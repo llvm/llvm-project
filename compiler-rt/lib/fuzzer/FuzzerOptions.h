@@ -18,6 +18,7 @@ struct FuzzingOptions {
   int Verbosity = 1;
   size_t MaxLen = 0;
   size_t LenControl = 1000;
+  bool KeepSeed = false;
   int UnitTimeoutSec = 300;
   int TimeoutExitCode = 70;
   int OOMExitCode = 71;
@@ -30,6 +31,7 @@ struct FuzzingOptions {
   int RssLimitMb = 0;
   int MallocLimitMb = 0;
   bool DoCrossOver = true;
+  bool CrossOverUniformDist = false;
   int MutateDepth = 5;
   bool ReduceDepth = false;
   bool UseCounters = false;
@@ -47,6 +49,7 @@ struct FuzzingOptions {
   bool Entropic = false;
   size_t EntropicFeatureFrequencyThreshold = 0xFF;
   size_t EntropicNumberOfRarestFeatures = 100;
+  bool EntropicScalePerExecTime = false;
   std::string OutputCorpus;
   std::string ArtifactPrefix = "./";
   std::string ExactArtifactPath;

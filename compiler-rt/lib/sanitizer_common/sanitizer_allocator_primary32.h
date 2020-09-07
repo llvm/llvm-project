@@ -153,6 +153,7 @@ class SizeClassAllocator32 {
   }
 
   void *GetMetaData(const void *p) {
+    CHECK(kMetadataSize);
     CHECK(PointerIsMine(p));
     uptr mem = reinterpret_cast<uptr>(p);
     uptr beg = ComputeRegionBeg(mem);

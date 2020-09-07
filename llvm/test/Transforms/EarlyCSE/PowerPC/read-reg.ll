@@ -1,4 +1,4 @@
-; RUN: opt -S -early-cse < %s | FileCheck %s
+; RUN: opt -S -early-cse -earlycse-debug-hash < %s | FileCheck %s
 ; RUN: opt -S -basic-aa -early-cse-memssa < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"

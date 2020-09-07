@@ -182,7 +182,12 @@ def PPCmffs   : SDNode<"PPCISD::MFFS",
 
 // Perform FADD in round-to-zero mode.
 def PPCfaddrtz: SDNode<"PPCISD::FADDRTZ", SDTFPBinOp, []>;
+def PPCstrict_faddrtz: SDNode<"PPCISD::STRICT_FADDRTZ", SDTFPBinOp,
+                              [SDNPHasChain]>;
 
+def PPCany_faddrtz: PatFrags<(ops node:$lhs, node:$rhs),
+                             [(PPCfaddrtz node:$lhs, node:$rhs),
+                              (PPCstrict_faddrtz node:$lhs, node:$rhs)]>;
 
 def PPCfsel   : SDNode<"PPCISD::FSEL",
    // Type constraint for fsel.
@@ -2960,9 +2965,9 @@ def : InstAlias<"mtcr $rA", (MTCRF 255, gprc:$rA)>;
 
 let Predicates = [HasFPU] in {
 // Custom inserter instruction to perform FADD in round-to-zero mode.
-let Uses = [RM] in {
+let Uses = [RM], mayRaiseFPException = 1 in {
   def FADDrtz: PPCCustomInserterPseudo<(outs f8rc:$FRT), (ins f8rc:$FRA, f8rc:$FRB), "",
-                      [(set f64:$FRT, (PPCfaddrtz f64:$FRA, f64:$FRB))]>;
+                      [(set f64:$FRT, (PPCany_faddrtz f64:$FRA, f64:$FRB))]>;
 }
 
 // The above pseudo gets expanded to make use of the following instructions

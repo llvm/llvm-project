@@ -17,10 +17,12 @@
 // CHECK-NEXT:    [[__PTR_ADDR_I:%.*]] = alloca i16*, align 8
 // CHECK-NEXT:    [[__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca <8 x i16>*, align 8
-// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca i16*, align 8
+// CHECK-NEXT:    [[ST_ADDR:%.*]] = alloca i16*, align 8
+// CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca i16*, align 8
 // CHECK-NEXT:    store <8 x i16>* [[C:%.*]], <8 x i16>** [[C_ADDR]], align 8
-// CHECK-NEXT:    store i16* [[PTR:%.*]], i16** [[PTR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load i16*, i16** [[PTR_ADDR]], align 8
+// CHECK-NEXT:    store i16* [[ST:%.*]], i16** [[ST_ADDR]], align 8
+// CHECK-NEXT:    store i16* [[LD:%.*]], i16** [[LD_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i16*, i16** [[LD_ADDR]], align 8
 // CHECK-NEXT:    store i64 3, i64* [[__OFFSET_ADDR_I]], align 8
 // CHECK-NEXT:    store i16* [[TMP0]], i16** [[__PTR_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i16*, i16** [[__PTR_ADDR_I]], align 8
@@ -35,7 +37,7 @@
 // CHECK-NEXT:    store <8 x i16> [[TMP6]], <8 x i16>* [[TMP7]], align 16
 // CHECK-NEXT:    [[TMP8:%.*]] = load <8 x i16>*, <8 x i16>** [[C_ADDR]], align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = load <8 x i16>, <8 x i16>* [[TMP8]], align 16
-// CHECK-NEXT:    [[TMP10:%.*]] = load i16*, i16** [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load i16*, i16** [[ST_ADDR]], align 8
 // CHECK-NEXT:    store <8 x i16> [[TMP9]], <8 x i16>* [[__VEC_ADDR_I]], align 16
 // CHECK-NEXT:    store i64 7, i64* [[__OFFSET_ADDR_I1]], align 8
 // CHECK-NEXT:    store i16* [[TMP10]], i16** [[__PTR_ADDR_I2]], align 8
@@ -50,9 +52,9 @@
 // CHECK-NEXT:    store <8 x i16> [[TMP14]], <8 x i16>* [[TMP16]], align 1
 // CHECK-NEXT:    ret void
 //
-void test1(vector signed short *c, signed short *ptr) {
-    *c = vec_xl(3ll, ptr);
-    vec_xst(*c, 7ll, ptr);
+void test1(vector signed short *c, signed short *st, const signed short *ld) {
+    *c = vec_xl(3ll, ld);
+    vec_xst(*c, 7ll, st);
 }
 
 // CHECK-LABEL: @test2(
@@ -65,10 +67,12 @@ void test1(vector signed short *c, signed short *ptr) {
 // CHECK-NEXT:    [[__PTR_ADDR_I:%.*]] = alloca i16*, align 8
 // CHECK-NEXT:    [[__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca <8 x i16>*, align 8
-// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca i16*, align 8
+// CHECK-NEXT:    [[ST_ADDR:%.*]] = alloca i16*, align 8
+// CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca i16*, align 8
 // CHECK-NEXT:    store <8 x i16>* [[C:%.*]], <8 x i16>** [[C_ADDR]], align 8
-// CHECK-NEXT:    store i16* [[PTR:%.*]], i16** [[PTR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load i16*, i16** [[PTR_ADDR]], align 8
+// CHECK-NEXT:    store i16* [[ST:%.*]], i16** [[ST_ADDR]], align 8
+// CHECK-NEXT:    store i16* [[LD:%.*]], i16** [[LD_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i16*, i16** [[LD_ADDR]], align 8
 // CHECK-NEXT:    store i64 3, i64* [[__OFFSET_ADDR_I]], align 8
 // CHECK-NEXT:    store i16* [[TMP0]], i16** [[__PTR_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i16*, i16** [[__PTR_ADDR_I]], align 8
@@ -83,7 +87,7 @@ void test1(vector signed short *c, signed short *ptr) {
 // CHECK-NEXT:    store <8 x i16> [[TMP6]], <8 x i16>* [[TMP7]], align 16
 // CHECK-NEXT:    [[TMP8:%.*]] = load <8 x i16>*, <8 x i16>** [[C_ADDR]], align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = load <8 x i16>, <8 x i16>* [[TMP8]], align 16
-// CHECK-NEXT:    [[TMP10:%.*]] = load i16*, i16** [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load i16*, i16** [[ST_ADDR]], align 8
 // CHECK-NEXT:    store <8 x i16> [[TMP9]], <8 x i16>* [[__VEC_ADDR_I]], align 16
 // CHECK-NEXT:    store i64 7, i64* [[__OFFSET_ADDR_I1]], align 8
 // CHECK-NEXT:    store i16* [[TMP10]], i16** [[__PTR_ADDR_I2]], align 8
@@ -98,9 +102,10 @@ void test1(vector signed short *c, signed short *ptr) {
 // CHECK-NEXT:    store <8 x i16> [[TMP14]], <8 x i16>* [[TMP16]], align 1
 // CHECK-NEXT:    ret void
 //
-void test2(vector unsigned short *c, unsigned short *ptr) {
-    *c = vec_xl(3ll, ptr);
-    vec_xst(*c, 7ll, ptr);
+void test2(vector unsigned short *c, unsigned short *st,
+           const unsigned short *ld) {
+    *c = vec_xl(3ll, ld);
+    vec_xst(*c, 7ll, st);
 }
 
 // CHECK-LABEL: @test3(
@@ -113,10 +118,12 @@ void test2(vector unsigned short *c, unsigned short *ptr) {
 // CHECK-NEXT:    [[__PTR_ADDR_I:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:    [[__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca <4 x i32>*, align 8
-// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca i32*, align 8
+// CHECK-NEXT:    [[ST_ADDR:%.*]] = alloca i32*, align 8
+// CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:    store <4 x i32>* [[C:%.*]], <4 x i32>** [[C_ADDR]], align 8
-// CHECK-NEXT:    store i32* [[PTR:%.*]], i32** [[PTR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[PTR_ADDR]], align 8
+// CHECK-NEXT:    store i32* [[ST:%.*]], i32** [[ST_ADDR]], align 8
+// CHECK-NEXT:    store i32* [[LD:%.*]], i32** [[LD_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[LD_ADDR]], align 8
 // CHECK-NEXT:    store i64 3, i64* [[__OFFSET_ADDR_I]], align 8
 // CHECK-NEXT:    store i32* [[TMP0]], i32** [[__PTR_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[__PTR_ADDR_I]], align 8
@@ -131,7 +138,7 @@ void test2(vector unsigned short *c, unsigned short *ptr) {
 // CHECK-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* [[TMP7]], align 16
 // CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i32>*, <4 x i32>** [[C_ADDR]], align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = load <4 x i32>, <4 x i32>* [[TMP8]], align 16
-// CHECK-NEXT:    [[TMP10:%.*]] = load i32*, i32** [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load i32*, i32** [[ST_ADDR]], align 8
 // CHECK-NEXT:    store <4 x i32> [[TMP9]], <4 x i32>* [[__VEC_ADDR_I]], align 16
 // CHECK-NEXT:    store i64 7, i64* [[__OFFSET_ADDR_I1]], align 8
 // CHECK-NEXT:    store i32* [[TMP10]], i32** [[__PTR_ADDR_I2]], align 8
@@ -146,9 +153,9 @@ void test2(vector unsigned short *c, unsigned short *ptr) {
 // CHECK-NEXT:    store <4 x i32> [[TMP14]], <4 x i32>* [[TMP16]], align 1
 // CHECK-NEXT:    ret void
 //
-void test3(vector signed int *c, signed int *ptr) {
-    *c = vec_xl(3ll, ptr);
-    vec_xst(*c, 7ll, ptr);
+void test3(vector signed int *c, signed int *st, const signed int *ld) {
+    *c = vec_xl(3ll, ld);
+    vec_xst(*c, 7ll, st);
 }
 
 // CHECK-LABEL: @test4(
@@ -161,10 +168,12 @@ void test3(vector signed int *c, signed int *ptr) {
 // CHECK-NEXT:    [[__PTR_ADDR_I:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:    [[__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca <4 x i32>*, align 8
-// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca i32*, align 8
+// CHECK-NEXT:    [[ST_ADDR:%.*]] = alloca i32*, align 8
+// CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:    store <4 x i32>* [[C:%.*]], <4 x i32>** [[C_ADDR]], align 8
-// CHECK-NEXT:    store i32* [[PTR:%.*]], i32** [[PTR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[PTR_ADDR]], align 8
+// CHECK-NEXT:    store i32* [[ST:%.*]], i32** [[ST_ADDR]], align 8
+// CHECK-NEXT:    store i32* [[LD:%.*]], i32** [[LD_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[LD_ADDR]], align 8
 // CHECK-NEXT:    store i64 3, i64* [[__OFFSET_ADDR_I]], align 8
 // CHECK-NEXT:    store i32* [[TMP0]], i32** [[__PTR_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[__PTR_ADDR_I]], align 8
@@ -179,7 +188,7 @@ void test3(vector signed int *c, signed int *ptr) {
 // CHECK-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* [[TMP7]], align 16
 // CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i32>*, <4 x i32>** [[C_ADDR]], align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = load <4 x i32>, <4 x i32>* [[TMP8]], align 16
-// CHECK-NEXT:    [[TMP10:%.*]] = load i32*, i32** [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load i32*, i32** [[ST_ADDR]], align 8
 // CHECK-NEXT:    store <4 x i32> [[TMP9]], <4 x i32>* [[__VEC_ADDR_I]], align 16
 // CHECK-NEXT:    store i64 7, i64* [[__OFFSET_ADDR_I1]], align 8
 // CHECK-NEXT:    store i32* [[TMP10]], i32** [[__PTR_ADDR_I2]], align 8
@@ -194,9 +203,9 @@ void test3(vector signed int *c, signed int *ptr) {
 // CHECK-NEXT:    store <4 x i32> [[TMP14]], <4 x i32>* [[TMP16]], align 1
 // CHECK-NEXT:    ret void
 //
-void test4(vector unsigned int *c, unsigned int *ptr) {
-    *c = vec_xl(3ll, ptr);
-    vec_xst(*c, 7ll, ptr);
+void test4(vector unsigned int *c, unsigned int *st, const unsigned int *ld) {
+    *c = vec_xl(3ll, ld);
+    vec_xst(*c, 7ll, st);
 }
 
 // CHECK-LABEL: @test5(
@@ -209,10 +218,12 @@ void test4(vector unsigned int *c, unsigned int *ptr) {
 // CHECK-NEXT:    [[__PTR_ADDR_I:%.*]] = alloca i64*, align 8
 // CHECK-NEXT:    [[__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca <2 x i64>*, align 8
-// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca i64*, align 8
+// CHECK-NEXT:    [[ST_ADDR:%.*]] = alloca i64*, align 8
+// CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca i64*, align 8
 // CHECK-NEXT:    store <2 x i64>* [[C:%.*]], <2 x i64>** [[C_ADDR]], align 8
-// CHECK-NEXT:    store i64* [[PTR:%.*]], i64** [[PTR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64*, i64** [[PTR_ADDR]], align 8
+// CHECK-NEXT:    store i64* [[ST:%.*]], i64** [[ST_ADDR]], align 8
+// CHECK-NEXT:    store i64* [[LD:%.*]], i64** [[LD_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64*, i64** [[LD_ADDR]], align 8
 // CHECK-NEXT:    store i64 3, i64* [[__OFFSET_ADDR_I]], align 8
 // CHECK-NEXT:    store i64* [[TMP0]], i64** [[__PTR_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i64*, i64** [[__PTR_ADDR_I]], align 8
@@ -227,7 +238,7 @@ void test4(vector unsigned int *c, unsigned int *ptr) {
 // CHECK-NEXT:    store <2 x i64> [[TMP6]], <2 x i64>* [[TMP7]], align 16
 // CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i64>*, <2 x i64>** [[C_ADDR]], align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = load <2 x i64>, <2 x i64>* [[TMP8]], align 16
-// CHECK-NEXT:    [[TMP10:%.*]] = load i64*, i64** [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load i64*, i64** [[ST_ADDR]], align 8
 // CHECK-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* [[__VEC_ADDR_I]], align 16
 // CHECK-NEXT:    store i64 7, i64* [[__OFFSET_ADDR_I1]], align 8
 // CHECK-NEXT:    store i64* [[TMP10]], i64** [[__PTR_ADDR_I2]], align 8
@@ -242,9 +253,10 @@ void test4(vector unsigned int *c, unsigned int *ptr) {
 // CHECK-NEXT:    store <2 x i64> [[TMP14]], <2 x i64>* [[TMP16]], align 1
 // CHECK-NEXT:    ret void
 //
-void test5(vector signed long long *c, signed long long *ptr) {
-    *c = vec_xl(3ll, ptr);
-    vec_xst(*c, 7ll, ptr);
+void test5(vector signed long long *c, signed long long *st,
+           const signed long long *ld) {
+    *c = vec_xl(3ll, ld);
+    vec_xst(*c, 7ll, st);
 }
 
 // CHECK-LABEL: @test6(
@@ -257,10 +269,12 @@ void test5(vector signed long long *c, signed long long *ptr) {
 // CHECK-NEXT:    [[__PTR_ADDR_I:%.*]] = alloca i64*, align 8
 // CHECK-NEXT:    [[__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca <2 x i64>*, align 8
-// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca i64*, align 8
+// CHECK-NEXT:    [[ST_ADDR:%.*]] = alloca i64*, align 8
+// CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca i64*, align 8
 // CHECK-NEXT:    store <2 x i64>* [[C:%.*]], <2 x i64>** [[C_ADDR]], align 8
-// CHECK-NEXT:    store i64* [[PTR:%.*]], i64** [[PTR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64*, i64** [[PTR_ADDR]], align 8
+// CHECK-NEXT:    store i64* [[ST:%.*]], i64** [[ST_ADDR]], align 8
+// CHECK-NEXT:    store i64* [[LD:%.*]], i64** [[LD_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64*, i64** [[LD_ADDR]], align 8
 // CHECK-NEXT:    store i64 3, i64* [[__OFFSET_ADDR_I]], align 8
 // CHECK-NEXT:    store i64* [[TMP0]], i64** [[__PTR_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i64*, i64** [[__PTR_ADDR_I]], align 8
@@ -275,7 +289,7 @@ void test5(vector signed long long *c, signed long long *ptr) {
 // CHECK-NEXT:    store <2 x i64> [[TMP6]], <2 x i64>* [[TMP7]], align 16
 // CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i64>*, <2 x i64>** [[C_ADDR]], align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = load <2 x i64>, <2 x i64>* [[TMP8]], align 16
-// CHECK-NEXT:    [[TMP10:%.*]] = load i64*, i64** [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load i64*, i64** [[ST_ADDR]], align 8
 // CHECK-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* [[__VEC_ADDR_I]], align 16
 // CHECK-NEXT:    store i64 7, i64* [[__OFFSET_ADDR_I1]], align 8
 // CHECK-NEXT:    store i64* [[TMP10]], i64** [[__PTR_ADDR_I2]], align 8
@@ -290,9 +304,10 @@ void test5(vector signed long long *c, signed long long *ptr) {
 // CHECK-NEXT:    store <2 x i64> [[TMP14]], <2 x i64>* [[TMP16]], align 1
 // CHECK-NEXT:    ret void
 //
-void test6(vector unsigned long long *c, unsigned long long *ptr) {
-    *c = vec_xl(3ll, ptr);
-    vec_xst(*c, 7ll, ptr);
+void test6(vector unsigned long long *c, unsigned long long *st,
+           const unsigned long long *ld) {
+    *c = vec_xl(3ll, ld);
+    vec_xst(*c, 7ll, st);
 }
 
 // CHECK-LABEL: @test7(
@@ -305,10 +320,12 @@ void test6(vector unsigned long long *c, unsigned long long *ptr) {
 // CHECK-NEXT:    [[__PTR_ADDR_I:%.*]] = alloca float*, align 8
 // CHECK-NEXT:    [[__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca <4 x float>*, align 8
-// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca float*, align 8
+// CHECK-NEXT:    [[ST_ADDR:%.*]] = alloca float*, align 8
+// CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca float*, align 8
 // CHECK-NEXT:    store <4 x float>* [[C:%.*]], <4 x float>** [[C_ADDR]], align 8
-// CHECK-NEXT:    store float* [[PTR:%.*]], float** [[PTR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load float*, float** [[PTR_ADDR]], align 8
+// CHECK-NEXT:    store float* [[ST:%.*]], float** [[ST_ADDR]], align 8
+// CHECK-NEXT:    store float* [[LD:%.*]], float** [[LD_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load float*, float** [[LD_ADDR]], align 8
 // CHECK-NEXT:    store i64 3, i64* [[__OFFSET_ADDR_I]], align 8
 // CHECK-NEXT:    store float* [[TMP0]], float** [[__PTR_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load float*, float** [[__PTR_ADDR_I]], align 8
@@ -323,7 +340,7 @@ void test6(vector unsigned long long *c, unsigned long long *ptr) {
 // CHECK-NEXT:    store <4 x float> [[TMP6]], <4 x float>* [[TMP7]], align 16
 // CHECK-NEXT:    [[TMP8:%.*]] = load <4 x float>*, <4 x float>** [[C_ADDR]], align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = load <4 x float>, <4 x float>* [[TMP8]], align 16
-// CHECK-NEXT:    [[TMP10:%.*]] = load float*, float** [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load float*, float** [[ST_ADDR]], align 8
 // CHECK-NEXT:    store <4 x float> [[TMP9]], <4 x float>* [[__VEC_ADDR_I]], align 16
 // CHECK-NEXT:    store i64 7, i64* [[__OFFSET_ADDR_I1]], align 8
 // CHECK-NEXT:    store float* [[TMP10]], float** [[__PTR_ADDR_I2]], align 8
@@ -338,9 +355,9 @@ void test6(vector unsigned long long *c, unsigned long long *ptr) {
 // CHECK-NEXT:    store <4 x float> [[TMP14]], <4 x float>* [[TMP16]], align 1
 // CHECK-NEXT:    ret void
 //
-void test7(vector float *c, float *ptr) {
-    *c = vec_xl(3ll, ptr);
-    vec_xst(*c, 7ll, ptr);
+void test7(vector float *c, float *st, const float *ld) {
+    *c = vec_xl(3ll, ld);
+    vec_xst(*c, 7ll, st);
 }
 
 // CHECK-LABEL: @test8(
@@ -353,10 +370,12 @@ void test7(vector float *c, float *ptr) {
 // CHECK-NEXT:    [[__PTR_ADDR_I:%.*]] = alloca double*, align 8
 // CHECK-NEXT:    [[__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca <2 x double>*, align 8
-// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca double*, align 8
+// CHECK-NEXT:    [[ST_ADDR:%.*]] = alloca double*, align 8
+// CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca double*, align 8
 // CHECK-NEXT:    store <2 x double>* [[C:%.*]], <2 x double>** [[C_ADDR]], align 8
-// CHECK-NEXT:    store double* [[PTR:%.*]], double** [[PTR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load double*, double** [[PTR_ADDR]], align 8
+// CHECK-NEXT:    store double* [[ST:%.*]], double** [[ST_ADDR]], align 8
+// CHECK-NEXT:    store double* [[LD:%.*]], double** [[LD_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load double*, double** [[LD_ADDR]], align 8
 // CHECK-NEXT:    store i64 3, i64* [[__OFFSET_ADDR_I]], align 8
 // CHECK-NEXT:    store double* [[TMP0]], double** [[__PTR_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load double*, double** [[__PTR_ADDR_I]], align 8
@@ -371,7 +390,7 @@ void test7(vector float *c, float *ptr) {
 // CHECK-NEXT:    store <2 x double> [[TMP6]], <2 x double>* [[TMP7]], align 16
 // CHECK-NEXT:    [[TMP8:%.*]] = load <2 x double>*, <2 x double>** [[C_ADDR]], align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = load <2 x double>, <2 x double>* [[TMP8]], align 16
-// CHECK-NEXT:    [[TMP10:%.*]] = load double*, double** [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load double*, double** [[ST_ADDR]], align 8
 // CHECK-NEXT:    store <2 x double> [[TMP9]], <2 x double>* [[__VEC_ADDR_I]], align 16
 // CHECK-NEXT:    store i64 7, i64* [[__OFFSET_ADDR_I1]], align 8
 // CHECK-NEXT:    store double* [[TMP10]], double** [[__PTR_ADDR_I2]], align 8
@@ -386,9 +405,9 @@ void test7(vector float *c, float *ptr) {
 // CHECK-NEXT:    store <2 x double> [[TMP14]], <2 x double>* [[TMP16]], align 1
 // CHECK-NEXT:    ret void
 //
-void test8(vector double *c, double *ptr) {
-    *c = vec_xl(3ll, ptr);
-    vec_xst(*c, 7ll, ptr);
+void test8(vector double *c, double *st, const double *ld) {
+    *c = vec_xl(3ll, ld);
+    vec_xst(*c, 7ll, st);
 }
 
 #ifdef __POWER8_VECTOR__
@@ -402,10 +421,12 @@ void test8(vector double *c, double *ptr) {
 // CHECK-P8-NEXT:    [[__PTR_ADDR_I:%.*]] = alloca i128*, align 8
 // CHECK-P8-NEXT:    [[__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK-P8-NEXT:    [[C_ADDR:%.*]] = alloca <1 x i128>*, align 8
-// CHECK-P8-NEXT:    [[PTR_ADDR:%.*]] = alloca i128*, align 8
+// CHECK-P8-NEXT:    [[ST_ADDR:%.*]] = alloca i128*, align 8
+// CHECK-P8-NEXT:    [[LD_ADDR:%.*]] = alloca i128*, align 8
 // CHECK-P8-NEXT:    store <1 x i128>* [[C:%.*]], <1 x i128>** [[C_ADDR]], align 8
-// CHECK-P8-NEXT:    store i128* [[PTR:%.*]], i128** [[PTR_ADDR]], align 8
-// CHECK-P8-NEXT:    [[TMP0:%.*]] = load i128*, i128** [[PTR_ADDR]], align 8
+// CHECK-P8-NEXT:    store i128* [[ST:%.*]], i128** [[ST_ADDR]], align 8
+// CHECK-P8-NEXT:    store i128* [[LD:%.*]], i128** [[LD_ADDR]], align 8
+// CHECK-P8-NEXT:    [[TMP0:%.*]] = load i128*, i128** [[LD_ADDR]], align 8
 // CHECK-P8-NEXT:    store i64 3, i64* [[__OFFSET_ADDR_I]], align 8
 // CHECK-P8-NEXT:    store i128* [[TMP0]], i128** [[__PTR_ADDR_I]], align 8
 // CHECK-P8-NEXT:    [[TMP1:%.*]] = load i128*, i128** [[__PTR_ADDR_I]], align 8
@@ -420,7 +441,7 @@ void test8(vector double *c, double *ptr) {
 // CHECK-P8-NEXT:    store <1 x i128> [[TMP6]], <1 x i128>* [[TMP7]], align 16
 // CHECK-P8-NEXT:    [[TMP8:%.*]] = load <1 x i128>*, <1 x i128>** [[C_ADDR]], align 8
 // CHECK-P8-NEXT:    [[TMP9:%.*]] = load <1 x i128>, <1 x i128>* [[TMP8]], align 16
-// CHECK-P8-NEXT:    [[TMP10:%.*]] = load i128*, i128** [[PTR_ADDR]], align 8
+// CHECK-P8-NEXT:    [[TMP10:%.*]] = load i128*, i128** [[ST_ADDR]], align 8
 // CHECK-P8-NEXT:    store <1 x i128> [[TMP9]], <1 x i128>* [[__VEC_ADDR_I]], align 16
 // CHECK-P8-NEXT:    store i64 7, i64* [[__OFFSET_ADDR_I1]], align 8
 // CHECK-P8-NEXT:    store i128* [[TMP10]], i128** [[__PTR_ADDR_I2]], align 8
@@ -435,9 +456,10 @@ void test8(vector double *c, double *ptr) {
 // CHECK-P8-NEXT:    store <1 x i128> [[TMP14]], <1 x i128>* [[TMP16]], align 1
 // CHECK-P8-NEXT:    ret void
 //
-void test9(vector signed __int128 *c, signed __int128 *ptr) {
-    *c = vec_xl(3ll, ptr);
-    vec_xst(*c, 7ll, ptr);
+void test9(vector signed __int128 *c, signed __int128 *st,
+           const signed __int128 *ld) {
+    *c = vec_xl(3ll, ld);
+    vec_xst(*c, 7ll, st);
 }
 
 // CHECK-P8-LABEL: @test10(
@@ -450,10 +472,12 @@ void test9(vector signed __int128 *c, signed __int128 *ptr) {
 // CHECK-P8-NEXT:    [[__PTR_ADDR_I:%.*]] = alloca i128*, align 8
 // CHECK-P8-NEXT:    [[__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK-P8-NEXT:    [[C_ADDR:%.*]] = alloca <1 x i128>*, align 8
-// CHECK-P8-NEXT:    [[PTR_ADDR:%.*]] = alloca i128*, align 8
+// CHECK-P8-NEXT:    [[ST_ADDR:%.*]] = alloca i128*, align 8
+// CHECK-P8-NEXT:    [[LD_ADDR:%.*]] = alloca i128*, align 8
 // CHECK-P8-NEXT:    store <1 x i128>* [[C:%.*]], <1 x i128>** [[C_ADDR]], align 8
-// CHECK-P8-NEXT:    store i128* [[PTR:%.*]], i128** [[PTR_ADDR]], align 8
-// CHECK-P8-NEXT:    [[TMP0:%.*]] = load i128*, i128** [[PTR_ADDR]], align 8
+// CHECK-P8-NEXT:    store i128* [[ST:%.*]], i128** [[ST_ADDR]], align 8
+// CHECK-P8-NEXT:    store i128* [[LD:%.*]], i128** [[LD_ADDR]], align 8
+// CHECK-P8-NEXT:    [[TMP0:%.*]] = load i128*, i128** [[LD_ADDR]], align 8
 // CHECK-P8-NEXT:    store i64 3, i64* [[__OFFSET_ADDR_I]], align 8
 // CHECK-P8-NEXT:    store i128* [[TMP0]], i128** [[__PTR_ADDR_I]], align 8
 // CHECK-P8-NEXT:    [[TMP1:%.*]] = load i128*, i128** [[__PTR_ADDR_I]], align 8
@@ -468,7 +492,7 @@ void test9(vector signed __int128 *c, signed __int128 *ptr) {
 // CHECK-P8-NEXT:    store <1 x i128> [[TMP6]], <1 x i128>* [[TMP7]], align 16
 // CHECK-P8-NEXT:    [[TMP8:%.*]] = load <1 x i128>*, <1 x i128>** [[C_ADDR]], align 8
 // CHECK-P8-NEXT:    [[TMP9:%.*]] = load <1 x i128>, <1 x i128>* [[TMP8]], align 16
-// CHECK-P8-NEXT:    [[TMP10:%.*]] = load i128*, i128** [[PTR_ADDR]], align 8
+// CHECK-P8-NEXT:    [[TMP10:%.*]] = load i128*, i128** [[ST_ADDR]], align 8
 // CHECK-P8-NEXT:    store <1 x i128> [[TMP9]], <1 x i128>* [[__VEC_ADDR_I]], align 16
 // CHECK-P8-NEXT:    store i64 7, i64* [[__OFFSET_ADDR_I1]], align 8
 // CHECK-P8-NEXT:    store i128* [[TMP10]], i128** [[__PTR_ADDR_I2]], align 8
@@ -483,8 +507,9 @@ void test9(vector signed __int128 *c, signed __int128 *ptr) {
 // CHECK-P8-NEXT:    store <1 x i128> [[TMP14]], <1 x i128>* [[TMP16]], align 1
 // CHECK-P8-NEXT:    ret void
 //
-void test10(vector unsigned __int128 *c, unsigned __int128 *ptr) {
-    *c = vec_xl(3ll, ptr);
-    vec_xst(*c, 7ll, ptr);
+void test10(vector unsigned __int128 *c, unsigned __int128 *st,
+            const unsigned __int128 *ld) {
+    *c = vec_xl(3ll, ld);
+    vec_xst(*c, 7ll, st);
 }
 #endif

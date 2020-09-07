@@ -54,8 +54,9 @@ constexpr auto fileNameExpr{scalarDefaultCharExpr};
 //         POSITION = scalar-default-char-expr | RECL = scalar-int-expr |
 //         ROUND = scalar-default-char-expr | SIGN = scalar-default-char-expr |
 //         STATUS = scalar-default-char-expr
-//         @ | CONVERT = scalar-default-char-variable
-//         @ | DISPOSE = scalar-default-char-variable
+//         @ | CARRIAGECONTROL = scalar-default-char-variable
+//           | CONVERT = scalar-default-char-variable
+//           | DISPOSE = scalar-default-char-variable
 constexpr auto statusExpr{construct<StatusExpr>(scalarDefaultCharExpr)};
 constexpr auto errLabel{construct<ErrLabel>(label)};
 
@@ -107,6 +108,10 @@ TYPE_PARSER(first(construct<ConnectSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
         "SIGN =" >> pure(ConnectSpec::CharExpr::Kind::Sign),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>("STATUS =" >> statusExpr),
+    extension<LanguageFeature::Carriagecontrol>(construct<ConnectSpec>(
+        construct<ConnectSpec::CharExpr>("CARRIAGECONTROL =" >>
+                pure(ConnectSpec::CharExpr::Kind::Carriagecontrol),
+            scalarDefaultCharExpr))),
     extension<LanguageFeature::Convert>(
         construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
             "CONVERT =" >> pure(ConnectSpec::CharExpr::Kind::Convert),
@@ -357,7 +362,8 @@ TYPE_CONTEXT_PARSER("FLUSH statement"_en_US,
 //         STREAM = scalar-default-char-variable |
 //         STATUS = scalar-default-char-variable |
 //         WRITE = scalar-default-char-variable
-//         @ | CONVERT = scalar-default-char-variable
+//         @ | CARRIAGECONTROL = scalar-default-char-variable
+//           | CONVERT = scalar-default-char-variable
 //           | DISPOSE = scalar-default-char-variable
 TYPE_PARSER(first(construct<InquireSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
     construct<InquireSpec>("FILE =" >> fileNameExpr),
@@ -475,6 +481,11 @@ TYPE_PARSER(first(construct<InquireSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
     construct<InquireSpec>("WRITE =" >>
         construct<InquireSpec::CharVar>(pure(InquireSpec::CharVar::Kind::Write),
             scalarDefaultCharVariable)),
+    extension<LanguageFeature::Carriagecontrol>(
+        construct<InquireSpec>("CARRIAGECONTROL =" >>
+            construct<InquireSpec::CharVar>(
+                pure(InquireSpec::CharVar::Kind::Carriagecontrol),
+                scalarDefaultCharVariable))),
     extension<LanguageFeature::Convert>(construct<InquireSpec>(
         "CONVERT =" >> construct<InquireSpec::CharVar>(
                            pure(InquireSpec::CharVar::Kind::Convert),

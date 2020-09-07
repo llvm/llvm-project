@@ -544,7 +544,8 @@ add_subdirectory(lib)
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(unittests)
   add_subdirectory(test)
-  if (COMPILER_RT_STANDALONE_BUILD)
+  # Don't build llvm-lit for runtimes-build, it will clean up map_config.
+  if (COMPILER_RT_STANDALONE_BUILD AND NOT RUNTIMES_BUILD)
     # If we have a valid source tree, generate llvm-lit into the bin directory.
     # The user can still choose to have the check targets *use* a different lit
     # by specifying -DLLVM_EXTERNAL_LIT, but we generate it regardless.

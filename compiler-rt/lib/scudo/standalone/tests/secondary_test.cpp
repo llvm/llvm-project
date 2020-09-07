@@ -56,18 +56,12 @@ template <class SecondaryT> static void testSecondaryBasic(void) {
 
 TEST(ScudoSecondaryTest, SecondaryBasic) {
   testSecondaryBasic<scudo::MapAllocator<scudo::MapAllocatorNoCache>>();
-#if !SCUDO_FUCHSIA
   testSecondaryBasic<scudo::MapAllocator<scudo::MapAllocatorCache<>>>();
   testSecondaryBasic<
       scudo::MapAllocator<scudo::MapAllocatorCache<128U, 64U, 1UL << 20>>>();
-#endif
 }
 
-#if SCUDO_FUCHSIA
-using LargeAllocator = scudo::MapAllocator<scudo::MapAllocatorNoCache>;
-#else
 using LargeAllocator = scudo::MapAllocator<scudo::MapAllocatorCache<>>;
-#endif
 
 // This exercises a variety of combinations of size and alignment for the
 // MapAllocator. The size computation done here mimic the ones done by the

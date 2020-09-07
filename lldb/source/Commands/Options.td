@@ -451,6 +451,12 @@ let Command = "reproducer dump" in {
     "provided, that reproducer is dumped.">;
 }
 
+let Command = "reproducer verify" in {
+  def reproducer_verify_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
+    Desc<"The reproducer path. If a reproducer is replayed and no path is "
+    "provided, that reproducer is dumped.">;
+}
+
 let Command = "reproducer xcrash" in {
   def reproducer_signal : Option<"signal", "s">, Group<1>,
     EnumArg<"None", "ReproducerSignalType()">,
@@ -631,6 +637,8 @@ let Command = "platform shell" in {
     Desc<"Run the commands on the host shell when enabled.">;
   def platform_shell_timeout : Option<"timeout", "t">, Arg<"Value">,
     Desc<"Seconds to wait for the remote host to finish running the command.">;
+  def platform_shell_interpreter : Option<"shell", "s">, Arg<"Path">,
+    Desc<"Shell interpreter path. This is the binary used to run the command.">;
 }
 
 let Command = "process attach" in {

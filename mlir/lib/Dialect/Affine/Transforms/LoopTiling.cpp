@@ -167,8 +167,7 @@ constructTiledIndexSetHyperRect(MutableArrayRef<AffineForOp> origLoops,
 /// function will return failure when any dependence component is negative along
 /// any of `origLoops`.
 static LogicalResult
-checkTilingLegality(MutableArrayRef<mlir::AffineForOp> origLoops,
-                    ArrayRef<unsigned> tileSizes) {
+checkTilingLegality(MutableArrayRef<mlir::AffineForOp> origLoops) {
   assert(!origLoops.empty() && "no original loops provided");
 
   // We first find out all dependences we intend to check.
@@ -242,7 +241,7 @@ mlir::tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
   auto origLoops = input;
 
   // Perform tiling legality test.
-  if (failed(checkTilingLegality(origLoops, tileSizes)))
+  if (failed(checkTilingLegality(origLoops)))
     origLoops[0].emitRemark("tiled code is illegal due to dependences");
 
   AffineForOp rootAffineForOp = origLoops[0];

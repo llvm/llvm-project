@@ -282,3 +282,18 @@ TEST(ELFObjectFileTest, MachineTestForMSP430) {
   for (const DataForTest &D : generateData(ELF::EM_MSP430))
     checkFormatAndArch(D, Formats[I++], Triple::msp430);
 }
+
+TEST(ELFObjectFileTest, MachineTestForCSKY) {
+  std::array<StringRef, 4> Formats = {"elf32-csky", "elf32-csky",
+                                      "elf64-unknown", "elf64-unknown"};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_CSKY))
+    checkFormatAndArch(D, Formats[I++], Triple::csky);
+}
+
+
+
+// ELF relative relocation type test.
+TEST(ELFObjectFileTest, RelativeRelocationTypeTest) {
+  EXPECT_EQ(ELF::R_CKCORE_RELATIVE, getELFRelativeRelocationType(ELF::EM_CSKY));
+}

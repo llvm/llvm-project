@@ -764,3 +764,47 @@ define <16 x float> @mask_shuffle_v4f32_v16f32_00_01_02_03_00_01_02_03_00_01_02_
   %res = shufflevector <4 x float> %a, <4 x float> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   ret <16 x float> %res
 }
+
+%struct.foo = type { [4 x double], [3 x [4 x double]], [4 x double] }
+
+; This test previously hung in shuffle combining. https://github.com/ispc/ispc/issues/1864
+define void @ispc_1864(<16 x float>* %arg) {
+; ALL-LABEL: ispc_1864:
+; ALL:       # %bb.0: # %bb
+; ALL-NEXT:    pushq %rbp
+; ALL-NEXT:    .cfi_def_cfa_offset 16
+; ALL-NEXT:    .cfi_offset %rbp, -16
+; ALL-NEXT:    movq %rsp, %rbp
+; ALL-NEXT:    .cfi_def_cfa_register %rbp
+; ALL-NEXT:    andq $-64, %rsp
+; ALL-NEXT:    subq $4864, %rsp # imm = 0x1300
+; ALL-NEXT:    vbroadcastss {{.*#+}} ymm0 = [-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0]
+; ALL-NEXT:    vmulps 32(%rdi), %ymm0, %ymm0
+; ALL-NEXT:    vcvtps2pd %ymm0, %zmm0
+; ALL-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[2,3,4,5,0,1,0,1]
+; ALL-NEXT:    vmovapd %ymm0, {{[0-9]+}}(%rsp)
+; ALL-NEXT:    movq %rbp, %rsp
+; ALL-NEXT:    popq %rbp
+; ALL-NEXT:    .cfi_def_cfa %rsp, 8
+; ALL-NEXT:    vzeroupper
+; ALL-NEXT:    retq
+bb:
+  %tmp = alloca [30 x %struct.foo], align 64
+  %tmp1 = load <16 x float>, <16 x float>* %arg, align 4
+  %tmp2 = fmul <16 x float> %tmp1, <float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00, float -5.000000e+00>
+  %tmp3 = fpext <16 x float> %tmp2 to <16 x double>
+  %tmp4 = getelementptr inbounds [30 x %struct.foo], [30 x %struct.foo]* %tmp, i64 0, i64 3, i32 2, i64 0
+  %tmp5 = extractelement <16 x double> %tmp3, i32 10
+  store double %tmp5, double* %tmp4, align 32
+  %tmp6 = getelementptr inbounds [30 x %struct.foo], [30 x %struct.foo]* %tmp, i64 0, i64 3, i32 2, i64 1
+  %tmp7 = extractelement <16 x double> %tmp3, i32 11
+  store double %tmp7, double* %tmp6, align 8
+  %tmp8 = getelementptr inbounds [30 x %struct.foo], [30 x %struct.foo]* %tmp, i64 0, i64 3, i32 2, i64 2
+  %tmp9 = extractelement <16 x double> %tmp3, i32 12
+  store double %tmp9, double* %tmp8, align 16
+  %tmp10 = getelementptr inbounds [30 x %struct.foo], [30 x %struct.foo]* %tmp, i64 0, i64 3, i32 2, i64 3
+  %tmp11 = extractelement <16 x double> %tmp3, i32 13
+  store double %tmp11, double* %tmp10, align 8
+  ret void
+}
+

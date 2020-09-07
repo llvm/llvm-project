@@ -274,7 +274,7 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
   const auto *VD = cast<ValueDecl>(DRE->getDecl()->getCanonicalDecl());
 
   // Function parameters require substitution and/or renaming.
-  if (const auto *PV = dyn_cast_or_null<ParmVarDecl>(VD)) {
+  if (const auto *PV = dyn_cast<ParmVarDecl>(VD)) {
     unsigned I = PV->getFunctionScopeIndex();
     const DeclContext *D = PV->getDeclContext();
     if (Ctx && Ctx->FunArgs) {

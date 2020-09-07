@@ -577,7 +577,8 @@ R1205 connect-spec ->
         POSITION = scalar-default-char-expr | RECL = scalar-int-expr |
         ROUND = scalar-default-char-expr | SIGN = scalar-default-char-expr |
         STATUS = scalar-default-char-expr
-        @ | CONVERT = scalar-default-char-expr
+        @ | CARRIAGECONTROL = scalar-default-char-expr
+          | CONVERT = scalar-default-char-expr
           | DISPOSE = scalar-default-char-expr
 R1206 file-name-expr -> scalar-default-char-expr
 R1207 iomsg-variable -> scalar-default-char-variable
@@ -657,7 +658,8 @@ R1231 inquire-spec ->
         STREAM = scalar-default-char-variable |
         STATUS = scalar-default-char-variable |
         WRITE = scalar-default-char-variable
-        @ | CONVERT = scalar-default-char-expr
+        @ | CARRIAGECONTROL = scalar-default-char-expr
+          | CONVERT = scalar-default-char-expr
           | DISPOSE = scalar-default-char-expr
 
 R1301 format-stmt -> FORMAT format-specification

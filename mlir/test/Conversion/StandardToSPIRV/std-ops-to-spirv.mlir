@@ -6,9 +6,7 @@
 
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, {}>
 } {
 
 // Check integer operation conversions.
@@ -146,10 +144,7 @@ func @unsupported_2x2elem_vector(%arg0: vector<2x2xi32>) {
 
 // Check that types are converted to 32-bit when no special capabilities.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-LABEL: @int_vector23
@@ -177,10 +172,7 @@ func @float_scalar(%arg0: f16, %arg1: f64) {
 // Check that types are converted to 32-bit when no special capabilities that
 // are not supported.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 func @int_vector4_invalid(%arg0: vector<4xi64>) {
@@ -199,10 +191,7 @@ func @int_vector4_invalid(%arg0: vector<4xi64>) {
 //===----------------------------------------------------------------------===//
 
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-LABEL: @bitwise_scalar
@@ -348,9 +337,7 @@ func @boolcmpi(%arg0 : i1, %arg1 : i1) {
 
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, {}>
 } {
 
 // CHECK-LABEL: @constant
@@ -412,10 +399,7 @@ func @constant_64bit() {
 
 // Check that constants are converted to 32-bit when no special capability.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-LABEL: @constant_16bit
@@ -498,9 +482,7 @@ func @unsupported_cases() {
 
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, {}>
 } {
 
 // CHECK-LABEL: index_cast1
@@ -631,10 +613,7 @@ func @fptosi2(%arg0 : f16) -> i16 {
 // Checks that cast types will be adjusted when no special capabilities for
 // non-32-bit scalar types.
 module attributes {
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
 
 // CHECK-LABEL: @fpext1
@@ -682,9 +661,8 @@ func @sitofp(%arg0 : i64) {
 
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Shader, Int8, Int16, Int64, Float16, Float64], [SPV_KHR_storage_buffer_storage_class]>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.0, [Shader, Int8, Int16, Int64, Float16, Float64],
+             [SPV_KHR_storage_buffer_storage_class]>, {}>
 } {
 
 //===----------------------------------------------------------------------===//
@@ -750,9 +728,7 @@ func @load_store_zero_rank_int(%arg0: memref<i32>, %arg1: memref<i32>) {
 // TODO: Test i1 and i64 types.
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
 } {
 
 // CHECK-LABEL: @load_i8
@@ -895,9 +871,7 @@ func @store_f32(%arg0: memref<f32>, %value: f32) {
 module attributes {
   spv.target_env = #spv.target_env<
     #spv.vce<v1.0, [Int16, StorageBuffer16BitAccess, Shader],
-    [SPV_KHR_storage_buffer_storage_class, SPV_KHR_16bit_storage]>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    [SPV_KHR_storage_buffer_storage_class, SPV_KHR_16bit_storage]>, {}>
 } {
 
 // CHECK-LABEL: @load_i8

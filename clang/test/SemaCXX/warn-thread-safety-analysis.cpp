@@ -5036,7 +5036,8 @@ void spawn_fake_flight_control_thread(void) {
 }
 
 extern const char *deque_log_msg(void) __attribute__((requires_capability(Logger)));
-void logger_entry(void) __attribute__((requires_capability(Logger))) {
+void logger_entry(void) __attribute__((requires_capability(Logger)))
+                        __attribute__((requires_capability(!FlightControl))) {
   const char *msg;
 
   while ((msg = deque_log_msg())) {
@@ -5044,13 +5045,13 @@ void logger_entry(void) __attribute__((requires_capability(Logger))) {
   }
 }
 
-void spawn_fake_logger_thread(void) {
+void spawn_fake_logger_thread(void) __attribute__((requires_capability(!FlightControl))) {
   acquire(Logger);
   logger_entry();
   release(Logger);
 }
 
-int main(void) {
+int main(void) __attribute__((requires_capability(!FlightControl))) {
   spawn_fake_flight_control_thread();
   spawn_fake_logger_thread();
 

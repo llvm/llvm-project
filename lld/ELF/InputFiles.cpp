@@ -27,6 +27,7 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -867,10 +868,7 @@ template <class ELFT>
 InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &sec) {
   StringRef name = getSectionName(sec);
 
-  switch (sec.sh_type) {
-  case SHT_ARM_ATTRIBUTES: {
-    if (config->emachine != EM_ARM)
-      break;
+  if (config->emachine == EM_ARM && sec.sh_type == SHT_ARM_ATTRIBUTES) {
     ARMAttributeParser attributes;
     ArrayRef<uint8_t> contents = check(this->getObj().getSectionContents(&sec));
     if (Error e = attributes.parse(contents, config->ekind == ELF32LEKind
@@ -878,20 +876,45 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &sec) {
                                                  : support::big)) {
       auto *isec = make<InputSection>(*this, sec, name);
       warn(toString(isec) + ": " + llvm::toString(std::move(e)));
-      break;
-    }
-    updateSupportedARMFeatures(attributes);
-    updateARMVFPArgs(attributes, this);
+    } else {
+      updateSupportedARMFeatures(attributes);
+      updateARMVFPArgs(attributes, this);
 
-    // FIXME: Retain the first attribute section we see. The eglibc ARM
-    // dynamic loaders require the presence of an attribute section for dlopen
-    // to work. In a full implementation we would merge all attribute sections.
-    if (in.armAttributes == nullptr) {
-      in.armAttributes = make<InputSection>(*this, sec, name);
-      return in.armAttributes;
+      // FIXME: Retain the first attribute section we see. The eglibc ARM
+      // dynamic loaders require the presence of an attribute section for dlopen
+      // to work. In a full implementation we would merge all attribute
+      // sections.
+      if (in.attributes == nullptr) {
+        in.attributes = make<InputSection>(*this, sec, name);
+        return in.attributes;
+      }
+      return &InputSection::discarded;
     }
-    return &InputSection::discarded;
   }
+
+  if (config->emachine == EM_RISCV && sec.sh_type == SHT_RISCV_ATTRIBUTES) {
+    RISCVAttributeParser attributes;
+    ArrayRef<uint8_t> contents = check(this->getObj().getSectionContents(&sec));
+    if (Error e = attributes.parse(contents, support::little)) {
+      auto *isec = make<InputSection>(*this, sec, name);
+      warn(toString(isec) + ": " + llvm::toString(std::move(e)));
+    } else {
+      // FIXME: Validate arch tag contains C if and only if EF_RISCV_RVC is
+      // present.
+
+      // FIXME: Retain the first attribute section we see. Tools such as
+      // llvm-objdump make use of the attribute section to determine which
+      // standard extensions to enable. In a full implementation we would merge
+      // all attribute sections.
+      if (in.attributes == nullptr) {
+        in.attributes = make<InputSection>(*this, sec, name);
+        return in.attributes;
+      }
+      return &InputSection::discarded;
+    }
+  }
+
+  switch (sec.sh_type) {
   case SHT_LLVM_DEPENDENT_LIBRARIES: {
     if (config->relocatable)
       break;

@@ -45,11 +45,16 @@ StringRef OperationName::stripDialect() const {
   return splitName.second.empty() ? splitName.first : splitName.second;
 }
 
-/// Return the name of this operation.  This always succeeds.
+/// Return the name of this operation. This always succeeds.
 StringRef OperationName::getStringRef() const {
+  return getIdentifier().strref();
+}
+
+/// Return the name of this operation as an identifier. This always succeeds.
+Identifier OperationName::getIdentifier() const {
   if (auto *op = representation.dyn_cast<const AbstractOperation *>())
     return op->name;
-  return representation.get<Identifier>().strref();
+  return representation.get<Identifier>();
 }
 
 const AbstractOperation *OperationName::getAbstractOperation() const {

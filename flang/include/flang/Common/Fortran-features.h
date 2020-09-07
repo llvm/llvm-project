@@ -22,14 +22,14 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     DoubleComplex, Byte, StarKind, QuadPrecision, SlashInitialization,
     TripletInArrayConstructor, MissingColons, SignedComplexLiteral,
     OldStyleParameter, ComplexConstructor, PercentLOC, SignedPrimary, FileName,
-    Convert, Dispose, IOListLeadingComma, AbbreviatedEditDescriptor,
-    ProgramParentheses, PercentRefAndVal, OmitFunctionDummies, CrayPointer,
-    Hollerith, ArithmeticIF, Assign, AssignedGOTO, Pause, OpenACC, OpenMP,
-    CruftAfterAmpersand, ClassicCComments, AdditionalFormats, BigIntLiterals,
-    RealDoControls, EquivalenceNumericWithCharacter, AdditionalIntrinsics,
-    AnonymousParents, OldLabelDoEndStatements, LogicalIntegerAssignment,
-    EmptySourceFile, ProgramReturn, ImplicitNoneTypeNever,
-    ImplicitNoneTypeAlways)
+    Carriagecontrol, Convert, Dispose, IOListLeadingComma,
+    AbbreviatedEditDescriptor, ProgramParentheses, PercentRefAndVal,
+    OmitFunctionDummies, CrayPointer, Hollerith, ArithmeticIF, Assign,
+    AssignedGOTO, Pause, OpenACC, OpenMP, CruftAfterAmpersand, ClassicCComments,
+    AdditionalFormats, BigIntLiterals, RealDoControls,
+    EquivalenceNumericWithCharacter, AdditionalIntrinsics, AnonymousParents,
+    OldLabelDoEndStatements, LogicalIntegerAssignment, EmptySourceFile,
+    ProgramReturn, ImplicitNoneTypeNever, ImplicitNoneTypeAlways)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 

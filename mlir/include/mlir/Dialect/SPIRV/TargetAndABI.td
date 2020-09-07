@@ -39,12 +39,37 @@ def SPV_CapabilityArrayAttr : TypedArrayAttrBase<
 // This attribute specifies the limits for various resources on the target
 // architecture.
 //
-// See https://renderdoc.org/vkspec_chunked/chap36.html#limits for the complete
-// list of limits and their explanation for the Vulkan API. The following ones
-// are those affecting SPIR-V CodeGen.
+// See https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#limits
+// for the complete list of limits and their explanation for the Vulkan API.
+// The following ones are those affecting SPIR-V CodeGen. Their default value
+// are the from Vulkan limit requirements:
+// https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#limits-minmax
 def SPV_ResourceLimitsAttr : StructAttr<"ResourceLimitsAttr", SPIRV_Dialect, [
-    StructFieldAttr<"max_compute_workgroup_invocations", I32Attr>,
-    StructFieldAttr<"max_compute_workgroup_size", I32ElementsAttr>
+    // Unique identifier for the vendor and target GPU.
+    // 0x7FFFFFFF means unknown.
+    StructFieldAttr<"vendor_id", DefaultValuedAttr<I32Attr, "0x7FFFFFFF">>,
+    StructFieldAttr<"device_id", DefaultValuedAttr<I32Attr, "0x7FFFFFFF">>,
+    // Target device type.
+    StructFieldAttr<"device_type",
+                    DefaultValuedAttr<SPV_DeviceTypeAttr,
+                                      "::mlir::spirv::DeviceType::Unknown">>,
+
+    // The maximum total storage size, in bytes, available for variables
+    // declared with the Workgroup storage class.
+    StructFieldAttr<"max_compute_shared_memory_size",
+                    DefaultValuedAttr<I32Attr, "16384">>,
+
+    // The maximum total number of compute shader invocations in a single local
+    // workgroup.
+    StructFieldAttr<"max_compute_workgroup_invocations",
+                    DefaultValuedAttr<I32Attr, "128">>,
+    // The maximum size of a local compute workgroup, per dimension.
+    StructFieldAttr<"max_compute_workgroup_size",
+                    DefaultValuedAttr<I32ElementsAttr, "{128, 128, 64}">>,
+
+    // The default number of invocations in each subgroup.
+    // 0x7FFFFFFF means unknown.
+    StructFieldAttr<"subgroup_size", DefaultValuedAttr<I32Attr, "0x7FFFFFFF">>
 ]>;
 
 #endif // SPIRV_TARGET_AND_ABI

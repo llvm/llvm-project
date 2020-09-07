@@ -209,21 +209,21 @@ must be held on entry to the function, *and must still be held on exit*.
   }
 
 
-ACQUIRE(...), ACQUIRE_SHARED(...), RELEASE(...), RELEASE_SHARED(...)
---------------------------------------------------------------------
+ACQUIRE(...), ACQUIRE_SHARED(...), RELEASE(...), RELEASE_SHARED(...), RELEASE_GENERIC(...)
+------------------------------------------------------------------------------------------
 
 *Previously*: ``EXCLUSIVE_LOCK_FUNCTION``, ``SHARED_LOCK_FUNCTION``,
 ``UNLOCK_FUNCTION``
 
-``ACQUIRE`` is an attribute on functions or methods, which
-declares that the function acquires a capability, but does not release it.  The
-caller must not hold the given capability on entry, and it will hold the
-capability on exit.  ``ACQUIRE_SHARED`` is similar.
+``ACQUIRE`` and ``ACQUIRE_SHARED`` are attributes on functions or methods
+declaring that the function acquires a capability, but does not release it.
+The given capability must not be held on entry, and will be held on exit
+(exclusively for ``ACQUIRE``, shared for ``ACQUIRE_SHARED``).
 
-``RELEASE`` and ``RELEASE_SHARED`` declare that the function releases the given
-capability.  The caller must hold the capability on entry, and will no longer
-hold it on exit. It does not matter whether the given capability is shared or
-exclusive.
+``RELEASE``, ``RELEASE_SHARED``, and ``RELEASE_GENERIC`` declare that the
+function releases the given capability.  The capability must be held on entry
+(exclusively for ``RELEASE``, shared for ``RELEASE_SHARED``, exclusively or
+shared for ``RELEASE_GENERIC``), and will no longer be held on exit.
 
 .. code-block:: c++
 
@@ -402,6 +402,13 @@ the destructor.  Such classes require special handling because the constructor
 and destructor refer to the capability via different names; see the
 ``MutexLocker`` class in :ref:`mutexheader`, below.
 
+Scoped capabilities are treated as capabilities that are implicitly acquired
+on construction and released on destruction. They are associated with
+the set of (regular) capabilities named in thread safety attributes on the
+constructor. Acquire-type attributes on other member functions are treated as
+applying to that set of associated capabilities, while ``RELEASE`` implies that
+a function releases all associated capabilities in whatever mode they're held.
+
 
 TRY_ACQUIRE(<bool>, ...), TRY_ACQUIRE_SHARED(<bool>, ...)
 ---------------------------------------------------------
@@ -413,6 +420,26 @@ capability, and returns a boolean value indicating success or failure.
 The first argument must be ``true`` or ``false``, to specify which return value
 indicates success, and the remaining arguments are interpreted in the same way
 as ``ACQUIRE``.  See :ref:`mutexheader`, below, for example uses.
+
+Because the analysis doesn't support conditional locking, a capability is
+treated as acquired after the first branch on the return value of a try-acquire
+function.
+
+.. code-block:: c++
+
+  Mutex mu;
+  int a GUARDED_BY(mu);
+
+  void foo() {
+    bool success = mu.TryLock();
+    a = 0;         // Warning, mu is not locked.
+    if (success) {
+      a = 0;       // Ok.
+      mu.Unlock();
+    } else {
+      a = 0;       // Warning, mu is not locked.
+    }
+  }
 
 
 ASSERT_CAPABILITY(...) and ASSERT_SHARED_CAPABILITY(...)
@@ -800,6 +827,9 @@ implementation.
   #define RELEASE_SHARED(...) \
     THREAD_ANNOTATION_ATTRIBUTE__(release_shared_capability(__VA_ARGS__))
 
+  #define RELEASE_GENERIC(...) \
+    THREAD_ANNOTATION_ATTRIBUTE__(release_generic_capability(__VA_ARGS__))
+
   #define TRY_ACQUIRE(...) \
     THREAD_ANNOTATION_ATTRIBUTE__(try_acquire_capability(__VA_ARGS__))
 
@@ -844,6 +874,9 @@ implementation.
     // Release/unlock a shared mutex.
     void ReaderUnlock() RELEASE_SHARED();
 
+    // Generic unlock, can unlock exclusive and shared mutexes.
+    void GenericUnlock() RELEASE_GENERIC();
+
     // Try to acquire the mutex.  Returns true on success, and false on failure.
     bool TryLock() TRY_ACQUIRE(true);
 
@@ -860,19 +893,78 @@ implementation.
     const Mutex& operator!() const { return *this; }
   };
 
+  // Tag types for selecting a constructor.
+  struct adopt_lock_t {} inline constexpr adopt_lock = {};
+  struct defer_lock_t {} inline constexpr defer_lock = {};
+  struct shared_lock_t {} inline constexpr shared_lock = {};
 
   // MutexLocker is an RAII class that acquires a mutex in its constructor, and
   // releases it in its destructor.
   class SCOPED_CAPABILITY MutexLocker {
   private:
     Mutex* mut;
+    bool locked;
 
   public:
-    MutexLocker(Mutex *mu) ACQUIRE(mu) : mut(mu) {
+    // Acquire mu, implicitly acquire *this and associate it with mu.
+    MutexLocker(Mutex *mu) ACQUIRE(mu) : mut(mu), locked(true) {
       mu->Lock();
     }
+
+    // Assume mu is held, implicitly acquire *this and associate it with mu.
+    MutexLocker(Mutex *mu, adopt_lock_t) REQUIRES(mu) : mut(mu), locked(true) {}
+
+    // Acquire mu in shared mode, implicitly acquire *this and associate it with mu.
+    MutexLocker(Mutex *mu, shared_lock_t) ACQUIRE_SHARED(mu) : mut(mu), locked(true) {
+      mu->ReaderLock();
+    }
+
+    // Assume mu is held in shared mode, implicitly acquire *this and associate it with mu.
+    MutexLocker(Mutex *mu, adopt_lock_t, shared_lock_t) REQUIRES_SHARED(mu)
+      : mut(mu), locked(true) {}
+
+    // Assume mu is not held, implicitly acquire *this and associate it with mu.
+    MutexLocker(Mutex *mu, defer_lock_t) EXCLUDES(mu) : mut(mu), locked(false) {}
+
+    // Release *this and all associated mutexes, if they are still held.
+    // There is no warning if the scope was already unlocked before.
     ~MutexLocker() RELEASE() {
+      if (locked)
+        mut->GenericUnlock();
+    }
+
+    // Acquire all associated mutexes exclusively.
+    void Lock() ACQUIRE() {
+      mut->Lock();
+      locked = true;
+    }
+
+    // Try to acquire all associated mutexes exclusively.
+    bool TryLock() TRY_ACQUIRE(true) {
+      return locked = mut->TryLock();
+    }
+
+    // Acquire all associated mutexes in shared mode.
+    void ReaderLock() ACQUIRE_SHARED() {
+      mut->ReaderLock();
+      locked = true;
+    }
+
+    // Try to acquire all associated mutexes in shared mode.
+    bool ReaderTryLock() TRY_ACQUIRE_SHARED(true) {
+      return locked = mut->ReaderTryLock();
+    }
+
+    // Release all associated mutexes. Warn on double unlock.
+    void Unlock() RELEASE() {
       mut->Unlock();
+      locked = false;
+    }
+
+    // Release all associated mutexes. Warn on double unlock.
+    void ReaderUnlock() RELEASE() {
+      mut->ReaderUnlock();
+      locked = false;
     }
   };
 

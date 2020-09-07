@@ -4944,10 +4944,6 @@ to the SVE predicate type ``svbool_t``, this excludes tuple types such as
 ``N==__ARM_FEATURE_SVE_BITS``, the implementation defined feature macro that is
 enabled under the ``-msve-vector-bits`` flag.
 
-NOTE: This feature is currently WIP, the ``-msve-vector-bits=`` flag defines
-the ``__ARM_FEATURE_SVE_BITS_EXPERIMENTAL`` macro. This feature is complete
-when experimental is dropped.
-
 For more information See `Arm C Language Extensions for SVE
 <https://developer.arm.com/documentation/100987/latest>`_ for more information.
 }];

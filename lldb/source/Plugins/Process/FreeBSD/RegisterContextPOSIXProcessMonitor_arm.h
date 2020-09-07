@@ -16,8 +16,8 @@ class RegisterContextPOSIXProcessMonitor_arm : public RegisterContextPOSIX_arm,
                                                public POSIXBreakpointProtocol {
 public:
   RegisterContextPOSIXProcessMonitor_arm(
-      lldb_private::Thread &thread, uint32_t concrete_frame_idx,
-      lldb_private::RegisterInfoInterface *register_info);
+      lldb_private::Thread &thread,
+      std::unique_ptr<RegisterInfoPOSIX_arm> register_info);
 
 protected:
   bool ReadGPR();

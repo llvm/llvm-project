@@ -179,12 +179,12 @@ WATCHPOINT_CREATED = "Watchpoint created successfully"
 
 
 def CMD_MSG(str):
-    '''A generic "Command '%s' returns successfully" message generator.'''
-    return "Command '%s' returns successfully" % str
+    '''A generic "Command '%s' did not return successfully" message generator.'''
+    return "Command '%s' did not return successfully" % str
 
 
 def COMPLETION_MSG(str_before, str_after, completions):
-    '''A generic message generator for the completion mechanism.'''
+    '''A generic assertion failed message generator for the completion mechanism.'''
     return ("'%s' successfully completes to '%s', but completions were:\n%s"
            % (str_before, str_after, "\n".join(completions)))
 
@@ -198,8 +198,8 @@ def EXP_MSG(str, actual, exe):
 
 
 def SETTING_MSG(setting):
-    '''A generic "Value of setting '%s' is correct" message generator.'''
-    return "Value of setting '%s' is correct" % setting
+    '''A generic "Value of setting '%s' is not correct" message generator.'''
+    return "Value of setting '%s' is not correct" % setting
 
 
 def line_number(filename, string_to_match):
@@ -1292,6 +1292,29 @@ class Base(unittest2.TestCase):
         if re.match("powerpc64le", arch):
             return True
         return False
+
+    def isAArch64SVE(self):
+        triple = self.dbg.GetSelectedPlatform().GetTriple()
+
+        # TODO other platforms, please implement this function
+        if not re.match(".*-.*-linux", triple):
+            return False
+
+        # Need to do something different for non-Linux/Android targets
+        cpuinfo_path = self.getBuildArtifact("cpuinfo")
+        if configuration.lldb_platform_name:
+            self.runCmd('platform get-file "/proc/cpuinfo" ' + cpuinfo_path)
+        else:
+            cpuinfo_path = "/proc/cpuinfo"
+
+        try:
+            f = open(cpuinfo_path, 'r')
+            cpuinfo = f.read()
+            f.close()
+        except:
+            return False
+
+        return " sve " in cpuinfo
 
     def getArchitecture(self):
         """Returns the architecture in effect the test suite is running with."""
@@ -2433,58 +2456,76 @@ FileCheck output:
             with recording(self, trace) as sbuf:
                 print("looking at:", output, file=sbuf)
 
-        # The heading says either "Expecting" or "Not expecting".
-        heading = "Expecting" if matching else "Not expecting"
+        expecting_str = "Expecting" if matching else "Not expecting"
+        def found_str(matched):
+            return "was found" if matched else "was not found"
 
-        # Start from the startstr, if specified.
-        # If there's no startstr, set the initial state appropriately.
-        matched = output.startswith(startstr) if startstr else (
-            True if matching else False)
+        # To be used as assert fail message and/or trace content
+        log_lines = [
+                "{}:".format("Ran command" if exe else "Checking string"),
+                "\"{}\"".format(str),
+                # Space out command and output
+                "",
+        ]
+        if exe:
+            # Newline before output to make large strings more readable
+            log_lines.append("Got output:\n{}".format(output))
 
+        # Assume that we start matched if we want a match
+        # Meaning if you have no conditions, matching or
+        # not matching will always pass
+        matched = matching
+
+        # We will stop checking on first failure
         if startstr:
-            with recording(self, trace) as sbuf:
-                print("%s start string: %s" % (heading, startstr), file=sbuf)
-                print("Matched" if matched else "Not matched", file=sbuf)
+            matched = output.startswith(startstr)
+            log_lines.append("{} start string: \"{}\" ({})".format(
+                    expecting_str, startstr, found_str(matched)))
 
-        # Look for endstr, if specified.
-        keepgoing = matched if matching else not matched
-        if endstr:
+        if endstr and matched == matching:
             matched = output.endswith(endstr)
-            with recording(self, trace) as sbuf:
-                print("%s end string: %s" % (heading, endstr), file=sbuf)
-                print("Matched" if matched else "Not matched", file=sbuf)
+            log_lines.append("{} end string: \"{}\" ({})".format(
+                    expecting_str, endstr, found_str(matched)))
 
-        # Look for sub strings, if specified.
-        keepgoing = matched if matching else not matched
-        if substrs and keepgoing:
+        if substrs and matched == matching:
             start = 0
             for substr in substrs:
                 index = output[start:].find(substr)
                 start = start + index if ordered and matching else 0
                 matched = index != -1
-                with recording(self, trace) as sbuf:
-                    print("%s sub string: %s" % (heading, substr), file=sbuf)
-                    print("Matched" if matched else "Not matched", file=sbuf)
-                keepgoing = matched if matching else not matched
-                if not keepgoing:
+                log_lines.append("{} sub string: \"{}\" ({})".format(
+                        expecting_str, substr, found_str(matched)))
+
+                if matched != matching:
                     break
 
-        # Search for regular expression patterns, if specified.
-        keepgoing = matched if matching else not matched
-        if patterns and keepgoing:
+        if patterns and matched == matching:
             for pattern in patterns:
-                # Match Objects always have a boolean value of True.
-                matched = bool(re.search(pattern, output))
-                with recording(self, trace) as sbuf:
-                    print("%s pattern: %s" % (heading, pattern), file=sbuf)
-                    print("Matched" if matched else "Not matched", file=sbuf)
-                keepgoing = matched if matching else not matched
-                if not keepgoing:
+                matched = re.search(pattern, output)
+
+                pattern_line = "{} regex pattern: \"{}\" ({}".format(
+                        expecting_str, pattern, found_str(matched))
+                if matched:
+                    pattern_line += ", matched \"{}\"".format(
+                            matched.group(0))
+                pattern_line += ")"
+                log_lines.append(pattern_line)
+
+                # Convert to bool because match objects
+                # are True-ish but != True itself
+                matched = bool(matched)
+                if matched != matching:
                     break
 
-        self.assertTrue(matched if matching else not matched,
-                        msg + "\nCommand output:\n" + EXP_MSG(str, output, exe)
-                        if msg else EXP_MSG(str, output, exe))
+        # If a check failed, add any extra assert message
+        if msg is not None and matched != matching:
+            log_lines.append(msg)
+
+        log_msg = "\n".join(log_lines)
+        with recording(self, trace) as sbuf:
+            print(log_msg, file=sbuf)
+        if matched != matching:
+            self.fail(log_msg)
 
     def expect_expr(
             self,

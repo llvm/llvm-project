@@ -36,7 +36,7 @@ define float @call_split_type_used_outside_block_v2f32() #0 {
 ; GCN-NEXT:    s_add_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func_v2f32@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func_v2f32@rel32@hi+4
+; GCN-NEXT:    s_addc_u32 s5, s5, func_v2f32@rel32@hi+12
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 0
@@ -70,7 +70,7 @@ define float @call_split_type_used_outside_block_v3f32() #0 {
 ; GCN-NEXT:    s_add_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func_v3f32@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func_v3f32@rel32@hi+4
+; GCN-NEXT:    s_addc_u32 s5, s5, func_v3f32@rel32@hi+12
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 0
@@ -104,7 +104,7 @@ define half @call_split_type_used_outside_block_v4f16() #0 {
 ; GCN-NEXT:    s_add_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func_v4f16@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func_v4f16@rel32@hi+4
+; GCN-NEXT:    s_addc_u32 s5, s5, func_v4f16@rel32@hi+12
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 0
@@ -138,7 +138,7 @@ define { i32, half } @call_split_type_used_outside_block_struct() #0 {
 ; GCN-NEXT:    s_add_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func_struct@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func_struct@rel32@hi+4
+; GCN-NEXT:    s_addc_u32 s5, s5, func_struct@rel32@hi+12
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 0
@@ -182,7 +182,7 @@ define amdgpu_kernel void @v3i16_registers(i1 %cond) #0 {
 ; GCN-NEXT:  ; %bb.1: ; %if.else
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func_v3i16@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func_v3i16@rel32@hi+4
+; GCN-NEXT:    s_addc_u32 s5, s5, func_v3i16@rel32@hi+12
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    s_branch BB4_3
 ; GCN-NEXT:  BB4_2:
@@ -227,7 +227,7 @@ define amdgpu_kernel void @v3f16_registers(i1 %cond) #0 {
 ; GCN-NEXT:  ; %bb.1: ; %if.else
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func_v3f16@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func_v3f16@rel32@hi+4
+; GCN-NEXT:    s_addc_u32 s5, s5, func_v3f16@rel32@hi+12
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    s_branch BB5_3
 ; GCN-NEXT:  BB5_2:

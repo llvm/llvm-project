@@ -242,7 +242,7 @@ public:
 } // namespace
 
 template <typename T>
-static llvm::Expected<SmallVector<clang::transformer::Edit, 1>>
+llvm::Expected<SmallVector<clang::transformer::Edit, 1>>
 rewriteDescendantsImpl(const T &Node, RewriteRule Rule,
                        const MatchResult &Result) {
   ApplyRuleCallback Callback(std::move(Rule));
@@ -252,10 +252,43 @@ rewriteDescendantsImpl(const T &Node, RewriteRule Rule,
   return std::move(Callback.Edits);
 }
 
+llvm::Expected<SmallVector<clang::transformer::Edit, 1>>
+transformer::detail::rewriteDescendants(const Decl &Node, RewriteRule Rule,
+                                        const MatchResult &Result) {
+  return rewriteDescendantsImpl(Node, std::move(Rule), Result);
+}
+
+llvm::Expected<SmallVector<clang::transformer::Edit, 1>>
+transformer::detail::rewriteDescendants(const Stmt &Node, RewriteRule Rule,
+                                        const MatchResult &Result) {
+  return rewriteDescendantsImpl(Node, std::move(Rule), Result);
+}
+
+llvm::Expected<SmallVector<clang::transformer::Edit, 1>>
+transformer::detail::rewriteDescendants(const TypeLoc &Node, RewriteRule Rule,
+                                        const MatchResult &Result) {
+  return rewriteDescendantsImpl(Node, std::move(Rule), Result);
+}
+
+llvm::Expected<SmallVector<clang::transformer::Edit, 1>>
+transformer::detail::rewriteDescendants(const DynTypedNode &DNode,
+                                        RewriteRule Rule,
+                                        const MatchResult &Result) {
+  if (const auto *Node = DNode.get<Decl>())
+    return rewriteDescendantsImpl(*Node, std::move(Rule), Result);
+  if (const auto *Node = DNode.get<Stmt>())
+    return rewriteDescendantsImpl(*Node, std::move(Rule), Result);
+  if (const auto *Node = DNode.get<TypeLoc>())
+    return rewriteDescendantsImpl(*Node, std::move(Rule), Result);
+
+  return llvm::make_error<llvm::StringError>(
+      llvm::errc::invalid_argument,
+      "type unsupported for recursive rewriting, Kind=" +
+          DNode.getNodeKind().asStringRef());
+}
+
 EditGenerator transformer::rewriteDescendants(std::string NodeId,
                                               RewriteRule Rule) {
-  // FIXME: warn or return error if `Rule` contains any `AddedIncludes`, since
-  // these will be dropped.
   return [NodeId = std::move(NodeId),
           Rule = std::move(Rule)](const MatchResult &Result)
              -> llvm::Expected<SmallVector<clang::transformer::Edit, 1>> {
@@ -265,17 +298,7 @@ EditGenerator transformer::rewriteDescendants(std::string NodeId,
     if (It == NodesMap.end())
       return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
                                                  "ID not bound: " + NodeId);
-    if (auto *Node = It->second.get<Decl>())
-      return rewriteDescendantsImpl(*Node, std::move(Rule), Result);
-    if (auto *Node = It->second.get<Stmt>())
-      return rewriteDescendantsImpl(*Node, std::move(Rule), Result);
-    if (auto *Node = It->second.get<TypeLoc>())
-      return rewriteDescendantsImpl(*Node, std::move(Rule), Result);
-
-    return llvm::make_error<llvm::StringError>(
-        llvm::errc::invalid_argument,
-        "type unsupported for recursive rewriting, ID=\"" + NodeId +
-            "\", Kind=" + It->second.getNodeKind().asStringRef());
+    return detail::rewriteDescendants(It->second, std::move(Rule), Result);
   };
 }
 
@@ -345,14 +368,13 @@ transformer::detail::buildMatchers(const RewriteRule &Rule) {
   // Each anyOf explicitly controls the traversal kind. The anyOf itself is set
   // to `TK_AsIs` to ensure no nodes are skipped, thereby deferring to the kind
   // of the branches. Then, each branch is either left as is, if the kind is
-  // already set, or explicitly set to `TK_IgnoreUnlessSpelledInSource`. We
-  // choose this setting, because we think it is the one most friendly to
-  // beginners, who are (largely) the target audience of Transformer.
+  // already set, or explicitly set to `TK_AsIs`. We choose this setting because
+  // it is the default interpretation of matchers.
   std::vector<DynTypedMatcher> Matchers;
   for (const auto &Bucket : Buckets) {
     DynTypedMatcher M = DynTypedMatcher::constructVariadic(
         DynTypedMatcher::VO_AnyOf, Bucket.first,
-        taggedMatchers("Tag", Bucket.second, TK_IgnoreUnlessSpelledInSource));
+        taggedMatchers("Tag", Bucket.second, TK_AsIs));
     M.setAllowBind(true);
     // `tryBind` is guaranteed to succeed, because `AllowBind` was set to true.
     Matchers.push_back(M.tryBind(RootID)->withTraversalKind(TK_AsIs));

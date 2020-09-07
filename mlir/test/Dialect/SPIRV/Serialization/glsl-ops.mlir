@@ -14,6 +14,20 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %4 = spv.GLSL.Sin %arg0 : f32
     // CHECK: {{%.*}} = spv.GLSL.Tan {{%.*}} : f32
     %5 = spv.GLSL.Tan %arg0 : f32
+    // CHECK: {{%.*}} = spv.GLSL.Acos {{%.*}} : f32
+    %6 = spv.GLSL.Acos %arg0 : f32
+    // CHECK: {{%.*}} = spv.GLSL.Asin {{%.*}} : f32
+    %7 = spv.GLSL.Asin %arg0 : f32
+    // CHECK: {{%.*}} = spv.GLSL.Atan {{%.*}} : f32
+    %8 = spv.GLSL.Atan %arg0 : f32
+    // CHECK: {{%.*}} = spv.GLSL.Sinh {{%.*}} : f32
+    %9 = spv.GLSL.Sinh %arg0 : f32
+    // CHECK: {{%.*}} = spv.GLSL.Cosh {{%.*}} : f32
+    %10 = spv.GLSL.Cosh %arg0 : f32
+    // CHECK: {{%.*}} = spv.GLSL.Pow {{%.*}} : f32
+    %11 = spv.GLSL.Pow %arg0, %arg1 : f32
+    // CHECK: {{%.*}} = spv.GLSL.Round {{%.*}} : f32
+    %12 = spv.GLSL.Round %arg0 : f32
     spv.Return
   }
 }

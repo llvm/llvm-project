@@ -198,7 +198,7 @@ define hidden void @use_workgroup_id_yz() #1 {
 ; GCN: s_mov_b32 s4, s6
 ; GCN-NEXT: s_getpc_b64 s[6:7]
 ; GCN-NEXT: s_add_u32 s6, s6, use_workgroup_id_x@rel32@lo+4
-; GCN-NEXT: s_addc_u32 s7, s7, use_workgroup_id_x@rel32@hi+4
+; GCN-NEXT: s_addc_u32 s7, s7, use_workgroup_id_x@rel32@hi+12
 ; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_endpgm

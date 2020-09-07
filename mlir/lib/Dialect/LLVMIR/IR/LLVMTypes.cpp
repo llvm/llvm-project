@@ -440,7 +440,8 @@ LogicalResult LLVMStructType::setBody(ArrayRef<LLVMType> types, bool isPacked) {
 bool LLVMStructType::isPacked() { return getImpl()->isPacked(); }
 bool LLVMStructType::isIdentified() { return getImpl()->isIdentified(); }
 bool LLVMStructType::isOpaque() {
-  return getImpl()->isOpaque() || !getImpl()->isInitialized();
+  return getImpl()->isIdentified() &&
+         (getImpl()->isOpaque() || !getImpl()->isInitialized());
 }
 bool LLVMStructType::isInitialized() { return getImpl()->isInitialized(); }
 StringRef LLVMStructType::getName() { return getImpl()->getIdentifier(); }

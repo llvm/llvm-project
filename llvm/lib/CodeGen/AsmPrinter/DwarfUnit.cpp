@@ -1013,8 +1013,10 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
       Tag == dwarf::DW_TAG_class_type || Tag == dwarf::DW_TAG_structure_type ||
       Tag == dwarf::DW_TAG_union_type) {
     // Add size if non-zero (derived types might be zero-sized.)
+    // Ignore the size if it's a non-enum forward decl.
     // TODO: Do we care about size for enum forward declarations?
-    if (Size)
+    if (Size &&
+        (!CTy->isForwardDecl() || Tag == dwarf::DW_TAG_enumeration_type))
       addUInt(Buffer, dwarf::DW_AT_byte_size, None, Size);
     else if (!CTy->isForwardDecl())
       // Add zero size if it is not a forward declaration.

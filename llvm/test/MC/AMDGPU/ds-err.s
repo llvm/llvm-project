@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --implicit-check-not=error: %s
 
 // offset too big
 // CHECK: error: invalid operand for instruction
@@ -18,19 +18,19 @@ ds_write2_b32 v2, v4, v6 offset0:4 offset0:8
 ds_write2_b32 v2, v4, v6 offset1:4 offset1:8
 
 // offset0 too big
-// CHECK: invalid operand for instruction
+// CHECK: error: invalid operand for instruction
 ds_write2_b32 v2, v4, v6 offset0:1000000000
 
 // offset0 too big
-// CHECK: invalid operand for instruction
+// CHECK: error: invalid operand for instruction
 ds_write2_b32 v2, v4, v6 offset0:0x100
 
 // offset1 too big
-// CHECK: invalid operand for instruction
+// CHECK: error: invalid operand for instruction
 ds_write2_b32 v2, v4, v6 offset1:1000000000
 
 // offset1 too big
-// CHECK: invalid operand for instruction
+// CHECK: error: invalid operand for instruction
 ds_write2_b32 v2, v4, v6 offset1:0x100
 
 //===----------------------------------------------------------------------===//
@@ -40,7 +40,7 @@ ds_write2_b32 v2, v4, v6 offset1:0x100
 // CHECK: error: expected a colon
 ds_swizzle_b32 v8, v2 offset
 
-// CHECK: error: failed parsing operand
+// CHECK: error: unknown token in expression
 ds_swizzle_b32 v8, v2 offset:
 
 // CHECK: error: expected a colon
@@ -121,5 +121,5 @@ ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "ppii")
 // CHECK: error: expected a 5-character mask
 ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "pppiii")
 
-// CHECK: invalid mask
+// CHECK: error: invalid mask
 ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "pppi2")

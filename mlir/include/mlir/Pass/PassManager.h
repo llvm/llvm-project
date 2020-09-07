@@ -26,9 +26,9 @@ class Any;
 
 namespace mlir {
 class AnalysisManager;
+class Identifier;
 class MLIRContext;
 class ModuleOp;
-class OperationName;
 class Operation;
 class Pass;
 class PassInstrumentation;
@@ -47,7 +47,8 @@ struct OpPassManagerImpl;
 /// other OpPassManagers or the top-level PassManager.
 class OpPassManager {
 public:
-  OpPassManager(OperationName name, bool verifyPasses);
+  OpPassManager(Identifier name, bool verifyPasses);
+  OpPassManager(StringRef name, bool verifyPasses);
   OpPassManager(OpPassManager &&rhs);
   OpPassManager(const OpPassManager &rhs);
   ~OpPassManager();
@@ -70,7 +71,7 @@ public:
 
   /// Nest a new operation pass manager for the given operation kind under this
   /// pass manager.
-  OpPassManager &nest(const OperationName &nestedName);
+  OpPassManager &nest(Identifier nestedName);
   OpPassManager &nest(StringRef nestedName);
   template <typename OpT> OpPassManager &nest() {
     return nest(OpT::getOperationName());
@@ -89,11 +90,11 @@ public:
   /// Returns the number of passes held by this manager.
   size_t size() const;
 
-  /// Return an instance of the context.
-  MLIRContext *getContext() const;
+  /// Return the operation name that this pass manager operates on.
+  Identifier getOpName(MLIRContext &context) const;
 
   /// Return the operation name that this pass manager operates on.
-  const OperationName &getOpName() const;
+  StringRef getOpName() const;
 
   /// Returns the internal implementation instance.
   detail::OpPassManagerImpl &getImpl();
@@ -150,6 +151,9 @@ public:
   /// Run the passes within this manager on the provided module.
   LLVM_NODISCARD
   LogicalResult run(ModuleOp module);
+
+  /// Return an instance of the context.
+  MLIRContext *getContext() const { return context; }
 
   /// Enable support for the pass manager to generate a reproducer on the event
   /// of a crash or a pass failure. `outputFile` is a .mlir filename used to
@@ -303,6 +307,9 @@ private:
   LogicalResult
   runWithCrashRecovery(MutableArrayRef<std::unique_ptr<Pass>> passes,
                        ModuleOp module, AnalysisManager am);
+
+  /// Context this PassManager was initialized with.
+  MLIRContext *context;
 
   /// Flag that specifies if pass statistics should be dumped.
   Optional<PassDisplayMode> passStatisticsMode;

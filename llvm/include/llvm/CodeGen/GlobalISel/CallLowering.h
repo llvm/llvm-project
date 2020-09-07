@@ -17,8 +17,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachineValueType.h"
 #include <cstdint>
@@ -30,11 +32,9 @@ class CallBase;
 class DataLayout;
 class Function;
 class MachineIRBuilder;
-class MachineOperand;
 struct MachinePointerInfo;
 class MachineRegisterInfo;
 class TargetLowering;
-class Type;
 class Value;
 
 class CallLowering {

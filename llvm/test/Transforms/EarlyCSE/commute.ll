@@ -1029,6 +1029,49 @@ define i16 @umul_fix_scale(i16 %a, i16 %b, i32 %s) {
   ret i16 %o
 }
 
+; TODO: handle >2 args
+
+define float @fma(float %a, float %b, float %c) {
+; CHECK-LABEL: @fma(
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.fma.f32(float [[A:%.*]], float [[B:%.*]], float [[C:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.fma.f32(float [[B]], float [[A]], float [[C]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv nnan float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %x = call float @llvm.fma.f32(float %a, float %b, float %c)
+  %y = call float @llvm.fma.f32(float %b, float %a, float %c)
+  %r = fdiv nnan float %x, %y
+  ret float %r
+}
+
+define float @fma_different_add_ops(float %a, float %b, float %c, float %d) {
+; CHECK-LABEL: @fma_different_add_ops(
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.fma.f32(float [[A:%.*]], float [[B:%.*]], float [[C:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.fma.f32(float [[B]], float [[A]], float [[D:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv nnan float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %x = call float @llvm.fma.f32(float %a, float %b, float %c)
+  %y = call float @llvm.fma.f32(float %b, float %a, float %d)
+  %r = fdiv nnan float %x, %y
+  ret float %r
+}
+
+; TODO: handle >2 args
+
+define <2 x double> @fmuladd(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+; CHECK-LABEL: @fmuladd(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> [[C:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[B]], <2 x double> [[A]], <2 x double> [[C]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv nnan <2 x double> [[X]], [[Y]]
+; CHECK-NEXT:    ret <2 x double> [[R]]
+;
+  %x = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c)
+  %y = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> %b, <2 x double> %a, <2 x double> %c)
+  %r = fdiv nnan <2 x double> %x, %y
+  ret <2 x double> %r
+}
+
 declare float @llvm.maxnum.f32(float, float)
 declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>)
 declare <2 x double> @llvm.maximum.v2f64(<2 x double>, <2 x double>)
@@ -1051,3 +1094,6 @@ declare i16 @llvm.smul.fix.i16(i16, i16, i32)
 declare i16 @llvm.umul.fix.i16(i16, i16, i32)
 declare <3 x i16> @llvm.smul.fix.sat.v3i16(<3 x i16>, <3 x i16>, i32)
 declare <3 x i16> @llvm.umul.fix.sat.v3i16(<3 x i16>, <3 x i16>, i32)
+
+declare float @llvm.fma.f32(float, float, float)
+declare <2 x double> @llvm.fmuladd.v2f64(<2 x double>, <2 x double>, <2 x double>)

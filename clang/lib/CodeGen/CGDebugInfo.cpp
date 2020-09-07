@@ -1031,6 +1031,10 @@ CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
   uint64_t Size = 0;
   uint32_t Align = 0;
 
+  const RecordDecl *D = RD->getDefinition();
+  if (D && D->isCompleteDefinition())
+    Size = CGM.getContext().getTypeSize(Ty);
+
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagFwdDecl;
 
   // Add flag to nontrivial forward declarations. To be consistent with MSVC,

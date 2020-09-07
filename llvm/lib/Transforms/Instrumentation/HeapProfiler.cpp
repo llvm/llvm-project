@@ -1,5 +1,4 @@
-//===- HeapProfiler.cpp - heap allocation and access profiler
-//--------------===//
+//===- HeapProfiler.cpp - heap allocation and access profiler -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -164,7 +163,8 @@ public:
   /// If it is an interesting memory access, populate information
   /// about the access and return a InterestingMemoryAccess struct.
   /// Otherwise return None.
-  Optional<InterestingMemoryAccess> isInterestingMemoryAccess(Instruction *I);
+  Optional<InterestingMemoryAccess>
+  isInterestingMemoryAccess(Instruction *I) const;
 
   void instrumentMop(Instruction *I, const DataLayout &DL,
                      InterestingMemoryAccess &Access);
@@ -321,7 +321,7 @@ void HeapProfiler::instrumentMemIntrinsic(MemIntrinsic *MI) {
 }
 
 Optional<InterestingMemoryAccess>
-HeapProfiler::isInterestingMemoryAccess(Instruction *I) {
+HeapProfiler::isInterestingMemoryAccess(Instruction *I) const {
   // Do not instrument the load fetching the dynamic shadow address.
   if (DynamicShadowOffset == I)
     return None;

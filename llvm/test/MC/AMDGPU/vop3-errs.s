@@ -1,7 +1,7 @@
-// RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck %s --check-prefix=GFX67 --check-prefix=GCN
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck %s --check-prefix=GFX67 --check-prefix=GCN
-// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s 2>&1 | FileCheck %s --check-prefix=GFX89 --check-prefix=GCN
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=GFX89 --check-prefix=GCN
+// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck %s --check-prefix=GFX67 --check-prefix=GCN --implicit-check-not=error:
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s --check-prefix=GFX67 --check-prefix=GCN --implicit-check-not=error:
+// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji %s 2>&1 | FileCheck %s --check-prefix=GFX89 --check-prefix=GCN --implicit-check-not=error:
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck %s --check-prefix=GFX89 --check-prefix=GCN --implicit-check-not=error:
 
 v_add_f32_e64 v0, v1
 // GCN: error: too few operands for instruction

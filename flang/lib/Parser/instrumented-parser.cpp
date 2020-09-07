@@ -63,14 +63,15 @@ void ParsingLog::Note(const char *at, const MessageFixedText &tag, bool pass,
   }
 }
 
-void ParsingLog::Dump(llvm::raw_ostream &o, const CookedSource &cooked) const {
+void ParsingLog::Dump(
+    llvm::raw_ostream &o, const AllCookedSources &allCooked) const {
   for (const auto &posLog : perPos_) {
     const char *at{reinterpret_cast<const char *>(posLog.first)};
     for (const auto &tagLog : posLog.second.perTag) {
-      Message{at, tagLog.first}.Emit(o, cooked, true);
+      Message{at, tagLog.first}.Emit(o, allCooked, true);
       auto &entry{tagLog.second};
       o << "  " << (entry.pass ? "pass" : "fail") << " " << entry.count << '\n';
-      entry.messages.Emit(o, cooked);
+      entry.messages.Emit(o, allCooked);
     }
   }
 }

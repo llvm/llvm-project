@@ -3965,6 +3965,15 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
     if (match(FalseVal, isRotate) && TrueVal == X && CmpLHS == ShAmt &&
         Pred == ICmpInst::ICMP_EQ)
       return FalseVal;
+
+    // X == 0 ? abs(X) : -abs(X) --> -abs(X)
+    // X == 0 ? -abs(X) : abs(X) --> abs(X)
+    if (match(TrueVal, m_Intrinsic<Intrinsic::abs>(m_Value(X))) &&
+        match(FalseVal, m_Neg(m_Intrinsic<Intrinsic::abs>(m_Specific(X)))))
+      return FalseVal;
+    if (match(TrueVal, m_Neg(m_Intrinsic<Intrinsic::abs>(m_Value(X)))) &&
+        match(FalseVal, m_Intrinsic<Intrinsic::abs>(m_Specific(X))))
+      return FalseVal;
   }
 
   // Check for other compares that behave like bit test.
@@ -5325,6 +5334,13 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
       return Op0;
     if (isICmpTrue(Pred, Op1, Op0, Q.getWithoutUndef(), RecursionLimit))
       return Op1;
+
+    if (Optional<bool> Imp =
+            isImpliedByDomCondition(Pred, Op0, Op1, Q.CxtI, Q.DL))
+      return *Imp ? Op0 : Op1;
+    if (Optional<bool> Imp =
+            isImpliedByDomCondition(Pred, Op1, Op0, Q.CxtI, Q.DL))
+      return *Imp ? Op1 : Op0;
 
     break;
   }

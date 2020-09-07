@@ -36,6 +36,7 @@
     __cpp_lib_concepts                             201806L [C++2a]
     __cpp_lib_constexpr_misc                       201811L [C++2a]
     __cpp_lib_constexpr_swap_algorithms            201806L [C++2a]
+    __cpp_lib_constexpr_utility                    201811L [C++2a]
     __cpp_lib_destroying_delete                    201806L [C++2a]
     __cpp_lib_enable_shared_from_this              201603L [C++17]
     __cpp_lib_endian                               201907L [C++2a]
@@ -192,6 +193,10 @@
 
 # ifdef __cpp_lib_constexpr_swap_algorithms
 #   error "__cpp_lib_constexpr_swap_algorithms should not be defined before c++2a"
+# endif
+
+# ifdef __cpp_lib_constexpr_utility
+#   error "__cpp_lib_constexpr_utility should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_destroying_delete
@@ -548,6 +553,10 @@
 
 # ifdef __cpp_lib_constexpr_swap_algorithms
 #   error "__cpp_lib_constexpr_swap_algorithms should not be defined before c++2a"
+# endif
+
+# ifdef __cpp_lib_constexpr_utility
+#   error "__cpp_lib_constexpr_utility should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_destroying_delete
@@ -1018,6 +1027,10 @@
 
 # ifdef __cpp_lib_constexpr_swap_algorithms
 #   error "__cpp_lib_constexpr_swap_algorithms should not be defined before c++2a"
+# endif
+
+# ifdef __cpp_lib_constexpr_utility
+#   error "__cpp_lib_constexpr_utility should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_destroying_delete
@@ -1719,6 +1732,13 @@
 #   ifdef __cpp_lib_constexpr_swap_algorithms
 #     error "__cpp_lib_constexpr_swap_algorithms should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_constexpr_utility
+#   error "__cpp_lib_constexpr_utility should be defined in c++2a"
+# endif
+# if __cpp_lib_constexpr_utility != 201811L
+#   error "__cpp_lib_constexpr_utility should have the value 201811L in c++2a"
 # endif
 
 # if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L

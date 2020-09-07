@@ -1,12 +1,12 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICIVI9-ERR,SIVICI-ERR,SI-ERR %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICIVI9-ERR,SIVICI-ERR,CIVI9-ERR %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX9-ERR,SICIVI9-ERR,CIVI9-ERR %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX10-ERR %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICIVI9-ERR,SIVICI-ERR,SI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICIVI9-ERR,SIVICI-ERR,CIVI9-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX9-ERR,SICIVI9-ERR,CIVI9-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX10-ERR --implicit-check-not=error: %s
 
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck -check-prefix=SIVICI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck -check-prefix=SIVICI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX9 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX10 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=SIVICI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=SIVICI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefix=GFX9 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
 
 s_add_i32 s106, s0, s1
 // GCN-ERR: error: not a valid operand
@@ -84,21 +84,25 @@ s_mov_b32 ttmp12, 0
 // SICIVI: error: not a valid operand
 // GFX9: s_mov_b32 ttmp12, 0 ; encoding:
 // GFX10: s_mov_b32 ttmp12, 0 ; encoding:
+// SIVICI-ERR: error: not a valid operand.
 
 s_mov_b32 ttmp15, 0
 // SICIVI: error: not a valid operand
 // GFX9: s_mov_b32 ttmp15, 0 ; encoding:
 // GFX10: s_mov_b32 ttmp15, 0 ; encoding:
+// SIVICI-ERR: error: not a valid operand.
 
 s_mov_b32 flat_scratch_lo, 0
 // SI-ERR: error: not a valid operand
 // CIVI9: s_mov_b32 flat_scratch_lo, 0 ; encoding:
 // GFX10-ERR: error: not a valid operand
+// GFX9: s_mov_b32 flat_scratch_lo, 0 ; encoding: [0x80,0x00,0xe6,0xbe]
 
 s_mov_b32 flat_scratch_hi, 0
 // SI-ERR: error: not a valid operand
 // CIVI9: s_mov_b32 flat_scratch_hi, 0 ; encoding:
 // GFX10-ERR: error: not a valid operand
+// GFX9: s_mov_b32 flat_scratch_hi, 0 ; encoding: [0x80,0x00,0xe7,0xbe]
 
 s_mov_b32 tma_lo, 0
 // SIVICI: s_mov_b32 tma_lo, 0 ; encoding:

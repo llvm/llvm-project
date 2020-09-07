@@ -225,6 +225,15 @@ void LiveIntervals::computeRegMasks() {
       RegMaskBits.push_back(Mask);
     }
 
+    // Unwinders may clobber additional registers.
+    // FIXME: This functionality can possibly be merged into
+    // MachineBasicBlock::getBeginClobberMask().
+    if (MBB.isEHPad())
+      if (auto *Mask = TRI->getCustomEHPadPreservedMask(*MBB.getParent())) {
+        RegMaskSlots.push_back(Indexes->getMBBStartIdx(&MBB));
+        RegMaskBits.push_back(Mask);
+      }
+
     for (const MachineInstr &MI : MBB) {
       for (const MachineOperand &MO : MI.operands()) {
         if (!MO.isRegMask())

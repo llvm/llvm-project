@@ -14,7 +14,7 @@ define dso_local void @mve_gather_qi_wb(i32* noalias nocapture readonly %A, i32*
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vadd.i32 q0, q0, r1
 ; CHECK-NEXT:    adds r1, r3, #4
-; CHECK:  .LBB0_1: @ %vector.body
+; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r3
 ; CHECK-NEXT:    vmov q2, q1
@@ -30,6 +30,13 @@ define dso_local void @mve_gather_qi_wb(i32* noalias nocapture readonly %A, i32*
 ; CHECK-NEXT:    vaddv.u32 r0, q0
 ; CHECK-NEXT:    str.w r0, [r2, r1, lsl #2]
 ; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.3:
+; CHECK-NEXT:  .LCPI0_0:
+; CHECK-NEXT:    .long 4294967228 @ 0xffffffbc
+; CHECK-NEXT:    .long 4294967248 @ 0xffffffd0
+; CHECK-NEXT:    .long 4294967268 @ 0xffffffe4
+; CHECK-NEXT:    .long 4294967288 @ 0xfffffff8
 entry:                                  ; preds = %middle.
   %add.us.us = add i32 4, %n
   %arrayidx.us.us = getelementptr inbounds i32, i32* %C, i32 %add.us.us
@@ -79,7 +86,7 @@ define dso_local void @mve_gatherscatter_offset(i32* noalias nocapture readonly 
 ; CHECK-NEXT:    vmov.i32 q2, #0x0
 ; CHECK-NEXT:    vmov.i32 q0, #0x14
 ; CHECK-NEXT:    dls lr, lr
-; CHECK:  .LBB1_1: @ %vector.body
+; CHECK-NEXT:  .LBB1_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r3
 ; CHECK-NEXT:    vmov q3, q2
@@ -154,7 +161,7 @@ define dso_local void @mve_scatter_qi(i32* noalias nocapture readonly %A, i32* n
 ; CHECK-NEXT:    vadd.i32 q0, q0, r1
 ; CHECK-NEXT:    adds r1, r3, #4
 ; CHECK-NEXT:    dls lr, lr
-; CHECK:  .LBB2_1: @ %vector.body
+; CHECK-NEXT:  .LBB2_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r3
 ; CHECK-NEXT:    vmov q3, q1

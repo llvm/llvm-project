@@ -100,6 +100,11 @@ BUILTIN(__builtin_altivec_vmulouh, "V4UiV8UsV8Us", "")
 BUILTIN(__builtin_altivec_vmulosh, "V4SiV8SsV8Ss", "")
 BUILTIN(__builtin_altivec_vmulouw, "V2ULLiV4UiV4Ui", "")
 BUILTIN(__builtin_altivec_vmulosw, "V2SLLiV4SiV4Si", "")
+BUILTIN(__builtin_altivec_vmuleud, "V1ULLLiV2ULLiV2ULLi", "")
+BUILTIN(__builtin_altivec_vmulesd, "V1SLLLiV2SLLiV2SLLi", "")
+BUILTIN(__builtin_altivec_vmuloud, "V1ULLLiV2ULLiV2ULLi", "")
+BUILTIN(__builtin_altivec_vmulosd, "V1SLLLiV2SLLiV2SLLi", "")
+BUILTIN(__builtin_altivec_vmsumcud, "V1ULLLiV2ULLiV2ULLiV1ULLLi", "")
 
 BUILTIN(__builtin_altivec_vnmsubfp, "V4fV4fV4fV4f", "")
 
@@ -316,6 +321,13 @@ BUILTIN(__builtin_altivec_vmulhsw, "V4SiV4SiV4Si", "")
 BUILTIN(__builtin_altivec_vmulhuw, "V4UiV4UiV4Ui", "")
 BUILTIN(__builtin_altivec_vmulhsd, "V2LLiV2LLiV2LLi", "")
 BUILTIN(__builtin_altivec_vmulhud, "V2ULLiV2ULLiV2ULLi", "")
+
+// P10 Vector Expand with Mask built-ins.
+BUILTIN(__builtin_altivec_vexpandbm, "V16UcV16Uc", "")
+BUILTIN(__builtin_altivec_vexpandhm, "V8UsV8Us", "")
+BUILTIN(__builtin_altivec_vexpandwm, "V4UiV4Ui", "")
+BUILTIN(__builtin_altivec_vexpanddm, "V2ULLiV2ULLi", "")
+BUILTIN(__builtin_altivec_vexpandqm, "V1ULLLiV1ULLLi", "")
 
 // P10 Vector Parallel Bits built-ins.
 BUILTIN(__builtin_altivec_vpdepd, "V2ULLiV2ULLiV2ULLi", "")

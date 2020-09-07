@@ -5,12 +5,12 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx810 -show-encoding %s | FileCheck %s --check-prefix=GCN  --check-prefix=SICIVI --check-prefix=VI --check-prefix=GFX89 --check-prefix=GFX8_1
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=GFX9 --check-prefix=GFX89
 
-// RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOVI --check-prefix=NOGFX8_0
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx810 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOVI --check-prefix=NOGFX8_1
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGFX9
+// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji %s 2>&1 | FileCheck %s --check-prefix=NOVI --check-prefix=NOGFX8_0 --implicit-check-not=error:
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx810 %s 2>&1 | FileCheck %s --check-prefix=NOVI --check-prefix=NOGFX8_1 --implicit-check-not=error:
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck %s --check-prefix=NOGFX9 --implicit-check-not=error:
 
 //===----------------------------------------------------------------------===//
 // Image Load/Store
@@ -201,7 +201,7 @@ image_store v[5:8], v[1:2], s[8:15] dmask:0xf unorm a16
 // NOSICI:   error: a16 modifier is not supported on this GPU
 // NOVI:     error: a16 modifier is not supported on this GPU
 
-/===----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 // Image Load/Store: a16 & d16
 //===----------------------------------------------------------------------===//
 

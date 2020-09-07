@@ -592,13 +592,17 @@ TEST(FuzzerUtil, Base64) {
 TEST(Corpus, Distribution) {
   DataFlowTrace DFT;
   Random Rand(0);
-  struct EntropicOptions Entropic = {false, 0xFF, 100};
+  struct EntropicOptions Entropic = {false, 0xFF, 100, false};
   std::unique_ptr<InputCorpus> C(new InputCorpus("", Entropic));
   size_t N = 10;
   size_t TriesPerUnit = 1<<16;
   for (size_t i = 0; i < N; i++)
-    C->AddToCorpus(Unit{static_cast<uint8_t>(i)}, 1, false, false, {}, DFT,
-                   nullptr);
+    C->AddToCorpus(Unit{static_cast<uint8_t>(i)}, /*NumFeatures*/ 1,
+                   /*MayDeleteFile*/ false, /*HasFocusFunction*/ false,
+                   /*ForceAddToCorpus*/ false,
+                   /*TimeOfUnit*/ std::chrono::microseconds(0),
+                   /*FeatureSet*/ {}, DFT,
+                   /*BaseII*/ nullptr);
 
   Vector<size_t> Hist(N);
   for (size_t i = 0; i < N * TriesPerUnit; i++) {
@@ -1056,7 +1060,7 @@ TEST(Entropic, UpdateFrequency) {
   const size_t FeatIdx1 = 0, FeatIdx2 = 42, FeatIdx3 = 12, FeatIdx4 = 26;
   size_t Index;
   // Create input corpus with default entropic configuration
-  struct EntropicOptions Entropic = {true, 0xFF, 100};
+  struct EntropicOptions Entropic = {true, 0xFF, 100, false};
   std::unique_ptr<InputCorpus> C(new InputCorpus("", Entropic));
   std::unique_ptr<InputInfo> II(new InputInfo());
 
@@ -1093,23 +1097,23 @@ double SubAndSquare(double X, double Y) {
 
 TEST(Entropic, ComputeEnergy) {
   const double Precision = 0.01;
-  struct EntropicOptions Entropic = {true, 0xFF, 100};
+  struct EntropicOptions Entropic = {true, 0xFF, 100, false};
   std::unique_ptr<InputCorpus> C(new InputCorpus("", Entropic));
   std::unique_ptr<InputInfo> II(new InputInfo());
   Vector<std::pair<uint32_t, uint16_t>> FeatureFreqs = {{1, 3}, {2, 3}, {3, 3}};
   II->FeatureFreqs = FeatureFreqs;
   II->NumExecutedMutations = 0;
-  II->UpdateEnergy(4);
+  II->UpdateEnergy(4, false, std::chrono::microseconds(0));
   EXPECT_LT(SubAndSquare(II->Energy, 1.450805), Precision);
 
   II->NumExecutedMutations = 9;
-  II->UpdateEnergy(5);
+  II->UpdateEnergy(5, false, std::chrono::microseconds(0));
   EXPECT_LT(SubAndSquare(II->Energy, 1.525496), Precision);
 
   II->FeatureFreqs[0].second++;
   II->FeatureFreqs.push_back(std::pair<uint32_t, uint16_t>(42, 6));
   II->NumExecutedMutations = 20;
-  II->UpdateEnergy(10);
+  II->UpdateEnergy(10, false, std::chrono::microseconds(0));
   EXPECT_LT(SubAndSquare(II->Energy, 1.792831), Precision);
 }
 

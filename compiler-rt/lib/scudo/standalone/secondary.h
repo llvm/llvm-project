@@ -75,11 +75,6 @@ template <u32 EntriesArraySize = 32U, u32 DefaultMaxEntriesCount = 32U,
           s32 MaxReleaseToOsIntervalMs = INT32_MAX>
 class MapAllocatorCache {
 public:
-  // Fuchsia doesn't allow releasing Secondary blocks yet. Note that 0 length
-  // arrays are an extension for some compilers.
-  // FIXME(kostyak): support (partially) the cache on Fuchsia.
-  static_assert(!SCUDO_FUCHSIA || EntriesArraySize == 0U, "");
-
   // Ensure the default maximum specified fits the array.
   static_assert(DefaultMaxEntriesCount <= EntriesArraySize, "");
 
@@ -392,9 +387,9 @@ void *MapAllocator<CacheT>::allocate(uptr Size, uptr AlignmentHint,
   }
 
   const uptr CommitSize = MapEnd - PageSize - CommitBase;
-  const uptr Ptr =
-      reinterpret_cast<uptr>(map(reinterpret_cast<void *>(CommitBase),
-                                 CommitSize, "scudo:secondary", 0, &Data));
+  const uptr Ptr = reinterpret_cast<uptr>(
+      map(reinterpret_cast<void *>(CommitBase), CommitSize, "scudo:secondary",
+          MAP_RESIZABLE, &Data));
   LargeBlock::Header *H = reinterpret_cast<LargeBlock::Header *>(Ptr);
   H->MapBase = MapBase;
   H->MapSize = MapEnd - MapBase;

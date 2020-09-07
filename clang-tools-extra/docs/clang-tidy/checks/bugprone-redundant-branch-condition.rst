@@ -83,6 +83,8 @@ Known limitations
 
 The ``else`` branch is not checked currently for negated condition variable:
 
+.. code-block:: c
+
   bool onFire = isBurning();
   if (onFire) {
     scream();

@@ -155,3 +155,117 @@ func @tanvec(%arg0 : vector<3xf16>) -> () {
   %2 = spv.GLSL.Tan %arg0 : vector<3xf16>
   return
 }
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Acos
+//===----------------------------------------------------------------------===//
+
+func @acos(%arg0 : f32) -> () {
+  // CHECK: spv.GLSL.Acos {{%.*}} : f32
+  %2 = spv.GLSL.Acos %arg0 : f32
+  return
+}
+
+func @acosvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spv.GLSL.Acos {{%.*}} : vector<3xf16>
+  %2 = spv.GLSL.Acos %arg0 : vector<3xf16>
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Asin
+//===----------------------------------------------------------------------===//
+
+func @asin(%arg0 : f32) -> () {
+  // CHECK: spv.GLSL.Asin {{%.*}} : f32
+  %2 = spv.GLSL.Asin %arg0 : f32
+  return
+}
+
+func @asinvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spv.GLSL.Asin {{%.*}} : vector<3xf16>
+  %2 = spv.GLSL.Asin %arg0 : vector<3xf16>
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Atan
+//===----------------------------------------------------------------------===//
+
+func @atan(%arg0 : f32) -> () {
+  // CHECK: spv.GLSL.Atan {{%.*}} : f32
+  %2 = spv.GLSL.Atan %arg0 : f32
+  return
+}
+
+func @atanvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spv.GLSL.Atan {{%.*}} : vector<3xf16>
+  %2 = spv.GLSL.Atan %arg0 : vector<3xf16>
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Sinh
+//===----------------------------------------------------------------------===//
+
+func @sinh(%arg0 : f32) -> () {
+  // CHECK: spv.GLSL.Sinh {{%.*}} : f32
+  %2 = spv.GLSL.Sinh %arg0 : f32
+  return
+}
+
+func @sinhvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spv.GLSL.Sinh {{%.*}} : vector<3xf16>
+  %2 = spv.GLSL.Sinh %arg0 : vector<3xf16>
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Cosh
+//===----------------------------------------------------------------------===//
+
+func @cosh(%arg0 : f32) -> () {
+  // CHECK: spv.GLSL.Cosh {{%.*}} : f32
+  %2 = spv.GLSL.Cosh %arg0 : f32
+  return
+}
+
+func @coshvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spv.GLSL.Cosh {{%.*}} : vector<3xf16>
+  %2 = spv.GLSL.Cosh %arg0 : vector<3xf16>
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Pow
+//===----------------------------------------------------------------------===//
+
+func @pow(%arg0 : f32, %arg1 : f32) -> () {
+  // CHECK: spv.GLSL.Pow {{%.*}}, {{%.*}} : f32
+  %2 = spv.GLSL.Pow %arg0, %arg1 : f32
+  return
+}
+
+func @powvec(%arg0 : vector<3xf16>, %arg1 : vector<3xf16>) -> () {
+  // CHECK: spv.GLSL.Pow {{%.*}}, {{%.*}} : vector<3xf16>
+  %2 = spv.GLSL.Pow %arg0, %arg1 : vector<3xf16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Round
+//===----------------------------------------------------------------------===//
+
+func @round(%arg0 : f32) -> () {
+  // CHECK: spv.GLSL.Round {{%.*}} : f32
+  %2 = spv.GLSL.Round %arg0 : f32
+  return
+}
+
+func @roundvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spv.GLSL.Round {{%.*}} : vector<3xf16>
+  %2 = spv.GLSL.Round %arg0 : vector<3xf16>
+  return
+}

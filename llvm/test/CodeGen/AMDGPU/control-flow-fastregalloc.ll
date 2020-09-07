@@ -198,23 +198,23 @@ end:
 ; VMEM: v_readlane_b32 s[[FLOW_S_RELOAD_SAVEEXEC_LO:[0-9]+]], v[[FLOW_V_RELOAD_SAVEEXEC]], 0
 ; VMEM: v_readlane_b32 s[[FLOW_S_RELOAD_SAVEEXEC_HI:[0-9]+]], v[[FLOW_V_RELOAD_SAVEEXEC]], 1
 
-; GCN: s_or_saveexec_b64 s{{\[}}[[FLOW_S_RELOAD_SAVEEXEC_LO]]:[[FLOW_S_RELOAD_SAVEEXEC_HI]]{{\]}}, s{{\[}}[[FLOW_S_RELOAD_SAVEEXEC_LO]]:[[FLOW_S_RELOAD_SAVEEXEC_HI]]{{\]}}
+; GCN: s_or_saveexec_b64 s{{\[}}[[FLOW_S_RELOAD_SAVEEXEC_LO_SAVEEXEC:[0-9]+]]:[[FLOW_S_RELOAD_SAVEEXEC_HI_SAVEEXEC:[0-9]+]]{{\]}}, s{{\[}}[[FLOW_S_RELOAD_SAVEEXEC_LO]]:[[FLOW_S_RELOAD_SAVEEXEC_HI]]{{\]}}
 
 ; Regular spill value restored after exec modification
 ; GCN: buffer_load_dword [[FLOW_VAL:v[0-9]+]], off, s[0:3], 0 offset:[[FLOW_VAL_OFFSET:[0-9]+]] ; 4-byte Folded Reload
 
 
 ; Spill saved exec
-; VGPR: v_writelane_b32 [[SPILL_VGPR]], s[[FLOW_S_RELOAD_SAVEEXEC_LO]], [[FLOW_SAVEEXEC_LO_LANE:[0-9]+]]
-; VGPR: v_writelane_b32 [[SPILL_VGPR]], s[[FLOW_S_RELOAD_SAVEEXEC_HI]], [[FLOW_SAVEEXEC_HI_LANE:[0-9]+]]
+; VGPR: v_writelane_b32 [[SPILL_VGPR]], s[[FLOW_S_RELOAD_SAVEEXEC_LO_SAVEEXEC]], [[FLOW_SAVEEXEC_LO_LANE:[0-9]+]]
+; VGPR: v_writelane_b32 [[SPILL_VGPR]], s[[FLOW_S_RELOAD_SAVEEXEC_HI_SAVEEXEC]], [[FLOW_SAVEEXEC_HI_LANE:[0-9]+]]
 
 
-; VMEM: v_writelane_b32 v[[FLOW_V_SAVEEXEC:[0-9]+]], s[[FLOW_S_RELOAD_SAVEEXEC_LO]], 0
-; VMEM: v_writelane_b32 v[[FLOW_V_SAVEEXEC]], s[[FLOW_S_RELOAD_SAVEEXEC_HI]], 1
+; VMEM: v_writelane_b32 v[[FLOW_V_SAVEEXEC:[0-9]+]], s[[FLOW_S_RELOAD_SAVEEXEC_LO_SAVEEXEC]], 0
+; VMEM: v_writelane_b32 v[[FLOW_V_SAVEEXEC]], s[[FLOW_S_RELOAD_SAVEEXEC_HI_SAVEEXEC]], 1
 ; VMEM: buffer_store_dword v[[FLOW_V_SAVEEXEC]], off, s[0:3], 0 offset:[[FLOW_SAVEEXEC_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 
 ; GCN: buffer_store_dword [[FLOW_VAL]], off, s[0:3], 0 offset:[[RESULT_OFFSET:[0-9]+]] ; 4-byte Folded Spill
-; GCN: s_xor_b64 exec, exec, s{{\[}}[[FLOW_S_RELOAD_SAVEEXEC_LO]]:[[FLOW_S_RELOAD_SAVEEXEC_HI]]{{\]}}
+; GCN: s_xor_b64 exec, exec, s{{\[}}[[FLOW_S_RELOAD_SAVEEXEC_LO_SAVEEXEC]]:[[FLOW_S_RELOAD_SAVEEXEC_HI_SAVEEXEC]]{{\]}}
 ; GCN-NEXT: s_cbranch_execz [[ENDIF:BB[0-9]+_[0-9]+]]
 
 

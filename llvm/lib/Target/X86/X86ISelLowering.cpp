@@ -10888,20 +10888,25 @@ static bool isTargetShuffleEquivalent(ArrayRef<int> Mask,
 // Attempt to create a shuffle mask from a VSELECT condition mask.
 static bool createShuffleMaskFromVSELECT(SmallVectorImpl<int> &Mask,
                                          SDValue Cond) {
-  if (!ISD::isBuildVectorOfConstantSDNodes(Cond.getNode()))
+  EVT CondVT = Cond.getValueType();
+  unsigned EltSizeInBits = CondVT.getScalarSizeInBits();
+  unsigned NumElts = CondVT.getVectorNumElements();
+
+  APInt UndefElts;
+  SmallVector<APInt, 32> EltBits;
+  if (!getTargetConstantBitsFromNode(Cond, EltSizeInBits, UndefElts, EltBits,
+                                     true, false))
     return false;
 
-  unsigned Size = Cond.getValueType().getVectorNumElements();
-  Mask.resize(Size, SM_SentinelUndef);
+  Mask.resize(NumElts, SM_SentinelUndef);
 
-  for (int i = 0; i != (int)Size; ++i) {
-    SDValue CondElt = Cond.getOperand(i);
+  for (int i = 0; i != (int)NumElts; ++i) {
     Mask[i] = i;
     // Arbitrarily choose from the 2nd operand if the select condition element
     // is undef.
     // TODO: Can we do better by matching patterns such as even/odd?
-    if (CondElt.isUndef() || isNullConstant(CondElt))
-      Mask[i] += Size;
+    if (UndefElts[i] || EltBits[i].isNullValue())
+      Mask[i] += NumElts;
   }
 
   return true;
@@ -14946,16 +14951,27 @@ static SDValue lowerShuffleWithPERMV(const SDLoc &DL, MVT VT,
                                      ArrayRef<int> Mask, SDValue V1, SDValue V2,
                                      const X86Subtarget &Subtarget,
                                      SelectionDAG &DAG) {
+  int NumElts = VT.getVectorNumElements();
   MVT MaskEltVT = MVT::getIntegerVT(VT.getScalarSizeInBits());
-  MVT MaskVecVT = MVT::getVectorVT(MaskEltVT, VT.getVectorNumElements());
-  SDValue MaskNode = getConstVector(Mask, MaskVecVT, DAG, DL, true);
+  MVT MaskVecVT = MVT::getVectorVT(MaskEltVT, NumElts);
 
+  SDValue MaskNode;
   MVT ShuffleVT = VT;
   if (!VT.is512BitVector() && !Subtarget.hasVLX()) {
     V1 = widenSubVector(V1, false, Subtarget, DAG, DL, 512);
     V2 = widenSubVector(V2, false, Subtarget, DAG, DL, 512);
-    MaskNode = widenSubVector(MaskNode, false, Subtarget, DAG, DL, 512);
     ShuffleVT = V1.getSimpleValueType();
+
+    // Adjust mask to correct indices for the second input.
+    unsigned Scale = 512 / VT.getSizeInBits();
+    SmallVector<int, 32> AdjustedMask(Mask.begin(), Mask.end());
+    for (int &M : AdjustedMask)
+      if (NumElts <= M)
+        M += (Scale - 1) * NumElts;
+    MaskNode = getConstVector(AdjustedMask, MaskVecVT, DAG, DL, true);
+    MaskNode = widenSubVector(MaskNode, false, Subtarget, DAG, DL, 512);
+  } else {
+    MaskNode = getConstVector(Mask, MaskVecVT, DAG, DL, true);
   }
 
   SDValue Result;
@@ -15545,53 +15561,94 @@ static SDValue lowerShuffleAsLanePermuteAndPermute(
   int NumElts = VT.getVectorNumElements();
   int NumLanes = VT.getSizeInBits() / 128;
   int NumEltsPerLane = NumElts / NumLanes;
+  bool CanUseSublanes = Subtarget.hasAVX2() && V2.isUndef();
 
-  SmallVector<int, 4> SrcLaneMask(NumLanes, SM_SentinelUndef);
-  SmallVector<int, 16> PermMask(NumElts, SM_SentinelUndef);
+  /// Attempts to find a sublane permute with the given size
+  /// that gets all elements into their target lanes.
+  ///
+  /// If successful, fills CrossLaneMask and InLaneMask and returns true.
+  /// If unsuccessful, returns false and may overwrite InLaneMask.
+  auto getSublanePermute = [&](int NumSublanes) -> SDValue {
+    int NumSublanesPerLane = NumSublanes / NumLanes;
+    int NumEltsPerSublane = NumElts / NumSublanes;
 
-  for (int i = 0; i != NumElts; ++i) {
-    int M = Mask[i];
-    if (M < 0)
-      continue;
+    SmallVector<int, 16> CrossLaneMask;
+    SmallVector<int, 16> InLaneMask(NumElts, SM_SentinelUndef);
+    // CrossLaneMask but one entry == one sublane.
+    SmallVector<int, 16> CrossLaneMaskLarge(NumSublanes, SM_SentinelUndef);
 
-    // Ensure that each lane comes from a single source lane.
-    int SrcLane = M / NumEltsPerLane;
-    int DstLane = i / NumEltsPerLane;
-    if (!isUndefOrEqual(SrcLaneMask[DstLane], SrcLane))
-      return SDValue();
-    SrcLaneMask[DstLane] = SrcLane;
+    for (int i = 0; i != NumElts; ++i) {
+      int M = Mask[i];
+      if (M < 0)
+        continue;
 
-    PermMask[i] = (DstLane * NumEltsPerLane) + (M % NumEltsPerLane);
-  }
+      int SrcSublane = M / NumEltsPerSublane;
+      int DstLane = i / NumEltsPerLane;
 
-  // Make sure we set all elements of the lane mask, to avoid undef propagation.
-  SmallVector<int, 16> LaneMask(NumElts, SM_SentinelUndef);
-  for (int DstLane = 0; DstLane != NumLanes; ++DstLane) {
-    int SrcLane = SrcLaneMask[DstLane];
-    if (0 <= SrcLane)
-      for (int j = 0; j != NumEltsPerLane; ++j) {
-        LaneMask[(DstLane * NumEltsPerLane) + j] =
-            (SrcLane * NumEltsPerLane) + j;
+      // We only need to get the elements into the right lane, not sublane.
+      // So search all sublanes that make up the destination lane.
+      bool Found = false;
+      int DstSubStart = DstLane * NumSublanesPerLane;
+      int DstSubEnd = DstSubStart + NumSublanesPerLane;
+      for (int DstSublane = DstSubStart; DstSublane < DstSubEnd; ++DstSublane) {
+        if (!isUndefOrEqual(CrossLaneMaskLarge[DstSublane], SrcSublane))
+          continue;
+
+        Found = true;
+        CrossLaneMaskLarge[DstSublane] = SrcSublane;
+        int DstSublaneOffset = DstSublane * NumEltsPerSublane;
+        InLaneMask[i] = DstSublaneOffset + M % NumEltsPerSublane;
+        break;
       }
-  }
+      if (!Found)
+        return SDValue();
+    }
 
-  // If we're only shuffling a single lowest lane and the rest are identity
-  // then don't bother.
-  // TODO - isShuffleMaskInputInPlace could be extended to something like this.
-  int NumIdentityLanes = 0;
-  bool OnlyShuffleLowestLane = true;
-  for (int i = 0; i != NumLanes; ++i) {
-    if (isSequentialOrUndefInRange(PermMask, i * NumEltsPerLane, NumEltsPerLane,
-                                   i * NumEltsPerLane))
-      NumIdentityLanes++;
-    else if (SrcLaneMask[i] != 0 && SrcLaneMask[i] != NumLanes)
-      OnlyShuffleLowestLane = false;
-  }
-  if (OnlyShuffleLowestLane && NumIdentityLanes == (NumLanes - 1))
+    // Fill CrossLaneMask using CrossLaneMaskLarge.
+    narrowShuffleMaskElts(NumEltsPerSublane, CrossLaneMaskLarge, CrossLaneMask);
+
+    if (!CanUseSublanes) {
+      // If we're only shuffling a single lowest lane and the rest are identity
+      // then don't bother.
+      // TODO - isShuffleMaskInputInPlace could be extended to something like
+      // this.
+      int NumIdentityLanes = 0;
+      bool OnlyShuffleLowestLane = true;
+      for (int i = 0; i != NumLanes; ++i) {
+        int LaneOffset = i * NumEltsPerLane;
+        if (isSequentialOrUndefInRange(InLaneMask, LaneOffset, NumEltsPerLane,
+                                       i * NumEltsPerLane))
+          NumIdentityLanes++;
+        else if (CrossLaneMask[LaneOffset] != 0)
+          OnlyShuffleLowestLane = false;
+      }
+      if (OnlyShuffleLowestLane && NumIdentityLanes == (NumLanes - 1))
+        return SDValue();
+    }
+
+    SDValue CrossLane = DAG.getVectorShuffle(VT, DL, V1, V2, CrossLaneMask);
+    return DAG.getVectorShuffle(VT, DL, CrossLane, DAG.getUNDEF(VT),
+                                InLaneMask);
+  };
+
+  // First attempt a solution with full lanes.
+  if (SDValue V = getSublanePermute(/*NumSublanes=*/NumLanes))
+    return V;
+
+  // The rest of the solutions use sublanes.
+  if (!CanUseSublanes)
     return SDValue();
 
-  SDValue LanePermute = DAG.getVectorShuffle(VT, DL, V1, V2, LaneMask);
-  return DAG.getVectorShuffle(VT, DL, LanePermute, DAG.getUNDEF(VT), PermMask);
+  // Then attempt a solution with 64-bit sublanes (vpermq).
+  if (SDValue V = getSublanePermute(/*NumSublanes=*/NumLanes * 2))
+    return V;
+
+  // If that doesn't work and we have fast variable shuffle,
+  // attempt 32-bit sublanes (vpermd).
+  if (!Subtarget.hasFastVariableShuffle())
+    return SDValue();
+
+  return getSublanePermute(/*NumSublanes=*/NumLanes * 4);
 }
 
 /// Lower a vector shuffle crossing multiple 128-bit lanes by shuffling one
@@ -18139,9 +18196,11 @@ static SDValue lowerVSELECTtoVectorShuffle(SDValue Op,
 
   // Only non-legal VSELECTs reach this lowering, convert those into generic
   // shuffles and re-use the shuffle lowering path for blends.
-  SmallVector<int, 32> Mask;
-  if (createShuffleMaskFromVSELECT(Mask, Cond))
-    return DAG.getVectorShuffle(VT, SDLoc(Op), LHS, RHS, Mask);
+  if (ISD::isBuildVectorOfConstantSDNodes(Cond.getNode())) {
+    SmallVector<int, 32> Mask;
+    if (createShuffleMaskFromVSELECT(Mask, Cond))
+      return DAG.getVectorShuffle(VT, SDLoc(Op), LHS, RHS, Mask);
+  }
 
   return SDValue();
 }
@@ -20142,10 +20201,8 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   SDValue Store =
       DAG.getStore(Chain, dl, ValueToStore, StackSlot, MPI, Align(8));
   // For i64 source, we need to add the appropriate power of 2 if the input
-  // was negative.  This is the same as the optimization in
-  // DAGTypeLegalizer::ExpandIntOp_UNIT_TO_FP, and for it to be safe here,
-  // we must be careful to do the computation in x87 extended precision, not
-  // in SSE. (The generic code can't know it's OK to do this, or how to.)
+  // was negative. We must be careful to do the computation in x87 extended
+  // precision, not in SSE.
   SDVTList Tys = DAG.getVTList(MVT::f80, MVT::Other);
   SDValue Ops[] = { Store, StackSlot };
   SDValue Fild =
@@ -34863,6 +34920,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
         (Mask[1] < 0 || Mask[3] < 0 || Mask[1] == (Mask[3] % 2));
 
     if (!isAnyZero(Mask) && !PreferPERMQ) {
+      if (Depth == 0 && Root.getOpcode() == X86ISD::SHUF128)
+        return SDValue(); // Nothing to do!
       if (SDValue V = MatchSHUF128(ShuffleVT, DL, Mask, V1, V2, DAG))
         return DAG.getBitcast(RootVT, V);
     }
@@ -40270,6 +40329,36 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
   }
 
+  // fold vselect(cond, pshufb(x), pshufb(y)) -> or (pshufb(x), pshufb(y))
+  // by forcing the unselected elements to zero.
+  // TODO: Can we handle more shuffles with this?
+  if (N->getOpcode() == ISD::VSELECT && CondVT.isVector() &&
+      LHS.getOpcode() == X86ISD::PSHUFB && RHS.getOpcode() == X86ISD::PSHUFB &&
+      LHS.hasOneUse() && RHS.hasOneUse()) {
+    MVT SimpleVT = VT.getSimpleVT();
+    bool LHSUnary, RHSUnary;
+    SmallVector<SDValue, 1> LHSOps, RHSOps;
+    SmallVector<int, 64> LHSMask, RHSMask, CondMask;
+    if (createShuffleMaskFromVSELECT(CondMask, Cond) &&
+        getTargetShuffleMask(LHS.getNode(), SimpleVT, true, LHSOps, LHSMask,
+                             LHSUnary) &&
+        getTargetShuffleMask(RHS.getNode(), SimpleVT, true, RHSOps, RHSMask,
+                             RHSUnary)) {
+      int NumElts = VT.getVectorNumElements();
+      for (int i = 0; i != NumElts; ++i) {
+        if (CondMask[i] < NumElts)
+          RHSMask[i] = 0x80;
+        else
+          LHSMask[i] = 0x80;
+      }
+      LHS = DAG.getNode(X86ISD::PSHUFB, DL, VT, LHS.getOperand(0),
+                        getConstVector(LHSMask, SimpleVT, DAG, DL, true));
+      RHS = DAG.getNode(X86ISD::PSHUFB, DL, VT, RHS.getOperand(0),
+                        getConstVector(RHSMask, SimpleVT, DAG, DL, true));
+      return DAG.getNode(ISD::OR, DL, VT, LHS, RHS);
+    }
+  }
+
   // If we have SSE[12] support, try to form min/max nodes. SSE min/max
   // instructions match the semantics of the common C idiom x<y?x:y but not
   // x<=y?x:y, because of how they handle negative zero (which can be
@@ -40673,10 +40762,18 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     return V;
 
   // select(~Cond, X, Y) -> select(Cond, Y, X)
-  if (CondVT.getScalarType() != MVT::i1)
+  if (CondVT.getScalarType() != MVT::i1) {
     if (SDValue CondNot = IsNOT(Cond, DAG))
       return DAG.getNode(N->getOpcode(), DL, VT,
                          DAG.getBitcast(CondVT, CondNot), RHS, LHS);
+    // pcmpgt(X, -1) -> pcmpgt(0, X) to help select/blendv just use the signbit.
+    if (Cond.getOpcode() == X86ISD::PCMPGT && Cond.hasOneUse() &&
+        ISD::isBuildVectorAllOnes(Cond.getOperand(1).getNode())) {
+      Cond = DAG.getNode(X86ISD::PCMPGT, DL, CondVT,
+                         DAG.getConstant(0, DL, CondVT), Cond.getOperand(0));
+      return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
+    }
+  }
 
   // Try to optimize vXi1 selects if both operands are either all constants or
   // bitcasts from scalar integer type. In that case we can convert the operands

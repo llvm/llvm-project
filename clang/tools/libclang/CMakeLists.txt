@@ -20,6 +20,7 @@ set(SOURCES
   CXType.cpp
   Indexing.cpp
   FatalErrorHandler.cpp
+  Rewrite.cpp
 
   ADDITIONAL_HEADERS
   CIndexDiagnostic.h
@@ -41,6 +42,7 @@ set(LIBS
   clangFrontend
   clangIndex
   clangLex
+  clangRewrite
   clangSema
   clangSerialization
   clangTooling

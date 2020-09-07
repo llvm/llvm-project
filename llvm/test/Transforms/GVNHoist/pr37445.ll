@@ -1,4 +1,4 @@
-; RUN: opt < %s -early-cse-memssa -gvn-hoist -S | FileCheck %s
+; RUN: opt < %s -early-cse-memssa -earlycse-debug-hash -gvn-hoist -S | FileCheck %s
 
 ; Make sure opt won't crash and that this pair of
 ; instructions (load, icmp) is hoisted successfully

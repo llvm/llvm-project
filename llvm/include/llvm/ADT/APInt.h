@@ -1450,6 +1450,14 @@ public:
     setBit(BitWidth - 1);
   }
 
+  /// Set a given bit to a given value.
+  void setBitVal(unsigned BitPosition, bool BitValue) {
+    if (BitValue)
+      setBit(BitPosition);
+    else
+      clearBit(BitPosition);
+  }
+
   /// Set the bits from loBit (inclusive) to hiBit (exclusive) to 1.
   /// This function handles "wrap" case when \p loBit >= \p hiBit, and calls
   /// setBits when \p loBit < \p hiBit.

@@ -11,8 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
+#include "llvm/CodeGen/FunctionLoweringInfo.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;

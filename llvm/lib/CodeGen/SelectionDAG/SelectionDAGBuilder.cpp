@@ -1128,6 +1128,8 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
       // TODO: We could handle all flags (nsw, etc) here.
       // TODO: If an IR instruction maps to >1 node, only the final node will have
       //       flags set.
+      // TODO: The handling of flags should be improved, see
+      //       https://reviews.llvm.org/D86871
       if (SDNode *Node = getNodeForIRValue(&I)) {
         SDNodeFlags IncomingFlags;
         IncomingFlags.copyFMF(*FPMO);

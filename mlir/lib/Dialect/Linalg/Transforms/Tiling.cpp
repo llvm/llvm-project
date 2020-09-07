@@ -243,7 +243,9 @@ static SmallVector<Value, 4> makeTiledViews(OpBuilder &b, Location loc,
   for (unsigned idx = 0, idxIvs = 0, e = tileSizes.size(); idx < e; ++idx) {
     bool isTiled = !isZero(tileSizes[idx]);
     lbs.push_back(isTiled ? ivs[idxIvs++] : (Value)std_constant_index(0));
-    subViewSizes.push_back(isTiled ? tileSizes[idx] : viewSizes[idx]);
+    // Before composing, we need to make range a closed interval.
+    Value size = isTiled ? tileSizes[idx] : viewSizes[idx];
+    subViewSizes.push_back(size - std_constant_index(1));
   }
 
   auto *op = linalgOp.getOperation();
@@ -282,7 +284,9 @@ static SmallVector<Value, 4> makeTiledViews(OpBuilder &b, Location loc,
       auto m = map.getSubMap({r});
       auto offset = applyMapToValues(b, loc, m, lbs).front();
       offsets.push_back(offset);
-      auto size = applyMapToValues(b, loc, m, subViewSizes).front();
+      auto closedIntSize = applyMapToValues(b, loc, m, subViewSizes).front();
+      // Resulting size needs to be made half open interval again.
+      auto size = closedIntSize + std_constant_index(1);
 
       // The size of the subview should be trimmed to avoid out-of-bounds
       // accesses, unless we statically know the subview size divides the view

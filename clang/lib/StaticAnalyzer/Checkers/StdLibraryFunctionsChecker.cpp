@@ -249,15 +249,21 @@ class StdLibraryFunctionsChecker
     }
   };
 
-  // Represents a buffer argument with an additional size argument.
-  // E.g. the first two arguments here:
+  // Represents a buffer argument with an additional size constraint. The
+  // constraint may be a concrete value, or a symbolic value in an argument.
+  // Example 1. Concrete value as the minimum buffer size.
+  //   char *asctime_r(const struct tm *restrict tm, char *restrict buf);
+  //   // `buf` size must be at least 26 bytes according the POSIX standard.
+  // Example 2. Argument as a buffer size.
   //   ctime_s(char *buffer, rsize_t bufsz, const time_t *time);
-  // Another example:
+  // Example 3. The size is computed as a multiplication of other args.
   //   size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
   //   // Here, ptr is the buffer, and its minimum size is `size * nmemb`.
   class BufferSizeConstraint : public ValueConstraint {
+    // The concrete value which is the minimum size for the buffer.
+    llvm::Optional<llvm::APSInt> ConcreteSize;
     // The argument which holds the size of the buffer.
-    ArgNo SizeArgN;
+    llvm::Optional<ArgNo> SizeArgN;
     // The argument which is a multiplier to size. This is set in case of
     // `fread` like functions where the size is computed as a multiplication of
     // two arguments.
@@ -266,9 +272,10 @@ class StdLibraryFunctionsChecker
     BinaryOperator::Opcode Op = BO_LE;
 
   public:
+    BufferSizeConstraint(ArgNo Buffer, llvm::APSInt BufMinSize)
+        : ValueConstraint(Buffer), ConcreteSize(BufMinSize) {}
     BufferSizeConstraint(ArgNo Buffer, ArgNo BufSize)
         : ValueConstraint(Buffer), SizeArgN(BufSize) {}
-
     BufferSizeConstraint(ArgNo Buffer, ArgNo BufSize, ArgNo BufSizeMultiplier)
         : ValueConstraint(Buffer), SizeArgN(BufSize),
           SizeMultiplierArgN(BufSizeMultiplier) {}
@@ -279,14 +286,27 @@ class StdLibraryFunctionsChecker
       SValBuilder &SvalBuilder = C.getSValBuilder();
       // The buffer argument.
       SVal BufV = getArgSVal(Call, getArgNo());
-      // The size argument.
-      SVal SizeV = getArgSVal(Call, SizeArgN);
-      // Multiply with another argument if given.
-      if (SizeMultiplierArgN) {
-        SVal SizeMulV = getArgSVal(Call, *SizeMultiplierArgN);
-        SizeV = SvalBuilder.evalBinOp(State, BO_Mul, SizeV, SizeMulV,
-                                      Summary.getArgType(SizeArgN));
-      }
+
+      // Get the size constraint.
+      const SVal SizeV = [this, &State, &Call, &Summary, &SvalBuilder]() {
+        if (ConcreteSize) {
+          return SVal(SvalBuilder.makeIntVal(*ConcreteSize));
+        } else if (SizeArgN) {
+          // The size argument.
+          SVal SizeV = getArgSVal(Call, *SizeArgN);
+          // Multiply with another argument if given.
+          if (SizeMultiplierArgN) {
+            SVal SizeMulV = getArgSVal(Call, *SizeMultiplierArgN);
+            SizeV = SvalBuilder.evalBinOp(State, BO_Mul, SizeV, SizeMulV,
+                                          Summary.getArgType(*SizeArgN));
+          }
+          return SizeV;
+        } else {
+          llvm_unreachable("The constraint must be either a concrete value or "
+                           "encoded in an arguement.");
+        }
+      }();
+
       // The dynamic size of the buffer argument, got from the analyzer engine.
       SVal BufDynSize = getDynamicSizeWithOffset(State, BufV);
 
@@ -744,21 +764,38 @@ bool StdLibraryFunctionsChecker::evalCall(const CallEvent &Call,
 bool StdLibraryFunctionsChecker::Signature::matches(
     const FunctionDecl *FD) const {
   assert(!isInvalid());
-  // Check number of arguments:
+  // Check the number of arguments.
   if (FD->param_size() != ArgTys.size())
     return false;
 
-  // Check return type.
-  if (!isIrrelevant(RetTy))
-    if (RetTy != FD->getReturnType().getCanonicalType())
-      return false;
+  // The "restrict" keyword is illegal in C++, however, many libc
+  // implementations use the "__restrict" compiler intrinsic in functions
+  // prototypes. The "__restrict" keyword qualifies a type as a restricted type
+  // even in C++.
+  // In case of any non-C99 languages, we don't want to match based on the
+  // restrict qualifier because we cannot know if the given libc implementation
+  // qualifies the paramter type or not.
+  auto RemoveRestrict = [&FD](QualType T) {
+    if (!FD->getASTContext().getLangOpts().C99)
+      T.removeLocalRestrict();
+    return T;
+  };
 
-  // Check argument types.
+  // Check the return type.
+  if (!isIrrelevant(RetTy)) {
+    QualType FDRetTy = RemoveRestrict(FD->getReturnType().getCanonicalType());
+    if (RetTy != FDRetTy)
+      return false;
+  }
+
+  // Check the argument types.
   for (size_t I = 0, E = ArgTys.size(); I != E; ++I) {
     QualType ArgTy = ArgTys[I];
     if (isIrrelevant(ArgTy))
       continue;
-    if (ArgTy != FD->getParamDecl(I)->getType().getCanonicalType())
+    QualType FDArgTy =
+        RemoveRestrict(FD->getParamDecl(I)->getType().getCanonicalType());
+    if (ArgTy != FDArgTy)
       return false;
   }
 
@@ -988,6 +1025,12 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     void operator()(StringRef Name, const std::vector<Summary> &Summaries) {
       for (const Summary &S : Summaries)
         operator()(Name, S);
+    }
+    // Add the same summary for different names with the Signature explicitly
+    // given.
+    void operator()(std::vector<StringRef> Names, Signature Sign, Summary Sum) {
+      for (StringRef Name : Names)
+        operator()(Name, Sign, Sum);
     }
   } addToFunctionSummaryMap(ACtx, FunctionSummaryMap, DisplayLoadedSummaries);
 
@@ -2013,6 +2056,132 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                 BufferSize(/*Buffer=*/ArgNo(4), /*BufSize=*/ArgNo(5)))
             .ArgConstraint(
                 ArgumentCondition(5, WithinRange, Range(0, Socklen_tMax))));
+
+    Optional<QualType> StructUtimbufTy = lookupTy("utimbuf");
+    Optional<QualType> StructUtimbufPtrTy = getPointerTy(StructUtimbufTy);
+
+    // int utime(const char *filename, struct utimbuf *buf);
+    addToFunctionSummaryMap(
+        "utime", Summary(ArgTypes{ConstCharPtrTy, StructUtimbufPtrTy},
+                         RetType{IntTy}, NoEvalCall)
+                     .ArgConstraint(NotNull(ArgNo(0))));
+
+    Optional<QualType> StructTimespecTy = lookupTy("timespec");
+    Optional<QualType> StructTimespecPtrTy = getPointerTy(StructTimespecTy);
+    Optional<QualType> ConstStructTimespecPtrTy =
+        getPointerTy(getConstTy(StructTimespecTy));
+
+    // int futimens(int fd, const struct timespec times[2]);
+    addToFunctionSummaryMap(
+        "futimens", Summary(ArgTypes{IntTy, ConstStructTimespecPtrTy},
+                            RetType{IntTy}, NoEvalCall)
+                        .ArgConstraint(ArgumentCondition(0, WithinRange,
+                                                         Range(0, IntMax))));
+
+    // int utimensat(int dirfd, const char *pathname,
+    //               const struct timespec times[2], int flags);
+    addToFunctionSummaryMap("utimensat",
+                            Summary(ArgTypes{IntTy, ConstCharPtrTy,
+                                             ConstStructTimespecPtrTy, IntTy},
+                                    RetType{IntTy}, NoEvalCall)
+                                .ArgConstraint(NotNull(ArgNo(1))));
+
+    Optional<QualType> StructTimevalTy = lookupTy("timeval");
+    Optional<QualType> ConstStructTimevalPtrTy =
+        getPointerTy(getConstTy(StructTimevalTy));
+
+    // int utimes(const char *filename, const struct timeval times[2]);
+    addToFunctionSummaryMap(
+        "utimes", Summary(ArgTypes{ConstCharPtrTy, ConstStructTimevalPtrTy},
+                          RetType{IntTy}, NoEvalCall)
+                      .ArgConstraint(NotNull(ArgNo(0))));
+
+    // int nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
+    addToFunctionSummaryMap(
+        "nanosleep",
+        Summary(ArgTypes{ConstStructTimespecPtrTy, StructTimespecPtrTy},
+                RetType{IntTy}, NoEvalCall)
+            .ArgConstraint(NotNull(ArgNo(0))));
+
+    Optional<QualType> Time_tTy = lookupTy("time_t");
+    Optional<QualType> ConstTime_tPtrTy = getPointerTy(getConstTy(Time_tTy));
+    Optional<QualType> ConstTime_tPtrRestrictTy =
+        getRestrictTy(ConstTime_tPtrTy);
+
+    Optional<QualType> StructTmTy = lookupTy("tm");
+    Optional<QualType> StructTmPtrTy = getPointerTy(StructTmTy);
+    Optional<QualType> StructTmPtrRestrictTy = getRestrictTy(StructTmPtrTy);
+    Optional<QualType> ConstStructTmPtrTy =
+        getPointerTy(getConstTy(StructTmTy));
+    Optional<QualType> ConstStructTmPtrRestrictTy =
+        getRestrictTy(ConstStructTmPtrTy);
+
+    // struct tm * localtime(const time_t *tp);
+    addToFunctionSummaryMap(
+        "localtime",
+        Summary(ArgTypes{ConstTime_tPtrTy}, RetType{StructTmPtrTy}, NoEvalCall)
+            .ArgConstraint(NotNull(ArgNo(0))));
+
+    // struct tm *localtime_r(const time_t *restrict timer,
+    //                        struct tm *restrict result);
+    addToFunctionSummaryMap(
+        "localtime_r",
+        Summary(ArgTypes{ConstTime_tPtrRestrictTy, StructTmPtrRestrictTy},
+                RetType{StructTmPtrTy}, NoEvalCall)
+            .ArgConstraint(NotNull(ArgNo(0)))
+            .ArgConstraint(NotNull(ArgNo(1))));
+
+    // char *asctime_r(const struct tm *restrict tm, char *restrict buf);
+    addToFunctionSummaryMap(
+        "asctime_r",
+        Summary(ArgTypes{ConstStructTmPtrRestrictTy, CharPtrRestrictTy},
+                RetType{CharPtrTy}, NoEvalCall)
+            .ArgConstraint(NotNull(ArgNo(0)))
+            .ArgConstraint(NotNull(ArgNo(1)))
+            .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(1),
+                                      /*MinBufSize=*/BVF.getValue(26, IntTy))));
+
+    // char *ctime_r(const time_t *timep, char *buf);
+    addToFunctionSummaryMap("ctime_r",
+                            Summary(ArgTypes{ConstTime_tPtrTy, CharPtrTy},
+                                    RetType{CharPtrTy}, NoEvalCall)
+                                .ArgConstraint(NotNull(ArgNo(0)))
+                                .ArgConstraint(NotNull(ArgNo(1)))
+                                .ArgConstraint(BufferSize(
+                                    /*Buffer=*/ArgNo(1),
+                                    /*MinBufSize=*/BVF.getValue(26, IntTy))));
+
+    // struct tm *gmtime_r(const time_t *restrict timer,
+    //                     struct tm *restrict result);
+    addToFunctionSummaryMap(
+        "gmtime_r",
+        Summary(ArgTypes{ConstTime_tPtrRestrictTy, StructTmPtrRestrictTy},
+                RetType{StructTmPtrTy}, NoEvalCall)
+            .ArgConstraint(NotNull(ArgNo(0)))
+            .ArgConstraint(NotNull(ArgNo(1))));
+
+    // struct tm * gmtime(const time_t *tp);
+    addToFunctionSummaryMap(
+        "gmtime",
+        Summary(ArgTypes{ConstTime_tPtrTy}, RetType{StructTmPtrTy}, NoEvalCall)
+            .ArgConstraint(NotNull(ArgNo(0))));
+
+    Optional<QualType> Clockid_tTy = lookupTy("clockid_t");
+
+    // int clock_gettime(clockid_t clock_id, struct timespec *tp);
+    addToFunctionSummaryMap("clock_gettime",
+                            Summary(ArgTypes{Clockid_tTy, StructTimespecPtrTy},
+                                    RetType{IntTy}, NoEvalCall)
+                                .ArgConstraint(NotNull(ArgNo(1))));
+
+    Optional<QualType> StructItimervalTy = lookupTy("itimerval");
+    Optional<QualType> StructItimervalPtrTy = getPointerTy(StructItimervalTy);
+
+    // int getitimer(int which, struct itimerval *curr_value);
+    addToFunctionSummaryMap("getitimer",
+                            Summary(ArgTypes{IntTy, StructItimervalPtrTy},
+                                    RetType{IntTy}, NoEvalCall)
+                                .ArgConstraint(NotNull(ArgNo(1))));
   }
 
   // Functions for testing.
@@ -2048,6 +2217,16 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                 EvalCallAsPure)
             .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1),
                                       /*BufSizeMultiplier=*/ArgNo(2))));
+    addToFunctionSummaryMap(
+        "__buf_size_arg_constraint_concrete",
+        Summary(ArgTypes{ConstVoidPtrTy}, RetType{IntTy}, EvalCallAsPure)
+            .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(0),
+                                      /*BufSize=*/BVF.getValue(10, IntTy))));
+    addToFunctionSummaryMap(
+        {"__test_restrict_param_0", "__test_restrict_param_1",
+         "__test_restrict_param_2"},
+        Signature(ArgTypes{VoidPtrRestrictTy}, RetType{VoidTy}),
+        Summary(EvalCallAsPure));
   }
 }
 

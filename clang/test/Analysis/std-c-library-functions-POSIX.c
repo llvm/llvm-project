@@ -95,6 +95,19 @@
 // CHECK: Loaded summary for: ssize_t send(int sockfd, const void *buf, size_t len, int flags)
 // CHECK: Loaded summary for: int socketpair(int domain, int type, int protocol, int sv[2])
 // CHECK: Loaded summary for: int getnameinfo(const struct sockaddr *restrict sa, socklen_t salen, char *restrict node, socklen_t nodelen, char *restrict service, socklen_t servicelen, int flags)
+// CHECK: Loaded summary for: int utime(const char *filename, struct utimbuf *buf)
+// CHECK: Loaded summary for: int futimens(int fd, const struct timespec times[2])
+// CHECK: Loaded summary for: int utimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags)
+// CHECK: Loaded summary for: int utimes(const char *filename, const struct timeval times[2])
+// CHECK: Loaded summary for: int nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
+// CHECK: Loaded summary for: struct tm *localtime(const time_t *tp)
+// CHECK: Loaded summary for: struct tm *localtime_r(const time_t *restrict timer, struct tm *restrict result)
+// CHECK: Loaded summary for: char *asctime_r(const struct tm *restrict tm, char *restrict buf)
+// CHECK: Loaded summary for: char *ctime_r(const time_t *timep, char *buf)
+// CHECK: Loaded summary for: struct tm *gmtime_r(const time_t *restrict timer, struct tm *restrict result)
+// CHECK: Loaded summary for: struct tm *gmtime(const time_t *tp)
+// CHECK: Loaded summary for: int clock_gettime(clockid_t clock_id, struct timespec *tp)
+// CHECK: Loaded summary for: int getitimer(int which, struct itimerval *curr_value)
 
 long a64l(const char *str64);
 char *l64a(long value);
@@ -226,6 +239,25 @@ int getsockopt(int socket, int level, int option_name, void *restrict option_val
 ssize_t send(int sockfd, const void *buf, size_t len, int flags);
 int socketpair(int domain, int type, int protocol, int sv[2]);
 int getnameinfo(const struct sockaddr *restrict sa, socklen_t salen, char *restrict node, socklen_t nodelen, char *restrict service, socklen_t servicelen, int flags);
+struct utimbuf;
+struct timespec { int x; };
+struct timeval { int x; };
+int utime(const char *filename, struct utimbuf *buf);
+int futimens(int fd, const struct timespec times[2]);
+int utimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags);
+int utimes(const char *filename, const struct timeval times[2]);
+int nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
+typedef unsigned long time_t;
+struct tm *localtime(const time_t *tp);
+struct tm *localtime_r(const time_t *restrict timer, struct tm *restrict result);
+char *asctime_r(const struct tm *restrict tm, char *restrict buf);
+char *ctime_r(const time_t *timep, char *buf);
+struct tm *gmtime_r(const time_t *restrict timer, struct tm *restrict result);
+struct tm *gmtime(const time_t *tp);
+typedef unsigned long clockid_t;
+int clock_gettime(clockid_t clock_id, struct timespec *tp);
+struct itimerval;
+int getitimer(int which, struct itimerval *curr_value);
 
 // Must have at least one call expression to initialize the summary map.
 int bar(void);

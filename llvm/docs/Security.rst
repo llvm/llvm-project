@@ -24,10 +24,10 @@ Security Group Members
 
 The members of the group represent a wide cross-section of the community, and meet the criteria for inclusion below.
 
+* Ahmed Bougacha (Apple)
 * Akila Srinivasan (Apple)
 * Dimitry Andric (individual; FreeBSD)
 * Ed Maste (individual; FreeBSD)
-* JF Bastien (Apple)
 * Josh Eads (Sony)
 * Kristof Beyls (ARM)
 * Matthew Riley (Google)
