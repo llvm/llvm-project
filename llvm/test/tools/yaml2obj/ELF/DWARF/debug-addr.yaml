@@ -631,3 +631,18 @@ DWARF:
       [[SIZENAME]]: 3
       Entries:
         - Address: 0x1234
+
+## n) Test that the .debug_addr section header is emitted if the "debug_addr"
+## entry is empty.
+
+# RUN: yaml2obj --docnum=12 %s -o %t12.o
+# RUN: llvm-readobj --sections %t12.o | \
+# RUN:   FileCheck %s -DSIZE=0 -DADDRALIGN=1 --check-prefix=SHDR
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_addr: []
