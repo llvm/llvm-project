@@ -15,11 +15,13 @@ func @materialize_read_1d() {
       %ip3 = affine.apply affine_map<(d0) -> (d0 + 3)> (%i1)
       %f4 = vector.transfer_read %A[%i0, %ip3], %f0 {permutation_map = affine_map<(d0, d1) -> (d0)>} : memref<7x42xf32>, vector<4xf32>
       // Both accesses in the load must be clipped otherwise %i1 + 2 and %i1 + 3 will go out of bounds.
-      // CHECK: {{.*}} = select
-      // CHECK: %[[FILTERED1:.*]] = select
-      // CHECK: {{.*}} = select
-      // CHECK: %[[FILTERED2:.*]] = select
-      // CHECK: %{{.*}} = load {{.*}}[%[[FILTERED1]], %[[FILTERED2]]] : memref<7x42xf32>
+      // CHECK: scf.if
+      // CHECK-NEXT: load
+      // CHECK-NEXT: vector.insertelement
+      // CHECK-NEXT: store
+      // CHECK-NEXT: else
+      // CHECK-NEXT: vector.insertelement
+      // CHECK-NEXT: store
     }
   }
   return
@@ -53,7 +55,6 @@ func @materialize_read_1d_partially_specialized(%dyn1 : index, %dyn2 : index, %d
 // -----
 
 // CHECK: #[[$ADD:map[0-9]+]] = affine_map<(d0, d1) -> (d0 + d1)>
-// CHECK: #[[$SUB:map[0-9]+]] = affine_map<()[s0] -> (s0 - 1)>
 
 // CHECK-LABEL: func @materialize_read(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
@@ -72,37 +73,18 @@ func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-NEXT:          scf.for %[[I4:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {
   // CHECK-NEXT:            scf.for %[[I5:.*]] = %[[C0]] to %[[C4]] step %[[C1]] {
   // CHECK-NEXT:              scf.for %[[I6:.*]] = %[[C0]] to %[[C5]] step %[[C1]] {
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[$ADD]](%[[I0]], %[[I4]])
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[$SUB]]()[%{{.*}}]
-  // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}} : index
-  // CHECK-NEXT:                {{.*}} = select
-  // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, %[[C0]] : index
-  // CHECK-NEXT:                %[[L0:.*]] = select
-  //
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[$SUB]]()[%{{.*}}]
-  // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}} : index
-  // CHECK-NEXT:                {{.*}} = select
-  // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, %[[C0]] : index
-  // CHECK-NEXT:                %[[L1:.*]] = select
-  //
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[$SUB]]()[%{{.*}}]
-  // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}} : index
-  // CHECK-NEXT:                {{.*}} = select
-  // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, %[[C0]] : index
-  // CHECK-NEXT:                %[[L2:.*]] = select
-  //
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[$ADD]](%[[I3]], %[[I6]])
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[$SUB]]()[%{{.*}}]
-  // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}} : index
-  // CHECK-NEXT:                {{.*}} = select
-  // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, %[[C0]] : index
-  // CHECK-NEXT:                %[[L3:.*]] = select
-  // CHECK-NEXT:                %[[VIDX:.*]] = index_cast %[[I4]]
-  //
-  // CHECK-NEXT:                %[[SCAL:.*]] = load %{{.*}}[%[[L0]], %[[L1]], %[[L2]], %[[L3]]] : memref<?x?x?x?xf32>
-  // CHECK-NEXT:                %[[VEC:.*]] = load %[[ALLOC]][%[[I6]], %[[I5]]] : memref<5x4xvector<3xf32>>
-  // CHECK-NEXT:                %[[RVEC:.*]] = vector.insertelement %[[SCAL]], %[[VEC]][%[[VIDX]] : i32] : vector<3xf32>
-  // CHECK-NEXT:                store %[[RVEC]], %[[ALLOC]][%[[I6]], %[[I5]]] : memref<5x4xvector<3xf32>>
+  // CHECK:                     %[[VIDX:.*]] = index_cast %[[I4]]
+  // CHECK:                     %[[VEC:.*]] = load %[[ALLOC]][%[[I6]], %[[I5]]] : memref<5x4xvector<3xf32>>
+  // CHECK:                     %[[L0:.*]] = affine.apply #[[$ADD]](%[[I0]], %[[I4]])
+  // CHECK:                     %[[L3:.*]] = affine.apply #[[$ADD]](%[[I3]], %[[I6]])
+  // CHECK-NEXT:                scf.if
+  // CHECK-NEXT:                  %[[SCAL:.*]] = load %{{.*}}[%[[L0]], %[[I1]], %[[I2]], %[[L3]]] : memref<?x?x?x?xf32>
+  // CHECK-NEXT:                  %[[RVEC:.*]] = vector.insertelement %[[SCAL]], %[[VEC]][%[[VIDX]] : i32] : vector<3xf32>
+  // CHECK-NEXT:                  store %[[RVEC]], %[[ALLOC]][%[[I6]], %[[I5]]] : memref<5x4xvector<3xf32>>
+  // CHECK-NEXT:                } else {
+  // CHECK-NEXT:                  %[[CVEC:.*]] = vector.insertelement
+  // CHECK-NEXT:                  store %[[CVEC]], %[[ALLOC]][%[[I6]], %[[I5]]] : memref<5x4xvector<3xf32>>
+  // CHECK-NEXT:                }
   // CHECK-NEXT:              }
   // CHECK-NEXT:            }
   // CHECK-NEXT:          }
@@ -132,7 +114,6 @@ func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
 // -----
 
 // CHECK: #[[$ADD:map[0-9]+]] = affine_map<(d0, d1) -> (d0 + d1)>
-// CHECK: #[[$SUB:map[0-9]+]] = affine_map<()[s0] -> (s0 - 1)>
 
 // CHECK-LABEL:func @materialize_write(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
@@ -153,37 +134,15 @@ func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-NEXT:          scf.for %[[I4:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {
   // CHECK-NEXT:            scf.for %[[I5:.*]] = %[[C0]] to %[[C4]] step %[[C1]] {
   // CHECK-NEXT:              scf.for %[[I6:.*]] = %[[C0]] to %[[C5]] step %[[C1]] {
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[$ADD]](%[[I0]], %[[I4]])
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[$SUB]]()[%{{.*}}]
-  // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, {{.*}} : index
-  // CHECK-NEXT:                {{.*}} = select {{.*}}, {{.*}}, {{.*}} : index
-  // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, %[[C0]] : index
-  // CHECK-NEXT:                %[[S0:.*]] = select {{.*}}, %[[C0]], {{.*}} : index
-  //
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[$ADD]](%[[I1]], %[[I5]])
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[$SUB]]()[%{{.*}}]
-  // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, {{.*}} : index
-  // CHECK-NEXT:                {{.*}} = select {{.*}}, {{.*}}, {{.*}} : index
-  // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, %[[C0]] : index
-  // CHECK-NEXT:                %[[S1:.*]] = select {{.*}}, %[[C0]], {{.*}} : index
-  //
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[$SUB]]()[%{{.*}}]
-  // CHECK-NEXT:                {{.*}} = cmpi "slt", %[[I2]], %{{.*}} : index
-  // CHECK-NEXT:                {{.*}} = select {{.*}}, %[[I2]], {{.*}} : index
-  // CHECK-NEXT:                {{.*}} = cmpi "slt", %[[I2]], %[[C0]] : index
-  // CHECK-NEXT:                %[[S2:.*]] = select {{.*}}, %[[C0]], {{.*}} : index
-  //
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[$ADD]](%[[I3]], %[[I6]])
-  // CHECK-NEXT:                {{.*}} = affine.apply #[[$SUB]]()[%{{.*}}]
-  // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, {{.*}} : index
-  // CHECK-NEXT:                {{.*}} = select {{.*}}, {{.*}}, {{.*}} : index
-  // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, %[[C0]] : index
-  // CHECK-NEXT:                %[[S3:.*]] = select {{.*}}, %[[C0]], {{.*}} : index
-  // CHECK-NEXT:                %[[VIDX:.*]] = index_cast %[[I4]]
-  //
-  // CHECK-NEXT:                %[[VEC:.*]] = load {{.*}}[%[[I6]], %[[I5]]] : memref<5x4xvector<3xf32>>
-  // CHECK-NEXT:                %[[SCAL:.*]] = vector.extractelement %[[VEC]][%[[VIDX]] : i32] : vector<3xf32>
-  // CHECK-NEXT:                store %[[SCAL]], {{.*}}[%[[S0]], %[[S1]], %[[S2]], %[[S3]]] : memref<?x?x?x?xf32>
+  // CHECK:                     %[[VIDX:.*]] = index_cast %[[I4]]
+  // CHECK:                     %[[S0:.*]] = affine.apply #[[$ADD]](%[[I0]], %[[I4]])
+  // CHECK:                     %[[S1:.*]] = affine.apply #[[$ADD]](%[[I1]], %[[I5]])
+  // CHECK:                     %[[S3:.*]] = affine.apply #[[$ADD]](%[[I3]], %[[I6]])
+  // CHECK-NEXT:                scf.if
+  // CHECK-NEXT:                  %[[VEC:.*]] = load {{.*}}[%[[I6]], %[[I5]]] : memref<5x4xvector<3xf32>>
+  // CHECK-NEXT:                  %[[SCAL:.*]] = vector.extractelement %[[VEC]][%[[VIDX]] : i32] : vector<3xf32>
+  //      CHECK:                  store %[[SCAL]], {{.*}}[%[[S0]], %[[S1]], %[[I2]], %[[S3]]] : memref<?x?x?x?xf32>
+  // CHECK-NEXT:                }
   // CHECK-NEXT:              }
   // CHECK-NEXT:            }
   // CHECK-NEXT:          }

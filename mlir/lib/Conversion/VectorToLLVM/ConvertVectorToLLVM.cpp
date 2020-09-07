@@ -1096,7 +1096,7 @@ static bool isContiguous(MemRefType memRefType,
                          SmallVectorImpl<int64_t> &strides) {
   int64_t offset;
   auto successStrides = getStridesAndOffset(memRefType, strides, offset);
-  bool isContiguous = (strides.back() == 1);
+  bool isContiguous = strides.empty() || strides.back() == 1;
   if (isContiguous) {
     auto sizes = memRefType.getShape();
     for (int index = 0, e = strides.size() - 2; index < e; ++index) {
