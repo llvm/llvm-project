@@ -16557,6 +16557,8 @@ TEST_F(FormatTest, TypenameMacros) {
   Macros.PointerAlignment = FormatStyle::PAS_Left;
   verifyFormat("STACK_OF(int)* a;", Macros);
   verifyFormat("STACK_OF(int*)* a;", Macros);
+  verifyFormat("x = (STACK_OF(uint64_t))*a;", Macros);
+  verifyFormat("x = (STACK_OF(uint64_t))&a;", Macros);
 }
 
 TEST_F(FormatTest, AmbersandInLamda) {
