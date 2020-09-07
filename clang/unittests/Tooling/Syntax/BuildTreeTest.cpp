@@ -2733,6 +2733,54 @@ CallExpression Expression
 )txt"}));
 }
 
+TEST_P(SyntaxTreeTest, CallExpression_DefaultArguments) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+void f(int i = 1, char c = '2');
+void test() {
+  [[f()]];
+  [[f(1)]];
+  [[f(1, '2')]];
+}
+)cpp",
+      {R"txt(
+CallExpression Expression
+|-IdExpression Callee
+| `-UnqualifiedId UnqualifiedId
+|   `-'f'
+|-'(' OpenParen
+`-')' CloseParen
+      )txt",
+       R"txt(
+CallExpression Expression
+|-IdExpression Callee
+| `-UnqualifiedId UnqualifiedId
+|   `-'f'
+|-'(' OpenParen
+|-CallArguments Arguments
+| `-IntegerLiteralExpression ListElement
+|   `-'1' LiteralToken
+`-')' CloseParen
+      )txt",
+       R"txt(
+CallExpression Expression
+|-IdExpression Callee
+| `-UnqualifiedId UnqualifiedId
+|   `-'f'
+|-'(' OpenParen
+|-CallArguments Arguments
+| |-IntegerLiteralExpression ListElement
+| | `-'1' LiteralToken
+| |-',' ListDelimiter
+| `-CharacterLiteralExpression ListElement
+|   `-''2'' LiteralToken
+`-')' CloseParen
+)txt"}));
+}
+
 TEST_P(SyntaxTreeTest, MultipleDeclaratorsGrouping) {
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
@@ -3986,6 +4034,56 @@ SimpleDeclaration
 )txt"}));
 }
 
+TEST_P(SyntaxTreeTest, InitDeclarator_Paren_DefaultArguments) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct S {
+  S(int i = 1, float = 2.);
+};
+[[S s0;]]
+// FIXME: 's...' is a declarator and '(...)' is initializer
+[[S s1(1);]]
+[[S s2(1, 2.);]]
+)cpp",
+      {R"txt(
+SimpleDeclaration
+|-'S'
+|-SimpleDeclarator Declarator
+| `-'s0'
+`-';'
+  )txt",
+       R"txt(
+SimpleDeclaration
+|-'S'
+|-SimpleDeclarator Declarator
+| `-UnknownExpression
+|   |-'s1'
+|   |-'('
+|   |-IntegerLiteralExpression
+|   | `-'1' LiteralToken
+|   `-')'
+`-';'
+  )txt",
+       R"txt(
+SimpleDeclaration
+|-'S'
+|-SimpleDeclarator Declarator
+| `-UnknownExpression
+|   |-'s2'
+|   |-'('
+|   |-IntegerLiteralExpression
+|   | `-'1' LiteralToken
+|   |-','
+|   |-FloatingLiteralExpression
+|   | `-'2.' LiteralToken
+|   `-')'
+`-';'
+)txt"}));
+}
+
 TEST_P(SyntaxTreeTest, ImplicitConversion_Argument) {
   if (!GetParam().isCXX()) {
     return;
@@ -4111,6 +4209,48 @@ ReturnStatement Statement
 | | `-''2'' LiteralToken
 | `-')'
 `-';'
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, ConstructorCall_DefaultArguments) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct X {
+  X(int i = 1, char c = '2');
+};
+X test() {
+  auto x0 = [[X()]];
+  auto x1 = [[X(1)]];
+  auto x2 = [[X(1, '2')]];
+}
+)cpp",
+      {R"txt(
+UnknownExpression
+|-'X'
+|-'('
+`-')'
+)txt",
+       R"txt(
+UnknownExpression
+|-'X'
+|-'('
+|-IntegerLiteralExpression
+| `-'1' LiteralToken
+`-')'
+)txt",
+       R"txt(
+UnknownExpression
+|-'X'
+|-'('
+|-IntegerLiteralExpression
+| `-'1' LiteralToken
+|-','
+|-CharacterLiteralExpression
+| `-''2'' LiteralToken
+`-')'
 )txt"}));
 }
 
@@ -4373,6 +4513,61 @@ TranslationUnit Detached
   |   `-')' CloseParen
   `-';'
 )txt"));
+}
+
+TEST_P(SyntaxTreeTest, ParametersAndQualifiers_InFreeFunctions_Default_One) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+int func1([[int a = 1]]);
+)cpp",
+      {R"txt(
+ParameterDeclarationList Parameters
+`-SimpleDeclaration ListElement
+  |-'int'
+  `-SimpleDeclarator Declarator
+    |-'a'
+    |-'='
+    `-IntegerLiteralExpression
+      `-'1' LiteralToken
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest,
+       ParametersAndQualifiers_InFreeFunctions_Default_Multiple) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+int func2([[int *ap, int a = 1, char c = '2']]);
+)cpp",
+      {R"txt(
+ParameterDeclarationList Parameters
+|-SimpleDeclaration ListElement
+| |-'int'
+| `-SimpleDeclarator Declarator
+|   |-'*'
+|   `-'ap'
+|-',' ListDelimiter
+|-SimpleDeclaration ListElement
+| |-'int'
+| `-SimpleDeclarator Declarator
+|   |-'a'
+|   |-'='
+|   `-IntegerLiteralExpression
+|     `-'1' LiteralToken
+|-',' ListDelimiter
+`-SimpleDeclaration ListElement
+  |-'char'
+  `-SimpleDeclarator Declarator
+    |-'c'
+    |-'='
+    `-CharacterLiteralExpression
+      `-''2'' LiteralToken
+)txt"}));
 }
 
 TEST_P(SyntaxTreeTest,
