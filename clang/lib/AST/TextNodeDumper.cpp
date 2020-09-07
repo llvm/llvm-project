@@ -1960,7 +1960,11 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
       FLAG(hasTrivialDestructor, trivial);
       FLAG(hasNonTrivialDestructor, non_trivial);
       FLAG(hasUserDeclaredDestructor, user_declared);
-      FLAG(hasConstexprDestructor, constexpr);
+      // Avoid calls to the external source.
+      if (!D->hasExternalVisibleStorage()) {
+        FLAG(hasConstexprDestructor, constexpr);
+      } else
+        OS << " maybe_constexpr";
       FLAG(needsImplicitDestructor, needs_implicit);
       FLAG(needsOverloadResolutionForDestructor, needs_overload_resolution);
       if (!D->needsOverloadResolutionForDestructor())
