@@ -744,7 +744,7 @@ File Bug</h3>
         return f
 
     def send_string(self, s, ctype='text/html', headers=True, mtime=None):
-        encoded_s = s.encode()
+        encoded_s = s.encode('utf-8')
         if headers:
             self.send_response(200)
             self.send_header("Content-type", ctype)
