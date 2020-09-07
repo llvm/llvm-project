@@ -215,7 +215,7 @@ struct Data {
   Optional<std::vector<StringOffsetsTable>> DebugStrOffsets;
   Optional<std::vector<ARange>> DebugAranges;
   std::vector<Ranges> DebugRanges;
-  std::vector<AddrTableEntry> DebugAddr;
+  Optional<std::vector<AddrTableEntry>> DebugAddr;
   Optional<PubSection> PubNames;
   Optional<PubSection> PubTypes;
 

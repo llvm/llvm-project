@@ -1039,13 +1039,28 @@ int ARMTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
                                        TTI::OperandValueProperties Opd2PropInfo,
                                        ArrayRef<const Value *> Args,
                                        const Instruction *CxtI) {
+  int ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
+  if (ST->isThumb() && CostKind == TTI::TCK_CodeSize && Ty->isIntegerTy(1)) {
+    // Make operations on i1 relatively expensive as this often involves
+    // combining predicates. AND and XOR should be easier to handle with IT
+    // blocks.
+    switch (ISDOpcode) {
+    default:
+      break;
+    case ISD::AND:
+    case ISD::XOR:
+      return 2;
+    case ISD::OR:
+      return 3;
+    }
+  }
+
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info, Opd1PropInfo,
                                          Opd2PropInfo, Args, CxtI);
 
-  int ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
   if (ST->hasNEON()) {

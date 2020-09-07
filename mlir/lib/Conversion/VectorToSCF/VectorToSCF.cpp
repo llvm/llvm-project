@@ -35,8 +35,6 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Passes.h"
 
-#define ALIGNMENT_SIZE 128
-
 using namespace mlir;
 using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
@@ -234,8 +232,7 @@ static Value setAllocAtFunctionEntry(MemRefType memRefMinorVectorType,
       op->getParentWithTrait<OpTrait::AutomaticAllocationScope>();
   assert(scope && "Expected op to be inside automatic allocation scope");
   b.setInsertionPointToStart(&scope->getRegion(0).front());
-  Value res = std_alloca(memRefMinorVectorType, ValueRange{},
-                         b.getI64IntegerAttr(ALIGNMENT_SIZE));
+  Value res = std_alloca(memRefMinorVectorType);
   return res;
 }
 
@@ -494,8 +491,10 @@ template <typename TransferOpTy>
 MemRefType VectorTransferRewriter<TransferOpTy>::tmpMemRefType(
     TransferOpTy transfer) const {
   auto vectorType = transfer.getVectorType();
-  return MemRefType::get(vectorType.getShape(), vectorType.getElementType(), {},
-                         0);
+  return MemRefType::get(vectorType.getShape().drop_back(),
+                         VectorType::get(vectorType.getShape().take_back(),
+                                         vectorType.getElementType()),
+                         {}, 0);
 }
 
 /// Lowers TransferReadOp into a combination of:
@@ -585,8 +584,7 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
     steps.push_back(std_constant_index(step));
 
   // 2. Emit alloc-copy-load-dealloc.
-  Value tmp = std_alloc(tmpMemRefType(transfer), ValueRange{},
-                        rewriter.getI64IntegerAttr(ALIGNMENT_SIZE));
+  Value tmp = setAllocAtFunctionEntry(tmpMemRefType(transfer), transfer);
   StdIndexedValue local(tmp);
   Value vec = vector_type_cast(tmp);
   loopNestBuilder(lbs, ubs, steps, [&](ValueRange loopIvs) {
@@ -595,10 +593,15 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
     if (coalescedIdx >= 0)
       std::swap(ivs.back(), ivs[coalescedIdx]);
     // Computes clippedScalarAccessExprs in the loop nest scope (ivs exist).
-    local(ivs) = remote(clip(transfer, memRefBoundsCapture, ivs));
+    SmallVector<Value, 8> indices = clip(transfer, memRefBoundsCapture, ivs);
+    ArrayRef<Value> indicesRef(indices), ivsRef(ivs);
+    Value pos =
+        std_index_cast(IntegerType::get(32, op->getContext()), ivsRef.back());
+    Value vector = vector_insert_element(remote(indicesRef),
+                                         local(ivsRef.drop_back()), pos);
+    local(ivsRef.drop_back()) = vector;
   });
   Value vectorValue = std_load(vec);
-  (std_dealloc(tmp)); // vexing parse
 
   // 3. Propagate.
   rewriter.replaceOp(op, vectorValue);
@@ -667,8 +670,7 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
     steps.push_back(std_constant_index(step));
 
   // 2. Emit alloc-store-copy-dealloc.
-  Value tmp = std_alloc(tmpMemRefType(transfer), ValueRange{},
-                        rewriter.getI64IntegerAttr(ALIGNMENT_SIZE));
+  Value tmp = setAllocAtFunctionEntry(tmpMemRefType(transfer), transfer);
   StdIndexedValue local(tmp);
   Value vec = vector_type_cast(tmp);
   std_store(vectorValue, vec);
@@ -678,10 +680,15 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
     if (coalescedIdx >= 0)
       std::swap(ivs.back(), ivs[coalescedIdx]);
     // Computes clippedScalarAccessExprs in the loop nest scope (ivs exist).
-    remote(clip(transfer, memRefBoundsCapture, ivs)) = local(ivs);
+    SmallVector<Value, 8> indices = clip(transfer, memRefBoundsCapture, ivs);
+    ArrayRef<Value> indicesRef(indices), ivsRef(ivs);
+    Value pos =
+        std_index_cast(IntegerType::get(32, op->getContext()), ivsRef.back());
+    Value scalar = vector_extract_element(local(ivsRef.drop_back()), pos);
+    remote(indices) = scalar;
   });
-  (std_dealloc(tmp)); // vexing parse...
 
+  // 3. Erase.
   rewriter.eraseOp(op);
   return success();
 }

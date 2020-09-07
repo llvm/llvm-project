@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_unittest(ASTTests
   ASTContextParentMapTest.cpp
+  ASTDumpTest.cpp
   ASTImporterFixtures.cpp
   ASTImporterTest.cpp
   ASTImporterGenericRedeclTest.cpp

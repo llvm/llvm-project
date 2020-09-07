@@ -147,7 +147,7 @@ static void inlineRegionAndEmitStore(OpType op, ArrayRef<Value> indexedValues,
   }
 
   Operation &terminator = block.back();
-  assert(isa<YieldOp>(terminator) &&
+  assert(isa<linalg::YieldOp>(terminator) &&
          "expected a yield op in the end of the region");
   for (unsigned i = 0, e = terminator.getNumOperands(); i < e; ++i) {
     IndexedValueType O(outputBuffers[i]);

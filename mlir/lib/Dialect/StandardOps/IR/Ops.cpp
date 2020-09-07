@@ -1312,7 +1312,6 @@ Optional<int64_t> DimOp::getConstantIndex() {
 }
 
 static LogicalResult verify(DimOp op) {
-
   // Assume unknown index to be in range.
   Optional<int64_t> index = op.getConstantIndex();
   if (!index.hasValue())
@@ -1630,6 +1629,67 @@ LogicalResult DmaWaitOp::verify() {
   if (!getNumElements().getType().isIndex())
     return emitOpError()
            << "expected the number of elements to be of index type";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DynamicTensorFromElementsOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseDynamicTensorFromElementsOp(OpAsmParser &parser,
+                                                    OperationState &result) {
+  // Parse operands.
+  SmallVector<OpAsmParser::OperandType, 4> dynamicExtents;
+  Type indexTy = parser.getBuilder().getIndexType();
+  if (parser.parseOperandList(dynamicExtents) ||
+      parser.resolveOperands(dynamicExtents, indexTy, result.operands))
+    return failure();
+
+  // Parse body.
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, {}, {}))
+    return failure();
+
+  // Parse result type.
+  Type resultType;
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(resultType))
+    return failure();
+  result.addTypes(resultType);
+
+  return success();
+}
+
+static void print(OpAsmPrinter &p, DynamicTensorFromElementsOp op) {
+  p << "dynamic_tensor_from_elements " << op.dynamicExtents();
+  p.printRegion(op.body());
+  p.printOptionalAttrDict(op.getAttrs());
+  p << " : " << op.getType();
+}
+
+static LogicalResult verify(DynamicTensorFromElementsOp op) {
+  // Ensure that the tensor type has as many dynamic dimensions as are specified
+  // by the operands.
+  RankedTensorType resultTy = op.getType().cast<RankedTensorType>();
+  if (op.getNumOperands() != resultTy.getNumDynamicDims())
+    return op.emitError("must have as many index operands as dynamic extents "
+                        "in the result type");
+
+  // Ensure that region arguments span the index space.
+  if (!llvm::all_of(op.body().getArgumentTypes(),
+                    [](Type ty) { return ty.isIndex(); }))
+    return op.emitError("all body arguments must be index");
+  if (op.body().getNumArguments() != resultTy.getRank())
+    return op.emitError("must have one body argument per input dimension");
+
+  // Ensure that the region yields an element of the right type.
+  auto yieldOp =
+      llvm::cast<YieldOp>(op.body().getBlocks().front().getTerminator());
+  if (yieldOp.value().getType() != resultTy.getElementType())
+    return op.emitOpError(
+        "body must be terminated with a `yield` operation of the tensor "
+        "element type");
 
   return success();
 }

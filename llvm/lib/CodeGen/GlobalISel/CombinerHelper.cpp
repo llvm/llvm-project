@@ -2243,13 +2243,13 @@ static bool isConstValidTrue(const TargetLowering &TLI, unsigned ScalarSizeBits,
          isConstTrueVal(TLI, Cst, IsVector, IsFP);
 }
 
-bool CombinerHelper::matchNotCmp(MachineInstr &MI, Register &CmpReg) {
+bool CombinerHelper::matchNotCmp(MachineInstr &MI,
+                                 SmallVectorImpl<Register> &RegsToNegate) {
   assert(MI.getOpcode() == TargetOpcode::G_XOR);
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
   const auto &TLI = *Builder.getMF().getSubtarget().getTargetLowering();
   Register XorSrc;
   Register CstReg;
-  int64_t Cst;
   // We match xor(src, true) here.
   if (!mi_match(MI.getOperand(0).getReg(), MRI,
                 m_GXor(m_Reg(XorSrc), m_Reg(CstReg))))
@@ -2258,15 +2258,51 @@ bool CombinerHelper::matchNotCmp(MachineInstr &MI, Register &CmpReg) {
   if (!MRI.hasOneNonDBGUse(XorSrc))
     return false;
 
-  // Now try match src to either icmp or fcmp.
+  // Check that XorSrc is the root of a tree of comparisons combined with ANDs
+  // and ORs. The suffix of RegsToNegate starting from index I is used a work
+  // list of tree nodes to visit.
+  RegsToNegate.push_back(XorSrc);
+  // Remember whether the comparisons are all integer or all floating point.
+  bool IsInt = false;
   bool IsFP = false;
-  if (!mi_match(XorSrc, MRI, m_GICmp(m_Pred(), m_Reg(), m_Reg()))) {
-    // Try fcmp.
-    if (!mi_match(XorSrc, MRI, m_GFCmp(m_Pred(), m_Reg(), m_Reg())))
+  for (unsigned I = 0; I < RegsToNegate.size(); ++I) {
+    Register Reg = RegsToNegate[I];
+    if (!MRI.hasOneNonDBGUse(Reg))
       return false;
-    IsFP = true;
+    MachineInstr *Def = MRI.getVRegDef(Reg);
+    switch (Def->getOpcode()) {
+    default:
+      // Don't match if the tree contains anything other than ANDs, ORs and
+      // comparisons.
+      return false;
+    case TargetOpcode::G_ICMP:
+      if (IsFP)
+        return false;
+      IsInt = true;
+      // When we apply the combine we will invert the predicate.
+      break;
+    case TargetOpcode::G_FCMP:
+      if (IsInt)
+        return false;
+      IsFP = true;
+      // When we apply the combine we will invert the predicate.
+      break;
+    case TargetOpcode::G_AND:
+    case TargetOpcode::G_OR:
+      // Implement De Morgan's laws:
+      // ~(x & y) -> ~x | ~y
+      // ~(x | y) -> ~x & ~y
+      // When we apply the combine we will change the opcode and recursively
+      // negate the operands.
+      RegsToNegate.push_back(Def->getOperand(1).getReg());
+      RegsToNegate.push_back(Def->getOperand(2).getReg());
+      break;
+    }
   }
 
+  // Now we know whether the comparisons are integer or floating point, check
+  // the constant in the xor.
+  int64_t Cst;
   if (Ty.isVector()) {
     MachineInstr *CstDef = MRI.getVRegDef(CstReg);
     auto MaybeCst = getBuildVectorConstantSplat(*CstDef, MRI);
@@ -2281,25 +2317,38 @@ bool CombinerHelper::matchNotCmp(MachineInstr &MI, Register &CmpReg) {
       return false;
   }
 
-  CmpReg = XorSrc;
   return true;
 }
 
-bool CombinerHelper::applyNotCmp(MachineInstr &MI, Register &CmpReg) {
-  MachineInstr *CmpDef = MRI.getVRegDef(CmpReg);
-  assert(CmpDef && "Should have been given an MI reg");
-  assert(CmpDef->getOpcode() == TargetOpcode::G_ICMP ||
-         CmpDef->getOpcode() == TargetOpcode::G_FCMP);
+bool CombinerHelper::applyNotCmp(MachineInstr &MI,
+                                 SmallVectorImpl<Register> &RegsToNegate) {
+  for (Register Reg : RegsToNegate) {
+    MachineInstr *Def = MRI.getVRegDef(Reg);
+    Observer.changingInstr(*Def);
+    // For each comparison, invert the opcode. For each AND and OR, change the
+    // opcode.
+    switch (Def->getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected opcode");
+    case TargetOpcode::G_ICMP:
+    case TargetOpcode::G_FCMP: {
+      MachineOperand &PredOp = Def->getOperand(1);
+      CmpInst::Predicate NewP = CmpInst::getInversePredicate(
+          (CmpInst::Predicate)PredOp.getPredicate());
+      PredOp.setPredicate(NewP);
+      break;
+    }
+    case TargetOpcode::G_AND:
+      Def->setDesc(Builder.getTII().get(TargetOpcode::G_OR));
+      break;
+    case TargetOpcode::G_OR:
+      Def->setDesc(Builder.getTII().get(TargetOpcode::G_AND));
+      break;
+    }
+    Observer.changedInstr(*Def);
+  }
 
-  Observer.changingInstr(*CmpDef);
-  MachineOperand &PredOp = CmpDef->getOperand(1);
-  CmpInst::Predicate NewP = CmpInst::getInversePredicate(
-      (CmpInst::Predicate)PredOp.getPredicate());
-  PredOp.setPredicate(NewP);
-  Observer.changedInstr(*CmpDef);
-
-  replaceRegWith(MRI, MI.getOperand(0).getReg(),
-                 CmpDef->getOperand(0).getReg());
+  replaceRegWith(MRI, MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
   MI.eraseFromParent();
   return true;
 }

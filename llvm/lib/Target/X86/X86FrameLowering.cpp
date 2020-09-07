@@ -490,9 +490,9 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
   }
   const MachineModuleInfo &MMI = MF.getMMI();
   const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
-  const unsigned FramePtr = TRI->getFrameRegister(MF);
-  const unsigned MachineFramePtr =
-      STI.isTarget64BitILP32() ? unsigned(getX86SubSuperRegister(FramePtr, 64))
+  const Register FramePtr = TRI->getFrameRegister(MF);
+  const Register MachineFramePtr =
+      STI.isTarget64BitILP32() ? Register(getX86SubSuperRegister(FramePtr, 64))
                                : FramePtr;
   unsigned DwarfReg = MRI->getDwarfRegNum(MachineFramePtr, true);
   // Offset = space for return address + size of the frame pointer itself.
@@ -1788,7 +1788,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   // standard x86_64 and NaCl use 64-bit frame/stack pointers, x32 - 32-bit.
   const bool Is64BitILP32 = STI.isTarget64BitILP32();
   Register FramePtr = TRI->getFrameRegister(MF);
-  unsigned MachineFramePtr =
+  Register MachineFramePtr =
       Is64BitILP32 ? Register(getX86SubSuperRegister(FramePtr, 64)) : FramePtr;
 
   bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();

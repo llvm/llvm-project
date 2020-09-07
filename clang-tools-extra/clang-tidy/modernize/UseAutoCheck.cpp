@@ -338,7 +338,7 @@ void UseAutoCheck::replaceIterators(const DeclStmt *D, ASTContext *Context) {
 
     // Drill down to the as-written initializer.
     const Expr *E = (*Construct->arg_begin())->IgnoreParenImpCasts();
-    if (E != E->IgnoreConversionOperator()) {
+    if (E != E->IgnoreConversionOperatorSingleStep()) {
       // We hit a conversion operator. Early-out now as they imply an implicit
       // conversion from a different type. Could also mean an explicit
       // conversion from the same type but that's pretty rare.
