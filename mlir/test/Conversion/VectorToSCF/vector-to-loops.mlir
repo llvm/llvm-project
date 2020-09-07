@@ -99,9 +99,9 @@ func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-NEXT:                %[[L3:.*]] = select
   // CHECK-NEXT:                %[[VIDX:.*]] = index_cast %[[I4]]
   //
-  // CHECK-NEXT:                {{.*}} = load %{{.*}}[%[[L0]], %[[L1]], %[[L2]], %[[L3]]] : memref<?x?x?x?xf32>
-  // CHECK-NEXT:                %[[VEC:.*]] = load %[[ALLOC]][%[[I6]], %[[I5]]] : memref<5x4xvector<3xf32>>
-  // CHECK-NEXT:                %[[RVEC:.*]] = vector.insertelement %25, %[[VEC]][%[[VIDX]] : i32] : vector<3xf32>
+  //  CHECK-DAG:                %[[SCAL:.*]] = load %{{.*}}[%[[L0]], %[[L1]], %[[L2]], %[[L3]]] : memref<?x?x?x?xf32>
+  //  CHECK-DAG:                %[[VEC:.*]] = load %[[ALLOC]][%[[I6]], %[[I5]]] : memref<5x4xvector<3xf32>>
+  // CHECK-NEXT:                %[[RVEC:.*]] = vector.insertelement %[[SCAL]], %[[VEC]][%[[VIDX]] : i32] : vector<3xf32>
   // CHECK-NEXT:                store %[[RVEC]], %[[ALLOC]][%[[I6]], %[[I5]]] : memref<5x4xvector<3xf32>>
   // CHECK-NEXT:              }
   // CHECK-NEXT:            }
@@ -183,7 +183,7 @@ func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
   //
   // CHECK-NEXT:                %[[VEC:.*]] = load {{.*}}[%[[I6]], %[[I5]]] : memref<5x4xvector<3xf32>>
   // CHECK-NEXT:                %[[SCAL:.*]] = vector.extractelement %[[VEC]][%[[VIDX]] : i32] : vector<3xf32>
-  //      CHECK:                store %[[SCAL]], {{.*}}[%[[S0]], %[[S1]], %[[S2]], %[[S3]]] : memref<?x?x?x?xf32>
+  // CHECK-NEXT:                store %[[SCAL]], {{.*}}[%[[S0]], %[[S1]], %[[S2]], %[[S3]]] : memref<?x?x?x?xf32>
   // CHECK-NEXT:              }
   // CHECK-NEXT:            }
   // CHECK-NEXT:          }

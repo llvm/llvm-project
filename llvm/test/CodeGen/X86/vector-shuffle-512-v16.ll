@@ -378,11 +378,10 @@ define <8 x float> @shuffle_v16f32_extract_256(float* %RET, float* %a) {
 define <8 x float> @test_v16f32_0_1_2_3_4_6_7_10 (<16 x float> %v) {
 ; ALL-LABEL: test_v16f32_0_1_2_3_4_6_7_10:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vextractf32x4 $2, %zmm0, %xmm1
-; ALL-NEXT:    vmovsldup {{.*#+}} xmm1 = xmm1[0,0,2,2]
-; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,6,7,u]
-; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7]
+; ALL-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = [0,1,2,3,4,6,7,10,0,1,2,3,4,6,7,10]
+; ALL-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3]
+; ALL-NEXT:    vpermd %zmm0, %zmm1, %zmm0
+; ALL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; ALL-NEXT:    retq
   %res = shufflevector <16 x float> %v, <16 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 6, i32 7, i32 10>
   ret <8 x float> %res

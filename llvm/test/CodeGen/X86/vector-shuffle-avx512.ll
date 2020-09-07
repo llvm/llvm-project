@@ -35,11 +35,11 @@ define <8 x float> @expand1(<4 x float> %a ) {
 ;
 ; KNL-LABEL: expand1:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; KNL-NEXT:    vmovaps {{.*#+}} ymm1 = <u,0,u,1,u,2,u,3>
-; KNL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; KNL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; KNL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7]
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; KNL-NEXT:    vmovaps {{.*#+}} ymm1 = [16,0,18,1,20,2,22,3]
+; KNL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; KNL-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    ret{{[l|q]}}
    %res = shufflevector <4 x float> zeroinitializer, <4 x float> %a, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
    ret <8 x float> %res
@@ -268,10 +268,11 @@ define <8 x float> @expand14(<4 x float> %a) {
 ;
 ; KNL-LABEL: expand14:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; KNL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
-; KNL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; KNL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3],ymm0[4],ymm1[5,6,7]
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; KNL-NEXT:    vmovaps {{.*#+}} ymm1 = [16,17,0,19,1,21,22,23]
+; KNL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; KNL-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    ret{{[l|q]}}
    %addV = fadd <4 x float> <float 0.0,float 1.0,float 2.0,float 0.0> , <float 0.0,float 1.0,float 2.0,float 0.0>
    %res = shufflevector <4 x float> %addV, <4 x float> %a, <8 x i32> <i32 3, i32 3, i32 4, i32 0, i32 5, i32 0, i32 0, i32 0>
@@ -476,9 +477,11 @@ define <8 x float> @test_masked_permps_v8f32(<8 x float>* %vp, <8 x float> %vec2
 ;
 ; KNL64-LABEL: test_masked_permps_v8f32:
 ; KNL64:       # %bb.0:
-; KNL64-NEXT:    vpermilps {{.*#+}} ymm1 = mem[3,2,2,3,7,6,6,7]
-; KNL64-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,0,2,3]
-; KNL64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3],ymm1[4,5],ymm0[6,7]
+; KNL64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; KNL64-NEXT:    vmovaps (%rdi), %ymm1
+; KNL64-NEXT:    vmovaps {{.*#+}} ymm2 = [7,6,3,19,7,6,22,23]
+; KNL64-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
+; KNL64-NEXT:    vmovaps %ymm1, %ymm0
 ; KNL64-NEXT:    retq
 ;
 ; SKX32-LABEL: test_masked_permps_v8f32:
@@ -492,10 +495,12 @@ define <8 x float> @test_masked_permps_v8f32(<8 x float>* %vp, <8 x float> %vec2
 ;
 ; KNL32-LABEL: test_masked_permps_v8f32:
 ; KNL32:       # %bb.0:
+; KNL32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; KNL32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL32-NEXT:    vpermilps {{.*#+}} ymm1 = mem[3,2,2,3,7,6,6,7]
-; KNL32-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,0,2,3]
-; KNL32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3],ymm1[4,5],ymm0[6,7]
+; KNL32-NEXT:    vmovaps (%eax), %ymm1
+; KNL32-NEXT:    vmovaps {{.*#+}} ymm2 = [7,6,3,19,7,6,22,23]
+; KNL32-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
+; KNL32-NEXT:    vmovaps %ymm1, %ymm0
 ; KNL32-NEXT:    retl
   %vec = load <8 x float>, <8 x float>* %vp
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 7, i32 6, i32 3, i32 0, i32 7, i32 6, i32 3, i32 0>

@@ -154,7 +154,7 @@ static bool isPotentialBlockedMemCpyLd(unsigned Opcode) {
   return isXMMLoadOpcode(Opcode) || isYMMLoadOpcode(Opcode);
 }
 
-static bool isPotentialBlockedMemCpyPair(int LdOpcode, int StOpcode) {
+static bool isPotentialBlockedMemCpyPair(unsigned LdOpcode, unsigned StOpcode) {
   switch (LdOpcode) {
   case X86::MOVUPSrm:
   case X86::MOVAPSrm:
@@ -206,7 +206,7 @@ static bool isPotentialBlockedMemCpyPair(int LdOpcode, int StOpcode) {
   }
 }
 
-static bool isPotentialBlockingStoreInst(int Opcode, int LoadOpcode) {
+static bool isPotentialBlockingStoreInst(unsigned Opcode, unsigned LoadOpcode) {
   bool PBlock = false;
   PBlock |= Opcode == X86::MOV64mr || Opcode == X86::MOV64mi32 ||
             Opcode == X86::MOV32mr || Opcode == X86::MOV32mi ||

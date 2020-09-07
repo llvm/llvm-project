@@ -597,6 +597,51 @@ exit:
   unreachable
 }
 
+define i32 @unreachable_assumes_and_store(i32 %x, i32 %y, i32* %p) {
+; CHECK-LABEL: @unreachable_assumes_and_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp sgt i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[OR]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[X]], 1
+; CHECK-NEXT:    br i1 [[CMP2]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[Y]], -2
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[A]], 104
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP3]])
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i32 [[X]], 2
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP4]])
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[Y]], 42
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP5]])
+; CHECK-NEXT:    store i32 [[X]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    unreachable
+;
+entry:
+  %cmp0 = icmp sgt i32 %x, 1
+  %cmp1 = icmp eq i32 %y, 1
+  %or = or i1 %cmp0, %cmp1
+  tail call void @llvm.assume(i1 %or)
+  %cmp2 = icmp eq i32 %x, 1
+  br i1 %cmp2, label %if, label %exit
+
+if:
+  %a = and i32 %y, -2
+  %cmp3 = icmp ne i32 %a, 104
+  tail call void @llvm.assume(i1 %cmp3)
+  br label %exit
+
+exit:
+  %cmp4 = icmp eq i32 %x, 2
+  tail call void @llvm.assume(i1 %cmp4)
+  %cmp5 = icmp ugt i32 %y, 42
+  tail call void @llvm.assume(i1 %cmp5)
+  store i32 %x, i32* %p
+  unreachable
+}
+
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
