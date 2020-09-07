@@ -11314,16 +11314,6 @@ static Value *EmitX86ConvertIntToFp(CodeGenFunction &CGF,
   return EmitX86Select(CGF, Ops[2], Res, Ops[1]);
 }
 
-static Value *EmitX86Abs(CodeGenFunction &CGF, ArrayRef<Value *> Ops) {
-
-  llvm::Type *Ty = Ops[0]->getType();
-  Value *Zero = llvm::Constant::getNullValue(Ty);
-  Value *Sub = CGF.Builder.CreateSub(Zero, Ops[0]);
-  Value *Cmp = CGF.Builder.CreateICmp(ICmpInst::ICMP_SGT, Ops[0], Zero);
-  Value *Res = CGF.Builder.CreateSelect(Cmp, Ops[0], Sub);
-  return Res;
-}
-
 static Value *EmitX86MinMax(CodeGenFunction &CGF, ICmpInst::Predicate Pred,
                             ArrayRef<Value *> Ops) {
   Value *Cmp = CGF.Builder.CreateICmp(Pred, Ops[0], Ops[1]);
@@ -13300,9 +13290,10 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pabsb512:
   case X86::BI__builtin_ia32_pabsw512:
   case X86::BI__builtin_ia32_pabsd512:
-  case X86::BI__builtin_ia32_pabsq512:
-    return EmitX86Abs(*this, Ops);
-
+  case X86::BI__builtin_ia32_pabsq512: {
+    Function *F = CGM.getIntrinsic(Intrinsic::abs, Ops[0]->getType());
+    return Builder.CreateCall(F, {Ops[0], Builder.getInt1(false)});
+  }
   case X86::BI__builtin_ia32_pmaxsb128:
   case X86::BI__builtin_ia32_pmaxsw128:
   case X86::BI__builtin_ia32_pmaxsd128:
