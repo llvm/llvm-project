@@ -120,3 +120,88 @@ define i64 @test_i64(i64 %a) nounwind {
   ret i64 %abs
 }
 
+define i128 @test_i128(i128 %a) nounwind {
+; X86-NO-CMOV-LABEL: test_i128:
+; X86-NO-CMOV:       # %bb.0:
+; X86-NO-CMOV-NEXT:    pushl %ebp
+; X86-NO-CMOV-NEXT:    pushl %ebx
+; X86-NO-CMOV-NEXT:    pushl %edi
+; X86-NO-CMOV-NEXT:    pushl %esi
+; X86-NO-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NO-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NO-CMOV-NEXT:    xorl %ecx, %ecx
+; X86-NO-CMOV-NEXT:    negl %ebp
+; X86-NO-CMOV-NEXT:    movl $0, %ebx
+; X86-NO-CMOV-NEXT:    sbbl %edx, %ebx
+; X86-NO-CMOV-NEXT:    movl $0, %edi
+; X86-NO-CMOV-NEXT:    sbbl {{[0-9]+}}(%esp), %edi
+; X86-NO-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NO-CMOV-NEXT:    sbbl %esi, %ecx
+; X86-NO-CMOV-NEXT:    testl %esi, %esi
+; X86-NO-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NO-CMOV-NEXT:    js .LBB4_2
+; X86-NO-CMOV-NEXT:  # %bb.1:
+; X86-NO-CMOV-NEXT:    movl %esi, %ecx
+; X86-NO-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NO-CMOV-NEXT:    movl %edx, %ebx
+; X86-NO-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NO-CMOV-NEXT:  .LBB4_2:
+; X86-NO-CMOV-NEXT:    movl %ebp, (%eax)
+; X86-NO-CMOV-NEXT:    movl %ebx, 4(%eax)
+; X86-NO-CMOV-NEXT:    movl %edi, 8(%eax)
+; X86-NO-CMOV-NEXT:    movl %ecx, 12(%eax)
+; X86-NO-CMOV-NEXT:    popl %esi
+; X86-NO-CMOV-NEXT:    popl %edi
+; X86-NO-CMOV-NEXT:    popl %ebx
+; X86-NO-CMOV-NEXT:    popl %ebp
+; X86-NO-CMOV-NEXT:    retl $4
+;
+; X86-CMOV-LABEL: test_i128:
+; X86-CMOV:       # %bb.0:
+; X86-CMOV-NEXT:    pushl %ebp
+; X86-CMOV-NEXT:    pushl %ebx
+; X86-CMOV-NEXT:    pushl %edi
+; X86-CMOV-NEXT:    pushl %esi
+; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-CMOV-NEXT:    xorl %esi, %esi
+; X86-CMOV-NEXT:    negl %edi
+; X86-CMOV-NEXT:    movl $0, %ebx
+; X86-CMOV-NEXT:    sbbl %edx, %ebx
+; X86-CMOV-NEXT:    movl $0, %ebp
+; X86-CMOV-NEXT:    sbbl %ecx, %ebp
+; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-CMOV-NEXT:    sbbl %eax, %esi
+; X86-CMOV-NEXT:    testl %eax, %eax
+; X86-CMOV-NEXT:    cmovnsl %eax, %esi
+; X86-CMOV-NEXT:    cmovnsl %ecx, %ebp
+; X86-CMOV-NEXT:    cmovnsl %edx, %ebx
+; X86-CMOV-NEXT:    cmovnsl {{[0-9]+}}(%esp), %edi
+; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-CMOV-NEXT:    movl %edi, (%eax)
+; X86-CMOV-NEXT:    movl %ebx, 4(%eax)
+; X86-CMOV-NEXT:    movl %ebp, 8(%eax)
+; X86-CMOV-NEXT:    movl %esi, 12(%eax)
+; X86-CMOV-NEXT:    popl %esi
+; X86-CMOV-NEXT:    popl %edi
+; X86-CMOV-NEXT:    popl %ebx
+; X86-CMOV-NEXT:    popl %ebp
+; X86-CMOV-NEXT:    retl $4
+;
+; X64-LABEL: test_i128:
+; X64:       # %bb.0:
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    negq %rax
+; X64-NEXT:    sbbq %rsi, %rdx
+; X64-NEXT:    testq %rsi, %rsi
+; X64-NEXT:    cmovnsq %rdi, %rax
+; X64-NEXT:    cmovnsq %rsi, %rdx
+; X64-NEXT:    retq
+  %tmp1neg = sub i128 0, %a
+  %b = icmp sgt i128 %a, -1
+  %abs = select i1 %b, i128 %a, i128 %tmp1neg
+  ret i128 %abs
+}
+
