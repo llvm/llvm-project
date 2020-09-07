@@ -5010,6 +5010,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Assert(Size % 16 == 0, "bswap must be an even number of bytes", &Call);
     break;
   }
+  case Intrinsic::invariant_start: {
+    ConstantInt *InvariantSize = dyn_cast<ConstantInt>(Call.getArgOperand(0));
+    Assert(InvariantSize &&
+               (!InvariantSize->isNegative() || InvariantSize->isMinusOne()),
+           "invariant_start parameter must be -1, 0 or a positive number",
+           &Call);
+    break;
+  }
   case Intrinsic::matrix_multiply:
   case Intrinsic::matrix_transpose:
   case Intrinsic::matrix_column_major_load:
