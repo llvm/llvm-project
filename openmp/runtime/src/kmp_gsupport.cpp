@@ -17,6 +17,12 @@
 #include "ompt-specific.h"
 #endif
 
+enum {
+  KMP_GOMP_TASK_UNTIED_FLAG = 1,
+  KMP_GOMP_TASK_FINAL_FLAG = 2,
+  KMP_GOMP_TASK_DEPENDS_FLAG = 8
+};
+
 // This class helps convert gomp dependency info into
 // kmp_depend_info_t structures
 class kmp_gomp_depends_info_t {
@@ -1181,11 +1187,11 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
   KA_TRACE(20, ("GOMP_task: T#%d\n", gtid));
 
   // The low-order bit is the "untied" flag
-  if (!(gomp_flags & 1)) {
+  if (!(gomp_flags & KMP_GOMP_TASK_UNTIED_FLAG)) {
     input_flags->tiedness = 1;
   }
   // The second low-order bit is the "final" flag
-  if (gomp_flags & 2) {
+  if (gomp_flags & KMP_GOMP_TASK_FINAL_FLAG) {
     input_flags->final = 1;
   }
   input_flags->native = 1;
@@ -1223,7 +1229,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
 #endif
 
   if (if_cond) {
-    if (gomp_flags & 8) {
+    if (gomp_flags & KMP_GOMP_TASK_DEPENDS_FLAG) {
       KMP_ASSERT(depend);
       kmp_gomp_depends_info_t gomp_depends(depend);
       kmp_int32 ndeps = gomp_depends.get_num_deps();
@@ -1250,6 +1256,15 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
       OMPT_STORE_RETURN_ADDRESS(gtid);
     }
 #endif
+    if (gomp_flags & KMP_GOMP_TASK_DEPENDS_FLAG) {
+      KMP_ASSERT(depend);
+      kmp_gomp_depends_info_t gomp_depends(depend);
+      kmp_int32 ndeps = gomp_depends.get_num_deps();
+      kmp_depend_info_t dep_list[ndeps];
+      for (kmp_int32 i = 0; i < ndeps; i++)
+        dep_list[i] = gomp_depends.get_kmp_depend(i);
+      __kmpc_omp_wait_deps(&loc, gtid, ndeps, dep_list, 0, NULL);
+    }
 
     __kmpc_omp_task_begin_if0(&loc, gtid, task);
     func(data);
