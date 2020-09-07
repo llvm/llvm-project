@@ -20,7 +20,7 @@
 // CHECK-NEXT:   }
 // CHECK:        Section {
 // CHECK:          Name: .xdata
-// CHECK:          RawDataSize: 56
+// CHECK:          RawDataSize: 52
 // CHECK:          RelocationCount: 1
 // CHECK:          Characteristics [
 // CHECK-NEXT:       ALIGN_4BYTES
@@ -41,7 +41,7 @@
 
 // CHECK-NEXT: Relocations [
 // CHECK-NEXT:   Section (4) .xdata {
-// CHECK-NEXT:     0x2C IMAGE_REL_ARM64_ADDR32NB __C_specific_handler
+// CHECK-NEXT:     0x28 IMAGE_REL_ARM64_ADDR32NB __C_specific_handler
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section (5) .pdata {
 // CHECK-NEXT:     0x0 IMAGE_REL_ARM64_ADDR32NB func
@@ -80,15 +80,9 @@
 // CHECK-NEXT:         0x01                ; sub sp, #16
 // CHECK-NEXT:         0xe4                ; end
 // CHECK-NEXT:       ]
-// CHECK-NEXT:       EpilogueScopes [
-// CHECK-NEXT:         EpilogueScope {
-// CHECK-NEXT:           StartOffset: 23
-// CHECK-NEXT:           EpilogueStartIndex: 33
-// CHECK-NEXT:           Opcodes [
-// CHECK-NEXT:             0x01                ; add sp, #16
-// CHECK-NEXT:             0xe4                ; end
-// CHECK-NEXT:           ]
-// CHECK-NEXT:         }
+// CHECK-NEXT:       Epilogue [
+// CHECK-NEXT:         0x01                ; add sp, #16
+// CHECK-NEXT:         0xe4                ; end
 // CHECK-NEXT:       ]
 // CHECK-NEXT:       ExceptionHandler [
 // CHECK-NEXT:         Routine: __C_specific_handler (0x0)

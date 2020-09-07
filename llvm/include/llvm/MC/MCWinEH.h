@@ -26,6 +26,14 @@ struct Instruction {
 
   Instruction(unsigned Op, MCSymbol *L, unsigned Reg, unsigned Off)
     : Label(L), Offset(Off), Register(Reg), Operation(Op) {}
+
+  bool operator==(const Instruction &I) const {
+    // Check whether two instructions refer to the same operation
+    // applied at a different spot (i.e. pointing at a different label).
+    return Offset == I.Offset && Register == I.Register &&
+           Operation == I.Operation;
+  }
+  bool operator!=(const Instruction &I) const { return !(*this == I); }
 };
 
 struct FrameInfo {
