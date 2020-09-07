@@ -2006,8 +2006,15 @@ define i64 @test_chr_22(i1 %i, i64* %j, i64 %v0) !prof !14 {
 ; CHECK-NEXT:  bb0:
 ; CHECK-NEXT:    [[REASS_ADD:%.*]] = shl i64 [[V0:%.*]], 1
 ; CHECK-NEXT:    [[V2:%.*]] = add i64 [[REASS_ADD]], 3
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i64 [[V2]], 100
+; CHECK-NEXT:    br i1 [[C1]], label [[BB0_SPLIT:%.*]], label [[BB0_SPLIT_NONCHR:%.*]], !prof !15
+; CHECK:       bb0.split:
 ; CHECK-NEXT:    [[V299:%.*]] = mul i64 [[V2]], 7860086430977039991
 ; CHECK-NEXT:    store i64 [[V299]], i64* [[J:%.*]], align 4
+; CHECK-NEXT:    ret i64 99
+; CHECK:       bb0.split.nonchr:
+; CHECK-NEXT:    [[V299_NONCHR:%.*]] = mul i64 [[V2]], 7860086430977039991
+; CHECK-NEXT:    store i64 [[V299_NONCHR]], i64* [[J]], align 4
 ; CHECK-NEXT:    ret i64 99
 ;
 bb0:
