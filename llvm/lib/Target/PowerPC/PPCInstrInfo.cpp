@@ -4765,7 +4765,7 @@ MachineInstr *PPCInstrInfo::findLoopInstr(
 bool PPCInstrInfo::getMemOperandWithOffsetWidth(
     const MachineInstr &LdSt, const MachineOperand *&BaseReg, int64_t &Offset,
     unsigned &Width, const TargetRegisterInfo *TRI) const {
-  if (!LdSt.mayLoadOrStore())
+  if (!LdSt.mayLoadOrStore() || LdSt.getNumExplicitOperands() != 3)
     return false;
 
   // Handle only loads/stores with base register followed by immediate offset.
