@@ -1893,11 +1893,17 @@ struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
       // Adjust the allocation size to consider alignment.
       if (Optional<uint64_t> alignment = allocOp.alignment()) {
         accessAlignment = createIndexConstant(rewriter, loc, *alignment);
-        cumulativeSize = rewriter.create<LLVM::SubOp>(
-            loc,
-            rewriter.create<LLVM::AddOp>(loc, cumulativeSize, accessAlignment),
-            one);
+      } else if (!memRefType.getElementType().isSignlessIntOrIndexOrFloat()) {
+        // In the case where no alignment is specified, we may want to override
+        // `malloc's` behavior. `malloc` typically aligns at the size of the
+        // biggest scalar on a target HW. For non-scalars, use the natural
+        // alignment of the LLVM type given by the LLVM DataLayout.
+        accessAlignment =
+            this->getSizeInBytes(loc, memRefType.getElementType(), rewriter);
       }
+      if (accessAlignment)
+        cumulativeSize =
+            rewriter.create<LLVM::AddOp>(loc, cumulativeSize, accessAlignment);
       callArgs.push_back(cumulativeSize);
     }
     auto allocFuncSymbol = rewriter.getSymbolRefAttr(allocFunc);
