@@ -51,14 +51,12 @@ namespace llvm {
 class BasicBlock;
 class DominatorTree;
 class InnerLoopVectorizer;
-template <class T> class InterleaveGroup;
 class LoopInfo;
 class raw_ostream;
 class RecurrenceDescriptor;
 class Value;
 class VPBasicBlock;
 class VPRegionBlock;
-class VPSlotTracker;
 class VPlan;
 class VPlanSlp;
 
