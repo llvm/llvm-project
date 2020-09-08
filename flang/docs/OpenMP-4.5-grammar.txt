@@ -344,6 +344,8 @@
                  ATOMIC [seq_cst]
        atomic-clause -> READ | WRITE | UPDATE | CAPTURE
 
+2.13.6 end-atomic -> END ATOMIC
+
 2.13.7 flush -> FLUSH [(variable-name-list)]
 
 2.13.8 ordered -> ORDERED ordered-construct-clause [[[,] ordered-construct-clause]...]
