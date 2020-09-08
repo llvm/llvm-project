@@ -53,11 +53,6 @@ ExecutionEngine *(*ExecutionEngine::MCJITCtor)(
     std::shared_ptr<LegacyJITSymbolResolver> Resolver,
     std::unique_ptr<TargetMachine> TM) = nullptr;
 
-ExecutionEngine *(*ExecutionEngine::OrcMCJITReplacementCtor)(
-    std::string *ErrorStr, std::shared_ptr<MCJITMemoryManager> MemMgr,
-    std::shared_ptr<LegacyJITSymbolResolver> Resolver,
-    std::unique_ptr<TargetMachine> TM) = nullptr;
-
 ExecutionEngine *(*ExecutionEngine::InterpCtor)(std::unique_ptr<Module> M,
                                                 std::string *ErrorStr) =nullptr;
 
@@ -476,8 +471,7 @@ EngineBuilder::EngineBuilder() : EngineBuilder(nullptr) {}
 
 EngineBuilder::EngineBuilder(std::unique_ptr<Module> M)
     : M(std::move(M)), WhichEngine(EngineKind::Either), ErrorStr(nullptr),
-      OptLevel(CodeGenOpt::Default), MemMgr(nullptr), Resolver(nullptr),
-      UseOrcMCJITReplacement(false) {
+      OptLevel(CodeGenOpt::Default), MemMgr(nullptr), Resolver(nullptr) {
 // IR module verification is enabled by default in debug builds, and disabled
 // by default in release builds.
 #ifndef NDEBUG
@@ -540,12 +534,7 @@ ExecutionEngine *EngineBuilder::create(TargetMachine *TM) {
     }
 
     ExecutionEngine *EE = nullptr;
-    if (ExecutionEngine::OrcMCJITReplacementCtor && UseOrcMCJITReplacement) {
-      EE = ExecutionEngine::OrcMCJITReplacementCtor(ErrorStr, std::move(MemMgr),
-                                                    std::move(Resolver),
-                                                    std::move(TheTM));
-      EE->addModule(std::move(M));
-    } else if (ExecutionEngine::MCJITCtor)
+    if (ExecutionEngine::MCJITCtor)
       EE = ExecutionEngine::MCJITCtor(std::move(M), ErrorStr, std::move(MemMgr),
                                       std::move(Resolver), std::move(TheTM));
 

@@ -152,56 +152,6 @@ inline iterator_range<StaticInitGVIterator> getStaticInitGVs(Module &M) {
   return make_range(StaticInitGVIterator(M), StaticInitGVIterator());
 }
 
-/// Convenience class for recording constructor/destructor names for
-///        later execution.
-template <typename JITLayerT>
-class LegacyCtorDtorRunner {
-public:
-  /// Construct a CtorDtorRunner for the given range using the given
-  ///        name mangling function.
-  LLVM_ATTRIBUTE_DEPRECATED(
-      LegacyCtorDtorRunner(std::vector<std::string> CtorDtorNames,
-                           VModuleKey K),
-      "ORCv1 utilities (utilities with the 'Legacy' prefix) are deprecated. "
-      "Please use the ORCv2 CtorDtorRunner utility instead");
-
-  LegacyCtorDtorRunner(ORCv1DeprecationAcknowledgement,
-                       std::vector<std::string> CtorDtorNames, VModuleKey K)
-      : CtorDtorNames(std::move(CtorDtorNames)), K(K) {}
-
-  /// Run the recorded constructors/destructors through the given JIT
-  ///        layer.
-  Error runViaLayer(JITLayerT &JITLayer) const {
-    using CtorDtorTy = void (*)();
-
-    for (const auto &CtorDtorName : CtorDtorNames) {
-      if (auto CtorDtorSym = JITLayer.findSymbolIn(K, CtorDtorName, false)) {
-        if (auto AddrOrErr = CtorDtorSym.getAddress()) {
-          CtorDtorTy CtorDtor =
-            reinterpret_cast<CtorDtorTy>(static_cast<uintptr_t>(*AddrOrErr));
-          CtorDtor();
-        } else
-          return AddrOrErr.takeError();
-      } else {
-        if (auto Err = CtorDtorSym.takeError())
-          return Err;
-        else
-          return make_error<JITSymbolNotFound>(CtorDtorName);
-      }
-    }
-    return Error::success();
-  }
-
-private:
-  std::vector<std::string> CtorDtorNames;
-  orc::VModuleKey K;
-};
-
-template <typename JITLayerT>
-LegacyCtorDtorRunner<JITLayerT>::LegacyCtorDtorRunner(
-    std::vector<std::string> CtorDtorNames, VModuleKey K)
-    : CtorDtorNames(std::move(CtorDtorNames)), K(K) {}
-
 class CtorDtorRunner {
 public:
   CtorDtorRunner(JITDylib &JD) : JD(JD) {}
@@ -249,45 +199,6 @@ protected:
   static int CXAAtExitOverride(DestructorPtr Destructor, void *Arg,
                                void *DSOHandle);
 };
-
-class LegacyLocalCXXRuntimeOverrides : public LocalCXXRuntimeOverridesBase {
-public:
-  /// Create a runtime-overrides class.
-  template <typename MangleFtorT>
-  LLVM_ATTRIBUTE_DEPRECATED(
-      LegacyLocalCXXRuntimeOverrides(const MangleFtorT &Mangle),
-      "ORCv1 utilities (utilities with the 'Legacy' prefix) are deprecated. "
-      "Please use the ORCv2 LocalCXXRuntimeOverrides utility instead");
-
-  template <typename MangleFtorT>
-  LegacyLocalCXXRuntimeOverrides(ORCv1DeprecationAcknowledgement,
-                                 const MangleFtorT &Mangle) {
-    addOverride(Mangle("__dso_handle"), toTargetAddress(&DSOHandleOverride));
-    addOverride(Mangle("__cxa_atexit"), toTargetAddress(&CXAAtExitOverride));
-  }
-
-  /// Search overrided symbols.
-  JITEvaluatedSymbol searchOverrides(const std::string &Name) {
-    auto I = CXXRuntimeOverrides.find(Name);
-    if (I != CXXRuntimeOverrides.end())
-      return JITEvaluatedSymbol(I->second, JITSymbolFlags::Exported);
-    return nullptr;
-  }
-
-private:
-  void addOverride(const std::string &Name, JITTargetAddress Addr) {
-    CXXRuntimeOverrides.insert(std::make_pair(Name, Addr));
-  }
-
-  StringMap<JITTargetAddress> CXXRuntimeOverrides;
-};
-
-template <typename MangleFtorT>
-LegacyLocalCXXRuntimeOverrides::LegacyLocalCXXRuntimeOverrides(
-    const MangleFtorT &Mangle) {
-  addOverride(Mangle("__dso_handle"), toTargetAddress(&DSOHandleOverride));
-  addOverride(Mangle("__cxa_atexit"), toTargetAddress(&CXAAtExitOverride));
-}
 
 class LocalCXXRuntimeOverrides : public LocalCXXRuntimeOverridesBase {
 public:
