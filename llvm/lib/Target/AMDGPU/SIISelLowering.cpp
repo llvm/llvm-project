@@ -7885,6 +7885,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
   if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
                                       MemVT, *Load->getMemOperand())) {
+    if (MemVT.isVector() && MemVT.getVectorNumElements() > 1)
+      return SplitVectorLoad(Op, DAG);
     SDValue Ops[2];
     std::tie(Ops[0], Ops[1]) = expandUnalignedLoad(Load, DAG);
     return DAG.getMergeValues(Ops, DL);
@@ -8408,6 +8410,8 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
 
   if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
                                       VT, *Store->getMemOperand())) {
+    if (VT.isVector() && VT.getVectorNumElements() > 1)
+      return SplitVectorStore(Op, DAG);
     return expandUnalignedStore(Store, DAG);
   }
 
