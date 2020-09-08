@@ -30,6 +30,7 @@ Clang-Tidy Checks
    `abseil-time-comparison <abseil-time-comparison.html>`_, "Yes"
    `abseil-time-subtraction <abseil-time-subtraction.html>`_, "Yes"
    `abseil-upgrade-duration-conversions <abseil-upgrade-duration-conversions.html>`_, "Yes"
+   `altera-struct-pack-align <altera-struct-pack-align.html>`_,
    `android-cloexec-accept <android-cloexec-accept.html>`_, "Yes"
    `android-cloexec-accept4 <android-cloexec-accept4.html>`_,
    `android-cloexec-creat <android-cloexec-creat.html>`_, "Yes"
