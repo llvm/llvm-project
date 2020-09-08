@@ -22,7 +22,7 @@ struct A {
   // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
   // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
-  // CHECK-NEXT: Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+  // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
 
   // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <col:1, col:8> col:8 implicit struct A
   int a;
@@ -57,7 +57,7 @@ struct C {
   // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
   // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
-  // CHECK-NEXT: Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+  // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
 
   // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <col:1, col:8> col:8 implicit struct C
   struct {
@@ -68,7 +68,7 @@ struct C {
     // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
     // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
-    // CHECK-NEXT: Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+    // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
     int a;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 a 'int'
   } b;
@@ -82,7 +82,7 @@ struct C {
     // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
     // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
-    // CHECK-NEXT: Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+    // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
     int c;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 c 'int'
     float d;
@@ -104,7 +104,7 @@ struct C {
     // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
     // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
-    // CHECK-NEXT: Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+    // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
     int e, f;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 e 'int'
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:5, col:12> col:12 f 'int'
@@ -126,7 +126,7 @@ struct D {
   // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
   // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
-  // CHECK-NEXT: Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+  // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
 
   // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <col:1, col:8> col:8 implicit struct D
   int a;
@@ -151,7 +151,7 @@ union E {
   // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
   // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
-  // CHECK-NEXT: Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+  // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
 
   // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <col:1, col:7> col:7 implicit union E
   int a;
@@ -186,7 +186,7 @@ union G {
   // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
   // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
   // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
-  // CHECK-NEXT: Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+  // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
 
   // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <col:1, col:7> col:7 implicit union G
   struct {
@@ -197,7 +197,7 @@ union G {
     // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
     // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
-    // CHECK-NEXT: Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+    // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
 
     int a;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 a 'int'
@@ -214,7 +214,7 @@ union G {
     // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
     // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
-    // CHECK-NEXT: Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+    // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
 
     int c;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 c 'int'
@@ -237,7 +237,7 @@ union G {
     // CHECK-NEXT: MoveConstructor exists simple trivial needs_implicit
     // CHECK-NEXT: CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
     // CHECK-NEXT: MoveAssignment exists simple trivial needs_implicit
-    // CHECK-NEXT: Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+    // CHECK-NEXT: Destructor simple irrelevant trivial needs_implicit
 
     int e, f;
     // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:5, col:9> col:9 e 'int'

@@ -48,7 +48,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    |   | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT:    |   | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    |   | |-MoveAssignment exists simple trivial needs_implicit
-// CHECK-NEXT:    |   | `-Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+// CHECK-NEXT:    |   | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    |   |-CXXRecordDecl {{.*}} <col:3, col:10> col:10{{( imported)?}} implicit struct V
 // CHECK-NEXT:    |   `-CXXMethodDecl {{.*}} <line:17:5, line:20:5> line:17:10{{( imported)?}} f 'void ()'
 // CHECK-NEXT:    |     `-CompoundStmt {{.*}} <col:14, line:20:5>
@@ -60,7 +60,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    |       | | | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT:    |       | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    |       | | | |-MoveAssignment
-// CHECK-NEXT:    |       | | | `-Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+// CHECK-NEXT:    |       | | | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    |       | | |-CXXMethodDecl {{.*}} <col:12, col:15> col:7{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    |       | | | `-CompoundStmt {{.*}} <col:14, col:15>
 // CHECK-NEXT:    |       | | `-FieldDecl {{.*}} <col:8> col:8{{( imported)?}} implicit 'V *'
@@ -75,7 +75,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    |         | | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT:    |         | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    |         | | |-MoveAssignment
-// CHECK-NEXT:    |         | | `-Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+// CHECK-NEXT:    |         | | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    |         | |-CXXMethodDecl {{.*}} <col:13, col:16> col:7{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    |         | | `-CompoundStmt {{.*}} <col:15, col:16>
 // CHECK-NEXT:    |         | `-FieldDecl {{.*}} <col:8> col:8{{( imported)?}} implicit 'V'
@@ -94,7 +94,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:6, col:9> col:3{{( imported)?}} operator() 'auto () const' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:8, col:9>
 // CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:9> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
@@ -108,7 +108,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:16, col:19> col:3{{( imported)?}} operator() 'auto (int, ...) const' inline
 // CHECK-NEXT:    | | | |-ParmVarDecl {{.*}} <col:6, col:10> col:10{{( imported)?}} a 'int'
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:18, col:19>
@@ -124,7 +124,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:11> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:10, col:11>
 // CHECK-NEXT:    | | `-FieldDecl {{.*}} <col:4> col:4{{( imported)?}} implicit 'Ts...'
@@ -139,7 +139,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:8> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | |   `-CompoundStmt {{.*}} <col:7, col:8>
 // CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:7, col:8>
@@ -151,7 +151,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:19> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | |   `-CompoundStmt {{.*}} <col:7, col:19>
 // CHECK-NEXT:    | |     `-ReturnStmt {{.*}} <col:9, col:16>
@@ -167,7 +167,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:8> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | |   `-CompoundStmt {{.*}} <col:7, col:8>
 // CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:7, col:8>
@@ -179,7 +179,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:19> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | |   `-CompoundStmt {{.*}} <col:7, col:19>
 // CHECK-NEXT:    | |     `-ReturnStmt {{.*}} <col:9, col:16>
@@ -195,7 +195,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:9, col:27> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:11, col:27>
 // CHECK-NEXT:    | | |   `-ReturnStmt {{.*}} <col:13, col:24>
@@ -224,7 +224,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:16, col:19> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:18, col:19>
 // CHECK-NEXT:    | | |-FieldDecl {{.*}} <col:4> col:4{{( imported)?}} implicit 'Ts...'
@@ -241,7 +241,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:19> col:3{{( imported)?}} constexpr operator() 'auto () const' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:18, col:19>
 // CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:19> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
@@ -255,7 +255,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:17> col:3{{( imported)?}} operator() 'auto ()' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:16, col:17>
 // CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:17> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
@@ -269,7 +269,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:18> col:3{{( imported)?}} operator() 'auto () const noexcept' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:17, col:18>
 // CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:18> col:3{{( imported)?}} implicit constexpr operator auto (*)() noexcept 'auto (*() const noexcept)() noexcept' inline
@@ -283,7 +283,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:      | | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT:      | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:      | | |-MoveAssignment
-// CHECK-NEXT:      | | `-Destructor simple irrelevant trivial{{( maybe_constexpr)?}} needs_implicit
+// CHECK-NEXT:      | | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:      | |-CXXMethodDecl {{.*}} <col:11, col:27> col:3{{( imported)?}} operator() 'auto () const -> int' inline
 // CHECK-NEXT:      | | `-CompoundStmt {{.*}} <col:15, col:27>
 // CHECK-NEXT:      | |   `-ReturnStmt {{.*}} <col:17, col:24>
