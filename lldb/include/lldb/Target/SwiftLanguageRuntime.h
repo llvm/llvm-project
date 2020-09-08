@@ -234,7 +234,11 @@ public:
       const SymbolContext &sc,
       llvm::DenseMap<ArchetypePath, llvm::StringRef> &dict);
 
-  CompilerType DoArchetypeBindingForType(StackFrame &stack_frame,
+  /// Using the generic type parameters of \p stack_frame return a
+  /// version of \p base_type that replaces all generic type
+  /// parameters with bound generic types. If a generic type parameter
+  /// cannot be resolved, the input type is returned.
+  CompilerType BindGenericTypeParameters(StackFrame &stack_frame,
                                          CompilerType base_type);
 
   bool IsStoredInlineInBuffer(CompilerType type) override;

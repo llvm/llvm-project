@@ -5187,8 +5187,8 @@ bool SwiftASTContext::IsGenericType(const CompilerType &compiler_type) {
   return false;
 }
 
-static CompilerType BindAllArchetypes(CompilerType type,
-                                      ExecutionContextScope *exe_scope) {
+static CompilerType
+BindGenericTypeParameters(CompilerType type, ExecutionContextScope *exe_scope) {
   if (!exe_scope)
     return type;
   auto *frame = exe_scope->CalculateStackFrame().get();
@@ -5197,7 +5197,7 @@ static CompilerType BindAllArchetypes(CompilerType type,
     return type;
   ExecutionContext exe_ctx;
   exe_scope->CalculateExecutionContext(exe_ctx);
-  if (auto bound = runtime->DoArchetypeBindingForType(*frame, type))
+  if (auto bound = runtime->BindGenericTypeParameters(*frame, type))
     return bound;
   return type;
 }
@@ -5930,7 +5930,7 @@ SwiftASTContext::GetBitSize(opaque_compiler_type_t type,
     ExecutionContext exe_ctx;
     exe_scope->CalculateExecutionContext(exe_ctx);
     auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
-    CompilerType bound_type = BindAllArchetypes({this, type}, exe_scope);
+    CompilerType bound_type = BindGenericTypeParameters({this, type}, exe_scope);
 
     // Check that the type has been bound successfully -- and if not,
     // log the event and bail out to avoid an infinite loop.
@@ -5980,7 +5980,7 @@ SwiftASTContext::GetByteStride(opaque_compiler_type_t type,
     ExecutionContext exe_ctx;
     exe_scope->CalculateExecutionContext(exe_ctx);
     auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
-    CompilerType bound_type = BindAllArchetypes({this, type}, exe_scope);
+    CompilerType bound_type = BindGenericTypeParameters({this, type}, exe_scope);
     // Note thay the bound type may be in a different AST context.
     return bound_type.GetByteStride(exe_scope);
   }
@@ -6013,7 +6013,7 @@ SwiftASTContext::GetTypeBitAlign(opaque_compiler_type_t type,
     ExecutionContext exe_ctx;
     exe_scope->CalculateExecutionContext(exe_ctx);
     auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
-    CompilerType bound_type = BindAllArchetypes({this, type}, exe_scope);
+    CompilerType bound_type = BindGenericTypeParameters({this, type}, exe_scope);
     // Note thay the bound type may be in a different AST context.
     return bound_type.GetTypeBitAlign(exe_scope);
   }
