@@ -148,6 +148,8 @@ class Configuration(object):
             self.lit_config
         )
 
+        self.lit_config.note("All available features: {}".format(self.config.available_features))
+
     def print_config_info(self):
         if self.cxx.use_modules:
             self.lit_config.note('Using modules flags: %s' %
