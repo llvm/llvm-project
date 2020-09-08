@@ -239,3 +239,48 @@ DWARF:
         - AbbrCode:        0x00000000
           Values:          []
 ...
+
+## Test generating and dumping an empty __debug_ranges section.
+
+# RUN: yaml2obj --docnum=2 %s | obj2yaml | FileCheck %s --check-prefix=EMPTY
+
+#      EMPTY: DWARF:
+# EMPTY-NEXT:   debug_ranges:    []
+# EMPTY-NEXT: ...
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 0x00000003
+  filetype:   0x0000000A
+  ncmds:      1
+  sizeofcmds: 232
+  flags:      0x00000000
+  reserved:   0x00000000
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  152
+    segname:  __DWARF
+    vmaddr:   0x00
+    vmsize:   0x00
+    fileoff:  0x00
+    filesize: 0x00
+    maxprot:  0
+    initprot: 0
+    nsects:   1
+    flags:    0
+    Sections:
+      - sectname:  __debug_ranges
+        segname:   __DWARF
+        addr:      0x00
+        size:      [[SIZE=0]]
+        offset:    0x210
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x00000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+        content:   [[CONTENT=<none>]]

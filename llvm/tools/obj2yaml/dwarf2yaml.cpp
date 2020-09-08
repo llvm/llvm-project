@@ -114,6 +114,7 @@ Error dumpDebugRanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
                           DCtx.isLittleEndian(), AddrSize);
   uint64_t Offset = 0;
   DWARFDebugRangeList DwarfRanges;
+  std::vector<DWARFYAML::Ranges> DebugRanges;
 
   while (Data.isValidOffset(Offset)) {
     DWARFYAML::Ranges YamlRanges;
@@ -123,8 +124,10 @@ Error dumpDebugRanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
       return E;
     for (const auto &RLE : DwarfRanges.getEntries())
       YamlRanges.Entries.push_back({RLE.StartAddress, RLE.EndAddress});
-    Y.DebugRanges.push_back(std::move(YamlRanges));
+    DebugRanges.push_back(std::move(YamlRanges));
   }
+
+  Y.DebugRanges = DebugRanges;
   return ErrorSuccess();
 }
 
