@@ -205,7 +205,7 @@ std::string compareExpressionToZero(const MatchFinder::MatchResult &Result,
 
 std::string replacementExpression(const MatchFinder::MatchResult &Result,
                                   bool Negated, const Expr *E) {
-  E = E->ignoreParenBaseCasts();
+  E = E->IgnoreParenBaseCasts();
   if (const auto *EC = dyn_cast<ExprWithCleanups>(E))
     E = EC->getSubExpr();
 
