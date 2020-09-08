@@ -1828,29 +1828,42 @@ struct DSEState {
     MemoryAccess *Current = StartAccess;
     Instruction *KillingI = KillingDef->getMemoryInst();
     bool StepAgain;
-    LLVM_DEBUG(dbgs() << "  trying to get dominating access for "
-                      << *StartAccess << "\n");
+    LLVM_DEBUG(dbgs() << "  trying to get dominating access\n");
 
     // Find the next clobbering Mod access for DefLoc, starting at StartAccess.
     do {
       StepAgain = false;
+      LLVM_DEBUG({
+        dbgs() << "   visiting " << *Current;
+        if (!MSSA.isLiveOnEntryDef(Current) && isa<MemoryUseOrDef>(Current))
+          dbgs() << " (" << *cast<MemoryUseOrDef>(Current)->getMemoryInst()
+                 << ")";
+        dbgs() << "\n";
+      });
+
       // Reached TOP.
-      if (MSSA.isLiveOnEntryDef(Current))
+      if (MSSA.isLiveOnEntryDef(Current)) {
+        LLVM_DEBUG(dbgs() << "   ...  found LiveOnEntryDef\n");
         return None;
+      }
 
       // Cost of a step. Accesses in the same block are more likely to be valid
       // candidates for elimination, hence consider them cheaper.
       unsigned StepCost = KillingDef->getBlock() == Current->getBlock()
                               ? MemorySSASameBBStepCost
                               : MemorySSAOtherBBStepCost;
-      if (WalkerStepLimit <= StepCost)
+      if (WalkerStepLimit <= StepCost) {
+        LLVM_DEBUG(dbgs() << "   ...  hit walker step limit\n");
         return None;
+      }
       WalkerStepLimit -= StepCost;
 
       // Return for MemoryPhis. They cannot be eliminated directly and the
       // caller is responsible for traversing them.
-      if (isa<MemoryPhi>(Current))
+      if (isa<MemoryPhi>(Current)) {
+        LLVM_DEBUG(dbgs() << "   ...  found MemoryPhi\n");
         return Current;
+      }
 
       // Below, check if CurrentDef is a valid candidate to be eliminated by
       // KillingDef. If it is not, check the next candidate.
