@@ -5326,6 +5326,13 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     if (isICmpTrue(Pred, Op1, Op0, Q.getWithoutUndef(), RecursionLimit))
       return Op1;
 
+    if (Optional<bool> Imp =
+            isImpliedByDomCondition(Pred, Op0, Op1, Q.CxtI, Q.DL))
+      return *Imp ? Op0 : Op1;
+    if (Optional<bool> Imp =
+            isImpliedByDomCondition(Pred, Op1, Op0, Q.CxtI, Q.DL))
+      return *Imp ? Op1 : Op0;
+
     break;
   }
   case Intrinsic::usub_with_overflow:
