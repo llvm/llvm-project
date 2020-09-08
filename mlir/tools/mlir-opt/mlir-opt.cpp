@@ -45,6 +45,7 @@ void registerTestAllReduceLoweringPass();
 void registerTestBufferPlacementPreparationPass();
 void registerTestCallGraphPass();
 void registerTestConstantFold();
+void registerTestConvVectorization();
 void registerTestConvertGPUKernelToCubinPass();
 void registerTestConvertGPUKernelToHsacoPass();
 void registerTestDominancePass();
@@ -93,6 +94,7 @@ void registerTestPasses() {
   registerTestAffineLoopUnswitchingPass();
   registerTestLoopPermutationPass();
   registerTestCallGraphPass();
+  registerTestConvVectorization();
   registerTestConstantFold();
 #if MLIR_CUDA_CONVERSIONS_ENABLED
   registerTestConvertGPUKernelToCubinPass();
