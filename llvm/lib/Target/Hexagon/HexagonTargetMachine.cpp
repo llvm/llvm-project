@@ -327,6 +327,7 @@ void HexagonPassConfig::addIRPasses() {
                                               .forwardSwitchCondToPhi(true)
                                               .convertSwitchToLookupTable(true)
                                               .needCanonicalLoops(false)
+                                              .hoistCommonInsts(true)
                                               .sinkCommonInsts(true)));
     if (EnableLoopPrefetch)
       addPass(createLoopDataPrefetchPass());
