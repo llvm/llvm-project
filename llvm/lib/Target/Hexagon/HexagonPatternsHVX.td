@@ -1,3 +1,6 @@
+def SDTVecUnaryOp:
+  SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
+
 def SDTVecBinOp:
   SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<1,2>]>;
 
@@ -37,6 +40,7 @@ def HexagonVZERO:      SDNode<"HexagonISD::VZERO",      SDTVecLeaf>;
 def HexagonQCAT:       SDNode<"HexagonISD::QCAT",       SDTVecBinOp>;
 def HexagonQTRUE:      SDNode<"HexagonISD::QTRUE",      SDTVecLeaf>;
 def HexagonQFALSE:     SDNode<"HexagonISD::QFALSE",     SDTVecLeaf>;
+def HexagonVPACKL:     SDNode<"HexagonISD::VPACKL",     SDTVecUnaryOp>;
 
 def vzero:  PatFrag<(ops), (HexagonVZERO)>;
 def qtrue:  PatFrag<(ops), (HexagonQTRUE)>;
@@ -44,7 +48,8 @@ def qfalse: PatFrag<(ops), (HexagonQFALSE)>;
 def qcat:   PatFrag<(ops node:$Qs, node:$Qt),
                     (HexagonQCAT node:$Qs, node:$Qt)>;
 
-def qnot: PatFrag<(ops node:$Qs), (xor node:$Qs, qtrue)>;
+def qnot:   PatFrag<(ops node:$Qs), (xor node:$Qs, qtrue)>;
+def vpackl: PatFrag<(ops node:$Vs), (HexagonVPACKL node:$Vs)>;
 
 def VSxtb: OutPatFrag<(ops node:$Vs), (V6_vunpackb  $Vs)>;
 def VSxth: OutPatFrag<(ops node:$Vs), (V6_vunpackh  $Vs)>;
@@ -400,6 +405,10 @@ let Predicates = [UseHVX] in {
   def: Pat<(sra HVI32:$Vs, HVI32:$Vt), (V6_vasrwv HvxVR:$Vs, HvxVR:$Vt)>;
   def: Pat<(srl HVI16:$Vs, HVI16:$Vt), (V6_vlsrhv HvxVR:$Vs, HvxVR:$Vt)>;
   def: Pat<(srl HVI32:$Vs, HVI32:$Vt), (V6_vlsrwv HvxVR:$Vs, HvxVR:$Vt)>;
+
+  def: Pat<(VecI8  (vpackl HVI16:$Vs)), (V6_vdealb HvxVR:$Vs)>;
+  def: Pat<(VecI8  (vpackl HVI32:$Vs)), (V6_vdealb4w HvxVR:$Vs, (IMPLICIT_DEF))>;
+  def: Pat<(VecI16 (vpackl HVI32:$Vs)), (V6_vdealh HvxVR:$Vs)>;
 
   def: Pat<(VecI16 (bswap HVI16:$Vs)),
            (V6_vdelta HvxVR:$Vs, (V6_lvsplatw (A2_tfrsi 0x01010101)))>;
