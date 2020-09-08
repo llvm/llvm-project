@@ -2413,8 +2413,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     // truncating casts, e.g., int2ptr/ptr2int with appropriate sizes, as well
     // as casts that can alter the value, e.g., AddrSpaceCasts.
     if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V))
-      if (isGEPKnownNonNull(GEP, Depth, Q))
-        return true;
+      return isGEPKnownNonNull(GEP, Depth, Q);
 
     if (auto *BCO = dyn_cast<BitCastOperator>(V))
       return isKnownNonZero(BCO->getOperand(0), Depth, Q);
