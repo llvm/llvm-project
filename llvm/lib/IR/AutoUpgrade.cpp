@@ -1375,16 +1375,12 @@ static Value *UpgradeMaskedLoad(IRBuilder<> &Builder,
 }
 
 static Value *upgradeAbs(IRBuilder<> &Builder, CallInst &CI) {
+  Type *Ty = CI.getType();
   Value *Op0 = CI.getArgOperand(0);
-  llvm::Type *Ty = Op0->getType();
-  Value *Zero = llvm::Constant::getNullValue(Ty);
-  Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_SGT, Op0, Zero);
-  Value *Neg = Builder.CreateNeg(Op0);
-  Value *Res = Builder.CreateSelect(Cmp, Op0, Neg);
-
+  Function *F = Intrinsic::getDeclaration(CI.getModule(), Intrinsic::abs, Ty);
+  Value *Res = Builder.CreateCall(F, {Op0, Builder.getInt1(false)});
   if (CI.getNumArgOperands() == 3)
-    Res = EmitX86Select(Builder,CI.getArgOperand(2), Res, CI.getArgOperand(1));
-
+    Res = EmitX86Select(Builder, CI.getArgOperand(2), Res, CI.getArgOperand(1));
   return Res;
 }
 
