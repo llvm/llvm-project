@@ -11,7 +11,7 @@ define i32 @umax(i32 %x, i32 %y) {
 ; CHECK-LABEL: 'umax'
 ; CHECK-NEXT:  Classifying expressions for: @umax
 ; CHECK-NEXT:    %z = call i32 @llvm.umax.i32(i32 %x, i32 %y)
-; CHECK-NEXT:    --> %z U: full-set S: full-set
+; CHECK-NEXT:    --> (%x umax %y) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @umax
 ;
   %z = call i32 @llvm.umax.i32(i32 %x, i32 %y)
@@ -22,7 +22,7 @@ define i32 @umin(i32 %x, i32 %y) {
 ; CHECK-LABEL: 'umin'
 ; CHECK-NEXT:  Classifying expressions for: @umin
 ; CHECK-NEXT:    %z = call i32 @llvm.umin.i32(i32 %x, i32 %y)
-; CHECK-NEXT:    --> %z U: full-set S: full-set
+; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @umin
 ;
   %z = call i32 @llvm.umin.i32(i32 %x, i32 %y)
@@ -33,7 +33,7 @@ define i32 @smax(i32 %x, i32 %y) {
 ; CHECK-LABEL: 'smax'
 ; CHECK-NEXT:  Classifying expressions for: @smax
 ; CHECK-NEXT:    %z = call i32 @llvm.smax.i32(i32 %x, i32 %y)
-; CHECK-NEXT:    --> %z U: full-set S: full-set
+; CHECK-NEXT:    --> (%x smax %y) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @smax
 ;
   %z = call i32 @llvm.smax.i32(i32 %x, i32 %y)
@@ -44,7 +44,7 @@ define i32 @smin(i32 %x, i32 %y) {
 ; CHECK-LABEL: 'smin'
 ; CHECK-NEXT:  Classifying expressions for: @smin
 ; CHECK-NEXT:    %z = call i32 @llvm.smin.i32(i32 %x, i32 %y)
-; CHECK-NEXT:    --> %z U: full-set S: full-set
+; CHECK-NEXT:    --> (%x smin %y) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @smin
 ;
   %z = call i32 @llvm.smin.i32(i32 %x, i32 %y)
@@ -55,9 +55,9 @@ define i32 @clamp(i32 %x) {
 ; CHECK-LABEL: 'clamp'
 ; CHECK-NEXT:  Classifying expressions for: @clamp
 ; CHECK-NEXT:    %y = call i32 @llvm.umax.i32(i32 %x, i32 10)
-; CHECK-NEXT:    --> %y U: full-set S: full-set
+; CHECK-NEXT:    --> (10 umax %x) U: [10,0) S: [10,0)
 ; CHECK-NEXT:    %z = call i32 @llvm.umin.i32(i32 %y, i32 20)
-; CHECK-NEXT:    --> %z U: full-set S: full-set
+; CHECK-NEXT:    --> (20 umin (10 umax %x)) U: [10,21) S: [10,21)
 ; CHECK-NEXT:  Determining loop execution counts for: @clamp
 ;
   %y = call i32 @llvm.umax.i32(i32 %x, i32 10)
