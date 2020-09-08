@@ -522,7 +522,7 @@ static constexpr FeatureBitset ImpliedFeaturesAVX5124FMAPS = {};
 static constexpr FeatureBitset ImpliedFeaturesAVX5124VNNIW = {};
 
 // SSE4_A->FMA4->XOP chain.
-static constexpr FeatureBitset ImpliedFeaturesSSE4_A = FeatureSSSE3;
+static constexpr FeatureBitset ImpliedFeaturesSSE4_A = FeatureSSE3;
 static constexpr FeatureBitset ImpliedFeaturesFMA4 = FeatureAVX | FeatureSSE4_A;
 static constexpr FeatureBitset ImpliedFeaturesXOP = FeatureFMA4;
 
