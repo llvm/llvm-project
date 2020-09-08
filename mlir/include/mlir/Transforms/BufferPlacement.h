@@ -24,34 +24,6 @@
 
 namespace mlir {
 
-/// Prepares a buffer placement phase. It can place (user-defined) alloc
-/// nodes. This simplifies the integration of the actual buffer-placement
-/// pass. Sample usage:
-///   BufferAssignmentPlacer baHelper(regionOp);
-///   -> determine alloc positions
-///   auto allocPosition = baHelper.computeAllocPosition(value);
-///   -> place alloc
-///   allocBuilder.setInsertionPoint(positions.getAllocPosition());
-///   <create alloc>
-/// Note: this class is intended to be used during legalization. In order
-/// to move alloc and dealloc nodes into the right places you can use the
-/// createBufferPlacementPass() function.
-class BufferAssignmentPlacer {
-public:
-  /// Creates a new assignment builder.
-  explicit BufferAssignmentPlacer(Operation *op);
-
-  /// Returns the operation this analysis was constructed from.
-  Operation *getOperation() const { return operation; }
-
-  /// Computes the actual position to place allocs for the given result.
-  OpBuilder::InsertPoint computeAllocPosition(OpResult result);
-
-private:
-  /// The operation this analysis was constructed from.
-  Operation *operation;
-};
-
 /// A helper type converter class for using inside Buffer Assignment operation
 /// conversion patterns. The default constructor keeps all the types intact
 /// except for the ranked-tensor types which is converted to memref types.
@@ -157,31 +129,20 @@ private:
   SmallVector<DecomposeTypeConversionCallFn, 2> decomposeTypeConversions;
 };
 
-/// Helper conversion pattern that encapsulates a BufferAssignmentPlacer
-/// instance. Sample usage:
-/// class CustomConversionPattern : public
-///     BufferAssignmentOpConversionPattern<MyOpT>
-/// {
-///   ... matchAndRewrite(...) {
-///     -> Access stored BufferAssignmentPlacer
-///     bufferAssignment->computeAllocPosition(resultOp);
-///   }
-/// };
+/// Helper conversion pattern that encapsulates a BufferAssignmentTypeConverter
+/// instance.
 template <typename SourceOp>
 class BufferAssignmentOpConversionPattern
     : public OpConversionPattern<SourceOp> {
 public:
   explicit BufferAssignmentOpConversionPattern(
-      MLIRContext *context, BufferAssignmentPlacer *bufferAssignment = nullptr,
-      BufferAssignmentTypeConverter *converter = nullptr,
+      MLIRContext *context, BufferAssignmentTypeConverter *converter,
       PatternBenefit benefit = 1)
-      : OpConversionPattern<SourceOp>(context, benefit),
-        bufferAssignment(bufferAssignment), converter(converter) {
+      : OpConversionPattern<SourceOp>(context, benefit), converter(converter) {
     assert(converter && "The type converter has not been defined");
   }
 
 protected:
-  BufferAssignmentPlacer *bufferAssignment;
   BufferAssignmentTypeConverter *converter;
 };
 
@@ -282,8 +243,7 @@ public:
 template <typename ReturnOpSourceTy, typename ReturnOpTargetTy,
           typename CopyOpTy>
 static void populateWithBufferAssignmentOpConversionPatterns(
-    MLIRContext *context, BufferAssignmentPlacer *placer,
-    BufferAssignmentTypeConverter *converter,
+    MLIRContext *context, BufferAssignmentTypeConverter *converter,
     OwningRewritePatternList *patterns) {
   // clang-format off
   patterns->insert<
@@ -291,7 +251,7 @@ static void populateWithBufferAssignmentOpConversionPatterns(
     BufferAssignmentFuncOpConverter,
     BufferAssignmentReturnOpConverter
       <ReturnOpSourceTy, ReturnOpTargetTy, CopyOpTy>
-  >(context, placer, converter);
+  >(context, converter);
   // clang-format on
 }
 } // end namespace mlir

@@ -682,20 +682,6 @@ struct BufferPlacementPass : BufferPlacementBase<BufferPlacementPass> {
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
-// BufferAssignmentPlacer
-//===----------------------------------------------------------------------===//
-
-/// Creates a new assignment placer.
-BufferAssignmentPlacer::BufferAssignmentPlacer(Operation *op) : operation(op) {}
-
-/// Computes the actual position to place allocs for the given value.
-OpBuilder::InsertPoint
-BufferAssignmentPlacer::computeAllocPosition(OpResult result) {
-  Operation *owner = result.getOwner();
-  return OpBuilder::InsertPoint(owner->getBlock(), Block::iterator(owner));
-}
-
-//===----------------------------------------------------------------------===//
 // BufferAssignmentTypeConverter
 //===----------------------------------------------------------------------===//
 
@@ -891,9 +877,6 @@ LogicalResult BufferAssignmentCallOpConverter::matchAndRewrite(
         resultMapping.addMapping(newResultTypes.size() - 1);
       } else {
         // kind = BufferAssignmentTypeConverter::AppendToArgumentsList
-        OpBuilder::InsertionGuard guard(rewriter);
-        rewriter.restoreInsertionPoint(
-            bufferAssignment->computeAllocPosition(result.value()));
         MemRefType memref = converted.dyn_cast<MemRefType>();
         if (!memref)
           return callOp.emitError("Cannot allocate for a non-Memref type");
