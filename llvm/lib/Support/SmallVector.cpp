@@ -12,6 +12,9 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include <cstdint>
+#ifdef LLVM_ENABLE_EXCEPTIONS
+#include <stdexcept>
+#endif
 using namespace llvm;
 
 // Check that no bytes are wasted and everything is well-aligned.
@@ -42,37 +45,45 @@ static_assert(sizeof(SmallVector<char, 0>) ==
                   sizeof(void *) * 2 + sizeof(void *),
               "1 byte elements have word-sized type for size and capacity");
 
+template <class Size_T>
+void SmallVectorBase<Size_T>::report_size_overflow(size_t MinSize) {
+  std::string Reason = "SmallVector unable to grow. Requested capacity (" +
+                       std::to_string(MinSize) +
+                       ") is larger than maximum value for size type (" +
+                       std::to_string(SizeTypeMax()) + ")";
+#ifdef LLVM_ENABLE_EXCEPTIONS
+  throw std::length_error(Reason);
+#else
+  report_fatal_error(Reason);
+#endif
+}
+
+template <class Size_T> void SmallVectorBase<Size_T>::report_at_maximum_capacity() {
+  std::string Reason =
+      "SmallVector capacity unable to grow. Already at maximum size " +
+      std::to_string(SizeTypeMax());
+#ifdef LLVM_ENABLE_EXCEPTIONS
+  throw std::length_error(Reason);
+#else
+  report_fatal_error(Reason);
+#endif
+}
+
 // Note: Moving this function into the header may cause performance regression.
 template <class Size_T>
 void SmallVectorBase<Size_T>::grow_pod(void *FirstEl, size_t MinSize,
                                        size_t TSize) {
   // Ensure we can fit the new capacity.
   // This is only going to be applicable when the capacity is 32 bit.
-  if (MinSize > SizeTypeMax()) {
-    std::string Reason = "SmallVector unable to grow. Requested capacity (" +
-                         std::to_string(MinSize) +
-                         ") is larger than maximum value for size type (" +
-                         std::to_string(SizeTypeMax()) + ")";
-#ifdef LLVM_ENABLE_EXCEPTIONS
-    throw std::length_error(Reason);
-#else
-    report_fatal_error(Reason);
-#endif
-  }
+  if (MinSize > SizeTypeMax())
+    report_size_overflow(MinSize);
 
   // Ensure we can meet the guarantee of space for at least one more element.
   // The above check alone will not catch the case where grow is called with a
   // default MinSize of 0, but the current capacity cannot be increased.
   // This is only going to be applicable when the capacity is 32 bit.
-  if (capacity() == SizeTypeMax()) {
-    std::string Reason =
-        "SmallVector capacity unable to grow. Already at maximum size " +
-        std::to_string(SizeTypeMax());
-#ifdef LLVM_ENABLE_EXCEPTIONS
-    throw std::length_error(Reason);
-#endif
-    report_fatal_error(Reason);
-  }
+  if (capacity() == SizeTypeMax())
+    report_at_maximum_capacity();
 
   // In theory 2*capacity can overflow if the capacity is 64 bit, but the
   // original capacity would never be large enough for this to be a problem.
