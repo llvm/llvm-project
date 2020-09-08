@@ -37,10 +37,12 @@ bb3:
   ret void
 }
 
-
+; We cannot remove the store in the entry block, because @unknown_func could
+; unwind and the stored value could be read by the caller.
 define void @test17(i32* noalias %P) {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to i8*
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    call void @unknown_func()
