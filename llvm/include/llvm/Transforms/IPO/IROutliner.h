@@ -321,9 +321,14 @@ private:
     // TODO: Handle specific intrinsics individually from those that can be
     // handled.
     bool IntrinsicInst(IntrinsicInst &II) { return false; }
-    // TODO: Handle CallInsts, there will need to be handling for special kinds
-    // of calls, as well as calls to intrinsics.
-    bool visitCallInst(CallInst &CI) { return false; }
+    // We only handle CallInsts that are not indirect, since we cannot guarantee
+    // that they have a name in these cases.
+    bool visitCallInst(CallInst &CI) {
+      Function *F = CI.getCalledFunction();
+      if (!F || CI.isIndirectCall() || !F->hasName())
+        return false;
+      return true;
+    }
     // TODO: Handle FreezeInsts.  Since a frozen value could be frozen inside
     // the outlined region, and then returned as an output, this will have to be
     // handled differently.
