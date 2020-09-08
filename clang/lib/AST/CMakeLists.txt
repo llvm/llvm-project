@@ -55,6 +55,7 @@ add_clang_library(clangAST
   ExternalASTMerger.cpp
   ExternalASTSource.cpp
   FormatString.cpp
+  IgnoreExpr.cpp
   InheritViz.cpp
   Interp/ByteCodeEmitter.cpp
   Interp/ByteCodeExprGen.cpp
