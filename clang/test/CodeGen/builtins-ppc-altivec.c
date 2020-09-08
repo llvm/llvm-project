@@ -1036,6 +1036,85 @@ void test2() {
 // CHECK: @llvm.ppc.altivec.vcmpeqfp
 // CHECK-LE: @llvm.ppc.altivec.vcmpeqfp
 
+  /* vec_cmpne */
+  res_vbc = vec_cmpne(vsc, vsc);
+// CHECK: @llvm.ppc.altivec.vcmpequb
+// CHECK: xor
+// CHECK-LE: @llvm.ppc.altivec.vcmpequb
+// CHECK-LE: xor
+
+  res_vbc = vec_cmpne(vuc, vuc);
+// CHECK: @llvm.ppc.altivec.vcmpequb
+// CHECK: xor
+// CHECK-LE: @llvm.ppc.altivec.vcmpequb
+// CHECK-LE: xor
+
+  res_vbc = vec_cmpne(vbc, vbc);
+// CHECK: @llvm.ppc.altivec.vcmpequb
+// CHECK: xor
+// CHECK-LE: @llvm.ppc.altivec.vcmpequb
+// CHECK-LE: xor
+
+  res_vbc = vec_cmpne(vbc, vbc);
+// CHECK: @llvm.ppc.altivec.vcmpequb
+// CHECK: xor
+// CHECK-LE: @llvm.ppc.altivec.vcmpequb
+// CHECK-LE: xor
+
+  res_vbs = vec_cmpne(vs, vs);
+// CHECK: @llvm.ppc.altivec.vcmpequh
+// CHECK: xor
+// CHECK-LE: @llvm.ppc.altivec.vcmpequh
+// CHECK-LE: xor
+
+  res_vbs = vec_cmpne(vus, vus);
+// CHECK: @llvm.ppc.altivec.vcmpequh
+// CHECK: xor
+// CHECK-LE: @llvm.ppc.altivec.vcmpequh
+// CHECK-LE: xor
+
+  res_vbs = vec_cmpne(vbs, vbs);
+// CHECK: @llvm.ppc.altivec.vcmpequh
+// CHECK: xor
+// CHECK-LE: @llvm.ppc.altivec.vcmpequh
+// CHECK-LE: xor
+
+  res_vbs = vec_cmpne(vbs, vbs);
+// CHECK: @llvm.ppc.altivec.vcmpequh
+// CHECK: xor
+// CHECK-LE: @llvm.ppc.altivec.vcmpequh
+// CHECK-LE: xor
+
+  res_vbi = vec_cmpne(vi, vi);
+// CHECK: @llvm.ppc.altivec.vcmpequw
+// CHECK: xor
+// CHECK-LE: @llvm.ppc.altivec.vcmpequw
+// CHECK-LE: xor
+
+  res_vbi = vec_cmpne(vui, vui);
+// CHECK: @llvm.ppc.altivec.vcmpequw
+// CHECK: xor
+// CHECK-LE: @llvm.ppc.altivec.vcmpequw
+// CHECK-LE: xor
+
+  res_vbi = vec_cmpne(vbi, vbi);
+// CHECK: @llvm.ppc.altivec.vcmpequw
+// CHECK: xor
+// CHECK-LE: @llvm.ppc.altivec.vcmpequw
+// CHECK-LE: xor
+
+  res_vbi = vec_cmpne(vbi, vbi);
+// CHECK: @llvm.ppc.altivec.vcmpequw
+// CHECK: xor
+// CHECK-LE: @llvm.ppc.altivec.vcmpequw
+// CHECK-LE: xor
+
+  res_vbi = vec_cmpne(vf, vf);
+// CHECK: @llvm.ppc.altivec.vcmpeqfp
+// CHECK: xor
+// CHECK-LE: @llvm.ppc.altivec.vcmpeqfp
+// CHECK-LE: xor
+
   /* vec_cmpge */
   res_vbc = vec_cmpge(vsc, vsc);
 // CHECK: @llvm.ppc.altivec.vcmpgtsb
