@@ -201,6 +201,36 @@ vector unsigned long long test_vcfuged(void) {
   return vec_cfuge(vulla, vullb);
 }
 
+vector unsigned char test_vec_expandm_uc(void) {
+  // CHECK: @llvm.ppc.altivec.vexpandbm(<16 x i8> %{{.+}})
+  // CHECK-NEXT: ret <16 x i8>
+  return vec_expandm(vuca);
+}
+
+vector unsigned short test_vec_expandm_us(void) {
+  // CHECK: @llvm.ppc.altivec.vexpandhm(<8 x i16> %{{.+}})
+  // CHECK-NEXT: ret <8 x i16>
+  return vec_expandm(vusa);
+}
+
+vector unsigned int test_vec_expandm_ui(void) {
+  // CHECK: @llvm.ppc.altivec.vexpandwm(<4 x i32> %{{.+}})
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_expandm(vuia);
+}
+
+vector unsigned long long test_vec_expandm_ull(void) {
+  // CHECK: @llvm.ppc.altivec.vexpanddm(<2 x i64> %{{.+}})
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_expandm(vulla);
+}
+
+vector unsigned __int128 test_vec_expandm_u128(void) {
+  // CHECK: @llvm.ppc.altivec.vexpandqm(<1 x i128> %{{.+}})
+  // CHECK-NEXT: ret <1 x i128>
+  return vec_expandm(vui128a);
+}
+
 unsigned long long test_vgnb_1(void) {
   // CHECK: @llvm.ppc.altivec.vgnb(<1 x i128> %{{.+}}, i32 2)
   // CHECK-NEXT: ret i64
