@@ -30,6 +30,10 @@ struct TiledLinalgOp {
   SmallVector<Operation *, 8> loops;
 };
 
+/// Populates patterns for vectorization of all ConvN-D ops.
+void populateConvVectorizationPatterns(MLIRContext *context,
+                                       OwningRewritePatternList &patterns);
+
 /// Performs standalone tiling of a single LinalgOp by `tileSizes`.
 /// and permute the loop nest according to `interchangeVector`
 /// The permutation is expressed as a list of integers that specify
@@ -528,6 +532,53 @@ struct AffineMinSCFCanonicalizationPattern
   using OpRewritePattern<AffineMinOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(AffineMinOp minOp,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Converts Convolution op into vector contraction.
+///
+/// Conversion expects ConvOp to have dimensions marked in the *mask* as
+/// false of size 1. This ensures that the ConvOp can be lowered to vector
+/// contraction of dimensions marked in the *mask* as true.
+///
+/// A good example is ConvNHWCOp which is 2D Conv op with channels as the last
+/// dimension. For this op we contract last 3 dimensions.
+/// The initial op definition looks like this:
+/// ```
+/// linalg.conv_2d_nhwc  %arg0, %arg1, %arg2 :
+///   (memref<1x3x3x3xf32>, memref<1x3x3x3xf32>, memref<?x?x?x?xf32>)
+/// ```
+/// This op can be expressed as a dot product between %arg0 (input) and
+/// %arg1 (kernel) which is written into first entry of %arg2 (output). This is
+/// the ConvOp this pass expects and converts into:
+/// ```
+/// #map0 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+/// #map1 = affine_map<(d0, d1, d2) -> ()>
+/// .....
+/// %0 = vector.transfer_read %arg0[%c0, %c0, %c0, %c0], %c0_f32
+///   : memref<1x3x3x3xf32>, vector<3x3x3xf32>
+/// %1 = vector.transfer_read %arg1[%c0, %c0, %c0, %c0], %c0_f32
+///   : memref<1x3x3x3xf32>, vector<3x3x3xf32>
+/// %2 = vector.contract {indexing_maps = [#map0, #map0, #map1],
+///   iterator_types = ["reduction", "reduction", "reduction"]} %0, %1,
+///   %c0_f32 : vector<3x3x3xf32>, vector<3x3x3xf32> into f32
+/// store %2, %arg2[%c0, %c0, %c0, %c0] : memref<?x?x?x?xf32>
+/// ```
+/// where first 2 operations read input and kernel memory buffers into vectors.
+/// Subsequently, they are contracted together and the result is written to
+/// the first entry of the output buffer.
+template <typename ConvOp, int N>
+struct ConvOpVectorization : public OpRewritePattern<ConvOp> {
+  using OpRewritePattern<ConvOp>::OpRewritePattern;
+  SmallVector<bool, 4> mask;
+
+  ConvOpVectorization(MLIRContext *context, SmallVector<bool, 4> msk)
+      : OpRewritePattern<ConvOp>(context) {
+    assert(msk.size() == N && "Mask size does not match rank");
+    this->mask = msk;
+  }
+
+  LogicalResult matchAndRewrite(ConvOp minOp,
                                 PatternRewriter &rewriter) const override;
 };
 
