@@ -152,9 +152,9 @@ void MarkLive<ELFT>::scanEhFrameSection(EhInputSection &eh,
     // a LSDA. We only need to keep the LSDA alive, so ignore anything that
     // points to executable sections.
     uint64_t pieceEnd = piece.inputOff + piece.size;
-    for (size_t j = firstRelI, end2 = rels.size(); j < end2; ++j)
-      if (rels[j].r_offset < pieceEnd)
-        resolveReloc(eh, rels[j], true);
+    for (size_t j = firstRelI, end2 = rels.size();
+         j < end2 && rels[j].r_offset < pieceEnd; ++j)
+      resolveReloc(eh, rels[j], true);
   }
 }
 
