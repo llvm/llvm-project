@@ -14,6 +14,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_TPCDYNAMICLIBRARYSEARCHGENERATOR_H
 #define LLVM_EXECUTIONENGINE_ORC_TPCDYNAMICLIBRARYSEARCHGENERATOR_H
 
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
 
 namespace llvm {
@@ -21,6 +22,8 @@ namespace orc {
 
 class TPCDynamicLibrarySearchGenerator : public JITDylib::DefinitionGenerator {
 public:
+  using SymbolPredicate = unique_function<bool(const SymbolStringPtr &)>;
+
   /// Create a DynamicLibrarySearchGenerator that searches for symbols in the
   /// library with the given handle.
   ///
@@ -28,19 +31,22 @@ public:
   /// will be searched for. If the predicate is not given then all symbols will
   /// be searched for.
   TPCDynamicLibrarySearchGenerator(TargetProcessControl &TPC,
-                                   TargetProcessControl::DylibHandle H)
-      : TPC(TPC), H(H) {}
+                                   TargetProcessControl::DylibHandle H,
+                                   SymbolPredicate Allow = SymbolPredicate())
+      : TPC(TPC), H(H), Allow(std::move(Allow)) {}
 
   /// Permanently loads the library at the given path and, on success, returns
   /// a DynamicLibrarySearchGenerator that will search it for symbol definitions
   /// in the library. On failure returns the reason the library failed to load.
   static Expected<std::unique_ptr<TPCDynamicLibrarySearchGenerator>>
-  Load(TargetProcessControl &TPC, const char *LibraryPath);
+  Load(TargetProcessControl &TPC, const char *LibraryPath,
+       SymbolPredicate Allow = SymbolPredicate());
 
   /// Creates a TPCDynamicLibrarySearchGenerator that searches for symbols in
   /// the target process.
   static Expected<std::unique_ptr<TPCDynamicLibrarySearchGenerator>>
-  GetForTargetProcess(TargetProcessControl &TPC) {
+  GetForTargetProcess(TargetProcessControl &TPC,
+                      SymbolPredicate Allow = SymbolPredicate()) {
     return Load(TPC, nullptr);
   }
 
@@ -51,6 +57,7 @@ public:
 private:
   TargetProcessControl &TPC;
   TargetProcessControl::DylibHandle H;
+  SymbolPredicate Allow;
 };
 
 } // end namespace orc
