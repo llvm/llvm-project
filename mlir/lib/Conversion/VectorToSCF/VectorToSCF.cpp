@@ -497,6 +497,8 @@ static void emitWithBoundsChecks(
     inBoundsFun(scalarAccessExprs);
 }
 
+namespace mlir {
+
 /// Lowers TransferReadOp into a combination of:
 ///   1. local memory allocation;
 ///   2. perfect loop nest over:
@@ -665,8 +667,6 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
   rewriter.eraseOp(op);
   return success();
 }
-
-namespace mlir {
 
 void populateVectorToSCFConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context,
