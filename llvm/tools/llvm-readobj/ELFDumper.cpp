@@ -960,6 +960,7 @@ private:
   void printRelrReloc(const Elf_Relr &R) override;
   void printDynamicReloc(const Relocation<ELFT> &R) override;
 
+  void printRelRelaReloc(const Relocation<ELFT> &R, StringRef SymbolName);
   void printSymbols();
   void printDynamicSymbols();
   void printSymbolSection(const Elf_Sym *Symbol, const Elf_Sym *First);
@@ -6156,7 +6157,12 @@ void LLVMStyle<ELFT>::printReloc(const Relocation<ELFT> &R, unsigned RelIndex,
     return;
   }
 
-  std::string TargetName = Target->Name;
+  printRelRelaReloc(R, Target->Name);
+}
+
+template <class ELFT>
+void LLVMStyle<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
+                                        StringRef SymbolName) {
   SmallString<32> RelocName;
   this->Obj.getRelocationTypeName(R.Type, RelocName);
 
@@ -6165,12 +6171,12 @@ void LLVMStyle<ELFT>::printReloc(const Relocation<ELFT> &R, unsigned RelIndex,
     DictScope Group(W, "Relocation");
     W.printHex("Offset", R.Offset);
     W.printNumber("Type", RelocName, R.Type);
-    W.printNumber("Symbol", !TargetName.empty() ? TargetName : "-", R.Symbol);
+    W.printNumber("Symbol", !SymbolName.empty() ? SymbolName : "-", R.Symbol);
     W.printHex("Addend", Addend);
   } else {
     raw_ostream &OS = W.startLine();
     OS << W.hex(R.Offset) << " " << RelocName << " "
-       << (!TargetName.empty() ? TargetName : "-") << " " << W.hex(Addend)
+       << (!SymbolName.empty() ? SymbolName : "-") << " " << W.hex(Addend)
        << "\n";
   }
 }
@@ -6362,24 +6368,9 @@ template <class ELFT> void LLVMStyle<ELFT>::printDynamicRelocations() {
 
 template <class ELFT>
 void LLVMStyle<ELFT>::printDynamicReloc(const Relocation<ELFT> &R) {
-  SmallString<32> RelocName;
-  this->Obj.getRelocationTypeName(R.Type, RelocName);
-  std::string SymbolName =
-      getSymbolForReloc(this->Obj, this->FileName, this->dumper(), R).Name;
-
-  uintX_t Addend = R.Addend.getValueOr(0);
-  if (opts::ExpandRelocs) {
-    DictScope Group(W, "Relocation");
-    W.printHex("Offset", R.Offset);
-    W.printNumber("Type", RelocName, R.Type);
-    W.printString("Symbol", !SymbolName.empty() ? SymbolName : "-");
-    W.printHex("Addend", Addend);
-  } else {
-    raw_ostream &OS = W.startLine();
-    OS << W.hex(R.Offset) << " " << RelocName << " "
-       << (!SymbolName.empty() ? SymbolName : "-") << " " << W.hex(Addend)
-       << "\n";
-  }
+  RelSymbol<ELFT> S =
+      getSymbolForReloc(this->Obj, this->FileName, this->dumper(), R);
+  printRelRelaReloc(R, S.Name);
 }
 
 template <class ELFT>
