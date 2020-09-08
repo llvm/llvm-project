@@ -33,13 +33,11 @@ protected:
 protected:
   LEONMachineFunctionPass(char &ID);
 
-  int GetRegIndexForOperand(MachineInstr &MI, int OperandIndex);
   void clearUsedRegisterList() { UsedRegisters.clear(); }
 
   void markRegisterUsed(int registerIndex) {
     UsedRegisters.push_back(registerIndex);
   }
-  int getUnusedFPRegister(MachineRegisterInfo &MRI);
 };
 
 class LLVM_LIBRARY_VISIBILITY InsertNOPLoad : public LEONMachineFunctionPass {
