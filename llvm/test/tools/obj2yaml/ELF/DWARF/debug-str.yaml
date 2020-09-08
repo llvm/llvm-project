@@ -99,3 +99,27 @@ FileHeader:
   Type:  ET_EXEC
 DWARF:
   debug_str: []
+
+## d) Test that yaml2obj stops parsing the .debug_str section if it encounters a
+## string without a null terminator. The output uses a raw content section instead of
+## the DWARF tag to represent the broken .debug_str section.
+
+# RUN: yaml2obj --docnum=3 %s | obj2yaml | FileCheck %s --check-prefix=NO-TERMINATOR
+
+#  NO-TERMINATOR-NOT: DWARF:
+#      NO-TERMINATOR: Sections:
+# NO-TERMINATOR-NEXT:   - Name:    .debug_str
+# NO-TERMINATOR-NEXT:     Type:    SHT_PROGBITS
+# NO-TERMINATOR-NEXT:     Flags:   [ SHF_MERGE, SHF_STRINGS ]
+# NO-TERMINATOR-NEXT:     Content: '61626300616263'
+# NO-TERMINATOR-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .debug_str
+    Type:    SHT_PROGBITS
+    Content: "61626300616263" ## "abc\0abc"
