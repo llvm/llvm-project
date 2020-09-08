@@ -527,7 +527,12 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   };
 
   MBB = VCTP->getParent();
-  if (auto *Def = RDA.getUniqueReachingMIDef(&MBB->back(), NumElements)) {
+  // Remove modifications to the element count since they have no purpose in a
+  // tail predicated loop. Explicitly refer to the vctp operand no matter which
+  // register NumElements has been assigned to, since that is what the
+  // modifications will be using
+  if (auto *Def = RDA.getUniqueReachingMIDef(&MBB->back(),
+                                             VCTP->getOperand(1).getReg())) {
     SmallPtrSet<MachineInstr*, 2> ElementChain;
     SmallPtrSet<MachineInstr*, 2> Ignore = { VCTP };
     unsigned ExpectedVectorWidth = getTailPredVectorWidth(VCTP->getOpcode());
