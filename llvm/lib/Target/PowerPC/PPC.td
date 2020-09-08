@@ -174,9 +174,6 @@ def FeatureAddisLoadFusion : SubtargetFeature<"fuse-addis-load",
                                               "HasAddisLoadFusion", "true",
                                               "Power8 Addis-Load fusion",
                                               [FeatureFusion]>;
-def FeatureStoreFusion : SubtargetFeature<"fuse-store", "HasStoreFusion", "true",
-                                          "Target supports store clustering",
-                                          [FeatureFusion]>;
 def FeatureUnalignedFloats :
   SubtargetFeature<"allow-unaligned-fp-access", "AllowsUnalignedFPAccess",
                    "true", "CPU does not trap on unaligned FP access">;
@@ -348,12 +345,10 @@ def ProcessorFeatures {
   // Power10
   // For P10 CPU we assume that all of the existing features from Power9
   // still exist with the exception of those we know are Power9 specific.
-  list<SubtargetFeature> FusionFeatures = [FeatureStoreFusion];
   list<SubtargetFeature> P10AdditionalFeatures =
-    !listconcat(FusionFeatures, [
-       DirectivePwr10, FeatureISA3_1, FeaturePrefixInstrs,
-       FeaturePCRelativeMemops, FeatureP10Vector, FeatureMMA,
-       FeaturePairedVectorMemops]);
+    [DirectivePwr10, FeatureISA3_1, FeaturePrefixInstrs,
+     FeaturePCRelativeMemops, FeatureP10Vector, FeatureMMA,
+     FeaturePairedVectorMemops];
   list<SubtargetFeature> P10SpecificFeatures = [];
   list<SubtargetFeature> P10InheritableFeatures =
     !listconcat(P9InheritableFeatures, P10AdditionalFeatures);

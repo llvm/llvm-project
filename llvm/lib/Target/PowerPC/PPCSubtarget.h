@@ -137,7 +137,6 @@ protected:
   bool HasHTM;
   bool HasFloat128;
   bool HasFusion;
-  bool HasStoreFusion;
   bool HasAddiLoadFusion;
   bool HasAddisLoadFusion;
   bool IsISA3_0;
@@ -309,7 +308,6 @@ public:
   bool isISA3_1() const { return IsISA3_1; }
   bool useLongCalls() const { return UseLongCalls; }
   bool hasFusion() const { return HasFusion; }
-  bool hasStoreFusion() const { return HasStoreFusion; }
   bool hasAddiLoadFusion() const { return HasAddiLoadFusion; }
   bool hasAddisLoadFusion() const { return HasAddisLoadFusion; }
   bool needsSwapsForVSXMemOps() const {
