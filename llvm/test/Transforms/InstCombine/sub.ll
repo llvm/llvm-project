@@ -505,9 +505,9 @@ define i64 @test24b(i8* %P, i64 %A){
 
 define i64 @test25(i8* %P, i64 %A){
 ; CHECK-LABEL: @test25(
-; CHECK-NEXT:    [[B_IDX_NEG_NEG:%.*]] = shl i64 [[A:%.*]], 1
-; CHECK-NEXT:    [[GEPDIFF_NEG:%.*]] = add i64 [[B_IDX_NEG_NEG]], -84
-; CHECK-NEXT:    ret i64 [[GEPDIFF_NEG]]
+; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw i64 [[A:%.*]], 1
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = add i64 [[B_IDX]], -84
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %B = getelementptr inbounds [42 x i16], [42 x i16]* @Arr, i64 0, i64 %A
   %C = ptrtoint i16* %B to i64
@@ -520,9 +520,9 @@ define i64 @test25(i8* %P, i64 %A){
 define i16 @test25_as1(i8 addrspace(1)* %P, i64 %A) {
 ; CHECK-LABEL: @test25_as1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[A:%.*]] to i16
-; CHECK-NEXT:    [[B_IDX_NEG_NEG:%.*]] = shl i16 [[TMP1]], 1
-; CHECK-NEXT:    [[GEPDIFF_NEG:%.*]] = add i16 [[B_IDX_NEG_NEG]], -84
-; CHECK-NEXT:    ret i16 [[GEPDIFF_NEG]]
+; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw i16 [[TMP1]], 1
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = add i16 [[B_IDX]], -84
+; CHECK-NEXT:    ret i16 [[GEPDIFF]]
 ;
   %B = getelementptr inbounds [42 x i16], [42 x i16] addrspace(1)* @Arr_as1, i64 0, i64 %A
   %C = ptrtoint i16 addrspace(1)* %B to i16
@@ -825,8 +825,8 @@ define i32 @test28commuted(i32 %x, i32 %y, i32 %z) {
 
 define i64 @test29(i8* %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test29(
-; CHECK-NEXT:    [[GEPDIFF_NEG:%.*]] = sub i64 [[I:%.*]], [[J:%.*]]
-; CHECK-NEXT:    ret i64 [[GEPDIFF_NEG]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub i64 [[I:%.*]], [[J:%.*]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %gep1 = getelementptr inbounds i8, i8* %foo, i64 %i
   %gep2 = getelementptr inbounds i8, i8* %foo, i64 %j
@@ -838,9 +838,9 @@ define i64 @test29(i8* %foo, i64 %i, i64 %j) {
 
 define i64 @test30(i8* %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test30(
-; CHECK-NEXT:    [[GEP1_IDX_NEG_NEG:%.*]] = shl i64 [[I:%.*]], 2
-; CHECK-NEXT:    [[GEPDIFF_NEG:%.*]] = sub i64 [[GEP1_IDX_NEG_NEG]], [[J:%.*]]
-; CHECK-NEXT:    ret i64 [[GEPDIFF_NEG]]
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i64 [[I:%.*]], 2
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub i64 [[GEP1_IDX]], [[J:%.*]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %bit = bitcast i8* %foo to i32*
   %gep1 = getelementptr inbounds i32, i32* %bit, i64 %i
@@ -853,9 +853,9 @@ define i64 @test30(i8* %foo, i64 %i, i64 %j) {
 
 define i16 @test30_as1(i8 addrspace(1)* %foo, i16 %i, i16 %j) {
 ; CHECK-LABEL: @test30_as1(
-; CHECK-NEXT:    [[GEP1_IDX_NEG_NEG:%.*]] = shl i16 [[I:%.*]], 2
-; CHECK-NEXT:    [[GEPDIFF_NEG:%.*]] = sub i16 [[GEP1_IDX_NEG_NEG]], [[J:%.*]]
-; CHECK-NEXT:    ret i16 [[GEPDIFF_NEG]]
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i16 [[I:%.*]], 2
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub i16 [[GEP1_IDX]], [[J:%.*]]
+; CHECK-NEXT:    ret i16 [[GEPDIFF]]
 ;
   %bit = bitcast i8 addrspace(1)* %foo to i32 addrspace(1)*
   %gep1 = getelementptr inbounds i32, i32 addrspace(1)* %bit, i16 %i
@@ -1234,10 +1234,10 @@ define i64 @test58([100 x [100 x i8]]* %foo, i64 %i, i64 %j) {
 ; "%sub = i64 %i, %j, ret i64 %sub"
 ; gep1 and gep2 have only one use
 ; CHECK-LABEL: @test58(
-; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add i64 [[J:%.*]], 4200
 ; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add i64 [[I:%.*]], 4200
-; CHECK-NEXT:    [[GEPDIFF_NEG:%.*]] = sub i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
-; CHECK-NEXT:    ret i64 [[GEPDIFF_NEG]]
+; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add i64 [[J:%.*]], 4200
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %gep1 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 %i
   %gep2 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 %j
