@@ -4069,7 +4069,6 @@ struct X {
   X(int);
 };
 X test() {
-  // FIXME: Remove `UnknownExpression` due to implicit `CXXFunctionalCastExpr`
   [[return X(1);]]
 }
 )cpp",
@@ -4077,12 +4076,11 @@ X test() {
 ReturnStatement Statement
 |-'return' IntroducerKeyword
 |-UnknownExpression ReturnValue
-| `-UnknownExpression
-|   |-'X'
-|   |-'('
-|   |-IntegerLiteralExpression
-|   | `-'1' LiteralToken
-|   `-')'
+| |-'X'
+| |-'('
+| |-IntegerLiteralExpression
+| | `-'1' LiteralToken
+| `-')'
 `-';'
 )txt"}));
 }

@@ -14,6 +14,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/IgnoreExpr.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TypeLoc.h"
@@ -60,9 +61,25 @@ static Expr *IgnoreImplicitConstructorSingleStep(Expr *E) {
   return E;
 }
 
+// In:
+// struct X {
+//   X(int)
+// };
+// X x = X(1);
+// Ignores the implicit `CXXFunctionalCastExpr` that wraps
+// `CXXConstructExpr X(1)`.
+static Expr *IgnoreCXXFunctionalCastExprWrappingConstructor(Expr *E) {
+  if (auto *F = dyn_cast<CXXFunctionalCastExpr>(E)) {
+    if (F->getCastKind() == CK_ConstructorConversion)
+      return F->getSubExpr();
+  }
+  return E;
+}
+
 static Expr *IgnoreImplicit(Expr *E) {
   return IgnoreExprNodes(E, IgnoreImplicitSingleStep,
-                         IgnoreImplicitConstructorSingleStep);
+                         IgnoreImplicitConstructorSingleStep,
+                         IgnoreCXXFunctionalCastExprWrappingConstructor);
 }
 
 LLVM_ATTRIBUTE_UNUSED
