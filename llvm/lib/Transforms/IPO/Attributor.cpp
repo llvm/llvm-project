@@ -132,11 +132,11 @@ static cl::opt<bool> PrintDependencies("attributor-print-dep", cl::Hidden,
 /// Logic operators for the change status enum class.
 ///
 ///{
-ChangeStatus llvm::operator|(ChangeStatus l, ChangeStatus r) {
-  return l == ChangeStatus::CHANGED ? l : r;
+ChangeStatus llvm::operator|(ChangeStatus L, ChangeStatus R) {
+  return L == ChangeStatus::CHANGED ? L : R;
 }
-ChangeStatus llvm::operator&(ChangeStatus l, ChangeStatus r) {
-  return l == ChangeStatus::UNCHANGED ? l : r;
+ChangeStatus llvm::operator&(ChangeStatus L, ChangeStatus R) {
+  return L == ChangeStatus::UNCHANGED ? L : R;
 }
 ///}
 
