@@ -23,6 +23,7 @@ set(SOURCES
   Driver.cpp
   Indexing.cpp
   FatalErrorHandler.cpp
+  Rewrite.cpp
 
   ADDITIONAL_HEADERS
   CIndexDiagnostic.h
