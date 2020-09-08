@@ -1,4 +1,5 @@
 ; RUN: opt %loadPolly -polly-simplify -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -disable-output "-passes=scop(print<polly-simplify>)" < %s -aa-pipeline=basic-aa < %s | FileCheck %s
 ;
 ; Simple test for the existence of the Simplify pass.
 ;

@@ -1,4 +1,5 @@
 ; RUN: opt %loadPolly -polly-simplify -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly "-passes=scop(print<polly-simplify>)" -disable-output -aa-pipeline=basic-aa < %s | FileCheck %s -match-full-lines
 ;
 ; Do not remove dependencies of a phi node in a region's exit block.
 ;
