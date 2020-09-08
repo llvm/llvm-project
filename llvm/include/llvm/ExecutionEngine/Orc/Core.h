@@ -759,8 +759,6 @@ private:
 
   void dropSymbol(const SymbolStringPtr &Name);
 
-  bool canStillFail();
-
   void handleFailed(Error Err);
 
   void detach();
@@ -912,17 +910,6 @@ public:
   /// Dump current JITDylib state to OS.
   void dump(raw_ostream &OS);
 
-  /// FIXME: Remove this when we remove the old ORC layers.
-  /// Search the given JITDylibs in order for the symbols in Symbols. Results
-  ///        (once they become available) will be returned via the given Query.
-  ///
-  /// If any symbol is not found then the unresolved symbols will be returned,
-  /// and the query will not be applied. The Query is not failed and can be
-  /// re-used in a subsequent lookup once the symbols have been added, or
-  /// manually failed.
-  Expected<SymbolNameSet>
-  legacyLookup(std::shared_ptr<AsynchronousSymbolQuery> Q, SymbolNameSet Names);
-
   /// Returns the given JITDylibs and all of their transitive dependencies in
   /// DFS order (based on linkage relationships). Each JITDylib will appear
   /// only once.
@@ -1038,10 +1025,6 @@ private:
                        std::shared_ptr<AsynchronousSymbolQuery> &Q,
                        LookupKind K, JITDylibLookupFlags JDLookupFlags,
                        SymbolLookupSet &Unresolved);
-
-  bool lookupImpl(std::shared_ptr<AsynchronousSymbolQuery> &Q,
-                  std::vector<std::unique_ptr<MaterializationUnit>> &MUs,
-                  SymbolLookupSet &Unresolved);
 
   void detachQueryHelper(AsynchronousSymbolQuery &Q,
                          const SymbolNameSet &QuerySymbols);
@@ -1197,18 +1180,6 @@ public:
     this->DispatchMaterialization = std::move(DispatchMaterialization);
     return *this;
   }
-
-  void legacyFailQuery(AsynchronousSymbolQuery &Q, Error Err);
-
-  using LegacyAsyncLookupFunction = std::function<SymbolNameSet(
-      std::shared_ptr<AsynchronousSymbolQuery> Q, SymbolNameSet Names)>;
-
-  /// A legacy lookup function for JITSymbolResolverAdapter.
-  /// Do not use -- this will be removed soon.
-  Expected<SymbolMap>
-  legacyLookup(LegacyAsyncLookupFunction AsyncLookup, SymbolNameSet Names,
-               SymbolState RequiredState,
-               RegisterDependenciesFunction RegisterDependencies);
 
   /// Search the given JITDylib list for the given symbols.
   ///

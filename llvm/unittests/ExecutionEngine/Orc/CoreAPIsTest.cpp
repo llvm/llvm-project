@@ -58,25 +58,6 @@ TEST_F(CoreAPIsStandardTest, BasicSuccessfulLookup) {
   EXPECT_TRUE(OnCompletionRun) << "Should have been marked ready";
 }
 
-TEST_F(CoreAPIsStandardTest, ExecutionSessionFailQuery) {
-  bool OnCompletionRun = false;
-
-  auto OnCompletion = [&](Expected<SymbolMap> Result) {
-    EXPECT_FALSE(!!Result) << "Resolution unexpectedly returned success";
-    auto Msg = toString(Result.takeError());
-    EXPECT_EQ(Msg, "xyz") << "Resolution returned incorrect result";
-    OnCompletionRun = true;
-  };
-
-  AsynchronousSymbolQuery Q(SymbolLookupSet(Foo), SymbolState::Ready,
-                            OnCompletion);
-
-  ES.legacyFailQuery(Q,
-                     make_error<StringError>("xyz", inconvertibleErrorCode()));
-
-  EXPECT_TRUE(OnCompletionRun) << "OnCompletionCallback was not run";
-}
-
 TEST_F(CoreAPIsStandardTest, EmptyLookup) {
   bool OnCompletionRun = false;
 
@@ -253,25 +234,6 @@ TEST_F(CoreAPIsStandardTest, RemoveSymbolsTest) {
   EXPECT_TRUE(BarMaterializerDestructed)
       << "\"Bar\"'s materializer should have been destructed";
   EXPECT_TRUE(OnCompletionRun) << "OnCompletion should have been run";
-}
-
-TEST_F(CoreAPIsStandardTest, ChainedJITDylibLookup) {
-  cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
-
-  auto &JD2 = ES.createBareJITDylib("JD2");
-
-  bool OnCompletionRun = false;
-
-  auto Q = std::make_shared<AsynchronousSymbolQuery>(
-      SymbolLookupSet({Foo}), SymbolState::Ready,
-      [&](Expected<SymbolMap> Result) {
-        cantFail(std::move(Result));
-        OnCompletionRun = true;
-      });
-
-  cantFail(JD2.legacyLookup(Q, cantFail(JD.legacyLookup(Q, {Foo}))));
-
-  EXPECT_TRUE(OnCompletionRun) << "OnCompletion was not run for empty query";
 }
 
 TEST_F(CoreAPIsStandardTest, LookupWithHiddenSymbols) {
