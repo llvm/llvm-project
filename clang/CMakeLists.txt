@@ -136,38 +136,19 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
 
   if(LLVM_INCLUDE_TESTS)
-    if(CMAKE_VERSION VERSION_LESS 3.12)
-      include(FindPythonInterp)
-      if(NOT PYTHONINTERP_FOUND)
-        message(FATAL_ERROR
-  "Unable to find Python interpreter, required for builds and testing.
-
-  Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
+    find_package(Python3 COMPONENTS Interpreter)
+    if(NOT Python3_Interpreter_FOUND)
+      message(WARNING "Python3 not found, using python2 as a fallback")
+      find_package(Python2 COMPONENTS Interpreter REQUIRED)
+      if(Python2_VERSION VERSION_LESS 2.7)
+        message(SEND_ERROR "Python 2.7 or newer is required")
       endif()
 
-      if( ${PYTHON_VERSION_STRING} VERSION_LESS 2.7 )
-        message(FATAL_ERROR "Python 2.7 or newer is required")
-      endif()
-
+      # Treat python2 as python3
       add_executable(Python3::Interpreter IMPORTED)
       set_target_properties(Python3::Interpreter PROPERTIES
-        IMPORTED_LOCATION ${PYTHON_EXECUTABLE})
-      set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
-    else()
-      find_package(Python3 COMPONENTS Interpreter)
-      if(NOT Python3_Interpreter_FOUND)
-        message(WARNING "Python3 not found, using python2 as a fallback")
-        find_package(Python2 COMPONENTS Interpreter REQUIRED)
-        if(Python2_VERSION VERSION_LESS 2.7)
-          message(SEND_ERROR "Python 2.7 or newer is required")
-        endif()
-
-        # Treat python2 as python3
-        add_executable(Python3::Interpreter IMPORTED)
-        set_target_properties(Python3::Interpreter PROPERTIES
-          IMPORTED_LOCATION ${Python2_EXECUTABLE})
-        set(Python3_EXECUTABLE ${Python2_EXECUTABLE})
-      endif()
+        IMPORTED_LOCATION ${Python2_EXECUTABLE})
+      set(Python3_EXECUTABLE ${Python2_EXECUTABLE})
     endif()
 
     # Check prebuilt llvm/utils.
