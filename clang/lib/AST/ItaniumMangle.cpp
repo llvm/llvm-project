@@ -3388,7 +3388,7 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(const VectorType *T) {
   case BuiltinType::ULong:
     TypeName = "__SVUint64_t";
     break;
-  case BuiltinType::Float16:
+  case BuiltinType::Half:
     TypeName = "__SVFloat16_t";
     break;
   case BuiltinType::Float:
