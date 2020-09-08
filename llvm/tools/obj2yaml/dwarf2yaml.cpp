@@ -46,14 +46,20 @@ void dumpDebugAbbrev(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   }
 }
 
-void dumpDebugStrings(DWARFContext &DCtx, DWARFYAML::Data &Y) {
-  StringRef RemainingTable = DCtx.getDWARFObj().getStrSection();
-  Y.DebugStrings.emplace();
-  while (RemainingTable.size() > 0) {
-    auto SymbolPair = RemainingTable.split('\0');
-    RemainingTable = SymbolPair.second;
-    Y.DebugStrings->push_back(SymbolPair.first);
+Error dumpDebugStrings(DWARFContext &DCtx, DWARFYAML::Data &Y) {
+  DataExtractor StrData = DCtx.getStringExtractor();
+  uint64_t Offset = 0;
+  std::vector<StringRef> DebugStr;
+  Error Err = Error::success();
+  while (StrData.isValidOffset(Offset)) {
+    const char *CStr = StrData.getCStr(&Offset, &Err);
+    if (Err)
+      return Err;
+    DebugStr.push_back(CStr);
   }
+
+  Y.DebugStrings = DebugStr;
+  return Err;
 }
 
 Error dumpDebugARanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
@@ -108,6 +114,7 @@ Error dumpDebugRanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
                           DCtx.isLittleEndian(), AddrSize);
   uint64_t Offset = 0;
   DWARFDebugRangeList DwarfRanges;
+  std::vector<DWARFYAML::Ranges> DebugRanges;
 
   while (Data.isValidOffset(Offset)) {
     DWARFYAML::Ranges YamlRanges;
@@ -117,8 +124,10 @@ Error dumpDebugRanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
       return E;
     for (const auto &RLE : DwarfRanges.getEntries())
       YamlRanges.Entries.push_back({RLE.StartAddress, RLE.EndAddress});
-    Y.DebugRanges.push_back(std::move(YamlRanges));
+    DebugRanges.push_back(std::move(YamlRanges));
   }
+
+  Y.DebugRanges = DebugRanges;
   return ErrorSuccess();
 }
 

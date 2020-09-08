@@ -28,7 +28,7 @@ SetVector<StringRef> DWARFYAML::Data::getNonEmptySectionNames() const {
     SecNames.insert("debug_str");
   if (DebugAranges)
     SecNames.insert("debug_aranges");
-  if (!DebugRanges.empty())
+  if (DebugRanges)
     SecNames.insert("debug_ranges");
   if (!DebugLines.empty())
     SecNames.insert("debug_line");
@@ -95,8 +95,7 @@ void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
   IO.mapOptional("debug_str", DWARF.DebugStrings);
   IO.mapOptional("debug_abbrev", DWARF.DebugAbbrev);
   IO.mapOptional("debug_aranges", DWARF.DebugAranges);
-  if (!DWARF.DebugRanges.empty() || !IO.outputting())
-    IO.mapOptional("debug_ranges", DWARF.DebugRanges);
+  IO.mapOptional("debug_ranges", DWARF.DebugRanges);
   IO.mapOptional("debug_pubnames", DWARF.PubNames);
   IO.mapOptional("debug_pubtypes", DWARF.PubTypes);
   DWARFCtx.IsGNUPubSec = true;

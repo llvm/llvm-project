@@ -108,7 +108,6 @@ void PPCSubtarget::initializeEnvironment() {
   HasHTM = false;
   HasFloat128 = false;
   HasFusion = false;
-  HasStoreFusion = false;
   HasAddiLoadFusion = false;
   HasAddisLoadFusion = false;
   IsISA3_0 = false;

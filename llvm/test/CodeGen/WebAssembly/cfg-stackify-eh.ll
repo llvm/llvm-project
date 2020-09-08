@@ -1023,6 +1023,54 @@ while.end:                                        ; preds = %while.body, %while.
   ret void
 }
 
+; When the function return type is non-void and 'end' instructions are at the
+; very end of a function, CFGStackify's fixEndsAtEndOfFunction function fixes
+; the corresponding block/loop/try's type to match the function's return type.
+; But when a `try`'s type is fixed, we should also check `end` instructions
+; before its corresponding `catch`, because both `try` and `catch` body should
+; satisfy the return type requirements.
+
+; NOSORT-LABEL: test19
+; NOSORT: try i32
+; NOSORT: loop i32
+; NOSORT: end_loop
+; NOSORT: catch
+; NOSORT: end_try
+; NOSORT-NEXT: end_function
+define i32 @test19(i32 %n) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  %t = alloca %class.Object, align 1
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %entry
+  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
+  %cmp = icmp slt i32 %i.0, %n
+  br label %for.body
+
+for.body:                                         ; preds = %for.cond
+  %div = sdiv i32 %n, 2
+  %cmp1 = icmp eq i32 %i.0, %div
+  br i1 %cmp1, label %if.then, label %for.inc
+
+if.then:                                          ; preds = %for.body
+  %call = invoke i32 @baz()
+          to label %invoke.cont unwind label %ehcleanup
+
+invoke.cont:                                      ; preds = %if.then
+  %call2 = call %class.Object* @_ZN6ObjectD2Ev(%class.Object* %t) #4
+  ret i32 %call
+
+for.inc:                                          ; preds = %for.body
+  %inc = add nsw i32 %i.0, 1
+  br label %for.cond
+
+ehcleanup:                                        ; preds = %if.then
+  %0 = cleanuppad within none []
+  %call3 = call %class.Object* @_ZN6ObjectD2Ev(%class.Object* %t) #4 [ "funclet"(token %0) ]
+  cleanupret from %0 unwind to caller
+}
+
+
 ; Check if the unwind destination mismatch stats are correct
 ; NOSORT-STAT: 17 wasm-cfg-stackify    - Number of EH pad unwind mismatches found
 

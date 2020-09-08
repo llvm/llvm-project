@@ -42,6 +42,7 @@ group("all-checks") {
   # If you add a check, also add it to ClangTidyForceLinker.h.
   deps = [
     "//clang-tools-extra/clang-tidy/abseil",
+    "//clang-tools-extra/clang-tidy/altera",
     "//clang-tools-extra/clang-tidy/android",
     "//clang-tools-extra/clang-tidy/boost",
     "//clang-tools-extra/clang-tidy/bugprone",

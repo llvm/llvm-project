@@ -415,7 +415,7 @@ Optional<DWARFYAML::Data> ELFDumper<ELFT>::dumpDWARFSections(
       if (RawSec->Name == ".debug_aranges")
         Err = dumpDebugARanges(*DWARFCtx.get(), DWARF);
       else if (RawSec->Name == ".debug_str")
-        dumpDebugStrings(*DWARFCtx.get(), DWARF);
+        Err = dumpDebugStrings(*DWARFCtx.get(), DWARF);
 
       // If the DWARF section cannot be successfully parsed, emit raw content
       // instead of an entry in the DWARF section of the YAML.

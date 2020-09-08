@@ -173,11 +173,10 @@ body:             |
   ; CHECK:   renamable $r3 = VMOVRS killed renamable $s0, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
   ; CHECK:   renamable $q1 = MVE_VDUP32 killed renamable $r3, 0, $noreg, undef renamable $q1
-  ; CHECK:   $r3 = tMOVr $r1, 14 /* CC::al */, $noreg
+  ; CHECK:   dead $r3 = tMOVr $r1, 14 /* CC::al */, $noreg
   ; CHECK: bb.3.do.body:
   ; CHECK:   successors: %bb.3(0x7c000000), %bb.4(0x04000000)
-  ; CHECK:   liveins: $lr, $q0, $q1, $r0, $r1, $r2, $r3
-  ; CHECK:   renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg
+  ; CHECK:   liveins: $lr, $q0, $q1, $r0, $r1, $r2
   ; CHECK:   renamable $r0, renamable $q2 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg :: (load 16 from %ir.pSrc.addr.01, align 4)
   ; CHECK:   renamable $q2 = nnan ninf nsz arcp contract afn reassoc MVE_VSUBf32 killed renamable $q2, renamable $q1, 0, $noreg, undef renamable $q2
   ; CHECK:   renamable $q0 = nnan ninf nsz arcp contract afn reassoc MVE_VFMAf32 killed renamable $q0, killed renamable $q2, killed renamable $q2, 0, killed $noreg
