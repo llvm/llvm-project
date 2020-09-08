@@ -282,7 +282,7 @@ class VSCodeTestCaseBase(TestBase):
                trace=False, initCommands=None, preRunCommands=None,
                stopCommands=None, exitCommands=None, terminateCommands=None,
                sourcePath=None, debuggerRoot=None, launchCommands=None,
-               sourceMap=None, disconnectAutomatically=True, runInTerminal=False):
+               sourceMap=None, disconnectAutomatically=True):
         '''Sending launch request to vscode
         '''
 
@@ -316,16 +316,10 @@ class VSCodeTestCaseBase(TestBase):
             sourcePath=sourcePath,
             debuggerRoot=debuggerRoot,
             launchCommands=launchCommands,
-            sourceMap=sourceMap,
-            runInTerminal=runInTerminal)
+            sourceMap=sourceMap)
         if not (response and response['success']):
             self.assertTrue(response['success'],
                             'launch failed (%s)' % (response['message']))
-        # We need to trigger a request_configurationDone after we've successfully
-        # attached a runInTerminal process to finish initialization.
-        if runInTerminal:
-            self.vscode.request_configurationDone()
-
 
     def build_and_launch(self, program, args=None, cwd=None, env=None,
                          stopOnEntry=False, disableASLR=True,
@@ -333,7 +327,7 @@ class VSCodeTestCaseBase(TestBase):
                          trace=False, initCommands=None, preRunCommands=None,
                          stopCommands=None, exitCommands=None,
                          terminateCommands=None, sourcePath=None,
-                         debuggerRoot=None, runInTerminal=False):
+                         debuggerRoot=None):
         '''Build the default Makefile target, create the VSCode debug adaptor,
            and launch the process.
         '''
@@ -343,4 +337,4 @@ class VSCodeTestCaseBase(TestBase):
         self.launch(program, args, cwd, env, stopOnEntry, disableASLR,
                     disableSTDIO, shellExpandArguments, trace,
                     initCommands, preRunCommands, stopCommands, exitCommands,
-                    terminateCommands, sourcePath, debuggerRoot, runInTerminal=runInTerminal)
+                    terminateCommands, sourcePath, debuggerRoot)
