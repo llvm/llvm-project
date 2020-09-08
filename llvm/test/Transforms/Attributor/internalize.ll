@@ -148,3 +148,14 @@ define void @unused_arg_caller() {
   call void @unused_arg(i8 0)
   ret void
 }
+
+; Don't crash on linkonce_odr hidden functions
+define linkonce_odr hidden void @__clang_call_terminate() {
+; CHECK_DISABLED-LABEL: define {{[^@]+}}@__clang_call_terminate() {
+; CHECK_DISABLED-NEXT:    call void @__clang_call_terminate()
+; CHECK_DISABLED-NEXT:    unreachable
+;
+  call void @__clang_call_terminate()
+  unreachable
+}
+
