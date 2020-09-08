@@ -8950,16 +8950,13 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
   SDLoc dl = getCurSDLoc();
   EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   SDValue Res;
-  FastMathFlags FMF;
   SDNodeFlags SDFlags;
-  if (auto *FPMO = dyn_cast<FPMathOperator>(&I)) {
-    FMF = FPMO->getFastMathFlags();
+  if (auto *FPMO = dyn_cast<FPMathOperator>(&I))
     SDFlags.copyFMF(*FPMO);
-  }
 
   switch (Intrinsic) {
   case Intrinsic::experimental_vector_reduce_v2_fadd:
-    if (FMF.allowReassoc())
+    if (SDFlags.hasAllowReassociation())
       Res = DAG.getNode(ISD::FADD, dl, VT, Op1,
                         DAG.getNode(ISD::VECREDUCE_FADD, dl, VT, Op2, SDFlags),
                         SDFlags);
@@ -8967,7 +8964,7 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
       Res = DAG.getNode(ISD::VECREDUCE_STRICT_FADD, dl, VT, Op1, Op2, SDFlags);
     break;
   case Intrinsic::experimental_vector_reduce_v2_fmul:
-    if (FMF.allowReassoc())
+    if (SDFlags.hasAllowReassociation())
       Res = DAG.getNode(ISD::FMUL, dl, VT, Op1,
                         DAG.getNode(ISD::VECREDUCE_FMUL, dl, VT, Op2, SDFlags),
                         SDFlags);
