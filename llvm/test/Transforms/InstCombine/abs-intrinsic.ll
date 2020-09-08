@@ -275,8 +275,7 @@ define i1 @abs_ne_int_min_poison(i8 %x) {
 
 define i1 @abs_eq_int_min_nopoison(i8 %x) {
 ; CHECK-LABEL: @abs_eq_int_min_nopoison(
-; CHECK-NEXT:    [[ABS:%.*]] = call i8 @llvm.abs.i8(i8 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[ABS]], -128
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], -128
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %abs = call i8 @llvm.abs.i8(i8 %x, i1 false)
@@ -286,8 +285,7 @@ define i1 @abs_eq_int_min_nopoison(i8 %x) {
 
 define i1 @abs_ne_int_min_nopoison(i8 %x) {
 ; CHECK-LABEL: @abs_ne_int_min_nopoison(
-; CHECK-NEXT:    [[ABS:%.*]] = call i8 @llvm.abs.i8(i8 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[ABS]], -128
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X:%.*]], -128
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %abs = call i8 @llvm.abs.i8(i8 %x, i1 false)
