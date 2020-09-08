@@ -155,11 +155,3 @@ void badSetter1(void) __attribute__((swift_name("getter:bad1())"))); // expected
 Point3D badGetter2(Point3D point) __attribute__((swift_name("getter:bad2(_:))"))); // expected-warning{{parameter of 'swift_name' attribute must be a Swift function name string}}
 
 void badSetter2(Point3D point) __attribute__((swift_name("setter:bad2(self:))"))); // expected-warning{{parameter of 'swift_name' attribute must be a Swift function name string}}
-
-// --- swift_bridged_typedef ---
-@interface NSString
-@end
-
-typedef NSString *NSMyAmazingStringAlias __attribute__((swift_bridged_typedef));
-
-struct __attribute__((swift_bridged_typedef)) NotATypedef { }; // expected-error{{'swift_bridged_typedef' attribute only applies to typedefs}}
