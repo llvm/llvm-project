@@ -126,3 +126,49 @@ define <4 x i32> @abs_of_select_neg_false_val(<4 x i1> %b, <4 x i32> %x) {
   %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %sel, i1 false)
   ret <4 x i32> %abs
 }
+
+define i32 @abs_dom_cond_nopoison(i32 %x) {
+; CHECK-LABEL: @abs_dom_cond_nopoison(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    [[A1:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 false)
+; CHECK-NEXT:    ret i32 [[A1]]
+; CHECK:       false:
+; CHECK-NEXT:    [[A2:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 false)
+; CHECK-NEXT:    ret i32 [[A2]]
+;
+  %cmp = icmp sge i32 %x, 0
+  br i1 %cmp, label %true, label %false
+
+true:
+  %a1 = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  ret i32 %a1
+
+false:
+  %a2 = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  ret i32 %a2
+}
+
+define i32 @abs_dom_cond_poison(i32 %x) {
+; CHECK-LABEL: @abs_dom_cond_poison(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    [[A1:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    ret i32 [[A1]]
+; CHECK:       false:
+; CHECK-NEXT:    [[A2:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    ret i32 [[A2]]
+;
+  %cmp = icmp sge i32 %x, 0
+  br i1 %cmp, label %true, label %false
+
+true:
+  %a1 = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  ret i32 %a1
+
+false:
+  %a2 = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  ret i32 %a2
+}
