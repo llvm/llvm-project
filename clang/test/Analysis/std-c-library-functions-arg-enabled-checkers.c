@@ -1,4 +1,13 @@
+// Here we test the order of the Checkers when StdCLibraryFunctionArgs is
+// enabled.
+
 // RUN: %clang --analyze %s --target=x86_64-pc-linux-gnu \
+// RUN:   -Xclang -analyzer-checker=core \
+// RUN:   -Xclang -analyzer-checker=apiModeling.StdCLibraryFunctions \
+// RUN:   -Xclang -analyzer-config \
+// RUN:      -Xclang apiModeling.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:   -Xclang -analyzer-checker=alpha.unix.StdCLibraryFunctionArgs \
+// RUN:   -Xclang -analyzer-checker=alpha.unix.Stream \
 // RUN:   -Xclang -analyzer-list-enabled-checkers \
 // RUN:   -Xclang -analyzer-display-progress \
 // RUN:   2>&1 | FileCheck %s --implicit-check-not=ANALYZE \
@@ -6,15 +15,17 @@
 
 // CHECK:      OVERVIEW: Clang Static Analyzer Enabled Checkers List
 // CHECK-EMPTY:
+// CHECK-NEXT: core.CallAndMessageModeling
+// CHECK-NEXT: core.CallAndMessage
+// CHECK-NEXT: core.NonNullParamChecker
+// CHECK-NEXT: alpha.unix.Stream
 // CHECK-NEXT: apiModeling.StdCLibraryFunctions
+// CHECK-NEXT: alpha.unix.StdCLibraryFunctionArgs
 // CHECK-NEXT: apiModeling.TrustNonnull
 // CHECK-NEXT: apiModeling.llvm.CastValue
 // CHECK-NEXT: apiModeling.llvm.ReturnValue
-// CHECK-NEXT: core.CallAndMessageModeling
-// CHECK-NEXT: core.CallAndMessage
 // CHECK-NEXT: core.DivideZero
 // CHECK-NEXT: core.DynamicTypePropagation
-// CHECK-NEXT: core.NonNullParamChecker
 // CHECK-NEXT: core.NonnilStringConstants
 // CHECK-NEXT: core.NullDereference
 // CHECK-NEXT: core.StackAddrEscapeBase
