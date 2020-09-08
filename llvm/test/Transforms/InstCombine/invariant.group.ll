@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -early-cse -S < %s | FileCheck %s
+; RUN: opt -instcombine -early-cse -earlycse-debug-hash -S < %s | FileCheck %s
 
 
 ; CHECK-LABEL: define i8* @simplifyNullLaunder()
