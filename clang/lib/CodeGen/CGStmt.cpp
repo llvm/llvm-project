@@ -21,6 +21,7 @@
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
@@ -1836,7 +1837,8 @@ SimplifyConstraint(const char *Constraint, const TargetInfo &Target,
 static std::string
 AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
                        const TargetInfo &Target, CodeGenModule &CGM,
-                       const AsmStmt &Stmt, const bool EarlyClobber) {
+                       const AsmStmt &Stmt, const bool EarlyClobber,
+                       std::string *GCCReg = nullptr) {
   const DeclRefExpr *AsmDeclRef = dyn_cast<DeclRefExpr>(&AsmExpr);
   if (!AsmDeclRef)
     return Constraint;
@@ -1861,6 +1863,8 @@ AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
   }
   // Canonicalize the register here before returning it.
   Register = Target.getNormalizedGCCRegisterName(Register);
+  if (GCCReg != nullptr)
+    *GCCReg = Register.str();
   return (EarlyClobber ? "&{" : "{") + Register.str() + "}";
 }
 
@@ -2059,6 +2063,9 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   // Keep track of out constraints for tied input operand.
   std::vector<std::string> OutputConstraints;
 
+  // Keep track of defined physregs.
+  llvm::SmallSet<std::string, 8> PhysRegOutputs;
+
   // An inline asm can be marked readonly if it meets the following conditions:
   //  - it doesn't have any sideeffects
   //  - it doesn't clobber memory
@@ -2078,9 +2085,15 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     const Expr *OutExpr = S.getOutputExpr(i);
     OutExpr = OutExpr->IgnoreParenNoopCasts(getContext());
 
+    std::string GCCReg;
     OutputConstraint = AddVariableConstraints(OutputConstraint, *OutExpr,
                                               getTarget(), CGM, S,
-                                              Info.earlyClobber());
+                                              Info.earlyClobber(),
+                                              &GCCReg);
+    // Give an error on multiple outputs to same physreg.
+    if (!GCCReg.empty() && !PhysRegOutputs.insert(GCCReg).second)
+      CGM.Error(S.getAsmLoc(), "multiple outputs to hard register: " + GCCReg);
+
     OutputConstraints.push_back(OutputConstraint);
     LValue Dest = EmitLValue(OutExpr);
     if (!Constraints.empty())
@@ -2167,7 +2180,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
         LargestVectorWidth =
             std::max((uint64_t)LargestVectorWidth,
                      VT->getPrimitiveSizeInBits().getKnownMinSize());
-      if (Info.allowsRegister())
+      // Don't tie physregs.
+      if (Info.allowsRegister() && GCCReg.empty())
         InOutConstraints += llvm::utostr(i);
       else
         InOutConstraints += OutputConstraint;
