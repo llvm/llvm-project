@@ -20,6 +20,7 @@
 
 using clang::tooling::ReplacementTest;
 using clang::tooling::toReplacements;
+using testing::internal::ScopedTrace;
 
 namespace clang {
 namespace format {
@@ -65,8 +66,10 @@ protected:
     return getStyleWithColumns(getGoogleStyle(), ColumnLimit);
   }
 
-  void verifyFormat(llvm::StringRef Expected, llvm::StringRef Code,
-                    const FormatStyle &Style = getLLVMStyle()) {
+  void _verifyFormat(const char *File, int Line, llvm::StringRef Expected,
+                     llvm::StringRef Code,
+                     const FormatStyle &Style = getLLVMStyle()) {
+    ScopedTrace t(File, Line, ::testing::Message() << Code.str());
     EXPECT_EQ(Expected.str(), format(Expected, Style))
         << "Expected code is not stable";
     EXPECT_EQ(Expected.str(), format(Code, Style));
@@ -79,24 +82,24 @@ protected:
     }
   }
 
-  void verifyFormat(llvm::StringRef Code,
-                    const FormatStyle &Style = getLLVMStyle()) {
-    verifyFormat(Code, test::messUp(Code), Style);
+  void _verifyFormat(const char *File, int Line, llvm::StringRef Code,
+                     const FormatStyle &Style = getLLVMStyle()) {
+    _verifyFormat(File, Line, Code, test::messUp(Code), Style);
   }
 
-  void verifyIncompleteFormat(llvm::StringRef Code,
-                              const FormatStyle &Style = getLLVMStyle()) {
+  void _verifyIncompleteFormat(const char *File, int Line, llvm::StringRef Code,
+                               const FormatStyle &Style = getLLVMStyle()) {
+    ScopedTrace t(File, Line, ::testing::Message() << Code.str());
     EXPECT_EQ(Code.str(),
               format(test::messUp(Code), Style, SC_ExpectIncomplete));
   }
 
-  void verifyGoogleFormat(llvm::StringRef Code) {
-    verifyFormat(Code, getGoogleStyle());
-  }
-
-  void verifyIndependentOfContext(llvm::StringRef text) {
-    verifyFormat(text);
-    verifyFormat(llvm::Twine("void f() { " + text + " }").str());
+  void _verifyIndependentOfContext(const char *File, int Line,
+                                   llvm::StringRef Text,
+                                   const FormatStyle &Style = getLLVMStyle()) {
+    _verifyFormat(File, Line, Text, Style);
+    _verifyFormat(File, Line, llvm::Twine("void f() { " + Text + " }").str(),
+                  Style);
   }
 
   /// \brief Verify that clang-format does not crash on the given input.
@@ -107,6 +110,13 @@ protected:
 
   int ReplacementCount;
 };
+
+#define verifyIndependentOfContext(...)                                        \
+  _verifyIndependentOfContext(__FILE__, __LINE__, __VA_ARGS__)
+#define verifyIncompleteFormat(...)                                            \
+  _verifyIncompleteFormat(__FILE__, __LINE__, __VA_ARGS__)
+#define verifyFormat(...) _verifyFormat(__FILE__, __LINE__, __VA_ARGS__)
+#define verifyGoogleFormat(Code) verifyFormat(Code, getGoogleStyle())
 
 TEST_F(FormatTest, MessUp) {
   EXPECT_EQ("1 2 3", test::messUp("1 2 3"));
