@@ -8,10 +8,7 @@ declare i8 @llvm.smax.i8(i8, i8)
 
 define i8 @umin_known_bits(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umin_known_bits(
-; CHECK-NEXT:    [[X2:%.*]] = and i8 [[X:%.*]], 127
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[X2]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[M]], -128
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %x2 = and i8 %x, 127
   %m = call i8 @llvm.umin.i8(i8 %x2, i8 %y)
@@ -21,10 +18,7 @@ define i8 @umin_known_bits(i8 %x, i8 %y) {
 
 define i8 @umax_known_bits(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umax_known_bits(
-; CHECK-NEXT:    [[X2:%.*]] = or i8 [[X:%.*]], -128
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X2]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[M]], -128
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -128
 ;
   %x2 = or i8 %x, -128
   %m = call i8 @llvm.umax.i8(i8 %x2, i8 %y)
@@ -34,10 +28,7 @@ define i8 @umax_known_bits(i8 %x, i8 %y) {
 
 define i8 @smin_known_bits(i8 %x, i8 %y) {
 ; CHECK-LABEL: @smin_known_bits(
-; CHECK-NEXT:    [[X2:%.*]] = or i8 [[X:%.*]], -128
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[X2]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[M]], -128
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -128
 ;
   %x2 = or i8 %x, -128
   %m = call i8 @llvm.smin.i8(i8 %x2, i8 %y)
@@ -47,10 +38,7 @@ define i8 @smin_known_bits(i8 %x, i8 %y) {
 
 define i8 @smax_known_bits(i8 %x, i8 %y) {
 ; CHECK-LABEL: @smax_known_bits(
-; CHECK-NEXT:    [[X2:%.*]] = and i8 [[X:%.*]], 127
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[X2]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[M]], -128
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %x2 = and i8 %x, 127
   %m = call i8 @llvm.smax.i8(i8 %x2, i8 %y)
