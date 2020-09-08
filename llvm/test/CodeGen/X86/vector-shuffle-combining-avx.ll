@@ -156,8 +156,7 @@ define <4 x double> @combine_vperm2f128_vpermilvar_as_vperm2f128(<4 x double> %a
 define <4 x double> @combine_vperm2f128_vpermilvar_as_vmovaps(<4 x double> %a0) {
 ; CHECK-LABEL: combine_vperm2f128_vpermilvar_as_vmovaps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
+; CHECK-NEXT:    vmovaps %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> <i64 2, i64 0, i64 2, i64 0>)
   %2 = shufflevector <4 x double> %1, <4 x double> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
