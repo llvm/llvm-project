@@ -102,6 +102,7 @@ namespace format {
   TYPE(TrailingReturnArrow)                                                    \
   TYPE(TrailingUnaryOperator)                                                  \
   TYPE(TypenameMacro)                                                          \
+  TYPE(TypenameMacroParen)                                                     \
   TYPE(UnaryOperator)                                                          \
   TYPE(UntouchableMacroFunc)                                                   \
   TYPE(CSharpStringLiteral)                                                    \

@@ -244,6 +244,8 @@ private:
       Contexts.back().IsExpression = false;
     } else if (Left->Previous && Left->Previous->is(tok::kw___attribute)) {
       Left->setType(TT_AttributeParen);
+    } else if (Left->Previous && Left->Previous->is(TT_TypenameMacro)) {
+      Left->setType(TT_TypenameMacroParen);
     } else if (Left->Previous && Left->Previous->is(TT_ForEachMacro)) {
       // The first argument to a foreach macro is a declaration.
       Contexts.back().IsForEachMacro = true;
@@ -335,6 +337,8 @@ private:
 
         if (Left->is(TT_AttributeParen))
           CurrentToken->setType(TT_AttributeParen);
+        if (Left->is(TT_TypenameMacroParen))
+          CurrentToken->setType(TT_TypenameMacroParen);
         if (Left->Previous && Left->Previous->is(TT_JavaAnnotation))
           CurrentToken->setType(TT_JavaAnnotation);
         if (Left->Previous && Left->Previous->is(TT_LeadingJavaAnnotation))
@@ -1855,9 +1859,11 @@ private:
       }
       return T && T->is(TT_PointerOrReference);
     };
-    bool ParensAreType = !Tok.Previous || Tok.Previous->is(TT_TemplateCloser) ||
-                         Tok.Previous->isSimpleTypeSpecifier() ||
-                         IsQualifiedPointerOrReference(Tok.Previous);
+    bool ParensAreType =
+        !Tok.Previous ||
+        Tok.Previous->isOneOf(TT_TemplateCloser, TT_TypenameMacroParen) ||
+        Tok.Previous->isSimpleTypeSpecifier() ||
+        IsQualifiedPointerOrReference(Tok.Previous);
     bool ParensCouldEndDecl =
         Tok.Next->isOneOf(tok::equal, tok::semi, tok::l_brace, tok::greater);
     if (ParensAreType && !ParensCouldEndDecl)
