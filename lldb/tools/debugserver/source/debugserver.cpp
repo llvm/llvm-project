@@ -1507,27 +1507,8 @@ int main(int argc, char *argv[]) {
           timeout_ptr = &attach_timeout_abstime;
         }
         nub_launch_flavor_t launch_flavor = g_launch_flavor;
-        if (launch_flavor == eLaunchFlavorDefault) {
-          // Our default launch method is posix spawn
-          launch_flavor = eLaunchFlavorPosixSpawn;
-
-#if defined WITH_FBS
-          // Check if we have an app bundle, if so launch using SpringBoard.
-          if (is_dot_app(waitfor_pid_name.c_str())) {
-            launch_flavor = eLaunchFlavorFBS;
-          }
-#elif defined WITH_BKS
-          // Check if we have an app bundle, if so launch using SpringBoard.
-          if (is_dot_app(waitfor_pid_name.c_str())) {
-            launch_flavor = eLaunchFlavorBKS;
-          }
-#elif defined WITH_SPRINGBOARD
-          // Check if we have an app bundle, if so launch using SpringBoard.
-          if (is_dot_app(waitfor_pid_name.c_str())) {
-            launch_flavor = eLaunchFlavorSpringBoard;
-          }
-#endif
-        }
+        if (launch_flavor == eLaunchFlavorDefault)
+          launch_flavor = default_launch_flavor(waitfor_pid_name.c_str());
 
         ctx.SetLaunchFlavor(launch_flavor);
         bool ignore_existing = false;
