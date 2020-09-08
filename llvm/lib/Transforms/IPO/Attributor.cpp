@@ -1449,7 +1449,7 @@ static void createShallowWrapper(Function &F) {
   BasicBlock *EntryBB = BasicBlock::Create(Ctx, "entry", Wrapper);
 
   SmallVector<Value *, 8> Args;
-  auto FArgIt = F.arg_begin();
+  Argument *FArgIt = F.arg_begin();
   for (Argument &Arg : Wrapper->args()) {
     Args.push_back(&Arg);
     Arg.setName((FArgIt++)->getName());
@@ -1773,8 +1773,8 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     assert(Success && "Assumed call site replacement to succeed!");
 
     // Rewire the arguments.
-    auto OldFnArgIt = OldFn->arg_begin();
-    auto NewFnArgIt = NewFn->arg_begin();
+    Argument *OldFnArgIt = OldFn->arg_begin();
+    Argument *NewFnArgIt = NewFn->arg_begin();
     for (unsigned OldArgNum = 0; OldArgNum < ARIs.size();
          ++OldArgNum, ++OldFnArgIt) {
       if (const std::unique_ptr<ArgumentReplacementInfo> &ARI =
