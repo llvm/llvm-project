@@ -646,12 +646,6 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
     return ExprError(Diag(OpLoc, diag::err_no_typeid_with_fno_rtti));
   }
 
-  // Warns when typeid is used with RTTI data disabled.
-  if (!getLangOpts().RTTIData)
-    Diag(OpLoc, diag::warn_no_typeid_with_rtti_disabled)
-        << (getDiagnostics().getDiagnosticOptions().getFormat() ==
-            DiagnosticOptions::MSVC);
-
   QualType TypeInfoType = Context.getTypeDeclType(CXXTypeInfoDecl);
 
   if (isType) {
