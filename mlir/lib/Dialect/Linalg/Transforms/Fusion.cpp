@@ -659,7 +659,7 @@ private:
     // Add operations from producer (except the yield operation) to the fused
     // op.
     for (auto &op : producerBlock.getOperations()) {
-      if (auto yieldOp = dyn_cast<YieldOp>(op)) {
+      if (auto yieldOp = dyn_cast<linalg::YieldOp>(op)) {
         // Lookup the value the yield operation is mapped to.
         Value yieldVal = yieldOp.getOperand(0);
         if (Value clonedVal = mapper.lookupOrNull(yieldVal))
