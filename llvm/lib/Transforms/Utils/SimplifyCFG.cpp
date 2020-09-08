@@ -143,6 +143,13 @@ MaxSmallBlockSize("simplifycfg-max-small-block-size", cl::Hidden, cl::init(10),
                   cl::desc("Max size of a block which is still considered "
                            "small enough to thread through"));
 
+// Two is chosen to allow one negation and a logical combine.
+static cl::opt<unsigned>
+    BranchFoldThreshold("simplifycfg-branch-fold-threshold", cl::Hidden,
+                        cl::init(2),
+                        cl::desc("Maximum cost of combining conditions when "
+                                 "folding branches"));
+
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
 STATISTIC(NumLinearMaps,
           "Number of switch instructions turned into linear mapping");
@@ -2684,12 +2691,16 @@ static bool extractPredSuccWeights(BranchInst *PBI, BranchInst *BI,
 /// and one of our successors, fold the block into the predecessor and use
 /// logical operations to pick the right destination.
 bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
+                                  const TargetTransformInfo *TTI,
                                   unsigned BonusInstThreshold) {
   BasicBlock *BB = BI->getParent();
 
   const unsigned PredCount = pred_size(BB);
 
   bool Changed = false;
+  TargetTransformInfo::TargetCostKind CostKind =
+    BB->getParent()->hasMinSize() ? TargetTransformInfo::TCK_CodeSize
+                                  : TargetTransformInfo::TCK_SizeAndLatency;
 
   Instruction *Cond = nullptr;
   if (BI->isConditional())
@@ -2815,6 +2826,19 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
       }
     } else {
       if (PBI->getSuccessor(0) != TrueDest && PBI->getSuccessor(1) != TrueDest)
+        continue;
+    }
+
+    // Check the cost of inserting the necessary logic before performing the
+    // transformation.
+    if (TTI && Opc != Instruction::BinaryOpsEnd) {
+      Type *Ty = BI->getCondition()->getType();
+      unsigned Cost = TTI->getArithmeticInstrCost(Opc, Ty, CostKind);
+      if (InvertPredCond && (!PBI->getCondition()->hasOneUse() ||
+          !isa<CmpInst>(PBI->getCondition())))
+        Cost += TTI->getArithmeticInstrCost(Instruction::Xor, Ty, CostKind);
+
+      if (Cost > BranchFoldThreshold)
         continue;
     }
 
@@ -6013,7 +6037,7 @@ bool SimplifyCFGOpt::simplifyUncondBranch(BranchInst *BI,
   // branches to us and our successor, fold the comparison into the
   // predecessor and use logical operations to update the incoming value
   // for PHI nodes in common successor.
-  if (FoldBranchToCommonDest(BI, nullptr, Options.BonusInstThreshold))
+  if (FoldBranchToCommonDest(BI, nullptr, &TTI, Options.BonusInstThreshold))
     return requestResimplify();
   return false;
 }
@@ -6076,7 +6100,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   // If this basic block is ONLY a compare and a branch, and if a predecessor
   // branches to us and one of our successors, fold the comparison into the
   // predecessor and use logical operations to pick the right destination.
-  if (FoldBranchToCommonDest(BI, nullptr, Options.BonusInstThreshold))
+  if (FoldBranchToCommonDest(BI, nullptr, &TTI, Options.BonusInstThreshold))
     return requestResimplify();
 
   // We have a conditional branch to two blocks that are only reachable
