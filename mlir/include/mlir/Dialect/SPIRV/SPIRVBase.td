@@ -248,6 +248,24 @@ def QueryCapabilityInterface : OpInterface<"QueryCapabilityInterface"> {
 }
 
 //===----------------------------------------------------------------------===//
+// SPIR-V target GPU vendor and device definitions
+//===----------------------------------------------------------------------===//
+
+// An accelerator other than GPU or CPU
+def SPV_DT_Other         : I32EnumAttrCase<"Other", 0>;
+def SPV_DT_IntegratedGPU : I32EnumAttrCase<"IntegratedGPU", 1>;
+def SPV_DT_DiscreteGPU   : I32EnumAttrCase<"DiscreteGPU", 2>;
+def SPV_DT_CPU           : I32EnumAttrCase<"CPU", 3>;
+// Information missing.
+def SPV_DT_Unknown       : I32EnumAttrCase<"Unknown", 0x7FFFFFFF>;
+
+def SPV_DeviceTypeAttr : SPV_I32EnumAttr<
+  "DeviceType", "valid SPIR-V device types", [
+    SPV_DT_Other, SPV_DT_IntegratedGPU, SPV_DT_DiscreteGPU,
+    SPV_DT_CPU, SPV_DT_Unknown
+  ]>;
+
+//===----------------------------------------------------------------------===//
 // SPIR-V extension definitions
 //===----------------------------------------------------------------------===//
 
