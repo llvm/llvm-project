@@ -724,3 +724,109 @@ TEST_F(LibclangSerializationTest, TokenKindsAreCorrectAfterLoading) {
 
   CheckTokenKinds();
 }
+
+TEST_F(LibclangParseTest, clang_getVarDeclInitializer) {
+  std::string Main = "main.cpp";
+  WriteFile(Main, "int foo() { return 5; }; const int a = foo();");
+  ClangTU = clang_parseTranslationUnit(Index, Main.c_str(), nullptr, 0, nullptr,
+                                       0, TUFlags);
+
+  CXCursor C = clang_getTranslationUnitCursor(ClangTU);
+  clang_visitChildren(
+      C,
+      [](CXCursor cursor, CXCursor parent,
+         CXClientData client_data) -> CXChildVisitResult {
+        if (clang_getCursorKind(cursor) == CXCursor_VarDecl) {
+          const CXCursor Initializer = clang_Cursor_getVarDeclInitializer(cursor);
+          EXPECT_FALSE(clang_Cursor_isNull(Initializer));
+          CXString Spelling = clang_getCursorSpelling(Initializer);
+          const char* const SpellingCSstr = clang_getCString(Spelling);
+          EXPECT_TRUE(SpellingCSstr);
+          EXPECT_EQ(std::string(SpellingCSstr), std::string("foo"));
+          clang_disposeString(Spelling);
+          return CXChildVisit_Break;
+        }
+        return CXChildVisit_Continue;
+      },
+      nullptr);
+}
+
+TEST_F(LibclangParseTest, clang_hasVarDeclGlobalStorageFalse) {
+  std::string Main = "main.cpp";
+  WriteFile(Main, "void foo() { int a; }");
+  ClangTU = clang_parseTranslationUnit(Index, Main.c_str(), nullptr, 0, nullptr,
+                                       0, TUFlags);
+
+  CXCursor C = clang_getTranslationUnitCursor(ClangTU);
+  clang_visitChildren(
+      C,
+      [](CXCursor cursor, CXCursor parent,
+         CXClientData client_data) -> CXChildVisitResult {
+        if (clang_getCursorKind(cursor) == CXCursor_VarDecl) {
+          EXPECT_FALSE(clang_Cursor_hasVarDeclGlobalStorage(cursor));
+          return CXChildVisit_Break;
+        }
+        return CXChildVisit_Continue;
+      },
+      nullptr);
+}
+
+TEST_F(LibclangParseTest, clang_Cursor_hasVarDeclGlobalStorageTrue) {
+  std::string Main = "main.cpp";
+  WriteFile(Main, "int a;");
+  ClangTU = clang_parseTranslationUnit(Index, Main.c_str(), nullptr, 0, nullptr,
+                                       0, TUFlags);
+
+  CXCursor C = clang_getTranslationUnitCursor(ClangTU);
+  clang_visitChildren(
+      C,
+      [](CXCursor cursor, CXCursor parent,
+         CXClientData client_data) -> CXChildVisitResult {
+        if (clang_getCursorKind(cursor) == CXCursor_VarDecl) {
+          EXPECT_TRUE(clang_Cursor_hasVarDeclGlobalStorage(cursor));
+          return CXChildVisit_Break;
+        }
+        return CXChildVisit_Continue;
+      },
+      nullptr);
+}
+
+TEST_F(LibclangParseTest, clang_Cursor_hasVarDeclExternalStorageFalse) {
+  std::string Main = "main.cpp";
+  WriteFile(Main, "int a;");
+  ClangTU = clang_parseTranslationUnit(Index, Main.c_str(), nullptr, 0, nullptr,
+                                       0, TUFlags);
+
+  CXCursor C = clang_getTranslationUnitCursor(ClangTU);
+  clang_visitChildren(
+      C,
+      [](CXCursor cursor, CXCursor parent,
+         CXClientData client_data) -> CXChildVisitResult {
+        if (clang_getCursorKind(cursor) == CXCursor_VarDecl) {
+          EXPECT_FALSE(clang_Cursor_hasVarDeclExternalStorage(cursor));
+          return CXChildVisit_Break;
+        }
+        return CXChildVisit_Continue;
+      },
+      nullptr);
+}
+
+TEST_F(LibclangParseTest, clang_Cursor_hasVarDeclExternalStorageTrue) {
+  std::string Main = "main.cpp";
+  WriteFile(Main, "extern int a;");
+  ClangTU = clang_parseTranslationUnit(Index, Main.c_str(), nullptr, 0, nullptr,
+                                       0, TUFlags);
+
+  CXCursor C = clang_getTranslationUnitCursor(ClangTU);
+  clang_visitChildren(
+      C,
+      [](CXCursor cursor, CXCursor parent,
+         CXClientData client_data) -> CXChildVisitResult {
+        if (clang_getCursorKind(cursor) == CXCursor_VarDecl) {
+          EXPECT_TRUE(clang_Cursor_hasVarDeclExternalStorage(cursor));
+          return CXChildVisit_Break;
+        }
+        return CXChildVisit_Continue;
+      },
+      nullptr);
+}
