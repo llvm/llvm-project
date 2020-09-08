@@ -292,7 +292,7 @@ LLVM_DUMP_METHOD void StackLifetime::dumpBlockLiveness() const {
     const BasicBlock *BB = IT.getFirst();
     const BlockLifetimeInfo &BlockInfo = BlockLiveness.find(BB)->getSecond();
     auto BlockRange = BlockInstRange.find(BB)->getSecond();
-    dbgs() << "  BB [" << BlockRange.first << ", " << BlockRange.second
+    dbgs() << "  BB (" << BB->getName() << ") [" << BlockRange.first << ", " << BlockRange.second
            << "): begin " << BlockInfo.Begin << ", end " << BlockInfo.End
            << ", livein " << BlockInfo.LiveIn << ", liveout "
            << BlockInfo.LiveOut << "\n";
