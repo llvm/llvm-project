@@ -140,7 +140,7 @@ the file is printed for review.
 
 The following are the basic punctuation tokens::
 
-   - + [ ] { } ( ) < > : ; .  = ? #
+   - + [ ] { } ( ) < > : ; . ... = ? #
 
 Literals
 --------
@@ -328,8 +328,8 @@ to an entity of type ``bits<4>``.
 .. warning::
   The peculiar last form of :token:`RangePiece` is due to the fact that the
   "``-``" is included in the :token:`TokInteger`, hence ``1-5`` gets lexed as
-  two consecutive tokens, with values ``1`` and ``-5``,
-  instead of "1", "-", and "5".
+  two consecutive tokens, with values ``1`` and ``-5``, instead of "1", "-",
+  and "5". The use of hyphen as the range punctuation is deprecated.
 
 Simple values
 -------------
@@ -431,7 +431,7 @@ sense after reading the remainder of this guide.
 
 * The iteration variable of a ``foreach``, such as the use of ``i`` in::
 
-     foreach i = 0..5 in
+     foreach i = 0...5 in
        def Foo#i;
 
 .. productionlist::
@@ -466,11 +466,11 @@ primary value. Here are the possible suffixes for some primary *value*.
 *value*\ ``{17}``
     The final value is bit 17 of the integer *value* (note the braces).
 
-*value*\ ``{8..15}``
+*value*\ ``{8...15}``
     The final value is bits 8--15 of the integer *value*. The order of the
-    bits can be reversed by specifying ``{15..8}``.
+    bits can be reversed by specifying ``{15...8}``.
 
-*value*\ ``[4..7,17,2..3,4]``
+*value*\ ``[4...7,17,2...3,4]``
     The final value is a new list that is a slice of the list *value* (note
     the brackets). The
     new list contains elements 4, 5, 6, 7, 17, 2, 3, and 4. Elements may be
@@ -827,10 +827,13 @@ template that expands into multiple records.
    MultiClassID: `TokIdentifier`
 
 As with regular classes, the multiclass has a name and can accept template
-arguments. The body of the multiclass contains a series of statements that
-define records, using :token:`Def` and :token:`Defm`. In addition,
-:token:`Defvar`, :token:`Foreach`, and :token:`Let`
-statements can be used to factor out even more common elements.
+arguments. A multiclass can inherit from other multiclasses, which causes
+the other multiclasses to be expanded and contribute to the record
+definitions in the inheriting multiclass. The body of the multiclass
+contains a series of statements that define records, using :token:`Def` and
+:token:`Defm`. In addition, :token:`Defvar`, :token:`Foreach`, and
+:token:`Let` statements can be used to factor out even more common elements.
+The :token:`If` statement can also be used.
 
 Also as with regular classes, the multiclass has the implicit template
 argument ``NAME`` (see NAME_). When a named (non-anonymous) record is
@@ -1128,8 +1131,8 @@ the next iteration.  The following ``defvar`` will not work::
 Variables can also be defined with ``defvar`` in a record body. See
 `Defvar in Record Body`_ for more details.
 
-``foreach`` --- iterate over a sequence
----------------------------------------
+``foreach`` --- iterate over a sequence of statements
+-----------------------------------------------------
 
 The ``foreach`` statement iterates over a series of statements, varying a
 variable over a sequence of values.
@@ -1529,7 +1532,7 @@ and non-0 as true.
 ``!shl(``\ *a*\ ``,`` *count*\ ``)``
     This operator shifts *a* left logically by *count* bits and produces the resulting
     value. The operation is performed on a 64-bit integer; the result
-    is undefined for shift counts outside 0..63.
+    is undefined for shift counts outside 0...63.
 
 ``!size(``\ *a*\ ``)``
     This operator produces the number of elements in the list *a*.
@@ -1537,12 +1540,12 @@ and non-0 as true.
 ``!sra(``\ *a*\ ``,`` *count*\ ``)``
     This operator shifts *a* right arithmetically by *count* bits and produces the resulting
     value. The operation is performed on a 64-bit integer; the result
-    is undefined for shift counts outside 0..63.
+    is undefined for shift counts outside 0...63.
 
 ``!srl(``\ *a*\ ``,`` *count*\ ``)``
     This operator shifts *a* right logically by *count* bits and produces the resulting
     value. The operation is performed on a 64-bit integer; the result
-    is undefined for shift counts outside 0..63.
+    is undefined for shift counts outside 0...63.
 
 ``!strconcat(``\ *str1*\ ``,`` *str2*\ ``, ...)``
     This operator concatenates the string arguments *str1*, *str2*, etc., and
