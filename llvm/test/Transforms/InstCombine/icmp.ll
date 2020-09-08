@@ -3397,58 +3397,6 @@ define i1 @eq_add_constants(i32 %x, i32 %y) {
   ret i1 %C
 }
 
-define i1 @eq_mul_constants(i32 %x, i32 %y) {
-; CHECK-LABEL: @eq_mul_constants(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[C]]
-;
-  %A = mul i32 %x, 5
-  %B = mul i32 %y, 5
-  %C = icmp eq i32 %A, %B
-  ret i1 %C
-}
-
-define <2 x i1> @eq_mul_constants_splat(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @eq_mul_constants_splat(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret <2 x i1> [[C]]
-;
-  %A = mul <2 x i32> %x, <i32 5, i32 5>
-  %B = mul <2 x i32> %y, <i32 5, i32 5>
-  %C = icmp ne <2 x i32> %A, %B
-  ret <2 x i1> %C
-}
-
-; If the multiply constant has any trailing zero bits, we get something completely different.
-; We mask off the high bits of each input and then convert:
-; (X&Z) == (Y&Z) -> (X^Y) & Z == 0
-
-define i1 @eq_mul_constants_with_tz(i32 %x, i32 %y) {
-; CHECK-LABEL: @eq_mul_constants_with_tz(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 1073741823
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[TMP2]], 0
-; CHECK-NEXT:    ret i1 [[C]]
-;
-  %A = mul i32 %x, 12
-  %B = mul i32 %y, 12
-  %C = icmp ne i32 %A, %B
-  ret i1 %C
-}
-
-define <2 x i1> @eq_mul_constants_with_tz_splat(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @eq_mul_constants_with_tz_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 1073741823, i32 1073741823>
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[C]]
-;
-  %A = mul <2 x i32> %x, <i32 12, i32 12>
-  %B = mul <2 x i32> %y, <i32 12, i32 12>
-  %C = icmp eq <2 x i32> %A, %B
-  ret <2 x i1> %C
-}
-
 declare i32 @llvm.bswap.i32(i32)
 
 define i1 @bswap_ne(i32 %x, i32 %y) {
