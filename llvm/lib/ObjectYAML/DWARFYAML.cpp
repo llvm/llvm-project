@@ -32,7 +32,7 @@ SetVector<StringRef> DWARFYAML::Data::getNonEmptySectionNames() const {
     SecNames.insert("debug_ranges");
   if (!DebugLines.empty())
     SecNames.insert("debug_line");
-  if (!DebugAddr.empty())
+  if (DebugAddr)
     SecNames.insert("debug_addr");
   if (!DebugAbbrev.empty())
     SecNames.insert("debug_abbrev");
