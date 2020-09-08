@@ -392,8 +392,7 @@ define i1 @mul_constant_ne_extra_use1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_constant_ne_extra_use1(
 ; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X:%.*]], 5
 ; CHECK-NEXT:    call void @use(i8 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = mul i8 [[Y:%.*]], 5
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = mul i8 %x, 5
@@ -405,10 +404,9 @@ define i1 @mul_constant_ne_extra_use1(i8 %x, i8 %y) {
 
 define i1 @mul_constant_eq_extra_use2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_constant_eq_extra_use2(
-; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X:%.*]], 5
 ; CHECK-NEXT:    [[B:%.*]] = mul i8 [[Y:%.*]], 5
 ; CHECK-NEXT:    call void @use(i8 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = mul i8 %x, 5
@@ -424,7 +422,7 @@ define i1 @mul_constant_ne_extra_use3(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @use(i8 [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = mul i8 [[Y:%.*]], 5
 ; CHECK-NEXT:    call void @use(i8 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = mul i8 %x, 5
@@ -437,9 +435,7 @@ define i1 @mul_constant_ne_extra_use3(i8 %x, i8 %y) {
 
 define i1 @mul_constant_eq_nsw(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_constant_eq_nsw(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 2147483647
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = mul nsw i32 %x, 6
@@ -450,9 +446,7 @@ define i1 @mul_constant_eq_nsw(i32 %x, i32 %y) {
 
 define <2 x i1> @mul_constant_ne_nsw_splat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @mul_constant_ne_nsw_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 1073741823, i32 1073741823>
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = mul nsw <2 x i32> %x, <i32 12, i32 12>
@@ -465,8 +459,7 @@ define i1 @mul_constant_ne_nsw_extra_use1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_constant_ne_nsw_extra_use1(
 ; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[X:%.*]], 74
 ; CHECK-NEXT:    call void @use(i8 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = mul nsw i8 [[Y:%.*]], 74
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = mul nsw i8 %x, 74
@@ -478,10 +471,9 @@ define i1 @mul_constant_ne_nsw_extra_use1(i8 %x, i8 %y) {
 
 define i1 @mul_constant_eq_nsw_extra_use2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_constant_eq_nsw_extra_use2(
-; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[X:%.*]], 20
 ; CHECK-NEXT:    [[B:%.*]] = mul nsw i8 [[Y:%.*]], 20
 ; CHECK-NEXT:    call void @use(i8 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = mul nsw i8 %x, 20
@@ -497,7 +489,7 @@ define i1 @mul_constant_ne_nsw_extra_use3(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @use(i8 [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = mul nsw i8 [[Y:%.*]], 24
 ; CHECK-NEXT:    call void @use(i8 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = mul nsw i8 %x, 24
@@ -510,9 +502,7 @@ define i1 @mul_constant_ne_nsw_extra_use3(i8 %x, i8 %y) {
 
 define i1 @mul_constant_nuw_eq(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_constant_nuw_eq(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 2147483647
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = mul nuw i32 %x, 22
@@ -523,9 +513,7 @@ define i1 @mul_constant_nuw_eq(i32 %x, i32 %y) {
 
 define <2 x i1> @mul_constant_ne_nuw_splat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @mul_constant_ne_nuw_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 2147483647, i32 2147483647>
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = mul nuw <2 x i32> %x, <i32 10, i32 10>
@@ -538,8 +526,7 @@ define i1 @mul_constant_ne_nuw_extra_use1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_constant_ne_nuw_extra_use1(
 ; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[X:%.*]], 6
 ; CHECK-NEXT:    call void @use(i8 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = mul nuw i8 [[Y:%.*]], 6
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = mul nuw i8 %x, 6
@@ -551,10 +538,9 @@ define i1 @mul_constant_ne_nuw_extra_use1(i8 %x, i8 %y) {
 
 define i1 @mul_constant_eq_nuw_extra_use2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_constant_eq_nuw_extra_use2(
-; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[X:%.*]], 36
 ; CHECK-NEXT:    [[B:%.*]] = mul nuw i8 [[Y:%.*]], 36
 ; CHECK-NEXT:    call void @use(i8 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = mul nuw i8 %x, 36
@@ -570,7 +556,7 @@ define i1 @mul_constant_ne_nuw_extra_use3(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @use(i8 [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = mul nuw i8 [[Y:%.*]], 38
 ; CHECK-NEXT:    call void @use(i8 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = mul nuw i8 %x, 38
@@ -580,6 +566,8 @@ define i1 @mul_constant_ne_nuw_extra_use3(i8 %x, i8 %y) {
   %C = icmp ne i8 %A, %B
   ret i1 %C
 }
+
+; Negative test - wrong pred
 
 define i1 @mul_constant_ult(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_constant_ult(
@@ -594,6 +582,8 @@ define i1 @mul_constant_ult(i32 %x, i32 %y) {
   ret i1 %C
 }
 
+; Negative test - wrong pred
+
 define i1 @mul_constant_nuw_sgt(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_constant_nuw_sgt(
 ; CHECK-NEXT:    [[A:%.*]] = mul nuw i32 [[X:%.*]], 46
@@ -606,6 +596,8 @@ define i1 @mul_constant_nuw_sgt(i32 %x, i32 %y) {
   %C = icmp sgt i32 %A, %B
   ret i1 %C
 }
+
+; Negative test - wrong constants
 
 define i1 @mul_mismatch_constant_nuw_eq(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_mismatch_constant_nuw_eq(
