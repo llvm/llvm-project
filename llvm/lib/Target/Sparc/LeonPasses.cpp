@@ -10,14 +10,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "LeonPasses.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
+#include "SparcSubtarget.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 
 LEONMachineFunctionPass::LEONMachineFunctionPass(char &ID)

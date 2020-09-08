@@ -594,7 +594,7 @@ Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
 }
 
 Error DWARFYAML::emitDebugAddr(raw_ostream &OS, const Data &DI) {
-  for (const AddrTableEntry &TableEntry : DI.DebugAddr) {
+  for (const AddrTableEntry &TableEntry : *DI.DebugAddr) {
     uint8_t AddrSize;
     if (TableEntry.AddrSize)
       AddrSize = *TableEntry.AddrSize;

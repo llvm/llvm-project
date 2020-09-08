@@ -6,69 +6,6 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx -show-mc-encoding | FileCheck %s --check-prefixes=CHECK,X64,AVX,X64-AVX,AVX1,X64-AVX1
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx512f,+avx512bw,+avx512dq,+avx512vl -show-mc-encoding | FileCheck %s --check-prefixes=CHECK,X64,AVX,X64-AVX,AVX512,X64-AVX512
 
-define <16 x i8> @test_x86_ssse3_pabs_b_128(<16 x i8> %a0) {
-; SSE-LABEL: test_x86_ssse3_pabs_b_128:
-; SSE:       ## %bb.0:
-; SSE-NEXT:    pabsb %xmm0, %xmm0 ## encoding: [0x66,0x0f,0x38,0x1c,0xc0]
-; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
-;
-; AVX1-LABEL: test_x86_ssse3_pabs_b_128:
-; AVX1:       ## %bb.0:
-; AVX1-NEXT:    vpabsb %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x1c,0xc0]
-; AVX1-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
-;
-; AVX512-LABEL: test_x86_ssse3_pabs_b_128:
-; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vpabsb %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x1c,0xc0]
-; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
-  %res = call <16 x i8> @llvm.x86.ssse3.pabs.b.128(<16 x i8> %a0) ; <<16 x i8>> [#uses=1]
-  ret <16 x i8> %res
-}
-declare <16 x i8> @llvm.x86.ssse3.pabs.b.128(<16 x i8>) nounwind readnone
-
-
-define <4 x i32> @test_x86_ssse3_pabs_d_128(<4 x i32> %a0) {
-; SSE-LABEL: test_x86_ssse3_pabs_d_128:
-; SSE:       ## %bb.0:
-; SSE-NEXT:    pabsd %xmm0, %xmm0 ## encoding: [0x66,0x0f,0x38,0x1e,0xc0]
-; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
-;
-; AVX1-LABEL: test_x86_ssse3_pabs_d_128:
-; AVX1:       ## %bb.0:
-; AVX1-NEXT:    vpabsd %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x1e,0xc0]
-; AVX1-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
-;
-; AVX512-LABEL: test_x86_ssse3_pabs_d_128:
-; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vpabsd %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x1e,0xc0]
-; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.ssse3.pabs.d.128(<4 x i32> %a0) ; <<4 x i32>> [#uses=1]
-  ret <4 x i32> %res
-}
-declare <4 x i32> @llvm.x86.ssse3.pabs.d.128(<4 x i32>) nounwind readnone
-
-
-define <8 x i16> @test_x86_ssse3_pabs_w_128(<8 x i16> %a0) {
-; SSE-LABEL: test_x86_ssse3_pabs_w_128:
-; SSE:       ## %bb.0:
-; SSE-NEXT:    pabsw %xmm0, %xmm0 ## encoding: [0x66,0x0f,0x38,0x1d,0xc0]
-; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
-;
-; AVX1-LABEL: test_x86_ssse3_pabs_w_128:
-; AVX1:       ## %bb.0:
-; AVX1-NEXT:    vpabsw %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x1d,0xc0]
-; AVX1-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
-;
-; AVX512-LABEL: test_x86_ssse3_pabs_w_128:
-; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vpabsw %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x1d,0xc0]
-; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
-  %res = call <8 x i16> @llvm.x86.ssse3.pabs.w.128(<8 x i16> %a0) ; <<8 x i16>> [#uses=1]
-  ret <8 x i16> %res
-}
-declare <8 x i16> @llvm.x86.ssse3.pabs.w.128(<8 x i16>) nounwind readnone
-
-
 define <4 x i32> @test_x86_ssse3_phadd_d_128(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-LABEL: test_x86_ssse3_phadd_d_128:
 ; SSE:       ## %bb.0:

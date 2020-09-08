@@ -162,6 +162,11 @@ int mlirTypeIsAVector(MlirType type);
  * is owned by the context. */
 MlirType mlirVectorTypeGet(intptr_t rank, int64_t *shape, MlirType elementType);
 
+/** Same as "mlirVectorTypeGet" but returns a nullptr wrapping MlirType on
+ * illegal arguments, emitting appropriate diagnostics. */
+MlirType mlirVectorTypeGetChecked(intptr_t rank, int64_t *shape,
+                                  MlirType elementType, MlirLocation loc);
+
 /*============================================================================*/
 /* Ranked / Unranked Tensor type.                                             */
 /*============================================================================*/
@@ -180,9 +185,19 @@ int mlirTypeIsAUnrankedTensor(MlirType type);
 MlirType mlirRankedTensorTypeGet(intptr_t rank, int64_t *shape,
                                  MlirType elementType);
 
+/** Same as "mlirRankedTensorTypeGet" but returns a nullptr wrapping MlirType on
+ * illegal arguments, emitting appropriate diagnostics. */
+MlirType mlirRankedTensorTypeGetChecked(intptr_t rank, int64_t *shape,
+                                        MlirType elementType, MlirLocation loc);
+
 /** Creates an unranked tensor type with the given element type in the same
  * context as the element type. The type is owned by the context. */
 MlirType mlirUnrankedTensorTypeGet(MlirType elementType);
+
+/** Same as "mlirUnrankedTensorTypeGet" but returns a nullptr wrapping MlirType
+ * on illegal arguments, emitting appropriate diagnostics. */
+MlirType mlirUnrankedTensorTypeGetChecked(MlirType elementType,
+                                          MlirLocation loc);
 
 /*============================================================================*/
 /* Ranked / Unranked MemRef type.                                             */
@@ -208,9 +223,22 @@ MlirType mlirMemRefTypeGet(MlirType elementType, intptr_t rank, int64_t *shape,
 MlirType mlirMemRefTypeContiguousGet(MlirType elementType, intptr_t rank,
                                      int64_t *shape, unsigned memorySpace);
 
+/** Same as "mlirMemRefTypeContiguousGet" but returns a nullptr wrapping
+ * MlirType on illegal arguments, emitting appropriate diagnostics. */
+MlirType mlirMemRefTypeContiguousGetChecked(MlirType elementType, intptr_t rank,
+                                            int64_t *shape,
+                                            unsigned memorySpace,
+                                            MlirLocation loc);
+
 /** Creates an Unranked MemRef type with the given element type and in the given
  * memory space. The type is owned by the context of element type. */
 MlirType mlirUnrankedMemRefTypeGet(MlirType elementType, unsigned memorySpace);
+
+/** Same as "mlirUnrankedMemRefTypeGet" but returns a nullptr wrapping
+ * MlirType on illegal arguments, emitting appropriate diagnostics. */
+MlirType mlirUnrankedMemRefTypeGetChecked(MlirType elementType,
+                                          unsigned memorySpace,
+                                          MlirLocation loc);
 
 /** Returns the number of affine layout maps in the given MemRef type. */
 intptr_t mlirMemRefTypeGetNumAffineMaps(MlirType type);

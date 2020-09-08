@@ -113,6 +113,8 @@ private:
 
   void combineMasks(MachineInstr &MI);
 
+  bool removeMBBifRedundant(MachineBasicBlock &MBB);
+
   void process(MachineInstr &MI);
 
   // Skip to the next instruction, ignoring debug instructions, and trivial
@@ -154,9 +156,6 @@ public:
     AU.addPreserved<SlotIndexes>();
     AU.addPreserved<LiveIntervals>();
     AU.addPreservedID(LiveVariablesID);
-    AU.addPreservedID(MachineLoopInfoID);
-    AU.addPreservedID(MachineDominatorsID);
-    AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -604,6 +603,7 @@ void SILowerControlFlow::optimizeEndCf() {
       if (LIS)
         LIS->RemoveMachineInstrFromMaps(*MI);
       MI->eraseFromParent();
+      removeMBBifRedundant(MBB);
     }
   }
 }
@@ -656,6 +656,47 @@ void SILowerControlFlow::process(MachineInstr &MI) {
       break;
     }
   }
+}
+
+bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
+  bool Redundant = true;
+  for (auto &I : MBB.instrs()) {
+    if (!I.isDebugInstr() && !I.isUnconditionalBranch())
+      Redundant = false;
+  }
+  if (Redundant) {
+    MachineBasicBlock *Succ = *MBB.succ_begin();
+    SmallVector<MachineBasicBlock *, 2> Preds(MBB.predecessors());
+    for (auto P : Preds) {
+      P->replaceSuccessor(&MBB, Succ);
+      MachineBasicBlock::iterator I(P->getFirstInstrTerminator());
+      while (I != P->end()) {
+        if (I->isBranch()) {
+          if (TII->getBranchDestBlock(*I) == &MBB) {
+            I->getOperand(0).setMBB(Succ);
+            break;
+          }
+        }
+        I++;
+      }
+      if (I == P->end()) {
+        MachineFunction *MF = P->getParent();
+        MachineFunction::iterator InsertPt =
+            P->getNextNode() ? MachineFunction::iterator(P->getNextNode())
+                             : MF->end();
+        MF->splice(InsertPt, Succ);
+      }
+    }
+    MBB.removeSuccessor(Succ);
+    if (LIS) {
+      for (auto &I : MBB.instrs())
+        LIS->RemoveMachineInstrFromMaps(I);
+    }
+    MBB.clear();
+    MBB.eraseFromParent();
+    return true;
+  }
+  return false;
 }
 
 bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {

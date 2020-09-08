@@ -12,10 +12,8 @@ define void @abs1(i8* %p) {
 ; CHECK-LABEL: @abs1(
 ; CHECK-NEXT:    [[X:%.*]] = load i8, i8* [[P:%.*]], align 1, [[RNG0:!range !.*]]
 ; CHECK-NEXT:    [[ABS:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i8 [[ABS]], 0
-; CHECK-NEXT:    call void @use(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[ABS]], 10
-; CHECK-NEXT:    call void @use(i1 [[CMP2]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp sge i8 [[ABS]], 1
 ; CHECK-NEXT:    call void @use(i1 [[CMP3]])
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp slt i8 [[ABS]], 9
@@ -40,8 +38,7 @@ define void @abs1(i8* %p) {
 define void @abs2(i8 %x) {
 ; CHECK-LABEL: @abs2(
 ; CHECK-NEXT:    [[ABS:%.*]] = call i8 @llvm.abs.i8(i8 [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[ABS]], 0
-; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
   %abs = call i8 @llvm.abs.i8(i8 %x, i1 true)
@@ -68,10 +65,8 @@ define void @umax1(i8* %p1, i8* %p2) {
 ; CHECK-NEXT:    [[X1:%.*]] = load i8, i8* [[P1:%.*]], align 1, [[RNG1:!range !.*]]
 ; CHECK-NEXT:    [[X2:%.*]] = load i8, i8* [[P2:%.*]], align 1, [[RNG2:!range !.*]]
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X1]], i8 [[X2]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp uge i8 [[M]], 5
-; CHECK-NEXT:    call void @use(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i8 [[M]], 15
-; CHECK-NEXT:    call void @use(i1 [[CMP2]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp uge i8 [[M]], 6
 ; CHECK-NEXT:    call void @use(i1 [[CMP3]])
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i8 [[M]], 14
@@ -95,8 +90,7 @@ define void @umax1(i8* %p1, i8* %p2) {
 define void @umax2(i8 %x) {
 ; CHECK-LABEL: @umax2(
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 10)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[M]], 10
-; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
   %m = call i8 @llvm.umax.i8(i8 %x, i8 10)

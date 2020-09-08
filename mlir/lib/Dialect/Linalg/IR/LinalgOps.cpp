@@ -905,7 +905,7 @@ static ParseResult parseTransposeOp(OpAsmParser &parser,
 // YieldOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, YieldOp op) {
+static void print(OpAsmPrinter &p, linalg::YieldOp op) {
   p << op.getOperationName();
   if (op.getNumOperands() > 0)
     p << ' ' << op.getOperands();
@@ -926,7 +926,8 @@ static ParseResult parseYieldOp(OpAsmParser &parser, OperationState &result) {
 
 // Check the operand number and types must match the element types of the
 // LinalgOp interface's shaped operands.
-static LogicalResult verifyYield(YieldOp op, LinalgOp linalgOpInterface) {
+static LogicalResult verifyYield(linalg::YieldOp op,
+                                 LinalgOp linalgOpInterface) {
   auto nOutputs = linalgOpInterface.getNumOutputs();
   if (op.getNumOperands() != nOutputs)
     return op.emitOpError("expected number of yield values (")
@@ -946,7 +947,7 @@ static LogicalResult verifyYield(YieldOp op, LinalgOp linalgOpInterface) {
   return success();
 }
 
-static LogicalResult verify(YieldOp op) {
+static LogicalResult verify(linalg::YieldOp op) {
   auto *parentOp = op.getParentOp();
   if (parentOp->getNumRegions() != 1 || parentOp->getRegion(0).empty())
     return op.emitOpError("expected single non-empty parent region");

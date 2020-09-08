@@ -1615,43 +1615,27 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
   // this.
   bool Swapped = false;
   GEPOperator *GEP1 = nullptr, *GEP2 = nullptr;
+  if (!isa<GEPOperator>(LHS) && isa<GEPOperator>(RHS)) {
+    std::swap(LHS, RHS);
+    Swapped = true;
+  }
 
-  // For now we require one side to be the base pointer "A" or a constant
-  // GEP derived from it.
-  if (GEPOperator *LHSGEP = dyn_cast<GEPOperator>(LHS)) {
+  // Require at least one GEP with a common base pointer on both sides.
+  if (auto *LHSGEP = dyn_cast<GEPOperator>(LHS)) {
     // (gep X, ...) - X
     if (LHSGEP->getOperand(0) == RHS) {
       GEP1 = LHSGEP;
-      Swapped = false;
-    } else if (GEPOperator *RHSGEP = dyn_cast<GEPOperator>(RHS)) {
+    } else if (auto *RHSGEP = dyn_cast<GEPOperator>(RHS)) {
       // (gep X, ...) - (gep X, ...)
       if (LHSGEP->getOperand(0)->stripPointerCasts() ==
-            RHSGEP->getOperand(0)->stripPointerCasts()) {
-        GEP2 = RHSGEP;
+          RHSGEP->getOperand(0)->stripPointerCasts()) {
         GEP1 = LHSGEP;
-        Swapped = false;
-      }
-    }
-  }
-
-  if (GEPOperator *RHSGEP = dyn_cast<GEPOperator>(RHS)) {
-    // X - (gep X, ...)
-    if (RHSGEP->getOperand(0) == LHS) {
-      GEP1 = RHSGEP;
-      Swapped = true;
-    } else if (GEPOperator *LHSGEP = dyn_cast<GEPOperator>(LHS)) {
-      // (gep X, ...) - (gep X, ...)
-      if (RHSGEP->getOperand(0)->stripPointerCasts() ==
-            LHSGEP->getOperand(0)->stripPointerCasts()) {
-        GEP2 = LHSGEP;
-        GEP1 = RHSGEP;
-        Swapped = true;
+        GEP2 = RHSGEP;
       }
     }
   }
 
   if (!GEP1)
-    // No GEP found.
     return nullptr;
 
   if (GEP2) {
@@ -1691,7 +1675,7 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
   // pointer, subtract it from the offset we have.
   if (GEP2) {
     Value *Offset = EmitGEPOffset(GEP2);
-    Result = Builder.CreateSub(Result, Offset);
+    Result = Builder.CreateSub(Result, Offset, "gepdiff");
   }
 
   // If we have p - gep(p, ...)  then we have to negate the result.

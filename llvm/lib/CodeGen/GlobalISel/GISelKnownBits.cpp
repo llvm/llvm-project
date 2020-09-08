@@ -308,11 +308,24 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                         Known, DemandedElts, Depth + 1);
     break;
   }
-  case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_SMIN: {
+    // TODO: Handle clamp pattern with number of sign bits
+    KnownBits KnownRHS;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), KnownRHS, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::smin(Known, KnownRHS);
+    break;
+  }
   case TargetOpcode::G_SMAX: {
     // TODO: Handle clamp pattern with number of sign bits
-    computeKnownBitsMin(MI.getOperand(1).getReg(), MI.getOperand(2).getReg(),
-                        Known, DemandedElts, Depth + 1);
+    KnownBits KnownRHS;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), KnownRHS, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::smax(Known, KnownRHS);
     break;
   }
   case TargetOpcode::G_UMIN: {
@@ -321,13 +334,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                          DemandedElts, Depth + 1);
     computeKnownBitsImpl(MI.getOperand(2).getReg(), KnownRHS,
                          DemandedElts, Depth + 1);
-
-    // UMIN - we know that the result will have the maximum of the
-    // known zero leading bits of the inputs.
-    unsigned LeadZero = Known.countMinLeadingZeros();
-    LeadZero = std::max(LeadZero, KnownRHS.countMinLeadingZeros());
-    Known &= KnownRHS;
-    Known.Zero.setHighBits(LeadZero);
+    Known = KnownBits::umin(Known, KnownRHS);
     break;
   }
   case TargetOpcode::G_UMAX: {
@@ -336,14 +343,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                          DemandedElts, Depth + 1);
     computeKnownBitsImpl(MI.getOperand(2).getReg(), KnownRHS,
                          DemandedElts, Depth + 1);
-
-    // UMAX - we know that the result will have the maximum of the
-    // known one leading bits of the inputs.
-    unsigned LeadOne = Known.countMinLeadingOnes();
-    LeadOne = std::max(LeadOne, KnownRHS.countMinLeadingOnes());
-    Known.Zero &= KnownRHS.Zero;
-    Known.One &= KnownRHS.One;
-    Known.One.setHighBits(LeadOne);
+    Known = KnownBits::umax(Known, KnownRHS);
     break;
   }
   case TargetOpcode::G_FCMP:

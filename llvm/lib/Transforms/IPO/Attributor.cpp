@@ -132,11 +132,11 @@ static cl::opt<bool> PrintDependencies("attributor-print-dep", cl::Hidden,
 /// Logic operators for the change status enum class.
 ///
 ///{
-ChangeStatus llvm::operator|(ChangeStatus l, ChangeStatus r) {
-  return l == ChangeStatus::CHANGED ? l : r;
+ChangeStatus llvm::operator|(ChangeStatus L, ChangeStatus R) {
+  return L == ChangeStatus::CHANGED ? L : R;
 }
-ChangeStatus llvm::operator&(ChangeStatus l, ChangeStatus r) {
-  return l == ChangeStatus::UNCHANGED ? l : r;
+ChangeStatus llvm::operator&(ChangeStatus L, ChangeStatus R) {
+  return L == ChangeStatus::UNCHANGED ? L : R;
 }
 ///}
 
@@ -1306,7 +1306,25 @@ ChangeStatus Attributor::cleanupIR() {
     CGUpdater.removeFunction(*Fn);
   }
 
+  if (!ToBeChangedUses.empty())
+    ManifestChange = ChangeStatus::CHANGED;
+
+  if (!ToBeChangedToUnreachableInsts.empty())
+    ManifestChange = ChangeStatus::CHANGED;
+
   if (!ToBeDeletedFunctions.empty())
+    ManifestChange = ChangeStatus::CHANGED;
+
+  if (!ToBeDeletedBlocks.empty())
+    ManifestChange = ChangeStatus::CHANGED;
+
+  if (!ToBeDeletedInsts.empty())
+    ManifestChange = ChangeStatus::CHANGED;
+
+  if (!InvokeWithDeadSuccessor.empty())
+    ManifestChange = ChangeStatus::CHANGED;
+
+  if (!DeadInsts.empty())
     ManifestChange = ChangeStatus::CHANGED;
 
   NumFnDeleted += ToBeDeletedFunctions.size();
@@ -1431,7 +1449,7 @@ static void createShallowWrapper(Function &F) {
   BasicBlock *EntryBB = BasicBlock::Create(Ctx, "entry", Wrapper);
 
   SmallVector<Value *, 8> Args;
-  auto FArgIt = F.arg_begin();
+  Argument *FArgIt = F.arg_begin();
   for (Argument &Arg : Wrapper->args()) {
     Args.push_back(&Arg);
     Arg.setName((FArgIt++)->getName());
@@ -1463,9 +1481,8 @@ static Function *internalizeFunction(Function &F) {
   FunctionType *FnTy = F.getFunctionType();
 
   // create a copy of the current function
-  Function *Copied =
-      Function::Create(FnTy, GlobalValue::PrivateLinkage, F.getAddressSpace(),
-                       F.getName() + ".internalized");
+  Function *Copied = Function::Create(FnTy, F.getLinkage(), F.getAddressSpace(),
+                                      F.getName() + ".internalized");
   ValueToValueMapTy VMap;
   auto *NewFArgIt = Copied->arg_begin();
   for (auto &Arg : F.args()) {
@@ -1477,6 +1494,11 @@ static Function *internalizeFunction(Function &F) {
 
   // Copy the body of the original function to the new one
   CloneFunctionInto(Copied, &F, VMap, /* ModuleLevelChanges */ false, Returns);
+
+  // Set the linakage and visibility late as CloneFunctionInto has some implicit
+  // requirements.
+  Copied->setVisibility(GlobalValue::DefaultVisibility);
+  Copied->setLinkage(GlobalValue::PrivateLinkage);
 
   // Copy metadata
   SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
@@ -1755,8 +1777,8 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     assert(Success && "Assumed call site replacement to succeed!");
 
     // Rewire the arguments.
-    auto OldFnArgIt = OldFn->arg_begin();
-    auto NewFnArgIt = NewFn->arg_begin();
+    Argument *OldFnArgIt = OldFn->arg_begin();
+    Argument *NewFnArgIt = NewFn->arg_begin();
     for (unsigned OldArgNum = 0; OldArgNum < ARIs.size();
          ++OldArgNum, ++OldFnArgIt) {
       if (const std::unique_ptr<ArgumentReplacementInfo> &ARI =

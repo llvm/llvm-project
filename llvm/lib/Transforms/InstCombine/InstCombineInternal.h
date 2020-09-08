@@ -159,6 +159,7 @@ public:
   Instruction *visitFenceInst(FenceInst &FI);
   Instruction *visitSwitchInst(SwitchInst &SI);
   Instruction *visitReturnInst(ReturnInst &RI);
+  Instruction *visitUnreachableInst(UnreachableInst &I);
   Instruction *
   foldAggregateConstructionIntoAggregateReuse(InsertValueInst &OrigIVI);
   Instruction *visitInsertValueInst(InsertValueInst &IV);

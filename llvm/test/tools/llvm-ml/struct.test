@@ -34,11 +34,9 @@ t1 foobar <>
 ; CHECK-NEXT: .byte 1
 ; CHECK-NEXT: .byte 2
 ;
-; <BYTE 6, BYTE 7>, with internal alignment padding
+; <BYTE 6, BYTE 7>, with no alignment padding (field size < alignment)
 ; CHECK-NEXT: .byte 6
-; CHECK-NEXT: .zero 1
 ; CHECK-NEXT: .byte 7
-; CHECK-NEXT: .zero 1
 ;
 ; BYTE "abcde", plus alignment padding
 ; CHECK-NEXT: .byte 97
@@ -65,11 +63,9 @@ t2 FOOBAR <"gh",,<10,11>,<12>,"ijk">
 ; CHECK-NEXT: .byte 10
 ; CHECK-NEXT: .byte 11
 ;
-; <BYTE 6, BYTE 7>, with internal alignment padding
+; <BYTE 12, BYTE 7>, with no alignment padding (field size < alignment)
 ; CHECK-NEXT: .byte 12
-; CHECK-NEXT: .zero 1
 ; CHECK-NEXT: .byte 7
-; CHECK-NEXT: .zero 1
 ;
 ; BYTE "ijk", padded with " ", plus alignment padding
 ; CHECK-NEXT: .byte 105
@@ -87,16 +83,16 @@ mov eax, [t2].f.h
 mov eax, [t2.f.h]
 
 ; CHECK: t3:
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+11]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+11]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+11]
 
 t4:
 mov eax, j.FOOBAR.f.h
 mov eax, j.baz.b
 
 ; CHECK: t4:
-; CHECK-NEXT: mov eax, dword ptr [rip + j+12]
+; CHECK-NEXT: mov eax, dword ptr [rip + j+11]
 ; CHECK-NEXT: mov eax, dword ptr [rip + j+1]
 
 t5:
@@ -105,9 +101,9 @@ mov eax, [ebx.FOOBAR].f.h
 mov eax, [ebx.FOOBAR.f.h]
 
 ; CHECK: t5:
-; CHECK-NEXT: mov eax, dword ptr [ebx + 12]
-; CHECK-NEXT: mov eax, dword ptr [ebx + 12]
-; CHECK-NEXT: mov eax, dword ptr [ebx + 12]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 11]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 11]
+; CHECK-NEXT: mov eax, dword ptr [ebx + 11]
 
 t6:
 mov eax, t2.FOOBAR.f.h
@@ -116,10 +112,10 @@ mov eax, [t2.FOOBAR].f.h
 mov eax, [t2.FOOBAR.f.h]
 
 ; CHECK: t6:
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+12]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+11]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+11]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+11]
+; CHECK-NEXT: mov eax, dword ptr [rip + t2+11]
 
 t7:
 mov eax, [ebx].FOOBAR.e.b
@@ -185,7 +181,7 @@ mov eax, FOOBAR.f.h
 
 ; CHECK: t10:
 ; CHECK-NEXT: mov eax, 10
-; CHECK-NEXT: mov eax, 12
+; CHECK-NEXT: mov eax, 11
 
 t11:
 mov eax, (FOOBAR PTR [ebx]).f

@@ -482,9 +482,8 @@ define void @trunc_i32_to_i16(i32 %x, i16* %p) {
 define void @be_i32_to_i16(i32 %x, i16* %p0) {
 ; CHECK-LABEL: be_i32_to_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movw %di, 2(%rsi)
-; CHECK-NEXT:    shrl $16, %edi
-; CHECK-NEXT:    movw %di, (%rsi)
+; CHECK-NEXT:    rorl $16, %edi
+; CHECK-NEXT:    movl %edi, (%rsi)
 ; CHECK-NEXT:    retq
   %sh1 = lshr i32 %x, 16
   %t0 = trunc i32 %x to i16
@@ -498,10 +497,8 @@ define void @be_i32_to_i16(i32 %x, i16* %p0) {
 define void @be_i32_to_i16_order(i32 %x, i16* %p0) {
 ; CHECK-LABEL: be_i32_to_i16_order:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shrl $16, %eax
-; CHECK-NEXT:    movw %ax, (%rsi)
-; CHECK-NEXT:    movw %di, 2(%rsi)
+; CHECK-NEXT:    rorl $16, %edi
+; CHECK-NEXT:    movl %edi, (%rsi)
 ; CHECK-NEXT:    retq
   %sh1 = lshr i32 %x, 16
   %t0 = trunc i32 %x to i16
@@ -589,9 +586,8 @@ define void @trunc_i64_to_i32(i64 %x, i32* %p) {
 define void @be_i64_to_i32(i64 %x, i32* %p0) {
 ; CHECK-LABEL: be_i64_to_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, 4(%rsi)
-; CHECK-NEXT:    shrq $32, %rdi
-; CHECK-NEXT:    movl %edi, (%rsi)
+; CHECK-NEXT:    rorq $32, %rdi
+; CHECK-NEXT:    movq %rdi, (%rsi)
 ; CHECK-NEXT:    retq
   %sh1 = lshr i64 %x, 32
   %t0 = trunc i64 %x to i32
@@ -605,10 +601,8 @@ define void @be_i64_to_i32(i64 %x, i32* %p0) {
 define void @be_i64_to_i32_order(i64 %x, i32* %p0) {
 ; CHECK-LABEL: be_i64_to_i32_order:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    movl %eax, (%rsi)
-; CHECK-NEXT:    movl %edi, 4(%rsi)
+; CHECK-NEXT:    rorq $32, %rdi
+; CHECK-NEXT:    movq %rdi, (%rsi)
 ; CHECK-NEXT:    retq
   %sh1 = lshr i64 %x, 32
   %t0 = trunc i64 %x to i32

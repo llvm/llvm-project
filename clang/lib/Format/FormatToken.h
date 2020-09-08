@@ -29,6 +29,7 @@ namespace format {
   TYPE(ArrayInitializerLSquare)                                                \
   TYPE(ArraySubscriptLSquare)                                                  \
   TYPE(AttributeColon)                                                         \
+  TYPE(AttributeMacro)                                                         \
   TYPE(AttributeParen)                                                         \
   TYPE(AttributeSquare)                                                        \
   TYPE(BinaryOperator)                                                         \
@@ -100,6 +101,7 @@ namespace format {
   TYPE(TrailingAnnotation)                                                     \
   TYPE(TrailingReturnArrow)                                                    \
   TYPE(TrailingUnaryOperator)                                                  \
+  TYPE(TypeDeclarationParen)                                                   \
   TYPE(TypenameMacro)                                                          \
   TYPE(UnaryOperator)                                                          \
   TYPE(UntouchableMacroFunc)                                                   \
@@ -442,7 +444,8 @@ public:
   bool canBePointerOrReferenceQualifier() const {
     return isOneOf(tok::kw_const, tok::kw_restrict, tok::kw_volatile,
                    tok::kw___attribute, tok::kw__Nonnull, tok::kw__Nullable,
-                   tok::kw__Null_unspecified, tok::kw___ptr32, tok::kw___ptr64);
+                   tok::kw__Null_unspecified, tok::kw___ptr32, tok::kw___ptr64,
+                   TT_AttributeMacro);
   }
 
   /// Determine whether the token is a simple-type-specifier.
@@ -523,7 +526,9 @@ public:
     case tok::kw_decltype:
     case tok::kw_noexcept:
     case tok::kw_static_assert:
+    case tok::kw__Atomic:
     case tok::kw___attribute:
+    case tok::kw___underlying_type:
       return true;
     default:
       return false;

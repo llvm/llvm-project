@@ -19,7 +19,7 @@ func @materialize_read_1d() {
       // CHECK: %[[FILTERED1:.*]] = select
       // CHECK: {{.*}} = select
       // CHECK: %[[FILTERED2:.*]] = select
-      // CHECK-NEXT: %{{.*}} = load {{.*}}[%[[FILTERED1]], %[[FILTERED2]]] : memref<7x42xf32>
+      // CHECK: %{{.*}} = load {{.*}}[%[[FILTERED1]], %[[FILTERED2]]] : memref<7x42xf32>
     }
   }
   return
@@ -58,6 +58,7 @@ func @materialize_read_1d_partially_specialized(%dyn1 : index, %dyn2 : index, %d
 // CHECK-LABEL: func @materialize_read(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
   %f0 = constant 0.0: f32
+  // CHECK-DAG:  %[[ALLOC:.*]] = alloca() : memref<5x4xvector<3xf32>>
   // CHECK-DAG:  %[[C0:.*]] = constant 0 : index
   // CHECK-DAG:  %[[C1:.*]] = constant 1 : index
   // CHECK-DAG:  %[[C3:.*]] = constant 3 : index
@@ -68,7 +69,6 @@ func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-NEXT:    affine.for %[[I1:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:      affine.for %[[I2:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:        affine.for %[[I3:.*]] = 0 to %{{.*}} step 5 {
-  //      CHECK:          %[[ALLOC:.*]] = alloc() {alignment = 128 : i64} : memref<5x4x3xf32>
   // CHECK-NEXT:          scf.for %[[I4:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {
   // CHECK-NEXT:            scf.for %[[I5:.*]] = %[[C0]] to %[[C4]] step %[[C1]] {
   // CHECK-NEXT:              scf.for %[[I6:.*]] = %[[C0]] to %[[C5]] step %[[C1]] {
@@ -97,13 +97,15 @@ func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-NEXT:                {{.*}} = select
   // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, %[[C0]] : index
   // CHECK-NEXT:                %[[L3:.*]] = select
+  // CHECK-NEXT:                %[[VIDX:.*]] = index_cast %[[I4]]
   //
-  // CHECK-NEXT:                {{.*}} = load %{{.*}}[%[[L0]], %[[L1]], %[[L2]], %[[L3]]] : memref<?x?x?x?xf32>
-  // CHECK-NEXT:                store {{.*}}, %[[ALLOC]][%[[I6]], %[[I5]], %[[I4]]] : memref<5x4x3xf32>
+  //  CHECK-DAG:                %[[SCAL:.*]] = load %{{.*}}[%[[L0]], %[[L1]], %[[L2]], %[[L3]]] : memref<?x?x?x?xf32>
+  //  CHECK-DAG:                %[[VEC:.*]] = load %[[ALLOC]][%[[I6]], %[[I5]]] : memref<5x4xvector<3xf32>>
+  // CHECK-NEXT:                %[[RVEC:.*]] = vector.insertelement %[[SCAL]], %[[VEC]][%[[VIDX]] : i32] : vector<3xf32>
+  // CHECK-NEXT:                store %[[RVEC]], %[[ALLOC]][%[[I6]], %[[I5]]] : memref<5x4xvector<3xf32>>
   // CHECK-NEXT:              }
   // CHECK-NEXT:            }
   // CHECK-NEXT:          }
-  // CHECK-NEXT:          dealloc %[[ALLOC]] : memref<5x4x3xf32>
   // CHECK-NEXT:        }
   // CHECK-NEXT:      }
   // CHECK-NEXT:    }
@@ -134,6 +136,7 @@ func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
 
 // CHECK-LABEL:func @materialize_write(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
+  // CHECK-DAG:  %[[ALLOC:.*]] = alloca() : memref<5x4xvector<3xf32>>
   // CHECK-DAG:  %{{.*}} = constant dense<1.000000e+00> : vector<5x4x3xf32>
   // CHECK-DAG:  %[[C0:.*]] = constant 0 : index
   // CHECK-DAG:  %[[C1:.*]] = constant 1 : index
@@ -145,8 +148,7 @@ func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-NEXT:    affine.for %[[I1:.*]] = 0 to %{{.*}} step 4 {
   // CHECK-NEXT:      affine.for %[[I2:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:        affine.for %[[I3:.*]] = 0 to %{{.*}} step 5 {
-  // CHECK:               %[[ALLOC:.*]] = alloc() {alignment = 128 : i64} : memref<5x4x3xf32>
-  // CHECK-NEXT:          %[[VECTOR_VIEW:.*]] = vector.type_cast {{.*}} : memref<5x4x3xf32>
+  // CHECK-NEXT:          %[[VECTOR_VIEW:.*]] = vector.type_cast {{.*}} : memref<5x4xvector<3xf32>>
   //      CHECK:          store %{{.*}}, {{.*}} : memref<vector<5x4x3xf32>>
   // CHECK-NEXT:          scf.for %[[I4:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {
   // CHECK-NEXT:            scf.for %[[I5:.*]] = %[[C0]] to %[[C4]] step %[[C1]] {
@@ -177,13 +179,14 @@ func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-NEXT:                {{.*}} = select {{.*}}, {{.*}}, {{.*}} : index
   // CHECK-NEXT:                {{.*}} = cmpi "slt", {{.*}}, %[[C0]] : index
   // CHECK-NEXT:                %[[S3:.*]] = select {{.*}}, %[[C0]], {{.*}} : index
+  // CHECK-NEXT:                %[[VIDX:.*]] = index_cast %[[I4]]
   //
-  // CHECK-NEXT:                {{.*}} = load {{.*}}[%[[I6]], %[[I5]], %[[I4]]] : memref<5x4x3xf32>
-  //      CHECK:                store {{.*}}, {{.*}}[%[[S0]], %[[S1]], %[[S2]], %[[S3]]] : memref<?x?x?x?xf32>
+  // CHECK-NEXT:                %[[VEC:.*]] = load {{.*}}[%[[I6]], %[[I5]]] : memref<5x4xvector<3xf32>>
+  // CHECK-NEXT:                %[[SCAL:.*]] = vector.extractelement %[[VEC]][%[[VIDX]] : i32] : vector<3xf32>
+  // CHECK-NEXT:                store %[[SCAL]], {{.*}}[%[[S0]], %[[S1]], %[[S2]], %[[S3]]] : memref<?x?x?x?xf32>
   // CHECK-NEXT:              }
   // CHECK-NEXT:            }
   // CHECK-NEXT:          }
-  // CHECK-NEXT:          dealloc {{.*}} : memref<5x4x3xf32>
   // CHECK-NEXT:        }
   // CHECK-NEXT:      }
   // CHECK-NEXT:    }
@@ -232,7 +235,7 @@ func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vector<3x
   %f7 = constant 7.0: f32
 
   // CHECK-DAG: %[[splat:.*]] = constant dense<7.000000e+00> : vector<15xf32>
-  // CHECK-DAG: %[[alloc:.*]] = alloca() {alignment = 128 : i64} : memref<3xvector<15xf32>>
+  // CHECK-DAG: %[[alloc:.*]] = alloca() : memref<3xvector<15xf32>>
   // CHECK-DAG: %[[C0:.*]] = constant 0 : index
   // CHECK-DAG: %[[dim:.*]] = dim %[[A]], %[[C0]] : memref<?x?xf32>
   // CHECK: affine.for %[[I:.*]] = 0 to 3 {
@@ -307,7 +310,7 @@ func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vector<3x
 //  FULL-UNROLL-SAME:   %[[vec:[a-zA-Z0-9]+]]: vector<3x15xf32>
 func @transfer_write_progressive(%A : memref<?x?xf32>, %base: index, %vec: vector<3x15xf32>) {
   // CHECK: %[[C0:.*]] = constant 0 : index
-  // CHECK: %[[alloc:.*]] = alloca() {alignment = 128 : i64} : memref<3xvector<15xf32>>
+  // CHECK: %[[alloc:.*]] = alloca() : memref<3xvector<15xf32>>
   // CHECK: %[[vmemref:.*]] = vector.type_cast %[[alloc]] : memref<3xvector<15xf32>> to memref<vector<3x15xf32>>
   // CHECK: store %[[vec]], %[[vmemref]][] : memref<vector<3x15xf32>>
   // CHECK: %[[dim:.*]] = dim %[[A]], %[[C0]] : memref<?x?xf32>
@@ -363,7 +366,7 @@ func @transfer_write_progressive(%A : memref<?x?xf32>, %base: index, %vec: vecto
 //  FULL-UNROLL-SAME:   %[[vec:[a-zA-Z0-9]+]]: vector<3x15xf32>
 func @transfer_write_progressive_unmasked(%A : memref<?x?xf32>, %base: index, %vec: vector<3x15xf32>) {
   // CHECK-NOT:    scf.if
-  // CHECK-NEXT: %[[alloc:.*]] = alloca() {alignment = 128 : i64} : memref<3xvector<15xf32>>
+  // CHECK-NEXT: %[[alloc:.*]] = alloca() : memref<3xvector<15xf32>>
   // CHECK-NEXT: %[[vmemref:.*]] = vector.type_cast %[[alloc]] : memref<3xvector<15xf32>> to memref<vector<3x15xf32>>
   // CHECK-NEXT: store %[[vec]], %[[vmemref]][] : memref<vector<3x15xf32>>
   // CHECK-NEXT: affine.for %[[I:.*]] = 0 to 3 {
@@ -416,7 +419,7 @@ func @transfer_read_minor_identity(%A : memref<?x?x?x?xf32>) -> vector<3x3xf32> 
 //       CHECK:   %[[cst:.*]] = constant 0.000000e+00 : f32
 //       CHECK:   %[[c2:.*]] = constant 2 : index
 //       CHECK:   %[[cst0:.*]] = constant dense<0.000000e+00> : vector<3xf32>
-//       CHECK:   %[[m:.*]] = alloca() {alignment = 128 : i64} : memref<3xvector<3xf32>>
+//       CHECK:   %[[m:.*]] = alloca() : memref<3xvector<3xf32>>
 //       CHECK:   %[[d:.*]] = dim %[[A]], %[[c2]] : memref<?x?x?x?xf32>
 //       CHECK:   affine.for %[[arg1:.*]] = 0 to 3 {
 //       CHECK:      %[[cmp:.*]] = cmpi "slt", %[[arg1]], %[[d]] : index
@@ -445,7 +448,7 @@ func @transfer_write_minor_identity(%A : vector<3x3xf32>, %B : memref<?x?x?x?xf3
 //  CHECK-SAME:   %[[B:.*]]: memref<?x?x?x?xf32>)
 //       CHECK:   %[[c0:.*]] = constant 0 : index
 //       CHECK:   %[[c2:.*]] = constant 2 : index
-//       CHECK:   %[[m:.*]] = alloca() {alignment = 128 : i64} : memref<3xvector<3xf32>>
+//       CHECK:   %[[m:.*]] = alloca() : memref<3xvector<3xf32>>
 //       CHECK:   %[[cast:.*]] = vector.type_cast %[[m]] : memref<3xvector<3xf32>> to memref<vector<3x3xf32>>
 //       CHECK:   store %[[A]], %[[cast]][] : memref<vector<3x3xf32>>
 //       CHECK:   %[[d:.*]] = dim %[[B]], %[[c2]] : memref<?x?x?x?xf32>

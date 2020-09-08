@@ -193,8 +193,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (Subtarget.hasCMov()) {
     setOperationAction(ISD::ABS            , MVT::i16  , Custom);
     setOperationAction(ISD::ABS            , MVT::i32  , Custom);
+    if (Subtarget.is64Bit())
+      setOperationAction(ISD::ABS          , MVT::i64  , Custom);
   }
-  setOperationAction(ISD::ABS              , MVT::i64  , Custom);
 
   // Funnel shifts.
   for (auto ShiftOp : {ISD::FSHL, ISD::FSHR}) {
@@ -7452,8 +7453,11 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     }
     Ops.push_back(Src);
     Ops.append(SubInputs.begin(), SubInputs.end());
-    for (int i = 0; i != (int)NumElts; ++i)
-      Mask.push_back(i);
+    if (ISD::isBuildVectorAllZeros(Src.getNode()))
+      Mask.append(NumElts, SM_SentinelZero);
+    else
+      for (int i = 0; i != (int)NumElts; ++i)
+        Mask.push_back(i);
     for (int i = 0; i != (int)NumSubElts; ++i) {
       int M = SubMask[i];
       if (0 <= M) {
@@ -22728,8 +22732,10 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   // Try to use SUBUS and PCMPEQ.
-  if (SDValue V = LowerVSETCCWithSUBUS(Op0, Op1, VT, Cond, dl, Subtarget, DAG))
-    return V;
+  if (FlipSigns)
+    if (SDValue V =
+            LowerVSETCCWithSUBUS(Op0, Op1, VT, Cond, dl, Subtarget, DAG))
+      return V;
 
   // We are handling one of the integer comparisons here. Since SSE only has
   // GT and EQ comparisons for integer, swapping operands and multiple
@@ -29713,28 +29719,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(Res);
     return;
   }
-  case ISD::ABS: {
-    assert(N->getValueType(0) == MVT::i64 &&
-           "Unexpected type (!= i64) on ABS.");
-    MVT HalfT = MVT::i32;
-    SDValue Lo, Hi, Tmp;
-    SDVTList VTList = DAG.getVTList(HalfT, MVT::i1);
-
-    Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HalfT, N->getOperand(0),
-                     DAG.getConstant(0, dl, HalfT));
-    Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HalfT, N->getOperand(0),
-                     DAG.getConstant(1, dl, HalfT));
-    Tmp = DAG.getNode(
-        ISD::SRA, dl, HalfT, Hi,
-        DAG.getShiftAmountConstant(HalfT.getSizeInBits() - 1, HalfT, dl));
-    Lo = DAG.getNode(ISD::UADDO, dl, VTList, Tmp, Lo);
-    Hi = DAG.getNode(ISD::ADDCARRY, dl, VTList, Tmp, Hi,
-                     SDValue(Lo.getNode(), 1));
-    Hi = DAG.getNode(ISD::XOR, dl, HalfT, Tmp, Hi);
-    Lo = DAG.getNode(ISD::XOR, dl, HalfT, Tmp, Lo);
-    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lo, Hi));
-    return;
-  }
   // We might have generated v2f32 FMIN/FMAX operations. Widen them to v4f32.
   case X86ISD::FMINC:
   case X86ISD::FMIN:
@@ -35237,44 +35221,48 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
 
   if (is128BitLaneCrossingShuffleMask(MaskVT, Mask)) {
     // If we have a single input lane-crossing shuffle then lower to VPERMV.
-    if (UnaryShuffle && AllowVariableMask && !MaskContainsZeros &&
-        ((Subtarget.hasAVX2() &&
-          (MaskVT == MVT::v8f32 || MaskVT == MVT::v8i32)) ||
-         (Subtarget.hasAVX512() &&
-          (MaskVT == MVT::v8f64 || MaskVT == MVT::v8i64 ||
-           MaskVT == MVT::v16f32 || MaskVT == MVT::v16i32)) ||
-         (Subtarget.hasBWI() && MaskVT == MVT::v32i16) ||
-         (Subtarget.hasBWI() && Subtarget.hasVLX() && MaskVT == MVT::v16i16) ||
-         (Subtarget.hasVBMI() && MaskVT == MVT::v64i8) ||
-         (Subtarget.hasVBMI() && Subtarget.hasVLX() && MaskVT == MVT::v32i8))) {
-      SDValue VPermMask = getConstVector(Mask, IntMaskVT, DAG, DL, true);
-      Res = DAG.getBitcast(MaskVT, V1);
-      Res = DAG.getNode(X86ISD::VPERMV, DL, MaskVT, VPermMask, Res);
-      return DAG.getBitcast(RootVT, Res);
+    if (UnaryShuffle && AllowVariableMask && !MaskContainsZeros) {
+      if (Subtarget.hasAVX2() &&
+          (MaskVT == MVT::v8f32 || MaskVT == MVT::v8i32)) {
+        SDValue VPermMask = getConstVector(Mask, IntMaskVT, DAG, DL, true);
+        Res = DAG.getBitcast(MaskVT, V1);
+        Res = DAG.getNode(X86ISD::VPERMV, DL, MaskVT, VPermMask, Res);
+        return DAG.getBitcast(RootVT, Res);
+      }
+      // AVX512 variants (non-VLX will pad to 512-bit shuffles).
+      if ((Subtarget.hasAVX512() &&
+           (MaskVT == MVT::v8f64 || MaskVT == MVT::v8i64 ||
+            MaskVT == MVT::v16f32 || MaskVT == MVT::v16i32)) ||
+          (Subtarget.hasBWI() &&
+           (MaskVT == MVT::v16i16 || MaskVT == MVT::v32i16)) ||
+          (Subtarget.hasVBMI() &&
+           (MaskVT == MVT::v32i8 || MaskVT == MVT::v64i8))) {
+        V1 = DAG.getBitcast(MaskVT, V1);
+        V2 = DAG.getUNDEF(MaskVT);
+        Res = lowerShuffleWithPERMV(DL, MaskVT, Mask, V1, V2, Subtarget, DAG);
+        return DAG.getBitcast(RootVT, Res);
+      }
     }
 
     // Lower a unary+zero lane-crossing shuffle as VPERMV3 with a zero
-    // vector as the second source.
+    // vector as the second source (non-VLX will pad to 512-bit shuffles).
     if (UnaryShuffle && AllowVariableMask &&
         ((Subtarget.hasAVX512() &&
           (MaskVT == MVT::v8f64 || MaskVT == MVT::v8i64 ||
+           MaskVT == MVT::v4f64 || MaskVT == MVT::v4i64 ||
+           MaskVT == MVT::v8f32 || MaskVT == MVT::v8i32 ||
            MaskVT == MVT::v16f32 || MaskVT == MVT::v16i32)) ||
-         (Subtarget.hasVLX() &&
-          (MaskVT == MVT::v4f64 || MaskVT == MVT::v4i64 ||
-           MaskVT == MVT::v8f32 || MaskVT == MVT::v8i32)) ||
-         (Subtarget.hasBWI() && MaskVT == MVT::v32i16) ||
-         (Subtarget.hasBWI() && Subtarget.hasVLX() && MaskVT == MVT::v16i16) ||
-         (Subtarget.hasVBMI() && MaskVT == MVT::v64i8) ||
-         (Subtarget.hasVBMI() && Subtarget.hasVLX() && MaskVT == MVT::v32i8))) {
+         (Subtarget.hasBWI() &&
+          (MaskVT == MVT::v16i16 || MaskVT == MVT::v32i16)) ||
+         (Subtarget.hasVBMI() &&
+          (MaskVT == MVT::v32i8 || MaskVT == MVT::v64i8)))) {
       // Adjust shuffle mask - replace SM_SentinelZero with second source index.
       for (unsigned i = 0; i != NumMaskElts; ++i)
         if (Mask[i] == SM_SentinelZero)
           Mask[i] = NumMaskElts + i;
-
-      SDValue VPermMask = getConstVector(Mask, IntMaskVT, DAG, DL, true);
-      Res = DAG.getBitcast(MaskVT, V1);
-      SDValue Zero = getZeroVector(MaskVT, Subtarget, DAG, DL);
-      Res = DAG.getNode(X86ISD::VPERMV3, DL, MaskVT, Res, VPermMask, Zero);
+      V1 = DAG.getBitcast(MaskVT, V1);
+      V2 = getZeroVector(MaskVT, Subtarget, DAG, DL);
+      Res = lowerShuffleWithPERMV(DL, MaskVT, Mask, V1, V2, Subtarget, DAG);
       return DAG.getBitcast(RootVT, Res);
     }
 
@@ -35285,22 +35273,21 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
             DAG, Subtarget))
       return WideShuffle;
 
-    // If we have a dual input lane-crossing shuffle then lower to VPERMV3.
+    // If we have a dual input lane-crossing shuffle then lower to VPERMV3,
+    // (non-VLX will pad to 512-bit shuffles).
     if (AllowVariableMask && !MaskContainsZeros &&
         ((Subtarget.hasAVX512() &&
           (MaskVT == MVT::v8f64 || MaskVT == MVT::v8i64 ||
-           MaskVT == MVT::v16f32 || MaskVT == MVT::v16i32)) ||
-         (Subtarget.hasVLX() &&
-          (MaskVT == MVT::v4f64 || MaskVT == MVT::v4i64 ||
+           MaskVT == MVT::v4f64 || MaskVT == MVT::v4i64 ||
+           MaskVT == MVT::v16f32 || MaskVT == MVT::v16i32 ||
            MaskVT == MVT::v8f32 || MaskVT == MVT::v8i32)) ||
-         (Subtarget.hasBWI() && MaskVT == MVT::v32i16) ||
-         (Subtarget.hasBWI() && Subtarget.hasVLX() && MaskVT == MVT::v16i16) ||
-         (Subtarget.hasVBMI() && MaskVT == MVT::v64i8) ||
-         (Subtarget.hasVBMI() && Subtarget.hasVLX() && MaskVT == MVT::v32i8))) {
-      SDValue VPermMask = getConstVector(Mask, IntMaskVT, DAG, DL, true);
+         (Subtarget.hasBWI() &&
+          (MaskVT == MVT::v16i16 || MaskVT == MVT::v32i16)) ||
+         (Subtarget.hasVBMI() &&
+          (MaskVT == MVT::v32i8 || MaskVT == MVT::v64i8)))) {
       V1 = DAG.getBitcast(MaskVT, V1);
       V2 = DAG.getBitcast(MaskVT, V2);
-      Res = DAG.getNode(X86ISD::VPERMV3, DL, MaskVT, V1, VPermMask, V2);
+      Res = lowerShuffleWithPERMV(DL, MaskVT, Mask, V1, V2, Subtarget, DAG);
       return DAG.getBitcast(RootVT, Res);
     }
     return SDValue();
@@ -35457,25 +35444,22 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
           DAG, Subtarget))
     return WideShuffle;
 
-  // If we have a dual input shuffle then lower to VPERMV3.
+  // If we have a dual input shuffle then lower to VPERMV3,
+  // (non-VLX will pad to 512-bit shuffles)
   if (!UnaryShuffle && AllowVariableMask && !MaskContainsZeros &&
       ((Subtarget.hasAVX512() &&
-        (MaskVT == MVT::v8f64 || MaskVT == MVT::v8i64 ||
-         MaskVT == MVT::v16f32 || MaskVT == MVT::v16i32)) ||
-       (Subtarget.hasVLX() &&
-        (MaskVT == MVT::v2f64 || MaskVT == MVT::v2i64 || MaskVT == MVT::v4f64 ||
-         MaskVT == MVT::v4i64 || MaskVT == MVT::v4f32 || MaskVT == MVT::v4i32 ||
-         MaskVT == MVT::v8f32 || MaskVT == MVT::v8i32)) ||
-       (Subtarget.hasBWI() && MaskVT == MVT::v32i16) ||
-       (Subtarget.hasBWI() && Subtarget.hasVLX() &&
-        (MaskVT == MVT::v8i16 || MaskVT == MVT::v16i16)) ||
-       (Subtarget.hasVBMI() && MaskVT == MVT::v64i8) ||
-       (Subtarget.hasVBMI() && Subtarget.hasVLX() &&
-        (MaskVT == MVT::v16i8 || MaskVT == MVT::v32i8)))) {
-    SDValue VPermMask = getConstVector(Mask, IntMaskVT, DAG, DL, true);
+        (MaskVT == MVT::v2f64 || MaskVT == MVT::v4f64 || MaskVT == MVT::v8f64 ||
+         MaskVT == MVT::v2i64 || MaskVT == MVT::v4i64 || MaskVT == MVT::v8i64 ||
+         MaskVT == MVT::v4f32 || MaskVT == MVT::v4i32 || MaskVT == MVT::v8f32 ||
+         MaskVT == MVT::v8i32 || MaskVT == MVT::v16f32 ||
+         MaskVT == MVT::v16i32)) ||
+       (Subtarget.hasBWI() && (MaskVT == MVT::v8i16 || MaskVT == MVT::v16i16 ||
+                               MaskVT == MVT::v32i16)) ||
+       (Subtarget.hasVBMI() && (MaskVT == MVT::v16i8 || MaskVT == MVT::v32i8 ||
+                                MaskVT == MVT::v64i8)))) {
     V1 = DAG.getBitcast(MaskVT, V1);
     V2 = DAG.getBitcast(MaskVT, V2);
-    Res = DAG.getNode(X86ISD::VPERMV3, DL, MaskVT, V1, VPermMask, V2);
+    Res = lowerShuffleWithPERMV(DL, MaskVT, Mask, V1, V2, Subtarget, DAG);
     return DAG.getBitcast(RootVT, Res);
   }
 

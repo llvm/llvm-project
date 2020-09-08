@@ -3983,6 +3983,19 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
                               ConstantExpr::getNeg(RHSC));
   }
 
+  {
+    // Try to remove shared constant multiplier from equality comparison:
+    // X * C == Y * C (with no overflowing/aliasing) --> X == Y
+    Value *X, *Y;
+    const APInt *C;
+    if (match(Op0, m_Mul(m_Value(X), m_APInt(C))) && *C != 0 &&
+        match(Op1, m_Mul(m_Value(Y), m_SpecificInt(*C))) && I.isEquality())
+      if (!C->countTrailingZeros() ||
+          (BO0->hasNoSignedWrap() && BO1->hasNoSignedWrap()) ||
+          (BO0->hasNoUnsignedWrap() && BO1->hasNoUnsignedWrap()))
+      return new ICmpInst(Pred, X, Y);
+  }
+
   BinaryOperator *SRem = nullptr;
   // icmp (srem X, Y), Y
   if (BO0 && BO0->getOpcode() == Instruction::SRem && Op1 == BO0->getOperand(1))
@@ -4059,10 +4072,6 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
           Value *And2 = Builder.CreateAnd(BO1->getOperand(0), Mask);
           return new ICmpInst(Pred, And1, And2);
         }
-        // If there are no trailing zeros in the multiplier, just eliminate
-        // the multiplies (no masking is needed):
-        // icmp eq/ne (X * C), (Y * C) --> icmp eq/ne X, Y
-        return new ICmpInst(Pred, BO0->getOperand(0), BO1->getOperand(0));
       }
       break;
     }

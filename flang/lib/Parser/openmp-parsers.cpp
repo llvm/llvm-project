@@ -300,9 +300,9 @@ TYPE_PARSER(sourced(construct<OpenMPCancelConstruct>(verbatim("CANCEL"_tok),
 //                               release
 //                               acquire
 TYPE_PARSER(sourced(construct<OmpFlushMemoryClause>(
-    "ACQ_REL" >> pure(OmpFlushMemoryClause::FlushMemoryOrder::AcqRel) ||
-    "RELEASE" >> pure(OmpFlushMemoryClause::FlushMemoryOrder::Release) ||
-    "ACQUIRE" >> pure(OmpFlushMemoryClause::FlushMemoryOrder::Acquire))))
+    "ACQ_REL" >> pure(llvm::omp::Clause::OMPC_acq_rel) ||
+    "RELEASE" >> pure(llvm::omp::Clause::OMPC_release) ||
+    "ACQUIRE" >> pure(llvm::omp::Clause::OMPC_acquire))))
 
 TYPE_PARSER(sourced(construct<OpenMPFlushConstruct>(verbatim("FLUSH"_tok),
     maybe(Parser<OmpFlushMemoryClause>{}),
@@ -384,51 +384,74 @@ TYPE_PARSER(construct<OmpReductionCombiner>(Parser<AssignmentStmt>{}) ||
             construct<Call>(Parser<ProcedureDesignator>{},
                 parenthesized(optionalList(actualArgSpec))))))
 
-// 2.13.6 ATOMIC [seq_cst[,]] atomic-clause [[,]seq_cst] | ATOMIC [seq_cst]
-//        atomic-clause -> READ | WRITE | UPDATE | CAPTURE
+// Hint Expression => HINT(hint-expression)
+TYPE_PARSER("HINT" >> construct<OmpHintExpr>(parenthesized(constantExpr)))
+
+// 2.17.7 atomic -> ATOMIC [clause [,]] atomic-clause [[,] clause] |
+//                  ATOMIC [clause]
+//       clause -> memory-order-clause | HINT(hint-expression)
+//       memory-order-clause -> SEQ_CST | ACQ_REL | RELEASE | ACQUIRE | RELAXED
+//       atomic-clause -> READ | WRITE | UPDATE | CAPTURE
 
 // OMP END ATOMIC
 TYPE_PARSER(construct<OmpEndAtomic>(startOmpLine >> "END ATOMIC"_tok))
 
-// ATOMIC Memory related clause
-TYPE_PARSER(sourced(construct<OmpMemoryClause>(
-    "SEQ_CST" >> pure(OmpMemoryClause::MemoryOrder::SeqCst))))
+// Memory order clause
+TYPE_PARSER(sourced(construct<OmpMemoryOrderClause>(
+    "SEQ_CST" >> pure(llvm::omp::Clause::OMPC_seq_cst) ||
+    "ACQ_REL" >> pure(llvm::omp::Clause::OMPC_acq_rel) ||
+    "RELEASE" >> pure(llvm::omp::Clause::OMPC_release) ||
+    "ACQUIRE" >> pure(llvm::omp::Clause::OMPC_acquire) ||
+    "RELAXED" >> pure(llvm::omp::Clause::OMPC_relaxed))))
 
-// ATOMIC Memory Clause List
-TYPE_PARSER(construct<OmpMemoryClauseList>(
-    many(maybe(","_tok) >> Parser<OmpMemoryClause>{})))
+// ATOMIC Memory order clause or Hint expression
+TYPE_PARSER(
+    construct<OmpAtomicMemoryOrderClause>(Parser<OmpMemoryOrderClause>{}) ||
+    construct<OmpAtomicMemoryOrderClause>(Parser<OmpHintExpr>{}))
 
-TYPE_PARSER(construct<OmpMemoryClausePostList>(
-    many(maybe(","_tok) >> Parser<OmpMemoryClause>{})))
+// ATOMIC Memory order Clause List
+TYPE_PARSER(construct<OmpAtomicMemoryOrderClauseList>(
+    many(maybe(","_tok) >> Parser<OmpAtomicMemoryOrderClause>{})))
 
-// OMP [SEQ_CST] ATOMIC READ [SEQ_CST]
+TYPE_PARSER(construct<OmpAtomicMemoryOrderClausePostList>(
+    many(maybe(","_tok) >> Parser<OmpAtomicMemoryOrderClause>{})))
+
+// OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST] READ [MEMORY-ORDER-CLAUSE-LIST]
 TYPE_PARSER("ATOMIC" >>
-    construct<OmpAtomicRead>(Parser<OmpMemoryClauseList>{} / maybe(","_tok),
-        verbatim("READ"_tok), Parser<OmpMemoryClausePostList>{} / endOmpLine,
+    construct<OmpAtomicRead>(
+        Parser<OmpAtomicMemoryOrderClauseList>{} / maybe(","_tok),
+        verbatim("READ"_tok),
+        Parser<OmpAtomicMemoryOrderClausePostList>{} / endOmpLine,
         statement(assignmentStmt), maybe(Parser<OmpEndAtomic>{} / endOmpLine)))
 
-// OMP ATOMIC [SEQ_CST] CAPTURE [SEQ_CST]
-TYPE_PARSER("ATOMIC" >>
-    construct<OmpAtomicCapture>(Parser<OmpMemoryClauseList>{} / maybe(","_tok),
-        verbatim("CAPTURE"_tok), Parser<OmpMemoryClausePostList>{} / endOmpLine,
-        statement(assignmentStmt), statement(assignmentStmt),
-        Parser<OmpEndAtomic>{} / endOmpLine))
+// OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST] CAPTURE [MEMORY-ORDER-CLAUSE-LIST]
+TYPE_PARSER(
+    "ATOMIC" >> construct<OmpAtomicCapture>(
+                    Parser<OmpAtomicMemoryOrderClauseList>{} / maybe(","_tok),
+                    verbatim("CAPTURE"_tok),
+                    Parser<OmpAtomicMemoryOrderClausePostList>{} / endOmpLine,
+                    statement(assignmentStmt), statement(assignmentStmt),
+                    Parser<OmpEndAtomic>{} / endOmpLine))
 
-// OMP ATOMIC [SEQ_CST] UPDATE [SEQ_CST]
+// OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST] UPDATE [MEMORY-ORDER-CLAUSE-LIST]
 TYPE_PARSER("ATOMIC" >>
-    construct<OmpAtomicUpdate>(Parser<OmpMemoryClauseList>{} / maybe(","_tok),
-        verbatim("UPDATE"_tok), Parser<OmpMemoryClausePostList>{} / endOmpLine,
+    construct<OmpAtomicUpdate>(
+        Parser<OmpAtomicMemoryOrderClauseList>{} / maybe(","_tok),
+        verbatim("UPDATE"_tok),
+        Parser<OmpAtomicMemoryOrderClausePostList>{} / endOmpLine,
         statement(assignmentStmt), maybe(Parser<OmpEndAtomic>{} / endOmpLine)))
 
-// OMP ATOMIC [SEQ_CST]
+// OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST]
 TYPE_PARSER(construct<OmpAtomic>(verbatim("ATOMIC"_tok),
-    Parser<OmpMemoryClauseList>{} / endOmpLine, statement(assignmentStmt),
-    maybe(Parser<OmpEndAtomic>{} / endOmpLine)))
+    Parser<OmpAtomicMemoryOrderClauseList>{} / endOmpLine,
+    statement(assignmentStmt), maybe(Parser<OmpEndAtomic>{} / endOmpLine)))
 
-// ATOMIC [SEQ_CST] WRITE [SEQ_CST]
+// OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST] WRITE [MEMORY-ORDER-CLAUSE-LIST]
 TYPE_PARSER("ATOMIC" >>
-    construct<OmpAtomicWrite>(Parser<OmpMemoryClauseList>{} / maybe(","_tok),
-        verbatim("WRITE"_tok), Parser<OmpMemoryClausePostList>{} / endOmpLine,
+    construct<OmpAtomicWrite>(
+        Parser<OmpAtomicMemoryOrderClauseList>{} / maybe(","_tok),
+        verbatim("WRITE"_tok),
+        Parser<OmpAtomicMemoryOrderClausePostList>{} / endOmpLine,
         statement(assignmentStmt), maybe(Parser<OmpEndAtomic>{} / endOmpLine)))
 
 // Atomic Construct
@@ -444,9 +467,7 @@ TYPE_PARSER(startOmpLine >>
         verbatim("END CRITICAL"_tok), maybe(parenthesized(name)))) /
         endOmpLine)
 TYPE_PARSER(sourced(construct<OmpCriticalDirective>(verbatim("CRITICAL"_tok),
-                maybe(parenthesized(name)),
-                maybe("HINT" >> construct<OmpCriticalDirective::Hint>(
-                                    parenthesized(constantExpr))))) /
+                maybe(parenthesized(name)), maybe(Parser<OmpHintExpr>{}))) /
     endOmpLine)
 
 TYPE_PARSER(construct<OpenMPCriticalConstruct>(

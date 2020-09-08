@@ -448,7 +448,7 @@ static bool printAsmMRegister(X86AsmPrinter &P, const MachineOperand &MO,
 
 static bool printAsmVRegister(X86AsmPrinter &P, const MachineOperand &MO,
                               char Mode, raw_ostream &O) {
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
   bool EmitPercent = MO.getParent()->getInlineAsmDialect() == InlineAsm::AD_ATT;
 
   unsigned Index;

@@ -197,12 +197,22 @@ bool ELFDumper<ELFT>::shouldPrintSection(const ELFYAML::Section &S,
   // entry but their section headers may have special flags, entry size, address
   // alignment, etc. We will preserve the header for them under such
   // circumstances.
-  if (DWARF && DWARF->getNonEmptySectionNames().count(S.Name.substr(1))) {
+  StringRef SecName = S.Name.substr(1);
+  if (DWARF && DWARF->getNonEmptySectionNames().count(SecName)) {
     if (const ELFYAML::RawContentSection *RawSec =
-            dyn_cast<const ELFYAML::RawContentSection>(&S))
-      return RawSec->Type != ELF::SHT_PROGBITS || RawSec->Flags ||
-             !RawSec->Link.empty() || RawSec->Info ||
-             RawSec->AddressAlign != 1 || RawSec->EntSize;
+            dyn_cast<const ELFYAML::RawContentSection>(&S)) {
+      if (RawSec->Type != ELF::SHT_PROGBITS || !RawSec->Link.empty() ||
+          RawSec->Info || RawSec->AddressAlign != 1 || RawSec->Address ||
+          RawSec->EntSize)
+        return true;
+
+      ELFYAML::ELF_SHF ShFlags = RawSec->Flags.getValueOr(ELFYAML::ELF_SHF(0));
+
+      if (SecName == "debug_str")
+        return ShFlags != ELFYAML::ELF_SHF(ELF::SHF_MERGE | ELF::SHF_STRINGS);
+
+      return ShFlags != 0;
+    }
   }
 
   // Normally we use "Symbols:" and "DynamicSymbols:" to describe contents of
@@ -404,6 +414,8 @@ Optional<DWARFYAML::Data> ELFDumper<ELFT>::dumpDWARFSections(
 
       if (RawSec->Name == ".debug_aranges")
         Err = dumpDebugARanges(*DWARFCtx.get(), DWARF);
+      else if (RawSec->Name == ".debug_str")
+        dumpDebugStrings(*DWARFCtx.get(), DWARF);
 
       // If the DWARF section cannot be successfully parsed, emit raw content
       // instead of an entry in the DWARF section of the YAML.
@@ -622,7 +634,8 @@ Error ELFDumper<ELFT>::dumpRelocation(const RelT *Rel, const Elf_Shdr *SymTab,
 }
 
 template <class ELFT>
-static unsigned getDefaultShEntSize(ELFYAML::ELF_SHT SecType) {
+static unsigned getDefaultShEntSize(ELFYAML::ELF_SHT SecType,
+                                    StringRef SecName) {
   switch (SecType) {
   case ELF::SHT_REL:
     return sizeof(typename ELFT::Rel);
@@ -633,6 +646,8 @@ static unsigned getDefaultShEntSize(ELFYAML::ELF_SHT SecType) {
   case ELF::SHT_DYNAMIC:
     return sizeof(typename ELFT::Dyn);
   default:
+    if (SecName == ".debug_str")
+      return 1;
     return 0;
   }
 }
@@ -649,15 +664,15 @@ Error ELFDumper<ELFT>::dumpCommonSection(const Elf_Shdr *Shdr,
     S.Address = static_cast<uint64_t>(Shdr->sh_addr);
   S.AddressAlign = Shdr->sh_addralign;
 
-  if (Shdr->sh_entsize != getDefaultShEntSize<ELFT>(S.Type))
-    S.EntSize = static_cast<llvm::yaml::Hex64>(Shdr->sh_entsize);
-
   S.OriginalSecNdx = Shdr - &Sections[0];
 
   auto NameOrErr = getUniquedSectionName(Shdr);
   if (!NameOrErr)
     return NameOrErr.takeError();
   S.Name = NameOrErr.get();
+
+  if (Shdr->sh_entsize != getDefaultShEntSize<ELFT>(S.Type, S.Name))
+    S.EntSize = static_cast<llvm::yaml::Hex64>(Shdr->sh_entsize);
 
   if (Shdr->sh_link != ELF::SHN_UNDEF) {
     auto LinkSection = Obj.getSection(Shdr->sh_link);

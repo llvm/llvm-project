@@ -14,6 +14,32 @@ define i64 @test_inbounds([0 x i32]* %base, i64 %idx) {
   ret i64 %d
 }
 
+define i64 @test_partial_inbounds1([0 x i32]* %base, i64 %idx) {
+; CHECK-LABEL: @test_partial_inbounds1(
+; CHECK-NEXT:    [[P2_IDX:%.*]] = shl i64 [[IDX:%.*]], 2
+; CHECK-NEXT:    ret i64 [[P2_IDX]]
+;
+  %p1 = getelementptr inbounds [0 x i32], [0 x i32]* %base, i64 0, i64 0
+  %p2 = getelementptr [0 x i32], [0 x i32]* %base, i64 0, i64 %idx
+  %i1 = ptrtoint i32* %p1 to i64
+  %i2 = ptrtoint i32* %p2 to i64
+  %d = sub i64 %i2, %i1
+  ret i64 %d
+}
+
+define i64 @test_partial_inbounds2([0 x i32]* %base, i64 %idx) {
+; CHECK-LABEL: @test_partial_inbounds2(
+; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i64 [[IDX:%.*]], 2
+; CHECK-NEXT:    ret i64 [[P2_IDX]]
+;
+  %p1 = getelementptr [0 x i32], [0 x i32]* %base, i64 0, i64 0
+  %p2 = getelementptr inbounds [0 x i32], [0 x i32]* %base, i64 0, i64 %idx
+  %i1 = ptrtoint i32* %p1 to i64
+  %i2 = ptrtoint i32* %p2 to i64
+  %d = sub i64 %i2, %i1
+  ret i64 %d
+}
+
 define i64 @test_inbounds_nuw([0 x i32]* %base, i64 %idx) {
 ; CHECK-LABEL: @test_inbounds_nuw(
 ; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nuw nsw i64 [[IDX:%.*]], 2
@@ -69,13 +95,39 @@ define i64 @test_inbounds_nuw_swapped([0 x i32]* %base, i64 %idx) {
   ret i64 %d
 }
 
+define i64 @test_inbounds1_nuw_swapped([0 x i32]* %base, i64 %idx) {
+; CHECK-LABEL: @test_inbounds1_nuw_swapped(
+; CHECK-NEXT:    [[P2_IDX_NEG:%.*]] = mul i64 [[IDX:%.*]], -4
+; CHECK-NEXT:    ret i64 [[P2_IDX_NEG]]
+;
+  %p1 = getelementptr inbounds [0 x i32], [0 x i32]* %base, i64 0, i64 0
+  %p2 = getelementptr [0 x i32], [0 x i32]* %base, i64 0, i64 %idx
+  %i1 = ptrtoint i32* %p2 to i64
+  %i2 = ptrtoint i32* %p1 to i64
+  %d = sub nuw i64 %i2, %i1
+  ret i64 %d
+}
+
+define i64 @test_inbounds2_nuw_swapped([0 x i32]* %base, i64 %idx) {
+; CHECK-LABEL: @test_inbounds2_nuw_swapped(
+; CHECK-NEXT:    [[P2_IDX_NEG:%.*]] = mul i64 [[IDX:%.*]], -4
+; CHECK-NEXT:    ret i64 [[P2_IDX_NEG]]
+;
+  %p1 = getelementptr [0 x i32], [0 x i32]* %base, i64 0, i64 0
+  %p2 = getelementptr inbounds [0 x i32], [0 x i32]* %base, i64 0, i64 %idx
+  %i1 = ptrtoint i32* %p2 to i64
+  %i2 = ptrtoint i32* %p1 to i64
+  %d = sub nuw i64 %i2, %i1
+  ret i64 %d
+}
+
 ; The sub and shl here could be nuw, but this is harder to handle.
 define i64 @test_inbounds_nuw_two_gep([0 x i32]* %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @test_inbounds_nuw_two_gep(
+; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i64 [[IDX2:%.*]], 2
 ; CHECK-NEXT:    [[P1_IDX_NEG:%.*]] = mul i64 [[IDX:%.*]], -4
-; CHECK-NEXT:    [[P2_IDX_NEG_NEG:%.*]] = shl i64 [[IDX2:%.*]], 2
-; CHECK-NEXT:    [[DOTNEG:%.*]] = add i64 [[P2_IDX_NEG_NEG]], [[P1_IDX_NEG]]
-; CHECK-NEXT:    ret i64 [[DOTNEG]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = add i64 [[P1_IDX_NEG]], [[P2_IDX]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %p1 = getelementptr inbounds [0 x i32], [0 x i32]* %base, i64 0, i64 %idx
   %p2 = getelementptr inbounds [0 x i32], [0 x i32]* %base, i64 0, i64 %idx2
