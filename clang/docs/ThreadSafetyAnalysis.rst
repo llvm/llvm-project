@@ -414,6 +414,26 @@ The first argument must be ``true`` or ``false``, to specify which return value
 indicates success, and the remaining arguments are interpreted in the same way
 as ``ACQUIRE``.  See :ref:`mutexheader`, below, for example uses.
 
+Because the analysis doesn't support conditional locking, a capability is
+treated as acquired after the first branch on the return value of a try-acquire
+function.
+
+.. code-block:: c++
+
+  Mutex mu;
+  int a GUARDED_BY(mu);
+
+  void foo() {
+    bool success = mu.TryLock();
+    a = 0;         // Warning, mu is not locked.
+    if (success) {
+      a = 0;       // Ok.
+      mu.Unlock();
+    } else {
+      a = 0;       // Warning, mu is not locked.
+    }
+  }
+
 
 ASSERT_CAPABILITY(...) and ASSERT_SHARED_CAPABILITY(...)
 --------------------------------------------------------
