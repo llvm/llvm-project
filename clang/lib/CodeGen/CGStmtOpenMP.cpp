@@ -2982,7 +2982,7 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
           ((ScheduleKind.Schedule == OMPC_SCHEDULE_static ||
             ScheduleKind.Schedule == OMPC_SCHEDULE_unknown) &&
            !(ScheduleKind.M1 == OMPC_SCHEDULE_MODIFIER_nonmonotonic ||
-             ScheduleKind.M1 == OMPC_SCHEDULE_MODIFIER_nonmonotonic)) ||
+             ScheduleKind.M2 == OMPC_SCHEDULE_MODIFIER_nonmonotonic)) ||
           ScheduleKind.M1 == OMPC_SCHEDULE_MODIFIER_monotonic ||
           ScheduleKind.M2 == OMPC_SCHEDULE_MODIFIER_monotonic;
       if ((RT.isStaticNonchunked(ScheduleKind.Schedule,
