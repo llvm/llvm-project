@@ -154,6 +154,13 @@ private:
 };
 } // namespace
 
+static CallExpr::arg_range dropDefaultArgs(CallExpr::arg_range Args) {
+  auto firstDefaultArg = std::find_if(Args.begin(), Args.end(), [](auto it) {
+    return isa<CXXDefaultArgExpr>(it);
+  });
+  return llvm::make_range(Args.begin(), firstDefaultArg);
+}
+
 static syntax::NodeKind getOperatorNodeKind(const CXXOperatorCallExpr &E) {
   switch (E.getOperator()) {
   // Comparison
@@ -1111,7 +1118,11 @@ public:
     return true;
   }
 
-  syntax::CallArguments *buildCallArguments(CallExpr::arg_range Args) {
+  /// Builds `CallArguments` syntax node from arguments that appear in source
+  /// code, i.e. not default arguments.
+  syntax::CallArguments *
+  buildCallArguments(CallExpr::arg_range ArgsAndDefaultArgs) {
+    auto Args = dropDefaultArgs(ArgsAndDefaultArgs);
     for (const auto &Arg : Args) {
       Builder.markExprChild(Arg, syntax::NodeRole::ListElement);
       const auto *DelimiterToken =
@@ -1232,6 +1243,8 @@ public:
       llvm_unreachable("getOperatorNodeKind() does not return this value");
     }
   }
+
+  bool WalkUpFromCXXDefaultArgExpr(CXXDefaultArgExpr *S) { return true; }
 
   bool WalkUpFromNamespaceDecl(NamespaceDecl *S) {
     auto Tokens = Builder.getDeclarationRange(S);
