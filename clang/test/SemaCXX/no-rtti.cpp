@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -fno-rtti %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fsyntax-only -verify -fno-rtti %s
 
 namespace std {
   class type_info;

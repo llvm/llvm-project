@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fno-rtti-data -fsyntax-only -verify
+// RUN: %clang_cc1 %s -triple x86_64-pc-linux-gnu -fno-rtti-data -fsyntax-only -verify
 
 namespace std {
 struct type_info {};
