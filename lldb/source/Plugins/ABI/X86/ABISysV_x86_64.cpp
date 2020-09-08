@@ -973,24 +973,6 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
         bool child_is_base_class = false;
         int32_t child_byte_offset = 0;
 
-        {
-          const bool transparent_pointers = false;
-          const bool omit_empty_base_classes = true;
-          const bool ignore_array_bounds = false;
-          uint32_t child_byte_size = 0;
-          uint32_t child_bitfield_bit_size = 0;
-          uint32_t child_bitfield_bit_offset = 0;
-          bool child_is_deref_of_parent = false;
-          uint64_t language_flags;
-          CompilerType field_compiler_type =
-              return_compiler_type.GetChildCompilerTypeAtIndex(
-                  &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-                  ignore_array_bounds, name, child_byte_size, child_byte_offset,
-                  child_bitfield_bit_size, child_bitfield_bit_offset,
-                  child_is_base_class, child_is_deref_of_parent, nullptr,
-                  language_flags);
-        }
-
         // if we don't know the size of the field (e.g. invalid type), just
         // bail out
         if (!field_bit_width || field_bit_width == 0)

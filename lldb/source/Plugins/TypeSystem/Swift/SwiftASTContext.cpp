@@ -1336,7 +1336,6 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
                                         llvm::raw_ostream &error,
                                         bool &got_serialized_options,
                                         bool &found_swift_modules) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
   bool found_validation_errors = false;
   got_serialized_options = false;
   auto &invocation = swift_ast.GetCompilerInvocation();
@@ -4470,7 +4469,7 @@ size_t SwiftASTContext::FindTypes(const char *name,
   for (const auto &result : types_or_decls_results) {
     CompilerType type = result.Apply<CompilerType>(
         [](CompilerType type) -> CompilerType { return type; },
-        [this](swift::Decl *decl) -> CompilerType {
+        [](swift::Decl *decl) -> CompilerType {
           if (swift::ValueDecl *value_decl =
                   swift::dyn_cast_or_null<swift::ValueDecl>(decl)) {
             swift::Type swift_type = value_decl->getInterfaceType();
@@ -7029,8 +7028,6 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
               continue;
             if (count++ < idx)
               continue;
-
-            swift::Type child_swift_type = VD->getType();
 
             CompilerType child_type =
                 ToCompilerType(VD->getType().getPointer());
