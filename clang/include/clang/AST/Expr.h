@@ -867,9 +867,9 @@ public:
 
   /// Skip conversion operators. If this Expr is a call to a conversion
   /// operator, return the argument.
-  Expr *IgnoreConversionOperator() LLVM_READONLY;
-  const Expr *IgnoreConversionOperator() const {
-    return const_cast<Expr *>(this)->IgnoreConversionOperator();
+  Expr *IgnoreConversionOperatorSingleStep() LLVM_READONLY;
+  const Expr *IgnoreConversionOperatorSingleStep() const {
+    return const_cast<Expr *>(this)->IgnoreConversionOperatorSingleStep();
   }
 
   /// Skip past any parentheses and lvalue casts which might surround this
@@ -901,9 +901,9 @@ public:
   /// * What IgnoreParens() skips
   /// * CastExpr which represent a derived-to-base cast (CK_DerivedToBase,
   ///   CK_UncheckedDerivedToBase and CK_NoOp)
-  Expr *ignoreParenBaseCasts() LLVM_READONLY;
-  const Expr *ignoreParenBaseCasts() const {
-    return const_cast<Expr *>(this)->ignoreParenBaseCasts();
+  Expr *IgnoreParenBaseCasts() LLVM_READONLY;
+  const Expr *IgnoreParenBaseCasts() const {
+    return const_cast<Expr *>(this)->IgnoreParenBaseCasts();
   }
 
   /// Determine whether this expression is a default function argument.
