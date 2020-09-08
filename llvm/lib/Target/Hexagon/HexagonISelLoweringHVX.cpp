@@ -631,6 +631,9 @@ HexagonTargetLowering::createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
     if (!ZeroFill)
       return S;
     // Fill the bytes beyond BlockLen with 0s.
+    // V6_pred_scalar2 cannot fill the entire predicate, so it only works
+    // when BlockLen < HwLen.
+    assert(BlockLen < HwLen && "vsetq(v1) prerequisite");
     MVT BoolTy = MVT::getVectorVT(MVT::i1, HwLen);
     SDValue Q = getInstr(Hexagon::V6_pred_scalar2, dl, BoolTy,
                          {DAG.getConstant(BlockLen, dl, MVT::i32)}, DAG);
@@ -1094,6 +1097,7 @@ HexagonTargetLowering::insertHvxSubvectorPred(SDValue VecV, SDValue SubV,
   // ByteVec is the target vector VecV rotated in such a way that the
   // subvector should be inserted at index 0. Generate a predicate mask
   // and use vmux to do the insertion.
+  assert(BlockLen < HwLen && "vsetq(v1) prerequisite");
   MVT BoolTy = MVT::getVectorVT(MVT::i1, HwLen);
   SDValue Q = getInstr(Hexagon::V6_pred_scalar2, dl, BoolTy,
                        {DAG.getConstant(BlockLen, dl, MVT::i32)}, DAG);
@@ -1906,6 +1910,7 @@ HexagonTargetLowering::WidenHvxStore(SDValue Op, SelectionDAG &DAG) const {
   }
   assert(ty(Value).getVectorNumElements() == HwLen);  // Paranoia
 
+  assert(ValueLen < HwLen && "vsetq(v1) prerequisite");
   MVT BoolTy = MVT::getVectorVT(MVT::i1, HwLen);
   SDValue StoreQ = getInstr(Hexagon::V6_pred_scalar2, dl, BoolTy,
                             {DAG.getConstant(ValueLen, dl, MVT::i32)}, DAG);
