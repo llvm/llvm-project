@@ -3476,6 +3476,16 @@ Swift.
   }];
 }
 
+def SwiftObjCMembersDocs : Documentation {
+  let Category = SwiftDocs;
+  let Heading = "swift_objc_members";
+  let Content = [{
+This attribute indicates that Swift subclasses and members of Swift extensions
+of this class will be implicitly marked with the ``@objcMembers`` Swift
+attribute, exposing them back to Objective-C.
+  }];
+}
+
 def SwiftErrorDocs : Documentation {
   let Category = SwiftDocs;
   let Heading = "swift_error";
