@@ -7876,9 +7876,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_SwiftBridgedTypedef:
     handleSimpleAttribute<SwiftBridgedTypedefAttr>(S, D, AL);
     break;
-  case ParsedAttr::AT_SwiftObjCMembers:
-    handleSimpleAttribute<SwiftObjCMembersAttr>(S, D, AL);
-    break;
   case ParsedAttr::AT_SwiftNewtype:
     handleSwiftNewtypeAttr(S, D, AL);
     break;
@@ -7886,6 +7883,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   // Swift attributes.
   case ParsedAttr::AT_SwiftError:
     handleSwiftError(S, D, AL);
+    break;
+  case ParsedAttr::AT_SwiftObjCMembers:
+    handleSimpleAttribute<SwiftObjCMembersAttr>(S, D, AL);
     break;
 
   // XRay attributes.

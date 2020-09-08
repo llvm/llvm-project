@@ -3635,6 +3635,16 @@ Swift.
   }];
 }
 
+def SwiftObjCMembersDocs : Documentation {
+  let Category = SwiftDocs;
+  let Heading = "swift_objc_members";
+  let Content = [{
+This attribute indicates that Swift subclasses and members of Swift extensions
+of this class will be implicitly marked with the ``@objcMembers`` Swift
+attribute, exposing them back to Objective-C.
+  }];
+}
+
 def SwiftErrorDocs : Documentation {
   let Category = SwiftDocs;
   let Heading = "swift_error";
@@ -3721,13 +3731,6 @@ def SwiftBridgedTypedefDocs : Documentation {
   let Category = SwiftDocs;
   let Content = [{
 The ``swift_bridged_typedef`` attribute indicates that, when the typedef to which the attribute appertains is imported into Swift, it should refer to the bridged Swift type (e.g., Swift's ``String``) rather than the Objective-C type as written (e.g., ``NSString``).
-  }];
-}
-
-def SwiftObjCMembersDocs : Documentation {
-  let Category = SwiftDocs;
-  let Content = [{
-The ``swift_objc_members`` attribute maps to the Swift ``@objcMembers`` attribute, which indicates that Swift members of this class, its subclasses, and all of the extensions thereof, will implicitly be exposed back to Objective-C.
   }];
 }
 
