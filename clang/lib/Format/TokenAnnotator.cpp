@@ -56,6 +56,13 @@ static bool isLambdaParameterList(const FormatToken *Left) {
          Left->Previous->MatchingParen->is(TT_LambdaLSquare);
 }
 
+/// Returns \c true if the token is followed by a boolean condition, \c false
+/// otherwise.
+static bool isKeywordWithCondition(const FormatToken &Tok) {
+  return Tok.isOneOf(tok::kw_if, tok::kw_for, tok::kw_while, tok::kw_switch,
+                     tok::kw_constexpr, tok::kw_catch);
+}
+
 /// A parser that gathers additional information about tokens.
 ///
 /// The \c TokenAnnotator tries to match parenthesis and square brakets and
@@ -108,6 +115,12 @@ private:
 
     while (CurrentToken) {
       if (CurrentToken->is(tok::greater)) {
+        // Try to do a better job at looking for ">>" within the condition of
+        // a statement.
+        if (CurrentToken->Next && CurrentToken->Next->is(tok::greater) &&
+            Left->ParentBracket != tok::less &&
+            isKeywordWithCondition(*Line.First))
+          return false;
         Left->MatchingParen = CurrentToken;
         CurrentToken->MatchingParen = Left;
         // In TT_Proto, we must distignuish between:
@@ -2731,13 +2744,6 @@ bool TokenAnnotator::spaceRequiredBeforeParens(const FormatToken &Right) const {
   return Style.SpaceBeforeParens == FormatStyle::SBPO_Always ||
          (Style.SpaceBeforeParens == FormatStyle::SBPO_NonEmptyParentheses &&
           Right.ParameterCount > 0);
-}
-
-/// Returns \c true if the token is followed by a boolean condition, \c false
-/// otherwise.
-static bool isKeywordWithCondition(const FormatToken &Tok) {
-  return Tok.isOneOf(tok::kw_if, tok::kw_for, tok::kw_while, tok::kw_switch,
-                     tok::kw_constexpr, tok::kw_catch);
 }
 
 bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
