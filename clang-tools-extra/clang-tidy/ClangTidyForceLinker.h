@@ -20,6 +20,11 @@ extern volatile int AbseilModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED AbseilModuleAnchorDestination =
     AbseilModuleAnchorSource;
 
+// This anchor is used to force the linker to link the AlteraModule.
+extern volatile int AlteraModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED AlteraModuleAnchorDestination =
+    AlteraModuleAnchorSource;
+
 // This anchor is used to force the linker to link the AndroidModule.
 extern volatile int AndroidModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED AndroidModuleAnchorDestination =
