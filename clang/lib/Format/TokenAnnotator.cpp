@@ -247,7 +247,8 @@ private:
       Left->setType(TT_AttributeParen);
     } else if (PrevNonComment &&
                PrevNonComment->isOneOf(TT_TypenameMacro, tok::kw_decltype,
-                                       tok::kw_typeof, tok::kw__Atomic)) {
+                                       tok::kw_typeof, tok::kw__Atomic,
+                                       tok::kw___underlying_type)) {
       Left->setType(TT_TypeDeclarationParen);
       // decltype() and typeof() usually contain expressions.
       if (PrevNonComment->isOneOf(tok::kw_decltype, tok::kw_typeof))
