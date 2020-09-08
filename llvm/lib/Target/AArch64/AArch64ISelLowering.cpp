@@ -6256,6 +6256,9 @@ SDValue AArch64TargetLowering::LowerBR_JT(SDValue Op,
   SDValue Entry = Op.getOperand(2);
   int JTI = cast<JumpTableSDNode>(JT.getNode())->getIndex();
 
+  auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
+  AFI->setJumpTableEntryInfo(JTI, 4, nullptr);
+
   SDNode *Dest =
       DAG.getMachineNode(AArch64::JumpTableDest32, DL, MVT::i64, MVT::i64, JT,
                          Entry, DAG.getTargetJumpTable(JTI, MVT::i32));

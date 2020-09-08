@@ -692,7 +692,8 @@ def : Pat<(AArch64LOADgot tconstpool:$addr),
 // 32-bit jump table destination is actually only 2 instructions since we can
 // use the table itself as a PC-relative base. But optimization occurs after
 // branch relaxation so be pessimistic.
-let Size = 12, Constraints = "@earlyclobber $dst,@earlyclobber $scratch" in {
+let Size = 12, Constraints = "@earlyclobber $dst,@earlyclobber $scratch",
+    isNotDuplicable = 1 in {
 def JumpTableDest32 : Pseudo<(outs GPR64:$dst, GPR64sp:$scratch),
                              (ins GPR64:$table, GPR64:$entry, i32imm:$jti), []>,
                       Sched<[]>;
