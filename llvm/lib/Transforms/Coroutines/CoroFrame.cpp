@@ -625,7 +625,22 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
 // We use a pointer use visitor to discover if there are any writes into an
 // alloca that dominates CoroBegin. If that is the case, insertSpills will copy
 // the value from the alloca into the coroutine frame spill slot corresponding
-// to that alloca.
+// to that alloca. We also collect any alias pointing to the alloca created
+// before CoroBegin but used after CoroBegin. These alias will be recreated
+// after CoroBegin from the frame address so that latter references are
+// pointing to the frame instead of the stack.
+// Note: We are repurposing PtrUseVisitor's isEscaped() to mean whether the
+// pointer is potentially written into.
+// TODO: If the pointer is really escaped, we are in big trouble because we
+// will be escaping a pointer to a stack address that would no longer exist
+// soon. However most escape analysis isn't good enough to precisely tell,
+// so we are assuming that if a pointer is escaped that it's written into.
+// TODO: Another potential issue is if we are creating an alias through
+// a function call, e.g:
+//   %a = AllocaInst ...
+//   %b = call @computeAddress(... %a)
+// If %b is an alias of %a and will be used after CoroBegin, this will be broken
+// and there is nothing we can do about it.
 namespace {
 struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
   using Base = PtrUseVisitor<AllocaUseVisitor>;
@@ -633,49 +648,83 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
                    const CoroBeginInst &CB)
       : PtrUseVisitor(DL), DT(DT), CoroBegin(CB) {}
 
-  // We are only interested in uses that dominate coro.begin.
+  // We are only interested in uses that's not dominated by coro.begin.
   void visit(Instruction &I) {
-    if (DT.dominates(&I, &CoroBegin))
+    if (!DT.dominates(&CoroBegin, &I))
       Base::visit(I);
   }
   // We need to provide this overload as PtrUseVisitor uses a pointer based
   // visiting function.
   void visit(Instruction *I) { return visit(*I); }
 
-  void visitLoadInst(LoadInst &) {} // Good. Nothing to do.
+  // We cannot handle PHI node and SelectInst because they could be selecting
+  // between two addresses that point to different Allocas.
+  void visitPHINode(PHINode &I) {
+    assert(!usedAfterCoroBegin(I) &&
+           "Unable to handle PHI node of aliases created before CoroBegin but "
+           "used after CoroBegin");
+  }
+
+  void visitSelectInst(SelectInst &I) {
+    assert(!usedAfterCoroBegin(I) &&
+           "Unable to handle Select of aliases created before CoroBegin but "
+           "used after CoroBegin");
+  }
+
+  void visitLoadInst(LoadInst &) {}
 
   // If the use is an operand, the pointer escaped and anything can write into
   // that memory. If the use is the pointer, we are definitely writing into the
   // alloca and therefore we need to copy.
-  void visitStoreInst(StoreInst &SI) { PI.setAborted(&SI); }
+  void visitStoreInst(StoreInst &SI) { PI.setEscaped(&SI); }
 
-  // Any other instruction that is not filtered out by PtrUseVisitor, will
-  // result in the copy.
-  void visitInstruction(Instruction &I) { PI.setAborted(&I); }
+  // All mem intrinsics modify the data.
+  void visitMemIntrinsic(MemIntrinsic &MI) { PI.setEscaped(&MI); }
+
+  void visitBitCastInst(BitCastInst &BC) {
+    Base::visitBitCastInst(BC);
+    handleAlias(BC);
+  }
+
+  void visitAddrSpaceCastInst(AddrSpaceCastInst &ASC) {
+    Base::visitAddrSpaceCastInst(ASC);
+    handleAlias(ASC);
+  }
+
+  void visitGetElementPtrInst(GetElementPtrInst &GEPI) {
+    // The base visitor will adjust Offset accordingly.
+    Base::visitGetElementPtrInst(GEPI);
+    handleAlias(GEPI);
+  }
+
+  const SmallVector<std::pair<Instruction *, APInt>, 1> &getAliases() const {
+    return Aliases;
+  }
 
 private:
   const DominatorTree &DT;
   const CoroBeginInst &CoroBegin;
+  // All alias to the original AllocaInst, and are used after CoroBegin.
+  // Each entry contains the instruction and the offset in the original Alloca.
+  SmallVector<std::pair<Instruction *, APInt>, 1> Aliases{};
+
+  bool usedAfterCoroBegin(Instruction &I) {
+    for (auto &U : I.uses())
+      if (DT.dominates(&CoroBegin, U))
+        return true;
+    return false;
+  }
+
+  void handleAlias(Instruction &I) {
+    if (!usedAfterCoroBegin(I))
+      return;
+
+    assert(IsOffsetKnown && "Can only handle alias with known offset created "
+                            "before CoroBegin and used after");
+    Aliases.emplace_back(&I, Offset);
+  }
 };
 } // namespace
-static bool mightWriteIntoAllocaPtr(AllocaInst &A, const DominatorTree &DT,
-                                    const CoroBeginInst &CB) {
-  const DataLayout &DL = A.getModule()->getDataLayout();
-  AllocaUseVisitor Visitor(DL, DT, CB);
-  auto PtrI = Visitor.visitPtr(A);
-  if (PtrI.isEscaped() || PtrI.isAborted()) {
-    auto *PointerEscapingInstr = PtrI.getEscapingInst()
-                                     ? PtrI.getEscapingInst()
-                                     : PtrI.getAbortingInst();
-    if (PointerEscapingInstr) {
-      LLVM_DEBUG(
-          dbgs() << "AllocaInst copy was triggered by instruction: "
-                 << *PointerEscapingInstr << "\n");
-    }
-    return true;
-  }
-  return false;
-}
 
 // We need to make room to insert a spill after initial PHIs, but before
 // catchswitch instruction. Placing it before violates the requirement that
@@ -955,7 +1004,11 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
 
     for (auto &P : Allocas) {
       AllocaInst *const A = P.first;
-      if (mightWriteIntoAllocaPtr(*A, DT, *CB)) {
+      AllocaUseVisitor Visitor(A->getModule()->getDataLayout(), DT, *CB);
+      auto PtrI = Visitor.visitPtr(*A);
+      assert(!PtrI.isAborted());
+      if (PtrI.isEscaped()) {
+        // isEscaped really means potentially modified before CoroBegin.
         if (A->isArrayAllocation())
           report_fatal_error(
               "Coroutines cannot handle copying of array allocas yet");
@@ -963,6 +1016,20 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
         auto *G = GetFramePointer(P.second, A);
         auto *Value = Builder.CreateLoad(A->getAllocatedType(), A);
         Builder.CreateStore(Value, G);
+      }
+      // For each alias to Alloca created before CoroBegin but used after
+      // CoroBegin, we recreate them after CoroBegin by appplying the offset
+      // to the pointer in the frame.
+      for (const auto &Alias : Visitor.getAliases()) {
+        auto *FramePtr = GetFramePointer(P.second, A);
+        auto *FramePtrRaw =
+            Builder.CreateBitCast(FramePtr, Type::getInt8PtrTy(C));
+        auto *AliasPtr = Builder.CreateGEP(
+            FramePtrRaw, ConstantInt::get(Type::getInt64Ty(C), Alias.second));
+        auto *AliasPtrTyped =
+            Builder.CreateBitCast(AliasPtr, Alias.first->getType());
+        Alias.first->replaceUsesWithIf(
+            AliasPtrTyped, [&](Use &U) { return DT.dominates(CB, U); });
       }
     }
   }
