@@ -584,9 +584,9 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
     steps.push_back(std_constant_index(step));
 
   // 2. Emit alloc-copy-load-dealloc.
+  MLIRContext *ctx = op->getContext();
   Value tmp = setAllocAtFunctionEntry(tmpMemRefType(transfer), transfer);
   StdIndexedValue local(tmp);
-  Value vec = vector_type_cast(tmp);
   loopNestBuilder(lbs, ubs, steps, [&](ValueRange loopIvs) {
     auto ivs = llvm::to_vector<8>(loopIvs);
     // Swap the ivs which will reorder memory accesses.
@@ -595,13 +595,12 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
     // Computes clippedScalarAccessExprs in the loop nest scope (ivs exist).
     SmallVector<Value, 8> indices = clip(transfer, memRefBoundsCapture, ivs);
     ArrayRef<Value> indicesRef(indices), ivsRef(ivs);
-    Value pos =
-        std_index_cast(IntegerType::get(32, op->getContext()), ivsRef.back());
-    Value vector = vector_insert_element(remote(indicesRef),
-                                         local(ivsRef.drop_back()), pos);
+    Value pos = std_index_cast(IntegerType::get(32, ctx), ivsRef.back());
+    Value scal = remote(indicesRef);
+    Value vector = vector_insert_element(scal, local(ivsRef.drop_back()), pos);
     local(ivsRef.drop_back()) = vector;
   });
-  Value vectorValue = std_load(vec);
+  Value vectorValue = std_load(vector_type_cast(tmp));
 
   // 3. Propagate.
   rewriter.replaceOp(op, vectorValue);
