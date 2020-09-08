@@ -51,11 +51,6 @@ public:
         return rewriter.notifyMatchFailure(
             op, "dynamic shapes not currently supported");
       auto memrefType = MemRefType::get(type.getShape(), type.getElementType());
-
-      // Compute alloc position and insert a custom allocation node.
-      OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.restoreInsertionPoint(
-          bufferAssignment->computeAllocPosition(result));
       auto alloc = rewriter.create<AllocOp>(loc, memrefType);
       newArgs.push_back(alloc);
       newResults.push_back(alloc);
@@ -99,13 +94,12 @@ public:
 /// Populate the given list with patterns to convert Linalg operations on
 /// tensors to buffers.
 static void populateConvertLinalgOnTensorsToBuffersPattern(
-    MLIRContext *context, BufferAssignmentPlacer *placer,
-    BufferAssignmentTypeConverter *converter,
+    MLIRContext *context, BufferAssignmentTypeConverter *converter,
     OwningRewritePatternList *patterns) {
   populateWithBufferAssignmentOpConversionPatterns<
-      mlir::ReturnOp, mlir::ReturnOp, linalg::CopyOp>(context, placer,
-                                                      converter, patterns);
-  patterns->insert<GenericOpConverter>(context, placer, converter);
+      mlir::ReturnOp, mlir::ReturnOp, linalg::CopyOp>(context, converter,
+                                                      patterns);
+  patterns->insert<GenericOpConverter>(context, converter);
 }
 
 /// Converts Linalg operations that work on tensor-type operands or results to
@@ -119,6 +113,8 @@ struct ConvertLinalgOnTensorsToBuffers
 
     // Mark all Standard operations legal.
     target.addLegalDialect<StandardOpsDialect>();
+    target.addLegalOp<ModuleOp>();
+    target.addLegalOp<ModuleTerminatorOp>();
 
     // Mark all Linalg operations illegal as long as they work on tensors.
     auto isLegalOperation = [&](Operation *op) {
@@ -144,16 +140,11 @@ struct ConvertLinalgOnTensorsToBuffers
     converter.setResultConversionKind<RankedTensorType, MemRefType>(
         BufferAssignmentTypeConverter::AppendToArgumentsList);
 
-    // Walk over all the functions to apply buffer assignment.
-    getOperation().walk([&](FuncOp function) -> WalkResult {
-      OwningRewritePatternList patterns;
-      BufferAssignmentPlacer placer(function);
-      populateConvertLinalgOnTensorsToBuffersPattern(&context, &placer,
-                                                     &converter, &patterns);
-
-      // Applying full conversion
-      return applyFullConversion(function, target, patterns);
-    });
+    OwningRewritePatternList patterns;
+    populateConvertLinalgOnTensorsToBuffersPattern(&context, &converter,
+                                                   &patterns);
+    if (failed(applyFullConversion(this->getOperation(), target, patterns)))
+      this->signalPassFailure();
   }
 };
 } // end anonymous namespace
