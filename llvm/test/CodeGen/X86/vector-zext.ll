@@ -1905,11 +1905,20 @@ define <4 x i64> @shuf_zext_8i16_to_4i64_offset2(<8 x i16> %A) nounwind uwtable 
 ; AVX2-NEXT:    vpmovzxwq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: shuf_zext_8i16_to_4i64_offset2:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,2,2,3]
-; AVX512-NEXT:    vpmovzxwq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: shuf_zext_8i16_to_4i64_offset2:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,2,2,3]
+; AVX512F-NEXT:    vpmovzxwq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: shuf_zext_8i16_to_4i64_offset2:
+; AVX512BW:       # %bb.0: # %entry
+; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm1 = [2,33,34,35,3,37,38,39,4,41,42,43,5,45,46,47]
+; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpermt2w %zmm2, %zmm1, %zmm0
+; AVX512BW-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512BW-NEXT:    retq
 entry:
   %B = shufflevector <8 x i16> %A, <8 x i16> zeroinitializer, <16 x i32> <i32 2, i32 8, i32 8, i32 8, i32 3, i32 8, i32 8, i32 8, i32 4, i32 8, i32 8, i32 8, i32 5, i32 8, i32 8, i32 8>
   %Z = bitcast <16 x i16> %B to <4 x i64>

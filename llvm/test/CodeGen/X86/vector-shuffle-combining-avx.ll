@@ -132,10 +132,19 @@ define <8 x float> @combine_vpermilvar_vperm2f128_8f32(<8 x float> %a0) {
 }
 
 define <8 x float> @combine_vpermilvar_vperm2f128_zero_8f32(<8 x float> %a0) {
-; CHECK-LABEL: combine_vpermilvar_vperm2f128_zero_8f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[0,1]
-; CHECK-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: combine_vpermilvar_vperm2f128_zero_8f32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[0,1]
+; AVX-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: combine_vpermilvar_vperm2f128_zero_8f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vmovaps {{.*#+}} ymm1 = [16,17,18,19,3,2,1,0]
+; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
+; AVX512-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
+; AVX512-NEXT:    ret{{[l|q]}}
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>)
   %2 = shufflevector <8 x float> %1, <8 x float> zeroinitializer, <8 x i32> <i32 8, i32 8, i32 8, i32 8, i32 0, i32 1, i32 2, i32 3>
   %3 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>  %2, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>)
