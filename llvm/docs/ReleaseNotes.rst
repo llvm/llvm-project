@@ -101,6 +101,18 @@ Changes to the LLVM IR
   where ``uint64_t`` was used to denote the size in bits of a IR type
   we have partially migrated the codebase to using ``llvm::TypeSize``.
 
+* Branching on ``undef``/``poison`` is undefined behavior. It is needed for
+  correctly analyzing value ranges based on branch conditions. This is
+  consistent with MSan's behavior as well.
+
+* ``memset``/``memcpy``/``memmove`` can take ``undef``/``poison`` pointer(s)
+  if the size to fill is zero.
+
+* Passing ``undef``/``poison`` to a standard I/O library function call
+  (`printf`/`fputc`/...) is undefined behavior. The new ``noundef`` attribute
+  is attached to the functions' arguments. The full list is available at
+  ``llvm::inferLibFuncAttributes``.
+
 Changes to building LLVM
 ------------------------
 
@@ -305,6 +317,10 @@ Changes to the Go bindings
 Changes to the DAG infrastructure
 ---------------------------------
 
+* A SelDag-level freeze instruction has landed. It is simply lowered as a copy
+  operation to MachineIR, but to make it fully correct either IMPLICIT_DEF
+  should be fixed or the equivalent FREEZE operation should be added to
+  MachineIR.
 
 Changes to the Debug Info
 ---------------------------------

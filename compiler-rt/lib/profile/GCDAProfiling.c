@@ -210,22 +210,6 @@ static void write_64bit_value(uint64_t i) {
   write_32bit_value(hi);
 }
 
-static uint32_t length_of_string(const char *s) {
-  return (strlen(s) / 4) + 1;
-}
-
-// Remove when we support libgcov 9 current_working_directory.
-#if !defined(_MSC_VER) && defined(__clang__)
-__attribute__((unused))
-#endif
-static void
-write_string(const char *s) {
-  uint32_t len = length_of_string(s);
-  write_32bit_value(len);
-  write_bytes(s, strlen(s));
-  write_bytes("\0\0\0\0", 4 - (strlen(s) % 4));
-}
-
 static uint32_t read_32bit_value() {
   uint32_t val;
 
@@ -632,6 +616,9 @@ void llvm_writeout_files(void) {
 // __attribute__((destructor)) and destructors whose priorities are greater than
 // 100 run before this function and can thus be tracked. The priority is
 // compatible with GCC 7 onwards.
+#if __GNUC__ >= 9
+#pragma GCC diagnostic ignored "-Wprio-ctor-dtor"
+#endif
 __attribute__((destructor(100)))
 #endif
 static void llvm_writeout_and_clear(void) {

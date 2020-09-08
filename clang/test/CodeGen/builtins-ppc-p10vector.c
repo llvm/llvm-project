@@ -24,10 +24,18 @@ vector unsigned long long vulla, vullb, vullc;
 vector unsigned __int128 vui128a, vui128b, vui128c;
 vector float vfa, vfb;
 vector double vda, vdb;
-unsigned int uia, uib;
+signed int *iap;
+unsigned int uia, uib, *uiap;
+signed char *cap;
 unsigned char uca;
+const unsigned char *ucap;
+const signed short *sap;
 unsigned short usa;
+const unsigned short *usap;
+const signed long long *llap;
+signed long long llb;
 unsigned long long ulla;
+const unsigned long long *ullap;
 
 vector unsigned long long test_vpdepd(void) {
   // CHECK: @llvm.ppc.altivec.vpdepd(<2 x i64>
