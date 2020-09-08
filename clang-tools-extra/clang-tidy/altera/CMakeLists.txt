@@ -5,11 +5,15 @@ add_clang_library(clangTidyAlteraModule
   StructPackAlignCheck.cpp
 
   LINK_LIBS
+  clangTidy
+  clangTidyUtils
+  )
+
+clang_target_link_libraries(clangTidyAlteraModule
+  PRIVATE
   clangAnalysis
   clangAST
   clangASTMatchers
   clangBasic
   clangLex
-  clangTidy
-  clangTidyUtils
   )
