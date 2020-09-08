@@ -321,6 +321,9 @@ public:
   /// Check if operand \p OpIdx is zero.
   bool matchOperandIsZero(MachineInstr &MI, unsigned OpIdx);
 
+  /// Check if operand \p OpIdx is undef.
+  bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx);
+
   /// Erase \p MI
   bool eraseInst(MachineInstr &MI);
 
