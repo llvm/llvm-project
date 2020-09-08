@@ -8,25 +8,19 @@
 
 __m256i test_mm256_abs_epi8(__m256i a) {
   // CHECK-LABEL: test_mm256_abs_epi8
-  // CHECK: [[SUB:%.*]] = sub <32 x i8> zeroinitializer, %{{.*}}
-  // CHECK: [[CMP:%.*]] = icmp sgt <32 x i8> %{{.*}}, zeroinitializer
-  // CHECK: select <32 x i1> [[CMP]], <32 x i8> %{{.*}}, <32 x i8> [[SUB]]
+  // CHECK: [[ABS:%.*]] = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %{{.*}}, i1 false)
   return _mm256_abs_epi8(a);
 }
 
 __m256i test_mm256_abs_epi16(__m256i a) {
   // CHECK-LABEL: test_mm256_abs_epi16
-  // CHECK: [[SUB:%.*]] = sub <16 x i16> zeroinitializer, %{{.*}}
-  // CHECK: [[CMP:%.*]] = icmp sgt <16 x i16> %{{.*}}, zeroinitializer
-  // CHECK: select <16 x i1> [[CMP]], <16 x i16> %{{.*}}, <16 x i16> [[SUB]]
+  // CHECK: [[ABS:%.*]] = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %{{.*}}, i1 false)
   return _mm256_abs_epi16(a);
 }
 
 __m256i test_mm256_abs_epi32(__m256i a) {
   // CHECK-LABEL: test_mm256_abs_epi32
-  // CHECK: [[SUB:%.*]] = sub <8 x i32> zeroinitializer, %{{.*}}
-  // CHECK: [[CMP:%.*]] = icmp sgt <8 x i32> %{{.*}}, zeroinitializer
-  // CHECK: select <8 x i1> [[CMP]], <8 x i32> %{{.*}}, <8 x i32> [[SUB]]
+  // CHECK: [[ABS:%.*]] = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %{{.*}}, i1 false)
   return _mm256_abs_epi32(a);
 }
 

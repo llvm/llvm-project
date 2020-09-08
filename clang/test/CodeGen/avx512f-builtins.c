@@ -10467,44 +10467,36 @@ __m512 test_mm512_set_ps (float __A, float __B, float __C, float __D,
 __m512i test_mm512_mask_abs_epi64 (__m512i __W, __mmask8 __U, __m512i __A)
 {
   // CHECK-LABEL: @test_mm512_mask_abs_epi64 
-  // CHECK: [[SUB:%.*]] = sub <8 x i64> zeroinitializer, [[A:%.*]]
-  // CHECK: [[CMP:%.*]] = icmp sgt <8 x i64> [[A]], zeroinitializer
-  // CHECK: [[SEL:%.*]] = select <8 x i1> [[CMP]], <8 x i64> [[A]], <8 x i64> [[SUB]]
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> [[SEL]], <8 x i64> %{{.*}}
+  // CHECK: [[ABS:%.*]] = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %{{.*}}, i1 false)
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> [[ABS]], <8 x i64> %{{.*}}
   return _mm512_mask_abs_epi64 (__W,__U,__A);
 }
 
 __m512i test_mm512_maskz_abs_epi64 (__mmask8 __U, __m512i __A)
 {
   // CHECK-LABEL: @test_mm512_maskz_abs_epi64 
-  // CHECK: [[SUB:%.*]] = sub <8 x i64> zeroinitializer, [[A:%.*]]
-  // CHECK: [[CMP:%.*]] = icmp sgt <8 x i64> [[A]], zeroinitializer
-  // CHECK: [[SEL:%.*]] = select <8 x i1> [[CMP]], <8 x i64> [[A]], <8 x i64> [[SUB]]
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> [[SEL]], <8 x i64> %{{.*}}
+  // CHECK: [[ABS:%.*]] = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %{{.*}}, i1 false)
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> [[ABS]], <8 x i64> %{{.*}}
   return _mm512_maskz_abs_epi64 (__U,__A);
 }
 
 __m512i test_mm512_mask_abs_epi32 (__m512i __W, __mmask16 __U, __m512i __A)
 {
   // CHECK-LABEL: @test_mm512_mask_abs_epi32
-  // CHECK: [[SUB:%.*]] = sub <16 x i32> zeroinitializer, [[A:%.*]]
-  // CHECK: [[CMP:%.*]] = icmp sgt <16 x i32> [[A]], zeroinitializer
-  // CHECK: [[SEL:%.*]] = select <16 x i1> [[CMP]], <16 x i32> [[A]], <16 x i32> [[SUB]]
-  // CHECK: [[TMP:%.*]] = bitcast <16 x i32> [[SEL]] to <8 x i64>
-  // CHECK: [[SEL:%.*]] = bitcast <8 x i64> [[TMP]] to <16 x i32>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> [[SEL]], <16 x i32> %{{.*}}
+  // CHECK: [[ABS:%.*]] = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %{{.*}}, i1 false)
+  // CHECK: [[TMP:%.*]] = bitcast <16 x i32> [[ABS]] to <8 x i64>
+  // CHECK: [[ABS:%.*]] = bitcast <8 x i64> [[TMP]] to <16 x i32>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> [[ABS]], <16 x i32> %{{.*}}
   return _mm512_mask_abs_epi32 (__W,__U,__A);
 }
 
 __m512i test_mm512_maskz_abs_epi32 (__mmask16 __U, __m512i __A)
 {
   // CHECK-LABEL: @test_mm512_maskz_abs_epi32
-  // CHECK: [[SUB:%.*]] = sub <16 x i32> zeroinitializer, [[A:%.*]]
-  // CHECK: [[CMP:%.*]] = icmp sgt <16 x i32> [[A]], zeroinitializer
-  // CHECK: [[SEL:%.*]] = select <16 x i1> [[CMP]], <16 x i32> [[A]], <16 x i32> [[SUB]]
-  // CHECK: [[TMP:%.*]] = bitcast <16 x i32> [[SEL]] to <8 x i64>
-  // CHECK: [[SEL:%.*]] = bitcast <8 x i64> [[TMP]] to <16 x i32>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> [[SEL]], <16 x i32> %{{.*}}
+  // CHECK: [[ABS:%.*]] = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %{{.*}}, i1 false)
+  // CHECK: [[TMP:%.*]] = bitcast <16 x i32> [[ABS]] to <8 x i64>
+  // CHECK: [[ABS:%.*]] = bitcast <8 x i64> [[TMP]] to <16 x i32>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> [[ABS]], <16 x i32> %{{.*}}
   return _mm512_maskz_abs_epi32 (__U,__A);
 }
 
