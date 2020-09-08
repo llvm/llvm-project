@@ -1901,6 +1901,18 @@ struct DSEState {
         return None;
       }
 
+      // Quick check if there are direct uses that are read-clobbers.
+      if (any_of(Current->uses(), [this, &DefLoc, StartAccess](Use &U) {
+            if (auto *UseOrDef = dyn_cast<MemoryUseOrDef>(U.getUser()))
+              return !MSSA.dominates(StartAccess, UseOrDef) &&
+                     isReadClobber(DefLoc, UseOrDef->getMemoryInst());
+            return false;
+          })) {
+        Cache.KnownReads.insert(Current);
+        LLVM_DEBUG(dbgs() << "   ...  found a read clobber\n");
+        return None;
+      }
+
       // If Current cannot be analyzed or is not removable, check the next
       // candidate.
       if (!hasAnalyzableMemoryWrite(CurrentI, TLI) || !isRemovable(CurrentI)) {
