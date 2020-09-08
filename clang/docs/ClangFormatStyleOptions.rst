@@ -758,7 +758,24 @@ the configuration (without a prefix: ``Auto``).
              int bbbbbbbbbbbbbbbbbbbbb) {
        }
 
+**AttributeMacros** (``std::vector<std::string>``)
+  A vector of strings that should be interpreted as attributes/qualifiers
+  instead of identifiers. This can be useful for language extensions or
+  static analyzer annotations:
 
+  .. code-block:: c++
+
+    x = (char *__capability)&y;
+    int function(void) __ununsed;
+    void only_writes_to_buffer(char *__output buffer);
+
+  In the .clang-format configuration file, this can be configured like:
+
+  .. code-block:: yaml
+
+    AttributeMacros: ['__capability', '__output', '__ununsed']
+
+  For example: __capability.
 
 **BinPackArguments** (``bool``)
   If ``false``, a function call's arguments will either be all on the
