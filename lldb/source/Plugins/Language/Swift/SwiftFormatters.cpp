@@ -979,7 +979,6 @@ ReadVector(Process &process, ValueObject &valobj,
   // array. It's a contiguous bag of bytes with no padding.
   lldb_private::DataExtractor data;
   uint64_t len = value_sp->GetData(data, error);
-  unsigned elt_size = formatter.getElementSize();
   if (error.Fail())
     return llvm::None;
 
@@ -1025,12 +1024,6 @@ void PrintMatrix(Stream &stream,
 
 bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  Status error;
-  ProcessSP process_sp(valobj.GetProcessSP());
-  if (!process_sp)
-    return false;
-  Process &process = *process_sp.get();
-
   // SIMD vector contains an inner member `_storage` which is an opaque
   // container. Given SIMD is always in the form SIMDX<Type> where X is a
   // positive integer, we can calculate the number of elements and the
@@ -1062,6 +1055,7 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
   uint64_t arg_size = *opt_arg_size;
 
   DataExtractor storage_buf;
+  Status error;
   uint64_t len = valobj.GetData(storage_buf, error);
   lldbassert(len == type_size && "extracted less bytes than requested");
   if (len < type_size)
@@ -1183,14 +1177,6 @@ bool lldb_private::formatters::swift::LegacySIMD_SummaryProvider(
 
 bool lldb_private::formatters::swift::GLKit_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  Status error;
-
-  ProcessSP process_sp(valobj.GetProcessSP());
-  if (!process_sp)
-    return false;
-
-  Process &process = *process_sp.get();
-
   // Get the type name without the "GLKit." prefix.
   ConstString full_type_name = valobj.GetTypeName();
   llvm::StringRef type_name = full_type_name.GetStringRef();
@@ -1210,6 +1196,7 @@ bool lldb_private::formatters::swift::GLKit_SummaryProvider(
   unsigned num_elements =
       is_quaternion ? 4 : llvm::hexDigitValue(type_name.back());
   DataExtractor data;
+  Status error;
   uint64_t len = valobj.GetData(data, error);
   const uint8_t *buffer = data.GetDataStart();
   if (!is_matrix) {

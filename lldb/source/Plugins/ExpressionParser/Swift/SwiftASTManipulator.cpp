@@ -254,7 +254,6 @@ void SwiftASTManipulatorBase::DoInitialization() {
   if (m_repl)
     return;
 
-  static llvm::StringRef s_wrapped_func_prefix_str("$__lldb_wrapped_expr");
   static llvm::StringRef s_func_prefix_str("$__lldb_expr");
 
   // First pass: find whether we're dealing with a wrapped function or not
@@ -681,13 +680,6 @@ void SwiftASTManipulator::MakeDeclarationsPublic() {
   m_source_file.walk(p);
 }
 
-static bool hasInit(swift::PatternBindingDecl *pattern_binding) {
-  for (unsigned i = 0, e = pattern_binding->getNumPatternEntries(); i != e; ++i)
-    if (pattern_binding->getInit(i))
-      return true;
-  return false;
-}
-
 static swift::Expr *getFirstInit(swift::PatternBindingDecl *pattern_binding) {
   for (unsigned i = 0, e = pattern_binding->getNumPatternEntries(); i != e; ++i)
     if (pattern_binding->getInit(i))
@@ -777,8 +769,6 @@ void SwiftASTManipulator::InsertResult(
     SwiftASTManipulator::ResultLocationInfo &result_info) {
   swift::ASTContext &ast_context = m_source_file.getASTContext();
 
-  CompilerType return_ast_type = ToCompilerType(result_type.getPointer());
-
   result_var->overwriteAccess(swift::AccessLevel::Public);
   result_var->overwriteSetterAccess(swift::AccessLevel::Public);
 
@@ -817,8 +807,6 @@ void SwiftASTManipulator::InsertError(swift::VarDecl *error_var,
     return;
 
   swift::ASTContext &ast_context = m_source_file.getASTContext();
-
-  CompilerType error_ast_type = ToCompilerType(error_type.getPointer());
 
   error_var->overwriteAccess(swift::AccessLevel::Public);
   error_var->overwriteSetterAccess(swift::AccessLevel::Public);
