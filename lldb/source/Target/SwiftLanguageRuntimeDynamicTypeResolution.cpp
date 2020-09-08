@@ -1930,6 +1930,8 @@ lldb::addr_t SwiftLanguageRuntime::FixupAddress(lldb::addr_t addr,
     return addr;
 
   swift::CanType swift_can_type = GetCanonicalSwiftType(type);
+  if (!swift_can_type)
+    return addr;
   switch (swift_can_type->getKind()) {
   case swift::TypeKind::UnownedStorage: {
     // Peek into the reference to see whether it needs an extra deref.
