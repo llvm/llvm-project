@@ -2280,9 +2280,8 @@ bool PPCInstrInfo::shouldClusterMemOps(
   assert(BaseOps1.size() == 1 && BaseOps2.size() == 1);
   const MachineOperand &BaseOp1 = *BaseOps1.front();
   const MachineOperand &BaseOp2 = *BaseOps2.front();
-  assert(BaseOp1.isReg() ||
-         BaseOp1.isFI() &&
-             "Only base registers and frame indices are supported.");
+  assert((BaseOp1.isReg() || BaseOp1.isFI()) &&
+         "Only base registers and frame indices are supported.");
 
   // The NumLoads means the number of loads that has been clustered.
   // Don't cluster memory op if there are already two ops clustered at least.
