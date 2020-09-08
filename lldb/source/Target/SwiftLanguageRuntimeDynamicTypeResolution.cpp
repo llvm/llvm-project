@@ -787,7 +787,7 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
     // Bind generic parameters if necessary.
     if (instance && swift_type->hasTypeParameter())
       if (auto *frame = instance->GetExecutionContextRef().GetFrameSP().get())
-        if (auto bound = DoArchetypeBindingForType(*frame, instance_type)) {
+        if (auto bound = BindGenericTypeParameters(*frame, instance_type)) {
           if (log)
             log->Printf(
                 "[MemberVariableOffsetResolver] resolved non-class type = %s",
@@ -1184,9 +1184,10 @@ ForEachGenericParameter(swift::Demangle::NodePointer node,
   }
 }
 
-CompilerType SwiftLanguageRuntimeImpl::DoArchetypeBindingForTypeRef(
-    StackFrame &stack_frame, TypeSystemSwiftTypeRef &ts,
-    ConstString mangled_name) {
+CompilerType
+SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
+                                                    TypeSystemSwiftTypeRef &ts,
+                                                    ConstString mangled_name) {
   Status error;
   auto &target = m_process.GetTarget();
   auto scratch_ctx = target.GetScratchSwiftASTContext(error, stack_frame);
@@ -1262,7 +1263,7 @@ CompilerType SwiftLanguageRuntimeImpl::DoArchetypeBindingForTypeRef(
 }
 
 CompilerType
-SwiftLanguageRuntimeImpl::DoArchetypeBindingForType(StackFrame &stack_frame,
+SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
                                                     CompilerType base_type) {
   auto &target = m_process.GetTarget();
   assert(IsScratchContextLocked(target) &&
@@ -1272,8 +1273,8 @@ SwiftLanguageRuntimeImpl::DoArchetypeBindingForType(StackFrame &stack_frame,
   auto sc = stack_frame.GetSymbolContext(lldb::eSymbolContextEverything);
   if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
           base_type.GetTypeSystem()))
-    return DoArchetypeBindingForTypeRef(stack_frame, *ts,
-                                        base_type.GetMangledTypeName());
+    return BindGenericTypeParameters(stack_frame, *ts,
+                                     base_type.GetMangledTypeName());
 
   Status error;
   // A failing Clang import in a module context permanently damages
@@ -1782,7 +1783,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
     if (!frame)
       return false;
 
-    CompilerType bound_type = DoArchetypeBindingForType(*frame.get(), val_type);
+    CompilerType bound_type = BindGenericTypeParameters(*frame.get(), val_type);
     if (!bound_type)
       return false;
 
@@ -1999,7 +2000,7 @@ SwiftLanguageRuntimeImpl::GetTypeInfo(CompilerType type,
       // but all the other functions currently get this wrong, too!
       m_process.GetTarget().CalculateExecutionContext(exe_ctx);
       lock = std::make_unique<SwiftASTContextLock>(&exe_ctx);
-      type = DoArchetypeBindingForType(*frame, type);
+      type = BindGenericTypeParameters(*frame, type);
     }
 
   // DoArchetypeBindingForType imports the type into the scratch
