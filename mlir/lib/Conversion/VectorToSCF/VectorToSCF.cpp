@@ -131,7 +131,6 @@ private:
   VectorType minorVectorType; // vector<(minor_dims) x type>
   MemRefType memRefMinorVectorType; // memref<vector<(minor_dims) x type>>
 };
-} // namespace
 
 template <typename ConcreteOp>
 void NDTransferOpHelper<ConcreteOp>::emitLoops(
@@ -394,6 +393,8 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
 
   return success();
 }
+
+} // namespace
 
 /// Analyzes the `transfer` to find an access dimension along the fastest remote
 /// MemRef dimension. If such a dimension with coalescing properties is found,
