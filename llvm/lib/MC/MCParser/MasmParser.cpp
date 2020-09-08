@@ -1314,7 +1314,7 @@ bool MasmParser::parseBracketExpr(const MCExpr *&Res, SMLoc &EndLoc) {
 ///  primaryexpr ::= symbol
 ///  primaryexpr ::= number
 ///  primaryexpr ::= '.'
-///  primaryexpr ::= ~,+,- primaryexpr
+///  primaryexpr ::= ~,+,-,'not' primaryexpr
 bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   SMLoc FirstTokenLoc = getLexer().getLoc();
   AsmToken::TokenKind FirstTokenKind = Lexer.getKind();
@@ -1351,6 +1351,13 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
         }
         return Error(FirstTokenLoc, "invalid token in expression");
       }
+    }
+    // Parse named bitwise negation.
+    if (Identifier.equals_lower("not")) {
+      if (parsePrimaryExpr(Res, EndLoc))
+        return true;
+      Res = MCUnaryExpr::createNot(Res, getContext(), FirstTokenLoc);
+      return false;
     }
     // Parse symbol variant.
     std::pair<StringRef, StringRef> Split;
@@ -1772,8 +1779,18 @@ bool MasmParser::parseBinOpRHS(unsigned Precedence, const MCExpr *&Res,
                                SMLoc &EndLoc) {
   SMLoc StartLoc = Lexer.getLoc();
   while (true) {
+    AsmToken::TokenKind TokKind = Lexer.getKind();
+    if (Lexer.getKind() == AsmToken::Identifier) {
+      StringRef Identifier = Lexer.getTok().getString();
+      if (Identifier.equals_lower("and"))
+        TokKind = AsmToken::Amp;
+      else if (Identifier.equals_lower("not"))
+        TokKind = AsmToken::Exclaim;
+      else if (Identifier.equals_lower("or"))
+        TokKind = AsmToken::Pipe;
+    }
     MCBinaryExpr::Opcode Kind = MCBinaryExpr::Add;
-    unsigned TokPrec = getBinOpPrecedence(Lexer.getKind(), Kind);
+    unsigned TokPrec = getBinOpPrecedence(TokKind, Kind);
 
     // If the next token is lower precedence than we are allowed to eat, return
     // successfully with what we ate already.
@@ -3229,7 +3246,7 @@ bool MasmParser::parseScalarInitializer(unsigned Size,
     Lex();
   } else {
     const MCExpr *Value;
-    if (checkForValidSection() || parseExpression(Value))
+    if (parseExpression(Value))
       return true;
     if (getTok().is(AsmToken::Identifier) &&
         getTok().getString().equals_lower("dup")) {
@@ -3449,6 +3466,9 @@ bool MasmParser::parseRealInstList(const fltSemantics &Semantics,
 
 // Initialize real data values.
 bool MasmParser::emitRealValues(const fltSemantics &Semantics) {
+  if (checkForValidSection())
+    return true;
+
   SmallVector<APInt, 1> ValuesAsInt;
   if (parseRealInstList(Semantics, ValuesAsInt))
     return true;
@@ -3468,8 +3488,7 @@ bool MasmParser::addRealField(StringRef Name, const fltSemantics &Semantics) {
 
   Field.SizeOf = 0;
 
-  if (checkForValidSection() ||
-      parseRealInstList(Semantics, RealInfo.AsIntValues))
+  if (parseRealInstList(Semantics, RealInfo.AsIntValues))
     return true;
 
   Field.Type = RealInfo.AsIntValues.back().getBitWidth() / 8;
@@ -3486,9 +3505,6 @@ bool MasmParser::addRealField(StringRef Name, const fltSemantics &Semantics) {
 ///  ::= (real4 | real8) [ expression (, expression)* ]
 bool MasmParser::parseDirectiveRealValue(StringRef IDVal,
                                          const fltSemantics &Semantics) {
-  if (checkForValidSection())
-    return true;
-
   if (StructInProgress.empty()) {
     // Initialize data value.
     if (emitRealValues(Semantics))
@@ -3504,9 +3520,6 @@ bool MasmParser::parseDirectiveRealValue(StringRef IDVal,
 bool MasmParser::parseDirectiveNamedRealValue(StringRef IDVal,
                                               const fltSemantics &Semantics,
                                               StringRef Name, SMLoc NameLoc) {
-  if (checkForValidSection())
-    return true;
-
   if (StructInProgress.empty()) {
     // Initialize named data value.
     MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
