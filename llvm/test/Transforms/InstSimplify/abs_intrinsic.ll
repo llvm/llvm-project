@@ -205,10 +205,7 @@ define i1 @abs_ule_int_min(i8 %x) {
 define i32 @select_abs_of_abs_eq(i32 %x) {
 ; CHECK-LABEL: @select_abs_of_abs_eq(
 ; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[ABS]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NEG]], i32 [[ABS]]
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 [[ABS]]
 ;
   %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
   %neg = sub i32 0, %abs
@@ -220,10 +217,7 @@ define i32 @select_abs_of_abs_eq(i32 %x) {
 define i32 @select_abs_of_abs_ne(i32 %x) {
 ; CHECK-LABEL: @select_abs_of_abs_ne(
 ; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[ABS]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[ABS]], i32 [[NEG]]
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 [[ABS]]
 ;
   %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
   %neg = sub i32 0, %abs
@@ -236,9 +230,7 @@ define i32 @select_nabs_of_abs_eq(i32 %x) {
 ; CHECK-LABEL: @select_nabs_of_abs_eq(
 ; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[ABS]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[ABS]], i32 [[NEG]]
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 [[NEG]]
 ;
   %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
   %neg = sub i32 0, %abs
@@ -251,9 +243,7 @@ define i32 @select_nabs_of_abs_ne(i32 %x) {
 ; CHECK-LABEL: @select_nabs_of_abs_ne(
 ; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[ABS]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NEG]], i32 [[ABS]]
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 [[NEG]]
 ;
   %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
   %neg = sub i32 0, %abs
