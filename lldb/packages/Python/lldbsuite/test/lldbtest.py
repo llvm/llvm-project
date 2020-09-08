@@ -1293,6 +1293,29 @@ class Base(unittest2.TestCase):
             return True
         return False
 
+    def isAArch64SVE(self):
+        triple = self.dbg.GetSelectedPlatform().GetTriple()
+
+        # TODO other platforms, please implement this function
+        if not re.match(".*-.*-linux", triple):
+            return False
+
+        # Need to do something different for non-Linux/Android targets
+        cpuinfo_path = self.getBuildArtifact("cpuinfo")
+        if configuration.lldb_platform_name:
+            self.runCmd('platform get-file "/proc/cpuinfo" ' + cpuinfo_path)
+        else:
+            cpuinfo_path = "/proc/cpuinfo"
+
+        try:
+            f = open(cpuinfo_path, 'r')
+            cpuinfo = f.read()
+            f.close()
+        except:
+            return False
+
+        return " sve " in cpuinfo
+
     def getArchitecture(self):
         """Returns the architecture in effect the test suite is running with."""
         module = builder_module()
