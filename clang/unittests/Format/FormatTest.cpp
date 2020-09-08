@@ -6681,9 +6681,12 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                Style);
 
   // All declarations and definitions should have the return type moved to its
-  // own
-  // line.
+  // own line.
   Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_All;
+  Style.TypenameMacros = {"LIST"};
+  verifyFormat("SomeType\n"
+               "funcdecl(LIST(uint64_t));",
+               Style);
   verifyFormat("class E {\n"
                "  int\n"
                "  f() {\n"
