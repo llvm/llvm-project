@@ -111,15 +111,6 @@ private:
   template <typename Lambda>
   void emitLoops(Lambda loopBodyBuilder);
 
-  /// Operate within the body of `emitLoops` to:
-  ///   1. Compute the indexings `majorIvs + majorOffsets` and save them in
-  ///      `majorIvsPlusOffsets`.
-  ///   2. Return a boolean that determines whether the first `majorIvs.rank()`
-  ///      dimensions `majorIvs + majorOffsets` are all within `memrefBounds`.
-  Value emitInBoundsCondition(ValueRange majorIvs, ValueRange majorOffsets,
-                              MemRefBoundsCapture &memrefBounds,
-                              SmallVectorImpl<Value> &majorIvsPlusOffsets);
-
   /// Common state to lower vector transfer ops.
   PatternRewriter &rewriter;
   const VectorTransferToSCFOptions &options;
@@ -196,11 +187,16 @@ static Value onTheFlyFoldSLT(Value v, Value ub) {
   return slt(v, ub);
 }
 
-template <typename ConcreteOp>
-Value NDTransferOpHelper<ConcreteOp>::emitInBoundsCondition(
-    ValueRange majorIvs, ValueRange majorOffsets,
-    MemRefBoundsCapture &memrefBounds,
-    SmallVectorImpl<Value> &majorIvsPlusOffsets) {
+///   1. Compute the indexings `majorIvs + majorOffsets` and save them in
+///      `majorIvsPlusOffsets`.
+///   2. Return a value of i1 that determines whether the first `majorIvs.rank()`
+///      dimensions `majorIvs + majorOffsets` are all within `memrefBounds`.
+static Value
+emitInBoundsCondition(PatternRewriter &rewriter,
+                      VectorTransferOpInterface xferOp, unsigned leadingRank,
+                      ValueRange majorIvs, ValueRange majorOffsets,
+                      MemRefBoundsCapture &memrefBounds,
+                      SmallVectorImpl<Value> &majorIvsPlusOffsets) {
   Value inBoundsCondition;
   majorIvsPlusOffsets.reserve(majorIvs.size());
   unsigned idx = 0;
@@ -271,7 +267,8 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
     // context.
     SmallVector<Value, 4> majorIvsPlusOffsets;
     Value inBoundsCondition = emitInBoundsCondition(
-        majorIvs, majorOffsets, memrefBounds, majorIvsPlusOffsets);
+        rewriter, cast<VectorTransferOpInterface>(xferOp.getOperation()),
+        leadingRank, majorIvs, majorOffsets, memrefBounds, majorIvsPlusOffsets);
 
     if (inBoundsCondition) {
       // 2. If the condition is not null, we need an IfOp, which may yield
@@ -374,7 +371,8 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
     // context.
     SmallVector<Value, 4> majorIvsPlusOffsets;
     Value inBoundsCondition = emitInBoundsCondition(
-        majorIvs, majorOffsets, memrefBounds, majorIvsPlusOffsets);
+        rewriter, cast<VectorTransferOpInterface>(xferOp.getOperation()),
+        leadingRank, majorIvs, majorOffsets, memrefBounds, majorIvsPlusOffsets);
 
     if (inBoundsCondition) {
       // 2.a. If the condition is not null, we need an IfOp, to write
@@ -424,60 +422,6 @@ static int computeCoalescedIndex(TransferOpTy transfer) {
   return coalescedIdx;
 }
 
-/// Emits remote memory accesses that are clipped to the boundaries of the
-/// MemRef.
-template <typename TransferOpTy>
-static SmallVector<Value, 8>
-clip(TransferOpTy transfer, MemRefBoundsCapture &bounds, ArrayRef<Value> ivs) {
-  using namespace mlir::edsc;
-
-  Value zero(std_constant_index(0)), one(std_constant_index(1));
-  SmallVector<Value, 8> memRefAccess(transfer.indices());
-  SmallVector<Value, 8> clippedScalarAccessExprs(memRefAccess.size());
-  // Indices accessing to remote memory are clipped and their expressions are
-  // returned in clippedScalarAccessExprs.
-  for (unsigned memRefDim = 0; memRefDim < clippedScalarAccessExprs.size();
-       ++memRefDim) {
-    // Linear search on a small number of entries.
-    int loopIndex = -1;
-    auto exprs = transfer.permutation_map().getResults();
-    for (auto en : llvm::enumerate(exprs)) {
-      auto expr = en.value();
-      auto dim = expr.template dyn_cast<AffineDimExpr>();
-      // Sanity check.
-      assert(
-          (dim || expr.template cast<AffineConstantExpr>().getValue() == 0) &&
-          "Expected dim or 0 in permutationMap");
-      if (dim && memRefDim == dim.getPosition()) {
-        loopIndex = en.index();
-        break;
-      }
-    }
-
-    // We cannot distinguish atm between unrolled dimensions that implement
-    // the "always full" tile abstraction and need clipping from the other
-    // ones. So we conservatively clip everything.
-    using namespace edsc::op;
-    auto N = bounds.ub(memRefDim);
-    auto i = memRefAccess[memRefDim];
-    if (loopIndex < 0) {
-      auto N_minus_1 = N - one;
-      auto select_1 = std_select(slt(i, N), i, N_minus_1);
-      clippedScalarAccessExprs[memRefDim] =
-          std_select(slt(i, zero), zero, select_1);
-    } else {
-      auto ii = ivs[loopIndex];
-      auto i_plus_ii = i + ii;
-      auto N_minus_1 = N - one;
-      auto select_1 = std_select(slt(i_plus_ii, N), i_plus_ii, N_minus_1);
-      clippedScalarAccessExprs[memRefDim] =
-          std_select(slt(i_plus_ii, zero), zero, select_1);
-    }
-  }
-
-  return clippedScalarAccessExprs;
-}
-
 namespace mlir {
 
 template <typename TransferOpTy>
@@ -495,6 +439,60 @@ MemRefType VectorTransferRewriter<TransferOpTy>::tmpMemRefType(
                          VectorType::get(vectorType.getShape().take_back(),
                                          vectorType.getElementType()),
                          {}, 0);
+}
+
+static void emitWithBoundsChecks(
+    PatternRewriter &rewriter, VectorTransferOpInterface transfer,
+    ValueRange ivs, MemRefBoundsCapture &memRefBoundsCapture,
+    function_ref<void(ArrayRef<Value>)> inBoundsFun,
+    function_ref<void(ArrayRef<Value>)> outOfBoundsFun = nullptr) {
+  // Permute the incoming indices according to the permutation map.
+  SmallVector<Value, 4> indices =
+      linalg::applyMapToValues(rewriter, transfer.getLoc(),
+                               transfer.permutation_map(), transfer.indices());
+
+  // Generate a bounds check if necessary.
+  SmallVector<Value, 4> majorIvsPlusOffsets;
+  Value inBoundsCondition =
+      emitInBoundsCondition(rewriter, transfer, 0, ivs, indices,
+                            memRefBoundsCapture, majorIvsPlusOffsets);
+
+  // Apply the permutation map to the ivs. The permutation map may not use all
+  // the inputs.
+  SmallVector<Value, 4> scalarAccessExprs(transfer.indices().size());
+  for (unsigned memRefDim = 0; memRefDim < transfer.indices().size();
+       ++memRefDim) {
+    // Linear search on a small number of entries.
+    int loopIndex = -1;
+    auto exprs = transfer.permutation_map().getResults();
+    for (auto en : llvm::enumerate(exprs)) {
+      auto expr = en.value();
+      auto dim = expr.dyn_cast<AffineDimExpr>();
+      // Sanity check.
+      assert((dim || expr.cast<AffineConstantExpr>().getValue() == 0) &&
+             "Expected dim or 0 in permutationMap");
+      if (dim && memRefDim == dim.getPosition()) {
+        loopIndex = en.index();
+        break;
+      }
+    }
+
+    using namespace edsc::op;
+    auto i = transfer.indices()[memRefDim];
+    scalarAccessExprs[memRefDim] = loopIndex < 0 ? i : i + ivs[loopIndex];
+  }
+
+  if (inBoundsCondition)
+    conditionBuilder(
+        /* scf.if */ inBoundsCondition, // {
+        [&] { inBoundsFun(scalarAccessExprs); },
+        // } else {
+        outOfBoundsFun ? [&] { outOfBoundsFun(scalarAccessExprs); }
+                       : function_ref<void()>()
+        // }
+    );
+  else
+    inBoundsFun(scalarAccessExprs);
 }
 
 /// Lowers TransferReadOp into a combination of:
@@ -588,17 +586,25 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
   Value tmp = setAllocAtFunctionEntry(tmpMemRefType(transfer), transfer);
   StdIndexedValue local(tmp);
   loopNestBuilder(lbs, ubs, steps, [&](ValueRange loopIvs) {
-    auto ivs = llvm::to_vector<8>(loopIvs);
+    auto ivsStorage = llvm::to_vector<8>(loopIvs);
     // Swap the ivs which will reorder memory accesses.
     if (coalescedIdx >= 0)
-      std::swap(ivs.back(), ivs[coalescedIdx]);
-    // Computes clippedScalarAccessExprs in the loop nest scope (ivs exist).
-    SmallVector<Value, 8> indices = clip(transfer, memRefBoundsCapture, ivs);
-    ArrayRef<Value> indicesRef(indices), ivsRef(ivs);
-    Value pos = std_index_cast(IntegerType::get(32, ctx), ivsRef.back());
-    Value scal = remote(indicesRef);
-    Value vector = vector_insert_element(scal, local(ivsRef.drop_back()), pos);
-    local(ivsRef.drop_back()) = vector;
+      std::swap(ivsStorage.back(), ivsStorage[coalescedIdx]);
+
+    ArrayRef<Value> ivs(ivsStorage);
+    Value pos = std_index_cast(IntegerType::get(32, ctx), ivs.back());
+    Value inVector = local(ivs.drop_back());
+    auto loadValue = [&](ArrayRef<Value> indices) {
+      Value vector = vector_insert_element(remote(indices), inVector, pos);
+      local(ivs.drop_back()) = vector;
+    };
+    auto loadPadding = [&](ArrayRef<Value>) {
+      Value vector = vector_insert_element(transfer.padding(), inVector, pos);
+      local(ivs.drop_back()) = vector;
+    };
+    emitWithBoundsChecks(
+        rewriter, cast<VectorTransferOpInterface>(transfer.getOperation()), ivs,
+        memRefBoundsCapture, loadValue, loadPadding);
   });
   Value vectorValue = std_load(vector_type_cast(tmp));
 
@@ -674,17 +680,21 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
   Value vec = vector_type_cast(tmp);
   std_store(vectorValue, vec);
   loopNestBuilder(lbs, ubs, steps, [&](ValueRange loopIvs) {
-    auto ivs = llvm::to_vector<8>(loopIvs);
-    // Swap the ivs which will reorder memory accesses.
+    auto ivsStorage = llvm::to_vector<8>(loopIvs);
+    // Swap the ivsStorage which will reorder memory accesses.
     if (coalescedIdx >= 0)
-      std::swap(ivs.back(), ivs[coalescedIdx]);
-    // Computes clippedScalarAccessExprs in the loop nest scope (ivs exist).
-    SmallVector<Value, 8> indices = clip(transfer, memRefBoundsCapture, ivs);
-    ArrayRef<Value> indicesRef(indices), ivsRef(ivs);
+      std::swap(ivsStorage.back(), ivsStorage[coalescedIdx]);
+
+    ArrayRef<Value> ivs(ivsStorage);
     Value pos =
-        std_index_cast(IntegerType::get(32, op->getContext()), ivsRef.back());
-    Value scalar = vector_extract_element(local(ivsRef.drop_back()), pos);
-    remote(indices) = scalar;
+        std_index_cast(IntegerType::get(32, op->getContext()), ivs.back());
+    auto storeValue = [&](ArrayRef<Value> indices) {
+      Value scalar = vector_extract_element(local(ivs.drop_back()), pos);
+      remote(indices) = scalar;
+    };
+    emitWithBoundsChecks(
+        rewriter, cast<VectorTransferOpInterface>(transfer.getOperation()), ivs,
+        memRefBoundsCapture, storeValue);
   });
 
   // 3. Erase.
