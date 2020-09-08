@@ -195,6 +195,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ABS            , MVT::i32  , Custom);
   }
   setOperationAction(ISD::ABS              , MVT::i64  , Custom);
+  if (Subtarget.is64Bit())
+    setOperationAction(ISD::ABS            , MVT::i128 , Custom);
 
   // Funnel shifts.
   for (auto ShiftOp : {ISD::FSHL, ISD::FSHR}) {
@@ -29719,9 +29721,12 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   }
   case ISD::ABS: {
-    assert(N->getValueType(0) == MVT::i64 &&
+    assert((Subtarget.is64Bit() || N->getValueType(0) == MVT::i64) &&
            "Unexpected type (!= i64) on ABS.");
-    MVT HalfT = MVT::i32;
+    assert((!Subtarget.is64Bit() || N->getValueType(0) == MVT::i128) &&
+           "Unexpected type (!= i128) on ABS.");
+    MVT VT = N->getSimpleValueType(0);
+    MVT HalfT = VT == MVT::i128 ? MVT::i64 : MVT::i32;
     SDValue Lo, Hi, Tmp;
     SDVTList VTList = DAG.getVTList(HalfT, MVT::i1);
 
@@ -29737,7 +29742,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                      SDValue(Lo.getNode(), 1));
     Hi = DAG.getNode(ISD::XOR, dl, HalfT, Tmp, Hi);
     Lo = DAG.getNode(ISD::XOR, dl, HalfT, Tmp, Lo);
-    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lo, Hi));
+    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, VT, Lo, Hi));
     return;
   }
   // We might have generated v2f32 FMIN/FMAX operations. Widen them to v4f32.
