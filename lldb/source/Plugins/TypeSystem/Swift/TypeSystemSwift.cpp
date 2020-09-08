@@ -15,11 +15,13 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include <lldb/lldb-enumerations.h>
+#include <llvm/ADT/StringRef.h>
 
 LLDB_PLUGIN_DEFINE(TypeSystemSwift)
 
 using namespace lldb;
 using namespace lldb_private;
+using llvm::StringRef;
 
 /// TypeSystem Plugin functionality.
 /// \{
@@ -39,10 +41,15 @@ static lldb::TypeSystemSP CreateTypeSystemInstance(lldb::LanguageType language,
   llvm_unreachable("Neither type nor module given to CreateTypeSystemInstance");
 }
 
-void TypeSystemSwift::Initialize() {
+LanguageSet TypeSystemSwift::GetSupportedLanguagesForTypes() {
   LanguageSet swift;
-  SwiftLanguageRuntime::Initialize();
   swift.Insert(lldb::eLanguageTypeSwift);
+  return swift;
+}
+
+void TypeSystemSwift::Initialize() {
+  SwiftLanguageRuntime::Initialize();
+  LanguageSet swift = GetSupportedLanguagesForTypes();
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 "Swift type system and AST context plug-in",
                                 CreateTypeSystemInstance, swift, swift);

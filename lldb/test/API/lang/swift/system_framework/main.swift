@@ -2,5 +2,5 @@ import ApplicationServices
 
 func stop() {}
 
-let a = ATSFSSpec()
+let a = ATSGlyphIdealMetrics()
 stop() // break here

@@ -15,6 +15,12 @@
 
 #include "lldb/Target/SwiftLanguageRuntime.h"
 
+namespace swift {
+namespace reflection {
+class TypeRef;
+}
+} // namespace swift
+
 namespace lldb_private {
 class Process;
 
@@ -64,11 +70,21 @@ public:
                                  ValueObject &static_value);
 
   /// Ask Remote Mirrors for the type info about a Swift type.
-  const swift::reflection::TypeInfo *GetTypeInfo(CompilerType type);
+  const swift::reflection::TypeInfo *
+  GetTypeInfo(CompilerType type, ExecutionContextScope *exe_scope);
+
+  llvm::Optional<const swift::reflection::TypeInfo *>
+  lookupClangTypeInfo(llvm::StringRef mangled_name);
+  const swift::reflection::TypeInfo *
+  emplaceClangTypeInfo(llvm::StringRef mangled_name,
+                       llvm::Optional<uint64_t> byte_size,
+                       llvm::Optional<size_t> bit_align);
+
   bool IsStoredInlineInBuffer(CompilerType type);
 
   /// Ask Remote Mirrors for the size of a Swift type.
-  llvm::Optional<uint64_t> GetBitSize(CompilerType type);
+  llvm::Optional<uint64_t> GetBitSize(CompilerType type,
+                                      ExecutionContextScope *exe_scope);
 
   /// Ask Remote mirrors for the stride of a Swift type.
   llvm::Optional<uint64_t> GetByteStride(CompilerType type);
@@ -82,6 +98,10 @@ public:
                                                    ValueObject *instance,
                                                    ConstString member_name,
                                                    Status *error);
+
+  CompilerType DoArchetypeBindingForTypeRef(StackFrame &stack_frame,
+                                            TypeSystemSwiftTypeRef &ts,
+                                            ConstString mangled_name);
 
   CompilerType DoArchetypeBindingForType(StackFrame &stack_frame,
                                          CompilerType base_type);
@@ -114,6 +134,21 @@ public:
   bool IsABIStable();
 
 protected:
+  /// Use the reflection context to build a TypeRef object.
+  ///
+  /// \param module can be used to specify a module to look up DWARF
+  /// type references (such as type aliases and Clang types)
+  /// in. Module only needs to be specified when it is different from
+  /// \c type.GetTypeSystem().GetModule(). The only situation where it
+  /// is necessary to specify the module explicitly is if a type has
+  /// been imported into the scratch context. This is always the
+  /// module of the outermost type. Even for bound generic types,
+  /// we're only interested in the module the bound generic type came
+  /// from, the bound generic parameters can be resolved from their
+  /// type metadata alone.
+  const swift::reflection::TypeRef *GetTypeRef(CompilerType type,
+                                               Module *module = nullptr);
+
   // Classes that inherit from SwiftLanguageRuntime can see and modify these
   Value::ValueType GetValueType(Value::ValueType static_value_type,
                                 CompilerType static_type,
@@ -149,6 +184,10 @@ protected:
 
   SwiftLanguageRuntime::MetadataPromiseSP
   GetPromiseForTypeNameAndFrame(const char *type_name, StackFrame *frame);
+
+  llvm::Optional<lldb::addr_t>
+  GetTypeMetadataForTypeNameAndFrame(llvm::StringRef mdvar_name,
+                                     StackFrame &frame);
 
   const CompilerType &GetBoxMetadataType();
 
@@ -237,6 +276,10 @@ private:
   /// \return true on success.
   bool AddModuleToReflectionContext(const lldb::ModuleSP &module_sp);
   /// \}
+
+  llvm::StringMap<llvm::Optional<swift::reflection::TypeInfo>>
+      m_clang_type_info;
+  std::recursive_mutex m_clang_type_info_mutex;
 
   /// Swift native NSError isa.
   llvm::Optional<lldb::addr_t> m_SwiftNativeNSErrorISA;

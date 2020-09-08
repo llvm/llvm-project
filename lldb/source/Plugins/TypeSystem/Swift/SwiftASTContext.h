@@ -61,6 +61,7 @@ namespace clang {
 namespace api_notes {
 class APINotesManager;
 }
+class NamedDecl;
 } // namespace clang
 
 namespace llvm {
@@ -249,7 +250,7 @@ public:
 
   void CacheModule(swift::ModuleDecl *module);
 
-  Module *GetModule() const { return m_module; }
+  Module *GetModule() const override { return m_module; }
 
   // Call this after the search paths are set up, it will find the module given
   // by module, load the module into the AST context, and also load any
@@ -316,6 +317,13 @@ public:
   /// Import and Swiftify a Clang type.
   /// \return Returns an invalid type if unsuccessful.
   CompilerType ImportClangType(CompilerType clang_type);
+
+  /// Use ClangImporter to determine the swiftified name of \p
+  /// clang_decl.
+  std::string GetSwiftName(const clang::Decl *clang_decl,
+                           TypeSystemClang &clang_typesystem) override;
+  /// Use \p ClangImporter to swiftify the decl's name.
+  std::string ImportName(const clang::NamedDecl *clang_decl);
 
   static SwiftASTContext *GetSwiftASTContext(swift::ASTContext *ast);
 

@@ -4571,17 +4571,17 @@ CompilerType SwiftASTContext::ImportType(CompilerType &type, Status &error) {
   // CompilerType to match this to the version of the type we got from
   // the mangled name in the original swift::ASTContext.
   ConstString mangled_name(type.GetMangledTypeName());
-  if (mangled_name) {
-    swift::TypeBase *our_type_base =
-        m_mangled_name_to_type_map.lookup(mangled_name.GetCString());
-    if (our_type_base)
-      return ToCompilerType({our_type_base});
-    else {
-      CompilerType our_type(GetTypeFromMangledTypename(mangled_name));
-      if (error.Success())
-        return our_type;
-    }
-  }
+  if (!mangled_name)
+    return {};
+  if (llvm::isa<TypeSystemSwiftTypeRef>(ts))
+    return m_typeref_typesystem.GetTypeFromMangledTypename(mangled_name);
+  swift::TypeBase *our_type_base =
+      m_mangled_name_to_type_map.lookup(mangled_name.GetCString());
+  if (our_type_base)
+    return ToCompilerType({our_type_base});
+  CompilerType our_type(GetTypeFromMangledTypename(mangled_name));
+  if (error.Success())
+    return our_type;
   return {};
 }
 
@@ -5960,7 +5960,7 @@ SwiftASTContext::GetBitSize(opaque_compiler_type_t type,
   if (!exe_scope)
     return {};
   if (auto *runtime = SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
-    return runtime->GetBitSize({this, type});
+    return runtime->GetBitSize({this, type}, exe_scope);
   return {};
 }
 
@@ -7798,6 +7798,21 @@ bool SwiftASTContext::IsImportedType(opaque_compiler_type_t type,
   }
 
   return success;
+}
+
+std::string SwiftASTContext::GetSwiftName(const clang::Decl *clang_decl,
+                                          TypeSystemClang &clang_typesystem) {
+  if (auto name_decl = llvm::dyn_cast<clang::NamedDecl>(clang_decl))
+    return ImportName(name_decl);
+  return {};
+}
+
+std::string SwiftASTContext::ImportName(const clang::NamedDecl *clang_decl) {
+  if (auto clang_importer = GetClangImporter()) {
+    swift::DeclName imported_name = clang_importer->importName(clang_decl, {});
+    return imported_name.getBaseName().userFacingName().str();
+  }
+  return clang_decl->getName().str();
 }
 
 void SwiftASTContext::DumpSummary(opaque_compiler_type_t type,

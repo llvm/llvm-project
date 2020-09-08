@@ -1037,7 +1037,9 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
   // dynamic archetype (and hence its size). Everything follows naturally
   // as the elements are laid out in a contigous buffer without padding.
   CompilerType simd_type = valobj.GetCompilerType().GetCanonicalType();
-  llvm::Optional<uint64_t> opt_type_size = simd_type.GetByteSize(nullptr);
+  ExecutionContext exe_ctx = valobj.GetExecutionContextRef().Lock(true);
+  llvm::Optional<uint64_t> opt_type_size =
+    simd_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
   if (!opt_type_size)
     return false;
   uint64_t type_size = *opt_type_size;
@@ -1053,7 +1055,8 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
   auto swift_arg_type = generic_args[0];
   CompilerType arg_type = ToCompilerType(swift_arg_type);
 
-  llvm::Optional<uint64_t> opt_arg_size = arg_type.GetByteSize(nullptr);
+  llvm::Optional<uint64_t> opt_arg_size =
+      arg_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
   if (!opt_arg_size)
     return false;
   uint64_t arg_size = *opt_arg_size;

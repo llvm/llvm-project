@@ -17,16 +17,22 @@
 #include "lldb/Core/SwiftForward.h"
 
 #include "swift/AST/Type.h"
-#include "swift/Demangling/Demangle.h"
-#include "swift/Demangling/Demangler.h"
 
 // FIXME: needed only for the DenseMap.
 #include "clang/APINotes/APINotesManager.h"
 #include "clang/Basic/Module.h"
 
+namespace swift {
+namespace Demangle {
+class Node;
+using NodePointer = Node *;
+class Demangler;
+} // namespace Demangle
+} // namespace swift
+
 namespace lldb_private {
-class SwiftASTContext;
 class ClangExternalASTSourceCallbacks;
+class SwiftASTContext;
 
 /// A Swift TypeSystem that does not own a swift::ASTContext.
 class TypeSystemSwiftTypeRef : public TypeSystemSwift {
@@ -44,7 +50,7 @@ public:
 
   TypeSystemSwiftTypeRef(SwiftASTContext *swift_ast_context);
 
-  Module *GetModule() const;
+  Module *GetModule() const override;
   swift::CanType GetCanonicalSwiftType(CompilerType compiler_type);
   swift::Type GetSwiftType(CompilerType compiler_type);
   CompilerType ReconstructType(CompilerType type);
@@ -232,6 +238,9 @@ public:
   void SetCachedType(ConstString mangled, const lldb::TypeSP &type_sp) override;
   bool IsImportedType(lldb::opaque_compiler_type_t type,
                       CompilerType *original_type) override;
+  /// Like \p IsImportedType(), but even returns Clang types that are also Swift
+  /// builtins (int <-> Swift.Int) as Clang types.
+  CompilerType GetAsClangTypeOrNull(lldb::opaque_compiler_type_t type);
   CompilerType GetErrorType() override;
   CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
   CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) override;
@@ -248,16 +257,26 @@ public:
       bool print_help_if_available, bool print_extensions_if_available,
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
-private:
-  /// Helper that creates an AST type from \p type.
-  void *ReconstructType(lldb::opaque_compiler_type_t type);
-  /// Cast \p opaque_type as a mangled name.
-  const char *AsMangledName(lldb::opaque_compiler_type_t opaque_type);
+  /// Return the canonicalized Demangle tree for a Swift mangled type name.
+  static swift::Demangle::NodePointer
+  GetCanonicalDemangleTree(lldb_private::Module *Module,
+                           swift::Demangle::Demangler &Dem,
+                           llvm::StringRef mangled_name);
+
+  /// Use API notes to determine the swiftified name of \p clang_decl.
+  std::string GetSwiftName(const clang::Decl *clang_decl,
+                           TypeSystemClang &clang_typesystem) override;
 
   /// Wrap \p node as \p Global(TypeMangling(node)), remangle the type
   /// and create a CompilerType from it.
   CompilerType RemangleAsType(swift::Demangle::Demangler &Dem,
                               swift::Demangle::NodePointer node);
+
+private:
+  /// Helper that creates an AST type from \p type.
+  void *ReconstructType(lldb::opaque_compiler_type_t type);
+  /// Cast \p opaque_type as a mangled name.
+  const char *AsMangledName(lldb::opaque_compiler_type_t type);
 
   /// Demangle the mangled name of the canonical type of \p type and
   /// drill into the Global(TypeMangling(Type())).
@@ -266,6 +285,21 @@ private:
   swift::Demangle::NodePointer
   DemangleCanonicalType(swift::Demangle::Demangler &Dem,
                         lldb::opaque_compiler_type_t type);
+
+  /// Replace all "__C" module names with their actual Clang module
+  /// names.  This is the recursion step of \p
+  /// GetDemangleTreeForPrinting(). Don't call it directly.
+  swift::Demangle::NodePointer
+  GetNodeForPrintingImpl(swift::Demangle::Demangler &Dem,
+                         swift::Demangle::NodePointer node,
+                         bool resolve_objc_module, bool desugar = true);
+
+  /// Return the demangle tree representation with all "__C" module
+  /// names with their actual Clang module names.
+  swift::Demangle::NodePointer
+  GetDemangleTreeForPrinting(swift::Demangle::Demangler &Dem,
+                             const char *mangled_name,
+                             bool resolve_objc_module);
 
   /// Return an APINotes manager for the module with module id \id.
   /// APINotes are used to get at the SDK swiftification annotations.
@@ -279,7 +313,7 @@ private:
   llvm::DenseMap<clang::Module *,
                  std::unique_ptr<clang::api_notes::APINotesManager>>
       m_apinotes_manager;
-};
+  };
 
 } // namespace lldb_private
 #endif
