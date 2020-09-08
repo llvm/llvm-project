@@ -89,7 +89,7 @@ class LLVMSymbolizer(Symbolizer):
 
   def open_llvm_symbolizer(self):
     cmd = [self.symbolizer_path,
-           '--demangle=%s' % demangle,
+           ('--demangle' if demangle else '--no-demangle'),
            '--functions=linkage',
            '--inlines',
            '--default-arch=%s' % self.default_arch]
