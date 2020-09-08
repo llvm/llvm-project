@@ -318,8 +318,6 @@ private:
     // analyzed for similarity as it has no bearing on the outcome of the
     // program.
     bool visitDbgInfoIntrinsic(DbgInfoIntrinsic &DII) { return true; }
-    // TODO: Handle GetElementPtrInsts
-    bool visitGetElementPtrInst(GetElementPtrInst &GEPI) { return false; }
     // TODO: Handle specific intrinsics individually from those that can be
     // handled.
     bool IntrinsicInst(IntrinsicInst &II) { return false; }
