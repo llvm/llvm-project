@@ -38,7 +38,7 @@ struct SCFInlinerInterface : public DialectInlinerInterface {
   // as necessary. Required when the region has only one block.
   void handleTerminator(Operation *op,
                         ArrayRef<Value> valuesToRepl) const final {
-    auto retValOp = dyn_cast<YieldOp>(op);
+    auto retValOp = dyn_cast<scf::YieldOp>(op);
     if (!retValOp)
       return;
 
@@ -889,7 +889,7 @@ static ParseResult parseYieldOp(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-static void print(OpAsmPrinter &p, YieldOp op) {
+static void print(OpAsmPrinter &p, scf::YieldOp op) {
   p << op.getOperationName();
   if (op.getNumOperands() != 0)
     p << ' ' << op.getOperands() << " : " << op.getOperandTypes();
@@ -899,5 +899,9 @@ static void print(OpAsmPrinter &p, YieldOp op) {
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
+namespace mlir {
+namespace scf {
 #define GET_OP_CLASSES
 #include "mlir/Dialect/SCF/SCFOps.cpp.inc"
+} // namespace scf
+} // namespace mlir
