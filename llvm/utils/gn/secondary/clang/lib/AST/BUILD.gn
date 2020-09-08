@@ -81,6 +81,7 @@ static_library("AST") {
     "ExternalASTMerger.cpp",
     "ExternalASTSource.cpp",
     "FormatString.cpp",
+    "IgnoreExpr.cpp",
     "InheritViz.cpp",
     "Interp/ByteCodeEmitter.cpp",
     "Interp/ByteCodeExprGen.cpp",
