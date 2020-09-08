@@ -130,8 +130,7 @@ func @aligned_1d_alloc() -> memref<42xf32> {
 // CHECK-NEXT:  llvm.mul %{{.*}}, %[[sizeof]] : !llvm.i64
 // CHECK-NEXT:  %[[one_1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 // CHECK-NEXT:  %[[alignment:.*]] = llvm.mlir.constant(8 : index) : !llvm.i64
-// CHECK-NEXT:  %[[alignmentMinus1:.*]] = llvm.add {{.*}}, %[[alignment]] : !llvm.i64
-// CHECK-NEXT:  %[[allocsize:.*]] = llvm.sub %[[alignmentMinus1]], %[[one_1]] : !llvm.i64
+// CHECK-NEXT:  %[[allocsize:.*]] = llvm.add {{.*}}, %[[alignment]] : !llvm.i64
 // CHECK-NEXT:  %[[allocated:.*]] = llvm.call @malloc(%[[allocsize]]) : (!llvm.i64) -> !llvm.ptr<i8>
 // CHECK-NEXT:  %[[ptr:.*]] = llvm.bitcast %{{.*}} : !llvm.ptr<i8> to !llvm.ptr<float>
 // CHECK-NEXT:  llvm.mlir.undef : !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>
@@ -154,8 +153,7 @@ func @aligned_1d_alloc() -> memref<42xf32> {
 // BAREPTR-NEXT:  llvm.mul %{{.*}}, %[[sizeof]] : !llvm.i64
 // BAREPTR-NEXT:  %[[one_1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 // BAREPTR-NEXT:  %[[alignment:.*]] = llvm.mlir.constant(8 : index) : !llvm.i64
-// BAREPTR-NEXT:  %[[alignmentMinus1:.*]] = llvm.add {{.*}}, %[[alignment]] : !llvm.i64
-// BAREPTR-NEXT:  %[[allocsize:.*]] = llvm.sub %[[alignmentMinus1]], %[[one_1]] : !llvm.i64
+// BAREPTR-NEXT:  %[[allocsize:.*]] = llvm.add {{.*}}, %[[alignment]] : !llvm.i64
 // BAREPTR-NEXT:  %[[allocated:.*]] = llvm.call @malloc(%[[allocsize]]) : (!llvm.i64) -> !llvm.ptr<i8>
 // BAREPTR-NEXT:  %[[ptr:.*]] = llvm.bitcast %{{.*}} : !llvm.ptr<i8> to !llvm.ptr<float>
 // BAREPTR-NEXT:  llvm.mlir.undef : !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>

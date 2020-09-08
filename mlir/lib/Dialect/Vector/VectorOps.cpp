@@ -537,6 +537,18 @@ Optional<SmallVector<int64_t, 4>> ContractionOp::getShapeForUnroll() {
 // ExtractElementOp
 //===----------------------------------------------------------------------===//
 
+void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
+                                     Value source, Value position) {
+  result.addOperands({source, position});
+  result.addTypes(source.getType().cast<VectorType>().getElementType());
+}
+
+void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
+                                     Value source, int64_t position) {
+  Value pos = builder.create<ConstantIntOp>(result.location, position, 32);
+  build(builder, result, source, pos);
+}
+
 static LogicalResult verify(vector::ExtractElementOp op) {
   VectorType vectorType = op.getVectorType();
   if (vectorType.getRank() != 1)
@@ -1006,6 +1018,18 @@ static ParseResult parseShuffleOp(OpAsmParser &parser, OperationState &result) {
 //===----------------------------------------------------------------------===//
 // InsertElementOp
 //===----------------------------------------------------------------------===//
+
+void InsertElementOp::build(OpBuilder &builder, OperationState &result,
+                            Value source, Value dest, Value position) {
+  result.addOperands({source, dest, position});
+  result.addTypes(dest.getType());
+}
+
+void InsertElementOp::build(OpBuilder &builder, OperationState &result,
+                            Value source, Value dest, int64_t position) {
+  Value pos = builder.create<ConstantIntOp>(result.location, position, 32);
+  build(builder, result, source, dest, pos);
+}
 
 static LogicalResult verify(InsertElementOp op) {
   auto dstVectorType = op.getDestVectorType();
