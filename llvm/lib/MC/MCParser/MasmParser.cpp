@@ -3076,6 +3076,11 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
   SMLoc EndLoc, StartLoc = Lexer.getLoc();
   if (parseExpression(Expr, EndLoc))
     return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Var.Name);
+  Sym->setRedefinable(Var.Redefinable);
+  Sym->setVariableValue(Expr);
+  Sym->setExternal(false);
+
   if (Expr->evaluateAsAbsolute(Var.NumericValue,
                                getStreamer().getAssemblerPtr()))
     return false;
