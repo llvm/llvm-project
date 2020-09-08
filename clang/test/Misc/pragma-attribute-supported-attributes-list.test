@@ -147,6 +147,7 @@
 // CHECK-NEXT: SetTypestate (SubjectMatchRule_function_is_member)
 // CHECK-NEXT: SpeculativeLoadHardening (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: SwiftContext (SubjectMatchRule_variable_is_parameter)
+// CHECK-NEXT: SwiftError (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: SwiftErrorResult (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: SwiftIndirectResult (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: TLSModel (SubjectMatchRule_variable_is_thread_local)
