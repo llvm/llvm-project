@@ -108,8 +108,10 @@ public:
 private:
   /// Creates the loop nest on the "major" dimensions and calls the
   /// `loopBodyBuilder` lambda in the context of the loop nest.
-  template <typename Lambda>
-  void emitLoops(Lambda loopBodyBuilder);
+  void
+  emitLoops(llvm::function_ref<void(ValueRange, ValueRange, ValueRange,
+                                    ValueRange, const MemRefBoundsCapture &)>
+                loopBodyBuilder);
 
   /// Common state to lower vector transfer ops.
   PatternRewriter &rewriter;
@@ -129,10 +131,13 @@ private:
   VectorType minorVectorType; // vector<(minor_dims) x type>
   MemRefType memRefMinorVectorType; // memref<vector<(minor_dims) x type>>
 };
+} // namespace
 
 template <typename ConcreteOp>
-template <typename Lambda>
-void NDTransferOpHelper<ConcreteOp>::emitLoops(Lambda loopBodyBuilder) {
+void NDTransferOpHelper<ConcreteOp>::emitLoops(
+    llvm::function_ref<void(ValueRange, ValueRange, ValueRange, ValueRange,
+                            const MemRefBoundsCapture &)>
+        loopBodyBuilder) {
   /// Loop nest operates on the major dimensions
   MemRefBoundsCapture memrefBoundsCapture(xferOp.memref());
 
@@ -195,7 +200,7 @@ static Value
 emitInBoundsCondition(PatternRewriter &rewriter,
                       VectorTransferOpInterface xferOp, unsigned leadingRank,
                       ValueRange majorIvs, ValueRange majorOffsets,
-                      MemRefBoundsCapture &memrefBounds,
+                      const MemRefBoundsCapture &memrefBounds,
                       SmallVectorImpl<Value> &majorIvsPlusOffsets) {
   Value inBoundsCondition;
   majorIvsPlusOffsets.reserve(majorIvs.size());
@@ -242,7 +247,7 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
 
   emitLoops([&](ValueRange majorIvs, ValueRange leadingOffsets,
                 ValueRange majorOffsets, ValueRange minorOffsets,
-                MemRefBoundsCapture &memrefBounds) {
+                const MemRefBoundsCapture &memrefBounds) {
     /// Lambda to load 1-D vector in the current loop ivs + offset context.
     auto load1DVector = [&](ValueRange majorIvsPlusOffsets) -> Value {
       SmallVector<Value, 8> indexing;
@@ -341,7 +346,7 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
 
   emitLoops([&](ValueRange majorIvs, ValueRange leadingOffsets,
                 ValueRange majorOffsets, ValueRange minorOffsets,
-                MemRefBoundsCapture &memrefBounds) {
+                const MemRefBoundsCapture &memrefBounds) {
     // Lower to 1-D vector_transfer_write and let recursion handle it.
     auto emitTransferWrite = [&](ValueRange majorIvsPlusOffsets) {
       SmallVector<Value, 8> indexing;
@@ -390,8 +395,6 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
   return success();
 }
 
-} // namespace
-
 /// Analyzes the `transfer` to find an access dimension along the fastest remote
 /// MemRef dimension. If such a dimension with coalescing properties is found,
 /// `pivs` and `vectorBoundsCapture` are swapped so that the invocation of
@@ -422,8 +425,6 @@ static int computeCoalescedIndex(TransferOpTy transfer) {
   return coalescedIdx;
 }
 
-namespace mlir {
-
 template <typename TransferOpTy>
 VectorTransferRewriter<TransferOpTy>::VectorTransferRewriter(
     VectorTransferToSCFOptions options, MLIRContext *context)
@@ -443,7 +444,7 @@ MemRefType VectorTransferRewriter<TransferOpTy>::tmpMemRefType(
 
 static void emitWithBoundsChecks(
     PatternRewriter &rewriter, VectorTransferOpInterface transfer,
-    ValueRange ivs, MemRefBoundsCapture &memRefBoundsCapture,
+    ValueRange ivs, const MemRefBoundsCapture &memRefBoundsCapture,
     function_ref<void(ArrayRef<Value>)> inBoundsFun,
     function_ref<void(ArrayRef<Value>)> outOfBoundsFun = nullptr) {
   // Permute the incoming indices according to the permutation map.
@@ -499,43 +500,13 @@ static void emitWithBoundsChecks(
 ///   1. local memory allocation;
 ///   2. perfect loop nest over:
 ///      a. scalar load from local buffers (viewed as a scalar memref);
-///      a. scalar store to original memref (with clipping).
+///      a. scalar store to original memref (with padding).
 ///   3. vector_load from local buffer (viewed as a memref<1 x vector>);
 ///   4. local memory deallocation.
 ///
 /// Lowers the data transfer part of a TransferReadOp while ensuring no
 /// out-of-bounds accesses are possible. Out-of-bounds behavior is handled by
-/// clipping. This means that a given value in memory can be read multiple
-/// times and concurrently.
-///
-/// Important notes about clipping and "full-tiles only" abstraction:
-/// =================================================================
-/// When using clipping for dealing with boundary conditions, the same edge
-/// value will appear multiple times (a.k.a edge padding). This is fine if the
-/// subsequent vector operations are all data-parallel but **is generally
-/// incorrect** in the presence of reductions or extract operations.
-///
-/// More generally, clipping is a scalar abstraction that is expected to work
-/// fine as a baseline for CPUs and GPUs but not for vector_load and DMAs.
-/// To deal with real vector_load and DMAs, a "padded allocation + view"
-/// abstraction with the ability to read out-of-memref-bounds (but still within
-/// the allocated region) is necessary.
-///
-/// Whether using scalar loops or vector_load/DMAs to perform the transfer,
-/// junk values will be materialized in the vectors and generally need to be
-/// filtered out and replaced by the "neutral element". This neutral element is
-/// op-dependent so, in the future, we expect to create a vector filter and
-/// apply it to a splatted constant vector with the proper neutral element at
-/// each ssa-use. This filtering is not necessary for pure data-parallel
-/// operations.
-///
-/// In the case of vector_store/DMAs, Read-Modify-Write will be required, which
-/// also have concurrency implications. Note that by using clipped scalar stores
-/// in the presence of data-parallel only operations, we generate code that
-/// writes the same value multiple time on the edge locations.
-///
-/// TODO: implement alternatives to clipping.
-/// TODO: support non-data-parallel operations.
+/// padding.
 
 /// Performs the rewrite.
 template <>
@@ -618,19 +589,11 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
 ///   2. vector_store to local buffer (viewed as a memref<1 x vector>);
 ///   3. perfect loop nest over:
 ///      a. scalar load from local buffers (viewed as a scalar memref);
-///      a. scalar store to original memref (with clipping).
+///      a. scalar store to original memref (if in bounds).
 ///   4. local memory deallocation.
 ///
 /// More specifically, lowers the data transfer part while ensuring no
-/// out-of-bounds accesses are possible. Out-of-bounds behavior is handled by
-/// clipping. This means that a given value in memory can be written to multiple
-/// times and concurrently.
-///
-/// See `Important notes about clipping and full-tiles only abstraction` in the
-/// description of `readClipped` above.
-///
-/// TODO: implement alternatives to clipping.
-/// TODO: support non-data-parallel operations.
+/// out-of-bounds accesses are possible.
 template <>
 LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
@@ -701,6 +664,8 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
   rewriter.eraseOp(op);
   return success();
 }
+
+namespace mlir {
 
 void populateVectorToSCFConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context,
