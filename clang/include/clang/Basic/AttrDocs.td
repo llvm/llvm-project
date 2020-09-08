@@ -3476,6 +3476,27 @@ Swift.
   }];
 }
 
+def SwiftBridgedTypedefDocs : Documentation {
+  let Category = SwiftDocs;
+  let Heading = "swift_bridged";
+  let Content = [{
+The ``swift_bridged_typedef`` attribute indicates that when the typedef to which
+the attribute appertains is imported into Swift, it should refer to the bridged
+Swift type (e.g. Swift's ``String``) rather than the Objective-C type as written
+(e.g. ``NSString``).
+
+  .. code-block:: c
+
+    @interface NSString;
+    typedef NSString *AliasedString __attribute__((__swift_bridged_typedef__));
+
+    extern void acceptsAliasedString(AliasedString _Nonnull parameter);
+
+In this case, the function ``acceptsAliasedString`` will be imported into Swift
+as a function which accepts a ``String`` type parameter.
+  }];
+}
+
 def SwiftObjCMembersDocs : Documentation {
   let Category = SwiftDocs;
   let Heading = "swift_objc_members";
