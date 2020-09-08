@@ -79,6 +79,9 @@ directory structure will be created.  Additionally, the following special
 
 * "%h" expands out to the hostname of the machine running the program.
 
+* "%t" expands out to the value of the ``TMPDIR`` environment variable. On
+  Darwin, this is typically set to a temporary scratch directory.
+
 * "%Nm" expands out to the instrumented binary's signature. When this pattern
   is specified, the runtime creates a pool of N raw profiles which are used for
   on-line profile merging. The runtime takes care of selecting a raw profile
