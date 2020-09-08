@@ -1444,10 +1444,6 @@ void LiveDebugVariables::emitDebugValues(VirtRegMap *VRM) {
     static_cast<LDVImpl*>(pImpl)->emitDebugValues(VRM);
 }
 
-bool LiveDebugVariables::doInitialization(Module &M) {
-  return Pass::doInitialization(M);
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LiveDebugVariables::dump() const {
   if (pImpl)
