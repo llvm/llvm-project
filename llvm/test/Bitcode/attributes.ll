@@ -98,8 +98,8 @@ define void @f16() sspreq
         ret void;
 }
 
-define void @f17(i8 align 4 %0)
-; CHECK: define void @f17(i8 align 4 %0)
+define void @f17(i8* align 4 %0)
+; CHECK: define void @f17(i8* align 4 %0)
 {
         ret void;
 }
