@@ -708,7 +708,6 @@ void ReportRace(ThreadState *thr) {
 
   if (!OutputReport(thr, rep))
     return;
-
 }
 
 void PrintCurrentStack(ThreadState *thr, uptr pc) {
