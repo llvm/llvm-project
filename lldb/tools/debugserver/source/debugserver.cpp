@@ -156,18 +156,36 @@ RNBRunLoopMode RNBRunLoopGetStartModeFromRemote(RNBRemote *remote) {
   return eRNBRunLoopModeExit;
 }
 
-// Check the name to see if it ends with .app
-static bool is_dot_app (const char *app_name) {
-  size_t len = strlen(app_name);
-  if (len < 4)
+static nub_launch_flavor_t default_launch_flavor(const char *app_name) {
+#if defined(WITH_FBS) || defined(WITH_BKS) || defined(WITH_SPRINGBOARD)
+  // Check the name to see if it ends with .app
+  auto is_dot_app = [](const char *app_name) {
+    size_t len = strlen(app_name);
+    if (len < 4)
+      return false;
+
+    if (app_name[len - 4] == '.' && app_name[len - 3] == 'a' &&
+        app_name[len - 2] == 'p' && app_name[len - 1] == 'p')
+      return true;
     return false;
-  
-  if (app_name[len - 4] == '.' &&
-      app_name[len - 3] == 'a' && 
-      app_name[len - 2] == 'p' &&
-      app_name[len - 1] == 'p')
-    return true;
-  return false;
+  };
+
+  if (is_dot_app(app_name)) {
+#if defined WITH_FBS
+    // Check if we have an app bundle, if so launch using FrontBoard Services.
+    return eLaunchFlavorFBS;
+#elif defined WITH_BKS
+    // Check if we have an app bundle, if so launch using BackBoard Services.
+    return eLaunchFlavorBKS;
+#elif defined WITH_SPRINGBOARD
+    // Check if we have an app bundle, if so launch using SpringBoard.
+    return eLaunchFlavorSpringBoard;
+#endif
+  }
+#endif
+
+  // Our default launch method is posix spawn
+  return eLaunchFlavorPosixSpawn;
 }
 
 // This run loop mode will wait for the process to launch and hit its
@@ -208,29 +226,8 @@ RNBRunLoopMode RNBRunLoopLaunchInferior(RNBRemote *remote,
   // figure our how we are going to launch automatically.
 
   nub_launch_flavor_t launch_flavor = g_launch_flavor;
-  if (launch_flavor == eLaunchFlavorDefault) {
-    // Our default launch method is posix spawn
-    launch_flavor = eLaunchFlavorPosixSpawn;
-
-    const bool dot_app = is_dot_app(inferior_argv[0]);
-    (void)dot_app;
-#if defined WITH_FBS
-    // Check if we have an app bundle, if so launch using BackBoard Services.
-    if (dot_app) {
-      launch_flavor = eLaunchFlavorFBS;
-    }
-#elif defined WITH_BKS
-    // Check if we have an app bundle, if so launch using BackBoard Services.
-    if (dot_app) {
-      launch_flavor = eLaunchFlavorBKS;
-    }
-#elif defined WITH_SPRINGBOARD
-    // Check if we have an app bundle, if so launch using SpringBoard.
-    if (dot_app) {
-      launch_flavor = eLaunchFlavorSpringBoard;
-    }
-#endif
-  }
+  if (launch_flavor == eLaunchFlavorDefault)
+    launch_flavor = default_launch_flavor(inferior_argv[0]);
 
   ctx.SetLaunchFlavor(launch_flavor);
   char resolved_path[PATH_MAX];
@@ -1509,27 +1506,8 @@ int main(int argc, char *argv[]) {
           timeout_ptr = &attach_timeout_abstime;
         }
         nub_launch_flavor_t launch_flavor = g_launch_flavor;
-        if (launch_flavor == eLaunchFlavorDefault) {
-          // Our default launch method is posix spawn
-          launch_flavor = eLaunchFlavorPosixSpawn;
-
-#if defined WITH_FBS
-          // Check if we have an app bundle, if so launch using SpringBoard.
-          if (is_dot_app(waitfor_pid_name.c_str())) {
-            launch_flavor = eLaunchFlavorFBS;
-          }
-#elif defined WITH_BKS
-          // Check if we have an app bundle, if so launch using SpringBoard.
-          if (is_dot_app(waitfor_pid_name.c_str())) {
-            launch_flavor = eLaunchFlavorBKS;
-          }
-#elif defined WITH_SPRINGBOARD
-          // Check if we have an app bundle, if so launch using SpringBoard.
-          if (is_dot_app(waitfor_pid_name.c_str())) {
-            launch_flavor = eLaunchFlavorSpringBoard;
-          }
-#endif
-        }
+        if (launch_flavor == eLaunchFlavorDefault)
+          launch_flavor = default_launch_flavor(waitfor_pid_name.c_str());
 
         ctx.SetLaunchFlavor(launch_flavor);
         bool ignore_existing = false;

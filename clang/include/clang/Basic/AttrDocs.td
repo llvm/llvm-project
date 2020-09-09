@@ -1684,6 +1684,101 @@ Here is an example:
   }];
 }
 
+def LikelihoodDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "likely and unlikely";
+  let Content = [{
+The ``likely`` and ``unlikely`` attributes are used as compiler hints.
+The attributes are used to aid the compiler to determine which branch is
+likely or unlikely to be taken. This is done by marking the branch substatement
+with one of the two attributes.
+
+It isn't allowed to annotate a single statement with both ``likely`` and
+``unlikely``. Annotating the ``true`` and ``false`` branch of an ``if``
+statement with the same likelihood attribute will result in a diagnostic and
+the attributes are ignored on both branches.
+
+These attributes have no effect on the generated code when using
+PGO (Profile-Guided Optimization) or at optimization level 0.
+
+In Clang, the attributes will be ignored if they're not placed on the
+substatement of an ``if`` or ``else`` statement. The C++ Standard recommends
+to honor them on every statement in the path of execution, but that can be
+confusing:
+
+.. code-block:: c++
+
+  if (b) {
+    [[unlikely]] --b; // In the path of execution,
+                      // this branch is considered unlikely.
+  }
+
+  if (b) {
+    --b;
+    if(b)
+      return;
+    [[unlikely]] --b; // Not in the path of execution,
+  }                   // the branch has no likelihood information.
+
+  if (b) {
+    --b;
+    foo(b);
+    // Whether or not the next statement is in the path of execution depends
+    // on the declaration of foo():
+    // In the path of execution: void foo(int);
+    // Not in the path of execution: [[noreturn]] void foo(int);
+    // This means the likelihood of the branch depends on the declaration
+    // of foo().
+    [[unlikely]] --b;
+  }
+
+
+At the moment the attribute only has effect when used in an ``if`` or ``else``
+statement.
+
+.. code-block:: c++
+
+  if (b) [[likely]] { // Placement on the first statement in the branch.
+    // The compiler will optimize to execute the code here.
+  } else {
+  }
+
+  if (b)
+    [[unlikely]] b++; // Placement on the first statement in the branch.
+  else {
+    // The compiler will optimize to execute the code here.
+  }
+
+  if (b) {
+    [[unlikely]] b++; // Placement on the second statement in the branch.
+  }                   // The attribute will be ignored.
+
+  if (b) [[likely]] {
+    [[unlikely]] b++; // No contradiction since the second attribute
+  }                   // is ignored.
+
+  if (b)
+    ;
+  else [[likely]] {
+    // The compiler will optimize to execute the code here.
+  }
+
+  if (b)
+    ;
+  else
+    // The compiler will optimize to execute the next statement.
+    [[likely]] b = f();
+
+  if (b) [[likely]]; // Both branches are likely. A diagnostic is issued
+  else [[likely]];   // and the attributes are ignored.
+
+  if (b)
+    [[likely]] int i = 5; // Issues a diagnostic since the attribute
+                          // isn't allowed on a declaration.
+
+  }];
+}
+
 def ARMInterruptDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "interrupt (ARM)";
