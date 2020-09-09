@@ -428,9 +428,8 @@ define void @test11() {
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@test11() {
-; IS________NPM-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
+; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    tail call void @sync_will_return(i8* [[TMP1]]) [[ATTR6]]
-; IS________NPM-NEXT:    tail call void @free(i8* nocapture [[TMP1]])
 ; IS________NPM-NEXT:    ret void
 ;
   %1 = tail call noalias i8* @malloc(i64 4)
@@ -739,10 +738,9 @@ define void @test16c(i8 %v, i8** %P) {
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@test16c
 ; IS________NPM-SAME: (i8 [[V:%.*]], i8** nocapture writeonly [[P:%.*]]) {
-; IS________NPM-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
+; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    store i8* [[TMP1]], i8** [[P]], align 8
 ; IS________NPM-NEXT:    tail call void @no_sync_func(i8* nocapture nofree [[TMP1]]) [[ATTR6]]
-; IS________NPM-NEXT:    tail call void @free(i8* nocapture [[TMP1]])
 ; IS________NPM-NEXT:    ret void
 ;
   %1 = tail call noalias i8* @malloc(i64 4)
