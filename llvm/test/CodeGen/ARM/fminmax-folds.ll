@@ -9,15 +9,7 @@ declare float @llvm.maximum.f32(float, float)
 define float @test_minnum_const_nan(float %x) {
 ; CHECK-LABEL: test_minnum_const_nan:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr s0, .LCPI0_0
-; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vminnm.f32 s0, s2, s0
-; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI0_0:
-; CHECK-NEXT:    .long 0x7ff80000 @ float NaN
   %r = call float @llvm.minnum.f32(float %x, float 0x7fff000000000000)
   ret float %r
 }
@@ -25,15 +17,7 @@ define float @test_minnum_const_nan(float %x) {
 define float @test_maxnum_const_nan(float %x) {
 ; CHECK-LABEL: test_maxnum_const_nan:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr s0, .LCPI1_0
-; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vmaxnm.f32 s0, s2, s0
-; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI1_0:
-; CHECK-NEXT:    .long 0x7ff80000 @ float NaN
   %r = call float @llvm.maxnum.f32(float %x, float 0x7fff000000000000)
   ret float %r
 }
@@ -41,15 +25,9 @@ define float @test_maxnum_const_nan(float %x) {
 define float @test_maximum_const_nan(float %x) {
 ; CHECK-LABEL: test_maximum_const_nan:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr s0, .LCPI2_0
-; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vmax.f32 d0, d1, d0
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    movw r0, #0
+; CHECK-NEXT:    movt r0, #32760
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI2_0:
-; CHECK-NEXT:    .long 0x7ff80000 @ float NaN
   %r = call float @llvm.maximum.f32(float %x, float 0x7fff000000000000)
   ret float %r
 }
@@ -57,15 +35,9 @@ define float @test_maximum_const_nan(float %x) {
 define float @test_minimum_const_nan(float %x) {
 ; CHECK-LABEL: test_minimum_const_nan:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr s0, .LCPI3_0
-; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vmin.f32 d0, d1, d0
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    movw r0, #0
+; CHECK-NEXT:    movt r0, #32760
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI3_0:
-; CHECK-NEXT:    .long 0x7ff80000 @ float NaN
   %r = call float @llvm.minimum.f32(float %x, float 0x7fff000000000000)
   ret float %r
 }

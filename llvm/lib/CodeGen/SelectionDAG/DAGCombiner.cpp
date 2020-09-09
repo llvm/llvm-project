@@ -14040,7 +14040,8 @@ SDValue DAGCombiner::visitFNEG(SDNode *N) {
 }
 
 static SDValue visitFMinMax(SelectionDAG &DAG, SDNode *N,
-                            APFloat (*Op)(const APFloat &, const APFloat &)) {
+                            APFloat (*Op)(const APFloat &, const APFloat &),
+                            bool PropagatesNaN) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
@@ -14058,23 +14059,30 @@ static SDValue visitFMinMax(SelectionDAG &DAG, SDNode *N,
       !isConstantFPBuildVectorOrConstantFP(N1))
     return DAG.getNode(N->getOpcode(), SDLoc(N), VT, N1, N0);
 
+  // minnum(X, nan) -> X
+  // maxnum(X, nan) -> X
+  // minimum(X, nan) -> nan
+  // maximum(X, nan) -> nan
+  if (N1CFP && N1CFP->isNaN())
+    return PropagatesNaN ? N->getOperand(1) : N->getOperand(0);
+
   return SDValue();
 }
 
 SDValue DAGCombiner::visitFMINNUM(SDNode *N) {
-  return visitFMinMax(DAG, N, minnum);
+  return visitFMinMax(DAG, N, minnum, /* PropagatesNaN */ false);
 }
 
 SDValue DAGCombiner::visitFMAXNUM(SDNode *N) {
-  return visitFMinMax(DAG, N, maxnum);
+  return visitFMinMax(DAG, N, maxnum, /* PropagatesNaN */ false);
 }
 
 SDValue DAGCombiner::visitFMINIMUM(SDNode *N) {
-  return visitFMinMax(DAG, N, minimum);
+  return visitFMinMax(DAG, N, minimum, /* PropagatesNaN */ true);
 }
 
 SDValue DAGCombiner::visitFMAXIMUM(SDNode *N) {
-  return visitFMinMax(DAG, N, maximum);
+  return visitFMinMax(DAG, N, maximum, /* PropagatesNaN */ true);
 }
 
 SDValue DAGCombiner::visitFABS(SDNode *N) {
