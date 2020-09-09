@@ -1417,8 +1417,10 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
     }
     if (Size == 96) {
       // ds_read/write_b96 require 16-byte alignment on gfx8 and older.
-      bool Aligned =
-          Alignment >= Align(Subtarget->hasUnalignedDSAccess() ? 4 : 16);
+      bool Aligned = Alignment >= Align((Subtarget->hasUnalignedDSAccess() &&
+                                         !Subtarget->hasLDSMisalignedBug())
+                                            ? 4
+                                            : 16);
       if (IsFast)
         *IsFast = Aligned;
 
@@ -1428,8 +1430,10 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
       // ds_read/write_b128 require 16-byte alignment on gfx8 and older, but we
       // can do a 8 byte aligned, 16 byte access in a single operation using
       // ds_read2/write2_b64.
-      bool Aligned =
-          Alignment >= Align(Subtarget->hasUnalignedDSAccess() ? 4 : 8);
+      bool Aligned = Alignment >= Align((Subtarget->hasUnalignedDSAccess() &&
+                                         !Subtarget->hasLDSMisalignedBug())
+                                            ? 4
+                                            : 8);
       if (IsFast)
         *IsFast = Aligned;
 
