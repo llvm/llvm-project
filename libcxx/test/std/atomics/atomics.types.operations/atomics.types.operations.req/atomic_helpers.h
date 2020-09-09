@@ -95,7 +95,7 @@ struct TestEachAtomicType {
             These aren't going to be lock-free,
             so some libatomic.a is necessary.
         */
-        TestFunctor<WeirdUserAtomicType>()();
+        //TestFunctor<WeirdUserAtomicType>()(); //< Actually, nobody is ready for this until P0528
         TestFunctor<LargeUserAtomicType>()();
 #endif
         TestFunctor<int*>()();
