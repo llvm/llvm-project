@@ -5710,6 +5710,7 @@ def MVE_VDWDUPu8  : MVE_VxWDUP<"vdwdup", "u8",  0b00, 0b1>;
 def MVE_VDWDUPu16 : MVE_VxWDUP<"vdwdup", "u16", 0b01, 0b1>;
 def MVE_VDWDUPu32 : MVE_VxWDUP<"vdwdup", "u32", 0b10, 0b1>;
 
+let isReMaterializable = 1 in
 class MVE_VCTPInst<string suffix, bits<2> size, list<dag> pattern=[]>
   : MVE_p<(outs VCCR:$P0), (ins rGPR:$Rn), NoItinerary, "vctp", suffix,
           "$Rn", vpred_n, "", pattern> {
