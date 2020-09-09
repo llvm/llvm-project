@@ -2443,10 +2443,10 @@ def SignExtendIOp : Std_Op<"sexti",
 def SIToFPOp : CastOp<"sitofp">, Arguments<(ins AnyType:$in)> {
   let summary = "cast from integer type to floating-point";
   let description = [{
-    Cast from a value interpreted as signed integer to the corresponding
-    floating-point value. If the value cannot be exactly represented, it is
-    rounded using the default rounding mode. Only scalars are currently
-    supported.
+    Cast from a value interpreted as signed or vector of signed integers to the
+    corresponding floating-point scalar or vector value. If the value cannot be
+    exactly represented, it is rounded using the default rounding mode. Scalars
+    and vector types are currently supported.
   }];
 
   let extraClassDeclaration = [{
@@ -3124,10 +3124,10 @@ def TruncateIOp : Std_Op<"trunci", [NoSideEffect, SameOperandsAndResultShape]> {
 def UIToFPOp : CastOp<"uitofp">, Arguments<(ins AnyType:$in)> {
   let summary = "cast from unsigned integer type to floating-point";
   let description = [{
-    Cast from a value interpreted as unsigned integer to the corresponding
-    floating-point value. If the value cannot be exactly represented, it is
-    rounded using the default rounding mode. Only scalars are currently
-    supported.
+    Cast from a value interpreted as unsigned integer or vector of unsigned
+    integers to the corresponding scalar or vector floating-point value. If the
+    value cannot be exactly represented, it is rounded using the default
+    rounding mode. Scalars and vector types are currently supported.
   }];
 
   let extraClassDeclaration = [{
