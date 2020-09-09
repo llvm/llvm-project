@@ -768,6 +768,11 @@ public:
     return getBackedgeTakenCount(L, ConstantMaximum);
   } 
 
+  /// Return a symbolic upper bound for the backedge taken count of the loop.
+  /// This is more general than getConstantMaxBackedgeTakenCount as it returns
+  /// an arbitrary expression as opposed to only constants.
+  const SCEV* computeMaxBackedgeTakenCount(const Loop *L);
+
   /// Return true if the backedge taken count is either the value returned by
   /// getConstantMaxBackedgeTakenCount or zero.
   bool isBackedgeTakenCountMaxOrZero(const Loop *L);
