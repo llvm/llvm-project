@@ -500,7 +500,7 @@ static void clampCallSiteArgumentStates(Attributor &A, const AAType &QueryingAA,
   Optional<StateType> T;
 
   // The argument number which is also the call site argument number.
-  unsigned ArgNo = QueryingAA.getIRPosition().getArgNo();
+  unsigned ArgNo = QueryingAA.getIRPosition().getCallSiteArgNo();
 
   auto CallSiteCheck = [&](AbstractCallSite ACS) {
     const IRPosition &ACSArgPos = IRPosition::callsite_argument(ACS, ArgNo);
@@ -2495,7 +2495,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
   void initialize(Attributor &A) override {
     // See callsite argument attribute and callee argument attribute.
     const auto &CB = cast<CallBase>(getAnchorValue());
-    if (CB.paramHasAttr(getArgNo(), Attribute::NoAlias))
+    if (CB.paramHasAttr(getCallSiteArgNo(), Attribute::NoAlias))
       indicateOptimisticFixpoint();
     Value &Val = getAssociatedValue();
     if (isa<ConstantPointerNull>(Val) &&
@@ -2510,7 +2510,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
                             const AAMemoryBehavior &MemBehaviorAA,
                             const CallBase &CB, unsigned OtherArgNo) {
     // We do not need to worry about aliasing with the underlying IRP.
-    if (this->getArgNo() == (int)OtherArgNo)
+    if (this->getCalleeArgNo() == (int)OtherArgNo)
       return false;
 
     // If it is not a pointer or pointer vector we do not alias.
@@ -2925,7 +2925,7 @@ struct AAIsDeadCallSiteArgument : public AAIsDeadValueImpl {
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     CallBase &CB = cast<CallBase>(getAnchorValue());
-    Use &U = CB.getArgOperandUse(getArgNo());
+    Use &U = CB.getArgOperandUse(getCallSiteArgNo());
     assert(!isa<UndefValue>(U.get()) &&
            "Expected undef values to be filtered out!");
     UndefValue &UV = *UndefValue::get(U->getType());
@@ -4030,7 +4030,7 @@ struct AANoCaptureImpl : public AANoCapture {
       return;
     }
 
-    const Function *F = getArgNo() >= 0 ? getAssociatedFunction() : AnchorScope;
+    const Function *F = isArgumentPosition() ? getAssociatedFunction() : AnchorScope;
 
     // Check what state the associated function can actually capture.
     if (F)
@@ -4049,7 +4049,7 @@ struct AANoCaptureImpl : public AANoCapture {
     if (!isAssumedNoCaptureMaybeReturned())
       return;
 
-    if (getArgNo() >= 0) {
+    if (isArgumentPosition()) {
       if (isAssumedNoCapture())
         Attrs.emplace_back(Attribute::get(Ctx, Attribute::NoCapture));
       else if (ManifestInternal)
@@ -4085,7 +4085,7 @@ struct AANoCaptureImpl : public AANoCapture {
       State.addKnownBits(NOT_CAPTURED_IN_RET);
 
     // Check existing "returned" attributes.
-    int ArgNo = IRP.getArgNo();
+    int ArgNo = IRP.getCalleeArgNo();
     if (F.doesNotThrow() && ArgNo >= 0) {
       for (unsigned u = 0, e = F.arg_size(); u < e; ++u)
         if (F.hasParamAttribute(u, Attribute::Returned)) {
@@ -4262,12 +4262,12 @@ private:
 ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
   const IRPosition &IRP = getIRPosition();
   const Value *V =
-      getArgNo() >= 0 ? IRP.getAssociatedArgument() : &IRP.getAssociatedValue();
+      isArgumentPosition() ? IRP.getAssociatedArgument() : &IRP.getAssociatedValue();
   if (!V)
     return indicatePessimisticFixpoint();
 
   const Function *F =
-      getArgNo() >= 0 ? IRP.getAssociatedFunction() : IRP.getAnchorScope();
+      isArgumentPosition() ? IRP.getAssociatedFunction() : IRP.getAnchorScope();
   assert(F && "Expected a function!");
   const IRPosition &FnPos = IRPosition::function(*F);
   const auto &IsDeadAA =
@@ -4613,7 +4613,7 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
 
     auto PredForCallSite = [&](AbstractCallSite ACS) {
       const IRPosition &ACSArgPos =
-          IRPosition::callsite_argument(ACS, getArgNo());
+          IRPosition::callsite_argument(ACS, getCallSiteArgNo());
       // Check if a coresponding argument was found or if it is on not
       // associated (which can happen for callback calls).
       if (ACSArgPos.getPositionKind() == IRPosition::IRP_INVALID)
@@ -4894,7 +4894,8 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
                   ? dyn_cast<Constant>(SimplifiedAssociatedValue.getValue())
                   : UndefValue::get(V.getType());
     if (C) {
-      Use &U = cast<CallBase>(&getAnchorValue())->getArgOperandUse(getArgNo());
+      Use &U = cast<CallBase>(&getAnchorValue())
+                   ->getArgOperandUse(getCallSiteArgNo());
       // We can replace the AssociatedValue with the constant.
       if (&V != C && V.getType() == C->getType()) {
         if (A.changeUseAfterManifest(U, *C))
@@ -5213,7 +5214,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       return getAssociatedValue().getType()->getPointerElementType();
 
     Optional<Type *> Ty;
-    unsigned ArgNo = getIRPosition().getArgNo();
+    unsigned ArgNo = getIRPosition().getCallSiteArgNo();
 
     // Make sure the associated call site argument has the same type at all call
     // sites and it is an allocation we know is safe to privatize, for now that
