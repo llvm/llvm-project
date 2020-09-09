@@ -29,9 +29,10 @@ define amdgpu_kernel void @localize_constants(i1 %cond) {
 ; GFX9-NEXT:    s_mov_b32 s0, 0
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9-NEXT:  BB0_2: ; %Flow
+; GFX9-NEXT:    s_xor_b32 s0, s0, -1
 ; GFX9-NEXT:    s_and_b32 s0, s0, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX9-NEXT:    s_cbranch_scc0 BB0_4
+; GFX9-NEXT:    s_cbranch_scc1 BB0_4
 ; GFX9-NEXT:  ; %bb.3: ; %bb0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x7b
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
@@ -109,9 +110,10 @@ define amdgpu_kernel void @localize_globals(i1 %cond) {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX9-NEXT:  BB1_2: ; %Flow
+; GFX9-NEXT:    s_xor_b32 s0, s0, -1
 ; GFX9-NEXT:    s_and_b32 s0, s0, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX9-NEXT:    s_cbranch_scc0 BB1_4
+; GFX9-NEXT:    s_cbranch_scc1 BB1_4
 ; GFX9-NEXT:  ; %bb.3: ; %bb0
 ; GFX9-NEXT:    s_getpc_b64 s[0:1]
 ; GFX9-NEXT:    s_add_u32 s0, s0, gv0@gotpcrel32@lo+4
