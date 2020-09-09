@@ -21,7 +21,7 @@ subroutine assign1(lhs, rhs)
 
   ! Copy of rhs into temp
   ! CHECK: fir.do_loop %[[i:.*]] =
-    ! CHECK: %[[rhs_addr2:.*]] = fir.convert %[[rhs]]#0
+    ! CHECK: %[[rhs_addr2:.*]] = fir.convert %{{[0-9]+}}#0
     ! CHECK-DAG: %[[rhs_addr:.*]] = fir.coordinate_of %[[rhs_addr2]], %[[i]]
     ! CHECK-DAG: %[[rhs_elt:.*]] = fir.load %[[rhs_addr]]
     ! CHECK-DAG: %[[tmp2:.*]] = fir.convert %[[tmp]]

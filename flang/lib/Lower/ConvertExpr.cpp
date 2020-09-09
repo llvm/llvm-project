@@ -242,13 +242,12 @@ private:
                                 const fir::ExtendedValue &left,
                                 const fir::ExtendedValue &right) {
     if (auto *lhs = left.getUnboxed()) {
-      if (auto *rhs = right.getUnboxed()) {
+      if (auto *rhs = right.getUnboxed())
         return Fortran::lower::genBoxCharCompare(converter, getLoc(), pred,
                                                  *lhs, *rhs);
-      } else if (auto *rhs = right.getCharBox()) {
+      if (auto *rhs = right.getCharBox())
         return Fortran::lower::genBoxCharCompare(converter, getLoc(), pred,
                                                  *lhs, rhs->getBuffer());
-      }
     }
     if (auto *lhs = left.getCharBox()) {
       if (auto *rhs = right.getCharBox()) {
@@ -256,10 +255,10 @@ private:
         // addresses
         return Fortran::lower::genBoxCharCompare(
             converter, getLoc(), pred, lhs->getBuffer(), rhs->getBuffer());
-      } else if (auto *rhs = right.getUnboxed()) {
+      }
+      if (auto *rhs = right.getUnboxed())
         return Fortran::lower::genBoxCharCompare(converter, getLoc(), pred,
                                                  lhs->getBuffer(), *rhs);
-      }
     }
 
     // Error if execution reaches this point
@@ -1269,7 +1268,7 @@ private:
       return converter.genType(dt.category(), dt.kind());
     llvm::report_fatal_error("derived types not implemented");
   }
-  
+
   template <typename A>
   fir::ExtendedValue gen(const Fortran::evaluate::FunctionRef<A> &func) {
     assert(func.GetType().has_value() && "function has no type");
@@ -1353,7 +1352,7 @@ private:
       symMap.addSymbol(dummySymbol, genExtAddr(*expr));
     }
     auto result = genval(details.stmtFunction().value());
-    LLVM_DEBUG(llvm::errs() << "stmt-function: " << result << '\n');
+    LLVM_DEBUG(llvm::dbgs() << "stmt-function: " << result << '\n');
     // Remove dummy local arguments from the map.
     for (const auto *dummySymbol : details.dummyArgs())
       symMap.erase(*dummySymbol);
@@ -1594,8 +1593,8 @@ mlir::Value Fortran::lower::createSomeExpression(
     const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
     Fortran::lower::SymMap &symMap) {
   Fortran::lower::ExpressionContext unused;
-  LLVM_DEBUG(llvm::errs() << "expr: "; expr.AsFortran(llvm::errs());
-             llvm::errs() << '\n');
+  LLVM_DEBUG(llvm::dbgs() << "expr: "; expr.AsFortran(llvm::dbgs());
+             llvm::dbgs() << '\n');
   return ExprLowering{loc, converter, symMap, unused}.genValue(expr);
 }
 
@@ -1604,8 +1603,8 @@ fir::ExtendedValue Fortran::lower::createSomeExtendedExpression(
     const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
     Fortran::lower::SymMap &symMap,
     const Fortran::lower::ExpressionContext &context) {
-  LLVM_DEBUG(llvm::errs() << "expr: "; expr.AsFortran(llvm::errs());
-             llvm::errs() << '\n');
+  LLVM_DEBUG(llvm::dbgs() << "expr: "; expr.AsFortran(llvm::dbgs());
+             llvm::dbgs() << '\n');
   return ExprLowering{loc, converter, symMap, context}.genExtValue(expr);
 }
 
@@ -1614,8 +1613,8 @@ mlir::Value Fortran::lower::createSomeAddress(
     const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
     Fortran::lower::SymMap &symMap) {
   Fortran::lower::ExpressionContext unused;
-  LLVM_DEBUG(llvm::errs() << "address: "; expr.AsFortran(llvm::errs());
-             llvm::errs() << '\n');
+  LLVM_DEBUG(llvm::dbgs() << "address: "; expr.AsFortran(llvm::dbgs());
+             llvm::dbgs() << '\n');
   return ExprLowering{loc, converter, symMap, unused}.genAddr(expr);
 }
 
@@ -1624,8 +1623,8 @@ fir::ExtendedValue Fortran::lower::createSomeExtendedAddress(
     const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
     Fortran::lower::SymMap &symMap,
     const Fortran::lower::ExpressionContext &context) {
-  LLVM_DEBUG(llvm::errs() << "address: "; expr.AsFortran(llvm::errs());
-             llvm::errs() << '\n');
+  LLVM_DEBUG(llvm::dbgs() << "address: "; expr.AsFortran(llvm::dbgs());
+             llvm::dbgs() << '\n');
   return ExprLowering{loc, converter, symMap, context}.genExtAddr(expr);
 }
 
@@ -1635,7 +1634,7 @@ fir::ExtendedValue Fortran::lower::createStringLiteral(
   assert(str.size() == len);
   Fortran::lower::SymMap unused1;
   Fortran::lower::ExpressionContext unused2;
-  LLVM_DEBUG(llvm::errs() << "string-lit: \"" << str << "\"\n");
+  LLVM_DEBUG(llvm::dbgs() << "string-lit: \"" << str << "\"\n");
   return ExprLowering{loc, converter, unused1, unused2}.genStringLit(str, len);
 }
 

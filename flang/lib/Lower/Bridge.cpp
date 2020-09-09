@@ -1484,8 +1484,10 @@ private:
               if (isCharacterCategory(lhsType->category())) {
                 // Fortran 2018 10.2.1.3 p10 and p11
                 // Generating value for lhs to get fir.boxchar.
+                Fortran::lower::ExpressionContext context;
                 auto lhs = genExprAddr(assign.lhs);
-                auto rhs = genExprValue(assign.rhs);
+                auto rhs = createSomeExtendedExpression(
+                    toLocation(), *this, assign.rhs, localSymbols, context);
                 Fortran::lower::CharacterExprHelper{*builder, loc}.createAssign(
                     lhs, rhs);
                 return;
@@ -1798,11 +1800,11 @@ private:
           // Assume that the members of the COMMON block will appear in an order
           // that is sorted by offset.
           [[maybe_unused]] std::int64_t lastByteOff = -1;
-          LLVM_DEBUG(llvm::errs() << "block {\n");
+          LLVM_DEBUG(llvm::dbgs() << "block {\n");
           for (const auto &obj : details->objects()) {
             assert(lastByteOff < static_cast<std::int64_t>(obj->offset()));
             lastByteOff = static_cast<std::int64_t>(obj->offset());
-            LLVM_DEBUG(llvm::errs() << "offset: " << obj->offset() << '\n');
+            LLVM_DEBUG(llvm::dbgs() << "offset: " << obj->offset() << '\n');
             if (const auto *objDet =
                     obj->detailsIf<Fortran::semantics::ObjectEntityDetails>())
               if (objDet->init()) {
@@ -1814,7 +1816,7 @@ private:
                                                         castVal, off);
               }
           }
-          LLVM_DEBUG(llvm::errs() << "}\n");
+          LLVM_DEBUG(llvm::dbgs() << "}\n");
           builder.create<fir::HasValueOp>(loc, cb);
         };
         global = builder->createGlobal(loc, commonTy, globalName,
