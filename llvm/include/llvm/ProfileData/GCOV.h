@@ -212,12 +212,13 @@ private:
 };
 
 struct GCOVArc {
-  GCOVArc(GCOVBlock &src, GCOVBlock &dst, bool fallthrough)
-      : src(src), dst(dst), fallthrough(fallthrough) {}
+  GCOVArc(GCOVBlock &src, GCOVBlock &dst, uint32_t flags)
+      : src(src), dst(dst), flags(flags) {}
+  bool onTree() const;
 
   GCOVBlock &src;
   GCOVBlock &dst;
-  bool fallthrough;
+  uint32_t flags;
   uint64_t Count = 0;
   uint64_t CyclesCount = 0;
 };
@@ -234,7 +235,7 @@ public:
   StringRef getFilename() const;
   size_t getNumBlocks() const { return Blocks.size(); }
   uint64_t getEntryCount() const;
-  uint64_t getExitCount() const;
+  GCOVBlock &getExitBlock() const;
 
   BlockIterator block_begin() const { return Blocks.begin(); }
   BlockIterator block_end() const { return Blocks.end(); }
@@ -242,6 +243,7 @@ public:
     return make_range(block_begin(), block_end());
   }
 
+  uint64_t propagateCounts(const GCOVBlock &v, GCOVArc *arc);
   void print(raw_ostream &OS) const;
   void dump() const;
   void collectLineCounts(FileInfo &FI);
