@@ -216,7 +216,12 @@ namespace {
 /// imported while completing the original Decls).
 class CompleteTagDeclsScope : public ClangASTImporter::NewDeclListener {
   ClangASTImporter::ImporterDelegateSP m_delegate;
-  llvm::SmallVector<NamedDecl *, 32> m_decls_to_complete;
+  /// List of declarations in the target context that need to be completed.
+  /// Every declaration should only be completed once and therefore should only
+  /// be once in this list.
+  llvm::SetVector<NamedDecl *> m_decls_to_complete;
+  /// Set of declarations that already were successfully completed (not just
+  /// added to m_decls_to_complete).
   llvm::SmallPtrSet<NamedDecl *, 32> m_decls_already_completed;
   clang::ASTContext *m_dst_ctx;
   clang::ASTContext *m_src_ctx;
@@ -244,6 +249,9 @@ public:
       NamedDecl *decl = m_decls_to_complete.pop_back_val();
       m_decls_already_completed.insert(decl);
 
+      // The decl that should be completed has to be imported into the target
+      // context from some other context.
+      assert(to_context_md->hasOrigin(decl));
       // We should only complete decls coming from the source context.
       assert(to_context_md->getOrigin(decl).ctx == m_src_ctx);
 
@@ -287,7 +295,8 @@ public:
     // Check if we already completed this type.
     if (m_decls_already_completed.count(to_named_decl) != 0)
       return;
-    m_decls_to_complete.push_back(to_named_decl);
+    // Queue this type to be completed.
+    m_decls_to_complete.insert(to_named_decl);
   }
 };
 } // namespace
