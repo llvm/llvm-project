@@ -1694,6 +1694,22 @@ static LogicalResult verify(DynamicTensorFromElementsOp op) {
   return success();
 }
 
+void DynamicTensorFromElementsOp::build(
+    OpBuilder &b, OperationState &result, Type resultTy,
+    ValueRange dynamicExtents,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
+  build(b, result, resultTy, dynamicExtents);
+
+  // Build and populate body.
+  OpBuilder::InsertionGuard guard(b);
+  Region *bodyRegion = result.regions.front().get();
+  auto rank = resultTy.cast<RankedTensorType>().getRank();
+  SmallVector<Type, 2> argumentTypes(rank, b.getIndexType());
+  Block *bodyBlock =
+      b.createBlock(bodyRegion, bodyRegion->end(), argumentTypes);
+  bodyBuilder(b, result.location, bodyBlock->getArguments());
+}
+
 //===----------------------------------------------------------------------===//
 // ExtractElementOp
 //===----------------------------------------------------------------------===//
