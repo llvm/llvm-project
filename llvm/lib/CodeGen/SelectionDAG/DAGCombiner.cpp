@@ -1558,9 +1558,15 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
       DAG.ReplaceAllUsesWith(N, &RV);
     }
 
-    // Push the new node and any users onto the worklist
-    AddToWorklist(RV.getNode());
-    AddUsersToWorklist(RV.getNode());
+    // Push the new node and any users onto the worklist.  Omit this if the
+    // new node is the EntryToken (e.g. if a store managed to get optimized
+    // out), because re-visiting the EntryToken and its users will not uncover
+    // any additional opportunities, but there may be a large number of such
+    // users, potentially causing compile time explosion.
+    if (RV.getOpcode() != ISD::EntryToken) {
+      AddToWorklist(RV.getNode());
+      AddUsersToWorklist(RV.getNode());
+    }
 
     // Finally, if the node is now dead, remove it from the graph.  The node
     // may not be dead if the replacement process recursively simplified to
