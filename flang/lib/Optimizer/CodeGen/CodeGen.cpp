@@ -98,12 +98,12 @@ public:
         specifics(fir::CodeGenSpecifics::get(module.getContext(),
                                              *fir::getTargetTriple(module),
                                              *fir::getKindMapping(module))) {
-    LLVM_DEBUG(llvm::errs() << "FIR type converter\n");
+    LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
 
     // Each conversion should return a value of type mlir::LLVM::LLVMType.
     addConversion([&](fir::BoxType box) { return convertBoxType(box); });
     addConversion([&](fir::BoxCharType boxchar) {
-      LLVM_DEBUG(llvm::errs() << "type convert: " << boxchar << '\n');
+      LLVM_DEBUG(llvm::dbgs() << "type convert: " << boxchar << '\n');
       return unwrap(
           convertType(specifics->boxcharMemoryType(boxchar.getEleTy())));
     });
@@ -149,7 +149,7 @@ public:
           unwrap(convertType(vecTy.getEleTy())), vecTy.getLen());
     });
     addConversion([&](mlir::TupleType tuple) {
-      LLVM_DEBUG(llvm::errs() << "type convert: " << tuple << '\n');
+      LLVM_DEBUG(llvm::dbgs() << "type convert: " << tuple << '\n');
       SmallVector<mlir::Type, 8> inMembers;
       tuple.getFlattenedTypes(inMembers);
       SmallVector<mlir::LLVM::LLVMType, 8> members;
@@ -267,14 +267,17 @@ public:
   // fir.complex<T> | std.complex<T>    --> llvm<"{t,t}">
   template <typename C>
   mlir::LLVM::LLVMType convertComplexType(C cmplx) {
-    LLVM_DEBUG(llvm::errs() << "type convert: " << cmplx << '\n');
+    LLVM_DEBUG(llvm::dbgs() << "type convert: " << cmplx << '\n');
     auto eleTy = cmplx.getElementType();
     return unwrap(convertType(specifics->complexMemoryType(eleTy)));
   }
 
+  // Get the default size of INTEGER. (The default size might have been set on
+  // the command line.)
   mlir::LLVM::LLVMType getDefaultInt() {
-    // FIXME: this should be tied to the front-end default
-    return mlir::LLVM::LLVMType::getInt64Ty(&getContext());
+    return mlir::LLVM::LLVMType::getIntNTy(
+        &getContext(),
+        kindMapping.getIntegerBitsize(kindMapping.defaultIntegerKind()));
   }
 
   template <typename A>

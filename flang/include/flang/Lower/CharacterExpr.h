@@ -53,7 +53,7 @@ public:
 
   /// Lower \p lhs = \p rhs where \p lhs and \p rhs are scalar characters.
   /// It handles cases where \p lhs and \p rhs may overlap.
-  void createAssign(mlir::Value lhs, mlir::Value rhs);
+  void createAssign(mlir::Value lhs, const fir::ExtendedValue &rhs);
 
   /// Lower an assignment where the buffer and LEN parameter are known and do
   /// not need to be unboxed.
@@ -101,7 +101,7 @@ public:
   materializeCharacterOrSequence(mlir::Value str);
 
   /// Return true if \p type is a character literal type (is
-  /// fir.array<len x fir.char<kind>>).;
+  /// `fir.array<len x fir.char<kind>>`).;
   static bool isCharacterLiteral(mlir::Type type);
 
   /// Return true if \p type is one of the following type
@@ -119,6 +119,7 @@ public:
   /// Determine the base character type
   static fir::CharacterType getCharacterType(mlir::Type type);
   static fir::CharacterType getCharacterType(const fir::CharBoxValue &box);
+  static fir::CharacterType getCharacterType(mlir::Value str);
 
   /// Return the integer type that must be used to manipulate
   /// Character lengths. TODO: move this to FirOpBuilder?
@@ -130,10 +131,12 @@ public:
   /// - fir.array<len x fir.char<kind>>
   /// - fir.char<kind>
   /// - fir.ref<char<kind>>
-  /// If the no length is passed, it is attempted to be extracted from \p
-  /// character (or its type). This will crash if this is not possible.
-  /// The returned value is a CharBoxValue if \p character is a scalar,
-  /// otherwise it is a CharArrayBoxValue.
+  ///
+  /// Does the heavy lifting of converting the value \p character (along with an
+  /// optional \p len value) to an extended value. If \p len is null, a length
+  /// value is extracted from \p character (or its type). This will produce an
+  /// error if it's not possible. The returned value is a CharBoxValue if \p
+  /// character is a scalar, otherwise it is a CharArrayBoxValue.
   fir::ExtendedValue toExtendedValue(mlir::Value character,
                                      mlir::Value len = {});
 
@@ -143,17 +146,23 @@ public:
   ///   - !fir.array<dim x !fir.char<kind, len>>
   ///   - !fir.ref<T>  where T is either of the first two cases
   ///   - !fir.box<T>  where T is either of the first two cases
+  ///
+  /// In certain contexts, Fortran allows an array of CHARACTERs to be treated
+  /// as if it were one longer CHARACTER scalar, each element append to the
+  /// previous.
   static bool isArray(mlir::Type type);
 
 private:
-  fir::CharBoxValue materializeValue(const fir::CharBoxValue &str);
+  fir::CharBoxValue materializeValue(mlir::Value str);
   fir::CharBoxValue toDataLengthPair(mlir::Value character);
   mlir::Type getReferenceType(const fir::CharBoxValue &c) const;
+  mlir::Type getReferenceType(mlir::Value str) const;
   mlir::Type getSeqTy(const fir::CharBoxValue &c) const;
+  mlir::Type getSeqTy(mlir::Value str) const;
+  mlir::Value getCharBoxBuffer(const fir::CharBoxValue &box);
   mlir::Value createEmbox(const fir::CharBoxValue &str);
-  mlir::Value createLoadCharAt(const fir::CharBoxValue &str, mlir::Value index);
-  void createStoreCharAt(const fir::CharBoxValue &str, mlir::Value index,
-                         mlir::Value c);
+  mlir::Value createLoadCharAt(mlir::Value buff, mlir::Value index);
+  void createStoreCharAt(mlir::Value str, mlir::Value index, mlir::Value c);
   void createCopy(const fir::CharBoxValue &dest, const fir::CharBoxValue &src,
                   mlir::Value count);
   void createPadding(const fir::CharBoxValue &str, mlir::Value lower,

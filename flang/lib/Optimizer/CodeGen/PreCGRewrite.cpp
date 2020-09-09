@@ -96,7 +96,7 @@ public:
     auto xbox = rewriter.create<XEmboxOp>(loc, embox.getType(), embox.memref(),
                                           shapeOpers, llvm::None, llvm::None,
                                           llvm::None, attrs);
-    LLVM_DEBUG(llvm::errs() << "rewriting " << embox << " to " << xbox << '\n');
+    LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
   }
@@ -140,7 +140,7 @@ public:
     auto xbox = rewriter.create<XEmboxOp>(loc, embox.getType(), embox.memref(),
                                           shapeOpers, shiftOpers, sliceOpers,
                                           embox.getLenParams(), attrs);
-    LLVM_DEBUG(llvm::errs() << "rewriting " << embox << " to " << xbox << '\n');
+    LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
   }
@@ -194,7 +194,7 @@ public:
     auto xArrCoor = rewriter.create<XArrayCoorOp>(
         loc, arrCoor.getType(), arrCoor.memref(), shapeOpers, shiftOpers,
         sliceOpers, arrCoor.indices(), arrCoor.lenParams(), attrs);
-    LLVM_DEBUG(llvm::errs()
+    LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << arrCoor << " to " << xArrCoor << '\n');
     rewriter.replaceOp(arrCoor, xArrCoor.getOperation()->getResults());
     return mlir::success();
@@ -523,7 +523,7 @@ public:
       assert(callOp.callee().hasValue() && "indirect call not implemented");
       auto newCall = rewriter->create<A>(loc, callOp.callee().getValue(),
                                          newResTys, newOpers);
-      LLVM_DEBUG(llvm::errs() << "replacing call with " << newCall << '\n');
+      LLVM_DEBUG(llvm::dbgs() << "replacing call with " << newCall << '\n');
       if (wrap.hasValue())
         replaceOp(callOp, (*wrap)(newCall.getOperation()));
       else
@@ -626,13 +626,13 @@ public:
     for (auto ty : func.getResults())
       if ((ty.isa<BoxCharType>() && !noCharacterConversion) ||
           (isa_complex(ty) && !noComplexConversion)) {
-        LLVM_DEBUG(llvm::errs() << "rewrite " << signature << " for target\n");
+        LLVM_DEBUG(llvm::dbgs() << "rewrite " << signature << " for target\n");
         return false;
       }
     for (auto ty : func.getInputs())
       if ((ty.isa<BoxCharType>() && !noCharacterConversion) ||
           (isa_complex(ty) && !noComplexConversion)) {
-        LLVM_DEBUG(llvm::errs() << "rewrite " << signature << " for target\n");
+        LLVM_DEBUG(llvm::dbgs() << "rewrite " << signature << " for target\n");
         return false;
       }
     return true;
@@ -751,7 +751,7 @@ public:
           mlir::Value load = rewriter->create<fir::LoadOp>(loc, cast);
           func.getArgument(fixup.index + 1).replaceAllUsesWith(load);
           func.front().eraseArgument(fixup.index + 1);
-          LLVM_DEBUG(llvm::errs()
+          LLVM_DEBUG(llvm::dbgs()
                      << "old argument: " << oldArgTy.getEleTy()
                      << ", repl: " << load << ", new argument: "
                      << func.getArgument(fixup.index).getType() << '\n');
@@ -850,7 +850,7 @@ public:
     newInTys.insert(newInTys.end(), trailingTys.begin(), trailingTys.end());
     auto newFuncTy =
         mlir::FunctionType::get(newInTys, newResTys, func.getContext());
-    LLVM_DEBUG(llvm::errs() << "new func: " << newFuncTy << '\n');
+    LLVM_DEBUG(llvm::dbgs() << "new func: " << newFuncTy << '\n');
     func.setType(newFuncTy);
 
     for (auto &fixup : fixups)

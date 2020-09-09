@@ -54,8 +54,8 @@ class AbstractBox {
 public:
   AbstractBox() = delete;
   AbstractBox(mlir::Value addr) : addr{addr} {
-    //assert(isa_passbyref_type(addr.getType()) &&
-    //       "box values must be references");
+    assert(isa_passbyref_type(addr.getType()) &&
+           "box values must be references");
   }
 
   /// An abstract box always contains a memory reference to a value.
@@ -225,7 +225,11 @@ public:
   using VT = std::variant<UnboxedValue, CharBoxValue, ArrayBoxValue,
                           CharArrayBoxValue, BoxValue, ProcBoxValue>;
 
-  template <typename A>
+  ExtendedValue() : box{UnboxedValue{}} {}
+  ExtendedValue(const ExtendedValue &) = default;
+  ExtendedValue(ExtendedValue &&) = default;
+  template <typename A, typename = std::enable_if_t<
+                            !std::is_same_v<std::decay_t<A>, ExtendedValue>>>
   constexpr ExtendedValue(A &&box) : box{std::forward<A>(box)} {}
 
   template <typename A>
