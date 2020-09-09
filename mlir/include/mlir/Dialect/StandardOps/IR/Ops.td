@@ -1504,6 +1504,13 @@ def DynamicTensorFromElementsOp : Std_Op<"dynamic_tensor_from_elements",
   let arguments = (ins Variadic<Index>:$dynamicExtents);
   let results = (outs AnyRankedTensor:$result);
   let regions = (region SizedRegion<1>:$body);
+
+  let builders = [
+    // Build op and populate its body per callback function.
+    OpBuilder<"OpBuilder &b, OperationState &result, Type resultTy, "
+              "ValueRange dynamicExtents, "
+              "function_ref<void(OpBuilder &, Location, ValueRange)>">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
