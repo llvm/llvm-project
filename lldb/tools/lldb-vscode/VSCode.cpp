@@ -38,8 +38,7 @@ VSCode::VSCode()
            {"swift_catch", "Swift Catch", lldb::eLanguageTypeSwift},
            {"swift_throw", "Swift Throw", lldb::eLanguageTypeSwift}}),
       focus_tid(LLDB_INVALID_THREAD_ID), sent_terminated_event(false),
-      stop_at_entry(false), is_attach(false),
-      reverse_request_seq(0), waiting_for_run_in_terminal(false) {
+      stop_at_entry(false), is_attach(false) {
   const char *log_file_path = getenv("LLDBVSCODE_LOG");
 #if defined(_WIN32)
   // Windows opens stdout and stdin in text mode which converts \n to 13,10
@@ -361,73 +360,6 @@ void VSCode::SetTarget(const lldb::SBTarget target) {
             lldb::SBTarget::eBroadcastBitModulesUnloaded |
             lldb::SBTarget::eBroadcastBitSymbolsLoaded);
   }
-}
-
-PacketStatus VSCode::GetObject(llvm::json::Object &object) {
-  std::string json = ReadJSON();
-  if (json.empty())
-    return PacketStatus::EndOfFile;
-
-  llvm::StringRef json_sref(json);
-  llvm::Expected<llvm::json::Value> json_value = llvm::json::parse(json_sref);
-  if (!json_value) {
-    auto error = json_value.takeError();
-    if (log) {
-      std::string error_str;
-      llvm::raw_string_ostream strm(error_str);
-      strm << error;
-      strm.flush();
-      *log << "error: failed to parse JSON: " << error_str << std::endl
-           << json << std::endl;
-    }
-    return PacketStatus::JSONMalformed;
-  }
-  object = *json_value->getAsObject();
-  if (!json_value->getAsObject()) {
-    if (log)
-      *log << "error: json packet isn't a object" << std::endl;
-    return PacketStatus::JSONNotObject;
-  }
-  return PacketStatus::Success;
-}
-
-bool VSCode::HandleObject(const llvm::json::Object &object) {
-  const auto packet_type = GetString(object, "type");
-  if (packet_type == "request") {
-    const auto command = GetString(object, "command");
-    auto handler_pos = request_handlers.find(std::string(command));
-    if (handler_pos != request_handlers.end()) {
-      handler_pos->second(object);
-      return true; // Success
-    } else {
-      if (log)
-        *log << "error: unhandled command \"" << command.data() << std::endl;
-      return false; // Fail
-    }
-  }
-  return false;
-}
-
-PacketStatus VSCode::SendReverseRequest(llvm::json::Object request,
-                                        llvm::json::Object &response) {
-  request.try_emplace("seq", ++reverse_request_seq);
-  SendJSON(llvm::json::Value(std::move(request)));
-  while (true) {
-    PacketStatus status = GetObject(response);
-    const auto packet_type = GetString(response, "type");
-    if (packet_type == "response")
-      return status;
-    else {
-      // Not our response, we got another packet
-      HandleObject(response);
-    }
-  }
-  return PacketStatus::EndOfFile;
-}
-
-void VSCode::RegisterRequestCallback(std::string request,
-                                     RequestCallback callback) {
-  request_handlers[request] = callback;
 }
 
 } // namespace lldb_vscode
