@@ -22,6 +22,8 @@ endforeach()
 list(REMOVE_ITEM entrypoints_name_list "__assert_fail" "__errno_location")
 list(TRANSFORM entrypoints_name_list PREPEND "-e=")
 
+file(GLOB spec_files ${LIBC_SOURCE_DIR}/spec/*.td)
+
 # Generate integration test souce code.
 add_custom_command(
   OUTPUT ${public_test}
@@ -30,7 +32,7 @@ add_custom_command(
           -I ${LIBC_SOURCE_DIR}
           ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
 
-  DEPENDS ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
+  DEPENDS ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td ${spec_files}
           libc-prototype-testgen ${TARGET_PUBLIC_HEADERS}
           llvmlibc llvmlibm
 )
