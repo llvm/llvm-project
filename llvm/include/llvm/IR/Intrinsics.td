@@ -1349,42 +1349,42 @@ def int_get_active_lane_mask:
 
 //===-------------------------- Masked Intrinsics -------------------------===//
 //
-def int_masked_store : Intrinsic<[], [llvm_anyvector_ty,
-                                      LLVMAnyPointerType<LLVMMatchType<0>>,
-                                      llvm_i32_ty,
-                                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                                 [IntrArgMemOnly, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
+def int_masked_load:
+  Intrinsic<[llvm_anyvector_ty],
+            [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
+            [IntrReadMem, IntrArgMemOnly, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
 
-def int_masked_load  : Intrinsic<[llvm_anyvector_ty],
-                                 [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty,
-                                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
-                                 [IntrReadMem, IntrArgMemOnly, IntrWillReturn,
-                                  ImmArg<ArgIndex<1>>]>;
+def int_masked_store:
+  Intrinsic<[],
+            [llvm_anyvector_ty, LLVMAnyPointerType<LLVMMatchType<0>>,
+             llvm_i32_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+            [IntrWriteMem, IntrArgMemOnly, IntrWillReturn,
+             ImmArg<ArgIndex<2>>]>;
 
-def int_masked_gather: Intrinsic<[llvm_anyvector_ty],
-                                 [LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
-                                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                  LLVMMatchType<0>],
-                                 [IntrReadMem, IntrWillReturn,
-                                  ImmArg<ArgIndex<1>>]>;
+def int_masked_gather:
+  Intrinsic<[llvm_anyvector_ty],
+            [LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
+            [IntrReadMem, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
 
-def int_masked_scatter: Intrinsic<[],
-                                  [llvm_anyvector_ty,
-                                   LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
-                                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                                  [IntrWillReturn, ImmArg<ArgIndex<2>>]>;
+def int_masked_scatter:
+  Intrinsic<[],
+            [llvm_anyvector_ty, LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+            [IntrWriteMem, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
 
-def int_masked_expandload: Intrinsic<[llvm_anyvector_ty],
-                                     [LLVMPointerToElt<0>,
-                                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                      LLVMMatchType<0>],
-                                     [IntrReadMem, IntrWillReturn]>;
+def int_masked_expandload:
+  Intrinsic<[llvm_anyvector_ty],
+            [LLVMPointerToElt<0>, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+             LLVMMatchType<0>],
+            [IntrReadMem, IntrWillReturn]>;
 
-def int_masked_compressstore: Intrinsic<[],
-                                     [llvm_anyvector_ty,
-                                      LLVMPointerToElt<0>,
-                                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                                     [IntrArgMemOnly, IntrWillReturn]>;
+def int_masked_compressstore:
+  Intrinsic<[],
+            [llvm_anyvector_ty, LLVMPointerToElt<0>,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+            [IntrWriteMem, IntrArgMemOnly, IntrWillReturn]>;
 
 // Test whether a pointer is associated with a type metadata identifier.
 def int_type_test : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],
