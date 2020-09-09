@@ -325,16 +325,12 @@ namespace {
     GCOVFunction(GCOVProfiler *P, Function *F, const DISubprogram *SP,
                  unsigned EndLine, uint32_t Ident, int Version)
         : GCOVRecord(P), SP(SP), EndLine(EndLine), Ident(Ident),
-          Version(Version), ReturnBlock(P, 1) {
+          Version(Version), EntryBlock(P, 0), ReturnBlock(P, 1) {
       LLVM_DEBUG(dbgs() << "Function: " << getFunctionName(SP) << "\n");
       bool ExitBlockBeforeBody = Version >= 48;
-      uint32_t i = 0;
-      for (auto &BB : *F) {
-        // Skip index 1 if it's assigned to the ReturnBlock.
-        if (i == 1 && ExitBlockBeforeBody)
-          ++i;
+      uint32_t i = ExitBlockBeforeBody ? 2 : 1;
+      for (BasicBlock &BB : *F)
         Blocks.insert(std::make_pair(&BB, GCOVBlock(P, i++)));
-      }
       if (!ExitBlockBeforeBody)
         ReturnBlock.Number = i;
 
@@ -349,6 +345,7 @@ namespace {
       return Blocks.find(BB)->second;
     }
 
+    GCOVBlock &getEntryBlock() { return EntryBlock; }
     GCOVBlock &getReturnBlock() {
       return ReturnBlock;
     }
@@ -391,17 +388,22 @@ namespace {
       // Emit count of blocks.
       write(GCOV_TAG_BLOCKS);
       if (Version < 80) {
-        write(Blocks.size() + 1);
-        for (int i = Blocks.size() + 1; i; --i)
+        write(Blocks.size() + 2);
+        for (int i = Blocks.size() + 2; i; --i)
           write(0);
       } else {
         write(1);
-        write(Blocks.size() + 1);
+        write(Blocks.size() + 2);
       }
       LLVM_DEBUG(dbgs() << (Blocks.size() + 1) << " blocks\n");
 
       // Emit edges between blocks.
       Function *F = Blocks.begin()->first->getParent();
+      write(GCOV_TAG_ARCS);
+      write(3);
+      write(0);
+      write(getBlock(&F->getEntryBlock()).Number);
+      write(0); // no flags
       for (BasicBlock &I : *F) {
         GCOVBlock &Block = getBlock(&I);
         if (Block.OutEdges.empty()) continue;
@@ -429,6 +431,7 @@ namespace {
     uint32_t FuncChecksum;
     int Version;
     DenseMap<BasicBlock *, GCOVBlock> Blocks;
+    GCOVBlock EntryBlock;
     GCOVBlock ReturnBlock;
   };
 }
@@ -604,16 +607,6 @@ static bool isUsingScopeBasedEH(Function &F) {
   return isScopedEHPersonality(Personality);
 }
 
-static bool shouldKeepInEntry(BasicBlock::iterator It) {
-	if (isa<AllocaInst>(*It)) return true;
-	if (isa<DbgInfoIntrinsic>(*It)) return true;
-	if (auto *II = dyn_cast<IntrinsicInst>(It)) {
-		if (II->getIntrinsicID() == llvm::Intrinsic::localescape) return true;
-	}
-
-	return false;
-}
-
 bool GCOVProfiler::AddFlushBeforeForkAndExec() {
   SmallVector<CallInst *, 2> Forks;
   SmallVector<CallInst *, 2> Execs;
@@ -740,10 +733,6 @@ void GCOVProfiler::emitProfileNotes() {
       // gcov expects every function to start with an entry block that has a
       // single successor, so split the entry block to make sure of that.
       BasicBlock &EntryBlock = F.getEntryBlock();
-      BasicBlock::iterator It = EntryBlock.begin();
-      while (shouldKeepInEntry(It))
-        ++It;
-      EntryBlock.splitBasicBlock(It);
 
       Funcs.push_back(std::make_unique<GCOVFunction>(this, &F, SP, EndLine,
                                                      FunctionIdent++, Version));
@@ -758,6 +747,7 @@ void GCOVProfiler::emitProfileNotes() {
       if (!SP->isArtificial())
         Func.getBlock(&EntryBlock).getFile(Filename).addLine(Line);
 
+      Func.getEntryBlock().addEdge(Func.getBlock(&EntryBlock));
       for (auto &BB : F) {
         GCOVBlock &Block = Func.getBlock(&BB);
         Instruction *TI = BB.getTerminator();
@@ -846,6 +836,7 @@ bool GCOVProfiler::emitProfileArcs() {
 
       DenseMap<std::pair<BasicBlock *, BasicBlock *>, unsigned> EdgeToCounter;
       unsigned Edges = 0;
+      EdgeToCounter[{nullptr, &F.getEntryBlock()}] = Edges++;
       for (auto &BB : F) {
         Instruction *TI = BB.getTerminator();
         if (isa<ReturnInst>(TI)) {
@@ -869,12 +860,20 @@ bool GCOVProfiler::emitProfileArcs() {
       // If a BB has several predecessors, use a PHINode to select
       // the correct counter.
       for (auto &BB : F) {
-        const unsigned EdgeCount =
-            std::distance(pred_begin(&BB), pred_end(&BB));
-        if (EdgeCount) {
-          // The phi node must be at the begin of the BB.
-          IRBuilder<> BuilderForPhi(&*BB.begin());
-          Type *Int64PtrTy = Type::getInt64PtrTy(*Ctx);
+        // The phi node must be at the begin of the BB.
+        IRBuilder<> BuilderForPhi(&*BB.begin());
+        IRBuilder<> Builder(&*BB.getFirstInsertionPt());
+        Type *Int64PtrTy = Type::getInt64PtrTy(*Ctx);
+        Value *V;
+        if (&BB == &F.getEntryBlock()) {
+          auto It = EdgeToCounter.find({nullptr, &BB});
+          V = Builder.CreateConstInBoundsGEP2_64(Counters->getValueType(),
+                                                 Counters, 0, It->second);
+        } else {
+          const unsigned EdgeCount =
+              std::distance(pred_begin(&BB), pred_end(&BB));
+          if (EdgeCount == 0)
+            continue;
           PHINode *Phi = BuilderForPhi.CreatePHI(Int64PtrTy, EdgeCount);
           for (BasicBlock *Pred : predecessors(&BB)) {
             auto It = EdgeToCounter.find({Pred, &BB});
@@ -883,36 +882,34 @@ bool GCOVProfiler::emitProfileArcs() {
             Value *EdgeCounter = BuilderForPhi.CreateConstInBoundsGEP2_64(
                 Counters->getValueType(), Counters, 0, Edge);
             Phi->addIncoming(EdgeCounter, Pred);
+            V = Phi;
           }
+        }
 
-          // Skip phis, landingpads.
-          IRBuilder<> Builder(&*BB.getFirstInsertionPt());
+        if (Options.Atomic) {
+          Builder.CreateAtomicRMW(AtomicRMWInst::Add, V, Builder.getInt64(1),
+                                  AtomicOrdering::Monotonic);
+        } else {
+          Value *Count = Builder.CreateLoad(Builder.getInt64Ty(), V);
+          Count = Builder.CreateAdd(Count, Builder.getInt64(1));
+          Builder.CreateStore(Count, V);
+        }
+
+        Instruction *TI = BB.getTerminator();
+        if (isa<ReturnInst>(TI)) {
+          auto It = EdgeToCounter.find({&BB, nullptr});
+          assert(It != EdgeToCounter.end());
+          const unsigned Edge = It->second;
+          Value *Counter = Builder.CreateConstInBoundsGEP2_64(
+              Counters->getValueType(), Counters, 0, Edge);
           if (Options.Atomic) {
-            Builder.CreateAtomicRMW(AtomicRMWInst::Add, Phi,
+            Builder.CreateAtomicRMW(AtomicRMWInst::Add, Counter,
                                     Builder.getInt64(1),
                                     AtomicOrdering::Monotonic);
           } else {
-            Value *Count = Builder.CreateLoad(Builder.getInt64Ty(), Phi);
+            Value *Count = Builder.CreateLoad(Builder.getInt64Ty(), Counter);
             Count = Builder.CreateAdd(Count, Builder.getInt64(1));
-            Builder.CreateStore(Count, Phi);
-          }
-
-          Instruction *TI = BB.getTerminator();
-          if (isa<ReturnInst>(TI)) {
-            auto It = EdgeToCounter.find({&BB, nullptr});
-            assert(It != EdgeToCounter.end());
-            const unsigned Edge = It->second;
-            Value *Counter = Builder.CreateConstInBoundsGEP2_64(
-                Counters->getValueType(), Counters, 0, Edge);
-            if (Options.Atomic) {
-              Builder.CreateAtomicRMW(AtomicRMWInst::Add, Counter,
-                                      Builder.getInt64(1),
-                                      AtomicOrdering::Monotonic);
-            } else {
-              Value *Count = Builder.CreateLoad(Builder.getInt64Ty(), Counter);
-              Count = Builder.CreateAdd(Count, Builder.getInt64(1));
-              Builder.CreateStore(Count, Counter);
-            }
+            Builder.CreateStore(Count, Counter);
           }
         }
       }
