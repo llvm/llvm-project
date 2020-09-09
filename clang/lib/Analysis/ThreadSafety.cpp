@@ -1266,21 +1266,13 @@ ClassifyDiagnostic(const AttrTy *A) {
 }
 
 bool ThreadSafetyAnalyzer::inCurrentScope(const CapabilityExpr &CapE) {
-  const threadSafety::til::SExpr *SExp = CapE.sexpr();
-  assert(SExp && "Null expressions should be ignored");
-
-  // Global variables are always in scope.
-  if (isa<til::LiteralPtr>(SExp))
-    return true;
-
-  // Members are in scope from methods of the same class.
-  if (const auto *P = dyn_cast<til::Project>(SExp)) {
-    if (!CurrentMethod)
+  if (!CurrentMethod)
       return false;
-    const ValueDecl *VD = P->clangDecl();
-    return VD->getDeclContext() == CurrentMethod->getDeclContext();
+  if (const auto *P = dyn_cast_or_null<til::Project>(CapE.sexpr())) {
+    const auto *VD = P->clangDecl();
+    if (VD)
+      return VD->getDeclContext() == CurrentMethod->getDeclContext();
   }
-
   return false;
 }
 
