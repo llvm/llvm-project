@@ -5936,14 +5936,21 @@ struct AAMemoryBehaviorCallSiteArgument final : AAMemoryBehaviorArgument {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    if (Argument *Arg = getAssociatedArgument()) {
-      if (Arg->hasByValAttr()) {
-        addKnownBits(NO_WRITES);
-        removeKnownBits(NO_READS);
-        removeAssumedBits(NO_READS);
-      }
+    // If we don't have an associated attribute this is either a variadic call
+    // or an indirect call, either way, nothing to do here.
+    Argument *Arg = getAssociatedArgument();
+    if (!Arg) {
+      indicatePessimisticFixpoint();
+      return;
+    }
+    if (Arg->hasByValAttr()) {
+      addKnownBits(NO_WRITES);
+      removeKnownBits(NO_READS);
+      removeAssumedBits(NO_READS);
     }
     AAMemoryBehaviorArgument::initialize(A);
+    if (getAssociatedFunction()->isDeclaration())
+      indicatePessimisticFixpoint();
   }
 
   /// See AbstractAttribute::updateImpl(...).
