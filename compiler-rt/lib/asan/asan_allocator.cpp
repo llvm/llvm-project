@@ -730,6 +730,9 @@ struct Allocator {
   // -------------------------- Chunk lookup ----------------------
 
   // Assumes alloc_beg == allocator.GetBlockBegin(alloc_beg).
+  // Returns nullptr if AsanChunk is not yet initialized just after
+  // get_allocator().Allocate(), or is being destroyed just before
+  // get_allocator().Deallocate().
   AsanChunk *GetAsanChunk(void *alloc_beg) {
     if (!alloc_beg)
       return nullptr;
@@ -1102,26 +1105,17 @@ void GetUserBeginDebug(uptr chunk) {
 
 uptr GetUserBegin(uptr chunk) {
   __asan::AsanChunk *m = __asan::instance.GetAsanChunkByAddrFastLocked(chunk);
-  if (!m) {
-    Printf(
-        "ASAN is about to crash with a CHECK failure.\n"
-        "The ASAN developers are trying to chase down this bug,\n"
-        "so if you've encountered this bug please let us know.\n"
-        "See also: https://github.com/google/sanitizers/issues/1193\n"
-        "Internal ref b/149237057\n"
-        "chunk: %p caller %p __lsan_current_stage %s\n",
-        chunk, GET_CALLER_PC(), __lsan_current_stage);
-    GetUserBeginDebug(chunk);
-  }
-  CHECK(m);
-  return m->Beg();
+  return m ? m->Beg() : 0;
 }
 
 LsanMetadata::LsanMetadata(uptr chunk) {
-  metadata_ = reinterpret_cast<void *>(chunk - __asan::kChunkHeaderSize);
+  metadata_ = chunk ? reinterpret_cast<void *>(chunk - __asan::kChunkHeaderSize)
+                    : nullptr;
 }
 
 bool LsanMetadata::allocated() const {
+  if (!metadata_)
+    return false;
   __asan::AsanChunk *m = reinterpret_cast<__asan::AsanChunk *>(metadata_);
   return atomic_load(&m->chunk_state, memory_order_relaxed) ==
          __asan::CHUNK_ALLOCATED;
