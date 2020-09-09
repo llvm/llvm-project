@@ -1621,14 +1621,9 @@ def TensorFromElementsOp : Std_Op<"tensor_from_elements",
   let results = (outs AnyTensor:$result);
 
   let skipDefaultBuilders = 1;
-  let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, ValueRange elements", [{
-      assert(!elements.empty() && "expected at least one element");
-      result.addOperands(elements);
-      result.addTypes(
-          RankedTensorType::get({static_cast<int64_t>(elements.size())},
-                                *elements.getTypes().begin()));
-    }]>];
+  let builders = [
+    OpBuilder<"OpBuilder &b, OperationState &result, ValueRange elements">
+  ];
 
   let hasCanonicalizer = 1;
 }
