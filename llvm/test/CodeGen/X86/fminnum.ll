@@ -609,5 +609,39 @@ define float @test_minnum_const_op2(float %x) {
   ret float %r
 }
 
+define float @test_minnum_const_nan(float %x) {
+; SSE-LABEL: test_minnum_const_nan:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    cmpunordss %xmm0, %xmm1
+; SSE-NEXT:    movaps %xmm1, %xmm3
+; SSE-NEXT:    andps %xmm2, %xmm3
+; SSE-NEXT:    minss %xmm0, %xmm2
+; SSE-NEXT:    andnps %xmm2, %xmm1
+; SSE-NEXT:    orps %xmm3, %xmm1
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: test_minnum_const_nan:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vminss %xmm0, %xmm1, %xmm2
+; AVX1-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: test_minnum_const_nan:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vminss %xmm0, %xmm2, %xmm1
+; AVX512-NEXT:    vcmpunordss %xmm0, %xmm0, %k1
+; AVX512-NEXT:    vmovss %xmm2, %xmm1, %xmm1 {%k1}
+; AVX512-NEXT:    vmovaps %xmm1, %xmm0
+; AVX512-NEXT:    retq
+  %r = call float @llvm.minnum.f32(float %x, float 0x7fff000000000000)
+  ret float %r
+}
+
 attributes #0 = { "no-nans-fp-math"="true" }
 
