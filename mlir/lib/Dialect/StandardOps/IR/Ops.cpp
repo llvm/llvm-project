@@ -1744,9 +1744,9 @@ static ParseResult parseTensorFromElementsOp(OpAsmParser &parser,
                                              OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 4> elementsOperands;
   Type resultType;
-  if (parser.parseLParen() || parser.parseOperandList(elementsOperands) ||
-      parser.parseRParen() || parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColon() || parser.parseType(resultType))
+  if (parser.parseOperandList(elementsOperands) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(resultType))
     return failure();
 
   if (parser.resolveOperands(elementsOperands,
@@ -1759,9 +1759,9 @@ static ParseResult parseTensorFromElementsOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, TensorFromElementsOp op) {
-  p << "tensor_from_elements(" << op.elements() << ')';
+  p << "tensor_from_elements " << op.elements();
   p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.result().getType();
+  p << " : " << op.getType();
 }
 
 static LogicalResult verify(TensorFromElementsOp op) {
@@ -1776,6 +1776,14 @@ static LogicalResult verify(TensorFromElementsOp op) {
            << "expected result type to be a 1D tensor with " << elementsCount
            << (elementsCount == 1 ? " element" : " elements");
   return success();
+}
+
+void TensorFromElementsOp::build(OpBuilder &builder, OperationState &result,
+                                 ValueRange elements) {
+  assert(!elements.empty() && "expected at least one element");
+  result.addOperands(elements);
+  result.addTypes(RankedTensorType::get({static_cast<int64_t>(elements.size())},
+                                        *elements.getTypes().begin()));
 }
 
 namespace {
