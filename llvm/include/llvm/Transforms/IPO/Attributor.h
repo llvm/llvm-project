@@ -133,8 +133,10 @@ struct AAIsDead;
 
 class Function;
 
-/// Simple enum classes that forces properties to be spelled out explicitly.
-///
+/// The value passed to the line option that defines the maximal initialization
+/// chain length.
+extern unsigned MaxInitializationChainLength;
+
 ///{
 enum class ChangeStatus {
   CHANGED,
@@ -337,8 +339,14 @@ struct IRPosition {
 
   /// Return the associated function, if any.
   Function *getAssociatedFunction() const {
-    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue())) {
+      // We reuse the logic that associates callback calles to arguments of a
+      // call site here to identify the callback callee as the associated
+      // function.
+      if (Argument *Arg = getAssociatedArgument())
+        return Arg->getParent();
       return CB->getCalledFunction();
+    }
     return getAnchorScope();
   }
 
@@ -386,10 +394,11 @@ struct IRPosition {
 
   /// Return the value this abstract attribute is associated with.
   Value &getAssociatedValue() const {
-    if (getArgNo() < 0 || isa<Argument>(&getAnchorValue()))
+    if (getCallSiteArgNo() < 0 || isa<Argument>(&getAnchorValue()))
       return getAnchorValue();
     assert(isa<CallBase>(&getAnchorValue()) && "Expected a call base!");
-    return *cast<CallBase>(&getAnchorValue())->getArgOperand(getArgNo());
+    return *cast<CallBase>(&getAnchorValue())
+                ->getArgOperand(getCallSiteArgNo());
   }
 
   /// Return the type this abstract attribute is associated with.
@@ -399,19 +408,22 @@ struct IRPosition {
     return getAssociatedValue().getType();
   }
 
-  /// Return the argument number of the associated value if it is an argument or
-  /// call site argument, otherwise a negative value.
-  int getArgNo() const {
-    switch (getPositionKind()) {
-    case IRPosition::IRP_ARGUMENT:
-      return cast<Argument>(getAsValuePtr())->getArgNo();
-    case IRPosition::IRP_CALL_SITE_ARGUMENT: {
-      Use &U = *getAsUsePtr();
-      return cast<CallBase>(U.getUser())->getArgOperandNo(&U);
-    }
-    default:
-      return -1;
-    }
+  /// Return the callee argument number of the associated value if it is an
+  /// argument or call site argument, otherwise a negative value. In contrast to
+  /// `getCallSiteArgNo` this method will always return the "argument number"
+  /// from the perspective of the callee. This may not the same as the call site
+  /// if this is a callback call.
+  int getCalleeArgNo() const {
+    return getArgNo(/* CallbackCalleeArgIfApplicable */ true);
+  }
+
+  /// Return the call site argument number of the associated value if it is an
+  /// argument or call site argument, otherwise a negative value. In contrast to
+  /// `getCalleArgNo` this method will always return the "operand number" from
+  /// the perspective of the call site. This may not the same as the callee
+  /// perspective if this is a callback call.
+  int getCallSiteArgNo() const {
+    return getArgNo(/* CallbackCalleeArgIfApplicable */ false);
   }
 
   /// Return the index in the attribute list for this position.
@@ -428,7 +440,7 @@ struct IRPosition {
       return AttributeList::ReturnIndex;
     case IRPosition::IRP_ARGUMENT:
     case IRPosition::IRP_CALL_SITE_ARGUMENT:
-      return getArgNo() + AttributeList::FirstArgIndex;
+      return getCallSiteArgNo() + AttributeList::FirstArgIndex;
     }
     llvm_unreachable(
         "There is no attribute index for a floating or invalid position!");
@@ -513,6 +525,17 @@ struct IRPosition {
     }
   }
 
+  /// Return true if the position is an argument or call site argument.
+  bool isArgumentPosition() const {
+    switch (getPositionKind()) {
+    case IRPosition::IRP_ARGUMENT:
+    case IRPosition::IRP_CALL_SITE_ARGUMENT:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   /// Special DenseMap key values.
   ///
   ///{
@@ -557,6 +580,25 @@ private:
       break;
     }
     verify();
+  }
+
+  /// Return the callee argument number of the associated value if it is an
+  /// argument or call site argument. See also `getCalleeArgNo` and
+  /// `getCallSiteArgNo`.
+  int getArgNo(bool CallbackCalleeArgIfApplicable) const {
+    if (CallbackCalleeArgIfApplicable)
+      if (Argument *Arg = getAssociatedArgument())
+        return Arg->getArgNo();
+    switch (getPositionKind()) {
+    case IRPosition::IRP_ARGUMENT:
+      return cast<Argument>(getAsValuePtr())->getArgNo();
+    case IRPosition::IRP_CALL_SITE_ARGUMENT: {
+      Use &U = *getAsUsePtr();
+      return cast<CallBase>(U.getUser())->getArgOperandNo(&U);
+    }
+    default:
+      return -1;
+    }
   }
 
   /// IRPosition for the use \p U. The position kind \p PK needs to be
@@ -1071,6 +1113,9 @@ struct Attributor {
       Invalidate |= FnScope->hasFnAttribute(Attribute::Naked) ||
                     FnScope->hasFnAttribute(Attribute::OptimizeNone);
 
+    // Avoid too many nested initializations to prevent a stack overflow.
+    Invalidate |= InitializationChainLength > MaxInitializationChainLength;
+
     // Bootstrap the new attribute with an initial update to propagate
     // information, e.g., function -> call site. If it is not on a given
     // Allowed we will not perform updates at all.
@@ -1081,7 +1126,9 @@ struct Attributor {
 
     {
       TimeTraceScope TimeScope(AA.getName() + "::initialize");
+      ++InitializationChainLength;
       AA.initialize(*this);
+      --InitializationChainLength;
     }
 
     // Initialize and update is allowed for code outside of the current function
@@ -1614,6 +1661,9 @@ private:
     MANIFEST,
     CLEANUP,
   } Phase = AttributorPhase::SEEDING;
+
+  /// The current initialization chain length. Tracked to avoid stack overflows.
+  unsigned InitializationChainLength = 0;
 
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///

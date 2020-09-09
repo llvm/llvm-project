@@ -1504,6 +1504,13 @@ def DynamicTensorFromElementsOp : Std_Op<"dynamic_tensor_from_elements",
   let arguments = (ins Variadic<Index>:$dynamicExtents);
   let results = (outs AnyRankedTensor:$result);
   let regions = (region SizedRegion<1>:$body);
+
+  let builders = [
+    // Build op and populate its body per callback function.
+    OpBuilder<"OpBuilder &b, OperationState &result, Type resultTy, "
+              "ValueRange dynamicExtents, "
+              "function_ref<void(OpBuilder &, Location, ValueRange)>">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1621,14 +1628,9 @@ def TensorFromElementsOp : Std_Op<"tensor_from_elements",
   let results = (outs AnyTensor:$result);
 
   let skipDefaultBuilders = 1;
-  let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, ValueRange elements", [{
-      assert(!elements.empty() && "expected at least one element");
-      result.addOperands(elements);
-      result.addTypes(
-          RankedTensorType::get({static_cast<int64_t>(elements.size())},
-                                *elements.getTypes().begin()));
-    }]>];
+  let builders = [
+    OpBuilder<"OpBuilder &b, OperationState &result, ValueRange elements">
+  ];
 
   let hasCanonicalizer = 1;
 }

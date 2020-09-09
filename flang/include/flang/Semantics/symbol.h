@@ -501,9 +501,9 @@ public:
       // OpenMP data-mapping attribute
       OmpMapTo, OmpMapFrom, OmpMapAlloc, OmpMapRelease, OmpMapDelete,
       // OpenMP miscellaneous flags
-      OmpCommonBlock, OmpReduction, OmpDeclareSimd, OmpDeclareTarget,
-      OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
-      OmpIfSpecified, OmpNone, OmpPreDetermined);
+      OmpCommonBlock, OmpReduction, OmpAllocate, OmpDeclareSimd,
+      OmpDeclareTarget, OmpThreadprivate, OmpDeclareReduction, OmpFlushed,
+      OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }

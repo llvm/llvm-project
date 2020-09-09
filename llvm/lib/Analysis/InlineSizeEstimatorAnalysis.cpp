@@ -171,7 +171,7 @@ unsigned getMaxDominatorTreeDepth(const Function &F,
 IRToNativeSizeLearning::FunctionFeatures
 IRToNativeSizeLearning::getFunctionFeatures(Function &F,
                                             FunctionAnalysisManager &FAM) {
-  assert(ensureSortedTuples() && "expected lazy initialization");
+  ensureSortedTuples();
 
   auto &DomTree = FAM.getResult<DominatorTreeAnalysis>(F);
   FunctionFeatures FF;

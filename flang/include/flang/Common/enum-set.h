@@ -37,8 +37,8 @@ public:
 
   constexpr EnumSet() {}
   constexpr EnumSet(const std::initializer_list<enumerationType> &enums) {
-    for (auto x : enums) {
-      set(x);
+    for (auto it{enums.begin()}; it != enums.end(); ++it) {
+      set(*it);
     }
   }
   constexpr EnumSet(const EnumSet &) = default;

@@ -42,8 +42,8 @@ s_mov_b64 s[2:3], s[4:5]
 
 s_mov_b64 null, s[4:5]
 // GFX10: s_mov_b64 null, s[4:5] ; encoding: [0x04,0x04,0xfd,0xbe]
-// NOSICIVI: error: not a valid operand.
-// NOGFX9: error: not a valid operand.
+// NOSICIVI: error: 'null' operand is not supported on this GPU
+// NOGFX9: error: 'null' operand is not supported on this GPU
 
 s_mov_b64 s[2:3], 0xffffffffffffffff
 // SICI: s_mov_b64 s[2:3], -1 ; encoding: [0xc1,0x04,0x82,0xbe]
@@ -62,7 +62,7 @@ s_mov_b64 s[0:1], 0x80000000
 
 s_mov_b64 s[102:103], -1
 // SICI: s_mov_b64 s[102:103], -1 ; encoding: [0xc1,0x04,0xe6,0xbe]
-// NOGFX89: error: not a valid operand
+// NOGFX89: error: register not available on this GPU
 // GFX10: s_mov_b64 s[102:103], -1 ; encoding: [0xc1,0x04,0xe6,0xbe]
 
 s_cmov_b32 s1, 200

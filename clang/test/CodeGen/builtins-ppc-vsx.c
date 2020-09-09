@@ -863,12 +863,12 @@ void test1() {
 // CHECK-LE: call <2 x double> @llvm.ppc.vsx.xvredp(<2 x double>
 
   res_vf = vec_rint(vf);
-// CHECK: call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %{{[0-9]+}})
-// CHECK-LE: call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %{{[0-9]+}})
+// CHECK: call <4 x float> @llvm.rint.v4f32(<4 x float> %{{[0-9]+}})
+// CHECK-LE: call <4 x float> @llvm.rint.v4f32(<4 x float> %{{[0-9]+}})
 
   res_vd = vec_rint(vd);
-// CHECK: call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %{{[0-9]+}})
-// CHECK-LE: call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %{{[0-9]+}})
+// CHECK: call <2 x double> @llvm.rint.v2f64(<2 x double> %{{[0-9]+}})
+// CHECK-LE: call <2 x double> @llvm.rint.v2f64(<2 x double> %{{[0-9]+}})
 
   res_vf = vec_rsqrte(vf);
 // CHECK: call <4 x float> @llvm.ppc.vsx.xvrsqrtesp(<4 x float> %{{[0-9]+}})

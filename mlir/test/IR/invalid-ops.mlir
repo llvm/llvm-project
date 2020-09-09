@@ -597,7 +597,7 @@ func @extract_element_tensor_too_few_indices(%t : tensor<2x3xf32>, %i : index) {
 func @tensor_from_elements_wrong_result_type() {
   // expected-error@+2 {{expected result type to be a ranked tensor}}
   %c0 = constant 0 : i32
-  %0 = tensor_from_elements(%c0) : tensor<*xi32>
+  %0 = tensor_from_elements %c0 : tensor<*xi32>
   return
 }
 
@@ -606,7 +606,7 @@ func @tensor_from_elements_wrong_result_type() {
 func @tensor_from_elements_wrong_elements_count() {
   // expected-error@+2 {{expected result type to be a 1D tensor with 1 element}}
   %c0 = constant 0 : index
-  %0 = tensor_from_elements(%c0) : tensor<2xindex>
+  %0 = tensor_from_elements %c0 : tensor<2xindex>
   return
 }
 

@@ -48,11 +48,10 @@
 // will be freed in the end.
 //
 // TODO:
-// The current implementation does not support loops and the resulting code will
-// be invalid with respect to program semantics. The only thing that is
-// currently missing is a high-level loop analysis that allows us to move allocs
-// and deallocs outside of the loop blocks. Furthermore, it doesn't also accept
-// functions which return buffers already.
+// The current implementation does not support explicit-control-flow loops and
+// the resulting code will be invalid with respect to program semantics.
+// However, structured control-flow loops are fully supported. Furthermore, it
+// doesn't accept functions which return buffers already.
 //
 //===----------------------------------------------------------------------===//
 
@@ -75,6 +74,22 @@ static void walkReturnOperations(Region *region, const FuncT &func) {
       if (operation.hasTrait<OpTrait::ReturnLike>())
         func(&operation);
     }
+}
+
+/// Wrapper for the actual `RegionBranchOpInterface.getSuccessorRegions`
+/// function that initializes the required `operandAttributes` array.
+static void getSuccessorRegions(RegionBranchOpInterface regionInterface,
+                                llvm::Optional<unsigned> index,
+                                SmallVectorImpl<RegionSuccessor> &successors) {
+  // Create a list of null attributes for each operand to comply with the
+  // `getSuccessorRegions` interface definition that requires a single
+  // attribute per operand.
+  SmallVector<Attribute, 2> operandAttributes(
+      regionInterface.getOperation()->getNumOperands());
+
+  // Get all successor regions using the temporarily allocated
+  // `operandAttributes`.
+  regionInterface.getSuccessorRegions(index, operandAttributes, successors);
 }
 
 namespace {
@@ -166,16 +181,10 @@ private:
 
     // Query the RegionBranchOpInterface to find potential successor regions.
     op->walk([&](RegionBranchOpInterface regionInterface) {
-      // Create an empty attribute for each operand to comply with the
-      // `getSuccessorRegions` interface definition that requires a single
-      // attribute per operand.
-      SmallVector<Attribute, 2> operandAttributes(
-          regionInterface.getOperation()->getNumOperands());
-
       // Extract all entry regions and wire all initial entry successor inputs.
       SmallVector<RegionSuccessor, 2> entrySuccessors;
-      regionInterface.getSuccessorRegions(/*index=*/llvm::None,
-                                          operandAttributes, entrySuccessors);
+      getSuccessorRegions(regionInterface, /*index=*/llvm::None,
+                          entrySuccessors);
       for (RegionSuccessor &entrySuccessor : entrySuccessors) {
         // Wire the entry region's successor arguments with the initial
         // successor inputs.
@@ -191,8 +200,8 @@ private:
         // Iterate over all successor region entries that are reachable from the
         // current region.
         SmallVector<RegionSuccessor, 2> successorRegions;
-        regionInterface.getSuccessorRegions(
-            region.getRegionNumber(), operandAttributes, successorRegions);
+        getSuccessorRegions(regionInterface, region.getRegionNumber(),
+                            successorRegions);
         for (RegionSuccessor &successorRegion : successorRegions) {
           // Iterate over all immediate terminator operations and wire the
           // successor inputs with the operands of each terminator.
@@ -207,6 +216,83 @@ private:
 
   /// Maps values to all immediate aliases this value can have.
   ValueMapT aliases;
+};
+
+//===----------------------------------------------------------------------===//
+// Backedges
+//===----------------------------------------------------------------------===//
+
+/// A straight-forward program analysis which detects loop backedges induced by
+/// explicit control flow.
+class Backedges {
+public:
+  using BlockSetT = SmallPtrSet<Block *, 16>;
+  using BackedgeSetT = llvm::DenseSet<std::pair<Block *, Block *>>;
+
+public:
+  /// Constructs a new backedges analysis using the op provided.
+  Backedges(Operation *op) { recurse(op, op->getBlock()); }
+
+  /// Returns the number of backedges formed by explicit control flow.
+  size_t size() const { return edgeSet.size(); }
+
+  /// Returns the start iterator to loop over all backedges.
+  BackedgeSetT::const_iterator begin() const { return edgeSet.begin(); }
+
+  /// Returns the end iterator to loop over all backedges.
+  BackedgeSetT::const_iterator end() const { return edgeSet.end(); }
+
+private:
+  /// Enters the current block and inserts a backedge into the `edgeSet` if we
+  /// have already visited the current block. The inserted edge links the given
+  /// `predecessor` with the `current` block.
+  bool enter(Block &current, Block *predecessor) {
+    bool inserted = visited.insert(&current).second;
+    if (!inserted)
+      edgeSet.insert(std::make_pair(predecessor, &current));
+    return inserted;
+  }
+
+  /// Leaves the current block.
+  void exit(Block &current) { visited.erase(&current); }
+
+  /// Recurses into the given operation while taking all attached regions into
+  /// account.
+  void recurse(Operation *op, Block *predecessor) {
+    Block *current = op->getBlock();
+    // If the current op implements the `BranchOpInterface`, there can be
+    // cycles in the scope of all successor blocks.
+    if (isa<BranchOpInterface>(op)) {
+      for (Block *succ : current->getSuccessors())
+        recurse(*succ, current);
+    }
+    // Recurse into all distinct regions and check for explicit control-flow
+    // loops.
+    for (Region &region : op->getRegions())
+      recurse(region.front(), current);
+  }
+
+  /// Recurses into explicit control-flow structures that are given by
+  /// the successor relation defined on the block level.
+  void recurse(Block &block, Block *predecessor) {
+    // Try to enter the current block. If this is not possible, we are
+    // currently processing this block and can safely return here.
+    if (!enter(block, predecessor))
+      return;
+
+    // Recurse into all operations and successor blocks.
+    for (auto &op : block.getOperations())
+      recurse(&op, predecessor);
+
+    // Leave the current block.
+    exit(block);
+  }
+
+  /// Stores all blocks that are currently visited and on the processing stack.
+  BlockSetT visited;
+
+  /// Stores all backedges in the format (source, target).
+  BackedgeSetT edgeSet;
 };
 
 //===----------------------------------------------------------------------===//
@@ -357,9 +443,14 @@ private:
       for (Value value : it->second) {
         if (valuesToFree.count(value) > 0)
           continue;
-        // Check whether we have to free this particular block argument.
-        if (!dominators.dominates(definingBlock, value.getParentBlock())) {
-          toProcess.emplace_back(value, value.getParentBlock());
+        Block *parentBlock = value.getParentBlock();
+        // Check whether we have to free this particular block argument or
+        // generic value. We have to free the current alias if it is either
+        // defined in a non-dominated block or it is defined in the same block
+        // but the current value is not dominated by the source value.
+        if (!dominators.dominates(definingBlock, parentBlock) ||
+            (definingBlock == parentBlock && value.isa<BlockArgument>())) {
+          toProcess.emplace_back(value, parentBlock);
           valuesToFree.insert(value);
         } else if (visitedValues.insert(std::make_tuple(value, definingBlock))
                        .second)
@@ -431,22 +522,42 @@ private:
     // argument belongs to the first block in a region and the parent operation
     // implements the RegionBranchOpInterface.
     Region *argRegion = block->getParent();
+    Operation *parentOp = argRegion->getParentOp();
     RegionBranchOpInterface regionInterface;
     if (!argRegion || &argRegion->front() != block ||
-        !(regionInterface =
-              dyn_cast<RegionBranchOpInterface>(argRegion->getParentOp())))
+        !(regionInterface = dyn_cast<RegionBranchOpInterface>(parentOp)))
       return;
 
     introduceCopiesForRegionSuccessors(
-        regionInterface, argRegion->getParentOp()->getRegions(),
+        regionInterface, argRegion->getParentOp()->getRegions(), blockArg,
         [&](RegionSuccessor &successorRegion) {
           // Find a predecessor of our argRegion.
           return successorRegion.getSuccessor() == argRegion;
-        },
-        [&](RegionSuccessor &successorRegion) {
-          // The operand index will be the argument number.
-          return blockArg.getArgNumber();
         });
+
+    // Check whether the block argument belongs to an entry region of the
+    // parent operation. In this case, we have to introduce an additional copy
+    // for buffer that is passed to the argument.
+    SmallVector<RegionSuccessor, 2> successorRegions;
+    getSuccessorRegions(regionInterface, llvm::None, successorRegions);
+    auto *it =
+        llvm::find_if(successorRegions, [&](RegionSuccessor &successorRegion) {
+          return successorRegion.getSuccessor() == argRegion;
+        });
+    if (it == successorRegions.end())
+      return;
+
+    // Determine the actual operand to introduce a copy for and rewire the
+    // operand to point to the copy instead.
+    Value operand =
+        regionInterface.getSuccessorEntryOperands(argRegion->getRegionNumber())
+            [llvm::find(it->getSuccessorInputs(), blockArg).getIndex()];
+    Value copy = introduceBufferCopy(operand, parentOp);
+
+    auto op = llvm::find(parentOp->getOperands(), operand);
+    assert(op != parentOp->getOperands().end() &&
+           "parentOp does not contain operand");
+    parentOp->setOperand(op.getIndex(), copy);
   }
 
   /// Introduces temporary allocs in front of all associated nested-region
@@ -455,42 +566,34 @@ private:
     // Get the actual result index in the scope of the parent terminator.
     Operation *operation = value.getDefiningOp();
     auto regionInterface = cast<RegionBranchOpInterface>(operation);
-    introduceCopiesForRegionSuccessors(
-        regionInterface, operation->getRegions(),
-        [&](RegionSuccessor &successorRegion) {
-          // Determine whether this region has a successor entry that leaves
-          // this region by returning to its parent operation.
-          return !successorRegion.getSuccessor();
-        },
-        [&](RegionSuccessor &successorRegion) {
-          // Find the associated success input index.
-          return llvm::find(successorRegion.getSuccessorInputs(), value)
-              .getIndex();
-        });
+    // Filter successors that return to the parent operation.
+    auto regionPredicate = [&](RegionSuccessor &successorRegion) {
+      // If the RegionSuccessor has no associated successor, it will return to
+      // its parent operation.
+      return !successorRegion.getSuccessor();
+    };
+    // Introduce a copy for all region "results" that are returned to the parent
+    // operation. This is required since the parent's result value has been
+    // considered critical. Therefore, the algorithm assumes that a copy of a
+    // previously allocated buffer is returned by the operation (like in the
+    // case of a block argument).
+    introduceCopiesForRegionSuccessors(regionInterface, operation->getRegions(),
+                                       value, regionPredicate);
   }
 
   /// Introduces buffer copies for all terminators in the given regions. The
   /// regionPredicate is applied to every successor region in order to restrict
-  /// the copies to specific regions. Thereby, the operandProvider is invoked
-  /// for each matching region successor and determines the operand index that
-  /// requires a buffer copy.
-  template <typename TPredicate, typename TOperandProvider>
-  void
-  introduceCopiesForRegionSuccessors(RegionBranchOpInterface regionInterface,
-                                     MutableArrayRef<Region> regions,
-                                     const TPredicate &regionPredicate,
-                                     const TOperandProvider &operandProvider) {
-    // Create an empty attribute for each operand to comply with the
-    // `getSuccessorRegions` interface definition that requires a single
-    // attribute per operand.
-    SmallVector<Attribute, 2> operandAttributes(
-        regionInterface.getOperation()->getNumOperands());
+  /// the copies to specific regions.
+  template <typename TPredicate>
+  void introduceCopiesForRegionSuccessors(
+      RegionBranchOpInterface regionInterface, MutableArrayRef<Region> regions,
+      Value argValue, const TPredicate &regionPredicate) {
     for (Region &region : regions) {
       // Query the regionInterface to get all successor regions of the current
       // one.
       SmallVector<RegionSuccessor, 2> successorRegions;
-      regionInterface.getSuccessorRegions(region.getRegionNumber(),
-                                          operandAttributes, successorRegions);
+      getSuccessorRegions(regionInterface, region.getRegionNumber(),
+                          successorRegions);
       // Try to find a matching region successor.
       RegionSuccessor *regionSuccessor =
           llvm::find_if(successorRegions, regionPredicate);
@@ -498,7 +601,9 @@ private:
         continue;
       // Get the operand index in the context of the current successor input
       // bindings.
-      auto operandIndex = operandProvider(*regionSuccessor);
+      size_t operandIndex =
+          llvm::find(regionSuccessor->getSuccessorInputs(), argValue)
+              .getIndex();
 
       // Iterate over all immediate terminator operations to introduce
       // new buffer allocations. Thereby, the appropriate terminator operand
@@ -518,6 +623,16 @@ private:
   /// its content into the newly allocated buffer. The terminator operation is
   /// used to insert the alloc and copy operations at the right places.
   Value introduceBufferCopy(Value sourceValue, Operation *terminator) {
+    // Avoid multiple copies of the same source value. This can happen in the
+    // presence of loops when a branch acts as a backedge while also having
+    // another successor that returns to its parent operation. Note: that
+    // copying copied buffers can introduce memory leaks since the invariant of
+    // BufferPlacement assumes that a buffer will be only copied once into a
+    // temporary buffer. Hence, the construction of copy chains introduces
+    // additional allocations that are not tracked automatically by the
+    // algorithm.
+    if (copiedValues.contains(sourceValue))
+      return sourceValue;
     // Create a new alloc at the current location of the terminator.
     auto memRefType = sourceValue.getType().cast<MemRefType>();
     OpBuilder builder(terminator);
@@ -541,6 +656,8 @@ private:
     // allocation to the new one.
     builder.create<linalg::CopyOp>(terminator->getLoc(), sourceValue, alloc);
 
+    // Remember the copy of original source value.
+    copiedValues.insert(alloc);
     return alloc;
   }
 
@@ -652,6 +769,9 @@ private:
   /// Maps allocation nodes to their associated blocks.
   AllocEntryList allocs;
 
+  // Stores already copied allocations to avoid additional copies of copies.
+  ValueSetT copiedValues;
+
   /// The underlying liveness analysis to compute fine grained information
   /// about alloc and dealloc positions.
   Liveness liveness;
@@ -673,6 +793,14 @@ private:
 struct BufferPlacementPass : BufferPlacementBase<BufferPlacementPass> {
 
   void runOnFunction() override {
+    // Ensure that there are supported loops only.
+    Backedges backedges(getFunction());
+    if (backedges.size()) {
+      getFunction().emitError(
+          "Structured control-flow loops are supported only.");
+      return;
+    }
+
     // Place all required alloc, copy and dealloc nodes.
     BufferPlacement placement(getFunction());
     placement.place();

@@ -89,18 +89,9 @@ static unsigned getStatepointGCArgStartIdx(MachineInstr *MI) {
          "STATEPOINT node expected");
   unsigned OperIdx = StatepointOpers(MI).getNumDeoptArgsIdx();
   unsigned NumDeopts = MI->getOperand(OperIdx).getImm();
-  // At this point stack references has not been lowered yet, so they
-  // take single operand.
   ++OperIdx;
-  while (NumDeopts--) {
-    MachineOperand &MO = MI->getOperand(OperIdx);
-    if (MO.isImm() && MO.getImm() == StackMaps::ConstantOp) {
-      ++OperIdx;
-      assert(MI->getOperand(OperIdx).isImm() &&
-             "Unexpected statepoint operand");
-    }
-    ++OperIdx;
-  }
+  while (NumDeopts--)
+    OperIdx = StackMaps::getNextMetaArgIdx(MI, OperIdx);
   return OperIdx;
 }
 
@@ -1002,11 +993,14 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
     assert(!HasPhysRegOuts && "STATEPOINT mishandled");
     MachineInstr *MI = MIB;
     unsigned Def = 0;
-    unsigned Use = getStatepointGCArgStartIdx(MI) + 1;
+    unsigned Use = getStatepointGCArgStartIdx(MI);
+    Use = StackMaps::getNextMetaArgIdx(MI, Use); // first derived
+    assert(Use < MI->getNumOperands());
     while (Def < NumDefs) {
       if (MI->getOperand(Use).isReg())
         MI->tieOperands(Def++, Use);
-      Use += 2;
+      Use = StackMaps::getNextMetaArgIdx(MI, Use); // next base
+      Use = StackMaps::getNextMetaArgIdx(MI, Use); // next derived
     }
   }
 
