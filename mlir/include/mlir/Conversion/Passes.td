@@ -350,7 +350,7 @@ def ConvertVectorToLLVM : Pass<"convert-vector-to-llvm", "ModuleOp"> {
            "bool", /*default=*/"false",
            "Allows llvm to reassociate floating-point reductions for speed">,
     Option<"enableIndexOptimizations", "enable-index-optimizations",
-           "bool", /*default=*/"false",
+           "bool", /*default=*/"true",
            "Allows compiler to assume indices fit in 32-bit if that yields faster code">
   ];
 }

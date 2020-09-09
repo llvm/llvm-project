@@ -22,7 +22,7 @@ class OperationPass;
 /// ConvertVectorToLLVM pass in include/mlir/Conversion/Passes.td
 struct LowerVectorToLLVMOptions {
   bool reassociateFPReductions = false;
-  bool enableIndexOptimizations = false;
+  bool enableIndexOptimizations = true;
   LowerVectorToLLVMOptions &setReassociateFPReductions(bool b) {
     reassociateFPReductions = b;
     return *this;
@@ -42,8 +42,7 @@ void populateVectorToLLVMMatrixConversionPatterns(
 /// Collect a set of patterns to convert from the Vector dialect to LLVM.
 void populateVectorToLLVMConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
-    bool reassociateFPReductions = false,
-    bool enableIndexOptimizations = false);
+    bool reassociateFPReductions = false, bool enableIndexOptimizations = true);
 
 /// Create a pass to convert vector operations to the LLVMIR dialect.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertVectorToLLVMPass(
