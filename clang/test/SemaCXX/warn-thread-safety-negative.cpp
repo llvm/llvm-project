@@ -81,35 +81,6 @@ public:
 
 }  // end namespace SimpleTest
 
-Mutex globalMutex;
-
-namespace ScopeTest {
-
-void f() EXCLUSIVE_LOCKS_REQUIRED(!globalMutex);
-void fq() EXCLUSIVE_LOCKS_REQUIRED(!::globalMutex);
-
-namespace ns {
-  Mutex globalMutex;
-  void f() EXCLUSIVE_LOCKS_REQUIRED(!globalMutex);
-  void fq() EXCLUSIVE_LOCKS_REQUIRED(!ns::globalMutex);
-}
-
-void testGlobals() EXCLUSIVE_LOCKS_REQUIRED(!ns::globalMutex) {
-  f();     // expected-warning {{calling function 'f' requires negative capability '!globalMutex'}}
-  fq();    // expected-warning {{calling function 'fq' requires negative capability '!globalMutex'}}
-  ns::f();
-  ns::fq();
-}
-
-void testNamespaceGlobals() EXCLUSIVE_LOCKS_REQUIRED(!globalMutex) {
-  f();
-  fq();
-  ns::f();  // expected-warning {{calling function 'f' requires negative capability '!globalMutex'}}
-  ns::fq(); // expected-warning {{calling function 'fq' requires negative capability '!globalMutex'}}
-}
-
-}  // end namespace ScopeTest
-
 namespace DoubleAttribute {
 
 struct Foo {
