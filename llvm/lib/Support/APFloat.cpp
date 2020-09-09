@@ -755,6 +755,7 @@ void IEEEFloat::copySignificand(const IEEEFloat &rhs) {
 void IEEEFloat::makeNaN(bool SNaN, bool Negative, const APInt *fill) {
   category = fcNaN;
   sign = Negative;
+  exponent = exponentNaN();
 
   integerPart *significand = significandParts();
   unsigned numParts = partCount();
@@ -925,8 +926,7 @@ IEEEFloat::IEEEFloat(const fltSemantics &ourSemantics, integerPart value) {
 
 IEEEFloat::IEEEFloat(const fltSemantics &ourSemantics) {
   initialize(&ourSemantics);
-  category = fcZero;
-  sign = false;
+  makeZero(false);
 }
 
 // Delegate to the previous constructor, because later copy constructor may
@@ -3379,15 +3379,13 @@ void IEEEFloat::initFromF80LongDoubleAPInt(const APInt &api) {
 
   sign = static_cast<unsigned int>(i2>>15);
   if (myexponent == 0 && mysignificand == 0) {
-    // exponent, significand meaningless
-    category = fcZero;
+    makeZero(sign);
   } else if (myexponent==0x7fff && mysignificand==0x8000000000000000ULL) {
-    // exponent, significand meaningless
-    category = fcInfinity;
+    makeInf(sign);
   } else if ((myexponent == 0x7fff && mysignificand != 0x8000000000000000ULL) ||
              (myexponent != 0x7fff && myexponent != 0 && myintegerbit == 0)) {
-    // exponent meaningless
     category = fcNaN;
+    exponent = exponentNaN();
     significandParts()[0] = mysignificand;
     significandParts()[1] = 0;
   } else {
@@ -3438,16 +3436,14 @@ void IEEEFloat::initFromQuadrupleAPInt(const APInt &api) {
   sign = static_cast<unsigned int>(i2>>63);
   if (myexponent==0 &&
       (mysignificand==0 && mysignificand2==0)) {
-    // exponent, significand meaningless
-    category = fcZero;
+    makeZero(sign);
   } else if (myexponent==0x7fff &&
              (mysignificand==0 && mysignificand2==0)) {
-    // exponent, significand meaningless
-    category = fcInfinity;
+    makeInf(sign);
   } else if (myexponent==0x7fff &&
              (mysignificand!=0 || mysignificand2 !=0)) {
-    // exponent meaningless
     category = fcNaN;
+    exponent = exponentNaN();
     significandParts()[0] = mysignificand;
     significandParts()[1] = mysignificand2;
   } else {
@@ -3473,14 +3469,12 @@ void IEEEFloat::initFromDoubleAPInt(const APInt &api) {
 
   sign = static_cast<unsigned int>(i>>63);
   if (myexponent==0 && mysignificand==0) {
-    // exponent, significand meaningless
-    category = fcZero;
+    makeZero(sign);
   } else if (myexponent==0x7ff && mysignificand==0) {
-    // exponent, significand meaningless
-    category = fcInfinity;
+    makeInf(sign);
   } else if (myexponent==0x7ff && mysignificand!=0) {
-    // exponent meaningless
     category = fcNaN;
+    exponent = exponentNaN();
     *significandParts() = mysignificand;
   } else {
     category = fcNormal;
@@ -3504,14 +3498,12 @@ void IEEEFloat::initFromFloatAPInt(const APInt &api) {
 
   sign = i >> 31;
   if (myexponent==0 && mysignificand==0) {
-    // exponent, significand meaningless
-    category = fcZero;
+    makeZero(sign);
   } else if (myexponent==0xff && mysignificand==0) {
-    // exponent, significand meaningless
-    category = fcInfinity;
+    makeInf(sign);
   } else if (myexponent==0xff && mysignificand!=0) {
-    // sign, exponent, significand meaningless
     category = fcNaN;
+    exponent = exponentNaN();
     *significandParts() = mysignificand;
   } else {
     category = fcNormal;
@@ -3535,14 +3527,12 @@ void IEEEFloat::initFromBFloatAPInt(const APInt &api) {
 
   sign = i >> 15;
   if (myexponent == 0 && mysignificand == 0) {
-    // exponent, significand meaningless
-    category = fcZero;
+    makeZero(sign);
   } else if (myexponent == 0xff && mysignificand == 0) {
-    // exponent, significand meaningless
-    category = fcInfinity;
+    makeInf(sign);
   } else if (myexponent == 0xff && mysignificand != 0) {
-    // sign, exponent, significand meaningless
     category = fcNaN;
+    exponent = exponentNaN();
     *significandParts() = mysignificand;
   } else {
     category = fcNormal;
@@ -3566,14 +3556,12 @@ void IEEEFloat::initFromHalfAPInt(const APInt &api) {
 
   sign = i >> 15;
   if (myexponent==0 && mysignificand==0) {
-    // exponent, significand meaningless
-    category = fcZero;
+    makeZero(sign);
   } else if (myexponent==0x1f && mysignificand==0) {
-    // exponent, significand meaningless
-    category = fcInfinity;
+    makeInf(sign);
   } else if (myexponent==0x1f && mysignificand!=0) {
-    // sign, exponent, significand meaningless
     category = fcNaN;
+    exponent = exponentNaN();
     *significandParts() = mysignificand;
   } else {
     category = fcNormal;
@@ -4131,17 +4119,29 @@ IEEEFloat::opStatus IEEEFloat::next(bool nextDown) {
   return result;
 }
 
+APFloatBase::ExponentType IEEEFloat::exponentNaN() const {
+  return semantics->maxExponent + 1;
+}
+
+APFloatBase::ExponentType IEEEFloat::exponentInf() const {
+  return semantics->maxExponent + 1;
+}
+
+APFloatBase::ExponentType IEEEFloat::exponentZero() const {
+  return semantics->minExponent - 1;
+}
+
 void IEEEFloat::makeInf(bool Negative) {
   category = fcInfinity;
   sign = Negative;
-  exponent = semantics->maxExponent + 1;
+  exponent = exponentInf();
   APInt::tcSet(significandParts(), 0, partCount());
 }
 
 void IEEEFloat::makeZero(bool Negative) {
   category = fcZero;
   sign = Negative;
-  exponent = semantics->minExponent-1;
+  exponent = exponentZero();
   APInt::tcSet(significandParts(), 0, partCount());
 }
 
