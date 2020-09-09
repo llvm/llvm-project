@@ -1,0 +1,3 @@
+module std {
+  module "vector" { header "vector" export * }
+}
