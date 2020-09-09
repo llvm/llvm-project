@@ -202,7 +202,7 @@ bool X86CallFrameOptimization::isProfitable(MachineFunction &MF,
   Align StackAlign = TFL->getStackAlign();
 
   int64_t Advantage = 0;
-  for (auto CC : CallSeqVector) {
+  for (const auto &CC : CallSeqVector) {
     // Call sites where no parameters are passed on the stack
     // do not affect the cost, since there needs to be no
     // stack adjustment.
@@ -265,7 +265,7 @@ bool X86CallFrameOptimization::runOnMachineFunction(MachineFunction &MF) {
   if (!isProfitable(MF, CallSeqVector))
     return false;
 
-  for (auto CC : CallSeqVector) {
+  for (const auto &CC : CallSeqVector) {
     if (CC.UsePush) {
       adjustCallSequence(MF, CC);
       Changed = true;
@@ -288,13 +288,13 @@ X86CallFrameOptimization::classifyInstruction(
     case X86::AND16mi8:
     case X86::AND32mi8:
     case X86::AND64mi8: {
-      MachineOperand ImmOp = MI->getOperand(X86::AddrNumOperands);
+      const MachineOperand &ImmOp = MI->getOperand(X86::AddrNumOperands);
       return ImmOp.getImm() == 0 ? Convert : Exit;
     }
     case X86::OR16mi8:
     case X86::OR32mi8:
     case X86::OR64mi8: {
-      MachineOperand ImmOp = MI->getOperand(X86::AddrNumOperands);
+      const MachineOperand &ImmOp = MI->getOperand(X86::AddrNumOperands);
       return ImmOp.getImm() == -1 ? Convert : Exit;
     }
     case X86::MOV32mi:
@@ -506,7 +506,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
   // replace uses.
   for (int Idx = (Context.ExpectedDist >> Log2SlotSize) - 1; Idx >= 0; --Idx) {
     MachineBasicBlock::iterator Store = *Context.ArgStoreVector[Idx];
-    MachineOperand PushOp = Store->getOperand(X86::AddrNumOperands);
+    const MachineOperand &PushOp = Store->getOperand(X86::AddrNumOperands);
     MachineBasicBlock::iterator Push = nullptr;
     unsigned PushOpcode;
     switch (Store->getOpcode()) {

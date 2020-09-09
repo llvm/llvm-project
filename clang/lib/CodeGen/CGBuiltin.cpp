@@ -14273,8 +14273,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     else if (BuiltinID == PPC::BI__builtin_vsx_xvrdpic ||
              BuiltinID == PPC::BI__builtin_vsx_xvrspic)
       ID = Builder.getIsFPConstrained()
-               ? Intrinsic::experimental_constrained_nearbyint
-               : Intrinsic::nearbyint;
+               ? Intrinsic::experimental_constrained_rint
+               : Intrinsic::rint;
     else if (BuiltinID == PPC::BI__builtin_vsx_xvrdpip ||
              BuiltinID == PPC::BI__builtin_vsx_xvrspip)
       ID = Builder.getIsFPConstrained()

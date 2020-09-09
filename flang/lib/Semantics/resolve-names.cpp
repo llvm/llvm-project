@@ -5044,6 +5044,9 @@ void ConstructVisitor::Post(const parser::Association &x) {
   const auto &name{std::get<parser::Name>(x.t)};
   GetCurrentAssociation().name = &name;
   if (auto *symbol{MakeAssocEntity()}) {
+    if (ExtractCoarrayRef(GetCurrentAssociation().selector.expr)) { // C1103
+      Say("Selector must not be a coindexed object"_err_en_US);
+    }
     SetTypeFromAssociation(*symbol);
     SetAttrsFromAssociation(*symbol);
   }
@@ -5098,6 +5101,9 @@ void ConstructVisitor::Post(const parser::SelectTypeStmt &x) {
     MakePlaceholder(*name, MiscDetails::Kind::SelectTypeAssociateName);
     association.name = &*name;
     auto exprType{association.selector.expr->GetType()};
+    if (ExtractCoarrayRef(association.selector.expr)) { // C1103
+      Say("Selector must not be a coindexed object"_err_en_US);
+    }
     if (exprType && !exprType->IsPolymorphic()) { // C1159
       Say(association.selector.source,
           "Selector '%s' in SELECT TYPE statement must be "
