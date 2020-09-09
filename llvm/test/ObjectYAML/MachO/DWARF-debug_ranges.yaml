@@ -284,3 +284,27 @@ LoadCommands:
         reserved2: 0x00000000
         reserved3: 0x00000000
         content:   [[CONTENT=<none>]]
+
+## Test generating and dumping a __debug_ranges section whose size isn't a
+## multiple of the address size. This test case is to ensure that when the
+## parser fails, the content of the __debug_ranges section will be dumped into
+## the 'content' entry and the 'debug_ranges' entry will not exist.
+
+# RUN: yaml2obj --docnum=2 -DSIZE=3 -DCONTENT='010203' %s | obj2yaml | FileCheck %s --check-prefix=FAILS
+
+#  FAILS-NOT: DWARF:
+#      FAILS: Sections:
+# FAILS-NEXT:   - sectname:  __debug_ranges
+# FAILS-NEXT:     segname:   __DWARF
+# FAILS-NEXT:     addr:      0x0000000000000000
+# FAILS-NEXT:     size:      3
+# FAILS-NEXT:     offset:    0x00000210
+# FAILS-NEXT:     align:     0
+# FAILS-NEXT:     reloff:    0x00000000
+# FAILS-NEXT:     nreloc:    0
+# FAILS-NEXT:     flags:     0x00000000
+# FAILS-NEXT:     reserved1: 0x00000000
+# FAILS-NEXT:     reserved2: 0x00000000
+# FAILS-NEXT:     reserved3: 0x00000000
+# FAILS-NEXT:     content:   '010203'
+# FAILS-NEXT: ...
