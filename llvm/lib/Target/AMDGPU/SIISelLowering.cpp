@@ -4263,21 +4263,16 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
 
     // The dedicated instructions can only set the whole denorm or round mode at
     // once, not a subset of bits in either.
-    if (Width == 8 && (SetMask & (AMDGPU::Hwreg::FP_ROUND_MASK |
-                                  AMDGPU::Hwreg::FP_DENORM_MASK)) == SetMask) {
+    if (SetMask ==
+        (AMDGPU::Hwreg::FP_ROUND_MASK | AMDGPU::Hwreg::FP_DENORM_MASK)) {
       // If this fully sets both the round and denorm mode, emit the two
       // dedicated instructions for these.
-      assert(Offset == 0);
       SetRoundOp = AMDGPU::S_ROUND_MODE;
       SetDenormOp = AMDGPU::S_DENORM_MODE;
-    } else if (Width == 4) {
-      if ((SetMask & AMDGPU::Hwreg::FP_ROUND_MASK) == SetMask) {
-        SetRoundOp = AMDGPU::S_ROUND_MODE;
-        assert(Offset == 0);
-      } else if ((SetMask & AMDGPU::Hwreg::FP_DENORM_MASK) == SetMask) {
-        SetDenormOp = AMDGPU::S_DENORM_MODE;
-        assert(Offset == 4);
-      }
+    } else if (SetMask == AMDGPU::Hwreg::FP_ROUND_MASK) {
+      SetRoundOp = AMDGPU::S_ROUND_MODE;
+    } else if (SetMask == AMDGPU::Hwreg::FP_DENORM_MASK) {
+      SetDenormOp = AMDGPU::S_DENORM_MODE;
     }
 
     if (SetRoundOp || SetDenormOp) {
