@@ -2919,7 +2919,6 @@ bool X86FrameLowering::adjustStackWithPops(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MBBI,
                                            const DebugLoc &DL,
                                            int Offset) const {
-
   if (Offset <= 0)
     return false;
 
@@ -2942,14 +2941,13 @@ bool X86FrameLowering::adjustStackWithPops(MachineBasicBlock &MBB,
   unsigned Regs[2];
   unsigned FoundRegs = 0;
 
-  auto &MRI = MBB.getParent()->getRegInfo();
-  auto RegMask = Prev->getOperand(1);
+  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  const MachineOperand &RegMask = Prev->getOperand(1);
 
   auto &RegClass =
       Is64Bit ? X86::GR64_NOREX_NOSPRegClass : X86::GR32_NOREX_NOSPRegClass;
   // Try to find up to NumPops free registers.
   for (auto Candidate : RegClass) {
-
     // Poor man's liveness:
     // Since we're immediately after a call, any register that is clobbered
     // by the call and not defined by it can be considered dead.
