@@ -351,9 +351,10 @@ define amdgpu_ps i64 @s_srem_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:  BB1_2:
 ; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:  BB1_3: ; %Flow
-; CHECK-NEXT:    s_and_b32 s0, s1, 1
+; CHECK-NEXT:    s_xor_b32 s0, s1, -1
+; CHECK-NEXT:    s_and_b32 s0, s0, 1
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
-; CHECK-NEXT:    s_cbranch_scc0 BB1_5
+; CHECK-NEXT:    s_cbranch_scc1 BB1_5
 ; CHECK-NEXT:  ; %bb.4:
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v0, s4
 ; CHECK-NEXT:    s_sub_i32 s0, 0, s4
