@@ -2260,18 +2260,19 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
 
     auto &MemOp = **I.memoperands_begin();
+    uint64_t MemSizeInBytes = MemOp.getSize();
     if (MemOp.isAtomic()) {
       // For now we just support s8 acquire loads to be able to compile stack
       // protector code.
       if (MemOp.getOrdering() == AtomicOrdering::Acquire &&
-          MemOp.getSize() == 1) {
+          MemSizeInBytes == 1) {
         I.setDesc(TII.get(AArch64::LDARB));
         return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
       }
       LLVM_DEBUG(dbgs() << "Atomic load/store not fully supported yet\n");
       return false;
     }
-    unsigned MemSizeInBits = MemOp.getSize() * 8;
+    unsigned MemSizeInBits = MemSizeInBytes * 8;
 
     const Register PtrReg = I.getOperand(1).getReg();
 #ifndef NDEBUG
@@ -2286,78 +2287,78 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     const Register ValReg = I.getOperand(0).getReg();
     const RegisterBank &RB = *RBI.getRegBank(ValReg, MRI, TRI);
 
-    const unsigned NewOpc =
-        selectLoadStoreUIOp(I.getOpcode(), RB.getID(), MemSizeInBits);
-    if (NewOpc == I.getOpcode())
-      return false;
-
-    I.setDesc(TII.get(NewOpc));
-
-    uint64_t Offset = 0;
-    auto *PtrMI = MRI.getVRegDef(PtrReg);
-
-    // Try to fold a GEP into our unsigned immediate addressing mode.
-    if (PtrMI->getOpcode() == TargetOpcode::G_PTR_ADD) {
-      if (auto COff = getConstantVRegVal(PtrMI->getOperand(2).getReg(), MRI)) {
-        int64_t Imm = *COff;
-        const unsigned Size = MemSizeInBits / 8;
-        const unsigned Scale = Log2_32(Size);
-        if ((Imm & (Size - 1)) == 0 && Imm >= 0 && Imm < (0x1000 << Scale)) {
-          Register Ptr2Reg = PtrMI->getOperand(1).getReg();
-          I.getOperand(1).setReg(Ptr2Reg);
-          PtrMI = MRI.getVRegDef(Ptr2Reg);
-          Offset = Imm / Size;
-        }
+    // Helper lambda for partially selecting I. Either returns the original
+    // instruction with an updated opcode, or a new instruction.
+    auto SelectLoadStoreAddressingMode = [&]() -> MachineInstr * {
+      bool IsStore = I.getOpcode() == TargetOpcode::G_STORE;
+      const unsigned NewOpc =
+          selectLoadStoreUIOp(I.getOpcode(), RB.getID(), MemSizeInBits);
+      if (NewOpc == I.getOpcode())
+        return nullptr;
+      // Check if we can fold anything into the addressing mode.
+      auto AddrModeFns =
+          selectAddrModeIndexed(I.getOperand(1), MemSizeInBytes);
+      if (!AddrModeFns) {
+        // Can't fold anything. Use the original instruction.
+        I.setDesc(TII.get(NewOpc));
+        I.addOperand(MachineOperand::CreateImm(0));
+        return &I;
       }
-    }
 
-    // If we haven't folded anything into our addressing mode yet, try to fold
-    // a frame index into the base+offset.
-    if (!Offset && PtrMI->getOpcode() == TargetOpcode::G_FRAME_INDEX)
-      I.getOperand(1).ChangeToFrameIndex(PtrMI->getOperand(1).getIndex());
+      // Folded something. Create a new instruction and return it.
+      auto NewInst = MIB.buildInstr(NewOpc, {}, {}, I.getFlags());
+      IsStore ? NewInst.addUse(ValReg) : NewInst.addDef(ValReg);
+      NewInst.cloneMemRefs(I);
+      for (auto &Fn : *AddrModeFns)
+        Fn(NewInst);
+      I.eraseFromParent();
+      return &*NewInst;
+    };
 
-    I.addOperand(MachineOperand::CreateImm(Offset));
+    MachineInstr *LoadStore = SelectLoadStoreAddressingMode();
+    if (!LoadStore)
+      return false;
 
     // If we're storing a 0, use WZR/XZR.
     if (Opcode == TargetOpcode::G_STORE) {
       auto CVal = getConstantVRegValWithLookThrough(
-          ValReg, MRI, /*LookThroughInstrs = */ true,
+          LoadStore->getOperand(0).getReg(), MRI, /*LookThroughInstrs = */ true,
           /*HandleFConstants = */ false);
       if (CVal && CVal->Value == 0) {
-        unsigned Opc = I.getOpcode();
-        switch (Opc) {
+        switch (LoadStore->getOpcode()) {
         case AArch64::STRWui:
         case AArch64::STRHHui:
         case AArch64::STRBBui:
-          I.getOperand(0).setReg(AArch64::WZR);
+          LoadStore->getOperand(0).setReg(AArch64::WZR);
           break;
         case AArch64::STRXui:
-          I.getOperand(0).setReg(AArch64::XZR);
+          LoadStore->getOperand(0).setReg(AArch64::XZR);
           break;
         }
       }
     }
 
     if (IsZExtLoad) {
-      // The zextload from a smaller type to i32 should be handled by the importer.
-      if (MRI.getType(ValReg).getSizeInBits() != 64)
+      // The zextload from a smaller type to i32 should be handled by the
+      // importer.
+      if (MRI.getType(LoadStore->getOperand(0).getReg()).getSizeInBits() != 64)
         return false;
       // If we have a ZEXTLOAD then change the load's type to be a narrower reg
-      //and zero_extend with SUBREG_TO_REG.
+      // and zero_extend with SUBREG_TO_REG.
       Register LdReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
-      Register DstReg = I.getOperand(0).getReg();
-      I.getOperand(0).setReg(LdReg);
+      Register DstReg = LoadStore->getOperand(0).getReg();
+      LoadStore->getOperand(0).setReg(LdReg);
 
-      MIB.setInsertPt(MIB.getMBB(), std::next(I.getIterator()));
+      MIB.setInsertPt(MIB.getMBB(), std::next(LoadStore->getIterator()));
       MIB.buildInstr(AArch64::SUBREG_TO_REG, {DstReg}, {})
           .addImm(0)
           .addUse(LdReg)
           .addImm(AArch64::sub_32);
-      constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(*LoadStore, TII, TRI, RBI);
       return RBI.constrainGenericRegister(DstReg, AArch64::GPR64allRegClass,
                                           MRI);
     }
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return constrainSelectedInstRegOperands(*LoadStore, TII, TRI, RBI);
   }
 
   case TargetOpcode::G_SMULH:
