@@ -650,12 +650,12 @@ main_body:
 ; CHECK: image_store
 ; CHECK: s_wqm_b64 exec, exec
 ; CHECK-DAG: v_mov_b32_e32 [[CTR:v[0-9]+]], 0
-; CHECK-DAG: s_mov_b32 [[SEVEN:s[0-9]+]], 0x40e00000
+; CHECK-DAG: v_mov_b32_e32 [[SEVEN:v[0-9]+]], 0x40e00000
 
 ; CHECK: [[LOOPHDR:BB[0-9]+_[0-9]+]]: ; %body
 ; CHECK: v_add_f32_e32 [[CTR]], 2.0, [[CTR]]
 ; CHECK: [[LOOP:BB[0-9]+_[0-9]+]]: ; %loop
-; CHECK: v_cmp_lt_f32_e32 vcc, [[SEVEN]], [[CTR]]
+; CHECK: v_cmp_gt_f32_e32 vcc, [[CTR]], [[SEVEN]]
 ; CHECK: s_cbranch_vccz [[LOOPHDR]]
 
 ; CHECK: ; %break
