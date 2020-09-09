@@ -588,12 +588,7 @@ static void AttemptToFoldSymbolOffsetDifference(
   if (!Asm->getWriter().isSymbolRefDifferenceFullyResolved(*Asm, A, B, InSet))
     return;
 
-  MCFragment *FA = SA.getFragment();
-  MCFragment *FB = SB.getFragment();
-  if (FA == FB && !SA.isVariable() && !SA.isUnset() && !SB.isVariable() &&
-      !SB.isUnset()) {
-    Addend += (SA.getOffset() - SB.getOffset());
-
+  auto FinalizeFolding = [&]() {
     // Pointers to Thumb symbols need to have their low-bit set to allow
     // for interworking.
     if (Asm->isThumbFunc(&SA))
@@ -607,11 +602,17 @@ static void AttemptToFoldSymbolOffsetDifference(
     // Clear the symbol expr pointers to indicate we have folded these
     // operands.
     A = B = nullptr;
-    return;
-  }
+  };
 
-  if (!Layout)
-    return;
+  const MCFragment *FA = SA.getFragment();
+  const MCFragment *FB = SB.getFragment();
+  // If both symbols are in the same fragment, return the difference of their
+  // offsets
+  if (FA == FB && !SA.isVariable() && !SA.isUnset() && !SB.isVariable() &&
+      !SB.isUnset()) {
+    Addend += SA.getOffset() - SB.getOffset();
+    return FinalizeFolding();
+  }
 
   const MCSection &SecA = *FA->getParent();
   const MCSection &SecB = *FB->getParent();
@@ -619,30 +620,46 @@ static void AttemptToFoldSymbolOffsetDifference(
   if ((&SecA != &SecB) && !Addrs)
     return;
 
-  // One of the symbol involved is part of a fragment being laid out. Quit now
-  // to avoid a self loop.
-  if (!Layout->canGetFragmentOffset(FA) || !Layout->canGetFragmentOffset(FB))
-    return;
+  if (Layout) {
+    // One of the symbol involved is part of a fragment being laid out. Quit now
+    // to avoid a self loop.
+    if (!Layout->canGetFragmentOffset(FA) || !Layout->canGetFragmentOffset(FB))
+      return;
 
-  // Eagerly evaluate.
-  Addend += Layout->getSymbolOffset(A->getSymbol()) -
-            Layout->getSymbolOffset(B->getSymbol());
-  if (Addrs && (&SecA != &SecB))
-    Addend += (Addrs->lookup(&SecA) - Addrs->lookup(&SecB));
+    // Eagerly evaluate when layout is finalized.
+    Addend += Layout->getSymbolOffset(A->getSymbol()) -
+              Layout->getSymbolOffset(B->getSymbol());
+    if (Addrs && (&SecA != &SecB))
+      Addend += (Addrs->lookup(&SecA) - Addrs->lookup(&SecB));
 
-  // Pointers to Thumb symbols need to have their low-bit set to allow
-  // for interworking.
-  if (Asm->isThumbFunc(&SA))
-    Addend |= 1;
+    FinalizeFolding();
+  } else {
+    // When layout is not finalized, our ability to resolve differences between
+    // symbols is limited to specific cases where the fragments between two
+    // symbols (including the fragments the symbols are defined in) are
+    // fixed-size fragments so the difference can be calculated. For example,
+    // this is important when the Subtarget is changed and a new MCDataFragment
+    // is created in the case of foo: instr; .arch_extension ext; instr .if . -
+    // foo.
+    if (SA.isVariable() || SA.isUnset() || SB.isVariable() || SB.isUnset() ||
+        FA->getKind() != MCFragment::FT_Data ||
+        FB->getKind() != MCFragment::FT_Data ||
+        FA->getSubsectionNumber() != FB->getSubsectionNumber())
+      return;
+    // Try to find a constant displacement from FA to FB, add the displacement
+    // between the offset in FA of SA and the offset in FB of SB.
+    int64_t Displacement = SA.getOffset() - SB.getOffset();
+    for (auto FI = FB->getIterator(), FE = SecA.end(); FI != FE; ++FI) {
+      if (&*FI == FA) {
+        Addend += Displacement;
+        return FinalizeFolding();
+      }
 
-  // If symbol is labeled as micromips, we set low-bit to ensure
-  // correct offset in .gcc_except_table
-  if (Asm->getBackend().isMicroMips(&SA))
-    Addend |= 1;
-
-  // Clear the symbol expr pointers to indicate we have folded these
-  // operands.
-  A = B = nullptr;
+      if (FI->getKind() != MCFragment::FT_Data)
+        return;
+      Displacement += cast<MCDataFragment>(FI)->getContents().size();
+    }
+  }
 }
 
 static bool canFold(const MCAssembler *Asm, const MCSymbolRefExpr *A,
