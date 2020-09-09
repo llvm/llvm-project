@@ -6409,7 +6409,7 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
   SDValue Sel;
 
   if (Node->isStrictFPOpcode()) {
-    Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT,
+    Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT, SDNodeFlags(),
                        Node->getOperand(0), /*IsSignaling*/ true);
     Chain = Sel.getValue(1);
   } else {

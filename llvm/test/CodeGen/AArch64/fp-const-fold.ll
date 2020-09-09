@@ -161,49 +161,33 @@ define double @fmul_nnan_inf_op1(double %x) {
   ret double %r
 }
 
-; TODO: Should simplify to undef
-
 define double @fdiv_nnan_undef_op0(double %x) {
 ; CHECK-LABEL: fdiv_nnan_undef_op0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9221120237041090560
-; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %r = fdiv nnan double undef, %x
   ret double %r
 }
 
-; TODO: Should simplify to undef
-
 define double @fdiv_nnan_undef_op1(double %x) {
 ; CHECK-LABEL: fdiv_nnan_undef_op1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9221120237041090560
-; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %r = fdiv nnan double %x, undef
   ret double %r
 }
 
-; TODO: Should simplify to undef
-
 define double @fdiv_ninf_undef_op0(double %x) {
 ; CHECK-LABEL: fdiv_ninf_undef_op0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9221120237041090560
-; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %r = fdiv ninf double undef, %x
   ret double %r
 }
 
-; TODO: Should simplify to undef
-
 define double @fdiv_ninf_undef_op1(double %x) {
 ; CHECK-LABEL: fdiv_ninf_undef_op1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9221120237041090560
-; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %r = fdiv ninf double %x, undef
   ret double %r

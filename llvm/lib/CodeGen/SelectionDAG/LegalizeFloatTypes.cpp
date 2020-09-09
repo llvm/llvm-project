@@ -1777,17 +1777,18 @@ void DAGTypeLegalizer::FloatExpandSetCCOperands(SDValue &NewLHS,
   // The following can be improved, but not that much.
   SDValue Tmp1, Tmp2, Tmp3, OutputChain;
   Tmp1 = DAG.getSetCC(dl, getSetCCResultType(LHSHi.getValueType()), LHSHi,
-                      RHSHi, ISD::SETOEQ, Chain, IsSignaling);
+                      RHSHi, ISD::SETOEQ, SDNodeFlags(), Chain, IsSignaling);
   OutputChain = Tmp1->getNumValues() > 1 ? Tmp1.getValue(1) : SDValue();
   Tmp2 = DAG.getSetCC(dl, getSetCCResultType(LHSLo.getValueType()), LHSLo,
-                      RHSLo, CCCode, OutputChain, IsSignaling);
+                      RHSLo, CCCode, SDNodeFlags(), OutputChain, IsSignaling);
   OutputChain = Tmp2->getNumValues() > 1 ? Tmp2.getValue(1) : SDValue();
   Tmp3 = DAG.getNode(ISD::AND, dl, Tmp1.getValueType(), Tmp1, Tmp2);
-  Tmp1 = DAG.getSetCC(dl, getSetCCResultType(LHSHi.getValueType()), LHSHi,
-                      RHSHi, ISD::SETUNE, OutputChain, IsSignaling);
+  Tmp1 =
+      DAG.getSetCC(dl, getSetCCResultType(LHSHi.getValueType()), LHSHi, RHSHi,
+                   ISD::SETUNE, SDNodeFlags(), OutputChain, IsSignaling);
   OutputChain = Tmp1->getNumValues() > 1 ? Tmp1.getValue(1) : SDValue();
   Tmp2 = DAG.getSetCC(dl, getSetCCResultType(LHSHi.getValueType()), LHSHi,
-                      RHSHi, CCCode, OutputChain, IsSignaling);
+                      RHSHi, CCCode, SDNodeFlags(), OutputChain, IsSignaling);
   OutputChain = Tmp2->getNumValues() > 1 ? Tmp2.getValue(1) : SDValue();
   Tmp1 = DAG.getNode(ISD::AND, dl, Tmp1.getValueType(), Tmp1, Tmp2);
   NewLHS = DAG.getNode(ISD::OR, dl, Tmp1.getValueType(), Tmp1, Tmp3);
