@@ -1824,6 +1824,11 @@ struct DSEState {
 
   // Returns true if \p Use may read from \p DefLoc.
   bool isReadClobber(MemoryLocation DefLoc, Instruction *UseInst) {
+    // Monotonic or weaker atomic stores can be re-ordered and do not need to be
+    // treated as read clobber.
+    if (auto SI = dyn_cast<StoreInst>(UseInst))
+      return isStrongerThan(SI->getOrdering(), AtomicOrdering::Monotonic);
+
     if (!UseInst->mayReadFromMemory())
       return false;
 
