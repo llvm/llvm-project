@@ -406,9 +406,15 @@ let Predicates = [UseHVX] in {
   def: Pat<(srl HVI16:$Vs, HVI16:$Vt), (V6_vlsrhv HvxVR:$Vs, HvxVR:$Vt)>;
   def: Pat<(srl HVI32:$Vs, HVI32:$Vt), (V6_vlsrwv HvxVR:$Vs, HvxVR:$Vt)>;
 
+  // Vpackl is a pseudo-op that is used when legalizing widened truncates.
+  // It should never be produced with a register pair in the output, but
+  // it can happen to have a pair as an input.
   def: Pat<(VecI8  (vpackl HVI16:$Vs)), (V6_vdealb HvxVR:$Vs)>;
   def: Pat<(VecI8  (vpackl HVI32:$Vs)), (V6_vdealb4w (IMPLICIT_DEF), HvxVR:$Vs)>;
   def: Pat<(VecI16 (vpackl HVI32:$Vs)), (V6_vdealh HvxVR:$Vs)>;
+  def: Pat<(VecI8  (vpackl HWI16:$Vs)), (V6_vpackeb (HiVec $Vs), (LoVec $Vs))>;
+  def: Pat<(VecI8  (vpackl HWI32:$Vs)), (V6_vdealb4w (HiVec $Vs), (LoVec $Vs))>;
+  def: Pat<(VecI16 (vpackl HWI32:$Vs)), (V6_vpackeh (HiVec $Vs), (LoVec $Vs))>;
 
   def: Pat<(VecI16 (bswap HVI16:$Vs)),
            (V6_vdelta HvxVR:$Vs, (V6_lvsplatw (A2_tfrsi 0x01010101)))>;
