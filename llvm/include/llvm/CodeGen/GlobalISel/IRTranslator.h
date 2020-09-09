@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/CodeGen.h"
 #include <memory>
 #include <utility>
 
@@ -556,6 +557,8 @@ private:
   /// Current target configuration. Controls how the pass handles errors.
   const TargetPassConfig *TPC;
 
+  CodeGenOpt::Level OptLevel;
+
   /// Current optimization remark emitter. Used to report failures.
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
@@ -659,8 +662,7 @@ private:
                             BranchProbability Prob);
 
 public:
-  // Ctor, nothing fancy.
-  IRTranslator();
+  IRTranslator(CodeGenOpt::Level OptLevel = CodeGenOpt::None);
 
   StringRef getPassName() const override { return "IRTranslator"; }
 
