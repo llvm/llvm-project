@@ -3090,9 +3090,10 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
   switch (II->getIntrinsicID()) {
   case Intrinsic::abs:
     // abs(A) == 0  ->  A == 0
-    if (C.isNullValue())
+    // abs(A) == INT_MIN  ->  A == INT_MIN
+    if (C.isNullValue() || C.isMinSignedValue())
       return new ICmpInst(Cmp.getPredicate(), II->getArgOperand(0),
-                          Constant::getNullValue(Ty));
+                          ConstantInt::get(Ty, C));
     break;
 
   case Intrinsic::bswap:

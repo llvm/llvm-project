@@ -7,10 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass is used to ensure that functions have at most one return and one
-// unwind instruction in them.  Additionally, it keeps track of which node is
-// the new exit node of the CFG.  If there are no return or unwind instructions
-// in the function, the getReturnBlock/getUnwindBlock methods will return a null
-// pointer.
+// unreachable instruction in them.
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,23 +21,12 @@ namespace llvm {
 class BasicBlock;
 
 struct UnifyFunctionExitNodes : public FunctionPass {
-  BasicBlock *ReturnBlock = nullptr;
-  BasicBlock *UnwindBlock = nullptr;
-  BasicBlock *UnreachableBlock;
-
 public:
   static char ID; // Pass identification, replacement for typeid
   UnifyFunctionExitNodes();
 
   // We can preserve non-critical-edgeness when we unify function exit nodes
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  // getReturn|Unwind|UnreachableBlock - Return the new single (or nonexistent)
-  // return, unwind, or unreachable  basic blocks in the CFG.
-  //
-  BasicBlock *getReturnBlock() const { return ReturnBlock; }
-  BasicBlock *getUnwindBlock() const { return UnwindBlock; }
-  BasicBlock *getUnreachableBlock() const { return UnreachableBlock; }
 
   bool runOnFunction(Function &F) override;
 };

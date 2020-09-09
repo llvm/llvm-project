@@ -2,9 +2,6 @@
 ;
 ; Check that a multiply-and-add results.
 
-; FIXME: This test is xfailed temporarily
-; XFAIL: *
-
 define void @f1(float %arg, float* %Dst) {
 ; CHECK-LABEL: f1:
 ; CHECK: maeb

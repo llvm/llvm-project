@@ -29,6 +29,7 @@
 
 namespace mlir {
 class Block;
+class BlockRange;
 class Dialect;
 class Operation;
 struct OperationState;
@@ -42,7 +43,6 @@ class Pattern;
 class Region;
 class ResultRange;
 class RewritePattern;
-class SuccessorRange;
 class Type;
 class Value;
 class ValueRange;
@@ -394,12 +394,8 @@ public:
     attributes.append(newAttributes);
   }
 
-  /// Add an array of successors.
-  void addSuccessors(ArrayRef<Block *> newSuccessors) {
-    successors.append(newSuccessors.begin(), newSuccessors.end());
-  }
   void addSuccessors(Block *successor) { successors.push_back(successor); }
-  void addSuccessors(SuccessorRange newSuccessors);
+  void addSuccessors(BlockRange newSuccessors);
 
   /// Create a region that should be attached to the operation.  These regions
   /// can be filled in immediately without waiting for Operation to be

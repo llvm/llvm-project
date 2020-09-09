@@ -98,22 +98,15 @@ extern char __eh_frame_hdr_end;
 extern char __exidx_start;
 extern char __exidx_end;
 
-#elif defined(_LIBUNWIND_ARM_EHABI) || defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
+#elif defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND) && defined(_WIN32)
 
-// ELF-based systems may use dl_iterate_phdr() to access sections
-// containing unwinding information. The ElfW() macro for pointer-size
-// independent ELF header traversal is not provided by <link.h> on some
-// systems (e.g., FreeBSD). On these systems the data structures are
-// just called Elf_XXX. Define ElfW() locally.
-#ifndef _WIN32
-#include <link.h>
-#else
 #include <windows.h>
 #include <psapi.h>
-#endif
-#if !defined(ElfW)
-#define ElfW(type) Elf_##type
-#endif
+
+#elif defined(_LIBUNWIND_USE_DL_ITERATE_PHDR) ||                               \
+      defined(_LIBUNWIND_USE_DL_UNWIND_FIND_EXIDX)
+
+#include <link.h>
 
 #endif
 
@@ -351,23 +344,14 @@ LocalAddressSpace::getEncodedP(pint_t &addr, pint_t end, uint8_t encoding,
   return result;
 }
 
-#ifdef __APPLE__
-#elif defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND) && defined(_LIBUNWIND_IS_BAREMETAL)
-#elif defined(_LIBUNWIND_ARM_EHABI) && defined(_LIBUNWIND_IS_BAREMETAL)
-#elif defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND) && defined(_WIN32)
-#elif defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32)
-#elif defined(_LIBUNWIND_ARM_EHABI) && defined(__BIONIC__)
-// Code inside findUnwindSections handles all these cases.
-//
-// Although the above ifdef chain is ugly, there doesn't seem to be a cleaner
-// way to handle it. The generalized boolean expression is:
-//
-//  A OR (B AND C) OR (D AND C) OR (B AND E) OR (F AND E) OR (D AND G)
-//
-// Running it through various boolean expression simplifiers gives expressions
-// that don't help at all.
-#elif defined(_LIBUNWIND_ARM_EHABI) || defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
+#if defined(_LIBUNWIND_USE_DL_ITERATE_PHDR)
 
+// The ElfW() macro for pointer-size independent ELF header traversal is not
+// provided by <link.h> on some systems (e.g., FreeBSD). On these systems the
+// data structures are just called Elf_XXX. Define ElfW() locally.
+#if !defined(ElfW)
+  #define ElfW(type) Elf_##type
+#endif
 #if !defined(Elf_Half)
   typedef ElfW(Half) Elf_Half;
 #endif
@@ -482,9 +466,7 @@ static int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo,
   return 0;
 }
 
-#else  // defined(LIBUNWIND_SUPPORT_DWARF_UNWIND)
-// Given all the #ifdef's above, the code here is for
-// defined(LIBUNWIND_ARM_EHABI)
+#elif defined(_LIBUNWIND_ARM_EHABI)
 
 static int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo, size_t,
                                     void *data) {
@@ -516,8 +498,9 @@ static int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo, size_t,
   }
   return found_obj && found_hdr;
 }
-#endif  // defined(LIBUNWIND_SUPPORT_DWARF_UNWIND)
-#endif  // defined(_LIBUNWIND_ARM_EHABI) || defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
+
+#endif
+#endif  // defined(_LIBUNWIND_USE_DL_ITERATE_PHDR)
 
 
 inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
@@ -601,16 +584,14 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
   (void)targetAddr;
   (void)info;
   return true;
-#elif defined(_LIBUNWIND_ARM_EHABI) && defined(__BIONIC__)
-  // For ARM EHABI, Bionic didn't implement dl_iterate_phdr until API 21. After
-  // API 21, dl_iterate_phdr exists, but dl_unwind_find_exidx is much faster.
+#elif defined(_LIBUNWIND_USE_DL_UNWIND_FIND_EXIDX)
   int length = 0;
   info.arm_section =
       (uintptr_t)dl_unwind_find_exidx((_Unwind_Ptr)targetAddr, &length);
   info.arm_section_length = (uintptr_t)length * sizeof(EHABIIndexEntry);
   if (info.arm_section && info.arm_section_length)
     return true;
-#elif defined(_LIBUNWIND_ARM_EHABI) || defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
+#elif defined(_LIBUNWIND_USE_DL_ITERATE_PHDR)
   dl_iterate_cb_data cb_data = {this, &info, targetAddr};
   int found = dl_iterate_phdr(findUnwindSectionsByPhdr, &cb_data);
   return static_cast<bool>(found);

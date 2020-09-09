@@ -3,27 +3,10 @@
 #include "../src/config.h"
 
 // Only run this test under supported configurations.
-// The frame header cache should work fine for other architectures,
-// but the #ifdefs end up being even more complicated than this.
 
-#if defined(__x86_64__) && defined(_LIBUNWIND_USE_FRAME_HEADER_CACHE)
-
-// This #if chain is ugly, but see the comments in AddressSpace.hpp for
-// the reasoning.
-
-#ifdef __APPLE__
-int main() { return 0; }
-#elif defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND) && defined(_LIBUNWIND_IS_BAREMETAL)
-int main() { return 0; }
-#elif defined(_LIBUNWIND_ARM_EHABI) && defined(_LIBUNWIND_IS_BAREMETAL)
-int main() { return 0; }
-#elif defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND) && defined(_WIN32)
-int main() { return 0; }
-#elif defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32)
-int main() { return 0; }
-#elif defined(_LIBUNWIND_ARM_EHABI) && defined(__BIONIC__)
-int main() { return 0; }
-#elif defined(_LIBUNWIND_ARM_EHABI) || defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
+#if defined(_LIBUNWIND_USE_DL_ITERATE_PHDR) &&                                 \
+    defined(_LIBUNWIND_SUPPORT_DWARF_INDEX) &&                                 \
+    defined(_LIBUNWIND_USE_FRAME_HEADER_CACHE)
 
 #include <link.h>
 #include <stdio.h>
@@ -84,9 +67,7 @@ int main() {
     abort();
   return 0;
 }
-#else
-int main() { return 0; }
-#endif
+
 #else
 int main() { return 0;}
 #endif

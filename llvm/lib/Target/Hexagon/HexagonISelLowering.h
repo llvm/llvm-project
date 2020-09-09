@@ -487,6 +487,7 @@ private:
   findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)
       const override;
 
+  bool shouldWidenToHvx(MVT Ty, SelectionDAG &DAG) const;
   bool isHvxOperation(SDNode *N, SelectionDAG &DAG) const;
   SDValue LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const;
   void LowerHvxOperationWrapper(SDNode *N, SmallVectorImpl<SDValue> &Results,

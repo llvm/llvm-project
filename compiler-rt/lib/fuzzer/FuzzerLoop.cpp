@@ -463,6 +463,37 @@ static void RenameFeatureSetFile(const std::string &FeaturesDir,
              DirPlusFile(FeaturesDir, NewFile));
 }
 
+static void WriteEdgeToMutationGraphFile(const std::string &MutationGraphFile,
+                                         const InputInfo *II,
+                                         const InputInfo *BaseII,
+                                         const std::string &MS) {
+  if (MutationGraphFile.empty())
+    return;
+
+  std::string Sha1 = Sha1ToString(II->Sha1);
+
+  std::string OutputString;
+
+  // Add a new vertex.
+  OutputString.append("\"");
+  OutputString.append(Sha1);
+  OutputString.append("\"\n");
+
+  // Add a new edge if there is base input.
+  if (BaseII) {
+    std::string BaseSha1 = Sha1ToString(BaseII->Sha1);
+    OutputString.append("\"");
+    OutputString.append(BaseSha1);
+    OutputString.append("\" -> \"");
+    OutputString.append(Sha1);
+    OutputString.append("\" [label=\"");
+    OutputString.append(MS);
+    OutputString.append("\"];\n");
+  }
+
+  AppendToFile(OutputString, MutationGraphFile);
+}
+
 bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
                     InputInfo *II, bool ForceAddToCorpus,
                     bool *FoundUniqFeatures) {
@@ -497,6 +528,8 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
                            TimeOfUnit, UniqFeatureSetTmp, DFT, II);
     WriteFeatureSetToFile(Options.FeaturesDir, Sha1ToString(NewII->Sha1),
                           NewII->UniqFeatureSet);
+    WriteEdgeToMutationGraphFile(Options.MutationGraphFile, NewII, II,
+                                 MD.MutationSequence());
     return true;
   }
   if (II && FoundUniqFeaturesOfII &&

@@ -108,11 +108,10 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
       for (uint32_t i = 0, e = (length - 1) / 2; i != e; ++i) {
         uint32_t dstNo = buf.getWord(), flags = buf.getWord();
         GCOVBlock *dst = fn->Blocks[dstNo].get();
-        auto arc =
-            std::make_unique<GCOVArc>(*src, *dst, flags & GCOV_ARC_FALLTHROUGH);
+        auto arc = std::make_unique<GCOVArc>(*src, *dst, flags);
         src->addDstEdge(arc.get());
         dst->addSrcEdge(arc.get());
-        if (flags & GCOV_ARC_ON_TREE)
+        if (arc->onTree())
           fn->treeArcs.push_back(std::move(arc));
         else
           fn->arcs.push_back(std::move(arc));
@@ -226,6 +225,17 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
         if (arc->dst.succ.empty())
           arc->dst.Counter += arc->Count;
       }
+
+      if (fn->Blocks.size() >= 2) {
+        GCOVBlock &src = *fn->Blocks[0];
+        GCOVBlock &sink =
+            Version < GCOV::V408 ? *fn->Blocks.back() : *fn->Blocks[1];
+        auto arc = std::make_unique<GCOVArc>(sink, src, GCOV_ARC_ON_TREE);
+        sink.addDstEdge(arc.get());
+        src.addSrcEdge(arc.get());
+        fn->treeArcs.push_back(std::move(arc));
+        fn->propagateCounts(src, nullptr);
+      }
     }
     pos += 4 * length;
     if (pos < buf.cursor.tell())
@@ -260,6 +270,8 @@ void GCOVFile::collectLineCounts(FileInfo &fi) {
   fi.setProgramCount(ProgramCount);
 }
 
+bool GCOVArc::onTree() const { return flags & GCOV_ARC_ON_TREE; }
+
 //===----------------------------------------------------------------------===//
 // GCOVFunction implementation.
 
@@ -271,10 +283,27 @@ uint64_t GCOVFunction::getEntryCount() const {
   return Blocks.front()->getCount();
 }
 
-/// getExitCount - Get the number of times the function returned by retrieving
-/// the exit block's count.
-uint64_t GCOVFunction::getExitCount() const {
-  return Blocks.back()->getCount();
+GCOVBlock &GCOVFunction::getExitBlock() const {
+  return file.getVersion() < GCOV::V408 ? *Blocks.back() : *Blocks[1];
+}
+
+// For each basic block, the sum of incoming edge counts equals the sum of
+// outgoing edge counts by Kirchoff's circuit law. If the unmeasured arcs form a
+// spanning tree, the count for each unmeasured arc (GCOV_ARC_ON_TREE) can be
+// uniquely identified.
+uint64_t GCOVFunction::propagateCounts(const GCOVBlock &v, GCOVArc *pred) {
+  uint64_t excess = 0;
+  for (GCOVArc *e : v.srcs())
+    if (e != pred)
+      excess += e->onTree() ? propagateCounts(e->src, e) : e->Count;
+  for (GCOVArc *e : v.dsts())
+    if (e != pred)
+      excess -= e->onTree() ? propagateCounts(e->dst, e) : e->Count;
+  if (int64_t(excess) < 0)
+    excess = -excess;
+  if (pred)
+    pred->Count = excess;
+  return excess;
 }
 
 void GCOVFunction::print(raw_ostream &OS) const {
@@ -322,8 +351,11 @@ void GCOVBlock::print(raw_ostream &OS) const {
   }
   if (!succ.empty()) {
     OS << "\tDestination Edges : ";
-    for (const GCOVArc *Edge : succ)
+    for (const GCOVArc *Edge : succ) {
+      if (Edge->flags & GCOV_ARC_ON_TREE)
+        OS << '*';
       OS << Edge->dst.Number << " (" << Edge->Count << "), ";
+    }
     OS << "\n";
   }
   if (!Lines.empty()) {
@@ -441,7 +473,7 @@ uint64_t GCOVBlock::getLineCount(const BlockVector &Blocks) {
   uint64_t Count = 0;
 
   for (auto Block : Blocks) {
-    if (Block->getNumSrcEdges() == 0) {
+    if (Block->getNumSrcEdges() == 0 || Block->Number == 0) {
       // The block has no predecessors and a non-null counter
       // (can be the case with entry block in functions).
       Count += Block->getCount();
@@ -467,11 +499,13 @@ uint64_t GCOVBlock::getLineCount(const BlockVector &Blocks) {
 //===----------------------------------------------------------------------===//
 // FileInfo implementation.
 
-// Safe integer division, returns 0 if numerator is 0.
-static uint32_t safeDiv(uint64_t Numerator, uint64_t Divisor) {
-  if (!Numerator)
+// Format dividend/divisor as a percentage. Return 1 if the result is greater
+// than 0% and less than 1%.
+static uint32_t formatPercentage(uint64_t dividend, uint64_t divisor) {
+  if (!dividend || !divisor)
     return 0;
-  return Numerator / Divisor;
+  dividend *= 100;
+  return dividend < divisor ? 1 : dividend / divisor;
 }
 
 // This custom division function mimics gcov's branch ouputs:
@@ -794,14 +828,15 @@ void FileInfo::printFunctionSummary(raw_ostream &OS,
   for (const GCOVFunction *Func : Funcs) {
     uint64_t EntryCount = Func->getEntryCount();
     uint32_t BlocksExec = 0;
+    const GCOVBlock &ExitBlock = Func->getExitBlock();
     for (const GCOVBlock &Block : Func->blocks())
-      if (Block.getNumDstEdges() && Block.getCount())
+      if (Block.Number != 0 && &Block != &ExitBlock && Block.getCount())
         ++BlocksExec;
 
     OS << "function " << Func->getName() << " called " << EntryCount
-       << " returned " << safeDiv(Func->getExitCount() * 100, EntryCount)
+       << " returned " << formatPercentage(ExitBlock.getCount(), EntryCount)
        << "% blocks executed "
-       << safeDiv(BlocksExec * 100, Func->getNumBlocks() - 1) << "%\n";
+       << formatPercentage(BlocksExec, Func->getNumBlocks() - 2) << "%\n";
   }
 }
 

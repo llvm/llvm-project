@@ -357,10 +357,6 @@ template<> struct simplify_type<SDUse> {
 /// the backend.
 struct SDNodeFlags {
 private:
-  // This bit is used to determine if the flags are in a defined state. It is
-  // only used by SelectionDAGBuilder.
-  bool AnyDefined : 1;
-
   bool NoUnsignedWrap : 1;
   bool NoSignedWrap : 1;
   bool Exact : 1;
@@ -382,9 +378,8 @@ private:
 public:
   /// Default constructor turns off all optimization flags.
   SDNodeFlags()
-      : AnyDefined(false), NoUnsignedWrap(false), NoSignedWrap(false),
-        Exact(false), NoNaNs(false), NoInfs(false),
-        NoSignedZeros(false), AllowReciprocal(false),
+      : NoUnsignedWrap(false), NoSignedWrap(false), Exact(false), NoNaNs(false),
+        NoInfs(false), NoSignedZeros(false), AllowReciprocal(false),
         AllowContract(false), ApproximateFuncs(false),
         AllowReassociation(false), NoFPExcept(false) {}
 
@@ -399,56 +394,18 @@ public:
     setAllowReassociation(FPMO.hasAllowReassoc());
   }
 
-  /// Sets the state of the flags to the defined state.
-  void setDefined() { AnyDefined = true; }
-  /// Returns true if the flags are in a defined state.
-  bool isDefined() const { return AnyDefined; }
-
   // These are mutators for each flag.
-  void setNoUnsignedWrap(bool b) {
-    setDefined();
-    NoUnsignedWrap = b;
-  }
-  void setNoSignedWrap(bool b) {
-    setDefined();
-    NoSignedWrap = b;
-  }
-  void setExact(bool b) {
-    setDefined();
-    Exact = b;
-  }
-  void setNoNaNs(bool b) {
-    setDefined();
-    NoNaNs = b;
-  }
-  void setNoInfs(bool b) {
-    setDefined();
-    NoInfs = b;
-  }
-  void setNoSignedZeros(bool b) {
-    setDefined();
-    NoSignedZeros = b;
-  }
-  void setAllowReciprocal(bool b) {
-    setDefined();
-    AllowReciprocal = b;
-  }
-  void setAllowContract(bool b) {
-    setDefined();
-    AllowContract = b;
-  }
-  void setApproximateFuncs(bool b) {
-    setDefined();
-    ApproximateFuncs = b;
-  }
-  void setAllowReassociation(bool b) {
-    setDefined();
-    AllowReassociation = b;
-  }
-  void setNoFPExcept(bool b) {
-    setDefined();
-    NoFPExcept = b;
-  }
+  void setNoUnsignedWrap(bool b) { NoUnsignedWrap = b; }
+  void setNoSignedWrap(bool b) { NoSignedWrap = b; }
+  void setExact(bool b) { Exact = b; }
+  void setNoNaNs(bool b) { NoNaNs = b; }
+  void setNoInfs(bool b) { NoInfs = b; }
+  void setNoSignedZeros(bool b) { NoSignedZeros = b; }
+  void setAllowReciprocal(bool b) { AllowReciprocal = b; }
+  void setAllowContract(bool b) { AllowContract = b; }
+  void setApproximateFuncs(bool b) { ApproximateFuncs = b; }
+  void setAllowReassociation(bool b) { AllowReassociation = b; }
+  void setNoFPExcept(bool b) { NoFPExcept = b; }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return NoUnsignedWrap; }
