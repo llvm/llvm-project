@@ -26,6 +26,8 @@ public:
   void StartMutationSequence();
   /// Print the current sequence of mutations.
   void PrintMutationSequence();
+  /// Return the current sequence of mutations.
+  std::string MutationSequence();
   /// Indicate that the current sequence of mutations was successful.
   void RecordSuccessfulMutationSequence();
   /// Mutates data by invoking user-provided mutator.
