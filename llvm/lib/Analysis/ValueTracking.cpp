@@ -4860,10 +4860,13 @@ bool llvm::canCreatePoison(const Operator *Op) {
   return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/true);
 }
 
-bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
-                                            const Instruction *CtxI,
-                                            const DominatorTree *DT,
-                                            unsigned Depth) {
+static bool programUndefinedIfUndefOrPoison(const Instruction *Inst,
+                                            bool PoisonOnly);
+
+static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
+                                             const Instruction *CtxI,
+                                             const DominatorTree *DT,
+                                             unsigned Depth, bool PoisonOnly) {
   if (Depth >= MaxAnalysisRecursionDepth)
     return false;
 
@@ -4874,14 +4877,15 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
 
   if (auto *C = dyn_cast<Constant>(V)) {
     if (isa<UndefValue>(C))
-      return false;
+      return PoisonOnly;
 
     if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) || isa<ConstantFP>(V) ||
         isa<ConstantPointerNull>(C) || isa<Function>(C))
       return true;
 
     if (C->getType()->isVectorTy() && !isa<ConstantExpr>(C))
-      return !C->containsConstantExpression() && !C->containsUndefElement();
+      return (PoisonOnly || !C->containsUndefElement()) &&
+             !C->containsConstantExpression();
   }
 
   // Strip cast operations from a pointer value.
@@ -4898,7 +4902,7 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
     return true;
 
   auto OpCheck = [&](const Value *V) {
-    return isGuaranteedNotToBeUndefOrPoison(V, CtxI, DT, Depth + 1);
+    return isGuaranteedNotToBeUndefOrPoison(V, CtxI, DT, Depth + 1, PoisonOnly);
   };
 
   if (auto *Opr = dyn_cast<Operator>(V)) {
@@ -4917,9 +4921,7 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
   }
 
   if (auto *I = dyn_cast<Instruction>(V)) {
-    if (programUndefinedIfPoison(I) && I->getType()->isIntegerTy(1))
-      // Note: once we have an agreement that poison is a value-wise concept,
-      // we can remove the isIntegerTy(1) constraint.
+    if (programUndefinedIfUndefOrPoison(I, PoisonOnly))
       return true;
   }
 
@@ -4941,18 +4943,42 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
   while (Dominator) {
     auto *TI = Dominator->getBlock()->getTerminator();
 
+    Value *Cond = nullptr;
     if (auto BI = dyn_cast<BranchInst>(TI)) {
-      if (BI->isConditional() && BI->getCondition() == V)
-        return true;
+      if (BI->isConditional())
+        Cond = BI->getCondition();
     } else if (auto SI = dyn_cast<SwitchInst>(TI)) {
-      if (SI->getCondition() == V)
+      Cond = SI->getCondition();
+    }
+
+    if (Cond) {
+      if (Cond == V)
         return true;
+      else if (PoisonOnly && isa<Operator>(Cond)) {
+        // For poison, we can analyze further
+        auto *Opr = cast<Operator>(Cond);
+        if (propagatesPoison(Opr) &&
+            any_of(Opr->operand_values(), [&](Value *Op) { return Op == V; }))
+          return true;
+      }
     }
 
     Dominator = Dominator->getIDom();
   }
 
   return false;
+}
+
+bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
+                                            const Instruction *CtxI,
+                                            const DominatorTree *DT,
+                                            unsigned Depth) {
+  return ::isGuaranteedNotToBeUndefOrPoison(V, CtxI, DT, Depth, false);
+}
+
+bool llvm::isGuaranteedNotToBePoison(const Value *V, const Instruction *CtxI,
+                                     const DominatorTree *DT, unsigned Depth) {
+  return ::isGuaranteedNotToBeUndefOrPoison(V, CtxI, DT, Depth, true);
 }
 
 OverflowResult llvm::computeOverflowForSignedAdd(const AddOperator *Add,
@@ -5048,7 +5074,7 @@ bool llvm::isGuaranteedToExecuteForEveryIteration(const Instruction *I,
   llvm_unreachable("Instruction not contained in its own parent basic block.");
 }
 
-bool llvm::propagatesPoison(const Instruction *I) {
+bool llvm::propagatesPoison(const Operator *I) {
   switch (I->getOpcode()) {
   case Instruction::Freeze:
   case Instruction::Select:
@@ -5124,30 +5150,51 @@ bool llvm::mustTriggerUB(const Instruction *I,
   return false;
 }
 
-
-bool llvm::programUndefinedIfPoison(const Instruction *PoisonI) {
-  // We currently only look for uses of poison values within the same basic
+static bool programUndefinedIfUndefOrPoison(const Instruction *Inst,
+                                            bool PoisonOnly) {
+  // We currently only look for uses of values within the same basic
   // block, as that makes it easier to guarantee that the uses will be
-  // executed given that PoisonI is executed.
+  // executed given that Inst is executed.
   //
   // FIXME: Expand this to consider uses beyond the same basic block. To do
   // this, look out for the distinction between post-dominance and strong
   // post-dominance.
-  const BasicBlock *BB = PoisonI->getParent();
+  const BasicBlock *BB = Inst->getParent();
 
-  // Set of instructions that we have proved will yield poison if PoisonI
+  BasicBlock::const_iterator Begin = Inst->getIterator(), End = BB->end();
+
+  if (!PoisonOnly) {
+    // Be conservative & just check whether a value is passed to a noundef
+    // argument.
+    // Instructions that raise UB with a poison operand are well-defined
+    // or have unclear semantics when the input is partially undef.
+    // For example, 'udiv x, (undef | 1)' isn't UB.
+
+    for (auto &I : make_range(Begin, End)) {
+      if (const auto *CB = dyn_cast<CallBase>(&I)) {
+        for (unsigned i = 0; i < CB->arg_size(); ++i) {
+          if (CB->paramHasAttr(i, Attribute::NoUndef) &&
+              CB->getArgOperand(i) == Inst)
+            return true;
+        }
+      }
+      if (!isGuaranteedToTransferExecutionToSuccessor(&I))
+        break;
+    }
+    return false;
+  }
+
+  // Set of instructions that we have proved will yield poison if Inst
   // does.
   SmallSet<const Value *, 16> YieldsPoison;
   SmallSet<const BasicBlock *, 4> Visited;
-  YieldsPoison.insert(PoisonI);
-  Visited.insert(PoisonI->getParent());
-
-  BasicBlock::const_iterator Begin = PoisonI->getIterator(), End = BB->end();
+  YieldsPoison.insert(Inst);
+  Visited.insert(Inst->getParent());
 
   unsigned Iter = 0;
   while (Iter++ < MaxAnalysisRecursionDepth) {
     for (auto &I : make_range(Begin, End)) {
-      if (&I != PoisonI) {
+      if (&I != Inst) {
         if (mustTriggerUB(&I, YieldsPoison))
           return true;
         if (!isGuaranteedToTransferExecutionToSuccessor(&I))
@@ -5158,7 +5205,7 @@ bool llvm::programUndefinedIfPoison(const Instruction *PoisonI) {
       if (YieldsPoison.count(&I)) {
         for (const User *User : I.users()) {
           const Instruction *UserI = cast<Instruction>(User);
-          if (propagatesPoison(UserI))
+          if (propagatesPoison(cast<Operator>(UserI)))
             YieldsPoison.insert(User);
         }
       }
@@ -5176,6 +5223,14 @@ bool llvm::programUndefinedIfPoison(const Instruction *PoisonI) {
     break;
   }
   return false;
+}
+
+bool llvm::programUndefinedIfUndefOrPoison(const Instruction *Inst) {
+  return ::programUndefinedIfUndefOrPoison(Inst, false);
+}
+
+bool llvm::programUndefinedIfPoison(const Instruction *Inst) {
+  return ::programUndefinedIfUndefOrPoison(Inst, true);
 }
 
 static bool isKnownNonNaN(const Value *V, FastMathFlags FMF) {

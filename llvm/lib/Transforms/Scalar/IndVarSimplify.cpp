@@ -1824,7 +1824,7 @@ static bool mustExecuteUBIfPoisonOnPathTo(Instruction *Root,
 
     // If we can't analyze propagation through this instruction, just skip it
     // and transitive users.  Safe as false is a conservative result.
-    if (!propagatesPoison(I) && I != Root)
+    if (!propagatesPoison(cast<Operator>(I)) && I != Root)
       continue;
 
     if (KnownPoison.insert(I).second)
