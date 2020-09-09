@@ -145,6 +145,24 @@ KnownBits KnownBits::smin(const KnownBits &LHS, const KnownBits &RHS) {
   return Flip(umax(Flip(LHS), Flip(RHS)));
 }
 
+KnownBits KnownBits::abs() const {
+  // If the source's MSB is zero then we know the rest of the bits already.
+  if (isNonNegative())
+    return *this;
+
+  // Assume we know nothing.
+  KnownBits KnownAbs(getBitWidth());
+
+  // We only know that the absolute values's MSB will be zero iff there is
+  // a set bit that isn't the sign bit (otherwise it could be INT_MIN).
+  APInt Val = One;
+  Val.clearSignBit();
+  if (!Val.isNullValue())
+    KnownAbs.Zero.setSignBit();
+
+  return KnownAbs;
+}
+
 KnownBits &KnownBits::operator&=(const KnownBits &RHS) {
   // Result bit is 0 if either operand bit is 0.
   Zero |= RHS.Zero;
