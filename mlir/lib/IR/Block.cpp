@@ -282,7 +282,7 @@ unsigned PredecessorIterator::getSuccessorIndex() const {
 }
 
 //===----------------------------------------------------------------------===//
-// Successors
+// SuccessorRange
 //===----------------------------------------------------------------------===//
 
 SuccessorRange::SuccessorRange(Block *block) : SuccessorRange(nullptr, 0) {
@@ -294,4 +294,30 @@ SuccessorRange::SuccessorRange(Block *block) : SuccessorRange(nullptr, 0) {
 SuccessorRange::SuccessorRange(Operation *term) : SuccessorRange(nullptr, 0) {
   if ((count = term->getNumSuccessors()))
     base = term->getBlockOperands().data();
+}
+
+//===----------------------------------------------------------------------===//
+// BlockRange
+//===----------------------------------------------------------------------===//
+
+BlockRange::BlockRange(ArrayRef<Block *> blocks) : BlockRange(nullptr, 0) {
+  if ((count = blocks.size()))
+    base = blocks.data();
+}
+
+BlockRange::BlockRange(SuccessorRange successors)
+    : BlockRange(successors.begin().getBase(), successors.size()) {}
+
+/// See `llvm::detail::indexed_accessor_range_base` for details.
+BlockRange::OwnerT BlockRange::offset_base(OwnerT object, ptrdiff_t index) {
+  if (auto *operand = object.dyn_cast<BlockOperand *>())
+    return {operand + index};
+  return {object.dyn_cast<Block *const *>() + index};
+}
+
+/// See `llvm::detail::indexed_accessor_range_base` for details.
+Block *BlockRange::dereference_iterator(OwnerT object, ptrdiff_t index) {
+  if (const auto *operand = object.dyn_cast<BlockOperand *>())
+    return operand[index].get();
+  return object.dyn_cast<Block *const *>()[index];
 }
