@@ -5,9 +5,9 @@ SWIFT_SOURCES = PlaygroundStub.swift
 # earlier than the availability set in the source file. This is made slightly
 # more complex by watchOS having misaligned version numbers.
 ifeq ($(TRIPLE),)
-TRIPLE := x86_64-apple-macosx10.10
+ARCH_SWIFTFLAGS := -target x86_64-apple-macosx10.10
 else
-override TRIPLE := $(shell echo $(TRIPLE) | sed 's/os[0-9.]*/os7.0/' | sed 's/watchos7.0/watchos5.0/')
+ARCH_SWIFTFLAGS := -target $(shell echo $(TRIPLE) | sed 's/os[0-9.]*/os7.0/' | sed 's/watchos7.0/watchos5.0/')
 endif
 
 # The deployment target we set is pre-ABI stability. The Swift driver will not
