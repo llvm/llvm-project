@@ -5092,6 +5092,9 @@ def err_fold_expression_empty : Error<
   "with no fallback value">;
 def err_fold_expression_bad_operand : Error<
   "expression not permitted as operand of fold expression">;
+def err_fold_expression_limit_exceeded: Error<
+  "instantiating fold expression with %0 arguments exceeded expression nesting "
+  "limit of %1">, DefaultFatal, NoSFINAE;
 
 def err_unexpected_typedef : Error<
   "unexpected type name %0: expected expression">;

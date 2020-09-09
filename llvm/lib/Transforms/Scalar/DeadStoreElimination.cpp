@@ -114,9 +114,9 @@ static cl::opt<unsigned>
                        cl::desc("The number of memory instructions to scan for "
                                 "dead store elimination (default = 100)"));
 static cl::opt<unsigned> MemorySSAUpwardsStepLimit(
-    "dse-memoryssa-walklimit", cl::init(70), cl::Hidden,
+    "dse-memoryssa-walklimit", cl::init(90), cl::Hidden,
     cl::desc("The maximum number of steps while walking upwards to find "
-             "MemoryDefs that may be killed (default = 70)"));
+             "MemoryDefs that may be killed (default = 90)"));
 
 static cl::opt<unsigned> MemorySSAPartialStoreLimit(
     "dse-memoryssa-partial-store-limit", cl::init(5), cl::Hidden,
@@ -1898,6 +1898,18 @@ struct DSEState {
           (Cache.KnownReads.contains(Current) ||
            isReadClobber(DefLoc, CurrentI))) {
         Cache.KnownReads.insert(Current);
+        return None;
+      }
+
+      // Quick check if there are direct uses that are read-clobbers.
+      if (any_of(Current->uses(), [this, &DefLoc, StartAccess](Use &U) {
+            if (auto *UseOrDef = dyn_cast<MemoryUseOrDef>(U.getUser()))
+              return !MSSA.dominates(StartAccess, UseOrDef) &&
+                     isReadClobber(DefLoc, UseOrDef->getMemoryInst());
+            return false;
+          })) {
+        Cache.KnownReads.insert(Current);
+        LLVM_DEBUG(dbgs() << "   ...  found a read clobber\n");
         return None;
       }
 

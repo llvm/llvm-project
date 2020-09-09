@@ -407,3 +407,17 @@ DWARF:
       Entries:
         - LowOffset:  0x1234
           HighOffset: 0x5678
+
+## l) Test that the .debug_ranges section header is emitted if the "debug_ranges"
+## entry is empty.
+
+# RUN: yaml2obj --docnum=12 %s -o %t12.o
+# RUN: llvm-readobj -S %t12.o | FileCheck -DSIZE=0 -DADDRALIGN=1 %s --check-prefix=DWARF-HEADER
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_ranges: []

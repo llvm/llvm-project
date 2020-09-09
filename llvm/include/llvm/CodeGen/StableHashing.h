@@ -40,7 +40,7 @@ inline void stable_hash_append(stable_hash &Hash, const char Value) {
 
 inline void stable_hash_append(stable_hash &Hash, stable_hash Value) {
   for (unsigned I = 0; I < 8; ++I) {
-    stable_hash_append(Hash, (const char)Value);
+    stable_hash_append(Hash, static_cast<char>(Value));
     Value >>= 8;
   }
 }

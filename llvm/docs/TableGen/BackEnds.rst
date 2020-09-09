@@ -226,16 +226,14 @@ SearchableTables
 
 **Purpose**: Generate custom searchable tables.
 
-**Output**: Enums, global tables and lookup helper functions.
+**Output**: Enums, global tables, and lookup helper functions.
 
 **Usage**: This backend allows generating free-form, target-specific tables
 from TableGen records. The ARM and AArch64 targets use this backend to generate
 tables of system registers; the AMDGPU target uses it to generate meta-data
 about complex image and memory buffer instructions.
 
-More documentation is available in ``include/llvm/TableGen/SearchableTable.td``,
-which also contains the definitions of TableGen classes which must be
-instantiated in order to define the enums and tables emitted by this backend.
+See `SearchableTables Reference`_ for a detailed description.
 
 CTags
 -----
@@ -437,6 +435,381 @@ used for documenting user-facing attributes.
 
 General BackEnds
 ================
+
+SearchableTables Reference
+--------------------------
+
+A TableGen include file, ``SearchableTable.td``, provides classes for
+generating C++ searchable tables. These tables are described in the
+following sections. To generate the C++ code, run ``llvm-tblgen`` with the
+``--gen-searchable-tables`` option, which invokes the backend that generates
+the tables from the records you provide.
+
+Each of the data structures generated for searchable tables is guarded by an
+``#ifdef``. This allows you to include the generated ``.inc`` file and select only
+certain data structures for inclusion. The examples below show the macro
+names used in these guards.
+
+Generic Enumerated Types
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``GenericEnum`` class makes it easy to define a C++ enumerated type and
+the enumerated *elements* of that type. To define the type, define a record
+whose parent class is ``GenericEnum`` and whose name is the desired enum
+type. This class provides three fields, which you can set in the record
+using the ``let`` statement.
+
+* ``string FilterClass``. The enum type will have one element for each record
+  that derives from this class. These records are collected to assemble the
+  complete set of elements.
+
+* ``string NameField``. The name of a field *in the collected records* that specifies
+  the name of the element. If a record has no such field, the record's
+  name will be used.
+
+* ``string ValueField``. The name of a field *in the collected records* that
+  specifies the numerical value of the element. If a record has no such
+  field, it will be assigned an integer value. Values are assigned in
+  alphabetical order starting with 0.
+
+Here is an example where the values of the elements are specified
+explicitly, as a template argument to the ``BEntry`` class. The resulting
+C++ code is shown.
+
+.. code-block:: text
+
+  def BValues : GenericEnum {
+    let FilterClass = "BEntry";
+    let NameField = "Name";
+    let ValueField = "Encoding";
+  }
+
+  class BEntry<bits<16> enc> {
+    string Name = NAME;
+    bits<16> Encoding = enc;
+  }
+
+  def BFoo   : BEntry<0xac>;
+  def BBar   : BEntry<0x14>;
+  def BZoo   : BEntry<0x80>;
+  def BSnork : BEntry<0x4c>;
+
+.. code-block:: text
+
+  #ifdef GET_BValues_DECL
+  enum BValues {
+    BBar = 20,
+    BFoo = 172,
+    BSnork = 76,
+    BZoo = 128,
+  };
+  #endif
+
+In the following example, the values of the elements are assigned
+automatically. Note that values are assigned from 0, in alphabetical order
+by element name.
+
+.. code-block:: text
+
+  def CEnum : GenericEnum {
+    let FilterClass = "CEnum";
+  }
+
+  class CEnum;
+
+  def CFoo : CEnum;
+  def CBar : CEnum;
+  def CBaz : CEnum;
+
+.. code-block:: text
+
+  #ifdef GET_CEnum_DECL
+  enum CEnum {
+    CBar = 0,
+    CBaz = 1,
+    CFoo = 2,
+  };
+  #endif
+
+
+Generic Tables
+~~~~~~~~~~~~~~
+
+The ``GenericTable`` class is used to define a searchable generic table.
+TableGen produces C++ code to define the table entries and also produces
+the declaration and definition of a function to search the table based on a
+primary key. To define the table, define a record whose parent class is
+``GenericTable`` and whose name is the name of the global table of entries.
+This class provides six fields.
+
+* ``string FilterClass``. The table will have one entry for each record
+  that derives from this class.
+
+* ``string CppTypeName``. The name of the C++ struct/class type of the
+  table that holds the entries. If unspecified, the ``FilterClass`` name is
+  used.
+
+* ``list<string> Fields``. A list of the names of the fields in the
+  collected records that contain the data for the table entries. The order of
+  this list determines the order of the values in the C++ initializers. See
+  below for information about the types of these fields.
+
+* ``list<string> PrimaryKey``. The list of fields that make up the
+  primary key.
+
+* ``string PrimaryKeyName``. The name of the generated C++ function
+  that performs a lookup on the primary key.
+
+* ``bit PrimaryKeyEarlyOut``. See the third example below.
+
+TableGen attempts to deduce the type of each of the table fields. It can
+deduce ``bit``, ``bits<n>``, ``string``, ``Intrinsic``, and ``Instruction``.
+These can be used in the primary key. TableGen also deduces ``code``, but it
+cannot be used in the primary key. Any other field types must be specified
+explicitly; this is done as shown in the second example below. Such fields
+cannot be used in the primary key.
+
+Here is an example where TableGen can deduce the field types. Note that the
+table entry records are anonymous; the names of entry records are
+irrelevant.
+
+.. code-block:: text
+
+  def ATable : GenericTable {
+    let FilterClass = "AEntry";
+    let Fields = ["Str", "Val1", "Val2"];
+    let PrimaryKey = ["Val1", "Val2"];
+    let PrimaryKeyName = "lookupATableByValues";
+  }
+
+  class AEntry<string str, int val1, int val2> {
+    string Str = str;
+    bits<8> Val1 = val1;
+    bits<10> Val2 = val2;
+  }
+
+  def : AEntry<"Bob",   5, 3>;
+  def : AEntry<"Carol", 2, 6>;
+  def : AEntry<"Ted",   4, 4>;
+  def : AEntry<"Alice", 4, 5>;
+  def : AEntry<"Costa", 2, 1>;
+
+Here is the generated C++ code. The declaration of ``lookupATableByValues``
+is guarded by ``GET_ATable_DECL``, while the definitions are guarded by
+``GET_ATable_IMPL``.
+
+.. code-block:: text
+
+  #ifdef GET_ATable_DECL
+  const AEntry *lookupATableByValues(uint8_t Val1, uint16_t Val2);
+  #endif
+
+  #ifdef GET_ATable_IMPL
+  constexpr AEntry ATable[] = {
+    { "Costa", 0x2, 0x1 }, // 0
+    { "Carol", 0x2, 0x6 }, // 1
+    { "Ted", 0x4, 0x4 }, // 2
+    { "Alice", 0x4, 0x5 }, // 3
+    { "Bob", 0x5, 0x3 }, // 4
+  };
+
+  const AEntry *lookupATableByValues(uint8_t Val1, uint16_t Val2) {
+    struct KeyType {
+      uint8_t Val1;
+      uint16_t Val2;
+    };
+    KeyType Key = { Val1, Val2 };
+    auto Table = makeArrayRef(ATable);
+    auto Idx = std::lower_bound(Table.begin(), Table.end(), Key,
+      [](const AEntry &LHS, const KeyType &RHS) {
+        if (LHS.Val1 < RHS.Val1)
+          return true;
+        if (LHS.Val1 > RHS.Val1)
+          return false;
+        if (LHS.Val2 < RHS.Val2)
+          return true;
+        if (LHS.Val2 > RHS.Val2)
+          return false;
+        return false;
+      });
+  
+    if (Idx == Table.end() ||
+        Key.Val1 != Idx->Val1 ||
+        Key.Val2 != Idx->Val2)
+      return nullptr;
+    return &*Idx;
+  }
+  #endif
+
+The table entries in ``ATable`` are sorted in order by ``Val1``, and within
+each of those values, by ``Val2``. This allows a binary search of the table,
+which is performed in the lookup function by ``std::lower_bound``. The
+lookup function returns a reference to the found table entry, or the null
+pointer if no entry is found.
+
+This example includes a field whose type TableGen cannot deduce. The ``Kind``
+field uses the enumerated type ``CEnum`` defined above. To inform TableGen
+of the type, the class derived from ``GenericTable`` must include a field
+named ``TypeOf_``\ *field*, where *field* is the name of the field whose type
+is required.
+
+.. code-block:: text
+
+  def CTable : GenericTable {
+    let FilterClass = "CEntry";
+    let Fields = ["Name", "Kind", "Encoding"];
+    GenericEnum TypeOf_Kind = CEnum;
+    let PrimaryKey = ["Encoding"];
+    let PrimaryKeyName = "lookupCEntryByEncoding";
+  }
+
+  class CEntry<string name, CEnum kind, int enc> {
+    string Name = name;
+    CEnum Kind = kind;
+    bits<16> Encoding = enc;
+  }
+
+  def : CEntry<"Apple", CFoo, 10>;
+  def : CEntry<"Pear",  CBaz, 15>;
+  def : CEntry<"Apple", CBar, 13>;
+
+Here is the generated C++ code.
+
+.. code-block:: text
+
+  #ifdef GET_CTable_DECL
+  const CEntry *lookupCEntryByEncoding(uint16_t Encoding);
+  #endif
+
+  #ifdef GET_CTable_IMPL
+  constexpr CEntry CTable[] = {
+    { "Apple", CFoo, 0xA }, // 0
+    { "Apple", CBar, 0xD }, // 1
+    { "Pear", CBaz, 0xF }, // 2
+  };
+
+  const CEntry *lookupCEntryByEncoding(uint16_t Encoding) {
+    struct KeyType {
+      uint16_t Encoding;
+    };
+    KeyType Key = { Encoding };
+    auto Table = makeArrayRef(CTable);
+    auto Idx = std::lower_bound(Table.begin(), Table.end(), Key,
+      [](const CEntry &LHS, const KeyType &RHS) {
+        if (LHS.Encoding < RHS.Encoding)
+          return true;
+        if (LHS.Encoding > RHS.Encoding)
+          return false;
+        return false;
+      });
+
+    if (Idx == Table.end() ||
+        Key.Encoding != Idx->Encoding)
+      return nullptr;
+    return &*Idx;
+  }
+
+The ``PrimaryKeyEarlyOut`` field, when set to 1, modifies the lookup
+function so that it tests the first field of the primary key to determine
+whether it is within the range of the collected records' primary keys. If
+not, the function returns the null pointer without performing the binary
+search. This is useful for tables that provide data for only some of the
+elements of a larger enum-based space. The first field of the primary key
+must be an integral type; it cannot be a string.
+
+Adding ``let PrimaryKeyEarlyOut = 1`` to the ``ATable`` above:
+
+.. code-block:: text
+
+  def ATable : GenericTable {
+    let FilterClass = "AEntry";
+    let Fields = ["Str", "Val1", "Val2"];
+    let PrimaryKey = ["Val1", "Val2"];
+    let PrimaryKeyName = "lookupATableByValues";
+    let PrimaryKeyEarlyOut = 1;
+  }
+
+causes the lookup function to change as follows:
+
+.. code-block:: text
+
+  const AEntry *lookupATableByValues(uint8_t Val1, uint16_t Val2) {
+    if ((Val1 < 0x2) ||
+        (Val1 > 0x5))
+      return nullptr;
+
+    struct KeyType {
+    ...
+
+Search Indexes
+~~~~~~~~~~~~~~
+
+The ``SearchIndex`` class is used to define additional lookup functions for
+generic tables. To define an additional function, define a record whose parent
+class is ``SearchIndex`` and whose name is the name of the desired lookup
+function. This class provides three fields.
+
+* ``GenericTable Table``. The name of the table that is to receive another
+  lookup function.
+
+* ``list<string> Key``. The list of fields that make up the secondary key.
+
+* ``bit EarlyOut``. See the third example in `Generic Tables`_.
+
+Here is an example of a secondary key added to the ``CTable`` above. The
+generated function looks up entries based on the ``Name`` and ``Kind`` fields.
+
+.. code-block:: text
+
+  def lookupCEntry : SearchIndex {
+    let Table = CTable;
+    let Key = ["Name", "Kind"];
+  }
+
+This use of ``SearchIndex`` generates the following additional C++ code.
+
+.. code-block:: text
+
+  const CEntry *lookupCEntry(StringRef Name, unsigned Kind);
+
+  ...
+
+  const CEntry *lookupCEntryByName(StringRef Name, unsigned Kind) {
+    struct IndexType {
+      const char * Name;
+      unsigned Kind;
+      unsigned _index;
+    };
+    static const struct IndexType Index[] = {
+      { "APPLE", CBar, 1 },
+      { "APPLE", CFoo, 0 },
+      { "PEAR", CBaz, 2 },
+    };
+
+    struct KeyType {
+      std::string Name;
+      unsigned Kind;
+    };
+    KeyType Key = { Name.upper(), Kind };
+    auto Table = makeArrayRef(Index);
+    auto Idx = std::lower_bound(Table.begin(), Table.end(), Key,
+      [](const IndexType &LHS, const KeyType &RHS) {
+        int CmpName = StringRef(LHS.Name).compare(RHS.Name);
+        if (CmpName < 0) return true;
+        if (CmpName > 0) return false;
+        if ((unsigned)LHS.Kind < (unsigned)RHS.Kind)
+          return true;
+        if ((unsigned)LHS.Kind > (unsigned)RHS.Kind)
+          return false;
+        return false;
+      });
+
+    if (Idx == Table.end() ||
+        Key.Name != Idx->Name ||
+        Key.Kind != Idx->Kind)
+      return nullptr;
+    return &CTable[Idx->_index];
+  }
 
 JSON
 ----

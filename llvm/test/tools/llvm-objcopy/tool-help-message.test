@@ -18,6 +18,7 @@
 # RUN: not llvm-install-name-tool -abcabc 2>&1 | FileCheck --check-prefix=UNKNOWN-ARG %s
 # RUN: not llvm-install-name-tool --abcabc 2>&1 | FileCheck --check-prefix=UNKNOWN-ARG %s
 # RUN: not llvm-install-name-tool -add_rpath @executable 2>&1 | FileCheck %s --check-prefix=NO-INPUT-FILES
+# RUN: not llvm-install-name-tool -add_rpath @executable f1 f2 2>&1 | FileCheck %s --check-prefix=MULTIPLE-INPUT-FILES
 
 # OBJCOPY-USAGE:  USAGE: llvm-objcopy [options] input [output]
 # OBJCOPY-USAGE:  Pass @FILE as argument to read options from FILE.
@@ -30,3 +31,4 @@
 
 # UNKNOWN-ARG:    unknown argument '{{-+}}abcabc'
 # NO-INPUT-FILES: no input file specified
+# MULTIPLE-INPUT-FILES: expects a single input file

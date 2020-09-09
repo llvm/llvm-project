@@ -4,6 +4,7 @@
 // RUN: FileCheck %s
 
 #map0 = affine_map<(d0, d1) -> (d1, d0)>
+#map1 = affine_map<(d0, d1) -> (d1)>
 
 func @print_memref_f32(memref<*xf32>)
 
@@ -29,6 +30,7 @@ func @main() {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %c2 = constant 2 : index
+  %c3 = constant 3 : index
   %c6 = constant 6 : index
   %cst = constant -4.2e+01 : f32
   %0 = call @alloc_2d_filled_f32(%c6, %c6) : (index, index) -> memref<?x?xf32>
@@ -75,6 +77,28 @@ func @main() {
   // CHECK-SAME:    ( 204, 304, 404, 504, 503 ),
   // CHECK-SAME:    ( 205, 305, 405, 505, 504 ),
   // CHECK-SAME:    ( 105, 205, 305, 405, 505 ) )
+
+  %3 = vector.transfer_read %0[%c2, %c3], %cst : memref<?x?xf32>, vector<5x5xf32>
+  vector.print %3 : vector<5x5xf32>
+  // New 5x5 block rooted @{2, 3} in memory.
+  // CHECK-NEXT: ( ( 403, 503, 502, -42, -42 ),
+  // CHECK-SAME:   ( 404, 504, 503, -42, -42 ),
+  // CHECK-SAME:   ( 405, 505, 504, -42, -42 ),
+  // CHECK-SAME:   ( 305, 405, 505, -42, -42 ),
+  // CHECK-SAME:   ( -42, -42, -42, -42, -42 ) )
+
+  %4 = vector.transfer_read %0[%c2, %c3], %cst {permutation_map = #map0} : memref<?x?xf32>, vector<5x5xf32>
+  vector.print %4 : vector<5x5xf32>
+  // Transposed 5x5 block rooted @{2, 3} in memory.
+  // CHECK-NEXT: ( ( 403, 404, 405, 305, -42 ),
+  // CHECK-SAME:   ( 503, 504, 505, 405, -42 ),
+  // CHECK-SAME:   ( 502, 503, 504, 505, -42 ),
+  // CHECK-SAME:   ( -42, -42, -42, -42, -42 ),
+  // CHECK-SAME:   ( -42, -42, -42, -42, -42 ) )
+
+  %5 = vector.transfer_read %0[%c2, %c3], %cst {permutation_map = #map1} : memref<?x?xf32>, vector<5xf32>
+  vector.print %5 : vector<5xf32>
+  // CHECK-NEXT: ( 403, 503, 502, -42, -42 )
 
   dealloc %0 : memref<?x?xf32>
   return

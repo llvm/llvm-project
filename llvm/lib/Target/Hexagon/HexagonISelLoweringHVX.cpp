@@ -1939,8 +1939,16 @@ HexagonTargetLowering::WidenHvxTruncate(SDValue Op, SelectionDAG &DAG) const {
   SDValue Op0 = Op.getOperand(0);
   MVT ResTy = ty(Op);
   MVT OpTy = ty(Op0);
+
+  // .-res, op->  Scalar         Illegal      HVX
+  // Scalar           ok  extract(widen)        -
+  // Illegal           -           widen    widen
+  // HVX               -               -       ok
+
   if (Subtarget.isHVXVectorType(OpTy))
     return DAG.getNode(HexagonISD::VPACKL, dl, getWideTy(ResTy), Op0);
+
+  assert(!isTypeLegal(OpTy) && "HVX-widening a truncate of scalar?");
 
   MVT WideOpTy = getWideTy(OpTy);
   SmallVector<SDValue, 4> Concats = {Op0};
@@ -1948,7 +1956,19 @@ HexagonTargetLowering::WidenHvxTruncate(SDValue Op, SelectionDAG &DAG) const {
     Concats.push_back(DAG.getUNDEF(OpTy));
 
   SDValue Cat = DAG.getNode(ISD::CONCAT_VECTORS, dl, WideOpTy, Concats);
-  return DAG.getNode(HexagonISD::VPACKL, dl, getWideTy(ResTy), Cat);
+  SDValue V = DAG.getNode(HexagonISD::VPACKL, dl, getWideTy(ResTy), Cat);
+  // If the original result wasn't legal and was supposed to be widened,
+  // we're done.
+  if (shouldWidenToHvx(ResTy, DAG))
+    return V;
+
+  // The original result type wasn't meant to be widened to HVX, so
+  // leave it as it is. Standard legalization should be able to deal
+  // with it (since now it's a result of a target-idendependent ISD
+  // node).
+  assert(ResTy.isVector());
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, ResTy,
+                     {V, getZero(dl, MVT::i32, DAG)});
 }
 
 SDValue
@@ -2029,11 +2049,15 @@ HexagonTargetLowering::LowerHvxOperationWrapper(SDNode *N,
   SDValue Op(N, 0);
 
   switch (Opc) {
+    case ISD::TRUNCATE: {
+      assert(shouldWidenToHvx(ty(Op.getOperand(0)), DAG) && "Not widening?");
+      SDValue T = WidenHvxTruncate(Op, DAG);
+      Results.push_back(T);
+      break;
+    }
     case ISD::STORE: {
-      assert(
-          getPreferredHvxVectorAction(ty(cast<StoreSDNode>(N)->getValue())) ==
-              TargetLoweringBase::TypeWidenVector &&
-          "Not widening?");
+      assert(shouldWidenToHvx(ty(cast<StoreSDNode>(N)->getValue()), DAG) &&
+             "Not widening?");
       SDValue Store = WidenHvxStore(SDValue(N, 0), DAG);
       Results.push_back(Store);
       break;
@@ -2061,12 +2085,12 @@ HexagonTargetLowering::ReplaceHvxNodeResults(SDNode *N,
   unsigned Opc = N->getOpcode();
   SDValue Op(N, 0);
   switch (Opc) {
-    case ISD::TRUNCATE:
-      if (!Subtarget.isHVXVectorType(ty(Op), false)) {
-        SDValue T = WidenHvxTruncate(Op, DAG);
-        Results.push_back(T);
-      }
+    case ISD::TRUNCATE: {
+      assert(shouldWidenToHvx(ty(Op), DAG) && "Not widening?");
+      SDValue T = WidenHvxTruncate(Op, DAG);
+      Results.push_back(T);
       break;
+    }
     case ISD::BITCAST:
       if (isHvxBoolTy(ty(N->getOperand(0)))) {
         SDValue Op(N, 0);
@@ -2104,7 +2128,21 @@ HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
 }
 
 bool
+HexagonTargetLowering::shouldWidenToHvx(MVT Ty, SelectionDAG &DAG) const {
+  assert(!Subtarget.isHVXVectorType(Ty, true));
+  auto Action = getPreferredHvxVectorAction(Ty);
+  if (Action == TargetLoweringBase::TypeWidenVector) {
+    EVT WideTy = getTypeToTransformTo(*DAG.getContext(), Ty);
+    assert(WideTy.isSimple());
+    return Subtarget.isHVXVectorType(WideTy.getSimpleVT(), true);
+  }
+  return false;
+}
+
+bool
 HexagonTargetLowering::isHvxOperation(SDNode *N, SelectionDAG &DAG) const {
+  if (!Subtarget.useHVXOps())
+    return false;
   // If the type of any result, or any operand type are HVX vector types,
   // this is an HVX operation.
   auto IsHvxTy = [this](EVT Ty) {
@@ -2122,15 +2160,7 @@ HexagonTargetLowering::isHvxOperation(SDNode *N, SelectionDAG &DAG) const {
     if (!Op.getValueType().isSimple())
       return false;
     MVT ValTy = ty(Op);
-    if (ValTy.isVector()) {
-      auto Action = getPreferredVectorAction(ValTy);
-      if (Action == TargetLoweringBase::TypeWidenVector) {
-        EVT WideTy = getTypeToTransformTo(*DAG.getContext(), ValTy);
-        assert(WideTy.isSimple());
-        return Subtarget.isHVXVectorType(WideTy.getSimpleVT(), true);
-      }
-    }
-    return false;
+    return ValTy.isVector() && shouldWidenToHvx(ValTy, DAG);
   };
 
   for (int i = 0, e = N->getNumValues(); i != e; ++i) {

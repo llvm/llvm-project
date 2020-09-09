@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass is used to ensure that functions have at most one return
-// instruction in them.  Additionally, it keeps track of which node is the new
-// exit node of the CFG.  If there are no exit nodes in the CFG, the getExitNode
-// method will return a null pointer.
+// This pass is used to ensure that functions have at most one return and one
+// unreachable instruction in them.
 //
 //===----------------------------------------------------------------------===//
 
@@ -61,12 +59,8 @@ bool UnifyFunctionExitNodes::runOnFunction(Function &F) {
       UnreachableBlocks.push_back(&I);
 
   // Then unreachable blocks.
-  if (UnreachableBlocks.empty()) {
-    UnreachableBlock = nullptr;
-  } else if (UnreachableBlocks.size() == 1) {
-    UnreachableBlock = UnreachableBlocks.front();
-  } else {
-    UnreachableBlock = BasicBlock::Create(F.getContext(),
+  if (UnreachableBlocks.size() > 1) {
+    BasicBlock *UnreachableBlock = BasicBlock::Create(F.getContext(),
                                           "UnifiedUnreachableBlock", &F);
     new UnreachableInst(F.getContext(), UnreachableBlock);
 
@@ -76,14 +70,9 @@ bool UnifyFunctionExitNodes::runOnFunction(Function &F) {
     }
   }
 
-  // Now handle return blocks.
-  if (ReturningBlocks.empty()) {
-    ReturnBlock = nullptr;
-    return false;                          // No blocks return
-  } else if (ReturningBlocks.size() == 1) {
-    ReturnBlock = ReturningBlocks.front(); // Already has a single return block
+  // There is nothing more to do if we do not have multiple return blocks.
+  if (ReturningBlocks.size() <= 1)
     return false;
-  }
 
   // Otherwise, we need to insert a new basic block into the function, add a PHI
   // nodes (if the function returns values), and convert all of the return
@@ -115,6 +104,5 @@ bool UnifyFunctionExitNodes::runOnFunction(Function &F) {
     BB->getInstList().pop_back();  // Remove the return insn
     BranchInst::Create(NewRetBlock, BB);
   }
-  ReturnBlock = NewRetBlock;
   return true;
 }

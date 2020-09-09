@@ -77,6 +77,19 @@ void WriteToFile(const uint8_t *Data, size_t Size, const std::string &Path) {
   fclose(Out);
 }
 
+void AppendToFile(const std::string &Data, const std::string &Path) {
+  AppendToFile(reinterpret_cast<const uint8_t *>(Data.data()), Data.size(),
+               Path);
+}
+
+void AppendToFile(const uint8_t *Data, size_t Size, const std::string &Path) {
+  FILE *Out = fopen(Path.c_str(), "a");
+  if (!Out)
+    return;
+  fwrite(Data, sizeof(Data[0]), Size, Out);
+  fclose(Out);
+}
+
 void ReadDirToVectorOfUnits(const char *Path, Vector<Unit> *V,
                             long *Epoch, size_t MaxSize, bool ExitOnError) {
   long E = Epoch ? *Epoch : 0;

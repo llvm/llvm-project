@@ -7011,12 +7011,15 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
 
   // Check if the offsets line up for the native data layout of this target.
   bool NeedBswap = false;
+  bool NeedRotate = false;
   if (!checkOffsets(Layout.isLittleEndian())) {
     // Special-case: check if byte offsets line up for the opposite endian.
-    // TODO: We could use rotates for 16/32-bit merge pairs.
-    if (NarrowNumBits != 8 || !checkOffsets(Layout.isBigEndian()))
+    if (NarrowNumBits == 8 && checkOffsets(Layout.isBigEndian()))
+      NeedBswap = true;
+    else if (NumStores == 2 && checkOffsets(Layout.isBigEndian()))
+      NeedRotate = true;
+    else
       return SDValue();
-    NeedBswap = true;
   }
 
   SDLoc DL(N);
@@ -7026,11 +7029,16 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
     SourceValue = DAG.getNode(ISD::TRUNCATE, DL, WideVT, SourceValue);
   }
 
-  // Before legalize we can introduce illegal bswaps which will be later
+  // Before legalize we can introduce illegal bswaps/rotates which will be later
   // converted to an explicit bswap sequence. This way we end up with a single
   // store and byte shuffling instead of several stores and byte shuffling.
-  if (NeedBswap)
+  if (NeedBswap) {
     SourceValue = DAG.getNode(ISD::BSWAP, DL, WideVT, SourceValue);
+  } else if (NeedRotate) {
+    assert(WideNumBits % 2 == 0 && "Unexpected type for rotate");
+    SDValue RotAmt = DAG.getConstant(WideNumBits / 2, DL, WideVT);
+    SourceValue = DAG.getNode(ISD::ROTR, DL, WideVT, SourceValue, RotAmt);
+  }
 
   SDValue NewStore =
       DAG.getStore(Chain, DL, SourceValue, FirstStore->getBasePtr(),
@@ -7390,9 +7398,9 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
         if (N0.hasOneUse()) {
           // FIXME Can we handle multiple uses? Could we token factor the chain
           // results from the new/old setcc?
-          SDValue SetCC = DAG.getSetCC(SDLoc(N0), VT, LHS, RHS, NotCC,
-                                       N0.getOperand(0),
-                                       N0Opcode == ISD::STRICT_FSETCCS);
+          SDValue SetCC =
+              DAG.getSetCC(SDLoc(N0), VT, LHS, RHS, NotCC, SDNodeFlags(),
+                           N0.getOperand(0), N0Opcode == ISD::STRICT_FSETCCS);
           CombineTo(N, SetCC);
           DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), SetCC.getValue(1));
           recursivelyDeleteUnusedNodes(N0.getNode());

@@ -141,7 +141,7 @@ public:
       return false;
     // It's illegal to replace an instruction that implicitly defines a register
     // with an instruction that doesn't, unless that register dead.
-    for (auto &MO : MI->implicit_operands())
+    for (const auto &MO : MI->implicit_operands())
       if (MO.isReg() && MO.isDef() && !MO.isDead() &&
           !TII->get(DstOpcode).hasImplicitDefOfPhysReg(MO.getReg()))
         return false;
@@ -180,7 +180,7 @@ public:
                     MachineRegisterInfo *MRI) const override {
     assert(isLegal(MI, TII) && "Cannot convert instruction");
     MachineBasicBlock *MBB = MI->getParent();
-    auto &DL = MI->getDebugLoc();
+    const DebugLoc &DL = MI->getDebugLoc();
 
     Register Reg = MRI->createVirtualRegister(
         TII->getRegClass(TII->get(DstOpcode), 0, MRI->getTargetRegisterInfo(),
@@ -237,7 +237,7 @@ public:
                       MachineRegisterInfo *MRI) const override {
     assert(MI->getOpcode() == TargetOpcode::COPY && "Expected a COPY");
 
-    for (auto &MO : MI->operands()) {
+    for (const auto &MO : MI->operands()) {
       // Physical registers will not be converted. Assume that converting the
       // COPY to the destination domain will eventually result in a actual
       // instruction.
@@ -517,7 +517,7 @@ void X86DomainReassignment::reassign(const Closure &C, RegDomain Domain) const {
     }
   }
 
-  for (auto MI : ToErase)
+  for (auto *MI : ToErase)
     MI->eraseFromParent();
 }
 
@@ -537,7 +537,7 @@ static bool usedAsAddr(const MachineInstr &MI, unsigned Reg,
   for (unsigned MemOpIdx = MemOpStart,
                 MemOpEnd = MemOpStart + X86::AddrNumOperands;
        MemOpIdx < MemOpEnd; ++MemOpIdx) {
-    auto &Op = MI.getOperand(MemOpIdx);
+    const MachineOperand &Op = MI.getOperand(MemOpIdx);
     if (Op.isReg() && Op.getReg() == Reg)
       return true;
   }

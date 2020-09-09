@@ -1171,3 +1171,77 @@ define i8 @not_ashr_wrong_const(i8 %x) {
   %r = xor i8 %a, -2
   ret i8 %r
 }
+
+; (~A & B) ^ A  -->   (A | B)
+; The division ops are here to thwart complexity-based canonicalization: all ops are binops.
+
+define i32 @test52(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @test52(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[P1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[P2:%.*]]
+; CHECK-NEXT:    [[O:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[O]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[R]], [[A]]
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %a = udiv i32 42, %p1
+  %b = udiv i32 42, %p2
+  %o = xor i32 %a, -1
+  %r = and i32 %o, %b
+  %z = xor i32 %r, %a
+  ret i32 %z
+}
+
+; (~B & A) ^ B  -->   (A | B)
+; The division ops are here to thwart complexity-based canonicalization: all ops are binops.
+
+define i32 @test53(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @test53(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[P1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[P2:%.*]]
+; CHECK-NEXT:    [[O:%.*]] = xor i32 [[B]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[A]], [[O]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[R]], [[B]]
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %a = udiv i32 42, %p1
+  %b = udiv i32 42, %p2
+  %o = xor i32 %b, -1
+  %r = and i32 %o, %a
+  %z = xor i32 %r, %b
+  ret i32 %z
+}
+
+define i32 @test54(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @test54(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[P1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[P2:%.*]]
+; CHECK-NEXT:    [[O:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[O]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[R]], [[A]]
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %a = udiv i32 42, %p1
+  %b = udiv i32 42, %p2
+  %o = xor i32 %a, -1
+  %r = and i32 %b, %o
+  %z = xor i32 %r, %a
+  ret i32 %z
+}
+
+define i32 @test55(i32 %p1, i32 %p2) {
+; CHECK-LABEL: @test55(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[P1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[P2:%.*]]
+; CHECK-NEXT:    [[O:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[O]]
+; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[A]], [[R]]
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %a = udiv i32 42, %p1
+  %b = udiv i32 42, %p2
+  %o = xor i32 %a, -1
+  %r = and i32 %o, %b
+  %z = xor i32 %a, %r
+  ret i32 %z
+}

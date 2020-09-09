@@ -1120,27 +1120,6 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
 
   visit(I.getOpcode(), I);
 
-  if (auto *FPMO = dyn_cast<FPMathOperator>(&I)) {
-    // ConstrainedFPIntrinsics handle their own FMF.
-    if (!isa<ConstrainedFPIntrinsic>(&I)) {
-      // Propagate the fast-math-flags of this IR instruction to the DAG node that
-      // maps to this instruction.
-      // TODO: We could handle all flags (nsw, etc) here.
-      // TODO: If an IR instruction maps to >1 node, only the final node will have
-      //       flags set.
-      // TODO: The handling of flags should be improved, see
-      //       https://reviews.llvm.org/D86871
-      if (SDNode *Node = getNodeForIRValue(&I)) {
-        SDNodeFlags IncomingFlags;
-        IncomingFlags.copyFMF(*FPMO);
-        if (!Node->getFlags().isDefined())
-          Node->setFlags(IncomingFlags);
-        else
-          Node->intersectFlagsWith(IncomingFlags);
-      }
-    }
-  }
-
   if (!I.isTerminator() && !HasTailCall &&
       !isa<GCStatepointInst>(I)) // statepoints handle their exports internally
     CopyToExportRegsIfNeeded(&I);
@@ -3023,9 +3002,10 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned Opcode) {
     Flags.setNoSignedWrap(OFBinOp->hasNoSignedWrap());
     Flags.setNoUnsignedWrap(OFBinOp->hasNoUnsignedWrap());
   }
-  if (auto *ExactOp = dyn_cast<PossiblyExactOperator>(&I)) {
+  if (auto *ExactOp = dyn_cast<PossiblyExactOperator>(&I))
     Flags.setExact(ExactOp->isExact());
-  }
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+    Flags.copyFMF(*FPOp);
 
   SDValue Op1 = getValue(I.getOperand(0));
   SDValue Op2 = getValue(I.getOperand(1));
@@ -3135,13 +3115,16 @@ void SelectionDAGBuilder::visitFCmp(const User &I) {
   SDValue Op2 = getValue(I.getOperand(1));
 
   ISD::CondCode Condition = getFCmpCondCode(predicate);
-  auto *FPMO = dyn_cast<FPMathOperator>(&I);
-  if ((FPMO && FPMO->hasNoNaNs()) || TM.Options.NoNaNsFPMath)
+  auto *FPMO = cast<FPMathOperator>(&I);
+  if (FPMO->hasNoNaNs() || TM.Options.NoNaNsFPMath)
     Condition = getFCmpCodeWithoutNaN(Condition);
+
+  SDNodeFlags Flags;
+  Flags.copyFMF(*FPMO);
 
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
-  setValue(&I, DAG.getSetCC(getCurSDLoc(), DestVT, Op1, Op2, Condition));
+  setValue(&I, DAG.getSetCC(getCurSDLoc(), DestVT, Op1, Op2, Condition, Flags));
 }
 
 // Check if the condition of the select has one use or two users that are both
@@ -3168,6 +3151,10 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
       Cond.getValueType().isVector() ? ISD::VSELECT : ISD::SELECT;
 
   bool IsUnaryAbs = false;
+
+  SDNodeFlags Flags;
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+    Flags.copyFMF(*FPOp);
 
   // Min/max matching is only viable if all output VTs are the same.
   if (is_splat(ValueVTs)) {
@@ -3272,7 +3259,7 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
       Ops.push_back(SDValue(RHSVal.getNode(), RHSVal.getResNo() + i));
       Values[i] = DAG.getNode(
           OpCode, getCurSDLoc(),
-          LHSVal.getNode()->getValueType(LHSVal.getResNo() + i), Ops);
+          LHSVal.getNode()->getValueType(LHSVal.getResNo() + i), Ops, Flags);
     }
   }
 
@@ -4876,7 +4863,7 @@ static SDValue getLimitedPrecisionExp2(SDValue t0, const SDLoc &dl,
 /// expandExp - Lower an exp intrinsic. Handles the special sequences for
 /// limited-precision mode.
 static SDValue expandExp(const SDLoc &dl, SDValue Op, SelectionDAG &DAG,
-                         const TargetLowering &TLI) {
+                         const TargetLowering &TLI, SDNodeFlags Flags) {
   if (Op.getValueType() == MVT::f32 &&
       LimitFloatPrecision > 0 && LimitFloatPrecision <= 18) {
 
@@ -4892,13 +4879,13 @@ static SDValue expandExp(const SDLoc &dl, SDValue Op, SelectionDAG &DAG,
   }
 
   // No special expansion.
-  return DAG.getNode(ISD::FEXP, dl, Op.getValueType(), Op);
+  return DAG.getNode(ISD::FEXP, dl, Op.getValueType(), Op, Flags);
 }
 
 /// expandLog - Lower a log intrinsic. Handles the special sequences for
 /// limited-precision mode.
 static SDValue expandLog(const SDLoc &dl, SDValue Op, SelectionDAG &DAG,
-                         const TargetLowering &TLI) {
+                         const TargetLowering &TLI, SDNodeFlags Flags) {
   // TODO: What fast-math-flags should be set on the floating-point nodes?
 
   if (Op.getValueType() == MVT::f32 &&
@@ -4991,13 +4978,13 @@ static SDValue expandLog(const SDLoc &dl, SDValue Op, SelectionDAG &DAG,
   }
 
   // No special expansion.
-  return DAG.getNode(ISD::FLOG, dl, Op.getValueType(), Op);
+  return DAG.getNode(ISD::FLOG, dl, Op.getValueType(), Op, Flags);
 }
 
 /// expandLog2 - Lower a log2 intrinsic. Handles the special sequences for
 /// limited-precision mode.
 static SDValue expandLog2(const SDLoc &dl, SDValue Op, SelectionDAG &DAG,
-                          const TargetLowering &TLI) {
+                          const TargetLowering &TLI, SDNodeFlags Flags) {
   // TODO: What fast-math-flags should be set on the floating-point nodes?
 
   if (Op.getValueType() == MVT::f32 &&
@@ -5088,13 +5075,13 @@ static SDValue expandLog2(const SDLoc &dl, SDValue Op, SelectionDAG &DAG,
   }
 
   // No special expansion.
-  return DAG.getNode(ISD::FLOG2, dl, Op.getValueType(), Op);
+  return DAG.getNode(ISD::FLOG2, dl, Op.getValueType(), Op, Flags);
 }
 
 /// expandLog10 - Lower a log10 intrinsic. Handles the special sequences for
 /// limited-precision mode.
 static SDValue expandLog10(const SDLoc &dl, SDValue Op, SelectionDAG &DAG,
-                           const TargetLowering &TLI) {
+                           const TargetLowering &TLI, SDNodeFlags Flags) {
   // TODO: What fast-math-flags should be set on the floating-point nodes?
 
   if (Op.getValueType() == MVT::f32 &&
@@ -5178,25 +5165,26 @@ static SDValue expandLog10(const SDLoc &dl, SDValue Op, SelectionDAG &DAG,
   }
 
   // No special expansion.
-  return DAG.getNode(ISD::FLOG10, dl, Op.getValueType(), Op);
+  return DAG.getNode(ISD::FLOG10, dl, Op.getValueType(), Op, Flags);
 }
 
 /// expandExp2 - Lower an exp2 intrinsic. Handles the special sequences for
 /// limited-precision mode.
 static SDValue expandExp2(const SDLoc &dl, SDValue Op, SelectionDAG &DAG,
-                          const TargetLowering &TLI) {
+                          const TargetLowering &TLI, SDNodeFlags Flags) {
   if (Op.getValueType() == MVT::f32 &&
       LimitFloatPrecision > 0 && LimitFloatPrecision <= 18)
     return getLimitedPrecisionExp2(Op, dl, DAG);
 
   // No special expansion.
-  return DAG.getNode(ISD::FEXP2, dl, Op.getValueType(), Op);
+  return DAG.getNode(ISD::FEXP2, dl, Op.getValueType(), Op, Flags);
 }
 
 /// visitPow - Lower a pow intrinsic. Handles the special sequences for
 /// limited-precision mode with x == 10.0f.
 static SDValue expandPow(const SDLoc &dl, SDValue LHS, SDValue RHS,
-                         SelectionDAG &DAG, const TargetLowering &TLI) {
+                         SelectionDAG &DAG, const TargetLowering &TLI,
+                         SDNodeFlags Flags) {
   bool IsExp10 = false;
   if (LHS.getValueType() == MVT::f32 && RHS.getValueType() == MVT::f32 &&
       LimitFloatPrecision > 0 && LimitFloatPrecision <= 18) {
@@ -5219,7 +5207,7 @@ static SDValue expandPow(const SDLoc &dl, SDValue LHS, SDValue RHS,
   }
 
   // No special expansion.
-  return DAG.getNode(ISD::FPOW, dl, LHS.getValueType(), LHS, RHS);
+  return DAG.getNode(ISD::FPOW, dl, LHS.getValueType(), LHS, RHS, Flags);
 }
 
 /// ExpandPowI - Expand a llvm.powi intrinsic.
@@ -5640,6 +5628,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   DebugLoc dl = getCurDebugLoc();
   SDValue Res;
 
+  SDNodeFlags Flags;
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+    Flags.copyFMF(*FPOp);
+
   switch (Intrinsic) {
   default:
     // By default, turn this into a target intrinsic node.
@@ -6054,23 +6046,26 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                             getValue(I.getArgOperand(1)), DAG));
     return;
   case Intrinsic::log:
-    setValue(&I, expandLog(sdl, getValue(I.getArgOperand(0)), DAG, TLI));
+    setValue(&I, expandLog(sdl, getValue(I.getArgOperand(0)), DAG, TLI, Flags));
     return;
   case Intrinsic::log2:
-    setValue(&I, expandLog2(sdl, getValue(I.getArgOperand(0)), DAG, TLI));
+    setValue(&I,
+             expandLog2(sdl, getValue(I.getArgOperand(0)), DAG, TLI, Flags));
     return;
   case Intrinsic::log10:
-    setValue(&I, expandLog10(sdl, getValue(I.getArgOperand(0)), DAG, TLI));
+    setValue(&I,
+             expandLog10(sdl, getValue(I.getArgOperand(0)), DAG, TLI, Flags));
     return;
   case Intrinsic::exp:
-    setValue(&I, expandExp(sdl, getValue(I.getArgOperand(0)), DAG, TLI));
+    setValue(&I, expandExp(sdl, getValue(I.getArgOperand(0)), DAG, TLI, Flags));
     return;
   case Intrinsic::exp2:
-    setValue(&I, expandExp2(sdl, getValue(I.getArgOperand(0)), DAG, TLI));
+    setValue(&I,
+             expandExp2(sdl, getValue(I.getArgOperand(0)), DAG, TLI, Flags));
     return;
   case Intrinsic::pow:
     setValue(&I, expandPow(sdl, getValue(I.getArgOperand(0)),
-                           getValue(I.getArgOperand(1)), DAG, TLI));
+                           getValue(I.getArgOperand(1)), DAG, TLI, Flags));
     return;
   case Intrinsic::sqrt:
   case Intrinsic::fabs:
@@ -6103,7 +6098,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 
     setValue(&I, DAG.getNode(Opcode, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
-                             getValue(I.getArgOperand(0))));
+                             getValue(I.getArgOperand(0)), Flags));
     return;
   }
   case Intrinsic::lround:
@@ -6128,38 +6123,37 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::FMINNUM, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
                              getValue(I.getArgOperand(0)),
-                             getValue(I.getArgOperand(1))));
+                             getValue(I.getArgOperand(1)), Flags));
     return;
   case Intrinsic::maxnum:
     setValue(&I, DAG.getNode(ISD::FMAXNUM, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
                              getValue(I.getArgOperand(0)),
-                             getValue(I.getArgOperand(1))));
+                             getValue(I.getArgOperand(1)), Flags));
     return;
   case Intrinsic::minimum:
     setValue(&I, DAG.getNode(ISD::FMINIMUM, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
                              getValue(I.getArgOperand(0)),
-                             getValue(I.getArgOperand(1))));
+                             getValue(I.getArgOperand(1)), Flags));
     return;
   case Intrinsic::maximum:
     setValue(&I, DAG.getNode(ISD::FMAXIMUM, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
                              getValue(I.getArgOperand(0)),
-                             getValue(I.getArgOperand(1))));
+                             getValue(I.getArgOperand(1)), Flags));
     return;
   case Intrinsic::copysign:
     setValue(&I, DAG.getNode(ISD::FCOPYSIGN, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
                              getValue(I.getArgOperand(0)),
-                             getValue(I.getArgOperand(1))));
+                             getValue(I.getArgOperand(1)), Flags));
     return;
   case Intrinsic::fma:
-    setValue(&I, DAG.getNode(ISD::FMA, sdl,
-                             getValue(I.getArgOperand(0)).getValueType(),
-                             getValue(I.getArgOperand(0)),
-                             getValue(I.getArgOperand(1)),
-                             getValue(I.getArgOperand(2))));
+    setValue(&I, DAG.getNode(
+                     ISD::FMA, sdl, getValue(I.getArgOperand(0)).getValueType(),
+                     getValue(I.getArgOperand(0)), getValue(I.getArgOperand(1)),
+                     getValue(I.getArgOperand(2)), Flags));
     return;
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
   case Intrinsic::INTRINSIC:
@@ -6174,17 +6168,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                                getValue(I.getArgOperand(0)).getValueType(),
                                getValue(I.getArgOperand(0)),
                                getValue(I.getArgOperand(1)),
-                               getValue(I.getArgOperand(2))));
+                               getValue(I.getArgOperand(2)), Flags));
     } else {
       // TODO: Intrinsic calls should have fast-math-flags.
-      SDValue Mul = DAG.getNode(ISD::FMUL, sdl,
-                                getValue(I.getArgOperand(0)).getValueType(),
-                                getValue(I.getArgOperand(0)),
-                                getValue(I.getArgOperand(1)));
+      SDValue Mul = DAG.getNode(
+          ISD::FMUL, sdl, getValue(I.getArgOperand(0)).getValueType(),
+          getValue(I.getArgOperand(0)), getValue(I.getArgOperand(1)), Flags);
       SDValue Add = DAG.getNode(ISD::FADD, sdl,
                                 getValue(I.getArgOperand(0)).getValueType(),
-                                Mul,
-                                getValue(I.getArgOperand(2)));
+                                Mul, getValue(I.getArgOperand(2)), Flags);
       setValue(&I, Add);
     }
     return;
@@ -7532,8 +7524,12 @@ bool SelectionDAGBuilder::visitUnaryFloatCall(const CallInst &I,
   if (!I.onlyReadsMemory())
     return false;
 
+  SDNodeFlags Flags;
+  Flags.copyFMF(cast<FPMathOperator>(I));
+
   SDValue Tmp = getValue(I.getArgOperand(0));
-  setValue(&I, DAG.getNode(Opcode, getCurSDLoc(), Tmp.getValueType(), Tmp));
+  setValue(&I,
+           DAG.getNode(Opcode, getCurSDLoc(), Tmp.getValueType(), Tmp, Flags));
   return true;
 }
 
@@ -7548,10 +7544,13 @@ bool SelectionDAGBuilder::visitBinaryFloatCall(const CallInst &I,
   if (!I.onlyReadsMemory())
     return false;
 
+  SDNodeFlags Flags;
+  Flags.copyFMF(cast<FPMathOperator>(I));
+
   SDValue Tmp0 = getValue(I.getArgOperand(0));
   SDValue Tmp1 = getValue(I.getArgOperand(1));
   EVT VT = Tmp0.getValueType();
-  setValue(&I, DAG.getNode(Opcode, getCurSDLoc(), VT, Tmp0, Tmp1));
+  setValue(&I, DAG.getNode(Opcode, getCurSDLoc(), VT, Tmp0, Tmp1, Flags));
   return true;
 }
 
@@ -8951,24 +8950,26 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
   SDLoc dl = getCurSDLoc();
   EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   SDValue Res;
-  FastMathFlags FMF;
-  if (isa<FPMathOperator>(I))
-    FMF = I.getFastMathFlags();
+  SDNodeFlags SDFlags;
+  if (auto *FPMO = dyn_cast<FPMathOperator>(&I))
+    SDFlags.copyFMF(*FPMO);
 
   switch (Intrinsic) {
   case Intrinsic::experimental_vector_reduce_v2_fadd:
-    if (FMF.allowReassoc())
+    if (SDFlags.hasAllowReassociation())
       Res = DAG.getNode(ISD::FADD, dl, VT, Op1,
-                        DAG.getNode(ISD::VECREDUCE_FADD, dl, VT, Op2));
+                        DAG.getNode(ISD::VECREDUCE_FADD, dl, VT, Op2, SDFlags),
+                        SDFlags);
     else
-      Res = DAG.getNode(ISD::VECREDUCE_STRICT_FADD, dl, VT, Op1, Op2);
+      Res = DAG.getNode(ISD::VECREDUCE_STRICT_FADD, dl, VT, Op1, Op2, SDFlags);
     break;
   case Intrinsic::experimental_vector_reduce_v2_fmul:
-    if (FMF.allowReassoc())
+    if (SDFlags.hasAllowReassociation())
       Res = DAG.getNode(ISD::FMUL, dl, VT, Op1,
-                        DAG.getNode(ISD::VECREDUCE_FMUL, dl, VT, Op2));
+                        DAG.getNode(ISD::VECREDUCE_FMUL, dl, VT, Op2, SDFlags),
+                        SDFlags);
     else
-      Res = DAG.getNode(ISD::VECREDUCE_STRICT_FMUL, dl, VT, Op1, Op2);
+      Res = DAG.getNode(ISD::VECREDUCE_STRICT_FMUL, dl, VT, Op1, Op2, SDFlags);
     break;
   case Intrinsic::experimental_vector_reduce_add:
     Res = DAG.getNode(ISD::VECREDUCE_ADD, dl, VT, Op1);
@@ -8998,10 +8999,10 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
     Res = DAG.getNode(ISD::VECREDUCE_UMIN, dl, VT, Op1);
     break;
   case Intrinsic::experimental_vector_reduce_fmax:
-    Res = DAG.getNode(ISD::VECREDUCE_FMAX, dl, VT, Op1);
+    Res = DAG.getNode(ISD::VECREDUCE_FMAX, dl, VT, Op1, SDFlags);
     break;
   case Intrinsic::experimental_vector_reduce_fmin:
-    Res = DAG.getNode(ISD::VECREDUCE_FMIN, dl, VT, Op1);
+    Res = DAG.getNode(ISD::VECREDUCE_FMIN, dl, VT, Op1, SDFlags);
     break;
   default:
     llvm_unreachable("Unhandled vector reduce intrinsic");

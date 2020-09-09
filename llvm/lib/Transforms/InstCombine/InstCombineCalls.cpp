@@ -657,6 +657,19 @@ InstCombinerImpl::foldIntrinsicWithOverflowCommon(IntrinsicInst *II) {
   return nullptr;
 }
 
+static Optional<bool> getKnownSign(Value *Op, Instruction *CxtI,
+                                   const DataLayout &DL, AssumptionCache *AC,
+                                   DominatorTree *DT) {
+  KnownBits Known = computeKnownBits(Op, DL, 0, AC, CxtI, DT);
+  if (Known.isNonNegative())
+    return false;
+  if (Known.isNegative())
+    return true;
+
+  return isImpliedByDomCondition(
+      ICmpInst::ICMP_SLT, Op, Constant::getNullValue(Op->getType()), CxtI, DL);
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -791,11 +804,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(IIOperand, m_Select(m_Value(), m_Neg(m_Value(X)), m_Deferred(X))))
       return replaceOperand(*II, 0, X);
 
-    if (Optional<bool> Imp = isImpliedByDomCondition(
-            ICmpInst::ICMP_SGE, IIOperand,
-            Constant::getNullValue(IIOperand->getType()), II, DL)) {
+    if (Optional<bool> Sign = getKnownSign(IIOperand, II, DL, &AC, &DT)) {
       // abs(x) -> x if x >= 0
-      if (*Imp)
+      if (!*Sign)
         return replaceInstUsesWith(*II, IIOperand);
 
       // abs(x) -> -x if x < 0

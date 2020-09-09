@@ -115,13 +115,13 @@ KnownBits KnownBits::umax(const KnownBits &LHS, const KnownBits &RHS) {
 
 KnownBits KnownBits::umin(const KnownBits &LHS, const KnownBits &RHS) {
   // Flip the range of values: [0, 0xFFFFFFFF] <-> [0xFFFFFFFF, 0]
-  auto Flip = [](KnownBits Val) { return KnownBits(Val.One, Val.Zero); };
+  auto Flip = [](const KnownBits &Val) { return KnownBits(Val.One, Val.Zero); };
   return Flip(umax(Flip(LHS), Flip(RHS)));
 }
 
 KnownBits KnownBits::smax(const KnownBits &LHS, const KnownBits &RHS) {
   // Flip the range of values: [-0x80000000, 0x7FFFFFFF] <-> [0, 0xFFFFFFFF]
-  auto Flip = [](KnownBits Val) {
+  auto Flip = [](const KnownBits &Val) {
     unsigned SignBitPosition = Val.getBitWidth() - 1;
     APInt Zero = Val.Zero;
     APInt One = Val.One;
@@ -134,7 +134,7 @@ KnownBits KnownBits::smax(const KnownBits &LHS, const KnownBits &RHS) {
 
 KnownBits KnownBits::smin(const KnownBits &LHS, const KnownBits &RHS) {
   // Flip the range of values: [-0x80000000, 0x7FFFFFFF] <-> [0xFFFFFFFF, 0]
-  auto Flip = [](KnownBits Val) {
+  auto Flip = [](const KnownBits &Val) {
     unsigned SignBitPosition = Val.getBitWidth() - 1;
     APInt Zero = Val.One;
     APInt One = Val.Zero;

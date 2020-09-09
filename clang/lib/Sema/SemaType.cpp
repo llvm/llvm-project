@@ -4043,32 +4043,9 @@ classifyPointerDeclarator(Sema &S, QualType type, Declarator &declarator,
     if (auto recordType = type->getAs<RecordType>()) {
       RecordDecl *recordDecl = recordType->getDecl();
 
-      bool isCFError = false;
-      if (S.CFError) {
-        // If we already know about CFError, test it directly.
-        isCFError = (S.CFError == recordDecl);
-      } else {
-        // Check whether this is CFError, which we identify based on its bridge
-        // to NSError. CFErrorRef used to be declared with "objc_bridge" but is
-        // now declared with "objc_bridge_mutable", so look for either one of
-        // the two attributes.
-        if (recordDecl->getTagKind() == TTK_Struct && numNormalPointers > 0) {
-          IdentifierInfo *bridgedType = nullptr;
-          if (auto bridgeAttr = recordDecl->getAttr<ObjCBridgeAttr>())
-            bridgedType = bridgeAttr->getBridgedType();
-          else if (auto bridgeAttr =
-                       recordDecl->getAttr<ObjCBridgeMutableAttr>())
-            bridgedType = bridgeAttr->getBridgedType();
-
-          if (bridgedType == S.getNSErrorIdent()) {
-            S.CFError = recordDecl;
-            isCFError = true;
-          }
-        }
-      }
-
       // If this is CFErrorRef*, report it as such.
-      if (isCFError && numNormalPointers == 2 && numTypeSpecifierPointers < 2) {
+      if (numNormalPointers == 2 && numTypeSpecifierPointers < 2 &&
+          S.isCFError(recordDecl)) {
         return PointerDeclaratorKind::CFErrorRefPointer;
       }
       break;
@@ -4090,6 +4067,31 @@ classifyPointerDeclarator(Sema &S, QualType type, Declarator &declarator,
   default:
     return PointerDeclaratorKind::MultiLevelPointer;
   }
+}
+
+bool Sema::isCFError(RecordDecl *RD) {
+  // If we already know about CFError, test it directly.
+  if (CFError)
+    return CFError == RD;
+
+  // Check whether this is CFError, which we identify based on its bridge to
+  // NSError. CFErrorRef used to be declared with "objc_bridge" but is now
+  // declared with "objc_bridge_mutable", so look for either one of the two
+  // attributes.
+  if (RD->getTagKind() == TTK_Struct) {
+    IdentifierInfo *bridgedType = nullptr;
+    if (auto bridgeAttr = RD->getAttr<ObjCBridgeAttr>())
+      bridgedType = bridgeAttr->getBridgedType();
+    else if (auto bridgeAttr = RD->getAttr<ObjCBridgeMutableAttr>())
+      bridgedType = bridgeAttr->getBridgedType();
+
+    if (bridgedType == getNSErrorIdent()) {
+      CFError = RD;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 static FileID getNullabilityCompletenessCheckFileID(Sema &S,

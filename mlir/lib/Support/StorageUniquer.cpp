@@ -89,6 +89,9 @@ struct StorageUniquerImpl {
   // Parametric Storage
   //===--------------------------------------------------------------------===//
 
+  /// Check if an instance of a parametric storage class exists.
+  bool hasParametricStorage(TypeID id) { return parametricUniquers.count(id); }
+
   /// Get or create an instance of a parametric type.
   BaseStorage *
   getOrCreate(TypeID id, unsigned hashValue,
@@ -176,6 +179,9 @@ struct StorageUniquerImpl {
     return singletonInstance;
   }
 
+  /// Check if an instance of a singleton storage class exists.
+  bool hasSingleton(TypeID id) { return singletonInstances.count(id); }
+
   //===--------------------------------------------------------------------===//
   // Instance Storage
   //===--------------------------------------------------------------------===//
@@ -225,6 +231,16 @@ void StorageUniquer::registerParametricStorageTypeImpl(TypeID id) {
 /// storage.
 auto StorageUniquer::getSingletonImpl(TypeID id) -> BaseStorage * {
   return impl->getSingleton(id);
+}
+
+/// Test is the storage singleton is initialized.
+bool StorageUniquer::isSingletonStorageInitialized(TypeID id) {
+  return impl->hasSingleton(id);
+}
+
+/// Test is the parametric storage is initialized.
+bool StorageUniquer::isParametricStorageInitialized(TypeID id) {
+  return impl->hasParametricStorage(id);
 }
 
 /// Implementation for registering an instance of a derived type with default

@@ -29,6 +29,9 @@ void WriteToFile(const uint8_t *Data, size_t Size, const std::string &Path);
 void WriteToFile(const std::string &Data, const std::string &Path);
 void WriteToFile(const Unit &U, const std::string &Path);
 
+void AppendToFile(const uint8_t *Data, size_t Size, const std::string &Path);
+void AppendToFile(const std::string &Data, const std::string &Path);
+
 void ReadDirToVectorOfUnits(const char *Path, Vector<Unit> *V,
                             long *Epoch, size_t MaxSize, bool ExitOnError);
 

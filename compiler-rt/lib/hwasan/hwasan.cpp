@@ -112,7 +112,7 @@ static void InitializeFlags() {
   if (__hwasan_default_options)
     parser.ParseString(__hwasan_default_options());
 #if HWASAN_CONTAINS_UBSAN
-  const char *ubsan_default_options = __ubsan::MaybeCallUbsanDefaultOptions();
+  const char *ubsan_default_options = __ubsan_default_options();
   ubsan_parser.ParseString(ubsan_default_options);
 #endif
 

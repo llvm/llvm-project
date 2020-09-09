@@ -1739,6 +1739,26 @@ static void computeKnownBitsFromOperator(const Operator *I,
         }
         break;
       }
+      case Intrinsic::umin:
+        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        Known = KnownBits::umin(Known, Known2);
+        break;
+      case Intrinsic::umax:
+        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        Known = KnownBits::umax(Known, Known2);
+        break;
+      case Intrinsic::smin:
+        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        Known = KnownBits::smin(Known, Known2);
+        break;
+      case Intrinsic::smax:
+        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        Known = KnownBits::smax(Known, Known2);
+        break;
       case Intrinsic::x86_sse42_crc32_64_64:
         Known.Zero.setBitsFrom(32);
         break;

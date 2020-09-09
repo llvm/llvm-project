@@ -452,6 +452,9 @@ private:
   MachineInstr *canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
                                  const TargetInstrInfo *TII) const;
 
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
+                                         AAResults *AA) const override;
+
 private:
   /// Modeling special VFP / NEON fp MLA / MLS hazards.
 
@@ -635,8 +638,7 @@ static inline unsigned getTailPredVectorWidth(unsigned Opcode) {
   return 0;
 }
 
-static inline
-bool isVCTP(MachineInstr *MI) {
+static inline bool isVCTP(const MachineInstr *MI) {
   switch (MI->getOpcode()) {
   default:
     break;

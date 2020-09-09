@@ -379,7 +379,7 @@ void InitializeFlags() {
   __ubsan::RegisterUbsanFlags(&ubsan_parser, uf);
   RegisterCommonFlags(&ubsan_parser);
 
-  const char *ubsan_default_options = __ubsan::MaybeCallUbsanDefaultOptions();
+  const char *ubsan_default_options = __ubsan_default_options();
   ubsan_parser.ParseString(ubsan_default_options);
   ubsan_parser.ParseStringFromEnv("UBSAN_OPTIONS");
 #endif

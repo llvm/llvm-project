@@ -88,6 +88,11 @@ FUZZER_FLAG_STRING(features_dir, "internal flag. Used to dump feature sets on di
   "Every time a new input is added to the corpus, a corresponding file in the features_dir"
   " is created containing the unique features of that input."
   " Features are stored in binary format.")
+FUZZER_FLAG_STRING(mutation_graph_file, "Saves a graph (in DOT format) to"
+  " mutation_graph_file. The graph contains a vertex for each input that has"
+  " unique coverage; directed edges are provided between parents and children"
+  " where the child has unique coverage, and are recorded with the type of"
+  " mutation that caused the child.")
 FUZZER_FLAG_INT(use_counters, 1, "Use coverage counters")
 FUZZER_FLAG_INT(use_memmem, 1,
                 "Use hints from intercepting memmem, strstr, etc")

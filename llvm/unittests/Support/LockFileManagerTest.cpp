@@ -81,7 +81,7 @@ TEST(LockFileManagerTest, RelativePath) {
 
   char PathBuf[1024];
   const char *OrigPath = getcwd(PathBuf, 1024);
-  ASSERT_FALSE(chdir(LockFileManagerTestDir.path().data()));
+  ASSERT_FALSE(chdir(LockFileManagerTestDir.c_str()));
 
   TempDir inner("inner");
   SmallString<64> LockedFile(inner.path());

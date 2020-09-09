@@ -367,3 +367,98 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
 
   return success();
 }
+
+template <class ConvOp, int N>
+LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
+    ConvOp op, PatternRewriter &rewriter) const {
+  const unsigned dimSize = 3;
+  Location loc = op.getLoc();
+  MLIRContext *context = op.getContext();
+  edsc::ScopedContext scope(rewriter, loc);
+
+  ShapedType inShapeType = op.getInputShapedType(0);
+  ShapedType kShapeType = op.getInputShapedType(1);
+
+  ArrayRef<int64_t> inShape = inShapeType.getShape();
+  ArrayRef<int64_t> kShape = kShapeType.getShape();
+
+  if (!inShapeType.hasStaticShape() || !kShapeType.hasStaticShape())
+    return failure();
+
+  SmallVector<AffineExpr, 4> mapping;
+  // Fail to apply when the size of not vectorized dimension is not 1 or
+  // when the size of vectorized dimension is not dimSize.
+  for (unsigned i = 0; i < N; i++) {
+    if (!mask[i] && (inShape[i] != 1 || kShape[i] != 1))
+      return failure();
+    if (mask[i] && (inShape[i] != dimSize || kShape[i] != dimSize))
+      return failure();
+
+    if (mask[i])
+      mapping.push_back(getAffineDimExpr(i, context));
+  }
+
+  Value input = op.getInput(0);
+  Value kernel = op.getInput(1);
+  Value output = op.getOutputBuffer(0);
+
+  unsigned rank = inShapeType.getRank();
+  unsigned numDims = mapping.size();
+  Type elemType = inShapeType.getElementType();
+
+  auto map = AffineMap::get(rank, 0, mapping, context);
+  SmallVector<Value, 4> zeros(rank, std_constant_index(0));
+  auto vecType =
+      VectorType::get(SmallVector<int64_t, 4>(numDims, dimSize), elemType);
+
+  auto inputVec = vector_transfer_read(vecType, input, zeros, map);
+  auto kernelVec = vector_transfer_read(vecType, kernel, zeros, map);
+
+  auto acc = std_constant(elemType, rewriter.getZeroAttr(elemType));
+
+  std::array<AffineMap, 3> indexingMaps{
+      AffineMap::getMultiDimIdentityMap(numDims, context),
+      AffineMap::getMultiDimIdentityMap(numDims, context),
+      AffineMap::get(numDims, 0, {}, context)};
+
+  std::vector<StringRef> iteratorTypes(numDims, "reduction");
+
+  auto result = rewriter.create<vector::ContractionOp>(
+      loc, inputVec, kernelVec, acc,
+      rewriter.getAffineMapArrayAttr(indexingMaps),
+      rewriter.getStrArrayAttr(iteratorTypes));
+
+  rewriter.create<StoreOp>(loc, result, output, ValueRange(zeros));
+  rewriter.eraseOp(op);
+  return success();
+}
+
+void mlir::linalg::populateConvVectorizationPatterns(
+    MLIRContext *context, OwningRewritePatternList &patterns) {
+  patterns.insert<ConvOpVectorization<linalg::ConvWOp, 1>>(
+      context, SmallVector<bool, 4>{true});
+
+  patterns.insert<ConvOpVectorization<linalg::ConvNWCOp, 3>>(
+      context, SmallVector<bool, 4>{false, true, true});
+
+  patterns.insert<ConvOpVectorization<linalg::ConvNCWOp, 3>>(
+      context, SmallVector<bool, 4>{false, true, true});
+
+  patterns.insert<ConvOpVectorization<linalg::ConvHWOp, 2>>(
+      context, SmallVector<bool, 4>{true, true});
+
+  patterns.insert<ConvOpVectorization<linalg::ConvNHWCOp, 4>>(
+      context, SmallVector<bool, 4>{false, true, true, true});
+
+  patterns.insert<ConvOpVectorization<linalg::ConvNCHWOp, 4>>(
+      context, SmallVector<bool, 4>{false, true, true, true});
+
+  patterns.insert<ConvOpVectorization<linalg::ConvDHWOp, 3>>(
+      context, SmallVector<bool, 4>{true, true, true});
+
+  patterns.insert<ConvOpVectorization<linalg::ConvNDHWCOp, 5>>(
+      context, SmallVector<bool, 4>{false, true, true, true, true});
+
+  patterns.insert<ConvOpVectorization<linalg::ConvNCDHWOp, 5>>(
+      context, SmallVector<bool, 4>{false, true, true, true, true});
+}

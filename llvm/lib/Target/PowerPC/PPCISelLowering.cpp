@@ -1199,6 +1199,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setLibcallName(RTLIB::SRA_I128, nullptr);
   }
 
+  if (!isPPC64)
+    setMaxAtomicSizeInBitsSupported(32);
+
   setStackPointerRegisterToSaveRestore(isPPC64 ? PPC::X1 : PPC::R1);
 
   // We have target-specific dag combine patterns for the following nodes:
@@ -8219,8 +8222,8 @@ SDValue PPCTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG,
               getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
           EVT DstSetCCVT =
               getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
-          SDValue Sel =
-              DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT, Chain, true);
+          SDValue Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT,
+                                     SDNodeFlags(), Chain, true);
           Chain = Sel.getValue(1);
 
           SDValue FltOfs = DAG.getSelect(

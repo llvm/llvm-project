@@ -210,6 +210,16 @@ public:
     return get<Storage>(TypeID::get<Storage>());
   }
 
+  /// Test if there is a singleton storage uniquer initialized for the provided
+  /// TypeID. This is only useful for debugging/diagnostic purpose: the uniquer
+  /// is initialized when a dialect is loaded.
+  bool isSingletonStorageInitialized(TypeID id);
+
+  /// Test if there is a parametric storage uniquer initialized for the provided
+  /// TypeID. This is only useful for debugging/diagnostic purpose: the uniquer
+  /// is initialized when a dialect is loaded.
+  bool isParametricStorageInitialized(TypeID id);
+
   /// Changes the mutable component of 'storage' by forwarding the trailing
   /// arguments to the 'mutate' function of the derived class.
   template <typename Storage, typename... Args>

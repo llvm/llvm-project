@@ -127,7 +127,7 @@ struct StructInfo {
   std::vector<FieldInfo> Fields;
   StringMap<size_t> FieldsByName;
 
-  FieldInfo &addField(StringRef FieldName, FieldType FT);
+  FieldInfo &addField(StringRef FieldName, FieldType FT, size_t FieldSize);
 
   StructInfo() = default;
 
@@ -330,7 +330,8 @@ struct FieldInfo {
   FieldInfo(FieldType FT) : Contents(FT) {}
 };
 
-FieldInfo &StructInfo::addField(StringRef FieldName, FieldType FT) {
+FieldInfo &StructInfo::addField(StringRef FieldName, FieldType FT,
+                                size_t FieldSize) {
   if (!FieldName.empty())
     FieldsByName[FieldName] = Fields.size();
   Fields.emplace_back(FT);
@@ -338,7 +339,7 @@ FieldInfo &StructInfo::addField(StringRef FieldName, FieldType FT) {
   if (IsUnion) {
     Field.Offset = 0;
   } else {
-    Size = llvm::alignTo(Size, Alignment);
+    Size = llvm::alignTo(Size, std::min(Alignment, FieldSize));
     Field.Offset = Size;
   }
   return Field;
@@ -759,13 +760,14 @@ private:
 
   // "real4", "real8"
   bool emitRealValues(const fltSemantics &Semantics);
-  bool addRealField(StringRef Name, const fltSemantics &Semantics);
-  bool parseDirectiveRealValue(StringRef IDVal, const fltSemantics &Semantics);
+  bool addRealField(StringRef Name, const fltSemantics &Semantics, size_t Size);
+  bool parseDirectiveRealValue(StringRef IDVal, const fltSemantics &Semantics,
+                               size_t Size);
   bool parseRealInstList(
       const fltSemantics &Semantics, SmallVectorImpl<APInt> &Values,
       const AsmToken::TokenKind EndToken = AsmToken::EndOfStatement);
   bool parseDirectiveNamedRealValue(StringRef IDVal,
-                                    const fltSemantics &Semantics,
+                                    const fltSemantics &Semantics, size_t Size,
                                     StringRef Name, SMLoc NameLoc);
 
   bool parseOptionalAngleBracketOpen();
@@ -1314,7 +1316,7 @@ bool MasmParser::parseBracketExpr(const MCExpr *&Res, SMLoc &EndLoc) {
 ///  primaryexpr ::= symbol
 ///  primaryexpr ::= number
 ///  primaryexpr ::= '.'
-///  primaryexpr ::= ~,+,- primaryexpr
+///  primaryexpr ::= ~,+,-,'not' primaryexpr
 bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   SMLoc FirstTokenLoc = getLexer().getLoc();
   AsmToken::TokenKind FirstTokenKind = Lexer.getKind();
@@ -1351,6 +1353,13 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
         }
         return Error(FirstTokenLoc, "invalid token in expression");
       }
+    }
+    // Parse named bitwise negation.
+    if (Identifier.equals_lower("not")) {
+      if (parsePrimaryExpr(Res, EndLoc))
+        return true;
+      Res = MCUnaryExpr::createNot(Res, getContext(), FirstTokenLoc);
+      return false;
     }
     // Parse symbol variant.
     std::pair<StringRef, StringRef> Split;
@@ -1772,8 +1781,18 @@ bool MasmParser::parseBinOpRHS(unsigned Precedence, const MCExpr *&Res,
                                SMLoc &EndLoc) {
   SMLoc StartLoc = Lexer.getLoc();
   while (true) {
+    AsmToken::TokenKind TokKind = Lexer.getKind();
+    if (Lexer.getKind() == AsmToken::Identifier) {
+      StringRef Identifier = Lexer.getTok().getString();
+      if (Identifier.equals_lower("and"))
+        TokKind = AsmToken::Amp;
+      else if (Identifier.equals_lower("not"))
+        TokKind = AsmToken::Exclaim;
+      else if (Identifier.equals_lower("or"))
+        TokKind = AsmToken::Pipe;
+    }
     MCBinaryExpr::Opcode Kind = MCBinaryExpr::Add;
-    unsigned TokPrec = getBinOpPrecedence(Lexer.getKind(), Kind);
+    unsigned TokPrec = getBinOpPrecedence(TokKind, Kind);
 
     // If the next token is lower precedence than we are allowed to eat, return
     // successfully with what we ate already.
@@ -2101,9 +2120,9 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     case DK_DQ:
       return parseDirectiveValue(IDVal, 8);
     case DK_REAL4:
-      return parseDirectiveRealValue(IDVal, APFloat::IEEEsingle());
+      return parseDirectiveRealValue(IDVal, APFloat::IEEEsingle(), 4);
     case DK_REAL8:
-      return parseDirectiveRealValue(IDVal, APFloat::IEEEdouble());
+      return parseDirectiveRealValue(IDVal, APFloat::IEEEdouble(), 8);
     case DK_STRUCT:
     case DK_UNION:
       return parseDirectiveNestedStruct(IDVal, DirKind);
@@ -2326,12 +2345,12 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     return parseDirectiveNamedValue(nextVal, 8, IDVal, IDLoc);
   case DK_REAL4:
     Lex();
-    return parseDirectiveNamedRealValue(nextVal, APFloat::IEEEsingle(), IDVal,
-                                        IDLoc);
+    return parseDirectiveNamedRealValue(nextVal, APFloat::IEEEsingle(), 4,
+                                        IDVal, IDLoc);
   case DK_REAL8:
     Lex();
-    return parseDirectiveNamedRealValue(nextVal, APFloat::IEEEdouble(), IDVal,
-                                        IDLoc);
+    return parseDirectiveNamedRealValue(nextVal, APFloat::IEEEdouble(), 8,
+                                        IDVal, IDLoc);
   case DK_STRUCT:
   case DK_UNION:
     Lex();
@@ -3057,6 +3076,11 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
   SMLoc EndLoc, StartLoc = Lexer.getLoc();
   if (parseExpression(Expr, EndLoc))
     return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Var.Name);
+  Sym->setRedefinable(Var.Redefinable);
+  Sym->setVariableValue(Expr);
+  Sym->setExternal(false);
+
   if (Expr->evaluateAsAbsolute(Var.NumericValue,
                                getStreamer().getAssemblerPtr()))
     return false;
@@ -3229,7 +3253,7 @@ bool MasmParser::parseScalarInitializer(unsigned Size,
     Lex();
   } else {
     const MCExpr *Value;
-    if (checkForValidSection() || parseExpression(Value))
+    if (parseExpression(Value))
       return true;
     if (getTok().is(AsmToken::Identifier) &&
         getTok().getString().equals_lower("dup")) {
@@ -3289,7 +3313,7 @@ bool MasmParser::emitIntegralValues(unsigned Size) {
 // Add a field to the current structure.
 bool MasmParser::addIntegralField(StringRef Name, unsigned Size) {
   StructInfo &Struct = StructInProgress.back();
-  FieldInfo &Field = Struct.addField(Name, FT_INTEGRAL);
+  FieldInfo &Field = Struct.addField(Name, FT_INTEGRAL, Size);
   IntFieldInfo &IntInfo = Field.Contents.IntInfo;
 
   Field.Type = Size;
@@ -3449,6 +3473,9 @@ bool MasmParser::parseRealInstList(const fltSemantics &Semantics,
 
 // Initialize real data values.
 bool MasmParser::emitRealValues(const fltSemantics &Semantics) {
+  if (checkForValidSection())
+    return true;
+
   SmallVector<APInt, 1> ValuesAsInt;
   if (parseRealInstList(Semantics, ValuesAsInt))
     return true;
@@ -3461,15 +3488,15 @@ bool MasmParser::emitRealValues(const fltSemantics &Semantics) {
 }
 
 // Add a real field to the current struct.
-bool MasmParser::addRealField(StringRef Name, const fltSemantics &Semantics) {
+bool MasmParser::addRealField(StringRef Name, const fltSemantics &Semantics,
+                              size_t Size) {
   StructInfo &Struct = StructInProgress.back();
-  FieldInfo &Field = Struct.addField(Name, FT_REAL);
+  FieldInfo &Field = Struct.addField(Name, FT_REAL, Size);
   RealFieldInfo &RealInfo = Field.Contents.RealInfo;
 
   Field.SizeOf = 0;
 
-  if (checkForValidSection() ||
-      parseRealInstList(Semantics, RealInfo.AsIntValues))
+  if (parseRealInstList(Semantics, RealInfo.AsIntValues))
     return true;
 
   Field.Type = RealInfo.AsIntValues.back().getBitWidth() / 8;
@@ -3485,15 +3512,13 @@ bool MasmParser::addRealField(StringRef Name, const fltSemantics &Semantics) {
 /// parseDirectiveRealValue
 ///  ::= (real4 | real8) [ expression (, expression)* ]
 bool MasmParser::parseDirectiveRealValue(StringRef IDVal,
-                                         const fltSemantics &Semantics) {
-  if (checkForValidSection())
-    return true;
-
+                                         const fltSemantics &Semantics,
+                                         size_t Size) {
   if (StructInProgress.empty()) {
     // Initialize data value.
     if (emitRealValues(Semantics))
       return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
-  } else if (addRealField("", Semantics)) {
+  } else if (addRealField("", Semantics, Size)) {
     return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
   }
   return false;
@@ -3503,17 +3528,15 @@ bool MasmParser::parseDirectiveRealValue(StringRef IDVal,
 ///  ::= name (real4 | real8) [ expression (, expression)* ]
 bool MasmParser::parseDirectiveNamedRealValue(StringRef IDVal,
                                               const fltSemantics &Semantics,
-                                              StringRef Name, SMLoc NameLoc) {
-  if (checkForValidSection())
-    return true;
-
+                                              size_t Size, StringRef Name,
+                                              SMLoc NameLoc) {
   if (StructInProgress.empty()) {
     // Initialize named data value.
     MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
     getStreamer().emitLabel(Sym);
     if (emitRealValues(Semantics))
       return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
-  } else if (addRealField(Name, Semantics)) {
+  } else if (addRealField(Name, Semantics, Size)) {
     return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
   }
   return false;
@@ -3943,7 +3966,7 @@ bool MasmParser::emitStructValues(const StructInfo &Structure) {
 // Declare a field in the current struct.
 bool MasmParser::addStructField(StringRef Name, const StructInfo &Structure) {
   StructInfo &OwningStruct = StructInProgress.back();
-  FieldInfo &Field = OwningStruct.addField(Name, FT_STRUCT);
+  FieldInfo &Field = OwningStruct.addField(Name, FT_STRUCT, Structure.Size);
   StructFieldInfo &StructInfo = Field.Contents.StructInfo;
 
   StructInfo.Structure = Structure;
@@ -4117,7 +4140,8 @@ bool MasmParser::parseDirectiveNestedEnds() {
     else
       ParentStruct.Size += Structure.Size;
   } else {
-    FieldInfo &Field = ParentStruct.addField(Structure.Name, FT_STRUCT);
+    FieldInfo &Field =
+        ParentStruct.addField(Structure.Name, FT_STRUCT, Structure.Size);
     StructFieldInfo &StructInfo = Field.Contents.StructInfo;
     Field.Type = Structure.Size;
     Field.LengthOf = 1;

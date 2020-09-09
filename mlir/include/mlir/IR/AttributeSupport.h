@@ -16,6 +16,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/StorageUniquerSupport.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/Twine.h"
 
 namespace mlir {
 class MLIRContext;
@@ -142,6 +143,14 @@ public:
   static typename std::enable_if_t<
       !std::is_same<typename T::ImplType, AttributeStorage>::value, T>
   get(MLIRContext *ctx, Args &&...args) {
+#ifndef NDEBUG
+    if (!ctx->getAttributeUniquer().isParametricStorageInitialized(
+            T::getTypeID()))
+      llvm::report_fatal_error(llvm::Twine("can't create Attribute '") +
+                               llvm::getTypeName<T>() +
+                               "' because storage uniquer isn't initialized: "
+                               "the dialect was likely not loaded.");
+#endif
     return ctx->getAttributeUniquer().get<typename T::ImplType>(
         [ctx](AttributeStorage *storage) {
           initializeAttributeStorage(storage, ctx, T::getTypeID());
@@ -153,6 +162,14 @@ public:
   static typename std::enable_if_t<
       std::is_same<typename T::ImplType, AttributeStorage>::value, T>
   get(MLIRContext *ctx) {
+#ifndef NDEBUG
+    if (!ctx->getAttributeUniquer().isSingletonStorageInitialized(
+            T::getTypeID()))
+      llvm::report_fatal_error(llvm::Twine("can't create Attribute '") +
+                               llvm::getTypeName<T>() +
+                               "' because storage uniquer isn't initialized: "
+                               "the dialect was likely not loaded.");
+#endif
     return ctx->getAttributeUniquer().get<typename T::ImplType>(T::getTypeID());
   }
 

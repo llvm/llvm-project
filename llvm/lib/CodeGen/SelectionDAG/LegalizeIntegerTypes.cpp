@@ -2789,16 +2789,38 @@ void DAGTypeLegalizer::ExpandIntRes_Constant(SDNode *N,
 void DAGTypeLegalizer::ExpandIntRes_ABS(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SDLoc dl(N);
 
+  SDValue N0 = N->getOperand(0);
+  GetExpandedInteger(N0, Lo, Hi);
+  EVT NVT = Lo.getValueType();
+
+  // If we have ADDCARRY, use the expanded form of the sra+add+xor sequence we
+  // use in LegalizeDAG. The ADD part of the expansion is based on
+  // ExpandIntRes_ADDSUB which also uses ADDCARRY/UADDO after checking that
+  // ADDCARRY is LegalOrCustom. Each of the pieces here can be further expanded
+  // if needed. Shift expansion has a special case for filling with sign bits
+  // so that we will only end up with one SRA.
+  bool HasAddCarry = TLI.isOperationLegalOrCustom(
+      ISD::ADDCARRY, TLI.getTypeToExpandTo(*DAG.getContext(), NVT));
+  if (HasAddCarry) {
+    EVT ShiftAmtTy = getShiftAmountTyForConstant(NVT, TLI, DAG);
+    SDValue Sign =
+        DAG.getNode(ISD::SRA, dl, NVT, Hi,
+                    DAG.getConstant(NVT.getSizeInBits() - 1, dl, ShiftAmtTy));
+    SDVTList VTList = DAG.getVTList(NVT, getSetCCResultType(NVT));
+    Lo = DAG.getNode(ISD::UADDO, dl, VTList, Lo, Sign);
+    Hi = DAG.getNode(ISD::ADDCARRY, dl, VTList, Hi, Sign, Lo.getValue(1));
+    Lo = DAG.getNode(ISD::XOR, dl, NVT, Lo, Sign);
+    Hi = DAG.getNode(ISD::XOR, dl, NVT, Hi, Sign);
+    return;
+  }
+
   // abs(HiLo) -> (Hi < 0 ? -HiLo : HiLo)
   EVT VT = N->getValueType(0);
-  SDValue N0 = N->getOperand(0);
   SDValue Neg = DAG.getNode(ISD::SUB, dl, VT,
                             DAG.getConstant(0, dl, VT), N0);
   SDValue NegLo, NegHi;
   SplitInteger(Neg, NegLo, NegHi);
 
-  GetExpandedInteger(N0, Lo, Hi);
-  EVT NVT = Lo.getValueType();
   SDValue HiIsNeg = DAG.getSetCC(dl, getSetCCResultType(NVT),
                                  DAG.getConstant(0, dl, NVT), Hi, ISD::SETGT);
   Lo = DAG.getSelect(dl, NVT, HiIsNeg, NegLo, Lo);

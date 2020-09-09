@@ -734,3 +734,19 @@ unsigned AArch64RegisterInfo::getLocalAddressRegister(
     return getBaseRegister();
   return getFrameRegister(MF);
 }
+
+/// SrcRC and DstRC will be morphed into NewRC if this returns true
+bool AArch64RegisterInfo::shouldCoalesce(
+    MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
+    const TargetRegisterClass *DstRC, unsigned DstSubReg,
+    const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
+  if (MI->isCopy() &&
+      ((DstRC->getID() == AArch64::GPR64RegClassID) ||
+       (DstRC->getID() == AArch64::GPR64commonRegClassID)) &&
+      MI->getOperand(0).getSubReg() && MI->getOperand(1).getSubReg())
+    // Do not coalesce in the case of a 32-bit subregister copy
+    // which implements a 32 to 64 bit zero extension
+    // which relies on the upper 32 bits being zeroed.
+    return false;
+  return true;
+}

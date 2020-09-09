@@ -63,8 +63,8 @@ static cl::opt<bool> UserForwardSwitchCond(
     cl::desc("Forward switch condition to phi ops (default = false)"));
 
 static cl::opt<bool> UserHoistCommonInsts(
-    "hoist-common-insts", cl::Hidden, cl::init(true),
-    cl::desc("hoist common instructions (default = true)"));
+    "hoist-common-insts", cl::Hidden, cl::init(false),
+    cl::desc("hoist common instructions (default = false)"));
 
 static cl::opt<bool> UserSinkCommonInsts(
     "sink-common-insts", cl::Hidden, cl::init(false),

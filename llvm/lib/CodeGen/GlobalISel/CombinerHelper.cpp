@@ -1989,6 +1989,12 @@ bool CombinerHelper::matchOperandIsZero(MachineInstr &MI, unsigned OpIdx) {
                        MRI);
 }
 
+bool CombinerHelper::matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) {
+  MachineOperand &MO = MI.getOperand(OpIdx);
+  return MO.isReg() &&
+         getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI);
+}
+
 bool CombinerHelper::replaceInstWithFConstant(MachineInstr &MI, double C) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
   Builder.setInstr(MI);

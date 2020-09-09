@@ -65,11 +65,6 @@ struct TestBufferPlacementPreparationPass
               op, "dynamic shapes not currently supported");
         auto memrefType =
             MemRefType::get(type.getShape(), type.getElementType());
-
-        // Compute alloc position and insert a custom allocation node.
-        OpBuilder::InsertionGuard guard(rewriter);
-        rewriter.restoreInsertionPoint(
-            bufferAssignment->computeAllocPosition(result));
         auto alloc = rewriter.create<AllocOp>(loc, memrefType);
         newArgs.push_back(alloc);
         newResults.push_back(alloc);
@@ -110,13 +105,12 @@ struct TestBufferPlacementPreparationPass
   };
 
   void populateTensorLinalgToBufferLinalgConversionPattern(
-      MLIRContext *context, BufferAssignmentPlacer *placer,
-      BufferAssignmentTypeConverter *converter,
+      MLIRContext *context, BufferAssignmentTypeConverter *converter,
       OwningRewritePatternList *patterns) {
     populateWithBufferAssignmentOpConversionPatterns<
-        mlir::ReturnOp, mlir::ReturnOp, linalg::CopyOp>(context, placer,
-                                                        converter, patterns);
-    patterns->insert<GenericOpConverter>(context, placer, converter);
+        mlir::ReturnOp, mlir::ReturnOp, linalg::CopyOp>(context, converter,
+                                                        patterns);
+    patterns->insert<GenericOpConverter>(context, converter);
   }
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -133,6 +127,8 @@ struct TestBufferPlacementPreparationPass
     target.addLegalDialect<StandardOpsDialect>();
     target.addLegalOp<MakeTupleOp>();
     target.addLegalOp<GetTupleElementOp>();
+    target.addLegalOp<ModuleOp>();
+    target.addLegalOp<ModuleTerminatorOp>();
 
     // Mark all Linalg operations illegal as long as they work on tensors.
     auto isLegalOperation = [&](Operation *op) {
@@ -191,16 +187,11 @@ struct TestBufferPlacementPreparationPass
       return success();
     });
 
-    // Walk over all the functions to apply buffer assignment.
-    this->getOperation().walk([&](FuncOp function) -> WalkResult {
-      OwningRewritePatternList patterns;
-      BufferAssignmentPlacer placer(function);
-      populateTensorLinalgToBufferLinalgConversionPattern(
-          &context, &placer, &converter, &patterns);
-
-      // Applying full conversion
-      return applyFullConversion(function, target, patterns);
-    });
+    OwningRewritePatternList patterns;
+    populateTensorLinalgToBufferLinalgConversionPattern(&context, &converter,
+                                                        &patterns);
+    if (failed(applyFullConversion(this->getOperation(), target, patterns)))
+      this->signalPassFailure();
   };
 };
 } // end anonymous namespace
