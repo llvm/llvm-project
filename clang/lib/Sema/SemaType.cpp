@@ -4065,26 +4065,24 @@ classifyPointerDeclarator(Sema &S, QualType type, Declarator &declarator,
   }
 }
 
-bool Sema::isCFError(RecordDecl *recordDecl) {
+bool Sema::isCFError(RecordDecl *RD) {
   // If we already know about CFError, test it directly.
-  if (CFError) {
-    return (CFError == recordDecl);
-  }
+  if (CFError)
+    return CFError == RD;
 
-  // Check whether this is CFError, which we identify based on being
-  // bridged to NSError. CFErrorRef used to be declared with "objc_bridge" but
-  // is now declared with "objc_bridge_mutable", so look for either one of the
-  // two attributes.
-  if (recordDecl->getTagKind() == TTK_Struct) {
+  // Check whether this is CFError, which we identify based on its bridge to
+  // NSError. CFErrorRef used to be declared with "objc_bridge" but is now
+  // declared with "objc_bridge_mutable", so look for either one of the two
+  // attributes.
+  if (RD->getTagKind() == TTK_Struct) {
     IdentifierInfo *bridgedType = nullptr;
-    if (auto bridgeAttr = recordDecl->getAttr<ObjCBridgeAttr>())
+    if (auto bridgeAttr = RD->getAttr<ObjCBridgeAttr>())
       bridgedType = bridgeAttr->getBridgedType();
-    else if (auto bridgeAttr =
-                 recordDecl->getAttr<ObjCBridgeMutableAttr>())
+    else if (auto bridgeAttr = RD->getAttr<ObjCBridgeMutableAttr>())
       bridgedType = bridgeAttr->getBridgedType();
 
     if (bridgedType == getNSErrorIdent()) {
-      CFError = recordDecl;
+      CFError = RD;
       return true;
     }
   }
