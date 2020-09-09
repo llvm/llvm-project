@@ -70,23 +70,26 @@ static inline int getDebugLevel() {
 #define GETNAME2(name) #name
 #define GETNAME(name) GETNAME2(name)
 
-// Messaging interface
+/// Print a generic message string from libomptarget or a plugin RTL
 #define MESSAGE0(_str)                                                         \
   do {                                                                         \
     fprintf(stderr, GETNAME(TARGET_NAME) " message: %s\n", _str);              \
   } while (0)
 
+/// Print a printf formatting string message from libomptarget or a plugin RTL
 #define MESSAGE(_str, ...)                                                     \
   do {                                                                         \
     fprintf(stderr, GETNAME(TARGET_NAME) " message: " _str "\n", __VA_ARGS__); \
   } while (0)
 
+/// Print fatal error message with an error string and error identifier
 #define FATAL_MESSAGE0(_num, _str)                                             \
   do {                                                                         \
     fprintf(stderr, GETNAME(TARGET_NAME) " fatal error %d: %s\n", _num, _str); \
     abort();                                                                   \
   } while (0)
 
+/// Print fatal error message with a printf string and error identifier
 #define FATAL_MESSAGE(_num, _str, ...)                                         \
   do {                                                                         \
     fprintf(stderr, GETNAME(TARGET_NAME) " fatal error %d:" _str "\n", _num,   \
@@ -94,9 +97,17 @@ static inline int getDebugLevel() {
     abort();                                                                   \
   } while (0)
 
+/// Print a generic error string from libomptarget or a plugin RTL
 #define FAILURE_MESSAGE(...)                                                   \
   do {                                                                         \
     fprintf(stderr, GETNAME(TARGET_NAME) " error: ");                          \
+    fprintf(stderr, __VA_ARGS__);                                              \
+  } while (0)
+
+/// Print a generic information string used if LIBOMPTARGET_INFO=1
+#define INFO_MESSAGE(_num, ...)                                                \
+  do {                                                                         \
+    fprintf(stderr, GETNAME(TARGET_NAME) " device %d info: ", _num);           \
     fprintf(stderr, __VA_ARGS__);                                              \
   } while (0)
 
@@ -110,6 +121,7 @@ static inline int getDebugLevel() {
     fprintf(stderr, __VA_ARGS__);                                              \
   }
 
+/// Emit a message for debugging
 #define DP(...)                                                                \
   do {                                                                         \
     if (getDebugLevel() > 0) {                                                 \
@@ -117,6 +129,7 @@ static inline int getDebugLevel() {
     }                                                                          \
   } while (false)
 
+/// Emit a message for debugging or failure if debugging is disabled
 #define REPORT(...)                                                            \
   do {                                                                         \
     if (getDebugLevel() > 0) {                                                 \
@@ -132,5 +145,15 @@ static inline int getDebugLevel() {
   {}
 #define REPORT(...) FAILURE_MESSAGE(__VA_ARGS__);
 #endif // OMPTARGET_DEBUG
+
+/// Emit a message giving the user extra information about the runtime if
+#define INFO(_id, ...)                                                         \
+  do {                                                                         \
+    if (getDebugLevel() > 0) {                                                 \
+      DEBUGP(DEBUG_PREFIX, __VA_ARGS__);                                       \
+    } else if (getInfoLevel() > 0) {                                           \
+      INFO_MESSAGE(_id, __VA_ARGS__);                                          \
+    }                                                                          \
+  } while (false)
 
 #endif // _OMPTARGET_DEBUG_H
