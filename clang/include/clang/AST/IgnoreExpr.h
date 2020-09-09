@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_IGNOREEXPR_H
 
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 
 namespace clang {
 namespace detail {
@@ -38,23 +39,122 @@ template <typename... FnTys> Expr *IgnoreExprNodes(Expr *E, FnTys &&... Fns) {
   return E;
 }
 
-Expr *IgnoreImplicitCastsSingleStep(Expr *E);
+template <typename... FnTys>
+const Expr *IgnoreExprNodes(const Expr *E, FnTys &&...Fns) {
+  return const_cast<Expr *>(IgnoreExprNodes(E, std::forward<FnTys>(Fns)...));
+}
 
-Expr *IgnoreImplicitCastsExtraSingleStep(Expr *E);
+inline Expr *IgnoreImplicitCastsSingleStep(Expr *E) {
+  if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
+    return ICE->getSubExpr();
 
-Expr *IgnoreCastsSingleStep(Expr *E);
+  if (auto *FE = dyn_cast<FullExpr>(E))
+    return FE->getSubExpr();
 
-Expr *IgnoreLValueCastsSingleStep(Expr *E);
+  return E;
+}
 
-Expr *IgnoreBaseCastsSingleStep(Expr *E);
+inline Expr *IgnoreImplicitCastsExtraSingleStep(Expr *E) {
+  // FIXME: Skip MaterializeTemporaryExpr and SubstNonTypeTemplateParmExpr in
+  // addition to what IgnoreImpCasts() skips to account for the current
+  // behaviour of IgnoreParenImpCasts().
+  Expr *SubE = IgnoreImplicitCastsSingleStep(E);
+  if (SubE != E)
+    return SubE;
 
-Expr *IgnoreImplicitSingleStep(Expr *E);
+  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+    return MTE->getSubExpr();
 
-Expr *IgnoreImplicitAsWrittenSingleStep(Expr *E);
+  if (auto *NTTP = dyn_cast<SubstNonTypeTemplateParmExpr>(E))
+    return NTTP->getReplacement();
 
-Expr *IgnoreParensOnlySingleStep(Expr *E);
+  return E;
+}
 
-Expr *IgnoreParensSingleStep(Expr *E);
+inline Expr *IgnoreCastsSingleStep(Expr *E) {
+  if (auto *CE = dyn_cast<CastExpr>(E))
+    return CE->getSubExpr();
+
+  if (auto *FE = dyn_cast<FullExpr>(E))
+    return FE->getSubExpr();
+
+  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+    return MTE->getSubExpr();
+
+  if (auto *NTTP = dyn_cast<SubstNonTypeTemplateParmExpr>(E))
+    return NTTP->getReplacement();
+
+  return E;
+}
+
+inline Expr *IgnoreLValueCastsSingleStep(Expr *E) {
+  // Skip what IgnoreCastsSingleStep skips, except that only
+  // lvalue-to-rvalue casts are skipped.
+  if (auto *CE = dyn_cast<CastExpr>(E))
+    if (CE->getCastKind() != CK_LValueToRValue)
+      return E;
+
+  return IgnoreCastsSingleStep(E);
+}
+
+inline Expr *IgnoreBaseCastsSingleStep(Expr *E) {
+  if (auto *CE = dyn_cast<CastExpr>(E))
+    if (CE->getCastKind() == CK_DerivedToBase ||
+        CE->getCastKind() == CK_UncheckedDerivedToBase ||
+        CE->getCastKind() == CK_NoOp)
+      return CE->getSubExpr();
+
+  return E;
+}
+
+inline Expr *IgnoreImplicitSingleStep(Expr *E) {
+  Expr *SubE = IgnoreImplicitCastsSingleStep(E);
+  if (SubE != E)
+    return SubE;
+
+  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+    return MTE->getSubExpr();
+
+  if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
+    return BTE->getSubExpr();
+
+  return E;
+}
+
+inline Expr *IgnoreImplicitAsWrittenSingleStep(Expr *E) {
+  if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
+    return ICE->getSubExprAsWritten();
+
+  return IgnoreImplicitSingleStep(E);
+}
+
+inline Expr *IgnoreParensOnlySingleStep(Expr *E) {
+  if (auto *PE = dyn_cast<ParenExpr>(E))
+    return PE->getSubExpr();
+  return E;
+}
+
+inline Expr *IgnoreParensSingleStep(Expr *E) {
+  if (auto *PE = dyn_cast<ParenExpr>(E))
+    return PE->getSubExpr();
+
+  if (auto *UO = dyn_cast<UnaryOperator>(E)) {
+    if (UO->getOpcode() == UO_Extension)
+      return UO->getSubExpr();
+  }
+
+  else if (auto *GSE = dyn_cast<GenericSelectionExpr>(E)) {
+    if (!GSE->isResultDependent())
+      return GSE->getResultExpr();
+  }
+
+  else if (auto *CE = dyn_cast<ChooseExpr>(E)) {
+    if (!CE->isConditionDependent())
+      return CE->getChosenSubExpr();
+  }
+
+  return E;
+}
 
 } // namespace clang
 
