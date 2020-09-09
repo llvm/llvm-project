@@ -47,6 +47,7 @@ entry:
   call void @consume(i32 addrspace(1)* %rel1)
   ret i1 %res1
 }
+
 ; test pointer variables intermixed with pointer constants
 define void @test_mixed(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c) gc "statepoint-example" {
 ; CHECK-LABEL: test_mixed:
@@ -565,6 +566,28 @@ exceptional_return.right:
           cleanup
   %val.relocated3 = call coldcc i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token %landing_pad1, i32 0, i32 0)
   ret i64 addrspace(1)* %val.relocated3
+}
+
+; test ISEL for constant base pointer - must properly tie operands
+define void @test_const_base(i32 addrspace(1)* %a) gc "statepoint-example" {
+; CHECK-LABEL: test_const_base:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    callq func
+; CHECK-NEXT:  .Ltmp24:
+; CHECK-NEXT:    movq %rbx, %rdi
+; CHECK-NEXT:    callq consume
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+entry:
+  %token1 = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @func, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 0, i32 1, i32 7, i32 addrspace(1)* null, i32 9), "gc-live" (i32 addrspace(1)* null, i32 addrspace(1)* %a)]
+  %rel = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %token1,  i32 0, i32 1)
+  call void @consume(i32 addrspace(1)* %rel)
+  ret void
 }
 
 declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
