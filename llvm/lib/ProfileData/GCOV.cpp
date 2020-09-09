@@ -220,10 +220,7 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
       for (std::unique_ptr<GCOVArc> &arc : fn->arcs) {
         if (!buf.readInt64(arc->Count))
           return false;
-        // FIXME Fix counters
         arc->src.Counter += arc->Count;
-        if (arc->dst.succ.empty())
-          arc->dst.Counter += arc->Count;
       }
 
       if (fn->Blocks.size() >= 2) {
@@ -469,31 +466,28 @@ void GCOVBlock::getCyclesCount(const BlockVector &Blocks, uint64_t &Count) {
 }
 
 /// Get the count for the list of blocks which lie on the same line.
-uint64_t GCOVBlock::getLineCount(const BlockVector &Blocks) {
-  uint64_t Count = 0;
-
-  for (auto Block : Blocks) {
-    if (Block->getNumSrcEdges() == 0 || Block->Number == 0) {
-      // The block has no predecessors and a non-null counter
-      // (can be the case with entry block in functions).
-      Count += Block->getCount();
+uint64_t GCOVBlock::getLineCount(const BlockVector &blocks) {
+  uint64_t count = 0;
+  for (const GCOVBlock *block : blocks) {
+    if (block->Number == 0) {
+      // For nonstandard control flows, arcs into the exit block may be
+      // duplicately counted (fork) or not be counted (abnormal exit), and thus
+      // the (exit,entry) counter may be inaccurate. Count the entry block with
+      // the outgoing arcs.
+      for (const GCOVArc *arc : block->succ)
+        count += arc->Count;
     } else {
       // Add counts from predecessors that are not on the same line.
-      for (auto E : Block->srcs()) {
-        const GCOVBlock *W = &E->src;
-        if (find(Blocks, W) == Blocks.end()) {
-          Count += E->Count;
-        }
-      }
+      for (const GCOVArc *arc : block->pred)
+        if (!llvm::is_contained(blocks, &arc->src))
+          count += arc->Count;
     }
-    for (auto E : Block->dsts()) {
-      E->CyclesCount = E->Count;
-    }
+    for (GCOVArc *arc : block->succ)
+      arc->CyclesCount = arc->Count;
   }
 
-  GCOVBlock::getCyclesCount(Blocks, Count);
-
-  return Count;
+  GCOVBlock::getCyclesCount(blocks, count);
+  return count;
 }
 
 //===----------------------------------------------------------------------===//
@@ -829,12 +823,15 @@ void FileInfo::printFunctionSummary(raw_ostream &OS,
     uint64_t EntryCount = Func->getEntryCount();
     uint32_t BlocksExec = 0;
     const GCOVBlock &ExitBlock = Func->getExitBlock();
+    uint64_t exitCount = 0;
+    for (const GCOVArc *arc : ExitBlock.pred)
+      exitCount += arc->Count;
     for (const GCOVBlock &Block : Func->blocks())
       if (Block.Number != 0 && &Block != &ExitBlock && Block.getCount())
         ++BlocksExec;
 
     OS << "function " << Func->getName() << " called " << EntryCount
-       << " returned " << formatPercentage(ExitBlock.getCount(), EntryCount)
+       << " returned " << formatPercentage(exitCount, EntryCount)
        << "% blocks executed "
        << formatPercentage(BlocksExec, Func->getNumBlocks() - 2) << "%\n";
   }
