@@ -10,6 +10,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -716,9 +717,54 @@ TEST(ValueTracking, propagatesPoison) {
   for (auto &I : BB) {
     if (isa<ReturnInst>(&I))
       break;
-    EXPECT_EQ(propagatesPoison(&I), Data[Index].first)
+    EXPECT_EQ(propagatesPoison(cast<Operator>(&I)), Data[Index].first)
         << "Incorrect answer at instruction " << Index << " = " << I;
     Index++;
+  }
+}
+
+TEST_F(ValueTrackingTest, programUndefinedIfPoison) {
+  parseAssembly("declare i32 @any_num()"
+                "define void @test(i32 %mask) {\n"
+                "  %A = call i32 @any_num()\n"
+                "  %B = or i32 %A, %mask\n"
+                "  udiv i32 1, %B"
+                "  ret void\n"
+                "}\n");
+  // If %A was poison, udiv raises UB regardless of %mask's value
+  EXPECT_EQ(programUndefinedIfPoison(A), true);
+}
+
+TEST_F(ValueTrackingTest, programUndefinedIfUndefOrPoison) {
+  parseAssembly("declare i32 @any_num()"
+                "define void @test(i32 %mask) {\n"
+                "  %A = call i32 @any_num()\n"
+                "  %B = or i32 %A, %mask\n"
+                "  udiv i32 1, %B"
+                "  ret void\n"
+                "}\n");
+  // If %A was undef and %mask was 1, udiv does not raise UB
+  EXPECT_EQ(programUndefinedIfUndefOrPoison(A), false);
+}
+
+TEST_F(ValueTrackingTest, isGuaranteedNotToBePoison_exploitBranchCond) {
+  parseAssembly("declare i1 @any_bool()"
+                "define void @test(i1 %y) {\n"
+                "  %A = call i1 @any_bool()\n"
+                "  %cond = and i1 %A, %y\n"
+                "  br i1 %cond, label %BB1, label %BB2\n"
+                "BB1:\n"
+                "  ret void\n"
+                "BB2:\n"
+                "  ret void\n"
+                "}\n");
+  DominatorTree DT(*F);
+  for (auto &BB : *F) {
+    if (&BB == &F->getEntryBlock())
+      continue;
+
+    EXPECT_EQ(isGuaranteedNotToBePoison(A, BB.getTerminator(), &DT), true)
+        << "isGuaranteedNotToBePoison does not hold at " << *BB.getTerminator();
   }
 }
 
