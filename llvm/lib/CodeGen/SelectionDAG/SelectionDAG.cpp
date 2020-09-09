@@ -3370,21 +3370,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   }
   case ISD::ABS: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-
-    // If the source's MSB is zero then we know the rest of the bits already.
-    if (Known2.isNonNegative()) {
-      Known.Zero = Known2.Zero;
-      Known.One = Known2.One;
-      break;
-    }
-
-    // We only know that the absolute values's MSB will be zero iff there is
-    // a set bit that isn't the sign bit (otherwise it could be INT_MIN).
-    Known2.One.clearSignBit();
-    if (Known2.One.getBoolValue()) {
-      Known.Zero = APInt::getSignMask(BitWidth);
-      break;
-    }
+    Known = Known2.abs();
     break;
   }
   case ISD::UMIN: {
