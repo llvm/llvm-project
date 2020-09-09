@@ -244,7 +244,7 @@ Windows
 
 On Windows the LLDB test suite requires lld. Either add ``lld`` to
 ``LLVM_ENABLE_PROJECTS`` or disable the test suite with
-``LLDB_ENABLE_TESTS=OFF``.
+``LLDB_INCLUDE_TESTS=OFF``.
 
 Although the following CMake variables are by no means Windows specific, they
 are commonly used on Windows.
@@ -300,7 +300,7 @@ macOS
 
 On macOS the LLDB test suite requires libc++. Either add ``libcxx`` to
 ``LLVM_ENABLE_PROJECTS`` or disable the test suite with
-``LLDB_ENABLE_TESTS=OFF``. Further useful options:
+``LLDB_INCLUDE_TESTS=OFF``. Further useful options:
 
 * ``LLDB_BUILD_FRAMEWORK:BOOL``: Builds the LLDB.framework.
 * ``LLDB_CODESIGN_IDENTITY:STRING``: Set the identity to use for code-signing
