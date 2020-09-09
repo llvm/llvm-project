@@ -134,6 +134,11 @@ void run()
     checkLongLongTypes();
     static_assert(std::atomic<void*>::is_always_lock_free == (2 == ATOMIC_POINTER_LOCK_FREE), "");
     static_assert(std::atomic<std::nullptr_t>::is_always_lock_free == (2 == ATOMIC_POINTER_LOCK_FREE), "");
+
+#if TEST_STD_VER >= 20
+    static_assert(std::atomic<std::atomic_signed_lock_free>::is_always_lock_free, "");
+    static_assert(std::atomic<std::atomic_unsigned_lock_free>::is_always_lock_free, "");
+#endif
 }
 
 int main(int, char**) { run(); return 0; }
