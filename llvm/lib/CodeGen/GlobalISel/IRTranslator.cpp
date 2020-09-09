@@ -74,6 +74,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <string>
@@ -114,7 +115,8 @@ static void reportTranslationError(MachineFunction &MF,
     ORE.emit(R);
 }
 
-IRTranslator::IRTranslator() : MachineFunctionPass(ID) { }
+IRTranslator::IRTranslator(CodeGenOpt::Level optlevel)
+    : MachineFunctionPass(ID), OptLevel(optlevel) {}
 
 #ifndef NDEBUG
 namespace {
@@ -158,6 +160,8 @@ void IRTranslator::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<StackProtector>();
   AU.addRequired<TargetPassConfig>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
+  if (OptLevel != CodeGenOpt::None)
+    AU.addRequired<BranchProbabilityInfoWrapperPass>();
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -2912,14 +2916,20 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   MRI = &MF->getRegInfo();
   DL = &F.getParent()->getDataLayout();
   ORE = std::make_unique<OptimizationRemarkEmitter>(&F);
-  FuncInfo.MF = MF;
-  FuncInfo.BPI = nullptr;
-  const auto &TLI = *MF->getSubtarget().getTargetLowering();
   const TargetMachine &TM = MF->getTarget();
+  EnableOpts = OptLevel != CodeGenOpt::None && !skipFunction(F);
+  FuncInfo.MF = MF;
+  if (EnableOpts)
+    FuncInfo.BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
+  else
+    FuncInfo.BPI = nullptr;
+
+  const auto &TLI = *MF->getSubtarget().getTargetLowering();
+
   SL = std::make_unique<GISelSwitchLowering>(this, FuncInfo);
   SL->init(TLI, TM, *DL);
 
-  EnableOpts = TM.getOptLevel() != CodeGenOpt::None && !skipFunction(F);
+
 
   assert(PendingPHIs.empty() && "stale PHIs");
 
