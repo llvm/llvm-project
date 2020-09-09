@@ -2060,6 +2060,10 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
           // Check if a return instruction always cause UB or not
           // Note: It is guaranteed that the returned position of the anchor
           //       scope has noundef attribute when this is called.
+          //       We also ensure the return position is not "assumed dead"
+          //       because the returned value was then potentially simplified to
+          //       `undef` in AAReturnedValues without removing the `noundef`
+          //       attribute yet.
 
           // When the returned position has noundef attriubte, UB occur in the
           // following cases.
@@ -2067,9 +2071,6 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
           //   (2) The value is known to be a null pointer and the returned
           //       position has nonnull attribute (because the returned value is
           //       poison).
-          // Note: This callback is not called for a dead returned value because
-          //       such values are ignored in
-          //       checkForAllReturnedValuesAndReturnedInsts.
           bool FoundUB = false;
           if (isa<UndefValue>(V)) {
             FoundUB = true;
@@ -2101,12 +2102,15 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     // If the returned position of the anchor scope has noundef attriubte, check
     // all returned instructions.
     if (!getAnchorScope()->getReturnType()->isVoidTy()) {
-      auto &RetPosNoUndefAA =
-          A.getAAFor<AANoUndef>(*this, IRPosition::returned(*getAnchorScope()),
-                                /* TrackDependence */ false);
-      if (RetPosNoUndefAA.isKnownNoUndef())
-        A.checkForAllReturnedValuesAndReturnInsts(InspectReturnInstForUB,
-                                                  *this);
+      const IRPosition &ReturnIRP = IRPosition::returned(*getAnchorScope());
+      if (!A.isAssumedDead(ReturnIRP, this, nullptr)) {
+        auto &RetPosNoUndefAA =
+            A.getAAFor<AANoUndef>(*this, ReturnIRP,
+                                  /* TrackDependence */ false);
+        if (RetPosNoUndefAA.isKnownNoUndef())
+          A.checkForAllReturnedValuesAndReturnInsts(InspectReturnInstForUB,
+                                                    *this);
+      }
     }
 
     if (NoUBPrevSize != AssumedNoUBInsts.size() ||
