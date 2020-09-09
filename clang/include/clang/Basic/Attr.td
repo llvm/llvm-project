@@ -2130,6 +2130,14 @@ def Regparm : TypeAttr {
   let ASTNode = 0;
 }
 
+def SwiftBridge : InheritableAttr {
+  let Spellings = [GNU<"swift_bridge">];
+  let Args = [StringArgument<"SwiftType">];
+  let Subjects = SubjectList<[Tag, TypedefName, ObjCInterface, ObjCProtocol],
+                             ErrorDiag>;
+  let Documentation = [SwiftBridgeDocs];
+}
+
 def SwiftBridgedTypedef : InheritableAttr {
   let Spellings = [GNU<"swift_bridged_typedef">];
   let Subjects = SubjectList<[TypedefName], ErrorDiag>;
