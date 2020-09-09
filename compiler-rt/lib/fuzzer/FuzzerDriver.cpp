@@ -755,6 +755,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Options.FeaturesDir = Flags.features_dir;
     ValidateDirectoryExists(Options.FeaturesDir, Flags.create_missing_dirs);
   }
+  if (Flags.mutation_graph_file)
+    Options.MutationGraphFile = Flags.mutation_graph_file;
   if (Flags.collect_data_flow)
     Options.CollectDataFlow = Flags.collect_data_flow;
   if (Flags.stop_file)
