@@ -210,6 +210,24 @@ static Attr *handleNoMergeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) NoMergeAttr(S.Context, A);
 }
 
+static Attr *handleLikely(Sema &S, Stmt *St, const ParsedAttr &A,
+                          SourceRange Range) {
+
+  if (!S.getLangOpts().CPlusPlus20 && A.isCXX11Attribute() && !A.getScopeName())
+    S.Diag(A.getLoc(), diag::ext_cxx20_attr) << A << Range;
+
+  return ::new (S.Context) LikelyAttr(S.Context, A);
+}
+
+static Attr *handleUnlikely(Sema &S, Stmt *St, const ParsedAttr &A,
+                            SourceRange Range) {
+
+  if (!S.getLangOpts().CPlusPlus20 && A.isCXX11Attribute() && !A.getScopeName())
+    S.Diag(A.getLoc(), diag::ext_cxx20_attr) << A << Range;
+
+  return ::new (S.Context) UnlikelyAttr(S.Context, A);
+}
+
 static void
 CheckForIncompatibleAttributes(Sema &S,
                                const SmallVectorImpl<const Attr *> &Attrs) {
@@ -315,6 +333,32 @@ CheckForIncompatibleAttributes(Sema &S,
           << CategoryState.NumericAttr->getDiagnosticName(Policy);
     }
   }
+
+  // C++20 [dcl.attr.likelihood]p1 The attribute-token likely shall not appear
+  // in an attribute-specifier-seq that contains the attribute-token unlikely.
+  const LikelyAttr *Likely = nullptr;
+  const UnlikelyAttr *Unlikely = nullptr;
+  for (const auto *I : Attrs) {
+    if (const auto *Attr = dyn_cast<LikelyAttr>(I)) {
+      if (Unlikely) {
+        S.Diag(Attr->getLocation(), diag::err_attributes_are_not_compatible)
+            << Attr << Unlikely << Attr->getRange();
+        S.Diag(Unlikely->getLocation(), diag::note_conflicting_attribute)
+            << Unlikely->getRange();
+        return;
+      }
+      Likely = Attr;
+    } else if (const auto *Attr = dyn_cast<UnlikelyAttr>(I)) {
+      if (Likely) {
+        S.Diag(Attr->getLocation(), diag::err_attributes_are_not_compatible)
+            << Attr << Likely << Attr->getRange();
+        S.Diag(Likely->getLocation(), diag::note_conflicting_attribute)
+            << Likely->getRange();
+        return;
+      }
+      Unlikely = Attr;
+    }
+  }
 }
 
 static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
@@ -377,6 +421,10 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleSuppressAttr(S, St, A, Range);
   case ParsedAttr::AT_NoMerge:
     return handleNoMergeAttr(S, St, A, Range);
+  case ParsedAttr::AT_Likely:
+    return handleLikely(S, St, A, Range);
+  case ParsedAttr::AT_Unlikely:
+    return handleUnlikely(S, St, A, Range);
   default:
     // if we're here, then we parsed a known attribute, but didn't recognize
     // it as a statement attribute => it is declaration attribute
