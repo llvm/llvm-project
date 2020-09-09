@@ -59,14 +59,14 @@ void test_float(void) {
 
   vf = __builtin_vsx_xvrspic(vf);
   // CHECK-LABEL: try-xvrspic
-  // CHECK-UNCONSTRAINED: @llvm.nearbyint.v4f32(<4 x float> %{{.*}})
-  // CHECK-CONSTRAINED: @llvm.experimental.constrained.nearbyint.v4f32(<4 x float> %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // CHECK-UNCONSTRAINED: @llvm.rint.v4f32(<4 x float> %{{.*}})
+  // CHECK-CONSTRAINED: @llvm.experimental.constrained.rint.v4f32(<4 x float> %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK-ASM: xvrspic
 
   vd = __builtin_vsx_xvrdpic(vd);
   // CHECK-LABEL: try-xvrdpic
-  // CHECK-UNCONSTRAINED: @llvm.nearbyint.v2f64(<2 x double> %{{.*}})
-  // CHECK-CONSTRAINED: @llvm.experimental.constrained.nearbyint.v2f64(<2 x double> %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // CHECK-UNCONSTRAINED: @llvm.rint.v2f64(<2 x double> %{{.*}})
+  // CHECK-CONSTRAINED: @llvm.experimental.constrained.rint.v2f64(<2 x double> %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK-ASM: xvrdpic
 
   vf = __builtin_vsx_xvrspip(vf);

@@ -316,8 +316,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::STRICT_FMUL, MVT::f64, Legal);
   setOperationAction(ISD::STRICT_FDIV, MVT::f64, Legal);
   setOperationAction(ISD::STRICT_FMA, MVT::f64, Legal);
-  if (Subtarget.hasVSX())
-    setOperationAction(ISD::STRICT_FNEARBYINT, MVT::f64, Legal);
+  if (Subtarget.hasVSX()) {
+    setOperationAction(ISD::STRICT_FRINT, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FRINT, MVT::f64, Legal);
+  }
 
   if (Subtarget.hasFSQRT()) {
     setOperationAction(ISD::STRICT_FSQRT, MVT::f32, Legal);
@@ -1059,7 +1061,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::STRICT_FSQRT, MVT::v4f32, Legal);
       setOperationAction(ISD::STRICT_FMAXNUM, MVT::v4f32, Legal);
       setOperationAction(ISD::STRICT_FMINNUM, MVT::v4f32, Legal);
-      setOperationAction(ISD::STRICT_FNEARBYINT, MVT::v4f32, Legal);
+      setOperationAction(ISD::STRICT_FRINT, MVT::v4f32, Legal);
       setOperationAction(ISD::STRICT_FFLOOR, MVT::v4f32, Legal);
       setOperationAction(ISD::STRICT_FCEIL,  MVT::v4f32, Legal);
       setOperationAction(ISD::STRICT_FTRUNC, MVT::v4f32, Legal);
@@ -1073,7 +1075,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::STRICT_FSQRT, MVT::v2f64, Legal);
       setOperationAction(ISD::STRICT_FMAXNUM, MVT::v2f64, Legal);
       setOperationAction(ISD::STRICT_FMINNUM, MVT::v2f64, Legal);
-      setOperationAction(ISD::STRICT_FNEARBYINT, MVT::v2f64, Legal);
+      setOperationAction(ISD::STRICT_FRINT, MVT::v2f64, Legal);
       setOperationAction(ISD::STRICT_FFLOOR, MVT::v2f64, Legal);
       setOperationAction(ISD::STRICT_FCEIL,  MVT::v2f64, Legal);
       setOperationAction(ISD::STRICT_FTRUNC, MVT::v2f64, Legal);
