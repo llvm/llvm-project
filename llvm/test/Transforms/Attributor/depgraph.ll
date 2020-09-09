@@ -51,88 +51,214 @@ define i32* @checkAndAdvance(i32* align 16 %0) {
 ; Check for graph
 ;
 
-; GRAPH: [AANoUnwind] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state nounwind
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AANoUnwind] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nounwind
-; GRAPH:   updates [AANoUnwind] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nounwind
-; GRAPH:   updates [AANoUnwind] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nounwind
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH: [AANoSync] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state nosync
-; GRAPH:   updates [AANoSync] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nosync
-; GRAPH:   updates [AANoSync] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nosync
-; GRAPH: [AANoFree] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state nofree
-; GRAPH:   updates [AANoFree] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state nofree
-; GRAPH:   updates [AANoFree] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state nofree
-; GRAPH:   updates [AANoFree] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nofree
-; GRAPH:   updates [AANoFree] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nofree
-; GRAPH: [AAMemoryBehavior] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state readonly
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AAMemoryBehavior] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state readonly
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AAMemoryBehavior] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state readonly
-; GRAPH:   updates [AAMemoryBehavior] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state readonly
-; GRAPH:   updates [AAMemoryBehavior] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state readonly
-; GRAPH:   updates [AAMemoryBehavior] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state readonly
-; GRAPH:   updates [AAMemoryBehavior] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state readonly
-; GRAPH:   updates [AAMemoryBehavior] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state readonly
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AAMemoryBehavior] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state readonly
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH: [AAMemoryLocation] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state memory:argument
-; GRAPH:   updates [AAMemoryLocation] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state memory:argument
-; GRAPH:   updates [AAMemoryLocation] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state memory:argument
-; GRAPH: [AAAlign] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state align<0-16>
-; GRAPH:   updates [AAAlign] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state align<1-16>
-; GRAPH:   updates [AAAlign] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state align<1-16>
-; GRAPH: [AANonNull] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
-; GRAPH:   updates [AANonNull] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state nonnull
-; GRAPH:   updates [AANonNull] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state nonnull
-; GRAPH: [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AANoCapture] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AANoCapture] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH: [AAMemoryBehavior] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state readonly
-; GRAPH:   updates [AAMemoryBehavior] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state readonly
-; GRAPH:   updates [AAMemoryBehavior] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state readonly
-; GRAPH: [AANoFree] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state nofree
-; GRAPH:   updates [AANoFree] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state nofree
-; GRAPH: [AANoUnwind] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nounwind
-; GRAPH:   updates [AAIsDead] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state assumed-live
-; GRAPH:   updates [AAIsDead] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state assumed-live
-; GRAPH:   updates [AANoUnwind] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state nounwind
-; GRAPH: [AAMemoryBehavior] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state readonly
-; GRAPH:   updates [AAIsDead] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state assumed-live
-; GRAPH:   updates [AAMemoryBehavior] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state readonly
-; GRAPH: [AANoCapture] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
-; GRAPH: [AAMemoryBehavior] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state readonly
-; GRAPH:   updates [AAMemoryLocation] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state memory:argument
-; GRAPH:   updates [AAMemoryLocation] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state memory:argument
-; GRAPH:   updates [AAMemoryLocation] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state memory:argument
-; GRAPH: [AANonNull] for CtxI '  %5 = getelementptr inbounds i32, i32* %0, i64 4' at position {flt: [@-1]} with state nonnull
-; GRAPH:   updates [AANonNull] for CtxI '  %5 = getelementptr inbounds i32, i32* %0, i64 4' at position {flt: [@-1]} with state nonnull
-; GRAPH:   updates [AANonNull] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state nonnull
-; GRAPH:   updates [AANonNull] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
-; GRAPH:   updates [AANonNull] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
-; GRAPH: [AANoSync] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nosync
-; GRAPH:   updates [AANoSync] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state nosync
-; GRAPH: [AANoFree] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nofree
-; GRAPH:   updates [AANoFree] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state nofree
-; GRAPH: [AAMemoryLocation] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state memory:argument
-; GRAPH:   updates [AAMemoryLocation] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state memory:argument
-; GRAPH: [AAAlign] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state align<1-16>
-; GRAPH:   updates [AAAlign] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state align<0-16>
-; GRAPH: [AANonNull] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state nonnull
-; GRAPH:   updates [AANonNull] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
+; GRAPH:      [AAIsDead] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state Live[#BB 4/4][#TBEP 0][#KDE 1]
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAValueSimplify] for CtxI '  %3 = icmp eq i32 %2, 0' at position {flt: [@-1]} with state simplified
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAWillReturn] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state may-noreturn
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAUndefinedBehavior] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state undefined-behavior
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAValueSimplify] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state simplified
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoUndef] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state may-undef-or-poison
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAReturnedValues] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state returns(#3)[#UC: 1]
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoUnwind] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state nounwind
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AANoUnwind] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nounwind
+; GRAPH-NEXT:   updates [AANoUnwind] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nounwind
+; GRAPH-NEXT:   updates [AANoUnwind] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nounwind
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoSync] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state nosync
+; GRAPH-NEXT:   updates [AANoSync] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nosync
+; GRAPH-NEXT:   updates [AANoSync] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nosync
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAIsDead] for CtxI '  %2 = load i32, i32* %0, align 4' at position {flt: [@-1]} with state assumed-live
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAValueSimplify] for CtxI '  %2 = load i32, i32* %0, align 4' at position {flt: [@-1]} with state simplified
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAValueConstantRange] for CtxI '  %2 = load i32, i32* %0, align 4' at position {flt: [@-1]} with state range(32)<full-set / full-set>
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %2 = load i32, i32* %0, align 4' at position {flt: [@-1]} with state set-state(< {full-set} >)
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAIsDead] for CtxI '  %3 = icmp eq i32 %2, 0' at position {flt: [@-1]} with state assumed-live
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAIsDead] for CtxI '  br i1 %3, label %4, label %7' at position {flt: [@-1]} with state assumed-live
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoFree] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state nofree
+; GRAPH-NEXT:   updates [AANoFree] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state nofree
+; GRAPH-NEXT:   updates [AANoFree] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state nofree
+; GRAPH-NEXT:   updates [AANoFree] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nofree
+; GRAPH-NEXT:   updates [AANoFree] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nofree
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoReturn] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state may-return
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoRecurse] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state may-recurse
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAMemoryBehavior] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state readonly
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state readonly
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state readonly
+; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state readonly
+; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state readonly
+; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state readonly
+; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state readonly
+; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state readonly
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state readonly
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAMemoryLocation] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state memory:argument
+; GRAPH-NEXT:   updates [AAMemoryLocation] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state memory:argument
+; GRAPH-NEXT:   updates [AAMemoryLocation] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state memory:argument
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAHeapToStack] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state [H2S] Mallocs: 0
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAIsDead] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state assumed-live
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAValueSimplify] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state simplified
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAAlign] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state align<0-16>
+; GRAPH-NEXT:   updates [AAAlign] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state align<1-16>
+; GRAPH-NEXT:   updates [AAAlign] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state align<1-16>
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANonNull] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
+; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state nonnull
+; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state nonnull
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoAlias] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state may-alias
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AADereferenceable] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state unknown-dereferenceable
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAIsDead] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed-live
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoUndef] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state may-undef-or-poison
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANonNull] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state nonnull
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoAlias] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state may-alias
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AADereferenceable] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state dereferenceable<4-4>
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AADereferenceable] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state unknown-dereferenceable
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANonNull] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state nonnull
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAAlign] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state align<16-16>
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAAlign] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state align<16-16>
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAMemoryBehavior] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state readonly
+; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state readonly
+; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state readonly
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoFree] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state nofree
+; GRAPH-NEXT:   updates [AANoFree] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state nofree
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAPrivatizablePtr] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state [no-priv]
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAIsDead] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state assumed-live
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoUnwind] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nounwind
+; GRAPH-NEXT:   updates [AAIsDead] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state assumed-live
+; GRAPH-NEXT:   updates [AAIsDead] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state assumed-live
+; GRAPH-NEXT:   updates [AANoUnwind] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state nounwind
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAMemoryBehavior] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state readonly
+; GRAPH-NEXT:   updates [AAIsDead] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state assumed-live
+; GRAPH-NEXT:   updates [AAMemoryBehavior] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state readonly
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAIsDead] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state assumed-live
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAValueSimplify] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state simplified
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoUndef] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state may-undef-or-poison
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoCapture] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, i32* %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoAlias] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state may-alias
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAMemoryBehavior] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state readonly
+; GRAPH-NEXT:   updates [AAMemoryLocation] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state memory:argument
+; GRAPH-NEXT:   updates [AAMemoryLocation] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state memory:argument
+; GRAPH-NEXT:   updates [AAMemoryLocation] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state memory:argument
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoFree] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state nofree
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAValueConstantRange] for CtxI '  %3 = icmp eq i32 %2, 0' at position {flt: [@-1]} with state range(1)<full-set / full-set>
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAValueConstantRange] for CtxI <<null inst>> at position {flt: [@-1]} with state range(32)<[0,1) / [0,1)>
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %3 = icmp eq i32 %2, 0' at position {flt: [@-1]} with state set-state(< {full-set} >)
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoReturn] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state may-return
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoAlias] for CtxI '  %5 = getelementptr inbounds i32, i32* %0, i64 4' at position {flt: [@-1]} with state may-alias
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAValueSimplify] for CtxI '  %5 = getelementptr inbounds i32, i32* %0, i64 4' at position {flt: [@-1]} with state simplified
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoUndef] for CtxI '  %5 = getelementptr inbounds i32, i32* %0, i64 4' at position {flt: [@-1]} with state may-undef-or-poison
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAValueSimplify] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state simplified
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAAlign] for CtxI '  %5 = getelementptr inbounds i32, i32* %0, i64 4' at position {flt: [@-1]} with state align<16-16>
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANonNull] for CtxI '  %5 = getelementptr inbounds i32, i32* %0, i64 4' at position {flt: [@-1]} with state nonnull
+; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %5 = getelementptr inbounds i32, i32* %0, i64 4' at position {flt: [@-1]} with state nonnull
+; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state nonnull
+; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
+; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAIsDead] for CtxI '  ret i32* %.0' at position {flt: [@-1]} with state assumed-live
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAIsDead] for CtxI '  br label %8' at position {flt: [@-1]} with state assumed-live
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAIsDead] for CtxI '  %5 = getelementptr inbounds i32, i32* %0, i64 4' at position {flt: [@-1]} with state assumed-live
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAWillReturn] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state may-noreturn
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoRecurse] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state may-recurse
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoSync] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nosync
+; GRAPH-NEXT:   updates [AANoSync] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state nosync
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANoFree] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state nofree
+; GRAPH-NEXT:   updates [AANoFree] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state nofree
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAMemoryLocation] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs: [@-1]} with state memory:argument
+; GRAPH-NEXT:   updates [AAMemoryLocation] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state memory:argument
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAIsDead] for CtxI '  br label %8' at position {flt: [@-1]} with state assumed-live
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAAlign] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state align<1-16>
+; GRAPH-NEXT:   updates [AAAlign] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state align<0-16>
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AADereferenceable] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state unknown-dereferenceable
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AANonNull] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_ret: [@-1]} with state nonnull
+; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %2 = load i32, i32* %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AADereferenceable] for CtxI '  %5 = getelementptr inbounds i32, i32* %0, i64 4' at position {flt: [@-1]} with state unknown-dereferenceable
+
 ; GRAPH-NOT: update
 
 ;
