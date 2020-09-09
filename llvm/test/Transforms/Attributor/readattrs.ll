@@ -449,3 +449,21 @@ define void @ptr_use_chain(i8* %ptr) {
   call void @escape_i8(i8* %abc9)
   ret void
 }
+
+@constant_mem = external dso_local constant i32, align 4
+define i32 @read_only_constant_mem() {
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@read_only_constant_mem
+; IS__TUNIT____-SAME: () [[ATTR1]] {
+; IS__TUNIT____-NEXT:    [[L:%.*]] = load i32, i32* @constant_mem, align 4
+; IS__TUNIT____-NEXT:    ret i32 [[L]]
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@read_only_constant_mem
+; IS__CGSCC____-SAME: () [[ATTR1]] {
+; IS__CGSCC____-NEXT:    [[L:%.*]] = load i32, i32* @constant_mem, align 4
+; IS__CGSCC____-NEXT:    ret i32 [[L]]
+;
+  %l = load i32, i32* @constant_mem
+  ret i32 %l
+}

@@ -8,7 +8,7 @@
 @G = constant %T { i32 0, i32 0, i32 17, i32 25 }
 
 define internal i32 @test(%T* %p) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readonly willreturn
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test
 ; IS__TUNIT____-SAME: () [[ATTR0:#.*]] {
 ; IS__TUNIT____-NEXT:  entry:
@@ -19,7 +19,7 @@ define internal i32 @test(%T* %p) {
 ; IS__TUNIT____-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
 ; IS__TUNIT____-NEXT:    ret i32 [[V]]
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test
 ; IS__CGSCC____-SAME: () [[ATTR0:#.*]] {
 ; IS__CGSCC____-NEXT:  entry:
@@ -40,14 +40,14 @@ entry:
 }
 
 define i32 @caller() {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readonly willreturn
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@caller
 ; IS__TUNIT____-SAME: () [[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    [[V:%.*]] = call i32 @test() [[ATTR0]]
 ; IS__TUNIT____-NEXT:    ret i32 [[V]]
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
 ; IS__CGSCC____-SAME: () [[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
