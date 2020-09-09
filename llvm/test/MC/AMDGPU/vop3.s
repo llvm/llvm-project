@@ -289,17 +289,17 @@ v_mac_f32_e64 v0, -v1, |v2|
 v_mac_f16_e64 v0, 0.5, flat_scratch_lo
 // VI: v_mac_f16_e64 v0, 0.5, flat_scratch_lo ; encoding: [0x00,0x00,0x23,0xd1,0xf0,0xcc,0x00,0x00]
 // NOCI: error: instruction not supported on this GPU
-// NOSI: error: not a valid operand.
+// NOSI: error: register not available on this GPU
 
 v_mac_f16_e64 v0, -4.0, flat_scratch_lo
 // VI: v_mac_f16_e64 v0, -4.0, flat_scratch_lo ; encoding: [0x00,0x00,0x23,0xd1,0xf7,0xcc,0x00,0x00]
 // NOCI: error: instruction not supported on this GPU
-// NOSI: error: not a valid operand.
+// NOSI: error: register not available on this GPU
 
 v_mac_f16_e64 v0, flat_scratch_lo, -4.0
 // VI: v_mac_f16_e64 v0, flat_scratch_lo, -4.0 ; encoding: [0x00,0x00,0x23,0xd1,0x66,0xee,0x01,0x00]
 // NOCI: error: instruction not supported on this GPU
-// NOSI: error: not a valid operand.
+// NOSI: error: register not available on this GPU
 
 v_add_u32 v84, vcc, v13, s31 clamp
 // NOSICI: error: invalid operand for instruction
