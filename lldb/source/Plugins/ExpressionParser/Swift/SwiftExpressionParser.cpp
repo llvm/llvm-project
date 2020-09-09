@@ -506,9 +506,8 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   auto *swift_runtime =
       SwiftLanguageRuntime::Get(stack_frame_sp->GetThread()->GetProcess());
   auto *stack_frame = stack_frame_sp.get();
-  imported_self_type =
-      swift_runtime->DoArchetypeBindingForType(*stack_frame,
-                                               imported_self_type);
+  imported_self_type = swift_runtime->BindGenericTypeParameters(
+      *stack_frame, imported_self_type);
 
   // This might be a referenced type, in which case we really want to
   // extend the referent:
@@ -636,7 +635,7 @@ static void AddVariableInfo(
   // Resolve all archetypes in the variable type.
   if (stack_frame_sp)
     if (language_runtime)
-      target_type = language_runtime->DoArchetypeBindingForType(*stack_frame_sp,
+      target_type = language_runtime->BindGenericTypeParameters(*stack_frame_sp,
                                                                 target_type);
 
   // If we couldn't fully realize the type, then we aren't going
@@ -970,7 +969,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
           auto *swift_runtime = SwiftLanguageRuntime::Get(
               stack_frame_sp->GetThread()->GetProcess());
           if (swift_runtime) {
-            actual_type = swift_runtime->DoArchetypeBindingForType(
+            actual_type = swift_runtime->BindGenericTypeParameters(
                 *stack_frame_sp, actual_type);
           }
         }
