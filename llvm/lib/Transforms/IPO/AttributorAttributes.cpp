@@ -4774,10 +4774,10 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
     if (Op0IsNull && Op1IsNull) {
       Value *NewVal = ConstantInt::get(
           Type::getInt1Ty(Ctx), ICmp->getPredicate() == CmpInst::ICMP_EQ);
-      SimplifiedAssociatedValue = NewVal;
-      indicateOptimisticFixpoint();
       assert(!SimplifiedAssociatedValue.hasValue() &&
              "Did not expect non-fixed value for constant comparison");
+      SimplifiedAssociatedValue = NewVal;
+      indicateOptimisticFixpoint();
       Changed = ChangeStatus::CHANGED;
       return true;
     }
