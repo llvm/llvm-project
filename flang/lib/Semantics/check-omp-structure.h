@@ -150,6 +150,7 @@ public:
   void Enter(const parser::OmpClause::IsDevicePtr &);
 
   void Enter(const parser::OmpAlignedClause &);
+  void Enter(const parser::OmpAllocateClause &);
   void Enter(const parser::OmpDefaultClause &);
   void Enter(const parser::OmpDefaultmapClause &);
   void Enter(const parser::OmpDependClause &);
