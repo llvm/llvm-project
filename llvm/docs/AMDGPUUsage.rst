@@ -266,9 +266,7 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                               .. TODO
                                                                                  Add product
                                                                                  names.
-     ``gfx1031``                 ``amdgcn``   dGPU  - xnack                   *TBA*
-                                                      [off]
-                                                    - wavefrontsize64
+     ``gfx1031``                 ``amdgcn``   dGPU  - wavefrontsize64         *TBA*
                                                       [off]
                                                     - cumode
                                                       [off]
