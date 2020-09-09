@@ -354,17 +354,18 @@ struct Allocator {
 
   // -------------------- Helper methods. -------------------------
   uptr ComputeRZLog(uptr user_requested_size) {
-    u32 rz_log =
-      user_requested_size <= 64        - 16   ? 0 :
-      user_requested_size <= 128       - 32   ? 1 :
-      user_requested_size <= 512       - 64   ? 2 :
-      user_requested_size <= 4096      - 128  ? 3 :
-      user_requested_size <= (1 << 14) - 256  ? 4 :
-      user_requested_size <= (1 << 15) - 512  ? 5 :
-      user_requested_size <= (1 << 16) - 1024 ? 6 : 7;
-    u32 min_rz = atomic_load(&min_redzone, memory_order_acquire);
-    u32 max_rz = atomic_load(&max_redzone, memory_order_acquire);
-    return Min(Max(rz_log, RZSize2Log(min_rz)), RZSize2Log(max_rz));
+    u32 rz_log = user_requested_size <= 64 - 16            ? 0
+                 : user_requested_size <= 128 - 32         ? 1
+                 : user_requested_size <= 512 - 64         ? 2
+                 : user_requested_size <= 4096 - 128       ? 3
+                 : user_requested_size <= (1 << 14) - 256  ? 4
+                 : user_requested_size <= (1 << 15) - 512  ? 5
+                 : user_requested_size <= (1 << 16) - 1024 ? 6
+                                                           : 7;
+    u32 hdr_log = RZSize2Log(RoundUpToPowerOfTwo(sizeof(ChunkHeader)));
+    u32 min_log = RZSize2Log(atomic_load(&min_redzone, memory_order_acquire));
+    u32 max_log = RZSize2Log(atomic_load(&max_redzone, memory_order_acquire));
+    return Min(Max(rz_log, Max(min_log, hdr_log)), Max(max_log, hdr_log));
   }
 
   static uptr ComputeUserRequestedAlignmentLog(uptr user_requested_alignment) {

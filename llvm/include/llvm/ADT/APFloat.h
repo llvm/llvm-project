@@ -249,7 +249,7 @@ public:
   /// \name Constructors
   /// @{
 
-  IEEEFloat(const fltSemantics &); // Default construct to 0.0
+  IEEEFloat(const fltSemantics &); // Default construct to +0.0
   IEEEFloat(const fltSemantics &, integerPart);
   IEEEFloat(const fltSemantics &, uninitializedTag);
   IEEEFloat(const fltSemantics &, const APInt &);
@@ -539,6 +539,9 @@ private:
                                  roundingMode) const;
   opStatus roundSignificandWithExponent(const integerPart *, unsigned int, int,
                                         roundingMode);
+  ExponentType exponentNaN() const;
+  ExponentType exponentInf() const;
+  ExponentType exponentZero() const;
 
   /// @}
 

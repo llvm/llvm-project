@@ -198,7 +198,7 @@ static LogicalResult getBasePtr(ConversionPatternRewriter &rewriter,
   Value base;
   if (failed(getBase(rewriter, loc, memref, memRefType, base)))
     return failure();
-  auto pType = MemRefDescriptor(memref).getElementType();
+  auto pType = MemRefDescriptor(memref).getElementPtrType();
   ptr = rewriter.create<LLVM::GEPOp>(loc, pType, base);
   return success();
 }
@@ -225,7 +225,7 @@ static LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter,
   Value base;
   if (failed(getBase(rewriter, loc, memref, memRefType, base)))
     return failure();
-  auto pType = MemRefDescriptor(memref).getElementType();
+  auto pType = MemRefDescriptor(memref).getElementPtrType();
   auto ptrsType = LLVM::LLVMType::getVectorTy(pType, vType.getDimSize(0));
   ptrs = rewriter.create<LLVM::GEPOp>(loc, ptrsType, base, indices);
   return success();
@@ -1151,7 +1151,7 @@ public:
 
     // Create descriptor.
     auto desc = MemRefDescriptor::undef(rewriter, loc, llvmTargetDescriptorTy);
-    Type llvmTargetElementTy = desc.getElementType();
+    Type llvmTargetElementTy = desc.getElementPtrType();
     // Set allocated ptr.
     Value allocated = sourceMemRef.allocatedPtr(rewriter, loc);
     allocated =
