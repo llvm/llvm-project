@@ -8,7 +8,7 @@ namespace llvm {
 	namespace details {
 		void extensions_anchor() {
 #define HANDLE_EXTENSION(Ext)                                                  \
-			static auto Ext = get##Ext##PluginInfo();
+			get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
 		}
 	}
