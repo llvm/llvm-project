@@ -247,7 +247,7 @@ public:
 
   void ReleaseAssociatedRemoteASTContext(swift::ASTContext *ctx) {}
 
-  CompilerType DoArchetypeBindingForType(StackFrame &stack_frame,
+  CompilerType BindGenericTypeParameters(StackFrame &stack_frame,
                                          CompilerType base_type) {
     STUB_LOG();
     return {};
@@ -757,7 +757,7 @@ static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntimeImpl *runtime,
       llvm::dyn_cast_or_null<TypeSystemSwift>(static_type.GetTypeSystem());
   if (swift_ast_ctx) {
     SwiftASTContextLock lock(GetSwiftExeCtx(object));
-    static_type = runtime->DoArchetypeBindingForType(*frame_sp, static_type);
+    static_type = runtime->BindGenericTypeParameters(*frame_sp, static_type);
   }
 
   auto stride = 0;
@@ -2097,9 +2097,9 @@ void SwiftLanguageRuntime::ReleaseAssociatedRemoteASTContext(
 }
 
 CompilerType
-SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
+SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
                                                 CompilerType base_type) {
-  FORWARD(DoArchetypeBindingForType, stack_frame, base_type);
+  FORWARD(BindGenericTypeParameters, stack_frame, base_type);
 }
 
 CompilerType

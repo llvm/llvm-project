@@ -99,11 +99,13 @@ public:
                                                    ConstString member_name,
                                                    Status *error);
 
-  CompilerType DoArchetypeBindingForTypeRef(StackFrame &stack_frame,
-                                            TypeSystemSwiftTypeRef &ts,
-                                            ConstString mangled_name);
+  /// Like \p BindGenericTypeParameters but for TypeSystemSwiftTypeRef.
+  CompilerType BindGenericTypeParameters(StackFrame &stack_frame,
+                                         TypeSystemSwiftTypeRef &ts,
+                                         ConstString mangled_name);
 
-  CompilerType DoArchetypeBindingForType(StackFrame &stack_frame,
+  /// \see SwiftLanguageRuntime::BindGenericTypeParameters().
+  CompilerType BindGenericTypeParameters(StackFrame &stack_frame,
                                          CompilerType base_type);
 
   CompilerType GetConcreteType(ExecutionContextScope *exe_scope,
