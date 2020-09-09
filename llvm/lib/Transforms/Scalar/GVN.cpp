@@ -410,9 +410,12 @@ uint32_t GVN::ValueTable::lookupOrAddCall(CallInst *C) {
     }
 
     if (local_dep.isDef()) {
-      CallInst* local_cdep = cast<CallInst>(local_dep.getInst());
+      // For masked load/store intrinsics, the local_dep may actully be
+      // a normal load or store instruction.
+      CallInst *local_cdep = dyn_cast<CallInst>(local_dep.getInst());
 
-      if (local_cdep->getNumArgOperands() != C->getNumArgOperands()) {
+      if (!local_cdep ||
+          local_cdep->getNumArgOperands() != C->getNumArgOperands()) {
         valueNumbering[C] = nextValueNumber;
         return nextValueNumber++;
       }
