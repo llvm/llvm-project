@@ -327,8 +327,8 @@ v_sin_f32 v0, -[ttmp0]
 
 s1000=1
 v_sin_f32 v0, -s1000
-// NOVI: error: not a valid operand.
+// NOVI: error: register index is out of range
 
 xnack_mask_lo=1
 v_sin_f32 v0, xnack_mask_lo
-// NOVI: error: not a valid operand.
+// NOVI: error: register not available on this GPU

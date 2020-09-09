@@ -65,8 +65,8 @@ s_and_b32 s2, 0xFFFF0000, -65536
 
 s_and_b64 null, s[4:5], s[6:7]
 // GFX10: s_and_b64 null, s[4:5], s[6:7] ; encoding: [0x04,0x06,0xfd,0x87]
-// NOSICIVI: error: not a valid operand.
-// NOGFX9: error: not a valid operand.
+// NOSICIVI: error: 'null' operand is not supported on this GPU
+// NOGFX9: error: 'null' operand is not supported on this GPU
 
 s_and_b64 s[2:3], s[4:5], s[6:7]
 // SICI: s_and_b64 s[2:3], s[4:5], s[6:7] ; encoding: [0x04,0x06,0x82,0x87]
@@ -235,7 +235,7 @@ s_absdiff_i32 s2, s4, s6
 
 s_add_u32 s101, s102, s103
 // SICI: s_add_u32 s101, s102, s103 ; encoding: [0x66,0x67,0x65,0x80]
-// NOGFX89: error: not a valid operand
+// NOGFX89: error: register not available on this GPU
 // GFX10: s_add_u32 s101, s102, s103 ; encoding: [0x66,0x67,0x65,0x80]
 
 s_lshl1_add_u32 s5, s1, s2

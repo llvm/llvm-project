@@ -289,7 +289,7 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], format:[BUF_DATA_FORMAT_32]
 
 // Invalid soffset
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s[255] format:[BUF_NUM_FORMAT_FLOAT]
-// GCN-ERR: error: not a valid operand.
+// GCN-ERR: error: register index is out of range
 
 // Both legacy and symbolic formats are specified
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:1 s0 format:[BUF_NUM_FORMAT_FLOAT]
