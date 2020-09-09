@@ -56,7 +56,10 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   # We need a pre-built/installed version of LLVM.
   find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_PATH}")
-  list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
+  # If the user specifies a relative path to LLVM_DIR, the calls to include
+  # LLVM modules fail. Append the absolute path to LLVM_DIR instead.
+  get_filename_component(LLVM_DIR_ABSOLUTE ${LLVM_DIR} REALPATH)
+  list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR_ABSOLUTE})
 
   # If LLVM links to zlib we need the imported targets so we can too.
   if(LLVM_ENABLE_ZLIB)
@@ -78,7 +81,10 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     find_package(MLIR REQUIRED CONFIG)
     # Use SYSTEM for the same reasons as for LLVM includes
     include_directories(SYSTEM ${MLIR_INCLUDE_DIRS})
-    list(APPEND CMAKE_MODULE_PATH ${MLIR_DIR})
+    # If the user specifies a relative path to MLIR_DIR, the calls to include
+    # MLIR modules fail. Append the absolute path to MLIR_DIR instead.
+    get_filename_component(MLIR_DIR_ABSOLUTE ${MLIR_DIR} REALPATH)
+    list(APPEND CMAKE_MODULE_PATH ${MLIR_DIR_ABSOLUTE})
     include(AddMLIR)
     find_program(MLIR_TABLEGEN_EXE "mlir-tblgen" ${LLVM_TOOLS_BINARY_DIR}
       NO_DEFAULT_PATH)
