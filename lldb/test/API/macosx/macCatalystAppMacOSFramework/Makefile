@@ -1,8 +1,7 @@
 C_SOURCES := main.c
 LD_EXTRAS := -L. -lfoo
 
-override TRIPLE := $(ARCH)-apple-ios13.0-macabi
-CFLAGS_EXTRAS := -target $(TRIPLE)
+CFLAGS_EXTRAS := -target $(ARCH)-apple-ios13.0-macabi
 
 # FIXME: rdar://problem/54986190
 override CC=xcrun clang
