@@ -9,16 +9,16 @@ s_mov_b32 s1, v0
 // GCN: error: invalid operand for instruction
 
 s_mov_b32 s[1:2], s0
-// GCN: error: not a valid operand
+// GCN: error: invalid register alignment
 
 s_mov_b32 s0, s[1:2]
-// GCN: error: not a valid operand
+// GCN: error: invalid register alignment
 
 s_mov_b32 s220, s0
-// GCN: error: not a valid operand
+// GCN: error: register index is out of range
 
 s_mov_b32 s0, s220
-// GCN: error: not a valid operand
+// GCN: error: register index is out of range
 
 s_mov_b64 s1, s[0:1]
 // GCN: error: invalid operand for instruction
@@ -32,13 +32,10 @@ s_mov_b32 s
 // Out of range register
 
 s_mov_b32 s102, 1
-// VI: error: not a valid operand
-// SI: s_mov_b32 s102, 1
+// VI: error: register not available on this GPU
 
 s_mov_b32 s103, 1
-// VI: error: not a valid operand
-// SI: s_mov_b32 s103, 1
+// VI: error: register not available on this GPU
 
 s_mov_b64 s[102:103], -1
-// VI: error: not a valid operand
-// SI: s_mov_b64 s[102:103], -1
+// VI: error: register not available on this GPU
