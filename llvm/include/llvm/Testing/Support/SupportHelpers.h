@@ -152,6 +152,9 @@ public:
   /// The path to the temporary directory.
   StringRef path() const { return Path; }
 
+  /// The null-terminated C string pointing to the path.
+  const char *c_str() { return Path.c_str(); }
+
   /// Creates a new path by appending the argument to the path of the managed
   /// directory using the native path separator.
   SmallString<128> path(StringRef component) const {
