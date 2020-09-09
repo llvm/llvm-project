@@ -198,7 +198,7 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
 ; GFX9-NEXT:    v_writelane_b32 v43, s34, 0
 ; GFX9-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-NEXT:    s_add_u32 s4, s4, foo@gotpcrel32@lo+4
-; GFX9-NEXT:    s_addc_u32 s5, s5, foo@gotpcrel32@hi+4
+; GFX9-NEXT:    s_addc_u32 s5, s5, foo@gotpcrel32@hi+12
 ; GFX9-NEXT:    v_writelane_b32 v43, s35, 1
 ; GFX9-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v40, v1
