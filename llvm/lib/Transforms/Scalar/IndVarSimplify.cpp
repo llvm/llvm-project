@@ -2329,36 +2329,6 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   return MadeAnyChanges;
 }
 
-/// Return a symbolic upper bound for the backedge taken count of the loop.
-/// This is more general than getConstantMaxBackedgeTakenCount as it returns
-/// an arbitrary expression as opposed to only constants.
-/// TODO: Move into the ScalarEvolution class.
-static const SCEV* getMaxBackedgeTakenCount(ScalarEvolution &SE,
-                                            DominatorTree &DT, Loop *L) {
-  SmallVector<BasicBlock*, 16> ExitingBlocks;
-  L->getExitingBlocks(ExitingBlocks);
-
-  // Form an expression for the maximum exit count possible for this loop. We
-  // merge the max and exact information to approximate a version of
-  // getConstantMaxBackedgeTakenCount which isn't restricted to just constants.
-  SmallVector<const SCEV*, 4> ExitCounts;
-  for (BasicBlock *ExitingBB : ExitingBlocks) {
-    const SCEV *ExitCount = SE.getExitCount(L, ExitingBB);
-    if (isa<SCEVCouldNotCompute>(ExitCount))
-      ExitCount = SE.getExitCount(L, ExitingBB,
-                                  ScalarEvolution::ConstantMaximum);
-    if (!isa<SCEVCouldNotCompute>(ExitCount)) {
-      assert(DT.dominates(ExitingBB, L->getLoopLatch()) &&
-             "We should only have known counts for exiting blocks that "
-             "dominate latch!");
-      ExitCounts.push_back(ExitCount);
-    }
-  }
-  if (ExitCounts.empty())
-    return SE.getCouldNotCompute();
-  return SE.getUMinFromMismatchedTypes(ExitCounts);
-}
-
 bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
   SmallVector<BasicBlock*, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
@@ -2391,7 +2361,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     return false;
 
   // Get a symbolic upper bound on the loop backedge taken count.
-  const SCEV *MaxExitCount = getMaxBackedgeTakenCount(*SE, *DT, L);
+  const SCEV *MaxExitCount = SE->computeMaxBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(MaxExitCount))
     return false;
 
