@@ -133,8 +133,10 @@ struct AAIsDead;
 
 class Function;
 
-/// Simple enum classes that forces properties to be spelled out explicitly.
-///
+/// The value passed to the line option that defines the maximal initialization
+/// chain length.
+extern unsigned MaxInitializationChainLength;
+
 ///{
 enum class ChangeStatus {
   CHANGED,
@@ -1071,6 +1073,9 @@ struct Attributor {
       Invalidate |= FnScope->hasFnAttribute(Attribute::Naked) ||
                     FnScope->hasFnAttribute(Attribute::OptimizeNone);
 
+    // Avoid too many nested initializations to prevent a stack overflow.
+    Invalidate |= InitializationChainLength > MaxInitializationChainLength;
+
     // Bootstrap the new attribute with an initial update to propagate
     // information, e.g., function -> call site. If it is not on a given
     // Allowed we will not perform updates at all.
@@ -1081,7 +1086,9 @@ struct Attributor {
 
     {
       TimeTraceScope TimeScope(AA.getName() + "::initialize");
+      ++InitializationChainLength;
       AA.initialize(*this);
+      --InitializationChainLength;
     }
 
     // Initialize and update is allowed for code outside of the current function
@@ -1614,6 +1621,9 @@ private:
     MANIFEST,
     CLEANUP,
   } Phase = AttributorPhase::SEEDING;
+
+  /// The current initialization chain length. Tracked to avoid stack overflows.
+  unsigned InitializationChainLength = 0;
 
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///

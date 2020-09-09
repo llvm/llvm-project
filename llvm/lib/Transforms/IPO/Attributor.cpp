@@ -73,6 +73,14 @@ static cl::opt<unsigned>
     MaxFixpointIterations("attributor-max-iterations", cl::Hidden,
                           cl::desc("Maximal number of fixpoint iterations."),
                           cl::init(32));
+
+static cl::opt<unsigned, true> MaxInitializationChainLengthX(
+    "attributor-max-initialization-chain-length", cl::Hidden,
+    cl::desc(
+        "Maximal number of chained initializations (to avoid stack overflows)"),
+    cl::location(MaxInitializationChainLength), cl::init(1024));
+unsigned llvm::MaxInitializationChainLength;
+
 static cl::opt<bool> VerifyMaxFixpointIterations(
     "attributor-max-iterations-verify", cl::Hidden,
     cl::desc("Verify that max-iterations is a tight bound for a fixpoint"),
