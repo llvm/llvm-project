@@ -163,7 +163,7 @@ def FeatureSGPRInitBug : SubtargetFeature<"sgpr-init-bug",
 def FeatureLdsMisalignedBug : SubtargetFeature<"lds-misaligned-bug",
   "LDSMisalignedBug",
   "true",
-  "Some GFX10 bug with misaligned multi-dword LDS access in WGP mode"
+  "Some GFX10 bug with multi-dword LDS and flat access that is not naturally aligned in WGP mode"
 >;
 
 def FeatureMFMAInlineLiteralBug : SubtargetFeature<"mfma-inline-literal-bug",
@@ -929,6 +929,7 @@ def FeatureISAVersion10_1_1 : FeatureSet<
      FeatureSMemTimeInst,
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
+     FeatureLdsMisalignedBug,
      FeatureDoesNotSupportXNACK,
      FeatureCodeObjectV3])>;
 
