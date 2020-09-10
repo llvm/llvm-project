@@ -8,6 +8,11 @@ def matvec(A: f32(M, N), y: f32(N)) -> (x: f32(M)) {
   x(m) = std_addf<n>(std_mulf(A(m, n), y(n)));
 }
 
+ods_def<VecmatOp>:
+def vecmat(y: f32(M), A: f32(M, N)) -> (x: f32(N)) {
+  x(n) = std_addf<m>(std_mulf(y(m), A(m, n)));
+}
+
 ods_def<DotOp>:
 def dot(A: f32(M), B: f32(M)) -> (C: f32()) {
   C() = std_addf<m>(std_mulf(A(m), B(m)));
