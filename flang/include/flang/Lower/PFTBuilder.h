@@ -34,9 +34,7 @@ class Scope;
 } // namespace semantics
 namespace lower {
 
-/// Disambiguate between variables that are declared inside a COMMON block and
-/// variables that slide into a COMMON block by EQUIVALENCE.
-bool declaredInCommonBlock(const semantics::Symbol &sym);
+bool definedInCommonBlock(const semantics::Symbol &sym);
 
 namespace pft {
 
@@ -117,8 +115,8 @@ using ActionStmts = std::tuple<
     parser::ComputedGotoStmt, parser::ForallStmt, parser::ArithmeticIfStmt,
     parser::AssignStmt, parser::AssignedGotoStmt, parser::PauseStmt>;
 
-using OtherStmts = std::tuple<parser::FormatStmt, parser::EntryStmt,
-                              parser::NamelistStmt>;
+using OtherStmts =
+    std::tuple<parser::FormatStmt, parser::EntryStmt, parser::NamelistStmt>;
 
 using ConstructStmts = std::tuple<
     parser::AssociateStmt, parser::EndAssociateStmt, parser::BlockStmt,
@@ -383,6 +381,9 @@ struct Variable {
     Nominal(const semantics::Symbol *symbol, int depth, bool global)
         : symbol{symbol}, depth{depth}, global{global} {}
     const semantics::Symbol *symbol{};
+
+    bool isGlobal() const { return global; }
+
     int depth{};
     bool global{};
     bool heapAlloc{}; // variable needs deallocation on exit
@@ -395,31 +396,30 @@ struct Variable {
   using Interval = std::tuple<std::size_t, std::size_t>;
 
   /// An interval of storage is a contiguous block of memory to be allocated or
-  /// mapped onto another variable. Aliaser variables will be pointers into
+  /// mapped onto another variable. Aliasing variables will be pointers into
   /// interval stores and may overlap each other.
   struct IntervalStore {
-    IntervalStore(Interval &&interval, bool global)
-        : interval{std::move(interval)}, global{global} {}
-    IntervalStore(Interval &&interval, bool global,
-                  const semantics::Symbol *obj, std::size_t offset)
-        : interval{std::move(interval)}, global{global}, obj{obj},
-          offset{offset} {}
+    IntervalStore(Interval &&interval) : interval{std::move(interval)} {}
+    IntervalStore(Interval &&interval,
+                  const llvm::SmallVector<const semantics::Symbol *, 8> &vars)
+        : interval{std::move(interval)}, vars{vars} {}
+
+    bool isGlobal() const { return vars.size() > 0; }
+
     Interval interval{};
-    bool global{};
-    const semantics::Symbol *obj{};
-    std::size_t offset{}; // offset of obj relative to interval
+    llvm::SmallVector<const semantics::Symbol *, 8> vars{};
   };
 
   explicit Variable(const Fortran::semantics::Symbol &sym, bool global = false,
                     int depth = 0)
       : var{Nominal(&sym, depth, global)} {}
-  explicit Variable(Interval &&interval, bool global = false)
-      : var{IntervalStore(std::move(interval), global)} {}
+  explicit Variable(Interval &&interval)
+      : var{IntervalStore(std::move(interval))} {}
   explicit Variable(IntervalStore &&istore) : var{std::move(istore)} {}
 
   /// Return the front-end symbol for a nominal variable.
   const Fortran::semantics::Symbol &getSymbol() const {
-    assert(hasSymbol());
+    assert(hasSymbol() && "variable is not nominal");
     return *std::get<Nominal>(var).symbol;
   }
 
@@ -445,7 +445,7 @@ struct Variable {
 
   /// Is this variable a global?
   bool isGlobal() const {
-    return std::visit([](const auto &x) { return x.global; }, var);
+    return std::visit([](const auto &x) { return x.isGlobal(); }, var);
   }
 
   bool isHeapAlloc() const {

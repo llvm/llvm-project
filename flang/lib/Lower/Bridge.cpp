@@ -385,6 +385,22 @@ public:
                                       bridge.getDefaultKinds(), tc);
   }
 
+  // FIXME: Should we fold the CHARACTER fixup into genType itself?
+  mlir::Type genTypeWithCharFixup(Fortran::lower::SymbolRef sym) {
+    auto symTy = genType(sym);
+    if (symTy.isa<fir::CharacterType>()) {
+      auto paramVal = sym->GetType()->characterTypeSpec().length();
+      auto expr = paramVal.GetExplicit();
+      assert(expr);
+      auto eval = Fortran::evaluate::AsGenericExpr(std::move(*expr));
+      auto lenVal = Fortran::evaluate::ToInt64(eval);
+      assert(lenVal);
+      fir::SequenceType::Shape len = {*lenVal};
+      symTy = fir::SequenceType::get(len, symTy);
+    }
+    return symTy;
+  }
+
   mlir::Location getCurrentLocation() override final { return toLocation(); }
 
   /// Generate a dummy location.
@@ -1743,91 +1759,8 @@ private:
       auto addrOf = builder->create<fir::AddrOfOp>(loc, global.resultType(),
                                                    global.getSymbol());
       mapSymbolAttributes(var, storeMap, addrOf);
-    } else if (const auto *details =
-                   sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
-      //===----------------------------------------------------------------===//
-      // COMMON blocks
-      //===----------------------------------------------------------------===//
-      const int64_t sz = static_cast<int64_t>(sym.size());
-      bool hasInit = [&]() {
-        for (const auto &obj : details->objects())
-          if (const auto *objDet =
-                  obj->detailsIf<Fortran::semantics::ObjectEntityDetails>())
-            if (objDet->init())
-              return true;
-        return false;
-      }();
-      if (!sym.name().size() || !hasInit) {
-        // anonymous COMMON must always be initialized to zero
-        // a named COMMON sans initializers is also initialized to zero
-        auto linkage = builder->createCommonLinkage();
-        fir::SequenceType::Shape shape = {sz};
-        auto i8Ty = builder->getIntegerType(8);
-        auto commonTy = fir::SequenceType::get(shape, i8Ty);
-        auto vecTy = mlir::VectorType::get(sz, i8Ty);
-        mlir::Attribute zero = builder->getIntegerAttr(i8Ty, 0);
-        auto init =
-            mlir::DenseElementsAttr::get(vecTy, llvm::makeArrayRef(zero));
-        global =
-            builder->createGlobal(loc, commonTy, globalName, linkage, init);
-      } else {
-        // FIXME? For now let the layout be determined by the target data
-        // layout. This may need to be revisited if the target data layout is
-        // insufficient to layout Fortran COMMON blocks.
-        // The target data layout is the better solution because it is selected
-        // by the instance of flang's chosen target rather than by properties of
-        // the build machine.
-        mlir::TupleType commonTy = [&]() {
-          llvm::SmallVector<mlir::Type, 8> members;
-          for (const auto &obj : details->objects()) {
-            auto memTy = genType(*obj);
-            if (memTy.isa<fir::CharacterType>()) {
-              auto paramVal = obj->GetType()->characterTypeSpec().length();
-              auto expr = paramVal.GetExplicit();
-              assert(expr);
-              auto eval = Fortran::evaluate::AsGenericExpr(std::move(*expr));
-              auto lenVal = Fortran::evaluate::ToInt64(eval);
-              assert(lenVal);
-              fir::SequenceType::Shape len;
-              len.push_back(*lenVal);
-              memTy = fir::SequenceType::get(len, memTy);
-            }
-            members.push_back(memTy);
-          }
-          return mlir::TupleType::get(members, builder->getContext());
-        }();
-        auto linkage = builder->createLinkOnceLinkage();
-        auto initFunc = [&](Fortran::lower::FirOpBuilder &builder) {
-          mlir::Value cb = builder.create<fir::UndefOp>(loc, commonTy);
-          unsigned offset = 0;
-          // Assume that the members of the COMMON block will appear in an order
-          // that is sorted by offset.
-          [[maybe_unused]] std::int64_t lastByteOff = -1;
-          LLVM_DEBUG(llvm::dbgs() << "block {\n");
-          for (const auto &obj : details->objects()) {
-            assert(lastByteOff < static_cast<std::int64_t>(obj->offset()));
-            lastByteOff = static_cast<std::int64_t>(obj->offset());
-            LLVM_DEBUG(llvm::dbgs() << "offset: " << obj->offset() << '\n');
-            if (const auto *objDet =
-                    obj->detailsIf<Fortran::semantics::ObjectEntityDetails>())
-              if (objDet->init()) {
-                auto initVal = genInitializerExprValue(objDet->init().value());
-                auto off = builder.createIntegerConstant(loc, idxTy, offset);
-                auto castVal = builder.createConvert(
-                    loc, commonTy.getType(offset++), fir::getBase(initVal));
-                cb = builder.create<fir::InsertValueOp>(loc, commonTy, cb,
-                                                        castVal, off);
-              }
-          }
-          LLVM_DEBUG(llvm::dbgs() << "}\n");
-          builder.create<fir::HasValueOp>(loc, cb);
-        };
-        global = builder->createGlobal(loc, commonTy, globalName,
-                                       /*isConstant=*/false, initFunc, linkage);
-      }
-      auto addrOf = builder->create<fir::AddrOfOp>(loc, global.resultType(),
-                                                   global.getSymbol());
-      addSymbol(sym, addrOf);
+    } else if (sym.has<Fortran::semantics::CommonBlockDetails>()) {
+      llvm_unreachable("COMMON symbol processed elsewhere");
     } else {
       TODO(); // Procedure pointer or something else
     }
@@ -1871,25 +1804,88 @@ private:
   void instantiateAggregateStore(
       const Fortran::lower::pft::Variable &var,
       llvm::DenseMap<std::size_t, mlir::Value> &storeMap) {
-    assert(var.isAggregateStore());
+    assert(var.isAggregateStore() && "not an interval");
     auto off = std::get<0>(var.getInterval());
     auto i8Ty = builder->getIntegerType(8);
     auto loc = toLocation();
     auto idxTy = builder->getIndexType();
     if (var.isGlobal()) {
+      //===----------------------------------------------------------------===//
+      // Aliased (EQUIVALENCE) variables with initializers
+      //===----------------------------------------------------------------===//
       auto &st = var.getAggregateStore();
-      // global address must already be in the map
-      auto addr = lookupSymbol(*st.obj);
-      assert(addr && "global variable must already be in map");
-      auto i8PtrTy = builder->getRefType(builder->getVarLenSeqTy(i8Ty));
-      auto i8Addr = builder->createConvert(loc, i8PtrTy, addr);
-      // adjust for displacement of the global variable relative to the
-      // aggregate interval
-      llvm::SmallVector<mlir::Value, 1> offs = {
-          builder->createIntegerConstant(loc, idxTy, off - st.offset)};
-      auto stAddr =
-          builder->create<fir::CoordinateOp>(loc, i8PtrTy, i8Addr, offs);
-      storeMap[off] = stAddr;
+      // The scope of this aggregate is this procedure.
+      auto aggName = mangleName(*st.vars[0]);
+      mlir::TupleType aggTy = [&]() {
+        llvm::SmallVector<mlir::Type, 8> members;
+        std::size_t counter = std::get<0>(st.interval);
+        for (const auto *mem : st.vars) {
+          if (const auto *memDet =
+                  mem->detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+            if (mem->offset() > counter) {
+              fir::SequenceType::Shape len = {
+                  static_cast<fir::SequenceType::Extent>(mem->offset() -
+                                                         counter)};
+              auto byteTy = builder->getIntegerType(8);
+              auto memTy = fir::SequenceType::get(len, byteTy);
+              members.push_back(memTy);
+              counter = mem->offset();
+            }
+            if (memDet->init()) {
+              auto memTy = genTypeWithCharFixup(*mem);
+              members.push_back(memTy);
+              counter = mem->offset() + mem->size();
+            }
+          }
+        }
+        if (counter < std::get<0>(st.interval) + std::get<1>(st.interval)) {
+          fir::SequenceType::Shape len = {
+              static_cast<fir::SequenceType::Extent>(std::get<0>(st.interval) +
+                                                     std::get<1>(st.interval) -
+                                                     counter)};
+          auto memTy = fir::SequenceType::get(len, i8Ty);
+          members.push_back(memTy);
+        }
+        return mlir::TupleType::get(members, builder->getContext());
+      }();
+      auto initFunc = [&](Fortran::lower::FirOpBuilder &builder) {
+        mlir::Value cb = builder.create<fir::UndefOp>(loc, aggTy);
+        unsigned tupIdx = 0;
+        std::size_t offset = std::get<0>(st.interval);
+        LLVM_DEBUG(llvm::dbgs() << "equivalence {\n");
+        for (const auto *mem : st.vars) {
+          if (const auto *memDet =
+                  mem->detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+            if (mem->offset() > offset) {
+              ++tupIdx;
+              offset = mem->offset();
+            }
+            if (memDet->init()) {
+              LLVM_DEBUG(llvm::dbgs() << "offset: " << mem->offset() << " is "
+                                      << *mem << '\n');
+              auto initVal = genInitializerExprValue(memDet->init().value());
+              auto offVal = builder.createIntegerConstant(loc, idxTy, tupIdx);
+              auto castVal = builder.createConvert(loc, aggTy.getType(tupIdx),
+                                                   fir::getBase(initVal));
+              cb = builder.create<fir::InsertValueOp>(loc, aggTy, cb, castVal,
+                                                      offVal);
+              ++tupIdx;
+              offset = mem->offset() + mem->size();
+            }
+          }
+        }
+        LLVM_DEBUG(llvm::dbgs() << "}\n");
+        builder.create<fir::HasValueOp>(loc, cb);
+      };
+      auto linkage = builder->createInternalLinkage();
+      auto agg = builder->createGlobal(loc, aggTy, aggName,
+                                       /*isConstant=*/false, initFunc, linkage);
+      auto addr = builder->create<fir::AddrOfOp>(loc, agg.resultType(),
+                                                 agg.getSymbol());
+      auto varTy = builder->getRefType(genType(*st.vars[0]));
+      auto result = builder->createConvert(loc, varTy, addr);
+      storeMap[off] = result;
+      addSymbol(*st.vars[0], result);
       return;
     }
     // Allocate an anonymous block of memory.
@@ -2141,19 +2137,139 @@ private:
     addSymbol(sym, local);
   }
 
+  using CommonBlockMap =
+      llvm::DenseMap<const Fortran::semantics::Symbol *,
+                     llvm::SmallVector<const Fortran::semantics::Symbol *, 8>>;
+
   /// The COMMON block is a global structure. `var` will be at some offset
   /// within the COMMON block. Adds the address of `var` (COMMON + offset) to
   /// the symbol map.
   void instantiateCommon(const Fortran::semantics::Symbol &common,
                          const Fortran::lower::pft::Variable &var,
-                         llvm::DenseMap<std::size_t, mlir::Value> &storeMap) {
+                         llvm::DenseMap<std::size_t, mlir::Value> &storeMap,
+                         const CommonBlockMap &cmnBlkMap) {
     auto commonName = mangleName(common);
     auto global = builder->getNamedGlobal(commonName);
-    if (!global)
-      instantiateGlobal(Fortran::lower::pft::Variable{common, true}, storeMap);
-    auto commonAddr = lookupSymbol(common);
     const auto &varSym = var.getSymbol();
     auto loc = genLocation(varSym.name());
+    if (!global) {
+      if (common.has<Fortran::semantics::CommonBlockDetails>()) {
+        //===--------------------------------------------------------------===//
+        // COMMON blocks
+        //===--------------------------------------------------------------===//
+        auto idxTy = builder->getIndexType();
+        const auto sz = static_cast<fir::SequenceType::Extent>(common.size());
+        auto cmnBlkMems = cmnBlkMap.lookup(&common);
+        std::sort(cmnBlkMems.begin(), cmnBlkMems.end(), [](auto *s1, auto *s2) {
+          return s1->offset() < s2->offset();
+        });
+        bool hasInit = [&]() {
+          for (const auto *mem : cmnBlkMems) {
+            LLVM_DEBUG(llvm::dbgs() << "common member: " << *mem << '\n');
+            if (const auto *memDet =
+                    mem->detailsIf<Fortran::semantics::ObjectEntityDetails>())
+              if (memDet->init())
+                return true;
+          }
+          return false;
+        }();
+        if (!common.name().size() || !hasInit) {
+          // anonymous COMMON must always be initialized to zero
+          // a named COMMON sans initializers is also initialized to zero
+          auto linkage = builder->createCommonLinkage();
+          fir::SequenceType::Shape shape = {sz};
+          auto i8Ty = builder->getIntegerType(8);
+          auto commonTy = fir::SequenceType::get(shape, i8Ty);
+          auto vecTy = mlir::VectorType::get(sz, i8Ty);
+          mlir::Attribute zero = builder->getIntegerAttr(i8Ty, 0);
+          auto init =
+              mlir::DenseElementsAttr::get(vecTy, llvm::makeArrayRef(zero));
+          global =
+              builder->createGlobal(loc, commonTy, commonName, linkage, init);
+        } else {
+          // COMMON has some initial values
+          // determine a type compatible with the initializers presented
+          mlir::TupleType commonTy = [&]() {
+            llvm::SmallVector<mlir::Type, 8> members;
+            std::size_t counter = 0;
+            for (const auto *mem : cmnBlkMems) {
+              if (const auto *memDet =
+                      mem->detailsIf<
+                          Fortran::semantics::ObjectEntityDetails>()) {
+                if (mem->offset() > counter) {
+                  fir::SequenceType::Shape len = {
+                      static_cast<fir::SequenceType::Extent>(mem->offset() -
+                                                             counter)};
+                  auto byteTy = builder->getIntegerType(8);
+                  auto memTy = fir::SequenceType::get(len, byteTy);
+                  members.push_back(memTy);
+                  counter = mem->offset();
+                }
+                if (memDet->init()) {
+                  auto memTy = genTypeWithCharFixup(*mem);
+                  members.push_back(memTy);
+                  counter = mem->offset() + mem->size();
+                }
+              }
+            }
+            if (counter < common.size()) {
+              fir::SequenceType::Shape len = {
+                  static_cast<fir::SequenceType::Extent>(common.size() -
+                                                         counter)};
+              auto byteTy = builder->getIntegerType(8);
+              auto memTy = fir::SequenceType::get(len, byteTy);
+              members.push_back(memTy);
+            }
+            return mlir::TupleType::get(members, builder->getContext());
+          }();
+          // lambda to initialize the body of the global with the initial values
+          auto initFunc = [&](Fortran::lower::FirOpBuilder &builder) {
+            mlir::Value cb = builder.create<fir::UndefOp>(loc, commonTy);
+            unsigned tupIdx = 0;
+            std::size_t offset = 0;
+            LLVM_DEBUG(llvm::dbgs() << "block {\n");
+            for (const auto *mem : cmnBlkMems) {
+              if (const auto *memDet =
+                      mem->detailsIf<
+                          Fortran::semantics::ObjectEntityDetails>()) {
+                if (mem->offset() > offset) {
+                  ++tupIdx;
+                  offset = mem->offset();
+                }
+                if (memDet->init()) {
+                  LLVM_DEBUG(llvm::dbgs() << "offset: " << mem->offset()
+                                          << " is " << *mem << '\n');
+                  auto initVal =
+                      genInitializerExprValue(memDet->init().value());
+                  auto offVal =
+                      builder.createIntegerConstant(loc, idxTy, tupIdx);
+                  auto castVal = builder.createConvert(
+                      loc, commonTy.getType(tupIdx), fir::getBase(initVal));
+                  cb = builder.create<fir::InsertValueOp>(loc, commonTy, cb,
+                                                          castVal, offVal);
+                  ++tupIdx;
+                  offset = mem->offset() + mem->size();
+                }
+              }
+            }
+            LLVM_DEBUG(llvm::dbgs() << "}\n");
+            builder.create<fir::HasValueOp>(loc, cb);
+          };
+          auto linkage = builder->createLinkOnceLinkage();
+          // create the global object
+          global =
+              builder->createGlobal(loc, commonTy, commonName,
+                                    /*isConstant=*/false, initFunc, linkage);
+        }
+        // introduce a local AddrOf and add it to the map
+        auto addrOf = builder->create<fir::AddrOfOp>(loc, global.resultType(),
+                                                     global.getSymbol());
+        addSymbol(common, addrOf);
+      } else {
+        llvm_unreachable("must be a common symbol");
+      }
+    }
+    auto commonAddr = lookupSymbol(common);
     if (!commonAddr) {
       commonAddr = builder->create<fir::AddrOfOp>(loc, global.resultType(),
                                                   global.getSymbol());
@@ -2167,23 +2283,26 @@ private:
     llvm::SmallVector<mlir::Value, 1> offs{builder->createIntegerConstant(
         loc, builder->getIndexType(), byteOffset)};
     auto varAddr = builder->create<fir::CoordinateOp>(loc, i8Ptr, base, offs);
-    auto localTy = builder->getRefType(genType(var));
+    auto localTy = builder->getRefType(genTypeWithCharFixup(var.getSymbol()));
     mlir::Value local = builder->createConvert(loc, localTy, varAddr);
     mapSymbolAttributes(var, storeMap, local);
   }
 
   void instantiateVar(const Fortran::lower::pft::Variable &var,
-                      llvm::DenseMap<std::size_t, mlir::Value> &storeMap) {
-    if (var.isAggregateStore())
+                      llvm::DenseMap<std::size_t, mlir::Value> &storeMap,
+                      CommonBlockMap *cmnBlkMap = nullptr) {
+    if (var.isAggregateStore()) {
       instantiateAggregateStore(var, storeMap);
-    else if (Fortran::lower::declaredInCommonBlock(var.getSymbol()))
+    } else if (Fortran::lower::definedInCommonBlock(var.getSymbol())) {
+      assert(cmnBlkMap);
       instantiateCommon(
           *Fortran::semantics::FindCommonBlockContaining(var.getSymbol()), var,
-          storeMap);
-    else if (var.isGlobal())
+          storeMap, *cmnBlkMap);
+    } else if (var.isGlobal()) {
       instantiateGlobal(var, storeMap);
-    else
+    } else {
       instantiateLocal(var, storeMap);
+    }
   }
 
   void mapDummiesAndResults(const Fortran::lower::pft::FunctionLikeUnit &funit,
@@ -2236,6 +2355,21 @@ private:
     mlir::Value primaryFuncResult;
     llvm::SmallVector<const Fortran::semantics::Symbol *, 4>
         deferredFuncResultList;
+
+    CommonBlockMap commonBlockMap;
+    for (const auto &var : funit.getOrderedSymbolTable()) {
+      if (var.isAggregateStore())
+        continue;
+      const Fortran::semantics::Symbol *sym = &var.getSymbol();
+      if (const auto *cmnBlk =
+              Fortran::semantics::FindCommonBlockContaining(*sym)) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "adding " << toStringRef(sym->name()) << " to /"
+                   << toStringRef(cmnBlk->name()) << "/\n");
+        commonBlockMap[cmnBlk].push_back(sym);
+      }
+    }
+
     llvm::DenseMap<std::size_t, mlir::Value> storeMap;
     for (const auto &var : funit.getOrderedSymbolTable()) {
       if (var.isAggregateStore()) {
@@ -2244,7 +2378,7 @@ private:
       }
       const Fortran::semantics::Symbol &sym = var.getSymbol();
       if (!sym.IsFuncResult() || !funit.primaryResult) {
-        instantiateVar(var, storeMap);
+        instantiateVar(var, storeMap, &commonBlockMap);
       } else if (&sym == funit.primaryResult) {
         instantiateVar(var, storeMap);
         primaryFuncResult = lookupSymbol(sym);
@@ -2353,8 +2487,8 @@ private:
 
   /// Instantiate the data from a BLOCK DATA unit.
   void lowerBlockData(Fortran::lower::pft::BlockDataUnit &bdunit) {
-    // FIXME: get rid of the bogus function context and instantiate the globals
-    // directly into the module.
+    // FIXME: get rid of the bogus function context and instantiate the
+    // globals directly into the module.
     auto *context = &getMLIRContext();
     auto func = Fortran::lower::FirOpBuilder::createFunction(
         mlir::UnknownLoc::get(context), getModuleOp(),
@@ -2362,9 +2496,20 @@ private:
         mlir::FunctionType::get(llvm::None, llvm::None, context));
     builder = new Fortran::lower::FirOpBuilder(func, bridge.getKindMap());
     llvm::DenseMap<std::size_t, mlir::Value> fakeMap;
+    CommonBlockMap commonBlockMap;
+    for (const auto &pair : bdunit.symTab) {
+      const auto sym = pair.second;
+      if (const auto *cmnBlk =
+              Fortran::semantics::FindCommonBlockContaining(*sym)) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "adding " << toStringRef(sym->name()) << " to /"
+                   << toStringRef(cmnBlk->name()) << "/\n");
+        commonBlockMap[cmnBlk].push_back(&*sym);
+      }
+    }
     for (const auto &[_, sym] : bdunit.symTab) {
       Fortran::lower::pft::Variable var(*sym, true);
-      instantiateVar(var, fakeMap);
+      instantiateVar(var, fakeMap, &commonBlockMap);
     }
     if (auto *region = func.getCallableRegion())
       region->dropAllReferences();

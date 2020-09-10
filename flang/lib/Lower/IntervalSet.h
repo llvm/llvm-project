@@ -19,8 +19,12 @@ namespace Fortran::lower {
 //===----------------------------------------------------------------------===//
 
 /// Interval set to keep track of intervals, merging them when they overlap one
+<<<<<<< HEAD
 /// another. Used to refine the pseudo-offset ranges of the front-end symbols
 /// into groups of aliasing variables.
+=======
+/// another. Used to refine ranges of offsets.
+>>>>>>> Update the lowering of COMMON blocks to match changes in the front-end.
 struct IntervalSet {
   using MAP = std::map<std::size_t, std::size_t>;
   using Iterator = MAP::const_iterator;
@@ -38,6 +42,7 @@ struct IntervalSet {
       if (up < i->first) {
         // [lo..up] < i->first
         m.insert({lo, up});
+<<<<<<< HEAD
         return;
       }
       // up >= i->first
@@ -68,6 +73,41 @@ struct IntervalSet {
       lo = i->first;
     }
     fuse(lo, up, i);
+=======
+      } else {
+        // up >= i->first
+        if (i->second > up)
+          up = i->second;
+        m.erase(i);
+        // merge i with [lo..max(up,i->second)]
+        m.insert({lo, up});
+      }
+    } else {
+      if (i == end() || i->first > lo)
+        i = std::prev(i);
+      // i->first <= lo
+      if (i->second >= up) {
+        // i->first <= lo && up <= i->second, keep i
+        return;
+      }
+      // i->second < up
+      if (i->second < lo) {
+        // i < [lo..up]
+        m.insert({lo, up});
+        return;
+      }
+      lo = i->first;
+      auto j = m.upper_bound(up);
+      // up < j->first
+      auto cu = std::prev(j)->second;
+      // cu < j->first
+      if (cu > up)
+        up = cu;
+      m.erase(i, j);
+      // merge [i .. j) with [i->first, max(up, cu)]
+      m.insert({lo, up});
+    }
+>>>>>>> Update the lowering of COMMON blocks to match changes in the front-end.
   }
 
   Iterator find(std::size_t pt) const {
@@ -88,6 +128,7 @@ struct IntervalSet {
   std::size_t size() const { return m.size(); }
 
 private:
+<<<<<<< HEAD
   // Find and fuse overlapping sets.
   void fuse(std::size_t lo, std::size_t up, Iterator i) {
     auto j = m.upper_bound(up);
@@ -101,6 +142,8 @@ private:
     m.insert({lo, up});
   }
 
+=======
+>>>>>>> Update the lowering of COMMON blocks to match changes in the front-end.
   MAP m{};
 };
 

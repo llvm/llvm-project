@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/PFTBuilder.h"
+#include "IntervalSet.h"
 #include "flang/Lower/Utils.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree-visitor.h"
@@ -15,6 +16,8 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/Support/CommandLine.h"
+
+#define DEBUG_TYPE "flang-pft"
 
 static llvm::cl::opt<bool> clDisableStructuredFir(
     "no-structured-fir", llvm::cl::desc("disable generation of structured FIR"),
@@ -1021,42 +1024,8 @@ Fortran::lower::pft::Evaluation::getOwningProcedure() const {
   });
 }
 
-namespace {
-/// Interval set to keep track of intervals, merging them when they overlap or
-/// abut one another. Used to refine ranges of offsets.
-struct IntervalSet : public llvm::IntervalMap<std::size_t, std::size_t, 16> {
-  using IntervalMap::IntervalMap;
-  using Allocator = IntervalMap::Allocator;
-
-  // Handles the merging of overlapping intervals correctly, efficiently.
-  bool merge(std::size_t lo, std::size_t up) {
-    assert(lo < up);
-    auto first = lookup(lo);
-    auto last = lookup(up);
-    if (!first && !last)
-      insert(lo, up, 1);
-    else if (!first)
-      find(up).setStart(lo);
-    else if (!last)
-      find(lo).setStop(up);
-    else
-      return false;
-    return true;
-  }
-};
-} // namespace
-
-// A variable with an offset relative to the subprogram stack but equivalence
-// aliasing a variable in a common will also be marked as contained in a common
-// block. We have to filter this out so that we can correctly map the offsets.
-bool Fortran::lower::declaredInCommonBlock(const semantics::Symbol &sym) {
-  if (auto *common = semantics::FindCommonBlockContaining(sym)) {
-    auto &details = common->get<semantics::CommonBlockDetails>();
-    for (auto &s : details.objects())
-      if (&*s == &sym)
-        return true;
-  }
-  return false;
+bool Fortran::lower::definedInCommonBlock(const semantics::Symbol &sym) {
+  return semantics::FindCommonBlockContaining(sym);
 }
 
 /// Is the symbol `sym` a global?
@@ -1064,7 +1033,7 @@ static bool symbolIsGlobal(const semantics::Symbol &sym) {
   if (const auto *details = sym.detailsIf<semantics::ObjectEntityDetails>())
     if (details->init())
       return true;
-  return semantics::IsSaved(sym) || lower::declaredInCommonBlock(sym);
+  return semantics::IsSaved(sym) || lower::definedInCommonBlock(sym);
 }
 
 namespace {
@@ -1077,80 +1046,75 @@ struct SymbolDependenceDepth {
       std::vector<std::vector<lower::pft::Variable>> &vars)
       : vars{vars} {}
 
-  const semantics::Symbol *setHasGlobalParticipant(
-      const std::vector<semantics::EquivalenceObject> &set,
-      const llvm::DenseSet<const semantics::Symbol *> &globals) {
-    for (const auto &eqv : set)
-      if (globals.find(&eqv.symbol) != globals.end())
-        return &eqv.symbol;
-    return nullptr;
-  }
-
-  std::pair<IntervalSet::iterator, std::size_t>
-  getIntervalForSet(IntervalSet &intervals,
-                    const std::vector<semantics::EquivalenceObject> &set,
-                    const llvm::DenseSet<const semantics::Symbol *> &globals) {
-    for (const auto &eqv : set)
-      if (globals.find(&eqv.symbol) == globals.end()) {
-        auto off = eqv.symbol.offset();
-        return {intervals.find(off), off};
-      }
-    return {intervals.end(), 0};
-  }
-
   // Analyze the equivalence sets. This analysis need not be performed when the
   // scope has no equivalence sets.
   void analyzeAliases(const semantics::Scope &scope) {
-    IntervalSet::Allocator allocator;
-    IntervalSet intervals(allocator);
-    llvm::DenseSet<const semantics::Symbol *> globals;
+    Fortran::lower::IntervalSet intervals;
+    llvm::DenseMap<std::size_t, llvm::SmallVector<const semantics::Symbol *, 8>>
+        aliasSets;
+    llvm::DenseMap<std::size_t, const semantics::Symbol *> setIsGlobal;
 
-    // 1. Collect the offset ranges which have aliasing.
-    for (const auto &set : scope.equivalenceSets())
-      for (const auto &eqv : set) {
-        const auto &sym = eqv.symbol;
-        if (symbolIsGlobal(sym)) {
-          // This symbol's offset is into a COMMON block rather than the stack
-          // frame proxy, so do not add it to the interval map. Reprocess the
-          // sets in step 2.
-          globals.insert(&sym);
-          continue;
-        }
-        aliasSyms.insert(&sym);
-        intervals.merge(sym.offset(), sym.offset() + sym.size() - 1);
+    // 1. Construct the intervals. Determine each entity's interval, merging
+    // overlapping intervals into aggregates.
+    for (const auto &pair : scope) {
+      const auto &sym = pair.second.get();
+      if (skipSymbol(sym))
+        continue;
+      LLVM_DEBUG(llvm::dbgs() << "symbol: " << sym << '\n');
+      intervals.merge(sym.offset(), sym.offset() + sym.size() - 1);
+    }
+
+    // 2. Compute alias sets. Adds each entity to a set for the interval it
+    // appears to be mapped into.
+    for (const auto &pair : scope) {
+      const auto &sym = pair.second.get();
+      if (skipSymbol(sym))
+        continue;
+      auto iter = intervals.find(sym.offset());
+      if (iter != intervals.end()) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "symbol: " << toStringRef(sym.name()) << " on ["
+                   << iter->first << ".." << iter->second << "]\n");
+        aliasSets[iter->first].push_back(&sym);
+        if (symbolIsGlobal(sym))
+          setIsGlobal.insert({iter->first, &sym});
       }
+    }
 
-    // 2. If we saw a global in an equivalence set, we want to map the
-    // corresponding interval to a global alias, possibly with an offset
-    // internal to that global. We assume that the front-end has already handled
-    // all error cases, such as two distinct common blocks being equivalenced.
-    if (!globals.empty())
-      for (const auto &set : scope.equivalenceSets())
-        if (const auto *gsym = setHasGlobalParticipant(set, globals)) {
-          auto [iter, off] = getIntervalForSet(intervals, set, globals);
-          if (iter != intervals.end()) {
-            // record the global that's aliased (?)
-            stores.emplace_back(
-                lower::pft::Variable::Interval{iter.start(),
-                                               iter.stop() - iter.start() + 1},
-                /*isGlobal=*/true, gsym, off);
-            // reset this interval and don't create an aggregate store on stack
-            iter.setValue(0);
-          }
+    // 3. For each alias set with more than 1 member, add an Interval to the
+    // stores. The Interval will be lowered into a single memory allocation,
+    // with the co-located, overlapping variables mapped into that memory range.
+    for (const auto &pair : aliasSets) {
+      if (pair.second.size() > 1) {
+        // Set contains more than 1 aliasing variable.
+        // 1. Mark the symbols as aliasing for lowering.
+        for (auto *sym : pair.second)
+          aliasSyms.insert(sym);
+        auto gvarIter = setIsGlobal.find(pair.first);
+        auto iter = intervals.find(pair.first);
+        auto ibgn = iter->first;
+        auto ilen = iter->second - ibgn + 1;
+        // 2. Add an Interval to the list of stores allocated for this unit.
+        lower::pft::Variable::Interval interval(ibgn, ilen);
+        if (gvarIter != setIsGlobal.end()) {
+          auto *gsym = gvarIter->second;
+          LLVM_DEBUG(llvm::dbgs() << "interval [" << ibgn << ".." << ibgn + ilen
+                                  << ") added as global " << *gsym << '\n');
+          stores.emplace_back(std::move(interval), pair.second);
+        } else {
+          LLVM_DEBUG(llvm::dbgs() << "interval [" << ibgn << ".." << ibgn + ilen
+                                  << ") added\n");
+          stores.emplace_back(std::move(interval));
         }
-
-    // 3. Create a aggregate store for each aliased interval.
-    for (auto i = intervals.begin(), end = intervals.end(); i != end; ++i)
-      if (i.value())
-        stores.emplace_back(
-            lower::pft::Variable::Interval{i.start(), i.stop() - i.start() + 1},
-            /*isGlobal=*/false);
+      }
+    }
   }
 
   // Recursively visit each symbol to determine the height of its dependence on
   // other symbols.
   int analyze(const semantics::Symbol &sym) {
     auto done = seen.insert(&sym);
+    LLVM_DEBUG(llvm::dbgs() << "analyze symbol: " << sym << '\n');
     if (!done.second)
       return 0;
     if (semantics::IsProcedure(sym)) {
@@ -1225,8 +1189,6 @@ struct SymbolDependenceDepth {
     // aggregate stores when constructing the new variable on the list.
     if (!aliasSyms.empty())
       if (aliasSyms.find(&sym) != aliasSyms.end()) {
-        if (global)
-          llvm::report_fatal_error("TODO: EQUIVALENCE on global");
         // Expect the total number of EQUIVALENCE sets to be small for a typical
         // Fortran program.
         auto findStore = [&](std::size_t off) -> std::size_t {
@@ -1235,8 +1197,19 @@ struct SymbolDependenceDepth {
             if (off >= bot && off < bot + std::get<1>(v.interval))
               return bot;
           }
+          // clang-format off
+          LLVM_DEBUG(
+              llvm::dbgs() << "looking for " << off << "\n{\n";
+              for (auto v : stores) {
+                llvm::dbgs() << "  i = [" << std::get<0>(v.interval) << ".."
+                    << std::get<0>(v.interval) + std::get<1>(v.interval)
+                    << "]\n";
+              }
+              llvm::dbgs() << "}\n");
+          // clang-format on
           llvm_unreachable("the store must be present");
         };
+        LLVM_DEBUG(llvm::dbgs() << "symbol: " << sym << '\n');
         vars[depth].back().setAlias(findStore(sym.offset()));
       }
     return depth;
@@ -1244,13 +1217,10 @@ struct SymbolDependenceDepth {
 
   /// Process the stores built for overlapping nominal variables.
   void prepareStores() {
-    for (auto st : stores) {
-      int depth = 0;
-      if (st.global)
-        depth = analyze(*st.obj);
-      adjustSize(depth + 1);
-      vars[depth].emplace_back(std::move(st));
-    }
+    // add all aggregate stores to the front of the work list
+    adjustSize(1);
+    for (auto st : stores)
+      vars[0].emplace_back(std::move(st));
   }
 
   /// Save the final list of variable allocations as a single vector and free
@@ -1262,6 +1232,11 @@ struct SymbolDependenceDepth {
   }
 
 private:
+  bool skipSymbol(const semantics::Symbol &sym) {
+    return !sym.has<semantics::ObjectEntityDetails>() ||
+           lower::definedInCommonBlock(sym);
+  }
+
   // Make sure the table is of appropriate size.
   void adjustSize(std::size_t size) {
     if (vars.size() < size)
@@ -1407,10 +1382,14 @@ void Fortran::lower::pft::Variable::dump() const {
   } else if (auto *s = std::get_if<IntervalStore>(&var)) {
     llvm::errs() << "interval[" << std::get<0>(s->interval) << ", "
                  << std::get<1>(s->interval) << "]:";
-    if (s->global)
+    if (s->isGlobal())
       llvm::errs() << ", global";
-    if (s->obj)
-      llvm::errs() << ", object:(" << *s->obj << "), offset: " << s->offset;
+    if (s->vars.size()) {
+      llvm::errs() << ", vars: {";
+      llvm::interleaveComma(s->vars, llvm::errs(),
+                            [](auto *y) { llvm::errs() << *y; });
+      llvm::errs() << '}';
+    }
   } else {
     llvm_unreachable("not a Variable");
   }
