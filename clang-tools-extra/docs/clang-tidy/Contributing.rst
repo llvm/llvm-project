@@ -27,7 +27,7 @@ There are a few tools particularly useful when developing clang-tidy checks:
   * `clang-check`_ with the ``-ast-dump`` (and optionally ``-ast-dump-filter``)
     provides a convenient way to dump AST of a C++ program.
 
-If CMake is configured with ``CLANG_ENABLE_STATIC_ANALYZER``,
+If CMake is configured with ``CLANG_TIDY_ENABLE_STATIC_ANALYZER=NO``,
 :program:`clang-tidy` will not be built with support for the
 ``clang-analyzer-*`` checks or the ``mpi-*`` checks.
 

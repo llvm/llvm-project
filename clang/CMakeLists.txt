@@ -473,7 +473,8 @@ option(CLANG_BUILD_TOOLS
   "Build the Clang tools. If OFF, just generate build targets." ON)
 
 option(CLANG_ENABLE_ARCMT "Build ARCMT." ON)
-option(CLANG_ENABLE_STATIC_ANALYZER "Build static analyzer." ON)
+option(CLANG_ENABLE_STATIC_ANALYZER
+  "Include static analyzer in clang binary." ON)
 
 option(CLANG_ENABLE_PROTO_FUZZER "Build Clang protobuf fuzzer." OFF)
 
