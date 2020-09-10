@@ -1756,50 +1756,12 @@ OpFoldResult ExtractElementOp::fold(ArrayRef<Attribute> operands) {
 // TensorFromElementsOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseTensorFromElementsOp(OpAsmParser &parser,
-                                             OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 4> elementsOperands;
-  Type resultType;
-  if (parser.parseOperandList(elementsOperands) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(resultType))
-    return failure();
-
-  if (parser.resolveOperands(elementsOperands,
-                             resultType.cast<ShapedType>().getElementType(),
-                             result.operands))
-    return failure();
-
-  result.addTypes(resultType);
-  return success();
-}
-
-static void print(OpAsmPrinter &p, TensorFromElementsOp op) {
-  p << "tensor_from_elements " << op.elements();
-  p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.getType();
-}
-
-static LogicalResult verify(TensorFromElementsOp op) {
-  auto resultTensorType = op.result().getType().dyn_cast<RankedTensorType>();
-  if (!resultTensorType)
-    return op.emitOpError("expected result type to be a ranked tensor");
-
-  int64_t elementsCount = static_cast<int64_t>(op.elements().size());
-  if (resultTensorType.getRank() != 1 ||
-      resultTensorType.getShape().front() != elementsCount)
-    return op.emitOpError()
-           << "expected result type to be a 1D tensor with " << elementsCount
-           << (elementsCount == 1 ? " element" : " elements");
-  return success();
-}
-
 void TensorFromElementsOp::build(OpBuilder &builder, OperationState &result,
                                  ValueRange elements) {
   assert(!elements.empty() && "expected at least one element");
-  result.addOperands(elements);
-  result.addTypes(RankedTensorType::get({static_cast<int64_t>(elements.size())},
-                                        *elements.getTypes().begin()));
+  Type resultTy = RankedTensorType::get({static_cast<int64_t>(elements.size())},
+                                        elements.front().getType());
+  build(builder, result, resultTy, elements);
 }
 
 namespace {
