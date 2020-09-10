@@ -6256,9 +6256,9 @@ class HorizontalReduction {
   enum ReductionKind {
     RK_None,       /// Not a reduction.
     RK_Arithmetic, /// Binary reduction data.
-    RK_Min,        /// Minimum reduction data.
+    RK_SMin,       /// Signed minimum reduction data.
     RK_UMin,       /// Unsigned minimum reduction data.
-    RK_Max,        /// Maximum reduction data.
+    RK_SMax,       /// Signed maximum reduction data.
     RK_UMax,       /// Unsigned maximum reduction data.
   };
 
@@ -6276,9 +6276,6 @@ class HorizontalReduction {
     /// Kind of the reduction operation.
     ReductionKind Kind = RK_None;
 
-    /// True if float point min/max reduction has no NaNs.
-    bool NoNaN = false;
-
     /// Checks if the reduction operation can be vectorized.
     bool isVectorizable() const {
       return LHS && RHS &&
@@ -6288,10 +6285,9 @@ class HorizontalReduction {
                 Opcode == Instruction::Mul || Opcode == Instruction::FMul ||
                 Opcode == Instruction::And || Opcode == Instruction::Or ||
                 Opcode == Instruction::Xor)) ||
-              ((Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) &&
-               (Kind == RK_Min || Kind == RK_Max)) ||
               (Opcode == Instruction::ICmp &&
-               (Kind == RK_UMin || Kind == RK_UMax)));
+               (Kind == RK_SMin || Kind == RK_SMax ||
+                Kind == RK_UMin || Kind == RK_UMax)));
     }
 
     /// Creates reduction operation with the current opcode.
@@ -6303,13 +6299,13 @@ class HorizontalReduction {
       case RK_Arithmetic:
         return Builder.CreateBinOp((Instruction::BinaryOps)Opcode, LHS, RHS,
                                    Name);
-      case RK_Min:
-        Cmp = Opcode == Instruction::ICmp ? Builder.CreateICmpSLT(LHS, RHS)
-                                          : Builder.CreateFCmpOLT(LHS, RHS);
+      case RK_SMin:
+        assert(Opcode == Instruction::ICmp && "Expected integer types.");
+        Cmp = Builder.CreateICmpSLT(LHS, RHS);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
-      case RK_Max:
-        Cmp = Opcode == Instruction::ICmp ? Builder.CreateICmpSGT(LHS, RHS)
-                                          : Builder.CreateFCmpOGT(LHS, RHS);
+      case RK_SMax:
+        assert(Opcode == Instruction::ICmp && "Expected integer types.");
+        Cmp = Builder.CreateICmpSGT(LHS, RHS);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       case RK_UMin:
         assert(Opcode == Instruction::ICmp && "Expected integer types.");
@@ -6337,9 +6333,8 @@ class HorizontalReduction {
 
     /// Constructor for reduction operations with opcode and its left and
     /// right operands.
-    OperationData(unsigned Opcode, Value *LHS, Value *RHS, ReductionKind Kind,
-                  bool NoNaN = false)
-        : Opcode(Opcode), LHS(LHS), RHS(RHS), Kind(Kind), NoNaN(NoNaN) {
+    OperationData(unsigned Opcode, Value *LHS, Value *RHS, ReductionKind Kind)
+        : Opcode(Opcode), LHS(LHS), RHS(RHS), Kind(Kind) {
       assert(Kind != RK_None && "One of the reduction operations is expected.");
     }
 
@@ -6350,8 +6345,8 @@ class HorizontalReduction {
       switch (Kind) {
       case RK_Arithmetic:
         return false;
-      case RK_Min:
-      case RK_Max:
+      case RK_SMin:
+      case RK_SMax:
       case RK_UMin:
       case RK_UMax:
         return true;
@@ -6433,10 +6428,8 @@ class HorizontalReduction {
       switch (Kind) {
       case RK_Arithmetic:
         return I->isAssociative();
-      case RK_Min:
-      case RK_Max:
-        return Opcode == Instruction::ICmp ||
-               cast<Instruction>(I->getOperand(0))->isFast();
+      case RK_SMin:
+      case RK_SMax:
       case RK_UMin:
       case RK_UMax:
         assert(Opcode == Instruction::ICmp &&
@@ -6466,7 +6459,6 @@ class HorizontalReduction {
       LHS = nullptr;
       RHS = nullptr;
       Kind = RK_None;
-      NoNaN = false;
     }
 
     /// Get the opcode of the reduction operation.
@@ -6494,8 +6486,8 @@ class HorizontalReduction {
       case RK_Arithmetic:
         propagateIRFlags(Op, ReductionOps[0]);
         return Op;
-      case RK_Min:
-      case RK_Max:
+      case RK_SMin:
+      case RK_SMax:
       case RK_UMin:
       case RK_UMax:
         if (auto *SI = dyn_cast<SelectInst>(Op))
@@ -6518,8 +6510,8 @@ class HorizontalReduction {
       case RK_Arithmetic:
         propagateIRFlags(Op, I);
         return Op;
-      case RK_Min:
-      case RK_Max:
+      case RK_SMin:
+      case RK_SMax:
       case RK_UMin:
       case RK_UMax:
         if (auto *SI = dyn_cast<SelectInst>(Op)) {
@@ -6536,16 +6528,15 @@ class HorizontalReduction {
 
     TargetTransformInfo::ReductionFlags getFlags() const {
       TargetTransformInfo::ReductionFlags Flags;
-      Flags.NoNaN = NoNaN;
       switch (Kind) {
       case RK_Arithmetic:
         break;
-      case RK_Min:
-        Flags.IsSigned = Opcode == Instruction::ICmp;
+      case RK_SMin:
+        Flags.IsSigned = true;
         Flags.IsMaxOp = false;
         break;
-      case RK_Max:
-        Flags.IsSigned = Opcode == Instruction::ICmp;
+      case RK_SMax:
+        Flags.IsSigned = true;
         Flags.IsMaxOp = true;
         break;
       case RK_UMin:
@@ -6610,21 +6601,11 @@ class HorizontalReduction {
       if (m_UMin(m_Value(LHS), m_Value(RHS)).match(Select)) {
         return OperationData(Instruction::ICmp, LHS, RHS, RK_UMin);
       } else if (m_SMin(m_Value(LHS), m_Value(RHS)).match(Select)) {
-        return OperationData(Instruction::ICmp, LHS, RHS, RK_Min);
-      } else if (m_OrdFMin(m_Value(LHS), m_Value(RHS)).match(Select) ||
-                 m_UnordFMin(m_Value(LHS), m_Value(RHS)).match(Select)) {
-        return OperationData(
-            Instruction::FCmp, LHS, RHS, RK_Min,
-            cast<Instruction>(Select->getCondition())->hasNoNaNs());
+        return OperationData(Instruction::ICmp, LHS, RHS, RK_SMin);
       } else if (m_UMax(m_Value(LHS), m_Value(RHS)).match(Select)) {
         return OperationData(Instruction::ICmp, LHS, RHS, RK_UMax);
       } else if (m_SMax(m_Value(LHS), m_Value(RHS)).match(Select)) {
-        return OperationData(Instruction::ICmp, LHS, RHS, RK_Max);
-      } else if (m_OrdFMax(m_Value(LHS), m_Value(RHS)).match(Select) ||
-                 m_UnordFMax(m_Value(LHS), m_Value(RHS)).match(Select)) {
-        return OperationData(
-            Instruction::FCmp, LHS, RHS, RK_Max,
-            cast<Instruction>(Select->getCondition())->hasNoNaNs());
+        return OperationData(Instruction::ICmp, LHS, RHS, RK_SMax);
       } else {
         // Try harder: look for min/max pattern based on instructions producing
         // same values such as: select ((cmp Inst1, Inst2), Inst1, Inst2).
@@ -6672,14 +6653,7 @@ class HorizontalReduction {
 
         case CmpInst::ICMP_SLT:
         case CmpInst::ICMP_SLE:
-          return OperationData(Instruction::ICmp, LHS, RHS, RK_Min);
-
-        case CmpInst::FCMP_OLT:
-        case CmpInst::FCMP_OLE:
-        case CmpInst::FCMP_ULT:
-        case CmpInst::FCMP_ULE:
-          return OperationData(Instruction::FCmp, LHS, RHS, RK_Min,
-                               cast<Instruction>(Cond)->hasNoNaNs());
+          return OperationData(Instruction::ICmp, LHS, RHS, RK_SMin);
 
         case CmpInst::ICMP_UGT:
         case CmpInst::ICMP_UGE:
@@ -6687,14 +6661,7 @@ class HorizontalReduction {
 
         case CmpInst::ICMP_SGT:
         case CmpInst::ICMP_SGE:
-          return OperationData(Instruction::ICmp, LHS, RHS, RK_Max);
-
-        case CmpInst::FCMP_OGT:
-        case CmpInst::FCMP_OGE:
-        case CmpInst::FCMP_UGT:
-        case CmpInst::FCMP_UGE:
-          return OperationData(Instruction::FCmp, LHS, RHS, RK_Max,
-                               cast<Instruction>(Cond)->hasNoNaNs());
+          return OperationData(Instruction::ICmp, LHS, RHS, RK_SMax);
         }
       }
     }
@@ -7017,8 +6984,8 @@ private:
           TTI->getArithmeticReductionCost(ReductionData.getOpcode(), VecTy,
                                           /*IsPairwiseForm=*/false);
       break;
-    case RK_Min:
-    case RK_Max:
+    case RK_SMin:
+    case RK_SMax:
     case RK_UMin:
     case RK_UMax: {
       auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VecTy));
@@ -7045,8 +7012,8 @@ private:
       ScalarReduxCost =
           TTI->getArithmeticInstrCost(ReductionData.getOpcode(), ScalarTy);
       break;
-    case RK_Min:
-    case RK_Max:
+    case RK_SMin:
+    case RK_SMax:
     case RK_UMin:
     case RK_UMax:
       ScalarReduxCost =
