@@ -69,7 +69,7 @@ static bool hasMultiplyAddBody(Region &r) {
 static LogicalResult isContraction(Operation *op) {
   // TODO: interface for named ops.
   if (isa<linalg::BatchMatmulOp, linalg::MatmulOp, linalg::MatvecOp,
-          linalg::DotOp>(op))
+          linalg::VecmatOp, linalg::DotOp>(op))
     return success();
 
   auto genericOp = dyn_cast<linalg::GenericOp>(op);

@@ -679,6 +679,8 @@ static Optional<LinalgLoops> linalgOpToLoopsImplSwitch(Operation *op,
     return linalgOpToLoopsImpl<LoopTy, MatmulOp>(op, builder);
   if (isa<MatvecOp>(op))
     return linalgOpToLoopsImpl<LoopTy, MatvecOp>(op, builder);
+  if (isa<VecmatOp>(op))
+    return linalgOpToLoopsImpl<LoopTy, VecmatOp>(op, builder);
   if (isa<DotOp>(op))
     return linalgOpToLoopsImpl<LoopTy, DotOp>(op, builder);
   if (isa<BatchMatmulOp>(op))

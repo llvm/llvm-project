@@ -244,6 +244,7 @@ void mlir::populateLinalgToStandardConversionPatterns(
       LinalgOpConversion<DotOp>,
       LinalgOpConversion<BatchMatmulOp>,
       LinalgOpConversion<MatvecOp>,
+      LinalgOpConversion<VecmatOp>,
       LinalgOpConversion<MatmulOp>,
       LinalgOpConversion<ConvWOp>,
       LinalgOpConversion<ConvNWCOp>,
