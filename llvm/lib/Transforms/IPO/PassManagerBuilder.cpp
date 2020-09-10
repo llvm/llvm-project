@@ -1000,7 +1000,7 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   // The IPO passes may leave cruft around.  Clean up after them.
   PM.add(createInstructionCombiningPass());
   addExtensionsToPM(EP_Peephole, PM);
-  PM.add(createJumpThreadingPass());
+  PM.add(createJumpThreadingPass(/*FreezeSelectCond*/ true));
 
   // Break up allocas
   PM.add(createSROAPass());
@@ -1063,7 +1063,7 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   PM.add(createInstructionCombiningPass());
   addExtensionsToPM(EP_Peephole, PM);
 
-  PM.add(createJumpThreadingPass());
+  PM.add(createJumpThreadingPass(/*FreezeSelectCond*/ true));
 }
 
 void PassManagerBuilder::addLateLTOOptimizationPasses(
