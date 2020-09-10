@@ -1778,7 +1778,6 @@ bool TypeSystemSwiftTypeRef::IsMeaninglessWithoutDynamicResolution(
 
 CompilerType TypeSystemSwiftTypeRef::GetAsClangTypeOrNull(
     lldb::opaque_compiler_type_t type) {
-  CompilerType clang_type;
   using namespace swift::Demangle;
   Demangler Dem;
   NodePointer node = GetDemangledType(Dem, AsMangledName(type));
@@ -1791,9 +1790,10 @@ CompilerType TypeSystemSwiftTypeRef::GetAsClangTypeOrNull(
       node->getChild(1)->hasText()) {
     auto node_clangtype = ResolveTypeAlias(GetModule(), Dem, node,
                                            /*prefer_clang_types*/ true);
-    if (clang_type = node_clangtype.second)
-      return clang_type;
+    if (node_clangtype.second)
+      return node_clangtype.second;
   }
+  CompilerType clang_type;
   IsImportedType(type, &clang_type);
   return clang_type;
 }
