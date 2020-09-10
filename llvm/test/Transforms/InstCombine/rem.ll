@@ -49,9 +49,9 @@ define i8 @big_divisor(i8 %x) {
 
 define i5 @biggest_divisor(i5 %x) {
 ; CHECK-LABEL: @biggest_divisor(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i5 [[X:%.*]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i5
-; CHECK-NEXT:    [[REM:%.*]] = add i5 [[TMP2]], [[X]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i5 [[X:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[DOTNOT]] to i5
+; CHECK-NEXT:    [[REM:%.*]] = add i5 [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i5 [[REM]]
 ;
   %rem = urem i5 %x, -1
@@ -128,8 +128,8 @@ define i8 @urem2(i8 %x, i8 %y) {
 define i8 @urem3(i8 %x) {
 ; CHECK-LABEL: @urem3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = urem i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[B1:%.*]] = sub i8 [[X]], [[TMP1]]
-; CHECK-NEXT:    [[C:%.*]] = add i8 [[B1]], [[X]]
+; CHECK-NEXT:    [[B_NEG:%.*]] = sub i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[C:%.*]] = add i8 [[B_NEG]], [[X]]
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
   %A = udiv i8 %x, 3
@@ -377,10 +377,10 @@ define i32 @test17(i32 %X) {
 define i32 @test18(i16 %x, i32 %y) {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[X:%.*]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i16 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 63, i32 31
-; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], [[Y:%.*]]
-; CHECK-NEXT:    ret i32 [[TMP4]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i16 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[DOTNOT]], i32 63, i32 31
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %1 = and i16 %x, 4
   %2 = icmp ne i16 %1, 0
@@ -477,10 +477,10 @@ define i32 @test21(i1 %c0, i32* %p) {
 ; CHECK-NEXT:    br i1 [[C0:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[V:%.*]] = load volatile i32, i32* [[P:%.*]], align 4
-; CHECK-NEXT:    [[PHITMP:%.*]] = srem i32 [[V]], 5
+; CHECK-NEXT:    [[PHI_BO:%.*]] = srem i32 [[V]], 5
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[LHS:%.*]] = phi i32 [ [[PHITMP]], [[IF_THEN]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LHS:%.*]] = phi i32 [ [[PHI_BO]], [[IF_THEN]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[LHS]]
 ;
 entry:
@@ -606,10 +606,10 @@ define i32 @pr27968_3(i1 %c0, i1 %always_false, i32* %p) {
 ; CHECK-NEXT:    br i1 [[C0:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[V:%.*]] = load volatile i32, i32* [[P:%.*]], align 4
-; CHECK-NEXT:    [[PHITMP:%.*]] = and i32 [[V]], 2147483647
+; CHECK-NEXT:    [[PHI_BO:%.*]] = and i32 [[V]], 2147483647
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[LHS:%.*]] = phi i32 [ [[PHITMP]], [[IF_THEN]] ], [ 5, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LHS:%.*]] = phi i32 [ [[PHI_BO]], [[IF_THEN]] ], [ 5, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br i1 [[ALWAYS_FALSE:%.*]], label [[REM_IS_SAFE:%.*]], label [[REM_IS_UNSAFE:%.*]]
 ; CHECK:       rem.is.safe:
 ; CHECK-NEXT:    ret i32 [[LHS]]
