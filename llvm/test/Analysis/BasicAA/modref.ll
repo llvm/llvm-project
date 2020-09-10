@@ -82,6 +82,7 @@ define void @test3a(i8* %P, i8 %X) {
   store i8 %Y, i8* %P2
   call void @llvm.lifetime.end.p0i8(i64 10, i8* %P)
   ret void
+; CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 10, i8* %P)
 ; CHECK-NEXT: ret void
 }
 
