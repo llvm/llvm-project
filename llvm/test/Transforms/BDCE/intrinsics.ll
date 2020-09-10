@@ -8,8 +8,8 @@ declare i8 @llvm.smin.i8(i8, i8)
 
 define i8 @umax(i8 %x, i8 %y, i1 %a, i1 %b) {
 ; CHECK-LABEL: @umax(
-; CHECK-NEXT:    [[A2:%.*]] = zext i1 [[A:%.*]] to i8
-; CHECK-NEXT:    [[B2:%.*]] = zext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[A2:%.*]] = zext i1 false to i8
+; CHECK-NEXT:    [[B2:%.*]] = zext i1 false to i8
 ; CHECK-NEXT:    [[X2:%.*]] = or i8 [[X:%.*]], [[A2]]
 ; CHECK-NEXT:    [[Y2:%.*]] = or i8 [[Y:%.*]], [[B2]]
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X2]], i8 [[Y2]])
@@ -27,8 +27,8 @@ define i8 @umax(i8 %x, i8 %y, i1 %a, i1 %b) {
 
 define i8 @umin(i8 %x, i8 %y, i1 %a, i1 %b) {
 ; CHECK-LABEL: @umin(
-; CHECK-NEXT:    [[A2:%.*]] = zext i1 [[A:%.*]] to i8
-; CHECK-NEXT:    [[B2:%.*]] = zext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[A2:%.*]] = zext i1 false to i8
+; CHECK-NEXT:    [[B2:%.*]] = zext i1 false to i8
 ; CHECK-NEXT:    [[X2:%.*]] = or i8 [[X:%.*]], [[A2]]
 ; CHECK-NEXT:    [[Y2:%.*]] = or i8 [[Y:%.*]], [[B2]]
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[X2]], i8 [[Y2]])
@@ -46,8 +46,8 @@ define i8 @umin(i8 %x, i8 %y, i1 %a, i1 %b) {
 
 define i8 @smax(i8 %x, i8 %y, i1 %a, i1 %b) {
 ; CHECK-LABEL: @smax(
-; CHECK-NEXT:    [[A2:%.*]] = zext i1 [[A:%.*]] to i8
-; CHECK-NEXT:    [[B2:%.*]] = zext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[A2:%.*]] = zext i1 false to i8
+; CHECK-NEXT:    [[B2:%.*]] = zext i1 false to i8
 ; CHECK-NEXT:    [[X2:%.*]] = or i8 [[X:%.*]], [[A2]]
 ; CHECK-NEXT:    [[Y2:%.*]] = or i8 [[Y:%.*]], [[B2]]
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[X2]], i8 [[Y2]])
@@ -65,8 +65,8 @@ define i8 @smax(i8 %x, i8 %y, i1 %a, i1 %b) {
 
 define i8 @smin(i8 %x, i8 %y, i1 %a, i1 %b) {
 ; CHECK-LABEL: @smin(
-; CHECK-NEXT:    [[A2:%.*]] = zext i1 [[A:%.*]] to i8
-; CHECK-NEXT:    [[B2:%.*]] = zext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[A2:%.*]] = zext i1 false to i8
+; CHECK-NEXT:    [[B2:%.*]] = zext i1 false to i8
 ; CHECK-NEXT:    [[X2:%.*]] = or i8 [[X:%.*]], [[A2]]
 ; CHECK-NEXT:    [[Y2:%.*]] = or i8 [[Y:%.*]], [[B2]]
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[X2]], i8 [[Y2]])
