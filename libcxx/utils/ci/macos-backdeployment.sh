@@ -134,7 +134,7 @@ echo "@@@ Running tests for libc++ @@@"
                                  ${ENABLE_FILESYSTEM} \
                                  --param=cxx_headers="${LLVM_INSTALL_DIR}/include/c++/v1" \
                                  --param=std="${STD}" \
-                                 --param=platform="macosx${DEPLOYMENT_TARGET}" \
+                                 --param=target_triple="x86_64-apple-macosx${DEPLOYMENT_TARGET}" \
                                  --param=cxx_library_root="${LLVM_INSTALL_DIR}/lib" \
                                  --param=cxx_runtime_root="${LIBCXX_ROOT_ON_DEPLOYMENT_TARGET}" \
                                  --param=abi_library_path="${LIBCXXABI_ROOT_ON_DEPLOYMENT_TARGET}" \

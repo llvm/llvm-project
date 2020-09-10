@@ -73,34 +73,8 @@ class DarwinLocalTI(DefaultTargetInfo):
 
         return re.sub(r'.*/[^0-9]+([0-9.]+)\.sdk', r'\1', out)
 
-    def get_platform(self):
-        platform = self.full_config.get_lit_conf('platform')
-        if platform:
-            platform = re.sub(r'([^0-9]+)([0-9\.]*)', r'\1-\2', platform)
-            name, version = tuple(platform.split('-', 1))
-        else:
-            name = 'macosx'
-            version = None
-
-        if version:
-            return (False, name, version)
-
-        # Infer the version, either from the SDK or the system itself.  For
-        # macosx, ignore the SDK version; what matters is what's at
-        # /usr/lib/libc++.dylib.
-        if name == 'macosx':
-            version = self.get_macosx_version()
-        else:
-            version = self.get_sdk_version(name)
-        return (True, name, version)
-
     def add_cxx_compile_flags(self, flags):
-        if self.full_config.use_deployment:
-            _, name, _ = self.full_config.config.deployment
-            cmd = ['xcrun', '--sdk', name, '--show-sdk-path']
-        else:
-            cmd = ['xcrun', '--show-sdk-path']
-        out, err, exit_code = executeCommand(cmd)
+        out, err, exit_code = executeCommand(['xcrun', '--show-sdk-path'])
         if exit_code != 0:
             self.full_config.lit_config.warning("Could not determine macOS SDK path! stderr was " + err)
         if exit_code == 0 and out:

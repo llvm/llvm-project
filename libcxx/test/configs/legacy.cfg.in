@@ -21,7 +21,6 @@ config.abi_library_path         = "@LIBCXX_CXX_ABI_LIBRARY_PATH@"
 config.configuration_variant    = "@LIBCXX_LIT_VARIANT@"
 config.host_triple              = "@LLVM_HOST_TRIPLE@"
 config.target_triple            = "@TARGET_TRIPLE@"
-config.use_target               = bool("@LIBCXX_TARGET_TRIPLE@")
 config.sysroot                  = "@LIBCXX_SYSROOT@"
 config.gcc_toolchain            = "@LIBCXX_GCC_TOOLCHAIN@"
 config.generate_coverage        = @LIBCXX_GENERATE_COVERAGE@
