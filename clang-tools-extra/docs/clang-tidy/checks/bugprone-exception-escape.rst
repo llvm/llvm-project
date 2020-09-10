@@ -5,6 +5,7 @@ bugprone-exception-escape
 
 Finds functions which may throw an exception directly or indirectly, but they
 should not. The functions which should not throw exceptions are the following:
+
 * Destructors
 * Move constructors
 * Move assignment operators
