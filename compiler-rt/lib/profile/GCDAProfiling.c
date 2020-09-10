@@ -128,6 +128,11 @@ struct fn_list {
 struct fn_list writeout_fn_list;
 
 /*
+ *  A list of flush functions that our __gcov_flush() function should call, shared between all dynamic objects.
+ */
+struct fn_list flush_fn_list;
+
+/*
  *  A list of reset functions, shared between all dynamic objects.
  */
 struct fn_list reset_fn_list;
