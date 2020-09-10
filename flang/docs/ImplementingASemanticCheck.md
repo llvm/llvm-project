@@ -1,3 +1,11 @@
+<!--===- docs/ImplementingASemanticCheck.md 
+  
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+  
+-->
+# Introduction
 I recently added a semantic check to the f18 compiler front end.  This document
 describes my thought process and the resulting implementation.
 
