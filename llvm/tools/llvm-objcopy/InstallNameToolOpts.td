@@ -32,3 +32,7 @@ def change: MultiArg<["-", "--"], "change", 2>,
 
 def version : Flag<["--"], "version">,
               HelpText<"Print the version and exit.">;
+
+def V : Flag<["-"], "V">,
+        Alias<version>,
+        HelpText<"Alias for --version">;
