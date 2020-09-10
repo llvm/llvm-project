@@ -371,7 +371,7 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
 template <class ConvOp, int N>
 LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
     ConvOp op, PatternRewriter &rewriter) const {
-  const unsigned dimSize = 3;
+  unsigned dimSize = 3;
   Location loc = op.getLoc();
   MLIRContext *context = op.getContext();
   edsc::ScopedContext scope(rewriter, loc);

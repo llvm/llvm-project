@@ -568,10 +568,11 @@ struct AffineMinSCFCanonicalizationPattern
 /// Subsequently, they are contracted together and the result is written to
 /// the first entry of the output buffer.
 template <typename ConvOp, int N>
-struct ConvOpVectorization : public OpRewritePattern<ConvOp> {
+class ConvOpVectorization : public OpRewritePattern<ConvOp> {
   using OpRewritePattern<ConvOp>::OpRewritePattern;
   SmallVector<bool, 4> mask;
 
+public:
   ConvOpVectorization(MLIRContext *context, SmallVector<bool, 4> msk)
       : OpRewritePattern<ConvOp>(context) {
     assert(msk.size() == N && "Mask size does not match rank");
