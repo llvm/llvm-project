@@ -32,11 +32,6 @@ protected:
   TranslationUnit *buildTree(StringRef Code,
                              const TestClangConfig &ClangConfig);
 
-  ::testing::AssertionResult treeDumpEqual(StringRef Code, StringRef Tree);
-
-  ::testing::AssertionResult
-  treeDumpEqualOnAnnotations(StringRef CodeWithAnnotations,
-                             ArrayRef<StringRef> TreeDumps);
   /// Finds the deepest node in the tree that covers exactly \p R.
   /// FIXME: implement this efficiently and move to public syntax tree API.
   syntax::Node *nodeByRange(llvm::Annotations::Range R, syntax::Node *Root);
@@ -56,6 +51,8 @@ protected:
   std::unique_ptr<syntax::TokenBuffer> TB;
   std::unique_ptr<syntax::Arena> Arena;
 };
+
+std::vector<TestClangConfig> allTestClangConfigs();
 } // namespace syntax
 } // namespace clang
 #endif // LLVM_CLANG_UNITTESTS_TOOLING_SYNTAX_TREETESTBASE_H
