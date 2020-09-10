@@ -361,9 +361,10 @@ public:
   swift::ClangImporter *GetClangImporter();
   swift::DWARFImporterDelegate *GetDWARFImporterDelegate();
 
-  CompilerType CreateTupleType(const std::vector<TupleElement> &elements);
+  CompilerType
+  CreateTupleType(const std::vector<TupleElement> &elements) override;
 
-  CompilerType GetErrorType();
+  CompilerType GetErrorType() override;
 
   bool HasErrors();
 

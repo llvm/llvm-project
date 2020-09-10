@@ -496,8 +496,8 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
 #ifdef LLDB_ENABLE_SWIFT
       ConstString persistent_variable_name(
           persistent_state->GetNextPersistentVariableName(/*is_error*/ true));
-      if (m_return_valobj_sp = SwiftLanguageRuntime::CalculateErrorValue(
-              frame_sp, persistent_variable_name)) {
+      if ((m_return_valobj_sp = SwiftLanguageRuntime::CalculateErrorValue(
+               frame_sp, persistent_variable_name))) {
 
         DataExtractor data;
         Status data_error;
