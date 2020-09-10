@@ -73,8 +73,11 @@ define void @test3(%0* noalias sret %agg.result) nounwind  {
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %agg.result2, i8* align 16 %x.01, i32 32, i1 false)
   ret void
 ; CHECK-LABEL: @test3(
+; CHECK-NEXT: %x.0 = alloca
+; CHECK-NEXT: %x.01 = bitcast
 ; CHECK-NEXT: %agg.result1 = bitcast
 ; CHECK-NEXT: call void @llvm.memcpy
+; CHECK-NEXT: %agg.result2 = bitcast
 ; CHECK-NEXT: ret void
 }
 
