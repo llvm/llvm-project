@@ -330,7 +330,6 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[COPY:%[0-9]+]]:gpr32sp = COPY $w0
-  ; CHECK:   B %bb.1
   ; CHECK: bb.1:
   ; CHECK:   [[ADDWri:%[0-9]+]]:gpr32sp = ADDWri [[COPY]], 1, 0
   ; CHECK:   $w0 = COPY [[ADDWri]]
