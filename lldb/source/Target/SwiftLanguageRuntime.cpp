@@ -399,7 +399,7 @@ void SwiftLanguageRuntimeImpl::SetupExclusivity() {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
   if (log)
     log->Printf(
-        "SwiftLanguageRuntime: _swift_disableExclusivityChecking = %lu",
+        "SwiftLanguageRuntime: _swift_disableExclusivityChecking = %llu",
         m_dynamic_exclusivity_flag_addr ? *m_dynamic_exclusivity_flag_addr : 0);
 }
 
@@ -574,6 +574,10 @@ static bool GetObjectDescription_ResultVariable(Process &process, Stream &str,
       log->Printf(
           "[GetObjectDescription_ResultVariable] eExpressionStoppedForDebug");
       break;
+    case eExpressionThreadVanished:
+      log->Printf(
+          "[GetObjectDescription_ResultVariable] eExpressionThreadVanished");
+      break;
     }
   }
 
@@ -680,6 +684,10 @@ static bool GetObjectDescription_ObjectReference(Process &process, Stream &str,
     case eExpressionStoppedForDebug:
       log->Printf(
           "[GetObjectDescription_ObjectReference] eExpressionStoppedForDebug");
+      break;
+    case eExpressionThreadVanished:
+      log->Printf(
+          "[GetObjectDescription_ObjectReference] eExpressionThreadVanished");
       break;
     }
   }
@@ -838,6 +846,10 @@ static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntimeImpl *runtime,
     case eExpressionStoppedForDebug:
       log->Printf(
           "[GetObjectDescription_ObjectCopy] eExpressionStoppedForDebug");
+      break;
+    case eExpressionThreadVanished:
+      log->Printf(
+          "[GetObjectDescription_ObjectCopy] eExpressionThreadVanished");
       break;
     }
   }

@@ -394,7 +394,7 @@ private:
   std::shared_ptr<ObjectFileELF> GetGnuDebugDataObjectFile();
 
   llvm::StringRef
-  GetReflectionSectionIdentifier(swift::ReflectionSectionKind section);
+  GetReflectionSectionIdentifier(swift::ReflectionSectionKind section) override;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_OBJECTFILEELF_H

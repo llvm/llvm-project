@@ -83,8 +83,8 @@ void ManualDWARFIndex::Index() {
   // done indexing to make sure we don't pull in all DWARF dies, but we need
   // to wait until all compile units have been indexed in case a DIE in one
   // compile unit refers to another and the indexes accesses those DIEs.
-  for (int i=0; i<units_to_index.size(); ++i)
-     extract_fn(i);
+  for (size_t i = 0; i < units_to_index.size(); ++i)
+    extract_fn(i);
   // This call can deadlock because we are sometimes holding the module lock.
   //  for (size_t i = 0; i < units_to_index.size(); ++i)
   //    pool.async(extract_fn, i);

@@ -30,6 +30,8 @@ public:
   UnsafePointerKind GetKind() const { return m_kind; }
   virtual bool Update() = 0;
 
+  virtual ~SwiftUnsafeType() = default;
+
 protected:
   SwiftUnsafeType(ValueObject &valobj, UnsafePointerKind kind);
   addr_t GetAddress(llvm::StringRef child_name);
@@ -531,7 +533,7 @@ bool lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::Update() {
 
     for (size_t i = 0; i < num_children; i++) {
       StreamString idx_name;
-      idx_name.Printf("[%" PRIu64 "]", i);
+      idx_name.Printf("[%zu]", i);
       DataExtractor data(buffer_data, i * m_element_stride, m_element_stride);
       m_children.push_back(CreateValueObjectFromData(
           idx_name.GetString(), data, m_exe_ctx_ref, element_type));
