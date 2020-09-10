@@ -433,6 +433,7 @@ def getAltVSXFMAOpcode : InstrMapping {
 
 include "PPCRegisterInfo.td"
 include "PPCSchedule.td"
+include "GISel/PPCRegisterBanks.td"
 
 //===----------------------------------------------------------------------===//
 // PowerPC processors supported.
