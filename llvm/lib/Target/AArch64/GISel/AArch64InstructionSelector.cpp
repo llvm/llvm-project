@@ -2274,8 +2274,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
     unsigned MemSizeInBits = MemSizeInBytes * 8;
 
-    const Register PtrReg = I.getOperand(1).getReg();
 #ifndef NDEBUG
+    const Register PtrReg = I.getOperand(1).getReg();
     const RegisterBank &PtrRB = *RBI.getRegBank(PtrReg, MRI, TRI);
     // Sanity-check the pointer register.
     assert(PtrRB.getID() == AArch64::GPRRegBankID &&
