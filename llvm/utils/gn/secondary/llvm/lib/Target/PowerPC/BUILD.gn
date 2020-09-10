@@ -18,17 +18,32 @@ tablegen("PPCGenFastISel") {
   td_file = "PPC.td"
 }
 
+tablegen("PPCGenGlobalISel") {
+  visibility = [ ":LLVMPowerPCCodeGen" ]
+  args = [ "-gen-global-isel" ]
+  td_file = "PPC.td"
+}
+
+tablegen("PPCGenRegisterBank") {
+  visibility = [ ":LLVMPowerPCCodeGen" ]
+  args = [ "-gen-register-bank" ]
+  td_file = "PPC.td"
+}
+
 static_library("LLVMPowerPCCodeGen") {
   deps = [
     ":PPCGenCallingConv",
     ":PPCGenDAGISel",
     ":PPCGenFastISel",
+    ":PPCGenGlobalISel",
+    ":PPCGenRegisterBank",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/Analysis",
     "//llvm/lib/CodeGen",
     "//llvm/lib/CodeGen/AsmPrinter",
+    "//llvm/lib/CodeGen/GlobalISel",
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
@@ -38,6 +53,10 @@ static_library("LLVMPowerPCCodeGen") {
   ]
   include_dirs = [ "." ]
   sources = [
+    "GISel/PPCCallLowering.cpp",
+    "GISel/PPCInstructionSelector.cpp",
+    "GISel/PPCLegalizerInfo.cpp",
+    "GISel/PPCRegisterBankInfo.cpp",
     "PPCAsmPrinter.cpp",
     "PPCBoolRetToInt.cpp",
     "PPCBranchCoalescing.cpp",

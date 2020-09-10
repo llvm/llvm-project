@@ -126,7 +126,12 @@ StringRef Attribute::getDerivedCodeBody() const {
 }
 
 Dialect Attribute::getDialect() const {
-  return Dialect(def->getValueAsDef("dialect"));
+  const llvm::RecordVal *record = def->getValue("dialect");
+  if (record && record->getValue()) {
+    if (DefInit *init = dyn_cast<DefInit>(record->getValue()))
+      return Dialect(init->getDef());
+  }
+  return Dialect(nullptr);
 }
 
 ConstantAttr::ConstantAttr(const DefInit *init) : def(init->getDef()) {
@@ -255,7 +260,7 @@ StringRef StructAttr::getStructClassName() const {
 }
 
 StringRef StructAttr::getCppNamespace() const {
-  Dialect dialect(def->getValueAsDef("structDialect"));
+  Dialect dialect(def->getValueAsDef("dialect"));
   return dialect.getCppNamespace();
 }
 

@@ -204,13 +204,12 @@ class ImplicitNullChecks : public MachineFunctionPass {
   /// if it was hoisted to the NullCheck block. This is used by caller
   /// canHoistInst to decide if DependenceMI can be hoisted safely.
   bool canDependenceHoistingClobberLiveIns(MachineInstr *DependenceMI,
-                                           MachineBasicBlock *NullSucc,
-                                           unsigned PointerReg);
+                                           MachineBasicBlock *NullSucc);
 
   /// Return true if \p FaultingMI can be hoisted from after the
   /// instructions in \p InstsSeenSoFar to before them.  Set \p Dependence to a
   /// non-null value if we also need to (and legally can) hoist a depedency.
-  bool canHoistInst(MachineInstr *FaultingMI, unsigned PointerReg,
+  bool canHoistInst(MachineInstr *FaultingMI,
                     ArrayRef<MachineInstr *> InstsSeenSoFar,
                     MachineBasicBlock *NullSucc, MachineInstr *&Dependence);
 
@@ -409,8 +408,7 @@ ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
 }
 
 bool ImplicitNullChecks::canDependenceHoistingClobberLiveIns(
-    MachineInstr *DependenceMI, MachineBasicBlock *NullSucc,
-    unsigned PointerReg) {
+    MachineInstr *DependenceMI, MachineBasicBlock *NullSucc) {
   for (auto &DependenceMO : DependenceMI->operands()) {
     if (!(DependenceMO.isReg() && DependenceMO.getReg()))
       continue;
@@ -442,7 +440,6 @@ bool ImplicitNullChecks::canDependenceHoistingClobberLiveIns(
 }
 
 bool ImplicitNullChecks::canHoistInst(MachineInstr *FaultingMI,
-                                      unsigned PointerReg,
                                       ArrayRef<MachineInstr *> InstsSeenSoFar,
                                       MachineBasicBlock *NullSucc,
                                       MachineInstr *&Dependence) {
@@ -467,7 +464,7 @@ bool ImplicitNullChecks::canHoistInst(MachineInstr *FaultingMI,
   if (DependenceMI->mayLoadOrStore())
     return false;
 
-  if (canDependenceHoistingClobberLiveIns(DependenceMI, NullSucc, PointerReg))
+  if (canDependenceHoistingClobberLiveIns(DependenceMI, NullSucc))
     return false;
 
   auto DepDepResult =
@@ -616,7 +613,7 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
     if (SR == SR_Impossible)
       return false;
     if (SR == SR_Suitable &&
-        canHoistInst(&MI, PointerReg, InstsSeenSoFar, NullSucc, Dependence)) {
+        canHoistInst(&MI, InstsSeenSoFar, NullSucc, Dependence)) {
       NullCheckList.emplace_back(&MI, MBP.ConditionDef, &MBB, NotNullSucc,
                                  NullSucc, Dependence);
       return true;
