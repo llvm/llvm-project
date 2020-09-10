@@ -3248,7 +3248,7 @@ static StringRef mangleAArch64VectorBase(const BuiltinType *EltType) {
   case BuiltinType::Double:
     return "Float64";
   case BuiltinType::BFloat16:
-    return "BFloat16";
+    return "Bfloat16";
   default:
     llvm_unreachable("Unexpected vector element base type");
   }
