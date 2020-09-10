@@ -855,7 +855,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   setForceEmitWaitcnt();
   bool IsForceEmitWaitcnt = isForceEmitWaitcnt();
 
-  if (MI.isDebugInstr())
+  if (MI.isMetaInstruction())
     return false;
 
   AMDGPU::Waitcnt Wait;
