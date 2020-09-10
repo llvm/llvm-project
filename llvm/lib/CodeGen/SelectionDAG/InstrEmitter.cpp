@@ -1124,6 +1124,20 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     break;
   }
 
+  case ISD::PSEUDO_PROBE: {
+    unsigned TarOp = TargetOpcode::PSEUDO_PROBE;
+    auto Guid = cast<PseudoProbeSDNode>(Node)->getGuid();
+    auto Index = cast<PseudoProbeSDNode>(Node)->getIndex();
+    auto Attr = cast<PseudoProbeSDNode>(Node)->getAttributes();
+
+    BuildMI(*MBB, InsertPos, Node->getDebugLoc(), TII->get(TarOp))
+        .addImm(Guid)
+        .addImm(Index)
+        .addImm(0) // 0 for block probes
+        .addImm(Attr);
+    break;
+  }
+
   case ISD::INLINEASM:
   case ISD::INLINEASM_BR: {
     unsigned NumOps = Node->getNumOperands();

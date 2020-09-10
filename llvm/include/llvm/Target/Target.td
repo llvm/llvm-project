@@ -1145,6 +1145,13 @@ def LIFETIME_END : StandardPseudoInstruction {
   let AsmString = "LIFETIME_END";
   let hasSideEffects = false;
 }
+def PSEUDO_PROBE : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins i64imm:$guid, i64imm:$index, i8imm:$type, i32imm:$attr);
+  let AsmString = "PSEUDO_PROBE";
+  let hasSideEffects = 1;
+}
+
 def STACKMAP : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins i64imm:$id, i32imm:$nbytes, variable_ops);
