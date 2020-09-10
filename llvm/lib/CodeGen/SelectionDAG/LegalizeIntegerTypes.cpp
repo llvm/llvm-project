@@ -4702,7 +4702,22 @@ SDValue DAGTypeLegalizer::PromoteIntOp_EXTRACT_SUBVECTOR(SDNode *N) {
 
 SDValue DAGTypeLegalizer::PromoteIntOp_CONCAT_VECTORS(SDNode *N) {
   SDLoc dl(N);
+
+  EVT ResVT = N->getValueType(0);
   unsigned NumElems = N->getNumOperands();
+
+  if (ResVT.isScalableVector()) {
+    SDValue ResVec = DAG.getUNDEF(ResVT);
+
+    for (unsigned OpIdx = 0; OpIdx < NumElems; ++OpIdx) {
+      SDValue Op = N->getOperand(OpIdx);
+      unsigned OpNumElts = Op.getValueType().getVectorMinNumElements();
+      ResVec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResVT, ResVec, Op,
+                           DAG.getIntPtrConstant(OpIdx * OpNumElts, dl));
+    }
+
+    return ResVec;
+  }
 
   EVT RetSclrTy = N->getValueType(0).getVectorElementType();
 
