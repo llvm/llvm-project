@@ -179,6 +179,9 @@ INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, int value) {
     case M_MEMTAG_TUNING:
       option = scudo::Option::MemtagTuning;
       break;
+    case M_THREAD_DISABLE_MEM_INIT:
+      option = scudo::Option::ThreadDisableMemInit;
+      break;
     case M_CACHE_COUNT_MAX:
       option = scudo::Option::MaxCacheEntriesCount;
       break;

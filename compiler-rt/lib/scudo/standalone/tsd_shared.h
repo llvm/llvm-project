@@ -83,9 +83,13 @@ struct TSDRegistrySharedT {
   bool setOption(Option O, sptr Value) {
     if (O == Option::MaxTSDsCount)
       return setNumberOfTSDs(static_cast<u32>(Value));
+    if (O == Option::ThreadDisableMemInit)
+      setDisableMemInit(Value);
     // Not supported by the TSD Registry, but not an error either.
     return true;
   }
+
+  bool getDisableMemInit() const { return *getTlsPtr() & 1; }
 
 private:
   ALWAYS_INLINE uptr *getTlsPtr() const {
@@ -97,12 +101,15 @@ private:
 #endif
   }
 
+  static_assert(alignof(TSD<Allocator>) >= 2, "");
+
   ALWAYS_INLINE void setCurrentTSD(TSD<Allocator> *CurrentTSD) {
-    *getTlsPtr() = reinterpret_cast<uptr>(CurrentTSD);
+    *getTlsPtr() &= 1;
+    *getTlsPtr() |= reinterpret_cast<uptr>(CurrentTSD);
   }
 
   ALWAYS_INLINE TSD<Allocator> *getCurrentTSD() {
-    return reinterpret_cast<TSD<Allocator> *>(*getTlsPtr());
+    return reinterpret_cast<TSD<Allocator> *>(*getTlsPtr() & ~1ULL);
   }
 
   bool setNumberOfTSDs(u32 N) {
@@ -129,6 +136,11 @@ private:
         CoPrimes[NumberOfCoPrimes++] = I + 1;
     }
     return true;
+  }
+
+  void setDisableMemInit(bool B) {
+    *getTlsPtr() &= ~1ULL;
+    *getTlsPtr() |= B;
   }
 
   void initOnceMaybe(Allocator *Instance) {

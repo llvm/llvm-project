@@ -13,10 +13,13 @@
 
 namespace scudo {
 
-enum class ThreadState : u8 {
-  NotInitialized = 0,
-  Initialized,
-  TornDown,
+struct ThreadState {
+  bool DisableMemInit : 1;
+  enum {
+    NotInitialized = 0,
+    Initialized,
+    TornDown,
+  } InitState : 2;
 };
 
 template <class Allocator> void teardownThread(void *Ptr);
@@ -36,13 +39,13 @@ template <class Allocator> struct TSDRegistryExT {
   void unmapTestOnly() {}
 
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance, bool MinimalInit) {
-    if (LIKELY(State != ThreadState::NotInitialized))
+    if (LIKELY(State.InitState != ThreadState::NotInitialized))
       return;
     initThread(Instance, MinimalInit);
   }
 
   ALWAYS_INLINE TSD<Allocator> *getTSDAndLock(bool *UnlockRequired) {
-    if (LIKELY(State == ThreadState::Initialized &&
+    if (LIKELY(State.InitState == ThreadState::Initialized &&
                !atomic_load(&Disabled, memory_order_acquire))) {
       *UnlockRequired = false;
       return &ThreadTSD;
@@ -67,10 +70,14 @@ template <class Allocator> struct TSDRegistryExT {
   }
 
   bool setOption(Option O, UNUSED sptr Value) {
+    if (O == Option::ThreadDisableMemInit)
+      State.DisableMemInit = Value;
     if (O == Option::MaxTSDsCount)
       return false;
     return true;
   }
+
+  bool getDisableMemInit() { return State.DisableMemInit; }
 
 private:
   void initOnceMaybe(Allocator *Instance) {
@@ -90,7 +97,7 @@ private:
     CHECK_EQ(
         pthread_setspecific(PThreadKey, reinterpret_cast<void *>(Instance)), 0);
     ThreadTSD.initLinkerInitialized(Instance);
-    State = ThreadState::Initialized;
+    State.InitState = ThreadState::Initialized;
     Instance->callPostInitCallback();
   }
 
@@ -126,7 +133,7 @@ template <class Allocator> void teardownThread(void *Ptr) {
       return;
   }
   TSDRegistryT::ThreadTSD.commitBack(Instance);
-  TSDRegistryT::State = ThreadState::TornDown;
+  TSDRegistryT::State.InitState = ThreadState::TornDown;
 }
 
 } // namespace scudo
