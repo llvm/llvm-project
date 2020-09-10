@@ -1,5 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,CI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt,+flat-for-global,-unaligned-access-mode < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,GFX9,GFX9-ALIGNED %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt,+flat-for-global,-unaligned-access-mode,-dword-access-mode < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,GFX9,GFX9-ALIGNED %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt,+flat-for-global,+dword-access-mode < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,GFX9,GFX9-DWORDALIGNED %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt,+flat-for-global,+unaligned-access-mode < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,GFX9,GFX9-UNALIGNED %s
 
 @lds = addrspace(3) global [512 x float] undef, align 4
@@ -441,7 +442,11 @@ define amdgpu_kernel void @store_constant_disjoint_offsets() {
 ; GCN-DAG: v_mov_b32_e32 [[PTR:v[0-9]+]], bar@abs32@lo{{$}}
 ; CI-DAG: ds_write2_b32 [[PTR]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1
 ; CI-DAG: ds_write2_b32 [[PTR]], v{{[0-9]+}}, v{{[0-9]+}} offset0:2 offset1:3
-; GFX9-DAG: ds_write_b128 [[PTR]], {{v\[[0-9]+:[0-9]+\]}}
+
+; GFX9-ALIGNED-DAG: ds_write2_b32 [[PTR]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1
+; GFX9-ALIGNED-DAG: ds_write2_b32 [[PTR]], v{{[0-9]+}}, v{{[0-9]+}} offset0:2 offset1:3
+
+; GFX9-UNALIGNED: ds_write_b128 [[PTR]], {{v\[[0-9]+:[0-9]+\]}}
 
 ; GCN: s_endpgm
 define amdgpu_kernel void @store_misaligned64_constant_offsets() {
@@ -514,7 +519,11 @@ define amdgpu_kernel void @write2_sgemm_sequence(float addrspace(1)* %C, i32 %ld
 
 ; CI: ds_write2_b32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}} offset1:1{{$}}
 ; CI: ds_write2_b32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}} offset0:2 offset1:3{{$}}
-; GFX9: ds_write_b128 {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}
+
+; GFX9-ALIGNED-DAG: ds_write2_b32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}} offset1:1{{$}}
+; GFX9-ALIGNED-DAG: ds_write2_b32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}} offset0:2 offset1:3{{$}}
+
+; GFX9-UNALIGNED: ds_write_b128 {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @simple_write2_v4f32_superreg_align4(<4 x float> addrspace(3)* %out, <4 x float> addrspace(1)* %in) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %in

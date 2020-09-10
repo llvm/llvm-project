@@ -21,12 +21,10 @@ bb:
 }
 
 ; GCN-LABEL: test_local_misaligned_v4:
-; VECT-DAG: ds_read_b128
-; VECT-DAG: ds_write_b128
-; SPLIT-DAG: ds_read2_b32
-; SPLIT-DAG: ds_read2_b32
-; SPLIT-DAG: ds_write2_b32
-; SPLIT-DAG: ds_write2_b32
+; GCN-DAG: ds_read2_b32
+; GCN-DAG: ds_read2_b32
+; GCN-DAG: ds_write2_b32
+; GCN-DAG: ds_write2_b32
 define amdgpu_kernel void @test_local_misaligned_v4(i32 addrspace(3)* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -46,12 +44,10 @@ bb:
 }
 
 ; GCN-LABEL: test_local_misaligned_v3:
-; VECT-DAG: ds_read_b96
-; VECT-DAG: ds_write_b96
-; SPLIT-DAG: ds_read2_b32
-; SPLIT-DAG: ds_read_b32
-; SPLIT-DAG: ds_write2_b32
-; SPLIT-DAG: ds_write_b32
+; GCN-DAG: ds_read2_b32
+; GCN-DAG: ds_read_b32
+; GCN-DAG: ds_write2_b32
+; GCN-DAG: ds_write_b32
 define amdgpu_kernel void @test_local_misaligned_v3(i32 addrspace(3)* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()

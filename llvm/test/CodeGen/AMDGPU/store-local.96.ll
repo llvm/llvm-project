@@ -244,11 +244,12 @@ define amdgpu_kernel void @store_lds_v3i32_align4(<3 x i32> addrspace(3)* %out, 
 ; GFX9-NEXT:    s_load_dword s4, s[0:1], 0x24
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x34
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v3, s4
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    v_mov_b32_e32 v2, s2
-; GFX9-NEXT:    ds_write_b96 v3, v[0:2]
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-NEXT:    v_mov_b32_e32 v1, s0
+; GFX9-NEXT:    v_mov_b32_e32 v2, s1
+; GFX9-NEXT:    v_mov_b32_e32 v3, s2
+; GFX9-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
+; GFX9-NEXT:    ds_write_b32 v0, v3 offset:8
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX7-LABEL: store_lds_v3i32_align4:
@@ -288,11 +289,12 @@ define amdgpu_kernel void @store_lds_v3i32_align8(<3 x i32> addrspace(3)* %out, 
 ; GFX9-NEXT:    s_load_dword s4, s[0:1], 0x24
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x34
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v3, s4
+; GFX9-NEXT:    v_mov_b32_e32 v2, s4
+; GFX9-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    v_mov_b32_e32 v2, s2
-; GFX9-NEXT:    ds_write_b96 v3, v[0:2]
+; GFX9-NEXT:    ds_write_b32 v2, v3 offset:8
+; GFX9-NEXT:    ds_write_b64 v2, v[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX7-LABEL: store_lds_v3i32_align8:
