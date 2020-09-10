@@ -754,6 +754,12 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VQADDu16:
     case MVE_VQADDu32:
     case MVE_VQADDu8:
+    case MVE_VQDMULH_qr_s16:
+    case MVE_VQDMULH_qr_s32:
+    case MVE_VQDMULH_qr_s8:
+    case MVE_VQDMULHi16:
+    case MVE_VQDMULHi32:
+    case MVE_VQDMULHi8:
     case MVE_VQDMULL_qr_s16bh:
     case MVE_VQDMULL_qr_s16th:
     case MVE_VQDMULL_qr_s32bh:
@@ -762,6 +768,12 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VQDMULLs16th:
     case MVE_VQDMULLs32bh:
     case MVE_VQDMULLs32th:
+    case MVE_VQRDMULH_qr_s16:
+    case MVE_VQRDMULH_qr_s32:
+    case MVE_VQRDMULH_qr_s8:
+    case MVE_VQRDMULHi16:
+    case MVE_VQRDMULHi32:
+    case MVE_VQRDMULHi8:
     case MVE_VQNEGs16:
     case MVE_VQNEGs32:
     case MVE_VQNEGs8:
