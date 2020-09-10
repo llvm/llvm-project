@@ -611,31 +611,22 @@ entry:
   ret i16 %max3
 }
 
+; FIXME: Use fmaxnum intrinsics to match what InstCombine creates for fcmp+select
+; with fastmath on the select.
 define half @reduction_fmax_v4half(<4 x half> %vec4) {
-; GFX9-LABEL: @reduction_fmax_v4half(
-; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x half> [[VEC4:%.*]], <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast ogt <4 x half> [[VEC4]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x half> [[VEC4]], <4 x half> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x half> [[RDX_MINMAX_SELECT]], <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = fcmp fast ogt <4 x half> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x half> [[RDX_MINMAX_SELECT]], <4 x half> [[RDX_SHUF1]]
-; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <4 x half> [[RDX_MINMAX_SELECT3]], i32 0
-; GFX9-NEXT:    ret half [[TMP0]]
-;
-; VI-LABEL: @reduction_fmax_v4half(
-; VI-NEXT:  entry:
-; VI-NEXT:    [[ELT0:%.*]] = extractelement <4 x half> [[VEC4:%.*]], i64 0
-; VI-NEXT:    [[ELT1:%.*]] = extractelement <4 x half> [[VEC4]], i64 1
-; VI-NEXT:    [[ELT2:%.*]] = extractelement <4 x half> [[VEC4]], i64 2
-; VI-NEXT:    [[ELT3:%.*]] = extractelement <4 x half> [[VEC4]], i64 3
-; VI-NEXT:    [[CMP1:%.*]] = fcmp fast ogt half [[ELT1]], [[ELT0]]
-; VI-NEXT:    [[MAX1:%.*]] = select i1 [[CMP1]], half [[ELT1]], half [[ELT0]]
-; VI-NEXT:    [[CMP2:%.*]] = fcmp fast ogt half [[ELT2]], [[MAX1]]
-; VI-NEXT:    [[MAX2:%.*]] = select i1 [[CMP2]], half [[ELT2]], half [[MAX1]]
-; VI-NEXT:    [[CMP3:%.*]] = fcmp fast ogt half [[ELT3]], [[MAX2]]
-; VI-NEXT:    [[MAX3:%.*]] = select i1 [[CMP3]], half [[ELT3]], half [[MAX2]]
-; VI-NEXT:    ret half [[MAX3]]
+; GCN-LABEL: @reduction_fmax_v4half(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[ELT0:%.*]] = extractelement <4 x half> [[VEC4:%.*]], i64 0
+; GCN-NEXT:    [[ELT1:%.*]] = extractelement <4 x half> [[VEC4]], i64 1
+; GCN-NEXT:    [[ELT2:%.*]] = extractelement <4 x half> [[VEC4]], i64 2
+; GCN-NEXT:    [[ELT3:%.*]] = extractelement <4 x half> [[VEC4]], i64 3
+; GCN-NEXT:    [[CMP1:%.*]] = fcmp fast ogt half [[ELT1]], [[ELT0]]
+; GCN-NEXT:    [[MAX1:%.*]] = select i1 [[CMP1]], half [[ELT1]], half [[ELT0]]
+; GCN-NEXT:    [[CMP2:%.*]] = fcmp fast ogt half [[ELT2]], [[MAX1]]
+; GCN-NEXT:    [[MAX2:%.*]] = select i1 [[CMP2]], half [[ELT2]], half [[MAX1]]
+; GCN-NEXT:    [[CMP3:%.*]] = fcmp fast ogt half [[ELT3]], [[MAX2]]
+; GCN-NEXT:    [[MAX3:%.*]] = select i1 [[CMP3]], half [[ELT3]], half [[MAX2]]
+; GCN-NEXT:    ret half [[MAX3]]
 ;
 entry:
   %elt0 = extractelement <4 x half> %vec4, i64 0
@@ -653,31 +644,22 @@ entry:
   ret half %max3
 }
 
+; FIXME: Use fmaxnum intrinsics to match what InstCombine creates for fcmp+select
+; with fastmath on the select.
 define half @reduction_fmin_v4half(<4 x half> %vec4) {
-; GFX9-LABEL: @reduction_fmin_v4half(
-; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x half> [[VEC4:%.*]], <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast olt <4 x half> [[VEC4]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x half> [[VEC4]], <4 x half> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x half> [[RDX_MINMAX_SELECT]], <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = fcmp fast olt <4 x half> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x half> [[RDX_MINMAX_SELECT]], <4 x half> [[RDX_SHUF1]]
-; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <4 x half> [[RDX_MINMAX_SELECT3]], i32 0
-; GFX9-NEXT:    ret half [[TMP0]]
-;
-; VI-LABEL: @reduction_fmin_v4half(
-; VI-NEXT:  entry:
-; VI-NEXT:    [[ELT0:%.*]] = extractelement <4 x half> [[VEC4:%.*]], i64 0
-; VI-NEXT:    [[ELT1:%.*]] = extractelement <4 x half> [[VEC4]], i64 1
-; VI-NEXT:    [[ELT2:%.*]] = extractelement <4 x half> [[VEC4]], i64 2
-; VI-NEXT:    [[ELT3:%.*]] = extractelement <4 x half> [[VEC4]], i64 3
-; VI-NEXT:    [[CMP1:%.*]] = fcmp fast olt half [[ELT1]], [[ELT0]]
-; VI-NEXT:    [[MIN1:%.*]] = select i1 [[CMP1]], half [[ELT1]], half [[ELT0]]
-; VI-NEXT:    [[CMP2:%.*]] = fcmp fast olt half [[ELT2]], [[MIN1]]
-; VI-NEXT:    [[MIN2:%.*]] = select i1 [[CMP2]], half [[ELT2]], half [[MIN1]]
-; VI-NEXT:    [[CMP3:%.*]] = fcmp fast olt half [[ELT3]], [[MIN2]]
-; VI-NEXT:    [[MIN3:%.*]] = select i1 [[CMP3]], half [[ELT3]], half [[MIN2]]
-; VI-NEXT:    ret half [[MIN3]]
+; GCN-LABEL: @reduction_fmin_v4half(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[ELT0:%.*]] = extractelement <4 x half> [[VEC4:%.*]], i64 0
+; GCN-NEXT:    [[ELT1:%.*]] = extractelement <4 x half> [[VEC4]], i64 1
+; GCN-NEXT:    [[ELT2:%.*]] = extractelement <4 x half> [[VEC4]], i64 2
+; GCN-NEXT:    [[ELT3:%.*]] = extractelement <4 x half> [[VEC4]], i64 3
+; GCN-NEXT:    [[CMP1:%.*]] = fcmp fast olt half [[ELT1]], [[ELT0]]
+; GCN-NEXT:    [[MIN1:%.*]] = select i1 [[CMP1]], half [[ELT1]], half [[ELT0]]
+; GCN-NEXT:    [[CMP2:%.*]] = fcmp fast olt half [[ELT2]], [[MIN1]]
+; GCN-NEXT:    [[MIN2:%.*]] = select i1 [[CMP2]], half [[ELT2]], half [[MIN1]]
+; GCN-NEXT:    [[CMP3:%.*]] = fcmp fast olt half [[ELT3]], [[MIN2]]
+; GCN-NEXT:    [[MIN3:%.*]] = select i1 [[CMP3]], half [[ELT3]], half [[MIN2]]
+; GCN-NEXT:    ret half [[MIN3]]
 ;
 entry:
   %elt0 = extractelement <4 x half> %vec4, i64 0

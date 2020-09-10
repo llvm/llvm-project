@@ -198,11 +198,59 @@ define i32 @maxi32(i32) {
   ret i32 %95
 }
 
+; FIXME: Use fmaxnum intrinsics to match what InstCombine creates for fcmp+select
+; with fastmath on the select.
 define float @maxf8(float) {
-; CHECK-LABEL: @maxf8(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x float>, <8 x float>* bitcast ([32 x float]* @arr1 to <8 x float>*), align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.experimental.vector.reduce.fmax.v8f32(<8 x float> [[TMP2]])
-; CHECK-NEXT:    ret float [[TMP3]]
+; DEFAULT-LABEL: @maxf8(
+; DEFAULT-NEXT:    [[TMP2:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 0), align 16
+; DEFAULT-NEXT:    [[TMP3:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 1), align 4
+; DEFAULT-NEXT:    [[TMP4:%.*]] = fcmp fast ogt float [[TMP2]], [[TMP3]]
+; DEFAULT-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], float [[TMP2]], float [[TMP3]]
+; DEFAULT-NEXT:    [[TMP6:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 2), align 8
+; DEFAULT-NEXT:    [[TMP7:%.*]] = fcmp fast ogt float [[TMP5]], [[TMP6]]
+; DEFAULT-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP5]], float [[TMP6]]
+; DEFAULT-NEXT:    [[TMP9:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 3), align 4
+; DEFAULT-NEXT:    [[TMP10:%.*]] = fcmp fast ogt float [[TMP8]], [[TMP9]]
+; DEFAULT-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], float [[TMP8]], float [[TMP9]]
+; DEFAULT-NEXT:    [[TMP12:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 4), align 16
+; DEFAULT-NEXT:    [[TMP13:%.*]] = fcmp fast ogt float [[TMP11]], [[TMP12]]
+; DEFAULT-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], float [[TMP11]], float [[TMP12]]
+; DEFAULT-NEXT:    [[TMP15:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 5), align 4
+; DEFAULT-NEXT:    [[TMP16:%.*]] = fcmp fast ogt float [[TMP14]], [[TMP15]]
+; DEFAULT-NEXT:    [[TMP17:%.*]] = select i1 [[TMP16]], float [[TMP14]], float [[TMP15]]
+; DEFAULT-NEXT:    [[TMP18:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 6), align 8
+; DEFAULT-NEXT:    [[TMP19:%.*]] = fcmp fast ogt float [[TMP17]], [[TMP18]]
+; DEFAULT-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], float [[TMP17]], float [[TMP18]]
+; DEFAULT-NEXT:    [[TMP21:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 7), align 4
+; DEFAULT-NEXT:    [[TMP22:%.*]] = fcmp fast ogt float [[TMP20]], [[TMP21]]
+; DEFAULT-NEXT:    [[TMP23:%.*]] = select i1 [[TMP22]], float [[TMP20]], float [[TMP21]]
+; DEFAULT-NEXT:    ret float [[TMP23]]
+;
+; THRESH-LABEL: @maxf8(
+; THRESH-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* bitcast ([32 x float]* @arr1 to <2 x float>*), align 16
+; THRESH-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; THRESH-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; THRESH-NEXT:    [[TMP5:%.*]] = fcmp fast ogt float [[TMP3]], [[TMP4]]
+; THRESH-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
+; THRESH-NEXT:    [[TMP7:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 2), align 8
+; THRESH-NEXT:    [[TMP8:%.*]] = fcmp fast ogt float [[TMP6]], [[TMP7]]
+; THRESH-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], float [[TMP6]], float [[TMP7]]
+; THRESH-NEXT:    [[TMP10:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 3), align 4
+; THRESH-NEXT:    [[TMP11:%.*]] = fcmp fast ogt float [[TMP9]], [[TMP10]]
+; THRESH-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], float [[TMP9]], float [[TMP10]]
+; THRESH-NEXT:    [[TMP13:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 4), align 16
+; THRESH-NEXT:    [[TMP14:%.*]] = fcmp fast ogt float [[TMP12]], [[TMP13]]
+; THRESH-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], float [[TMP12]], float [[TMP13]]
+; THRESH-NEXT:    [[TMP16:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 5), align 4
+; THRESH-NEXT:    [[TMP17:%.*]] = fcmp fast ogt float [[TMP15]], [[TMP16]]
+; THRESH-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], float [[TMP15]], float [[TMP16]]
+; THRESH-NEXT:    [[TMP19:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 6), align 8
+; THRESH-NEXT:    [[TMP20:%.*]] = fcmp fast ogt float [[TMP18]], [[TMP19]]
+; THRESH-NEXT:    [[TMP21:%.*]] = select i1 [[TMP20]], float [[TMP18]], float [[TMP19]]
+; THRESH-NEXT:    [[TMP22:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 7), align 4
+; THRESH-NEXT:    [[TMP23:%.*]] = fcmp fast ogt float [[TMP21]], [[TMP22]]
+; THRESH-NEXT:    [[TMP24:%.*]] = select i1 [[TMP23]], float [[TMP21]], float [[TMP22]]
+; THRESH-NEXT:    ret float [[TMP24]]
 ;
   %2 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 0), align 16
   %3 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 1), align 4
@@ -229,11 +277,107 @@ define float @maxf8(float) {
   ret float %23
 }
 
+; FIXME: Use fmaxnum intrinsics to match what InstCombine creates for fcmp+select
+; with fastmath on the select.
 define float @maxf16(float) {
-; CHECK-LABEL: @maxf16(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x float>, <16 x float>* bitcast ([32 x float]* @arr1 to <16 x float>*), align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.experimental.vector.reduce.fmax.v16f32(<16 x float> [[TMP2]])
-; CHECK-NEXT:    ret float [[TMP3]]
+; DEFAULT-LABEL: @maxf16(
+; DEFAULT-NEXT:    [[TMP2:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 0), align 16
+; DEFAULT-NEXT:    [[TMP3:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 1), align 4
+; DEFAULT-NEXT:    [[TMP4:%.*]] = fcmp fast ogt float [[TMP2]], [[TMP3]]
+; DEFAULT-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], float [[TMP2]], float [[TMP3]]
+; DEFAULT-NEXT:    [[TMP6:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 2), align 8
+; DEFAULT-NEXT:    [[TMP7:%.*]] = fcmp fast ogt float [[TMP5]], [[TMP6]]
+; DEFAULT-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP5]], float [[TMP6]]
+; DEFAULT-NEXT:    [[TMP9:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 3), align 4
+; DEFAULT-NEXT:    [[TMP10:%.*]] = fcmp fast ogt float [[TMP8]], [[TMP9]]
+; DEFAULT-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], float [[TMP8]], float [[TMP9]]
+; DEFAULT-NEXT:    [[TMP12:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 4), align 16
+; DEFAULT-NEXT:    [[TMP13:%.*]] = fcmp fast ogt float [[TMP11]], [[TMP12]]
+; DEFAULT-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], float [[TMP11]], float [[TMP12]]
+; DEFAULT-NEXT:    [[TMP15:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 5), align 4
+; DEFAULT-NEXT:    [[TMP16:%.*]] = fcmp fast ogt float [[TMP14]], [[TMP15]]
+; DEFAULT-NEXT:    [[TMP17:%.*]] = select i1 [[TMP16]], float [[TMP14]], float [[TMP15]]
+; DEFAULT-NEXT:    [[TMP18:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 6), align 8
+; DEFAULT-NEXT:    [[TMP19:%.*]] = fcmp fast ogt float [[TMP17]], [[TMP18]]
+; DEFAULT-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], float [[TMP17]], float [[TMP18]]
+; DEFAULT-NEXT:    [[TMP21:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 7), align 4
+; DEFAULT-NEXT:    [[TMP22:%.*]] = fcmp fast ogt float [[TMP20]], [[TMP21]]
+; DEFAULT-NEXT:    [[TMP23:%.*]] = select i1 [[TMP22]], float [[TMP20]], float [[TMP21]]
+; DEFAULT-NEXT:    [[TMP24:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 8), align 16
+; DEFAULT-NEXT:    [[TMP25:%.*]] = fcmp fast ogt float [[TMP23]], [[TMP24]]
+; DEFAULT-NEXT:    [[TMP26:%.*]] = select i1 [[TMP25]], float [[TMP23]], float [[TMP24]]
+; DEFAULT-NEXT:    [[TMP27:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 9), align 4
+; DEFAULT-NEXT:    [[TMP28:%.*]] = fcmp fast ogt float [[TMP26]], [[TMP27]]
+; DEFAULT-NEXT:    [[TMP29:%.*]] = select i1 [[TMP28]], float [[TMP26]], float [[TMP27]]
+; DEFAULT-NEXT:    [[TMP30:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 10), align 8
+; DEFAULT-NEXT:    [[TMP31:%.*]] = fcmp fast ogt float [[TMP29]], [[TMP30]]
+; DEFAULT-NEXT:    [[TMP32:%.*]] = select i1 [[TMP31]], float [[TMP29]], float [[TMP30]]
+; DEFAULT-NEXT:    [[TMP33:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 11), align 4
+; DEFAULT-NEXT:    [[TMP34:%.*]] = fcmp fast ogt float [[TMP32]], [[TMP33]]
+; DEFAULT-NEXT:    [[TMP35:%.*]] = select i1 [[TMP34]], float [[TMP32]], float [[TMP33]]
+; DEFAULT-NEXT:    [[TMP36:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 12), align 16
+; DEFAULT-NEXT:    [[TMP37:%.*]] = fcmp fast ogt float [[TMP35]], [[TMP36]]
+; DEFAULT-NEXT:    [[TMP38:%.*]] = select i1 [[TMP37]], float [[TMP35]], float [[TMP36]]
+; DEFAULT-NEXT:    [[TMP39:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 13), align 4
+; DEFAULT-NEXT:    [[TMP40:%.*]] = fcmp fast ogt float [[TMP38]], [[TMP39]]
+; DEFAULT-NEXT:    [[TMP41:%.*]] = select i1 [[TMP40]], float [[TMP38]], float [[TMP39]]
+; DEFAULT-NEXT:    [[TMP42:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 14), align 8
+; DEFAULT-NEXT:    [[TMP43:%.*]] = fcmp fast ogt float [[TMP41]], [[TMP42]]
+; DEFAULT-NEXT:    [[TMP44:%.*]] = select i1 [[TMP43]], float [[TMP41]], float [[TMP42]]
+; DEFAULT-NEXT:    [[TMP45:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 15), align 4
+; DEFAULT-NEXT:    [[TMP46:%.*]] = fcmp fast ogt float [[TMP44]], [[TMP45]]
+; DEFAULT-NEXT:    [[TMP47:%.*]] = select i1 [[TMP46]], float [[TMP44]], float [[TMP45]]
+; DEFAULT-NEXT:    ret float [[TMP47]]
+;
+; THRESH-LABEL: @maxf16(
+; THRESH-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* bitcast ([32 x float]* @arr1 to <2 x float>*), align 16
+; THRESH-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; THRESH-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; THRESH-NEXT:    [[TMP5:%.*]] = fcmp fast ogt float [[TMP3]], [[TMP4]]
+; THRESH-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
+; THRESH-NEXT:    [[TMP7:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 2), align 8
+; THRESH-NEXT:    [[TMP8:%.*]] = fcmp fast ogt float [[TMP6]], [[TMP7]]
+; THRESH-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], float [[TMP6]], float [[TMP7]]
+; THRESH-NEXT:    [[TMP10:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 3), align 4
+; THRESH-NEXT:    [[TMP11:%.*]] = fcmp fast ogt float [[TMP9]], [[TMP10]]
+; THRESH-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], float [[TMP9]], float [[TMP10]]
+; THRESH-NEXT:    [[TMP13:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 4), align 16
+; THRESH-NEXT:    [[TMP14:%.*]] = fcmp fast ogt float [[TMP12]], [[TMP13]]
+; THRESH-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], float [[TMP12]], float [[TMP13]]
+; THRESH-NEXT:    [[TMP16:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 5), align 4
+; THRESH-NEXT:    [[TMP17:%.*]] = fcmp fast ogt float [[TMP15]], [[TMP16]]
+; THRESH-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], float [[TMP15]], float [[TMP16]]
+; THRESH-NEXT:    [[TMP19:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 6), align 8
+; THRESH-NEXT:    [[TMP20:%.*]] = fcmp fast ogt float [[TMP18]], [[TMP19]]
+; THRESH-NEXT:    [[TMP21:%.*]] = select i1 [[TMP20]], float [[TMP18]], float [[TMP19]]
+; THRESH-NEXT:    [[TMP22:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 7), align 4
+; THRESH-NEXT:    [[TMP23:%.*]] = fcmp fast ogt float [[TMP21]], [[TMP22]]
+; THRESH-NEXT:    [[TMP24:%.*]] = select i1 [[TMP23]], float [[TMP21]], float [[TMP22]]
+; THRESH-NEXT:    [[TMP25:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 8), align 16
+; THRESH-NEXT:    [[TMP26:%.*]] = fcmp fast ogt float [[TMP24]], [[TMP25]]
+; THRESH-NEXT:    [[TMP27:%.*]] = select i1 [[TMP26]], float [[TMP24]], float [[TMP25]]
+; THRESH-NEXT:    [[TMP28:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 9), align 4
+; THRESH-NEXT:    [[TMP29:%.*]] = fcmp fast ogt float [[TMP27]], [[TMP28]]
+; THRESH-NEXT:    [[TMP30:%.*]] = select i1 [[TMP29]], float [[TMP27]], float [[TMP28]]
+; THRESH-NEXT:    [[TMP31:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 10), align 8
+; THRESH-NEXT:    [[TMP32:%.*]] = fcmp fast ogt float [[TMP30]], [[TMP31]]
+; THRESH-NEXT:    [[TMP33:%.*]] = select i1 [[TMP32]], float [[TMP30]], float [[TMP31]]
+; THRESH-NEXT:    [[TMP34:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 11), align 4
+; THRESH-NEXT:    [[TMP35:%.*]] = fcmp fast ogt float [[TMP33]], [[TMP34]]
+; THRESH-NEXT:    [[TMP36:%.*]] = select i1 [[TMP35]], float [[TMP33]], float [[TMP34]]
+; THRESH-NEXT:    [[TMP37:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 12), align 16
+; THRESH-NEXT:    [[TMP38:%.*]] = fcmp fast ogt float [[TMP36]], [[TMP37]]
+; THRESH-NEXT:    [[TMP39:%.*]] = select i1 [[TMP38]], float [[TMP36]], float [[TMP37]]
+; THRESH-NEXT:    [[TMP40:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 13), align 4
+; THRESH-NEXT:    [[TMP41:%.*]] = fcmp fast ogt float [[TMP39]], [[TMP40]]
+; THRESH-NEXT:    [[TMP42:%.*]] = select i1 [[TMP41]], float [[TMP39]], float [[TMP40]]
+; THRESH-NEXT:    [[TMP43:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 14), align 8
+; THRESH-NEXT:    [[TMP44:%.*]] = fcmp fast ogt float [[TMP42]], [[TMP43]]
+; THRESH-NEXT:    [[TMP45:%.*]] = select i1 [[TMP44]], float [[TMP42]], float [[TMP43]]
+; THRESH-NEXT:    [[TMP46:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 15), align 4
+; THRESH-NEXT:    [[TMP47:%.*]] = fcmp fast ogt float [[TMP45]], [[TMP46]]
+; THRESH-NEXT:    [[TMP48:%.*]] = select i1 [[TMP47]], float [[TMP45]], float [[TMP46]]
+; THRESH-NEXT:    ret float [[TMP48]]
 ;
   %2 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 0), align 16
   %3 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 1), align 4
@@ -284,11 +428,203 @@ define float @maxf16(float) {
   ret float %47
 }
 
+; FIXME: Use fmaxnum intrinsics to match what InstCombine creates for fcmp+select
+; with fastmath on the select.
 define float @maxf32(float) {
-; CHECK-LABEL: @maxf32(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x float>, <32 x float>* bitcast ([32 x float]* @arr1 to <32 x float>*), align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.experimental.vector.reduce.fmax.v32f32(<32 x float> [[TMP2]])
-; CHECK-NEXT:    ret float [[TMP3]]
+; DEFAULT-LABEL: @maxf32(
+; DEFAULT-NEXT:    [[TMP2:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 0), align 16
+; DEFAULT-NEXT:    [[TMP3:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 1), align 4
+; DEFAULT-NEXT:    [[TMP4:%.*]] = fcmp fast ogt float [[TMP2]], [[TMP3]]
+; DEFAULT-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], float [[TMP2]], float [[TMP3]]
+; DEFAULT-NEXT:    [[TMP6:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 2), align 8
+; DEFAULT-NEXT:    [[TMP7:%.*]] = fcmp fast ogt float [[TMP5]], [[TMP6]]
+; DEFAULT-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP5]], float [[TMP6]]
+; DEFAULT-NEXT:    [[TMP9:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 3), align 4
+; DEFAULT-NEXT:    [[TMP10:%.*]] = fcmp fast ogt float [[TMP8]], [[TMP9]]
+; DEFAULT-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], float [[TMP8]], float [[TMP9]]
+; DEFAULT-NEXT:    [[TMP12:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 4), align 16
+; DEFAULT-NEXT:    [[TMP13:%.*]] = fcmp fast ogt float [[TMP11]], [[TMP12]]
+; DEFAULT-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], float [[TMP11]], float [[TMP12]]
+; DEFAULT-NEXT:    [[TMP15:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 5), align 4
+; DEFAULT-NEXT:    [[TMP16:%.*]] = fcmp fast ogt float [[TMP14]], [[TMP15]]
+; DEFAULT-NEXT:    [[TMP17:%.*]] = select i1 [[TMP16]], float [[TMP14]], float [[TMP15]]
+; DEFAULT-NEXT:    [[TMP18:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 6), align 8
+; DEFAULT-NEXT:    [[TMP19:%.*]] = fcmp fast ogt float [[TMP17]], [[TMP18]]
+; DEFAULT-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], float [[TMP17]], float [[TMP18]]
+; DEFAULT-NEXT:    [[TMP21:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 7), align 4
+; DEFAULT-NEXT:    [[TMP22:%.*]] = fcmp fast ogt float [[TMP20]], [[TMP21]]
+; DEFAULT-NEXT:    [[TMP23:%.*]] = select i1 [[TMP22]], float [[TMP20]], float [[TMP21]]
+; DEFAULT-NEXT:    [[TMP24:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 8), align 16
+; DEFAULT-NEXT:    [[TMP25:%.*]] = fcmp fast ogt float [[TMP23]], [[TMP24]]
+; DEFAULT-NEXT:    [[TMP26:%.*]] = select i1 [[TMP25]], float [[TMP23]], float [[TMP24]]
+; DEFAULT-NEXT:    [[TMP27:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 9), align 4
+; DEFAULT-NEXT:    [[TMP28:%.*]] = fcmp fast ogt float [[TMP26]], [[TMP27]]
+; DEFAULT-NEXT:    [[TMP29:%.*]] = select i1 [[TMP28]], float [[TMP26]], float [[TMP27]]
+; DEFAULT-NEXT:    [[TMP30:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 10), align 8
+; DEFAULT-NEXT:    [[TMP31:%.*]] = fcmp fast ogt float [[TMP29]], [[TMP30]]
+; DEFAULT-NEXT:    [[TMP32:%.*]] = select i1 [[TMP31]], float [[TMP29]], float [[TMP30]]
+; DEFAULT-NEXT:    [[TMP33:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 11), align 4
+; DEFAULT-NEXT:    [[TMP34:%.*]] = fcmp fast ogt float [[TMP32]], [[TMP33]]
+; DEFAULT-NEXT:    [[TMP35:%.*]] = select i1 [[TMP34]], float [[TMP32]], float [[TMP33]]
+; DEFAULT-NEXT:    [[TMP36:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 12), align 16
+; DEFAULT-NEXT:    [[TMP37:%.*]] = fcmp fast ogt float [[TMP35]], [[TMP36]]
+; DEFAULT-NEXT:    [[TMP38:%.*]] = select i1 [[TMP37]], float [[TMP35]], float [[TMP36]]
+; DEFAULT-NEXT:    [[TMP39:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 13), align 4
+; DEFAULT-NEXT:    [[TMP40:%.*]] = fcmp fast ogt float [[TMP38]], [[TMP39]]
+; DEFAULT-NEXT:    [[TMP41:%.*]] = select i1 [[TMP40]], float [[TMP38]], float [[TMP39]]
+; DEFAULT-NEXT:    [[TMP42:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 14), align 8
+; DEFAULT-NEXT:    [[TMP43:%.*]] = fcmp fast ogt float [[TMP41]], [[TMP42]]
+; DEFAULT-NEXT:    [[TMP44:%.*]] = select i1 [[TMP43]], float [[TMP41]], float [[TMP42]]
+; DEFAULT-NEXT:    [[TMP45:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 15), align 4
+; DEFAULT-NEXT:    [[TMP46:%.*]] = fcmp fast ogt float [[TMP44]], [[TMP45]]
+; DEFAULT-NEXT:    [[TMP47:%.*]] = select i1 [[TMP46]], float [[TMP44]], float [[TMP45]]
+; DEFAULT-NEXT:    [[TMP48:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 16), align 16
+; DEFAULT-NEXT:    [[TMP49:%.*]] = fcmp fast ogt float [[TMP47]], [[TMP48]]
+; DEFAULT-NEXT:    [[TMP50:%.*]] = select i1 [[TMP49]], float [[TMP47]], float [[TMP48]]
+; DEFAULT-NEXT:    [[TMP51:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 17), align 4
+; DEFAULT-NEXT:    [[TMP52:%.*]] = fcmp fast ogt float [[TMP50]], [[TMP51]]
+; DEFAULT-NEXT:    [[TMP53:%.*]] = select i1 [[TMP52]], float [[TMP50]], float [[TMP51]]
+; DEFAULT-NEXT:    [[TMP54:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 18), align 8
+; DEFAULT-NEXT:    [[TMP55:%.*]] = fcmp fast ogt float [[TMP53]], [[TMP54]]
+; DEFAULT-NEXT:    [[TMP56:%.*]] = select i1 [[TMP55]], float [[TMP53]], float [[TMP54]]
+; DEFAULT-NEXT:    [[TMP57:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 19), align 4
+; DEFAULT-NEXT:    [[TMP58:%.*]] = fcmp fast ogt float [[TMP56]], [[TMP57]]
+; DEFAULT-NEXT:    [[TMP59:%.*]] = select i1 [[TMP58]], float [[TMP56]], float [[TMP57]]
+; DEFAULT-NEXT:    [[TMP60:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 20), align 16
+; DEFAULT-NEXT:    [[TMP61:%.*]] = fcmp fast ogt float [[TMP59]], [[TMP60]]
+; DEFAULT-NEXT:    [[TMP62:%.*]] = select i1 [[TMP61]], float [[TMP59]], float [[TMP60]]
+; DEFAULT-NEXT:    [[TMP63:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 21), align 4
+; DEFAULT-NEXT:    [[TMP64:%.*]] = fcmp fast ogt float [[TMP62]], [[TMP63]]
+; DEFAULT-NEXT:    [[TMP65:%.*]] = select i1 [[TMP64]], float [[TMP62]], float [[TMP63]]
+; DEFAULT-NEXT:    [[TMP66:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 22), align 8
+; DEFAULT-NEXT:    [[TMP67:%.*]] = fcmp fast ogt float [[TMP65]], [[TMP66]]
+; DEFAULT-NEXT:    [[TMP68:%.*]] = select i1 [[TMP67]], float [[TMP65]], float [[TMP66]]
+; DEFAULT-NEXT:    [[TMP69:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 23), align 4
+; DEFAULT-NEXT:    [[TMP70:%.*]] = fcmp fast ogt float [[TMP68]], [[TMP69]]
+; DEFAULT-NEXT:    [[TMP71:%.*]] = select i1 [[TMP70]], float [[TMP68]], float [[TMP69]]
+; DEFAULT-NEXT:    [[TMP72:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 24), align 16
+; DEFAULT-NEXT:    [[TMP73:%.*]] = fcmp fast ogt float [[TMP71]], [[TMP72]]
+; DEFAULT-NEXT:    [[TMP74:%.*]] = select i1 [[TMP73]], float [[TMP71]], float [[TMP72]]
+; DEFAULT-NEXT:    [[TMP75:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 25), align 4
+; DEFAULT-NEXT:    [[TMP76:%.*]] = fcmp fast ogt float [[TMP74]], [[TMP75]]
+; DEFAULT-NEXT:    [[TMP77:%.*]] = select i1 [[TMP76]], float [[TMP74]], float [[TMP75]]
+; DEFAULT-NEXT:    [[TMP78:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 26), align 8
+; DEFAULT-NEXT:    [[TMP79:%.*]] = fcmp fast ogt float [[TMP77]], [[TMP78]]
+; DEFAULT-NEXT:    [[TMP80:%.*]] = select i1 [[TMP79]], float [[TMP77]], float [[TMP78]]
+; DEFAULT-NEXT:    [[TMP81:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 27), align 4
+; DEFAULT-NEXT:    [[TMP82:%.*]] = fcmp fast ogt float [[TMP80]], [[TMP81]]
+; DEFAULT-NEXT:    [[TMP83:%.*]] = select i1 [[TMP82]], float [[TMP80]], float [[TMP81]]
+; DEFAULT-NEXT:    [[TMP84:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 28), align 16
+; DEFAULT-NEXT:    [[TMP85:%.*]] = fcmp fast ogt float [[TMP83]], [[TMP84]]
+; DEFAULT-NEXT:    [[TMP86:%.*]] = select i1 [[TMP85]], float [[TMP83]], float [[TMP84]]
+; DEFAULT-NEXT:    [[TMP87:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 29), align 4
+; DEFAULT-NEXT:    [[TMP88:%.*]] = fcmp fast ogt float [[TMP86]], [[TMP87]]
+; DEFAULT-NEXT:    [[TMP89:%.*]] = select i1 [[TMP88]], float [[TMP86]], float [[TMP87]]
+; DEFAULT-NEXT:    [[TMP90:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 30), align 8
+; DEFAULT-NEXT:    [[TMP91:%.*]] = fcmp fast ogt float [[TMP89]], [[TMP90]]
+; DEFAULT-NEXT:    [[TMP92:%.*]] = select i1 [[TMP91]], float [[TMP89]], float [[TMP90]]
+; DEFAULT-NEXT:    [[TMP93:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 31), align 4
+; DEFAULT-NEXT:    [[TMP94:%.*]] = fcmp fast ogt float [[TMP92]], [[TMP93]]
+; DEFAULT-NEXT:    [[TMP95:%.*]] = select i1 [[TMP94]], float [[TMP92]], float [[TMP93]]
+; DEFAULT-NEXT:    ret float [[TMP95]]
+;
+; THRESH-LABEL: @maxf32(
+; THRESH-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* bitcast ([32 x float]* @arr1 to <2 x float>*), align 16
+; THRESH-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; THRESH-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; THRESH-NEXT:    [[TMP5:%.*]] = fcmp fast ogt float [[TMP3]], [[TMP4]]
+; THRESH-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
+; THRESH-NEXT:    [[TMP7:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 2), align 8
+; THRESH-NEXT:    [[TMP8:%.*]] = fcmp fast ogt float [[TMP6]], [[TMP7]]
+; THRESH-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], float [[TMP6]], float [[TMP7]]
+; THRESH-NEXT:    [[TMP10:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 3), align 4
+; THRESH-NEXT:    [[TMP11:%.*]] = fcmp fast ogt float [[TMP9]], [[TMP10]]
+; THRESH-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], float [[TMP9]], float [[TMP10]]
+; THRESH-NEXT:    [[TMP13:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 4), align 16
+; THRESH-NEXT:    [[TMP14:%.*]] = fcmp fast ogt float [[TMP12]], [[TMP13]]
+; THRESH-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], float [[TMP12]], float [[TMP13]]
+; THRESH-NEXT:    [[TMP16:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 5), align 4
+; THRESH-NEXT:    [[TMP17:%.*]] = fcmp fast ogt float [[TMP15]], [[TMP16]]
+; THRESH-NEXT:    [[TMP18:%.*]] = select i1 [[TMP17]], float [[TMP15]], float [[TMP16]]
+; THRESH-NEXT:    [[TMP19:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 6), align 8
+; THRESH-NEXT:    [[TMP20:%.*]] = fcmp fast ogt float [[TMP18]], [[TMP19]]
+; THRESH-NEXT:    [[TMP21:%.*]] = select i1 [[TMP20]], float [[TMP18]], float [[TMP19]]
+; THRESH-NEXT:    [[TMP22:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 7), align 4
+; THRESH-NEXT:    [[TMP23:%.*]] = fcmp fast ogt float [[TMP21]], [[TMP22]]
+; THRESH-NEXT:    [[TMP24:%.*]] = select i1 [[TMP23]], float [[TMP21]], float [[TMP22]]
+; THRESH-NEXT:    [[TMP25:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 8), align 16
+; THRESH-NEXT:    [[TMP26:%.*]] = fcmp fast ogt float [[TMP24]], [[TMP25]]
+; THRESH-NEXT:    [[TMP27:%.*]] = select i1 [[TMP26]], float [[TMP24]], float [[TMP25]]
+; THRESH-NEXT:    [[TMP28:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 9), align 4
+; THRESH-NEXT:    [[TMP29:%.*]] = fcmp fast ogt float [[TMP27]], [[TMP28]]
+; THRESH-NEXT:    [[TMP30:%.*]] = select i1 [[TMP29]], float [[TMP27]], float [[TMP28]]
+; THRESH-NEXT:    [[TMP31:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 10), align 8
+; THRESH-NEXT:    [[TMP32:%.*]] = fcmp fast ogt float [[TMP30]], [[TMP31]]
+; THRESH-NEXT:    [[TMP33:%.*]] = select i1 [[TMP32]], float [[TMP30]], float [[TMP31]]
+; THRESH-NEXT:    [[TMP34:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 11), align 4
+; THRESH-NEXT:    [[TMP35:%.*]] = fcmp fast ogt float [[TMP33]], [[TMP34]]
+; THRESH-NEXT:    [[TMP36:%.*]] = select i1 [[TMP35]], float [[TMP33]], float [[TMP34]]
+; THRESH-NEXT:    [[TMP37:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 12), align 16
+; THRESH-NEXT:    [[TMP38:%.*]] = fcmp fast ogt float [[TMP36]], [[TMP37]]
+; THRESH-NEXT:    [[TMP39:%.*]] = select i1 [[TMP38]], float [[TMP36]], float [[TMP37]]
+; THRESH-NEXT:    [[TMP40:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 13), align 4
+; THRESH-NEXT:    [[TMP41:%.*]] = fcmp fast ogt float [[TMP39]], [[TMP40]]
+; THRESH-NEXT:    [[TMP42:%.*]] = select i1 [[TMP41]], float [[TMP39]], float [[TMP40]]
+; THRESH-NEXT:    [[TMP43:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 14), align 8
+; THRESH-NEXT:    [[TMP44:%.*]] = fcmp fast ogt float [[TMP42]], [[TMP43]]
+; THRESH-NEXT:    [[TMP45:%.*]] = select i1 [[TMP44]], float [[TMP42]], float [[TMP43]]
+; THRESH-NEXT:    [[TMP46:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 15), align 4
+; THRESH-NEXT:    [[TMP47:%.*]] = fcmp fast ogt float [[TMP45]], [[TMP46]]
+; THRESH-NEXT:    [[TMP48:%.*]] = select i1 [[TMP47]], float [[TMP45]], float [[TMP46]]
+; THRESH-NEXT:    [[TMP49:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 16), align 16
+; THRESH-NEXT:    [[TMP50:%.*]] = fcmp fast ogt float [[TMP48]], [[TMP49]]
+; THRESH-NEXT:    [[TMP51:%.*]] = select i1 [[TMP50]], float [[TMP48]], float [[TMP49]]
+; THRESH-NEXT:    [[TMP52:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 17), align 4
+; THRESH-NEXT:    [[TMP53:%.*]] = fcmp fast ogt float [[TMP51]], [[TMP52]]
+; THRESH-NEXT:    [[TMP54:%.*]] = select i1 [[TMP53]], float [[TMP51]], float [[TMP52]]
+; THRESH-NEXT:    [[TMP55:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 18), align 8
+; THRESH-NEXT:    [[TMP56:%.*]] = fcmp fast ogt float [[TMP54]], [[TMP55]]
+; THRESH-NEXT:    [[TMP57:%.*]] = select i1 [[TMP56]], float [[TMP54]], float [[TMP55]]
+; THRESH-NEXT:    [[TMP58:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 19), align 4
+; THRESH-NEXT:    [[TMP59:%.*]] = fcmp fast ogt float [[TMP57]], [[TMP58]]
+; THRESH-NEXT:    [[TMP60:%.*]] = select i1 [[TMP59]], float [[TMP57]], float [[TMP58]]
+; THRESH-NEXT:    [[TMP61:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 20), align 16
+; THRESH-NEXT:    [[TMP62:%.*]] = fcmp fast ogt float [[TMP60]], [[TMP61]]
+; THRESH-NEXT:    [[TMP63:%.*]] = select i1 [[TMP62]], float [[TMP60]], float [[TMP61]]
+; THRESH-NEXT:    [[TMP64:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 21), align 4
+; THRESH-NEXT:    [[TMP65:%.*]] = fcmp fast ogt float [[TMP63]], [[TMP64]]
+; THRESH-NEXT:    [[TMP66:%.*]] = select i1 [[TMP65]], float [[TMP63]], float [[TMP64]]
+; THRESH-NEXT:    [[TMP67:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 22), align 8
+; THRESH-NEXT:    [[TMP68:%.*]] = fcmp fast ogt float [[TMP66]], [[TMP67]]
+; THRESH-NEXT:    [[TMP69:%.*]] = select i1 [[TMP68]], float [[TMP66]], float [[TMP67]]
+; THRESH-NEXT:    [[TMP70:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 23), align 4
+; THRESH-NEXT:    [[TMP71:%.*]] = fcmp fast ogt float [[TMP69]], [[TMP70]]
+; THRESH-NEXT:    [[TMP72:%.*]] = select i1 [[TMP71]], float [[TMP69]], float [[TMP70]]
+; THRESH-NEXT:    [[TMP73:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 24), align 16
+; THRESH-NEXT:    [[TMP74:%.*]] = fcmp fast ogt float [[TMP72]], [[TMP73]]
+; THRESH-NEXT:    [[TMP75:%.*]] = select i1 [[TMP74]], float [[TMP72]], float [[TMP73]]
+; THRESH-NEXT:    [[TMP76:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 25), align 4
+; THRESH-NEXT:    [[TMP77:%.*]] = fcmp fast ogt float [[TMP75]], [[TMP76]]
+; THRESH-NEXT:    [[TMP78:%.*]] = select i1 [[TMP77]], float [[TMP75]], float [[TMP76]]
+; THRESH-NEXT:    [[TMP79:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 26), align 8
+; THRESH-NEXT:    [[TMP80:%.*]] = fcmp fast ogt float [[TMP78]], [[TMP79]]
+; THRESH-NEXT:    [[TMP81:%.*]] = select i1 [[TMP80]], float [[TMP78]], float [[TMP79]]
+; THRESH-NEXT:    [[TMP82:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 27), align 4
+; THRESH-NEXT:    [[TMP83:%.*]] = fcmp fast ogt float [[TMP81]], [[TMP82]]
+; THRESH-NEXT:    [[TMP84:%.*]] = select i1 [[TMP83]], float [[TMP81]], float [[TMP82]]
+; THRESH-NEXT:    [[TMP85:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 28), align 16
+; THRESH-NEXT:    [[TMP86:%.*]] = fcmp fast ogt float [[TMP84]], [[TMP85]]
+; THRESH-NEXT:    [[TMP87:%.*]] = select i1 [[TMP86]], float [[TMP84]], float [[TMP85]]
+; THRESH-NEXT:    [[TMP88:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 29), align 4
+; THRESH-NEXT:    [[TMP89:%.*]] = fcmp fast ogt float [[TMP87]], [[TMP88]]
+; THRESH-NEXT:    [[TMP90:%.*]] = select i1 [[TMP89]], float [[TMP87]], float [[TMP88]]
+; THRESH-NEXT:    [[TMP91:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 30), align 8
+; THRESH-NEXT:    [[TMP92:%.*]] = fcmp fast ogt float [[TMP90]], [[TMP91]]
+; THRESH-NEXT:    [[TMP93:%.*]] = select i1 [[TMP92]], float [[TMP90]], float [[TMP91]]
+; THRESH-NEXT:    [[TMP94:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 31), align 4
+; THRESH-NEXT:    [[TMP95:%.*]] = fcmp fast ogt float [[TMP93]], [[TMP94]]
+; THRESH-NEXT:    [[TMP96:%.*]] = select i1 [[TMP95]], float [[TMP93]], float [[TMP94]]
+; THRESH-NEXT:    ret float [[TMP96]]
 ;
   %2 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 0), align 16
   %3 = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 1), align 4
