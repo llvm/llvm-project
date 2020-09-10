@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "HexagonSubtarget.h"
 #include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
-#include "HexagonSubtarget.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
 #include <map>
@@ -37,7 +38,6 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #define GET_SUBTARGETINFO_TARGET_DESC
 #include "HexagonGenSubtargetInfo.inc"
-
 
 static cl::opt<bool> EnableBSBSched("enable-bsb-sched",
   cl::Hidden, cl::ZeroOrMore, cl::init(true));

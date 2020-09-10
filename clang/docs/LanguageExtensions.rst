@@ -2416,9 +2416,9 @@ Memory builtins
 
 ``__builtin_memcpy_inline(dst, src, size)`` is identical to
 ``__builtin_memcpy(dst, src, size)`` except that the generated code is
-guaranteed not to call any external functions. See [LLVM IR ‘llvm.memcpy.inline’
-Intrinsic](https://llvm.org/docs/LangRef.html#llvm-memcpy-inline-intrinsic) for
-more information.
+guaranteed not to call any external functions. See LLVM IR `llvm.memcpy.inline
+<https://llvm.org/docs/LangRef.html#llvm-memcpy-inline-intrinsic>`_ Intrinsic 
+for more information.
 
 Note that the `size` argument must be a compile time constant.
 

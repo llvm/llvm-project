@@ -20,6 +20,7 @@ using linalg_dot = OperationBuilder<linalg::DotOp>;
 using linalg_fill = OperationBuilder<linalg::FillOp>;
 using linalg_matmul = OperationBuilder<linalg::MatmulOp>;
 using linalg_matvec = OperationBuilder<linalg::MatvecOp>;
+using linalg_vecmat = OperationBuilder<linalg::VecmatOp>;
 using linalg_range = ValueBuilder<linalg::RangeOp>;
 using linalg_reshape = ValueBuilder<linalg::ReshapeOp>;
 using linalg_slice = ValueBuilder<linalg::SliceOp>;

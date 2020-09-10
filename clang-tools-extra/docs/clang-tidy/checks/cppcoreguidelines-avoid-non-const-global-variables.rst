@@ -3,8 +3,8 @@
 cppcoreguidelines-avoid-non-const-global-variables
 ==================================================
 
-Finds non-const global variables as described in `I.2 of C++ Core Guidelines <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Ri-global>` .
-As `R.6 of C++ Core Guidelines <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rr-global>` is a duplicate of rule I.2 it also covers that rule.
+Finds non-const global variables as described in `I.2 of C++ Core Guidelines <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Ri-global>`_ .
+As `R.6 of C++ Core Guidelines <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rr-global>`_ is a duplicate of rule I.2 it also covers that rule.
 
 .. code-block:: c++
 

@@ -37,7 +37,7 @@ The check warns for constructors C1 and C2, because those can hide copy and move
 constructors. We suppress warnings if the copy and the move constructors are both
 disabled (deleted or private), because there is nothing the perfect forwarding
 constructor could hide in this case. We also suppress warnings for constructors
-like C3 that are guarded with an enable_if, assuming the programmer was aware of
+like C3 that are guarded with an ``enable_if``, assuming the programmer was aware of
 the possible hiding.
 
 Background
@@ -45,5 +45,5 @@ Background
 
 For deciding whether a constructor is guarded with enable_if, we consider the
 default values of the type parameters and the types of the constructor
-parameters. If any part of these types is std::enable_if or std::enable_if_t, we
-assume the constructor is guarded.
+parameters. If any part of these types is ``std::enable_if`` or ``std::enable_if_t``,
+we assume the constructor is guarded.

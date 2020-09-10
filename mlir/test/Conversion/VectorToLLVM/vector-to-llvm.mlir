@@ -755,34 +755,36 @@ func @transfer_read_1d(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
 // 2. Create a vector with linear indices [ 0 .. vector_length - 1 ].
 //       CHECK: %[[linearIndex:.*]] = llvm.mlir.constant(dense
 //  CHECK-SAME: <[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]> :
-//  CHECK-SAME: vector<17xi64>) : !llvm.vec<17 x i64>
+//  CHECK-SAME: vector<17xi32>) : !llvm.vec<17 x i32>
 //
 // 3. Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
-//       CHECK: %[[offsetVec:.*]] = llvm.mlir.undef : !llvm.vec<17 x i64>
+//       CHECK: %[[otrunc:.*]] = llvm.trunc %[[BASE]] : !llvm.i64 to !llvm.i32
+//       CHECK: %[[offsetVec:.*]] = llvm.mlir.undef : !llvm.vec<17 x i32>
 //       CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
-//       CHECK: %[[offsetVec2:.*]] = llvm.insertelement %[[BASE]], %[[offsetVec]][%[[c0]] :
-//  CHECK-SAME: !llvm.i32] : !llvm.vec<17 x i64>
+//       CHECK: %[[offsetVec2:.*]] = llvm.insertelement %[[otrunc]], %[[offsetVec]][%[[c0]] :
+//  CHECK-SAME: !llvm.i32] : !llvm.vec<17 x i32>
 //       CHECK: %[[offsetVec3:.*]] = llvm.shufflevector %[[offsetVec2]], %{{.*}} [
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32] :
-//  CHECK-SAME: !llvm.vec<17 x i64>, !llvm.vec<17 x i64>
+//  CHECK-SAME: !llvm.vec<17 x i32>, !llvm.vec<17 x i32>
 //       CHECK: %[[offsetVec4:.*]] = llvm.add %[[offsetVec3]], %[[linearIndex]] :
-//  CHECK-SAME: !llvm.vec<17 x i64>
+//  CHECK-SAME: !llvm.vec<17 x i32>
 //
 // 4. Let dim the memref dimension, compute the vector comparison mask:
 //    [ offset + 0 .. offset + vector_length - 1 ] < [ dim .. dim ]
-//       CHECK: %[[dimVec:.*]] = llvm.mlir.undef : !llvm.vec<17 x i64>
+//       CHECK: %[[dtrunc:.*]] = llvm.trunc %[[DIM]] : !llvm.i64 to !llvm.i32
+//       CHECK: %[[dimVec:.*]] = llvm.mlir.undef : !llvm.vec<17 x i32>
 //       CHECK: %[[c01:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
-//       CHECK: %[[dimVec2:.*]] = llvm.insertelement %[[DIM]], %[[dimVec]][%[[c01]] :
-//  CHECK-SAME:  !llvm.i32] : !llvm.vec<17 x i64>
+//       CHECK: %[[dimVec2:.*]] = llvm.insertelement %[[dtrunc]], %[[dimVec]][%[[c01]] :
+//  CHECK-SAME:  !llvm.i32] : !llvm.vec<17 x i32>
 //       CHECK: %[[dimVec3:.*]] = llvm.shufflevector %[[dimVec2]], %{{.*}} [
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32] :
-//  CHECK-SAME: !llvm.vec<17 x i64>, !llvm.vec<17 x i64>
+//  CHECK-SAME: !llvm.vec<17 x i32>, !llvm.vec<17 x i32>
 //       CHECK: %[[mask:.*]] = llvm.icmp "slt" %[[offsetVec4]], %[[dimVec3]] :
-//  CHECK-SAME: !llvm.vec<17 x i64>
+//  CHECK-SAME: !llvm.vec<17 x i32>
 //
 // 5. Rewrite as a masked read.
 //       CHECK: %[[PASS_THROUGH:.*]] =  llvm.mlir.constant(dense<7.000000e+00> :
@@ -801,13 +803,13 @@ func @transfer_read_1d(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
 // 2. Create a vector with linear indices [ 0 .. vector_length - 1 ].
 //       CHECK: %[[linearIndex_b:.*]] = llvm.mlir.constant(dense
 //  CHECK-SAME: <[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]> :
-//  CHECK-SAME: vector<17xi64>) : !llvm.vec<17 x i64>
+//  CHECK-SAME: vector<17xi32>) : !llvm.vec<17 x i32>
 //
 // 3. Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
 //       CHECK: llvm.shufflevector {{.*}} [0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32] :
-//  CHECK-SAME: !llvm.vec<17 x i64>, !llvm.vec<17 x i64>
+//  CHECK-SAME: !llvm.vec<17 x i32>, !llvm.vec<17 x i32>
 //       CHECK: llvm.add
 //
 // 4. Let dim the memref dimension, compute the vector comparison mask:
@@ -815,8 +817,8 @@ func @transfer_read_1d(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
 //       CHECK: llvm.shufflevector {{.*}} [0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32] :
-//  CHECK-SAME: !llvm.vec<17 x i64>, !llvm.vec<17 x i64>
-//       CHECK: %[[mask_b:.*]] = llvm.icmp "slt" {{.*}} : !llvm.vec<17 x i64>
+//  CHECK-SAME: !llvm.vec<17 x i32>, !llvm.vec<17 x i32>
+//       CHECK: %[[mask_b:.*]] = llvm.icmp "slt" {{.*}} : !llvm.vec<17 x i32>
 //
 // 5. Rewrite as a masked write.
 //       CHECK: llvm.intr.masked.store %[[loaded]], %[[vecPtr_b]], %[[mask_b]]
@@ -836,28 +838,29 @@ func @transfer_read_2d_to_1d(%A : memref<?x?xf32>, %base0: index, %base1: index)
 //  CHECK-SAME: !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
 //
 // Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
-//       CHECK: %[[offsetVec:.*]] = llvm.mlir.undef : !llvm.vec<17 x i64>
+//       CHECK: %[[trunc:.*]] = llvm.trunc %[[BASE_1]] : !llvm.i64 to !llvm.i32
+//       CHECK: %[[offsetVec:.*]] = llvm.mlir.undef : !llvm.vec<17 x i32>
 //       CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
-// Here we check we properly use %BASE_1
-//       CHECK: %[[offsetVec2:.*]] = llvm.insertelement %[[BASE_1]], %[[offsetVec]][%[[c0]] :
-//  CHECK-SAME: !llvm.i32] : !llvm.vec<17 x i64>
+//       CHECK: %[[offsetVec2:.*]] = llvm.insertelement %[[trunc]], %[[offsetVec]][%[[c0]] :
+//  CHECK-SAME: !llvm.i32] : !llvm.vec<17 x i32>
 //       CHECK: %[[offsetVec3:.*]] = llvm.shufflevector %[[offsetVec2]], %{{.*}} [
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32] :
+//  CHECK-SAME: !llvm.vec<17 x i32>, !llvm.vec<17 x i32>
 //
 // Let dim the memref dimension, compute the vector comparison mask:
 //    [ offset + 0 .. offset + vector_length - 1 ] < [ dim .. dim ]
-// Here we check we properly use %DIM[1]
-//       CHECK: %[[dimVec:.*]] = llvm.mlir.undef : !llvm.vec<17 x i64>
+//       CHECK: %[[dimtrunc:.*]] = llvm.trunc %[[DIM]] : !llvm.i64 to !llvm.i32
+//       CHECK: %[[dimVec:.*]] = llvm.mlir.undef : !llvm.vec<17 x i32>
 //       CHECK: %[[c01:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
-//       CHECK: %[[dimVec2:.*]] = llvm.insertelement %[[DIM]], %[[dimVec]][%[[c01]] :
-//  CHECK-SAME:  !llvm.i32] : !llvm.vec<17 x i64>
+//       CHECK: %[[dimVec2:.*]] = llvm.insertelement %[[dimtrunc]], %[[dimVec]][%[[c01]] :
+//  CHECK-SAME:  !llvm.i32] : !llvm.vec<17 x i32>
 //       CHECK: %[[dimVec3:.*]] = llvm.shufflevector %[[dimVec2]], %{{.*}} [
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32] :
-//  CHECK-SAME: !llvm.vec<17 x i64>, !llvm.vec<17 x i64>
+//  CHECK-SAME: !llvm.vec<17 x i32>, !llvm.vec<17 x i32>
 
 func @transfer_read_1d_non_zero_addrspace(%A : memref<?xf32, 3>, %base: index) -> vector<17xf32> {
   %f7 = constant 7.0: f32

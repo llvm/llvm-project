@@ -1,5 +1,8 @@
 include(CMakeDependentOption)
 
+option(CLANG_TIDY_ENABLE_STATIC_ANALYZER
+  "Include static analyzer checks in clang-tidy" ON)
+
 add_subdirectory(clang-apply-replacements)
 add_subdirectory(clang-reorder-fields)
 add_subdirectory(modularize)

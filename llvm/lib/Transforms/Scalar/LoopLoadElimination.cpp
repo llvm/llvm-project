@@ -486,7 +486,6 @@ public:
 
     // Filter the candidates further.
     SmallVector<StoreToLoadForwardingCandidate, 4> Candidates;
-    unsigned NumForwarding = 0;
     for (const StoreToLoadForwardingCandidate &Cand : StoreToLoadDependences) {
       LLVM_DEBUG(dbgs() << "Candidate " << Cand);
 
@@ -506,12 +505,17 @@ public:
       if (!Cand.isDependenceDistanceOfOne(PSE, L))
         continue;
 
-      ++NumForwarding;
+      assert(isa<SCEVAddRecExpr>(PSE.getSCEV(Cand.Load->getPointerOperand())) &&
+             "Loading from something other than indvar?");
+      assert(
+          isa<SCEVAddRecExpr>(PSE.getSCEV(Cand.Store->getPointerOperand())) &&
+          "Storing to something other than indvar?");
+
+      Candidates.push_back(Cand);
       LLVM_DEBUG(
           dbgs()
-          << NumForwarding
+          << Candidates.size()
           << ". Valid store-to-load forwarding across the loop backedge\n");
-      Candidates.push_back(Cand);
     }
     if (Candidates.empty())
       return false;
@@ -563,6 +567,17 @@ public:
       LV.setAliasChecks(std::move(Checks));
       LV.setSCEVChecks(LAI.getPSE().getUnionPredicate());
       LV.versionLoop();
+
+      // After versioning, some of the candidates' pointers could stop being
+      // SCEVAddRecs. We need to filter them out.
+      auto NoLongerGoodCandidate = [this](
+          const StoreToLoadForwardingCandidate &Cand) {
+        return !isa<SCEVAddRecExpr>(
+                    PSE.getSCEV(Cand.Load->getPointerOperand())) ||
+               !isa<SCEVAddRecExpr>(
+                    PSE.getSCEV(Cand.Store->getPointerOperand()));
+      };
+      llvm::erase_if(Candidates, NoLongerGoodCandidate);
     }
 
     // Next, propagate the value stored by the store to the users of the load.
@@ -571,7 +586,7 @@ public:
                      "storeforward");
     for (const auto &Cand : Candidates)
       propagateStoredValueToLoadUsers(Cand, SEE);
-    NumLoopLoadEliminted += NumForwarding;
+    NumLoopLoadEliminted += Candidates.size();
 
     return true;
   }

@@ -20,17 +20,20 @@
 #undef PPC
 
 namespace llvm {
-  class PPCTargetMachine;
-  class PassRegistry;
-  class FunctionPass;
-  class MachineInstr;
-  class MachineOperand;
-  class AsmPrinter;
-  class MCInst;
-  class MCOperand;
-  class ModulePass;
-  
-  FunctionPass *createPPCCTRLoops();
+class PPCRegisterBankInfo;
+class PPCSubtarget;
+class PPCTargetMachine;
+class PassRegistry;
+class FunctionPass;
+class InstructionSelector;
+class MachineInstr;
+class MachineOperand;
+class AsmPrinter;
+class MCInst;
+class MCOperand;
+class ModulePass;
+
+FunctionPass *createPPCCTRLoops();
 #ifndef NDEBUG
   FunctionPass *createPPCCTRLoopsVerify();
 #endif
@@ -78,7 +81,10 @@ namespace llvm {
   ModulePass *createPPCLowerMASSVEntriesPass();
   void initializePPCLowerMASSVEntriesPass(PassRegistry &);
   extern char &PPCLowerMASSVEntriesID;
-  
+
+  InstructionSelector *
+  createPPCInstructionSelector(const PPCTargetMachine &, const PPCSubtarget &,
+                               const PPCRegisterBankInfo &);
   namespace PPCII {
 
   /// Target Operand Flag enum.
