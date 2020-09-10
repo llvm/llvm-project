@@ -385,6 +385,15 @@ def not_cmp_fold : GICombineRule<
   (apply [{ return Helper.applyNotCmp(*${d}, ${info}); }])
 >;
 
+// Fold (fneg (fneg x)) -> x.
+def fneg_fneg_fold_matchinfo : GIDefMatchData<"Register">;
+def fneg_fneg_fold: GICombineRule <
+  (defs root:$root, fneg_fneg_fold_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_FNEG):$root,
+         [{ return Helper.matchCombineFNegOfFNeg(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
+>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -397,7 +406,8 @@ def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
 def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         binop_same_val, binop_left_to_zero,
                                         binop_right_to_zero, p2i_to_i2p,
-                                        i2p_to_p2i, anyext_trunc_fold]>;
+                                        i2p_to_p2i, anyext_trunc_fold,
+                                        fneg_fneg_fold]>;
 
 def known_bits_simplifications : GICombineGroup<[
   and_trivial_mask, redundant_sext_inreg]>;
