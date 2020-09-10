@@ -7168,19 +7168,19 @@ define <3 x double> @constrained_vector_fpext_v3f32() #0 {
 ; PC64LE-NEXT:    addis 3, 2, .LCPI133_0@toc@ha
 ; PC64LE-NEXT:    addis 4, 2, .LCPI133_1@toc@ha
 ; PC64LE-NEXT:    addis 5, 2, .LCPI133_2@toc@ha
-; PC64LE-NEXT:    lfs 1, .LCPI133_0@toc@l(3)
+; PC64LE-NEXT:    lfs 3, .LCPI133_0@toc@l(3)
 ; PC64LE-NEXT:    lfs 2, .LCPI133_1@toc@l(4)
-; PC64LE-NEXT:    lfs 3, .LCPI133_2@toc@l(5)
+; PC64LE-NEXT:    lfs 1, .LCPI133_2@toc@l(5)
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_fpext_v3f32:
 ; PC64LE9:       # %bb.0: # %entry
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI133_0@toc@ha
-; PC64LE9-NEXT:    lfs 1, .LCPI133_0@toc@l(3)
+; PC64LE9-NEXT:    lfs 3, .LCPI133_0@toc@l(3)
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI133_1@toc@ha
 ; PC64LE9-NEXT:    lfs 2, .LCPI133_1@toc@l(3)
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI133_2@toc@ha
-; PC64LE9-NEXT:    lfs 3, .LCPI133_2@toc@l(3)
+; PC64LE9-NEXT:    lfs 1, .LCPI133_2@toc@l(3)
 ; PC64LE9-NEXT:    blr
 entry:
   %result = call <3 x double> @llvm.experimental.constrained.fpext.v3f64.v3f32(
