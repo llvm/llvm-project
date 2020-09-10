@@ -2869,7 +2869,7 @@ const std::map<std::string, RequestCallback> &GetRequestHandlers() {
 } // anonymous namespace
 
 static void printHelp(LLDBVSCodeOptTable &table, llvm::StringRef tool_name) {
-  std::string usage_str = tool_name.str() + "options";
+  std::string usage_str = tool_name.str() + " options";
   table.PrintHelp(llvm::outs(), usage_str.c_str(), "LLDB VSCode", false);
 
   std::string examples = R"___(
