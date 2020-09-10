@@ -115,7 +115,7 @@ void DemandedBits::determineLiveOperandBits(
   default: break;
   case Instruction::Call:
   case Instruction::Invoke:
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(UserI))
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(UserI)) {
       switch (II->getIntrinsicID()) {
       default: break;
       case Intrinsic::bswap:
@@ -171,6 +171,7 @@ void DemandedBits::determineLiveOperandBits(
         break;
       }
       }
+    }
     break;
   case Instruction::Add:
     if (AOut.isMask()) {
