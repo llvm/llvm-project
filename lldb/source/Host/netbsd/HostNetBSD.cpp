@@ -220,7 +220,7 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
     if (proc_kinfo[i].p_nlwps > 1) {
       bool already_registered = false;
       for (size_t pi = 0; pi < process_infos.size(); pi++) {
-        if (process_infos[pi].GetProcessID() == proc_kinfo[i].p_pid) {
+        if ((::pid_t)process_infos[pi].GetProcessID() == proc_kinfo[i].p_pid) {
           already_registered = true;
           break;
         }

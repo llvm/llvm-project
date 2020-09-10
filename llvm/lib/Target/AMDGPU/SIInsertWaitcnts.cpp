@@ -855,7 +855,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   setForceEmitWaitcnt();
   bool IsForceEmitWaitcnt = isForceEmitWaitcnt();
 
-  if (MI.isDebugInstr())
+  if (MI.isMetaInstruction())
     return false;
 
   AMDGPU::Waitcnt Wait;
@@ -1026,8 +1026,10 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
           continue;
         RegInterval Interval =
             ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I);
+
+        const bool IsVGPR = TRI->isVGPR(*MRI, Op.getReg());
         for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-          if (TRI->isVGPR(*MRI, Op.getReg())) {
+          if (IsVGPR) {
             // RAW always needs an s_waitcnt. WAW needs an s_waitcnt unless the
             // previous write and this write are the same type of VMEM
             // instruction, in which case they're guaranteed to write their

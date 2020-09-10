@@ -444,7 +444,7 @@ bool X86PassConfig::addInstSelector() {
 }
 
 bool X86PassConfig::addIRTranslator() {
-  addPass(new IRTranslator());
+  addPass(new IRTranslator(getOptLevel()));
   return false;
 }
 

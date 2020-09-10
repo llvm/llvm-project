@@ -115,7 +115,7 @@ if not platform.system() in ['Windows'] or not execute_external:
 if platform.system() not in ['Windows']:
     config.available_features.add('ansi-escape-sequences')
 
-if config.clang_staticanalyzer:
+if config.clang_tidy_staticanalyzer:
     config.available_features.add('static-analyzer')
 
 # Get shlex.quote if available (added in 3.3), and fall back to pipes.quote if

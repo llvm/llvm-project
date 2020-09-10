@@ -416,12 +416,13 @@ struct ExceptionDataRecord {
 
   uint32_t ExceptionHandlerRVA() const {
     assert(X() && "Exception Handler RVA is only valid if the X bit is set");
-    return Data[HeaderWords(*this) + EpilogueCount() + CodeWords()];
+    return Data[HeaderWords(*this) + (E() ? 0 : EpilogueCount()) + CodeWords()];
   }
 
   uint32_t ExceptionHandlerParameter() const {
     assert(X() && "Exception Handler RVA is only valid if the X bit is set");
-    return Data[HeaderWords(*this) + EpilogueCount() + CodeWords() + 1];
+    return Data[HeaderWords(*this) + (E() ? 0 : EpilogueCount()) + CodeWords() +
+                1];
   }
 };
 

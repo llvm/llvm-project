@@ -129,6 +129,12 @@ struct __sanitizer_shmid_ds {
   void *_shm_internal;
 };
 
+struct __sanitizer_protoent {
+  char *p_name;
+  char **p_aliases;
+  int p_proto;
+};
+
 struct __sanitizer_netent {
   char *n_name;
   char **n_aliases;

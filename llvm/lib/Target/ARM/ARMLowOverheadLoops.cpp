@@ -723,7 +723,7 @@ bool LowOverheadLoop::ValidateLiveOuts() {
       continue;
     else if (!isPredicated && retainsOrReduces)
       return false;
-    else
+    else if (!isPredicated)
       FalseLanesUnknown.insert(&MI);
   }
 

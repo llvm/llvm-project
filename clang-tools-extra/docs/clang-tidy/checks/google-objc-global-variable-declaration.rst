@@ -9,8 +9,8 @@ pattern of variable names in Google's Objective-C Style Guide.
 The corresponding style guide rule:
 https://google.github.io/styleguide/objcguide.html#variable-names
 
-All the global variables should follow the pattern of `g[A-Z].*` (variables) or
-`k[A-Z].*` (constants). The check will suggest a variable name that follows the
+All the global variables should follow the pattern of ``g[A-Z].*`` (variables) or
+``k[A-Z].*`` (constants). The check will suggest a variable name that follows the
 pattern if it can be inferred from the original name.
 
 For code:

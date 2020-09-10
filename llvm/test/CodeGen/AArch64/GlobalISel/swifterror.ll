@@ -131,8 +131,6 @@ define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float 
 ; CHECK: malloc
 ; CHECK: mov x21, x0
 ; CHECK: strb w{{.*}}, [x0, #8]
-; CHECK: fcmp
-; CHECK: b.le
 ; CHECK: ret
 
 entry:

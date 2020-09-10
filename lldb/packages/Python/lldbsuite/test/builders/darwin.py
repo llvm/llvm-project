@@ -78,7 +78,7 @@ class BuilderDarwin(Builder):
             {'{}="{}"'.format(key, value)
              for key, value in args.items()})
 
-    def getArchCFlags(self, architecture):
+    def getArchCFlags(self, arch):
         """Returns the ARCH_CFLAGS for the make system."""
         # Get the triple components.
         vendor, os, version, env = get_triple()
@@ -86,7 +86,7 @@ class BuilderDarwin(Builder):
             return ""
 
         # Construct the triple from its components.
-        triple = "{}-{}-{}-{}".format(vendor, os, version, env)
+        triple = '-'.join([arch, vendor, os, version, env])
 
         # Construct min version argument
         version_min = ""
