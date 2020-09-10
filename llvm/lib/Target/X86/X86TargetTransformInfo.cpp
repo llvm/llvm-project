@@ -321,6 +321,11 @@ int X86TTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     { ISD::SHL,  MVT::v64i8,   4 }, // psllw + pand.
     { ISD::SRL,  MVT::v64i8,   4 }, // psrlw + pand.
     { ISD::SRA,  MVT::v64i8,   8 }, // psrlw, pand, pxor, psubb.
+
+    { ISD::SDIV, MVT::v16i32,  6 }, // pmuludq sequence
+    { ISD::SREM, MVT::v16i32,  8 }, // pmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v16i32,  5 }, // pmuludq sequence
+    { ISD::UREM, MVT::v16i32,  7 }, // pmuludq+mul+sub sequence
   };
 
   if (Op2Info == TargetTransformInfo::OK_UniformConstantValue &&
@@ -336,6 +341,11 @@ int X86TTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     { ISD::SRA,  MVT::v32i8,   4 }, // psrlw, pand, pxor, psubb.
 
     { ISD::SRA,  MVT::v4i64,   4 }, // 2 x psrad + shuffle.
+
+    { ISD::SDIV, MVT::v8i32,   6 }, // pmuludq sequence
+    { ISD::SREM, MVT::v8i32,   8 }, // pmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v8i32,   5 }, // pmuludq sequence
+    { ISD::UREM, MVT::v8i32,   7 }, // pmuludq+mul+sub sequence
   };
 
   if (Op2Info == TargetTransformInfo::OK_UniformConstantValue &&
@@ -353,6 +363,15 @@ int X86TTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     { ISD::SHL,  MVT::v32i8,   4+2 }, // 2*(psllw + pand) + split.
     { ISD::SRL,  MVT::v32i8,   4+2 }, // 2*(psrlw + pand) + split.
     { ISD::SRA,  MVT::v32i8,   8+2 }, // 2*(psrlw, pand, pxor, psubb) + split.
+
+    { ISD::SDIV, MVT::v8i32,  12+2 }, // 2*pmuludq sequence + split.
+    { ISD::SREM, MVT::v8i32,  16+2 }, // 2*pmuludq+mul+sub sequence + split.
+    { ISD::SDIV, MVT::v4i32,     6 }, // pmuludq sequence
+    { ISD::SREM, MVT::v4i32,     8 }, // pmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v8i32,  10+2 }, // 2*pmuludq sequence + split.
+    { ISD::UREM, MVT::v8i32,  14+2 }, // 2*pmuludq+mul+sub sequence + split.
+    { ISD::UDIV, MVT::v4i32,     5 }, // pmuludq sequence
+    { ISD::UREM, MVT::v4i32,     7 }, // pmuludq+mul+sub sequence
   };
 
   // XOP has faster vXi8 shifts.
