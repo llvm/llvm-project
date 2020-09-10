@@ -40,7 +40,6 @@ class TestSwiftPlaygrounds(TestBase):
     @skipUnlessDarwin
     @swiftTest
     @skipIf(debug_info=decorators.no_match("dsym"))
-    @skipIf(bugnumber="rdar://problem/67823748")
     def test_cross_module_extension(self):
         """Test that playgrounds work"""
         self.build()

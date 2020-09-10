@@ -1,7 +1,6 @@
 C_SOURCES := main.c
 
-override TRIPLE := $(ARCH)-apple-ios13.0-macabi
-CFLAGS_EXTRAS := -target $(TRIPLE)
+CFLAGS_EXTRAS := -target $(ARCH)-apple-ios13.0-macabi
 
 # FIXME: rdar://problem/54986190
 # There is a Clang driver change missing on llvm.org.
