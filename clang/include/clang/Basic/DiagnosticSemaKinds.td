@@ -3974,6 +3974,46 @@ def err_objc_bridged_related_known_method : Error<
 def err_objc_attr_protocol_requires_definition : Error<
   "attribute %0 can only be applied to @protocol definitions, not forward declarations">;
 
+// Swift attributes.
+def warn_attr_swift_name_function
+  : Warning<"%0 attribute argument must be a string literal specifying a Swift function name">,
+    InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_invalid_identifier
+  : Warning<"%0 attribute has invalid identifier for the %select{base|context|parameter}1 name">,
+    InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_decl_kind
+  : Warning<"%0 attribute cannot be applied to this declaration">,
+    InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_subscript_invalid_parameter
+  : Warning<"%0 attribute for 'subscript' must %select{be a getter or setter|"
+        "have at least one parameter|"
+        "have a 'self:' parameter}1">,
+    InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_missing_parameters
+  : Warning<"%0 attribute is missing parameter label clause">,
+    InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_setter_parameters
+  : Warning<"%0 attribute for setter must have one parameter for new value">,
+    InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_multiple_selfs
+  : Warning<"%0 attribute cannot specify more than one 'self:' parameter">,
+    InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_getter_parameters
+  : Warning<"%0 attribute for getter must not have any parameters besides 'self:'">,
+    InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_subscript_setter_no_newValue
+  : Warning<"%0 attribute for 'subscript' setter must have a 'newValue:' parameter">,
+    InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_subscript_setter_multiple_newValues
+  : Warning<"%0 attribute for 'subscript' setter cannot have multiple 'newValue:' parameters">,
+    InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_subscript_getter_newValue
+  : Warning<"%0 attribute for 'subscript' getter cannot have a 'newValue:' parameter">,
+    InGroup<SwiftNameAttribute>;
+def warn_attr_swift_name_num_params
+  : Warning<"too %select{few|many}0 parameters in %1 attribute (expected %2; got %3)">,
+    InGroup<SwiftNameAttribute>;
+
 def err_attr_swift_error_no_error_parameter : Error<
   "%0 attribute can only be applied to a %select{function|method}1 with an "
   "error parameter">;

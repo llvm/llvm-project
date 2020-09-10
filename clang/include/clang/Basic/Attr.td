@@ -2162,6 +2162,12 @@ def SwiftError : InheritableAttr {
   let Documentation = [SwiftErrorDocs];
 }
 
+def SwiftName : InheritableAttr {
+  let Spellings = [GNU<"swift_name">];
+  let Args = [StringArgument<"Name">];
+  let Documentation = [SwiftNameDocs];
+}
+
 def NoDeref : TypeAttr {
   let Spellings = [Clang<"noderef">];
   let Documentation = [NoDerefDocs];
