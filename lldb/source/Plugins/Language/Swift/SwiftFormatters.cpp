@@ -1001,10 +1001,10 @@ void PrintMatrix(Stream &stream,
                  int num_columns, int num_rows) {
   // Print each row.
   stream.Printf("\n[ ");
-  for (unsigned J = 0; J < num_rows; ++J) {
+  for (int J = 0; J < num_rows; ++J) {
     // Join the J-th row's elements with commas.
     std::vector<std::string> row;
-    for (unsigned I = 0; I < num_columns; ++I)
+    for (int I = 0; I < num_columns; ++I)
       row.emplace_back(std::move(matrix[I][J]));
     std::string joined = llvm::join(row, ", ");
 
@@ -1069,14 +1069,14 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
   ConstString full_type_name = simd_type.GetTypeName();
   llvm::StringRef type_name = full_type_name.GetStringRef();
   uint64_t num_elements = type_size / arg_size;
-  int generic_pos = type_name.find("<");
+  auto generic_pos = type_name.find("<");
   if (generic_pos != llvm::StringRef::npos)
     type_name = type_name.slice(0, generic_pos);
   if (type_name == "Swift.SIMD3")
     num_elements = 3;
 
   std::vector<std::string> elem_vector;
-  for (int i = 0; i < num_elements; ++i) {
+  for (uint64_t i = 0; i < num_elements; ++i) {
     DataExtractor elem_extractor(storage_buf, i * arg_size, arg_size);
     auto simd_elem = ValueObject::CreateValueObjectFromData(
         "simd_elem", elem_extractor, valobj.GetExecutionContextRef(), arg_type);

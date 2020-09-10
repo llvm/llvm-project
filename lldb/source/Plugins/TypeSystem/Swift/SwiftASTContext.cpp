@@ -1263,8 +1263,6 @@ static const char *getImportFailureString(swift::serialization::Status status) {
   case swift::serialization::Status::TargetTooNew:
     return "The module file was built for a target newer than the current "
            "target.";
-  default:
-    return "An unknown error occurred.";
   }
 }
 
@@ -2977,8 +2975,6 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
       // Not implemented since Objective-C protocols aren't yet
       // described in DWARF.
       return true;
-    default:
-      return true;
     }
   }
 
@@ -3193,7 +3189,7 @@ public:
         if (results.size())
           break;
       }
-      LOG_PRINTF(LIBLLDB_LOG_TYPES, "%d types collected.", results.size());
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "%zu types collected.", results.size());
       return;
     }
 
@@ -3224,7 +3220,7 @@ public:
       return true;
     });
 
-    LOG_PRINTF(LIBLLDB_LOG_TYPES, "%d types from debug info.", results.size());
+    LOG_PRINTF(LIBLLDB_LOG_TYPES, "%zu types from debug info.", results.size());
   }
 };
 } // namespace lldb_private
@@ -3553,8 +3549,7 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
   }
 
   if (!module_decl) {
-    LOG_PRINTF(LIBLLDB_LOG_TYPES, "failed with no error",
-               module.path.front().GetCString());
+    LOG_PRINTF(LIBLLDB_LOG_TYPES, "failed with no error");
 
     error.SetErrorStringWithFormat(
         "failed to get module \"%s\" from AST context",
@@ -6839,7 +6834,7 @@ static llvm::Optional<uint64_t> GetInstanceVariableOffset_Metadata(
   llvm::Optional<uint64_t> offset = runtime->GetMemberVariableOffset(
       type, valobj, ConstString(ivar_name), &error);
   if (offset)
-    LOG_PRINTF(LIBLLDB_LOG_TYPES, "for %s: %lu", ivar_name.str().c_str(),
+    LOG_PRINTF(LIBLLDB_LOG_TYPES, "for %s: %llu", ivar_name.str().c_str(),
                *offset);
   else
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "resolver failure: %s", error.AsCString());
@@ -8139,10 +8134,16 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
       switch (source_file->Kind) {
       case swift::SourceFileKind::Library:
         s.PutCString("Library");
+        break;
       case swift::SourceFileKind::Main:
         s.PutCString("Main");
+        break;
       case swift::SourceFileKind::SIL:
         s.PutCString("SIL");
+        break;
+      case swift::SourceFileKind::Interface:
+        s.PutCString("Interface");
+        break;
       }
     }
   } break;

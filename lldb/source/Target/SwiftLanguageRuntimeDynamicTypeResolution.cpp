@@ -949,7 +949,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
   auto metadata_address = remote_ast.getHeapMetadataForObject(instance_address);
   if (!metadata_address) {
     if (log) {
-      log->Printf("could not read heap metadata for object at %lu: %s\n",
+      log->Printf("could not read heap metadata for object at %llu: %s\n",
                   class_metadata_ptr,
                   metadata_address.getFailure().render().c_str());
     }
