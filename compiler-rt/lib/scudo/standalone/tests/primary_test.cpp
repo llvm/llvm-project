@@ -152,7 +152,7 @@ static std::condition_variable Cv;
 static bool Ready;
 
 template <typename Primary> static void performAllocations(Primary *Allocator) {
-  static THREADLOCAL typename Primary::CacheT Cache;
+  static thread_local typename Primary::CacheT Cache;
   Cache.init(nullptr, Allocator);
   std::vector<std::pair<scudo::uptr, void *>> V;
   {
