@@ -4829,11 +4829,10 @@ void llvm::EmbedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
   std::string Data;
   ArrayRef<uint8_t> ModuleData;
   Triple T(M.getTargetTriple());
-  // Create a constant that contains the bitcode.
-  // In case of embedding a marker, ignore the input Buf and use the empty
-  // ArrayRef. It is also legal to create a bitcode marker even Buf is empty.
+
   if (EmbedBitcode) {
-    if (!isBitcode((const unsigned char *)Buf.getBufferStart(),
+    if (Buf.getBufferSize() == 0 ||
+        !isBitcode((const unsigned char *)Buf.getBufferStart(),
                    (const unsigned char *)Buf.getBufferEnd())) {
       // If the input is LLVM Assembly, bitcode is produced by serializing
       // the module. Use-lists order need to be preserved in this case.

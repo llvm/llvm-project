@@ -38,6 +38,7 @@ class BasicBlock;
 class CallInst;
 class CallLowering;
 class Constant;
+class ConstrainedFPIntrinsic;
 class DataLayout;
 class Instruction;
 class MachineBasicBlock;

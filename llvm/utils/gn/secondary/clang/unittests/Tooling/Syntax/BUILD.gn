@@ -18,6 +18,7 @@ unittest("SyntaxTests") {
   sources = [
     "BuildTreeTest.cpp",
     "MutationsTest.cpp",
+    "SynthesisTest.cpp",
     "TokensTest.cpp",
     "TreeTestBase.cpp",
   ]

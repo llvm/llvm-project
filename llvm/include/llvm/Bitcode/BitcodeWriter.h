@@ -153,6 +153,10 @@ class raw_ostream;
                             *ModuleToSummariesForIndex = nullptr);
 
   /// Save a copy of the llvm IR as data in the __LLVM,__bitcode section.
+  /// If available, pass the serialized module via the Buf parameter. If not,
+  /// pass an empty (default-initialized) MemoryBufferRef, and the serialization
+  /// will be handled by this API. The same behavior happens if the provided Buf
+  /// is not bitcode (i.e. if it's invalid data or even textual LLVM assembly).
   void EmbedBitcodeInModule(Module &M, MemoryBufferRef Buf, bool EmbedBitcode,
                             bool EmbedMarker,
                             const std::vector<uint8_t> *CmdArgs);

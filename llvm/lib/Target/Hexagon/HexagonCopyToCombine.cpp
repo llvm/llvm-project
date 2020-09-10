@@ -10,6 +10,7 @@
 // to move them together. If we can move them next to each other we do so and
 // replace them with a combine instruction.
 //===----------------------------------------------------------------------===//
+
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/DenseMap.h"
@@ -26,6 +27,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
