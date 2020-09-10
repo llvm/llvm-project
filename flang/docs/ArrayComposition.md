@@ -1,3 +1,11 @@
+<!--===- docs/ArrayComposition.md 
+  
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+  
+-->
+
 This note attempts to describe the motivation for and design of an
 implementation of Fortran 90 (and later) array expression evaluation that
 minimizes the use of dynamically allocated temporary storage for
