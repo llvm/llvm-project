@@ -406,32 +406,6 @@ void llvm_gcda_start_file(const char *orig_filename, uint32_t version,
 #endif
 }
 
-/* Given an array of pointers to counters (counters), increment the n-th one,
- * where we're also given a pointer to n (predecessor).
- */
-COMPILER_RT_VISIBILITY
-void llvm_gcda_increment_indirect_counter(uint32_t *predecessor,
-                                          uint64_t **counters) {
-  uint64_t *counter;
-  uint32_t pred;
-
-  pred = *predecessor;
-  if (pred == 0xffffffff)
-    return;
-  counter = counters[pred];
-
-  /* Don't crash if the pred# is out of sync. This can happen due to threads,
-     or because of a TODO in GCOVProfiling.cpp buildEdgeLookupTable(). */
-  if (counter)
-    ++*counter;
-#ifdef DEBUG_GCDAPROFILING
-  else
-    fprintf(stderr,
-            "llvmgcda: increment_indirect_counter counters=%08llx, pred=%u\n",
-            *counter, *predecessor);
-#endif
-}
-
 COMPILER_RT_VISIBILITY
 void llvm_gcda_emit_function(uint32_t ident, uint32_t func_checksum,
                              uint32_t cfg_checksum) {
