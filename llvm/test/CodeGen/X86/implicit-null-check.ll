@@ -48,6 +48,8 @@ define i32 @imp_null_check_unordered_load(i32* %x) {
   ret i32 %t
 }
 
+
+; TODO: Can be converted into implicit check.
 ;; Probably could be implicit, but we're conservative for now
 define i32 @imp_null_check_seq_cst_load(i32* %x) {
 ; CHECK-LABEL: imp_null_check_seq_cst_load:
@@ -557,4 +559,66 @@ define i32 @imp_null_check_neg_gep_load(i32* %x) {
   ret i32 %t
 }
 
+; This redefines the null check reg by doing a zero-extend and a shift on
+; itself.
+; Converted into implicit null check since both of these operations do not
+; change the nullness of %x (i.e. if it is null, it remains null).
+define i64 @imp_null_check_load_shift_addr(i64* %x) {
+; CHECK-LABEL: imp_null_check_load_shift_addr:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    shlq $6, %rdi
+; CHECK-NEXT:  Ltmp17:
+; CHECK-NEXT:    movq 8(%rdi), %rax ## on-fault: LBB21_1
+; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  LBB21_1: ## %is_null
+; CHECK-NEXT:    movl $42, %eax
+; CHECK-NEXT:    retq
+
+  entry:
+   %c = icmp eq i64* %x, null
+   br i1 %c, label %is_null, label %not_null, !make.implicit !0
+
+  is_null:
+   ret i64 42
+
+  not_null:
+   %y = ptrtoint i64* %x to i64
+   %shry = shl i64 %y, 6
+   %y.ptr = inttoptr i64 %shry to i64*
+   %x.loc = getelementptr i64, i64* %y.ptr, i64 1
+   %t = load i64, i64* %x.loc
+   ret i64 %t
+}
+
+; Same as imp_null_check_load_shift_addr but shift is by 3 and this is now
+; converted into complex addressing.
+; TODO: Can be converted into implicit null check
+define i64 @imp_null_check_load_shift_by_3_addr(i64* %x) {
+; CHECK-LABEL: imp_null_check_load_shift_by_3_addr:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    je LBB22_1
+; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movq 8(,%rdi,8), %rax
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  LBB22_1: ## %is_null
+; CHECK-NEXT:    movl $42, %eax
+; CHECK-NEXT:    retq
+
+  entry:
+   %c = icmp eq i64* %x, null
+   br i1 %c, label %is_null, label %not_null, !make.implicit !0
+
+  is_null:
+   ret i64 42
+
+  not_null:
+   %y = ptrtoint i64* %x to i64
+   %shry = shl i64 %y, 3
+   %y.ptr = inttoptr i64 %shry to i64*
+   %x.loc = getelementptr i64, i64* %y.ptr, i64 1
+   %t = load i64, i64* %x.loc
+   ret i64 %t
+}
 !0 = !{}
