@@ -1676,22 +1676,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                                               RetType{IntTy}, NoEvalCall)
                                           .ArgConstraint(NotNull(ArgNo(0))));
 
-    // int strcasecmp(const char *s1, const char *s2);
-    addToFunctionSummaryMap("strcasecmp",
-                            Summary(ArgTypes{ConstCharPtrTy, ConstCharPtrTy},
-                                    RetType{IntTy}, EvalCallAsPure)
-                                .ArgConstraint(NotNull(ArgNo(0)))
-                                .ArgConstraint(NotNull(ArgNo(1))));
-
-    // int strncasecmp(const char *s1, const char *s2, size_t n);
-    addToFunctionSummaryMap(
-        "strncasecmp", Summary(ArgTypes{ConstCharPtrTy, ConstCharPtrTy, SizeTy},
-                               RetType{IntTy}, EvalCallAsPure)
-                           .ArgConstraint(NotNull(ArgNo(0)))
-                           .ArgConstraint(NotNull(ArgNo(1)))
-                           .ArgConstraint(ArgumentCondition(
-                               2, WithinRange, Range(0, SizeMax))));
-
     // int fileno(FILE *stream);
     addToFunctionSummaryMap(
         "fileno", Summary(ArgTypes{FilePtrTy}, RetType{IntTy}, NoEvalCall)
