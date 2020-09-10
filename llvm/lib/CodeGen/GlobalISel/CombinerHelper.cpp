@@ -1813,6 +1813,12 @@ bool CombinerHelper::applyCombineExtOfExt(
   return false;
 }
 
+bool CombinerHelper::matchCombineFNegOfFNeg(MachineInstr &MI, Register &Reg) {
+  assert(MI.getOpcode() == TargetOpcode::G_FNEG && "Expected a G_FNEG");
+  Register SrcReg = MI.getOperand(1).getReg();
+  return mi_match(SrcReg, MRI, m_GFNeg(m_Reg(Reg)));
+}
+
 bool CombinerHelper::matchAnyExplicitUseIsUndef(MachineInstr &MI) {
   return any_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
     return MO.isReg() &&
