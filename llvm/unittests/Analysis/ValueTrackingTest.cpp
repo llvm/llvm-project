@@ -1059,6 +1059,24 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntZext) {
   EXPECT_EQ(Known.One.getZExtValue(), 0u);
 }
 
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFreeze) {
+  parseAssembly("define void @test() {\n"
+                "  %m = call i32 @any_num()\n"
+                "  %A = freeze i32 %m\n"
+                "  %n = and i32 %m, 31\n"
+                "  %c = icmp eq i32 %n, 0\n"
+                "  call void @llvm.assume(i1 %c)\n"
+                "  ret void\n"
+                "}\n"
+                "declare void @llvm.assume(i1)\n"
+                "declare i32 @any_num()\n");
+  AssumptionCache AC(*F);
+  KnownBits Known = computeKnownBits(A, M->getDataLayout(), /* Depth */ 0, &AC,
+                                     F->front().getTerminator());
+  EXPECT_EQ(Known.Zero.getZExtValue(), 31u);
+  EXPECT_EQ(Known.One.getZExtValue(), 0u);
+}
+
 class IsBytewiseValueTest : public ValueTrackingTest,
                             public ::testing::WithParamInterface<
                                 std::pair<const char *, const char *>> {
