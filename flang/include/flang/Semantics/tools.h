@@ -70,6 +70,8 @@ bool IsIntrinsicConcat(
     const evaluate::DynamicType &, int, const evaluate::DynamicType &, int);
 
 bool IsGenericDefinedOp(const Symbol &);
+bool IsDefinedOperator(SourceName);
+std::string MakeOpName(SourceName);
 bool DoesScopeContain(const Scope *maybeAncestor, const Scope &maybeDescendent);
 bool DoesScopeContain(const Scope *, const Symbol &);
 bool IsUseAssociated(const Symbol &, const Scope &);

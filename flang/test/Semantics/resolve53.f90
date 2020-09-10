@@ -210,7 +210,7 @@ module m14
     module procedure f1
     module procedure f2
   end interface
-  !ERROR: Generic 'operator(+)' may not have specific procedures 'f1' and 'f3' as their interfaces are not distinguishable
+  !ERROR: Generic 'OPERATOR(+)' may not have specific procedures 'f1' and 'f3' as their interfaces are not distinguishable
   interface operator(+)
     module procedure f1
     module procedure f3
@@ -219,7 +219,7 @@ module m14
     module procedure f1
     module procedure f2
   end interface
-  !ERROR: Generic operator '.bar.' may not have specific procedures 'f1' and 'f3' as their interfaces are not distinguishable
+  !ERROR: Generic 'OPERATOR(.bar.)' may not have specific procedures 'f1' and 'f3' as their interfaces are not distinguishable
   interface operator(.bar.)
     module procedure f1
     module procedure f3
@@ -332,7 +332,6 @@ contains
   end subroutine
 end
 
-
 ! Check that specifics for type-bound generics can be distinguished
 module m16
   type :: t
@@ -441,20 +440,20 @@ module m19
     module procedure f1
     module procedure f2
   end interface
-  !ERROR: Generic operator '.bar.' may not have specific procedures 'f2' and 'f3' as their interfaces are not distinguishable
+  !ERROR: Generic 'OPERATOR(.bar.)' may not have specific procedures 'f2' and 'f3' as their interfaces are not distinguishable
   interface operator(.bar.)
     module procedure f2
     module procedure f3
   end interface
 contains
   integer function f1(i)
-    integer :: i
+    integer, intent(in) :: i
   end
   integer function f2(i, j)
-    integer :: i, j
+    integer, value :: i, j
   end
   integer function f3(i, j)
-    integer :: i, j
+    integer, intent(in) :: i, j
   end
 end
 
@@ -472,11 +471,11 @@ end module
 subroutine s1()
   use m20
   interface operator(.not.)
-    !ERROR: Procedure 'f' is already specified in generic 'operator(.not.)'
+    !ERROR: Procedure 'f' is already specified in generic 'OPERATOR(.NOT.)'
     procedure f
   end interface
   interface operator(+)
-    !ERROR: Procedure 'f' is already specified in generic 'operator(+)'
+    !ERROR: Procedure 'f' is already specified in generic 'OPERATOR(+)'
     procedure f
   end interface
 end subroutine s1
