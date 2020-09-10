@@ -7,7 +7,8 @@ set(LIBS
 )
 
 add_flang_unittest(FlangLoweringOpenMPTests
-	OpenMPLoweringTest.cpp
+  IntervalSet.cpp
+  OpenMPLoweringTest.cpp
   RTBuilder.cpp  
 )
 target_link_libraries(FlangLoweringOpenMPTests
