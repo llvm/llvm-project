@@ -524,7 +524,7 @@ struct urio_command {
 #include "sanitizer_platform_limits_netbsd.h"
 
 namespace __sanitizer {
-void *__sanitizer_get_link_map_by_dlopen_handle(void* handle) {
+void *__sanitizer_get_link_map_by_dlopen_handle(void *handle) {
   void *p = nullptr;
   return internal_dlinfo(handle, RTLD_DI_LINKMAP, &p) == 0 ? p : nullptr;
 }
