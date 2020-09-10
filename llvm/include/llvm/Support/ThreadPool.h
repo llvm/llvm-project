@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_THREAD_POOL_H
 #define LLVM_SUPPORT_THREAD_POOL_H
 
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/thread.h"
@@ -36,7 +37,7 @@ namespace llvm {
 /// for some work to become available.
 class ThreadPool {
 public:
-  using TaskTy = std::function<void()>;
+  using TaskTy = unique_function<void()>;
   using PackagedTaskTy = std::packaged_task<void()>;
 
   /// Construct a pool using the hardware strategy \p S for mapping hardware
