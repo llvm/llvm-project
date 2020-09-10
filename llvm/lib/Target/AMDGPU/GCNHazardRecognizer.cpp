@@ -368,7 +368,7 @@ static int getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
     if (IsHazard(&*I))
       return WaitStates;
 
-    if (I->isInlineAsm() || I->isImplicitDef() || I->isDebugInstr())
+    if (I->isInlineAsm() || I->isMetaInstruction())
       continue;
 
     WaitStates += SIInstrInfo::getNumWaitStates(*I);
