@@ -8036,22 +8036,22 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
   if (const SCEVUnknown *SU = dyn_cast<SCEVUnknown>(V)) {
     if (Instruction *I = dyn_cast<Instruction>(SU->getValue())) {
       if (PHINode *PN = dyn_cast<PHINode>(I)) {
-        const Loop *LI = this->LI[I->getParent()];
+        const Loop *CurrLoop = this->LI[I->getParent()];
         // Looking for loop exit value.
-        if (LI && LI->getParentLoop() == L &&
-            PN->getParent() == LI->getHeader()) {
+        if (CurrLoop && CurrLoop->getParentLoop() == L &&
+            PN->getParent() == CurrLoop->getHeader()) {
           // Okay, there is no closed form solution for the PHI node.  Check
           // to see if the loop that contains it has a known backedge-taken
           // count.  If so, we may be able to force computation of the exit
           // value.
-          const SCEV *BackedgeTakenCount = getBackedgeTakenCount(LI);
+          const SCEV *BackedgeTakenCount = getBackedgeTakenCount(CurrLoop);
           // This trivial case can show up in some degenerate cases where
           // the incoming IR has not yet been fully simplified.
           if (BackedgeTakenCount->isZero()) {
             Value *InitValue = nullptr;
             bool MultipleInitValues = false;
             for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
-              if (!LI->contains(PN->getIncomingBlock(i))) {
+              if (!CurrLoop->contains(PN->getIncomingBlock(i))) {
                 if (!InitValue)
                   InitValue = PN->getIncomingValue(i);
                 else if (InitValue != PN->getIncomingValue(i)) {
@@ -8069,17 +8069,18 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
               isKnownPositive(BackedgeTakenCount) &&
               PN->getNumIncomingValues() == 2) {
 
-            unsigned InLoopPred = LI->contains(PN->getIncomingBlock(0)) ? 0 : 1;
+            unsigned InLoopPred =
+                CurrLoop->contains(PN->getIncomingBlock(0)) ? 0 : 1;
             Value *BackedgeVal = PN->getIncomingValue(InLoopPred);
-            if (LI->isLoopInvariant(BackedgeVal))
+            if (CurrLoop->isLoopInvariant(BackedgeVal))
               return getSCEV(BackedgeVal);
           }
           if (auto *BTCC = dyn_cast<SCEVConstant>(BackedgeTakenCount)) {
             // Okay, we know how many times the containing loop executes.  If
             // this is a constant evolving PHI node, get the final value at
             // the specified iteration number.
-            Constant *RV =
-                getConstantEvolutionLoopExitValue(PN, BTCC->getAPInt(), LI);
+            Constant *RV = getConstantEvolutionLoopExitValue(
+                PN, BTCC->getAPInt(), CurrLoop);
             if (RV) return getSCEV(RV);
           }
         }
@@ -8135,9 +8136,10 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
           if (const CmpInst *CI = dyn_cast<CmpInst>(I))
             C = ConstantFoldCompareInstOperands(CI->getPredicate(), Operands[0],
                                                 Operands[1], DL, &TLI);
-          else if (const LoadInst *LI = dyn_cast<LoadInst>(I)) {
-            if (!LI->isVolatile())
-              C = ConstantFoldLoadFromConstPtr(Operands[0], LI->getType(), DL);
+          else if (const LoadInst *Load = dyn_cast<LoadInst>(I)) {
+            if (!Load->isVolatile())
+              C = ConstantFoldLoadFromConstPtr(Operands[0], Load->getType(),
+                                               DL);
           } else
             C = ConstantFoldInstOperands(I, Operands, DL, &TLI);
           if (!C) return V;
