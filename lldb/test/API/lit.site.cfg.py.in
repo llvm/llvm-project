@@ -58,6 +58,7 @@ try:
     config.test_compiler = config.test_compiler % lit_config.params
     config.dsymutil = config.dsymutil % lit_config.params
     config.filecheck = config.filecheck % lit_config.params
+    config.yaml2obj = config.yaml2obj % lit_config.params
     config.dotest_args_str = config.dotest_args_str % lit_config.params
 except KeyError as e:
     key, = e.args
