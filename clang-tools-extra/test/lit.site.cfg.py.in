@@ -10,7 +10,7 @@ config.clang_tools_dir = "@CLANG_TOOLS_DIR@"
 config.clang_libs_dir = "@SHLIBDIR@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.target_triple = "@TARGET_TRIPLE@"
-config.clang_staticanalyzer = @CLANG_ENABLE_STATIC_ANALYZER@
+config.clang_tidy_staticanalyzer = @CLANG_TIDY_ENABLE_STATIC_ANALYZER@
 config.libclang_include_clang_tools_extra = @LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA@
 
 # Support substitution of the tools and libs dirs with user parameters. This is
