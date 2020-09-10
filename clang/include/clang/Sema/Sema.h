@@ -1841,18 +1841,9 @@ public:
     }
   };
 
-  /// Do a check to make sure \p Name looks like a legal swift_name
-  /// attribute for the decl \p D. Raise a diagnostic if the name is invalid
-  /// for the given declaration.
-  ///
-  /// For a function, this will validate a compound Swift name,
-  /// e.g. <code>init(foo:bar:baz:)</code> or <code>controllerForName(_:)</code>,
-  /// and the function will output the number of parameter names, and whether
-  /// this is a single-arg initializer.
-  ///
-  /// For a type, enum constant, property, or variable declaration, this will
-  /// validate either a simple identifier, or a qualified
-  /// <code>context.identifier</code> name.
+  /// Do a check to make sure \p Name looks like a legal argument for the
+  /// swift_name attribute applied to decl \p D.  Raise a diagnostic if the name
+  /// is invalid for the given declaration.
   ///
   /// \p AL is used to provide caret diagnostics in case of a malformed name.
   ///

@@ -58,9 +58,9 @@ __attribute__((__swift_name__("IClass")))
 + (instancetype)trailingColon SWIFT_NAME("foo:");
 // expected-warning@-1 {{'__swift_name__' attribute argument must be a string literal specifying a Swift function name}}
 + (instancetype)initialIgnore:(int)value SWIFT_NAME("_(value:)");
-// expected-warning@-1 {{'__swift_name__' attribute has invalid identifier for base name}}
+// expected-warning@-1 {{'__swift_name__' attribute has invalid identifier for the base name}}
 + (instancetype)middleOmitted:(int)value SWIFT_NAME("i(:)");
-// expected-warning@-1 {{'__swift_name__' attribute has invalid identifier for parameter name}}
+// expected-warning@-1 {{'__swift_name__' attribute has invalid identifier for the parameter name}}
 
 @property(strong) id someProp SWIFT_NAME("prop");
 @end
@@ -69,7 +69,7 @@ enum SWIFT_NAME("E") E {
   value1,
   value2,
   value3 SWIFT_NAME("three"),
-  value4 SWIFT_NAME("four()"), // expected-warning {{'__swift_name__' attribute has invalid identifier for base name}}
+  value4 SWIFT_NAME("four()"), // expected-warning {{'__swift_name__' attribute has invalid identifier for the base name}}
 };
 
 struct SWIFT_NAME("TStruct") SStruct {
