@@ -39,15 +39,15 @@ TEST_F(LazyReexportsTest, BasicLocalCallThroughManagerOperation) {
 
   cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
       SymbolFlagsMap({{DummyTarget, JITSymbolFlags::Exported}}),
-      [&](MaterializationResponsibility R) {
+      [&](std::unique_ptr<MaterializationResponsibility> R) {
         DummyTargetMaterialized = true;
         // No dependencies registered, can't fail.
-        cantFail(R.notifyResolved(
+        cantFail(R->notifyResolved(
             {{DummyTarget,
               JITEvaluatedSymbol(static_cast<JITTargetAddress>(
                                      reinterpret_cast<uintptr_t>(&dummyTarget)),
                                  JITSymbolFlags::Exported)}}));
-        cantFail(R.notifyEmitted());
+        cantFail(R->notifyEmitted());
       })));
 
   unsigned NotifyResolvedCount = 0;
