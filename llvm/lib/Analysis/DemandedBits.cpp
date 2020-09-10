@@ -170,6 +170,14 @@ void DemandedBits::determineLiveOperandBits(
         }
         break;
       }
+      case Intrinsic::umax:
+      case Intrinsic::umin:
+      case Intrinsic::smax:
+      case Intrinsic::smin:
+        // If low bits of result are not demanded, they are also not demanded
+        // for the min/max operands.
+        AB = APInt::getBitsSetFrom(BitWidth, AOut.countTrailingZeros());
+        break;
       }
     }
     break;
