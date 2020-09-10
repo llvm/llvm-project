@@ -282,6 +282,9 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// Whether the current function has a DISubprogram attached to it.
   bool HasDebugInfo = false;
 
+  /// The current source language.
+  dwarf::SourceLanguage CurrentSourceLang = dwarf::DW_LANG_lo_user;
+
   /// Whether source was present on the first DIFile encountered in each CU.
   DenseMap<const DICompileUnit *, bool> HasSourceDebugInfo;
 
@@ -895,7 +898,9 @@ void Verifier::visitDIScope(const DIScope &N) {
 
 void Verifier::visitDISubrange(const DISubrange &N) {
   AssertDI(N.getTag() == dwarf::DW_TAG_subrange_type, "invalid tag", &N);
-  AssertDI(N.getRawCountNode() || N.getRawUpperBound(),
+  bool HasAssumedSizedArraySupport = dwarf::isFortran(CurrentSourceLang);
+  AssertDI(HasAssumedSizedArraySupport || N.getRawCountNode() ||
+               N.getRawUpperBound(),
            "Subrange must contain count or upperBound", &N);
   AssertDI(!N.getRawCountNode() || !N.getRawUpperBound(),
            "Subrange can have any one of count or upperBound", &N);
@@ -1099,6 +1104,8 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
            N.getRawFile());
   AssertDI(!N.getFile()->getFilename().empty(), "invalid filename", &N,
            N.getFile());
+
+  CurrentSourceLang = (dwarf::SourceLanguage)N.getSourceLanguage();
 
   verifySourceDebugInfo(N, *N.getFile());
 
