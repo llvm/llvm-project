@@ -240,10 +240,12 @@ FunctionPass *createReassociatePass();
 //===----------------------------------------------------------------------===//
 //
 // JumpThreading - Thread control through mult-pred/multi-succ blocks where some
-// preds always go to some succ. Thresholds other than minus one override the
-// internal BB duplication default threshold.
+// preds always go to some succ. If FreezeSelectCond is true, unfold the
+// condition of a select that unfolds to branch. Thresholds other than minus one
+// override the internal BB duplication default threshold.
 //
-FunctionPass *createJumpThreadingPass(int Threshold = -1);
+FunctionPass *createJumpThreadingPass(bool FreezeSelectCond = false,
+                                      int Threshold = -1);
 
 //===----------------------------------------------------------------------===//
 //
