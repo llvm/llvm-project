@@ -2805,6 +2805,14 @@ Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
   Instruction *Prev = I.getPrevNonDebugInstruction();
   if (Prev && !Prev->isEHPad() &&
       isGuaranteedToTransferExecutionToSuccessor(Prev)) {
+    // Temporarily disable removal of volatile stores preceding unreachable,
+    // pending a potential LangRef change permitting volatile stores to trap.
+    // TODO: Either remove this code, or properly integrate the check into
+    // isGuaranteedToTransferExecutionToSuccessor().
+    if (auto *SI = dyn_cast<StoreInst>(Prev))
+      if (SI->isVolatile())
+        return nullptr;
+
     eraseInstFromFunction(*Prev);
     return &I;
   }
