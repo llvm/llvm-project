@@ -435,12 +435,6 @@ bool ImplicitNullChecks::canDependenceHoistingClobberLiveIns(
     if (AnyAliasLiveIn(TRI, NullSucc, DependenceMO.getReg()))
       return true;
 
-    // The Dependency can't be re-defining the base register -- then we won't
-    // get the memory operation on the address we want.  This is already
-    // checked in \c IsSuitableMemoryOp.
-    assert(!(DependenceMO.isDef() &&
-             TRI->regsOverlap(DependenceMO.getReg(), PointerReg)) &&
-           "Should have been checked before!");
   }
 
   // The dependence does not clobber live-ins in NullSucc block.
@@ -628,11 +622,9 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
       return true;
     }
 
-    // If MI re-defines the PointerReg then we cannot move further.
-    if (llvm::any_of(MI.operands(), [&](MachineOperand &MO) {
-          return MO.isReg() && MO.getReg() && MO.isDef() &&
-                 TRI->regsOverlap(MO.getReg(), PointerReg);
-        }))
+    // If MI re-defines the PointerReg in a way that changes the value of
+    // PointerReg if it was null, then we cannot move further.
+    if (!TII->preservesZeroValueInReg(&MI, PointerReg, TRI))
       return false;
     InstsSeenSoFar.push_back(&MI);
   }
