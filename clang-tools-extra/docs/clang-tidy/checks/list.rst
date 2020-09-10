@@ -143,7 +143,6 @@ Clang-Tidy Checks
    `cppcoreguidelines-narrowing-conversions <cppcoreguidelines-narrowing-conversions.html>`_,
    `cppcoreguidelines-no-malloc <cppcoreguidelines-no-malloc.html>`_,
    `cppcoreguidelines-owning-memory <cppcoreguidelines-owning-memory.html>`_,
-   `cppcoreguidelines-prefer-member-initializer <cppcoreguidelines-prefer-member-initializer.html>`_,
    `cppcoreguidelines-pro-bounds-array-to-pointer-decay <cppcoreguidelines-pro-bounds-array-to-pointer-decay.html>`_,
    `cppcoreguidelines-pro-bounds-constant-array-index <cppcoreguidelines-pro-bounds-constant-array-index.html>`_, "Yes"
    `cppcoreguidelines-pro-bounds-pointer-arithmetic <cppcoreguidelines-pro-bounds-pointer-arithmetic.html>`_,

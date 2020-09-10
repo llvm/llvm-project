@@ -94,12 +94,6 @@ New checks
   Finds condition variables in nested ``if`` statements that were also checked
   in the outer ``if`` statement and were not changed.
 
-- New :doc:`cppcoreguidelines-prefer-member-initializer
-  <clang-tidy/checks/cppcoreguidelines-prefer-member-initializer>` check.
-
-  Finds member initializations in the constructor body which can be placed into
-  the initialization list instead.
-
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
