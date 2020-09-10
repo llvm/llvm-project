@@ -246,58 +246,15 @@ PlatformFreeBSD::GetSoftwareBreakpointTrapOpcode(Target &target,
   }
 }
 
-Status PlatformFreeBSD::LaunchProcess(ProcessLaunchInfo &launch_info) {
-  Status error;
-  if (IsHost()) {
-    error = Platform::LaunchProcess(launch_info);
-  } else {
-    if (m_remote_platform_sp)
-      error = m_remote_platform_sp->LaunchProcess(launch_info);
-    else
-      error.SetErrorString("the platform is not currently connected");
-  }
-  return error;
-}
-
-lldb::ProcessSP PlatformFreeBSD::Attach(ProcessAttachInfo &attach_info,
-                                        Debugger &debugger, Target *target,
-                                        Status &error) {
-  lldb::ProcessSP process_sp;
-  if (IsHost()) {
-    if (target == nullptr) {
-      TargetSP new_target_sp;
-      ArchSpec emptyArchSpec;
-
-      error = debugger.GetTargetList().CreateTarget(
-          debugger, "", emptyArchSpec, eLoadDependentsNo, m_remote_platform_sp,
-          new_target_sp);
-      target = new_target_sp.get();
-    } else
-      error.Clear();
-
-    if (target && error.Success()) {
-      debugger.GetTargetList().SetSelectedTarget(target);
-      // The freebsd always currently uses the GDB remote debugger plug-in so
-      // even when debugging locally we are debugging remotely! Just like the
-      // darwin plugin.
-      process_sp = target->CreateProcess(
-          attach_info.GetListenerForProcess(debugger), "gdb-remote", nullptr);
-
-      if (process_sp)
-        error = process_sp->Attach(attach_info);
-    }
-  } else {
-    if (m_remote_platform_sp)
-      process_sp =
-          m_remote_platform_sp->Attach(attach_info, debugger, target, error);
-    else
-      error.SetErrorString("the platform is not currently connected");
-  }
-  return process_sp;
-}
-
-// FreeBSD processes cannot yet be launched by spawning and attaching.
 bool PlatformFreeBSD::CanDebugProcess() {
+  if (getenv("FREEBSD_REMOTE_PLUGIN")) {
+    if (IsHost()) {
+      return true;
+    } else {
+      // If we're connected, we can debug.
+      return IsConnected();
+    }
+  }
   return false;
 }
 
