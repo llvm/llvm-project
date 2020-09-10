@@ -22,8 +22,8 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-static uint64_t ppc64TocOffset = 0x8000;
-static uint64_t dynamicThreadPointerOffset = 0x8000;
+constexpr uint64_t ppc64TocOffset = 0x8000;
+constexpr uint64_t dynamicThreadPointerOffset = 0x8000;
 
 // The instruction encoding of bits 21-30 from the ISA for the Xform and Dform
 // instructions that can be used as part of the initial exec TLS sequence.
