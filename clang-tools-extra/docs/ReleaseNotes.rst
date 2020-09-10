@@ -70,7 +70,7 @@ Improvements to clang-tidy
 New modules
 ^^^^^^^^^^^
 
-- New :doc:`altera <clang-tidy/modules/altera>` module.
+- New ``altera`` module.
 
   Includes checks related to OpenCL for FPGA coding guidelines, based on the
   `Altera SDK for OpenCL: Best Practices Guide
