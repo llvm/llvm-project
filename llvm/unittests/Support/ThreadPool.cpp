@@ -133,13 +133,6 @@ TEST_F(ThreadPoolTest, Async) {
   ASSERT_EQ(2, i.load());
 }
 
-TEST_F(ThreadPoolTest, NonCopyableTask) {
-  CHECK_UNSUPPORTED();
-  ThreadPool Pool;
-  Pool.async([P = std::make_unique<int>()] {});
-  Pool.wait();
-};
-
 TEST_F(ThreadPoolTest, GetFuture) {
   CHECK_UNSUPPORTED();
   ThreadPool Pool(hardware_concurrency(2));
