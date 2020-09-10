@@ -48,8 +48,6 @@ add_entrypoint_object(
     strcmp.cpp
   HDRS
     strcmp.h
-  DEPENDS
-    libc.include.string
 )
 
 add_entrypoint_object(
