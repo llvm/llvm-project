@@ -156,66 +156,60 @@ bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
     return false;
 
   llvm::APInt value;
-  if (ReadValueIfAny(*rawValue_sp, value)) {
-    FillCasesIfNeeded();
+  if (!ReadValueIfAny(*rawValue_sp, value))
+    return false;
 
-    StreamString ss;
-    bool first_match = true;
-    bool any_match = false;
+  FillCasesIfNeeded();
 
-    llvm::APInt matched_value(llvm::APInt::getNullValue(64));
+  StreamString ss;
+  bool first_match = true;
+  bool any_match = false;
 
-    for (auto val_name : *m_cases) {
-      llvm::APInt case_value = val_name.first;
-      // Print single valued sets without using enclosing brackets.
-      // `WouldEvenConsiderFormatting` can't opt out early because it
-      // has only the type, but needs the value for this case.
-      if (case_value == value) {
-        ss << '.' << val_name.second;
-        dest.assign(ss.GetData());
-        return true;
-      }
-      // Don't display the zero case in an option set unless it's the
-      // only value.
-      if (case_value == 0 && value != 0)
-        continue;
-      if ((case_value & value) == case_value) {
-        // hey a case matched!!
-        any_match = true;
-        if (first_match) {
-          ss.Printf("[.%s", val_name.second.AsCString());
-          first_match = false;
-        } else {
-          ss.Printf(", .%s", val_name.second.AsCString());
-        }
+  llvm::APInt matched_value(llvm::APInt::getNullValue(64));
 
-        matched_value |= case_value;
-
-        // if we matched everything, get out
-        if (matched_value == value)
-          break;
-      }
-    }
-
-    if (any_match) {
-      // if we found a full match, then close the list
-      if (matched_value == value)
-        ss.PutChar(']');
-      else {
-        // print the unaccounted-for bits separately
-        llvm::APInt residual = (value & ~matched_value);
-        ss.Printf(", 0x%s]", residual.toString(16, false).c_str());
-      }
-    }
-
-    // if we printed anything, use it
-    const char *data = ss.GetData();
-    if (data && data[0]) {
-      dest.assign(data);
+  for (auto val_name : *m_cases) {
+    llvm::APInt case_value = val_name.first;
+    // Print single valued sets without using enclosing brackets.
+    // `WouldEvenConsiderFormatting` can't opt out early because it
+    // has only the type, but needs the value for this case.
+    if (case_value == value) {
+      ss << '.' << val_name.second;
+      dest.assign(ss.GetData());
       return true;
     }
+    // Don't display the zero case in an option set unless it's the
+    // only value.
+    if (case_value == 0 && value != 0)
+      continue;
+    if ((case_value & value) == case_value) {
+      any_match = true;
+      if (first_match) {
+        ss << "[." << val_name.second;
+        first_match = false;
+      } else {
+        ss << ", ." << val_name.second;
+      }
+
+      matched_value |= case_value;
+
+      // If we matched everything, get out.
+      if (matched_value == value)
+        break;
+    }
   }
-  return false;
+
+  if (!any_match)
+    return false;
+
+  if (matched_value != value) {
+    // Print the unaccounted-for bits separately.
+    llvm::APInt residual = value & ~matched_value;
+    ss << ", 0x" << residual.toString(16, false);
+  }
+  ss << ']';
+
+  dest.assign(ss.GetData());
+  return true;
 }
 
 bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
