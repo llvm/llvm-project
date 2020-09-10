@@ -746,7 +746,9 @@ bool Decoder::opcode_alloc_l(const uint8_t *OC, unsigned &Offset,
 
 bool Decoder::opcode_setfp(const uint8_t *OC, unsigned &Offset, unsigned Length,
                            bool Prologue) {
-  SW.startLine() << format("0x%02x                ; mov fp, sp\n", OC[Offset]);
+  SW.startLine() << format("0x%02x                ; mov %s, %s\n", OC[Offset],
+                           static_cast<const char *>(Prologue ? "fp" : "sp"),
+                           static_cast<const char *>(Prologue ? "sp" : "fp"));
   ++Offset;
   return false;
 }
@@ -754,8 +756,11 @@ bool Decoder::opcode_setfp(const uint8_t *OC, unsigned &Offset, unsigned Length,
 bool Decoder::opcode_addfp(const uint8_t *OC, unsigned &Offset, unsigned Length,
                            bool Prologue) {
   unsigned NumBytes = OC[Offset + 1] << 3;
-  SW.startLine() << format("0x%02x%02x              ; add fp, sp, #%u\n",
-                           OC[Offset], OC[Offset + 1], NumBytes);
+  SW.startLine() << format(
+      "0x%02x%02x              ; %s %s, %s, #%u\n", OC[Offset], OC[Offset + 1],
+      static_cast<const char *>(Prologue ? "add" : "sub"),
+      static_cast<const char *>(Prologue ? "fp" : "sp"),
+      static_cast<const char *>(Prologue ? "sp" : "fp"), NumBytes);
   Offset += 2;
   return false;
 }

@@ -20,7 +20,7 @@
 # CHECK-NEXT:          StartOffset: 20
 # CHECK-NEXT:          EpilogueStartIndex: 4
 # CHECK-NEXT:          Opcodes [
-# CHECK-NEXT:            0xe1                ; mov fp, sp
+# CHECK-NEXT:            0xe1                ; mov sp, fp
 # CHECK-NEXT:            0x81                ; ldp x29, x30, [sp], #16
 # CHECK-NEXT:            0xe4                ; end
 # CHECK-NEXT:          ]
