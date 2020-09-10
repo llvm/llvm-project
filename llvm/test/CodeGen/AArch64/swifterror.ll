@@ -339,14 +339,14 @@ define float @foo_vararg(%swift_error** swifterror %error_ptr_ref, ...) {
 ; CHECK-APPLE: malloc
 
 ; First vararg
-; CHECK-APPLE-AARCH64: ldr {{w[0-9]+}}, [{{.*}}[[TMP:x[0-9]+]], #16]
 ; CHECK-APPLE-AARCH64: mov [[ID:w[0-9]+]], #1
+; CHECK-APPLE-AARCH64: ldr {{w[0-9]+}}, [{{.*}}[[TMP:x[0-9]+]], #16]
 ; CHECK-APPLE-AARCH64: add [[ARGS:x[0-9]+]], [[TMP]], #16
+; Third vararg
+; CHECK-APPLE-AARCH64: ldr {{w[0-9]+}}, [{{.*}}[[TMP]], #32]
 ; CHECK-APPLE-AARCH64: strb [[ID]], [x0, #8]
 ; Second vararg
 ; CHECK-APPLE-AARCH64: ldr {{w[0-9]+}}, [{{.*}}[[TMP]], #24]
-; Third vararg
-; CHECK-APPLE-AARCH64: ldr {{w[0-9]+}}, [{{.*}}[[TMP]], #32]
 
 ; CHECK-APPLE-ARM64_32: mov [[ID:w[0-9]+]], #1
 ; CHECK-APPLE-ARM64_32: add [[ARGS:x[0-9]+]], [[TMP:x[0-9]+]], #16

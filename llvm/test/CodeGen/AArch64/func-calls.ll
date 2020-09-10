@@ -90,12 +90,10 @@ define void @check_stack_args() {
   ; memcpy gets created, but the following works for now.
 
 ; CHECK-DAG: str {{q[0-9]+}}, [sp]
-; CHECK-DAG: fmov d[[FINAL_DOUBLE:[0-9]+]], #1.0
-; CHECK: mov v0.16b, v[[FINAL_DOUBLE]].16b
+; CHECK-DAG: fmov d0, #1.0
 
 ; CHECK-NONEON-DAG: str {{q[0-9]+}}, [sp]
-; CHECK-NONEON-DAG: fmov d[[FINAL_DOUBLE:[0-9]+]], #1.0
-; CHECK-NONEON: fmov d0, d[[FINAL_DOUBLE]]
+; CHECK-NONEON-DAG: fmov d0, #1.0
 
 ; CHECK: bl struct_on_stack
 ; CHECK-NOFP-NOT: fmov
