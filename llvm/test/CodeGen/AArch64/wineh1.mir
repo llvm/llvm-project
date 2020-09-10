@@ -73,7 +73,6 @@
 # ASM: .seh_endepilogue
 
 # ASM: .seh_endfunclet
-# ASM: .section .xdata,"dr"
 # ASM: .seh_handlerdata
 # ASM: .text
 # ASM: .seh_endproc
