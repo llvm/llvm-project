@@ -86,7 +86,7 @@ private:
 class SimpleMaterializationUnit : public orc::MaterializationUnit {
 public:
   using MaterializeFunction =
-      std::function<void(orc::MaterializationResponsibility)>;
+      std::function<void(std::unique_ptr<orc::MaterializationResponsibility>)>;
   using DiscardFunction =
       std::function<void(const orc::JITDylib &, orc::SymbolStringPtr)>;
   using DestructorFunction = std::function<void()>;
@@ -108,7 +108,8 @@ public:
 
   StringRef getName() const override { return "<Simple>"; }
 
-  void materialize(orc::MaterializationResponsibility R) override {
+  void
+  materialize(std::unique_ptr<orc::MaterializationResponsibility> R) override {
     Materialize(std::move(R));
   }
 
