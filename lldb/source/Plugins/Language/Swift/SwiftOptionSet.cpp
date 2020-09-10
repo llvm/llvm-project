@@ -182,7 +182,6 @@ bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
     if (case_value == 0 && value != 0)
       continue;
     if ((case_value & value) == case_value) {
-      // hey a case matched!!
       any_match = true;
       if (first_match) {
         ss << "[." << val_name.second;
@@ -193,7 +192,7 @@ bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
 
       matched_value |= case_value;
 
-      // if we matched everything, get out
+      // If we matched everything, get out.
       if (matched_value == value)
         break;
     }
@@ -203,11 +202,10 @@ bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
     return false;
 
   if (matched_value != value) {
-    // print the unaccounted-for bits separately
+    // Print the unaccounted-for bits separately.
     llvm::APInt residual = value & ~matched_value;
     ss << ", 0x" << residual.toString(16, false);
   }
-  // close the list
   ss << ']';
 
   dest.assign(ss.GetData());
