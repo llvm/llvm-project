@@ -24,166 +24,43 @@
 
 define void @sdiv_v16i32_uniformconst() {
 ; SSE-LABEL: @sdiv_v16i32_uniformconst(
-; SSE-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
-; SSE-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
-; SSE-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
-; SSE-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
-; SSE-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
-; SSE-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
-; SSE-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
-; SSE-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
-; SSE-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
-; SSE-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
-; SSE-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
-; SSE-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
-; SSE-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
-; SSE-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
-; SSE-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
-; SSE-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
-; SSE-NEXT:    [[R0:%.*]] = sdiv i32 [[A0]], 5
-; SSE-NEXT:    [[R1:%.*]] = sdiv i32 [[A1]], 5
-; SSE-NEXT:    [[R2:%.*]] = sdiv i32 [[A2]], 5
-; SSE-NEXT:    [[R3:%.*]] = sdiv i32 [[A3]], 5
-; SSE-NEXT:    [[R4:%.*]] = sdiv i32 [[A4]], 5
-; SSE-NEXT:    [[R5:%.*]] = sdiv i32 [[A5]], 5
-; SSE-NEXT:    [[R6:%.*]] = sdiv i32 [[A6]], 5
-; SSE-NEXT:    [[R7:%.*]] = sdiv i32 [[A7]], 5
-; SSE-NEXT:    [[R8:%.*]] = sdiv i32 [[A8]], 5
-; SSE-NEXT:    [[R9:%.*]] = sdiv i32 [[A9]], 5
-; SSE-NEXT:    [[R10:%.*]] = sdiv i32 [[A10]], 5
-; SSE-NEXT:    [[R11:%.*]] = sdiv i32 [[A11]], 5
-; SSE-NEXT:    [[R12:%.*]] = sdiv i32 [[A12]], 5
-; SSE-NEXT:    [[R13:%.*]] = sdiv i32 [[A13]], 5
-; SSE-NEXT:    [[R14:%.*]] = sdiv i32 [[A14]], 5
-; SSE-NEXT:    [[R15:%.*]] = sdiv i32 [[A15]], 5
-; SSE-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
-; SSE-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
-; SSE-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
-; SSE-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
-; SSE-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
-; SSE-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
-; SSE-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
-; SSE-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
-; SSE-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
-; SSE-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
-; SSE-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
-; SSE-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
-; SSE-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
-; SSE-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
-; SSE-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
-; SSE-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
+; SSE-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([16 x i32]* @a32 to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP5:%.*]] = sdiv <4 x i32> [[TMP1]], <i32 5, i32 5, i32 5, i32 5>
+; SSE-NEXT:    [[TMP6:%.*]] = sdiv <4 x i32> [[TMP2]], <i32 5, i32 5, i32 5, i32 5>
+; SSE-NEXT:    [[TMP7:%.*]] = sdiv <4 x i32> [[TMP3]], <i32 5, i32 5, i32 5, i32 5>
+; SSE-NEXT:    [[TMP8:%.*]] = sdiv <4 x i32> [[TMP4]], <i32 5, i32 5, i32 5, i32 5>
+; SSE-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* bitcast ([16 x i32]* @c32 to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4) to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12) to <4 x i32>*), align 4
 ; SSE-NEXT:    ret void
 ;
 ; SLM-LABEL: @sdiv_v16i32_uniformconst(
-; SLM-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
-; SLM-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
-; SLM-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
-; SLM-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
-; SLM-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
-; SLM-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
-; SLM-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
-; SLM-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
-; SLM-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
-; SLM-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
-; SLM-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
-; SLM-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
-; SLM-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
-; SLM-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
-; SLM-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
-; SLM-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
-; SLM-NEXT:    [[R0:%.*]] = sdiv i32 [[A0]], 5
-; SLM-NEXT:    [[R1:%.*]] = sdiv i32 [[A1]], 5
-; SLM-NEXT:    [[R2:%.*]] = sdiv i32 [[A2]], 5
-; SLM-NEXT:    [[R3:%.*]] = sdiv i32 [[A3]], 5
-; SLM-NEXT:    [[R4:%.*]] = sdiv i32 [[A4]], 5
-; SLM-NEXT:    [[R5:%.*]] = sdiv i32 [[A5]], 5
-; SLM-NEXT:    [[R6:%.*]] = sdiv i32 [[A6]], 5
-; SLM-NEXT:    [[R7:%.*]] = sdiv i32 [[A7]], 5
-; SLM-NEXT:    [[R8:%.*]] = sdiv i32 [[A8]], 5
-; SLM-NEXT:    [[R9:%.*]] = sdiv i32 [[A9]], 5
-; SLM-NEXT:    [[R10:%.*]] = sdiv i32 [[A10]], 5
-; SLM-NEXT:    [[R11:%.*]] = sdiv i32 [[A11]], 5
-; SLM-NEXT:    [[R12:%.*]] = sdiv i32 [[A12]], 5
-; SLM-NEXT:    [[R13:%.*]] = sdiv i32 [[A13]], 5
-; SLM-NEXT:    [[R14:%.*]] = sdiv i32 [[A14]], 5
-; SLM-NEXT:    [[R15:%.*]] = sdiv i32 [[A15]], 5
-; SLM-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
-; SLM-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
-; SLM-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
-; SLM-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
-; SLM-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
-; SLM-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
-; SLM-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
-; SLM-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
-; SLM-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
-; SLM-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
-; SLM-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
-; SLM-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
-; SLM-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
-; SLM-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
-; SLM-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
-; SLM-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
+; SLM-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([16 x i32]* @a32 to <4 x i32>*), align 4
+; SLM-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4) to <4 x i32>*), align 4
+; SLM-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <4 x i32>*), align 4
+; SLM-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12) to <4 x i32>*), align 4
+; SLM-NEXT:    [[TMP5:%.*]] = sdiv <4 x i32> [[TMP1]], <i32 5, i32 5, i32 5, i32 5>
+; SLM-NEXT:    [[TMP6:%.*]] = sdiv <4 x i32> [[TMP2]], <i32 5, i32 5, i32 5, i32 5>
+; SLM-NEXT:    [[TMP7:%.*]] = sdiv <4 x i32> [[TMP3]], <i32 5, i32 5, i32 5, i32 5>
+; SLM-NEXT:    [[TMP8:%.*]] = sdiv <4 x i32> [[TMP4]], <i32 5, i32 5, i32 5, i32 5>
+; SLM-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* bitcast ([16 x i32]* @c32 to <4 x i32>*), align 4
+; SLM-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4) to <4 x i32>*), align 4
+; SLM-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <4 x i32>*), align 4
+; SLM-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12) to <4 x i32>*), align 4
 ; SLM-NEXT:    ret void
 ;
-; AVX1-LABEL: @sdiv_v16i32_uniformconst(
-; AVX1-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
-; AVX1-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
-; AVX1-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
-; AVX1-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
-; AVX1-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
-; AVX1-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
-; AVX1-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
-; AVX1-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
-; AVX1-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
-; AVX1-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
-; AVX1-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
-; AVX1-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
-; AVX1-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
-; AVX1-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
-; AVX1-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
-; AVX1-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
-; AVX1-NEXT:    [[R0:%.*]] = sdiv i32 [[A0]], 5
-; AVX1-NEXT:    [[R1:%.*]] = sdiv i32 [[A1]], 5
-; AVX1-NEXT:    [[R2:%.*]] = sdiv i32 [[A2]], 5
-; AVX1-NEXT:    [[R3:%.*]] = sdiv i32 [[A3]], 5
-; AVX1-NEXT:    [[R4:%.*]] = sdiv i32 [[A4]], 5
-; AVX1-NEXT:    [[R5:%.*]] = sdiv i32 [[A5]], 5
-; AVX1-NEXT:    [[R6:%.*]] = sdiv i32 [[A6]], 5
-; AVX1-NEXT:    [[R7:%.*]] = sdiv i32 [[A7]], 5
-; AVX1-NEXT:    [[R8:%.*]] = sdiv i32 [[A8]], 5
-; AVX1-NEXT:    [[R9:%.*]] = sdiv i32 [[A9]], 5
-; AVX1-NEXT:    [[R10:%.*]] = sdiv i32 [[A10]], 5
-; AVX1-NEXT:    [[R11:%.*]] = sdiv i32 [[A11]], 5
-; AVX1-NEXT:    [[R12:%.*]] = sdiv i32 [[A12]], 5
-; AVX1-NEXT:    [[R13:%.*]] = sdiv i32 [[A13]], 5
-; AVX1-NEXT:    [[R14:%.*]] = sdiv i32 [[A14]], 5
-; AVX1-NEXT:    [[R15:%.*]] = sdiv i32 [[A15]], 5
-; AVX1-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
-; AVX1-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
-; AVX1-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
-; AVX1-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
-; AVX1-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
-; AVX1-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
-; AVX1-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
-; AVX1-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
-; AVX1-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
-; AVX1-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
-; AVX1-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
-; AVX1-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
-; AVX1-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
-; AVX1-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
-; AVX1-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
-; AVX1-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
-; AVX1-NEXT:    ret void
-;
-; AVX2-LABEL: @sdiv_v16i32_uniformconst(
-; AVX2-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @a32 to <8 x i32>*), align 4
-; AVX2-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <8 x i32>*), align 4
-; AVX2-NEXT:    [[TMP3:%.*]] = sdiv <8 x i32> [[TMP1]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
-; AVX2-NEXT:    [[TMP4:%.*]] = sdiv <8 x i32> [[TMP2]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
-; AVX2-NEXT:    store <8 x i32> [[TMP3]], <8 x i32>* bitcast ([16 x i32]* @c32 to <8 x i32>*), align 4
-; AVX2-NEXT:    store <8 x i32> [[TMP4]], <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <8 x i32>*), align 4
-; AVX2-NEXT:    ret void
+; AVX-LABEL: @sdiv_v16i32_uniformconst(
+; AVX-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @a32 to <8 x i32>*), align 4
+; AVX-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX-NEXT:    [[TMP3:%.*]] = sdiv <8 x i32> [[TMP1]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
+; AVX-NEXT:    [[TMP4:%.*]] = sdiv <8 x i32> [[TMP2]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
+; AVX-NEXT:    store <8 x i32> [[TMP3]], <8 x i32>* bitcast ([16 x i32]* @c32 to <8 x i32>*), align 4
+; AVX-NEXT:    store <8 x i32> [[TMP4]], <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX-NEXT:    ret void
 ;
 ; AVX512-LABEL: @sdiv_v16i32_uniformconst(
 ; AVX512-NEXT:    [[TMP1:%.*]] = load <16 x i32>, <16 x i32>* bitcast ([16 x i32]* @a32 to <16 x i32>*), align 4
@@ -244,166 +121,43 @@ define void @sdiv_v16i32_uniformconst() {
 
 define void @srem_v16i32_uniformconst() {
 ; SSE-LABEL: @srem_v16i32_uniformconst(
-; SSE-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
-; SSE-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
-; SSE-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
-; SSE-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
-; SSE-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
-; SSE-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
-; SSE-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
-; SSE-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
-; SSE-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
-; SSE-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
-; SSE-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
-; SSE-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
-; SSE-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
-; SSE-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
-; SSE-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
-; SSE-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
-; SSE-NEXT:    [[R0:%.*]] = srem i32 [[A0]], 5
-; SSE-NEXT:    [[R1:%.*]] = srem i32 [[A1]], 5
-; SSE-NEXT:    [[R2:%.*]] = srem i32 [[A2]], 5
-; SSE-NEXT:    [[R3:%.*]] = srem i32 [[A3]], 5
-; SSE-NEXT:    [[R4:%.*]] = srem i32 [[A4]], 5
-; SSE-NEXT:    [[R5:%.*]] = srem i32 [[A5]], 5
-; SSE-NEXT:    [[R6:%.*]] = srem i32 [[A6]], 5
-; SSE-NEXT:    [[R7:%.*]] = srem i32 [[A7]], 5
-; SSE-NEXT:    [[R8:%.*]] = srem i32 [[A8]], 5
-; SSE-NEXT:    [[R9:%.*]] = srem i32 [[A9]], 5
-; SSE-NEXT:    [[R10:%.*]] = srem i32 [[A10]], 5
-; SSE-NEXT:    [[R11:%.*]] = srem i32 [[A11]], 5
-; SSE-NEXT:    [[R12:%.*]] = srem i32 [[A12]], 5
-; SSE-NEXT:    [[R13:%.*]] = srem i32 [[A13]], 5
-; SSE-NEXT:    [[R14:%.*]] = srem i32 [[A14]], 5
-; SSE-NEXT:    [[R15:%.*]] = srem i32 [[A15]], 5
-; SSE-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
-; SSE-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
-; SSE-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
-; SSE-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
-; SSE-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
-; SSE-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
-; SSE-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
-; SSE-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
-; SSE-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
-; SSE-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
-; SSE-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
-; SSE-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
-; SSE-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
-; SSE-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
-; SSE-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
-; SSE-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
+; SSE-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([16 x i32]* @a32 to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP5:%.*]] = srem <4 x i32> [[TMP1]], <i32 5, i32 5, i32 5, i32 5>
+; SSE-NEXT:    [[TMP6:%.*]] = srem <4 x i32> [[TMP2]], <i32 5, i32 5, i32 5, i32 5>
+; SSE-NEXT:    [[TMP7:%.*]] = srem <4 x i32> [[TMP3]], <i32 5, i32 5, i32 5, i32 5>
+; SSE-NEXT:    [[TMP8:%.*]] = srem <4 x i32> [[TMP4]], <i32 5, i32 5, i32 5, i32 5>
+; SSE-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* bitcast ([16 x i32]* @c32 to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4) to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12) to <4 x i32>*), align 4
 ; SSE-NEXT:    ret void
 ;
 ; SLM-LABEL: @srem_v16i32_uniformconst(
-; SLM-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
-; SLM-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
-; SLM-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
-; SLM-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
-; SLM-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
-; SLM-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
-; SLM-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
-; SLM-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
-; SLM-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
-; SLM-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
-; SLM-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
-; SLM-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
-; SLM-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
-; SLM-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
-; SLM-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
-; SLM-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
-; SLM-NEXT:    [[R0:%.*]] = srem i32 [[A0]], 5
-; SLM-NEXT:    [[R1:%.*]] = srem i32 [[A1]], 5
-; SLM-NEXT:    [[R2:%.*]] = srem i32 [[A2]], 5
-; SLM-NEXT:    [[R3:%.*]] = srem i32 [[A3]], 5
-; SLM-NEXT:    [[R4:%.*]] = srem i32 [[A4]], 5
-; SLM-NEXT:    [[R5:%.*]] = srem i32 [[A5]], 5
-; SLM-NEXT:    [[R6:%.*]] = srem i32 [[A6]], 5
-; SLM-NEXT:    [[R7:%.*]] = srem i32 [[A7]], 5
-; SLM-NEXT:    [[R8:%.*]] = srem i32 [[A8]], 5
-; SLM-NEXT:    [[R9:%.*]] = srem i32 [[A9]], 5
-; SLM-NEXT:    [[R10:%.*]] = srem i32 [[A10]], 5
-; SLM-NEXT:    [[R11:%.*]] = srem i32 [[A11]], 5
-; SLM-NEXT:    [[R12:%.*]] = srem i32 [[A12]], 5
-; SLM-NEXT:    [[R13:%.*]] = srem i32 [[A13]], 5
-; SLM-NEXT:    [[R14:%.*]] = srem i32 [[A14]], 5
-; SLM-NEXT:    [[R15:%.*]] = srem i32 [[A15]], 5
-; SLM-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
-; SLM-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
-; SLM-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
-; SLM-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
-; SLM-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
-; SLM-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
-; SLM-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
-; SLM-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
-; SLM-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
-; SLM-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
-; SLM-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
-; SLM-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
-; SLM-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
-; SLM-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
-; SLM-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
-; SLM-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
+; SLM-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([16 x i32]* @a32 to <4 x i32>*), align 4
+; SLM-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4) to <4 x i32>*), align 4
+; SLM-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <4 x i32>*), align 4
+; SLM-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12) to <4 x i32>*), align 4
+; SLM-NEXT:    [[TMP5:%.*]] = srem <4 x i32> [[TMP1]], <i32 5, i32 5, i32 5, i32 5>
+; SLM-NEXT:    [[TMP6:%.*]] = srem <4 x i32> [[TMP2]], <i32 5, i32 5, i32 5, i32 5>
+; SLM-NEXT:    [[TMP7:%.*]] = srem <4 x i32> [[TMP3]], <i32 5, i32 5, i32 5, i32 5>
+; SLM-NEXT:    [[TMP8:%.*]] = srem <4 x i32> [[TMP4]], <i32 5, i32 5, i32 5, i32 5>
+; SLM-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* bitcast ([16 x i32]* @c32 to <4 x i32>*), align 4
+; SLM-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4) to <4 x i32>*), align 4
+; SLM-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <4 x i32>*), align 4
+; SLM-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12) to <4 x i32>*), align 4
 ; SLM-NEXT:    ret void
 ;
-; AVX1-LABEL: @srem_v16i32_uniformconst(
-; AVX1-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
-; AVX1-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
-; AVX1-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
-; AVX1-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
-; AVX1-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
-; AVX1-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
-; AVX1-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
-; AVX1-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
-; AVX1-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
-; AVX1-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
-; AVX1-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
-; AVX1-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
-; AVX1-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
-; AVX1-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
-; AVX1-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
-; AVX1-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
-; AVX1-NEXT:    [[R0:%.*]] = srem i32 [[A0]], 5
-; AVX1-NEXT:    [[R1:%.*]] = srem i32 [[A1]], 5
-; AVX1-NEXT:    [[R2:%.*]] = srem i32 [[A2]], 5
-; AVX1-NEXT:    [[R3:%.*]] = srem i32 [[A3]], 5
-; AVX1-NEXT:    [[R4:%.*]] = srem i32 [[A4]], 5
-; AVX1-NEXT:    [[R5:%.*]] = srem i32 [[A5]], 5
-; AVX1-NEXT:    [[R6:%.*]] = srem i32 [[A6]], 5
-; AVX1-NEXT:    [[R7:%.*]] = srem i32 [[A7]], 5
-; AVX1-NEXT:    [[R8:%.*]] = srem i32 [[A8]], 5
-; AVX1-NEXT:    [[R9:%.*]] = srem i32 [[A9]], 5
-; AVX1-NEXT:    [[R10:%.*]] = srem i32 [[A10]], 5
-; AVX1-NEXT:    [[R11:%.*]] = srem i32 [[A11]], 5
-; AVX1-NEXT:    [[R12:%.*]] = srem i32 [[A12]], 5
-; AVX1-NEXT:    [[R13:%.*]] = srem i32 [[A13]], 5
-; AVX1-NEXT:    [[R14:%.*]] = srem i32 [[A14]], 5
-; AVX1-NEXT:    [[R15:%.*]] = srem i32 [[A15]], 5
-; AVX1-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
-; AVX1-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
-; AVX1-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
-; AVX1-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
-; AVX1-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
-; AVX1-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
-; AVX1-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
-; AVX1-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
-; AVX1-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
-; AVX1-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
-; AVX1-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
-; AVX1-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
-; AVX1-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
-; AVX1-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
-; AVX1-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
-; AVX1-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
-; AVX1-NEXT:    ret void
-;
-; AVX2-LABEL: @srem_v16i32_uniformconst(
-; AVX2-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @a32 to <8 x i32>*), align 4
-; AVX2-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <8 x i32>*), align 4
-; AVX2-NEXT:    [[TMP3:%.*]] = srem <8 x i32> [[TMP1]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
-; AVX2-NEXT:    [[TMP4:%.*]] = srem <8 x i32> [[TMP2]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
-; AVX2-NEXT:    store <8 x i32> [[TMP3]], <8 x i32>* bitcast ([16 x i32]* @c32 to <8 x i32>*), align 4
-; AVX2-NEXT:    store <8 x i32> [[TMP4]], <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <8 x i32>*), align 4
-; AVX2-NEXT:    ret void
+; AVX-LABEL: @srem_v16i32_uniformconst(
+; AVX-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @a32 to <8 x i32>*), align 4
+; AVX-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX-NEXT:    [[TMP3:%.*]] = srem <8 x i32> [[TMP1]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
+; AVX-NEXT:    [[TMP4:%.*]] = srem <8 x i32> [[TMP2]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
+; AVX-NEXT:    store <8 x i32> [[TMP3]], <8 x i32>* bitcast ([16 x i32]* @c32 to <8 x i32>*), align 4
+; AVX-NEXT:    store <8 x i32> [[TMP4]], <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX-NEXT:    ret void
 ;
 ; AVX512-LABEL: @srem_v16i32_uniformconst(
 ; AVX512-NEXT:    [[TMP1:%.*]] = load <16 x i32>, <16 x i32>* bitcast ([16 x i32]* @a32 to <16 x i32>*), align 4
@@ -464,166 +218,43 @@ define void @srem_v16i32_uniformconst() {
 
 define void @udiv_v16i32_uniformconst() {
 ; SSE-LABEL: @udiv_v16i32_uniformconst(
-; SSE-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
-; SSE-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
-; SSE-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
-; SSE-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
-; SSE-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
-; SSE-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
-; SSE-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
-; SSE-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
-; SSE-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
-; SSE-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
-; SSE-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
-; SSE-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
-; SSE-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
-; SSE-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
-; SSE-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
-; SSE-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
-; SSE-NEXT:    [[R0:%.*]] = udiv i32 [[A0]], 5
-; SSE-NEXT:    [[R1:%.*]] = udiv i32 [[A1]], 5
-; SSE-NEXT:    [[R2:%.*]] = udiv i32 [[A2]], 5
-; SSE-NEXT:    [[R3:%.*]] = udiv i32 [[A3]], 5
-; SSE-NEXT:    [[R4:%.*]] = udiv i32 [[A4]], 5
-; SSE-NEXT:    [[R5:%.*]] = udiv i32 [[A5]], 5
-; SSE-NEXT:    [[R6:%.*]] = udiv i32 [[A6]], 5
-; SSE-NEXT:    [[R7:%.*]] = udiv i32 [[A7]], 5
-; SSE-NEXT:    [[R8:%.*]] = udiv i32 [[A8]], 5
-; SSE-NEXT:    [[R9:%.*]] = udiv i32 [[A9]], 5
-; SSE-NEXT:    [[R10:%.*]] = udiv i32 [[A10]], 5
-; SSE-NEXT:    [[R11:%.*]] = udiv i32 [[A11]], 5
-; SSE-NEXT:    [[R12:%.*]] = udiv i32 [[A12]], 5
-; SSE-NEXT:    [[R13:%.*]] = udiv i32 [[A13]], 5
-; SSE-NEXT:    [[R14:%.*]] = udiv i32 [[A14]], 5
-; SSE-NEXT:    [[R15:%.*]] = udiv i32 [[A15]], 5
-; SSE-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
-; SSE-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
-; SSE-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
-; SSE-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
-; SSE-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
-; SSE-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
-; SSE-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
-; SSE-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
-; SSE-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
-; SSE-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
-; SSE-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
-; SSE-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
-; SSE-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
-; SSE-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
-; SSE-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
-; SSE-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
+; SSE-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([16 x i32]* @a32 to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP5:%.*]] = udiv <4 x i32> [[TMP1]], <i32 5, i32 5, i32 5, i32 5>
+; SSE-NEXT:    [[TMP6:%.*]] = udiv <4 x i32> [[TMP2]], <i32 5, i32 5, i32 5, i32 5>
+; SSE-NEXT:    [[TMP7:%.*]] = udiv <4 x i32> [[TMP3]], <i32 5, i32 5, i32 5, i32 5>
+; SSE-NEXT:    [[TMP8:%.*]] = udiv <4 x i32> [[TMP4]], <i32 5, i32 5, i32 5, i32 5>
+; SSE-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* bitcast ([16 x i32]* @c32 to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4) to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12) to <4 x i32>*), align 4
 ; SSE-NEXT:    ret void
 ;
 ; SLM-LABEL: @udiv_v16i32_uniformconst(
-; SLM-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
-; SLM-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
-; SLM-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
-; SLM-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
-; SLM-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
-; SLM-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
-; SLM-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
-; SLM-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
-; SLM-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
-; SLM-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
-; SLM-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
-; SLM-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
-; SLM-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
-; SLM-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
-; SLM-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
-; SLM-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
-; SLM-NEXT:    [[R0:%.*]] = udiv i32 [[A0]], 5
-; SLM-NEXT:    [[R1:%.*]] = udiv i32 [[A1]], 5
-; SLM-NEXT:    [[R2:%.*]] = udiv i32 [[A2]], 5
-; SLM-NEXT:    [[R3:%.*]] = udiv i32 [[A3]], 5
-; SLM-NEXT:    [[R4:%.*]] = udiv i32 [[A4]], 5
-; SLM-NEXT:    [[R5:%.*]] = udiv i32 [[A5]], 5
-; SLM-NEXT:    [[R6:%.*]] = udiv i32 [[A6]], 5
-; SLM-NEXT:    [[R7:%.*]] = udiv i32 [[A7]], 5
-; SLM-NEXT:    [[R8:%.*]] = udiv i32 [[A8]], 5
-; SLM-NEXT:    [[R9:%.*]] = udiv i32 [[A9]], 5
-; SLM-NEXT:    [[R10:%.*]] = udiv i32 [[A10]], 5
-; SLM-NEXT:    [[R11:%.*]] = udiv i32 [[A11]], 5
-; SLM-NEXT:    [[R12:%.*]] = udiv i32 [[A12]], 5
-; SLM-NEXT:    [[R13:%.*]] = udiv i32 [[A13]], 5
-; SLM-NEXT:    [[R14:%.*]] = udiv i32 [[A14]], 5
-; SLM-NEXT:    [[R15:%.*]] = udiv i32 [[A15]], 5
-; SLM-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
-; SLM-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
-; SLM-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
-; SLM-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
-; SLM-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
-; SLM-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
-; SLM-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
-; SLM-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
-; SLM-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
-; SLM-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
-; SLM-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
-; SLM-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
-; SLM-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
-; SLM-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
-; SLM-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
-; SLM-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
+; SLM-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([16 x i32]* @a32 to <4 x i32>*), align 4
+; SLM-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4) to <4 x i32>*), align 4
+; SLM-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <4 x i32>*), align 4
+; SLM-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12) to <4 x i32>*), align 4
+; SLM-NEXT:    [[TMP5:%.*]] = udiv <4 x i32> [[TMP1]], <i32 5, i32 5, i32 5, i32 5>
+; SLM-NEXT:    [[TMP6:%.*]] = udiv <4 x i32> [[TMP2]], <i32 5, i32 5, i32 5, i32 5>
+; SLM-NEXT:    [[TMP7:%.*]] = udiv <4 x i32> [[TMP3]], <i32 5, i32 5, i32 5, i32 5>
+; SLM-NEXT:    [[TMP8:%.*]] = udiv <4 x i32> [[TMP4]], <i32 5, i32 5, i32 5, i32 5>
+; SLM-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* bitcast ([16 x i32]* @c32 to <4 x i32>*), align 4
+; SLM-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4) to <4 x i32>*), align 4
+; SLM-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <4 x i32>*), align 4
+; SLM-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12) to <4 x i32>*), align 4
 ; SLM-NEXT:    ret void
 ;
-; AVX1-LABEL: @udiv_v16i32_uniformconst(
-; AVX1-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
-; AVX1-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
-; AVX1-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
-; AVX1-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
-; AVX1-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
-; AVX1-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
-; AVX1-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
-; AVX1-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
-; AVX1-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
-; AVX1-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
-; AVX1-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
-; AVX1-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
-; AVX1-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
-; AVX1-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
-; AVX1-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
-; AVX1-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
-; AVX1-NEXT:    [[R0:%.*]] = udiv i32 [[A0]], 5
-; AVX1-NEXT:    [[R1:%.*]] = udiv i32 [[A1]], 5
-; AVX1-NEXT:    [[R2:%.*]] = udiv i32 [[A2]], 5
-; AVX1-NEXT:    [[R3:%.*]] = udiv i32 [[A3]], 5
-; AVX1-NEXT:    [[R4:%.*]] = udiv i32 [[A4]], 5
-; AVX1-NEXT:    [[R5:%.*]] = udiv i32 [[A5]], 5
-; AVX1-NEXT:    [[R6:%.*]] = udiv i32 [[A6]], 5
-; AVX1-NEXT:    [[R7:%.*]] = udiv i32 [[A7]], 5
-; AVX1-NEXT:    [[R8:%.*]] = udiv i32 [[A8]], 5
-; AVX1-NEXT:    [[R9:%.*]] = udiv i32 [[A9]], 5
-; AVX1-NEXT:    [[R10:%.*]] = udiv i32 [[A10]], 5
-; AVX1-NEXT:    [[R11:%.*]] = udiv i32 [[A11]], 5
-; AVX1-NEXT:    [[R12:%.*]] = udiv i32 [[A12]], 5
-; AVX1-NEXT:    [[R13:%.*]] = udiv i32 [[A13]], 5
-; AVX1-NEXT:    [[R14:%.*]] = udiv i32 [[A14]], 5
-; AVX1-NEXT:    [[R15:%.*]] = udiv i32 [[A15]], 5
-; AVX1-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
-; AVX1-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
-; AVX1-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
-; AVX1-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
-; AVX1-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
-; AVX1-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
-; AVX1-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
-; AVX1-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
-; AVX1-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
-; AVX1-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
-; AVX1-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
-; AVX1-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
-; AVX1-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
-; AVX1-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
-; AVX1-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
-; AVX1-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
-; AVX1-NEXT:    ret void
-;
-; AVX2-LABEL: @udiv_v16i32_uniformconst(
-; AVX2-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @a32 to <8 x i32>*), align 4
-; AVX2-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <8 x i32>*), align 4
-; AVX2-NEXT:    [[TMP3:%.*]] = udiv <8 x i32> [[TMP1]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
-; AVX2-NEXT:    [[TMP4:%.*]] = udiv <8 x i32> [[TMP2]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
-; AVX2-NEXT:    store <8 x i32> [[TMP3]], <8 x i32>* bitcast ([16 x i32]* @c32 to <8 x i32>*), align 4
-; AVX2-NEXT:    store <8 x i32> [[TMP4]], <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <8 x i32>*), align 4
-; AVX2-NEXT:    ret void
+; AVX-LABEL: @udiv_v16i32_uniformconst(
+; AVX-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @a32 to <8 x i32>*), align 4
+; AVX-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX-NEXT:    [[TMP3:%.*]] = udiv <8 x i32> [[TMP1]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
+; AVX-NEXT:    [[TMP4:%.*]] = udiv <8 x i32> [[TMP2]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
+; AVX-NEXT:    store <8 x i32> [[TMP3]], <8 x i32>* bitcast ([16 x i32]* @c32 to <8 x i32>*), align 4
+; AVX-NEXT:    store <8 x i32> [[TMP4]], <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX-NEXT:    ret void
 ;
 ; AVX512-LABEL: @udiv_v16i32_uniformconst(
 ; AVX512-NEXT:    [[TMP1:%.*]] = load <16 x i32>, <16 x i32>* bitcast ([16 x i32]* @a32 to <16 x i32>*), align 4
@@ -684,166 +315,43 @@ define void @udiv_v16i32_uniformconst() {
 
 define void @urem_v16i32_uniformconst() {
 ; SSE-LABEL: @urem_v16i32_uniformconst(
-; SSE-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
-; SSE-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
-; SSE-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
-; SSE-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
-; SSE-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
-; SSE-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
-; SSE-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
-; SSE-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
-; SSE-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
-; SSE-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
-; SSE-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
-; SSE-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
-; SSE-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
-; SSE-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
-; SSE-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
-; SSE-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
-; SSE-NEXT:    [[R0:%.*]] = urem i32 [[A0]], 5
-; SSE-NEXT:    [[R1:%.*]] = urem i32 [[A1]], 5
-; SSE-NEXT:    [[R2:%.*]] = urem i32 [[A2]], 5
-; SSE-NEXT:    [[R3:%.*]] = urem i32 [[A3]], 5
-; SSE-NEXT:    [[R4:%.*]] = urem i32 [[A4]], 5
-; SSE-NEXT:    [[R5:%.*]] = urem i32 [[A5]], 5
-; SSE-NEXT:    [[R6:%.*]] = urem i32 [[A6]], 5
-; SSE-NEXT:    [[R7:%.*]] = urem i32 [[A7]], 5
-; SSE-NEXT:    [[R8:%.*]] = urem i32 [[A8]], 5
-; SSE-NEXT:    [[R9:%.*]] = urem i32 [[A9]], 5
-; SSE-NEXT:    [[R10:%.*]] = urem i32 [[A10]], 5
-; SSE-NEXT:    [[R11:%.*]] = urem i32 [[A11]], 5
-; SSE-NEXT:    [[R12:%.*]] = urem i32 [[A12]], 5
-; SSE-NEXT:    [[R13:%.*]] = urem i32 [[A13]], 5
-; SSE-NEXT:    [[R14:%.*]] = urem i32 [[A14]], 5
-; SSE-NEXT:    [[R15:%.*]] = urem i32 [[A15]], 5
-; SSE-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
-; SSE-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
-; SSE-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
-; SSE-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
-; SSE-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
-; SSE-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
-; SSE-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
-; SSE-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
-; SSE-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
-; SSE-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
-; SSE-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
-; SSE-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
-; SSE-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
-; SSE-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
-; SSE-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
-; SSE-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
+; SSE-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([16 x i32]* @a32 to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP5:%.*]] = urem <4 x i32> [[TMP1]], <i32 5, i32 5, i32 5, i32 5>
+; SSE-NEXT:    [[TMP6:%.*]] = urem <4 x i32> [[TMP2]], <i32 5, i32 5, i32 5, i32 5>
+; SSE-NEXT:    [[TMP7:%.*]] = urem <4 x i32> [[TMP3]], <i32 5, i32 5, i32 5, i32 5>
+; SSE-NEXT:    [[TMP8:%.*]] = urem <4 x i32> [[TMP4]], <i32 5, i32 5, i32 5, i32 5>
+; SSE-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* bitcast ([16 x i32]* @c32 to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4) to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12) to <4 x i32>*), align 4
 ; SSE-NEXT:    ret void
 ;
 ; SLM-LABEL: @urem_v16i32_uniformconst(
-; SLM-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
-; SLM-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
-; SLM-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
-; SLM-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
-; SLM-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
-; SLM-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
-; SLM-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
-; SLM-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
-; SLM-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
-; SLM-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
-; SLM-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
-; SLM-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
-; SLM-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
-; SLM-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
-; SLM-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
-; SLM-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
-; SLM-NEXT:    [[R0:%.*]] = urem i32 [[A0]], 5
-; SLM-NEXT:    [[R1:%.*]] = urem i32 [[A1]], 5
-; SLM-NEXT:    [[R2:%.*]] = urem i32 [[A2]], 5
-; SLM-NEXT:    [[R3:%.*]] = urem i32 [[A3]], 5
-; SLM-NEXT:    [[R4:%.*]] = urem i32 [[A4]], 5
-; SLM-NEXT:    [[R5:%.*]] = urem i32 [[A5]], 5
-; SLM-NEXT:    [[R6:%.*]] = urem i32 [[A6]], 5
-; SLM-NEXT:    [[R7:%.*]] = urem i32 [[A7]], 5
-; SLM-NEXT:    [[R8:%.*]] = urem i32 [[A8]], 5
-; SLM-NEXT:    [[R9:%.*]] = urem i32 [[A9]], 5
-; SLM-NEXT:    [[R10:%.*]] = urem i32 [[A10]], 5
-; SLM-NEXT:    [[R11:%.*]] = urem i32 [[A11]], 5
-; SLM-NEXT:    [[R12:%.*]] = urem i32 [[A12]], 5
-; SLM-NEXT:    [[R13:%.*]] = urem i32 [[A13]], 5
-; SLM-NEXT:    [[R14:%.*]] = urem i32 [[A14]], 5
-; SLM-NEXT:    [[R15:%.*]] = urem i32 [[A15]], 5
-; SLM-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
-; SLM-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
-; SLM-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
-; SLM-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
-; SLM-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
-; SLM-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
-; SLM-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
-; SLM-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
-; SLM-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
-; SLM-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
-; SLM-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
-; SLM-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
-; SLM-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
-; SLM-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
-; SLM-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
-; SLM-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
+; SLM-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([16 x i32]* @a32 to <4 x i32>*), align 4
+; SLM-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4) to <4 x i32>*), align 4
+; SLM-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <4 x i32>*), align 4
+; SLM-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12) to <4 x i32>*), align 4
+; SLM-NEXT:    [[TMP5:%.*]] = urem <4 x i32> [[TMP1]], <i32 5, i32 5, i32 5, i32 5>
+; SLM-NEXT:    [[TMP6:%.*]] = urem <4 x i32> [[TMP2]], <i32 5, i32 5, i32 5, i32 5>
+; SLM-NEXT:    [[TMP7:%.*]] = urem <4 x i32> [[TMP3]], <i32 5, i32 5, i32 5, i32 5>
+; SLM-NEXT:    [[TMP8:%.*]] = urem <4 x i32> [[TMP4]], <i32 5, i32 5, i32 5, i32 5>
+; SLM-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* bitcast ([16 x i32]* @c32 to <4 x i32>*), align 4
+; SLM-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4) to <4 x i32>*), align 4
+; SLM-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <4 x i32>*), align 4
+; SLM-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12) to <4 x i32>*), align 4
 ; SLM-NEXT:    ret void
 ;
-; AVX1-LABEL: @urem_v16i32_uniformconst(
-; AVX1-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
-; AVX1-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
-; AVX1-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
-; AVX1-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
-; AVX1-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
-; AVX1-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
-; AVX1-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
-; AVX1-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
-; AVX1-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
-; AVX1-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
-; AVX1-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
-; AVX1-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
-; AVX1-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
-; AVX1-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
-; AVX1-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
-; AVX1-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
-; AVX1-NEXT:    [[R0:%.*]] = urem i32 [[A0]], 5
-; AVX1-NEXT:    [[R1:%.*]] = urem i32 [[A1]], 5
-; AVX1-NEXT:    [[R2:%.*]] = urem i32 [[A2]], 5
-; AVX1-NEXT:    [[R3:%.*]] = urem i32 [[A3]], 5
-; AVX1-NEXT:    [[R4:%.*]] = urem i32 [[A4]], 5
-; AVX1-NEXT:    [[R5:%.*]] = urem i32 [[A5]], 5
-; AVX1-NEXT:    [[R6:%.*]] = urem i32 [[A6]], 5
-; AVX1-NEXT:    [[R7:%.*]] = urem i32 [[A7]], 5
-; AVX1-NEXT:    [[R8:%.*]] = urem i32 [[A8]], 5
-; AVX1-NEXT:    [[R9:%.*]] = urem i32 [[A9]], 5
-; AVX1-NEXT:    [[R10:%.*]] = urem i32 [[A10]], 5
-; AVX1-NEXT:    [[R11:%.*]] = urem i32 [[A11]], 5
-; AVX1-NEXT:    [[R12:%.*]] = urem i32 [[A12]], 5
-; AVX1-NEXT:    [[R13:%.*]] = urem i32 [[A13]], 5
-; AVX1-NEXT:    [[R14:%.*]] = urem i32 [[A14]], 5
-; AVX1-NEXT:    [[R15:%.*]] = urem i32 [[A15]], 5
-; AVX1-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
-; AVX1-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
-; AVX1-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
-; AVX1-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
-; AVX1-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
-; AVX1-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
-; AVX1-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
-; AVX1-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
-; AVX1-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
-; AVX1-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
-; AVX1-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
-; AVX1-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
-; AVX1-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
-; AVX1-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
-; AVX1-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
-; AVX1-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
-; AVX1-NEXT:    ret void
-;
-; AVX2-LABEL: @urem_v16i32_uniformconst(
-; AVX2-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @a32 to <8 x i32>*), align 4
-; AVX2-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <8 x i32>*), align 4
-; AVX2-NEXT:    [[TMP3:%.*]] = urem <8 x i32> [[TMP1]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
-; AVX2-NEXT:    [[TMP4:%.*]] = urem <8 x i32> [[TMP2]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
-; AVX2-NEXT:    store <8 x i32> [[TMP3]], <8 x i32>* bitcast ([16 x i32]* @c32 to <8 x i32>*), align 4
-; AVX2-NEXT:    store <8 x i32> [[TMP4]], <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <8 x i32>*), align 4
-; AVX2-NEXT:    ret void
+; AVX-LABEL: @urem_v16i32_uniformconst(
+; AVX-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @a32 to <8 x i32>*), align 4
+; AVX-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX-NEXT:    [[TMP3:%.*]] = urem <8 x i32> [[TMP1]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
+; AVX-NEXT:    [[TMP4:%.*]] = urem <8 x i32> [[TMP2]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
+; AVX-NEXT:    store <8 x i32> [[TMP3]], <8 x i32>* bitcast ([16 x i32]* @c32 to <8 x i32>*), align 4
+; AVX-NEXT:    store <8 x i32> [[TMP4]], <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX-NEXT:    ret void
 ;
 ; AVX512-LABEL: @urem_v16i32_uniformconst(
 ; AVX512-NEXT:    [[TMP1:%.*]] = load <16 x i32>, <16 x i32>* bitcast ([16 x i32]* @a32 to <16 x i32>*), align 4
