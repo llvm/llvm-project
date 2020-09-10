@@ -97,8 +97,6 @@ void lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
       return;
   }
 
-  SwiftASTContext *swift_ast_ctx =
-      llvm::dyn_cast_or_null<SwiftASTContext>(m_type.GetTypeSystem());
   auto iter = enum_decl->enumerator_begin(), end = enum_decl->enumerator_end();
   for (; iter != end; ++iter) {
     clang::EnumConstantDecl *case_decl = *iter;

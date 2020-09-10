@@ -287,7 +287,7 @@ protected:
                                           const section_header_t &sect);
 
   llvm::StringRef
-  GetReflectionSectionIdentifier(swift::ReflectionSectionKind section);
+  GetReflectionSectionIdentifier(swift::ReflectionSectionKind section) override;
 
   typedef std::vector<section_header_t> SectionHeaderColl;
   typedef SectionHeaderColl::iterator SectionHeaderCollIter;

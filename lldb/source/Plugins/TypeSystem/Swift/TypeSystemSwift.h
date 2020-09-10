@@ -116,6 +116,7 @@ public:
   };
   virtual CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) = 0;
+  using TypeSystem::DumpTypeDescription;
   virtual void DumpTypeDescription(
       lldb::opaque_compiler_type_t type, bool print_help_if_available,
       bool print_extensions_if_available,

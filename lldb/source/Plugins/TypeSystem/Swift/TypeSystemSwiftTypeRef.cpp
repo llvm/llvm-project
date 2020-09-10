@@ -586,15 +586,16 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetNodeForPrintingImpl(
     NodePointer args_ty = Dem.createNode(Node::Kind::Type);
     NodePointer args_tuple = Dem.createNode(Node::Kind::Tuple);
     for (NodePointer child : *node) {
-      if (child->getKind() == Node::Kind::ImplParameter)
+      if (child->getKind() == Node::Kind::ImplParameter) {
         for (NodePointer type : *node)
           if (type->getKind() == Node::Kind::Type &&
               type->getNumChildren() == 1)
             rett->addChild(type->getChild(0), Dem);
-      else if (child->getKind() == Node::Kind::ImplResult)
+      } else if (child->getKind() == Node::Kind::ImplResult) {
         for (NodePointer type : *node)
           if (type->getKind() == Node::Kind::Type)
             rett->addChild(type, Dem);
+      }
     }
     args_ty->addChild(args_tuple, Dem);
     args->addChild(args_ty, Dem);
@@ -759,7 +760,6 @@ static uint32_t collectTypeInfo(Module *M, swift::Demangle::Demangler &Dem,
       // Bug-for-bug-compatibility. Not sure if this is correct.
       swift_flags |= eTypeIsPointer | eTypeHasValue;
       return swift_flags;
-      LLVM_FALLTHROUGH;
     case Node::Kind::BoundGenericFunction:
       swift_flags |= eTypeIsGeneric | eTypeIsBound;
       LLVM_FALLTHROUGH;
@@ -1779,7 +1779,6 @@ bool TypeSystemSwiftTypeRef::IsMeaninglessWithoutDynamicResolution(
 
 CompilerType TypeSystemSwiftTypeRef::GetAsClangTypeOrNull(
     lldb::opaque_compiler_type_t type) {
-  CompilerType clang_type;
   using namespace swift::Demangle;
   Demangler Dem;
   NodePointer node = GetDemangledType(Dem, AsMangledName(type));
@@ -1792,9 +1791,10 @@ CompilerType TypeSystemSwiftTypeRef::GetAsClangTypeOrNull(
       node->getChild(1)->hasText()) {
     auto node_clangtype = ResolveTypeAlias(GetModule(), Dem, node,
                                            /*prefer_clang_types*/ true);
-    if (clang_type = node_clangtype.second)
-      return clang_type;
+    if (node_clangtype.second)
+      return node_clangtype.second;
   }
+  CompilerType clang_type;
   IsImportedType(type, &clang_type);
   return clang_type;
 }
