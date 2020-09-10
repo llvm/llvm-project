@@ -63,8 +63,6 @@
 // CHECK: Loaded summary for: void rewinddir(DIR *dir)
 // CHECK: Loaded summary for: void seekdir(DIR *dirp, long loc)
 // CHECK: Loaded summary for: int rand_r(unsigned int *seedp)
-// CHECK: Loaded summary for: int strcasecmp(const char *s1, const char *s2)
-// CHECK: Loaded summary for: int strncasecmp(const char *s1, const char *s2, size_t n)
 // CHECK: Loaded summary for: int fileno(FILE *stream)
 // CHECK: Loaded summary for: int fseeko(FILE *stream, off_t offset, int whence)
 // CHECK: Loaded summary for: off_t ftello(FILE *stream)
@@ -195,8 +193,6 @@ FILE *fdopen(int fd, const char *mode);
 void rewinddir(DIR *dir);
 void seekdir(DIR *dirp, long loc);
 int rand_r(unsigned int *seedp);
-int strcasecmp(const char *s1, const char *s2);
-int strncasecmp(const char *s1, const char *s2, size_t n);
 int fileno(FILE *stream);
 int fseeko(FILE *stream, off_t offset, int whence);
 off_t ftello(FILE *stream);
