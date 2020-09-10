@@ -1854,10 +1854,11 @@ public:
   /// validate either a simple identifier, or a qualified
   /// <code>context.identifier</code> name.
   ///
+  /// \p AL is used to provide caret diagnostics in case of a malformed name.
+  ///
   /// \returns true if the name is a valid swift name for \p D, false otherwise.
-  bool DiagnoseSwiftName(Decl *D, StringRef Name,
-                         SourceLocation ArgLoc,
-                         const IdentifierInfo *AttrName);
+  bool DiagnoseSwiftName(Decl *D, StringRef Name, SourceLocation Loc,
+                         const ParsedAttr &AL);
 
   /// A derivative of BoundTypeDiagnoser for which the diagnostic's type
   /// parameter is preceded by a 0/1 enum that is 1 if the type is sizeless.
@@ -3090,6 +3091,8 @@ public:
   SpeculativeLoadHardeningAttr *
   mergeSpeculativeLoadHardeningAttr(Decl *D,
                                     const SpeculativeLoadHardeningAttr &AL);
+  SwiftNameAttr *mergeSwiftNameAttr(Decl *D, const SwiftNameAttr &SNA,
+                                    StringRef Name, bool Override);
   OptimizeNoneAttr *mergeOptimizeNoneAttr(Decl *D,
                                           const AttributeCommonInfo &CI);
   SwiftNameAttr *mergeSwiftNameAttr(Decl *D, const AttributeCommonInfo &CI,
