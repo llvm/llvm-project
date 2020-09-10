@@ -609,5 +609,13 @@ define float @test_maxnum_const_op2(float %x) {
   ret float %r
 }
 
+define float @test_maxnum_const_nan(float %x) {
+; CHECK-LABEL: test_maxnum_const_nan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retq
+  %r = call float @llvm.maxnum.f32(float %x, float 0x7fff000000000000)
+  ret float %r
+}
+
 attributes #0 = { "no-nans-fp-math"="true" }
 

@@ -145,13 +145,11 @@ def combine_indexed_load_store : GICombineRule<
          [{ return Helper.matchCombineIndexedLoadStore(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineIndexedLoadStore(*${root}, ${matchinfo}); }])>;
 
-// FIXME: Is there a reason this wasn't in tryCombine? I've left it out of
-//        all_combines because it wasn't there.
-def elide_br_by_inverting_cond : GICombineRule<
+def opt_brcond_by_inverting_cond : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_BR):$root,
-         [{ return Helper.matchElideBrByInvertingCond(*${root}); }]),
-  (apply [{ Helper.applyElideBrByInvertingCond(*${root}); }])>;
+         [{ return Helper.matchOptBrCondByInvertingCond(*${root}); }]),
+  (apply [{ Helper.applyOptBrCondByInvertingCond(*${root}); }])>;
 
 def ptr_add_immed_matchdata : GIDefMatchData<"PtrAddChain">;
 def ptr_add_immed_chain : GICombineRule<
@@ -416,4 +414,4 @@ def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,
     known_bits_simplifications, ext_ext_fold,
-    not_cmp_fold]>;
+    not_cmp_fold, opt_brcond_by_inverting_cond]>;

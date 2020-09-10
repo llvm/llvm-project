@@ -302,9 +302,9 @@ struct Allocator {
     // This could be a user-facing chunk (with redzones), or some internal
     // housekeeping chunk, like TransferBatch. Start by assuming the former.
     AsanChunk *ac = GetAsanChunk((void *)chunk);
-    uptr allocated_size = allocator.GetActuallyAllocatedSize((void *)ac);
-    if (atomic_load(&ac->chunk_state, memory_order_acquire) ==
-        CHUNK_ALLOCATED) {
+    uptr allocated_size = allocator.GetActuallyAllocatedSize((void *)chunk);
+    if (ac && atomic_load(&ac->chunk_state, memory_order_acquire) ==
+                  CHUNK_ALLOCATED) {
       uptr beg = ac->Beg();
       uptr end = ac->Beg() + ac->UsedSize(true);
       uptr chunk_end = chunk + allocated_size;
@@ -385,6 +385,10 @@ struct Allocator {
   // We have an address between two chunks, and we want to report just one.
   AsanChunk *ChooseChunk(uptr addr, AsanChunk *left_chunk,
                          AsanChunk *right_chunk) {
+    if (!left_chunk)
+      return right_chunk;
+    if (!right_chunk)
+      return left_chunk;
     // Prefer an allocated chunk over freed chunk and freed chunk
     // over available chunk.
     u8 left_state = atomic_load(&left_chunk->chunk_state, memory_order_relaxed);
@@ -737,18 +741,25 @@ struct Allocator {
   AsanChunk *GetAsanChunk(void *alloc_beg) {
     if (!alloc_beg)
       return nullptr;
+    AsanChunk *p = nullptr;
     if (!allocator.FromPrimary(alloc_beg)) {
       uptr *meta = reinterpret_cast<uptr *>(allocator.GetMetaData(alloc_beg));
-      AsanChunk *m = reinterpret_cast<AsanChunk *>(meta[1]);
-      return m;
+      p = reinterpret_cast<AsanChunk *>(meta[1]);
+    } else {
+      uptr *alloc_magic = reinterpret_cast<uptr *>(alloc_beg);
+      if (alloc_magic[0] == kAllocBegMagic)
+        p = reinterpret_cast<AsanChunk *>(alloc_magic[1]);
+      else
+        p = reinterpret_cast<AsanChunk *>(alloc_beg);
     }
-    uptr *alloc_magic = reinterpret_cast<uptr *>(alloc_beg);
-    if (alloc_magic[0] == kAllocBegMagic)
-      return reinterpret_cast<AsanChunk *>(alloc_magic[1]);
-    // FIXME: This is either valid small chunk with tiny redzone or invalid
-    // chunk which is beeing allocated/deallocated. The latter case should
-    // return nullptr like secondary allocator does.
-    return reinterpret_cast<AsanChunk *>(alloc_beg);
+    if (!p)
+      return nullptr;
+    u8 state = atomic_load(&p->chunk_state, memory_order_relaxed);
+    // It does not guaranty that Chunk is initialized, but it's
+    // definitely not for any other value.
+    if (state == CHUNK_ALLOCATED || state == CHUNK_QUARANTINE)
+      return p;
+    return nullptr;
   }
 
   AsanChunk *GetAsanChunkByAddr(uptr p) {
@@ -774,9 +785,8 @@ struct Allocator {
 
   AsanChunkView FindHeapChunkByAddress(uptr addr) {
     AsanChunk *m1 = GetAsanChunkByAddr(addr);
-    if (!m1) return AsanChunkView(m1);
     sptr offset = 0;
-    if (AsanChunkView(m1).AddrIsAtLeft(addr, 1, &offset)) {
+    if (!m1 || AsanChunkView(m1).AddrIsAtLeft(addr, 1, &offset)) {
       // The address is in the chunk's left redzone, so maybe it is actually
       // a right buffer overflow from the other chunk to the left.
       // Search a bit to the left to see if there is another chunk.

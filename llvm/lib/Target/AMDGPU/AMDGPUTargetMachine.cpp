@@ -953,7 +953,7 @@ bool GCNPassConfig::addInstSelector() {
 }
 
 bool GCNPassConfig::addIRTranslator() {
-  addPass(new IRTranslator());
+  addPass(new IRTranslator(getOptLevel()));
   return false;
 }
 

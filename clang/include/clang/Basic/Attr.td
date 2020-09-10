@@ -1288,6 +1288,18 @@ def FallThrough : StmtAttr {
   let Documentation = [FallthroughDocs];
 }
 
+def Likely : StmtAttr {
+  // FIXME: Change the date to 201803 once the implementation is finished.
+  let Spellings = [CXX11<"", "likely", 2>, C2x<"clang", "likely">];
+  let Documentation = [LikelihoodDocs];
+}
+
+def Unlikely : StmtAttr {
+  // FIXME: Change the date to 201803 once the implementation is finished.
+  let Spellings = [CXX11<"", "unlikely", 2>, C2x<"clang", "unlikely">];
+  let Documentation = [LikelihoodDocs];
+}
+
 def NoMerge : StmtAttr {
   let Spellings = [Clang<"nomerge">];
   let Documentation = [NoMergeDocs];

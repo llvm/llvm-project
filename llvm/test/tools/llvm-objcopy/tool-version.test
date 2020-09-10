@@ -5,6 +5,7 @@
 # RUN: llvm-strip -V | FileCheck --check-prefix=STRIP %s
 
 # RUN: llvm-install-name-tool --version | FileCheck %s
+# RUN: llvm-install-name-tool -V | FileCheck %s
 
 # OBJCOPY-DAG: {{ version }}
 # OBJCOPY-DAG: GNU objcopy

@@ -740,3 +740,15 @@ bool llvm::isConstTrueVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
   }
   llvm_unreachable("Invalid boolean contents");
 }
+
+int64_t llvm::getICmpTrueVal(const TargetLowering &TLI, bool IsVector,
+                             bool IsFP) {
+  switch (TLI.getBooleanContents(IsVector, IsFP)) {
+  case TargetLowering::UndefinedBooleanContent:
+  case TargetLowering::ZeroOrOneBooleanContent:
+    return 1;
+  case TargetLowering::ZeroOrNegativeOneBooleanContent:
+    return -1;
+  }
+  llvm_unreachable("Invalid boolean contents");
+}

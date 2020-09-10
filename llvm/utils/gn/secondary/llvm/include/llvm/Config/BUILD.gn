@@ -304,9 +304,9 @@ write_cmake_config("config") {
   }
 
   if (llvm_enable_libxml2) {
-    values += [ "LLVM_LIBXML2_ENABLED=1" ]
+    values += [ "LLVM_ENABLE_LIBXML2=1" ]
   } else {
-    values += [ "LLVM_LIBXML2_ENABLED=" ]
+    values += [ "LLVM_ENABLE_LIBXML2=" ]
   }
 }
 

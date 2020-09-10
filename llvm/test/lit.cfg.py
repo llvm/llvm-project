@@ -356,7 +356,7 @@ if config.have_libxar:
 if config.enable_threads:
     config.available_features.add('thread_support')
 
-if config.llvm_libxml2_enabled:
+if config.have_libxml2:
     config.available_features.add('libxml2')
 
 if config.have_opt_viewer_modules:

@@ -42,8 +42,7 @@ def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
 
 
 def AMDGPUPreLegalizerCombinerHelper: GICombinerHelper<
-  "AMDGPUGenPreLegalizerCombinerHelper", [all_combines,
-                                          elide_br_by_inverting_cond]> {
+  "AMDGPUGenPreLegalizerCombinerHelper", [all_combines]> {
   let DisableRuleOption = "amdgpuprelegalizercombiner-disable-rule";
 }
 

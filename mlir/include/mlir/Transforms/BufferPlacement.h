@@ -158,7 +158,7 @@ public:
 
   /// Performs the actual signature rewriting step.
   LogicalResult matchAndRewrite(mlir::FuncOp, ArrayRef<Value>,
-                                ConversionPatternRewriter &) const;
+                                ConversionPatternRewriter &) const override;
 };
 
 /// Rewrites the `ReturnOp` to conform with the changed function signature.
@@ -235,7 +235,7 @@ public:
 
   /// Performs the actual rewriting step.
   LogicalResult matchAndRewrite(CallOp, ArrayRef<Value>,
-                                ConversionPatternRewriter &) const;
+                                ConversionPatternRewriter &) const override;
 };
 
 /// Populates `patterns` with the conversion patterns of buffer
