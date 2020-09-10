@@ -196,6 +196,12 @@ static bool removeTerminatorBit(const SIInstrInfo &TII, MachineInstr &MI) {
     MI.setDesc(TII.get(AMDGPU::S_XOR_B32));
     return true;
   }
+  case AMDGPU::S_OR_B64_term: {
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(TII.get(AMDGPU::S_OR_B64));
+    return true;
+  }
   case AMDGPU::S_OR_B32_term: {
     // This is only a terminator to get the correct spill code placement during
     // register allocation.
