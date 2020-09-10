@@ -37,7 +37,8 @@ public:
     this->Transform = std::move(Transform);
   }
 
-  void emit(MaterializationResponsibility R, ThreadSafeModule TSM) override;
+  void emit(std::unique_ptr<MaterializationResponsibility> R,
+            ThreadSafeModule TSM) override;
 
   static ThreadSafeModule identityTransform(ThreadSafeModule TSM,
                                             MaterializationResponsibility &R) {
