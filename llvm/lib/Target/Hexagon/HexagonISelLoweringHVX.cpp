@@ -1985,6 +1985,8 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
         break;
       case ISD::LOAD:
       case ISD::STORE:
+      case ISD::MLOAD:
+      case ISD::MSTORE:
         return SplitHvxMemOp(Op, DAG);
       case ISD::CTPOP:
       case ISD::CTLZ:
