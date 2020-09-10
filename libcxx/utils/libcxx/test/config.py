@@ -289,6 +289,7 @@ class Configuration(object):
         # Configure include paths
         self.configure_compile_flags_header_includes()
         self.target_info.add_cxx_compile_flags(self.cxx.compile_flags)
+        self.target_info.add_cxx_flags(self.cxx.flags)
         # Configure feature flags.
         enable_32bit = self.get_lit_bool('enable_32bit', False)
         if enable_32bit:
