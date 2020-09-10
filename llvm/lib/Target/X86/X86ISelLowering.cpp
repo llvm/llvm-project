@@ -32178,7 +32178,7 @@ X86TargetLowering::EmitLoweredSegAlloca(MachineInstr &MI,
   const TargetRegisterClass *AddrRegClass =
       getRegClassFor(getPointerTy(MF->getDataLayout()));
 
-  unsigned mallocPtrVReg = MRI.createVirtualRegister(AddrRegClass),
+  Register mallocPtrVReg = MRI.createVirtualRegister(AddrRegClass),
            bumpSPPtrVReg = MRI.createVirtualRegister(AddrRegClass),
            tmpSPVReg = MRI.createVirtualRegister(AddrRegClass),
            SPLimitVReg = MRI.createVirtualRegister(AddrRegClass),
