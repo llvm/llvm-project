@@ -2587,3 +2587,100 @@ define void @select_freeze_icmp_multuses(i32 %x, i32 %y) {
   call void @use_i1_i32(i1 %c.fr, i32 %v)
   ret void
 }
+
+; FIXME: This is a miscompile!
+define i32 @pr47322_more_poisonous_replacement(i32 %arg) {
+; CHECK-LABEL: @pr47322_more_poisonous_replacement(
+; CHECK-NEXT:    [[TRAILING:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG:%.*]], i1 immarg true), [[RNG0:!range !.*]]
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[ARG]], [[TRAILING]]
+; CHECK-NEXT:    ret i32 [[SHIFTED]]
+;
+  %cmp = icmp eq i32 %arg, 0
+  %trailing = call i32 @llvm.cttz.i32(i32 %arg, i1 immarg true)
+  %shifted = lshr i32 %arg, %trailing
+  %r1.sroa.0.1 = select i1 %cmp, i32 0, i32 %shifted
+  ret i32 %r1.sroa.0.1
+}
+
+define i8 @select_replacement_add_eq(i8 %x, i8 %y) {
+; CHECK-LABEL: @select_replacement_add_eq(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[ADD]], i8 [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, 1
+  %add = add i8 %x, 1
+  %sel = select i1 %cmp, i8 %add, i8 %y
+  ret i8 %sel
+}
+
+define i8 @select_replacement_add_ne(i8 %x, i8 %y) {
+; CHECK-LABEL: @select_replacement_add_ne(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X:%.*]], 1
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[Y:%.*]], i8 [[ADD]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp ne i8 %x, 1
+  call void @use(i1 %cmp)
+  %add = add i8 %x, 1
+  %sel = select i1 %cmp, i8 %y, i8 %add
+  ret i8 %sel
+}
+
+define i8 @select_replacement_add_nuw(i8 %x, i8 %y) {
+; CHECK-LABEL: @select_replacement_add_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[ADD]], i8 [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, 1
+  %add = add nuw i8 %x, 1
+  %sel = select i1 %cmp, i8 %add, i8 %y
+  ret i8 %sel
+}
+
+define i8 @select_replacement_sub(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @select_replacement_sub(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[SUB]], i8 [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, %y
+  %sub = sub i8 %x, %y
+  %sel = select i1 %cmp, i8 %sub, i8 %z
+  ret i8 %sel
+}
+
+define i8 @select_replacement_shift(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @select_replacement_shift(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SHR]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[Y]], 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[SHL]], i8 [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %shr = lshr exact i8 %x, 1
+  %cmp = icmp eq i8 %shr, %y
+  %shl = shl i8 %y, 1
+  %sel = select i1 %cmp, i8 %shl, i8 %z
+  ret i8 %sel
+}
+
+define i8 @select_replacement_loop(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @select_replacement_loop(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[X]], i8 [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, %y
+  %sel = select i1 %cmp, i8 %x, i8 %z
+  ret i8 %sel
+}
+
+declare void @use(i1)
+declare i32 @llvm.cttz.i32(i32, i1 immarg)
