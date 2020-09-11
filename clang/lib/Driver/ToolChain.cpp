@@ -12,6 +12,7 @@
 #include "ToolChains/Clang.h"
 #include "ToolChains/InterfaceStubs.h"
 #include "ToolChains/Flang.h"
+#include "ToolChains/AMDFlang.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Config/config.h"
@@ -262,9 +263,9 @@ Tool *ToolChain::getClang() const {
 }
 
 Tool *ToolChain::getFlang() const {
-  if (!Flang)
-    Flang.reset(new tools::Flang(*this));
-  return Flang.get();
+  if (!AMDFlang)
+    AMDFlang.reset(new tools::AMDFlang(*this));
+  return AMDFlang.get();
 }
 
 Tool *ToolChain::buildAssembler() const {
