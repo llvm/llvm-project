@@ -427,6 +427,26 @@ public:
     }
     llvm_unreachable("Unsupported type in Type::getScalarTy");
   }
+  static Type *getFloatingPointTy(LLVMContext &C, const fltSemantics &S) {
+    Type *Ty;
+    if (&S == &APFloat::IEEEhalf())
+      Ty = Type::getHalfTy(C);
+    else if (&S == &APFloat::BFloat())
+      Ty = Type::getBFloatTy(C);
+    else if (&S == &APFloat::IEEEsingle())
+      Ty = Type::getFloatTy(C);
+    else if (&S == &APFloat::IEEEdouble())
+      Ty = Type::getDoubleTy(C);
+    else if (&S == &APFloat::x87DoubleExtended())
+      Ty = Type::getX86_FP80Ty(C);
+    else if (&S == &APFloat::IEEEquad())
+      Ty = Type::getFP128Ty(C);
+    else {
+      assert(&S == &APFloat::PPCDoubleDouble() && "Unknown FP format");
+      Ty = Type::getPPC_FP128Ty(C);
+    }
+    return Ty;
+  }
 
   //===--------------------------------------------------------------------===//
   // Convenience methods for getting pointer types with one of the above builtin
