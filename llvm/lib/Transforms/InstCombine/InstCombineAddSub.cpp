@@ -1671,12 +1671,11 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
       I->getOpcode() == Instruction::Mul)
     I->setHasNoUnsignedWrap();
 
-  // If we have a 2nd GEP of the same base pointer, subtract the offsets.
-  // If both GEPs are inbounds, then the subtract does not have signed overflow.
+  // If we had a constant expression GEP on the other side offsetting the
+  // pointer, subtract it from the offset we have.
   if (GEP2) {
     Value *Offset = EmitGEPOffset(GEP2);
-    Result = Builder.CreateSub(Result, Offset, "gepdiff", /* NUW */ false,
-                               GEP1->isInBounds() && GEP2->isInBounds());
+    Result = Builder.CreateSub(Result, Offset, "gepdiff");
   }
 
   // If we have p - gep(p, ...)  then we have to negate the result.
