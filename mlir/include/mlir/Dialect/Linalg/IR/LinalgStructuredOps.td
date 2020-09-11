@@ -130,21 +130,22 @@ def CopyOp : LinalgStructured_Op<"copy", [
   let extraClassDeclaration = libraryCallName # [{
     // Rank-polymorphic.
     //   filling_value -> O(ivs) with parallel iterators.
-    llvm::Optional<SmallVector<StringRef, 8>> referenceIterators() {
-      unsigned nPar = input().getType().cast<ShapedType>().getRank();
-      return SmallVector<StringRef, 8>(nPar, getParallelIteratorTypeName());
+    ArrayAttr iterator_types() {
+      unsigned nPar = getInputShapedType(0).getRank();
+      return Builder(getContext()).getStrArrayAttr(
+        SmallVector<StringRef, 8>(nPar, getParallelIteratorTypeName()));
     }
 
     // I(input_perm(ivs)) -> O(output_perm(ivs))
-    llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps() {
+    ArrayAttr indexing_maps() {
       MLIRContext *context = getContext();
       auto maybeInputMap = inputPermutation();
       auto maybeOutputMap = outputPermutation();
       unsigned inputRank = getInputShapedType(0).getRank();
       unsigned outputRank = getOutputShapedType(0).getRank();
-      return SmallVector<AffineMap, 8>{
+      return Builder(getContext()).getAffineMapArrayAttr({
           extractOrIdentityMap(maybeInputMap, inputRank, context),
-          extractOrIdentityMap(maybeOutputMap, outputRank, context)};
+          extractOrIdentityMap(maybeOutputMap, outputRank, context)});
     }
 
     Value getSource() { return input();}
@@ -163,16 +164,17 @@ def FillOp : LinalgStructured_Op<"fill", [NInputs<0>, NOutputs<1>]> {
   let extraClassDeclaration = libraryCallName # [{
     // Rank-polymorphic.
     //   filling_value -> O(ivs) with parallel iterators.
-    llvm::Optional<SmallVector<StringRef, 8>> referenceIterators() {
-      unsigned nPar = output().getType().cast<ShapedType>().getRank();
-      return SmallVector<StringRef, 8>(nPar, getParallelIteratorTypeName());
+    ArrayAttr iterator_types() {
+      unsigned nPar = getOutputShapedType(0).getRank();
+      return Builder(getContext()).getStrArrayAttr(
+        SmallVector<StringRef, 8>(nPar, getParallelIteratorTypeName()));
     }
 
-    llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps() {
+    ArrayAttr indexing_maps() {
       MLIRContext *context = getContext();
       // filling_value -> O(ivs)
-      return SmallVector<AffineMap, 8>{
-          extractOrIdentityMap(llvm::None, getNumParallelLoops(), context)};
+      return Builder(getContext()).getAffineMapArrayAttr({
+          extractOrIdentityMap(llvm::None, getNumParallelLoops(), context)});
     }
   }];
 
@@ -295,7 +297,7 @@ def ConvOp : PoolingBase_Op<"conv", [NInputs<2>, NOutputs<1>]> {
              getNumOutputFeatureDimensions();
     }
 
-    llvm::Optional<SmallVector<StringRef, 8>> referenceIterators() {
+    ArrayAttr iterator_types() {
       // Outer parallel loops are always the number of output dimensions; i.e.
       // [b, xs, q] in the TF notation above.
       unsigned nPar = getOutputShapedType(0).getRank();
@@ -310,7 +312,7 @@ def ConvOp : PoolingBase_Op<"conv", [NInputs<2>, NOutputs<1>]> {
       iters.reserve(nPar + nRed + nWin);
       iters.append(nRed, getReductionIteratorTypeName());
       iters.append(nWin, getWindowIteratorTypeName());
-      return iters;
+      return Builder(getContext()).getStrArrayAttr(iters);
     }
 
     //   F(z0, ..., zN-1, q, k) *
@@ -318,7 +320,7 @@ def ConvOp : PoolingBase_Op<"conv", [NInputs<2>, NOutputs<1>]> {
     //   ->  O(b, x0, ..., xN-1, k)
     // for N equal to `nWindow`. If there is no padding attribute, it will be
     // ignored.
-    llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps() {
+    ArrayAttr indexing_maps() {
       MLIRContext *context = getContext();
       auto nWin = getNumWindowLoops();
       assert(nWin > 0 && "expected at least one window dimension");
@@ -343,7 +345,7 @@ def ConvOp : PoolingBase_Op<"conv", [NInputs<2>, NOutputs<1>]> {
       auto zs = makeAffineDimExprs(nWin, idx, context);
       // Construct the weighedSum expression.
       auto ws = weightedPoolingInputIndex(*this, xs, zs);
-      return SmallVector<AffineMap, 8>{
+      return Builder(getContext()).getAffineMapArrayAttr({
         // filter[z[0], ..., z[N-1], q, k]
         AffineMap::get(idx, 0, concat(concat(zs, qs), ks), context),
         // input[b,
@@ -353,7 +355,7 @@ def ConvOp : PoolingBase_Op<"conv", [NInputs<2>, NOutputs<1>]> {
         //       q]
         AffineMap::get(idx, 0, concat(concat(bs, ws), qs), context),
         // output[b, x[0], ..., x[N-1], k]
-        AffineMap::get(idx, 0, concat(concat(bs, xs), ks), context)};
+        AffineMap::get(idx, 0, concat(concat(bs, xs), ks), context)});
     }
   }];
 
@@ -384,7 +386,7 @@ class SingleInputPoolingBase_Op<string mnemonic>
                    OptionalAttr<I64ElementsAttr>:$padding);
 
   let extraClassDeclaration = commonUtils# [{
-    llvm::Optional<SmallVector<StringRef, 8>> referenceIterators() {
+    ArrayAttr iterator_types() {
       // Outer parallel loops are always the number of output dimensions.
       unsigned nPar = getOutputShapedType(0).getRank();
       // The window loops has the same number loops with output dimensions.
@@ -392,10 +394,10 @@ class SingleInputPoolingBase_Op<string mnemonic>
       SmallVector<StringRef, 8> iters(nPar, getParallelIteratorTypeName());
       iters.reserve(nPar + nWin);
       iters.append(nWin, getWindowIteratorTypeName());
-      return iters;
+      return Builder(getContext()).getStrArrayAttr(iters);
     }
 
-    llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps() {
+    ArrayAttr indexing_maps() {
       MLIRContext *context = getContext();
       auto nPar = getNumParallelLoops();
       auto nWin = getNumWindowLoops();
@@ -406,14 +408,13 @@ class SingleInputPoolingBase_Op<string mnemonic>
       // Construct the weighedSum expression.
       auto inputDims =
           weightedPoolingInputIndex(*this, outputDims, windowDims);
-      return SmallVector<AffineMap, 8>{
+      return Builder(getContext()).getAffineMapArrayAttr({
         // input
         AffineMap::get(idx, 0, inputDims, context),
         // windowDims
         AffineMap::get(idx, 0, windowDims, context),
         // output
-        AffineMap::get(idx, 0, outputDims, context)
-        };
+        AffineMap::get(idx, 0, outputDims, context)});
     }
   }];
 
@@ -483,16 +484,6 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic,
 
     StringRef getLibraryCallName() {
       return library_call().hasValue() ? library_call().getValue() : "";
-    }
-
-    llvm::Optional<SmallVector<StringRef, 8>> referenceIterators() {
-      llvm_unreachable(
-        "No such thing as reference iterator types for a generic op.");
-    }
-
-    llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps() {
-      llvm_unreachable(
-        "No such thing as reference indexing maps for a generic op.");
     }
 
     llvm::Optional<unsigned> getSymbolSource() {
@@ -806,8 +797,6 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
 //===----------------------------------------------------------------------===//
 // Named Linalg ops, implemented as a declarative configurations of generic ops.
 //===----------------------------------------------------------------------===//
-
-def NamedStructuredOpTraits : NativeOpTrait<"linalg::NamedStructuredOpTraits">;
 
 class LinalgNamedStructured_Op<string mnemonic, list<OpTrait> props>
     : LinalgStructuredBase_Op<mnemonic, props> {

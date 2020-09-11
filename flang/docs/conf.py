@@ -46,12 +46,23 @@ else:
   else:
     source_parsers = {'.md': 'recommonmark.parser.CommonMarkParser'}
   source_suffix['.md'] = 'markdown'
+  extensions.append('sphinx_markdown_tables')
+
+  # Setup AutoStructify for inline .rst toctrees in index.md
+  from recommonmark.transform import AutoStructify
+  def setup(app):
+    # Disable inline math to avoid
+    # https://github.com/readthedocs/recommonmark/issues/120 in Extensions.md
+    app.add_config_value('recommonmark_config', {
+      'enable_inline_math': False
+    }, True)
+    app.add_transform(AutoStructify)
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'Overview'
+master_doc = 'index'
 
 # General information about the project.
 project = u'Flang'
