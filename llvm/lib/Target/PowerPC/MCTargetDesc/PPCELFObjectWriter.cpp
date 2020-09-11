@@ -419,7 +419,13 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       }
       break;
     case PPC::fixup_ppc_imm34:
-      report_fatal_error("Unsupported Modifier for fixup_ppc_imm34.");
+      switch (Modifier) {
+      default:
+        report_fatal_error("Unsupported Modifier for fixup_ppc_imm34.");
+      case MCSymbolRefExpr::VK_TPREL:
+        Type = ELF::R_PPC64_TPREL34;
+        break;
+      }
       break;
     case FK_Data_8:
       switch (Modifier) {
