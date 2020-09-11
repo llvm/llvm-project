@@ -57,7 +57,7 @@ protected:
         new DiagnosticIDs, Opts,
         new TextDiagnosticPrinter(llvm::errs(), Opts.get()));
     DriverInstance.emplace(ClangBinary, "x86_64-unknown-linux-gnu", Diags,
-                           prepareFS(ExtraFiles));
+                           "clang LLVM compiler", prepareFS(ExtraFiles));
 
     std::vector<const char *> Args = {ClangBinary};
     for (const auto &A : ExtraArgs)

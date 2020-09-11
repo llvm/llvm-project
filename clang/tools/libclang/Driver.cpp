@@ -73,7 +73,7 @@ clang_Driver_getExternalActionsForCommand_v0(int ArgC, const char **ArgV,
       return nullptr;
     }
 
-  driver::Driver TheDriver(ArgV[0], llvm::sys::getDefaultTargetTriple(), *Diags,
+  driver::Driver TheDriver(ArgV[0], llvm::sys::getDefaultTargetTriple(), *Diags, "clang LLVM compiler",
                            VFS.release());
   TheDriver.setCheckInputsExist(false);
   std::unique_ptr<driver::Compilation> C(

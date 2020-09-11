@@ -143,6 +143,21 @@ cd ~/flang/build
 cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR ~/flang/src
 make
 ```
+
+### Build The New Flang Driver
+The new Flang driver, `flang-new`, is currently under active development and
+should be considered as an experimental feature. For this reason it is disabled
+by default. This will change once the new driver replaces the _throwaway_
+driver, `flang`.
+
+In order to build the new driver, add `-DBUILD_FLANG_NEW_DRIVER=ON` to your
+CMake invocation line. Additionally, when building out-of-tree, use `CLANG_DIR`
+(similarly to `LLVM_DIR` and `MLIR_DIR`) to find the installed Clang
+components.
+
+**Note:** `CLANG_DIR` is only required when building the new Flang driver,
+which currently depends on Clang.
+
 # How to Run Tests
 
 Flang supports 2 different categories of tests
