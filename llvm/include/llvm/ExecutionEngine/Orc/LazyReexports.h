@@ -144,7 +144,7 @@ public:
                                    IndirectStubsManager &ISManager,
                                    JITDylib &SourceJD,
                                    SymbolAliasMap CallableAliases,
-                                   ImplSymbolMap *SrcJDLoc, VModuleKey K);
+                                   ImplSymbolMap *SrcJDLoc);
 
   StringRef getName() const override;
 
@@ -166,11 +166,10 @@ private:
 inline std::unique_ptr<LazyReexportsMaterializationUnit>
 lazyReexports(LazyCallThroughManager &LCTManager,
               IndirectStubsManager &ISManager, JITDylib &SourceJD,
-              SymbolAliasMap CallableAliases, ImplSymbolMap *SrcJDLoc = nullptr,
-              VModuleKey K = VModuleKey()) {
+              SymbolAliasMap CallableAliases,
+              ImplSymbolMap *SrcJDLoc = nullptr) {
   return std::make_unique<LazyReexportsMaterializationUnit>(
-      LCTManager, ISManager, SourceJD, std::move(CallableAliases), SrcJDLoc,
-      std::move(K));
+      LCTManager, ISManager, SourceJD, std::move(CallableAliases), SrcJDLoc);
 }
 
 } // End namespace orc

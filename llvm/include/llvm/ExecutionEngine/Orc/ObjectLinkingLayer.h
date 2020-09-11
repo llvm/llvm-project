@@ -51,7 +51,7 @@ class ObjectLinkingLayerJITLinkContext;
 /// Clients can use this class to add relocatable object files to an
 /// ExecutionSession, and it typically serves as the base layer (underneath
 /// a compiling layer like IRCompileLayer) for the rest of the JIT.
-class ObjectLinkingLayer : public ObjectLayer {
+class ObjectLinkingLayer : public ObjectLayer, private ResourceManager {
   friend class ObjectLinkingLayerJITLinkContext;
 
 public:
@@ -72,10 +72,10 @@ public:
     virtual Error notifyEmitted(MaterializationResponsibility &MR) {
       return Error::success();
     }
-    virtual Error notifyRemovingModule(VModuleKey K) {
-      return Error::success();
-    }
-    virtual Error notifyRemovingAllModules() { return Error::success(); }
+    virtual Error notifyFailed(MaterializationResponsibility &MR) = 0;
+    virtual Error notifyRemovingResources(ResourceKey K) = 0;
+    virtual void notifyTransferringResources(ResourceKey DstKey,
+                                             ResourceKey SrcKey) = 0;
 
     /// Return any dependencies that synthetic symbols (e.g. init symbols)
     /// have on locally scoped jitlink::Symbols. This is used by the
@@ -161,8 +161,8 @@ private:
   void notifyLoaded(MaterializationResponsibility &MR);
   Error notifyEmitted(MaterializationResponsibility &MR, AllocPtr Alloc);
 
-  Error removeModule(VModuleKey K);
-  Error removeAllModules();
+  Error handleRemoveResources(ResourceKey K) override;
+  void handleTransferResources(ResourceKey DstKey, ResourceKey SrcKey) override;
 
   mutable std::mutex LayerMutex;
   jitlink::JITLinkMemoryManager &MemMgr;
@@ -170,20 +170,22 @@ private:
   bool OverrideObjectFlags = false;
   bool AutoClaimObjectSymbols = false;
   ReturnObjectBufferFunction ReturnObjectBuffer;
-  DenseMap<VModuleKey, AllocPtr> TrackedAllocs;
-  std::vector<AllocPtr> UntrackedAllocs;
+  DenseMap<ResourceKey, std::vector<AllocPtr>> Allocs;
   std::vector<std::unique_ptr<Plugin>> Plugins;
 };
 
 class EHFrameRegistrationPlugin : public ObjectLinkingLayer::Plugin {
 public:
   EHFrameRegistrationPlugin(
+      ExecutionSession &ES,
       std::unique_ptr<jitlink::EHFrameRegistrar> Registrar);
-  Error notifyEmitted(MaterializationResponsibility &MR) override;
   void modifyPassConfig(MaterializationResponsibility &MR, const Triple &TT,
                         jitlink::PassConfiguration &PassConfig) override;
-  Error notifyRemovingModule(VModuleKey K) override;
-  Error notifyRemovingAllModules() override;
+  Error notifyEmitted(MaterializationResponsibility &MR) override;
+  Error notifyFailed(MaterializationResponsibility &MR) override;
+  Error notifyRemovingResources(ResourceKey K) override;
+  void notifyTransferringResources(ResourceKey DstKey,
+                                   ResourceKey SrcKey) override;
 
 private:
 
@@ -193,10 +195,10 @@ private:
   };
 
   std::mutex EHFramePluginMutex;
+  ExecutionSession &ES;
   std::unique_ptr<jitlink::EHFrameRegistrar> Registrar;
   DenseMap<MaterializationResponsibility *, EHFrameRange> InProcessLinks;
-  DenseMap<VModuleKey, EHFrameRange> TrackedEHFrameRanges;
-  std::vector<EHFrameRange> UntrackedEHFrameRanges;
+  DenseMap<ResourceKey, std::vector<EHFrameRange>> EHFrameRanges;
 };
 
 } // end namespace orc
