@@ -632,9 +632,11 @@ static int checkPackedEpilog(MCStreamer &streamer, WinEH::FrameInfo *info,
   if (DistanceFromEnd / 4 != Epilog.size())
     return -1;
 
-  int Offset = ARM64CountOfUnwindCodes(
-      ArrayRef<WinEH::Instruction>(&info->Instructions[Epilog.size()],
-                                   info->Instructions.size() - Epilog.size()));
+  int Offset = Epilog.size() == info->Instructions.size()
+                   ? 0
+                   : ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction>(
+                         &info->Instructions[Epilog.size()],
+                         info->Instructions.size() - Epilog.size()));
 
   // Check that the offset and prolog size fits in the first word; it's
   // unclear whether the epilog count in the extension word can be taken
