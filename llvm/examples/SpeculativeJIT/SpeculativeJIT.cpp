@@ -113,14 +113,13 @@ private:
     this->CODLayer.setImplMap(&Imps);
     this->ES->setDispatchMaterialization(
         [this](std::unique_ptr<MaterializationUnit> MU,
-               MaterializationResponsibility MR) {
-          // FIXME: Switch to move capture once we have C++14.
-          auto SharedMU = std::shared_ptr<MaterializationUnit>(std::move(MU));
-          auto SharedMR =
-            std::make_shared<MaterializationResponsibility>(std::move(MR));
-          CompileThreads.async([SharedMU, SharedMR]() {
-            SharedMU->materialize(std::move(*SharedMR));
-          });
+               std::unique_ptr<MaterializationResponsibility> MR) {
+          CompileThreads.async(
+              [UnownedMU = MU.release(), UnownedMR = MR.release()]() {
+                std::unique_ptr<MaterializationUnit> MU(UnownedMU);
+                std::unique_ptr<MaterializationResponsibility> MR(UnownedMR);
+                MU->materialize(std::move(MR));
+              });
         });
     ExitOnErr(S.addSpeculationRuntime(MainJD, Mangle));
     LocalCXXRuntimeOverrides CXXRuntimeoverrides;

@@ -1085,15 +1085,17 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
         std::make_unique<ThreadPool>(hardware_concurrency(S.NumCompileThreads));
     ES->setDispatchMaterialization(
         [this](std::unique_ptr<MaterializationUnit> MU,
-               MaterializationResponsibility MR) {
-          // FIXME: Switch to move capture once ThreadPool uses unique_function.
-          auto SharedMU = std::shared_ptr<MaterializationUnit>(std::move(MU));
-          auto SharedMR =
-              std::make_shared<MaterializationResponsibility>(std::move(MR));
-          auto Work = [SharedMU, SharedMR]() mutable {
-            SharedMU->materialize(std::move(*SharedMR));
-          };
-          CompileThreads->async(std::move(Work));
+               std::unique_ptr<MaterializationResponsibility> MR) {
+          // FIXME: We should be able to use move-capture here, but ThreadPool's
+          // AsyncTaskTys are std::functions rather than unique_functions
+          // (because MSVC's std::packaged_tasks don't support move-only types).
+          // Fix this when all the above gets sorted out.
+          CompileThreads->async(
+              [UnownedMU = MU.release(), UnownedMR = MR.release()]() mutable {
+                std::unique_ptr<MaterializationUnit> MU(UnownedMU);
+                std::unique_ptr<MaterializationResponsibility> MR(UnownedMR);
+                MU->materialize(std::move(MR));
+              });
         });
   }
 

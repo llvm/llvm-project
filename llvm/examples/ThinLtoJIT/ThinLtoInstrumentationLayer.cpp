@@ -120,8 +120,8 @@ void ThinLtoInstrumentationLayer::nudgeIntoDiscovery(
   LLVM_DEBUG(dbgs() << "Nudged " << Count << " new functions into discovery\n");
 }
 
-void ThinLtoInstrumentationLayer::emit(MaterializationResponsibility R,
-                                       ThreadSafeModule TSM) {
+void ThinLtoInstrumentationLayer::emit(
+    std::unique_ptr<MaterializationResponsibility> R, ThreadSafeModule TSM) {
   TSM.withModuleDo([this](Module &M) {
     std::vector<Function *> FunctionsToInstrument;
 
