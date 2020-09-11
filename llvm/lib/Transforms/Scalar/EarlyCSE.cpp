@@ -199,7 +199,6 @@ static bool matchSelectWithOptionalNotCond(Value *V, Value *&Cond, Value *&A,
   case CmpInst::ICMP_SLE:
   case CmpInst::ICMP_SGE:
     Pred = CmpInst::getInversePredicate(Pred);
-    std::swap(A, B);
     Inversed = true;
     break;
   default:
