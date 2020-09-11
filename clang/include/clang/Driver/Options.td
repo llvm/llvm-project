@@ -56,6 +56,13 @@ def NoDriverOption : OptionFlag;
 // be used), add this flag.
 def LinkOption : OptionFlag;
 
+// FlangOption - This is considered a "core" Flang option, available in
+// flang mode.
+def FlangOption : OptionFlag;
+
+// FC1Option - This option should be accepted by flang -fc1.
+def FC1Option : OptionFlag;
+
 // A short name to show in documentation. The name will be interpreted as rST.
 class DocName<string name> { string DocName = name; }
 
@@ -2100,7 +2107,7 @@ def gno_embed_source : Flag<["-"], "gno-embed-source">, Group<g_flags_Group>,
     Flags<[DriverOption]>,
     HelpText<"Restore the default behavior of not embedding source text in DWARF debug sections">;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
-def help : Flag<["-", "--"], "help">, Flags<[CC1Option,CC1AsOption]>,
+def help : Flag<["-", "--"], "help">, Flags<[CC1Option,CC1AsOption, FC1Option, FlangOption]>,
   HelpText<"Display available options">;
 def ibuiltininc : Flag<["-"], "ibuiltininc">,
   HelpText<"Enable builtin #include directories even when -nostdinc is used "
@@ -3049,7 +3056,8 @@ def _rtlib : Separate<["--"], "rtlib">, Alias<rtlib_EQ>;
 def _serialize_diags : Separate<["-", "--"], "serialize-diagnostics">, Flags<[DriverOption]>,
   HelpText<"Serialize compiler diagnostics to a file">;
 // We give --version different semantics from -version.
-def _version : Flag<["--"], "version">, Flags<[CoreOption, CC1Option]>,
+def _version : Flag<["--"], "version">,
+  Flags<[CoreOption, CC1Option, FC1Option, FlangOption]>,
   HelpText<"Print version information">;
 def _signed_char : Flag<["--"], "signed-char">, Alias<fsigned_char>;
 def _std : Separate<["--"], "std">, Alias<std_EQ>;

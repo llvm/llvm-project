@@ -50,7 +50,7 @@ public:
     unsigned ID;
     unsigned char Kind;
     unsigned char Param;
-    unsigned short Flags;
+    unsigned int Flags;
     unsigned short GroupID;
     unsigned short AliasID;
     const char *AliasArgs;
