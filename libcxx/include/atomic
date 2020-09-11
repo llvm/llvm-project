@@ -2163,7 +2163,7 @@ template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
-    is_pointer<_Tp>::value || (is_integral<_Tp>::value && !is_same<_Tp, bool>::value),
+    is_integral<_Tp>::value && !is_same<_Tp, bool>::value && !is_const<_Tp>::value,
     _Tp
 >::type
 atomic_fetch_add(volatile atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op) _NOEXCEPT
@@ -2175,10 +2175,26 @@ template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
-    is_pointer<_Tp>::value || (is_integral<_Tp>::value && !is_same<_Tp, bool>::value),
+    is_integral<_Tp>::value && !is_same<_Tp, bool>::value && !is_const<_Tp>::value,
     _Tp
 >::type
 atomic_fetch_add(atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op) _NOEXCEPT
+{
+    return __o->fetch_add(__op);
+}
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+_Tp* 
+atomic_fetch_add(volatile atomic<_Tp*>* __o, typename atomic<_Tp*>::difference_type __op) _NOEXCEPT
+{
+    return __o->fetch_add(__op);
+}
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+_Tp* 
+atomic_fetch_add(atomic<_Tp*>* __o, typename atomic<_Tp*>::difference_type __op) _NOEXCEPT
 {
     return __o->fetch_add(__op);
 }
@@ -2189,7 +2205,7 @@ template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
-    is_pointer<_Tp>::value || (is_integral<_Tp>::value && !is_same<_Tp, bool>::value),
+    is_integral<_Tp>::value && !is_same<_Tp, bool>::value && !is_const<_Tp>::value,
     _Tp
 >::type
 atomic_fetch_add_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op, memory_order __m) _NOEXCEPT
@@ -2201,10 +2217,26 @@ template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
-    is_pointer<_Tp>::value || (is_integral<_Tp>::value && !is_same<_Tp, bool>::value),
+    is_integral<_Tp>::value && !is_same<_Tp, bool>::value && !is_const<_Tp>::value,
     _Tp
 >::type
 atomic_fetch_add_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op, memory_order __m) _NOEXCEPT
+{
+    return __o->fetch_add(__op, __m);
+}
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+_Tp*
+atomic_fetch_add_explicit(volatile atomic<_Tp*>* __o, typename atomic<_Tp*>::difference_type __op, memory_order __m) _NOEXCEPT
+{
+    return __o->fetch_add(__op, __m);
+}
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+_Tp*
+atomic_fetch_add_explicit(atomic<_Tp*>* __o, typename atomic<_Tp*>::difference_type __op, memory_order __m) _NOEXCEPT
 {
     return __o->fetch_add(__op, __m);
 }
@@ -2215,7 +2247,7 @@ template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
-    is_pointer<_Tp>::value || (is_integral<_Tp>::value && !is_same<_Tp, bool>::value),
+    is_integral<_Tp>::value && !is_same<_Tp, bool>::value && !is_const<_Tp>::value,
     _Tp
 >::type
 atomic_fetch_sub(volatile atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op) _NOEXCEPT
@@ -2227,10 +2259,26 @@ template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
-    is_pointer<_Tp>::value || (is_integral<_Tp>::value && !is_same<_Tp, bool>::value),
+    is_integral<_Tp>::value && !is_same<_Tp, bool>::value && !is_const<_Tp>::value,
     _Tp
 >::type
 atomic_fetch_sub(atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op) _NOEXCEPT
+{
+    return __o->fetch_sub(__op);
+}
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+_Tp*
+atomic_fetch_sub(volatile atomic<_Tp*>* __o, typename atomic<_Tp*>::difference_type __op) _NOEXCEPT
+{
+    return __o->fetch_sub(__op);
+}
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+_Tp*
+atomic_fetch_sub(atomic<_Tp*>* __o, typename atomic<_Tp*>::difference_type __op) _NOEXCEPT
 {
     return __o->fetch_sub(__op);
 }
@@ -2241,7 +2289,7 @@ template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
-    is_pointer<_Tp>::value || (is_integral<_Tp>::value && !is_same<_Tp, bool>::value),
+    is_integral<_Tp>::value && !is_same<_Tp, bool>::value && !is_const<_Tp>::value,
     _Tp
 >::type
 atomic_fetch_sub_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op, memory_order __m) _NOEXCEPT
@@ -2253,10 +2301,26 @@ template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
-    is_pointer<_Tp>::value || (is_integral<_Tp>::value && !is_same<_Tp, bool>::value),
+    is_integral<_Tp>::value && !is_same<_Tp, bool>::value && !is_const<_Tp>::value,
     _Tp
 >::type
 atomic_fetch_sub_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op, memory_order __m) _NOEXCEPT
+{
+    return __o->fetch_sub(__op, __m);
+}
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+_Tp*
+atomic_fetch_sub_explicit(volatile atomic<_Tp*>* __o, typename atomic<_Tp*>::difference_type __op, memory_order __m) _NOEXCEPT
+{
+    return __o->fetch_sub(__op, __m);
+}
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+_Tp*
+atomic_fetch_sub_explicit(atomic<_Tp*>* __o, typename atomic<_Tp*>::difference_type __op, memory_order __m) _NOEXCEPT
 {
     return __o->fetch_sub(__op, __m);
 }
