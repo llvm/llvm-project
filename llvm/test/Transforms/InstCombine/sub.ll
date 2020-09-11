@@ -1077,7 +1077,7 @@ define i64 @test58([100 x [100 x i8]]* %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test58(
 ; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add i64 [[I:%.*]], 4200
 ; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add i64 [[J:%.*]], 4200
-; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub nsw i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
 ; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %gep1 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 %i
