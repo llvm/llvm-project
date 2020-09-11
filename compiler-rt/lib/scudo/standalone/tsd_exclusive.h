@@ -99,16 +99,16 @@ private:
   atomic_u8 Disabled;
   TSD<Allocator> FallbackTSD;
   HybridMutex Mutex;
-  static THREADLOCAL ThreadState State;
-  static THREADLOCAL TSD<Allocator> ThreadTSD;
+  static thread_local ThreadState State;
+  static thread_local TSD<Allocator> ThreadTSD;
 
   friend void teardownThread<Allocator>(void *Ptr);
 };
 
 template <class Allocator>
-THREADLOCAL TSD<Allocator> TSDRegistryExT<Allocator>::ThreadTSD;
+thread_local TSD<Allocator> TSDRegistryExT<Allocator>::ThreadTSD;
 template <class Allocator>
-THREADLOCAL ThreadState TSDRegistryExT<Allocator>::State;
+thread_local ThreadState TSDRegistryExT<Allocator>::State;
 
 template <class Allocator> void teardownThread(void *Ptr) {
   typedef TSDRegistryExT<Allocator> TSDRegistryT;
