@@ -673,6 +673,9 @@ func @tensor_from_elements() {
   // CHECK: %2 = tensor_from_elements [[C0_F32]] : tensor<1xf32>
   %2 = tensor_from_elements %c0_f32 : tensor<1xf32>
 
+  // CHECK: tensor_from_elements : tensor<0xindex>
+  %3 = tensor_from_elements : tensor<0xindex>
+
   return
 }
 
