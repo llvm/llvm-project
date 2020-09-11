@@ -5799,105 +5799,6 @@ static void handleSwiftName(Sema &S, Decl *D, const ParsedAttr &Attr) {
   D->addAttr(::new (S.Context) SwiftNameAttr(S.Context, Attr, Name));
 }
 
-static bool isErrorParameter(Sema &S, QualType paramType) {
-  if (auto ptr = paramType->getAs<PointerType>()) {
-    auto outerPointee = ptr->getPointeeType();
-
-    // NSError**.
-    if (auto objcPtr = outerPointee->getAs<ObjCObjectPointerType>()) {
-      if (auto iface = objcPtr->getInterfaceDecl())
-        if (iface->getIdentifier() == S.getNSErrorIdent())
-          return true;
-    }
-
-    // CFErrorRef*.
-    if (auto cPtr = outerPointee->getAs<PointerType>()) {
-      auto innerPointee = cPtr->getPointeeType();
-      if (auto recordType = innerPointee->getAs<RecordType>()) {
-        if (S.isCFError(recordType->getDecl()))
-          return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-static void handleSwiftError(Sema &S, Decl *D, const ParsedAttr &attr) {
-  SwiftErrorAttr::ConventionKind convention;
-  IdentifierLoc *conventionLoc = attr.getArgAsIdent(0);
-  StringRef conventionStr = conventionLoc->Ident->getName();
-  if (!SwiftErrorAttr::ConvertStrToConventionKind(conventionStr, convention)) {
-    S.Diag(attr.getLoc(), diag::warn_attribute_type_not_supported)
-      << attr.getAttrName() << conventionLoc->Ident;
-    return;
-  }
-
-  auto requireErrorParameter = [&]() -> bool {
-    if (D->isInvalidDecl()) return true;
-
-    for (unsigned i = 0, e = getFunctionOrMethodNumParams(D); i != e; ++i) {
-      if (isErrorParameter(S, getFunctionOrMethodParamType(D, i)))
-        return true;
-    }
-
-    S.Diag(attr.getLoc(), diag::err_attr_swift_error_no_error_parameter)
-      << attr.getAttrName() << isa<ObjCMethodDecl>(D);
-    return false;
-  };
-
-  auto requirePointerResult = [&] {
-    if (D->isInvalidDecl()) return true;
-
-    // C, ObjC, and block pointers are definitely okay.
-    // References are definitely not okay.
-    // nullptr_t is weird but acceptable.
-    QualType returnType = getFunctionOrMethodResultType(D);
-    if (returnType->hasPointerRepresentation() &&
-        !returnType->isReferenceType()) return true;
-
-    S.Diag(attr.getLoc(), diag::err_attr_swift_error_return_type)
-      << attr.getAttrName() << conventionStr
-      << isa<ObjCMethodDecl>(D) << /*pointer*/ 1;
-    return false;
-  };
-
-  auto requireIntegerResult = [&] {
-    if (D->isInvalidDecl()) return true;
-
-    QualType returnType = getFunctionOrMethodResultType(D);
-    if (returnType->isIntegralType(S.Context)) return true;
-
-    S.Diag(attr.getLoc(), diag::err_attr_swift_error_return_type)
-      << attr.getAttrName() << conventionStr
-      << isa<ObjCMethodDecl>(D) << /*integral*/ 0;
-    return false;
-  };
-
-  switch (convention) {
-  case SwiftErrorAttr::None:
-    // No additional validation required.
-    break;
-
-  case SwiftErrorAttr::NonNullError:
-    if (!requireErrorParameter()) return;
-    break;
-
-  case SwiftErrorAttr::NullResult:
-    if (!requireErrorParameter()) return;
-    if (!requirePointerResult()) return;
-    break;
-
-  case SwiftErrorAttr::NonZeroResult:
-  case SwiftErrorAttr::ZeroResult:
-    if (!requireErrorParameter()) return;
-    if (!requireIntegerResult()) return;
-    break;
-  }
-
-  D->addAttr(::new (S.Context) SwiftErrorAttr(S.Context, attr, convention));
-}
-
 static void handleSwiftBridgeAttr(Sema &S, Decl *D, const ParsedAttr &Attr) {
   // Make sure that there is a string literal as the annotation's single
   // argument.
@@ -5949,6 +5850,102 @@ static void handleSwiftNewtypeAttr(Sema &S, Decl *D, const ParsedAttr &Attr) {
   }
 
   D->addAttr(::new (S.Context) SwiftNewtypeAttr(S.Context, Attr, Kind));
+}
+
+static bool isErrorParameter(Sema &S, QualType QT) {
+  const auto *PT = QT->getAs<PointerType>();
+  if (!PT)
+    return false;
+
+  QualType Pointee = PT->getPointeeType();
+
+  // Check for NSError**.
+  if (const auto *OPT = Pointee->getAs<ObjCObjectPointerType>())
+    if (const auto *ID = OPT->getInterfaceDecl())
+      if (ID->getIdentifier() == S.getNSErrorIdent())
+        return true;
+
+  // Check for CFError**.
+  if (const auto *PT = Pointee->getAs<PointerType>())
+    if (const auto *RT = PT->getPointeeType()->getAs<RecordType>())
+      if (S.isCFError(RT->getDecl()))
+        return true;
+
+  return false;
+}
+
+static void handleSwiftError(Sema &S, Decl *D, const ParsedAttr &AL) {
+  auto hasErrorParameter = [](Sema &S, Decl *D, const ParsedAttr &AL) -> bool {
+    for (unsigned I = 0, E = getFunctionOrMethodNumParams(D); I != E; ++I) {
+      if (isErrorParameter(S, getFunctionOrMethodParamType(D, I)))
+        return true;
+    }
+
+    S.Diag(AL.getLoc(), diag::err_attr_swift_error_no_error_parameter)
+        << AL << isa<ObjCMethodDecl>(D);
+    return false;
+  };
+
+  auto hasPointerResult = [](Sema &S, Decl *D, const ParsedAttr &AL) -> bool {
+    // - C, ObjC, and block pointers are definitely okay.
+    // - References are definitely not okay.
+    // - nullptr_t is weird, but acceptable.
+    QualType RT = getFunctionOrMethodResultType(D);
+    if (RT->hasPointerRepresentation() && !RT->isReferenceType())
+      return true;
+
+    S.Diag(AL.getLoc(), diag::err_attr_swift_error_return_type)
+        << AL << AL.getArgAsIdent(0)->Ident->getName() << isa<ObjCMethodDecl>(D)
+        << /*pointer*/ 1;
+    return false;
+  };
+
+  auto hasIntegerResult = [](Sema &S, Decl *D, const ParsedAttr &AL) -> bool {
+    QualType RT = getFunctionOrMethodResultType(D);
+    if (RT->isIntegralType(S.Context))
+      return true;
+
+    S.Diag(AL.getLoc(), diag::err_attr_swift_error_return_type)
+        << AL << AL.getArgAsIdent(0)->Ident->getName() << isa<ObjCMethodDecl>(D)
+        << /*integeral*/ 0;
+    return false;
+  };
+
+  if (D->isInvalidDecl())
+    return;
+
+  IdentifierLoc *Loc = AL.getArgAsIdent(0);
+  SwiftErrorAttr::ConventionKind Convention;
+  if (!SwiftErrorAttr::ConvertStrToConventionKind(Loc->Ident->getName(),
+                                                  Convention)) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
+        << AL << Loc->Ident;
+    return;
+  }
+
+  switch (Convention) {
+  case SwiftErrorAttr::None:
+    // No additional validation required.
+    break;
+
+  case SwiftErrorAttr::NonNullError:
+    if (!hasErrorParameter(S, D, AL))
+      return;
+    break;
+
+  case SwiftErrorAttr::NullResult:
+    if (!hasErrorParameter(S, D, AL) || !hasPointerResult(S, D, AL))
+      return;
+    break;
+
+  case SwiftErrorAttr::NonZeroResult:
+  case SwiftErrorAttr::ZeroResult:
+    if (!hasErrorParameter(S, D, AL) || !hasIntegerResult(S, D, AL))
+      return;
+    break;
+  }
+
+  D->addAttr(::new (S.Context) SwiftErrorAttr(S.Context, AL, Convention));
 }
 
 //===----------------------------------------------------------------------===//
@@ -7873,9 +7870,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_SwiftName:
     handleSwiftName(S, D, AL);
     break;
-  case ParsedAttr::AT_SwiftError:
-    handleSwiftError(S, D, AL);
-    break;
   case ParsedAttr::AT_SwiftBridge:
     handleSwiftBridgeAttr(S, D, AL);
     break;
@@ -7887,6 +7881,11 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case ParsedAttr::AT_SwiftNewtype:
     handleSwiftNewtypeAttr(S, D, AL);
+    break;
+
+  // Swift attributes.
+  case ParsedAttr::AT_SwiftError:
+    handleSwiftError(S, D, AL);
     break;
 
   // XRay attributes.
