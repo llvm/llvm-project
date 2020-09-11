@@ -347,6 +347,8 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
   case llvm::Triple::sparcv9:
     if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
       return A->getValue();
+    if (T.getArch() == llvm::Triple::sparc && T.isOSSolaris())
+      return "v9";
     return "";
 
   case llvm::Triple::x86:
