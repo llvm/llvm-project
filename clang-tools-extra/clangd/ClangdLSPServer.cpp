@@ -57,7 +57,7 @@ llvm::Optional<int64_t> decodeVersion(llvm::StringRef Encoded) {
   int64_t Result;
   if (llvm::to_integer(Encoded, Result, 10))
     return Result;
-  else if (!Encoded.empty()) // Empty can be e.g. diagnostics on close.
+  if (!Encoded.empty()) // Empty can be e.g. diagnostics on close.
     elog("unexpected non-numeric version {0}", Encoded);
   return llvm::None;
 }
