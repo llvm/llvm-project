@@ -545,6 +545,9 @@ public:
 
   // Creating related types
 
+  /// Return the TypeSystemSwiftTypeRef version of this type.
+  CompilerType GetTypeRefType(lldb::opaque_compiler_type_t type);
+
   CompilerType GetArrayElementType(lldb::opaque_compiler_type_t type,
                                    uint64_t *stride,
                                    ExecutionContextScope *exe_scope) override;
