@@ -3622,6 +3622,36 @@ must be a simple or qualified identifier.
   }];
 }
 
+def SwiftNewTypeDocs : Documentation {
+  let Category = SwiftDocs;
+  let Heading = "swift_newtype";
+  let Content = [{
+The ``swift_newtype`` attribute indicates that the typedef to which the
+attribute appertains is imported as a new Swift type of the typedef's name.
+Previously, the attribute was spelt ``swift_wrapper``.  While the behaviour of
+the attribute is identical with either spelling, ``swift_wrapper`` is
+deprecated, only exists for compatibility purposes, and should not be used in
+new code.
+
+* ``swift_newtype(struct)`` means that a Swift struct will be created for this
+typedef.
+
+* ``swift_newtype(enum)`` means that a Swift enum will be created for this
+ypedef.
+
+  .. code-block:: c
+
+    // Import UIFontTextStyle as an enum type, with enumerated values being
+    // constants.
+    typedef NSString * UIFontTextStyle __attribute__((__swift_newtype__(enum)));
+
+    // Import UIFontDescriptorFeatureKey as a structure type, with enumerated
+    // values being members of the type structure.
+    typedef NSString * UIFontDescriptorFeatureKey __attribute__((__swift_newtype__(struct)));
+
+  }];
+}
+
 def OMPDeclareSimdDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "#pragma omp declare simd";
