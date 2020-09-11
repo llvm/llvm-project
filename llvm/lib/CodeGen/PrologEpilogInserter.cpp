@@ -1233,23 +1233,33 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
         // complex location that is interpreted as being a memory address.
         // This changes a pointer-valued variable to dereference that pointer,
         // which is incorrect. Fix by adding DW_OP_stack_value.
-        unsigned PrependFlags = DIExpression::ApplyOffset;
-        if (!MI.isIndirectDebugValue() && !DIExpr->isComplex())
-          PrependFlags |= DIExpression::StackValue;
 
-        // If we have DBG_VALUE that is indirect and has a Implicit location
-        // expression need to insert a deref before prepending a Memory
-        // location expression. Also after doing this we change the DBG_VALUE
-        // to be direct.
-        if (MI.isIndirectDebugValue() && DIExpr->isImplicit()) {
-          SmallVector<uint64_t, 2> Ops = {dwarf::DW_OP_deref_size, Size};
-          bool WithStackValue = true;
-          DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, WithStackValue);
-          // Make the DBG_VALUE direct.
-          MI.getDebugOffset().ChangeToRegister(0, false);
+        if (MI.isNonListDebugValue()) {
+          unsigned PrependFlags = DIExpression::ApplyOffset;
+          if (!MI.isIndirectDebugValue() && !DIExpr->isComplex())
+            PrependFlags |= DIExpression::StackValue;
+
+          // If we have DBG_VALUE that is indirect and has a Implicit location
+          // expression need to insert a deref before prepending a Memory
+          // location expression. Also after doing this we change the DBG_VALUE
+          // to be direct.
+          if (MI.isIndirectDebugValue() && DIExpr->isImplicit()) {
+            SmallVector<uint64_t, 2> Ops = {dwarf::DW_OP_deref_size, Size};
+            bool WithStackValue = true;
+            DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, WithStackValue);
+            // Make the DBG_VALUE direct.
+            MI.getDebugOffset().ChangeToRegister(0, false);
+          }
+          DIExpr = TRI.prependOffsetExpression(DIExpr, PrependFlags, Offset);
+        } else {
+          // The debug operand at DebugOpIndex was a frame index at offset
+          // `Offset`; now the operand has been replaced with the frame
+          // register, we must add Offset with `register x, plus Offset`.
+          unsigned DebugOpIndex = MI.getDebugOperandIndex(&MI.getOperand(i));
+          SmallVector<uint64_t, 3> Ops;
+          TRI.getOffsetOpcodes(Offset, Ops);
+          DIExpr = DIExpression::appendOpsToArg(DIExpr, Ops, DebugOpIndex);
         }
-
-        DIExpr = TRI.prependOffsetExpression(DIExpr, PrependFlags, Offset);
         MI.getDebugExpressionOp().setMetadata(DIExpr);
         continue;
       }
