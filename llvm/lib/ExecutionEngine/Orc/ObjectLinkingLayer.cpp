@@ -24,10 +24,9 @@ namespace orc {
 
 class ObjectLinkingLayerJITLinkContext final : public JITLinkContext {
 public:
-  ObjectLinkingLayerJITLinkContext(
-      ObjectLinkingLayer &Layer,
-      std::unique_ptr<MaterializationResponsibility> MR,
-      std::unique_ptr<MemoryBuffer> ObjBuffer)
+  ObjectLinkingLayerJITLinkContext(ObjectLinkingLayer &Layer,
+                                   MaterializationResponsibility MR,
+                                   std::unique_ptr<MemoryBuffer> ObjBuffer)
       : Layer(Layer), MR(std::move(MR)), ObjBuffer(std::move(ObjBuffer)) {}
 
   ~ObjectLinkingLayerJITLinkContext() {
@@ -45,14 +44,14 @@ public:
 
   void notifyFailed(Error Err) override {
     Layer.getExecutionSession().reportError(std::move(Err));
-    MR->failMaterialization();
+    MR.failMaterialization();
   }
 
   void lookup(const LookupMap &Symbols,
               std::unique_ptr<JITLinkAsyncLookupContinuation> LC) override {
 
     JITDylibSearchOrder LinkOrder;
-    MR->getTargetJITDylib().withLinkOrderDo(
+    MR.getTargetJITDylib().withLinkOrderDo(
         [&](const JITDylibSearchOrder &LO) { LinkOrder = LO; });
 
     auto &ES = Layer.getExecutionSession();
@@ -86,8 +85,8 @@ public:
 
     for (auto &KV : InternalNamedSymbolDeps) {
       SymbolDependenceMap InternalDeps;
-      InternalDeps[&MR->getTargetJITDylib()] = std::move(KV.second);
-      MR->addDependencies(KV.first, InternalDeps);
+      InternalDeps[&MR.getTargetJITDylib()] = std::move(KV.second);
+      MR.addDependencies(KV.first, InternalDeps);
     }
 
     ES.lookup(LookupKind::Static, LinkOrder, std::move(LookupSet),
@@ -116,7 +115,7 @@ public:
 
         InternedResult[InternedName] =
             JITEvaluatedSymbol(Sym->getAddress(), Flags);
-        if (AutoClaim && !MR->getSymbols().count(InternedName)) {
+        if (AutoClaim && !MR.getSymbols().count(InternedName)) {
           assert(!ExtraSymbolsToClaim.count(InternedName) &&
                  "Duplicate symbol to claim?");
           ExtraSymbolsToClaim[InternedName] = Flags;
@@ -134,7 +133,7 @@ public:
           Flags |= JITSymbolFlags::Weak;
         InternedResult[InternedName] =
             JITEvaluatedSymbol(Sym->getAddress(), Flags);
-        if (AutoClaim && !MR->getSymbols().count(InternedName)) {
+        if (AutoClaim && !MR.getSymbols().count(InternedName)) {
           assert(!ExtraSymbolsToClaim.count(InternedName) &&
                  "Duplicate symbol to claim?");
           ExtraSymbolsToClaim[InternedName] = Flags;
@@ -142,19 +141,19 @@ public:
       }
 
     if (!ExtraSymbolsToClaim.empty())
-      if (auto Err = MR->defineMaterializing(ExtraSymbolsToClaim))
+      if (auto Err = MR.defineMaterializing(ExtraSymbolsToClaim))
         return Err;
 
     {
 
-      // Check that InternedResult matches up with MR->getSymbols().
+      // Check that InternedResult matches up with MR.getSymbols().
       // This guards against faulty transformations / compilers / object caches.
 
       // First check that there aren't any missing symbols.
       size_t NumMaterializationSideEffectsOnlySymbols = 0;
       SymbolNameVector ExtraSymbols;
       SymbolNameVector MissingSymbols;
-      for (auto &KV : MR->getSymbols()) {
+      for (auto &KV : MR.getSymbols()) {
 
         // If this is a materialization-side-effects only symbol then bump
         // the counter and make sure it's *not* defined, otherwise make
@@ -176,9 +175,9 @@ public:
       // If there are more definitions than expected, add them to the
       // ExtraSymbols vector.
       if (InternedResult.size() >
-          MR->getSymbols().size() - NumMaterializationSideEffectsOnlySymbols) {
+          MR.getSymbols().size() - NumMaterializationSideEffectsOnlySymbols) {
         for (auto &KV : InternedResult)
-          if (!MR->getSymbols().count(KV.first))
+          if (!MR.getSymbols().count(KV.first))
             ExtraSymbols.push_back(KV.first);
       }
 
@@ -188,23 +187,23 @@ public:
                                                        std::move(ExtraSymbols));
     }
 
-    if (auto Err = MR->notifyResolved(InternedResult))
+    if (auto Err = MR.notifyResolved(InternedResult))
       return Err;
 
-    Layer.notifyLoaded(*MR);
+    Layer.notifyLoaded(MR);
     return Error::success();
   }
 
   void notifyFinalized(
       std::unique_ptr<JITLinkMemoryManager::Allocation> A) override {
-    if (auto Err = Layer.notifyEmitted(*MR, std::move(A))) {
+    if (auto Err = Layer.notifyEmitted(MR, std::move(A))) {
       Layer.getExecutionSession().reportError(std::move(Err));
-      MR->failMaterialization();
+      MR.failMaterialization();
       return;
     }
-    if (auto Err = MR->notifyEmitted()) {
+    if (auto Err = MR.notifyEmitted()) {
       Layer.getExecutionSession().reportError(std::move(Err));
-      MR->failMaterialization();
+      MR.failMaterialization();
     }
   }
 
@@ -218,7 +217,7 @@ public:
     Config.PrePrunePasses.push_back(
         [this](LinkGraph &G) { return externalizeWeakAndCommonSymbols(G); });
 
-    Layer.modifyPassConfig(*MR, TT, Config);
+    Layer.modifyPassConfig(MR, TT, Config);
 
     Config.PostPrunePasses.push_back(
         [this](LinkGraph &G) { return computeNamedSymbolDependencies(G); });
@@ -238,13 +237,13 @@ private:
     auto &ES = Layer.getExecutionSession();
     for (auto *Sym : G.defined_symbols())
       if (Sym->hasName() && Sym->getLinkage() == Linkage::Weak) {
-        if (!MR->getSymbols().count(ES.intern(Sym->getName())))
+        if (!MR.getSymbols().count(ES.intern(Sym->getName())))
           G.makeExternal(*Sym);
       }
 
     for (auto *Sym : G.absolute_symbols())
       if (Sym->hasName() && Sym->getLinkage() == Linkage::Weak) {
-        if (!MR->getSymbols().count(ES.intern(Sym->getName())))
+        if (!MR.getSymbols().count(ES.intern(Sym->getName())))
           G.makeExternal(*Sym);
       }
 
@@ -254,13 +253,13 @@ private:
   Error markResponsibilitySymbolsLive(LinkGraph &G) const {
     auto &ES = Layer.getExecutionSession();
     for (auto *Sym : G.defined_symbols())
-      if (Sym->hasName() && MR->getSymbols().count(ES.intern(Sym->getName())))
+      if (Sym->hasName() && MR.getSymbols().count(ES.intern(Sym->getName())))
         Sym->setLive(true);
     return Error::success();
   }
 
   Error computeNamedSymbolDependencies(LinkGraph &G) {
-    auto &ES = MR->getTargetJITDylib().getExecutionSession();
+    auto &ES = MR.getTargetJITDylib().getExecutionSession();
     auto LocalDeps = computeLocalDeps(G);
 
     // Compute dependencies for symbols defined in the JITLink graph.
@@ -307,7 +306,7 @@ private:
     }
 
     for (auto &P : Layer.Plugins) {
-      auto SyntheticLocalDeps = P->getSyntheticSymbolLocalDependencies(*MR);
+      auto SyntheticLocalDeps = P->getSyntheticSymbolLocalDependencies(MR);
       if (SyntheticLocalDeps.empty())
         continue;
 
@@ -427,12 +426,12 @@ private:
           SymbolDeps.erase(&SourceJD);
       }
 
-      MR->addDependencies(Name, SymbolDeps);
+      MR.addDependencies(Name, SymbolDeps);
     }
   }
 
   ObjectLinkingLayer &Layer;
-  std::unique_ptr<MaterializationResponsibility> MR;
+  MaterializationResponsibility MR;
   std::unique_ptr<MemoryBuffer> ObjBuffer;
   DenseMap<SymbolStringPtr, SymbolNameSet> ExternalNamedSymbolDeps;
   DenseMap<SymbolStringPtr, SymbolNameSet> InternalNamedSymbolDeps;
@@ -453,7 +452,7 @@ ObjectLinkingLayer::~ObjectLinkingLayer() {
     getExecutionSession().reportError(std::move(Err));
 }
 
-void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
+void ObjectLinkingLayer::emit(MaterializationResponsibility R,
                               std::unique_ptr<MemoryBuffer> O) {
   assert(O && "Object must not be null");
   jitLink(std::make_unique<ObjectLinkingLayerJITLinkContext>(
