@@ -3694,11 +3694,13 @@ static bool isLoadCombineCandidateImpl(Value *Root, unsigned NumElts,
                                        TargetTransformInfo *TTI) {
   // Look past the root to find a source value. Arbitrarily follow the
   // path through operand 0 of any 'or'. Also, peek through optional
-  // shift-left-by-constant.
+  // shift-left-by-multiple-of-8-bits.
   Value *ZextLoad = Root;
+  const APInt *ShAmtC;
   while (!isa<ConstantExpr>(ZextLoad) &&
          (match(ZextLoad, m_Or(m_Value(), m_Value())) ||
-          match(ZextLoad, m_Shl(m_Value(), m_Constant()))))
+          (match(ZextLoad, m_Shl(m_Value(), m_APInt(ShAmtC))) &&
+           ShAmtC->urem(8) == 0)))
     ZextLoad = cast<BinaryOperator>(ZextLoad)->getOperand(0);
 
   // Check if the input is an extended load of the required or/shift expression.
