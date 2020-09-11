@@ -95,7 +95,7 @@ public:
   inline const Symbol *GetSymbol() const;
   const Scope *GetDerivedTypeParent() const;
   const Scope &GetDerivedTypeBase() const;
-  std::optional<SourceName> GetName() const;
+  inline std::optional<SourceName> GetName() const;
   bool Contains(const Scope &) const;
   /// Make a scope nested in this one
   Scope &MakeScope(Kind kind, Symbol *symbol = nullptr);
@@ -264,6 +264,14 @@ inline const Symbol *Scope::GetSymbol() const {
   return symbol_         ? symbol_
       : derivedTypeSpec_ ? &derivedTypeSpec_->typeSymbol()
                          : nullptr;
+}
+
+inline std::optional<SourceName> Scope::GetName() const {
+  if (const auto *sym{GetSymbol()}) {
+    return sym->name();
+  } else {
+    return std::nullopt;
+  }
 }
 
 } // namespace Fortran::semantics
