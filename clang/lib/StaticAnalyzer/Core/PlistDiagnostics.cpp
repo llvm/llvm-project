@@ -27,6 +27,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
+#include <memory>
 
 using namespace clang;
 using namespace ento;
@@ -879,6 +880,46 @@ public:
   void printToken(const Token &Tok);
 };
 
+/// Wrapper around a Lexer object that can lex tokens one-by-one. Its possible
+/// to "inject" a range of tokens into the stream, in which case the next token
+/// is retrieved from the next element of the range, until the end of the range
+/// is reached.
+class TokenStream {
+public:
+  TokenStream(SourceLocation ExpanLoc, const SourceManager &SM,
+              const LangOptions &LangOpts)
+      : ExpanLoc(ExpanLoc) {
+    FileID File;
+    unsigned Offset;
+    std::tie(File, Offset) = SM.getDecomposedLoc(ExpanLoc);
+    const llvm::MemoryBuffer *MB = SM.getBuffer(File);
+    const char *MacroNameTokenPos = MB->getBufferStart() + Offset;
+
+    RawLexer = std::make_unique<Lexer>(SM.getLocForStartOfFile(File), LangOpts,
+                                       MB->getBufferStart(), MacroNameTokenPos,
+                                       MB->getBufferEnd());
+  }
+
+  void next(Token &Result) {
+    if (CurrTokenIt == TokenRange.end()) {
+      RawLexer->LexFromRawLexer(Result);
+      return;
+    }
+    Result = *CurrTokenIt;
+    CurrTokenIt++;
+  }
+
+  void injectRange(const ArgTokensTy &Range) {
+    TokenRange = Range;
+    CurrTokenIt = TokenRange.begin();
+  }
+
+  std::unique_ptr<Lexer> RawLexer;
+  ArgTokensTy TokenRange;
+  ArgTokensTy::iterator CurrTokenIt = TokenRange.begin();
+  SourceLocation ExpanLoc;
+};
+
 } // end of anonymous namespace
 
 /// The implementation method of getMacroExpansion: It prints the expansion of
@@ -933,8 +974,9 @@ static std::string getMacroNameAndPrintExpansion(
 /// When \p ExpanLoc references "SET_TO_NULL(a)" within the definition of
 /// "NOT_SUSPICOUS", the macro name "SET_TO_NULL" and the MacroArgMap map
 /// { (x, a) } will be returned.
-static MacroExpansionInfo getMacroExpansionInfo(SourceLocation ExpanLoc,
-                                                const Preprocessor &PP);
+static MacroExpansionInfo
+getMacroExpansionInfo(const MacroParamMap &PrevParamMap,
+                      SourceLocation ExpanLoc, const Preprocessor &PP);
 
 /// Retrieves the ')' token that matches '(' \p It points to.
 static MacroInfo::tokens_iterator getMatchingRParen(
@@ -980,7 +1022,7 @@ static std::string getMacroNameAndPrintExpansion(
   const SourceManager &SM = PP.getSourceManager();
 
   MacroExpansionInfo MExpInfo =
-      getMacroExpansionInfo(SM.getExpansionLoc(MacroLoc), PP);
+      getMacroExpansionInfo(PrevParamMap, SM.getExpansionLoc(MacroLoc), PP);
   IdentifierInfo *MacroNameII = PP.getIdentifierInfo(MExpInfo.Name);
 
   // TODO: If the macro definition contains another symbol then this function is
@@ -1077,24 +1119,20 @@ static std::string getMacroNameAndPrintExpansion(
   return MExpInfo.Name;
 }
 
-static MacroExpansionInfo getMacroExpansionInfo(SourceLocation ExpanLoc,
-                                                const Preprocessor &PP) {
+static MacroExpansionInfo
+getMacroExpansionInfo(const MacroParamMap &PrevParamMap,
+                      SourceLocation ExpanLoc, const Preprocessor &PP) {
 
   const SourceManager &SM = PP.getSourceManager();
   const LangOptions &LangOpts = PP.getLangOpts();
 
   // First, we create a Lexer to lex *at the expansion location* the tokens
   // referring to the macro's name and its arguments.
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(ExpanLoc);
-  const llvm::MemoryBuffer *MB = SM.getBuffer(LocInfo.first);
-  const char *MacroNameTokenPos = MB->getBufferStart() + LocInfo.second;
-
-  Lexer RawLexer(SM.getLocForStartOfFile(LocInfo.first), LangOpts,
-                 MB->getBufferStart(), MacroNameTokenPos, MB->getBufferEnd());
+  TokenStream TStream(ExpanLoc, SM, LangOpts);
 
   // Acquire the macro's name.
   Token TheTok;
-  RawLexer.LexFromRawLexer(TheTok);
+  TStream.next(TheTok);
 
   std::string MacroName = PP.getSpelling(TheTok);
 
@@ -1122,7 +1160,7 @@ static MacroExpansionInfo getMacroExpansionInfo(SourceLocation ExpanLoc,
   if (MacroParams.empty())
     return { MacroName, MI, {} };
 
-  RawLexer.LexFromRawLexer(TheTok);
+  TStream.next(TheTok);
   // When this is a token which expands to another macro function then its
   // parentheses are not at its expansion locaiton. For example:
   //
@@ -1166,7 +1204,7 @@ static MacroExpansionInfo getMacroExpansionInfo(SourceLocation ExpanLoc,
     if (ParenthesesDepth != 0) {
 
       // Lex the first token of the next macro parameter.
-      RawLexer.LexFromRawLexer(TheTok);
+      TStream.next(TheTok);
 
       while (
           !(ParenthesesDepth == 1 &&
@@ -1183,16 +1221,38 @@ static MacroExpansionInfo getMacroExpansionInfo(SourceLocation ExpanLoc,
         if (ParenthesesDepth == 0)
           break;
 
-        if (TheTok.is(tok::raw_identifier))
+        if (TheTok.is(tok::raw_identifier)) {
           PP.LookUpIdentifierInfo(TheTok);
+          // This token is a variadic parameter:
+          //
+          //   #define PARAMS_RESOLVE_TO_VA_ARGS(i, fmt) foo(i, fmt); \
+          //     i = 0;
+          //   #define DISPATCH(...) \
+          //     PARAMS_RESOLVE_TO_VA_ARGS(__VA_ARGS__);
+          //                            // ^~~~~~~~~~~ Variadic parameter here
+          //
+          //   void mulitpleParamsResolveToVA_ARGS(void) {
+          //     int x = 1;
+          //     DISPATCH(x, "LF1M healer"); // Multiple arguments are mapped to
+          //                                 // a single __VA_ARGS__ parameter.
+          //     (void)(10 / x);
+          //   }
+          //
+          // We will stumble across this while trying to expand
+          // PARAMS_RESOLVE_TO_VA_ARGS. By this point, we already noted during
+          // the processing of DISPATCH what __VA_ARGS__ maps to, so we'll
+          // retrieve the next series of tokens from that.
+          if (TheTok.getIdentifierInfo() == __VA_ARGS__II) {
+            TStream.injectRange(PrevParamMap.at(__VA_ARGS__II));
+            TStream.next(TheTok);
+            continue;
+          }
+        }
 
         ArgTokens.push_back(TheTok);
-        RawLexer.LexFromRawLexer(TheTok);
+        TStream.next(TheTok);
       }
     } else {
-      // FIXME: Handle when multiple parameters map to a single argument.
-      // Currently, we only handle when multiple arguments map to the same
-      // parameter.
       assert(CurrParamII == __VA_ARGS__II &&
              "No more macro arguments are found, but the current parameter "
              "isn't __VA_ARGS__!");
@@ -1295,6 +1355,15 @@ static void dumpArgTokensToStream(llvm::raw_ostream &Out,
 }
 
 void TokenPrinter::printToken(const Token &Tok) {
+  // TODO: Handle GNU extensions where hash and hashhash occurs right before
+  // __VA_ARGS__.
+  // cppreference.com: "some compilers offer an extension that allows ## to
+  // appear after a comma and before __VA_ARGS__, in which case the ## does
+  // nothing when the variable arguments are present, but removes the comma when
+  // the variable arguments are not present: this makes it possible to define
+  // macros such as fprintf (stderr, format, ##__VA_ARGS__)"
+  // FIXME: Handle named variadic macro parameters (also a GNU extension).
+
   // If this is the first token to be printed, don't print space.
   if (PrevTok.isNot(tok::unknown)) {
     // If the tokens were already space separated, or if they must be to avoid
