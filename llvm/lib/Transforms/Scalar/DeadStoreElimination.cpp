@@ -411,22 +411,53 @@ enum OverwriteResult {
 
 } // end anonymous namespace
 
-/// Return 'OW_Complete' if a store to the 'Later' location completely
-/// overwrites a store to the 'Earlier' location. Return OW_MaybePartial
-/// if \p Later does not completely overwrite \p Earlier, but they both
-/// write to the same underlying object. In that case, use isPartialOverwrite to
-/// check if \p Later partially overwrites \p Earlier. Returns 'OW_Unknown' if
-/// nothing can be determined.
+/// Check if two instruction are masked stores that completely
+/// overwrite one another. More specifically, \p Later has to
+/// overwrite \p Earlier.
+template <typename AATy>
+static OverwriteResult isMaskedStoreOverwrite(const Instruction *Later,
+                                              const Instruction *Earlier,
+                                              AATy &AA) {
+  const auto *IIL = dyn_cast<IntrinsicInst>(Later);
+  const auto *IIE = dyn_cast<IntrinsicInst>(Earlier);
+  if (IIL == nullptr || IIE == nullptr)
+    return OW_Unknown;
+  if (IIL->getIntrinsicID() != Intrinsic::masked_store ||
+      IIE->getIntrinsicID() != Intrinsic::masked_store)
+    return OW_Unknown;
+  // Pointers.
+  Value *LP = IIL->getArgOperand(1)->stripPointerCasts();
+  Value *EP = IIE->getArgOperand(1)->stripPointerCasts();
+  if (LP != EP && !AA.isMustAlias(LP, EP))
+    return OW_Unknown;
+  // Masks.
+  // TODO: check that Later's mask is a superset of the Earlier's mask.
+  if (IIL->getArgOperand(3) != IIE->getArgOperand(3))
+    return OW_Unknown;
+  return OW_Complete;
+}
+
+/// Return 'OW_Complete' if a store to the 'Later' location (by \p LaterI
+/// instruction) completely overwrites a store to the 'Earlier' location.
+/// (by \p EarlierI instruction).
+/// Return OW_MaybePartial if \p Later does not completely overwrite
+/// \p Earlier, but they both write to the same underlying object. In that
+/// case, use isPartialOverwrite to check if \p Later partially overwrites
+/// \p Earlier. Returns 'OW_Unknown' if nothing can be determined.
 template <typename AATy>
 static OverwriteResult
-isOverwrite(const MemoryLocation &Later, const MemoryLocation &Earlier,
+isOverwrite(const Instruction *LaterI, const Instruction *EarlierI,
+            const MemoryLocation &Later, const MemoryLocation &Earlier,
             const DataLayout &DL, const TargetLibraryInfo &TLI,
             int64_t &EarlierOff, int64_t &LaterOff, AATy &AA,
             const Function *F) {
   // FIXME: Vet that this works for size upper-bounds. Seems unlikely that we'll
   // get imprecise values here, though (except for unknown sizes).
-  if (!Later.Size.isPrecise() || !Earlier.Size.isPrecise())
-    return OW_Unknown;
+  if (!Later.Size.isPrecise() || !Earlier.Size.isPrecise()) {
+    // Masked stores have imprecise locations, but we can reason about them
+    // to some extent.
+    return isMaskedStoreOverwrite(LaterI, EarlierI, AA);
+  }
 
   const uint64_t LaterSize = Later.Size.getValue();
   const uint64_t EarlierSize = Earlier.Size.getValue();
@@ -492,24 +523,6 @@ isOverwrite(const MemoryLocation &Later, const MemoryLocation &Earlier,
 
   // Later may overwrite earlier completely with other partial writes.
   return OW_MaybePartial;
-}
-
-static OverwriteResult isMaskedStoreOverwrite(Instruction *Later,
-                                              Instruction *Earlier) {
-  auto *IIL = dyn_cast<IntrinsicInst>(Later);
-  auto *IIE = dyn_cast<IntrinsicInst>(Earlier);
-  if (IIL == nullptr || IIE == nullptr)
-    return OW_Unknown;
-  if (IIL->getIntrinsicID() != Intrinsic::masked_store ||
-      IIE->getIntrinsicID() != Intrinsic::masked_store)
-    return OW_Unknown;
-  // Pointers.
-  if (IIL->getArgOperand(1) != IIE->getArgOperand(1))
-    return OW_Unknown;
-  // Masks.
-  if (IIL->getArgOperand(3) != IIE->getArgOperand(3))
-    return OW_Unknown;
-  return OW_Complete;
 }
 
 /// Return 'OW_Complete' if a store to the 'Later' location completely
@@ -1376,13 +1389,9 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
       if (isRemovable(DepWrite) &&
           !isPossibleSelfRead(Inst, Loc, DepWrite, *TLI, *AA)) {
         int64_t InstWriteOffset, DepWriteOffset;
-        OverwriteResult OR = isOverwrite(Loc, DepLoc, DL, *TLI, DepWriteOffset,
-                                         InstWriteOffset, *AA, BB.getParent());
-        if (OR == OW_Unknown) {
-          // isOverwrite punts on MemoryLocations with an imprecise size, such
-          // as masked stores. Handle this here, somwewhat inelegantly.
-          OR = isMaskedStoreOverwrite(Inst, DepWrite);
-        }
+        OverwriteResult OR = isOverwrite(Inst, DepWrite, Loc, DepLoc, DL, *TLI,
+                                         DepWriteOffset, InstWriteOffset, *AA,
+                                         BB.getParent());
         if (OR == OW_MaybePartial)
           OR = isPartialOverwrite(Loc, DepLoc, DepWriteOffset, InstWriteOffset,
                                   DepWrite, IOL);
@@ -1707,6 +1716,8 @@ struct DSEState {
       switch (CB->getIntrinsicID()) {
       case Intrinsic::init_trampoline:
         return {MemoryLocation(CB->getArgOperand(0))};
+      case Intrinsic::masked_store:
+        return {MemoryLocation::getForArgument(CB, 1, TLI)};
       default:
         break;
       }
@@ -1716,8 +1727,10 @@ struct DSEState {
     return MemoryLocation::getOrNone(I);
   }
 
-  /// Returns true if \p Use completely overwrites \p DefLoc.
-  bool isCompleteOverwrite(MemoryLocation DefLoc, Instruction *UseInst) {
+  /// Returns true if \p UseInst completely overwrites \p DefLoc
+  /// (stored by \p DefInst).
+  bool isCompleteOverwrite(MemoryLocation DefLoc, Instruction *DefInst,
+                           Instruction *UseInst) {
     // UseInst has a MemoryDef associated in MemorySSA. It's possible for a
     // MemoryDef to not write to memory, e.g. a volatile load is modeled as a
     // MemoryDef.
@@ -1729,9 +1742,10 @@ struct DSEState {
         return false;
 
     int64_t InstWriteOffset, DepWriteOffset;
-    auto CC = getLocForWriteEx(UseInst);
-    return CC && isOverwrite(*CC, DefLoc, DL, TLI, DepWriteOffset,
-                             InstWriteOffset, BatchAA, &F) == OW_Complete;
+    if (auto CC = getLocForWriteEx(UseInst))
+      return isOverwrite(UseInst, DefInst, *CC, DefLoc, DL, TLI, DepWriteOffset,
+                         InstWriteOffset, BatchAA, &F) == OW_Complete;
+    return false;
   }
 
   /// Returns true if \p Def is not read before returning from the function.
@@ -1977,8 +1991,8 @@ struct DSEState {
         continue;
       } else {
         int64_t InstWriteOffset, DepWriteOffset;
-        auto OR = isOverwrite(DefLoc, *CurrentLoc, DL, TLI, DepWriteOffset,
-                              InstWriteOffset, BatchAA, &F);
+        auto OR = isOverwrite(KillingI, CurrentI, DefLoc, *CurrentLoc, DL, TLI,
+                              DepWriteOffset, InstWriteOffset, BatchAA, &F);
         // If Current does not write to the same object as KillingDef, check
         // the next candidate.
         if (OR == OW_Unknown) {
@@ -2122,7 +2136,7 @@ struct DSEState {
       //   3 = Def(1)   ; <---- Current  (3, 2) = NoAlias, (3,1) = MayAlias,
       //                  stores [0,1]
       if (MemoryDef *UseDef = dyn_cast<MemoryDef>(UseAccess)) {
-        if (isCompleteOverwrite(DefLoc, UseInst)) {
+        if (isCompleteOverwrite(DefLoc, KillingI, UseInst)) {
           if (!isInvisibleToCallerAfterRet(DefUO) &&
               UseAccess != EarlierAccess) {
             BasicBlock *MaybeKillingBlock = UseInst->getParent();
@@ -2479,7 +2493,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
         // Check if NI overwrites SI.
         int64_t InstWriteOffset, DepWriteOffset;
         OverwriteResult OR =
-            isOverwrite(SILoc, NILoc, State.DL, TLI, DepWriteOffset,
+            isOverwrite(SI, NI, SILoc, NILoc, State.DL, TLI, DepWriteOffset,
                         InstWriteOffset, State.BatchAA, &F);
         if (OR == OW_MaybePartial) {
           auto Iter = State.IOLs.insert(
