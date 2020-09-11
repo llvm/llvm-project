@@ -154,8 +154,8 @@ StringRef LazyReexportsMaterializationUnit::getName() const {
 }
 
 void LazyReexportsMaterializationUnit::materialize(
-    MaterializationResponsibility R) {
-  auto RequestedSymbols = R.getRequestedSymbols();
+    std::unique_ptr<MaterializationResponsibility> R) {
+  auto RequestedSymbols = R->getRequestedSymbols();
 
   SymbolAliasMap RequestedAliases;
   for (auto &RequestedSymbol : RequestedSymbols) {
@@ -166,8 +166,8 @@ void LazyReexportsMaterializationUnit::materialize(
   }
 
   if (!CallableAliases.empty())
-    R.replace(lazyReexports(LCTManager, ISManager, SourceJD,
-                            std::move(CallableAliases), AliaseeTable));
+    R->replace(lazyReexports(LCTManager, ISManager, SourceJD,
+                             std::move(CallableAliases), AliaseeTable));
 
   IndirectStubsManager::StubInitsMap StubInits;
   for (auto &Alias : RequestedAliases) {
@@ -182,7 +182,7 @@ void LazyReexportsMaterializationUnit::materialize(
     if (!CallThroughTrampoline) {
       SourceJD.getExecutionSession().reportError(
           CallThroughTrampoline.takeError());
-      R.failMaterialization();
+      R->failMaterialization();
       return;
     }
 
@@ -195,7 +195,7 @@ void LazyReexportsMaterializationUnit::materialize(
 
   if (auto Err = ISManager.createStubs(StubInits)) {
     SourceJD.getExecutionSession().reportError(std::move(Err));
-    R.failMaterialization();
+    R->failMaterialization();
     return;
   }
 
@@ -204,8 +204,8 @@ void LazyReexportsMaterializationUnit::materialize(
     Stubs[Alias.first] = ISManager.findStub(*Alias.first, false);
 
   // No registered dependencies, so these calls cannot fail.
-  cantFail(R.notifyResolved(Stubs));
-  cantFail(R.notifyEmitted());
+  cantFail(R->notifyResolved(Stubs));
+  cantFail(R->notifyEmitted());
 }
 
 void LazyReexportsMaterializationUnit::discard(const JITDylib &JD,

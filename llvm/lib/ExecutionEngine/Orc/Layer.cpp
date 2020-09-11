@@ -133,7 +133,7 @@ BasicIRLayerMaterializationUnit::BasicIRLayerMaterializationUnit(
       L(L), K(std::move(K)) {}
 
 void BasicIRLayerMaterializationUnit::materialize(
-    MaterializationResponsibility R) {
+    std::unique_ptr<MaterializationResponsibility> R) {
 
   // Throw away the SymbolToDefinition map: it's not usable after we hand
   // off the module.
@@ -144,8 +144,8 @@ void BasicIRLayerMaterializationUnit::materialize(
     TSM = cloneToNewContext(TSM);
 
 #ifndef NDEBUG
-  auto &ES = R.getTargetJITDylib().getExecutionSession();
-  auto &N = R.getTargetJITDylib().getName();
+  auto &ES = R->getTargetJITDylib().getExecutionSession();
+  auto &N = R->getTargetJITDylib().getName();
 #endif // NDEBUG
 
   LLVM_DEBUG(ES.runSessionLocked(
@@ -200,7 +200,7 @@ StringRef BasicObjectLayerMaterializationUnit::getName() const {
 }
 
 void BasicObjectLayerMaterializationUnit::materialize(
-    MaterializationResponsibility R) {
+    std::unique_ptr<MaterializationResponsibility> R) {
   L.emit(std::move(R), std::move(O));
 }
 
