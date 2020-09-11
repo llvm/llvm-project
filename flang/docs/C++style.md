@@ -6,6 +6,15 @@
   
 -->
 
+# Flang C++ Style Guide
+
+```eval_rst
+.. contents::
+   :local:
+```
+
+This document captures the style guide rules that are followed in the Flang codebase.
+
 ## In brief:
 * Use *clang-format*
 from llvm 7

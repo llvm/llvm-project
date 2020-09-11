@@ -6,6 +6,13 @@
   
 -->
 
+# Control Flow Graph
+
+```eval_rst
+.. contents::
+   :local:
+```
+
 ## Concept
 After a Fortran subprogram has been parsed, its names resolved, and all its
 semantic constraints successfully checked, the parse tree of its
