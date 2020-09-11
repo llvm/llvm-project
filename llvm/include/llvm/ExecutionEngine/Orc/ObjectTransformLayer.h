@@ -31,7 +31,7 @@ public:
   ObjectTransformLayer(ExecutionSession &ES, ObjectLayer &BaseLayer,
                        TransformFunction Transform = TransformFunction());
 
-  void emit(MaterializationResponsibility R,
+  void emit(std::unique_ptr<MaterializationResponsibility> R,
             std::unique_ptr<MemoryBuffer> O) override;
 
   void setTransform(TransformFunction Transform) {

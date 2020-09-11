@@ -5,10 +5,10 @@
 ; RUN: llvm-lto2 run -r %t1.o,_start,px -r %t2.o,foo,px -r %t3.o,bar,px -r %t2.o,bar,lx -o %t3 %t1.o %t2.o %t3.o
 ; RUN: llvm-readelf -S %t3.0 | FileCheck %s --implicit-check-not=.llvmbc
 
-; RUN: llvm-lto2 run -r %t1.o,_start,px -r %t2.o,foo,px -r %t3.o,bar,px -r %t2.o,bar,lx -lto-embed-bitcode=false -o %t3 %t1.o %t2.o %t3.o
+; RUN: llvm-lto2 run -r %t1.o,_start,px -r %t2.o,foo,px -r %t3.o,bar,px -r %t2.o,bar,lx -lto-embed-bitcode=none -o %t3 %t1.o %t2.o %t3.o
 ; RUN: llvm-readelf -S %t3.0 | FileCheck %s --implicit-check-not=.llvmbc
 
-; RUN: llvm-lto2 run -r %t1.o,_start,px -r %t2.o,foo,px -r %t3.o,bar,px -r %t2.o,bar,lx -lto-embed-bitcode -o %t3 %t1.o %t2.o %t3.o
+; RUN: llvm-lto2 run -r %t1.o,_start,px -r %t2.o,foo,px -r %t3.o,bar,px -r %t2.o,bar,lx -lto-embed-bitcode=optimized -o %t3 %t1.o %t2.o %t3.o
 ; RUN: llvm-readelf -S %t3.0 | FileCheck %s --check-prefix=CHECK-ELF
 ; RUN: llvm-objcopy --dump-section=.llvmbc=%t-embedded.bc %t3.0 /dev/null
 ; RUN: llvm-dis %t-embedded.bc -o - | FileCheck %s --check-prefix=CHECK-LL

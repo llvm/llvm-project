@@ -351,6 +351,7 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   std::string Linker = getToolChain().GetProgramPath(getShortName());
   ArgStringList CmdArgs;
+  addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
   CmdArgs.push_back("-shared");
   CmdArgs.push_back("-o");

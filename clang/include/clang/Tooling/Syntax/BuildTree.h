@@ -34,6 +34,12 @@ syntax::Leaf *createLeaf(syntax::Arena &A, tok::TokenKind K,
 /// this token
 syntax::Leaf *createLeaf(syntax::Arena &A, tok::TokenKind K);
 
+// Synthesis of Trees
+syntax::Tree *
+createTree(Arena &A,
+           std::vector<std::pair<syntax::Node *, syntax::NodeRole>> Children,
+           syntax::NodeKind K);
+
 // Synthesis of Syntax Nodes
 clang::syntax::EmptyStatement *createEmptyStatement(clang::syntax::Arena &A);
 

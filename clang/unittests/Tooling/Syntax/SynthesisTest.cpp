@@ -12,6 +12,7 @@
 
 #include "TreeTestBase.h"
 #include "clang/Tooling/Syntax/BuildTree.h"
+#include "clang/Tooling/Syntax/Nodes.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -77,6 +78,62 @@ TEST_P(SynthesisTest, Leaf_Number) {
 
   EXPECT_TRUE(treeDumpEqual(Leaf, R"txt(
 '1' Detached synthesized
+  )txt"));
+}
+
+TEST_P(SynthesisTest, Tree_Empty) {
+  buildTree("", GetParam());
+
+  auto *Tree = createTree(*Arena, {}, NodeKind::UnknownExpression);
+
+  EXPECT_TRUE(treeDumpEqual(Tree, R"txt(
+UnknownExpression Detached synthesized
+  )txt"));
+}
+
+TEST_P(SynthesisTest, Tree_Flat) {
+  buildTree("", GetParam());
+
+  auto *LeafLParen = createLeaf(*Arena, tok::l_paren);
+  auto *LeafRParen = createLeaf(*Arena, tok::r_paren);
+  auto *TreeParen = createTree(*Arena,
+                               {{LeafLParen, NodeRole::LeftHandSide},
+                                {LeafRParen, NodeRole::RightHandSide}},
+                               NodeKind::ParenExpression);
+
+  EXPECT_TRUE(treeDumpEqual(TreeParen, R"txt(
+ParenExpression Detached synthesized
+|-'(' LeftHandSide synthesized
+`-')' RightHandSide synthesized
+  )txt"));
+}
+
+TEST_P(SynthesisTest, Tree_OfTree) {
+  buildTree("", GetParam());
+
+  auto *Leaf1 = createLeaf(*Arena, tok::numeric_constant, "1");
+  auto *Int1 = createTree(*Arena, {{Leaf1, NodeRole::LiteralToken}},
+                          NodeKind::IntegerLiteralExpression);
+
+  auto *LeafPlus = createLeaf(*Arena, tok::plus);
+
+  auto *Leaf2 = createLeaf(*Arena, tok::numeric_constant, "2");
+  auto *Int2 = createTree(*Arena, {{Leaf2, NodeRole::LiteralToken}},
+                          NodeKind::IntegerLiteralExpression);
+
+  auto *TreeBinaryOperator = createTree(*Arena,
+                                        {{Int1, NodeRole::LeftHandSide},
+                                         {LeafPlus, NodeRole::OperatorToken},
+                                         {Int2, NodeRole::RightHandSide}},
+                                        NodeKind::BinaryOperatorExpression);
+
+  EXPECT_TRUE(treeDumpEqual(TreeBinaryOperator, R"txt(
+BinaryOperatorExpression Detached synthesized
+|-IntegerLiteralExpression LeftHandSide synthesized
+| `-'1' LiteralToken synthesized
+|-'+' OperatorToken synthesized
+`-IntegerLiteralExpression RightHandSide synthesized
+  `-'2' LiteralToken synthesized
   )txt"));
 }
 

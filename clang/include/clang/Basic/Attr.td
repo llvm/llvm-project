@@ -2130,6 +2130,17 @@ def Regparm : TypeAttr {
   let ASTNode = 0;
 }
 
+def SwiftError : InheritableAttr {
+  let Spellings = [GNU<"swift_error">];
+  let Args = [
+      EnumArgument<"Convention", "ConventionKind",
+                   ["none", "nonnull_error", "null_result", "zero_result", "nonzero_result"],
+                   ["None", "NonNullError", "NullResult", "ZeroResult", "NonZeroResult"]>
+  ];
+  let Subjects = SubjectList<[Function, ObjCMethod], ErrorDiag>;
+  let Documentation = [SwiftErrorDocs];
+}
+
 def NoDeref : TypeAttr {
   let Spellings = [Clang<"noderef">];
   let Documentation = [NoDerefDocs];

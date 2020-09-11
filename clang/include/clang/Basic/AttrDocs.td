@@ -3469,6 +3469,53 @@ For example:
   }];
 }
 
+def SwiftDocs : DocumentationCategory<"Customizing Swift Import"> {
+  let Content = [{
+Clang supports additional attributes for customizing how APIs are imported into
+Swift.
+  }];
+}
+
+def SwiftErrorDocs : Documentation {
+  let Category = SwiftDocs;
+  let Heading = "swift_error";
+  let Content = [{
+The ``swift_error`` attribute controls whether a particular function (or
+Objective-C method) is imported into Swift as a throwing function, and if so,
+which dynamic convention it uses.
+
+All of these conventions except ``none`` require the function to have an error
+parameter. Currently, the error parameter is always the last parameter of type
+``NSError**`` or ``CFErrorRef*``.  Swift will remove the error parameter from
+the imported API. When calling the API, Swift will always pass a valid address
+initialized to a null pointer.
+
+* ``swift_error(none)`` means that the function should not be imported as
+throwing. The error parameter and result type will be imported normally.
+
+* ``swift_error(null_result)`` means that calls to the function should be
+considered to have thrown if they return a null value. The return type must be
+a pointer type, and it will be imported into Swift with a non-optional type.
+This is the default error convention for Objective-C methods that return
+pointers.
+
+* ``swift_error(zero_result)`` means that calls to the function should be
+considered to have thrown if they return a zero result. The return type must be
+an integral type. If the return type would have been imported as ``Bool``, it
+is instead imported as ``Void``. This is the default error convention for
+Objective-C methods that return a type that would be imported as ``Bool``.
+
+* ``swift_error(nonzero_result)`` means that calls to the function should be
+considered to have thrown if they return a non-zero result. The return type must
+be an integral type. If the return type would have been imported as ``Bool``,
+it is instead imported as ``Void``.
+
+* ``swift_error(nonnull_error)`` means that calls to the function should be
+considered to have thrown if they leave a non-null error in the error parameter.
+The return type is left unmodified.
+  }];
+}
+
 def OMPDeclareSimdDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "#pragma omp declare simd";
