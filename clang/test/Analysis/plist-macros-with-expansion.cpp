@@ -452,6 +452,9 @@ void recursiveMacroUser() {
                // expected-warning@-1{{expression result unused}}
 }
 
+// CHECK: <key>name</key><string>value</string>
+// CHECK-NEXT: <key>expansion</key><string>garbage_</string>
+
 #define FOO(x) int foo() { return x; }
 #define APPLY_ZERO1(function) function(0)
 
