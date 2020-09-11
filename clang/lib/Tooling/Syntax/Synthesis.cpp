@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Tooling/Syntax/BuildTree.h"
+#include "clang/Tooling/Syntax/Tree.h"
 
 using namespace clang;
 
@@ -20,11 +21,18 @@ public:
                                    syntax::NodeRole R) {
     T->prependChildLowLevel(Child, R);
   }
+
+  static std::pair<FileID, ArrayRef<Token>>
+  lexBuffer(syntax::Arena &A, std::unique_ptr<llvm::MemoryBuffer> Buffer) {
+    return A.lexBuffer(std::move(Buffer));
+  }
 };
 
 syntax::Leaf *clang::syntax::createLeaf(syntax::Arena &A, tok::TokenKind K,
                                         StringRef Spelling) {
-  auto Tokens = A.lexBuffer(llvm::MemoryBuffer::getMemBuffer(Spelling)).second;
+  auto Tokens =
+      FactoryImpl::lexBuffer(A, llvm::MemoryBuffer::getMemBuffer(Spelling))
+          .second;
   assert(Tokens.size() == 1);
   assert(Tokens.front().kind() == K &&
          "spelling is not lexed into the expected kind of token");
