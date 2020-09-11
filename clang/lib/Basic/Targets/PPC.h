@@ -82,6 +82,7 @@ public:
     SimdDefaultAlign = 128;
     LongDoubleWidth = LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::PPCDoubleDouble();
+    HasStrictFP = true;
   }
 
   // Set the language option for altivec based on our value.
