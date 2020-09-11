@@ -896,7 +896,7 @@ void PPC64R2SaveStub::writeTo(uint8_t *buf) {
   int64_t offset = destination.getVA() - (getThunkTargetSym()->getVA() + 4);
   // The branch offset needs to fit in 26 bits.
   if (!isInt<26>(offset))
-    fatal("R2 save stub branch offset is too large: " + Twine(offset));
+    reportRangeError(buf, offset, 26, destination, "R2 save stub offset");
   write32(buf + 0, 0xf8410018);                         // std  r2,24(r1)
   write32(buf + 4, 0x48000000 | (offset & 0x03fffffc)); // b    <offset>
 }
@@ -910,7 +910,7 @@ void PPC64R2SaveStub::addSymbols(ThunkSection &isec) {
 void PPC64R12SetupStub::writeTo(uint8_t *buf) {
   int64_t offset = destination.getVA() - getThunkTargetSym()->getVA();
   if (!isInt<34>(offset))
-    fatal("offset must fit in 34 bits to encode in the instruction");
+    reportRangeError(buf, offset, 34, destination, "R12 setup stub offset");
   uint64_t paddi = PADDI_R12_NO_DISP | (((offset >> 16) & 0x3ffff) << 32) |
                    (offset & 0xffff);
 
@@ -927,7 +927,8 @@ void PPC64R12SetupStub::addSymbols(ThunkSection &isec) {
 void PPC64PCRelPLTStub::writeTo(uint8_t *buf) {
   int64_t offset = destination.getGotPltVA() - getThunkTargetSym()->getVA();
   if (!isInt<34>(offset))
-    fatal("offset must fit in 34 bits to encode in the instruction");
+    reportRangeError(buf, offset, 34, destination,
+                     "PC-relative PLT stub offset");
   uint64_t pld =
       PLD_R12_NO_DISP | (((offset >> 16) & 0x3ffff) << 32) | (offset & 0xffff);
 
