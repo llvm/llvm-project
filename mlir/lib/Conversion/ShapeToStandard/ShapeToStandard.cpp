@@ -182,8 +182,9 @@ LogicalResult ConstShapeOpConverter::matchAndRewrite(
     extentOperands.push_back(
         rewriter.create<ConstantIndexOp>(loc, extent.getLimitedValue()));
   }
-  Value tensor = rewriter.create<TensorFromElementsOp>(loc, extentOperands);
   Type indexTy = rewriter.getIndexType();
+  Value tensor =
+      rewriter.create<TensorFromElementsOp>(loc, indexTy, extentOperands);
   Type resultTy = RankedTensorType::get({ShapedType::kDynamicSize}, indexTy);
   rewriter.replaceOpWithNewOp<TensorCastOp>(op, tensor, resultTy);
   return success();
@@ -444,8 +445,8 @@ LogicalResult ShapeOfOpConversion::matchAndRewrite(
     }
 
     // Materialize extent tensor.
-    Value staticExtentTensor =
-        rewriter.create<TensorFromElementsOp>(loc, extentValues);
+    Value staticExtentTensor = rewriter.create<TensorFromElementsOp>(
+        loc, rewriter.getIndexType(), extentValues);
     rewriter.replaceOpWithNewOp<TensorCastOp>(op, staticExtentTensor,
                                               op.getType());
     return success();
