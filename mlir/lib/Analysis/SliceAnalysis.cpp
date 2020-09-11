@@ -12,6 +12,7 @@
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Operation.h"
@@ -84,7 +85,8 @@ static void getBackwardSliceImpl(Operation *op,
   if (!op)
     return;
 
-  assert((op->getNumRegions() == 0 || isa<AffineForOp, scf::ForOp>(op)) &&
+  assert((op->getNumRegions() == 0 ||
+          isa<AffineForOp, scf::ForOp, linalg::LinalgOp>(op)) &&
          "unexpected generic op with regions");
 
   // Evaluate whether we should keep this def.
