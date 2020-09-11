@@ -1,0 +1,10 @@
+// Test that input can't be redirected from unreadable A.swift
+
+// RUN: mkdir -p %t
+// RUN: cp %S/Inputs/A.swift %t/A.swift
+// RUN: chmod -r %t/A.swift
+// RUN: cd %t
+// RUN: %lldb --repl < %s 2>&1 | FileCheck %s --check-prefix=LLDB
+
+< A.swift
+// LLDB: could not read file at path 'A.swift'
