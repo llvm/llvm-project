@@ -186,13 +186,13 @@ class SizeClassAllocator64 {
 
   void *GetBlockBegin(const void *p) {
     uptr class_id = GetSizeClass(p);
+    if (class_id >= kNumClasses) return nullptr;
     uptr size = ClassIdToSize(class_id);
     if (!size) return nullptr;
     uptr chunk_idx = GetChunkIdx((uptr)p, size);
     uptr reg_beg = GetRegionBegin(p);
     uptr beg = chunk_idx * size;
     uptr next_beg = beg + size;
-    if (class_id >= kNumClasses) return nullptr;
     const RegionInfo *region = AddressSpaceView::Load(GetRegionInfo(class_id));
     if (region->mapped_user >= next_beg)
       return reinterpret_cast<void*>(reg_beg + beg);

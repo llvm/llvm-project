@@ -17,21 +17,6 @@ body:             |
 ...
 
 ---
-name:            fold_simm_16_sub_to_sub
-body:             |
-  bb.0:
-
-    ; GCN-LABEL: name: fold_simm_16_sub_to_sub
-    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2048
-    ; GCN: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2048
-    ; GCN: SI_RETURN_TO_EPILOG [[S_MOV_B32_1]]
-    %0:sreg_32 = S_MOV_B32 2048
-    %1.lo16:sreg_32 = COPY killed %0.lo16
-    SI_RETURN_TO_EPILOG %1
-
-...
-
----
 name:            fold_simm_16_sub_to_phys
 body:             |
   bb.0:
@@ -43,36 +28,6 @@ body:             |
     %0:sreg_32 = S_MOV_B32 2048
     $sgpr0_lo16 = COPY killed %0.lo16
     SI_RETURN_TO_EPILOG $sgpr0_lo16
-
-...
-
----
-name:            fold_aimm_16_sub_to_sub_2048
-body:             |
-  bb.0:
-
-    ; GCN-LABEL: name: fold_aimm_16_sub_to_sub_2048
-    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2048
-    ; GCN: %1.lo16:agpr_32 = COPY killed [[S_MOV_B32_]].lo16
-    ; GCN: SI_RETURN_TO_EPILOG %1
-    %0:sreg_32 = S_MOV_B32 2048
-    %1.lo16:agpr_32 = COPY killed %0.lo16
-    SI_RETURN_TO_EPILOG %1
-
-...
-
----
-name:            fold_aimm_16_sub_to_sub_0
-body:             |
-  bb.0:
-
-    ; GCN-LABEL: name: fold_aimm_16_sub_to_sub_0
-    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GCN: [[V_ACCVGPR_WRITE_B32_:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32 0, implicit $exec
-    ; GCN: SI_RETURN_TO_EPILOG [[V_ACCVGPR_WRITE_B32_]]
-    %0:sreg_32 = S_MOV_B32 0
-    %1.lo16:agpr_32 = COPY killed %0.lo16
-    SI_RETURN_TO_EPILOG %1
 
 ...
 
@@ -107,21 +62,6 @@ body:             |
 ...
 
 ---
-name:            fold_vimm_16_sub_to_sub
-body:             |
-  bb.0:
-
-    ; GCN-LABEL: name: fold_vimm_16_sub_to_sub
-    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2048
-    ; GCN: %1.lo16:vgpr_32 = COPY killed [[S_MOV_B32_]].lo16
-    ; GCN: SI_RETURN_TO_EPILOG %1
-    %0:sreg_32 = S_MOV_B32 2048
-    %1.lo16:vgpr_32 = COPY killed %0.lo16
-    SI_RETURN_TO_EPILOG %1
-
-...
-
----
 name:            fold_vimm_16_sub_to_phys
 body:             |
   bb.0:
@@ -133,125 +73,5 @@ body:             |
     %0:sreg_32 = S_MOV_B32 2048
     $vgpr0_lo16 = COPY killed %0.lo16
     SI_RETURN_TO_EPILOG $vgpr0_lo16
-
-...
-
----
-name:            fold_vimm_16_lo_to_hi
-body:             |
-  bb.0:
-
-    ; GCN-LABEL: name: fold_vimm_16_lo_to_hi
-    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2048
-    ; GCN: %1.hi16:vgpr_32 = COPY killed [[S_MOV_B32_]].lo16
-    ; GCN: SI_RETURN_TO_EPILOG %1
-    %0:sreg_32 = S_MOV_B32 2048
-    %1.hi16:vgpr_32 = COPY killed %0.lo16
-    SI_RETURN_TO_EPILOG %1
-
-...
-
----
-name:            fold_vimm_16_hi_to_lo
-body:             |
-  bb.0:
-
-    ; GCN-LABEL: name: fold_vimm_16_hi_to_lo
-    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2048
-    ; GCN: %1.lo16:vgpr_32 = COPY killed [[S_MOV_B32_]].hi16
-    ; GCN: SI_RETURN_TO_EPILOG %1
-    %0:sreg_32 = S_MOV_B32 2048
-    %1.lo16:vgpr_32 = COPY killed %0.hi16
-    SI_RETURN_TO_EPILOG %1
-
-...
-
----
-name:            fold_simm_16_sub_to_sub_lo_to_hi
-body:             |
-  bb.0:
-
-    ; GCN-LABEL: name: fold_simm_16_sub_to_sub_lo_to_hi
-    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2048
-    ; GCN: %1.hi16:sreg_32 = COPY killed [[S_MOV_B32_]].lo16
-    ; GCN: SI_RETURN_TO_EPILOG %1
-    %0:sreg_32 = S_MOV_B32 2048
-    %1.hi16:sreg_32 = COPY killed %0.lo16
-    SI_RETURN_TO_EPILOG %1
-
-...
-
----
-name:            fold_simm_16_sub_to_sub_hi_to_lo_2048
-body:             |
-  bb.0:
-
-    ; GCN-LABEL: name: fold_simm_16_sub_to_sub_hi_to_lo_2048
-    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2048
-    ; GCN: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GCN: SI_RETURN_TO_EPILOG [[S_MOV_B32_1]]
-    %0:sreg_32 = S_MOV_B32 2048
-    %1.lo16:sreg_32 = COPY killed %0.hi16
-    SI_RETURN_TO_EPILOG %1
-
-...
-
----
-name:            fold_simm_16_sub_to_sub_hi_to_lo_shifted_2048
-body:             |
-  bb.0:
-
-    ; GCN-LABEL: name: fold_simm_16_sub_to_sub_hi_to_lo_shifted_2048
-    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 134217728
-    ; GCN: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2048
-    ; GCN: SI_RETURN_TO_EPILOG [[S_MOV_B32_1]]
-    %0:sreg_32 = S_MOV_B32 134217728
-    %1.lo16:sreg_32 = COPY killed %0.hi16
-    SI_RETURN_TO_EPILOG %1
-
-...
-
----
-name:            fold_aimm_16_sub_to_sub_hi_to_lo_2048
-body:             |
-  bb.0:
-
-    ; GCN-LABEL: name: fold_aimm_16_sub_to_sub_hi_to_lo_2048
-    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2048
-    ; GCN: [[V_ACCVGPR_WRITE_B32_:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32 0, implicit $exec
-    ; GCN: SI_RETURN_TO_EPILOG [[V_ACCVGPR_WRITE_B32_]]
-    %0:sreg_32 = S_MOV_B32 2048
-    %1.lo16:agpr_32 = COPY killed %0.hi16
-    SI_RETURN_TO_EPILOG %1
-
-...
-
----
-name:            fold_aimm_16_sub_to_sub_hi_to_lo_shifted_1
-body:             |
-  bb.0:
-
-    ; GCN-LABEL: name: fold_aimm_16_sub_to_sub_hi_to_lo_shifted_1
-    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65536
-    ; GCN: [[V_ACCVGPR_WRITE_B32_:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32 1, implicit $exec
-    ; GCN: SI_RETURN_TO_EPILOG [[V_ACCVGPR_WRITE_B32_]]
-    %0:sreg_32 = S_MOV_B32 65536
-    %1.lo16:agpr_32 = COPY killed %0.hi16
-    SI_RETURN_TO_EPILOG %1
-
-...
-
----
-name:            fold_aimm_16_sub_to_sub_hi_to_lo_shifted_2048
-body:             |
-  bb.0:
-
-    ; GCN-LABEL: name: fold_aimm_16_sub_to_sub_hi_to_lo_shifted_2048
-    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 134217728
-    ; GCN: %1.lo16:agpr_32 = COPY killed [[S_MOV_B32_]].hi16
-    ; GCN: SI_RETURN_TO_EPILOG %1
-    %0:sreg_32 = S_MOV_B32 134217728
-    %1.lo16:agpr_32 = COPY killed %0.hi16
-    SI_RETURN_TO_EPILOG %1
 
 ...

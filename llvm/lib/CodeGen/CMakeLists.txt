@@ -14,6 +14,7 @@ add_llvm_component_library(LLVMCodeGen
   CFGuardLongjmp.cpp
   CFIInstrInserter.cpp
   CodeGen.cpp
+  CodeGenPassBuilder.cpp
   CodeGenPrepare.cpp
   CommandFlags.cpp
   CriticalAntiDepBreaker.cpp

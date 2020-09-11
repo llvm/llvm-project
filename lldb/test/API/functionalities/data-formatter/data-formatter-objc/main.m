@@ -476,6 +476,8 @@ int main(int argc, const char *argv[]) {
   [newMutableDictionary setObject:@"foo" forKey:@"bar19"];
   [newMutableDictionary setObject:@"foo" forKey:@"bar20"];
 
+  CFMutableDictionaryRef newMutableDictionaryRef = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, newMutableDictionary);
+
   id cfKeys[4] = {@"foo", @"bar", @"baz", @"quux"};
   id cfValues[4] = {@"foo", @"bar", @"baz", @"quux"};
   NSDictionary *nsDictionary = CFBridgingRelease(
