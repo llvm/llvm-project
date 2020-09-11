@@ -5578,43 +5578,6 @@ static void handleSwiftBridge(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) SwiftBridgeAttr(S.Context, AL, BT));
 }
 
-static void handleSwiftNewtypeAttr(Sema &S, Decl *D, const ParsedAttr &Attr) {
-  // Make sure that there is an identifier as the annotation's single
-  // argument.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-      << Attr.getAttrName() << 1;
-    Attr.setInvalid();
-    return;
-  }
-  if (!Attr.isArgIdent(0)) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
-      << Attr.getAttrName() << AANT_ArgumentIdentifier;
-    Attr.setInvalid();
-    return;
-  }
-
-  IdentifierInfo *II = Attr.getArgAsIdent(0)->Ident;
-  SwiftNewtypeAttr::NewtypeKind Kind;
-  if (II->isStr("struct"))
-    Kind = SwiftNewtypeAttr::NK_Struct;
-  else if (II->isStr("enum"))
-    Kind = SwiftNewtypeAttr::NK_Enum;
-  else {
-    S.Diag(Attr.getLoc(), diag::warn_attribute_type_not_supported)
-      << Attr.getAttrName() << II;
-    Attr.setInvalid();
-    return;
-  }
-
-  if (!isa<TypedefNameDecl>(D)) {
-    S.Diag(Attr.getLoc(), diag::warn_swift_newtype_attribute_non_typedef);
-    return;
-  }
-
-  D->addAttr(::new (S.Context) SwiftNewtypeAttr(S.Context, Attr, Kind));
-}
-
 static bool isErrorParameter(Sema &S, QualType QT) {
   const auto *PT = QT->getAs<PointerType>();
   if (!PT)
@@ -5996,6 +5959,33 @@ static void handleSwiftName(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
 
   D->addAttr(::new (S.Context) SwiftNameAttr(S.Context, AL, Name));
+}
+
+static void handleSwiftNewType(Sema &S, Decl *D, const ParsedAttr &AL) {
+  // Make sure that there is an identifier as the annotation's single argument.
+  if (!checkAttributeNumArgs(S, AL, 1))
+    return;
+
+  if (!AL.isArgIdent(0)) {
+    S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
+        << AL << AANT_ArgumentIdentifier;
+    return;
+  }
+
+  SwiftNewTypeAttr::NewtypeKind Kind;
+  IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
+  if (!SwiftNewTypeAttr::ConvertStrToNewtypeKind(II->getName(), Kind)) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL << II;
+    return;
+  }
+
+  if (!isa<TypedefNameDecl>(D)) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type_str)
+        << AL << "typedefs";
+    return;
+  }
+
+  D->addAttr(::new (S.Context) SwiftNewTypeAttr(S.Context, AL, Kind));
 }
 
 //===----------------------------------------------------------------------===//
@@ -7923,14 +7913,14 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_SwiftBridgedTypedef:
     handleSimpleAttribute<SwiftBridgedTypedefAttr>(S, D, AL);
     break;
-  case ParsedAttr::AT_SwiftNewtype:
-    handleSwiftNewtypeAttr(S, D, AL);
-    break;
   case ParsedAttr::AT_SwiftError:
     handleSwiftError(S, D, AL);
     break;
   case ParsedAttr::AT_SwiftName:
     handleSwiftName(S, D, AL);
+    break;
+  case ParsedAttr::AT_SwiftNewType:
+    handleSwiftNewType(S, D, AL);
     break;
   case ParsedAttr::AT_SwiftObjCMembers:
     handleSimpleAttribute<SwiftObjCMembersAttr>(S, D, AL);

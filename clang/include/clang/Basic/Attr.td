@@ -2144,15 +2144,6 @@ def Regparm : TypeAttr {
   let ASTNode = 0;
 }
 
-def SwiftNewtype : InheritableAttr {
-  let Spellings = [GNU<"swift_newtype">, GNU<"swift_wrapper">];
-  let Subjects = SubjectList<[TypedefName], ErrorDiag, "ExpectedType">;
-  let Args = [EnumArgument<"NewtypeKind", "NewtypeKind",
-               ["struct", "enum"],
-               ["NK_Struct", "NK_Enum"]>];
-  let Documentation = [SwiftNewtypeDocs];
-}
-
 def SwiftPrivate : InheritableAttr {
   let Spellings = [GCC<"swift_private">];
   let Documentation = [Undocumented];
@@ -2234,6 +2225,15 @@ def SwiftName : InheritableAttr {
   let Spellings = [GNU<"swift_name">];
   let Args = [StringArgument<"Name">];
   let Documentation = [SwiftNameDocs];
+}
+
+def SwiftNewType : InheritableAttr {
+  let Spellings = [GNU<"swift_newtype">, GNU<"swift_wrapper">];
+  let Args = [EnumArgument<"NewtypeKind", "NewtypeKind",
+                           ["struct", "enum"], ["NK_Struct", "NK_Enum"]>];
+  let Subjects = SubjectList<[TypedefName], ErrorDiag>;
+  let Documentation = [SwiftNewTypeDocs];
+  let HasCustomParsing = 1;
 }
 
 def NoDeref : TypeAttr {
