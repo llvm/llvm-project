@@ -1761,7 +1761,6 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) const {
     // Only do this for -O0 for a good code size improvement, because when
     // optimizations are enabled we want to leave this choice to
     // MachineBlockPlacement.
-    Function &F = MF.getFunction();
     bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOpt::None;
     if (EnableOpt || !MBB.isLayoutSuccessor(I.getOperand(0).getMBB()))
       return false;
