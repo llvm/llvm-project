@@ -31,7 +31,6 @@ private:
   bool Scalable; // If true, NumElements is a multiple of 'Min' determined
                  // at runtime rather than compile time.
 
-public:
   /// Prevent code from using initializer-list contructors like
   /// ElementCount EC = {<unsigned>, <bool>}. The static `get*`
   /// methods below are preferred, as users should always make a
