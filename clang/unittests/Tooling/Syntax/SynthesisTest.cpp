@@ -26,7 +26,7 @@ TEST_P(SyntaxTreeTest, Leaf_Punctuation) {
 
   auto *C = syntax::createPunctuation(*Arena, tok::comma);
   ASSERT_NE(C, nullptr);
-  EXPECT_EQ(C->token()->kind(), tok::comma);
+  EXPECT_EQ(C->getToken()->kind(), tok::comma);
   EXPECT_TRUE(C->canModify());
   EXPECT_FALSE(C->isOriginal());
   EXPECT_TRUE(C->isDetached());

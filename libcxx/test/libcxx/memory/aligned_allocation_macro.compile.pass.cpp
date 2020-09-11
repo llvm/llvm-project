@@ -15,11 +15,11 @@
 // GCC 5 doesn't support aligned allocation
 // UNSUPPORTED: gcc-5
 
-// XFAIL: availability=macosx10.13
-// XFAIL: availability=macosx10.12
-// XFAIL: availability=macosx10.11
-// XFAIL: availability=macosx10.10
-// XFAIL: availability=macosx10.9
+// XFAIL: with_system_cxx_lib=macosx10.13
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
 
 #include <new>
 
@@ -29,7 +29,3 @@
 #ifdef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
 #   error "libc++ should have aligned allocation in C++17 and up when targeting a platform that supports it"
 #endif
-
-int main(int, char**) {
-  return 0;
-}

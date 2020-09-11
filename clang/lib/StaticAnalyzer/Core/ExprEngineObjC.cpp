@@ -53,10 +53,8 @@ static void populateObjCForDestinationSet(
     ProgramStateRef state = Pred->getState();
     const LocationContext *LCtx = Pred->getLocationContext();
 
-    SVal hasElementsV = svalBuilder.makeTruthVal(hasElements);
-
-    // FIXME: S is not an expression. We should not be binding values to it.
-    ProgramStateRef nextState = state->BindExpr(S, LCtx, hasElementsV);
+    ProgramStateRef nextState =
+        ExprEngine::setWhetherHasMoreIteration(state, S, LCtx, hasElements);
 
     if (auto MV = elementV.getAs<loc::MemRegionVal>())
       if (const auto *R = dyn_cast<TypedValueRegion>(MV->getRegion())) {
@@ -93,10 +91,9 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
   //  (1) binds the next container value to 'element'.  This creates a new
   //      node in the ExplodedGraph.
   //
-  //  (2) binds the value 0/1 to the ObjCForCollectionStmt* itself, indicating
-  //      whether or not the container has any more elements.  This value
-  //      will be tested in ProcessBranch.  We need to explicitly bind
-  //      this value because a container can contain nil elements.
+  //  (2) note whether the collection has any more elements (or in other words,
+  //      whether the loop has more iterations). This will be tested in
+  //      processBranch.
   //
   // FIXME: Eventually this logic should actually do dispatches to
   //   'countByEnumeratingWithState:objects:count:' (NSFastEnumeration).

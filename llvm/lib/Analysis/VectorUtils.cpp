@@ -416,8 +416,7 @@ void llvm::narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
   ScaledMask.clear();
   for (int MaskElt : Mask) {
     if (MaskElt >= 0) {
-      assert(((uint64_t)Scale * MaskElt + (Scale - 1)) <=
-                 std::numeric_limits<int32_t>::max() &&
+      assert(((uint64_t)Scale * MaskElt + (Scale - 1)) <= INT32_MAX &&
              "Overflowed 32-bits");
     }
     for (int SliceElt = 0; SliceElt != Scale; ++SliceElt)

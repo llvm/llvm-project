@@ -28,7 +28,7 @@ clang::syntax::Leaf *syntax::createPunctuation(clang::syntax::Arena &A,
                     .second;
   assert(Tokens.size() == 1);
   assert(Tokens.front().kind() == K);
-  auto *L = new (A.allocator()) clang::syntax::Leaf(Tokens.begin());
+  auto *L = new (A.getAllocator()) clang::syntax::Leaf(Tokens.begin());
   FactoryImpl::setCanModify(L);
   L->assertInvariants();
   return L;
@@ -36,7 +36,7 @@ clang::syntax::Leaf *syntax::createPunctuation(clang::syntax::Arena &A,
 
 clang::syntax::EmptyStatement *
 syntax::createEmptyStatement(clang::syntax::Arena &A) {
-  auto *S = new (A.allocator()) clang::syntax::EmptyStatement;
+  auto *S = new (A.getAllocator()) clang::syntax::EmptyStatement;
   FactoryImpl::setCanModify(S);
   FactoryImpl::prependChildLowLevel(S, createPunctuation(A, clang::tok::semi),
                                     NodeRole::Unknown);

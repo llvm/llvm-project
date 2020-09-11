@@ -14,6 +14,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
@@ -494,7 +495,8 @@ SymbolReaper::isLive(const Stmt *ExprVal, const LocationContext *ELCtx) const {
     return true;
   }
 
-  // If no statement is provided, everything is this and parent contexts is live.
+  // If no statement is provided, everything in this and parent contexts is
+  // live.
   if (!Loc)
     return true;
 

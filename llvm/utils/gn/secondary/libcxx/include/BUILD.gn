@@ -23,7 +23,7 @@ if (libcxx_needs_site_config) {
       values += [ "_LIBCPP_ABI_NAMESPACE=$libcxx_abi_namespace" ]
     }
     if (libcxx_abi_unstable) {
-      values += [ "_LIBCPP_ABI_UNSTABLE=" ]
+      values += [ "_LIBCPP_ABI_UNSTABLE=1" ]
     }
   }
 
