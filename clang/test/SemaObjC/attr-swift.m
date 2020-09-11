@@ -156,66 +156,6 @@ Point3D badGetter2(Point3D point) __attribute__((swift_name("getter:bad2(_:))"))
 
 void badSetter2(Point3D point) __attribute__((swift_name("setter:bad2(self:))"))); // expected-warning{{parameter of 'swift_name' attribute must be a Swift function name string}}
 
-// --- swift_error ---
-
-@class NSError;
-
-typedef struct __attribute__((objc_bridge(NSError))) __CFError *CFErrorRef;
-
-@interface Erroneous
-- (_Bool) tom0: (NSError**) err __attribute__((swift_error(none)));
-- (_Bool) tom1: (NSError**) err __attribute__((swift_error(nonnull_error)));
-- (_Bool) tom2: (NSError**) err __attribute__((swift_error(null_result))); // expected-error {{'swift_error' attribute with 'null_result' convention can only be applied to a method returning a pointer}}
-- (_Bool) tom3: (NSError**) err __attribute__((swift_error(nonzero_result)));
-- (_Bool) tom4: (NSError**) err __attribute__((swift_error(zero_result)));
-
-- (Undeclared) richard0: (NSError**) err __attribute__((swift_error(none))); // expected-error {{expected a type}}
-- (Undeclared) richard1: (NSError**) err __attribute__((swift_error(nonnull_error))); // expected-error {{expected a type}}
-- (Undeclared) richard2: (NSError**) err __attribute__((swift_error(null_result))); // expected-error {{expected a type}}
-// FIXME: the follow-on warnings should really be suppressed, but apparently having an ill-formed return type doesn't mark anything as invalid
-- (Undeclared) richard3: (NSError**) err __attribute__((swift_error(nonzero_result))); // expected-error {{expected a type}} expected-error {{can only be applied}}
-- (Undeclared) richard4: (NSError**) err __attribute__((swift_error(zero_result))); // expected-error {{expected a type}} expected-error {{can only be applied}}
-
-- (instancetype) harry0: (NSError**) err __attribute__((swift_error(none)));
-- (instancetype) harry1: (NSError**) err __attribute__((swift_error(nonnull_error)));
-- (instancetype) harry2: (NSError**) err __attribute__((swift_error(null_result)));
-- (instancetype) harry3: (NSError**) err __attribute__((swift_error(nonzero_result))); // expected-error {{'swift_error' attribute with 'nonzero_result' convention can only be applied to a method returning an integral type}}
-- (instancetype) harry4: (NSError**) err __attribute__((swift_error(zero_result))); // expected-error {{'swift_error' attribute with 'zero_result' convention can only be applied to a method returning an integral type}}
-
-- (instancetype) harry0 __attribute__((swift_error(none)));
-- (instancetype) harry1 __attribute__((swift_error(nonnull_error))); // expected-error {{'swift_error' attribute can only be applied to a method with an error parameter}}
-- (instancetype) harry2 __attribute__((swift_error(null_result))); // expected-error {{'swift_error' attribute can only be applied to a method with an error parameter}}
-- (instancetype) harry3 __attribute__((swift_error(nonzero_result))); // expected-error {{'swift_error' attribute can only be applied to a method with an error parameter}}
-- (instancetype) harry4 __attribute__((swift_error(zero_result))); // expected-error {{'swift_error' attribute can only be applied to a method with an error parameter}}
-@end
-
-extern _Bool tom0(CFErrorRef *) __attribute__((swift_error(none)));
-extern _Bool tom1(CFErrorRef *) __attribute__((swift_error(nonnull_error)));
-extern _Bool tom2(CFErrorRef *) __attribute__((swift_error(null_result))); // expected-error {{'swift_error' attribute with 'null_result' convention can only be applied to a function returning a pointer}}
-extern _Bool tom3(CFErrorRef *) __attribute__((swift_error(nonzero_result)));
-extern _Bool tom4(CFErrorRef *) __attribute__((swift_error(zero_result)));
-
-extern Undeclared richard0(CFErrorRef *) __attribute__((swift_error(none))); // expected-error {{unknown type name 'Undeclared'}}
-extern Undeclared richard1(CFErrorRef *) __attribute__((swift_error(nonnull_error))); // expected-error {{unknown type name 'Undeclared'}}
-extern Undeclared richard2(CFErrorRef *) __attribute__((swift_error(null_result))); // expected-error {{unknown type name 'Undeclared'}}
-extern Undeclared richard3(CFErrorRef *) __attribute__((swift_error(nonzero_result))); // expected-error {{unknown type name 'Undeclared'}}
-extern Undeclared richard4(CFErrorRef *) __attribute__((swift_error(zero_result))); // expected-error {{unknown type name 'Undeclared'}}
-
-extern void *harry0(CFErrorRef *) __attribute__((swift_error(none)));
-extern void *harry1(CFErrorRef *) __attribute__((swift_error(nonnull_error)));
-extern void *harry2(CFErrorRef *) __attribute__((swift_error(null_result)));
-extern void *harry3(CFErrorRef *) __attribute__((swift_error(nonzero_result))); // expected-error {{'swift_error' attribute with 'nonzero_result' convention can only be applied to a function returning an integral type}}
-extern void *harry4(CFErrorRef *) __attribute__((swift_error(zero_result))); // expected-error {{'swift_error' attribute with 'zero_result' convention can only be applied to a function returning an integral type}}
-
-extern void *wilma0(void) __attribute__((swift_error(none)));
-extern void *wilma1(void) __attribute__((swift_error(nonnull_error))); // expected-error {{'swift_error' attribute can only be applied to a function with an error parameter}}
-extern void *wilma2(void) __attribute__((swift_error(null_result))); // expected-error {{'swift_error' attribute can only be applied to a function with an error parameter}}
-extern void *wilma3(void) __attribute__((swift_error(nonzero_result))); // expected-error {{'swift_error' attribute can only be applied to a function with an error parameter}}
-extern void *wilma4(void) __attribute__((swift_error(zero_result))); // expected-error {{'swift_error' attribute can only be applied to a function with an error parameter}}
-
-
-extern _Bool suzanne __attribute__((swift_error(none))); // expected-error {{'swift_error' attribute only applies to functions and Objective-C methods}}
-
 // --- swift_bridged_typedef ---
 @interface NSString
 @end
