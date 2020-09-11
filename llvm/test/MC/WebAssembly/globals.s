@@ -6,7 +6,7 @@
 .globl read_global
 .globl write_global
 .globaltype foo_global, i32
-.globaltype global2, i64
+.globaltype global2, i64, immutable
 .globaltype global3, f32
 .globaltype global4, f64
 
@@ -41,6 +41,12 @@ global4:
 # BIN-NEXT:       Mutable:         true
 # BIN-NEXT:       InitExpr:
 # BIN-NEXT:         Opcode:          I32_CONST
+# BIN-NEXT:         Value:           0
+# BIN-NEXT:     - Index:           1
+# BIN-NEXT:       Type:            I64
+# BIN-NEXT:       Mutable:         false
+# BIN-NEXT:       InitExpr:
+# BIN-NEXT:         Opcode:          I64_CONST
 # BIN-NEXT:         Value:           0
 
 #      BIN:  - Type:            CUSTOM
