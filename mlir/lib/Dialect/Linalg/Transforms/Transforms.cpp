@@ -126,8 +126,6 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewrite(
 
   // New marker if specified.
   marker.replaceLinalgMarker(rewriter, res->op.getOperation());
-
-  rewriter.eraseOp(op);
   return success();
 }
 
