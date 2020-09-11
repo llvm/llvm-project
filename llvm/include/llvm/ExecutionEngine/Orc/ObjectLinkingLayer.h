@@ -119,7 +119,7 @@ public:
   }
 
   /// Emit the object.
-  void emit(MaterializationResponsibility R,
+  void emit(std::unique_ptr<MaterializationResponsibility> R,
             std::unique_ptr<MemoryBuffer> O) override;
 
   /// Instructs this ObjectLinkingLayer instance to override the symbol flags
