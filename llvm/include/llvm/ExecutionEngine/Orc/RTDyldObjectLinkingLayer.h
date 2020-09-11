@@ -58,7 +58,7 @@ public:
   ~RTDyldObjectLinkingLayer();
 
   /// Emit the object.
-  void emit(std::unique_ptr<MaterializationResponsibility> R,
+  void emit(MaterializationResponsibility R,
             std::unique_ptr<MemoryBuffer> O) override;
 
   /// Set the NotifyLoaded callback.

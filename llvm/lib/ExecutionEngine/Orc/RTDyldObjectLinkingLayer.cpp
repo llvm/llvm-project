@@ -89,10 +89,15 @@ RTDyldObjectLinkingLayer::~RTDyldObjectLinkingLayer() {
   }
 }
 
-void RTDyldObjectLinkingLayer::emit(
-    std::unique_ptr<MaterializationResponsibility> R,
-    std::unique_ptr<MemoryBuffer> O) {
+void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
+                                    std::unique_ptr<MemoryBuffer> O) {
   assert(O && "Object must not be null");
+
+  // This method launches an asynchronous link step that will fulfill our
+  // materialization responsibility. We need to switch R to be heap
+  // allocated before that happens so it can live as long as the asynchronous
+  // link needs it to (i.e. it must be able to outlive this method).
+  auto SharedR = std::make_shared<MaterializationResponsibility>(std::move(R));
 
   auto &ES = getExecutionSession();
 
@@ -100,7 +105,7 @@ void RTDyldObjectLinkingLayer::emit(
 
   if (!Obj) {
     getExecutionSession().reportError(Obj.takeError());
-    R->failMaterialization();
+    SharedR->failMaterialization();
     return;
   }
 
@@ -116,7 +121,7 @@ void RTDyldObjectLinkingLayer::emit(
           continue;
       } else {
         ES.reportError(SymType.takeError());
-        R->failMaterialization();
+        R.failMaterialization();
         return;
       }
 
@@ -124,7 +129,7 @@ void RTDyldObjectLinkingLayer::emit(
       if (!SymFlagsOrErr) {
         // TODO: Test this error.
         ES.reportError(SymFlagsOrErr.takeError());
-        R->failMaterialization();
+        R.failMaterialization();
         return;
       }
 
@@ -134,14 +139,14 @@ void RTDyldObjectLinkingLayer::emit(
           InternalSymbols->insert(*SymName);
         else {
           ES.reportError(SymName.takeError());
-          R->failMaterialization();
+          R.failMaterialization();
           return;
         }
       }
     }
   }
 
-  auto K = R->getVModuleKey();
+  auto K = R.getVModuleKey();
   RuntimeDyld::MemoryManager *MemMgr = nullptr;
 
   // Create a record a memory manager for this object.
@@ -151,10 +156,6 @@ void RTDyldObjectLinkingLayer::emit(
     MemMgrs.push_back(std::move(Tmp));
     MemMgr = MemMgrs.back().get();
   }
-
-  // Switch to shared ownership of MR so that it can be captured by both
-  // lambdas below.
-  std::shared_ptr<MaterializationResponsibility> SharedR(std::move(R));
 
   JITDylibSearchOrderResolver Resolver(*SharedR);
 
