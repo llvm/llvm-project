@@ -78,8 +78,6 @@ the following features will be made available:
   - with_system_cxx_lib=macosx
   - with_system_cxx_lib=macosx10.12
   - with_system_cxx_lib=x86_64-apple-macosx10.12
-  - availability=macosx
-  - availability=macosx10.12
 
 These features are used to XFAIL a test that fails when deployed on (or is
 compiled for) an older system. For example, if the test exhibits a bug in the
