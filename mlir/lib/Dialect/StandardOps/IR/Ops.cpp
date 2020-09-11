@@ -1757,11 +1757,17 @@ OpFoldResult ExtractElementOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 void TensorFromElementsOp::build(OpBuilder &builder, OperationState &result,
+                                 Type elementType, ValueRange elements) {
+  Type resultTy = RankedTensorType::get({static_cast<int64_t>(elements.size())},
+                                        elementType);
+  result.addOperands(elements);
+  result.addTypes(resultTy);
+}
+
+void TensorFromElementsOp::build(OpBuilder &builder, OperationState &result,
                                  ValueRange elements) {
   assert(!elements.empty() && "expected at least one element");
-  Type resultTy = RankedTensorType::get({static_cast<int64_t>(elements.size())},
-                                        elements.front().getType());
-  build(builder, result, resultTy, elements);
+  build(builder, result, elements.front().getType(), elements);
 }
 
 namespace {

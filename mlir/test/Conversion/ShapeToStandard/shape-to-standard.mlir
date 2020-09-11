@@ -103,6 +103,19 @@ func @const_shape() -> tensor<?xindex> {
 
 // -----
 
+// Lower `const_shape` in the case of rank 0.
+// CHECK-LABEL: func @const_shape_zero_elements
+// CHECK-SAME: () -> tensor<?xindex>
+func @const_shape_zero_elements() -> tensor<?xindex> {
+  // CHECK: %[[TENSOR:.*]] = tensor_from_elements : tensor<0xindex>
+  // CHECK: %[[RESULT:.*]] = tensor_cast %[[TENSOR]] : tensor<0xindex> to tensor<?xindex>
+  // CHECK: return %[[RESULT]] : tensor<?xindex>
+  %shape = shape.const_shape [] : tensor<?xindex>
+  return %shape : tensor<?xindex>
+}
+
+// -----
+
 // Lower `any` to its first operand.
 // CHECK-LABEL: @any_of_three
 // CHECK-SAME:  (%[[A:.*]]: tensor<?xindex>, %[[B:.*]]: tensor<?xindex>, %[[C:.*]]: tensor<?xindex>) -> tensor<?xindex>
@@ -222,6 +235,17 @@ func @shape_of_stat(%arg : tensor<1x2x3xf32>) {
   // CHECK-DAG: %[[C3:.*]] = constant 3 : index
   // CHECK-DAG: %[[SHAPE_UNCASTED:.*]] = tensor_from_elements %[[C1]], %[[C2]], %[[C3]] : tensor<3xindex>
   %shape = shape.shape_of %arg : tensor<1x2x3xf32> -> tensor<?xindex>
+  return
+}
+
+// -----
+
+// Lower `shape_of` for 0-D tensor.
+// CHECK-LABEL: @shape_of_zero_d
+// CHECK-SAME: (%[[ARG:.*]]: tensor<f32>)
+func @shape_of_zero_d(%arg : tensor<f32>) {
+  // CHECK-DAG: %[[SHAPE_UNCASTED:.*]] = tensor_from_elements : tensor<0xindex>
+  %shape = shape.shape_of %arg : tensor<f32> -> tensor<?xindex>
   return
 }
 

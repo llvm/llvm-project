@@ -1613,7 +1613,6 @@ def ExtractElementOp : Std_Op<"extract_element",
 
 def TensorFromElementsOp : Std_Op<"tensor_from_elements", [
     NoSideEffect,
-    SameOperandsAndResultElementType,
     TypesMatchWith<"operand types match result element type",
                    "result", "elements", "SmallVector<Type, 2>("
                    "$_self.cast<ShapedType>().getDimSize(0), "
@@ -1638,7 +1637,11 @@ def TensorFromElementsOp : Std_Op<"tensor_from_elements", [
   // This op is fully verified by its traits.
   let verifier = ?;
 
+  let skipDefaultBuilders = 1;
   let builders = [
+    OpBuilder<"OpBuilder &b, OperationState &result, Type elementType,"
+    "ValueRange elements">,
+    // Special case builder for when `elements` has size >=1.
     OpBuilder<"OpBuilder &b, OperationState &result, ValueRange elements">
   ];
 
