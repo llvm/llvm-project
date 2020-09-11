@@ -2037,8 +2037,7 @@ static Instruction *foldTruncShuffle(ShuffleVectorInst &Shuf,
     if (Mask[i] == UndefMaskElem)
       continue;
     uint64_t LSBIndex = IsBigEndian ? (i + 1) * TruncRatio - 1 : i * TruncRatio;
-    assert(LSBIndex <= std::numeric_limits<int32_t>::max() &&
-           "Overflowed 32-bits");
+    assert(LSBIndex <= INT32_MAX && "Overflowed 32-bits");
     if (Mask[i] != (int)LSBIndex)
       return nullptr;
   }
