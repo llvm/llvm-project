@@ -47,11 +47,13 @@ public:
   const TokenBuffer &getTokenBuffer() const;
   llvm::BumpPtrAllocator &getAllocator() { return Allocator; }
 
+private:
   /// Add \p Buffer to the underlying source manager, tokenize it and store the
-  /// resulting tokens. Useful when there is a need to materialize tokens that
-  /// were not written in user code.
+  /// resulting tokens. Used exclusively in `FactoryImpl` to materialize tokens
+  /// that were not written in user code.
   std::pair<FileID, ArrayRef<Token>>
   lexBuffer(std::unique_ptr<llvm::MemoryBuffer> Buffer);
+  friend class FactoryImpl;
 
 private:
   SourceManager &SourceMgr;
