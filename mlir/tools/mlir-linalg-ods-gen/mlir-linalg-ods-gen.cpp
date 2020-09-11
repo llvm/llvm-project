@@ -974,19 +974,19 @@ public:
   /// Parse and print the information for a TC def.
   /// When `gen-ods-decl` is used, this prints the ODS declaration for the TC.
   /// When `gen-impl` is used, this prints the C++ implementation for the extra
-  /// methods defined in ODS (referenceIterators, referenceIndexingMaps and
-  /// regionBuilder).
+  /// methods defined in ODS (`iterator_types`, `indexing_maps` and
+  /// `regionBuilder`).
   LogicalResult parseAndEmitODSDef(llvm::raw_ostream &os);
 
   /// Print the ODS class that defines a new `cppOpName` for a `linalgOpName`.
   void printODS(llvm::raw_ostream &os, StringRef cppOpName,
                 StringRef linalgOpName);
 
-  /// Print the C++ StructuredOpsInterface impl of `referenceIterators`.
+  /// Print the C++ StructuredOpsInterface impl of `iterator_types`.
   void printReferenceIterators(llvm::raw_ostream &os, StringRef cppOpName,
                                ComprehensionParsingState &state);
 
-  /// Print the C++ StructuredOpsInterface impl of `referenceIndexingMaps`.
+  /// Print the C++ StructuredOpsInterface impl of `indexing_maps`.
   void printReferenceIndexingMaps(llvm::raw_ostream &os, StringRef cppOpName,
                                   ComprehensionParsingState &state);
 
@@ -1446,7 +1446,6 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
   const char *header = R"FMT(  def {0} : LinalgNamedStructured_Op<"{1}", [
     NInputs<{2}>,
     NOutputs<{3}>,
-    NamedStructuredOpTraits,
     SingleBlockImplicitTerminator<"YieldOp">]> {
       let arguments = (ins Variadic<LinalgOperand>:$views);
       let results = (outs Variadic<AnyRankedTensor>:$output_tensors);
@@ -1465,16 +1464,9 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
         return ::parseNamedStructuredOp<{0}>(parser, result);
       }];
       let extraClassDeclaration = [{{
-        llvm::Optional<SmallVector<StringRef, 8>> referenceIterators();
-        static SmallVector<StringRef, 8> referenceIterators(
-          TypeRange inputTypes, TypeRange outputTypes);
-
-        llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps();
-        static SmallVector<AffineMap, 8> referenceIndexingMaps(
-          TypeRange inputTypes, TypeRange outputTypes);
-
+        ArrayAttr iterator_types();
+        ArrayAttr indexing_maps();
         static void regionBuilder(Block &block);
-
         std::string getLibraryCallName() {{
           return generateLibraryCallName(getOperation());
         }
@@ -1492,20 +1484,14 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
   os << llvm::formatv(header, cppOpName, linalgOpName, nInputs, nOutputs);
 }
 
-/// Print the C++ StructuredOpsInterface impl of `referenceIterators`.
+/// Print the C++ StructuredOpsInterface impl of `iterator_types`.
 void TCParser::printReferenceIterators(llvm::raw_ostream &os,
                                        StringRef cppOpName,
                                        ComprehensionParsingState &state) {
   const char *referenceReferenceIteratorsFmt =
       R"FMT(
-    // This is temporary until we transition out of manually specified ops
-    // that should be auto-generated with linalg-ods-gen.
-    llvm::Optional<SmallVector<StringRef, 8>> {0}::referenceIterators() {{
-      llvm_unreachable("Unexpected missing `iterator_types` attribute.");
-    }
-    SmallVector<StringRef, 8> {0}::referenceIterators(
-      TypeRange inputTypes, TypeRange outputTypes) {
-      return SmallVector<StringRef, 8>{{ {1} };
+    ArrayAttr {0}::iterator_types() {
+      return Builder(getContext()).getStrArrayAttr(SmallVector<StringRef, 8>{{ {1} });
     })FMT";
 
   std::string iteratorsStr;
@@ -1542,16 +1528,11 @@ void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os,
       R"FMT(
   // This is temporary until we transition out of manually specified ops that
   // should be auto-generated with linalg-ods-gen.
-  llvm::Optional<SmallVector<AffineMap, 8>> {0}::referenceIndexingMaps() {{
-    llvm_unreachable("Unexpected missing `indexing_maps` attribute.");
-  }
-  SmallVector<AffineMap, 8> {0}::referenceIndexingMaps(
-    TypeRange inputTypes, TypeRange outputTypes) {
-    assert(!inputTypes.empty() && "At least one input expected");
-    MLIRContext *context = (*inputTypes.begin()).getContext();
+  ArrayAttr {0}::indexing_maps() {
+    MLIRContext *context = getContext();
     AffineExpr {1};
     bindDims(context, {1});
-    return SmallVector<AffineMap, 8>{{ {2} };
+    return Builder(context).getAffineMapArrayAttr({ {2} });
   })FMT";
 
   // 2. Print a comma-separated list of identifiers for the AffineExpr in

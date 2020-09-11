@@ -113,7 +113,7 @@ func @generic_mismatched_num_returns(%arg0: memref<f32>) {
 // -----
 
 func @generic_symbol_in_map(%arg0: memref<i32>) {
-  // expected-error @+1 {{expected the number of symbols in indexing_map #0 to match target rank}}
+  // expected-error @+1 {{expected the number of symbols in indexing_map #0 to match rank of operand `symbol_source`}}
   linalg.generic {
     args_in = 0,
     args_out = 1,
@@ -512,5 +512,22 @@ func @pooling_rank_mismatch(%arg0: memref<?x?x?xf32>,
 func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?xf32>, %c3: memref<?x?x?xf32>) {
   // expected-error @+1 {{op expected indexing_map #1 results to match view rank: 'memref<?x?xf32>'}}
   linalg.batch_matmul %a3, %b3, %c3 : (memref<?x?x?xf32>, memref<?x?xf32>, memref<?x?x?xf32>) -> ()
+  return
+}
+
+// -----
+
+func @generic(%arg0: tensor<?x?xi4>) {
+  // expected-error @+1 {{unexpected #results > #outputs}}
+  linalg.generic  {
+    args_in = 1,
+    args_out = 1,
+    indexing_maps = [ affine_map<(i) -> (i)> ],
+    iterator_types = ["parallel"]
+  } %arg0 {
+    ^bb(%0: i4) :
+      %1 = std.addi %0, %0: i4
+      linalg.yield %1, %1: i4, i4
+  } : tensor<?x?xi4> -> (tensor<?x?xi4>, tensor<?x?xi4>)
   return
 }
