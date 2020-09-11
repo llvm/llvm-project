@@ -269,6 +269,9 @@ public:
   bool applyCombineExtOfExt(MachineInstr &MI,
                             std::tuple<Register, unsigned> &MatchInfo);
 
+  /// Transform fneg(fneg(x)) to x.
+  bool matchCombineFNegOfFNeg(MachineInstr &MI, Register &Reg);
+
   /// Return true if any explicit use operand on \p MI is defined by a
   /// G_IMPLICIT_DEF.
   bool matchAnyExplicitUseIsUndef(MachineInstr &MI);

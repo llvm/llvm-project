@@ -35,6 +35,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -1755,6 +1756,17 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) const {
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   switch (I.getOpcode()) {
+  case TargetOpcode::G_BR: {
+    // If the branch jumps to the fallthrough block, don't bother emitting it.
+    // Only do this for -O0 for a good code size improvement, because when
+    // optimizations are enabled we want to leave this choice to
+    // MachineBlockPlacement.
+    bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOpt::None;
+    if (EnableOpt || !MBB.isLayoutSuccessor(I.getOperand(0).getMBB()))
+      return false;
+    I.eraseFromParent();
+    return true;
+  }
   case TargetOpcode::G_SHL:
     return earlySelectSHL(I, MRI);
   case TargetOpcode::G_CONSTANT: {

@@ -36,7 +36,6 @@
 #define FORMAT(F, A) __attribute__((format(printf, F, A)))
 #define NOINLINE __attribute__((noinline))
 #define NORETURN __attribute__((noreturn))
-#define THREADLOCAL __thread
 #define LIKELY(X) __builtin_expect(!!(X), 1)
 #define UNLIKELY(X) __builtin_expect(!!(X), 0)
 #if defined(__i386__) || defined(__x86_64__)

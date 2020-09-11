@@ -10,6 +10,8 @@
 #define LLVM_LIBC_UTILS_FPUTIL_SQRT_LONG_DOUBLE_X86_H
 
 #include "FPBits.h"
+#include "Sqrt.h"
+
 #include "utils/CPP/TypeTraits.h"
 
 namespace __llvm_libc {

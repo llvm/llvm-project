@@ -18,8 +18,8 @@ define i32 @select_xor_icmp(i32 %x, i32 %y, i32 %z) {
 
 define i32 @select_xor_icmp2(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_xor_icmp2(
-; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Z:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[A_NOT:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A_NOT]], i32 [[Z:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp ne i32 %x, 0
@@ -527,9 +527,9 @@ define i32 @select_xor_fcmp_bad_4(i32 %x, i32 %y, i32 %z, float %k) {
 
 define i32 @select_xor_icmp_bad_5(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_xor_icmp_bad_5(
-; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[A_NOT:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[B:%.*]] = xor i32 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Y:%.*]], i32 [[B]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A_NOT]], i32 [[Y:%.*]], i32 [[B]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp ne i32 %x, 0
@@ -540,9 +540,9 @@ define i32 @select_xor_icmp_bad_5(i32 %x, i32 %y, i32 %z) {
 
 define i32 @select_xor_icmp_bad_6(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_xor_icmp_bad_6(
-; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[A_NOT:%.*]] = icmp eq i32 [[X:%.*]], 1
 ; CHECK-NEXT:    [[B:%.*]] = xor i32 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A_NOT]], i32 [[B]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp ne i32 %x, 1

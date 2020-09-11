@@ -416,6 +416,8 @@ Optional<DWARFYAML::Data> ELFDumper<ELFT>::dumpDWARFSections(
         Err = dumpDebugARanges(*DWARFCtx.get(), DWARF);
       else if (RawSec->Name == ".debug_str")
         Err = dumpDebugStrings(*DWARFCtx.get(), DWARF);
+      else if (RawSec->Name == ".debug_ranges")
+        Err = dumpDebugRanges(*DWARFCtx.get(), DWARF);
       else
         continue;
 

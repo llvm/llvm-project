@@ -132,7 +132,6 @@ body:             |
   ; CHECK-LABEL: name: xor_constant_n1_s32_gpr_2bb
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   B %bb.1
   ; CHECK: bb.1:
   ; CHECK:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; CHECK:   [[ORNWrr:%[0-9]+]]:gpr32 = ORNWrr $wzr, [[COPY]]
