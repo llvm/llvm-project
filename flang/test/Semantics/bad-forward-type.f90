@@ -70,3 +70,13 @@ subroutine s7(x)
   type, extends(undef) :: t
   end type
 end subroutine
+
+subroutine s8
+  !ERROR: Derived type 't2' was used but never defined
+  !ERROR: The derived type 't2' was forward-referenced but not defined
+  implicit type(t2)(x)
+  parameter(y=t2(12.3))
+  type t2
+    real :: c
+  end type
+end subroutine
