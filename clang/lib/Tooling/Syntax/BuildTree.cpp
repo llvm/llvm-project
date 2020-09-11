@@ -558,7 +558,7 @@ private:
       assert(A.getTokenBuffer().expandedTokens().back().kind() == tok::eof);
       // Create all leaf nodes.
       // Note that we do not have 'eof' in the tree.
-      for (auto &T : A.getTokenBuffer().expandedTokens().drop_back()) {
+      for (const auto &T : A.getTokenBuffer().expandedTokens().drop_back()) {
         auto *L = new (A.getAllocator()) syntax::Leaf(&T);
         L->Original = true;
         L->CanModify = A.getTokenBuffer().spelledForExpanded(T).hasValue();

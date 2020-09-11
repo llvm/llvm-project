@@ -32,7 +32,7 @@ void enumerateTokenSpans(const syntax::Tree *Root, ProcessTokensFn Callback) {
   private:
     void process(const syntax::Node *N) {
       if (auto *T = dyn_cast<syntax::Tree>(N)) {
-        for (auto *C = T->getFirstChild(); C != nullptr;
+        for (const auto *C = T->getFirstChild(); C != nullptr;
              C = C->getNextSibling())
           process(C);
         return;
@@ -64,8 +64,8 @@ void enumerateTokenSpans(const syntax::Tree *Root, ProcessTokensFn Callback) {
 
 syntax::FileRange rangeOfExpanded(const syntax::Arena &A,
                                   llvm::ArrayRef<syntax::Token> Expanded) {
-  auto &Buffer = A.getTokenBuffer();
-  auto &SM = A.getSourceManager();
+  const auto &Buffer = A.getTokenBuffer();
+  const auto &SM = A.getSourceManager();
 
   // Check that \p Expanded actually points into expanded tokens.
   assert(Buffer.expandedTokens().begin() <= Expanded.begin());
@@ -85,8 +85,8 @@ syntax::FileRange rangeOfExpanded(const syntax::Arena &A,
 tooling::Replacements
 syntax::computeReplacements(const syntax::Arena &A,
                             const syntax::TranslationUnit &TU) {
-  auto &Buffer = A.getTokenBuffer();
-  auto &SM = A.getSourceManager();
+  const auto &Buffer = A.getTokenBuffer();
+  const auto &SM = A.getSourceManager();
 
   tooling::Replacements Replacements;
   // Text inserted by the replacement we are building now.
