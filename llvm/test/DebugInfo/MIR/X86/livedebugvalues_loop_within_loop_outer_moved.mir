@@ -5,11 +5,11 @@
   ; loops that move their locations.
 
   ; CHECK-LABEL: bb.0.entry:
-  ; CHECK:       DBG_VALUE $ebx, $noreg, !16, !DIExpression(), debug-location !17
+  ; CHECK:       DBG_VALUE $ebx, $noreg, !16, !DIExpression()
   ; CHECK-LABEL: bb.4.bb4:
-  ; CHECK:       DBG_VALUE $eax, $noreg, !16, !DIExpression(), debug-location !17
+  ; CHECK:       DBG_VALUE $eax, $noreg, !16, !DIExpression()
   ; CHECK-LABEL: bb.5.bb5:
-  ; CHECK:       DBG_VALUE $eax, $noreg, !16, !DIExpression(), debug-location !17
+  ; CHECK:       DBG_VALUE $eax, $noreg, !16, !DIExpression()
 
   define i32 @_Z8bb_to_bb() local_unnamed_addr !dbg !12 {
   entry:
