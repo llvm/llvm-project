@@ -35,7 +35,6 @@ static_library("Analysis") {
     "CmpInstAnalysis.cpp",
     "CodeMetrics.cpp",
     "ConstantFolding.cpp",
-    "ConstraintSystem.cpp",
     "CostModel.cpp",
     "DDG.cpp",
     "Delinearization.cpp",
