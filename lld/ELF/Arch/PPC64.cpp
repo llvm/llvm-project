@@ -62,6 +62,8 @@ enum DFormOpcd {
   ADDI = 14
 };
 
+constexpr uint32_t NOP = 0x60000000;
+
 enum class PPCLegacyInsn : uint32_t {
   NOINSN = 0,
   // Loads.
@@ -691,7 +693,7 @@ void PPC64::relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     writePrefixedInstruction(loc, pcRelInsn |
                                       ((totalDisp & 0x3ffff0000) << 16) |
                                       (totalDisp & 0xffff));
-    write32(loc + rel.addend, 0x60000000); // nop accessInsn.
+    write32(loc + rel.addend, NOP); // nop accessInsn.
     break;
   }
   default:
@@ -718,7 +720,7 @@ void PPC64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
 
   switch (rel.type) {
   case R_PPC64_GOT_TLSGD16_HA:
-    writeFromHalf16(loc, 0x60000000); // nop
+    writeFromHalf16(loc, NOP);
     break;
   case R_PPC64_GOT_TLSGD16:
   case R_PPC64_GOT_TLSGD16_LO:
@@ -726,7 +728,7 @@ void PPC64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
     relocateNoSym(loc, R_PPC64_TPREL16_HA, val);
     break;
   case R_PPC64_TLSGD:
-    write32(loc, 0x60000000);     // nop
+    write32(loc, NOP);
     write32(loc + 4, 0x38630000); // addi r3, r3
     // Since we are relocating a half16 type relocation and Loc + 4 points to
     // the start of an instruction we need to advance the buffer by an extra
@@ -758,13 +760,13 @@ void PPC64::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
 
   switch (rel.type) {
   case R_PPC64_GOT_TLSLD16_HA:
-    writeFromHalf16(loc, 0x60000000); // nop
+    writeFromHalf16(loc, NOP);
     break;
   case R_PPC64_GOT_TLSLD16_LO:
     writeFromHalf16(loc, 0x3c6d0000); // addis r3, r13, 0
     break;
   case R_PPC64_TLSLD:
-    write32(loc, 0x60000000);     // nop
+    write32(loc, NOP);
     write32(loc + 4, 0x38631000); // addi r3, r3, 4096
     break;
   case R_PPC64_DTPREL16:
@@ -829,7 +831,7 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   unsigned offset = (config->ekind == ELF64BEKind) ? 2 : 0;
   switch (rel.type) {
   case R_PPC64_GOT_TPREL16_HA:
-    write32(loc - offset, 0x60000000); // nop
+    write32(loc - offset, NOP);
     break;
   case R_PPC64_GOT_TPREL16_LO_DS:
   case R_PPC64_GOT_TPREL16_DS: {
@@ -1128,7 +1130,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC64_REL16_HA:
   case R_PPC64_TPREL16_HA:
     if (config->tocOptimize && shouldTocOptimize && ha(val) == 0)
-      writeFromHalf16(loc, 0x60000000);
+      writeFromHalf16(loc, NOP);
     else
       write16(loc, ha(val));
     break;
@@ -1353,7 +1355,7 @@ void PPC64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
     return;
   }
   case R_PPC64_TLSGD:
-    write32(loc, 0x60000000);     // bl __tls_get_addr(sym@tlsgd) --> nop
+    write32(loc, NOP);            // bl __tls_get_addr(sym@tlsgd) --> nop
     write32(loc + 4, 0x7c636A14); // nop --> add r3, r3, r13
     return;
   default:
@@ -1424,7 +1426,7 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
   uint32_t secondInstr = read32(loc + 8);
   if (!loImm && getPrimaryOpCode(secondInstr) == 14) {
     loImm = secondInstr & 0xFFFF;
-  } else if (secondInstr != 0x60000000) {
+  } else if (secondInstr != NOP) {
     return false;
   }
 
@@ -1438,7 +1440,7 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
   };
   if (!checkRegOperands(firstInstr, 12, 1))
     return false;
-  if (secondInstr != 0x60000000 && !checkRegOperands(secondInstr, 12, 12))
+  if (secondInstr != NOP && !checkRegOperands(secondInstr, 12, 12))
     return false;
 
   int32_t stackFrameSize = (hiImm * 65536) + loImm;
@@ -1457,12 +1459,12 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
   if (hiImm) {
     write32(loc + 4, 0x3D810000 | (uint16_t)hiImm);
     // If the low immediate is zero the second instruction will be a nop.
-    secondInstr = loImm ? 0x398C0000 | (uint16_t)loImm : 0x60000000;
+    secondInstr = loImm ? 0x398C0000 | (uint16_t)loImm : NOP;
     write32(loc + 8, secondInstr);
   } else {
     // addi r12, r1, imm
     write32(loc + 4, (0x39810000) | (uint16_t)loImm);
-    write32(loc + 8, 0x60000000);
+    write32(loc + 8, NOP);
   }
 
   return true;
