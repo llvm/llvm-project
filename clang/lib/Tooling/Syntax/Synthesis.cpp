@@ -52,6 +52,20 @@ syntax::Leaf *clang::syntax::createLeaf(syntax::Arena &A, tok::TokenKind K) {
   return createLeaf(A, K, Spelling);
 }
 
+syntax::Tree *clang::syntax::createTree(
+    syntax::Arena &A,
+    std::vector<std::pair<syntax::Node *, syntax::NodeRole>> Children,
+    syntax::NodeKind K) {
+  auto *T = new (A.getAllocator()) syntax::Tree(K);
+  FactoryImpl::setCanModify(T);
+  for (auto ChildIt = Children.rbegin(); ChildIt != Children.rend();
+       std::advance(ChildIt, 1))
+    FactoryImpl::prependChildLowLevel(T, ChildIt->first, ChildIt->second);
+
+  T->assertInvariants();
+  return T;
+}
+
 syntax::EmptyStatement *clang::syntax::createEmptyStatement(syntax::Arena &A) {
   auto *S = new (A.getAllocator()) syntax::EmptyStatement;
   FactoryImpl::setCanModify(S);
