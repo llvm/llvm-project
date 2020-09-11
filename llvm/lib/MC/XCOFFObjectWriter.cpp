@@ -49,7 +49,6 @@ namespace {
 
 constexpr unsigned DefaultSectionAlign = 4;
 constexpr int16_t MaxSectionIndex = INT16_MAX;
-constexpr uint16_t MaxTOCSizeInARegion = UINT16_MAX;
 
 // Packs the csect's alignment and type into a byte.
 uint8_t getEncodedType(const MCSectionXCOFF *);
@@ -431,12 +430,15 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
     FixedValue = getVirtualAddress(SymA, SymASec) + Target.getConstant();
   else if (Type == XCOFF::RelocationType::R_TOC ||
            Type == XCOFF::RelocationType::R_TOCL) {
-    // The FixedValue should be the TC entry offset from TOC-base.
-    FixedValue = SectionMap[SymASec]->Address - TOCCsects.front().Address;
-    if (FixedValue >= MaxTOCSizeInARegion)
-      report_fatal_error(
-          "handling of TOC entries could not fit in the initial TOC "
-          "entry region is not yet supported");
+    // The FixedValue should be the TOC entry offset from the TOC-base plus any
+    // constant offset value.
+    const int64_t TOCEntryOffset = SectionMap[SymASec]->Address -
+                                   TOCCsects.front().Address +
+                                   Target.getConstant();
+    if (Type == XCOFF::RelocationType::R_TOC && !isInt<16>(TOCEntryOffset))
+      report_fatal_error("TOCEntryOffset overflows in small code model mode");
+
+    FixedValue = TOCEntryOffset;
   }
 
   assert(
