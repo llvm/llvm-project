@@ -410,7 +410,7 @@ private:
 class MaterializationResponsibility {
   friend class MaterializationUnit;
 public:
-  MaterializationResponsibility(MaterializationResponsibility &&) = delete;
+  MaterializationResponsibility(MaterializationResponsibility &&) = default;
   MaterializationResponsibility &
   operator=(MaterializationResponsibility &&) = delete;
 
@@ -514,8 +514,8 @@ public:
   /// Delegates responsibility for the given symbols to the returned
   /// materialization responsibility. Useful for breaking up work between
   /// threads, or different kinds of materialization processes.
-  std::unique_ptr<MaterializationResponsibility>
-  delegate(const SymbolNameSet &Symbols, VModuleKey NewKey = VModuleKey());
+  MaterializationResponsibility delegate(const SymbolNameSet &Symbols,
+                                         VModuleKey NewKey = VModuleKey());
 
   void addDependencies(const SymbolStringPtr &Name,
                        const SymbolDependenceMap &Dependencies);
@@ -577,8 +577,7 @@ public:
   /// Implementations of this method should materialize all symbols
   ///        in the materialzation unit, except for those that have been
   ///        previously discarded.
-  virtual void
-  materialize(std::unique_ptr<MaterializationResponsibility> R) = 0;
+  virtual void materialize(MaterializationResponsibility R) = 0;
 
   /// Called by JITDylibs to notify MaterializationUnits that the given symbol
   /// has been overridden.
@@ -595,11 +594,10 @@ protected:
 private:
   virtual void anchor();
 
-  std::unique_ptr<MaterializationResponsibility>
+  MaterializationResponsibility
   createMaterializationResponsibility(std::shared_ptr<JITDylib> JD) {
-    return std::unique_ptr<MaterializationResponsibility>(
-        new MaterializationResponsibility(std::move(JD), std::move(SymbolFlags),
-                                          std::move(InitSymbol), K));
+    return MaterializationResponsibility(std::move(JD), std::move(SymbolFlags),
+                                         std::move(InitSymbol), K);
   }
 
   /// Implementations of this method should discard the given symbol
@@ -623,7 +621,7 @@ public:
   StringRef getName() const override;
 
 private:
-  void materialize(std::unique_ptr<MaterializationResponsibility> R) override;
+  void materialize(MaterializationResponsibility R) override;
   void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
   static SymbolFlagsMap extractFlags(const SymbolMap &Symbols);
 
@@ -665,7 +663,7 @@ public:
   StringRef getName() const override;
 
 private:
-  void materialize(std::unique_ptr<MaterializationResponsibility> R) override;
+  void materialize(MaterializationResponsibility R) override;
   void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
   static SymbolFlagsMap extractFlags(const SymbolAliasMap &Aliases);
 
@@ -1118,7 +1116,7 @@ public:
   /// For dispatching MaterializationUnit::materialize calls.
   using DispatchMaterializationFunction =
       std::function<void(std::unique_ptr<MaterializationUnit> MU,
-                         std::unique_ptr<MaterializationResponsibility> MR)>;
+                         MaterializationResponsibility MR)>;
 
   /// Construct an ExecutionSession.
   ///
@@ -1270,11 +1268,10 @@ public:
          SymbolState RequiredState = SymbolState::Ready);
 
   /// Materialize the given unit.
-  void
-  dispatchMaterialization(std::unique_ptr<MaterializationUnit> MU,
-                          std::unique_ptr<MaterializationResponsibility> MR) {
+  void dispatchMaterialization(std::unique_ptr<MaterializationUnit> MU,
+                               MaterializationResponsibility MR) {
     assert(MU && "MU must be non-null");
-    DEBUG_WITH_TYPE("orc", dumpDispatchInfo(MR->getTargetJITDylib(), *MU));
+    DEBUG_WITH_TYPE("orc", dumpDispatchInfo(MR.getTargetJITDylib(), *MU));
     DispatchMaterialization(std::move(MU), std::move(MR));
   }
 
@@ -1286,9 +1283,9 @@ private:
     logAllUnhandledErrors(std::move(Err), errs(), "JIT session error: ");
   }
 
-  static void materializeOnCurrentThread(
-      std::unique_ptr<MaterializationUnit> MU,
-      std::unique_ptr<MaterializationResponsibility> MR) {
+  static void
+  materializeOnCurrentThread(std::unique_ptr<MaterializationUnit> MU,
+                             MaterializationResponsibility MR) {
     MU->materialize(std::move(MR));
   }
 
@@ -1312,7 +1309,7 @@ private:
   //        with callbacks from asynchronous queries.
   mutable std::recursive_mutex OutstandingMUsMutex;
   std::vector<std::pair<std::unique_ptr<MaterializationUnit>,
-                        std::unique_ptr<MaterializationResponsibility>>>
+                        MaterializationResponsibility>>
       OutstandingMUs;
 };
 

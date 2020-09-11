@@ -96,8 +96,7 @@ public:
 
   /// Emits the given module. This should not be called by clients: it will be
   /// called by the JIT when a definition added via the add method is requested.
-  void emit(std::unique_ptr<MaterializationResponsibility> R,
-            ThreadSafeModule TSM) override;
+  void emit(MaterializationResponsibility R, ThreadSafeModule TSM) override;
 
 private:
   struct PerDylibResources {
@@ -121,8 +120,7 @@ private:
 
   void expandPartition(GlobalValueSet &Partition);
 
-  void emitPartition(std::unique_ptr<MaterializationResponsibility> R,
-                     ThreadSafeModule TSM,
+  void emitPartition(MaterializationResponsibility R, ThreadSafeModule TSM,
                      IRMaterializationUnit::SymbolNameToDefinitionMap Defs);
 
   mutable std::mutex CODLayerMutex;

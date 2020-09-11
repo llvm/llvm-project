@@ -279,7 +279,7 @@ void MaterializationResponsibility::replace(
   JD->replace(std::move(MU));
 }
 
-std::unique_ptr<MaterializationResponsibility>
+MaterializationResponsibility
 MaterializationResponsibility::delegate(const SymbolNameSet &Symbols,
                                         VModuleKey NewKey) {
 
@@ -302,10 +302,9 @@ MaterializationResponsibility::delegate(const SymbolNameSet &Symbols,
     SymbolFlags.erase(I);
   }
 
-  return std::unique_ptr<MaterializationResponsibility>(
-      new MaterializationResponsibility(JD, std::move(DelegatedFlags),
-                                        std::move(DelegatedInitSymbol),
-                                        std::move(NewKey)));
+  return MaterializationResponsibility(JD, std::move(DelegatedFlags),
+                                       std::move(DelegatedInitSymbol),
+                                       std::move(NewKey));
 }
 
 void MaterializationResponsibility::addDependencies(
@@ -339,10 +338,10 @@ StringRef AbsoluteSymbolsMaterializationUnit::getName() const {
 }
 
 void AbsoluteSymbolsMaterializationUnit::materialize(
-    std::unique_ptr<MaterializationResponsibility> R) {
+    MaterializationResponsibility R) {
   // No dependencies, so these calls can't fail.
-  cantFail(R->notifyResolved(Symbols));
-  cantFail(R->notifyEmitted());
+  cantFail(R.notifyResolved(Symbols));
+  cantFail(R.notifyEmitted());
 }
 
 void AbsoluteSymbolsMaterializationUnit::discard(const JITDylib &JD,
@@ -371,16 +370,16 @@ StringRef ReExportsMaterializationUnit::getName() const {
 }
 
 void ReExportsMaterializationUnit::materialize(
-    std::unique_ptr<MaterializationResponsibility> R) {
+    MaterializationResponsibility R) {
 
-  auto &ES = R->getTargetJITDylib().getExecutionSession();
-  JITDylib &TgtJD = R->getTargetJITDylib();
+  auto &ES = R.getTargetJITDylib().getExecutionSession();
+  JITDylib &TgtJD = R.getTargetJITDylib();
   JITDylib &SrcJD = SourceJD ? *SourceJD : TgtJD;
 
   // Find the set of requested aliases and aliasees. Return any unrequested
   // aliases back to the JITDylib so as to not prematurely materialize any
   // aliasees.
-  auto RequestedSymbols = R->getRequestedSymbols();
+  auto RequestedSymbols = R.getRequestedSymbols();
   SymbolAliasMap RequestedAliases;
 
   for (auto &Name : RequestedSymbols) {
@@ -400,19 +399,18 @@ void ReExportsMaterializationUnit::materialize(
 
   if (!Aliases.empty()) {
     if (SourceJD)
-      R->replace(reexports(*SourceJD, std::move(Aliases), SourceJDLookupFlags));
+      R.replace(reexports(*SourceJD, std::move(Aliases), SourceJDLookupFlags));
     else
-      R->replace(symbolAliases(std::move(Aliases)));
+      R.replace(symbolAliases(std::move(Aliases)));
   }
 
   // The OnResolveInfo struct will hold the aliases and responsibilty for each
   // query in the list.
   struct OnResolveInfo {
-    OnResolveInfo(std::unique_ptr<MaterializationResponsibility> R,
-                  SymbolAliasMap Aliases)
+    OnResolveInfo(MaterializationResponsibility R, SymbolAliasMap Aliases)
         : R(std::move(R)), Aliases(std::move(Aliases)) {}
 
-    std::unique_ptr<MaterializationResponsibility> R;
+    MaterializationResponsibility R;
     SymbolAliasMap Aliases;
   };
 
@@ -453,7 +451,7 @@ void ReExportsMaterializationUnit::materialize(
     assert(!QuerySymbols.empty() && "Alias cycle detected!");
 
     auto QueryInfo = std::make_shared<OnResolveInfo>(
-        R->delegate(ResponsibilitySymbols), std::move(QueryAliases));
+        R.delegate(ResponsibilitySymbols), std::move(QueryAliases));
     QueryInfos.push_back(
         make_pair(std::move(QuerySymbols), std::move(QueryInfo)));
   }
@@ -482,12 +480,12 @@ void ReExportsMaterializationUnit::materialize(
       for (auto &KV : QueryInfo->Aliases)
         if (SrcJDDeps.count(KV.second.Aliasee)) {
           PerAliasDeps = {KV.second.Aliasee};
-          QueryInfo->R->addDependencies(KV.first, PerAliasDepsMap);
+          QueryInfo->R.addDependencies(KV.first, PerAliasDepsMap);
         }
     };
 
     auto OnComplete = [QueryInfo](Expected<SymbolMap> Result) {
-      auto &ES = QueryInfo->R->getTargetJITDylib().getExecutionSession();
+      auto &ES = QueryInfo->R.getTargetJITDylib().getExecutionSession();
       if (Result) {
         SymbolMap ResolutionMap;
         for (auto &KV : QueryInfo->Aliases) {
@@ -501,19 +499,19 @@ void ReExportsMaterializationUnit::materialize(
           ResolutionMap[KV.first] = JITEvaluatedSymbol(
               (*Result)[KV.second.Aliasee].getAddress(), KV.second.AliasFlags);
         }
-        if (auto Err = QueryInfo->R->notifyResolved(ResolutionMap)) {
+        if (auto Err = QueryInfo->R.notifyResolved(ResolutionMap)) {
           ES.reportError(std::move(Err));
-          QueryInfo->R->failMaterialization();
+          QueryInfo->R.failMaterialization();
           return;
         }
-        if (auto Err = QueryInfo->R->notifyEmitted()) {
+        if (auto Err = QueryInfo->R.notifyEmitted()) {
           ES.reportError(std::move(Err));
-          QueryInfo->R->failMaterialization();
+          QueryInfo->R.failMaterialization();
           return;
         }
       } else {
         ES.reportError(Result.takeError());
-        QueryInfo->R->failMaterialization();
+        QueryInfo->R.failMaterialization();
       }
     };
 
@@ -2133,7 +2131,7 @@ void ExecutionSession::dump(raw_ostream &OS) {
 void ExecutionSession::runOutstandingMUs() {
   while (1) {
     Optional<std::pair<std::unique_ptr<MaterializationUnit>,
-                       std::unique_ptr<MaterializationResponsibility>>>
+                       MaterializationResponsibility>>
         JMU;
 
     {
