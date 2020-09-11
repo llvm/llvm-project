@@ -1200,16 +1200,19 @@ Error RuntimeDyldImpl::resolveExternalSymbols() {
 
 void RuntimeDyldImpl::finalizeAsync(
     std::unique_ptr<RuntimeDyldImpl> This,
-    unique_function<void(object::OwningBinary<object::ObjectFile>, Error)>
+    unique_function<void(object::OwningBinary<object::ObjectFile>,
+                         std::unique_ptr<RuntimeDyld::LoadedObjectInfo>, Error)>
         OnEmitted,
-    object::OwningBinary<object::ObjectFile> O) {
+    object::OwningBinary<object::ObjectFile> O,
+    std::unique_ptr<RuntimeDyld::LoadedObjectInfo> Info) {
 
   auto SharedThis = std::shared_ptr<RuntimeDyldImpl>(std::move(This));
   auto PostResolveContinuation =
-      [SharedThis, OnEmitted = std::move(OnEmitted), O = std::move(O)](
+      [SharedThis, OnEmitted = std::move(OnEmitted), O = std::move(O),
+       Info = std::move(Info)](
           Expected<JITSymbolResolver::LookupResult> Result) mutable {
         if (!Result) {
-          OnEmitted(std::move(O), Result.takeError());
+          OnEmitted(std::move(O), std::move(Info), Result.takeError());
           return;
         }
 
@@ -1223,11 +1226,11 @@ void RuntimeDyldImpl::finalizeAsync(
         SharedThis->registerEHFrames();
         std::string ErrMsg;
         if (SharedThis->MemMgr.finalizeMemory(&ErrMsg))
-          OnEmitted(std::move(O),
+          OnEmitted(std::move(O), std::move(Info),
                     make_error<StringError>(std::move(ErrMsg),
                                             inconvertibleErrorCode()));
         else
-          OnEmitted(std::move(O), Error::success());
+          OnEmitted(std::move(O), std::move(Info), Error::success());
       };
 
   JITSymbolResolver::LookupSet Symbols;
@@ -1418,12 +1421,12 @@ void jitLinkForORC(
     object::OwningBinary<object::ObjectFile> O,
     RuntimeDyld::MemoryManager &MemMgr, JITSymbolResolver &Resolver,
     bool ProcessAllSections,
-    unique_function<
-        Error(const object::ObjectFile &Obj,
-              std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObj,
-              std::map<StringRef, JITEvaluatedSymbol>)>
+    unique_function<Error(const object::ObjectFile &Obj,
+                          RuntimeDyld::LoadedObjectInfo &LoadedObj,
+                          std::map<StringRef, JITEvaluatedSymbol>)>
         OnLoaded,
-    unique_function<void(object::OwningBinary<object::ObjectFile>, Error)>
+    unique_function<void(object::OwningBinary<object::ObjectFile>,
+                         std::unique_ptr<RuntimeDyld::LoadedObjectInfo>, Error)>
         OnEmitted) {
 
   RuntimeDyld RTDyld(MemMgr, Resolver);
@@ -1432,17 +1435,17 @@ void jitLinkForORC(
   auto Info = RTDyld.loadObject(*O.getBinary());
 
   if (RTDyld.hasError()) {
-    OnEmitted(std::move(O), make_error<StringError>(RTDyld.getErrorString(),
-                                                    inconvertibleErrorCode()));
+    OnEmitted(std::move(O), std::move(Info),
+              make_error<StringError>(RTDyld.getErrorString(),
+                                      inconvertibleErrorCode()));
     return;
   }
 
-  if (auto Err =
-          OnLoaded(*O.getBinary(), std::move(Info), RTDyld.getSymbolTable()))
-    OnEmitted(std::move(O), std::move(Err));
+  if (auto Err = OnLoaded(*O.getBinary(), *Info, RTDyld.getSymbolTable()))
+    OnEmitted(std::move(O), std::move(Info), std::move(Err));
 
   RuntimeDyldImpl::finalizeAsync(std::move(RTDyld.Dyld), std::move(OnEmitted),
-                                 std::move(O));
+                                 std::move(O), std::move(Info));
 }
 
 } // end namespace llvm

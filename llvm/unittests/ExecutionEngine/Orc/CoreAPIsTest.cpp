@@ -1242,7 +1242,7 @@ TEST_F(CoreAPIsStandardTest, TestGetRequestedSymbolsAndReplace) {
               BarMaterialized = true;
             });
 
-        R->replace(std::move(NewMU));
+        cantFail(R->replace(std::move(NewMU)));
 
         cantFail(R->notifyResolved(SymbolMap({{Foo, FooSym}})));
         cantFail(R->notifyEmitted());
@@ -1272,7 +1272,7 @@ TEST_F(CoreAPIsStandardTest, TestMaterializationResponsibilityDelegation) {
   auto MU = std::make_unique<SimpleMaterializationUnit>(
       SymbolFlagsMap({{Foo, FooSym.getFlags()}, {Bar, BarSym.getFlags()}}),
       [&](std::unique_ptr<MaterializationResponsibility> R) {
-        auto R2 = R->delegate({Bar});
+        auto R2 = cantFail(R->delegate({Bar}));
 
         cantFail(R->notifyResolved({{Foo, FooSym}}));
         cantFail(R->notifyEmitted());
@@ -1333,7 +1333,7 @@ TEST_F(CoreAPIsStandardTest, TestMaterializeWeakSymbol) {
   cantFail(FooR->notifyEmitted());
 }
 
-static bool linkOrdersEqual(const std::vector<std::shared_ptr<JITDylib>> &LHS,
+static bool linkOrdersEqual(const std::vector<JITDylibSP> &LHS,
                             ArrayRef<JITDylib *> RHS) {
   if (LHS.size() != RHS.size())
     return false;
@@ -1367,23 +1367,21 @@ TEST(JITDylibTest, GetDFSLinkOrderTree) {
   LibB.setLinkOrder(makeJITDylibSearchOrder({&LibD, &LibE}));
   LibC.setLinkOrder(makeJITDylibSearchOrder({&LibF}));
 
-  auto DFSOrderFromB = JITDylib::getDFSLinkOrder({LibB.shared_from_this()});
+  auto DFSOrderFromB = JITDylib::getDFSLinkOrder({&LibB});
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromB, {&LibB, &LibD, &LibE}))
       << "Incorrect DFS link order for LibB";
 
-  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({LibA.shared_from_this()});
+  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({&LibA});
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromA,
                               {&LibA, &LibB, &LibD, &LibE, &LibC, &LibF}))
       << "Incorrect DFS link order for libA";
 
-  auto DFSOrderFromAB = JITDylib::getDFSLinkOrder(
-      {LibA.shared_from_this(), LibB.shared_from_this()});
+  auto DFSOrderFromAB = JITDylib::getDFSLinkOrder({&LibA, &LibB});
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromAB,
                               {&LibA, &LibB, &LibD, &LibE, &LibC, &LibF}))
       << "Incorrect DFS link order for { libA, libB }";
 
-  auto DFSOrderFromBA = JITDylib::getDFSLinkOrder(
-      {LibB.shared_from_this(), LibA.shared_from_this()});
+  auto DFSOrderFromBA = JITDylib::getDFSLinkOrder({&LibB, &LibA});
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromBA,
                               {&LibB, &LibD, &LibE, &LibA, &LibC, &LibF}))
       << "Incorrect DFS link order for { libB, libA }";
@@ -1406,7 +1404,7 @@ TEST(JITDylibTest, GetDFSLinkOrderDiamond) {
   LibB.setLinkOrder(makeJITDylibSearchOrder({&LibD}));
   LibC.setLinkOrder(makeJITDylibSearchOrder({&LibD}));
 
-  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({LibA.shared_from_this()});
+  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({&LibA});
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromA, {&LibA, &LibB, &LibD, &LibC}))
       << "Incorrect DFS link order for libA";
 }
@@ -1426,15 +1424,15 @@ TEST(JITDylibTest, GetDFSLinkOrderCycle) {
   LibB.setLinkOrder(makeJITDylibSearchOrder({&LibC}));
   LibC.setLinkOrder(makeJITDylibSearchOrder({&LibA}));
 
-  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({LibA.shared_from_this()});
+  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({&LibA});
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromA, {&LibA, &LibB, &LibC}))
       << "Incorrect DFS link order for libA";
 
-  auto DFSOrderFromB = JITDylib::getDFSLinkOrder({LibB.shared_from_this()});
+  auto DFSOrderFromB = JITDylib::getDFSLinkOrder({&LibB});
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromB, {&LibB, &LibC, &LibA}))
       << "Incorrect DFS link order for libB";
 
-  auto DFSOrderFromC = JITDylib::getDFSLinkOrder({LibC.shared_from_this()});
+  auto DFSOrderFromC = JITDylib::getDFSLinkOrder({&LibC});
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromC, {&LibC, &LibA, &LibB}))
       << "Incorrect DFS link order for libC";
 }

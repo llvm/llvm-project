@@ -73,17 +73,16 @@ class PartitioningIRMaterializationUnit : public IRMaterializationUnit {
 public:
   PartitioningIRMaterializationUnit(ExecutionSession &ES,
                                     const IRSymbolMapper::ManglingOptions &MO,
-                                    ThreadSafeModule TSM, VModuleKey K,
+                                    ThreadSafeModule TSM,
                                     CompileOnDemandLayer &Parent)
-      : IRMaterializationUnit(ES, MO, std::move(TSM), std::move(K)),
-        Parent(Parent) {}
+      : IRMaterializationUnit(ES, MO, std::move(TSM)), Parent(Parent) {}
 
   PartitioningIRMaterializationUnit(
-      ThreadSafeModule TSM, VModuleKey K, SymbolFlagsMap SymbolFlags,
+      ThreadSafeModule TSM, SymbolFlagsMap SymbolFlags,
       SymbolStringPtr InitSymbol, SymbolNameToDefinitionMap SymbolToDefinition,
       CompileOnDemandLayer &Parent)
-      : IRMaterializationUnit(std::move(TSM), std::move(K),
-                              std::move(SymbolFlags), std::move(InitSymbol),
+      : IRMaterializationUnit(std::move(TSM), std::move(SymbolFlags),
+                              std::move(InitSymbol),
                               std::move(SymbolToDefinition)),
         Parent(Parent) {}
 
@@ -158,19 +157,29 @@ void CompileOnDemandLayer::emit(
   // implementation dylib.
   if (auto Err = PDR.getImplDylib().define(
           std::make_unique<PartitioningIRMaterializationUnit>(
-              ES, *getManglingOptions(), std::move(TSM), R->getVModuleKey(),
-              *this))) {
+              ES, *getManglingOptions(), std::move(TSM), *this))) {
     ES.reportError(std::move(Err));
     R->failMaterialization();
     return;
   }
 
   if (!NonCallables.empty())
-    R->replace(reexports(PDR.getImplDylib(), std::move(NonCallables),
-                         JITDylibLookupFlags::MatchAllSymbols));
-  if (!Callables.empty())
-    R->replace(lazyReexports(LCTMgr, PDR.getISManager(), PDR.getImplDylib(),
-                             std::move(Callables), AliaseeImpls));
+    if (auto Err =
+            R->replace(reexports(PDR.getImplDylib(), std::move(NonCallables),
+                                 JITDylibLookupFlags::MatchAllSymbols))) {
+      getExecutionSession().reportError(std::move(Err));
+      R->failMaterialization();
+      return;
+    }
+  if (!Callables.empty()) {
+    if (auto Err = R->replace(
+            lazyReexports(LCTMgr, PDR.getISManager(), PDR.getImplDylib(),
+                          std::move(Callables), AliaseeImpls))) {
+      getExecutionSession().reportError(std::move(Err));
+      R->failMaterialization();
+      return;
+    }
+  }
 }
 
 CompileOnDemandLayer::PerDylibResources &
@@ -285,9 +294,14 @@ void CompileOnDemandLayer::emitPartition(
 
   // If the partition is empty, return the whole module to the symbol table.
   if (GVsToExtract->empty()) {
-    R->replace(std::make_unique<PartitioningIRMaterializationUnit>(
-        std::move(TSM), R->getVModuleKey(), R->getSymbols(),
-        R->getInitializerSymbol(), std::move(Defs), *this));
+    if (auto Err =
+            R->replace(std::make_unique<PartitioningIRMaterializationUnit>(
+                std::move(TSM), R->getSymbols(), R->getInitializerSymbol(),
+                std::move(Defs), *this))) {
+      getExecutionSession().reportError(std::move(Err));
+      R->failMaterialization();
+      return;
+    }
     return;
   }
 
@@ -352,8 +366,12 @@ void CompileOnDemandLayer::emitPartition(
     return;
   }
 
-  R->replace(std::make_unique<PartitioningIRMaterializationUnit>(
-      ES, *getManglingOptions(), std::move(TSM), R->getVModuleKey(), *this));
+  if (auto Err = R->replace(std::make_unique<PartitioningIRMaterializationUnit>(
+          ES, *getManglingOptions(), std::move(TSM), *this))) {
+    ES.reportError(std::move(Err));
+    R->failMaterialization();
+    return;
+  }
   BaseLayer.emit(std::move(R), std::move(*ExtractedTSM));
 }
 
