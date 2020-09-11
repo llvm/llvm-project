@@ -501,8 +501,8 @@ syntax::Leaf *syntax::CompoundStatement::getLbrace() {
 
 std::vector<syntax::Statement *> syntax::CompoundStatement::getStatements() {
   std::vector<syntax::Statement *> Children;
-  for (auto *C = firstChild(); C; C = C->nextSibling()) {
-    assert(C->role() == syntax::NodeRole::Statement);
+  for (auto *C = getFirstChild(); C; C = C->getNextSibling()) {
+    assert(C->getRole() == syntax::NodeRole::Statement);
     Children.push_back(cast<syntax::Statement>(C));
   }
   return Children;
@@ -524,8 +524,8 @@ syntax::Expression *syntax::StaticAssertDeclaration::getMessage() {
 std::vector<syntax::SimpleDeclarator *>
 syntax::SimpleDeclaration::getDeclarators() {
   std::vector<syntax::SimpleDeclarator *> Children;
-  for (auto *C = firstChild(); C; C = C->nextSibling()) {
-    if (C->role() == syntax::NodeRole::Declarator)
+  for (auto *C = getFirstChild(); C; C = C->getNextSibling()) {
+    if (C->getRole() == syntax::NodeRole::Declarator)
       Children.push_back(cast<syntax::SimpleDeclarator>(C));
   }
   return Children;

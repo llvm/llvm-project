@@ -28,7 +28,7 @@ protected:
              << "Source file has syntax errors, they were printed to the test "
                 "log";
     }
-    auto Actual = StringRef(Root->dump(Arena->sourceManager())).trim().str();
+    auto Actual = StringRef(Root->dump(Arena->getSourceManager())).trim().str();
     // EXPECT_EQ shows the diff between the two strings if they are different.
     EXPECT_EQ(Tree.trim().str(), Actual);
     if (Actual != Tree.trim().str()) {
@@ -63,7 +63,9 @@ protected:
       auto *AnnotatedNode = nodeByRange(AnnotatedRanges[i], Root);
       assert(AnnotatedNode);
       auto AnnotatedNodeDump =
-          StringRef(AnnotatedNode->dump(Arena->sourceManager())).trim().str();
+          StringRef(AnnotatedNode->dump(Arena->getSourceManager()))
+              .trim()
+              .str();
       // EXPECT_EQ shows the diff between the two strings if they are different.
       EXPECT_EQ(TreeDumps[i].trim().str(), AnnotatedNodeDump)
           << "Dumps diverged for the code:\n"
