@@ -1,11 +1,8 @@
-#===-- docs/f2018-grammar.txt -------------------------------------===#
-#
-# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-# See https://llvm.org/LICENSE.txt for license information.
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#
-#===------------------------------------------------------------------------===#
+# Fortran 2018 Grammar
 
+Grammar used by Flang to parse Fortran 2018.
+
+```
 R0001 digit -> 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 R0002 letter ->
         A | B | C | D | E | F | G | H | I | J | K | L | M |
@@ -801,3 +798,4 @@ R1542 return-stmt -> RETURN [scalar-int-expr]
 R1543 contains-stmt -> CONTAINS
 R1544 stmt-function-stmt ->
         function-name ( [dummy-arg-name-list] ) = scalar-expr
+```        

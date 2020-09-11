@@ -1,4 +1,9 @@
-## Bijective Internal Name Uniquing
+# Bijective Internal Name Uniquing
+
+```eval_rst
+.. contents::
+   :local:
+```
 
 FIR has a flat namespace.  No two objects may have the same name at
 the module level.  (These would be functions, globals, etc.)
@@ -13,14 +18,14 @@ Fortran is case insensitive, which allows the compiler to convert the
 user's identifiers to all lower case.  Such a universal conversion implies
 that all upper case letters are available for use in uniquing.
 
-### Prefix `_Q`
+## Prefix `_Q`
 
 All uniqued names have the prefix sequence `_Q` to indicate the name has
 been uniqued.  (Q is chosen because it is a
 [low frequency letter](http://pi.math.cornell.edu/~mec/2003-2004/cryptography/subs/frequencies.html)
 in English.)
 
-### Scope Building
+## Scope Building
 
 Symbols can be scoped by the module, submodule, or procedure that contains
 that symbol.  After the `_Q` sigil, names are constructed from outermost to
@@ -45,7 +50,7 @@ The uniqued name of `fun` becomes:
     _QMmodSs1modSs2modFsubPfun
 ```
 
-### Common blocks
+## Common blocks
 
    * A common block name will be prefixed with `B`
 
@@ -69,7 +74,7 @@ The uniqued name in case of `blank common block` becomes:
     _QB
 ```
 
-### Module scope global data
+## Module scope global data
 
    * A global data entity is prefixed with `E`
    * A global entity that is constant (parameter) will be prefixed with `EC`
@@ -92,7 +97,7 @@ The uniqued name of `pi` becomes:
     _QMmodECpi
 ```
 
-### Procedures/Subprograms
+## Procedures/Subprograms
 
    * A procedure/subprogram is prefixed with `P`
 
@@ -105,7 +110,7 @@ The uniqued name of `sub` becomes:
     _QPsub
 ```
 
-### Derived types and related
+## Derived types and related
 
    * A derived type is prefixed with `T`
    * If a derived type has KIND parameters, they are listed in a consistent
@@ -148,7 +153,7 @@ The uniqued name of `yourtype` where `k1=4` and `k2=-6` (at compile-time):
      type `yourtype` above would be `_QCTyourtypeK4KN6`.  The type
      descriptor for `REAL(4)` would be `_QCrealK4`.
 
-### Compiler generated names
+## Compiler generated names
 
 Compiler generated names do not have to be mapped back to Fortran.  These
 names will be prefixed with `_QQ` and followed by a unique compiler

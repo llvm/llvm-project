@@ -6,6 +6,13 @@
   
 -->
 
+# Fortran Extensions supported by Flang
+
+```eval_rst
+.. contents::
+   :local:
+```
+
 As a general principle, this compiler will accept by default and
 without complaint many legacy features, extensions to the standard
 language, and features that have been deleted from the standard,
@@ -16,8 +23,8 @@ Other non-standard features, which do conflict with the current
 standard specification of the Fortran programming language, are
 accepted if enabled by command-line options.
 
-Intentional violations of the standard
-======================================
+## Intentional violations of the standard
+
 * Scalar `INTEGER` actual argument expressions (not variables!)
   are converted to the kinds of scalar `INTEGER` dummy arguments
   when the interface is explicit and the kinds differ.
@@ -29,8 +36,8 @@ Intentional violations of the standard
   so long as they contain no executable code, no internal subprograms,
   and allocate no storage outside a named `COMMON` block.  (C1415)
 
-Extensions, deletions, and legacy features supported by default
-===============================================================
+## Extensions, deletions, and legacy features supported by default
+
 * Tabs in source
 * `<>` as synonym for `.NE.` and `/=`
 * `$` and `@` as legal characters in names
@@ -123,8 +130,8 @@ Extensions, deletions, and legacy features supported by default
 * DATA statement initialization is allowed for procedure pointers outside
   structure constructors.
 
-Extensions supported when enabled by options
---------------------------------------------
+### Extensions supported when enabled by options
+
 * C-style backslash escape sequences in quoted CHARACTER literals
   (but not Hollerith) [-fbackslash]
 * Logical abbreviations `.T.`, `.F.`, `.N.`, `.A.`, `.O.`, and `.X.`
@@ -145,8 +152,8 @@ Extensions supported when enabled by options
 * Ignore occurrences of `IMPLICIT NONE` and `IMPLICIT NONE(TYPE)`
   [-fimplicit-none-type-never]
 
-Extensions and legacy features deliberately not supported
----------------------------------------------------------
+### Extensions and legacy features deliberately not supported
+
 * `.LG.` as synonym for `.NE.`
 * `REDIMENSION`
 * Allocatable `COMMON`
@@ -189,8 +196,8 @@ Extensions and legacy features deliberately not supported
   PGI, Intel, and XLF support this in ways that are not numerically equivalent.
   PGI converts the arguments while Intel and XLF replace the specific by the related generic.
 
-Preprocessing behavior
-======================
+## Preprocessing behavior
+
 * The preprocessor is always run, whatever the filename extension may be.
 * We respect Fortran comments in macro actual arguments (like GNU, Intel, NAG;
   unlike PGI and XLF) on the principle that macro calls should be treated
