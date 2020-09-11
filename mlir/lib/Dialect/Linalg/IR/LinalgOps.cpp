@@ -260,13 +260,14 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
   if (failed(BlockArgsVerifier<GenericOpType>::verify(op, region.front())))
     return failure();
 
-  auto attr = op.template getAttrOfType<IntegerAttr>("symbol_source");
-  int64_t targetRank = 0;
-  if (attr) {
-    unsigned index = attr.getInt();
+  auto symbolSourceAttr =
+      op.template getAttrOfType<IntegerAttr>("symbol_source");
+  int64_t expectedNumSymbols = 0;
+  if (symbolSourceAttr) {
+    unsigned index = symbolSourceAttr.getInt();
     if (index >= op.getNumOperands())
       return op.emitOpError("symbol_source index out of range");
-    targetRank = op.getShapedType(index).getRank();
+    expectedNumSymbols = op.getShapedType(index).getRank();
   }
 
   SmallVector<AffineMap, 4> indexingMaps;
@@ -278,9 +279,9 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
     auto view = (idx < nInputViews) ? op.getInputShapedType(idx)
                                     : op.getOutputShapedType(idx - nInputViews);
 
-    if (m.getNumSymbols() != targetRank)
+    if (m.getNumSymbols() != expectedNumSymbols)
       return op.emitOpError("expected the number of symbols in indexing_map #")
-             << idx << " to match target rank";
+             << idx << " to match rank of operand `symbol_source`";
 
     if (m.getNumDims() != nLoops)
       return op.emitOpError("expected indexing_map #")
@@ -1246,15 +1247,9 @@ void buildNamedStructuredOpRegionAndAttributes(Builder &builder,
   mlir::edsc::ScopedContext scope(opBuilder, builder.getUnknownLoc());
   NamedStructuredOpType::regionBuilder(*body);
 
-  auto indexingMaps = builder.getAffineMapArrayAttr(
-      NamedStructuredOpType::referenceIndexingMaps(operandTypes,
-                                                   tensorResultTypes));
-  result.addAttribute(getIndexingMapsAttrName(), indexingMaps);
+  // indexing_maps is an auto-generated method.
 
-  auto iterators =
-      builder.getStrArrayAttr(NamedStructuredOpType::referenceIterators(
-          operandTypes, tensorResultTypes));
-  result.addAttribute(getIteratorTypesAttrName(), iterators);
+  // iterator_types is an auto-generated method.
 }
 
 template <typename NamedStructuredOpType>
