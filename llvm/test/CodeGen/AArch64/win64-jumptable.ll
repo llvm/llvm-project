@@ -44,7 +44,6 @@ declare void @g(i32, i32)
 ; CHECK:    .word .LBB0_3-.LJTI0_0
 ; CHECK:    .word .LBB0_4-.LJTI0_0
 ; CHECK:    .word .LBB0_5-.LJTI0_0
-; CHECK:    .section  .xdata,"dr"
 ; CHECK:    .seh_handlerdata
 ; CHECK:    .text
 ; CHECK:    .seh_endproc
