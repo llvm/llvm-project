@@ -252,9 +252,6 @@ class Configuration(object):
             self.config.available_features.add('with_system_cxx_lib={}{}'.format(sysname, version))
             self.config.available_features.add('with_system_cxx_lib={}'.format(sysname))
 
-            self.config.available_features.add('availability={}'.format(sysname))
-            self.config.available_features.add('availability={}{}'.format(sysname, version))
-
         if self.target_info.is_windows():
             if self.cxx_stdlib_under_test == 'libc++':
                 # LIBCXX-WINDOWS-FIXME is the feature name used to XFAIL the
