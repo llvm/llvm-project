@@ -6489,26 +6489,26 @@ static Expected<std::vector<uint64_t>> toULEB128Array(ArrayRef<uint8_t> Data) {
 
 template <class ELFT> void LLVMStyle<ELFT>::printAddrsig() {
   ListScope L(W, "Addrsig");
-  if (!this->dumper()->getDotAddrsigSec())
+  const Elf_Shdr *Sec = this->dumper()->getDotAddrsigSec();
+  if (!Sec)
     return;
-  ArrayRef<uint8_t> Contents = unwrapOrError(
-      this->FileName,
-      this->Obj.getSectionContents(this->dumper()->getDotAddrsigSec()));
-  Expected<std::vector<uint64_t>> V = toULEB128Array(Contents);
-  if (!V) {
-    reportWarning(V.takeError(), this->FileName);
+
+  Expected<ArrayRef<uint8_t>> ContentsOrErr = this->Obj.getSectionContents(Sec);
+  if (!ContentsOrErr) {
+    this->reportUniqueWarning(ContentsOrErr.takeError());
     return;
   }
 
-  for (uint64_t Sym : *V) {
-    Expected<std::string> NameOrErr = this->dumper()->getStaticSymbolName(Sym);
-    if (NameOrErr) {
-      W.printNumber("Sym", *NameOrErr, Sym);
-      continue;
-    }
-    reportWarning(NameOrErr.takeError(), this->FileName);
-    W.printNumber("Sym", "<?>", Sym);
+  Expected<std::vector<uint64_t>> SymsOrErr = toULEB128Array(*ContentsOrErr);
+  if (!SymsOrErr) {
+    this->reportUniqueWarning(createError("unable to decode " +
+                                          describe(this->Obj, *Sec) + ": " +
+                                          toString(SymsOrErr.takeError())));
+    return;
   }
+
+  for (uint64_t Sym : *SymsOrErr)
+    W.printNumber("Sym", this->dumper()->getStaticSymbolName(Sym), Sym);
 }
 
 template <typename ELFT>
