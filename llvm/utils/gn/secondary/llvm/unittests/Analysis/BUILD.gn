@@ -19,6 +19,7 @@ unittest("AnalysisTests") {
     "CGSCCPassManagerTest.cpp",
     "CallGraphTest.cpp",
     "CaptureTrackingTest.cpp",
+    "ConstraintSystemTest.cpp",
     "DDGTest.cpp",
     "DivergenceAnalysisTest.cpp",
     "DomTreeUpdaterTest.cpp",
