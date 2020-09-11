@@ -19,7 +19,7 @@ namespace {
 static void traverse(const syntax::Node *N,
                      llvm::function_ref<void(const syntax::Node *)> Visit) {
   if (auto *T = dyn_cast<syntax::Tree>(N)) {
-    for (auto *C = T->getFirstChild(); C; C = C->getNextSibling())
+    for (const auto *C = T->getFirstChild(); C; C = C->getNextSibling())
       traverse(C, Visit);
   }
   Visit(N);
@@ -226,7 +226,7 @@ void syntax::Node::assertInvariants() const {
   auto *T = dyn_cast<Tree>(this);
   if (!T)
     return;
-  for (auto *C = T->getFirstChild(); C; C = C->getNextSibling()) {
+  for (const auto *C = T->getFirstChild(); C; C = C->getNextSibling()) {
     if (T->isOriginal())
       assert(C->isOriginal());
     assert(!C->isDetached());
