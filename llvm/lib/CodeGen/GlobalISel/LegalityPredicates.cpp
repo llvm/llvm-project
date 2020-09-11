@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Disable optimizations to work around MSVC debug mode bug in 32-bit:
+// Enable optimizations to work around MSVC debug mode bug in 32-bit:
 // https://developercommunity.visualstudio.com/content/problem/1179643/msvc-copies-overaligned-non-trivially-copyable-par.html
 // FIXME: Remove this when the issue is closed.
 #if defined(_MSC_VER) && !defined(__clang__) && defined(_M_IX86)
