@@ -12,33 +12,81 @@
 
 #include "TreeTestBase.h"
 #include "clang/Tooling/Syntax/BuildTree.h"
+#include "gtest/gtest.h"
 
 using namespace clang;
 using namespace clang::syntax;
 
 namespace {
 
-INSTANTIATE_TEST_CASE_P(SyntaxTreeTests, SyntaxTreeTest,
+class SynthesisTest : public SyntaxTreeTest {
+protected:
+  ::testing::AssertionResult treeDumpEqual(syntax::Node *Root, StringRef Dump) {
+    if (!Root)
+      return ::testing::AssertionFailure()
+             << "Root was not built successfully.";
+
+    auto Actual = StringRef(Root->dump(Arena->getSourceManager())).trim().str();
+    auto Expected = Dump.trim().str();
+    // EXPECT_EQ shows the diff between the two strings if they are different.
+    EXPECT_EQ(Expected, Actual);
+    if (Actual != Expected) {
+      return ::testing::AssertionFailure();
+    }
+    return ::testing::AssertionSuccess();
+  }
+};
+
+INSTANTIATE_TEST_CASE_P(SynthesisTests, SynthesisTest,
                         ::testing::ValuesIn(allTestClangConfigs()), );
 
-TEST_P(SyntaxTreeTest, Leaf_Punctuation) {
+TEST_P(SynthesisTest, Leaf_Punctuation) {
   buildTree("", GetParam());
 
-  auto *C = syntax::createPunctuation(*Arena, tok::comma);
-  ASSERT_NE(C, nullptr);
-  EXPECT_EQ(C->getToken()->kind(), tok::comma);
-  EXPECT_TRUE(C->canModify());
-  EXPECT_FALSE(C->isOriginal());
-  EXPECT_TRUE(C->isDetached());
+  auto *Leaf = createLeaf(*Arena, tok::comma);
+
+  EXPECT_TRUE(treeDumpEqual(Leaf, R"txt(
+',' Detached synthesized
+  )txt"));
 }
 
-TEST_P(SyntaxTreeTest, Statement_Empty) {
+TEST_P(SynthesisTest, Leaf_Keyword) {
   buildTree("", GetParam());
 
-  auto *S = syntax::createEmptyStatement(*Arena);
-  ASSERT_NE(S, nullptr);
-  EXPECT_TRUE(S->canModify());
-  EXPECT_FALSE(S->isOriginal());
-  EXPECT_TRUE(S->isDetached());
+  auto *Leaf = createLeaf(*Arena, tok::kw_if);
+
+  EXPECT_TRUE(treeDumpEqual(Leaf, R"txt(
+'if' Detached synthesized
+  )txt"));
+}
+
+TEST_P(SynthesisTest, Leaf_Identifier) {
+  buildTree("", GetParam());
+
+  auto *Leaf = createLeaf(*Arena, tok::identifier, "a");
+
+  EXPECT_TRUE(treeDumpEqual(Leaf, R"txt(
+'a' Detached synthesized
+  )txt"));
+}
+
+TEST_P(SynthesisTest, Leaf_Number) {
+  buildTree("", GetParam());
+
+  auto *Leaf = createLeaf(*Arena, tok::numeric_constant, "1");
+
+  EXPECT_TRUE(treeDumpEqual(Leaf, R"txt(
+'1' Detached synthesized
+  )txt"));
+}
+
+TEST_P(SynthesisTest, Statement_EmptyStatement) {
+  buildTree("", GetParam());
+
+  auto *S = createEmptyStatement(*Arena);
+  EXPECT_TRUE(treeDumpEqual(S, R"txt(
+EmptyStatement Detached synthesized
+`-';' synthesized
+  )txt"));
 }
 } // namespace
