@@ -28,7 +28,7 @@ enum AllocType {
   FROM_NEW_BR = 3   // Memory block came from operator new [ ]
 };
 
-struct AsanChunk;
+class AsanChunk;
 
 struct AllocatorOptions {
   u32 quarantine_size_mb;
