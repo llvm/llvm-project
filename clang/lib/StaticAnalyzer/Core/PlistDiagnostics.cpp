@@ -834,11 +834,6 @@ LLVM_DUMP_METHOD static void dumpArgTokensToStream(llvm::raw_ostream &Out,
                                                    const Preprocessor &PP,
                                                    const ArgTokensTy &Toks);
 
-LLVM_DUMP_METHOD static void dumpArgTokens(const Preprocessor &PP,
-                                           const ArgTokensTy &Toks) {
-  dumpArgTokensToStream(llvm::errs(), PP, Toks);
-}
-
 namespace {
 /// Maps unexpanded macro parameters to expanded arguments. A macro argument may
 /// need to expanded further when it is nested inside another macro.
