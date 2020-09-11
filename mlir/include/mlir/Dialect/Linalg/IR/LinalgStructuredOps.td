@@ -467,7 +467,7 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic,
                    OptionalAttr<StrAttr>:$library_call,
                    Confined<OptionalAttr<I64Attr>,
                      [IntMinValue<0>]>:$symbol_source);
-  let results = (outs Variadic<AnyRankedTensor>:$output_lis);
+  let results = (outs Variadic<AnyRankedTensor>:$output_tensors);
   let regions = (region AnyRegion:$region);
   let extraClassDeclaration = [{
     SmallVector<StringRef, 8> linalgTraitAttrNames() {
