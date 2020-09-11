@@ -2,10 +2,6 @@
 // RUN: %clang_dfsan -O2 -mllvm -dfsan-event-callbacks %s %t-callbacks.o -o %t
 // RUN: %run %t FooBarBaz 2>&1 | FileCheck %s
 
-// See PR47488, parts of this test get optimized out by a more aggressive
-// dead store eliminator.
-// XFAIL: *
-
 // Tests that callbacks are inserted for store events when
 // -dfsan-event-callbacks is specified.
 
@@ -118,14 +114,16 @@ int main(int Argc, char *Argv[]) {
   LabelArgv = dfsan_create_label("Argv", 0);
   dfsan_set_label(LabelArgv, Argv[1], LenArgv);
 
-  char SinkBuf[64];
-  assert(LenArgv < sizeof(SinkBuf) - 1);
+  char Buf[64];
+  assert(LenArgv < sizeof(Buf) - 1);
 
   // CHECK: Label 4 copied to memory
-  memcpy(SinkBuf, Argv[1], LenArgv);
+  void *volatile SinkPtr = Buf;
+  memcpy(SinkPtr, Argv[1], LenArgv);
 
   // CHECK: Label 4 copied to memory
-  memmove(&SinkBuf[1], SinkBuf, LenArgv);
+  SinkPtr = &Buf[1];
+  memmove(SinkPtr, Buf, LenArgv);
 
   return 0;
 }
