@@ -544,6 +544,63 @@ FindMatchingEpilog(const std::vector<WinEH::Instruction>& EpilogInstrs,
   return nullptr;
 }
 
+static void simplifyOpcodes(std::vector<WinEH::Instruction> &Instructions,
+                            bool Reverse) {
+  unsigned PrevOffset = -1;
+  unsigned PrevRegister = -1;
+
+  auto VisitInstruction = [&](WinEH::Instruction &Inst) {
+    // Convert 2-byte opcodes into equivalent 1-byte ones.
+    if (Inst.Operation == Win64EH::UOP_SaveRegP && Inst.Register == 29) {
+      Inst.Operation = Win64EH::UOP_SaveFPLR;
+    } else if (Inst.Operation == Win64EH::UOP_SaveRegPX &&
+               Inst.Register == 29) {
+      Inst.Operation = Win64EH::UOP_SaveFPLRX;
+    } else if (Inst.Operation == Win64EH::UOP_SaveRegPX &&
+               Inst.Register == 19 && Inst.Offset <= 248) {
+      Inst.Operation = Win64EH::UOP_SaveR19R20X;
+    } else if (Inst.Operation == Win64EH::UOP_AddFP && Inst.Offset == 0) {
+      Inst.Operation = Win64EH::UOP_SetFP;
+    } else if (Inst.Operation == Win64EH::UOP_SaveRegP &&
+               Inst.Register == PrevRegister + 2 &&
+               Inst.Offset == PrevOffset + 16) {
+      Inst.Operation = Win64EH::UOP_SaveNext;
+      // Intentionally not creating UOP_SaveNext for float register pairs,
+      // as current versions of Windows (up to at least 20.04) is buggy
+      // regarding SaveNext for float pairs.
+    }
+    // Update info about the previous instruction, for detecting if
+    // the next one can be made a UOP_SaveNext
+    if (Inst.Operation == Win64EH::UOP_SaveR19R20X) {
+      PrevOffset = 0;
+      PrevRegister = 19;
+    } else if (Inst.Operation == Win64EH::UOP_SaveRegPX) {
+      PrevOffset = 0;
+      PrevRegister = Inst.Register;
+    } else if (Inst.Operation == Win64EH::UOP_SaveRegP) {
+      PrevOffset = Inst.Offset;
+      PrevRegister = Inst.Register;
+    } else if (Inst.Operation == Win64EH::UOP_SaveNext) {
+      PrevRegister += 2;
+      PrevOffset += 16;
+    } else {
+      PrevRegister = -1;
+      PrevOffset = -1;
+    }
+  };
+
+  // Iterate over instructions in a forward order (for prologues),
+  // backwards for epilogues (i.e. always reverse compared to how the
+  // opcodes are stored).
+  if (Reverse) {
+    for (auto It = Instructions.rbegin(); It != Instructions.rend(); It++)
+      VisitInstruction(*It);
+  } else {
+    for (WinEH::Instruction &Inst : Instructions)
+      VisitInstruction(Inst);
+  }
+}
+
 // Populate the .xdata section.  The format of .xdata on ARM64 is documented at
 // https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
 static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
@@ -571,6 +628,10 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
                      "did get unwind info that can't be emitted");
     return;
   }
+
+  simplifyOpcodes(info->Instructions, false);
+  for (auto &I : info->EpilogMap)
+    simplifyOpcodes(I.second, true);
 
   MCContext &context = streamer.getContext();
   MCSymbol *Label = context.createTempSymbol();

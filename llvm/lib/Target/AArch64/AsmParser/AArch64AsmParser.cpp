@@ -5836,7 +5836,7 @@ bool AArch64AsmParser::parseDirectiveSEHSaveRegX(SMLoc L) {
 bool AArch64AsmParser::parseDirectiveSEHSaveRegP(SMLoc L) {
   unsigned Reg;
   int64_t Offset;
-  if (parseRegisterInRange(Reg, AArch64::X0, AArch64::X19, AArch64::LR) ||
+  if (parseRegisterInRange(Reg, AArch64::X0, AArch64::X19, AArch64::FP) ||
       parseComma() || parseImmExpr(Offset))
     return true;
   getTargetStreamer().EmitARM64WinCFISaveRegP(Reg, Offset);
@@ -5848,7 +5848,7 @@ bool AArch64AsmParser::parseDirectiveSEHSaveRegP(SMLoc L) {
 bool AArch64AsmParser::parseDirectiveSEHSaveRegPX(SMLoc L) {
   unsigned Reg;
   int64_t Offset;
-  if (parseRegisterInRange(Reg, AArch64::X0, AArch64::X19, AArch64::X28) ||
+  if (parseRegisterInRange(Reg, AArch64::X0, AArch64::X19, AArch64::FP) ||
       parseComma() || parseImmExpr(Offset))
     return true;
   getTargetStreamer().EmitARM64WinCFISaveRegPX(Reg, Offset);
@@ -5900,7 +5900,7 @@ bool AArch64AsmParser::parseDirectiveSEHSaveFRegX(SMLoc L) {
 bool AArch64AsmParser::parseDirectiveSEHSaveFRegP(SMLoc L) {
   unsigned Reg;
   int64_t Offset;
-  if (parseRegisterInRange(Reg, AArch64::D0, AArch64::D8, AArch64::D15) ||
+  if (parseRegisterInRange(Reg, AArch64::D0, AArch64::D8, AArch64::D14) ||
       parseComma() || parseImmExpr(Offset))
     return true;
   getTargetStreamer().EmitARM64WinCFISaveFRegP(Reg, Offset);
@@ -5912,7 +5912,7 @@ bool AArch64AsmParser::parseDirectiveSEHSaveFRegP(SMLoc L) {
 bool AArch64AsmParser::parseDirectiveSEHSaveFRegPX(SMLoc L) {
   unsigned Reg;
   int64_t Offset;
-  if (parseRegisterInRange(Reg, AArch64::D0, AArch64::D8, AArch64::D15) ||
+  if (parseRegisterInRange(Reg, AArch64::D0, AArch64::D8, AArch64::D14) ||
       parseComma() || parseImmExpr(Offset))
     return true;
   getTargetStreamer().EmitARM64WinCFISaveFRegPX(Reg, Offset);

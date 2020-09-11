@@ -64,8 +64,8 @@
 // CHECK-NEXT:         0xe202              ; add fp, sp, #16
 // CHECK-NEXT:         0xdd41              ; str d13, [sp, #8]
 // CHECK-NEXT:         0xde83              ; str d12, [sp, #-32]!
-// CHECK-NEXT:         0xd882              ; stp d10, d11, [sp, #16]
-// CHECK-NEXT:         0xda03              ; stp d8, d9, [sp, #-32]!
+// CHECK-NEXT:         0xd884              ; stp d10, d11, [sp, #32]
+// CHECK-NEXT:         0xda05              ; stp d8, d9, [sp, #-48]!
 // CHECK-NEXT:         0x83                ; stp x29, x30, [sp, #-32]!
 // CHECK-NEXT:         0x46                ; stp x29, x30, [sp, #48]
 // CHECK-NEXT:         0xd141              ; str x24, [sp, #8]
@@ -74,7 +74,7 @@
 // CHECK-NEXT:         0xc882              ; stp x21, x22, [sp, #16]
 // CHECK-NEXT:         0xd6c2              ; stp x25, lr, [sp, #16]
 // CHECK-NEXT:         0x24                ; stp x19, x20, [sp, #-32]!
-// CHECK-NEXT:         0xcc03              ; stp x19, x20, [sp, #-32]!
+// CHECK-NEXT:         0xcc83              ; stp x21, x22, [sp, #-32]!
 // CHECK-NEXT:         0x83                ; stp x29, x30, [sp, #-32]!
 // CHECK-NEXT:         0xe1                ; mov fp, sp
 // CHECK-NEXT:         0x01                ; sub sp, #16
@@ -113,8 +113,8 @@ func:
     .seh_set_fp
     stp x29, x30, [sp, #-32]!
     .seh_save_fplr_x 32
-    stp x19, x20, [sp, #-32]!
-    .seh_save_regp_x x19, 32
+    stp x21, x22, [sp, #-32]!
+    .seh_save_regp_x x21, 32
     stp x19, x20, [sp, #-32]!
     .seh_save_r19r20_x 32
     stp x25, x30, [sp, #16]
@@ -131,10 +131,10 @@ func:
     .seh_save_fplr 48
     stp x29, x30, [sp, #-32]!
     .seh_save_fplr_x 32
-    stp d8, d9, [sp, #-32]!
-    .seh_save_fregp_x d8, 32
-    stp d10, d11, [sp, #16]
-    .seh_save_fregp d10, 16
+    stp d8, d9, [sp, #-48]!
+    .seh_save_fregp_x d8, 48
+    stp d10, d11, [sp, #32]
+    .seh_save_fregp d10, 32
     str d12, [sp, #-32]!
     .seh_save_freg_x d12, 32
     str d13, [sp, #8]
