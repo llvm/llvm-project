@@ -51,6 +51,22 @@ static u32 RZSize2Log(u32 rz_size) {
 
 static AsanAllocator &get_allocator();
 
+static void AtomicContextStore(volatile atomic_uint64_t *atomic_context,
+                               u32 tid, u32 stack) {
+  u64 context = tid;
+  context <<= 32;
+  context += stack;
+  atomic_store(atomic_context, context, memory_order_relaxed);
+}
+
+static void AtomicContextLoad(const volatile atomic_uint64_t *atomic_context,
+                              u32 &tid, u32 &stack) {
+  u64 context = atomic_load(atomic_context, memory_order_relaxed);
+  stack = context;
+  context >>= 32;
+  tid = context;
+}
+
 // The memory chunk allocated from the underlying allocator looks like this:
 // L L L L L L H H U U U U U U R R
 //   L -- left redzone words (0 or more bytes)
@@ -70,12 +86,14 @@ static AsanAllocator &get_allocator();
 //   B -- address of ChunkHeader pointing to the first 'H'
 static const uptr kAllocBegMagic = 0xCC6E96B9;
 
-struct ChunkHeader {
+class ChunkHeader {
+ public:
   atomic_uint8_t chunk_state;
   u8 from_memalign : 1;
   u8 alloc_type : 2;
   u8 rz_log : 3;
   u8 lsan_tag : 2;
+
   // This field is used for small sizes. For large sizes it is equal to
   // SizeClassMap::kMaxSize and the actual size is stored in the
   // SecondaryAllocator's metadata.
@@ -83,14 +101,31 @@ struct ChunkHeader {
   // align < 8 -> 0
   // else      -> log2(min(align, 512)) - 2
   u32 user_requested_alignment_log : 3;
-  u32 alloc_tid;
-  atomic_uint32_t alloc_context_id;
+
+ private:
+  atomic_uint64_t alloc_context_id;
+
+ public:
+  void SetAllocContext(u32 tid, u32 stack) {
+    AtomicContextStore(&alloc_context_id, tid, stack);
+  }
+
+  void GetAllocContext(u32 &tid, u32 &stack) const {
+    AtomicContextLoad(&alloc_context_id, tid, stack);
+  }
 };
 
-struct ChunkBase : ChunkHeader {
-  // Header2, intersects with user memory.
-  u32 free_context_id;
-  u32 free_tid;
+class ChunkBase : public ChunkHeader {
+  atomic_uint64_t free_context_id;
+
+ public:
+  void SetFreeContext(u32 tid, u32 stack) {
+    AtomicContextStore(&free_context_id, tid, stack);
+  }
+
+  void GetFreeContext(u32 &tid, u32 &stack) const {
+    AtomicContextLoad(&free_context_id, tid, stack);
+  }
 };
 
 static const uptr kChunkHeaderSize = sizeof(ChunkHeader);
@@ -109,7 +144,8 @@ enum {
   CHUNK_QUARANTINE = 3,
 };
 
-struct AsanChunk: ChunkBase {
+class AsanChunk : public ChunkBase {
+ public:
   uptr Beg() { return reinterpret_cast<uptr>(this) + kChunkHeaderSize; }
   uptr UsedSize(bool locked_version = false) {
     if (user_requested_size != SizeClassMap::kMaxSize)
@@ -144,8 +180,6 @@ struct QuarantineCallback {
       CHECK_EQ(old_chunk_state, CHUNK_QUARANTINE);
     }
 
-    CHECK_NE(m->alloc_tid, kInvalidTid);
-    CHECK_NE(m->free_tid, kInvalidTid);
     PoisonShadow(m->Beg(),
                  RoundUpTo(m->UsedSize(), SHADOW_GRANULARITY),
                  kAsanHeapLeftRedzoneMagic);
@@ -419,8 +453,8 @@ struct Allocator {
     if (atomic_load(&m->chunk_state, memory_order_acquire) != CHUNK_ALLOCATED)
       return false;
     if (m->Beg() != addr) return false;
-    atomic_store(&m->alloc_context_id, StackDepotPut(*stack),
-                 memory_order_relaxed);
+    AsanThread *t = GetCurrentThread();
+    m->SetAllocContext(t ? t->tid() : 0, StackDepotPut(*stack));
     return true;
   }
 
@@ -515,9 +549,6 @@ struct Allocator {
     AsanChunk *m = reinterpret_cast<AsanChunk *>(chunk_beg);
     m->alloc_type = alloc_type;
     m->rz_log = rz_log;
-    u32 alloc_tid = t ? t->tid() : 0;
-    m->alloc_tid = alloc_tid;
-    CHECK_EQ(alloc_tid, m->alloc_tid);  // Does alloc_tid fit into the bitfield?
     m->from_memalign = user_beg != beg_plus_redzone;
     if (alloc_beg != chunk_beg) {
       CHECK_LE(alloc_beg + 2 * sizeof(uptr), chunk_beg);
@@ -537,8 +568,7 @@ struct Allocator {
     }
     m->user_requested_alignment_log = user_requested_alignment_log;
 
-    atomic_store(&m->alloc_context_id, StackDepotPut(*stack),
-                 memory_order_relaxed);
+    m->SetAllocContext(t ? t->tid() : 0, StackDepotPut(*stack));
 
     uptr size_rounded_down_to_granularity =
         RoundDownTo(size, SHADOW_GRANULARITY);
@@ -591,8 +621,7 @@ struct Allocator {
     }
     CHECK_EQ(CHUNK_ALLOCATED, old_chunk_state);
     // It was a user data.
-    m->free_tid = kInvalidTid;
-    m->free_context_id = 0;
+    m->SetFreeContext(kInvalidTid, 0);
     return true;
   }
 
@@ -602,8 +631,7 @@ struct Allocator {
     CHECK_EQ(atomic_load(&m->chunk_state, memory_order_relaxed),
              CHUNK_QUARANTINE);
     AsanThread *t = GetCurrentThread();
-    m->free_tid = t ? t->tid() : 0;
-    m->free_context_id = StackDepotPut(*stack);
+    m->SetFreeContext(t ? t->tid() : 0, StackDepotPut(*stack));
 
     Flags &fl = *flags();
     if (fl.max_free_fill_size > 0) {
@@ -860,10 +888,23 @@ uptr AsanChunkView::UsedSize() const { return chunk_->UsedSize(); }
 u32 AsanChunkView::UserRequestedAlignment() const {
   return Allocator::ComputeUserAlignment(chunk_->user_requested_alignment_log);
 }
-uptr AsanChunkView::AllocTid() const { return chunk_->alloc_tid; }
-uptr AsanChunkView::FreeTid() const {
-  return IsQuarantined() ? chunk_->free_tid : kInvalidTid;
+
+uptr AsanChunkView::AllocTid() const {
+  u32 tid = 0;
+  u32 stack = 0;
+  chunk_->GetAllocContext(tid, stack);
+  return tid;
 }
+
+uptr AsanChunkView::FreeTid() const {
+  if (!IsQuarantined())
+    return kInvalidTid;
+  u32 tid = 0;
+  u32 stack = 0;
+  chunk_->GetFreeContext(tid, stack);
+  return tid;
+}
+
 AllocType AsanChunkView::GetAllocType() const {
   return (AllocType)chunk_->alloc_type;
 }
@@ -876,10 +917,19 @@ static StackTrace GetStackTraceFromId(u32 id) {
 }
 
 u32 AsanChunkView::GetAllocStackId() const {
-  return atomic_load(&chunk_->alloc_context_id, memory_order_relaxed);
+  u32 tid = 0;
+  u32 stack = 0;
+  chunk_->GetAllocContext(tid, stack);
+  return stack;
 }
+
 u32 AsanChunkView::GetFreeStackId() const {
-  return IsQuarantined() ? chunk_->free_context_id : 0;
+  if (!IsQuarantined())
+    return 0;
+  u32 tid = 0;
+  u32 stack = 0;
+  chunk_->GetFreeContext(tid, stack);
+  return stack;
 }
 
 StackTrace AsanChunkView::GetAllocStack() const {
@@ -1111,7 +1161,10 @@ uptr LsanMetadata::requested_size() const {
 
 u32 LsanMetadata::stack_trace_id() const {
   __asan::AsanChunk *m = reinterpret_cast<__asan::AsanChunk *>(metadata_);
-  return atomic_load(&m->alloc_context_id, memory_order_relaxed);
+  u32 tid = 0;
+  u32 stack = 0;
+  m->GetAllocContext(tid, stack);
+  return stack;
 }
 
 void ForEachChunk(ForEachChunkCallback callback, void *arg) {
