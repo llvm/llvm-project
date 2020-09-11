@@ -130,7 +130,7 @@ public:
 
     if (!Opt.VerifyMachineCode) {
 #ifdef EXPENSIVE_CHECKS
-      Opt.VerifyMachineCode = TM->isMachineVerifierClean();
+      Opt.VerifyMachineCode = TM.isMachineVerifierClean();
 #else
       Opt.VerifyMachineCode = false;
 #endif
