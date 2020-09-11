@@ -2164,15 +2164,6 @@ def SwiftObjCMembers : Attr {
   let Documentation = [SwiftObjCMembersDocs];
 }
 
-def SwiftError : InheritableAttr {
-  let Spellings = [GCC<"swift_error">];
-  let Args = [EnumArgument<"Convention", "ConventionKind",
-               ["none", "nonnull_error", "null_result", "zero_result", "nonzero_result"],
-               ["None", "NonNullError", "NullResult", "ZeroResult", "NonZeroResult"]>];
-  let Subjects = SubjectList<[Function, ObjCMethod], ErrorDiag>;
-  let Documentation = [SwiftErrorDocs];
-}
-
 def SwiftName : InheritableAttr {
   let Spellings = [GCC<"swift_name">];
   let Args = [StringArgument<"Name">];
@@ -2236,6 +2227,17 @@ def SwiftVersionedRemoval : Attr {
       return static_cast<attr::Kind>(getRawKind());
     }
   }];
+}
+
+def SwiftError : InheritableAttr {
+  let Spellings = [GNU<"swift_error">];
+  let Args = [
+      EnumArgument<"Convention", "ConventionKind",
+                   ["none", "nonnull_error", "null_result", "zero_result", "nonzero_result"],
+                   ["None", "NonNullError", "NullResult", "ZeroResult", "NonZeroResult"]>
+  ];
+  let Subjects = SubjectList<[Function, ObjCMethod], ErrorDiag>;
+  let Documentation = [SwiftErrorDocs];
 }
 
 def NoDeref : TypeAttr {
