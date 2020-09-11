@@ -2,6 +2,10 @@
 // RUN: %clang_dfsan -O2 -mllvm -dfsan-event-callbacks %s %t-callbacks.o -o %t
 // RUN: %run %t FooBarBaz 2>&1 | FileCheck %s
 
+// See PR47488, parts of this test get optimized out by a more aggressive
+// dead store eliminator.
+// XFAIL: *
+
 // Tests that callbacks are inserted for store events when
 // -dfsan-event-callbacks is specified.
 
