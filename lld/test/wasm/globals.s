@@ -8,10 +8,11 @@
 
 .globaltype foo_global, i32
 .globaltype bar_global, f32
+.globaltype immutable_global, i32, immutable
 
 read_global:
   .functype read_global () -> (i32)
-  global.get foo_global
+  global.get immutable_global
   end_function
 
 write_global:
@@ -26,10 +27,13 @@ _start:
   .functype _start () -> ()
   i32.const 1
   call write_global
+  call read_global
+  drop
   end_function
 
 foo_global:
 bar_global:
+immutable_global:
 
 # CHECK:       - Type:            GLOBAL
 # CHECK-NEXT:    Globals:
@@ -39,13 +43,19 @@ bar_global:
 # CHECK-NEXT:        InitExpr:
 # CHECK-NEXT:          Opcode:          I32_CONST
 # CHECK-NEXT:          Value:           66560
-# CHECK-NEXT:      - Index:           1
+# CHECK-NEXT:       - Index:           1
+# CHECK-NEXT:         Type:            I32
+# CHECK-NEXT:         Mutable:         false
+# CHECK-NEXT:         InitExpr:
+# CHECK-NEXT:           Opcode:          I32_CONST
+# CHECK-NEXT:           Value:           0
+# CHECK-NEXT:      - Index:           2
 # CHECK-NEXT:        Type:            I32
 # CHECK-NEXT:        Mutable:         true
 # CHECK-NEXT:        InitExpr:
 # CHECK-NEXT:          Opcode:          I32_CONST
 # CHECK-NEXT:          Value:           0
-# CHECK-NEXT:      - Index:           2
+# CHECK-NEXT:      - Index:           3
 # CHECK-NEXT:        Type:            F32
 # CHECK-NEXT:        Mutable:         true
 # CHECK-NEXT:        InitExpr:
