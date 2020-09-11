@@ -5322,6 +5322,12 @@ SwiftASTContext::GetAllocationStrategy(opaque_compiler_type_t type) {
   return TypeAllocationStrategy::eUnknown;
 }
 
+CompilerType
+SwiftASTContext::GetTypeRefType(lldb::opaque_compiler_type_t type) {
+  return m_typeref_typesystem.GetTypeFromMangledTypename(
+      GetMangledTypeName(type));
+}
+
 //----------------------------------------------------------------------
 // Type Completion
 //----------------------------------------------------------------------
