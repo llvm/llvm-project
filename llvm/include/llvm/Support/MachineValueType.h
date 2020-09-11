@@ -425,7 +425,7 @@ namespace llvm {
       MVT EltVT = getVectorElementType();
       auto EltCnt = getVectorElementCount();
       assert(EltCnt.isKnownEven() && "Splitting vector, but not in half!");
-      return getVectorVT(EltVT, EltCnt / 2);
+      return getVectorVT(EltVT, EltCnt.divideCoefficientBy(2));
     }
 
     /// Returns true if the given vector is a power of 2.

@@ -414,7 +414,16 @@ namespace llvm {
       EVT EltVT = getVectorElementType();
       auto EltCnt = getVectorElementCount();
       assert(EltCnt.isKnownEven() && "Splitting vector, but not in half!");
-      return EVT::getVectorVT(Context, EltVT, EltCnt / 2);
+      return EVT::getVectorVT(Context, EltVT, EltCnt.divideCoefficientBy(2));
+    }
+
+    // Return a VT for a vector type with the same element type but
+    // double the number of elements. The type returned may be an
+    // extended type.
+    EVT getDoubleNumVectorElementsVT(LLVMContext &Context) const {
+      EVT EltVT = getVectorElementType();
+      auto EltCnt = getVectorElementCount();
+      return EVT::getVectorVT(Context, EltVT, EltCnt * 2);
     }
 
     /// Returns true if the given vector is a power of 2.
