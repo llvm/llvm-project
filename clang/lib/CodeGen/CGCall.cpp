@@ -2201,6 +2201,13 @@ void CodeGenModule::ConstructAttributeList(
       if (AI.getIndirectByVal())
         Attrs.addByValAttr(getTypes().ConvertTypeForMem(ParamType));
 
+      auto *Decl = ParamType->getAsRecordDecl();
+      if (CodeGenOpts.PassByValueIsNoAlias && Decl &&
+          Decl->getArgPassingRestrictions() == RecordDecl::APK_CanPassInRegs)
+        // When calling the function, the pointer passed in will be the only
+        // reference to the underlying object. Mark it accordingly.
+        Attrs.addAttribute(llvm::Attribute::NoAlias);
+
       // TODO: We could add the byref attribute if not byval, but it would
       // require updating many testcases.
 
