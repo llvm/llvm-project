@@ -583,7 +583,7 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
     }
     if (repl_module) {
       swift::SourceFile &repl_source_file =
-          repl_module->getMainSourceFile(swift::SourceFileKind::Main);
+          repl_module->getMainSourceFile();
 
       // Swift likes to give us strings to append to the current token but
       // the CompletionRequest requires a replacement for the full current
