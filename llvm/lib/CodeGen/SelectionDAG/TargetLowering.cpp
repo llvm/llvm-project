@@ -7934,7 +7934,6 @@ bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,
 
 SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc dl(Node);
-  bool NoNaN = Node->getFlags().hasNoNaNs();
   unsigned BaseOpcode = 0;
   switch (Node->getOpcode()) {
   default: llvm_unreachable("Expected VECREDUCE opcode");
@@ -7949,12 +7948,8 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
   case ISD::VECREDUCE_SMIN: BaseOpcode = ISD::SMIN; break;
   case ISD::VECREDUCE_UMAX: BaseOpcode = ISD::UMAX; break;
   case ISD::VECREDUCE_UMIN: BaseOpcode = ISD::UMIN; break;
-  case ISD::VECREDUCE_FMAX:
-    BaseOpcode = NoNaN ? ISD::FMAXNUM : ISD::FMAXIMUM;
-    break;
-  case ISD::VECREDUCE_FMIN:
-    BaseOpcode = NoNaN ? ISD::FMINNUM : ISD::FMINIMUM;
-    break;
+  case ISD::VECREDUCE_FMAX: BaseOpcode = ISD::FMAXNUM; break;
+  case ISD::VECREDUCE_FMIN: BaseOpcode = ISD::FMINNUM; break;
   }
 
   SDValue Op = Node->getOperand(0);

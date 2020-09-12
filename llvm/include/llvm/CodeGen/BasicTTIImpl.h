@@ -1352,13 +1352,9 @@ public:
       break;
     case Intrinsic::minnum:
       ISDs.push_back(ISD::FMINNUM);
-      if (FMF.noNaNs())
-        ISDs.push_back(ISD::FMINIMUM);
       break;
     case Intrinsic::maxnum:
       ISDs.push_back(ISD::FMAXNUM);
-      if (FMF.noNaNs())
-        ISDs.push_back(ISD::FMAXIMUM);
       break;
     case Intrinsic::copysign:
       ISDs.push_back(ISD::FCOPYSIGN);
