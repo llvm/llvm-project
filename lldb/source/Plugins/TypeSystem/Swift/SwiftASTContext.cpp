@@ -2354,6 +2354,15 @@ llvm::Triple SwiftASTContext::GetSwiftFriendlyTriple(llvm::Triple triple) {
     if (triple.isOSLinux() &&
         triple.getEnvironment() == llvm::Triple::UnknownEnvironment)
       triple.setEnvironment(llvm::Triple::GNU);
+
+    // Set the vendor to `unknown` on Windows as the Swift standard library is
+    // overly aggressive in matching the triple.  The vendor field is
+    // initialized to `pc` by LLDB though there is no official vendor associated
+    // with the open source toolchain, and so this field is rightly
+    // canonicalized to `unknown`.  This allows loading of the Swift standard
+    // library for the REPL.
+    if (triple.isOSWindows() && triple.isWindowsMSVCEnvironment())
+      triple.setVendor(llvm::Triple::UnknownVendor);
     triple.normalize();
     return triple;
   }
