@@ -7482,6 +7482,9 @@ def : Pat<(f64 (fadd (vector_extract (v2f64 FPR128:$Rn), (i64 0)),
 def : Pat<(fadd (vector_extract (v4f32 FPR128:$Rn), (i64 0)),
                 (vector_extract (v4f32 FPR128:$Rn), (i64 1))),
           (f32 (FADDPv2i32p (EXTRACT_SUBREG FPR128:$Rn, dsub)))>;
+def : Pat<(fadd (vector_extract (v8f16 FPR128:$Rn), (i64 0)),
+                (vector_extract (v8f16 FPR128:$Rn), (i64 1))),
+          (f16 (FADDPv2i16p (EXTRACT_SUBREG FPR128:$Rn, dsub)))>;
 
 // Scalar 64-bit shifts in FPR64 registers.
 def : Pat<(i64 (int_aarch64_neon_sshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
