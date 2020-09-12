@@ -4098,6 +4098,7 @@ def err_attr_swift_error_return_type : Error<
 def warn_swift_newtype_attribute_non_typedef : Warning<
   "'swift_newtype' attribute may be put on a typedef only; "
   "attribute is ignored">, InGroup<DiagGroup<"swift-newtype-attribute">>;
+
 def warn_ignored_objc_externally_retained : Warning<
   "'objc_externally_retained' can only be applied to local variables "
   "%select{of retainable type|with strong ownership}0">,
