@@ -24,19 +24,12 @@ using namespace llvm;
 
 /// Return a constant boolean vector that has true elements in all positions
 /// where the input constant data vector has an element with the sign bit set.
-static Constant *getNegativeIsTrueBoolVec(ConstantDataVector *V) {
-  SmallVector<Constant *, 32> BoolVec;
-  IntegerType *BoolTy = Type::getInt1Ty(V->getContext());
-  for (unsigned I = 0, E = V->getNumElements(); I != E; ++I) {
-    Constant *Elt = V->getElementAsConstant(I);
-    assert((isa<ConstantInt>(Elt) || isa<ConstantFP>(Elt)) &&
-           "Unexpected constant data vector element type");
-    bool Sign = V->getElementType()->isIntegerTy()
-                    ? cast<ConstantInt>(Elt)->isNegative()
-                    : cast<ConstantFP>(Elt)->isNegative();
-    BoolVec.push_back(ConstantInt::get(BoolTy, Sign));
-  }
-  return ConstantVector::get(BoolVec);
+static Constant *getNegativeIsTrueBoolVec(Constant *V) {
+  VectorType *IntTy = VectorType::getInteger(cast<VectorType>(V->getType()));
+  V = ConstantExpr::getBitCast(V, IntTy);
+  V = ConstantExpr::getICmp(CmpInst::ICMP_SGT, Constant::getNullValue(IntTy),
+                            V);
+  return V;
 }
 
 // TODO: If the x86 backend knew how to convert a bool vector mask back to an
