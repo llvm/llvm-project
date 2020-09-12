@@ -22,7 +22,6 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
-#include "llvm/CodeGen/CGPassBuilderOption.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
@@ -30,13 +29,11 @@
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Pass.h"
-#include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -123,17 +120,16 @@ static cl::opt<cl::boolOrDefault> DebugifyAndStripAll(
         "Debugify MIR before and Strip debug after "
         "each pass except those known to be unsafe when debug info is present"),
     cl::ZeroOrMore);
-
+enum RunOutliner { AlwaysOutline, NeverOutline, TargetDefault };
 // Enable or disable the MachineOutliner.
 static cl::opt<RunOutliner> EnableMachineOutliner(
     "enable-machine-outliner", cl::desc("Enable the machine outliner"),
-    cl::Hidden, cl::ValueOptional, cl::init(RunOutliner::TargetDefault),
-    cl::values(clEnumValN(RunOutliner::AlwaysOutline, "always",
+    cl::Hidden, cl::ValueOptional, cl::init(TargetDefault),
+    cl::values(clEnumValN(AlwaysOutline, "always",
                           "Run on all functions guaranteed to be beneficial"),
-               clEnumValN(RunOutliner::NeverOutline, "never",
-                          "Disable all outlining"),
+               clEnumValN(NeverOutline, "never", "Disable all outlining"),
                // Sentinel value for unspecified option.
-               clEnumValN(RunOutliner::AlwaysOutline, "", "")));
+               clEnumValN(AlwaysOutline, "", "")));
 // Enable or disable FastISel. Both options are needed, because
 // FastISel is enabled by default with -fast, and we wish to be
 // able to enable or disable fast-isel independently from -O0.
@@ -176,6 +172,7 @@ static cl::opt<bool> EarlyLiveIntervals("early-live-intervals", cl::Hidden,
     cl::desc("Run live interval analysis earlier in the pipeline"));
 
 // Experimental option to use CFL-AA in codegen
+enum class CFLAAType { None, Steensgaard, Andersen, Both };
 static cl::opt<CFLAAType> UseCFLAA(
     "use-cfl-aa-in-codegen", cl::init(CFLAAType::None), cl::Hidden,
     cl::desc("Enable the new, experimental CFL alias analysis in CodeGen"),
@@ -405,143 +402,6 @@ void TargetPassConfig::setStartStopPasses() {
     report_fatal_error(Twine(StopBeforeOptName) + Twine(" and ") +
                        Twine(StopAfterOptName) + Twine(" specified!"));
   Started = (StartAfter == nullptr) && (StartBefore == nullptr);
-}
-
-CGPassBuilderOption llvm::getCGPassBuilderOption() {
-  CGPassBuilderOption Opt;
-
-#define SET_OPTION(Option)                                                     \
-  if (Option.getNumOccurrences())                                              \
-    Opt.Option = Option;
-
-  SET_OPTION(EnableFastISelOption)
-  SET_OPTION(EnableGlobalISelAbort)
-  SET_OPTION(EnableGlobalISelOption)
-  SET_OPTION(EnableIPRA)
-  SET_OPTION(OptimizeRegAlloc)
-  SET_OPTION(VerifyMachineCode)
-
-  Opt.EnableMachineOutliner = EnableMachineOutliner;
-  Opt.UseCFLAA = UseCFLAA;
-  Opt.PrintISelInput = PrintISelInput;
-  Opt.PrintGCInfo = PrintGCInfo;
-  Opt.EnablePostMachineSchedulerPass = MISchedPostRA;
-  Opt.EnableLiveIntervalsPass = EarlyLiveIntervals;
-  Opt.EnableMachineBlockPlacementStatsPass = EnableBlockPlacementStats;
-  Opt.EnableImplicitNullChecksPass = EnableImplicitNullChecks;
-  Opt.DisableLoopStrengthReducePass = DisableLSR;
-  Opt.DisableCodeGenPreparePass = DisableCGP;
-  Opt.DisableMergeICmpsPass = DisableMergeICmps;
-  Opt.DisablePartiallyInlineLibCallsPass = DisablePartialLibcallInlining;
-  Opt.DisableConstantHoistingPass = DisableConstantHoisting;
-  Opt.PrintAfterLSR = PrintLSR;
-
-  return Opt;
-}
-
-static void registerPartialPipelineCallback(PassInstrumentationCallbacks &PIC,
-                                            LLVMTargetMachine &LLVMTM) {
-  StringRef StartBefore;
-  StringRef StartAfter;
-  StringRef StopBefore;
-  StringRef StopAfter;
-
-  unsigned StartBeforeInstanceNum = 0;
-  unsigned StartAfterInstanceNum = 0;
-  unsigned StopBeforeInstanceNum = 0;
-  unsigned StopAfterInstanceNum = 0;
-
-  std::tie(StartBefore, StartBeforeInstanceNum) =
-      getPassNameAndInstanceNum(StartBeforeOpt);
-  std::tie(StartAfter, StartAfterInstanceNum) =
-      getPassNameAndInstanceNum(StartAfterOpt);
-  std::tie(StopBefore, StopBeforeInstanceNum) =
-      getPassNameAndInstanceNum(StopBeforeOpt);
-  std::tie(StopAfter, StopAfterInstanceNum) =
-      getPassNameAndInstanceNum(StopAfterOpt);
-
-  if (StartBefore.empty() && StartAfter.empty() && StopBefore.empty() &&
-      StopAfter.empty())
-    return;
-
-  std::tie(StartBefore, std::ignore) =
-      LLVMTM.getPassNameFromLegacyName(StartBefore);
-  std::tie(StartAfter, std::ignore) =
-      LLVMTM.getPassNameFromLegacyName(StartAfter);
-  std::tie(StopBefore, std::ignore) =
-      LLVMTM.getPassNameFromLegacyName(StopBefore);
-  std::tie(StopAfter, std::ignore) =
-      LLVMTM.getPassNameFromLegacyName(StopAfter);
-  if (!StartBefore.empty() && !StartAfter.empty())
-    report_fatal_error(Twine(StartBeforeOptName) + Twine(" and ") +
-                       Twine(StartAfterOptName) + Twine(" specified!"));
-  if (!StopBefore.empty() && !StopAfter.empty())
-    report_fatal_error(Twine(StopBeforeOptName) + Twine(" and ") +
-                       Twine(StopAfterOptName) + Twine(" specified!"));
-
-  PIC.registerBeforePassCallback(
-      [=, EnableCurrent = StartBefore.empty() && StartAfter.empty(),
-       EnableNext = Optional<bool>(), StartBeforeCount = 0u,
-       StartAfterCount = 0u, StopBeforeCount = 0u,
-       StopAfterCount = 0u](StringRef P, Any) mutable {
-        bool StartBeforePass = !StartBefore.empty() && P.contains(StartBefore);
-        bool StartAfterPass = !StartAfter.empty() && P.contains(StartAfter);
-        bool StopBeforePass = !StopBefore.empty() && P.contains(StopBefore);
-        bool StopAfterPass = !StopAfter.empty() && P.contains(StopAfter);
-
-        // Implement -start-after/-stop-after
-        if (EnableNext) {
-          EnableCurrent = *EnableNext;
-          EnableNext.reset();
-        }
-
-        // Using PIC.registerAfterPassCallback won't work because if this
-        // callback returns false, AfterPassCallback is also skipped.
-        if (StartAfterPass && StartAfterCount++ == StartAfterInstanceNum) {
-          assert(!EnableNext && "Error: assign to EnableNext more than once");
-          EnableNext = true;
-        }
-        if (StopAfterPass && StopAfterCount++ == StopAfterInstanceNum) {
-          assert(!EnableNext && "Error: assign to EnableNext more than once");
-          EnableNext = false;
-        }
-
-        if (StartBeforePass && StartBeforeCount++ == StartBeforeInstanceNum)
-          EnableCurrent = true;
-        if (StopBeforePass && StopBeforeCount++ == StopBeforeInstanceNum)
-          EnableCurrent = false;
-        return EnableCurrent;
-      });
-}
-
-void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
-                                   LLVMTargetMachine &LLVMTM) {
-
-  // Register a callback for disabling passes.
-  PIC.registerBeforePassCallback([](StringRef P, Any) {
-
-#define DISABLE_PASS(Option, Name)                                             \
-  if (Option && P.contains(#Name))                                             \
-    return false;
-    DISABLE_PASS(DisableBlockPlacement, MachineBlockPlacementPass)
-    DISABLE_PASS(DisableBranchFold, BranchFolderPass)
-    DISABLE_PASS(DisableCopyProp, MachineCopyPropagationPass)
-    DISABLE_PASS(DisableEarlyIfConversion, EarlyIfConverterPass)
-    DISABLE_PASS(DisableEarlyTailDup, EarlyTailDuplicatePass)
-    DISABLE_PASS(DisableMachineCSE, MachineCSEPass)
-    DISABLE_PASS(DisableMachineDCE, DeadMachineInstructionElimPass)
-    DISABLE_PASS(DisableMachineLICM, EarlyMachineLICMPass)
-    DISABLE_PASS(DisableMachineSink, MachineSinkingPass)
-    DISABLE_PASS(DisablePostRAMachineLICM, MachineLICMPass)
-    DISABLE_PASS(DisablePostRAMachineSink, PostRAMachineSinkingPass)
-    DISABLE_PASS(DisablePostRASched, PostRASchedulerPass)
-    DISABLE_PASS(DisableSSC, StackSlotColoringPass)
-    DISABLE_PASS(DisableTailDuplicate, TailDuplicatePass)
-
-    return true;
-  });
-
-  registerPartialPipelineCallback(PIC, LLVMTM);
 }
 
 // Out of line constructor provides default values for pass options and
@@ -1152,11 +1012,10 @@ void TargetPassConfig::addMachinePasses() {
   addPass(&LiveDebugValuesID, false);
 
   if (TM->Options.EnableMachineOutliner && getOptLevel() != CodeGenOpt::None &&
-      EnableMachineOutliner != RunOutliner::NeverOutline) {
-    bool RunOnAllFunctions =
-        (EnableMachineOutliner == RunOutliner::AlwaysOutline);
-    bool AddOutliner =
-        RunOnAllFunctions || TM->Options.SupportsDefaultOutlining;
+      EnableMachineOutliner != NeverOutline) {
+    bool RunOnAllFunctions = (EnableMachineOutliner == AlwaysOutline);
+    bool AddOutliner = RunOnAllFunctions ||
+                       TM->Options.SupportsDefaultOutlining;
     if (AddOutliner)
       addPass(createMachineOutlinerPass(RunOnAllFunctions));
   }
