@@ -41,3 +41,259 @@ define float @test_minimum_const_nan(float %x) {
   %r = call float @llvm.minimum.f32(float %x, float 0x7fff000000000000)
   ret float %r
 }
+
+define float @test_minnum_const_inf(float %x) {
+; CHECK-LABEL: test_minnum_const_inf:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr s0, .LCPI4_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vminnm.f32 s0, s2, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI4_0:
+; CHECK-NEXT:    .long 0x7f800000 @ float +Inf
+  %r = call float @llvm.minnum.f32(float %x, float 0x7ff0000000000000)
+  ret float %r
+}
+
+define float @test_maxnum_const_inf(float %x) {
+; CHECK-LABEL: test_maxnum_const_inf:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr s0, .LCPI5_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vmaxnm.f32 s0, s2, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI5_0:
+; CHECK-NEXT:    .long 0x7f800000 @ float +Inf
+  %r = call float @llvm.maxnum.f32(float %x, float 0x7ff0000000000000)
+  ret float %r
+}
+
+define float @test_maximum_const_inf(float %x) {
+; CHECK-LABEL: test_maximum_const_inf:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr s0, .LCPI6_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vmax.f32 d0, d1, d0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI6_0:
+; CHECK-NEXT:    .long 0x7f800000 @ float +Inf
+  %r = call float @llvm.maximum.f32(float %x, float 0x7ff0000000000000)
+  ret float %r
+}
+
+define float @test_minimum_const_inf(float %x) {
+; CHECK-LABEL: test_minimum_const_inf:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr s0, .LCPI7_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vmin.f32 d0, d1, d0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI7_0:
+; CHECK-NEXT:    .long 0x7f800000 @ float +Inf
+  %r = call float @llvm.minimum.f32(float %x, float 0x7ff0000000000000)
+  ret float %r
+}
+
+define float @test_minnum_const_ninf(float %x) {
+; CHECK-LABEL: test_minnum_const_ninf:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr s0, .LCPI8_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vminnm.f32 s0, s2, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI8_0:
+; CHECK-NEXT:    .long 0xff800000 @ float -Inf
+  %r = call float @llvm.minnum.f32(float %x, float 0xfff0000000000000)
+  ret float %r
+}
+
+define float @test_maxnum_const_ninf(float %x) {
+; CHECK-LABEL: test_maxnum_const_ninf:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr s0, .LCPI9_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vmaxnm.f32 s0, s2, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI9_0:
+; CHECK-NEXT:    .long 0xff800000 @ float -Inf
+  %r = call float @llvm.maxnum.f32(float %x, float 0xfff0000000000000)
+  ret float %r
+}
+
+define float @test_maximum_const_ninf(float %x) {
+; CHECK-LABEL: test_maximum_const_ninf:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr s0, .LCPI10_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vmax.f32 d0, d1, d0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI10_0:
+; CHECK-NEXT:    .long 0xff800000 @ float -Inf
+  %r = call float @llvm.maximum.f32(float %x, float 0xfff0000000000000)
+  ret float %r
+}
+
+define float @test_minimum_const_ninf(float %x) {
+; CHECK-LABEL: test_minimum_const_ninf:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr s0, .LCPI11_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vmin.f32 d0, d1, d0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI11_0:
+; CHECK-NEXT:    .long 0xff800000 @ float -Inf
+  %r = call float @llvm.minimum.f32(float %x, float 0xfff0000000000000)
+  ret float %r
+}
+
+define float @test_minnum_const_inf_nnan(float %x) {
+; CHECK-LABEL: test_minnum_const_inf_nnan:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr s0, .LCPI12_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vminnm.f32 s0, s2, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI12_0:
+; CHECK-NEXT:    .long 0x7f800000 @ float +Inf
+  %r = call nnan float @llvm.minnum.f32(float %x, float 0x7ff0000000000000)
+  ret float %r
+}
+
+define float @test_maxnum_const_inf_nnan(float %x) {
+; CHECK-LABEL: test_maxnum_const_inf_nnan:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr s0, .LCPI13_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vmaxnm.f32 s0, s2, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI13_0:
+; CHECK-NEXT:    .long 0x7f800000 @ float +Inf
+  %r = call nnan float @llvm.maxnum.f32(float %x, float 0x7ff0000000000000)
+  ret float %r
+}
+
+define float @test_maximum_const_inf_nnan(float %x) {
+; CHECK-LABEL: test_maximum_const_inf_nnan:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr s0, .LCPI14_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vmax.f32 d0, d1, d0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI14_0:
+; CHECK-NEXT:    .long 0x7f800000 @ float +Inf
+  %r = call nnan float @llvm.maximum.f32(float %x, float 0x7ff0000000000000)
+  ret float %r
+}
+
+define float @test_minimum_const_inf_nnan(float %x) {
+; CHECK-LABEL: test_minimum_const_inf_nnan:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr s0, .LCPI15_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vmin.f32 d0, d1, d0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI15_0:
+; CHECK-NEXT:    .long 0x7f800000 @ float +Inf
+  %r = call nnan float @llvm.minimum.f32(float %x, float 0x7ff0000000000000)
+  ret float %r
+}
+
+define float @test_minnum_const_ninf_nnan(float %x) {
+; CHECK-LABEL: test_minnum_const_ninf_nnan:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr s0, .LCPI16_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vminnm.f32 s0, s2, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI16_0:
+; CHECK-NEXT:    .long 0xff800000 @ float -Inf
+  %r = call nnan float @llvm.minnum.f32(float %x, float 0xfff0000000000000)
+  ret float %r
+}
+
+define float @test_maxnum_const_ninf_nnan(float %x) {
+; CHECK-LABEL: test_maxnum_const_ninf_nnan:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr s0, .LCPI17_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vmaxnm.f32 s0, s2, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI17_0:
+; CHECK-NEXT:    .long 0xff800000 @ float -Inf
+  %r = call nnan float @llvm.maxnum.f32(float %x, float 0xfff0000000000000)
+  ret float %r
+}
+
+define float @test_maximum_const_ninf_nnan(float %x) {
+; CHECK-LABEL: test_maximum_const_ninf_nnan:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr s0, .LCPI18_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vmax.f32 d0, d1, d0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI18_0:
+; CHECK-NEXT:    .long 0xff800000 @ float -Inf
+  %r = call nnan float @llvm.maximum.f32(float %x, float 0xfff0000000000000)
+  ret float %r
+}
+
+define float @test_minimum_const_ninf_nnan(float %x) {
+; CHECK-LABEL: test_minimum_const_ninf_nnan:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr s0, .LCPI19_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vmin.f32 d0, d1, d0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI19_0:
+; CHECK-NEXT:    .long 0xff800000 @ float -Inf
+  %r = call nnan float @llvm.minimum.f32(float %x, float 0xfff0000000000000)
+  ret float %r
+}
