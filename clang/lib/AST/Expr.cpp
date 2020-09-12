@@ -1892,42 +1892,19 @@ const FieldDecl *CastExpr::getTargetFieldForToUnionCast(const RecordDecl *RD,
   return nullptr;
 }
 
-FPOptionsOverride *CastExpr::getTrailingFPFeatures() {
-  assert(hasStoredFPFeatures());
-  switch (getStmtClass()) {
-  case ImplicitCastExprClass:
-    return static_cast<ImplicitCastExpr *>(this)
-        ->getTrailingObjects<FPOptionsOverride>();
-  case CStyleCastExprClass:
-    return static_cast<CStyleCastExpr *>(this)
-        ->getTrailingObjects<FPOptionsOverride>();
-  case CXXFunctionalCastExprClass:
-    return static_cast<CXXFunctionalCastExpr *>(this)
-        ->getTrailingObjects<FPOptionsOverride>();
-  case CXXStaticCastExprClass:
-    return static_cast<CXXStaticCastExpr *>(this)
-        ->getTrailingObjects<FPOptionsOverride>();
-  default:
-    llvm_unreachable("Cast does not have FPFeatures");
-  }
-}
-
 ImplicitCastExpr *ImplicitCastExpr::Create(const ASTContext &C, QualType T,
                                            CastKind Kind, Expr *Operand,
                                            const CXXCastPath *BasePath,
-                                           ExprValueKind VK,
-                                           FPOptionsOverride FPO) {
+                                           ExprValueKind VK) {
   unsigned PathSize = (BasePath ? BasePath->size() : 0);
-  void *Buffer =
-      C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *, FPOptionsOverride>(
-          PathSize, FPO.requiresTrailingStorage()));
+  void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
   // Per C++ [conv.lval]p3, lvalue-to-rvalue conversions on class and
   // std::nullptr_t have special semantics not captured by CK_LValueToRValue.
   assert((Kind != CK_LValueToRValue ||
           !(T->isNullPtrType() || T->getAsCXXRecordDecl())) &&
          "invalid type for lvalue-to-rvalue conversion");
   ImplicitCastExpr *E =
-      new (Buffer) ImplicitCastExpr(T, Kind, Operand, PathSize, FPO, VK);
+    new (Buffer) ImplicitCastExpr(T, Kind, Operand, PathSize, VK);
   if (PathSize)
     std::uninitialized_copy_n(BasePath->data(), BasePath->size(),
                               E->getTrailingObjects<CXXBaseSpecifier *>());
@@ -1935,26 +1912,21 @@ ImplicitCastExpr *ImplicitCastExpr::Create(const ASTContext &C, QualType T,
 }
 
 ImplicitCastExpr *ImplicitCastExpr::CreateEmpty(const ASTContext &C,
-                                                unsigned PathSize,
-                                                bool HasFPFeatures) {
-  void *Buffer =
-      C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *, FPOptionsOverride>(
-          PathSize, HasFPFeatures));
-  return new (Buffer) ImplicitCastExpr(EmptyShell(), PathSize, HasFPFeatures);
+                                                unsigned PathSize) {
+  void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
+  return new (Buffer) ImplicitCastExpr(EmptyShell(), PathSize);
 }
+
 
 CStyleCastExpr *CStyleCastExpr::Create(const ASTContext &C, QualType T,
                                        ExprValueKind VK, CastKind K, Expr *Op,
                                        const CXXCastPath *BasePath,
-                                       FPOptionsOverride FPO,
                                        TypeSourceInfo *WrittenTy,
                                        SourceLocation L, SourceLocation R) {
   unsigned PathSize = (BasePath ? BasePath->size() : 0);
-  void *Buffer =
-      C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *, FPOptionsOverride>(
-          PathSize, FPO.requiresTrailingStorage()));
+  void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
   CStyleCastExpr *E =
-      new (Buffer) CStyleCastExpr(T, VK, K, Op, PathSize, FPO, WrittenTy, L, R);
+    new (Buffer) CStyleCastExpr(T, VK, K, Op, PathSize, WrittenTy, L, R);
   if (PathSize)
     std::uninitialized_copy_n(BasePath->data(), BasePath->size(),
                               E->getTrailingObjects<CXXBaseSpecifier *>());
@@ -1962,12 +1934,9 @@ CStyleCastExpr *CStyleCastExpr::Create(const ASTContext &C, QualType T,
 }
 
 CStyleCastExpr *CStyleCastExpr::CreateEmpty(const ASTContext &C,
-                                            unsigned PathSize,
-                                            bool HasFPFeatures) {
-  void *Buffer =
-      C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *, FPOptionsOverride>(
-          PathSize, HasFPFeatures));
-  return new (Buffer) CStyleCastExpr(EmptyShell(), PathSize, HasFPFeatures);
+                                            unsigned PathSize) {
+  void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
+  return new (Buffer) CStyleCastExpr(EmptyShell(), PathSize);
 }
 
 /// getOpcodeStr - Turn an Opcode enum value into the punctuation char it

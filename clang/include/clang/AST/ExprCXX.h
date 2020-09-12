@@ -374,17 +374,16 @@ private:
 protected:
   friend class ASTStmtReader;
 
-  CXXNamedCastExpr(StmtClass SC, QualType ty, ExprValueKind VK, CastKind kind,
-                   Expr *op, unsigned PathSize, bool HasFPFeatures,
+  CXXNamedCastExpr(StmtClass SC, QualType ty, ExprValueKind VK,
+                   CastKind kind, Expr *op, unsigned PathSize,
                    TypeSourceInfo *writtenTy, SourceLocation l,
-                   SourceLocation RParenLoc, SourceRange AngleBrackets)
-      : ExplicitCastExpr(SC, ty, VK, kind, op, PathSize, HasFPFeatures,
-                         writtenTy),
-        Loc(l), RParenLoc(RParenLoc), AngleBrackets(AngleBrackets) {}
+                   SourceLocation RParenLoc,
+                   SourceRange AngleBrackets)
+      : ExplicitCastExpr(SC, ty, VK, kind, op, PathSize, writtenTy), Loc(l),
+        RParenLoc(RParenLoc), AngleBrackets(AngleBrackets) {}
 
-  explicit CXXNamedCastExpr(StmtClass SC, EmptyShell Shell, unsigned PathSize,
-                            bool HasFPFeatures)
-      : ExplicitCastExpr(SC, Shell, PathSize, HasFPFeatures) {}
+  explicit CXXNamedCastExpr(StmtClass SC, EmptyShell Shell, unsigned PathSize)
+      : ExplicitCastExpr(SC, Shell, PathSize) {}
 
 public:
   const char *getCastName() const;
@@ -420,39 +419,29 @@ public:
 /// \c static_cast<int>(1.0).
 class CXXStaticCastExpr final
     : public CXXNamedCastExpr,
-      private llvm::TrailingObjects<CXXStaticCastExpr, CXXBaseSpecifier *,
-                                    FPOptionsOverride> {
+      private llvm::TrailingObjects<CXXStaticCastExpr, CXXBaseSpecifier *> {
   CXXStaticCastExpr(QualType ty, ExprValueKind vk, CastKind kind, Expr *op,
                     unsigned pathSize, TypeSourceInfo *writtenTy,
-                    FPOptionsOverride FPO, SourceLocation l,
-                    SourceLocation RParenLoc, SourceRange AngleBrackets)
+                    SourceLocation l, SourceLocation RParenLoc,
+                    SourceRange AngleBrackets)
       : CXXNamedCastExpr(CXXStaticCastExprClass, ty, vk, kind, op, pathSize,
-                         FPO.requiresTrailingStorage(), writtenTy, l, RParenLoc,
-                         AngleBrackets) {
-    if (hasStoredFPFeatures())
-      *getTrailingFPFeatures() = FPO;
-  }
+                         writtenTy, l, RParenLoc, AngleBrackets) {}
 
-  explicit CXXStaticCastExpr(EmptyShell Empty, unsigned PathSize,
-                             bool HasFPFeatures)
-      : CXXNamedCastExpr(CXXStaticCastExprClass, Empty, PathSize,
-                         HasFPFeatures) {}
-
-  unsigned numTrailingObjects(OverloadToken<CXXBaseSpecifier *>) const {
-    return path_size();
-  }
+  explicit CXXStaticCastExpr(EmptyShell Empty, unsigned PathSize)
+      : CXXNamedCastExpr(CXXStaticCastExprClass, Empty, PathSize) {}
 
 public:
   friend class CastExpr;
   friend TrailingObjects;
 
-  static CXXStaticCastExpr *
-  Create(const ASTContext &Context, QualType T, ExprValueKind VK, CastKind K,
-         Expr *Op, const CXXCastPath *Path, TypeSourceInfo *Written,
-         FPOptionsOverride FPO, SourceLocation L, SourceLocation RParenLoc,
-         SourceRange AngleBrackets);
+  static CXXStaticCastExpr *Create(const ASTContext &Context, QualType T,
+                                   ExprValueKind VK, CastKind K, Expr *Op,
+                                   const CXXCastPath *Path,
+                                   TypeSourceInfo *Written, SourceLocation L,
+                                   SourceLocation RParenLoc,
+                                   SourceRange AngleBrackets);
   static CXXStaticCastExpr *CreateEmpty(const ASTContext &Context,
-                                        unsigned PathSize, bool hasFPFeatures);
+                                        unsigned PathSize);
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXStaticCastExprClass;
@@ -467,17 +456,15 @@ public:
 class CXXDynamicCastExpr final
     : public CXXNamedCastExpr,
       private llvm::TrailingObjects<CXXDynamicCastExpr, CXXBaseSpecifier *> {
-  CXXDynamicCastExpr(QualType ty, ExprValueKind VK, CastKind kind, Expr *op,
-                     unsigned pathSize, TypeSourceInfo *writtenTy,
+  CXXDynamicCastExpr(QualType ty, ExprValueKind VK, CastKind kind,
+                     Expr *op, unsigned pathSize, TypeSourceInfo *writtenTy,
                      SourceLocation l, SourceLocation RParenLoc,
                      SourceRange AngleBrackets)
       : CXXNamedCastExpr(CXXDynamicCastExprClass, ty, VK, kind, op, pathSize,
-                         /*HasFPFeatures*/ false, writtenTy, l, RParenLoc,
-                         AngleBrackets) {}
+                         writtenTy, l, RParenLoc, AngleBrackets) {}
 
   explicit CXXDynamicCastExpr(EmptyShell Empty, unsigned pathSize)
-      : CXXNamedCastExpr(CXXDynamicCastExprClass, Empty, pathSize,
-                         /*HasFPFeatures*/ false) {}
+      : CXXNamedCastExpr(CXXDynamicCastExprClass, Empty, pathSize) {}
 
 public:
   friend class CastExpr;
@@ -512,17 +499,16 @@ class CXXReinterpretCastExpr final
     : public CXXNamedCastExpr,
       private llvm::TrailingObjects<CXXReinterpretCastExpr,
                                     CXXBaseSpecifier *> {
-  CXXReinterpretCastExpr(QualType ty, ExprValueKind vk, CastKind kind, Expr *op,
-                         unsigned pathSize, TypeSourceInfo *writtenTy,
-                         SourceLocation l, SourceLocation RParenLoc,
+  CXXReinterpretCastExpr(QualType ty, ExprValueKind vk, CastKind kind,
+                         Expr *op, unsigned pathSize,
+                         TypeSourceInfo *writtenTy, SourceLocation l,
+                         SourceLocation RParenLoc,
                          SourceRange AngleBrackets)
       : CXXNamedCastExpr(CXXReinterpretCastExprClass, ty, vk, kind, op,
-                         pathSize, /*HasFPFeatures*/ false, writtenTy, l,
-                         RParenLoc, AngleBrackets) {}
+                         pathSize, writtenTy, l, RParenLoc, AngleBrackets) {}
 
   CXXReinterpretCastExpr(EmptyShell Empty, unsigned pathSize)
-      : CXXNamedCastExpr(CXXReinterpretCastExprClass, Empty, pathSize,
-                         /*HasFPFeatures*/ false) {}
+      : CXXNamedCastExpr(CXXReinterpretCastExprClass, Empty, pathSize) {}
 
 public:
   friend class CastExpr;
@@ -555,13 +541,11 @@ class CXXConstCastExpr final
   CXXConstCastExpr(QualType ty, ExprValueKind VK, Expr *op,
                    TypeSourceInfo *writtenTy, SourceLocation l,
                    SourceLocation RParenLoc, SourceRange AngleBrackets)
-      : CXXNamedCastExpr(CXXConstCastExprClass, ty, VK, CK_NoOp, op, 0,
-                         /*HasFPFeatures*/ false, writtenTy, l, RParenLoc,
-                         AngleBrackets) {}
+      : CXXNamedCastExpr(CXXConstCastExprClass, ty, VK, CK_NoOp, op,
+                         0, writtenTy, l, RParenLoc, AngleBrackets) {}
 
   explicit CXXConstCastExpr(EmptyShell Empty)
-      : CXXNamedCastExpr(CXXConstCastExprClass, Empty, 0,
-                         /*HasFPFeatures*/ false) {}
+      : CXXNamedCastExpr(CXXConstCastExprClass, Empty, 0) {}
 
 public:
   friend class CastExpr;
@@ -594,12 +578,10 @@ class CXXAddrspaceCastExpr final
                        TypeSourceInfo *writtenTy, SourceLocation l,
                        SourceLocation RParenLoc, SourceRange AngleBrackets)
       : CXXNamedCastExpr(CXXAddrspaceCastExprClass, ty, VK, Kind, op, 0,
-                         /*HasFPFeatures*/ false, writtenTy, l, RParenLoc,
-                         AngleBrackets) {}
+                         writtenTy, l, RParenLoc, AngleBrackets) {}
 
   explicit CXXAddrspaceCastExpr(EmptyShell Empty)
-      : CXXNamedCastExpr(CXXAddrspaceCastExprClass, Empty, 0,
-                         /*HasFPFeatures*/ false) {}
+      : CXXNamedCastExpr(CXXAddrspaceCastExprClass, Empty, 0) {}
 
 public:
   friend class CastExpr;
@@ -1711,43 +1693,34 @@ public:
 /// \endcode
 class CXXFunctionalCastExpr final
     : public ExplicitCastExpr,
-      private llvm::TrailingObjects<CXXFunctionalCastExpr, CXXBaseSpecifier *,
-                                    FPOptionsOverride> {
+      private llvm::TrailingObjects<CXXFunctionalCastExpr, CXXBaseSpecifier *> {
   SourceLocation LParenLoc;
   SourceLocation RParenLoc;
 
   CXXFunctionalCastExpr(QualType ty, ExprValueKind VK,
-                        TypeSourceInfo *writtenTy, CastKind kind,
-                        Expr *castExpr, unsigned pathSize,
-                        FPOptionsOverride FPO, SourceLocation lParenLoc,
-                        SourceLocation rParenLoc)
-      : ExplicitCastExpr(CXXFunctionalCastExprClass, ty, VK, kind, castExpr,
-                         pathSize, FPO.requiresTrailingStorage(), writtenTy),
-        LParenLoc(lParenLoc), RParenLoc(rParenLoc) {
-    if (hasStoredFPFeatures())
-      *getTrailingFPFeatures() = FPO;
-  }
+                        TypeSourceInfo *writtenTy,
+                        CastKind kind, Expr *castExpr, unsigned pathSize,
+                        SourceLocation lParenLoc, SourceLocation rParenLoc)
+      : ExplicitCastExpr(CXXFunctionalCastExprClass, ty, VK, kind,
+                         castExpr, pathSize, writtenTy),
+        LParenLoc(lParenLoc), RParenLoc(rParenLoc) {}
 
-  explicit CXXFunctionalCastExpr(EmptyShell Shell, unsigned PathSize,
-                                 bool HasFPFeatures)
-      : ExplicitCastExpr(CXXFunctionalCastExprClass, Shell, PathSize,
-                         HasFPFeatures) {}
-
-  unsigned numTrailingObjects(OverloadToken<CXXBaseSpecifier *>) const {
-    return path_size();
-  }
+  explicit CXXFunctionalCastExpr(EmptyShell Shell, unsigned PathSize)
+      : ExplicitCastExpr(CXXFunctionalCastExprClass, Shell, PathSize) {}
 
 public:
   friend class CastExpr;
   friend TrailingObjects;
 
-  static CXXFunctionalCastExpr *
-  Create(const ASTContext &Context, QualType T, ExprValueKind VK,
-         TypeSourceInfo *Written, CastKind Kind, Expr *Op,
-         const CXXCastPath *Path, FPOptionsOverride FPO, SourceLocation LPLoc,
-         SourceLocation RPLoc);
-  static CXXFunctionalCastExpr *
-  CreateEmpty(const ASTContext &Context, unsigned PathSize, bool HasFPFeatures);
+  static CXXFunctionalCastExpr *Create(const ASTContext &Context, QualType T,
+                                       ExprValueKind VK,
+                                       TypeSourceInfo *Written,
+                                       CastKind Kind, Expr *Op,
+                                       const CXXCastPath *Path,
+                                       SourceLocation LPLoc,
+                                       SourceLocation RPLoc);
+  static CXXFunctionalCastExpr *CreateEmpty(const ASTContext &Context,
+                                            unsigned PathSize);
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
   void setLParenLoc(SourceLocation L) { LParenLoc = L; }
@@ -4855,11 +4828,11 @@ public:
   BuiltinBitCastExpr(QualType T, ExprValueKind VK, CastKind CK, Expr *SrcExpr,
                      TypeSourceInfo *DstType, SourceLocation KWLoc,
                      SourceLocation RParenLoc)
-      : ExplicitCastExpr(BuiltinBitCastExprClass, T, VK, CK, SrcExpr, 0, false,
+      : ExplicitCastExpr(BuiltinBitCastExprClass, T, VK, CK, SrcExpr, 0,
                          DstType),
         KWLoc(KWLoc), RParenLoc(RParenLoc) {}
   BuiltinBitCastExpr(EmptyShell Empty)
-      : ExplicitCastExpr(BuiltinBitCastExprClass, Empty, 0, false) {}
+      : ExplicitCastExpr(BuiltinBitCastExprClass, Empty, 0) {}
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return KWLoc; }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }

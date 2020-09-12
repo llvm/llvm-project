@@ -7478,7 +7478,7 @@ Sema::BuildExpressionFromIntegralTemplateArgument(const TemplateArgument &Arg,
     // FIXME: This is a hack. We need a better way to handle substituted
     // non-type template parameters.
     E = CStyleCastExpr::Create(Context, OrigT, VK_RValue, CK_IntegralCast, E,
-                               nullptr, CurFPFeatureOverrides(),
+                               nullptr,
                                Context.getTrivialTypeSourceInfo(OrigT, Loc),
                                Loc, Loc);
   }

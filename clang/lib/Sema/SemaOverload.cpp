@@ -5862,8 +5862,7 @@ diagnoseNoViableConversion(Sema &SemaRef, SourceLocation Loc, Expr *&From,
     // Record usage of conversion in an implicit cast.
     From = ImplicitCastExpr::Create(SemaRef.Context, Result.get()->getType(),
                                     CK_UserDefinedConversion, Result.get(),
-                                    nullptr, Result.get()->getValueKind(),
-                                    SemaRef.CurFPFeatureOverrides());
+                                    nullptr, Result.get()->getValueKind());
   }
   return false;
 }
@@ -5892,8 +5891,7 @@ static bool recordConversion(Sema &SemaRef, SourceLocation Loc, Expr *&From,
   // Record usage of conversion in an implicit cast.
   From = ImplicitCastExpr::Create(SemaRef.Context, Result.get()->getType(),
                                   CK_UserDefinedConversion, Result.get(),
-                                  nullptr, Result.get()->getValueKind(),
-                                  SemaRef.CurFPFeatureOverrides());
+                                  nullptr, Result.get()->getValueKind());
   return false;
 }
 
@@ -7298,8 +7296,8 @@ void Sema::AddConversionCandidate(
                             VK_LValue, From->getBeginLoc());
   ImplicitCastExpr ConversionFn(ImplicitCastExpr::OnStack,
                                 Context.getPointerType(Conversion->getType()),
-                                CK_FunctionToPointerDecay, &ConversionRef,
-                                VK_RValue, CurFPFeatureOverrides());
+                                CK_FunctionToPointerDecay,
+                                &ConversionRef, VK_RValue);
 
   QualType ConversionType = Conversion->getConversionType();
   if (!isCompleteType(From->getBeginLoc(), ConversionType)) {
@@ -14424,9 +14422,9 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
     if (Call.isInvalid())
       return ExprError();
     // Record usage of conversion in an implicit cast.
-    Call = ImplicitCastExpr::Create(
-        Context, Call.get()->getType(), CK_UserDefinedConversion, Call.get(),
-        nullptr, VK_RValue, CurFPFeatureOverrides());
+    Call = ImplicitCastExpr::Create(Context, Call.get()->getType(),
+                                    CK_UserDefinedConversion, Call.get(),
+                                    nullptr, VK_RValue);
 
     return BuildCallExpr(S, Call.get(), LParenLoc, Args, RParenLoc);
   }
@@ -14831,9 +14829,10 @@ Expr *Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
     if (SubExpr == ICE->getSubExpr())
       return ICE;
 
-    return ImplicitCastExpr::Create(Context, ICE->getType(), ICE->getCastKind(),
-                                    SubExpr, nullptr, ICE->getValueKind(),
-                                    CurFPFeatureOverrides());
+    return ImplicitCastExpr::Create(Context, ICE->getType(),
+                                    ICE->getCastKind(),
+                                    SubExpr, nullptr,
+                                    ICE->getValueKind());
   }
 
   if (auto *GSE = dyn_cast<GenericSelectionExpr>(E)) {
