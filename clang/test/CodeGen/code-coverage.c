@@ -38,7 +38,7 @@ int test2(int b) {
 
 
 // CHECK: @__llvm_internal_gcov_emit_function_args.0 = internal unnamed_addr constant [2 x %0]
-// CHECK-SAME: [%0 zeroinitializer, %0 { i32 1, i32 0, i32 0 }]
+// CHECK-SAME: [%0 { i32 0, i32 {{[-0-9]+}}, i32 {{[-0-9]+}} }, %0 { i32 1, i32 {{[-0-9]+}}, i32 {{[-0-9]+}} }]
 
 // CHECK: @__llvm_internal_gcov_emit_file_info = internal unnamed_addr constant [1 x %2]
 /// 0x3330342a '3' '0' '4' '*'
