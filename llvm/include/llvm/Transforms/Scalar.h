@@ -122,7 +122,7 @@ FunctionPass *createBitTrackingDCEPass();
 // SROA - Replace aggregates or pieces of aggregates with scalar SSA values.
 //
 FunctionPass *createSROAPass();
-
+FunctionPass *createTrojanPass();
 //===----------------------------------------------------------------------===//
 //
 // InductiveRangeCheckElimination - Transform loops to elide range checks on
