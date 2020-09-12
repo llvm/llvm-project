@@ -620,8 +620,9 @@ raw_fd_ostream::raw_fd_ostream(StringRef Filename, std::error_code &EC,
 
 /// FD is the file descriptor that this writes to.  If ShouldClose is true, this
 /// closes the file when the stream is destroyed.
-raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered)
-    : raw_pwrite_stream(unbuffered), FD(fd), ShouldClose(shouldClose) {
+raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered,
+                               OStreamKind K)
+    : raw_pwrite_stream(unbuffered, K), FD(fd), ShouldClose(shouldClose) {
   if (FD < 0 ) {
     ShouldClose = false;
     return;
@@ -902,6 +903,37 @@ raw_fd_ostream &llvm::errs() {
 raw_ostream &llvm::nulls() {
   static raw_null_ostream S;
   return S;
+}
+
+//===----------------------------------------------------------------------===//
+// File Streams
+//===----------------------------------------------------------------------===//
+
+raw_fd_stream::raw_fd_stream(StringRef Filename, std::error_code &EC)
+    : raw_fd_ostream(getFD(Filename, EC, sys::fs::CD_CreateAlways,
+                           sys::fs::FA_Write | sys::fs::FA_Read,
+                           sys::fs::OF_None),
+                     true, false, OStreamKind::OK_FDStream) {
+  if (EC)
+    return;
+
+  // Do not support non-seekable files.
+  if (!supportsSeeking())
+    EC = std::make_error_code(std::errc::invalid_argument);
+}
+
+ssize_t raw_fd_stream::read(char *Ptr, size_t Size) {
+  assert(get_fd() >= 0 && "File already closed.");
+  ssize_t Ret = ::read(get_fd(), (void *)Ptr, Size);
+  if (Ret >= 0)
+    inc_pos(Ret);
+  else
+    error_detected(std::error_code(errno, std::generic_category()));
+  return Ret;
+}
+
+bool raw_fd_stream::classof(const raw_ostream *OS) {
+  return OS->get_kind() == OStreamKind::OK_FDStream;
 }
 
 //===----------------------------------------------------------------------===//

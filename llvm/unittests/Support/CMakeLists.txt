@@ -87,6 +87,7 @@ add_llvm_unittest(SupportTests
   YAMLIOTest.cpp
   YAMLParserTest.cpp
   formatted_raw_ostream_test.cpp
+  raw_fd_stream_test.cpp
   raw_ostream_test.cpp
   raw_pwrite_stream_test.cpp
   raw_sha1_ostream_test.cpp
