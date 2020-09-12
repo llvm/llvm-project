@@ -19,14 +19,10 @@ struct StructuralEquivalenceTest : ::testing::Test {
   std::unique_ptr<ASTUnit> AST0, AST1;
   std::string Code0, Code1; // Buffers for SourceManager
 
-  // Get a pair of node pointers into the synthesized AST from the given code
-  // snippets. To determine the returned node, a separate matcher is specified
-  // for both snippets. The first matching node is returned.
-  template <typename NodeType, typename MatcherType>
-  std::tuple<NodeType *, NodeType *>
-  makeDecls(const std::string &SrcCode0, const std::string &SrcCode1,
-            TestLanguage Lang, const MatcherType &Matcher0,
-            const MatcherType &Matcher1) {
+  // Parses the source code in the specified language and sets the ASTs of
+  // the current test instance to the parse result.
+  void makeASTUnits(const std::string &SrcCode0, const std::string &SrcCode1,
+                    TestLanguage Lang) {
     this->Code0 = SrcCode0;
     this->Code1 = SrcCode1;
     std::vector<std::string> Args = getCommandLineArgsForTesting(Lang);
@@ -35,6 +31,17 @@ struct StructuralEquivalenceTest : ::testing::Test {
 
     AST0 = tooling::buildASTFromCodeWithArgs(Code0, Args, InputFileName);
     AST1 = tooling::buildASTFromCodeWithArgs(Code1, Args, InputFileName);
+  }
+
+  // Get a pair of node pointers into the synthesized AST from the given code
+  // snippets. To determine the returned node, a separate matcher is specified
+  // for both snippets. The first matching node is returned.
+  template <typename NodeType, typename MatcherType>
+  std::tuple<NodeType *, NodeType *>
+  makeDecls(const std::string &SrcCode0, const std::string &SrcCode1,
+            TestLanguage Lang, const MatcherType &Matcher0,
+            const MatcherType &Matcher1) {
+    makeASTUnits(SrcCode0, SrcCode1, Lang);
 
     NodeType *D0 = FirstDeclMatcher<NodeType>().match(
         AST0->getASTContext().getTranslationUnitDecl(), Matcher0);
@@ -47,14 +54,7 @@ struct StructuralEquivalenceTest : ::testing::Test {
   std::tuple<TranslationUnitDecl *, TranslationUnitDecl *>
   makeTuDecls(const std::string &SrcCode0, const std::string &SrcCode1,
               TestLanguage Lang) {
-    this->Code0 = SrcCode0;
-    this->Code1 = SrcCode1;
-    std::vector<std::string> Args = getCommandLineArgsForTesting(Lang);
-
-    const char *const InputFileName = "input.cc";
-
-    AST0 = tooling::buildASTFromCodeWithArgs(Code0, Args, InputFileName);
-    AST1 = tooling::buildASTFromCodeWithArgs(Code1, Args, InputFileName);
+    makeASTUnits(SrcCode0, SrcCode1, Lang);
 
     return std::make_tuple(AST0->getASTContext().getTranslationUnitDecl(),
                            AST1->getASTContext().getTranslationUnitDecl());
@@ -80,6 +80,56 @@ struct StructuralEquivalenceTest : ::testing::Test {
     return makeDecls<NamedDecl>(SrcCode0, SrcCode1, Lang, Matcher);
   }
 
+  // Wraps a Stmt and the ASTContext that contains it.
+  struct StmtWithASTContext {
+    Stmt *S;
+    ASTContext *Context;
+    explicit StmtWithASTContext(Stmt &S, ASTContext &Context)
+        : S(&S), Context(&Context) {}
+    explicit StmtWithASTContext(FunctionDecl *FD)
+        : S(FD->getBody()), Context(&FD->getASTContext()) {}
+  };
+
+  // Get a pair of node pointers into the synthesized AST from the given code
+  // snippets. To determine the returned node, a separate matcher is specified
+  // for both snippets. The first matching node is returned.
+  template <typename MatcherType>
+  std::tuple<StmtWithASTContext, StmtWithASTContext>
+  makeStmts(const std::string &SrcCode0, const std::string &SrcCode1,
+            TestLanguage Lang, const MatcherType &Matcher0,
+            const MatcherType &Matcher1) {
+    makeASTUnits(SrcCode0, SrcCode1, Lang);
+
+    Stmt *S0 = FirstDeclMatcher<Stmt>().match(
+        AST0->getASTContext().getTranslationUnitDecl(), Matcher0);
+    Stmt *S1 = FirstDeclMatcher<Stmt>().match(
+        AST1->getASTContext().getTranslationUnitDecl(), Matcher1);
+
+    return std::make_tuple(StmtWithASTContext(*S0, AST0->getASTContext()),
+                           StmtWithASTContext(*S1, AST1->getASTContext()));
+  }
+
+  // Get a pair of node pointers into the synthesized AST from the given code
+  // snippets. The same matcher is used for both snippets.
+  template <typename MatcherType>
+  std::tuple<StmtWithASTContext, StmtWithASTContext>
+  makeStmts(const std::string &SrcCode0, const std::string &SrcCode1,
+            TestLanguage Lang, const MatcherType &AMatcher) {
+    return makeStmts(SrcCode0, SrcCode1, Lang, AMatcher, AMatcher);
+  }
+
+  // Convenience function for makeStmts that wraps the code inside a function
+  // body.
+  template <typename MatcherType>
+  std::tuple<StmtWithASTContext, StmtWithASTContext>
+  makeWrappedStmts(const std::string &SrcCode0, const std::string &SrcCode1,
+                   TestLanguage Lang, const MatcherType &AMatcher) {
+    auto Wrap = [](const std::string &Src) {
+      return "void wrapped() {" + Src + ";}";
+    };
+    return makeStmts(Wrap(SrcCode0), Wrap(SrcCode1), Lang, AMatcher);
+  }
+
   bool testStructuralMatch(Decl *D0, Decl *D1) {
     llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls01;
     llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls10;
@@ -93,6 +143,26 @@ struct StructuralEquivalenceTest : ::testing::Test {
     bool Eq10 = Ctx10.IsEquivalent(D1, D0);
     EXPECT_EQ(Eq01, Eq10);
     return Eq01;
+  }
+
+  bool testStructuralMatch(StmtWithASTContext S0, StmtWithASTContext S1) {
+    llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls01;
+    llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls10;
+    StructuralEquivalenceContext Ctx01(
+        *S0.Context, *S1.Context, NonEquivalentDecls01,
+        StructuralEquivalenceKind::Default, false, false);
+    StructuralEquivalenceContext Ctx10(
+        *S1.Context, *S0.Context, NonEquivalentDecls10,
+        StructuralEquivalenceKind::Default, false, false);
+    bool Eq01 = Ctx01.IsEquivalent(S0.S, S1.S);
+    bool Eq10 = Ctx10.IsEquivalent(S1.S, S0.S);
+    EXPECT_EQ(Eq01, Eq10);
+    return Eq01;
+  }
+
+  bool
+  testStructuralMatch(std::tuple<StmtWithASTContext, StmtWithASTContext> t) {
+    return testStructuralMatch(get<0>(t), get<1>(t));
   }
 
   bool testStructuralMatch(std::tuple<Decl *, Decl *> t) {
@@ -1373,6 +1443,226 @@ TEST_F(StructuralEquivalenceCacheTest, Cycle) {
       TU, cxxRecordDecl(hasName("A"), unless(isImplicit())))));
   EXPECT_FALSE(isInNonEqCache(
       findDeclPair<FunctionDecl>(TU, functionDecl(hasName("x")))));
+}
+
+struct StructuralEquivalenceStmtTest : StructuralEquivalenceTest {};
+
+/// Fallback matcher to be used only when there is no specific matcher for a
+/// Expr subclass. Remove this once all Expr subclasses have their own matcher.
+static auto &fallbackExprMatcher = expr;
+
+TEST_F(StructuralEquivalenceStmtTest, AddrLabelExpr) {
+  auto t = makeWrappedStmts("lbl: &&lbl;", "lbl: &&lbl;", Lang_CXX03,
+                            addrLabelExpr());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, AddrLabelExprDifferentLabel) {
+  auto t = makeWrappedStmts("lbl1: lbl2: &&lbl1;", "lbl1: lbl2: &&lbl2;",
+                            Lang_CXX03, addrLabelExpr());
+  // FIXME: Should be false. LabelDecl are incorrectly matched.
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+static const std::string MemoryOrderSrc = R"(
+enum memory_order {
+  memory_order_relaxed,
+  memory_order_consume,
+  memory_order_acquire,
+  memory_order_release,
+  memory_order_acq_rel,
+  memory_order_seq_cst
+};
+)";
+
+TEST_F(StructuralEquivalenceStmtTest, AtomicExpr) {
+  std::string Prefix = "char a, b; " + MemoryOrderSrc;
+  auto t = makeStmts(
+      Prefix +
+          "void wrapped() { __atomic_load(&a, &b, memory_order_seq_cst); }",
+      Prefix +
+          "void wrapped() { __atomic_load(&a, &b, memory_order_seq_cst); }",
+      Lang_CXX03, atomicExpr());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, AtomicExprDifferentOp) {
+  std::string Prefix = "char a, b; " + MemoryOrderSrc;
+  auto t = makeStmts(
+      Prefix +
+          "void wrapped() { __atomic_load(&a, &b, memory_order_seq_cst); }",
+      Prefix +
+          "void wrapped() { __atomic_store(&a, &b, memory_order_seq_cst); }",
+      Lang_CXX03, atomicExpr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, BinaryOperator) {
+  auto t = makeWrappedStmts("1 + 1", "1 + 1", Lang_CXX03, binaryOperator());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, BinaryOperatorDifferentOps) {
+  auto t = makeWrappedStmts("1 + 1", "1 - 1", Lang_CXX03, binaryOperator());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, CallExpr) {
+  std::string Src = "int call(); int wrapped() { call(); }";
+  auto t = makeStmts(Src, Src, Lang_CXX03, callExpr());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, CallExprDifferentCallee) {
+  std::string FunctionSrc = "int func1(); int func2();\n";
+  auto t = makeStmts(FunctionSrc + "void wrapper() { func1(); }",
+                     FunctionSrc + "void wrapper() { func2(); }", Lang_CXX03,
+                     callExpr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, CharacterLiteral) {
+  auto t = makeWrappedStmts("'a'", "'a'", Lang_CXX03, characterLiteral());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, CharacterLiteralDifferentValues) {
+  auto t = makeWrappedStmts("'a'", "'b'", Lang_CXX03, characterLiteral());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, ExpressionTraitExpr) {
+  auto t = makeWrappedStmts("__is_lvalue_expr(1)", "__is_lvalue_expr(1)",
+                            Lang_CXX03, fallbackExprMatcher());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, ExpressionTraitExprDifferentKind) {
+  auto t = makeWrappedStmts("__is_lvalue_expr(1)", "__is_rvalue_expr(1)",
+                            Lang_CXX03, fallbackExprMatcher());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, FloatingLiteral) {
+  auto t = makeWrappedStmts("1.0", "1.0", Lang_CXX03, fallbackExprMatcher());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, FloatingLiteralDifferentSpelling) {
+  auto t = makeWrappedStmts("0x10.1p0", "16.0625", Lang_CXX17,
+                            fallbackExprMatcher());
+  // Same value but with different spelling is equivalent.
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, FloatingLiteralDifferentType) {
+  auto t = makeWrappedStmts("1.0", "1.0f", Lang_CXX03, fallbackExprMatcher());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, FloatingLiteralDifferentValue) {
+  auto t = makeWrappedStmts("1.01", "1.0", Lang_CXX03, fallbackExprMatcher());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, IntegerLiteral) {
+  auto t = makeWrappedStmts("1", "1", Lang_CXX03, integerLiteral());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, IntegerLiteralDifferentSpelling) {
+  auto t = makeWrappedStmts("1", "0x1", Lang_CXX03, integerLiteral());
+  // Same value but with different spelling is equivalent.
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, IntegerLiteralDifferentValue) {
+  auto t = makeWrappedStmts("1", "2", Lang_CXX03, integerLiteral());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, IntegerLiteralDifferentTypes) {
+  auto t = makeWrappedStmts("1", "1L", Lang_CXX03, integerLiteral());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, ObjCStringLiteral) {
+  auto t =
+      makeWrappedStmts("@\"a\"", "@\"a\"", Lang_OBJCXX, fallbackExprMatcher());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, ObjCStringLiteralDifferentContent) {
+  auto t =
+      makeWrappedStmts("@\"a\"", "@\"b\"", Lang_OBJCXX, fallbackExprMatcher());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, StringLiteral) {
+  auto t = makeWrappedStmts("\"a\"", "\"a\"", Lang_CXX03, stringLiteral());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, StringLiteralDifferentContent) {
+  auto t = makeWrappedStmts("\"a\"", "\"b\"", Lang_CXX03, stringLiteral());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, StringLiteralDifferentLength) {
+  auto t = makeWrappedStmts("\"a\"", "\"aa\"", Lang_CXX03, stringLiteral());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, TypeTraitExpr) {
+  auto t = makeWrappedStmts("__is_pod(int)", "__is_pod(int)", Lang_CXX03,
+                            fallbackExprMatcher());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, TypeTraitExprDifferentType) {
+  auto t = makeWrappedStmts("__is_pod(int)", "__is_pod(long)", Lang_CXX03,
+                            fallbackExprMatcher());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, TypeTraitExprDifferentTrait) {
+  auto t = makeWrappedStmts(
+      "__is_pod(int)", "__is_trivially_constructible(int)", Lang_CXX03, expr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, TypeTraitExprDifferentTraits) {
+  auto t = makeWrappedStmts("__is_constructible(int)",
+                            "__is_constructible(int, int)", Lang_CXX03, expr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, UnaryExprOrTypeTraitExpr) {
+  auto t = makeWrappedStmts("sizeof(int)", "sizeof(int)", Lang_CXX03,
+                            unaryExprOrTypeTraitExpr());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, UnaryExprOrTypeTraitExprDifferentKind) {
+  auto t = makeWrappedStmts("sizeof(int)", "alignof(long)", Lang_CXX11,
+                            unaryExprOrTypeTraitExpr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, UnaryExprOrTypeTraitExprDifferentType) {
+  auto t = makeWrappedStmts("sizeof(int)", "sizeof(long)", Lang_CXX03,
+                            unaryExprOrTypeTraitExpr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, UnaryOperator) {
+  auto t = makeWrappedStmts("+1", "+1", Lang_CXX03, unaryOperator());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, UnaryOperatorDifferentOps) {
+  auto t = makeWrappedStmts("+1", "-1", Lang_CXX03, unaryOperator());
+  EXPECT_FALSE(testStructuralMatch(t));
 }
 
 } // end namespace ast_matchers
