@@ -5574,6 +5574,25 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     if (SDValue V = combineShiftAnd1ToBitTest(N, DAG))
       return V;
 
+  // fold (and (ctpop X), 1) -> parity X
+  // Only do this before op legalization as it might be turned back into ctpop.
+  // TODO: Support vectors?
+  if (!LegalOperations && isOneConstant(N1) && N0.hasOneUse()) {
+    SDValue Tmp = N0;
+
+    // It's possible the ctpop has been truncated, but since we only care about
+    // the LSB we can look through it.
+    if (Tmp.getOpcode() == ISD::TRUNCATE && Tmp.getOperand(0).hasOneUse())
+      Tmp = Tmp.getOperand(0);
+
+    if (Tmp.getOpcode() == ISD::CTPOP) {
+      SDLoc dl(N);
+      SDValue Parity =
+          DAG.getNode(ISD::PARITY, dl, Tmp.getValueType(), Tmp.getOperand(0));
+      return DAG.getNode(ISD::TRUNCATE, dl, VT, Parity);
+    }
+  }
+
   return SDValue();
 }
 
