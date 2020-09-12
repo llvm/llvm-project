@@ -15824,7 +15824,12 @@ The '``llvm.experimental.vector.reduce.fmax.*``' intrinsics do a floating-point
 ``MAX`` reduction of a vector, returning the result as a scalar. The return type
 matches the element-type of the vector input.
 
-If the intrinsic call has the ``nnan`` fast-math flag then the operation can
+This instruction has the same comparison semantics as the '``llvm.maxnum.*``'
+intrinsic. That is, the result will always be a number unless all elements of
+the vector are NaN. For a vector with maximum element magnitude 0.0 and
+containing both +0.0 and -0.0 elements, the sign of the result is unspecified.
+
+If the intrinsic call has the ``nnan`` fast-math flag, then the operation can
 assume that NaNs are not present in the input vector.
 
 Arguments:
@@ -15850,7 +15855,12 @@ The '``llvm.experimental.vector.reduce.fmin.*``' intrinsics do a floating-point
 ``MIN`` reduction of a vector, returning the result as a scalar. The return type
 matches the element-type of the vector input.
 
-If the intrinsic call has the ``nnan`` fast-math flag then the operation can
+This instruction has the same comparison semantics as the '``llvm.minnum.*``'
+intrinsic. That is, the result will always be a number unless all elements of
+the vector are NaN. For a vector with minimum element magnitude 0.0 and
+containing both +0.0 and -0.0 elements, the sign of the result is unspecified.
+
+If the intrinsic call has the ``nnan`` fast-math flag, then the operation can
 assume that NaNs are not present in the input vector.
 
 Arguments:
