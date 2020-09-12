@@ -105,9 +105,10 @@ namespace {
       // If this is an unbridged cast, wrap the result in an implicit
       // cast that yields the unbridged-cast placeholder type.
       if (IsARCUnbridgedCast) {
-        castExpr = ImplicitCastExpr::Create(
-            Self.Context, Self.Context.ARCUnbridgedCastTy, CK_Dependent,
-            castExpr, nullptr, castExpr->getValueKind(), FPOptionsOverride());
+        castExpr = ImplicitCastExpr::Create(Self.Context,
+                                            Self.Context.ARCUnbridgedCastTy,
+                                            CK_Dependent, castExpr, nullptr,
+                                            castExpr->getValueKind());
       }
       updatePartOfExplicitCastFlags(castExpr);
       return castExpr;
@@ -360,10 +361,11 @@ Sema::BuildCXXNamedCast(SourceLocation OpLoc, tok::TokenKind Kind,
       DiscardMisalignedMemberAddress(DestType.getTypePtr(), E);
     }
 
-    return Op.complete(CXXStaticCastExpr::Create(
-        Context, Op.ResultType, Op.ValueKind, Op.Kind, Op.SrcExpr.get(),
-        &Op.BasePath, DestTInfo, CurFPFeatureOverrides(), OpLoc,
-        Parens.getEnd(), AngleBrackets));
+    return Op.complete(CXXStaticCastExpr::Create(Context, Op.ResultType,
+                                   Op.ValueKind, Op.Kind, Op.SrcExpr.get(),
+                                                 &Op.BasePath, DestTInfo,
+                                                 OpLoc, Parens.getEnd(),
+                                                 AngleBrackets));
   }
   }
 }
@@ -3031,9 +3033,9 @@ ExprResult Sema::BuildCStyleCastExpr(SourceLocation LPLoc,
   // -Wcast-qual
   DiagnoseCastQual(Op.Self, Op.SrcExpr, Op.DestType);
 
-  return Op.complete(CStyleCastExpr::Create(
-      Context, Op.ResultType, Op.ValueKind, Op.Kind, Op.SrcExpr.get(),
-      &Op.BasePath, CurFPFeatureOverrides(), CastTypeInfo, LPLoc, RPLoc));
+  return Op.complete(CStyleCastExpr::Create(Context, Op.ResultType,
+                              Op.ValueKind, Op.Kind, Op.SrcExpr.get(),
+                              &Op.BasePath, CastTypeInfo, LPLoc, RPLoc));
 }
 
 ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,
@@ -3056,7 +3058,7 @@ ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,
   if (auto *ConstructExpr = dyn_cast<CXXConstructExpr>(SubExpr))
     ConstructExpr->setParenOrBraceRange(SourceRange(LPLoc, RPLoc));
 
-  return Op.complete(CXXFunctionalCastExpr::Create(
-      Context, Op.ResultType, Op.ValueKind, CastTypeInfo, Op.Kind,
-      Op.SrcExpr.get(), &Op.BasePath, CurFPFeatureOverrides(), LPLoc, RPLoc));
+  return Op.complete(CXXFunctionalCastExpr::Create(Context, Op.ResultType,
+                         Op.ValueKind, CastTypeInfo, Op.Kind,
+                         Op.SrcExpr.get(), &Op.BasePath, LPLoc, RPLoc));
 }

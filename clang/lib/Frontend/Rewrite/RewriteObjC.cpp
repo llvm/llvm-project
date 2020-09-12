@@ -492,8 +492,7 @@ namespace {
                                              CastKind Kind, Expr *E) {
       TypeSourceInfo *TInfo = Ctx->getTrivialTypeSourceInfo(Ty, SourceLocation());
       return CStyleCastExpr::Create(*Ctx, Ty, VK_RValue, Kind, E, nullptr,
-                                    FPOptionsOverride(), TInfo,
-                                    SourceLocation(), SourceLocation());
+                                    TInfo, SourceLocation(), SourceLocation());
     }
 
     StringLiteral *getStringLiteral(StringRef Str) {
@@ -2023,8 +2022,8 @@ RewriteObjC::SynthesizeCallToFunctionDecl(FunctionDecl *FD,
   // Now, we cast the reference to a pointer to the objc_msgSend type.
   QualType pToFunc = Context->getPointerType(msgSendType);
   ImplicitCastExpr *ICE =
-      ImplicitCastExpr::Create(*Context, pToFunc, CK_FunctionToPointerDecay,
-                               DRE, nullptr, VK_RValue, FPOptionsOverride());
+    ImplicitCastExpr::Create(*Context, pToFunc, CK_FunctionToPointerDecay,
+                             DRE, nullptr, VK_RValue);
 
   const auto *FT = msgSendType->castAs<FunctionType>();
 
