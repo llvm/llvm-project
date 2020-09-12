@@ -325,6 +325,8 @@ def ProcessorFeatures {
     [DirectivePwr9,
      FeatureP9Altivec,
      FeatureP9Vector,
+     FeaturePPCPreRASched,
+     FeaturePPCPostRASched,
      FeatureISA3_0,
      FeaturePredictableSelectIsExpensive
     ];
@@ -334,9 +336,7 @@ def ProcessorFeatures {
   // dispatch for vector operations than scalar ones. For the time being,
   // this list also includes scheduling-related features since we do not have
   // enough info to create custom scheduling strategies for future CPUs.
-  list<SubtargetFeature> P9SpecificFeatures = [FeatureVectorsUseTwoUnits,
-                                               FeaturePPCPreRASched,
-                                               FeaturePPCPostRASched];
+  list<SubtargetFeature> P9SpecificFeatures = [FeatureVectorsUseTwoUnits];
   list<SubtargetFeature> P9InheritableFeatures =
     !listconcat(P8InheritableFeatures, P9AdditionalFeatures);
   list<SubtargetFeature> P9Features =
@@ -559,7 +559,7 @@ def : ProcessorModel<"pwr7", P7Model, ProcessorFeatures.P7Features>;
 def : ProcessorModel<"pwr8", P8Model, ProcessorFeatures.P8Features>;
 def : ProcessorModel<"pwr9", P9Model, ProcessorFeatures.P9Features>;
 // No scheduler model yet.
-def : ProcessorModel<"pwr10", NoSchedModel, ProcessorFeatures.P10Features>;
+def : ProcessorModel<"pwr10", P9Model, ProcessorFeatures.P10Features>;
 // No scheduler model for future CPU.
 def : ProcessorModel<"future", NoSchedModel,
                   ProcessorFeatures.FutureFeatures>;
