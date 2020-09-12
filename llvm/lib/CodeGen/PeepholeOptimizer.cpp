@@ -178,6 +178,11 @@ namespace {
       }
     }
 
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties()
+        .set(MachineFunctionProperties::Property::IsSSA);
+    }
+
     /// Track Def -> Use info used for rewriting copies.
     using RewriteMapTy = SmallDenseMap<RegSubRegPair, ValueTrackerResult>;
 
