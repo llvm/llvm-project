@@ -1126,7 +1126,7 @@ public:
   syntax::CallArguments *
   buildCallArguments(CallExpr::arg_range ArgsAndDefaultArgs) {
     auto Args = dropDefaultArgs(ArgsAndDefaultArgs);
-    for (const auto &Arg : Args) {
+    for (auto *Arg : Args) {
       Builder.markExprChild(Arg, syntax::NodeRole::ListElement);
       const auto *DelimiterToken =
           std::next(Builder.findToken(Arg->getEndLoc()));
