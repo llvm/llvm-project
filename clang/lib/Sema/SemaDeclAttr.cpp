@@ -5907,7 +5907,7 @@ static void handleSwiftError(Sema &S, Decl *D, const ParsedAttr &AL) {
 
     S.Diag(AL.getLoc(), diag::err_attr_swift_error_return_type)
         << AL << AL.getArgAsIdent(0)->Ident->getName() << isa<ObjCMethodDecl>(D)
-        << /*integeral*/ 0;
+        << /*integral*/ 0;
     return false;
   };
 
@@ -7882,8 +7882,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_SwiftNewtype:
     handleSwiftNewtypeAttr(S, D, AL);
     break;
-
-  // Swift attributes.
   case ParsedAttr::AT_SwiftError:
     handleSwiftError(S, D, AL);
     break;
