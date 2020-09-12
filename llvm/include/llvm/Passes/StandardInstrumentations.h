@@ -28,6 +28,7 @@
 
 namespace llvm {
 
+class LLVMTargetMachine;
 class Module;
 class Function;
 
@@ -140,6 +141,10 @@ public:
 
   TimePassesHandler &getTimePasses() { return TimePasses; }
 };
+
+void registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
+                             LLVMTargetMachine &);
+
 } // namespace llvm
 
 #endif
