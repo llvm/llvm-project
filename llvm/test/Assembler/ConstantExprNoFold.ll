@@ -42,6 +42,12 @@ target datalayout = "p:32:32"
 @empty.2 = external global [0 x i8], align 1
 @empty.cmp = global i1 icmp eq ([0 x i8]* @empty.1, [0 x i8]* @empty.2)
 
+; Two unnamed_addr globals can share an address
+; CHECK: @unnamed.cmp = global i1 icmp eq ([5 x i8]* @unnamed.1, [5 x i8]* @unnamed.2)
+@unnamed.1 = unnamed_addr constant [5 x i8] c"asdf\00"
+@unnamed.2 = unnamed_addr constant [5 x i8] c"asdf\00"
+@unnamed.cmp = global i1 icmp eq ([5 x i8]* @unnamed.1, [5 x i8]* @unnamed.2)
+
 @addrspace3 = internal addrspace(3) global i32 undef
 
 ; CHECK: @no.fold.addrspace.icmp.eq.gv.null = global i1 icmp eq (i32 addrspace(3)* @addrspace3, i32 addrspace(3)* null)
