@@ -15,12 +15,9 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/CodeGen/CGPassBuilderOption.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Target/TargetOptions.h"
 #include <string>
 
@@ -370,20 +367,6 @@ public:
                       bool DisableVerify = true,
                       MachineModuleInfoWrapperPass *MMIWP = nullptr) override;
 
-  virtual Expected<std::pair<ModulePassManager, MachineFunctionPassManager>>
-  buildCodeGenPipeline(raw_pwrite_stream &, raw_pwrite_stream *,
-                       CodeGenFileType, CGPassBuilderOption,
-                       MachineFunctionAnalysisManager &,
-                       PassInstrumentationCallbacks *) {
-    return make_error<StringError>("buildCodeGenPipeline is not overriden",
-                                   inconvertibleErrorCode());
-  }
-
-  virtual std::pair<StringRef, bool> getPassNameFromLegacyName(StringRef) {
-    llvm_unreachable(
-        "getPassNameFromLegacyName parseMIRPipeline is not overriden");
-  }
-
   /// Add passes to the specified pass manager to get machine code emitted with
   /// the MCJIT. This method returns true if machine code is not supported. It
   /// fills the MCContext Ctx pointer which can be used to build custom
@@ -403,10 +386,6 @@ public:
   bool addAsmPrinter(PassManagerBase &PM, raw_pwrite_stream &Out,
                      raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
                      MCContext &Context);
-
-  Expected<std::unique_ptr<MCStreamer>>
-  createMCStreamer(raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-                   CodeGenFileType FileType, MCContext &Ctx);
 
   /// True if the target uses physical regs (as nearly all targets do). False
   /// for stack machines such as WebAssembly and other virtual-register
