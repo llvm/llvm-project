@@ -395,6 +395,10 @@ CODEGENOPT(KeepStaticConsts, 1, 0)
 /// Whether to not follow the AAPCS that enforce at least one read before storing to a volatile bitfield
 CODEGENOPT(ForceAAPCSBitfieldLoad, 1, 0)
 
+/// Assume that by-value parameters do not alias any other values.
+CODEGENOPT(PassByValueIsNoAlias, 1, 0)
+
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT
