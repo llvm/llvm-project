@@ -128,12 +128,12 @@ bool StringRecTy::typeIsConvertibleTo(const RecTy *RHS) const {
 }
 
 std::string ListRecTy::getAsString() const {
-  return "list<" + Ty->getAsString() + ">";
+  return "list<" + ElementTy->getAsString() + ">";
 }
 
 bool ListRecTy::typeIsConvertibleTo(const RecTy *RHS) const {
   if (const auto *ListTy = dyn_cast<ListRecTy>(RHS))
-    return Ty->typeIsConvertibleTo(ListTy->getElementType());
+    return ElementTy->typeIsConvertibleTo(ListTy->getElementType());
   return false;
 }
 
