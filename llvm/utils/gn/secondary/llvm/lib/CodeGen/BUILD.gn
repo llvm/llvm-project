@@ -32,7 +32,6 @@ static_library("CodeGen") {
     "CalcSpillWeights.cpp",
     "CallingConvLower.cpp",
     "CodeGen.cpp",
-    "CodeGenPassBuilder.cpp",
     "CodeGenPrepare.cpp",
     "CommandFlags.cpp",
     "CriticalAntiDepBreaker.cpp",
