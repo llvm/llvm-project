@@ -29,6 +29,9 @@ define void @test.1() {
 ; CHECK-NEXT:    [[PTR_IV_2:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[A]], i64 0, i64 [[IV_2]]
 ; CHECK-NEXT:    [[L_0:%.*]] = load i32, i32* [[PTR_IV_2]], align 4
 ; CHECK-NEXT:    call void @use(i32 [[L_0]])
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[IV_2]], 1
+; CHECK-NEXT:    [[PTR_IV_2_ADD_1:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[A]], i64 0, i64 [[ADD]]
+; CHECK-NEXT:    store i32 10, i32* [[PTR_IV_2_ADD_1]], align 4
 ; CHECK-NEXT:    [[L_1:%.*]] = load i32, i32* [[PTR_IV_2]], align 4
 ; CHECK-NEXT:    call void @use(i32 [[L_1]])
 ; CHECK-NEXT:    [[IV_2_NEXT]] = add nsw i64 [[IV_2]], 1
