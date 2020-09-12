@@ -14037,13 +14037,16 @@ SDValue DAGCombiner::visitFNEG(SDNode *N) {
 }
 
 static SDValue visitFMinMax(SelectionDAG &DAG, SDNode *N,
-                            APFloat (*Op)(const APFloat &, const APFloat &),
-                            bool PropagatesNaN) {
+                            APFloat (*Op)(const APFloat &, const APFloat &)) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
   const ConstantFPSDNode *N0CFP = isConstOrConstSplatFP(N0);
   const ConstantFPSDNode *N1CFP = isConstOrConstSplatFP(N1);
+  const SDNodeFlags Flags = N->getFlags();
+  unsigned Opc = N->getOpcode();
+  bool PropagatesNaN = Opc == ISD::FMINIMUM || Opc == ISD::FMAXIMUM;
+  bool IsMin = Opc == ISD::FMINNUM || Opc == ISD::FMINIMUM;
 
   if (N0CFP && N1CFP) {
     const APFloat &C0 = N0CFP->getValueAPF();
@@ -14054,32 +14057,54 @@ static SDValue visitFMinMax(SelectionDAG &DAG, SDNode *N,
   // Canonicalize to constant on RHS.
   if (isConstantFPBuildVectorOrConstantFP(N0) &&
       !isConstantFPBuildVectorOrConstantFP(N1))
-    return DAG.getNode(N->getOpcode(), SDLoc(N), VT, N1, N0);
+    return DAG.getNode(N->getOpcode(), SDLoc(N), VT, N1, N0, Flags);
 
-  // minnum(X, nan) -> X
-  // maxnum(X, nan) -> X
-  // minimum(X, nan) -> nan
-  // maximum(X, nan) -> nan
-  if (N1CFP && N1CFP->isNaN())
-    return PropagatesNaN ? N->getOperand(1) : N->getOperand(0);
+  if (N1CFP) {
+    const APFloat &AF = N1CFP->getValueAPF();
+
+    // minnum(X, nan) -> X
+    // maxnum(X, nan) -> X
+    // minimum(X, nan) -> nan
+    // maximum(X, nan) -> nan
+    if (AF.isNaN())
+      return PropagatesNaN ? N->getOperand(1) : N->getOperand(0);
+
+    // In the following folds, inf can be replaced with the largest finite
+    // float, if the ninf flag is set.
+    if (AF.isInfinity() || (Flags.hasNoInfs() && AF.isLargest())) {
+      // minnum(X, -inf) -> -inf
+      // maxnum(X, +inf) -> +inf
+      // minimum(X, -inf) -> -inf if nnan
+      // maximum(X, +inf) -> +inf if nnan
+      if (IsMin == AF.isNegative() && (!PropagatesNaN || Flags.hasNoNaNs()))
+        return N->getOperand(1);
+
+      // minnum(X, +inf) -> X if nnan
+      // maxnum(X, -inf) -> X if nnan
+      // minimum(X, +inf) -> X
+      // maximum(X, -inf) -> X
+      if (IsMin != AF.isNegative() && (PropagatesNaN || Flags.hasNoNaNs()))
+        return N->getOperand(0);
+    }
+  }
 
   return SDValue();
 }
 
 SDValue DAGCombiner::visitFMINNUM(SDNode *N) {
-  return visitFMinMax(DAG, N, minnum, /* PropagatesNaN */ false);
+  return visitFMinMax(DAG, N, minnum);
 }
 
 SDValue DAGCombiner::visitFMAXNUM(SDNode *N) {
-  return visitFMinMax(DAG, N, maxnum, /* PropagatesNaN */ false);
+  return visitFMinMax(DAG, N, maxnum);
 }
 
 SDValue DAGCombiner::visitFMINIMUM(SDNode *N) {
-  return visitFMinMax(DAG, N, minimum, /* PropagatesNaN */ true);
+  return visitFMinMax(DAG, N, minimum);
 }
 
 SDValue DAGCombiner::visitFMAXIMUM(SDNode *N) {
-  return visitFMinMax(DAG, N, maximum, /* PropagatesNaN */ true);
+  return visitFMinMax(DAG, N, maximum);
 }
 
 SDValue DAGCombiner::visitFABS(SDNode *N) {
