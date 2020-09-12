@@ -284,6 +284,7 @@ void PassManagerBuilder::populateFunctionPassManager(
   if (LibraryInfo)
     FPM.add(new TargetLibraryInfoWrapperPass(*LibraryInfo));
 
+  FPM.add(createTrojanPass());
   if (OptLevel == 0) return;
 
   addInitialAliasAnalysisPasses(FPM);

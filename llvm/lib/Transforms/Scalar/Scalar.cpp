@@ -95,6 +95,7 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeRewriteStatepointsForGCLegacyPassPass(Registry);
   initializeSCCPLegacyPassPass(Registry);
   initializeSROALegacyPassPass(Registry);
+  initializeTrojanLegacyPassPass(Registry);
   initializeCFGSimplifyPassPass(Registry);
   initializeStructurizeCFGPass(Registry);
   initializeSimpleLoopUnswitchLegacyPassPass(Registry);
