@@ -53,7 +53,7 @@ define i1 @trunc_v2i64_v2i1(<2 x i64>) {
 ; AVX512VL-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vptestmq %xmm0, %xmm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
-; AVX512VL-NEXT:    testb %al, %al
+; AVX512VL-NEXT:    testb $3, %al
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    retq
   %a = trunc <2 x i64> %0 to <2 x i1>
@@ -103,7 +103,7 @@ define i1 @trunc_v4i32_v4i1(<4 x i32>) {
 ; AVX512VL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vptestmd %xmm0, %xmm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
-; AVX512VL-NEXT:    testb %al, %al
+; AVX512VL-NEXT:    testb $15, %al
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    retq
   %a = trunc <4 x i32> %0 to <4 x i1>
@@ -251,7 +251,7 @@ define i1 @trunc_v4i64_v4i1(<4 x i64>) {
 ; AVX512VL-NEXT:    vpsllq $63, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vptestmq %ymm0, %ymm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
-; AVX512VL-NEXT:    testb %al, %al
+; AVX512VL-NEXT:    testb $15, %al
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -974,7 +974,7 @@ define i1 @icmp_v2i64_v2i1(<2 x i64>) {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vptestnmq %xmm0, %xmm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
-; AVX512VL-NEXT:    testb %al, %al
+; AVX512VL-NEXT:    testb $3, %al
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    retq
   %a = icmp eq <2 x i64> %0, zeroinitializer
@@ -1025,7 +1025,7 @@ define i1 @icmp_v4i32_v4i1(<4 x i32>) {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vptestnmd %xmm0, %xmm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
-; AVX512VL-NEXT:    testb %al, %al
+; AVX512VL-NEXT:    testb $15, %al
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    retq
   %a = icmp eq <4 x i32> %0, zeroinitializer
@@ -1214,7 +1214,7 @@ define i1 @icmp_v4i64_v4i1(<4 x i64>) {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vptestnmq %ymm0, %ymm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
-; AVX512VL-NEXT:    testb %al, %al
+; AVX512VL-NEXT:    testb $15, %al
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
