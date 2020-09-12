@@ -4462,8 +4462,8 @@ Sema::CheckObjCConversion(SourceRange castRange, QualType castType,
   // If the result is +1, consume it here.
   case ACC_plusOne:
     castExpr = ImplicitCastExpr::Create(Context, castExpr->getType(),
-                                        CK_ARCConsumeObject, castExpr,
-                                        nullptr, VK_RValue);
+                                        CK_ARCConsumeObject, castExpr, nullptr,
+                                        VK_RValue, CurFPFeatureOverrides());
     Cleanup.setExprNeedsCleanups(true);
     return ACR_okay;
   }
@@ -4689,9 +4689,9 @@ ExprResult Sema::BuildObjCBridgedCast(SourceLocation LParenLoc,
 
     case OBC_BridgeRetained:
       // Produce the object before casting it.
-      SubExpr = ImplicitCastExpr::Create(Context, FromType,
-                                         CK_ARCProduceObject,
-                                         SubExpr, nullptr, VK_RValue);
+      SubExpr = ImplicitCastExpr::Create(Context, FromType, CK_ARCProduceObject,
+                                         SubExpr, nullptr, VK_RValue,
+                                         CurFPFeatureOverrides());
       break;
 
     case OBC_BridgeTransfer: {
@@ -4729,8 +4729,9 @@ ExprResult Sema::BuildObjCBridgedCast(SourceLocation LParenLoc,
 
   if (MustConsume) {
     Cleanup.setExprNeedsCleanups(true);
-    Result = ImplicitCastExpr::Create(Context, T, CK_ARCConsumeObject, Result,
-                                      nullptr, VK_RValue);
+    Result =
+        ImplicitCastExpr::Create(Context, T, CK_ARCConsumeObject, Result,
+                                 nullptr, VK_RValue, CurFPFeatureOverrides());
   }
 
   return Result;
