@@ -1205,7 +1205,11 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
+    auto insertPt = builder->saveInsertionPoint();
     genOpenMPConstruct(*this, getEval(), omp);
+    for (auto &e : getEval().getNestedEvaluations())
+      genFIR(e);
+    builder->restoreInsertionPoint(insertPt);
   }
 
   void genFIR(const Fortran::parser::OmpEndLoopDirective &omp) {
