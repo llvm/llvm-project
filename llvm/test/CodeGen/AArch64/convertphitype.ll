@@ -70,14 +70,13 @@ define float @convphi3(i32 *%s, i32 *%d, i32 %n, float %f) {
 ; CHECK-LABEL: @convphi3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[FB:%.*]] = bitcast float [[F:%.*]] to i32
 ; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[END:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
 ; CHECK-NEXT:    [[LS_BC:%.*]] = bitcast i32 [[LS]] to float
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ [[LS_BC]], [[THEN]] ], [ [[F]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ [[LS_BC]], [[THEN]] ], [ [[F:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret float [[PHI_TC]]
 ;
 entry:
@@ -99,14 +98,13 @@ define void @convphi4(i32 *%s, i32 *%d, i32 %n, float %f) {
 ; CHECK-LABEL: @convphi4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[FB:%.*]] = bitcast float [[F:%.*]] to i32
 ; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[END:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
 ; CHECK-NEXT:    [[LS_BC:%.*]] = bitcast i32 [[LS]] to float
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ [[LS_BC]], [[THEN]] ], [ [[F]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ [[LS_BC]], [[THEN]] ], [ [[F:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast float [[PHI_TC]] to i32
 ; CHECK-NEXT:    store i32 [[BC]], i32* [[D:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -481,6 +479,201 @@ end:
   ret float %b
 }
 
+define void @convphi_stop(i32 *%s, i32 *%d, float *%e, i32 %n) {
+; CHECK-LABEL: @convphi_stop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[D:%.*]], align 4
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[LS]], [[THEN]] ], [ [[LD]], [[ELSE]] ]
+; CHECK-NEXT:    [[B:%.*]] = bitcast i32 [[PHI]] to float
+; CHECK-NEXT:    store float [[B]], float* [[E:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  br i1 %cmp15, label %then, label %else
 
+then:
+  %ls = load i32, i32* %s, align 4
+  br label %end
 
+else:
+  %ld = load i32, i32* %d, align 4
+  br label %end
 
+end:
+  %phi = phi i32 [ %ls, %then ], [ %ld, %else ]
+  %b = bitcast i32 %phi to float
+  store float %b, float* %e, align 4
+  ret void
+}
+
+define void @convphi_stop2(i32 *%s, i32 *%d, float *%e, i32 %n) {
+; CHECK-LABEL: @convphi_stop2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
+; CHECK-NEXT:    [[LSB:%.*]] = bitcast i32 [[LS]] to float
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[D:%.*]], align 4
+; CHECK-NEXT:    [[LDB:%.*]] = bitcast i32 [[LD]] to float
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi float [ [[LSB]], [[THEN]] ], [ [[LDB]], [[ELSE]] ]
+; CHECK-NEXT:    store float [[PHI]], float* [[E:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  br i1 %cmp15, label %then, label %else
+
+then:
+  %ls = load i32, i32* %s, align 4
+  %lsb = bitcast i32 %ls to float
+  br label %end
+
+else:
+  %ld = load i32, i32* %d, align 4
+  %ldb = bitcast i32 %ld to float
+  br label %end
+
+end:
+  %phi = phi float [ %lsb, %then ], [ %ldb, %else ]
+  store float %phi, float* %e, align 4
+  ret void
+}
+
+define float @convphi_stop3(i32 *%s, i32 *%d, float *%e, i32 %n) {
+; CHECK-LABEL: @convphi_stop3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
+; CHECK-NEXT:    [[LS_BC:%.*]] = bitcast i32 [[LS]] to float
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[D:%.*]], align 4
+; CHECK-NEXT:    [[LD_BC:%.*]] = bitcast i32 [[LD]] to float
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ [[LS_BC]], [[THEN]] ], [ [[LD_BC]], [[ELSE]] ]
+; CHECK-NEXT:    store float [[PHI_TC]], float* [[E:%.*]], align 4
+; CHECK-NEXT:    ret float [[PHI_TC]]
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  br i1 %cmp15, label %then, label %else
+
+then:
+  %ls = load i32, i32* %s, align 4
+  br label %end
+
+else:
+  %ld = load i32, i32* %d, align 4
+  br label %end
+
+end:
+  %phi = phi i32 [ %ls, %then ], [ %ld, %else ]
+  %b = bitcast i32 %phi to float
+  store float %b, float* %e, align 4
+  ret float %b
+}
+
+define void @convphi_stop4(i32 *%s, i32 *%d, float *%e, i32 %n) {
+; CHECK-LABEL: @convphi_stop4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[D:%.*]], align 4
+; CHECK-NEXT:    [[LD_BC:%.*]] = bitcast i32 [[LD]] to float
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
+; CHECK-NEXT:    [[LS_BC:%.*]] = bitcast i32 [[LS]] to float
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ [[LS_BC]], [[THEN]] ], [ [[LD_BC]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[N]], 0
+; CHECK-NEXT:    [[BC:%.*]] = bitcast float [[PHI_TC]] to i32
+; CHECK-NEXT:    store i32 [[BC]], i32* [[S]], align 4
+; CHECK-NEXT:    br i1 [[TMP0]], label [[THEN2:%.*]], label [[END2:%.*]]
+; CHECK:       then2:
+; CHECK-NEXT:    [[LF:%.*]] = load float, float* [[E:%.*]], align 4
+; CHECK-NEXT:    br label [[END2]]
+; CHECK:       end2:
+; CHECK-NEXT:    [[PHI2:%.*]] = phi float [ [[PHI_TC]], [[END]] ], [ [[LF]], [[THEN2]] ]
+; CHECK-NEXT:    store float [[PHI2]], float* [[E]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  %ld = load i32, i32* %d, align 4
+  br i1 %cmp15, label %then, label %end
+
+then:
+  %ls = load i32, i32* %s, align 4
+  br label %end
+
+end:
+  %phi = phi i32 [ %ls, %then ], [ %ld, %entry ]
+  %phib = bitcast i32 %phi to float
+  store i32 %phi, i32* %s, align 4
+  br i1 %cmp15, label %then2, label %end2
+
+then2:
+  %lf = load float, float* %e, align 4
+  br label %end2
+
+end2:
+  %phi2 = phi float [ %phib, %end ], [ %lf, %then2 ]
+  store float %phi2, float* %e, align 4
+  ret void
+}
+
+define float @multiuse(i32 *%s, i32 *%d, i32 %n) {
+; CHECK-LABEL: @multiuse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[LS]], 2
+; CHECK-NEXT:    store i32 [[A]], i32* [[D:%.*]], align 4
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[D]], align 4
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[LS]], [[THEN]] ], [ [[LD]], [[ELSE]] ]
+; CHECK-NEXT:    [[B:%.*]] = bitcast i32 [[PHI]] to float
+; CHECK-NEXT:    ret float [[B]]
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  br i1 %cmp15, label %then, label %else
+
+then:
+  %ls = load i32, i32* %s, align 4
+  %a = add i32 %ls, 2
+  store i32 %a, i32* %d, align 4
+  br label %end
+
+else:
+  %ld = load i32, i32* %d, align 4
+  br label %end
+
+end:
+  %phi = phi i32 [ %ls, %then ], [ %ld, %else ]
+  %b = bitcast i32 %phi to float
+  ret float %b
+}
