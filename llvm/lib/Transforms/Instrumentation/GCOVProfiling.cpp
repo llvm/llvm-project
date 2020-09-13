@@ -193,7 +193,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<BlockFrequencyInfoWrapperPass>();
-    AU.addRequired<BranchProbabilityInfoWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
   }
 
