@@ -15,6 +15,7 @@ Flang is LLVM's Fortran frontend
 .. toctree::
    :titlesonly:
 
+   GettingInvolved
    FortranForCProgrammers
    C++style
    C++17
