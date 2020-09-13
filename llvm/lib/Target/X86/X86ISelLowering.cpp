@@ -39373,10 +39373,8 @@ static SDValue combineHorizontalPredicateResult(SDNode *Extract,
 
   MVT CmpVT = NumElts == 64 ? MVT::i64 : MVT::i32;
   if (BinOp == ISD::XOR) {
-    // parity -> (AND (CTPOP(MOVMSK X)), 1)
-    SDValue Mask = DAG.getConstant(1, DL, CmpVT);
-    SDValue Result = DAG.getNode(ISD::CTPOP, DL, CmpVT, Movmsk);
-    Result = DAG.getNode(ISD::AND, DL, CmpVT, Result, Mask);
+    // parity -> (PARITY(MOVMSK X))
+    SDValue Result = DAG.getNode(ISD::PARITY, DL, CmpVT, Movmsk);
     return DAG.getZExtOrTrunc(Result, DL, ExtractVT);
   }
 
