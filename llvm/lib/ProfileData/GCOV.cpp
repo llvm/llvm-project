@@ -261,8 +261,24 @@ LLVM_DUMP_METHOD void GCOVFile::dump() const { print(dbgs()); }
 /// reading .gcno and .gcda files.
 void GCOVFile::collectLineCounts(FileInfo &fi) {
   assert(fi.sources.empty());
-  for (StringRef filename : filenames)
+  for (StringRef filename : filenames) {
     fi.sources.emplace_back(filename);
+    SourceInfo &si = fi.sources.back();
+    si.displayName = si.filename;
+    if (!fi.Options.SourcePrefix.empty() &&
+        sys::path::replace_path_prefix(si.displayName, fi.Options.SourcePrefix,
+                                       "") &&
+        !si.displayName.empty()) {
+      // TODO replace_path_prefix may strip the prefix even if the remaining
+      // part does not start with a separator.
+      if (sys::path::is_separator(si.displayName[0]))
+        si.displayName.erase(si.displayName.begin());
+      else
+        si.displayName = si.filename;
+    }
+    if (fi.Options.RelativeOnly && sys::path::is_absolute(si.displayName))
+      si.ignored = true;
+  }
   for (GCOVFunction &f : *this) {
     f.collectLineCounts(fi);
     fi.sources[f.srcIdx].functions.push_back(&f);
@@ -664,6 +680,10 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
   llvm::sort(Filenames);
 
   for (StringRef Filename : Filenames) {
+    SourceInfo &source = sources[file.filenameToIdx.find(Filename)->second];
+    if (source.ignored)
+      continue;
+
     auto AllLines =
         Options.Intermediate ? LineConsumer() : LineConsumer(Filename);
     std::string CoveragePath = getCoveragePath(Filename, MainFilename);
@@ -675,7 +695,7 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
     raw_ostream &CovOS =
         !Options.NoOutput && Options.UseStdout ? llvm::outs() : *CovStream;
 
-    CovOS << "        -:    0:Source:" << Filename << "\n";
+    CovOS << "        -:    0:Source:" << source.displayName << "\n";
     CovOS << "        -:    0:Graph:" << GCNOFile << "\n";
     CovOS << "        -:    0:Data:" << GCDAFile << "\n";
     CovOS << "        -:    0:Runs:" << RunCount << "\n";
@@ -683,7 +703,7 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
       CovOS << "        -:    0:Programs:" << ProgramCount << "\n";
 
     const LineData &Line = LineInfo[Filename];
-    GCOVCoverage FileCoverage(Filename);
+    GCOVCoverage FileCoverage(source.displayName);
     for (uint32_t LineIndex = 0; LineIndex < Line.LastLine || !AllLines.empty();
          ++LineIndex) {
       if (Options.BranchInfo) {
@@ -767,7 +787,6 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
         }
       }
     }
-    SourceInfo &source = sources[file.filenameToIdx.find(Filename)->second];
     source.name = CoveragePath;
     source.coverage = FileCoverage;
   }
@@ -928,6 +947,8 @@ void FileInfo::printFuncCoverage(raw_ostream &OS) const {
 // printFileCoverage - Print per-file coverage info.
 void FileInfo::printFileCoverage(raw_ostream &OS) const {
   for (const SourceInfo &source : sources) {
+    if (source.ignored)
+      continue;
     const GCOVCoverage &Coverage = source.coverage;
     OS << "File '" << Coverage.Name << "'\n";
     printCoverage(OS, Coverage);
