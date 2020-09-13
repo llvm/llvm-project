@@ -172,51 +172,51 @@ static InputSection *findContainingSubsection(SubsectionMap &map,
 void InputFile::parseRelocations(const section_64 &sec,
                                  SubsectionMap &subsecMap) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
-  ArrayRef<any_relocation_info> relInfos(
+  ArrayRef<any_relocation_info> anyRelInfos(
       reinterpret_cast<const any_relocation_info *>(buf + sec.reloff),
       sec.nreloc);
 
-  for (const any_relocation_info &anyRel : relInfos) {
-    if (anyRel.r_word0 & R_SCATTERED)
+  for (const any_relocation_info &anyRelInfo : anyRelInfos) {
+    if (anyRelInfo.r_word0 & R_SCATTERED)
       fatal("TODO: Scattered relocations not supported");
 
-    auto rel = reinterpret_cast<const relocation_info &>(anyRel);
+    auto relInfo = reinterpret_cast<const relocation_info &>(anyRelInfo);
 
     Reloc r;
-    r.type = rel.r_type;
-    r.pcrel = rel.r_pcrel;
-    r.length = rel.r_length;
-    uint64_t rawAddend = target->getImplicitAddend(mb, sec, rel);
+    r.type = relInfo.r_type;
+    r.pcrel = relInfo.r_pcrel;
+    r.length = relInfo.r_length;
+    uint64_t rawAddend = target->getImplicitAddend(mb, sec, relInfo);
 
-    if (rel.r_extern) {
-      r.target = symbols[rel.r_symbolnum];
+    if (relInfo.r_extern) {
+      r.referent = symbols[relInfo.r_symbolnum];
       r.addend = rawAddend;
     } else {
-      if (rel.r_symbolnum == 0 || rel.r_symbolnum > subsections.size())
+      if (relInfo.r_symbolnum == 0 || relInfo.r_symbolnum > subsections.size())
         fatal("invalid section index in relocation for offset " +
               std::to_string(r.offset) + " in section " + sec.sectname +
               " of " + getName());
 
-      SubsectionMap &targetSubsecMap = subsections[rel.r_symbolnum - 1];
-      const section_64 &targetSec = sectionHeaders[rel.r_symbolnum - 1];
-      uint32_t targetOffset;
-      if (rel.r_pcrel) {
+      SubsectionMap &referentSubsecMap = subsections[relInfo.r_symbolnum - 1];
+      const section_64 &referentSec = sectionHeaders[relInfo.r_symbolnum - 1];
+      uint32_t referentOffset;
+      if (relInfo.r_pcrel) {
         // The implicit addend for pcrel section relocations is the pcrel offset
         // in terms of the addresses in the input file. Here we adjust it so
-        // that it describes the offset from the start of the target section.
+        // that it describes the offset from the start of the referent section.
         // TODO: The offset of 4 is probably not right for ARM64, nor for
         //       relocations with r_length != 2.
-        targetOffset =
-            sec.addr + rel.r_address + 4 + rawAddend - targetSec.addr;
+        referentOffset =
+            sec.addr + relInfo.r_address + 4 + rawAddend - referentSec.addr;
       } else {
         // The addend for a non-pcrel relocation is its absolute address.
-        targetOffset = rawAddend - targetSec.addr;
+        referentOffset = rawAddend - referentSec.addr;
       }
-      r.target = findContainingSubsection(targetSubsecMap, &targetOffset);
-      r.addend = targetOffset;
+      r.referent = findContainingSubsection(referentSubsecMap, &referentOffset);
+      r.addend = referentOffset;
     }
 
-    r.offset = rel.r_address;
+    r.offset = relInfo.r_address;
     InputSection *subsec = findContainingSubsection(subsecMap, &r.offset);
     subsec->relocs.push_back(r);
   }
