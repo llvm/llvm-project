@@ -27,6 +27,8 @@
 
 // CHECK: Runs:2
 
+#include <stdio.h>
+
 int main(int argc, char *argv[]) { // CHECK:      2: [[@LINE]]:int main
   if (argc > 1)                    // CHECK-NEXT: 2: [[@LINE]]:
     puts("hello");                 // CHECK-NEXT: 1: [[@LINE]]:
