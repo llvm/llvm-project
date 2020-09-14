@@ -358,8 +358,8 @@ void Compilation::ExecuteJobs(const JobList &Jobs,
     auto Work = [&, Next]() {
       const Command *FailingCommand = nullptr;
       if (int Res = ExecuteCommand(*Next, FailingCommand)) {
-        JS.setJobState(Next, JobScheduler::JS_FAIL);
         FailingCommands.push_back(std::make_pair(Res, FailingCommand));
+        JS.setJobState(Next, JobScheduler::JS_FAIL);
       } else {
         JS.setJobState(Next, JobScheduler::JS_DONE);
       }
