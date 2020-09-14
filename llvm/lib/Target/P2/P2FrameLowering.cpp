@@ -150,6 +150,7 @@ void P2FrameLowering::determineCalleeSaves(MachineFunction &MF, BitVector &Saved
     LLVM_DEBUG(errs() << "Determining callee saves\n");
     // hack for now: if this is the __start, __entry, or main function, skip saving anything since we have no stack to save to,
     // or in the case of main, there's no reason to save it since main should never return
+    // maybe we should instead make this a separate pass to just remove the prologue/epilogue for these functions
     auto fn_name = MF.getName();
     if (fn_name == "__start" || fn_name == "__entry" || fn_name == "main")
         return;

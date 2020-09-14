@@ -259,11 +259,24 @@ let DecoderMethod = "DecodeJumpInstruction", isBarrier = 1, isBranch = 1, isTerm
     def JMPlte  : P2BranchInst<(ins jmptarget:$target, P2Implicit:$cmp), if_c_or_z>;*/
 }
 
+let Constraints = "$s1 = $d" in {
+    def DJNZrr  : P2InstIDS<0b101101101, 0b0, (outs P2GPR:$d), (ins P2GPR:$s1, P2GPR:$s), "djnz $d, $s">;
+    def DJNZri  : P2InstIDS<0b101101101, 0b1, (outs P2GPR:$d), (ins P2GPR:$s1, jmptarget:$s), "djnz $d, #$s">;
+}
+
 def TJZrr   : P2InstIDS<0b101110010, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "tjz $d, $s">;
 def TJZri   : P2InstIDS<0b101110010, 0b1, (outs), (ins P2GPR:$d, jmptarget:$s), "tjz $d, #$s">;
 
-def TJNZrr   : P2InstIDS<0b101110011, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "tjnz $d, $s">;
-def TJNZri   : P2InstIDS<0b101110011, 0b1, (outs), (ins P2GPR:$d, jmptarget:$s), "tjnz $d, #$s">;
+def TJNZrr  : P2InstIDS<0b101110011, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "tjnz $d, $s">;
+def TJNZri  : P2InstIDS<0b101110011, 0b1, (outs), (ins P2GPR:$d, jmptarget:$s), "tjnz $d, #$s">;
+
+def REPrr   : P2InstLIDS<0b11001101, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "rep $d, $s">;
+def REPri   : P2InstLIDS<0b11001101, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "rep $d, #$s">;
+def REPir   : P2InstLIDS<0b11001101, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "rep #$d, $s">;
+def REPii   : P2InstLIDS<0b11001101, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "rep #$d, #$s">;
+
+def TESTr   : P2InstCZIDS<0b0111110, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "test $d, $s">;
+def TESTi   : P2InstCZIDS<0b0111110, 0b1, (outs), (ins P2GPR:$d, s9imm:$s), "test $d, #$s">;
 
 // Patterns for various branch conditions and types of branch instructions
 // unsigned comparison
@@ -306,8 +319,19 @@ def : Pat<(brcc SETLE, P2GPR:$lhs, imm9:$rhs, bb:$target), (JMP bb:$target, (CMP
 
 // if (c) branch => jump if not 0
 def : Pat<(brcond P2GPR:$c, bb:$target), (TJNZri P2GPR:$c, bb:$target, always)>;
+
+// unconditional jump
 def : Pat<(br bb:$target), (JMP bb:$target, 1, always)>;
+
+// indirect branch
 def : Pat<(brind P2GPR:$d), (JMPr P2GPR:$d, noeff, always)>;
+
+// these patterns break jump analysis, so might need to do it as a pass later to replace, or update the jump analysis
+// to select these instructions when appropriate
+// test and jump if 0
+// def : Pat<(brcc SETEQ, P2GPR:$lhs, 0, bb:$target), (TJZri P2GPR:$lhs, bb:$target, always)>;
+// test and jump if not 0
+// def : Pat<(brcc SETNE, P2GPR:$lhs, 0, bb:$target), (TJNZri P2GPR:$lhs, bb:$target, always)>;
 
 /*--------------------------------*/
 /* moving data                    */
@@ -381,13 +405,32 @@ def WRLONGir    : P2InstLIDS<0b11000110, 0b10, (outs), (ins s9imm:$d, P2GPR:$s),
 def SETQr       : P2InstLD<0b1101011, 0b000101000, 0b0, (outs), (ins P2GPR:$d), "setq $d">;
 def SETQi       : P2InstLD<0b1101011, 0b000101000, 0b1, (outs), (ins s9imm:$d), "setq #$d">;
 
-def RDLUTrr     : P2InstCZIDS<0b1010101, 0b0, (outs P2GPR:$d), (ins P2GPR:$s), "rdlut %d, %s">;
-def RDLUTri     : P2InstCZIDS<0b1010101, 0b1, (outs P2GPR:$d), (ins s9imm:$s), "rdlut %d, #%s">;
+def RDLUTrr     : P2InstCZIDS<0b1010101, 0b0, (outs P2GPR:$d), (ins P2GPR:$s), "rdlut $d, $s">;
+def RDLUTri     : P2InstCZIDS<0b1010101, 0b1, (outs P2GPR:$d), (ins s9imm:$s), "rdlut $d, #$s">;
 
-def WRLUTrr     : P2InstLIDS<0b11000011, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "wrlut %d, %s">;
-def WRLUTri     : P2InstLIDS<0b11000011, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "wrlut %d, #%s">;
-def WRLUTir     : P2InstLIDS<0b11000011, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "wrlut #%d, %s">;
-def WRLUTii     : P2InstLIDS<0b11000011, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "wrlut #%d, #%s">;
+def WRLUTrr     : P2InstLIDS<0b11000011, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "wrlut $d, $s">;
+def WRLUTri     : P2InstLIDS<0b11000011, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "wrlut $d, #$s">;
+def WRLUTir     : P2InstLIDS<0b11000011, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "wrlut #$d, $s">;
+def WRLUTii     : P2InstLIDS<0b11000011, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "wrlut #$d, #$s">;
+
+def XINITrr     : P2InstLIDS<0b11001010, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "xinit $d, $s">;
+def XINITri     : P2InstLIDS<0b11001010, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "xinit $d, #$s">;
+def XINITir     : P2InstLIDS<0b11001010, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "xinit #$d, $s">;
+def XINITii     : P2InstLIDS<0b11001010, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "xinit #$d, #$s">;
+
+def XCONTrr     : P2InstLIDS<0b11001100, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "xcont $d, $s">;
+def XCONTri     : P2InstLIDS<0b11001100, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "xcont $d, #$s">;
+def XCONTir     : P2InstLIDS<0b11001100, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "xcont #$d, $s">;
+def XCONTii     : P2InstLIDS<0b11001100, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "xcont #$d, #$s">;
+
+def RDFASTrr    : P2InstLIDS<0b11000111, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "rdfast $d, $s">;
+def RDFASTri    : P2InstLIDS<0b11000111, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "rdfast $d, #$s">;
+def RDFASTir    : P2InstLIDS<0b11000111, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "rdfast #$d, $s">;
+def RDFASTii    : P2InstLIDS<0b11000111, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "rdfast #$d, #$s">;
+
+def RFBYTE      : P2InstCZD<0b1101011, 0b000010000, (outs P2GPR:$d), (ins), "rfbyte $d">;
+def RFWORD      : P2InstCZD<0b1101011, 0b000010001, (outs P2GPR:$d), (ins), "rfword $d">;
+def RFLONG      : P2InstCZD<0b1101011, 0b000010010, (outs P2GPR:$d), (ins), "rflong $d">;
 
 def : Pat<(zextloadi8 imm9:$s), (RDBYTEri imm9:$s, always, noeff)>;
 def : Pat<(zextloadi8 addr:$s), (RDBYTErr P2GPR:$s, always, noeff)>;
@@ -462,11 +505,17 @@ let DecoderMethod = "DecodeIOInstruction" in {
     def OUTHr       : P2InstCZLD<0b1101011, 0b001001001, 0b0, (outs P2GPR:$dir), (ins P2GPR:$d), "outh $d">;
     def OUTHi       : P2InstCZLD<0b1101011, 0b001001001, 0b1, (outs P2GPR:$dir), (ins s9imm:$d), "outh #$d">;
 
+    def OUTNOTr     : P2InstCZLD<0b1101011, 0b001001111, 0b0, (outs P2GPR:$dir), (ins P2GPR:$d), "outnot $d">;
+    def OUTNOTi     : P2InstCZLD<0b1101011, 0b001001111, 0b1, (outs P2GPR:$dir), (ins s9imm:$d), "outnot #$d">;
+
     def DRVLr       : P2InstCZLD<0b1101011, 0b001011000, 0b0, (outs P2GPR:$dir), (ins P2GPR:$d), "drvl $d">;
     def DRVLi       : P2InstCZLD<0b1101011, 0b001011000, 0b1, (outs P2GPR:$dir), (ins s9imm:$d), "drvl #$d">;
 
     def DRVHr       : P2InstCZLD<0b1101011, 0b001011001, 0b0, (outs P2GPR:$dir), (ins P2GPR:$d), "drvh $d">;
     def DRVHi       : P2InstCZLD<0b1101011, 0b001011001, 0b1, (outs P2GPR:$dir), (ins s9imm:$d), "drvh #$d">;
+
+    def DRVNOTr     : P2InstCZLD<0b1101011, 0b001011111, 0b0, (outs P2GPR:$dir), (ins P2GPR:$d), "drvnot $d">;
+    def DRVNOTi     : P2InstCZLD<0b1101011, 0b001011111, 0b1, (outs P2GPR:$dir), (ins s9imm:$d), "drvnot #$d">;
 
     let cz = 0b10 in {
         def TESTPrc      : P2InstCZLD<0b1101011, 0b001000000, 0b0, (outs), (ins P2GPR:$d), "testp $d">;
