@@ -71,7 +71,11 @@ static inline SourceRange translateCXSourceRange(CXSourceRange R) {
                      SourceLocation::getFromRawEncoding(R.end_int_data));
 }
 
-
+/// Translates CXSourceRange to CharSourceRange.
+/// The semantics of \p R are:
+/// R.begin_int_data is first character of the range.
+/// R.end_int_data is one character past the end of the range.
+CharSourceRange translateCXRangeToCharRange(CXSourceRange R);
 }} // end namespace: clang::cxloc
 
 #endif
