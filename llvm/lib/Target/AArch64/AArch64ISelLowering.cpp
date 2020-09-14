@@ -1185,6 +1185,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
 
       setOperationAction(ISD::SELECT_CC, VT, Expand);
+      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
 
       // There are no legal MVT::nxv16f## based types.
       if (VT != MVT::nxv16i1) {
@@ -10073,8 +10074,21 @@ SDValue
 AArch64TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
                                                SelectionDAG &DAG) const {
   assert(Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT && "Unknown opcode!");
-
   EVT VT = Op.getOperand(0).getValueType();
+
+  if (VT.getScalarType() == MVT::i1) {
+    // We can't directly extract from an SVE predicate; extend it first.
+    // (This isn't the only possible lowering, but it's straightforward.)
+    EVT VectorVT = getPromotedVTForPredicate(VT);
+    SDLoc DL(Op);
+    SDValue Extend =
+        DAG.getNode(ISD::ANY_EXTEND, DL, VectorVT, Op.getOperand(0));
+    MVT ExtractTy = VectorVT == MVT::nxv2i64 ? MVT::i64 : MVT::i32;
+    SDValue Extract = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractTy,
+                                  Extend, Op.getOperand(1));
+    return DAG.getAnyExtOrTrunc(Extract, DL, Op.getValueType());
+  }
+
   if (useSVEForFixedLengthVectorVT(VT))
     return LowerFixedLengthExtractVectorElt(Op, DAG);
 
@@ -10082,7 +10096,6 @@ AArch64TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
   ConstantSDNode *CI = dyn_cast<ConstantSDNode>(Op.getOperand(1));
   if (!CI || CI->getZExtValue() >= VT.getVectorNumElements())
     return SDValue();
-
 
   // Insertion/extraction are legal for V128 types.
   if (VT == MVT::v16i8 || VT == MVT::v8i16 || VT == MVT::v4i32 ||
