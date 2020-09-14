@@ -2342,6 +2342,10 @@ class SBBreakpoint(object):
         r"""AddLocation(SBBreakpoint self, SBAddress address) -> SBError"""
         return _lldb.SBBreakpoint_AddLocation(self, address)
 
+    def SerializeToStructuredData(self):
+        r"""SerializeToStructuredData(SBBreakpoint self) -> SBStructuredData"""
+        return _lldb.SBBreakpoint_SerializeToStructuredData(self)
+
     @staticmethod
     def EventIsBreakpointEvent(event):
         r"""EventIsBreakpointEvent(SBEvent event) -> bool"""
