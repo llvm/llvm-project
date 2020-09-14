@@ -384,10 +384,9 @@ define void @dont_merge_noalias_complex_2(i32 %arg, i32 %arg1)  {
 ; CHECK-NEXT:  call void @init([32 x i32]* %tmp)
 
 ; CHECK-LABEL: loop.1.header:
-; CHECK-NEXT: ; 4 = MemoryPhi({entry,1},{loop.1.latch,3})
-; NOLIMIT:    ; MemoryUse(1) MayAlias
-; LIMIT:      ; MemoryUse(4) MayAlias
-; CHECK-NEXT: %l.1 = load i32, i32* %p.1, align 4
+; CHECK-NEXT:  ; 4 = MemoryPhi({entry,1},{loop.1.latch,3})
+; CHECK:       ; MemoryUse(4) MayAlias
+; CHECK-NEXT:  %l.1 = load i32, i32* %p.1, align 4
 
 ; CHECK-LABEL: loop.1.latch:
 ; CHECK-NEXT:  ; 3 = MemoryPhi({loop.1.header,4},{storebb,2})
