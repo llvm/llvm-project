@@ -5273,7 +5273,7 @@ AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
   SDValue FuncTLVGet = DAG.getLoad(
       PtrMemVT, DL, Chain, DescAddr,
       MachinePointerInfo::getGOT(DAG.getMachineFunction()),
-      /* Alignment = */ PtrMemVT.getSizeInBits() / 8,
+      Align(PtrMemVT.getSizeInBits() / 8),
       MachineMemOperand::MOInvariant | MachineMemOperand::MODereferenceable);
   Chain = FuncTLVGet.getValue(1);
 
@@ -6302,8 +6302,8 @@ SDValue AArch64TargetLowering::LowerAAPCS_VASTART(SDValue Op,
 
   // void *__stack at offset 0
   SDValue Stack = DAG.getFrameIndex(FuncInfo->getVarArgsStackIndex(), PtrVT);
-  MemOps.push_back(DAG.getStore(Chain, DL, Stack, VAList,
-                                MachinePointerInfo(SV), /* Alignment = */ 8));
+  MemOps.push_back(
+      DAG.getStore(Chain, DL, Stack, VAList, MachinePointerInfo(SV), Align(8)));
 
   // void *__gr_top at offset 8
   int GPRSize = FuncInfo->getVarArgsGPRSize();
@@ -6318,8 +6318,7 @@ SDValue AArch64TargetLowering::LowerAAPCS_VASTART(SDValue Op,
                         DAG.getConstant(GPRSize, DL, PtrVT));
 
     MemOps.push_back(DAG.getStore(Chain, DL, GRTop, GRTopAddr,
-                                  MachinePointerInfo(SV, 8),
-                                  /* Alignment = */ 8));
+                                  MachinePointerInfo(SV, 8), Align(8)));
   }
 
   // void *__vr_top at offset 16
@@ -6334,23 +6333,22 @@ SDValue AArch64TargetLowering::LowerAAPCS_VASTART(SDValue Op,
                         DAG.getConstant(FPRSize, DL, PtrVT));
 
     MemOps.push_back(DAG.getStore(Chain, DL, VRTop, VRTopAddr,
-                                  MachinePointerInfo(SV, 16),
-                                  /* Alignment = */ 8));
+                                  MachinePointerInfo(SV, 16), Align(8)));
   }
 
   // int __gr_offs at offset 24
   SDValue GROffsAddr =
       DAG.getNode(ISD::ADD, DL, PtrVT, VAList, DAG.getConstant(24, DL, PtrVT));
-  MemOps.push_back(DAG.getStore(
-      Chain, DL, DAG.getConstant(-GPRSize, DL, MVT::i32), GROffsAddr,
-      MachinePointerInfo(SV, 24), /* Alignment = */ 4));
+  MemOps.push_back(
+      DAG.getStore(Chain, DL, DAG.getConstant(-GPRSize, DL, MVT::i32),
+                   GROffsAddr, MachinePointerInfo(SV, 24), Align(4)));
 
   // int __vr_offs at offset 28
   SDValue VROffsAddr =
       DAG.getNode(ISD::ADD, DL, PtrVT, VAList, DAG.getConstant(28, DL, PtrVT));
-  MemOps.push_back(DAG.getStore(
-      Chain, DL, DAG.getConstant(-FPRSize, DL, MVT::i32), VROffsAddr,
-      MachinePointerInfo(SV, 28), /* Alignment = */ 4));
+  MemOps.push_back(
+      DAG.getStore(Chain, DL, DAG.getConstant(-FPRSize, DL, MVT::i32),
+                   VROffsAddr, MachinePointerInfo(SV, 28), Align(4)));
 
   return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOps);
 }
