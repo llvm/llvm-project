@@ -4172,15 +4172,20 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
     return parseDirectiveFPOEndPrologue(DirectiveID.getLoc());
   else if (IDVal == ".cv_fpo_endproc")
     return parseDirectiveFPOEndProc(DirectiveID.getLoc());
-  else if (IDVal == ".seh_pushreg")
+  else if (IDVal == ".seh_pushreg" ||
+           (Parser.isParsingMasm() && IDVal.equals_lower(".pushreg")))
     return parseDirectiveSEHPushReg(DirectiveID.getLoc());
-  else if (IDVal == ".seh_setframe")
+  else if (IDVal == ".seh_setframe" ||
+           (Parser.isParsingMasm() && IDVal.equals_lower(".setframe")))
     return parseDirectiveSEHSetFrame(DirectiveID.getLoc());
-  else if (IDVal == ".seh_savereg")
+  else if (IDVal == ".seh_savereg" ||
+           (Parser.isParsingMasm() && IDVal.equals_lower(".savereg")))
     return parseDirectiveSEHSaveReg(DirectiveID.getLoc());
-  else if (IDVal == ".seh_savexmm")
+  else if (IDVal == ".seh_savexmm" ||
+           (Parser.isParsingMasm() && IDVal.equals_lower(".savexmm128")))
     return parseDirectiveSEHSaveXMM(DirectiveID.getLoc());
-  else if (IDVal == ".seh_pushframe")
+  else if (IDVal == ".seh_pushframe" ||
+           (Parser.isParsingMasm() && IDVal.equals_lower(".pushframe")))
     return parseDirectiveSEHPushFrame(DirectiveID.getLoc());
 
   return true;
