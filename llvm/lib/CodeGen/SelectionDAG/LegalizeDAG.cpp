@@ -2800,7 +2800,7 @@ SDValue SelectionDAGLegalize::ExpandPARITY(SDValue Op, const SDLoc &dl) {
     Result = Op;
     for (unsigned i = Log2_32_Ceil(Sz); i != 0;) {
       SDValue Shift = DAG.getNode(ISD::SRL, dl, VT, Result,
-                                  DAG.getConstant(1 << (--i), dl, ShVT));
+                                  DAG.getConstant(1ULL << (--i), dl, ShVT));
       Result = DAG.getNode(ISD::XOR, dl, VT, Result, Shift);
     }
   }
