@@ -20,18 +20,15 @@ define i32 @z() nounwind ssp {
 ; CHECK-NEXT:    movb $15, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %esp, %eax
 ; CHECK-NEXT:    movl $8, %ecx
-; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
+; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
 ; CHECK-NEXT:    movl %eax, %edi
-; CHECK-NEXT:    movl %edx, %esi
 ; CHECK-NEXT:    rep;movsl (%esi), %es:(%edi)
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    addl $36, %ecx
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi ## 4-byte Reload
-; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi ## 4-byte Reload
-; CHECK-NEXT:    movl %edx, %esi
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx ## 4-byte Reload
+; CHECK-NEXT:    movl %eax, %edi
+; CHECK-NEXT:    addl $36, %edi
 ; CHECK-NEXT:    rep;movsl (%esi), %es:(%edi)
 ; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; CHECK-NEXT:    movb %cl, 32(%eax)
@@ -42,11 +39,11 @@ define i32 @z() nounwind ssp {
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:  ## %bb.1: ## %return
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl L___stack_chk_guard$non_lazy_ptr, %ecx
-; CHECK-NEXT:    movl (%ecx), %ecx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    cmpl %edx, %ecx
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
+; CHECK-NEXT:    movl L___stack_chk_guard$non_lazy_ptr, %eax
+; CHECK-NEXT:    movl (%eax), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    cmpl %ecx, %eax
 ; CHECK-NEXT:    jne LBB0_3
 ; CHECK-NEXT:  ## %bb.2: ## %SP_return
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax ## 4-byte Reload
