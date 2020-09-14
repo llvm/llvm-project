@@ -26,7 +26,7 @@ int main(int, char**)
     }
     {
         std::strstreambuf s(1024);
-        assert(s.str() == nullptr);
+        LIBCPP_ASSERT(s.str() == nullptr);
         assert(s.pcount() == 0);
     }
 
