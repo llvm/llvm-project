@@ -280,6 +280,10 @@ public:
   /// Transform fneg(fneg(x)) to x.
   bool matchCombineFNegOfFNeg(MachineInstr &MI, Register &Reg);
 
+  /// Match fabs(fabs(x)) to fabs(x).
+  bool matchCombineFAbsOfFAbs(MachineInstr &MI, Register &Src);
+  bool applyCombineFAbsOfFAbs(MachineInstr &MI, Register &Src);
+
   /// Return true if any explicit use operand on \p MI is defined by a
   /// G_IMPLICIT_DEF.
   bool matchAnyExplicitUseIsUndef(MachineInstr &MI);
