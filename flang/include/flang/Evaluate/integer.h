@@ -176,22 +176,22 @@ public:
   constexpr Integer &operator=(const Integer &) = default;
 
   constexpr bool operator<(const Integer &that) const {
-    return CompareUnsigned(that) == Ordering::Less;
+    return CompareSigned(that) == Ordering::Less;
   }
   constexpr bool operator<=(const Integer &that) const {
-    return CompareUnsigned(that) != Ordering::Greater;
+    return CompareSigned(that) != Ordering::Greater;
   }
   constexpr bool operator==(const Integer &that) const {
-    return CompareUnsigned(that) == Ordering::Equal;
+    return CompareSigned(that) == Ordering::Equal;
   }
   constexpr bool operator!=(const Integer &that) const {
     return !(*this == that);
   }
   constexpr bool operator>=(const Integer &that) const {
-    return CompareUnsigned(that) != Ordering::Less;
+    return CompareSigned(that) != Ordering::Less;
   }
   constexpr bool operator>(const Integer &that) const {
-    return CompareUnsigned(that) == Ordering::Greater;
+    return CompareSigned(that) == Ordering::Greater;
   }
 
   // Left-justified mask (e.g., MASKL(1) has only its sign bit set)
