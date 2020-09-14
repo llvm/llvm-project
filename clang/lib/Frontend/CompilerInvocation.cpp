@@ -1033,7 +1033,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.ThinLinkBitcodeFile =
       std::string(Args.getLastArgValue(OPT_fthin_link_bitcode_EQ));
 
-  Opts.HeapProf = Args.hasArg(OPT_fmemory_profile);
+  Opts.MemProf = Args.hasArg(OPT_fmemory_profile);
 
   Opts.MSVolatile = Args.hasArg(OPT_fms_volatile);
 
