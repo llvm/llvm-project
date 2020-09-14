@@ -14094,8 +14094,8 @@ int64_t test_vqdmulls_s32(int32_t a, int32_t b) {
 // CHECK:   [[VQMOVUNH_S16_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqxtun.v8i8(<8 x i16> [[TMP0]])
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQMOVUNH_S16_I]], i64 0
 // CHECK:   ret i8 [[TMP1]]
-int8_t test_vqmovunh_s16(int16_t a) {
-  return (int8_t)vqmovunh_s16(a);
+uint8_t test_vqmovunh_s16(int16_t a) {
+  return (uint8_t)vqmovunh_s16(a);
 }
 
 // CHECK-LABEL: @test_vqmovuns_s32(
@@ -14103,15 +14103,15 @@ int8_t test_vqmovunh_s16(int16_t a) {
 // CHECK:   [[VQMOVUNS_S32_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqxtun.v4i16(<4 x i32> [[TMP0]])
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQMOVUNS_S32_I]], i64 0
 // CHECK:   ret i16 [[TMP1]]
-int16_t test_vqmovuns_s32(int32_t a) {
-  return (int16_t)vqmovuns_s32(a);
+uint16_t test_vqmovuns_s32(int32_t a) {
+  return (uint16_t)vqmovuns_s32(a);
 }
 
 // CHECK-LABEL: @test_vqmovund_s64(
 // CHECK:   [[VQMOVUND_S64_I:%.*]] = call i32 @llvm.aarch64.neon.scalar.sqxtun.i32.i64(i64 %a)
 // CHECK:   ret i32 [[VQMOVUND_S64_I]]
-int32_t test_vqmovund_s64(int64_t a) {
-  return (int32_t)vqmovund_s64(a);
+uint32_t test_vqmovund_s64(int64_t a) {
+  return (uint32_t)vqmovund_s64(a);
 }
 
 // CHECK-LABEL: @test_vqmovnh_s16(
