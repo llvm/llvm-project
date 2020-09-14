@@ -9439,6 +9439,33 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBBreakpoint_SerializeToStructuredData(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBBreakpoint *arg1 = (lldb::SBBreakpoint *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  lldb::SBStructuredData result;
+  
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBBreakpoint, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBBreakpoint_SerializeToStructuredData" "', argument " "1"" of type '" "lldb::SBBreakpoint *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBBreakpoint * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->SerializeToStructuredData();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBStructuredData(static_cast< const lldb::SBStructuredData& >(result))), SWIGTYPE_p_lldb__SBStructuredData, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBBreakpoint_EventIsBreakpointEvent(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBEvent *arg1 = 0 ;
@@ -82225,26 +82252,29 @@ static PyMethodDef SwigMethods[] = {
 		"GetDescription(SBStream description) -> bool\n"
 		"SBBreakpoint_GetDescription(SBBreakpoint self, SBStream description, bool include_locations) -> bool\n"
 		""},
-	 { (char *)"SBBreakpoint_AddLocation", _wrap_SBBreakpoint_AddLocation, METH_VARARGS, (char *)"SBBreakpoint_AddLocation(SBBreakpoint self, SBAddress address) -> SBError"},
-	 { (char *)"SBBreakpoint_EventIsBreakpointEvent", _wrap_SBBreakpoint_EventIsBreakpointEvent, METH_VARARGS, (char *)"SBBreakpoint_EventIsBreakpointEvent(SBEvent event) -> bool"},
-	 { (char *)"SBBreakpoint_GetBreakpointEventTypeFromEvent", _wrap_SBBreakpoint_GetBreakpointEventTypeFromEvent, METH_VARARGS, (char *)"SBBreakpoint_GetBreakpointEventTypeFromEvent(SBEvent event) -> lldb::BreakpointEventType"},
-	 { (char *)"SBBreakpoint_GetBreakpointFromEvent", _wrap_SBBreakpoint_GetBreakpointFromEvent, METH_VARARGS, (char *)"SBBreakpoint_GetBreakpointFromEvent(SBEvent event) -> SBBreakpoint"},
-	 { (char *)"SBBreakpoint_GetBreakpointLocationAtIndexFromEvent", _wrap_SBBreakpoint_GetBreakpointLocationAtIndexFromEvent, METH_VARARGS, (char *)"SBBreakpoint_GetBreakpointLocationAtIndexFromEvent(SBEvent event, uint32_t loc_idx) -> SBBreakpointLocation"},
-	 { (char *)"SBBreakpoint_GetNumBreakpointLocationsFromEvent", _wrap_SBBreakpoint_GetNumBreakpointLocationsFromEvent, METH_VARARGS, (char *)"SBBreakpoint_GetNumBreakpointLocationsFromEvent(SBEvent event_sp) -> uint32_t"},
-	 { (char *)"SBBreakpoint_IsHardware", _wrap_SBBreakpoint_IsHardware, METH_VARARGS, (char *)"SBBreakpoint_IsHardware(SBBreakpoint self) -> bool"},
-	 { (char *)"SBBreakpoint___str__", _wrap_SBBreakpoint___str__, METH_VARARGS, (char *)"SBBreakpoint___str__(SBBreakpoint self) -> std::string"},
-	 { (char *)"SBBreakpoint_swigregister", SBBreakpoint_swigregister, METH_VARARGS, NULL},
-	 { (char *)"new_SBBreakpointList", _wrap_new_SBBreakpointList, METH_VARARGS, (char *)"new_SBBreakpointList(SBTarget target) -> SBBreakpointList"},
-	 { (char *)"delete_SBBreakpointList", _wrap_delete_SBBreakpointList, METH_VARARGS, (char *)"delete_SBBreakpointList(SBBreakpointList self)"},
-	 { (char *)"SBBreakpointList_GetSize", _wrap_SBBreakpointList_GetSize, METH_VARARGS, (char *)"SBBreakpointList_GetSize(SBBreakpointList self) -> size_t"},
-	 { (char *)"SBBreakpointList_GetBreakpointAtIndex", _wrap_SBBreakpointList_GetBreakpointAtIndex, METH_VARARGS, (char *)"SBBreakpointList_GetBreakpointAtIndex(SBBreakpointList self, size_t idx) -> SBBreakpoint"},
-	 { (char *)"SBBreakpointList_FindBreakpointByID", _wrap_SBBreakpointList_FindBreakpointByID, METH_VARARGS, (char *)"SBBreakpointList_FindBreakpointByID(SBBreakpointList self, lldb::break_id_t arg3) -> SBBreakpoint"},
-	 { (char *)"SBBreakpointList_Append", _wrap_SBBreakpointList_Append, METH_VARARGS, (char *)"SBBreakpointList_Append(SBBreakpointList self, SBBreakpoint sb_bkpt)"},
-	 { (char *)"SBBreakpointList_AppendIfUnique", _wrap_SBBreakpointList_AppendIfUnique, METH_VARARGS, (char *)"SBBreakpointList_AppendIfUnique(SBBreakpointList self, SBBreakpoint sb_bkpt) -> bool"},
-	 { (char *)"SBBreakpointList_AppendByID", _wrap_SBBreakpointList_AppendByID, METH_VARARGS, (char *)"SBBreakpointList_AppendByID(SBBreakpointList self, lldb::break_id_t id)"},
-	 { (char *)"SBBreakpointList_Clear", _wrap_SBBreakpointList_Clear, METH_VARARGS, (char *)"SBBreakpointList_Clear(SBBreakpointList self)"},
-	 { (char *)"SBBreakpointList_swigregister", SBBreakpointList_swigregister, METH_VARARGS, NULL},
-	 { (char *)"new_SBBreakpointLocation", _wrap_new_SBBreakpointLocation, METH_VARARGS, (char *)"\n"
+	 { "SBBreakpoint_AddLocation", _wrap_SBBreakpoint_AddLocation, METH_VARARGS, "SBBreakpoint_AddLocation(SBBreakpoint self, SBAddress address) -> SBError"},
+	 { "SBBreakpoint_SerializeToStructuredData", _wrap_SBBreakpoint_SerializeToStructuredData, METH_O, "SBBreakpoint_SerializeToStructuredData(SBBreakpoint self) -> SBStructuredData"},
+	 { "SBBreakpoint_EventIsBreakpointEvent", _wrap_SBBreakpoint_EventIsBreakpointEvent, METH_O, "SBBreakpoint_EventIsBreakpointEvent(SBEvent event) -> bool"},
+	 { "SBBreakpoint_GetBreakpointEventTypeFromEvent", _wrap_SBBreakpoint_GetBreakpointEventTypeFromEvent, METH_O, "SBBreakpoint_GetBreakpointEventTypeFromEvent(SBEvent event) -> lldb::BreakpointEventType"},
+	 { "SBBreakpoint_GetBreakpointFromEvent", _wrap_SBBreakpoint_GetBreakpointFromEvent, METH_O, "SBBreakpoint_GetBreakpointFromEvent(SBEvent event) -> SBBreakpoint"},
+	 { "SBBreakpoint_GetBreakpointLocationAtIndexFromEvent", _wrap_SBBreakpoint_GetBreakpointLocationAtIndexFromEvent, METH_VARARGS, "SBBreakpoint_GetBreakpointLocationAtIndexFromEvent(SBEvent event, uint32_t loc_idx) -> SBBreakpointLocation"},
+	 { "SBBreakpoint_GetNumBreakpointLocationsFromEvent", _wrap_SBBreakpoint_GetNumBreakpointLocationsFromEvent, METH_O, "SBBreakpoint_GetNumBreakpointLocationsFromEvent(SBEvent event_sp) -> uint32_t"},
+	 { "SBBreakpoint_IsHardware", _wrap_SBBreakpoint_IsHardware, METH_O, "SBBreakpoint_IsHardware(SBBreakpoint self) -> bool"},
+	 { "SBBreakpoint___str__", _wrap_SBBreakpoint___str__, METH_O, "SBBreakpoint___str__(SBBreakpoint self) -> std::string"},
+	 { "SBBreakpoint_swigregister", SBBreakpoint_swigregister, METH_O, NULL},
+	 { "SBBreakpoint_swiginit", SBBreakpoint_swiginit, METH_VARARGS, NULL},
+	 { "new_SBBreakpointList", _wrap_new_SBBreakpointList, METH_O, "new_SBBreakpointList(SBTarget target) -> SBBreakpointList"},
+	 { "delete_SBBreakpointList", _wrap_delete_SBBreakpointList, METH_O, "delete_SBBreakpointList(SBBreakpointList self)"},
+	 { "SBBreakpointList_GetSize", _wrap_SBBreakpointList_GetSize, METH_O, "SBBreakpointList_GetSize(SBBreakpointList self) -> size_t"},
+	 { "SBBreakpointList_GetBreakpointAtIndex", _wrap_SBBreakpointList_GetBreakpointAtIndex, METH_VARARGS, "SBBreakpointList_GetBreakpointAtIndex(SBBreakpointList self, size_t idx) -> SBBreakpoint"},
+	 { "SBBreakpointList_FindBreakpointByID", _wrap_SBBreakpointList_FindBreakpointByID, METH_VARARGS, "SBBreakpointList_FindBreakpointByID(SBBreakpointList self, lldb::break_id_t arg2) -> SBBreakpoint"},
+	 { "SBBreakpointList_Append", _wrap_SBBreakpointList_Append, METH_VARARGS, "SBBreakpointList_Append(SBBreakpointList self, SBBreakpoint sb_bkpt)"},
+	 { "SBBreakpointList_AppendIfUnique", _wrap_SBBreakpointList_AppendIfUnique, METH_VARARGS, "SBBreakpointList_AppendIfUnique(SBBreakpointList self, SBBreakpoint sb_bkpt) -> bool"},
+	 { "SBBreakpointList_AppendByID", _wrap_SBBreakpointList_AppendByID, METH_VARARGS, "SBBreakpointList_AppendByID(SBBreakpointList self, lldb::break_id_t id)"},
+	 { "SBBreakpointList_Clear", _wrap_SBBreakpointList_Clear, METH_O, "SBBreakpointList_Clear(SBBreakpointList self)"},
+	 { "SBBreakpointList_swigregister", SBBreakpointList_swigregister, METH_O, NULL},
+	 { "SBBreakpointList_swiginit", SBBreakpointList_swiginit, METH_VARARGS, NULL},
+	 { "new_SBBreakpointLocation", _wrap_new_SBBreakpointLocation, METH_VARARGS, "\n"
 		"SBBreakpointLocation()\n"
 		"new_SBBreakpointLocation(SBBreakpointLocation rhs) -> SBBreakpointLocation\n"
 		""},
