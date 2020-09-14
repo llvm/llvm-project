@@ -55,7 +55,7 @@ public:
   create(mlir::MLIRContext &ctx,
          const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
          const Fortran::evaluate::IntrinsicProcTable &intrinsics,
-         const Fortran::parser::AllCookedSource &allCooked,
+         const Fortran::parser::AllCookedSources &allCooked,
          llvm::Triple &triple, fir::NameUniquer &uniquer,
          fir::KindMapping &kindMap) {
     return LoweringBridge(ctx, defaultKinds, intrinsics, allCooked, triple,
@@ -103,7 +103,7 @@ private:
       mlir::MLIRContext &ctx,
       const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
       const Fortran::evaluate::IntrinsicProcTable &intrinsics,
-      const Fortran::parser::AllCookedSource &cooked, llvm::Triple &triple,
+      const Fortran::parser::AllCookedSources &cooked, llvm::Triple &triple,
       fir::NameUniquer &uniquer, fir::KindMapping &kindMap);
   LoweringBridge() = delete;
   LoweringBridge(const LoweringBridge &) = delete;
@@ -111,7 +111,7 @@ private:
   const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds;
   const Fortran::evaluate::IntrinsicProcTable &intrinsics;
   const Fortran::parser::AllCookedSources *cooked;
-  std::unique_ptr<mlir::MLIRContext> context;
+  mlir::MLIRContext &context;
   std::unique_ptr<mlir::ModuleOp> module;
   fir::KindMapping &kindMap;
 };

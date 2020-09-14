@@ -2458,7 +2458,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     mlir::MLIRContext &context,
     const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
     const Fortran::evaluate::IntrinsicProcTable &intrinsics,
-    const Fortran::parser::CookedSource &cooked, llvm::Triple &triple,
+    const Fortran::parser::AllCookedSources &cooked, llvm::Triple &triple,
     fir::NameUniquer &uniquer, fir::KindMapping &kindMap)
     : defaultKinds{defaultKinds}, intrinsics{intrinsics}, cooked{&cooked},
       context{context}, kindMap{kindMap} {
