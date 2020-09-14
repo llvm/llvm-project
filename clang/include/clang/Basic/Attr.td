@@ -2158,12 +2158,6 @@ def SwiftBridgedTypedef : Attr {
   let Documentation = [SwiftBridgedTypedefDocs];
 }
 
-def SwiftObjCMembers : Attr {
-  let Spellings = [GNU<"swift_objc_members">];
-  let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
-  let Documentation = [SwiftObjCMembersDocs];
-}
-
 def SwiftName : InheritableAttr {
   let Spellings = [GCC<"swift_name">];
   let Args = [StringArgument<"Name">];
@@ -2227,6 +2221,12 @@ def SwiftVersionedRemoval : Attr {
       return static_cast<attr::Kind>(getRawKind());
     }
   }];
+}
+
+def SwiftObjCMembers : Attr {
+  let Spellings = [GNU<"swift_objc_members">];
+  let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
+  let Documentation = [SwiftObjCMembersDocs];
 }
 
 def SwiftError : InheritableAttr {
