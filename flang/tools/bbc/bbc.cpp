@@ -189,18 +189,18 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
 
   // prep for prescan and parse
   options.searchDirectories = includeDirs;
-  Fortran::parser::Parsing parsing{semanticsContext.allSources()};
+  Fortran::parser::Parsing parsing{semanticsContext.allCookedSources()};
   parsing.Prescan(path, options);
   if (!parsing.messages().empty() &&
       (warnIsError || parsing.messages().AnyFatalError())) {
     llvm::errs() << programPrefix << "could not scan " << path << '\n';
-    parsing.messages().Emit(llvm::errs(), parsing.cooked());
+    parsing.messages().Emit(llvm::errs(), parsing.allCooked());
     return mlir::failure();
   }
 
   // parse the input Fortran
   parsing.Parse(llvm::outs());
-  parsing.messages().Emit(llvm::errs(), parsing.cooked());
+  parsing.messages().Emit(llvm::errs(), parsing.allCooked());
   if (!parsing.consumedWholeFile()) {
     parsing.EmitMessage(llvm::errs(), parsing.finalRestingPlace(),
                         "parser FAIL (final position)");
@@ -244,7 +244,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   fir::KindMapping kindMap(
       &ctx, llvm::ArrayRef<fir::KindTy>{fromDefaultKinds(defKinds)});
   auto burnside = Fortran::lower::LoweringBridge::create(
-      ctx, defKinds, semanticsContext.intrinsics(), parsing.cooked(), triple,
+      ctx, defKinds, semanticsContext.intrinsics(), parsing.allCooked(), triple,
       nameUniquer, kindMap);
   burnside.lower(parseTree, semanticsContext);
   mlir::ModuleOp mlirModule = burnside.getModule();
@@ -352,8 +352,9 @@ int main(int argc, char **argv) {
 
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
   Fortran::parser::AllSources allSources;
+  Fortran::parser::AllCookedSources allCookedSources(allSources);
   Fortran::semantics::SemanticsContext semanticsContext{
-      defaultKinds, options.features, allSources};
+      defaultKinds, options.features, allCookedSources};
   semanticsContext.set_moduleDirectory(moduleDir)
       .set_moduleFileSuffix(moduleSuffix)
       .set_searchDirectories(includeDirs)
