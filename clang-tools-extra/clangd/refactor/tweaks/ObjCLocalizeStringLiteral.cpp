@@ -68,8 +68,7 @@ ObjCLocalizeStringLiteral::apply(const Selection &Inputs) {
   const auto &TB = AST->getTokens();
   auto Toks = TB.spelledForExpanded(TB.expandedTokens(Str->getSourceRange()));
   if (!Toks || Toks->empty())
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Failed to find tokens to replace.");
+    return error("Failed to find tokens to replace.");
   // Insert `NSLocalizedString(` before the literal.
   auto Reps = tooling::Replacements(tooling::Replacement(
       SM, Toks->front().location(), 0, "NSLocalizedString("));
