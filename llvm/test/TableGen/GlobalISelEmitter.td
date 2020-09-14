@@ -78,7 +78,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    bool testImmPredicate_APInt(unsigned PredicateID, const APInt &Imm) const override;
 // CHECK-NEXT:    bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat &Imm) const override;
 // CHECK-NEXT:    const int64_t *getMatchTable() const override;
-// CHECK-NEXT:    bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI) const override;
+// CHECK-NEXT:    bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI, const std::array<const MachineOperand *, 3> &Operands) const override;
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_INIT
