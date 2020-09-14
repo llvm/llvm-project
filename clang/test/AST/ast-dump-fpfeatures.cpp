@@ -79,7 +79,6 @@ float func_07(double x) {
 // CHECK-NEXT:   CompoundStmt
 // CHECK-NEXT:     ReturnStmt
 // CHECK-NEXT:       CXXStaticCastExpr {{.*}} FPContractMode=1
-// CHECK-NEXT:         CallExpr {{.*}} FPContractMode=0
 
 
 
