@@ -2529,7 +2529,7 @@ rotate(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __l
 // rotate_copy
 
 template <class _ForwardIterator, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _OutputIterator
 rotate_copy(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last, _OutputIterator __result)
 {
@@ -4394,6 +4394,7 @@ binary_search(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
 // merge
 
 template <class _Compare, class _InputIterator1, class _InputIterator2, class _OutputIterator>
+_LIBCPP_CONSTEXPR_AFTER_CXX17
 _OutputIterator
 __merge(_InputIterator1 __first1, _InputIterator1 __last1,
         _InputIterator2 __first2, _InputIterator2 __last2, _OutputIterator __result, _Compare __comp)
@@ -4417,7 +4418,7 @@ __merge(_InputIterator1 __first1, _InputIterator1 __last1,
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _OutputIterator
 merge(_InputIterator1 __first1, _InputIterator1 __last1,
       _InputIterator2 __first2, _InputIterator2 __last2, _OutputIterator __result, _Compare __comp)
@@ -4427,7 +4428,7 @@ merge(_InputIterator1 __first1, _InputIterator1 __last1,
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _OutputIterator
 merge(_InputIterator1 __first1, _InputIterator1 __last1,
       _InputIterator2 __first2, _InputIterator2 __last2, _OutputIterator __result)
