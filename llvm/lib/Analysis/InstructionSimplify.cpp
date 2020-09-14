@@ -5447,18 +5447,31 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     // If the arguments are the same, this is a no-op.
     if (Op0 == Op1) return Op0;
 
-    // If one argument is undef, return the other argument.
-    if (Q.isUndefValue(Op0))
-      return Op1;
+    // Canonicalize constant operand as Op1.
+    if (isa<Constant>(Op0))
+      std::swap(Op0, Op1);
+
+    // If an argument is undef, return the other argument.
     if (Q.isUndefValue(Op1))
       return Op0;
 
-    // If one argument is NaN, return other or NaN appropriately.
+    // If an argument is NaN, return other or NaN appropriately.
     bool PropagateNaN = IID == Intrinsic::minimum || IID == Intrinsic::maximum;
-    if (match(Op0, m_NaN()))
-      return PropagateNaN ? Op0 : Op1;
     if (match(Op1, m_NaN()))
       return PropagateNaN ? Op1 : Op0;
+
+    // min(X, -Inf) --> -Inf
+    // max(X, +Inf) --> +Inf
+    bool UseNegInf = IID == Intrinsic::minnum || IID == Intrinsic::minimum;
+    const APFloat *C;
+    if (match(Op1, m_APFloat(C)) && C->isInfinity() &&
+        C->isNegative() == UseNegInf && !PropagateNaN)
+      return ConstantFP::getInfinity(ReturnType, UseNegInf);
+
+    // TODO: minimum(nnan x, inf) -> x
+    // TODO: minnum(nnan ninf x, flt_max) -> x
+    // TODO: maximum(nnan x, -inf) -> x
+    // TODO: maxnum(nnan ninf x, -flt_max) -> x
 
     // Min/max of the same operation with common operand:
     // m(m(X, Y)), X --> m(X, Y) (4 commuted variants)
@@ -5471,20 +5484,6 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
           (M1->getOperand(0) == Op0 || M1->getOperand(1) == Op0))
         return Op1;
 
-    // min(X, -Inf) --> -Inf (and commuted variant)
-    // max(X, +Inf) --> +Inf (and commuted variant)
-    bool UseNegInf = IID == Intrinsic::minnum || IID == Intrinsic::minimum;
-    const APFloat *C;
-    if ((match(Op0, m_APFloat(C)) && C->isInfinity() &&
-         C->isNegative() == UseNegInf && !PropagateNaN) ||
-        (match(Op1, m_APFloat(C)) && C->isInfinity() &&
-         C->isNegative() == UseNegInf && !PropagateNaN))
-      return ConstantFP::getInfinity(ReturnType, UseNegInf);
-
-    // TODO: minnum(nnan x, inf) -> x
-    // TODO: minnum(nnan ninf x, flt_max) -> x
-    // TODO: maxnum(nnan x, -inf) -> x
-    // TODO: maxnum(nnan ninf x, -flt_max) -> x
     break;
   }
   default:
