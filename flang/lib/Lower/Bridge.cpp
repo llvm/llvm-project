@@ -544,14 +544,17 @@ private:
     genFIRConditionalBranch(cond, trueTarget->block, falseTarget->block);
   }
 
-  //
+  //===----------------------------------------------------------------------===//
   // Termination of symbolically referenced execution units
-  //
+  //===----------------------------------------------------------------------===//
 
   /// END of program
   ///
   /// Generate the cleanup block before the program exits
-  void genExitRoutine() { builder->create<mlir::ReturnOp>(toLocation()); }
+  void genExitRoutine() {
+    if (blockIsUnterminated())
+      builder->create<mlir::ReturnOp>(toLocation());
+  }
   void genFIR(const Fortran::parser::EndProgramStmt &) { genExitRoutine(); }
 
   /// END of procedure-like constructs
