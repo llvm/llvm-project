@@ -14,7 +14,7 @@
 #define liblldb_SwiftLanguageRuntimeImpl_h_
 
 #include "lldb/Target/SwiftLanguageRuntime.h"
-#include "swift/reflection/TypeLowering.h"
+#include "swift/Reflection/TypeLowering.h"
 
 namespace swift {
 namespace reflection {
