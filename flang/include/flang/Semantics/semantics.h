@@ -204,10 +204,10 @@ private:
 class Semantics {
 public:
   explicit Semantics(SemanticsContext &context, parser::Program &program,
-      const parser::CookedSource &cooked, bool debugModuleWriter = false)
+      parser::CharBlock charBlock, bool debugModuleWriter = false)
       : context_{context}, program_{program} {
     context.set_debugModuleWriter(debugModuleWriter);
-    context.globalScope().AddSourceRange(parser::CharBlock{cooked.data()});
+    context.globalScope().AddSourceRange(charBlock);
   }
 
   SemanticsContext &context() const { return context_; }
