@@ -223,7 +223,7 @@ void syntax::Node::assertInvariants() const {
   else
     assert(getParent() != nullptr);
 
-  auto *T = dyn_cast<Tree>(this);
+  const auto *T = dyn_cast<Tree>(this);
   if (!T)
     return;
   for (const auto *C = T->getFirstChild(); C; C = C->getNextSibling()) {
@@ -232,6 +232,19 @@ void syntax::Node::assertInvariants() const {
     assert(!C->isDetached());
     assert(C->getParent() == T);
   }
+
+  const auto *L = dyn_cast<List>(T);
+  if (!L)
+    return;
+  for (const auto *C = T->getFirstChild(); C; C = C->getNextSibling()) {
+    assert(C->getRole() == NodeRole::ListElement ||
+           C->getRole() == NodeRole::ListDelimiter);
+    if (C->getRole() == NodeRole::ListDelimiter) {
+      assert(isa<Leaf>(C));
+      assert(cast<Leaf>(C)->getToken()->kind() == L->getDelimiterTokenKind());
+    }
+  }
+
 #endif
 }
 
@@ -273,7 +286,7 @@ syntax::Node *syntax::Tree::findChild(NodeRole R) {
   return nullptr;
 }
 
-bool classof(const syntax::Node *N) {
+bool syntax::List::classof(const syntax::Node *N) {
   switch (N->getKind()) {
   case syntax::NodeKind::NestedNameSpecifier:
   case syntax::NodeKind::CallArguments:
@@ -372,7 +385,7 @@ std::vector<syntax::Node *> syntax::List::getElementsAsNodes() {
   return children;
 }
 
-clang::tok::TokenKind syntax::List::getDelimiterTokenKind() {
+clang::tok::TokenKind syntax::List::getDelimiterTokenKind() const {
   switch (this->getKind()) {
   case NodeKind::NestedNameSpecifier:
     return clang::tok::coloncolon;
@@ -385,7 +398,7 @@ clang::tok::TokenKind syntax::List::getDelimiterTokenKind() {
   }
 }
 
-syntax::List::TerminationKind syntax::List::getTerminationKind() {
+syntax::List::TerminationKind syntax::List::getTerminationKind() const {
   switch (this->getKind()) {
   case NodeKind::NestedNameSpecifier:
     return TerminationKind::Terminated;
@@ -398,7 +411,7 @@ syntax::List::TerminationKind syntax::List::getTerminationKind() {
   }
 }
 
-bool syntax::List::canBeEmpty() {
+bool syntax::List::canBeEmpty() const {
   switch (this->getKind()) {
   case NodeKind::NestedNameSpecifier:
     return false;
