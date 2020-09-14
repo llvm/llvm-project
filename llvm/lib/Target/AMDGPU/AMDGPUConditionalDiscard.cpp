@@ -127,6 +127,10 @@ void AMDGPUConditionalDiscard::optimizeBlock(BasicBlock &BB, bool ConvertToDemot
     if (!Val || !Val->isZero())
       return;
 
+    // Skip if the terminator is not a branch, e.g. an "unreachable".
+    if (!isa<BranchInst>(BB.getTerminator()))
+      return;
+
     auto *PredBlock = BB.getSinglePredecessor();
     if (!PredBlock)
       return;

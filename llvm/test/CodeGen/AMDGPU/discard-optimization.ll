@@ -243,6 +243,23 @@ exit:                                               ; preds = %next, %kill_br
   ret { <4 x float> } %tmp6
 }
 
+; Check the conditional discard pass is not crashing with "unreachable".
+
+; GCN-LABEL: {{^}}kill_with_unreachable:
+define amdgpu_ps void @kill_with_unreachable(float %arg0){
+.entry:
+  %tmp0 = fptosi float %arg0 to i32
+  %tmp1 = icmp slt i32 %tmp0, 150
+  br i1 %tmp1, label %kill_br, label %exit
+
+kill_br:                                            ; preds = %.entry
+  call void @llvm.amdgcn.kill(i1 false)
+  unreachable
+
+exit:                                               ; preds = %.entry
+  ret void
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 
