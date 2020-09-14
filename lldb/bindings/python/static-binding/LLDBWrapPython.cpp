@@ -9115,6 +9115,33 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBBreakpoint_SerializeToStructuredData(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBBreakpoint *arg1 = (lldb::SBBreakpoint *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  lldb::SBStructuredData result;
+  
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBBreakpoint, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBBreakpoint_SerializeToStructuredData" "', argument " "1"" of type '" "lldb::SBBreakpoint *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBBreakpoint * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->SerializeToStructuredData();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBStructuredData(static_cast< const lldb::SBStructuredData& >(result))), SWIGTYPE_p_lldb__SBStructuredData, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBBreakpoint_EventIsBreakpointEvent(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBEvent *arg1 = 0 ;
@@ -80961,6 +80988,7 @@ static PyMethodDef SwigMethods[] = {
 		"SBBreakpoint_GetDescription(SBBreakpoint self, SBStream description, bool include_locations) -> bool\n"
 		""},
 	 { "SBBreakpoint_AddLocation", _wrap_SBBreakpoint_AddLocation, METH_VARARGS, "SBBreakpoint_AddLocation(SBBreakpoint self, SBAddress address) -> SBError"},
+	 { "SBBreakpoint_SerializeToStructuredData", _wrap_SBBreakpoint_SerializeToStructuredData, METH_O, "SBBreakpoint_SerializeToStructuredData(SBBreakpoint self) -> SBStructuredData"},
 	 { "SBBreakpoint_EventIsBreakpointEvent", _wrap_SBBreakpoint_EventIsBreakpointEvent, METH_O, "SBBreakpoint_EventIsBreakpointEvent(SBEvent event) -> bool"},
 	 { "SBBreakpoint_GetBreakpointEventTypeFromEvent", _wrap_SBBreakpoint_GetBreakpointEventTypeFromEvent, METH_O, "SBBreakpoint_GetBreakpointEventTypeFromEvent(SBEvent event) -> lldb::BreakpointEventType"},
 	 { "SBBreakpoint_GetBreakpointFromEvent", _wrap_SBBreakpoint_GetBreakpointFromEvent, METH_O, "SBBreakpoint_GetBreakpointFromEvent(SBEvent event) -> SBBreakpoint"},
