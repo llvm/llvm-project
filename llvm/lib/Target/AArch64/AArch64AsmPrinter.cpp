@@ -95,6 +95,8 @@ public:
                      const MachineInstr &MI);
   void LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
                        const MachineInstr &MI);
+  void LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
+                       const MachineInstr &MI);
 
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
   void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
@@ -944,6 +946,47 @@ void AArch64AsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
     EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
 }
 
+void AArch64AsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
+                                        const MachineInstr &MI) {
+  StatepointOpers SOpers(&MI);
+  if (unsigned PatchBytes = SOpers.getNumPatchBytes()) {
+    assert(PatchBytes % 4 == 0 && "Invalid number of NOP bytes requested!");
+    for (unsigned i = 0; i < PatchBytes; i += 4)
+      EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
+  } else {
+    // Lower call target and choose correct opcode
+    const MachineOperand &CallTarget = SOpers.getCallTarget();
+    MCOperand CallTargetMCOp;
+    unsigned CallOpcode;
+    switch (CallTarget.getType()) {
+    case MachineOperand::MO_GlobalAddress:
+    case MachineOperand::MO_ExternalSymbol:
+      MCInstLowering.lowerOperand(CallTarget, CallTargetMCOp);
+      CallOpcode = AArch64::BL;
+      break;
+    case MachineOperand::MO_Immediate:
+      CallTargetMCOp = MCOperand::createImm(CallTarget.getImm());
+      CallOpcode = AArch64::BL;
+      break;
+    case MachineOperand::MO_Register:
+      CallTargetMCOp = MCOperand::createReg(CallTarget.getReg());
+      CallOpcode = AArch64::BLR;
+      break;
+    default:
+      llvm_unreachable("Unsupported operand type in statepoint call target");
+      break;
+    }
+
+    EmitToStreamer(OutStreamer,
+                   MCInstBuilder(CallOpcode).addOperand(CallTargetMCOp));
+  }
+
+  auto &Ctx = OutStreamer.getContext();
+  MCSymbol *MILabel = Ctx.createTempSymbol();
+  OutStreamer.emitLabel(MILabel);
+  SM.recordStatepoint(*MILabel, MI);
+}
+
 void AArch64AsmPrinter::EmitFMov0(const MachineInstr &MI) {
   Register DestReg = MI.getOperand(0).getReg();
   if (STI->hasZeroCycleZeroingFP() && !STI->hasZeroCycleZeroingFPWorkaround()) {
@@ -1224,6 +1267,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case TargetOpcode::PATCHPOINT:
     return LowerPATCHPOINT(*OutStreamer, SM, *MI);
+
+  case TargetOpcode::STATEPOINT:
+    return LowerSTATEPOINT(*OutStreamer, SM, *MI);
 
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
     LowerPATCHABLE_FUNCTION_ENTER(*MI);
