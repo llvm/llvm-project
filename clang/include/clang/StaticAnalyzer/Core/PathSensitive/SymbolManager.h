@@ -59,6 +59,8 @@ public:
     Profile(profile, R);
   }
 
+  StringRef getKindStr() const override;
+
   void dumpToStream(raw_ostream &os) const override;
   const MemRegion *getOriginRegion() const override { return getRegion(); }
 
@@ -98,6 +100,8 @@ public:
   const void *getTag() const { return SymbolTag; }
 
   QualType getType() const override;
+
+  StringRef getKindStr() const override;
 
   void dumpToStream(raw_ostream &os) const override;
 
@@ -141,6 +145,8 @@ public:
 
   QualType getType() const override;
 
+  StringRef getKindStr() const override;
+
   void dumpToStream(raw_ostream &os) const override;
   const MemRegion *getOriginRegion() const override { return getRegion(); }
 
@@ -176,6 +182,8 @@ public:
   const SubRegion *getRegion() const { return R; }
 
   QualType getType() const override;
+
+  StringRef getKindStr() const override;
 
   void dumpToStream(raw_ostream &os) const override;
 
@@ -225,6 +233,8 @@ public:
   const void *getTag() const { return Tag; }
 
   QualType getType() const override;
+
+  StringRef getKindStr() const override;
 
   void dumpToStream(raw_ostream &os) const override;
 
