@@ -34,14 +34,11 @@ class TestSwiftDebugPrefixMap(TestBase):
         TestBase.setUp(self)
 
     def do_test(self):
-        os.chdir(self.getBuildDir())
-        self.build()
-
         # Mirror the same source tree layout used in the Makefile. When lldb is
         # invoked in the CWD, it should find the source files with the same
         # relative paths used during compilation because the compiler's CWD was
         # remapped to ".".
-        src = os.path.join(self.getSourceDir(), 'main.swift')
+        src = os.path.join(self.getSourceDir(), 'Inputs', 'main.swift')
         local_srcroot = self.getBuildArtifact('srcroot')
         local_main = os.path.join(local_srcroot, 'main.swift')
 
@@ -49,12 +46,10 @@ class TestSwiftDebugPrefixMap(TestBase):
             os.makedirs(local_srcroot)
         shutil.copy(src, local_main)
 
-        # Clean up the files we created above when the test ends.
-        def cleanup():
-            shutil.rmtree(local_srcroot)
-            os.chdir(self.getSourceDir())
-
-        self.addTearDownHook(cleanup)
+        self.build()
+        # Map "." back to the build dir.
+        self.expect('settings set target.source-map . ' +
+                    self.getBuildArtifact("."))
 
         # Create the target.
         target = self.dbg.CreateTarget(self.getBuildArtifact())
