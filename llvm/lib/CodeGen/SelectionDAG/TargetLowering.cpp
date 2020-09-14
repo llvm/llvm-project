@@ -1748,6 +1748,17 @@ bool TargetLowering::SimplifyDemandedBits(
     Known.Zero = Known2.Zero.byteSwap();
     break;
   }
+  case ISD::CTPOP: {
+    // If only 1 bit is demanded, replace with PARITY as long as we're before
+    // op legalization.
+    // FIXME: Limit to scalars for now.
+    if (DemandedBits.isOneValue() && !TLO.LegalOps && !VT.isVector())
+      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::PARITY, dl, VT,
+                                               Op.getOperand(0)));
+
+    Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
+    break;
+  }
   case ISD::SIGN_EXTEND_INREG: {
     SDValue Op0 = Op.getOperand(0);
     EVT ExVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
