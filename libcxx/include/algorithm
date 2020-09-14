@@ -1631,7 +1631,7 @@ search_n(_ForwardIterator __first, _ForwardIterator __last, _Size __count, const
 
 // copy
 template <class _Iter>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _Iter
 __unwrap_iter(_Iter __i)
 {
@@ -1639,7 +1639,7 @@ __unwrap_iter(_Iter __i)
 }
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 typename enable_if
 <
     is_trivially_copy_assignable<_Tp>::value,
@@ -1653,7 +1653,7 @@ __unwrap_iter(move_iterator<_Tp*> __i)
 #if _LIBCPP_DEBUG_LEVEL < 2
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
 typename enable_if
 <
     is_trivially_copy_assignable<_Tp>::value,
@@ -1665,7 +1665,7 @@ __unwrap_iter(__wrap_iter<_Tp*> __i)
 }
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
 typename enable_if
 <
     is_trivially_copy_assignable<_Tp>::value,
@@ -1679,7 +1679,7 @@ __unwrap_iter(__wrap_iter<const _Tp*> __i)
 #else
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
 typename enable_if
 <
     is_trivially_copy_assignable<_Tp>::value,
@@ -1859,28 +1859,18 @@ copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result)
 
 // move
 
-// __move_constexpr exists so that __move doesn't call itself when delegating to the constexpr
-// version of __move.
 template <class _InputIterator, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+inline _LIBCPP_INLINE_VISIBILITY
 _OutputIterator
-__move_constexpr(_InputIterator __first, _InputIterator __last, _OutputIterator __result)
+__move(_InputIterator __first, _InputIterator __last, _OutputIterator __result)
 {
     for (; __first != __last; ++__first, (void) ++__result)
         *__result = _VSTD::move(*__first);
     return __result;
 }
 
-template <class _InputIterator, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-_OutputIterator
-__move(_InputIterator __first, _InputIterator __last, _OutputIterator __result)
-{
-    return __move_constexpr(__first, __last, __result);
-}
-
 template <class _Tp, class _Up>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+inline _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
     is_same<typename remove_const<_Tp>::type, _Up>::value &&
@@ -1889,8 +1879,6 @@ typename enable_if
 >::type
 __move(_Tp* __first, _Tp* __last, _Up* __result)
 {
-    if (__libcpp_is_constant_evaluated())
-        return __move_constexpr(__first, __last, __result);
     const size_t __n = static_cast<size_t>(__last - __first);
     if (__n > 0)
         _VSTD::memmove(__result, __first, __n * sizeof(_Up));
@@ -1898,7 +1886,7 @@ __move(_Tp* __first, _Tp* __last, _Up* __result)
 }
 
 template <class _InputIterator, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+inline _LIBCPP_INLINE_VISIBILITY
 _OutputIterator
 move(_InputIterator __first, _InputIterator __last, _OutputIterator __result)
 {
@@ -1907,28 +1895,18 @@ move(_InputIterator __first, _InputIterator __last, _OutputIterator __result)
 
 // move_backward
 
-// __move_backward_constexpr exists so that __move_backward doesn't call itself when delegating to
-// the constexpr version of __move_backward.
 template <class _InputIterator, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+inline _LIBCPP_INLINE_VISIBILITY
 _OutputIterator
-__move_backward_constexpr(_InputIterator __first, _InputIterator __last, _OutputIterator __result)
+__move_backward(_InputIterator __first, _InputIterator __last, _OutputIterator __result)
 {
     while (__first != __last)
         *--__result = _VSTD::move(*--__last);
     return __result;
 }
 
-template <class _InputIterator, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-_OutputIterator
-__move_backward(_InputIterator __first, _InputIterator __last, _OutputIterator __result)
-{
-    return __move_backward_constexpr(__first, __last, __result);
-}
-
 template <class _Tp, class _Up>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+inline _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
     is_same<typename remove_const<_Tp>::type, _Up>::value &&
@@ -1937,8 +1915,6 @@ typename enable_if
 >::type
 __move_backward(_Tp* __first, _Tp* __last, _Up* __result)
 {
-    if (__libcpp_is_constant_evaluated())
-        return __move_backward_constexpr(__first, __last, __result);
     const size_t __n = static_cast<size_t>(__last - __first);
     if (__n > 0)
     {
@@ -1949,7 +1925,7 @@ __move_backward(_Tp* __first, _Tp* __last, _Up* __result)
 }
 
 template <class _BidirectionalIterator1, class _BidirectionalIterator2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+inline _LIBCPP_INLINE_VISIBILITY
 _BidirectionalIterator2
 move_backward(_BidirectionalIterator1 __first, _BidirectionalIterator1 __last,
               _BidirectionalIterator2 __result)
@@ -2357,7 +2333,7 @@ reverse_copy(_BidirectionalIterator __first, _BidirectionalIterator __last, _Out
 // rotate
 
 template <class _ForwardIterator>
-_LIBCPP_CONSTEXPR_AFTER_CXX11 _ForwardIterator
+_ForwardIterator
 __rotate_left(_ForwardIterator __first, _ForwardIterator __last)
 {
     typedef typename iterator_traits<_ForwardIterator>::value_type value_type;
@@ -2368,7 +2344,7 @@ __rotate_left(_ForwardIterator __first, _ForwardIterator __last)
 }
 
 template <class _BidirectionalIterator>
-_LIBCPP_CONSTEXPR_AFTER_CXX11 _BidirectionalIterator
+_BidirectionalIterator
 __rotate_right(_BidirectionalIterator __first, _BidirectionalIterator __last)
 {
     typedef typename iterator_traits<_BidirectionalIterator>::value_type value_type;
@@ -2380,7 +2356,7 @@ __rotate_right(_BidirectionalIterator __first, _BidirectionalIterator __last)
 }
 
 template <class _ForwardIterator>
-_LIBCPP_CONSTEXPR_AFTER_CXX14 _ForwardIterator
+_ForwardIterator
 __rotate_forward(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last)
 {
     _ForwardIterator __i = __middle;
@@ -2416,7 +2392,7 @@ __rotate_forward(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIt
 
 template<typename _Integral>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_AFTER_CXX14 _Integral
+_Integral
 __algo_gcd(_Integral __x, _Integral __y)
 {
     do
@@ -2429,7 +2405,7 @@ __algo_gcd(_Integral __x, _Integral __y)
 }
 
 template<typename _RandomAccessIterator>
-_LIBCPP_CONSTEXPR_AFTER_CXX14 _RandomAccessIterator
+_RandomAccessIterator
 __rotate_gcd(_RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomAccessIterator __last)
 {
     typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
@@ -2465,7 +2441,7 @@ __rotate_gcd(_RandomAccessIterator __first, _RandomAccessIterator __middle, _Ran
 
 template <class _ForwardIterator>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_AFTER_CXX11 _ForwardIterator
+_ForwardIterator
 __rotate(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last,
          _VSTD::forward_iterator_tag)
 {
@@ -2480,7 +2456,7 @@ __rotate(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator _
 
 template <class _BidirectionalIterator>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_AFTER_CXX11 _BidirectionalIterator
+_BidirectionalIterator
 __rotate(_BidirectionalIterator __first, _BidirectionalIterator __middle, _BidirectionalIterator __last,
          _VSTD::bidirectional_iterator_tag)
 {
@@ -2497,7 +2473,7 @@ __rotate(_BidirectionalIterator __first, _BidirectionalIterator __middle, _Bidir
 
 template <class _RandomAccessIterator>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_AFTER_CXX11 _RandomAccessIterator
+_RandomAccessIterator
 __rotate(_RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomAccessIterator __last,
          _VSTD::random_access_iterator_tag)
 {
@@ -2515,7 +2491,7 @@ __rotate(_RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomA
 
 template <class _ForwardIterator>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator
+_ForwardIterator
 rotate(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last)
 {
     if (__first == __middle)
