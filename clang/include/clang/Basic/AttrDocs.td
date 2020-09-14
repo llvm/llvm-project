@@ -3713,6 +3713,19 @@ ypedef.
   }];
 }
 
+def SwiftPrivateDocs : Documentation {
+  let Category = SwiftDocs;
+  let Heading = "swift_private";
+  let Content = [{
+Declarations marked with the ``swift_private`` attribute are hidden from the
+framework client but are still made available for use within the framework or
+Swift SDK overlay.
+
+The purpose of this attribute is to permit a more idomatic implementation of
+declarations in Swift while hiding the non-idiomatic one.
+  }];
+}
+
 def OMPDeclareSimdDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "#pragma omp declare simd";

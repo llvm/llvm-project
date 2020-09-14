@@ -2177,6 +2177,11 @@ def SwiftNewType : InheritableAttr {
   let HasCustomParsing = 1;
 }
 
+def SwiftPrivate : InheritableAttr {
+  let Spellings = [GNU<"swift_private">];
+  let Documentation = [SwiftPrivateDocs];
+}
+
 def NoDeref : TypeAttr {
   let Spellings = [Clang<"noderef">];
   let Documentation = [NoDerefDocs];
