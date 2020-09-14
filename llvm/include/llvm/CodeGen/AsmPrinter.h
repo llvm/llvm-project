@@ -342,6 +342,8 @@ public:
 
   void emitStackSizeSection(const MachineFunction &MF);
 
+  void emitBBAddrMapSection(const MachineFunction &MF);
+
   void emitRemarksSection(remarks::RemarkStreamer &RS);
 
   enum CFIMoveType { CFI_M_None, CFI_M_EH, CFI_M_Debug };

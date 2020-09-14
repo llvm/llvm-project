@@ -1,23 +1,24 @@
 ; Check the basic block sections labels option
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=labels | FileCheck %s -check-prefix=LINUX-LABELS
+; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=labels | FileCheck %s
 
-define void @_Z3bazb(i1 zeroext) {
-  %2 = alloca i8, align 1
-  %3 = zext i1 %0 to i8
-  store i8 %3, i8* %2, align 1
-  %4 = load i8, i8* %2, align 1
-  %5 = trunc i8 %4 to i1
-  br i1 %5, label %6, label %8
+define void @_Z3bazb(i1 zeroext) personality i32 (...)* @__gxx_personality_v0 {
+  br i1 %0, label %2, label %7
 
-6:                                                ; preds = %1
-  %7 = call i32 @_Z3barv()
-  br label %10
+2:
+  %3 = invoke i32 @_Z3barv()
+          to label %7 unwind label %5
+  br label %9
 
-8:                                                ; preds = %1
-  %9 = call i32 @_Z3foov()
-  br label %10
+5:
+  landingpad { i8*, i32 }
+          catch i8* null
+  br label %9
 
-10:                                               ; preds = %8, %6
+7:
+  %8 = call i32 @_Z3foov()
+  br label %9
+
+9:
   ret void
 }
 
@@ -25,9 +26,31 @@ declare i32 @_Z3barv() #1
 
 declare i32 @_Z3foov() #1
 
-; LINUX-LABELS: .section
-; LINUX-LABELS: _Z3bazb:
-; LINUX-LABELS-NOT: .section
-; LINUX-LABELS: r.BB._Z3bazb:
-; LINUX-LABELS-NOT: .section
-; LINUX-LABELS: rr.BB._Z3bazb:
+declare i32 @__gxx_personality_v0(...)
+
+; CHECK-LABEL:	_Z3bazb:
+; CHECK-LABEL:	.Lfunc_begin0:
+; CHECK-LABEL:	.LBB_END0_0:
+; CHECK-LABEL:	.LBB0_1:
+; CHECK-LABEL:	.LBB_END0_1:
+; CHECK-LABEL:	.LBB0_2:
+; CHECK-LABEL:	.LBB_END0_2:
+; CHECK-LABEL:	.LBB0_3:
+; CHECK-LABEL:	.LBB_END0_3:
+; CHECK-LABEL:	.Lfunc_end0:
+
+; CHECK:	.section	.bb_addr_map,"o",@progbits,.text
+; CHECK-NEXT:	.quad	.Lfunc_begin0
+; CHECK-NEXT:	.byte	4
+; CHECK-NEXT:	.uleb128 .Lfunc_begin0-.Lfunc_begin0
+; CHECK-NEXT:	.uleb128 .LBB_END0_0-.Lfunc_begin0
+; CHECK-NEXT:	.byte	0
+; CHECK-NEXT:	.uleb128 .LBB0_1-.Lfunc_begin0
+; CHECK-NEXT:	.uleb128 .LBB_END0_1-.LBB0_1
+; CHECK-NEXT:	.byte	0
+; CHECK-NEXT:	.uleb128 .LBB0_2-.Lfunc_begin0
+; CHECK-NEXT:	.uleb128 .LBB_END0_2-.LBB0_2
+; CHECK-NEXT:	.byte	1
+; CHECK-NEXT:	.uleb128 .LBB0_3-.Lfunc_begin0
+; CHECK-NEXT:	.uleb128 .LBB_END0_3-.LBB0_3
+; CHECK-NEXT:	.byte	5
