@@ -2995,7 +2995,7 @@ int main(int argc, char *argv[]) {
   uint32_t packet_idx = 0;
   while (!g_vsc.sent_terminated_event) {
     llvm::json::Object object;
-    lldb_vscode::PacketStatus status = g_vsc.GetObject(object);
+    lldb_vscode::PacketStatus status = g_vsc.GetNextObject(object);
     if (status == lldb_vscode::PacketStatus::EndOfFile)
       break;
     if (status != lldb_vscode::PacketStatus::Success)
