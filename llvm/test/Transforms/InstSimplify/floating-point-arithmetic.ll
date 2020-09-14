@@ -1060,36 +1060,6 @@ define float @minimum_x_y_minimum_z(float %x, float %y, float %z) {
   ret float %b
 }
 
-; minimum(X, -INF) --> -INF
-
-define float @minimum_neginf(float %x) {
-; CHECK-LABEL: @minimum_neginf(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float 0xFFF0000000000000)
-; CHECK-NEXT:    ret float [[VAL]]
-;
-  %val = call float @llvm.minimum.f32(float %x, float 0xFFF0000000000000)
-  ret float %val
-}
-
-define <2 x double> @minimum_neginf_commute_vec(<2 x double> %x) {
-; CHECK-LABEL: @minimum_neginf_commute_vec(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x double> @llvm.minimum.v2f64(<2 x double> <double 0xFFF0000000000000, double 0xFFF0000000000000>, <2 x double> [[X:%.*]])
-; CHECK-NEXT:    ret <2 x double> [[R]]
-;
-  %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> <double 0xFFF0000000000000, double 0xFFF0000000000000>, <2 x double> %x)
-  ret <2 x double> %r
-}
-
-; negative test
-
-define float @minimum_inf(float %x) {
-; CHECK-LABEL: @minimum_inf(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.minimum.f32(float 0x7FF0000000000000, float [[X:%.*]])
-; CHECK-NEXT:    ret float [[VAL]]
-;
-  %val = call float @llvm.minimum.f32(float 0x7FF0000000000000, float %x)
-  ret float %val
-}
 define float @maximum_x_maximum_x_y(float %x, float %y) {
 ; CHECK-LABEL: @maximum_x_maximum_x_y(
 ; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Y:%.*]])
@@ -1156,7 +1126,40 @@ define float @maximum_x_y_maximum_z(float %x, float %y, float %z) {
   ret float %b
 }
 
-; maximum(X, INF) --> INF
+; negative test - minimum(X, -INF) != -INF because X could be NaN
+
+define float @minimum_neginf(float %x) {
+; CHECK-LABEL: @minimum_neginf(
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float 0xFFF0000000000000)
+; CHECK-NEXT:    ret float [[VAL]]
+;
+  %val = call float @llvm.minimum.f32(float %x, float 0xFFF0000000000000)
+  ret float %val
+}
+
+; negative test - minimum(-INF, X) != -INF because X could be NaN
+
+define <2 x double> @minimum_neginf_commute_vec(<2 x double> %x) {
+; CHECK-LABEL: @minimum_neginf_commute_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x double> @llvm.minimum.v2f64(<2 x double> <double 0xFFF0000000000000, double 0xFFF0000000000000>, <2 x double> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x double> [[R]]
+;
+  %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> <double 0xFFF0000000000000, double 0xFFF0000000000000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+; TODO: minimum(INF, X) --> X
+
+define float @minimum_inf(float %x) {
+; CHECK-LABEL: @minimum_inf(
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.minimum.f32(float 0x7FF0000000000000, float [[X:%.*]])
+; CHECK-NEXT:    ret float [[VAL]]
+;
+  %val = call float @llvm.minimum.f32(float 0x7FF0000000000000, float %x)
+  ret float %val
+}
+
+; negative test - maximum(X, INF) != INF because X could be NaN
 
 define <2 x double> @maximum_inf(<2 x double> %x) {
 ; CHECK-LABEL: @maximum_inf(
@@ -1166,6 +1169,8 @@ define <2 x double> @maximum_inf(<2 x double> %x) {
   %val = call <2 x double> @llvm.maximum.v2f64(<2 x double> %x, <2 x double><double 0x7FF0000000000000, double 0x7FF0000000000000>)
   ret <2 x double> %val
 }
+
+; negative test - maximum(INF, X) != INF because X could be NaN
 
 define float @maximum_inf_commute(float %x) {
 ; CHECK-LABEL: @maximum_inf_commute(
