@@ -213,6 +213,7 @@ public:
   };
 
   using Tree::Tree;
+  static bool classof(const Node *N);
   /// Returns the elements and corresponding delimiters. Missing elements
   /// and delimiters are represented as null pointers.
   ///

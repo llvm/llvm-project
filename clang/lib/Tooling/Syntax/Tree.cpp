@@ -273,6 +273,17 @@ syntax::Node *syntax::Tree::findChild(NodeRole R) {
   return nullptr;
 }
 
+bool classof(const syntax::Node *N) {
+  switch (N->getKind()) {
+  case syntax::NodeKind::NestedNameSpecifier:
+  case syntax::NodeKind::CallArguments:
+  case syntax::NodeKind::ParameterDeclarationList:
+    return true;
+  default:
+    return false;
+  }
+}
+
 std::vector<syntax::List::ElementAndDelimiter<syntax::Node>>
 syntax::List::getElementsAsNodesAndDelimiters() {
   if (!getFirstChild())
