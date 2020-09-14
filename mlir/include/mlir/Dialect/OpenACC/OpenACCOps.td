@@ -24,7 +24,7 @@ def OpenACC_Dialect : Dialect {
     This dialect models the construct from the OpenACC 3.0 directive language.
   }];
 
-  let cppNamespace = "acc";
+  let cppNamespace = "::mlir::acc";
 }
 
 // Base class for OpenACC dialect ops.

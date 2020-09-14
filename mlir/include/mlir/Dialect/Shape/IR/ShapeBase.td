@@ -36,7 +36,7 @@ def ShapeDialect : Dialect {
     concatting etc. on how to combine them).
   }];
 
-  let cppNamespace = "shape";
+  let cppNamespace = "::mlir::shape";
 
   let hasConstantMaterializer = 1;
 }

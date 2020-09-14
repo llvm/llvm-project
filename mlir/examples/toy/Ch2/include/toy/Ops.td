@@ -20,7 +20,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // can define our operations.
 def Toy_Dialect : Dialect {
   let name = "toy";
-  let cppNamespace = "toy";
+  let cppNamespace = "::mlir::toy";
 }
 
 // Base class for toy dialect operations. This operation inherits from the base

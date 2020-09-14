@@ -19,7 +19,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def SCF_Dialect : Dialect {
   let name = "scf";
-  let cppNamespace = "scf";
+  let cppNamespace = "::mlir::scf";
 }
 
 // Base class for SCF dialect ops.

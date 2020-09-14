@@ -1552,11 +1552,8 @@ fir::GlobalOp fir::createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
   return modBuilder.create<fir::GlobalOp>(loc, name, type, attrs);
 }
 
-namespace fir {
-
 // Tablegen operators
 
 #define GET_OP_CLASSES
 #include "flang/Optimizer/Dialect/FIROps.cpp.inc"
 
-} // namespace fir

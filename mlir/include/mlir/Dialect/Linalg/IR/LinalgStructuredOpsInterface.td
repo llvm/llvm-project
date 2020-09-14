@@ -18,6 +18,7 @@ include "mlir/Dialect/Linalg/IR/LinalgBase.td"
 // The linalg 'LinalgStructuredInterface' provides access to the 'LinalgOp'
 // interface.
 def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
+  let cppNamespace = "::mlir::linalg";
   let methods = [
     //===------------------------------------------------------------------===//
     // Loop types handling.

@@ -777,10 +777,5 @@ static void print(OpAsmPrinter &p, GPUModuleOp op) {
                 /*printBlockTerminators=*/false);
 }
 
-// Namespace avoids ambiguous ReturnOpAdaptor.
-namespace mlir {
-namespace gpu {
 #define GET_OP_CLASSES
 #include "mlir/Dialect/GPU/GPUOps.cpp.inc"
-} // namespace gpu
-} // namespace mlir

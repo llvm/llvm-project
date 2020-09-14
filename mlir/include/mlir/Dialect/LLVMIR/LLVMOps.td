@@ -59,7 +59,7 @@ def LLVM_VoidResultTypeOpBuilder : OpBuilder<
   "OpBuilder &builder, OperationState &result, Type resultType, "
   "ValueRange operands, ArrayRef<NamedAttribute> attributes = {}",
   [{
-    auto llvmType = resultType.dyn_cast<LLVM::LLVMType>(); (void)llvmType;
+    auto llvmType = resultType.dyn_cast<LLVMType>(); (void)llvmType;
     assert(llvmType && "result must be an LLVM type");
     assert(llvmType.isVoidTy() &&
            "for zero-result operands, only 'void' is accepted as result type");
@@ -301,7 +301,7 @@ def LLVM_LoadOp :
     "unsigned alignment = 0, bool isVolatile = false, "
     "bool isNonTemporal = false",
     [{
-      auto type = addr.getType().cast<LLVM::LLVMType>().getPointerElementTy();
+      auto type = addr.getType().cast<LLVMType>().getPointerElementTy();
       build(b, result, type, addr, alignment, isVolatile, isNonTemporal);
     }]>,
     OpBuilder<
@@ -494,8 +494,8 @@ def LLVM_ShuffleVectorOp
     "OpBuilder &b, OperationState &result, Value v1, Value v2, "
     "ArrayAttr mask, ArrayRef<NamedAttribute> attrs = {}">];
   let verifier = [{
-    auto wrappedVectorType1 = v1().getType().cast<LLVM::LLVMType>();
-    auto wrappedVectorType2 = v2().getType().cast<LLVM::LLVMType>();
+    auto wrappedVectorType1 = v1().getType().cast<LLVMType>();
+    auto wrappedVectorType2 = v2().getType().cast<LLVMType>();
     if (!wrappedVectorType2.isVectorTy())
       return emitOpError("expected LLVM IR Dialect vector type for operand #2");
     if (wrappedVectorType1.getVectorElementType() !=
@@ -770,7 +770,7 @@ def LLVM_LLVMFuncOp
 
   let builders = [
     OpBuilder<"OpBuilder &builder, OperationState &result, StringRef name, "
-              "LLVMType type, LLVM::Linkage linkage = LLVM::Linkage::External, "
+              "LLVMType type, Linkage linkage = Linkage::External, "
               "ArrayRef<NamedAttribute> attrs = {}, "
               "ArrayRef<MutableDictionaryAttr> argAttrs = {}">
   ];
