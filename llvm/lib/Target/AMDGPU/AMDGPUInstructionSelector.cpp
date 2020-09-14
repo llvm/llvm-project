@@ -3167,7 +3167,7 @@ AMDGPUInstructionSelector::selectVOP3Mods_nnan(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;
   std::tie(Src, Mods) = selectVOP3ModsImpl(Root);
-  if (!TM.Options.NoNaNsFPMath && !isKnownNeverNaN(Src, *MRI))
+  if (!isKnownNeverNaN(Src, *MRI))
     return None;
 
   return {{

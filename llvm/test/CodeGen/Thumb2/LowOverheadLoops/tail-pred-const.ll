@@ -265,13 +265,13 @@ for.cond.cleanup:
   ret void
 }
 
-; CHECK-LABEL: @overflow_BTC_plus_1(
+; CHECK-LABEL: @inconsistent_tripcounts(
 ; CHECK:       vector.body:
 ; CHECK-NOT:   @llvm.arm.mve.vctp32
 ; CHECK:       @llvm.get.active.lane.mask
 ; CHECK:       ret void
 ;
-define dso_local void @overflow_BTC_plus_1(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
+define dso_local void @inconsistent_tripcounts(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
 entry:
   call void @llvm.set.loop.iterations.i32(i32 8001)
   br label %vector.body
@@ -316,63 +316,7 @@ for.cond.cleanup:
 ;
 define dso_local void @overflow_in_sub(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
 entry:
-  call void @llvm.set.loop.iterations.i32(i32 8001)
-  br label %vector.body
-
-vector.body:
-  %lsr.iv14 = phi i32* [ %scevgep15, %vector.body ], [ %A, %entry ]
-  %lsr.iv11 = phi i32* [ %scevgep12, %vector.body ], [ %C, %entry ]
-  %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %B, %entry ]
-  %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = phi i32 [ 8001, %entry ], [ %3, %vector.body ]
-  %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
-  %lsr.iv1113 = bitcast i32* %lsr.iv11 to <4 x i32>*
-  %lsr.iv10 = bitcast i32* %lsr.iv to <4 x i32>*
-  %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
-  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-  %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
-
-; Overflow in the substraction. This should hold:
-;
-;   ceil(ElementCount / VectorWidth) >= TripCount
-;
-; But we have:
-;
-;   ceil(3200 / 4) >= 8001
-;   8000 >= 8001
-;
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 31999)
-
-  %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv10, i32 4, <4 x i1> %1, <4 x i32> undef)
-  %wide.masked.load9 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv1113, i32 4, <4 x i1> %1, <4 x i32> undef)
-  %2 = add nsw <4 x i32> %wide.masked.load9, %wide.masked.load
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %2, <4 x i32>* %lsr.iv1416, i32 4, <4 x i1> %1)
-  %index.next = add i32 %index, 4
-  %scevgep = getelementptr i32, i32* %lsr.iv, i32 4
-  %scevgep12 = getelementptr i32, i32* %lsr.iv11, i32 4
-  %scevgep15 = getelementptr i32, i32* %lsr.iv14, i32 4
-  %3 = call i32 @llvm.loop.decrement.reg.i32(i32 %0, i32 1)
-  %4 = icmp ne i32 %3, 0
-  br i1 %4, label %vector.body, label %for.cond.cleanup
-
-for.cond.cleanup:
-  ret void
-}
-
-; CHECK-LABEL: @overflow_in_rounding_tripcount(
-; CHECK:       vector.body:
-; CHECK-NOT:   @llvm.arm.mve.vctp32
-; CHECK:       @llvm.get.active.lane.mask
-; CHECK:       ret void
-;
-define dso_local void @overflow_in_rounding_tripcount(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture readnone %D, i32 %N) local_unnamed_addr #0 {
-entry:
-
-; TC = 4294967292
-; 4294967292 <= 4294967291 (MAX - vectorwidth)
-; False
-;
-  call void @llvm.set.loop.iterations.i32(i32 4294967291)
+  call void @llvm.set.loop.iterations.i32(i32 1073741824)
   br label %vector.body
 
 vector.body:
