@@ -1166,7 +1166,7 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_7_64(<2 x i16> addrspace(1)* %out,
 ; GFX10-NEXT:    v_add_co_u32_e64 v0, s0, s0, v2
 ; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, s0, s1, 0, s0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_pk_sub_i16 v2, v3, 7 op_sel_hi:[1,0]
+; GFX10-NEXT:    v_pk_sub_i16 v2, v3, 0x400007
 ; GFX10-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX10-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1250,7 +1250,7 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_64_123(<2 x i16> addrspace(1)* %ou
 ; GFX10-NEXT:    v_add_co_u32_e64 v0, s0, s0, v2
 ; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, s0, s1, 0, s0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_pk_sub_i16 v2, v3, 64 op_sel_hi:[1,0]
+; GFX10-NEXT:    v_pk_sub_i16 v2, v3, 0x7b0040
 ; GFX10-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX10-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
