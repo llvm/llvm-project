@@ -124,8 +124,7 @@ namespace StableAddress {
   // FIXME: Deduction guide not needed with P1816R0.
   template<size_t N> str(const char (&)[N]) -> str<N>;
 
-  // FIXME: Explicit size not needed.
-  template<str<15> s> constexpr int sum() {
+  template<str s> constexpr int sum() {
     int n = 0;
     for (char c : s.arr)
       n += c;
@@ -183,4 +182,22 @@ namespace Diags {
   struct A { int n, m; };
   template<A a> struct X { static_assert(a.n == a.m); }; // expected-error {{static_assert failed due to requirement 'Diags::A{1, 2}.n == Diags::A{1, 2}.m'}}
   template struct X<A{1, 2}>; // expected-note {{in instantiation of template class 'Diags::X<{1, 2}>' requested here}}
+}
+
+namespace CTADPartialOrder {
+  template<int> struct A {};
+  template<typename T, typename U, A a> struct X; // expected-note {{declared here}}
+  template<typename T, A a> struct X<T, int, a> { static constexpr int n = 1; }; // expected-note {{matches}}
+  template<typename T, A a> struct X<T *, int, a> { static constexpr int n = 2; };
+  template<typename T, A a> struct X<T, T, a> { static constexpr int n = 3; }; // expected-note {{matches}}
+
+  A<0> a;
+  static_assert(X<void, int, a>::n == 1);
+  static_assert(X<int*, int, a>::n == 2);
+  static_assert(X<void, void, a>::n == 3);
+  static_assert(X<int, int, a>::n == -1); // expected-error {{ambiguous}}
+  static_assert(X<int*, void, a>::n == 2); // expected-error {{undefined}}
+
+  template<typename T, A<0> a> struct X<T, T, a> { static constexpr int n = 4; };
+  static_assert(X<float, float, a>::n == 4);
 }
