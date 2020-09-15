@@ -13,7 +13,7 @@
 
 // CHECK: foo
 // CHECK-NEXT: array
-// CHECK-NEXT: /home/ubuntu{{/|\\}}.{{/|\\}}example.cpp:1
+// CHECK-NEXT: /home/ubuntu{{/|\\}}example.cpp:1
 // CHECK-NEXT: -24 8 ??
 
         .file   "example.cpp"
