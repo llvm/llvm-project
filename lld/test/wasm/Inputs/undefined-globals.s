@@ -7,5 +7,5 @@ use_undef_global:
   global.get used_undef_global
   end_function
 
-.globaltype unused_undef_global, i64
-.globaltype used_undef_global, i64
+.globaltype unused_undef_global, i64, immutable
+.globaltype used_undef_global, i64, immutable
