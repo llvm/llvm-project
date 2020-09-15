@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "globalisel-utils"
 
@@ -470,7 +471,8 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
   if (!DefMI)
     return false;
 
-  if (DefMI->getFlag(MachineInstr::FmNoNans))
+  const TargetMachine& TM = DefMI->getMF()->getTarget();
+  if (DefMI->getFlag(MachineInstr::FmNoNans) || TM.Options.NoNaNsFPMath)
     return true;
 
   if (SNaN) {
