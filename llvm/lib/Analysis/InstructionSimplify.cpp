@@ -5455,23 +5455,30 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     if (Q.isUndefValue(Op1))
       return Op0;
 
-    // If an argument is NaN, return other or NaN appropriately.
     bool PropagateNaN = IID == Intrinsic::minimum || IID == Intrinsic::maximum;
+    bool IsMin = IID == Intrinsic::minimum || IID == Intrinsic::minnum;
+
+    // minnum(X, nan) -> X
+    // maxnum(X, nan) -> X
+    // minimum(X, nan) -> nan
+    // maximum(X, nan) -> nan
     if (match(Op1, m_NaN()))
       return PropagateNaN ? Op1 : Op0;
 
-    // min(X, -Inf) --> -Inf
-    // max(X, +Inf) --> +Inf
-    bool UseNegInf = IID == Intrinsic::minnum || IID == Intrinsic::minimum;
+    // In the following folds, inf can be replaced with the largest finite
+    // float, if the ninf flag is set.
     const APFloat *C;
-    if (match(Op1, m_APFloat(C)) && C->isInfinity() &&
-        C->isNegative() == UseNegInf && !PropagateNaN)
-      return ConstantFP::getInfinity(ReturnType, UseNegInf);
-
-    // TODO: minimum(nnan x, inf) -> x
-    // TODO: minnum(nnan ninf x, flt_max) -> x
-    // TODO: maximum(nnan x, -inf) -> x
-    // TODO: maxnum(nnan ninf x, -flt_max) -> x
+    if (match(Op1, m_APFloat(C)) &&
+        (C->isInfinity() || (Q.CxtI->hasNoInfs() && C->isLargest()))) {
+      // min(X, -Inf) --> -Inf
+      // max(X, +Inf) --> +Inf
+      if (C->isNegative() == IsMin && !PropagateNaN)
+        return ConstantFP::get(ReturnType, *C);
+      // TODO: minimum(nnan x, inf) -> x
+      // TODO: minnum(nnan ninf x, flt_max) -> x
+      // TODO: maximum(nnan x, -inf) -> x
+      // TODO: maxnum(nnan ninf x, -flt_max) -> x
+    }
 
     // Min/max of the same operation with common operand:
     // m(m(X, Y)), X --> m(X, Y) (4 commuted variants)
