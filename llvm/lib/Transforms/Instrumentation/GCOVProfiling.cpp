@@ -99,10 +99,10 @@ class GCOVProfiler {
 public:
   GCOVProfiler() : GCOVProfiler(GCOVOptions::getDefault()) {}
   GCOVProfiler(const GCOVOptions &Opts) : Options(Opts) {}
-  bool runOnModule(Module &M,
-                   function_ref<BlockFrequencyInfo *(Function &F)> GetBFI,
-                   function_ref<BranchProbabilityInfo *(Function &F)> GetBPI,
-                   function_ref<const TargetLibraryInfo &(Function &F)> GetTLI);
+  bool
+  runOnModule(Module &M, function_ref<BlockFrequencyInfo *(Function &F)> GetBFI,
+              function_ref<BranchProbabilityInfo *(Function &F)> GetBPI,
+              std::function<const TargetLibraryInfo &(Function &F)> GetTLI);
 
   void write(uint32_t i) {
     char Bytes[4];
@@ -609,7 +609,7 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
 bool GCOVProfiler::runOnModule(
     Module &M, function_ref<BlockFrequencyInfo *(Function &F)> GetBFI,
     function_ref<BranchProbabilityInfo *(Function &F)> GetBPI,
-    function_ref<const TargetLibraryInfo &(Function &F)> GetTLI) {
+    std::function<const TargetLibraryInfo &(Function &F)> GetTLI) {
   this->M = &M;
   this->GetTLI = std::move(GetTLI);
   Ctx = &M.getContext();
@@ -622,7 +622,7 @@ bool GCOVProfiler::runOnModule(
 
   FilterRe = createRegexesFromString(Options.Filter);
   ExcludeRe = createRegexesFromString(Options.Exclude);
-  emitProfileNotes(CUNode, HasExecOrFork, GetBFI, GetBPI, GetTLI);
+  emitProfileNotes(CUNode, HasExecOrFork, GetBFI, GetBPI, this->GetTLI);
   return true;
 }
 
