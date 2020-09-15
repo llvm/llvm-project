@@ -72,9 +72,8 @@ subroutine s7(x)
 end subroutine
 
 subroutine s8
-  !ERROR: Derived type 't2' was used but never defined
-  !ERROR: The derived type 't2' was forward-referenced but not defined
   implicit type(t2)(x)
+  !ERROR: Cannot construct value for derived type 't2' before it is defined
   parameter(y=t2(12.3))
   type t2
     real :: c
