@@ -829,6 +829,10 @@ let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
   // PPCtlsdynamatpcreladdr node is used for TLS dynamic models to materialize
   // tls global address with paddi instruction.
   def : Pat<(PPCtlsdynamatpcreladdr pcreladdr:$addr), (PADDI8pc 0, $addr)>;
+  // PPCtlslocalexecmataddr node is used for TLS local exec models to
+  // materialize tls global address with paddi instruction.
+  def : Pat<(PPCaddTls i64:$in, (PPCtlslocalexecmataddr tglobaltlsaddr:$addr)),
+            (PADDI8 $in, $addr)>;
 }
 
 let Predicates = [PrefixInstrs] in {
