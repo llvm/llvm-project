@@ -3358,6 +3358,15 @@ uint16_t DwarfDebug::getDwarfVersion() const {
   return Asm->OutStreamer->getContext().getDwarfVersion();
 }
 
+dwarf::Form DwarfDebug::getDwarfSectionOffsetForm() const {
+  if (Asm->getDwarfVersion() >= 4)
+    return dwarf::Form::DW_FORM_sec_offset;
+  assert((!Asm->isDwarf64() || (Asm->getDwarfVersion() == 3)) &&
+         "DWARF64 is not defined prior DWARFv3");
+  return Asm->isDwarf64() ? dwarf::Form::DW_FORM_data8
+                          : dwarf::Form::DW_FORM_data4;
+}
+
 const MCSymbol *DwarfDebug::getSectionLabel(const MCSection *S) {
   return SectionLabels.find(S)->second;
 }

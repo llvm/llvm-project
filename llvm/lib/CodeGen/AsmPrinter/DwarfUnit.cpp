@@ -1695,15 +1695,15 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
 
 void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
   // Emit size of content not including length itself
-  Asm->OutStreamer->AddComment("Length of Unit");
   if (!DD->useSectionsAsReferences()) {
     StringRef Prefix = isDwoUnit() ? "debug_info_dwo_" : "debug_info_";
     MCSymbol *BeginLabel = Asm->createTempSymbol(Prefix + "start");
     EndLabel = Asm->createTempSymbol(Prefix + "end");
-    Asm->emitLabelDifference(EndLabel, BeginLabel, 4);
+    Asm->emitDwarfUnitLength(EndLabel, BeginLabel, "Length of Unit");
     Asm->OutStreamer->emitLabel(BeginLabel);
   } else
-    Asm->emitInt32(getHeaderSize() + getUnitDie().getSize());
+    Asm->emitDwarfUnitLength(getHeaderSize() + getUnitDie().getSize(),
+                             "Length of Unit");
 
   Asm->OutStreamer->AddComment("DWARF version number");
   unsigned Version = DD->getDwarfVersion();
@@ -1759,10 +1759,7 @@ DIE::value_iterator
 DwarfUnit::addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
                            const MCSymbol *Label, const MCSymbol *Sec) {
   if (Asm->MAI->doesDwarfUseRelocationsAcrossSections())
-    return addLabel(Die, Attribute,
-                    DD->getDwarfVersion() >= 4 ? dwarf::DW_FORM_sec_offset
-                                               : dwarf::DW_FORM_data4,
-                    Label);
+    return addLabel(Die, Attribute, DD->getDwarfSectionOffsetForm(), Label);
   return addSectionDelta(Die, Attribute, Label, Sec);
 }
 

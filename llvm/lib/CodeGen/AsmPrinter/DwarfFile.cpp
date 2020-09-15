@@ -79,8 +79,8 @@ void DwarfFile::computeSizeAndOffsets() {
 
 unsigned DwarfFile::computeSizeAndOffsetsForUnit(DwarfUnit *TheU) {
   // CU-relative offset is reset to 0 here.
-  unsigned Offset = sizeof(int32_t) +      // Length of Unit Info
-                    TheU->getHeaderSize(); // Unit-specific headers
+  unsigned Offset = Asm->getUnitLengthFieldByteSize() + // Length of Unit Info
+                    TheU->getHeaderSize();              // Unit-specific headers
 
   // The return value here is CU-relative, after laying out
   // all of the CU DIE.
