@@ -1886,19 +1886,17 @@ ELFDumper<ELFT>::findDynamic(const ELFFile<ELFT> *Obj) {
   }
 
   if (DynamicPhdr && DynamicSec) {
-    StringRef Name =
-        unwrapOrError(ObjF->getFileName(), Obj->getSectionName(DynamicSec));
     if (DynamicSec->sh_addr + DynamicSec->sh_size >
             DynamicPhdr->p_vaddr + DynamicPhdr->p_memsz ||
         DynamicSec->sh_addr < DynamicPhdr->p_vaddr)
-      reportWarning(createError("The SHT_DYNAMIC section '" + Name +
-                                "' is not contained within the "
+      reportWarning(createError(describe(*DynamicSec) +
+                                " is not contained within the "
                                 "PT_DYNAMIC segment"),
                     ObjF->getFileName());
 
     if (DynamicSec->sh_addr != DynamicPhdr->p_vaddr)
-      reportWarning(createError("The SHT_DYNAMIC section '" + Name +
-                                "' is not at the start of "
+      reportWarning(createError(describe(*DynamicSec) +
+                                " is not at the start of "
                                 "PT_DYNAMIC segment"),
                     ObjF->getFileName());
   }
