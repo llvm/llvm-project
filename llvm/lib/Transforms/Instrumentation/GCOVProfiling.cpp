@@ -322,14 +322,14 @@ namespace {
   // object users can construct, the blocks and lines will be rooted here.
   class GCOVFunction : public GCOVRecord {
   public:
-    GCOVFunction(GCOVProfiler *P, Function *F, const DISubprogram *SP,
+    GCOVFunction(GCOVProfiler *P, Function &F, const DISubprogram *SP,
                  unsigned EndLine, uint32_t Ident, int Version)
-        : GCOVRecord(P), SP(SP), EndLine(EndLine), Ident(Ident),
+        : GCOVRecord(P), F(F), SP(SP), EndLine(EndLine), Ident(Ident),
           Version(Version), EntryBlock(P, 0), ReturnBlock(P, 1) {
       LLVM_DEBUG(dbgs() << "Function: " << getFunctionName(SP) << "\n");
       bool ExitBlockBeforeBody = Version >= 48;
       uint32_t i = ExitBlockBeforeBody ? 2 : 1;
-      for (BasicBlock &BB : *F)
+      for (BasicBlock &BB : F)
         Blocks.insert(std::make_pair(&BB, GCOVBlock(P, i++)));
       if (!ExitBlockBeforeBody)
         ReturnBlock.Number = i;
@@ -423,6 +423,8 @@ namespace {
       for (BasicBlock &I : *F)
         getBlock(&I).writeOut();
     }
+
+    Function &F;
 
   private:
     const DISubprogram *SP;
@@ -736,7 +738,7 @@ void GCOVProfiler::emitProfileNotes(NamedMDNode *CUNode) {
       // single successor, so split the entry block to make sure of that.
       BasicBlock &EntryBlock = F.getEntryBlock();
 
-      Funcs.push_back(std::make_unique<GCOVFunction>(this, &F, SP, EndLine,
+      Funcs.push_back(std::make_unique<GCOVFunction>(this, F, SP, EndLine,
                                                      FunctionIdent++, Version));
       GCOVFunction &Func = *Funcs.back();
 
@@ -824,15 +826,8 @@ bool GCOVProfiler::emitProfileArcs(NamedMDNode *CUNode) {
   bool Result = false;
   for (unsigned i = 0, e = CUNode->getNumOperands(); i != e; ++i) {
     SmallVector<std::pair<GlobalVariable *, MDNode *>, 8> CountersBySP;
-    for (auto &F : M->functions()) {
-      DISubprogram *SP = F.getSubprogram();
-      unsigned EndLine;
-      if (!SP) continue;
-      if (!functionHasLines(F, EndLine) || !isFunctionInstrumented(F))
-        continue;
-      // TODO: Functions using scope-based EH are currently not supported.
-      if (isUsingScopeBasedEH(F)) continue;
-
+    for (const GCOVFunction &GF : make_pointee_range(Funcs)) {
+      Function &F = GF.F;
       DenseMap<std::pair<BasicBlock *, BasicBlock *>, unsigned> EdgeToCounter;
       unsigned Edges = 0;
       EdgeToCounter[{nullptr, &F.getEntryBlock()}] = Edges++;
@@ -854,7 +849,7 @@ bool GCOVProfiler::emitProfileArcs(NamedMDNode *CUNode) {
                            GlobalValue::InternalLinkage,
                            Constant::getNullValue(CounterTy),
                            "__llvm_gcov_ctr");
-      CountersBySP.push_back(std::make_pair(Counters, SP));
+      CountersBySP.emplace_back(Counters, F.getSubprogram());
 
       // If a BB has several predecessors, use a PHINode to select
       // the correct counter.
