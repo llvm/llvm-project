@@ -135,8 +135,9 @@ for.cond.cleanup:
 }
 
 ; The vector loop is not guarded with an entry check (N == 0). Check that
-; despite this we can still calculate a precise enough range for the
-; backedge count to safely insert a vctp here.
+; despite this we can still calculate a precise enough range so that the
+; the overflow checks for get.active.active.lane.mask don't reject
+; tail-predication.
 ;
 ; CHECK-LABEL: @reduction_not_guarded
 ;
