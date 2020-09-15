@@ -90,8 +90,7 @@ GetClangTypeNode(CompilerType clang_type, swift::Demangle::Demangler &dem) {
 }
 
 /// \return the child of the \p Type node.
-static swift::Demangle::NodePointer GetType(swift::Demangle::Demangler &dem,
-                                            swift::Demangle::NodePointer n) {
+static NodePointer GetType(swift::Demangle::NodePointer n) {
   using namespace swift::Demangle;
   if (!n || n->getKind() != Node::Kind::Global || !n->hasChildren())
     return nullptr;
@@ -109,7 +108,7 @@ static swift::Demangle::NodePointer GetType(swift::Demangle::Demangler &dem,
 static swift::Demangle::NodePointer
 GetDemangledType(swift::Demangle::Demangler &dem, StringRef name) {
   NodePointer n = dem.demangleSymbol(name);
-  return GetType(dem, n);
+  return GetType(n);
 }
 
 /// Resolve a type alias node and return a demangle tree for the
@@ -1291,7 +1290,7 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::DemangleCanonicalType(
   using namespace swift::Demangle;
   NodePointer node =
       GetCanonicalDemangleTree(GetModule(), dem, AsMangledName(opaque_type));
-  return GetType(dem, node);
+  return GetType(node);
 }
 
 bool TypeSystemSwiftTypeRef::IsArrayType(opaque_compiler_type_t type,
@@ -1669,9 +1668,62 @@ CompilerType
 TypeSystemSwiftTypeRef::GetPointeeType(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetPointeeType(ReconstructType(type));
 }
+
 CompilerType
 TypeSystemSwiftTypeRef::GetPointerType(opaque_compiler_type_t type) {
-  return m_swift_ast_context->GetPointerType(ReconstructType(type));
+  auto impl = [&]() -> CompilerType {
+    /*
+      kind=Type
+        kind=BoundGenericStructure
+          kind=Type
+            kind=Structure
+              kind=Module, text="Swift"
+              kind=Identifier, text="UnsafePointer"
+          kind=TypeList
+            kind=Type
+              kind=Structure
+                kind=Module, text="Swift"
+                kind=Identifier, text="Int"
+     */
+    using namespace swift::Demangle;
+    Demangler dem;
+
+    auto *pointee_type = GetType(dem.demangleSymbol(AsMangledName(type)));
+
+    auto *pointer_type = dem.createNode(Node::Kind::Type);
+    auto *BGS = dem.createNode(Node::Kind::BoundGenericStructure);
+    pointer_type->addChild(BGS, dem);
+
+    NodePointer parent;
+    NodePointer child;
+
+    // Construct the first (Type) branch of BoundGenericStructure.
+    parent = BGS;
+    child = dem.createNode(Node::Kind::Type);
+    parent->addChild(child, dem);
+    parent = child;
+    child = dem.createNode(Node::Kind::Structure);
+    parent->addChild(child, dem);
+    parent = child;
+    parent->addChild(
+        dem.createNodeWithAllocatedText(Node::Kind::Module, swift::STDLIB_NAME),
+        dem);
+    parent->addChild(dem.createNode(Node::Kind::Identifier, "UnsafePointer"),
+                     dem);
+
+    // Construct the second (TypeList) branch of BoundGenericStructure.
+    parent = BGS;
+    child = dem.createNode(Node::Kind::TypeList);
+    parent->addChild(child, dem);
+    parent = child;
+    child = dem.createNode(Node::Kind::Type);
+    parent->addChild(child, dem);
+    parent = child;
+    parent->addChild(pointee_type, dem);
+
+    return RemangleAsType(dem, pointer_type);
+  };
+  VALIDATE_AND_RETURN(impl, GetPointerType, type, (ReconstructType(type)));
 }
 
 // Exploring the type
