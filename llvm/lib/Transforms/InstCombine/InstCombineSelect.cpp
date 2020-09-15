@@ -1165,15 +1165,32 @@ static Instruction *canonicalizeAbsNabs(SelectInst &Sel, ICmpInst &Cmp,
 ///
 /// We can't replace %sel with %add unless we strip away the flags.
 /// TODO: Wrapping flags could be preserved in some cases with better analysis.
-static Value *foldSelectValueEquivalence(SelectInst &Sel, ICmpInst &Cmp,
-                                         const SimplifyQuery &Q) {
+static Instruction *foldSelectValueEquivalence(SelectInst &Sel, ICmpInst &Cmp,
+                                               const SimplifyQuery &Q,
+                                               InstCombiner &IC) {
   if (!Cmp.isEquality())
     return nullptr;
 
   // Canonicalize the pattern to ICMP_EQ by swapping the select operands.
   Value *TrueVal = Sel.getTrueValue(), *FalseVal = Sel.getFalseValue();
-  if (Cmp.getPredicate() == ICmpInst::ICMP_NE)
+  bool Swapped = false;
+  if (Cmp.getPredicate() == ICmpInst::ICMP_NE) {
     std::swap(TrueVal, FalseVal);
+    Swapped = true;
+  }
+
+  // In X == Y ? f(X) : Z, try to evaluate f(X) and replace the operand.
+  // Take care to avoid replacing X == Y ? X : Z with X == Y ? Y : Z, as that
+  // would lead to an infinite replacement cycle.
+  Value *CmpLHS = Cmp.getOperand(0), *CmpRHS = Cmp.getOperand(1);
+  if (TrueVal != CmpLHS)
+    if (Value *V = SimplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q,
+                                          /* AllowRefinement */ true))
+      return IC.replaceOperand(Sel, Swapped ? 2 : 1, V);
+  if (TrueVal != CmpRHS)
+    if (Value *V = SimplifyWithOpReplaced(TrueVal, CmpRHS, CmpLHS, Q,
+                                          /* AllowRefinement */ true))
+      return IC.replaceOperand(Sel, Swapped ? 2 : 1, V);
 
   auto *FalseInst = dyn_cast<Instruction>(FalseVal);
   if (!FalseInst)
@@ -1198,12 +1215,11 @@ static Value *foldSelectValueEquivalence(SelectInst &Sel, ICmpInst &Cmp,
   // We have an 'EQ' comparison, so the select's false value will propagate.
   // Example:
   // (X == 42) ? 43 : (X + 1) --> (X == 42) ? (X + 1) : (X + 1) --> X + 1
-  Value *CmpLHS = Cmp.getOperand(0), *CmpRHS = Cmp.getOperand(1);
   if (SimplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q,
                              /* AllowRefinement */ false) == TrueVal ||
       SimplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, Q,
                              /* AllowRefinement */ false) == TrueVal) {
-    return FalseVal;
+    return IC.replaceInstUsesWith(Sel, FalseVal);
   }
 
   // Restore poison-generating flags if the transform did not apply.
@@ -1439,8 +1455,8 @@ tryToReuseConstantFromSelectInComparison(SelectInst &Sel, ICmpInst &Cmp,
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
                                                       ICmpInst *ICI) {
-  if (Value *V = foldSelectValueEquivalence(SI, *ICI, SQ))
-    return replaceInstUsesWith(SI, V);
+  if (Instruction *NewSel = foldSelectValueEquivalence(SI, *ICI, SQ, *this))
+    return NewSel;
 
   if (Instruction *NewSel = canonicalizeMinMaxWithConstant(SI, *ICI, *this))
     return NewSel;
