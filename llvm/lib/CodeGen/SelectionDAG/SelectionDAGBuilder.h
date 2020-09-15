@@ -18,7 +18,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
@@ -26,7 +25,6 @@
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/Statepoint.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -39,6 +37,7 @@
 
 namespace llvm {
 
+class AAResults;
 class AllocaInst;
 class AtomicCmpXchgInst;
 class AtomicRMWInst;
@@ -63,6 +62,7 @@ class FunctionLoweringInfo;
 class GCFunctionInfo;
 class GCRelocateInst;
 class GCResultInst;
+class GCStatepointInst;
 class IndirectBrInst;
 class InvokeInst;
 class LandingPadInst;
@@ -388,7 +388,7 @@ public:
 
   SelectionDAG &DAG;
   const DataLayout *DL = nullptr;
-  AliasAnalysis *AA = nullptr;
+  AAResults *AA = nullptr;
   const TargetLibraryInfo *LibInfo;
 
   class SDAGSwitchLowering : public SwitchCG::SwitchLowering {
@@ -442,7 +442,7 @@ public:
         SL(std::make_unique<SDAGSwitchLowering>(this, funcinfo)), FuncInfo(funcinfo),
         SwiftError(swifterror) {}
 
-  void init(GCFunctionInfo *gfi, AliasAnalysis *AA,
+  void init(GCFunctionInfo *gfi, AAResults *AA,
             const TargetLibraryInfo *li);
 
   /// Clear out the current SelectionDAG and the associated state and prepare
