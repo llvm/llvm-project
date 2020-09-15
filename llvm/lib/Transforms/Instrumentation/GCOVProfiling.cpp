@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CFGMST.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
@@ -20,6 +21,8 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/CFG.h"
@@ -53,6 +56,8 @@ namespace endian = llvm::support::endian;
 #define DEBUG_TYPE "insert-gcov-profiling"
 
 enum : uint32_t {
+  GCOV_ARC_ON_TREE = 1 << 0,
+
   GCOV_TAG_FUNCTION = 0x01000000,
   GCOV_TAG_BLOCKS = 0x01410000,
   GCOV_TAG_ARCS = 0x01430000,
@@ -94,9 +99,10 @@ class GCOVProfiler {
 public:
   GCOVProfiler() : GCOVProfiler(GCOVOptions::getDefault()) {}
   GCOVProfiler(const GCOVOptions &Opts) : Options(Opts) {}
-  bool
-  runOnModule(Module &M,
-              std::function<const TargetLibraryInfo &(Function &F)> GetTLI);
+  bool runOnModule(Module &M,
+                   function_ref<BlockFrequencyInfo *(Function &F)> GetBFI,
+                   function_ref<BranchProbabilityInfo *(Function &F)> GetBPI,
+                   function_ref<const TargetLibraryInfo &(Function &F)> GetTLI);
 
   void write(uint32_t i) {
     char Bytes[4];
@@ -112,13 +118,12 @@ public:
 
 private:
   // Create the .gcno files for the Module based on DebugInfo.
-  void emitProfileNotes(NamedMDNode *CUNode);
+  bool
+  emitProfileNotes(NamedMDNode *CUNode, bool HasExecOrFork,
+                   function_ref<BlockFrequencyInfo *(Function &F)> GetBFI,
+                   function_ref<BranchProbabilityInfo *(Function &F)> GetBPI,
+                   function_ref<const TargetLibraryInfo &(Function &F)> GetTLI);
 
-  // Modify the program to track transitions along edges and call into the
-  // profiling runtime to emit .gcda files when run.
-  void instrumentFunction(
-      Function &F,
-      SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP);
   void emitGlobalConstructor(
       SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP);
 
@@ -158,6 +163,7 @@ private:
   SmallVector<std::unique_ptr<GCOVFunction>, 16> Funcs;
   std::vector<Regex> FilterRe;
   std::vector<Regex> ExcludeRe;
+  DenseSet<const BasicBlock *> ExecBlocks;
   StringMap<bool> InstrumentedFiles;
 };
 
@@ -173,17 +179,60 @@ public:
   StringRef getPassName() const override { return "GCOV Profiler"; }
 
   bool runOnModule(Module &M) override {
-    return Profiler.runOnModule(M, [this](Function &F) -> TargetLibraryInfo & {
-      return getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    });
+    auto GetBFI = [this](Function &F) {
+      return &this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
+    };
+    auto GetBPI = [this](Function &F) {
+      return &this->getAnalysis<BranchProbabilityInfoWrapperPass>(F).getBPI();
+    };
+    auto GetTLI = [this](Function &F) -> const TargetLibraryInfo & {
+      return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+    };
+    return Profiler.runOnModule(M, GetBFI, GetBPI, GetTLI);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<BlockFrequencyInfoWrapperPass>();
+    AU.addRequired<BranchProbabilityInfoWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
   }
 
 private:
   GCOVProfiler Profiler;
+};
+
+struct BBInfo {
+  BBInfo *Group;
+  uint32_t Index;
+  uint32_t Rank = 0;
+
+  BBInfo(unsigned Index) : Group(this), Index(Index) {}
+  const std::string infoString() const {
+    return (Twine("Index=") + Twine(Index)).str();
+  }
+};
+
+struct Edge {
+  // This class implements the CFG edges. Note the CFG can be a multi-graph.
+  // So there might be multiple edges with same SrcBB and DestBB.
+  const BasicBlock *SrcBB;
+  const BasicBlock *DestBB;
+  uint64_t Weight;
+  BasicBlock *Place = nullptr;
+  uint32_t SrcNumber, DstNumber;
+  bool InMST = false;
+  bool Removed = false;
+  bool IsCritical = false;
+
+  Edge(const BasicBlock *Src, const BasicBlock *Dest, uint64_t W = 1)
+      : SrcBB(Src), DestBB(Dest), Weight(W) {}
+
+  // Return the information string of an edge.
+  const std::string infoString() const {
+    return (Twine(Removed ? "-" : " ") + (InMST ? " " : "*") +
+            (IsCritical ? "c" : " ") + "  W=" + Twine(Weight))
+        .str();
+  }
 };
 }
 
@@ -191,6 +240,8 @@ char GCOVProfilerLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(
     GCOVProfilerLegacyPass, "insert-gcov-profiling",
     "Insert instrumentation for GCOV profiling", false, false)
+INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(
     GCOVProfilerLegacyPass, "insert-gcov-profiling",
@@ -275,8 +326,8 @@ namespace {
       return LinesByFile.try_emplace(Filename, P, Filename).first->second;
     }
 
-    void addEdge(GCOVBlock &Successor) {
-      OutEdges.push_back(&Successor);
+    void addEdge(GCOVBlock &Successor, uint32_t Flags) {
+      OutEdges.emplace_back(&Successor, Flags);
     }
 
     void writeOut() {
@@ -310,9 +361,9 @@ namespace {
     }
 
     uint32_t Number;
-    SmallVector<GCOVBlock *, 4> OutEdges;
+    SmallVector<std::pair<GCOVBlock *, uint32_t>, 4> OutEdges;
 
-   private:
+  private:
     friend class GCOVFunction;
 
     GCOVBlock(GCOVProfiler *P, uint32_t Number)
@@ -345,7 +396,7 @@ namespace {
       FuncChecksum = hash_value(FunctionNameAndLine);
     }
 
-    GCOVBlock &getBlock(BasicBlock *BB) {
+    GCOVBlock &getBlock(const BasicBlock *BB) {
       return Blocks.find(BB)->second;
     }
 
@@ -402,33 +453,41 @@ namespace {
       LLVM_DEBUG(dbgs() << (Blocks.size() + 1) << " blocks\n");
 
       // Emit edges between blocks.
-      Function *F = Blocks.begin()->first->getParent();
-      write(GCOV_TAG_ARCS);
-      write(3);
-      write(0);
-      write(getBlock(&F->getEntryBlock()).Number);
-      write(0); // no flags
-      for (BasicBlock &I : *F) {
-        GCOVBlock &Block = getBlock(&I);
+      const uint32_t Outgoing = EntryBlock.OutEdges.size();
+      if (Outgoing) {
+        write(GCOV_TAG_ARCS);
+        write(Outgoing * 2 + 1);
+        write(EntryBlock.Number);
+        for (const auto &E : EntryBlock.OutEdges) {
+          write(E.first->Number);
+          write(E.second);
+        }
+      }
+      std::vector<GCOVBlock *> Sorted;
+      Sorted.reserve(Blocks.size());
+      for (auto &It : Blocks)
+        Sorted.push_back(&It.second);
+      llvm::sort(Sorted, [](GCOVBlock *x, GCOVBlock *y) {
+        return x->Number < y->Number;
+      });
+      for (GCOVBlock &Block : make_pointee_range(Sorted)) {
         if (Block.OutEdges.empty()) continue;
 
         write(GCOV_TAG_ARCS);
         write(Block.OutEdges.size() * 2 + 1);
         write(Block.Number);
-        for (int i = 0, e = Block.OutEdges.size(); i != e; ++i) {
-          LLVM_DEBUG(dbgs() << Block.Number << " -> "
-                            << Block.OutEdges[i]->Number << "\n");
-          write(Block.OutEdges[i]->Number);
-          write(0);  // no flags
+        for (const auto &E : Block.OutEdges) {
+          write(E.first->Number);
+          write(E.second);
         }
       }
 
       // Emit lines for each block.
-      for (BasicBlock &I : *F)
-        getBlock(&I).writeOut();
+      for (GCOVBlock &Block : make_pointee_range(Sorted))
+        Block.writeOut();
     }
 
-  private:
+  public:
     const DISubprogram *SP;
     unsigned EndLine;
     uint32_t Ident;
@@ -549,7 +608,9 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
 }
 
 bool GCOVProfiler::runOnModule(
-    Module &M, std::function<const TargetLibraryInfo &(Function &F)> GetTLI) {
+    Module &M, function_ref<BlockFrequencyInfo *(Function &F)> GetBFI,
+    function_ref<BranchProbabilityInfo *(Function &F)> GetBPI,
+    function_ref<const TargetLibraryInfo &(Function &F)> GetTLI) {
   this->M = &M;
   this->GetTLI = std::move(GetTLI);
   Ctx = &M.getContext();
@@ -558,12 +619,12 @@ bool GCOVProfiler::runOnModule(
   if (!CUNode || (!Options.EmitNotes && !Options.EmitData))
     return false;
 
-  bool Modified = AddFlushBeforeForkAndExec();
+  bool HasExecOrFork = AddFlushBeforeForkAndExec();
 
   FilterRe = createRegexesFromString(Options.Filter);
   ExcludeRe = createRegexesFromString(Options.Exclude);
-  emitProfileNotes(CUNode);
-  return Modified || Options.EmitData;
+  emitProfileNotes(CUNode, HasExecOrFork, GetBFI, GetBPI, GetTLI);
+  return true;
 }
 
 PreservedAnalyses GCOVProfilerPass::run(Module &M,
@@ -573,9 +634,17 @@ PreservedAnalyses GCOVProfilerPass::run(Module &M,
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
-  if (!Profiler.runOnModule(M, [&](Function &F) -> TargetLibraryInfo & {
-        return FAM.getResult<TargetLibraryAnalysis>(F);
-      }))
+  auto GetBFI = [&FAM](Function &F) {
+    return &FAM.getResult<BlockFrequencyAnalysis>(F);
+  };
+  auto GetBPI = [&FAM](Function &F) {
+    return &FAM.getResult<BranchProbabilityAnalysis>(F);
+  };
+  auto GetTLI = [&FAM](Function &F) -> const TargetLibraryInfo & {
+    return FAM.getResult<TargetLibraryAnalysis>(F);
+  };
+
+  if (!Profiler.runOnModule(M, GetBFI, GetBPI, GetTLI))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -681,6 +750,7 @@ bool GCOVProfiler::AddFlushBeforeForkAndExec() {
     // dumped
     FunctionCallee ResetF = M->getOrInsertFunction("llvm_reset_counters", FTy);
     Builder.CreateCall(ResetF)->setDebugLoc(Loc);
+    ExecBlocks.insert(Parent);
     Parent->splitBasicBlock(NextInst);
     Parent->back().setDebugLoc(Loc);
   }
@@ -688,7 +758,67 @@ bool GCOVProfiler::AddFlushBeforeForkAndExec() {
   return !Forks.empty() || !Execs.empty();
 }
 
-void GCOVProfiler::emitProfileNotes(NamedMDNode *CUNode) {
+static BasicBlock *getInstrBB(CFGMST<Edge, BBInfo> &MST, Edge &E,
+                              const DenseSet<const BasicBlock *> &ExecBlocks) {
+  if (E.InMST || E.Removed)
+    return nullptr;
+
+  BasicBlock *SrcBB = const_cast<BasicBlock *>(E.SrcBB);
+  BasicBlock *DestBB = const_cast<BasicBlock *>(E.DestBB);
+  // For a fake edge, instrument the real BB.
+  if (SrcBB == nullptr)
+    return DestBB;
+  if (DestBB == nullptr)
+    return SrcBB;
+
+  auto CanInstrument = [](BasicBlock *BB) -> BasicBlock * {
+    // There are basic blocks (such as catchswitch) cannot be instrumented.
+    // If the returned first insertion point is the end of BB, skip this BB.
+    if (BB->getFirstInsertionPt() == BB->end())
+      return nullptr;
+    return BB;
+  };
+
+  // Instrument the SrcBB if it has a single successor,
+  // otherwise, the DestBB if this is not a critical edge.
+  Instruction *TI = SrcBB->getTerminator();
+  if (TI->getNumSuccessors() <= 1 && !ExecBlocks.count(SrcBB))
+    return CanInstrument(SrcBB);
+  if (!E.IsCritical)
+    return CanInstrument(DestBB);
+
+  // Some IndirectBr critical edges cannot be split by the previous
+  // SplitIndirectBrCriticalEdges call. Bail out.
+  const unsigned SuccNum = GetSuccessorNumber(SrcBB, DestBB);
+  BasicBlock *InstrBB =
+      isa<IndirectBrInst>(TI) ? nullptr : SplitCriticalEdge(TI, SuccNum);
+  if (!InstrBB)
+    return nullptr;
+
+  MST.addEdge(SrcBB, InstrBB, 0);
+  MST.addEdge(InstrBB, DestBB, 0).InMST = true;
+  E.Removed = true;
+
+  return CanInstrument(InstrBB);
+}
+
+#ifndef NDEBUG
+static void dumpEdges(CFGMST<Edge, BBInfo> &MST, GCOVFunction &GF) {
+  size_t ID = 0;
+  for (auto &E : make_pointee_range(MST.AllEdges)) {
+    GCOVBlock &Src = E.SrcBB ? GF.getBlock(E.SrcBB) : GF.getEntryBlock();
+    GCOVBlock &Dst = E.DestBB ? GF.getBlock(E.DestBB) : GF.getReturnBlock();
+    dbgs() << "  Edge " << ID++ << ": " << Src.Number << "->" << Dst.Number
+           << E.infoString() << "\n";
+  }
+}
+#endif
+
+bool GCOVProfiler::emitProfileNotes(
+    NamedMDNode *CUNode, bool HasExecOrFork,
+    function_ref<BlockFrequencyInfo *(Function &F)> GetBFI,
+    function_ref<BranchProbabilityInfo *(Function &F)> GetBPI,
+    function_ref<const TargetLibraryInfo &(Function &F)> GetTLI) {
   int Version;
   {
     uint8_t c3 = Options.Version[0];
@@ -725,36 +855,79 @@ void GCOVProfiler::emitProfileNotes(NamedMDNode *CUNode) {
       // TODO: Functions using scope-based EH are currently not supported.
       if (isUsingScopeBasedEH(F)) continue;
 
-      // gcov expects every function to start with an entry block that has a
-      // single successor, so split the entry block to make sure of that.
-      BasicBlock &EntryBlock = F.getEntryBlock();
-
-      Funcs.push_back(std::make_unique<GCOVFunction>(this, &F, SP, EndLine,
-                                                     FunctionIdent++, Version));
-      GCOVFunction &Func = *Funcs.back();
-
       // Add the function line number to the lines of the entry block
       // to have a counter for the function definition.
       uint32_t Line = SP->getLine();
       auto Filename = getFilename(SP);
 
+      BranchProbabilityInfo *BPI = GetBPI(F);
+      BlockFrequencyInfo *BFI = GetBFI(F);
+
+      // Split indirectbr critical edges here before computing the MST rather
+      // than later in getInstrBB() to avoid invalidating it.
+      SplitIndirectBrCriticalEdges(F, BPI, BFI);
+
+      CFGMST<Edge, BBInfo> MST(F, /*InstrumentFuncEntry_=*/false, BPI, BFI);
+
+      // getInstrBB can split basic blocks and push elements to AllEdges.
+      for (size_t I : llvm::seq<size_t>(0, MST.AllEdges.size())) {
+        auto &E = *MST.AllEdges[I];
+        // For now, disable spanning tree optimization when fork or exec* is
+        // used.
+        if (HasExecOrFork)
+          E.InMST = false;
+        E.Place = getInstrBB(MST, E, ExecBlocks);
+      }
+      // Basic blocks in F are finalized at this point.
+      BasicBlock &EntryBlock = F.getEntryBlock();
+      Funcs.push_back(std::make_unique<GCOVFunction>(this, &F, SP, EndLine,
+                                                     FunctionIdent++, Version));
+      GCOVFunction &Func = *Funcs.back();
+
+      // Some non-tree edges are IndirectBr which cannot be split. Ignore them
+      // as well.
+      llvm::erase_if(MST.AllEdges, [](std::unique_ptr<Edge> &E) {
+        return E->Removed || (!E->InMST && !E->Place);
+      });
+      const size_t Measured =
+          llvm::partition(MST.AllEdges,
+                          [](std::unique_ptr<Edge> &E) { return E->Place; }) -
+          MST.AllEdges.begin();
+      for (size_t I : llvm::seq<size_t>(0, Measured)) {
+        Edge &E = *MST.AllEdges[I];
+        GCOVBlock &Src =
+            E.SrcBB ? Func.getBlock(E.SrcBB) : Func.getEntryBlock();
+        GCOVBlock &Dst =
+            E.DestBB ? Func.getBlock(E.DestBB) : Func.getReturnBlock();
+        E.SrcNumber = Src.Number;
+        E.DstNumber = Dst.Number;
+      }
+      std::stable_sort(
+          MST.AllEdges.begin(), MST.AllEdges.begin() + Measured,
+          [](const std::unique_ptr<Edge> &L, const std::unique_ptr<Edge> &R) {
+            return L->SrcNumber != R->SrcNumber ? L->SrcNumber < R->SrcNumber
+                                                : L->DstNumber < R->DstNumber;
+          });
+
+      for (const Edge &E : make_pointee_range(MST.AllEdges)) {
+        GCOVBlock &Src =
+            E.SrcBB ? Func.getBlock(E.SrcBB) : Func.getEntryBlock();
+        GCOVBlock &Dst =
+            E.DestBB ? Func.getBlock(E.DestBB) : Func.getReturnBlock();
+        Src.addEdge(Dst, E.Place ? 0 : uint32_t(GCOV_ARC_ON_TREE));
+      }
+
       // Artificial functions such as global initializers
       if (!SP->isArtificial())
         Func.getBlock(&EntryBlock).getFile(Filename).addLine(Line);
 
-      Func.getEntryBlock().addEdge(Func.getBlock(&EntryBlock));
-      for (auto &BB : F) {
-        GCOVBlock &Block = Func.getBlock(&BB);
-        Instruction *TI = BB.getTerminator();
-        if (int successors = TI->getNumSuccessors()) {
-          for (int i = 0; i != successors; ++i) {
-            Block.addEdge(Func.getBlock(TI->getSuccessor(i)));
-          }
-        } else if (isa<ReturnInst>(TI)) {
-          Block.addEdge(Func.getReturnBlock());
-        }
-        for (GCOVBlock *Succ : Block.OutEdges) {
-          uint32_t Idx = Succ->Number;
+      LLVM_DEBUG(dumpEdges(MST, Func));
+
+      for (auto &GB : Func.Blocks) {
+        const BasicBlock &BB = *GB.first;
+        auto &Block = GB.second;
+        for (auto Succ : Block.OutEdges) {
+          uint32_t Idx = Succ.first->Number;
           do EdgeDestinations.push_back(Idx & 255);
           while ((Idx >>= 8) > 0);
         }
@@ -782,8 +955,30 @@ void GCOVProfiler::emitProfileNotes(NamedMDNode *CUNode) {
         }
         Line = 0;
       }
-      if (EmitGCDA)
-        instrumentFunction(F, CountersBySP);
+      if (EmitGCDA) {
+        DISubprogram *SP = F.getSubprogram();
+        ArrayType *CounterTy = ArrayType::get(Type::getInt64Ty(*Ctx), Measured);
+        GlobalVariable *Counters = new GlobalVariable(
+            *M, CounterTy, false, GlobalValue::InternalLinkage,
+            Constant::getNullValue(CounterTy), "__llvm_gcov_ctr");
+        CountersBySP.emplace_back(Counters, SP);
+
+        for (size_t I : llvm::seq<size_t>(0, Measured)) {
+          const Edge &E = *MST.AllEdges[I];
+          IRBuilder<> Builder(E.Place, E.Place->getFirstInsertionPt());
+          Value *V = Builder.CreateConstInBoundsGEP2_64(
+              Counters->getValueType(), Counters, 0, I);
+          if (Options.Atomic) {
+            Builder.CreateAtomicRMW(AtomicRMWInst::Add, V, Builder.getInt64(1),
+                                    AtomicOrdering::Monotonic);
+          } else {
+            Value *Count =
+                Builder.CreateLoad(Builder.getInt64Ty(), V, "gcov_ctr");
+            Count = Builder.CreateAdd(Count, Builder.getInt64(1));
+            Builder.CreateStore(Count, V);
+          }
+        }
+      }
     }
 
     char Tmp[4];
@@ -830,86 +1025,7 @@ void GCOVProfiler::emitProfileNotes(NamedMDNode *CUNode) {
       EmitGCDA = false;
     }
   }
-}
-
-void GCOVProfiler::instrumentFunction(
-    Function &F,
-    SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP) {
-  DISubprogram *SP = F.getSubprogram();
-  DenseMap<std::pair<BasicBlock *, BasicBlock *>, unsigned> EdgeToCounter;
-  unsigned Edges = 0;
-  EdgeToCounter[{nullptr, &F.getEntryBlock()}] = Edges++;
-  for (auto &BB : F) {
-    Instruction *TI = BB.getTerminator();
-    if (isa<ReturnInst>(TI)) {
-      EdgeToCounter[{&BB, nullptr}] = Edges++;
-    } else {
-      for (BasicBlock *Succ : successors(TI)) {
-        EdgeToCounter[{&BB, Succ}] = Edges++;
-      }
-    }
-  }
-
-  ArrayType *CounterTy = ArrayType::get(Type::getInt64Ty(*Ctx), Edges);
-  GlobalVariable *Counters =
-      new GlobalVariable(*M, CounterTy, false, GlobalValue::InternalLinkage,
-                         Constant::getNullValue(CounterTy), "__llvm_gcov_ctr");
-  CountersBySP.push_back(std::make_pair(Counters, SP));
-
-  // If a BB has several predecessors, use a PHINode to select
-  // the correct counter.
-  for (auto &BB : F) {
-    // The phi node must be at the begin of the BB.
-    IRBuilder<> BuilderForPhi(&*BB.begin());
-    IRBuilder<> Builder(&*BB.getFirstInsertionPt());
-    Type *Int64PtrTy = Type::getInt64PtrTy(*Ctx);
-    Value *V;
-    if (&BB == &F.getEntryBlock()) {
-      auto It = EdgeToCounter.find({nullptr, &BB});
-      V = Builder.CreateConstInBoundsGEP2_64(Counters->getValueType(), Counters,
-                                             0, It->second);
-    } else {
-      const unsigned EdgeCount = std::distance(pred_begin(&BB), pred_end(&BB));
-      if (EdgeCount == 0)
-        continue;
-      PHINode *Phi = BuilderForPhi.CreatePHI(Int64PtrTy, EdgeCount);
-      for (BasicBlock *Pred : predecessors(&BB)) {
-        auto It = EdgeToCounter.find({Pred, &BB});
-        assert(It != EdgeToCounter.end());
-        const unsigned Edge = It->second;
-        Value *EdgeCounter = BuilderForPhi.CreateConstInBoundsGEP2_64(
-            Counters->getValueType(), Counters, 0, Edge);
-        Phi->addIncoming(EdgeCounter, Pred);
-        V = Phi;
-      }
-    }
-
-    if (Options.Atomic) {
-      Builder.CreateAtomicRMW(AtomicRMWInst::Add, V, Builder.getInt64(1),
-                              AtomicOrdering::Monotonic);
-    } else {
-      Value *Count = Builder.CreateLoad(Builder.getInt64Ty(), V, "gcov_ctr");
-      Count = Builder.CreateAdd(Count, Builder.getInt64(1));
-      Builder.CreateStore(Count, V);
-    }
-
-    Instruction *TI = BB.getTerminator();
-    if (isa<ReturnInst>(TI)) {
-      auto It = EdgeToCounter.find({&BB, nullptr});
-      assert(It != EdgeToCounter.end());
-      const unsigned Edge = It->second;
-      Value *Counter = Builder.CreateConstInBoundsGEP2_64(
-          Counters->getValueType(), Counters, 0, Edge);
-      if (Options.Atomic) {
-        Builder.CreateAtomicRMW(AtomicRMWInst::Add, Counter,
-                                Builder.getInt64(1), AtomicOrdering::Monotonic);
-      } else {
-        Value *Count = Builder.CreateLoad(Builder.getInt64Ty(), Counter);
-        Count = Builder.CreateAdd(Count, Builder.getInt64(1));
-        Builder.CreateStore(Count, Counter);
-      }
-    }
-  }
+  return true;
 }
 
 void GCOVProfiler::emitGlobalConstructor(
