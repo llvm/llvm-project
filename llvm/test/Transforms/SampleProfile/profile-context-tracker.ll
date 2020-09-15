@@ -110,15 +110,15 @@ entry:
   ret i32 %call, !dbg !53
 }
 
-; INLINE-ALL-DAG: [[MAIN_PROF]] = !{!"function_entry_count", i64 13}
+; INLINE-ALL-DAG: [[MAIN_PROF]] = !{!"function_entry_count", i64 1}
 ; INLINE-ALL-DAG: [[FUNCA_PROF]] = !{!"function_entry_count", i64 0}
 ; INLINE-ALL-DAG-SAME: [[LEAF_PROF]] = !{!"function_entry_count", i64 0}
-; INLINE-ALL-DAG: [[FUNCB_PROF]] = !{!"function_entry_count", i64 33}
+; INLINE-ALL-DAG: [[FUNCB_PROF]] = !{!"function_entry_count", i64 13}
 
-; INLINE-HOT-DAG: [[MAIN_PROF]] = !{!"function_entry_count", i64 13}
+; INLINE-HOT-DAG: [[MAIN_PROF]] = !{!"function_entry_count", i64 1}
 ; INLINE-HOT-DAG: [[FUNCA_PROF]] = !{!"function_entry_count", i64 12}
 ; INLINE-HOT-DAG-SAME: [[LEAF_PROF]] = !{!"function_entry_count", i64 0}
-; INLINE-HOT-DAG: [[FUNCB_PROF]] = !{!"function_entry_count", i64 33}
+; INLINE-HOT-DAG: [[FUNCB_PROF]] = !{!"function_entry_count", i64 13}
 
 declare i32 @_Z3fibi(i32)
 

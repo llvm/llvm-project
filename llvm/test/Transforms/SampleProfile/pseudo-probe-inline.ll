@@ -69,8 +69,8 @@ if.end:
 ; CHECK: !llvm.pseudo_probe_desc = !{![[#DESC0:]], ![[#DESC1:]]}
 ; CHECK: ![[#DESC0]] = !{i64 [[#GUID1]], i64 [[#HASH1:]], !"foo"}
 ; CHECK: ![[#DESC1]] = !{i64 [[#GUID2]], i64 [[#HASH2:]], !"zen"}
-; CHECK: ![[PD1]] = !{!"branch_weights", i32 25, i32 1}
-; CHECK: ![[PD2]] = !{!"branch_weights", i32 382916, i32 25}
+; CHECK: ![[PD1]] = !{!"branch_weights", i32 5, i32 0}
+; CHECK: ![[PD2]] = !{!"branch_weights", i32 382915, i32 5}
 
 ; Checking to see if YAML file is generated and contains remarks
 ;YAML: --- !Passed

@@ -1982,6 +1982,9 @@ bool SampleProfileLoader::doInitialization(Module &M,
     // Enable iterative-BFI by default for CSSPGO.
     if (!UseIterativeBFIInference.getNumOccurrences())
       UseIterativeBFIInference = true;
+    // Enable Profi by default for CSSPGO.
+    if (!SampleProfileUseProfi.getNumOccurrences())
+      SampleProfileUseProfi = true;
 
     // Tracker for profiles under different context
     ContextTracker = std::make_unique<SampleContextTracker>(
