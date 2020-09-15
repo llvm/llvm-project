@@ -166,23 +166,21 @@ ASTMaker::makeLvalueToRvalue(const VarDecl *Arg,
 ImplicitCastExpr *ASTMaker::makeImplicitCast(const Expr *Arg, QualType Ty,
                                              CastKind CK) {
   return ImplicitCastExpr::Create(C, Ty,
-                                  /* CastKind=*/ CK,
-                                  /* Expr=*/ const_cast<Expr *>(Arg),
-                                  /* CXXCastPath=*/ nullptr,
-                                  /* ExprValueKind=*/ VK_RValue);
+                                  /* CastKind=*/CK,
+                                  /* Expr=*/const_cast<Expr *>(Arg),
+                                  /* CXXCastPath=*/nullptr,
+                                  /* ExprValueKind=*/VK_RValue,
+                                  /* FPFeatures */ FPOptionsOverride());
 }
 
 Expr *ASTMaker::makeIntegralCast(const Expr *Arg, QualType Ty) {
   if (Arg->getType() == Ty)
     return const_cast<Expr*>(Arg);
-
-  return ImplicitCastExpr::Create(C, Ty, CK_IntegralCast,
-                                  const_cast<Expr*>(Arg), nullptr, VK_RValue);
+  return makeImplicitCast(Arg, Ty, CK_IntegralCast);
 }
 
 ImplicitCastExpr *ASTMaker::makeIntegralCastToBoolean(const Expr *Arg) {
-  return ImplicitCastExpr::Create(C, C.BoolTy, CK_IntegralToBoolean,
-                                  const_cast<Expr*>(Arg), nullptr, VK_RValue);
+  return makeImplicitCast(Arg, C.BoolTy, CK_IntegralToBoolean);
 }
 
 ObjCBoolLiteralExpr *ASTMaker::makeObjCBool(bool Val) {
