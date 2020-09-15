@@ -97,7 +97,7 @@ bool WebAssemblyOptimizeLiveIntervals::runOnMachineFunction(
       // values through live-range splitting and stackification, it will have to
       // do.
       MF.getInfo<WebAssemblyFunctionInfo>()->setFrameBaseVreg(
-          SplitLIs.back()->reg);
+          SplitLIs.back()->reg());
     }
     SplitLIs.clear();
   }

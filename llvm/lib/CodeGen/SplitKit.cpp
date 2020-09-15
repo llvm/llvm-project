@@ -168,7 +168,7 @@ void SplitAnalysis::analyzeUses() {
 
   // Get use slots form the use-def chain.
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (MachineOperand &MO : MRI.use_nodbg_operands(CurLI->reg))
+  for (MachineOperand &MO : MRI.use_nodbg_operands(CurLI->reg()))
     if (!MO.isUndef())
       UseSlots.push_back(LIS.getInstructionIndex(*MO.getParent()).getRegSlot());
 
@@ -333,7 +333,7 @@ unsigned SplitAnalysis::countLiveBlocks(const LiveInterval *cli) const {
 }
 
 bool SplitAnalysis::isOriginalEndpoint(SlotIndex Idx) const {
-  unsigned OrigReg = VRM.getOriginal(CurLI->reg);
+  unsigned OrigReg = VRM.getOriginal(CurLI->reg());
   const LiveInterval &Orig = LIS.getInterval(OrigReg);
   assert(!Orig.empty() && "Splitting empty interval?");
   LiveInterval::const_iterator I = Orig.find(Idx);
@@ -433,7 +433,7 @@ void SplitEditor::addDeadDef(LiveInterval &LI, VNInfo *VNI, bool Original) {
     LaneBitmask LM;
     for (const MachineOperand &DefOp : DefMI->defs()) {
       Register R = DefOp.getReg();
-      if (R != LI.reg)
+      if (R != LI.reg())
         continue;
       if (unsigned SR = DefOp.getSubReg())
         LM |= TRI.getSubRegIndexLaneMask(SR);
@@ -636,7 +636,7 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx,
   LiveInterval &OrigLI = LIS.getInterval(Original);
   VNInfo *OrigVNI = OrigLI.getVNInfoAt(UseIdx);
 
-  unsigned Reg = LI->reg;
+  unsigned Reg = LI->reg();
   bool DidRemat = false;
   if (OrigVNI) {
     LiveRangeEdit::Remat RM(ParentVNI);
@@ -1329,7 +1329,7 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
     // Rewrite to the mapped register at Idx.
     unsigned RegIdx = RegAssign.lookup(Idx);
     LiveInterval &LI = LIS.getInterval(Edit->get(RegIdx));
-    MO.setReg(LI.reg);
+    MO.setReg(LI.reg());
     LLVM_DEBUG(dbgs() << "  rewr " << printMBBReference(*MI->getParent())
                       << '\t' << Idx << ':' << RegIdx << '\t' << *MI);
 
@@ -1411,7 +1411,7 @@ void SplitEditor::deleteRematVictims() {
         continue;
       MachineInstr *MI = LIS.getInstructionFromIndex(S.valno->def);
       assert(MI && "Missing instruction for dead def");
-      MI->addRegisterDead(LI->reg, &TRI);
+      MI->addRegisterDead(LI->reg(), &TRI);
 
       if (!MI->allDefsAreDead())
         continue;
@@ -1531,7 +1531,7 @@ void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
     LIS.splitSeparateComponents(LI, SplitLIs);
     unsigned Original = VRM.getOriginal(VReg);
     for (LiveInterval *SplitLI : SplitLIs)
-      VRM.setIsSplitFromReg(SplitLI->reg, Original);
+      VRM.setIsSplitFromReg(SplitLI->reg(), Original);
 
     // The new intervals all map back to i.
     if (LRMap)
