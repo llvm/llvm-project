@@ -12120,23 +12120,32 @@ static SDValue lowerShuffleAsByteRotateAndPermute(
 /// This matches the extremely common pattern for handling combined
 /// shuffle+blend operations on newer X86 ISAs where we have very fast blend
 /// operations. It will try to pick the best arrangement of shuffles and
-/// blends.
-static SDValue lowerShuffleAsDecomposedShuffleBlend(
+/// blends. For vXi8/vXi16 shuffles we may use unpack instead of blend.
+static SDValue lowerShuffleAsDecomposedShuffleMerge(
     const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
     const X86Subtarget &Subtarget, SelectionDAG &DAG) {
+  int NumElts = Mask.size();
+  int NumLanes = VT.getSizeInBits() / 128;
+  int NumEltsPerLane = NumElts / NumLanes;
+
   // Shuffle the input elements into the desired positions in V1 and V2 and
-  // blend them together.
-  SmallVector<int, 32> V1Mask(Mask.size(), -1);
-  SmallVector<int, 32> V2Mask(Mask.size(), -1);
-  SmallVector<int, 32> BlendMask(Mask.size(), -1);
-  for (int i = 0, Size = Mask.size(); i < Size; ++i)
-    if (Mask[i] >= 0 && Mask[i] < Size) {
-      V1Mask[i] = Mask[i];
-      BlendMask[i] = i;
-    } else if (Mask[i] >= Size) {
-      V2Mask[i] = Mask[i] - Size;
-      BlendMask[i] = i + Size;
+  // unpack/blend them together.
+  bool IsAlternating = true;
+  SmallVector<int, 32> V1Mask(NumElts, -1);
+  SmallVector<int, 32> V2Mask(NumElts, -1);
+  SmallVector<int, 32> FinalMask(NumElts, -1);
+  for (int i = 0; i < NumElts; ++i) {
+    int M = Mask[i];
+    if (M >= 0 && M < NumElts) {
+      V1Mask[i] = M;
+      FinalMask[i] = i;
+      IsAlternating &= (i & 1) == 0;
+    } else if (M >= NumElts) {
+      V2Mask[i] = M - NumElts;
+      FinalMask[i] = i + NumElts;
+      IsAlternating &= (i & 1) == 1;
     }
+  }
 
   // Try to lower with the simpler initial blend/unpack/rotate strategies unless
   // one of the input shuffles would be a no-op. We prefer to shuffle inputs as
@@ -12160,9 +12169,30 @@ static SDValue lowerShuffleAsDecomposedShuffleBlend(
       return BlendPerm;
   }
 
+  // If the final mask is an alternating blend of vXi8/vXi16, convert to an
+  // UNPCKL(SHUFFLE, SHUFFLE) pattern.
+  // TODO: It doesn't have to be alternating - but each lane mustn't have more
+  // than half the elements coming from each source.
+  if (IsAlternating && VT.getScalarSizeInBits() < 32) {
+    V1Mask.assign(NumElts, -1);
+    V2Mask.assign(NumElts, -1);
+    FinalMask.assign(NumElts, -1);
+    for (int i = 0; i != NumElts; i += NumEltsPerLane)
+      for (int j = 0; j != NumEltsPerLane; ++j) {
+        int M = Mask[i + j];
+        if (M >= 0 && M < NumElts) {
+          V1Mask[i + (j / 2)] = M;
+          FinalMask[i + j] = i + (j / 2);
+        } else if (M >= NumElts) {
+          V2Mask[i + (j / 2)] = M - NumElts;
+          FinalMask[i + j] = i + (j / 2) + NumElts;
+        }
+      }
+  }
+
   V1 = DAG.getVectorShuffle(VT, DL, V1, DAG.getUNDEF(VT), V1Mask);
   V2 = DAG.getVectorShuffle(VT, DL, V2, DAG.getUNDEF(VT), V2Mask);
-  return DAG.getVectorShuffle(VT, DL, V1, V2, BlendMask);
+  return DAG.getVectorShuffle(VT, DL, V1, V2, FinalMask);
 }
 
 /// Try to lower a vector shuffle as a bit rotation.
@@ -13901,7 +13931,7 @@ static SDValue lowerV2I64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // If we have direct support for blends, we should lower by decomposing into
   // a permute. That will be faster than the domain cross.
   if (IsBlendSupported)
-    return lowerShuffleAsDecomposedShuffleBlend(DL, MVT::v2i64, V1, V2, Mask,
+    return lowerShuffleAsDecomposedShuffleMerge(DL, MVT::v2i64, V1, V2, Mask,
                                                 Subtarget, DAG);
 
   // We implement this with SHUFPD which is pretty lame because it will likely
@@ -14193,7 +14223,7 @@ static SDValue lowerV4I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     // If we have direct support for blends, we should lower by decomposing into
     // a permute. That will be faster than the domain cross.
     if (IsBlendSupported)
-      return lowerShuffleAsDecomposedShuffleBlend(DL, MVT::v4i32, V1, V2, Mask,
+      return lowerShuffleAsDecomposedShuffleMerge(DL, MVT::v4i32, V1, V2, Mask,
                                                   Subtarget, DAG);
 
     // Try to lower by permuting the inputs into an unpack instruction.
@@ -14943,8 +14973,8 @@ static SDValue lowerV8I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   }
 
   // We can always bit-blend if we have to so the fallback strategy is to
-  // decompose into single-input permutes and blends.
-  return lowerShuffleAsDecomposedShuffleBlend(DL, MVT::v8i16, V1, V2,
+  // decompose into single-input permutes and blends/unpacks.
+  return lowerShuffleAsDecomposedShuffleMerge(DL, MVT::v8i16, V1, V2,
                                               Mask, Subtarget, DAG);
 }
 
@@ -15281,9 +15311,9 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return Result;
   }
 
-  // Handle multi-input cases by blending single-input shuffles.
+  // Handle multi-input cases by blending/unpacking single-input shuffles.
   if (NumV2Elements > 0)
-    return lowerShuffleAsDecomposedShuffleBlend(DL, MVT::v16i8, V1, V2, Mask,
+    return lowerShuffleAsDecomposedShuffleMerge(DL, MVT::v16i8, V1, V2, Mask,
                                                 Subtarget, DAG);
 
   // The fallback path for single-input shuffles widens this into two v8i16
@@ -15463,7 +15493,7 @@ static SDValue splitAndLowerShuffle(const SDLoc &DL, MVT VT, SDValue V1,
 }
 
 /// Either split a vector in halves or decompose the shuffles and the
-/// blend.
+/// blend/unpack.
 ///
 /// This is provided as a good fallback for many lowerings of non-single-input
 /// shuffles with more than one 128-bit lane. In those cases, we want to select
@@ -15498,8 +15528,8 @@ static SDValue lowerShuffleAsSplitOrBlend(const SDLoc &DL, MVT VT, SDValue V1,
     return true;
   };
   if (DoBothBroadcast())
-    return lowerShuffleAsDecomposedShuffleBlend(DL, VT, V1, V2, Mask,
-                                                Subtarget, DAG);
+    return lowerShuffleAsDecomposedShuffleMerge(DL, VT, V1, V2, Mask, Subtarget,
+                                                DAG);
 
   // If the inputs all stem from a single 128-bit lane of each input, then we
   // split them rather than blending because the split will decompose to
@@ -15515,9 +15545,9 @@ static SDValue lowerShuffleAsSplitOrBlend(const SDLoc &DL, MVT VT, SDValue V1,
   if (LaneInputs[0].count() <= 1 && LaneInputs[1].count() <= 1)
     return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG);
 
-  // Otherwise, just fall back to decomposed shuffles and a blend. This requires
-  // that the decomposed single-input shuffles don't end up here.
-  return lowerShuffleAsDecomposedShuffleBlend(DL, VT, V1, V2, Mask, Subtarget,
+  // Otherwise, just fall back to decomposed shuffles and a blend/unpack. This
+  // requires that the decomposed single-input shuffles don't end up here.
+  return lowerShuffleAsDecomposedShuffleMerge(DL, VT, V1, V2, Mask, Subtarget,
                                               DAG);
 }
 
@@ -16569,7 +16599,7 @@ static SDValue lowerV4F64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // If we have one input in place, then we can permute the other input and
   // blend the result.
   if (isShuffleMaskInputInPlace(0, Mask) || isShuffleMaskInputInPlace(1, Mask))
-    return lowerShuffleAsDecomposedShuffleBlend(DL, MVT::v4f64, V1, V2, Mask,
+    return lowerShuffleAsDecomposedShuffleMerge(DL, MVT::v4f64, V1, V2, Mask,
                                                 Subtarget, DAG);
 
   // Try to create an in-lane repeating shuffle mask and then shuffle the
@@ -16597,7 +16627,7 @@ static SDValue lowerV4F64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // If we have AVX2 then we always want to lower with a blend because an v4 we
   // can fully permute the elements.
   if (Subtarget.hasAVX2())
-    return lowerShuffleAsDecomposedShuffleBlend(DL, MVT::v4f64, V1, V2, Mask,
+    return lowerShuffleAsDecomposedShuffleMerge(DL, MVT::v4f64, V1, V2, Mask,
                                                 Subtarget, DAG);
 
   // Otherwise fall back on generic lowering.
@@ -16679,7 +16709,7 @@ static SDValue lowerV4I64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // If we have one input in place, then we can permute the other input and
   // blend the result.
   if (isShuffleMaskInputInPlace(0, Mask) || isShuffleMaskInputInPlace(1, Mask))
-    return lowerShuffleAsDecomposedShuffleBlend(DL, MVT::v4i64, V1, V2, Mask,
+    return lowerShuffleAsDecomposedShuffleMerge(DL, MVT::v4i64, V1, V2, Mask,
                                                 Subtarget, DAG);
 
   // Try to create an in-lane repeating shuffle mask and then shuffle the
@@ -16699,7 +16729,7 @@ static SDValue lowerV4I64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
       return Result;
 
   // Otherwise fall back on generic blend lowering.
-  return lowerShuffleAsDecomposedShuffleBlend(DL, MVT::v4i64, V1, V2, Mask,
+  return lowerShuffleAsDecomposedShuffleMerge(DL, MVT::v4i64, V1, V2, Mask,
                                               Subtarget, DAG);
 }
 
@@ -16794,7 +16824,7 @@ static SDValue lowerV8F32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // If we have AVX2 then we always want to lower with a blend because at v8 we
   // can fully permute the elements.
   if (Subtarget.hasAVX2())
-    return lowerShuffleAsDecomposedShuffleBlend(DL, MVT::v8f32, V1, V2, Mask,
+    return lowerShuffleAsDecomposedShuffleMerge(DL, MVT::v8f32, V1, V2, Mask,
                                                 Subtarget, DAG);
 
   // Otherwise fall back on generic lowering.
@@ -16913,7 +16943,7 @@ static SDValue lowerV8I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return Result;
 
   // Otherwise fall back on generic blend lowering.
-  return lowerShuffleAsDecomposedShuffleBlend(DL, MVT::v8i32, V1, V2, Mask,
+  return lowerShuffleAsDecomposedShuffleMerge(DL, MVT::v8i32, V1, V2, Mask,
                                               Subtarget, DAG);
 }
 
