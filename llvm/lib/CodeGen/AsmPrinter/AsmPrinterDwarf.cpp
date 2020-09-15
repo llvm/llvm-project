@@ -154,19 +154,22 @@ void AsmPrinter::emitDwarfSymbolReference(const MCSymbol *Label,
   if (!ForceOffset) {
     // On COFF targets, we have to emit the special .secrel32 directive.
     if (MAI->needsDwarfSectionOffsetDirective()) {
+      assert(!isDwarf64() &&
+             "emitting DWARF64 is not implemented for COFF targets");
       OutStreamer->EmitCOFFSecRel32(Label, /*Offset=*/0);
       return;
     }
 
     // If the format uses relocations with dwarf, refer to the symbol directly.
     if (MAI->doesDwarfUseRelocationsAcrossSections()) {
-      OutStreamer->emitSymbolValue(Label, 4);
+      OutStreamer->emitSymbolValue(Label, getDwarfOffsetByteSize());
       return;
     }
   }
 
   // Otherwise, emit it as a label difference from the start of the section.
-  emitLabelDifference(Label, Label->getSection().getBeginSymbol(), 4);
+  emitLabelDifference(Label, Label->getSection().getBeginSymbol(),
+                      getDwarfOffsetByteSize());
 }
 
 void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntry S) const {
@@ -177,12 +180,11 @@ void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntry S) const {
   }
 
   // Just emit the offset directly; no need for symbol math.
-  emitInt32(S.Offset);
+  OutStreamer->emitIntValue(S.Offset, getDwarfOffsetByteSize());
 }
 
 void AsmPrinter::emitDwarfOffset(const MCSymbol *Label, uint64_t Offset) const {
-  // TODO: Support DWARF64
-  emitLabelPlusOffset(Label, Offset, 4);
+  emitLabelPlusOffset(Label, Offset, getDwarfOffsetByteSize());
 }
 
 void AsmPrinter::emitCallSiteOffset(const MCSymbol *Hi, const MCSymbol *Lo,
