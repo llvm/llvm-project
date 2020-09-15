@@ -986,3 +986,79 @@ func @extract_element_from_tensor_from_elements(%element : index) -> index {
   // CHECK: [[ARG]] : index
   return %extracted_element : index
 }
+
+// -----
+
+// CHECK-LABEL: func @extract_element_from_dynamic_tensor_from_elements
+// CHECK-SAME: %[[IDX:.*]]: index, %[[TENSOR:.*]]: tensor<*xf32>
+func @extract_element_from_dynamic_tensor_from_elements(%idx: index, %tensor: tensor<*xf32>) -> index {
+  %size = rank %tensor : tensor<*xf32>
+  // CHECK-NEXT: %[[RES:.*]] = dim %[[TENSOR]], %[[IDX]]
+  %0 = dynamic_tensor_from_elements %size {
+    ^bb0(%arg0: index):
+    %1 = dim %tensor, %arg0 : tensor<*xf32>
+    yield %1 : index
+  } : tensor<?xindex>
+  %1 = extract_element %0[%idx] : tensor<?xindex>
+  // CHECK-NEXT: return %[[RES]]
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @extract_element_from_dynamic_tensor_from_elements_2d
+// CHECK-SAME: %[[IDX0:.*]]: index, %[[IDX1:.*]]: index, %[[TENSOR:.*]]: tensor<*xf32>
+func @extract_element_from_dynamic_tensor_from_elements_2d(%idx0: index, %idx1: index, %tensor: tensor<*xf32>) -> index {
+  %size = rank %tensor : tensor<*xf32>
+  // CHECK-NEXT: %[[DIM0:.*]] = dim %[[TENSOR]], %[[IDX0]]
+  // CHECK-NEXT: %[[DIM1:.*]] = dim %[[TENSOR]], %[[IDX1]]
+  // CHECK-NEXT: %[[RES:.*]] = addi %[[DIM0]], %[[DIM1]]
+  %0 = dynamic_tensor_from_elements %size, %size {
+    ^bb0(%arg0: index, %arg1: index):
+    %1 = dim %tensor, %arg0 : tensor<*xf32>
+    %2 = dim %tensor, %arg1 : tensor<*xf32>
+    %3 = addi %1, %2 : index
+    yield %3 : index
+  } : tensor<?x?xindex>
+  %4 = extract_element %0[%idx0, %idx1] : tensor<?x?xindex>
+  // CHECK-NEXT: return %[[RES]]
+  return %4 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @extract_element_from_dynamic_tensor_from_elements_sideeffects
+// CHECK-SAME: %[[IDX:.*]]: index
+func @extract_element_from_dynamic_tensor_from_elements_sideeffects(%idx: index, %tensor: tensor<*xf32>) -> index {
+  %size = rank %tensor : tensor<*xf32>
+  %mem = alloc(%size) : memref<?xindex>
+  // CHECK: %[[DTENSOR:.*]] = dynamic_tensor_from_elements
+  %0 = dynamic_tensor_from_elements %size {
+    ^bb0(%arg0: index):
+    %1 = dim %tensor, %arg0 : tensor<*xf32>
+    store %1, %mem[%arg0] : memref<?xindex>
+    yield %1 : index
+  } : tensor<?xindex>
+  // CHECK: %[[RES:.*]] = extract_element %[[DTENSOR]][%[[IDX]]]
+  %1 = extract_element %0[%idx] : tensor<?xindex>
+  // CHECK-NEXT: return %[[RES]]
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: @static_dynamic_tensor_from_elements
+// CHECK-SAME: %[[SIZE1:.*]]: index, %[[SIZE4:.*]]: index)
+func @static_dynamic_tensor_from_elements(%size1: index, %size4: index) -> tensor<3x?x?x7x?xindex> {
+  %c5 = constant 5 : index
+  // CHECK: dynamic_tensor_from_elements %[[SIZE1]], %[[SIZE4]]
+  %0 = dynamic_tensor_from_elements %size1, %c5, %size4 {
+    ^bb0(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index):
+    %1 = constant 32 : index
+    yield %1 : index
+  // CHECK: : tensor<3x?x5x7x?xindex>
+  } : tensor<3x?x?x7x?xindex>
+  // CHECK: tensor_cast %{{.*}} : tensor<3x?x5x7x?xindex> to tensor<3x?x?x7x?xindex>
+  return %0 : tensor<3x?x?x7x?xindex>
+}
+
