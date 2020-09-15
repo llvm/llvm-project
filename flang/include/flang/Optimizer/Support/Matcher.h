@@ -15,7 +15,8 @@
 
 #include <variant>
 
-// Boilerplate CRTP class for a simplified type-casing syntactic sugar.
+// Boilerplate CRTP class for a simplified type-casing syntactic sugar. This
+// lets one write pattern matchers using a more compact syntax.
 namespace fir::details {
 // clang-format off
 template<class... Ts> struct matches : Ts... { using Ts::operator()...; };
