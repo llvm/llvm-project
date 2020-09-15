@@ -373,6 +373,11 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
   DwarfVersion =
       TT.isNVPTX() ? 2 : (DwarfVersion ? DwarfVersion : dwarf::DWARF_VERSION);
 
+  bool Dwarf64 = Asm->TM.Options.MCOptions.Dwarf64 &&
+                 DwarfVersion >= 3 &&   // DWARF64 was introduced in DWARFv3.
+                 TT.isArch64Bit() &&    // DWARF64 requires 64-bit relocations.
+                 TT.isOSBinFormatELF(); // Support only ELF for now.
+
   UseRangesSection = !NoDwarfRangesSection && !TT.isNVPTX();
 
   // Use sections as references. Force for NVPTX.
@@ -414,6 +419,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
       DwarfVersion >= 5 || (UseGNUDebugMacro && !useSplitDwarf());
 
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
+  Asm->OutStreamer->getContext().setDwarfFormat(Dwarf64 ? dwarf::DWARF64
+                                                        : dwarf::DWARF32);
 }
 
 // Define out of line so we don't have to include DwarfUnit.h in DwarfDebug.h.
