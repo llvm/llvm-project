@@ -3,11 +3,11 @@
 # RUN: not lld-link /lldmingw /out:%t.exe %t.o /entry:entry 2>&1 | FileCheck %s
 
 # CHECK: error: undefined symbol: bar()
-# CHECK-NEXT: >>> referenced by /path{{[/\\]}}to{{[/\\]}}src{{[/\\]}}undef.cpp:17
+# CHECK-NEXT: >>> referenced by /path/to/src{{[/\\]}}undef.cpp:17
 # CHECK-NEXT: >>>               {{.*}}.o:(entry)
 # CHECK-EMPTY:
 # CHECK-NEXT: error: undefined symbol: foo()
-# CHECK-NEXT: >>> referenced by /path{{[/\\]}}to{{[/\\]}}src{{[/\\]}}undef.cpp:7
+# CHECK-NEXT: >>> referenced by /path/to/src{{[/\\]}}undef.cpp:7
 # CHECK-NEXT: >>>               {{.*}}.o:(A::afunc())
 
         .text

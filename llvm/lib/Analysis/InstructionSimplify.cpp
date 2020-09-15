@@ -5477,10 +5477,12 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
       if (C->isNegative() == IsMin && (!PropagateNaN || Q.CxtI->hasNoNaNs()))
         return ConstantFP::get(ReturnType, *C);
 
-      // TODO: minimum(nnan x, inf) -> x
-      // TODO: minnum(nnan ninf x, flt_max) -> x
-      // TODO: maximum(nnan x, -inf) -> x
-      // TODO: maxnum(nnan ninf x, -flt_max) -> x
+      // minnum(X, +inf) -> X if nnan
+      // maxnum(X, -inf) -> X if nnan
+      // minimum(X, +inf) -> X
+      // maximum(X, -inf) -> X
+      if (C->isNegative() != IsMin && (PropagateNaN || Q.CxtI->hasNoNaNs()))
+        return Op0;
     }
 
     // Min/max of the same operation with common operand:

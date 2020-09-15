@@ -1511,6 +1511,8 @@ def DynamicTensorFromElementsOp : Std_Op<"dynamic_tensor_from_elements",
               "ValueRange dynamicExtents, "
               "function_ref<void(OpBuilder &, Location, ValueRange)>">,
   ];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

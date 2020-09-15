@@ -2,7 +2,7 @@
 ; Test that the getelementptr generated when the dse pass determines that
 ; a memset can be shortened has the debugloc carried over from the memset.
 
-; RUN: opt -S -march=native -dse < %s| FileCheck %s
+; RUN: opt -S -march=native -dse -enable-dse-memoryssa < %s| FileCheck %s
 ; CHECK: bitcast [5 x i64]* %{{[a-zA-Z_][a-zA-Z0-9_]*}} to i8*, !dbg
 ; CHECK-NEXT: %{{[0-9]+}} = getelementptr inbounds i8, i8* %0, i64 32, !dbg ![[DBG:[0-9]+]]
 ; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* align 16 %1, i8 0, i64 8, i1 false), !dbg ![[DBG:[0-9]+]]

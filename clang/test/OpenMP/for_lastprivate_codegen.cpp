@@ -654,7 +654,8 @@ int main() {
 // CHECK-NEXT: br label %[[LAST_DONE]]
 // CHECK: [[LAST_DONE]]
 
-// CHECK:      call void @__kmpc_free(i32 [[GTID]], i8* [[F_VOID_PTR]], i8* inttoptr (i64 3 to i8*))
+// CHECK: [[F_VOID_PTR:%.+]] = bitcast float* [[F_PRIV]] to i8*
+// CHECK-NEXT:      call void @__kmpc_free(i32 [[GTID]], i8* [[F_VOID_PTR]], i8* inttoptr (i64 3 to i8*))
 // CHECK-NEXT: call void @__kmpc_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i{{[0-9]+}} [[GTID]])
 // CHECK-NEXT: ret void
 

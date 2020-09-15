@@ -221,6 +221,7 @@ public:
   void writeBody() override;
 
   std::vector<llvm::wasm::WasmExport> exports;
+  std::vector<const Symbol *> exportedSymbols;
 };
 
 class StartSection : public SyntheticSection {

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix UNTIEDRT
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -x c++ -emit-llvm %s -o - -DUNTIEDRT | FileCheck %s --check-prefix CHECK --check-prefix UNTIEDRT
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s -DUNTIEDRT
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix UNTIEDRT
 //
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fopenmp-enable-irbuilder -x c++ -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-enable-irbuilder -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
@@ -13,6 +13,19 @@
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
+
+enum omp_allocator_handle_t {
+  omp_null_allocator = 0,
+  omp_default_mem_alloc = 1,
+  omp_large_cap_mem_alloc = 2,
+  omp_const_mem_alloc = 3,
+  omp_high_bw_mem_alloc = 4,
+  omp_low_lat_mem_alloc = 5,
+  omp_cgroup_mem_alloc = 6,
+  omp_pteam_mem_alloc = 7,
+  omp_thread_mem_alloc = 8,
+  KMP_ALLOCATOR_MAX_HANDLE = __UINTPTR_MAX__
+};
 
 // CHECK-DAG: [[IDENT_T:%.+]] = type { i32, i32, i32, i32, i8* }
 // CHECK-DAG: [[STRUCT_SHAREDS:%.+]] = type { i8*, [2 x [[STRUCT_S:%.+]]]* }
@@ -258,21 +271,26 @@ int main() {
     a = 4;
     c = 5;
   }
-// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc([[IDENT_T]]* @{{.+}}, i32 {{%.*}}, i32 0, i64 48, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, [[KMP_TASK_T]]{{.*}}*)* [[TASK_ENTRY6:@.+]] to i32 (i32, i8*)*))
+// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc([[IDENT_T]]* @{{.+}}, i32 {{%.*}}, i32 0, i64 256, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, [[KMP_TASK_T]]{{.*}}*)* [[TASK_ENTRY6:@.+]] to i32 (i32, i8*)*))
 // CHECK: call i32 @__kmpc_omp_task([[IDENT_T]]* @{{.+}}, i32 {{%.*}}, i8* [[ORIG_TASK_PTR]])
-#pragma omp task untied
+#pragma omp task untied firstprivate(c) allocate(omp_pteam_mem_alloc:c)
   {
-    S s1;
+    S s1, s2;
+#ifdef UNTIEDRT
+#pragma omp allocate(s2) allocator(omp_pteam_mem_alloc)
+#endif
+    s2.a = 0;
 #pragma omp task
-    a = 4;
+    a = c = 4;
 #pragma omp taskyield
     s1 = S();
+    s2.a = 10;
 #pragma omp taskwait
   }
   return a;
 }
 // CHECK: define internal i32 [[TASK_ENTRY1]](i32 %0, [[KMP_TASK_T]]{{.*}}* noalias %1)
-// CHECK: store i32 15, i32* [[A_PTR:@.+]]
+// CHECK: store i32 15, i32* [[A_PTR:@.+]],
 // CHECK: [[A_VAL:%.+]] = load i32, i32* [[A_PTR]]
 // CHECK: [[A_VAL_I8:%.+]] = trunc i32 [[A_VAL]] to i8
 // CHECK: store i8 [[A_VAL_I8]], i8* %{{.+}}
@@ -294,10 +312,13 @@ int main() {
 // CHECK: define internal i32
 // CHECK: store i32 4, i32* [[A_PTR]]
 
-// CHECK: define internal i32 [[TASK_ENTRY6]](i32 %0, [[KMP_TASK_T]]{{.*}}* noalias %1)
+// CHECK: define internal i32 [[TASK_ENTRY6]](i32 %0, [[KMP_TASK_T]]{{.*}}* noalias %{{.+}})
 // UNTIEDRT: [[S1_ADDR_PTR:%.+]] = alloca %struct.S*,
-// UNTIEDRT: call void (i8*, ...) %{{.+}}(i8* %{{.+}}, %struct.S** [[S1_ADDR_PTR]])
-// UNTIEDRT: [[S1_ADDR:%.+]] = load %struct.S*, %struct.S** [[S1_ADDR_PTR]],
+// UNTIEDRT: [[S2_ADDR_PTR_REF:%.+]] = alloca %struct.S**,
+// UNTIEDRT: call void (i8*, ...) %{{.+}}(i8* %{{.+}}, %struct.S** [[S1_ADDR_PTR]], %struct.S*** [[S2_ADDR_PTR_REF]])
+// UNTIEDRT-DAG: [[S1_ADDR:%.+]] = load %struct.S*, %struct.S** [[S1_ADDR_PTR]],
+// UNTIEDRT-DAG: [[S2_ADDR_PTR:%.+]] = load %struct.S**, %struct.S*** [[S2_ADDR_PTR_REF]],
+// UNTIEDRT-DAG: [[S2_ADDR:%.+]] = load %struct.S*, %struct.S** [[S2_ADDR_PTR]],
 // CHECK: switch i32 %{{.+}}, label %[[DONE:.+]] [
 
 // CHECK: [[DONE]]:
@@ -309,16 +330,25 @@ int main() {
 // UNTIEDRT: br label %[[EXIT:[^,]+]]
 
 // UNTIEDRT: call void [[CONSTR:@.+]](%struct.S* [[S1_ADDR]])
+// UNTIEDRT: [[S2_VOID_PTR:%.+]] = call i8* @__kmpc_alloc(i32 %{{.+}}, i64 4, i8* inttoptr (i64 7 to i8*))
+// UNTIEDRT: [[S2_PTR:%.+]] = bitcast i8* [[S2_VOID_PTR]] to %struct.S*
+// UNTIEDRT: store %struct.S* [[S2_PTR]], %struct.S** [[S2_ADDR_PTR]],
+// UNTIEDRT: load i32*, i32** %
+// UNTIEDRT: store i32 2, i32* %
+// UNTIEDRT: call i32 @__kmpc_omp_task(%
+// UNTIEDRT: br label %[[EXIT]]
+
+// UNTIEDRT: call void [[CONSTR]](%struct.S* [[S2_ADDR]])
 // CHECK: call i8* @__kmpc_omp_task_alloc(
 // CHECK: call i32 @__kmpc_omp_task(%
 // CHECK: load i32*, i32** %
-// CHECK: store i32 2, i32* %
+// CHECK: store i32 {{2|3}}, i32* %
 // CHECK: call i32 @__kmpc_omp_task(%
 // UNTIEDRT: br label %[[EXIT]]
 
 // CHECK: call i32 @__kmpc_omp_taskyield(%
 // CHECK: load i32*, i32** %
-// CHECK: store i32 3, i32* %
+// CHECK: store i32 {{3|4}}, i32* %
 // CHECK: call i32 @__kmpc_omp_task(%
 // UNTIEDRT: br label %[[EXIT]]
 
@@ -331,10 +361,13 @@ int main() {
 
 // CHECK: call i32 @__kmpc_omp_taskwait(%
 // CHECK: load i32*, i32** %
-// CHECK: store i32 4, i32* %
+// CHECK: store i32 {{4|5}}, i32* %
 // CHECK: call i32 @__kmpc_omp_task(%
 // UNTIEDRT: br label %[[EXIT]]
 
+// UNTIEDRT: call void [[DESTR]](%struct.S* [[S2_ADDR]])
+// UNTIEDRT: [[S2_VOID_PTR:%.+]] = bitcast %struct.S* [[S2_ADDR]] to i8*
+// UNTIEDRT: call void @__kmpc_free(i32 %{{.+}}, i8* [[S2_VOID_PTR]], i8* inttoptr (i64 7 to i8*))
 // UNTIEDRT: call void [[DESTR]](%struct.S* [[S1_ADDR]])
 // CHECK: br label %[[CLEANUP]]
 

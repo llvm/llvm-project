@@ -938,6 +938,7 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
   case R_PPC64_TPREL16_HIGHERA:
   case R_PPC64_TPREL16_HIGHEST:
   case R_PPC64_TPREL16_HIGHESTA:
+  case R_PPC64_TPREL34:
     return R_TLS;
   case R_PPC64_DTPREL16:
   case R_PPC64_DTPREL16_DS:
@@ -1235,7 +1236,8 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
                              (val & si1Mask));
     break;
   }
-  case R_PPC64_GOT_PCREL34: {
+  case R_PPC64_GOT_PCREL34:
+  case R_PPC64_TPREL34: {
     const uint64_t si0Mask = 0x00000003ffff0000;
     const uint64_t si1Mask = 0x000000000000ffff;
     const uint64_t fullMask = 0x0003ffff0000ffff;

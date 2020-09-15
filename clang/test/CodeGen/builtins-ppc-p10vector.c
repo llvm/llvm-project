@@ -17,6 +17,7 @@ vector signed int vsia, vsib;
 vector unsigned int vuia, vuib, vuic;
 vector signed long long vslla, vsllb;
 vector unsigned long long vulla, vullb, vullc;
+vector signed __int128 vsi128a, vsi128b;
 vector unsigned __int128 vui128a, vui128b, vui128c;
 vector float vfa, vfb;
 vector double vda, vdb;
@@ -67,6 +68,18 @@ vector unsigned long long test_vec_div_ull(void) {
   // CHECK: udiv <2 x i64>
   // CHECK-NEXT: ret <2 x i64>
   return vec_div(vulla, vullb);
+}
+
+vector unsigned __int128 test_vec_div_u128(void) {
+  // CHECK: udiv <1 x i128>
+  // CHECK-NEXT: ret <1 x i128>
+  return vec_div(vui128a, vui128b);
+}
+
+vector signed __int128 test_vec_div_s128(void) {
+  // CHECK: sdiv <1 x i128>
+  // CHECK-NEXT: ret <1 x i128>
+  return vec_div(vsi128a, vsi128b);
 }
 
 vector signed int test_vec_dive_si(void) {

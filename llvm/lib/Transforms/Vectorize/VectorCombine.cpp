@@ -98,7 +98,12 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     return false;
   auto *Load = dyn_cast<LoadInst>(Scalar);
   Type *ScalarTy = Scalar->getType();
-  if (!Load || !Load->isSimple())
+  // Do not vectorize scalar load (widening) if atomic/volatile or under
+  // asan/hwasan/memtag/tsan. The widened load may load data from dirty regions
+  // or create data races non-existent in the source.
+  if (!Load || !Load->isSimple() ||
+      Load->getFunction()->hasFnAttribute(Attribute::SanitizeMemTag) ||
+      mustSuppressSpeculation(*Load))
     return false;
   auto *Ty = dyn_cast<FixedVectorType>(I.getType());
   if (!Ty)

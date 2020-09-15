@@ -1090,34 +1090,11 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   Optional<QualType> FilePtrRestrictTy = getRestrictTy(FilePtrTy);
 
   // Templates for summaries that are reused by many functions.
-  auto Getc = [&]() {
-    return Summary(ArgTypes{FilePtrTy}, RetType{IntTy}, NoEvalCall)
-        .Case({ReturnValueCondition(WithinRange,
-                                    {{EOFv, EOFv}, {0, UCharRangeMax}})});
-  };
   auto Read = [&](RetType R, RangeInt Max) {
     return Summary(ArgTypes{Irrelevant, Irrelevant, SizeTy}, RetType{R},
                    NoEvalCall)
         .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
                ReturnValueCondition(WithinRange, Range(-1, Max))});
-  };
-  auto Fread = [&]() {
-    return Summary(
-               ArgTypes{VoidPtrRestrictTy, SizeTy, SizeTy, FilePtrRestrictTy},
-               RetType{SizeTy}, NoEvalCall)
-        .Case({
-            ReturnValueCondition(LessThanOrEq, ArgNo(2)),
-        })
-        .ArgConstraint(NotNull(ArgNo(0)));
-  };
-  auto Fwrite = [&]() {
-    return Summary(ArgTypes{ConstVoidPtrRestrictTy, SizeTy, SizeTy,
-                            FilePtrRestrictTy},
-                   RetType{SizeTy}, NoEvalCall)
-        .Case({
-            ReturnValueCondition(LessThanOrEq, ArgNo(2)),
-        })
-        .ArgConstraint(NotNull(ArgNo(0)));
   };
   auto Getline = [&](RetType R, RangeInt Max) {
     return Summary(ArgTypes{Irrelevant, Irrelevant, Irrelevant}, RetType{R},
@@ -1283,19 +1260,45 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                          0U, WithinRange, {{EOFv, EOFv}, {0, UCharRangeMax}})));
 
   // The getc() family of functions that returns either a char or an EOF.
-    addToFunctionSummaryMap("getc", Getc());
-    addToFunctionSummaryMap("fgetc", Getc());
+  addToFunctionSummaryMap(
+      {"getc", "fgetc"}, Signature(ArgTypes{FilePtrTy}, RetType{IntTy}),
+      Summary(NoEvalCall)
+          .Case({ReturnValueCondition(WithinRange,
+                                      {{EOFv, EOFv}, {0, UCharRangeMax}})}));
   addToFunctionSummaryMap(
       "getchar", Summary(ArgTypes{}, RetType{IntTy}, NoEvalCall)
                      .Case({ReturnValueCondition(
                          WithinRange, {{EOFv, EOFv}, {0, UCharRangeMax}})}));
 
   // read()-like functions that never return more than buffer size.
-    addToFunctionSummaryMap("fread", Fread());
-    addToFunctionSummaryMap("fwrite", Fwrite());
+  auto FreadSummary =
+      Summary(NoEvalCall)
+          .Case({
+              ReturnValueCondition(LessThanOrEq, ArgNo(2)),
+          })
+          .ArgConstraint(NotNull(ArgNo(0)))
+          .ArgConstraint(NotNull(ArgNo(3)))
+          .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1),
+                                    /*BufSizeMultiplier=*/ArgNo(2)));
+
+  // size_t fread(void *restrict ptr, size_t size, size_t nitems,
+  //              FILE *restrict stream);
+  addToFunctionSummaryMap(
+      "fread",
+      Signature(ArgTypes{VoidPtrRestrictTy, SizeTy, SizeTy, FilePtrRestrictTy},
+                RetType{SizeTy}),
+      FreadSummary);
+  // size_t fwrite(const void *restrict ptr, size_t size, size_t nitems,
+  //               FILE *restrict stream);
+  addToFunctionSummaryMap("fwrite",
+                          Signature(ArgTypes{ConstVoidPtrRestrictTy, SizeTy,
+                                             SizeTy, FilePtrRestrictTy},
+                                    RetType{SizeTy}),
+                          FreadSummary);
 
   // We are not sure how ssize_t is defined on every platform, so we
   // provide three variants that should cover common cases.
+  // FIXME Use lookupTy("ssize_t") instead of the `Read` lambda.
   // FIXME these are actually defined by POSIX and not by the C standard, we
   // should handle them together with the rest of the POSIX functions.
   addToFunctionSummaryMap("read", {Read(IntTy, IntMax), Read(LongTy, LongMax),
@@ -1304,11 +1307,13 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                                     Read(LongLongTy, LongLongMax)});
 
   // getline()-like functions either fail or read at least the delimiter.
+  // FIXME Use lookupTy("ssize_t") instead of the `Getline` lambda.
   // FIXME these are actually defined by POSIX and not by the C standard, we
   // should handle them together with the rest of the POSIX functions.
   addToFunctionSummaryMap("getline",
                           {Getline(IntTy, IntMax), Getline(LongTy, LongMax),
                            Getline(LongLongTy, LongLongMax)});
+  // FIXME getdelim's signature is different than getline's!
   addToFunctionSummaryMap("getdelim",
                           {Getline(IntTy, IntMax), Getline(LongTy, LongMax),
                            Getline(LongLongTy, LongLongMax)});

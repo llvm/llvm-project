@@ -1285,9 +1285,11 @@ let Predicates = [IsISA3_1] in {
                            [(set v1i128:$vD, (int_ppc_altivec_vmsumcud
                                  v2i64:$vA, v2i64:$vB, v1i128:$vC))]>;
   def VDIVSQ : VXForm_1<267, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vdivsq $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vdivsq $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v1i128:$vD, (sdiv v1i128:$vA, v1i128:$vB))]>;
   def VDIVUQ : VXForm_1<11, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vdivuq $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vdivuq $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v1i128:$vD, (udiv v1i128:$vA, v1i128:$vB))]>;
   def VDIVESQ : VXForm_1<779, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                          "vdivesq $vD, $vA, $vB", IIC_VecGeneral, []>;
   def VDIVEUQ : VXForm_1<523, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
