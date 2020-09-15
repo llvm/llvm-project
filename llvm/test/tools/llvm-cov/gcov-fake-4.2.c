@@ -1,6 +1,7 @@
 /// Test that llvm-cov supports a fake gcov 4.2 format used before clang 11.
 
 // RUN: rm -rf %t && mkdir %t && cd %t
+// RUN: echo -e '\n\n\n\n\n\n\n\n\n' > test.cpp && echo > test.h
 // RUN: llvm-cov gcov test. --gcno=%S/Inputs/gcov-fake-4.2.gcno --gcda=%S/Inputs/gcov-fake-4.2.gcda | FileCheck %s
 // RUN: FileCheck %s --check-prefix=C < test.cpp.gcov
 // RUN: FileCheck %s --check-prefix=H < test.h.gcov

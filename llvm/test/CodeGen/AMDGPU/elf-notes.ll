@@ -31,8 +31,8 @@
 ; OSABI-HSA: .amd_amdgpu_hsa_metadata
 ; OSABI-HSA-NOT: .amd_amdgpu_pal_metadata
 
-; OSABI-HSA-ELF: Unknown note type (0x00000001)
-; OSABI-HSA-ELF: Unknown note type (0x00000003)
+; OSABI-HSA-ELF: Unknown note type: (0x00000001)
+; OSABI-HSA-ELF: Unknown note type: (0x00000003)
 ; OSABI-HSA-ELF: NT_AMD_AMDGPU_ISA (ISA Version)
 ; OSABI-HSA-ELF: ISA Version:
 ; OSABI-HSA-ELF: amdgcn-amd-amdhsa--gfx802
@@ -59,7 +59,7 @@
 ; OSABI-PAL-NOT: .amd_amdgpu_hsa_metadata
 ; OSABI-PAL: .amd_amdgpu_pal_metadata
 
-; OSABI-PAL-ELF: Unknown note type (0x00000003)
+; OSABI-PAL-ELF: Unknown note type: (0x00000003)
 ; OSABI-PAL-ELF: NT_AMD_AMDGPU_ISA (ISA Version)
 ; OSABI-PAL-ELF: ISA Version:
 ; OSABI-PAL-ELF: amdgcn-amd-amdpal--gfx802

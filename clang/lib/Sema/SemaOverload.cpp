@@ -7299,7 +7299,7 @@ void Sema::AddConversionCandidate(
   ImplicitCastExpr ConversionFn(ImplicitCastExpr::OnStack,
                                 Context.getPointerType(Conversion->getType()),
                                 CK_FunctionToPointerDecay, &ConversionRef,
-                                VK_RValue, CurFPFeatureOverrides());
+                                VK_RValue, FPOptionsOverride());
 
   QualType ConversionType = Conversion->getConversionType();
   if (!isCompleteType(From->getBeginLoc(), ConversionType)) {

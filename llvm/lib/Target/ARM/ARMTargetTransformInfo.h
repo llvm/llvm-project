@@ -186,6 +186,9 @@ public:
   bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
                              TTI::ReductionFlags Flags) const;
 
+  bool preferInLoopReduction(unsigned Opcode, Type *Ty,
+                             TTI::ReductionFlags Flags) const;
+
   bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
                                        TTI::ReductionFlags Flags) const;
 
@@ -201,10 +204,8 @@ public:
 
     case Intrinsic::experimental_vector_reduce_fmin:
     case Intrinsic::experimental_vector_reduce_fmax:
-      // Can't legalize reductions with soft floats, and NoNan will create
-      // fminimum which we do not know how to lower.
-      return TLI->useSoftFloat() || !TLI->getSubtarget()->hasFPRegs() ||
-             !II->getFastMathFlags().noNaNs();
+      // Can't legalize reductions with soft floats.
+      return TLI->useSoftFloat() || !TLI->getSubtarget()->hasFPRegs();
 
     default:
       // Don't expand anything else, let legalization deal with it.

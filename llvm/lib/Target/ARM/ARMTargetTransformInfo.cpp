@@ -1861,6 +1861,20 @@ bool ARMTTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
   return ST->hasMVEIntegerOps();
 }
 
+bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty,
+                                       TTI::ReductionFlags Flags) const {
+  if (!ST->hasMVEIntegerOps())
+    return false;
+
+  unsigned ScalarBits = Ty->getScalarSizeInBits();
+  switch (Opcode) {
+  case Instruction::Add:
+    return ScalarBits <= 32;
+  default:
+    return false;
+  }
+}
+
 bool ARMTTIImpl::preferPredicatedReductionSelect(
     unsigned Opcode, Type *Ty, TTI::ReductionFlags Flags) const {
   if (!ST->hasMVEIntegerOps())

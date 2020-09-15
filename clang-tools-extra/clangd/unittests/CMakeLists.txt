@@ -62,6 +62,7 @@ add_unittest(ClangdUnitTests ClangdTests
   IndexActionTests.cpp
   IndexTests.cpp
   JSONTransportTests.cpp
+  LoggerTests.cpp
   LSPClient.cpp
   ModulesTests.cpp
   ParsedASTTests.cpp

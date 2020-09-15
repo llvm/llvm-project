@@ -1149,22 +1149,6 @@ static Instruction *canonicalizeAbsNabs(SelectInst &Sel, ICmpInst &Cmp,
   return &Sel;
 }
 
-static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *ReplaceOp,
-                                     const SimplifyQuery &Q) {
-  // If this is a binary operator, try to simplify it with the replaced op
-  // because we know Op and ReplaceOp are equivalant.
-  // For example: V = X + 1, Op = X, ReplaceOp = 42
-  // Simplifies as: add(42, 1) --> 43
-  if (auto *BO = dyn_cast<BinaryOperator>(V)) {
-    if (BO->getOperand(0) == Op)
-      return SimplifyBinOp(BO->getOpcode(), ReplaceOp, BO->getOperand(1), Q);
-    if (BO->getOperand(1) == Op)
-      return SimplifyBinOp(BO->getOpcode(), BO->getOperand(0), ReplaceOp, Q);
-  }
-
-  return nullptr;
-}
-
 /// If we have a select with an equality comparison, then we know the value in
 /// one of the arms of the select. See if substituting this value into an arm
 /// and simplifying the result yields the same value as the other arm.
@@ -1191,20 +1175,45 @@ static Value *foldSelectValueEquivalence(SelectInst &Sel, ICmpInst &Cmp,
   if (Cmp.getPredicate() == ICmpInst::ICMP_NE)
     std::swap(TrueVal, FalseVal);
 
+  auto *FalseInst = dyn_cast<Instruction>(FalseVal);
+  if (!FalseInst)
+    return nullptr;
+
+  // InstSimplify already performed this fold if it was possible subject to
+  // current poison-generating flags. Try the transform again with
+  // poison-generating flags temporarily dropped.
+  bool WasNUW = false, WasNSW = false, WasExact = false;
+  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(FalseVal)) {
+    WasNUW = OBO->hasNoUnsignedWrap();
+    WasNSW = OBO->hasNoSignedWrap();
+    FalseInst->setHasNoUnsignedWrap(false);
+    FalseInst->setHasNoSignedWrap(false);
+  }
+  if (auto *PEO = dyn_cast<PossiblyExactOperator>(FalseVal)) {
+    WasExact = PEO->isExact();
+    FalseInst->setIsExact(false);
+  }
+
   // Try each equivalence substitution possibility.
   // We have an 'EQ' comparison, so the select's false value will propagate.
   // Example:
   // (X == 42) ? 43 : (X + 1) --> (X == 42) ? (X + 1) : (X + 1) --> X + 1
-  // (X == 42) ? (X + 1) : 43 --> (X == 42) ? (42 + 1) : 43 --> 43
   Value *CmpLHS = Cmp.getOperand(0), *CmpRHS = Cmp.getOperand(1);
-  if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q) == TrueVal ||
-      simplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, Q) == TrueVal ||
-      simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q) == FalseVal ||
-      simplifyWithOpReplaced(TrueVal, CmpRHS, CmpLHS, Q) == FalseVal) {
-    if (auto *FalseInst = dyn_cast<Instruction>(FalseVal))
-      FalseInst->dropPoisonGeneratingFlags();
+  if (SimplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q,
+                             /* AllowRefinement */ false) == TrueVal ||
+      SimplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, Q,
+                             /* AllowRefinement */ false) == TrueVal) {
     return FalseVal;
   }
+
+  // Restore poison-generating flags if the transform did not apply.
+  if (WasNUW)
+    FalseInst->setHasNoUnsignedWrap();
+  if (WasNSW)
+    FalseInst->setHasNoSignedWrap();
+  if (WasExact)
+    FalseInst->setIsExact();
+
   return nullptr;
 }
 

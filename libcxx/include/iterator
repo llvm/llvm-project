@@ -1052,9 +1052,19 @@ class _LIBCPP_TEMPLATE_VIS ostream_iterator
     : public iterator<output_iterator_tag, void, void, void, void>
 {
 public:
-    typedef _CharT char_type;
-    typedef _Traits traits_type;
-    typedef basic_ostream<_CharT,_Traits> ostream_type;
+    typedef output_iterator_tag             iterator_category;
+    typedef void                            value_type;
+#if _LIBCPP_STD_VER > 17
+    typedef std::ptrdiff_t                  difference_type;
+#else
+    typedef void                            difference_type;
+#endif
+    typedef void                            pointer;
+    typedef void                            reference;
+    typedef _CharT                          char_type;
+    typedef _Traits                         traits_type;
+    typedef basic_ostream<_CharT, _Traits>  ostream_type;
+
 private:
     ostream_type* __out_stream_;
     const char_type* __delim_;
@@ -1151,10 +1161,20 @@ class _LIBCPP_TEMPLATE_VIS ostreambuf_iterator
     : public iterator<output_iterator_tag, void, void, void, void>
 {
 public:
-    typedef _CharT                          char_type;
-    typedef _Traits                         traits_type;
-    typedef basic_streambuf<_CharT,_Traits> streambuf_type;
-    typedef basic_ostream<_CharT,_Traits>   ostream_type;
+    typedef output_iterator_tag                 iterator_category;
+    typedef void                                value_type;
+#if _LIBCPP_STD_VER > 17
+    typedef std::ptrdiff_t                      difference_type;
+#else
+    typedef void                                difference_type;
+#endif
+    typedef void                                pointer;
+    typedef void                                reference;
+    typedef _CharT                              char_type;
+    typedef _Traits                             traits_type;
+    typedef basic_streambuf<_CharT, _Traits>    streambuf_type;
+    typedef basic_ostream<_CharT, _Traits>      ostream_type;
+
 private:
     streambuf_type* __sbuf_;
 public:

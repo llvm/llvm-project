@@ -1776,10 +1776,12 @@ struct DSEState {
       }
 
       MemoryAccess *UseAccess = WorkList[I];
-      if (isa<MemoryPhi>(UseAccess)) {
-        PushMemUses(UseAccess);
-        continue;
-      }
+      // Simply adding the users of MemoryPhi to the worklist is not enough,
+      // because we might miss read clobbers in different iterations of a loop,
+      // for example.
+      // TODO: Add support for phi translation to handle the loop case.
+      if (isa<MemoryPhi>(UseAccess))
+        return false;
 
       // TODO: Checking for aliasing is expensive. Consider reducing the amount
       // of times this is called and/or caching it.
@@ -1857,6 +1859,32 @@ struct DSEState {
     // be expensive compared to the benefits in practice. For now, avoid more
     // expensive analysis to limit compile-time.
     return isRefSet(BatchAA.getModRefInfo(UseInst, DefLoc));
+  }
+
+  /// Returns true if \p Ptr is guaranteed to be loop invariant for any possible
+  /// loop. In particular, this guarantees that it only references a single
+  /// MemoryLocation during execution of the containing function.
+  bool IsGuaranteedLoopInvariant(Value *Ptr) {
+    auto IsGuaranteedLoopInvariantBase = [this](Value *Ptr) {
+      Ptr = Ptr->stripPointerCasts();
+      if (auto *I = dyn_cast<Instruction>(Ptr)) {
+        if (isa<AllocaInst>(Ptr))
+          return true;
+
+        if (isAllocLikeFn(I, &TLI))
+          return true;
+
+        return false;
+      }
+      return true;
+    };
+
+    Ptr = Ptr->stripPointerCasts();
+    if (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
+      return IsGuaranteedLoopInvariantBase(GEP->getPointerOperand()) &&
+             GEP->hasAllConstantIndices();
+    }
+    return IsGuaranteedLoopInvariantBase(Ptr);
   }
 
   // Find a MemoryDef writing to \p DefLoc and dominating \p StartAccess, with
@@ -1990,6 +2018,17 @@ struct DSEState {
         }
         continue;
       } else {
+        // AliasAnalysis does not account for loops. Limit elimination to
+        // candidates for which we can guarantee they always store to the same
+        // memory location and not multiple locations in a loop.
+        if (Current->getBlock() != KillingDef->getBlock() &&
+            !IsGuaranteedLoopInvariant(const_cast<Value *>(CurrentLoc->Ptr))) {
+          StepAgain = true;
+          Current = CurrentDef->getDefiningAccess();
+          WalkerStepLimit -= 1;
+          continue;
+        }
+
         int64_t InstWriteOffset, DepWriteOffset;
         auto OR = isOverwrite(KillingI, CurrentI, DefLoc, *CurrentLoc, DL, TLI,
                               DepWriteOffset, InstWriteOffset, BatchAA, &F);

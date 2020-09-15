@@ -223,7 +223,7 @@ void syntax::Node::assertInvariants() const {
   else
     assert(getParent() != nullptr);
 
-  auto *T = dyn_cast<Tree>(this);
+  const auto *T = dyn_cast<Tree>(this);
   if (!T)
     return;
   for (const auto *C = T->getFirstChild(); C; C = C->getNextSibling()) {
@@ -232,6 +232,19 @@ void syntax::Node::assertInvariants() const {
     assert(!C->isDetached());
     assert(C->getParent() == T);
   }
+
+  const auto *L = dyn_cast<List>(T);
+  if (!L)
+    return;
+  for (const auto *C = T->getFirstChild(); C; C = C->getNextSibling()) {
+    assert(C->getRole() == NodeRole::ListElement ||
+           C->getRole() == NodeRole::ListDelimiter);
+    if (C->getRole() == NodeRole::ListDelimiter) {
+      assert(isa<Leaf>(C));
+      assert(cast<Leaf>(C)->getToken()->kind() == L->getDelimiterTokenKind());
+    }
+  }
+
 #endif
 }
 
@@ -271,6 +284,17 @@ syntax::Node *syntax::Tree::findChild(NodeRole R) {
       return C;
   }
   return nullptr;
+}
+
+bool syntax::List::classof(const syntax::Node *N) {
+  switch (N->getKind()) {
+  case syntax::NodeKind::NestedNameSpecifier:
+  case syntax::NodeKind::CallArguments:
+  case syntax::NodeKind::ParameterDeclarationList:
+    return true;
+  default:
+    return false;
+  }
 }
 
 std::vector<syntax::List::ElementAndDelimiter<syntax::Node>>
@@ -361,12 +385,12 @@ std::vector<syntax::Node *> syntax::List::getElementsAsNodes() {
   return children;
 }
 
-clang::tok::TokenKind syntax::List::getDelimiterTokenKind() {
+clang::tok::TokenKind syntax::List::getDelimiterTokenKind() const {
   switch (this->getKind()) {
   case NodeKind::NestedNameSpecifier:
     return clang::tok::coloncolon;
   case NodeKind::CallArguments:
-  case NodeKind::ParametersAndQualifiers:
+  case NodeKind::ParameterDeclarationList:
     return clang::tok::comma;
   default:
     llvm_unreachable("This is not a subclass of List, thus "
@@ -374,12 +398,12 @@ clang::tok::TokenKind syntax::List::getDelimiterTokenKind() {
   }
 }
 
-syntax::List::TerminationKind syntax::List::getTerminationKind() {
+syntax::List::TerminationKind syntax::List::getTerminationKind() const {
   switch (this->getKind()) {
   case NodeKind::NestedNameSpecifier:
     return TerminationKind::Terminated;
   case NodeKind::CallArguments:
-  case NodeKind::ParametersAndQualifiers:
+  case NodeKind::ParameterDeclarationList:
     return TerminationKind::Separated;
   default:
     llvm_unreachable("This is not a subclass of List, thus "
@@ -387,13 +411,13 @@ syntax::List::TerminationKind syntax::List::getTerminationKind() {
   }
 }
 
-bool syntax::List::canBeEmpty() {
+bool syntax::List::canBeEmpty() const {
   switch (this->getKind()) {
   case NodeKind::NestedNameSpecifier:
     return false;
   case NodeKind::CallArguments:
     return true;
-  case NodeKind::ParametersAndQualifiers:
+  case NodeKind::ParameterDeclarationList:
     return true;
   default:
     llvm_unreachable("This is not a subclass of List, thus canBeEmpty() "

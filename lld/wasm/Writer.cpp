@@ -11,6 +11,7 @@
 #include "InputChunks.h"
 #include "InputEvent.h"
 #include "InputGlobal.h"
+#include "MapFile.h"
 #include "OutputSections.h"
 #include "OutputSegment.h"
 #include "Relocations.h"
@@ -460,6 +461,29 @@ void Writer::populateTargetFeatures() {
 
   if (!config->checkFeatures)
     return;
+
+  if (!config->relocatable && used.count("mutable-globals") == 0) {
+    for (Symbol *sym : symtab->getSymbols()) {
+      if (auto *global = dyn_cast<GlobalSymbol>(sym)) {
+        if (global->getGlobalType()->Mutable) {
+          if (!sym->isLive())
+            continue;
+          if (!sym->isUsedInRegularObj)
+            continue;
+          if (sym->isUndefined() && sym->isWeak() && !config->relocatable)
+            continue;
+          if (sym->isUndefined())
+            error(Twine("mutable global imported but 'mutable-globals' feature "
+                        "not present in inputs: `") +
+                  toString(*sym) + "`. Use --no-check-features to suppress.");
+          else if (sym->isExported())
+            error(Twine("mutable global exported but 'mutable-globals' feature "
+                        "not present in inputs: `") +
+                  toString(*sym) + "`. Use --no-check-features to suppress.");
+        }
+      }
+    }
+  }
 
   if (config->sharedMemory) {
     if (disallowed.count("shared-mem"))
@@ -1113,6 +1137,9 @@ void Writer::run() {
   createHeader();
   log("-- finalizeSections");
   finalizeSections();
+
+  log("-- writeMapFile");
+  writeMapFile(outputSections);
 
   log("-- openFile");
   openFile();

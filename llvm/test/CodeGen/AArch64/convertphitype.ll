@@ -70,14 +70,13 @@ define float @convphi3(i32 *%s, i32 *%d, i32 %n, float %f) {
 ; CHECK-LABEL: @convphi3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[FB:%.*]] = bitcast float [[F:%.*]] to i32
 ; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[END:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
 ; CHECK-NEXT:    [[LS_BC:%.*]] = bitcast i32 [[LS]] to float
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ [[LS_BC]], [[THEN]] ], [ [[F]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ [[LS_BC]], [[THEN]] ], [ [[F:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret float [[PHI_TC]]
 ;
 entry:
@@ -99,14 +98,13 @@ define void @convphi4(i32 *%s, i32 *%d, i32 %n, float %f) {
 ; CHECK-LABEL: @convphi4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[FB:%.*]] = bitcast float [[F:%.*]] to i32
 ; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[END:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
 ; CHECK-NEXT:    [[LS_BC:%.*]] = bitcast i32 [[LS]] to float
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ [[LS_BC]], [[THEN]] ], [ [[F]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ [[LS_BC]], [[THEN]] ], [ [[F:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast float [[PHI_TC]] to i32
 ; CHECK-NEXT:    store i32 [[BC]], i32* [[D:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -481,6 +479,401 @@ end:
   ret float %b
 }
 
+define void @convphi_stop(i32 *%s, i32 *%d, float *%e, i32 %n) {
+; CHECK-LABEL: @convphi_stop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[D:%.*]], align 4
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[LS]], [[THEN]] ], [ [[LD]], [[ELSE]] ]
+; CHECK-NEXT:    [[B:%.*]] = bitcast i32 [[PHI]] to float
+; CHECK-NEXT:    store float [[B]], float* [[E:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  br i1 %cmp15, label %then, label %else
 
+then:
+  %ls = load i32, i32* %s, align 4
+  br label %end
 
+else:
+  %ld = load i32, i32* %d, align 4
+  br label %end
 
+end:
+  %phi = phi i32 [ %ls, %then ], [ %ld, %else ]
+  %b = bitcast i32 %phi to float
+  store float %b, float* %e, align 4
+  ret void
+}
+
+define void @convphi_stop2(i32 *%s, i32 *%d, float *%e, i32 %n) {
+; CHECK-LABEL: @convphi_stop2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
+; CHECK-NEXT:    [[LSB:%.*]] = bitcast i32 [[LS]] to float
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[D:%.*]], align 4
+; CHECK-NEXT:    [[LDB:%.*]] = bitcast i32 [[LD]] to float
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi float [ [[LSB]], [[THEN]] ], [ [[LDB]], [[ELSE]] ]
+; CHECK-NEXT:    store float [[PHI]], float* [[E:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  br i1 %cmp15, label %then, label %else
+
+then:
+  %ls = load i32, i32* %s, align 4
+  %lsb = bitcast i32 %ls to float
+  br label %end
+
+else:
+  %ld = load i32, i32* %d, align 4
+  %ldb = bitcast i32 %ld to float
+  br label %end
+
+end:
+  %phi = phi float [ %lsb, %then ], [ %ldb, %else ]
+  store float %phi, float* %e, align 4
+  ret void
+}
+
+define float @convphi_stop3(i32 *%s, i32 *%d, float *%e, i32 %n) {
+; CHECK-LABEL: @convphi_stop3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
+; CHECK-NEXT:    [[LS_BC:%.*]] = bitcast i32 [[LS]] to float
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[D:%.*]], align 4
+; CHECK-NEXT:    [[LD_BC:%.*]] = bitcast i32 [[LD]] to float
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ [[LS_BC]], [[THEN]] ], [ [[LD_BC]], [[ELSE]] ]
+; CHECK-NEXT:    store float [[PHI_TC]], float* [[E:%.*]], align 4
+; CHECK-NEXT:    ret float [[PHI_TC]]
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  br i1 %cmp15, label %then, label %else
+
+then:
+  %ls = load i32, i32* %s, align 4
+  br label %end
+
+else:
+  %ld = load i32, i32* %d, align 4
+  br label %end
+
+end:
+  %phi = phi i32 [ %ls, %then ], [ %ld, %else ]
+  %b = bitcast i32 %phi to float
+  store float %b, float* %e, align 4
+  ret float %b
+}
+
+define void @convphi_stop4(i32 *%s, i32 *%d, float *%e, i32 %n) {
+; CHECK-LABEL: @convphi_stop4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[D:%.*]], align 4
+; CHECK-NEXT:    [[LD_BC:%.*]] = bitcast i32 [[LD]] to float
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
+; CHECK-NEXT:    [[LS_BC:%.*]] = bitcast i32 [[LS]] to float
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI_TC:%.*]] = phi float [ [[LS_BC]], [[THEN]] ], [ [[LD_BC]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[N]], 0
+; CHECK-NEXT:    [[BC:%.*]] = bitcast float [[PHI_TC]] to i32
+; CHECK-NEXT:    store i32 [[BC]], i32* [[S]], align 4
+; CHECK-NEXT:    br i1 [[TMP0]], label [[THEN2:%.*]], label [[END2:%.*]]
+; CHECK:       then2:
+; CHECK-NEXT:    [[LF:%.*]] = load float, float* [[E:%.*]], align 4
+; CHECK-NEXT:    br label [[END2]]
+; CHECK:       end2:
+; CHECK-NEXT:    [[PHI2:%.*]] = phi float [ [[PHI_TC]], [[END]] ], [ [[LF]], [[THEN2]] ]
+; CHECK-NEXT:    store float [[PHI2]], float* [[E]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  %ld = load i32, i32* %d, align 4
+  br i1 %cmp15, label %then, label %end
+
+then:
+  %ls = load i32, i32* %s, align 4
+  br label %end
+
+end:
+  %phi = phi i32 [ %ls, %then ], [ %ld, %entry ]
+  %phib = bitcast i32 %phi to float
+  store i32 %phi, i32* %s, align 4
+  br i1 %cmp15, label %then2, label %end2
+
+then2:
+  %lf = load float, float* %e, align 4
+  br label %end2
+
+end2:
+  %phi2 = phi float [ %phib, %end ], [ %lf, %then2 ]
+  store float %phi2, float* %e, align 4
+  ret void
+}
+
+define float @multiuse(i32 *%s, i32 *%d, i32 %n) {
+; CHECK-LABEL: @multiuse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[LS]], 2
+; CHECK-NEXT:    store i32 [[A]], i32* [[D:%.*]], align 4
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[D]], align 4
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[LS]], [[THEN]] ], [ [[LD]], [[ELSE]] ]
+; CHECK-NEXT:    [[B:%.*]] = bitcast i32 [[PHI]] to float
+; CHECK-NEXT:    ret float [[B]]
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  br i1 %cmp15, label %then, label %else
+
+then:
+  %ls = load i32, i32* %s, align 4
+  %a = add i32 %ls, 2
+  store i32 %a, i32* %d, align 4
+  br label %end
+
+else:
+  %ld = load i32, i32* %d, align 4
+  br label %end
+
+end:
+  %phi = phi i32 [ %ls, %then ], [ %ld, %else ]
+  %b = bitcast i32 %phi to float
+  ret float %b
+}
+
+define float @convphi_volatile(i32 *%s, i32 *%d, i32 %n) {
+; CHECK-LABEL: @convphi_volatile(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load volatile i32, i32* [[S:%.*]], align 4
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[D:%.*]], align 4
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[LS]], [[THEN]] ], [ [[LD]], [[ELSE]] ]
+; CHECK-NEXT:    [[B:%.*]] = bitcast i32 [[PHI]] to float
+; CHECK-NEXT:    ret float [[B]]
+;
+; DEBUG-LABEL: @convphi_volatile(
+; DEBUG-NEXT:  entry:
+; DEBUG-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0, !dbg !358
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP15]], metadata !353, metadata !DIExpression()), !dbg !358
+; DEBUG-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[ELSE:%.*]], !dbg !359
+; DEBUG:       then:
+; DEBUG-NEXT:    [[LS:%.*]] = load volatile i32, i32* [[S:%.*]], align 4, !dbg !360
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[LS]], metadata !354, metadata !DIExpression()), !dbg !360
+; DEBUG-NEXT:    br label [[END:%.*]], !dbg !361
+; DEBUG:       else:
+; DEBUG-NEXT:    [[LD:%.*]] = load i32, i32* [[D:%.*]], align 4, !dbg !362
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[LD]], metadata !355, metadata !DIExpression()), !dbg !362
+; DEBUG-NEXT:    br label [[END]], !dbg !363
+; DEBUG:       end:
+; DEBUG-NEXT:    [[PHI:%.*]] = phi i32 [ [[LS]], [[THEN]] ], [ [[LD]], [[ELSE]] ], !dbg !364
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[PHI]], metadata !356, metadata !DIExpression()), !dbg !364
+; DEBUG-NEXT:    [[B:%.*]] = bitcast i32 [[PHI]] to float, !dbg !365
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata float [[B]], metadata !357, metadata !DIExpression()), !dbg !365
+; DEBUG-NEXT:    ret float [[B]], !dbg !366
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  br i1 %cmp15, label %then, label %else
+
+then:
+  %ls = load volatile i32, i32* %s, align 4
+  br label %end
+
+else:
+  %ld = load i32, i32* %d, align 4
+  br label %end
+
+end:
+  %phi = phi i32 [ %ls, %then ], [ %ld, %else ]
+  %b = bitcast i32 %phi to float
+  ret float %b
+}
+
+define void @convphi_volatile2(i32 *%s, i32 *%d, i32 %n, float %f) {
+; CHECK-LABEL: @convphi_volatile2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    [[FB:%.*]] = bitcast float [[F:%.*]] to i32
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[LS]], [[THEN]] ], [ [[FB]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store volatile i32 [[PHI]], i32* [[D:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+; DEBUG-LABEL: @convphi_volatile2(
+; DEBUG-NEXT:  entry:
+; DEBUG-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0, !dbg !373
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP15]], metadata !369, metadata !DIExpression()), !dbg !373
+; DEBUG-NEXT:    [[FB:%.*]] = bitcast float [[F:%.*]] to i32, !dbg !374
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[FB]], metadata !370, metadata !DIExpression()), !dbg !374
+; DEBUG-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[END:%.*]], !dbg !375
+; DEBUG:       then:
+; DEBUG-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4, !dbg !376
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[LS]], metadata !371, metadata !DIExpression()), !dbg !376
+; DEBUG-NEXT:    br label [[END]], !dbg !377
+; DEBUG:       end:
+; DEBUG-NEXT:    [[PHI:%.*]] = phi i32 [ [[LS]], [[THEN]] ], [ [[FB]], [[ENTRY:%.*]] ], !dbg !378
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[PHI]], metadata !372, metadata !DIExpression()), !dbg !378
+; DEBUG-NEXT:    store volatile i32 [[PHI]], i32* [[D:%.*]], align 4, !dbg !379
+; DEBUG-NEXT:    ret void, !dbg !380
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  %fb = bitcast float %f to i32
+  br i1 %cmp15, label %then, label %end
+
+then:
+  %ls = load i32, i32* %s, align 4
+  br label %end
+
+end:
+  %phi = phi i32 [ %ls, %then ], [ %fb, %entry ]
+  store volatile i32 %phi, i32 *%d
+  ret void
+}
+
+define float @convphi_atomic(i32 *%s, i32 *%d, i32 %n) {
+; CHECK-LABEL: @convphi_atomic(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load atomic i32, i32* [[S:%.*]] acquire, align 4
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[D:%.*]], align 4
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[LS]], [[THEN]] ], [ [[LD]], [[ELSE]] ]
+; CHECK-NEXT:    [[B:%.*]] = bitcast i32 [[PHI]] to float
+; CHECK-NEXT:    ret float [[B]]
+;
+; DEBUG-LABEL: @convphi_atomic(
+; DEBUG-NEXT:  entry:
+; DEBUG-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0, !dbg !388
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP15]], metadata !383, metadata !DIExpression()), !dbg !388
+; DEBUG-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[ELSE:%.*]], !dbg !389
+; DEBUG:       then:
+; DEBUG-NEXT:    [[LS:%.*]] = load atomic i32, i32* [[S:%.*]] acquire, align 4, !dbg !390
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[LS]], metadata !384, metadata !DIExpression()), !dbg !390
+; DEBUG-NEXT:    br label [[END:%.*]], !dbg !391
+; DEBUG:       else:
+; DEBUG-NEXT:    [[LD:%.*]] = load i32, i32* [[D:%.*]], align 4, !dbg !392
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[LD]], metadata !385, metadata !DIExpression()), !dbg !392
+; DEBUG-NEXT:    br label [[END]], !dbg !393
+; DEBUG:       end:
+; DEBUG-NEXT:    [[PHI:%.*]] = phi i32 [ [[LS]], [[THEN]] ], [ [[LD]], [[ELSE]] ], !dbg !394
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[PHI]], metadata !386, metadata !DIExpression()), !dbg !394
+; DEBUG-NEXT:    [[B:%.*]] = bitcast i32 [[PHI]] to float, !dbg !395
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata float [[B]], metadata !387, metadata !DIExpression()), !dbg !395
+; DEBUG-NEXT:    ret float [[B]], !dbg !396
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  br i1 %cmp15, label %then, label %else
+
+then:
+  %ls = load atomic i32, i32* %s acquire, align 4
+  br label %end
+
+else:
+  %ld = load i32, i32* %d, align 4
+  br label %end
+
+end:
+  %phi = phi i32 [ %ls, %then ], [ %ld, %else ]
+  %b = bitcast i32 %phi to float
+  ret float %b
+}
+
+define void @convphi_atomic2(i32 *%s, i32 *%d, i32 %n, float %f) {
+; CHECK-LABEL: @convphi_atomic2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    [[FB:%.*]] = bitcast float [[F:%.*]] to i32
+; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[LS]], [[THEN]] ], [ [[FB]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store atomic i32 [[PHI]], i32* [[D:%.*]] release, align 4
+; CHECK-NEXT:    ret void
+;
+; DEBUG-LABEL: @convphi_atomic2(
+; DEBUG-NEXT:  entry:
+; DEBUG-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0, !dbg !403
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP15]], metadata !399, metadata !DIExpression()), !dbg !403
+; DEBUG-NEXT:    [[FB:%.*]] = bitcast float [[F:%.*]] to i32, !dbg !404
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[FB]], metadata !400, metadata !DIExpression()), !dbg !404
+; DEBUG-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[END:%.*]], !dbg !405
+; DEBUG:       then:
+; DEBUG-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4, !dbg !406
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[LS]], metadata !401, metadata !DIExpression()), !dbg !406
+; DEBUG-NEXT:    br label [[END]], !dbg !407
+; DEBUG:       end:
+; DEBUG-NEXT:    [[PHI:%.*]] = phi i32 [ [[LS]], [[THEN]] ], [ [[FB]], [[ENTRY:%.*]] ], !dbg !408
+; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i32 [[PHI]], metadata !402, metadata !DIExpression()), !dbg !408
+; DEBUG-NEXT:    store atomic i32 [[PHI]], i32* [[D:%.*]] release, align 4, !dbg !409
+; DEBUG-NEXT:    ret void, !dbg !410
+;
+entry:
+  %cmp15 = icmp sgt i32 %n, 0
+  %fb = bitcast float %f to i32
+  br i1 %cmp15, label %then, label %end
+
+then:
+  %ls = load i32, i32* %s, align 4
+  br label %end
+
+end:
+  %phi = phi i32 [ %ls, %then ], [ %fb, %entry ]
+  store atomic i32 %phi, i32 *%d release, align 4
+  ret void
+}

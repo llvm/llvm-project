@@ -80,9 +80,6 @@ float func_07(double x) {
 // CHECK-NEXT:     ReturnStmt
 // CHECK-NEXT:       CXXStaticCastExpr {{.*}} FPContractMode=1
 
-
-
-
 #pragma STDC FENV_ROUND FE_DOWNWARD
 
 float func_10(float x, float y) {
@@ -131,7 +128,7 @@ T func_14(T x, T y) {
 }
 
 float func_15(float x, float y) {
-#pragma STDC FPENV_ROUND FE_DOWNWARD
+#pragma STDC FENV_ROUND FE_DOWNWARD
   return func_14(x, y);
 }
 

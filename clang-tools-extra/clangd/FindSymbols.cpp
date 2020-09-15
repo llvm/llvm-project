@@ -43,12 +43,9 @@ struct ScoredSymbolGreater {
 llvm::Expected<Location> indexToLSPLocation(const SymbolLocation &Loc,
                                             llvm::StringRef TUPath) {
   auto Path = URI::resolve(Loc.FileURI, TUPath);
-  if (!Path) {
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("Could not resolve path for file '{0}': {1}", Loc.FileURI,
-                      llvm::toString(Path.takeError())),
-        llvm::inconvertibleErrorCode());
-  }
+  if (!Path)
+    return error("Could not resolve path for file '{0}': {1}", Loc.FileURI,
+                 Path.takeError());
   Location L;
   L.uri = URIForFile::canonicalize(*Path, TUPath);
   Position Start, End;

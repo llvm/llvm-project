@@ -1093,7 +1093,8 @@ void ASTStmtReader::VisitCastExpr(CastExpr *E) {
     *BaseI++ = BaseSpec;
   }
   if (HasFPFeatures)
-    *E->getTrailingFPFeatures() = FPOptionsOverride::getFromOpaqueInt(Record.readInt());
+    *E->getTrailingFPFeatures() =
+        FPOptionsOverride::getFromOpaqueInt(Record.readInt());
 }
 
 void ASTStmtReader::VisitBinaryOperator(BinaryOperator *E) {

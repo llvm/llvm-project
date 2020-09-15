@@ -1288,6 +1288,10 @@ public:
   bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
                              ReductionFlags Flags) const;
 
+  /// \returns True if the target prefers reductions in loop.
+  bool preferInLoopReduction(unsigned Opcode, Type *Ty,
+                             ReductionFlags Flags) const;
+
   /// \returns True if the target prefers reductions select kept in the loop
   /// when tail folding. i.e.
   /// loop:
@@ -1591,6 +1595,8 @@ public:
                                         unsigned ChainSizeInBytes,
                                         VectorType *VecTy) const = 0;
   virtual bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
+                                     ReductionFlags) const = 0;
+  virtual bool preferInLoopReduction(unsigned Opcode, Type *Ty,
                                      ReductionFlags) const = 0;
   virtual bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
                                                ReductionFlags) const = 0;
@@ -2093,6 +2099,10 @@ public:
   bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
                              ReductionFlags Flags) const override {
     return Impl.useReductionIntrinsic(Opcode, Ty, Flags);
+  }
+  bool preferInLoopReduction(unsigned Opcode, Type *Ty,
+                             ReductionFlags Flags) const override {
+    return Impl.preferInLoopReduction(Opcode, Ty, Flags);
   }
   bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
                                        ReductionFlags Flags) const override {

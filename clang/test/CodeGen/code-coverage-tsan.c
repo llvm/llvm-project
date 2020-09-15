@@ -5,7 +5,6 @@
 // CHECK-LABEL: void @foo()
 /// Two counters are incremented by __tsan_atomic64_fetch_add.
 // CHECK:         call i64 @__tsan_atomic64_fetch_add
-// CHECK-NEXT:    call i64 @__tsan_atomic64_fetch_add
 // CHECK-NEXT:    call i32 @__tsan_atomic32_fetch_sub
 
 _Atomic(int) cnt;

@@ -1006,7 +1006,8 @@ void DAGTypeLegalizer::IncrementPointer(MemSDNode *N, EVT MemVT,
     Flags.setNoUnsignedWrap(true);
     if (ScaledOffset)
       *ScaledOffset += IncrementSize;
-    Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr, BytesIncrement);
+    Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr, BytesIncrement,
+                      Flags);
   } else {
     MPI = N->getPointerInfo().getWithOffset(IncrementSize);
     // Increment the pointer to the other half.
@@ -2044,16 +2045,12 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     case ISD::FP_TO_UINT:
     case ISD::STRICT_FP_TO_SINT:
     case ISD::STRICT_FP_TO_UINT:
-    case ISD::CTTZ:
-    case ISD::CTLZ:
-    case ISD::CTPOP:
     case ISD::STRICT_FP_EXTEND:
     case ISD::FP_EXTEND:
     case ISD::SIGN_EXTEND:
     case ISD::ZERO_EXTEND:
     case ISD::ANY_EXTEND:
     case ISD::FTRUNC:
-    case ISD::FCANONICALIZE:
       Res = SplitVecOp_UnaryOp(N);
       break;
 
@@ -2146,7 +2143,6 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE(SDNode *N, unsigned OpNo) {
   EVT LoOpVT, HiOpVT;
   std::tie(LoOpVT, HiOpVT) = DAG.GetSplitDestVTs(VecVT);
 
-  bool NoNaN = N->getFlags().hasNoNaNs();
   unsigned CombineOpc = 0;
   switch (N->getOpcode()) {
   case ISD::VECREDUCE_FADD: CombineOpc = ISD::FADD; break;
@@ -2160,12 +2156,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE(SDNode *N, unsigned OpNo) {
   case ISD::VECREDUCE_SMIN: CombineOpc = ISD::SMIN; break;
   case ISD::VECREDUCE_UMAX: CombineOpc = ISD::UMAX; break;
   case ISD::VECREDUCE_UMIN: CombineOpc = ISD::UMIN; break;
-  case ISD::VECREDUCE_FMAX:
-    CombineOpc = NoNaN ? ISD::FMAXNUM : ISD::FMAXIMUM;
-    break;
-  case ISD::VECREDUCE_FMIN:
-    CombineOpc = NoNaN ? ISD::FMINNUM : ISD::FMINIMUM;
-    break;
+  case ISD::VECREDUCE_FMAX: CombineOpc = ISD::FMAXNUM; break;
+  case ISD::VECREDUCE_FMIN: CombineOpc = ISD::FMINNUM; break;
   default:
     llvm_unreachable("Unexpected reduce ISD node");
   }
@@ -4771,6 +4763,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
   EVT OrigVT = N->getOperand(0).getValueType();
   EVT WideVT = Op.getValueType();
   EVT ElemVT = OrigVT.getVectorElementType();
+  SDNodeFlags Flags = N->getFlags();
 
   SDValue NeutralElem;
   switch (N->getOpcode()) {
@@ -4802,12 +4795,18 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
     NeutralElem = DAG.getConstantFP(1.0, dl, ElemVT);
     break;
   case ISD::VECREDUCE_FMAX:
+    // This has maxnum semantics, so NaN represents missing data. We must clear
+    // 'nnan' if it was set because the NaN would be a poison value.
     NeutralElem = DAG.getConstantFP(
-        -std::numeric_limits<double>::infinity(), dl, ElemVT);
+        std::numeric_limits<double>::quiet_NaN(), dl, ElemVT);
+    Flags.setNoNaNs(false);
     break;
   case ISD::VECREDUCE_FMIN:
+    // This has minnum semantics, so NaN represents missing data. We must clear
+    // 'nnan' if it was set because the NaN would be a poison value.
     NeutralElem = DAG.getConstantFP(
-        std::numeric_limits<double>::infinity(), dl, ElemVT);
+        std::numeric_limits<double>::quiet_NaN(), dl, ElemVT);
+    Flags.setNoNaNs(false);
     break;
   }
 
@@ -4818,7 +4817,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
     Op = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, WideVT, Op, NeutralElem,
                      DAG.getVectorIdxConstant(Idx, dl));
 
-  return DAG.getNode(N->getOpcode(), dl, N->getValueType(0), Op, N->getFlags());
+  return DAG.getNode(N->getOpcode(), dl, N->getValueType(0), Op, Flags);
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VSELECT(SDNode *N) {

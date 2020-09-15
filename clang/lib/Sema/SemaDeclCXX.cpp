@@ -1186,7 +1186,7 @@ static bool checkTupleLikeDecomposition(Sema &S,
     if (!Src->getType()->isLValueReferenceType())
       E = ImplicitCastExpr::Create(S.Context, E.get()->getType(), CK_NoOp,
                                    E.get(), nullptr, VK_XValue,
-                                   S.CurFPFeatureOverrides());
+                                   FPOptionsOverride());
 
     TemplateArgumentListInfo Args(Loc, Loc);
     Args.addArgument(
@@ -14913,7 +14913,7 @@ void Sema::DefineImplicitLambdaToBlockPointerConversion(
   if (!BuildBlock.isInvalid() && !getLangOpts().ObjCAutoRefCount)
     BuildBlock = ImplicitCastExpr::Create(
         Context, BuildBlock.get()->getType(), CK_CopyAndAutoreleaseBlockObject,
-        BuildBlock.get(), nullptr, VK_RValue, CurFPFeatureOverrides());
+        BuildBlock.get(), nullptr, VK_RValue, FPOptionsOverride());
 
   if (BuildBlock.isInvalid()) {
     Diag(CurrentLocation, diag::note_lambda_to_block_conv);
