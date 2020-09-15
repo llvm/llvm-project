@@ -14,37 +14,37 @@ define void @foo() {
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    # kill: def $rax killed $eax
+; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    movw $0, var_825
-; X64-NEXT:    movzwl var_32, %ecx
+; X64-NEXT:    movzwl var_32, %eax
 ; X64-NEXT:    movzwl var_901, %edx
-; X64-NEXT:    movl %ecx, %esi
+; X64-NEXT:    movl %eax, %esi
 ; X64-NEXT:    xorl %edx, %esi
-; X64-NEXT:    movl %ecx, %edx
+; X64-NEXT:    movl %eax, %edx
 ; X64-NEXT:    xorl %esi, %edx
-; X64-NEXT:    addl %ecx, %edx
-; X64-NEXT:    movslq %edx, %rcx
-; X64-NEXT:    movq %rcx, var_826
-; X64-NEXT:    movzwl var_32, %ecx
-; X64-NEXT:    # kill: def $rcx killed $ecx
-; X64-NEXT:    movzwl var_901, %edx
-; X64-NEXT:    xorl $51981, %edx # imm = 0xCB0D
-; X64-NEXT:    movslq %edx, %rdx
-; X64-NEXT:    movabsq $-1142377792914660288, %rsi # imm = 0xF02575732E06E440
-; X64-NEXT:    xorq %rsi, %rdx
-; X64-NEXT:    movq %rcx, %rsi
-; X64-NEXT:    xorq %rdx, %rsi
-; X64-NEXT:    xorq $-1, %rsi
-; X64-NEXT:    xorq %rsi, %rcx
-; X64-NEXT:    movq %rcx, %rdx
-; X64-NEXT:    orq var_57, %rdx
-; X64-NEXT:    orq %rdx, %rcx
-; X64-NEXT:    # kill: def $cx killed $cx killed $rcx
-; X64-NEXT:    movw %cx, var_900
-; X64-NEXT:    cmpq var_28, %rax
-; X64-NEXT:    setne %al
-; X64-NEXT:    andb $1, %al
-; X64-NEXT:    movzbl %al, %eax
+; X64-NEXT:    addl %eax, %edx
+; X64-NEXT:    movslq %edx, %rdi
+; X64-NEXT:    movq %rdi, var_826
+; X64-NEXT:    movzwl var_32, %eax
+; X64-NEXT:    movl %eax, %edi
+; X64-NEXT:    movzwl var_901, %eax
+; X64-NEXT:    xorl $51981, %eax # imm = 0xCB0D
+; X64-NEXT:    movslq %eax, %r8
+; X64-NEXT:    movabsq $-1142377792914660288, %r9 # imm = 0xF02575732E06E440
+; X64-NEXT:    xorq %r9, %r8
+; X64-NEXT:    movq %rdi, %r9
+; X64-NEXT:    xorq %r8, %r9
+; X64-NEXT:    xorq $-1, %r9
+; X64-NEXT:    xorq %r9, %rdi
+; X64-NEXT:    movq %rdi, %r8
+; X64-NEXT:    orq var_57, %r8
+; X64-NEXT:    orq %r8, %rdi
+; X64-NEXT:    # kill: def $di killed $di killed $rdi
+; X64-NEXT:    movw %di, var_900
+; X64-NEXT:    cmpq var_28, %rcx
+; X64-NEXT:    setne %r10b
+; X64-NEXT:    andb $1, %r10b
+; X64-NEXT:    movzbl %r10b, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    movw %ax, var_827
 ; X64-NEXT:    retq

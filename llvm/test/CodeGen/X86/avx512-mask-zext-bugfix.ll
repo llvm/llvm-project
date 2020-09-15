@@ -40,20 +40,22 @@ define void @test_xmm(i32 %shift, i32 %mulp, <2 x i64> %a,i8* %arraydecay,i8* %f
 ; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
 ; CHECK-NEXT:    vpmovd2m %xmm0, %k0
 ; CHECK-NEXT:    kmovq %k0, %k1
-; CHECK-NEXT:    kmovd %k0, %ecx
-; CHECK-NEXT:    ## kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    movzbl %cl, %ecx
-; CHECK-NEXT:    ## kill: def $cx killed $cx killed $ecx
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
-; CHECK-NEXT:    movl $4, %edx
-; CHECK-NEXT:    movl %edx, %esi
+; CHECK-NEXT:    kmovd %k0, %esi
+; CHECK-NEXT:    ## kill: def $sil killed $sil killed $esi
+; CHECK-NEXT:    movzbl %sil, %edi
+; CHECK-NEXT:    ## kill: def $di killed $di killed $edi
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
+; CHECK-NEXT:    movw %di, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; CHECK-NEXT:    movq %rcx, %rdi
+; CHECK-NEXT:    movl $4, %r8d
+; CHECK-NEXT:    movl %r8d, %esi
+; CHECK-NEXT:    movl %r8d, %edx
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; CHECK-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; CHECK-NEXT:    movw %cx, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; CHECK-NEXT:    callq _calc_expected_mask_val
 ; CHECK-NEXT:    ## kill: def $ax killed $ax killed $rax
-; CHECK-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %cx ## 2-byte Reload
-; CHECK-NEXT:    movzwl %cx, %edi
+; CHECK-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %r9w ## 2-byte Reload
+; CHECK-NEXT:    movzwl %r9w, %edi
 ; CHECK-NEXT:    movzwl %ax, %esi
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx ## 8-byte Reload
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
