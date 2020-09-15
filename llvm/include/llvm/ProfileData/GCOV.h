@@ -15,6 +15,7 @@
 #define LLVM_PROFILEDATA_GCOV_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -261,6 +262,7 @@ public:
   unsigned srcIdx;
   SmallVector<std::unique_ptr<GCOVBlock>, 0> Blocks;
   SmallVector<std::unique_ptr<GCOVArc>, 0> arcs, treeArcs;
+  DenseSet<const GCOVBlock *> visited;
 };
 
 /// GCOVBlock - Collects block information.
