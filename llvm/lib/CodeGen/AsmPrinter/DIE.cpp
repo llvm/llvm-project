@@ -194,7 +194,7 @@ DIEAbbrev DIE::generateAbbrev() const {
   return Abbrev;
 }
 
-unsigned DIE::getDebugSectionOffset() const {
+uint64_t DIE::getDebugSectionOffset() const {
   const DIEUnit *Unit = getUnit();
   assert(Unit && "DIE must be owned by a DIEUnit to get its absolute offset");
   return Unit->getDebugSectionOffset() + getOffset();
@@ -662,7 +662,7 @@ void DIEEntry::emitValue(const AsmPrinter *AP, dwarf::Form Form) const {
 
   case dwarf::DW_FORM_ref_addr: {
     // Get the absolute offset for this DIE within the debug info/types section.
-    unsigned Addr = Entry->getDebugSectionOffset();
+    uint64_t Addr = Entry->getDebugSectionOffset();
     if (const MCSymbol *SectionSym =
             Entry->getUnit()->getCrossSectionRelativeBaseAddress()) {
       AP->emitLabelPlusOffset(SectionSym, Addr, SizeOf(AP, Form), true);
