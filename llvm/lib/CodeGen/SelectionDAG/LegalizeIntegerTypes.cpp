@@ -62,7 +62,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::Constant:    Res = PromoteIntRes_Constant(N); break;
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTLZ:        Res = PromoteIntRes_CTLZ(N); break;
-  case ISD::CTPOP:       Res = PromoteIntRes_CTPOP(N); break;
+  case ISD::PARITY:
+  case ISD::CTPOP:       Res = PromoteIntRes_CTPOP_PARITY(N); break;
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTTZ:        Res = PromoteIntRes_CTTZ(N); break;
   case ISD::EXTRACT_VECTOR_ELT:
@@ -503,10 +504,10 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTLZ(SDNode *N) {
                       NVT));
 }
 
-SDValue DAGTypeLegalizer::PromoteIntRes_CTPOP(SDNode *N) {
-  // Zero extend to the promoted type and do the count there.
+SDValue DAGTypeLegalizer::PromoteIntRes_CTPOP_PARITY(SDNode *N) {
+  // Zero extend to the promoted type and do the count or parity there.
   SDValue Op = ZExtPromotedInteger(N->getOperand(0));
-  return DAG.getNode(ISD::CTPOP, SDLoc(N), Op.getValueType(), Op);
+  return DAG.getNode(N->getOpcode(), SDLoc(N), Op.getValueType(), Op);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_CTTZ(SDNode *N) {
@@ -1980,6 +1981,7 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::AssertZext:  ExpandIntRes_AssertZext(N, Lo, Hi); break;
   case ISD::BITREVERSE:  ExpandIntRes_BITREVERSE(N, Lo, Hi); break;
   case ISD::BSWAP:       ExpandIntRes_BSWAP(N, Lo, Hi); break;
+  case ISD::PARITY:      ExpandIntRes_PARITY(N, Lo, Hi); break;
   case ISD::Constant:    ExpandIntRes_Constant(N, Lo, Hi); break;
   case ISD::ABS:         ExpandIntRes_ABS(N, Lo, Hi); break;
   case ISD::CTLZ_ZERO_UNDEF:
@@ -2770,6 +2772,17 @@ void DAGTypeLegalizer::ExpandIntRes_BSWAP(SDNode *N,
   GetExpandedInteger(N->getOperand(0), Hi, Lo);  // Note swapped operands.
   Lo = DAG.getNode(ISD::BSWAP, dl, Lo.getValueType(), Lo);
   Hi = DAG.getNode(ISD::BSWAP, dl, Hi.getValueType(), Hi);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_PARITY(SDNode *N, SDValue &Lo,
+                                           SDValue &Hi) {
+  SDLoc dl(N);
+  // parity(HiLo) -> parity(Lo^Hi)
+  GetExpandedInteger(N->getOperand(0), Lo, Hi);
+  EVT NVT = Lo.getValueType();
+  Lo =
+      DAG.getNode(ISD::PARITY, dl, NVT, DAG.getNode(ISD::XOR, dl, NVT, Lo, Hi));
+  Hi = DAG.getConstant(0, dl, NVT);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_Constant(SDNode *N,
