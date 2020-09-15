@@ -27,6 +27,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include <cstdint>
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -185,6 +186,33 @@ void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntry S) const {
 
 void AsmPrinter::emitDwarfOffset(const MCSymbol *Label, uint64_t Offset) const {
   emitLabelPlusOffset(Label, Offset, getDwarfOffsetByteSize());
+}
+
+void AsmPrinter::emitDwarfLengthOrOffset(uint64_t Value) const {
+  assert(isDwarf64() || Value <= UINT32_MAX);
+  OutStreamer->emitIntValue(Value, getDwarfOffsetByteSize());
+}
+
+void AsmPrinter::maybeEmitDwarf64Mark() const {
+  if (!isDwarf64())
+    return;
+  OutStreamer->AddComment("DWARF64 Mark");
+  OutStreamer->emitInt32(dwarf::DW_LENGTH_DWARF64);
+}
+
+void AsmPrinter::emitDwarfUnitLength(uint64_t Length,
+                                     const Twine &Comment) const {
+  assert(isDwarf64() || Length <= dwarf::DW_LENGTH_lo_reserved);
+  maybeEmitDwarf64Mark();
+  OutStreamer->AddComment(Comment);
+  OutStreamer->emitIntValue(Length, getDwarfOffsetByteSize());
+}
+
+void AsmPrinter::emitDwarfUnitLength(const MCSymbol *Hi, const MCSymbol *Lo,
+                                     const Twine &Comment) const {
+  maybeEmitDwarf64Mark();
+  OutStreamer->AddComment(Comment);
+  OutStreamer->emitAbsoluteSymbolDiff(Hi, Lo, getDwarfOffsetByteSize());
 }
 
 void AsmPrinter::emitCallSiteOffset(const MCSymbol *Hi, const MCSymbol *Lo,
