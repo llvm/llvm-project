@@ -58,6 +58,7 @@ struct Configuration {
   llvm::StringRef thinLTOJobs;
 
   llvm::StringRef entry;
+  llvm::StringRef mapFile;
   llvm::StringRef outputFile;
   llvm::StringRef thinLTOCacheDir;
 
