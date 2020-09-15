@@ -131,6 +131,14 @@ int gcovMain(int argc, const char *argv[]) {
                               cl::desc("Preserve path components"));
   cl::alias PreservePathsA("preserve-paths", cl::aliasopt(PreservePaths));
 
+  cl::opt<bool> RelativeOnly(
+      "r", cl::Grouping,
+      cl::desc("Only dump files with relative paths or absolute paths with the "
+               "prefix specified by -s"));
+  cl::alias RelativeOnlyA("relative-only", cl::aliasopt(RelativeOnly));
+  cl::opt<std::string> SourcePrefix("s", cl::desc("Source prefix to elide"));
+  cl::alias SourcePrefixA("source-prefix", cl::aliasopt(SourcePrefix));
+
   cl::opt<bool> UseStdout("t", cl::Grouping, cl::init(false),
                           cl::desc("Print to stdout"));
   cl::alias UseStdoutA("stdout", cl::aliasopt(UseStdout));
@@ -157,7 +165,8 @@ int gcovMain(int argc, const char *argv[]) {
 
   GCOV::Options Options(AllBlocks, BranchProb, BranchCount, FuncSummary,
                         PreservePaths, UncondBranch, Intermediate, LongNames,
-                        NoOutput, UseStdout, HashFilenames);
+                        NoOutput, RelativeOnly, UseStdout, HashFilenames,
+                        SourcePrefix);
 
   for (const auto &SourceFile : SourceFiles)
     reportCoverage(SourceFile, ObjectDir, InputGCNO, InputGCDA, DumpGCOV,

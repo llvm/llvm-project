@@ -48,10 +48,11 @@ enum GCOVVersion { V304, V407, V408, V800, V900 };
 /// A struct for passing gcov options between functions.
 struct Options {
   Options(bool A, bool B, bool C, bool F, bool P, bool U, bool I, bool L,
-          bool N, bool T, bool X)
+          bool N, bool R, bool T, bool X, std::string SourcePrefix)
       : AllBlocks(A), BranchInfo(B), BranchCount(C), FuncCoverage(F),
         PreservePaths(P), UncondBranch(U), Intermediate(I), LongFileNames(L),
-        NoOutput(N), UseStdout(T), HashFilenames(X) {}
+        NoOutput(N), RelativeOnly(R), UseStdout(T), HashFilenames(X),
+        SourcePrefix(std::move(SourcePrefix)) {}
 
   bool AllBlocks;
   bool BranchInfo;
@@ -62,8 +63,10 @@ struct Options {
   bool Intermediate;
   bool LongFileNames;
   bool NoOutput;
+  bool RelativeOnly;
   bool UseStdout;
   bool HashFilenames;
+  std::string SourcePrefix;
 };
 
 } // end namespace GCOV
@@ -341,9 +344,11 @@ struct GCOVCoverage {
 
 struct SourceInfo {
   StringRef filename;
+  SmallString<0> displayName;
   std::string name;
   std::vector<GCOVFunction *> functions;
   GCOVCoverage coverage;
+  bool ignored = false;
   SourceInfo(StringRef filename) : filename(filename) {}
 };
 
