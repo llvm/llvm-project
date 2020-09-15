@@ -270,7 +270,7 @@ void AccelTableWriter::emitOffsets(const MCSymbol *Base) const {
         continue;
       PrevHash = HashValue;
       Asm->OutStreamer->AddComment("Offset in Bucket " + Twine(i));
-      Asm->emitLabelDifference(Hash->Sym, Base, sizeof(uint32_t));
+      Asm->emitLabelDifference(Hash->Sym, Base, Asm->getDwarfOffsetByteSize());
     }
   }
 }
@@ -366,9 +366,8 @@ void Dwarf5AccelTableWriter<DataT>::Header::emit(
   assert(CompUnitCount > 0 && "Index must have at least one CU.");
 
   AsmPrinter *Asm = Ctx.Asm;
-  Asm->OutStreamer->AddComment("Header: unit length");
-  Asm->emitLabelDifference(Ctx.ContributionEnd, Ctx.ContributionStart,
-                           sizeof(uint32_t));
+  Asm->emitDwarfUnitLength(Ctx.ContributionEnd, Ctx.ContributionStart,
+                           "Header: unit length");
   Asm->OutStreamer->emitLabel(Ctx.ContributionStart);
   Asm->OutStreamer->AddComment("Header: version");
   Asm->emitInt16(Version);
