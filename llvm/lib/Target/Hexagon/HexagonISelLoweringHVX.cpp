@@ -2112,22 +2112,40 @@ HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
       const {
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
+
   const SDLoc &dl(N);
+  SelectionDAG &DAG = DCI.DAG;
   SDValue Op(N, 0);
 
   unsigned Opc = Op.getOpcode();
-  if (Opc == ISD::VSELECT) {
-    // (vselect (xor x, qtrue), v0, v1) -> (vselect x, v1, v0)
-    SDValue Cond = Op.getOperand(0);
-    if (Cond->getOpcode() == ISD::XOR) {
-      SDValue C0 = Cond.getOperand(0), C1 = Cond.getOperand(1);
-      if (C1->getOpcode() == HexagonISD::QTRUE) {
-        SDValue VSel = DCI.DAG.getNode(ISD::VSELECT, dl, ty(Op), C0,
-                                       Op.getOperand(2), Op.getOperand(1));
-        return VSel;
+  switch (Opc) {
+    case ISD::VSELECT: {
+      // (vselect (xor x, qtrue), v0, v1) -> (vselect x, v1, v0)
+      SDValue Cond = Op.getOperand(0);
+      if (Cond->getOpcode() == ISD::XOR) {
+        SDValue C0 = Cond.getOperand(0), C1 = Cond.getOperand(1);
+        if (C1->getOpcode() == HexagonISD::QTRUE)
+          return DAG.getNode(ISD::VSELECT, dl, ty(Op), C0,
+                             Op.getOperand(2), Op.getOperand(1));
       }
+      break;
+    }
+    case HexagonISD::VINSERTW0:
+      if (isUndef(Op.getOperand(1)))
+        return Op.getOperand(0);
+      break;
+    case HexagonISD::VROR: {
+      SDValue Op0 = Op.getOperand(0);
+      if (Op0.getOpcode() == HexagonISD::VROR) {
+        SDValue Vec = Op0.getOperand(0);
+        SDValue Rot0 = Op.getOperand(1), Rot1 = Op0.getOperand(1);
+        SDValue Rot = DAG.getNode(ISD::ADD, dl, ty(Rot0), {Rot0, Rot1});
+        return DAG.getNode(HexagonISD::VROR, dl, ty(Op), {Vec, Rot});
+      }
+      break;
     }
   }
+
   return SDValue();
 }
 
