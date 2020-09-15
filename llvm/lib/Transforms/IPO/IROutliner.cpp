@@ -211,6 +211,8 @@ static bool
 collectRegionsConstants(OutlinableRegion &Region,
                         DenseMap<unsigned, Constant *> &GVNToConstant,
                         DenseSet<unsigned> &NotSame) {
+  bool ConstantsTheSame = true;
+
   IRSimilarityCandidate &C = *Region.Candidate;
   for (IRInstructionData &ID : C) {
 
@@ -222,11 +224,10 @@ collectRegionsConstants(OutlinableRegion &Region,
       assert(GVNOpt.hasValue() && "Expected a GVN for operand?");
       unsigned GVN = GVNOpt.getValue();
 
-      // If this global value has been found to not be the same, it could have
-      // just been a register, check that it is not a constant value.
+      // Check if this global value has been found to not be the same already.
       if (NotSame.find(GVN) != NotSame.end()) {
         if (isa<Constant>(V))
-          return false;
+          ConstantsTheSame = false;
         continue;
       }
 
@@ -239,30 +240,27 @@ collectRegionsConstants(OutlinableRegion &Region,
         if (ConstantMatches.getValue())
           continue;
         else
-          return false;
+          ConstantsTheSame = false;
       }
 
       // While this value is a register, it might not have been previously,
       // make sure we don't already have a constant mapped to this global value
       // number.
       if (GVNToConstant.find(GVN) != GVNToConstant.end())
-        return false;
+        ConstantsTheSame = false;
 
       NotSame.insert(GVN);
     }
   }
 
-  return true;
+  return ConstantsTheSame;
 }
 
 void OutlinableGroup::findSameConstants(DenseSet<unsigned> &NotSame) {
   DenseMap<unsigned, Constant *> GVNToConstant;
 
   for (OutlinableRegion *Region : Regions)
-    if (!collectRegionsConstants(*Region, GVNToConstant, NotSame)) {
-      IgnoreGroup = true;
-      return;
-    }
+    collectRegionsConstants(*Region, GVNToConstant, NotSame);
 }
 
 Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
@@ -307,16 +305,44 @@ static BasicBlock *moveFunctionData(Function &Old, Function &New) {
   return NewEnd;
 }
 
-/// Find the GVN for the inputs that have been found by the CodeExtractor,
-/// excluding the ones that will be removed by llvm.assumes as these will be
-/// removed by the CodeExtractor.
+/// Find the the constants that will need to be lifted into arguments
+/// as they are not the same in each instance of the region.
+///
+/// \param [in] C - The IRSimilarityCandidate containing the region we are
+/// analyzing.
+/// \param [in] NotSame - The set of global value numbers that do not have a
+/// single Constant across all OutlinableRegions similar to \p C.
+/// \param [out] Inputs - The list containing the global value numbers of the
+/// arguments needed for the region of code.
+static void findConstants(IRSimilarityCandidate &C, DenseSet<unsigned> &NotSame,
+                          std::vector<unsigned> &Inputs) {
+  DenseSet<unsigned> Seen;
+  // Iterate over the instructions, and find what constants will need to be
+  // extracted into arguments.
+  for (IRInstructionDataList::iterator IDIt = C.begin(), EndIDIt = C.end();
+       IDIt != EndIDIt; IDIt++) {
+    for (Value *V : (*IDIt).OperVals) {
+      // Since these are stored before any outlining, they will be in the
+      // global value numbering.
+      unsigned GVN = C.getGVN(V).getValue();
+      if (Constant *CST = dyn_cast<Constant>(V))
+        if (NotSame.find(GVN) != NotSame.end() &&
+            Seen.find(GVN) == Seen.end()) {
+          Inputs.push_back(GVN);
+          Seen.insert(GVN);
+        }
+    }
+  }
+}
+
+/// Find the GVN for the inputs that have been found by the CodeExtractor.
 ///
 /// \param [in] C - The IRSimilarityCandidate containing the region we are
 /// analyzing.
 /// \param [in] CurrentInputs - The set of inputs found by the
 /// CodeExtractor.
-/// \param [out] CurrentInputNumbers - The global value numbers for the
-/// extracted arguments.
+/// \param [out] EndInputNumbers - The global value numbers for the extracted
+/// arguments.
 static void mapInputsToGVNs(IRSimilarityCandidate &C,
                             SetVector<Value *> &CurrentInputs,
                             std::vector<unsigned> &EndInputNumbers) {
@@ -332,16 +358,20 @@ static void mapInputsToGVNs(IRSimilarityCandidate &C,
 /// Find the input GVNs and the output values for a region of Instructions.
 /// Using the code extractor, we collect the inputs to the extracted function.
 ///
-/// The \p Region can be identifed as needing to be ignored in this function.
+/// The \p Region can be identified as needing to be ignored in this function.
 /// It should be checked whether it should be ignored after a call to this
 /// function.
 ///
 /// \param [in,out] Region - The region of code to be analyzed.
 /// \param [out] InputGVNs - The global value numbers for the extracted
 /// arguments.
+/// \param [in] NotSame - The global value numbers in the region that do not
+/// have the same constant value in the regions structurally similar to
+/// \p Region.
 /// \param [out] ArgInputs - The values of the inputs to the extracted function.
 static void getCodeExtractorArguments(OutlinableRegion &Region,
                                       std::vector<unsigned> &InputGVNs,
+                                      DenseSet<unsigned> &NotSame,
                                       SetVector<Value *> &ArgInputs) {
   IRSimilarityCandidate &C = *Region.Candidate;
 
@@ -389,13 +419,18 @@ static void getCodeExtractorArguments(OutlinableRegion &Region,
     return;
   }
 
+  findConstants(C, NotSame, InputGVNs);
   mapInputsToGVNs(C, OverallInputs, InputGVNs);
+
+  // Sort the GVNs, since we now have constants included in the \ref InputGVNs
+  // we need to make sure they are in a deterministic order.
+  stable_sort(InputGVNs.begin(), InputGVNs.end());
 }
 
 /// Look over the inputs and map each input argument to an argument in the
-/// overall function for the regions.  This creates a way to replace the
-/// arguments of the extracted function, with the arguments of the new overall
-/// function.
+/// overall function for the OutlinableRegions.  This creates a way to replace
+/// the arguments of the extracted function with the arguments of the new
+/// overall function.
 ///
 /// \param [in,out] Region - The region of code to be analyzed.
 /// \param [in] InputsGVNs - The global value numbering of the input values
@@ -417,7 +452,10 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
   unsigned OriginalIndex = 0;
 
   // Find the mapping of the extracted arguments to the arguments for the
-  // overall function.
+  // overall function. Since there may be extra arguments in the overall
+  // function to account for the extracted constants, we have two different
+  // counters as we find extracted arguments, and as we come across overall
+  // arguments.
   for (unsigned InputVal : InputGVNs) {
     Optional<Value *> InputOpt = C.fromGVN(InputVal);
     assert(InputOpt.hasValue() && "Global value number not found?");
@@ -426,9 +464,16 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
     if (!Group.InputTypesSet)
       Group.ArgumentTypes.push_back(Input->getType());
 
-    // It is not a constant, check if it is a sunken alloca.  If it is not,
-    // create the mapping from extracted to overall.  If it is, create the
-    // mapping of the index to the value.
+    // Check if we have a constant. If we do add it to the overall argument
+    // number to Constant map for the region, and continue to the next input.
+    if (Constant *CST = dyn_cast<Constant>(Input)) {
+      Region.AggArgToConstant.insert(std::make_pair(TypeIndex, CST));
+      TypeIndex++;
+      continue;
+    }
+
+    // It is not a constant, we create the mapping from extracted argument list
+    // to the overall argument list.
     assert(ArgInputs.count(Input) && "Input cannot be found!");
 
     Region.ExtractedArgToAgg.insert(std::make_pair(OriginalIndex, TypeIndex));
@@ -437,10 +482,10 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
     TypeIndex++;
   }
 
-  // If we do not have definitions for the OutlinableGroup holding the region,
-  // set the length of the inputs here.  We should have the same inputs for
-  // all of the different regions contained in the OutlinableGroup since they
-  // are all structurally similar to one another
+  // If the function type definitions for the OutlinableGroup holding the region
+  // have not been set, set the length of the inputs here.  We should have the
+  // same inputs for all of the different regions contained in the
+  // OutlinableGroup since they are all structurally similar to one another.
   if (!Group.InputTypesSet) {
     Group.NumAggregateInputs = TypeIndex;
     Group.InputTypesSet = true;
@@ -449,11 +494,12 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
   Region.NumExtractedInputs = OriginalIndex;
 }
 
-void IROutliner::findAddInputsOutputs(Module &M, OutlinableRegion &Region) {
+void IROutliner::findAddInputsOutputs(Module &M, OutlinableRegion &Region,
+                                      DenseSet<unsigned> &NotSame) {
   std::vector<unsigned> Inputs;
   SetVector<Value *> ArgInputs;
 
-  getCodeExtractorArguments(Region, Inputs, ArgInputs);
+  getCodeExtractorArguments(Region, Inputs, NotSame, ArgInputs);
 
   if (Region.IgnoreRegion)
     return;
@@ -474,6 +520,7 @@ void IROutliner::findAddInputsOutputs(Module &M, OutlinableRegion &Region) {
 /// \returns a call instruction with the replaced function.
 CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
   std::vector<Value *> NewCallArgs;
+  DenseMap<unsigned, unsigned>::iterator ArgPair;
 
   OutlinableGroup &Group = *Region.Parent;
   CallInst *Call = Region.Call;
@@ -484,12 +531,72 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
   // If the arguments are the same size, there are not values that need to be
   // made argument, or different output registers to handle.  We can simply
   // replace the called function in this case.
-  assert(AggFunc->arg_size() == Call->arg_size() &&
-         "Can only replace calls with the same number of arguments!");
+  if (AggFunc->arg_size() == Call->arg_size()) {
+    LLVM_DEBUG(dbgs() << "Replace call to " << *Call << " with call to "
+                      << *AggFunc << " with same number of arguments\n");
+    Call->setCalledFunction(AggFunc);
+    return Call;
+  }
+
+  // We have a different number of arguments than the new function, so
+  // we need to use our previously mappings off extracted argument to overall
+  // function argument, and constants to overall function argument to create the
+  // new argument list.
+  for (unsigned AggArgIdx = 0; AggArgIdx < AggFunc->arg_size(); AggArgIdx++) {
+
+    ArgPair = Region.AggArgToExtracted.find(AggArgIdx);
+    if (ArgPair != Region.AggArgToExtracted.end()) {
+      Value *ArgumentValue = Call->getArgOperand(ArgPair->second);
+      // If we found the mapping from the extracted function to the overall
+      // function, we simply add it to the argument list.  We use the same
+      // value, it just needs to honor the new order of arguments.
+      LLVM_DEBUG(dbgs() << "Setting argument " << AggArgIdx << " to value "
+                        << *ArgumentValue << "\n");
+      NewCallArgs.push_back(ArgumentValue);
+      continue;
+    }
+
+    // If it is a constant, we simply add it to the argument list as a value.
+    if (Region.AggArgToConstant.find(AggArgIdx) !=
+        Region.AggArgToConstant.end()) {
+      Constant *CST = Region.AggArgToConstant.find(AggArgIdx)->second;
+      LLVM_DEBUG(dbgs() << "Setting argument " << AggArgIdx << " to value "
+                        << *CST << "\n");
+      NewCallArgs.push_back(CST);
+      continue;
+    }
+
+    // Add a nullptr value if the argument is not found in the extracted
+    // function.  If we cannot find a value, it means it is not in use
+    // for the region, so we should not pass anything to it.
+    LLVM_DEBUG(dbgs() << "Setting argument " << AggArgIdx << " to nullptr\n");
+    NewCallArgs.push_back(ConstantPointerNull::get(
+        static_cast<PointerType *>(AggFunc->getArg(AggArgIdx)->getType())));
+  }
 
   LLVM_DEBUG(dbgs() << "Replace call to " << *Call << " with call to "
-                    << *AggFunc << " with same number of arguments\n");
-  Call->setCalledFunction(AggFunc);
+                    << *AggFunc << " with new set of arguments\n");
+  // Create the new call instruction and erase the old one.
+  Call = CallInst::Create(AggFunc->getFunctionType(), AggFunc, NewCallArgs, "",
+                          Call);
+
+  // It is possible that the call to the outlined function is either the first
+  // instruction in the new block, the last instruction, or both.  If either of
+  // these is the case, we need to make sure that we replace the instruction in
+  // the IRInstructionData struct with the new call.
+  CallInst *OldCall = Region.Call;
+  if (Region.NewFront->Inst == OldCall)
+    Region.NewFront->Inst = Call;
+  if (Region.NewBack->Inst == OldCall)
+    Region.NewBack->Inst = Call;
+
+  // Transfer any debug information.
+  Call->setDebugLoc(Region.Call->getDebugLoc());
+
+  // Remove the old instruction.
+  OldCall->eraseFromParent();
+  Region.Call = Call;
+
   return Call;
 }
 
@@ -515,6 +622,37 @@ static void replaceArgumentUses(OutlinableRegion &Region) {
                       << *Region.ExtractedFunction << " with " << *AggArg
                       << " in function " << *Group.OutlinedFunction << "\n");
     Arg->replaceAllUsesWith(AggArg);
+  }
+}
+
+/// Within an extracted function, replace the constants that need to be lifted
+/// into arguments with the actual argument.
+///
+/// \param Region [in] - The region of extracted code to be changed.
+void replaceConstants(OutlinableRegion &Region) {
+  OutlinableGroup &Group = *Region.Parent;
+  // Iterate over the constants that need to be elevated into arguments
+  for (std::pair<unsigned, Constant *> &Const : Region.AggArgToConstant) {
+    unsigned AggArgIdx = Const.first;
+    Function *OutlinedFunction = Group.OutlinedFunction;
+    assert(OutlinedFunction && "Overall Function is not defined?");
+    Constant *CST = Const.second;
+    Argument *Arg = Group.OutlinedFunction->getArg(AggArgIdx);
+    // Identify the argument it will be elevated to, and replace instances of
+    // that constant in the function.
+
+    // TODO: If in the future constants do not have one global value number,
+    // i.e. a constant 1 could be mapped to several values, this check will
+    // have to be more strict.  It cannot be using only replaceUsesWithIf.
+
+    LLVM_DEBUG(dbgs() << "Replacing uses of constant " << *CST
+                      << " in function " << *OutlinedFunction << " with "
+                      << *Arg << "\n");
+    CST->replaceUsesWithIf(Arg, [OutlinedFunction](Use &U) {
+      if (Instruction *I = dyn_cast<Instruction>(U.getUser()))
+        return I->getFunction() == OutlinedFunction;
+      return false;
+    });
   }
 }
 
@@ -544,6 +682,7 @@ static void fillOverallFunction(Module &M, OutlinableGroup &CurrentGroup,
     CurrentGroup.OutlinedFunction->addFnAttr(A);
 
   replaceArgumentUses(*CurrentOS);
+  replaceConstants(*CurrentOS);
 
   // Replace the call to the extracted function with the outlined function.
   CurrentOS->Call = replaceCalledFunction(M, *CurrentOS);
@@ -738,7 +877,7 @@ unsigned IROutliner::doOutline(Module &M) {
       OS->CE = new (ExtractorAllocator.Allocate())
           CodeExtractor(BE, nullptr, false, nullptr, nullptr, nullptr, false,
                         false, "outlined");
-      findAddInputsOutputs(M, *OS);
+      findAddInputsOutputs(M, *OS, NotSame);
       if (!OS->IgnoreRegion)
         OutlinedRegions.push_back(OS);
       else
