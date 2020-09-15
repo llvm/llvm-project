@@ -5062,7 +5062,7 @@ static bool isSaturatingConditional(const SDValue &Op, SDValue &V,
     int64_t PosVal = std::max(Val1, Val2);
     int64_t NegVal = std::min(Val1, Val2);
 
-    if (!((Val1 > Val2 && isLTorLE(CC1)) || (Val1 < Val2 && isLTorLE(CC2))) &&
+    if (!((Val1 > Val2 && isLTorLE(CC1)) || (Val1 < Val2 && isLTorLE(CC2))) ||
         !isPowerOf2_64(PosVal + 1)) 
       return false;
 
