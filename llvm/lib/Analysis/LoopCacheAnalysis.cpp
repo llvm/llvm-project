@@ -29,7 +29,11 @@
 #include "llvm/ADT/BreadthFirstIterator.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/DependenceAnalysis.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
@@ -145,7 +149,7 @@ IndexedReference::IndexedReference(Instruction &StoreOrLoadInst,
 
 Optional<bool> IndexedReference::hasSpacialReuse(const IndexedReference &Other,
                                                  unsigned CLS,
-                                                 AliasAnalysis &AA) const {
+                                                 AAResults &AA) const {
   assert(IsValid && "Expecting a valid reference");
 
   if (BasePointer != Other.getBasePointer() && !isAliased(Other, AA)) {
@@ -202,7 +206,7 @@ Optional<bool> IndexedReference::hasTemporalReuse(const IndexedReference &Other,
                                                   unsigned MaxDistance,
                                                   const Loop &L,
                                                   DependenceInfo &DI,
-                                                  AliasAnalysis &AA) const {
+                                                  AAResults &AA) const {
   assert(IsValid && "Expecting a valid reference");
 
   if (BasePointer != Other.getBasePointer() && !isAliased(Other, AA)) {
@@ -457,7 +461,7 @@ bool IndexedReference::isSimpleAddRecurrence(const SCEV &Subscript,
 }
 
 bool IndexedReference::isAliased(const IndexedReference &Other,
-                                 AliasAnalysis &AA) const {
+                                 AAResults &AA) const {
   const auto &Loc1 = MemoryLocation::get(&StoreOrLoadInst);
   const auto &Loc2 = MemoryLocation::get(&Other.StoreOrLoadInst);
   return AA.isMustAlias(Loc1, Loc2);
@@ -476,7 +480,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const CacheCost &CC) {
 
 CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
                      ScalarEvolution &SE, TargetTransformInfo &TTI,
-                     AliasAnalysis &AA, DependenceInfo &DI,
+                     AAResults &AA, DependenceInfo &DI,
                      Optional<unsigned> TRT)
     : Loops(Loops), TripCounts(), LoopCosts(),
       TRT((TRT == None) ? Optional<unsigned>(TemporalReuseThreshold) : TRT),
