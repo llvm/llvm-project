@@ -726,7 +726,12 @@ private:
     DK_STRUCT,
     DK_UNION,
     DK_ENDS,
-    DK_END
+    DK_END,
+    DK_PUSHFRAME,
+    DK_PUSHREG,
+    DK_SAVEREG,
+    DK_SAVEXMM128,
+    DK_SETFRAME,
   };
 
   /// Maps directive name --> DirectiveKind enum, for directives parsed by this
@@ -6333,6 +6338,11 @@ void MasmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".erridni"] = DK_ERRIDNI;
   DirectiveKindMap[".erre"] = DK_ERRE;
   DirectiveKindMap[".errnz"] = DK_ERRNZ;
+  DirectiveKindMap[".pushframe"] = DK_PUSHFRAME;
+  DirectiveKindMap[".pushreg"] = DK_PUSHREG;
+  DirectiveKindMap[".savereg"] = DK_SAVEREG;
+  DirectiveKindMap[".savexmm128"] = DK_SAVEXMM128;
+  DirectiveKindMap[".setframe"] = DK_SETFRAME;
   // DirectiveKindMap[".altmacro"] = DK_ALTMACRO;
   // DirectiveKindMap[".noaltmacro"] = DK_NOALTMACRO;
   DirectiveKindMap["db"] = DK_DB;
