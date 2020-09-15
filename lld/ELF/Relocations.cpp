@@ -692,7 +692,7 @@ static std::string maybeReportDiscarded(Undefined &sym) {
   if (sym.type == ELF::STT_SECTION) {
     msg = "relocation refers to a discarded section: ";
     msg += CHECK(
-        file->getObj().getSectionName(&objSections[sym.discardedSecIdx]), file);
+        file->getObj().getSectionName(objSections[sym.discardedSecIdx]), file);
   } else {
     msg = "relocation refers to a symbol in a discarded section: " +
           toString(sym);
