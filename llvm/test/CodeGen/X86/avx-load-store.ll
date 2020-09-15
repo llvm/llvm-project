@@ -175,8 +175,8 @@ define void @double_save(<4 x i32> %A, <4 x i32> %B, <8 x i32>* %P) nounwind ssp
 ; CHECK_O0:       # %bb.0:
 ; CHECK_O0-NEXT:    # implicit-def: $ymm2
 ; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm2
-; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm0
-; CHECK_O0-NEXT:    vmovdqu %ymm0, (%rdi)
+; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm2
+; CHECK_O0-NEXT:    vmovdqu %ymm2, (%rdi)
 ; CHECK_O0-NEXT:    vzeroupper
 ; CHECK_O0-NEXT:    retq
   %Z = shufflevector <4 x i32>%A, <4 x i32>%B, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -197,8 +197,8 @@ define void @double_save_volatile(<4 x i32> %A, <4 x i32> %B, <8 x i32>* %P) nou
 ; CHECK_O0:       # %bb.0:
 ; CHECK_O0-NEXT:    # implicit-def: $ymm2
 ; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm2
-; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm0
-; CHECK_O0-NEXT:    vmovdqu %ymm0, (%rdi)
+; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm2
+; CHECK_O0-NEXT:    vmovdqu %ymm2, (%rdi)
 ; CHECK_O0-NEXT:    vzeroupper
 ; CHECK_O0-NEXT:    retq
   %Z = shufflevector <4 x i32>%A, <4 x i32>%B, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -239,10 +239,10 @@ define void @f_f() nounwind {
 ; CHECK_O0-NEXT:  .LBB9_3: # %cif_mixed_test_all
 ; CHECK_O0-NEXT:    vmovdqa {{.*#+}} xmm0 = [4294967295,0,0,0]
 ; CHECK_O0-NEXT:    vmovdqa %xmm0, %xmm0
-; CHECK_O0-NEXT:    # kill: def $ymm0 killed $xmm0
+; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm1
 ; CHECK_O0-NEXT:    # implicit-def: $rax
-; CHECK_O0-NEXT:    # implicit-def: $ymm1
-; CHECK_O0-NEXT:    vmaskmovps %ymm1, %ymm0, (%rax)
+; CHECK_O0-NEXT:    # implicit-def: $ymm2
+; CHECK_O0-NEXT:    vmaskmovps %ymm2, %ymm1, (%rax)
 ; CHECK_O0-NEXT:  .LBB9_4: # %cif_mixed_test_any_check
 allocas:
   br i1 undef, label %cif_mask_all, label %cif_mask_mixed
@@ -276,8 +276,8 @@ define void @add8i32(<8 x i32>* %ret, <8 x i32>* %bp) nounwind {
 ; CHECK_O0-NEXT:    vmovdqu 16(%rsi), %xmm1
 ; CHECK_O0-NEXT:    # implicit-def: $ymm2
 ; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm2
-; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm0
-; CHECK_O0-NEXT:    vmovdqu %ymm0, (%rdi)
+; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm2
+; CHECK_O0-NEXT:    vmovdqu %ymm2, (%rdi)
 ; CHECK_O0-NEXT:    vzeroupper
 ; CHECK_O0-NEXT:    retq
   %b = load <8 x i32>, <8 x i32>* %bp, align 1
@@ -321,8 +321,8 @@ define void @add4i64a16(<4 x i64>* %ret, <4 x i64>* %bp) nounwind {
 ; CHECK_O0-NEXT:    vmovdqa 16(%rsi), %xmm1
 ; CHECK_O0-NEXT:    # implicit-def: $ymm2
 ; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm2
-; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm0
-; CHECK_O0-NEXT:    vmovdqu %ymm0, (%rdi)
+; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm2
+; CHECK_O0-NEXT:    vmovdqu %ymm2, (%rdi)
 ; CHECK_O0-NEXT:    vzeroupper
 ; CHECK_O0-NEXT:    retq
   %b = load <4 x i64>, <4 x i64>* %bp, align 16

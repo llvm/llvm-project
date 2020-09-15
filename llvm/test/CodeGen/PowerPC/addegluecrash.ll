@@ -21,11 +21,11 @@ define void @bn_mul_comba8(i64* nocapture %r, i64* nocapture readonly %a, i64* n
 ; CHECK-NEXT:    addze 5, 5
 ; CHECK-NEXT:    add 4, 5, 4
 ; CHECK-NEXT:    cmpld 7, 4, 5
-; CHECK-NEXT:    mfocrf 4, 1
-; CHECK-NEXT:    rlwinm 4, 4, 29, 31, 31
-; CHECK-NEXT:    # implicit-def: $x5
-; CHECK-NEXT:    mr 5, 4
-; CHECK-NEXT:    clrldi 4, 5, 32
+; CHECK-NEXT:    mfocrf 10, 1
+; CHECK-NEXT:    rlwinm 10, 10, 29, 31, 31
+; CHECK-NEXT:    # implicit-def: $x4
+; CHECK-NEXT:    mr 4, 10
+; CHECK-NEXT:    clrldi 4, 4, 32
 ; CHECK-NEXT:    std 4, 0(3)
 ; CHECK-NEXT:    blr
   %1 = load i64, i64* %a, align 8

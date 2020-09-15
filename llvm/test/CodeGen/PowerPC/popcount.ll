@@ -58,17 +58,17 @@ define <1 x i128> @popcount1x128(<1 x i128> %0) {
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vsl0
 ; CHECK-NEXT:    mffprd 3, 0
 ; CHECK-NEXT:    popcntd 3, 3
-; CHECK-NEXT:    xxswapd 0, 34
-; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vsl0
-; CHECK-NEXT:    mffprd 4, 0
+; CHECK-NEXT:    xxswapd 1, 34
+; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
+; CHECK-NEXT:    mffprd 4, 1
 ; CHECK-NEXT:    popcntd 4, 4
 ; CHECK-NEXT:    add 3, 4, 3
 ; CHECK-NEXT:    mtfprd 0, 3
-; CHECK-NEXT:    # kill: def $vsl0 killed $f0
+; CHECK-NEXT:    fmr 2, 0
 ; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    mtfprd 1, 3
-; CHECK-NEXT:    # kill: def $vsl1 killed $f1
-; CHECK-NEXT:    xxmrghd 34, 1, 0
+; CHECK-NEXT:    mtfprd 0, 3
+; CHECK-NEXT:    fmr 3, 0
+; CHECK-NEXT:    xxmrghd 34, 3, 2
 ; CHECK-NEXT:    blr
 Entry:
   %1 = tail call <1 x i128> @llvm.ctpop.v1.i128(<1 x i128> %0)
