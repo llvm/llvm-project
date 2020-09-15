@@ -696,7 +696,8 @@ public:
   /// before taking the branch. For loops with multiple exits, it may not be
   /// the number times that the loop header executes if the loop exits
   /// prematurely via another branch.
-  unsigned getSmallConstantTripCount(const Loop *L, BasicBlock *ExitingBlock);
+  unsigned getSmallConstantTripCount(const Loop *L,
+                                     const BasicBlock *ExitingBlock);
 
   /// Returns the upper bound of the loop trip count as a normal unsigned
   /// value.
@@ -718,8 +719,7 @@ public:
   /// for getSmallConstantTripCount, this assumes that control exits the loop
   /// via ExitingBlock.
   unsigned getSmallConstantTripMultiple(const Loop *L,
-                                        BasicBlock *ExitingBlock);
-
+                                        const BasicBlock *ExitingBlock);
 
   /// The terms "backedge taken count" and "exit count" are used
   /// interchangeably to refer to the number of times the backedge of a loop 
@@ -737,8 +737,8 @@ public:
   /// For a single exit loop, this value is equivelent to the result of
   /// getBackedgeTakenCount.  The loop is guaranteed to exit (via *some* exit)
   /// before the backedge is executed (ExitCount + 1) times.  Note that there
-  /// is no guarantee about *which* exit is taken on the exiting iteration.  
-  const SCEV *getExitCount(const Loop *L, BasicBlock *ExitingBlock,
+  /// is no guarantee about *which* exit is taken on the exiting iteration.
+  const SCEV *getExitCount(const Loop *L, const BasicBlock *ExitingBlock,
                            ExitCountKind Kind = Exact);
 
   /// If the specified loop has a predictable backedge-taken count, return it,
@@ -1352,13 +1352,15 @@ private:
     /// edge, or SCEVCouldNotCompute. The loop is guaranteed not to exit via
     /// this block before this number of iterations, but may exit via another
     /// block.
-    const SCEV *getExact(BasicBlock *ExitingBlock, ScalarEvolution *SE) const;
+    const SCEV *getExact(const BasicBlock *ExitingBlock,
+                         ScalarEvolution *SE) const;
 
     /// Get the max backedge taken count for the loop.
     const SCEV *getMax(ScalarEvolution *SE) const;
 
     /// Get the max backedge taken count for the particular loop exit.
-    const SCEV *getMax(BasicBlock *ExitingBlock, ScalarEvolution *SE) const;
+    const SCEV *getMax(const BasicBlock *ExitingBlock,
+                       ScalarEvolution *SE) const;
 
     /// Return true if the number of times this backedge is taken is either the
     /// value returned by getMax or zero.
