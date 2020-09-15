@@ -264,7 +264,7 @@ void initializeLowerGuardIntrinsicLegacyPassPass(PassRegistry&);
 void initializeLowerWidenableConditionLegacyPassPass(PassRegistry&);
 void initializeLowerIntrinsicsPass(PassRegistry&);
 void initializeLowerInvokeLegacyPassPass(PassRegistry&);
-void initializeLowerSwitchPass(PassRegistry&);
+void initializeLowerSwitchLegacyPassPass(PassRegistry &);
 void initializeLowerTypeTestsPass(PassRegistry&);
 void initializeLowerMatrixIntrinsicsLegacyPassPass(PassRegistry &);
 void initializeLowerMatrixIntrinsicsMinimalLegacyPassPass(PassRegistry &);
