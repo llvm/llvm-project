@@ -119,10 +119,10 @@ private:
   /// load/stores.
   bool IsPredicatedVectorLoop();
 
-  /// Perform checks on the arguments of @llvm.get.active.lane.mask
-  /// intrinsic: check if the first is a loop induction variable, and for the
-  /// the second check that no overflow can occur in the expression that use
-  /// this backedge-taken count.
+  /// Perform several checks on the arguments of @llvm.get.active.lane.mask
+  /// intrinsic. E.g., check that the loop induction variable and the element
+  /// count are of the form we expect, and also perform overflow checks for
+  /// the new expressions that are created.
   bool IsSafeActiveMask(IntrinsicInst *ActiveLaneMask, Value *TripCount,
                         FixedVectorType *VecTy);
 
@@ -373,10 +373,73 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
     EnableTailPredication == TailPredication::ForceEnabledNoReductions ||
     EnableTailPredication == TailPredication::ForceEnabled;
 
-  // 1) TODO: Check that the TripCount (TC) belongs to this loop (originally).
+  // 1) Check that the original scalar loop TripCount (TC) belongs to this loop.
   // The scalar tripcount corresponds the number of elements processed by the
   // loop, so we will refer to that from this point on.
-  auto *ElemCountVal = ActiveLaneMask->getOperand(1);
+  Value *ElemCount = ActiveLaneMask->getOperand(1);
+  auto *EC= SE->getSCEV(ElemCount);
+  auto *TC = SE->getSCEV(TripCount);
+  int VectorWidth = VecTy->getNumElements();
+  ConstantInt *ConstElemCount = nullptr;
+
+  if (!SE->isLoopInvariant(EC, L)) {
+    LLVM_DEBUG(dbgs() << "ARM TP: element count must be loop invariant.\n");
+    return false;
+  }
+
+  if ((ConstElemCount = dyn_cast<ConstantInt>(ElemCount))) {
+    ConstantInt *TC = dyn_cast<ConstantInt>(TripCount);
+    if (!TC) {
+      LLVM_DEBUG(dbgs() << "ARM TP: Constant tripcount expected in "
+                           "set.loop.iterations\n");
+      return false;
+    }
+
+    // Calculate 2 tripcount values and check that they are consistent with
+    // each other:
+    // i) The number of loop iterations extracted from the set.loop.iterations
+    //    intrinsic, multipled by the vector width:
+    uint64_t TC1 = TC->getZExtValue() * VectorWidth;
+
+    // ii) TC1 has to be equal to TC + 1, with the + 1 to compensate for start
+    //     counting from 0.
+    uint64_t TC2 = ConstElemCount->getZExtValue() + 1;
+
+    if (TC1 != TC2) {
+      LLVM_DEBUG(dbgs() << "ARM TP: inconsistent constant tripcount values: "
+                 << TC1 << " from set.loop.iterations, and "
+                 << TC2 << " from get.active.lane.mask\n");
+      return false;
+    }
+  } else {
+    // Smoke tests if the element count is a runtime value. I.e., this isn't
+    // fully generic because that would require a full SCEV visitor here. It
+    // would require extracting the variable from the elementcount SCEV
+    // expression, and match this up with the tripcount SCEV expression. If
+    // this matches up, we know both expressions are bound by the same
+    // variable, and thus we know this tripcount belongs to this loop. The
+    // checks below will catch most cases though.
+    if (isa<SCEVAddExpr>(EC) || isa<SCEVUnknown>(EC)) {
+      // If the element count is a simple AddExpr or SCEVUnknown, which is e.g.
+      // the case when the element count is just a variable %N, we can just see
+      // if it is an operand in the tripcount scev expression.
+      if (isa<SCEVAddExpr>(TC) && !SE->hasOperand(TC, EC)) {
+        LLVM_DEBUG(dbgs() << "ARM TP: 1Can't verify the element counter\n");
+        return false;
+      }
+    } else if (const SCEVAddRecExpr *AddRecExpr = dyn_cast<SCEVAddRecExpr>(EC)) {
+      // For more complicated AddRecExpr, check that the corresponding loop and
+      // its loop hierarhy contains the trip count loop.
+      if (!AddRecExpr->getLoop()->contains(L)) {
+        LLVM_DEBUG(dbgs() << "ARM TP: 2Can't verify the element counter\n");
+        return false;
+      }
+    } else {
+      LLVM_DEBUG(dbgs() << "ARM TP: Unsupported SCEV type, can't verify the "
+                           "element counter\n");
+      return false;
+    }
+  }
 
   // 2) Prove that the sub expression is non-negative, i.e. it doesn't overflow:
   //
@@ -393,9 +456,7 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   //
   //     upperbound(TC) <= UINT_MAX - VectorWidth
   //
-  auto *TC = SE->getSCEV(TripCount);
   unsigned SizeInBits = TripCount->getType()->getScalarSizeInBits();
-  int VectorWidth = VecTy->getNumElements();
   auto Diff = APInt(SizeInBits, ~0) - APInt(SizeInBits, VectorWidth);
   uint64_t MaxMinusVW = Diff.getZExtValue();
   // FIXME: since ranges can be negative we work with signed ranges here, but
@@ -432,9 +493,9 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   // 1. Thus, if the ranges of Ceil and TC are not a single constant but a set,
   // we first add 0 to TC such that we can do the <= comparison on both sets.
   //
-  auto *ElementCount = SE->getSCEV(ElemCountVal);
+
   // Tmp = ElementCount + (VW-1)
-  auto *ECPlusVWMinus1 = SE->getAddExpr(ElementCount,
+  auto *ECPlusVWMinus1 = SE->getAddExpr(EC,
       SE->getSCEV(ConstantInt::get(TripCount->getType(), VectorWidth - 1)));
   // Ceil = ElementCount + (VW-1) / VW
   auto *Ceil = SE->getUDivExpr(ECPlusVWMinus1,
