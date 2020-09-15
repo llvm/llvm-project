@@ -2588,12 +2588,13 @@ define void @select_freeze_icmp_multuses(i32 %x, i32 %y) {
   ret void
 }
 
-; FIXME: This is a miscompile!
 define i32 @pr47322_more_poisonous_replacement(i32 %arg) {
 ; CHECK-LABEL: @pr47322_more_poisonous_replacement(
-; CHECK-NEXT:    [[TRAILING:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG:%.*]], i1 immarg true), [[RNG0:!range !.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
+; CHECK-NEXT:    [[TRAILING:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 immarg true), [[RNG0:!range !.*]]
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[ARG]], [[TRAILING]]
-; CHECK-NEXT:    ret i32 [[SHIFTED]]
+; CHECK-NEXT:    [[R1_SROA_0_1:%.*]] = select i1 [[CMP]], i32 0, i32 [[SHIFTED]]
+; CHECK-NEXT:    ret i32 [[R1_SROA_0_1]]
 ;
   %cmp = icmp eq i32 %arg, 0
   %trailing = call i32 @llvm.cttz.i32(i32 %arg, i1 immarg true)
