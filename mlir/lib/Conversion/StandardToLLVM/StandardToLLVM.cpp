@@ -1112,6 +1112,8 @@ protected:
     TypeConverter::SignatureConversion result(funcOp.getNumArguments());
     auto llvmType = typeConverter.convertFunctionSignature(
         funcOp.getType(), varargsAttr && varargsAttr.getValue(), result);
+    if (!llvmType)
+      return nullptr;
 
     // Propagate argument attributes to all converted arguments obtained after
     // converting a given original argument.
