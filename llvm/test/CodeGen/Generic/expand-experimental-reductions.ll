@@ -93,8 +93,8 @@ define float @fadd_f32(<4 x float> %vec) {
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast float 0.000000e+00, [[TMP0]]
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[BIN_RDX3:%.*]] = fadd fast float 0.000000e+00, [[TMP0]]
+; CHECK-NEXT:    ret float [[BIN_RDX3]]
 ;
 entry:
   %r = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.0, <4 x float> %vec)
@@ -109,8 +109,8 @@ define float @fadd_f32_accum(float %accum, <4 x float> %vec) {
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast float %accum, [[TMP0]]
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[BIN_RDX3:%.*]] = fadd fast float [[ACCUM:%.*]], [[TMP0]]
+; CHECK-NEXT:    ret float [[BIN_RDX3]]
 ;
 entry:
   %r = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float %accum, <4 x float> %vec)
@@ -161,8 +161,8 @@ define float @fmul_f32(<4 x float> %vec) {
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fmul fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float 1.000000e+00, [[TMP0]]
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[BIN_RDX3:%.*]] = fmul fast float 1.000000e+00, [[TMP0]]
+; CHECK-NEXT:    ret float [[BIN_RDX3]]
 ;
 entry:
   %r = call fast float @llvm.experimental.vector.reduce.v2.fmul.f32.v4f32(float 1.0, <4 x float> %vec)
@@ -177,8 +177,8 @@ define float @fmul_f32_accum(float %accum, <4 x float> %vec) {
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fmul fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float %accum, [[TMP0]]
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[BIN_RDX3:%.*]] = fmul fast float [[ACCUM:%.*]], [[TMP0]]
+; CHECK-NEXT:    ret float [[BIN_RDX3]]
 ;
 entry:
   %r = call fast float @llvm.experimental.vector.reduce.v2.fmul.f32.v4f32(float %accum, <4 x float> %vec)
@@ -277,40 +277,40 @@ entry:
   ret i64 %r
 }
 
+; FIXME: Expand using maxnum intrinsic?
+
 define double @fmax_f64(<2 x double> %vec) {
 ; CHECK-LABEL: @fmax_f64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x double> [[VEC:%.*]], <2 x double> undef, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast ogt <2 x double> [[VEC]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select fast <2 x i1> [[RDX_MINMAX_CMP]], <2 x double> [[VEC]], <2 x double> [[RDX_SHUF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x double> [[RDX_MINMAX_SELECT]], i32 0
-; CHECK-NEXT:    ret double [[TMP0]]
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.experimental.vector.reduce.fmax.v2f64(<2 x double> [[VEC:%.*]])
+; CHECK-NEXT:    ret double [[R]]
 ;
 entry:
   %r = call double @llvm.experimental.vector.reduce.fmax.v2f64(<2 x double> %vec)
   ret double %r
 }
 
+; FIXME: Expand using minnum intrinsic?
+
 define double @fmin_f64(<2 x double> %vec) {
 ; CHECK-LABEL: @fmin_f64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x double> [[VEC:%.*]], <2 x double> undef, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast olt <2 x double> [[VEC]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select fast <2 x i1> [[RDX_MINMAX_CMP]], <2 x double> [[VEC]], <2 x double> [[RDX_SHUF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x double> [[RDX_MINMAX_SELECT]], i32 0
-; CHECK-NEXT:    ret double [[TMP0]]
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.experimental.vector.reduce.fmin.v2f64(<2 x double> [[VEC:%.*]])
+; CHECK-NEXT:    ret double [[R]]
 ;
 entry:
   %r = call double @llvm.experimental.vector.reduce.fmin.v2f64(<2 x double> %vec)
   ret double %r
 }
 
+; FIXME: Why is this not expanded?
+
 ; Test when the vector size is not power of two.
 define i8 @test_v3i8(<3 x i8> %a) nounwind {
 ; CHECK-LABEL: @test_v3i8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    %b = call i8 @llvm.experimental.vector.reduce.and.v3i8(<3 x i8> %a)
-; CHECK-NEXT:    ret i8 %b
+; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.experimental.vector.reduce.and.v3i8(<3 x i8> [[A:%.*]])
+; CHECK-NEXT:    ret i8 [[B]]
 ;
 entry:
   %b = call i8 @llvm.experimental.vector.reduce.and.i8.v3i8(<3 x i8> %a)
