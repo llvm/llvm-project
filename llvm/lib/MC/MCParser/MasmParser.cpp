@@ -623,6 +623,7 @@ private:
     DK_SQWORD,
     DK_DB,
     DK_DD,
+    DK_DF,
     DK_DQ,
     DK_DW,
     DK_REAL4,
@@ -2114,6 +2115,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     case DK_DD:
       return parseDirectiveValue(IDVal, 4);
     case DK_FWORD:
+    case DK_DF:
       return parseDirectiveValue(IDVal, 6);
     case DK_QWORD:
     case DK_SQWORD:
@@ -2325,21 +2327,26 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     Lex();
     return parseDirectiveEquate(nextVal, IDVal, DirKind);
   case DK_BYTE:
+  case DK_SBYTE:
   case DK_DB:
     Lex();
     return parseDirectiveNamedValue(nextVal, 1, IDVal, IDLoc);
   case DK_WORD:
+  case DK_SWORD:
   case DK_DW:
     Lex();
     return parseDirectiveNamedValue(nextVal, 2, IDVal, IDLoc);
   case DK_DWORD:
+  case DK_SDWORD:
   case DK_DD:
     Lex();
     return parseDirectiveNamedValue(nextVal, 4, IDVal, IDLoc);
   case DK_FWORD:
+  case DK_DF:
     Lex();
     return parseDirectiveNamedValue(nextVal, 6, IDVal, IDLoc);
   case DK_QWORD:
+  case DK_SQWORD:
   case DK_DQ:
     Lex();
     return parseDirectiveNamedValue(nextVal, 8, IDVal, IDLoc);
@@ -6284,6 +6291,7 @@ void MasmParser::initializeDirectiveKindMap() {
   // DirectiveKindMap[".noaltmacro"] = DK_NOALTMACRO;
   DirectiveKindMap["db"] = DK_DB;
   DirectiveKindMap["dd"] = DK_DD;
+  DirectiveKindMap["df"] = DK_DF;
   DirectiveKindMap["dq"] = DK_DQ;
   DirectiveKindMap["dw"] = DK_DW;
   DirectiveKindMap["echo"] = DK_ECHO;
