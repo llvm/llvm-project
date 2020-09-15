@@ -112,11 +112,11 @@ public:
 
 private:
   // Create the .gcno files for the Module based on DebugInfo.
-  void emitProfileNotes();
+  void emitProfileNotes(NamedMDNode *CUNode);
 
   // Modify the program to track transitions along edges and call into the
   // profiling runtime to emit .gcda files when run.
-  bool emitProfileArcs();
+  bool emitProfileArcs(NamedMDNode *CUNode);
 
   bool isFunctionInstrumented(const Function &F);
   std::vector<Regex> createRegexesFromString(StringRef RegexesStr);
@@ -550,14 +550,19 @@ bool GCOVProfiler::runOnModule(
   this->GetTLI = std::move(GetTLI);
   Ctx = &M.getContext();
 
+  NamedMDNode *CUNode = M.getNamedMetadata("llvm.dbg.cu");
+  if (!CUNode)
+    return false;
+
   bool Modified = AddFlushBeforeForkAndExec();
 
   FilterRe = createRegexesFromString(Options.Filter);
   ExcludeRe = createRegexesFromString(Options.Exclude);
 
-  if (Options.EmitNotes) emitProfileNotes();
+  if (Options.EmitNotes)
+    emitProfileNotes(CUNode);
   if (Options.EmitData)
-    Modified |= emitProfileArcs();
+    Modified |= emitProfileArcs(CUNode);
   return Modified;
 }
 
@@ -683,10 +688,7 @@ bool GCOVProfiler::AddFlushBeforeForkAndExec() {
   return !Forks.empty() || !Execs.empty();
 }
 
-void GCOVProfiler::emitProfileNotes() {
-  NamedMDNode *CU_Nodes = M->getNamedMetadata("llvm.dbg.cu");
-  if (!CU_Nodes) return;
-
+void GCOVProfiler::emitProfileNotes(NamedMDNode *CUNode) {
   int Version;
   {
     uint8_t c3 = Options.Version[0];
@@ -696,12 +698,12 @@ void GCOVProfiler::emitProfileNotes() {
                         : (c3 - '0') * 10 + c1 - '0';
   }
 
-  for (unsigned i = 0, e = CU_Nodes->getNumOperands(); i != e; ++i) {
+  for (unsigned i = 0, e = CUNode->getNumOperands(); i != e; ++i) {
     // Each compile unit gets its own .gcno file. This means that whether we run
     // this pass over the original .o's as they're produced, or run it after
     // LTO, we'll generate the same .gcno files.
 
-    auto *CU = cast<DICompileUnit>(CU_Nodes->getOperand(i));
+    auto *CU = cast<DICompileUnit>(CUNode->getOperand(i));
 
     // Skip module skeleton (and module) CUs.
     if (CU->getDWOId())
@@ -818,12 +820,9 @@ void GCOVProfiler::emitProfileNotes() {
   }
 }
 
-bool GCOVProfiler::emitProfileArcs() {
-  NamedMDNode *CU_Nodes = M->getNamedMetadata("llvm.dbg.cu");
-  if (!CU_Nodes) return false;
-
+bool GCOVProfiler::emitProfileArcs(NamedMDNode *CUNode) {
   bool Result = false;
-  for (unsigned i = 0, e = CU_Nodes->getNumOperands(); i != e; ++i) {
+  for (unsigned i = 0, e = CUNode->getNumOperands(); i != e; ++i) {
     SmallVector<std::pair<GlobalVariable *, MDNode *>, 8> CountersBySP;
     for (auto &F : M->functions()) {
       DISubprogram *SP = F.getSubprogram();
