@@ -1,4 +1,4 @@
-//===- HeapProfiler.cpp - heap allocation and access profiler -------------===//
+//===- MemProfiler.cpp - memory allocation and access profiler ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file is a part of HeapProfiler. Memory accesses are instrumented
+// This file is a part of MemProfiler. Memory accesses are instrumented
 // to increment the access count held in a shadow memory location, or
 // alternatively to call into the runtime. Memory intrinsic calls (memmove,
-// memcpy, memset) are changed to call the heap profiling runtime version
+// memcpy, memset) are changed to call the memory profiling runtime version
 // instead.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Instrumentation/HeapProfiler.h"
+#include "llvm/Transforms/Instrumentation/MemProfiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -39,9 +39,9 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "heapprof"
+#define DEBUG_TYPE "memprof"
 
-constexpr int LLVM_HEAP_PROFILER_VERSION = 1;
+constexpr int LLVM_MEM_PROFILER_VERSION = 1;
 
 // Size of memory mapped to a single shadow location.
 constexpr uint64_t DefaultShadowGranularity = 64;
@@ -49,74 +49,74 @@ constexpr uint64_t DefaultShadowGranularity = 64;
 // Scale from granularity down to shadow size.
 constexpr uint64_t DefaultShadowScale = 3;
 
-constexpr char HeapProfModuleCtorName[] = "heapprof.module_ctor";
-constexpr uint64_t HeapProfCtorAndDtorPriority = 1;
+constexpr char MemProfModuleCtorName[] = "memprof.module_ctor";
+constexpr uint64_t MemProfCtorAndDtorPriority = 1;
 // On Emscripten, the system needs more than one priorities for constructors.
-constexpr uint64_t HeapProfEmscriptenCtorAndDtorPriority = 50;
-constexpr char HeapProfInitName[] = "__heapprof_init";
-constexpr char HeapProfVersionCheckNamePrefix[] =
-    "__heapprof_version_mismatch_check_v";
+constexpr uint64_t MemProfEmscriptenCtorAndDtorPriority = 50;
+constexpr char MemProfInitName[] = "__memprof_init";
+constexpr char MemProfVersionCheckNamePrefix[] =
+    "__memprof_version_mismatch_check_v";
 
-constexpr char HeapProfShadowMemoryDynamicAddress[] =
-    "__heapprof_shadow_memory_dynamic_address";
+constexpr char MemProfShadowMemoryDynamicAddress[] =
+    "__memprof_shadow_memory_dynamic_address";
 
 // Command-line flags.
 
 static cl::opt<bool> ClInsertVersionCheck(
-    "heapprof-guard-against-version-mismatch",
+    "memprof-guard-against-version-mismatch",
     cl::desc("Guard against compiler/runtime version mismatch."), cl::Hidden,
     cl::init(true));
 
 // This flag may need to be replaced with -f[no-]memprof-reads.
-static cl::opt<bool> ClInstrumentReads("heapprof-instrument-reads",
+static cl::opt<bool> ClInstrumentReads("memprof-instrument-reads",
                                        cl::desc("instrument read instructions"),
                                        cl::Hidden, cl::init(true));
 
 static cl::opt<bool>
-    ClInstrumentWrites("heapprof-instrument-writes",
+    ClInstrumentWrites("memprof-instrument-writes",
                        cl::desc("instrument write instructions"), cl::Hidden,
                        cl::init(true));
 
 static cl::opt<bool> ClInstrumentAtomics(
-    "heapprof-instrument-atomics",
+    "memprof-instrument-atomics",
     cl::desc("instrument atomic instructions (rmw, cmpxchg)"), cl::Hidden,
     cl::init(true));
 
 static cl::opt<bool> ClUseCalls(
-    "heapprof-use-callbacks",
+    "memprof-use-callbacks",
     cl::desc("Use callbacks instead of inline instrumentation sequences."),
     cl::Hidden, cl::init(false));
 
 static cl::opt<std::string>
-    ClMemoryAccessCallbackPrefix("heapprof-memory-access-callback-prefix",
+    ClMemoryAccessCallbackPrefix("memprof-memory-access-callback-prefix",
                                  cl::desc("Prefix for memory access callbacks"),
-                                 cl::Hidden, cl::init("__heapprof_"));
+                                 cl::Hidden, cl::init("__memprof_"));
 
 // These flags allow to change the shadow mapping.
 // The shadow mapping looks like
 //    Shadow = ((Mem & mask) >> scale) + offset
 
-static cl::opt<int> ClMappingScale("heapprof-mapping-scale",
-                                   cl::desc("scale of heapprof shadow mapping"),
+static cl::opt<int> ClMappingScale("memprof-mapping-scale",
+                                   cl::desc("scale of memprof shadow mapping"),
                                    cl::Hidden, cl::init(DefaultShadowScale));
 
 static cl::opt<int>
-    ClMappingGranularity("heapprof-mapping-granularity",
-                         cl::desc("granularity of heapprof shadow mapping"),
+    ClMappingGranularity("memprof-mapping-granularity",
+                         cl::desc("granularity of memprof shadow mapping"),
                          cl::Hidden, cl::init(DefaultShadowGranularity));
 
 // Debug flags.
 
-static cl::opt<int> ClDebug("heapprof-debug", cl::desc("debug"), cl::Hidden,
+static cl::opt<int> ClDebug("memprof-debug", cl::desc("debug"), cl::Hidden,
                             cl::init(0));
 
-static cl::opt<std::string> ClDebugFunc("heapprof-debug-func", cl::Hidden,
+static cl::opt<std::string> ClDebugFunc("memprof-debug-func", cl::Hidden,
                                         cl::desc("Debug func"));
 
-static cl::opt<int> ClDebugMin("heapprof-debug-min", cl::desc("Debug min inst"),
+static cl::opt<int> ClDebugMin("memprof-debug-min", cl::desc("Debug min inst"),
                                cl::Hidden, cl::init(-1));
 
-static cl::opt<int> ClDebugMax("heapprof-debug-max", cl::desc("Debug max inst"),
+static cl::opt<int> ClDebugMax("memprof-debug-max", cl::desc("Debug max inst"),
                                cl::Hidden, cl::init(-1));
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
@@ -139,8 +139,8 @@ struct ShadowMapping {
 };
 
 static uint64_t getCtorAndDtorPriority(Triple &TargetTriple) {
-  return TargetTriple.isOSEmscripten() ? HeapProfEmscriptenCtorAndDtorPriority
-                                       : HeapProfCtorAndDtorPriority;
+  return TargetTriple.isOSEmscripten() ? MemProfEmscriptenCtorAndDtorPriority
+                                       : MemProfCtorAndDtorPriority;
 }
 
 struct InterestingMemoryAccess {
@@ -151,10 +151,10 @@ struct InterestingMemoryAccess {
   Value *MaybeMask = nullptr;
 };
 
-/// Instrument the code in module to profile heap accesses.
-class HeapProfiler {
+/// Instrument the code in module to profile memory accesses.
+class MemProfiler {
 public:
-  HeapProfiler(Module &M) {
+  MemProfiler(Module &M) {
     C = &(M.getContext());
     LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
@@ -177,7 +177,7 @@ public:
   void instrumentMemIntrinsic(MemIntrinsic *MI);
   Value *memToShadow(Value *Shadow, IRBuilder<> &IRB);
   bool instrumentFunction(Function &F);
-  bool maybeInsertHeapProfInitAtFunctionEntry(Function &F);
+  bool maybeInsertMemProfInitAtFunctionEntry(Function &F);
   bool insertDynamicShadowAtFunctionEntry(Function &F);
 
 private:
@@ -189,68 +189,67 @@ private:
   ShadowMapping Mapping;
 
   // These arrays is indexed by AccessIsWrite
-  FunctionCallee HeapProfMemoryAccessCallback[2];
-  FunctionCallee HeapProfMemoryAccessCallbackSized[2];
+  FunctionCallee MemProfMemoryAccessCallback[2];
+  FunctionCallee MemProfMemoryAccessCallbackSized[2];
 
-  FunctionCallee HeapProfMemmove, HeapProfMemcpy, HeapProfMemset;
+  FunctionCallee MemProfMemmove, MemProfMemcpy, MemProfMemset;
   Value *DynamicShadowOffset = nullptr;
 };
 
-class HeapProfilerLegacyPass : public FunctionPass {
+class MemProfilerLegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  explicit HeapProfilerLegacyPass() : FunctionPass(ID) {
-    initializeHeapProfilerLegacyPassPass(*PassRegistry::getPassRegistry());
+  explicit MemProfilerLegacyPass() : FunctionPass(ID) {
+    initializeMemProfilerLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
-  StringRef getPassName() const override { return "HeapProfilerFunctionPass"; }
+  StringRef getPassName() const override { return "MemProfilerFunctionPass"; }
 
   bool runOnFunction(Function &F) override {
-    HeapProfiler Profiler(*F.getParent());
+    MemProfiler Profiler(*F.getParent());
     return Profiler.instrumentFunction(F);
   }
 };
 
-class ModuleHeapProfiler {
+class ModuleMemProfiler {
 public:
-  ModuleHeapProfiler(Module &M) { TargetTriple = Triple(M.getTargetTriple()); }
+  ModuleMemProfiler(Module &M) { TargetTriple = Triple(M.getTargetTriple()); }
 
   bool instrumentModule(Module &);
 
 private:
   Triple TargetTriple;
   ShadowMapping Mapping;
-  Function *HeapProfCtorFunction = nullptr;
+  Function *MemProfCtorFunction = nullptr;
 };
 
-class ModuleHeapProfilerLegacyPass : public ModulePass {
+class ModuleMemProfilerLegacyPass : public ModulePass {
 public:
   static char ID;
 
-  explicit ModuleHeapProfilerLegacyPass() : ModulePass(ID) {
-    initializeModuleHeapProfilerLegacyPassPass(
-        *PassRegistry::getPassRegistry());
+  explicit ModuleMemProfilerLegacyPass() : ModulePass(ID) {
+    initializeModuleMemProfilerLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
-  StringRef getPassName() const override { return "ModuleHeapProfiler"; }
+  StringRef getPassName() const override { return "ModuleMemProfiler"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {}
 
   bool runOnModule(Module &M) override {
-    ModuleHeapProfiler HeapProfiler(M);
-    return HeapProfiler.instrumentModule(M);
+    ModuleMemProfiler MemProfiler(M);
+    return MemProfiler.instrumentModule(M);
   }
 };
 
 } // end anonymous namespace
 
-HeapProfilerPass::HeapProfilerPass() {}
+MemProfilerPass::MemProfilerPass() {}
 
-PreservedAnalyses HeapProfilerPass::run(Function &F,
-                                        AnalysisManager<Function> &AM) {
+PreservedAnalyses MemProfilerPass::run(Function &F,
+                                       AnalysisManager<Function> &AM) {
   Module &M = *F.getParent();
-  HeapProfiler Profiler(M);
+  MemProfiler Profiler(M);
   if (Profiler.instrumentFunction(F))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -258,41 +257,41 @@ PreservedAnalyses HeapProfilerPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-ModuleHeapProfilerPass::ModuleHeapProfilerPass() {}
+ModuleMemProfilerPass::ModuleMemProfilerPass() {}
 
-PreservedAnalyses ModuleHeapProfilerPass::run(Module &M,
-                                              AnalysisManager<Module> &AM) {
-  ModuleHeapProfiler Profiler(M);
+PreservedAnalyses ModuleMemProfilerPass::run(Module &M,
+                                             AnalysisManager<Module> &AM) {
+  ModuleMemProfiler Profiler(M);
   if (Profiler.instrumentModule(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }
 
-char HeapProfilerLegacyPass::ID = 0;
+char MemProfilerLegacyPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(HeapProfilerLegacyPass, "heapprof",
-                      "HeapProfiler: profile heap allocations and accesses.",
+INITIALIZE_PASS_BEGIN(MemProfilerLegacyPass, "memprof",
+                      "MemProfiler: profile memory allocations and accesses.",
                       false, false)
-INITIALIZE_PASS_END(HeapProfilerLegacyPass, "heapprof",
-                    "HeapProfiler: profile heap allocations and accesses.",
+INITIALIZE_PASS_END(MemProfilerLegacyPass, "memprof",
+                    "MemProfiler: profile memory allocations and accesses.",
                     false, false)
 
-FunctionPass *llvm::createHeapProfilerFunctionPass() {
-  return new HeapProfilerLegacyPass();
+FunctionPass *llvm::createMemProfilerFunctionPass() {
+  return new MemProfilerLegacyPass();
 }
 
-char ModuleHeapProfilerLegacyPass::ID = 0;
+char ModuleMemProfilerLegacyPass::ID = 0;
 
-INITIALIZE_PASS(ModuleHeapProfilerLegacyPass, "heapprof-module",
-                "HeapProfiler: profile heap allocations and accesses."
+INITIALIZE_PASS(ModuleMemProfilerLegacyPass, "memprof-module",
+                "MemProfiler: profile memory allocations and accesses."
                 "ModulePass",
                 false, false)
 
-ModulePass *llvm::createModuleHeapProfilerLegacyPassPass() {
-  return new ModuleHeapProfilerLegacyPass();
+ModulePass *llvm::createModuleMemProfilerLegacyPassPass() {
+  return new ModuleMemProfilerLegacyPass();
 }
 
-Value *HeapProfiler::memToShadow(Value *Shadow, IRBuilder<> &IRB) {
+Value *MemProfiler::memToShadow(Value *Shadow, IRBuilder<> &IRB) {
   // (Shadow & mask) >> scale
   Shadow = IRB.CreateAnd(Shadow, Mapping.Mask);
   Shadow = IRB.CreateLShr(Shadow, Mapping.Scale);
@@ -302,17 +301,17 @@ Value *HeapProfiler::memToShadow(Value *Shadow, IRBuilder<> &IRB) {
 }
 
 // Instrument memset/memmove/memcpy
-void HeapProfiler::instrumentMemIntrinsic(MemIntrinsic *MI) {
+void MemProfiler::instrumentMemIntrinsic(MemIntrinsic *MI) {
   IRBuilder<> IRB(MI);
   if (isa<MemTransferInst>(MI)) {
     IRB.CreateCall(
-        isa<MemMoveInst>(MI) ? HeapProfMemmove : HeapProfMemcpy,
+        isa<MemMoveInst>(MI) ? MemProfMemmove : MemProfMemcpy,
         {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
          IRB.CreatePointerCast(MI->getOperand(1), IRB.getInt8PtrTy()),
          IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
   } else if (isa<MemSetInst>(MI)) {
     IRB.CreateCall(
-        HeapProfMemset,
+        MemProfMemset,
         {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
          IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
          IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
@@ -321,7 +320,7 @@ void HeapProfiler::instrumentMemIntrinsic(MemIntrinsic *MI) {
 }
 
 Optional<InterestingMemoryAccess>
-HeapProfiler::isInterestingMemoryAccess(Instruction *I) const {
+MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
   // Do not instrument the load fetching the dynamic shadow address.
   if (DynamicShadowOffset == I)
     return None;
@@ -409,11 +408,10 @@ HeapProfiler::isInterestingMemoryAccess(Instruction *I) const {
   return Access;
 }
 
-void HeapProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL,
-                                               Value *Mask, Instruction *I,
-                                               Value *Addr, unsigned Alignment,
-                                               uint32_t TypeSize,
-                                               bool IsWrite) {
+void MemProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
+                                              Instruction *I, Value *Addr,
+                                              unsigned Alignment,
+                                              uint32_t TypeSize, bool IsWrite) {
   auto *VTy = cast<FixedVectorType>(
       cast<PointerType>(Addr->getType())->getElementType());
   uint64_t ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
@@ -446,8 +444,8 @@ void HeapProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL,
   }
 }
 
-void HeapProfiler::instrumentMop(Instruction *I, const DataLayout &DL,
-                                 InterestingMemoryAccess &Access) {
+void MemProfiler::instrumentMop(Instruction *I, const DataLayout &DL,
+                                InterestingMemoryAccess &Access) {
   if (Access.IsWrite)
     NumInstrumentedWrites++;
   else
@@ -465,14 +463,14 @@ void HeapProfiler::instrumentMop(Instruction *I, const DataLayout &DL,
   }
 }
 
-void HeapProfiler::instrumentAddress(Instruction *OrigIns,
-                                     Instruction *InsertBefore, Value *Addr,
-                                     uint32_t TypeSize, bool IsWrite) {
+void MemProfiler::instrumentAddress(Instruction *OrigIns,
+                                    Instruction *InsertBefore, Value *Addr,
+                                    uint32_t TypeSize, bool IsWrite) {
   IRBuilder<> IRB(InsertBefore);
   Value *AddrLong = IRB.CreatePointerCast(Addr, IntptrTy);
 
   if (ClUseCalls) {
-    IRB.CreateCall(HeapProfMemoryAccessCallback[IsWrite], AddrLong);
+    IRB.CreateCall(MemProfMemoryAccessCallback[IsWrite], AddrLong);
     return;
   }
 
@@ -488,24 +486,24 @@ void HeapProfiler::instrumentAddress(Instruction *OrigIns,
   IRB.CreateStore(ShadowValue, ShadowAddr);
 }
 
-bool ModuleHeapProfiler::instrumentModule(Module &M) {
+bool ModuleMemProfiler::instrumentModule(Module &M) {
   // Create a module constructor.
-  std::string HeapProfVersion = std::to_string(LLVM_HEAP_PROFILER_VERSION);
+  std::string MemProfVersion = std::to_string(LLVM_MEM_PROFILER_VERSION);
   std::string VersionCheckName =
-      ClInsertVersionCheck ? (HeapProfVersionCheckNamePrefix + HeapProfVersion)
+      ClInsertVersionCheck ? (MemProfVersionCheckNamePrefix + MemProfVersion)
                            : "";
-  std::tie(HeapProfCtorFunction, std::ignore) =
-      createSanitizerCtorAndInitFunctions(M, HeapProfModuleCtorName,
-                                          HeapProfInitName, /*InitArgTypes=*/{},
+  std::tie(MemProfCtorFunction, std::ignore) =
+      createSanitizerCtorAndInitFunctions(M, MemProfModuleCtorName,
+                                          MemProfInitName, /*InitArgTypes=*/{},
                                           /*InitArgs=*/{}, VersionCheckName);
 
   const uint64_t Priority = getCtorAndDtorPriority(TargetTriple);
-  appendToGlobalCtors(M, HeapProfCtorFunction, Priority);
+  appendToGlobalCtors(M, MemProfCtorFunction, Priority);
 
   return true;
 }
 
-void HeapProfiler::initializeCallbacks(Module &M) {
+void MemProfiler::initializeCallbacks(Module &M) {
   IRBuilder<> IRB(*C);
 
   for (size_t AccessIsWrite = 0; AccessIsWrite <= 1; AccessIsWrite++) {
@@ -513,68 +511,68 @@ void HeapProfiler::initializeCallbacks(Module &M) {
 
     SmallVector<Type *, 3> Args2 = {IntptrTy, IntptrTy};
     SmallVector<Type *, 2> Args1{1, IntptrTy};
-    HeapProfMemoryAccessCallbackSized[AccessIsWrite] =
+    MemProfMemoryAccessCallbackSized[AccessIsWrite] =
         M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + TypeStr + "N",
                               FunctionType::get(IRB.getVoidTy(), Args2, false));
 
-    HeapProfMemoryAccessCallback[AccessIsWrite] =
+    MemProfMemoryAccessCallback[AccessIsWrite] =
         M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + TypeStr,
                               FunctionType::get(IRB.getVoidTy(), Args1, false));
   }
-  HeapProfMemmove = M.getOrInsertFunction(
+  MemProfMemmove = M.getOrInsertFunction(
       ClMemoryAccessCallbackPrefix + "memmove", IRB.getInt8PtrTy(),
       IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IntptrTy);
-  HeapProfMemcpy = M.getOrInsertFunction(
-      ClMemoryAccessCallbackPrefix + "memcpy", IRB.getInt8PtrTy(),
-      IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IntptrTy);
-  HeapProfMemset = M.getOrInsertFunction(
-      ClMemoryAccessCallbackPrefix + "memset", IRB.getInt8PtrTy(),
-      IRB.getInt8PtrTy(), IRB.getInt32Ty(), IntptrTy);
+  MemProfMemcpy = M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + "memcpy",
+                                        IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
+                                        IRB.getInt8PtrTy(), IntptrTy);
+  MemProfMemset = M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + "memset",
+                                        IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
+                                        IRB.getInt32Ty(), IntptrTy);
 }
 
-bool HeapProfiler::maybeInsertHeapProfInitAtFunctionEntry(Function &F) {
+bool MemProfiler::maybeInsertMemProfInitAtFunctionEntry(Function &F) {
   // For each NSObject descendant having a +load method, this method is invoked
   // by the ObjC runtime before any of the static constructors is called.
-  // Therefore we need to instrument such methods with a call to __heapprof_init
+  // Therefore we need to instrument such methods with a call to __memprof_init
   // at the beginning in order to initialize our runtime before any access to
   // the shadow memory.
   // We cannot just ignore these methods, because they may call other
   // instrumented functions.
   if (F.getName().find(" load]") != std::string::npos) {
-    FunctionCallee HeapProfInitFunction =
-        declareSanitizerInitFunction(*F.getParent(), HeapProfInitName, {});
+    FunctionCallee MemProfInitFunction =
+        declareSanitizerInitFunction(*F.getParent(), MemProfInitName, {});
     IRBuilder<> IRB(&F.front(), F.front().begin());
-    IRB.CreateCall(HeapProfInitFunction, {});
+    IRB.CreateCall(MemProfInitFunction, {});
     return true;
   }
   return false;
 }
 
-bool HeapProfiler::insertDynamicShadowAtFunctionEntry(Function &F) {
+bool MemProfiler::insertDynamicShadowAtFunctionEntry(Function &F) {
   IRBuilder<> IRB(&F.front().front());
   Value *GlobalDynamicAddress = F.getParent()->getOrInsertGlobal(
-      HeapProfShadowMemoryDynamicAddress, IntptrTy);
+      MemProfShadowMemoryDynamicAddress, IntptrTy);
   DynamicShadowOffset = IRB.CreateLoad(IntptrTy, GlobalDynamicAddress);
   return true;
 }
 
-bool HeapProfiler::instrumentFunction(Function &F) {
+bool MemProfiler::instrumentFunction(Function &F) {
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage)
     return false;
   if (ClDebugFunc == F.getName())
     return false;
-  if (F.getName().startswith("__heapprof_"))
+  if (F.getName().startswith("__memprof_"))
     return false;
 
   bool FunctionModified = false;
 
-  // If needed, insert __heapprof_init.
+  // If needed, insert __memprof_init.
   // This function needs to be called even if the function body is not
   // instrumented.
-  if (maybeInsertHeapProfInitAtFunctionEntry(F))
+  if (maybeInsertMemProfInitAtFunctionEntry(F))
     FunctionModified = true;
 
-  LLVM_DEBUG(dbgs() << "HEAPPROF instrumenting:\n" << F << "\n");
+  LLVM_DEBUG(dbgs() << "MEMPROF instrumenting:\n" << F << "\n");
 
   initializeCallbacks(*F.getParent());
 
@@ -607,8 +605,8 @@ bool HeapProfiler::instrumentFunction(Function &F) {
   if (NumInstrumented > 0)
     FunctionModified = true;
 
-  LLVM_DEBUG(dbgs() << "HEAPPROF done instrumenting: " << FunctionModified
-                    << " " << F << "\n");
+  LLVM_DEBUG(dbgs() << "MEMPROF done instrumenting: " << FunctionModified << " "
+                    << F << "\n");
 
   return FunctionModified;
 }
