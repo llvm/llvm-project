@@ -6883,7 +6883,7 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
   // For the moment, without predicated reduction instructions, we do not
   // support inloop reductions whilst folding the tail, and hence in those cases
   // all reductions are currently out of the loop.
-  if (!PreferInLoopReductions || foldTailByMasking())
+  if (foldTailByMasking())
     return;
 
   for (auto &Reduction : Legal->getReductionVars()) {
@@ -6892,6 +6892,14 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
 
     // We don't collect reductions that are type promoted (yet).
     if (RdxDesc.getRecurrenceType() != Phi->getType())
+      continue;
+
+    // If the target would prefer this reduction to happen "in-loop", then we
+    // want to record it as such.
+    unsigned Opcode = RdxDesc.getRecurrenceBinOp(RdxDesc.getRecurrenceKind());
+    if (!PreferInLoopReductions &&
+        !TTI.preferInLoopReduction(Opcode, Phi->getType(),
+                                   TargetTransformInfo::ReductionFlags()))
       continue;
 
     // Check that we can correctly put the reductions into the loop, by
