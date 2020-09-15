@@ -1472,6 +1472,23 @@ Warn about assigning non-{0,1} values to boolean variables.
 alpha.core
 ^^^^^^^^^^
 
+.. _alpha-core-C11Lock:
+
+alpha.core.C11Lock
+""""""""""""""""""
+Similarly to :ref:`alpha.unix.PthreadLock <alpha-unix-PthreadLock>`, checks for
+the locking/unlocking of ``mtx_t`` mutexes.
+
+.. code-block:: cpp
+
+ mtx_t mtx1;
+
+ void bad1(void)
+ {
+   mtx_lock(&mtx1);
+   mtx_lock(&mtx1); // warn: This lock has already been acquired
+ }
+
 .. _alpha-core-CallAndMessageUnInitRefArg:
 
 alpha.core.CallAndMessageUnInitRefArg (C,C++, ObjC)
@@ -1847,6 +1864,26 @@ Check for dereference of null smart pointers.
  void deref_smart_ptr() {
    std::unique_ptr<int> P;
    *P; // warn: dereference of a default constructed smart unique_ptr
+ }
+
+alpha.fuchsia
+^^^^^^^^^^^^^
+
+.. _alpha-fuchsia-lock:
+
+alpha.fuchsia.Lock
+""""""""""""""""""
+Similarly to :ref:`alpha.unix.PthreadLock <alpha-unix-PthreadLock>`, checks for
+the locking/unlocking of fuchsia mutexes.
+
+.. code-block:: cpp
+
+ spin_lock_t mtx1;
+
+ void bad1(void)
+ {
+   spin_lock(&mtx1);
+   spin_lock(&mtx1);	// warn: This lock has already been acquired
  }
 
 alpha.llvm
