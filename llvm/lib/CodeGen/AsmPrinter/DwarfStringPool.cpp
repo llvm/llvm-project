@@ -120,7 +120,7 @@ void DwarfStringPool::emit(AsmPrinter &Asm, MCSection *StrSection,
     }
 
     Asm.OutStreamer->SwitchSection(OffsetSection);
-    unsigned size = 4; // FIXME: DWARF64 is 8.
+    unsigned size = Asm.getDwarfOffsetByteSize();
     for (const auto &Entry : Entries)
       if (UseRelativeOffsets)
         Asm.emitDwarfStringOffset(Entry->getValue());
