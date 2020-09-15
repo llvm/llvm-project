@@ -649,6 +649,60 @@ bool DwarfLinkerForBinary::AddressManager::hasValidRelocationAt(
   return true;
 }
 
+/// Get the starting and ending (exclusive) offset for the
+/// attribute with index \p Idx descibed by \p Abbrev. \p Offset is
+/// supposed to point to the position of the first attribute described
+/// by \p Abbrev.
+/// \return [StartOffset, EndOffset) as a pair.
+static std::pair<uint64_t, uint64_t>
+getAttributeOffsets(const DWARFAbbreviationDeclaration *Abbrev, unsigned Idx,
+                    uint64_t Offset, const DWARFUnit &Unit) {
+  DataExtractor Data = Unit.getDebugInfoExtractor();
+
+  for (unsigned I = 0; I < Idx; ++I)
+    DWARFFormValue::skipValue(Abbrev->getFormByIndex(I), Data, &Offset,
+                              Unit.getFormParams());
+
+  uint64_t End = Offset;
+  DWARFFormValue::skipValue(Abbrev->getFormByIndex(Idx), Data, &End,
+                            Unit.getFormParams());
+
+  return std::make_pair(Offset, End);
+}
+
+bool DwarfLinkerForBinary::AddressManager::hasLiveMemoryLocation(
+    const DWARFDie &DIE, CompileUnit::DIEInfo &MyInfo) {
+
+  const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
+
+  Optional<uint32_t> LocationIdx =
+      Abbrev->findAttributeIndex(dwarf::DW_AT_location);
+  if (!LocationIdx)
+    return false;
+
+  uint64_t Offset = DIE.getOffset() + getULEB128Size(Abbrev->getCode());
+  uint64_t LocationOffset, LocationEndOffset;
+  std::tie(LocationOffset, LocationEndOffset) =
+      getAttributeOffsets(Abbrev, *LocationIdx, Offset, *DIE.getDwarfUnit());
+
+  return hasValidRelocationAt(LocationOffset, LocationEndOffset, MyInfo);
+}
+
+bool DwarfLinkerForBinary::AddressManager::hasLiveAddressRange(
+    const DWARFDie &DIE, CompileUnit::DIEInfo &MyInfo) {
+  const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
+
+  Optional<uint32_t> LowPcIdx = Abbrev->findAttributeIndex(dwarf::DW_AT_low_pc);
+  if (!LowPcIdx)
+    return false;
+
+  uint64_t Offset = DIE.getOffset() + getULEB128Size(Abbrev->getCode());
+  uint64_t LowPcOffset, LowPcEndOffset;
+  std::tie(LowPcOffset, LowPcEndOffset) =
+      getAttributeOffsets(Abbrev, *LowPcIdx, Offset, *DIE.getDwarfUnit());
+
+  return hasValidRelocationAt(LowPcOffset, LowPcEndOffset, MyInfo);
+}
 /// Apply the valid relocations found by findValidRelocs() to
 /// the buffer \p Data, taking into account that Data is at \p BaseOffset
 /// in the debug_info section.
