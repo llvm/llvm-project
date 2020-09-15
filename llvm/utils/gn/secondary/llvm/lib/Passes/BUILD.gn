@@ -8,6 +8,7 @@ static_library("Passes") {
     "//llvm/lib/Target",
     "//llvm/lib/Transforms/AggressiveInstCombine",
     "//llvm/lib/Transforms/Coroutines",
+    "//llvm/lib/Transforms/HelloNew",
     "//llvm/lib/Transforms/IPO",
     "//llvm/lib/Transforms/InstCombine",
     "//llvm/lib/Transforms/Instrumentation",
