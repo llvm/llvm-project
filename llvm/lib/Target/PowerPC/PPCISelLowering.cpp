@@ -1512,6 +1512,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::MAT_PCREL_ADDR:  return "PPCISD::MAT_PCREL_ADDR";
   case PPCISD::TLS_DYNAMIC_MAT_PCREL_ADDR:
     return "PPCISD::TLS_DYNAMIC_MAT_PCREL_ADDR";
+  case PPCISD::TLS_LOCAL_EXEC_MAT_ADDR:
+    return "PPCISD::TLS_LOCAL_EXEC_MAT_ADDR";
   case PPCISD::LD_SPLAT:        return "PPCISD::LD_SPLAT";
   case PPCISD::FNMSUB:          return "PPCISD::FNMSUB";
   case PPCISD::STRICT_FADDRTZ:
@@ -3015,6 +3017,15 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
   TLSModel::Model Model = TM.getTLSModel(GV);
 
   if (Model == TLSModel::LocalExec) {
+    if (Subtarget.isUsingPCRelativeCalls()) {
+      SDValue TLSReg = DAG.getRegister(PPC::X13, MVT::i64);
+      SDValue TGA = DAG.getTargetGlobalAddress(
+          GV, dl, PtrVT, 0, (PPCII::MO_PCREL_FLAG | PPCII::MO_TPREL_FLAG));
+      SDValue MatAddr =
+          DAG.getNode(PPCISD::TLS_LOCAL_EXEC_MAT_ADDR, dl, PtrVT, TGA);
+      return DAG.getNode(PPCISD::ADD_TLS, dl, PtrVT, TLSReg, MatAddr);
+    }
+
     SDValue TGAHi = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
                                                PPCII::MO_TPREL_HA);
     SDValue TGALo = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,

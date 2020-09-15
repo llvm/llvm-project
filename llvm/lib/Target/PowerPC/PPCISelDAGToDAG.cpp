@@ -691,6 +691,8 @@ bool PPCDAGToDAGISel::tryTLSXFormLoad(LoadSDNode *LD) {
   SDValue Offset = LD->getOffset();
   if (!Offset.isUndef())
     return false;
+  if (Base.getOperand(1).getOpcode() == PPCISD::TLS_LOCAL_EXEC_MAT_ADDR)
+    return false;
 
   SDLoc dl(LD);
   EVT MemVT = LD->getMemoryVT();
