@@ -262,6 +262,10 @@ public:
   bool matchCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI);
   bool applyCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI);
 
+  /// Transform X, Y = G_UNMERGE(G_ZEXT(Z)) -> X = G_ZEXT(Z); Y = G_CONSTANT 0
+  bool matchCombineUnmergeZExtToZExt(MachineInstr &MI);
+  bool applyCombineUnmergeZExtToZExt(MachineInstr &MI);
+
   /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
   bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg);
   bool applyCombineI2PToP2I(MachineInstr &MI, Register &Reg);

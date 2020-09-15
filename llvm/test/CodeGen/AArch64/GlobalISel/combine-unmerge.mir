@@ -369,3 +369,110 @@ body:             |
     %1:_(<2 x s16>),%2:_(<2 x s16>) = G_UNMERGE_VALUES %0(s64)
     $w0 = COPY %1(<2 x s16>)
 ...
+
+# Transform unmerge(zext) into zext.
+# In that test, the source of the zext is same size as the first definition
+# of the unmerge. Therefore a we can just reuse the input of the zext for
+# this definition.
+---
+name:            test_combine_unmerge_zext_to_zext_same_size
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_combine_unmerge_zext_to_zext_same_size
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: $w0 = COPY [[COPY]](s32)
+    ; CHECK: $w1 = COPY [[C]](s32)
+    %0:_(s32) = COPY $w0
+    %3:_(s64) = G_ZEXT %0(s32)
+    %1:_(s32),%2:_(s32) = G_UNMERGE_VALUES %3(s64)
+    $w0 = COPY %1(s32)
+    $w1 = COPY %2(s32)
+...
+
+# Transform unmerge(zext) into zext.
+# In that test, the source of the zext is smaller than the first definition
+# of the unmerge. Therefore a G_ZEXT is required.
+---
+name:            test_combine_unmerge_zext_to_zext
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_combine_unmerge_zext_to_zext
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $b0
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[COPY]](s8)
+    ; CHECK: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
+    ; CHECK: $h0 = COPY [[ZEXT]](s16)
+    ; CHECK: $h1 = COPY [[C]](s16)
+    ; CHECK: $h2 = COPY [[C]](s16)
+    ; CHECK: $h3 = COPY [[C]](s16)
+    %0:_(s8) = COPY $b0
+    %3:_(s64) = G_ZEXT %0(s8)
+    %1:_(s16),%2:_(s16),%4:_(s16),%5:_(s16) = G_UNMERGE_VALUES %3(s64)
+    $h0 = COPY %1(s16)
+    $h1 = COPY %2(s16)
+    $h2 = COPY %4(s16)
+    $h3 = COPY %5(s16)
+...
+
+# Check that we don't apply the unmerge(zext) to zext transformation
+# when the first destination of the unmerge is smaller than the source
+# of the zext.
+---
+name:            test_dont_combine_unmerge_zext_to_zext_src_bigger
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_dont_combine_unmerge_zext_to_zext_src_bigger
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s32)
+    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[ZEXT]](s64)
+    ; CHECK: $h0 = COPY [[UV]](s16)
+    ; CHECK: $h1 = COPY [[UV1]](s16)
+    ; CHECK: $h2 = COPY [[UV2]](s16)
+    ; CHECK: $h3 = COPY [[UV3]](s16)
+    %0:_(s32) = COPY $w0
+    %3:_(s64) = G_ZEXT %0(s32)
+    %1:_(s16),%2:_(s16),%4:_(s16),%5:_(s16) = G_UNMERGE_VALUES %3(s64)
+    $h0 = COPY %1(s16)
+    $h1 = COPY %2(s16)
+    $h2 = COPY %4(s16)
+    $h3 = COPY %5(s16)
+...
+
+# Check that we don't apply the unmerge(zext) to zext transformation
+# when the input zext deals with a vector type.
+---
+name:            test_dont_combine_unmerge_zext_to_zext_src_vector
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_dont_combine_unmerge_zext_to_zext_src_vector
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $w0
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(<2 x s32>) = G_ZEXT [[COPY]](<2 x s16>)
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ZEXT]](<2 x s32>)
+    ; CHECK: $w0 = COPY [[UV]](s32)
+    ; CHECK: $w1 = COPY [[UV1]](s32)
+    %0:_(<2 x s16>) = COPY $w0
+    %3:_(<2 x s32>) = G_ZEXT %0(<2 x s16>)
+    %1:_(s32),%2:_(s32) = G_UNMERGE_VALUES %3(<2 x s32>)
+    $w0 = COPY %1(s32)
+    $w1 = COPY %2(s32)
+...
+
+# Check that we don't apply the unmerge(zext) to zext transformation
+# when the destination type is a vector type.
+# We could actually handle this case but we would need to insert a cast.
+---
+name:            test_dont_combine_unmerge_zext_to_zext_dst_vector
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_dont_combine_unmerge_zext_to_zext_dst_vector
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s32)
+    ; CHECK: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[ZEXT]](s64)
+    ; CHECK: $w0 = COPY [[UV]](<2 x s16>)
+    ; CHECK: $w1 = COPY [[UV1]](<2 x s16>)
+    %0:_(s32) = COPY $w0
+    %3:_(s64) = G_ZEXT %0(s32)
+    %1:_(<2 x s16>),%2:_(<2 x s16>) = G_UNMERGE_VALUES %3(s64)
+    $w0 = COPY %1(<2 x s16>)
+    $w1 = COPY %2(<2 x s16>)
+...

@@ -1687,6 +1687,67 @@ bool CombinerHelper::applyCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI) {
   return true;
 }
 
+bool CombinerHelper::matchCombineUnmergeZExtToZExt(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
+         "Expected an unmerge");
+  Register Dst0Reg = MI.getOperand(0).getReg();
+  LLT Dst0Ty = MRI.getType(Dst0Reg);
+  // G_ZEXT on vector applies to each lane, so it will
+  // affect all destinations. Therefore we won't be able
+  // to simplify the unmerge to just the first definition.
+  if (Dst0Ty.isVector())
+    return false;
+  Register SrcReg = MI.getOperand(MI.getNumDefs()).getReg();
+  LLT SrcTy = MRI.getType(SrcReg);
+  if (SrcTy.isVector())
+    return false;
+
+  Register ZExtSrcReg;
+  if (!mi_match(SrcReg, MRI, m_GZExt(m_Reg(ZExtSrcReg))))
+    return false;
+
+  // Finally we can replace the first definition with
+  // a zext of the source if the definition is big enough to hold
+  // all of ZExtSrc bits.
+  LLT ZExtSrcTy = MRI.getType(ZExtSrcReg);
+  return ZExtSrcTy.getSizeInBits() <= Dst0Ty.getSizeInBits();
+}
+
+bool CombinerHelper::applyCombineUnmergeZExtToZExt(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
+         "Expected an unmerge");
+
+  Register Dst0Reg = MI.getOperand(0).getReg();
+
+  MachineInstr *ZExtInstr =
+      MRI.getVRegDef(MI.getOperand(MI.getNumDefs()).getReg());
+  assert(ZExtInstr && ZExtInstr->getOpcode() == TargetOpcode::G_ZEXT &&
+         "Expecting a G_ZEXT");
+
+  Register ZExtSrcReg = ZExtInstr->getOperand(1).getReg();
+  LLT Dst0Ty = MRI.getType(Dst0Reg);
+  LLT ZExtSrcTy = MRI.getType(ZExtSrcReg);
+
+  Builder.setInstrAndDebugLoc(MI);
+
+  if (Dst0Ty.getSizeInBits() > ZExtSrcTy.getSizeInBits()) {
+    Builder.buildZExt(Dst0Reg, ZExtSrcReg);
+  } else {
+    assert(Dst0Ty.getSizeInBits() == ZExtSrcTy.getSizeInBits() &&
+           "ZExt src doesn't fit in destination");
+    replaceRegWith(MRI, Dst0Reg, ZExtSrcReg);
+  }
+
+  Register ZeroReg;
+  for (unsigned Idx = 1, EndIdx = MI.getNumDefs(); Idx != EndIdx; ++Idx) {
+    if (!ZeroReg)
+      ZeroReg = Builder.buildConstant(Dst0Ty, 0).getReg(0);
+    replaceRegWith(MRI, MI.getOperand(Idx).getReg(), ZeroReg);
+  }
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::matchCombineShiftToUnmerge(MachineInstr &MI,
                                                 unsigned TargetShiftSize,
                                                 unsigned &ShiftVal) {
