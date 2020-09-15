@@ -9,5 +9,7 @@ _start:
   end_function
 
 .globaltype foo, i32
+.import_module foo, env
+.import_name foo, foo
 
 # CHECK: error: mutable global imported but 'mutable-globals' feature not present in inputs: `foo`. Use --no-check-features to suppress.
