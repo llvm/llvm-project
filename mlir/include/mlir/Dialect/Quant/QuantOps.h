@@ -18,15 +18,9 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/Support/MathExtras.h"
 
-namespace mlir {
-namespace quant {
-
 #include "mlir/Dialect/Quant/QuantOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Quant/QuantOps.h.inc"
-
-} // namespace quant
-} // namespace mlir
 
 #endif // MLIR_DIALECT_QUANT_QUANTOPS_H_

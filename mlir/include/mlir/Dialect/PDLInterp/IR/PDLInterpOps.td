@@ -34,7 +34,7 @@ def PDLInterp_Dialect : Dialect {
   }];
 
   let name = "pdl_interp";
-  let cppNamespace = "mlir::pdl_interp";
+  let cppNamespace = "::mlir::pdl_interp";
   let dependentDialects = ["pdl::PDLDialect"];
 }
 

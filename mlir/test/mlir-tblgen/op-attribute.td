@@ -275,3 +275,19 @@ def SomeTypedArrayAttr : TypedArrayAttrBase<SomeAttr, "SomeAttr array">;
 
 // RECORD-LABEL: def SomeTypedArrayAttr
 // RECORD: Attr elementAttr = SomeAttr;
+
+def Test_Dialect_2 : Dialect {
+  let name = "dialect_2";
+}
+def MyStruct : StructAttr<"MyStruct", Test_Dialect_2, 
+[StructFieldAttr<"potatoes", I64ElementsAttr>]> {
+  let description = "A structure describing a number of potatoes.";
+}
+
+def StructAttrOp : NS_Op<"struct_attr_op", []> {
+  let arguments = (ins
+    MyStruct:$potatoes
+  );
+}
+
+// DECL: dialect_2::MyStruct potatoes();
