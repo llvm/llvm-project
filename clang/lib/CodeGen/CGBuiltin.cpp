@@ -11314,15 +11314,6 @@ static Value *EmitX86ConvertIntToFp(CodeGenFunction &CGF,
   return EmitX86Select(CGF, Ops[2], Res, Ops[1]);
 }
 
-static Value *EmitX86MinMax(CodeGenFunction &CGF, ICmpInst::Predicate Pred,
-                            ArrayRef<Value *> Ops) {
-  Value *Cmp = CGF.Builder.CreateICmp(Pred, Ops[0], Ops[1]);
-  Value *Res = CGF.Builder.CreateSelect(Cmp, Ops[0], Ops[1]);
-
-  assert(Ops.size() == 2);
-  return Res;
-}
-
 // Lowers X86 FMA intrinsics to IR.
 static Value *EmitX86FMAExpr(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
                              unsigned BuiltinID, bool IsAddSub) {
@@ -13306,7 +13297,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pmaxsw512:
   case X86::BI__builtin_ia32_pmaxsd512:
   case X86::BI__builtin_ia32_pmaxsq512:
-    return EmitX86MinMax(*this, ICmpInst::ICMP_SGT, Ops);
+    return EmitX86BinaryIntrinsic(*this, Ops, Intrinsic::smax);
   case X86::BI__builtin_ia32_pmaxub128:
   case X86::BI__builtin_ia32_pmaxuw128:
   case X86::BI__builtin_ia32_pmaxud128:
@@ -13319,7 +13310,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pmaxuw512:
   case X86::BI__builtin_ia32_pmaxud512:
   case X86::BI__builtin_ia32_pmaxuq512:
-    return EmitX86MinMax(*this, ICmpInst::ICMP_UGT, Ops);
+    return EmitX86BinaryIntrinsic(*this, Ops, Intrinsic::umax);
   case X86::BI__builtin_ia32_pminsb128:
   case X86::BI__builtin_ia32_pminsw128:
   case X86::BI__builtin_ia32_pminsd128:
@@ -13332,7 +13323,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pminsw512:
   case X86::BI__builtin_ia32_pminsd512:
   case X86::BI__builtin_ia32_pminsq512:
-    return EmitX86MinMax(*this, ICmpInst::ICMP_SLT, Ops);
+    return EmitX86BinaryIntrinsic(*this, Ops, Intrinsic::smin);
   case X86::BI__builtin_ia32_pminub128:
   case X86::BI__builtin_ia32_pminuw128:
   case X86::BI__builtin_ia32_pminud128:
@@ -13345,7 +13336,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pminuw512:
   case X86::BI__builtin_ia32_pminud512:
   case X86::BI__builtin_ia32_pminuq512:
-    return EmitX86MinMax(*this, ICmpInst::ICMP_ULT, Ops);
+    return EmitX86BinaryIntrinsic(*this, Ops, Intrinsic::umin);
 
   case X86::BI__builtin_ia32_pmuludq128:
   case X86::BI__builtin_ia32_pmuludq256:
