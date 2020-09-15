@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
@@ -122,14 +123,14 @@ struct FieldInfo;
 struct StructInfo {
   StringRef Name;
   bool IsUnion = false;
-  size_t Alignment = 0;
-  size_t Size = 0;
-  size_t AlignmentSize = 0;
+  unsigned Alignment = 0;
+  unsigned Size = 0;
+  unsigned AlignmentSize = 0;
   std::vector<FieldInfo> Fields;
   StringMap<size_t> FieldsByName;
 
   FieldInfo &addField(StringRef FieldName, FieldType FT,
-                      size_t FieldAlignmentSize);
+                      unsigned FieldAlignmentSize);
 
   StructInfo() = default;
 
@@ -319,13 +320,13 @@ struct FieldInfo {
   size_t Offset = 0;
 
   // Total size of the field (= LengthOf * Type).
-  size_t SizeOf = 0;
+  unsigned SizeOf = 0;
 
   // Number of elements in the field (1 if scalar, >1 if an array).
-  size_t LengthOf = 0;
+  unsigned LengthOf = 0;
 
   // Size of a single entry in this field, in bytes ("type" in MASM standards).
-  size_t Type = 0;
+  unsigned Type = 0;
 
   FieldInitializer Contents;
 
@@ -333,9 +334,9 @@ struct FieldInfo {
 };
 
 FieldInfo &StructInfo::addField(StringRef FieldName, FieldType FT,
-                                size_t FieldAlignmentSize) {
+                                unsigned FieldAlignmentSize) {
   if (!FieldName.empty())
-    FieldsByName[FieldName] = Fields.size();
+    FieldsByName[FieldName.lower()] = Fields.size();
   Fields.emplace_back(FT);
   FieldInfo &Field = Fields.back();
   if (IsUnion) {
@@ -390,8 +391,8 @@ private:
   /// Maps struct tags to struct definitions.
   StringMap<StructInfo> Structs;
 
-  /// Maps data location names to user-defined types.
-  StringMap<const StructInfo *> KnownType;
+  /// Maps data location names to types.
+  StringMap<AsmTypeInfo> KnownType;
 
   /// Stack of active macro instantiations.
   std::vector<MacroInstantiation*> ActiveMacros;
@@ -494,10 +495,11 @@ public:
 
   bool isParsingMasm() const override { return true; }
 
-  bool lookUpField(StringRef Name, StringRef &Type,
-                   unsigned &Offset) const override;
-  bool lookUpField(StringRef Base, StringRef Member, StringRef &Type,
-                   unsigned &Offset) const override;
+  bool lookUpField(StringRef Name, AsmFieldInfo &Info) const override;
+  bool lookUpField(StringRef Base, StringRef Member,
+                   AsmFieldInfo &Info) const override;
+
+  bool lookUpType(StringRef Name, AsmTypeInfo &Info) const override;
 
   bool parseMSInlineAsm(void *AsmLoc, std::string &AsmString,
                         unsigned &NumOutputs, unsigned &NumInputs,
@@ -509,7 +511,8 @@ public:
 
   bool parseExpression(const MCExpr *&Res);
   bool parseExpression(const MCExpr *&Res, SMLoc &EndLoc) override;
-  bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
+  bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
+                        AsmTypeInfo *TypeInfo) override;
   bool parseParenExpression(const MCExpr *&Res, SMLoc &EndLoc) override;
   bool parseParenExprOfDepth(unsigned ParenDepth, const MCExpr *&Res,
                              SMLoc &EndLoc) override;
@@ -568,7 +571,7 @@ private:
   static void DiagHandler(const SMDiagnostic &Diag, void *Context);
 
   bool lookUpField(const StructInfo &Structure, StringRef Member,
-                   StringRef &Type, unsigned &Offset) const;
+                   AsmFieldInfo &Info) const;
 
   /// Should we emit DWARF describing this assembler source?  (Returns false if
   /// the source has .file directives, which means we don't want to generate
@@ -756,23 +759,24 @@ private:
   bool parseScalarInstList(
       unsigned Size, SmallVectorImpl<const MCExpr *> &Values,
       const AsmToken::TokenKind EndToken = AsmToken::EndOfStatement);
-  bool emitIntegralValues(unsigned Size);
+  bool emitIntegralValues(unsigned Size, unsigned *Count = nullptr);
   bool addIntegralField(StringRef Name, unsigned Size);
   bool parseDirectiveValue(StringRef IDVal, unsigned Size);
-  bool parseDirectiveNamedValue(StringRef IDVal, unsigned Size, StringRef Name,
-                                SMLoc NameLoc);
+  bool parseDirectiveNamedValue(StringRef TypeName, unsigned Size,
+                                StringRef Name, SMLoc NameLoc);
 
   // "real4", "real8"
-  bool emitRealValues(const fltSemantics &Semantics);
+  bool emitRealValues(const fltSemantics &Semantics, unsigned *Count = nullptr);
   bool addRealField(StringRef Name, const fltSemantics &Semantics, size_t Size);
   bool parseDirectiveRealValue(StringRef IDVal, const fltSemantics &Semantics,
                                size_t Size);
   bool parseRealInstList(
       const fltSemantics &Semantics, SmallVectorImpl<APInt> &Values,
       const AsmToken::TokenKind EndToken = AsmToken::EndOfStatement);
-  bool parseDirectiveNamedRealValue(StringRef IDVal,
-                                    const fltSemantics &Semantics, size_t Size,
-                                    StringRef Name, SMLoc NameLoc);
+  bool parseDirectiveNamedRealValue(StringRef TypeName,
+                                    const fltSemantics &Semantics,
+                                    unsigned Size, StringRef Name,
+                                    SMLoc NameLoc);
 
   bool parseOptionalAngleBracketOpen();
   bool parseAngleBracketClose(const Twine &Msg = "expected '>'");
@@ -816,7 +820,7 @@ private:
                              const StructInitializer &Initializer);
 
   // User-defined types (structs, unions):
-  bool emitStructValues(const StructInfo &Structure);
+  bool emitStructValues(const StructInfo &Structure, unsigned *Count = nullptr);
   bool addStructField(StringRef Name, const StructInfo &Structure);
   bool parseDirectiveStructValue(const StructInfo &Structure,
                                  StringRef Directive, SMLoc DirLoc);
@@ -1321,7 +1325,8 @@ bool MasmParser::parseBracketExpr(const MCExpr *&Res, SMLoc &EndLoc) {
 ///  primaryexpr ::= number
 ///  primaryexpr ::= '.'
 ///  primaryexpr ::= ~,+,-,'not' primaryexpr
-bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
+bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
+                                  AsmTypeInfo *TypeInfo) {
   SMLoc FirstTokenLoc = getLexer().getLoc();
   AsmToken::TokenKind FirstTokenKind = Lexer.getKind();
   switch (FirstTokenKind) {
@@ -1332,7 +1337,7 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     return true;
   case AsmToken::Exclaim:
     Lex(); // Eat the operator.
-    if (parsePrimaryExpr(Res, EndLoc))
+    if (parsePrimaryExpr(Res, EndLoc, nullptr))
       return true;
     Res = MCUnaryExpr::createLNot(Res, getContext(), FirstTokenLoc);
     return false;
@@ -1360,7 +1365,7 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     }
     // Parse named bitwise negation.
     if (Identifier.equals_lower("not")) {
-      if (parsePrimaryExpr(Res, EndLoc))
+      if (parsePrimaryExpr(Res, EndLoc, nullptr))
         return true;
       Res = MCUnaryExpr::createNot(Res, getContext(), FirstTokenLoc);
       return false;
@@ -1415,24 +1420,19 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     }
 
     // Find the field offset if used.
-    StringRef Type;
-    unsigned Offset = 0;
+    AsmFieldInfo Info;
     Split = SymbolName.split('.');
-    if (!Split.second.empty()) {
+    if (Split.second.empty()) {
+    } else {
       SymbolName = Split.first;
-      if (Structs.count(SymbolName.lower()) &&
-          !lookUpField(SymbolName, Split.second, Type, Offset)) {
-        // This is actually a reference to a field offset.
-        Res = MCConstantExpr::create(Offset, getContext());
-        return false;
-      }
-
-      auto TypeIt = KnownType.find(SymbolName);
-      if (TypeIt == KnownType.end() ||
-          lookUpField(*TypeIt->second, Split.second, Type, Offset)) {
+      if (lookUpField(SymbolName, Split.second, Info)) {
         std::pair<StringRef, StringRef> BaseMember = Split.second.split('.');
         StringRef Base = BaseMember.first, Member = BaseMember.second;
-        lookUpField(Base, Member, Type, Offset);
+        lookUpField(Base, Member, Info);
+      } else if (Structs.count(SymbolName.lower())) {
+        // This is actually a reference to a field offset.
+        Res = MCConstantExpr::create(Info.Offset, getContext());
+        return false;
       }
     }
 
@@ -1458,12 +1458,22 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     // Otherwise create a symbol ref.
     const MCExpr *SymRef =
         MCSymbolRefExpr::create(Sym, Variant, getContext(), FirstTokenLoc);
-    if (Offset) {
-      Res = MCBinaryExpr::create(MCBinaryExpr::Add, SymRef,
-                                 MCConstantExpr::create(Offset, getContext()),
-                                 getContext());
+    if (Info.Offset) {
+      Res = MCBinaryExpr::create(
+          MCBinaryExpr::Add, SymRef,
+          MCConstantExpr::create(Info.Offset, getContext()), getContext());
     } else {
       Res = SymRef;
+    }
+    if (TypeInfo) {
+      if (Info.Type.Name.empty()) {
+        auto TypeIt = KnownType.find(Identifier.lower());
+        if (TypeIt != KnownType.end()) {
+          Info.Type = TypeIt->second;
+        }
+      }
+
+      *TypeInfo = Info.Type;
     }
     return false;
   }
@@ -1528,19 +1538,19 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     return parseBracketExpr(Res, EndLoc);
   case AsmToken::Minus:
     Lex(); // Eat the operator.
-    if (parsePrimaryExpr(Res, EndLoc))
+    if (parsePrimaryExpr(Res, EndLoc, nullptr))
       return true;
     Res = MCUnaryExpr::createMinus(Res, getContext(), FirstTokenLoc);
     return false;
   case AsmToken::Plus:
     Lex(); // Eat the operator.
-    if (parsePrimaryExpr(Res, EndLoc))
+    if (parsePrimaryExpr(Res, EndLoc, nullptr))
       return true;
     Res = MCUnaryExpr::createPlus(Res, getContext(), FirstTokenLoc);
     return false;
   case AsmToken::Tilde:
     Lex(); // Eat the operator.
-    if (parsePrimaryExpr(Res, EndLoc))
+    if (parsePrimaryExpr(Res, EndLoc, nullptr))
       return true;
     Res = MCUnaryExpr::createNot(Res, getContext(), FirstTokenLoc);
     return false;
@@ -3309,7 +3319,7 @@ bool MasmParser::parseScalarInstList(unsigned Size,
   return false;
 }
 
-bool MasmParser::emitIntegralValues(unsigned Size) {
+bool MasmParser::emitIntegralValues(unsigned Size, unsigned *Count) {
   SmallVector<const MCExpr *, 1> Values;
   if (checkForValidSection() || parseScalarInstList(Size, Values))
     return true;
@@ -3317,6 +3327,8 @@ bool MasmParser::emitIntegralValues(unsigned Size) {
   for (auto Value : Values) {
     emitIntValue(Value, Size);
   }
+  if (Count)
+    *Count = Values.size();
   return false;
 }
 
@@ -3356,16 +3368,24 @@ bool MasmParser::parseDirectiveValue(StringRef IDVal, unsigned Size) {
 
 /// parseDirectiveNamedValue
 ///  ::= name (byte | word | ... ) [ expression (, expression)* ]
-bool MasmParser::parseDirectiveNamedValue(StringRef IDVal, unsigned Size,
+bool MasmParser::parseDirectiveNamedValue(StringRef TypeName, unsigned Size,
                                           StringRef Name, SMLoc NameLoc) {
   if (StructInProgress.empty()) {
     // Initialize named data value.
     MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
     getStreamer().emitLabel(Sym);
-    if (emitIntegralValues(Size))
-      return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
+    unsigned Count;
+    if (emitIntegralValues(Size, &Count))
+      return addErrorSuffix(" in '" + Twine(TypeName) + "' directive");
+
+    AsmTypeInfo Type;
+    Type.Name = TypeName;
+    Type.Size = Size * Count;
+    Type.ElementSize = Size;
+    Type.Length = Count;
+    KnownType[Name.lower()] = Type;
   } else if (addIntegralField(Name, Size)) {
-    return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
+    return addErrorSuffix(" in '" + Twine(TypeName) + "' directive");
   }
 
   return false;
@@ -3482,7 +3502,8 @@ bool MasmParser::parseRealInstList(const fltSemantics &Semantics,
 }
 
 // Initialize real data values.
-bool MasmParser::emitRealValues(const fltSemantics &Semantics) {
+bool MasmParser::emitRealValues(const fltSemantics &Semantics,
+                                unsigned *Count) {
   if (checkForValidSection())
     return true;
 
@@ -3494,6 +3515,8 @@ bool MasmParser::emitRealValues(const fltSemantics &Semantics) {
     getStreamer().emitIntValue(AsInt.getLimitedValue(),
                                AsInt.getBitWidth() / 8);
   }
+  if (Count)
+    *Count = ValuesAsInt.size();
   return false;
 }
 
@@ -3536,18 +3559,26 @@ bool MasmParser::parseDirectiveRealValue(StringRef IDVal,
 
 /// parseDirectiveNamedRealValue
 ///  ::= name (real4 | real8) [ expression (, expression)* ]
-bool MasmParser::parseDirectiveNamedRealValue(StringRef IDVal,
+bool MasmParser::parseDirectiveNamedRealValue(StringRef TypeName,
                                               const fltSemantics &Semantics,
-                                              size_t Size, StringRef Name,
+                                              unsigned Size, StringRef Name,
                                               SMLoc NameLoc) {
   if (StructInProgress.empty()) {
     // Initialize named data value.
     MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
     getStreamer().emitLabel(Sym);
-    if (emitRealValues(Semantics))
-      return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
+    unsigned Count;
+    if (emitRealValues(Semantics, &Count))
+      return addErrorSuffix(" in '" + TypeName + "' directive");
+
+    AsmTypeInfo Type;
+    Type.Name = TypeName;
+    Type.Size = Size * Count;
+    Type.ElementSize = Size;
+    Type.Length = Count;
+    KnownType[Name.lower()] = Type;
   } else if (addRealField(Name, Semantics, Size)) {
-    return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
+    return addErrorSuffix(" in '" + TypeName + "' directive");
   }
   return false;
 }
@@ -3960,7 +3991,8 @@ bool MasmParser::emitStructInitializer(const StructInfo &Structure,
 }
 
 // Set data values from initializers.
-bool MasmParser::emitStructValues(const StructInfo &Structure) {
+bool MasmParser::emitStructValues(const StructInfo &Structure,
+                                  unsigned *Count) {
   std::vector<StructInitializer> Initializers;
   if (parseStructInstList(Structure, Initializers))
     return true;
@@ -3970,6 +4002,8 @@ bool MasmParser::emitStructValues(const StructInfo &Structure) {
       return true;
   }
 
+  if (Count)
+    *Count = Initializers.size();
   return false;
 }
 
@@ -4020,9 +4054,15 @@ bool MasmParser::parseDirectiveNamedStructValue(const StructInfo &Structure,
     // Initialize named data value.
     MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
     getStreamer().emitLabel(Sym);
-    KnownType[Name] = &Structure;
-    if (emitStructValues(Structure))
+    unsigned Count;
+    if (emitStructValues(Structure, &Count))
       return true;
+    AsmTypeInfo Type;
+    Type.Name = Structure.Name;
+    Type.Size = Structure.Size * Count;
+    Type.ElementSize = Structure.Size;
+    Type.Length = Count;
+    KnownType[Name.lower()] = Type;
   } else if (addStructField(Name, Structure)) {
     return addErrorSuffix(" in '" + Twine(Directive) + "' directive");
   }
@@ -6564,37 +6604,39 @@ static int rewritesSort(const AsmRewrite *AsmRewriteA,
   llvm_unreachable("Unstable rewrite sort.");
 }
 
-bool MasmParser::lookUpField(StringRef Name, StringRef &Type,
-                             unsigned &Offset) const {
+bool MasmParser::lookUpField(StringRef Name, AsmFieldInfo &Info) const {
   const std::pair<StringRef, StringRef> BaseMember = Name.split('.');
   const StringRef Base = BaseMember.first, Member = BaseMember.second;
-  return lookUpField(Base, Member, Type, Offset);
+  return lookUpField(Base, Member, Info);
 }
 
-bool MasmParser::lookUpField(StringRef Base, StringRef Member, StringRef &Type,
-                             unsigned &Offset) const {
+bool MasmParser::lookUpField(StringRef Base, StringRef Member,
+                             AsmFieldInfo &Info) const {
   if (Base.empty())
     return true;
 
-  unsigned BaseOffset = 0;
-  if (Base.contains('.') && !lookUpField(Base, Type, BaseOffset))
-    Base = Type;
-
-  auto TypeIt = KnownType.find(Base);
-  if (TypeIt != KnownType.end())
-    return lookUpField(*TypeIt->second, Member, Type, Offset);
+  AsmFieldInfo BaseInfo;
+  if (Base.contains('.') && !lookUpField(Base, BaseInfo))
+    Base = BaseInfo.Type.Name;
 
   auto StructIt = Structs.find(Base.lower());
+  auto TypeIt = KnownType.find(Base.lower());
+  if (TypeIt != KnownType.end()) {
+    StructIt = Structs.find(TypeIt->second.Name.lower());
+  }
   if (StructIt != Structs.end())
-    return lookUpField(StructIt->second, Member, Type, Offset);
+    return lookUpField(StructIt->second, Member, Info);
 
   return true;
 }
 
 bool MasmParser::lookUpField(const StructInfo &Structure, StringRef Member,
-                             StringRef &Type, unsigned &Offset) const {
+                             AsmFieldInfo &Info) const {
   if (Member.empty()) {
-    Type = Structure.Name;
+    Info.Type.Name = Structure.Name;
+    Info.Type.Size = Structure.Size;
+    Info.Type.ElementSize = Structure.Size;
+    Info.Type.Length = 1;
     return false;
   }
 
@@ -6603,7 +6645,7 @@ bool MasmParser::lookUpField(const StructInfo &Structure, StringRef Member,
 
   auto StructIt = Structs.find(FieldName.lower());
   if (StructIt != Structs.end())
-    return lookUpField(StructIt->second, FieldMember, Type, Offset);
+    return lookUpField(StructIt->second, FieldMember, Info);
 
   auto FieldIt = Structure.FieldsByName.find(FieldName.lower());
   if (FieldIt == Structure.FieldsByName.end())
@@ -6611,9 +6653,12 @@ bool MasmParser::lookUpField(const StructInfo &Structure, StringRef Member,
 
   const FieldInfo &Field = Structure.Fields[FieldIt->second];
   if (FieldMember.empty()) {
-    Offset += Field.Offset;
+    Info.Offset += Field.Offset;
+    Info.Type.Size = Field.SizeOf;
+    Info.Type.ElementSize = Field.Type;
+    Info.Type.Length = Field.LengthOf;
     if (Field.Contents.FT == FT_STRUCT)
-      Type = Field.Contents.StructInfo.Structure.Name;
+      Info.Type.Name = Field.Contents.StructInfo.Structure.Name;
     return false;
   }
 
@@ -6621,12 +6666,42 @@ bool MasmParser::lookUpField(const StructInfo &Structure, StringRef Member,
     return true;
   const StructFieldInfo &StructInfo = Field.Contents.StructInfo;
 
-  bool Result = lookUpField(StructInfo.Structure, FieldMember, Type, Offset);
-  if (Result)
+  if (lookUpField(StructInfo.Structure, FieldMember, Info))
     return true;
 
-  Offset += Field.Offset;
+  Info.Offset += Field.Offset;
   return false;
+}
+
+bool MasmParser::lookUpType(StringRef Name, AsmTypeInfo &Info) const {
+  unsigned Size = StringSwitch<unsigned>(Name)
+                      .CasesLower("byte", "db", "sbyte", 1)
+                      .CasesLower("word", "dw", "sword", 2)
+                      .CasesLower("dword", "dd", "sdword", 4)
+                      .CasesLower("fword", "df", 6)
+                      .CasesLower("qword", "dq", "sqword", 8)
+                      .CaseLower("real4", 4)
+                      .CaseLower("real8", 8)
+                      .Default(0);
+  if (Size) {
+    Info.Name = Name;
+    Info.ElementSize = Size;
+    Info.Length = 1;
+    Info.Size = Size;
+    return false;
+  }
+
+  auto StructIt = Structs.find(Name.lower());
+  if (StructIt != Structs.end()) {
+    const StructInfo &Structure = StructIt->second;
+    Info.Name = Name;
+    Info.ElementSize = Structure.Size;
+    Info.Length = 1;
+    Info.Size = Structure.Size;
+    return false;
+  }
+
+  return true;
 }
 
 bool MasmParser::parseMSInlineAsm(

@@ -2541,7 +2541,7 @@ AMDGPUAsmParser::parseImm(OperandVector &Operands, bool HasSP3AbsModifier) {
       // This syntax is not compatible with syntax of standard
       // MC expressions (due to the trailing '|').
       SMLoc EndLoc;
-      if (getParser().parsePrimaryExpr(Expr, EndLoc))
+      if (getParser().parsePrimaryExpr(Expr, EndLoc, nullptr))
         return MatchOperand_ParseFail;
     } else {
       if (Parser.parseExpression(Expr))
