@@ -5598,11 +5598,27 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   }
 
   // If trip count is known or estimated compile time constant, limit the
-  // interleave count to be less than the trip count divided by VF.
+  // interleave count to be less than the trip count divided by VF, provided it
+  // is at least 1.
   if (BestKnownTC) {
     MaxInterleaveCount =
         std::min(*BestKnownTC / VF.getKnownMinValue(), MaxInterleaveCount);
+    // Make sure MaxInterleaveCount is greater than 0.
+    MaxInterleaveCount = std::max(1u, MaxInterleaveCount);
   }
+
+  assert(MaxInterleaveCount > 0 &&
+         "Maximum interleave count must be greater than 0");
+
+  // Clamp the calculated IC to be between the 1 and the max interleave count
+  // that the target and trip count allows.
+  if (IC > MaxInterleaveCount)
+    IC = MaxInterleaveCount;
+  else
+    // Make sure IC is greater than 0.
+    IC = std::max(1u, IC);
+
+  assert(IC > 0 && "Interleave count must be greater than 0.");
 
   // If we did not calculate the cost for VF (because the user selected the VF)
   // then we calculate the cost of VF here.
@@ -5610,13 +5626,6 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
     LoopCost = expectedCost(VF).first;
 
   assert(LoopCost && "Non-zero loop cost expected");
-
-  // Clamp the calculated IC to be between the 1 and the max interleave count
-  // that the target and trip count allows.
-  if (IC > MaxInterleaveCount)
-    IC = MaxInterleaveCount;
-  else if (IC < 1)
-    IC = 1;
 
   // Interleave if we vectorized this loop and there is a reduction that could
   // benefit from interleaving.
