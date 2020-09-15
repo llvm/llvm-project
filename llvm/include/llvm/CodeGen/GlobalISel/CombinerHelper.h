@@ -252,6 +252,12 @@ public:
   applyCombineUnmergeMergeToPlainValues(MachineInstr &MI,
                                         SmallVectorImpl<Register> &Operands);
 
+  /// Transform G_UNMERGE Constant -> Constant1, Constant2, ...
+  bool matchCombineUnmergeConstant(MachineInstr &MI,
+                                   SmallVectorImpl<APInt> &Csts);
+  bool applyCombineUnmergeConstant(MachineInstr &MI,
+                                   SmallVectorImpl<APInt> &Csts);
+
   /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
   bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg);
   bool applyCombineI2PToP2I(MachineInstr &MI, Register &Reg);
