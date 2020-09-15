@@ -342,8 +342,7 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
 
     const auto *PreambleData = IP->Preamble;
     if (!PreambleData)
-      return CB(llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                        "Failed to parse includes"));
+      return CB(error("Failed to parse includes"));
 
     ParseInputs ParseInput{IP->Command, &TFS, IP->Contents.str()};
     ParseInput.Index = Index;
