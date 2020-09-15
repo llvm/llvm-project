@@ -550,6 +550,8 @@ unsigned DIEDelta::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   switch (Form) {
   case dwarf::DW_FORM_data4:
     return 4;
+  case dwarf::DW_FORM_data8:
+    return 8;
   case dwarf::DW_FORM_sec_offset:
     return AP->getDwarfOffsetByteSize();
   default:
