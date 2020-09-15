@@ -269,21 +269,26 @@ static void print(OpAsmPrinter &printer, ParallelOp &op) {
   printer << ParallelOp::getOperationName();
 
   // async()?
-  if (auto async = op.async())
+  if (Value async = op.async())
     printer << " " << ParallelOp::getAsyncKeyword() << "(" << async << ")";
 
   // wait()?
   printOperandList(op.waitOperands(), ParallelOp::getWaitKeyword(), printer);
 
   // num_gangs()?
-  if (auto numGangs = op.numGangs())
+  if (Value numGangs = op.numGangs())
     printer << " " << ParallelOp::getNumGangsKeyword() << "(" << numGangs
             << ")";
 
   // num_workers()?
-  if (auto numWorkers = op.numWorkers())
+  if (Value numWorkers = op.numWorkers())
     printer << " " << ParallelOp::getNumWorkersKeyword() << "(" << numWorkers
             << ")";
+
+  // vector_length()?
+  if (Value vectorLength = op.vectorLength())
+    printer << " " << ParallelOp::getVectorLengthKeyword() << "("
+            << vectorLength << ")";
 
   // if()?
   if (Value ifCond = op.ifCond())
