@@ -311,7 +311,10 @@ Modified Compiler Flags
 New Pragmas in Clang
 --------------------
 
-- ...
+- The ``clang max_tokens_here`` pragma can be used together with
+  `-Wmax-tokens <DiagnosticsReference.html#wmax-tokens>`_ to emit a warning when
+  the number of preprocessor tokens exceeds a limit. Such limits can be helpful
+  in limiting code growth and slow compiles due to large header files.
 
 Attribute Changes in Clang
 --------------------------
