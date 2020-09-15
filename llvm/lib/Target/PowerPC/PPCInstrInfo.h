@@ -497,8 +497,9 @@ public:
   /// Get the base operand and byte offset of an instruction that reads/writes
   /// memory.
   bool getMemOperandsWithOffsetWidth(
-      const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
-      int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+      const MachineInstr &LdSt,
+      SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
+      bool &OffsetIsScalable, unsigned &Width,
       const TargetRegisterInfo *TRI) const override;
 
   /// Returns true if the two given memory operations should be scheduled
