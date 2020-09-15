@@ -379,9 +379,8 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
           ConstantInt::get(Ctx, APInt(32, StringRef("0"), 10));
       ZeroIdxList.push_back(zeroInt);
 
-      GetElementPtrInst *BufferIdx =
-          dyn_cast<GetElementPtrInst>(GetElementPtrInst::Create(
-              nullptr, pcall, ZeroIdxList, "PrintBuffID", Brnch));
+      GetElementPtrInst *BufferIdx = GetElementPtrInst::Create(
+          nullptr, pcall, ZeroIdxList, "PrintBuffID", Brnch);
 
       Type *idPointer = PointerType::get(I32Ty, AMDGPUAS::GLOBAL_ADDRESS);
       Value *id_gep_cast =
@@ -395,8 +394,8 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
 
       FourthIdxList.push_back(fourInt); // 1st 4 bytes hold the printf_id
       // the following GEP is the buffer pointer
-      BufferIdx = cast<GetElementPtrInst>(GetElementPtrInst::Create(
-          nullptr, pcall, FourthIdxList, "PrintBuffGep", Brnch));
+      BufferIdx = GetElementPtrInst::Create(nullptr, pcall, FourthIdxList,
+                                            "PrintBuffGep", Brnch);
 
       Type *Int32Ty = Type::getInt32Ty(Ctx);
       Type *Int64Ty = Type::getInt64Ty(Ctx);
@@ -409,17 +408,15 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
         if (ArgType->isFPOrFPVectorTy() && !isa<VectorType>(ArgType)) {
           Type *IType = (ArgType->isFloatTy()) ? Int32Ty : Int64Ty;
           if (OpConvSpecifiers[ArgCount - 1] == 'f') {
-            ConstantFP *fpCons = dyn_cast<ConstantFP>(Arg);
-            if (fpCons) {
-              APFloat Val(fpCons->getValueAPF());
+            if (auto *FpCons = dyn_cast<ConstantFP>(Arg)) {
+              APFloat Val(FpCons->getValueAPF());
               bool Lost = false;
               Val.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven,
                           &Lost);
               Arg = ConstantFP::get(Ctx, Val);
               IType = Int32Ty;
-            } else {
-              FPExtInst *FpExt = dyn_cast<FPExtInst>(Arg);
-              if (FpExt && FpExt->getType()->isDoubleTy() &&
+            } else if (auto *FpExt = dyn_cast<FPExtInst>(Arg)) {
+              if (FpExt->getType()->isDoubleTy() &&
                   FpExt->getOperand(0)->getType()->isFloatTy()) {
                 Arg = FpExt->getOperand(0);
                 IType = Int32Ty;
@@ -431,9 +428,8 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
         } else if (ArgType->getTypeID() == Type::PointerTyID) {
           if (shouldPrintAsStr(OpConvSpecifiers[ArgCount - 1], ArgType)) {
             const char *S = NonLiteralStr;
-            if (ConstantExpr *ConstExpr = dyn_cast<ConstantExpr>(Arg)) {
-              GlobalVariable *GV =
-                  dyn_cast<GlobalVariable>(ConstExpr->getOperand(0));
+            if (auto *ConstExpr = dyn_cast<ConstantExpr>(Arg)) {
+              auto *GV = dyn_cast<GlobalVariable>(ConstExpr->getOperand(0));
               if (GV && GV->hasInitializer()) {
                 Constant *Init = GV->getInitializer();
                 ConstantDataArray *CA = dyn_cast<ConstantDataArray>(Init);
@@ -491,27 +487,27 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
           switch (EleSize) {
           default:
             EleCount = TotalSize / 64;
-            IType = dyn_cast<Type>(Type::getInt64Ty(ArgType->getContext()));
+            IType = Type::getInt64Ty(ArgType->getContext());
             break;
           case 8:
             if (EleCount >= 8) {
               EleCount = TotalSize / 64;
-              IType = dyn_cast<Type>(Type::getInt64Ty(ArgType->getContext()));
+              IType = Type::getInt64Ty(ArgType->getContext());
             } else if (EleCount >= 3) {
               EleCount = 1;
-              IType = dyn_cast<Type>(Type::getInt32Ty(ArgType->getContext()));
+              IType = Type::getInt32Ty(ArgType->getContext());
             } else {
               EleCount = 1;
-              IType = dyn_cast<Type>(Type::getInt16Ty(ArgType->getContext()));
+              IType = Type::getInt16Ty(ArgType->getContext());
             }
             break;
           case 16:
             if (EleCount >= 3) {
               EleCount = TotalSize / 64;
-              IType = dyn_cast<Type>(Type::getInt64Ty(ArgType->getContext()));
+              IType = Type::getInt64Ty(ArgType->getContext());
             } else {
               EleCount = 1;
-              IType = dyn_cast<Type>(Type::getInt32Ty(ArgType->getContext()));
+              IType = Type::getInt32Ty(ArgType->getContext());
             }
             break;
           }
@@ -539,8 +535,8 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(
           (void)StBuff;
           if (I + 1 == E && ArgCount + 1 == CI->getNumArgOperands())
             break;
-          BufferIdx = dyn_cast<GetElementPtrInst>(GetElementPtrInst::Create(
-              nullptr, BufferIdx, BuffOffset, "PrintBuffNextPtr", Brnch));
+          BufferIdx = GetElementPtrInst::Create(nullptr, BufferIdx, BuffOffset,
+                                                "PrintBuffNextPtr", Brnch);
           LLVM_DEBUG(dbgs() << "inserting gep to the printf buffer:\n"
                             << *BufferIdx << '\n');
         }
