@@ -591,10 +591,14 @@ void llvm::emitDWARF5AccelTable(
 }
 
 void AppleAccelTableOffsetData::emit(AsmPrinter *Asm) const {
+  assert(Die.getDebugSectionOffset() <= UINT32_MAX &&
+         "The section offset exceeds the limit.");
   Asm->emitInt32(Die.getDebugSectionOffset());
 }
 
 void AppleAccelTableTypeData::emit(AsmPrinter *Asm) const {
+  assert(Die.getDebugSectionOffset() <= UINT32_MAX &&
+         "The section offset exceeds the limit.");
   Asm->emitInt32(Die.getDebugSectionOffset());
   Asm->emitInt16(Die.getTag());
   Asm->emitInt8(0);
