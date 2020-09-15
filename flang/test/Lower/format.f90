@@ -6,28 +6,29 @@ function formatAssign()
     integer :: label
     logical :: flag
 
-    ! CHECK: select
+    ! CHECK-DAG: %[[ONE:.*]] = constant 100 : i32
+    ! CHECK-DAG: %[[TWO:.*]] = constant 200 : i32
+    ! CHECK: %{{.*}} = select %{{.*}}, %[[ONE]], %[[TWO]] : i32
     if (flag) then
        assign 100 to label
     else
        assign 200 to label
     end if
 
-    ! CHECK: fir.select {{.*\[100, \^bb[0-9]+, 200, \^bb[0-9]+, unit, \^bb[0-9]+\]}}
-    ! CHECK-LABEL: ^bb{{[0-9]+}}:
-    ! CHECK: fir.address_of
-    ! CHECK: br [[END_BLOCK:\^bb[0-9]+]]{{(.*)}}
-    ! CHECK-LABEL: ^bb{{[0-9]+}}: //
-    ! CHECK: fir.address_of
-    ! CHECK: br [[END_BLOCK]]
-    ! CHECK-LABEL: ^bb{{[0-9]+}}: //
-    ! CHECK: fir.address_of
-    ! CHECK: br [[END_BLOCK]]
-    ! CHECK-LABEL: ^bb{{[0-9]+(.*)}}: //
-    ! CHECK: call{{.*}}BeginExternalFormattedOutput
-    ! CHECK-DAG: call{{.*}}OutputAscii
-    ! CHECK-DAG: call{{.*}}OutputReal32
-    ! CHECK: call{{.*}}EndIoStatement
+    ! CHECK: fir.select %{{.*}} [100, ^bb[[BLK1:.*]], 200, ^bb[[BLK2:.*]], unit, ^bb[[BLK3:.*]]]
+    ! CHECK: ^bb[[BLK1]]:
+    ! CHECK: fir.address_of(@_QQcl
+    ! CHECK: br ^bb[[END_BLOCK:.*]](
+    ! CHECK: ^bb[[BLK2]]:
+    ! CHECK: fir.address_of(@_QQcl
+    ! CHECK: br ^bb[[END_BLOCK]](
+    ! CHECK: ^bb[[BLK3]]:
+    ! CHECK-NEXT: fir.unreachable
+    ! CHECK: ^bb[[END_BLOCK]](
+    ! CHECK: fir.call @{{.*}}BeginExternalFormattedOutput
+    ! CHECK: fir.call @{{.*}}OutputAscii
+    ! CHECK: fir.call @{{.*}}OutputReal32
+    ! CHECK: fir.call @{{.*}}EndIoStatement
     pi = 3.141592653589
     write(*, label) "PI=", pi
  

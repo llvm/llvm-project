@@ -57,6 +57,15 @@ static void noRuntimeSupport(mlir::Location loc, llvm::StringRef stmt) {
   std::exit(1);
 }
 
+/// Runtime calls that do not return to the caller indicate this condition by
+/// terminating the current basic block with an unreachable op.
+static void genUnreachable(Fortran::lower::FirOpBuilder &builder,
+                           mlir::Location loc) {
+  builder.create<fir::UnreachableOp>(loc);
+  auto *newBlock = builder.getBlock()->splitBlock(builder.getInsertionPoint());
+  builder.setInsertionPointToStart(newBlock);
+}
+
 //===----------------------------------------------------------------------===//
 // Misc. Fortran statements that lower to runtime calls
 //===----------------------------------------------------------------------===//
@@ -106,14 +115,16 @@ void Fortran::lower::genStopStatement(
     op = builder.createConvert(loc, type, op);
   }
   builder.create<fir::CallOp>(loc, callee, operands);
+  genUnreachable(builder, loc);
 }
 
 void Fortran::lower::genFailImageStatement(
     Fortran::lower::AbstractConverter &converter) {
-  auto &bldr = converter.getFirOpBuilder();
+  auto &builder = converter.getFirOpBuilder();
   auto loc = converter.getCurrentLocation();
-  auto callee = genRuntimeFunction<mkRTKey(FailImageStatement)>(loc, bldr);
-  bldr.create<fir::CallOp>(loc, callee, llvm::None);
+  auto callee = genRuntimeFunction<mkRTKey(FailImageStatement)>(loc, builder);
+  builder.create<fir::CallOp>(loc, callee, llvm::None);
+  genUnreachable(builder, loc);
 }
 
 void Fortran::lower::genEventPostStatement(
@@ -175,10 +186,10 @@ void Fortran::lower::genSyncTeamStatement(
 void Fortran::lower::genPauseStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::PauseStmt &) {
-  auto &bldr = converter.getFirOpBuilder();
+  auto &builder = converter.getFirOpBuilder();
   auto loc = converter.getCurrentLocation();
-  auto callee = genRuntimeFunction<mkRTKey(PauseStatement)>(loc, bldr);
-  bldr.create<fir::CallOp>(loc, callee, llvm::None);
+  auto callee = genRuntimeFunction<mkRTKey(PauseStatement)>(loc, builder);
+  builder.create<fir::CallOp>(loc, callee, llvm::None);
 }
 
 void Fortran::lower::genDateAndTime(Fortran::lower::FirOpBuilder &builder,
