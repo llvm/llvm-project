@@ -1886,19 +1886,17 @@ ELFDumper<ELFT>::findDynamic(const ELFFile<ELFT> *Obj) {
   }
 
   if (DynamicPhdr && DynamicSec) {
-    StringRef Name =
-        unwrapOrError(ObjF->getFileName(), Obj->getSectionName(DynamicSec));
     if (DynamicSec->sh_addr + DynamicSec->sh_size >
             DynamicPhdr->p_vaddr + DynamicPhdr->p_memsz ||
         DynamicSec->sh_addr < DynamicPhdr->p_vaddr)
-      reportWarning(createError("The SHT_DYNAMIC section '" + Name +
-                                "' is not contained within the "
+      reportWarning(createError(describe(*DynamicSec) +
+                                " is not contained within the "
                                 "PT_DYNAMIC segment"),
                     ObjF->getFileName());
 
     if (DynamicSec->sh_addr != DynamicPhdr->p_vaddr)
-      reportWarning(createError("The SHT_DYNAMIC section '" + Name +
-                                "' is not at the start of "
+      reportWarning(createError(describe(*DynamicSec) +
+                                " is not at the start of "
                                 "PT_DYNAMIC segment"),
                     ObjF->getFileName());
   }
@@ -6489,26 +6487,26 @@ static Expected<std::vector<uint64_t>> toULEB128Array(ArrayRef<uint8_t> Data) {
 
 template <class ELFT> void LLVMStyle<ELFT>::printAddrsig() {
   ListScope L(W, "Addrsig");
-  if (!this->dumper()->getDotAddrsigSec())
+  const Elf_Shdr *Sec = this->dumper()->getDotAddrsigSec();
+  if (!Sec)
     return;
-  ArrayRef<uint8_t> Contents = unwrapOrError(
-      this->FileName,
-      this->Obj.getSectionContents(this->dumper()->getDotAddrsigSec()));
-  Expected<std::vector<uint64_t>> V = toULEB128Array(Contents);
-  if (!V) {
-    reportWarning(V.takeError(), this->FileName);
+
+  Expected<ArrayRef<uint8_t>> ContentsOrErr = this->Obj.getSectionContents(Sec);
+  if (!ContentsOrErr) {
+    this->reportUniqueWarning(ContentsOrErr.takeError());
     return;
   }
 
-  for (uint64_t Sym : *V) {
-    Expected<std::string> NameOrErr = this->dumper()->getStaticSymbolName(Sym);
-    if (NameOrErr) {
-      W.printNumber("Sym", *NameOrErr, Sym);
-      continue;
-    }
-    reportWarning(NameOrErr.takeError(), this->FileName);
-    W.printNumber("Sym", "<?>", Sym);
+  Expected<std::vector<uint64_t>> SymsOrErr = toULEB128Array(*ContentsOrErr);
+  if (!SymsOrErr) {
+    this->reportUniqueWarning(createError("unable to decode " +
+                                          describe(this->Obj, *Sec) + ": " +
+                                          toString(SymsOrErr.takeError())));
+    return;
   }
+
+  for (uint64_t Sym : *SymsOrErr)
+    W.printNumber("Sym", this->dumper()->getStaticSymbolName(Sym), Sym);
 }
 
 template <typename ELFT>

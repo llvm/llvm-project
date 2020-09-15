@@ -579,6 +579,38 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
   }
 #endif
+
+  auto getTOCRelocAdjustedExprForXCOFF = [this](const MCExpr *Expr,
+                                                ptrdiff_t OriginalOffset) {
+    // Apply an offset to the TOC-based expression such that the adjusted
+    // notional offset from the TOC base (to be encoded into the instruction's D
+    // or DS field) is the signed 16-bit truncation of the original notional
+    // offset from the TOC base.
+    // This is consistent with the treatment used both by XL C/C++ and
+    // by AIX ld -r.
+    ptrdiff_t Adjustment =
+        OriginalOffset - llvm::SignExtend32<16>(OriginalOffset);
+    return MCBinaryExpr::createAdd(
+        Expr, MCConstantExpr::create(-Adjustment, OutContext), OutContext);
+  };
+
+  auto getTOCEntryLoadingExprForXCOFF =
+      [IsPPC64, getTOCRelocAdjustedExprForXCOFF,
+       this](const MCSymbol *MOSymbol, const MCExpr *Expr) -> const MCExpr * {
+    const unsigned EntryByteSize = IsPPC64 ? 8 : 4;
+    const auto TOCEntryIter = TOC.find(MOSymbol);
+    assert(TOCEntryIter != TOC.end() &&
+           "Could not find the TOC entry for this symbol.");
+    const ptrdiff_t EntryDistanceFromTOCBase =
+        (TOCEntryIter - TOC.begin()) * EntryByteSize;
+    constexpr int16_t PositiveTOCRange = INT16_MAX;
+
+    if (EntryDistanceFromTOCBase > PositiveTOCRange)
+      return getTOCRelocAdjustedExprForXCOFF(Expr, EntryDistanceFromTOCBase);
+
+    return Expr;
+  };
+
   // Lower multi-instruction pseudo operations.
   switch (MI->getOpcode()) {
   default: break;
@@ -725,6 +757,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       assert(
           TM.getCodeModel() == CodeModel::Small &&
           "This pseudo should only be selected for 32-bit small code model.");
+      Exp = getTOCEntryLoadingExprForXCOFF(MOSymbol, Exp);
       TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
       EmitToStreamer(*OutStreamer, TmpInst);
       return;
@@ -753,17 +786,20 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
            "Invalid operand!");
 
+    // Map the operand to its corresponding MCSymbol.
+    const MCSymbol *const MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
+
     // Map the machine operand to its corresponding MCSymbol, then map the
     // global address operand to be a reference to the TOC entry we will
     // synthesize later.
-    MCSymbol *TOCEntry =
-        lookUpOrCreateTOCEntry(getMCSymbolForTOCPseudoMO(MO, *this));
+    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(MOSymbol);
 
     const MCSymbolRefExpr::VariantKind VK =
         IsAIX ? MCSymbolRefExpr::VK_None : MCSymbolRefExpr::VK_PPC_TOC;
     const MCExpr *Exp =
         MCSymbolRefExpr::create(TOCEntry, VK, OutContext);
-    TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
+    TmpInst.getOperand(1) = MCOperand::createExpr(
+        IsAIX ? getTOCEntryLoadingExprForXCOFF(MOSymbol, Exp) : Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
@@ -1820,16 +1856,6 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
 
   PPCTargetStreamer *TS =
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
-
-  const unsigned EntryByteSize = Subtarget->isPPC64() ? 8 : 4;
-  const unsigned TOCEntriesByteSize = TOC.size() * EntryByteSize;
-  // TODO: If TOC entries' size is larger than 32768, then we run out of
-  // positive displacement to reach the TOC entry. We need to decide how to
-  // handle entries' size larger than that later.
-  if (TOCEntriesByteSize > 32767) {
-    report_fatal_error("Handling of TOC entry displacement larger than 32767 "
-                       "is not yet implemented.");
-  }
 
   for (auto &I : TOC) {
     // Setup the csect for the current TC entry.

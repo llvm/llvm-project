@@ -31,9 +31,7 @@ bb:
   %la3 = getelementptr inbounds i32, i32* %lb, i32 6
   %ld3 = load i32, i32* %la3
 
-; DBG: Cluster ld/st SU([[S1:[0-9]+]]) - SU([[S2:[0-9]+]])
-; DBG: Cluster ld/st SU([[S2]]) - SU([[S3:[0-9]+]])
-; DBG: Cluster ld/st SU([[S3]]) - SU([[S4:[0-9]+]])
+; DBG-NOT: Cluster ld/st
 ; GCN:      flat_store_dword v[{{[0-9:]+}}], [[LD1]]
 ; GCN-NEXT: flat_store_dword v[{{[0-9:]+}}], [[LD2]] offset:8
 ; GCN-NEXT: flat_store_dword v[{{[0-9:]+}}], [[LD3]] offset:16
@@ -78,13 +76,11 @@ bb:
   %la3 = getelementptr inbounds i32, i32* %lb, i32 6
   %ld3 = load i32, i32* %la3
 
-; DBG: Cluster ld/st SU([[S1:[0-9]+]]) - SU([[S2:[0-9]+]])
-; DBG: Cluster ld/st SU([[S2]]) - SU([[S3:[0-9]+]])
-; DBG: Cluster ld/st SU([[S3]]) - SU([[S4:[0-9]+]])
-; GCN:      v_add_u32_e32 [[ST2:v[0-9]+]], 1, [[LD2]]
+; DBG-NOT: Cluster ld/st
 ; GCN:      flat_store_dword v[{{[0-9:]+}}], [[LD1]]
-; GCN-NEXT: flat_store_dword v[{{[0-9:]+}}], [[ST2]] offset:8
+; GCN:      v_add_u32_e32 [[ST2:v[0-9]+]], 1, [[LD2]]
 ; GCN-NEXT: flat_store_dword v[{{[0-9:]+}}], [[LD3]] offset:16
+; GCN-NEXT: flat_store_dword v[{{[0-9:]+}}], [[ST2]] offset:8
 ; GCN-NEXT: flat_store_dword v[{{[0-9:]+}}], [[LD4]] offset:24
   %sa0 = getelementptr inbounds i32, i32* %sb, i32 0
   store i32 %ld0, i32* %sa0
@@ -123,7 +119,6 @@ entry:
 
 ; Don't cluster loads from different textures
 ; CHECK-LABEL: {{^}}no_cluster_image_load:
-; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 16
 ; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 16
 ; DBG: Num BaseOps: {{[1-9]+}}, Offset: {{[0-9]+}}, OffsetIsScalable: {{[01]}}, Width: 16
 ; DBG-NOT: {{^}}Cluster ld/st
