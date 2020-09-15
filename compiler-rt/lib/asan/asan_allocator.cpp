@@ -89,9 +89,7 @@ static const uptr kAllocBegMagic = 0xCC6E96B9;
 class ChunkHeader {
  public:
   atomic_uint8_t chunk_state;
-  u8 from_memalign : 1;
   u8 alloc_type : 2;
-  u8 rz_log : 3;
   u8 lsan_tag : 2;
 
   // align < 8 -> 0
@@ -161,12 +159,6 @@ enum {
 class AsanChunk : public ChunkBase {
  public:
   uptr Beg() { return reinterpret_cast<uptr>(this) + kChunkHeaderSize; }
-
-  void *AllocBeg() {
-    if (from_memalign)
-      return get_allocator().GetBlockBegin(reinterpret_cast<void *>(this));
-    return reinterpret_cast<void*>(Beg() - RZLog2Size(rz_log));
-  }
 };
 
 struct QuarantineCallback {
@@ -185,7 +177,7 @@ struct QuarantineCallback {
     PoisonShadow(m->Beg(),
                  RoundUpTo(m->UsedSize(), SHADOW_GRANULARITY),
                  kAsanHeapLeftRedzoneMagic);
-    void *p = reinterpret_cast<void *>(m->AllocBeg());
+    void *p = get_allocator().GetBlockBegin(m);
     if (p != m) {
       uptr *alloc_magic = reinterpret_cast<uptr *>(p);
       CHECK_EQ(alloc_magic[0], kAllocBegMagic);
@@ -541,8 +533,7 @@ struct Allocator {
 
     uptr alloc_beg = reinterpret_cast<uptr>(allocated);
     uptr alloc_end = alloc_beg + needed_size;
-    uptr beg_plus_redzone = alloc_beg + rz_size;
-    uptr user_beg = beg_plus_redzone;
+    uptr user_beg = alloc_beg + rz_size;
     if (!IsAligned(user_beg, alignment))
       user_beg = RoundUpTo(user_beg, alignment);
     uptr user_end = user_beg + size;
@@ -550,8 +541,6 @@ struct Allocator {
     uptr chunk_beg = user_beg - kChunkHeaderSize;
     AsanChunk *m = reinterpret_cast<AsanChunk *>(chunk_beg);
     m->alloc_type = alloc_type;
-    m->rz_log = rz_log;
-    m->from_memalign = user_beg != beg_plus_redzone;
     if (alloc_beg != chunk_beg) {
       CHECK_LE(alloc_beg + 2 * sizeof(uptr), chunk_beg);
       reinterpret_cast<uptr *>(alloc_beg)[0] = kAllocBegMagic;
