@@ -203,6 +203,11 @@ struct VerNeed {
   std::vector<VernAux> AuxV;
 };
 
+struct NoteType {
+  uint32_t ID;
+  StringRef Name;
+};
+
 } // namespace
 
 template <class ELFT> class Relocation {
@@ -4764,184 +4769,6 @@ template <class ELFT> void GNUStyle<ELFT>::printAddrsig() {
   reportError(createError("--addrsig: not implemented"), this->FileName);
 }
 
-static StringRef getGenericNoteTypeName(const uint32_t NT) {
-  static const struct {
-    uint32_t ID;
-    const char *Name;
-  } Notes[] = {
-      {ELF::NT_VERSION, "NT_VERSION (version)"},
-      {ELF::NT_ARCH, "NT_ARCH (architecture)"},
-      {ELF::NT_GNU_BUILD_ATTRIBUTE_OPEN, "OPEN"},
-      {ELF::NT_GNU_BUILD_ATTRIBUTE_FUNC, "func"},
-  };
-
-  for (const auto &Note : Notes)
-    if (Note.ID == NT)
-      return Note.Name;
-
-  return "";
-}
-
-static StringRef getCoreNoteTypeName(const uint32_t NT) {
-  static const struct {
-    uint32_t ID;
-    const char *Name;
-  } Notes[] = {
-      {ELF::NT_PRSTATUS, "NT_PRSTATUS (prstatus structure)"},
-      {ELF::NT_FPREGSET, "NT_FPREGSET (floating point registers)"},
-      {ELF::NT_PRPSINFO, "NT_PRPSINFO (prpsinfo structure)"},
-      {ELF::NT_TASKSTRUCT, "NT_TASKSTRUCT (task structure)"},
-      {ELF::NT_AUXV, "NT_AUXV (auxiliary vector)"},
-      {ELF::NT_PSTATUS, "NT_PSTATUS (pstatus structure)"},
-      {ELF::NT_FPREGS, "NT_FPREGS (floating point registers)"},
-      {ELF::NT_PSINFO, "NT_PSINFO (psinfo structure)"},
-      {ELF::NT_LWPSTATUS, "NT_LWPSTATUS (lwpstatus_t structure)"},
-      {ELF::NT_LWPSINFO, "NT_LWPSINFO (lwpsinfo_t structure)"},
-      {ELF::NT_WIN32PSTATUS, "NT_WIN32PSTATUS (win32_pstatus structure)"},
-
-      {ELF::NT_PPC_VMX, "NT_PPC_VMX (ppc Altivec registers)"},
-      {ELF::NT_PPC_VSX, "NT_PPC_VSX (ppc VSX registers)"},
-      {ELF::NT_PPC_TAR, "NT_PPC_TAR (ppc TAR register)"},
-      {ELF::NT_PPC_PPR, "NT_PPC_PPR (ppc PPR register)"},
-      {ELF::NT_PPC_DSCR, "NT_PPC_DSCR (ppc DSCR register)"},
-      {ELF::NT_PPC_EBB, "NT_PPC_EBB (ppc EBB registers)"},
-      {ELF::NT_PPC_PMU, "NT_PPC_PMU (ppc PMU registers)"},
-      {ELF::NT_PPC_TM_CGPR, "NT_PPC_TM_CGPR (ppc checkpointed GPR registers)"},
-      {ELF::NT_PPC_TM_CFPR,
-       "NT_PPC_TM_CFPR (ppc checkpointed floating point registers)"},
-      {ELF::NT_PPC_TM_CVMX,
-       "NT_PPC_TM_CVMX (ppc checkpointed Altivec registers)"},
-      {ELF::NT_PPC_TM_CVSX, "NT_PPC_TM_CVSX (ppc checkpointed VSX registers)"},
-      {ELF::NT_PPC_TM_SPR, "NT_PPC_TM_SPR (ppc TM special purpose registers)"},
-      {ELF::NT_PPC_TM_CTAR, "NT_PPC_TM_CTAR (ppc checkpointed TAR register)"},
-      {ELF::NT_PPC_TM_CPPR, "NT_PPC_TM_CPPR (ppc checkpointed PPR register)"},
-      {ELF::NT_PPC_TM_CDSCR,
-       "NT_PPC_TM_CDSCR (ppc checkpointed DSCR register)"},
-
-      {ELF::NT_386_TLS, "NT_386_TLS (x86 TLS information)"},
-      {ELF::NT_386_IOPERM, "NT_386_IOPERM (x86 I/O permissions)"},
-      {ELF::NT_X86_XSTATE, "NT_X86_XSTATE (x86 XSAVE extended state)"},
-
-      {ELF::NT_S390_HIGH_GPRS,
-       "NT_S390_HIGH_GPRS (s390 upper register halves)"},
-      {ELF::NT_S390_TIMER, "NT_S390_TIMER (s390 timer register)"},
-      {ELF::NT_S390_TODCMP, "NT_S390_TODCMP (s390 TOD comparator register)"},
-      {ELF::NT_S390_TODPREG,
-       "NT_S390_TODPREG (s390 TOD programmable register)"},
-      {ELF::NT_S390_CTRS, "NT_S390_CTRS (s390 control registers)"},
-      {ELF::NT_S390_PREFIX, "NT_S390_PREFIX (s390 prefix register)"},
-      {ELF::NT_S390_LAST_BREAK,
-       "NT_S390_LAST_BREAK (s390 last breaking event address)"},
-      {ELF::NT_S390_SYSTEM_CALL,
-       "NT_S390_SYSTEM_CALL (s390 system call restart data)"},
-      {ELF::NT_S390_TDB, "NT_S390_TDB (s390 transaction diagnostic block)"},
-      {ELF::NT_S390_VXRS_LOW,
-       "NT_S390_VXRS_LOW (s390 vector registers 0-15 upper half)"},
-      {ELF::NT_S390_VXRS_HIGH,
-       "NT_S390_VXRS_HIGH (s390 vector registers 16-31)"},
-      {ELF::NT_S390_GS_CB, "NT_S390_GS_CB (s390 guarded-storage registers)"},
-      {ELF::NT_S390_GS_BC,
-       "NT_S390_GS_BC (s390 guarded-storage broadcast control)"},
-
-      {ELF::NT_ARM_VFP, "NT_ARM_VFP (arm VFP registers)"},
-      {ELF::NT_ARM_TLS, "NT_ARM_TLS (AArch TLS registers)"},
-      {ELF::NT_ARM_HW_BREAK,
-       "NT_ARM_HW_BREAK (AArch hardware breakpoint registers)"},
-      {ELF::NT_ARM_HW_WATCH,
-       "NT_ARM_HW_WATCH (AArch hardware watchpoint registers)"},
-
-      {ELF::NT_FILE, "NT_FILE (mapped files)"},
-      {ELF::NT_PRXFPREG, "NT_PRXFPREG (user_xfpregs structure)"},
-      {ELF::NT_SIGINFO, "NT_SIGINFO (siginfo_t data)"},
-  };
-
-  for (const auto &Note : Notes)
-    if (Note.ID == NT)
-      return Note.Name;
-
-  return "";
-}
-
-static std::string getGNUNoteTypeName(const uint32_t NT) {
-  static const struct {
-    uint32_t ID;
-    const char *Name;
-  } Notes[] = {
-      {ELF::NT_GNU_ABI_TAG, "NT_GNU_ABI_TAG (ABI version tag)"},
-      {ELF::NT_GNU_HWCAP, "NT_GNU_HWCAP (DSO-supplied software HWCAP info)"},
-      {ELF::NT_GNU_BUILD_ID, "NT_GNU_BUILD_ID (unique build ID bitstring)"},
-      {ELF::NT_GNU_GOLD_VERSION, "NT_GNU_GOLD_VERSION (gold version)"},
-      {ELF::NT_GNU_PROPERTY_TYPE_0, "NT_GNU_PROPERTY_TYPE_0 (property note)"},
-  };
-
-  for (const auto &Note : Notes)
-    if (Note.ID == NT)
-      return std::string(Note.Name);
-
-  std::string string;
-  raw_string_ostream OS(string);
-  OS << format("Unknown note type (0x%08x)", NT);
-  return OS.str();
-}
-
-static std::string getFreeBSDNoteTypeName(const uint32_t NT) {
-  static const struct {
-    uint32_t ID;
-    const char *Name;
-  } Notes[] = {
-      {ELF::NT_FREEBSD_THRMISC, "NT_THRMISC (thrmisc structure)"},
-      {ELF::NT_FREEBSD_PROCSTAT_PROC, "NT_PROCSTAT_PROC (proc data)"},
-      {ELF::NT_FREEBSD_PROCSTAT_FILES, "NT_PROCSTAT_FILES (files data)"},
-      {ELF::NT_FREEBSD_PROCSTAT_VMMAP, "NT_PROCSTAT_VMMAP (vmmap data)"},
-      {ELF::NT_FREEBSD_PROCSTAT_GROUPS, "NT_PROCSTAT_GROUPS (groups data)"},
-      {ELF::NT_FREEBSD_PROCSTAT_UMASK, "NT_PROCSTAT_UMASK (umask data)"},
-      {ELF::NT_FREEBSD_PROCSTAT_RLIMIT, "NT_PROCSTAT_RLIMIT (rlimit data)"},
-      {ELF::NT_FREEBSD_PROCSTAT_OSREL, "NT_PROCSTAT_OSREL (osreldate data)"},
-      {ELF::NT_FREEBSD_PROCSTAT_PSSTRINGS,
-       "NT_PROCSTAT_PSSTRINGS (ps_strings data)"},
-      {ELF::NT_FREEBSD_PROCSTAT_AUXV, "NT_PROCSTAT_AUXV (auxv data)"},
-  };
-
-  for (const auto &Note : Notes)
-    if (Note.ID == NT)
-      return std::string(Note.Name);
-
-  std::string string;
-  raw_string_ostream OS(string);
-  OS << format("Unknown note type (0x%08x)", NT);
-  return OS.str();
-}
-
-static std::string getAMDNoteTypeName(const uint32_t NT) {
-  static const struct {
-    uint32_t ID;
-    const char *Name;
-  } Notes[] = {{ELF::NT_AMD_AMDGPU_HSA_METADATA,
-                "NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)"},
-               {ELF::NT_AMD_AMDGPU_ISA, "NT_AMD_AMDGPU_ISA (ISA Version)"},
-               {ELF::NT_AMD_AMDGPU_PAL_METADATA,
-                "NT_AMD_AMDGPU_PAL_METADATA (PAL Metadata)"}};
-
-  for (const auto &Note : Notes)
-    if (Note.ID == NT)
-      return std::string(Note.Name);
-
-  std::string string;
-  raw_string_ostream OS(string);
-  OS << format("Unknown note type (0x%08x)", NT);
-  return OS.str();
-}
-
-static std::string getAMDGPUNoteTypeName(const uint32_t NT) {
-  if (NT == ELF::NT_AMDGPU_METADATA)
-    return std::string("NT_AMDGPU_METADATA (AMDGPU Metadata)");
-
-  std::string string;
-  raw_string_ostream OS(string);
-  OS << format("Unknown note type (0x%08x)", NT);
-  return OS.str();
-}
-
 template <typename ELFT>
 static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
                                   ArrayRef<uint8_t> Data) {
@@ -5291,6 +5118,138 @@ static void printCoreNote(raw_ostream &OS, const CoreNote &Note) {
   }
 }
 
+static const NoteType GenericNoteTypes[] = {
+    {ELF::NT_VERSION, "NT_VERSION (version)"},
+    {ELF::NT_ARCH, "NT_ARCH (architecture)"},
+    {ELF::NT_GNU_BUILD_ATTRIBUTE_OPEN, "OPEN"},
+    {ELF::NT_GNU_BUILD_ATTRIBUTE_FUNC, "func"},
+};
+
+static const NoteType GNUNoteTypes[] = {
+    {ELF::NT_GNU_ABI_TAG, "NT_GNU_ABI_TAG (ABI version tag)"},
+    {ELF::NT_GNU_HWCAP, "NT_GNU_HWCAP (DSO-supplied software HWCAP info)"},
+    {ELF::NT_GNU_BUILD_ID, "NT_GNU_BUILD_ID (unique build ID bitstring)"},
+    {ELF::NT_GNU_GOLD_VERSION, "NT_GNU_GOLD_VERSION (gold version)"},
+    {ELF::NT_GNU_PROPERTY_TYPE_0, "NT_GNU_PROPERTY_TYPE_0 (property note)"},
+};
+
+static const NoteType FreeBSDNoteTypes[] = {
+    {ELF::NT_FREEBSD_THRMISC, "NT_THRMISC (thrmisc structure)"},
+    {ELF::NT_FREEBSD_PROCSTAT_PROC, "NT_PROCSTAT_PROC (proc data)"},
+    {ELF::NT_FREEBSD_PROCSTAT_FILES, "NT_PROCSTAT_FILES (files data)"},
+    {ELF::NT_FREEBSD_PROCSTAT_VMMAP, "NT_PROCSTAT_VMMAP (vmmap data)"},
+    {ELF::NT_FREEBSD_PROCSTAT_GROUPS, "NT_PROCSTAT_GROUPS (groups data)"},
+    {ELF::NT_FREEBSD_PROCSTAT_UMASK, "NT_PROCSTAT_UMASK (umask data)"},
+    {ELF::NT_FREEBSD_PROCSTAT_RLIMIT, "NT_PROCSTAT_RLIMIT (rlimit data)"},
+    {ELF::NT_FREEBSD_PROCSTAT_OSREL, "NT_PROCSTAT_OSREL (osreldate data)"},
+    {ELF::NT_FREEBSD_PROCSTAT_PSSTRINGS,
+     "NT_PROCSTAT_PSSTRINGS (ps_strings data)"},
+    {ELF::NT_FREEBSD_PROCSTAT_AUXV, "NT_PROCSTAT_AUXV (auxv data)"},
+};
+
+static const NoteType AMDNoteTypes[] = {
+    {ELF::NT_AMD_AMDGPU_HSA_METADATA,
+     "NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)"},
+    {ELF::NT_AMD_AMDGPU_ISA, "NT_AMD_AMDGPU_ISA (ISA Version)"},
+    {ELF::NT_AMD_AMDGPU_PAL_METADATA,
+     "NT_AMD_AMDGPU_PAL_METADATA (PAL Metadata)"},
+};
+
+static const NoteType AMDGPUNoteTypes[] = {
+    {ELF::NT_AMDGPU_METADATA, "NT_AMDGPU_METADATA (AMDGPU Metadata)"},
+};
+
+static const NoteType CoreNoteTypes[] = {
+    {ELF::NT_PRSTATUS, "NT_PRSTATUS (prstatus structure)"},
+    {ELF::NT_FPREGSET, "NT_FPREGSET (floating point registers)"},
+    {ELF::NT_PRPSINFO, "NT_PRPSINFO (prpsinfo structure)"},
+    {ELF::NT_TASKSTRUCT, "NT_TASKSTRUCT (task structure)"},
+    {ELF::NT_AUXV, "NT_AUXV (auxiliary vector)"},
+    {ELF::NT_PSTATUS, "NT_PSTATUS (pstatus structure)"},
+    {ELF::NT_FPREGS, "NT_FPREGS (floating point registers)"},
+    {ELF::NT_PSINFO, "NT_PSINFO (psinfo structure)"},
+    {ELF::NT_LWPSTATUS, "NT_LWPSTATUS (lwpstatus_t structure)"},
+    {ELF::NT_LWPSINFO, "NT_LWPSINFO (lwpsinfo_t structure)"},
+    {ELF::NT_WIN32PSTATUS, "NT_WIN32PSTATUS (win32_pstatus structure)"},
+
+    {ELF::NT_PPC_VMX, "NT_PPC_VMX (ppc Altivec registers)"},
+    {ELF::NT_PPC_VSX, "NT_PPC_VSX (ppc VSX registers)"},
+    {ELF::NT_PPC_TAR, "NT_PPC_TAR (ppc TAR register)"},
+    {ELF::NT_PPC_PPR, "NT_PPC_PPR (ppc PPR register)"},
+    {ELF::NT_PPC_DSCR, "NT_PPC_DSCR (ppc DSCR register)"},
+    {ELF::NT_PPC_EBB, "NT_PPC_EBB (ppc EBB registers)"},
+    {ELF::NT_PPC_PMU, "NT_PPC_PMU (ppc PMU registers)"},
+    {ELF::NT_PPC_TM_CGPR, "NT_PPC_TM_CGPR (ppc checkpointed GPR registers)"},
+    {ELF::NT_PPC_TM_CFPR,
+     "NT_PPC_TM_CFPR (ppc checkpointed floating point registers)"},
+    {ELF::NT_PPC_TM_CVMX,
+     "NT_PPC_TM_CVMX (ppc checkpointed Altivec registers)"},
+    {ELF::NT_PPC_TM_CVSX, "NT_PPC_TM_CVSX (ppc checkpointed VSX registers)"},
+    {ELF::NT_PPC_TM_SPR, "NT_PPC_TM_SPR (ppc TM special purpose registers)"},
+    {ELF::NT_PPC_TM_CTAR, "NT_PPC_TM_CTAR (ppc checkpointed TAR register)"},
+    {ELF::NT_PPC_TM_CPPR, "NT_PPC_TM_CPPR (ppc checkpointed PPR register)"},
+    {ELF::NT_PPC_TM_CDSCR, "NT_PPC_TM_CDSCR (ppc checkpointed DSCR register)"},
+
+    {ELF::NT_386_TLS, "NT_386_TLS (x86 TLS information)"},
+    {ELF::NT_386_IOPERM, "NT_386_IOPERM (x86 I/O permissions)"},
+    {ELF::NT_X86_XSTATE, "NT_X86_XSTATE (x86 XSAVE extended state)"},
+
+    {ELF::NT_S390_HIGH_GPRS, "NT_S390_HIGH_GPRS (s390 upper register halves)"},
+    {ELF::NT_S390_TIMER, "NT_S390_TIMER (s390 timer register)"},
+    {ELF::NT_S390_TODCMP, "NT_S390_TODCMP (s390 TOD comparator register)"},
+    {ELF::NT_S390_TODPREG, "NT_S390_TODPREG (s390 TOD programmable register)"},
+    {ELF::NT_S390_CTRS, "NT_S390_CTRS (s390 control registers)"},
+    {ELF::NT_S390_PREFIX, "NT_S390_PREFIX (s390 prefix register)"},
+    {ELF::NT_S390_LAST_BREAK,
+     "NT_S390_LAST_BREAK (s390 last breaking event address)"},
+    {ELF::NT_S390_SYSTEM_CALL,
+     "NT_S390_SYSTEM_CALL (s390 system call restart data)"},
+    {ELF::NT_S390_TDB, "NT_S390_TDB (s390 transaction diagnostic block)"},
+    {ELF::NT_S390_VXRS_LOW,
+     "NT_S390_VXRS_LOW (s390 vector registers 0-15 upper half)"},
+    {ELF::NT_S390_VXRS_HIGH, "NT_S390_VXRS_HIGH (s390 vector registers 16-31)"},
+    {ELF::NT_S390_GS_CB, "NT_S390_GS_CB (s390 guarded-storage registers)"},
+    {ELF::NT_S390_GS_BC,
+     "NT_S390_GS_BC (s390 guarded-storage broadcast control)"},
+
+    {ELF::NT_ARM_VFP, "NT_ARM_VFP (arm VFP registers)"},
+    {ELF::NT_ARM_TLS, "NT_ARM_TLS (AArch TLS registers)"},
+    {ELF::NT_ARM_HW_BREAK,
+     "NT_ARM_HW_BREAK (AArch hardware breakpoint registers)"},
+    {ELF::NT_ARM_HW_WATCH,
+     "NT_ARM_HW_WATCH (AArch hardware watchpoint registers)"},
+
+    {ELF::NT_FILE, "NT_FILE (mapped files)"},
+    {ELF::NT_PRXFPREG, "NT_PRXFPREG (user_xfpregs structure)"},
+    {ELF::NT_SIGINFO, "NT_SIGINFO (siginfo_t data)"},
+};
+
+template <class ELFT>
+const StringRef getNoteTypeName(const typename ELFT::Note &Note,
+                                unsigned ELFType) {
+  uint32_t Type = Note.getType();
+  auto FindNote = [&](ArrayRef<NoteType> V) -> StringRef {
+    for (const NoteType &N : V)
+      if (N.ID == Type)
+        return N.Name;
+    return "";
+  };
+
+  StringRef Name = Note.getName();
+  if (Name == "GNU")
+    return FindNote(GNUNoteTypes);
+  if (Name == "FreeBSD")
+    return FindNote(FreeBSDNoteTypes);
+  if (Name == "AMD")
+    return FindNote(AMDNoteTypes);
+  if (Name == "AMDGPU")
+    return FindNote(AMDGPUNoteTypes);
+
+  if (ELFType == ELF::ET_CORE)
+    return FindNote(CoreNoteTypes);
+  return FindNote(GenericNoteTypes);
+}
+
 template <class ELFT> void GNUStyle<ELFT>::printNotes() {
   auto PrintHeader = [&](Optional<StringRef> SecName,
                          const typename ELFT::Off Offset,
@@ -5314,23 +5273,13 @@ template <class ELFT> void GNUStyle<ELFT>::printNotes() {
     // Print the note owner/type.
     OS << "  " << left_justify(Name, 20) << ' '
        << format_hex(Descriptor.size(), 10) << '\t';
-    if (Name == "GNU") {
-      OS << getGNUNoteTypeName(Type) << '\n';
-    } else if (Name == "FreeBSD") {
-      OS << getFreeBSDNoteTypeName(Type) << '\n';
-    } else if (Name == "AMD") {
-      OS << getAMDNoteTypeName(Type) << '\n';
-    } else if (Name == "AMDGPU") {
-      OS << getAMDGPUNoteTypeName(Type) << '\n';
-    } else {
-      StringRef NoteType = this->Obj.getHeader()->e_type == ELF::ET_CORE
-                               ? getCoreNoteTypeName(Type)
-                               : getGenericNoteTypeName(Type);
-      if (!NoteType.empty())
-        OS << NoteType << '\n';
-      else
-        OS << "Unknown note type: (" << format_hex(Type, 10) << ")\n";
-    }
+
+    StringRef NoteType =
+        getNoteTypeName<ELFT>(Note, this->Obj.getHeader()->e_type);
+    if (!NoteType.empty())
+      OS << NoteType << '\n';
+    else
+      OS << "Unknown note type: (" << format_hex(Type, 10) << ")\n";
 
     // Print the description, or fallback to printing raw bytes for unknown
     // owners.
@@ -6624,24 +6573,14 @@ template <class ELFT> void LLVMStyle<ELFT>::printNotes() {
     // Print the note owner/type.
     W.printString("Owner", Name);
     W.printHex("Data size", Descriptor.size());
-    if (Name == "GNU") {
-      W.printString("Type", getGNUNoteTypeName(Type));
-    } else if (Name == "FreeBSD") {
-      W.printString("Type", getFreeBSDNoteTypeName(Type));
-    } else if (Name == "AMD") {
-      W.printString("Type", getAMDNoteTypeName(Type));
-    } else if (Name == "AMDGPU") {
-      W.printString("Type", getAMDGPUNoteTypeName(Type));
-    } else {
-      StringRef NoteType = this->Obj.getHeader()->e_type == ELF::ET_CORE
-                               ? getCoreNoteTypeName(Type)
-                               : getGenericNoteTypeName(Type);
-      if (!NoteType.empty())
-        W.printString("Type", NoteType);
-      else
-        W.printString("Type",
-                      "Unknown (" + to_string(format_hex(Type, 10)) + ")");
-    }
+
+    StringRef NoteType =
+        getNoteTypeName<ELFT>(Note, this->Obj.getHeader()->e_type);
+    if (!NoteType.empty())
+      W.printString("Type", NoteType);
+    else
+      W.printString("Type",
+                    "Unknown (" + to_string(format_hex(Type, 10)) + ")");
 
     // Print the description, or fallback to printing raw bytes for unknown
     // owners.
