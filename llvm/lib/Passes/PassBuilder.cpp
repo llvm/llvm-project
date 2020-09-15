@@ -2787,6 +2787,9 @@ Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
 }
 
 bool PassBuilder::isAAPassName(StringRef PassName) {
+#define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS)                               \
+  if (PassName == NAME)                                                        \
+    return true;
 #define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS)                             \
   if (PassName == NAME)                                                        \
     return true;
