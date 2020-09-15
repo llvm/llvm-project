@@ -489,7 +489,7 @@ bool SymbolReaper::isLive(SymbolRef sym) {
 }
 
 bool
-SymbolReaper::isLive(const Stmt *ExprVal, const LocationContext *ELCtx) const {
+SymbolReaper::isLive(const Expr *ExprVal, const LocationContext *ELCtx) const {
   if (LCtx == nullptr)
     return false;
 

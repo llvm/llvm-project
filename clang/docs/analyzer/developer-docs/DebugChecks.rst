@@ -30,7 +30,7 @@ using a 'dot' format viewer (such as Graphviz on macOS) instead.
 - debug.DumpLiveVars: Show the results of live variable analysis for each
   top-level function being analyzed.
 
-- debug.DumpLiveStmts: Show the results of live statement analysis for each
+- debug.DumpLiveExprs: Show the results of live expression analysis for each
   top-level function being analyzed.
 
 - debug.ViewExplodedGraph: Show the Exploded Graphs generated for the
