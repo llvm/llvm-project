@@ -41,6 +41,8 @@ def HexagonQCAT:       SDNode<"HexagonISD::QCAT",       SDTVecBinOp>;
 def HexagonQTRUE:      SDNode<"HexagonISD::QTRUE",      SDTVecLeaf>;
 def HexagonQFALSE:     SDNode<"HexagonISD::QFALSE",     SDTVecLeaf>;
 def HexagonVPACKL:     SDNode<"HexagonISD::VPACKL",     SDTVecUnaryOp>;
+def HexagonVUNPACK:    SDNode<"HexagonISD::VUNPACK",    SDTVecUnaryOp>;
+def HexagonVUNPACKU:   SDNode<"HexagonISD::VUNPACKU",   SDTVecUnaryOp>;
 
 def vzero:  PatFrag<(ops), (HexagonVZERO)>;
 def qtrue:  PatFrag<(ops), (HexagonQTRUE)>;
@@ -48,8 +50,10 @@ def qfalse: PatFrag<(ops), (HexagonQFALSE)>;
 def qcat:   PatFrag<(ops node:$Qs, node:$Qt),
                     (HexagonQCAT node:$Qs, node:$Qt)>;
 
-def qnot:   PatFrag<(ops node:$Qs), (xor node:$Qs, qtrue)>;
-def vpackl: PatFrag<(ops node:$Vs), (HexagonVPACKL node:$Vs)>;
+def qnot:     PatFrag<(ops node:$Qs), (xor node:$Qs, qtrue)>;
+def vpackl:   PatFrag<(ops node:$Vs), (HexagonVPACKL node:$Vs)>;
+def vunpack:  PatFrag<(ops node:$Vs), (HexagonVUNPACK node:$Vs)>;
+def vunpacku: PatFrag<(ops node:$Vs), (HexagonVUNPACKU node:$Vs)>;
 
 def VSxtb: OutPatFrag<(ops node:$Vs), (V6_vunpackb  $Vs)>;
 def VSxth: OutPatFrag<(ops node:$Vs), (V6_vunpackh  $Vs)>;
@@ -415,6 +419,20 @@ let Predicates = [UseHVX] in {
   def: Pat<(VecI8  (vpackl HWI16:$Vs)), (V6_vpackeb (HiVec $Vs), (LoVec $Vs))>;
   def: Pat<(VecI8  (vpackl HWI32:$Vs)), (V6_vdealb4w (HiVec $Vs), (LoVec $Vs))>;
   def: Pat<(VecI16 (vpackl HWI32:$Vs)), (V6_vpackeh (HiVec $Vs), (LoVec $Vs))>;
+
+  def: Pat<(VecI16  (vunpack   HVI8:$Vs)), (LoVec (VSxtb $Vs))>;
+  def: Pat<(VecI32  (vunpack   HVI8:$Vs)), (LoVec (VSxth (LoVec (VSxtb $Vs))))>;
+  def: Pat<(VecI32  (vunpack  HVI16:$Vs)), (LoVec (VSxth $Vs))>;
+  def: Pat<(VecPI16 (vunpack   HVI8:$Vs)), (VSxtb $Vs)>;
+  def: Pat<(VecPI32 (vunpack   HVI8:$Vs)), (VSxth (LoVec (VSxtb $Vs)))>;
+  def: Pat<(VecPI32 (vunpack  HVI32:$Vs)), (VSxth $Vs)>;
+
+  def: Pat<(VecI16  (vunpacku  HVI8:$Vs)), (LoVec (VZxtb $Vs))>;
+  def: Pat<(VecI32  (vunpacku  HVI8:$Vs)), (LoVec (VZxth (LoVec (VZxtb $Vs))))>;
+  def: Pat<(VecI32  (vunpacku HVI16:$Vs)), (LoVec (VZxth $Vs))>;
+  def: Pat<(VecPI16 (vunpacku  HVI8:$Vs)), (VZxtb $Vs)>;
+  def: Pat<(VecPI32 (vunpacku  HVI8:$Vs)), (VZxth (LoVec (VZxtb $Vs)))>;
+  def: Pat<(VecPI32 (vunpacku HVI32:$Vs)), (VZxth $Vs)>;
 
   def: Pat<(VecI16 (bswap HVI16:$Vs)),
            (V6_vdelta HvxVR:$Vs, (V6_lvsplatw (A2_tfrsi 0x01010101)))>;
