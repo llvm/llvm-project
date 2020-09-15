@@ -5,12 +5,20 @@
 #include <sanitizer/lsan_interface.h>
 #include <stdlib.h>
 
+int *x, *y, *z;
+
 int main() {
-  int *x = new int;
+  x = new int;
   __lsan_ignore_object(x);
+
   {
     __lsan::ScopedDisabler disabler;
-    double *y = new double;
+    y = new int;
   }
+
+  z = new int;
+  __lsan_ignore_object(z - 1);
+
+  x = y = z = nullptr;
   return 0;
 }
