@@ -2891,8 +2891,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
             Context, CodeUnit, PromotedCharTy, SubExpr->getExprLoc());
         if (CharTy != PromotedCharTy)
           Init = ImplicitCastExpr::Create(Context, CharTy, CK_IntegralCast,
-                                          Init, nullptr, VK_RValue,
-                                          SemaRef.CurFPFeatureOverrides());
+                                          Init, nullptr, VK_RValue);
         StructuredList->updateInit(Context, i, Init);
       }
     } else {
@@ -2914,8 +2913,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
             Context, CodeUnit, PromotedCharTy, SubExpr->getExprLoc());
         if (CharTy != PromotedCharTy)
           Init = ImplicitCastExpr::Create(Context, CharTy, CK_IntegralCast,
-                                          Init, nullptr, VK_RValue,
-                                          SemaRef.CurFPFeatureOverrides());
+                                          Init, nullptr, VK_RValue);
         StructuredList->updateInit(Context, i, Init);
       }
     }
@@ -8021,9 +8019,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
               (Step->Kind == SK_CastDerivedToBaseXValue ?
                    VK_XValue :
                    VK_RValue);
-      CurInit = ImplicitCastExpr::Create(
-          S.Context, Step->Type, CK_DerivedToBase, CurInit.get(), &BasePath, VK,
-          S.CurFPFeatureOverrides());
+      CurInit =
+          ImplicitCastExpr::Create(S.Context, Step->Type, CK_DerivedToBase,
+                                   CurInit.get(), &BasePath, VK);
       break;
     }
 
@@ -8152,9 +8150,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
       if (CreatedObject && checkAbstractType(CurInit.get()->getType()))
         return ExprError();
 
-      CurInit = ImplicitCastExpr::Create(
-          S.Context, CurInit.get()->getType(), CastKind, CurInit.get(), nullptr,
-          CurInit.get()->getValueKind(), S.CurFPFeatureOverrides());
+      CurInit = ImplicitCastExpr::Create(S.Context, CurInit.get()->getType(),
+                                         CastKind, CurInit.get(), nullptr,
+                                         CurInit.get()->getValueKind());
 
       if (shouldBindAsTemporary(Entity))
         // The overall entity is temporary, so this expression should be
@@ -8495,9 +8493,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
       break;
 
     case SK_ProduceObjCObject:
-      CurInit = ImplicitCastExpr::Create(
-          S.Context, Step->Type, CK_ARCProduceObject, CurInit.get(), nullptr,
-          VK_RValue, S.CurFPFeatureOverrides());
+      CurInit =
+          ImplicitCastExpr::Create(S.Context, Step->Type, CK_ARCProduceObject,
+                                   CurInit.get(), nullptr, VK_RValue);
       break;
 
     case SK_StdInitializerList: {
@@ -8551,9 +8549,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
           // Case 1b and 1c
           // No cast from integer to sampler is needed.
           if (!Var->hasGlobalStorage()) {
-            CurInit = ImplicitCastExpr::Create(
-                S.Context, Step->Type, CK_LValueToRValue, Init,
-                /*BasePath=*/nullptr, VK_RValue, S.CurFPFeatureOverrides());
+            CurInit = ImplicitCastExpr::Create(S.Context, Step->Type,
+                                               CK_LValueToRValue, Init,
+                                               /*BasePath=*/nullptr, VK_RValue);
             break;
           }
           // Case 1a

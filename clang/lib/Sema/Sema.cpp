@@ -592,8 +592,7 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
     }
   }
 
-  return ImplicitCastExpr::Create(Context, Ty, Kind, E, BasePath, VK,
-                                  CurFPFeatureOverrides());
+  return ImplicitCastExpr::Create(Context, Ty, Kind, E, BasePath, VK);
 }
 
 /// ScalarTypeToBooleanCastKind - Returns the cast kind corresponding

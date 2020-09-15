@@ -497,8 +497,6 @@ public:
   FPOptionsOverride() {}
   FPOptionsOverride(const LangOptions &LO)
       : Options(LO), OverrideMask(OverrideMaskBits) {}
-  FPOptionsOverride(FPOptions FPO)
-      : Options(FPO), OverrideMask(OverrideMaskBits) {}
 
   bool requiresTrailingStorage() const { return OverrideMask != 0; }
 

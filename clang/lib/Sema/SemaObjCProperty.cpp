@@ -1464,9 +1464,10 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
           DeclRefExpr(Context, SelfDecl, false, SelfDecl->getType(), VK_LValue,
                       PropertyDiagLoc);
       MarkDeclRefReferenced(SelfExpr);
-      Expr *LoadSelfExpr = ImplicitCastExpr::Create(
-          Context, SelfDecl->getType(), CK_LValueToRValue, SelfExpr, nullptr,
-          VK_RValue, CurFPFeatureOverrides());
+      Expr *LoadSelfExpr =
+        ImplicitCastExpr::Create(Context, SelfDecl->getType(),
+                                 CK_LValueToRValue, SelfExpr, nullptr,
+                                 VK_RValue);
       Expr *IvarRefExpr =
         new (Context) ObjCIvarRefExpr(Ivar,
                                       Ivar->getUsageType(SelfDecl->getType()),
@@ -1527,9 +1528,10 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
           DeclRefExpr(Context, SelfDecl, false, SelfDecl->getType(), VK_LValue,
                       PropertyDiagLoc);
       MarkDeclRefReferenced(SelfExpr);
-      Expr *LoadSelfExpr = ImplicitCastExpr::Create(
-          Context, SelfDecl->getType(), CK_LValueToRValue, SelfExpr, nullptr,
-          VK_RValue, CurFPFeatureOverrides());
+      Expr *LoadSelfExpr =
+        ImplicitCastExpr::Create(Context, SelfDecl->getType(),
+                                 CK_LValueToRValue, SelfExpr, nullptr,
+                                 VK_RValue);
       Expr *lhs =
         new (Context) ObjCIvarRefExpr(Ivar,
                                       Ivar->getUsageType(SelfDecl->getType()),
