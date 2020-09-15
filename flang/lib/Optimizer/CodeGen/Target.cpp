@@ -173,6 +173,7 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &trp,
     default:
       break;
     case llvm::Triple::OSType::Linux:
+    case llvm::Triple::OSType::Darwin:
       return std::make_unique<TargetI386>(ctx, trp, kindMap);
     }
     break;
@@ -181,6 +182,7 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &trp,
     default:
       break;
     case llvm::Triple::OSType::Linux:
+    case llvm::Triple::OSType::Darwin:
       return std::make_unique<TargetX86_64>(ctx, trp, kindMap);
     }
     break;

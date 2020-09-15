@@ -10,6 +10,7 @@
 
 #include "clock.h"
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <stdio.h>
@@ -43,8 +44,8 @@ void RTNAME(DateAndTime)(char *date, char *time, char *zone,
     copyBufferAndPad(date, dateChars, len);
   }
   if (time) {
-    auto ms{t.tv_usec / 1000};
-    auto len{::snprintf(buffer, buffSize, "%02d%02d%02d.%03ld",
+    std::intmax_t ms{t.tv_usec / 1000};
+    auto len{::snprintf(buffer, buffSize, "%02d%02d%02d.%03jd",
         localTime.tm_hour, localTime.tm_min, localTime.tm_sec, ms)};
     copyBufferAndPad(time, timeChars, len);
   }
