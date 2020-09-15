@@ -429,6 +429,14 @@ def unmerge_dead_to_trunc : GICombineRule<
   (apply [{ return Helper.applyCombineUnmergeWithDeadLanesToTrunc(*${d}); }])
 >;
 
+// Transform x,y = unmerge(zext(z)) -> x = zext z; y = 0.
+def unmerge_zext_to_zext : GICombineRule<
+  (defs root:$d),
+  (match (wip_match_opcode G_UNMERGE_VALUES): $d,
+  [{ return Helper.matchCombineUnmergeZExtToZExt(*${d}); }]),
+  (apply [{ return Helper.applyCombineUnmergeZExtToZExt(*${d}); }])
+>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -460,4 +468,5 @@ def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     width_reduction_combines, select_combines,
     known_bits_simplifications, ext_ext_fold,
     not_cmp_fold, opt_brcond_by_inverting_cond,
-    unmerge_merge, fabs_fabs_fold, unmerge_cst, unmerge_dead_to_trunc]>;
+    unmerge_merge, fabs_fabs_fold, unmerge_cst, unmerge_dead_to_trunc,
+    unmerge_zext_to_zext]>;
