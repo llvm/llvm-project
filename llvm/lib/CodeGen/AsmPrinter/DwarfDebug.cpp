@@ -2569,7 +2569,8 @@ static MCSymbol *emitLoclistsTableHeader(AsmPrinter *Asm,
   Asm->OutStreamer->emitLabel(DebugLocs.getSym());
 
   for (const auto &List : DebugLocs.getLists())
-    Asm->emitLabelDifference(List.Label, DebugLocs.getSym(), 4);
+    Asm->emitLabelDifference(List.Label, DebugLocs.getSym(),
+                             Asm->getDwarfOffsetByteSize());
 
   return TableEnd;
 }
