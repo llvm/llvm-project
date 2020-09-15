@@ -2348,6 +2348,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetObjectKind
   // CastExpr
   Abv->Add(BitCodeAbbrevOp(0)); // PathSize
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // HasFPFeatures
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 6)); // CastKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // PartOfExplicitCast
   // ImplicitCastExpr
