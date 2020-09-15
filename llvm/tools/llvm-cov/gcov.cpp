@@ -77,9 +77,7 @@ static void reportCoverage(StringRef SourceFile, StringRef ObjectDir,
   if (DumpGCOV)
     GF.print(errs());
 
-  FileInfo FI(Options);
-  GF.collectLineCounts(FI);
-  FI.print(llvm::outs(), SourceFile, GCNO, GCDA, GF);
+  gcovOneInput(Options, SourceFile, GCNO, GCDA, GF);
 }
 
 int gcovMain(int argc, const char *argv[]) {

@@ -38,7 +38,7 @@ RUN: llvm-cov gcov -n test.c | FileCheck %s --check-prefix=OUT
 # Print to stdout.
 RUN: llvm-cov gcov -t test.c > stdout
 RUN: llvm-cov gcov --stdout test.c | cmp stdout -
-RUN: cat test_no_options.h.gcov test_no_options.cpp.gcov | diff -u - stdout
+RUN: cat test_no_options.cpp.gcov test_no_options.h.gcov | diff -u - stdout
 RUN: llvm-cov gcov -n -t test.c | count 0
 
 RUN: llvm-cov gcov test_paths.cpp 2>/dev/null | FileCheck %s --check-prefix=MISSING
@@ -84,12 +84,7 @@ RUN: llvm-cov gcov test.c -a -b -f | FileCheck %s --check-prefixes=OUT,OUTFILE,O
 RUN: FileCheck %s --check-prefixes=C,C-A,C-B --match-full-lines --strict-whitespace < test.cpp.gcov
 RUN: FileCheck %s --check-prefixes=H,H-A,H-B --match-full-lines --strict-whitespace < test.h.gcov
 
-       OUT-F:Function '_ZN1AC2Ev'
-  OUT-F-NEXT:Lines executed:100.00% of 1
- OUT-FB-NEXT:No branches
- OUT-FB-NEXT:No calls
- OUT-F-EMPTY:
-  OUT-F-NEXT:Function '_ZN1A1BEv'
+       OUT-F:Function '_ZN1A1BEv'
   OUT-F-NEXT:Lines executed:100.00% of 1
  OUT-FB-NEXT:No branches
  OUT-FB-NEXT:No calls
@@ -121,14 +116,17 @@ RUN: FileCheck %s --check-prefixes=H,H-A,H-B --match-full-lines --strict-whitesp
  OUT-F-EMPTY:
   OUT-F-NEXT:Function '_Z15initialize_gridv'
   OUT-F-NEXT:Lines executed:100.00% of 5
- OUT-FB-NEXT:Branches executed:100.00% of 4
- OUT-FB-NEXT:Taken at least once:100.00% of 4
+ OUT-FB-NEXT:No branches
  OUT-FB-NEXT:No calls
  OUT-F-EMPTY:
   OUT-F-NEXT:Function 'main'
   OUT-F-NEXT:Lines executed:92.00% of 25
- OUT-FB-NEXT:Branches executed:100.00% of 11
- OUT-FB-NEXT:Taken at least once:81.82% of 11
+ OUT-FB-NEXT:No branches
+ OUT-FB-NEXT:No calls
+ OUT-F-EMPTY:
+  OUT-F-NEXT:Function '_ZN1AC2Ev'
+  OUT-F-NEXT:Lines executed:100.00% of 1
+ OUT-FB-NEXT:No branches
  OUT-FB-NEXT:No calls
  OUT-F-EMPTY:
          OUT:File 'test.cpp'
