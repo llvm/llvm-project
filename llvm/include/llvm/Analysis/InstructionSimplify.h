@@ -268,6 +268,12 @@ Value *SimplifyFreezeInst(Value *Op, const SimplifyQuery &Q);
 Value *SimplifyInstruction(Instruction *I, const SimplifyQuery &Q,
                            OptimizationRemarkEmitter *ORE = nullptr);
 
+/// See if V simplifies when its operand Op is replaced with RepOp.
+/// AllowRefinement specifies whether the simplification can be a refinement,
+/// or whether it needs to be strictly identical.
+Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
+                              const SimplifyQuery &Q, bool AllowRefinement);
+
 /// Replace all uses of 'I' with 'SimpleV' and simplify the uses recursively.
 ///
 /// This first performs a normal RAUW of I with SimpleV. It then recursively
