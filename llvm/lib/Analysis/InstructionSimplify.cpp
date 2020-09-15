@@ -5470,10 +5470,13 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     const APFloat *C;
     if (match(Op1, m_APFloat(C)) &&
         (C->isInfinity() || (Q.CxtI->hasNoInfs() && C->isLargest()))) {
-      // min(X, -Inf) --> -Inf
-      // max(X, +Inf) --> +Inf
-      if (C->isNegative() == IsMin && !PropagateNaN)
+      // minnum(X, -inf) -> -inf
+      // maxnum(X, +inf) -> +inf
+      // minimum(X, -inf) -> -inf if nnan
+      // maximum(X, +inf) -> +inf if nnan
+      if (C->isNegative() == IsMin && (!PropagateNaN || Q.CxtI->hasNoNaNs()))
         return ConstantFP::get(ReturnType, *C);
+
       // TODO: minimum(nnan x, inf) -> x
       // TODO: minnum(nnan ninf x, flt_max) -> x
       // TODO: maximum(nnan x, -inf) -> x
