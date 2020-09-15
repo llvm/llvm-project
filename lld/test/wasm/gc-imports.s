@@ -31,7 +31,7 @@ _start:
 # CHECK-NEXT:         Field:           used_undef_global
 # CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         GlobalType:      I64
-# CHECK-NEXT:         GlobalMutable:   true
+# CHECK-NEXT:         GlobalMutable:   false
 # CHECK-NEXT:   - Type:
 # CHECK:        - Type:            CUSTOM
 # CHECK-NEXT:     Name:            name
@@ -62,12 +62,12 @@ _start:
 # NO-GC-NEXT:         Field:           unused_undef_global
 # NO-GC-NEXT:         Kind:            GLOBAL
 # NO-GC-NEXT:         GlobalType:      I64
-# NO-GC-NEXT:         GlobalMutable:   true
+# NO-GC-NEXT:         GlobalMutable:   false
 # NO-GC-NEXT:       - Module:          env
 # NO-GC-NEXT:         Field:           used_undef_global
 # NO-GC-NEXT:         Kind:            GLOBAL
 # NO-GC-NEXT:         GlobalType:      I64
-# NO-GC-NEXT:         GlobalMutable:   true
+# NO-GC-NEXT:         GlobalMutable:   false
 # NO-GC-NEXT:   - Type:
 # NO-GC:        - Type:            CUSTOM
 # NO-GC-NEXT:     Name:            name
