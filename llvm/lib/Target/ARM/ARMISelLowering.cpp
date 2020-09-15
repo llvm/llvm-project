@@ -4998,16 +4998,6 @@ static bool isLowerSaturate(const SDValue LHS, const SDValue RHS,
           ((K == RHS && K == TrueVal) || (K == LHS && K == FalseVal)));
 }
 
-// Similar to isLowerSaturate(), but checks for upper-saturating conditions.
-static bool isUpperSaturate(const SDValue LHS, const SDValue RHS,
-                            const SDValue TrueVal, const SDValue FalseVal,
-                            const ISD::CondCode CC, const SDValue K) {
-  return (isGTorGE(CC) &&
-          ((K == RHS && K == TrueVal) || (K == LHS && K == FalseVal))) ||
-         (isLTorLE(CC) &&
-          ((K == LHS && K == TrueVal) || (K == RHS && K == FalseVal)));
-}
-
 // Check if two chained conditionals could be converted into SSAT or USAT.
 //
 // SSAT can replace a set of two conditional selectors that bound a number to an
@@ -5019,6 +5009,10 @@ static bool isUpperSaturate(const SDValue LHS, const SDValue RHS,
 //     x < k ? (x < -k ? -k : x) : k
 //     etc.
 //
+// LLVM canonicalizes these to either a min(max()) or a max(min())
+// pattern. This function tries to match one of these and will return true
+// if successful.
+//
 // USAT works similarily to SSAT but bounds on the interval [0, k] where k + 1 is
 // a power of 2.
 //
@@ -5026,9 +5020,9 @@ static bool isUpperSaturate(const SDValue LHS, const SDValue RHS,
 // Additionally, the variable is returned in parameter V, the constant in K and
 // usat is set to true if the conditional represents an unsigned saturation
 static bool isSaturatingConditional(const SDValue &Op, SDValue &V,
-                                    uint64_t &K, bool &usat) {
-  SDValue LHS1 = Op.getOperand(0);
-  SDValue RHS1 = Op.getOperand(1);
+                                    uint64_t &K, bool &Usat) {
+  SDValue V1 = Op.getOperand(0);
+  SDValue K1 = Op.getOperand(1);
   SDValue TrueVal1 = Op.getOperand(2);
   SDValue FalseVal1 = Op.getOperand(3);
   ISD::CondCode CC1 = cast<CondCodeSDNode>(Op.getOperand(4))->get();
@@ -5037,82 +5031,57 @@ static bool isSaturatingConditional(const SDValue &Op, SDValue &V,
   if (Op2.getOpcode() != ISD::SELECT_CC)
     return false;
 
-  SDValue LHS2 = Op2.getOperand(0);
-  SDValue RHS2 = Op2.getOperand(1);
+  SDValue V2 = Op2.getOperand(0);
+  SDValue K2 = Op2.getOperand(1);
   SDValue TrueVal2 = Op2.getOperand(2);
   SDValue FalseVal2 = Op2.getOperand(3);
   ISD::CondCode CC2 = cast<CondCodeSDNode>(Op2.getOperand(4))->get();
 
-  // Find out which are the constants and which are the variables
-  // in each conditional
-  SDValue *K1 = isa<ConstantSDNode>(LHS1) ? &LHS1 : isa<ConstantSDNode>(RHS1)
-                                                        ? &RHS1
-                                                        : nullptr;
-  SDValue *K2 = isa<ConstantSDNode>(LHS2) ? &LHS2 : isa<ConstantSDNode>(RHS2)
-                                                        ? &RHS2
-                                                        : nullptr;
-  SDValue K2Tmp = isa<ConstantSDNode>(TrueVal2) ? TrueVal2 : FalseVal2;
-  SDValue V1Tmp = (K1 && *K1 == LHS1) ? RHS1 : LHS1;
-  SDValue V2Tmp = (K2 && *K2 == LHS2) ? RHS2 : LHS2;
-  SDValue V2 = (K2Tmp == TrueVal2) ? FalseVal2 : TrueVal2;
+  SDValue V1Tmp = V1;
+  SDValue V2Tmp = V2;
 
-  // We must detect cases where the original operations worked with 16- or
-  // 8-bit values. In such case, V2Tmp != V2 because the comparison operations
-  // must work with sign-extended values but the select operations return
-  // the original non-extended value.
-  SDValue V2TmpReg = V2Tmp;
-  if (V2Tmp->getOpcode() == ISD::SIGN_EXTEND_INREG)
-    V2TmpReg = V2Tmp->getOperand(0);
+  if (V1.getOpcode() == ISD::SIGN_EXTEND_INREG &&
+      V2.getOpcode() == ISD::SIGN_EXTEND_INREG) {
+    V1Tmp = V1.getOperand(0);
+    V2Tmp = V2.getOperand(0);
+  }
 
-  // Check that the registers and the constants have the correct values
-  // in both conditionals
-  if (!K1 || !K2 || *K1 == Op2 || *K2 != K2Tmp || V1Tmp != V2Tmp ||
-      V2TmpReg != V2)
-    return false;
+  // Check that the registers and the constants match a max(min()) or min(max())
+  // pattern
+  if (V1Tmp == TrueVal1 && V2Tmp == TrueVal2 && K1 == FalseVal1 &&
+      K2 == FalseVal2 &&
+      ((isGTorGE(CC1) && isLTorLE(CC2)) || (isLTorLE(CC1) && isGTorGE(CC2)))) {
 
-  // Figure out which conditional is saturating the lower/upper bound.
-  const SDValue *LowerCheckOp =
-      isLowerSaturate(LHS1, RHS1, TrueVal1, FalseVal1, CC1, *K1)
-          ? &Op
-          : isLowerSaturate(LHS2, RHS2, TrueVal2, FalseVal2, CC2, *K2)
-                ? &Op2
-                : nullptr;
-  const SDValue *UpperCheckOp =
-      isUpperSaturate(LHS1, RHS1, TrueVal1, FalseVal1, CC1, *K1)
-          ? &Op
-          : isUpperSaturate(LHS2, RHS2, TrueVal2, FalseVal2, CC2, *K2)
-                ? &Op2
-                : nullptr;
+    // Check that the constant in the lower-bound check is
+    // the opposite of the constant in the upper-bound check
+    // in 1's complement.
+    if (!isa<ConstantSDNode>(K1) || !isa<ConstantSDNode>(K2))
+      return false;
 
-  if (!UpperCheckOp || !LowerCheckOp || LowerCheckOp == UpperCheckOp)
-    return false;
+    int64_t Val1 = cast<ConstantSDNode>(K1)->getSExtValue();
+    int64_t Val2 = cast<ConstantSDNode>(K2)->getSExtValue();
+    int64_t PosVal = std::max(Val1, Val2);
+    int64_t NegVal = std::min(Val1, Val2);
 
-  // Check that the constant in the lower-bound check is
-  // the opposite of the constant in the upper-bound check
-  // in 1's complement.
-  int64_t Val1 = cast<ConstantSDNode>(*K1)->getSExtValue();
-  int64_t Val2 = cast<ConstantSDNode>(*K2)->getSExtValue();
-  int64_t PosVal = std::max(Val1, Val2);
-  int64_t NegVal = std::min(Val1, Val2);
+    if (!((Val1 > Val2 && isLTorLE(CC1)) || (Val1 < Val2 && isLTorLE(CC2))) &&
+        !isPowerOf2_64(PosVal + 1)) 
+      return false;
 
-  if (((Val1 > Val2 && UpperCheckOp == &Op) ||
-       (Val1 < Val2 && UpperCheckOp == &Op2)) &&
-      isPowerOf2_64(PosVal + 1)) {
-
-    // Handle the difference between USAT (unsigned) and SSAT (signed) saturation
+    // Handle the difference between USAT (unsigned) and SSAT (signed)
+    // saturation
     if (Val1 == ~Val2)
-      usat = false;
+      Usat = false;
     else if (NegVal == 0)
-      usat = true;
+      Usat = true;
     else
       return false;
 
-    V = V2;
-    K = (uint64_t)PosVal; // At this point, PosVal is guaranteed to be positive
+    V = V2Tmp;
+    // At this point, PosVal is guaranteed to be positive
+    K = (uint64_t) PosVal; 
 
     return true;
   }
-
   return false;
 }
 
