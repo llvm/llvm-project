@@ -58,7 +58,8 @@ public:
     SEA_ISLANDS = 5,
     VOLCANIC_ISLANDS = 6,
     GFX9 = 7,
-    GFX10 = 8
+    GFX10 = 8,
+    GFX11 = 9
   };
 
 private:
@@ -344,6 +345,7 @@ protected:
   bool GFX8Insts;
   bool GFX9Insts;
   bool GFX10Insts;
+  bool GFX11Insts;
   bool GFX10_3Insts;
   bool GFX7GFX8GFX9Insts;
   bool SGPRInitBug;

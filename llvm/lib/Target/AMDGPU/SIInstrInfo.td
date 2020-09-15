@@ -17,7 +17,7 @@ class GCNPredicateControl : PredicateControl {
 }
 
 // Execpt for the NONE field, this must be kept in sync with the
-// SIEncodingFamily enum in AMDGPUInstrInfo.cpp
+// SIEncodingFamily enum in SIInstrInfo.cpp
 def SIEncodingFamily {
   int NONE = -1;
   int SI = 0;
@@ -28,6 +28,7 @@ def SIEncodingFamily {
   int GFX9 = 5;
   int GFX10 = 6;
   int SDWA10 = 7;
+  int GFX11 = 11;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2416,6 +2417,7 @@ multiclass VINTRP_m <bits <2> op, dag outs, dag ins, string asm,
     def _gfx10 : VINTRP_Real_si<op, NAME, outs, ins, asm, SIEncodingFamily.GFX10>;
   } // End AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10"
 }
+//TODO-GFX11 : VINTERP changes in gfx11
 //===----------------------------------------------------------------------===//
 // Vector instruction mappings
 //===----------------------------------------------------------------------===//
@@ -2499,7 +2501,8 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.GFX80)],
                    [!cast<string>(SIEncodingFamily.GFX9)],
                    [!cast<string>(SIEncodingFamily.GFX10)],
-                   [!cast<string>(SIEncodingFamily.SDWA10)]];
+                   [!cast<string>(SIEncodingFamily.SDWA10)],
+                   [!cast<string>(SIEncodingFamily.GFX11)]];
 }
 
 // Get equivalent SOPK instruction.

@@ -1190,8 +1190,20 @@ public:
     return AMDGPU::isGFX9(getSTI());
   }
 
+  bool isGFX9Plus() const {
+    return AMDGPU::isGFX9Plus(getSTI());
+  }
+
   bool isGFX10() const {
     return AMDGPU::isGFX10(getSTI());
+  }
+
+  bool isGFX10Plus() const {
+    return AMDGPU::isGFX10Plus(getSTI());
+  }
+
+  bool isGFX11() const {
+    return AMDGPU::isGFX11(getSTI());
   }
 
   bool isGFX10_BEncoding() const {
@@ -1211,7 +1223,7 @@ public:
   }
 
   bool hasSGPR104_SGPR105() const {
-    return isGFX10();
+    return isGFX10Plus();
   }
 
   bool hasIntClamp() const {
@@ -4284,6 +4296,7 @@ bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
   }
   Lex();
 
+  //TODO-GFX11
   if (ID == "enable_wavefront_size32") {
     if (Header.code_properties & AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32) {
       if (!isGFX10())
@@ -4619,10 +4632,10 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   for (MCRegAliasIterator R(AMDGPU::TTMP12_TTMP13_TTMP14_TTMP15, &MRI, true);
        R.isValid(); ++R) {
     if (*R == RegNo)
-      return isGFX9() || isGFX10();
+      return isGFX9Plus();
   }
 
-  // GFX10 has 2 more SGPRs 104 and 105.
+  // GFX10+ has 2 more SGPRs 104 and 105.
   for (MCRegAliasIterator R(AMDGPU::SGPR104_SGPR105, &MRI, true);
        R.isValid(); ++R) {
     if (*R == RegNo)

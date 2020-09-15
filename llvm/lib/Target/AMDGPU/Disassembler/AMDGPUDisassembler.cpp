@@ -50,8 +50,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-disassembler"
-
-#define SGPR_MAX (isGFX10() ? AMDGPU::EncValues::SGPR_MAX_GFX10 \
+#define SGPR_MAX (isGFX10Plus() ? AMDGPU::EncValues::SGPR_MAX_GFX10 \
                             : AMDGPU::EncValues::SGPR_MAX_SI)
 
 using DecodeStatus = llvm::MCDisassembler::DecodeStatus;
@@ -63,7 +62,8 @@ AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
   TargetMaxInstBytes(Ctx.getAsmInfo()->getMaxInstLength(&STI)) {
 
   // ToDo: AMDGPUDisassembler supports only VI ISA.
-  if (!STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding] && !isGFX10())
+  if (!STI.getFeatureBits()[AMDGPU::FeatureGCN3Encoding] &&
+          !isGFX10Plus() )
     report_fatal_error("Disassembly not yet supported for subtarget");
 }
 
@@ -367,6 +367,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     Res = tryDecodeInst(DecoderTableGFX1032, MI, DW, Address);
     if (Res) break;
 
+    Res = tryDecodeInst(DecoderTableGFX1132, MI, DW, Address);
+    if (Res) break;
+
     if (Bytes.size() < 4) break;
     const uint64_t QW = ((uint64_t)eatBytes<uint32_t>(Bytes) << 32) | DW;
     Res = tryDecodeInst(DecoderTableGFX864, MI, QW, Address);
@@ -379,6 +382,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (Res) break;
 
     Res = tryDecodeInst(DecoderTableGFX1064, MI, QW, Address);
+    if (Res) break;
+
+    //TODO-GFX11
+    //Res = tryDecodeInst(DecoderTableGFX1164, MI, DW, Address);
   } while (false);
 
   if (Res && (MI.getOpcode() == AMDGPU::V_MAC_F32_e64_vi ||
@@ -483,6 +490,7 @@ DecodeStatus AMDGPUDisassembler::convertDPP8Inst(MCInst &MI) const {
 // Note that before gfx10, the MIMG encoding provided no information about
 // VADDR size. Consequently, decoded instructions always show address as if it
 // has 1 dword, which could be not really so.
+// TODO-GFX11
 DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
 
   int VDstIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
@@ -1005,11 +1013,11 @@ unsigned AMDGPUDisassembler::getTtmpClassId(const OpWidthTy Width) const {
 
 int AMDGPUDisassembler::getTTmpIdx(unsigned Val) const {
   using namespace AMDGPU::EncValues;
-
+//TODO-GFX11
   unsigned TTmpMin =
-      (isGFX9() || isGFX10()) ? TTMP_GFX9_GFX10_MIN : TTMP_VI_MIN;
+      isGFX9Plus() ? TTMP_GFX9_GFX10_MIN : TTMP_VI_MIN;
   unsigned TTmpMax =
-      (isGFX9() || isGFX10()) ? TTMP_GFX9_GFX10_MAX : TTMP_VI_MAX;
+      isGFX9Plus() ? TTMP_GFX9_GFX10_MAX : TTMP_VI_MAX;
 
   return (TTmpMin <= Val && Val <= TTmpMax)? Val - TTmpMin : -1;
 }
@@ -1221,9 +1229,23 @@ bool AMDGPUDisassembler::isGFX9() const {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX9];
 }
 
+bool AMDGPUDisassembler::isGFX9Plus() const {
+  return AMDGPU::isGFX9Plus(STI);
+}
+
 bool AMDGPUDisassembler::isGFX10() const {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX10];
 }
+
+bool AMDGPUDisassembler::isGFX10Plus() const {
+  return AMDGPU::isGFX10Plus(STI);
+}
+
+bool AMDGPUDisassembler::isGFX11() const {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX11];
+}
+
+
 
 //===----------------------------------------------------------------------===//
 // AMDGPUSymbolizer

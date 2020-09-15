@@ -459,7 +459,7 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
 }
 
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
-  if (!isGFX10(*STI))
+  if (!isGFX10Plus(*STI))
     return 256;
   return STI->getFeatureBits().test(FeatureWavefrontSize32) ? 1024 : 512;
 }
@@ -1078,8 +1078,20 @@ bool isGFX9(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX9];
 }
 
+bool isGFX9Plus(const MCSubtargetInfo &STI) {
+  return isGFX9(STI) || isGFX10Plus(STI);
+}
+
 bool isGFX10(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX10];
+}
+
+bool isGFX10Plus(const MCSubtargetInfo &STI) {
+  return isGFX10(STI) || isGFX11(STI);
+}
+
+bool isGFX11(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX11];
 }
 
 bool isGCN3Encoding(const MCSubtargetInfo &STI) {

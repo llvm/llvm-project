@@ -140,7 +140,10 @@ public:
 
   bool isVI() const;
   bool isGFX9() const;
+  bool isGFX9Plus() const;
   bool isGFX10() const;
+  bool isGFX10Plus() const;
+  bool isGFX11() const;
 };
 
 //===----------------------------------------------------------------------===//

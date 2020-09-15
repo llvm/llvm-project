@@ -274,6 +274,12 @@ def FeatureGFX10Insts : SubtargetFeature<"gfx10-insts",
   "Additional instructions for GFX10+"
 >;
 
+def FeatureGFX11Insts : SubtargetFeature<"gfx11-insts",
+  "GFX11Insts",
+  "true",
+  "Additional instructions for GFX11+"
+>;
+
 def FeatureGFX10_3Insts : SubtargetFeature<"gfx10-3-insts",
   "GFX10_3Insts",
   "true",
@@ -732,6 +738,25 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
   ]
 >;
 
+def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
+  "gfx11",
+  [FeatureFP64, FeatureLocalMemorySize65536, FeatureMIMG_R128,
+   FeatureFlatAddressSpace,
+   FeatureCIInsts, Feature16BitInsts,
+   FeatureSMemRealTime, FeatureInv2PiInlineImm,
+   FeatureApertureRegs, FeatureGFX9Insts, FeatureGFX11Insts, FeatureVOP3P,
+   FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
+   FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
+   FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
+   FeatureAddNoCarryInsts, FeatureFmaMixInsts, FeatureGFX8Insts,
+   FeatureNoSdstCMPX, FeatureVscnt, FeatureRegisterBanking,
+   FeatureVOP3Literal, FeatureDPP8,
+   FeatureNoDataDepHazard, FeaturePkFmacF16Inst, FeatureDoesNotSupportSRAMECC,
+   FeatureGFX10A16, FeatureFastDenormalF32, FeatureG16,
+   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess
+  ]
+>;
+
 class FeatureSet<list<SubtargetFeature> Features_> {
   list<SubtargetFeature> Features = Features_;
 }
@@ -966,6 +991,19 @@ def FeatureISAVersion10_3_0 : FeatureSet<
    FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
+def FeatureISAVersion11_0_0 : FeatureSet<
+  [FeatureGFX11,
+   FeatureLDSBankCount32,
+   FeatureDLInsts,
+   FeatureDot1Insts,
+   FeatureDot2Insts,
+   FeatureDot5Insts,
+   FeatureDot6Insts,
+   FeatureNSAEncoding,
+   FeatureWavefrontSize32,
+   FeatureDoesNotSupportXNACK,
+   FeatureCodeObjectV3]>;
+
 //===----------------------------------------------------------------------===//
 
 def AMDGPUInstrInfo : InstrInfo {
@@ -1115,6 +1153,10 @@ def isGFX8GFX9 :
 def isGFX10Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX10">,
   AssemblerPredicate<(all_of FeatureGFX10Insts)>;
+
+def isGFX11Plus :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts)>;
 
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;
