@@ -1553,6 +1553,65 @@ bool CombinerHelper::applyCombineShlOfExtend(MachineInstr &MI,
   return true;
 }
 
+static Register peekThroughBitcast(Register Reg,
+                                   const MachineRegisterInfo &MRI) {
+  while (mi_match(Reg, MRI, m_GBitcast(m_Reg(Reg))))
+    ;
+
+  return Reg;
+}
+
+bool CombinerHelper::matchCombineUnmergeMergeToPlainValues(
+    MachineInstr &MI, SmallVectorImpl<Register> &Operands) {
+  assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
+         "Expected an unmerge");
+  Register SrcReg =
+      peekThroughBitcast(MI.getOperand(MI.getNumOperands() - 1).getReg(), MRI);
+
+  MachineInstr *SrcInstr = MRI.getVRegDef(SrcReg);
+  if (SrcInstr->getOpcode() != TargetOpcode::G_MERGE_VALUES &&
+      SrcInstr->getOpcode() != TargetOpcode::G_BUILD_VECTOR &&
+      SrcInstr->getOpcode() != TargetOpcode::G_CONCAT_VECTORS)
+    return false;
+
+  // Check the source type of the merge.
+  LLT SrcMergeTy = MRI.getType(SrcInstr->getOperand(1).getReg());
+  LLT Dst0Ty = MRI.getType(MI.getOperand(0).getReg());
+  bool SameSize = Dst0Ty.getSizeInBits() == SrcMergeTy.getSizeInBits();
+  if (SrcMergeTy != Dst0Ty && !SameSize)
+    return false;
+  // They are the same now (modulo a bitcast).
+  // We can collect all the src registers.
+  for (unsigned Idx = 1, EndIdx = SrcInstr->getNumOperands(); Idx != EndIdx;
+       ++Idx)
+    Operands.push_back(SrcInstr->getOperand(Idx).getReg());
+  return true;
+}
+
+bool CombinerHelper::applyCombineUnmergeMergeToPlainValues(
+    MachineInstr &MI, SmallVectorImpl<Register> &Operands) {
+  assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
+         "Expected an unmerge");
+  assert((MI.getNumOperands() - 1 == Operands.size()) &&
+         "Not enough operands to replace all defs");
+  unsigned NumElems = MI.getNumOperands() - 1;
+
+  LLT SrcTy = MRI.getType(Operands[0]);
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  bool CanReuseInputDirectly = DstTy == SrcTy;
+  Builder.setInstrAndDebugLoc(MI);
+  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+    Register DstReg = MI.getOperand(Idx).getReg();
+    Register SrcReg = Operands[Idx];
+    if (CanReuseInputDirectly)
+      replaceRegWith(MRI, DstReg, SrcReg);
+    else
+      Builder.buildCast(DstReg, SrcReg);
+  }
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::matchCombineShiftToUnmerge(MachineInstr &MI,
                                                 unsigned TargetShiftSize,
                                                 unsigned &ShiftVal) {
