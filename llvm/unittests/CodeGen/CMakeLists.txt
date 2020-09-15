@@ -15,6 +15,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(CodeGenTests
   AArch64SelectionDAGTest.cpp
+  AsmPrinterDwarfTest.cpp
   DIEHashTest.cpp
   LowLevelTypeTest.cpp
   LexicalScopesTest.cpp
@@ -25,6 +26,9 @@ add_llvm_unittest(CodeGenTests
   ScalableVectorMVTsTest.cpp
   TypeTraitsTest.cpp
   TargetOptionsTest.cpp
+  TestAsmPrinter.cpp
   )
 
 add_subdirectory(GlobalISel)
+
+target_link_libraries(CodeGenTests PRIVATE LLVMTestingSupport)
