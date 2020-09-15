@@ -94,10 +94,10 @@ class ChunkHeader {
 
   // align < 8 -> 0
   // else      -> log2(min(align, 512)) - 2
-  u16 user_requested_alignment_log : 3;
+  u8 user_requested_alignment_log : 3;
 
  private:
-  u16 user_requested_size_hi : 13;
+  u16 user_requested_size_hi;
   u32 user_requested_size_lo;
   atomic_uint64_t alloc_context_id;
 
