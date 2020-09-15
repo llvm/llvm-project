@@ -191,19 +191,15 @@ EnvironmentManager::removeDeadBindings(Environment Env,
              F.getTreeFactory());
 
   // Iterate over the block-expr bindings.
-  for (Environment::iterator I = Env.begin(), E = Env.end();
-       I != E; ++I) {
+  for (Environment::iterator I = Env.begin(), End = Env.end(); I != End; ++I) {
     const EnvironmentEntry &BlkExpr = I.getKey();
     const SVal &X = I.getData();
 
-    const bool IsBlkExprLive =
-        SymReaper.isLive(BlkExpr.getStmt(), BlkExpr.getLocationContext());
+    const Expr *E = dyn_cast<Expr>(BlkExpr.getStmt());
+    if (!E)
+      continue;
 
-    assert((isa<Expr>(BlkExpr.getStmt()) || !IsBlkExprLive) &&
-           "Only Exprs can be live, LivenessAnalysis argues about the liveness "
-           "of *values*!");
-
-    if (IsBlkExprLive) {
+    if (SymReaper.isLive(E, BlkExpr.getLocationContext())) {
       // Copy the binding to the new map.
       EBMapRef = EBMapRef.add(BlkExpr, X);
 

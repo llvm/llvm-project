@@ -1478,8 +1478,8 @@ def LiveVariablesDumper : Checker<"DumpLiveVars">,
   HelpText<"Print results of live variable analysis">,
   Documentation<NotDocumented>;
 
-def LiveStatementsDumper : Checker<"DumpLiveStmts">,
-  HelpText<"Print results of live statement analysis">,
+def LiveExpressionsDumper : Checker<"DumpLiveExprs">,
+  HelpText<"Print results of live expression analysis">,
   Documentation<NotDocumented>;
 
 def CFGViewer : Checker<"ViewCFG">,
