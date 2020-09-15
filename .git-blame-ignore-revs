@@ -31,3 +31,6 @@ d8f0e6caa91e230a486c948ab643174e40bdf215
 
 # Remove line-endings added by r320089. NFC.
 100a0eedc00b2bf48bcdc6c209c000745a4a0e48
+
+# Cleanup __config indention. NFC.
+2b772b930e097ed6f06d698a51e291c7fd318baa
