@@ -38,7 +38,7 @@ def {
   bits<2> D8 = { 0 };    // type mismatch.  RHS doesn't have enough bits
 
   bits<8> E;
-  let E{7-0} = {0,0,1,?,?,?,?,?};
+  let E{7..0} = {0,0,1,?,?,?,?,?};
   let E{3-0} = 0b0010;
 
   bits<8> F1 = { 0, 1, 0b1001, 0, 0b0 }; // ok
