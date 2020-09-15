@@ -940,7 +940,19 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
                                   Loop *CurLoop) {
   Value *Addr = LI->getOperand(0);
   const DataLayout &DL = LI->getModule()->getDataLayout();
-  const uint32_t LocSizeInBits = DL.getTypeSizeInBits(LI->getType());
+  const TypeSize LocSizeInBits = DL.getTypeSizeInBits(LI->getType());
+
+  // It is not currently possible for clang to generate an invariant.start
+  // intrinsic with scalable vector types because we don't support thread local
+  // sizeless types and we don't permit sizeless types in structs or classes.
+  // Furthermore, even if support is added for this in future the intrinsic
+  // itself is defined to have a size of -1 for variable sized objects. This
+  // makes it impossible to verify if the intrinsic envelops our region of
+  // interest. For example, both <vscale x 32 x i8> and <vscale x 16 x i8>
+  // types would have a -1 parameter, but the former is clearly double the size
+  // of the latter.
+  if (LocSizeInBits.isScalable())
+    return false;
 
   // if the type is i8 addrspace(x)*, we know this is the type of
   // llvm.invariant.start operand
@@ -970,13 +982,17 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
     if (!II || II->getIntrinsicID() != Intrinsic::invariant_start ||
         !II->use_empty())
       continue;
-    unsigned InvariantSizeInBits =
-        cast<ConstantInt>(II->getArgOperand(0))->getSExtValue() * 8;
+    ConstantInt *InvariantSize = cast<ConstantInt>(II->getArgOperand(0));
+    // The intrinsic supports having a -1 argument for variable sized objects
+    // so we should check for that here.
+    if (InvariantSize->isNegative())
+      continue;
+    uint64_t InvariantSizeInBits = InvariantSize->getSExtValue() * 8;
     // Confirm the invariant.start location size contains the load operand size
     // in bits. Also, the invariant.start should dominate the load, and we
     // should not hoist the load out of a loop that contains this dominating
     // invariant.start.
-    if (LocSizeInBits <= InvariantSizeInBits &&
+    if (LocSizeInBits.getFixedSize() <= InvariantSizeInBits &&
         DT->properlyDominates(II->getParent(), CurLoop->getHeader()))
       return true;
   }
