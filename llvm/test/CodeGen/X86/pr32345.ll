@@ -15,23 +15,23 @@ define void @foo() {
 ; X640-NEXT:    xorl %ecx, %eax
 ; X640-NEXT:    movzwl var_27, %ecx
 ; X640-NEXT:    xorl %ecx, %eax
-; X640-NEXT:    cltq
-; X640-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; X640-NEXT:    movslq %eax, %rdx
+; X640-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
 ; X640-NEXT:    movzwl var_22, %eax
 ; X640-NEXT:    movzwl var_27, %ecx
 ; X640-NEXT:    xorl %ecx, %eax
 ; X640-NEXT:    movzwl var_27, %ecx
 ; X640-NEXT:    xorl %ecx, %eax
-; X640-NEXT:    cltq
-; X640-NEXT:    movzwl var_27, %ecx
-; X640-NEXT:    subl $16610, %ecx # imm = 0x40E2
-; X640-NEXT:    movl %ecx, %ecx
-; X640-NEXT:    # kill: def $rcx killed $ecx
+; X640-NEXT:    movslq %eax, %rdx
+; X640-NEXT:    movzwl var_27, %eax
+; X640-NEXT:    subl $16610, %eax # imm = 0x40E2
+; X640-NEXT:    movl %eax, %eax
+; X640-NEXT:    movl %eax, %ecx
 ; X640-NEXT:    # kill: def $cl killed $rcx
-; X640-NEXT:    sarq %cl, %rax
-; X640-NEXT:    # kill: def $al killed $al killed $rax
-; X640-NEXT:    # implicit-def: $rcx
-; X640-NEXT:    movb %al, (%rcx)
+; X640-NEXT:    sarq %cl, %rdx
+; X640-NEXT:    # kill: def $dl killed $dl killed $rdx
+; X640-NEXT:    # implicit-def: $rsi
+; X640-NEXT:    movb %dl, (%rsi)
 ; X640-NEXT:    retq
 ;
 ; 6860-LABEL: foo:
@@ -41,37 +41,43 @@ define void @foo() {
 ; 6860-NEXT:    .cfi_offset %ebp, -8
 ; 6860-NEXT:    movl %esp, %ebp
 ; 6860-NEXT:    .cfi_def_cfa_register %ebp
+; 6860-NEXT:    pushl %ebx
+; 6860-NEXT:    pushl %edi
+; 6860-NEXT:    pushl %esi
 ; 6860-NEXT:    andl $-8, %esp
-; 6860-NEXT:    subl $24, %esp
+; 6860-NEXT:    subl $32, %esp
+; 6860-NEXT:    .cfi_offset %esi, -20
+; 6860-NEXT:    .cfi_offset %edi, -16
+; 6860-NEXT:    .cfi_offset %ebx, -12
 ; 6860-NEXT:    movw var_22, %ax
 ; 6860-NEXT:    movzwl var_27, %ecx
 ; 6860-NEXT:    movw %cx, %dx
 ; 6860-NEXT:    xorw %dx, %ax
-; 6860-NEXT:    # implicit-def: $edx
-; 6860-NEXT:    movw %ax, %dx
-; 6860-NEXT:    xorl %ecx, %edx
-; 6860-NEXT:    # kill: def $dx killed $dx killed $edx
-; 6860-NEXT:    movzwl %dx, %eax
-; 6860-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; 6860-NEXT:    # implicit-def: $esi
+; 6860-NEXT:    movw %ax, %si
+; 6860-NEXT:    xorl %ecx, %esi
+; 6860-NEXT:    # kill: def $si killed $si killed $esi
+; 6860-NEXT:    movzwl %si, %ecx
+; 6860-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; 6860-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; 6860-NEXT:    movw var_22, %ax
 ; 6860-NEXT:    movzwl var_27, %ecx
 ; 6860-NEXT:    movw %cx, %dx
 ; 6860-NEXT:    xorw %dx, %ax
-; 6860-NEXT:    # implicit-def: $edx
-; 6860-NEXT:    movw %ax, %dx
-; 6860-NEXT:    xorl %ecx, %edx
-; 6860-NEXT:    # kill: def $dx killed $dx killed $edx
-; 6860-NEXT:    movzwl %dx, %eax
+; 6860-NEXT:    # implicit-def: $edi
+; 6860-NEXT:    movw %ax, %di
+; 6860-NEXT:    xorl %ecx, %edi
+; 6860-NEXT:    # kill: def $di killed $di killed $edi
+; 6860-NEXT:    movzwl %di, %ebx
 ; 6860-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; 6860-NEXT:    addb $30, %cl
-; 6860-NEXT:    xorl %edx, %edx
+; 6860-NEXT:    xorl %eax, %eax
 ; 6860-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; 6860-NEXT:    shrdl %cl, %edx, %eax
+; 6860-NEXT:    shrdl %cl, %eax, %ebx
 ; 6860-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %cl # 1-byte Reload
 ; 6860-NEXT:    testb $32, %cl
+; 6860-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; 6860-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; 6860-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; 6860-NEXT:    jne .LBB0_2
 ; 6860-NEXT:  # %bb.1: # %bb
 ; 6860-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
@@ -81,7 +87,10 @@ define void @foo() {
 ; 6860-NEXT:    # kill: def $al killed $al killed $eax
 ; 6860-NEXT:    # implicit-def: $ecx
 ; 6860-NEXT:    movb %al, (%ecx)
-; 6860-NEXT:    movl %ebp, %esp
+; 6860-NEXT:    leal -12(%ebp), %esp
+; 6860-NEXT:    popl %esi
+; 6860-NEXT:    popl %edi
+; 6860-NEXT:    popl %ebx
 ; 6860-NEXT:    popl %ebp
 ; 6860-NEXT:    .cfi_def_cfa %esp, 4
 ; 6860-NEXT:    retl
