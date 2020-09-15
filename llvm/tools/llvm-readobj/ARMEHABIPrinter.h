@@ -407,7 +407,7 @@ PrinterContext<ET>::FindExceptionTable(unsigned IndexSectionIndex,
       reportError(SymTabOrErr.takeError(), FileName);
     const Elf_Shdr *SymTab = *SymTabOrErr;
 
-    for (const Elf_Rel &R : unwrapOrError(FileName, ELF->rels(&Sec))) {
+    for (const Elf_Rel &R : unwrapOrError(FileName, ELF->rels(Sec))) {
       if (R.r_offset != static_cast<unsigned>(IndexTableOffset))
         continue;
 
@@ -417,9 +417,9 @@ PrinterContext<ET>::FindExceptionTable(unsigned IndexSectionIndex,
       RelA.r_addend = 0;
 
       const Elf_Sym *Symbol =
-          unwrapOrError(FileName, ELF->getRelocationSymbol(&RelA, SymTab));
+          unwrapOrError(FileName, ELF->getRelocationSymbol(RelA, SymTab));
 
-      auto Ret = ELF->getSection(Symbol, SymTab, ShndxTable);
+      auto Ret = ELF->getSection(*Symbol, SymTab, ShndxTable);
       if (!Ret)
         report_fatal_error(errorToErrorCode(Ret.takeError()).message());
       return *Ret;
@@ -432,7 +432,7 @@ template <typename ET>
 void PrinterContext<ET>::PrintExceptionTable(const Elf_Shdr *IT,
                                              const Elf_Shdr *EHT,
                                              uint64_t TableEntryOffset) const {
-  Expected<ArrayRef<uint8_t>> Contents = ELF->getSectionContents(EHT);
+  Expected<ArrayRef<uint8_t>> Contents = ELF->getSectionContents(*EHT);
   if (!Contents)
     return;
 
@@ -499,7 +499,7 @@ void PrinterContext<ET>::PrintOpcodes(const uint8_t *Entry,
 template <typename ET>
 void PrinterContext<ET>::PrintIndexTable(unsigned SectionIndex,
                                          const Elf_Shdr *IT) const {
-  Expected<ArrayRef<uint8_t>> Contents = ELF->getSectionContents(IT);
+  Expected<ArrayRef<uint8_t>> Contents = ELF->getSectionContents(*IT);
   if (!Contents)
     return;
 
@@ -553,7 +553,7 @@ void PrinterContext<ET>::PrintIndexTable(unsigned SectionIndex,
         FindExceptionTable(SectionIndex, Entry * IndexTableEntrySize + 4);
 
       if (EHT)
-        if (auto Name = ELF->getSectionName(EHT))
+        if (auto Name = ELF->getSectionName(*EHT))
           SW.printString("ExceptionHandlingTable", *Name);
 
       uint64_t TableEntryOffset = PREL31(Word1, IT->sh_addr);
@@ -575,7 +575,7 @@ void PrinterContext<ET>::PrintUnwindInformation() const {
       DictScope UIT(SW, "UnwindIndexTable");
 
       SW.printNumber("SectionIndex", SectionIndex);
-      if (auto SectionName = ELF->getSectionName(&Sec))
+      if (auto SectionName = ELF->getSectionName(Sec))
         SW.printString("SectionName", *SectionName);
       SW.printHex("SectionOffset", Sec.sh_offset);
 

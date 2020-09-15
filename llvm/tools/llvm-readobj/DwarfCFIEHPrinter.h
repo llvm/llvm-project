@@ -85,7 +85,7 @@ void PrinterContext<ELFT>::printUnwindInformation() const {
     reportError(SectionsOrErr.takeError(), ObjF->getFileName());
 
   for (const Elf_Shdr &Shdr : *SectionsOrErr) {
-    Expected<StringRef> NameOrErr = Obj->getSectionName(&Shdr);
+    Expected<StringRef> NameOrErr = Obj->getSectionName(Shdr);
     if (!NameOrErr)
       reportError(NameOrErr.takeError(), ObjF->getFileName());
     if (*NameOrErr == ".eh_frame")
@@ -104,13 +104,13 @@ void PrinterContext<ELFT>::printEHFrameHdr(const Elf_Phdr *EHFramePHdr) const {
   const object::ELFFile<ELFT> *Obj = ObjF->getELFFile();
   if (const Elf_Shdr *EHFrameHdr =
           findSectionByAddress(ObjF, EHFramePHdr->p_vaddr)) {
-    Expected<StringRef> NameOrErr = Obj->getSectionName(EHFrameHdr);
+    Expected<StringRef> NameOrErr = Obj->getSectionName(*EHFrameHdr);
     if (!NameOrErr)
       reportError(NameOrErr.takeError(), ObjF->getFileName());
     W.printString("Corresponding Section", *NameOrErr);
   }
 
-  Expected<ArrayRef<uint8_t>> Content = Obj->getSegmentContents(EHFramePHdr);
+  Expected<ArrayRef<uint8_t>> Content = Obj->getSegmentContents(*EHFramePHdr);
   if (!Content)
     reportError(Content.takeError(), ObjF->getFileName());
 
@@ -181,7 +181,7 @@ void PrinterContext<ELFT>::printEHFrame(const Elf_Shdr *EHFrameShdr) const {
   W.indent();
 
   Expected<ArrayRef<uint8_t>> DataOrErr =
-      ObjF->getELFFile()->getSectionContents(EHFrameShdr);
+      ObjF->getELFFile()->getSectionContents(*EHFrameShdr);
   if (!DataOrErr)
     reportError(DataOrErr.takeError(), ObjF->getFileName());
 

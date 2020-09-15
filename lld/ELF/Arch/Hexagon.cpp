@@ -66,7 +66,7 @@ uint32_t Hexagon::calcEFlags() const {
   // greatest revision in the list of inputs.
   uint32_t ret = 0;
   for (InputFile *f : objectFiles) {
-    uint32_t eflags = cast<ObjFile<ELF32LE>>(f)->getObj().getHeader()->e_flags;
+    uint32_t eflags = cast<ObjFile<ELF32LE>>(f)->getObj().getHeader().e_flags;
     if (eflags > ret)
       ret = eflags;
   }
