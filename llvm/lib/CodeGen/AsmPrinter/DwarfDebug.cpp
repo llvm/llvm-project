@@ -2336,10 +2336,10 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
     TheU = Skeleton;
 
   // Emit the header.
-  Asm->OutStreamer->AddComment("Length of Public " + Name + " Info");
   MCSymbol *BeginLabel = Asm->createTempSymbol("pub" + Name + "_begin");
   MCSymbol *EndLabel = Asm->createTempSymbol("pub" + Name + "_end");
-  Asm->emitLabelDifference(EndLabel, BeginLabel, 4);
+  Asm->emitDwarfUnitLength(EndLabel, BeginLabel,
+                           "Length of Public " + Name + " Info");
 
   Asm->OutStreamer->emitLabel(BeginLabel);
 
@@ -2350,7 +2350,7 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
   emitSectionReference(*TheU);
 
   Asm->OutStreamer->AddComment("Compilation Unit Length");
-  Asm->emitInt32(TheU->getLength());
+  Asm->emitDwarfLengthOrOffset(TheU->getLength());
 
   // Emit the pubnames for this compilation unit.
   for (const auto &GI : Globals) {
@@ -2358,7 +2358,7 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
     const DIE *Entity = GI.second;
 
     Asm->OutStreamer->AddComment("DIE offset");
-    Asm->emitInt32(Entity->getOffset());
+    Asm->emitDwarfLengthOrOffset(Entity->getOffset());
 
     if (GnuStyle) {
       dwarf::PubIndexEntryDescriptor Desc = computeIndexValue(TheU, Entity);
@@ -2373,7 +2373,7 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
   }
 
   Asm->OutStreamer->AddComment("End Mark");
-  Asm->emitInt32(0);
+  Asm->emitDwarfLengthOrOffset(0);
   Asm->OutStreamer->emitLabel(EndLabel);
 }
 
