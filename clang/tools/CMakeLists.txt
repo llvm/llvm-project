@@ -16,7 +16,7 @@ add_clang_subdirectory(IndexStore)
 
 add_clang_subdirectory(clang-rename)
 add_clang_subdirectory(clang-refactor)
-if(UNIX)
+if(UNIX OR MINGW)
   add_clang_subdirectory(clang-shlib)
 endif()
 
