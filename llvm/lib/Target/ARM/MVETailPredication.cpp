@@ -424,14 +424,14 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
       // the case when the element count is just a variable %N, we can just see
       // if it is an operand in the tripcount scev expression.
       if (isa<SCEVAddExpr>(TC) && !SE->hasOperand(TC, EC)) {
-        LLVM_DEBUG(dbgs() << "ARM TP: 1Can't verify the element counter\n");
+        LLVM_DEBUG(dbgs() << "ARM TP: Can't verify the element counter\n");
         return false;
       }
     } else if (const SCEVAddRecExpr *AddRecExpr = dyn_cast<SCEVAddRecExpr>(EC)) {
       // For more complicated AddRecExpr, check that the corresponding loop and
       // its loop hierarhy contains the trip count loop.
       if (!AddRecExpr->getLoop()->contains(L)) {
-        LLVM_DEBUG(dbgs() << "ARM TP: 2Can't verify the element counter\n");
+        LLVM_DEBUG(dbgs() << "ARM TP: Can't verify the element counter\n");
         return false;
       }
     } else {
