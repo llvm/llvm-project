@@ -84,7 +84,6 @@ static void AtomicContextLoad(const volatile atomic_uint64_t *atomic_context,
 //   ---------------------|
 //   M -- magic value kAllocBegMagic
 //   B -- address of ChunkHeader pointing to the first 'H'
-static const uptr kAllocBegMagic = 0xCC6E96B9;
 
 class ChunkHeader {
  public:
@@ -161,6 +160,33 @@ class AsanChunk : public ChunkBase {
   uptr Beg() { return reinterpret_cast<uptr>(this) + kChunkHeaderSize; }
 };
 
+class LargeChunkHeader {
+  static constexpr uptr kAllocBegMagic = 0xCC6E96B9;
+  atomic_uint64_t magic;
+  AsanChunk *chunk_header;
+
+ public:
+  AsanChunk *Get() {
+    return atomic_load(&magic, memory_order_acquire) == kAllocBegMagic
+               ? chunk_header
+               : reinterpret_cast<AsanChunk *>(this);
+  }
+
+  void Set(AsanChunk *p) {
+    if (p) {
+      chunk_header = p;
+      atomic_store(&magic, kAllocBegMagic, memory_order_release);
+      return;
+    }
+
+    u64 old = kAllocBegMagic;
+    if (!atomic_compare_exchange_strong(&magic, &old, 0,
+                                        memory_order_release)) {
+      CHECK_EQ(old, kAllocBegMagic);
+    }
+  }
+};
+
 struct QuarantineCallback {
   QuarantineCallback(AllocatorCache *cache, BufferedStackTrace *stack)
       : cache_(cache),
@@ -168,6 +194,13 @@ struct QuarantineCallback {
   }
 
   void Recycle(AsanChunk *m) {
+    void *p = get_allocator().GetBlockBegin(m);
+    if (p != m) {
+      // Clear the magic value, as allocator internals may overwrite the
+      // contents of deallocated chunk, confusing GetAsanChunk lookup.
+      reinterpret_cast<LargeChunkHeader *>(p)->Set(nullptr);
+    }
+
     u8 old_chunk_state = CHUNK_QUARANTINE;
     if (!atomic_compare_exchange_strong(&m->chunk_state, &old_chunk_state,
                                         CHUNK_INVALID, memory_order_acquire)) {
@@ -177,15 +210,6 @@ struct QuarantineCallback {
     PoisonShadow(m->Beg(),
                  RoundUpTo(m->UsedSize(), SHADOW_GRANULARITY),
                  kAsanHeapLeftRedzoneMagic);
-    void *p = get_allocator().GetBlockBegin(m);
-    if (p != m) {
-      uptr *alloc_magic = reinterpret_cast<uptr *>(p);
-      CHECK_EQ(alloc_magic[0], kAllocBegMagic);
-      // Clear the magic value, as allocator internals may overwrite the
-      // contents of deallocated chunk, confusing GetAsanChunk lookup.
-      alloc_magic[0] = 0;
-      CHECK_EQ(alloc_magic[1], reinterpret_cast<uptr>(m));
-    }
 
     // Statistics.
     AsanStats &thread_stats = GetCurrentThreadStats();
@@ -541,11 +565,6 @@ struct Allocator {
     uptr chunk_beg = user_beg - kChunkHeaderSize;
     AsanChunk *m = reinterpret_cast<AsanChunk *>(chunk_beg);
     m->alloc_type = alloc_type;
-    if (alloc_beg != chunk_beg) {
-      CHECK_LE(alloc_beg + 2 * sizeof(uptr), chunk_beg);
-      reinterpret_cast<uptr *>(alloc_beg)[0] = kAllocBegMagic;
-      reinterpret_cast<uptr *>(alloc_beg)[1] = chunk_beg;
-    }
     CHECK(size);
     m->SetUsedSize(size);
     if (using_primary_allocator) {
@@ -591,6 +610,10 @@ struct Allocator {
 #endif
     // Must be the last mutation of metadata in this function.
     atomic_store(&m->chunk_state, CHUNK_ALLOCATED, memory_order_release);
+    if (alloc_beg != chunk_beg) {
+      CHECK_LE(alloc_beg + sizeof(LargeChunkHeader), chunk_beg);
+      reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Set(m);
+    }
     ASAN_MALLOC_HOOK(res, size);
     return res;
   }
@@ -763,11 +786,7 @@ struct Allocator {
       uptr *meta = reinterpret_cast<uptr *>(allocator.GetMetaData(alloc_beg));
       p = reinterpret_cast<AsanChunk *>(meta[1]);
     } else {
-      uptr *alloc_magic = reinterpret_cast<uptr *>(alloc_beg);
-      if (alloc_magic[0] == kAllocBegMagic)
-        p = reinterpret_cast<AsanChunk *>(alloc_magic[1]);
-      else
-        p = reinterpret_cast<AsanChunk *>(alloc_beg);
+      p = reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Get();
     }
     if (!p)
       return nullptr;
