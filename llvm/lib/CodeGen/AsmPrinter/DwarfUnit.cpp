@@ -1739,8 +1739,7 @@ void DwarfTypeUnit::emitHeader(bool UseOffsets) {
   Asm->OutStreamer->emitIntValue(TypeSignature, sizeof(TypeSignature));
   Asm->OutStreamer->AddComment("Type DIE Offset");
   // In a skeleton type unit there is no type DIE so emit a zero offset.
-  Asm->OutStreamer->emitIntValue(Ty ? Ty->getOffset() : 0,
-                                 sizeof(Ty->getOffset()));
+  Asm->emitDwarfLengthOrOffset(Ty ? Ty->getOffset() : 0);
 }
 
 DIE::value_iterator
