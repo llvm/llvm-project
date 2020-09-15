@@ -539,7 +539,7 @@ public:
 
   bool isLive(SymbolRef sym);
   bool isLiveRegion(const MemRegion *region);
-  bool isLive(const Stmt *ExprVal, const LocationContext *LCtx) const;
+  bool isLive(const Expr *ExprVal, const LocationContext *LCtx) const;
   bool isLive(const VarRegion *VR, bool includeStoreBindings = false) const;
 
   /// Unconditionally marks a symbol as live.
