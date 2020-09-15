@@ -3390,7 +3390,7 @@ Type LLVMTypeConverter::packFunctionResults(ArrayRef<Type> types) {
   SmallVector<LLVM::LLVMType, 8> resultTypes;
   resultTypes.reserve(types.size());
   for (auto t : types) {
-    auto converted = convertType(t).dyn_cast<LLVM::LLVMType>();
+    auto converted = convertType(t).dyn_cast_or_null<LLVM::LLVMType>();
     if (!converted)
       return {};
     resultTypes.push_back(converted);
