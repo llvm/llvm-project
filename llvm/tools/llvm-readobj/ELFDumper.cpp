@@ -1225,37 +1225,43 @@ template <typename ELFT>
 Expected<unsigned>
 ELFDumper<ELFT>::getSymbolSectionIndex(const Elf_Sym *Symbol,
                                        const Elf_Sym *FirstSym) const {
-  return Symbol->st_shndx == SHN_XINDEX
-             ? object::getExtendedSymbolTableIndex<ELFT>(*Symbol, *FirstSym,
-                                                         ShndxTable)
-             : Symbol->st_shndx;
+  unsigned Ndx = Symbol->st_shndx;
+  if (Ndx == SHN_XINDEX)
+    return object::getExtendedSymbolTableIndex<ELFT>(*Symbol, *FirstSym,
+                                                     ShndxTable);
+  if (Ndx != SHN_UNDEF && Ndx < SHN_LORESERVE)
+    return Ndx;
+
+  auto CreateErr = [&](const Twine &Name, Optional<unsigned> Offset = None) {
+    std::string Desc;
+    if (Offset)
+      Desc = (Name + "+0x" + Twine::utohexstr(*Offset)).str();
+    else
+      Desc = Name.str();
+    return createError(
+        "unable to get section index for symbol with st_shndx = 0x" +
+        Twine::utohexstr(Ndx) + " (" + Desc + ")");
+  };
+
+  if (Ndx >= ELF::SHN_LOPROC && Ndx <= ELF::SHN_HIPROC)
+    return CreateErr("SHN_LOPROC", Ndx - ELF::SHN_LOPROC);
+  if (Ndx >= ELF::SHN_LOOS && Ndx <= ELF::SHN_HIOS)
+    return CreateErr("SHN_LOOS", Ndx - ELF::SHN_LOOS);
+  if (Ndx == ELF::SHN_UNDEF)
+    return CreateErr("SHN_UNDEF");
+  if (Ndx == ELF::SHN_ABS)
+    return CreateErr("SHN_ABS");
+  if (Ndx == ELF::SHN_COMMON)
+    return CreateErr("SHN_COMMON");
+  return CreateErr("SHN_LORESERVE", Ndx - SHN_LORESERVE);
 }
 
-// If the Symbol has a reserved st_shndx other than SHN_XINDEX, return a
-// descriptive interpretation of the st_shndx value. Otherwise, return the name
-// of the section with index SectionIndex. This function assumes that if the
-// Symbol has st_shndx == SHN_XINDEX the SectionIndex will be the value derived
-// from the SHT_SYMTAB_SHNDX section.
 template <typename ELFT>
 Expected<StringRef>
 ELFDumper<ELFT>::getSymbolSectionName(const Elf_Sym *Symbol,
                                       unsigned SectionIndex) const {
-  if (Symbol->isUndefined())
-    return "Undefined";
-  if (Symbol->isProcessorSpecific())
-    return "Processor Specific";
-  if (Symbol->isOSSpecific())
-    return "Operating System Specific";
-  if (Symbol->isAbsolute())
-    return "Absolute";
-  if (Symbol->isCommon())
-    return "Common";
-  if (Symbol->isReserved() && Symbol->st_shndx != SHN_XINDEX)
-    return "Reserved";
-
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
-  Expected<const Elf_Shdr *> SecOrErr =
-      Obj->getSection(SectionIndex);
+  Expected<const Elf_Shdr *> SecOrErr = Obj->getSection(SectionIndex);
   if (!SecOrErr)
     return SecOrErr.takeError();
   return Obj->getSectionName(**SecOrErr);
@@ -3933,7 +3939,7 @@ std::string GNUStyle<ELFT>::getSymbolSectionNdx(const Elf_Sym *Symbol,
         *Symbol, *FirstSym, this->dumper()->getShndxTable());
     if (!IndexOrErr) {
       assert(Symbol->st_shndx == SHN_XINDEX &&
-             "getSymbolSectionIndex should only fail due to an invalid "
+             "getExtendedSymbolTableIndex should only fail due to an invalid "
              "SHT_SYMTAB_SHNDX table/reference");
       this->reportUniqueWarning(IndexOrErr.takeError());
       return "RSV[0xffff]";
@@ -6168,6 +6174,27 @@ template <class ELFT> void LLVMStyle<ELFT>::printSectionHeaders() {
 template <class ELFT>
 void LLVMStyle<ELFT>::printSymbolSection(const Elf_Sym *Symbol,
                                          const Elf_Sym *First) {
+  auto GetSectionSpecialType = [&]() -> Optional<StringRef> {
+    if (Symbol->isUndefined())
+      return StringRef("Undefined");
+    if (Symbol->isProcessorSpecific())
+      return StringRef("Processor Specific");
+    if (Symbol->isOSSpecific())
+      return StringRef("Operating System Specific");
+    if (Symbol->isAbsolute())
+      return StringRef("Absolute");
+    if (Symbol->isCommon())
+      return StringRef("Common");
+    if (Symbol->isReserved() && Symbol->st_shndx != SHN_XINDEX)
+      return StringRef("Reserved");
+    return None;
+  };
+
+  if (Optional<StringRef> Type = GetSectionSpecialType()) {
+    W.printHex("Section", *Type, Symbol->st_shndx);
+    return;
+  }
+
   Expected<unsigned> SectionIndex =
       this->dumper()->getSymbolSectionIndex(Symbol, First);
   if (!SectionIndex) {
