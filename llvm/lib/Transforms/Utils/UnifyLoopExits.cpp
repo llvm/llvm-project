@@ -16,6 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
@@ -80,7 +81,7 @@ static void restoreSSA(const DominatorTree &DT, const Loop *L,
                        const SetVector<BasicBlock *> &Incoming,
                        BasicBlock *LoopExitBlock) {
   using InstVector = SmallVector<Instruction *, 8>;
-  using IIMap = DenseMap<Instruction *, InstVector>;
+  using IIMap = MapVector<Instruction *, InstVector>;
   IIMap ExternalUsers;
   for (auto BB : L->blocks()) {
     for (auto &I : *BB) {
