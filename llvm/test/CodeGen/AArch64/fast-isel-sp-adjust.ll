@@ -15,7 +15,8 @@
 ; CHECK-LABEL: foo:
 ; CHECK: sub
 ; CHECK-DAG: mov x[[SP:[0-9]+]], sp
-; CHECK-DAG: mov w[[OFFSET:[0-9]+]], #4104
+; CHECK-DAG: mov [[TMP:w[0-9]+]], #4104
+; CHECK: mov w[[OFFSET:[0-9]+]], [[TMP]]
 ; CHECK: strb w0, [x[[SP]], x[[OFFSET]]]
 
 define void @foo(i8 %in) {

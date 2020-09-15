@@ -182,11 +182,11 @@ define void @test_fptrunc_double(double %d, half* %p) nounwind {
 ; V8-UNOPT-NEXT:    std %i4, [%fp+-8]
 ; V8-UNOPT-NEXT:    ldd [%fp+-8], %f0
 ; V8-UNOPT-NEXT:    std %f0, [%fp+-16]
-; V8-UNOPT-NEXT:    ldd [%fp+-16], %i0
-; V8-UNOPT-NEXT:    mov %i0, %i3
-; V8-UNOPT-NEXT:    ! kill: def $i1 killed $i1 killed $i0_i1
-; V8-UNOPT-NEXT:    mov %i3, %o0
-; V8-UNOPT-NEXT:    mov %i1, %o1
+; V8-UNOPT-NEXT:    ldd [%fp+-16], %i4
+; V8-UNOPT-NEXT:    mov %i4, %i0
+; V8-UNOPT-NEXT:    ! kill: def $i5 killed $i5 killed $i4_i5
+; V8-UNOPT-NEXT:    mov %i0, %o0
+; V8-UNOPT-NEXT:    mov %i5, %o1
 ; V8-UNOPT-NEXT:    call __truncdfhf2
 ; V8-UNOPT-NEXT:    st %i2, [%fp+-20]
 ; V8-UNOPT-NEXT:    ld [%fp+-20], %i0 ! 4-byte Folded Reload
