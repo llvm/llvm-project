@@ -344,6 +344,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->importTable = args.hasArg(OPT_import_table);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
+  config->mapFile = args.getLastArgValue(OPT_Map);
   config->optimize = args::getInteger(args, OPT_O, 0);
   config->outputFile = args.getLastArgValue(OPT_o);
   config->relocatable = args.hasArg(OPT_relocatable);
@@ -410,6 +411,9 @@ static void readConfigs(opt::InputArgList &args) {
     for (StringRef s : arg->getValues())
       config->features->push_back(std::string(s));
   }
+
+  if (args.hasArg(OPT_print_map))
+    config->mapFile = "-";
 }
 
 // Some Config members do not directly correspond to any particular
@@ -795,7 +799,8 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // find that it failed because there was a mistake in their command-line.
   if (auto e = tryCreateFile(config->outputFile))
     error("cannot open output file " + config->outputFile + ": " + e.message());
-  // TODO(sbc): add check for map file too once we add support for that.
+  if (auto e = tryCreateFile(config->mapFile))
+    error("cannot open map file " + config->mapFile + ": " + e.message());
   if (errorCount())
     return;
 

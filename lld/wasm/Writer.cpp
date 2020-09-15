@@ -11,6 +11,7 @@
 #include "InputChunks.h"
 #include "InputEvent.h"
 #include "InputGlobal.h"
+#include "MapFile.h"
 #include "OutputSections.h"
 #include "OutputSegment.h"
 #include "Relocations.h"
@@ -1136,6 +1137,9 @@ void Writer::run() {
   createHeader();
   log("-- finalizeSections");
   finalizeSections();
+
+  log("-- writeMapFile");
+  writeMapFile(outputSections);
 
   log("-- openFile");
   openFile();
