@@ -856,6 +856,11 @@ protected:
       DefinedComplexPatternSubOperandMap;
   /// A map of Symbolic Names to ComplexPattern sub-operands.
   DefinedComplexPatternSubOperandMap ComplexSubOperands;
+  /// A map used to for multiple referenced error check of ComplexSubOperand.
+  /// ComplexSubOperand can't be referenced multiple from different operands,
+  /// however multiple references from same operand are allowed since that is
+  /// how 'same operand checks' are generated.
+  StringMap<std::string> ComplexSubOperandsParentName;
 
   uint64_t RuleID;
   static uint64_t NextRuleID;
@@ -921,14 +926,24 @@ public:
   void definePhysRegOperand(Record *Reg, OperandMatcher &OM);
 
   Error defineComplexSubOperand(StringRef SymbolicName, Record *ComplexPattern,
-                                unsigned RendererID, unsigned SubOperandID) {
-    if (ComplexSubOperands.count(SymbolicName))
-      return failedImport(
-          "Complex suboperand referenced more than once (Operand: " +
-          SymbolicName + ")");
+                                unsigned RendererID, unsigned SubOperandID,
+                                StringRef ParentSymbolicName) {
+    std::string ParentName(ParentSymbolicName);
+    if (ComplexSubOperands.count(SymbolicName)) {
+      auto RecordedParentName = ComplexSubOperandsParentName[SymbolicName];
+      if (RecordedParentName.compare(ParentName) != 0)
+        return failedImport("Error: Complex suboperand " + SymbolicName +
+                            " referenced by different operands: " +
+                            RecordedParentName + " and " + ParentName + ".");
+      // Complex suboperand referenced more than once from same the operand is
+      // used to generate 'same operand check'. Emitting of
+      // GIR_ComplexSubOperandRenderer for them is already handled.
+      return Error::success();
+    }
 
     ComplexSubOperands[SymbolicName] =
         std::make_tuple(ComplexPattern, RendererID, SubOperandID);
+    ComplexSubOperandsParentName[SymbolicName] = ParentName;
 
     return Error::success();
   }
@@ -4100,12 +4115,22 @@ Error GlobalISelEmitter::importChildMatcher(
     bool OperandIsImmArg, unsigned OpIdx, unsigned &TempOpIdx) {
 
   Record *PhysReg = nullptr;
-  StringRef SrcChildName = getSrcChildName(SrcChild, PhysReg);
+  std::string SrcChildName = std::string(getSrcChildName(SrcChild, PhysReg));
+  if (!SrcChild->isLeaf() &&
+      SrcChild->getOperator()->isSubClassOf("ComplexPattern")) {
+    // The "name" of a non-leaf complex pattern (MY_PAT $op1, $op2) is
+    // "MY_PAT:op1:op2" and the ones with same "name" represent same operand.
+    std::string PatternName = std::string(SrcChild->getOperator()->getName());
+    for (unsigned i = 0; i < SrcChild->getNumChildren(); ++i) {
+      PatternName += ":";
+      PatternName += SrcChild->getChild(i)->getName();
+    }
+    SrcChildName = PatternName;
+  }
 
   OperandMatcher &OM =
-      PhysReg
-          ? InsnMatcher.addPhysRegInput(PhysReg, OpIdx, TempOpIdx)
-          : InsnMatcher.addOperand(OpIdx, std::string(SrcChildName), TempOpIdx);
+      PhysReg ? InsnMatcher.addPhysRegInput(PhysReg, OpIdx, TempOpIdx)
+              : InsnMatcher.addOperand(OpIdx, SrcChildName, TempOpIdx);
   if (OM.isSameAsAnotherOperand())
     return Error::success();
 
@@ -4152,9 +4177,9 @@ Error GlobalISelEmitter::importChildMatcher(
       for (unsigned i = 0, e = SrcChild->getNumChildren(); i != e; ++i) {
         auto *SubOperand = SrcChild->getChild(i);
         if (!SubOperand->getName().empty()) {
-          if (auto Error = Rule.defineComplexSubOperand(SubOperand->getName(),
-                                                        SrcChild->getOperator(),
-                                                        RendererID, i))
+          if (auto Error = Rule.defineComplexSubOperand(
+                  SubOperand->getName(), SrcChild->getOperator(), RendererID, i,
+                  SrcChildName))
             return Error;
         }
       }
