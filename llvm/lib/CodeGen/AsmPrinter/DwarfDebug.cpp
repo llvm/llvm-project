@@ -2962,21 +2962,22 @@ static void emitMacroHeader(AsmPrinter *Asm, const DwarfDebug &DD,
 #define HANDLE_MACRO_FLAG(ID, NAME) MACRO_FLAG_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
   };
-  uint8_t Flags = 0;
   Asm->OutStreamer->AddComment("Macro information version");
   Asm->emitInt16(DwarfVersion >= 5 ? DwarfVersion : 4);
-  // We are setting Offset and line offset flags unconditionally here,
-  // since we're only supporting DWARF32 and line offset should be mostly
-  // present.
-  // FIXME: Add support for DWARF64.
-  Flags |= MACRO_FLAG_DEBUG_LINE_OFFSET;
-  Asm->OutStreamer->AddComment("Flags: 32 bit, debug_line_offset present");
-  Asm->emitInt8(Flags);
+  // We emit the line offset flag unconditionally here, since line offset should
+  // be mostly present.
+  if (Asm->isDwarf64()) {
+    Asm->OutStreamer->AddComment("Flags: 64 bit, debug_line_offset present");
+    Asm->emitInt8(MACRO_FLAG_OFFSET_SIZE | MACRO_FLAG_DEBUG_LINE_OFFSET);
+  } else {
+    Asm->OutStreamer->AddComment("Flags: 32 bit, debug_line_offset present");
+    Asm->emitInt8(MACRO_FLAG_DEBUG_LINE_OFFSET);
+  }
   Asm->OutStreamer->AddComment("debug_line_offset");
   if (DD.useSplitDwarf())
-    Asm->OutStreamer->emitIntValue(0, /*Size=*/4);
+    Asm->emitDwarfLengthOrOffset(0);
   else
-    Asm->OutStreamer->emitSymbolValue(CU.getLineTableStartSym(), /*Size=*/4);
+    Asm->emitDwarfSymbolReference(CU.getLineTableStartSym());
 }
 
 void DwarfDebug::handleMacroNodes(DIMacroNodeArray Nodes, DwarfCompileUnit &U) {
@@ -3019,10 +3020,8 @@ void DwarfDebug::emitMacro(DIMacro &M) {
       Asm->OutStreamer->AddComment("Line Number");
       Asm->emitULEB128(M.getLine());
       Asm->OutStreamer->AddComment("Macro String");
-      // FIXME: Add support for DWARF64.
-      Asm->OutStreamer->emitSymbolValue(
-          InfoHolder.getStringPool().getEntry(*Asm, Str).getSymbol(),
-          /*Size=*/4);
+      Asm->emitDwarfSymbolReference(
+          InfoHolder.getStringPool().getEntry(*Asm, Str).getSymbol());
     }
   } else {
     Asm->OutStreamer->AddComment(dwarf::MacinfoString(M.getMacinfoType()));
