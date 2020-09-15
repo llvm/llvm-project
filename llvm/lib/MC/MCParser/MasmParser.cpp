@@ -124,10 +124,12 @@ struct StructInfo {
   bool IsUnion = false;
   size_t Alignment = 0;
   size_t Size = 0;
+  size_t AlignmentSize = 0;
   std::vector<FieldInfo> Fields;
   StringMap<size_t> FieldsByName;
 
-  FieldInfo &addField(StringRef FieldName, FieldType FT, size_t FieldSize);
+  FieldInfo &addField(StringRef FieldName, FieldType FT,
+                      size_t FieldAlignmentSize);
 
   StructInfo() = default;
 
@@ -331,7 +333,7 @@ struct FieldInfo {
 };
 
 FieldInfo &StructInfo::addField(StringRef FieldName, FieldType FT,
-                                size_t FieldSize) {
+                                size_t FieldAlignmentSize) {
   if (!FieldName.empty())
     FieldsByName[FieldName] = Fields.size();
   Fields.emplace_back(FT);
@@ -339,9 +341,10 @@ FieldInfo &StructInfo::addField(StringRef FieldName, FieldType FT,
   if (IsUnion) {
     Field.Offset = 0;
   } else {
-    Size = llvm::alignTo(Size, std::min(Alignment, FieldSize));
+    Size = llvm::alignTo(Size, std::min(Alignment, FieldAlignmentSize));
     Field.Offset = Size;
   }
+  AlignmentSize = std::max(AlignmentSize, FieldAlignmentSize);
   return Field;
 }
 
@@ -3973,7 +3976,8 @@ bool MasmParser::emitStructValues(const StructInfo &Structure) {
 // Declare a field in the current struct.
 bool MasmParser::addStructField(StringRef Name, const StructInfo &Structure) {
   StructInfo &OwningStruct = StructInProgress.back();
-  FieldInfo &Field = OwningStruct.addField(Name, FT_STRUCT, Structure.Size);
+  FieldInfo &Field =
+      OwningStruct.addField(Name, FT_STRUCT, Structure.AlignmentSize);
   StructFieldInfo &StructInfo = Field.Contents.StructInfo;
 
   StructInfo.Structure = Structure;
@@ -4101,8 +4105,10 @@ bool MasmParser::parseDirectiveEnds(StringRef Name, SMLoc NameLoc) {
     return Error(NameLoc, "mismatched name in ENDS directive; expected '" +
                               StructInProgress.back().Name + "'");
   StructInfo Structure = StructInProgress.pop_back_val();
-  // Pad to make the structure's size divisible by its alignment.
-  Structure.Size = llvm::alignTo(Structure.Size, Structure.Alignment);
+  // Pad to make the structure's size divisible by the smaller of its alignment
+  // and the size of its largest field.
+  Structure.Size = llvm::alignTo(
+      Structure.Size, std::min(Structure.Alignment, Structure.AlignmentSize));
   Structs[Name.lower()] = Structure;
 
   if (parseToken(AsmToken::EndOfStatement))
@@ -4147,8 +4153,8 @@ bool MasmParser::parseDirectiveNestedEnds() {
     else
       ParentStruct.Size += Structure.Size;
   } else {
-    FieldInfo &Field =
-        ParentStruct.addField(Structure.Name, FT_STRUCT, Structure.Size);
+    FieldInfo &Field = ParentStruct.addField(Structure.Name, FT_STRUCT,
+                                             Structure.AlignmentSize);
     StructFieldInfo &StructInfo = Field.Contents.StructInfo;
     Field.Type = Structure.Size;
     Field.LengthOf = 1;
