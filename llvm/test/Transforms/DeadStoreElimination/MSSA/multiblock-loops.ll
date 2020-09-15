@@ -111,6 +111,7 @@ define void @test_loop(i32 %N, i32* noalias nocapture readonly %A, i32* noalias 
 ; CHECK:       for.body4.lr.ph:
 ; CHECK-NEXT:    [[I_028:%.*]] = phi i32 [ [[INC11:%.*]], [[FOR_COND_CLEANUP3:%.*]] ], [ 0, [[FOR_BODY4_LR_PH_PREHEADER]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[I_028]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I_028]], [[N]]
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.body4:
@@ -327,6 +328,7 @@ define i16 @test_loop_carried_dep() {
 ; CHECK:       do.body:
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[IF_END:%.*]] ]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [10 x i16], [10 x i16]* @x, i16 0, i16 [[I_0]]
+; CHECK-NEXT:    store i16 2, i16* [[ARRAYIDX2]], align 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i16 [[I_0]], 4
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[IF_END10:%.*]], label [[IF_END]]
 ; CHECK:       if.end:
