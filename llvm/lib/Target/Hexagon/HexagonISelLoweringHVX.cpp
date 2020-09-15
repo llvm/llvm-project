@@ -1925,6 +1925,17 @@ HexagonTargetLowering::WidenHvxTruncate(SDValue Op, SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
   unsigned HwWidth = 8*Subtarget.getVectorLength();
 
+  SDValue Op0 = Op.getOperand(0);
+  MVT ResTy = ty(Op);
+  MVT OpTy = ty(Op0);
+  if (!Subtarget.isHVXElementType(OpTy) || !Subtarget.isHVXElementType(ResTy))
+    return SDValue();
+
+  // .-res, op->  Scalar         Illegal      HVX
+  // Scalar           ok  extract(widen)        -
+  // Illegal           -           widen    widen
+  // HVX               -               -       ok
+
   auto getFactor = [HwWidth](MVT Ty) {
     unsigned Width = Ty.getSizeInBits();
     assert(HwWidth % Width == 0);
@@ -1935,15 +1946,6 @@ HexagonTargetLowering::WidenHvxTruncate(SDValue Op, SelectionDAG &DAG) const {
     unsigned WideLen = Ty.getVectorNumElements() * getFactor(Ty);
     return MVT::getVectorVT(Ty.getVectorElementType(), WideLen);
   };
-
-  SDValue Op0 = Op.getOperand(0);
-  MVT ResTy = ty(Op);
-  MVT OpTy = ty(Op0);
-
-  // .-res, op->  Scalar         Illegal      HVX
-  // Scalar           ok  extract(widen)        -
-  // Illegal           -           widen    widen
-  // HVX               -               -       ok
 
   if (Subtarget.isHVXVectorType(OpTy))
     return DAG.getNode(HexagonISD::VPACKL, dl, getWideTy(ResTy), Op0);
@@ -2053,8 +2055,8 @@ HexagonTargetLowering::LowerHvxOperationWrapper(SDNode *N,
   switch (Opc) {
     case ISD::TRUNCATE: {
       assert(shouldWidenToHvx(ty(Op.getOperand(0)), DAG) && "Not widening?");
-      SDValue T = WidenHvxTruncate(Op, DAG);
-      Results.push_back(T);
+      if (SDValue T = WidenHvxTruncate(Op, DAG))
+        Results.push_back(T);
       break;
     }
     case ISD::STORE: {
@@ -2089,8 +2091,8 @@ HexagonTargetLowering::ReplaceHvxNodeResults(SDNode *N,
   switch (Opc) {
     case ISD::TRUNCATE: {
       assert(shouldWidenToHvx(ty(Op), DAG) && "Not widening?");
-      SDValue T = WidenHvxTruncate(Op, DAG);
-      Results.push_back(T);
+      if (SDValue T = WidenHvxTruncate(Op, DAG))
+        Results.push_back(T);
       break;
     }
     case ISD::BITCAST:
