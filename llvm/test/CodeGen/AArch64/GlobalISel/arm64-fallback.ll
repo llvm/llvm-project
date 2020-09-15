@@ -107,8 +107,8 @@ end:
 ; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %{{[0-9]+}}:_(s96) = G_ADD %{{[0-9]+}}:_, %{{[0-9]+}}:_ (in function: nonpow2_add_narrowing)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_add_narrowing
 ; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_add_narrowing:
-define void @nonpow2_add_narrowing() {
-  %a = add i128 undef, undef
+define void @nonpow2_add_narrowing(i128 %x, i128 %y) {
+  %a = add i128 %x, %y
   %b = trunc i128 %a to i96
   %dummy = add i96 %b, %b
   store i96 %dummy, i96* undef
