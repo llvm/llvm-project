@@ -3432,3 +3432,12 @@ uint16_t AsmPrinter::getDwarfVersion() const {
 void AsmPrinter::setDwarfVersion(uint16_t Version) {
   OutStreamer->getContext().setDwarfVersion(Version);
 }
+
+bool AsmPrinter::isDwarf64() const {
+  return OutStreamer->getContext().getDwarfFormat() == dwarf::DWARF64;
+}
+
+unsigned int AsmPrinter::getDwarfOffsetByteSize() const {
+  return dwarf::getDwarfOffsetByteSize(
+      OutStreamer->getContext().getDwarfFormat());
+}
