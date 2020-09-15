@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolID.h"
+#include "support/Logger.h"
 #include "llvm/Support/SHA1.h"
 
 namespace clang {
@@ -34,12 +35,10 @@ std::string SymbolID::str() const { return llvm::toHex(raw()); }
 
 llvm::Expected<SymbolID> SymbolID::fromStr(llvm::StringRef Str) {
   if (Str.size() != RawSize * 2)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Bad ID length");
+    return error("Bad ID length");
   for (char C : Str)
     if (!llvm::isHexDigit(C))
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Bad hex ID");
+      return error("Bad hex ID");
   return fromRaw(llvm::fromHex(Str));
 }
 

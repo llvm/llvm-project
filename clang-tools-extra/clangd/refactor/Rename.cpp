@@ -213,9 +213,7 @@ llvm::Error makeError(ReasonToReject Reason) {
     }
     llvm_unreachable("unhandled reason kind");
   };
-  return llvm::make_error<llvm::StringError>(
-      llvm::formatv("Cannot rename symbol: {0}", Message(Reason)),
-      llvm::inconvertibleErrorCode());
+  return error("Cannot rename symbol: {0}", Message(Reason));
 }
 
 // Return all rename occurrences in the main file.
@@ -319,16 +317,11 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
   });
 
   if (AffectedFiles.size() >= MaxLimitFiles)
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("The number of affected files exceeds the max limit {0}",
-                      MaxLimitFiles),
-        llvm::inconvertibleErrorCode());
-  if (HasMore) {
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("The symbol {0} has too many occurrences",
-                      RenameDecl.getQualifiedNameAsString()),
-        llvm::inconvertibleErrorCode());
-  }
+    return error("The number of affected files exceeds the max limit {0}",
+                 MaxLimitFiles);
+  if (HasMore)
+    return error("The symbol {0} has too many occurrences",
+                 RenameDecl.getQualifiedNameAsString());
   // Sort and deduplicate the results, in case that index returns duplications.
   for (auto &FileAndOccurrences : AffectedFiles) {
     auto &Ranges = FileAndOccurrences.getValue();
@@ -379,20 +372,15 @@ llvm::Expected<FileEdits> renameOutsideFile(
       // Our heuristics fails to adjust rename ranges to the current state of
       // the file, it is most likely the index is stale, so we give up the
       // entire rename.
-      return llvm::make_error<llvm::StringError>(
-          llvm::formatv("Index results don't match the content of file {0} "
-                        "(the index may be stale)",
-                        FilePath),
-          llvm::inconvertibleErrorCode());
+      return error("Index results don't match the content of file {0} "
+                   "(the index may be stale)",
+                   FilePath);
     }
     auto RenameEdit =
         buildRenameEdit(FilePath, *AffectedFileCode, *RenameRanges, NewName);
-    if (!RenameEdit) {
-      return llvm::make_error<llvm::StringError>(
-          llvm::formatv("fail to build rename edit for file {0}: {1}", FilePath,
-                        llvm::toString(RenameEdit.takeError())),
-          llvm::inconvertibleErrorCode());
-    }
+    if (!RenameEdit)
+      return error("failed to rename in file {0}: {1}", FilePath,
+                   RenameEdit.takeError());
     if (!RenameEdit->Replacements.empty())
       Results.insert({FilePath, std::move(*RenameEdit)});
   }
@@ -455,14 +443,10 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
     auto Content =
         SM.getFileManager().getVirtualFileSystem().getBufferForFile(AbsPath);
     if (!Content)
-      return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          llvm::formatv("Fail to open file {0}: {1}", AbsPath,
-                        Content.getError().message()));
+      return error("Fail to open file {0}: {1}", AbsPath,
+                   Content.getError().message());
     if (!*Content)
-      return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          llvm::formatv("Got no buffer for file {0}", AbsPath));
+      return error("Got no buffer for file {0}", AbsPath);
 
     return (*Content)->getBuffer().str();
   };
@@ -559,10 +543,8 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
     auto ShiftedOffset =
         positionToOffset(InitialCode.substr(LastOffset), Shifted);
     if (!ShiftedOffset)
-      return llvm::make_error<llvm::StringError>(
-          llvm::formatv("fail to convert the position {0} to offset ({1})", P,
-                        llvm::toString(ShiftedOffset.takeError())),
-          llvm::inconvertibleErrorCode());
+      return error("fail to convert the position {0} to offset ({1})", P,
+                   ShiftedOffset.takeError());
     LastPos = P;
     LastOffset += *ShiftedOffset;
     return LastOffset;
