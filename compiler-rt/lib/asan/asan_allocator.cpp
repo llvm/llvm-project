@@ -167,10 +167,10 @@ class LargeChunkHeader {
   AsanChunk *chunk_header;
 
  public:
-  AsanChunk *Get() {
+  AsanChunk *Get() const {
     return atomic_load(&magic, memory_order_acquire) == kAllocBegMagic
                ? chunk_header
-               : reinterpret_cast<AsanChunk *>(this);
+               : nullptr;
   }
 
   void Set(AsanChunk *p) {
@@ -510,13 +510,10 @@ struct Allocator {
     uptr needed_size = rounded_size + rz_size;
     if (alignment > min_alignment)
       needed_size += alignment;
-    bool using_primary_allocator = true;
     // If we are allocating from the secondary allocator, there will be no
     // automatic right redzone, so add the right redzone manually.
-    if (!PrimaryAllocator::CanAllocate(needed_size, alignment)) {
+    if (!PrimaryAllocator::CanAllocate(needed_size, alignment))
       needed_size += rz_size;
-      using_primary_allocator = false;
-    }
     CHECK(IsAligned(needed_size, min_alignment));
     if (size > kMaxAllowedMallocSize || needed_size > kMaxAllowedMallocSize ||
         size > max_user_defined_malloc_size) {
@@ -568,13 +565,6 @@ struct Allocator {
     m->alloc_type = alloc_type;
     CHECK(size);
     m->SetUsedSize(size);
-    if (using_primary_allocator) {
-      CHECK(allocator.FromPrimary(allocated));
-    } else {
-      CHECK(!allocator.FromPrimary(allocated));
-      uptr *meta = reinterpret_cast<uptr *>(allocator.GetMetaData(allocated));
-      meta[1] = chunk_beg;
-    }
     m->user_requested_alignment_log = user_requested_alignment_log;
 
     m->SetAllocContext(t ? t->tid() : 0, StackDepotPut(*stack));
@@ -782,15 +772,12 @@ struct Allocator {
   AsanChunk *GetAsanChunk(void *alloc_beg) {
     if (!alloc_beg)
       return nullptr;
-    AsanChunk *p = nullptr;
-    if (!allocator.FromPrimary(alloc_beg)) {
-      uptr *meta = reinterpret_cast<uptr *>(allocator.GetMetaData(alloc_beg));
-      p = reinterpret_cast<AsanChunk *>(meta[1]);
-    } else {
-      p = reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Get();
+    AsanChunk *p = reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Get();
+    if (!p) {
+      if (!allocator.FromPrimary(alloc_beg))
+        return nullptr;
+      p = reinterpret_cast<AsanChunk *>(alloc_beg);
     }
-    if (!p)
-      return nullptr;
     u8 state = atomic_load(&p->chunk_state, memory_order_relaxed);
     // It does not guaranty that Chunk is initialized, but it's
     // definitely not for any other value.
