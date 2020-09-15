@@ -2549,7 +2549,8 @@ static MCSymbol *emitRnglistsTableHeader(AsmPrinter *Asm,
   Asm->OutStreamer->emitLabel(Holder.getRnglistsTableBaseSym());
 
   for (const RangeSpanList &List : Holder.getRangeLists())
-    Asm->emitLabelDifference(List.Label, Holder.getRnglistsTableBaseSym(), 4);
+    Asm->emitLabelDifference(List.Label, Holder.getRnglistsTableBaseSym(),
+                             Asm->getDwarfOffsetByteSize());
 
   return TableEnd;
 }
