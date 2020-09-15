@@ -273,16 +273,14 @@ private:
 
   fir::ExtendedValue getExValue(const Fortran::lower::SymbolBox &symBox) {
     using T = fir::ExtendedValue;
-    return std::visit(
-        Fortran::common::visitors{
-            [](const Fortran::lower::SymbolBox::Intrinsic &box) -> T {
-              return box.getAddr();
-            },
-            [](const auto &box) -> T { return box; },
-            [](const Fortran::lower::SymbolBox::None &) -> T {
-              llvm_unreachable("symbol not mapped");
-            }},
-        symBox.box);
+    return symBox.match(
+        [](const Fortran::lower::SymbolBox::Intrinsic &box) -> T {
+          return box.getAddr();
+        },
+        [](const Fortran::lower::SymbolBox::None &) -> T {
+          llvm_unreachable("symbol not mapped");
+        },
+        [](const auto &box) -> T { return box; });
   }
 
   /// Returns a reference to a symbol or its box/boxChar descriptor if it has
@@ -1098,25 +1096,23 @@ private:
       // We need some context here, since we could also box as an argument
       llvm::report_fatal_error("TODO: array slice not supported");
     };
-    return std::visit(
-        Fortran::common::visitors{
-            [&](const Fortran::lower::SymbolBox::FullDim &arr) {
-              if (!inArrayContext() && isSlice(aref))
-                return genArraySlice(arr);
-              return genFullDim(arr, one);
-            },
-            [&](const Fortran::lower::SymbolBox::CharFullDim &arr) {
-              return genFullDim(arr, arr.getLen());
-            },
-            [&](const Fortran::lower::SymbolBox::Derived &arr) {
-              TODO();
-              return mlir::Value{};
-            },
-            [&](const auto &) {
-              TODO();
-              return mlir::Value{};
-            }},
-        si.box);
+    return si.match(
+        [&](const Fortran::lower::SymbolBox::FullDim &arr) {
+          if (!inArrayContext() && isSlice(aref))
+            return genArraySlice(arr);
+          return genFullDim(arr, one);
+        },
+        [&](const Fortran::lower::SymbolBox::CharFullDim &arr) {
+          return genFullDim(arr, arr.getLen());
+        },
+        [&](const Fortran::lower::SymbolBox::Derived &arr) {
+          TODO();
+          return mlir::Value{};
+        },
+        [&](const auto &) {
+          TODO();
+          return mlir::Value{};
+        });
   }
 
   fir::ExtendedValue genArrayCoorOp(const Fortran::lower::SymbolBox &si,
@@ -1163,28 +1159,26 @@ private:
       return builder.create<fir::ArrayCoorOp>(
           loc, refTy, addr, shape, mlir::Value{}, arrayCoorArgs, ValueRange());
     };
-    return std::visit(
-        Fortran::common::visitors{
-            [&](const Fortran::lower::SymbolBox::FullDim &arr) {
-              if (!inArrayContext() && isSlice(aref)) {
-                TODO();
-                return mlir::Value{};
-              }
-              return genWithShape(arr);
-            },
-            [&](const Fortran::lower::SymbolBox::CharFullDim &arr) {
-              TODO();
-              return mlir::Value{};
-            },
-            [&](const Fortran::lower::SymbolBox::Derived &arr) {
-              TODO();
-              return mlir::Value{};
-            },
-            [&](const auto &) {
-              TODO();
-              return mlir::Value{};
-            }},
-        si.box);
+    return si.match(
+        [&](const Fortran::lower::SymbolBox::FullDim &arr) {
+          if (!inArrayContext() && isSlice(aref)) {
+            TODO();
+            return mlir::Value{};
+          }
+          return genWithShape(arr);
+        },
+        [&](const Fortran::lower::SymbolBox::CharFullDim &arr) {
+          TODO();
+          return mlir::Value{};
+        },
+        [&](const Fortran::lower::SymbolBox::Derived &arr) {
+          TODO();
+          return mlir::Value{};
+        },
+        [&](const auto &) {
+          TODO();
+          return mlir::Value{};
+        });
   }
 
   // Return the coordinate of the array reference
@@ -1643,31 +1637,22 @@ fir::ExtendedValue Fortran::lower::createStringLiteral(
 //===----------------------------------------------------------------------===//
 
 mlir::Value fir::getBase(const fir::ExtendedValue &exv) {
-  return std::visit(Fortran::common::visitors{
-                        [](const fir::UnboxedValue &x) { return x; },
-                        [](const auto &x) { return x.getAddr(); },
-                    },
-                    exv.box);
+  return exv.match([](const fir::UnboxedValue &x) { return x; },
+                   [](const auto &x) { return x.getAddr(); });
 }
 
 mlir::Value fir::getLen(const fir::ExtendedValue &exv) {
-  return std::visit(
-      Fortran::common::visitors{
-          [](const fir::CharBoxValue &x) { return x.getLen(); },
-          [](const fir::CharArrayBoxValue &x) { return x.getLen(); },
-          [](const fir::BoxValue &x) { return x.getLen(); },
-          [](const auto &) { return mlir::Value{}; }},
-      exv.box);
+  return exv.match([](const fir::CharBoxValue &x) { return x.getLen(); },
+                   [](const fir::CharArrayBoxValue &x) { return x.getLen(); },
+                   [](const fir::BoxValue &x) { return x.getLen(); },
+                   [](const auto &) { return mlir::Value{}; });
 }
 
-fir::ExtendedValue fir::substBase(const fir::ExtendedValue &ex,
+fir::ExtendedValue fir::substBase(const fir::ExtendedValue &exv,
                                   mlir::Value base) {
-  return std::visit(
-      Fortran::common::visitors{
-          [&](const fir::UnboxedValue &x) { return fir::ExtendedValue(base); },
-          [&](const auto &x) { return fir::ExtendedValue(x.clone(base)); },
-      },
-      ex.box);
+  return exv.match(
+      [=](const fir::UnboxedValue &x) { return fir::ExtendedValue(base); },
+      [=](const auto &x) { return fir::ExtendedValue(x.clone(base)); });
 }
 
 llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
@@ -1750,14 +1735,13 @@ void Fortran::lower::SymMap::dump() const {
   auto &os = llvm::errs();
   for (auto iter : symbolMap) {
     os << "symbol [" << *iter.first << "] ->\n\t";
-    std::visit(Fortran::common::visitors{
-                   [&](const Fortran::lower::SymbolBox::None &box) {
-                     os << "** symbol not properly mapped **\n";
-                   },
-                   [&](const Fortran::lower::SymbolBox::Intrinsic &val) {
-                     os << val.getAddr() << '\n';
-                   },
-                   [&](const auto &box) { os << box << '\n'; }},
-               iter.second.box);
+    iter.second.match(
+        [&](const Fortran::lower::SymbolBox::None &box) {
+          os << "** symbol not properly mapped **\n";
+        },
+        [&](const Fortran::lower::SymbolBox::Intrinsic &val) {
+          os << val.getAddr() << '\n';
+        },
+        [&](const auto &box) { os << box << '\n'; });
   }
 }

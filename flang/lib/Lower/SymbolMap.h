@@ -9,10 +9,10 @@
 #ifndef FORTRAN_LOWER_SYMBOLMAP_H
 #define FORTRAN_LOWER_SYMBOLMAP_H
 
-#include "flang/Common/idioms.h"
 #include "flang/Common/reference.h"
 #include "flang/Lower/Support/BoxValue.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Support/Matcher.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -39,7 +39,7 @@ namespace Fortran::lower {
 ///
 /// The lowering bridge needs to be able to record all four of these ssa-values
 /// in the lookup table to be able to correctly lower Fortran to FIR.
-struct SymbolBox {
+struct SymbolBox : public fir::details::matcher<SymbolBox> {
   // For lookups that fail, have a monostate
   using None = std::monostate;
 
@@ -57,6 +57,8 @@ struct SymbolBox {
 
   // Generalized derived type variable
   using Derived = fir::BoxValue;
+
+  using VT = std::variant<Intrinsic, FullDim, Char, CharFullDim, Derived, None>;
 
   //===--------------------------------------------------------------------===//
   // Constructors
@@ -80,55 +82,42 @@ struct SymbolBox {
   /// scalar. For an array, this is the address of the first element in the
   /// array, etc.
   mlir::Value getAddr() const {
-    return std::visit(common::visitors{
-                          [](const None &) { return mlir::Value{}; },
-                          [](const auto &x) { return x.getAddr(); },
-                      },
-                      box);
+    return match([](const None &) { return mlir::Value{}; },
+                 [](const auto &x) { return x.getAddr(); });
   }
 
   /// Get the LEN type parameter of a CHARACTER boxed value.
   llvm::Optional<mlir::Value> getCharLen() const {
     using T = llvm::Optional<mlir::Value>;
-    return std::visit(common::visitors{
-                          [](const Char &x) { return T{x.getLen()}; },
-                          [](const CharFullDim &x) { return T{x.getLen()}; },
-                          [](const auto &) { return T{}; },
-                      },
-                      box);
+    return match([](const Char &x) { return T{x.getLen()}; },
+                 [](const CharFullDim &x) { return T{x.getLen()}; },
+                 [](const auto &) { return T{}; });
   }
 
   /// Does the boxed value have an intrinsic type?
   bool isIntrinsic() const {
-    return std::visit(common::visitors{
-                          [](const Intrinsic &) { return true; },
-                          [](const Char &) { return true; },
-                          [](const auto &x) { return false; },
-                      },
-                      box);
+    return match([](const Intrinsic &) { return true; },
+                 [](const Char &) { return true; },
+                 [](const auto &x) { return false; });
   }
 
   /// Does the boxed value have a rank greater than zero?
   bool hasRank() const {
-    return std::visit(
-        common::visitors{
-            [](const Intrinsic &) { return false; },
-            [](const Char &) { return false; },
-            [](const None &) { return false; },
-            [](const auto &x) { return x.getExtents().size() > 0; },
-        },
-        box);
+    return match([](const Intrinsic &) { return false; },
+                 [](const Char &) { return false; },
+                 [](const None &) { return false; },
+                 [](const auto &x) { return x.getExtents().size() > 0; });
   }
 
   /// Does the boxed value have trivial lower bounds (== 1)?
   bool hasSimpleLBounds() const {
-    if (auto *arr = std::get_if<FullDim>(&box))
-      return arr->getLBounds().empty();
-    if (auto *arr = std::get_if<CharFullDim>(&box))
-      return arr->getLBounds().empty();
-    if (auto *arr = std::get_if<Derived>(&box))
-      return (arr->getExtents().size() > 0) && arr->getLBounds().empty();
-    return false;
+    return match(
+        [](const FullDim &arr) { return arr.getLBounds().empty(); },
+        [](const CharFullDim &arr) { return arr.getLBounds().empty(); },
+        [](const Derived &arr) {
+          return (arr.getExtents().size() > 0) && arr.getLBounds().empty();
+        },
+        [](const auto &) { return false; });
   }
 
   /// Does the boxed value have a constant shape?
@@ -141,13 +130,10 @@ struct SymbolBox {
 
   /// Get the lbound if the box explicitly contains it.
   mlir::Value getLBound(unsigned dim) const {
-    return std::visit(
-        common::visitors{
-            [&](const FullDim &box) { return box.getLBounds()[dim]; },
-            [&](const CharFullDim &box) { return box.getLBounds()[dim]; },
-            [&](const Derived &box) { return box.getLBounds()[dim]; },
-            [](const auto &) { return mlir::Value{}; }},
-        box);
+    return match([&](const FullDim &box) { return box.getLBounds()[dim]; },
+                 [&](const CharFullDim &box) { return box.getLBounds()[dim]; },
+                 [&](const Derived &box) { return box.getLBounds()[dim]; },
+                 [](const auto &) { return mlir::Value{}; });
   }
 
   /// Apply the lambda `func` to this box value.
@@ -158,7 +144,10 @@ struct SymbolBox {
     return RT{};
   }
 
-  std::variant<Intrinsic, FullDim, Char, CharFullDim, Derived, None> box;
+  const VT &matchee() const { return box; }
+
+private:
+  VT box;
 };
 
 //===----------------------------------------------------------------------===//

@@ -120,7 +120,7 @@ public:
     auto rank = shapeOp.getType().cast<ShapeType>().getRank();
     auto rankAttr = rewriter.getIntegerAttr(idxTy, rank);
     attrs.push_back(rewriter.getNamedAttr(XEmboxOp::rankAttrName(), rankAttr));
-    auto lenParamSize = embox.getLenParams().size();
+    auto lenParamSize = embox.lenParams().size();
     auto lenParamAttr = rewriter.getIntegerAttr(idxTy, lenParamSize);
     attrs.push_back(
         rewriter.getNamedAttr(XEmboxOp::lenParamAttrName(), lenParamAttr));
@@ -139,7 +139,7 @@ public:
         rewriter.getNamedAttr(XEmboxOp::sliceAttrName(), sliceAttr));
     auto xbox = rewriter.create<XEmboxOp>(loc, embox.getType(), embox.memref(),
                                           shapeOpers, shiftOpers, sliceOpers,
-                                          embox.getLenParams(), attrs);
+                                          embox.lenParams(), attrs);
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();

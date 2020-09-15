@@ -250,9 +250,6 @@ public:
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                                        const ExtendedValue &);
-  friend mlir::Value getBase(const ExtendedValue &exv);
-  friend mlir::Value getLen(const ExtendedValue &exv);
-  friend ExtendedValue substBase(const ExtendedValue &exv, mlir::Value base);
 
   const VT &matchee() const { return box; }
 
