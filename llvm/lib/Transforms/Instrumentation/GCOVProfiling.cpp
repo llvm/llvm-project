@@ -116,7 +116,11 @@ private:
 
   // Modify the program to track transitions along edges and call into the
   // profiling runtime to emit .gcda files when run.
-  bool emitProfileArcs(NamedMDNode *CUNode);
+  void instrumentFunction(
+      Function &F,
+      SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP);
+  void emitGlobalConstructor(
+      SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP);
 
   bool isFunctionInstrumented(const Function &F);
   std::vector<Regex> createRegexesFromString(StringRef RegexesStr);
@@ -551,19 +555,15 @@ bool GCOVProfiler::runOnModule(
   Ctx = &M.getContext();
 
   NamedMDNode *CUNode = M.getNamedMetadata("llvm.dbg.cu");
-  if (!CUNode)
+  if (!CUNode || (!Options.EmitNotes && !Options.EmitData))
     return false;
 
   bool Modified = AddFlushBeforeForkAndExec();
 
   FilterRe = createRegexesFromString(Options.Filter);
   ExcludeRe = createRegexesFromString(Options.Exclude);
-
-  if (Options.EmitNotes)
-    emitProfileNotes(CUNode);
-  if (Options.EmitData)
-    Modified |= emitProfileArcs(CUNode);
-  return Modified;
+  emitProfileNotes(CUNode);
+  return Modified || Options.EmitData;
 }
 
 PreservedAnalyses GCOVProfilerPass::run(Module &M,
@@ -698,6 +698,7 @@ void GCOVProfiler::emitProfileNotes(NamedMDNode *CUNode) {
                         : (c3 - '0') * 10 + c1 - '0';
   }
 
+  bool EmitGCDA = Options.EmitData;
   for (unsigned i = 0, e = CUNode->getNumOperands(); i != e; ++i) {
     // Each compile unit gets its own .gcno file. This means that whether we run
     // this pass over the original .o's as they're produced, or run it after
@@ -709,16 +710,8 @@ void GCOVProfiler::emitProfileNotes(NamedMDNode *CUNode) {
     if (CU->getDWOId())
       continue;
 
-    std::error_code EC;
-    raw_fd_ostream out(mangleName(CU, GCovFileType::GCNO), EC,
-                       sys::fs::OF_None);
-    if (EC) {
-      Ctx->emitError(Twine("failed to open coverage notes file for writing: ") +
-                     EC.message());
-      continue;
-    }
-
     std::vector<uint8_t> EdgeDestinations;
+    SmallVector<std::pair<GlobalVariable *, MDNode *>, 8> CountersBySP;
 
     Endian = M->getDataLayout().isLittleEndian() ? support::endianness::little
                                                  : support::endianness::big;
@@ -789,165 +782,167 @@ void GCOVProfiler::emitProfileNotes(NamedMDNode *CUNode) {
         }
         Line = 0;
       }
+      if (EmitGCDA)
+        instrumentFunction(F, CountersBySP);
     }
 
     char Tmp[4];
     JamCRC JC;
     JC.update(EdgeDestinations);
-    os = &out;
     uint32_t Stamp = JC.getCRC();
     FileChecksums.push_back(Stamp);
-    if (Endian == support::endianness::big) {
-      out.write("gcno", 4);
-      out.write(Options.Version, 4);
-    } else {
-      out.write("oncg", 4);
-      std::reverse_copy(Options.Version, Options.Version + 4, Tmp);
-      out.write(Tmp, 4);
+
+    if (Options.EmitNotes) {
+      std::error_code EC;
+      raw_fd_ostream out(mangleName(CU, GCovFileType::GCNO), EC,
+                         sys::fs::OF_None);
+      if (EC) {
+        Ctx->emitError(
+            Twine("failed to open coverage notes file for writing: ") +
+            EC.message());
+        continue;
+      }
+      os = &out;
+      if (Endian == support::endianness::big) {
+        out.write("gcno", 4);
+        out.write(Options.Version, 4);
+      } else {
+        out.write("oncg", 4);
+        std::reverse_copy(Options.Version, Options.Version + 4, Tmp);
+        out.write(Tmp, 4);
+      }
+      write(Stamp);
+      if (Version >= 90)
+        writeString(""); // unuseful current_working_directory
+      if (Version >= 80)
+        write(0); // unuseful has_unexecuted_blocks
+
+      for (auto &Func : Funcs)
+        Func->writeOut(Stamp);
+
+      write(0);
+      write(0);
+      out.close();
     }
-    write(Stamp);
-    if (Version >= 90)
-      writeString(""); // unuseful current_working_directory
-    if (Version >= 80)
-      write(0); // unuseful has_unexecuted_blocks
 
-    for (auto &Func : Funcs)
-      Func->writeOut(Stamp);
-
-    write(0);
-    write(0);
-    out.close();
+    if (EmitGCDA) {
+      emitGlobalConstructor(CountersBySP);
+      EmitGCDA = false;
+    }
   }
 }
 
-bool GCOVProfiler::emitProfileArcs(NamedMDNode *CUNode) {
-  bool Result = false;
-  for (unsigned i = 0, e = CUNode->getNumOperands(); i != e; ++i) {
-    SmallVector<std::pair<GlobalVariable *, MDNode *>, 8> CountersBySP;
-    for (auto &F : M->functions()) {
-      DISubprogram *SP = F.getSubprogram();
-      unsigned EndLine;
-      if (!SP) continue;
-      if (!functionHasLines(F, EndLine) || !isFunctionInstrumented(F))
-        continue;
-      // TODO: Functions using scope-based EH are currently not supported.
-      if (isUsingScopeBasedEH(F)) continue;
-
-      DenseMap<std::pair<BasicBlock *, BasicBlock *>, unsigned> EdgeToCounter;
-      unsigned Edges = 0;
-      EdgeToCounter[{nullptr, &F.getEntryBlock()}] = Edges++;
-      for (auto &BB : F) {
-        Instruction *TI = BB.getTerminator();
-        if (isa<ReturnInst>(TI)) {
-          EdgeToCounter[{&BB, nullptr}] = Edges++;
-        } else {
-          for (BasicBlock *Succ : successors(TI)) {
-            EdgeToCounter[{&BB, Succ}] = Edges++;
-          }
-        }
+void GCOVProfiler::instrumentFunction(
+    Function &F,
+    SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP) {
+  DISubprogram *SP = F.getSubprogram();
+  DenseMap<std::pair<BasicBlock *, BasicBlock *>, unsigned> EdgeToCounter;
+  unsigned Edges = 0;
+  EdgeToCounter[{nullptr, &F.getEntryBlock()}] = Edges++;
+  for (auto &BB : F) {
+    Instruction *TI = BB.getTerminator();
+    if (isa<ReturnInst>(TI)) {
+      EdgeToCounter[{&BB, nullptr}] = Edges++;
+    } else {
+      for (BasicBlock *Succ : successors(TI)) {
+        EdgeToCounter[{&BB, Succ}] = Edges++;
       }
+    }
+  }
 
-      ArrayType *CounterTy =
-        ArrayType::get(Type::getInt64Ty(*Ctx), Edges);
-      GlobalVariable *Counters =
-        new GlobalVariable(*M, CounterTy, false,
-                           GlobalValue::InternalLinkage,
-                           Constant::getNullValue(CounterTy),
-                           "__llvm_gcov_ctr");
-      CountersBySP.push_back(std::make_pair(Counters, SP));
+  ArrayType *CounterTy = ArrayType::get(Type::getInt64Ty(*Ctx), Edges);
+  GlobalVariable *Counters =
+      new GlobalVariable(*M, CounterTy, false, GlobalValue::InternalLinkage,
+                         Constant::getNullValue(CounterTy), "__llvm_gcov_ctr");
+  CountersBySP.push_back(std::make_pair(Counters, SP));
 
-      // If a BB has several predecessors, use a PHINode to select
-      // the correct counter.
-      for (auto &BB : F) {
-        // The phi node must be at the begin of the BB.
-        IRBuilder<> BuilderForPhi(&*BB.begin());
-        IRBuilder<> Builder(&*BB.getFirstInsertionPt());
-        Type *Int64PtrTy = Type::getInt64PtrTy(*Ctx);
-        Value *V;
-        if (&BB == &F.getEntryBlock()) {
-          auto It = EdgeToCounter.find({nullptr, &BB});
-          V = Builder.CreateConstInBoundsGEP2_64(Counters->getValueType(),
-                                                 Counters, 0, It->second);
-        } else {
-          const unsigned EdgeCount =
-              std::distance(pred_begin(&BB), pred_end(&BB));
-          if (EdgeCount == 0)
-            continue;
-          PHINode *Phi = BuilderForPhi.CreatePHI(Int64PtrTy, EdgeCount);
-          for (BasicBlock *Pred : predecessors(&BB)) {
-            auto It = EdgeToCounter.find({Pred, &BB});
-            assert(It != EdgeToCounter.end());
-            const unsigned Edge = It->second;
-            Value *EdgeCounter = BuilderForPhi.CreateConstInBoundsGEP2_64(
-                Counters->getValueType(), Counters, 0, Edge);
-            Phi->addIncoming(EdgeCounter, Pred);
-            V = Phi;
-          }
-        }
-
-        if (Options.Atomic) {
-          Builder.CreateAtomicRMW(AtomicRMWInst::Add, V, Builder.getInt64(1),
-                                  AtomicOrdering::Monotonic);
-        } else {
-          Value *Count =
-              Builder.CreateLoad(Builder.getInt64Ty(), V, "gcov_ctr");
-          Count = Builder.CreateAdd(Count, Builder.getInt64(1));
-          Builder.CreateStore(Count, V);
-        }
-
-        Instruction *TI = BB.getTerminator();
-        if (isa<ReturnInst>(TI)) {
-          auto It = EdgeToCounter.find({&BB, nullptr});
-          assert(It != EdgeToCounter.end());
-          const unsigned Edge = It->second;
-          Value *Counter = Builder.CreateConstInBoundsGEP2_64(
-              Counters->getValueType(), Counters, 0, Edge);
-          if (Options.Atomic) {
-            Builder.CreateAtomicRMW(AtomicRMWInst::Add, Counter,
-                                    Builder.getInt64(1),
-                                    AtomicOrdering::Monotonic);
-          } else {
-            Value *Count = Builder.CreateLoad(Builder.getInt64Ty(), Counter);
-            Count = Builder.CreateAdd(Count, Builder.getInt64(1));
-            Builder.CreateStore(Count, Counter);
-          }
-        }
+  // If a BB has several predecessors, use a PHINode to select
+  // the correct counter.
+  for (auto &BB : F) {
+    // The phi node must be at the begin of the BB.
+    IRBuilder<> BuilderForPhi(&*BB.begin());
+    IRBuilder<> Builder(&*BB.getFirstInsertionPt());
+    Type *Int64PtrTy = Type::getInt64PtrTy(*Ctx);
+    Value *V;
+    if (&BB == &F.getEntryBlock()) {
+      auto It = EdgeToCounter.find({nullptr, &BB});
+      V = Builder.CreateConstInBoundsGEP2_64(Counters->getValueType(), Counters,
+                                             0, It->second);
+    } else {
+      const unsigned EdgeCount = std::distance(pred_begin(&BB), pred_end(&BB));
+      if (EdgeCount == 0)
+        continue;
+      PHINode *Phi = BuilderForPhi.CreatePHI(Int64PtrTy, EdgeCount);
+      for (BasicBlock *Pred : predecessors(&BB)) {
+        auto It = EdgeToCounter.find({Pred, &BB});
+        assert(It != EdgeToCounter.end());
+        const unsigned Edge = It->second;
+        Value *EdgeCounter = BuilderForPhi.CreateConstInBoundsGEP2_64(
+            Counters->getValueType(), Counters, 0, Edge);
+        Phi->addIncoming(EdgeCounter, Pred);
+        V = Phi;
       }
     }
 
-    Function *WriteoutF = insertCounterWriteout(CountersBySP);
-    Function *ResetF = insertReset(CountersBySP);
+    if (Options.Atomic) {
+      Builder.CreateAtomicRMW(AtomicRMWInst::Add, V, Builder.getInt64(1),
+                              AtomicOrdering::Monotonic);
+    } else {
+      Value *Count = Builder.CreateLoad(Builder.getInt64Ty(), V, "gcov_ctr");
+      Count = Builder.CreateAdd(Count, Builder.getInt64(1));
+      Builder.CreateStore(Count, V);
+    }
 
-    // Create a small bit of code that registers the "__llvm_gcov_writeout" to
-    // be executed at exit and the "__llvm_gcov_flush" function to be executed
-    // when "__gcov_flush" is called.
-    FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
-    Function *F = Function::Create(FTy, GlobalValue::InternalLinkage,
-                                   "__llvm_gcov_init", M);
-    F->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-    F->setLinkage(GlobalValue::InternalLinkage);
-    F->addFnAttr(Attribute::NoInline);
-    if (Options.NoRedZone)
-      F->addFnAttr(Attribute::NoRedZone);
-
-    BasicBlock *BB = BasicBlock::Create(*Ctx, "entry", F);
-    IRBuilder<> Builder(BB);
-
-    FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
-    auto *PFTy = PointerType::get(FTy, 0);
-    FTy = FunctionType::get(Builder.getVoidTy(), {PFTy, PFTy}, false);
-
-    // Initialize the environment and register the local writeout, flush and
-    // reset functions.
-    FunctionCallee GCOVInit = M->getOrInsertFunction("llvm_gcov_init", FTy);
-    Builder.CreateCall(GCOVInit, {WriteoutF, ResetF});
-    Builder.CreateRetVoid();
-
-    appendToGlobalCtors(*M, F, 0);
-    Result = true;
+    Instruction *TI = BB.getTerminator();
+    if (isa<ReturnInst>(TI)) {
+      auto It = EdgeToCounter.find({&BB, nullptr});
+      assert(It != EdgeToCounter.end());
+      const unsigned Edge = It->second;
+      Value *Counter = Builder.CreateConstInBoundsGEP2_64(
+          Counters->getValueType(), Counters, 0, Edge);
+      if (Options.Atomic) {
+        Builder.CreateAtomicRMW(AtomicRMWInst::Add, Counter,
+                                Builder.getInt64(1), AtomicOrdering::Monotonic);
+      } else {
+        Value *Count = Builder.CreateLoad(Builder.getInt64Ty(), Counter);
+        Count = Builder.CreateAdd(Count, Builder.getInt64(1));
+        Builder.CreateStore(Count, Counter);
+      }
+    }
   }
+}
 
-  return Result;
+void GCOVProfiler::emitGlobalConstructor(
+    SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP) {
+  Function *WriteoutF = insertCounterWriteout(CountersBySP);
+  Function *ResetF = insertReset(CountersBySP);
+
+  // Create a small bit of code that registers the "__llvm_gcov_writeout" to
+  // be executed at exit and the "__llvm_gcov_flush" function to be executed
+  // when "__gcov_flush" is called.
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
+  Function *F = Function::Create(FTy, GlobalValue::InternalLinkage,
+                                 "__llvm_gcov_init", M);
+  F->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  F->setLinkage(GlobalValue::InternalLinkage);
+  F->addFnAttr(Attribute::NoInline);
+  if (Options.NoRedZone)
+    F->addFnAttr(Attribute::NoRedZone);
+
+  BasicBlock *BB = BasicBlock::Create(*Ctx, "entry", F);
+  IRBuilder<> Builder(BB);
+
+  FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
+  auto *PFTy = PointerType::get(FTy, 0);
+  FTy = FunctionType::get(Builder.getVoidTy(), {PFTy, PFTy}, false);
+
+  // Initialize the environment and register the local writeout, flush and
+  // reset functions.
+  FunctionCallee GCOVInit = M->getOrInsertFunction("llvm_gcov_init", FTy);
+  Builder.CreateCall(GCOVInit, {WriteoutF, ResetF});
+  Builder.CreateRetVoid();
+
+  appendToGlobalCtors(*M, F, 0);
 }
 
 FunctionCallee GCOVProfiler::getStartFileFunc(const TargetLibraryInfo *TLI) {
