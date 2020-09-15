@@ -35,10 +35,8 @@ bool Large_was_constructed = false;
 bool Large_was_destroyed = false;
 bool Large_was_deallocated = false;
 
-bool Small_was_allocated = false;
 bool Small_was_constructed = false;
 bool Small_was_destroyed = false;
-bool Small_was_deallocated = false;
 
 namespace std {
   template <>
@@ -51,7 +49,7 @@ namespace std {
 
     Large* allocate(std::size_t n) {
       Large_was_allocated = true;
-      return static_cast<Large*>(::operator new(n));
+      return static_cast<Large*>(::operator new(n * sizeof(Large)));
     }
 
     template <typename ...Args>
@@ -79,10 +77,7 @@ namespace std {
     using propagate_on_container_move_assignment = std::true_type;
     using is_always_equal = std::true_type;
 
-    Small* allocate(std::size_t n) {
-      Small_was_allocated = true;
-      return static_cast<Small*>(::operator new(n));
-    }
+    Small* allocate(std::size_t) { assert(false); }
 
     template <typename ...Args>
     void construct(Small* p, Args&& ...args) {
@@ -95,10 +90,7 @@ namespace std {
       Small_was_destroyed = true;
     }
 
-    void deallocate(Small* p, std::size_t) {
-      Small_was_deallocated = true;
-      return ::operator delete(p);
-    }
+    void deallocate(Small*, std::size_t) { assert(false); }
   };
 } // end namespace std
 
@@ -124,12 +116,10 @@ int main(int, char**) {
       std::any a = Small();
       (void)a;
 
-      assert(!Small_was_allocated);
       assert(Small_was_constructed);
     }
 
     assert(Small_was_destroyed);
-    assert(!Small_was_deallocated);
   }
 
   return 0;
