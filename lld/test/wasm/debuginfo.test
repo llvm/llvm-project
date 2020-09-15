@@ -16,13 +16,13 @@ CHECK-NEXT:                DW_AT_low_pc
 CHECK-NEXT:                DW_AT_high_pc
 CHECK-NEXT:                DW_AT_frame_base
 CHECK-NEXT:                DW_AT_name	("test")
-CHECK-NEXT:                DW_AT_decl_file	("/Users{{(/|\\)}}yury{{(/|\\)}}llvmwasm{{(/|\\)}}hi.c")
+CHECK-NEXT:                DW_AT_decl_file	("/Users/yury/llvmwasm{{(/|\\)}}hi.c")
 CHECK-NEXT:                DW_AT_decl_line	(3)
 CHECK-NEXT:                DW_AT_prototyped	(true)
 
 CHECK:     DW_TAG_formal_parameter
 CHECK-NEXT:                  DW_AT_name	("t")
-CHECK-NEXT:                  DW_AT_decl_file	("/Users{{(/|\\)}}yury{{(/|\\)}}llvmwasm{{(/|\\)}}hi.c")
+CHECK-NEXT:                  DW_AT_decl_file	("/Users/yury/llvmwasm{{(/|\\)}}hi.c")
 CHECK-NEXT:                  DW_AT_decl_line	(3)
 
 CHECK:   DW_TAG_subprogram
@@ -30,7 +30,7 @@ CHECK-NEXT:                DW_AT_low_pc
 CHECK-NEXT:                DW_AT_high_pc
 CHECK-NEXT:                DW_AT_frame_base
 CHECK-NEXT:                DW_AT_name	("_start")
-CHECK-NEXT:                DW_AT_decl_file	("/Users{{(/|\\)}}yury{{(/|\\)}}llvmwasm{{(/|\\)}}hi.c")
+CHECK-NEXT:                DW_AT_decl_file	("/Users/yury/llvmwasm{{(/|\\)}}hi.c")
 CHECK-NEXT:                DW_AT_decl_line	(7)
 
 CHECK:   DW_TAG_base_type

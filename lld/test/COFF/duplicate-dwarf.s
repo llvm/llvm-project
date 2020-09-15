@@ -4,21 +4,21 @@
 # RUN: not lld-link -lldmingw -out:%t.exe %t.o %t.dupl.o -entry:_Z4funcv 2>&1 | FileCheck %s
 
 # CHECK: error: duplicate symbol: func()
-# CHECK-NEXT: >>> defined at /path{{[/\\]}}to{{[/\\]}}src{{[/\\]}}dupl.cpp:6
+# CHECK-NEXT: >>> defined at /path/to/src{{[/\\]}}dupl.cpp:6
 # CHECK-NEXT: >>>            {{.*}}.o
-# CHECK-NEXT: >>> defined at /path{{[/\\]}}to{{[/\\]}}src{{[/\\]}}dupl.cpp:6
+# CHECK-NEXT: >>> defined at /path/to/src{{[/\\]}}dupl.cpp:6
 # CHECK-NEXT: >>>            {{.*}}.o
 # CHECK-EMPTY:
 # CHECK-NEXT: error: duplicate symbol: _var
-# CHECK-NEXT: >>> defined at /path{{[/\\]}}to{{[/\\]}}src{{[/\\]}}dupl.cpp:1
+# CHECK-NEXT: >>> defined at /path/to/src{{[/\\]}}dupl.cpp:1
 # CHECK-NEXT: >>>            {{.*}}.o
-# CHECK-NEXT: >>> defined at /path{{[/\\]}}to{{[/\\]}}src{{[/\\]}}dupl.cpp:1
+# CHECK-NEXT: >>> defined at /path/to/src{{[/\\]}}dupl.cpp:1
 # CHECK-NEXT: >>>            {{.*}}.o
 # CHECK-EMPTY:
 # CHECK-NEXT: error: duplicate symbol: A::namespaceVar
-# CHECK-NEXT: >>> defined at /path{{[/\\]}}to{{[/\\]}}src{{[/\\]}}dupl.cpp:3
+# CHECK-NEXT: >>> defined at /path/to/src{{[/\\]}}dupl.cpp:3
 # CHECK-NEXT: >>>            {{.*}}.o
-# CHECK-NEXT: >>> defined at /path{{[/\\]}}to{{[/\\]}}src{{[/\\]}}dupl.cpp:3
+# CHECK-NEXT: >>> defined at /path/to/src{{[/\\]}}dupl.cpp:3
 # CHECK-NEXT: >>>            {{.*}}.o
 
         .text
