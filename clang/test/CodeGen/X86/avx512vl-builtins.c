@@ -4603,8 +4603,7 @@ __m256i test_mm256_maskz_abs_epi64(__mmask8 __U, __m256i __A) {
 }
 __m128i test_mm_maskz_max_epi32(__mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_max_epi32
-  // CHECK:       [[CMP:%.*]] = icmp sgt <4 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[X]], <4 x i32> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK: [[TMP:%.*]] = bitcast <4 x i32> [[RES]] to <2 x i64>
   // CHECK: [[RES:%.*]] = bitcast <2 x i64> [[TMP]] to <4 x i32>
   // CHECK:       select <4 x i1> {{.*}}, <4 x i32> [[RES]], <4 x i32> {{.*}}
@@ -4612,8 +4611,7 @@ __m128i test_mm_maskz_max_epi32(__mmask8 __M, __m128i __A, __m128i __B) {
 }
 __m128i test_mm_mask_max_epi32(__m128i __W, __mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_max_epi32
-  // CHECK:       [[CMP:%.*]] = icmp sgt <4 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[X]], <4 x i32> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK: [[TMP:%.*]] = bitcast <4 x i32> [[RES]] to <2 x i64>
   // CHECK: [[RES:%.*]] = bitcast <2 x i64> [[TMP]] to <4 x i32>
   // CHECK:       select <4 x i1> {{.*}}, <4 x i32> [[RES]], <4 x i32> {{.*}}
@@ -4621,8 +4619,7 @@ __m128i test_mm_mask_max_epi32(__m128i __W, __mmask8 __M, __m128i __A, __m128i _
 }
 __m256i test_mm256_maskz_max_epi32(__mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_max_epi32
-  // CHECK:       [[CMP:%.*]] = icmp sgt <8 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <8 x i1> [[CMP]], <8 x i32> [[X]], <8 x i32> [[Y]]
+  // CHECK: [[RES:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
   // CHECK: [[TMP:%.*]] = bitcast <8 x i32> [[RES]] to <4 x i64>
   // CHECK: [[RES:%.*]] = bitcast <4 x i64> [[TMP]] to <8 x i32>
   // CHECK:       select <8 x i1> {{.*}}, <8 x i32> [[RES]], <8 x i32> {{.*}}
@@ -4630,8 +4627,7 @@ __m256i test_mm256_maskz_max_epi32(__mmask8 __M, __m256i __A, __m256i __B) {
 }
 __m256i test_mm256_mask_max_epi32(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_max_epi32
-  // CHECK:       [[CMP:%.*]] = icmp sgt <8 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <8 x i1> [[CMP]], <8 x i32> [[X]], <8 x i32> [[Y]]
+  // CHECK: [[RES:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
   // CHECK: [[TMP:%.*]] = bitcast <8 x i32> [[RES]] to <4 x i64>
   // CHECK: [[RES:%.*]] = bitcast <4 x i64> [[TMP]] to <8 x i32>
   // CHECK:       select <8 x i1> {{.*}}, <8 x i32> [[RES]], <8 x i32> {{.*}}
@@ -4639,48 +4635,41 @@ __m256i test_mm256_mask_max_epi32(__m256i __W, __mmask8 __M, __m256i __A, __m256
 }
 __m128i test_mm_maskz_max_epi64(__mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_max_epi64
-  // CHECK:       [[CMP:%.*]] = icmp sgt <2 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[X]], <2 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <2 x i64> @llvm.smax.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK:       select <2 x i1> {{.*}}, <2 x i64> [[RES]], <2 x i64> {{.*}}
   return _mm_maskz_max_epi64(__M,__A,__B); 
 }
 __m128i test_mm_mask_max_epi64(__m128i __W, __mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_max_epi64
-  // CHECK:       [[CMP:%.*]] = icmp sgt <2 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[X]], <2 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <2 x i64> @llvm.smax.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK:       select <2 x i1> {{.*}}, <2 x i64> [[RES]], <2 x i64> {{.*}}
   return _mm_mask_max_epi64(__W,__M,__A,__B); 
 }
 __m128i test_mm_max_epi64(__m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_max_epi64
-  // CHECK:       [[CMP:%.*]] = icmp sgt <2 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[X]], <2 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <2 x i64> @llvm.smax.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_max_epi64(__A,__B); 
 }
 __m256i test_mm256_maskz_max_epi64(__mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_max_epi64
-  // CHECK:       [[CMP:%.*]] = icmp sgt <4 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i64> [[X]], <4 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   // CHECK:       select <4 x i1> {{.*}}, <4 x i64> [[RES]], <4 x i64> {{.*}}
   return _mm256_maskz_max_epi64(__M,__A,__B); 
 }
 __m256i test_mm256_mask_max_epi64(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_max_epi64
-  // CHECK:       [[CMP:%.*]] = icmp sgt <4 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i64> [[X]], <4 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   // CHECK:       select <4 x i1> {{.*}}, <4 x i64> [[RES]], <4 x i64> {{.*}}
   return _mm256_mask_max_epi64(__W,__M,__A,__B); 
 }
 __m256i test_mm256_max_epi64(__m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_max_epi64
-  // CHECK:       [[CMP:%.*]] = icmp sgt <4 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i64> [[X]], <4 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_max_epi64(__A,__B); 
 }
 __m128i test_mm_maskz_max_epu32(__mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_max_epu32
-  // CHECK:       [[CMP:%.*]] = icmp ugt <4 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[X]], <4 x i32> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK: [[TMP:%.*]] = bitcast <4 x i32> [[RES]] to <2 x i64>
   // CHECK: [[RES:%.*]] = bitcast <2 x i64> [[TMP]] to <4 x i32>
   // CHECK:       select <4 x i1> {{.*}}, <4 x i32> [[RES]], <4 x i32> {{.*}}
@@ -4688,8 +4677,7 @@ __m128i test_mm_maskz_max_epu32(__mmask8 __M, __m128i __A, __m128i __B) {
 }
 __m128i test_mm_mask_max_epu32(__m128i __W, __mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_max_epu32
-  // CHECK:       [[CMP:%.*]] = icmp ugt <4 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[X]], <4 x i32> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK: [[TMP:%.*]] = bitcast <4 x i32> [[RES]] to <2 x i64>
   // CHECK: [[RES:%.*]] = bitcast <2 x i64> [[TMP]] to <4 x i32>
   // CHECK:       select <4 x i1> {{.*}}, <4 x i32> [[RES]], <4 x i32> {{.*}}
@@ -4697,8 +4685,7 @@ __m128i test_mm_mask_max_epu32(__m128i __W, __mmask8 __M, __m128i __A, __m128i _
 }
 __m256i test_mm256_maskz_max_epu32(__mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_max_epu32
-  // CHECK:       [[CMP:%.*]] = icmp ugt <8 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <8 x i1> [[CMP]], <8 x i32> [[X]], <8 x i32> [[Y]]
+  // CHECK: [[RES:%.*]] = call <8 x i32> @llvm.umax.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
   // CHECK: [[TMP:%.*]] = bitcast <8 x i32> [[RES]] to <4 x i64>
   // CHECK: [[RES:%.*]] = bitcast <4 x i64> [[TMP]] to <8 x i32>
   // CHECK:       select <8 x i1> {{.*}}, <8 x i32> [[RES]], <8 x i32> {{.*}}
@@ -4706,8 +4693,7 @@ __m256i test_mm256_maskz_max_epu32(__mmask8 __M, __m256i __A, __m256i __B) {
 }
 __m256i test_mm256_mask_max_epu32(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_max_epu32
-  // CHECK:       [[CMP:%.*]] = icmp ugt <8 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <8 x i1> [[CMP]], <8 x i32> [[X]], <8 x i32> [[Y]]
+  // CHECK: [[RES:%.*]] = call <8 x i32> @llvm.umax.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
   // CHECK: [[TMP:%.*]] = bitcast <8 x i32> [[RES]] to <4 x i64>
   // CHECK: [[RES:%.*]] = bitcast <4 x i64> [[TMP]] to <8 x i32>
   // CHECK:       select <8 x i1> {{.*}}, <8 x i32> [[RES]], <8 x i32> {{.*}}
@@ -4715,48 +4701,41 @@ __m256i test_mm256_mask_max_epu32(__m256i __W, __mmask8 __M, __m256i __A, __m256
 }
 __m128i test_mm_maskz_max_epu64(__mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_max_epu64
-  // CHECK:       [[CMP:%.*]] = icmp ugt <2 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[X]], <2 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <2 x i64> @llvm.umax.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK:       select <2 x i1> {{.*}}, <2 x i64> [[RES]], <2 x i64> {{.*}}
   return _mm_maskz_max_epu64(__M,__A,__B); 
 }
 __m128i test_mm_max_epu64(__m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_max_epu64
-  // CHECK:       [[CMP:%.*]] = icmp ugt <2 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[X]], <2 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <2 x i64> @llvm.umax.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_max_epu64(__A,__B); 
 }
 __m128i test_mm_mask_max_epu64(__m128i __W, __mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_max_epu64
-  // CHECK:       [[CMP:%.*]] = icmp ugt <2 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[X]], <2 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <2 x i64> @llvm.umax.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK:       select <2 x i1> {{.*}}, <2 x i64> [[RES]], <2 x i64> {{.*}}
   return _mm_mask_max_epu64(__W,__M,__A,__B); 
 }
 __m256i test_mm256_maskz_max_epu64(__mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_max_epu64
-  // CHECK:       [[CMP:%.*]] = icmp ugt <4 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i64> [[X]], <4 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i64> @llvm.umax.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   // CHECK:       select <4 x i1> {{.*}}, <4 x i64> [[RES]], <4 x i64> {{.*}}
   return _mm256_maskz_max_epu64(__M,__A,__B); 
 }
 __m256i test_mm256_max_epu64(__m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_max_epu64
-  // CHECK:       [[CMP:%.*]] = icmp ugt <4 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i64> [[X]], <4 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i64> @llvm.umax.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_max_epu64(__A,__B); 
 }
 __m256i test_mm256_mask_max_epu64(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_max_epu64
-  // CHECK:       [[CMP:%.*]] = icmp ugt <4 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i64> [[X]], <4 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i64> @llvm.umax.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   // CHECK:       select <4 x i1> {{.*}}, <4 x i64> [[RES]], <4 x i64> {{.*}}
   return _mm256_mask_max_epu64(__W,__M,__A,__B); 
 }
 __m128i test_mm_maskz_min_epi32(__mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_min_epi32
-  // CHECK:       [[CMP:%.*]] = icmp slt <4 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[X]], <4 x i32> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK: [[TMP:%.*]] = bitcast <4 x i32> [[RES]] to <2 x i64>
   // CHECK: [[RES:%.*]] = bitcast <2 x i64> [[TMP]] to <4 x i32>
   // CHECK:       select <4 x i1> {{.*}}, <4 x i32> [[RES]], <4 x i32> {{.*}}
@@ -4764,8 +4743,7 @@ __m128i test_mm_maskz_min_epi32(__mmask8 __M, __m128i __A, __m128i __B) {
 }
 __m128i test_mm_mask_min_epi32(__m128i __W, __mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_min_epi32
-  // CHECK:       [[CMP:%.*]] = icmp slt <4 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[X]], <4 x i32> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK: [[TMP:%.*]] = bitcast <4 x i32> [[RES]] to <2 x i64>
   // CHECK: [[RES:%.*]] = bitcast <2 x i64> [[TMP]] to <4 x i32>
   // CHECK:       select <4 x i1> {{.*}}, <4 x i32> [[RES]], <4 x i32> {{.*}}
@@ -4773,8 +4751,7 @@ __m128i test_mm_mask_min_epi32(__m128i __W, __mmask8 __M, __m128i __A, __m128i _
 }
 __m256i test_mm256_maskz_min_epi32(__mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_min_epi32
-  // CHECK:       [[CMP:%.*]] = icmp slt <8 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <8 x i1> [[CMP]], <8 x i32> [[X]], <8 x i32> [[Y]]
+  // CHECK: [[RES:%.*]] = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
   // CHECK: [[TMP:%.*]] = bitcast <8 x i32> [[RES]] to <4 x i64>
   // CHECK: [[RES:%.*]] = bitcast <4 x i64> [[TMP]] to <8 x i32>
   // CHECK:       select <8 x i1> {{.*}}, <8 x i32> [[RES]], <8 x i32> {{.*}}
@@ -4782,8 +4759,7 @@ __m256i test_mm256_maskz_min_epi32(__mmask8 __M, __m256i __A, __m256i __B) {
 }
 __m256i test_mm256_mask_min_epi32(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_min_epi32
-  // CHECK:       [[CMP:%.*]] = icmp slt <8 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <8 x i1> [[CMP]], <8 x i32> [[X]], <8 x i32> [[Y]]
+  // CHECK: [[RES:%.*]] = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
   // CHECK: [[TMP:%.*]] = bitcast <8 x i32> [[RES]] to <4 x i64>
   // CHECK: [[RES:%.*]] = bitcast <4 x i64> [[TMP]] to <8 x i32>
   // CHECK:       select <8 x i1> {{.*}}, <8 x i32> [[RES]], <8 x i32> {{.*}}
@@ -4791,48 +4767,41 @@ __m256i test_mm256_mask_min_epi32(__m256i __W, __mmask8 __M, __m256i __A, __m256
 }
 __m128i test_mm_min_epi64(__m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_min_epi64
-  // CHECK:       [[CMP:%.*]] = icmp slt <2 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[X]], <2 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <2 x i64> @llvm.smin.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_min_epi64(__A,__B); 
 }
 __m128i test_mm_mask_min_epi64(__m128i __W, __mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_min_epi64
-  // CHECK:       [[CMP:%.*]] = icmp slt <2 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[X]], <2 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <2 x i64> @llvm.smin.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK:       select <2 x i1> {{.*}}, <2 x i64> [[RES]], <2 x i64> {{.*}}
   return _mm_mask_min_epi64(__W,__M,__A,__B); 
 }
 __m128i test_mm_maskz_min_epi64(__mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_min_epi64
-  // CHECK:       [[CMP:%.*]] = icmp slt <2 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[X]], <2 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <2 x i64> @llvm.smin.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK:       select <2 x i1> {{.*}}, <2 x i64> [[RES]], <2 x i64> {{.*}}
   return _mm_maskz_min_epi64(__M,__A,__B); 
 }
 __m256i test_mm256_min_epi64(__m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_min_epi64
-  // CHECK:       [[CMP:%.*]] = icmp slt <4 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i64> [[X]], <4 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_min_epi64(__A,__B); 
 }
 __m256i test_mm256_mask_min_epi64(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_min_epi64
-  // CHECK:       [[CMP:%.*]] = icmp slt <4 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i64> [[X]], <4 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   // CHECK:       select <4 x i1> {{.*}}, <4 x i64> [[RES]], <4 x i64> {{.*}}
   return _mm256_mask_min_epi64(__W,__M,__A,__B); 
 }
 __m256i test_mm256_maskz_min_epi64(__mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_min_epi64
-  // CHECK:       [[CMP:%.*]] = icmp slt <4 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i64> [[X]], <4 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   // CHECK:       select <4 x i1> {{.*}}, <4 x i64> [[RES]], <4 x i64> {{.*}}
   return _mm256_maskz_min_epi64(__M,__A,__B); 
 }
 __m128i test_mm_maskz_min_epu32(__mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_min_epu32
-  // CHECK:       [[CMP:%.*]] = icmp ult <4 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[X]], <4 x i32> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK: [[TMP:%.*]] = bitcast <4 x i32> [[RES]] to <2 x i64>
   // CHECK: [[RES:%.*]] = bitcast <2 x i64> [[TMP]] to <4 x i32>
   // CHECK:       select <4 x i1> {{.*}}, <4 x i32> [[RES]], <4 x i32> {{.*}}
@@ -4840,8 +4809,7 @@ __m128i test_mm_maskz_min_epu32(__mmask8 __M, __m128i __A, __m128i __B) {
 }
 __m128i test_mm_mask_min_epu32(__m128i __W, __mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_min_epu32
-  // CHECK:       [[CMP:%.*]] = icmp ult <4 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i32> [[X]], <4 x i32> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   // CHECK: [[TMP:%.*]] = bitcast <4 x i32> [[RES]] to <2 x i64>
   // CHECK: [[RES:%.*]] = bitcast <2 x i64> [[TMP]] to <4 x i32>
   // CHECK:       select <4 x i1> {{.*}}, <4 x i32> [[RES]], <4 x i32> {{.*}}
@@ -4849,8 +4817,7 @@ __m128i test_mm_mask_min_epu32(__m128i __W, __mmask8 __M, __m128i __A, __m128i _
 }
 __m256i test_mm256_maskz_min_epu32(__mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_min_epu32
-  // CHECK:       [[CMP:%.*]] = icmp ult <8 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <8 x i1> [[CMP]], <8 x i32> [[X]], <8 x i32> [[Y]]
+  // CHECK: [[RES:%.*]] = call <8 x i32> @llvm.umin.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
   // CHECK: [[TMP:%.*]] = bitcast <8 x i32> [[RES]] to <4 x i64>
   // CHECK: [[RES:%.*]] = bitcast <4 x i64> [[TMP]] to <8 x i32>
   // CHECK:       select <8 x i1> {{.*}}, <8 x i32> [[RES]], <8 x i32> {{.*}}
@@ -4858,8 +4825,7 @@ __m256i test_mm256_maskz_min_epu32(__mmask8 __M, __m256i __A, __m256i __B) {
 }
 __m256i test_mm256_mask_min_epu32(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_min_epu32
-  // CHECK:       [[CMP:%.*]] = icmp ult <8 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <8 x i1> [[CMP]], <8 x i32> [[X]], <8 x i32> [[Y]]
+  // CHECK: [[RES:%.*]] = call <8 x i32> @llvm.umin.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
   // CHECK: [[TMP:%.*]] = bitcast <8 x i32> [[RES]] to <4 x i64>
   // CHECK: [[RES:%.*]] = bitcast <4 x i64> [[TMP]] to <8 x i32>
   // CHECK:       select <8 x i1> {{.*}}, <8 x i32> [[RES]], <8 x i32> {{.*}}
@@ -4867,41 +4833,35 @@ __m256i test_mm256_mask_min_epu32(__m256i __W, __mmask8 __M, __m256i __A, __m256
 }
 __m128i test_mm_min_epu64(__m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_min_epu64
-  // CHECK:       [[CMP:%.*]] = icmp ult <2 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[X]], <2 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <2 x i64> @llvm.umin.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_min_epu64(__A,__B); 
 }
 __m128i test_mm_mask_min_epu64(__m128i __W, __mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_min_epu64
-  // CHECK:       [[CMP:%.*]] = icmp ult <2 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[X]], <2 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <2 x i64> @llvm.umin.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK:       select <2 x i1> {{.*}}, <2 x i64> [[RES]], <2 x i64> {{.*}}
   return _mm_mask_min_epu64(__W,__M,__A,__B); 
 }
 __m128i test_mm_maskz_min_epu64(__mmask8 __M, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_min_epu64
-  // CHECK:       [[CMP:%.*]] = icmp ult <2 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[X]], <2 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <2 x i64> @llvm.umin.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // CHECK:       select <2 x i1> {{.*}}, <2 x i64> [[RES]], <2 x i64> {{.*}}
   return _mm_maskz_min_epu64(__M,__A,__B); 
 }
 __m256i test_mm256_min_epu64(__m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_min_epu64
-  // CHECK:       [[CMP:%.*]] = icmp ult <4 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i64> [[X]], <4 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_min_epu64(__A,__B); 
 }
 __m256i test_mm256_mask_min_epu64(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_min_epu64
-  // CHECK:       [[CMP:%.*]] = icmp ult <4 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i64> [[X]], <4 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   // CHECK:       select <4 x i1> {{.*}}, <4 x i64> [[RES]], <4 x i64> {{.*}}
   return _mm256_mask_min_epu64(__W,__M,__A,__B); 
 }
 __m256i test_mm256_maskz_min_epu64(__mmask8 __M, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_min_epu64
-  // CHECK:       [[CMP:%.*]] = icmp ult <4 x i64> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  [[RES:%.*]] = select <4 x i1> [[CMP]], <4 x i64> [[X]], <4 x i64> [[Y]]
+  // CHECK: [[RES:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   // CHECK:       select <4 x i1> {{.*}}, <4 x i64> [[RES]], <4 x i64> {{.*}}
   return _mm256_maskz_min_epu64(__M,__A,__B); 
 }
