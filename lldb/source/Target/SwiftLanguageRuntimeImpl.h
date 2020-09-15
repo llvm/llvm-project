@@ -14,6 +14,7 @@
 #define liblldb_SwiftLanguageRuntimeImpl_h_
 
 #include "lldb/Target/SwiftLanguageRuntime.h"
+#include "swift/Reflection/TypeLowering.h"
 
 namespace swift {
 namespace reflection {
@@ -74,11 +75,12 @@ public:
   GetTypeInfo(CompilerType type, ExecutionContextScope *exe_scope);
 
   llvm::Optional<const swift::reflection::TypeInfo *>
-  lookupClangTypeInfo(llvm::StringRef mangled_name);
-  const swift::reflection::TypeInfo *
-  emplaceClangTypeInfo(llvm::StringRef mangled_name,
-                       llvm::Optional<uint64_t> byte_size,
-                       llvm::Optional<size_t> bit_align);
+  lookupClangTypeInfo(CompilerType clang_type);
+
+  const swift::reflection::TypeInfo *emplaceClangTypeInfo(
+      CompilerType clang_type, llvm::Optional<uint64_t> byte_size,
+      llvm::Optional<size_t> bit_align,
+      llvm::ArrayRef<swift::reflection::FieldInfo> fields);
 
   bool IsStoredInlineInBuffer(CompilerType type);
 
@@ -94,6 +96,15 @@ public:
 
   SwiftLanguageRuntime::MetadataPromiseSP
   GetMetadataPromise(lldb::addr_t addr, ValueObject &for_object);
+
+  llvm::Optional<uint64_t>
+  GetMemberVariableOffsetRemoteAST(CompilerType instance_type,
+                                   ValueObject *instance,
+                                   ConstString member_name);
+  llvm::Optional<uint64_t>
+  GetMemberVariableOffsetRemoteMirrors(CompilerType instance_type,
+                                       ValueObject *instance,
+                                       ConstString member_name, Status *error);
   llvm::Optional<uint64_t> GetMemberVariableOffset(CompilerType instance_type,
                                                    ValueObject *instance,
                                                    ConstString member_name,
@@ -279,9 +290,16 @@ private:
   bool AddModuleToReflectionContext(const lldb::ModuleSP &module_sp);
   /// \}
 
-  llvm::StringMap<llvm::Optional<swift::reflection::TypeInfo>>
+  /// Cache for the debug-info-originating type infos.
+  /// \{
+  llvm::DenseMap<lldb::opaque_compiler_type_t,
+                 llvm::Optional<swift::reflection::TypeInfo>>
       m_clang_type_info;
+  llvm::DenseMap<lldb::opaque_compiler_type_t,
+                 llvm::Optional<swift::reflection::RecordTypeInfo>>
+      m_clang_record_type_info;
   std::recursive_mutex m_clang_type_info_mutex;
+  /// \}
 
   /// Swift native NSError isa.
   llvm::Optional<lldb::addr_t> m_SwiftNativeNSErrorISA;
