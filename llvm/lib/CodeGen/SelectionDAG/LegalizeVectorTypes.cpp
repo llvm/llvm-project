@@ -2044,16 +2044,12 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     case ISD::FP_TO_UINT:
     case ISD::STRICT_FP_TO_SINT:
     case ISD::STRICT_FP_TO_UINT:
-    case ISD::CTTZ:
-    case ISD::CTLZ:
-    case ISD::CTPOP:
     case ISD::STRICT_FP_EXTEND:
     case ISD::FP_EXTEND:
     case ISD::SIGN_EXTEND:
     case ISD::ZERO_EXTEND:
     case ISD::ANY_EXTEND:
     case ISD::FTRUNC:
-    case ISD::FCANONICALIZE:
       Res = SplitVecOp_UnaryOp(N);
       break;
 
