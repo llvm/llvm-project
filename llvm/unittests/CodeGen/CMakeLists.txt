@@ -17,6 +17,7 @@ add_llvm_unittest(CodeGenTests
   AArch64SelectionDAGTest.cpp
   AsmPrinterDwarfTest.cpp
   DIEHashTest.cpp
+  DIETest.cpp
   LowLevelTypeTest.cpp
   LexicalScopesTest.cpp
   MachineInstrBundleIteratorTest.cpp
