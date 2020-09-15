@@ -209,6 +209,7 @@ def AArch64frintx_mt : SDNode<"AArch64ISD::FRINT_MERGE_PASSTHRU", SDT_AArch64Ari
 def AArch64frinta_mt : SDNode<"AArch64ISD::FROUND_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frintn_mt : SDNode<"AArch64ISD::FROUNDEVEN_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frintz_mt : SDNode<"AArch64ISD::FTRUNC_MERGE_PASSTHRU", SDT_AArch64Arith>;
+def AArch64fsqrt_mt : SDNode<"AArch64ISD::FSQRT_MERGE_PASSTHRU", SDT_AArch64Arith>;
 
 def SDT_AArch64ReduceWithInit : SDTypeProfile<1, 3, [SDTCisVec<1>, SDTCisVec<3>]>;
 def AArch64clasta_n   : SDNode<"AArch64ISD::CLASTA_N",   SDT_AArch64ReduceWithInit>;
@@ -1430,7 +1431,7 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm FRINTX_ZPmZ : sve_fp_2op_p_zd_HSD<0b00110, "frintx", null_frag, AArch64frintx_mt>;
   defm FRINTI_ZPmZ : sve_fp_2op_p_zd_HSD<0b00111, "frinti", null_frag, AArch64frinti_mt>;
   defm FRECPX_ZPmZ : sve_fp_2op_p_zd_HSD<0b01100, "frecpx", int_aarch64_sve_frecpx>;
-  defm FSQRT_ZPmZ  : sve_fp_2op_p_zd_HSD<0b01101, "fsqrt",  int_aarch64_sve_fsqrt>;
+  defm FSQRT_ZPmZ  : sve_fp_2op_p_zd_HSD<0b01101, "fsqrt",  null_frag, AArch64fsqrt_mt>;
 
   let Predicates = [HasBF16, HasSVE] in {
     defm BFDOT_ZZZ    : sve_bfloat_dot<"bfdot", int_aarch64_sve_bfdot>;

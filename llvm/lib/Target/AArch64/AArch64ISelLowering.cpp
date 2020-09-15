@@ -145,6 +145,7 @@ static bool isMergePassthruOpcode(unsigned Opc) {
   case AArch64ISD::FROUND_MERGE_PASSTHRU:
   case AArch64ISD::FROUNDEVEN_MERGE_PASSTHRU:
   case AArch64ISD::FTRUNC_MERGE_PASSTHRU:
+  case AArch64ISD::FSQRT_MERGE_PASSTHRU:
     return true;
   }
 }
@@ -990,6 +991,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::FROUND, VT, Custom);
         setOperationAction(ISD::FROUNDEVEN, VT, Custom);
         setOperationAction(ISD::FTRUNC, VT, Custom);
+        setOperationAction(ISD::FSQRT, VT, Custom);
       }
     }
 
@@ -1502,6 +1504,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::FROUND_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::FROUNDEVEN_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::FTRUNC_MERGE_PASSTHRU)
+    MAKE_CASE(AArch64ISD::FSQRT_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::SETCC_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::ADC)
     MAKE_CASE(AArch64ISD::SBC)
@@ -3385,6 +3388,9 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_frintz:
     return DAG.getNode(AArch64ISD::FTRUNC_MERGE_PASSTHRU, dl, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
+  case Intrinsic::aarch64_sve_fsqrt:
+    return DAG.getNode(AArch64ISD::FSQRT_MERGE_PASSTHRU, dl, Op.getValueType(),
+                       Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
   case Intrinsic::aarch64_sve_convert_to_svbool: {
     EVT OutVT = Op.getValueType();
     EVT InVT = Op.getOperand(1).getValueType();
@@ -3696,6 +3702,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FROUNDEVEN_MERGE_PASSTHRU);
   case ISD::FTRUNC:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FTRUNC_MERGE_PASSTHRU);
+  case ISD::FSQRT:
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FSQRT_MERGE_PASSTHRU);
   case ISD::FP_ROUND:
   case ISD::STRICT_FP_ROUND:
     return LowerFP_ROUND(Op, DAG);
