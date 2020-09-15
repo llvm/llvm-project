@@ -2151,13 +2151,6 @@ def SwiftBridge : Attr {
   let Documentation = [SwiftBridgeDocs];
 }
 
-def SwiftBridgedTypedef : Attr {
-  let Spellings = [GNU<"swift_bridged_typedef">];
-  let Subjects = SubjectList<[TypedefName], ErrorDiag, "typedefs">;
-  let Args = [];
-  let Documentation = [SwiftBridgedTypedefDocs];
-}
-
 def SwiftName : InheritableAttr {
   let Spellings = [GCC<"swift_name">];
   let Args = [StringArgument<"Name">];
@@ -2221,6 +2214,12 @@ def SwiftVersionedRemoval : Attr {
       return static_cast<attr::Kind>(getRawKind());
     }
   }];
+}
+
+def SwiftBridgedTypedef : InheritableAttr {
+  let Spellings = [GNU<"swift_bridged_typedef">];
+  let Subjects = SubjectList<[TypedefName], ErrorDiag>;
+  let Documentation = [SwiftBridgedTypedefDocs];
 }
 
 def SwiftObjCMembers : Attr {
