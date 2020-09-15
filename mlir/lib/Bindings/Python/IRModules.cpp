@@ -285,10 +285,8 @@ public:
     c.def_property_readonly(
         "value",
         [](PyStringAttribute &self) {
-          PySinglePartStringAccumulator accum;
-          mlirStringAttrGetValue(self.attr, accum.getCallback(),
-                                 accum.getUserData());
-          return accum.takeValue();
+          MlirStringRef stringRef = mlirStringAttrGetValue(self.attr);
+          return py::str(stringRef.data, stringRef.length);
         },
         "Returns the value of the string attribute");
   }
