@@ -13,10 +13,6 @@
 //   OutIter
 //   move(InIter first, InIter last, OutIter result);
 
-// UNSUPPORTED: clang-6, clang-7
-// UNSUPPORTED: apple-clang-9, apple-clang-10, apple-clang-11
-// UNSUPPORTED: gcc-5, gcc-6, gcc-7, gcc-8
-
 #include <algorithm>
 #include <cassert>
 #include <memory>
@@ -25,11 +21,11 @@
 #include "test_iterators.h"
 
 template <class InIter, class OutIter>
-_LIBCPP_CONSTEXPR_AFTER_CXX17 bool
+void
 test()
 {
     const unsigned N = 1000;
-    int ia[N] = {};
+    int ia[N];
     for (unsigned i = 0; i < N; ++i)
         ia[i] = i;
     int ib[N] = {0};
@@ -38,8 +34,6 @@ test()
     assert(base(r) == ib+N);
     for (unsigned i = 0; i < N; ++i)
         assert(ia[i] == ib[i]);
-
-    return true;
 }
 
 #if TEST_STD_VER >= 11
@@ -133,38 +127,6 @@ int main(int, char**)
     test1<std::unique_ptr<int>*, random_access_iterator<std::unique_ptr<int>*> >();
     test1<std::unique_ptr<int>*, std::unique_ptr<int>*>();
 #endif // TEST_STD_VER >= 11
-
-#if TEST_STD_VER > 17
-    static_assert(test<input_iterator<const int*>, input_iterator<int*> >());
-    static_assert(test<input_iterator<const int*>, forward_iterator<int*> >());
-    static_assert(test<input_iterator<const int*>, bidirectional_iterator<int*> >());
-    static_assert(test<input_iterator<const int*>, random_access_iterator<int*> >());
-    static_assert(test<input_iterator<const int*>, int*>());
-
-    static_assert(test<forward_iterator<const int*>, input_iterator<int*> >());
-    static_assert(test<forward_iterator<const int*>, forward_iterator<int*> >());
-    static_assert(test<forward_iterator<const int*>, bidirectional_iterator<int*> >());
-    static_assert(test<forward_iterator<const int*>, random_access_iterator<int*> >());
-    static_assert(test<forward_iterator<const int*>, int*>());
-
-    static_assert(test<bidirectional_iterator<const int*>, input_iterator<int*> >());
-    static_assert(test<bidirectional_iterator<const int*>, forward_iterator<int*> >());
-    static_assert(test<bidirectional_iterator<const int*>, bidirectional_iterator<int*> >());
-    static_assert(test<bidirectional_iterator<const int*>, random_access_iterator<int*> >());
-    static_assert(test<bidirectional_iterator<const int*>, int*>());
-
-    static_assert(test<random_access_iterator<const int*>, input_iterator<int*> >());
-    static_assert(test<random_access_iterator<const int*>, forward_iterator<int*> >());
-    static_assert(test<random_access_iterator<const int*>, bidirectional_iterator<int*> >());
-    static_assert(test<random_access_iterator<const int*>, random_access_iterator<int*> >());
-    static_assert(test<random_access_iterator<const int*>, int*>());
-
-    static_assert(test<const int*, input_iterator<int*> >());
-    static_assert(test<const int*, forward_iterator<int*> >());
-    static_assert(test<const int*, bidirectional_iterator<int*> >());
-    static_assert(test<const int*, random_access_iterator<int*> >());
-    static_assert(test<const int*, int*>());
-#endif  // TEST_STD_VER > 17
 
   return 0;
 }
