@@ -476,8 +476,7 @@ unsigned DIEExpr::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   case dwarf::DW_FORM_data8:
     return 8;
   case dwarf::DW_FORM_sec_offset:
-    // FIXME: add support for DWARF64
-    return 4;
+    return AP->getDwarfOffsetByteSize();
   default:
     llvm_unreachable("DIE Value form not supported yet");
   }
@@ -505,8 +504,7 @@ unsigned DIELabel::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
     return 4;
   case dwarf::DW_FORM_sec_offset:
   case dwarf::DW_FORM_strp:
-    // FIXME: add support for DWARF64
-    return 4;
+    return AP->getDwarfOffsetByteSize();
   case dwarf::DW_FORM_addr:
     return AP->MAI->getCodePointerSize();
   default:
@@ -551,8 +549,7 @@ unsigned DIEDelta::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   case dwarf::DW_FORM_data4:
     return 4;
   case dwarf::DW_FORM_sec_offset:
-    // FIXME: add support for DWARF64
-    return 4;
+    return AP->getDwarfOffsetByteSize();
   default:
     llvm_unreachable("DIE Value form not supported yet");
   }
@@ -822,10 +819,17 @@ unsigned DIELocList::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   case dwarf::DW_FORM_loclistx:
     return getULEB128Size(Index);
   case dwarf::DW_FORM_data4:
+    assert(!AP->isDwarf64() &&
+           "DW_FORM_data4 is not suitable to emit a pointer to a location list "
+           "in the 64-bit DWARF format");
     return 4;
+  case dwarf::DW_FORM_data8:
+    assert(AP->isDwarf64() &&
+           "DW_FORM_data8 is not suitable to emit a pointer to a location list "
+           "in the 32-bit DWARF format");
+    return 8;
   case dwarf::DW_FORM_sec_offset:
-    // FIXME: add support for DWARF64
-    return 4;
+    return AP->getDwarfOffsetByteSize();
   default:
     llvm_unreachable("DIE Value form not supported yet");
   }
