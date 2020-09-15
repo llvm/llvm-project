@@ -6930,7 +6930,7 @@ ExpectedStmt ASTNodeImporter::VisitImplicitCastExpr(ImplicitCastExpr *E) {
 
   return ImplicitCastExpr::Create(
       Importer.getToContext(), *ToTypeOrErr, E->getCastKind(), *ToSubExprOrErr,
-      &(*ToBasePathOrErr), E->getValueKind(), E->getFPFeatures());
+      &(*ToBasePathOrErr), E->getValueKind());
 }
 
 ExpectedStmt ASTNodeImporter::VisitExplicitCastExpr(ExplicitCastExpr *E) {
@@ -6957,8 +6957,8 @@ ExpectedStmt ASTNodeImporter::VisitExplicitCastExpr(ExplicitCastExpr *E) {
       return ToRParenLocOrErr.takeError();
     return CStyleCastExpr::Create(
         Importer.getToContext(), ToType, E->getValueKind(), E->getCastKind(),
-        ToSubExpr, ToBasePath, CCE->getFPFeatures(), ToTypeInfoAsWritten,
-        *ToLParenLocOrErr, *ToRParenLocOrErr);
+        ToSubExpr, ToBasePath, ToTypeInfoAsWritten, *ToLParenLocOrErr,
+        *ToRParenLocOrErr);
   }
 
   case Stmt::CXXFunctionalCastExprClass: {
@@ -6971,8 +6971,8 @@ ExpectedStmt ASTNodeImporter::VisitExplicitCastExpr(ExplicitCastExpr *E) {
       return ToRParenLocOrErr.takeError();
     return CXXFunctionalCastExpr::Create(
         Importer.getToContext(), ToType, E->getValueKind(), ToTypeInfoAsWritten,
-        E->getCastKind(), ToSubExpr, ToBasePath, FCE->getFPFeatures(),
-        *ToLParenLocOrErr, *ToRParenLocOrErr);
+        E->getCastKind(), ToSubExpr, ToBasePath, *ToLParenLocOrErr,
+        *ToRParenLocOrErr);
   }
 
   case Stmt::ObjCBridgedCastExprClass: {
@@ -7815,11 +7815,10 @@ ExpectedStmt ASTNodeImporter::VisitCXXNamedCastExpr(CXXNamedCastExpr *E) {
   if (!ToBasePathOrErr)
     return ToBasePathOrErr.takeError();
 
-  if (auto CCE = dyn_cast<CXXStaticCastExpr>(E)) {
+  if (isa<CXXStaticCastExpr>(E)) {
     return CXXStaticCastExpr::Create(
         Importer.getToContext(), ToType, VK, CK, ToSubExpr, &(*ToBasePathOrErr),
-        ToTypeInfoAsWritten, CCE->getFPFeatures(), ToOperatorLoc, ToRParenLoc,
-        ToAngleBrackets);
+        ToTypeInfoAsWritten, ToOperatorLoc, ToRParenLoc, ToAngleBrackets);
   } else if (isa<CXXDynamicCastExpr>(E)) {
     return CXXDynamicCastExpr::Create(
         Importer.getToContext(), ToType, VK, CK, ToSubExpr, &(*ToBasePathOrErr),
