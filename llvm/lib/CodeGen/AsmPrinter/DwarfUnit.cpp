@@ -300,10 +300,7 @@ void DwarfUnit::addLabel(DIELoc &Die, dwarf::Form Form, const MCSymbol *Label) {
 
 void DwarfUnit::addSectionOffset(DIE &Die, dwarf::Attribute Attribute,
                                  uint64_t Integer) {
-  if (DD->getDwarfVersion() >= 4)
-    addUInt(Die, Attribute, dwarf::DW_FORM_sec_offset, Integer);
-  else
-    addUInt(Die, Attribute, dwarf::DW_FORM_data4, Integer);
+  addUInt(Die, Attribute, DD->getDwarfSectionOffsetForm(), Integer);
 }
 
 unsigned DwarfTypeUnit::getOrCreateSourceID(const DIFile *File) {
@@ -1750,8 +1747,7 @@ DIE::value_iterator
 DwarfUnit::addSectionDelta(DIE &Die, dwarf::Attribute Attribute,
                            const MCSymbol *Hi, const MCSymbol *Lo) {
   return Die.addValue(DIEValueAllocator, Attribute,
-                      DD->getDwarfVersion() >= 4 ? dwarf::DW_FORM_sec_offset
-                                                 : dwarf::DW_FORM_data4,
+                      DD->getDwarfSectionOffsetForm(),
                       new (DIEValueAllocator) DIEDelta(Hi, Lo));
 }
 
