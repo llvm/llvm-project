@@ -33,7 +33,6 @@ DwarfStringPool::getEntryImpl(AsmPrinter &Asm, StringRef Str) {
     Entry.Symbol = ShouldCreateSymbols ? Asm.createTempSymbol(Prefix) : nullptr;
 
     NumBytes += Str.size() + 1;
-    assert(NumBytes > Entry.Offset && "Unexpected overflow");
   }
   return *I.first;
 }
