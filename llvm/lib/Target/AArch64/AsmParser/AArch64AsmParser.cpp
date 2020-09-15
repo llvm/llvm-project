@@ -5657,7 +5657,7 @@ bool AArch64AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   // Try @AUTH expressions: they're more complex than the usual symbol variants.
   if (!parseAuthExpr(Res, EndLoc))
     return false;
-  return getParser().parsePrimaryExpr(Res, EndLoc);
+  return getParser().parsePrimaryExpr(Res, EndLoc, nullptr);
 }
 
 ///  parseAuthExpr
@@ -5704,7 +5704,7 @@ bool AArch64AsmParser::parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc) {
         return true;
       Res = MCSymbolRefExpr::create(Ctx.getOrCreateSymbol(SymName), Ctx);
     } else {
-      if (Parser.parsePrimaryExpr(Res, EndLoc))
+      if (Parser.parsePrimaryExpr(Res, EndLoc, nullptr))
         return true;
     }
 

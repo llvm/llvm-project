@@ -25,10 +25,6 @@
 namespace clang {
 namespace clangd {
 namespace {
-llvm::Error makeError(const llvm::Twine &Msg) {
-  return llvm::make_error<llvm::StringError>(Msg,
-                                             llvm::inconvertibleErrorCode());
-}
 
 // IO PRIMITIVES
 // We use little-endian 32 bit ints, sometimes with variable-length encoding.
@@ -199,7 +195,7 @@ llvm::Expected<StringTableIn> readStringTable(llvm::StringRef Data) {
   Reader R(Data);
   size_t UncompressedSize = R.consume32();
   if (R.err())
-    return makeError("Truncated string table");
+    return error("Truncated string table");
 
   llvm::StringRef Uncompressed;
   llvm::SmallString<1> UncompressedStorage;
@@ -218,12 +214,12 @@ llvm::Expected<StringTableIn> readStringTable(llvm::StringRef Data) {
   for (Reader R(Uncompressed); !R.eof();) {
     auto Len = R.rest().find(0);
     if (Len == llvm::StringRef::npos)
-      return makeError("Bad string table: not null terminated");
+      return error("Bad string table: not null terminated");
     Table.Strings.push_back(Saver.save(R.consume(Len)));
     R.consume8();
   }
   if (R.err())
-    return makeError("Truncated string table");
+    return error("Truncated string table");
   return std::move(Table);
 }
 
@@ -426,24 +422,23 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
   if (!RIFF)
     return RIFF.takeError();
   if (RIFF->Type != riff::fourCC("CdIx"))
-    return makeError("wrong RIFF filetype: " + riff::fourCCStr(RIFF->Type));
+    return error("wrong RIFF filetype: {0}", riff::fourCCStr(RIFF->Type));
   llvm::StringMap<llvm::StringRef> Chunks;
   for (const auto &Chunk : RIFF->Chunks)
     Chunks.try_emplace(llvm::StringRef(Chunk.ID.data(), Chunk.ID.size()),
                        Chunk.Data);
 
   if (!Chunks.count("meta"))
-    return makeError("missing meta chunk");
+    return error("missing meta chunk");
   Reader Meta(Chunks.lookup("meta"));
   auto SeenVersion = Meta.consume32();
   if (SeenVersion != Version)
-    return makeError("wrong version: want " + llvm::Twine(Version) + ", got " +
-                     llvm::Twine(SeenVersion));
+    return error("wrong version: want {0}, got {1}", Version, SeenVersion);
 
   // meta chunk is checked above, as we prefer the "version mismatch" error.
   for (llvm::StringRef RequiredChunk : {"stri"})
     if (!Chunks.count(RequiredChunk))
-      return makeError("missing required chunk " + RequiredChunk);
+      return error("missing required chunk {0}", RequiredChunk);
 
   auto Strings = readStringTable(Chunks.lookup("stri"));
   if (!Strings)
@@ -464,7 +459,7 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
         Include = Result.Sources->try_emplace(Include).first->getKey();
     }
     if (SrcsReader.err())
-      return makeError("malformed or truncated include uri");
+      return error("malformed or truncated include uri");
   }
 
   if (Chunks.count("symb")) {
@@ -473,7 +468,7 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
     while (!SymbolReader.eof())
       Symbols.insert(readSymbol(SymbolReader, Strings->Strings));
     if (SymbolReader.err())
-      return makeError("malformed or truncated symbol");
+      return error("malformed or truncated symbol");
     Result.Symbols = std::move(Symbols).build();
   }
   if (Chunks.count("refs")) {
@@ -485,7 +480,7 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
         Refs.insert(RefsBundle.first, Ref);
     }
     if (RefsReader.err())
-      return makeError("malformed or truncated refs");
+      return error("malformed or truncated refs");
     Result.Refs = std::move(Refs).build();
   }
   if (Chunks.count("rela")) {
@@ -496,13 +491,13 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
       Relations.insert(Relation);
     }
     if (RelationsReader.err())
-      return makeError("malformed or truncated relations");
+      return error("malformed or truncated relations");
     Result.Relations = std::move(Relations).build();
   }
   if (Chunks.count("cmdl")) {
     Reader CmdReader(Chunks.lookup("cmdl"));
     if (CmdReader.err())
-      return makeError("malformed or truncated commandline section");
+      return error("malformed or truncated commandline section");
     InternedCompileCommand Cmd =
         readCompileCommand(CmdReader, Strings->Strings);
     Result.Cmd.emplace();
@@ -660,8 +655,8 @@ llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef Data) {
   } else if (auto YAMLContents = readYAML(Data)) {
     return std::move(*YAMLContents);
   } else {
-    return makeError("Not a RIFF file and failed to parse as YAML: " +
-                     llvm::toString(YAMLContents.takeError()));
+    return error("Not a RIFF file and failed to parse as YAML: {0}",
+                 YAMLContents.takeError());
   }
 }
 

@@ -24,19 +24,29 @@ using namespace llvm;
 
 /// Return a constant boolean vector that has true elements in all positions
 /// where the input constant data vector has an element with the sign bit set.
-static Constant *getNegativeIsTrueBoolVec(ConstantDataVector *V) {
-  SmallVector<Constant *, 32> BoolVec;
-  IntegerType *BoolTy = Type::getInt1Ty(V->getContext());
-  for (unsigned I = 0, E = V->getNumElements(); I != E; ++I) {
-    Constant *Elt = V->getElementAsConstant(I);
-    assert((isa<ConstantInt>(Elt) || isa<ConstantFP>(Elt)) &&
-           "Unexpected constant data vector element type");
-    bool Sign = V->getElementType()->isIntegerTy()
-                    ? cast<ConstantInt>(Elt)->isNegative()
-                    : cast<ConstantFP>(Elt)->isNegative();
-    BoolVec.push_back(ConstantInt::get(BoolTy, Sign));
-  }
-  return ConstantVector::get(BoolVec);
+static Constant *getNegativeIsTrueBoolVec(Constant *V) {
+  VectorType *IntTy = VectorType::getInteger(cast<VectorType>(V->getType()));
+  V = ConstantExpr::getBitCast(V, IntTy);
+  V = ConstantExpr::getICmp(CmpInst::ICMP_SGT, Constant::getNullValue(IntTy),
+                            V);
+  return V;
+}
+
+/// Convert the x86 XMM integer vector mask to a vector of bools based on
+/// each element's most significant bit (the sign bit).
+static Value *getBoolVecFromMask(Value *Mask) {
+  // Fold Constant Mask.
+  if (auto *ConstantMask = dyn_cast<ConstantDataVector>(Mask))
+    return getNegativeIsTrueBoolVec(ConstantMask);
+
+  // Mask was extended from a boolean vector.
+  Value *ExtMask;
+  if (PatternMatch::match(
+          Mask, PatternMatch::m_SExt(PatternMatch::m_Value(ExtMask))) &&
+      ExtMask->getType()->isIntOrIntVectorTy(1))
+    return ExtMask;
+
+  return nullptr;
 }
 
 // TODO: If the x86 backend knew how to convert a bool vector mask back to an
@@ -47,32 +57,26 @@ static Instruction *simplifyX86MaskedLoad(IntrinsicInst &II, InstCombiner &IC) {
   Value *Mask = II.getOperand(1);
   Constant *ZeroVec = Constant::getNullValue(II.getType());
 
-  // Special case a zero mask since that's not a ConstantDataVector.
-  // This masked load instruction creates a zero vector.
+  // Zero Mask - masked load instruction creates a zero vector.
   if (isa<ConstantAggregateZero>(Mask))
     return IC.replaceInstUsesWith(II, ZeroVec);
 
-  auto *ConstMask = dyn_cast<ConstantDataVector>(Mask);
-  if (!ConstMask)
-    return nullptr;
+  // The mask is constant or extended from a bool vector. Convert this x86
+  // intrinsic to the LLVM intrinsic to allow target-independent optimizations.
+  if (Value *BoolMask = getBoolVecFromMask(Mask)) {
+    // First, cast the x86 intrinsic scalar pointer to a vector pointer to match
+    // the LLVM intrinsic definition for the pointer argument.
+    unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
+    PointerType *VecPtrTy = PointerType::get(II.getType(), AddrSpace);
+    Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
 
-  // The mask is constant. Convert this x86 intrinsic to the LLVM instrinsic
-  // to allow target-independent optimizations.
+    // The pass-through vector for an x86 masked load is a zero vector.
+    CallInst *NewMaskedLoad =
+        IC.Builder.CreateMaskedLoad(PtrCast, Align(1), BoolMask, ZeroVec);
+    return IC.replaceInstUsesWith(II, NewMaskedLoad);
+  }
 
-  // First, cast the x86 intrinsic scalar pointer to a vector pointer to match
-  // the LLVM intrinsic definition for the pointer argument.
-  unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
-  PointerType *VecPtrTy = PointerType::get(II.getType(), AddrSpace);
-  Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
-
-  // Second, convert the x86 XMM integer vector mask to a vector of bools based
-  // on each element's most significant bit (the sign bit).
-  Constant *BoolMask = getNegativeIsTrueBoolVec(ConstMask);
-
-  // The pass-through vector for an x86 masked load is a zero vector.
-  CallInst *NewMaskedLoad =
-      IC.Builder.CreateMaskedLoad(PtrCast, Align(1), BoolMask, ZeroVec);
-  return IC.replaceInstUsesWith(II, NewMaskedLoad);
+  return nullptr;
 }
 
 // TODO: If the x86 backend knew how to convert a bool vector mask back to an
@@ -83,8 +87,7 @@ static bool simplifyX86MaskedStore(IntrinsicInst &II, InstCombiner &IC) {
   Value *Mask = II.getOperand(1);
   Value *Vec = II.getOperand(2);
 
-  // Special case a zero mask since that's not a ConstantDataVector:
-  // this masked store instruction does nothing.
+  // Zero Mask - this masked store instruction does nothing.
   if (isa<ConstantAggregateZero>(Mask)) {
     IC.eraseInstFromFunction(II);
     return true;
@@ -95,28 +98,21 @@ static bool simplifyX86MaskedStore(IntrinsicInst &II, InstCombiner &IC) {
   if (II.getIntrinsicID() == Intrinsic::x86_sse2_maskmov_dqu)
     return false;
 
-  auto *ConstMask = dyn_cast<ConstantDataVector>(Mask);
-  if (!ConstMask)
-    return false;
+  // The mask is constant or extended from a bool vector. Convert this x86
+  // intrinsic to the LLVM intrinsic to allow target-independent optimizations.
+  if (Value *BoolMask = getBoolVecFromMask(Mask)) {
+    unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
+    PointerType *VecPtrTy = PointerType::get(Vec->getType(), AddrSpace);
+    Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
 
-  // The mask is constant. Convert this x86 intrinsic to the LLVM instrinsic
-  // to allow target-independent optimizations.
+    IC.Builder.CreateMaskedStore(Vec, PtrCast, Align(1), BoolMask);
 
-  // First, cast the x86 intrinsic scalar pointer to a vector pointer to match
-  // the LLVM intrinsic definition for the pointer argument.
-  unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
-  PointerType *VecPtrTy = PointerType::get(Vec->getType(), AddrSpace);
-  Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
+    // 'Replace uses' doesn't work for stores. Erase the original masked store.
+    IC.eraseInstFromFunction(II);
+    return true;
+  }
 
-  // Second, convert the x86 XMM integer vector mask to a vector of bools based
-  // on each element's most significant bit (the sign bit).
-  Constant *BoolMask = getNegativeIsTrueBoolVec(ConstMask);
-
-  IC.Builder.CreateMaskedStore(Vec, PtrCast, Align(1), BoolMask);
-
-  // 'Replace uses' doesn't work for stores. Erase the original masked store.
-  IC.eraseInstFromFunction(II);
-  return true;
+  return false;
 }
 
 static Value *simplifyX86immShift(const IntrinsicInst &II,

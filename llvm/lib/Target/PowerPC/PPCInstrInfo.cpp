@@ -2222,6 +2222,112 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   return true;
 }
 
+bool PPCInstrInfo::getMemOperandsWithOffsetWidth(
+    const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
+    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    const TargetRegisterInfo *TRI) const {
+  const MachineOperand *BaseOp;
+  OffsetIsScalable = false;
+  if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width, TRI))
+    return false;
+  BaseOps.push_back(BaseOp);
+  return true;
+}
+
+static bool isLdStSafeToCluster(const MachineInstr &LdSt,
+                                const TargetRegisterInfo *TRI) {
+  // If this is a volatile load/store, don't mess with it.
+  if (LdSt.hasOrderedMemoryRef() || LdSt.getNumExplicitOperands() != 3)
+    return false;
+
+  if (LdSt.getOperand(2).isFI())
+    return true;
+
+  assert(LdSt.getOperand(2).isReg() && "Expected a reg operand.");
+  // Can't cluster if the instruction modifies the base register
+  // or it is update form. e.g. ld r2,3(r2)
+  if (LdSt.modifiesRegister(LdSt.getOperand(2).getReg(), TRI))
+    return false;
+
+  return true;
+}
+
+// Only cluster instruction pair that have the same opcode, and they are
+// clusterable according to PowerPC specification.
+static bool isClusterableLdStOpcPair(unsigned FirstOpc, unsigned SecondOpc,
+                                     const PPCSubtarget &Subtarget) {
+  switch (FirstOpc) {
+  default:
+    return false;
+  case PPC::STD:
+  case PPC::STFD:
+  case PPC::STXSD:
+  case PPC::DFSTOREf64:
+    return FirstOpc == SecondOpc;
+  // PowerPC backend has opcode STW/STW8 for instruction "stw" to deal with
+  // 32bit and 64bit instruction selection. They are clusterable pair though
+  // they are different opcode.
+  case PPC::STW:
+  case PPC::STW8:
+    return SecondOpc == PPC::STW || SecondOpc == PPC::STW8;
+  }
+}
+
+bool PPCInstrInfo::shouldClusterMemOps(
+    ArrayRef<const MachineOperand *> BaseOps1,
+    ArrayRef<const MachineOperand *> BaseOps2, unsigned NumLoads,
+    unsigned NumBytes) const {
+
+  assert(BaseOps1.size() == 1 && BaseOps2.size() == 1);
+  const MachineOperand &BaseOp1 = *BaseOps1.front();
+  const MachineOperand &BaseOp2 = *BaseOps2.front();
+  assert((BaseOp1.isReg() || BaseOp1.isFI()) &&
+         "Only base registers and frame indices are supported.");
+
+  // The NumLoads means the number of loads that has been clustered.
+  // Don't cluster memory op if there are already two ops clustered at least.
+  if (NumLoads > 2)
+    return false;
+
+  // Cluster the load/store only when they have the same base
+  // register or FI.
+  if ((BaseOp1.isReg() != BaseOp2.isReg()) ||
+      (BaseOp1.isReg() && BaseOp1.getReg() != BaseOp2.getReg()) ||
+      (BaseOp1.isFI() && BaseOp1.getIndex() != BaseOp2.getIndex()))
+    return false;
+
+  // Check if the load/store are clusterable according to the PowerPC
+  // specification.
+  const MachineInstr &FirstLdSt = *BaseOp1.getParent();
+  const MachineInstr &SecondLdSt = *BaseOp2.getParent();
+  unsigned FirstOpc = FirstLdSt.getOpcode();
+  unsigned SecondOpc = SecondLdSt.getOpcode();
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+  // Cluster the load/store only when they have the same opcode, and they are
+  // clusterable opcode according to PowerPC specification.
+  if (!isClusterableLdStOpcPair(FirstOpc, SecondOpc, Subtarget))
+    return false;
+
+  // Can't cluster load/store that have ordered or volatile memory reference.
+  if (!isLdStSafeToCluster(FirstLdSt, TRI) ||
+      !isLdStSafeToCluster(SecondLdSt, TRI))
+    return false;
+
+  int64_t Offset1 = 0, Offset2 = 0;
+  unsigned Width1 = 0, Width2 = 0;
+  const MachineOperand *Base1 = nullptr, *Base2 = nullptr;
+  if (!getMemOperandWithOffsetWidth(FirstLdSt, Base1, Offset1, Width1, TRI) ||
+      !getMemOperandWithOffsetWidth(SecondLdSt, Base2, Offset2, Width2, TRI) ||
+      Width1 != Width2)
+    return false;
+
+  assert(Base1 == &BaseOp1 && Base2 == &BaseOp2 &&
+         "getMemOperandWithOffsetWidth return incorrect base op");
+  // The caller should already have ordered FirstMemOp/SecondMemOp by offset.
+  assert(Offset1 <= Offset2 && "Caller should have ordered offsets.");
+  return Offset1 + Width1 == Offset2;
+}
+
 /// GetInstSize - Return the number of bytes of code the specified
 /// instruction may be.  This returns the maximum number of bytes.
 ///
@@ -4664,7 +4770,8 @@ bool PPCInstrInfo::getMemOperandWithOffsetWidth(
     return false;
 
   // Handle only loads/stores with base register followed by immediate offset.
-  if (LdSt.getNumExplicitOperands() != 3)
+  if (!LdSt.getOperand(1).isImm() ||
+      (!LdSt.getOperand(2).isReg() && !LdSt.getOperand(2).isFI()))
     return false;
   if (!LdSt.getOperand(1).isImm() ||
       (!LdSt.getOperand(2).isReg() && !LdSt.getOperand(2).isFI()))

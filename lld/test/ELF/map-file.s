@@ -11,7 +11,7 @@
 # RUN: ld.lld %t1.o %t2.o %t3.o %t4.a %t5.so -o %t -M | FileCheck --match-full-lines --strict-whitespace %s
 # RUN: ld.lld %t1.o %t2.o %t3.o %t4.a %t5.so -o %t --print-map | FileCheck --match-full-lines -strict-whitespace %s
 # RUN: ld.lld %t1.o %t2.o %t3.o %t4.a %t5.so -o %t -Map=%t.map
-# RUN: FileCheck -strict-whitespace %s < %t.map
+# RUN: FileCheck -match-full-lines -strict-whitespace %s < %t.map
 
 .global _start
 _start:

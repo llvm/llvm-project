@@ -223,11 +223,6 @@ public:
       // We don't have legalization support for ordered FP reductions.
       return !II->getFastMathFlags().allowReassoc();
 
-    case Intrinsic::experimental_vector_reduce_fmax:
-    case Intrinsic::experimental_vector_reduce_fmin:
-      // Lowering asserts that there are no NaNs.
-      return !II->getFastMathFlags().noNaNs();
-
     default:
       // Don't expand anything else, let legalization deal with it.
       return false;

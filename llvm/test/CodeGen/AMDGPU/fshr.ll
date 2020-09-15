@@ -1084,23 +1084,23 @@ define <2 x i24> @v_fshr_v2i24(<2 x i24> %src0, <2 x i24> %src1, <2 x i24> %src2
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 8, v3
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v6, 4, v6
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 4, v7
-; GFX9-NEXT:    v_mul_lo_u32 v7, v7, 24
 ; GFX9-NEXT:    v_mul_lo_u32 v6, v6, 24
+; GFX9-NEXT:    v_mul_lo_u32 v7, v7, 24
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v5, 8, v5
-; GFX9-NEXT:    v_sub_u32_e32 v2, v2, v7
 ; GFX9-NEXT:    v_sub_u32_e32 v1, v1, v6
-; GFX9-NEXT:    v_add_u32_e32 v2, 8, v2
+; GFX9-NEXT:    v_sub_u32_e32 v2, v2, v7
 ; GFX9-NEXT:    v_add_u32_e32 v1, 8, v1
-; GFX9-NEXT:    v_alignbit_b32 v2, v4, v3, v2
+; GFX9-NEXT:    v_add_u32_e32 v2, 8, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_alignbit_b32 v1, v8, v5, v1
-; GFX9-NEXT:    v_lshrrev_b32_e32 v3, 8, v2
+; GFX9-NEXT:    v_alignbit_b32 v2, v4, v3, v2
 ; GFX9-NEXT:    buffer_store_byte v2, v0, s[0:3], 0 offen offset:3
+; GFX9-NEXT:    buffer_store_byte_d16_hi v2, v0, s[0:3], 0 offen offset:5
 ; GFX9-NEXT:    buffer_store_byte_d16_hi v1, v0, s[0:3], 0 offen offset:2
 ; GFX9-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen
-; GFX9-NEXT:    buffer_store_byte_d16_hi v2, v0, s[0:3], 0 offen offset:5
-; GFX9-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:4
+; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
+; GFX9-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;

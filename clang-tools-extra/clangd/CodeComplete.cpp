@@ -333,8 +333,7 @@ struct CodeCompletionBuilder {
         return ResolvedInserted.takeError();
       auto Spelled = Includes.calculateIncludePath(*ResolvedInserted, FileName);
       if (!Spelled)
-        return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                       "Header not on include path");
+        return error("Header not on include path");
       return std::make_pair(
           std::move(*Spelled),
           Includes.shouldInsertInclude(*ResolvedDeclaring, *ResolvedInserted));

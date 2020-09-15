@@ -243,6 +243,27 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
     CC1Args.push_back("+sign-ext");
   }
 
+  if (!DriverArgs.hasFlag(options::OPT_mmutable_globals,
+                          options::OPT_mno_mutable_globals, false)) {
+    // -fPIC implies +mutable-globals because the PIC ABI used by the linker
+    // depends on importing and exporting mutable globals.
+    llvm::Reloc::Model RelocationModel;
+    unsigned PICLevel;
+    bool IsPIE;
+    std::tie(RelocationModel, PICLevel, IsPIE) =
+        ParsePICArgs(*this, DriverArgs);
+    if (RelocationModel == llvm::Reloc::PIC_) {
+      if (DriverArgs.hasFlag(options::OPT_mno_mutable_globals,
+                             options::OPT_mmutable_globals, false)) {
+        getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+            << "-fPIC"
+            << "-mno-mutable-globals";
+      }
+      CC1Args.push_back("-target-feature");
+      CC1Args.push_back("+mutable-globals");
+    }
+  }
+
   if (DriverArgs.getLastArg(options::OPT_fwasm_exceptions)) {
     // '-fwasm-exceptions' is not compatible with '-mno-exception-handling'
     if (DriverArgs.hasFlag(options::OPT_mno_exception_handing,

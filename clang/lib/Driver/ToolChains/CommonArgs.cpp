@@ -706,10 +706,10 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
         HelperStaticRuntimes.push_back("asan-preinit");
     }
-    if (SanArgs.needsHeapProfRt() && SanArgs.linkRuntimes()) {
-      SharedRuntimes.push_back("heapprof");
+    if (SanArgs.needsMemProfRt() && SanArgs.linkRuntimes()) {
+      SharedRuntimes.push_back("memprof");
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
-        HelperStaticRuntimes.push_back("heapprof-preinit");
+        HelperStaticRuntimes.push_back("memprof-preinit");
     }
     if (SanArgs.needsUbsanRt() && SanArgs.linkRuntimes()) {
       if (SanArgs.requiresMinimalRuntime())
@@ -748,11 +748,11 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       StaticRuntimes.push_back("asan_cxx");
   }
 
-  if (!SanArgs.needsSharedRt() && SanArgs.needsHeapProfRt() &&
+  if (!SanArgs.needsSharedRt() && SanArgs.needsMemProfRt() &&
       SanArgs.linkRuntimes()) {
-    StaticRuntimes.push_back("heapprof");
+    StaticRuntimes.push_back("memprof");
     if (SanArgs.linkCXXRuntimes())
-      StaticRuntimes.push_back("heapprof_cxx");
+      StaticRuntimes.push_back("memprof_cxx");
   }
 
   if (!SanArgs.needsSharedRt() && SanArgs.needsHwasanRt() && SanArgs.linkRuntimes()) {

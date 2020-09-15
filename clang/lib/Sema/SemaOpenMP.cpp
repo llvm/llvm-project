@@ -15390,10 +15390,10 @@ static bool actOnOMPReductionKindClause(
         RHS = S.DefaultLvalueConversion(RHS.get());
         LHS = ImplicitCastExpr::Create(
             Context, PtrRedTy, CK_UncheckedDerivedToBase, LHS.get(), &BasePath,
-            LHS.get()->getValueKind(), S.CurFPFeatureOverrides());
+            LHS.get()->getValueKind(), FPOptionsOverride());
         RHS = ImplicitCastExpr::Create(
             Context, PtrRedTy, CK_UncheckedDerivedToBase, RHS.get(), &BasePath,
-            RHS.get()->getValueKind(), S.CurFPFeatureOverrides());
+            RHS.get()->getValueKind(), FPOptionsOverride());
       }
       FunctionProtoType::ExtProtoInfo EPI;
       QualType Params[] = {PtrRedTy, PtrRedTy};

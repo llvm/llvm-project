@@ -369,3 +369,58 @@ for.end:                                          ; preds = %for.body
   ret i32 0
 }
 
+declare i1 @should_exit(i32) readnone
+declare void @init([32 x i32]*)
+
+; Test case for PR47498.
+; %l.1 may read the result of `store i32 10, i32* %p.1` in %storebb, because
+; after %storebb has been executed, %loop.1.header might be executed again.
+; Make sure %l.1's defining access is the MemoryPhi in the block.
+define void @dont_merge_noalias_complex_2(i32 %arg, i32 %arg1)  {
+; CHECK-LABEL: define void @dont_merge_noalias_complex_2(
+
+; CHECK-LABEL: entry:
+; CHECK:       ; 1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT:  call void @init([32 x i32]* %tmp)
+
+; CHECK-LABEL: loop.1.header:
+; CHECK-NEXT:  ; 4 = MemoryPhi({entry,1},{loop.1.latch,3})
+; CHECK:       ; MemoryUse(4) MayAlias
+; CHECK-NEXT:  %l.1 = load i32, i32* %p.1, align 4
+
+; CHECK-LABEL: loop.1.latch:
+; CHECK-NEXT:  ; 3 = MemoryPhi({loop.1.header,4},{storebb,2})
+
+; CHECK-LABEL: storebb:
+; NOLIMIT:     ; MemoryUse(1) MayAlias
+; LIMIT:       ; MemoryUse(4) MayAlias
+; CHECK-NEXT:  %l.2 = load i32, i32* %p.2, align 4
+; CHECK-NEXT:  ; 2 = MemoryDef(4)
+; CHECK-NEXT:  store i32 10, i32* %p.1, align 4
+entry:
+  %tmp = alloca [32 x i32], align 16
+  call void @init([32 x i32]* %tmp)
+  br label %loop.1.header
+
+loop.1.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.1.latch ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %p.1 = getelementptr inbounds [32 x i32], [32 x i32]* %tmp, i64 0, i64 %iv.next
+  %l.1 = load i32, i32* %p.1, align 4
+  %tmp244 = icmp ult i64 %iv, 10
+  br i1 %tmp244, label %loop.1.latch, label %storebb
+
+loop.1.latch:
+  %ec = call i1 @should_exit(i32 %l.1)
+  br i1 %ec, label %exit, label %loop.1.header
+
+storebb:
+  %iv.add2 = add nuw nsw i64 %iv, 2
+  %p.2 = getelementptr inbounds [32 x i32], [32 x i32]* %tmp, i64 0, i64 %iv.add2
+  %l.2 = load i32, i32* %p.2, align 4
+  store i32 10, i32* %p.1, align 4
+  br label %loop.1.latch
+
+exit:
+  ret void
+}

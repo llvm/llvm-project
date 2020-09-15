@@ -78,70 +78,70 @@ t2 FOOBAR <"gh",,<10,11>,<12>,"ijk">
 .code
 
 t3:
-mov eax, t2.f.h
-mov eax, [t2].f.h
-mov eax, [t2.f.h]
+mov al, t2.f.h
+mov al, [t2].f.h
+mov al, [t2.f.h]
 
 ; CHECK: t3:
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+11]
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+11]
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+11]
+; CHECK-NEXT: mov al, byte ptr [rip + t2+11]
+; CHECK-NEXT: mov al, byte ptr [rip + t2+11]
+; CHECK-NEXT: mov al, byte ptr [rip + t2+11]
 
 t4:
-mov eax, j.FOOBAR.f.h
-mov eax, j.baz.b
+mov al, j.FOOBAR.f.h
+mov al, j.baz.b
 
 ; CHECK: t4:
-; CHECK-NEXT: mov eax, dword ptr [rip + j+11]
-; CHECK-NEXT: mov eax, dword ptr [rip + j+1]
+; CHECK-NEXT: mov al, byte ptr [rip + j+11]
+; CHECK-NEXT: mov al, byte ptr [rip + j+1]
 
 t5:
-mov eax, [ebx].FOOBAR.f.h
-mov eax, [ebx.FOOBAR].f.h
-mov eax, [ebx.FOOBAR.f.h]
+mov al, [ebx].FOOBAR.f.h
+mov al, [ebx.FOOBAR].f.h
+mov al, [ebx.FOOBAR.f.h]
 
 ; CHECK: t5:
-; CHECK-NEXT: mov eax, dword ptr [ebx + 11]
-; CHECK-NEXT: mov eax, dword ptr [ebx + 11]
-; CHECK-NEXT: mov eax, dword ptr [ebx + 11]
+; CHECK-NEXT: mov al, byte ptr [ebx + 11]
+; CHECK-NEXT: mov al, byte ptr [ebx + 11]
+; CHECK-NEXT: mov al, byte ptr [ebx + 11]
 
 t6:
-mov eax, t2.FOOBAR.f.h
-mov eax, [t2].FOOBAR.f.h
-mov eax, [t2.FOOBAR].f.h
-mov eax, [t2.FOOBAR.f.h]
+mov al, t2.FOOBAR.f.h
+mov al, [t2].FOOBAR.f.h
+mov al, [t2.FOOBAR].f.h
+mov al, [t2.FOOBAR.f.h]
 
 ; CHECK: t6:
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+11]
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+11]
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+11]
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+11]
+; CHECK-NEXT: mov al, byte ptr [rip + t2+11]
+; CHECK-NEXT: mov al, byte ptr [rip + t2+11]
+; CHECK-NEXT: mov al, byte ptr [rip + t2+11]
+; CHECK-NEXT: mov al, byte ptr [rip + t2+11]
 
 t7:
-mov eax, [ebx].FOOBAR.e.b
-mov eax, [ebx.FOOBAR].e.b
-mov eax, [ebx.FOOBAR.e].b
-mov eax, [ebx.FOOBAR.e.b]
+mov al, [ebx].FOOBAR.e.b
+mov al, [ebx.FOOBAR].e.b
+mov al, [ebx.FOOBAR.e].b
+mov al, [ebx.FOOBAR.e.b]
 
 ; CHECK: t7:
-; CHECK-NEXT: mov eax, dword ptr [ebx + 9]
-; CHECK-NEXT: mov eax, dword ptr [ebx + 9]
-; CHECK-NEXT: mov eax, dword ptr [ebx + 9]
-; CHECK-NEXT: mov eax, dword ptr [ebx + 9]
+; CHECK-NEXT: mov al, byte ptr [ebx + 9]
+; CHECK-NEXT: mov al, byte ptr [ebx + 9]
+; CHECK-NEXT: mov al, byte ptr [ebx + 9]
+; CHECK-NEXT: mov al, byte ptr [ebx + 9]
 
 t8:
-mov eax, t2.FOOBAR.e.b
-mov eax, [t2].FOOBAR.e.b
-mov eax, [t2.FOOBAR].e.b
-mov eax, [t2.FOOBAR.e].b
-mov eax, [t2.FOOBAR.e.b]
+mov al, t2.FOOBAR.e.b
+mov al, [t2].FOOBAR.e.b
+mov al, [t2.FOOBAR].e.b
+mov al, [t2.FOOBAR.e].b
+mov al, [t2.FOOBAR.e.b]
 
 ; CHECK: t8:
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+9]
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+9]
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+9]
-; CHECK-NEXT: mov eax, dword ptr [rip + (t2+8)+1]
-; CHECK-NEXT: mov eax, dword ptr [rip + t2+9]
+; CHECK-NEXT: mov al, byte ptr [rip + t2+9]
+; CHECK-NEXT: mov al, byte ptr [rip + t2+9]
+; CHECK-NEXT: mov al, byte ptr [rip + t2+9]
+; CHECK-NEXT: mov al, byte ptr [rip + (t2+8)+1]
+; CHECK-NEXT: mov al, byte ptr [rip + t2+9]
 
 QUUX STRUCT
   u DWORD ?
@@ -159,20 +159,20 @@ QUUX ENDS
 
 t9:
 mov eax, [ebx].QUUX.u
-mov eax, [ebx].QUUX.v
+mov ax, [ebx].QUUX.v
 mov eax, [ebx].QUUX.w
-mov eax, [ebx].QUUX.x
-mov eax, [ebx].QUUX.y
-mov eax, [ebx].QUUX.after_struct
+mov al, [ebx].QUUX.x
+mov al, [ebx].QUUX.y
+mov al, [ebx].QUUX.after_struct
 mov eax, [ebx].QUUX.z
 
 ; CHECK: t9:
 ; CHECK-NEXT: mov eax, dword ptr [ebx]
+; CHECK-NEXT: mov ax, word ptr [ebx + 4]
 ; CHECK-NEXT: mov eax, dword ptr [ebx + 4]
-; CHECK-NEXT: mov eax, dword ptr [ebx + 4]
-; CHECK-NEXT: mov eax, dword ptr [ebx + 4]
-; CHECK-NEXT: mov eax, dword ptr [ebx + 5]
-; CHECK-NEXT: mov eax, dword ptr [ebx + 4]
+; CHECK-NEXT: mov al, byte ptr [ebx + 4]
+; CHECK-NEXT: mov al, byte ptr [ebx + 5]
+; CHECK-NEXT: mov al, byte ptr [ebx + 4]
 ; CHECK-NEXT: mov eax, dword ptr [ebx + 8]
 
 t10:
@@ -184,11 +184,11 @@ mov eax, FOOBAR.f.h
 ; CHECK-NEXT: mov eax, 11
 
 t11:
-mov eax, (FOOBAR PTR [ebx]).f
-mov eax, (FOOBAR PTR t1).f
+mov ax, (FOOBAR PTR [ebx]).f
+mov ax, (FOOBAR PTR t1).f
 
 ; CHECK: t11:
-; CHECK-NEXT: mov eax, dword ptr [ebx + 10]
-; CHECK-NEXT: mov eax, dword ptr [rip + t1+10]
+; CHECK-NEXT: mov ax, word ptr [ebx + 10]
+; CHECK-NEXT: mov ax, word ptr [rip + t1+10]
 
 END

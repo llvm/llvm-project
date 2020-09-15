@@ -50,6 +50,7 @@ class SIRegisterInfo;
 class AMDGPUInstructionSelector final : public InstructionSelector {
 private:
   MachineRegisterInfo *MRI;
+  const GCNSubtarget *Subtarget;
 
 public:
   AMDGPUInstructionSelector(const GCNSubtarget &STI,

@@ -53,6 +53,9 @@ class COFFMasmParser : public MCAsmParserExtension {
   bool ParseDirectiveSegmentEnd(StringRef, SMLoc);
   bool ParseDirectiveIncludelib(StringRef, SMLoc);
 
+  bool ParseSEHDirectiveAllocStack(StringRef, SMLoc);
+  bool ParseSEHDirectiveEndProlog(StringRef, SMLoc);
+
   bool IgnoreDirective(StringRef, SMLoc) {
     while (!getLexer().is(AsmToken::EndOfStatement)) {
       Lex();
@@ -65,13 +68,10 @@ class COFFMasmParser : public MCAsmParserExtension {
     MCAsmParserExtension::Initialize(Parser);
 
     // x64 directives
-    // .allocstack
-    // .endprolog
-    // .pushframe
-    // .pushreg
-    // .savereg
-    // .savexmm128
-    // .setframe
+    addDirectiveHandler<&COFFMasmParser::ParseSEHDirectiveAllocStack>(
+        ".allocstack");
+    addDirectiveHandler<&COFFMasmParser::ParseSEHDirectiveEndProlog>(
+        ".endprolog");
 
     // Code label directives
     // label
@@ -92,16 +92,12 @@ class COFFMasmParser : public MCAsmParserExtension {
 
     // Data allocation directives
     // align
-    // byte/sbyte
-    // dword/sdword
     // even
-    // fword
-    // qword
-    // real4
-    // real8
+    // mmword
     // real10
     // tbyte
-    // word/sword
+    // xmmword
+    // ymmword
 
     // Listing control directives
     addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".cref");
@@ -133,14 +129,11 @@ class COFFMasmParser : public MCAsmParserExtension {
     // .fpo
     addDirectiveHandler<&COFFMasmParser::ParseDirectiveIncludelib>(
         "includelib");
-    // mmword
     // option
     // popcontext
     // pushcontext
     // .radix
     // .safeseh
-    // xmmword
-    // ymmword
 
     // Procedure directives
     addDirectiveHandler<&COFFMasmParser::ParseDirectiveEndProc>("endp");
@@ -148,7 +141,7 @@ class COFFMasmParser : public MCAsmParserExtension {
     addDirectiveHandler<&COFFMasmParser::ParseDirectiveProc>("proc");
     // proto
 
-    // Processor directives
+    // Processor directives; all ignored
     addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".386");
     addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".386P");
     addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".387");
@@ -202,11 +195,8 @@ class COFFMasmParser : public MCAsmParserExtension {
     // substr (equivalent to <name> TEXTEQU @SubStr(<params>))
 
     // Structure and record directives
-    // ends
     // record
-    // struct
     // typedef
-    // union
   }
 
   bool ParseSectionDirectiveCode(StringRef, SMLoc) {
@@ -234,6 +224,7 @@ class COFFMasmParser : public MCAsmParserExtension {
   }
 
   StringRef CurrentProcedure;
+  bool CurrentProcedureFramed;
 
 public:
   COFFMasmParser() = default;
@@ -361,8 +352,17 @@ bool COFFMasmParser::ParseDirectiveProc(StringRef Directive, SMLoc Loc) {
   getStreamer().EmitCOFFSymbolType(0x20);
   getStreamer().EndCOFFSymbolDef();
 
+  bool Framed = false;
+  if (getLexer().is(AsmToken::Identifier) &&
+      getTok().getString().equals_lower("frame")) {
+    Lex();
+    Framed = true;
+    getStreamer().EmitWinCFIStartProc(Sym, Loc);
+  }
   getStreamer().emitLabel(Sym, Loc);
+
   CurrentProcedure = Label;
+  CurrentProcedureFramed = Framed;
   return false;
 }
 bool COFFMasmParser::ParseDirectiveEndProc(StringRef Directive, SMLoc Loc) {
@@ -376,6 +376,30 @@ bool COFFMasmParser::ParseDirectiveEndProc(StringRef Directive, SMLoc Loc) {
   else if (CurrentProcedure != Label)
     return Error(LabelLoc, "endp does not match current procedure '" +
                                CurrentProcedure + "'");
+
+  if (CurrentProcedureFramed) {
+    getStreamer().EmitWinCFIEndProc(Loc);
+  }
+  CurrentProcedure = "";
+  CurrentProcedureFramed = false;
+  return false;
+}
+
+bool COFFMasmParser::ParseSEHDirectiveAllocStack(StringRef Directive,
+                                                 SMLoc Loc) {
+  int64_t Size;
+  SMLoc SizeLoc = getTok().getLoc();
+  if (getParser().parseAbsoluteExpression(Size))
+    return Error(SizeLoc, "expected integer size");
+  if (Size % 8 != 0)
+    return Error(SizeLoc, "stack size must be a multiple of 8");
+  getStreamer().EmitWinCFIAllocStack(static_cast<unsigned>(Size), Loc);
+  return false;
+}
+
+bool COFFMasmParser::ParseSEHDirectiveEndProlog(StringRef Directive,
+                                                SMLoc Loc) {
+  getStreamer().EmitWinCFIEndProlog(Loc);
   return false;
 }
 

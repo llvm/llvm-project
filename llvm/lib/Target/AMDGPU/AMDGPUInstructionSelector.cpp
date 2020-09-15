@@ -72,6 +72,7 @@ const char *AMDGPUInstructionSelector::getName() { return DEBUG_TYPE; }
 void AMDGPUInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits &KB,
                                         CodeGenCoverage &CoverageInfo) {
   MRI = &MF.getRegInfo();
+  Subtarget = &MF.getSubtarget<GCNSubtarget>();
   InstructionSelector::setupMF(MF, KB, CoverageInfo);
 }
 
@@ -3166,7 +3167,7 @@ AMDGPUInstructionSelector::selectVOP3Mods_nnan(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;
   std::tie(Src, Mods) = selectVOP3ModsImpl(Root);
-  if (!TM.Options.NoNaNsFPMath && !isKnownNeverNaN(Src, *MRI))
+  if (!isKnownNeverNaN(Src, *MRI))
     return None;
 
   return {{

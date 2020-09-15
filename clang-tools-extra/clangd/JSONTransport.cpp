@@ -12,6 +12,7 @@
 #include "support/Shutdown.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
+#include <system_error>
 
 namespace clang {
 namespace clangd {
@@ -51,12 +52,10 @@ llvm::json::Object encodeError(llvm::Error E) {
 }
 
 llvm::Error decodeError(const llvm::json::Object &O) {
-  std::string Msg =
-      std::string(O.getString("message").getValueOr("Unspecified error"));
+  llvm::StringRef Msg = O.getString("message").getValueOr("Unspecified error");
   if (auto Code = O.getInteger("code"))
-    return llvm::make_error<LSPError>(std::move(Msg), ErrorCode(*Code));
-  return llvm::make_error<llvm::StringError>(std::move(Msg),
-                                             llvm::inconvertibleErrorCode());
+    return llvm::make_error<LSPError>(Msg.str(), ErrorCode(*Code));
+  return error(Msg.str());
 }
 
 class JSONTransport : public Transport {
@@ -102,9 +101,8 @@ public:
   llvm::Error loop(MessageHandler &Handler) override {
     while (!feof(In)) {
       if (shutdownRequested())
-        return llvm::createStringError(
-            std::make_error_code(std::errc::operation_canceled),
-            "Got signal, shutting down");
+        return error(std::make_error_code(std::errc::operation_canceled),
+                     "Got signal, shutting down");
       if (ferror(In))
         return llvm::errorCodeToError(
             std::error_code(errno, std::system_category()));

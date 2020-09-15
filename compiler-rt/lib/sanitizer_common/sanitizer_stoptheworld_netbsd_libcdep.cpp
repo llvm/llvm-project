@@ -131,7 +131,7 @@ bool ThreadSuspender::SuspendAllThreads() {
   pl.pl_lwpid = 0;
 
   int val;
-  while ((val = ptrace(op, pid_, (void *)&pl, sizeof(pl))) != -1 &&
+  while ((val = internal_ptrace(op, pid_, (void *)&pl, sizeof(pl))) != -1 &&
          pl.pl_lwpid != 0) {
     suspended_threads_list_.Append(pl.pl_lwpid);
     VReport(2, "Appended thread %d in process %d.\n", pl.pl_lwpid, pid_);

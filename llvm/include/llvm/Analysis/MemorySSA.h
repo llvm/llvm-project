@@ -1181,9 +1181,11 @@ class upward_defs_iterator
   using BaseT = upward_defs_iterator::iterator_facade_base;
 
 public:
-  upward_defs_iterator(const MemoryAccessPair &Info, DominatorTree *DT)
+  upward_defs_iterator(const MemoryAccessPair &Info, DominatorTree *DT,
+                       bool *PerformedPhiTranslation = nullptr)
       : DefIterator(Info.first), Location(Info.second),
-        OriginalAccess(Info.first), DT(DT) {
+        OriginalAccess(Info.first), DT(DT),
+        PerformedPhiTranslation(PerformedPhiTranslation) {
     CurrentPair.first = nullptr;
 
     WalkingPhi = Info.first && isa<MemoryPhi>(Info.first);
@@ -1214,8 +1216,6 @@ public:
 
   BasicBlock *getPhiArgBlock() const { return DefIterator.getPhiArgBlock(); }
 
-  bool performedPhiTranslation() const { return PerformedPhiTranslation; }
-
 private:
   void fillInCurrentPair() {
     CurrentPair.first = *DefIterator;
@@ -1228,7 +1228,8 @@ private:
                                         false)) {
         if (Translator.getAddr() != Location.Ptr) {
           CurrentPair.second = Location.getWithNewPtr(Translator.getAddr());
-          PerformedPhiTranslation = true;
+          if (PerformedPhiTranslation)
+            *PerformedPhiTranslation = true;
           return;
         }
       } else {
@@ -1245,12 +1246,13 @@ private:
   MemoryAccess *OriginalAccess = nullptr;
   DominatorTree *DT = nullptr;
   bool WalkingPhi = false;
-  bool PerformedPhiTranslation = false;
+  bool *PerformedPhiTranslation = nullptr;
 };
 
-inline upward_defs_iterator upward_defs_begin(const MemoryAccessPair &Pair,
-                                              DominatorTree &DT) {
-  return upward_defs_iterator(Pair, &DT);
+inline upward_defs_iterator
+upward_defs_begin(const MemoryAccessPair &Pair, DominatorTree &DT,
+                  bool *PerformedPhiTranslation = nullptr) {
+  return upward_defs_iterator(Pair, &DT, PerformedPhiTranslation);
 }
 
 inline upward_defs_iterator upward_defs_end() { return upward_defs_iterator(); }

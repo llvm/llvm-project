@@ -13,7 +13,7 @@
 // GNU-NEXT:   FreeBSD              0x00000000       NT_PROCSTAT_FILES (files data)
 // GNU-NEXT: Displaying notes found in: .note.baz
 // GNU-NEXT:   Owner                Data size        Description
-// GNU-NEXT:   FreeBSD              0x0000001c       Unknown note type (0x00000003)
+// GNU-NEXT:   FreeBSD              0x0000001c       Unknown note type: (0x00000003)
 // GNU-NEXT:    description data: 4c 6f 72 65 6d 20 69 70 73 75 6d 20 64 6f 6c 6f 72 20 73 69 74 20 61 6d 65 74 00 00
 
 // LLVM:      Notes [
@@ -49,7 +49,7 @@
 // LLVM-NEXT:     Note {
 // LLVM-NEXT:       Owner: FreeBSD
 // LLVM-NEXT:       Data size: 0x1C
-// LLVM-NEXT:       Type: Unknown note type (0x00000003)
+// LLVM-NEXT:       Type: Unknown (0x00000003)
 // LLVM-NEXT:       Description data (
 // LLVM-NEXT:         0000: 4C6F7265 6D206970 73756D20 646F6C6F  |Lorem ipsum dolo|
 // LLVM-NEXT:         0010: 72207369 7420616D 65740000           |r sit amet..|

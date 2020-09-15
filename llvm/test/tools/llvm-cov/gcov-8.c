@@ -20,7 +20,7 @@ int main() {                                      // GCOV:       1: [[@LINE]]:in
 // RUN: llvm-cov gcov gcov-8.c | FileCheck %s --check-prefixes=OUT,OUTFILE
 // OUT:          File 'gcov-8.c'
 // OUT-NEXT:     Lines executed:100.00% of 9
-// OUT-B-NEXT:   Branches executed:85.71% of 14
+// OUT-B-NEXT:   Branches executed:100.00% of 14
 // OUT-B-NEXT:   Taken at least once:71.43% of 14
 // OUT-B-NEXT:   No calls
 // OUTFILE-NEXT: Creating 'gcov-8.c.gcov'
@@ -66,6 +66,6 @@ int main() {                                      // GCOV:       1: [[@LINE]]:in
 // I-B-NEXT:branch:11,taken
 // I-B-NEXT:branch:11,nottaken
 //   I-NEXT:lcount:12,4
-// I-B-NEXT:branch:12,notexec
-// I-B-NEXT:branch:12,notexec
+// I-B-NEXT:branch:12,taken
+// I-B-NEXT:branch:12,nottaken
 //   I-NEXT:lcount:14,1

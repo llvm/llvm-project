@@ -107,7 +107,8 @@ namespace {
       if (IsARCUnbridgedCast) {
         castExpr = ImplicitCastExpr::Create(
             Self.Context, Self.Context.ARCUnbridgedCastTy, CK_Dependent,
-            castExpr, nullptr, castExpr->getValueKind(), FPOptionsOverride());
+            castExpr, nullptr, castExpr->getValueKind(),
+            Self.CurFPFeatureOverrides());
       }
       updatePartOfExplicitCastFlags(castExpr);
       return castExpr;
