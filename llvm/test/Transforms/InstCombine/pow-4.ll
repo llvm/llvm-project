@@ -152,7 +152,6 @@ define double @test_simplify_neg_16_5(double %x) {
 }
 
 ; pow(x, 16.5) with double
-; FIXME: This is wrong without sqrt.
 
 define double @test_simplify_16_5_libcall(double %x) {
 ; SQRT-LABEL: @test_simplify_16_5_libcall(
@@ -165,18 +164,14 @@ define double @test_simplify_16_5_libcall(double %x) {
 ; SQRT-NEXT:    ret double [[TMP4]]
 ;
 ; NOSQRT-LABEL: @test_simplify_16_5_libcall(
-; NOSQRT-NEXT:    [[SQUARE:%.*]] = fmul fast double [[X:%.*]], [[X]]
-; NOSQRT-NEXT:    [[TMP1:%.*]] = fmul fast double [[SQUARE]], [[SQUARE]]
-; NOSQRT-NEXT:    [[TMP2:%.*]] = fmul fast double [[TMP1]], [[TMP1]]
-; NOSQRT-NEXT:    [[TMP3:%.*]] = fmul fast double [[TMP2]], [[TMP2]]
-; NOSQRT-NEXT:    ret double [[TMP3]]
+; NOSQRT-NEXT:    [[TMP1:%.*]] = call fast double @pow(double [[X:%.*]], double 1.650000e+01)
+; NOSQRT-NEXT:    ret double [[TMP1]]
 ;
   %1 = call fast double @pow(double %x, double 1.650000e+01)
   ret double %1
 }
 
 ; pow(x, -16.5) with double
-; FIXME: This is wrong without sqrt.
 
 define double @test_simplify_neg_16_5_libcall(double %x) {
 ; SQRT-LABEL: @test_simplify_neg_16_5_libcall(
@@ -190,12 +185,8 @@ define double @test_simplify_neg_16_5_libcall(double %x) {
 ; SQRT-NEXT:    ret double [[RECIPROCAL]]
 ;
 ; NOSQRT-LABEL: @test_simplify_neg_16_5_libcall(
-; NOSQRT-NEXT:    [[SQUARE:%.*]] = fmul fast double [[X:%.*]], [[X]]
-; NOSQRT-NEXT:    [[TMP1:%.*]] = fmul fast double [[SQUARE]], [[SQUARE]]
-; NOSQRT-NEXT:    [[TMP2:%.*]] = fmul fast double [[TMP1]], [[TMP1]]
-; NOSQRT-NEXT:    [[TMP3:%.*]] = fmul fast double [[TMP2]], [[TMP2]]
-; NOSQRT-NEXT:    [[RECIPROCAL:%.*]] = fdiv fast double 1.000000e+00, [[TMP3]]
-; NOSQRT-NEXT:    ret double [[RECIPROCAL]]
+; NOSQRT-NEXT:    [[TMP1:%.*]] = call fast double @pow(double [[X:%.*]], double -1.650000e+01)
+; NOSQRT-NEXT:    ret double [[TMP1]]
 ;
   %1 = call fast double @pow(double %x, double -1.650000e+01)
   ret double %1
