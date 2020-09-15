@@ -1618,7 +1618,7 @@ private:
     __unwrap_iter(__wrap_iter<_Tp*>);
 #else
   template <class _Tp>
-  inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+  inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR friend
   typename enable_if
   <
       is_trivially_copy_assignable<_Tp>::value,
