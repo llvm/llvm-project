@@ -338,12 +338,12 @@ number of cross compilers, or may only support a native target.
 .. option:: --print-supported-cpus
 
   Print out a list of supported processors for the given target (specified
-  through --target=<architecture> or -arch <architecture>). If no target is
-  specified, the system default target will be used.
+  through ``--target=<architecture>`` or :option:`-arch` ``<architecture>``). If no
+  target is specified, the system default target will be used.
 
 .. option:: -mcpu=?, -mtune=?
 
-  Aliases of --print-supported-cpus
+  Acts as an alias for :option:`--print-supported-cpus`.
 
 .. option:: -march=<cpu>
 
