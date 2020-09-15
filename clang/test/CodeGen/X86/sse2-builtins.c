@@ -752,15 +752,13 @@ void test_mm_maskmoveu_si128(__m128i A, __m128i B, char* C) {
 
 __m128i test_mm_max_epi16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_max_epi16
-  // CHECK:       [[CMP:%.*]] = icmp sgt <8 x i16> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  select <8 x i1> [[CMP]], <8 x i16> [[X]], <8 x i16> [[Y]]
+  // CHECK: call <8 x i16> @llvm.smax.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_max_epi16(A, B);
 }
 
 __m128i test_mm_max_epu8(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_max_epu8
-  // CHECK:       [[CMP:%.*]] = icmp ugt <16 x i8> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  select <16 x i1> [[CMP]], <16 x i8> [[X]], <16 x i8> [[Y]]
+  // CHECK: call <16 x i8> @llvm.umax.v16i8(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   return _mm_max_epu8(A, B);
 }
 
@@ -784,15 +782,13 @@ void test_mm_mfence() {
 
 __m128i test_mm_min_epi16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_min_epi16
-  // CHECK:       [[CMP:%.*]] = icmp slt <8 x i16> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  select <8 x i1> [[CMP]], <8 x i16> [[X]], <8 x i16> [[Y]]
+  // CHECK: call <8 x i16> @llvm.smin.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_min_epi16(A, B);
 }
 
 __m128i test_mm_min_epu8(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_min_epu8
-  // CHECK:       [[CMP:%.*]] = icmp ult <16 x i8> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  select <16 x i1> [[CMP]], <16 x i8> [[X]], <16 x i8> [[Y]]
+  // CHECK: call <16 x i8> @llvm.umin.v16i8(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   return _mm_min_epu8(A, B);
 }
 
