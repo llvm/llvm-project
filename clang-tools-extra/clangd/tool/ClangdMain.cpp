@@ -484,9 +484,9 @@ public:
     // Still require "/" in body to mimic file scheme, as we want lengths of an
     // equivalent URI in both schemes to be the same.
     if (!Body.startswith("/"))
-      return llvm::make_error<llvm::StringError>(
-          "Expect URI body to be an absolute path starting with '/': " + Body,
-          llvm::inconvertibleErrorCode());
+      return error(
+          "Expect URI body to be an absolute path starting with '/': {0}",
+          Body);
     Body = Body.ltrim('/');
     llvm::SmallVector<char, 16> Path(Body.begin(), Body.end());
     path::native(Path);
@@ -497,11 +497,9 @@ public:
   llvm::Expected<URI>
   uriFromAbsolutePath(llvm::StringRef AbsolutePath) const override {
     llvm::StringRef Body = AbsolutePath;
-    if (!Body.consume_front(TestScheme::TestDir)) {
-      return llvm::make_error<llvm::StringError>(
-          "Path " + AbsolutePath + " doesn't start with root " + TestDir,
-          llvm::inconvertibleErrorCode());
-    }
+    if (!Body.consume_front(TestScheme::TestDir))
+      return error("Path {0} doesn't start with root {1}", AbsolutePath,
+                   TestDir);
 
     return URI("test", /*Authority=*/"",
                llvm::sys::path::convert_to_slash(Body));
