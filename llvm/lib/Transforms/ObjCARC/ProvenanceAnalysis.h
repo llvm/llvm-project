@@ -26,12 +26,12 @@
 #define LLVM_LIB_TRANSFORMS_OBJCARC_PROVENANCEANALYSIS_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/ValueHandle.h"
 #include <utility>
 
 namespace llvm {
 
+class AAResults;
 class DataLayout;
 class PHINode;
 class SelectInst;
@@ -49,7 +49,7 @@ namespace objcarc {
 /// not two pointers have the same provenance source and thus could
 /// potentially be related.
 class ProvenanceAnalysis {
-  AliasAnalysis *AA;
+  AAResults *AA;
 
   using ValuePairTy = std::pair<const Value *, const Value *>;
   using CachedResultsTy = DenseMap<ValuePairTy, bool>;
@@ -67,9 +67,9 @@ public:
   ProvenanceAnalysis(const ProvenanceAnalysis &) = delete;
   ProvenanceAnalysis &operator=(const ProvenanceAnalysis &) = delete;
 
-  void setAA(AliasAnalysis *aa) { AA = aa; }
+  void setAA(AAResults *aa) { AA = aa; }
 
-  AliasAnalysis *getAA() const { return AA; }
+  AAResults *getAA() const { return AA; }
 
   bool related(const Value *A, const Value *B, const DataLayout &DL);
 
