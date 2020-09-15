@@ -7451,6 +7451,12 @@ def err_no_typeid_with_fno_rtti : Error<
   "use of typeid requires -frtti">;
 def err_no_dynamic_cast_with_fno_rtti : Error<
   "use of dynamic_cast requires -frtti">;
+def warn_no_dynamic_cast_with_rtti_disabled: Warning<
+  "dynamic_cast will not work since RTTI data is disabled by " 
+  "%select{-fno-rtti-data|/GR-}0">, InGroup<RTTI>;
+def warn_no_typeid_with_rtti_disabled: Warning<
+  "typeid will not work since RTTI data is disabled by "
+  "%select{-fno-rtti-data|/GR-}0">, InGroup<RTTI>;
 
 def err_cannot_form_pointer_to_member_of_reference_type : Error<
   "cannot form a pointer-to-member to member %0 of reference type %1">;
