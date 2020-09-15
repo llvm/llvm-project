@@ -2688,11 +2688,5 @@ void mlir::vector::populateVectorToVectorCanonicalizationPatterns(
                   TransposeFolder>(context);
 }
 
-namespace mlir {
-namespace vector {
-
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Vector/VectorOps.cpp.inc"
-
-} // namespace vector
-} // namespace mlir

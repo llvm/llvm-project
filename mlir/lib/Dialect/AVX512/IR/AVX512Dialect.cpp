@@ -25,10 +25,5 @@ void avx512::AVX512Dialect::initialize() {
       >();
 }
 
-namespace mlir {
-namespace avx512 {
 #define GET_OP_CLASSES
 #include "mlir/Dialect/AVX512/AVX512.cpp.inc"
-}  // namespace avx512
-} // namespace mlir
-

@@ -21,7 +21,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def AVX512_Dialect : Dialect {
   let name = "avx512";
-  let cppNamespace = "avx512";
+  let cppNamespace = "::mlir::avx512";
 }
 
 //===----------------------------------------------------------------------===//

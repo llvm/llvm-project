@@ -19,7 +19,7 @@ include "mlir/Interfaces/VectorInterfaces.td"
 
 def Vector_Dialect : Dialect {
   let name = "vector";
-  let cppNamespace = "vector";
+  let cppNamespace = "::mlir::vector";
   let hasConstantMaterializer = 1;
 }
 

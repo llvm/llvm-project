@@ -17,10 +17,10 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/Support/LLVM.h"
 
-namespace mlir {
 // Pull in SPIR-V attribute definitions for target and ABI.
 #include "mlir/Dialect/SPIRV/TargetAndABI.h.inc"
 
+namespace mlir {
 namespace spirv {
 enum class Capability : uint32_t;
 enum class Extension;

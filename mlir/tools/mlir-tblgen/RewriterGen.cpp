@@ -887,8 +887,9 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   // special cases listed below, DRR needs to supply types for all results
   // when building an op.
   bool isSameOperandsAndResultType =
-      resultOp.getTrait("OpTrait::SameOperandsAndResultType");
-  bool useFirstAttr = resultOp.getTrait("OpTrait::FirstAttrDerivedResultType");
+      resultOp.getTrait("::mlir::OpTrait::SameOperandsAndResultType");
+  bool useFirstAttr =
+      resultOp.getTrait("::mlir::OpTrait::FirstAttrDerivedResultType");
 
   if (isSameOperandsAndResultType || useFirstAttr) {
     // We know how to deduce the result type for ops with these traits and we've

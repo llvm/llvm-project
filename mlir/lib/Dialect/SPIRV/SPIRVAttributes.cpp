@@ -16,8 +16,9 @@ using namespace mlir;
 // DictionaryDict derived attributes
 //===----------------------------------------------------------------------===//
 
-namespace mlir {
 #include "mlir/Dialect/SPIRV/TargetAndABI.cpp.inc"
+
+namespace mlir {
 
 //===----------------------------------------------------------------------===//
 // Attribute storage classes
