@@ -457,7 +457,8 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
     MapSize = FileSize;
   }
 
-  if (false) {
+  if (shouldUseMmap(FD, FileSize, MapSize, Offset, RequiresNullTerminator,
+                    PageSize, IsVolatile)) {
     std::error_code EC;
     std::unique_ptr<MB> Result(
         new (NamedBufferAlloc(Filename)) MemoryBufferMMapFile<MB>(
