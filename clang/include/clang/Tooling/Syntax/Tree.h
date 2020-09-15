@@ -237,16 +237,16 @@ public:
   ///
   /// Useful for discovering the correct delimiter to use when adding
   /// elements to empty or one-element lists.
-  clang::tok::TokenKind getDelimiterTokenKind();
+  clang::tok::TokenKind getDelimiterTokenKind() const;
 
-  TerminationKind getTerminationKind();
+  TerminationKind getTerminationKind() const;
 
   /// Whether this list can be empty in syntactically and semantically correct
   /// code.
   ///
   /// This list may be empty when the source code has errors even if
   /// canBeEmpty() returns false.
-  bool canBeEmpty();
+  bool canBeEmpty() const;
 };
 
 } // namespace syntax
