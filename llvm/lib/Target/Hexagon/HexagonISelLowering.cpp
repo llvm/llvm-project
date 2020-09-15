@@ -1863,6 +1863,8 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::VALIGN:        return "HexagonISD::VALIGN";
   case HexagonISD::VALIGNADDR:    return "HexagonISD::VALIGNADDR";
   case HexagonISD::VPACKL:        return "HexagonISD::VPACKL";
+  case HexagonISD::VUNPACK:       return "HexagonISD::VUNPACK";
+  case HexagonISD::VUNPACKU:      return "HexagonISD::VUNPACKU";
   case HexagonISD::OP_END:        break;
   }
   return nullptr;
@@ -2648,6 +2650,28 @@ HexagonTargetLowering::getZero(const SDLoc &dl, MVT Ty, SelectionDAG &DAG)
   if (Ty.isFloatingPoint())
     return DAG.getConstantFP(0.0, dl, Ty);
   llvm_unreachable("Invalid type for zero");
+}
+
+SDValue
+HexagonTargetLowering::appendUndef(SDValue Val, MVT ResTy, SelectionDAG &DAG)
+      const {
+  MVT ValTy = ty(Val);
+  assert(ValTy.getVectorElementType() == ResTy.getVectorElementType());
+
+  unsigned ValLen = ValTy.getVectorNumElements();
+  unsigned ResLen = ResTy.getVectorNumElements();
+  if (ValLen == ResLen)
+    return Val;
+
+  const SDLoc &dl(Val);
+  assert(ValLen < ResLen);
+  assert(ResLen % ValLen == 0);
+
+  SmallVector<SDValue, 4> Concats = {Val};
+  for (unsigned i = 1, e = ResLen / ValLen; i < e; ++i)
+    Concats.push_back(DAG.getUNDEF(ValTy));
+
+  return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResTy, Concats);
 }
 
 SDValue
