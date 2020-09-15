@@ -25,8 +25,7 @@ body: |
     ; CHECK: [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
     ; CHECK: [[COPY4:%[0-9]+]]:vreg_64 = COPY [[S_LOAD_DWORDX2_IMM]]
     ; CHECK: %12:vreg_64 = nofpexcept V_ADD_F64 0, [[COPY3]], 1, [[COPY4]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK: %13:vreg_64 = nofpexcept V_FLOOR_F64_e64 0, %12, 0, 0, implicit $mode, implicit $exec
-    ; CHECK: %15:vreg_64 = nofpexcept V_ADD_F64 0, %12, 1, %13, 0, 0, implicit $mode, implicit $exec
+    ; CHECK: %15:vreg_64 = nofpexcept V_FRACT_F64_e64 0, %12, 0, 0, implicit $mode, implicit $exec
     ; CHECK: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[COPY1]]
     ; CHECK: GLOBAL_STORE_DWORDX2 [[COPY5]], %15, 0, 0, 0, 0, implicit $exec :: (store 8, addrspace 1)
     ; CHECK: S_ENDPGM 0
@@ -76,8 +75,7 @@ body: |
     ; CHECK: [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
     ; CHECK: [[COPY4:%[0-9]+]]:vreg_64 = COPY [[S_LOAD_DWORDX2_IMM]]
     ; CHECK: %13:vreg_64 = nofpexcept V_ADD_F64 0, [[COPY3]], 3, [[COPY4]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK: %14:vreg_64 = nofpexcept V_FLOOR_F64_e64 0, %13, 0, 0, implicit $mode, implicit $exec
-    ; CHECK: %16:vreg_64 = nofpexcept V_ADD_F64 0, %13, 1, %14, 0, 0, implicit $mode, implicit $exec
+    ; CHECK: %16:vreg_64 = nofpexcept V_FRACT_F64_e64 0, %13, 0, 0, implicit $mode, implicit $exec
     ; CHECK: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[COPY1]]
     ; CHECK: GLOBAL_STORE_DWORDX2 [[COPY5]], %16, 0, 0, 0, 0, implicit $exec :: (store 8, addrspace 1)
     ; CHECK: S_ENDPGM 0
