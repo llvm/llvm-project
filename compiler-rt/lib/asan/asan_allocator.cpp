@@ -94,18 +94,32 @@ class ChunkHeader {
   u8 rz_log : 3;
   u8 lsan_tag : 2;
 
-  // This field is used for small sizes. For large sizes it is equal to
-  // SizeClassMap::kMaxSize and the actual size is stored in the
-  // SecondaryAllocator's metadata.
-  u32 user_requested_size : 29;
   // align < 8 -> 0
   // else      -> log2(min(align, 512)) - 2
-  u32 user_requested_alignment_log : 3;
+  u16 user_requested_alignment_log : 3;
 
  private:
+  u16 user_requested_size_hi : 13;
+  u32 user_requested_size_lo;
   atomic_uint64_t alloc_context_id;
 
  public:
+  uptr UsedSize() const {
+    uptr R = user_requested_size_lo;
+    if (sizeof(uptr) > sizeof(user_requested_size_lo))
+      R += (uptr)user_requested_size_hi << (8 * sizeof(user_requested_size_lo));
+    return R;
+  }
+
+  void SetUsedSize(uptr size) {
+    user_requested_size_lo = size;
+    if (sizeof(uptr) > sizeof(user_requested_size_lo)) {
+      size >>= (8 * sizeof(user_requested_size_lo));
+      user_requested_size_hi = size;
+      CHECK_EQ(user_requested_size_hi, size);
+    }
+  }
+
   void SetAllocContext(u32 tid, u32 stack) {
     AtomicContextStore(&alloc_context_id, tid, stack);
   }
@@ -147,19 +161,10 @@ enum {
 class AsanChunk : public ChunkBase {
  public:
   uptr Beg() { return reinterpret_cast<uptr>(this) + kChunkHeaderSize; }
-  uptr UsedSize(bool locked_version = false) {
-    if (user_requested_size != SizeClassMap::kMaxSize)
-      return user_requested_size;
-    return *reinterpret_cast<uptr *>(
-        get_allocator().GetMetaData(AllocBeg(locked_version)));
-  }
-  void *AllocBeg(bool locked_version = false) {
-    if (from_memalign) {
-      if (locked_version)
-        return get_allocator().GetBlockBeginFastLocked(
-            reinterpret_cast<void *>(this));
+
+  void *AllocBeg() {
+    if (from_memalign)
       return get_allocator().GetBlockBegin(reinterpret_cast<void *>(this));
-    }
     return reinterpret_cast<void*>(Beg() - RZLog2Size(rz_log));
   }
 };
@@ -337,7 +342,7 @@ struct Allocator {
     if (ac && atomic_load(&ac->chunk_state, memory_order_acquire) ==
                   CHUNK_ALLOCATED) {
       uptr beg = ac->Beg();
-      uptr end = ac->Beg() + ac->UsedSize(true);
+      uptr end = ac->Beg() + ac->UsedSize();
       uptr chunk_end = chunk + allocated_size;
       if (chunk < beg && beg < end && end <= chunk_end) {
         // Looks like a valid AsanChunk in use, poison redzones only.
@@ -552,15 +557,13 @@ struct Allocator {
       reinterpret_cast<uptr *>(alloc_beg)[0] = kAllocBegMagic;
       reinterpret_cast<uptr *>(alloc_beg)[1] = chunk_beg;
     }
+    CHECK(size);
+    m->SetUsedSize(size);
     if (using_primary_allocator) {
-      CHECK(size);
-      m->user_requested_size = size;
       CHECK(allocator.FromPrimary(allocated));
     } else {
       CHECK(!allocator.FromPrimary(allocated));
-      m->user_requested_size = SizeClassMap::kMaxSize;
       uptr *meta = reinterpret_cast<uptr *>(allocator.GetMetaData(allocated));
-      meta[0] = size;
       meta[1] = chunk_beg;
     }
     m->user_requested_alignment_log = user_requested_alignment_log;
@@ -1151,7 +1154,7 @@ void LsanMetadata::set_tag(ChunkTag value) {
 
 uptr LsanMetadata::requested_size() const {
   __asan::AsanChunk *m = reinterpret_cast<__asan::AsanChunk *>(metadata_);
-  return m->UsedSize(/*locked_version=*/true);
+  return m->UsedSize();
 }
 
 u32 LsanMetadata::stack_trace_id() const {
