@@ -1029,15 +1029,19 @@ Function *GCOVProfiler::insertCounterWriteout(
   // Collect the relevant data into a large constant data structure that we can
   // walk to write out everything.
   StructType *StartFileCallArgsTy = StructType::create(
-      {Builder.getInt8PtrTy(), Builder.getInt32Ty(), Builder.getInt32Ty()});
+      {Builder.getInt8PtrTy(), Builder.getInt32Ty(), Builder.getInt32Ty()},
+      "start_file_args_ty");
   StructType *EmitFunctionCallArgsTy = StructType::create(
-      {Builder.getInt32Ty(), Builder.getInt32Ty(), Builder.getInt32Ty()});
+      {Builder.getInt32Ty(), Builder.getInt32Ty(), Builder.getInt32Ty()},
+      "emit_function_args_ty");
   StructType *EmitArcsCallArgsTy = StructType::create(
-      {Builder.getInt32Ty(), Builder.getInt64Ty()->getPointerTo()});
+      {Builder.getInt32Ty(), Builder.getInt64Ty()->getPointerTo()},
+      "emit_arcs_args_ty");
   StructType *FileInfoTy =
       StructType::create({StartFileCallArgsTy, Builder.getInt32Ty(),
                           EmitFunctionCallArgsTy->getPointerTo(),
-                          EmitArcsCallArgsTy->getPointerTo()});
+                          EmitArcsCallArgsTy->getPointerTo()},
+                         "file_info");
 
   Constant *Zero32 = Builder.getInt32(0);
   // Build an explicit array of two zeros for use in ConstantExpr GEP building.
@@ -1147,41 +1151,46 @@ Function *GCOVProfiler::insertCounterWriteout(
 
   // The index into the files structure is our loop induction variable.
   Builder.SetInsertPoint(FileLoopHeader);
-  PHINode *IV =
-      Builder.CreatePHI(Builder.getInt32Ty(), /*NumReservedValues*/ 2);
+  PHINode *IV = Builder.CreatePHI(Builder.getInt32Ty(), /*NumReservedValues*/ 2,
+                                  "file_idx");
   IV->addIncoming(Builder.getInt32(0), BB);
   auto *FileInfoPtr = Builder.CreateInBoundsGEP(
       FileInfoArrayTy, FileInfoArrayGV, {Builder.getInt32(0), IV});
   auto *StartFileCallArgsPtr =
-      Builder.CreateStructGEP(FileInfoTy, FileInfoPtr, 0);
+      Builder.CreateStructGEP(FileInfoTy, FileInfoPtr, 0, "start_file_args");
   auto *StartFileCall = Builder.CreateCall(
       StartFile,
       {Builder.CreateLoad(StartFileCallArgsTy->getElementType(0),
                           Builder.CreateStructGEP(StartFileCallArgsTy,
-                                                  StartFileCallArgsPtr, 0)),
+                                                  StartFileCallArgsPtr, 0),
+                          "filename"),
        Builder.CreateLoad(StartFileCallArgsTy->getElementType(1),
                           Builder.CreateStructGEP(StartFileCallArgsTy,
-                                                  StartFileCallArgsPtr, 1)),
+                                                  StartFileCallArgsPtr, 1),
+                          "version"),
        Builder.CreateLoad(StartFileCallArgsTy->getElementType(2),
                           Builder.CreateStructGEP(StartFileCallArgsTy,
-                                                  StartFileCallArgsPtr, 2))});
+                                                  StartFileCallArgsPtr, 2),
+                          "stamp")});
   if (auto AK = TLI->getExtAttrForI32Param(false))
     StartFileCall->addParamAttr(2, AK);
-  auto *NumCounters =
-      Builder.CreateLoad(FileInfoTy->getElementType(1),
-                         Builder.CreateStructGEP(FileInfoTy, FileInfoPtr, 1));
+  auto *NumCounters = Builder.CreateLoad(
+      FileInfoTy->getElementType(1),
+      Builder.CreateStructGEP(FileInfoTy, FileInfoPtr, 1), "num_ctrs");
   auto *EmitFunctionCallArgsArray =
       Builder.CreateLoad(FileInfoTy->getElementType(2),
-                         Builder.CreateStructGEP(FileInfoTy, FileInfoPtr, 2));
-  auto *EmitArcsCallArgsArray =
-      Builder.CreateLoad(FileInfoTy->getElementType(3),
-                         Builder.CreateStructGEP(FileInfoTy, FileInfoPtr, 3));
+                         Builder.CreateStructGEP(FileInfoTy, FileInfoPtr, 2),
+                         "emit_function_args");
+  auto *EmitArcsCallArgsArray = Builder.CreateLoad(
+      FileInfoTy->getElementType(3),
+      Builder.CreateStructGEP(FileInfoTy, FileInfoPtr, 3), "emit_arcs_args");
   auto *EnterCounterLoopCond =
       Builder.CreateICmpSLT(Builder.getInt32(0), NumCounters);
   Builder.CreateCondBr(EnterCounterLoopCond, CounterLoopHeader, FileLoopLatch);
 
   Builder.SetInsertPoint(CounterLoopHeader);
-  auto *JV = Builder.CreatePHI(Builder.getInt32Ty(), /*NumReservedValues*/ 2);
+  auto *JV = Builder.CreatePHI(Builder.getInt32Ty(), /*NumReservedValues*/ 2,
+                               "ctr_idx");
   JV->addIncoming(Builder.getInt32(0), FileLoopHeader);
   auto *EmitFunctionCallArgsPtr = Builder.CreateInBoundsGEP(
       EmitFunctionCallArgsTy, EmitFunctionCallArgsArray, JV);
@@ -1189,14 +1198,16 @@ Function *GCOVProfiler::insertCounterWriteout(
       EmitFunction,
       {Builder.CreateLoad(EmitFunctionCallArgsTy->getElementType(0),
                           Builder.CreateStructGEP(EmitFunctionCallArgsTy,
-                                                  EmitFunctionCallArgsPtr, 0)),
+                                                  EmitFunctionCallArgsPtr, 0),
+                          "ident"),
        Builder.CreateLoad(EmitFunctionCallArgsTy->getElementType(1),
                           Builder.CreateStructGEP(EmitFunctionCallArgsTy,
-                                                  EmitFunctionCallArgsPtr, 1)),
+                                                  EmitFunctionCallArgsPtr, 1),
+                          "func_checkssum"),
        Builder.CreateLoad(EmitFunctionCallArgsTy->getElementType(2),
                           Builder.CreateStructGEP(EmitFunctionCallArgsTy,
-                                                  EmitFunctionCallArgsPtr,
-                                                  2))});
+                                                  EmitFunctionCallArgsPtr, 2),
+                          "cfg_checksum")});
   if (auto AK = TLI->getExtAttrForI32Param(false)) {
     EmitFunctionCall->addParamAttr(0, AK);
     EmitFunctionCall->addParamAttr(1, AK);
@@ -1208,10 +1219,12 @@ Function *GCOVProfiler::insertCounterWriteout(
       EmitArcs,
       {Builder.CreateLoad(
            EmitArcsCallArgsTy->getElementType(0),
-           Builder.CreateStructGEP(EmitArcsCallArgsTy, EmitArcsCallArgsPtr, 0)),
-       Builder.CreateLoad(EmitArcsCallArgsTy->getElementType(1),
-                          Builder.CreateStructGEP(EmitArcsCallArgsTy,
-                                                  EmitArcsCallArgsPtr, 1))});
+           Builder.CreateStructGEP(EmitArcsCallArgsTy, EmitArcsCallArgsPtr, 0),
+           "num_counters"),
+       Builder.CreateLoad(
+           EmitArcsCallArgsTy->getElementType(1),
+           Builder.CreateStructGEP(EmitArcsCallArgsTy, EmitArcsCallArgsPtr, 1),
+           "counters")});
   if (auto AK = TLI->getExtAttrForI32Param(false))
     EmitArcsCall->addParamAttr(0, AK);
   auto *NextJV = Builder.CreateAdd(JV, Builder.getInt32(1));
@@ -1222,7 +1235,7 @@ Function *GCOVProfiler::insertCounterWriteout(
   Builder.SetInsertPoint(FileLoopLatch);
   Builder.CreateCall(SummaryInfo, {});
   Builder.CreateCall(EndFile, {});
-  auto *NextIV = Builder.CreateAdd(IV, Builder.getInt32(1));
+  auto *NextIV = Builder.CreateAdd(IV, Builder.getInt32(1), "next_file_idx");
   auto *FileLoopCond =
       Builder.CreateICmpSLT(NextIV, Builder.getInt32(FileInfos.size()));
   Builder.CreateCondBr(FileLoopCond, FileLoopHeader, ExitBB);
