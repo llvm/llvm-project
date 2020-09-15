@@ -104,15 +104,15 @@ define dso_local signext i32 @X2IsCallerSaved(i32 signext %a, i32 signext %b, i3
 ; CHECK-P9-NOT:    .localentry
 ; CHECK-ALL:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
+; CHECK-S-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-S-NEXT:    add r11, r4, r3
 ; CHECK-S-NEXT:    sub r29, r8, r9
 ; CHECK-S-NEXT:    add r9, r10, r9
 ; CHECK-S-NEXT:    sub r10, r10, r3
-; CHECK-S-NEXT:    mullw r3, r4, r3
 ; CHECK-S-NEXT:    sub r12, r4, r5
 ; CHECK-S-NEXT:    add r0, r6, r5
 ; CHECK-S-NEXT:    sub r2, r6, r7
-; CHECK-S-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-S-NEXT:    mullw r3, r4, r3
 ; CHECK-S-NEXT:    add r30, r8, r7
 ; CHECK-S-NEXT:    mullw r3, r3, r11
 ; CHECK-S-NEXT:    mullw r3, r3, r5
