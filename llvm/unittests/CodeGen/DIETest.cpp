@@ -117,10 +117,12 @@ INSTANTIATE_TEST_CASE_P(
     DIETestParams, DIELabelFixture,
     testing::Values(
         DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_data4, 4u},
+        DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_data8, 8u},
         DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_sec_offset, 4u},
         DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_strp, 4u},
         DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_addr, 8u},
         DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_data4, 4u},
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_data8, 8u},
         DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_sec_offset, 8u},
         DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_strp, 8u},
         DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_addr, 8u}), );
