@@ -1822,24 +1822,28 @@ CompilerType TypeSystemSwiftTypeRef::GetErrorType() {
   auto impl = [&]() {
     using namespace swift::Demangle;
     Demangler Dem;
-    llvm::ArrayRef<NodePointer> nodes = {
-        Dem.createNode(Node::Kind::Type),
-        Dem.createNode(Node::Kind::ProtocolList),
-        Dem.createNode(Node::Kind::TypeList),
-        Dem.createNode(Node::Kind::Type),
-        Dem.createNode(Node::Kind::Protocol),
-    };
-    for (int i = 1; i < nodes.size(); ++i)
-      nodes[i - 1]->addChild(nodes[i], Dem);
+    auto *error_type = Dem.createNode(Node::Kind::Type);
+    auto *parent = error_type;
+    NodePointer node;
+    node = Dem.createNode(Node::Kind::ProtocolList);
+    parent->addChild(node, Dem);
+    parent = node;
+    node = Dem.createNode(Node::Kind::TypeList);
+    parent->addChild(node, Dem);
+    parent = node;
+    node = Dem.createNode(Node::Kind::Type);
+    parent->addChild(node, Dem);
+    parent = node;
+    node = Dem.createNode(Node::Kind::Protocol);
+    parent->addChild(node, Dem);
+    parent = node;
 
-    auto *error_type = nodes.back();
-    auto *module =
-        Dem.createNodeWithAllocatedText(Node::Kind::Module, swift::STDLIB_NAME);
-    auto *identifier =
-        Dem.createNodeWithAllocatedText(Node::Kind::Identifier, "Error");
-    error_type->addChild(module, Dem);
-    error_type->addChild(identifier, Dem);
-    return RemangleAsType(Dem, nodes[0]);
+    parent->addChild(
+        Dem.createNodeWithAllocatedText(Node::Kind::Module, swift::STDLIB_NAME),
+        Dem);
+    parent->addChild(Dem.createNode(Node::Kind::Identifier, "Error"), Dem);
+
+    return RemangleAsType(Dem, error_type);
   };
   VALIDATE_AND_RETURN_STATIC(impl, GetErrorType);
 }
