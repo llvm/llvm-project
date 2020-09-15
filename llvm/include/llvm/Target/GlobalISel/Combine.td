@@ -394,6 +394,15 @@ def fneg_fneg_fold: GICombineRule <
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
+// Fold (unmerge(merge x, y, z)) -> z, y, z.
+def unmerge_merge_matchinfo : GIDefMatchData<"SmallVector<Register, 8>">;
+def unmerge_merge : GICombineRule<
+  (defs root:$d, unmerge_merge_matchinfo:$info),
+  (match (wip_match_opcode G_UNMERGE_VALUES): $d,
+  [{ return Helper.matchCombineUnmergeMergeToPlainValues(*${d}, ${info}); }]),
+  (apply [{ return Helper.applyCombineUnmergeMergeToPlainValues(*${d}, ${info}); }])
+>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -424,4 +433,4 @@ def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,
     known_bits_simplifications, ext_ext_fold,
-    not_cmp_fold, opt_brcond_by_inverting_cond]>;
+    not_cmp_fold, opt_brcond_by_inverting_cond, unmerge_merge]>;
