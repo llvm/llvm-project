@@ -15,6 +15,7 @@ static_library("Scalar") {
     "BDCE.cpp",
     "CallSiteSplitting.cpp",
     "ConstantHoisting.cpp",
+    "ConstraintElimination.cpp",
     "CorrelatedValuePropagation.cpp",
     "DCE.cpp",
     "DeadStoreElimination.cpp",
