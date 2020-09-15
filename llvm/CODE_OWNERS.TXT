@@ -85,7 +85,11 @@ D: Branch weights and BlockFrequencyInfo
 
 N: Hal Finkel
 E: hfinkel@anl.gov
-D: The loop reroller, alias analysis and the PowerPC target
+D: The loop reroller and alias analysis
+
+N: Nemanja Ivanovic
+E: nemanja.i.ibm@gmail.com
+D: PowerPC Backend
 
 N: Dan Gohman
 E: llvm@sunfishcode.online
