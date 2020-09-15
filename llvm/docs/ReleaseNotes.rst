@@ -333,6 +333,12 @@ Changes to the Debug Info
   passed to the callee. The feature improves the debugging user experience when
   debugging optimized code.
 
+Changes to the Gold Plugin
+--------------------------
+
+* ``--plugin-opt=whole-program-visibility`` is added to specify that classes have hidden LTO visibility in LTO and ThinLTO links of source files compiled with ``-fwhole-program-vtables``. See `LTOVisibility <https://clang.llvm.org/docs/LTOVisibility.html>`_ for details.
+  (`D71913 <https://reviews.llvm.org/D71913>`_)
+
 Changes to the LLVM tools
 ---------------------------------
 
