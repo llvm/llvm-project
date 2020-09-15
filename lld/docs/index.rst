@@ -177,3 +177,4 @@ document soon.
    Partitions
    ReleaseNotes
    ELF/linker_script
+   ELF/warn_backrefs
