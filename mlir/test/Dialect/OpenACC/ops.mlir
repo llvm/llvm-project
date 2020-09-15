@@ -232,3 +232,15 @@ func @testop() -> () {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.loop tile([[TILESIZE]]: i64, [[TILESIZE]]: i64) {
 // CHECK-NEXT: }
+
+
+func @testparallelop() -> () {
+  %vectorLength = constant 128 : index
+  acc.parallel vector_length(%vectorLength) {
+  }
+  return
+}
+
+// CHECK:      [[VECTORLENGTH:%.*]] = constant 128 : index
+// CHECK-NEXT: acc.parallel vector_length([[VECTORLENGTH]]) {
+// CHECK-NEXT: }
