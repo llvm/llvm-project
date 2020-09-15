@@ -51,6 +51,17 @@ public:
 
   /// Returns true if there may be a solution for the constraints in the system.
   bool mayHaveSolution();
+
+  static SmallVector<int64_t, 8> negate(SmallVector<int64_t, 8> R) {
+    // The negated constraint R is obtained by multiplying by -1 and adding 1 to
+    // the constant.
+    R[0] += 1;
+    for (auto &C : R)
+      C *= -1;
+    return R;
+  }
+
+  bool isConditionImplied(SmallVector<int64_t, 8> R);
 };
 } // namespace llvm
 
