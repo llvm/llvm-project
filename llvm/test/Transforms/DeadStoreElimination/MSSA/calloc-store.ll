@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -dse -S | FileCheck %s
+; RUN: opt < %s -basic-aa -dse -enable-dse-memoryssa -S | FileCheck %s
 
 declare noalias i8* @calloc(i64, i64)
 
