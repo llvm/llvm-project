@@ -20,8 +20,15 @@
 #include <limits.h>
 #include <stdint.h>
 
+// __DEVICE__ is a helper macro with common set of attributes for the wrappers
+// we implement in this file. We need static in order to avoid emitting unused
+// functions.
 #pragma push_macro("__DEVICE__")
+#ifdef __OPENMP_AMDGCN__
+#define __DEVICE__ static constexpr __attribute__((always_inline, nothrow))
+#else
 #define __DEVICE__ static __device__ inline __attribute__((always_inline))
+#endif
 
 // Start with functions that cannot be defined by DEF macros below.
 #if defined(__cplusplus)
@@ -87,13 +94,17 @@ __DEVICE__ bool isunordered(float __x, float __y) {
 __DEVICE__ bool isunordered(double __x, double __y) {
   return __builtin_isunordered(__x, __y);
 }
+__DEVICE__ float log2(int __x) { return ::log2fi(__x); }
+__DEVICE__ double log2i(int __x) { return ::log2((double) __x); }
 __DEVICE__ float modf(float __x, float *__iptr) { return ::modff(__x, __iptr); }
 __DEVICE__ float pow(float __base, int __iexp) {
   return ::powif(__base, __iexp);
 }
+__DEVICE__ int pow(int __x, int __y) { return ::powii(__x, __y); }
 __DEVICE__ double pow(double __base, int __iexp) {
   return ::powi(__base, __iexp);
 }
+__DEVICE__ double powi(int __x, int __y) { return ::pow((double) __x,  __y); }
 __DEVICE__ float remquo(float __x, float __y, int *__quo) {
   return ::remquof(__x, __y, __quo);
 }

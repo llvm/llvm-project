@@ -27,6 +27,7 @@
 // different but equivalent function versions. TODO: For OpenMP we currently
 // select the native builtins as the overload support for templates is lacking.
 #if !defined(_OPENMP)
+#ifdef __NVPTX__
 #define _ISNANd std::isnan
 #define _ISNANf std::isnan
 #define _ISINFd std::isinf
@@ -41,7 +42,29 @@
 #define _ABSf std::abs
 #define _LOGBd std::logb
 #define _LOGBf std::logb
+#define _fmaxd max
+#define _fmaxf max
 #else
+#include <__clang_hip_libdevice_declares.h>
+#define _ISNANd __ocml_isnan_f64
+#define _ISNANf __ocml_isnan_f32
+#define _ISINFd __ocml_isinf_f64
+#define _ISINFf __ocml_isinf_f32
+#define _ISFINITEd __ocml_isfinite_f64
+#define _ISFINITEf __ocml_isfinite_f32
+#define _COPYSIGNd __ocml_copysign_f64
+#define _COPYSIGNf __ocml_copysign_f32
+#define _SCALBNd __ocml_scalbn_f64
+#define _SCALBNf __ocml_scalbn_f32
+#define _ABSd __ocml_fabs_f64
+#define _ABSf __ocml_fabs_f32
+#define _LOGBd __ocml_logb_f64
+#define _LOGBf __ocml_logb_f32
+#define _fmaxd __ocml_fmax_f64
+#define _fmaxf __ocml_fmax_f32
+#endif
+#else  // OPENMP
+#ifdef __NVPTX__
 #define _ISNANd __nv_isnand
 #define _ISNANf __nv_isnanf
 #define _ISINFd __nv_isinfd
@@ -56,6 +79,28 @@
 #define _ABSf __nv_fabsf
 #define _LOGBd __nv_logb
 #define _LOGBf __nv_logbf
+#define _fmaxd __nv_fmax
+#define _fmaxf __nv_fmaxf
+#else
+// OPENMP and __AMDGCN__
+#include <__clang_hip_libdevice_declares.h>
+#define _ISNANd __ocml_isnan_f64
+#define _ISNANf __ocml_isnan_f32
+#define _ISINFd __ocml_isinf_f64
+#define _ISINFf __ocml_isinf_f32
+#define _ISFINITEd __ocml_isfinite_f64
+#define _ISFINITEf __ocml_isfinite_f32
+#define _COPYSIGNd __ocml_copysign_f64
+#define _COPYSIGNf __ocml_copysign_f32
+#define _SCALBNd __ocml_scalbn_f64
+#define _SCALBNf __ocml_scalbn_f32
+#define _ABSd __ocml_fabs_f64
+#define _ABSf __ocml_fabs_f32
+#define _LOGBd __ocml_logb_f64
+#define _LOGBf __ocml_logb_f32
+#define _fmaxd __ocml_fmax_f64
+#define _fmaxf __ocml_fmax_f32
+#endif
 #endif
 
 #if defined(__cplusplus)
@@ -167,7 +212,7 @@ __DEVICE__ double _Complex __divdc3(double __a, double __b, double __c,
   // Can't use std::max, because that's defined in <algorithm>, and we don't
   // want to pull that in for every compile.  The CUDA headers define
   // ::max(float, float) and ::max(double, double), which is sufficient for us.
-  double __logbw = _LOGBd(max(_ABSd(__c), _ABSd(__d)));
+  double __logbw = _LOGBd(_fmaxd(_ABSd(__c), _ABSd(__d)));
   if (_ISFINITEd(__logbw)) {
     __ilogbw = (int)__logbw;
     __c = _SCALBNd(__c, -__ilogbw);
@@ -200,7 +245,7 @@ __DEVICE__ double _Complex __divdc3(double __a, double __b, double __c,
 
 __DEVICE__ float _Complex __divsc3(float __a, float __b, float __c, float __d) {
   int __ilogbw = 0;
-  float __logbw = _LOGBf(max(_ABSf(__c), _ABSf(__d)));
+  float __logbw = _LOGBf(_fmaxf(_ABSf(__c), _ABSf(__d)));
   if (_ISFINITEf(__logbw)) {
     __ilogbw = (int)__logbw;
     __c = _SCALBNf(__c, -__ilogbw);
@@ -249,6 +294,8 @@ __DEVICE__ float _Complex __divsc3(float __a, float __b, float __c, float __d) {
 #undef _ABSf
 #undef _LOGBd
 #undef _LOGBf
+#undef _fmaxd
+#undef _fmaxf
 
 #ifdef _OPENMP
 #pragma omp end declare target

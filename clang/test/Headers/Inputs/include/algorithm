@@ -1,0 +1,21 @@
+#pragma once
+
+// Copied from libcxx
+
+namespace std {
+
+template <class T>
+    const T&
+    max(const T& a, const T& b); // constexpr in C++14
+template <class T, class Compare>
+    const T&
+    max(const T& a, const T& b, Compare comp);  // constexpr in C++14
+
+template <class T>
+    const T&
+    min(const T& a, const T& b);  // constexpr in C++14
+template <class T, class Compare>
+    const T&
+    min(const T& a, const T& b, Compare comp);  // constexpr in C++14
+
+}

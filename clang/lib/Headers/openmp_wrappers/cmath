@@ -16,14 +16,16 @@
 
 #include_next <cmath>
 
-// Make sure we include our math.h overlay, it probably happend already but we
-// need to be sure.
+// Make sure we include our new and math.h overlays, it probably happened already
+// but we need to be sure.
+#include <new>
 #include <math.h>
 
 // We (might) need cstdlib because __clang_cuda_cmath.h below declares `abs`
 // which might live in cstdlib.
 #include <cstdlib>
 
+#ifdef __NVPTX__
 // We need limits because __clang_cuda_cmath.h below uses `std::numeric_limit`.
 #include <limits>
 
@@ -74,5 +76,16 @@ __DEVICE__ float tgamma(float __x) { return ::tgammaf(__x); }
 #undef __DEVICE__
 
 #pragma omp end declare variant
+#endif // __NVPTX__
 
-#endif
+#ifdef __AMDGCN__
+#pragma omp begin declare variant match(                                       \
+    device = {arch(amdgcn)}, implementation = {extension(match_any, allow_templates)})
+#define __HIP__
+#define __OPENMP_AMDGCN__
+#include <__clang_hip_cmath.h>
+
+#pragma omp end declare variant
+#endif // __AMDGCN__
+
+#endif // __CLANG_OPENMP_CMATH_H__

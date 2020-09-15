@@ -145,6 +145,16 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
     BCLibs.push_back(Args.MakeArgString(Lib));
   }
 
+  // Add libm for Fortran.
+  if (C.getDriver().IsFlangMode()) {
+    BCLibs.push_back(Args.MakeArgString("libm-amdgcn-" + SubArchName + ".bc"));
+    BCLibs.push_back(Args.MakeArgString("ocml.bc"));
+    if (Args.hasArg(options::OPT_cl_finite_math_only))
+      BCLibs.push_back(Args.MakeArgString("oclc_finite_only_on.bc"));
+    else
+      BCLibs.push_back(Args.MakeArgString("oclc_finite_only_off.bc"));
+  }
+
   llvm::StringRef WaveFrontSizeBC;
   std::string GFXVersion = SubArchName.drop_front(3).str();
   if (stoi(GFXVersion) < 1000)
@@ -165,10 +175,6 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
          "hip.bc", "ockl.bc",
          Args.MakeArgString("libbc-hostrpc-amdgcn.a"),
          std::string(WaveFrontSizeBC)});
-
-    if (!Args.hasArg(options::OPT_nostdlibxx) &&
-        !Args.hasArg(options::OPT_nostdlib))
-      BCLibs.append({Args.MakeArgString("libm-amdgcn-" + SubArchName + ".bc")});
   }
 
   for (auto Lib : BCLibs)
@@ -589,6 +595,11 @@ void AMDGPUOpenMPToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   CC1Args.push_back(DriverArgs.MakeArgString(D.Dir + "/../../include"));
 
   HostTC.AddClangSystemIncludeArgs(DriverArgs, CC1Args);
+
+  CC1Args.push_back("-internal-isystem");
+  SmallString<128> P(HostTC.getDriver().ResourceDir);
+  llvm::sys::path::append(P, "include/cuda_wrappers");
+  CC1Args.push_back(DriverArgs.MakeArgString(P));
 }
 
 /// Convert path list to Fortran frontend argument

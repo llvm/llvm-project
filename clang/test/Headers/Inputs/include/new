@@ -1,0 +1,50 @@
+#pragma once
+
+#include <cstdlib>
+#include <exception>
+
+// Copied from libcxx
+
+namespace std {
+
+struct nothrow_t { explicit nothrow_t() = default; };
+extern const nothrow_t nothrow;
+
+class bad_alloc
+    : public exception
+{
+public:
+    bad_alloc();
+    virtual ~bad_alloc();
+    virtual const char* what() const;
+};
+
+class bad_array_new_length
+    : public bad_alloc
+{
+public:
+    bad_array_new_length();
+    virtual ~bad_array_new_length();
+    virtual const char* what() const;
+};
+
+typedef void (*new_handler)();
+new_handler set_new_handler(new_handler);
+new_handler get_new_handler();
+
+}
+
+void* operator new(std::size_t __sz);
+void* operator new(std::size_t __sz, const std::nothrow_t&);
+void  operator delete(void* __p);
+void  operator delete(void* __p, const std::nothrow_t&);
+
+void* operator new[](std::size_t __sz);
+void* operator new[](std::size_t __sz, const std::nothrow_t&);
+void  operator delete[](void* __p);
+void  operator delete[](void* __p, const std::nothrow_t&);
+
+inline void* operator new  (std::size_t, void* __p) {return __p;}
+inline void* operator new[](std::size_t, void* __p) {return __p;}
+inline void  operator delete  (void*, void*) {}
+inline void  operator delete[](void*, void*) {}
