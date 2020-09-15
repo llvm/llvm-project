@@ -5773,8 +5773,10 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
 
     // If we already have the use of the negated floating constant, it is free
     // to negate it even it has multiple uses.
-    if (!Op.hasOneUse() && CFP.use_empty())
+    if (!Op.hasOneUse() && CFP.use_empty()) {
+      RemoveDeadNode(CFP);
       break;
+    }
     Cost = NegatibleCost::Neutral;
     return CFP;
   }
