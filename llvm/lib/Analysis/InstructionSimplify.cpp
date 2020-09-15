@@ -5476,9 +5476,9 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     bool UseNegInf = IID == Intrinsic::minnum || IID == Intrinsic::minimum;
     const APFloat *C;
     if ((match(Op0, m_APFloat(C)) && C->isInfinity() &&
-         C->isNegative() == UseNegInf) ||
+         C->isNegative() == UseNegInf && !PropagateNaN) ||
         (match(Op1, m_APFloat(C)) && C->isInfinity() &&
-         C->isNegative() == UseNegInf))
+         C->isNegative() == UseNegInf && !PropagateNaN))
       return ConstantFP::getInfinity(ReturnType, UseNegInf);
 
     // TODO: minnum(nnan x, inf) -> x
