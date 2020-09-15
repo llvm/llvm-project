@@ -403,6 +403,15 @@ def unmerge_merge : GICombineRule<
   (apply [{ return Helper.applyCombineUnmergeMergeToPlainValues(*${d}, ${info}); }])
 >;
 
+// Fold (fabs (fabs x)) -> (fabs x).
+def fabs_fabs_fold_matchinfo : GIDefMatchData<"Register">;
+def fabs_fabs_fold: GICombineRule<
+  (defs root:$root, fabs_fabs_fold_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_FABS):$root,
+         [{ return Helper.matchCombineFAbsOfFAbs(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.applyCombineFAbsOfFAbs(*${root}, ${matchinfo}); }])
+>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -433,4 +442,5 @@ def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,
     known_bits_simplifications, ext_ext_fold,
-    not_cmp_fold, opt_brcond_by_inverting_cond, unmerge_merge]>;
+    not_cmp_fold, opt_brcond_by_inverting_cond,
+    unmerge_merge, fabs_fabs_fold]>;

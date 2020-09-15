@@ -1878,6 +1878,21 @@ bool CombinerHelper::matchCombineFNegOfFNeg(MachineInstr &MI, Register &Reg) {
   return mi_match(SrcReg, MRI, m_GFNeg(m_Reg(Reg)));
 }
 
+bool CombinerHelper::matchCombineFAbsOfFAbs(MachineInstr &MI, Register &Src) {
+  assert(MI.getOpcode() == TargetOpcode::G_FABS && "Expected a G_FABS");
+  Src = MI.getOperand(1).getReg();
+  Register AbsSrc;
+  return mi_match(Src, MRI, m_GFabs(m_Reg(AbsSrc)));
+}
+
+bool CombinerHelper::applyCombineFAbsOfFAbs(MachineInstr &MI, Register &Src) {
+  assert(MI.getOpcode() == TargetOpcode::G_FABS && "Expected a G_FABS");
+  Register Dst = MI.getOperand(0).getReg();
+  MI.eraseFromParent();
+  replaceRegWith(MRI, Dst, Src);
+  return true;
+}
+
 bool CombinerHelper::matchAnyExplicitUseIsUndef(MachineInstr &MI) {
   return any_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
     return MO.isReg() &&
