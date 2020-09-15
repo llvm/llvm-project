@@ -76,6 +76,24 @@ entry:
   ret <4 x i32> %div
 }
 
+define <1 x i128> @test_vdivsq(<1 x i128> %x, <1 x i128> %y) nounwind readnone {
+; CHECK-LABEL: test_vdivsq:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vdivsq v2, v2, v3
+; CHECK-NEXT:    blr
+  %tmp = sdiv <1 x i128> %x, %y
+  ret <1 x i128> %tmp
+}
+
+define <1 x i128> @test_vdivuq(<1 x i128> %x, <1 x i128> %y) nounwind readnone {
+; CHECK-LABEL: test_vdivuq:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vdivuq v2, v2, v3
+; CHECK-NEXT:    blr
+  %tmp = udiv <1 x i128> %x, %y
+  ret <1 x i128> %tmp
+}
+
 define <2 x i64> @test_vdivesd(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vdivesd:
 ; CHECK:       # %bb.0: # %entry
