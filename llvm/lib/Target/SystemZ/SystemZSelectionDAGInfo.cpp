@@ -117,9 +117,8 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
           return Chain1;
         SDValue Dst2 = DAG.getNode(ISD::ADD, DL, PtrVT, Dst,
                                    DAG.getConstant(1, DL, PtrVT));
-        SDValue Chain2 =
-            DAG.getStore(Chain, DL, Byte, Dst2, DstPtrInfo.getWithOffset(1),
-                         /* Alignment = */ 1);
+        SDValue Chain2 = DAG.getStore(Chain, DL, Byte, Dst2,
+                                      DstPtrInfo.getWithOffset(1), Align(1));
         return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chain1, Chain2);
       }
     }
