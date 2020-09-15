@@ -1996,11 +1996,18 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
       const auto &designator{std::get<parser::ProcedureDesignator>(call.t)};
       if (const auto *name{std::get_if<parser::Name>(&designator.u)}) {
         semantics::Scope &scope{context_.FindScope(name->source)};
+        semantics::DerivedTypeSpec dtSpec{
+            name->source, derivedType.GetUltimate()};
+        if (dtSpec.IsForwardReferenced()) {
+          Say(call.source,
+              "Cannot construct value for derived type '%s' "
+              "before it is defined"_err_en_US,
+              name->source);
+          return std::nullopt;
+        }
         const semantics::DeclTypeSpec &type{
-            semantics::FindOrInstantiateDerivedType(scope,
-                semantics::DerivedTypeSpec{
-                    name->source, derivedType.GetUltimate()},
-                context_)};
+            semantics::FindOrInstantiateDerivedType(
+                scope, std::move(dtSpec), context_)};
         auto &mutableRef{const_cast<parser::FunctionReference &>(funcRef)};
         *structureConstructor =
             mutableRef.ConvertToStructureConstructor(type.derivedTypeSpec());
