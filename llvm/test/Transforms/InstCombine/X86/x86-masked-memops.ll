@@ -14,14 +14,14 @@ define <4 x float> @mload(i8* %f, <4 x i32> %mask) {
   ret <4 x float> %ld
 }
 
-; TODO: If the mask comes from a comparison, convert to an LLVM intrinsic. The backend should optimize further.
+; If the mask comes from a comparison, convert to an LLVM intrinsic. The backend should optimize further.
 
 define <4 x float> @mload_v4f32_cmp(i8* %f, <4 x i32> %src) {
 ; CHECK-LABEL: @mload_v4f32_cmp(
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne <4 x i32> [[SRC:%.*]], zeroinitializer
-; CHECK-NEXT:    [[MASK:%.*]] = sext <4 x i1> [[ICMP]] to <4 x i32>
-; CHECK-NEXT:    [[LD:%.*]] = tail call <4 x float> @llvm.x86.avx.maskload.ps(i8* [[F:%.*]], <4 x i32> [[MASK]])
-; CHECK-NEXT:    ret <4 x float> [[LD]]
+; CHECK-NEXT:    [[CASTVEC:%.*]] = bitcast i8* [[F:%.*]] to <4 x float>*
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* [[CASTVEC]], i32 1, <4 x i1> [[ICMP]], <4 x float> zeroinitializer)
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %icmp = icmp ne <4 x i32> %src, zeroinitializer
   %mask = sext <4 x i1> %icmp to <4 x i32>
@@ -102,9 +102,9 @@ define <8 x float> @mload_v8f32_cmp(i8* %f, <8 x float> %src0, <8 x float> %src1
 ; CHECK-NEXT:    [[ICMP0:%.*]] = fcmp one <8 x float> [[SRC0:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[ICMP1:%.*]] = fcmp one <8 x float> [[SRC1:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[MASK1:%.*]] = and <8 x i1> [[ICMP0]], [[ICMP1]]
-; CHECK-NEXT:    [[MASK:%.*]] = sext <8 x i1> [[MASK1]] to <8 x i32>
-; CHECK-NEXT:    [[LD:%.*]] = tail call <8 x float> @llvm.x86.avx.maskload.ps.256(i8* [[F:%.*]], <8 x i32> [[MASK]])
-; CHECK-NEXT:    ret <8 x float> [[LD]]
+; CHECK-NEXT:    [[CASTVEC:%.*]] = bitcast i8* [[F:%.*]] to <8 x float>*
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* [[CASTVEC]], i32 1, <8 x i1> [[MASK1]], <8 x float> zeroinitializer)
+; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %icmp0 = fcmp one <8 x float> %src0, zeroinitializer
   %icmp1 = fcmp one <8 x float> %src1, zeroinitializer
@@ -193,13 +193,13 @@ define void @mstore(i8* %f, <4 x i32> %mask, <4 x float> %v) {
   ret void
 }
 
-; TODO: If the mask comes from a comparison, convert to an LLVM intrinsic. The backend should optimize further.
+; If the mask comes from a comparison, convert to an LLVM intrinsic. The backend should optimize further.
 
 define void @mstore_v4f32_cmp(i8* %f, <4 x i32> %src, <4 x float> %v) {
 ; CHECK-LABEL: @mstore_v4f32_cmp(
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq <4 x i32> [[SRC:%.*]], zeroinitializer
-; CHECK-NEXT:    [[MASK:%.*]] = sext <4 x i1> [[ICMP]] to <4 x i32>
-; CHECK-NEXT:    tail call void @llvm.x86.avx.maskstore.ps(i8* [[F:%.*]], <4 x i32> [[MASK]], <4 x float> [[V:%.*]])
+; CHECK-NEXT:    [[CASTVEC:%.*]] = bitcast i8* [[F:%.*]] to <4 x float>*
+; CHECK-NEXT:    call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> [[V:%.*]], <4 x float>* [[CASTVEC]], i32 1, <4 x i1> [[ICMP]])
 ; CHECK-NEXT:    ret void
 ;
   %icmp = icmp eq <4 x i32> %src, zeroinitializer
@@ -348,8 +348,8 @@ define void @mstore_v4i64_cmp(i8* %f, <4 x i64> %src0, <4 x i64> %src1, <4 x i64
 ; CHECK-NEXT:    [[ICMP0:%.*]] = icmp eq <4 x i64> [[SRC0:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[ICMP1:%.*]] = icmp ne <4 x i64> [[SRC1:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[MASK1:%.*]] = and <4 x i1> [[ICMP0]], [[ICMP1]]
-; CHECK-NEXT:    [[MASK:%.*]] = sext <4 x i1> [[MASK1]] to <4 x i64>
-; CHECK-NEXT:    tail call void @llvm.x86.avx2.maskstore.q.256(i8* [[F:%.*]], <4 x i64> [[MASK]], <4 x i64> [[V:%.*]])
+; CHECK-NEXT:    [[CASTVEC:%.*]] = bitcast i8* [[F:%.*]] to <4 x i64>*
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0v4i64(<4 x i64> [[V:%.*]], <4 x i64>* [[CASTVEC]], i32 1, <4 x i1> [[MASK1]])
 ; CHECK-NEXT:    ret void
 ;
   %icmp0 = icmp eq <4 x i64> %src0, zeroinitializer
