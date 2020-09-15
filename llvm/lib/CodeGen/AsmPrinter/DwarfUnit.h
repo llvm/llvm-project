@@ -253,9 +253,9 @@ public:
   /// Compute the size of a header for this unit, not including the initial
   /// length field.
   virtual unsigned getHeaderSize() const {
-    return sizeof(int16_t) + // DWARF version number
-           sizeof(int32_t) + // Offset Into Abbrev. Section
-           sizeof(int8_t) +  // Pointer Size (in bytes)
+    return sizeof(int16_t) +               // DWARF version number
+           Asm->getDwarfOffsetByteSize() + // Offset Into Abbrev. Section
+           sizeof(int8_t) +                // Pointer Size (in bytes)
            (DD->getDwarfVersion() >= 5 ? sizeof(int8_t)
                                        : 0); // DWARF v5 unit type
   }
