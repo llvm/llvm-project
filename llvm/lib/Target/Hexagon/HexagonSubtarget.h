@@ -275,6 +275,17 @@ public:
     return makeArrayRef(Types);
   }
 
+  bool isHVXElementType(MVT Ty, bool IncludeBool = false) const {
+    if (!useHVXOps())
+      return false;
+    if (Ty.isVector())
+      Ty = Ty.getVectorElementType();
+    if (IncludeBool && Ty == MVT::i1)
+      return true;
+    ArrayRef<MVT> ElemTypes = getHVXElementTypes();
+    return llvm::find(ElemTypes, Ty) != ElemTypes.end();
+  }
+
   bool isHVXVectorType(MVT VecTy, bool IncludeBool = false) const {
     if (!VecTy.isVector() || !useHVXOps() || VecTy.isScalableVector())
       return false;
@@ -298,7 +309,7 @@ public:
     unsigned VecWidth = VecTy.getSizeInBits();
     if (VecWidth != 8*HwLen && VecWidth != 16*HwLen)
       return false;
-    return llvm::any_of(ElemTypes, [ElemTy] (MVT T) { return ElemTy == T; });
+    return llvm::find(ElemTypes, ElemTy) != ElemTypes.end();
   }
 
   unsigned getTypeAlignment(MVT Ty) const {
