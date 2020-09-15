@@ -161,8 +161,9 @@ class AsanChunk : public ChunkBase {
 };
 
 class LargeChunkHeader {
-  static constexpr uptr kAllocBegMagic = 0xCC6E96B9;
-  atomic_uint64_t magic;
+  static constexpr uptr kAllocBegMagic =
+      FIRST_32_SECOND_64(0xCC6E96B9, 0xCC6E96B9CC6E96B9ULL);
+  atomic_uintptr_t magic;
   AsanChunk *chunk_header;
 
  public:
@@ -179,7 +180,7 @@ class LargeChunkHeader {
       return;
     }
 
-    u64 old = kAllocBegMagic;
+    uptr old = kAllocBegMagic;
     if (!atomic_compare_exchange_strong(&magic, &old, 0,
                                         memory_order_release)) {
       CHECK_EQ(old, kAllocBegMagic);
