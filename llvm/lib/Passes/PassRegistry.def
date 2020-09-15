@@ -258,6 +258,8 @@ FUNCTION_PASS("print<phi-values>", PhiValuesPrinterPass(dbgs()))
 FUNCTION_PASS("print<regions>", RegionInfoPrinterPass(dbgs()))
 FUNCTION_PASS("print<scalar-evolution>", ScalarEvolutionPrinterPass(dbgs()))
 FUNCTION_PASS("print<stack-safety-local>", StackSafetyPrinterPass(dbgs()))
+// TODO: rename to print<alias-sets> after NPM switch
+FUNCTION_PASS("print-alias-sets", AliasSetsPrinterPass(dbgs()))
 FUNCTION_PASS("print-predicateinfo", PredicateInfoPrinterPass(dbgs()))
 FUNCTION_PASS("reassociate", ReassociatePass())
 FUNCTION_PASS("scalarizer", ScalarizerPass())
