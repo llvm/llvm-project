@@ -540,7 +540,7 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner *prescanner) {
       return;
     }
     std::string include;
-    if (dir.TokenAt(j).ToString() == "<") {
+    if (dir.TokenAt(j).ToString() == "<") { // #include <foo>
       std::size_t k{j + 1};
       if (k >= tokens) {
         prescanner->Say(dir.GetIntervalProvenanceRange(j, tokens - j),
@@ -553,15 +553,12 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner *prescanner) {
       if (k >= tokens) {
         prescanner->Say(dir.GetIntervalProvenanceRange(j, tokens - j),
             "#include: expected '>' at end of included file"_en_US);
-      } else if (k + 1 < tokens) {
-        prescanner->Say(dir.GetIntervalProvenanceRange(k + 1, tokens - k - 1),
-            "#include: extra stuff ignored after '>'"_en_US);
       }
       TokenSequence braced{dir, j + 1, k - j - 1};
       include = ReplaceMacros(braced, *prescanner).ToString();
-    } else if (j + 1 == tokens &&
-        (include = dir.TokenAt(j).ToString()).substr(0, 1) == "\"" &&
-        include.substr(include.size() - 1, 1) == "\"") {
+      j = k;
+    } else if ((include = dir.TokenAt(j).ToString()).substr(0, 1) == "\"" &&
+        include.substr(include.size() - 1, 1) == "\"") { // #include "foo"
       include = include.substr(1, include.size() - 2);
     } else {
       prescanner->Say(dir.GetTokenProvenanceRange(j < tokens ? j : tokens - 1),
@@ -572,6 +569,11 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner *prescanner) {
       prescanner->Say(dir.GetTokenProvenanceRange(dirOffset),
           "#include: empty include file name"_err_en_US);
       return;
+    }
+    j = dir.SkipBlanks(j + 1);
+    if (j < tokens && dir.TokenAt(j).ToString() != "!") {
+      prescanner->Say(dir.GetIntervalProvenanceRange(j, tokens - j),
+          "#include: extra stuff ignored after file name"_en_US);
     }
     std::string buf;
     llvm::raw_string_ostream error{buf};
