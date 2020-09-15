@@ -231,7 +231,11 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
         sink.addDstEdge(arc.get());
         src.addSrcEdge(arc.get());
         fn->treeArcs.push_back(std::move(arc));
-        fn->propagateCounts(src, nullptr);
+
+        for (GCOVBlock &block : make_pointee_range(fn->Blocks))
+          fn->propagateCounts(block, nullptr);
+        for (size_t i = fn->treeArcs.size() - 1; i; --i)
+          fn->treeArcs[i - 1]->src.Counter += fn->treeArcs[i - 1]->Count;
       }
     }
     pos += 4 * length;
@@ -289,6 +293,11 @@ GCOVBlock &GCOVFunction::getExitBlock() const {
 // spanning tree, the count for each unmeasured arc (GCOV_ARC_ON_TREE) can be
 // uniquely identified.
 uint64_t GCOVFunction::propagateCounts(const GCOVBlock &v, GCOVArc *pred) {
+  // If GCOV_ARC_ON_TREE edges do form a tree, visited is not needed; otherwise
+  // this prevents infinite recursion.
+  if (!visited.insert(&v).second)
+    return 0;
+
   uint64_t excess = 0;
   for (GCOVArc *e : v.srcs())
     if (e != pred)
