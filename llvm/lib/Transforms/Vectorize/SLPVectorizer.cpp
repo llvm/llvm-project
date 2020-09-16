@@ -7508,6 +7508,11 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
   SmallVector<Instruction *, 8> PostProcessInstructions;
   SmallDenseSet<Instruction *, 4> KeyNodes;
   for (BasicBlock::iterator it = BB->begin(), e = BB->end(); it != e; ++it) {
+    // Skip instructions with scalable type. The num of elements is unknown at
+    // compile-time for scalable type.
+    if (isa<ScalableVectorType>(it->getType()))
+      continue;
+
     // Skip instructions marked for the deletion.
     if (R.isDeleted(&*it))
       continue;
