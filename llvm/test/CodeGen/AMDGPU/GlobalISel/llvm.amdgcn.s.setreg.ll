@@ -1194,9 +1194,9 @@ define void @test_setreg_roundingmode_var_vgpr(i32 %var.mode) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    v_readfirstlane_b32 s4, v0 ; encoding: [0x00,0x05,0x08,0x7e]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 3), s4 ; encoding: [0x01,0x10,0x84,0xb9]
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ;;#ASMEND
+; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 3), s4 ; encoding: [0x01,0x10,0x84,0xb9]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
   call void @llvm.amdgcn.s.setreg(i32 4097, i32 %var.mode)
   call void asm sideeffect "", ""()
