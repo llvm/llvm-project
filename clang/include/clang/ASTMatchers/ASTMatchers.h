@@ -4879,7 +4879,9 @@ AST_MATCHER_P(ArraySubscriptExpr, hasBase,
 }
 
 /// Matches a 'for', 'while', 'do while' statement or a function
-/// definition that has a given body.
+/// definition that has a given body. Note that in case of functions
+/// this matcher only matches the definition itself and not the other
+/// declarations of the same function.
 ///
 /// Given
 /// \code
@@ -4889,6 +4891,18 @@ AST_MATCHER_P(ArraySubscriptExpr, hasBase,
 ///   matches 'for (;;) {}'
 /// with compoundStmt()
 ///   matching '{}'
+///
+/// Given
+/// \code
+///   void f();
+///   void f() {}
+/// \endcode
+/// hasBody(functionDecl())
+///   matches 'void f() {}'
+/// with compoundStmt()
+///   matching '{}'
+///   but does not match 'void f();'
+
 AST_POLYMORPHIC_MATCHER_P(hasBody,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(DoStmt, ForStmt,
                                                           WhileStmt,
@@ -4899,6 +4913,30 @@ AST_POLYMORPHIC_MATCHER_P(hasBody,
   return (Statement != nullptr &&
           InnerMatcher.matches(*Statement, Finder, Builder));
 }
+
+/// Matches a function declaration that has a given body present in the AST.
+/// Note that this matcher matches all the declarations of a function whose
+/// body is present in the AST.
+///
+/// Given
+/// \code
+///   void f();
+///   void f() {}
+///   void g();
+/// \endcode
+/// hasAnyBody(functionDecl())
+///   matches both 'void f();'
+///   and 'void f() {}'
+/// with compoundStmt()
+///   matching '{}'
+///   but does not match 'void g();'
+AST_MATCHER_P(FunctionDecl, hasAnyBody,
+              internal::Matcher<Stmt>, InnerMatcher) {
+  const Stmt *const Statement = Node.getBody();
+  return (Statement != nullptr &&
+          InnerMatcher.matches(*Statement, Finder, Builder));
+}
+
 
 /// Matches compound statements where at least one substatement matches
 /// a given matcher. Also matches StmtExprs that have CompoundStmt as children.
