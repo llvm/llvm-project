@@ -522,7 +522,7 @@ ELFDumper<ELFT>::dumpSections() {
 
     // Recognize some special SHT_PROGBITS sections by name.
     if (Sec.sh_type == ELF::SHT_PROGBITS) {
-      auto NameOrErr = Obj.getSectionName(&Sec);
+      auto NameOrErr = getUniquedSectionName(&Sec);
       if (!NameOrErr)
         return NameOrErr.takeError();
 
