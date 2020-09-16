@@ -6844,8 +6844,9 @@ public:
     // so set it as externally used to prevent it from being deleted.
     ExternallyUsedValues[ReductionRoot];
     SmallVector<Value *, 16> IgnoreList;
-    for (auto &V : ReductionOps)
-      IgnoreList.append(V.begin(), V.end());
+    for (ReductionOpsType &RdxOp : ReductionOps)
+      IgnoreList.append(RdxOp.begin(), RdxOp.end());
+
     while (i < NumReducedVals - ReduxWidth + 1 && ReduxWidth > 2) {
       auto VL = makeArrayRef(&ReducedVals[i], ReduxWidth);
       V.buildTree(VL, ExternallyUsedValues, IgnoreList);
