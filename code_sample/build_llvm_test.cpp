@@ -1,3 +1,5 @@
+/// Run it clang++ -g build_llvm_test.cpp `llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native` -O3 -o test.out && ./test.out
+
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
