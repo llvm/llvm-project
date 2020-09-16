@@ -40,7 +40,6 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   HasAggressiveSymbolFolding = true;
   COMMDirectiveAlignmentIsInBytes = false;
   HasNoDeadStrip = true;
-  WeakRefDirective = ".weakref\t";
   //===--- Dwarf Emission Directives -----------------------------------===//
   SupportsDebugInformation = true;
   DwarfRegNumForCFI = true;
