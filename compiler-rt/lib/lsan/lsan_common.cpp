@@ -218,10 +218,7 @@ static void ProcessThreads(SuspendedThreadsList const &, Frontier *) {}
 // Scans thread data (stacks and TLS) for heap pointers.
 static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
                            Frontier *frontier) {
-  InternalMmapVector<uptr> registers(suspended_threads.RegisterCount());
-  uptr registers_begin = reinterpret_cast<uptr>(registers.data());
-  uptr registers_end =
-      reinterpret_cast<uptr>(registers.data() + registers.size());
+  InternalMmapVector<uptr> registers;
   for (uptr i = 0; i < suspended_threads.ThreadCount(); i++) {
     tid_t os_id = static_cast<tid_t>(suspended_threads.GetThreadID(i));
     LOG_THREADS("Processing thread %d.\n", os_id);
@@ -238,7 +235,7 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
     }
     uptr sp;
     PtraceRegistersStatus have_registers =
-        suspended_threads.GetRegistersAndSP(i, registers.data(), &sp);
+        suspended_threads.GetRegistersAndSP(i, &registers, &sp);
     if (have_registers != REGISTERS_AVAILABLE) {
       Report("Unable to get registers from thread %d.\n", os_id);
       // If unable to get SP, consider the entire stack to be reachable unless
@@ -247,9 +244,13 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
       sp = stack_begin;
     }
 
-    if (flags()->use_registers && have_registers)
+    if (flags()->use_registers && have_registers) {
+      uptr registers_begin = reinterpret_cast<uptr>(registers.data());
+      uptr registers_end =
+          reinterpret_cast<uptr>(registers.data() + registers.size());
       ScanRangeForPointers(registers_begin, registers_end, frontier,
                            "REGISTERS", kReachable);
+    }
 
     if (flags()->use_stacks) {
       LOG_THREADS("Stack at %p-%p (SP = %p).\n", stack_begin, stack_end, sp);
