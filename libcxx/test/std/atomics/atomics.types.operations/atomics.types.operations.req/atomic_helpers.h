@@ -23,9 +23,13 @@ struct UserAtomicType
     { return x.i == y.i; }
 };
 
+/*
+
+Enable these once we have P0528 
+
 struct WeirdUserAtomicType
 {
-    char i, j, k; /* the 3 chars of doom */
+    char i, j, k; // the 3 chars of doom
 
     explicit WeirdUserAtomicType(int d = 0) TEST_NOEXCEPT : i(d) {}
 
@@ -35,13 +39,15 @@ struct WeirdUserAtomicType
 
 struct PaddedUserAtomicType
 {
-    char i; int j; /* probably lock-free? */
+    char i; int j; // probably lock-free?
 
     explicit PaddedUserAtomicType(int d = 0) TEST_NOEXCEPT : i(d) {}
 
     friend bool operator==(const PaddedUserAtomicType& x, const PaddedUserAtomicType& y)
     { return x.i == y.i; }
 };
+
+*/
 
 struct LargeUserAtomicType
 {
@@ -89,15 +95,19 @@ struct TestEachAtomicType {
     void operator()() const {
         TestEachIntegralType<TestFunctor>()();
         TestFunctor<UserAtomicType>()();
-        TestFunctor<PaddedUserAtomicType>()();
 #ifndef __APPLE__
         /*
             These aren't going to be lock-free,
             so some libatomic.a is necessary.
         */
-        //TestFunctor<WeirdUserAtomicType>()(); //< Actually, nobody is ready for this until P0528
         TestFunctor<LargeUserAtomicType>()();
 #endif
+/*
+    Enable these once we have P0528 
+    
+        TestFunctor<PaddedUserAtomicType>()();
+        TestFunctor<WeirdUserAtomicType>()();
+*/
         TestFunctor<int*>()();
         TestFunctor<const int*>()();
         TestFunctor<float>()();
