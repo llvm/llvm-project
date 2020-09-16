@@ -26,5 +26,5 @@
 ; CHECK:          define void @foo() 
 ; CHECK-OPT-NEXT:   ret void
 ; CHECK-NOOPT-NEXT: call void @bar()
-; CHECK-NOOPT: define available_externally void @bar() !thinlto_src_module !0 {
+; CHECK-NOOPT: define available_externally void @bar()
 ; CHECK-NOOPT-NEXT: ret void
