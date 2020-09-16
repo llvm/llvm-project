@@ -2823,6 +2823,12 @@ bool PassBuilder::isAnalysisPassName(StringRef PassName) {
 #define CGSSC_ANALYSIS(NAME, CREATE_PASS)                                      \
   if (PassName == NAME)                                                        \
     return true;
+#define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS)                               \
+  if (PassName == NAME)                                                        \
+    return true;
+#define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS)                             \
+  if (PassName == NAME)                                                        \
+    return true;
 #include "PassRegistry.def"
   return false;
 }
