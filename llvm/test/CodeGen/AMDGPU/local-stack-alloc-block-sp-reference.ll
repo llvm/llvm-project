@@ -41,8 +41,8 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(i64 addrspace(1)* %out, i8
 ; GCN-NEXT:    v_add_u32_e32 v1, 0x20d0, v1
 ; GCN-NEXT:    buffer_load_dword v2, v1, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen offset:4
-; GCN-NEXT:    buffer_load_dword v3, v0, s[0:3], s32 offen
-; GCN-NEXT:    buffer_load_dword v4, v0, s[0:3], s32 offen offset:4
+; GCN-NEXT:    buffer_load_dword v3, v0, s[0:3], 0 offen
+; GCN-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen offset:4
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v3
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -94,8 +94,8 @@ define void @func_local_stack_offset_uses_sp(i64 addrspace(1)* %out, i8 addrspac
 ; GCN-NEXT:    v_add_u32_e32 v3, 0x20d0, v3
 ; GCN-NEXT:    buffer_load_dword v4, v3, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v3, v3, s[0:3], 0 offen offset:4
-; GCN-NEXT:    buffer_load_dword v5, v2, s[0:3], s32 offen
-; GCN-NEXT:    buffer_load_dword v6, v2, s[0:3], s32 offen offset:4
+; GCN-NEXT:    buffer_load_dword v5, v2, s[0:3], 0 offen
+; GCN-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen offset:4
 ; GCN-NEXT:    s_sub_u32 s32, s32, 0x180000
 ; GCN-NEXT:    s_mov_b32 s33, s5
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
