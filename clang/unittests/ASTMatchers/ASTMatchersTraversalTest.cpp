@@ -1612,10 +1612,49 @@ TEST(HasBody, FindsBodyOfForWhileDoLoops) {
                       doStmt(hasBody(compoundStmt()))));
   EXPECT_TRUE(matches("void f() { int p[2]; for (auto x : p) {} }",
                       cxxForRangeStmt(hasBody(compoundStmt()))));
+}
+
+TEST(HasBody, FindsBodyOfFunctions) {
   EXPECT_TRUE(matches("void f() {}", functionDecl(hasBody(compoundStmt()))));
   EXPECT_TRUE(notMatches("void f();", functionDecl(hasBody(compoundStmt()))));
-  EXPECT_TRUE(matches("void f(); void f() {}",
-                      functionDecl(hasBody(compoundStmt()))));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "void f(); void f() {}",
+      functionDecl(hasBody(compoundStmt())).bind("func"),
+      std::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("func", 1)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "class C { void f(); }; void C::f() {}",
+      cxxMethodDecl(hasBody(compoundStmt())).bind("met"),
+      std::make_unique<VerifyIdIsBoundTo<CXXMethodDecl>>("met", 1)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "class C { C(); }; C::C() {}",
+      cxxConstructorDecl(hasBody(compoundStmt())).bind("ctr"),
+      std::make_unique<VerifyIdIsBoundTo<CXXConstructorDecl>>("ctr", 1)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "class C { ~C(); }; C::~C() {}",
+      cxxDestructorDecl(hasBody(compoundStmt())).bind("dtr"),
+      std::make_unique<VerifyIdIsBoundTo<CXXDestructorDecl>>("dtr", 1)));
+}
+
+TEST(HasAnyBody, FindsAnyBodyOfFunctions) {
+  EXPECT_TRUE(matches("void f() {}", functionDecl(hasAnyBody(compoundStmt()))));
+  EXPECT_TRUE(notMatches("void f();",
+                         functionDecl(hasAnyBody(compoundStmt()))));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "void f(); void f() {}",
+      functionDecl(hasAnyBody(compoundStmt())).bind("func"),
+      std::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("func", 2)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "class C { void f(); }; void C::f() {}",
+      cxxMethodDecl(hasAnyBody(compoundStmt())).bind("met"),
+      std::make_unique<VerifyIdIsBoundTo<CXXMethodDecl>>("met", 2)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "class C { C(); }; C::C() {}",
+      cxxConstructorDecl(hasAnyBody(compoundStmt())).bind("ctr"),
+      std::make_unique<VerifyIdIsBoundTo<CXXConstructorDecl>>("ctr", 2)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "class C { ~C(); }; C::~C() {}",
+      cxxDestructorDecl(hasAnyBody(compoundStmt())).bind("dtr"),
+      std::make_unique<VerifyIdIsBoundTo<CXXDestructorDecl>>("dtr", 2)));
 }
 
 TEST(HasAnySubstatement, MatchesForTopLevelCompoundStatement) {
