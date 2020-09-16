@@ -580,7 +580,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
 
       // Since a __block variable cannot be captured by lambdas, its type and
       // the capture field type should always match.
-      assert(getCaptureFieldType(*CGF, CI) == variable->getType() &&
+      assert(CGF && getCaptureFieldType(*CGF, CI) == variable->getType() &&
              "capture type differs from the variable type");
       layout.push_back(BlockLayoutChunk(align, CGM.getPointerSize(),
                                         Qualifiers::OCL_None, &CI,
