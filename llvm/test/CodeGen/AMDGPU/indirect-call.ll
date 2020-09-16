@@ -577,3 +577,54 @@ bb1:
 bb2:
   ret void
 }
+
+define void @test_indirect_call_vgpr_ptr_inreg_arg(void(i32)* %fptr) {
+; GCN-LABEL: test_indirect_call_vgpr_ptr_inreg_arg:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; GCN-NEXT:    s_mov_b64 exec, s[4:5]
+; GCN-NEXT:    v_writelane_b32 v42, s33, 6
+; GCN-NEXT:    s_mov_b32 s33, s32
+; GCN-NEXT:    s_add_u32 s32, s32, 0x400
+; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
+; GCN-NEXT:    v_writelane_b32 v42, s34, 0
+; GCN-NEXT:    v_writelane_b32 v42, s35, 1
+; GCN-NEXT:    v_writelane_b32 v42, s36, 2
+; GCN-NEXT:    v_writelane_b32 v42, s37, 3
+; GCN-NEXT:    v_writelane_b32 v42, s30, 4
+; GCN-NEXT:    v_writelane_b32 v42, s31, 5
+; GCN-NEXT:    v_mov_b32_e32 v41, v1
+; GCN-NEXT:    v_mov_b32_e32 v40, v0
+; GCN-NEXT:    s_mov_b64 s[34:35], exec
+; GCN-NEXT:  BB6_1: ; =>This Inner Loop Header: Depth=1
+; GCN-NEXT:    v_readfirstlane_b32 s6, v40
+; GCN-NEXT:    v_readfirstlane_b32 s7, v41
+; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, s[6:7], v[40:41]
+; GCN-NEXT:    s_and_saveexec_b64 s[36:37], vcc
+; GCN-NEXT:    s_movk_i32 s4, 0x7b
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; GCN-NEXT:    s_xor_b64 exec, exec, s[36:37]
+; GCN-NEXT:    s_cbranch_execnz BB6_1
+; GCN-NEXT:  ; %bb.2:
+; GCN-NEXT:    s_mov_b64 exec, s[34:35]
+; GCN-NEXT:    v_readlane_b32 s4, v42, 4
+; GCN-NEXT:    v_readlane_b32 s5, v42, 5
+; GCN-NEXT:    v_readlane_b32 s37, v42, 3
+; GCN-NEXT:    v_readlane_b32 s36, v42, 2
+; GCN-NEXT:    v_readlane_b32 s35, v42, 1
+; GCN-NEXT:    v_readlane_b32 s34, v42, 0
+; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    s_sub_u32 s32, s32, 0x400
+; GCN-NEXT:    v_readlane_b32 s33, v42, 6
+; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[6:7]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[4:5]
+  call amdgpu_gfx void %fptr(i32 inreg 123)
+  ret void
+}
