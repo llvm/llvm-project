@@ -5,7 +5,7 @@
 #include <sanitizer/lsan_interface.h>
 #include <stdlib.h>
 
-int *x, *y, *z;
+int *x, *y;
 
 int main() {
   x = new int;
@@ -16,9 +16,6 @@ int main() {
     y = new int;
   }
 
-  z = new int;
-  __lsan_ignore_object(z - 1);
-
-  x = y = z = nullptr;
+  x = y = nullptr;
   return 0;
 }
