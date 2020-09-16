@@ -25,6 +25,10 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 
+namespace fir {
+class ExtendedValue;
+}
+
 namespace Fortran::lower {
 
 class AbstractConverter;
@@ -141,21 +145,13 @@ public:
   // Linkage helpers (inline). The default linkage is external.
   //===--------------------------------------------------------------------===//
 
-  mlir::StringAttr createCommonLinkage() {
-    return getStringAttr("common");
-  }
+  mlir::StringAttr createCommonLinkage() { return getStringAttr("common"); }
 
-  mlir::StringAttr createInternalLinkage() {
-    return getStringAttr("internal");
-  }
+  mlir::StringAttr createInternalLinkage() { return getStringAttr("internal"); }
 
-  mlir::StringAttr createLinkOnceLinkage() {
-    return getStringAttr("linkonce");
-  }
+  mlir::StringAttr createLinkOnceLinkage() { return getStringAttr("linkonce"); }
 
-  mlir::StringAttr createWeakLinkage() {
-    return getStringAttr("weak");
-  }
+  mlir::StringAttr createWeakLinkage() { return getStringAttr("weak"); }
 
   /// Get a function by name. If the function exists in the current module, it
   /// is returned. Otherwise, a null FuncOp is returned.
@@ -210,6 +206,9 @@ public:
   mlir::Value convertToIndexType(mlir::Location loc, mlir::Value val) {
     return createConvert(loc, getIndexType(), val);
   }
+
+  /// Create one of the shape ops given an extended value.
+  mlir::Value createShape(mlir::Location loc, const fir::ExtendedValue &exv);
 
 private:
   const fir::KindMapping &kindMap;

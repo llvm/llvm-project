@@ -31,7 +31,6 @@
 #include "mlir/IR/Function.h"
 #include <memory>
 #include <optional>
-#include <string>
 
 namespace Fortran::semantics {
 class Symbol;

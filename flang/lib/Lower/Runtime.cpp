@@ -85,7 +85,7 @@ void Fortran::lower::genStopStatement(
           std::get<std::optional<Fortran::parser::StopCode>>(stmt.t)) {
     auto expr = Fortran::semantics::GetExpr(*code);
     assert(expr && "failed getting typed expression");
-    operands.push_back(converter.genExprValue(*expr));
+    operands.push_back(fir::getBase(converter.genExprValue(*expr)));
   } else {
     operands.push_back(
         builder.createIntegerConstant(loc, calleeType.getInput(0), 0));
@@ -101,7 +101,7 @@ void Fortran::lower::genStopStatement(
           std::get<std::optional<Fortran::parser::ScalarLogicalExpr>>(stmt.t)) {
     auto expr = Fortran::semantics::GetExpr(*quiet);
     assert(expr && "failed getting typed expression");
-    operands.push_back(converter.genExprValue(*expr));
+    operands.push_back(fir::getBase(converter.genExprValue(*expr)));
   } else {
     operands.push_back(
         builder.createIntegerConstant(loc, calleeType.getInput(2), 0));
