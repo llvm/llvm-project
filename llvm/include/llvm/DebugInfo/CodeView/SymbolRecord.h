@@ -1003,9 +1003,6 @@ public:
   uint32_t RecordOffset = 0;
 };
 
-using CVSymbol = CVRecord<SymbolKind>;
-using CVSymbolArray = VarStreamArray<CVSymbol>;
-
 Expected<CVSymbol> readSymbolFromStream(BinaryStreamRef Stream,
                                         uint32_t Offset);
 
