@@ -136,7 +136,7 @@ public:
   };
 
   static bool findFDE(A &addressSpace, pint_t pc, pint_t ehSectionStart,
-                      uint32_t sectionLength, pint_t fdeHint, FDE_Info *fdeInfo,
+                      uintptr_t sectionLength, pint_t fdeHint, FDE_Info *fdeInfo,
                       CIE_Info *cieInfo);
   static const char *decodeFDE(A &addressSpace, pint_t fdeStart,
                                FDE_Info *fdeInfo, CIE_Info *cieInfo);
@@ -167,7 +167,7 @@ const char *CFI_Parser<A>::decodeFDE(A &addressSpace, pint_t fdeStart,
     p += 8;
   }
   if (cfiLength == 0)
-    return "FDE has zero length"; // end marker
+    return "FDE has zero length"; // zero terminator
   uint32_t ciePointer = addressSpace.get32(p);
   if (ciePointer == 0)
     return "FDE is really a CIE"; // this is a CIE not an FDE
@@ -212,11 +212,13 @@ const char *CFI_Parser<A>::decodeFDE(A &addressSpace, pint_t fdeStart,
 /// Scan an eh_frame section to find an FDE for a pc
 template <typename A>
 bool CFI_Parser<A>::findFDE(A &addressSpace, pint_t pc, pint_t ehSectionStart,
-                            uint32_t sectionLength, pint_t fdeHint,
+                            uintptr_t sectionLength, pint_t fdeHint,
                             FDE_Info *fdeInfo, CIE_Info *cieInfo) {
   //fprintf(stderr, "findFDE(0x%llX)\n", (long long)pc);
   pint_t p = (fdeHint != 0) ? fdeHint : ehSectionStart;
-  const pint_t ehSectionEnd = p + sectionLength;
+  const pint_t ehSectionEnd = (sectionLength == UINTPTR_MAX)
+                                  ? static_cast<pint_t>(-1)
+                                  : (ehSectionStart + sectionLength);
   while (p < ehSectionEnd) {
     pint_t currentCFI = p;
     //fprintf(stderr, "findFDE() CFI at 0x%llX\n", (long long)p);
@@ -228,7 +230,7 @@ bool CFI_Parser<A>::findFDE(A &addressSpace, pint_t pc, pint_t ehSectionStart,
       p += 8;
     }
     if (cfiLength == 0)
-      return false; // end marker
+      return false; // zero terminator
     uint32_t id = addressSpace.get32(p);
     if (id == 0) {
       // Skip over CIEs.
