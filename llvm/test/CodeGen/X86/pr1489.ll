@@ -16,9 +16,9 @@ define i32 @quux() nounwind {
 ; CHECK-NEXT:    movl $1082126238, (%eax) ## imm = 0x407FEF9E
 ; CHECK-NEXT:    calll _lrintf
 ; CHECK-NEXT:    cmpl $1, %eax
-; CHECK-NEXT:    setl %al
-; CHECK-NEXT:    andb $1, %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    setl %cl
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
@@ -42,9 +42,9 @@ define i32 @foo() nounwind {
 ; CHECK-NEXT:    movl $-1236950581, (%eax) ## imm = 0xB645A1CB
 ; CHECK-NEXT:    calll _lrint
 ; CHECK-NEXT:    cmpl $1, %eax
-; CHECK-NEXT:    setl %al
-; CHECK-NEXT:    andb $1, %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    setl %cl
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
@@ -67,9 +67,9 @@ define i32 @bar() nounwind {
 ; CHECK-NEXT:    movl $1082126238, (%eax) ## imm = 0x407FEF9E
 ; CHECK-NEXT:    calll _lrintf
 ; CHECK-NEXT:    cmpl $1, %eax
-; CHECK-NEXT:    setl %al
-; CHECK-NEXT:    andb $1, %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    setl %cl
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
@@ -90,9 +90,9 @@ define i32 @baz() nounwind {
 ; CHECK-NEXT:    movl $1082126238, (%eax) ## imm = 0x407FEF9E
 ; CHECK-NEXT:    calll _lrintf
 ; CHECK-NEXT:    cmpl $1, %eax
-; CHECK-NEXT:    setl %al
-; CHECK-NEXT:    andb $1, %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    setl %cl
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl

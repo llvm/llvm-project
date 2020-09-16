@@ -188,7 +188,41 @@ During this release ...
 Changes to the PowerPC Target
 -----------------------------
 
-During this release ...
+Optimization:
+
+* Improved Loop Unroll-and-Jam legality checks, allowing it to handle more than two level loop nests
+* Improved Loop Unroll to be able to unroll more loops
+* Implemented an option to allow loop fusion to work on loops with different constant trip counts
+
+Codegen:
+
+* POWER10 support
+* Added PC Relative addressing
+* Added __int128 vector bool support
+* Security enhancement via probe-stack attribute support to protect against stack clash
+* Floating point support enhancements
+* Improved half precision and quad precision support, including GLIBC
+* constrained FP operation support for arithmetic/rounding/max/min
+* cleaning up fast math flags checks in DAGCombine, Legalizer, and Lowering
+* Performance improvements from instruction exploitation, especially for vector permute on LE
+* Scheduling enhancements
+* Added MacroFusion for POWER8
+* Added post-ra heuristics for POWER9
+* Target dependent passes tuning
+* Updated LoopStrengthReduce to use instruction number as first priority
+* Enhanced MachineCombiner to expose more ILP
+* Code quality and maintenance enhancements
+* Enabled more machine verification passes
+* Added ability to parse and emit additional extended mnemonics
+* Numerous bug fixes
+
+AIX Support Improvements:
+
+* Enabled compile and link such that a simple <stdio.h> "Hello World" program works with standard headers
+* Added support for the C calling convention for non-vector code
+* Implemented correct stack frame layout for functions
+* In llvm-objdump, added support for relocations, improved selection of symbol labels, and added the --symbol-description option
+
 
 Changes to the RISC-V Target
 ----------------------------

@@ -439,7 +439,52 @@ ABI Changes in Clang
 OpenMP Support in Clang
 -----------------------
 
-- ...
+New features for OpenMP 5.0 were implemented.
+
+- OpenMP 5.0 is the default version supported by the compiler. User can switch
+  to OpenMP 4.5 using ``-fopenmp-version=45`` option.
+
+- Added support for declare variant directive.
+
+- Improved support of math functions and complex types for NVPTX target.
+
+- Added support for parallel execution of target regions for NVPTX target.
+
+- Added support for ``scan`` directives and ``inscan`` modifier in ``reduction``
+  clauses.
+
+- Added support for ``iterator`` construct.
+
+- Added support for ``depobj`` construct.
+
+- Added support for ``detach`` clauses in task-based directives.
+
+- Added support for array shaping operations.
+
+- Added support for cancellation constructs in ``taskloop`` directives.
+
+- Nonmonotonic modifier is allowed with all schedule kinds.
+
+- Added support for ``task`` and ``default`` modifiers in ``reduction`` clauses.
+
+- Added support for strides in array sections.
+
+- Added support for ``use_device_addr`` clause.
+
+- Added support for ``uses_allocators`` clause.
+
+- Added support for ``defaultmap`` clause.
+
+- Added basic support for ``hint`` clause in ``atomic`` directives.
+
+- Added basic support for ``affinity`` clause.
+
+- Added basic support for ``ancestor`` modifier in ``device`` clause.
+
+- Added support for ``default(firstprivate)`` clause. This clause is the part of
+  upcoming OpenMP 5.1 and can be enabled using ``-fopenmp-version=51`` option.
+
+- Bug fixes and optimizations.
 
 CUDA Support in Clang
 ---------------------

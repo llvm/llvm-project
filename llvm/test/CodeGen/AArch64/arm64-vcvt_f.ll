@@ -285,11 +285,11 @@ define i16 @to_half(float %in) {
 ; FAST:       // %bb.0:
 ; FAST-NEXT:    sub sp, sp, #16 // =16
 ; FAST-NEXT:    .cfi_def_cfa_offset 16
-; FAST-NEXT:    fcvt h0, s0
+; FAST-NEXT:    fcvt h1, s0
 ; FAST-NEXT:    // implicit-def: $w0
-; FAST-NEXT:    fmov s1, w0
-; FAST-NEXT:    mov.16b v1, v0
-; FAST-NEXT:    fmov w8, s1
+; FAST-NEXT:    fmov s0, w0
+; FAST-NEXT:    mov.16b v0, v1
+; FAST-NEXT:    fmov w8, s0
 ; FAST-NEXT:    mov w0, w8
 ; FAST-NEXT:    str w0, [sp, #12] // 4-byte Folded Spill
 ; FAST-NEXT:    mov w0, w8

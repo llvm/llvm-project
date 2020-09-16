@@ -117,9 +117,9 @@ if.then:                                          ; preds = %for.body
 ; X64-NOOPT-NEXT:      lfence
 ; X64-NOOPT-NEXT:      movq (%rax,%rcx,8), %rax
 ; X64-NOOPT-NEXT:      lfence
-; X64-NOOPT-NEXT:      movl (%rax), %eax
+; X64-NOOPT-NEXT:      movl (%rax), %edx
 ; X64-NOOPT-NEXT:      lfence
-; X64-NOOPT-NEXT:      movl %eax, -{{[0-9]+}}(%rsp)
+; X64-NOOPT-NEXT:      movl %edx, -{{[0-9]+}}(%rsp)
 
 if.end:                                           ; preds = %if.then, %for.body
   br label %for.inc
