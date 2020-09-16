@@ -1225,7 +1225,7 @@ private:
           OriginalAccess->getBlock()->getModule()->getDataLayout(), nullptr);
       if (!Translator.PHITranslateValue(OriginalAccess->getBlock(),
                                         DefIterator.getPhiArgBlock(), DT,
-                                        false)) {
+                                        true)) {
         if (Translator.getAddr() != Location.Ptr) {
           CurrentPair.second = Location.getWithNewPtr(Translator.getAddr());
           if (PerformedPhiTranslation)
