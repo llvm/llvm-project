@@ -353,7 +353,7 @@ ProgramHeaders:
 # RUN: llvm-readobj --sections --dyn-relocations %t4.1 2>&1 >> %t4.out.llvm.txt 2>&1
 # RUN: FileCheck %s -DFILE=%t4.1 --input-file=%t4.out.llvm.txt --check-prefix=BROKEN-NCHAIN-LLVM
 
-# BROKEN-NCHAIN-LLVM: {{^}}[[#%u, FILESIZE:]]
+# BROKEN-NCHAIN-LLVM: [[#%u, FILESIZE:]]
 # BROKEN-NCHAIN-LLVM: warning: '[[FILE]]': the size (0x17ffffffe8) of the dynamic symbol table at 0x[[#%x, DYNSYMOFF:]], derived from the hash table, goes past the end of the file (0x[[#%x, FILESIZE]]) and will be ignored
 
 # BROKEN-NCHAIN-LLVM:      Name: .dynsym
