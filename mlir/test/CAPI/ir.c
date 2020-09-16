@@ -408,31 +408,36 @@ int printStandardAttributes(MlirContext ctx) {
   mlirAttributeDump(boolean);
 
   const char data[] = "abcdefghijklmnopqestuvwxyz";
-  char buffer[10];
   MlirAttribute opaque =
       mlirOpaqueAttrGet(ctx, "std", 3, data, mlirNoneTypeGet(ctx));
   if (!mlirAttributeIsAOpaque(opaque) ||
       strcmp("std", mlirOpaqueAttrGetDialectNamespace(opaque)))
     return 4;
-  mlirOpaqueAttrGetData(opaque, callbackSetFixedLengthString, buffer);
-  if (buffer[0] != 'a' || buffer[1] != 'b' || buffer[2] != 'c')
+
+  MlirStringRef opaqueData = mlirOpaqueAttrGetData(opaque);
+  if (opaqueData.length != 3 ||
+      strncmp(data, opaqueData.data, opaqueData.length))
     return 5;
   mlirAttributeDump(opaque);
 
   MlirAttribute string = mlirStringAttrGet(ctx, 2, data + 3);
   if (!mlirAttributeIsAString(string))
     return 6;
-  mlirStringAttrGetValue(string, callbackSetFixedLengthString, buffer);
-  if (buffer[0] != 'd' || buffer[1] != 'e')
+
+  MlirStringRef stringValue = mlirStringAttrGetValue(string);
+  if (stringValue.length != 2 ||
+      strncmp(data + 3, stringValue.data, stringValue.length))
     return 7;
   mlirAttributeDump(string);
 
   MlirAttribute flatSymbolRef = mlirFlatSymbolRefAttrGet(ctx, 3, data + 5);
   if (!mlirAttributeIsAFlatSymbolRef(flatSymbolRef))
     return 8;
-  mlirFloatSymbolRefAttrGetValue(flatSymbolRef, callbackSetFixedLengthString,
-                                 buffer);
-  if (buffer[0] != 'f' || buffer[1] != 'g' || buffer[2] != 'h')
+
+  MlirStringRef flatSymbolRefValue =
+      mlirFlatSymbolRefAttrGetValue(flatSymbolRef);
+  if (flatSymbolRefValue.length != 3 ||
+      strncmp(data + 5, flatSymbolRefValue.data, flatSymbolRefValue.length))
     return 9;
   mlirAttributeDump(flatSymbolRef);
 
@@ -445,12 +450,13 @@ int printStandardAttributes(MlirContext ctx) {
       !mlirAttributeEqual(mlirSymbolRefAttrGetNestedReference(symbolRef, 1),
                           flatSymbolRef))
     return 10;
-  mlirSymbolRefAttrGetLeafReference(symbolRef, callbackSetFixedLengthString,
-                                    buffer);
-  mlirSymbolRefAttrGetRootReference(symbolRef, callbackSetFixedLengthString,
-                                    buffer + 3);
-  if (buffer[0] != 'f' || buffer[1] != 'g' || buffer[2] != 'h' ||
-      buffer[3] != 'i' || buffer[4] != 'j')
+
+  MlirStringRef symbolRefLeaf = mlirSymbolRefAttrGetLeafReference(symbolRef);
+  MlirStringRef symbolRefRoot = mlirSymbolRefAttrGetRootReference(symbolRef);
+  if (symbolRefLeaf.length != 3 ||
+      strncmp(data + 5, symbolRefLeaf.data, symbolRefLeaf.length) ||
+      symbolRefRoot.length != 2 ||
+      strncmp(data + 8, symbolRefRoot.data, symbolRefRoot.length))
     return 11;
   mlirAttributeDump(symbolRef);
 
