@@ -49,8 +49,21 @@ struct ChunkMetadata {
   u32 stack_trace_id;
 };
 
-#if defined(__mips64) || defined(__aarch64__) || defined(__i386__) || \
-    defined(__arm__)
+#if SANITIZER_CAN_USE_ALLOCATOR64
+template <typename AddressSpaceViewTy>
+struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
+  static const uptr kSpaceBeg = __sanitizer::kAllocatorSpace;
+  static const uptr kSpaceSize = __sanitizer::kAllocatorSize;
+  static const uptr kMetadataSize = sizeof(ChunkMetadata);
+  typedef __sanitizer::AllocatorSizeClassMap SizeClassMap;
+  typedef NoOpMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+  using AddressSpaceView = AddressSpaceViewTy;
+};
+template <typename AddressSpaceView>
+using PrimaryAllocatorASVT = SizeClassAllocator64<AP64<AddressSpaceView>>;
+using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
+#else  // !SANITIZER_CAN_USE_ALLOCATOR64
 template <typename AddressSpaceViewTy>
 struct AP32 {
   static const uptr kSpaceBeg = 0;
@@ -65,35 +78,7 @@ struct AP32 {
 template <typename AddressSpaceView>
 using PrimaryAllocatorASVT = SizeClassAllocator32<AP32<AddressSpaceView>>;
 using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
-#elif defined(__x86_64__) || defined(__powerpc64__) || defined(__s390x__)
-# if SANITIZER_FUCHSIA
-const uptr kAllocatorSpace = ~(uptr)0;
-const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
-# elif defined(__powerpc64__)
-const uptr kAllocatorSpace = 0xa0000000000ULL;
-const uptr kAllocatorSize  = 0x20000000000ULL;  // 2T.
-#elif defined(__s390x__)
-const uptr kAllocatorSpace = 0x40000000000ULL;
-const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
-# else
-const uptr kAllocatorSpace = 0x600000000000ULL;
-const uptr kAllocatorSize  = 0x40000000000ULL;  // 4T.
-# endif
-template <typename AddressSpaceViewTy>
-struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
-  static const uptr kSpaceBeg = kAllocatorSpace;
-  static const uptr kSpaceSize = kAllocatorSize;
-  static const uptr kMetadataSize = sizeof(ChunkMetadata);
-  typedef DefaultSizeClassMap SizeClassMap;
-  typedef NoOpMapUnmapCallback MapUnmapCallback;
-  static const uptr kFlags = 0;
-  using AddressSpaceView = AddressSpaceViewTy;
-};
-
-template <typename AddressSpaceView>
-using PrimaryAllocatorASVT = SizeClassAllocator64<AP64<AddressSpaceView>>;
-using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
-#endif
+#endif  // SANITIZER_CAN_USE_ALLOCATOR64
 
 template <typename AddressSpaceView>
 using AllocatorASVT = CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>>;
