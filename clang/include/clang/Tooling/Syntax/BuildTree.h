@@ -45,6 +45,17 @@ createTree(syntax::Arena &A,
 // Synthesis of Syntax Nodes
 syntax::EmptyStatement *createEmptyStatement(syntax::Arena &A);
 
+/// Creates a completely independent copy of `N` (a deep copy).
+///
+/// The copy is:
+/// * Detached, i.e. `Parent == NextSibling == nullptr` and
+/// `Role == Detached`.
+/// * Synthesized, i.e. `Original == false`.
+///
+/// `N` might be backed by source code but if any descendants of `N` are
+/// unmodifiable returns `nullptr`.
+syntax::Node *deepCopy(syntax::Arena &A, const syntax::Node *N);
+
 } // namespace syntax
 } // namespace clang
 #endif
