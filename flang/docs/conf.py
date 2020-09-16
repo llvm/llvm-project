@@ -50,6 +50,17 @@ else:
 
   # Setup AutoStructify for inline .rst toctrees in index.md
   from recommonmark.transform import AutoStructify
+
+  # Stolen from https://github.com/readthedocs/recommonmark/issues/93
+  # Monkey patch to fix recommonmark 0.4 doc reference issues.
+  from recommonmark.states import DummyStateMachine
+  orig_run_role = DummyStateMachine.run_role
+  def run_role(self, name, options=None, content=None):
+    if name == 'doc':
+      name = 'any'
+      return orig_run_role(self, name, options, content)
+  DummyStateMachine.run_role = run_role
+
   def setup(app):
     # Disable inline math to avoid
     # https://github.com/readthedocs/recommonmark/issues/120 in Extensions.md
