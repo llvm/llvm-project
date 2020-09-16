@@ -1426,7 +1426,8 @@ bool ArchSpec::IsFullySpecifiedTriple() const {
     if ((user_specified_triple.getVendor() != llvm::Triple::UnknownVendor) ||
         TripleVendorWasSpecified()) {
       const unsigned unspecified = 0;
-      if (user_specified_triple.getOSMajorVersion() != unspecified) {
+      if (!user_specified_triple.isOSDarwin() ||
+          user_specified_triple.getOSMajorVersion() != unspecified) {
         user_triple_fully_specified = true;
       }
     }

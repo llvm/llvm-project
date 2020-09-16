@@ -128,10 +128,12 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   llvm::raw_svector_ostream os(os_name);
   // Use the most generic sub-architecture.
   target_triple.setArch(target_triple.getArch());
-  // Override the stub's minimum deployment target to the host os version.
-  llvm::VersionTuple version = HostInfo::GetOSVersion();
   os << llvm::Triple::getOSTypeName(target_triple.getOS());
-  os << version.getAsString();
+  // Override the stub's minimum deployment target to the host os version.
+  if (target_triple.isOSDarwin()) {
+    llvm::VersionTuple version = HostInfo::GetOSVersion();
+    os << version.getAsString();
+  }
   target_triple.setOSName(os.str());
 
   TargetSP target_sp;
