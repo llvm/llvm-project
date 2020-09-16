@@ -2,12 +2,17 @@
 Clang-tidy IDE/Editor Integrations
 ==================================
 
-.. _Clangd: https://clang.llvm.org/extra/clangd.html
+.. _clangd: http://clangd.llvm.org/
+.. _is available: https://clangd.llvm.org/installation.html#editor-plugins
+.. _more: https://langserver.org/#implementations-client
 
 Apart from being a standalone tool, :program:`clang-tidy` is integrated into
-various IDEs, code analyzers, and editors. Besides, it is currently being
-integrated into Clangd_. The following table shows the most
-well-known :program:`clang-tidy` integrations in detail.
+various IDEs, code analyzers, and editors. We recommend using clangd_ which
+integrates :program:`clang-tidy` and `is available`_ in most major editors
+through plugins (Vim, Emacs, Visual Studio Code, Sublime Text and more_).
+
+The following table shows the most well-known :program:`clang-tidy`
+integrations in detail.
 
 +--------------------------------------+------------------------+---------------------------------+--------------------------+-----------------------------------------+--------------------------+
 |                                      |        Feature                                                                                                                                           |
@@ -18,7 +23,7 @@ well-known :program:`clang-tidy` integrations in detail.
 +--------------------------------------+------------------------+---------------------------------+--------------------------+-----------------------------------------+--------------------------+
 |Clang Power Tools for Visual Studio   |         \-\            |               \+\               |           \-\            |                 \+\                     |           \-\            |
 +--------------------------------------+------------------------+---------------------------------+--------------------------+-----------------------------------------+--------------------------+
-|Clangd                                |         \+\            |               \-\               |           \-\            |                 \-\                     |           \-\            |
+|Clangd                                |         \+\            |               \-\               |           \-\            |                 \+\                     |           \-\            |
 +--------------------------------------+------------------------+---------------------------------+--------------------------+-----------------------------------------+--------------------------+
 |CLion IDE                             |         \+\            |               \+\               |           \+\            |                 \+\                     |           \+\            |
 +--------------------------------------+------------------------+---------------------------------+--------------------------+-----------------------------------------+--------------------------+

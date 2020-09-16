@@ -7,13 +7,23 @@ define void @remat_vctp(i32* %arg, i32* %arg1, i32* %arg2, i32* %arg3, i32* %arg
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    ldrd r5, r12, [sp, #80]
+; CHECK-NEXT:    cmp.w r12, #4
+; CHECK-NEXT:    mov r4, r12
 ; CHECK-NEXT:    vmvn.i32 q0, #0x80000000
+; CHECK-NEXT:    it ge
+; CHECK-NEXT:    movge r4, #4
 ; CHECK-NEXT:    vmov.i32 q1, #0x3f
+; CHECK-NEXT:    sub.w r4, r12, r4
 ; CHECK-NEXT:    vmov.i32 q2, #0x1
-; CHECK-NEXT:    dlstp.32 lr, r12
+; CHECK-NEXT:    add.w lr, r4, #3
+; CHECK-NEXT:    movs r4, #1
+; CHECK-NEXT:    add.w lr, r4, lr, lsr #2
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB0_1: @ %bb6
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q4, [r1], #16
+; CHECK-NEXT:    vctp.32 r12
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vldrwt.u32 q4, [r1], #16
 ; CHECK-NEXT:    vabs.s32 q5, q4
 ; CHECK-NEXT:    vcls.s32 q3, q5
 ; CHECK-NEXT:    vshl.u32 q5, q5, q3
@@ -31,13 +41,15 @@ define void @remat_vctp(i32* %arg, i32* %arg1, i32* %arg2, i32* %arg3, i32* %arg
 ; CHECK-NEXT:    vqshl.s32 q5, q5, #1
 ; CHECK-NEXT:    vpt.s32 lt, q4, zr
 ; CHECK-NEXT:    vnegt.s32 q5, q5
+; CHECK-NEXT:    vctp.32 r12
+; CHECK-NEXT:    sub.w r12, r12, #4
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q4, [r0], #16
 ; CHECK-NEXT:    vqrdmulh.s32 q4, q4, q5
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vstrwt.32 q4, [r2], #16
 ; CHECK-NEXT:    vstrwt.32 q3, [r3], #16
-; CHECK-NEXT:    letp lr, .LBB0_1
+; CHECK-NEXT:    le lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %bb44
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}

@@ -10213,7 +10213,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
     SDValue N00 = N0.getOperand(0);
     SDValue N01 = N0.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
-    EVT N00VT = N0.getOperand(0).getValueType();
+    EVT N00VT = N00.getValueType();
 
     // sext(setcc) -> sext_in_reg(vsetcc) for vectors.
     // Only do this before legalize for now.
