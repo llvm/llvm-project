@@ -303,6 +303,15 @@ def simplify_add_to_sub: GICombineRule <
   (apply [{ return Helper.applySimplifyAddToSub(*${root}, ${info});}])
 >;
 
+// Fold fp_op(cst) to the constant result of the floating point operation.
+def constant_fp_op_matchinfo: GIDefMatchData<"Optional<APFloat>">;
+def constant_fp_op: GICombineRule <
+  (defs root:$root, constant_fp_op_matchinfo:$info),
+  (match (wip_match_opcode G_FNEG, G_FABS, G_FPTRUNC, G_FSQRT, G_FLOG2):$root,
+    [{ return Helper.matchCombineConstantFoldFpUnary(*${root}, ${info}); }]),
+  (apply [{ return Helper.applyCombineConstantFoldFpUnary(*${root}, ${info}); }])
+>;
+
 // Fold int2ptr(ptr2int(x)) -> x
 def p2i_to_i2p_matchinfo: GIDefMatchData<"Register">;
 def p2i_to_i2p: GICombineRule<
@@ -505,4 +514,5 @@ def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     known_bits_simplifications, ext_ext_fold,
     not_cmp_fold, opt_brcond_by_inverting_cond,
     unmerge_merge, fabs_fabs_fold, unmerge_cst, unmerge_dead_to_trunc,
-    unmerge_zext_to_zext, trunc_ext_fold, trunc_shl]>;
+    unmerge_zext_to_zext, trunc_ext_fold, trunc_shl,
+    constant_fp_op]>;

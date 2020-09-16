@@ -1430,6 +1430,69 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   return false;
 }
 
+static Optional<APFloat> constantFoldFpUnary(unsigned Opcode, LLT DstTy,
+                                             const Register Op,
+                                             const MachineRegisterInfo &MRI) {
+  const ConstantFP *MaybeCst = getConstantFPVRegVal(Op, MRI);
+  if (!MaybeCst)
+    return None;
+
+  APFloat V = MaybeCst->getValueAPF();
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Unexpected opcode!");
+  case TargetOpcode::G_FNEG: {
+    V.changeSign();
+    return V;
+  }
+  case TargetOpcode::G_FABS: {
+    V.clearSign();
+    return V;
+  }
+  case TargetOpcode::G_FPTRUNC:
+    break;
+  case TargetOpcode::G_FSQRT: {
+    bool Unused;
+    V.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &Unused);
+    V = APFloat(sqrt(V.convertToDouble()));
+    break;
+  }
+  case TargetOpcode::G_FLOG2: {
+    bool Unused;
+    V.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &Unused);
+    V = APFloat(log2(V.convertToDouble()));
+    break;
+  }
+  }
+  // Convert `APFloat` to appropriate IEEE type depending on `DstTy`. Otherwise,
+  // `buildFConstant` will assert on size mismatch. Only `G_FPTRUNC`, `G_FSQRT`,
+  // and `G_FLOG2` reach here.
+  bool Unused;
+  V.convert(getFltSemanticForLLT(DstTy), APFloat::rmNearestTiesToEven, &Unused);
+  return V;
+}
+
+bool CombinerHelper::matchCombineConstantFoldFpUnary(MachineInstr &MI,
+                                                     Optional<APFloat> &Cst) {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  Cst = constantFoldFpUnary(MI.getOpcode(), DstTy, SrcReg, MRI);
+  return Cst.hasValue();
+}
+
+bool CombinerHelper::applyCombineConstantFoldFpUnary(MachineInstr &MI,
+                                                     Optional<APFloat> &Cst) {
+  assert(Cst.hasValue() && "Optional is unexpectedly empty!");
+  Builder.setInstrAndDebugLoc(MI);
+  MachineFunction &MF = Builder.getMF();
+  auto *FPVal = ConstantFP::get(MF.getFunction().getContext(), *Cst);
+  Register DstReg = MI.getOperand(0).getReg();
+  Builder.buildFConstant(DstReg, *FPVal);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
                                            PtrAddChain &MatchInfo) {
   // We're trying to match the following pattern:
