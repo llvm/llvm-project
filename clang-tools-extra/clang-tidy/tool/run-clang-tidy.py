@@ -84,7 +84,7 @@ def get_tidy_invocation(f, clang_tidy_binary, checks, tmpdir, build_path,
                         extra_arg, extra_arg_before, quiet, config):
   """Gets a command line for clang-tidy."""
   start = [clang_tidy_binary]
-  if allow_enabling_alpha_checkers is not None:
+  if allow_enabling_alpha_checkers:
     start.append('-allow-enabling-analyzer-alpha-checkers')
   if header_filter is not None:
     start.append('-header-filter=' + header_filter)

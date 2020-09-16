@@ -306,12 +306,16 @@ Modified Compiler Flags
 - -mcpu is now supported for RISC-V, and recognises the generic-rv32,
   rocket-rv32, sifive-e31, generic-rv64, rocket-rv64, and sifive-u54 target
   CPUs.
-
+- ``-fwhole-program-vtables`` (along with ``-flto*``) now prepares all classes for possible whole program visibility if specified during the LTO link.
+  (`D71913 <https://reviews.llvm.org/D71913>`_)
 
 New Pragmas in Clang
 --------------------
 
-- ...
+- The ``clang max_tokens_here`` pragma can be used together with
+  `-Wmax-tokens <DiagnosticsReference.html#wmax-tokens>`_ to emit a warning when
+  the number of preprocessor tokens exceeds a limit. Such limits can be helpful
+  in limiting code growth and slow compiles due to large header files.
 
 Attribute Changes in Clang
 --------------------------
@@ -600,10 +604,77 @@ libclang
 
 - ...
 
+.. _release-notes-clang-static-analyzer:
+
 Static Analyzer
 ---------------
 
-- ...
+- Improved the analyzer's understanding of inherited C++ constructors.
+
+- Improved the analyzer's understanding of dynamic class method dispatching in
+  Objective-C.
+
+- Greatly improved the analyzer's constraint solver by better understanding
+  when constraints are imposed on multiple symbolic values that are known to be
+  equal or known to be non-equal. It will now also efficiently reject impossible
+  if-branches between known comparison expressions.
+
+- Added :ref:`on-demand parsing <ctu-on-demand>` capability to Cross Translation
+  Unit (CTU) analysis.
+
+- Numerous fixes and improvements for the HTML output.
+
+- New checker: :ref:`alpha.core.C11Lock <alpha-core-C11Lock>` and
+  :ref:`alpha.fuchsia.Lock <alpha-fuchsia-lock>` checks for their respective
+  locking APIs.
+
+- New checker: :ref:`alpha.security.cert.pos.34c <alpha-security-cert-pos-34c>`
+  finds calls to ``putenv`` where a pointer to an autmoatic variable is passed
+  as an argument.
+
+- New checker: :ref:`webkit.NoUncountedMemberChecker
+  <webkit-NoUncountedMemberChecker>` to enforce the existence of virtual
+  destructors for all uncounted types used as base classes.
+
+- New checker: :ref:`webkit.RefCntblBaseVirtualDtor
+  <webkit-RefCntblBaseVirtualDtor>` checks that only ref-counted types
+  are used as class members, not raw pointers and references to uncounted
+  types.
+
+- New checker: :ref:`alpha.cplusplus.SmartPtr <alpha-cplusplus-SmartPtr>` check
+  for dereference of null smart pointers.
+
+- Moved ``PlacementNewChecker`` out of alpha, making it enabled by default.
+
+- Added support for multi-dimensional variadic arrays in ``core.VLASize``.
+
+- Added a check for insufficient storage in array placement new calls, as well
+  as support for alignment variants to ``cplusplus.PlacementNew``.
+
+- While still in alpha, ``alpha.unix.PthreadLock``, the iterator and container
+  modeling infrastructure, ``alpha.unix.Stream``, and taint analysis were
+  improved greatly. An ongoing, currently off-by-default improvement was made on
+  the pre-condition modeling of several functions defined in the POSIX standard.
+
+- Improved the warning messages of several checkers.
+
+- Fixed a few remaining cases of checkers emitting reports under incorrect
+  checker names, and employed a few restrictions to more easily identify and
+  avoid such errors.
+
+- Moved several non-reporting checkers (those that model, among other things,
+  standard functions, but emit no diagnostics) to be listed under
+  ``-analyzer-checker-help-developer`` instead of ``-analyzer-checker-help``.
+  Manually enabling or disabling checkers found on this list is not supported
+  in production.
+
+- Numerous fixes for crashes, false positives and false negatives in
+  ``unix.Malloc``, ``osx.cocoa.NSError``, and several other checkers.
+
+- Implemented a dockerized testing system to more easily determine the
+  correctness and performance impact of a change to the static analyzer itself.
+  The currently beta-version tool is found in
+  ``(llvm-project repository)/clang/utils/analyzer/SATest.py``.
 
 .. _release-notes-ubsan:
 
