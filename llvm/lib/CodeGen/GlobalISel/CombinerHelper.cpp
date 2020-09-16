@@ -2113,8 +2113,9 @@ bool CombinerHelper::applyCombineTruncOfShl(
   Register ShiftSrc = MatchInfo.first;
   Register ShiftAmt = MatchInfo.second;
   Builder.setInstrAndDebugLoc(MI);
-  Builder.buildShl(DstReg, Builder.buildTrunc(DstTy, ShiftSrc),
-                   Builder.buildTrunc(DstTy, ShiftAmt), SrcMI->getFlags());
+  auto TruncShiftSrc = Builder.buildTrunc(DstTy, ShiftSrc);
+  auto TruncShiftAmt = Builder.buildTrunc(DstTy, ShiftAmt);
+  Builder.buildShl(DstReg, TruncShiftSrc, TruncShiftAmt, SrcMI->getFlags());
   MI.eraseFromParent();
   return true;
 }
