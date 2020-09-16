@@ -1066,7 +1066,7 @@ TEST_F(MemorySSATest, TestStoreMustAlias) {
     MemoryDef *MemDef = dyn_cast_or_null<MemoryDef>(MSSA.getMemoryAccess(V));
     EXPECT_EQ(MemDef->isOptimized(), false)
         << "Store " << I << " is optimized from the start?";
-    EXPECT_EQ(MemDef->getOptimizedAccessType(), MayAlias)
+    EXPECT_EQ(MemDef->getOptimizedAccessType(), None)
         << "Store " << I
         << " has correct alias information before being optimized?";
     if (V == SA1)
@@ -1170,7 +1170,7 @@ TEST_F(MemorySSATest, TestStoreMayAlias) {
     MemoryDef *MemDef = dyn_cast_or_null<MemoryDef>(MSSA.getMemoryAccess(V));
     EXPECT_EQ(MemDef->isOptimized(), false)
         << "Store " << I << " is optimized from the start?";
-    EXPECT_EQ(MemDef->getOptimizedAccessType(), MayAlias)
+    EXPECT_EQ(MemDef->getOptimizedAccessType(), None)
         << "Store " << I
         << " has correct alias information before being optimized?";
     ++I;

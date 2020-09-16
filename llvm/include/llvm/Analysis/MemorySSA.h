@@ -270,7 +270,7 @@ public:
   // Retrieve AliasResult type of the optimized access. Ideally this would be
   // returned by the caching walker and may go away in the future.
   Optional<AliasResult> getOptimizedAccessType() const {
-    return OptimizedAccessAlias;
+    return isOptimized() ? OptimizedAccessAlias : None;
   }
 
   /// Reset the ID of what this MemoryUse was optimized to, causing it to

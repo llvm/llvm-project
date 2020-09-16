@@ -22,22 +22,22 @@ entry:
   store i32 7, i32* %1, align 4
 ; NOLIMIT: MemoryUse(3) MustAlias
 ; NOLIMIT-NEXT:   %2 = load i32, i32* %0, align 4
-; LIMIT: MemoryUse(4) MayAlias
+; LIMIT: MemoryUse(4)
 ; LIMIT-NEXT:   %2 = load i32, i32* %0, align 4
   %2 = load i32, i32* %0, align 4
 ; NOLIMIT: MemoryUse(4) MustAlias
 ; NOLIMIT-NEXT:   %3 = load i32, i32* %1, align 4
-; LIMIT: MemoryUse(4) MayAlias
+; LIMIT: MemoryUse(4)
 ; LIMIT-NEXT:   %3 = load i32, i32* %1, align 4
   %3 = load i32, i32* %1, align 4
 ; NOLIMIT: MemoryUse(3) MustAlias
 ; NOLIMIT-NEXT:   %4 = load i32, i32* %0, align 4
-; LIMIT: MemoryUse(4) MayAlias
+; LIMIT: MemoryUse(4)
 ; LIMIT-NEXT:   %4 = load i32, i32* %0, align 4
   %4 = load i32, i32* %0, align 4
 ; NOLIMIT: MemoryUse(4) MustAlias
 ; NOLIMIT-NEXT:   %5 = load i32, i32* %1, align 4
-; LIMIT: MemoryUse(4) MayAlias
+; LIMIT: MemoryUse(4)
 ; LIMIT-NEXT:   %5 = load i32, i32* %1, align 4
   %5 = load i32, i32* %1, align 4
   %add = add nsw i32 %3, %5
