@@ -158,6 +158,9 @@ enum {
 class AsanChunk : public ChunkBase {
  public:
   uptr Beg() { return reinterpret_cast<uptr>(this) + kChunkHeaderSize; }
+  bool AddrIsInside(uptr addr) {
+    return (addr >= Beg()) && (addr < Beg() + UsedSize());
+  }
 };
 
 class LargeChunkHeader {
@@ -1113,11 +1116,12 @@ uptr PointsIntoChunk(void *p) {
   if (!m || atomic_load(&m->chunk_state, memory_order_acquire) !=
                 __asan::CHUNK_ALLOCATED)
     return 0;
-  // AsanChunk presence means that we point into some block from underlying
-  // allocators. Don't check whether p points into user memory, since until
-  // the return from AsanAllocator::Allocator we may have no such
-  // pointer anywhere. But we must already have a pointer to GetBlockBegin().
-  return m->Beg();
+  uptr chunk = m->Beg();
+  if (m->AddrIsInside(addr))
+    return chunk;
+  if (IsSpecialCaseOfOperatorNew0(chunk, m->UsedSize(), addr))
+    return chunk;
+  return 0;
 }
 
 uptr GetUserBegin(uptr chunk) {
