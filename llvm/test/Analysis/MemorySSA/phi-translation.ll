@@ -25,7 +25,7 @@ if.end:
 ; CHECK: 3 = MemoryPhi({entry,1},{if.then,2})
 ; NOLIMIT: MemoryUse(1) MayAlias
 ; NOLIMIT-NEXT: load i8, i8* %local, align 1
-; LIMIT: MemoryUse(3) MayAlias
+; LIMIT: MemoryUse(3)
 ; LIMIT-NEXT: load i8, i8* %local, align 1
   load i8, i8* %local, align 1
   ret void
@@ -68,7 +68,7 @@ phi.1:
 ; CHECK: 6 = MemoryPhi({phi.2,4},{phi.3,3})
 ; NOLIMIT: MemoryUse(1) MayAlias
 ; NOLIMIT-NEXT: load i8, i8* %local
-; LIMIT: MemoryUse(6) MayAlias
+; LIMIT: MemoryUse(6)
 ; LIMIT-NEXT: load i8, i8* %local
   load i8, i8* %local
   ret void
@@ -81,7 +81,7 @@ define void @cross_phi(i8* noalias %p1, i8* noalias %p2) {
   store i8 0, i8* %p1
 ; NOLIMIT: MemoryUse(1) MustAlias
 ; NOLIMIT-NEXT: load i8, i8* %p1
-; LIMIT: MemoryUse(1) MayAlias
+; LIMIT: MemoryUse(1)
 ; LIMIT-NEXT: load i8, i8* %p1
   load i8, i8* %p1
   br i1 undef, label %a, label %b
@@ -116,7 +116,7 @@ e:
 ; 8 = MemoryPhi({c,4},{d,5})
 ; NOLIMIT: MemoryUse(1) MustAlias
 ; NOLIMIT-NEXT: load i8, i8* %p1
-; LIMIT: MemoryUse(8) MayAlias
+; LIMIT: MemoryUse(8)
 ; LIMIT-NEXT: load i8, i8* %p1
   load i8, i8* %p1
   ret void
@@ -150,7 +150,7 @@ loop.3:
   store i8 2, i8* %p2
 ; NOLIMIT: MemoryUse(1) MayAlias
 ; NOLIMIT-NEXT: load i8, i8* %p1
-; LIMIT: MemoryUse(4) MayAlias
+; LIMIT: MemoryUse(4)
 ; LIMIT-NEXT: load i8, i8* %p1
   load i8, i8* %p1
   br i1 undef, label %loop.2, label %loop.1
@@ -179,7 +179,7 @@ if.then2:
 
 if.end:
 ; CHECK: 4 = MemoryPhi({while.cond,5},{if.then,1},{if.then2,2})
-; CHECK: MemoryUse(4) MayAlias
+; CHECK: MemoryUse(4)
 ; CHECK-NEXT: load i8, i8* %p1
   load i8, i8* %p1
 ; CHECK: 3 = MemoryDef(4)
@@ -187,7 +187,7 @@ if.end:
   store i8 2, i8* %p2
 ; NOLIMIT: MemoryUse(4) MayAlias
 ; NOLIMIT-NEXT: load i8, i8* %p1
-; LIMIT: MemoryUse(3) MayAlias
+; LIMIT: MemoryUse(3)
 ; LIMIT-NEXT: load i8, i8* %p1
   load i8, i8* %p1
   br label %while.cond
@@ -212,11 +212,11 @@ for.body:                                         ; preds = %entry, %for.inc
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %cmp1 = icmp eq i64 %indvars.iv, 0
   %arrayidx2 = getelementptr inbounds i32, i32* %m_i_strides, i64 %indvars.iv
-; CHECK: MemoryUse(4) MayAlias
+; CHECK: MemoryUse(4)
 ; CHECK-NEXT: %0 = load i32, i32* %arrayidx2, align 4
   %0 = load i32, i32* %arrayidx2, align 4
   %arrayidx4 = getelementptr inbounds i32, i32* %eval_left_dims, i64 %indvars.iv
-; CHECK: MemoryUse(4) MayAlias
+; CHECK: MemoryUse(4)
 ; CHECK-NEXT: %1 = load i32, i32* %arrayidx4, align 4
   %1 = load i32, i32* %arrayidx4, align 4
   %mul = mul nsw i32 %1, %0
@@ -270,7 +270,7 @@ for.main.body:               ; preds = %if.end220.if.then185_crit_edge, %for.bod
   %add199 = add nuw nsw i64 %nocontract_idx.0656, 1
   %cmp200 = icmp eq i64 %nocontract_idx.0656, 0
   %arrayidx.i559 = getelementptr inbounds %BigStruct, %BigStruct* %this, i64 0, i32 7, i32 0, i64 %nocontract_idx.0656
-; CHECK: MemoryUse(4) MayAlias
+; CHECK: MemoryUse(4)
 ; CHECK-NEXT: %tmp21 = load i64, i64* %arrayidx.i559, align 8
   %tmp21 = load i64, i64* %arrayidx.i559, align 8
   %mul206 = mul nsw i64 %tmp21, %tmp21
@@ -298,7 +298,7 @@ define i32 @dont_merge_noalias_simple(i32* noalias %ptr) {
 ; CHECK-NEXT:  store i16 1, i16* %s1.ptr, align 2
 
 ; CHECK-LABEL: %for.body
-; CHECK:       ; MemoryUse(4) MayAlias
+; CHECK:       ; MemoryUse(4)
 ; CHECK-NEXT:    %lv = load i16, i16* %arrayidx, align 2
 
 entry:
@@ -331,7 +331,7 @@ define i32 @dont_merge_noalias_complex(i32* noalias %ptr, i32* noalias %another)
 ; CHECK-NEXT:  store i16 1, i16* %s1.ptr, align 2
 
 ; CHECK-LABEL: %for.body
-; CHECK:       ; MemoryUse(7) MayAlias
+; CHECK:       ; MemoryUse(7)
 ; CHECK-NEXT:    %lv = load i16, i16* %arrayidx, align 2
 
 entry:
@@ -385,7 +385,7 @@ define void @dont_merge_noalias_complex_2(i32 %arg, i32 %arg1)  {
 
 ; CHECK-LABEL: loop.1.header:
 ; CHECK-NEXT:  ; 4 = MemoryPhi({entry,1},{loop.1.latch,3})
-; CHECK:       ; MemoryUse(4) MayAlias
+; CHECK:       ; MemoryUse(4)
 ; CHECK-NEXT:  %l.1 = load i32, i32* %p.1, align 4
 
 ; CHECK-LABEL: loop.1.latch:
@@ -394,7 +394,7 @@ define void @dont_merge_noalias_complex_2(i32 %arg, i32 %arg1)  {
 ; CHECK-LABEL: storebb:
 ; CHECK-NEXT:  %iv.add2 = add nuw nsw i64 %iv, 2
 ; CHECK-NEXT:  %p.2 = getelementptr inbounds [32 x i32], [32 x i32]* %tmp, i64 0, i64 %iv.add2
-; CHECK-NEXT:  ; MemoryUse(4) MayAlias
+; CHECK-NEXT:  ; MemoryUse(4)
 ; CHECK-NEXT:  %l.2 = load i32, i32* %p.2, align 4
 ; CHECK-NEXT:  ; 2 = MemoryDef(4)
 ; CHECK-NEXT:  store i32 10, i32* %p.1, align 4
@@ -445,7 +445,7 @@ while.cond:                                       ; preds = %entry, %while.cond.
 ; CHECK-LABEL: land.rhs:
 ; CHECK-NEXT: %sub = add nsw i32 %depth.1, -1
 ; CHECK-NEXT: %arrayidx = getelementptr inbounds [12 x i32], [12 x i32]* %nodeStack, i32 0, i32 %sub
-; CHECK-NEXT: ; MemoryUse([[NO6]]) MayAlias
+; CHECK-NEXT: ; MemoryUse([[NO6]])
 ; CHECK-NEXT: %1 = load i32, i32* %arrayidx, align 4
 
 land.rhs:                                         ; preds = %while.cond
