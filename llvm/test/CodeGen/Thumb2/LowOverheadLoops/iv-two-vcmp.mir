@@ -118,8 +118,7 @@ body:             |
   ; CHECK: bb.2.vector.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $q1, $q2, $q3, $r0, $r1
-  ; CHECK:   renamable $vpr = MVE_VCMPu32 renamable $q1, renamable $q0, 8, 0, killed $noreg
-  ; CHECK:   MVE_VPST 2, implicit $vpr
+  ; CHECK:   MVE_VPTv4u32 2, renamable $q1, renamable $q0, 8, implicit-def $vpr
   ; CHECK:   renamable $vpr = MVE_VCMPu32 renamable $q0, renamable $q2, 2, 1, killed renamable $vpr
   ; CHECK:   renamable $r1, renamable $q4 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv35, align 4)
   ; CHECK:   renamable $r0 = MVE_VSTRWU32_post killed renamable $q4, killed renamable $r0, 16, 1, killed renamable $vpr :: (store 16 into %ir.lsr.iv12, align 4)
