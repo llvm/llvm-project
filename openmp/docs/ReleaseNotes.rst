@@ -5,11 +5,6 @@ openmp 11.0.0 Release Notes
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 11.0.0 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
-
 Introduction
 ============
 
@@ -20,16 +15,6 @@ from the `LLVM releases web site <https://llvm.org/releases/>`_.
 
 Non-comprehensive list of changes in this release
 =================================================
-
-5.0 features
-------------
-
-* ...
-
-5.1 features
-------------
-
-* ...
 
 OMPT Improvements
 -----------------
