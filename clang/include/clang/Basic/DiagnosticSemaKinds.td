@@ -7219,8 +7219,8 @@ def warn_overaligned_type : Warning<
   "guarantees %2 bytes">,
   InGroup<OveralignedType>, DefaultIgnore;
 def err_aligned_allocation_unavailable : Error<
-  "aligned %select{allocation|deallocation}0 function of type '%1' is only "
-  "available on %2 %3 or newer">;
+  "aligned %select{allocation|deallocation}0 function of type '%1' is "
+  "%select{only|not}4 available on %2%select{ %3 or newer|}4">;
 def note_silence_aligned_allocation_unavailable : Note<
   "if you supply your own aligned allocation functions, use "
   "-faligned-allocation to silence this diagnostic">;

@@ -770,6 +770,8 @@ protected:
       // type is not declared as a typedef in system headers.
       Builder.defineMacro("__wchar_t");
     }
+
+    this->PlatformName = llvm::Triple::getOSTypeName(Triple.getOS());
   }
 
 public:
