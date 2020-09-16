@@ -25,6 +25,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/Allocator.h"
@@ -704,11 +705,11 @@ namespace llvm {
   private:
     SubRange *SubRanges = nullptr; ///< Single linked list of subregister live
                                    /// ranges.
-    const unsigned Reg; // the register or stack slot of this interval.
+    const Register Reg; // the register or stack slot of this interval.
     float Weight = 0.0; // weight of this interval
 
   public:
-    unsigned reg() const { return Reg; }
+    Register reg() const { return Reg; }
     float weight() const { return Weight; }
     void incrementWeight(float Inc) { Weight += Inc; }
     void setWeight(float Value) { Weight = Value; }
