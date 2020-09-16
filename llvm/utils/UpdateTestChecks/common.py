@@ -379,7 +379,7 @@ def get_value_use(var, match):
   return '[[' + get_value_name(var, match) + ']]'
 
 # Replace IR value defs and uses with FileCheck variables.
-def genericize_check_lines(lines, is_analyze, vars_seen, global_vars_seen):
+def generalize_check_lines(lines, is_analyze, vars_seen, global_vars_seen):
   # This gets called for each match that occurs in
   # a line. We transform variables we haven't seen
   # into defs, and variables we have seen into uses.
@@ -466,7 +466,7 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
       if attrs:
         output_lines.append('%s %s: Function Attrs: %s' % (comment_marker, checkprefix, attrs))
       args_and_sig = str(func_dict[checkprefix][func_name].args_and_sig)
-      args_and_sig = genericize_check_lines([args_and_sig], is_analyze, vars_seen, global_vars_seen)[0]
+      args_and_sig = generalize_check_lines([args_and_sig], is_analyze, vars_seen, global_vars_seen)[0]
       if '[[' in args_and_sig:
         output_lines.append(check_label_format % (checkprefix, func_name, ''))
         output_lines.append('%s %s-SAME: %s' % (comment_marker, checkprefix, args_and_sig))
@@ -486,7 +486,7 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
 
       # For IR output, change all defs to FileCheck variables, so we're immune
       # to variable naming fashions.
-      func_body = genericize_check_lines(func_body, is_analyze, vars_seen, global_vars_seen)
+      func_body = generalize_check_lines(func_body, is_analyze, vars_seen, global_vars_seen)
 
       # This could be selectively enabled with an optional invocation argument.
       # Disabled for now: better to check everything. Be safe rather than sorry.
