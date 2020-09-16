@@ -1194,6 +1194,17 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                  MachineMemOperand::MOVolatile;
     return true;
   }
+  case Intrinsic::amdgcn_image_bvh_intersect_ray: {
+    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(CI.getType()); // XXX: what is correct VT?
+    Info.ptrVal = MFI->getImagePSV(
+        *MF.getSubtarget<GCNSubtarget>().getInstrInfo(), CI.getArgOperand(5));
+    Info.align.reset();
+    Info.flags = MachineMemOperand::MOLoad |
+                 MachineMemOperand::MODereferenceable;
+    return true;
+  }
   case Intrinsic::amdgcn_ds_gws_init:
   case Intrinsic::amdgcn_ds_gws_barrier:
   case Intrinsic::amdgcn_ds_gws_sema_v:
@@ -7318,6 +7329,76 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                          DAG.getVTList(VT, MVT::Other), Ops,
                          M->getMemOperand());
   }
+  case Intrinsic::amdgcn_image_bvh_intersect_ray: {
+    SDLoc DL(Op);
+    MemSDNode *M = cast<MemSDNode>(Op);
+    SDValue NodePtr = M->getOperand(2);
+    SDValue RayExtent = M->getOperand(3);
+    SDValue RayOrigin = M->getOperand(4);
+    SDValue RayDir = M->getOperand(5);
+    SDValue RayInvDir = M->getOperand(6);
+    SDValue TDescr = M->getOperand(7);
+
+    assert(NodePtr.getValueType() == MVT::i32 ||
+           NodePtr.getValueType() == MVT::i64);
+    assert(RayDir.getValueType() == MVT::v4f16 ||
+           RayDir.getValueType() == MVT::v4f32);
+
+    bool IsA16 = RayDir.getValueType().getVectorElementType() == MVT::f16;
+    bool Is64 = NodePtr.getValueType() == MVT::i64;
+    unsigned Opcode = IsA16 ? Is64 ? AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_nsa
+                                   : AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_nsa
+                            : Is64 ? AMDGPU::IMAGE_BVH64_INTERSECT_RAY_nsa
+                                   : AMDGPU::IMAGE_BVH_INTERSECT_RAY_nsa;
+
+    SmallVector<SDValue, 16> Ops;
+
+    auto packLanes = [&DAG, &Ops, &DL] (SDValue Op, bool IsAligned) {
+      SmallVector<SDValue, 3> Lanes;
+      DAG.ExtractVectorElements(Op, Lanes, 0, 3);
+      if (Lanes[0].getValueSizeInBits() == 32) {
+        for (unsigned I = 0; I < 3; ++I)
+          Ops.push_back(DAG.getBitcast(MVT::i32, Lanes[I]));
+      } else {
+        if (IsAligned) {
+          Ops.push_back(
+            DAG.getBitcast(MVT::i32,
+                           DAG.getBuildVector(MVT::v2f16, DL,
+                                              { Lanes[0], Lanes[1] })));
+          Ops.push_back(Lanes[2]);
+        } else {
+          SDValue Elt0 = Ops.pop_back_val();
+          Ops.push_back(
+            DAG.getBitcast(MVT::i32,
+                           DAG.getBuildVector(MVT::v2f16, DL,
+                                              { Elt0, Lanes[0] })));
+          Ops.push_back(
+            DAG.getBitcast(MVT::i32,
+                           DAG.getBuildVector(MVT::v2f16, DL,
+                                              { Lanes[1], Lanes[2] })));
+        }
+      }
+    };
+
+    if (Is64)
+      DAG.ExtractVectorElements(DAG.getBitcast(MVT::v2i32, NodePtr), Ops, 0, 2);
+    else
+      Ops.push_back(NodePtr);
+
+    Ops.push_back(DAG.getBitcast(MVT::i32, RayExtent));
+    packLanes(RayOrigin, true);
+    packLanes(RayDir, true);
+    packLanes(RayInvDir, false);
+    Ops.push_back(TDescr);
+    if (IsA16)
+      Ops.push_back(DAG.getTargetConstant(1, DL, MVT::i1));
+    Ops.push_back(M->getChain());
+
+    auto *NewNode = DAG.getMachineNode(Opcode, DL, M->getVTList(), Ops);
+    MachineMemOperand *MemRef = M->getMemOperand();
+    DAG.setNodeMemRefs(NewNode, {MemRef});
+    return SDValue(NewNode, 0);
+  }
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))
@@ -10963,7 +11044,8 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
   unsigned Opcode = Node->getMachineOpcode();
 
   if (TII->isMIMG(Opcode) && !TII->get(Opcode).mayStore() &&
-      !TII->isGather4(Opcode)) {
+      !TII->isGather4(Opcode) &&
+      AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::dmask) != -1) {
     return adjustWritemask(Node, DAG);
   }
 

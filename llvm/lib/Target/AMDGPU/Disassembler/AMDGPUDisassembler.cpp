@@ -139,6 +139,8 @@ DECODE_OPERAND_REG(VS_128)
 DECODE_OPERAND_REG(VReg_64)
 DECODE_OPERAND_REG(VReg_96)
 DECODE_OPERAND_REG(VReg_128)
+DECODE_OPERAND_REG(VReg_256)
+DECODE_OPERAND_REG(VReg_512)
 
 DECODE_OPERAND_REG(SReg_32)
 DECODE_OPERAND_REG(SReg_32_XM0_XEXEC)
@@ -499,8 +501,16 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
                                             AMDGPU::OpName::d16);
 
   assert(VDataIdx != -1);
-  assert(DMaskIdx != -1);
-  assert(TFEIdx != -1);
+  if (DMaskIdx == -1 || TFEIdx == -1) {// intersect_ray
+    if (AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::a16) > -1) {
+      assert(MI.getOpcode() == AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_sa ||
+             MI.getOpcode() == AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_nsa ||
+             MI.getOpcode() == AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_sa ||
+             MI.getOpcode() == AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_nsa);
+      addOperand(MI, MCOperand::createImm(1));
+    }
+    return MCDisassembler::Success;
+  }
 
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
   bool IsAtomic = (VDstIdx != -1);
