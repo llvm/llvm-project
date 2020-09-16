@@ -1,4 +1,5 @@
-; RUN: opt < %s -basic-aa -globals-aa -S -licm | FileCheck %s
+; RUN: opt < %s -basic-aa -globals-aa -S -licm -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %s -basic-aa -globals-aa -S -licm -enable-new-pm=1 | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
