@@ -13,7 +13,6 @@
 #include "DwarfUnit.h"
 #include "AddressPool.h"
 #include "DwarfCompileUnit.h"
-#include "DwarfDebug.h"
 #include "DwarfExpression.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
