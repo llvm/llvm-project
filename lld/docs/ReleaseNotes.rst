@@ -5,11 +5,6 @@ lld 11.0.0 Release Notes
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 11.0.0 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
-
 Introduction
 ============
 
@@ -176,12 +171,3 @@ MinGW Improvements
   ``--disable-runtime-pseudo-reloc``), the ``--no-seh`` flag and options
   for selecting file and section alignment (``--file-alignment`` and
   ``--section-alignment``).
-
-MachO Improvements
-------------------
-
-* Item 1.
-
-WebAssembly Improvements
-------------------------
-
