@@ -255,6 +255,14 @@ def right_identity_zero: GICombineRule<
   (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
 >;
 
+// Fold x op 1 -> x
+def right_identity_one: GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_MUL):$root,
+    [{ return Helper.matchConstantOp(${root}->getOperand(2), 1); }]),
+  (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+>;
+
 // Fold (x op x) - > x
 def binop_same_val: GICombineRule<
   (defs root:$root),
@@ -455,6 +463,14 @@ def trunc_shl: GICombineRule <
   (apply [{ return Helper.applyCombineTruncOfShl(*${root}, ${matchinfo}); }])
 >;
 
+// Transform (mul x, -1) -> (sub 0, x)
+def mul_by_neg_one: GICombineRule <
+  (defs root:$root),
+  (match (wip_match_opcode G_MUL):$root,
+         [{ return Helper.matchConstantOp(${root}->getOperand(2), -1); }]),
+  (apply [{ return Helper.applyCombineMulByNegativeOne(*${root}); }])
+>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -468,7 +484,7 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         binop_same_val, binop_left_to_zero,
                                         binop_right_to_zero, p2i_to_i2p,
                                         i2p_to_p2i, anyext_trunc_fold,
-                                        fneg_fneg_fold]>;
+                                        fneg_fneg_fold, right_identity_one]>;
 
 def known_bits_simplifications : GICombineGroup<[
   and_trivial_mask, redundant_sext_inreg]>;
@@ -477,7 +493,9 @@ def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend]>;
 
 def select_combines : GICombineGroup<[select_undef_cmp, select_constant_cmp]>;
 
-def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd]>;
+def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd,
+                                       mul_by_neg_one]>;
+
 def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     combines_for_extload, combine_indexed_load_store, undef_combines,
     identity_combines, simplify_add_to_sub,
