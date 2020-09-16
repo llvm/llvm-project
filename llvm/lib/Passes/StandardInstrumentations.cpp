@@ -338,7 +338,6 @@ template <typename IRUnitT> ChangePrinter<IRUnitT>::~ChangePrinter<IRUnitT>() {
 IRChangePrinter::IRChangePrinter() : Out(dbgs()) {}
 
 IRChangePrinter::~IRChangePrinter() {
-  ChangePrinter<std::string>::~ChangePrinter();
 }
 
 void IRChangePrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
@@ -415,7 +414,7 @@ void IRChangePrinter::handleIgnored(StringRef PassID, std::string &Name) {
 bool IRChangePrinter::same(const std::string &Before,
                            const std::string &After) {
   return Before.compare(After) == 0;
-};
+}
 
 PrintIRInstrumentation::~PrintIRInstrumentation() {
   assert(ModuleDescStack.empty() && "ModuleDescStack is not empty at exit");
