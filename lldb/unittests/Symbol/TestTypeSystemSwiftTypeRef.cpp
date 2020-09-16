@@ -438,6 +438,10 @@ TEST_F(TestTypeSystemSwiftTypeRef, TypeClass) {
   }
 }
 
+TEST_F(TestTypeSystemSwiftTypeRef, MangledTypeName) {
+  ASSERT_EQ(m_swift_ts.GetErrorType().GetMangledTypeName(), "$ss5Error_pD");
+}
+
 TEST_F(TestTypeSystemSwiftTypeRef, ImportedType) {
   using namespace swift::Demangle;
   Demangler dem;

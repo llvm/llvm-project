@@ -1818,8 +1818,35 @@ bool TypeSystemSwiftTypeRef::IsImportedType(opaque_compiler_type_t type,
   VALIDATE_AND_RETURN(impl, IsImportedType, type,
                       (ReconstructType(type), nullptr));
 }
+
 CompilerType TypeSystemSwiftTypeRef::GetErrorType() {
-  return m_swift_ast_context->GetErrorType();
+  auto impl = [&]() {
+    using namespace swift::Demangle;
+    Demangler Dem;
+    auto *error_type = Dem.createNode(Node::Kind::Type);
+    auto *parent = error_type;
+    NodePointer node;
+    node = Dem.createNode(Node::Kind::ProtocolList);
+    parent->addChild(node, Dem);
+    parent = node;
+    node = Dem.createNode(Node::Kind::TypeList);
+    parent->addChild(node, Dem);
+    parent = node;
+    node = Dem.createNode(Node::Kind::Type);
+    parent->addChild(node, Dem);
+    parent = node;
+    node = Dem.createNode(Node::Kind::Protocol);
+    parent->addChild(node, Dem);
+    parent = node;
+
+    parent->addChild(
+        Dem.createNodeWithAllocatedText(Node::Kind::Module, swift::STDLIB_NAME),
+        Dem);
+    parent->addChild(Dem.createNode(Node::Kind::Identifier, "Error"), Dem);
+
+    return RemangleAsType(Dem, error_type);
+  };
+  VALIDATE_AND_RETURN_STATIC(impl, GetErrorType);
 }
 
 CompilerType
