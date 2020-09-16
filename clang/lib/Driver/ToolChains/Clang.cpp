@@ -7018,15 +7018,6 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
     }
     break;
 
-  case llvm::Triple::aarch64:
-  case llvm::Triple::aarch64_32:
-  case llvm::Triple::aarch64_be:
-    if (Args.hasArg(options::OPT_mmark_bti_property)) {
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-aarch64-mark-bti-property");
-    }
-    break;
-
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
     AddRISCVTargetArgs(Args, CmdArgs);

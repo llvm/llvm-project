@@ -223,9 +223,26 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     return;
 
   // Emit a .note.gnu.property section with the flags.
-  if (auto *TS = static_cast<AArch64TargetStreamer *>(
-          OutStreamer->getTargetStreamer()))
-    TS->emitNoteSection(Flags);
+  MCSection *Cur = OutStreamer->getCurrentSectionOnly();
+  MCSection *Nt = MMI->getContext().getELFSection(
+      ".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);
+  OutStreamer->SwitchSection(Nt);
+
+  // Emit the note header.
+  emitAlignment(Align(8));
+  OutStreamer->emitInt32(4);     // data size for "GNU\0"
+  OutStreamer->emitInt32(4 * 4); // Elf_Prop size
+  OutStreamer->emitInt32(ELF::NT_GNU_PROPERTY_TYPE_0);
+  OutStreamer->emitBytes(StringRef("GNU", 4)); // note name
+
+  // Emit the PAC/BTI properties.
+  OutStreamer->emitInt32(ELF::GNU_PROPERTY_AARCH64_FEATURE_1_AND);
+  OutStreamer->emitInt32(4);     // data size
+  OutStreamer->emitInt32(Flags); // data
+  OutStreamer->emitInt32(0);     // pad
+
+  OutStreamer->endSection(Nt);
+  OutStreamer->SwitchSection(Cur);
 }
 
 void AArch64AsmPrinter::emitFunctionHeaderComment() {
