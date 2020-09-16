@@ -130,7 +130,7 @@ bool RenameIndependentSubregs::renameComponents(LiveInterval &LI) const {
     return false;
 
   // Create a new VReg for each class.
-  unsigned Reg = LI.reg;
+  unsigned Reg = LI.reg();
   const TargetRegisterClass *RegClass = MRI->getRegClass(Reg);
   SmallVector<LiveInterval*, 4> Intervals;
   Intervals.push_back(&LI);
@@ -175,7 +175,7 @@ bool RenameIndependentSubregs::findComponents(IntEqClasses &Classes,
   // across subranges when they are affected by the same MachineOperand.
   const TargetRegisterInfo &TRI = *MRI->getTargetRegisterInfo();
   Classes.grow(NumComponents);
-  unsigned Reg = LI.reg;
+  unsigned Reg = LI.reg();
   for (const MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
     if (!MO.isDef() && !MO.readsReg())
       continue;
@@ -212,7 +212,7 @@ void RenameIndependentSubregs::rewriteOperands(const IntEqClasses &Classes,
     const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
     const SmallVectorImpl<LiveInterval*> &Intervals) const {
   const TargetRegisterInfo &TRI = *MRI->getTargetRegisterInfo();
-  unsigned Reg = Intervals[0]->reg;
+  unsigned Reg = Intervals[0]->reg();
   for (MachineRegisterInfo::reg_nodbg_iterator I = MRI->reg_nodbg_begin(Reg),
        E = MRI->reg_nodbg_end(); I != E; ) {
     MachineOperand &MO = *I++;
@@ -242,7 +242,7 @@ void RenameIndependentSubregs::rewriteOperands(const IntEqClasses &Classes,
       break;
     }
 
-    unsigned VReg = Intervals[ID]->reg;
+    unsigned VReg = Intervals[ID]->reg();
     MO.setReg(VReg);
 
     if (MO.isTied() && Reg != VReg) {
@@ -304,7 +304,7 @@ void RenameIndependentSubregs::computeMainRangesFixFlags(
   const SlotIndexes &Indexes = *LIS->getSlotIndexes();
   for (size_t I = 0, E = Intervals.size(); I < E; ++I) {
     LiveInterval &LI = *Intervals[I];
-    unsigned Reg = LI.reg;
+    unsigned Reg = LI.reg();
 
     LI.removeEmptySubRanges();
 
