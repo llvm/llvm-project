@@ -854,6 +854,24 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
   if (CannotTailPredicate)
     return false;
 
+  const MCInstrDesc &MCID = MI->getDesc();
+  uint64_t Flags = MCID.TSFlags;
+  if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
+    return true;
+
+  if (MI->getOpcode() == ARM::MVE_VPSEL ||
+      MI->getOpcode() == ARM::MVE_VPNOT) {
+    // TODO: Allow VPSEL and VPNOT, we currently cannot because:
+    // 1) It will use the VPR as a predicate operand, but doesn't have to be
+    //    instead a VPT block, which means we can assert while building up
+    //    the VPT block because we don't find another VPT or VPST to being a new
+    //    one.
+    // 2) VPSEL still requires a VPR operand even after tail predicating,
+    //    which means we can't remove it unless there is another
+    //    instruction, such as vcmp, that can provide the VPR def.
+    return false;
+  }
+
   if (isVCTP(MI)) {
     // If we find another VCTP, check whether it uses the same value as the main VCTP.
     // If it does, store it in the SecondaryVCTPs set, else refuse it.
@@ -881,22 +899,10 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
     VPTBlocks.emplace_back(MI, CurrentPredicate);
     CurrentBlock = &VPTBlocks.back();
     return true;
-  } else if (MI->getOpcode() == ARM::MVE_VPSEL ||
-             MI->getOpcode() == ARM::MVE_VPNOT) {
-    // TODO: Allow VPSEL and VPNOT, we currently cannot because:
-    // 1) It will use the VPR as a predicate operand, but doesn't have to be
-    //    instead a VPT block, which means we can assert while building up
-    //    the VPT block because we don't find another VPT or VPST to being a new
-    //    one.
-    // 2) VPSEL still requires a VPR operand even after tail predicating,
-    //    which means we can't remove it unless there is another
-    //    instruction, such as vcmp, that can provide the VPR def.
-    return false;
   }
 
   bool IsUse = false;
   bool IsDef = false;
-  const MCInstrDesc &MCID = MI->getDesc();
   for (int i = MI->getNumOperands() - 1; i >= 0; --i) {
     const MachineOperand &MO = MI->getOperand(i);
     if (!MO.isReg() || MO.getReg() != ARM::VPR)
@@ -931,10 +937,6 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Found disjoint vpr def: " << *MI);
     return false;
   }
-
-  uint64_t Flags = MCID.TSFlags;
-  if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
-    return true;
 
   // If we find an instruction that has been marked as not valid for tail
   // predication, only allow the instruction if it's contained within a valid
