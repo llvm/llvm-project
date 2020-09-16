@@ -113,6 +113,42 @@ LLVMOrcExecutionSessionIntern(LLVMOrcExecutionSessionRef ES, const char *Name);
 void LLVMOrcReleaseSymbolStringPoolEntry(LLVMOrcSymbolStringPoolEntryRef S);
 
 /**
+ * Create a "bare" JITDylib.
+ *
+ * The client is responsible for ensuring that the JITDylib's name is unique,
+ * e.g. by calling LLVMOrcExecutionSessionGetJTIDylibByName first.
+ *
+ * This call does not install any library code or symbols into the newly
+ * created JITDylib. The client is responsible for all configuration.
+ */
+LLVMOrcJITDylibRef
+LLVMOrcExecutionSessionCreateBareJITDylib(LLVMOrcExecutionSessionRef ES,
+                                          const char *Name);
+
+/**
+ * Create a JITDylib.
+ *
+ * The client is responsible for ensuring that the JITDylib's name is unique,
+ * e.g. by calling LLVMOrcExecutionSessionGetJTIDylibByName first.
+ *
+ * If a Platform is attached to the ExecutionSession then
+ * Platform::setupJITDylib will be called to install standard platform symbols
+ * (e.g. standard library interposes). If no Platform is installed then this
+ * call is equivalent to LLVMExecutionSessionRefCreateBareJITDylib and will
+ * always return success.
+ */
+LLVMErrorRef
+LLVMOrcExecutionSessionCreateJITDylib(LLVMOrcExecutionSessionRef ES,
+                                      LLVMOrcJITDylibRef *Result,
+                                      const char *Name);
+
+/**
+ * Returns the JITDylib with the given name, or NULL if no such JITDylib
+ * exists.
+ */
+LLVMOrcJITDylibRef LLVMOrcExecutionSessionGetJITDylibByName(const char *Name);
+
+/**
  * Dispose of a JITDylib::DefinitionGenerator. This should only be called if
  * ownership has not been passed to a JITDylib (e.g. because some error
  * prevented the client from calling LLVMOrcJITDylibAddGenerator).
