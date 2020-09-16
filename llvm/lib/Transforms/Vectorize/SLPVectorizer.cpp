@@ -6819,7 +6819,6 @@ public:
     FastMathFlags Unsafe;
     Unsafe.setFast();
     Builder.setFastMathFlags(Unsafe);
-    unsigned i = 0;
 
     BoUpSLP::ExtraValueToDebugLocsMap ExternallyUsedValues;
     // The same extra argument may be used several time, so log each attempt
@@ -6847,6 +6846,7 @@ public:
     for (ReductionOpsType &RdxOp : ReductionOps)
       IgnoreList.append(RdxOp.begin(), RdxOp.end());
 
+    unsigned i = 0;
     while (i < NumReducedVals - ReduxWidth + 1 && ReduxWidth > 2) {
       auto VL = makeArrayRef(&ReducedVals[i], ReduxWidth);
       V.buildTree(VL, ExternallyUsedValues, IgnoreList);
