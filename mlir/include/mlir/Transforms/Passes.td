@@ -102,12 +102,13 @@ def AffinePipelineDataTransfer
   let constructor = "mlir::createPipelineDataTransferPass()";
 }
 
-def BufferPlacement : FunctionPass<"buffer-placement"> {
-  let summary = "Optimizes placement of alloc and dealloc operations";
+def BufferDeallocation : FunctionPass<"buffer-deallocation"> {
+  let summary = "Adds all required dealloc operations for all allocations in the "
+                "input program";
   let description = [{
-    This pass implements an algorithm to optimize the placement of alloc and
-    dealloc operations. This pass also inserts missing dealloc operations
-    automatically to reclaim memory.
+    This pass implements an algorithm to automatically introduce all required
+    deallocation operations for all buffers in the input program. This ensures that
+    the resulting program does not have any memory leaks.
 
 
     Input
@@ -121,7 +122,11 @@ def BufferPlacement : FunctionPass<"buffer-placement"> {
         br ^bb3(%arg1 : memref<2xf32>)
       ^bb2:
         %0 = alloc() : memref<2xf32>
-        linalg.generic {args_in = 1 : i64, args_out = 1 : i64, indexing_maps = [#map0, #map0], iterator_types = ["parallel"]} %arg1, %0 {
+        linalg.generic {
+          args_in = 1 : i64,
+          args_out = 1 : i64,
+          indexing_maps = [#map0, #map0],
+          iterator_types = ["parallel"]} %arg1, %0 {
         ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
           %tmp1 = exp %gen1_arg0 : f32
           linalg.yield %tmp1 : f32
@@ -141,29 +146,59 @@ def BufferPlacement : FunctionPass<"buffer-placement"> {
     #map0 = affine_map<(d0) -> (d0)>
     module {
       func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
-        %0 = alloc() : memref<2xf32>
         cond_br %arg0, ^bb1, ^bb2
-      ^bb1: // pred: ^bb0
-        br ^bb3(%arg1 : memref<2xf32>)
-      ^bb2: // pred: ^bb0
-        linalg.generic {args_in = 1 : i64, args_out = 1 : i64, indexing_maps = [#map0, #map0], iterator_types = ["parallel"]} %arg1, %0 {
-        ^bb0(%arg3: f32, %arg4: f32):       // no predecessors
-          %2 = exp %arg3 : f32
-          linalg.yield %2 : f32
-        }: memref<2xf32>, memref<2xf32>
+      ^bb1:  // pred: ^bb0
+        %0 = alloc() : memref<2xf32>
+        linalg.copy(%arg1, %0) : memref<2xf32>, memref<2xf32>
         br ^bb3(%0 : memref<2xf32>)
-      ^bb3(%1: memref<2xf32>):      // 2 preds: ^bb1, ^bb2
-        linalg.copy(%1, %arg2) : memref<2xf32>, memref<2xf32>
-        dealloc %0 : memref<2xf32>
+      ^bb2:  // pred: ^bb0
+        %1 = alloc() : memref<2xf32>
+        linalg.generic {
+          args_in = 1 : i64,
+          args_out = 1 : i64,
+          indexing_maps = [#map0, #map0],
+          iterator_types = ["parallel"]} %arg1, %1 {
+        ^bb0(%arg3: f32, %arg4: f32):  // no predecessors
+          %4 = exp %arg3 : f32
+          linalg.yield %4 : f32
+        }: memref<2xf32>, memref<2xf32>
+        %2 = alloc() : memref<2xf32>
+        linalg.copy(%1, %2) : memref<2xf32>, memref<2xf32>
+        dealloc %1 : memref<2xf32>
+        br ^bb3(%2 : memref<2xf32>)
+      ^bb3(%3: memref<2xf32>):  // 2 preds: ^bb1, ^bb2
+        linalg.copy(%3, %arg2) : memref<2xf32>, memref<2xf32>
+        dealloc %3 : memref<2xf32>
         return
       }
+
     }
     ```
 
   }];
-  let constructor = "mlir::createBufferPlacementPass()";
+  let constructor = "mlir::createBufferDeallocationPass()";
   // TODO: this pass likely shouldn't depend on Linalg?
   let dependentDialects = ["linalg::LinalgDialect"];
+}
+
+def BufferHoisting : FunctionPass<"buffer-hoisting"> {
+  let summary = "Optimizes placement of allocation operations by moving them "
+                "into common dominators and out of nested regions";
+  let description = [{
+    This pass implements an approach to aggressively move allocations upwards
+    into common dominators and out of nested regions.
+  }];
+  let constructor = "mlir::createBufferHoistingPass()";
+}
+
+def BufferLoopHoisting : FunctionPass<"buffer-loop-hoisting"> {
+  let summary = "Optimizes placement of allocation operations by moving them "
+                "out of loop nests";
+  let description = [{
+    This pass implements an approach to aggressively move allocations upwards
+    out of loop nests. It does not move allocations into common dominators.
+  }];
+  let constructor = "mlir::createBufferLoopHoistingPass()";
 }
 
 def Canonicalizer : Pass<"canonicalize"> {

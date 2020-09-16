@@ -1,8 +1,8 @@
-// RUN: mlir-opt -buffer-placement -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -buffer-deallocation -split-input-file %s | FileCheck %s
 
-// This file checks the behaviour of BufferPlacement pass for moving Alloc and
-// Dealloc operations and inserting the missing the DeallocOps in their correct
-// positions.
+// This file checks the behaviour of BufferDeallocation pass for moving and
+// inserting missing DeallocOps in their correct positions. Furthermore,
+// copies and their corresponding AllocOps are inserted.
 
 // Test Case:
 //    bb0
@@ -10,9 +10,10 @@
 //  bb1  bb2 <- Initial position of AllocOp
 //   \   /
 //    bb3
-// BufferPlacement Expected Behaviour: It should move the existing AllocOp to
-// the entry block, and insert a DeallocOp at the exit block after CopyOp since
-// %1 is an alias for %0 and %arg1.
+// BufferDeallocation expected behavior: bb2 contains an AllocOp which is
+// passed to bb3. In the latter block, there should be an deallocation.
+// Since bb1 does not contain an adequate alloc and the alloc in bb2 is not
+// moved to bb0, we need to insert allocs and copies.
 
 #map0 = affine_map<(d0) -> (d0)>
 
@@ -38,10 +39,18 @@ func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   return
 }
 
-// CHECK-NEXT: %[[ALLOC:.*]] = alloc()
 // CHECK-NEXT: cond_br
+//      CHECK: %[[ALLOC0:.*]] = alloc()
+// CHECK-NEXT: linalg.copy
+// CHECK-NEXT: br ^bb3(%[[ALLOC0]]
+//      CHECK: %[[ALLOC1:.*]] = alloc()
+// CHECK-NEXT: linalg.generic
+//      CHECK: %[[ALLOC2:.*]] = alloc()
+// CHECK-NEXT: linalg.copy
+// CHECK-NEXT: dealloc %[[ALLOC1]]
+// CHECK-NEXT: br ^bb3(%[[ALLOC2]]
 //      CHECK: linalg.copy
-// CHECK-NEXT: dealloc %[[ALLOC]]
+// CHECK-NEXT: dealloc
 // CHECK-NEXT: return
 
 // -----
@@ -52,12 +61,12 @@ func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 //  bb1  bb2 <- Initial position of AllocOp
 //   \   /
 //    bb3
-// BufferPlacement Expected Behaviour: It should not move the existing AllocOp
-// to any other block since the alloc has a dynamic dependency to block argument
-// %0 in bb2. Since the dynamic type is passed to bb3 via the block argument %2,
-// it is currently required to allocate a temporary buffer for %2 that gets
-// copies of %arg0 and %1 with their appropriate shape dimensions. The copy
-// buffer deallocation will be applied to %2 in block bb3.
+// BufferDeallocation expected behavior: The existing AllocOp has a dynamic
+// dependency to block argument %0 in bb2. Since the dynamic type is passed
+// to bb3 via the block argument %2, it is currently required to allocate a
+// temporary buffer for %2 that gets copies of %arg0 and %1 with their
+// appropriate shape dimensions. The copy buffer deallocation will be applied
+// to %2 in block bb3.
 
 #map0 = affine_map<(d0) -> (d0)>
 
@@ -91,6 +100,7 @@ func @condBranchDynamicType(
 //      CHECK: %[[DIM0:.*]] = dim
 // CHECK-NEXT: %[[ALLOC0:.*]] = alloc(%[[DIM0]])
 // CHECK-NEXT: linalg.copy(%{{.*}}, %[[ALLOC0]])
+// CHECK-NEXT: br ^bb3(%[[ALLOC0]]
 //      CHECK: ^bb2(%[[IDX:.*]]:{{.*}})
 // CHECK-NEXT: %[[ALLOC1:.*]] = alloc(%[[IDX]])
 // CHECK-NEXT: linalg.generic
@@ -118,18 +128,17 @@ func @condBranchDynamicType(
 //       bb6
 //        |
 //       bb7
-// BufferPlacement Expected Behaviour: It should not move the existing AllocOp
-// to any other block since the alloc has a dynamic dependency to block argument
-// %0 in bb2. Since the dynamic type is passed to bb5 via the block argument %2
-// and to bb6 via block argument %3, it is currently required to allocate
-// temporary buffers for %2 and %3 that gets copies of %1 and %arg0 1 with their
-// appropriate shape dimensions. The copy buffer deallocations will be applied
-// to %2 in block bb5 and to %3 in block bb6. Furthermore, there should be no
-// copy inserted for %4.
+// BufferDeallocation expected behavior: The existing AllocOp has a dynamic
+// dependency to block argument %0 in bb2. Since the dynamic type is passed to
+// bb5 via the block argument %2 and to bb6 via block argument %3, it is
+// currently required to allocate temporary buffers for %2 and %3 that gets
+// copies of %1 and %arg0 1 with their appropriate shape dimensions. The copy
+// buffer deallocations will be applied to %2 in block bb5 and to %3 in block
+// bb6. Furthermore, there should be no copy inserted for %4.
 
 #map0 = affine_map<(d0) -> (d0)>
 
-// CHECK-LABEL: func @condBranchDynamicType
+// CHECK-LABEL: func @condBranchDynamicTypeNested
 func @condBranchDynamicTypeNested(
   %arg0: i1,
   %arg1: memref<?xf32>,
@@ -168,6 +177,7 @@ func @condBranchDynamicTypeNested(
 //      CHECK: %[[DIM0:.*]] = dim
 // CHECK-NEXT: %[[ALLOC0:.*]] = alloc(%[[DIM0]])
 // CHECK-NEXT: linalg.copy(%{{.*}}, %[[ALLOC0]])
+// CHECK-NEXT: br ^bb6
 //      CHECK: ^bb2(%[[IDX:.*]]:{{.*}})
 // CHECK-NEXT: %[[ALLOC1:.*]] = alloc(%[[IDX]])
 // CHECK-NEXT: linalg.generic
@@ -192,8 +202,8 @@ func @condBranchDynamicTypeNested(
 // -----
 
 // Test Case: Existing AllocOp with no users.
-// BufferPlacement Expected Behaviour: It should insert a DeallocOp right before
-// ReturnOp.
+// BufferDeallocation expected behavior: It should insert a DeallocOp right
+// before ReturnOp.
 
 // CHECK-LABEL: func @emptyUsesValue
 func @emptyUsesValue(%arg0: memref<4xf32>) {
@@ -212,9 +222,9 @@ func @emptyUsesValue(%arg0: memref<4xf32>) {
 //  |    bb1 <- Initial position of AllocOp
 //   \   /
 //    bb2
-// BufferPlacement Expected Behaviour: It should move the existing AllocOp to
-// the entry block and insert a DeallocOp at the exit block after CopyOp since
-// %1 is an alias for %0 and %arg1.
+// BufferDeallocation expected behavior: It should insert a DeallocOp at the
+// exit block after CopyOp since %1 is an alias for %0 and %arg1. Furthermore,
+// we have to insert a copy and an alloc in the beginning of the function.
 
 #map0 = affine_map<(d0) -> (d0)>
 
@@ -238,10 +248,16 @@ func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   return
 }
 
-// CHECK-NEXT: %[[ALLOC:.*]] = alloc()
+// CHECK-NEXT: %[[ALLOC0:.*]] = alloc()
+// CHECK-NEXT: linalg.copy
 // CHECK-NEXT: cond_br
+//      CHECK: %[[ALLOC1:.*]] = alloc()
+// CHECK-NEXT: linalg.generic
+//      CHECK: %[[ALLOC2:.*]] = alloc()
+// CHECK-NEXT: linalg.copy
+// CHECK-NEXT: dealloc %[[ALLOC1]]
 //      CHECK: linalg.copy
-// CHECK-NEXT: dealloc %[[ALLOC]]
+// CHECK-NEXT: dealloc
 // CHECK-NEXT: return
 
 // -----
@@ -252,9 +268,8 @@ func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 //  |    bb1
 //   \   /
 //    bb2
-// BufferPlacement Expected Behaviour: It shouldn't move the alloc position. It
-// only inserts a DeallocOp at the exit block after CopyOp since %1 is an alias
-// for %0 and %arg1.
+// BufferDeallocation expected behavior: It only inserts a DeallocOp at the
+// exit block after CopyOp since %1 is an alias for %0 and %arg1.
 
 #map0 = affine_map<(d0) -> (d0)>
 
@@ -289,10 +304,10 @@ func @invCriticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 //  bb1  bb2
 //   \   /
 //    bb3 <- Initial position of the second AllocOp
-// BufferPlacement Expected Behaviour: It shouldn't move the AllocOps. It only
-// inserts two missing DeallocOps in the exit block. %5 is an alias for %0.
-// Therefore, the DeallocOp for %0 should occur after the last GenericOp. The
-// Dealloc for %7 should happen after the CopyOp.
+// BufferDeallocation expected behavior: It only inserts two missing
+// DeallocOps in the exit block. %5 is an alias for %0. Therefore, the
+// DeallocOp for %0 should occur after the last GenericOp. The Dealloc for %7
+// should happen after the CopyOp.
 
 #map0 = affine_map<(d0) -> (d0)>
 
@@ -347,9 +362,8 @@ func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 //  bb1  bb2
 //   \   /
 //    bb3
-// BufferPlacement Expected Behaviour: It shouldn't move the AllocOp. It only
-// inserts a missing DeallocOp in the exit block since %5 or %6 are the latest
-// aliases of %0.
+// BufferDeallocation expected behavior: It only inserts a missing DeallocOp
+// in the exit block since %5 or %6 are the latest aliases of %0.
 
 #map0 = affine_map<(d0) -> (d0)>
 
@@ -378,7 +392,8 @@ func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 }
 
 // CHECK-NEXT: %[[FIRST_ALLOC:.*]] = alloc()
-//      CHECK: dealloc %[[FIRST_ALLOC]]
+//      CHECK: linalg.copy
+// CHECK-NEXT: dealloc %[[FIRST_ALLOC]]
 // CHECK-NEXT: return
 
 // -----
@@ -392,8 +407,8 @@ func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 //    \     \  /
 //     \     /
 //       bb5 <- Initial position of the second AllocOp
-// BufferPlacement Expected Behaviour: AllocOps shouldn't be moved.
-// Two missing DeallocOps should be inserted in the exit block.
+// BufferDeallocation expected behavior: Two missing DeallocOps should be
+// inserted in the exit block.
 
 #map0 = affine_map<(d0) -> (d0)>
 
@@ -447,8 +462,8 @@ func @ifElseNested(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // -----
 
 // Test Case: Dead operations in a single block.
-// BufferPlacement Expected Behaviour: It shouldn't move the AllocOps. It only
-// inserts the two missing DeallocOps after the last GenericOp.
+// BufferDeallocation expected behavior: It only inserts the two missing
+// DeallocOps after the last GenericOp.
 
 #map0 = affine_map<(d0) -> (d0)>
 
@@ -481,7 +496,8 @@ func @redundantOperations(%arg0: memref<2xf32>) {
 // CHECK-NEXT: %[[FIRST_ALLOC:.*]] = alloc()
 // CHECK-NEXT: linalg.generic {{.*}} ins(%[[ARG0]]{{.*}}outs(%[[FIRST_ALLOC]]
 //      CHECK: %[[SECOND_ALLOC:.*]] = alloc()
-// CHECK-NEXT: linalg.generic {{.*}} ins(%[[FIRST_ALLOC]]{{.*}}outs(%[[SECOND_ALLOC]]
+// CHECK-NEXT: linalg.generic {{.*}} ins
+// CHECK-SAME: (%[[FIRST_ALLOC]]{{.*}}outs(%[[SECOND_ALLOC]]
 //      CHECK: dealloc
 // CHECK-NEXT: dealloc
 // CHECK-NEXT: return
@@ -494,9 +510,10 @@ func @redundantOperations(%arg0: memref<2xf32>) {
 // Initial pos of the 1st AllocOp -> bb1  bb2 <- Initial pos of the 2nd AllocOp
 //                                    \   /
 //                                     bb3
-// BufferPlacement Expected Behaviour: Both AllocOps should be moved to the
-// entry block. Both missing DeallocOps should be moved to the exit block after
-// CopyOp since %arg2 is an alias for %0 and %1.
+// BufferDeallocation expected behavior: We need to introduce a copy for each
+// buffer since the buffers are passed to bb3. The both missing DeallocOps are
+// inserted in the respective block of the allocs. The copy is freed in the exit
+// block.
 
 #map0 = affine_map<(d0) -> (d0)>
 
@@ -535,11 +552,25 @@ func @moving_alloc_and_inserting_missing_dealloc(
   return
 }
 
-// CHECK-NEXT: %{{.*}} = alloc()
-// CHECK-NEXT: %{{.*}} = alloc()
+// CHECK-NEXT: cond_br
+//      CHECK: ^bb1
+//      CHECK: ^bb1
+//      CHECK: %[[ALLOC0:.*]] = alloc()
+// CHECK-NEXT: linalg.generic
+//      CHECK: %[[ALLOC1:.*]] = alloc()
+// CHECK-NEXT: linalg.copy
+// CHECK-NEXT: dealloc %[[ALLOC0]]
+// CHECK-NEXT: br ^bb3(%[[ALLOC1]]
+// CHECK-NEXT: ^bb2
+// CHECK-NEXT: %[[ALLOC2:.*]] = alloc()
+// CHECK-NEXT: linalg.generic
+//      CHECK: %[[ALLOC3:.*]] = alloc()
+// CHECK-NEXT: linalg.copy
+// CHECK-NEXT: dealloc %[[ALLOC2]]
+// CHECK-NEXT: br ^bb3(%[[ALLOC3]]
+// CHECK-NEXT: ^bb3(%[[ALLOC4:.*]]:{{.*}})
 //      CHECK: linalg.copy
-// CHECK-NEXT: dealloc
-// CHECK-NEXT: dealloc
+// CHECK-NEXT: dealloc %[[ALLOC4]]
 // CHECK-NEXT: return
 
 // -----
@@ -551,8 +582,8 @@ func @moving_alloc_and_inserting_missing_dealloc(
 // bb1  bb2 <- Initial position of AllocOp
 //  \   /
 //   bb3
-// BufferPlacement Expected Behaviour: It should move the AllocOp to the entry
-// block. The existing DeallocOp should be moved to exit block.
+// BufferDeallocation expected behavior: The existing DeallocOp should be
+// moved to exit block.
 
 #map0 = affine_map<(d0) -> (d0)>
 
@@ -561,11 +592,11 @@ func @moving_invalid_dealloc_op_complex(
   %cond: i1,
     %arg0: memref<2xf32>,
     %arg1: memref<2xf32>) {
+  %1 = alloc() : memref<2xf32>
   cond_br %cond, ^bb1, ^bb2
 ^bb1:
   br ^exit(%arg0 : memref<2xf32>)
 ^bb2:
-  %1 = alloc() : memref<2xf32>
   linalg.generic {
     indexing_maps = [#map0, #map0],
     iterator_types = ["parallel"]}
@@ -582,9 +613,10 @@ func @moving_invalid_dealloc_op_complex(
   return
 }
 
-// CHECK-NEXT: %{{.*}} = alloc()
+// CHECK-NEXT: %[[ALLOC0:.*]] = alloc()
+// CHECK-NEXT: cond_br
 //      CHECK: linalg.copy
-// CHECK-NEXT: dealloc
+// CHECK-NEXT: dealloc %[[ALLOC0]]
 // CHECK-NEXT: return
 
 // -----
@@ -611,8 +643,9 @@ func @inserting_missing_dealloc_simple(
   return
 }
 
+// CHECK-NEXT: %[[ALLOC0:.*]] = alloc()
 //      CHECK: linalg.copy
-// CHECK-NEXT: dealloc
+// CHECK-NEXT: dealloc %[[ALLOC0]]
 
 // -----
 
@@ -638,33 +671,41 @@ func @moving_invalid_dealloc_op(%arg0 : memref<2xf32>, %arg1: memref<2xf32>) {
   return
 }
 
+// CHECK-NEXT: %[[ALLOC0:.*]] = alloc()
 //      CHECK: linalg.copy
-// CHECK-NEXT: dealloc
+// CHECK-NEXT: dealloc %[[ALLOC0]]
 
 // -----
 
-// Test Case: Nested regions - This test defines a GenericOp inside the region of
-// another GenericOp.
-// BufferPlacement Expected Behaviour: The AllocOp of inner GenericOp should remain
-// inside the region of outer GenericOp and it should insert the missing DeallocOp
-// in the same region. The AllocOp of the outer GenericOp should be moved to the
-// entry block and its missing DeallocOp should be inserted after Linalg.Copy.
+// Test Case: Nested regions - This test defines a GenericOp inside the region
+// of another GenericOp.
+// BufferDeallocation expected behavior: The AllocOp of inner GenericOp should
+// remain inside the region of outer GenericOp and it should insert the missing
+// DeallocOp in the same region. The missing DeallocOp should be inserted after
+// Linalg.Copy.
 
 #map0 = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: func @nested_regions_and_cond_branch
-func @nested_regions_and_cond_branch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func @nested_regions_and_cond_branch(
+  %arg0: i1,
+  %arg1: memref<2xf32>,
+  %arg2: memref<2xf32>) {
   cond_br %arg0, ^bb1, ^bb2
 ^bb1:
   br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
   %0 = alloc() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
+  linalg.generic {
+    indexing_maps = [#map0, #map0],
+    iterator_types = ["parallel"]}
     ins(%arg1: memref<2xf32>)
    outs(%0: memref<2xf32>) {
   ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
     %1 = alloc() : memref<2xf32>
-    linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
+    linalg.generic {
+      indexing_maps = [#map0, #map0],
+      iterator_types = ["parallel"]}
       ins(%arg1: memref<2xf32>)
      outs(%1: memref<2xf32>) {
     ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
@@ -680,29 +721,37 @@ func @nested_regions_and_cond_branch(%arg0: i1, %arg1: memref<2xf32>, %arg2: mem
   return
 }
 //      CHECK: (%[[cond:.*]]: {{.*}}, %[[ARG1:.*]]: {{.*}}, %{{.*}}: {{.*}})
-// CHECK-NEXT:   %[[GENERIC1_ALLOC:.*]] = alloc()
 // CHECK-NEXT:   cond_br %[[cond]], ^[[BB1:.*]], ^[[BB2:.*]]
+//      CHECK:   %[[ALLOC0:.*]] = alloc()
+// CHECK-NEXT:   linalg.copy(%[[ARG1]], %[[ALLOC0]])
 //      CHECK: ^[[BB2]]:
-// CHECK-NEXT:   linalg.generic {{{.*}}} ins(%[[ARG1]]{{.*}}outs(%[[GENERIC1_ALLOC]]
-//      CHECK:     %[[GENERIC2_ALLOC:.*]] = alloc()
-// CHECK-NEXT:     linalg.generic {{{.*}}} ins(%[[ARG1]]{{.*}}outs(%[[GENERIC2_ALLOC]]
-//      CHECK:     dealloc %[[GENERIC2_ALLOC]]
+//      CHECK:   %[[ALLOC1:.*]] = alloc()
+// CHECK-NEXT:   linalg.generic {{{.*}}} ins(%[[ARG1]]{{.*}}outs(%[[ALLOC1]]
+//      CHECK:     %[[ALLOC2:.*]] = alloc()
+// CHECK-NEXT:     linalg.generic {{{.*}}} ins(%[[ARG1]]{{.*}}outs(%[[ALLOC2]]
+//      CHECK:     dealloc %[[ALLOC2]]
 // CHECK-NEXT:     %{{.*}} = exp
+//      CHECK:   %[[ALLOC3:.*]] = alloc()
+// CHECK-NEXT:   linalg.copy(%[[ALLOC1]], %[[ALLOC3]])
+// CHECK-NEXT:   dealloc %[[ALLOC1]]
 //      CHECK:  ^[[BB3:.*]]({{.*}}):
 //      CHECK:  linalg.copy
-// CHECK-NEXT:  dealloc %[[GENERIC1_ALLOC]]
+// CHECK-NEXT:  dealloc
 
 // -----
 
 // Test Case: buffer deallocation escaping
-// BufferPlacement Expected Behaviour: It must not dealloc %arg1 and %x
+// BufferDeallocation expected behavior: It must not dealloc %arg1 and %x
 // since they are operands of return operation and should escape from
 // deallocating. It should dealloc %y after linalg.copy.
 
 #map0 = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: func @memref_in_function_results
-func @memref_in_function_results(%arg0: memref<5xf32>, %arg1: memref<10xf32>, %arg2: memref<5xf32>) -> (memref<10xf32>, memref<15xf32>) {
+func @memref_in_function_results(
+  %arg0: memref<5xf32>,
+  %arg1: memref<10xf32>,
+  %arg2: memref<5xf32>) -> (memref<10xf32>, memref<15xf32>) {
   %x = alloc() : memref<15xf32>
   %y = alloc() : memref<5xf32>
   linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
@@ -715,19 +764,20 @@ func @memref_in_function_results(%arg0: memref<5xf32>, %arg1: memref<10xf32>, %a
   linalg.copy(%y, %arg2) : memref<5xf32>, memref<5xf32>
   return %arg1, %x : memref<10xf32>, memref<15xf32>
 }
-// CHECK: (%[[ARG0:.*]]: memref<5xf32>, %[[ARG1:.*]]: memref<10xf32>, %[[RESULT:.*]]: memref<5xf32>)
-// CHECK: %[[X:.*]] = alloc()
-// CHECK: %[[Y:.*]] = alloc()
-// CHECK: linalg.copy
-// CHECK: dealloc %[[Y]]
-// CHECK: return %[[ARG1]], %[[X]]
+//      CHECK: (%[[ARG0:.*]]: memref<5xf32>, %[[ARG1:.*]]: memref<10xf32>,
+// CHECK-SAME: %[[RESULT:.*]]: memref<5xf32>)
+//      CHECK: %[[X:.*]] = alloc()
+//      CHECK: %[[Y:.*]] = alloc()
+//      CHECK: linalg.copy
+//      CHECK: dealloc %[[Y]]
+//      CHECK: return %[[ARG1]], %[[X]]
 
 // -----
 
 // Test Case: nested region control flow
-// The alloc position of %1 does not need to be changed and flows through
-// both if branches until it is finally returned. Hence, it does not
-// require a specific dealloc operation. However, %3 requires a dealloc.
+// The alloc %1 flows through both if branches until it is finally returned.
+// Hence, it does not require a specific dealloc operation. However, %3
+// requires a dealloc.
 
 // CHECK-LABEL: func @nested_region_control_flow
 func @nested_region_control_flow(
@@ -756,10 +806,8 @@ func @nested_region_control_flow(
 
 // Test Case: nested region control flow with a nested buffer allocation in a
 // divergent branch.
-// The alloc positions of %1, %3 does not need to be changed since
-// BufferPlacement does not move allocs out of nested regions at the moment.
-// However, since %3 is allocated and "returned" in a divergent branch, we have
-// to allocate a temporary buffer (like in condBranchDynamicTypeNested).
+// Buffer deallocation places a copy for both  %1 and %3, since they are
+// returned in the end.
 
 // CHECK-LABEL: func @nested_region_control_flow_div
 func @nested_region_control_flow_div(
@@ -791,61 +839,9 @@ func @nested_region_control_flow_div(
 
 // -----
 
-// Test Case: deeply nested region control flow with a nested buffer allocation
-// in a divergent branch.
-// The alloc positions of %1, %4 and %5 does not need to be changed since
-// BufferPlacement does not move allocs out of nested regions at the moment.
-// However, since %4 is allocated and "returned" in a divergent branch, we have
-// to allocate several temporary buffers (like in condBranchDynamicTypeNested).
-
-// CHECK-LABEL: func @nested_region_control_flow_div_nested
-func @nested_region_control_flow_div_nested(
-  %arg0 : index,
-  %arg1 : index) -> memref<?x?xf32> {
-  %0 = cmpi "eq", %arg0, %arg1 : index
-  %1 = alloc(%arg0, %arg0) : memref<?x?xf32>
-  %2 = scf.if %0 -> (memref<?x?xf32>) {
-    %3 = scf.if %0 -> (memref<?x?xf32>) {
-      scf.yield %1 : memref<?x?xf32>
-    } else {
-      %4 = alloc(%arg0, %arg1) : memref<?x?xf32>
-      scf.yield %4 : memref<?x?xf32>
-    }
-    scf.yield %3 : memref<?x?xf32>
-  } else {
-    %5 = alloc(%arg1, %arg1) : memref<?x?xf32>
-    scf.yield %5 : memref<?x?xf32>
-  }
-  return %2 : memref<?x?xf32>
-}
-//      CHECK: %[[ALLOC0:.*]] = alloc(%arg0, %arg0)
-// CHECK-NEXT: %[[ALLOC1:.*]] = scf.if
-// CHECK-NEXT: %[[ALLOC2:.*]] = scf.if
-//      CHECK: %[[ALLOC3:.*]] = alloc
-// CHECK-NEXT: linalg.copy(%[[ALLOC0]], %[[ALLOC3]])
-//      CHECK: scf.yield %[[ALLOC3]]
-//      CHECK: %[[ALLOC4:.*]] = alloc(%arg0, %arg1)
-//      CHECK: %[[ALLOC5:.*]] = alloc
-// CHECK-NEXT: linalg.copy(%[[ALLOC4]], %[[ALLOC5]])
-//      CHECK: dealloc %[[ALLOC4]]
-//      CHECK: scf.yield %[[ALLOC5]]
-//      CHECK: %[[ALLOC6:.*]] = alloc
-// CHECK-NEXT: linalg.copy(%[[ALLOC2]], %[[ALLOC6]])
-//      CHECK: dealloc %[[ALLOC2]]
-//      CHECK: scf.yield %[[ALLOC6]]
-//      CHECK: %[[ALLOC7:.*]] = alloc(%arg1, %arg1)
-//      CHECK: %[[ALLOC8:.*]] = alloc
-// CHECK-NEXT: linalg.copy(%[[ALLOC7]], %[[ALLOC8]])
-//      CHECK: dealloc %[[ALLOC7]]
-//      CHECK: scf.yield %[[ALLOC8]]
-//      CHECK: dealloc %[[ALLOC0]]
-// CHECK-NEXT: return %[[ALLOC1]]
-
-// -----
-
 // Test Case: nested region control flow within a region interface.
-// The alloc positions of %0 does not need to be changed and no copies are
-// required in this case since the allocation finally escapes the method.
+// No copies are required in this case since the allocation finally escapes
+// the method.
 
 // CHECK-LABEL: func @inner_region_control_flow
 func @inner_region_control_flow(%arg0 : index) -> memref<?x?xf32> {
@@ -875,54 +871,6 @@ func @inner_region_control_flow(%arg0 : index) -> memref<?x?xf32> {
 
 // -----
 
-// Test Case: nested region control flow within a region interface including an
-// allocation in a divergent branch.
-// The alloc positions of %1 and %2 does not need to be changed since
-// BufferPlacement does not move allocs out of nested regions at the moment.
-// However, since %2 is allocated and yielded in a divergent branch, we have
-// to allocate several temporary buffers (like in condBranchDynamicTypeNested).
-
-// CHECK-LABEL: func @inner_region_control_flow_div
-func @inner_region_control_flow_div(
-  %arg0 : index,
-  %arg1 : index) -> memref<?x?xf32> {
-  %0 = alloc(%arg0, %arg0) : memref<?x?xf32>
-  %1 = test.region_if %0 : memref<?x?xf32> -> (memref<?x?xf32>) then {
-    ^bb0(%arg2 : memref<?x?xf32>):
-      test.region_if_yield %arg2 : memref<?x?xf32>
-  } else {
-    ^bb0(%arg2 : memref<?x?xf32>):
-      %2 = alloc(%arg0, %arg1) : memref<?x?xf32>
-      test.region_if_yield %2 : memref<?x?xf32>
-  } join {
-    ^bb0(%arg2 : memref<?x?xf32>):
-      test.region_if_yield %arg2 : memref<?x?xf32>
-  }
-  return %1 : memref<?x?xf32>
-}
-
-//      CHECK: %[[ALLOC0:.*]] = alloc(%arg0, %arg0)
-// CHECK-NEXT: %[[ALLOC1:.*]] = test.region_if
-// CHECK-NEXT: ^bb0(%[[ALLOC2:.*]]:{{.*}}):
-//      CHECK: %[[ALLOC3:.*]] = alloc
-// CHECK-NEXT: linalg.copy(%[[ALLOC2]], %[[ALLOC3]])
-// CHECK-NEXT: test.region_if_yield %[[ALLOC3]]
-//      CHECK: ^bb0(%[[ALLOC4:.*]]:{{.*}}):
-//      CHECK: %[[ALLOC5:.*]] = alloc
-//      CHECK: %[[ALLOC6:.*]] = alloc
-// CHECK-NEXT: linalg.copy(%[[ALLOC5]], %[[ALLOC6]])
-// CHECK-NEXT: dealloc %[[ALLOC5]]
-// CHECK-NEXT: test.region_if_yield %[[ALLOC6]]
-//      CHECK: ^bb0(%[[ALLOC7:.*]]:{{.*}}):
-//      CHECK: %[[ALLOC8:.*]] = alloc
-// CHECK-NEXT: linalg.copy(%[[ALLOC7]], %[[ALLOC8]])
-// CHECK-NEXT: dealloc %[[ALLOC7]]
-// CHECK-NEXT: test.region_if_yield %[[ALLOC8]]
-//      CHECK: dealloc %[[ALLOC0]]
-// CHECK-NEXT: return %[[ALLOC1]]
-
-// -----
-
 // CHECK-LABEL: func @subview
 func @subview(%arg0 : index, %arg1 : index, %arg2 : memref<?x?xf32>) {
   %0 = alloc() : memref<64x4xf32, offset: 0, strides: [4, 1]>
@@ -943,6 +891,9 @@ func @subview(%arg0 : index, %arg1 : index, %arg2 : memref<?x?xf32>) {
 // -----
 
 #map0 = affine_map<(d0) -> (d0)>
+
+// Test Case: In the presence of AllocaOps only the AllocOps has top be freed.
+// Therefore, all allocas are not handled.
 
 // CHECK-LABEL: func @condBranchAlloca
 func @condBranchAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
@@ -976,6 +927,10 @@ func @condBranchAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // -----
 
 #map0 = affine_map<(d0) -> (d0)>
+
+// Test Case: In the presence of AllocaOps only the AllocOps has top be freed.
+// Therefore, all allocas are not handled. In this case, only alloc %0 has a
+// dealloc.
 
 // CHECK-LABEL: func @ifElseAlloca
 func @ifElseAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
@@ -1024,7 +979,10 @@ func @ifElseAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 #map0 = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: func @ifElseNestedAlloca
-func @ifElseNestedAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func @ifElseNestedAlloca(
+  %arg0: i1,
+  %arg1: memref<2xf32>,
+  %arg2: memref<2xf32>) {
   %0 = alloca() : memref<2xf32>
   linalg.generic {
     indexing_maps = [#map0, #map0],
@@ -1074,18 +1032,25 @@ func @ifElseNestedAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) 
 #map0 = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: func @nestedRegionsAndCondBranchAlloca
-func @nestedRegionsAndCondBranchAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func @nestedRegionsAndCondBranchAlloca(
+  %arg0: i1,
+  %arg1: memref<2xf32>,
+  %arg2: memref<2xf32>) {
   cond_br %arg0, ^bb1, ^bb2
 ^bb1:
   br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
   %0 = alloc() : memref<2xf32>
-  linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
+  linalg.generic {
+    indexing_maps = [#map0, #map0],
+    iterator_types = ["parallel"]}
     ins(%arg1: memref<2xf32>)
    outs(%0: memref<2xf32>) {
   ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
     %1 = alloca() : memref<2xf32>
-    linalg.generic {indexing_maps = [#map0, #map0], iterator_types = ["parallel"]}
+    linalg.generic {
+      indexing_maps = [#map0, #map0],
+      iterator_types = ["parallel"]}
     ins(%arg1: memref<2xf32>)
    outs(%1: memref<2xf32>) {
     ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
@@ -1101,16 +1066,22 @@ func @nestedRegionsAndCondBranchAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: m
   return
 }
 //      CHECK: (%[[cond:.*]]: {{.*}}, %[[ARG1:.*]]: {{.*}}, %{{.*}}: {{.*}})
-// CHECK-NEXT:   %[[ALLOC:.*]] = alloc()
 // CHECK-NEXT:   cond_br %[[cond]], ^[[BB1:.*]], ^[[BB2:.*]]
+//      CHECK: ^[[BB1]]:
+//      CHECK: %[[ALLOC0:.*]] = alloc()
+// CHECK-NEXT: linalg.copy
 //      CHECK: ^[[BB2]]:
-// CHECK-NEXT:   linalg.generic {{{.*}}} ins(%[[ARG1]]{{.*}}outs(%[[ALLOC]]
+//      CHECK:   %[[ALLOC1:.*]] = alloc()
+// CHECK-NEXT:   linalg.generic {{{.*}}} ins(%[[ARG1]]{{.*}}outs(%[[ALLOC1]]
 //      CHECK:     %[[ALLOCA:.*]] = alloca()
 // CHECK-NEXT:     linalg.generic {{{.*}}} ins(%[[ARG1]]{{.*}}outs(%[[ALLOCA]]
 //      CHECK:     %{{.*}} = exp
+//      CHECK:  %[[ALLOC2:.*]] = alloc()
+// CHECK-NEXT:  linalg.copy
+// CHECK-NEXT:  dealloc %[[ALLOC1]]
 //      CHECK:  ^[[BB3:.*]]({{.*}}):
 //      CHECK:  linalg.copy
-// CHECK-NEXT:  dealloc %[[ALLOC]]
+// CHECK-NEXT:  dealloc
 
 // -----
 
@@ -1139,10 +1110,8 @@ func @nestedRegionControlFlowAlloca(
 // -----
 
 // Test Case: structured control-flow loop using a nested alloc.
-// The alloc positions of %3 will not be changed, but the iteration argument
-// %iterBuf has to be freed before yielding %3 to avoid memory leaks.
-
-// -----
+// The iteration argument %iterBuf has to be freed before yielding %3 to avoid
+// memory leaks.
 
 // CHECK-LABEL: func @loop_alloc
 func @loop_alloc(
@@ -1166,7 +1135,8 @@ func @loop_alloc(
 // CHECK-NEXT: dealloc %[[ALLOC0]]
 // CHECK-NEXT: %[[ALLOC1:.*]] = alloc()
 //      CHECK: linalg.copy(%arg3, %[[ALLOC1]])
-//      CHECK: %[[ALLOC2:.*]] = scf.for {{.*}} iter_args(%[[IALLOC:.*]] = %[[ALLOC1]]
+//      CHECK: %[[ALLOC2:.*]] = scf.for {{.*}} iter_args
+// CHECK-SAME: (%[[IALLOC:.*]] = %[[ALLOC1]]
 //      CHECK:    cmpi
 //      CHECK:    dealloc %[[IALLOC]]
 //      CHECK:    %[[ALLOC3:.*]] = alloc()
@@ -1251,7 +1221,8 @@ func @loop_nested_if_alloc(
 //      CHECK: %[[ALLOC0:.*]] = alloc()
 //      CHECK: %[[ALLOC1:.*]] = alloc()
 // CHECK-NEXT: linalg.copy(%arg3, %[[ALLOC1]])
-// CHECK-NEXT: %[[ALLOC2:.*]] = scf.for {{.*}} iter_args(%[[IALLOC:.*]] = %[[ALLOC1]]
+// CHECK-NEXT: %[[ALLOC2:.*]] = scf.for {{.*}} iter_args
+// CHECK-SAME: (%[[IALLOC:.*]] = %[[ALLOC1]]
 //      CHECK: dealloc %[[IALLOC]]
 //      CHECK: %[[ALLOC3:.*]] = scf.if
 
@@ -1362,7 +1333,7 @@ func @loop_nested_alloc(
 // -----
 
 // Test Case: explicit control-flow loop with a dynamically allocated buffer.
-// The BufferPlacement transformation should fail on this explicit
+// The BufferDeallocation transformation should fail on this explicit
 // control-flow loop since they are not supported.
 
 // CHECK-LABEL: func @loop_dynalloc
@@ -1397,7 +1368,7 @@ func @loop_dynalloc(
 // -----
 
 // Test Case: explicit control-flow loop with a dynamically allocated buffer.
-// The BufferPlacement transformation should fail on this explicit
+// The BufferDeallocation transformation should fail on this explicit
 // control-flow loop since they are not supported.
 
 // CHECK-LABEL: func @do_loop_alloc
