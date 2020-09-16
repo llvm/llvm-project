@@ -15120,6 +15120,17 @@ static bool actOnOMPReductionKindClause(
           continue;
         }
       }
+    } else {
+      // Threadprivates cannot be shared between threads, so dignose if the base
+      // is a threadprivate variable.
+      DSAStackTy::DSAVarData DVar = Stack->getTopDSA(D, /*FromParent=*/false);
+      if (DVar.CKind == OMPC_threadprivate) {
+        S.Diag(ELoc, diag::err_omp_wrong_dsa)
+            << getOpenMPClauseName(DVar.CKind)
+            << getOpenMPClauseName(OMPC_reduction);
+        reportOriginalDsa(S, Stack, D, DVar);
+        continue;
+      }
     }
 
     // Try to find 'declare reduction' corresponding construct before using
