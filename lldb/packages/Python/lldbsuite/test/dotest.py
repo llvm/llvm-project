@@ -449,6 +449,18 @@ def parseOptionsAndInitTestdirs():
 
     lldbtest_config.codesign_identity = args.codesign_identity
 
+def registerFaulthandler():
+    try:
+        import faulthandler
+    except ImportError:
+        # faulthandler is not available until python3
+        return
+
+    faulthandler.enable()
+    # faulthandler.register is not available on Windows.
+    if getattr(faulthandler, 'register', None):
+        faulthandler.register(signal.SIGTERM, chain=True)
+
 def setupSysPath():
     """
     Add LLDB.framework/Resources/Python to the search paths for modules.
@@ -874,6 +886,9 @@ def run_suite():
     # then, we walk the directory trees and collect the tests into our test suite.
     #
     parseOptionsAndInitTestdirs()
+
+    # Print a stack trace if the test hangs or is passed SIGTERM.
+    registerFaulthandler()
 
     setupSysPath()
 
