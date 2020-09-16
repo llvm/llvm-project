@@ -6796,14 +6796,10 @@ public:
     return true;
   }
 
-  /// Attempt to vectorize the tree found by
-  /// matchAssociativeReduction.
+  /// Attempt to vectorize the tree found by matchAssociativeReduction.
   bool tryToReduce(BoUpSLP &V, TargetTransformInfo *TTI) {
-    if (ReducedVals.empty())
-      return false;
-
-    // If there is a sufficient number of reduction values, reduce
-    // to a nearby power-of-2. Can safely generate oversized
+    // If there are a sufficient number of reduction values, reduce
+    // to a nearby power-of-2. We can safely generate oversized
     // vectors and rely on the backend to split them to legal sizes.
     unsigned NumReducedVals = ReducedVals.size();
     if (NumReducedVals < 4)
