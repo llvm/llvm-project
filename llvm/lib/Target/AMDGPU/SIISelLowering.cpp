@@ -921,15 +921,18 @@ MVT SITargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   if (VT.isVector()) {
     EVT ScalarVT = VT.getScalarType();
     unsigned Size = ScalarVT.getSizeInBits();
-    if (Size == 32)
-      return ScalarVT.getSimpleVT();
+    if (Size == 16) {
+      if (Subtarget->has16BitInsts())
+        return VT.isInteger() ? MVT::v2i16 : MVT::v2f16;
+      return VT.isInteger() ? MVT::i32 : MVT::f32;
+    }
 
-    if (Size > 32)
-      return MVT::i32;
+    if (Size < 16)
+      return Subtarget->has16BitInsts() ? MVT::i16 : MVT::i32;
+    return Size == 32 ? ScalarVT.getSimpleVT() : MVT::i32;
+  }
 
-    if (Size == 16 && Subtarget->has16BitInsts())
-      return VT.isInteger() ? MVT::v2i16 : MVT::v2f16;
-  } else if (VT.getSizeInBits() > 32)
+  if (VT.getSizeInBits() > 32)
     return MVT::i32;
 
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
@@ -946,14 +949,15 @@ unsigned SITargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
     EVT ScalarVT = VT.getScalarType();
     unsigned Size = ScalarVT.getSizeInBits();
 
-    if (Size == 32)
+    // FIXME: Should probably promote 8-bit vectors to i16.
+    if (Size == 16 && Subtarget->has16BitInsts())
+      return (NumElts + 1) / 2;
+
+    if (Size <= 32)
       return NumElts;
 
     if (Size > 32)
       return NumElts * ((Size + 31) / 32);
-
-    if (Size == 16 && Subtarget->has16BitInsts())
-      return (NumElts + 1) / 2;
   } else if (VT.getSizeInBits() > 32)
     return (VT.getSizeInBits() + 31) / 32;
 
@@ -968,9 +972,35 @@ unsigned SITargetLowering::getVectorTypeBreakdownForCallingConv(
     unsigned NumElts = VT.getVectorNumElements();
     EVT ScalarVT = VT.getScalarType();
     unsigned Size = ScalarVT.getSizeInBits();
+    // FIXME: We should fix the ABI to be the same on targets without 16-bit
+    // support, but unless we can properly handle 3-vectors, it will be still be
+    // inconsistent.
+    if (Size == 16 && Subtarget->has16BitInsts()) {
+      RegisterVT = VT.isInteger() ? MVT::v2i16 : MVT::v2f16;
+      IntermediateVT = RegisterVT;
+      NumIntermediates = (NumElts + 1) / 2;
+      return NumIntermediates;
+    }
+
     if (Size == 32) {
       RegisterVT = ScalarVT.getSimpleVT();
       IntermediateVT = RegisterVT;
+      NumIntermediates = NumElts;
+      return NumIntermediates;
+    }
+
+    if (Size < 16 && Subtarget->has16BitInsts()) {
+      // FIXME: Should probably form v2i16 pieces
+      RegisterVT = MVT::i16;
+      IntermediateVT = ScalarVT;
+      NumIntermediates = NumElts;
+      return NumIntermediates;
+    }
+
+
+    if (Size != 16 && Size <= 32) {
+      RegisterVT = MVT::i32;
+      IntermediateVT = ScalarVT;
       NumIntermediates = NumElts;
       return NumIntermediates;
     }
@@ -979,16 +1009,6 @@ unsigned SITargetLowering::getVectorTypeBreakdownForCallingConv(
       RegisterVT = MVT::i32;
       IntermediateVT = RegisterVT;
       NumIntermediates = NumElts * ((Size + 31) / 32);
-      return NumIntermediates;
-    }
-
-    // FIXME: We should fix the ABI to be the same on targets without 16-bit
-    // support, but unless we can properly handle 3-vectors, it will be still be
-    // inconsistent.
-    if (Size == 16 && Subtarget->has16BitInsts()) {
-      RegisterVT = VT.isInteger() ? MVT::v2i16 : MVT::v2f16;
-      IntermediateVT = RegisterVT;
-      NumIntermediates = (NumElts + 1) / 2;
       return NumIntermediates;
     }
   }
