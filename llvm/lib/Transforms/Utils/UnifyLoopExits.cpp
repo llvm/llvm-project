@@ -54,7 +54,7 @@ FunctionPass *llvm::createUnifyLoopExitsPass() { return new UnifyLoopExits(); }
 INITIALIZE_PASS_BEGIN(UnifyLoopExits, "unify-loop-exits",
                       "Fixup each natural loop to have a single exit block",
                       false /* Only looks at CFG */, false /* Analysis Pass */)
-INITIALIZE_PASS_DEPENDENCY(LowerSwitch)
+INITIALIZE_PASS_DEPENDENCY(LowerSwitchLegacyPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(UnifyLoopExits, "unify-loop-exits",
