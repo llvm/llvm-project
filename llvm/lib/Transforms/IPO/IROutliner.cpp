@@ -50,6 +50,9 @@ struct OutlinableGroup {
   /// for extraction.
   bool IgnoreGroup = false;
 
+  /// The return block for the overall function.
+  BasicBlock *EndBB = nullptr;
+
   /// Flag for whether the \ref ArgumentTypes have been defined after the
   /// extraction of the first region.
   bool InputTypesSet = false;
@@ -343,15 +346,45 @@ static void findConstants(IRSimilarityCandidate &C, DenseSet<unsigned> &NotSame,
 /// CodeExtractor.
 /// \param [out] EndInputNumbers - The global value numbers for the extracted
 /// arguments.
+/// \param [in] OutputMappings - The mapping of values that have been replaced
+/// by a new output value.
+/// \param [out] EndInputs - The global value numbers for the extracted
+/// arguments.
 static void mapInputsToGVNs(IRSimilarityCandidate &C,
                             SetVector<Value *> &CurrentInputs,
+                            const DenseMap<Value *, Value *> &OutputMappings,
                             std::vector<unsigned> &EndInputNumbers) {
-  // Get the global value number for each input.
+  // Get the Global Value Number for each input.  We check if the Value has been
+  // replaced by a different value at output, and use the original value before
+  // replacement.
   for (Value *Input : CurrentInputs) {
     assert(Input && "Have a nullptr as an input");
+    if (OutputMappings.find(Input) != OutputMappings.end())
+      Input = OutputMappings.find(Input)->second;
     assert(C.getGVN(Input).hasValue() &&
            "Could not find a numbering for the given input");
     EndInputNumbers.push_back(C.getGVN(Input).getValue());
+  }
+}
+
+/// Find the original value for the \p ArgInput values if any one of them was
+/// replaced during a previous extraction.
+///
+/// \param [in] ArgInputs - The inputs to be extracted by the code extractor.
+/// \param [in] OutputMappings - The mapping of values that have been replaced
+/// by a new output value.
+/// \param [out] RemappedArgInputs - The remapped values according to
+/// \p OutputMappings that will be extracted.
+static void
+remapExtractedInputs(const ArrayRef<Value *> ArgInputs,
+                     const DenseMap<Value *, Value *> &OutputMappings,
+                     SetVector<Value *> &RemappedArgInputs) {
+  // Get the global value number for each input that will be extracted as an
+  // argument by the code extractor, remapping if needed for reloaded values.
+  for (Value *Input : ArgInputs) {
+    if (OutputMappings.find(Input) != OutputMappings.end())
+      Input = OutputMappings.find(Input)->second;
+    RemappedArgInputs.insert(Input);
   }
 }
 
@@ -368,19 +401,25 @@ static void mapInputsToGVNs(IRSimilarityCandidate &C,
 /// \param [in] NotSame - The global value numbers in the region that do not
 /// have the same constant value in the regions structurally similar to
 /// \p Region.
+/// \param [in] OutputMappings - The mapping of values that have been replaced
+/// by a new output value after extraction.
 /// \param [out] ArgInputs - The values of the inputs to the extracted function.
-static void getCodeExtractorArguments(OutlinableRegion &Region,
-                                      std::vector<unsigned> &InputGVNs,
-                                      DenseSet<unsigned> &NotSame,
-                                      SetVector<Value *> &ArgInputs) {
+/// \param [out] Outputs - The set of values extracted by the CodeExtractor
+/// as outputs.
+static void getCodeExtractorArguments(
+    OutlinableRegion &Region, std::vector<unsigned> &InputGVNs,
+    DenseSet<unsigned> &NotSame, DenseMap<Value *, Value *> &OutputMappings,
+    SetVector<Value *> &ArgInputs, SetVector<Value *> &Outputs) {
   IRSimilarityCandidate &C = *Region.Candidate;
 
   // OverallInputs are the inputs to the region found by the CodeExtractor,
   // SinkCands and HoistCands are used by the CodeExtractor to find sunken
   // allocas of values whose lifetimes are contained completely within the
-  // outlined region. Outputs are values used outside of the outlined region
-  // found by the CodeExtractor.
-  SetVector<Value *> OverallInputs, SinkCands, HoistCands, Outputs;
+  // outlined region. PremappedInputs are the arguments found by the
+  // CodeExtractor, removing conditions such as sunken allocas, but that
+  // may need to be remapped due to the extracted output values replacing
+  // the original values.
+  SetVector<Value *> OverallInputs, PremappedInputs, SinkCands, HoistCands;
 
   // Use the code extractor to get the inputs and outputs, without sunken
   // allocas or removing llvm.assumes.
@@ -400,27 +439,24 @@ static void getCodeExtractorArguments(OutlinableRegion &Region,
 
   // Find if any values are going to be sunk into the function when extracted
   CE->findAllocas(CEAC, SinkCands, HoistCands, Dummy);
-  CE->findInputsOutputs(ArgInputs, Outputs, SinkCands);
-
-  // TODO: Support regions with output values.  Outputs add an extra layer of
-  // resolution that adds too much complexity at this stage.
-  if (Outputs.size() > 0) {
-    Region.IgnoreRegion = true;
-    return;
-  }
+  CE->findInputsOutputs(PremappedInputs, Outputs, SinkCands);
 
   // TODO: Support regions with sunken allocas: values whose lifetimes are
   // contained completely within the outlined region.  These are not guaranteed
   // to be the same in every region, so we must elevate them all to arguments
   // when they appear.  If these values are not equal, it means there is some
   // Input in OverallInputs that was removed for ArgInputs.
-  if (ArgInputs.size() != OverallInputs.size()) {
+  if (OverallInputs.size() != PremappedInputs.size()) {
     Region.IgnoreRegion = true;
     return;
   }
 
   findConstants(C, NotSame, InputGVNs);
-  mapInputsToGVNs(C, OverallInputs, InputGVNs);
+
+  mapInputsToGVNs(C, OverallInputs, OutputMappings, InputGVNs);
+
+  remapExtractedInputs(PremappedInputs.getArrayRef(), OutputMappings,
+                       ArgInputs);
 
   // Sort the GVNs, since we now have constants included in the \ref InputGVNs
   // we need to make sure they are in a deterministic order.
@@ -439,7 +475,7 @@ static void getCodeExtractorArguments(OutlinableRegion &Region,
 /// function.
 static void
 findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
-                                        std::vector<unsigned> InputGVNs,
+                                        std::vector<unsigned> &InputGVNs,
                                         SetVector<Value *> &ArgInputs) {
 
   IRSimilarityCandidate &C = *Region.Candidate;
@@ -494,12 +530,82 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
   Region.NumExtractedInputs = OriginalIndex;
 }
 
+/// Create a mapping of the output arguments for the \p Region to the output
+/// arguments of the overall outlined function.
+///
+/// \param [in,out] Region - The region of code to be analyzed.
+/// \param [in] Outputs - The values found by the code extractor.
+static void
+findExtractedOutputToOverallOutputMapping(OutlinableRegion &Region,
+                                          ArrayRef<Value *> Outputs) {
+  OutlinableGroup &Group = *Region.Parent;
+  IRSimilarityCandidate &C = *Region.Candidate;
+
+  // This counts the argument number in the extracted function.
+  unsigned OriginalIndex = Region.NumExtractedInputs;
+
+  // This counts the argument number in the overall function.
+  unsigned TypeIndex = Group.NumAggregateInputs;
+  bool TypeFound;
+  DenseSet<unsigned> AggArgsUsed;
+
+  // Iterate over the output types and identify if there is an aggregate pointer
+  // type whose base type matches the current output type. If there is, we mark
+  // that we will use this output register for this value. If not we add another
+  // type to the overall argument type list. We also store the GVNs used for
+  // stores to identify which values will need to be moved into an special
+  // block that holds the stores to the output registers.
+  for (Value *Output : Outputs) {
+    TypeFound = false;
+    // We can do this since it is a result value, and will have a number
+    // that is necessarily the same. BUT if in the future, the instructions
+    // do not have to be in same order, but are functionally the same, we will
+    // have to use a different scheme, as one-to-one correspondence is not
+    // guaranteed.
+    unsigned GlobalValue = C.getGVN(Output).getValue();
+    unsigned ArgumentSize = Group.ArgumentTypes.size();
+
+    for (unsigned Jdx = TypeIndex; Jdx < ArgumentSize; Jdx++) {
+      if (Group.ArgumentTypes[Jdx] != PointerType::getUnqual(Output->getType()))
+        continue;
+
+      if (AggArgsUsed.find(Jdx) != AggArgsUsed.end())
+        continue;
+
+      TypeFound = true;
+      AggArgsUsed.insert(Jdx);
+      Region.ExtractedArgToAgg.insert(std::make_pair(OriginalIndex, Jdx));
+      Region.AggArgToExtracted.insert(std::make_pair(Jdx, OriginalIndex));
+      Region.GVNStores.push_back(GlobalValue);
+      break;
+    }
+
+    // We were unable to find an unused type in the output type set that matches
+    // the output, so we add a pointer type to the argument types of the overall
+    // function to handle this output and create a mapping to it.
+    if (!TypeFound) {
+      Group.ArgumentTypes.push_back(PointerType::getUnqual(Output->getType()));
+      AggArgsUsed.insert(Group.ArgumentTypes.size() - 1);
+      Region.ExtractedArgToAgg.insert(
+          std::make_pair(OriginalIndex, Group.ArgumentTypes.size() - 1));
+      Region.AggArgToExtracted.insert(
+          std::make_pair(Group.ArgumentTypes.size() - 1, OriginalIndex));
+      Region.GVNStores.push_back(GlobalValue);
+    }
+
+    stable_sort(Region.GVNStores);
+    OriginalIndex++;
+    TypeIndex++;
+  }
+}
+
 void IROutliner::findAddInputsOutputs(Module &M, OutlinableRegion &Region,
                                       DenseSet<unsigned> &NotSame) {
   std::vector<unsigned> Inputs;
-  SetVector<Value *> ArgInputs;
+  SetVector<Value *> ArgInputs, Outputs;
 
-  getCodeExtractorArguments(Region, Inputs, NotSame, ArgInputs);
+  getCodeExtractorArguments(Region, Inputs, NotSame, OutputMappings, ArgInputs,
+                            Outputs);
 
   if (Region.IgnoreRegion)
     return;
@@ -507,6 +613,10 @@ void IROutliner::findAddInputsOutputs(Module &M, OutlinableRegion &Region,
   // Map the inputs found by the CodeExtractor to the arguments found for
   // the overall function.
   findExtractedInputToOverallInputMapping(Region, Inputs, ArgInputs);
+
+  // Map the outputs found by the CodeExtractor to the arguments found for
+  // the overall function.
+  findExtractedOutputToOverallOutputMapping(Region, Outputs.getArrayRef());
 }
 
 /// Replace the extracted function in the Region with a call to the overall
@@ -543,6 +653,18 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
   // function argument, and constants to overall function argument to create the
   // new argument list.
   for (unsigned AggArgIdx = 0; AggArgIdx < AggFunc->arg_size(); AggArgIdx++) {
+
+    if (AggArgIdx == AggFunc->arg_size() - 1 &&
+        Group.ArgumentTypes.size() > Group.NumAggregateInputs) {
+      // If we are on the last argument, and we need to differentiate between
+      // output blocks, add an integer to the argument list to determine
+      // what block to take
+      LLVM_DEBUG(dbgs() << "Set switch block argument to "
+                        << Region.OutputBlockNum << "\n");
+      NewCallArgs.push_back(ConstantInt::get(Type::getInt32Ty(M.getContext()),
+                                             Region.OutputBlockNum));
+      continue;
+    }
 
     ArgPair = Region.AggArgToExtracted.find(AggArgIdx);
     if (ArgPair != Region.AggArgToExtracted.end()) {
@@ -603,8 +725,11 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
 // Within an extracted function, replace the argument uses of the extracted
 // region with the arguments of the function for an OutlinableGroup.
 //
-// \param OS [in] - The region of extracted code to be changed.
-static void replaceArgumentUses(OutlinableRegion &Region) {
+/// \param [in] Region - The region of extracted code to be changed.
+/// \param [in,out] OutputBB - The BasicBlock for the output stores for this
+/// region.
+static void replaceArgumentUses(OutlinableRegion &Region,
+                                BasicBlock *OutputBB) {
   OutlinableGroup &Group = *Region.Parent;
   assert(Region.ExtractedFunction && "Region has no extracted function?");
 
@@ -618,7 +743,29 @@ static void replaceArgumentUses(OutlinableRegion &Region) {
     Argument *Arg = Region.ExtractedFunction->getArg(ArgIdx);
     // The argument is an input, so we can simply replace it with the overall
     // argument value
-    LLVM_DEBUG(dbgs() << "Replacing uses of input " << *Arg << " in function "
+    if (ArgIdx < Region.NumExtractedInputs) {
+      LLVM_DEBUG(dbgs() << "Replacing uses of input " << *Arg << " in function "
+                        << *Region.ExtractedFunction << " with " << *AggArg
+                        << " in function " << *Group.OutlinedFunction << "\n");
+      Arg->replaceAllUsesWith(AggArg);
+      continue;
+    }
+
+    // If we are replacing an output, we place the store value in its own
+    // block inside the overall function before replacing the use of the output
+    // in the function.
+    assert(Arg->hasOneUse() && "Output argument can only have one use");
+    User *InstAsUser = Arg->user_back();
+    assert(InstAsUser && "User is nullptr!");
+
+    Instruction *I = cast<Instruction>(InstAsUser);
+    I->setDebugLoc(DebugLoc());
+    LLVM_DEBUG(dbgs() << "Move store for instruction " << *I << " to "
+                      << *OutputBB << "\n");
+
+    I->moveBefore(*OutputBB, OutputBB->end());
+
+    LLVM_DEBUG(dbgs() << "Replacing uses of output " << *Arg << " in function "
                       << *Region.ExtractedFunction << " with " << *AggArg
                       << " in function " << *Group.OutlinedFunction << "\n");
     Arg->replaceAllUsesWith(AggArg);
@@ -656,38 +803,181 @@ void replaceConstants(OutlinableRegion &Region) {
   }
 }
 
+/// For the given function, find all the nondebug or lifetime instructions,
+/// and return them as a vector. Exclude any blocks in \p ExludeBlocks.
+///
+/// \param [in] F - The function we collect the instructions from.
+/// \param [in] ExcludeBlocks - BasicBlocks to ignore.
+/// \returns the list of instructions extracted.
+static std::vector<Instruction *>
+collectRelevantInstructions(Function &F,
+                            DenseSet<BasicBlock *> &ExcludeBlocks) {
+  std::vector<Instruction *> RelevantInstructions;
+
+  for (BasicBlock &BB : F) {
+    if (ExcludeBlocks.find(&BB) != ExcludeBlocks.end())
+      continue;
+
+    for (Instruction &Inst : BB) {
+      if (Inst.isLifetimeStartOrEnd())
+        continue;
+      if (isa<DbgInfoIntrinsic>(Inst))
+        continue;
+
+      RelevantInstructions.push_back(&Inst);
+    }
+  }
+
+  return RelevantInstructions;
+}
+
+/// For the outlined section, move needed the StoreInsts for the output
+/// registers into their own block.  Then, determine if there is a duplicate
+/// output block already created.
+///
+/// \param [in] OG - The OutlinableGroup of regions to be outlined.
+/// \param [in] Region - The OutlinableRegion that is being analyzed.
+/// \param [in,out] OutputBB - the block that stores for this region will be
+/// placed in.
+/// \param [in] EndBB - the final block of the extracted function.
+/// \param [in] OutputMappings - OutputMappings the mapping of values that have
+/// been replaced by a new output value.
+/// \param [in,out] OutputStoreBBs - The existing output blocks.
+static void
+alignOutputBlockWithAggFunc(OutlinableGroup &OG, OutlinableRegion &Region,
+                            BasicBlock *OutputBB, BasicBlock *EndBB,
+                            const DenseMap<Value *, Value *> &OutputMappings,
+                            std::vector<BasicBlock *> &OutputStoreBBs) {
+  DenseSet<unsigned> ValuesToFind(Region.GVNStores.begin(),
+                                  Region.GVNStores.end());
+
+  // We iterate over the instructions in the extracted function, and find the
+  // global value number of the instructions.  If we find a value that should
+  // be contained in a store, we replace the uses of the value with the value
+  // from the overall function, so that the store is storing the correct
+  // value from the overall function.
+
+  DenseSet<BasicBlock *> ExcludeBBs(OutputStoreBBs.begin(),
+                                    OutputStoreBBs.end());
+  std::vector<Instruction *> ExtractedFunctionInsts =
+      collectRelevantInstructions(*(Region.ExtractedFunction), ExcludeBBs);
+  std::vector<Instruction *> OverallFunctionInsts =
+      collectRelevantInstructions(*OG.OutlinedFunction, ExcludeBBs);
+
+  assert(ExtractedFunctionInsts.size() == OverallFunctionInsts.size() &&
+         "Number of relevant instructions not equal!");
+
+  unsigned NumInstructions = ExtractedFunctionInsts.size();
+  for (unsigned Idx = 0; Idx < NumInstructions; Idx++) {
+    Value *V = ExtractedFunctionInsts[Idx];
+
+    if (OutputMappings.find(V) != OutputMappings.end())
+      V = OutputMappings.find(V)->second;
+    Optional<unsigned> GVN = Region.Candidate->getGVN(V);
+
+    // If we have found one of the stored values for output, replace the value
+    // with the corresponding one from the overall function.
+    if (GVN.hasValue() &&
+        ValuesToFind.find(GVN.getValue()) != ValuesToFind.end()) {
+      ValuesToFind.erase(GVN.getValue());
+      V->replaceAllUsesWith(OverallFunctionInsts[Idx]);
+      if (ValuesToFind.size() == 0)
+        break;
+    }
+
+    if (ValuesToFind.size() == 0)
+      break;
+  }
+
+  assert(ValuesToFind.size() == 0 && "Not all store values were handled!");
+}
+
+/// Create the switch statement for outlined function to differentiate between
+/// all the output blocks.
+///
+/// For the outlined section, determine if an outlined block already exists that
+/// matches the needed stores for the extracted section.
+/// \param [in] M - The module we are outlining from.
+/// \param [in] OG - The group of regions to be outlined.
+/// \param [in] OS - The region that is being analyzed.
+/// \param [in] EndBB - The final block of the extracted function.
+/// \param [in,out] OutputStoreBBs - The existing output blocks.
+void createSwitchStatement(Module &M, OutlinableGroup &OG, BasicBlock *EndBB,
+                           ArrayRef<BasicBlock *> OutputStoreBBs) {
+  Function *AggFunc = OG.OutlinedFunction;
+  // Create a final block
+  BasicBlock *ReturnBlock =
+      BasicBlock::Create(M.getContext(), "final_block", AggFunc);
+  Instruction *Term = EndBB->getTerminator();
+  Term->moveBefore(*ReturnBlock, ReturnBlock->end());
+  // Put the switch statement in the old end basic block for the function with
+  // a fall through to the new return block
+  LLVM_DEBUG(dbgs() << "Create switch statement in " << *AggFunc << " for "
+                    << OutputStoreBBs.size() << "\n");
+  SwitchInst *SwitchI =
+      SwitchInst::Create(AggFunc->getArg(AggFunc->arg_size() - 1), ReturnBlock,
+                         OutputStoreBBs.size(), EndBB);
+
+  unsigned Idx = 0;
+  for (BasicBlock *BB : OutputStoreBBs) {
+    SwitchI->addCase(ConstantInt::get(Type::getInt32Ty(M.getContext()), Idx),
+                     BB);
+    Term = BB->getTerminator();
+    Term->setSuccessor(0, ReturnBlock);
+    Idx++;
+  }
+
+  return;
+}
+
 /// Fill the new function that will serve as the replacement function for all of
 /// the extracted regions of a certain structure from the first region in the
 /// list of regions.  Replace this first region's extracted function with the
 /// new overall function.
 ///
-/// \param M [in] - The module we are outlining from.
-/// \param CurrentGroup [in] - The group of regions to be outlined.
-/// \param FuncsToRemove [in,out] - Extracted functions to erase from module
+/// \param [in] M - The module we are outlining from.
+/// \param [in] CurrentGroup - The group of regions to be outlined.
+/// \param [in,out] OutputStoreBBs - The output blocks for each different
+/// set of stores needed for the different functions.
+/// \param [in,out] FuncsToRemove - Extracted functions to erase from module
 /// once outlining is complete.
 static void fillOverallFunction(Module &M, OutlinableGroup &CurrentGroup,
+                                std::vector<BasicBlock *> &OutputStoreBBs,
                                 std::vector<Function *> &FuncsToRemove) {
   OutlinableRegion *CurrentOS = CurrentGroup.Regions[0];
 
-  // Move first extracted function's instructions into new function
+  // Move first extracted function's instructions into new function.
   LLVM_DEBUG(dbgs() << "Move instructions from "
                     << *CurrentOS->ExtractedFunction << " to instruction "
                     << *CurrentGroup.OutlinedFunction << "\n");
-  moveFunctionData(*CurrentOS->ExtractedFunction,
-                   *CurrentGroup.OutlinedFunction);
 
-  // Transfer the attributes
+  CurrentGroup.EndBB = moveFunctionData(*CurrentOS->ExtractedFunction,
+                                        *CurrentGroup.OutlinedFunction);
+
+  // Transfer the attributes from the function to the new function.
   for (Attribute A :
        CurrentOS->ExtractedFunction->getAttributes().getFnAttributes())
     CurrentGroup.OutlinedFunction->addFnAttr(A);
 
-  replaceArgumentUses(*CurrentOS);
+  // Create an output block for the first extracted function.
+  BasicBlock *NewBB = BasicBlock::Create(
+      M.getContext(), Twine("output_block_") + Twine(static_cast<unsigned>(0)),
+      CurrentGroup.OutlinedFunction);
+  CurrentOS->OutputBlockNum = 0;
+
+  replaceArgumentUses(*CurrentOS, NewBB);
   replaceConstants(*CurrentOS);
+
+  if (CurrentGroup.ArgumentTypes.size() > CurrentGroup.NumAggregateInputs) {
+    BranchInst::Create(CurrentGroup.EndBB, NewBB);
+    OutputStoreBBs.push_back(NewBB);
+  } else
+    NewBB->eraseFromParent();
 
   // Replace the call to the extracted function with the outlined function.
   CurrentOS->Call = replaceCalledFunction(M, *CurrentOS);
 
-  // We only delete the extracted funcitons at the end since we may need to
+  // We only delete the extracted functions at the end since we may need to
   // reference instructions contained in them for mapping purposes.
   FuncsToRemove.push_back(CurrentOS->ExtractedFunction);
 }
@@ -701,16 +991,34 @@ void IROutliner::deduplicateExtractedSections(
 
   OutlinableRegion *CurrentOS;
 
-  fillOverallFunction(M, CurrentGroup, FuncsToRemove);
+  fillOverallFunction(M, CurrentGroup, OutputStoreBBs, FuncsToRemove);
 
-  // Do the same for the other extracted functions
   for (unsigned Idx = 1; Idx < CurrentGroup.Regions.size(); Idx++) {
     CurrentOS = CurrentGroup.Regions[Idx];
 
-    replaceArgumentUses(*CurrentOS);
+    // Create a new BasicBlock to hold the needed store instructions.
+    BasicBlock *NewBB = BasicBlock::Create(
+        M.getContext(), "output_block_" + std::to_string(Idx),
+        CurrentGroup.OutlinedFunction);
+    replaceArgumentUses(*CurrentOS, NewBB);
+
+    if (CurrentGroup.ArgumentTypes.size() > CurrentGroup.NumAggregateInputs) {
+      BranchInst::Create(CurrentGroup.EndBB, NewBB);
+      CurrentOS->OutputBlockNum = OutputStoreBBs.size();
+      OutputStoreBBs.push_back(NewBB);
+      alignOutputBlockWithAggFunc(CurrentGroup, *CurrentOS, NewBB,
+                                  CurrentGroup.EndBB, OutputMappings,
+                                  OutputStoreBBs);
+    } else
+      NewBB->eraseFromParent();
+
     CurrentOS->Call = replaceCalledFunction(M, *CurrentOS);
     FuncsToRemove.push_back(CurrentOS->ExtractedFunction);
   }
+
+  // Create a switch statement to handle the different output schemes.
+  if (CurrentGroup.ArgumentTypes.size() > CurrentGroup.NumAggregateInputs)
+    createSwitchStatement(M, CurrentGroup, CurrentGroup.EndBB, OutputStoreBBs);
 
   OutlinedFunctionNum++;
 }
@@ -766,11 +1074,45 @@ void IROutliner::pruneIncompatibleRegions(
   }
 }
 
+void IROutliner::updateOutputMapping(OutlinableRegion &Region,
+                                     ArrayRef<Value *> Outputs,
+                                     LoadInst *LI) {
+  // For and load instructions following the call
+  Value *Operand = LI->getPointerOperand();
+  Optional<unsigned> OutputIdx = None;
+  // Find if the operand it is an output register.
+  for (unsigned ArgIdx = Region.NumExtractedInputs;
+       ArgIdx < Region.Call->arg_size(); ArgIdx++) {
+    if (Operand == Region.Call->getArgOperand(ArgIdx)) {
+      OutputIdx = ArgIdx - Region.NumExtractedInputs;
+      break;
+    }
+  }
+
+  // If we found an output register, place a mapping of the new value
+  // to the original in the mapping.
+  if (!OutputIdx.hasValue())
+    return;
+
+  if (OutputMappings.find(Outputs[OutputIdx.getValue()]) ==
+      OutputMappings.end()) {
+    LLVM_DEBUG(dbgs() << "Mapping extracted output " << *LI << " to "
+                      << *Outputs[OutputIdx.getValue()] << "\n");
+    OutputMappings.insert(std::make_pair(LI, Outputs[OutputIdx.getValue()]));
+  } else {
+    Value *Orig = OutputMappings.find(Outputs[OutputIdx.getValue()])->second;
+    LLVM_DEBUG(dbgs() << "Mapping extracted output " << *Orig << " to "
+                      << *Outputs[OutputIdx.getValue()] << "\n");
+    OutputMappings.insert(std::make_pair(LI, Orig));
+  }
+}
+
 bool IROutliner::extractSection(OutlinableRegion &Region) {
-  assert(Region.StartBB != nullptr &&
-         "StartBB for the OutlinableRegion is nullptr!");
-  assert(Region.FollowBB != nullptr &&
-         "StartBB for the OutlinableRegion is nullptr!");
+  SetVector<Value *> ArgInputs, Outputs, SinkCands;
+  Region.CE->findInputsOutputs(ArgInputs, Outputs, SinkCands);
+
+  assert(Region.StartBB && "StartBB for the OutlinableRegion is nullptr!");
+  assert(Region.FollowBB && "FollowBB for the OutlinableRegion is nullptr!");
   Function *OrigF = Region.StartBB->getParent();
   CodeExtractorAnalysisCache CEAC(*OrigF);
   Region.ExtractedFunction = Region.CE->extractCodeRegion(CEAC);
@@ -816,17 +1158,17 @@ bool IROutliner::extractSection(OutlinableRegion &Region) {
   // Iterate over the new set of instructions to find the new call
   // instruction.
   for (Instruction &I : *RewrittenBB)
-    if (CallInst *CI = dyn_cast<CallInst>(&I))
-      if (Region.ExtractedFunction == CI->getCalledFunction()) {
+    if (CallInst *CI = dyn_cast<CallInst>(&I)) {
+      if (Region.ExtractedFunction == CI->getCalledFunction())
         Region.Call = CI;
-        break;
-      }
+    } else if (LoadInst *LI = dyn_cast<LoadInst>(&I))
+      updateOutputMapping(Region, Outputs.getArrayRef(), LI);
   Region.reattachCandidate();
   return true;
 }
 
 unsigned IROutliner::doOutline(Module &M) {
-  // Find the possibile similarity sections.
+  // Find the possible similarity sections.
   IRSimilarityIdentifier &Identifier = getIRSI(M);
   SimilarityGroupList &SimilarityCandidates = *Identifier.getSimilarity();
 
@@ -885,6 +1227,15 @@ unsigned IROutliner::doOutline(Module &M) {
     }
 
     CurrentGroup.Regions = std::move(OutlinedRegions);
+
+    if (CurrentGroup.Regions.empty())
+      continue;
+
+    // We are adding an extracted argument to decide between which output path
+    // to use in the basic block.  It is used in a switch statement and only
+    // needs to be an integer.
+    if (CurrentGroup.ArgumentTypes.size() > CurrentGroup.NumAggregateInputs)
+      CurrentGroup.ArgumentTypes.push_back(Type::getInt32Ty(M.getContext()));
 
     // Create functions out of all the sections, and mark them as outlined.
     OutlinedRegions.clear();
