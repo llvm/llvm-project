@@ -41,7 +41,27 @@ IRBuilder<> *EscapeEnumerator::Next() {
     if (!isa<ReturnInst>(TI) && !isa<ResumeInst>(TI))
       continue;
 
-    Builder.SetInsertPoint(TI);
+    // If the ret instruction is followed by a musttaill call,
+    // or a bitcast instruction and then a musttail call, we should return
+    // the musttail call as the insertion point to not break the musttail
+    // contract.
+    auto AdjustMustTailCall = [&](Instruction *I) -> Instruction * {
+      auto *RI = dyn_cast<ReturnInst>(I);
+      if (!RI || !RI->getPrevNode())
+        return I;
+      auto *CI = dyn_cast<CallInst>(RI->getPrevNode());
+      if (CI && CI->isMustTailCall())
+        return CI;
+      auto *BI = dyn_cast<BitCastInst>(RI->getPrevNode());
+      if (!BI || !BI->getPrevNode())
+        return I;
+      CI = dyn_cast<CallInst>(BI->getPrevNode());
+      if (CI && CI->isMustTailCall())
+        return CI;
+      return I;
+    };
+
+    Builder.SetInsertPoint(AdjustMustTailCall(TI));
     return &Builder;
   }
 
@@ -54,11 +74,12 @@ IRBuilder<> *EscapeEnumerator::Next() {
     return nullptr;
 
   // Find all 'call' instructions that may throw.
+  // We cannot tranform calls with musttail tag.
   SmallVector<Instruction *, 16> Calls;
   for (BasicBlock &BB : F)
     for (Instruction &II : BB)
       if (CallInst *CI = dyn_cast<CallInst>(&II))
-        if (!CI->doesNotThrow())
+        if (!CI->doesNotThrow() && !CI->isMustTailCall())
           Calls.push_back(CI);
 
   if (Calls.empty())
