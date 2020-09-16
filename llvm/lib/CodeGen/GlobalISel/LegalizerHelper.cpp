@@ -2033,7 +2033,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       return UnableToLegalize;
 
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    if (!isPowerOf2_32(Ty.getSizeInBits()))
+    if (!Ty.isScalar())
       return UnableToLegalize;
 
     Observer.changingInstr(MI);
