@@ -6171,25 +6171,10 @@ define <4 x float> @mload_constmask_v4f32_all(<4 x float>* %addr) {
 ; SSE-NEXT:    movups (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1OR2-LABEL: mload_constmask_v4f32_all:
-; AVX1OR2:       ## %bb.0:
-; AVX1OR2-NEXT:    vmovups (%rdi), %xmm0
-; AVX1OR2-NEXT:    retq
-;
-; AVX512F-LABEL: mload_constmask_v4f32_all:
-; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    movw $15, %ax
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovups (%rdi), %zmm0 {%k1} {z}
-; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: mload_constmask_v4f32_all:
-; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    kxnorw %k0, %k0, %k1
-; AVX512VL-NEXT:    vmovups (%rdi), %xmm0 {%k1} {z}
-; AVX512VL-NEXT:    retq
+; AVX-LABEL: mload_constmask_v4f32_all:
+; AVX:       ## %bb.0:
+; AVX-NEXT:    vmovups (%rdi), %xmm0
+; AVX-NEXT:    retq
   %res = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %addr, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float>undef)
   ret <4 x float> %res
 }
@@ -6573,7 +6558,7 @@ define <8 x double> @mload_constmask_v8f64(<8 x double>* %addr, <8 x double> %ds
   ret <8 x double> %res
 }
 
-; FIXME: We should be able to detect the mask is all ones after type
+; Make sure we detect the mask is all ones after type
 ; legalization to use an unmasked load for some of the avx512 instructions.
 define <16 x double> @mload_constmask_v16f64_allones_split(<16 x double>* %addr, <16 x double> %dst) {
 ; SSE-LABEL: mload_constmask_v16f64_allones_split:
@@ -6611,29 +6596,26 @@ define <16 x double> @mload_constmask_v16f64_allones_split(<16 x double>* %addr,
 ;
 ; AVX512F-LABEL: mload_constmask_v16f64_allones_split:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    kxnorw %k0, %k0, %k1
-; AVX512F-NEXT:    vmovupd (%rdi), %zmm0 {%k1}
 ; AVX512F-NEXT:    movb $85, %al
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vmovupd 64(%rdi), %zmm1 {%k1}
+; AVX512F-NEXT:    vmovups (%rdi), %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: mload_constmask_v16f64_allones_split:
 ; AVX512VLDQ:       ## %bb.0:
-; AVX512VLDQ-NEXT:    kxnorw %k0, %k0, %k1
-; AVX512VLDQ-NEXT:    vmovupd (%rdi), %zmm0 {%k1}
 ; AVX512VLDQ-NEXT:    movb $85, %al
 ; AVX512VLDQ-NEXT:    kmovw %eax, %k1
 ; AVX512VLDQ-NEXT:    vmovupd 64(%rdi), %zmm1 {%k1}
+; AVX512VLDQ-NEXT:    vmovups (%rdi), %zmm0
 ; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: mload_constmask_v16f64_allones_split:
 ; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    kxnorw %k0, %k0, %k1
-; AVX512VLBW-NEXT:    vmovupd (%rdi), %zmm0 {%k1}
 ; AVX512VLBW-NEXT:    movb $85, %al
 ; AVX512VLBW-NEXT:    kmovd %eax, %k1
 ; AVX512VLBW-NEXT:    vmovupd 64(%rdi), %zmm1 {%k1}
+; AVX512VLBW-NEXT:    vmovups (%rdi), %zmm0
 ; AVX512VLBW-NEXT:    retq
   %res = call <16 x double> @llvm.masked.load.v16f64.p0v16f64(<16 x double>* %addr, i32 4, <16 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <16 x double> %dst)
   ret <16 x double> %res
