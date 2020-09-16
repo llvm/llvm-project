@@ -107,7 +107,8 @@ class TestSwiftTypeLookup(TestBase):
                 'func foo',
                 'Int',
                 'Double'],
-            matching=True)
+            matching=True,
+            ordered=False)
         self.expect(
             'type lookup --show-help -- print',
             substrs=[
