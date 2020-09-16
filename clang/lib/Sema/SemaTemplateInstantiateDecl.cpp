@@ -417,7 +417,9 @@ static void instantiateOMPDeclareVariantAttr(
   if (TI.anyScoreOrCondition(SubstScoreOrConditionExpr))
     return;
 
-  // Check function/variant ref.
+  Expr *E = VariantFuncRef.get();
+  // Check function/variant ref for `omp declare variant` but not for `omp
+  // begin declare variant` (which use implicit attributes).
   Optional<std::pair<FunctionDecl *, Expr *>> DeclVarData =
       S.checkOpenMPDeclareVariantFunction(S.ConvertDeclToDeclGroup(New),
                                           VariantFuncRef.get(), TI,
@@ -426,9 +428,36 @@ static void instantiateOMPDeclareVariantAttr(
   if (!DeclVarData)
     return;
 
-  S.ActOnOpenMPDeclareVariantDirective(DeclVarData.getValue().first,
-                                       DeclVarData.getValue().second, TI,
-                                       Attr.getRange());
+  E = DeclVarData.getValue().second;
+  FD = DeclVarData.getValue().first;
+
+  if (auto *VariantDRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts())) {
+    if (auto *VariantFD = dyn_cast<FunctionDecl>(VariantDRE->getDecl())) {
+      if (auto *VariantFTD = VariantFD->getDescribedFunctionTemplate()) {
+        if (!VariantFTD->isThisDeclarationADefinition())
+          return;
+        Sema::TentativeAnalysisScope Trap(S);
+        const TemplateArgumentList *TAL = TemplateArgumentList::CreateCopy(
+            S.Context, TemplateArgs.getInnermost());
+
+        auto *SubstFD = S.InstantiateFunctionDeclaration(VariantFTD, TAL,
+                                                         New->getLocation());
+        if (!SubstFD)
+          return;
+        S.InstantiateFunctionDefinition(
+            New->getLocation(), SubstFD, /* Recursive */ true,
+            /* DefinitionRequired */ false, /* AtEndOfTU */ false);
+        SubstFD->setInstantiationIsPending(!SubstFD->isDefined());
+        E = DeclRefExpr::Create(S.Context, NestedNameSpecifierLoc(),
+                                SourceLocation(), SubstFD,
+                                /* RefersToEnclosingVariableOrCapture */ false,
+                                /* NameLoc */ SubstFD->getLocation(),
+                                SubstFD->getType(), ExprValueKind::VK_RValue);
+      }
+    }
+  }
+
+  S.ActOnOpenMPDeclareVariantDirective(FD, E, TI, Attr.getRange());
 }
 
 static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
