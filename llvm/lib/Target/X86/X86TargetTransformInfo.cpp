@@ -4283,7 +4283,7 @@ bool X86TTIImpl::isLegalMaskedGather(Type *DataTy, Align Alignment) {
   // scalarize it.
   if (auto *DataVTy = dyn_cast<FixedVectorType>(DataTy)) {
     unsigned NumElts = DataVTy->getNumElements();
-    if (NumElts == 1 || !isPowerOf2_32(NumElts))
+    if (NumElts == 1)
       return false;
   }
   Type *ScalarTy = DataTy->getScalarType();
