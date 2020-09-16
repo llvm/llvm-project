@@ -935,6 +935,10 @@ static bool checkExtensionProperty(Parser &P, SourceLocation Loc,
   if (TIProperty.Kind == TraitProperty::invalid)
     return false;
 
+  if (TIProperty.Kind ==
+      TraitProperty::implementation_extension_disable_implicit_base)
+    return true;
+
   auto IsMatchExtension = [](OMPTraitProperty &TP) {
     return (TP.Kind ==
                 llvm::omp::TraitProperty::implementation_extension_match_all ||
