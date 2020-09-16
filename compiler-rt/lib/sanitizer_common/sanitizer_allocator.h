@@ -76,43 +76,6 @@ INLINE void RandomShuffle(T *a, u32 n, u32 *rand_state) {
 #include "sanitizer_allocator_secondary.h"
 #include "sanitizer_allocator_combined.h"
 
-// The platform-specific default parameters are shared by both
-// asan_allocator.h and lsan_allocator.h.
-#if SANITIZER_CAN_USE_ALLOCATOR64
-# if SANITIZER_FUCHSIA
-const uptr kAllocatorSpace = ~(uptr)0;
-const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
-using AllocatorSizeClassMap = DefaultSizeClassMap;
-# elif defined(__powerpc64__)
-const uptr kAllocatorSpace = ~(uptr)0;
-const uptr kAllocatorSize  =  0x20000000000ULL;  // 2T.
-using AllocatorSizeClassMap = DefaultSizeClassMap;
-# elif defined(__aarch64__) && SANITIZER_ANDROID
-// Android needs to support 39, 42 and 48 bit VMA.
-const uptr kAllocatorSpace =  ~(uptr)0;
-const uptr kAllocatorSize  =  0x2000000000ULL;  // 128G.
-using AllocatorSizeClassMap = VeryCompactSizeClassMap;
-# elif defined(__aarch64__)
-// AArch64/SANITIZER_CAN_USE_ALLOCATOR64 is only for 42-bit VMA
-// so no need to different values for different VMA.
-const uptr kAllocatorSpace =  0x10000000000ULL;
-const uptr kAllocatorSize  =  0x10000000000ULL;  // 3T.
-using AllocatorSizeClassMap = DefaultSizeClassMap;
-#elif defined(__sparc__)
-const uptr kAllocatorSpace = ~(uptr)0;
-const uptr kAllocatorSize = 0x20000000000ULL;  // 2T.
-using AllocatorSizeClassMap = DefaultSizeClassMap;
-# elif SANITIZER_WINDOWS
-const uptr kAllocatorSpace = ~(uptr)0;
-const uptr kAllocatorSize  =  0x8000000000ULL;  // 500G
-using AllocatorSizeClassMap = DefaultSizeClassMap;
-# else
-const uptr kAllocatorSpace = 0x600000000000ULL;
-const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
-using AllocatorSizeClassMap = DefaultSizeClassMap;
-# endif
-#endif  // SANITIZER_CAN_USE_ALLOCATOR64
-
 } // namespace __sanitizer
 
 #endif // SANITIZER_ALLOCATOR_H
