@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -82,6 +83,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -2539,7 +2541,7 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   SDLoc dl = getCurSDLoc();
   SDValue StackSlotPtr = DAG.getFrameIndex(FI, PtrTy);
   const Module &M = *ParentBB->getParent()->getFunction().getParent();
-  unsigned Align = DL->getPrefTypeAlignment(Type::getInt8PtrTy(M.getContext()));
+  Align Align = DL->getPrefTypeAlign(Type::getInt8PtrTy(M.getContext()));
 
   // Generate code to load the content of the guard slot.
   SDValue GuardVal = DAG.getLoad(
@@ -6380,7 +6382,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     } else {
       EVT PtrTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
       const Value *Global = TLI.getSDagStackGuard(M);
-      unsigned Align = DL->getPrefTypeAlignment(Global->getType());
+      Align Align = DL->getPrefTypeAlign(Global->getType());
       Res = DAG.getLoad(PtrTy, sdl, Chain, getValue(Global),
                         MachinePointerInfo(Global, 0), Align,
                         MachineMemOperand::MOVolatile);
@@ -6411,9 +6413,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue FIN = DAG.getFrameIndex(FI, PtrTy);
 
     // Store the stack protector onto the stack.
-    Res = DAG.getStore(Chain, sdl, Src, FIN, MachinePointerInfo::getFixedStack(
-                                                 DAG.getMachineFunction(), FI),
-                       /* Alignment = */ 0, MachineMemOperand::MOVolatile);
+    Res = DAG.getStore(
+        Chain, sdl, Src, FIN,
+        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI),
+        MaybeAlign(), MachineMemOperand::MOVolatile);
     setValue(&I, Res);
     DAG.setRoot(Res);
     return;
@@ -7245,9 +7248,9 @@ static SDValue getMemCmpLoad(const Value *PtrVal, MVT LoadVT,
   }
 
   SDValue Ptr = Builder.getValue(PtrVal);
-  SDValue LoadVal = Builder.DAG.getLoad(LoadVT, Builder.getCurSDLoc(), Root,
-                                        Ptr, MachinePointerInfo(PtrVal),
-                                        /* Alignment = */ 1);
+  SDValue LoadVal =
+      Builder.DAG.getLoad(LoadVT, Builder.getCurSDLoc(), Root, Ptr,
+                          MachinePointerInfo(PtrVal), Align(1));
 
   if (!ConstantMemory)
     Builder.PendingLoads.push_back(LoadVal.getValue(1));

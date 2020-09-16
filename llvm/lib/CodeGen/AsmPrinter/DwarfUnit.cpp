@@ -300,10 +300,7 @@ void DwarfUnit::addLabel(DIELoc &Die, dwarf::Form Form, const MCSymbol *Label) {
 
 void DwarfUnit::addSectionOffset(DIE &Die, dwarf::Attribute Attribute,
                                  uint64_t Integer) {
-  if (DD->getDwarfVersion() >= 4)
-    addUInt(Die, Attribute, dwarf::DW_FORM_sec_offset, Integer);
-  else
-    addUInt(Die, Attribute, dwarf::DW_FORM_data4, Integer);
+  addUInt(Die, Attribute, DD->getDwarfSectionOffsetForm(), Integer);
 }
 
 unsigned DwarfTypeUnit::getOrCreateSourceID(const DIFile *File) {
@@ -1695,15 +1692,15 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
 
 void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
   // Emit size of content not including length itself
-  Asm->OutStreamer->AddComment("Length of Unit");
   if (!DD->useSectionsAsReferences()) {
     StringRef Prefix = isDwoUnit() ? "debug_info_dwo_" : "debug_info_";
     MCSymbol *BeginLabel = Asm->createTempSymbol(Prefix + "start");
     EndLabel = Asm->createTempSymbol(Prefix + "end");
-    Asm->emitLabelDifference(EndLabel, BeginLabel, 4);
+    Asm->emitDwarfUnitLength(EndLabel, BeginLabel, "Length of Unit");
     Asm->OutStreamer->emitLabel(BeginLabel);
   } else
-    Asm->emitInt32(getHeaderSize() + getUnitDie().getSize());
+    Asm->emitDwarfUnitLength(getHeaderSize() + getUnitDie().getSize(),
+                             "Length of Unit");
 
   Asm->OutStreamer->AddComment("DWARF version number");
   unsigned Version = DD->getDwarfVersion();
@@ -1723,7 +1720,7 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
   Asm->OutStreamer->AddComment("Offset Into Abbrev. Section");
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   if (UseOffsets)
-    Asm->emitInt32(0);
+    Asm->emitDwarfLengthOrOffset(0);
   else
     Asm->emitDwarfSymbolReference(
         TLOF.getDwarfAbbrevSection()->getBeginSymbol(), false);
@@ -1742,16 +1739,14 @@ void DwarfTypeUnit::emitHeader(bool UseOffsets) {
   Asm->OutStreamer->emitIntValue(TypeSignature, sizeof(TypeSignature));
   Asm->OutStreamer->AddComment("Type DIE Offset");
   // In a skeleton type unit there is no type DIE so emit a zero offset.
-  Asm->OutStreamer->emitIntValue(Ty ? Ty->getOffset() : 0,
-                                 sizeof(Ty->getOffset()));
+  Asm->emitDwarfLengthOrOffset(Ty ? Ty->getOffset() : 0);
 }
 
 DIE::value_iterator
 DwarfUnit::addSectionDelta(DIE &Die, dwarf::Attribute Attribute,
                            const MCSymbol *Hi, const MCSymbol *Lo) {
   return Die.addValue(DIEValueAllocator, Attribute,
-                      DD->getDwarfVersion() >= 4 ? dwarf::DW_FORM_sec_offset
-                                                 : dwarf::DW_FORM_data4,
+                      DD->getDwarfSectionOffsetForm(),
                       new (DIEValueAllocator) DIEDelta(Hi, Lo));
 }
 
@@ -1759,10 +1754,7 @@ DIE::value_iterator
 DwarfUnit::addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
                            const MCSymbol *Label, const MCSymbol *Sec) {
   if (Asm->MAI->doesDwarfUseRelocationsAcrossSections())
-    return addLabel(Die, Attribute,
-                    DD->getDwarfVersion() >= 4 ? dwarf::DW_FORM_sec_offset
-                                               : dwarf::DW_FORM_data4,
-                    Label);
+    return addLabel(Die, Attribute, DD->getDwarfSectionOffsetForm(), Label);
   return addSectionDelta(Die, Attribute, Label, Sec);
 }
 

@@ -320,7 +320,7 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
                    DynEnt.StrSize);
 
   // Populate Arch from ELF header.
-  DestStub->Arch = ElfFile->getHeader()->e_machine;
+  DestStub->Arch = ElfFile->getHeader().e_machine;
 
   // Populate SoName from .dynamic entries and dynamic string table.
   if (DynEnt.SONameOffset.hasValue()) {

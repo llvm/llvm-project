@@ -1298,6 +1298,12 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
              E = ++MachineBasicBlock::iterator(Divergent->MI); I != E; ++I)
           RemovePredicate(&*I);
 
+        // Check if the instruction defining vpr is a vcmp so it can be combined
+        // with the VPST This should be the divergent instruction
+        MachineInstr *VCMP = VCMPOpcodeToVPT(Divergent->MI->getOpcode()) != 0
+                                 ? Divergent->MI
+                                 : nullptr;
+
         unsigned Size = 0;
         auto E = MachineBasicBlock::reverse_iterator(Divergent->MI);
         auto I = MachineBasicBlock::reverse_iterator(Insts.back().MI);
@@ -1307,13 +1313,32 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
           ++Size;
           ++I;
         }
-        // Create a VPST (with a null mask for now, we'll recompute it later).
-        MachineInstrBuilder MIB = BuildMI(*InsertAt->getParent(), InsertAt,
-                                          InsertAt->getDebugLoc(),
-                                          TII->get(ARM::MVE_VPST));
-        MIB.addImm(0);
-        LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *Block.getPredicateThen());
-        LLVM_DEBUG(dbgs() << "ARM Loops: Created VPST: " << *MIB);
+        MachineInstrBuilder MIB;
+        LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: "
+                          << *Block.getPredicateThen());
+        if (VCMP) {
+          // Combine the VPST and VCMP into a VPT
+          MIB =
+              BuildMI(*InsertAt->getParent(), InsertAt, InsertAt->getDebugLoc(),
+                      TII->get(VCMPOpcodeToVPT(VCMP->getOpcode())));
+          MIB.addImm(ARMVCC::Then);
+          // Register one
+          MIB.add(VCMP->getOperand(1));
+          // Register two
+          MIB.add(VCMP->getOperand(2));
+          // The comparison code, e.g. ge, eq, lt
+          MIB.add(VCMP->getOperand(3));
+          LLVM_DEBUG(dbgs()
+                     << "ARM Loops: Combining with VCMP to VPT: " << *MIB);
+          LoLoop.ToRemove.insert(VCMP);
+        } else {
+          // Create a VPST (with a null mask for now, we'll recompute it later)
+          // or a VPT in case there was a VCMP right before it
+          MIB = BuildMI(*InsertAt->getParent(), InsertAt,
+                        InsertAt->getDebugLoc(), TII->get(ARM::MVE_VPST));
+          MIB.addImm(0);
+          LLVM_DEBUG(dbgs() << "ARM Loops: Created VPST: " << *MIB);
+        }
         LoLoop.ToRemove.insert(Block.getPredicateThen());
         LoLoop.BlockMasksToRecompute.insert(MIB.getInstr());
       }

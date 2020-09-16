@@ -998,6 +998,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.UniqueInternalLinkageNames =
       Args.hasArg(OPT_funique_internal_linkage_names);
 
+  Opts.SplitMachineFunctions = Args.hasArg(OPT_fsplit_machine_functions);
+
   Opts.MergeFunctions = Args.hasArg(OPT_fmerge_functions);
 
   Opts.NoUseJumpTables = Args.hasArg(OPT_fno_jump_tables);
@@ -1033,7 +1035,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.ThinLinkBitcodeFile =
       std::string(Args.getLastArgValue(OPT_fthin_link_bitcode_EQ));
 
-  Opts.HeapProf = Args.hasArg(OPT_fmemory_profile);
+  Opts.MemProf = Args.hasArg(OPT_fmemory_profile);
 
   Opts.MSVolatile = Args.hasArg(OPT_fms_volatile);
 

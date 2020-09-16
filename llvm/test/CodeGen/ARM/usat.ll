@@ -176,6 +176,18 @@ entry:
   ret i32 %saturateUp
 }
 
+; The interval is [0, k] but k+1 is not a power of 2
+define i32 @no_unsigned_sat_incorrect_constant2(i32 %x) #0 {
+; CHECK-LABEL: no_unsigned_sat_incorrect_constant2:
+; CHECK-NOT: usat
+entry:
+  %0 = icmp sgt i32 %x, 0
+  %saturateLow = select i1 %0, i32 %x, i32 0
+  %1 = icmp slt i32 %saturateLow, 8388609
+  %saturateUp = select i1 %1, i32 %saturateLow, i32 8388609
+  ret i32 %saturateUp
+}
+
 ; The interval is not [0, k]
 define i32 @no_unsigned_sat_incorrect_interval(i32 %x) #0 {
 ; CHECK-LABEL: no_unsigned_sat_incorrect_interval:

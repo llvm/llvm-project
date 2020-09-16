@@ -357,7 +357,8 @@ PreservedAnalyses LoopVersioningPass::run(Function &F,
 
   auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
   auto GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
-    LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI, MSSA};
+    LoopStandardAnalysisResults AR = {AA,  AC,  DT,      LI,  SE,
+                                      TLI, TTI, nullptr, MSSA};
     return LAM.getResult<LoopAccessAnalysis>(L, AR);
   };
 

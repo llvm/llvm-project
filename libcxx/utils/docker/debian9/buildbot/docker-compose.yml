@@ -5,7 +5,7 @@ services:
       context: https://github.com/llvm/llvm-project.git#master:libcxx/utils/docker/debian9/buildbot
       args:
         gcc_tot: "ericwf/gcc:9.2.0"
-        llvm_tot: "ericwf/llvm:9.x"
+        llvm_tot: "ericwf/llvm:11.x"
     image: llvm-buildbot-worker
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock

@@ -10,11 +10,12 @@ define i8 @popcount128(i128* nocapture nonnull readonly %0) {
 ; CHECK-NEXT:    // implicit-def: $q1
 ; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov v1.d[1], x8
-; CHECK-NEXT:    cnt v0.16b, v1.16b
-; CHECK-NEXT:    uaddlv h0, v0.16b
+; CHECK-NEXT:    cnt v1.16b, v1.16b
+; CHECK-NEXT:    uaddlv h2, v1.16b
 ; CHECK-NEXT:    // implicit-def: $q1
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    fmov w0, s1
+; CHECK-NEXT:    mov v1.16b, v2.16b
+; CHECK-NEXT:    fmov w1, s1
+; CHECK-NEXT:    mov w0, w1
 ; CHECK-NEXT:    ret
 Entry:
   %1 = load i128, i128* %0, align 16
@@ -36,21 +37,21 @@ define i16 @popcount256(i256* nocapture nonnull readonly %0) {
 ; CHECK-NEXT:    // implicit-def: $q1
 ; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov v1.d[1], x9
-; CHECK-NEXT:    cnt v0.16b, v1.16b
-; CHECK-NEXT:    uaddlv h0, v0.16b
+; CHECK-NEXT:    cnt v1.16b, v1.16b
+; CHECK-NEXT:    uaddlv h2, v1.16b
 ; CHECK-NEXT:    // implicit-def: $q1
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    mov v1.16b, v2.16b
+; CHECK-NEXT:    fmov w10, s1
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    // implicit-def: $q1
 ; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov v1.d[1], x8
-; CHECK-NEXT:    cnt v0.16b, v1.16b
-; CHECK-NEXT:    uaddlv h0, v0.16b
+; CHECK-NEXT:    cnt v1.16b, v1.16b
+; CHECK-NEXT:    uaddlv h2, v1.16b
 ; CHECK-NEXT:    // implicit-def: $q1
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    add w0, w8, w9
+; CHECK-NEXT:    mov v1.16b, v2.16b
+; CHECK-NEXT:    fmov w11, s1
+; CHECK-NEXT:    add w0, w11, w10
 ; CHECK-NEXT:    ret
 Entry:
   %1 = load i256, i256* %0, align 16
@@ -69,11 +70,11 @@ define <1 x i128> @popcount1x128(<1 x i128> %0) {
 ; CHECK-NEXT:    fmov d0, x0
 ; CHECK-NEXT:    mov v0.d[1], x1
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlv h0, v0.16b
-; CHECK-NEXT:    // implicit-def: $q1
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    fmov w0, s1
-; CHECK-NEXT:    // kill: def $x0 killed $w0
+; CHECK-NEXT:    uaddlv h1, v0.16b
+; CHECK-NEXT:    // implicit-def: $q0
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov w2, s0
+; CHECK-NEXT:    mov w0, w2
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov x1, v0.d[1]
 ; CHECK-NEXT:    ret

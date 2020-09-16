@@ -1595,8 +1595,6 @@ void LazyCallGraph::updateGraphPtrs() {
 }
 
 LazyCallGraph::Node &LazyCallGraph::createNode(Function &F) {
-  assert(!lookup(F) && "node already exists");
-
   Node &N = get(F);
   NodeMap[&F] = &N;
   N.DFSNumber = N.LowLink = -1;

@@ -216,6 +216,14 @@ public:
   uint16_t getDwarfVersion() const;
   void setDwarfVersion(uint16_t Version);
 
+  bool isDwarf64() const;
+
+  /// Returns 4 for DWARF32 and 8 for DWARF64.
+  unsigned int getDwarfOffsetByteSize() const;
+
+  /// Returns 4 for DWARF32 and 12 for DWARF64.
+  unsigned int getUnitLengthFieldByteSize() const;
+
   bool isPositionIndependent() const;
 
   /// Return true if assembly output should contain comments.
@@ -341,6 +349,8 @@ public:
   void emitFrameAlloc(const MachineInstr &MI);
 
   void emitStackSizeSection(const MachineFunction &MF);
+
+  void emitBBAddrMapSection(const MachineFunction &MF);
 
   void emitRemarksSection(remarks::RemarkStreamer &RS);
 
@@ -560,9 +570,6 @@ public:
     emitLabelPlusOffset(Label, 0, Size, IsSectionRelative);
   }
 
-  /// Emit something like ".long Label + Offset".
-  void emitDwarfOffset(const MCSymbol *Label, uint64_t Offset) const;
-
   //===------------------------------------------------------------------===//
   // Dwarf Emission Helper Routines
   //===------------------------------------------------------------------===//
@@ -591,17 +598,38 @@ public:
   void emitDwarfSymbolReference(const MCSymbol *Label,
                                 bool ForceOffset = false) const;
 
-  /// Emit the 4-byte offset of a string from the start of its section.
+  /// Emit the 4- or 8-byte offset of a string from the start of its section.
   ///
   /// When possible, emit a DwarfStringPool section offset without any
   /// relocations, and without using the symbol.  Otherwise, defers to \a
   /// emitDwarfSymbolReference().
+  ///
+  /// The length of the emitted value depends on the DWARF format.
   void emitDwarfStringOffset(DwarfStringPoolEntry S) const;
 
-  /// Emit the 4-byte offset of a string from the start of its section.
+  /// Emit the 4-or 8-byte offset of a string from the start of its section.
   void emitDwarfStringOffset(DwarfStringPoolEntryRef S) const {
     emitDwarfStringOffset(S.getEntry());
   }
+
+  /// Emit something like ".long Label + Offset" or ".quad Label + Offset"
+  /// depending on the DWARF format.
+  void emitDwarfOffset(const MCSymbol *Label, uint64_t Offset) const;
+
+  /// Emit 32- or 64-bit value depending on the DWARF format.
+  void emitDwarfLengthOrOffset(uint64_t Value) const;
+
+  /// Emit a special value of 0xffffffff if producing 64-bit debugging info.
+  void maybeEmitDwarf64Mark() const;
+
+  /// Emit a unit length field. The actual format, DWARF32 or DWARF64, is chosen
+  /// according to the settings.
+  void emitDwarfUnitLength(uint64_t Length, const Twine &Comment) const;
+
+  /// Emit a unit length field. The actual format, DWARF32 or DWARF64, is chosen
+  /// according to the settings.
+  void emitDwarfUnitLength(const MCSymbol *Hi, const MCSymbol *Lo,
+                           const Twine &Comment) const;
 
   /// Emit reference to a call site with a specified encoding
   void emitCallSiteOffset(const MCSymbol *Hi, const MCSymbol *Lo,

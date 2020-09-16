@@ -1996,6 +1996,9 @@ defm unique_internal_linkage_names : OptInFFlag<"unique-internal-linkage-names",
 defm unique_section_names : OptOutFFlag<"unique-section-names",
   "", "Don't use unique names for text and data sections">;
 
+defm split_machine_functions: OptInFFlag<"split-machine-functions",
+  "Enable", "Disable", " late function splitting using profile information (x86 ELF)">;
+
 defm strict_return : OptOutFFlag<"strict-return", "",
   "Don't treat control flow paths that fall off the end of a non-void function as unreachable">;
 

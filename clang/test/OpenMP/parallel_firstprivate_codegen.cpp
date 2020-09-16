@@ -423,6 +423,7 @@ int main() {
 // CHECK-64: [[T_VAR_VAL:%.+]] = load i32, i32* [[BC]],
 // CHECK:    store i32 [[T_VAR_VAL]], i32* [[T_VAR_PRIV]],
 // CHECK:    store i32 0, i32* [[T_VAR_PRIV]],
+// CHECK:    [[T_VAR_VOID_PTR:%.+]] = bitcast i32* [[T_VAR_PRIV]] to i8*
 // CHECK:    call void @__kmpc_free(i32 [[GTID]], i8* [[T_VAR_VOID_PTR]], i8* inttoptr ([[iz]] 1 to i8*))
 // CHECK:    ret void
 
@@ -584,6 +585,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // ARRAY: [[SIZE:%.+]] = mul nuw i64 %{{.+}}, 8
 // ARRAY: [[BC:%.+]] = bitcast double* [[VLA2_PTR]] to i8*
 // ARRAY: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 128 [[BC]], i8* align 128 %{{.+}}, i64 [[SIZE]], i1 false)
+// ARRAY: [[VLA2_VOID_PTR:%.+]] = bitcast double* [[VLA2_PTR]] to i8*
 // ARRAY: call void @__kmpc_free(i32 [[GTID]], i8* [[VLA2_VOID_PTR]], i8* inttoptr (i64 8 to i8*))
 // ARRAY-NEXT: ret void
 #endif

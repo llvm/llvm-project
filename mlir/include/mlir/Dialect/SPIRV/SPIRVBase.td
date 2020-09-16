@@ -45,7 +45,7 @@ def SPIRV_Dialect : Dialect {
     high-level designs and implementation structures of the SPIR-V dialect.
   }];
 
-  let cppNamespace = "spirv";
+  let cppNamespace = "::mlir::spirv";
   let hasConstantMaterializer = 1;
   let hasOperationAttrVerify = 1;
   let hasRegionArgAttrVerify = 1;
@@ -226,21 +226,24 @@ class Capability<list<I32EnumAttrCase> capabilities> : Availability {
   let instance = "ref";
 }
 
+class SPIRVOpInterface<string name> : OpInterface<name> {
+  let cppNamespace = "::mlir::spirv";
+}
 // TODO: the following interfaces definitions are duplicating with the above.
 // Remove them once we are able to support dialect-specific contents in ODS.
-def QueryMinVersionInterface : OpInterface<"QueryMinVersionInterface"> {
+def QueryMinVersionInterface : SPIRVOpInterface<"QueryMinVersionInterface"> {
   let methods = [InterfaceMethod<"", "::mlir::spirv::Version", "getMinVersion">];
 }
-def QueryMaxVersionInterface : OpInterface<"QueryMaxVersionInterface"> {
+def QueryMaxVersionInterface : SPIRVOpInterface<"QueryMaxVersionInterface"> {
   let methods = [InterfaceMethod<"", "::mlir::spirv::Version", "getMaxVersion">];
 }
-def QueryExtensionInterface : OpInterface<"QueryExtensionInterface"> {
+def QueryExtensionInterface : SPIRVOpInterface<"QueryExtensionInterface"> {
   let methods = [InterfaceMethod<
     "",
     "::llvm::SmallVector<::llvm::ArrayRef<::mlir::spirv::Extension>, 1>",
     "getExtensions">];
 }
-def QueryCapabilityInterface : OpInterface<"QueryCapabilityInterface"> {
+def QueryCapabilityInterface : SPIRVOpInterface<"QueryCapabilityInterface"> {
   let methods = [InterfaceMethod<
     "",
     "::llvm::SmallVector<::llvm::ArrayRef<::mlir::spirv::Capability>, 1>",

@@ -14031,6 +14031,12 @@ static SDValue lowerShuffleWithSHUFPS(const SDLoc &DL, MVT VT,
       NewMask[2] = Mask[2] < 4 ? 1 : 3;
       NewMask[3] = Mask[2] < 4 ? 3 : 1;
     }
+  } else if (NumV2Elements == 3) {
+    // Ideally canonicalizeShuffleMaskWithCommute should have caught this, but
+    // we can get here due to other paths (e.g repeated mask matching) that we
+    // don't want to do another round of lowerVECTOR_SHUFFLE.
+    ShuffleVectorSDNode::commuteMask(NewMask);
+    return lowerShuffleWithSHUFPS(DL, VT, NewMask, V2, V1, DAG);
   }
   return DAG.getNode(X86ISD::SHUFP, DL, VT, LowV, HighV,
                      getV4X86ShuffleImm8ForMask(NewMask, DL, DAG));
@@ -19835,17 +19841,15 @@ static SDValue LowerUINT_TO_FP_i64(SDValue Op, SelectionDAG &DAG,
   // Load the 64-bit value into an XMM register.
   SDValue XR1 =
       DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64, Op.getOperand(OpNo));
-  SDValue CLod0 =
-      DAG.getLoad(MVT::v4i32, dl, DAG.getEntryNode(), CPIdx0,
-                  MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
-                  /* Alignment = */ 16);
+  SDValue CLod0 = DAG.getLoad(
+      MVT::v4i32, dl, DAG.getEntryNode(), CPIdx0,
+      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()), Align(16));
   SDValue Unpck1 =
       getUnpackl(DAG, dl, MVT::v4i32, DAG.getBitcast(MVT::v4i32, XR1), CLod0);
 
-  SDValue CLod1 =
-      DAG.getLoad(MVT::v2f64, dl, CLod0.getValue(1), CPIdx1,
-                  MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
-                  /* Alignment = */ 16);
+  SDValue CLod1 = DAG.getLoad(
+      MVT::v2f64, dl, CLod0.getValue(1), CPIdx1,
+      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()), Align(16));
   SDValue XR2F = DAG.getBitcast(MVT::v2f64, Unpck1);
   SDValue Sub;
   SDValue Chain;
@@ -20211,17 +20215,17 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   // Make a 64-bit buffer, and use it to build an FILD.
   SDValue StackSlot = DAG.CreateStackTemporary(MVT::i64, 8);
   int SSFI = cast<FrameIndexSDNode>(StackSlot)->getIndex();
+  Align SlotAlign(8);
   MachinePointerInfo MPI =
     MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI);
   if (SrcVT == MVT::i32) {
     SDValue OffsetSlot =
         DAG.getMemBasePlusOffset(StackSlot, TypeSize::Fixed(4), dl);
-    SDValue Store1 =
-        DAG.getStore(Chain, dl, Src, StackSlot, MPI, 8 /*Align*/);
+    SDValue Store1 = DAG.getStore(Chain, dl, Src, StackSlot, MPI, SlotAlign);
     SDValue Store2 = DAG.getStore(Store1, dl, DAG.getConstant(0, dl, MVT::i32),
-                                  OffsetSlot, MPI.getWithOffset(4), 4);
+                                  OffsetSlot, MPI.getWithOffset(4), SlotAlign);
     std::pair<SDValue, SDValue> Tmp =
-        BuildFILD(DstVT, MVT::i64, dl, Store2, StackSlot, MPI, Align(8), DAG);
+        BuildFILD(DstVT, MVT::i64, dl, Store2, StackSlot, MPI, SlotAlign, DAG);
     if (IsStrict)
       return DAG.getMergeValues({Tmp.first, Tmp.second}, dl);
 
@@ -20237,7 +20241,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
     ValueToStore = DAG.getBitcast(MVT::f64, ValueToStore);
   }
   SDValue Store =
-      DAG.getStore(Chain, dl, ValueToStore, StackSlot, MPI, Align(8));
+      DAG.getStore(Chain, dl, ValueToStore, StackSlot, MPI, SlotAlign);
   // For i64 source, we need to add the appropriate power of 2 if the input
   // was negative. We must be careful to do the computation in x87 extended
   // precision, not in SSE.
@@ -20245,7 +20249,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   SDValue Ops[] = { Store, StackSlot };
   SDValue Fild =
       DAG.getMemIntrinsicNode(X86ISD::FILD, dl, Tys, Ops, MVT::i64, MPI,
-                              Align(8), MachineMemOperand::MOLoad);
+                              SlotAlign, MachineMemOperand::MOLoad);
   Chain = Fild.getValue(1);
 
 
@@ -26298,9 +26302,8 @@ SDValue X86TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
 
     Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                        DAG.getConstant(2, dl, MVT::i64));
-    OutChains[1] =
-        DAG.getStore(Root, dl, FPtr, Addr, MachinePointerInfo(TrmpAddr, 2),
-                     /* Alignment = */ 2);
+    OutChains[1] = DAG.getStore(Root, dl, FPtr, Addr,
+                                MachinePointerInfo(TrmpAddr, 2), Align(2));
 
     // Load the 'nest' parameter value into R10.
     // R10 is specified in X86CallingConv.td
@@ -26312,9 +26315,8 @@ SDValue X86TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
 
     Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                        DAG.getConstant(12, dl, MVT::i64));
-    OutChains[3] =
-        DAG.getStore(Root, dl, Nest, Addr, MachinePointerInfo(TrmpAddr, 12),
-                     /* Alignment = */ 2);
+    OutChains[3] = DAG.getStore(Root, dl, Nest, Addr,
+                                MachinePointerInfo(TrmpAddr, 12), Align(2));
 
     // Jump to the nested function.
     OpCode = (JMP64r << 8) | REX_WB; // jmpq *...
@@ -26394,22 +26396,20 @@ SDValue X86TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
 
     Addr = DAG.getNode(ISD::ADD, dl, MVT::i32, Trmp,
                        DAG.getConstant(1, dl, MVT::i32));
-    OutChains[1] =
-        DAG.getStore(Root, dl, Nest, Addr, MachinePointerInfo(TrmpAddr, 1),
-                     /* Alignment = */ 1);
+    OutChains[1] = DAG.getStore(Root, dl, Nest, Addr,
+                                MachinePointerInfo(TrmpAddr, 1), Align(1));
 
     const unsigned char JMP = 0xE9; // jmp <32bit dst> opcode.
     Addr = DAG.getNode(ISD::ADD, dl, MVT::i32, Trmp,
                        DAG.getConstant(5, dl, MVT::i32));
-    OutChains[2] = DAG.getStore(Root, dl, DAG.getConstant(JMP, dl, MVT::i8),
-                                Addr, MachinePointerInfo(TrmpAddr, 5),
-                                /* Alignment = */ 1);
+    OutChains[2] =
+        DAG.getStore(Root, dl, DAG.getConstant(JMP, dl, MVT::i8), Addr,
+                     MachinePointerInfo(TrmpAddr, 5), Align(1));
 
     Addr = DAG.getNode(ISD::ADD, dl, MVT::i32, Trmp,
                        DAG.getConstant(6, dl, MVT::i32));
-    OutChains[3] =
-        DAG.getStore(Root, dl, Disp, Addr, MachinePointerInfo(TrmpAddr, 6),
-                     /* Alignment = */ 1);
+    OutChains[3] = DAG.getStore(Root, dl, Disp, Addr,
+                                MachinePointerInfo(TrmpAddr, 6), Align(1));
 
     return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
   }
@@ -27197,8 +27197,8 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
     MachinePointerInfo MPI =
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
     Entry.Node = StackPtr;
-    InChain = DAG.getStore(InChain, dl, Op->getOperand(i), StackPtr,
-                           MPI, /* Alignment = */ 16);
+    InChain =
+        DAG.getStore(InChain, dl, Op->getOperand(i), StackPtr, MPI, Align(16));
     Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
     Entry.Ty = PointerType::get(ArgTy,0);
     Entry.IsSExt = false;
@@ -29059,7 +29059,7 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
             MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
         Chain =
             DAG.getStore(Node->getChain(), dl, Node->getOperand(2), StackPtr,
-                         MPI, /*Align*/ 0, MachineMemOperand::MOStore);
+                         MPI, MaybeAlign(), MachineMemOperand::MOStore);
         SDVTList Tys = DAG.getVTList(MVT::f80, MVT::Other);
         SDValue LdOps[] = {Chain, StackPtr};
         SDValue Value =
@@ -37866,7 +37866,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     case X86ISD::UNPCKL:
     case X86ISD::UNPCKH:
     case X86ISD::BLENDI:
-      // Saturated Packs.
+      // Integer ops.
+    case X86ISD::AVG:
     case X86ISD::PACKSS:
     case X86ISD::PACKUS:
       // Horizontal Ops.
@@ -44189,8 +44190,7 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
   unsigned NumElems = VT.getVectorNumElements();
 
   EVT ScalarVT = VT.getVectorElementType();
-  if (!((ScalarVT == MVT::i8 || ScalarVT == MVT::i16) &&
-        NumElems >= 2 && isPowerOf2_32(NumElems)))
+  if (!((ScalarVT == MVT::i8 || ScalarVT == MVT::i16) && NumElems >= 2))
     return SDValue();
 
   // InScalarVT is the intermediate type in AVG pattern and it should be greater
@@ -44241,6 +44241,29 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
     return DAG.getNode(X86ISD::AVG, DL, Ops[0].getValueType(), Ops);
   };
 
+  auto AVGSplitter = [&](SDValue Op0, SDValue Op1) {
+    // Pad to a power-of-2 vector, split+apply and extract the original vector.
+    unsigned NumElemsPow2 = PowerOf2Ceil(NumElems);
+    EVT Pow2VT = EVT::getVectorVT(*DAG.getContext(), ScalarVT, NumElemsPow2);
+    if (NumElemsPow2 != NumElems) {
+      SmallVector<SDValue, 32> Ops0(NumElemsPow2, DAG.getUNDEF(ScalarVT));
+      SmallVector<SDValue, 32> Ops1(NumElemsPow2, DAG.getUNDEF(ScalarVT));
+      for (unsigned i = 0; i != NumElems; ++i) {
+        SDValue Idx = DAG.getIntPtrConstant(i, DL);
+        Ops0[i] = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Op0, Idx);
+        Ops1[i] = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Op1, Idx);
+      }
+      Op0 = DAG.getBuildVector(Pow2VT, DL, Ops0);
+      Op1 = DAG.getBuildVector(Pow2VT, DL, Ops1);
+    }
+    SDValue Res =
+        SplitOpsAndApply(DAG, Subtarget, DL, Pow2VT, {Op0, Op1}, AVGBuilder);
+    if (NumElemsPow2 == NumElems)
+      return Res;
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
+                       DAG.getIntPtrConstant(0, DL));
+  };
+
   // Take care of the case when one of the operands is a constant vector whose
   // element is in the range [1, 256].
   if (IsConstVectorInRange(Operands[1], 1, ScalarVT == MVT::i8 ? 256 : 65536) &&
@@ -44251,9 +44274,7 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
     SDValue VecOnes = DAG.getConstant(1, DL, InVT);
     Operands[1] = DAG.getNode(ISD::SUB, DL, InVT, Operands[1], VecOnes);
     Operands[1] = DAG.getNode(ISD::TRUNCATE, DL, VT, Operands[1]);
-    return SplitOpsAndApply(DAG, Subtarget, DL, VT,
-                            { Operands[0].getOperand(0), Operands[1] },
-                            AVGBuilder);
+    return AVGSplitter(Operands[0].getOperand(0), Operands[1]);
   }
 
   // Matches 'add like' patterns: add(Op0,Op1) + zext(or(Op0,Op1)).
@@ -44300,8 +44321,7 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
       }
 
     // The pattern is detected, emit X86ISD::AVG instruction(s).
-    return SplitOpsAndApply(DAG, Subtarget, DL, VT, {Operands[0], Operands[1]},
-                            AVGBuilder);
+    return AVGSplitter(Operands[0], Operands[1]);
   }
 
   return SDValue();
@@ -44426,7 +44446,8 @@ static int getOneTrueElt(SDValue V) {
 /// scalar element, and the alignment for the scalar memory access.
 static bool getParamsForOneTrueMaskedElt(MaskedLoadStoreSDNode *MaskedOp,
                                          SelectionDAG &DAG, SDValue &Addr,
-                                         SDValue &Index, unsigned &Alignment) {
+                                         SDValue &Index, Align &Alignment,
+                                         unsigned &Offset) {
   int TrueMaskElt = getOneTrueElt(MaskedOp->getMask());
   if (TrueMaskElt < 0)
     return false;
@@ -44434,15 +44455,17 @@ static bool getParamsForOneTrueMaskedElt(MaskedLoadStoreSDNode *MaskedOp,
   // Get the address of the one scalar element that is specified by the mask
   // using the appropriate offset from the base pointer.
   EVT EltVT = MaskedOp->getMemoryVT().getVectorElementType();
+  Offset = 0;
   Addr = MaskedOp->getBasePtr();
   if (TrueMaskElt != 0) {
-    unsigned Offset = TrueMaskElt * EltVT.getStoreSize();
+    Offset = TrueMaskElt * EltVT.getStoreSize();
     Addr = DAG.getMemBasePlusOffset(Addr, TypeSize::Fixed(Offset),
                                     SDLoc(MaskedOp));
   }
 
   Index = DAG.getIntPtrConstant(TrueMaskElt, SDLoc(MaskedOp));
-  Alignment = MinAlign(MaskedOp->getAlignment(), EltVT.getStoreSize());
+  Alignment = commonAlignment(MaskedOp->getOriginalAlign(),
+                              EltVT.getStoreSize());
   return true;
 }
 
@@ -44459,8 +44482,9 @@ reduceMaskedLoadToScalarLoad(MaskedLoadSDNode *ML, SelectionDAG &DAG,
   // is profitable. Endianness would also have to be considered.
 
   SDValue Addr, VecIndex;
-  unsigned Alignment;
-  if (!getParamsForOneTrueMaskedElt(ML, DAG, Addr, VecIndex, Alignment))
+  Align Alignment;
+  unsigned Offset;
+  if (!getParamsForOneTrueMaskedElt(ML, DAG, Addr, VecIndex, Alignment, Offset))
     return SDValue();
 
   // Load the one scalar element that is specified by the mask using the
@@ -44469,7 +44493,8 @@ reduceMaskedLoadToScalarLoad(MaskedLoadSDNode *ML, SelectionDAG &DAG,
   EVT VT = ML->getValueType(0);
   EVT EltVT = VT.getVectorElementType();
   SDValue Load =
-      DAG.getLoad(EltVT, DL, ML->getChain(), Addr, ML->getPointerInfo(),
+      DAG.getLoad(EltVT, DL, ML->getChain(), Addr,
+                  ML->getPointerInfo().getWithOffset(Offset),
                   Alignment, ML->getMemOperand()->getFlags());
 
   // Insert the loaded element into the appropriate place in the vector.
@@ -44580,8 +44605,9 @@ static SDValue reduceMaskedStoreToScalarStore(MaskedStoreSDNode *MS,
   // is profitable. Endianness would also have to be considered.
 
   SDValue Addr, VecIndex;
-  unsigned Alignment;
-  if (!getParamsForOneTrueMaskedElt(MS, DAG, Addr, VecIndex, Alignment))
+  Align Alignment;
+  unsigned Offset;
+  if (!getParamsForOneTrueMaskedElt(MS, DAG, Addr, VecIndex, Alignment, Offset))
     return SDValue();
 
   // Extract the one scalar element that is actually being stored.
@@ -44592,7 +44618,8 @@ static SDValue reduceMaskedStoreToScalarStore(MaskedStoreSDNode *MS,
                                 MS->getValue(), VecIndex);
 
   // Store that element at the appropriate offset from the base pointer.
-  return DAG.getStore(MS->getChain(), DL, Extract, Addr, MS->getPointerInfo(),
+  return DAG.getStore(MS->getChain(), DL, Extract, Addr,
+                      MS->getPointerInfo().getWithOffset(Offset),
                       Alignment, MS->getMemOperand()->getFlags());
 }
 

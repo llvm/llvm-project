@@ -938,11 +938,5 @@ static void print(OpAsmPrinter &p, ReduceOp op) {
   p.printOptionalAttrDict(op.getAttrs());
 }
 
-namespace mlir {
-namespace shape {
-
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Shape/IR/ShapeOps.cpp.inc"
-
-} // namespace shape
-} // namespace mlir

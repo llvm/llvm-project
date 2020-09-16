@@ -155,7 +155,7 @@ int main(int, char**)
 
     test<TriviallyCopyable>();
     test<PaddedTriviallyCopyable>();
-#ifndef __APPLE__
+#ifndef __APPLE__ // Apple doesn't ship libatomic
     /*
         These aren't going to be lock-free,
         so some libatomic.a is necessary.

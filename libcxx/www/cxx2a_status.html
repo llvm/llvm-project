@@ -261,7 +261,7 @@
 
 <p>The missing bits in P0600 are in [mem.res.class], [mem.poly.allocator.class], and [container.node.overview]</p>
 
-<p>The missing bits in P0202 are in <tt>copy</tt>, <tt>copy_backwards</tt>, <tt>move</tt>, and <tt>move_backwards</tt> (and the ones that call them: <tt>copy_n</tt>, <tt>rotate_copy</tt>, <tt>merge</tt>, <tt>set_union</tt>, <tt>set_difference</tt>, and <tt>set_symmetric_difference</tt>). This is because the first four algorithms have specializations that call <tt>memmove</tt> which is not constexpr. See <a href="https://bugs.llvm.org/show_bug.cgi?id=25165">Bug 25165</a></p>
+<p>The missing bits in P0202 are in <tt>copy</tt> and <tt>copy_backwards</tt> (and the ones that call them: <tt>copy_n</tt>, <tt>set_union</tt>, <tt>set_difference</tt>, and <tt>set_symmetric_difference</tt>). This is because the first two algorithms have specializations that call <tt>memmove</tt> which is not constexpr. See <a href="https://bugs.llvm.org/show_bug.cgi?id=25165">Bug 25165</a></p>
 
 
   <h3>Library Working group Issues Status</h3>

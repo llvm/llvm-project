@@ -269,21 +269,26 @@ static void print(OpAsmPrinter &printer, ParallelOp &op) {
   printer << ParallelOp::getOperationName();
 
   // async()?
-  if (auto async = op.async())
+  if (Value async = op.async())
     printer << " " << ParallelOp::getAsyncKeyword() << "(" << async << ")";
 
   // wait()?
   printOperandList(op.waitOperands(), ParallelOp::getWaitKeyword(), printer);
 
   // num_gangs()?
-  if (auto numGangs = op.numGangs())
+  if (Value numGangs = op.numGangs())
     printer << " " << ParallelOp::getNumGangsKeyword() << "(" << numGangs
             << ")";
 
   // num_workers()?
-  if (auto numWorkers = op.numWorkers())
+  if (Value numWorkers = op.numWorkers())
     printer << " " << ParallelOp::getNumWorkersKeyword() << "(" << numWorkers
             << ")";
+
+  // vector_length()?
+  if (Value vectorLength = op.vectorLength())
+    printer << " " << ParallelOp::getVectorLengthKeyword() << "("
+            << vectorLength << ")";
 
   // if()?
   if (Value ifCond = op.ifCond())
@@ -482,7 +487,7 @@ static void print(OpAsmPrinter &printer, DataOp &op) {
 ///                         region attr-dict?
 static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &result) {
   Builder &builder = parser.getBuilder();
-  unsigned executionMapping = 0;
+  unsigned executionMapping = OpenACCExecMapping::NONE;
   SmallVector<Type, 8> operandTypes;
   SmallVector<OpAsmParser::OperandType, 8> privateOperands, reductionOperands;
   SmallVector<OpAsmParser::OperandType, 8> tileOperands;
@@ -562,7 +567,7 @@ static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &result) {
                               reductionOperands, operandTypes, result)))
     return failure();
 
-  if (executionMapping != 0)
+  if (executionMapping != acc::OpenACCExecMapping::NONE)
     result.addAttribute(LoopOp::getExecutionMappingAttrName(),
                         builder.getI64IntegerAttr(executionMapping));
 
@@ -592,13 +597,7 @@ static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &result) {
 static void print(OpAsmPrinter &printer, LoopOp &op) {
   printer << LoopOp::getOperationName();
 
-  unsigned execMapping =
-      (op.getAttrOfType<IntegerAttr>(LoopOp::getExecutionMappingAttrName()) !=
-       nullptr)
-          ? op.getAttrOfType<IntegerAttr>(LoopOp::getExecutionMappingAttrName())
-                .getInt()
-          : 0;
-
+  unsigned execMapping = op.exec_mapping();
   if (execMapping & OpenACCExecMapping::GANG) {
     printer << " " << LoopOp::getGangKeyword();
     Value gangNum = op.gangNum();
@@ -654,6 +653,32 @@ static void print(OpAsmPrinter &printer, LoopOp &op) {
   printer.printOptionalAttrDictWithKeyword(
       op.getAttrs(), {LoopOp::getExecutionMappingAttrName(),
                       LoopOp::getOperandSegmentSizeAttr()});
+}
+
+static LogicalResult verifyLoopOp(acc::LoopOp loopOp) {
+  // auto, independent and seq attribute are mutually exclusive.
+  if ((loopOp.auto_() && (loopOp.independent() || loopOp.seq())) ||
+      (loopOp.independent() && loopOp.seq())) {
+    loopOp.emitError("only one of " + acc::LoopOp::getAutoAttrName() + ", " +
+                     acc::LoopOp::getIndependentAttrName() + ", " +
+                     acc::LoopOp::getSeqAttrName() +
+                     " can be present at the same time");
+    return failure();
+  }
+
+  // Gang, worker and vector are incompatible with seq.
+  if (loopOp.seq() && loopOp.exec_mapping() != OpenACCExecMapping::NONE) {
+    loopOp.emitError("gang, worker or vector cannot appear with the seq attr");
+    return failure();
+  }
+
+  // Check non-empty body().
+  if (loopOp.region().empty()) {
+    loopOp.emitError("expected non-empty body.");
+    return failure();
+  }
+
+  return success();
 }
 
 #define GET_OP_CLASSES

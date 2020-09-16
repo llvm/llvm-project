@@ -253,9 +253,9 @@ public:
   /// Compute the size of a header for this unit, not including the initial
   /// length field.
   virtual unsigned getHeaderSize() const {
-    return sizeof(int16_t) + // DWARF version number
-           sizeof(int32_t) + // Offset Into Abbrev. Section
-           sizeof(int8_t) +  // Pointer Size (in bytes)
+    return sizeof(int16_t) +               // DWARF version number
+           Asm->getDwarfOffsetByteSize() + // Offset Into Abbrev. Section
+           sizeof(int8_t) +                // Pointer Size (in bytes)
            (DD->getDwarfVersion() >= 5 ? sizeof(int8_t)
                                        : 0); // DWARF v5 unit type
   }
@@ -356,7 +356,7 @@ public:
   void emitHeader(bool UseOffsets) override;
   unsigned getHeaderSize() const override {
     return DwarfUnit::getHeaderSize() + sizeof(uint64_t) + // Type Signature
-           sizeof(uint32_t);                               // Type DIE Offset
+           Asm->getDwarfOffsetByteSize();                  // Type DIE Offset
   }
   void addGlobalName(StringRef Name, const DIE &Die,
                      const DIScope *Context) override;

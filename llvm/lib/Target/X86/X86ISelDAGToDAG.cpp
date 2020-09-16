@@ -3502,6 +3502,7 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
   // Shift NBits left by 8 bits, thus producing 'control'.
   // This makes the low 8 bits to be zero.
   SDValue C8 = CurDAG->getConstant(8, DL, MVT::i8);
+  insertDAGNode(*CurDAG, SDValue(Node, 0), C8);
   SDValue Control = CurDAG->getNode(ISD::SHL, DL, MVT::i32, NBits, C8);
   insertDAGNode(*CurDAG, SDValue(Node, 0), Control);
 

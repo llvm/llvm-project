@@ -510,9 +510,6 @@ public:
 
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
 
-  /// Creates basic block Labels for this function.
-  void createBBLabels();
-
   /// Assign IsBeginSection IsEndSection fields for basic blocks in this
   /// function.
   void assignBeginEndSections();

@@ -244,6 +244,28 @@ public:
   bool applyCombineShiftToUnmerge(MachineInstr &MI, const unsigned &ShiftVal);
   bool tryCombineShiftToUnmerge(MachineInstr &MI, unsigned TargetShiftAmount);
 
+  /// Transform <ty,...> G_UNMERGE(G_MERGE ty X, Y, Z) -> ty X, Y, Z.
+  bool
+  matchCombineUnmergeMergeToPlainValues(MachineInstr &MI,
+                                        SmallVectorImpl<Register> &Operands);
+  bool
+  applyCombineUnmergeMergeToPlainValues(MachineInstr &MI,
+                                        SmallVectorImpl<Register> &Operands);
+
+  /// Transform G_UNMERGE Constant -> Constant1, Constant2, ...
+  bool matchCombineUnmergeConstant(MachineInstr &MI,
+                                   SmallVectorImpl<APInt> &Csts);
+  bool applyCombineUnmergeConstant(MachineInstr &MI,
+                                   SmallVectorImpl<APInt> &Csts);
+
+  /// Transform X, Y<dead> = G_UNMERGE Z -> X = G_TRUNC Z.
+  bool matchCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI);
+  bool applyCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI);
+
+  /// Transform X, Y = G_UNMERGE(G_ZEXT(Z)) -> X = G_ZEXT(Z); Y = G_CONSTANT 0
+  bool matchCombineUnmergeZExtToZExt(MachineInstr &MI);
+  bool applyCombineUnmergeZExtToZExt(MachineInstr &MI);
+
   /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
   bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg);
   bool applyCombineI2PToP2I(MachineInstr &MI, Register &Reg);
@@ -271,6 +293,26 @@ public:
 
   /// Transform fneg(fneg(x)) to x.
   bool matchCombineFNegOfFNeg(MachineInstr &MI, Register &Reg);
+
+  /// Match fabs(fabs(x)) to fabs(x).
+  bool matchCombineFAbsOfFAbs(MachineInstr &MI, Register &Src);
+  bool applyCombineFAbsOfFAbs(MachineInstr &MI, Register &Src);
+
+  /// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
+  bool matchCombineTruncOfExt(MachineInstr &MI,
+                              std::pair<Register, unsigned> &MatchInfo);
+  bool applyCombineTruncOfExt(MachineInstr &MI,
+                              std::pair<Register, unsigned> &MatchInfo);
+
+  /// Transform trunc (shl x, K) to shl (trunc x),
+  /// K => K < VT.getScalarSizeInBits().
+  bool matchCombineTruncOfShl(MachineInstr &MI,
+                              std::pair<Register, Register> &MatchInfo);
+  bool applyCombineTruncOfShl(MachineInstr &MI,
+                              std::pair<Register, Register> &MatchInfo);
+
+  /// Transform G_MUL(x, -1) to G_SUB(0, x)
+  bool applyCombineMulByNegativeOne(MachineInstr &MI);
 
   /// Return true if any explicit use operand on \p MI is defined by a
   /// G_IMPLICIT_DEF.

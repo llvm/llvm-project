@@ -48,19 +48,11 @@
 // Basic Block Labels
 // ==================
 //
-// With -fbasic-block-sections=labels, or when a basic block is placed in a
-// unique section, it is labelled with a symbol.  This allows easy mapping of
-// virtual addresses from PMU profiles back to the corresponding basic blocks.
-// Since the number of basic blocks is large, the labeling bloats the symbol
-// table sizes and the string table sizes significantly. While the binary size
-// does increase, it does not affect performance as the symbol table is not
-// loaded in memory during run-time. The string table size bloat is kept very
-// minimal using a unary naming scheme that uses string suffix compression. The
-// basic blocks for function foo are named "a.BB.foo", "aa.BB.foo", ... This
-// turns out to be very good for string table sizes and the bloat in the string
-// table size for a very large binary is ~8 %.  The naming also allows using
-// the --symbol-ordering-file option in LLD to arbitrarily reorder the
-// sections.
+// With -fbasic-block-sections=labels, we emit the offsets of BB addresses of
+// every function into a .bb_addr_map section. Along with the function symbols,
+// this allows for mapping of virtual addresses in PMU profiles back to the
+// corresponding basic blocks. This logic is implemented in AsmPrinter. This
+// pass only assigns the BBSectionType of every function to ``labels``.
 //
 //===----------------------------------------------------------------------===//
 
@@ -304,7 +296,6 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
 
   if (BBSectionsType == BasicBlockSection::Labels) {
     MF.setBBSectionsType(BBSectionsType);
-    MF.createBBLabels();
     return true;
   }
 
@@ -314,7 +305,6 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
                                    FuncBBClusterInfo))
     return true;
   MF.setBBSectionsType(BBSectionsType);
-  MF.createBBLabels();
   assignSections(MF, FuncBBClusterInfo);
 
   // We make sure that the cluster including the entry basic block precedes all

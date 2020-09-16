@@ -463,24 +463,20 @@ void Writer::populateTargetFeatures() {
     return;
 
   if (!config->relocatable && used.count("mutable-globals") == 0) {
-    for (Symbol *sym : symtab->getSymbols()) {
+    for (const Symbol *sym : out.importSec->importedSymbols) {
       if (auto *global = dyn_cast<GlobalSymbol>(sym)) {
         if (global->getGlobalType()->Mutable) {
-          if (!sym->isLive())
-            continue;
-          if (!sym->isUsedInRegularObj)
-            continue;
-          if (sym->isUndefined() && sym->isWeak() && !config->relocatable)
-            continue;
-          if (sym->isUndefined())
-            error(Twine("mutable global imported but 'mutable-globals' feature "
-                        "not present in inputs: `") +
-                  toString(*sym) + "`. Use --no-check-features to suppress.");
-          else if (sym->isExported())
-            error(Twine("mutable global exported but 'mutable-globals' feature "
-                        "not present in inputs: `") +
-                  toString(*sym) + "`. Use --no-check-features to suppress.");
+          error(Twine("mutable global imported but 'mutable-globals' feature "
+                      "not present in inputs: `") +
+                toString(*sym) + "`. Use --no-check-features to suppress.");
         }
+      }
+    }
+    for (const Symbol *sym : out.exportSec->exportedSymbols) {
+      if (auto *global = dyn_cast<GlobalSymbol>(sym)) {
+        error(Twine("mutable global exported but 'mutable-globals' feature "
+                    "not present in inputs: `") +
+              toString(*sym) + "`. Use --no-check-features to suppress.");
       }
     }
   }
@@ -603,6 +599,7 @@ void Writer::calculateExports() {
 
     LLVM_DEBUG(dbgs() << "Export: " << name << "\n");
     out.exportSec->exports.push_back(export_);
+    out.exportSec->exportedSymbols.push_back(sym);
   }
 }
 
@@ -1075,8 +1072,6 @@ void Writer::run() {
   createSyntheticSections();
   log("-- populateProducers");
   populateProducers();
-  log("-- populateTargetFeatures");
-  populateTargetFeatures();
   log("-- calculateImports");
   calculateImports();
   log("-- layoutMemory");
@@ -1119,6 +1114,8 @@ void Writer::run() {
   calculateCustomSections();
   log("-- populateSymtab");
   populateSymtab();
+  log("-- populateTargetFeatures");
+  populateTargetFeatures();
   log("-- addSections");
   addSections();
 

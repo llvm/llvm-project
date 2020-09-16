@@ -24,7 +24,7 @@ def OpenACC_Dialect : Dialect {
     This dialect models the construct from the OpenACC 3.0 directive language.
   }];
 
-  let cppNamespace = "acc";
+  let cppNamespace = "::mlir::acc";
 }
 
 // Base class for OpenACC dialect ops.
@@ -200,7 +200,8 @@ def OpenACC_TerminatorOp : OpenACC_Op<"terminator", [Terminator]> {
 //===----------------------------------------------------------------------===//
 
 def OpenACC_LoopOp : OpenACC_Op<"loop",
-                        [AttrSizedOperandSegments]> {
+      [AttrSizedOperandSegments,
+       SingleBlockImplicitTerminator<"acc::YieldOp">]> {
   let summary = "loop construct";
 
   let description = [{
@@ -228,13 +229,14 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
                        Optional<AnyInteger>:$gangStatic,
                        Optional<AnyInteger>:$workerNum,
                        Optional<AnyInteger>:$vectorLength,
-                       UnitAttr:$loopSeq,
-                       UnitAttr:$loopIndependent,
-                       UnitAttr:$loopAuto,
+                       UnitAttr:$seq,
+                       UnitAttr:$independent,
+                       UnitAttr:$auto_,
                        Variadic<AnyInteger>:$tileOperands,
                        Variadic<AnyType>:$privateOperands,
                        OptionalAttr<OpenACC_ReductionOpAttr>:$reductionOp,
-                       Variadic<AnyType>:$reductionOperands);
+                       Variadic<AnyType>:$reductionOperands,
+                       DefaultValuedAttr<I64Attr, "0">:$exec_mapping);
 
   let results = (outs Variadic<AnyType>:$results);
 
@@ -256,7 +258,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     static StringRef getReductionKeyword() { return "reduction"; }
   }];
 
-  let verifier = ?;
+  let verifier = [{ return ::verifyLoopOp(*this); }];
 }
 
 // Yield operation for the acc.loop and acc.parallel operations.

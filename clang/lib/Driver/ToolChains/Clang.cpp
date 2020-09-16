@@ -4911,6 +4911,26 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fno_unique_basic_block_section_names, false))
     CmdArgs.push_back("-funique-basic-block-section-names");
 
+  if (Arg *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
+                               options::OPT_fno_split_machine_functions)) {
+    // This codegen pass is only available on x86-elf targets.
+    if (Triple.isX86() && Triple.isOSBinFormatELF()) {
+      if (A->getOption().matches(options::OPT_fsplit_machine_functions)) {
+        // If the flag is enabled but no profile information is available then
+        // emit a warning.
+        if (getLastProfileUseArg(Args) || getLastProfileSampleUseArg(Args)) {
+          A->render(Args, CmdArgs);
+        } else {
+          D.Diag(diag::warn_drv_diagnostics_hotness_requires_pgo)
+              << A->getAsString(Args);
+        }
+      }
+    } else {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << TripleStr;
+    }
+  }
+
   Args.AddLastArg(CmdArgs, options::OPT_finstrument_functions,
                   options::OPT_finstrument_functions_after_inlining,
                   options::OPT_finstrument_function_entry_bare);

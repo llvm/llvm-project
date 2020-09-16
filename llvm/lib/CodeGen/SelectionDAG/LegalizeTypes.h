@@ -548,6 +548,7 @@ private:
   SDValue SoftenFloatRes_UNDEF(SDNode *N);
   SDValue SoftenFloatRes_VAARG(SDNode *N);
   SDValue SoftenFloatRes_XINT_TO_FP(SDNode *N);
+  SDValue SoftenFloatRes_VECREDUCE(SDNode *N);
 
   // Convert Float Operand to Integer.
   bool SoftenFloatOperand(SDNode *N, unsigned OpNo);
@@ -666,6 +667,7 @@ private:
   SDValue PromoteFloatRes_UNDEF(SDNode *N);
   SDValue BitcastToInt_ATOMIC_SWAP(SDNode *N);
   SDValue PromoteFloatRes_XINT_TO_FP(SDNode *N);
+  SDValue PromoteFloatRes_VECREDUCE(SDNode *N);
 
   bool PromoteFloatOperand(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_BITCAST(SDNode *N, unsigned OpNo);
@@ -703,6 +705,7 @@ private:
   SDValue SoftPromoteHalfRes_UnaryOp(SDNode *N);
   SDValue SoftPromoteHalfRes_XINT_TO_FP(SDNode *N);
   SDValue SoftPromoteHalfRes_UNDEF(SDNode *N);
+  SDValue SoftPromoteHalfRes_VECREDUCE(SDNode *N);
 
   bool SoftPromoteHalfOperand(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_BITCAST(SDNode *N);

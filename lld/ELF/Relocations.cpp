@@ -113,6 +113,17 @@ void elf::reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
               ", " + Twine(max).str() + "]" + hint);
 }
 
+void elf::reportRangeError(uint8_t *loc, int64_t v, int n, const Symbol &sym,
+                           const Twine &msg) {
+  ErrorPlace errPlace = getErrorPlace(loc);
+  std::string hint;
+  if (!sym.getName().empty())
+    hint = "; references " + lld::toString(sym) + getDefinedLocation(sym);
+  errorOrWarn(errPlace.loc + msg + " is out of range: " + Twine(v) +
+              " is not in [" + Twine(llvm::minIntN(n)) + ", " +
+              Twine(llvm::maxIntN(n)) + "]" + hint);
+}
+
 namespace {
 // Build a bitmask with one bit set for each RelExpr.
 //
@@ -681,7 +692,7 @@ static std::string maybeReportDiscarded(Undefined &sym) {
   if (sym.type == ELF::STT_SECTION) {
     msg = "relocation refers to a discarded section: ";
     msg += CHECK(
-        file->getObj().getSectionName(&objSections[sym.discardedSecIdx]), file);
+        file->getObj().getSectionName(objSections[sym.discardedSecIdx]), file);
   } else {
     msg = "relocation refers to a symbol in a discarded section: " +
           toString(sym);

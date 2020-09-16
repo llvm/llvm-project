@@ -2517,9 +2517,9 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
             DAG.getTargetGlobalAddress(GV, dl, PtrVt, 0, ARMII::MO_NONLAZY));
         Callee = DAG.getLoad(
             PtrVt, dl, DAG.getEntryNode(), Callee,
-            MachinePointerInfo::getGOT(DAG.getMachineFunction()),
-            /* Alignment = */ 0, MachineMemOperand::MODereferenceable |
-                                     MachineMemOperand::MOInvariant);
+            MachinePointerInfo::getGOT(DAG.getMachineFunction()), MaybeAlign(),
+            MachineMemOperand::MODereferenceable |
+                MachineMemOperand::MOInvariant);
       } else if (Subtarget->isTargetCOFF()) {
         assert(Subtarget->isTargetWindows() &&
                "Windows is the only supported COFF target");
@@ -3328,8 +3328,7 @@ ARMTargetLowering::LowerGlobalTLSAddressDarwin(SDValue Op,
   SDValue Chain = DAG.getEntryNode();
   SDValue FuncTLVGet = DAG.getLoad(
       MVT::i32, DL, Chain, DescAddr,
-      MachinePointerInfo::getGOT(DAG.getMachineFunction()),
-      /* Alignment = */ 4,
+      MachinePointerInfo::getGOT(DAG.getMachineFunction()), Align(4),
       MachineMemOperand::MONonTemporal | MachineMemOperand::MODereferenceable |
           MachineMemOperand::MOInvariant);
   Chain = FuncTLVGet.getValue(1);
@@ -5063,7 +5062,7 @@ static bool isSaturatingConditional(const SDValue &Op, SDValue &V,
     int64_t PosVal = std::max(Val1, Val2);
     int64_t NegVal = std::min(Val1, Val2);
 
-    if (!((Val1 > Val2 && isLTorLE(CC1)) || (Val1 < Val2 && isLTorLE(CC2))) &&
+    if (!((Val1 > Val2 && isLTorLE(CC1)) || (Val1 < Val2 && isLTorLE(CC2))) ||
         !isPowerOf2_64(PosVal + 1)) 
       return false;
 
@@ -15336,7 +15335,7 @@ static SDValue PerformSplittingToWideningLoad(SDNode *N, SelectionDAG &DAG) {
     SDValue NewLoad =
         DAG.getLoad(ISD::UNINDEXED, NewExtType, NewToVT, DL, Ch, NewPtr, Offset,
                     LD->getPointerInfo().getWithOffset(NewOffset), NewFromVT,
-                    Alignment.value(), MMOFlags, AAInfo);
+                    Alignment, MMOFlags, AAInfo);
     Loads.push_back(NewLoad);
     Chains.push_back(SDValue(NewLoad.getNode(), 1));
   }

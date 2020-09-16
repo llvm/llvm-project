@@ -349,6 +349,9 @@ let ParentPackage = APIModeling in {
 
 def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
   HelpText<"Improve modeling of the C standard library functions">,
+  // Uninitialized value check is a mandatory dependency. This Checker asserts
+  // that arguments are always initialized.
+  Dependencies<[CallAndMessageModeling]>,
   CheckerOptions<[
     CmdLineOption<Boolean,
                   "DisplayLoadedSummaries",
@@ -1475,8 +1478,8 @@ def LiveVariablesDumper : Checker<"DumpLiveVars">,
   HelpText<"Print results of live variable analysis">,
   Documentation<NotDocumented>;
 
-def LiveStatementsDumper : Checker<"DumpLiveStmts">,
-  HelpText<"Print results of live statement analysis">,
+def LiveExpressionsDumper : Checker<"DumpLiveExprs">,
+  HelpText<"Print results of live expression analysis">,
   Documentation<NotDocumented>;
 
 def CFGViewer : Checker<"ViewCFG">,

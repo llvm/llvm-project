@@ -23,7 +23,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def LLVM_Dialect : Dialect {
   let name = "llvm";
-  let cppNamespace = "LLVM";
+  let cppNamespace = "::mlir::LLVM";
 
   /// FIXME: at the moment this is a dependency of the translation to LLVM IR,
   /// not really one of this dialect per-se.

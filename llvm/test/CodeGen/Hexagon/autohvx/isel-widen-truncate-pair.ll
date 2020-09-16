@@ -2,10 +2,11 @@
 
 ; This has a v32i8 = truncate v16i32 (64b mode), which was legalized to
 ; 64i8 = vpackl v32i32, for which there were no selection patterns provided.
-; Check that we generate vdeale for this.
+; Check that we generate vpackeh->vpackeb for this.
 
 ; CHECK-LABEL: fred:
-; CHECK: vdeale(v1.b,v0.b)
+; CHECK: v[[V0:[0-9]+]].h = vpacke(v1.w,v0.w)
+; CHECK:                  = vpacke({{.*}},v[[V0]].h)
 define void @fred(<32 x i8>* %a0, <32 x i32> %a1) #0 {
   %v0 = trunc <32 x i32> %a1 to <32 x i8>
   store <32 x i8> %v0, <32 x i8>* %a0, align 32

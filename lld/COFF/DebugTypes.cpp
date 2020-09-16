@@ -447,16 +447,6 @@ UsePrecompSource::mergeDebugT(TypeMerger *m, CVIndexMap *indexMap) {
   if (!e)
     return e.takeError();
 
-  // Drop LF_PRECOMP record from the input stream, as it has been replaced
-  // with the precompiled headers Type stream in the mergeInPrecompHeaderObj()
-  // call above. Note that we can't just call Types.drop_front(), as we
-  // explicitly want to rebase the stream.
-  CVTypeArray types;
-  BinaryStreamReader reader(file->debugTypes, support::little);
-  cantFail(reader.readArray(types, reader.getLength()));
-  auto firstType = types.begin();
-  file->debugTypes = file->debugTypes.drop_front(firstType->RecordData.size());
-
   return TpiSource::mergeDebugT(m, indexMap);
 }
 

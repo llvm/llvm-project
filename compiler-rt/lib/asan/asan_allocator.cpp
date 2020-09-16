@@ -84,28 +84,39 @@ static void AtomicContextLoad(const volatile atomic_uint64_t *atomic_context,
 //   ---------------------|
 //   M -- magic value kAllocBegMagic
 //   B -- address of ChunkHeader pointing to the first 'H'
-static const uptr kAllocBegMagic = 0xCC6E96B9;
 
 class ChunkHeader {
  public:
   atomic_uint8_t chunk_state;
-  u8 from_memalign : 1;
   u8 alloc_type : 2;
-  u8 rz_log : 3;
   u8 lsan_tag : 2;
 
-  // This field is used for small sizes. For large sizes it is equal to
-  // SizeClassMap::kMaxSize and the actual size is stored in the
-  // SecondaryAllocator's metadata.
-  u32 user_requested_size : 29;
   // align < 8 -> 0
   // else      -> log2(min(align, 512)) - 2
-  u32 user_requested_alignment_log : 3;
+  u8 user_requested_alignment_log : 3;
 
  private:
+  u16 user_requested_size_hi;
+  u32 user_requested_size_lo;
   atomic_uint64_t alloc_context_id;
 
  public:
+  uptr UsedSize() const {
+    uptr R = user_requested_size_lo;
+    if (sizeof(uptr) > sizeof(user_requested_size_lo))
+      R += (uptr)user_requested_size_hi << (8 * sizeof(user_requested_size_lo));
+    return R;
+  }
+
+  void SetUsedSize(uptr size) {
+    user_requested_size_lo = size;
+    if (sizeof(uptr) > sizeof(user_requested_size_lo)) {
+      size >>= (8 * sizeof(user_requested_size_lo));
+      user_requested_size_hi = size;
+      CHECK_EQ(user_requested_size_hi, size);
+    }
+  }
+
   void SetAllocContext(u32 tid, u32 stack) {
     AtomicContextStore(&alloc_context_id, tid, stack);
   }
@@ -147,23 +158,36 @@ enum {
 class AsanChunk : public ChunkBase {
  public:
   uptr Beg() { return reinterpret_cast<uptr>(this) + kChunkHeaderSize; }
-  uptr UsedSize(bool locked_version = false) {
-    if (user_requested_size != SizeClassMap::kMaxSize)
-      return user_requested_size;
-    return *reinterpret_cast<uptr *>(
-        get_allocator().GetMetaData(AllocBeg(locked_version)));
+  bool AddrIsInside(uptr addr) {
+    return (addr >= Beg()) && (addr < Beg() + UsedSize());
   }
-  void *AllocBeg(bool locked_version = false) {
-    if (from_memalign) {
-      if (locked_version)
-        return get_allocator().GetBlockBeginFastLocked(
-            reinterpret_cast<void *>(this));
-      return get_allocator().GetBlockBegin(reinterpret_cast<void *>(this));
+};
+
+class LargeChunkHeader {
+  static constexpr uptr kAllocBegMagic =
+      FIRST_32_SECOND_64(0xCC6E96B9, 0xCC6E96B9CC6E96B9ULL);
+  atomic_uintptr_t magic;
+  AsanChunk *chunk_header;
+
+ public:
+  AsanChunk *Get() const {
+    return atomic_load(&magic, memory_order_acquire) == kAllocBegMagic
+               ? chunk_header
+               : nullptr;
+  }
+
+  void Set(AsanChunk *p) {
+    if (p) {
+      chunk_header = p;
+      atomic_store(&magic, kAllocBegMagic, memory_order_release);
+      return;
     }
-    return reinterpret_cast<void*>(Beg() - RZLog2Size(rz_log));
-  }
-  bool AddrIsInside(uptr addr, bool locked_version = false) {
-    return (addr >= Beg()) && (addr < Beg() + UsedSize(locked_version));
+
+    uptr old = kAllocBegMagic;
+    if (!atomic_compare_exchange_strong(&magic, &old, 0,
+                                        memory_order_release)) {
+      CHECK_EQ(old, kAllocBegMagic);
+    }
   }
 };
 
@@ -174,6 +198,13 @@ struct QuarantineCallback {
   }
 
   void Recycle(AsanChunk *m) {
+    void *p = get_allocator().GetBlockBegin(m);
+    if (p != m) {
+      // Clear the magic value, as allocator internals may overwrite the
+      // contents of deallocated chunk, confusing GetAsanChunk lookup.
+      reinterpret_cast<LargeChunkHeader *>(p)->Set(nullptr);
+    }
+
     u8 old_chunk_state = CHUNK_QUARANTINE;
     if (!atomic_compare_exchange_strong(&m->chunk_state, &old_chunk_state,
                                         CHUNK_INVALID, memory_order_acquire)) {
@@ -183,15 +214,6 @@ struct QuarantineCallback {
     PoisonShadow(m->Beg(),
                  RoundUpTo(m->UsedSize(), SHADOW_GRANULARITY),
                  kAsanHeapLeftRedzoneMagic);
-    void *p = reinterpret_cast<void *>(m->AllocBeg());
-    if (p != m) {
-      uptr *alloc_magic = reinterpret_cast<uptr *>(p);
-      CHECK_EQ(alloc_magic[0], kAllocBegMagic);
-      // Clear the magic value, as allocator internals may overwrite the
-      // contents of deallocated chunk, confusing GetAsanChunk lookup.
-      alloc_magic[0] = 0;
-      CHECK_EQ(alloc_magic[1], reinterpret_cast<uptr>(m));
-    }
 
     // Statistics.
     AsanStats &thread_stats = GetCurrentThreadStats();
@@ -340,7 +362,7 @@ struct Allocator {
     if (ac && atomic_load(&ac->chunk_state, memory_order_acquire) ==
                   CHUNK_ALLOCATED) {
       uptr beg = ac->Beg();
-      uptr end = ac->Beg() + ac->UsedSize(true);
+      uptr end = ac->Beg() + ac->UsedSize();
       uptr chunk_end = chunk + allocated_size;
       if (chunk < beg && beg < end && end <= chunk_end) {
         // Looks like a valid AsanChunk in use, poison redzones only.
@@ -491,13 +513,10 @@ struct Allocator {
     uptr needed_size = rounded_size + rz_size;
     if (alignment > min_alignment)
       needed_size += alignment;
-    bool using_primary_allocator = true;
     // If we are allocating from the secondary allocator, there will be no
     // automatic right redzone, so add the right redzone manually.
-    if (!PrimaryAllocator::CanAllocate(needed_size, alignment)) {
+    if (!PrimaryAllocator::CanAllocate(needed_size, alignment))
       needed_size += rz_size;
-      using_primary_allocator = false;
-    }
     CHECK(IsAligned(needed_size, min_alignment));
     if (size > kMaxAllowedMallocSize || needed_size > kMaxAllowedMallocSize ||
         size > max_user_defined_malloc_size) {
@@ -539,8 +558,7 @@ struct Allocator {
 
     uptr alloc_beg = reinterpret_cast<uptr>(allocated);
     uptr alloc_end = alloc_beg + needed_size;
-    uptr beg_plus_redzone = alloc_beg + rz_size;
-    uptr user_beg = beg_plus_redzone;
+    uptr user_beg = alloc_beg + rz_size;
     if (!IsAligned(user_beg, alignment))
       user_beg = RoundUpTo(user_beg, alignment);
     uptr user_end = user_beg + size;
@@ -548,24 +566,8 @@ struct Allocator {
     uptr chunk_beg = user_beg - kChunkHeaderSize;
     AsanChunk *m = reinterpret_cast<AsanChunk *>(chunk_beg);
     m->alloc_type = alloc_type;
-    m->rz_log = rz_log;
-    m->from_memalign = user_beg != beg_plus_redzone;
-    if (alloc_beg != chunk_beg) {
-      CHECK_LE(alloc_beg + 2 * sizeof(uptr), chunk_beg);
-      reinterpret_cast<uptr *>(alloc_beg)[0] = kAllocBegMagic;
-      reinterpret_cast<uptr *>(alloc_beg)[1] = chunk_beg;
-    }
-    if (using_primary_allocator) {
-      CHECK(size);
-      m->user_requested_size = size;
-      CHECK(allocator.FromPrimary(allocated));
-    } else {
-      CHECK(!allocator.FromPrimary(allocated));
-      m->user_requested_size = SizeClassMap::kMaxSize;
-      uptr *meta = reinterpret_cast<uptr *>(allocator.GetMetaData(allocated));
-      meta[0] = size;
-      meta[1] = chunk_beg;
-    }
+    CHECK(size);
+    m->SetUsedSize(size);
     m->user_requested_alignment_log = user_requested_alignment_log;
 
     m->SetAllocContext(t ? t->tid() : 0, StackDepotPut(*stack));
@@ -602,6 +604,10 @@ struct Allocator {
 #endif
     // Must be the last mutation of metadata in this function.
     atomic_store(&m->chunk_state, CHUNK_ALLOCATED, memory_order_release);
+    if (alloc_beg != chunk_beg) {
+      CHECK_LE(alloc_beg + sizeof(LargeChunkHeader), chunk_beg);
+      reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Set(m);
+    }
     ASAN_MALLOC_HOOK(res, size);
     return res;
   }
@@ -769,19 +775,12 @@ struct Allocator {
   AsanChunk *GetAsanChunk(void *alloc_beg) {
     if (!alloc_beg)
       return nullptr;
-    AsanChunk *p = nullptr;
-    if (!allocator.FromPrimary(alloc_beg)) {
-      uptr *meta = reinterpret_cast<uptr *>(allocator.GetMetaData(alloc_beg));
-      p = reinterpret_cast<AsanChunk *>(meta[1]);
-    } else {
-      uptr *alloc_magic = reinterpret_cast<uptr *>(alloc_beg);
-      if (alloc_magic[0] == kAllocBegMagic)
-        p = reinterpret_cast<AsanChunk *>(alloc_magic[1]);
-      else
-        p = reinterpret_cast<AsanChunk *>(alloc_beg);
+    AsanChunk *p = reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Get();
+    if (!p) {
+      if (!allocator.FromPrimary(alloc_beg))
+        return nullptr;
+      p = reinterpret_cast<AsanChunk *>(alloc_beg);
     }
-    if (!p)
-      return nullptr;
     u8 state = atomic_load(&p->chunk_state, memory_order_relaxed);
     // It does not guaranty that Chunk is initialized, but it's
     // definitely not for any other value.
@@ -1111,17 +1110,16 @@ void GetAllocatorGlobalRange(uptr *begin, uptr *end) {
   *end = *begin + sizeof(__asan::get_allocator());
 }
 
-uptr PointsIntoChunk(void* p) {
+uptr PointsIntoChunk(void *p) {
   uptr addr = reinterpret_cast<uptr>(p);
   __asan::AsanChunk *m = __asan::instance.GetAsanChunkByAddrFastLocked(addr);
   if (!m || atomic_load(&m->chunk_state, memory_order_acquire) !=
                 __asan::CHUNK_ALLOCATED)
     return 0;
   uptr chunk = m->Beg();
-  if (m->AddrIsInside(addr, /*locked_version=*/true))
+  if (m->AddrIsInside(addr))
     return chunk;
-  if (IsSpecialCaseOfOperatorNew0(chunk, m->UsedSize(/*locked_version*/ true),
-                                  addr))
+  if (IsSpecialCaseOfOperatorNew0(chunk, m->UsedSize(), addr))
     return chunk;
   return 0;
 }
@@ -1156,7 +1154,7 @@ void LsanMetadata::set_tag(ChunkTag value) {
 
 uptr LsanMetadata::requested_size() const {
   __asan::AsanChunk *m = reinterpret_cast<__asan::AsanChunk *>(metadata_);
-  return m->UsedSize(/*locked_version=*/true);
+  return m->UsedSize();
 }
 
 u32 LsanMetadata::stack_trace_id() const {
@@ -1174,16 +1172,16 @@ void ForEachChunk(ForEachChunkCallback callback, void *arg) {
 IgnoreObjectResult IgnoreObjectLocked(const void *p) {
   uptr addr = reinterpret_cast<uptr>(p);
   __asan::AsanChunk *m = __asan::instance.GetAsanChunkByAddr(addr);
-  if (!m) return kIgnoreObjectInvalid;
-  if ((atomic_load(&m->chunk_state, memory_order_acquire) ==
-       __asan::CHUNK_ALLOCATED) &&
-      m->AddrIsInside(addr)) {
-    if (m->lsan_tag == kIgnored)
-      return kIgnoreObjectAlreadyIgnored;
-    m->lsan_tag = __lsan::kIgnored;
-    return kIgnoreObjectSuccess;
+  if (!m ||
+      (atomic_load(&m->chunk_state, memory_order_acquire) !=
+       __asan::CHUNK_ALLOCATED) ||
+      !m->AddrIsInside(addr)) {
+    return kIgnoreObjectInvalid;
   }
-  return kIgnoreObjectInvalid;
+  if (m->lsan_tag == kIgnored)
+    return kIgnoreObjectAlreadyIgnored;
+  m->lsan_tag = __lsan::kIgnored;
+  return kIgnoreObjectSuccess;
 }
 }  // namespace __lsan
 

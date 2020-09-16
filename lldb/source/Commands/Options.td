@@ -717,6 +717,12 @@ let Command = "script add" in {
     "LLDB event system.">;
 }
 
+let Command = "script" in {
+  def script_language : Option<"language", "l">,
+    EnumArg<"ScriptLang", "ScriptOptionEnum()">, Desc<"Specify the scripting "
+    " language. If none is specific the default scripting language is used.">;
+}
+
 let Command = "source info" in {
   def source_info_count : Option<"count", "c">, Arg<"Count">,
     Desc<"The number of line entries to display.">;

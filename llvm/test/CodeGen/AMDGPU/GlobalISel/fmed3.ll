@@ -105,8 +105,18 @@ define amdgpu_kernel void @v_test_no_global_nnans_med3_f32_pat0_srcmod0(float ad
 ; SI-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64
 ; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_sub_f32_e32 v2, 0x80000000, v2
+; SI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; SI-NEXT:    s_waitcnt vmcnt(1)
+; SI-NEXT:    v_mul_f32_e32 v3, 1.0, v3
+; SI-NEXT:    v_min_f32_e32 v5, v2, v3
+; SI-NEXT:    v_max_f32_e32 v2, v2, v3
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_med3_f32 v2, v2, v3, v4
+; SI-NEXT:    v_mul_f32_e32 v3, 1.0, v4
+; SI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; SI-NEXT:    v_min_f32_e32 v2, v2, v3
+; SI-NEXT:    v_mul_f32_e32 v3, 1.0, v5
+; SI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; SI-NEXT:    v_max_f32_e32 v2, v3, v2
 ; SI-NEXT:    s_mov_b64 s[2:3], s[10:11]
 ; SI-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-NEXT:    s_endpgm
@@ -114,32 +124,42 @@ define amdgpu_kernel void @v_test_no_global_nnans_med3_f32_pat0_srcmod0(float ad
 ; VI-LABEL: v_test_no_global_nnans_med3_f32_pat0_srcmod0:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
-; VI-NEXT:    v_lshlrev_b32_e32 v8, 2, v0
+; VI-NEXT:    v_lshlrev_b32_e32 v6, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
-; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v8
+; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v6
 ; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    v_add_u32_e32 v2, vcc, v2, v8
+; VI-NEXT:    v_add_u32_e32 v2, vcc, v2, v6
 ; VI-NEXT:    v_mov_b32_e32 v4, s6
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-NEXT:    v_mov_b32_e32 v5, s7
-; VI-NEXT:    v_add_u32_e32 v4, vcc, v4, v8
+; VI-NEXT:    v_add_u32_e32 v4, vcc, v4, v6
 ; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v5, vcc
-; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    flat_load_dword v1, v[2:3]
-; VI-NEXT:    flat_load_dword v2, v[4:5]
-; VI-NEXT:    v_mov_b32_e32 v7, s1
-; VI-NEXT:    v_mov_b32_e32 v6, s0
-; VI-NEXT:    v_add_u32_e32 v6, vcc, v6, v8
-; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v7, vcc
+; VI-NEXT:    flat_load_dword v7, v[0:1]
+; VI-NEXT:    flat_load_dword v2, v[2:3]
+; VI-NEXT:    flat_load_dword v3, v[4:5]
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v6
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
-; VI-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
+; VI-NEXT:    v_sub_f32_e32 v4, 0x80000000, v7
+; VI-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
+; VI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; VI-NEXT:    v_mul_f32_e32 v4, 1.0, v4
+; VI-NEXT:    v_min_f32_e32 v5, v4, v2
+; VI-NEXT:    v_max_f32_e32 v2, v4, v2
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_med3_f32 v0, v0, v1, v2
-; VI-NEXT:    flat_store_dword v[6:7], v0
+; VI-NEXT:    v_mul_f32_e32 v3, 1.0, v3
+; VI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; VI-NEXT:    v_min_f32_e32 v2, v2, v3
+; VI-NEXT:    v_mul_f32_e32 v3, 1.0, v5
+; VI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; VI-NEXT:    v_max_f32_e32 v2, v3, v2
+; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: v_test_no_global_nnans_med3_f32_pat0_srcmod0:
@@ -152,8 +172,18 @@ define amdgpu_kernel void @v_test_no_global_nnans_med3_f32_pat0_srcmod0(float ad
 ; GFX9-NEXT:    global_load_dword v3, v0, s[6:7]
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    v_sub_f32_e32 v1, 0x80000000, v1
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX9-NEXT:    v_min_f32_e32 v4, v1, v2
+; GFX9-NEXT:    v_max_f32_e32 v1, v1, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_med3_f32 v1, v1, v2, v3
+; GFX9-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX9-NEXT:    v_min_f32_e32 v1, v1, v3
+; GFX9-NEXT:    v_max_f32_e32 v2, v4, v4
+; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX9-NEXT:    v_max_f32_e32 v1, v2, v1
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -396,7 +426,13 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(float addrspace(1)* %out,
 ; SI-NEXT:    v_add_f32_e32 v3, 2.0, v3
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_add_f32_e32 v4, 4.0, v4
-; SI-NEXT:    v_med3_f32 v2, v2, v3, v4
+; SI-NEXT:    v_min_f32_e32 v5, v2, v3
+; SI-NEXT:    v_max_f32_e32 v2, v2, v3
+; SI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; SI-NEXT:    v_min_f32_e32 v2, v2, v4
+; SI-NEXT:    v_mul_f32_e32 v3, 1.0, v5
+; SI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; SI-NEXT:    v_max_f32_e32 v2, v3, v2
 ; SI-NEXT:    s_mov_b64 s[2:3], s[10:11]
 ; SI-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-NEXT:    s_endpgm
@@ -429,9 +465,15 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(float addrspace(1)* %out,
 ; VI-NEXT:    v_add_f32_e32 v4, 1.0, v7
 ; VI-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
 ; VI-NEXT:    v_add_f32_e32 v2, 2.0, v2
+; VI-NEXT:    v_min_f32_e32 v5, v4, v2
+; VI-NEXT:    v_max_f32_e32 v2, v4, v2
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_add_f32_e32 v3, 4.0, v3
-; VI-NEXT:    v_med3_f32 v2, v4, v2, v3
+; VI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; VI-NEXT:    v_min_f32_e32 v2, v2, v3
+; VI-NEXT:    v_mul_f32_e32 v3, 1.0, v5
+; VI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; VI-NEXT:    v_max_f32_e32 v2, v3, v2
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
@@ -447,9 +489,15 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(float addrspace(1)* %out,
 ; GFX9-NEXT:    v_add_f32_e32 v1, 1.0, v1
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_add_f32_e32 v2, 2.0, v2
+; GFX9-NEXT:    v_min_f32_e32 v4, v1, v2
+; GFX9-NEXT:    v_max_f32_e32 v1, v1, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_add_f32_e32 v3, 4.0, v3
-; GFX9-NEXT:    v_med3_f32 v1, v1, v2, v3
+; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX9-NEXT:    v_min_f32_e32 v1, v1, v3
+; GFX9-NEXT:    v_max_f32_e32 v2, v4, v4
+; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX9-NEXT:    v_max_f32_e32 v1, v2, v1
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -495,13 +543,20 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(float addrspace(
 ; SI-NEXT:    s_mov_b32 s3, s11
 ; SI-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; SI-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64
+; SI-NEXT:    s_waitcnt vmcnt(2)
+; SI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
 ; SI-NEXT:    s_waitcnt vmcnt(1)
+; SI-NEXT:    v_mul_f32_e32 v3, 1.0, v3
 ; SI-NEXT:    v_min_f32_e32 v5, v2, v3
 ; SI-NEXT:    v_max_f32_e32 v2, v2, v3
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_mul_f32_e32 v3, 1.0, v4
 ; SI-NEXT:    buffer_store_dword v5, off, s[0:3], 0
-; SI-NEXT:    s_waitcnt vmcnt(1)
-; SI-NEXT:    v_min_f32_e32 v2, v2, v4
-; SI-NEXT:    v_max_f32_e32 v2, v5, v2
+; SI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; SI-NEXT:    v_min_f32_e32 v2, v2, v3
+; SI-NEXT:    v_mul_f32_e32 v3, 1.0, v5
+; SI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; SI-NEXT:    v_max_f32_e32 v2, v3, v2
 ; SI-NEXT:    s_mov_b64 s[2:3], s[10:11]
 ; SI-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-NEXT:    s_endpgm
@@ -530,13 +585,20 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(float addrspace(
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v6
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; VI-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
+; VI-NEXT:    v_mul_f32_e32 v4, 1.0, v7
 ; VI-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; VI-NEXT:    v_min_f32_e32 v4, v7, v2
-; VI-NEXT:    v_max_f32_e32 v2, v7, v2
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_min_f32_e32 v2, v2, v3
+; VI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; VI-NEXT:    v_min_f32_e32 v5, v4, v2
 ; VI-NEXT:    v_max_f32_e32 v2, v4, v2
-; VI-NEXT:    flat_store_dword v[0:1], v4
+; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_mul_f32_e32 v3, 1.0, v3
+; VI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; VI-NEXT:    v_min_f32_e32 v2, v2, v3
+; VI-NEXT:    v_mul_f32_e32 v3, 1.0, v5
+; VI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; VI-NEXT:    v_max_f32_e32 v2, v3, v2
+; VI-NEXT:    flat_store_dword v[0:1], v5
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
@@ -548,13 +610,20 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(float addrspace(
 ; GFX9-NEXT:    global_load_dword v1, v0, s[2:3]
 ; GFX9-NEXT:    global_load_dword v2, v0, s[4:5]
 ; GFX9-NEXT:    global_load_dword v3, v0, s[6:7]
+; GFX9-NEXT:    s_waitcnt vmcnt(2)
+; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_max_f32_e32 v2, v2, v2
 ; GFX9-NEXT:    v_min_f32_e32 v4, v1, v2
 ; GFX9-NEXT:    v_max_f32_e32 v1, v1, v2
 ; GFX9-NEXT:    global_store_dword v[0:1], v4, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
 ; GFX9-NEXT:    v_min_f32_e32 v1, v1, v3
-; GFX9-NEXT:    v_max_f32_e32 v1, v4, v1
+; GFX9-NEXT:    v_max_f32_e32 v2, v4, v4
+; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX9-NEXT:    v_max_f32_e32 v1, v2, v1
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
