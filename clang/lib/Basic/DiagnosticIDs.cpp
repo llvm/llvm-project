@@ -42,6 +42,7 @@ struct StaticDiagInfoRec {
   unsigned SFINAE : 2;
   unsigned WarnNoWerror : 1;
   unsigned WarnShowInSystemHeader : 1;
+  unsigned Deferrable : 1;
   unsigned Category : 6;
 
   uint16_t OptionGroupIndex;
@@ -96,12 +97,10 @@ VALIDATE_DIAG_SIZE(REFACTORING)
 
 static const StaticDiagInfoRec StaticDiagInfo[] = {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, CATEGORY)                                        \
-  {                                                                            \
-    diag::ENUM, DEFAULT_SEVERITY, CLASS, DiagnosticIDs::SFINAE, NOWERROR,      \
-        SHOWINSYSHEADER, CATEGORY, GROUP, STR_SIZE(DESC, uint16_t), DESC       \
-  }                                                                            \
-  ,
+             SHOWINSYSHEADER, DEFERRABLE, CATEGORY)                            \
+  {diag::ENUM, DEFAULT_SEVERITY,         CLASS,      DiagnosticIDs::SFINAE,    \
+   NOWERROR,   SHOWINSYSHEADER,          DEFERRABLE, CATEGORY,                 \
+   GROUP,      STR_SIZE(DESC, uint16_t), DESC},
 #include "clang/Basic/DiagnosticCommonKinds.inc"
 #include "clang/Basic/DiagnosticDriverKinds.inc"
 #include "clang/Basic/DiagnosticFrontendKinds.inc"
@@ -251,6 +250,12 @@ DiagnosticIDs::getDiagnosticSFINAEResponse(unsigned DiagID) {
   if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
     return static_cast<DiagnosticIDs::SFINAEResponse>(Info->SFINAE);
   return SFINAE_Report;
+}
+
+bool DiagnosticIDs::isDeferrable(unsigned DiagID) {
+  if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
+    return Info->Deferrable;
+  return false;
 }
 
 /// getBuiltinDiagClass - Return the class field of the diagnostic.
