@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -dse -S < %s | FileCheck %s
+; RUN: opt -basic-aa -dse -enable-dse-memoryssa -S < %s | FileCheck %s
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
