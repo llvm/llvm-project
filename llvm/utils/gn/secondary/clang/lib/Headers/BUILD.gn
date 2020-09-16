@@ -159,6 +159,7 @@ copy("Headers") {
     "openmp_wrappers/__clang_openmp_device_functions.h",
     "openmp_wrappers/cmath",
     "openmp_wrappers/complex.h",
+    "openmp_wrappers/complex_cmath.h",
     "openmp_wrappers/math.h",
     "pconfigintrin.h",
     "pkuintrin.h",
