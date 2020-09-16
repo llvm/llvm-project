@@ -3796,15 +3796,30 @@ static Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   if (!AllowRefinement && canCreatePoison(cast<Operator>(I)))
     return nullptr;
 
+  // The simplification queries below may return the original value. Consider:
+  //   %div = udiv i32 %arg, %arg2
+  //   %mul = mul nsw i32 %div, %arg2
+  //   %cmp = icmp eq i32 %mul, %arg
+  //   %sel = select i1 %cmp, i32 %div, i32 undef
+  // Replacing %arg by %mul, %div becomes "udiv i32 %mul, %arg2", which
+  // simplifies back to %arg. This can only happen because %mul does not
+  // dominate %div. To ensure a consistent return value contract, we make sure
+  // that this case returns nullptr as well.
+  auto PreventSelfSimplify = [V](Value *Simplified) {
+    return Simplified != V ? Simplified : nullptr;
+  };
+
   // If this is a binary operator, try to simplify it with the replaced op.
   if (auto *B = dyn_cast<BinaryOperator>(I)) {
     if (MaxRecurse) {
       if (B->getOperand(0) == Op)
-        return SimplifyBinOp(B->getOpcode(), RepOp, B->getOperand(1), Q,
-                             MaxRecurse - 1);
+        return PreventSelfSimplify(SimplifyBinOp(B->getOpcode(), RepOp,
+                                                 B->getOperand(1), Q,
+                                                 MaxRecurse - 1));
       if (B->getOperand(1) == Op)
-        return SimplifyBinOp(B->getOpcode(), B->getOperand(0), RepOp, Q,
-                             MaxRecurse - 1);
+        return PreventSelfSimplify(SimplifyBinOp(B->getOpcode(),
+                                                 B->getOperand(0), RepOp, Q,
+                                                 MaxRecurse - 1));
     }
   }
 
@@ -3812,11 +3827,13 @@ static Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   if (CmpInst *C = dyn_cast<CmpInst>(I)) {
     if (MaxRecurse) {
       if (C->getOperand(0) == Op)
-        return SimplifyCmpInst(C->getPredicate(), RepOp, C->getOperand(1), Q,
-                               MaxRecurse - 1);
+        return PreventSelfSimplify(SimplifyCmpInst(C->getPredicate(), RepOp,
+                                                   C->getOperand(1), Q,
+                                                   MaxRecurse - 1));
       if (C->getOperand(1) == Op)
-        return SimplifyCmpInst(C->getPredicate(), C->getOperand(0), RepOp, Q,
-                               MaxRecurse - 1);
+        return PreventSelfSimplify(SimplifyCmpInst(C->getPredicate(),
+                                                   C->getOperand(0), RepOp, Q,
+                                                   MaxRecurse - 1));
     }
   }
 
@@ -3826,8 +3843,8 @@ static Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
       SmallVector<Value *, 8> NewOps(GEP->getNumOperands());
       transform(GEP->operands(), NewOps.begin(),
                 [&](Value *V) { return V == Op ? RepOp : V; });
-      return SimplifyGEPInst(GEP->getSourceElementType(), NewOps, Q,
-                             MaxRecurse - 1);
+      return PreventSelfSimplify(SimplifyGEPInst(GEP->getSourceElementType(),
+                                                 NewOps, Q, MaxRecurse - 1));
     }
   }
 
