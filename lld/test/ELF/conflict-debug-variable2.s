@@ -7,14 +7,14 @@
 # INPUT-NEXT:    DW_AT_name [DW_FORM_strp]       ( .debug_str[0x00000027] = "foo")
 # INPUT-NEXT:    DW_AT_type [DW_FORM_ref4]       (cu + 0x0033 => {0x00000033} "int")
 # INPUT-NEXT:    DW_AT_external [DW_FORM_flag_present]   (true)
-# INPUT-NEXT:    DW_AT_decl_file [DW_FORM_data1] ("/home{{(/|\\)}}path{{(/|\\)}}test.c")
+# INPUT-NEXT:    DW_AT_decl_file [DW_FORM_data1] ("/home/path/test.c")
 # INPUT-NEXT:    DW_AT_decl_line [DW_FORM_data1] (1)
 # INPUT-NEXT:    DW_AT_location [DW_FORM_exprloc]        (DW_OP_addr 0x0)
 # INPUT:       DW_TAG_variable
 # INPUT-NEXT:    DW_AT_name [DW_FORM_strp]       ( .debug_str[0x0000002f] = "bar")
 # INPUT-NEXT:    DW_AT_type [DW_FORM_ref4]       (cu + 0x0033 => {0x00000033} "int")
 # INPUT-NEXT:    DW_AT_external [DW_FORM_flag_present]   (true)
-# INPUT-NEXT:    DW_AT_decl_file [DW_FORM_data1] ("/home{{(/|\\)}}path{{(/|\\)}}test.c")
+# INPUT-NEXT:    DW_AT_decl_file [DW_FORM_data1] ("/home/path/test.c")
 # INPUT-NEXT:    DW_AT_decl_line [DW_FORM_data1] (2)
 # INPUT-NEXT:    DW_AT_location [DW_FORM_exprloc]        (DW_OP_addr 0x0)
 
