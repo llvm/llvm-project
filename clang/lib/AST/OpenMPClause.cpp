@@ -2281,7 +2281,7 @@ OMPTraitInfo::OMPTraitInfo(StringRef MangledName) {
         Property.RawString = PropRestPair.first;
         Property.Kind = getOpenMPContextTraitPropertyKind(
             Set.Kind, Selector.Kind, PropRestPair.first);
-        MangledName = PropRestPair.second;
+        MangledName = MangledName.drop_front(PropRestPair.first.size());
       } while (true);
     } while (true);
   } while (true);
