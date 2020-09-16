@@ -2490,7 +2490,8 @@ let DecoderMethod = "DecodeForVMRSandVMSR" in {
                                 "vmrs", "\t$Rt, fpcxts", []>;
  }
 
- let Predicates = [HasV8_1MMainline, HasMVEInt] in {
+ let Predicates = [HasV8_1MMainline, HasMVEInt],
+                   D=MVEDomain, validForTailPredication=1 in {
    // System level VPR/P0 -> GPR
    let Uses = [VPR] in
    def VMRS_VPR : MovFromVFP<0b1100 /* vpr */, (outs GPR:$Rt), (ins),
@@ -2845,12 +2846,19 @@ let Defs = [FPSCR] in {
   }
 }
 
-let Predicates = [HasV8_1MMainline, HasMVEInt] in {
+let Predicates = [HasV8_1MMainline, HasMVEInt],
+                  D=MVEDomain, validForTailPredication=1 in {
   let Uses = [VPR] in {
     defm VSTR_VPR          : vfp_vstrldr_sysreg<0b0,0b1100, "vpr">;
   }
   defm VSTR_P0             : vfp_vstrldr_sysreg<0b0,0b1101, "p0",
                                                 (outs), (ins VCCR:$P0)>;
+
+  let Defs = [VPR] in {
+    defm VLDR_VPR          : vfp_vstrldr_sysreg<0b1,0b1100, "vpr">;
+  }
+  defm VLDR_P0             : vfp_vstrldr_sysreg<0b1,0b1101, "p0",
+                                                (outs VCCR:$P0), (ins)>;
 }
 
 let Uses = [FPSCR] in {
@@ -2861,12 +2869,4 @@ let Uses = [FPSCR] in {
     defm VLDR_FPCXTNS      : vfp_vstrldr_sysreg<0b1,0b1110, "fpcxtns">;
     defm VLDR_FPCXTS       : vfp_vstrldr_sysreg<0b1,0b1111, "fpcxts">;
   }
-}
-
-let Predicates = [HasV8_1MMainline, HasMVEInt] in {
-  let Defs = [VPR] in {
-    defm VLDR_VPR          : vfp_vstrldr_sysreg<0b1,0b1100, "vpr">;
-  }
-  defm VLDR_P0             : vfp_vstrldr_sysreg<0b1,0b1101, "p0",
-                                                (outs VCCR:$P0), (ins)>;
 }
