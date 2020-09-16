@@ -311,6 +311,9 @@ public:
   bool applyCombineTruncOfShl(MachineInstr &MI,
                               std::pair<Register, Register> &MatchInfo);
 
+  /// Transform G_MUL(x, -1) to G_SUB(0, x)
+  bool applyCombineMulByNegativeOne(MachineInstr &MI);
+
   /// Return true if any explicit use operand on \p MI is defined by a
   /// G_IMPLICIT_DEF.
   bool matchAnyExplicitUseIsUndef(MachineInstr &MI);

@@ -2008,6 +2008,19 @@ bool CombinerHelper::applyCombineExtOfExt(
   return false;
 }
 
+bool CombinerHelper::applyCombineMulByNegativeOne(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_MUL && "Expected a G_MUL");
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildSub(DstReg, Builder.buildConstant(DstTy, 0), SrcReg,
+                   MI.getFlags());
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::matchCombineFNegOfFNeg(MachineInstr &MI, Register &Reg) {
   assert(MI.getOpcode() == TargetOpcode::G_FNEG && "Expected a G_FNEG");
   Register SrcReg = MI.getOperand(1).getReg();
