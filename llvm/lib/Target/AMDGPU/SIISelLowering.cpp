@@ -1121,7 +1121,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_buffer_atomic_fadd: {
     SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
-    Info.opc = ISD::INTRINSIC_VOID;
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getOperand(0)->getType());
     Info.ptrVal = MFI->getBufferPSV(
       *MF.getSubtarget<GCNSubtarget>().getInstrInfo(),
@@ -1132,18 +1132,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     const ConstantInt *Vol = dyn_cast<ConstantInt>(CI.getOperand(4));
     if (!Vol || !Vol->isZero())
       Info.flags |= MachineMemOperand::MOVolatile;
-
-    return true;
-  }
-  case Intrinsic::amdgcn_global_atomic_fadd: {
-    Info.opc = ISD::INTRINSIC_VOID;
-    Info.memVT = MVT::getVT(CI.getOperand(0)->getType()
-                            ->getPointerElementType());
-    Info.ptrVal = CI.getOperand(0);
-    Info.align.reset();
-
-    // FIXME: Should report an atomic ordering here.
-    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
     return true;
   }
@@ -1168,6 +1156,17 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align.reset();
     Info.flags = MachineMemOperand::MOLoad |
                  MachineMemOperand::MOStore |
+                 MachineMemOperand::MOVolatile;
+    return true;
+  }
+  case Intrinsic::amdgcn_global_atomic_fadd: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(CI.getType());
+    Info.ptrVal = CI.getOperand(0);
+    Info.align.reset();
+    Info.flags = MachineMemOperand::MOLoad |
+                 MachineMemOperand::MOStore |
+                 MachineMemOperand::MODereferenceable |
                  MachineMemOperand::MOVolatile;
     return true;
   }
@@ -7034,7 +7033,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_buffer_atomic_umax:
   case Intrinsic::amdgcn_buffer_atomic_and:
   case Intrinsic::amdgcn_buffer_atomic_or:
-  case Intrinsic::amdgcn_buffer_atomic_xor: {
+  case Intrinsic::amdgcn_buffer_atomic_xor:
+  case Intrinsic::amdgcn_buffer_atomic_fadd: {
     unsigned Slc = cast<ConstantSDNode>(Op.getOperand(6))->getZExtValue();
     unsigned IdxEn = 1;
     if (auto Idx = dyn_cast<ConstantSDNode>(Op.getOperand(4)))
@@ -7094,6 +7094,17 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     case Intrinsic::amdgcn_buffer_atomic_xor:
       Opcode = AMDGPUISD::BUFFER_ATOMIC_XOR;
       break;
+    case Intrinsic::amdgcn_buffer_atomic_fadd:
+      if (!Op.getValue(0).use_empty()) {
+        DiagnosticInfoUnsupported
+          NoFpRet(DAG.getMachineFunction().getFunction(),
+                  "return versions of fp atomics not supported",
+                  DL.getDebugLoc(), DS_Error);
+        DAG.getContext()->diagnose(NoFpRet);
+        return SDValue();
+      }
+      Opcode = AMDGPUISD::BUFFER_ATOMIC_FADD;
+      break;
     default:
       llvm_unreachable("unhandled atomic opcode");
     }
@@ -7101,6 +7112,10 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return DAG.getMemIntrinsicNode(Opcode, DL, Op->getVTList(), Ops, VT,
                                    M->getMemOperand());
   }
+  case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
+    return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FADD);
+  case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
+    return lowerStructBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FADD);
   case Intrinsic::amdgcn_raw_buffer_atomic_swap:
     return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_SWAP);
   case Intrinsic::amdgcn_raw_buffer_atomic_add:
@@ -7225,6 +7240,27 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 
     return DAG.getMemIntrinsicNode(AMDGPUISD::BUFFER_ATOMIC_CMPSWAP, DL,
                                    Op->getVTList(), Ops, VT, M->getMemOperand());
+  }
+  case Intrinsic::amdgcn_global_atomic_fadd: {
+    if (!Op.getValue(0).use_empty()) {
+      DiagnosticInfoUnsupported
+        NoFpRet(DAG.getMachineFunction().getFunction(),
+                "return versions of fp atomics not supported",
+                DL.getDebugLoc(), DS_Error);
+      DAG.getContext()->diagnose(NoFpRet);
+      return SDValue();
+    }
+    MemSDNode *M = cast<MemSDNode>(Op);
+    SDValue Ops[] = {
+      M->getOperand(0), // Chain
+      M->getOperand(2), // Ptr
+      M->getOperand(3)  // Value
+    };
+
+    EVT VT = Op.getOperand(3).getValueType();
+    return DAG.getAtomic(ISD::ATOMIC_LOAD_FADD, DL, VT,
+                         DAG.getVTList(VT, MVT::Other), Ops,
+                         M->getMemOperand());
   }
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
@@ -7546,39 +7582,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     return DAG.getMemIntrinsicNode(Opc, DL, Op->getVTList(), Ops,
                                    M->getMemoryVT(), M->getMemOperand());
-  }
-  case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
-    return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FADD);
-  case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
-    return lowerStructBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FADD);
-  case Intrinsic::amdgcn_buffer_atomic_fadd: {
-    unsigned Slc = cast<ConstantSDNode>(Op.getOperand(6))->getZExtValue();
-    unsigned IdxEn = 1;
-    if (auto Idx = dyn_cast<ConstantSDNode>(Op.getOperand(4)))
-      IdxEn = Idx->getZExtValue() != 0;
-    SDValue Ops[] = {
-      Chain,
-      Op.getOperand(2), // vdata
-      Op.getOperand(3), // rsrc
-      Op.getOperand(4), // vindex
-      SDValue(),        // voffset -- will be set by setBufferOffsets
-      SDValue(),        // soffset -- will be set by setBufferOffsets
-      SDValue(),        // offset -- will be set by setBufferOffsets
-      DAG.getTargetConstant(Slc << 1, DL, MVT::i32), // cachepolicy
-      DAG.getTargetConstant(IdxEn, DL, MVT::i1), // idxen
-    };
-    unsigned Offset = setBufferOffsets(Op.getOperand(5), DAG, &Ops[4]);
-    // We don't know the offset if vindex is non-zero, so clear it.
-    if (IdxEn)
-      Offset = 0;
-    EVT VT = Op.getOperand(2).getValueType();
-
-    auto *M = cast<MemSDNode>(Op);
-    M->getMemOperand()->setOffset(Offset);
-
-    return DAG.getMemIntrinsicNode(AMDGPUISD::BUFFER_ATOMIC_FADD, DL,
-                                   Op->getVTList(), Ops, VT,
-                                   M->getMemOperand());
   }
   case Intrinsic::amdgcn_end_cf:
     return SDValue(DAG.getMachineNode(AMDGPU::SI_END_CF, DL, MVT::Other,
