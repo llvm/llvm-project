@@ -663,7 +663,16 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
   }
 
   // The operand is an expression.
-  return BuildCXXTypeId(TypeInfoType, OpLoc, (Expr*)TyOrExpr, RParenLoc);
+  ExprResult Result =
+      BuildCXXTypeId(TypeInfoType, OpLoc, (Expr *)TyOrExpr, RParenLoc);
+
+  if (!getLangOpts().RTTIData && !Result.isInvalid())
+    if (auto *CTE = dyn_cast<CXXTypeidExpr>(Result.get()))
+      if (CTE->isPotentiallyEvaluated() && !CTE->isMostDerived(Context))
+        Diag(OpLoc, diag::warn_no_typeid_with_rtti_disabled)
+            << (getDiagnostics().getDiagnosticOptions().getFormat() ==
+                DiagnosticOptions::MSVC);
+  return Result;
 }
 
 /// Grabs __declspec(uuid()) off a type, or returns 0 if we cannot resolve to
