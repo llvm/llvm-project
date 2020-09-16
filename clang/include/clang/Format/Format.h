@@ -1860,7 +1860,7 @@ struct FormatStyle {
   bool ObjCSpaceAfterProperty;
 
   /// Break parameters list into lines when there is nested block
-  /// parameters in a fuction call.
+  /// parameters in a function call.
   /// \code
   ///   false:
   ///    - (void)_aMethod
