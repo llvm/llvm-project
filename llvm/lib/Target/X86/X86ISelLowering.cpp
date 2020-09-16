@@ -35913,9 +35913,9 @@ static SDValue combineX86ShufflesRecursively(
   SDValue Op = SrcOps[SrcOpIndex];
   Op = peekThroughOneUseBitcasts(Op);
 
-  MVT VT = Op.getSimpleValueType();
-  if (!VT.isVector())
-    return SDValue(); // Bail if we hit a non-vector.
+  EVT VT = Op.getValueType();
+  if (!VT.isVector() || !VT.isSimple())
+    return SDValue(); // Bail if we hit a non-simple non-vector.
 
   assert(VT.getSizeInBits() == RootSizeInBits &&
          "Can only combine shuffles of the same vector register size.");
@@ -36718,6 +36718,27 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
       }
     }
 
+    // Pull subvector inserts into undef through VZEXT_MOVL by making it an
+    // insert into a zero vector. This helps get VZEXT_MOVL closer to
+    // scalar_to_vectors where 256/512 are canonicalized to an insert and a
+    // 128-bit scalar_to_vector. This reduces the number of isel patterns.
+    if (!DCI.isBeforeLegalizeOps() && N0.hasOneUse()) {
+      SDValue V = peekThroughOneUseBitcasts(N0);
+
+      if (V.getOpcode() == ISD::INSERT_SUBVECTOR && V.getOperand(0).isUndef() &&
+          isNullConstant(V.getOperand(2))) {
+        SDValue In = V.getOperand(1);
+        MVT SubVT = MVT::getVectorVT(VT.getVectorElementType(),
+                                     In.getValueSizeInBits() /
+                                         VT.getScalarSizeInBits());
+        In = DAG.getBitcast(SubVT, In);
+        SDValue Movl = DAG.getNode(X86ISD::VZEXT_MOVL, DL, SubVT, In);
+        return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
+                           getZeroVector(VT, Subtarget, DAG, DL), Movl,
+                           V.getOperand(2));
+      }
+    }
+
     return SDValue();
   }
   case X86ISD::BLENDI: {
@@ -37396,30 +37417,9 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     // TODO - merge this into combineX86ShufflesRecursively.
     APInt KnownUndef, KnownZero;
     APInt DemandedElts = APInt::getAllOnesValue(VT.getVectorNumElements());
-    if (TLI.SimplifyDemandedVectorElts(Op, DemandedElts, KnownUndef, KnownZero, DCI))
+    if (TLI.SimplifyDemandedVectorElts(Op, DemandedElts, KnownUndef, KnownZero,
+                                       DCI))
       return SDValue(N, 0);
-  }
-
-  // Pull subvector inserts into undef through VZEXT_MOVL by making it an
-  // insert into a zero vector. This helps get VZEXT_MOVL closer to
-  // scalar_to_vectors where 256/512 are canonicalized to an insert and a
-  // 128-bit scalar_to_vector. This reduces the number of isel patterns.
-  if (N->getOpcode() == X86ISD::VZEXT_MOVL && !DCI.isBeforeLegalizeOps() &&
-      N->getOperand(0).hasOneUse()) {
-    SDValue V = peekThroughOneUseBitcasts(N->getOperand(0));
-
-    if (V.getOpcode() == ISD::INSERT_SUBVECTOR &&
-        V.getOperand(0).isUndef() && isNullConstant(V.getOperand(2))) {
-      SDValue In = V.getOperand(1);
-      MVT SubVT =
-          MVT::getVectorVT(VT.getSimpleVT().getVectorElementType(),
-                           In.getValueSizeInBits() / VT.getScalarSizeInBits());
-      In = DAG.getBitcast(SubVT, In);
-      SDValue Movl = DAG.getNode(X86ISD::VZEXT_MOVL, dl, SubVT, In);
-      return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, VT,
-                         getZeroVector(VT.getSimpleVT(), Subtarget, DAG, dl),
-                         Movl, V.getOperand(2));
-    }
   }
 
   return SDValue();
