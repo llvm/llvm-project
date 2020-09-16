@@ -5871,6 +5871,7 @@ Sema::OMPDeclareVariantScope::OMPDeclareVariantScope(OMPTraitInfo &TI)
 FunctionDecl *
 Sema::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(Scope *S,
                                                                 Declarator &D) {
+  OMPDeclareVariantScope &DVScope = OMPDeclareVariantScopes.back();
   IdentifierInfo *BaseII = D.getIdentifier();
   LookupResult Lookup(*this, DeclarationName(BaseII), D.getIdentifierLoc(),
                       LookupOrdinaryName);
@@ -5905,12 +5906,15 @@ Sema::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(Scope *S,
     BaseFD = UDecl;
     break;
   }
-  if (!BaseFD) {
+
+  bool UseImplicitBase = !DVScope.TI->isExtensionActive(
+      llvm::omp::TraitProperty::implementation_extension_disable_implicit_base);
+  // If no base was found we create a declaration that we use as base.
+  if (!BaseFD && UseImplicitBase) {
     BaseFD = cast<FunctionDecl>(ActOnDeclarator(S, D));
     BaseFD->setImplicit(true);
   }
 
-  OMPDeclareVariantScope &DVScope = OMPDeclareVariantScopes.back();
   std::string MangledName;
   MangledName += D.getIdentifier()->getName();
   MangledName += getOpenMPVariantManglingSeparatorStr();
