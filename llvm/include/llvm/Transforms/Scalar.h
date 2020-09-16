@@ -342,6 +342,13 @@ FunctionPass *createConstantHoistingPass();
 
 //===----------------------------------------------------------------------===//
 //
+// ConstraintElimination - This pass eliminates conditions based on found
+//                         constraints.
+//
+FunctionPass *createConstraintEliminationPass();
+
+//===----------------------------------------------------------------------===//
+//
 // Sink - Code Sinking
 //
 FunctionPass *createSinkingPass();
