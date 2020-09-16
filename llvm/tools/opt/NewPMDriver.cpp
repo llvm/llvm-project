@@ -336,15 +336,12 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   }
   // For compatibility with legacy pass manager.
   // Alias analyses are not specially specified when using the legacy PM.
-  SmallVector<StringRef, 4> NonAAPasses;
   for (auto PassName : Passes) {
     if (PB.isAAPassName(PassName)) {
       if (auto Err = PB.parseAAPipeline(AA, PassName)) {
         errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
         return false;
       }
-    } else {
-      NonAAPasses.push_back(PassName);
     }
   }
   // For compatibility with the legacy PM AA pipeline.
@@ -389,7 +386,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
       return false;
     }
   }
-  for (auto PassName : NonAAPasses) {
+  for (auto PassName : Passes) {
     std::string ModifiedPassName(PassName.begin(), PassName.end());
     if (PB.isAnalysisPassName(PassName))
       ModifiedPassName = "require<" + ModifiedPassName + ">";
