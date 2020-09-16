@@ -6573,6 +6573,72 @@ define <8 x double> @mload_constmask_v8f64(<8 x double>* %addr, <8 x double> %ds
   ret <8 x double> %res
 }
 
+; FIXME: We should be able to detect the mask is all ones after type
+; legalization to use an unmasked load for some of the avx512 instructions.
+define <16 x double> @mload_constmask_v16f64_allones_split(<16 x double>* %addr, <16 x double> %dst) {
+; SSE-LABEL: mload_constmask_v16f64_allones_split:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    movups (%rsi), %xmm0
+; SSE-NEXT:    movups 16(%rsi), %xmm1
+; SSE-NEXT:    movups 32(%rsi), %xmm2
+; SSE-NEXT:    movups 48(%rsi), %xmm3
+; SSE-NEXT:    movlps {{.*#+}} xmm4 = mem[0,1],xmm4[2,3]
+; SSE-NEXT:    movlps {{.*#+}} xmm5 = mem[0,1],xmm5[2,3]
+; SSE-NEXT:    movlps {{.*#+}} xmm6 = mem[0,1],xmm6[2,3]
+; SSE-NEXT:    movlps {{.*#+}} xmm7 = mem[0,1],xmm7[2,3]
+; SSE-NEXT:    movaps %xmm7, 112(%rdi)
+; SSE-NEXT:    movaps %xmm6, 96(%rdi)
+; SSE-NEXT:    movaps %xmm5, 80(%rdi)
+; SSE-NEXT:    movaps %xmm4, 64(%rdi)
+; SSE-NEXT:    movaps %xmm3, 48(%rdi)
+; SSE-NEXT:    movaps %xmm2, 32(%rdi)
+; SSE-NEXT:    movaps %xmm1, 16(%rdi)
+; SSE-NEXT:    movaps %xmm0, (%rdi)
+; SSE-NEXT:    retq
+;
+; AVX1OR2-LABEL: mload_constmask_v16f64_allones_split:
+; AVX1OR2:       ## %bb.0:
+; AVX1OR2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = [18446744073709551615,0,18446744073709551615,0]
+; AVX1OR2-NEXT:    ## ymm0 = mem[0,1,0,1]
+; AVX1OR2-NEXT:    vmaskmovpd 64(%rdi), %ymm0, %ymm1
+; AVX1OR2-NEXT:    vblendpd {{.*#+}} ymm2 = ymm1[0],ymm2[1],ymm1[2],ymm2[3]
+; AVX1OR2-NEXT:    vmaskmovpd 96(%rdi), %ymm0, %ymm0
+; AVX1OR2-NEXT:    vblendpd {{.*#+}} ymm3 = ymm0[0],ymm3[1],ymm0[2],ymm3[3]
+; AVX1OR2-NEXT:    vmovups (%rdi), %ymm0
+; AVX1OR2-NEXT:    vmovups 32(%rdi), %ymm1
+; AVX1OR2-NEXT:    retq
+;
+; AVX512F-LABEL: mload_constmask_v16f64_allones_split:
+; AVX512F:       ## %bb.0:
+; AVX512F-NEXT:    kxnorw %k0, %k0, %k1
+; AVX512F-NEXT:    vmovupd (%rdi), %zmm0 {%k1}
+; AVX512F-NEXT:    movb $85, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovupd 64(%rdi), %zmm1 {%k1}
+; AVX512F-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: mload_constmask_v16f64_allones_split:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    kxnorw %k0, %k0, %k1
+; AVX512VLDQ-NEXT:    vmovupd (%rdi), %zmm0 {%k1}
+; AVX512VLDQ-NEXT:    movb $85, %al
+; AVX512VLDQ-NEXT:    kmovw %eax, %k1
+; AVX512VLDQ-NEXT:    vmovupd 64(%rdi), %zmm1 {%k1}
+; AVX512VLDQ-NEXT:    retq
+;
+; AVX512VLBW-LABEL: mload_constmask_v16f64_allones_split:
+; AVX512VLBW:       ## %bb.0:
+; AVX512VLBW-NEXT:    kxnorw %k0, %k0, %k1
+; AVX512VLBW-NEXT:    vmovupd (%rdi), %zmm0 {%k1}
+; AVX512VLBW-NEXT:    movb $85, %al
+; AVX512VLBW-NEXT:    kmovd %eax, %k1
+; AVX512VLBW-NEXT:    vmovupd 64(%rdi), %zmm1 {%k1}
+; AVX512VLBW-NEXT:    retq
+  %res = call <16 x double> @llvm.masked.load.v16f64.p0v16f64(<16 x double>* %addr, i32 4, <16 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <16 x double> %dst)
+  ret <16 x double> %res
+}
+
 ; If the pass-through operand is undef, no blend is needed.
 
 define <4 x double> @mload_constmask_v4f64_undef_passthrough(<4 x double>* %addr) {
@@ -6788,20 +6854,20 @@ define i32 @pr38986(i1 %c, i32* %p) {
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    testb $1, %dil
 ; SSE-NEXT:    ## implicit-def: $eax
-; SSE-NEXT:    je LBB43_2
+; SSE-NEXT:    je LBB44_2
 ; SSE-NEXT:  ## %bb.1: ## %cond.load
 ; SSE-NEXT:    movl (%rsi), %eax
-; SSE-NEXT:  LBB43_2: ## %else
+; SSE-NEXT:  LBB44_2: ## %else
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: pr38986:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    testb $1, %dil
 ; AVX-NEXT:    ## implicit-def: $eax
-; AVX-NEXT:    je LBB43_2
+; AVX-NEXT:    je LBB44_2
 ; AVX-NEXT:  ## %bb.1: ## %cond.load
 ; AVX-NEXT:    movl (%rsi), %eax
-; AVX-NEXT:  LBB43_2: ## %else
+; AVX-NEXT:  LBB44_2: ## %else
 ; AVX-NEXT:    retq
  %vc = insertelement <1 x i1> undef, i1 %c, i32 0
  %vp = bitcast i32* %p to <1 x i32>*
@@ -6822,6 +6888,7 @@ define <2 x double> @zero_mask(<2 x double>* %addr, <2 x double> %dst) {
   ret <2 x double> %res
 }
 
+declare <16 x double> @llvm.masked.load.v16f64.p0v16f64(<16 x double>*, i32, <16 x i1>, <16 x double>)
 declare <8 x double> @llvm.masked.load.v8f64.p0v8f64(<8 x double>*, i32, <8 x i1>, <8 x double>)
 declare <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>*, i32, <4 x i1>, <4 x double>)
 declare <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>*, i32, <2 x i1>, <2 x double>)
