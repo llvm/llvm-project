@@ -3108,7 +3108,8 @@ private:
 
   /// Parse a `match` clause for an '#pragma omp declare variant'. Return true
   /// if there was an error.
-  bool parseOMPDeclareVariantMatchClause(SourceLocation Loc, OMPTraitInfo &TI);
+  bool parseOMPDeclareVariantMatchClause(SourceLocation Loc, OMPTraitInfo &TI,
+                                         OMPTraitInfo *ParentTI);
 
   /// Parse clauses for '#pragma omp declare variant'.
   void ParseOMPDeclareVariantClauses(DeclGroupPtrTy Ptr, CachedTokens &Toks,

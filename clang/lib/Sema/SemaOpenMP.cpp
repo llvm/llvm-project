@@ -2441,10 +2441,6 @@ void Sema::DestroyDataSharingAttributesStack() { delete DSAStack; }
 
 void Sema::ActOnOpenMPBeginDeclareVariant(SourceLocation Loc,
                                           OMPTraitInfo &TI) {
-  if (!OMPDeclareVariantScopes.empty()) {
-    Diag(Loc, diag::warn_nested_declare_variant);
-    return;
-  }
   OMPDeclareVariantScopes.push_back(OMPDeclareVariantScope(TI));
 }
 
