@@ -649,6 +649,30 @@ Example matches a
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecompositionDecl.html">DecompositionDecl</a>&gt;</td><td class="name" onclick="toggle('decompositionDecl0')"><a name="decompositionDecl0Anchor">decompositionDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecompositionDecl.html">DecompositionDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="decompositionDecl0"><pre>Matches decomposition-declarations.
+
+Examples matches the declaration node with foo and bar, but not
+number.
+(matcher = declStmt(has(decompositionDecl())))
+
+  int number = 42;
+  auto [foo, bar] = std::make_pair{42, 42};
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecompositionDecl.html">DecompositionDecl</a>&gt;</td><td class="name" onclick="toggle('decompositionDecl0')"><a name="decompositionDecl0Anchor">decompositionDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecompositionDecl.html">DecompositionDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="decompositionDecl0"><pre>Matches decomposition-declarations.
+
+Examples matches the declaration node with foo and bar, but not
+number.
+(matcher = declStmt(has(decompositionDecl())))
+
+  int number = 42;
+  auto [foo, bar] = std::make_pair{42, 42};
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NestedNameSpecifierLoc.html">NestedNameSpecifierLoc</a>&gt;</td><td class="name" onclick="toggle('nestedNameSpecifierLoc0')"><a name="nestedNameSpecifierLoc0Anchor">nestedNameSpecifierLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NestedNameSpecifierLoc.html">NestedNameSpecifierLoc</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="nestedNameSpecifierLoc0"><pre>Same as nestedNameSpecifier but matches NestedNameSpecifierLoc.
 </pre></td></tr>
@@ -5322,6 +5346,60 @@ and parmVarDecl(...)
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;</td><td class="name" onclick="toggle('forEachArgumentWithParamType1')"><a name="forEachArgumentWithParamType1Anchor">forEachArgumentWithParamType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; ArgMatcher, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; ParamMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachArgumentWithParamType1"><pre>Matches all arguments and their respective types for a CallExpr or
+CXXConstructExpr. It is very similar to forEachArgumentWithParam but
+it works on calls through function pointers as well.
+
+The difference is, that function pointers do not provide access to a
+ParmVarDecl, but only the QualType for each argument.
+
+Given
+  void f(int i);
+  int y;
+  f(y);
+  void (*f_ptr)(int) = f;
+  f_ptr(y);
+callExpr(
+  forEachArgumentWithParamType(
+    declRefExpr(to(varDecl(hasName("y")))),
+    qualType(isInteger()).bind("type)
+))
+  matches f(y) and f_ptr(y)
+with declRefExpr(...)
+  matching int y
+and qualType(...)
+  matching int
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;</td><td class="name" onclick="toggle('forEachArgumentWithParamType1')"><a name="forEachArgumentWithParamType1Anchor">forEachArgumentWithParamType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; ArgMatcher, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; ParamMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachArgumentWithParamType1"><pre>Matches all arguments and their respective types for a CallExpr or
+CXXConstructExpr. It is very similar to forEachArgumentWithParam but
+it works on calls through function pointers as well.
+
+The difference is, that function pointers do not provide access to a
+ParmVarDecl, but only the QualType for each argument.
+
+Given
+  void f(int i);
+  int y;
+  f(y);
+  void (*f_ptr)(int) = f;
+  f_ptr(y);
+callExpr(
+  forEachArgumentWithParamType(
+    declRefExpr(to(varDecl(hasName("y")))),
+    qualType(isInteger()).bind("type)
+))
+  matches f(y) and f_ptr(y)
+with declRefExpr(...)
+  matching int y
+and qualType(...)
+  matching int
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyArgument1')"><a name="hasAnyArgument1Anchor">hasAnyArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasAnyArgument1"><pre>Matches any argument of a call expression or a constructor call
 expression, or an ObjC-message-send expression.
@@ -5847,6 +5925,60 @@ with declRefExpr(...)
   matching int y
 and parmVarDecl(...)
   matching int i
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;</td><td class="name" onclick="toggle('forEachArgumentWithParamType0')"><a name="forEachArgumentWithParamType0Anchor">forEachArgumentWithParamType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; ArgMatcher, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; ParamMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachArgumentWithParamType0"><pre>Matches all arguments and their respective types for a CallExpr or
+CXXConstructExpr. It is very similar to forEachArgumentWithParam but
+it works on calls through function pointers as well.
+
+The difference is, that function pointers do not provide access to a
+ParmVarDecl, but only the QualType for each argument.
+
+Given
+  void f(int i);
+  int y;
+  f(y);
+  void (*f_ptr)(int) = f;
+  f_ptr(y);
+callExpr(
+  forEachArgumentWithParamType(
+    declRefExpr(to(varDecl(hasName("y")))),
+    qualType(isInteger()).bind("type)
+))
+  matches f(y) and f_ptr(y)
+with declRefExpr(...)
+  matching int y
+and qualType(...)
+  matching int
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;</td><td class="name" onclick="toggle('forEachArgumentWithParamType0')"><a name="forEachArgumentWithParamType0Anchor">forEachArgumentWithParamType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; ArgMatcher, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; ParamMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachArgumentWithParamType0"><pre>Matches all arguments and their respective types for a CallExpr or
+CXXConstructExpr. It is very similar to forEachArgumentWithParam but
+it works on calls through function pointers as well.
+
+The difference is, that function pointers do not provide access to a
+ParmVarDecl, but only the QualType for each argument.
+
+Given
+  void f(int i);
+  int y;
+  f(y);
+  void (*f_ptr)(int) = f;
+  f_ptr(y);
+callExpr(
+  forEachArgumentWithParamType(
+    declRefExpr(to(varDecl(hasName("y")))),
+    qualType(isInteger()).bind("type)
+))
+  matches f(y) and f_ptr(y)
+with declRefExpr(...)
+  matching int y
+and qualType(...)
+  matching int
 </pre></td></tr>
 
 
