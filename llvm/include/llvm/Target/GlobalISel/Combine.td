@@ -202,7 +202,7 @@ def binop_left_undef_to_zero: GICombineRule<
 // replaced with undef.
 def propagate_undef_any_op: GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_ADD, G_FPTOSI, G_FPTOUI, G_SUB, G_XOR):$root,
+  (match (wip_match_opcode G_ADD, G_FPTOSI, G_FPTOUI, G_SUB, G_XOR, G_TRUNC):$root,
          [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
 
@@ -437,6 +437,24 @@ def unmerge_zext_to_zext : GICombineRule<
   (apply [{ return Helper.applyCombineUnmergeZExtToZExt(*${d}); }])
 >;
 
+// Fold trunc ([asz]ext x) -> x or ([asz]ext x) or (trunc x).
+def trunc_ext_fold_matchinfo : GIDefMatchData<"std::pair<Register, unsigned>">;
+def trunc_ext_fold: GICombineRule <
+  (defs root:$root, trunc_ext_fold_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_TRUNC):$root,
+         [{ return Helper.matchCombineTruncOfExt(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.applyCombineTruncOfExt(*${root}, ${matchinfo}); }])
+>;
+
+// Fold trunc (shl x, K) -> shl (trunc x), K => K < VT.getScalarSizeInBits().
+def trunc_shl_matchinfo : GIDefMatchData<"std::pair<Register, Register>">;
+def trunc_shl: GICombineRule <
+  (defs root:$root, trunc_shl_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_TRUNC):$root,
+         [{ return Helper.matchCombineTruncOfShl(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.applyCombineTruncOfShl(*${root}, ${matchinfo}); }])
+>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -469,4 +487,4 @@ def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     known_bits_simplifications, ext_ext_fold,
     not_cmp_fold, opt_brcond_by_inverting_cond,
     unmerge_merge, fabs_fabs_fold, unmerge_cst, unmerge_dead_to_trunc,
-    unmerge_zext_to_zext]>;
+    unmerge_zext_to_zext, trunc_ext_fold, trunc_shl]>;

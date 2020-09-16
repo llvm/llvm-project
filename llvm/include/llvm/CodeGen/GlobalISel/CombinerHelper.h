@@ -298,6 +298,19 @@ public:
   bool matchCombineFAbsOfFAbs(MachineInstr &MI, Register &Src);
   bool applyCombineFAbsOfFAbs(MachineInstr &MI, Register &Src);
 
+  /// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
+  bool matchCombineTruncOfExt(MachineInstr &MI,
+                              std::pair<Register, unsigned> &MatchInfo);
+  bool applyCombineTruncOfExt(MachineInstr &MI,
+                              std::pair<Register, unsigned> &MatchInfo);
+
+  /// Transform trunc (shl x, K) to shl (trunc x),
+  /// K => K < VT.getScalarSizeInBits().
+  bool matchCombineTruncOfShl(MachineInstr &MI,
+                              std::pair<Register, Register> &MatchInfo);
+  bool applyCombineTruncOfShl(MachineInstr &MI,
+                              std::pair<Register, Register> &MatchInfo);
+
   /// Return true if any explicit use operand on \p MI is defined by a
   /// G_IMPLICIT_DEF.
   bool matchAnyExplicitUseIsUndef(MachineInstr &MI);
