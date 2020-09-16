@@ -201,12 +201,13 @@ llvm::Expected<StringTableIn> readStringTable(llvm::StringRef Data) {
   llvm::SmallString<1> UncompressedStorage;
   if (UncompressedSize == 0) // No compression
     Uncompressed = R.rest();
-  else {
+  else if (llvm::zlib::isAvailable()) {
     if (llvm::Error E = llvm::zlib::uncompress(R.rest(), UncompressedStorage,
                                                UncompressedSize))
       return std::move(E);
     Uncompressed = UncompressedStorage;
-  }
+  } else
+    return error("Compressed string table, but zlib is unavailable");
 
   StringTableIn Table;
   llvm::StringSaver Saver(Table.Arena);
