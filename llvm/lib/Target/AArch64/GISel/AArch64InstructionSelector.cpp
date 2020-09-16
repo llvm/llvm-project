@@ -171,8 +171,57 @@ private:
   emitIntegerCompare(MachineOperand &LHS, MachineOperand &RHS,
                      MachineOperand &Predicate,
                      MachineIRBuilder &MIRBuilder) const;
-  MachineInstr *emitADD(Register DefReg, MachineOperand &LHS, MachineOperand &RHS,
+  MachineInstr *emitInstr(unsigned Opcode,
+                          std::initializer_list<llvm::DstOp> DstOps,
+                          std::initializer_list<llvm::SrcOp> SrcOps,
+                          MachineIRBuilder &MIRBuilder,
+                          const ComplexRendererFns &RenderFns = None) const;
+  /// Helper function to emit a binary operation such as an ADD, ADDS, etc.
+  ///
+  /// This is intended for instructions with the following opcode variants:
+  ///
+  ///  - Xri, Wri (arithmetic immediate form)
+  ///  - Xrs, Wrs (shifted register form)
+  ///  - Xrr, Wrr (register form)
+  ///
+  /// For example, for ADD, we have ADDXri, ADDWri, ADDXrs, etc.
+  ///
+  /// \p AddrModeAndSizeToOpcode must contain each of the opcode variants above
+  /// in a specific order.
+  ///
+  /// Below is an example of the expected input to \p AddrModeAndSizeToOpcode.
+  ///
+  /// \code
+  ///   const std::array<std::array<unsigned, 2>, 3> Table {
+  ///    {{AArch64::ADDXri, AArch64::ADDWri},
+  ///     {AArch64::ADDXrs, AArch64::ADDWrs},
+  ///     {AArch64::ADDXrr, AArch64::ADDWrr}}};
+  /// \endcode
+  ///
+  /// Each row in the table corresponds to a different addressing mode. Each
+  /// column corresponds to a different register size.
+  ///
+  /// \attention Rows must be structured as follows:
+  ///   - Row 0: The ri opcode variants
+  ///   - Row 1: The rs opcode variants
+  ///   - Row 2: The rr opcode variants
+  ///
+  /// \attention Columns must be structured as follows:
+  ///   - Column 0: The 64-bit opcode variants
+  ///   - Column 1: The 32-bit opcode variants
+  ///
+  /// \p Dst is the destination register of the binop to emit.
+  /// \p LHS is the left-hand operand of the binop to emit.
+  /// \p RHS is the right-hand operand of the binop to emit.
+  MachineInstr *emitBinOp(
+      const std::array<std::array<unsigned, 2>, 3> &AddrModeAndSizeToOpcode,
+      Register Dst, MachineOperand &LHS, MachineOperand &RHS,
+      MachineIRBuilder &MIRBuilder) const;
+  MachineInstr *emitADD(Register DefReg, MachineOperand &LHS,
+                        MachineOperand &RHS,
                         MachineIRBuilder &MIRBuilder) const;
+  MachineInstr *emitADDS(Register Dst, MachineOperand &LHS, MachineOperand &RHS,
+                         MachineIRBuilder &MIRBuilder) const;
   MachineInstr *emitCMN(MachineOperand &LHS, MachineOperand &RHS,
                         MachineIRBuilder &MIRBuilder) const;
   MachineInstr *emitTST(const Register &LHS, const Register &RHS,
@@ -2462,11 +2511,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
 
     // Add and set the set condition flag.
-    unsigned AddsOpc = OpSize == 32 ? AArch64::ADDSWrr : AArch64::ADDSXrr;
     MachineIRBuilder MIRBuilder(I);
-    auto AddsMI = MIRBuilder.buildInstr(AddsOpc, {I.getOperand(0)},
-                                        {I.getOperand(2), I.getOperand(3)});
-    constrainSelectedInstRegOperands(*AddsMI, TII, TRI, RBI);
+    emitADDS(I.getOperand(0).getReg(), I.getOperand(2), I.getOperand(3),
+             MIRBuilder);
 
     // Now, put the overflow result in the register given by the first operand
     // to the G_UADDO. CSINC increments the result when the predicate is false,
@@ -3749,55 +3796,70 @@ getInsertVecEltOpInfo(const RegisterBank &RB, unsigned EltSize) {
   return std::make_pair(Opc, SubregIdx);
 }
 
+MachineInstr *AArch64InstructionSelector::emitInstr(
+    unsigned Opcode, std::initializer_list<llvm::DstOp> DstOps,
+    std::initializer_list<llvm::SrcOp> SrcOps, MachineIRBuilder &MIRBuilder,
+    const ComplexRendererFns &RenderFns) const {
+  assert(Opcode && "Expected an opcode?");
+  assert(!isPreISelGenericOpcode(Opcode) &&
+         "Function should only be used to produce selected instructions!");
+  auto MI = MIRBuilder.buildInstr(Opcode, DstOps, SrcOps);
+  if (RenderFns)
+    for (auto &Fn : *RenderFns)
+      Fn(MI);
+  constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return &*MI;
+}
+
+MachineInstr *AArch64InstructionSelector::emitBinOp(
+    const std::array<std::array<unsigned, 2>, 3> &AddrModeAndSizeToOpcode,
+    Register Dst, MachineOperand &LHS, MachineOperand &RHS,
+    MachineIRBuilder &MIRBuilder) const {
+  MachineRegisterInfo &MRI = MIRBuilder.getMF().getRegInfo();
+  assert(LHS.isReg() && RHS.isReg() && "Expected register operands?");
+  auto Ty = MRI.getType(LHS.getReg());
+  assert(Ty.isScalar() && "Expected a scalar?");
+  unsigned Size = Ty.getSizeInBits();
+  assert((Size == 32 || Size == 64) && "Expected a 32-bit or 64-bit type only");
+  bool Is32Bit = Size == 32;
+  if (auto Fns = selectArithImmed(RHS))
+    return emitInstr(AddrModeAndSizeToOpcode[0][Is32Bit], {Dst}, {LHS},
+                     MIRBuilder, Fns);
+  if (auto Fns = selectShiftedRegister(RHS))
+    return emitInstr(AddrModeAndSizeToOpcode[1][Is32Bit], {Dst}, {LHS},
+                     MIRBuilder, Fns);
+  return emitInstr(AddrModeAndSizeToOpcode[2][Is32Bit], {Dst}, {LHS, RHS},
+                   MIRBuilder);
+}
+
 MachineInstr *
 AArch64InstructionSelector::emitADD(Register DefReg, MachineOperand &LHS,
                                     MachineOperand &RHS,
                                     MachineIRBuilder &MIRBuilder) const {
-  assert(LHS.isReg() && RHS.isReg() && "Expected LHS and RHS to be registers!");
-  MachineRegisterInfo &MRI = MIRBuilder.getMF().getRegInfo();
-  static const unsigned OpcTable[2][2]{{AArch64::ADDXrr, AArch64::ADDXri},
-                                       {AArch64::ADDWrr, AArch64::ADDWri}};
-  bool Is32Bit = MRI.getType(LHS.getReg()).getSizeInBits() == 32;
-  auto ImmFns = selectArithImmed(RHS);
-  unsigned Opc = OpcTable[Is32Bit][ImmFns.hasValue()];
-  auto AddMI = MIRBuilder.buildInstr(Opc, {DefReg}, {LHS});
+  const std::array<std::array<unsigned, 2>, 3> OpcTable{
+      {{AArch64::ADDXri, AArch64::ADDWri},
+       {AArch64::ADDXrs, AArch64::ADDWrs},
+       {AArch64::ADDXrr, AArch64::ADDWrr}}};
+  return emitBinOp(OpcTable, DefReg, LHS, RHS, MIRBuilder);
+}
 
-  // If we matched a valid constant immediate, add those operands.
-  if (ImmFns) {
-    for (auto &RenderFn : *ImmFns)
-      RenderFn(AddMI);
-  } else {
-    AddMI.addUse(RHS.getReg());
-  }
-
-  constrainSelectedInstRegOperands(*AddMI, TII, TRI, RBI);
-  return &*AddMI;
+MachineInstr *
+AArch64InstructionSelector::emitADDS(Register Dst, MachineOperand &LHS,
+                                     MachineOperand &RHS,
+                                     MachineIRBuilder &MIRBuilder) const {
+  const std::array<std::array<unsigned, 2>, 3> OpcTable{
+      {{AArch64::ADDSXri, AArch64::ADDSWri},
+       {AArch64::ADDSXrs, AArch64::ADDSWrs},
+       {AArch64::ADDSXrr, AArch64::ADDSWrr}}};
+  return emitBinOp(OpcTable, Dst, LHS, RHS, MIRBuilder);
 }
 
 MachineInstr *
 AArch64InstructionSelector::emitCMN(MachineOperand &LHS, MachineOperand &RHS,
                                     MachineIRBuilder &MIRBuilder) const {
-  assert(LHS.isReg() && RHS.isReg() && "Expected LHS and RHS to be registers!");
   MachineRegisterInfo &MRI = MIRBuilder.getMF().getRegInfo();
-  static const unsigned OpcTable[2][2]{{AArch64::ADDSXrr, AArch64::ADDSXri},
-                                       {AArch64::ADDSWrr, AArch64::ADDSWri}};
   bool Is32Bit = (MRI.getType(LHS.getReg()).getSizeInBits() == 32);
-  auto ImmFns = selectArithImmed(RHS);
-  unsigned Opc = OpcTable[Is32Bit][ImmFns.hasValue()];
-  Register ZReg = Is32Bit ? AArch64::WZR : AArch64::XZR;
-
-  auto CmpMI = MIRBuilder.buildInstr(Opc, {ZReg}, {LHS});
-
-  // If we matched a valid constant immediate, add those operands.
-  if (ImmFns) {
-    for (auto &RenderFn : *ImmFns)
-      RenderFn(CmpMI);
-  } else {
-    CmpMI.addUse(RHS.getReg());
-  }
-
-  constrainSelectedInstRegOperands(*CmpMI, TII, TRI, RBI);
-  return &*CmpMI;
+  return emitADDS(Is32Bit ? AArch64::WZR : AArch64::XZR, LHS, RHS, MIRBuilder);
 }
 
 MachineInstr *
