@@ -758,10 +758,14 @@ the configuration (without a prefix: ``Auto``).
              int bbbbbbbbbbbbbbbbbbbbb) {
        }
 
+
+
 **AttributeMacros** (``std::vector<std::string>``)
   A vector of strings that should be interpreted as attributes/qualifiers
   instead of identifiers. This can be useful for language extensions or
-  static analyzer annotations:
+  static analyzer annotations.
+
+  For example:
 
   .. code-block:: c++
 
@@ -774,8 +778,6 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: yaml
 
     AttributeMacros: ['__capability', '__output', '__ununsed']
-
-  For example: __capability.
 
 **BinPackArguments** (``bool``)
   If ``false``, a function call's arguments will either be all on the
@@ -2246,7 +2248,7 @@ the configuration (without a prefix: ``Auto``).
 
 **ObjCBreakBeforeNestedBlockParam** (``bool``)
   Break parameters list into lines when there is nested block
-  parameters in a fuction call.
+  parameters in a function call.
 
   .. code-block:: c++
 
