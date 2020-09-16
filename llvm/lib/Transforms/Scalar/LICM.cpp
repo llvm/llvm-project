@@ -39,6 +39,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/GuardUtils.h"
+#include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -171,8 +172,8 @@ static void moveInstructionBefore(Instruction &I, Instruction &Dest,
 namespace {
 struct LoopInvariantCodeMotion {
   bool runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI, DominatorTree *DT,
-                 TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
-                 ScalarEvolution *SE, MemorySSA *MSSA,
+                 BlockFrequencyInfo *BFI, TargetLibraryInfo *TLI,
+                 TargetTransformInfo *TTI, ScalarEvolution *SE, MemorySSA *MSSA,
                  OptimizationRemarkEmitter *ORE);
 
   LoopInvariantCodeMotion(unsigned LicmMssaOptCap,
@@ -208,19 +209,23 @@ struct LegacyLICMPass : public LoopPass {
     MemorySSA *MSSA = EnableMSSALoopDependency
                           ? (&getAnalysis<MemorySSAWrapperPass>().getMSSA())
                           : nullptr;
+    bool hasProfileData = L->getHeader()->getParent()->hasProfileData();
+    BlockFrequencyInfo *BFI =
+        hasProfileData ? &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI()
+                       : nullptr;
     // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
-    // pass.  Function analyses need to be preserved across loop transformations
+    // pass. Function analyses need to be preserved across loop transformations
     // but ORE cannot be preserved (see comment before the pass definition).
     OptimizationRemarkEmitter ORE(L->getHeader()->getParent());
-    return LICM.runOnLoop(L,
-                          &getAnalysis<AAResultsWrapperPass>().getAAResults(),
-                          &getAnalysis<LoopInfoWrapperPass>().getLoopInfo(),
-                          &getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
-                          &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
-                              *L->getHeader()->getParent()),
-                          &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
-                              *L->getHeader()->getParent()),
-                          SE ? &SE->getSE() : nullptr, MSSA, &ORE);
+    return LICM.runOnLoop(
+        L, &getAnalysis<AAResultsWrapperPass>().getAAResults(),
+        &getAnalysis<LoopInfoWrapperPass>().getLoopInfo(),
+        &getAnalysis<DominatorTreeWrapperPass>().getDomTree(), BFI,
+        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
+            *L->getHeader()->getParent()),
+        &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
+            *L->getHeader()->getParent()),
+        SE ? &SE->getSE() : nullptr, MSSA, &ORE);
   }
 
   /// This transformation requires natural loop information & requires that
@@ -236,6 +241,9 @@ struct LegacyLICMPass : public LoopPass {
     }
     AU.addRequired<TargetTransformInfoWrapperPass>();
     getLoopAnalysisUsage(AU);
+    LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
+    AU.addPreserved<LazyBlockFrequencyInfoPass>();
+    AU.addPreserved<LazyBranchProbabilityInfoPass>();
   }
 
 private:
@@ -251,8 +259,8 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
 
   LoopInvariantCodeMotion LICM(LicmMssaOptCap, LicmMssaNoAccForPromotionCap);
-  if (!LICM.runOnLoop(&L, &AR.AA, &AR.LI, &AR.DT, &AR.TLI, &AR.TTI, &AR.SE,
-                      AR.MSSA, &ORE))
+  if (!LICM.runOnLoop(&L, &AR.AA, &AR.LI, &AR.DT, AR.BFI, &AR.TLI, &AR.TTI,
+                      &AR.SE, AR.MSSA, &ORE))
     return PreservedAnalyses::all();
 
   auto PA = getLoopPassPreservedAnalyses();
@@ -272,6 +280,7 @@ INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LazyBFIPass)
 INITIALIZE_PASS_END(LegacyLICMPass, "licm", "Loop Invariant Code Motion", false,
                     false)
 
@@ -286,8 +295,8 @@ Pass *llvm::createLICMPass(unsigned LicmMssaOptCap,
 /// times on one loop.
 bool LoopInvariantCodeMotion::runOnLoop(
     Loop *L, AAResults *AA, LoopInfo *LI, DominatorTree *DT,
-    TargetLibraryInfo *TLI, TargetTransformInfo *TTI, ScalarEvolution *SE,
-    MemorySSA *MSSA, OptimizationRemarkEmitter *ORE) {
+    BlockFrequencyInfo *BFI, TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
+    ScalarEvolution *SE, MemorySSA *MSSA, OptimizationRemarkEmitter *ORE) {
   bool Changed = false;
 
   assert(L->isLCSSAForm(*DT) && "Loop is not in LCSSA form.");
