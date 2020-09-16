@@ -22,6 +22,7 @@ class Symbol;
 
 class TrieBuilder {
 public:
+  void setImageBase(uint64_t addr) { imageBase = addr; }
   void addSymbol(const Symbol &sym) { exported.push_back(&sym); }
   // Returns the size in bytes of the serialized trie.
   size_t build();
@@ -32,6 +33,7 @@ private:
   void sortAndBuild(llvm::MutableArrayRef<const Symbol *> vec, TrieNode *node,
                     size_t lastPos, size_t pos);
 
+  uint64_t imageBase = 0;
   std::vector<const Symbol *> exported;
   std::vector<TrieNode *> nodes;
 };
