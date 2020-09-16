@@ -18,6 +18,7 @@
 namespace fuzzer {
 
 const size_t Dictionary::kMaxDictSize;
+static const size_t kMaxMutationsToPrint = 10;
 
 static void PrintASCII(const Word &W, const char *PrintAfter) {
   PrintASCII(W.data(), W.size(), PrintAfter);
@@ -481,15 +482,21 @@ void MutationDispatcher::PrintRecommendedDictionary() {
   Printf("###### End of recommended dictionary. ######\n");
 }
 
-void MutationDispatcher::PrintMutationSequence() {
+void MutationDispatcher::PrintMutationSequence(bool Verbose) {
   Printf("MS: %zd ", CurrentMutatorSequence.size());
-  for (auto M : CurrentMutatorSequence)
-    Printf("%s-", M.Name);
+  size_t EntriesToPrint =
+      Verbose ? CurrentMutatorSequence.size()
+              : std::min(kMaxMutationsToPrint, CurrentMutatorSequence.size());
+  for (size_t i = 0; i < EntriesToPrint; i++)
+    Printf("%s-", CurrentMutatorSequence[i].Name);
   if (!CurrentDictionaryEntrySequence.empty()) {
     Printf(" DE: ");
-    for (auto DE : CurrentDictionaryEntrySequence) {
+    EntriesToPrint = Verbose ? CurrentDictionaryEntrySequence.size()
+                             : std::min(kMaxMutationsToPrint,
+                                        CurrentDictionaryEntrySequence.size());
+    for (size_t i = 0; i < EntriesToPrint; i++) {
       Printf("\"");
-      PrintASCII(DE->GetW(), "\"-");
+      PrintASCII(CurrentDictionaryEntrySequence[i]->GetW(), "\"-");
     }
   }
 }
