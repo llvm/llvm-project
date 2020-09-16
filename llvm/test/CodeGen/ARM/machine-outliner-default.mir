@@ -5,8 +5,6 @@
 --- |
   define void @outline_default_arm() #0 { ret void }
   define void @outline_default_thumb() #1 { ret void }
-  define void @outline_default_KO_call_arm() #0 { ret void }
-  define void @outline_default_KO_call_thumb() #1 { ret void }
   define void @outline_default_KO_stack_arm() #0 { ret void }
   define void @outline_default_KO_stack_thumb() #0 { ret void }
   declare void @bar()
@@ -113,120 +111,6 @@ body:             |
     $r3 = t2MOVi 1, 14, $noreg, $noreg
   bb.3:
     liveins: $lr, $r4, $r5, $r6, $r7, $r8, $r9, $r10, $r11
-    $r2 = tMOVr $lr, 14, $noreg
-    tBX_RET 14, $noreg
-...
----
-
-name:           outline_default_KO_call_arm
-tracksRegLiveness: true
-body:             |
-  ; CHECK-LABEL: name: outline_default_KO_call_arm
-  ; CHECK: bb.0:
-  ; CHECK:   liveins: $lr
-  ; CHECK:   BL @bar, implicit-def dead $lr, implicit $sp
-  ; CHECK:   $r0 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r1 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r2 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r3 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r4 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK: bb.1:
-  ; CHECK:   liveins: $lr, $r5, $r6, $r7, $r8, $r9, $r10, $r11
-  ; CHECK:   BL @bar, implicit-def dead $lr, implicit $sp
-  ; CHECK:   $r0 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r1 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r2 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r3 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r4 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK: bb.2:
-  ; CHECK:   liveins: $lr, $r5, $r6, $r7, $r8, $r9, $r10, $r11
-  ; CHECK:   BL @bar, implicit-def dead $lr, implicit $sp
-  ; CHECK:   $r0 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r1 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r2 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r3 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r4 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK: bb.3:
-  ; CHECK:   liveins: $lr, $r5, $r6, $r7, $r8, $r9, $r10, $r11
-  ; CHECK:   $r2 = MOVr $lr, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   BX_RET 14 /* CC::al */, $noreg
-  bb.0:
-    liveins: $lr
-    BL @bar, implicit-def dead $lr, implicit $sp
-    $r0 = MOVi 2, 14, $noreg, $noreg
-    $r1 = MOVi 2, 14, $noreg, $noreg
-    $r2 = MOVi 2, 14, $noreg, $noreg
-    $r3 = MOVi 2, 14, $noreg, $noreg
-    $r4 = MOVi 2, 14, $noreg, $noreg
-  bb.1:
-    liveins: $lr, $r5, $r6, $r7, $r8, $r9, $r10, $r11
-    BL @bar, implicit-def dead $lr, implicit $sp
-    $r0 = MOVi 2, 14, $noreg, $noreg
-    $r1 = MOVi 2, 14, $noreg, $noreg
-    $r2 = MOVi 2, 14, $noreg, $noreg
-    $r3 = MOVi 2, 14, $noreg, $noreg
-    $r4 = MOVi 2, 14, $noreg, $noreg
-  bb.2:
-    liveins: $lr, $r5, $r6, $r7, $r8, $r9, $r10, $r11
-    BL @bar, implicit-def dead $lr, implicit $sp
-    $r0 = MOVi 2, 14, $noreg, $noreg
-    $r1 = MOVi 2, 14, $noreg, $noreg
-    $r2 = MOVi 2, 14, $noreg, $noreg
-    $r3 = MOVi 2, 14, $noreg, $noreg
-    $r4 = MOVi 2, 14, $noreg, $noreg
-  bb.3:
-    liveins: $lr, $r5, $r6, $r7, $r8, $r9, $r10, $r11
-    $r2 = MOVr $lr, 14, $noreg, $noreg
-    BX_RET 14, $noreg
-...
----
-
-name:           outline_default_KO_call_thumb
-tracksRegLiveness: true
-body:             |
-  ; CHECK-LABEL: name: outline_default_KO_call_thumb
-  ; CHECK: bb.0:
-  ; CHECK:   liveins: $lr
-  ; CHECK:   tBL 14 /* CC::al */, $noreg, @bar, implicit-def dead $lr, implicit $sp
-  ; CHECK:   $r0 = t2MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r1 = t2MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r2 = t2MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK: bb.1:
-  ; CHECK:   liveins: $lr, $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r10, $r11
-  ; CHECK:   tBL 14 /* CC::al */, $noreg, @bar, implicit-def dead $lr, implicit $sp
-  ; CHECK:   $r0 = t2MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r1 = t2MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r2 = t2MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK: bb.2:
-  ; CHECK:   liveins: $lr, $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r10, $r11
-  ; CHECK:   tBL 14 /* CC::al */, $noreg, @bar, implicit-def dead $lr, implicit $sp
-  ; CHECK:   $r0 = t2MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r1 = t2MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r2 = t2MOVi 2, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK: bb.3:
-  ; CHECK:   liveins: $lr, $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r10, $r11
-  ; CHECK:   $r2 = tMOVr $lr, 14 /* CC::al */, $noreg
-  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
-  bb.0:
-    liveins: $lr
-    tBL 14, $noreg, @bar, implicit-def dead $lr, implicit $sp
-    $r0 = t2MOVi 2, 14, $noreg, $noreg
-    $r1 = t2MOVi 2, 14, $noreg, $noreg
-    $r2 = t2MOVi 2, 14, $noreg, $noreg
-  bb.1:
-    liveins: $lr, $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r10, $r11
-    tBL 14, $noreg, @bar, implicit-def dead $lr, implicit $sp
-    $r0 = t2MOVi 2, 14, $noreg, $noreg
-    $r1 = t2MOVi 2, 14, $noreg, $noreg
-    $r2 = t2MOVi 2, 14, $noreg, $noreg
-  bb.2:
-    liveins: $lr, $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r10, $r11
-    tBL 14, $noreg, @bar, implicit-def dead $lr, implicit $sp
-    $r0 = t2MOVi 2, 14, $noreg, $noreg
-    $r1 = t2MOVi 2, 14, $noreg, $noreg
-    $r2 = t2MOVi 2, 14, $noreg, $noreg
-  bb.3:
-    liveins: $lr, $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r10, $r11
     $r2 = tMOVr $lr, 14, $noreg
     tBX_RET 14, $noreg
 ...
