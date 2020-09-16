@@ -858,6 +858,10 @@ public:
   /// evaluated, per C++11 [expr.typeid]p3.
   bool isPotentiallyEvaluated() const;
 
+  /// Best-effort check if the expression operand refers to a most derived
+  /// object. This is not a strong guarantee.
+  bool isMostDerived(ASTContext &Context) const;
+
   bool isTypeOperand() const { return Operand.is<TypeSourceInfo *>(); }
 
   /// Retrieves the type operand of this typeid() expression after
