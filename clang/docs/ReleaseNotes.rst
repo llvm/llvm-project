@@ -1,18 +1,12 @@
-========================================
-Clang 11.0.0 (In-Progress) Release Notes
-========================================
+==========================
+Clang 11.0.0 Release Notes
+==========================
 
 .. contents::
    :local:
    :depth: 2
 
 Written by the `LLVM Team <https://llvm.org/>`_
-
-.. warning::
-
-   These are in-progress notes for the upcoming Clang 11 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
 
 Introduction
 ============
@@ -30,11 +24,6 @@ For more information about Clang or LLVM, including information about the
 latest release, please see the `Clang Web Site <https://clang.llvm.org>`_ or the
 `LLVM Web Site <https://llvm.org>`_.
 
-Note that if you are reading this file from a Git checkout or the
-main Clang web page, this document applies to the *next* release, not
-the current one. To see the release notes for a specific release, please
-see the `releases page <https://llvm.org/releases/>`_.
-
 What's New in Clang 11.0.0?
 ===========================
 
@@ -43,13 +32,9 @@ here. Generic improvements to Clang as a whole or to its underlying
 infrastructure are described first, followed by language-specific
 sections with improvements to Clang's support for those languages.
 
-Major New Features
-------------------
-
-- ...
 
 Recovery AST
-^^^^^^^^^^^^
+------------
 
 clang's AST now improves support for representing broken C++ code. This improves
 the quality of subsequent diagnostics after an error is encountered. It also
@@ -89,7 +74,7 @@ This feature is on by default for C++ code, and can be explicitly controlled
 with `-Xclang -f[no-]recovery-ast`.
 
 Improvements to Clang's diagnostics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------------------
 
 - -Wpointer-to-int-cast is a new warning group. This group warns about C-style
   casts of pointers to a integer type too small to hold all possible values.
@@ -269,13 +254,6 @@ New Compiler Flags
   compiler support will continue to change until the specification is
   finalised.
 
-Deprecated Compiler Flags
--------------------------
-
-The following options are deprecated and ignored. They will be removed in
-future versions of Clang.
-
-- ...
 
 Modified Compiler Flags
 -----------------------
@@ -346,8 +324,6 @@ C Language Changes in Clang
 - Clang now supports the GNU C extension `asm inline`; it won't do anything
   *yet*, but it will be parsed.
 
-- ...
-
 C++ Language Changes in Clang
 -----------------------------
 
@@ -389,13 +365,6 @@ C++ Language Changes in Clang
       int f() { return 0; }
     } S;
 
-C++1z Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-...
-
-Objective-C Language Changes in Clang
--------------------------------------
 
 OpenCL Kernel Language Changes in Clang
 ---------------------------------------
@@ -420,7 +389,7 @@ OpenCL Kernel Language Changes in Clang
   `cl_arm_integer_dot_product`.
 
 Changes related to C++ for OpenCL
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------------
 
 - Added `addrspace_cast` operator.
 
@@ -486,10 +455,6 @@ New features for OpenMP 5.0 were implemented.
 
 - Bug fixes and optimizations.
 
-CUDA Support in Clang
----------------------
-
-- ...
 
 Internal API Changes
 --------------------
@@ -537,11 +502,6 @@ release of Clang. Users of the build system should adjust accordingly.
   but it's expected that that setting will go away eventually. If this is
   something you need, please reach out to the mailing list to discuss possible
   ways forward.
-
-AST Matchers
-------------
-
-- ...
 
 clang-format
 ------------
@@ -644,10 +604,6 @@ clang-format
         foo();
       } while(1);
 
-libclang
---------
-
-- ...
 
 .. _release-notes-clang-static-analyzer:
 
@@ -723,28 +679,6 @@ Static Analyzer
 
 .. _release-notes-ubsan:
 
-Undefined Behavior Sanitizer (UBSan)
-------------------------------------
-
-Core Analysis Improvements
-==========================
-
-- ...
-
-New Issues Found
-================
-
-- ...
-
-Python Binding Changes
-----------------------
-
-The following methods have been added:
-
--  ...
-
-Significant Known Problems
-==========================
 
 Additional Information
 ======================
