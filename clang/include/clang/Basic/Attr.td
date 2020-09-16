@@ -2143,14 +2143,6 @@ def Regparm : TypeAttr {
   let ASTNode = 0;
 }
 
-def SwiftBridge : Attr {
-  let Spellings = [GNU<"swift_bridge">];
-  let Subjects = SubjectList<[Tag, TypedefName, ObjCInterface, ObjCProtocol],
-                             ErrorDiag, "ExpectedType">;
-  let Args = [StringArgument<"SwiftType">];
-  let Documentation = [SwiftBridgeDocs];
-}
-
 def SwiftName : InheritableAttr {
   let Spellings = [GCC<"swift_name">];
   let Args = [StringArgument<"Name">];
@@ -2214,6 +2206,14 @@ def SwiftVersionedRemoval : Attr {
       return static_cast<attr::Kind>(getRawKind());
     }
   }];
+}
+
+def SwiftBridge : InheritableAttr {
+  let Spellings = [GNU<"swift_bridge">];
+  let Args = [StringArgument<"SwiftType">];
+  let Subjects = SubjectList<[Tag, TypedefName, ObjCInterface, ObjCProtocol],
+                             ErrorDiag>;
+  let Documentation = [SwiftBridgeDocs];
 }
 
 def SwiftBridgedTypedef : InheritableAttr {
