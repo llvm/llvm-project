@@ -821,6 +821,8 @@ void ObjFile::initializeDependencies() {
     PrecompRecord precomp = cantFail(
         TypeDeserializer::deserializeAs<PrecompRecord>(firstType->data()));
     debugTypesObj = makeUsePrecompSource(this, precomp);
+    // Drop the LF_PRECOMP record from the input stream.
+    debugTypes = debugTypes.drop_front(firstType->RecordData.size());
     return;
   }
 
