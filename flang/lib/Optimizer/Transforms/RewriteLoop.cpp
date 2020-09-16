@@ -157,7 +157,7 @@ public:
 
     // Move blocks from the "then" region to the region containing 'fir.if',
     // place it before the continuation block, and branch to it.
-    auto &ifOpRegion = ifOp.whereRegion();
+    auto &ifOpRegion = ifOp.thenRegion();
     auto *ifOpBlock = &ifOpRegion.front();
     auto *ifOpTerminator = ifOpRegion.back().getTerminator();
     auto ifOpTerminatorOperands = ifOpTerminator->getOperands();
@@ -170,7 +170,7 @@ public:
     // 'fir.if', place it before the continuation block and branch to it.  It
     // will be placed after the "then" regions.
     auto *otherwiseBlock = continueBlock;
-    auto &otherwiseRegion = ifOp.otherRegion();
+    auto &otherwiseRegion = ifOp.elseRegion();
     if (!otherwiseRegion.empty()) {
       otherwiseBlock = &otherwiseRegion.front();
       auto *otherwiseTerm = otherwiseRegion.back().getTerminator();

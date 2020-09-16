@@ -14,6 +14,7 @@
 #define FORTRAN_LOWER_ABSTRACTCONVERTER_H
 
 #include "flang/Common/Fortran.h"
+#include "flang/Lower/Support/BoxValue.h"
 #include "flang/Lower/Utils.h"
 #include "mlir/IR/BuiltinOps.h"
 
@@ -22,6 +23,7 @@ namespace common {
 template <typename>
 class Reference;
 }
+
 namespace evaluate {
 struct DataRef;
 template <typename>
@@ -73,18 +75,19 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Generate the address of the location holding the expression, someExpr
-  virtual mlir::Value genExprAddr(const SomeExpr &,
-                                  mlir::Location *loc = nullptr) = 0;
+  virtual fir::ExtendedValue genExprAddr(const SomeExpr &,
+                                         mlir::Location *loc = nullptr) = 0;
   /// Generate the address of the location holding the expression, someExpr
-  mlir::Value genExprAddr(const SomeExpr *someExpr, mlir::Location loc) {
+  fir::ExtendedValue genExprAddr(const SomeExpr *someExpr, mlir::Location loc) {
     return genExprAddr(*someExpr, &loc);
   }
 
   /// Generate the computations of the expression to produce a value
-  virtual mlir::Value genExprValue(const SomeExpr &,
-                                   mlir::Location *loc = nullptr) = 0;
+  virtual fir::ExtendedValue genExprValue(const SomeExpr &,
+                                          mlir::Location *loc = nullptr) = 0;
   /// Generate the computations of the expression, someExpr, to produce a value
-  mlir::Value genExprValue(const SomeExpr *someExpr, mlir::Location loc) {
+  fir::ExtendedValue genExprValue(const SomeExpr *someExpr,
+                                  mlir::Location loc) {
     return genExprValue(*someExpr, &loc);
   }
 

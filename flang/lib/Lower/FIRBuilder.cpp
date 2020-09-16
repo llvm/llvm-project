@@ -11,6 +11,7 @@
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ComplexExpr.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/Support/BoxValue.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Semantics/symbol.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -186,4 +187,36 @@ fir::StringLitOp Fortran::lower::FirOpBuilder::createStringLit(
       fir::SequenceType::get(fir::SequenceType::Shape(1, data.size()), eleTy);
   return create<fir::StringLitOp>(loc, llvm::ArrayRef<mlir::Type>{arrTy},
                                   llvm::None, attrs);
+}
+
+mlir::Value
+Fortran::lower::FirOpBuilder::createShape(mlir::Location loc,
+                                          const fir::ExtendedValue &exv) {
+  auto ctor = [&](const fir::AbstractArrayBox &box) -> mlir::Value {
+    if (box.lboundsAllOne()) {
+      // Create a ShapeOp with nominal origin of all ones.
+      auto shapeTy = fir::ShapeType::get(getContext(), box.getExtents().size());
+      return create<fir::ShapeOp>(loc, shapeTy, box.getExtents());
+    }
+    // Create a ShapeShiftOp, as origin may not be all ones.
+    auto idxTy = getIndexType();
+    auto shapeTy =
+        fir::ShapeShiftType::get(getContext(), box.getExtents().size());
+    llvm::SmallVector<mlir::Value, 8> pairs;
+    for (const auto &pair : llvm::zip(box.getLBounds(), box.getExtents())) {
+      auto lb = createConvert(loc, idxTy, std::get<0>(pair));
+      pairs.push_back(lb);
+      auto ext = createConvert(loc, idxTy, std::get<1>(pair));
+      pairs.push_back(ext);
+    }
+    return create<fir::ShapeShiftOp>(loc, shapeTy, pairs);
+  };
+  return exv.match([&](const fir::ArrayBoxValue &box) { return ctor(box); },
+                   [&](const fir::CharArrayBoxValue &box) { return ctor(box); },
+                   [&](const fir::BoxValue &box) { return ctor(box); },
+                   [&](const auto &) {
+                     exv.dump();
+                     mlir::emitError(loc, "expected shape on entity");
+                     return mlir::Value{};
+                   });
 }

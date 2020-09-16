@@ -507,7 +507,7 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     LLVM_DEBUG(llvm::dbgs() << "AffineIfConversion: rewriting if:\n";
                op.dump(););
-    auto &ifOps = op.whereRegion().front().getOperations();
+    auto &ifOps = op.thenRegion().front().getOperations();
     auto affineCondition = AffineIfCondition(op.condition());
     if (!affineCondition.integerSet) {
       LLVM_DEBUG(
@@ -517,12 +517,12 @@ public:
     }
     auto affineIf = rewriter.create<mlir::AffineIfOp>(
         op.getLoc(), affineCondition.integerSet.getValue(),
-        affineCondition.affineArgs, !op.otherRegion().empty());
+        affineCondition.affineArgs, !op.elseRegion().empty());
     rewriter.startRootUpdate(affineIf);
     affineIf.getThenBlock()->getOperations().splice(
         --affineIf.getThenBlock()->end(), ifOps, ifOps.begin(), --ifOps.end());
-    if (!op.otherRegion().empty()) {
-      auto &otherOps = op.otherRegion().front().getOperations();
+    if (!op.elseRegion().empty()) {
+      auto &otherOps = op.elseRegion().front().getOperations();
       affineIf.getElseBlock()->getOperations().splice(
           --affineIf.getElseBlock()->end(), otherOps, otherOps.begin(),
           --otherOps.end());

@@ -144,7 +144,7 @@ mlir::Value Fortran::lower::CallerInterface::getResultLength() {
   assert(typeAndShape && "no result type");
   auto expr = AsGenericExpr(typeAndShape->LEN().value());
   if (Fortran::evaluate::IsConstantExpr(expr))
-    return converter.genExprValue(expr);
+    return fir::getBase(converter.genExprValue(expr));
   llvm_unreachable(
       "non constant result length on caller side not yet safely handled");
 }
