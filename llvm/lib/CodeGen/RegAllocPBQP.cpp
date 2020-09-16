@@ -199,7 +199,7 @@ public:
 
     for (auto NId : G.nodeIds()) {
       PBQP::PBQPNum SpillCost =
-        LIS.getInterval(G.getNodeMetadata(NId).getVReg()).weight;
+          LIS.getInterval(G.getNodeMetadata(NId).getVReg()).weight();
       if (SpillCost == 0.0)
         SpillCost = std::numeric_limits<PBQP::PBQPNum>::min();
       else
@@ -290,7 +290,7 @@ private:
     // If two intervals end at the same point, we need a way to break the tie or
     // the set will assume they're actually equal and refuse to insert a
     // "duplicate". Just compare the vregs - fast and guaranteed unique.
-    return std::get<0>(I1)->reg < std::get<0>(I2)->reg;
+    return std::get<0>(I1)->reg() < std::get<0>(I2)->reg();
   }
 
   static bool isAtLastSegment(const IntervalInfo &I) {
@@ -595,8 +595,8 @@ void RegAllocPBQP::initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM,
     // If this is an empty interval move it to the EmptyIntervalVRegs set then
     // continue.
     if (VRegLI.empty()) {
-      EmptyIntervalVRegs.insert(VRegLI.reg);
-      VRegsToAlloc.erase(VRegLI.reg);
+      EmptyIntervalVRegs.insert(VRegLI.reg());
+      VRegsToAlloc.erase(VRegLI.reg());
       continue;
     }
 
@@ -684,7 +684,7 @@ void RegAllocPBQP::spillVReg(Register VReg,
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   (void)TRI;
   LLVM_DEBUG(dbgs() << "VREG " << printReg(VReg, &TRI) << " -> SPILLED (Cost: "
-                    << LRE.getParent().weight << ", New vregs: ");
+                    << LRE.getParent().weight() << ", New vregs: ");
 
   // Copy any newly inserted live intervals into the list of regs to
   // allocate.
@@ -692,8 +692,8 @@ void RegAllocPBQP::spillVReg(Register VReg,
        I != E; ++I) {
     const LiveInterval &LI = LIS.getInterval(*I);
     assert(!LI.empty() && "Empty spill range.");
-    LLVM_DEBUG(dbgs() << printReg(LI.reg, &TRI) << " ");
-    VRegsToAlloc.insert(LI.reg);
+    LLVM_DEBUG(dbgs() << printReg(LI.reg(), &TRI) << " ");
+    VRegsToAlloc.insert(LI.reg());
   }
 
   LLVM_DEBUG(dbgs() << ")\n");
@@ -749,10 +749,10 @@ void RegAllocPBQP::finalizeAlloc(MachineFunction &MF,
          I != E; ++I) {
     LiveInterval &LI = LIS.getInterval(*I);
 
-    unsigned PReg = MRI.getSimpleHint(LI.reg);
+    unsigned PReg = MRI.getSimpleHint(LI.reg());
 
     if (PReg == 0) {
-      const TargetRegisterClass &RC = *MRI.getRegClass(LI.reg);
+      const TargetRegisterClass &RC = *MRI.getRegClass(LI.reg());
       const ArrayRef<MCPhysReg> RawPRegOrder = RC.getRawAllocationOrder(MF);
       for (unsigned CandidateReg : RawPRegOrder) {
         if (!VRM.getRegInfo().isReserved(CandidateReg)) {
@@ -764,7 +764,7 @@ void RegAllocPBQP::finalizeAlloc(MachineFunction &MF,
              "No un-reserved physical registers in this register class");
     }
 
-    VRM.assignVirt2Phys(LI.reg, PReg);
+    VRM.assignVirt2Phys(LI.reg(), PReg);
   }
 }
 
