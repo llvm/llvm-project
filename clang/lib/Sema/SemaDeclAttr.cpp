@@ -5799,20 +5799,20 @@ static void handleSwiftName(Sema &S, Decl *D, const ParsedAttr &Attr) {
   D->addAttr(::new (S.Context) SwiftNameAttr(S.Context, Attr, Name));
 }
 
-static void handleSwiftBridgeAttr(Sema &S, Decl *D, const ParsedAttr &Attr) {
+static void handleSwiftBridge(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Make sure that there is a string literal as the annotation's single
   // argument.
-  StringRef Str;
-  if (!S.checkStringLiteralArgumentAttr(Attr, 0, Str))
+  StringRef BT;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, BT))
     return;
 
   // Don't duplicate annotations that are already set.
   if (D->hasAttr<SwiftBridgeAttr>()) {
-    S.Diag(Attr.getLoc(), diag::warn_duplicate_attribute) << Attr.getAttrName();
+    S.Diag(AL.getLoc(), diag::warn_duplicate_attribute) << AL;
     return;
   }
 
-  D->addAttr(::new (S.Context) SwiftBridgeAttr(S.Context, Attr, Str));
+  D->addAttr(::new (S.Context) SwiftBridgeAttr(S.Context, AL, BT));
 }
 
 static void handleSwiftNewtypeAttr(Sema &S, Decl *D, const ParsedAttr &Attr) {
@@ -7871,7 +7871,7 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleSwiftName(S, D, AL);
     break;
   case ParsedAttr::AT_SwiftBridge:
-    handleSwiftBridgeAttr(S, D, AL);
+    handleSwiftBridge(S, D, AL);
     break;
   case ParsedAttr::AT_SwiftBridgedTypedef:
     handleSimpleAttribute<SwiftBridgedTypedefAttr>(S, D, AL);
