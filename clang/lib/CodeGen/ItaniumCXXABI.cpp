@@ -9,11 +9,11 @@
 // This provides C++ code generation targeting the Itanium C++ ABI.  The class
 // in this file generates structures that follow the Itanium C++ ABI, which is
 // documented at:
-//  http://www.codesourcery.com/public/cxx-abi/abi.html
-//  http://www.codesourcery.com/public/cxx-abi/abi-eh.html
+//  https://itanium-cxx-abi.github.io/cxx-abi/abi.html
+//  https://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html
 //
 // It also supports the closely-related ARM ABI, documented at:
-// http://infocenter.arm.com/help/topic/com.arm.doc.ihi0041c/IHI0041C_cppabi.pdf
+// https://developer.arm.com/documentation/ihi0041/g/
 //
 //===----------------------------------------------------------------------===//
 
