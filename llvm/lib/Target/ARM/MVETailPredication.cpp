@@ -411,7 +411,7 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
                  << TC2 << " from get.active.lane.mask\n");
       return false;
     }
-  } else {
+  } else if (!ForceTailPredication) {
     // Smoke tests if the element count is a runtime value. I.e., this isn't
     // fully generic because that would require a full SCEV visitor here. It
     // would require extracting the variable from the elementcount SCEV
