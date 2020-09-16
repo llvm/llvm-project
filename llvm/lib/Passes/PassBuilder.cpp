@@ -2429,9 +2429,11 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
         return Err;
       // Add the nested pass manager with the appropriate adaptor.
       bool UseMemorySSA = (Name == "loop-mssa");
-      FPM.addPass(createFunctionToLoopPassAdaptor(
-          std::move(LPM), UseMemorySSA, /*UseBlockFrequencyInfo=*/false,
-          DebugLogging));
+      bool UseBFI =
+          std::any_of(InnerPipeline.begin(), InnerPipeline.end(),
+                      [](auto Pipeline) { return Pipeline.Name == "licm"; });
+      FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM), UseMemorySSA,
+                                                  UseBFI, DebugLogging));
       return Error::success();
     }
     if (auto Count = parseRepeatPassName(Name)) {
