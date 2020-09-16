@@ -49,8 +49,9 @@ define void @f2(<64 x i16>* %a0, <64 x i8>* %a1) #0 {
 ; CHECK-DAG: v[[V0:[0-9]+]] = vmem(r0+#0)
 ; CHECK-DAG: v[[V1:[0-9]+]] = vmem(r0+#1)
 ; CHECK-DAG: q[[Q0:[0-3]]] = vsetq
-; CHECK: v[[V2:[0-9]+]].b = vdeale(v[[V1]].b,v[[V0]].b)
-; CHECK: if (q[[Q0]]) vmem(r1+#0) = v[[V2]]
+; CHECK: v[[V2:[0-9]+]].h = vpacke(v[[V1]].w,v[[V0]].w)
+; CHECK: v[[V3:[0-9]+]].b = vpacke({{.*}},v[[V2]].h)
+; CHECK: if (q[[Q0]]) vmem(r1+#0) = v[[V3]]
 define void @f3(<64 x i32>* %a0, <64 x i8>* %a1) #0 {
   %v0 = load <64 x i32>, <64 x i32>* %a0, align 128
   %v1 = trunc <64 x i32> %v0 to <64 x i8>

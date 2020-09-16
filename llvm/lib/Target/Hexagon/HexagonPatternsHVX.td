@@ -417,7 +417,8 @@ let Predicates = [UseHVX] in {
   def: Pat<(VecI8  (vpackl HVI32:$Vs)), (V6_vdealb4w (IMPLICIT_DEF), HvxVR:$Vs)>;
   def: Pat<(VecI16 (vpackl HVI32:$Vs)), (V6_vdealh HvxVR:$Vs)>;
   def: Pat<(VecI8  (vpackl HWI16:$Vs)), (V6_vpackeb (HiVec $Vs), (LoVec $Vs))>;
-  def: Pat<(VecI8  (vpackl HWI32:$Vs)), (V6_vdealb4w (HiVec $Vs), (LoVec $Vs))>;
+  def: Pat<(VecI8  (vpackl HWI32:$Vs)),
+           (V6_vpackeb (IMPLICIT_DEF), (V6_vpackeh (HiVec $Vs), (LoVec $Vs)))>;
   def: Pat<(VecI16 (vpackl HWI32:$Vs)), (V6_vpackeh (HiVec $Vs), (LoVec $Vs))>;
 
   def: Pat<(VecI16  (vunpack   HVI8:$Vs)), (LoVec (VSxtb $Vs))>;
