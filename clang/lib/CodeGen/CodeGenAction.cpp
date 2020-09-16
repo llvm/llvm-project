@@ -245,8 +245,13 @@ namespace clang {
     bool LinkInModules() {
       for (auto &LM : LinkModules) {
         if (LM.PropagateAttrs)
-          for (Function &F : *LM.Module)
+          for (Function &F : *LM.Module) {
+            // Skip intrinsics. Keep consistent with how intrinsics are created
+            // in LLVM IR.
+            if (F.isIntrinsic())
+              continue;
             Gen->CGM().addDefaultFunctionDefinitionAttributes(F);
+          }
 
         CurLinkModule = LM.Module.get();
 
