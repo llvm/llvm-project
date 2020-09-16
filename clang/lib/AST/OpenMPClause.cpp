@@ -2201,7 +2201,10 @@ void OMPTraitInfo::print(llvm::raw_ostream &OS,
 
       OS << "(";
       if (Selector.Kind == TraitSelector::user_condition) {
-        Selector.ScoreOrCondition->printPretty(OS, nullptr, Policy);
+        if (Selector.ScoreOrCondition)
+          Selector.ScoreOrCondition->printPretty(OS, nullptr, Policy);
+        else
+          OS << "...";
       } else {
 
         if (Selector.ScoreOrCondition) {
