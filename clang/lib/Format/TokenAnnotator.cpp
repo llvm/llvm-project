@@ -198,8 +198,8 @@ private:
     if (!CurrentToken)
       return false;
     FormatToken *Left = CurrentToken->Previous;
-    FormatToken *PrevNonComment =
-        Left ? Left->getPreviousNonComment() : nullptr;
+    assert(Left && "Unknown previous token");
+    FormatToken *PrevNonComment = Left->getPreviousNonComment();
     Left->ParentBracket = Contexts.back().ContextKind;
     ScopedContextCreator ContextCreator(*this, tok::l_paren, 1);
 
