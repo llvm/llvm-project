@@ -53,6 +53,11 @@ struct OutlinableGroup {
   /// The return block for the overall function.
   BasicBlock *EndBB = nullptr;
 
+  /// A set containing the different GVN store sets needed. Each array contains
+  /// a sorted list of the different values that need to be stored into output
+  /// registers.
+  DenseSet<ArrayRef<unsigned>> OutputGVNCombinations;
+
   /// Flag for whether the \ref ArgumentTypes have been defined after the
   /// extraction of the first region.
   bool InputTypesSet = false;
@@ -67,6 +72,13 @@ struct OutlinableGroup {
   /// \param [in,out] NotSame contains the global value numbers where the
   /// constant is not always the same, and must be passed in as an argument.
   void findSameConstants(DenseSet<unsigned> &NotSame);
+
+  /// For the regions, look at each set of GVN stores needed and account for
+  /// each combination.  Add an argument to the argument types if there is
+  /// more than one combination.
+  ///
+  /// \param [in] M - The module we are outlining from.
+  void collectGVNStoreSets(Module &M);
 };
 
 /// Move the contents of \p SourceBB to before the last instruction of \p
@@ -264,6 +276,17 @@ void OutlinableGroup::findSameConstants(DenseSet<unsigned> &NotSame) {
 
   for (OutlinableRegion *Region : Regions)
     collectRegionsConstants(*Region, GVNToConstant, NotSame);
+}
+
+void OutlinableGroup::collectGVNStoreSets(Module &M) {
+  for (OutlinableRegion *OS : Regions) 
+    OutputGVNCombinations.insert(OS->GVNStores);
+
+  // We are adding an extracted argument to decide between which output path
+  // to use in the basic block.  It is used in a switch statement and only
+  // needs to be an integer.
+  if (OutputGVNCombinations.size() > 1)
+    ArgumentTypes.push_back(Type::getInt32Ty(M.getContext()));
 }
 
 Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
@@ -655,7 +678,7 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
   for (unsigned AggArgIdx = 0; AggArgIdx < AggFunc->arg_size(); AggArgIdx++) {
 
     if (AggArgIdx == AggFunc->arg_size() - 1 &&
-        Group.ArgumentTypes.size() > Group.NumAggregateInputs) {
+        Group.OutputGVNCombinations.size() > 1) {
       // If we are on the last argument, and we need to differentiate between
       // output blocks, add an integer to the argument list to determine
       // what block to take
@@ -703,9 +726,9 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
                           Call);
 
   // It is possible that the call to the outlined function is either the first
-  // instruction in the new block, the last instruction, or both.  If either of
-  // these is the case, we need to make sure that we replace the instruction in
-  // the IRInstructionData struct with the new call.
+  // instruction is in the new block, the last instruction, or both.  If either
+  // of these is the case, we need to make sure that we replace the instruction
+  // in the IRInstructionData struct with the new call.
   CallInst *OldCall = Region.Call;
   if (Region.NewFront->Inst == OldCall)
     Region.NewFront->Inst = Call;
@@ -831,8 +854,51 @@ collectRelevantInstructions(Function &F,
   return RelevantInstructions;
 }
 
+/// It is possible that there is a basic block that already performs the same
+/// stores. This returns a duplicate block, if it exists
+///
+/// \param OutputBB [in] the block we are looking for a duplicate of.
+/// \param OutputStoreBBs [in] The existing output blocks.
+/// \returns an optional value with the number output block if there is a match.
+Optional<unsigned>
+findDuplicateOutputBlock(BasicBlock *OutputBB,
+                         ArrayRef<BasicBlock *> OutputStoreBBs) {
+
+  bool WrongInst = false;
+  bool WrongSize = false;
+  unsigned MatchingNum = 0;
+  for (BasicBlock *CompBB : OutputStoreBBs) {
+    WrongInst = false;
+    if (CompBB->size() - 1 != OutputBB->size()) {
+      WrongSize = true;
+      MatchingNum++;
+      continue;
+    }
+    
+    WrongSize = false;
+    BasicBlock::iterator NIt = OutputBB->begin();
+    for (Instruction &I : *CompBB) {
+      if (isa<BranchInst>(&I))
+        continue;
+
+      if (!I.isIdenticalTo(&(*NIt))) {
+        WrongInst = true;
+        break;
+      }
+
+      NIt++;
+    }
+    if (!WrongInst && !WrongSize) 
+      return MatchingNum;
+
+    MatchingNum++;
+  }
+
+  return None;
+}
+
 /// For the outlined section, move needed the StoreInsts for the output
-/// registers into their own block.  Then, determine if there is a duplicate
+/// registers into their own block. Then, determine if there is a duplicate
 /// output block already created.
 ///
 /// \param [in] OG - The OutlinableGroup of regions to be outlined.
@@ -856,9 +922,9 @@ alignOutputBlockWithAggFunc(OutlinableGroup &OG, OutlinableRegion &Region,
   // be contained in a store, we replace the uses of the value with the value
   // from the overall function, so that the store is storing the correct
   // value from the overall function.
-
   DenseSet<BasicBlock *> ExcludeBBs(OutputStoreBBs.begin(),
                                     OutputStoreBBs.end());
+  ExcludeBBs.insert(OutputBB);
   std::vector<Instruction *> ExtractedFunctionInsts =
       collectRelevantInstructions(*(Region.ExtractedFunction), ExcludeBBs);
   std::vector<Instruction *> OverallFunctionInsts =
@@ -890,6 +956,38 @@ alignOutputBlockWithAggFunc(OutlinableGroup &OG, OutlinableRegion &Region,
   }
 
   assert(ValuesToFind.size() == 0 && "Not all store values were handled!");
+
+  // If the size of the block is 0, then there are no stores, and we do not
+  // need to save this block.
+  if (OutputBB->size() == 0) {
+    Region.OutputBlockNum = -1;
+    OutputBB->eraseFromParent();
+    return;
+  } 
+
+  // Determine is there is a duplicate block.
+  Optional<unsigned> MatchingBB =
+      findDuplicateOutputBlock(OutputBB, OutputStoreBBs);
+
+  // If there is, we remove the new output block.  If it does not,
+  // we add it to our list of output blocks.
+  if (MatchingBB.hasValue()) {
+    LLVM_DEBUG(dbgs() << "Set output block for region in function"
+                      << Region.ExtractedFunction << " to "
+                      << MatchingBB.getValue());
+
+    Region.OutputBlockNum = MatchingBB.getValue();
+    OutputBB->eraseFromParent();
+    return;
+  }
+
+  Region.OutputBlockNum = OutputStoreBBs.size();
+
+  LLVM_DEBUG(dbgs() << "Create output block for region in"
+                    << Region.ExtractedFunction << " to "
+                    << *OutputBB);
+  OutputStoreBBs.push_back(OutputBB);
+  BranchInst::Create(EndBB, OutputBB);
 }
 
 /// Create the switch statement for outlined function to differentiate between
@@ -904,27 +1002,46 @@ alignOutputBlockWithAggFunc(OutlinableGroup &OG, OutlinableRegion &Region,
 /// \param [in,out] OutputStoreBBs - The existing output blocks.
 void createSwitchStatement(Module &M, OutlinableGroup &OG, BasicBlock *EndBB,
                            ArrayRef<BasicBlock *> OutputStoreBBs) {
-  Function *AggFunc = OG.OutlinedFunction;
-  // Create a final block
-  BasicBlock *ReturnBlock =
-      BasicBlock::Create(M.getContext(), "final_block", AggFunc);
-  Instruction *Term = EndBB->getTerminator();
-  Term->moveBefore(*ReturnBlock, ReturnBlock->end());
-  // Put the switch statement in the old end basic block for the function with
-  // a fall through to the new return block
-  LLVM_DEBUG(dbgs() << "Create switch statement in " << *AggFunc << " for "
-                    << OutputStoreBBs.size() << "\n");
-  SwitchInst *SwitchI =
-      SwitchInst::Create(AggFunc->getArg(AggFunc->arg_size() - 1), ReturnBlock,
-                         OutputStoreBBs.size(), EndBB);
+  // We only need the switch statement if there is more than one store
+  // combination.
+  if (OG.OutputGVNCombinations.size() > 1) {
+    Function *AggFunc = OG.OutlinedFunction;
+    // Create a final block
+    BasicBlock *ReturnBlock =
+        BasicBlock::Create(M.getContext(), "final_block", AggFunc);
+    Instruction *Term = EndBB->getTerminator();
+    Term->moveBefore(*ReturnBlock, ReturnBlock->end());
+    // Put the switch statement in the old end basic block for the function with
+    // a fall through to the new return block
+    LLVM_DEBUG(dbgs() << "Create switch statement in " << *AggFunc << " for "
+                      << OutputStoreBBs.size() << "\n");
+    SwitchInst *SwitchI =
+        SwitchInst::Create(AggFunc->getArg(AggFunc->arg_size() - 1),
+                           ReturnBlock, OutputStoreBBs.size(), EndBB);
 
-  unsigned Idx = 0;
-  for (BasicBlock *BB : OutputStoreBBs) {
-    SwitchI->addCase(ConstantInt::get(Type::getInt32Ty(M.getContext()), Idx),
-                     BB);
-    Term = BB->getTerminator();
-    Term->setSuccessor(0, ReturnBlock);
-    Idx++;
+    unsigned Idx = 0;
+    for (BasicBlock *BB : OutputStoreBBs) {
+      SwitchI->addCase(ConstantInt::get(Type::getInt32Ty(M.getContext()), Idx),
+                       BB);
+      Term = BB->getTerminator();
+      Term->setSuccessor(0, ReturnBlock);
+      Idx++;
+    }
+    return;
+  }
+
+  // If there needs to be stores, move them from the output block to the end
+  // block to save on branching instructions.
+  if (OutputStoreBBs.size() == 1) {
+    LLVM_DEBUG(dbgs() << "Move store instructions to the end block in "
+                      << *OG.OutlinedFunction << "\n");
+    BasicBlock *OutputBlock = OutputStoreBBs[0];
+    Instruction *Term = OutputBlock->getTerminator();
+    Term->eraseFromParent();
+    Term = EndBB->getTerminator();
+    moveBBContents(*OutputBlock, *EndBB);
+    Term->moveBefore(*EndBB, EndBB->end());
+    OutputBlock->eraseFromParent();
   }
 
   return;
@@ -968,11 +1085,16 @@ static void fillOverallFunction(Module &M, OutlinableGroup &CurrentGroup,
   replaceArgumentUses(*CurrentOS, NewBB);
   replaceConstants(*CurrentOS);
 
-  if (CurrentGroup.ArgumentTypes.size() > CurrentGroup.NumAggregateInputs) {
+  // If the new basic block has no new stores, we can erase it from the module.
+  // It it does, we create a branch instruction to the last basic block from the
+  // new one.
+  if (NewBB->size() == 0) {
+    CurrentOS->OutputBlockNum = -1;
+    NewBB->eraseFromParent();
+  } else {
     BranchInst::Create(CurrentGroup.EndBB, NewBB);
     OutputStoreBBs.push_back(NewBB);
-  } else
-    NewBB->eraseFromParent();
+  }
 
   // Replace the call to the extracted function with the outlined function.
   CurrentOS->Call = replaceCalledFunction(M, *CurrentOS);
@@ -1002,23 +1124,16 @@ void IROutliner::deduplicateExtractedSections(
         CurrentGroup.OutlinedFunction);
     replaceArgumentUses(*CurrentOS, NewBB);
 
-    if (CurrentGroup.ArgumentTypes.size() > CurrentGroup.NumAggregateInputs) {
-      BranchInst::Create(CurrentGroup.EndBB, NewBB);
-      CurrentOS->OutputBlockNum = OutputStoreBBs.size();
-      OutputStoreBBs.push_back(NewBB);
-      alignOutputBlockWithAggFunc(CurrentGroup, *CurrentOS, NewBB,
-                                  CurrentGroup.EndBB, OutputMappings,
-                                  OutputStoreBBs);
-    } else
-      NewBB->eraseFromParent();
+    alignOutputBlockWithAggFunc(CurrentGroup, *CurrentOS, NewBB,
+                                CurrentGroup.EndBB, OutputMappings,
+                                OutputStoreBBs);
 
     CurrentOS->Call = replaceCalledFunction(M, *CurrentOS);
     FuncsToRemove.push_back(CurrentOS->ExtractedFunction);
   }
 
   // Create a switch statement to handle the different output schemes.
-  if (CurrentGroup.ArgumentTypes.size() > CurrentGroup.NumAggregateInputs)
-    createSwitchStatement(M, CurrentGroup, CurrentGroup.EndBB, OutputStoreBBs);
+  createSwitchStatement(M, CurrentGroup, CurrentGroup.EndBB, OutputStoreBBs);
 
   OutlinedFunctionNum++;
 }
@@ -1231,11 +1346,7 @@ unsigned IROutliner::doOutline(Module &M) {
     if (CurrentGroup.Regions.empty())
       continue;
 
-    // We are adding an extracted argument to decide between which output path
-    // to use in the basic block.  It is used in a switch statement and only
-    // needs to be an integer.
-    if (CurrentGroup.ArgumentTypes.size() > CurrentGroup.NumAggregateInputs)
-      CurrentGroup.ArgumentTypes.push_back(Type::getInt32Ty(M.getContext()));
+    CurrentGroup.collectGVNStoreSets(M);
 
     // Create functions out of all the sections, and mark them as outlined.
     OutlinedRegions.clear();
