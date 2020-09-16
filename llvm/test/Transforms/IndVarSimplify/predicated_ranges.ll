@@ -110,4 +110,241 @@ fail:
   unreachable
 }
 
+
+define void @predicated_outside_loop_signed(i32 %arg) nounwind #0 {
+; CHECK-LABEL: @predicated_outside_loop_signed(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[ARG:%.*]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[SUB1]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[OUTER_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       outer.preheader:
+; CHECK-NEXT:    br label [[OUTER:%.*]]
+; CHECK:       outer:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], [[OUTER_INC:%.*]] ], [ 0, [[OUTER_PREHEADER]] ]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[ARG]], [[I]]
+; CHECK-NEXT:    [[SUB3:%.*]] = sub nsw i32 [[SUB2]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 0, [[SUB3]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[INNER_PH:%.*]], label [[OUTER_INC]]
+; CHECK:       inner.ph:
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    br i1 false, label [[INNER]], label [[OUTER_INC_LOOPEXIT:%.*]]
+; CHECK:       outer.inc.loopexit:
+; CHECK-NEXT:    br label [[OUTER_INC]]
+; CHECK:       outer.inc:
+; CHECK-NEXT:    [[I_INC]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    br i1 false, label [[OUTER]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %sub1 = sub nsw i32 %arg, 1
+  %cmp1 = icmp slt i32 0, %sub1
+  br i1 %cmp1, label %outer, label %exit
+
+outer:
+  %i = phi i32 [ 0, %entry ], [ %i.inc, %outer.inc ]
+  %sub2 = sub nsw i32 %arg, %i
+  %sub3 = sub nsw i32 %sub2, 1
+  %cmp2 = icmp slt i32 0, %sub3
+  br i1 %cmp2, label %inner.ph, label %outer.inc
+
+inner.ph:
+  br label %inner
+
+inner:
+  %j = phi i32 [ 0, %inner.ph ], [ %j.inc, %inner ]
+  %j.inc = add nsw i32 %j, 1
+  %cmp3 = icmp slt i32 %j.inc, %sub3
+  br i1 %cmp3, label %inner, label %outer.inc
+
+outer.inc:
+  %i.inc = add nsw i32 %i, 1
+  %cmp4 = icmp slt i32 %i.inc, %arg
+  br i1 %cmp4, label %outer, label %exit
+
+exit:
+  ret void
+}
+
+define void @predicated_outside_loop_unsigned(i32 %arg) nounwind #0 {
+; CHECK-LABEL: @predicated_outside_loop_unsigned(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[ARG:%.*]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[SUB1]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[OUTER_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       outer.preheader:
+; CHECK-NEXT:    br label [[OUTER:%.*]]
+; CHECK:       outer:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], [[OUTER_INC:%.*]] ], [ 0, [[OUTER_PREHEADER]] ]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[ARG]], [[I]]
+; CHECK-NEXT:    [[SUB3:%.*]] = sub nsw i32 [[SUB2]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 0, [[SUB3]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[INNER_PH:%.*]], label [[OUTER_INC]]
+; CHECK:       inner.ph:
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    br i1 false, label [[INNER]], label [[OUTER_INC_LOOPEXIT:%.*]]
+; CHECK:       outer.inc.loopexit:
+; CHECK-NEXT:    br label [[OUTER_INC]]
+; CHECK:       outer.inc:
+; CHECK-NEXT:    [[I_INC]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    br i1 false, label [[OUTER]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %sub1 = sub nsw i32 %arg, 1
+  %cmp1 = icmp slt i32 0, %sub1
+  br i1 %cmp1, label %outer, label %exit
+
+outer:
+  %i = phi i32 [ 0, %entry ], [ %i.inc, %outer.inc ]
+  %sub2 = sub nsw i32 %arg, %i
+  %sub3 = sub nsw i32 %sub2, 1
+  %cmp2 = icmp ult i32 0, %sub3
+  br i1 %cmp2, label %inner.ph, label %outer.inc
+
+inner.ph:
+  br label %inner
+
+inner:
+  %j = phi i32 [ 0, %inner.ph ], [ %j.inc, %inner ]
+  %j.inc = add nsw i32 %j, 1
+  %cmp3 = icmp slt i32 %j.inc, %sub3
+  br i1 %cmp3, label %inner, label %outer.inc
+
+outer.inc:
+  %i.inc = add nsw i32 %i, 1
+  %cmp4 = icmp slt i32 %i.inc, %arg
+  br i1 %cmp4, label %outer, label %exit
+
+exit:
+  ret void
+}
+
+define void @predicated_inside_loop_signed(i32 %arg) nounwind #0 {
+; CHECK-LABEL: @predicated_inside_loop_signed(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[OUTER:%.*]]
+; CHECK:       outer:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[OUTER_INC:%.*]] ]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[ARG:%.*]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[SUB1]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[GUARDED:%.*]], label [[EXIT:%.*]]
+; CHECK:       guarded:
+; CHECK-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[ARG]], [[I]]
+; CHECK-NEXT:    [[SUB3:%.*]] = sub nsw i32 [[SUB2]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 0, [[SUB3]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[INNER_PH:%.*]], label [[OUTER_INC]]
+; CHECK:       inner.ph:
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    br i1 false, label [[INNER]], label [[OUTER_INC_LOOPEXIT:%.*]]
+; CHECK:       outer.inc.loopexit:
+; CHECK-NEXT:    br label [[OUTER_INC]]
+; CHECK:       outer.inc:
+; CHECK-NEXT:    [[I_INC]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp slt i32 [[I_INC]], [[ARG]]
+; CHECK-NEXT:    br i1 [[CMP4]], label [[OUTER]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer
+
+outer:
+  %i = phi i32 [ 0, %entry ], [ %i.inc, %outer.inc ]
+  %sub1 = sub nsw i32 %arg, 1
+  %cmp1 = icmp slt i32 0, %sub1
+  br i1 %cmp1, label %guarded, label %exit
+
+guarded:
+  %sub2 = sub nsw i32 %arg, %i
+  %sub3 = sub nsw i32 %sub2, 1
+  %cmp2 = icmp slt i32 0, %sub3
+  br i1 %cmp2, label %inner.ph, label %outer.inc
+
+inner.ph:
+  br label %inner
+
+inner:
+  %j = phi i32 [ 0, %inner.ph ], [ %j.inc, %inner ]
+  %j.inc = add nsw i32 %j, 1
+  %cmp3 = icmp slt i32 %j.inc, %sub3
+  br i1 %cmp3, label %inner, label %outer.inc
+
+outer.inc:
+  %i.inc = add nsw i32 %i, 1
+  %cmp4 = icmp slt i32 %i.inc, %arg
+  br i1 %cmp4, label %outer, label %exit
+
+exit:
+  ret void
+}
+
+define void @predicated_inside_loop_unsigned(i32 %arg) nounwind #0 {
+; CHECK-LABEL: @predicated_inside_loop_unsigned(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[OUTER:%.*]]
+; CHECK:       outer:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[OUTER_INC:%.*]] ]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[ARG:%.*]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[SUB1]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[GUARDED:%.*]], label [[EXIT:%.*]]
+; CHECK:       guarded:
+; CHECK-NEXT:    [[SUB2:%.*]] = sub nsw i32 [[ARG]], [[I]]
+; CHECK-NEXT:    [[SUB3:%.*]] = sub nsw i32 [[SUB2]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 0, [[SUB3]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[INNER_PH:%.*]], label [[OUTER_INC]]
+; CHECK:       inner.ph:
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    br i1 false, label [[INNER]], label [[OUTER_INC_LOOPEXIT:%.*]]
+; CHECK:       outer.inc.loopexit:
+; CHECK-NEXT:    br label [[OUTER_INC]]
+; CHECK:       outer.inc:
+; CHECK-NEXT:    [[I_INC]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp slt i32 [[I_INC]], [[ARG]]
+; CHECK-NEXT:    br i1 [[CMP4]], label [[OUTER]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer
+
+outer:
+  %i = phi i32 [ 0, %entry ], [ %i.inc, %outer.inc ]
+  %sub1 = sub nsw i32 %arg, 1
+  %cmp1 = icmp slt i32 0, %sub1
+  br i1 %cmp1, label %guarded, label %exit
+
+guarded:
+  %sub2 = sub nsw i32 %arg, %i
+  %sub3 = sub nsw i32 %sub2, 1
+  %cmp2 = icmp ult i32 0, %sub3
+  br i1 %cmp2, label %inner.ph, label %outer.inc
+
+inner.ph:
+  br label %inner
+
+inner:
+  %j = phi i32 [ 0, %inner.ph ], [ %j.inc, %inner ]
+  %j.inc = add nsw i32 %j, 1
+  %cmp3 = icmp slt i32 %j.inc, %sub3
+  br i1 %cmp3, label %inner, label %outer.inc
+
+outer.inc:
+  %i.inc = add nsw i32 %i, 1
+  %cmp4 = icmp slt i32 %i.inc, %arg
+  br i1 %cmp4, label %outer, label %exit
+
+exit:
+  ret void
+}
+
 !0 = !{i32 0, i32 2147483647}
