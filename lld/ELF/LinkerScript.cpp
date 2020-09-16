@@ -320,20 +320,33 @@ void LinkerScript::assignSymbol(SymbolAssignment *cmd, bool inSec) {
   cmd->sym->type = v.type;
 }
 
-static std::string getFilename(InputFile *file) {
-  if (!file)
-    return "";
-  if (file->archiveName.empty())
-    return std::string(file->getName());
-  return (file->archiveName + ':' + file->getName()).str();
+static inline StringRef getFilename(const InputFile *file) {
+  return file ? file->getNameForScript() : StringRef();
+}
+
+bool InputSectionDescription::matchesFile(const InputFile *file) const {
+  if (filePat.isTrivialMatchAll())
+    return true;
+
+  if (!matchesFileCache || matchesFileCache->first != file)
+    matchesFileCache.emplace(file, filePat.match(getFilename(file)));
+
+  return matchesFileCache->second;
+}
+
+bool SectionPattern::excludesFile(const InputFile *file) const {
+  if (excludedFilePat.empty())
+    return false;
+
+  if (!excludesFileCache || excludesFileCache->first != file)
+    excludesFileCache.emplace(file, excludedFilePat.match(getFilename(file)));
+
+  return excludesFileCache->second;
 }
 
 bool LinkerScript::shouldKeep(InputSectionBase *s) {
-  if (keptSections.empty())
-    return false;
-  std::string filename = getFilename(s->file);
   for (InputSectionDescription *id : keptSections)
-    if (id->filePat.match(filename))
+    if (id->matchesFile(s->file))
       for (SectionPattern &p : id->sectionPatterns)
         if (p.sectionPat.match(s->name) &&
             (s->flags & id->withFlags) == id->withFlags &&
@@ -433,9 +446,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
       if (!pat.sectionPat.match(sec->name))
         continue;
 
-      std::string filename = getFilename(sec->file);
-      if (!cmd->filePat.match(filename) ||
-          pat.excludedFilePat.match(filename) ||
+      if (!cmd->matchesFile(sec->file) || pat.excludesFile(sec->file) ||
           (sec->flags & cmd->withFlags) != cmd->withFlags ||
           (sec->flags & cmd->withoutFlags) != 0)
         continue;
