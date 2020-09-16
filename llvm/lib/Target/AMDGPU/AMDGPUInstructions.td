@@ -483,6 +483,8 @@ defm atomic_load_umax : ret_noret_binary_atomic_op<atomic_load_umax>;
 defm atomic_load_umin : ret_noret_binary_atomic_op<atomic_load_umin>;
 defm atomic_load_xor : ret_noret_binary_atomic_op<atomic_load_xor>;
 defm atomic_load_fadd : ret_noret_binary_atomic_op<atomic_load_fadd, 0>;
+let MemoryVT = v2f16 in
+defm atomic_load_fadd_v2f16 : ret_noret_binary_atomic_op<atomic_load_fadd, 0>;
 defm AMDGPUatomic_cmp_swap : ret_noret_binary_atomic_op<AMDGPUatomic_cmp_swap>;
 
 def load_align8_local : PatFrag<(ops node:$ptr), (load_local node:$ptr)>,

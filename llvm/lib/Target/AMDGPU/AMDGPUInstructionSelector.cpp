@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1743,6 +1744,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectDSAppendConsume(I, false);
   case Intrinsic::amdgcn_s_barrier:
     return selectSBarrier(I);
+  case Intrinsic::amdgcn_global_atomic_fadd:
+    return selectGlobalAtomicFaddIntrinsic(I);
   default: {
     return selectImpl(I, *CoverageInfo);
   }
@@ -2899,6 +2902,123 @@ bool AMDGPUInstructionSelector::selectG_SHUFFLE_VECTOR(
   return true;
 }
 
+bool AMDGPUInstructionSelector::selectAMDGPU_BUFFER_ATOMIC_FADD(
+  MachineInstr &MI) const {
+
+  MachineBasicBlock *MBB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  if (!MRI->use_nodbg_empty(MI.getOperand(0).getReg())) {
+    Function &F = MBB->getParent()->getFunction();
+    DiagnosticInfoUnsupported
+      NoFpRet(F, "return versions of fp atomics not supported",
+              MI.getDebugLoc(), DS_Error);
+    F.getContext().diagnose(NoFpRet);
+    return false;
+  }
+
+  // FIXME: This is only needed because tablegen requires number of dst operands
+  // in match and replace pattern to be the same. Otherwise patterns can be
+  // exported from SDag path.
+  MachineOperand &VDataIn = MI.getOperand(1);
+  MachineOperand &VIndex = MI.getOperand(3);
+  MachineOperand &VOffset = MI.getOperand(4);
+  MachineOperand &SOffset = MI.getOperand(5);
+  int16_t Offset = MI.getOperand(6).getImm();
+
+  bool HasVOffset = !isOperandImmEqual(VOffset, 0, *MRI);
+  bool HasVIndex = !isOperandImmEqual(VIndex, 0, *MRI);
+
+  unsigned Opcode;
+  if (HasVOffset) {
+    Opcode = HasVIndex ? AMDGPU::BUFFER_ATOMIC_ADD_F32_BOTHEN
+                       : AMDGPU::BUFFER_ATOMIC_ADD_F32_OFFEN;
+  } else {
+    Opcode = HasVIndex ? AMDGPU::BUFFER_ATOMIC_ADD_F32_IDXEN
+                       : AMDGPU::BUFFER_ATOMIC_ADD_F32_OFFSET;
+  }
+
+  if (MRI->getType(VDataIn.getReg()).isVector()) {
+    switch (Opcode) {
+    case AMDGPU::BUFFER_ATOMIC_ADD_F32_BOTHEN:
+      Opcode = AMDGPU::BUFFER_ATOMIC_PK_ADD_F16_BOTHEN;
+      break;
+    case AMDGPU::BUFFER_ATOMIC_ADD_F32_OFFEN:
+      Opcode = AMDGPU::BUFFER_ATOMIC_PK_ADD_F16_OFFEN;
+      break;
+    case AMDGPU::BUFFER_ATOMIC_ADD_F32_IDXEN:
+      Opcode = AMDGPU::BUFFER_ATOMIC_PK_ADD_F16_IDXEN;
+      break;
+    case AMDGPU::BUFFER_ATOMIC_ADD_F32_OFFSET:
+      Opcode = AMDGPU::BUFFER_ATOMIC_PK_ADD_F16_OFFSET;
+      break;
+    }
+  }
+
+  auto I = BuildMI(*MBB, MI, DL, TII.get(Opcode));
+  I.add(VDataIn);
+
+  if (Opcode == AMDGPU::BUFFER_ATOMIC_ADD_F32_BOTHEN ||
+      Opcode == AMDGPU::BUFFER_ATOMIC_PK_ADD_F16_BOTHEN) {
+    Register IdxReg = MRI->createVirtualRegister(&AMDGPU::VReg_64RegClass);
+    BuildMI(*MBB, &*I, DL, TII.get(AMDGPU::REG_SEQUENCE), IdxReg)
+      .addReg(VIndex.getReg())
+      .addImm(AMDGPU::sub0)
+      .addReg(VOffset.getReg())
+      .addImm(AMDGPU::sub1);
+
+    I.addReg(IdxReg);
+  } else if (HasVIndex) {
+    I.add(VIndex);
+  } else if (HasVOffset) {
+    I.add(VOffset);
+  }
+
+  I.add(MI.getOperand(2)); // rsrc
+  I.add(SOffset);
+  I.addImm(Offset);
+  renderExtractSLC(I, MI, 7);
+  I.cloneMemRefs(MI);
+
+  MI.eraseFromParent();
+
+  return true;
+}
+
+bool AMDGPUInstructionSelector::selectGlobalAtomicFaddIntrinsic(
+  MachineInstr &MI) const{
+
+  MachineBasicBlock *MBB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  if (!MRI->use_nodbg_empty(MI.getOperand(0).getReg())) {
+    Function &F = MBB->getParent()->getFunction();
+    DiagnosticInfoUnsupported
+      NoFpRet(F, "return versions of fp atomics not supported",
+              MI.getDebugLoc(), DS_Error);
+    F.getContext().diagnose(NoFpRet);
+    return false;
+  }
+
+  // FIXME: This is only needed because tablegen requires number of dst operands
+  // in match and replace pattern to be the same. Otherwise patterns can be
+  // exported from SDag path.
+  auto Addr = selectFlatOffsetImpl<true>(MI.getOperand(2));
+
+  Register Data = MI.getOperand(3).getReg();
+  const unsigned Opc = MRI->getType(Data).isVector() ?
+    AMDGPU::GLOBAL_ATOMIC_PK_ADD_F16 : AMDGPU::GLOBAL_ATOMIC_ADD_F32;
+  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opc))
+    .addReg(Addr.first)
+    .addReg(Data)
+    .addImm(Addr.second)
+    .addImm(0) // SLC
+    .cloneMemRefs(MI);
+
+  MI.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+}
+
 bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   if (I.isPHI())
     return selectPHI(I);
@@ -3018,6 +3138,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     assert(Intr && "not an image intrinsic with image pseudo");
     return selectImageIntrinsic(I, Intr);
   }
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD:
+    return selectAMDGPU_BUFFER_ATOMIC_FADD(I);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -3260,14 +3382,11 @@ AMDGPUInstructionSelector::selectSmrdSgpr(MachineOperand &Root) const {
 }
 
 template <bool Signed>
-InstructionSelector::ComplexRendererFns
+std::pair<Register, int>
 AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root) const {
   MachineInstr *MI = Root.getParent();
 
-  InstructionSelector::ComplexRendererFns Default = {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },  // offset
-    }};
+  auto Default = std::make_pair(Root.getReg(), 0);
 
   if (!STI.hasFlatInstOffsets())
     return Default;
@@ -3287,20 +3406,27 @@ AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root) const {
 
   Register BasePtr = OpDef->getOperand(1).getReg();
 
-  return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(BasePtr); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset.getValue()); },
-    }};
+  return std::make_pair(BasePtr, Offset.getValue());
 }
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectFlatOffset(MachineOperand &Root) const {
-  return selectFlatOffsetImpl<false>(Root);
+  auto PtrWithOffset = selectFlatOffsetImpl<false>(Root);
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrWithOffset.first); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(PtrWithOffset.second); },
+    }};
 }
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectFlatOffsetSigned(MachineOperand &Root) const {
-  return selectFlatOffsetImpl<true>(Root);
+  auto PtrWithOffset = selectFlatOffsetImpl<true>(Root);
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrWithOffset.first); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(PtrWithOffset.second); },
+    }};
 }
 
 /// Match a zero extend from a 32-bit value to 64-bits.
