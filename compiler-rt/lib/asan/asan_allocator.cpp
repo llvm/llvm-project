@@ -1172,8 +1172,10 @@ void ForEachChunk(ForEachChunkCallback callback, void *arg) {
 IgnoreObjectResult IgnoreObjectLocked(const void *p) {
   uptr addr = reinterpret_cast<uptr>(p);
   __asan::AsanChunk *m = __asan::instance.GetAsanChunkByAddr(addr);
-  if (!m || (atomic_load(&m->chunk_state, memory_order_acquire) !=
-             __asan::CHUNK_ALLOCATED)) {
+  if (!m ||
+      (atomic_load(&m->chunk_state, memory_order_acquire) !=
+       __asan::CHUNK_ALLOCATED) ||
+      !m->AddrIsInside(addr)) {
     return kIgnoreObjectInvalid;
   }
   if (m->lsan_tag == kIgnored)
