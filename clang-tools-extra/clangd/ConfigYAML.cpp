@@ -38,6 +38,7 @@ public:
     DictParser Dict("Config", this);
     Dict.handle("If", [&](Node &N) { parse(F.If, N); });
     Dict.handle("CompileFlags", [&](Node &N) { parse(F.CompileFlags, N); });
+    Dict.handle("Index", [&](Node &N) { parse(F.Index, N); });
     Dict.parse(N);
     return !(N.failed() || HadError);
   }
