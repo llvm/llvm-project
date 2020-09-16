@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
-; RUN: opt -regions -analyze < %s | FileCheck %s
+; RUN: opt -regions -analyze -enable-new-pm=0 < %s | FileCheck %s
+; RUN: opt -passes='print<regions>' -disable-output < %s 2>&1 | FileCheck %s
 
 ; While working on improvements to the region info analysis, this test
 ; case caused an incorrect region 3 => 8 to be detected.
