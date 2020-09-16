@@ -161,6 +161,7 @@ bool X86SpeculativeExecutionSideEffectSuppression::runOnMachineFunction(
 
       // This branch requires adding an LFENCE.
       if (!PrevInstIsLFENCE) {
+        assert(FirstTerminator && "Unknown terminator instruction");
         BuildMI(MBB, FirstTerminator, DebugLoc(), TII->get(X86::LFENCE));
         NumLFENCEsInserted++;
         Modified = true;
