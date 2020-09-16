@@ -3950,7 +3950,7 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
       return OutOfDate;
     }
 
-    assert(M->Name == F.ModuleName && "found module with different name");
+    assert(M && M->Name == F.ModuleName && "found module with different name");
 
     // Check the primary module map file.
     auto StoredModMap = FileMgr.getFile(F.ModuleMapPath);
