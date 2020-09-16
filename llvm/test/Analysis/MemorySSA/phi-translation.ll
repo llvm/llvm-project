@@ -392,8 +392,9 @@ define void @dont_merge_noalias_complex_2(i32 %arg, i32 %arg1)  {
 ; CHECK-NEXT:  ; 3 = MemoryPhi({loop.1.header,4},{storebb,2})
 
 ; CHECK-LABEL: storebb:
-; NOLIMIT:     ; MemoryUse(1) MayAlias
-; LIMIT:       ; MemoryUse(4) MayAlias
+; CHECK-NEXT:  %iv.add2 = add nuw nsw i64 %iv, 2
+; CHECK-NEXT:  %p.2 = getelementptr inbounds [32 x i32], [32 x i32]* %tmp, i64 0, i64 %iv.add2
+; CHECK-NEXT:  ; MemoryUse(4) MayAlias
 ; CHECK-NEXT:  %l.2 = load i32, i32* %p.2, align 4
 ; CHECK-NEXT:  ; 2 = MemoryDef(4)
 ; CHECK-NEXT:  store i32 10, i32* %p.1, align 4
@@ -424,3 +425,52 @@ storebb:
 exit:
   ret void
 }
+
+; CHECK-LABEL: define void @use_clobbered_by_def_in_loop()
+define void @use_clobbered_by_def_in_loop() {
+entry:
+  %nodeStack = alloca [12 x i32], align 4
+  %0 = bitcast [12 x i32]* %nodeStack to i8*
+  call void @llvm.lifetime.start.p0i8(i64 48, i8* nonnull %0)
+  br i1 false, label %cleanup, label %while.cond
+
+; CHECK-LABEL: while.cond:
+; CHECK-NEXT: ; [[NO6:.*]] = MemoryPhi({entry,1},{while.cond.backedge,5})
+
+while.cond:                                       ; preds = %entry, %while.cond.backedge
+  %depth.1 = phi i32 [ %depth.1.be, %while.cond.backedge ], [ 0, %entry ]
+  %cmp = icmp sgt i32 %depth.1, 0
+  br i1 %cmp, label %land.rhs, label %while.end
+
+; CHECK-LABEL: land.rhs:
+; CHECK-NEXT: %sub = add nsw i32 %depth.1, -1
+; CHECK-NEXT: %arrayidx = getelementptr inbounds [12 x i32], [12 x i32]* %nodeStack, i32 0, i32 %sub
+; CHECK-NEXT: ; MemoryUse([[NO6]]) MayAlias
+; CHECK-NEXT: %1 = load i32, i32* %arrayidx, align 4
+
+land.rhs:                                         ; preds = %while.cond
+  %sub = add nsw i32 %depth.1, -1
+  %arrayidx = getelementptr inbounds [12 x i32], [12 x i32]* %nodeStack, i32 0, i32 %sub
+  %1 = load i32, i32* %arrayidx, align 4
+  br i1 true, label %while.body, label %while.end
+
+while.body:                                       ; preds = %land.rhs
+  br i1 true, label %cleanup, label %while.cond.backedge
+
+while.cond.backedge:                              ; preds = %while.body, %while.end
+  %depth.1.be = phi i32 [ %sub, %while.body ], [ %inc, %while.end ]
+  br label %while.cond
+
+while.end:                                        ; preds = %while.cond, %land.rhs
+  %arrayidx10 = getelementptr inbounds [12 x i32], [12 x i32]* %nodeStack, i32 0, i32 %depth.1
+  store i32 %depth.1, i32* %arrayidx10, align 4
+  %inc = add nsw i32 %depth.1, 1
+  br i1 true, label %cleanup, label %while.cond.backedge
+
+cleanup:                                          ; preds = %while.body, %while.end, %entry
+  call void @llvm.lifetime.end.p0i8(i64 48, i8* nonnull %0)
+  ret void
+}
+
+declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
