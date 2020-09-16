@@ -1766,5 +1766,60 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewRefSCC) {
   MPM.run(*M, MAM);
 }
 
+TEST_F(CGSCCPassManagerTest, TestInsertionOfNewRefSCCMutuallyRecursive) {
+  std::unique_ptr<Module> M = parseIR("define void @f() {\n"
+                                      "entry:\n"
+                                      "  ret void\n"
+                                      "}\n");
+
+  CGSCCPassManager CGPM(/*DebugLogging*/ true);
+  CGPM.addPass(LambdaSCCPassNoPreserve([&](LazyCallGraph::SCC &C,
+                                           CGSCCAnalysisManager &AM,
+                                           LazyCallGraph &CG,
+                                           CGSCCUpdateResult &UR) {
+    auto &FAM =
+        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
+
+    for (auto &N : C) {
+      auto &F = N.getFunction();
+      if (F.getName() != "f")
+        continue;
+
+      // Create mutually recursive functions (ref only) 'h1' and 'h2'.
+      auto *H1 = Function::Create(F.getFunctionType(), F.getLinkage(),
+                                  F.getAddressSpace(), "h1", F.getParent());
+      auto *H2 = Function::Create(F.getFunctionType(), F.getLinkage(),
+                                  F.getAddressSpace(), "h2", F.getParent());
+      BasicBlock *H1BB =
+          BasicBlock::Create(F.getParent()->getContext(), "entry", H1);
+      BasicBlock *H2BB =
+          BasicBlock::Create(F.getParent()->getContext(), "entry", H2);
+      (void)CastInst::CreatePointerCast(H2, Type::getInt8PtrTy(F.getContext()),
+                                        "h2.ref", H1BB);
+      (void)ReturnInst::Create(H1->getContext(), H1BB);
+      (void)CastInst::CreatePointerCast(H1, Type::getInt8PtrTy(F.getContext()),
+                                        "h1.ref", H2BB);
+      (void)ReturnInst::Create(H2->getContext(), H2BB);
+
+      // Add 'f -> h1' ref edge.
+      (void)CastInst::CreatePointerCast(H1, Type::getInt8PtrTy(F.getContext()),
+                                        "h.ref", &F.getEntryBlock().front());
+
+      CG.addNewFunctionIntoRefSCC(*H1, C.getOuterRefSCC());
+      CG.addNewFunctionIntoRefSCC(*H2, C.getOuterRefSCC());
+
+      ASSERT_NO_FATAL_FAILURE(
+          updateCGAndAnalysisManagerForCGSCCPass(CG, C, N, AM, UR, FAM))
+          << "Updating the call graph with a demoted, self-referential "
+             "call edge 'f -> f', a newly inserted ref edge 'f -> g', and "
+             "mutually recursive h1 <-> h2 caused a fatal failure";
+    }
+  }));
+
+  ModulePassManager MPM(/*DebugLogging*/ true);
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+  MPM.run(*M, MAM);
+}
+
 #endif
 } // namespace
