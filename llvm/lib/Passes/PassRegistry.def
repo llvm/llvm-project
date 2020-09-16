@@ -88,7 +88,11 @@ MODULE_PASS("scc-oz-module-inliner",
   buildInlinerPipeline(OptimizationLevel::Oz, ThinLTOPhase::None, DebugLogging))
 MODULE_PASS("oz-module-optimizer",
   buildModuleOptimizationPipeline(OptimizationLevel::Oz, DebugLogging, /*LTOPreLink*/false))
+MODULE_PASS("strip", StripSymbolsPass())
+MODULE_PASS("strip-dead-debug-info", StripDeadDebugInfoPass())
 MODULE_PASS("strip-dead-prototypes", StripDeadPrototypesPass())
+MODULE_PASS("strip-debug-declare", StripDebugDeclarePass())
+MODULE_PASS("strip-nondebug", StripNonDebugSymbolsPass())
 MODULE_PASS("synthetic-counts-propagation", SyntheticCountsPropagation())
 MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass(nullptr, nullptr))
 MODULE_PASS("verify", VerifierPass())
