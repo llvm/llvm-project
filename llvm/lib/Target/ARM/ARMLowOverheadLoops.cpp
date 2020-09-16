@@ -874,6 +874,7 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
     if (MI->getOpcode() != ARM::MVE_VPST) {
       assert(MI->findRegisterDefOperandIdx(ARM::VPR) != -1 &&
              "VPT does not implicitly define VPR?!");
+      CurrentPredicate.clear();
       CurrentPredicate.insert(MI);
     }
 
@@ -913,6 +914,16 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
     }
   }
 
+  // If this instruction defines the VPR, update the predicate for the
+  // proceeding instructions.
+  if (IsDef) {
+    // Clear the existing predicate when we're not in VPT Active state.
+    if (!isVectorPredicated(MI))
+      CurrentPredicate.clear();
+    CurrentPredicate.insert(MI);
+    LLVM_DEBUG(dbgs() << "ARM Loops: Adding Predicate: " << *MI);
+  }
+
   // If we find a vpr def that is not already predicated on the vctp, we've
   // got disjoint predicates that may not be equivalent when we do the
   // conversion.
@@ -928,9 +939,9 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
   // If we find an instruction that has been marked as not valid for tail
   // predication, only allow the instruction if it's contained within a valid
   // VPT block.
-  if ((Flags & ARMII::ValidForTailPredication) == 0 && !IsUse) {
+  if ((Flags & ARMII::ValidForTailPredication) == 0) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Can't tail predicate: " << *MI);
-    return false;
+    return IsUse;
   }
 
   // If the instruction is already explicitly predicated, then the conversion
