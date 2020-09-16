@@ -11095,11 +11095,6 @@ void Sema::CheckMSVCRTEntryPoint(FunctionDecl *FD) {
     if (FD->getName() != "DllMain")
       FD->setHasImplicitReturnZero(true);
 
-  if (FT->getCallConv() != CC_C) {
-    FT = Context.adjustFunctionType(FT, FT->getExtInfo().withCallingConv(CC_C));
-    FD->setType(QualType(FT, 0));
-  }
-
   if (!FD->isInvalidDecl() && FD->getDescribedFunctionTemplate()) {
     Diag(FD->getLocation(), diag::err_mainlike_template_decl) << FD;
     FD->setInvalidDecl();
