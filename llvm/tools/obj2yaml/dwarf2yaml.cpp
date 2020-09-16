@@ -8,6 +8,7 @@
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAddr.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
@@ -44,6 +45,38 @@ void dumpDebugAbbrev(DWARFContext &DCtx, DWARFYAML::Data &Y) {
       }
     }
   }
+}
+
+Error dumpDebugAddr(DWARFContext &DCtx, DWARFYAML::Data &Y) {
+  DWARFDebugAddrTable AddrTable;
+  DWARFDataExtractor AddrData(DCtx.getDWARFObj(),
+                              DCtx.getDWARFObj().getAddrSection(),
+                              DCtx.isLittleEndian(), /*AddrSize=*/0);
+  std::vector<DWARFYAML::AddrTableEntry> AddrTables;
+  uint64_t Offset = 0;
+  while (AddrData.isValidOffset(Offset)) {
+    // We ignore any errors that don't prevent parsing the section, since we can
+    // still represent such sections.
+    if (Error Err = AddrTable.extractV5(AddrData, &Offset, /*CUAddrSize=*/0,
+                                        consumeError))
+      return Err;
+    AddrTables.emplace_back();
+    for (uint64_t Addr : AddrTable.getAddressEntries()) {
+      // Currently, the parser doesn't support parsing an address table with non
+      // linear addresses (segment_selector_size != 0). The segment selectors
+      // are specified to be zero.
+      AddrTables.back().SegAddrPairs.push_back(
+          {/*SegmentSelector=*/0, /*Address=*/Addr});
+    }
+
+    AddrTables.back().Format = AddrTable.getFormat();
+    AddrTables.back().Length = AddrTable.getLength();
+    AddrTables.back().Version = AddrTable.getVersion();
+    AddrTables.back().AddrSize = AddrTable.getAddressSize();
+    AddrTables.back().SegSelectorSize = AddrTable.getSegmentSelectorSize();
+  }
+  Y.DebugAddr = std::move(AddrTables);
+  return Error::success();
 }
 
 Error dumpDebugStrings(DWARFContext &DCtx, DWARFYAML::Data &Y) {
