@@ -96,4 +96,20 @@ int __kmpc_get_target_offload(void) __attribute__((weak));
 #define TARGET_NAME Libomptarget
 #define DEBUG_PREFIX GETNAME(TARGET_NAME)
 
+////////////////////////////////////////////////////////////////////////////////
+/// dump a table of all the host-target pointer pairs on failure
+static inline void dumpTargetPointerMappings(const DeviceTy &Device) {
+  if (Device.HostDataToTargetMap.empty())
+    return;
+
+  fprintf(stderr, "Device %d Host-Device Pointer Mappings:\n", Device.DeviceID);
+  fprintf(stderr, "%-18s %-18s %s\n", "Host Ptr", "Target Ptr", "Size (B)");
+  for (const auto &HostTargetMap : Device.HostDataToTargetMap) {
+    fprintf(stderr, DPxMOD " " DPxMOD " %lu\n",
+            DPxPTR(HostTargetMap.HstPtrBegin),
+            DPxPTR(HostTargetMap.TgtPtrBegin),
+            HostTargetMap.HstPtrEnd - HostTargetMap.HstPtrBegin);
+  }
+}
+
 #endif
