@@ -519,6 +519,7 @@ static void initTargetOptions(DiagnosticsEngine &Diags,
       Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
   }
 
+  Options.EnableMachineFunctionSplitter = CodeGenOpts.SplitMachineFunctions;
   Options.FunctionSections = CodeGenOpts.FunctionSections;
   Options.DataSections = CodeGenOpts.DataSections;
   Options.UniqueSectionNames = CodeGenOpts.UniqueSectionNames;
