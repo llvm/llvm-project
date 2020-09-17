@@ -104,6 +104,12 @@ static cl::opt<bool> PHICSEDebugHash(
     cl::desc("Perform extra assertion checking to verify that PHINodes's hash "
              "function is well-behaved w.r.t. its isEqual predicate"));
 
+static cl::opt<unsigned> PHICSENumPHISmallSize(
+    "phicse-num-phi-smallsize", cl::init(32), cl::Hidden,
+    cl::desc(
+        "When the basic block contains not more than this number of PHI nodes, "
+        "perform a (faster!) exhaustive search instead of set-driven one."));
+
 // Max recursion depth for collectBitParts used when detecting bswap and
 // bitreverse idioms
 static const unsigned BitPartRecursionMaxDepth = 64;
@@ -1132,9 +1138,39 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   return true;
 }
 
-// WARNING: this logic must be kept in sync with
-//          Instruction::isIdenticalToWhenDefined()!
-bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
+static bool EliminateDuplicatePHINodesNaiveImpl(BasicBlock *BB) {
+  // This implementation doesn't currently consider undef operands
+  // specially. Theoretically, two phis which are identical except for
+  // one having an undef where the other doesn't could be collapsed.
+
+  bool Changed = false;
+
+  // Examine each PHI.
+  // Note that increment of I must *NOT* be in the iteration_expression, since
+  // we don't want to immediately advance when we restart from the beginning.
+  for (auto I = BB->begin(); PHINode *PN = dyn_cast<PHINode>(I);) {
+    ++I;
+    // Is there an identical PHI node in this basic block?
+    // Note that we only look in the upper square's triangle,
+    // we already checked that the lower triangle PHI's aren't identical.
+    for (auto J = I; PHINode *DuplicatePN = dyn_cast<PHINode>(J); ++J) {
+      if (!DuplicatePN->isIdenticalToWhenDefined(PN))
+        continue;
+      // A duplicate. Replace this PHI with the base PHI.
+      ++NumPHICSEs;
+      DuplicatePN->replaceAllUsesWith(PN);
+      DuplicatePN->eraseFromParent();
+      Changed = true;
+
+      // The RAUW can change PHIs that we already visited.
+      I = BB->begin();
+      break; // Start over from the beginning.
+    }
+  }
+  return Changed;
+}
+
+static bool EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB) {
   // This implementation doesn't currently consider undef operands
   // specially. Theoretically, two phis which are identical except for
   // one having an undef where the other doesn't could be collapsed.
@@ -1152,6 +1188,8 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
       return PN == getEmptyKey() || PN == getTombstoneKey();
     }
 
+    // WARNING: this logic must be kept in sync with
+    //          Instruction::isIdenticalToWhenDefined()!
     static unsigned getHashValueImpl(PHINode *PN) {
       // Compute a hash value on the operands. Instcombine will likely have
       // sorted them, which helps expose duplicates, but we have to check all
@@ -1191,6 +1229,7 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
 
   // Set of unique PHINodes.
   DenseSet<PHINode *, PHIDenseMapInfo> PHISet;
+  PHISet.reserve(4 * PHICSENumPHISmallSize);
 
   // Examine each PHI.
   bool Changed = false;
@@ -1211,6 +1250,16 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
   }
 
   return Changed;
+}
+
+bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
+  if (
+#ifndef NDEBUG
+      !PHICSEDebugHash &&
+#endif
+      hasNItemsOrLess(BB->phis(), PHICSENumPHISmallSize))
+    return EliminateDuplicatePHINodesNaiveImpl(BB);
+  return EliminateDuplicatePHINodesSetBasedImpl(BB);
 }
 
 /// enforceKnownAlignment - If the specified pointer points to an object that
