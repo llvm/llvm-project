@@ -204,30 +204,30 @@ TEST_F(TestTypeSystemSwiftTypeRef, Pointer) {
     NodePointer n = b.GlobalType(b.Node(Node::Kind::BuiltinTypeName,
                                         swift::BUILTIN_TYPE_NAME_RAWPOINTER));
     CompilerType p = GetCompilerType(b.Mangle(n));
-    ASSERT_TRUE(p.IsPointerType(nullptr));
-    ASSERT_TRUE(p.IsPointerOrReferenceType(nullptr));
+    ASSERT_TRUE(p.IsPointerType());
+    ASSERT_TRUE(p.IsPointerOrReferenceType());
   }
   {
     NodePointer n =
         b.GlobalType(b.Node(Node::Kind::BuiltinTypeName,
                             swift::BUILTIN_TYPE_NAME_UNSAFEVALUEBUFFER));
     CompilerType p = GetCompilerType(b.Mangle(n));
-    ASSERT_TRUE(p.IsPointerType(nullptr));
-    ASSERT_TRUE(p.IsPointerOrReferenceType(nullptr));
+    ASSERT_TRUE(p.IsPointerType());
+    ASSERT_TRUE(p.IsPointerOrReferenceType());
   }
   {
     NodePointer n = b.GlobalType(b.Node(Node::Kind::BuiltinTypeName,
                                         swift::BUILTIN_TYPE_NAME_NATIVEOBJECT));
     CompilerType p = GetCompilerType(b.Mangle(n));
-    ASSERT_TRUE(p.IsPointerType(nullptr));
-    ASSERT_TRUE(p.IsPointerOrReferenceType(nullptr));
+    ASSERT_TRUE(p.IsPointerType());
+    ASSERT_TRUE(p.IsPointerOrReferenceType());
   }
   {
     NodePointer n = b.GlobalType(b.Node(Node::Kind::BuiltinTypeName,
                                         swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT));
     CompilerType p = GetCompilerType(b.Mangle(n));
-    ASSERT_TRUE(p.IsPointerType(nullptr));
-    ASSERT_TRUE(p.IsPointerOrReferenceType(nullptr));
+    ASSERT_TRUE(p.IsPointerType());
+    ASSERT_TRUE(p.IsPointerOrReferenceType());
   }
 }
 
