@@ -62,36 +62,38 @@ static llvm::cl::opt<std::size_t>
 namespace {
 /// Information for generating a structured or unstructured increment loop.
 struct IncrementLoopInfo {
-  explicit IncrementLoopInfo(
-      Fortran::semantics::Symbol *sym,
-      const Fortran::parser::ScalarExpr &lowerExpr,
-      const Fortran::parser::ScalarExpr &upperExpr,
-      const std::optional<Fortran::parser::ScalarExpr> &stepExpr,
-      mlir::Type type)
-      : loopVariableSym{sym}, lowerExpr{lowerExpr}, upperExpr{upperExpr},
-        stepExpr{stepExpr}, loopVariableType{type} {}
+  template <typename T>
+  explicit IncrementLoopInfo(Fortran::semantics::Symbol &sym, const T &lower,
+                             const T &upper, const std::optional<T> &step)
+      : loopVariableSym{sym}, lowerExpr{Fortran::semantics::GetExpr(lower)},
+        upperExpr{Fortran::semantics::GetExpr(upper)},
+        stepExpr{Fortran::semantics::GetExpr(step)} {}
 
   bool isStructured() const { return !headerBlock; }
 
-  // Data members for both structured and unstructured loops.
-  Fortran::semantics::Symbol *loopVariableSym;
-  const Fortran::parser::ScalarExpr &lowerExpr;
-  const Fortran::parser::ScalarExpr &upperExpr;
-  const std::optional<Fortran::parser::ScalarExpr> &stepExpr;
-  mlir::Type loopVariableType;
-
-  mlir::Value loopVariable{};
-  mlir::Value stepValue{}; // possible uses in multiple blocks
+  // Data members common to both structured and unstructured loops.
+  const Fortran::semantics::Symbol &loopVariableSym;
+  const Fortran::semantics::SomeExpr *lowerExpr;
+  const Fortran::semantics::SomeExpr *upperExpr;
+  const Fortran::semantics::SomeExpr *stepExpr;
+  const Fortran::semantics::SomeExpr *maskExpr = nullptr;
+  bool isUnordered = false;
+  bool isOutermost = true;
+  bool isInnermost = true;
+  llvm::SmallVector<const Fortran::semantics::Symbol *, 4> localInitSymList;
+  mlir::Value loopVariable = nullptr;
+  mlir::Value stepValue = nullptr; // possible uses in multiple blocks
 
   // Data members for structured loops.
-  fir::DoLoopOp doLoop{};
-  mlir::OpBuilder::InsertPoint insertionPoint{};
+  fir::DoLoopOp doLoop = nullptr;
 
   // Data members for unstructured loops.
-  mlir::Value tripVariable{};
-  mlir::Block *headerBlock{nullptr};    // loop entry and test block
-  mlir::Block *bodyBlock{nullptr};      // first loop body block
-  mlir::Block *successorBlock{nullptr}; // loop exit target block
+  bool hasRealControl = false;
+  mlir::Value tripVariable = nullptr;
+  mlir::Block *headerBlock = nullptr; // loop entry and test block
+  mlir::Block *maskBlock = nullptr;   // concurrent loop mask block
+  mlir::Block *bodyBlock = nullptr;   // first loop body block
+  mlir::Block *exitBlock = nullptr;   // loop exit target block
 };
 } // namespace
 
@@ -330,9 +332,8 @@ public:
                       Fortran::lower::pft::LabelSet &labelSet) override final {
     auto &owningProc = *getEval().getOwningProcedure();
     auto iter = owningProc.assignSymbolLabelMap.find(sym);
-    if (iter == owningProc.assignSymbolLabelMap.end()) {
+    if (iter == owningProc.assignSymbolLabelMap.end())
       return false;
-    }
     labelSet = iter->second;
     return true;
   }
@@ -341,9 +342,8 @@ public:
   lookupLabel(Fortran::lower::pft::Label label) override final {
     auto &owningProc = *getEval().getOwningProcedure();
     auto iter = owningProc.labelEvaluationMap.find(label);
-    if (iter == owningProc.labelEvaluationMap.end()) {
+    if (iter == owningProc.labelEvaluationMap.end())
       return nullptr;
-    }
     return iter->second;
   }
 
@@ -538,24 +538,29 @@ private:
     return block;
   }
 
-  void genBranch(mlir::Block *targetBlock) {
+  void genFIRBranch(mlir::Block *targetBlock) {
     assert(targetBlock && "missing unconditional target block");
     builder->create<mlir::BranchOp>(toLocation(), targetBlock);
   }
 
-  void genFIRConditionalBranch(mlir::Value &cond, mlir::Block *trueTarget,
+  void genFIRConditionalBranch(mlir::Value cond, mlir::Block *trueTarget,
                                mlir::Block *falseTarget) {
+    assert(trueTarget && "missing conditional branch true block");
+    assert(falseTarget && "missing conditional branch false block");
     auto loc = toLocation();
     auto bcc = builder->createConvert(loc, builder->getI1Type(), cond);
     builder->create<mlir::CondBranchOp>(loc, bcc, trueTarget, llvm::None,
                                         falseTarget, llvm::None);
   }
-
+  void genFIRConditionalBranch(const Fortran::parser::ScalarLogicalExpr &expr,
+                               mlir::Block *trueTarget,
+                               mlir::Block *falseTarget) {
+    mlir::Value cond = genExprValue(*Fortran::semantics::GetExpr(expr));
+    genFIRConditionalBranch(cond, trueTarget, falseTarget);
+  }
   void genFIRConditionalBranch(const Fortran::parser::ScalarLogicalExpr &expr,
                                Fortran::lower::pft::Evaluation *trueTarget,
                                Fortran::lower::pft::Evaluation *falseTarget) {
-    assert(trueTarget && "missing conditional branch true block");
-    assert(falseTarget && "missing conditional branch true block");
     mlir::Value cond = genExprValue(*Fortran::semantics::GetExpr(expr));
     genFIRConditionalBranch(cond, trueTarget->block, falseTarget->block);
   }
@@ -642,12 +647,6 @@ private:
     return {insPt, ifOp};
   }
 
-  mlir::Value genFIRLoopIndex(const Fortran::parser::ScalarExpr &x,
-                              mlir::Type t) {
-    mlir::Value v = genExprValue(*Fortran::semantics::GetExpr(x));
-    return builder->createConvert(toLocation(), t, v);
-  }
-
   mlir::FuncOp getFunc(llvm::StringRef name, mlir::FunctionType ty) {
     if (auto func = builder->getNamedFunction(name)) {
       assert(func.getType() == ty);
@@ -702,7 +701,7 @@ private:
 
   void genFIR(const Fortran::parser::ComputedGotoStmt &stmt) {
     auto &eval = getEval();
-    mlir::Value selectExpr = genExprValue(*Fortran::semantics::GetExpr(
+    auto selectExpr = genExprValue(*Fortran::semantics::GetExpr(
         std::get<Fortran::parser::ScalarIntExpr>(stmt.t)));
     llvm::SmallVector<int64_t, 10> indexList;
     llvm::SmallVector<mlir::Block *, 10> blockList;
@@ -718,7 +717,7 @@ private:
 
   void genFIR(const Fortran::parser::ArithmeticIfStmt &stmt) {
     auto &eval = getEval();
-    mlir::Value expr = genExprValue(
+    auto expr = genExprValue(
         *Fortran::semantics::GetExpr(std::get<Fortran::parser::Expr>(stmt.t)));
     auto exprType = expr.getType();
     auto loc = toLocation();
@@ -745,15 +744,15 @@ private:
     //   sum = expr + expr  [ raise an exception if expr is a NaN ]
     //   if (sum < 0.0) goto L1 else if (sum > 0.0) goto L3 else goto L2
     assert(eval.localBlocks.size() == 1 && "missing arithmetic if block");
-    mlir::Value sum = builder->create<fir::AddfOp>(loc, expr, expr);
-    mlir::Value zero = builder->create<mlir::ConstantOp>(
+    auto sum = builder->create<fir::AddfOp>(loc, expr, expr);
+    auto zero = builder->create<mlir::ConstantOp>(
         loc, exprType, builder->getFloatAttr(exprType, 0.0));
-    mlir::Value cond1 =
+    auto cond1 =
         builder->create<mlir::CmpFOp>(loc, mlir::CmpFPredicate::OLT, sum, zero);
     genFIRConditionalBranch(cond1, blockOfLabel(eval, std::get<1>(stmt.t)),
                             eval.localBlocks[0]);
     startBlock(eval.localBlocks[0]);
-    mlir::Value cond2 =
+    auto cond2 =
         builder->create<mlir::CmpFOp>(loc, mlir::CmpFPredicate::OGT, sum, zero);
     genFIRConditionalBranch(cond2, blockOfLabel(eval, std::get<3>(stmt.t)),
                             blockOfLabel(eval, std::get<2>(stmt.t)));
@@ -801,11 +800,9 @@ private:
       }
     }
     // Absent an explicit list, add all possible label targets.
-    if (indexList.empty()) {
-      for (auto &label : labelSet) {
+    if (indexList.empty())
+      for (auto &label : labelSet)
         addLabel(label);
-      }
-    }
     // Add a nop/fallthrough branch to the switch for a nonconforming program
     // unit that violates the program requirement above.
     blockList.push_back(eval.nonNopSuccessor().block); // default
@@ -817,161 +814,270 @@ private:
   ///  - structured and unstructured increment loops
   ///  - structured and unstructured concurrent loops
   void genFIR(const Fortran::parser::DoConstruct &) {
+    // Collect loop information.
+    // Generate begin loop code directly for infinite and while loops.
     auto &eval = getEval();
     bool unstructuredContext = eval.lowerAsUnstructured();
-    Fortran::lower::pft::Evaluation &doStmtEval =
-        eval.getFirstNestedEvaluation();
+    auto &doStmtEval = eval.getFirstNestedEvaluation();
     auto *doStmt = doStmtEval.getIf<Fortran::parser::NonLabelDoStmt>();
-    assert(doStmt && "missing DO statement");
     const auto &loopControl =
         std::get<std::optional<Fortran::parser::LoopControl>>(doStmt->t);
-    llvm::SmallVector<IncrementLoopInfo, 1> incrementLoopInfo;
+    auto *preheaderBlock = doStmtEval.block;
+    auto *headerBlock =
+        unstructuredContext ? doStmtEval.localBlocks[0] : nullptr;
+    auto *bodyBlock = doStmtEval.lexicalSuccessor->block;
+    auto *exitBlock = doStmtEval.parentConstruct->constructExit->block;
+    llvm::SmallVector<IncrementLoopInfo, 4> incrementLoopInfo;
     const Fortran::parser::ScalarLogicalExpr *whileCondition = nullptr;
     bool infiniteLoop = !loopControl.has_value();
     if (infiniteLoop) {
       assert(unstructuredContext && "infinite loop must be unstructured");
-      startBlock(doStmtEval.localBlocks[0]); // header block
+      startBlock(headerBlock);
     } else if ((whileCondition =
                     std::get_if<Fortran::parser::ScalarLogicalExpr>(
                         &loopControl->u))) {
       assert(unstructuredContext && "while loop must be unstructured");
-      startBlock(doStmtEval.localBlocks[0]); // header block
-      genFIRConditionalBranch(*whileCondition, doStmtEval.lexicalSuccessor,
-                              doStmtEval.parentConstruct->constructExit);
+      startBlock(headerBlock);
+      genFIRConditionalBranch(*whileCondition, bodyBlock, exitBlock);
     } else if (const auto *bounds =
                    std::get_if<Fortran::parser::LoopControl::Bounds>(
                        &loopControl->u)) {
-      // "Normal" increment loop.
-      incrementLoopInfo.emplace_back(bounds->name.thing.symbol, bounds->lower,
-                                     bounds->upper, bounds->step,
-                                     genType(*bounds->name.thing.symbol));
+      // Non-concurrent increment loop.
+      incrementLoopInfo.emplace_back(*bounds->name.thing.symbol, bounds->lower,
+                                     bounds->upper, bounds->step);
       if (unstructuredContext) {
-        maybeStartBlock(doStmtEval.block); // preheader block
-        incrementLoopInfo[0].headerBlock = doStmtEval.localBlocks[0];
-        incrementLoopInfo[0].bodyBlock = doStmtEval.lexicalSuccessor->block;
-        incrementLoopInfo[0].successorBlock =
-            doStmtEval.parentConstruct->constructExit->block;
+        maybeStartBlock(preheaderBlock);
+        auto &info = incrementLoopInfo.back();
+        info.hasRealControl = info.loopVariableSym.GetType()->IsNumeric(
+            Fortran::common::TypeCategory::Real);
+        info.headerBlock = headerBlock;
+        info.bodyBlock = bodyBlock;
+        info.exitBlock = exitBlock;
       }
     } else {
-      [[maybe_unused]] const auto *concurrentInfo =
+      const auto *concurrent =
           std::get_if<Fortran::parser::LoopControl::Concurrent>(
               &loopControl->u);
-      assert(concurrentInfo && "DO loop variant is invalid");
-      TODO();
-      // Add entries to incrementLoopInfo.  (Define extra members for a mask.)
+      assert(concurrent && "invalid DO loop variant");
+      if (unstructuredContext)
+        maybeStartBlock(preheaderBlock);
+      const auto &header =
+          std::get<Fortran::parser::ConcurrentHeader>(concurrent->t);
+      auto &concurrentControlList =
+          std::get<std::list<Fortran::parser::ConcurrentControl>>(header.t);
+      auto dims = concurrentControlList.size();
+      auto &endDoStmtEval = *doStmtEval.controlSuccessor;
+      auto beginBlocks = doStmtEval.localBlocks.begin();
+      auto endBlocks = endDoStmtEval.localBlocks.end();
+      decltype(dims) d = 0;
+      for (const auto &control : concurrentControlList) {
+        incrementLoopInfo.emplace_back(
+            *std::get<0>(control.t).symbol, std::get<1>(control.t),
+            std::get<2>(control.t), std::get<3>(control.t));
+        auto &info = incrementLoopInfo.back();
+        info.isUnordered = true;
+        info.isOutermost = ++d == 1;
+        info.isInnermost = d == dims;
+        if (info.isInnermost) {
+          for (const auto &x :
+               std::get<std::list<Fortran::parser::LocalitySpec>>(
+                   concurrent->t)) {
+            if (const auto *localInitList =
+                    std::get_if<Fortran::parser::LocalitySpec::LocalInit>(&x.u))
+              for (const auto &x : localInitList->v)
+                info.localInitSymList.push_back(x.symbol);
+            if (std::get_if<Fortran::parser::LocalitySpec::Local>(&x.u))
+              llvm_unreachable("do concurrent locality specs not implemented");
+          }
+        }
+        if (!unstructuredContext)
+          continue;
+        // Unstructured concurrent loop - The original loop body provides the
+        // body and latch blocks of the innermost dimension.  The (first) body
+        // block of a non-innermost dimension is the preheader block of the
+        // immediately enclosed dimension.  The latch block of a non-innermost
+        // dimension is the exit block of the immediately enclosed dimension.
+        // Blocks are generated "in order".
+        info.headerBlock = *beginBlocks++;
+        info.bodyBlock = info.isInnermost ? bodyBlock : *beginBlocks++;
+        info.exitBlock = info.isOutermost ? exitBlock : *--endBlocks;
+      }
+      if (auto *maskExpr = Fortran::semantics::GetExpr(
+              std::get<std::optional<Fortran::parser::ScalarLogicalExpr>>(
+                  header.t))) {
+        auto &info = incrementLoopInfo.back();
+        info.maskExpr = maskExpr;
+        if (unstructuredContext) {
+          assert(endDoStmtEval.block &&
+                 "missing masked concurrent loop latch block");
+          info.maskBlock = *beginBlocks++;
+        }
+      }
+      assert(beginBlocks == doStmtEval.localBlocks.end() &&
+             "concurrent header+body+mask block count mismatch");
+      assert(endBlocks == endDoStmtEval.localBlocks.begin() &&
+             "concurrent latch block count mismatch");
     }
-    auto n = incrementLoopInfo.size();
-    for (decltype(n) i = 0; i < n; ++i)
-      genFIRIncrementLoopBegin(incrementLoopInfo[i]);
 
-    // Generate loop body code.
+    // Generate increment loop begin code.
+    // (Infinite and while loop begin code has already been generated.)
+    for (auto &info : incrementLoopInfo)
+      genFIRIncrementLoopBegin(info);
+
+    // Generate loop body code.  The NonLabelDoStmt and EndDoStmt genFIR calls
+    // are nops, since their code is generated directly here.  However, their
+    // genFIR wrapper calls are needed for block management in some cases.
     for (auto &e : eval.getNestedEvaluations())
       genFIR(e, unstructuredContext);
-    setCurrentEval(eval);
 
-    // Generate end loop code.
+    // Generate loop end code.
     if (infiniteLoop || whileCondition) {
-      genBranch(doStmtEval.localBlocks[0]);
+      genFIRBranch(headerBlock);
     } else {
-      for (auto i = incrementLoopInfo.size(); i > 0;)
-        genFIRIncrementLoopEnd(incrementLoopInfo[--i]);
+      for (auto d = incrementLoopInfo.size(); d > 0;)
+        genFIRIncrementLoopEnd(incrementLoopInfo[--d]);
     }
   }
 
   /// Generate FIR to begin a structured or unstructured increment loop.
   void genFIRIncrementLoopBegin(IncrementLoopInfo &info) {
     auto loc = toLocation();
-    mlir::Type type =
-        info.isStructured() ? builder->getIndexType() : info.loopVariableType;
-    auto lowerValue = genFIRLoopIndex(info.lowerExpr, type);
-    auto upperValue = genFIRLoopIndex(info.upperExpr, type);
-    // clang-format off
-    info.stepValue =
-        info.stepExpr.has_value() ? genFIRLoopIndex(*info.stepExpr, type)
-        : info.isStructured()
-            ? builder->create<mlir::ConstantIndexOp>(loc, 1)
-            : builder->createIntegerConstant(loc, info.loopVariableType, 1);
-    // clang-format on
-    assert(info.stepValue && "step value must be set");
-    info.loopVariable = createTemp(loc, *info.loopVariableSym);
+    info.loopVariable = createTemp(loc, info.loopVariableSym);
+    auto controlType = info.isStructured() ? builder->getIndexType()
+                                           : genType(info.loopVariableSym);
+    auto genControlValue = [&](const Fortran::semantics::SomeExpr *expr) {
+      if (expr)
+        return builder->createConvert(loc, controlType, genExprValue(*expr));
+      if (!info.hasRealControl)
+        return builder->createIntegerConstant(loc, controlType, 1); // step
+      auto one =
+          builder->createIntegerConstant(loc, builder->getIndexType(), 1);
+      return builder->createConvert(loc, controlType, one); // real step
+    };
+    auto lowerValue = genControlValue(info.lowerExpr);
+    auto upperValue = genControlValue(info.upperExpr);
+    info.stepValue = genControlValue(info.stepExpr);
+
+    auto genLocalInitAssignments = [&]() {
+      for (const auto *sym : info.localInitSymList) {
+        llvm_unreachable("do concurrent locality specs not implemented");
+        const auto *hostDetails =
+            sym->detailsIf<Fortran::semantics::HostAssocDetails>();
+        assert(hostDetails && "missing local_init variable host variable");
+        [[maybe_unused]] const Fortran::semantics::Symbol &hostSym =
+            hostDetails->symbol();
+        // assign sym = hostSym
+      }
+    };
 
     // Structured loop - generate fir.do_loop.
     if (info.isStructured()) {
-      // Perform the default initial assignment of the DO variable.
-      info.insertionPoint = builder->saveInsertionPoint();
       info.doLoop = builder->create<fir::DoLoopOp>(
-          loc, lowerValue, upperValue, info.stepValue, /*unordered=*/false,
-          ArrayRef<mlir::Value>{lowerValue});
+          loc, lowerValue, upperValue, info.stepValue, info.isUnordered,
+          ArrayRef<mlir::Value>{lowerValue}); // initial doLoop result value
       builder->setInsertionPointToStart(info.doLoop.getBody());
-      // Always store iteration ssa-value to the DO variable to avoid missing
-      // any aliasing. Note that this assignment can only happen when executing
-      // an iteration of the loop.
-      auto lcv = builder->createConvert(loc, info.loopVariableType,
-                                        info.doLoop.getInductionVar());
-      builder->create<fir::StoreOp>(loc, lcv, info.loopVariable);
+      // Update the loop variable value, as it may have non-index references.
+      auto value = builder->createConvert(loc, genType(info.loopVariableSym),
+                                          info.doLoop.getInductionVar());
+      builder->create<fir::StoreOp>(loc, value, info.loopVariable);
+      if (info.maskExpr) {
+        auto ifOp = builder->create<fir::IfOp>(
+            loc, genExprValue(*info.maskExpr), /*withOtherRegion=*/false);
+        builder->setInsertionPointToStart(&ifOp.whereRegion().front());
+      }
+      genLocalInitAssignments();
       return;
     }
 
-    // Unstructured loop preheader code - initialize tripVariable, loopVariable.
-    auto distance = builder->create<mlir::SubIOp>(loc, upperValue, lowerValue);
-    auto adjusted =
-        builder->create<mlir::AddIOp>(loc, distance, info.stepValue);
-    mlir::Value tripCount =
-        builder->create<mlir::SignedDivIOp>(loc, adjusted, info.stepValue);
-    // Unstructured loop - `--always-execute-loop-body`.
-    if (fir::isAlwaysExecuteLoopBody()) {
-      auto tripCountType = tripCount.getType();
-      mlir::Value zero = builder->createIntegerConstant(loc, tripCountType, 0);
-      auto cond = builder->create<mlir::CmpIOp>(loc, CmpIPredicate::sle,
-                                                tripCount, zero);
-      auto one = builder->createIntegerConstant(loc, tripCountType, 1);
+    // Unstructured loop preheader - initialize tripVariable and loopVariable.
+    mlir::Value tripCount;
+    if (info.hasRealControl) {
+      auto delta1 = builder->create<mlir::SubFOp>(loc, upperValue, lowerValue);
+      auto delta2 = builder->create<mlir::AddFOp>(loc, delta1, info.stepValue);
+      tripCount = builder->create<mlir::DivFOp>(loc, delta2, info.stepValue);
+      controlType = builder->getIndexType();
+      tripCount = builder->createConvert(loc, controlType, tripCount);
+    } else {
+      auto delta1 = builder->create<mlir::SubIOp>(loc, upperValue, lowerValue);
+      auto delta2 = builder->create<mlir::AddIOp>(loc, delta1, info.stepValue);
+      tripCount =
+          builder->create<mlir::SignedDivIOp>(loc, delta2, info.stepValue);
+    }
+    if (fir::isAlwaysExecuteLoopBody()) { // minimum tripCount is 1
+      auto one = builder->createIntegerConstant(loc, controlType, 1);
+      auto cond = builder->create<mlir::CmpIOp>(loc, CmpIPredicate::slt,
+                                                tripCount, one);
       tripCount = builder->create<mlir::SelectOp>(loc, cond, one, tripCount);
     }
-    info.tripVariable = builder->createTemporary(loc, info.loopVariableType);
+    info.tripVariable = builder->createTemporary(loc, controlType);
     builder->create<fir::StoreOp>(loc, tripCount, info.tripVariable);
     builder->create<fir::StoreOp>(loc, lowerValue, info.loopVariable);
 
-    // Unstructured loop header code - generate loop condition.
+    // Unstructured loop header - generate loop condition and mask.
+    // Note - Currently there is no way to tag a loop as a concurrent loop.
     startBlock(info.headerBlock);
-    mlir::Value tripVariable =
-        builder->create<fir::LoadOp>(loc, info.tripVariable);
-    mlir::Value zero =
-        builder->createIntegerConstant(loc, info.loopVariableType, 0);
-    mlir::Value cond = builder->create<mlir::CmpIOp>(
-        loc, mlir::CmpIPredicate::sgt, tripVariable, zero);
-    genFIRConditionalBranch(cond, info.bodyBlock, info.successorBlock);
+    tripCount = builder->create<fir::LoadOp>(loc, info.tripVariable);
+    auto zero = builder->createIntegerConstant(loc, controlType, 0);
+    auto cond = builder->create<mlir::CmpIOp>(loc, mlir::CmpIPredicate::sgt,
+                                              tripCount, zero);
+    if (info.maskExpr) {
+      genFIRConditionalBranch(cond, info.maskBlock, info.exitBlock);
+      startBlock(info.maskBlock);
+      auto latchBlock = getEval().getLastNestedEvaluation().block;
+      assert(latchBlock && "missing masked concurrent loop latch block");
+      genFIRConditionalBranch(genExprValue(*info.maskExpr), info.bodyBlock,
+                              latchBlock);
+    } else {
+      genFIRConditionalBranch(cond, info.bodyBlock, info.exitBlock);
+      if (!info.isInnermost)
+        startBlock(info.bodyBlock); // preheader block of enclosed dimension
+    }
+    if (!info.localInitSymList.empty()) {
+      auto insertPt = builder->saveInsertionPoint();
+      builder->setInsertionPointToStart(info.bodyBlock);
+      genLocalInitAssignments();
+      builder->restoreInsertionPoint(insertPt);
+    }
   }
 
   /// Generate FIR to end a structured or unstructured increment loop.
   void genFIRIncrementLoopEnd(IncrementLoopInfo &info) {
     auto loc = toLocation();
     if (info.isStructured()) {
-      // End fir.do_loop.
-      mlir::Value inc = builder->create<mlir::AddIOp>(
-          loc, info.doLoop.getInductionVar(), info.doLoop.step());
-      builder->create<fir::ResultOp>(loc, inc);
-      builder->restoreInsertionPoint(info.insertionPoint);
-      auto lcv = builder->createConvert(loc, info.loopVariableType,
+      // End fir.do_loop.  A concurrent loop result is illegitimate/irrelevant.
+      builder->setInsertionPointToEnd(info.doLoop.getBody());
+      auto result = info.doLoop.getInductionVar();
+      if (!info.isUnordered)
+        result = builder->create<mlir::AddIOp>(loc, result, info.doLoop.step());
+      builder->create<fir::ResultOp>(loc, result);
+      builder->setInsertionPointAfter(info.doLoop);
+      if (info.isUnordered)
+        return;
+      // The loop control variable may be used after loop execution.
+      auto lcv = builder->createConvert(loc, genType(info.loopVariableSym),
                                         info.doLoop.getResult(0));
       builder->create<fir::StoreOp>(loc, lcv, info.loopVariable);
       return;
     }
 
-    // Unstructured loop - increment loopVariable.
-    mlir::Value loopVariable =
-        builder->create<fir::LoadOp>(loc, info.loopVariable);
-    loopVariable =
-        builder->create<mlir::AddIOp>(loc, loopVariable, info.stepValue);
-    builder->create<fir::StoreOp>(loc, loopVariable, info.loopVariable);
-
-    // Unstructured loop - decrement tripVariable.
-    mlir::Value tripVariable =
+    // Unstructured loop - decrement tripVariable and step loopVariable.
+    mlir::Value tripCount =
         builder->create<fir::LoadOp>(loc, info.tripVariable);
-    mlir::Value one = builder->create<mlir::ConstantOp>(
-        loc, builder->getIntegerAttr(info.loopVariableType, 1));
-    tripVariable = builder->create<mlir::SubIOp>(loc, tripVariable, one);
-    builder->create<fir::StoreOp>(loc, tripVariable, info.tripVariable);
-    genBranch(info.headerBlock);
+    auto tripVarType = info.hasRealControl ? builder->getIndexType()
+                                           : genType(info.loopVariableSym);
+    auto one = builder->createIntegerConstant(loc, tripVarType, 1);
+    tripCount = builder->create<mlir::SubIOp>(loc, tripCount, one);
+    builder->create<fir::StoreOp>(loc, tripCount, info.tripVariable);
+    mlir::Value value = builder->create<fir::LoadOp>(loc, info.loopVariable);
+    if (info.hasRealControl)
+      value = builder->create<mlir::AddFOp>(loc, value, info.stepValue);
+    else
+      value = builder->create<mlir::AddIOp>(loc, value, info.stepValue);
+    builder->create<fir::StoreOp>(loc, value, info.loopVariable);
+
+    genFIRBranch(info.headerBlock);
+    if (!info.isOutermost)
+      startBlock(info.exitBlock); // latch block of enclosing dimension
   }
 
   /// Generate structured or unstructured FIR for an IF construct.
@@ -998,7 +1104,6 @@ private:
           genFIR(e, /*unstructuredContext=*/false);
         }
       }
-      setCurrentEval(eval);
       return;
     }
 
@@ -1023,7 +1128,6 @@ private:
         genFIR(e);
       }
     }
-    setCurrentEval(eval);
   }
 
   void genFIR(const Fortran::parser::CaseConstruct &) {
@@ -1255,9 +1359,9 @@ private:
     if (!iostat)
       return;
 
-    mlir::Block *endBlock{};
-    mlir::Block *eorBlock{};
-    mlir::Block *errBlock{};
+    mlir::Block *endBlock = nullptr;
+    mlir::Block *eorBlock = nullptr;
+    mlir::Block *errBlock = nullptr;
     for (const auto &spec : specList) {
       std::visit(Fortran::common::visitors{
                      [&](const Fortran::parser::EndLabel &label) {
@@ -1642,13 +1746,13 @@ private:
   }
 
   void genFIR(const Fortran::parser::CycleStmt &) {
-    genBranch(getEval().controlSuccessor->block);
+    genFIRBranch(getEval().controlSuccessor->block);
   }
   void genFIR(const Fortran::parser::ExitStmt &) {
-    genBranch(getEval().controlSuccessor->block);
+    genFIRBranch(getEval().controlSuccessor->block);
   }
   void genFIR(const Fortran::parser::GotoStmt &) {
-    genBranch(getEval().controlSuccessor->block);
+    genFIRBranch(getEval().controlSuccessor->block);
   }
 
   /// Generate the FIR for the Evaluation `eval`.
@@ -1657,7 +1761,6 @@ private:
     if (eval.skip)
       return; // rhs of {Forall,If,Where}Stmt has already been processed
 
-    setCurrentPosition(eval.position);
     if (unstructuredContext) {
       // When transitioning from unstructured to structured code,
       // the structured code could be a target that starts a new block.
@@ -1667,6 +1770,7 @@ private:
     }
 
     setCurrentEval(eval);
+    setCurrentPosition(eval.position);
     eval.visit([&](const auto &stmt) { genFIR(stmt); });
 
     if (unstructuredContext && blockIsUnterminated()) {
@@ -1678,9 +1782,8 @@ private:
                eval.getLastNestedEvaluation()
                    .lexicalSuccessor->isIntermediateConstructStmt())
         successor = eval.constructExit;
-
       if (successor && successor->block)
-        genBranch(successor->block);
+        genFIRBranch(successor->block);
     }
   }
 
@@ -1988,13 +2091,12 @@ private:
                "dummy CHARACTER argument must be boxchar");
       } else {
         // local CHARACTER variable
-        if (auto c = sba.getCharLenConst()) {
+        if (auto c = sba.getCharLenConst())
           len = builder->createIntegerConstant(loc, idxTy, *c);
-        } else if (auto e = sba.getCharLenExpr()) {
+        else if (auto e = sba.getCharLenExpr())
           len = genExprValue(*e);
-        } else {
+        else
           len = builder->createIntegerConstant(loc, idxTy, sym.size());
-        }
         assert(!addr);
       }
     }
@@ -2421,7 +2523,7 @@ private:
     }
 
     if (alternateEntryEval) {
-      genBranch(alternateEntryEval->block);
+      genFIRBranch(alternateEntryEval->block);
       builder->setInsertionPointToStart(
           builder->createBlock(&builder->getRegion()));
     }
@@ -2430,11 +2532,12 @@ private:
   /// Create empty blocks for the current function.
   void createEmptyBlocks(
       std::list<Fortran::lower::pft::Evaluation> &evaluationList) {
+    auto *region = &builder->getRegion();
     for (auto &eval : evaluationList) {
       if (eval.isNewBlock)
-        eval.block = builder->createBlock(&builder->getRegion());
-      for (size_t i = 0, n = eval.localBlocks.size(); i < n; ++i)
-        eval.localBlocks[i] = builder->createBlock(&builder->getRegion());
+        eval.block = builder->createBlock(region);
+      for (auto &block : eval.localBlocks)
+        block = builder->createBlock(region);
       if (eval.isConstruct() || eval.isDirective()) {
         if (eval.lowerAsUnstructured()) {
           createEmptyBlocks(eval.getNestedEvaluations());
@@ -2442,7 +2545,7 @@ private:
           // A structured construct that is a target starts a new block.
           auto &constructStmt = eval.getFirstNestedEvaluation();
           if (constructStmt.isNewBlock)
-            constructStmt.block = builder->createBlock(&builder->getRegion());
+            constructStmt.block = builder->createBlock(region);
         }
       }
     }
@@ -2457,11 +2560,9 @@ private:
   /// Unconditionally switch code insertion to a new block.
   void startBlock(mlir::Block *newBlock) {
     assert(newBlock && "missing block");
-    // If the current block does not have a terminator branch,
-    // append a fallthrough branch.
     if (blockIsUnterminated())
-      genBranch(newBlock);
-    builder->setInsertionPointToStart(newBlock);
+      genFIRBranch(newBlock); // default termination is a fallthrough branch
+    builder->setInsertionPointToEnd(newBlock); // newBlock might not be empty
   }
 
   /// Conditionally switch code insertion to a new block.
