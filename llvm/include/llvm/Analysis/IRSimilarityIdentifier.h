@@ -41,6 +41,9 @@
 // An IRSimilarityCandidate is a region of IRInstructionData (wrapped
 // Instructions), usually used to denote a region of similarity has been found.
 //
+// A SimilarityGroup is a set of IRSimilarityCandidates that are structurally
+// similar to one another.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ANALYSIS_IRSIMILARITYIDENTIFIER_H
@@ -573,6 +576,122 @@ public:
   using iterator = IRInstructionDataList::iterator;
   iterator begin() const { return iterator(front()); }
   iterator end() const { return std::next(iterator(back())); }
+};
+
+typedef std::vector<IRSimilarityCandidate> SimilarityGroup;
+typedef std::vector<SimilarityGroup> SimilarityGroupList;
+
+/// This class puts all the pieces of the IRInstructionData,
+/// IRInstructionMapper, IRSimilarityCandidate together.
+///
+/// It first feeds the Module or vector of Modules into the IRInstructionMapper,
+/// and puts all the mapped instructions into a single long list of
+/// IRInstructionData.
+///
+/// The list of unsigned integers is given to the Suffix Tree or similar data
+/// structure to find repeated subsequences.  We construct an
+/// IRSimilarityCandidate for each instance of the subsequence.  We compare them
+/// against one another since  These repeated subsequences can have different
+/// structure.  For each different kind of structure found, we create a
+/// similarity group.
+///
+/// If we had four IRSimilarityCandidates A, B, C, and D where A, B and D are
+/// structurally similar to one another, while C is different we would have two
+/// SimilarityGroups:
+///
+/// SimilarityGroup 1:  SimilarityGroup 2
+/// A, B, D             C
+///
+/// A list of the different similarity groups is then returned after
+/// analyzing the module.
+class IRSimilarityIdentifier {
+public:
+  IRSimilarityIdentifier()
+      : Mapper(&InstDataAllocator, &InstDataListAllocator) {}
+
+  /// \param M the module to find similarity in.
+  explicit IRSimilarityIdentifier(Module &M)
+      : Mapper(&InstDataAllocator, &InstDataListAllocator) {
+    findSimilarity(M);
+  }
+
+private:
+  /// Map the instructions in the module to unsigned integers, using mapping
+  /// already present in the Mapper if possible.
+  ///
+  /// \param [in] M Module - To map to integers.
+  /// \param [in,out] InstrList - The vector to append IRInstructionData to.
+  /// \param [in,out] IntegerMapping - The vector to append integers to.
+  void populateMapper(Module &M, std::vector<IRInstructionData *> &InstrList,
+                      std::vector<unsigned> &IntegerMapping);
+
+  /// Map the instructions in the modules vector to unsigned integers, using
+  /// mapping already present in the mapper if possible.
+  ///
+  /// \param [in] Modules - The list of modules to use to populate the mapper
+  /// \param [in,out] InstrList - The vector to append IRInstructionData to.
+  /// \param [in,out] IntegerMapping - The vector to append integers to.
+  void populateMapper(ArrayRef<std::unique_ptr<Module>> &Modules,
+                      std::vector<IRInstructionData *> &InstrList,
+                      std::vector<unsigned> &IntegerMapping);
+
+  /// Find the similarity candidates in \p InstrList and corresponding
+  /// \p UnsignedVec
+  ///
+  /// \param [in,out] InstrList - The vector to append IRInstructionData to.
+  /// \param [in,out] IntegerMapping - The vector to append integers to.
+  /// candidates found in the program.
+  void findCandidates(std::vector<IRInstructionData *> &InstrList,
+                      std::vector<unsigned> &IntegerMapping);
+
+public:
+  // Find the IRSimilarityCandidates in the \p Modules and group by structural
+  // similarity in a SimilarityGroup, each group is returned in a
+  // SimilarityGroupList.
+  //
+  // \param [in] Modules - the modules to analyze.
+  // \returns The groups of similarity ranges found in the modules.
+  SimilarityGroupList &
+  findSimilarity(ArrayRef<std::unique_ptr<Module>> Modules);
+
+  // Find the IRSimilarityCandidates in the given Module grouped by structural
+  // similarity in a SimilarityGroup, contained inside a SimilarityGroupList.
+  //
+  // \param [in] M - the module to analyze.
+  // \returns The groups of similarity ranges found in the module.
+  SimilarityGroupList &findSimilarity(Module &M);
+
+  // Clears \ref SimilarityCandidates if it is already filled by a previous run.
+  void resetSimilarityCandidates() {
+    // If we've already analyzed a Module or set of Modules, so we must clear
+    // the SimilarityCandidates to make sure we do not have only old values
+    // hanging around.
+    if (SimilarityCandidates.hasValue())
+      SimilarityCandidates->clear();
+    else
+      SimilarityCandidates = SimilarityGroupList();
+  }
+
+  // \returns The groups of similarity ranges found in the most recently passed
+  // set of modules.
+  Optional<SimilarityGroupList> &getSimilarity() {
+    return SimilarityCandidates;
+  }
+
+private:
+  /// The allocator for IRInstructionData.
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+
+  /// The allocator for IRInstructionDataLists.
+  SpecificBumpPtrAllocator<IRInstructionDataList> InstDataListAllocator;
+
+  /// Map Instructions to unsigned integers and wraps the Instruction in an
+  /// instance of IRInstructionData.
+  IRInstructionMapper Mapper;
+
+  /// The SimilarityGroups found with the most recent run of \ref
+  /// findSimilarity. None if there is no recent run.
+  Optional<SimilarityGroupList> SimilarityCandidates;
 };
 
 } // end namespace IRSimilarity
