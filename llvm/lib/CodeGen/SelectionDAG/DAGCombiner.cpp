@@ -9244,6 +9244,14 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   if (ISD::isBuildVectorAllZeros(Mask.getNode()))
     return Chain;
 
+  // If this is a masked load with an all ones mask, we can use a unmasked load.
+  // FIXME: Can we do this for indexed, compressing, or truncating stores?
+  if (ISD::isBuildVectorAllOnes(Mask.getNode()) &&
+      MST->isUnindexed() && !MST->isCompressingStore() &&
+      !MST->isTruncatingStore())
+    return DAG.getStore(MST->getChain(), SDLoc(N), MST->getValue(),
+                        MST->getBasePtr(), MST->getMemOperand());
+
   // Try transforming N to an indexed store.
   if (CombineToPreIndexedLoadStore(N) || CombineToPostIndexedLoadStore(N))
     return SDValue(N, 0);
