@@ -226,6 +226,8 @@ enum NodeType : unsigned {
   SMAXV,
   UMAXV,
 
+  SADDV_PRED,
+  UADDV_PRED,
   SMAXV_PRED,
   UMAXV_PRED,
   SMINV_PRED,
