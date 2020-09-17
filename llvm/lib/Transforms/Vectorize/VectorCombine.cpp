@@ -95,7 +95,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // Match insert into fixed vector of scalar load.
   auto *Ty = dyn_cast<FixedVectorType>(I.getType());
   Value *Scalar;
-  if (!Ty || !match(&I, m_InsertElt(m_Undef(), m_Value(Scalar), m_ZeroInt())))
+  if (!Ty || !match(&I, m_InsertElt(m_Undef(), m_Value(Scalar), m_ZeroInt())) ||
+      !Scalar->hasOneUse())
     return false;
 
   // Do not vectorize scalar load (widening) if atomic/volatile or under

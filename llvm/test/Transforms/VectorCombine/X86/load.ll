@@ -472,10 +472,8 @@ define void @PR47558_multiple_use_load(<2 x float>* nocapture nonnull %resultptr
 ; CHECK-LABEL: @PR47558_multiple_use_load(
 ; CHECK-NEXT:    [[SCALEPTR:%.*]] = tail call nonnull align 16 dereferenceable(64) float* @getscaleptr()
 ; CHECK-NEXT:    [[OP:%.*]] = load <2 x float>, <2 x float>* [[OPPTR:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[SCALEPTR]] to <4 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 16
-; CHECK-NEXT:    [[T1:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> undef, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[SCALE:%.*]] = load float, float* [[SCALEPTR]], align 16
+; CHECK-NEXT:    [[T1:%.*]] = insertelement <2 x float> undef, float [[SCALE]], i32 0
 ; CHECK-NEXT:    [[T2:%.*]] = insertelement <2 x float> [[T1]], float [[SCALE]], i32 1
 ; CHECK-NEXT:    [[T3:%.*]] = fmul <2 x float> [[OP]], [[T2]]
 ; CHECK-NEXT:    [[T4:%.*]] = extractelement <2 x float> [[T3]], i32 0
