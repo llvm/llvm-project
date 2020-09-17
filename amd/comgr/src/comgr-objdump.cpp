@@ -722,7 +722,7 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
   auto StrTabSec = EF.getSection(SymTab->sh_link);
   if (!StrTabSec)
     return errorToErrorCode(StrTabSec.takeError());
-  auto StrTabOrErr = EF.getStringTable(*StrTabSec);
+  auto StrTabOrErr = EF.getStringTable(**StrTabSec);
   if (!StrTabOrErr)
     return errorToErrorCode(StrTabOrErr.takeError());
   StringRef StrTab = *StrTabOrErr;
@@ -754,7 +754,7 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
       if (!SymSI)
         return errorToErrorCode(SymSI.takeError());
       const Elf_Shdr *SymSec = Obj->getSection((*SymSI)->getRawDataRefImpl());
-      auto SecName = EF.getSectionName(SymSec);
+      auto SecName = EF.getSectionName(*SymSec);
       if (!SecName)
         return errorToErrorCode(SecName.takeError());
       Target = *SecName;

@@ -411,7 +411,7 @@ static amd_comgr_status_t getElfIsaNameV2(const ELFObjectFile<ELFT> *Obj,
       auto ArchitectureName = StringRef(NoteIsa->vendor_and_architecture_name +
                                             NoteIsa->vendor_name_size,
                                         NoteIsa->architecture_name_size - 1);
-      auto EFlags = Obj->getELFFile()->getHeader()->e_flags;
+      auto EFlags = Obj->getELFFile()->getHeader().e_flags;
 
       std::string NoteIsaName;
       NoteStatus = getNoteIsaName(VendorName, ArchitectureName, NoteIsa->major,
@@ -443,7 +443,7 @@ static amd_comgr_status_t getElfIsaNameV3(const ELFObjectFile<ELFT> *Obj,
 
   std::string ElfIsaName;
 
-  switch (EHdr->e_ident[ELF::EI_CLASS]) {
+  switch (EHdr.e_ident[ELF::EI_CLASS]) {
   case ELF::ELFCLASSNONE:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   case ELF::ELFCLASS32:
@@ -456,7 +456,7 @@ static amd_comgr_status_t getElfIsaNameV3(const ELFObjectFile<ELFT> *Obj,
 
   ElfIsaName += "-amd-";
 
-  switch (EHdr->e_ident[ELF::EI_OSABI]) {
+  switch (EHdr.e_ident[ELF::EI_OSABI]) {
   case ELF::ELFOSABI_NONE:
     ElfIsaName += "unknown";
     break;
@@ -475,7 +475,7 @@ static amd_comgr_status_t getElfIsaNameV3(const ELFObjectFile<ELFT> *Obj,
 
   ElfIsaName += "--";
 
-  switch (EHdr->e_flags & ELF::EF_AMDGPU_MACH) {
+  switch (EHdr.e_flags & ELF::EF_AMDGPU_MACH) {
   case ELF::EF_AMDGPU_MACH_NONE:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   case ELF::EF_AMDGPU_MACH_R600_R600:
@@ -596,9 +596,9 @@ static amd_comgr_status_t getElfIsaNameV3(const ELFObjectFile<ELFT> *Obj,
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
 
-  if (EHdr->e_flags & ELF::EF_AMDGPU_XNACK)
+  if (EHdr.e_flags & ELF::EF_AMDGPU_XNACK)
     ElfIsaName += "+xnack";
-  if (EHdr->e_flags & ELF::EF_AMDGPU_SRAM_ECC)
+  if (EHdr.e_flags & ELF::EF_AMDGPU_SRAM_ECC)
     ElfIsaName += "+sram-ecc";
 
   if (IsaName)
@@ -613,7 +613,7 @@ template <class ELFT>
 static amd_comgr_status_t getElfIsaNameImpl(const ELFObjectFile<ELFT> *Obj,
                                             size_t *Size, char *IsaName) {
   auto EHdr = Obj->getELFFile()->getHeader();
-  if (EHdr->e_machine == ELF::EM_AMDGPU)
+  if (EHdr.e_machine == ELF::EM_AMDGPU)
     return getElfIsaNameV3(Obj, Size, IsaName);
   return getElfIsaNameV2(Obj, Size, IsaName);
 }
