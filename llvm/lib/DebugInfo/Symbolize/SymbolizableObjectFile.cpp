@@ -12,24 +12,15 @@
 
 #include "SymbolizableObjectFile.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolSize.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/Error.h"
 #include <algorithm>
-#include <cstdint>
-#include <memory>
-#include <string>
-#include <system_error>
-#include <utility>
-#include <vector>
 
 using namespace llvm;
 using namespace object;
