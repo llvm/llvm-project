@@ -139,7 +139,7 @@ typedef signed short S2;
 typedef signed int S4;
 typedef signed long long S8;
 #define NOINLINE      __attribute__((noinline))
-#define INLINE      __attribute__((always_inline))
+#define ALWAYS_INLINE __attribute__((always_inline))
 
 static bool TrackingOrigins() {
   S8 x;
@@ -4312,7 +4312,7 @@ TEST(MemorySanitizerOrigins, InitializedStoreDoesNotChangeOrigin) {
 }  // namespace
 
 template<class T, class BinaryOp>
-INLINE
+ALWAYS_INLINE
 void BinaryOpOriginTest(BinaryOp op) {
   U4 ox = rand();  //NOLINT
   U4 oy = rand();  //NOLINT
@@ -4345,12 +4345,12 @@ void BinaryOpOriginTest(BinaryOp op) {
   EXPECT_ORIGIN(ox, __msan_get_origin(z));
 }
 
-template<class T> INLINE T XOR(const T &a, const T&b) { return a ^ b; }
-template<class T> INLINE T ADD(const T &a, const T&b) { return a + b; }
-template<class T> INLINE T SUB(const T &a, const T&b) { return a - b; }
-template<class T> INLINE T MUL(const T &a, const T&b) { return a * b; }
-template<class T> INLINE T AND(const T &a, const T&b) { return a & b; }
-template<class T> INLINE T OR (const T &a, const T&b) { return a | b; }
+template<class T> ALWAYS_INLINE T XOR(const T &a, const T&b) { return a ^ b; }
+template<class T> ALWAYS_INLINE T ADD(const T &a, const T&b) { return a + b; }
+template<class T> ALWAYS_INLINE T SUB(const T &a, const T&b) { return a - b; }
+template<class T> ALWAYS_INLINE T MUL(const T &a, const T&b) { return a * b; }
+template<class T> ALWAYS_INLINE T AND(const T &a, const T&b) { return a & b; }
+template<class T> ALWAYS_INLINE T OR (const T &a, const T&b) { return a | b; }
 
 TEST(MemorySanitizerOrigins, BinaryOp) {
   if (!TrackingOrigins()) return;
@@ -4704,7 +4704,7 @@ static void TestBZHI() {
       __builtin_ia32_bzhi_di(0xABCDABCDABCDABCD, Poisoned<U8>(1, 0xFFFFFFFF00000000ULL)));
 }
 
-inline U4 bextr_imm(U4 start, U4 len) {
+ALWAYS_INLINE U4 bextr_imm(U4 start, U4 len) {
   start &= 0xFF;
   len &= 0xFF;
   return (len << 8) | start;
