@@ -1637,7 +1637,7 @@ bool tools::GetSDLFromOffloadArchive(Compilation &C, const Driver &D,
               ? "libbc-" + libname + "-" + archname + "-" + gpuname
               : "lib" + libname + "-" + archname + "-" + gpuname,
           "a");
-      
+
       C.addTempFile(C.getArgs().MakeArgString(OutputLib.c_str()));
 
       ArgStringList CmdArgs;

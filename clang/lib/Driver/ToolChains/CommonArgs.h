@@ -52,7 +52,7 @@ void AddRunTimeLibs(const ToolChain &TC, const Driver &D,
                     const llvm::opt::ArgList &Args);
 
 void AddStaticDeviceLibs(Compilation &C, const Tool &T, const JobAction &JA,
-			 const InputInfoList &Inputs,
+                         const InputInfoList &Inputs,
                          const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CmdArgs, StringRef ArchName,
                          StringRef GpuArch, bool isBitCodeSDL,
@@ -62,7 +62,7 @@ void AddStaticDeviceLibs(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                          StringRef GpuArch, bool isBitCodeSDL,
                          bool postClangLink);
 void AddStaticDeviceLibs(Compilation *C, const Tool *T, const JobAction *JA,
-			 const InputInfoList *Inputs,
+                         const InputInfoList *Inputs,
                          const Driver &D, const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CmdArgs, StringRef ArchName,
                          StringRef GpuArch, bool isBitCodeSDL,

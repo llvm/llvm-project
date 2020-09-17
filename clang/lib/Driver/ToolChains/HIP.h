@@ -69,10 +69,10 @@ public:
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
   void addActionsFromClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-					llvm::opt::ArgStringList &CC1Args,
-					const JobAction &JA,
-					Compilation &C,
-					const InputInfoList &Inputs) const override;
+                                        llvm::opt::ArgStringList &CC1Args,
+                                        const JobAction &JA,
+                                        Compilation &C,
+                                        const InputInfoList &Inputs) const override;
 
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args,

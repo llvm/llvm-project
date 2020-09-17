@@ -570,9 +570,9 @@ public:
   /// commands to the compilation to transform an input.
   virtual void
   addActionsFromClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-				   llvm::opt::ArgStringList &CC1Args,
-				   const JobAction &JA, Compilation &C,
-				   const InputInfoList &Inputs) const;
+                                   llvm::opt::ArgStringList &CC1Args,
+                                   const JobAction &JA, Compilation &C,
+                                   const InputInfoList &Inputs) const;
 
   /// Add options that need to be passed to cc1 for this target.
   virtual void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
