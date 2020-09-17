@@ -333,7 +333,8 @@ if have_ld64_plugin_support():
 
 # Ask llvm-config about asserts
 llvm_config.feature_config(
-    [('--assertion-mode', {'ON': 'asserts'})])
+    [('--assertion-mode', {'ON': 'asserts'}),
+     ('--build-mode', {'[Dd][Ee][Bb][Uu][Gg]': 'debug'})])
 
 if lit.util.isMacOSTriple(config.target_triple):
     cmd = ['sysctl', 'hw.optional.fma']
@@ -364,3 +365,6 @@ if config.have_libxml2:
 
 if config.have_opt_viewer_modules:
     config.available_features.add('have_opt_viewer_modules')
+
+if config.expensive_checks:
+    config.available_features.add('expensive_checks')
