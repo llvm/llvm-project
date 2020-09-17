@@ -177,6 +177,38 @@ TEST_FUNC(builder_max_min_for) {
   f.erase();
 }
 
+TEST_FUNC(builder_affine_for_iter_args) {
+  auto indexType = IndexType::get(&globalContext());
+  auto f = makeFunction("builder_affine_for_iter_args", {},
+                        {indexType, indexType, indexType});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  Value i, lb_1(f.getArgument(0)), ub_1(f.getArgument(1)),
+      ub_2(f.getArgument(2));
+  Value c32(std_constant_int(32, 32));
+  Value c42(std_constant_int(42, 32));
+  using namespace edsc::op;
+  affineLoopBuilder(
+      lb_1, {ub_1, ub_2}, 2, {c32, c42}, [&](Value iv, ValueRange args) {
+        Value sum(args[0] + args[1]);
+        builder.create<AffineYieldOp>(f.getLoc(), ValueRange({args[1], sum}));
+      });
+
+  // clang-format off
+  // CHECK-LABEL: func @builder_affine_for_iter_args
+  // CHECK:       (%[[lb_1:.*]]: index, %[[ub_1:.*]]: index, %[[ub_2:.*]]: index) {
+  // CHECK-NEXT:    %[[c32:.*]] = constant 32 : i32
+  // CHECK-NEXT:    %[[c42:.*]] = constant 42 : i32
+  // CHECK-NEXT:    %{{.*}} = affine.for %{{.*}} = affine_map<(d0) -> (d0)>(%{{.*}}) to min affine_map<(d0, d1) -> (d0, d1)>(%[[ub_1]], %[[ub_2]]) step 2 iter_args(%[[iarg_1:.*]] = %[[c32]], %[[iarg_2:.*]] = %[[c42]]) -> (i32, i32) {
+  // CHECK-NEXT:      %[[sum:.*]] = addi %[[iarg_1]], %[[iarg_2]] : i32
+  // CHECK-NEXT:      affine.yield %[[iarg_2]], %[[sum]] : i32, i32
+  // CHECK-NEXT:    }
+  // clang-format on
+  f.print(llvm::outs());
+  f.erase();
+}
+
 TEST_FUNC(builder_block_append) {
   using namespace edsc::op;
   auto f = makeFunction("builder_blocks");

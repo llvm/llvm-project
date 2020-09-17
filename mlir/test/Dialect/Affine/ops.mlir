@@ -184,3 +184,53 @@ func @affine_if() -> f32 {
   // CHECK: return %[[OUT]] : f32
   return %0 : f32
 }
+
+// -----
+
+//  Test affine.for with yield values.
+
+#set = affine_set<(d0): (d0 - 10 >= 0)>
+
+// CHECK-LABEL: func @yield_loop
+func @yield_loop(%buffer: memref<1024xf32>) -> f32 {
+  %sum_init_0 = constant 0.0 : f32
+  %res = affine.for %i = 0 to 10 step 2 iter_args(%sum_iter = %sum_init_0) -> f32 {
+    %t = affine.load %buffer[%i] : memref<1024xf32>
+    %sum_next = affine.if #set(%i) -> (f32) {
+      %new_sum = addf %sum_iter, %t : f32
+      affine.yield %new_sum : f32
+    } else {
+      affine.yield %sum_iter : f32
+    }
+    affine.yield %sum_next : f32
+  }
+  return %res : f32
+}
+// CHECK:      %[[const_0:.*]] = constant 0.000000e+00 : f32
+// CHECK-NEXT: %[[output:.*]] = affine.for %{{.*}} = 0 to 10 step 2 iter_args(%{{.*}} = %[[const_0]]) -> (f32) {
+// CHECK:        affine.if #set0(%{{.*}}) -> f32 {
+// CHECK:          affine.yield %{{.*}} : f32
+// CHECK-NEXT:   } else {
+// CHECK-NEXT:     affine.yield %{{.*}} : f32
+// CHECK-NEXT:   }
+// CHECK-NEXT:   affine.yield %{{.*}} : f32
+// CHECK-NEXT: }
+// CHECK-NEXT: return %[[output]] : f32
+
+// CHECK-LABEL: func @affine_for_multiple_yield
+func @affine_for_multiple_yield(%buffer: memref<1024xf32>) -> (f32, f32) {
+  %init_0 = constant 0.0 : f32
+  %res1, %res2 = affine.for %i = 0 to 10 step 2 iter_args(%iter_arg1 = %init_0, %iter_arg2 = %init_0) -> (f32, f32) {
+    %t = affine.load %buffer[%i] : memref<1024xf32>
+    %ret1 = addf %t, %iter_arg1 : f32
+    %ret2 = addf %t, %iter_arg2 : f32
+    affine.yield %ret1, %ret2 : f32, f32
+  }
+  return %res1, %res2 : f32, f32
+}
+// CHECK:      %[[const_0:.*]] = constant 0.000000e+00 : f32
+// CHECK-NEXT: %[[output:[0-9]+]]:2 = affine.for %{{.*}} = 0 to 10 step 2 iter_args(%[[iter_arg1:.*]] = %[[const_0]], %[[iter_arg2:.*]] = %[[const_0]]) -> (f32, f32) {
+// CHECK:        %[[res1:.*]] = addf %{{.*}}, %[[iter_arg1]] : f32
+// CHECK-NEXT:   %[[res2:.*]] = addf %{{.*}}, %[[iter_arg2]] : f32
+// CHECK-NEXT:   affine.yield %[[res1]], %[[res2]] : f32, f32
+// CHECK-NEXT: }
