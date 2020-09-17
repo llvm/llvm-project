@@ -10,13 +10,12 @@ define void @vadd(i32* %s1, i32 %c0, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB0_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vdup.32 q0, r1
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB0_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vadd.i32 q1, q1, q0
-; CHECK-NEXT:    vstrw.32 q1, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vadd.i32 q0, q0, r1
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB0_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
@@ -55,13 +54,12 @@ define void @vsub(i32* %s1, i32 %c0, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB1_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vdup.32 q0, r1
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB1_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vsub.i32 q1, q1, q0
-; CHECK-NEXT:    vstrw.32 q1, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vsub.i32 q0, q0, r1
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB1_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
@@ -100,13 +98,12 @@ define void @vmul(i32* %s1, i32 %c0, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB2_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vdup.32 q0, r1
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB2_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vmul.i32 q1, q1, q0
-; CHECK-NEXT:    vstrw.32 q1, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vmul.i32 q0, q0, r1
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB2_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
@@ -145,13 +142,12 @@ define void @vqadd(i32* %s1, i32 %c0, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB3_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vdup.32 q0, r1
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB3_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vqadd.s32 q1, q1, q0
-; CHECK-NEXT:    vstrw.32 q1, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vqadd.s32 q0, q0, r1
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB3_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
@@ -190,13 +186,12 @@ define void @vqsub(i32* %s1, i32 %c0, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB4_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vdup.32 q0, r1
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB4_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vqsub.s32 q1, q1, q0
-; CHECK-NEXT:    vstrw.32 q1, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vqsub.s32 q0, q0, r1
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB4_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
@@ -235,13 +230,12 @@ define void @vhadd(i32* %s1, i32 %c0, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB5_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vdup.32 q0, r1
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB5_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vhadd.s32 q1, q1, q0
-; CHECK-NEXT:    vstrw.32 q1, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vhadd.s32 q0, q0, r1
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB5_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
@@ -280,13 +274,12 @@ define void @vhsub(i32* %s1, i32 %c0, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB6_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vdup.32 q0, r1
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB6_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vhsub.s32 q1, q1, q0
-; CHECK-NEXT:    vstrw.32 q1, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vhsub.s32 q0, q0, r1
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB6_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
@@ -325,13 +318,12 @@ define void @vqdmull(i32* %s1, i32 %c0, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB7_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vdup.16 q0, r1
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB7_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.s32 q1, [r0]
-; CHECK-NEXT:    vqdmullb.s16 q1, q1, q0
-; CHECK-NEXT:    vstrw.32 q1, [r0], #16
+; CHECK-NEXT:    vldrh.s32 q0, [r0]
+; CHECK-NEXT:    vqdmullb.s16 q0, q0, r1
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB7_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
@@ -374,13 +366,12 @@ define void @vqdmulh(i32* %s1, i32 %c0, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB8_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vdup.32 q0, r1
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB8_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vqdmulh.s32 q1, q1, q0
-; CHECK-NEXT:    vstrw.32 q1, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vqdmulh.s32 q0, q0, r1
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB8_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
@@ -419,13 +410,12 @@ define void @vqrdmulh(i32* %s1, i32 %c0, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB9_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vdup.32 q0, r1
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB9_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vqrdmulh.s32 q1, q1, q0
-; CHECK-NEXT:    vstrw.32 q1, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vqrdmulh.s32 q0, q0, r1
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB9_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
@@ -464,13 +454,12 @@ define void @vaddf(float* %s1, float %c0, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB10_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vdup.32 q0, r1
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB10_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vadd.f32 q1, q1, q0
-; CHECK-NEXT:    vstrw.32 q1, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vadd.f32 q0, q0, r1
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB10_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
@@ -509,13 +498,12 @@ define void @vsubf(float* %s1, float %c0, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB11_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vdup.32 q0, r1
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB11_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vsub.f32 q1, q1, q0
-; CHECK-NEXT:    vstrw.32 q1, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vsub.f32 q0, q0, r1
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB11_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
@@ -554,13 +542,12 @@ define void @vmulf(float* %s1, float %c0, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB12_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vdup.32 q0, r1
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB12_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vmul.f32 q1, q1, q0
-; CHECK-NEXT:    vstrw.32 q1, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vmul.f32 q0, q0, r1
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB12_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
@@ -599,14 +586,13 @@ define void @vfma(float* %s1, float* %s2, float %c0, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB13_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vdup.32 q0, r2
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB13_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-NEXT:    vfma.f32 q2, q1, q0
-; CHECK-NEXT:    vstrw.32 q2, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vfma.f32 q1, q0, r2
+; CHECK-NEXT:    vstrw.32 q1, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB13_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
@@ -647,15 +633,13 @@ define void @vfmas(float* %s1, float* %s2, float %c0, i32 %N) {
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB14_1: @ %while.body.lr.ph
-; CHECK-NEXT:    vdup.32 q0, r2
 ; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB14_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmov q3, q0
-; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-NEXT:    vfma.f32 q3, q2, q1
-; CHECK-NEXT:    vstrw.32 q3, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vfmas.f32 q1, q0, r2
+; CHECK-NEXT:    vstrw.32 q1, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB14_2
 ; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
