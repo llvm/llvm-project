@@ -36,7 +36,7 @@ class OpenACC_Op<string mnemonic, list<OpTrait> traits = []> :
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
-// Reduction operation enumeration
+// Reduction operation enumeration.
 def OpenACC_ReductionOpAdd : StrEnumAttrCase<"redop_add">;
 def OpenACC_ReductionOpMul : StrEnumAttrCase<"redop_mul">;
 def OpenACC_ReductionOpMax : StrEnumAttrCase<"redop_max">;
@@ -59,6 +59,9 @@ def OpenACC_ReductionOpAttr : StrEnumAttr<"ReductionOpAttr",
     ]> {
   let cppNamespace = "::mlir::acc";
 }
+
+// Type used in operation below.
+def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
 
 //===----------------------------------------------------------------------===//
 // 2.5.1 parallel Construct
@@ -90,11 +93,11 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     ```
   }];
 
-  let arguments = (ins Optional<Index>:$async,
-                       Variadic<Index>:$waitOperands,
-                       Optional<Index>:$numGangs,
-                       Optional<Index>:$numWorkers,
-                       Optional<Index>:$vectorLength,
+  let arguments = (ins Optional<IntOrIndex>:$async,
+                       Variadic<IntOrIndex>:$waitOperands,
+                       Optional<IntOrIndex>:$numGangs,
+                       Optional<IntOrIndex>:$numWorkers,
+                       Optional<IntOrIndex>:$vectorLength,
                        Optional<I1>:$ifCond,
                        Optional<I1>:$selfCond,
                        OptionalAttr<OpenACC_ReductionOpAttr>:$reductionOp,
