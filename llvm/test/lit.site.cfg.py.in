@@ -50,6 +50,7 @@ config.has_plugins = @LLVM_ENABLE_PLUGINS@
 config.linked_bye_extension = @LLVM_BYE_LINK_INTO_TOOLS@
 config.have_tf_aot = @LLVM_HAVE_TF_AOT@
 config.have_tf_api = @LLVM_HAVE_TF_API@
+config.expensive_checks = @LLVM_ENABLE_EXPENSIVE_CHECKS@
 
 # Support substitution of the tools_dir with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
