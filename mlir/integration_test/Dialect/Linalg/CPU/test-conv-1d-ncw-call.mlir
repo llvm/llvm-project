@@ -9,17 +9,13 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=1,1,1" -test-conv-vectorization \
-// RUN:   -convert-linalg-to-loops -test-vector-contraction-conversion=vector-outerproduct=0 \
-// RUN:   -convert-vector-to-scf -convert-linalg-to-llvm | \
+// RUN: mlir-opt %s -test-conv-vectorization -convert-linalg-to-llvm | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=0,0,4" -linalg-tile="linalg-tile-sizes=1,1,1" \
-// RUN:   -test-conv-vectorization -convert-linalg-to-loops \
-// RUN:   -test-vector-contraction-conversion=vector-outerproduct=0 \
-// RUN:   -convert-vector-to-scf -convert-linalg-to-llvm | \
+// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=0,0,4" \
+// RUN:   -test-conv-vectorization -convert-linalg-to-llvm | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
