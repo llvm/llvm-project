@@ -529,6 +529,29 @@ uint32_t LazyBindingSection::encode(const DylibSymbol &sym) {
   return opstreamOffset;
 }
 
+void macho::prepareBranchTarget(Symbol *sym) {
+  if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+    if (in.stubs->addEntry(dysym)) {
+      if (sym->isWeakDef()) {
+        in.binding->addEntry(dysym, in.lazyPointers,
+                             sym->stubsIndex * WordSize);
+        in.weakBinding->addEntry(sym, in.lazyPointers,
+                                 sym->stubsIndex * WordSize);
+      } else {
+        in.lazyBinding->addEntry(dysym);
+      }
+    }
+  } else if (auto *defined = dyn_cast<Defined>(sym)) {
+    if (defined->isWeakDef() && defined->isExternal()) {
+      if (in.stubs->addEntry(sym)) {
+        in.rebase->addEntry(in.lazyPointers, sym->stubsIndex * WordSize);
+        in.weakBinding->addEntry(sym, in.lazyPointers,
+                                 sym->stubsIndex * WordSize);
+      }
+    }
+  }
+}
+
 ExportSection::ExportSection()
     : LinkEditSection(segment_names::linkEdit, section_names::export_) {}
 

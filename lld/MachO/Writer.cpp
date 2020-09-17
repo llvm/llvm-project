@@ -194,7 +194,13 @@ class LCMain : public LoadCommand {
     auto *c = reinterpret_cast<entry_point_command *>(buf);
     c->cmd = LC_MAIN;
     c->cmdsize = getSize();
-    c->entryoff = config->entry->getFileOffset();
+
+    if (config->entry->isInStubs())
+      c->entryoff =
+          in.stubs->fileOff + config->entry->stubsIndex * target->stubSize;
+    else
+      c->entryoff = config->entry->getFileOffset();
+
     c->stacksize = 0;
   }
 };
@@ -617,6 +623,7 @@ void Writer::run() {
   OutputSegment *linkEditSegment =
       getOrCreateOutputSegment(segment_names::linkEdit);
 
+  prepareBranchTarget(config->entry);
   scanRelocations();
   if (in.stubHelper->isNeeded())
     in.stubHelper->setup();
