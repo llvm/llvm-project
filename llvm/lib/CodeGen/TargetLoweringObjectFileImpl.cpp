@@ -21,6 +21,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -833,7 +834,7 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
   // name, or a unique ID for the section.
   SmallString<128> Name;
   if (MBB.getSectionID() == MBBSectionID::ColdSectionID) {
-    Name += ".text.unlikely.";
+    Name += BBSectionsColdTextPrefix;
     Name += MBB.getParent()->getName();
   } else if (MBB.getSectionID() == MBBSectionID::ExceptionSectionID) {
     Name += ".text.eh.";
