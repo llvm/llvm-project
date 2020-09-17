@@ -88,7 +88,6 @@
 namespace llvm {
 template <typename T> class ArrayRef;
 class Module;
-class Pass;
 class StringRef;
 class Value;
 class Timer;

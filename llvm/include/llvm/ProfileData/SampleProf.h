@@ -37,8 +37,6 @@
 
 namespace llvm {
 
-class raw_ostream;
-
 const std::error_category &sampleprof_category();
 
 enum class sampleprof_error {
