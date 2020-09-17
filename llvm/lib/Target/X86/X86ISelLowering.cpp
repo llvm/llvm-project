@@ -50618,23 +50618,27 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 
   // Not found as a standard register?
   if (!Res.second) {
-    // Map st(0) -> st(7) -> ST0
-    if (Constraint.size() == 7 && Constraint[0] == '{' &&
-        tolower(Constraint[1]) == 's' && tolower(Constraint[2]) == 't' &&
-        Constraint[3] == '(' &&
-        (Constraint[4] >= '0' && Constraint[4] <= '7') &&
-        Constraint[5] == ')' && Constraint[6] == '}') {
-      // st(7) is not allocatable and thus not a member of RFP80. Return
-      // singleton class in cases where we have a reference to it.
-      if (Constraint[4] == '7')
-        return std::make_pair(X86::FP7, &X86::RFP80_7RegClass);
-      return std::make_pair(X86::FP0 + Constraint[4] - '0',
-                            &X86::RFP80RegClass);
-    }
+    // Only match x87 registers if the VT is one SelectionDAGBuilder can convert
+    // to/from f80.
+    if (VT == MVT::Other || VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f80) {
+      // Map st(0) -> st(7) -> ST0
+      if (Constraint.size() == 7 && Constraint[0] == '{' &&
+          tolower(Constraint[1]) == 's' && tolower(Constraint[2]) == 't' &&
+          Constraint[3] == '(' &&
+          (Constraint[4] >= '0' && Constraint[4] <= '7') &&
+          Constraint[5] == ')' && Constraint[6] == '}') {
+        // st(7) is not allocatable and thus not a member of RFP80. Return
+        // singleton class in cases where we have a reference to it.
+        if (Constraint[4] == '7')
+          return std::make_pair(X86::FP7, &X86::RFP80_7RegClass);
+        return std::make_pair(X86::FP0 + Constraint[4] - '0',
+                              &X86::RFP80RegClass);
+      }
 
-    // GCC allows "st(0)" to be called just plain "st".
-    if (StringRef("{st}").equals_lower(Constraint))
-      return std::make_pair(X86::FP0, &X86::RFP80RegClass);
+      // GCC allows "st(0)" to be called just plain "st".
+      if (StringRef("{st}").equals_lower(Constraint))
+        return std::make_pair(X86::FP0, &X86::RFP80RegClass);
+    }
 
     // flags -> EFLAGS
     if (StringRef("{flags}").equals_lower(Constraint))
