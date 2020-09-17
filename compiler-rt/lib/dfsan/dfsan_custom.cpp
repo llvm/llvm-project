@@ -95,18 +95,9 @@ SANITIZER_INTERFACE_ATTRIBUTE char *__dfsw_strchr(const char *s, int c,
   }
 }
 
-DECLARE_WEAK_INTERCEPTOR_HOOK(dfsan_weak_hook_memcmp, uptr caller_pc,
-                              const void *s1, const void *s2, size_t n,
-                              dfsan_label s1_label, dfsan_label s2_label,
-                              dfsan_label n_label)
-
-SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_memcmp(const void *s1, const void *s2,
-                                                size_t n, dfsan_label s1_label,
-                                                dfsan_label s2_label,
-                                                dfsan_label n_label,
-                                                dfsan_label *ret_label) {
-  CALL_WEAK_INTERCEPTOR_HOOK(dfsan_weak_hook_memcmp, GET_CALLER_PC(), s1, s2, n,
-                             s1_label, s2_label, n_label);
+static int dfsan_memcmp_bcmp(const void *s1, const void *s2, size_t n,
+                             dfsan_label s1_label, dfsan_label s2_label,
+                             dfsan_label n_label, dfsan_label *ret_label) {
   const char *cs1 = (const char *) s1, *cs2 = (const char *) s2;
   for (size_t i = 0; i != n; ++i) {
     if (cs1[i] != cs2[i]) {
@@ -127,6 +118,29 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_memcmp(const void *s1, const void *s2,
                              dfsan_read_label(cs2, n));
   }
   return 0;
+}
+
+DECLARE_WEAK_INTERCEPTOR_HOOK(dfsan_weak_hook_memcmp, uptr caller_pc,
+                              const void *s1, const void *s2, size_t n,
+                              dfsan_label s1_label, dfsan_label s2_label,
+                              dfsan_label n_label)
+
+SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_memcmp(const void *s1, const void *s2,
+                                                size_t n, dfsan_label s1_label,
+                                                dfsan_label s2_label,
+                                                dfsan_label n_label,
+                                                dfsan_label *ret_label) {
+  CALL_WEAK_INTERCEPTOR_HOOK(dfsan_weak_hook_memcmp, GET_CALLER_PC(), s1, s2, n,
+                             s1_label, s2_label, n_label);
+  return dfsan_memcmp_bcmp(s1, s2, n, s1_label, s2_label, n_label, ret_label);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_bcmp(const void *s1, const void *s2,
+                                              size_t n, dfsan_label s1_label,
+                                              dfsan_label s2_label,
+                                              dfsan_label n_label,
+                                              dfsan_label *ret_label) {
+  return dfsan_memcmp_bcmp(s1, s2, n, s1_label, s2_label, n_label, ret_label);
 }
 
 DECLARE_WEAK_INTERCEPTOR_HOOK(dfsan_weak_hook_strcmp, uptr caller_pc,
