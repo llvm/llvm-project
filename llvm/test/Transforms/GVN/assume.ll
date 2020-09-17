@@ -19,7 +19,7 @@ define void @assume_not_arg(i1 %x) {
 ; CHECK-LABEL: @assume_not_arg(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[X:%.*]], true
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[XOR]])
-; CHECK-NEXT:    call void @use(i1 [[X]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %xor = xor i1 %x, true
@@ -33,7 +33,7 @@ define void @pr47496(i8 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[CMP]], true
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[XOR]])
-; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %cmp = icmp slt i8 %x, 0
