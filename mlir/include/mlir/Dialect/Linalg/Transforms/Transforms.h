@@ -31,8 +31,8 @@ struct TiledLinalgOp {
 };
 
 /// Populates patterns for vectorization of all ConvN-D ops.
-void populateConvVectorizationPatterns(MLIRContext *context,
-                                       OwningRewritePatternList &patterns);
+void populateConvVectorizationPatterns(
+    MLIRContext *context, SmallVectorImpl<OwningRewritePatternList> &patterns);
 
 /// Performs standalone tiling of a single LinalgOp by `tileSizes`.
 /// and permute the loop nest according to `interchangeVector`
@@ -589,6 +589,10 @@ public:
 
   LogicalResult matchAndRewrite(ConvOp minOp,
                                 PatternRewriter &rewriter) const override;
+
+  // TODO: Make these pass arguments.
+  static const int tileSize = 3;
+  static const int noTile = 1;
 };
 
 //===----------------------------------------------------------------------===//
