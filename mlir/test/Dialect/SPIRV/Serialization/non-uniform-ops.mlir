@@ -8,6 +8,14 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     spv.ReturnValue %0: vector<4xi32>
   }
 
+  // CHECK-LABEL: @group_non_uniform_broadcast
+  spv.func @group_non_uniform_broadcast(%value: f32) -> f32 "None" {
+    %one = spv.constant 1 : i32
+    // CHECK: spv.GroupNonUniformBroadcast "Subgroup" %{{.*}}, %{{.*}} : f32, i32
+    %0 = spv.GroupNonUniformBroadcast "Subgroup" %value, %one : f32, i32
+    spv.ReturnValue %0: f32
+  }
+
   // CHECK-LABEL: @group_non_uniform_elect
   spv.func @group_non_uniform_elect() -> i1 "None" {
     // CHECK: %{{.+}} = spv.GroupNonUniformElect "Workgroup" : i1
