@@ -1244,11 +1244,6 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
         foldOperand(OpToFold, UseMI, OpNo, FoldList,
                     CopiesToReplace);
       } else {
-        // Skip updating literal use if it's used in the same REQ_SQUENCE as,
-        // if that literal could be inlined, it's just a single use.
-        if (NonInlineUse && NonInlineUse->getParent() == UseMI &&
-            UseMI->isRegSequence())
-          continue;
         if (++NumLiteralUses == 1) {
           NonInlineUse = &*Use;
           NonInlineUseOpNo = OpNo;
