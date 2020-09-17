@@ -832,6 +832,7 @@ int main() {
   // CHECK: (d0, d1, d2) -> (d0)
   // CHECK: (d0, d1, d2) -> (d2)
   // CHECK: 0
+  // clang-format on
   fprintf(stderr, "@affineMap\n");
   errcode = printAffineMap(ctx);
   fprintf(stderr, "%d\n", errcode);
