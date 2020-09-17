@@ -2357,11 +2357,10 @@ private:
             LLVM_DEBUG(llvm::dbgs() << "}\n");
             builder.create<fir::HasValueOp>(loc, cb);
           };
-          auto linkage = builder->createLinkOnceLinkage();
           // create the global object
           global =
               builder->createGlobal(loc, commonTy, commonName,
-                                    /*isConstant=*/false, initFunc, linkage);
+                                    /*isConstant=*/false, initFunc);
         }
         // introduce a local AddrOf and add it to the map
         auto addrOf = builder->create<fir::AddrOfOp>(loc, global.resultType(),
