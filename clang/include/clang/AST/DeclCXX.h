@@ -4070,8 +4070,11 @@ public:
 
 /// Insertion operator for diagnostics.  This allows sending an AccessSpecifier
 /// into a diagnostic with <<.
-const StreamableDiagnosticBase &operator<<(const StreamableDiagnosticBase &DB,
-                                           AccessSpecifier AS);
+const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
+                                    AccessSpecifier AS);
+
+const PartialDiagnostic &operator<<(const PartialDiagnostic &DB,
+                                    AccessSpecifier AS);
 
 } // namespace clang
 

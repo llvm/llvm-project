@@ -519,8 +519,8 @@ public:
 
 /// Insertion operator for diagnostics.  This allows sending
 /// NestedNameSpecifiers into a diagnostic with <<.
-inline const StreamableDiagnosticBase &
-operator<<(const StreamableDiagnosticBase &DB, NestedNameSpecifier *NNS) {
+inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
+                                           NestedNameSpecifier *NNS) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(NNS),
                   DiagnosticsEngine::ak_nestednamespec);
   return DB;
