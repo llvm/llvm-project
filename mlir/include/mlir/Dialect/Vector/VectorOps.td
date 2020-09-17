@@ -270,6 +270,7 @@ def Vector_BroadcastOp :
     }
   }];
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($vector)";
+  let hasFolder = 1;
 }
 
 def Vector_ShuffleOp :
