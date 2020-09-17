@@ -11748,6 +11748,16 @@ bool SITargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
                                                             SNaN, Depth);
 }
 
+// Global FP atomic instructions have a hardcoded FP mode and do not support
+// FP32 denormals, and only support v2f16 denormals.
+static bool fpModeMatchesGlobalFPAtomicMode(const AtomicRMWInst *RMW) {
+  const fltSemantics &Flt = RMW->getType()->getScalarType()->getFltSemantics();
+  auto DenormMode = RMW->getParent()->getParent()->getDenormalMode(Flt);
+  if (&Flt == &APFloat::IEEEsingle())
+    return DenormMode == DenormalMode::getPreserveSign();
+  return DenormMode == DenormalMode::getIEEE();
+}
+
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   switch (RMW->getOperation()) {
@@ -11766,10 +11776,15 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     unsigned AS = RMW->getPointerAddressSpace();
 
     if (AS == AMDGPUAS::GLOBAL_ADDRESS && Subtarget->hasAtomicFaddInsts()) {
+      if (!fpModeMatchesGlobalFPAtomicMode(RMW))
+        return AtomicExpansionKind::CmpXChg;
+
       return RMW->use_empty() ? AtomicExpansionKind::None :
                                 AtomicExpansionKind::CmpXChg;
     }
 
+    // DS FP atomics do repect the denormal mode, but the rounding mode is fixed
+    // to round-to-nearest-even.
     return (AS == AMDGPUAS::LOCAL_ADDRESS && Subtarget->hasLDSFPAtomics()) ?
       AtomicExpansionKind::None : AtomicExpansionKind::CmpXChg;
   }
