@@ -910,9 +910,8 @@ ASTIdentifierLookupTraitBase::ReadKey(const unsigned char* d, unsigned n) {
 /// Whether the given identifier is "interesting".
 static bool isInterestingIdentifier(ASTReader &Reader, IdentifierInfo &II,
                                     bool IsModule) {
-  return II.hadMacroDefinition() ||
-         II.isPoisoned() ||
-         (IsModule ? II.hasRevertedBuiltin() : II.getObjCOrBuiltinID()) ||
+  return II.hadMacroDefinition() || II.isPoisoned() ||
+         (!IsModule && II.getObjCOrBuiltinID()) ||
          II.hasRevertedTokenIDToIdentifier() ||
          (!(IsModule && Reader.getPreprocessor().getLangOpts().CPlusPlus) &&
           II.getFETokenInfo());
@@ -972,7 +971,6 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
   unsigned Bits = endian::readNext<uint16_t, little, unaligned>(d);
   bool CPlusPlusOperatorKeyword = readBit(Bits);
   bool HasRevertedTokenIDToIdentifier = readBit(Bits);
-  bool HasRevertedBuiltin = readBit(Bits);
   bool Poisoned = readBit(Bits);
   bool ExtensionToken = readBit(Bits);
   bool HadMacroDefinition = readBit(Bits);
@@ -986,12 +984,6 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
     II->revertTokenIDToIdentifier();
   if (!F.isModule())
     II->setObjCOrBuiltinID(ObjCOrBuiltinID);
-  else if (HasRevertedBuiltin && II->getBuiltinID()) {
-    II->revertBuiltin();
-    assert((II->hasRevertedBuiltin() ||
-            II->getObjCOrBuiltinID() == ObjCOrBuiltinID) &&
-           "Incorrect ObjC keyword or builtin ID");
-  }
   assert(II->isExtensionToken() == ExtensionToken &&
          "Incorrect extension token flag");
   (void)ExtensionToken;
