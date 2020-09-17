@@ -71,12 +71,10 @@ define i32 @TestVectorsEqual(i32* noalias %Vec0, i32* noalias %Vec1, i32 %Tolera
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[VEC1:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw <4 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <4 x i32> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw <4 x i32> zeroinitializer, [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP6]], <4 x i32> [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP7]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp sle i32 [[TMP8]], [[TOLERANCE:%.*]]
-; CHECK-NEXT:    [[COND6:%.*]] = zext i1 [[CMP5]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP4]], i1 true)
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[CMP5_NOT:%.*]] = icmp sle i32 [[TMP6]], [[TOLERANCE:%.*]]
+; CHECK-NEXT:    [[COND6:%.*]] = zext i1 [[CMP5_NOT]] to i32
 ; CHECK-NEXT:    ret i32 [[COND6]]
 ;
 entry:
@@ -134,8 +132,8 @@ define i32 @TestVectorsEqual_alt(i32* noalias %Vec0, i32* noalias %Vec1, i32 %To
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub <4 x i32> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ule i32 [[TMP5]], [[TOLERANCE:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[CMP3]] to i32
+; CHECK-NEXT:    [[CMP3_NOT:%.*]] = icmp ule i32 [[TMP5]], [[TOLERANCE:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[CMP3_NOT]] to i32
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
