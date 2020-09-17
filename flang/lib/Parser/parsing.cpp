@@ -65,7 +65,7 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   }
   currentCooked_ = &allCooked_.NewCookedSource();
   Prescanner prescanner{
-      messages_, *currentCooked_, allSources, preprocessor, options.features};
+      messages_, *currentCooked_, preprocessor, options.features};
   prescanner.set_fixedForm(options.isFixedForm)
       .set_fixedFormColumnLimit(options.fixedFormColumns)
       .AddCompilerDirectiveSentinel("dir$");
