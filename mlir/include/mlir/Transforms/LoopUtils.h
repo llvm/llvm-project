@@ -88,15 +88,27 @@ LLVM_NODISCARD
 LogicalResult affineForOpBodySkew(AffineForOp forOp, ArrayRef<uint64_t> shifts,
                                   bool unrollPrologueEpilogue = false);
 
+/// Identify valid and profitable bands of loops to tile. This is currently just
+/// a temporary placeholder to test the mechanics of tiled code generation.
+/// Returns all maximal outermost perfect loop nests to tile.
+void getTileableBands(FuncOp f,
+                      std::vector<SmallVector<AffineForOp, 6>> *bands);
+
 /// Tiles the specified band of perfectly nested loops creating tile-space loops
-/// and intra-tile loops. A band is a contiguous set of loops. `tiledNest` when
-/// non-null is set to the loops of the tiled nest from outermost to innermost.
-/// Loops in `input` are erased when the tiling is successful.
+/// and intra-tile loops. A band is a contiguous set of loops.
 LLVM_NODISCARD
 LogicalResult
 tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
                     ArrayRef<unsigned> tileSizes,
                     SmallVectorImpl<AffineForOp> *tiledNest = nullptr);
+
+/// Tiles the specified band of perfectly nested loops creating tile-space
+/// loops and intra-tile loops, using SSA values as tiling parameters. A band
+/// is a contiguous set of loops.
+LLVM_NODISCARD
+LogicalResult tilePerfectlyNestedParametric(
+    MutableArrayRef<AffineForOp> input, ArrayRef<Value> tileSizes,
+    SmallVectorImpl<AffineForOp> *tiledNest = nullptr);
 
 /// Performs loop interchange on 'forOpA' and 'forOpB'. Requires that 'forOpA'
 /// and 'forOpB' are part of a perfectly nested sequence of loops.
