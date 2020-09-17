@@ -291,6 +291,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                                  {p0, p0, 64, 8},
                                  {s128, p0, 128, 8},
                                  {v16s8, p0, 128, 8},
+                                 {v8s8, p0, 64, 8},
                                  {v4s16, p0, 64, 8},
                                  {v8s16, p0, 128, 8},
                                  {v2s32, p0, 64, 8},
