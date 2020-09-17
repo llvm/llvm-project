@@ -46,7 +46,6 @@ bool ConstraintSystem::eliminateUsingFM() {
     }
 
     // FIXME do not use copy
-    bool EliminatedInRow = false;
     for (unsigned R2 = R1 + 1; R2 < NumConstraints; R2++) {
       if (R1 == R2)
         continue;
@@ -85,7 +84,6 @@ bool ConstraintSystem::eliminateUsingFM() {
                      .getZExtValue();
       }
       NewSystem.push_back(std::move(NR));
-      EliminatedInRow = true;
     }
   }
   Constraints = std::move(NewSystem);

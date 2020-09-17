@@ -5,11 +5,10 @@
 
 # CHECK:      --- !ELF
 # CHECK-NEXT: FileHeader:
-# CHECK-NEXT:   Class:           ELFCLASS64
-# CHECK-NEXT:   Data:            ELFDATA2LSB
-# CHECK-NEXT:   Type:            ET_EXEC
-# CHECK-NEXT:   Machine:         EM_NONE
-# CHECK-NEXT:   Entry:           0x0000000000201000
+# CHECK-NEXT:   Class: ELFCLASS64
+# CHECK-NEXT:   Data:  ELFDATA2LSB
+# CHECK-NEXT:   Type:  ET_EXEC
+# CHECK-NEXT:   Entry: 0x0000000000201000
 # CHECK-NEXT: Sections:
 # CHECK-NEXT:   - Name:            .gnu.version
 # CHECK-NEXT:     Type:            SHT_GNU_versym

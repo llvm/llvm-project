@@ -651,3 +651,58 @@ Sections:
         Value: 0x1122
 DynamicSymbols:
   - Name: foo
+
+## Check how we print global GOT entries when they are unnamed section symbols.
+## TODO: we should print proper symbol names instead of descriptions.
+# RUN: yaml2obj --docnum=5 %s -o %t.err8.o
+# RUN: llvm-readobj -A %t.err8.o 2>&1 | FileCheck %s -DFILE=%t.err8.o --check-prefix=SEC-SYMS-LLVM
+# RUN: llvm-readelf -A %t.err8.o 2>&1 | FileCheck %s -DFILE=%t.err8.o --check-prefix=SEC-SYMS-GNU
+
+# SEC-SYMS-LLVM:      Global entries [
+# SEC-SYMS-LLVM-NEXT:   Entry {
+# SEC-SYMS-LLVM:          Section: Absolute (0xFFF1)
+# SEC-SYMS-LLVM-NEXT:     Name: Absolute (0)
+# SEC-SYMS-LLVM-NEXT:   }
+# SEC-SYMS-LLVM-NEXT:   Entry {
+# SEC-SYMS-LLVM:          Section: .got (0x1)
+# SEC-SYMS-LLVM-NEXT:     Name: .got (0)
+# SEC-SYMS-LLVM-NEXT:   }
+# SEC-SYMS-LLVM-NEXT:   Entry {
+# SEC-SYMS-LLVM:          Section: Common (0xFFF2)
+# SEC-SYMS-LLVM-NEXT:     Name: Common (0)
+# SEC-SYMS-LLVM-NEXT:   }
+# SEC-SYMS-LLVM-NEXT: ]
+
+# SEC-SYMS-GNU:      Global entries:
+# SEC-SYMS-GNU-NEXT:  {{.*}} Ndx Name
+# SEC-SYMS-GNU-NEXT:  {{.*}} ABS Absolute
+# SEC-SYMS-GNU-NEXT:  {{.*}}   1 .got
+# SEC-SYMS-GNU-NEXT:  {{.*}} COM Common
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Sections:
+  - Name:    .got
+    Type:    SHT_PROGBITS
+    Address: 0x1122
+    Size:    48
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_MIPS_LOCAL_GOTNO
+        Value: 1
+      - Tag:   DT_MIPS_GOTSYM
+        Value: 1
+      - Tag:   DT_PLTGOT
+        Value: 0x1122
+DynamicSymbols:
+  - Type:    STT_SECTION
+    Index:   SHN_ABS
+  - Type:    STT_SECTION
+    Section: .got
+  - Type:    STT_SECTION
+    Index:   SHN_COMMON

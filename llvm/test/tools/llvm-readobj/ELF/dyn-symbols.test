@@ -322,8 +322,32 @@ Sections:
           - NonDefault
 DynamicSymbols:
   - Name: foo
-  - Name: bar
-  - Name: zed
+  - Name:  [[NAME=bar]]
+    Type:  [[TYPE=STT_NOTYPE]]
+    Index: [[INDEX=<none>]]
+  - Name: [[NAME=zed]]
+    Type: [[TYPE=STT_NOTYPE]]
+
+## Check the behavior for unnamed versioned section symbols.
+## TODO: we should print proper symbol names instead of descriptions.
+# RUN: yaml2obj %s -DTYPE=STT_SECTION -DNAME="''" -DINDEX=SHN_ABS --docnum=6 -o %t6.sec.sym
+# RUN: llvm-readobj -V --dyn-symbols %t6.sec.sym | FileCheck %s --check-prefix=VERSIONED-SEC-SYM-LLVM
+# RUN: llvm-readelf -V --dyn-symbols %t6.sec.sym | FileCheck %s --check-prefix=VERSIONED-SEC-SYM-GNU
+
+# VERSIONED-SEC-SYM-LLVM: DynamicSymbols [
+# VERSIONED-SEC-SYM-LLVM:  Name: foo (12)
+# VERSIONED-SEC-SYM-LLVM:  Name: Absolute (0)
+# VERSIONED-SEC-SYM-LLVM:  Name: Undefined (0)
+# VERSIONED-SEC-SYM-LLVM: VersionSymbols [
+# VERSIONED-SEC-SYM-LLVM:  Name: foo
+# VERSIONED-SEC-SYM-LLVM:  Name: Absolute
+# VERSIONED-SEC-SYM-LLVM:  Name: Undefined
+
+# VERSIONED-SEC-SYM-GNU: Symbol table '.dynsym' contains 4 entries:
+# VERSIONED-SEC-SYM-GNU:    Num: {{.*}} Ndx Name
+# VERSIONED-SEC-SYM-GNU:      1: {{.*}} UND foo
+# VERSIONED-SEC-SYM-GNU-NEXT: 2: {{.*}} ABS Absolute
+# VERSIONED-SEC-SYM-GNU-NEXT: 3: {{.*}} UND Undefined
 
 ## Case 8: Check what we print when:
 ## a) The dynamic symbol table does not exist.

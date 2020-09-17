@@ -39,7 +39,6 @@ class ScalarEvolution;
 class SCEV;
 class SCEVExpander;
 class TargetLibraryInfo;
-class TargetTransformInfo;
 class LPPassManager;
 class Instruction;
 struct RuntimeCheckingPtrGroup;
