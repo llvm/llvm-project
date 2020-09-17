@@ -13,13 +13,8 @@ func @matmul(%A: memref<1584x1584xf32, offset: 0, strides: [1584, 1]>,
 }
 
 // CHECK-LABEL:func @matmul
-//      CHECK: vector.broadcast {{.*}} : f32 to vector<8x16xf32>
 //      CHECK: store {{.*}}[] : memref<vector<8x16xf32>>
-//
-//      CHECK: vector.broadcast {{.*}} : f32 to vector<16x12xf32>
 //      CHECK: store {{.*}}[] : memref<vector<16x12xf32>>
-//
-//      CHECK: vector.broadcast {{.*}} : f32 to vector<8x12xf32>
 //      CHECK: store {{.*}}[] : memref<vector<8x12xf32>>
 //
 //      CHECK: linalg.copy
