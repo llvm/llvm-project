@@ -101,6 +101,22 @@ static ParseResult parseOptionalOperand(OpAsmParser &parser, StringRef keyword,
   return success();
 }
 
+static OptionalParseResult parseOptionalOperandAndType(OpAsmParser &parser,
+                                                       StringRef keyword,
+                                                       OperationState &result) {
+  OpAsmParser::OperandType operand;
+  Type type;
+  if (succeeded(parser.parseOptionalKeyword(keyword))) {
+    if (parser.parseLParen() || parser.parseOperand(operand) ||
+        parser.parseColonType(type) ||
+        parser.resolveOperand(operand, type, result.operands) ||
+        parser.parseRParen())
+      return failure();
+    return success();
+  }
+  return llvm::None;
+}
+
 //===----------------------------------------------------------------------===//
 // ParallelOp
 //===----------------------------------------------------------------------===//
@@ -142,17 +158,17 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
       createZeroOperandTypes, noCreateOperandTypes, presentOperandTypes,
       deviceptrOperandTypes, attachOperandTypes, privateOperandTypes,
       firstprivateOperandTypes;
-  OpAsmParser::OperandType async, numGangs, numWorkers, vectorLength, ifCond,
-      selfCond;
-  bool hasAsync = false, hasNumGangs = false, hasNumWorkers = false;
-  bool hasVectorLength = false, hasIfCond = false, hasSelfCond = false;
 
-  Type indexType = builder.getIndexType();
+  SmallVector<Type, 8> operandTypes;
+  OpAsmParser::OperandType ifCond, selfCond;
+  bool hasIfCond = false, hasSelfCond = false;
+  OptionalParseResult async, numGangs, numWorkers, vectorLength;
   Type i1Type = builder.getI1Type();
 
   // async()?
-  if (failed(parseOptionalOperand(parser, ParallelOp::getAsyncKeyword(), async,
-                                  indexType, hasAsync, result)))
+  async = parseOptionalOperandAndType(parser, ParallelOp::getAsyncKeyword(),
+                                      result);
+  if (async.hasValue() && failed(*async))
     return failure();
 
   // wait()?
@@ -161,20 +177,21 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
     return failure();
 
   // num_gangs(value)?
-  if (failed(parseOptionalOperand(parser, ParallelOp::getNumGangsKeyword(),
-                                  numGangs, indexType, hasNumGangs, result)))
+  numGangs = parseOptionalOperandAndType(
+      parser, ParallelOp::getNumGangsKeyword(), result);
+  if (numGangs.hasValue() && failed(*numGangs))
     return failure();
 
   // num_workers(value)?
-  if (failed(parseOptionalOperand(parser, ParallelOp::getNumWorkersKeyword(),
-                                  numWorkers, indexType, hasNumWorkers,
-                                  result)))
+  numWorkers = parseOptionalOperandAndType(
+      parser, ParallelOp::getNumWorkersKeyword(), result);
+  if (numWorkers.hasValue() && failed(*numWorkers))
     return failure();
 
   // vector_length(value)?
-  if (failed(parseOptionalOperand(parser, ParallelOp::getVectorLengthKeyword(),
-                                  vectorLength, indexType, hasVectorLength,
-                                  result)))
+  vectorLength = parseOptionalOperandAndType(
+      parser, ParallelOp::getVectorLengthKeyword(), result);
+  if (vectorLength.hasValue() && failed(*vectorLength))
     return failure();
 
   // if()?
@@ -267,29 +284,30 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
   if (failed(parseRegions<ParallelOp>(parser, result)))
     return failure();
 
-  result.addAttribute(ParallelOp::getOperandSegmentSizeAttr(),
-                      builder.getI32VectorAttr(
-                          {static_cast<int32_t>(hasAsync ? 1 : 0),
-                           static_cast<int32_t>(waitOperands.size()),
-                           static_cast<int32_t>(hasNumGangs ? 1 : 0),
-                           static_cast<int32_t>(hasNumWorkers ? 1 : 0),
-                           static_cast<int32_t>(hasVectorLength ? 1 : 0),
-                           static_cast<int32_t>(hasIfCond ? 1 : 0),
-                           static_cast<int32_t>(hasSelfCond ? 1 : 0),
-                           static_cast<int32_t>(reductionOperands.size()),
-                           static_cast<int32_t>(copyOperands.size()),
-                           static_cast<int32_t>(copyinOperands.size()),
-                           static_cast<int32_t>(copyinReadonlyOperands.size()),
-                           static_cast<int32_t>(copyoutOperands.size()),
-                           static_cast<int32_t>(copyoutZeroOperands.size()),
-                           static_cast<int32_t>(createOperands.size()),
-                           static_cast<int32_t>(createZeroOperands.size()),
-                           static_cast<int32_t>(noCreateOperands.size()),
-                           static_cast<int32_t>(presentOperands.size()),
-                           static_cast<int32_t>(devicePtrOperands.size()),
-                           static_cast<int32_t>(attachOperands.size()),
-                           static_cast<int32_t>(privateOperands.size()),
-                           static_cast<int32_t>(firstprivateOperands.size())}));
+  result.addAttribute(
+      ParallelOp::getOperandSegmentSizeAttr(),
+      builder.getI32VectorAttr(
+          {static_cast<int32_t>(async.hasValue() ? 1 : 0),
+           static_cast<int32_t>(waitOperands.size()),
+           static_cast<int32_t>(numGangs.hasValue() ? 1 : 0),
+           static_cast<int32_t>(numWorkers.hasValue() ? 1 : 0),
+           static_cast<int32_t>(vectorLength.hasValue() ? 1 : 0),
+           static_cast<int32_t>(hasIfCond ? 1 : 0),
+           static_cast<int32_t>(hasSelfCond ? 1 : 0),
+           static_cast<int32_t>(reductionOperands.size()),
+           static_cast<int32_t>(copyOperands.size()),
+           static_cast<int32_t>(copyinOperands.size()),
+           static_cast<int32_t>(copyinReadonlyOperands.size()),
+           static_cast<int32_t>(copyoutOperands.size()),
+           static_cast<int32_t>(copyoutZeroOperands.size()),
+           static_cast<int32_t>(createOperands.size()),
+           static_cast<int32_t>(createZeroOperands.size()),
+           static_cast<int32_t>(noCreateOperands.size()),
+           static_cast<int32_t>(presentOperands.size()),
+           static_cast<int32_t>(devicePtrOperands.size()),
+           static_cast<int32_t>(attachOperands.size()),
+           static_cast<int32_t>(privateOperands.size()),
+           static_cast<int32_t>(firstprivateOperands.size())}));
 
   // Additional attributes
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
@@ -303,7 +321,8 @@ static void print(OpAsmPrinter &printer, ParallelOp &op) {
 
   // async()?
   if (Value async = op.async())
-    printer << " " << ParallelOp::getAsyncKeyword() << "(" << async << ")";
+    printer << " " << ParallelOp::getAsyncKeyword() << "(" << async << ": "
+            << async.getType() << ")";
 
   // wait()?
   printOperandList(op.waitOperands(), ParallelOp::getWaitKeyword(), printer);
@@ -311,17 +330,17 @@ static void print(OpAsmPrinter &printer, ParallelOp &op) {
   // num_gangs()?
   if (Value numGangs = op.numGangs())
     printer << " " << ParallelOp::getNumGangsKeyword() << "(" << numGangs
-            << ")";
+            << ": " << numGangs.getType() << ")";
 
   // num_workers()?
   if (Value numWorkers = op.numWorkers())
     printer << " " << ParallelOp::getNumWorkersKeyword() << "(" << numWorkers
-            << ")";
+            << ": " << numWorkers.getType() << ")";
 
   // vector_length()?
   if (Value vectorLength = op.vectorLength())
     printer << " " << ParallelOp::getVectorLengthKeyword() << "("
-            << vectorLength << ")";
+            << vectorLength << ": " << vectorLength.getType() << ")";
 
   // if()?
   if (Value ifCond = op.ifCond())
