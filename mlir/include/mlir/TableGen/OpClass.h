@@ -292,7 +292,7 @@ public:
   template <typename... Args>
   OpConstructor(StringRef className, Property property, unsigned id,
                 Args &&...args)
-      : OpMethod("", className, property, id, std::forward<Args>(args)...){};
+      : OpMethod("", className, property, id, std::forward<Args>(args)...) {}
 
   // Add member initializer to constructor initializing `name` with `value`.
   void addMemberInitializer(StringRef name, StringRef value);
@@ -366,7 +366,7 @@ protected:
   template <typename MethodTy>
   struct MethodCompare {
     bool operator()(const std::unique_ptr<MethodTy> &x,
-                    const std::unique_ptr<MethodTy> &y) {
+                    const std::unique_ptr<MethodTy> &y) const {
       return x->getID() < y->getID();
     }
   };
