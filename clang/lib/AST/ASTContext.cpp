@@ -8528,6 +8528,10 @@ bool ASTContext::areCompatibleSveTypes(QualType FirstType,
         else if (VT->getVectorKind() == VectorType::SveFixedLengthDataVector)
           return VT->getElementType().getCanonicalType() ==
                  FirstType->getSveEltType(*this);
+        else if (VT->getVectorKind() == VectorType::GenericVector)
+          return getTypeSize(SecondType) == getLangOpts().ArmSveVectorBits &&
+                 hasSameType(VT->getElementType(),
+                             getBuiltinVectorTypeInfo(BT).ElementType);
       }
     }
     return false;
