@@ -2997,6 +2997,8 @@ def TensorCastOp : CastOp<"tensor_cast"> {
     /// The result of a tensor_cast is always a tensor.
     TensorType getType() { return getResult().getType().cast<TensorType>(); }
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
