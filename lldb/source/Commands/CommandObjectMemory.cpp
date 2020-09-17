@@ -1707,7 +1707,6 @@ protected:
                 "invalid address argument \"%s\": %s\n", command[0].c_str(),
                 error.AsCString());
             result.SetStatus(eReturnStatusFailed);
-            return false;
           }
         }
 
