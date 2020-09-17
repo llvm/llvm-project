@@ -1,7 +1,7 @@
 ! RUN: bbc %s -o - | tco | FileCheck %s
 
 ! CHECK: @_QB = common global [8 x i8] zeroinitializer
-! CHECK: @_QBx = linkonce global { float, float } { float 1.0{{.*}}, float 2.0{{.*}} }
+! CHECK: @_QBx = global { float, float } { float 1.0{{.*}}, float 2.0{{.*}} }
 ! CHECK: @_QBy = common global [12 x i8] zeroinitializer
 
 ! CHECK-LABEL: _QPs0
