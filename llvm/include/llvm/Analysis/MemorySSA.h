@@ -1224,12 +1224,9 @@ private:
   bool IsGuaranteedLoopInvariant(Value *Ptr) const {
     auto IsGuaranteedLoopInvariantBase = [](Value *Ptr) {
       Ptr = Ptr->stripPointerCasts();
-      if (auto *I = dyn_cast<Instruction>(Ptr)) {
-        if (isa<AllocaInst>(Ptr))
-          return true;
-        return false;
-      }
-      return true;
+      if (!isa<Instruction>(Ptr))
+        return true;
+      return isa<AllocaInst>(Ptr);
     };
 
     Ptr = Ptr->stripPointerCasts();
