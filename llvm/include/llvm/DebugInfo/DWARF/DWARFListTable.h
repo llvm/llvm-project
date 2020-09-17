@@ -270,19 +270,13 @@ template <typename DWARFListType>
 Expected<DWARFListType>
 DWARFListTableBase<DWARFListType>::findList(DWARFDataExtractor Data,
                                             uint64_t Offset) {
-  auto Entry = ListMap.find(Offset);
-  if (Entry != ListMap.end())
-    return Entry->second;
-
   // Extract the list from the section and enter it into the list map.
   DWARFListType List;
   uint64_t End = getHeaderOffset() + Header.length();
-  uint64_t StartingOffset = Offset;
   if (Error E =
           List.extract(Data, getHeaderOffset(), End, &Offset,
                        Header.getSectionName(), Header.getListTypeString()))
     return std::move(E);
-  ListMap[StartingOffset] = List;
   return List;
 }
 

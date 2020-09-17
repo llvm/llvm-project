@@ -265,14 +265,54 @@ func @testop(%a: memref<10xf32>) -> () {
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 
-
-func @testparallelop() -> () {
+func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
   %vectorLength = constant 128 : index
   acc.parallel vector_length(%vectorLength) {
   }
+  acc.parallel copyin(%a: memref<10xf32>, %b: memref<10xf32>) {
+  }
+  acc.parallel copyin_readonly(%a: memref<10xf32>, %b: memref<10xf32>) {
+  }
+  acc.parallel copyin(%a: memref<10xf32>) copyout_zero(%b: memref<10xf32>, %c: memref<10x10xf32>) {
+  }
+  acc.parallel copyout(%b: memref<10xf32>, %c: memref<10x10xf32>) create(%a: memref<10xf32>) {
+  }
+  acc.parallel copyout_zero(%b: memref<10xf32>, %c: memref<10x10xf32>) create_zero(%a: memref<10xf32>) {
+  }
+  acc.parallel no_create(%a: memref<10xf32>) present(%b: memref<10xf32>, %c: memref<10x10xf32>) {
+  }
+  acc.parallel deviceptr(%a: memref<10xf32>) attach(%b: memref<10xf32>, %c: memref<10x10xf32>) {
+  }
+  acc.parallel private(%a: memref<10xf32>, %c: memref<10x10xf32>) firstprivate(%b: memref<10xf32>) {
+  }
+  acc.parallel {
+  } attributes {defaultAttr = "none"}
+  acc.parallel {
+  } attributes {defaultAttr = "present"}
   return
 }
 
-// CHECK:      [[VECTORLENGTH:%.*]] = constant 128 : index
-// CHECK-NEXT: acc.parallel vector_length([[VECTORLENGTH]]) {
-// CHECK-NEXT: }
+// CHECK:      func @testparallelop([[ARGA:%.*]]: memref<10xf32>, [[ARGB:%.*]]: memref<10xf32>, [[ARGC:%.*]]: memref<10x10xf32>) {
+// CHECK:        [[VECTORLENGTH:%.*]] = constant 128 : index
+// CHECK:        acc.parallel vector_length([[VECTORLENGTH]]) {
+// CHECK-NEXT:   }
+// CHECK:        acc.parallel copyin([[ARGA]]: memref<10xf32>, [[ARGB]]: memref<10xf32>) {
+// CHECK-NEXT:   }
+// CHECK:        acc.parallel copyin_readonly([[ARGA]]: memref<10xf32>, [[ARGB]]: memref<10xf32>) {
+// CHECK-NEXT:   }
+// CHECK:        acc.parallel copyin([[ARGA]]: memref<10xf32>) copyout_zero([[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) {
+// CHECK-NEXT:   }
+// CHECK:        acc.parallel copyout([[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) create([[ARGA]]: memref<10xf32>) {
+// CHECK-NEXT:   }
+// CHECK:        acc.parallel copyout_zero([[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) create_zero([[ARGA]]: memref<10xf32>) {
+// CHECK-NEXT:   }
+// CHECK:        acc.parallel no_create([[ARGA]]: memref<10xf32>) present([[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) {
+// CHECK-NEXT:   }
+// CHECK:        acc.parallel deviceptr([[ARGA]]: memref<10xf32>) attach([[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) {
+// CHECK-NEXT:   }
+// CHECK:        acc.parallel private([[ARGA]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) firstprivate([[ARGB]]: memref<10xf32>) {
+// CHECK-NEXT:   }
+// CHECK:        acc.parallel {
+// CHECK-NEXT:   } attributes {defaultAttr = "none"}
+// CHECK:        acc.parallel {
+// CHECK-NEXT:   } attributes {defaultAttr = "present"}

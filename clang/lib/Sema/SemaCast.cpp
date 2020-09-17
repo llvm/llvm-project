@@ -889,6 +889,18 @@ void CastOperation::CheckDynamicCast() {
     return;
   }
 
+  // Warns when dynamic_cast is used with RTTI data disabled.
+  if (!Self.getLangOpts().RTTIData) {
+    bool MicrosoftABI =
+        Self.getASTContext().getTargetInfo().getCXXABI().isMicrosoft();
+    bool isClangCL = Self.getDiagnostics().getDiagnosticOptions().getFormat() ==
+                     DiagnosticOptions::MSVC;
+    if (MicrosoftABI || !DestPointee->isVoidType())
+      Self.Diag(OpRange.getBegin(),
+                diag::warn_no_dynamic_cast_with_rtti_disabled)
+          << isClangCL;
+  }
+
   // Done. Everything else is run-time checks.
   Kind = CK_Dynamic;
 }

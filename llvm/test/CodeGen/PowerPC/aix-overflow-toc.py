@@ -1,4 +1,4 @@
-# REQUIRES: system-aix || system-linux
+# UNSUPPORTED: expensive_checks, debug
 
 # RUN: python %s > %t.ll
 # RUN: llc -mtriple powerpc-ibm-aix-xcoff -code-model=small -mcpu=pwr4 -mattr=-altivec -O0 < %t.ll | \

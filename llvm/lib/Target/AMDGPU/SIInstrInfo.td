@@ -539,6 +539,48 @@ def si_setcc_uniform : PatFrag <
 }]>;
 
 //===----------------------------------------------------------------------===//
+// SDNodes PatFrags for a16 loads and stores with 3 components.
+// v3f16/v3i16 is widened to v4f16/v4i16, so we need to match on the memory
+// load/store size.
+//===----------------------------------------------------------------------===//
+
+class mubuf_intrinsic_load<SDPatternOperator name, ValueType vt> : PatFrag <
+  (ops node:$rsrc, node:$vindex, node:$voffset, node:$soffset, node:$offset,
+            node:$auxiliary, node:$idxen),
+  (name node:$rsrc, node:$vindex, node:$voffset, node:$soffset, node:$offset,
+            node:$auxiliary, node:$idxen)> {
+  let IsLoad = 1;
+  let MemoryVT = vt;
+}
+
+class mubuf_intrinsic_store<SDPatternOperator name, ValueType vt> : PatFrag <
+  (ops node:$vdata, node:$rsrc, node:$vindex, node:$voffset, node:$soffset, node:$offset,
+            node:$auxiliary, node:$idxen),
+  (name node:$vdata, node:$rsrc, node:$vindex, node:$voffset, node:$soffset, node:$offset,
+            node:$auxiliary, node:$idxen)> {
+  let IsStore = 1;
+  let MemoryVT = vt;
+}
+
+class mtbuf_intrinsic_load<SDPatternOperator name, ValueType vt> : PatFrag <
+  (ops node:$rsrc, node:$vindex, node:$voffset, node:$soffset, node:$offset,
+            node:$format, node:$auxiliary, node:$idxen),
+  (name node:$rsrc, node:$vindex, node:$voffset, node:$soffset, node:$offset,
+            node:$format, node:$auxiliary, node:$idxen)> {
+  let IsLoad = 1;
+  let MemoryVT = vt;
+}
+
+class mtbuf_intrinsic_store<SDPatternOperator name, ValueType vt> : PatFrag <
+  (ops node:$vdata, node:$rsrc, node:$vindex, node:$voffset, node:$soffset, node:$offset,
+            node:$format, node:$auxiliary, node:$idxen),
+  (name node:$vdata, node:$rsrc, node:$vindex, node:$voffset, node:$soffset, node:$offset,
+            node:$format, node:$auxiliary, node:$idxen)> {
+  let IsStore = 1;
+  let MemoryVT = vt;
+}
+
+//===----------------------------------------------------------------------===//
 // SDNodes PatFrags for d16 loads
 //===----------------------------------------------------------------------===//
 

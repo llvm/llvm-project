@@ -1511,6 +1511,17 @@ public:
       BaseDiag << Value;
       return Diag;
     }
+
+    // It is necessary to limit this to rvalue reference to avoid calling this
+    // function with a bitfield lvalue argument since non-const reference to
+    // bitfield is not allowed.
+    template <typename T, typename = typename std::enable_if<
+                              !std::is_lvalue_reference<T>::value>::type>
+    const SemaDiagnosticBuilder &operator<<(T &&V) const {
+      const StreamableDiagnosticBase &DB = *this;
+      DB << std::move(V);
+      return *this;
+    }
   };
 
   /// Emit a diagnostic.
@@ -10019,21 +10030,27 @@ private:
     OMPDeclareVariantScope(OMPTraitInfo &TI);
   };
 
+  /// Return the OMPTraitInfo for the surrounding scope, if any.
+  OMPTraitInfo *getOMPTraitInfoForSurroundingScope() {
+    return OMPDeclareVariantScopes.empty() ? nullptr
+                                           : OMPDeclareVariantScopes.back().TI;
+  }
+
   /// The current `omp begin/end declare variant` scopes.
   SmallVector<OMPDeclareVariantScope, 4> OMPDeclareVariantScopes;
 
   /// The declarator \p D defines a function in the scope \p S which is nested
   /// in an `omp begin/end declare variant` scope. In this method we create a
   /// declaration for \p D and rename \p D according to the OpenMP context
-  /// selector of the surrounding scope.
-  FunctionDecl *
-  ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(Scope *S,
-                                                            Declarator &D);
+  /// selector of the surrounding scope. Return all base functions in \p Bases.
+  void ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
+      Scope *S, Declarator &D, MultiTemplateParamsArg TemplateParameterLists,
+      SmallVectorImpl<FunctionDecl *> &Bases);
 
-  /// Register \p FD as specialization of \p BaseFD in the current `omp
-  /// begin/end declare variant` scope.
+  /// Register \p D as specialization of all base functions in \p Bases in the
+  /// current `omp begin/end declare variant` scope.
   void ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(
-      FunctionDecl *FD, FunctionDecl *BaseFD);
+      Decl *D, SmallVectorImpl<FunctionDecl *> &Bases);
 
 public:
 

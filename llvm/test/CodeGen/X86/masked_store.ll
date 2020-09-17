@@ -4504,34 +4504,102 @@ define void @mstore_constmask_v4i32_v4i32(<4 x i32> %trigger, <4 x i32>* %addr, 
 ; SSE-NEXT:    movups %xmm1, (%rdi)
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: mstore_constmask_v4i32_v4i32:
+; AVX-LABEL: mstore_constmask_v4i32_v4i32:
+; AVX:       ## %bb.0:
+; AVX-NEXT:    vmovups %xmm1, (%rdi)
+; AVX-NEXT:    retq
+  %mask = icmp eq <4 x i32> %trigger, zeroinitializer
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %val, <4 x i32>* %addr, i32 4, <4 x i1><i1 true, i1 true, i1 true, i1 true>)
+  ret void
+}
+
+; Make sure we are able to detect all ones constant mask after type legalization
+; to avoid masked stores.
+define void @mstore_constmask_allones_split(<16 x i32> %trigger, <16 x i32>* %addr, <16 x i32> %val) {
+; SSE2-LABEL: mstore_constmask_allones_split:
+; SSE2:       ## %bb.0:
+; SSE2-NEXT:    movd %xmm4, (%rdi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[1,1,1,1]
+; SSE2-NEXT:    movd %xmm0, 4(%rdi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[3,3,3,3]
+; SSE2-NEXT:    movd %xmm0, 12(%rdi)
+; SSE2-NEXT:    movd %xmm5, 16(%rdi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[2,3,2,3]
+; SSE2-NEXT:    movd %xmm0, 24(%rdi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[3,3,3,3]
+; SSE2-NEXT:    movd %xmm0, 28(%rdi)
+; SSE2-NEXT:    movd %xmm6, 32(%rdi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[1,1,1,1]
+; SSE2-NEXT:    movd %xmm0, 36(%rdi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[2,3,2,3]
+; SSE2-NEXT:    movd %xmm0, 40(%rdi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[3,3,3,3]
+; SSE2-NEXT:    movd %xmm0, 44(%rdi)
+; SSE2-NEXT:    movd %xmm7, 48(%rdi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm7[1,1,1,1]
+; SSE2-NEXT:    movd %xmm0, 52(%rdi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm7[2,3,2,3]
+; SSE2-NEXT:    movd %xmm0, 56(%rdi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm7[3,3,3,3]
+; SSE2-NEXT:    movd %xmm0, 60(%rdi)
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: mstore_constmask_allones_split:
+; SSE4:       ## %bb.0:
+; SSE4-NEXT:    movss %xmm4, (%rdi)
+; SSE4-NEXT:    extractps $1, %xmm4, 4(%rdi)
+; SSE4-NEXT:    extractps $3, %xmm4, 12(%rdi)
+; SSE4-NEXT:    movd %xmm5, 16(%rdi)
+; SSE4-NEXT:    movdqa %xmm7, %xmm0
+; SSE4-NEXT:    palignr {{.*#+}} xmm0 = xmm6[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
+; SSE4-NEXT:    palignr {{.*#+}} xmm6 = xmm5[8,9,10,11,12,13,14,15],xmm6[0,1,2,3,4,5,6,7]
+; SSE4-NEXT:    movdqu %xmm6, 24(%rdi)
+; SSE4-NEXT:    movdqu %xmm0, 40(%rdi)
+; SSE4-NEXT:    pextrd $2, %xmm7, 56(%rdi)
+; SSE4-NEXT:    pextrd $3, %xmm7, 60(%rdi)
+; SSE4-NEXT:    retq
+;
+; AVX1-LABEL: mstore_constmask_allones_split:
 ; AVX1:       ## %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi)
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967295,4294967295,0,4294967295,4294967295,0,4294967295,4294967295]
+; AVX1-NEXT:    vmaskmovps %ymm2, %ymm0, (%rdi)
+; AVX1-NEXT:    vmovups %ymm3, 32(%rdi)
+; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: mstore_constmask_v4i32_v4i32:
+; AVX2-LABEL: mstore_constmask_allones_split:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpmaskmovd %xmm1, %xmm0, (%rdi)
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm0 = [4294967295,4294967295,0,4294967295,4294967295,0,4294967295,4294967295]
+; AVX2-NEXT:    vpmaskmovd %ymm2, %ymm0, (%rdi)
+; AVX2-NEXT:    vmovups %ymm3, 32(%rdi)
+; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: mstore_constmask_v4i32_v4i32:
+; AVX512F-LABEL: mstore_constmask_allones_split:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512F-NEXT:    movw $15, %ax
+; AVX512F-NEXT:    movw $-37, %ax
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vmovdqu32 %zmm1, (%rdi) {%k1}
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512VL-LABEL: mstore_constmask_v4i32_v4i32:
-; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    kxnorw %k0, %k0, %k1
-; AVX512VL-NEXT:    vmovdqu32 %xmm1, (%rdi) {%k1}
-; AVX512VL-NEXT:    retq
-  %mask = icmp eq <4 x i32> %trigger, zeroinitializer
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %val, <4 x i32>* %addr, i32 4, <4 x i1><i1 true, i1 true, i1 true, i1 true>)
+; AVX512VLDQ-LABEL: mstore_constmask_allones_split:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    movw $-37, %ax
+; AVX512VLDQ-NEXT:    kmovw %eax, %k1
+; AVX512VLDQ-NEXT:    vmovdqu32 %zmm1, (%rdi) {%k1}
+; AVX512VLDQ-NEXT:    vzeroupper
+; AVX512VLDQ-NEXT:    retq
+;
+; AVX512VLBW-LABEL: mstore_constmask_allones_split:
+; AVX512VLBW:       ## %bb.0:
+; AVX512VLBW-NEXT:    movw $-37, %ax
+; AVX512VLBW-NEXT:    kmovd %eax, %k1
+; AVX512VLBW-NEXT:    vmovdqu32 %zmm1, (%rdi) {%k1}
+; AVX512VLBW-NEXT:    vzeroupper
+; AVX512VLBW-NEXT:    retq
+  %mask = icmp eq <16 x i32> %trigger, zeroinitializer
+  call void @llvm.masked.store.v16i32.p0v16i32(<16 x i32> %val, <16 x i32>* %addr, i32 4, <16 x i1><i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
   ret void
 }
 
@@ -4642,31 +4710,31 @@ define void @masked_store_bool_mask_demand_trunc_sext(<4 x double> %x, <4 x doub
 ; SSE-NEXT:    pslld $31, %xmm2
 ; SSE-NEXT:    movmskps %xmm2, %eax
 ; SSE-NEXT:    testb $1, %al
-; SSE-NEXT:    jne LBB23_1
+; SSE-NEXT:    jne LBB24_1
 ; SSE-NEXT:  ## %bb.2: ## %else
 ; SSE-NEXT:    testb $2, %al
-; SSE-NEXT:    jne LBB23_3
-; SSE-NEXT:  LBB23_4: ## %else2
+; SSE-NEXT:    jne LBB24_3
+; SSE-NEXT:  LBB24_4: ## %else2
 ; SSE-NEXT:    testb $4, %al
-; SSE-NEXT:    jne LBB23_5
-; SSE-NEXT:  LBB23_6: ## %else4
+; SSE-NEXT:    jne LBB24_5
+; SSE-NEXT:  LBB24_6: ## %else4
 ; SSE-NEXT:    testb $8, %al
-; SSE-NEXT:    jne LBB23_7
-; SSE-NEXT:  LBB23_8: ## %else6
+; SSE-NEXT:    jne LBB24_7
+; SSE-NEXT:  LBB24_8: ## %else6
 ; SSE-NEXT:    retq
-; SSE-NEXT:  LBB23_1: ## %cond.store
+; SSE-NEXT:  LBB24_1: ## %cond.store
 ; SSE-NEXT:    movlps %xmm0, (%rdi)
 ; SSE-NEXT:    testb $2, %al
-; SSE-NEXT:    je LBB23_4
-; SSE-NEXT:  LBB23_3: ## %cond.store1
+; SSE-NEXT:    je LBB24_4
+; SSE-NEXT:  LBB24_3: ## %cond.store1
 ; SSE-NEXT:    movhps %xmm0, 8(%rdi)
 ; SSE-NEXT:    testb $4, %al
-; SSE-NEXT:    je LBB23_6
-; SSE-NEXT:  LBB23_5: ## %cond.store3
+; SSE-NEXT:    je LBB24_6
+; SSE-NEXT:  LBB24_5: ## %cond.store3
 ; SSE-NEXT:    movlps %xmm1, 16(%rdi)
 ; SSE-NEXT:    testb $8, %al
-; SSE-NEXT:    je LBB23_8
-; SSE-NEXT:  LBB23_7: ## %cond.store5
+; SSE-NEXT:    je LBB24_8
+; SSE-NEXT:  LBB24_7: ## %cond.store5
 ; SSE-NEXT:    movhps %xmm1, 24(%rdi)
 ; SSE-NEXT:    retq
 ;
@@ -4728,35 +4796,35 @@ define void @one_mask_bit_set1_variable(<4 x float>* %addr, <4 x float> %val, <4
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movmskps %xmm1, %eax
 ; SSE2-NEXT:    testb $1, %al
-; SSE2-NEXT:    jne LBB24_1
+; SSE2-NEXT:    jne LBB25_1
 ; SSE2-NEXT:  ## %bb.2: ## %else
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    jne LBB24_3
-; SSE2-NEXT:  LBB24_4: ## %else2
+; SSE2-NEXT:    jne LBB25_3
+; SSE2-NEXT:  LBB25_4: ## %else2
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    jne LBB24_5
-; SSE2-NEXT:  LBB24_6: ## %else4
+; SSE2-NEXT:    jne LBB25_5
+; SSE2-NEXT:  LBB25_6: ## %else4
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    jne LBB24_7
-; SSE2-NEXT:  LBB24_8: ## %else6
+; SSE2-NEXT:    jne LBB25_7
+; SSE2-NEXT:  LBB25_8: ## %else6
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  LBB24_1: ## %cond.store
+; SSE2-NEXT:  LBB25_1: ## %cond.store
 ; SSE2-NEXT:    movss %xmm0, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je LBB24_4
-; SSE2-NEXT:  LBB24_3: ## %cond.store1
+; SSE2-NEXT:    je LBB25_4
+; SSE2-NEXT:  LBB25_3: ## %cond.store1
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
 ; SSE2-NEXT:    movss %xmm1, 4(%rdi)
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    je LBB24_6
-; SSE2-NEXT:  LBB24_5: ## %cond.store3
+; SSE2-NEXT:    je LBB25_6
+; SSE2-NEXT:  LBB25_5: ## %cond.store3
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE2-NEXT:    movss %xmm1, 8(%rdi)
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    je LBB24_8
-; SSE2-NEXT:  LBB24_7: ## %cond.store5
+; SSE2-NEXT:    je LBB25_8
+; SSE2-NEXT:  LBB25_7: ## %cond.store5
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    movss %xmm0, 12(%rdi)
 ; SSE2-NEXT:    retq
@@ -4765,31 +4833,31 @@ define void @one_mask_bit_set1_variable(<4 x float>* %addr, <4 x float> %val, <4
 ; SSE4:       ## %bb.0:
 ; SSE4-NEXT:    movmskps %xmm1, %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne LBB24_1
+; SSE4-NEXT:    jne LBB25_1
 ; SSE4-NEXT:  ## %bb.2: ## %else
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne LBB24_3
-; SSE4-NEXT:  LBB24_4: ## %else2
+; SSE4-NEXT:    jne LBB25_3
+; SSE4-NEXT:  LBB25_4: ## %else2
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    jne LBB24_5
-; SSE4-NEXT:  LBB24_6: ## %else4
+; SSE4-NEXT:    jne LBB25_5
+; SSE4-NEXT:  LBB25_6: ## %else4
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    jne LBB24_7
-; SSE4-NEXT:  LBB24_8: ## %else6
+; SSE4-NEXT:    jne LBB25_7
+; SSE4-NEXT:  LBB25_8: ## %else6
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  LBB24_1: ## %cond.store
+; SSE4-NEXT:  LBB25_1: ## %cond.store
 ; SSE4-NEXT:    movss %xmm0, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je LBB24_4
-; SSE4-NEXT:  LBB24_3: ## %cond.store1
+; SSE4-NEXT:    je LBB25_4
+; SSE4-NEXT:  LBB25_3: ## %cond.store1
 ; SSE4-NEXT:    extractps $1, %xmm0, 4(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je LBB24_6
-; SSE4-NEXT:  LBB24_5: ## %cond.store3
+; SSE4-NEXT:    je LBB25_6
+; SSE4-NEXT:  LBB25_5: ## %cond.store3
 ; SSE4-NEXT:    extractps $2, %xmm0, 8(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je LBB24_8
-; SSE4-NEXT:  LBB24_7: ## %cond.store5
+; SSE4-NEXT:    je LBB25_8
+; SSE4-NEXT:  LBB25_7: ## %cond.store5
 ; SSE4-NEXT:    extractps $3, %xmm0, 12(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -4834,25 +4902,25 @@ define void @widen_masked_store(<3 x i32> %v, <3 x i32>* %p, <3 x i1> %mask) {
 ; SSE2-NEXT:    shlb $2, %cl
 ; SSE2-NEXT:    orb %dl, %cl
 ; SSE2-NEXT:    testb $1, %cl
-; SSE2-NEXT:    jne LBB25_1
+; SSE2-NEXT:    jne LBB26_1
 ; SSE2-NEXT:  ## %bb.2: ## %else
 ; SSE2-NEXT:    testb $2, %cl
-; SSE2-NEXT:    jne LBB25_3
-; SSE2-NEXT:  LBB25_4: ## %else2
+; SSE2-NEXT:    jne LBB26_3
+; SSE2-NEXT:  LBB26_4: ## %else2
 ; SSE2-NEXT:    testb $4, %cl
-; SSE2-NEXT:    jne LBB25_5
-; SSE2-NEXT:  LBB25_6: ## %else4
+; SSE2-NEXT:    jne LBB26_5
+; SSE2-NEXT:  LBB26_6: ## %else4
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  LBB25_1: ## %cond.store
+; SSE2-NEXT:  LBB26_1: ## %cond.store
 ; SSE2-NEXT:    movd %xmm0, (%rdi)
 ; SSE2-NEXT:    testb $2, %cl
-; SSE2-NEXT:    je LBB25_4
-; SSE2-NEXT:  LBB25_3: ## %cond.store1
+; SSE2-NEXT:    je LBB26_4
+; SSE2-NEXT:  LBB26_3: ## %cond.store1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm1, 4(%rdi)
 ; SSE2-NEXT:    testb $4, %cl
-; SSE2-NEXT:    je LBB25_6
-; SSE2-NEXT:  LBB25_5: ## %cond.store3
+; SSE2-NEXT:    je LBB26_6
+; SSE2-NEXT:  LBB26_5: ## %cond.store3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm0, 8(%rdi)
 ; SSE2-NEXT:    retq
@@ -4867,24 +4935,24 @@ define void @widen_masked_store(<3 x i32> %v, <3 x i32>* %p, <3 x i1> %mask) {
 ; SSE4-NEXT:    shlb $2, %cl
 ; SSE4-NEXT:    orb %dl, %cl
 ; SSE4-NEXT:    testb $1, %cl
-; SSE4-NEXT:    jne LBB25_1
+; SSE4-NEXT:    jne LBB26_1
 ; SSE4-NEXT:  ## %bb.2: ## %else
 ; SSE4-NEXT:    testb $2, %cl
-; SSE4-NEXT:    jne LBB25_3
-; SSE4-NEXT:  LBB25_4: ## %else2
+; SSE4-NEXT:    jne LBB26_3
+; SSE4-NEXT:  LBB26_4: ## %else2
 ; SSE4-NEXT:    testb $4, %cl
-; SSE4-NEXT:    jne LBB25_5
-; SSE4-NEXT:  LBB25_6: ## %else4
+; SSE4-NEXT:    jne LBB26_5
+; SSE4-NEXT:  LBB26_6: ## %else4
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  LBB25_1: ## %cond.store
+; SSE4-NEXT:  LBB26_1: ## %cond.store
 ; SSE4-NEXT:    movss %xmm0, (%rdi)
 ; SSE4-NEXT:    testb $2, %cl
-; SSE4-NEXT:    je LBB25_4
-; SSE4-NEXT:  LBB25_3: ## %cond.store1
+; SSE4-NEXT:    je LBB26_4
+; SSE4-NEXT:  LBB26_3: ## %cond.store1
 ; SSE4-NEXT:    extractps $1, %xmm0, 4(%rdi)
 ; SSE4-NEXT:    testb $4, %cl
-; SSE4-NEXT:    je LBB25_6
-; SSE4-NEXT:  LBB25_5: ## %cond.store3
+; SSE4-NEXT:    je LBB26_6
+; SSE4-NEXT:  LBB26_5: ## %cond.store3
 ; SSE4-NEXT:    extractps $2, %xmm0, 8(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -4998,68 +5066,68 @@ define void @PR11210(<4 x float> %x, <4 x float>* %ptr, <4 x float> %y, <2 x i64
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movmskps %xmm2, %eax
 ; SSE2-NEXT:    testb $1, %al
-; SSE2-NEXT:    jne LBB27_1
+; SSE2-NEXT:    jne LBB28_1
 ; SSE2-NEXT:  ## %bb.2: ## %else
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    jne LBB27_3
-; SSE2-NEXT:  LBB27_4: ## %else2
+; SSE2-NEXT:    jne LBB28_3
+; SSE2-NEXT:  LBB28_4: ## %else2
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    jne LBB27_5
-; SSE2-NEXT:  LBB27_6: ## %else4
+; SSE2-NEXT:    jne LBB28_5
+; SSE2-NEXT:  LBB28_6: ## %else4
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    jne LBB27_7
-; SSE2-NEXT:  LBB27_8: ## %else6
+; SSE2-NEXT:    jne LBB28_7
+; SSE2-NEXT:  LBB28_8: ## %else6
 ; SSE2-NEXT:    testb $1, %al
-; SSE2-NEXT:    jne LBB27_9
-; SSE2-NEXT:  LBB27_10: ## %else9
+; SSE2-NEXT:    jne LBB28_9
+; SSE2-NEXT:  LBB28_10: ## %else9
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    jne LBB27_11
-; SSE2-NEXT:  LBB27_12: ## %else11
+; SSE2-NEXT:    jne LBB28_11
+; SSE2-NEXT:  LBB28_12: ## %else11
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    jne LBB27_13
-; SSE2-NEXT:  LBB27_14: ## %else13
+; SSE2-NEXT:    jne LBB28_13
+; SSE2-NEXT:  LBB28_14: ## %else13
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    jne LBB27_15
-; SSE2-NEXT:  LBB27_16: ## %else15
+; SSE2-NEXT:    jne LBB28_15
+; SSE2-NEXT:  LBB28_16: ## %else15
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  LBB27_1: ## %cond.store
+; SSE2-NEXT:  LBB28_1: ## %cond.store
 ; SSE2-NEXT:    movss %xmm0, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je LBB27_4
-; SSE2-NEXT:  LBB27_3: ## %cond.store1
+; SSE2-NEXT:    je LBB28_4
+; SSE2-NEXT:  LBB28_3: ## %cond.store1
 ; SSE2-NEXT:    movaps %xmm0, %xmm2
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm0[1,1]
 ; SSE2-NEXT:    movss %xmm2, 4(%rdi)
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    je LBB27_6
-; SSE2-NEXT:  LBB27_5: ## %cond.store3
+; SSE2-NEXT:    je LBB28_6
+; SSE2-NEXT:  LBB28_5: ## %cond.store3
 ; SSE2-NEXT:    movaps %xmm0, %xmm2
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
 ; SSE2-NEXT:    movss %xmm2, 8(%rdi)
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    je LBB27_8
-; SSE2-NEXT:  LBB27_7: ## %cond.store5
+; SSE2-NEXT:    je LBB28_8
+; SSE2-NEXT:  LBB28_7: ## %cond.store5
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    movss %xmm0, 12(%rdi)
 ; SSE2-NEXT:    testb $1, %al
-; SSE2-NEXT:    je LBB27_10
-; SSE2-NEXT:  LBB27_9: ## %cond.store8
+; SSE2-NEXT:    je LBB28_10
+; SSE2-NEXT:  LBB28_9: ## %cond.store8
 ; SSE2-NEXT:    movss %xmm1, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je LBB27_12
-; SSE2-NEXT:  LBB27_11: ## %cond.store10
+; SSE2-NEXT:    je LBB28_12
+; SSE2-NEXT:  LBB28_11: ## %cond.store10
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
 ; SSE2-NEXT:    movss %xmm0, 4(%rdi)
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    je LBB27_14
-; SSE2-NEXT:  LBB27_13: ## %cond.store12
+; SSE2-NEXT:    je LBB28_14
+; SSE2-NEXT:  LBB28_13: ## %cond.store12
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
 ; SSE2-NEXT:    movss %xmm0, 8(%rdi)
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    je LBB27_16
-; SSE2-NEXT:  LBB27_15: ## %cond.store14
+; SSE2-NEXT:    je LBB28_16
+; SSE2-NEXT:  LBB28_15: ## %cond.store14
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE2-NEXT:    movss %xmm1, 12(%rdi)
 ; SSE2-NEXT:    retq
@@ -5068,59 +5136,59 @@ define void @PR11210(<4 x float> %x, <4 x float>* %ptr, <4 x float> %y, <2 x i64
 ; SSE4:       ## %bb.0:
 ; SSE4-NEXT:    movmskps %xmm2, %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne LBB27_1
+; SSE4-NEXT:    jne LBB28_1
 ; SSE4-NEXT:  ## %bb.2: ## %else
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne LBB27_3
-; SSE4-NEXT:  LBB27_4: ## %else2
+; SSE4-NEXT:    jne LBB28_3
+; SSE4-NEXT:  LBB28_4: ## %else2
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    jne LBB27_5
-; SSE4-NEXT:  LBB27_6: ## %else4
+; SSE4-NEXT:    jne LBB28_5
+; SSE4-NEXT:  LBB28_6: ## %else4
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    jne LBB27_7
-; SSE4-NEXT:  LBB27_8: ## %else6
+; SSE4-NEXT:    jne LBB28_7
+; SSE4-NEXT:  LBB28_8: ## %else6
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne LBB27_9
-; SSE4-NEXT:  LBB27_10: ## %else9
+; SSE4-NEXT:    jne LBB28_9
+; SSE4-NEXT:  LBB28_10: ## %else9
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne LBB27_11
-; SSE4-NEXT:  LBB27_12: ## %else11
+; SSE4-NEXT:    jne LBB28_11
+; SSE4-NEXT:  LBB28_12: ## %else11
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    jne LBB27_13
-; SSE4-NEXT:  LBB27_14: ## %else13
+; SSE4-NEXT:    jne LBB28_13
+; SSE4-NEXT:  LBB28_14: ## %else13
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    jne LBB27_15
-; SSE4-NEXT:  LBB27_16: ## %else15
+; SSE4-NEXT:    jne LBB28_15
+; SSE4-NEXT:  LBB28_16: ## %else15
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  LBB27_1: ## %cond.store
+; SSE4-NEXT:  LBB28_1: ## %cond.store
 ; SSE4-NEXT:    movss %xmm0, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je LBB27_4
-; SSE4-NEXT:  LBB27_3: ## %cond.store1
+; SSE4-NEXT:    je LBB28_4
+; SSE4-NEXT:  LBB28_3: ## %cond.store1
 ; SSE4-NEXT:    extractps $1, %xmm0, 4(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je LBB27_6
-; SSE4-NEXT:  LBB27_5: ## %cond.store3
+; SSE4-NEXT:    je LBB28_6
+; SSE4-NEXT:  LBB28_5: ## %cond.store3
 ; SSE4-NEXT:    extractps $2, %xmm0, 8(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je LBB27_8
-; SSE4-NEXT:  LBB27_7: ## %cond.store5
+; SSE4-NEXT:    je LBB28_8
+; SSE4-NEXT:  LBB28_7: ## %cond.store5
 ; SSE4-NEXT:    extractps $3, %xmm0, 12(%rdi)
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    je LBB27_10
-; SSE4-NEXT:  LBB27_9: ## %cond.store8
+; SSE4-NEXT:    je LBB28_10
+; SSE4-NEXT:  LBB28_9: ## %cond.store8
 ; SSE4-NEXT:    movss %xmm1, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je LBB27_12
-; SSE4-NEXT:  LBB27_11: ## %cond.store10
+; SSE4-NEXT:    je LBB28_12
+; SSE4-NEXT:  LBB28_11: ## %cond.store10
 ; SSE4-NEXT:    extractps $1, %xmm1, 4(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je LBB27_14
-; SSE4-NEXT:  LBB27_13: ## %cond.store12
+; SSE4-NEXT:    je LBB28_14
+; SSE4-NEXT:  LBB28_13: ## %cond.store12
 ; SSE4-NEXT:    extractps $2, %xmm1, 8(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je LBB27_16
-; SSE4-NEXT:  LBB27_15: ## %cond.store14
+; SSE4-NEXT:    je LBB28_16
+; SSE4-NEXT:  LBB28_15: ## %cond.store14
 ; SSE4-NEXT:    extractps $3, %xmm1, 12(%rdi)
 ; SSE4-NEXT:    retq
 ;

@@ -114,7 +114,7 @@ GCNNSAReassign::tryAssignRegisters(SmallVectorImpl<LiveInterval *> &Intervals,
   unsigned NumRegs = Intervals.size();
 
   for (unsigned N = 0; N < NumRegs; ++N)
-    if (VRM->hasPhys(Intervals[N]->reg))
+    if (VRM->hasPhys(Intervals[N]->reg()))
       LRM->unassign(*Intervals[N]);
 
   for (unsigned N = 0; N < NumRegs; ++N)
@@ -302,14 +302,15 @@ bool GCNNSAReassign::runOnMachineFunction(MachineFunction &MF) {
 
     LLVM_DEBUG(dbgs() << "Attempting to reassign NSA: " << *MI
                       << "\tOriginal allocation:\t";
-               for(auto *LI : Intervals)
-                 dbgs() << " " << llvm::printReg((VRM->getPhys(LI->reg)), TRI);
+               for (auto *LI
+                    : Intervals) dbgs()
+               << " " << llvm::printReg((VRM->getPhys(LI->reg())), TRI);
                dbgs() << '\n');
 
     bool Success = scavengeRegs(Intervals);
     if (!Success) {
       LLVM_DEBUG(dbgs() << "\tCannot reallocate.\n");
-      if (VRM->hasPhys(Intervals.back()->reg)) // Did not change allocation.
+      if (VRM->hasPhys(Intervals.back()->reg())) // Did not change allocation.
         continue;
     } else {
       // Check we did not make it worse for other instructions.
@@ -328,7 +329,7 @@ bool GCNNSAReassign::runOnMachineFunction(MachineFunction &MF) {
 
     if (!Success) {
       for (unsigned I = 0; I < Info->VAddrDwords; ++I)
-        if (VRM->hasPhys(Intervals[I]->reg))
+        if (VRM->hasPhys(Intervals[I]->reg()))
           LRM->unassign(*Intervals[I]);
 
       for (unsigned I = 0; I < Info->VAddrDwords; ++I)
@@ -339,11 +340,12 @@ bool GCNNSAReassign::runOnMachineFunction(MachineFunction &MF) {
 
     C.second = true;
     ++NumNSAConverted;
-    LLVM_DEBUG(dbgs() << "\tNew allocation:\t\t ["
-                 << llvm::printReg((VRM->getPhys(Intervals.front()->reg)), TRI)
-                 << " : "
-                 << llvm::printReg((VRM->getPhys(Intervals.back()->reg)), TRI)
-                 << "]\n");
+    LLVM_DEBUG(
+        dbgs() << "\tNew allocation:\t\t ["
+               << llvm::printReg((VRM->getPhys(Intervals.front()->reg())), TRI)
+               << " : "
+               << llvm::printReg((VRM->getPhys(Intervals.back()->reg())), TRI)
+               << "]\n");
     Changed = true;
   }
 

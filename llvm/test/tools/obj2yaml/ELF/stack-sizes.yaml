@@ -83,3 +83,51 @@ Sections:
   - Name:    .stack_sizes
     Type:    SHT_PROGBITS
     Content: ""
+
+## Check obj2yaml can dump multiple .stack_sizes.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: obj2yaml %t4 | FileCheck %s --check-prefix=MULTI
+
+# MULTI:      --- !ELF
+# MULTI-NEXT: FileHeader:
+# MULTI-NEXT:   Class:   ELFCLASS64
+# MULTI-NEXT:   Data:    ELFDATA2LSB
+# MULTI-NEXT:   Type:    ET_EXEC
+# MULTI-NEXT:   Machine: EM_NONE
+# MULTI-NEXT: Sections:
+# MULTI-NEXT:   - Name:    .stack_sizes
+# MULTI-NEXT:     Type:    SHT_PROGBITS
+# MULTI-NEXT:     Entries:
+# MULTI-NEXT:       - Address: 0x0000000000000010
+# MULTI-NEXT:         Size:    0x0000000000000020
+# MULTI-NEXT:       - Address: 0x0000000000000030
+# MULTI-NEXT:         Size:    0x0000000000000040
+# MULTI-NEXT:   - Name:    '.stack_sizes (1)'
+# MULTI-NEXT:     Type:    SHT_PROGBITS
+# MULTI-NEXT:     Entries:
+# MULTI-NEXT:       - Address: 0x0000000000000050
+# MULTI-NEXT:         Size:    0x0000000000000001
+# MULTI-NEXT:       - Address: 0x0000000000000060
+# MULTI-NEXT:         Size:    0x0000000000000002
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Entries:
+      - Address: 0x0000000000000010
+        Size:    0x0000000000000020
+      - Address: 0x0000000000000030
+        Size:    0x0000000000000040
+  - Name:    '.stack_sizes (1)'
+    Type:    SHT_PROGBITS
+    Entries:
+      - Address: 0x0000000000000050
+        Size:    0x0000000000000001
+      - Address: 0x0000000000000060
+        Size:    0x0000000000000002

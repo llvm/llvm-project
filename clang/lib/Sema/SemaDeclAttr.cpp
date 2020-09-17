@@ -5524,6 +5524,22 @@ static void handleObjCPreciseLifetimeAttr(Sema &S, Decl *D,
   D->addAttr(::new (S.Context) ObjCPreciseLifetimeAttr(S.Context, AL));
 }
 
+static void handleSwiftBridge(Sema &S, Decl *D, const ParsedAttr &AL) {
+  // Make sure that there is a string literal as the annotation's single
+  // argument.
+  StringRef BT;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, BT))
+    return;
+
+  // Don't duplicate annotations that are already set.
+  if (D->hasAttr<SwiftBridgeAttr>()) {
+    S.Diag(AL.getLoc(), diag::warn_duplicate_attribute) << AL;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) SwiftBridgeAttr(S.Context, AL, BT));
+}
+
 static bool isErrorParameter(Sema &S, QualType QT) {
   const auto *PT = QT->getAs<PointerType>();
   if (!PT)
@@ -7533,6 +7549,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
 
   // Swift attributes.
+  case ParsedAttr::AT_SwiftBridge:
+    handleSwiftBridge(S, D, AL);
+    break;
   case ParsedAttr::AT_SwiftBridgedTypedef:
     handleSimpleAttribute<SwiftBridgedTypedefAttr>(S, D, AL);
     break;

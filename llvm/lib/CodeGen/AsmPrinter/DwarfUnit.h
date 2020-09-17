@@ -16,22 +16,19 @@
 #include "DwarfDebug.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
-#include "llvm/IR/DIBuilder.h"
-#include "llvm/IR/DebugInfo.h"
-#include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCSection.h"
+#include <string>
 
 namespace llvm {
 
-class MachineOperand;
-class ConstantInt;
 class ConstantFP;
+class ConstantInt;
 class DbgVariable;
 class DwarfCompileUnit;
+class MachineOperand;
+class MCDwarfDwoLineTable;
+class MCSymbol;
 
 //===----------------------------------------------------------------------===//
 /// This dwarf writer support class manages information associated with a

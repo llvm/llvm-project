@@ -806,6 +806,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v2f16, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v2i16, Custom);
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v3f16, Custom);
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v3i16, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v4f16, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v4i16, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v8f16, Custom);
@@ -817,6 +819,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::v2i16, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::v2f16, Custom);
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::v3i16, Custom);
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::v3f16, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::v4f16, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::v4i16, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::f16, Custom);
@@ -917,15 +921,18 @@ MVT SITargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   if (VT.isVector()) {
     EVT ScalarVT = VT.getScalarType();
     unsigned Size = ScalarVT.getSizeInBits();
-    if (Size == 32)
-      return ScalarVT.getSimpleVT();
+    if (Size == 16) {
+      if (Subtarget->has16BitInsts())
+        return VT.isInteger() ? MVT::v2i16 : MVT::v2f16;
+      return VT.isInteger() ? MVT::i32 : MVT::f32;
+    }
 
-    if (Size > 32)
-      return MVT::i32;
+    if (Size < 16)
+      return Subtarget->has16BitInsts() ? MVT::i16 : MVT::i32;
+    return Size == 32 ? ScalarVT.getSimpleVT() : MVT::i32;
+  }
 
-    if (Size == 16 && Subtarget->has16BitInsts())
-      return VT.isInteger() ? MVT::v2i16 : MVT::v2f16;
-  } else if (VT.getSizeInBits() > 32)
+  if (VT.getSizeInBits() > 32)
     return MVT::i32;
 
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
@@ -942,14 +949,15 @@ unsigned SITargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
     EVT ScalarVT = VT.getScalarType();
     unsigned Size = ScalarVT.getSizeInBits();
 
-    if (Size == 32)
+    // FIXME: Should probably promote 8-bit vectors to i16.
+    if (Size == 16 && Subtarget->has16BitInsts())
+      return (NumElts + 1) / 2;
+
+    if (Size <= 32)
       return NumElts;
 
     if (Size > 32)
       return NumElts * ((Size + 31) / 32);
-
-    if (Size == 16 && Subtarget->has16BitInsts())
-      return (NumElts + 1) / 2;
   } else if (VT.getSizeInBits() > 32)
     return (VT.getSizeInBits() + 31) / 32;
 
@@ -964,9 +972,35 @@ unsigned SITargetLowering::getVectorTypeBreakdownForCallingConv(
     unsigned NumElts = VT.getVectorNumElements();
     EVT ScalarVT = VT.getScalarType();
     unsigned Size = ScalarVT.getSizeInBits();
+    // FIXME: We should fix the ABI to be the same on targets without 16-bit
+    // support, but unless we can properly handle 3-vectors, it will be still be
+    // inconsistent.
+    if (Size == 16 && Subtarget->has16BitInsts()) {
+      RegisterVT = VT.isInteger() ? MVT::v2i16 : MVT::v2f16;
+      IntermediateVT = RegisterVT;
+      NumIntermediates = (NumElts + 1) / 2;
+      return NumIntermediates;
+    }
+
     if (Size == 32) {
       RegisterVT = ScalarVT.getSimpleVT();
       IntermediateVT = RegisterVT;
+      NumIntermediates = NumElts;
+      return NumIntermediates;
+    }
+
+    if (Size < 16 && Subtarget->has16BitInsts()) {
+      // FIXME: Should probably form v2i16 pieces
+      RegisterVT = MVT::i16;
+      IntermediateVT = ScalarVT;
+      NumIntermediates = NumElts;
+      return NumIntermediates;
+    }
+
+
+    if (Size != 16 && Size <= 32) {
+      RegisterVT = MVT::i32;
+      IntermediateVT = ScalarVT;
       NumIntermediates = NumElts;
       return NumIntermediates;
     }
@@ -975,16 +1009,6 @@ unsigned SITargetLowering::getVectorTypeBreakdownForCallingConv(
       RegisterVT = MVT::i32;
       IntermediateVT = RegisterVT;
       NumIntermediates = NumElts * ((Size + 31) / 32);
-      return NumIntermediates;
-    }
-
-    // FIXME: We should fix the ABI to be the same on targets without 16-bit
-    // support, but unless we can properly handle 3-vectors, it will be still be
-    // inconsistent.
-    if (Size == 16 && Subtarget->has16BitInsts()) {
-      RegisterVT = VT.isInteger() ? MVT::v2i16 : MVT::v2f16;
-      IntermediateVT = RegisterVT;
-      NumIntermediates = (NumElts + 1) / 2;
       return NumIntermediates;
     }
   }
@@ -1169,6 +1193,17 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                  MachineMemOperand::MOStore |
                  MachineMemOperand::MODereferenceable |
                  MachineMemOperand::MOVolatile;
+    return true;
+  }
+  case Intrinsic::amdgcn_image_bvh_intersect_ray: {
+    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(CI.getType()); // XXX: what is correct VT?
+    Info.ptrVal = MFI->getImagePSV(
+        *MF.getSubtarget<GCNSubtarget>().getInstrInfo(), CI.getArgOperand(5));
+    Info.align.reset();
+    Info.flags = MachineMemOperand::MOLoad |
+                 MachineMemOperand::MODereferenceable;
     return true;
   }
   case Intrinsic::amdgcn_ds_gws_init:
@@ -4231,9 +4266,6 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
 
     return emitGWSMemViolTestLoop(MI, BB);
   case AMDGPU::S_SETREG_B32: {
-    if (!getSubtarget()->hasDenormModeInst())
-      return BB;
-
     // Try to optimize cases that only set the denormal mode or rounding mode.
     //
     // If the s_setreg_b32 fully sets all of the bits in the rounding mode or
@@ -4243,9 +4275,6 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     // FIXME: This could be predicates on the immediate, but tablegen doesn't
     // allow you to have a no side effect instruction in the output of a
     // sideeffecting pattern.
-
-    // TODO: Should also emit a no side effects pseudo if only FP bits are
-    // touched, even if not all of them or to a variable.
     unsigned ID, Offset, Width;
     AMDGPU::Hwreg::decodeHwreg(MI.getOperand(1).getImm(), ID, Offset, Width);
     if (ID != AMDGPU::Hwreg::ID_MODE)
@@ -4253,44 +4282,53 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
 
     const unsigned WidthMask = maskTrailingOnes<unsigned>(Width);
     const unsigned SetMask = WidthMask << Offset;
-    unsigned SetDenormOp = 0;
-    unsigned SetRoundOp = 0;
 
-    // The dedicated instructions can only set the whole denorm or round mode at
-    // once, not a subset of bits in either.
-    if (SetMask ==
-        (AMDGPU::Hwreg::FP_ROUND_MASK | AMDGPU::Hwreg::FP_DENORM_MASK)) {
-      // If this fully sets both the round and denorm mode, emit the two
-      // dedicated instructions for these.
-      SetRoundOp = AMDGPU::S_ROUND_MODE;
-      SetDenormOp = AMDGPU::S_DENORM_MODE;
-    } else if (SetMask == AMDGPU::Hwreg::FP_ROUND_MASK) {
-      SetRoundOp = AMDGPU::S_ROUND_MODE;
-    } else if (SetMask == AMDGPU::Hwreg::FP_DENORM_MASK) {
-      SetDenormOp = AMDGPU::S_DENORM_MODE;
-    }
+    if (getSubtarget()->hasDenormModeInst()) {
+      unsigned SetDenormOp = 0;
+      unsigned SetRoundOp = 0;
 
-    if (SetRoundOp || SetDenormOp) {
-      MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-      MachineInstr *Def = MRI.getVRegDef(MI.getOperand(0).getReg());
-      if (Def && Def->isMoveImmediate() && Def->getOperand(1).isImm()) {
-        unsigned ImmVal = Def->getOperand(1).getImm();
-        if (SetRoundOp) {
-          BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(SetRoundOp))
-            .addImm(ImmVal & 0xf);
+      // The dedicated instructions can only set the whole denorm or round mode
+      // at once, not a subset of bits in either.
+      if (SetMask ==
+          (AMDGPU::Hwreg::FP_ROUND_MASK | AMDGPU::Hwreg::FP_DENORM_MASK)) {
+        // If this fully sets both the round and denorm mode, emit the two
+        // dedicated instructions for these.
+        SetRoundOp = AMDGPU::S_ROUND_MODE;
+        SetDenormOp = AMDGPU::S_DENORM_MODE;
+      } else if (SetMask == AMDGPU::Hwreg::FP_ROUND_MASK) {
+        SetRoundOp = AMDGPU::S_ROUND_MODE;
+      } else if (SetMask == AMDGPU::Hwreg::FP_DENORM_MASK) {
+        SetDenormOp = AMDGPU::S_DENORM_MODE;
+      }
 
-          // If we also have the denorm mode, get just the denorm mode bits.
-          ImmVal >>= 4;
+      if (SetRoundOp || SetDenormOp) {
+        MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+        MachineInstr *Def = MRI.getVRegDef(MI.getOperand(0).getReg());
+        if (Def && Def->isMoveImmediate() && Def->getOperand(1).isImm()) {
+          unsigned ImmVal = Def->getOperand(1).getImm();
+          if (SetRoundOp) {
+            BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(SetRoundOp))
+                .addImm(ImmVal & 0xf);
+
+            // If we also have the denorm mode, get just the denorm mode bits.
+            ImmVal >>= 4;
+          }
+
+          if (SetDenormOp) {
+            BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(SetDenormOp))
+                .addImm(ImmVal & 0xf);
+          }
+
+          MI.eraseFromParent();
+          return BB;
         }
-
-        if (SetDenormOp) {
-          BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(SetDenormOp))
-            .addImm(ImmVal & 0xf);
-        }
-
-        MI.eraseFromParent();
       }
     }
+
+    // If only FP bits are touched, used the no side effects pseudo.
+    if ((SetMask & (AMDGPU::Hwreg::FP_ROUND_MASK |
+                    AMDGPU::Hwreg::FP_DENORM_MASK)) == SetMask)
+      MI.setDesc(TII->get(AMDGPU::S_SETREG_B32_mode));
 
     return BB;
   }
@@ -4549,15 +4587,27 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   return SDValue();
 }
 
+// Used for D16: Casts the result of an instruction into the right vector,
+// packs values if loads return unpacked values.
 static SDValue adjustLoadValueTypeImpl(SDValue Result, EVT LoadVT,
                                        const SDLoc &DL,
                                        SelectionDAG &DAG, bool Unpacked) {
   if (!LoadVT.isVector())
     return Result;
 
+  // Cast back to the original packed type or to a larger type that is a
+  // multiple of 32 bit for D16. Widening the return type is a required for
+  // legalization.
+  EVT FittingLoadVT = LoadVT;
+  if ((LoadVT.getVectorNumElements() % 2) == 1) {
+    FittingLoadVT =
+        EVT::getVectorVT(*DAG.getContext(), LoadVT.getVectorElementType(),
+                         LoadVT.getVectorNumElements() + 1);
+  }
+
   if (Unpacked) { // From v2i32/v4i32 back to v2f16/v4f16.
     // Truncate to v2i16/v4i16.
-    EVT IntLoadVT = LoadVT.changeTypeToInteger();
+    EVT IntLoadVT = FittingLoadVT.changeTypeToInteger();
 
     // Workaround legalizer not scalarizing truncate after vector op
     // legalization but not creating intermediate vector trunc.
@@ -4566,14 +4616,18 @@ static SDValue adjustLoadValueTypeImpl(SDValue Result, EVT LoadVT,
     for (SDValue &Elt : Elts)
       Elt = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Elt);
 
+    // Pad illegal v1i16/v3fi6 to v4i16
+    if ((LoadVT.getVectorNumElements() % 2) == 1)
+      Elts.push_back(DAG.getUNDEF(MVT::i16));
+
     Result = DAG.getBuildVector(IntLoadVT, DL, Elts);
 
     // Bitcast to original type (v2f16/v4f16).
-    return DAG.getNode(ISD::BITCAST, DL, LoadVT, Result);
+    return DAG.getNode(ISD::BITCAST, DL, FittingLoadVT, Result);
   }
 
   // Cast back to the original packed type.
-  return DAG.getNode(ISD::BITCAST, DL, LoadVT, Result);
+  return DAG.getNode(ISD::BITCAST, DL, FittingLoadVT, Result);
 }
 
 SDValue SITargetLowering::adjustLoadValueType(unsigned Opcode,
@@ -4587,10 +4641,16 @@ SDValue SITargetLowering::adjustLoadValueType(unsigned Opcode,
   EVT LoadVT = M->getValueType(0);
 
   EVT EquivLoadVT = LoadVT;
-  if (Unpacked && LoadVT.isVector()) {
-    EquivLoadVT = LoadVT.isVector() ?
-      EVT::getVectorVT(*DAG.getContext(), MVT::i32,
-                       LoadVT.getVectorNumElements()) : LoadVT;
+  if (LoadVT.isVector()) {
+    if (Unpacked) {
+      EquivLoadVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
+                                     LoadVT.getVectorNumElements());
+    } else if ((LoadVT.getVectorNumElements() % 2) == 1) {
+      // Widen v3f16 to legal type
+      EquivLoadVT =
+          EVT::getVectorVT(*DAG.getContext(), LoadVT.getVectorElementType(),
+                           LoadVT.getVectorNumElements() + 1);
+    }
   }
 
   // Change from v4f16/v2f16 to EquivLoadVT.
@@ -4601,8 +4661,6 @@ SDValue SITargetLowering::adjustLoadValueType(unsigned Opcode,
       IsIntrinsic ? (unsigned)ISD::INTRINSIC_W_CHAIN : Opcode, DL,
       VTList, Ops, M->getMemoryVT(),
       M->getMemOperand());
-  if (!Unpacked) // Just adjusted the opcode.
-    return Load;
 
   SDValue Adjusted = adjustLoadValueTypeImpl(Load, LoadVT, DL, DAG, Unpacked);
 
@@ -4806,8 +4864,9 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
     if (SDValue Res = LowerINTRINSIC_W_CHAIN(SDValue(N, 0), DAG)) {
       if (Res.getOpcode() == ISD::MERGE_VALUES) {
         // FIXME: Hacky
-        Results.push_back(Res.getOperand(0));
-        Results.push_back(Res.getOperand(1));
+        for (unsigned I = 0; I < Res.getNumOperands(); I++) {
+          Results.push_back(Res.getOperand(I));
+        }
       } else {
         Results.push_back(Res);
         Results.push_back(Res.getValue(1));
@@ -5837,13 +5896,20 @@ static SDValue constructRetValue(SelectionDAG &DAG,
   if (IsD16)
     Data = adjustLoadValueTypeImpl(Data, ReqRetVT, DL, DAG, Unpacked);
 
+  EVT LegalReqRetVT = ReqRetVT;
   if (!ReqRetVT.isVector()) {
     if (!Data.getValueType().isInteger())
       Data = DAG.getNode(ISD::BITCAST, DL, Data.getValueType().changeTypeToInteger(), Data);
     Data = DAG.getNode(ISD::TRUNCATE, DL, ReqRetVT.changeTypeToInteger(), Data);
+  } else {
+    // We need to widen the return vector to a legal type
+    if ((ReqRetVT.getVectorNumElements() % 2) == 1) {
+      LegalReqRetVT =
+          EVT::getVectorVT(*DAG.getContext(), ReqRetVT.getVectorElementType(),
+                           ReqRetVT.getVectorNumElements() + 1);
+    }
   }
-
-  Data = DAG.getNode(ISD::BITCAST, DL, ReqRetVT, Data);
+  Data = DAG.getNode(ISD::BITCAST, DL, LegalReqRetVT, Data);
 
   if (TexFail)
     return DAG.getMergeValues({Data, TexFail, SDValue(Result, 1)}, DL);
@@ -7262,6 +7328,76 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                          DAG.getVTList(VT, MVT::Other), Ops,
                          M->getMemOperand());
   }
+  case Intrinsic::amdgcn_image_bvh_intersect_ray: {
+    SDLoc DL(Op);
+    MemSDNode *M = cast<MemSDNode>(Op);
+    SDValue NodePtr = M->getOperand(2);
+    SDValue RayExtent = M->getOperand(3);
+    SDValue RayOrigin = M->getOperand(4);
+    SDValue RayDir = M->getOperand(5);
+    SDValue RayInvDir = M->getOperand(6);
+    SDValue TDescr = M->getOperand(7);
+
+    assert(NodePtr.getValueType() == MVT::i32 ||
+           NodePtr.getValueType() == MVT::i64);
+    assert(RayDir.getValueType() == MVT::v4f16 ||
+           RayDir.getValueType() == MVT::v4f32);
+
+    bool IsA16 = RayDir.getValueType().getVectorElementType() == MVT::f16;
+    bool Is64 = NodePtr.getValueType() == MVT::i64;
+    unsigned Opcode = IsA16 ? Is64 ? AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_nsa
+                                   : AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_nsa
+                            : Is64 ? AMDGPU::IMAGE_BVH64_INTERSECT_RAY_nsa
+                                   : AMDGPU::IMAGE_BVH_INTERSECT_RAY_nsa;
+
+    SmallVector<SDValue, 16> Ops;
+
+    auto packLanes = [&DAG, &Ops, &DL] (SDValue Op, bool IsAligned) {
+      SmallVector<SDValue, 3> Lanes;
+      DAG.ExtractVectorElements(Op, Lanes, 0, 3);
+      if (Lanes[0].getValueSizeInBits() == 32) {
+        for (unsigned I = 0; I < 3; ++I)
+          Ops.push_back(DAG.getBitcast(MVT::i32, Lanes[I]));
+      } else {
+        if (IsAligned) {
+          Ops.push_back(
+            DAG.getBitcast(MVT::i32,
+                           DAG.getBuildVector(MVT::v2f16, DL,
+                                              { Lanes[0], Lanes[1] })));
+          Ops.push_back(Lanes[2]);
+        } else {
+          SDValue Elt0 = Ops.pop_back_val();
+          Ops.push_back(
+            DAG.getBitcast(MVT::i32,
+                           DAG.getBuildVector(MVT::v2f16, DL,
+                                              { Elt0, Lanes[0] })));
+          Ops.push_back(
+            DAG.getBitcast(MVT::i32,
+                           DAG.getBuildVector(MVT::v2f16, DL,
+                                              { Lanes[1], Lanes[2] })));
+        }
+      }
+    };
+
+    if (Is64)
+      DAG.ExtractVectorElements(DAG.getBitcast(MVT::v2i32, NodePtr), Ops, 0, 2);
+    else
+      Ops.push_back(NodePtr);
+
+    Ops.push_back(DAG.getBitcast(MVT::i32, RayExtent));
+    packLanes(RayOrigin, true);
+    packLanes(RayDir, true);
+    packLanes(RayInvDir, false);
+    Ops.push_back(TDescr);
+    if (IsA16)
+      Ops.push_back(DAG.getTargetConstant(1, DL, MVT::i1));
+    Ops.push_back(M->getChain());
+
+    auto *NewNode = DAG.getMachineNode(Opcode, DL, M->getVTList(), Ops);
+    MachineMemOperand *MemRef = M->getMemOperand();
+    DAG.setNodeMemRefs(NewNode, {MemRef});
+    return SDValue(NewNode, 0);
+  }
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))
@@ -7312,17 +7448,28 @@ SDValue SITargetLowering::handleD16VData(SDValue VData,
     return VData;
 
   SDLoc DL(VData);
-  assert((StoreVT.getVectorNumElements() != 3) && "Handle v3f16");
+  unsigned NumElements = StoreVT.getVectorNumElements();
 
   if (Subtarget->hasUnpackedD16VMem()) {
     // We need to unpack the packed data to store.
     EVT IntStoreVT = StoreVT.changeTypeToInteger();
     SDValue IntVData = DAG.getNode(ISD::BITCAST, DL, IntStoreVT, VData);
 
-    EVT EquivStoreVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
-                                        StoreVT.getVectorNumElements());
+    EVT EquivStoreVT =
+        EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumElements);
     SDValue ZExt = DAG.getNode(ISD::ZERO_EXTEND, DL, EquivStoreVT, IntVData);
     return DAG.UnrollVectorOp(ZExt.getNode());
+  } else if (NumElements == 3) {
+    EVT IntStoreVT =
+        EVT::getIntegerVT(*DAG.getContext(), StoreVT.getStoreSizeInBits());
+    SDValue IntVData = DAG.getNode(ISD::BITCAST, DL, IntStoreVT, VData);
+
+    EVT WidenedStoreVT = EVT::getVectorVT(
+        *DAG.getContext(), StoreVT.getVectorElementType(), NumElements + 1);
+    EVT WidenedIntVT = EVT::getIntegerVT(*DAG.getContext(),
+                                         WidenedStoreVT.getStoreSizeInBits());
+    SDValue ZExt = DAG.getNode(ISD::ZERO_EXTEND, DL, WidenedIntVT, IntVData);
+    return DAG.getNode(ISD::BITCAST, DL, WidenedStoreVT, ZExt);
   }
 
   assert(isTypeLegal(StoreVT));
@@ -7502,8 +7649,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     EVT VDataVT = VData.getValueType();
     EVT EltType = VDataVT.getScalarType();
     bool IsD16 = IsFormat && (EltType.getSizeInBits() == 16);
-    if (IsD16)
+    if (IsD16) {
       VData = handleD16VData(VData, DAG);
+      VDataVT = VData.getValueType();
+    }
 
     if (!isTypeLegal(VDataVT)) {
       VData =
@@ -7547,8 +7696,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     EVT EltType = VDataVT.getScalarType();
     bool IsD16 = IsFormat && (EltType.getSizeInBits() == 16);
 
-    if (IsD16)
+    if (IsD16) {
       VData = handleD16VData(VData, DAG);
+      VDataVT = VData.getValueType();
+    }
 
     if (!isTypeLegal(VDataVT)) {
       VData =
@@ -10896,7 +11047,8 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
   unsigned Opcode = Node->getMachineOpcode();
 
   if (TII->isMIMG(Opcode) && !TII->get(Opcode).mayStore() &&
-      !TII->isGather4(Opcode)) {
+      !TII->isGather4(Opcode) &&
+      AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::dmask) != -1) {
     return adjustWritemask(Node, DAG);
   }
 

@@ -767,16 +767,12 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.EntropicNumberOfRarestFeatures =
       (size_t)Flags.entropic_number_of_rarest_features;
   Options.EntropicScalePerExecTime = Flags.entropic_scale_per_exec_time;
-  if (Options.Entropic) {
-    if (!Options.FocusFunction.empty()) {
-      Printf("ERROR: The parameters `--entropic` and `--focus_function` cannot "
-             "be used together.\n");
-      exit(1);
-    }
+  if (!Options.FocusFunction.empty())
+    Options.Entropic = false; // FocusFunction overrides entropic scheduling.
+  if (Options.Entropic)
     Printf("INFO: Running with entropic power schedule (0x%X, %d).\n",
            Options.EntropicFeatureFrequencyThreshold,
            Options.EntropicNumberOfRarestFeatures);
-  }
   struct EntropicOptions Entropic;
   Entropic.Enabled = Options.Entropic;
   Entropic.FeatureFrequencyThreshold =

@@ -568,7 +568,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       });
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
-      .legalFor({{v4s16, s16},
+      .legalFor({{v16s8, s8},
+                 {v4s16, s16},
                  {v8s16, s16},
                  {v2s32, s32},
                  {v4s32, s32},

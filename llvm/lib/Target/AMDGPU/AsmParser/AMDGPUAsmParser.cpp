@@ -1444,6 +1444,7 @@ public:
   void cvtMIMG(MCInst &Inst, const OperandVector &Operands,
                bool IsAtomic = false);
   void cvtMIMGAtomic(MCInst &Inst, const OperandVector &Operands);
+  void cvtIntersectRay(MCInst &Inst, const OperandVector &Operands);
 
   OperandMatchResultTy parseDim(OperandVector &Operands);
   OperandMatchResultTy parseDPP8(OperandVector &Operands);
@@ -3109,8 +3110,9 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
   int TFEIdx   = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::tfe);
 
   assert(VDataIdx != -1);
-  assert(DMaskIdx != -1);
-  assert(TFEIdx != -1);
+
+  if (DMaskIdx == -1 || TFEIdx == -1) // intersect_ray
+    return true;
 
   unsigned VDataSize = AMDGPU::getRegOperandSize(getMRI(), Desc, VDataIdx);
   unsigned TFESize = Inst.getOperand(TFEIdx).getImm()? 1 : 0;
@@ -3137,6 +3139,7 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
     return true;
 
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Opc);
+
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
       AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
   int VAddr0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0);
@@ -3145,8 +3148,10 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
 
   assert(VAddr0Idx != -1);
   assert(SrsrcIdx != -1);
-  assert(DimIdx != -1);
   assert(SrsrcIdx > VAddr0Idx);
+
+  if (DimIdx == -1)
+    return true; // intersect_ray
 
   unsigned Dim = Inst.getOperand(DimIdx).getImm();
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByEncoding(Dim);
@@ -6464,6 +6469,17 @@ void AMDGPUAsmParser::cvtMIMG(MCInst &Inst, const OperandVector &Operands,
 
 void AMDGPUAsmParser::cvtMIMGAtomic(MCInst &Inst, const OperandVector &Operands) {
   cvtMIMG(Inst, Operands, true);
+}
+
+void AMDGPUAsmParser::cvtIntersectRay(MCInst &Inst,
+                                      const OperandVector &Operands) {
+  for (unsigned I = 1; I < Operands.size(); ++I) {
+    auto &Operand = (AMDGPUOperand &)*Operands[I];
+    if (Operand.isReg())
+      Operand.addRegOperands(Inst, 1);
+  }
+
+  Inst.addOperand(MCOperand::createImm(1)); // a16
 }
 
 //===----------------------------------------------------------------------===//

@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
+#include "mlir/Dialect/SPIRV/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/FunctionImplementation.h"
@@ -2039,6 +2040,32 @@ static LogicalResult verify(spirv::GroupNonUniformBallotOp ballotOp) {
   if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
     return ballotOp.emitOpError(
         "execution scope must be 'Workgroup' or 'Subgroup'");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spv.GroupNonUniformBroadcast
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(spirv::GroupNonUniformBroadcastOp broadcastOp) {
+  spirv::Scope scope = broadcastOp.execution_scope();
+  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
+    return broadcastOp.emitOpError(
+        "execution scope must be 'Workgroup' or 'Subgroup'");
+
+  // SPIR-V spec: "Before version 1.5, Id must come from a
+  // constant instruction.
+  auto targetEnv = spirv::getDefaultTargetEnv(broadcastOp.getContext());
+  if (auto spirvModule = broadcastOp.getParentOfType<spirv::ModuleOp>())
+    targetEnv = spirv::lookupTargetEnvOrDefault(spirvModule);
+
+  if (targetEnv.getVersion() < spirv::Version::V_1_5) {
+    auto *idOp = broadcastOp.id().getDefiningOp();
+    if (!idOp || !isa<spirv::ConstantOp,           // for normal constant
+                      spirv::ReferenceOfOp>(idOp)) // for spec constant
+      return broadcastOp.emitOpError("id must be the result of a constant op");
+  }
 
   return success();
 }

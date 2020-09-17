@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasAnalysisEvaluator.h"
+#include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -2821,6 +2822,12 @@ bool PassBuilder::isAnalysisPassName(StringRef PassName) {
   if (PassName == NAME)                                                        \
     return true;
 #define CGSSC_ANALYSIS(NAME, CREATE_PASS)                                      \
+  if (PassName == NAME)                                                        \
+    return true;
+#define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS)                               \
+  if (PassName == NAME)                                                        \
+    return true;
+#define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS)                             \
   if (PassName == NAME)                                                        \
     return true;
 #include "PassRegistry.def"

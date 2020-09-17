@@ -2529,7 +2529,7 @@ void MachineVerifier::verifyLiveIntervals() {
     }
 
     const LiveInterval &LI = LiveInts->getInterval(Reg);
-    assert(Reg == LI.reg && "Invalid reg to interval mapping");
+    assert(Reg == LI.reg() && "Invalid reg to interval mapping");
     verifyLiveInterval(LI);
   }
 
@@ -2855,7 +2855,7 @@ void MachineVerifier::verifyLiveRange(const LiveRange &LR, unsigned Reg,
 }
 
 void MachineVerifier::verifyLiveInterval(const LiveInterval &LI) {
-  unsigned Reg = LI.reg;
+  unsigned Reg = LI.reg();
   assert(Register::isVirtualRegister(Reg));
   verifyLiveRange(LI, Reg);
 
@@ -2872,10 +2872,10 @@ void MachineVerifier::verifyLiveInterval(const LiveInterval &LI) {
     }
     if (SR.empty()) {
       report("Subrange must not be empty", MF);
-      report_context(SR, LI.reg, SR.LaneMask);
+      report_context(SR, LI.reg(), SR.LaneMask);
     }
     Mask |= SR.LaneMask;
-    verifyLiveRange(SR, LI.reg, SR.LaneMask);
+    verifyLiveRange(SR, LI.reg(), SR.LaneMask);
     if (!LI.covers(SR)) {
       report("A Subrange is not covered by the main range", MF);
       report_context(LI);

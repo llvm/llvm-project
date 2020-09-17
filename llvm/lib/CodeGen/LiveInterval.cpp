@@ -951,9 +951,9 @@ void LiveInterval::refineSubRanges(
       MatchingRange = createSubRangeFrom(Allocator, Matching, SR);
       // Now that the subrange is split in half, make sure we
       // only keep in the subranges the VNIs that touch the related half.
-      stripValuesNotDefiningMask(reg, *MatchingRange, Matching, Indexes, TRI,
+      stripValuesNotDefiningMask(reg(), *MatchingRange, Matching, Indexes, TRI,
                                  ComposeSubRegIdx);
-      stripValuesNotDefiningMask(reg, SR, SR.LaneMask, Indexes, TRI,
+      stripValuesNotDefiningMask(reg(), SR, SR.LaneMask, Indexes, TRI,
                                  ComposeSubRegIdx);
     }
     Apply(*MatchingRange);
@@ -977,11 +977,11 @@ void LiveInterval::computeSubRangeUndefs(SmallVectorImpl<SlotIndex> &Undefs,
                                          LaneBitmask LaneMask,
                                          const MachineRegisterInfo &MRI,
                                          const SlotIndexes &Indexes) const {
-  assert(Register::isVirtualRegister(reg));
-  LaneBitmask VRegMask = MRI.getMaxLaneMaskForVReg(reg);
+  assert(Register::isVirtualRegister(reg()));
+  LaneBitmask VRegMask = MRI.getMaxLaneMaskForVReg(reg());
   assert((VRegMask & LaneMask).any());
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
-  for (const MachineOperand &MO : MRI.def_operands(reg)) {
+  for (const MachineOperand &MO : MRI.def_operands(reg())) {
     if (!MO.isUndef())
       continue;
     unsigned SubReg = MO.getSubReg();
@@ -1043,12 +1043,12 @@ void LiveInterval::SubRange::print(raw_ostream &OS) const {
 }
 
 void LiveInterval::print(raw_ostream &OS) const {
-  OS << printReg(reg) << ' ';
+  OS << printReg(reg()) << ' ';
   super::print(OS);
   // Print subranges
   for (const SubRange &SR : subranges())
     OS << SR;
-  OS << " weight:" << weight;
+  OS << " weight:" << Weight;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1087,7 +1087,7 @@ void LiveInterval::verify(const MachineRegisterInfo *MRI) const {
 
   // Make sure SubRanges are fine and LaneMasks are disjunct.
   LaneBitmask Mask;
-  LaneBitmask MaxMask = MRI != nullptr ? MRI->getMaxLaneMaskForVReg(reg)
+  LaneBitmask MaxMask = MRI != nullptr ? MRI->getMaxLaneMaskForVReg(reg())
                                        : LaneBitmask::getAll();
   for (const SubRange &SR : subranges()) {
     // Subrange lanemask should be disjunct to any previous subrange masks.
@@ -1361,8 +1361,9 @@ unsigned ConnectedVNInfoEqClasses::Classify(const LiveRange &LR) {
 void ConnectedVNInfoEqClasses::Distribute(LiveInterval &LI, LiveInterval *LIV[],
                                           MachineRegisterInfo &MRI) {
   // Rewrite instructions.
-  for (MachineRegisterInfo::reg_iterator RI = MRI.reg_begin(LI.reg),
-       RE = MRI.reg_end(); RI != RE;) {
+  for (MachineRegisterInfo::reg_iterator RI = MRI.reg_begin(LI.reg()),
+                                         RE = MRI.reg_end();
+       RI != RE;) {
     MachineOperand &MO = *RI;
     MachineInstr *MI = RI->getParent();
     ++RI;
@@ -1382,7 +1383,7 @@ void ConnectedVNInfoEqClasses::Distribute(LiveInterval &LI, LiveInterval *LIV[],
     if (!VNI)
       continue;
     if (unsigned EqClass = getEqClass(VNI))
-      MO.setReg(LIV[EqClass-1]->reg);
+      MO.setReg(LIV[EqClass - 1]->reg());
   }
 
   // Distribute subregister liveranges.

@@ -681,8 +681,8 @@ struct alignas(void *) ASTTemplateKWAndArgsInfo {
                 TemplateArgumentListInfo &List) const;
 };
 
-const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                    const TemplateArgument &Arg);
+const StreamableDiagnosticBase &operator<<(const StreamableDiagnosticBase &DB,
+                                           const TemplateArgument &Arg);
 
 inline TemplateSpecializationType::iterator
     TemplateSpecializationType::end() const {

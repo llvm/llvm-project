@@ -57,9 +57,9 @@ class SuspendedThreadsListNetBSD : public SuspendedThreadsList {
   bool ContainsTid(tid_t thread_id) const;
   void Append(tid_t tid);
 
-  PtraceRegistersStatus GetRegistersAndSP(uptr index, uptr *buffer,
+  PtraceRegistersStatus GetRegistersAndSP(uptr index,
+                                          InternalMmapVector<uptr> *buffer,
                                           uptr *sp) const;
-  uptr RegisterCount() const;
 
  private:
   InternalMmapVector<tid_t> thread_ids_;
@@ -335,7 +335,7 @@ void SuspendedThreadsListNetBSD::Append(tid_t tid) {
 }
 
 PtraceRegistersStatus SuspendedThreadsListNetBSD::GetRegistersAndSP(
-    uptr index, uptr *buffer, uptr *sp) const {
+    uptr index, InternalMmapVector<uptr> *buffer, uptr *sp) const {
   lwpid_t tid = GetThreadID(index);
   pid_t ppid = internal_getppid();
   struct reg regs;
@@ -351,14 +351,12 @@ PtraceRegistersStatus SuspendedThreadsListNetBSD::GetRegistersAndSP(
   }
 
   *sp = PTRACE_REG_SP(&regs);
-  internal_memcpy(buffer, &regs, sizeof(regs));
+  buffer->resize(RoundUpTo(sizeof(regs), sizeof(uptr)) / sizeof(uptr));
+  internal_memcpy(buffer->data(), &regs, sizeof(regs));
 
   return REGISTERS_AVAILABLE;
 }
 
-uptr SuspendedThreadsListNetBSD::RegisterCount() const {
-  return sizeof(struct reg) / sizeof(uptr);
-}
 }  // namespace __sanitizer
 
 #endif

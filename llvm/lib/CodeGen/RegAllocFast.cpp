@@ -263,6 +263,20 @@ int RegAllocFast::getStackSpaceFor(Register VirtReg) {
   return FrameIdx;
 }
 
+static bool dominates(MachineBasicBlock &MBB,
+                      MachineBasicBlock::const_iterator A,
+                      MachineBasicBlock::const_iterator B) {
+  auto MBBEnd = MBB.end();
+  if (B == MBBEnd)
+    return true;
+
+  MachineBasicBlock::const_iterator I = MBB.begin();
+  for (; &*I != A && &*I != B; ++I)
+    ;
+
+  return &*I == A;
+}
+
 /// Returns false if \p VirtReg is known to not live out of the current block.
 bool RegAllocFast::mayLiveOut(Register VirtReg) {
   if (MayLiveAcrossBlocks.test(Register::virtReg2Index(VirtReg))) {
@@ -270,11 +284,16 @@ bool RegAllocFast::mayLiveOut(Register VirtReg) {
     return !MBB->succ_empty();
   }
 
-  // If this block loops back to itself, it would be necessary to check whether
-  // the use comes after the def.
+  const MachineInstr *SelfLoopDef = nullptr;
+
+  // If this block loops back to itself, it is necessary to check whether the
+  // use comes after the def.
   if (MBB->isSuccessor(MBB)) {
-    MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
-    return true;
+    SelfLoopDef = MRI->getUniqueVRegDef(VirtReg);
+    if (!SelfLoopDef) {
+      MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
+      return true;
+    }
   }
 
   // See if the first \p Limit uses of the register are all in the current
@@ -286,6 +305,16 @@ bool RegAllocFast::mayLiveOut(Register VirtReg) {
       MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
       // Cannot be live-out if there are no successors.
       return !MBB->succ_empty();
+    }
+
+    if (SelfLoopDef) {
+      // Try to handle some simple cases to avoid spilling and reloading every
+      // value inside a self looping block.
+      if (SelfLoopDef == &UseInst ||
+          !dominates(*MBB, SelfLoopDef->getIterator(), UseInst.getIterator())) {
+        MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
+        return true;
+      }
     }
   }
 

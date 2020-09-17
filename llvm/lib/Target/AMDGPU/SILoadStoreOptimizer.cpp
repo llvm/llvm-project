@@ -393,6 +393,15 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::DS_WRITE_B64:
   case AMDGPU::DS_WRITE_B64_gfx9:
     return DS_WRITE;
+  case AMDGPU::IMAGE_BVH_INTERSECT_RAY_sa:
+  case AMDGPU::IMAGE_BVH64_INTERSECT_RAY_sa:
+  case AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_sa:
+  case AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_sa:
+  case AMDGPU::IMAGE_BVH_INTERSECT_RAY_nsa:
+  case AMDGPU::IMAGE_BVH64_INTERSECT_RAY_nsa:
+  case AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_nsa:
+  case AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_nsa:
+    return UNKNOWN;
   }
 }
 

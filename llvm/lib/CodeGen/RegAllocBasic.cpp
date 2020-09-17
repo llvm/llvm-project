@@ -46,7 +46,7 @@ static RegisterRegAlloc basicRegAlloc("basic", "basic register allocator",
 namespace {
   struct CompSpillWeight {
     bool operator()(LiveInterval *A, LiveInterval *B) const {
-      return A->weight < B->weight;
+      return A->weight() < B->weight();
     }
   };
 }
@@ -213,7 +213,7 @@ bool RABasic::spillInterferences(LiveInterval &VirtReg, Register PhysReg,
     Q.collectInterferingVRegs();
     for (unsigned i = Q.interferingVRegs().size(); i; --i) {
       LiveInterval *Intf = Q.interferingVRegs()[i - 1];
-      if (!Intf->isSpillable() || Intf->weight > VirtReg.weight)
+      if (!Intf->isSpillable() || Intf->weight() > VirtReg.weight())
         return false;
       Intfs.push_back(Intf);
     }
@@ -227,7 +227,7 @@ bool RABasic::spillInterferences(LiveInterval &VirtReg, Register PhysReg,
     LiveInterval &Spill = *Intfs[i];
 
     // Skip duplicates.
-    if (!VRM->hasPhys(Spill.reg))
+    if (!VRM->hasPhys(Spill.reg()))
       continue;
 
     // Deallocate the interfering vreg by removing it from the union.
@@ -259,7 +259,7 @@ Register RABasic::selectOrSplit(LiveInterval &VirtReg,
   SmallVector<Register, 8> PhysRegSpillCands;
 
   // Check for an available register in this class.
-  AllocationOrder Order(VirtReg.reg, *VRM, RegClassInfo, Matrix);
+  AllocationOrder Order(VirtReg.reg(), *VRM, RegClassInfo, Matrix);
   while (Register PhysReg = Order.next()) {
     // Check for interference in PhysReg
     switch (Matrix->checkInterference(VirtReg, PhysReg)) {
