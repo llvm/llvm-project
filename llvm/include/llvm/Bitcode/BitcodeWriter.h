@@ -47,7 +47,7 @@ class raw_ostream;
 
   public:
     /// Create a BitcodeWriter that writes to Buffer.
-    BitcodeWriter(SmallVectorImpl<char> &Buffer);
+    BitcodeWriter(SmallVectorImpl<char> &Buffer, raw_fd_stream *FS = nullptr);
 
     ~BitcodeWriter();
 
