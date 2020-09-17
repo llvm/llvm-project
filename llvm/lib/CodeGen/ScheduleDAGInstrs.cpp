@@ -1167,8 +1167,6 @@ void ScheduleDAGInstrs::dumpNode(const SUnit &SU) const {
 
 void ScheduleDAGInstrs::dump() const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  if (EntrySU.getInstr() != nullptr)
-    dumpNodeAll(EntrySU);
   for (const SUnit &SU : SUnits)
     dumpNodeAll(SU);
   if (ExitSU.getInstr() != nullptr)
@@ -1179,9 +1177,7 @@ void ScheduleDAGInstrs::dump() const {
 std::string ScheduleDAGInstrs::getGraphNodeLabel(const SUnit *SU) const {
   std::string s;
   raw_string_ostream oss(s);
-  if (SU == &EntrySU)
-    oss << "<entry>";
-  else if (SU == &ExitSU)
+  if (SU == &ExitSU)
     oss << "<exit>";
   else
     SU->getInstr()->print(oss, /*SkipOpers=*/true);
