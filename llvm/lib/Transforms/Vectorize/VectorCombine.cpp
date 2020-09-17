@@ -92,29 +92,28 @@ static void replaceValue(Value &Old, Value &New) {
 }
 
 bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
-  // Match insert of scalar load.
+  // Match insert into fixed vector of scalar load.
+  auto *Ty = dyn_cast<FixedVectorType>(I.getType());
   Value *Scalar;
-  if (!match(&I, m_InsertElt(m_Undef(), m_Value(Scalar), m_ZeroInt())))
+  if (!Ty || !match(&I, m_InsertElt(m_Undef(), m_Value(Scalar), m_ZeroInt())))
     return false;
-  auto *Load = dyn_cast<LoadInst>(Scalar);
-  Type *ScalarTy = Scalar->getType();
+
   // Do not vectorize scalar load (widening) if atomic/volatile or under
   // asan/hwasan/memtag/tsan. The widened load may load data from dirty regions
   // or create data races non-existent in the source.
+  auto *Load = dyn_cast<LoadInst>(Scalar);
   if (!Load || !Load->isSimple() ||
       Load->getFunction()->hasFnAttribute(Attribute::SanitizeMemTag) ||
       mustSuppressSpeculation(*Load))
-    return false;
-  auto *Ty = dyn_cast<FixedVectorType>(I.getType());
-  if (!Ty)
     return false;
 
   // TODO: Extend this to match GEP with constant offsets.
   Value *PtrOp = Load->getPointerOperand()->stripPointerCasts();
   assert(isa<PointerType>(PtrOp->getType()) && "Expected a pointer type");
 
-  unsigned MinVectorSize = TTI.getMinVectorRegisterBitWidth();
+  Type *ScalarTy = Scalar->getType();
   uint64_t ScalarSize = ScalarTy->getPrimitiveSizeInBits();
+  unsigned MinVectorSize = TTI.getMinVectorRegisterBitWidth();
   if (!ScalarSize || !MinVectorSize || MinVectorSize % ScalarSize != 0)
     return false;
 
