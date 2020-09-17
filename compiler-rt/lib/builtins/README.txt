@@ -87,6 +87,8 @@ du_int __udivmoddi4(du_int a, du_int b, du_int* rem);  // a / b, *rem = a % b  u
 tu_int __udivmodti4(tu_int a, tu_int b, tu_int* rem);  // a / b, *rem = a % b  unsigned
 su_int __udivmodsi4(su_int a, su_int b, su_int* rem);  // a / b, *rem = a % b  unsigned
 si_int __divmodsi4(si_int a, si_int b, si_int* rem);   // a / b, *rem = a % b  signed
+di_int __divmoddi4(di_int a, di_int b, di_int* rem);   // a / b, *rem = a % b  signed
+ti_int __divmodti4(ti_int a, ti_int b, ti_int* rem);   // a / b, *rem = a % b  signed
 
 
 
