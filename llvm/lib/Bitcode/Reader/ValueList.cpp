@@ -16,14 +16,11 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
-#include <cassert>
 #include <cstddef>
 #include <limits>
-#include <utility>
 
 using namespace llvm;
 
