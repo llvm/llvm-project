@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SafeStackLayout.h"
-#include "llvm/Analysis/StackLifetime.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
