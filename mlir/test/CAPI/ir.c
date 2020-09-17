@@ -10,6 +10,7 @@
 /* RUN: mlir-capi-ir-test 2>&1 | FileCheck %s
  */
 
+#include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Registration.h"
 #include "mlir-c/StandardAttributes.h"
@@ -593,6 +594,121 @@ int printStandardAttributes(MlirContext ctx) {
   return 0;
 }
 
+int printAffineMap(MlirContext ctx) {
+  MlirAffineMap emptyAffineMap = mlirAffineMapEmptyGet(ctx);
+  MlirAffineMap affineMap = mlirAffineMapGet(ctx, 3, 2);
+  MlirAffineMap constAffineMap = mlirAffineMapConstantGet(ctx, 2);
+  MlirAffineMap multiDimIdentityAffineMap =
+      mlirAffineMapMultiDimIdentityGet(ctx, 3);
+  MlirAffineMap minorIdentityAffineMap =
+      mlirAffineMapMinorIdentityGet(ctx, 3, 2);
+  unsigned permutation[] = {1, 2, 0};
+  MlirAffineMap permutationAffineMap = mlirAffineMapPermutationGet(
+      ctx, sizeof(permutation) / sizeof(unsigned), permutation);
+
+  mlirAffineMapDump(emptyAffineMap);
+  mlirAffineMapDump(affineMap);
+  mlirAffineMapDump(constAffineMap);
+  mlirAffineMapDump(multiDimIdentityAffineMap);
+  mlirAffineMapDump(minorIdentityAffineMap);
+  mlirAffineMapDump(permutationAffineMap);
+
+  if (!mlirAffineMapIsIdentity(emptyAffineMap) ||
+      mlirAffineMapIsIdentity(affineMap) ||
+      mlirAffineMapIsIdentity(constAffineMap) ||
+      !mlirAffineMapIsIdentity(multiDimIdentityAffineMap) ||
+      mlirAffineMapIsIdentity(minorIdentityAffineMap) ||
+      mlirAffineMapIsIdentity(permutationAffineMap))
+    return 1;
+
+  if (!mlirAffineMapIsMinorIdentity(emptyAffineMap) ||
+      mlirAffineMapIsMinorIdentity(affineMap) ||
+      !mlirAffineMapIsMinorIdentity(multiDimIdentityAffineMap) ||
+      !mlirAffineMapIsMinorIdentity(minorIdentityAffineMap) ||
+      mlirAffineMapIsMinorIdentity(permutationAffineMap))
+    return 2;
+
+  if (!mlirAffineMapIsEmpty(emptyAffineMap) ||
+      mlirAffineMapIsEmpty(affineMap) ||
+      mlirAffineMapIsEmpty(constAffineMap) ||
+      mlirAffineMapIsEmpty(multiDimIdentityAffineMap) ||
+      mlirAffineMapIsEmpty(minorIdentityAffineMap) ||
+      mlirAffineMapIsEmpty(permutationAffineMap))
+    return 3;
+
+  if (mlirAffineMapIsSingleConstant(emptyAffineMap) ||
+      mlirAffineMapIsSingleConstant(affineMap) ||
+      !mlirAffineMapIsSingleConstant(constAffineMap) ||
+      mlirAffineMapIsSingleConstant(multiDimIdentityAffineMap) ||
+      mlirAffineMapIsSingleConstant(minorIdentityAffineMap) ||
+      mlirAffineMapIsSingleConstant(permutationAffineMap))
+    return 4;
+
+  if (mlirAffineMapGetSingleConstantResult(constAffineMap) != 2)
+    return 5;
+
+  if (mlirAffineMapGetNumDims(emptyAffineMap) != 0 ||
+      mlirAffineMapGetNumDims(affineMap) != 3 ||
+      mlirAffineMapGetNumDims(constAffineMap) != 0 ||
+      mlirAffineMapGetNumDims(multiDimIdentityAffineMap) != 3 ||
+      mlirAffineMapGetNumDims(minorIdentityAffineMap) != 3 ||
+      mlirAffineMapGetNumDims(permutationAffineMap) != 3)
+    return 6;
+
+  if (mlirAffineMapGetNumSymbols(emptyAffineMap) != 0 ||
+      mlirAffineMapGetNumSymbols(affineMap) != 2 ||
+      mlirAffineMapGetNumSymbols(constAffineMap) != 0 ||
+      mlirAffineMapGetNumSymbols(multiDimIdentityAffineMap) != 0 ||
+      mlirAffineMapGetNumSymbols(minorIdentityAffineMap) != 0 ||
+      mlirAffineMapGetNumSymbols(permutationAffineMap) != 0)
+    return 7;
+
+  if (mlirAffineMapGetNumResults(emptyAffineMap) != 0 ||
+      mlirAffineMapGetNumResults(affineMap) != 0 ||
+      mlirAffineMapGetNumResults(constAffineMap) != 1 ||
+      mlirAffineMapGetNumResults(multiDimIdentityAffineMap) != 3 ||
+      mlirAffineMapGetNumResults(minorIdentityAffineMap) != 2 ||
+      mlirAffineMapGetNumResults(permutationAffineMap) != 3)
+    return 8;
+
+  if (mlirAffineMapGetNumInputs(emptyAffineMap) != 0 ||
+      mlirAffineMapGetNumInputs(affineMap) != 5 ||
+      mlirAffineMapGetNumInputs(constAffineMap) != 0 ||
+      mlirAffineMapGetNumInputs(multiDimIdentityAffineMap) != 3 ||
+      mlirAffineMapGetNumInputs(minorIdentityAffineMap) != 3 ||
+      mlirAffineMapGetNumInputs(permutationAffineMap) != 3)
+    return 9;
+
+  if (!mlirAffineMapIsProjectedPermutation(emptyAffineMap) ||
+      !mlirAffineMapIsPermutation(emptyAffineMap) ||
+      mlirAffineMapIsProjectedPermutation(affineMap) ||
+      mlirAffineMapIsPermutation(affineMap) ||
+      mlirAffineMapIsProjectedPermutation(constAffineMap) ||
+      mlirAffineMapIsPermutation(constAffineMap) ||
+      !mlirAffineMapIsProjectedPermutation(multiDimIdentityAffineMap) ||
+      !mlirAffineMapIsPermutation(multiDimIdentityAffineMap) ||
+      !mlirAffineMapIsProjectedPermutation(minorIdentityAffineMap) ||
+      mlirAffineMapIsPermutation(minorIdentityAffineMap) ||
+      !mlirAffineMapIsProjectedPermutation(permutationAffineMap) ||
+      !mlirAffineMapIsPermutation(permutationAffineMap))
+    return 10;
+
+  intptr_t sub[] = {1};
+
+  MlirAffineMap subMap = mlirAffineMapGetSubMap(
+      multiDimIdentityAffineMap, sizeof(sub) / sizeof(intptr_t), sub);
+  MlirAffineMap majorSubMap =
+      mlirAffineMapGetMajorSubMap(multiDimIdentityAffineMap, 1);
+  MlirAffineMap minorSubMap =
+      mlirAffineMapGetMinorSubMap(multiDimIdentityAffineMap, 1);
+
+  mlirAffineMapDump(subMap);
+  mlirAffineMapDump(majorSubMap);
+  mlirAffineMapDump(minorSubMap);
+
+  return 0;
+}
+
 int main() {
   MlirContext ctx = mlirContextCreate();
   mlirRegisterAllDialects(ctx);
@@ -702,6 +818,22 @@ int main() {
   // clang-format on
   fprintf(stderr, "@attrs\n");
   errcode = printStandardAttributes(ctx);
+  fprintf(stderr, "%d\n", errcode);
+
+  // clang-format off
+  // CHECK-LABEL: @affineMap
+  // CHECK: () -> ()
+  // CHECK: (d0, d1, d2)[s0, s1] -> ()
+  // CHECK: () -> (2)
+  // CHECK: (d0, d1, d2) -> (d0, d1, d2)
+  // CHECK: (d0, d1, d2) -> (d1, d2)
+  // CHECK: (d0, d1, d2) -> (d1, d2, d0)
+  // CHECK: (d0, d1, d2) -> (d1)
+  // CHECK: (d0, d1, d2) -> (d0)
+  // CHECK: (d0, d1, d2) -> (d2)
+  // CHECK: 0
+  fprintf(stderr, "@affineMap\n");
+  errcode = printAffineMap(ctx);
   fprintf(stderr, "%d\n", errcode);
 
   mlirContextDestroy(ctx);
