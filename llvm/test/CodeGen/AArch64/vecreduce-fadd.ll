@@ -22,10 +22,9 @@ define half @add_HalfH(<4 x half> %bin.rdx)  {
 ; CHECK-LABEL: add_HalfH:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov h3, v0.h[1]
 ; CHECK-NEXT:    mov h1, v0.h[3]
 ; CHECK-NEXT:    mov h2, v0.h[2]
-; CHECK-NEXT:    fadd h0, h0, h3
+; CHECK-NEXT:    faddp h0, v0.2h
 ; CHECK-NEXT:    fadd h0, h0, h2
 ; CHECK-NEXT:    fadd h0, h0, h1
 ; CHECK-NEXT:    ret
@@ -59,10 +58,9 @@ define half @add_H(<8 x half> %bin.rdx)  {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    fadd v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    mov h1, v0.h[1]
-; CHECK-NEXT:    mov h2, v0.h[2]
-; CHECK-NEXT:    fadd h1, h0, h1
-; CHECK-NEXT:    fadd h1, h1, h2
+; CHECK-NEXT:    mov h1, v0.h[2]
+; CHECK-NEXT:    faddp h2, v0.2h
+; CHECK-NEXT:    fadd h1, h2, h1
 ; CHECK-NEXT:    mov h0, v0.h[3]
 ; CHECK-NEXT:    fadd h0, h1, h0
 ; CHECK-NEXT:    ret
@@ -105,7 +103,6 @@ define half @add_H(<8 x half> %bin.rdx)  {
 ; CHECKNOFP16-NEXT:    fadd s0, s0, s1
 ; CHECKNOFP16-NEXT:    fcvt h0, s0
 ; CHECKNOFP16-NEXT:    ret
-
   %r = call fast half @llvm.experimental.vector.reduce.v2.fadd.f16.v8f16(half 0.0, <8 x half> %bin.rdx)
   ret half %r
 }
@@ -148,10 +145,9 @@ define half @add_2H(<16 x half> %bin.rdx)  {
 ; CHECK-NEXT:    fadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    fadd v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    mov h1, v0.h[1]
-; CHECK-NEXT:    mov h2, v0.h[2]
-; CHECK-NEXT:    fadd h1, h0, h1
-; CHECK-NEXT:    fadd h1, h1, h2
+; CHECK-NEXT:    mov h1, v0.h[2]
+; CHECK-NEXT:    faddp h2, v0.2h
+; CHECK-NEXT:    fadd h1, h2, h1
 ; CHECK-NEXT:    mov h0, v0.h[3]
 ; CHECK-NEXT:    fadd h0, h1, h0
 ; CHECK-NEXT:    ret
