@@ -44,7 +44,7 @@ static u32 Cookie;
 // at compilation or at runtime.
 static atomic_uint8_t HashAlgorithm = { CRC32Software };
 
-ATTR_inline u32 computeCRC32(u32 Crc, uptr Value, uptr *Array, uptr ArraySize) {
+inline u32 computeCRC32(u32 Crc, uptr Value, uptr *Array, uptr ArraySize) {
   // If the hardware CRC32 feature is defined here, it was enabled everywhere,
   // as opposed to only for scudo_crc32.cpp. This means that other hardware
   // specific instructions were likely emitted at other places, and as a
