@@ -307,6 +307,9 @@ public:
   /// otherwise.
   bool containsId(Value id) const;
 
+  /// Swap the posA^th identifier with the posB^th identifier.
+  void swapId(unsigned posA, unsigned posB);
+
   // Add identifiers of the specified kind - specified positions are relative to
   // the kind of identifier. The coefficient column corresponding to the added
   // identifier is initialized to zero. 'id' is the Value corresponding to the
