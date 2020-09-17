@@ -384,7 +384,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   // FP conversions
   getActionDefinitionsBuilder(G_FPTRUNC).legalFor(
-      {{s16, s32}, {s16, s64}, {s32, s64}, {v4s16, v4s32}, {v2s32, v2s64}});
+      {{s16, s32}, {s16, s64}, {s32, s64}, {v4s16, v4s32}, {v2s32, v2s64}})
+      .clampMaxNumElements(0, s32, 2);
   getActionDefinitionsBuilder(G_FPEXT).legalFor(
       {{s32, s16}, {s64, s16}, {s64, s32}, {v4s32, v4s16}, {v2s64, v2s32}});
 
