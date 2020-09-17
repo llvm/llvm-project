@@ -145,6 +145,8 @@ static bool isMergePassthruOpcode(unsigned Opc) {
   case AArch64ISD::FROUND_MERGE_PASSTHRU:
   case AArch64ISD::FROUNDEVEN_MERGE_PASSTHRU:
   case AArch64ISD::FTRUNC_MERGE_PASSTHRU:
+  case AArch64ISD::FCVTZU_MERGE_PASSTHRU:
+  case AArch64ISD::FCVTZS_MERGE_PASSTHRU:
   case AArch64ISD::FSQRT_MERGE_PASSTHRU:
     return true;
   }
@@ -945,6 +947,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (MVT VT : MVT::integer_scalable_vector_valuetypes()) {
       if (isTypeLegal(VT)) {
         setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
+        setOperationAction(ISD::FP_TO_UINT, VT, Custom);
+        setOperationAction(ISD::FP_TO_SINT, VT, Custom);
         setOperationAction(ISD::MUL, VT, Custom);
         setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
         setOperationAction(ISD::SELECT, VT, Custom);
@@ -1504,6 +1508,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::FROUND_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::FROUNDEVEN_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::FTRUNC_MERGE_PASSTHRU)
+    MAKE_CASE(AArch64ISD::FCVTZU_MERGE_PASSTHRU)
+    MAKE_CASE(AArch64ISD::FCVTZS_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::FSQRT_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::SETCC_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::ADC)
@@ -2870,6 +2876,14 @@ SDValue AArch64TargetLowering::LowerVectorFP_TO_INT(SDValue Op,
   // in the cost tables.
   EVT InVT = Op.getOperand(0).getValueType();
   EVT VT = Op.getValueType();
+
+  if (VT.isScalableVector()) {
+    unsigned Opcode = Op.getOpcode() == ISD::FP_TO_UINT
+                          ? AArch64ISD::FCVTZU_MERGE_PASSTHRU
+                          : AArch64ISD::FCVTZS_MERGE_PASSTHRU;
+    return LowerToPredicatedOp(Op, DAG, Opcode);
+  }
+
   unsigned NumElts = InVT.getVectorNumElements();
 
   // f16 conversions are promoted to f32 when full fp16 is not supported.
@@ -3388,6 +3402,14 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_frintz:
     return DAG.getNode(AArch64ISD::FTRUNC_MERGE_PASSTHRU, dl, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
+  case Intrinsic::aarch64_sve_fcvtzu:
+    return DAG.getNode(AArch64ISD::FCVTZU_MERGE_PASSTHRU, dl,
+                       Op.getValueType(), Op.getOperand(2), Op.getOperand(3),
+                       Op.getOperand(1));
+  case Intrinsic::aarch64_sve_fcvtzs:
+    return DAG.getNode(AArch64ISD::FCVTZS_MERGE_PASSTHRU, dl,
+                       Op.getValueType(), Op.getOperand(2), Op.getOperand(3),
+                       Op.getOperand(1));
   case Intrinsic::aarch64_sve_fsqrt:
     return DAG.getNode(AArch64ISD::FSQRT_MERGE_PASSTHRU, dl, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
