@@ -174,30 +174,74 @@ def AffineForOp : Affine_Op<"for",
       return
     }
     ```
+    `affine.for` can also operate on loop-carried variables and return the final
+    values after loop termination. The initial values of the variables are
+    passed as additional SSA operands to the "affine.for" following the 2 loop
+    control values lower bound, upper bound. The operation region has equivalent
+    arguments for each variable representing the value of the variable at the
+    current iteration.
+
+    The region must terminate with an `affine.yield` that passes all the current
+    iteration variables to the next iteration, or to the `affine.for` result, if
+    at the last iteration.
+
+    `affine.for` results hold the final values after the last iteration.
+    For example, to sum-reduce a memref:
+
+     ```mlir
+    func @reduce(%buffer: memref<1024xf32>) -> (f32) {
+      // Initial sum set to 0.
+      %sum_0 = constant 0.0 : f32
+      // iter_args binds initial values to the loop's region arguments.
+      %sum = affine.for %i = 0 to 10 step 2
+          iter_args(%sum_iter = %sum_0) -> (f32) {
+        %t = affine.load %buffer[%i] : memref<1024xf32>
+        %sum_next = addf %sum_iter, %t : f32
+        // Yield current iteration sum to next iteration %sum_iter or to %sum
+        // if final iteration.
+        affine.yield %sum_next : f32
+      }
+      return %sum : f32
+    }
+    ```
+    If the `affine.for` defines any values, a yield terminator must be
+    explicitly present. The number and types of the "affine.for" results must
+    match the initial values in the `iter_args` binding and the yield operands.
   }];
   let arguments = (ins Variadic<AnyType>);
+  let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
 
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<"OpBuilder &builder, OperationState &result, "
               "int64_t lowerBound, int64_t upperBound, int64_t step = 1, "
-              "function_ref<void(OpBuilder &, Location, Value)> bodyBuilder "
-              "    = nullptr">,
+              "ValueRange iterArgs = llvm::None, function_ref<void(OpBuilder "
+              "&, Location, Value, ValueRange)> bodyBuilder = nullptr">,
     OpBuilder<"OpBuilder &builder, OperationState &result, "
               "ValueRange lbOperands, AffineMap lbMap, "
               "ValueRange ubOperands, AffineMap ubMap, "
-              "int64_t step = 1, "
-              "function_ref<void(OpBuilder &, Location, Value)> bodyBuilder "
-              "    = nullptr">
+              "int64_t step = 1, ValueRange iterArgs = llvm::None, "
+              "function_ref<void(OpBuilder &, Location, Value, ValueRange)> "
+              "bodyBuilder = nullptr">
   ];
 
   let extraClassDeclaration = [{
+    /// Defining the function type we use for building the body of affine.for.
+    using BodyBuilderFn =
+        function_ref<void(OpBuilder &, Location, Value, ValueRange)>;
+
     static StringRef getStepAttrName() { return "step"; }
     static StringRef getLowerBoundAttrName() { return "lower_bound"; }
     static StringRef getUpperBoundAttrName() { return "upper_bound"; }
 
     Value getInductionVar() { return getBody()->getArgument(0); }
+    Block::BlockArgListType getRegionIterArgs() {
+      return getBody()->getArguments().drop_front();
+    }
+    Operation::operand_range getIterOperands() {
+      return getOperands().drop_front(getNumControlOperands());
+    }
 
     // TODO: provide iterators for the lower and upper bound operands
     // if the current access via getLowerBound(), getUpperBound() is too slow.
@@ -250,6 +294,17 @@ def AffineForOp : Affine_Op<"for",
       setAttr(Identifier::get(getStepAttrName(), context),
               IntegerAttr::get(IndexType::get(context), step));
     }
+
+    /// Returns number of region arguments for loop-carried values.
+    unsigned getNumRegionIterArgs() {
+      return getBody()->getNumArguments() - 1;
+    }
+
+    /// Number of operands controlling the loop: lb and ub.
+    unsigned getNumControlOperands() { return getOperation()->getNumOperands() - getNumIterOperands(); }
+
+    /// Get the number of loop-carried values.
+    unsigned getNumIterOperands();
 
     /// Returns true if the lower bound is constant.
     bool hasConstantLowerBound();
@@ -540,7 +595,7 @@ def AffineMaxOp : AffineMinMaxOpBase<"max", [NoSideEffect]> {
   }];
 }
 
-def AffineParallelOp : Affine_Op<"parallel", 
+def AffineParallelOp : Affine_Op<"parallel",
     [ImplicitAffineTerminator, RecursiveSideEffects,
      DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
   let summary = "multi-index parallel band operation";
@@ -569,7 +624,7 @@ def AffineParallelOp : Affine_Op<"parallel",
 
     Note: Calling AffineParallelOp::build will create the required region and
     block, and insert the required terminator if it is trivial (i.e. no values
-    are yielded).  Parsing will also create the required region, block, and 
+    are yielded).  Parsing will also create the required region, block, and
     terminator, even when they are missing from the textual representation.
 
     Example (3x3 valid convolution):
