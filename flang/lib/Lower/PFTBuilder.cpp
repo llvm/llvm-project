@@ -320,9 +320,8 @@ private:
              "entry must be a subprogram");
       entryPointList.push_back(std::pair{sym, p});
     }
-    if (p->label.has_value()) {
+    if (p->label.has_value())
       labelEvaluationMap->try_emplace(*p->label, p);
-    }
     return evaluationListStack.back()->back();
   }
 
@@ -349,9 +348,8 @@ private:
         const auto *label = std::visit(
             [](const auto &label) -> const parser::Label * {
               using B = std::decay_t<decltype(label)>;
-              if constexpr (common::HasMember<B, LabelNodes>) {
+              if constexpr (common::HasMember<B, LabelNodes>)
                 return &label.v;
-              }
               return nullptr;
             },
             spec.u);
@@ -448,14 +446,14 @@ private:
         parser::TypeGuardStmt, parser::WhereConstructStmt>;
 
     if constexpr (common::HasMember<A, MaybeConstructNameInTuple>) {
-      if (auto name{std::get<std::optional<parser::Name>>(stmt.t)})
+      if (auto name = std::get<std::optional<parser::Name>>(stmt.t))
         return name->ToString();
     }
 
     // These statements have several std::optional<parser::Name>
     if constexpr (std::is_same_v<A, parser::SelectRankStmt> ||
                   std::is_same_v<A, parser::SelectTypeStmt>) {
-      if (auto name{std::get<0>(stmt.t)})
+      if (auto name = std::get<0>(stmt.t))
         return name->ToString();
     }
     return {};
@@ -466,7 +464,7 @@ private:
   template <typename A>
   void insertConstructName(const A &stmt,
                            lower::pft::Evaluation *parentConstruct) {
-    std::string name{getConstructName(stmt)};
+    std::string name = getConstructName(stmt);
     if (!name.empty())
       constructNameMap[name] = parentConstruct;
   }
@@ -476,24 +474,24 @@ private:
   /// top-level statements of a program.
   void analyzeBranches(lower::pft::Evaluation *parentConstruct,
                        std::list<lower::pft::Evaluation> &evaluationList) {
-    lower::pft::Evaluation *lastConstructStmtEvaluation{nullptr};
-    lower::pft::Evaluation *lastIfStmtEvaluation{nullptr};
+    lower::pft::Evaluation *lastConstructStmtEvaluation{};
+    lower::pft::Evaluation *lastIfStmtEvaluation{};
     for (auto &eval : evaluationList) {
       eval.visit(common::visitors{
-          // Action statements
+          // Action statements (except I/O statements)
           [&](const parser::CallStmt &s) {
             // Look for alternate return specifiers.
-            const auto &args{std::get<std::list<parser::ActualArgSpec>>(s.v.t)};
+            const auto &args =
+                std::get<std::list<parser::ActualArgSpec>>(s.v.t);
             for (const auto &arg : args) {
-              const auto &actual{std::get<parser::ActualArg>(arg.t)};
-              if (const auto *altReturn{
-                      std::get_if<parser::AltReturnSpec>(&actual.u)}) {
+              const auto &actual = std::get<parser::ActualArg>(arg.t);
+              if (const auto *altReturn =
+                      std::get_if<parser::AltReturnSpec>(&actual.u))
                 markBranchTarget(eval, altReturn->v);
-              }
             }
           },
           [&](const parser::CycleStmt &s) {
-            std::string name{getConstructName(s)};
+            std::string name = getConstructName(s);
             lower::pft::Evaluation *construct{name.empty()
                                                   ? doConstructStack.back()
                                                   : constructNameMap[name]};
@@ -501,7 +499,7 @@ private:
             markBranchTarget(eval, construct->evaluationList->back());
           },
           [&](const parser::ExitStmt &s) {
-            std::string name{getConstructName(s)};
+            std::string name = getConstructName(s);
             lower::pft::Evaluation *construct{name.empty()
                                                   ? doConstructStack.back()
                                                   : constructNameMap[name]};
@@ -542,9 +540,8 @@ private:
             lower::pft::Evaluation *target{
                 labelEvaluationMap->find(label)->second};
             assert(target && "missing branch target evaluation");
-            if (!target->isA<parser::FormatStmt>()) {
+            if (!target->isA<parser::FormatStmt>())
               target->isNewBlock = true;
-            }
             auto iter = assignSymbolLabelMap->find(*sym);
             if (iter == assignSymbolLabelMap->end()) {
               lower::pft::LabelSet labelSet{};
@@ -591,59 +588,56 @@ private:
           [&](const parser::NonLabelDoStmt &s) {
             insertConstructName(s, parentConstruct);
             doConstructStack.push_back(parentConstruct);
-            auto &control{std::get<std::optional<parser::LoopControl>>(s.t)};
-            // eval.block is the loop preheader block, which will be set
-            // elsewhere if the NonLabelDoStmt is itself a target.
-            // eval.localBlocks[0] is the loop header block.
-            eval.localBlocks.emplace_back(nullptr);
-            if (!control.has_value()) {
+            const auto &loopControl = std::get<1>(s.t);
+            if (!loopControl.has_value()) {
               eval.isUnstructured = true; // infinite loop
               return;
             }
             eval.nonNopSuccessor().isNewBlock = true;
             eval.controlSuccessor = &evaluationList.back();
-            if (std::holds_alternative<parser::ScalarLogicalExpr>(control->u))
+            if (const auto *bounds = std::get_if<0>(&loopControl->u)) {
+              if (bounds->name.thing.symbol->GetType()->IsNumeric(
+                      common::TypeCategory::Real))
+                eval.isUnstructured = true; // real-valued loop control
+            } else if (std::get_if<1>(&loopControl->u)) {
               eval.isUnstructured = true; // while loop
-            // Defer additional processing for an unstructured concurrent loop
-            // to the EndDoStmt, when the loop is known to be unstructured.
+            }
           },
           [&](const parser::EndDoStmt &) {
-            lower::pft::Evaluation &doEval{evaluationList.front()};
+            lower::pft::Evaluation &doEval = evaluationList.front();
             eval.controlSuccessor = &doEval;
             doConstructStack.pop_back();
             if (parentConstruct->lowerAsStructured())
               return;
-
-            // Now that the loop is known to be unstructured, finish concurrent
-            // loop processing, using NonLabelDoStmt information.
+            // The loop is unstructured, which wasn't known for all cases when
+            // visiting the NonLabelDoStmt.  doEval.block is the loop preheader
+            // block, which will be set elsewhere if the NonLabelDoStmt is
+            // itself a target.  doEval.localBlocks[0] is the loop header block.
+            doEval.localBlocks.emplace_back(nullptr);
             parentConstruct->constructExit->isNewBlock = true;
             const auto &doStmt = doEval.getIf<parser::NonLabelDoStmt>();
-            assert(doStmt && "missing NonLabelDoStmt");
-            auto &control =
-                std::get<std::optional<parser::LoopControl>>(doStmt->t);
-            if (!control.has_value())
+            const auto &loopControl = std::get<1>(doStmt->t);
+            if (!loopControl.has_value())
               return; // infinite loop
-
-            const auto *concurrent =
-                std::get_if<parser::LoopControl::Concurrent>(&control->u);
+            const auto *concurrent = std::get_if<2>(&loopControl->u);
             if (!concurrent)
               return;
-
-            // Unstructured concurrent loop.  NonLabelDoStmt code accounts
-            // for one concurrent loop dimension.  Reserve preheader,
-            // header, and latch blocks for the remaining dimensions, and
-            // one block for a mask expression.
-            const auto &header =
-                std::get<parser::ConcurrentHeader>(concurrent->t);
-            auto dims =
-                std::get<std::list<parser::ConcurrentControl>>(header.t).size();
-            for (; dims > 1; --dims) {
-              doEval.localBlocks.emplace_back(nullptr); // preheader
-              doEval.localBlocks.emplace_back(nullptr); // header
-              eval.localBlocks.emplace_back(nullptr);   // latch
-            }
-            if (std::get<std::optional<parser::ScalarLogicalExpr>>(header.t))
-              doEval.localBlocks.emplace_back(nullptr); // mask
+            // Unstructured concurrent loop.  Reserve header, body, and latch
+            // blocks for each loop dimension, and one block for a mask.
+            // The original loop body provides the body and latch blocks of
+            // the innermost dimension, so adjust for those.  The (first) body
+            // block of a non-innermost dimension is the preheader block of
+            // the immediately enclosed dimension.  The latch block of a
+            // non-innermost dimension is the exit block of the immediately
+            // enclosed dimension.  Reserving these blocks in advance, while
+            // not strictly required, allows "in order" code generation, which
+            // is much easier to read and debug.
+            const auto &header = std::get<0>(concurrent->t);
+            const auto dims = std::get<1>(header.t).size();
+            const bool hasMask = std::get<2>(header.t).has_value();
+            doEval.localBlocks.resize(2 * dims + hasMask - 1); // header, body
+            eval.localBlocks.resize(dims - 1);                 // latch blocks
+            eval.isNewBlock |= hasMask;
           },
           [&](const parser::IfThenStmt &s) {
             insertConstructName(s, parentConstruct);
@@ -708,6 +702,7 @@ private:
             eval.isUnstructured = true;
           },
 
+          // Default - Common analysis for I/O statements; otherwise nop.
           [&](const auto &stmt) {
             using A = std::decay_t<decltype(stmt)>;
             using IoStmts = std::tuple<parser::BackspaceStmt, parser::CloseStmt,
@@ -715,11 +710,8 @@ private:
                                        parser::InquireStmt, parser::OpenStmt,
                                        parser::ReadStmt, parser::RewindStmt,
                                        parser::WaitStmt, parser::WriteStmt>;
-            if constexpr (common::HasMember<A, IoStmts>) {
+            if constexpr (common::HasMember<A, IoStmts>)
               analyzeIoBranches(eval, stmt);
-            }
-
-            /* do nothing */
           },
       });
 
@@ -747,15 +739,13 @@ private:
       }
 
       // Propagate isUnstructured flag to enclosing construct.
-      if (parentConstruct && eval.isUnstructured) {
+      if (parentConstruct && eval.isUnstructured)
         parentConstruct->isUnstructured = true;
-      }
 
       // The successor of a branch starts a new block.
       if (eval.controlSuccessor && eval.isActionStmt() &&
-          eval.lowerAsUnstructured()) {
+          eval.lowerAsUnstructured())
         markSuccessorAsNewBlock(eval);
-      }
     }
   }
 
@@ -802,15 +792,15 @@ private:
 
   /// functionList points to the internal or module procedure function list
   /// of a FunctionLikeUnit or a ModuleLikeUnit.  It may be null.
-  std::list<lower::pft::FunctionLikeUnit> *functionList{nullptr};
+  std::list<lower::pft::FunctionLikeUnit> *functionList{};
   std::vector<lower::pft::Evaluation *> constructAndDirectiveStack{};
   std::vector<lower::pft::Evaluation *> doConstructStack{};
   /// evaluationListStack is the current nested construct evaluationList state.
   std::vector<lower::pft::EvaluationList *> evaluationListStack{};
   llvm::DenseMap<parser::Label, lower::pft::Evaluation *> *labelEvaluationMap{};
-  lower::pft::SymbolLabelMap *assignSymbolLabelMap{nullptr};
+  lower::pft::SymbolLabelMap *assignSymbolLabelMap{};
   std::map<std::string, lower::pft::Evaluation *> constructNameMap{};
-  lower::pft::Evaluation *lastLexicalEvaluation{nullptr};
+  lower::pft::Evaluation *lastLexicalEvaluation{};
 };
 
 class PFTDumper {
@@ -1268,8 +1258,8 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
     : ProgramUnit{func, parent}, endStmt{
                                      getFunctionStmt<parser::EndProgramStmt>(
                                          func)} {
-  const auto &programStmt{
-      std::get<std::optional<parser::Statement<parser::ProgramStmt>>>(func.t)};
+  const auto &programStmt =
+      std::get<std::optional<parser::Statement<parser::ProgramStmt>>>(func.t);
   if (programStmt.has_value()) {
     beginStmt = programStmt.value();
     auto symbol = getSymbol(*beginStmt);
