@@ -47,11 +47,11 @@ enum GCOVVersion { V304, V407, V408, V800, V900 };
 /// A struct for passing gcov options between functions.
 struct Options {
   Options(bool A, bool B, bool C, bool F, bool P, bool U, bool I, bool L,
-          bool N, bool R, bool T, bool X, std::string SourcePrefix)
+          bool M, bool N, bool R, bool T, bool X, std::string SourcePrefix)
       : AllBlocks(A), BranchInfo(B), BranchCount(C), FuncCoverage(F),
         PreservePaths(P), UncondBranch(U), Intermediate(I), LongFileNames(L),
-        NoOutput(N), RelativeOnly(R), UseStdout(T), HashFilenames(X),
-        SourcePrefix(std::move(SourcePrefix)) {}
+        Demangle(M), NoOutput(N), RelativeOnly(R), UseStdout(T),
+        HashFilenames(X), SourcePrefix(std::move(SourcePrefix)) {}
 
   bool AllBlocks;
   bool BranchInfo;
@@ -61,6 +61,7 @@ struct Options {
   bool UncondBranch;
   bool Intermediate;
   bool LongFileNames;
+  bool Demangle;
   bool NoOutput;
   bool RelativeOnly;
   bool UseStdout;
@@ -232,7 +233,7 @@ public:
 
   GCOVFunction(GCOVFile &file) : file(file) {}
 
-  StringRef getName() const { return Name; }
+  StringRef getName(bool demangle) const;
   StringRef getFilename() const;
   uint64_t getEntryCount() const;
   GCOVBlock &getExitBlock() const;
@@ -255,6 +256,7 @@ public:
   uint32_t endColumn = 0;
   uint8_t artificial = 0;
   StringRef Name;
+  mutable SmallString<0> demangled;
   unsigned srcIdx;
   SmallVector<std::unique_ptr<GCOVBlock>, 0> blocks;
   SmallVector<std::unique_ptr<GCOVArc>, 0> arcs, treeArcs;
