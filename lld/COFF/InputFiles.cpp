@@ -785,8 +785,14 @@ void ObjFile::initializeDependencies() {
   else
     data = getDebugSection(".debug$T");
 
-  if (data.empty())
+  // Don't make a TpiSource for objects with no debug info. If the object has
+  // symbols but no types, make a plain, empty TpiSource anyway, because it
+  // simplifies adding the symbols later.
+  if (data.empty()) {
+    if (!debugChunks.empty())
+      debugTypesObj = makeTpiSource(this);
     return;
+  }
 
   // Get the first type record. It will indicate if this object uses a type
   // server (/Zi) or a PCH file (/Yu).

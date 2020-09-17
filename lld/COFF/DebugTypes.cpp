@@ -29,6 +29,8 @@ using namespace lld;
 using namespace lld::coff;
 
 namespace {
+class TypeServerIpiSource;
+
 // The TypeServerSource class represents a PDB type server, a file referenced by
 // OBJ files compiled with MSVC /Zi. A single PDB can be shared by several OBJ
 // files, therefore there must be only once instance per OBJ lot. The file path
@@ -49,18 +51,33 @@ public:
     auto it = mappings.emplace(expectedInfo->getGuid(), this);
     assert(it.second);
     (void)it;
-    tsIndexMap.isTypeServerMap = true;
   }
 
-  Expected<const CVIndexMap *> mergeDebugT(TypeMerger *m,
-                                           CVIndexMap *indexMap) override;
+  Error mergeDebugT(TypeMerger *m) override;
   bool isDependency() const override { return true; }
 
   PDBInputFile *pdbInputFile = nullptr;
 
-  CVIndexMap tsIndexMap;
+  // TpiSource for IPI stream.
+  TypeServerIpiSource *ipiSrc = nullptr;
 
   static std::map<codeview::GUID, TypeServerSource *> mappings;
+};
+
+// Companion to TypeServerSource. Stores the index map for the IPI stream in the
+// PDB. Modeling PDBs with two sources for TPI and IPI helps establish the
+// invariant of one type index space per source.
+class TypeServerIpiSource : public TpiSource {
+public:
+  explicit TypeServerIpiSource() : TpiSource(PDBIpi, nullptr) {}
+
+  friend class TypeServerSource;
+
+  // IPI merging is handled in TypeServerSource::mergeDebugT, since it depends
+  // directly on type merging.
+  Error mergeDebugT(TypeMerger *m) override { return Error::success(); }
+
+  bool isDependency() const override { return true; }
 };
 
 // This class represents the debug type stream of an OBJ file that depends on a
@@ -70,8 +87,7 @@ public:
   UseTypeServerSource(ObjFile *f, TypeServer2Record ts)
       : TpiSource(UsingPDB, f), typeServerDependency(ts) {}
 
-  Expected<const CVIndexMap *> mergeDebugT(TypeMerger *m,
-                                           CVIndexMap *indexMap) override;
+  Error mergeDebugT(TypeMerger *m) override;
 
   // Information about the PDB type server dependency, that needs to be loaded
   // in before merging this OBJ.
@@ -92,14 +108,9 @@ public:
     if (!it.second)
       fatal("a PCH object with the same signature has already been provided (" +
             toString(it.first->second->file) + " and " + toString(file) + ")");
-    precompIndexMap.isPrecompiledTypeMap = true;
   }
 
-  Expected<const CVIndexMap *> mergeDebugT(TypeMerger *m,
-                                           CVIndexMap *indexMap) override;
   bool isDependency() const override { return true; }
-
-  CVIndexMap precompIndexMap;
 
   static std::map<uint32_t, PrecompSource *> mappings;
 };
@@ -111,8 +122,7 @@ public:
   UsePrecompSource(ObjFile *f, PrecompRecord precomp)
       : TpiSource(UsingPCH, f), precompDependency(precomp) {}
 
-  Expected<const CVIndexMap *> mergeDebugT(TypeMerger *m,
-                                           CVIndexMap *indexMap) override;
+  Error mergeDebugT(TypeMerger *m) override;
 
   // Information about the Precomp OBJ dependency, that needs to be loaded in
   // before merging this OBJ.
@@ -134,7 +144,11 @@ TpiSource *lld::coff::makeTpiSource(ObjFile *file) {
 }
 
 TpiSource *lld::coff::makeTypeServerSource(PDBInputFile *pdbInputFile) {
-  return make<TypeServerSource>(pdbInputFile);
+  // Type server sources come in pairs: the TPI stream, and the IPI stream.
+  auto *tpiSource = make<TypeServerSource>(pdbInputFile);
+  if (pdbInputFile->session->getPDBFile().hasPDBIpiStream())
+    tpiSource->ipiSrc = make<TypeServerIpiSource>();
+  return tpiSource;
 }
 
 TpiSource *lld::coff::makeUseTypeServerSource(ObjFile *file,
@@ -196,8 +210,7 @@ getHashesFromDebugH(ArrayRef<uint8_t> debugH) {
 }
 
 // Merge .debug$T for a generic object file.
-Expected<const CVIndexMap *> TpiSource::mergeDebugT(TypeMerger *m,
-                                                    CVIndexMap *indexMap) {
+Error TpiSource::mergeDebugT(TypeMerger *m) {
   CVTypeArray types;
   BinaryStreamReader reader(file->debugTypes, support::little);
   cantFail(reader.readArray(types, reader.getLength()));
@@ -213,17 +226,21 @@ Expected<const CVIndexMap *> TpiSource::mergeDebugT(TypeMerger *m,
     }
 
     if (auto err = mergeTypeAndIdRecords(m->globalIDTable, m->globalTypeTable,
-                                         indexMap->tpiMap, types, hashes,
+                                         indexMapStorage, types, hashes,
                                          file->pchSignature))
       fatal("codeview::mergeTypeAndIdRecords failed: " +
             toString(std::move(err)));
   } else {
     if (auto err =
-            mergeTypeAndIdRecords(m->idTable, m->typeTable, indexMap->tpiMap,
+            mergeTypeAndIdRecords(m->idTable, m->typeTable, indexMapStorage,
                                   types, file->pchSignature))
       fatal("codeview::mergeTypeAndIdRecords failed: " +
             toString(std::move(err)));
   }
+
+  // In an object, there is only one mapping for both types and items.
+  tpiMap = indexMapStorage;
+  ipiMap = indexMapStorage;
 
   if (config->showSummary) {
     // Count how many times we saw each type record in our input. This
@@ -234,7 +251,7 @@ Expected<const CVIndexMap *> TpiSource::mergeDebugT(TypeMerger *m,
     m->ipiCounts.resize(m->getIDTable().size());
     uint32_t srcIdx = 0;
     for (CVType &ty : types) {
-      TypeIndex dstIdx = indexMap->tpiMap[srcIdx++];
+      TypeIndex dstIdx = tpiMap[srcIdx++];
       // Type merging may fail, so a complex source type may become the simple
       // NotTranslated type, which cannot be used as an array index.
       if (dstIdx.isSimple())
@@ -245,12 +262,11 @@ Expected<const CVIndexMap *> TpiSource::mergeDebugT(TypeMerger *m,
     }
   }
 
-  return indexMap;
+  return Error::success();
 }
 
 // Merge types from a type server PDB.
-Expected<const CVIndexMap *> TypeServerSource::mergeDebugT(TypeMerger *m,
-                                                           CVIndexMap *) {
+Error TypeServerSource::mergeDebugT(TypeMerger *m) {
   pdb::PDBFile &pdbFile = pdbInputFile->session->getPDBFile();
   Expected<pdb::TpiStream &> expectedTpi = pdbFile.getPDBTpiStream();
   if (auto e = expectedTpi.takeError())
@@ -273,30 +289,34 @@ Expected<const CVIndexMap *> TypeServerSource::mergeDebugT(TypeMerger *m,
     Optional<uint32_t> endPrecomp;
     // Merge TPI first, because the IPI stream will reference type indices.
     if (auto err =
-            mergeTypeRecords(m->globalTypeTable, tsIndexMap.tpiMap,
+            mergeTypeRecords(m->globalTypeTable, indexMapStorage,
                              expectedTpi->typeArray(), tpiHashes, endPrecomp))
       fatal("codeview::mergeTypeRecords failed: " + toString(std::move(err)));
+    tpiMap = indexMapStorage;
 
     // Merge IPI.
     if (maybeIpi) {
       auto ipiHashes =
           GloballyHashedType::hashIds(maybeIpi->typeArray(), tpiHashes);
-      if (auto err = mergeIdRecords(m->globalIDTable, tsIndexMap.tpiMap,
-                                    tsIndexMap.ipiMap, maybeIpi->typeArray(),
-                                    ipiHashes))
+      if (auto err =
+              mergeIdRecords(m->globalIDTable, tpiMap, ipiSrc->indexMapStorage,
+                             maybeIpi->typeArray(), ipiHashes))
         fatal("codeview::mergeIdRecords failed: " + toString(std::move(err)));
+      ipiMap = ipiSrc->indexMapStorage;
     }
   } else {
     // Merge TPI first, because the IPI stream will reference type indices.
-    if (auto err = mergeTypeRecords(m->typeTable, tsIndexMap.tpiMap,
+    if (auto err = mergeTypeRecords(m->typeTable, indexMapStorage,
                                     expectedTpi->typeArray()))
       fatal("codeview::mergeTypeRecords failed: " + toString(std::move(err)));
+    tpiMap = indexMapStorage;
 
     // Merge IPI.
     if (maybeIpi) {
-      if (auto err = mergeIdRecords(m->idTable, tsIndexMap.tpiMap,
-                                    tsIndexMap.ipiMap, maybeIpi->typeArray()))
+      if (auto err = mergeIdRecords(m->idTable, tpiMap, ipiSrc->indexMapStorage,
+                                    maybeIpi->typeArray()))
         fatal("codeview::mergeIdRecords failed: " + toString(std::move(err)));
+      ipiMap = ipiSrc->indexMapStorage;
     }
   }
 
@@ -306,19 +326,18 @@ Expected<const CVIndexMap *> TypeServerSource::mergeDebugT(TypeMerger *m,
     // map, that means we saw it once in the input. Add it to our histogram.
     m->tpiCounts.resize(m->getTypeTable().size());
     m->ipiCounts.resize(m->getIDTable().size());
-    for (TypeIndex ti : tsIndexMap.tpiMap)
+    for (TypeIndex ti : tpiMap)
       if (!ti.isSimple())
         ++m->tpiCounts[ti.toArrayIndex()];
-    for (TypeIndex ti : tsIndexMap.ipiMap)
+    for (TypeIndex ti : ipiMap)
       if (!ti.isSimple())
         ++m->ipiCounts[ti.toArrayIndex()];
   }
 
-  return &tsIndexMap;
+  return Error::success();
 }
 
-Expected<const CVIndexMap *>
-UseTypeServerSource::mergeDebugT(TypeMerger *m, CVIndexMap *indexMap) {
+Error UseTypeServerSource::mergeDebugT(TypeMerger *m) {
   const codeview::GUID &tsId = typeServerDependency.getGuid();
   StringRef tsPath = typeServerDependency.getName();
 
@@ -342,7 +361,7 @@ UseTypeServerSource::mergeDebugT(TypeMerger *m, CVIndexMap *indexMap) {
   pdb::PDBFile &pdbSession = tsSrc->pdbInputFile->session->getPDBFile();
   auto expectedInfo = pdbSession.getPDBInfoStream();
   if (!expectedInfo)
-    return &tsSrc->tsIndexMap;
+    return expectedInfo.takeError();
 
   // Just because a file with a matching name was found and it was an actual
   // PDB file doesn't mean it matches.  For it to match the InfoStream's GUID
@@ -352,7 +371,10 @@ UseTypeServerSource::mergeDebugT(TypeMerger *m, CVIndexMap *indexMap) {
         tsPath,
         make_error<pdb::PDBError>(pdb::pdb_error_code::signature_out_of_date));
 
-  return &tsSrc->tsIndexMap;
+  // Reuse the type index map of the type server.
+  tpiMap = tsSrc->tpiMap;
+  ipiMap = tsSrc->ipiMap;
+  return Error::success();
 }
 
 static bool equalsPath(StringRef path1, StringRef path2) {
@@ -377,8 +399,8 @@ static PrecompSource *findObjByName(StringRef fileNameOnly) {
   return nullptr;
 }
 
-static Expected<const CVIndexMap *> findPrecompMap(ObjFile *file,
-                                                   PrecompRecord &pr) {
+static Expected<PrecompSource *> findPrecompMap(ObjFile *file,
+                                                PrecompRecord &pr) {
   // Cross-compile warning: given that Clang doesn't generate LF_PRECOMP
   // records, we assume the OBJ comes from a Windows build of cl.exe. Thusly,
   // the paths embedded in the OBJs are in the Windows format.
@@ -409,53 +431,42 @@ static Expected<const CVIndexMap *> findPrecompMap(ObjFile *file,
         toString(precomp->file),
         make_error<pdb::PDBError>(pdb::pdb_error_code::no_matching_pch));
 
-  return &precomp->precompIndexMap;
+  return precomp;
 }
 
 /// Merges a precompiled headers TPI map into the current TPI map. The
 /// precompiled headers object will also be loaded and remapped in the
 /// process.
-static Expected<const CVIndexMap *>
-mergeInPrecompHeaderObj(ObjFile *file, CVIndexMap *indexMap,
+static Error
+mergeInPrecompHeaderObj(ObjFile *file,
+                        SmallVectorImpl<TypeIndex> &indexMapStorage,
                         PrecompRecord &precomp) {
   auto e = findPrecompMap(file, precomp);
   if (!e)
     return e.takeError();
 
-  const CVIndexMap *precompIndexMap = *e;
-  assert(precompIndexMap->isPrecompiledTypeMap);
-
-  if (precompIndexMap->tpiMap.empty())
-    return precompIndexMap;
+  PrecompSource *precompSrc = *e;
+  if (precompSrc->tpiMap.empty())
+    return Error::success();
 
   assert(precomp.getStartTypeIndex() == TypeIndex::FirstNonSimpleIndex);
-  assert(precomp.getTypesCount() <= precompIndexMap->tpiMap.size());
+  assert(precomp.getTypesCount() <= precompSrc->tpiMap.size());
   // Use the previously remapped index map from the precompiled headers.
-  indexMap->tpiMap.append(precompIndexMap->tpiMap.begin(),
-                          precompIndexMap->tpiMap.begin() +
-                              precomp.getTypesCount());
-  return indexMap;
+  indexMapStorage.append(precompSrc->tpiMap.begin(),
+                         precompSrc->tpiMap.begin() + precomp.getTypesCount());
+  return Error::success();
 }
 
-Expected<const CVIndexMap *>
-UsePrecompSource::mergeDebugT(TypeMerger *m, CVIndexMap *indexMap) {
+Error UsePrecompSource::mergeDebugT(TypeMerger *m) {
   // This object was compiled with /Yu, so process the corresponding
   // precompiled headers object (/Yc) first. Some type indices in the current
   // object are referencing data in the precompiled headers object, so we need
   // both to be loaded.
-  auto e = mergeInPrecompHeaderObj(file, indexMap, precompDependency);
-  if (!e)
-    return e.takeError();
+  if (Error e =
+          mergeInPrecompHeaderObj(file, indexMapStorage, precompDependency))
+    return e;
 
-  return TpiSource::mergeDebugT(m, indexMap);
-}
-
-Expected<const CVIndexMap *> PrecompSource::mergeDebugT(TypeMerger *m,
-                                                        CVIndexMap *) {
-  // Note that we're not using the provided CVIndexMap. Instead, we use our
-  // local one. Precompiled headers objects need to save the index map for
-  // further reference by other objects which use the precompiled headers.
-  return TpiSource::mergeDebugT(m, &precompIndexMap);
+  return TpiSource::mergeDebugT(m);
 }
 
 uint32_t TpiSource::countTypeServerPDBs() {
