@@ -4133,8 +4133,7 @@ static FileID getNullabilityCompletenessCheckFileID(Sema &S,
 
 /// Creates a fix-it to insert a C-style nullability keyword at \p pointerLoc,
 /// taking into account whitespace before and after.
-template <typename DiagBuilderT>
-static void fixItNullability(Sema &S, DiagBuilderT &Diag,
+static void fixItNullability(Sema &S, DiagnosticBuilder &Diag,
                              SourceLocation PointerLoc,
                              NullabilityKind Nullability) {
   assert(PointerLoc.isValid());
