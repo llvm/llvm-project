@@ -303,25 +303,52 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CPACK_PACKAGE_NAME comgr)
   set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc.")
   set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Library to provide support functions")
-  set(CPACK_PACKAGE_VERSION "${amd_comgr_VERSION}")
   set(CPACK_PACKAGE_VERSION_MAJOR "${amd_comgr_VERSION_MAJOR}")
   set(CPACK_PACKAGE_VERSION_MINOR "${amd_comgr_VERSION_MINOR}")
   set(CPACK_PACKAGE_VERSION_PATCH "${amd_comgr_VERSION_PATCH}")
   set(CPACK_PACKAGE_CONTACT "Advanced Micro Devices, Inc.")
   set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 
+  # Make proper version for appending
+  set(ROCM_VERSION_FOR_PACKAGE "")
+  if(DEFINED ENV{ROCM_LIBPATCH_VERSION})
+    set(ROCM_VERSION_FOR_PACKAGE $ENV{ROCM_LIBPATCH_VERSION})
+  elseif(DEFINED ENV{ROCM_VERSION})
+    string(REGEX REPLACE "." "" ROCM_VERSION_FOR_PACKAGE $ENV{ROCM_VERSION})
+  else()
+    # Default Case, set to 99999
+    set(ROCM_VERSION_FOR_PACKAGE "99999")
+  endif()
+
   # Debian package specific variables
-  set(CPACK_DEBIAN_PACKAGE_HOMEPAGE
-    "https://github.com/RadeonOpenCompute/ROCm-CompilerSupport")
+  set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/RadeonOpenCompute/ROCm-CompilerSupport")
+  if (DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
+    set(CPACK_DEBIAN_PACKAGE_RELEASE $ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
+  else()
+    set(CPACK_DEBIAN_PACKAGE_RELEASE "local")
+  endif()
 
   # RPM package specific variables
   if(DEFINED CPACK_PACKAGING_INSTALL_PREFIX)
-    set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
-      "${CPACK_PACKAGING_INSTALL_PREFIX}")
+    set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "${CPACK_PACKAGING_INSTALL_PREFIX}")
+  endif()
+  if(DEFINED ENV{CPACK_RPM_PACKAGE_RELEASE})
+    set(CPACK_RPM_PACKAGE_RELEASE $ENV{CPACK_RPM_PACKAGE_RELEASE})
+  else()
+    set(CPACK_RPM_PACKAGE_RELEASE "local")
   endif()
 
-  # Debian and RPM conditionals for generator
-  set(CPACK_PROJECT_CONFIG_FILE ${CMAKE_CURRENT_SOURCE_DIR}/cpack_project_config.cmake)
+  # Get rpm distro
+  if(CPACK_RPM_PACKAGE_RELEASE)
+    set(CPACK_RPM_PACKAGE_RELEASE_DIST ON)
+  endif()
+
+  # Prepare final version for the CPACK use
+  set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}.${ROCM_VERSION_FOR_PACKAGE}")
+
+  # Set the names now using CPACK utility
+  set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
+  set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
 
   include(CPack)
 endif()
