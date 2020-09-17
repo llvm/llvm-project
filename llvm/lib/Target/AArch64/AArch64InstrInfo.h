@@ -188,6 +188,9 @@ public:
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
                      bool AllowModify = false) const override;
+  bool analyzeBranchPredicate(MachineBasicBlock &MBB,
+                              MachineBranchPredicate &MBP,
+                              bool AllowModify) const override;
   unsigned removeBranch(MachineBasicBlock &MBB,
                         int *BytesRemoved = nullptr) const override;
   unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
