@@ -158,7 +158,7 @@ public:
     // Copy data to update into Bytes from the file FS and the buffer Out.
     char Bytes[8];
     size_t BytesNum = StartBit ? 8 : 4;
-    size_t BytesFromDisk = std::min(BytesNum, NumOfFlushedBytes - ByteNo);
+    size_t BytesFromDisk = std::min(static_cast<uint64_t>(BytesNum), NumOfFlushedBytes - ByteNo);
     size_t BytesFromBuffer = BytesNum - BytesFromDisk;
 
     // When unaligned, copy existing data into Bytes from the file FS and the
