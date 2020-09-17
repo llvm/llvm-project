@@ -2418,14 +2418,60 @@ static bool HandleFloatToIntCast(EvalInfo &Info, const Expr *E,
   return true;
 }
 
+/// Get rounding mode used for evaluation of the specified expression.
+/// \param[out] DynamicRM Is set to true is the requested rounding mode is
+///                       dynamic.
+/// If rounding mode is unknown at compile time, still try to evaluate the
+/// expression. If the result is exact, it does not depend on rounding mode.
+/// So return "tonearest" mode instead of "dynamic".
+static llvm::RoundingMode getActiveRoundingMode(EvalInfo &Info, const Expr *E,
+                                                bool &DynamicRM) {
+  llvm::RoundingMode RM =
+      E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).getRoundingMode();
+  DynamicRM = (RM == llvm::RoundingMode::Dynamic);
+  if (DynamicRM)
+    RM = llvm::RoundingMode::NearestTiesToEven;
+  return RM;
+}
+
+/// Check if the given evaluation result is allowed for constant evaluation.
+static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
+                                     APFloat::opStatus St) {
+  FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+  if ((St & APFloat::opInexact) &&
+      FPO.getRoundingMode() == llvm::RoundingMode::Dynamic) {
+    // Inexact result means that it depends on rounding mode. If the requested
+    // mode is dynamic, the evaluation cannot be made in compile time.
+    Info.FFDiag(E, diag::note_constexpr_dynamic_rounding);
+    return false;
+  }
+
+  if (St & APFloat::opStatus::opInvalidOp) {
+    // There is no usefully definable result.
+    Info.FFDiag(E);
+    return false;
+  }
+
+  // FIXME: if:
+  // - evaluation triggered other FP exception, and
+  // - exception mode is not "ignore", and
+  // - the expression being evaluated is not a part of global variable
+  //   initializer,
+  // the evaluation probably need to be rejected.
+  return true;
+}
+
 static bool HandleFloatToFloatCast(EvalInfo &Info, const Expr *E,
                                    QualType SrcType, QualType DestType,
                                    APFloat &Result) {
+  assert(isa<CastExpr>(E) || isa<CompoundAssignOperator>(E));
+  bool DynamicRM;
+  llvm::RoundingMode RM = getActiveRoundingMode(Info, E, DynamicRM);
+  APFloat::opStatus St;
   APFloat Value = Result;
   bool ignored;
-  Result.convert(Info.Ctx.getFloatTypeSemantics(DestType),
-                 APFloat::rmNearestTiesToEven, &ignored);
-  return true;
+  St = Result.convert(Info.Ctx.getFloatTypeSemantics(DestType), RM, &ignored);
+  return checkFloatingPointResult(Info, E, St);
 }
 
 static APSInt HandleIntToIntCast(EvalInfo &Info, const Expr *E,
@@ -2647,28 +2693,31 @@ static bool handleIntIntBinOp(EvalInfo &Info, const Expr *E, const APSInt &LHS,
 }
 
 /// Perform the given binary floating-point operation, in-place, on LHS.
-static bool handleFloatFloatBinOp(EvalInfo &Info, const Expr *E,
+static bool handleFloatFloatBinOp(EvalInfo &Info, const BinaryOperator *E,
                                   APFloat &LHS, BinaryOperatorKind Opcode,
                                   const APFloat &RHS) {
+  bool DynamicRM;
+  llvm::RoundingMode RM = getActiveRoundingMode(Info, E, DynamicRM);
+  APFloat::opStatus St;
   switch (Opcode) {
   default:
     Info.FFDiag(E);
     return false;
   case BO_Mul:
-    LHS.multiply(RHS, APFloat::rmNearestTiesToEven);
+    St = LHS.multiply(RHS, RM);
     break;
   case BO_Add:
-    LHS.add(RHS, APFloat::rmNearestTiesToEven);
+    St = LHS.add(RHS, RM);
     break;
   case BO_Sub:
-    LHS.subtract(RHS, APFloat::rmNearestTiesToEven);
+    St = LHS.subtract(RHS, RM);
     break;
   case BO_Div:
     // [expr.mul]p4:
     //   If the second operand of / or % is zero the behavior is undefined.
     if (RHS.isZero())
       Info.CCEDiag(E, diag::note_expr_divide_by_zero);
-    LHS.divide(RHS, APFloat::rmNearestTiesToEven);
+    St = LHS.divide(RHS, RM);
     break;
   }
 
@@ -2680,7 +2729,8 @@ static bool handleFloatFloatBinOp(EvalInfo &Info, const Expr *E,
     Info.CCEDiag(E, diag::note_constexpr_float_arithmetic) << LHS.isNaN();
     return Info.noteUndefinedBehavior();
   }
-  return true;
+
+  return checkFloatingPointResult(Info, E, St);
 }
 
 static bool handleLogicalOpForVector(const APInt &LHSValue,
@@ -2763,7 +2813,7 @@ static bool handleCompareOpForVector(const APValue &LHSValue,
 }
 
 // Perform binary operations for vector types, in place on the LHS.
-static bool handleVectorVectorBinOp(EvalInfo &Info, const Expr *E,
+static bool handleVectorVectorBinOp(EvalInfo &Info, const BinaryOperator *E,
                                     BinaryOperatorKind Opcode,
                                     APValue &LHSValue,
                                     const APValue &RHSValue) {
@@ -4077,7 +4127,7 @@ static bool handleAssignment(EvalInfo &Info, const Expr *E, const LValue &LVal,
 namespace {
 struct CompoundAssignSubobjectHandler {
   EvalInfo &Info;
-  const Expr *E;
+  const CompoundAssignOperator *E;
   QualType PromotedLHSType;
   BinaryOperatorKind Opcode;
   const APValue &RHS;
@@ -4197,10 +4247,12 @@ struct CompoundAssignSubobjectHandler {
 const AccessKinds CompoundAssignSubobjectHandler::AccessKind;
 
 /// Perform a compound assignment of LVal <op>= RVal.
-static bool handleCompoundAssignment(
-    EvalInfo &Info, const Expr *E,
-    const LValue &LVal, QualType LValType, QualType PromotedLValType,
-    BinaryOperatorKind Opcode, const APValue &RVal) {
+static bool handleCompoundAssignment(EvalInfo &Info,
+                                     const CompoundAssignOperator *E,
+                                     const LValue &LVal, QualType LValType,
+                                     QualType PromotedLValType,
+                                     BinaryOperatorKind Opcode,
+                                     const APValue &RVal) {
   if (LVal.Designator.Invalid)
     return false;
 
