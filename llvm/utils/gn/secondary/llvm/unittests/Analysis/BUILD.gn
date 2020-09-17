@@ -25,7 +25,6 @@ unittest("AnalysisTests") {
     "DomTreeUpdaterTest.cpp",
     "FunctionPropertiesAnalysisTest.cpp",
     "GlobalsModRefTest.cpp",
-    "IRSimilarityIdentifierTest.cpp",
     "IVDescriptorsTest.cpp",
     "LazyCallGraphTest.cpp",
     "LoadsTest.cpp",
