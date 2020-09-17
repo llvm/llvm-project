@@ -3285,7 +3285,7 @@ LegalizerHelper::fewerElementsVectorCasts(MachineInstr &MI, unsigned TypeIdx,
     if (NumParts * NarrowTy.getNumElements() != DstTy.getNumElements())
       return UnableToLegalize;
 
-    NarrowTy1 = LLT::vector(NumParts, SrcTy.getElementType().getSizeInBits());
+    NarrowTy1 = LLT::vector(NarrowTy.getNumElements(), SrcTy.getElementType());
   } else {
     NumParts = DstTy.getNumElements();
     NarrowTy1 = SrcTy.getElementType();
