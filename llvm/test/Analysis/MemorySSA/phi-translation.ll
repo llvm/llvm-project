@@ -481,8 +481,7 @@ define void @another_loop_clobber() {
 ; CHECK-NEXT:  ; 4 = MemoryPhi({entry,1},{cond.read,3})
 
 ; CHECK-LABEL: cond.read:
-; NOLIMIT:     ; MemoryUse(liveOnEntry)
-; LIMIT:       ; MemoryUse(4)
+; CHECK:       ; MemoryUse(4)
 ; CHECK-NEXT:  %use = load i32, i32* %ptr.1, align 4
 ; CHECK-NEXT:  ; 2 = MemoryDef(4)
 ; CHECK-NEXT:  %c.2 = call i1 @cond(i32 %use)
