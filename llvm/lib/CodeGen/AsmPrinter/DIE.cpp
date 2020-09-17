@@ -428,10 +428,10 @@ void DIEInteger::emitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
 /// SizeOf - Determine size of integer value in bytes.
 ///
 unsigned DIEInteger::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
-  dwarf::FormParams Params = {0, 0, dwarf::DWARF32};
-  if (AP)
-    Params = {AP->getDwarfVersion(), uint8_t(AP->getPointerSize()),
-              AP->OutStreamer->getContext().getDwarfFormat()};
+  assert(AP && "AsmPrinter is required to set FormParams");
+  dwarf::FormParams Params = {AP->getDwarfVersion(),
+                              uint8_t(AP->getPointerSize()),
+                              AP->OutStreamer->getContext().getDwarfFormat()};
 
   if (Optional<uint8_t> FixedSize = dwarf::getFixedFormByteSize(Form, Params))
     return *FixedSize;
