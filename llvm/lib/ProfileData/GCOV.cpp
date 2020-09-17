@@ -14,6 +14,7 @@
 #include "llvm/ProfileData/GCOV.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -316,6 +317,26 @@ bool GCOVArc::onTree() const { return flags & GCOV_ARC_ON_TREE; }
 //===----------------------------------------------------------------------===//
 // GCOVFunction implementation.
 
+StringRef GCOVFunction::getName(bool demangle) const {
+  if (!demangle)
+    return Name;
+  if (demangled.empty()) {
+    do {
+      if (Name.startswith("_Z")) {
+        int status = 0;
+        // Name is guaranteed to be NUL-terminated.
+        char *res = itaniumDemangle(Name.data(), nullptr, nullptr, &status);
+        if (status == 0) {
+          demangled = res;
+          free(res);
+          break;
+        }
+      }
+      demangled = Name;
+    } while (0);
+  }
+  return demangled;
+}
 StringRef GCOVFunction::getFilename() const { return file.filenames[srcIdx]; }
 
 /// getEntryCount - Get the number of times the function was called by
@@ -785,7 +806,7 @@ void Context::printSourceToIntermediate(const SourceInfo &si,
   for (const auto &fs : si.startLineToFunctions)
     for (const GCOVFunction *f : fs)
       os << "function:" << f->startLine << ',' << f->getEntryCount() << ','
-         << f->Name << '\n';
+         << f->getName(options.Demangle) << '\n';
   for (size_t lineNum = 1, size = si.lines.size(); lineNum < size; ++lineNum) {
     const LineInfo &line = si.lines[lineNum];
     if (line.blocks.empty())
@@ -832,7 +853,7 @@ void Context::print(StringRef filename, StringRef gcno, StringRef gcda,
 
   raw_ostream &os = llvm::outs();
   for (GCOVFunction &f : make_pointee_range(file.functions)) {
-    Summary summary(f.Name);
+    Summary summary(f.getName(options.Demangle));
     collectFunction(f, summary);
     if (options.FuncCoverage && !options.UseStdout) {
       os << "Function '" << summary.Name << "'\n";
@@ -900,8 +921,9 @@ void Context::printFunctionDetails(const GCOVFunction &f,
     if (b.number != 0 && &b != &exitBlock && b.getCount())
       ++blocksExec;
 
-  os << "function " << f.getName() << " called " << entryCount << " returned "
-     << formatPercentage(exitCount, entryCount) << "% blocks executed "
+  os << "function " << f.getName(options.Demangle) << " called " << entryCount
+     << " returned " << formatPercentage(exitCount, entryCount)
+     << "% blocks executed "
      << formatPercentage(blocksExec, f.blocks.size() - 2) << "%\n";
 }
 
