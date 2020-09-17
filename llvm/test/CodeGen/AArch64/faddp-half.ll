@@ -6,9 +6,7 @@ define half @faddp_2xhalf(<2 x half> %a) {
 ; CHECK-LABEL: faddp_2xhalf:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    dup v1.4h, v0.h[1]
-; CHECK-NEXT:    fadd v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-NEXT:    faddp h0, v0.2h
 ; CHECK-NEXT:    ret
 ;
 ; CHECKNOFP16-LABEL: faddp_2xhalf:
@@ -32,9 +30,7 @@ define half @faddp_2xhalf_commute(<2 x half> %a) {
 ; CHECK-LABEL: faddp_2xhalf_commute:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    dup v1.4h, v0.h[1]
-; CHECK-NEXT:    fadd v0.4h, v1.4h, v0.4h
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-NEXT:    faddp h0, v0.2h
 ; CHECK-NEXT:    ret
 ;
 ; CHECKNOFP16-LABEL: faddp_2xhalf_commute:
@@ -58,9 +54,7 @@ define half @faddp_4xhalf(<4 x half> %a) {
 ; CHECK-LABEL: faddp_4xhalf:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    dup v1.4h, v0.h[1]
-; CHECK-NEXT:    fadd v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-NEXT:    faddp h0, v0.2h
 ; CHECK-NEXT:    ret
 ;
 ; CHECKNOFP16-LABEL: faddp_4xhalf:
@@ -84,9 +78,7 @@ define half @faddp_4xhalf_commute(<4 x half> %a) {
 ; CHECK-LABEL: faddp_4xhalf_commute:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    dup v1.4h, v0.h[1]
-; CHECK-NEXT:    fadd v0.4h, v1.4h, v0.4h
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-NEXT:    faddp h0, v0.2h
 ; CHECK-NEXT:    ret
 ;
 ; CHECKNOFP16-LABEL: faddp_4xhalf_commute:
@@ -109,9 +101,7 @@ entry:
 define half @faddp_8xhalf(<8 x half> %a) {
 ; CHECK-LABEL: faddp_8xhalf:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    dup v1.8h, v0.h[1]
-; CHECK-NEXT:    fadd v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-NEXT:    faddp h0, v0.2h
 ; CHECK-NEXT:    ret
 ;
 ; CHECKNOFP16-LABEL: faddp_8xhalf:
@@ -132,9 +122,7 @@ entry:
 define half @faddp_8xhalf_commute(<8 x half> %a) {
 ; CHECK-LABEL: faddp_8xhalf_commute:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    dup v1.8h, v0.h[1]
-; CHECK-NEXT:    fadd v0.8h, v1.8h, v0.8h
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-NEXT:    faddp h0, v0.2h
 ; CHECK-NEXT:    ret
 ;
 ; CHECKNOFP16-LABEL: faddp_8xhalf_commute:

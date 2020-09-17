@@ -5,9 +5,7 @@ define float @faddp_2xfloat(<2 x float> %a) {
 ; CHECK-LABEL: faddp_2xfloat:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    dup v1.2s, v0.s[1]
-; CHECK-NEXT:    fadd v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 entry:
   %shift = shufflevector <2 x float> %a, <2 x float> undef, <2 x i32> <i32 1, i32 undef>
@@ -19,9 +17,7 @@ entry:
 define float @faddp_4xfloat(<4 x float> %a) {
 ; CHECK-LABEL: faddp_4xfloat:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    dup v1.4s, v0.s[1]
-; CHECK-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 entry:
   %shift = shufflevector <4 x float> %a, <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -33,9 +29,7 @@ entry:
 define float @faddp_4xfloat_commute(<4 x float> %a) {
 ; CHECK-LABEL: faddp_4xfloat_commute:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    dup v1.4s, v0.s[1]
-; CHECK-NEXT:    fadd v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 entry:
   %shift = shufflevector <4 x float> %a, <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -48,9 +42,7 @@ define float @faddp_2xfloat_commute(<2 x float> %a) {
 ; CHECK-LABEL: faddp_2xfloat_commute:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    dup v1.2s, v0.s[1]
-; CHECK-NEXT:    fadd v0.2s, v1.2s, v0.2s
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 entry:
   %shift = shufflevector <2 x float> %a, <2 x float> undef, <2 x i32> <i32 1, i32 undef>
@@ -62,9 +54,7 @@ entry:
 define double @faddp_2xdouble(<2 x double> %a) {
 ; CHECK-LABEL: faddp_2xdouble:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    dup v1.2d, v0.d[1]
-; CHECK-NEXT:    fadd v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    faddp d0, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %shift = shufflevector <2 x double> %a, <2 x double> undef, <2 x i32> <i32 1, i32 undef>
@@ -76,9 +66,7 @@ entry:
 define double @faddp_2xdouble_commute(<2 x double> %a) {
 ; CHECK-LABEL: faddp_2xdouble_commute:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    dup v1.2d, v0.d[1]
-; CHECK-NEXT:    fadd v0.2d, v1.2d, v0.2d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    faddp d0, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %shift = shufflevector <2 x double> %a, <2 x double> undef, <2 x i32> <i32 1, i32 undef>
@@ -90,8 +78,7 @@ entry:
 define i64 @addp_2xi64(<2 x i64> %a) {
 ; CHECK-LABEL: addp_2xi64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    dup v1.2d, v0.d[1]
-; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    addp d0, v0.2d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
@@ -104,8 +91,7 @@ entry:
 define i64 @addp_2xi64_commute(<2 x i64> %a) {
 ; CHECK-LABEL: addp_2xi64_commute:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    dup v1.2d, v0.d[1]
-; CHECK-NEXT:    add v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    addp d0, v0.2d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
