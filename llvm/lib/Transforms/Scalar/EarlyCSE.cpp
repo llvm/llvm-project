@@ -191,25 +191,16 @@ static bool matchSelectWithOptionalNotCond(Value *V, Value *&Cond, Value *&A,
     Pred = ICmpInst::getSwappedPredicate(Pred);
   }
 
-  // Check for inverted variants of min/max by swapping operands.
-  bool Inversed = false;
   switch (Pred) {
-  case CmpInst::ICMP_ULE:
-  case CmpInst::ICMP_UGE:
-  case CmpInst::ICMP_SLE:
-  case CmpInst::ICMP_SGE:
-    Pred = CmpInst::getInversePredicate(Pred);
-    Inversed = true;
-    break;
-  default:
-    break;
-  }
-
-  switch (Pred) {
-  case CmpInst::ICMP_UGT: Flavor = Inversed ? SPF_UMIN : SPF_UMAX; break;
-  case CmpInst::ICMP_ULT: Flavor = Inversed ? SPF_UMAX : SPF_UMIN; break;
-  case CmpInst::ICMP_SGT: Flavor = Inversed ? SPF_SMIN : SPF_SMAX; break;
-  case CmpInst::ICMP_SLT: Flavor = Inversed ? SPF_SMAX : SPF_SMIN; break;
+  case CmpInst::ICMP_UGT: Flavor = SPF_UMAX; break;
+  case CmpInst::ICMP_ULT: Flavor = SPF_UMIN; break;
+  case CmpInst::ICMP_SGT: Flavor = SPF_SMAX; break;
+  case CmpInst::ICMP_SLT: Flavor = SPF_SMIN; break;
+  // Non-strict inequalities.
+  case CmpInst::ICMP_ULE: Flavor = SPF_UMIN; break;
+  case CmpInst::ICMP_UGE: Flavor = SPF_UMAX; break;
+  case CmpInst::ICMP_SLE: Flavor = SPF_SMIN; break;
+  case CmpInst::ICMP_SGE: Flavor = SPF_SMAX; break;
   default: break;
   }
 
