@@ -163,6 +163,8 @@ public:
   bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
                             Intrinsic::ID IID) const;
 
+  bool legalizeBVHIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
+
   bool legalizeImageIntrinsic(
       MachineInstr &MI, MachineIRBuilder &B,
       GISelChangeObserver &Observer,
