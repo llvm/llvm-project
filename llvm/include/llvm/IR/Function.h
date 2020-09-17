@@ -658,6 +658,10 @@ public:
     return hasFnAttribute(Attribute::OptimizeForSize) || hasMinSize();
   }
 
+  /// Returns the denormal handling type for the default rounding mode of the
+  /// function.
+  DenormalMode getDenormalMode(const fltSemantics &FPType) const;
+
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a Function) from the Function Src to this one.
   void copyAttributesFrom(const Function *Src);
