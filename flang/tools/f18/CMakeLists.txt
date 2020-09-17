@@ -84,4 +84,4 @@ set(FLANG_INTRINSIC_MODULES_DIR ${CMAKE_INSTALL_PREFIX}/include/flang)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/flang.sh.in ${FLANG_BINARY_DIR}/bin/flang-install.sh @ONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/f18_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/f18_version.h @ONLY)
 
-install(PROGRAMS ${FLANG_BINARY_DIR}/bin/flang-install.sh DESTINATION bin RENAME flang PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE)
+install(PROGRAMS ${FLANG_BINARY_DIR}/bin/flang-install.sh DESTINATION bin RENAME flang)
