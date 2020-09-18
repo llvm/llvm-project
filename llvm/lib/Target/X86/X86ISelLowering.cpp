@@ -8649,7 +8649,7 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
   // b. t1 = (build_vector t0 t0)
   //
   // Create (VBROADCASTM v2i1 X)
-  if (Subtarget.hasCDI() && (VT.is512BitVector() || Subtarget.hasVLX())) {
+  if (Subtarget.hasCDI()) {
     MVT EltType = VT.getScalarType();
     unsigned NumElts = VT.getVectorNumElements();
     SDValue BOperand;
@@ -8666,12 +8666,17 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
       else
         BOperand = Ld.getOperand(0).getOperand(0);
       MVT MaskVT = BOperand.getSimpleValueType();
-      if ((EltType == MVT::i64 && MaskVT == MVT::v8i1) || // for broadcastmb2q
+      if ((EltType == MVT::i64 && MaskVT == MVT::v8i1) ||  // for broadcastmb2q
           (EltType == MVT::i32 && MaskVT == MVT::v16i1)) { // for broadcastmw2d
-        SDValue Brdcst =
-            DAG.getNode(X86ISD::VBROADCASTM, dl,
-                        MVT::getVectorVT(EltType, NumElts), BOperand);
-        return DAG.getBitcast(VT, Brdcst);
+        MVT BcstVT = MVT::getVectorVT(EltType, NumElts);
+        if (!VT.is512BitVector() && !Subtarget.hasVLX()) {
+          unsigned Scale = 512 / VT.getSizeInBits();
+          BcstVT = MVT::getVectorVT(EltType, NumElts * Scale);
+        }
+        SDValue Bcst = DAG.getNode(X86ISD::VBROADCASTM, dl, BcstVT, BOperand);
+        if (BcstVT.getSizeInBits() != VT.getSizeInBits())
+          Bcst = extractSubVector(Bcst, 0, DAG, dl, VT.getSizeInBits());
+        return DAG.getBitcast(VT, Bcst);
       }
     }
   }
