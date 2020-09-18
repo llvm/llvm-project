@@ -1768,11 +1768,13 @@ int32_t __tgt_rtl_run_target_team_region_locked(
 
       // assign a hostcall buffer for the selected Q
       if (g_atmi_hostcall_required) {
-        {
-
-          impl_args->hostcall_ptr = hostrpc_assign_buffer(
-              DeviceInfo.HSAAgents[device_id], queue, device_id);
-        }
+        // hostrpc_assign_buffer is not thread safe, and this function is
+        // under a multiple reader lock, not a writer lock.
+        static pthread_mutex_t hostcall_init_lock = PTHREAD_MUTEX_INITIALIZER;
+        pthread_mutex_lock(&hostcall_init_lock);
+        impl_args->hostcall_ptr = hostrpc_assign_buffer(
+            DeviceInfo.HSAAgents[device_id], queue, device_id);
+        pthread_mutex_unlock(&hostcall_init_lock);
       }
 
       packet->kernarg_address = kernarg;
