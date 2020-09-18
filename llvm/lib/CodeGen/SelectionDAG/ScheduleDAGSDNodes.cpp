@@ -696,8 +696,6 @@ void ScheduleDAGSDNodes::dumpNode(const SUnit &SU) const {
 
 void ScheduleDAGSDNodes::dump() const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  if (EntrySU.getNode() != nullptr)
-    dumpNodeAll(EntrySU);
   for (const SUnit &SU : SUnits)
     dumpNodeAll(SU);
   if (ExitSU.getNode() != nullptr)

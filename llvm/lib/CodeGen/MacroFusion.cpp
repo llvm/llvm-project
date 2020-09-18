@@ -109,23 +109,21 @@ static bool fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
 
   // Make the FirstSU also dependent on the dependencies of the SecondSU to
   // prevent them from being scheduled between the FirstSU and the SecondSU.
-  if (&FirstSU != &DAG.EntrySU) {
-    for (const SDep &SI : SecondSU.Preds) {
-      SUnit *SU = SI.getSUnit();
-      if (SI.isWeak() || isHazard(SI) || &FirstSU == SU || FirstSU.isSucc(SU))
-        continue;
-      LLVM_DEBUG(dbgs() << "  Bind "; DAG.dumpNodeName(*SU); dbgs() << " - ";
-                 DAG.dumpNodeName(FirstSU); dbgs() << '\n';);
-      DAG.addEdge(&FirstSU, SDep(SU, SDep::Artificial));
-    }
-    // ExitSU comes last by design, which acts like an implicit dependency
-    // between ExitSU and any bottom root in the graph. We should transfer
-    // this to FirstSU as well.
-    if (&SecondSU == &DAG.ExitSU) {
-      for (SUnit &SU : DAG.SUnits) {
-        if (SU.Succs.empty())
-          DAG.addEdge(&FirstSU, SDep(&SU, SDep::Artificial));
-      }
+  for (const SDep &SI : SecondSU.Preds) {
+    SUnit *SU = SI.getSUnit();
+    if (SI.isWeak() || isHazard(SI) || &FirstSU == SU || FirstSU.isSucc(SU))
+      continue;
+    LLVM_DEBUG(dbgs() << "  Bind "; DAG.dumpNodeName(*SU); dbgs() << " - ";
+               DAG.dumpNodeName(FirstSU); dbgs() << '\n';);
+    DAG.addEdge(&FirstSU, SDep(SU, SDep::Artificial));
+  }
+  // ExitSU comes last by design, which acts like an implicit dependency
+  // between ExitSU and any bottom root in the graph. We should transfer
+  // this to FirstSU as well.
+  if (&SecondSU == &DAG.ExitSU) {
+    for (SUnit &SU : DAG.SUnits) {
+      if (SU.Succs.empty())
+        DAG.addEdge(&FirstSU, SDep(&SU, SDep::Artificial));
     }
   }
 
