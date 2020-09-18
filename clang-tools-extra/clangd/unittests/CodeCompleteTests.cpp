@@ -10,7 +10,6 @@
 #include "ClangdServer.h"
 #include "CodeComplete.h"
 #include "Compiler.h"
-#include "CompletionModel.h"
 #include "Matchers.h"
 #include "Protocol.h"
 #include "Quality.h"
@@ -48,7 +47,6 @@ using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::UnorderedElementsAre;
-using ContextKind = CodeCompletionContext::Kind;
 
 // GMock helpers for matching completion items.
 MATCHER_P(Named, Name, "") { return arg.Name == Name; }
@@ -161,16 +159,6 @@ CodeCompleteResult completionsNoCompile(llvm::StringRef Text,
 Symbol withReferences(int N, Symbol S) {
   S.References = N;
   return S;
-}
-
-TEST(DecisionForestRuntime, SanityTest) {
-  using Example = clangd::Example;
-  using clangd::Evaluate;
-  Example E1;
-  E1.setContextKind(ContextKind::CCC_ArrowMemberAccess);
-  Example E2;
-  E2.setContextKind(ContextKind::CCC_SymbolOrNewName);
-  EXPECT_GT(Evaluate(E1), Evaluate(E2));
 }
 
 TEST(CompletionTest, Limit) {
