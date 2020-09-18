@@ -493,7 +493,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts std.zexti to spv.Select if the type of source is i1.
+/// Converts std.zexti to spv.Select if the type of source is i1 or vector of
+/// i1.
 class ZeroExtendI1Pattern final : public SPIRVOpLowering<ZeroExtendIOp> {
 public:
   using SPIRVOpLowering<ZeroExtendIOp>::SPIRVOpLowering;
@@ -502,13 +503,21 @@ public:
   matchAndRewrite(ZeroExtendIOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto srcType = operands.front().getType();
-    if (!srcType.isSignlessInteger() || srcType.getIntOrFloatBitWidth() != 1)
+    if (!isBoolScalarOrVector(srcType))
       return failure();
 
     auto dstType = this->typeConverter.convertType(op.getResult().getType());
     Location loc = op.getLoc();
-    Value zero = rewriter.create<ConstantIntOp>(loc, 0, dstType);
-    Value one = rewriter.create<ConstantIntOp>(loc, 1, dstType);
+    Attribute zeroAttr, oneAttr;
+    if (auto vectorType = dstType.dyn_cast<VectorType>()) {
+      zeroAttr = DenseElementsAttr::get(vectorType, 0);
+      oneAttr = DenseElementsAttr::get(vectorType, 1);
+    } else {
+      zeroAttr = IntegerAttr::get(dstType, 0);
+      oneAttr = IntegerAttr::get(dstType, 1);
+    }
+    Value zero = rewriter.create<ConstantOp>(loc, zeroAttr);
+    Value one = rewriter.create<ConstantOp>(loc, oneAttr);
     rewriter.template replaceOpWithNewOp<spirv::SelectOp>(
         op, dstType, operands.front(), one, zero);
     return success();
@@ -526,7 +535,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     assert(operands.size() == 1);
     auto srcType = operands.front().getType();
-    if (srcType.isSignlessInteger() && srcType.getIntOrFloatBitWidth() == 1)
+    if (isBoolScalarOrVector(srcType))
       return failure();
     auto dstType =
         this->typeConverter.convertType(operation.getResult().getType());

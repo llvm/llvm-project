@@ -578,6 +578,15 @@ func @zexti3(%arg0 : i1) -> i32 {
   return %0 : i32
 }
 
+// CHECK-LABEL: @zexti4
+func @zexti4(%arg0 : vector<4xi1>) -> vector<4xi32> {
+  // CHECK: %[[ZERO:.+]] = spv.constant dense<0> : vector<4xi32>
+  // CHECK: %[[ONE:.+]] = spv.constant dense<1> : vector<4xi32>
+  // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : vector<4xi1>, vector<4xi32>
+  %0 = std.zexti %arg0 : vector<4xi1> to vector<4xi32>
+  return %0 : vector<4xi32>
+}
+
 // CHECK-LABEL: @trunci1
 func @trunci1(%arg0 : i64) -> i16 {
   // CHECK: spv.SConvert %{{.*}} : i64 to i16
