@@ -9,7 +9,6 @@ The generated runtime provides an `Evaluate` function which can be used to score
 import argparse
 import json
 import struct
-from enum import Enum
 
 
 class CppClass:
