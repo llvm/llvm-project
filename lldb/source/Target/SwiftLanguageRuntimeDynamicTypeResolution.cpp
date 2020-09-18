@@ -765,7 +765,7 @@ SwiftLanguageRuntimeImpl::emplaceClangTypeInfo(
 llvm::Optional<uint64_t>
 SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
     CompilerType instance_type, ValueObject *instance,
-    ConstString member_name) {
+    llvm::StringRef member_name) {
   auto *scratch_ctx =
       llvm::cast<SwiftASTContext>(instance_type.GetTypeSystem());
   if (scratch_ctx->HasFatalErrors())
@@ -777,7 +777,7 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
       GetCanonicalSwiftType(instance_type).getPointer();
 
   // Perform the cache lookup.
-  MemberID key{swift_type, member_name.GetCString()};
+  MemberID key{swift_type, ConstString(member_name).GetCString()};
   auto it = m_member_offsets.find(key);
   if (it != m_member_offsets.end())
     return it->second;
@@ -818,7 +818,7 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
               bound.GetTypeName().AsCString());
 
           swift_type = GetCanonicalSwiftType(bound).getPointer();
-          MemberID key{swift_type, member_name.GetCString()};
+          MemberID key{swift_type, ConstString(member_name).GetCString()};
           auto it = m_member_offsets.find(key);
           if (it != m_member_offsets.end())
             return it->second;
@@ -834,15 +834,15 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
 
   // Use RemoteAST to determine the member offset.
   if (safe_to_use_remote_ast) {
-    swift::remoteAST::Result<uint64_t> result = remote_ast->getOffsetOfMember(
-        swift_type, optmeta, member_name.GetStringRef());
+    swift::remoteAST::Result<uint64_t> result =
+        remote_ast->getOffsetOfMember(swift_type, optmeta, member_name);
     if (result) {
       LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
                 "[MemberVariableOffsetResolver] offset discovered = %" PRIu64,
                 (uint64_t)result.getValue());
 
       // Cache this result.
-      MemberID key{swift_type, member_name.GetCString()};
+      MemberID key{swift_type, ConstString(member_name).GetCString()};
       m_member_offsets.insert({key, result.getValue()});
       return result.getValue();
     }
@@ -856,7 +856,7 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
 }
 
 llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteMirrors(
-    CompilerType instance_type, ValueObject *instance, ConstString member_name,
+    CompilerType instance_type, ValueObject *instance, llvm::StringRef member_name,
     Status *error) {
   LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
             "using remote mirrors");
@@ -880,7 +880,7 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemote
     // Handle tuples.
     if (ti->getRecordKind() == swift::reflection::RecordKind::Tuple) {
       unsigned tuple_idx;
-      if (member_name.GetStringRef().getAsInteger(10, tuple_idx) ||
+      if (member_name.getAsInteger(10, tuple_idx) ||
           tuple_idx >= ti->getNumFields()) {
         if (error)
           error->SetErrorString("tuple index out of bounds");
@@ -891,7 +891,7 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemote
 
     // Handle other record types.
    for (auto &field : fields)
-      if (StringRef(field.Name) == member_name.GetStringRef())
+      if (StringRef(field.Name) == member_name)
         return field.Offset;
   }
 
@@ -907,7 +907,7 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemote
                       "using instance type info");
           }
           for (auto &field : ti.getFields())
-            if (StringRef(field.Name) == member_name.GetStringRef()) {
+            if (StringRef(field.Name) == member_name) {
               result = field.Offset;
               return true;
             }
@@ -917,10 +917,9 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemote
   return result;
 }
 
-  
 llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
-    CompilerType instance_type, ValueObject *instance, ConstString member_name,
-    Status *error) {
+    CompilerType instance_type, ValueObject *instance,
+    llvm::StringRef member_name, Status *error) {
   llvm::Optional<uint64_t> offset;
 
   if (!instance_type.IsValid())
@@ -928,7 +927,7 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
 
   LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
             "[GetMemberVariableOffset] asked to resolve offset for member %s",
-            member_name.AsCString());
+            member_name.str().c_str());
 
   // Using the module context for RemoteAST is cheaper bit only safe
   // when there is no dynamic type resolution involved.
@@ -967,11 +966,11 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
   if (offset) {
     LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
               "[GetMemberVariableOffset] offset of %s is %d",
-              member_name.AsCString(), *offset);
+              member_name.str().c_str(), *offset);
   } else {
     LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
               "[GetMemberVariableOffset] failed for %s",
-              member_name.AsCString());
+              member_name.str().c_str());
     if (error)
       error->SetErrorStringWithFormat("could not resolve member offset");
   }

@@ -249,7 +249,7 @@ public:
   /// \param instance_type
   llvm::Optional<uint64_t> GetMemberVariableOffset(CompilerType instance_type,
                                                    ValueObject *instance,
-                                                   ConstString member_name,
+                                                   llvm::StringRef member_name,
                                                    Status *error = nullptr);
 
   /// Ask Remote Mirrors for the size of a Swift type.
