@@ -53,8 +53,6 @@ def ComplexTensorOp : TEST_Op<"complex_f64_tensor"> {
   let results = (outs TensorOf<[ComplexF64]>);
 }
 
-def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped">;
-
 def TupleOp : TEST_Op<"tuple_32_bit"> {
   let results = (outs TupleOf<[I32, F32]>);
 }
@@ -1513,6 +1511,22 @@ def FormatCustomDirectiveResults
   let assemblyFormat = [{
     custom<CustomDirectiveResults>(
       type($result), type($optResult), type($varResults)
+    )
+    attr-dict
+  }];
+}
+
+def FormatCustomDirectiveResultsWithTypeRefs
+    : TEST_Op<"format_custom_directive_results_with_type_refs",
+              [AttrSizedResultSegments]> {
+  let results = (outs AnyType:$result, Optional<AnyType>:$optResult,
+                      Variadic<AnyType>:$varResults);
+  let assemblyFormat = [{
+    custom<CustomDirectiveResults>(
+      type($result), type($optResult), type($varResults)
+    )
+    custom<CustomDirectiveWithTypeRefs>(
+      type_ref($result), type_ref($optResult), type_ref($varResults)
     )
     attr-dict
   }];

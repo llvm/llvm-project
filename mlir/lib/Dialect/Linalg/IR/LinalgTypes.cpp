@@ -58,6 +58,8 @@ struct LinalgInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 void mlir::linalg::LinalgDialect::initialize() {
+  getContext()->getOrLoadDialect("std");
+
   addTypes<RangeType>();
   addOperations<
 #define GET_OP_LIST
@@ -67,6 +69,7 @@ void mlir::linalg::LinalgDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
       >();
+
   addInterfaces<LinalgInlinerInterface>();
 }
 

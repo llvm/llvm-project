@@ -32,6 +32,7 @@ class NOutputs<int args_out> :
   NativeOpTrait<"linalg::NOutputs<" # !cast<string>(args_out) # ">::Impl"> {}
 
 def StructuredOpTraits : NativeOpTrait<"linalg::StructuredOpTraits">;
+def NamedStructuredOpTrait : NativeOpTrait<"linalg::NamedStructuredOpTrait">;
 
 // Base Tablegen class for Linalg ops.
 // Linalg ops that correspond to library calls operate on linalg::View as their
@@ -798,24 +799,7 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
 // Named Linalg ops, implemented as a declarative configurations of generic ops.
 //===----------------------------------------------------------------------===//
 
-class LinalgNamedStructured_Op<string mnemonic, list<OpTrait> props>
-    : LinalgStructuredBase_Op<mnemonic, props> {
-  string spec = ?;
-  // We cannot use an assemblyFormat atm because we need to hook in a custom-
-  // built implicit region from a static OpClass method.
-  // TODO: Revisit in the future if/when appropriate.
-  // let assemblyFormat = "`(` operands `)` attr-dict `:` "
-  //   "functional-type(operands, results)";
-
-  // The parser needs to specialize on the OpType so it has to be auto-generated
-  // in the linalg-ods tool.
-  let printer = [{ return ::printNamedStructuredOp(p, *this); }];
-  let verifier = [{ return ::verifyNamedStructuredOp(*this); }];
-  let hasFolder = 1;
-  let hasCanonicalizer = 1;
-}
-
-// This file is auto-generated from a tc specification.
+// This file is auto-generated from a TC def specification.
 include "mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.td"
 
 #endif // LINALG_STRUCTURED_OPS

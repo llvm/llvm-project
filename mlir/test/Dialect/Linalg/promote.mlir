@@ -27,10 +27,10 @@ func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
         %11 = std.subview %3[%arg4, %arg6][%c2, %c4][1, 1] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
         %14 = std.subview %4[%arg6, %arg5][%c4, %c3][1, 1] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
         %17 = std.subview %5[%arg4, %arg5][%c2, %c3][1, 1] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
-        linalg.matmul %11, %14, %17 :
-          (memref<?x?xf32, offset: ?, strides: [?, 1]>,
-           memref<?x?xf32, offset: ?, strides: [?, 1]>,
-           memref<?x?xf32, offset: ?, strides: [?, 1]>)
+        linalg.matmul
+          ins(%11, %14: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+                        memref<?x?xf32, offset: ?, strides: [?, 1]>)
+         outs(%17: memref<?x?xf32, offset: ?, strides: [?, 1]>)
       }
     }
   }
@@ -67,10 +67,7 @@ func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //       CHECK:         linalg.copy(%[[vB]], %[[partialB]]) : memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D_dynamic]]>
 //       CHECK:         linalg.copy(%[[vC]], %[[partialC]]) : memref<?x?xf32, #[[$strided2D]]>, memref<?x?xf32, #[[$strided2D_dynamic]]>
 //
-//       CHECK:         linalg.matmul %[[partialA]], %[[partialB]], %[[partialC]] :
-//       CHECK:           memref<?x?xf32, #[[$strided2D_dynamic]]>,
-//       CHECK:           memref<?x?xf32, #[[$strided2D_dynamic]]>,
-//       CHECK:           memref<?x?xf32, #[[$strided2D_dynamic]]>
+//       CHECK:         linalg.matmul ins(%[[partialA]], %[[partialB]]{{.*}} outs(%[[partialC]]
 //
 //       CHECK:         linalg.copy(%[[partialC]], %[[vC]]) :
 //       CHECK:           memref<?x?xf32, #[[$strided2D_dynamic]]>,
@@ -103,10 +100,10 @@ func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
         %11 = std.subview %3[%arg4, %arg6][%c2, %c4][1, 1] : memref<?x?xf64> to memref<?x?xf64, offset: ?, strides: [?, 1]>
         %14 = std.subview %4[%arg6, %arg5][%c4, %c3][1, 1] : memref<?x?xf64> to memref<?x?xf64, offset: ?, strides: [?, 1]>
         %17 = std.subview %5[%arg4, %arg5][%c2, %c3][1, 1] : memref<?x?xf64> to memref<?x?xf64, offset: ?, strides: [?, 1]>
-        linalg.matmul %11, %14, %17 :
-          (memref<?x?xf64, offset: ?, strides: [?, 1]>,
-           memref<?x?xf64, offset: ?, strides: [?, 1]>,
-           memref<?x?xf64, offset: ?, strides: [?, 1]>)
+        linalg.matmul
+          ins(%11, %14: memref<?x?xf64, offset: ?, strides: [?, 1]>,
+                        memref<?x?xf64, offset: ?, strides: [?, 1]>)
+         outs(%17: memref<?x?xf64, offset: ?, strides: [?, 1]>)
       }
     }
   }
@@ -140,10 +137,7 @@ func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //       CHECK:         linalg.copy(%[[vB_f64]], %[[partialB_f64]]) : memref<?x?xf64, #[[$strided2D]]>, memref<?x?xf64, #[[$strided2D_dynamic]]>
 //       CHECK:         linalg.copy(%[[vC_f64]], %[[partialC_f64]]) : memref<?x?xf64, #[[$strided2D]]>, memref<?x?xf64, #[[$strided2D_dynamic]]>
 //
-//       CHECK:         linalg.matmul %[[partialA_f64]], %[[partialB_f64]], %[[partialC_f64]] :
-//       CHECK:           memref<?x?xf64, #[[$strided2D_dynamic]]>,
-//       CHECK:           memref<?x?xf64, #[[$strided2D_dynamic]]>,
-//       CHECK:           memref<?x?xf64, #[[$strided2D_dynamic]]>
+//       CHECK:         linalg.matmul ins(%[[partialA_f64]], %[[partialB_f64]]{{.*}} outs(%[[partialC_f64]]
 //
 //       CHECK:         linalg.copy(%[[partialC_f64]], %[[vC_f64]]) :
 //       CHECK:           memref<?x?xf64, #[[$strided2D_dynamic]]>,

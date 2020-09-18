@@ -5,8 +5,10 @@ func @slicing_linalg_op(%arg0 : index, %arg1 : index, %arg2 : index) {
   %b = alloc(%arg2, %arg1) : memref<?x?xf32>
   %c = alloc(%arg0, %arg1) : memref<?x?xf32>
   %d = alloc(%arg0, %arg1) : memref<?x?xf32>
-  linalg.matmul %a, %b, %c : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>)
-  linalg.matmul %a, %b, %d : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>)
+  linalg.matmul ins(%a, %b : memref<?x?xf32>, memref<?x?xf32>)
+               outs(%c : memref<?x?xf32>)
+  linalg.matmul ins(%a, %b : memref<?x?xf32>, memref<?x?xf32>)
+               outs(%d : memref<?x?xf32>)
   dealloc %c : memref<?x?xf32>
   dealloc %b : memref<?x?xf32>
   dealloc %a : memref<?x?xf32>
