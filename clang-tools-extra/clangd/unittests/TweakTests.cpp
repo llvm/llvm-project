@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "Config.h"
 #include "SourceCode.h"
 #include "TestFS.h"
 #include "TestTU.h"
@@ -2471,8 +2472,14 @@ TEST_F(DefineOutlineTest, FailsMacroSpecifier) {
 
 TWEAK_TEST(AddUsing);
 TEST_F(AddUsingTest, Prepare) {
+  Config Cfg;
+  Cfg.Style.FullyQualifiedNamespaces.push_back("ban");
+  WithContextValue WithConfig(Config::Key, std::move(Cfg));
+
   const std::string Header = R"cpp(
 #define NS(name) one::two::name
+namespace ban { void foo() {} }
+namespace banana { void foo() {} }
 namespace one {
 void oo() {}
 template<typename TT> class tt {};
@@ -2506,6 +2513,10 @@ public:
   // Test that we don't crash or misbehave on unnamed DeclRefExpr.
   EXPECT_UNAVAILABLE(Header +
                      "void fun() { one::two::cc() ^| one::two::cc(); }");
+  // Do not offer code action when operating on a banned namespace.
+  EXPECT_UNAVAILABLE(Header + "void fun() { ban::fo^o(); }");
+  EXPECT_UNAVAILABLE(Header + "void fun() { ::ban::fo^o(); }");
+  EXPECT_AVAILABLE(Header + "void fun() { banana::fo^o(); }");
 
   // Check that we do not trigger in header files.
   FileName = "test.h";

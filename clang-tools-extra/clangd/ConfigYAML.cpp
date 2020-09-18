@@ -39,6 +39,7 @@ public:
     Dict.handle("If", [&](Node &N) { parse(F.If, N); });
     Dict.handle("CompileFlags", [&](Node &N) { parse(F.CompileFlags, N); });
     Dict.handle("Index", [&](Node &N) { parse(F.Index, N); });
+    Dict.handle("Style", [&](Node &N) { parse(F.Style, N); });
     Dict.parse(N);
     return !(N.failed() || HadError);
   }
@@ -68,6 +69,15 @@ private:
     Dict.handle("Remove", [&](Node &N) {
       if (auto Values = scalarValues(N))
         F.Remove = std::move(*Values);
+    });
+    Dict.parse(N);
+  }
+
+  void parse(Fragment::StyleBlock &F, Node &N) {
+    DictParser Dict("Style", this);
+    Dict.handle("FullyQualifiedNamespaces", [&](Node &N) {
+      if (auto Values = scalarValues(N))
+        F.FullyQualifiedNamespaces = std::move(*Values);
     });
     Dict.parse(N);
   }
