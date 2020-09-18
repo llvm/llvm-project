@@ -14746,6 +14746,32 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrin, { Src0->getType() });
     return Builder.CreateCall(F, { Src0, Builder.getFalse() });
   }
+  case AMDGPU::BI__builtin_amdgcn_ds_faddf:
+  case AMDGPU::BI__builtin_amdgcn_ds_fminf:
+  case AMDGPU::BI__builtin_amdgcn_ds_fmaxf: {
+    Intrinsic::ID Intrin;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_ds_faddf:
+      Intrin = Intrinsic::amdgcn_ds_fadd;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_fminf:
+      Intrin = Intrinsic::amdgcn_ds_fmin;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_fmaxf:
+      Intrin = Intrinsic::amdgcn_ds_fmax;
+      break;
+    }
+    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
+    llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
+    llvm::Value *Src3 = EmitScalarExpr(E->getArg(3));
+    llvm::Value *Src4 = EmitScalarExpr(E->getArg(4));
+    llvm::Function *F = CGM.getIntrinsic(Intrin, { Src1->getType() });
+    llvm::FunctionType *FTy = F->getFunctionType();
+    llvm::Type *PTy = FTy->getParamType(0);
+    Src0 = Builder.CreatePointerBitCastOrAddrSpaceCast(Src0, PTy);
+    return Builder.CreateCall(F, { Src0, Src1, Src2, Src3, Src4 });
+  }
   case AMDGPU::BI__builtin_amdgcn_read_exec: {
     CallInst *CI = cast<CallInst>(
       EmitSpecialRegisterBuiltin(*this, E, Int64Ty, Int64Ty, NormalRead, "exec"));
