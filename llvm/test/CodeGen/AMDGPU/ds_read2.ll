@@ -480,7 +480,11 @@ define amdgpu_kernel void @load_constant_disjoint_offsets(i32 addrspace(1)* %out
 ; GCN-DAG: v_mov_b32_e32 [[PTR:v[0-9]+]], bar@abs32@lo{{$}}
 ; CI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[PTR]] offset1:1
 ; CI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[PTR]] offset0:2 offset1:3
-; GFX9: ds_read_b128 v{{\[[0-9]+:[0-9]+\]}}, [[PTR]]
+
+; GFX9-ALIGNED-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[PTR]] offset1:1
+; GFX9-ALIGNED-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[PTR]] offset0:2 offset1:3
+
+; GFX9-UNALIGNED: ds_read_b128 v{{\[[0-9]+:[0-9]+\]}}, [[PTR]]
 define amdgpu_kernel void @load_misaligned64_constant_offsets(i64 addrspace(1)* %out) {
   %val0 = load i64, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 0), align 4
   %val1 = load i64, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 1), align 4
