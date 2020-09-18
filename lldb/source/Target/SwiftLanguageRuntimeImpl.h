@@ -162,6 +162,14 @@ protected:
   const swift::reflection::TypeRef *GetTypeRef(CompilerType type,
                                                Module *module = nullptr);
 
+  /// If \p instance points to a Swift object, retrieve its
+  /// RecordTypeInfo pass it to the callback \p fn. Repeat the process
+  /// with all superclasses. If \p fn returns \p true, early exit and
+  /// return \ptrue. Otherwise return \p false.
+  bool ForEachSuperClassTypeInfo(
+      ValueObject &instance,
+      std::function<bool(const swift::reflection::RecordTypeInfo &rti)> fn);
+
   // Classes that inherit from SwiftLanguageRuntime can see and modify these
   Value::ValueType GetValueType(Value::ValueType static_value_type,
                                 CompilerType static_type,
