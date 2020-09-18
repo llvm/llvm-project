@@ -319,8 +319,7 @@ public:
     using tu_range = DWARFUnitVector::iterator_range;
     using LineToUnitMap = std::map<uint64_t, DWARFUnit *>;
 
-    SectionParser(DWARFDataExtractor &Data, const DWARFContext &C, cu_range CUs,
-                  tu_range TUs);
+    SectionParser(DWARFDataExtractor &Data, const DWARFContext &C, DWARFUnitVector::iterator_range Units);
 
     /// Get the next line table from the section. Report any issues via the
     /// handlers.
