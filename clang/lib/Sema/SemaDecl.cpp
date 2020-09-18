@@ -9643,6 +9643,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
             NewFD->addAttr(BuiltinAttr::CreateImplicit(Context, BuiltinID));
           } else {
             ASTContext::GetBuiltinTypeError Error;
+            LookupPredefedObjCSuperType(*this, S, NewFD->getIdentifier());
             QualType BuiltinType = Context.GetBuiltinType(BuiltinID, Error);
 
             if (!Error && !BuiltinType.isNull() &&
