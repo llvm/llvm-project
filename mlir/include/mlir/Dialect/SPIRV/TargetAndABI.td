@@ -45,15 +45,6 @@ def SPV_CapabilityArrayAttr : TypedArrayAttrBase<
 // are the from Vulkan limit requirements:
 // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#limits-minmax
 def SPV_ResourceLimitsAttr : StructAttr<"ResourceLimitsAttr", SPIRV_Dialect, [
-    // Unique identifier for the vendor and target GPU.
-    // 0x7FFFFFFF means unknown.
-    StructFieldAttr<"vendor_id", DefaultValuedAttr<I32Attr, "0x7FFFFFFF">>,
-    StructFieldAttr<"device_id", DefaultValuedAttr<I32Attr, "0x7FFFFFFF">>,
-    // Target device type.
-    StructFieldAttr<"device_type",
-                    DefaultValuedAttr<SPV_DeviceTypeAttr,
-                                      "::mlir::spirv::DeviceType::Unknown">>,
-
     // The maximum total storage size, in bytes, available for variables
     // declared with the Workgroup storage class.
     StructFieldAttr<"max_compute_shared_memory_size",

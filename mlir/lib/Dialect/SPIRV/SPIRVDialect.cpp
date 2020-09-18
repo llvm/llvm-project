@@ -918,6 +918,42 @@ static Attribute parseTargetEnvAttr(DialectAsmParser &parser) {
   if (parser.parseAttribute(tripleAttr) || parser.parseComma())
     return {};
 
+  // Parse [vendor[:device-type[:device-id]]]
+  Vendor vendorID = Vendor::Unknown;
+  DeviceType deviceType = DeviceType::Unknown;
+  uint32_t deviceID = spirv::TargetEnvAttr::kUnknownDeviceID;
+  {
+    auto loc = parser.getCurrentLocation();
+    StringRef vendorStr;
+    if (succeeded(parser.parseOptionalKeyword(&vendorStr))) {
+      if (auto vendorSymbol = spirv::symbolizeVendor(vendorStr)) {
+        vendorID = *vendorSymbol;
+      } else {
+        parser.emitError(loc, "unknown vendor: ") << vendorStr;
+      }
+
+      if (succeeded(parser.parseOptionalColon())) {
+        loc = parser.getCurrentLocation();
+        StringRef deviceTypeStr;
+        if (parser.parseKeyword(&deviceTypeStr))
+          return {};
+        if (auto deviceTypeSymbol = spirv::symbolizeDeviceType(deviceTypeStr)) {
+          deviceType = *deviceTypeSymbol;
+        } else {
+          parser.emitError(loc, "unknown device type: ") << deviceTypeStr;
+        }
+
+        if (succeeded(parser.parseOptionalColon())) {
+          loc = parser.getCurrentLocation();
+          if (parser.parseInteger(deviceID))
+            return {};
+        }
+      }
+      if (parser.parseComma())
+        return {};
+    }
+  }
+
   DictionaryAttr limitsAttr;
   {
     auto loc = parser.getCurrentLocation();
@@ -937,7 +973,8 @@ static Attribute parseTargetEnvAttr(DialectAsmParser &parser) {
   if (parser.parseGreater())
     return {};
 
-  return spirv::TargetEnvAttr::get(tripleAttr, limitsAttr);
+  return spirv::TargetEnvAttr::get(tripleAttr, vendorID, deviceType, deviceID,
+                                   limitsAttr);
 }
 
 Attribute SPIRVDialect::parseAttribute(DialectAsmParser &parser,
@@ -986,6 +1023,17 @@ static void print(spirv::VerCapExtAttr triple, DialectAsmPrinter &printer) {
 static void print(spirv::TargetEnvAttr targetEnv, DialectAsmPrinter &printer) {
   printer << spirv::TargetEnvAttr::getKindName() << "<#spv.";
   print(targetEnv.getTripleAttr(), printer);
+  spirv::Vendor vendorID = targetEnv.getVendorID();
+  spirv::DeviceType deviceType = targetEnv.getDeviceType();
+  uint32_t deviceID = targetEnv.getDeviceID();
+  if (vendorID != spirv::Vendor::Unknown) {
+    printer << ", " << spirv::stringifyVendor(vendorID);
+    if (deviceType != spirv::DeviceType::Unknown) {
+      printer << ":" << spirv::stringifyDeviceType(deviceType);
+      if (deviceID != spirv::TargetEnvAttr::kUnknownDeviceID)
+        printer << ":" << deviceID;
+    }
+  }
   printer << ", " << targetEnv.getResourceLimits() << ">";
 }
 
