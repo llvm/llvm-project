@@ -107,7 +107,7 @@ def BOp : NS_Op<"b_op", []> {
     StrAttr:$str_attr,
     ElementsAttr:$elements_attr,
     FlatSymbolRefAttr:$function_attr,
-    SomeTypeAttr:$type_attr,
+    SomeTypeAttr:$some_type_attr,
     ArrayAttr:$array_attr,
     TypedArrayAttrBase<SomeAttr, "SomeAttr array">:$some_attr_array,
     TypeAttr:$type_attr
@@ -128,7 +128,7 @@ def BOp : NS_Op<"b_op", []> {
 // DEF: if (!((tblgen_str_attr.isa<::mlir::StringAttr>())))
 // DEF: if (!((tblgen_elements_attr.isa<::mlir::ElementsAttr>())))
 // DEF: if (!((tblgen_function_attr.isa<::mlir::FlatSymbolRefAttr>())))
-// DEF: if (!(((tblgen_type_attr.isa<::mlir::TypeAttr>())) && ((tblgen_type_attr.cast<::mlir::TypeAttr>().getValue().isa<SomeType>()))))
+// DEF: if (!(((tblgen_some_type_attr.isa<::mlir::TypeAttr>())) && ((tblgen_some_type_attr.cast<::mlir::TypeAttr>().getValue().isa<SomeType>()))))
 // DEF: if (!((tblgen_array_attr.isa<::mlir::ArrayAttr>())))
 // DEF: if (!(((tblgen_some_attr_array.isa<::mlir::ArrayAttr>())) && (::llvm::all_of(tblgen_some_attr_array.cast<::mlir::ArrayAttr>(), [](::mlir::Attribute attr) { return (some-condition); }))))
 // DEF: if (!(((tblgen_type_attr.isa<::mlir::TypeAttr>())) && ((tblgen_type_attr.cast<::mlir::TypeAttr>().getValue().isa<::mlir::Type>()))))
@@ -145,7 +145,7 @@ def BOp : NS_Op<"b_op", []> {
 // DEF: ::llvm::StringRef BOp::str_attr()
 // DEF: ::mlir::ElementsAttr BOp::elements_attr()
 // DEF: ::llvm::StringRef BOp::function_attr()
-// DEF: SomeType BOp::type_attr()
+// DEF: SomeType BOp::some_type_attr()
 // DEF: ::mlir::ArrayAttr BOp::array_attr()
 // DEF: ::mlir::ArrayAttr BOp::some_attr_array()
 // DEF: ::mlir::Type BOp::type_attr()

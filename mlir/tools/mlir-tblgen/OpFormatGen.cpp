@@ -922,11 +922,14 @@ static void genCustomDirectiveParser(CustomDirective *dir, OpMethodBody &body) {
 }
 
 void OperationFormat::genParser(Operator &op, OpClass &opClass) {
-  auto &method = opClass.newMethod(
-      "::mlir::ParseResult", "parse",
-      "::mlir::OpAsmParser &parser, ::mlir::OperationState &result",
-      OpMethod::MP_Static);
-  auto &body = method.body();
+  llvm::SmallVector<OpMethodParameter, 4> paramList;
+  paramList.emplace_back("::mlir::OpAsmParser &", "parser");
+  paramList.emplace_back("::mlir::OperationState &", "result");
+
+  auto *method =
+      opClass.addMethodAndPrune("::mlir::ParseResult", "parse",
+                                OpMethod::MP_Static, std::move(paramList));
+  auto &body = method->body();
 
   // Generate variables to store the operands and type within the format. This
   // allows for referencing these variables in the presence of optional
@@ -1611,8 +1614,9 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
 }
 
 void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
-  auto &method = opClass.newMethod("void", "print", "::mlir::OpAsmPrinter &p");
-  auto &body = method.body();
+  auto *method =
+      opClass.addMethodAndPrune("void", "print", "::mlir::OpAsmPrinter &p");
+  auto &body = method->body();
 
   // Emit the operation name, trimming the prefix if this is the standard
   // dialect.
