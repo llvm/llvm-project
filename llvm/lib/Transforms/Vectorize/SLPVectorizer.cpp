@@ -523,6 +523,15 @@ static bool isSimple(Instruction *I) {
 
 namespace llvm {
 
+static void inversePermutation(ArrayRef<unsigned> Indices,
+                               SmallVectorImpl<int> &Mask) {
+  Mask.clear();
+  const unsigned E = Indices.size();
+  Mask.resize(E, E + 1);
+  for (unsigned I = 0; I < E; ++I)
+    Mask[Indices[I]] = I;
+}
+
 namespace slpvectorizer {
 
 /// Bottom Up SLP Vectorizer.
@@ -537,6 +546,7 @@ public:
   using StoreList = SmallVector<StoreInst *, 8>;
   using ExtraValueToDebugLocsMap =
       MapVector<Value *, SmallVector<Instruction *, 2>>;
+  using OrdersType = SmallVector<unsigned, 4>;
 
   BoUpSLP(Function *Func, ScalarEvolution *Se, TargetTransformInfo *Tti,
           TargetLibraryInfo *TLi, AAResults *Aa, LoopInfo *Li,
@@ -614,6 +624,14 @@ public:
 
   /// \returns The best order of instructions for vectorization.
   Optional<ArrayRef<unsigned>> bestOrder() const {
+    assert(llvm::all_of(
+               NumOpsWantToKeepOrder,
+               [this](const decltype(NumOpsWantToKeepOrder)::value_type &D) {
+                 return D.getFirst().size() ==
+                        VectorizableTree[0]->Scalars.size();
+               }) &&
+           "All orders must have the same size as number of instructions in "
+           "tree node.");
     auto I = std::max_element(
         NumOpsWantToKeepOrder.begin(), NumOpsWantToKeepOrder.end(),
         [](const decltype(NumOpsWantToKeepOrder)::value_type &D1,
@@ -625,6 +643,81 @@ public:
       return None;
 
     return makeArrayRef(I->getFirst());
+  }
+
+  /// Builds the correct order for root instructions.
+  /// If some leaves have the same instructions to be vectorized, we may
+  /// incorrectly evaluate the best order for the root node (it is built for the
+  /// vector of instructions without repeated instructions and, thus, has less
+  /// elements than the root node). This function builds the correct order for
+  /// the root node.
+  /// For example, if the root node is \<a+b, a+c, a+d, f+e\>, then the leaves
+  /// are \<a, a, a, f\> and \<b, c, d, e\>. When we try to vectorize the first
+  /// leaf, it will be shrink to \<a, b\>. If instructions in this leaf should
+  /// be reordered, the best order will be \<1, 0\>. We need to extend this
+  /// order for the root node. For the root node this order should look like
+  /// \<3, 0, 1, 2\>. This function extends the order for the reused
+  /// instructions.
+  void findRootOrder(OrdersType &Order) {
+    // If the leaf has the same number of instructions to vectorize as the root
+    // - order must be set already.
+    unsigned RootSize = VectorizableTree[0]->Scalars.size();
+    if (Order.size() == RootSize)
+      return;
+    SmallVector<unsigned, 4> RealOrder(Order.size());
+    std::swap(Order, RealOrder);
+    SmallVector<int, 4> Mask;
+    inversePermutation(RealOrder, Mask);
+    Order.assign(Mask.begin(), Mask.end());
+    // The leaf has less number of instructions - need to find the true order of
+    // the root.
+    // Scan the nodes starting from the leaf back to the root.
+    const TreeEntry *PNode = VectorizableTree.back().get();
+    SmallVector<const TreeEntry *, 4> Nodes(1, PNode);
+    SmallPtrSet<const TreeEntry *, 4> Visited;
+    while (!Nodes.empty() && Order.size() != RootSize) {
+      const TreeEntry *PNode = Nodes.pop_back_val();
+      if (!Visited.insert(PNode).second)
+        continue;
+      const TreeEntry &Node = *PNode;
+      for (const EdgeInfo &EI : Node.UserTreeIndices)
+        if (EI.UserTE)
+          Nodes.push_back(EI.UserTE);
+      if (Node.ReuseShuffleIndices.empty())
+        continue;
+      // Build the order for the parent node.
+      OrdersType NewOrder(Node.ReuseShuffleIndices.size(), RootSize);
+      SmallVector<unsigned, 4> OrderCounter(Order.size(), 0);
+      // The algorithm of the order extension is:
+      // 1. Calculate the number of the same instructions for the order.
+      // 2. Calculate the index of the new order: total number of instructions
+      // with order less than the order of the current instruction + reuse
+      // number of the current instruction.
+      // 3. The new order is just the index of the instruction in the original
+      // vector of the instructions.
+      for (unsigned I : Node.ReuseShuffleIndices)
+        ++OrderCounter[Order[I]];
+      SmallVector<unsigned, 4> CurrentCounter(Order.size(), 0);
+      for (unsigned I = 0, E = Node.ReuseShuffleIndices.size(); I < E; ++I) {
+        unsigned ReusedIdx = Node.ReuseShuffleIndices[I];
+        unsigned OrderIdx = Order[ReusedIdx];
+        unsigned NewIdx = 0;
+        for (unsigned J = 0; J < OrderIdx; ++J)
+          NewIdx += OrderCounter[J];
+        NewIdx += CurrentCounter[OrderIdx];
+        ++CurrentCounter[OrderIdx];
+        assert(NewOrder[NewIdx] == RootSize &&
+               "The order index should not be written already.");
+        NewOrder[NewIdx] = I;
+      }
+      std::swap(Order, NewOrder);
+    }
+    assert(Order.size() == RootSize &&
+           "Root node is expected or the size of the order must be the same as "
+           "the number of elements in the root node.");
+    assert(llvm::all_of(Order,
+                        [RootSize](unsigned Val) { return Val != RootSize; }) &&
+           "All indices must be initialized");
   }
 
   /// \return The vector element size in bits to use when vectorizing the
@@ -1467,7 +1560,7 @@ private:
     SmallVector<int, 4> ReuseShuffleIndices;
 
     /// Does this entry require reordering?
-    ArrayRef<unsigned> ReorderIndices;
+    SmallVector<unsigned, 4> ReorderIndices;
 
     /// Points back to the VectorizableTree.
     ///
@@ -1660,7 +1753,7 @@ private:
     Last->State = Vectorized ? TreeEntry::Vectorize : TreeEntry::NeedToGather;
     Last->ReuseShuffleIndices.append(ReuseShuffleIndices.begin(),
                                      ReuseShuffleIndices.end());
-    Last->ReorderIndices = ReorderIndices;
+    Last->ReorderIndices.append(ReorderIndices.begin(), ReorderIndices.end());
     Last->setOperations(S);
     if (Vectorized) {
       for (int i = 0, e = VL.size(); i != e; ++i) {
@@ -2197,7 +2290,6 @@ private:
   /// List of users to ignore during scheduling and that don't need extracting.
   ArrayRef<Value *> UserIgnoreList;
 
-  using OrdersType = SmallVector<unsigned, 4>;
   /// A DenseMapInfo implementation for holding DenseMaps and DenseSets of
   /// sorted SmallVectors of unsigned.
   struct OrdersTypeDenseMapInfo {
@@ -2659,12 +2751,10 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         });
         // Insert new order with initial value 0, if it does not exist,
         // otherwise return the iterator to the existing one.
-        auto StoredCurrentOrderAndNum =
-            NumOpsWantToKeepOrder.try_emplace(CurrentOrder).first;
-        ++StoredCurrentOrderAndNum->getSecond();
         newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
-                     ReuseShuffleIndicies,
-                     StoredCurrentOrderAndNum->getFirst());
+                     ReuseShuffleIndicies, CurrentOrder);
+        findRootOrder(CurrentOrder);
+        ++NumOpsWantToKeepOrder[CurrentOrder];
         // This is a special case, as it does not gather, but at the same time
         // we are not extending buildTree_rec() towards the operands.
         ValueList Op0;
@@ -2741,13 +2831,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
             LLVM_DEBUG(dbgs() << "SLP: added a vector of loads.\n");
           } else {
             // Need to reorder.
-            auto I = NumOpsWantToKeepOrder.try_emplace(CurrentOrder).first;
-            ++I->getSecond();
             TreeEntry *TE =
                 newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
-                             ReuseShuffleIndicies, I->getFirst());
+                             ReuseShuffleIndicies, CurrentOrder);
             TE->setOperandsInOrder();
             LLVM_DEBUG(dbgs() << "SLP: added a vector of jumbled loads.\n");
+            findRootOrder(CurrentOrder);
+            ++NumOpsWantToKeepOrder[CurrentOrder];
           }
           return;
         }
@@ -3003,15 +3093,14 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
             buildTree_rec(Operands, Depth + 1, {TE, 0});
             LLVM_DEBUG(dbgs() << "SLP: added a vector of stores.\n");
           } else {
-            // Need to reorder.
-            auto I = NumOpsWantToKeepOrder.try_emplace(CurrentOrder).first;
-            ++(I->getSecond());
             TreeEntry *TE =
                 newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
-                             ReuseShuffleIndicies, I->getFirst());
+                             ReuseShuffleIndicies, CurrentOrder);
             TE->setOperandsInOrder();
             buildTree_rec(Operands, Depth + 1, {TE, 0});
             LLVM_DEBUG(dbgs() << "SLP: added a vector of jumbled stores.\n");
+            findRootOrder(CurrentOrder);
+            ++NumOpsWantToKeepOrder[CurrentOrder];
           }
           return;
         }
@@ -4139,15 +4228,6 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
     }
   }
   return V;
-}
-
-static void inversePermutation(ArrayRef<unsigned> Indices,
-                               SmallVectorImpl<int> &Mask) {
-  Mask.clear();
-  const unsigned E = Indices.size();
-  Mask.resize(E);
-  for (unsigned I = 0; I < E; ++I)
-    Mask[Indices[I]] = I;
 }
 
 Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
@@ -6873,8 +6953,10 @@ public:
       ArrayRef<Value *> VL = makeArrayRef(&ReducedVals[i], ReduxWidth);
       V.buildTree(VL, ExternallyUsedValues, IgnoreList);
       Optional<ArrayRef<unsigned>> Order = V.bestOrder();
-      // TODO: Handle orders of size less than number of elements in the vector.
-      if (Order && Order->size() == VL.size()) {
+      if (Order) {
+        assert(Order->size() == VL.size() &&
+               "Order size must be the same as number of vectorized "
+               "instructions.");
         // TODO: reorder tree nodes without tree rebuilding.
         SmallVector<Value *, 4> ReorderedOps(VL.size());
         llvm::transform(*Order, ReorderedOps.begin(),
