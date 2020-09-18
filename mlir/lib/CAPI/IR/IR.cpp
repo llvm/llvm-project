@@ -48,6 +48,10 @@ MlirLocation mlirLocationUnknownGet(MlirContext context) {
   return wrap(UnknownLoc::get(unwrap(context)));
 }
 
+MlirContext mlirLocationGetContext(MlirLocation location) {
+  return wrap(unwrap(location).getContext());
+}
+
 void mlirLocationPrint(MlirLocation location, MlirStringCallback callback,
                        void *userData) {
   detail::CallbackOstream stream(callback, userData);
@@ -68,6 +72,10 @@ MlirModule mlirModuleCreateParse(MlirContext context, const char *module) {
   if (!owning)
     return MlirModule{nullptr};
   return MlirModule{owning.release().getOperation()};
+}
+
+MlirContext mlirModuleGetContext(MlirModule module) {
+  return wrap(unwrap(module).getContext());
 }
 
 void mlirModuleDestroy(MlirModule module) {
@@ -347,6 +355,10 @@ void mlirTypeDump(MlirType type) { unwrap(type).dump(); }
 
 MlirAttribute mlirAttributeParseGet(MlirContext context, const char *attr) {
   return wrap(mlir::parseAttribute(attr, unwrap(context)));
+}
+
+MlirContext mlirAttributeGetContext(MlirAttribute attribute) {
+  return wrap(unwrap(attribute).getContext());
 }
 
 int mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2) {
