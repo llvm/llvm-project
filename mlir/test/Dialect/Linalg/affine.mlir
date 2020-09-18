@@ -15,7 +15,8 @@ func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
   %A = view %arg0[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32>
   %B = view %arg0[%c0][%K, %N] : memref<?xi8> to memref<?x?xf32>
   %C = view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
-  linalg.matmul %A, %B, %C : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>)
+  linalg.matmul ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
+               outs(%C: memref<?x?xf32>)
   return
 }
 
@@ -102,7 +103,8 @@ func @conv_padding(%arg0: memref<?x?x?x?xf32>,
 // Named ops to loops.
 //----------------------------------------------------------------------------//
 func @named_batch_matmul(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?x?xf32>) {
-  linalg.batch_matmul %A, %B, %C : (memref<?x?x?xf32>, memref<?x?x?xf32>, memref<?x?x?xf32>) -> ()
+  linalg.batch_matmul ins(%A, %B: memref<?x?x?xf32>, memref<?x?x?xf32>)
+                     outs(%C : memref<?x?x?xf32>)
   return
 }
 // CHECK-LABEL: @named_batch_matmul

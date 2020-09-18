@@ -30,7 +30,8 @@ func @alloc_5d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %s4 : index, %s
 }
 
 func @conv_3d_ncdhw(%arg0: memref<?x?x?x?x?xf32>, %arg1: memref<?x?x?x?x?xf32>, %arg2: memref<?x?x?x?x?xf32>) {
-  linalg.conv_3d_ncdhw %arg0, %arg1, %arg2 : (memref<?x?x?x?x?xf32>, memref<?x?x?x?x?xf32>, memref<?x?x?x?x?xf32>)
+  linalg.conv_3d_ncdhw ins (%arg0, %arg1: memref<?x?x?x?x?xf32>, memref<?x?x?x?x?xf32>)
+                      outs (%arg2: memref<?x?x?x?x?xf32>)
   return
 }
 

@@ -85,6 +85,11 @@ AffineMap extractOrIdentityMap(Optional<AffineMap> maybeMap, unsigned rank,
 SmallVector<AffineExpr, 4> concat(ArrayRef<AffineExpr> a,
                                   ArrayRef<AffineExpr> b);
 
+/// Return the dims that are `iteratorTypeName` loops in the LinalgOp `op`.
+/// Assumes `op` is a LinalgOp.
+void getDimsOfType(Operation *op, StringRef iteratorTypeName,
+                   SmallVectorImpl<AffineExpr> &res);
+
 } // namespace linalg
 } // namespace mlir
 
@@ -95,6 +100,5 @@ SmallVector<AffineExpr, 4> concat(ArrayRef<AffineExpr> a,
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.h.inc"
-
 
 #endif // MLIR_DIALECT_LINALG_LINALGOPS_H_

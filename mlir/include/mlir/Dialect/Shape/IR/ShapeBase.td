@@ -15,8 +15,6 @@
 
 include "mlir/IR/OpBase.td"
 
-def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped">;
-
 //===----------------------------------------------------------------------===//
 // Shape Inference dialect definitions
 //===----------------------------------------------------------------------===//
