@@ -2089,9 +2089,9 @@ RecordRecTy *Record::getType() {
 }
 
 DefInit *Record::getDefInit() {
-  if (!TheInit)
-    TheInit = new(Allocator) DefInit(this);
-  return TheInit;
+  if (!CorrespondingDefInit)
+    CorrespondingDefInit = new (Allocator) DefInit(this);
+  return CorrespondingDefInit;
 }
 
 void Record::setName(Init *NewName) {
