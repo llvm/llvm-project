@@ -20,10 +20,42 @@ write_cmake_config("features") {
   public_configs = [ ":features_config" ]
 }
 
+action("CompletionModelCpp") {
+  script = "quality/CompletionModelCodegen.py"
+  outputs = [
+    "$target_gen_dir/CompletionModel.cpp",
+    "$target_gen_dir/CompletionModel.h",
+  ]
+  args = [
+    "--model",
+    rebase_path("quality/model", root_build_dir),
+    "--output_dir",
+    rebase_path(target_gen_dir, root_build_dir),
+    "--filename",
+    "CompletionModel",
+    "--cpp_class",
+    "clang::clangd::Example",
+  ]
+}
+
+config("CompletionModelConfig") {
+  cflags = [ "-Wno-unused-label" ]
+}
+
+source_set("CompletionModel") {
+  configs += [
+    "//llvm/utils/gn/build:clang_code",
+    ":CompletionModelConfig",
+  ]
+  deps = [ ":CompletionModelCpp" ]
+  sources = get_target_outputs(":CompletionModelCpp")
+}
+
 static_library("clangd") {
   output_name = "clangDaemon"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":CompletionModel",
     ":features",
     "//clang-tools-extra/clang-tidy",
     "//clang-tools-extra/clang-tidy:all-checks",
