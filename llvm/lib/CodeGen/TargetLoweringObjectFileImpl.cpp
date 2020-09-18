@@ -1551,21 +1551,7 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForJumpTable(
 
 void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
                                                       Module &M) const {
-  if (NamedMDNode *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
-    // Emit the linker options to the linker .drectve section.  According to the
-    // spec, this section is a space-separated string containing flags for
-    // linker.
-    MCSection *Sec = getDrectveSection();
-    Streamer.SwitchSection(Sec);
-    for (const auto *Option : LinkerOptions->operands()) {
-      for (const auto &Piece : cast<MDNode>(Option)->operands()) {
-        // Lead with a space for consistency with our dllexport implementation.
-        std::string Directive(" ");
-        Directive.append(std::string(cast<MDString>(Piece)->getString()));
-        Streamer.emitBytes(Directive);
-      }
-    }
-  }
+  emitLinkerDirectives(Streamer, M);
 
   unsigned Version = 0;
   unsigned Flags = 0;
@@ -1586,6 +1572,65 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
   }
 
   emitCGProfile(Streamer, M);
+}
+
+void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
+    MCStreamer &Streamer, Module &M) const {
+  if (NamedMDNode *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
+    // Emit the linker options to the linker .drectve section.  According to the
+    // spec, this section is a space-separated string containing flags for
+    // linker.
+    MCSection *Sec = getDrectveSection();
+    Streamer.SwitchSection(Sec);
+    for (const auto *Option : LinkerOptions->operands()) {
+      for (const auto &Piece : cast<MDNode>(Option)->operands()) {
+        // Lead with a space for consistency with our dllexport implementation.
+        std::string Directive(" ");
+        Directive.append(std::string(cast<MDString>(Piece)->getString()));
+        Streamer.emitBytes(Directive);
+      }
+    }
+  }
+
+  // Emit /EXPORT: flags for each exported global as necessary.
+  std::string Flags;
+  for (const GlobalValue &GV : M.global_values()) {
+    raw_string_ostream OS(Flags);
+    emitLinkerFlagsForGlobalCOFF(OS, &GV, getTargetTriple(), getMangler());
+    OS.flush();
+    if (!Flags.empty()) {
+      Streamer.SwitchSection(getDrectveSection());
+      Streamer.emitBytes(Flags);
+    }
+    Flags.clear();
+  }
+
+  // Emit /INCLUDE: flags for each used global as necessary.
+  if (const auto *LU = M.getNamedGlobal("llvm.used")) {
+    assert(LU->hasInitializer() && "expected llvm.used to have an initializer");
+    assert(isa<ArrayType>(LU->getValueType()) &&
+           "expected llvm.used to be an array type");
+    if (const auto *A = cast<ConstantArray>(LU->getInitializer())) {
+      for (const Value *Op : A->operands()) {
+        const auto *GV = cast<GlobalValue>(Op->stripPointerCasts());
+        // Global symbols with internal or private linkage are not visible to
+        // the linker, and thus would cause an error when the linker tried to
+        // preserve the symbol due to the `/include:` directive.
+        if (GV->hasLocalLinkage())
+          continue;
+
+        raw_string_ostream OS(Flags);
+        emitLinkerFlagsForUsedCOFF(OS, GV, getTargetTriple(), getMangler());
+        OS.flush();
+
+        if (!Flags.empty()) {
+          Streamer.SwitchSection(getDrectveSection());
+          Streamer.emitBytes(Flags);
+        }
+        Flags.clear();
+      }
+    }
+  }
 }
 
 void TargetLoweringObjectFileCOFF::Initialize(MCContext &Ctx,
@@ -1663,16 +1708,6 @@ MCSection *TargetLoweringObjectFileCOFF::getStaticDtorSection(
   return getCOFFStaticStructorSection(getContext(), getTargetTriple(), false,
                                       Priority, KeySym,
                                       cast<MCSectionCOFF>(StaticDtorSection));
-}
-
-void TargetLoweringObjectFileCOFF::emitLinkerFlagsForGlobal(
-    raw_ostream &OS, const GlobalValue *GV) const {
-  emitLinkerFlagsForGlobalCOFF(OS, GV, getTargetTriple(), getMangler());
-}
-
-void TargetLoweringObjectFileCOFF::emitLinkerFlagsForUsed(
-    raw_ostream &OS, const GlobalValue *GV) const {
-  emitLinkerFlagsForUsedCOFF(OS, GV, getTargetTriple(), getMangler());
 }
 
 const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(

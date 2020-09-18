@@ -1720,51 +1720,6 @@ bool AsmPrinter::doFinalization(Module &M) {
     if (MCSection *S = MAI->getNonexecutableStackSection(OutContext))
       OutStreamer->SwitchSection(S);
 
-  if (TM.getTargetTriple().isOSBinFormatCOFF()) {
-    // Emit /EXPORT: flags for each exported global as necessary.
-    const auto &TLOF = getObjFileLowering();
-    std::string Flags;
-
-    for (const GlobalValue &GV : M.global_values()) {
-      raw_string_ostream OS(Flags);
-      TLOF.emitLinkerFlagsForGlobal(OS, &GV);
-      OS.flush();
-      if (!Flags.empty()) {
-        OutStreamer->SwitchSection(TLOF.getDrectveSection());
-        OutStreamer->emitBytes(Flags);
-      }
-      Flags.clear();
-    }
-
-    // Emit /INCLUDE: flags for each used global as necessary.
-    if (const auto *LU = M.getNamedGlobal("llvm.used")) {
-      assert(LU->hasInitializer() &&
-             "expected llvm.used to have an initializer");
-      assert(isa<ArrayType>(LU->getValueType()) &&
-             "expected llvm.used to be an array type");
-      if (const auto *A = cast<ConstantArray>(LU->getInitializer())) {
-        for (const Value *Op : A->operands()) {
-          const auto *GV = cast<GlobalValue>(Op->stripPointerCasts());
-          // Global symbols with internal or private linkage are not visible to
-          // the linker, and thus would cause an error when the linker tried to
-          // preserve the symbol due to the `/include:` directive.
-          if (GV->hasLocalLinkage())
-            continue;
-
-          raw_string_ostream OS(Flags);
-          TLOF.emitLinkerFlagsForUsed(OS, GV);
-          OS.flush();
-
-          if (!Flags.empty()) {
-            OutStreamer->SwitchSection(TLOF.getDrectveSection());
-            OutStreamer->emitBytes(Flags);
-          }
-          Flags.clear();
-        }
-      }
-    }
-  }
-
   if (TM.Options.EmitAddrsig) {
     // Emit address-significance attributes for all globals.
     OutStreamer->emitAddrsig();
