@@ -560,7 +560,7 @@ PtraceRegistersStatus SuspendedThreadsListLinux::GetRegistersAndSP(
                            &pterrno);
       if (fail) {
         VReport(1, "Could not get regset %p from thread %d (errno %d).\n",
-                regset, tid, pterrno);
+                (void *)regset, tid, pterrno);
         buffer->resize(size);
         return false;
       }
