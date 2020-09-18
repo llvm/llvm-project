@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -1100,10 +1101,12 @@ void MachineInstr::tieOperands(unsigned DefIdx, unsigned UseIdx) {
   if (DefIdx < TiedMax)
     UseMO.TiedTo = DefIdx + 1;
   else {
-    // Inline asm can use the group descriptors to find tied operands, but on
-    // normal instruction, the tied def must be within the first TiedMax
+    // Inline asm can use the group descriptors to find tied operands,
+    // statepoint tied operands are trivial to match (1-1 reg def with reg use),
+    // but on normal instruction, the tied def must be within the first TiedMax
     // operands.
-    assert(isInlineAsm() && "DefIdx out of range");
+    assert((isInlineAsm() || getOpcode() == TargetOpcode::STATEPOINT) &&
+           "DefIdx out of range");
     UseMO.TiedTo = TiedMax;
   }
 
@@ -1123,7 +1126,7 @@ unsigned MachineInstr::findTiedOperandIdx(unsigned OpIdx) const {
     return MO.TiedTo - 1;
 
   // Uses on normal instructions can be out of range.
-  if (!isInlineAsm()) {
+  if (!isInlineAsm() && getOpcode() != TargetOpcode::STATEPOINT) {
     // Normal tied defs must be in the 0..TiedMax-1 range.
     if (MO.isUse())
       return TiedMax - 1;
@@ -1132,6 +1135,25 @@ unsigned MachineInstr::findTiedOperandIdx(unsigned OpIdx) const {
       const MachineOperand &UseMO = getOperand(i);
       if (UseMO.isReg() && UseMO.isUse() && UseMO.TiedTo == OpIdx + 1)
         return i;
+    }
+    llvm_unreachable("Can't find tied use");
+  }
+
+  if (getOpcode() == TargetOpcode::STATEPOINT) {
+    // In STATEPOINT defs correspond 1-1 to GC pointer operands passed
+    // on registers.
+    StatepointOpers SO(this);
+    unsigned CurUseIdx = SO.getFirstGCPtrIdx();
+    assert(CurUseIdx != -1U && "only gc pointer statepoint operands can be tied");
+    unsigned NumDefs = getNumDefs();
+    for (unsigned CurDefIdx = 0; CurDefIdx < NumDefs; ++CurDefIdx) {
+      while (!getOperand(CurUseIdx).isReg())
+        CurUseIdx = StackMaps::getNextMetaArgIdx(this, CurUseIdx);
+      if (OpIdx == CurDefIdx)
+        return CurUseIdx;
+      if (OpIdx == CurUseIdx)
+        return CurDefIdx;
+      CurUseIdx = StackMaps::getNextMetaArgIdx(this, CurUseIdx);
     }
     llvm_unreachable("Can't find tied use");
   }
@@ -1458,6 +1480,8 @@ void MachineInstr::copyImplicitOps(MachineFunction &MF,
 
 bool MachineInstr::hasComplexRegisterTies() const {
   const MCInstrDesc &MCID = getDesc();
+  if (MCID.Opcode == TargetOpcode::STATEPOINT)
+    return true;
   for (unsigned I = 0, E = getNumOperands(); I < E; ++I) {
     const auto &Operand = getOperand(I);
     if (!Operand.isReg() || Operand.isDef())
