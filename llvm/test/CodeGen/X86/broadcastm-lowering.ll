@@ -7,53 +7,25 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512vl,avx512cd,+avx512bw,+fast-variable-shuffle | FileCheck %s --check-prefixes=ALL,AVX512VLCDBW,X86-AVX512VLCDBW
 
 define <2 x i64> @test_mm_epi64(<8 x i16> %a, <8 x i16> %b) {
-; X64-AVX512CD-LABEL: test_mm_epi64:
-; X64-AVX512CD:       # %bb.0: # %entry
-; X64-AVX512CD-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; X64-AVX512CD-NEXT:    vpmovsxwq %xmm0, %zmm0
-; X64-AVX512CD-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; X64-AVX512CD-NEXT:    kmovw %k0, %eax
-; X64-AVX512CD-NEXT:    movzbl %al, %eax
-; X64-AVX512CD-NEXT:    vmovq %rax, %xmm0
-; X64-AVX512CD-NEXT:    vpbroadcastq %xmm0, %xmm0
-; X64-AVX512CD-NEXT:    vzeroupper
-; X64-AVX512CD-NEXT:    retq
+; AVX512CD-LABEL: test_mm_epi64:
+; AVX512CD:       # %bb.0: # %entry
+; AVX512CD-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
+; AVX512CD-NEXT:    vpmovsxwq %xmm0, %zmm0
+; AVX512CD-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; AVX512CD-NEXT:    vpbroadcastmb2q %k0, %zmm0
+; AVX512CD-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512CD-NEXT:    vzeroupper
+; AVX512CD-NEXT:    ret{{[l|q]}}
 ;
-; X86-AVX512CD-LABEL: test_mm_epi64:
-; X86-AVX512CD:       # %bb.0: # %entry
-; X86-AVX512CD-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; X86-AVX512CD-NEXT:    vpmovsxwq %xmm0, %zmm0
-; X86-AVX512CD-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; X86-AVX512CD-NEXT:    kmovw %k0, %eax
-; X86-AVX512CD-NEXT:    movzbl %al, %eax
-; X86-AVX512CD-NEXT:    vmovd %eax, %xmm0
-; X86-AVX512CD-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3],zero,zero,zero,zero,xmm0[0,1,2,3],zero,zero,zero,zero
-; X86-AVX512CD-NEXT:    vzeroupper
-; X86-AVX512CD-NEXT:    retl
-;
-; X64-AVX512CDBW-LABEL: test_mm_epi64:
-; X64-AVX512CDBW:       # %bb.0: # %entry
-; X64-AVX512CDBW-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; X64-AVX512CDBW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; X64-AVX512CDBW-NEXT:    vpcmpeqw %zmm1, %zmm0, %k0
-; X64-AVX512CDBW-NEXT:    kmovd %k0, %eax
-; X64-AVX512CDBW-NEXT:    movzbl %al, %eax
-; X64-AVX512CDBW-NEXT:    vmovq %rax, %xmm0
-; X64-AVX512CDBW-NEXT:    vpbroadcastq %xmm0, %xmm0
-; X64-AVX512CDBW-NEXT:    vzeroupper
-; X64-AVX512CDBW-NEXT:    retq
-;
-; X86-AVX512CDBW-LABEL: test_mm_epi64:
-; X86-AVX512CDBW:       # %bb.0: # %entry
-; X86-AVX512CDBW-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; X86-AVX512CDBW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; X86-AVX512CDBW-NEXT:    vpcmpeqw %zmm1, %zmm0, %k0
-; X86-AVX512CDBW-NEXT:    kmovd %k0, %eax
-; X86-AVX512CDBW-NEXT:    movzbl %al, %eax
-; X86-AVX512CDBW-NEXT:    vmovd %eax, %xmm0
-; X86-AVX512CDBW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3],zero,zero,zero,zero,xmm0[0,1,2,3],zero,zero,zero,zero
-; X86-AVX512CDBW-NEXT:    vzeroupper
-; X86-AVX512CDBW-NEXT:    retl
+; AVX512CDBW-LABEL: test_mm_epi64:
+; AVX512CDBW:       # %bb.0: # %entry
+; AVX512CDBW-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512CDBW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512CDBW-NEXT:    vpcmpeqw %zmm1, %zmm0, %k0
+; AVX512CDBW-NEXT:    vpbroadcastmb2q %k0, %zmm0
+; AVX512CDBW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512CDBW-NEXT:    vzeroupper
+; AVX512CDBW-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512VLCDBW-LABEL: test_mm_epi64:
 ; AVX512VLCDBW:       # %bb.0: # %entry
@@ -83,9 +55,8 @@ define <4 x i32> @test_mm_epi32(<16 x i8> %a, <16 x i8> %b) {
 ; AVX512CDBW-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512CDBW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512CDBW-NEXT:    vpcmpeqb %zmm1, %zmm0, %k0
-; AVX512CDBW-NEXT:    kmovw %k0, %eax
-; AVX512CDBW-NEXT:    vmovd %eax, %xmm0
-; AVX512CDBW-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX512CDBW-NEXT:    vpbroadcastmw2d %k0, %zmm0
+; AVX512CDBW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512CDBW-NEXT:    vzeroupper
 ; AVX512CDBW-NEXT:    ret{{[l|q]}}
 ;
@@ -150,49 +121,23 @@ entry:
 }
 
 define <4 x i64> @test_mm256_epi64(<8 x i32> %a, <8 x i32> %b) {
-; X64-AVX512CD-LABEL: test_mm256_epi64:
-; X64-AVX512CD:       # %bb.0: # %entry
-; X64-AVX512CD-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; X64-AVX512CD-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; X64-AVX512CD-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
-; X64-AVX512CD-NEXT:    kmovw %k0, %eax
-; X64-AVX512CD-NEXT:    movzbl %al, %eax
-; X64-AVX512CD-NEXT:    vmovq %rax, %xmm0
-; X64-AVX512CD-NEXT:    vpbroadcastq %xmm0, %ymm0
-; X64-AVX512CD-NEXT:    retq
+; AVX512CD-LABEL: test_mm256_epi64:
+; AVX512CD:       # %bb.0: # %entry
+; AVX512CD-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512CD-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512CD-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; AVX512CD-NEXT:    vpbroadcastmb2q %k0, %zmm0
+; AVX512CD-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512CD-NEXT:    ret{{[l|q]}}
 ;
-; X86-AVX512CD-LABEL: test_mm256_epi64:
-; X86-AVX512CD:       # %bb.0: # %entry
-; X86-AVX512CD-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; X86-AVX512CD-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; X86-AVX512CD-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
-; X86-AVX512CD-NEXT:    kmovw %k0, %eax
-; X86-AVX512CD-NEXT:    movzbl %al, %eax
-; X86-AVX512CD-NEXT:    vmovd %eax, %xmm0
-; X86-AVX512CD-NEXT:    vpbroadcastq %xmm0, %ymm0
-; X86-AVX512CD-NEXT:    retl
-;
-; X64-AVX512CDBW-LABEL: test_mm256_epi64:
-; X64-AVX512CDBW:       # %bb.0: # %entry
-; X64-AVX512CDBW-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; X64-AVX512CDBW-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; X64-AVX512CDBW-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
-; X64-AVX512CDBW-NEXT:    kmovd %k0, %eax
-; X64-AVX512CDBW-NEXT:    movzbl %al, %eax
-; X64-AVX512CDBW-NEXT:    vmovq %rax, %xmm0
-; X64-AVX512CDBW-NEXT:    vpbroadcastq %xmm0, %ymm0
-; X64-AVX512CDBW-NEXT:    retq
-;
-; X86-AVX512CDBW-LABEL: test_mm256_epi64:
-; X86-AVX512CDBW:       # %bb.0: # %entry
-; X86-AVX512CDBW-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; X86-AVX512CDBW-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; X86-AVX512CDBW-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
-; X86-AVX512CDBW-NEXT:    kmovd %k0, %eax
-; X86-AVX512CDBW-NEXT:    movzbl %al, %eax
-; X86-AVX512CDBW-NEXT:    vmovd %eax, %xmm0
-; X86-AVX512CDBW-NEXT:    vpbroadcastq %xmm0, %ymm0
-; X86-AVX512CDBW-NEXT:    retl
+; AVX512CDBW-LABEL: test_mm256_epi64:
+; AVX512CDBW:       # %bb.0: # %entry
+; AVX512CDBW-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512CDBW-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512CDBW-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; AVX512CDBW-NEXT:    vpbroadcastmb2q %k0, %zmm0
+; AVX512CDBW-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512CDBW-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512VLCDBW-LABEL: test_mm256_epi64:
 ; AVX512VLCDBW:       # %bb.0: # %entry
@@ -214,9 +159,8 @@ define <8 x i32> @test_mm256_epi32(<16 x i16> %a, <16 x i16> %b) {
 ; AVX512CD-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
 ; AVX512CD-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVX512CD-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512CD-NEXT:    kmovw %k0, %eax
-; AVX512CD-NEXT:    vmovd %eax, %xmm0
-; AVX512CD-NEXT:    vpbroadcastd %xmm0, %ymm0
+; AVX512CD-NEXT:    vpbroadcastmw2d %k0, %zmm0
+; AVX512CD-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512CD-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512CDBW-LABEL: test_mm256_epi32:
@@ -224,9 +168,8 @@ define <8 x i32> @test_mm256_epi32(<16 x i16> %a, <16 x i16> %b) {
 ; AVX512CDBW-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512CDBW-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512CDBW-NEXT:    vpcmpeqw %zmm1, %zmm0, %k0
-; AVX512CDBW-NEXT:    kmovw %k0, %eax
-; AVX512CDBW-NEXT:    vmovd %eax, %xmm0
-; AVX512CDBW-NEXT:    vpbroadcastd %xmm0, %ymm0
+; AVX512CDBW-NEXT:    vpbroadcastmw2d %k0, %zmm0
+; AVX512CDBW-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512CDBW-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512VLCDBW-LABEL: test_mm256_epi32:
