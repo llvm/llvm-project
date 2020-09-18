@@ -741,7 +741,7 @@ def Shape_ConstWitnessOp : Shape_Op<"const_witness", [ConstantLike, NoSideEffect
 def Shape_CstrRequireOp : Shape_Op<"cstr_require", []> {
   let summary = "Represents a runtime assertion that an i1 is `true`";
   let description = [{
-    Represents a runtime assretion that an i1 is true. It returns a
+    Represents a runtime assertion that an i1 is true. It returns a
     !shape.witness to order this assertion.
 
     For simplicity, prefer using other cstr_* ops if they are available for a
@@ -750,13 +750,17 @@ def Shape_CstrRequireOp : Shape_Op<"cstr_require", []> {
     Example:
     ```mlir
     %bool = ...
-    %w0 = shape.cstr_require %bool // Passing if `%bool` is true.
+    %w0 = shape.cstr_require %bool, "msg" // Passing if `%bool` is true.
     ```
+
+    Since this op can be used to express many different possible assertions
+    (depending on whatever computation calculated `pred`), the `msg`
+    should clarify the nature of the assertion for users.
   }];
-  let arguments = (ins I1:$pred);
+  let arguments = (ins I1:$pred, StrAttr:$msg);
   let results = (outs Shape_WitnessType:$result);
 
-  let assemblyFormat = "$pred attr-dict";
+  let assemblyFormat = "$pred `,` $msg attr-dict";
 
   let hasFolder = 1;
 }

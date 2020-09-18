@@ -393,7 +393,7 @@ func @cstr_require_fold() {
   // CHECK-NEXT: consume.witness
   // CHECK-NEXT: return
   %true = constant true
-  %0 = shape.cstr_require %true
+  %0 = shape.cstr_require %true, "msg"
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }
@@ -405,7 +405,7 @@ func @cstr_require_no_fold(%arg0: i1) {
   // CHECK-NEXT: shape.cstr_require
   // CHECK-NEXT: consume.witness
   // CHECK-NEXT: return
-  %0 = shape.cstr_require %arg0
+  %0 = shape.cstr_require %arg0, "msg"
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
 }
