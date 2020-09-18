@@ -499,7 +499,6 @@ DWARF:
       LineRange:       14
       OpcodeBase:      13
       StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
-      IncludeDirs:     
       Files:           
         - Name:            hello_world.c
           DirIdx:          0
@@ -540,7 +539,6 @@ DWARF:
 # CHECK-NEXT:     LineRange:       14
 # CHECK-NEXT:     OpcodeBase:      13
 # CHECK-NEXT:     StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
-# CHECK-NEXT:     IncludeDirs:
 # CHECK-NEXT:     Files:
 # CHECK-NEXT:       - Name:            hello_world.c
 # CHECK-NEXT:         DirIdx:          0
