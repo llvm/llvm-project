@@ -44,6 +44,10 @@ config.test_source_root = os.path.join(config.libunwind_src_root, 'test')
 # Allow expanding substitutions that are based on other substitutions
 config.recursiveExpansionLimit = 10
 
+# Make symbols available in the tests.
+config.test_compiler_flags += " -funwind-tables "
+config.test_linker_flags += " -Wl,--export-dynamic "
+
 # Infer the test_exec_root from the build directory.
 config.test_exec_root = os.path.join(config.libunwind_obj_root, 'test')
 
