@@ -548,8 +548,7 @@ void DWARFContext::dump(
                                    DObj->getLineSection().Data)) {
     DWARFDataExtractor LineData(*DObj, DObj->getLineSection(), isLittleEndian(),
                                 0);
-    DWARFDebugLine::SectionParser Parser(LineData, *this, compile_units(),
-                                         type_units());
+    DWARFDebugLine::SectionParser Parser(LineData, *this, normal_units());
     DumpLineSection(Parser, DumpOpts, *Off);
   }
 
@@ -558,8 +557,7 @@ void DWARFContext::dump(
                      DObj->getLineDWOSection().Data)) {
     DWARFDataExtractor LineData(*DObj, DObj->getLineDWOSection(),
                                 isLittleEndian(), 0);
-    DWARFDebugLine::SectionParser Parser(LineData, *this, dwo_compile_units(),
-                                         dwo_type_units());
+    DWARFDebugLine::SectionParser Parser(LineData, *this, dwo_units());
     DumpLineSection(Parser, DumpOpts, *Off);
   }
 
