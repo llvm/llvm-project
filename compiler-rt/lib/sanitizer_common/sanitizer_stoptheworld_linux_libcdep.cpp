@@ -504,13 +504,13 @@ typedef struct user regs_struct;
 #elif defined(__aarch64__)
 typedef struct user_pt_regs regs_struct;
 #define REG_SP sp
-static constexpr uptr kExtraRegs[] = {};
+static constexpr uptr kExtraRegs[] = {0};
 #define ARCH_IOVEC_FOR_GETREGSET
 
 #elif defined(__s390__)
 typedef _user_regs_struct regs_struct;
 #define REG_SP gprs[15]
-static constexpr uptr kExtraRegs[] = {};
+static constexpr uptr kExtraRegs[] = {0};
 #define ARCH_IOVEC_FOR_GETREGSET
 
 #else
@@ -578,7 +578,7 @@ PtraceRegistersStatus SuspendedThreadsListLinux::GetRegistersAndSP(
   if (!fail) {
     // Accept the first available and do not report errors.
     for (uptr regs : kExtraRegs)
-      if (append(regs))
+      if (regs && append(regs))
         break;
   }
 #else
