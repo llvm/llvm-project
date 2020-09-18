@@ -923,8 +923,8 @@ namespace llvm {
       }
     }
 
-    TypeSize getScalarSizeInBits() const {
-      return getScalarType().getSizeInBits();
+    uint64_t getScalarSizeInBits() const {
+      return getScalarType().getSizeInBits().getFixedSize();
     }
 
     /// Return the number of bytes overwritten by a store of the specified value
