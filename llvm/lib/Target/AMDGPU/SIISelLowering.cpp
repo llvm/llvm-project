@@ -102,10 +102,6 @@ static cl::opt<bool> UseDivergentRegisterIndexing(
   cl::desc("Use indirect register addressing for divergent indexes"),
   cl::init(false));
 
-static cl::opt<bool> EnableLowerSGPRToVGPRCopy(
-    "lower-sgpr-to-vgpr-copy", cl::Hidden,
-    cl::desc("Enable lowering copy from SGPR to VGPR"), cl::init(true));
-
 static bool hasFP32Denormals(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   return Info->getMode().allFP32Denormals();
@@ -11484,60 +11480,6 @@ bool SITargetLowering::checkAsmConstraintValA(SDValue Op,
   return false;
 }
 
-// Lower COPY from SGPR to VGPR to real one as they are real transfer instead
-// of COPY.
-static void lowerSGPRToVGPRCopy(MachineFunction &MF, MachineRegisterInfo &MRI,
-                                const SIRegisterInfo &TRI,
-                                const SIInstrInfo &TII) {
-  for (MachineBasicBlock &MBB : MF) {
-    for (auto BI = MBB.begin(), BE = MBB.end(); BI != BE; /*EMPTY*/) {
-      MachineInstr &MI = *BI++;
-
-      auto IsSGPRToVGPRCopy = [&MRI, &TRI](const MachineInstr &MI) {
-        if (!MI.isCopy())
-          return false;
-
-        auto DstReg = MI.getOperand(0).getReg();
-        auto SrcReg = MI.getOperand(1).getReg();
-        const auto *DstRC = DstReg.isVirtual() ? MRI.getRegClass(DstReg)
-                                               : TRI.getPhysRegClass(DstReg);
-        const auto *SrcRC = SrcReg.isVirtual() ? MRI.getRegClass(SrcReg)
-                                               : TRI.getPhysRegClass(SrcReg);
-        return (DstRC == &AMDGPU::VGPR_32RegClass ||
-                DstRC == &AMDGPU::VReg_64RegClass) &&
-               (SrcRC == &AMDGPU::SGPR_32RegClass ||
-                SrcRC == &AMDGPU::SGPR_64RegClass);
-      };
-
-      // Skip if it's not a copy from SGPR to VGPR.
-      if (!IsSGPRToVGPRCopy(MI))
-        continue;
-
-      const MachineOperand &Src = MI.getOperand(1);
-      // FIXME: Need subreg support.
-      if (Src.getSubReg() != AMDGPU::NoSubRegister)
-        continue;
-      // FIXME: Need undef support.
-      if (Src.getReg().isVirtual()) {
-        auto *DefMI = MRI.getVRegDef(Src.getReg());
-        if (!DefMI || DefMI->isImplicitDef())
-          continue;
-      }
-
-      LLVM_DEBUG(dbgs() << "Lower COPY: " << MI);
-      unsigned Opcode = (TRI.getRegSizeInBits(Src.getReg(), MRI) == 64)
-                            ? AMDGPU::V_MOV_B64_PSEUDO
-                            : AMDGPU::V_MOV_B32_e32;
-      auto DstReg = MI.getOperand(0).getReg();
-      auto MIB = BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(Opcode), DstReg)
-                     .add(MI.getOperand(1));
-      (void)MIB;
-      LLVM_DEBUG(dbgs() << "        to: " << *MIB.getInstr());
-      MI.eraseFromParent();
-    }
-  }
-}
-
 // Figure out which registers should be reserved for stack access. Only after
 // the function is legalized do we know all of the non-spill stack objects or if
 // calls are present.
@@ -11546,10 +11488,6 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
-  const SIInstrInfo *TII = Subtarget->getInstrInfo();
-
-  if (EnableLowerSGPRToVGPRCopy)
-    lowerSGPRToVGPRCopy(MF, MRI, *TRI, *TII);
 
   if (Info->isEntryFunction()) {
     // Callable functions have fixed registers used for stack access.
