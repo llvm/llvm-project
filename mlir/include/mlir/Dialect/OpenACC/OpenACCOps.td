@@ -175,8 +175,11 @@ def OpenACC_DataOp : OpenACC_Op<"data",
   let arguments = (ins Variadic<AnyType>:$presentOperands,
                        Variadic<AnyType>:$copyOperands,
                        Variadic<AnyType>:$copyinOperands,
+                       Variadic<AnyType>:$copyinReadonlyOperands,
                        Variadic<AnyType>:$copyoutOperands,
+                       Variadic<AnyType>:$copyoutZeroOperands,
                        Variadic<AnyType>:$createOperands,
+                       Variadic<AnyType>:$createZeroOperands,
                        Variadic<AnyType>:$noCreateOperands,
                        Variadic<AnyType>:$deleteOperands,
                        Variadic<AnyType>:$attachOperands,
@@ -189,9 +192,12 @@ def OpenACC_DataOp : OpenACC_Op<"data",
     static StringRef getDeleteKeyword() { return "delete"; }
     static StringRef getDetachKeyword() { return "detach"; }
     static StringRef getCopyinKeyword() { return "copyin"; }
+    static StringRef getCopyinReadonlyKeyword() { return "copyin_readonly"; }
     static StringRef getCopyKeyword() { return "copy"; }
     static StringRef getCopyoutKeyword() { return "copyout"; }
+    static StringRef getCopyoutZeroKeyword() { return "copyout_zero"; }
     static StringRef getCreateKeyword() { return "create"; }
+    static StringRef getCreateZeroKeyword() { return "create_zero"; }
     static StringRef getNoCreateKeyword() { return "no_create"; }
     static StringRef getPresentKeyword() { return "present"; }
   }];
