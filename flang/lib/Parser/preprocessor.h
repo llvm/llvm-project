@@ -28,6 +28,7 @@
 namespace Fortran::parser {
 
 class Prescanner;
+class Preprocessor;
 
 // Defines a macro
 class Definition {
@@ -46,7 +47,7 @@ public:
 
   bool set_isDisabled(bool disable);
 
-  TokenSequence Apply(const std::vector<TokenSequence> &args, AllSources &);
+  TokenSequence Apply(const std::vector<TokenSequence> &args, Prescanner &);
 
 private:
   static TokenSequence Tokenize(const std::vector<std::string> &argNames,
@@ -65,12 +66,15 @@ class Preprocessor {
 public:
   explicit Preprocessor(AllSources &);
 
+  const AllSources &allSources() const { return allSources_; }
+  AllSources &allSources() { return allSources_; }
+
   void Define(std::string macro, std::string value);
   void Undefine(std::string macro);
   bool IsNameDefined(const CharBlock &);
 
   std::optional<TokenSequence> MacroReplacement(
-      const TokenSequence &, const Prescanner &);
+      const TokenSequence &, Prescanner &);
 
   // Implements a preprocessor directive.
   void Directive(const TokenSequence &, Prescanner *);
@@ -80,7 +84,7 @@ private:
   enum class CanDeadElseAppear { No, Yes };
 
   CharBlock SaveTokenAsName(const CharBlock &);
-  TokenSequence ReplaceMacros(const TokenSequence &, const Prescanner &);
+  TokenSequence ReplaceMacros(const TokenSequence &, Prescanner &);
   void SkipDisabledConditionalCode(
       const std::string &, IsElseActive, Prescanner *, ProvenanceRange);
   bool IsIfPredicateTrue(const TokenSequence &expr, std::size_t first,
