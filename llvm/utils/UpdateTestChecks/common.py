@@ -642,7 +642,9 @@ def dump_input_lines(output_lines, test_info, prefix_set, comment_string):
 def add_checks_at_end(output_lines, prefix_list, func_order,
                       comment_string, check_generator):
   added = set()
-  for prefixes, tool_args, *rest in prefix_list:
+  for prefix in prefix_list:
+    prefixes = prefix[0]
+    tool_args = prefix[1]
     for prefix in prefixes:
       for func in func_order[prefix]:
         if added:
