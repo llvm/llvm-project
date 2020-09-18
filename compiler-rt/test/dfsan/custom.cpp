@@ -758,6 +758,40 @@ void test_strstr() {
 #endif
 }
 
+void test_strpbrk() {
+  char s[] = "abcdefg";
+  char accept[] = "123fd";
+  dfsan_set_label(i_label, &s[5], 1);
+  dfsan_set_label(j_label, &accept[1], 1);
+
+  char *rv = strpbrk(s, accept);
+  assert(rv == &s[3]);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, j_label);
+#endif
+
+  char *ps = s;
+  dfsan_set_label(j_label, &ps, sizeof(ps));
+
+  rv = strpbrk(ps, "123gf");
+  assert(rv == &s[5]);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_LABEL(rv, j_label);
+#else
+  ASSERT_LABEL(rv, i_j_label);
+#endif
+
+  rv = strpbrk(ps, "123");
+  assert(rv == NULL);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, i_j_label);
+#endif
+}
+
 void test_memchr() {
   char str1[] = "str1";
   dfsan_set_label(i_label, &str1[3], 1);
@@ -1030,6 +1064,7 @@ int main(void) {
   test_strncasecmp();
   test_strncmp();
   test_strncpy();
+  test_strpbrk();
   test_strrchr();
   test_strstr();
   test_strtod();
