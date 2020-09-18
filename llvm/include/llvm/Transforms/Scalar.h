@@ -39,13 +39,6 @@ FunctionPass *createSCCPPass();
 
 //===----------------------------------------------------------------------===//
 //
-// DeadInstElimination - This pass quickly removes trivially dead instructions
-// without modifying the CFG of the function.  It is a FunctionPass.
-//
-Pass *createDeadInstEliminationPass();
-
-//===----------------------------------------------------------------------===//
-//
 // RedundantDbgInstElimination - This pass removes redundant dbg intrinsics
 // without modifying the CFG of the function.  It is a FunctionPass.
 //

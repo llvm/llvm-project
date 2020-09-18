@@ -1,6 +1,6 @@
 ; Ensure constant propagation of logical instructions is working correctly.
 
-; RUN: opt < %s -instsimplify -die -S | FileCheck %s
+; RUN: opt < %s -instsimplify -dce -S | FileCheck %s
 ; CHECK-NOT:     {{and|or|xor}}
 
 define i32 @test1() {
