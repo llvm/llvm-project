@@ -115,12 +115,6 @@ void StackDepotUnlockAll() {
   theDepot.UnlockAll();
 }
 
-void StackDepotPrintAll() {
-#if !SANITIZER_GO
-  theDepot.PrintAll();
-#endif
-}
-
 bool StackDepotReverseMap::IdDescPair::IdComparator(
     const StackDepotReverseMap::IdDescPair &a,
     const StackDepotReverseMap::IdDescPair &b) {
