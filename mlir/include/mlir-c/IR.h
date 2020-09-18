@@ -103,6 +103,9 @@ MlirLocation mlirLocationFileLineColGet(MlirContext context,
 /** Creates a location with unknown position owned by the given context. */
 MlirLocation mlirLocationUnknownGet(MlirContext context);
 
+/** Gets the context that a location was created with. */
+MlirContext mlirLocationGetContext(MlirLocation location);
+
 /** Prints a location by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
  * several times with consecutive chunks of the string. */
@@ -118,6 +121,9 @@ MlirModule mlirModuleCreateEmpty(MlirLocation location);
 
 /** Parses a module from the string and transfers ownership to the caller. */
 MlirModule mlirModuleCreateParse(MlirContext context, const char *module);
+
+/** Gets the context that a module was created with. */
+MlirContext mlirModuleGetContext(MlirModule module);
 
 /** Checks whether a module is null. */
 inline int mlirModuleIsNull(MlirModule module) { return !module.ptr; }
@@ -341,6 +347,9 @@ void mlirTypeDump(MlirType type);
 
 /** Parses an attribute. The attribute is owned by the context. */
 MlirAttribute mlirAttributeParseGet(MlirContext context, const char *attr);
+
+/** Gets the context that an attribute was created with. */
+MlirContext mlirAttributeGetContext(MlirAttribute attribute);
 
 /** Checks whether an attribute is null. */
 inline int mlirAttributeIsNull(MlirAttribute attr) { return !attr.ptr; }
