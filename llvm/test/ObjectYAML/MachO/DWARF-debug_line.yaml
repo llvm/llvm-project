@@ -499,7 +499,6 @@ DWARF:
       LineRange:       14
       OpcodeBase:      13
       StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
-      IncludeDirs:     
       Files:           
         - Name:            hello_world.c
           DirIdx:          0
@@ -530,43 +529,42 @@ DWARF:
           Data:            11
 ...
 
-#CHECK:   debug_line:      
-#CHECK:     - Length:          65
-#CHECK:       Version:         2
-#CHECK:       PrologueLength:  36
-#CHECK:       MinInstLength:   1
-#CHECK:       DefaultIsStmt:   1
-#CHECK:       LineBase:        251
-#CHECK:       LineRange:       14
-#CHECK:       OpcodeBase:      13
-#CHECK:       StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
-#CHECK:       IncludeDirs:     
-#CHECK:       Files:           
-#CHECK:         - Name:            hello_world.c
-#CHECK:           DirIdx:          0
-#CHECK:           ModTime:         0
-#CHECK:           Length:          0
-#CHECK:       Opcodes:         
-#CHECK:         - Opcode:          DW_LNS_extended_op
-#CHECK:           ExtLen:          9
-#CHECK:           SubOpcode:       DW_LNE_set_address
-#CHECK:           Data:            4294971216
-#CHECK:         - Opcode:          0x14
-#CHECK:           Data:            0
-#CHECK:         - Opcode:          DW_LNS_set_column
-#CHECK:           Data:            3
-#CHECK:         - Opcode:          DW_LNS_set_prologue_end
-#CHECK:           Data:            0
-#CHECK:         - Opcode:          DW_LNS_const_add_pc
-#CHECK:           Data:            0
-#CHECK:         - Opcode:          0xBB
-#CHECK:           Data:            0
-#CHECK:         - Opcode:          0xBB
-#CHECK:           Data:            0
-#CHECK:         - Opcode:          DW_LNS_advance_pc
-#CHECK:           Data:            11
-#CHECK:         - Opcode:          DW_LNS_extended_op
-#CHECK:           ExtLen:          1
-#CHECK:           SubOpcode:       DW_LNE_end_sequence
-#CHECK:           Data:            0
-#CHECK: ...
+#      CHECK: debug_line:
+# CHECK-NEXT:   - Length:          65
+# CHECK-NEXT:     Version:         2
+# CHECK-NEXT:     PrologueLength:  36
+# CHECK-NEXT:     MinInstLength:   1
+# CHECK-NEXT:     DefaultIsStmt:   1
+# CHECK-NEXT:     LineBase:        251
+# CHECK-NEXT:     LineRange:       14
+# CHECK-NEXT:     OpcodeBase:      13
+# CHECK-NEXT:     StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+# CHECK-NEXT:     Files:
+# CHECK-NEXT:       - Name:            hello_world.c
+# CHECK-NEXT:         DirIdx:          0
+# CHECK-NEXT:         ModTime:         0
+# CHECK-NEXT:         Length:          0
+# CHECK-NEXT:     Opcodes:
+# CHECK-NEXT:       - Opcode:          DW_LNS_extended_op
+# CHECK-NEXT:         ExtLen:          9
+# CHECK-NEXT:         SubOpcode:       DW_LNE_set_address
+# CHECK-NEXT:         Data:            4294971216
+# CHECK-NEXT:       - Opcode:          0x14
+# CHECK-NEXT:         Data:            0
+# CHECK-NEXT:       - Opcode:          DW_LNS_set_column
+# CHECK-NEXT:         Data:            3
+# CHECK-NEXT:       - Opcode:          DW_LNS_set_prologue_end
+# CHECK-NEXT:         Data:            0
+# CHECK-NEXT:       - Opcode:          DW_LNS_const_add_pc
+# CHECK-NEXT:         Data:            0
+# CHECK-NEXT:       - Opcode:          0xBB
+# CHECK-NEXT:         Data:            0
+# CHECK-NEXT:       - Opcode:          0xBB
+# CHECK-NEXT:         Data:            0
+# CHECK-NEXT:       - Opcode:          DW_LNS_advance_pc
+# CHECK-NEXT:         Data:            11
+# CHECK-NEXT:       - Opcode:          DW_LNS_extended_op
+# CHECK-NEXT:         ExtLen:          1
+# CHECK-NEXT:         SubOpcode:       DW_LNE_end_sequence
+# CHECK-NEXT:         Data:            0
+# CHECK-NEXT: ...

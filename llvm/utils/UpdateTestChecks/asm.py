@@ -15,7 +15,7 @@ else:
 ##### Assembly parser
 
 ASM_FUNCTION_X86_RE = re.compile(
-    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@"?(?P=func)"?\n(?:\s*\.?Lfunc_begin[^:\n]*:\n)?[^:]*?'
+    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*(@"?(?P=func)"?| -- Begin function (?P=func))\n(?:\s*\.?Lfunc_begin[^:\n]*:\n)?[^:]*?'
     r'(?P<body>^##?[ \t]+[^:]+:.*?)\s*'
     r'^\s*(?:[^:\n]+?:\s*\n\s*\.size|\.cfi_endproc|\.globl|\.comm|\.(?:sub)?section|#+ -- End function)',
     flags=(re.M | re.S))
@@ -28,7 +28,7 @@ ASM_FUNCTION_ARM_RE = re.compile(
         flags=(re.M | re.S))
 
 ASM_FUNCTION_AARCH64_RE = re.compile(
-     r'^_?(?P<func>[^:]+):[ \t]*\/\/[ \t]*@"?(?P=func)"?\n'
+     r'^_?(?P<func>[^:]+):[ \t]*\/\/[ \t]*@"?(?P=func)"?( (Function|Tail Call))?\n'
      r'(?:[ \t]+.cfi_startproc\n)?'  # drop optional cfi noise
      r'(?P<body>.*?)\n'
      # This list is incomplete
@@ -323,7 +323,8 @@ def get_triple_from_march(march):
   print("Cannot find a triple. Assume 'x86'", file=sys.stderr)
   return 'x86'
 
-def build_function_body_dictionary_for_triple(args, raw_tool_output, triple, prefixes, func_dict):
+def build_function_body_dictionary_for_triple(args, raw_tool_output, triple,
+                                              prefixes, func_dict, func_order):
   target_handlers = {
       'i686': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'x86': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
@@ -366,7 +367,7 @@ def build_function_body_dictionary_for_triple(args, raw_tool_output, triple, pre
   scrubber, function_re = handler
   common.build_function_body_dictionary(
           function_re, scrubber, [args], raw_tool_output, prefixes,
-          func_dict, args.verbose, False, False)
+          func_dict, func_order, args.verbose, False, False)
 
 ##### Generator of assembly CHECK lines
 

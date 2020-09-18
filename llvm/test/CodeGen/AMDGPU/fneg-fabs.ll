@@ -34,7 +34,7 @@ define amdgpu_kernel void @fneg_fabs_fmul_f32(float addrspace(1)* %out, float %x
 ; R600: |PV.{{[XYZW]}}|
 ; R600: -PV
 
-; SI: s_bitset1_b32 s{{[0-9]+}}, 31
+; SI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80000000
 ; VI: s_bitset1_b32 s{{[0-9]+}}, 31
 define amdgpu_kernel void @fneg_fabs_free_f32(float addrspace(1)* %out, i32 %in) {
   %bc = bitcast i32 %in to float
@@ -49,7 +49,7 @@ define amdgpu_kernel void @fneg_fabs_free_f32(float addrspace(1)* %out, i32 %in)
 ; R600: |PV.{{[XYZW]}}|
 ; R600: -PV
 
-; SI: s_bitset1_b32 s{{[0-9]+}}, 31
+; SI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80000000
 define amdgpu_kernel void @fneg_fabs_fn_free_f32(float addrspace(1)* %out, i32 %in) {
   %bc = bitcast i32 %in to float
   %fabs = call float @fabs(float %bc)
@@ -59,7 +59,7 @@ define amdgpu_kernel void @fneg_fabs_fn_free_f32(float addrspace(1)* %out, i32 %
 }
 
 ; FUNC-LABEL: {{^}}fneg_fabs_f32:
-; SI: s_bitset1_b32 s{{[0-9]+}}, 31
+; SI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80000000
 define amdgpu_kernel void @fneg_fabs_f32(float addrspace(1)* %out, float %in) {
   %fabs = call float @llvm.fabs.f32(float %in)
   %fsub = fsub float -0.000000e+00, %fabs
