@@ -107,6 +107,7 @@ public:
   StringRef dylibName;
   uint64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
   bool reexport = false;
+  bool forceWeakImport = false;
   std::vector<DylibFile *> reexported;
 };
 
