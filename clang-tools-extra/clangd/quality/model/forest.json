@@ -1,0 +1,18 @@
+[
+    {
+        "operation": "if_member",
+        "feature": "ContextKind",
+        "set": [
+            "CCC_DotMemberAccess",
+            "CCC_ArrowMemberAccess"
+        ],
+        "then": {
+            "operation": "boost",
+            "score": 3.0
+        },
+        "else": {
+            "operation": "boost",
+            "score": 1.0
+        }
+    }
+]
