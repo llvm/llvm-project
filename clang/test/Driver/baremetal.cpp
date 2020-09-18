@@ -83,3 +83,7 @@
 // RUN: %clangxx -target arm-none-eabi -mthread-model posix -v 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-THREAD-MODEL-POSIX
 // CHECK-THREAD-MODEL-POSIX: Thread model: posix
+
+// RUN: %clang -### -target arm-none-eabi -rtlib=libgcc -v %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-RTLIB-GCC
+// CHECK-RTLIB-GCC: -lgcc

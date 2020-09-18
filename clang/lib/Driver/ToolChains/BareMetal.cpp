@@ -156,8 +156,17 @@ void BareMetal::AddCXXStdlibLibArgs(const ArgList &Args,
 
 void BareMetal::AddLinkRuntimeLib(const ArgList &Args,
                                   ArgStringList &CmdArgs) const {
-  CmdArgs.push_back(Args.MakeArgString("-lclang_rt.builtins-" +
-                                       getTriple().getArchName()));
+  ToolChain::RuntimeLibType RLT = GetRuntimeLibType(Args);
+  switch (RLT) {
+  case ToolChain::RLT_CompilerRT:
+    CmdArgs.push_back(
+        Args.MakeArgString("-lclang_rt.builtins-" + getTriple().getArchName()));
+    return;
+  case ToolChain::RLT_Libgcc:
+    CmdArgs.push_back("-lgcc");
+    return;
+  }
+  llvm_unreachable("Unhandled RuntimeLibType.");
 }
 
 void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
