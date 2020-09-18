@@ -4179,13 +4179,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   case AMDGPU::ADJCALLSTACKDOWN: {
     const SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
     MachineInstrBuilder MIB(*MF, &MI);
-
-    // Add an implicit use of the frame offset reg to prevent the restore copy
-    // inserted after the call from being reorderd after stack operations in the
-    // the caller's frame.
     MIB.addReg(Info->getStackPtrOffsetReg(), RegState::ImplicitDefine)
-        .addReg(Info->getStackPtrOffsetReg(), RegState::Implicit)
-        .addReg(Info->getFrameOffsetReg(), RegState::Implicit);
+       .addReg(Info->getStackPtrOffsetReg(), RegState::Implicit);
     return BB;
   }
   case AMDGPU::SI_CALL_ISEL: {
