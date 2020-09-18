@@ -24,25 +24,26 @@ class CppClass:
 
     def ns_begin(self):
         """Returns snippet for opening namespace declarations."""
-        open_ns = [f"namespace {ns} {{" for ns in self.ns]
+        open_ns = ["namespace %s {" % ns for ns in self.ns]
         return "\n".join(open_ns)
 
     def ns_end(self):
         """Returns snippet for closing namespace declarations."""
         close_ns = [
-            f"}} // namespace {ns}" for ns in reversed(self.ns)]
+            "} // namespace %s" % ns for ns in reversed(self.ns)]
         return "\n".join(close_ns)
 
 
 def header_guard(filename):
     '''Returns the header guard for the generated header.'''
-    return f"GENERATED_DECISION_FOREST_MODEL_{filename.upper()}_H"
+    return "GENERATED_DECISION_FOREST_MODEL_%s_H" % filename.upper()
 
 
 def boost_node(n, label, next_label):
     """Returns code snippet for a leaf/boost node.
     Adds value of leaf to the score and jumps to the root of the next tree."""
-    return f"{label}: Score += {n['score']}; goto {next_label};"
+    return "%s: Score += %s; goto %s;" % (
+            label, n['score'], next_label)
 
 
 def if_greater_node(n, label, next_label):
@@ -52,7 +53,8 @@ def if_greater_node(n, label, next_label):
     are represented as IEEE 754, it order-encodes the floats to integers before comparing them.
     Control falls through if condition is evaluated to false."""
     threshold = n["threshold"]
-    return f"{label}: if (E.{n['feature']} >= {order_encode(threshold)} /*{threshold}*/) goto {next_label};"
+    return "%s: if (E.%s >= %s /*%s*/) goto %s;" % (
+            label, n['feature'], order_encode(threshold), threshold, next_label)
 
 
 def if_member_node(n, label, next_label):
@@ -61,10 +63,11 @@ def if_member_node(n, label, next_label):
     described in the node.
     Control falls through if condition is evaluated to false."""
     members = '|'.join([
-        f"BIT({n['feature']}_type::{member})"
+        "BIT(%s_type::%s)" % (n['feature'], member)
         for member in n["set"]
     ])
-    return f"{label}: if (E.{n['feature']} & ({members})) goto {next_label};"
+    return "%s: if (E.%s & (%s)) goto %s;" % (
+            label, n['feature'], members, next_label)
 
 
 def node(n, label, next_label):
@@ -76,7 +79,7 @@ def node(n, label, next_label):
     }[n['operation']](n, label, next_label)
 
 
-def tree(t, tree_num: int, node_num: int):
+def tree(t, tree_num, node_num):
     """Returns code for inferencing a Decision Tree.
     Also returns the size of the decision tree.
 
@@ -90,20 +93,20 @@ def tree(t, tree_num: int, node_num: int):
         immediately next label.
     -   Leaf node adds the value to the score and jumps to the next tree.
     """
-    label = f"t{tree_num}_n{node_num}"
+    label = "t%d_n%d" % (tree_num, node_num)
     code = []
     if node_num == 0:
-        code.append(f"t{tree_num}:")
+        code.append("t%d:" % tree_num)
 
     if t["operation"] == "boost":
-        code.append(node(t, label=label, next_label=f"t{tree_num+1}"))
+        code.append(node(t, label=label, next_label="t%d" % (tree_num + 1)))
         return code, 1
 
     false_code, false_size = tree(
         t['else'], tree_num=tree_num, node_num=node_num+1)
 
     true_node_num = node_num+false_size+1
-    true_label = f"t{tree_num}_n{true_node_num}"
+    true_label = "t%d_n%d" % (tree_num, true_node_num)
 
     true_code, true_size = tree(
         t['then'], tree_num=tree_num, node_num=true_node_num)
@@ -113,7 +116,7 @@ def tree(t, tree_num: int, node_num: int):
     return code+false_code+true_code, 1+false_size+true_size
 
 
-def gen_header_code(features_json: list, cpp_class, filename: str):
+def gen_header_code(features_json, cpp_class, filename):
     """Returns code for header declaring the inference runtime.
 
     Declares the Example class named {cpp_class} inside relevant namespaces.
@@ -127,43 +130,46 @@ def gen_header_code(features_json: list, cpp_class, filename: str):
         if f["kind"] == "NUMBER":
             # Floats are order-encoded to integers for faster comparison.
             setters.append(
-                f"void set{feature}(float V) {{ {feature} = OrderEncode(V); }}")
+                "void set%s(float V) { %s = OrderEncode(V); }" % (
+                    feature, feature))
         elif f["kind"] == "ENUM":
             setters.append(
-                f"void set{feature}(unsigned V) {{ {feature} = 1 << V; }}")
+                "void set%s(unsigned V) { %s = 1 << V; }" % (feature, feature))
         else:
             raise ValueError("Unhandled feature type.", f["kind"])
 
     # Class members represent all the features of the Example.
-    class_members = [f"uint32_t {f['name']} = 0;" for f in features_json]
+    class_members = ["uint32_t %s = 0;" % f['name'] for f in features_json]
 
     nline = "\n  "
     guard = header_guard(filename)
-    return f"""#ifndef {guard}
-#define {guard}
+    return """#ifndef %s
+#define %s
 #include <cstdint>
 
-{cpp_class.ns_begin()}
-class {cpp_class.name} {{
+%s
+class %s {
 public:
-  {nline.join(setters)}
+  %s
 
 private:
-  {nline.join(class_members)}
+  %s
 
   // Produces an integer that sorts in the same order as F.
   // That is: a < b <==> orderEncode(a) < orderEncode(b).
   static uint32_t OrderEncode(float F);
-  friend float Evaluate(const {cpp_class.name}&);
-}};
+  friend float Evaluate(const %s&);
+};
 
-float Evaluate(const {cpp_class.name}&);
-{cpp_class.ns_end()}
-#endif // {guard}
-"""
+float Evaluate(const %s&);
+%s
+#endif // %s
+""" % (guard, guard, cpp_class.ns_begin(), cpp_class.name, nline.join(setters),
+        nline.join(class_members), cpp_class.name, cpp_class.name,
+        cpp_class.ns_end(), guard)
 
 
-def order_encode(v: float):
+def order_encode(v):
     i = struct.unpack('<I', struct.pack('<f', v))[0]
     TopBit = 1 << 31
     # IEEE 754 floats compare like sign-magnitude integers.
@@ -172,10 +178,10 @@ def order_encode(v: float):
     return TopBit + i  # top half of integers
 
 
-def evaluate_func(forest_json: list, cpp_class: CppClass):
+def evaluate_func(forest_json, cpp_class):
     """Generates code for `float Evaluate(const {Example}&)` function.
     The generated function can be used to score an Example."""
-    code = f"float Evaluate(const {cpp_class.name}& E) {{\n"
+    code = "float Evaluate(const %s& E) {\n" % cpp_class.name
     lines = []
     lines.append("float Score = 0;")
     tree_num = 0
@@ -184,48 +190,48 @@ def evaluate_func(forest_json: list, cpp_class: CppClass):
         lines.append("")
         tree_num += 1
 
-    lines.append(f"t{len(forest_json)}: // No such tree.")
+    lines.append("t%s: // No such tree." % len(forest_json))
     lines.append("return Score;")
     code += "  " + "\n  ".join(lines)
     code += "\n}"
     return code
 
 
-def gen_cpp_code(forest_json: list, features_json: list, filename: str,
-                 cpp_class: CppClass):
+def gen_cpp_code(forest_json, features_json, filename, cpp_class):
     """Generates code for the .cpp file."""
     # Headers
     # Required by OrderEncode(float F).
     angled_include = [
-        f'#include <{h}>'
+        '#include <%s>' % h
         for h in ["cstring", "limits"]
     ]
 
     # Include generated header.
-    qouted_headers = {f"{filename}.h", "llvm/ADT/bit.h"}
+    qouted_headers = {filename + '.h', 'llvm/ADT/bit.h'}
     # Headers required by ENUM features used by the model.
     qouted_headers |= {f["header"]
                        for f in features_json if f["kind"] == "ENUM"}
-    quoted_include = [f'#include "{h}"' for h in sorted(qouted_headers)]
+    quoted_include = ['#include "%s"' % h for h in sorted(qouted_headers)]
 
     # using-decl for ENUM features.
-    using_decls = "\n".join(f"using {feature['name']}_type = {feature['type']};"
+    using_decls = "\n".join("using %s_type = %s;" % (
+                                feature['name'], feature['type'])
                             for feature in features_json
                             if feature["kind"] == "ENUM")
     nl = "\n"
-    return f"""{nl.join(angled_include)}
+    return """%s
 
-{nl.join(quoted_include)}
+%s
 
 #define BIT(X) (1 << X)
 
-{cpp_class.ns_begin()}
+%s
 
-{using_decls}
+%s
 
-uint32_t {cpp_class.name}::OrderEncode(float F) {{
+uint32_t %s::OrderEncode(float F) {
   static_assert(std::numeric_limits<float>::is_iec559, "");
-  constexpr uint32_t TopBit = ~(~uint32_t{{0}} >> 1);
+  constexpr uint32_t TopBit = ~(~uint32_t{0} >> 1);
 
   // Get the bits of the float. Endianness is the same as for integers.
   uint32_t U = llvm::bit_cast<uint32_t>(F);
@@ -234,11 +240,13 @@ uint32_t {cpp_class.name}::OrderEncode(float F) {{
   if (U & TopBit)    // Negative float.
     return 0 - U;    // Map onto the low half of integers, order reversed.
   return U + TopBit; // Positive floats map onto the high half of integers.
-}}
+}
 
-{evaluate_func(forest_json, cpp_class)}
-{cpp_class.ns_end()}
-"""
+%s
+%s
+""" % (nl.join(angled_include), nl.join(quoted_include), cpp_class.ns_begin(),
+       using_decls, cpp_class.name, evaluate_func(forest_json, cpp_class),
+       cpp_class.ns_end())
 
 
 def main():
@@ -254,12 +262,12 @@ def main():
 
     output_dir = ns.output_dir
     filename = ns.filename
-    header_file = f"{output_dir}/{filename}.h"
-    cpp_file = f"{output_dir}/{filename}.cpp"
+    header_file = "%s/%s.h" % (output_dir, filename)
+    cpp_file = "%s/%s.cpp" % (output_dir, filename)
     cpp_class = CppClass(cpp_class=ns.cpp_class)
 
-    model_file = f"{ns.model}/forest.json"
-    features_file = f"{ns.model}/features.json"
+    model_file = "%s/forest.json" % ns.model
+    features_file = "%s/features.json" % ns.model
 
     with open(features_file) as f:
         features_json = json.load(f)
