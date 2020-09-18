@@ -280,6 +280,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"frexpf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntPtr>]>,
           FunctionSpec<"frexpl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntPtr>]>,
 
+          FunctionSpec<"hypot", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"hypotf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
 
           FunctionSpec<"ilogb", RetValSpec<IntType>, [ArgSpec<DoubleType>]>,
