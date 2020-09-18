@@ -2996,8 +2996,10 @@ define i32 @f5(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[A:%.*]] to i32
 ; CHECK-NEXT:    [[CONV3:%.*]] = zext i8 [[B:%.*]] to i32
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[CONV]], [[CONV3]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 true)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp slt i32 [[SUB]], 0
+; CHECK-NEXT:    [[SUB7:%.*]] = sub nsw i32 0, [[SUB]]
+; CHECK-NEXT:    [[SUB7_SUB:%.*]] = select i1 [[CMP4]], i32 [[SUB7]], i32 [[SUB]]
+; CHECK-NEXT:    ret i32 [[SUB7_SUB]]
 ;
   %conv = zext i8 %a to i32
   %conv3 = zext i8 %b to i32
@@ -3591,8 +3593,10 @@ define i1 @knownbits8(i8 %a, i8 %b) {
 define i32 @abs_preserve(i32 %x) {
 ; CHECK-LABEL: @abs_preserve(
 ; CHECK-NEXT:    [[A:%.*]] = shl nsw i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.abs.i32(i32 [[A]], i1 false)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[A]], 0
+; CHECK-NEXT:    [[NEGA:%.*]] = sub i32 0, [[A]]
+; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[C]], i32 [[NEGA]], i32 [[A]]
+; CHECK-NEXT:    ret i32 [[ABS]]
 ;
   %a = mul nsw i32 %x, 2
   %c = icmp sge i32 %a, 0
@@ -3630,8 +3634,10 @@ define <2 x i1> @PR36583(<2 x i8*>)  {
 ; fold (icmp pred (sub (0, X)) C1) for vec type
 define <2 x i32> @Op1Negated_Vec(<2 x i32> %x) {
 ; CHECK-LABEL: @Op1Negated_Vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.abs.v2i32(<2 x i32> [[X:%.*]], i1 true)
-; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[SUB]], <2 x i32> [[X]]
+; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;
   %sub = sub nsw <2 x i32> zeroinitializer, %x
   %cmp = icmp sgt <2 x i32> %sub, <i32 -1, i32 -1>
