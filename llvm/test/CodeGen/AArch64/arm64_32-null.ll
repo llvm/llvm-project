@@ -13,11 +13,12 @@ define void @test_store(i8** %p) {
 define void @test_phi(i8** %p) {
 ; CHECK-LABEL: test_phi:
 ; CHECK: mov [[R1:x[0-9]+]], xzr
-; CHECK: str [[R1]], [sp]
+; CHECK: str [[R1]], [sp, #8]
 ; CHECK: b [[BB:LBB[0-9_]+]]
 ; CHECK: [[BB]]:
-; CHECK: ldr x0, [sp]
-; CHECK: str w0, [x{{.*}}]
+; CHECK: ldr x0, [sp, #8]
+; CHECK: mov w8, w0
+; CHECK: str w8, [x{{.*}}]
 
 bb0:
   br label %bb1

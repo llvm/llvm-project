@@ -15,35 +15,32 @@ define void @Print_c_N_times(i8 %c, i32 %N) {
 ; MIPS32-NEXT:    .cfi_offset 30, -8
 ; MIPS32-NEXT:    move $fp, $sp
 ; MIPS32-NEXT:    .cfi_def_cfa_register 30
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    ori $2, $zero, 0
-; MIPS32-NEXT:    addiu $3, $5, 1
-; MIPS32-NEXT:    mul $1, $3, $1
+; MIPS32-NEXT:    sw $4, 8($fp) # 4-byte Folded Spill
+; MIPS32-NEXT:    move $6, $5
+; MIPS32-NEXT:    lw $5, 8($fp) # 4-byte Folded Reload
+; MIPS32-NEXT:    sw $6, 12($fp) # 4-byte Folded Spill
+; MIPS32-NEXT:    ori $2, $zero, 1
+; MIPS32-NEXT:    ori $1, $zero, 0
+; MIPS32-NEXT:    sw $1, 16($fp) # 4-byte Folded Spill
+; MIPS32-NEXT:    addiu $1, $6, 1
+; MIPS32-NEXT:    mul $1, $1, $2
 ; MIPS32-NEXT:    addiu $1, $1, 7
-; MIPS32-NEXT:    addiu $3, $zero, 65528
-; MIPS32-NEXT:    and $1, $1, $3
-; MIPS32-NEXT:    move $3, $sp
-; MIPS32-NEXT:    subu $1, $3, $1
-; MIPS32-NEXT:    move $sp, $1
-; MIPS32-NEXT:    addiu $sp, $sp, -16
+; MIPS32-NEXT:    addiu $2, $zero, 65528
+; MIPS32-NEXT:    and $2, $1, $2
+; MIPS32-NEXT:    move $1, $sp
+; MIPS32-NEXT:    subu $4, $1, $2
 ; MIPS32-NEXT:    sw $4, 20($fp) # 4-byte Folded Spill
-; MIPS32-NEXT:    move $4, $1
-; MIPS32-NEXT:    lw $3, 20($fp) # 4-byte Folded Reload
-; MIPS32-NEXT:    sw $5, 16($fp) # 4-byte Folded Spill
-; MIPS32-NEXT:    move $5, $3
-; MIPS32-NEXT:    lw $6, 16($fp) # 4-byte Folded Reload
-; MIPS32-NEXT:    sw $2, 12($fp) # 4-byte Folded Spill
-; MIPS32-NEXT:    sw $1, 8($fp) # 4-byte Folded Spill
+; MIPS32-NEXT:    move $sp, $4
+; MIPS32-NEXT:    addiu $sp, $sp, -16
 ; MIPS32-NEXT:    jal memset
 ; MIPS32-NEXT:    nop
+; MIPS32-NEXT:    lw $5, 12($fp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $1, 16($fp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $4, 20($fp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    addiu $sp, $sp, 16
-; MIPS32-NEXT:    lw $1, 8($fp) # 4-byte Folded Reload
-; MIPS32-NEXT:    lw $2, 16($fp) # 4-byte Folded Reload
-; MIPS32-NEXT:    addu $3, $1, $2
-; MIPS32-NEXT:    lw $4, 12($fp) # 4-byte Folded Reload
-; MIPS32-NEXT:    sb $4, 0($3)
+; MIPS32-NEXT:    addu $2, $4, $5
+; MIPS32-NEXT:    sb $1, 0($2)
 ; MIPS32-NEXT:    addiu $sp, $sp, -16
-; MIPS32-NEXT:    move $4, $1
 ; MIPS32-NEXT:    jal puts
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:    addiu $sp, $sp, 16
