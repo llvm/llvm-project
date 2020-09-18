@@ -422,7 +422,10 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
       // FIXME: duplicated from Target/WebAssembly/WebAssembly.h
       // don't want to depend on target specific headers in this code?
       const unsigned TI_GLOBAL_RELOC = 3;
-      if (FrameBase.Location.WasmLoc.Kind == TI_GLOBAL_RELOC) {
+      // FIXME: when writing dwo, we need to avoid relocations. Probably
+      // the "right" solution is to treat globals the way func and data symbols
+      // are (with entries in .debug_addr).
+      if (FrameBase.Location.WasmLoc.Kind == TI_GLOBAL_RELOC && !isDwoUnit()) {
         // These need to be relocatable.
         assert(FrameBase.Location.WasmLoc.Index == 0);  // Only SP so far.
         auto SPSym = cast<MCSymbolWasm>(

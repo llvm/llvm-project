@@ -1511,17 +1511,6 @@ public:
       BaseDiag << Value;
       return Diag;
     }
-
-    // It is necessary to limit this to rvalue reference to avoid calling this
-    // function with a bitfield lvalue argument since non-const reference to
-    // bitfield is not allowed.
-    template <typename T, typename = typename std::enable_if<
-                              !std::is_lvalue_reference<T>::value>::type>
-    const SemaDiagnosticBuilder &operator<<(T &&V) const {
-      const StreamableDiagnosticBase &DB = *this;
-      DB << std::move(V);
-      return *this;
-    }
   };
 
   /// Emit a diagnostic.
@@ -3983,6 +3972,8 @@ public:
   ObjCInterfaceDecl *getObjCInterfaceDecl(IdentifierInfo *&Id,
                                           SourceLocation IdLoc,
                                           bool TypoCorrection = false);
+  FunctionDecl *CreateBuiltin(IdentifierInfo *II, QualType Type, unsigned ID,
+                              SourceLocation Loc);
   NamedDecl *LazilyCreateBuiltin(IdentifierInfo *II, unsigned ID,
                                  Scope *S, bool ForRedeclaration,
                                  SourceLocation Loc);

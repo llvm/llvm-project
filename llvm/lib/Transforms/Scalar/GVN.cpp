@@ -1612,6 +1612,11 @@ bool GVN::processAssumeIntrinsic(IntrinsicInst *IntrinsicI) {
   // br i1 %cmp, label %bb1, label %bb2 ; will change %cmp to true
   ReplaceOperandsWithMap[V] = True;
 
+  // Similarly, after assume(!NotV) we know that NotV == false.
+  Value *NotV;
+  if (match(V, m_Not(m_Value(NotV))))
+    ReplaceOperandsWithMap[NotV] = ConstantInt::getFalse(V->getContext());
+
   // If we find an equality fact, canonicalize all dominated uses in this block
   // to one of the two values.  We heuristically choice the "oldest" of the
   // two where age is determined by value number. (Note that propagateEquality

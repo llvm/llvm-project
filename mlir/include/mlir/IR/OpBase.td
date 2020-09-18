@@ -571,6 +571,10 @@ class VectorOfLengthAndType<list<int> allowedLengths,
 
 def AnyVector : VectorOf<[AnyType]>;
 
+// Shaped types.
+
+def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped">;
+
 // Tensor types.
 
 // Any tensor type whose element type is from the given `allowedTypes` list

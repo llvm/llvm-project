@@ -745,6 +745,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::INTRINSIC_VOID);
   setTargetDAGCombine(ISD::INTRINSIC_W_CHAIN);
   setTargetDAGCombine(ISD::INSERT_VECTOR_ELT);
+  setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
 
   setTargetDAGCombine(ISD::GlobalAddress);
 
@@ -1173,6 +1174,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::UDIV, VT, Custom);
   setOperationAction(ISD::UMAX, VT, Custom);
   setOperationAction(ISD::UMIN, VT, Custom);
+  setOperationAction(ISD::VSELECT, VT, Custom);
   setOperationAction(ISD::XOR, VT, Custom);
   setOperationAction(ISD::ZERO_EXTEND, VT, Custom);
 }
@@ -3854,6 +3856,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMAXNM_PRED);
   case ISD::FMINNUM:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMINNM_PRED);
+  case ISD::VSELECT:
+    return LowerFixedLengthVectorSelectToSVE(Op, DAG);
   }
 }
 
@@ -6252,6 +6256,9 @@ SDValue AArch64TargetLowering::LowerBR_JT(SDValue Op,
   SDValue Entry = Op.getOperand(2);
   int JTI = cast<JumpTableSDNode>(JT.getNode())->getIndex();
 
+  auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
+  AFI->setJumpTableEntryInfo(JTI, 4, nullptr);
+
   SDNode *Dest =
       DAG.getMachineNode(AArch64::JumpTableDest32, DL, MVT::i64, MVT::i64, JT,
                          Entry, DAG.getTargetJumpTable(JTI, MVT::i32));
@@ -7330,7 +7337,11 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
       continue;
     }
 
-    assert(SrcVT.getSizeInBits() == 2 * VT.getSizeInBits());
+    if (SrcVT.getSizeInBits() != 2 * VT.getSizeInBits()) {
+      LLVM_DEBUG(
+          dbgs() << "Reshuffle failed: result vector too small to extract\n");
+      return SDValue();
+    }
 
     if (Src.MaxElt - Src.MinElt >= NumSrcElts) {
       LLVM_DEBUG(
@@ -7358,6 +7369,13 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
           DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, DestVT, Src.ShuffleVec,
                       DAG.getConstant(NumSrcElts, dl, MVT::i64));
       unsigned Imm = Src.MinElt * getExtFactor(VEXTSrc1);
+
+      if (!SrcVT.is64BitVector()) {
+        LLVM_DEBUG(
+          dbgs() << "Reshuffle failed: don't know how to lower AArch64ISD::EXT "
+                    "for SVE vectors.");
+        return SDValue();
+      }
 
       Src.ShuffleVec = DAG.getNode(AArch64ISD::EXT, dl, DestVT, VEXTSrc1,
                                    VEXTSrc2,
@@ -9116,7 +9134,8 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
 
   // If this is extracting the upper 64-bits of a 128-bit vector, we match
   // that directly.
-  if (Size == 64 && Idx * InVT.getScalarSizeInBits() == 64)
+  if (Size == 64 && Idx * InVT.getScalarSizeInBits() == 64 &&
+      InVT.getSizeInBits() == 128)
     return Op;
 
   return SDValue();
@@ -11600,6 +11619,60 @@ performVectorTruncateCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   SDValue ResultHADD = DAG.getNode(HADDOpc, DL, VT, OpA, OpB);
 
   return ResultHADD;
+}
+
+static bool hasPairwiseAdd(unsigned Opcode, EVT VT, bool FullFP16) {
+  switch (Opcode) {
+  case ISD::FADD:
+    return (FullFP16 && VT == MVT::f16) || VT == MVT::f32 || VT == MVT::f64;
+  case ISD::ADD:
+    return VT == MVT::i64;
+  default:
+    return false;
+  }
+}
+
+static SDValue performExtractVectorEltCombine(SDNode *N, SelectionDAG &DAG) {
+  SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
+  ConstantSDNode *ConstantN1 = dyn_cast<ConstantSDNode>(N1);
+
+  EVT VT = N->getValueType(0);
+  const bool FullFP16 =
+      static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasFullFP16();
+
+  // Rewrite for pairwise fadd pattern
+  //   (f32 (extract_vector_elt
+  //           (fadd (vXf32 Other)
+  //                 (vector_shuffle (vXf32 Other) undef <1,X,...> )) 0))
+  // ->
+  //   (f32 (fadd (extract_vector_elt (vXf32 Other) 0)
+  //              (extract_vector_elt (vXf32 Other) 1))
+  if (ConstantN1 && ConstantN1->getZExtValue() == 0 &&
+      hasPairwiseAdd(N0->getOpcode(), VT, FullFP16)) {
+    SDLoc DL(N0);
+    SDValue N00 = N0->getOperand(0);
+    SDValue N01 = N0->getOperand(1);
+
+    ShuffleVectorSDNode *Shuffle = dyn_cast<ShuffleVectorSDNode>(N01);
+    SDValue Other = N00;
+
+    // And handle the commutative case.
+    if (!Shuffle) {
+      Shuffle = dyn_cast<ShuffleVectorSDNode>(N00);
+      Other = N01;
+    }
+
+    if (Shuffle && Shuffle->getMaskElt(0) == 1 &&
+        Other == Shuffle->getOperand(0)) {
+      return DAG.getNode(N0->getOpcode(), DL, VT,
+                         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Other,
+                                     DAG.getConstant(0, DL, MVT::i64)),
+                         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Other,
+                                     DAG.getConstant(1, DL, MVT::i64)));
+    }
+  }
+
+  return SDValue();
 }
 
 static SDValue performConcatVectorsCombine(SDNode *N,
@@ -14425,6 +14498,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performUzpCombine(N, DAG);
   case ISD::INSERT_VECTOR_ELT:
     return performPostLD1Combine(N, DCI, true);
+  case ISD::EXTRACT_VECTOR_ELT:
+    return performExtractVectorEltCombine(N, DAG);
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN:
     switch (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue()) {
@@ -15816,6 +15891,31 @@ SDValue AArch64TargetLowering::LowerToScalableOp(SDValue Op,
   }
 
   auto ScalableRes = DAG.getNode(Op.getOpcode(), SDLoc(Op), ContainerVT, Ops);
+  return convertFromScalableVector(DAG, VT, ScalableRes);
+}
+
+SDValue
+AArch64TargetLowering::LowerFixedLengthVectorSelectToSVE(SDValue Op,
+    SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+
+  EVT InVT = Op.getOperand(1).getValueType();
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, InVT);
+  SDValue Op1 = convertToScalableVector(DAG, ContainerVT, Op->getOperand(1));
+  SDValue Op2 = convertToScalableVector(DAG, ContainerVT, Op->getOperand(2));
+
+  // Convert the mask to a predicated (NOTE: We don't need to worry about
+  // inactive lanes since VSELECT is safe when given undefined elements).
+  EVT MaskVT = Op.getOperand(0).getValueType();
+  EVT MaskContainerVT = getContainerForFixedLengthVector(DAG, MaskVT);
+  auto Mask = convertToScalableVector(DAG, MaskContainerVT, Op.getOperand(0));
+  Mask = DAG.getNode(ISD::TRUNCATE, DL,
+                     MaskContainerVT.changeVectorElementType(MVT::i1), Mask);
+
+  auto ScalableRes = DAG.getNode(ISD::VSELECT, DL, ContainerVT,
+                                Mask, Op1, Op2);
+
   return convertFromScalableVector(DAG, VT, ScalableRes);
 }
 

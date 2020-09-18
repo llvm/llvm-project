@@ -244,6 +244,30 @@ vector unsigned __int128 test_vec_expandm_u128(void) {
   return vec_expandm(vui128a);
 }
 
+unsigned long long test_vec_cntm_uc(void) {
+  // CHECK: @llvm.ppc.altivec.vcntmbb(<16 x i8> %{{.+}}, i32
+  // CHECK-NEXT: ret i64
+  return vec_cntm(vuca, 1);
+}
+
+unsigned long long test_vec_cntm_us(void) {
+  // CHECK: @llvm.ppc.altivec.vcntmbh(<8 x i16> %{{.+}}, i32
+  // CHECK-NEXT: ret i64
+  return vec_cntm(vusa, 0);
+}
+
+unsigned long long test_vec_cntm_ui(void) {
+  // CHECK: @llvm.ppc.altivec.vcntmbw(<4 x i32> %{{.+}}, i32
+  // CHECK-NEXT: ret i64
+  return vec_cntm(vuia, 1);
+}
+
+unsigned long long test_vec_cntm_ull(void) {
+  // CHECK: @llvm.ppc.altivec.vcntmbd(<2 x i64> %{{.+}}, i32
+  // CHECK-NEXT: ret i64
+  return vec_cntm(vulla, 0);
+}
+
 unsigned long long test_vgnb_1(void) {
   // CHECK: @llvm.ppc.altivec.vgnb(<1 x i128> %{{.+}}, i32 2)
   // CHECK-NEXT: ret i64

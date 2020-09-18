@@ -692,7 +692,8 @@ def : Pat<(AArch64LOADgot tconstpool:$addr),
 // 32-bit jump table destination is actually only 2 instructions since we can
 // use the table itself as a PC-relative base. But optimization occurs after
 // branch relaxation so be pessimistic.
-let Size = 12, Constraints = "@earlyclobber $dst,@earlyclobber $scratch" in {
+let Size = 12, Constraints = "@earlyclobber $dst,@earlyclobber $scratch",
+    isNotDuplicable = 1 in {
 def JumpTableDest32 : Pseudo<(outs GPR64:$dst, GPR64sp:$scratch),
                              (ins GPR64:$table, GPR64:$entry, i32imm:$jti), []>,
                       Sched<[]>;
@@ -7482,6 +7483,9 @@ def : Pat<(f64 (fadd (vector_extract (v2f64 FPR128:$Rn), (i64 0)),
 def : Pat<(fadd (vector_extract (v4f32 FPR128:$Rn), (i64 0)),
                 (vector_extract (v4f32 FPR128:$Rn), (i64 1))),
           (f32 (FADDPv2i32p (EXTRACT_SUBREG FPR128:$Rn, dsub)))>;
+def : Pat<(fadd (vector_extract (v8f16 FPR128:$Rn), (i64 0)),
+                (vector_extract (v8f16 FPR128:$Rn), (i64 1))),
+          (f16 (FADDPv2i16p (EXTRACT_SUBREG FPR128:$Rn, dsub)))>;
 
 // Scalar 64-bit shifts in FPR64 registers.
 def : Pat<(i64 (int_aarch64_neon_sshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),

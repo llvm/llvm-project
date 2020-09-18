@@ -120,3 +120,48 @@ entry:
   %exp = tail call <1 x i128> @llvm.ppc.altivec.vexpandqm(<1 x i128> %a)
   ret <1 x i128> %exp
 }
+
+declare i64 @llvm.ppc.altivec.vcntmbb(<16 x i8>, i32)
+declare i64 @llvm.ppc.altivec.vcntmbh(<8 x i16>, i32)
+declare i64 @llvm.ppc.altivec.vcntmbw(<4 x i32>, i32)
+declare i64 @llvm.ppc.altivec.vcntmbd(<2 x i64>, i32)
+
+define i64 @test_vcntmbb(<16 x i8> %a) {
+; CHECK-LABEL: test_vcntmbb:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vcntmbb r3, v2, 1
+; CHECK-NEXT:    blr
+entry:
+  %cnt = tail call i64 @llvm.ppc.altivec.vcntmbb(<16 x i8> %a, i32 1)
+  ret i64 %cnt
+}
+
+define i64 @test_vcntmbh(<8 x i16> %a) {
+; CHECK-LABEL: test_vcntmbh:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vcntmbh r3, v2, 0
+; CHECK-NEXT:    blr
+entry:
+  %cnt = tail call i64 @llvm.ppc.altivec.vcntmbh(<8 x i16> %a, i32 0)
+  ret i64 %cnt
+}
+
+define i64 @test_vcntmbw(<4 x i32> %a) {
+; CHECK-LABEL: test_vcntmbw:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vcntmbw r3, v2, 1
+; CHECK-NEXT:    blr
+entry:
+  %cnt = tail call i64 @llvm.ppc.altivec.vcntmbw(<4 x i32> %a, i32 1)
+  ret i64 %cnt
+}
+
+define i64 @test_vcntmbd(<2 x i64> %a) {
+; CHECK-LABEL: test_vcntmbd:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vcntmbd r3, v2, 0
+; CHECK-NEXT:    blr
+entry:
+  %cnt = tail call i64 @llvm.ppc.altivec.vcntmbd(<2 x i64> %a, i32 0)
+  ret i64 %cnt
+}

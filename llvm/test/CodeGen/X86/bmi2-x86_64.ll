@@ -41,6 +41,18 @@ define i64 @pdep64_load(i64 %x, i64* %y)   {
   ret i64 %tmp
 }
 
+define i64 @pdep64_anyext(i32 %x)   {
+; CHECK-LABEL: pdep64_anyext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movslq %edi, %rax
+; CHECK-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; CHECK-NEXT:    pdepq %rcx, %rax, %rax
+; CHECK-NEXT:    retq
+  %x1 = sext i32 %x to i64
+  %tmp = tail call i64 @llvm.x86.bmi.pdep.64(i64 %x1, i64 6148914691236517205)
+  ret i64 %tmp
+}
+
 declare i64 @llvm.x86.bmi.pdep.64(i64, i64)
 
 define i64 @pext64(i64 %x, i64 %y)   {

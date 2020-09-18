@@ -35,13 +35,15 @@ syntax::Leaf *createLeaf(syntax::Arena &A, tok::TokenKind K,
 syntax::Leaf *createLeaf(syntax::Arena &A, tok::TokenKind K);
 
 // Synthesis of Trees
+/// Creates the concrete syntax node according to the specified `NodeKind` `K`.
+/// Returns it as a pointer to the base class `Tree`.
 syntax::Tree *
-createTree(Arena &A,
+createTree(syntax::Arena &A,
            std::vector<std::pair<syntax::Node *, syntax::NodeRole>> Children,
            syntax::NodeKind K);
 
 // Synthesis of Syntax Nodes
-clang::syntax::EmptyStatement *createEmptyStatement(clang::syntax::Arena &A);
+syntax::EmptyStatement *createEmptyStatement(syntax::Arena &A);
 
 } // namespace syntax
 } // namespace clang

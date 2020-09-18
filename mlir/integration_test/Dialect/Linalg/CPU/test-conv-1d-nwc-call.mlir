@@ -30,7 +30,8 @@ func @alloc_3d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %f : f32) -> me
 }
 
 func @conv_1d_nwc(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>, %arg2: memref<?x?x?xf32>) {
-  linalg.conv_1d_nwc %arg0, %arg1, %arg2 : (memref<?x?x?xf32>, memref<?x?x?xf32>, memref<?x?x?xf32>)
+  linalg.conv_1d_nwc ins (%arg0, %arg1: memref<?x?x?xf32>, memref<?x?x?xf32>)
+                    outs (%arg2: memref<?x?x?xf32>)
   return
 }
 

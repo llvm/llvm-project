@@ -3526,3 +3526,11 @@ def ReleaseHandle : InheritableParamAttr {
   let Subjects = SubjectList<[ParmVar]>;
   let Documentation = [ReleaseHandleDocs];
 }
+
+def Builtin : InheritableAttr {
+  let Spellings = [];
+  let Args = [UnsignedArgument<"ID">];
+  let Subjects = SubjectList<[Function]>;
+  let SemaHandler = 0;
+  let Documentation = [Undocumented];
+}

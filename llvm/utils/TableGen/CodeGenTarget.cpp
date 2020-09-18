@@ -266,6 +266,11 @@ StringRef CodeGenTarget::getInstNamespace() const {
   return "";
 }
 
+StringRef CodeGenTarget::getRegNamespace() const {
+  auto &RegClasses = RegBank->getRegClasses();
+  return RegClasses.size() > 0 ? RegClasses.front().Namespace : "";
+}
+
 Record *CodeGenTarget::getInstructionSet() const {
   return TargetRec->getValueAsDef("InstructionSet");
 }

@@ -83,30 +83,30 @@ func @ops(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
           %arg1: memref<?xf32, offset: ?, strides: [1]>,
           %arg2: memref<?xf32, offset: ?, strides: [1]>,
           %arg3: memref<f32>) {
-  linalg.matmul %arg0, %arg0, %arg0 : (memref<?x?xf32, offset: ?, strides: [?, 1]>,
-                                       memref<?x?xf32, offset: ?, strides: [?, 1]>,
-                                       memref<?x?xf32, offset: ?, strides: [?, 1]>)
-  linalg.matvec %arg0, %arg1, %arg2 : (memref<?x?xf32, offset: ?, strides: [?, 1]>,
-                                       memref<?xf32, offset: ?, strides: [1]>,
-                                       memref<?xf32, offset: ?, strides: [1]>) 
-  linalg.dot %arg1, %arg2, %arg3  : (memref<?xf32, offset: ?, strides: [1]>,
-                                     memref<?xf32, offset: ?, strides: [1]>,
-                                     memref<f32>)
+  linalg.matmul ins(%arg0, %arg0 : memref<?x?xf32, offset: ?, strides: [?, 1]>,
+                                   memref<?x?xf32, offset: ?, strides: [?, 1]>)
+               outs(%arg0 : memref<?x?xf32, offset: ?, strides: [?, 1]>)
+  linalg.matvec ins(%arg0, %arg1: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+                                  memref<?xf32, offset: ?, strides: [1]>)
+               outs(%arg2: memref<?xf32, offset: ?, strides: [1]>)
+  linalg.dot ins(%arg1, %arg2: memref<?xf32, offset: ?, strides: [1]>,
+                               memref<?xf32, offset: ?, strides: [1]>)
+            outs(%arg3: memref<f32>)
   return
 }
 // CHECK-LABEL: func @ops(%
-//  CHECK-NEXT:  linalg.matmul %{{.*}}, %{{.*}}, %{{.*}} :
-//  CHECK-SAME:    (memref<?x?xf32, #[[$strided2D]]>,
-//  CHECK-SAME:     memref<?x?xf32, #[[$strided2D]]>,
-//  CHECK-SAME:     memref<?x?xf32, #[[$strided2D]]>)
-//  CHECK-NEXT:  linalg.matvec %{{.*}}, %{{.*}}, %{{.*}} :
-//  CHECK-SAME:    (memref<?x?xf32, #[[$strided2D]]>,
-//  CHECK-SAME:     memref<?xf32, #[[$strided1D]]>,
-//  CHECK-SAME:     memref<?xf32, #[[$strided1D]]>)
-//  CHECK-NEXT:  linalg.dot %{{.*}}, %{{.*}}, %{{.*}} :
-//  CHECK-SAME:     (memref<?xf32, #[[$strided1D]]>,
-//  CHECK-SAME:      memref<?xf32, #[[$strided1D]]>,
-//  CHECK-SAME:      memref<f32>)
+// CHECK: linalg.matmul
+// CHECK-SAME:   ins(%{{.*}}, %{{.*}} : memref<?x?xf32, #[[$strided2D]]>,
+// CHECK-SAME:                          memref<?x?xf32, #[[$strided2D]]>)
+// CHECK-SAME:  outs(%{{.*}} : memref<?x?xf32, #[[$strided2D]]>)
+// CHECK: linalg.matvec
+// CHECK-SAME:   ins(%{{.*}}, %{{.*}}: memref<?x?xf32, #[[$strided2D]]>,
+// CHECK-SAME:                         memref<?xf32, #[[$strided1D]]>)
+// CHECK-SAME:  outs(%{{.*}}: memref<?xf32, #[[$strided1D]]>)
+// CHECK: linalg.dot
+// CHECK-SAME:   ins(%{{.*}}, %{{.*}}: memref<?xf32, #[[$strided1D]]>,
+// CHECK-SAME:                         memref<?xf32, #[[$strided1D]]>)
+// CHECK-SAME:  outs(%{{.*}}: memref<f32>)
 
 // -----
 
@@ -619,15 +619,25 @@ func @reshape_dynamic(%arg0: memref<?x?x?xf32>,
 //       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD01]], #[[$reshapeD2]]]
 //  CHECK-SAME:     memref<?x?xf32, #[[$strided2D]]> into memref<?x?x?xf32, #[[$strided3D]]>
 
-
-// TODO: Return tensors need a semantics convention update.
 func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref<?x?x?xf32>,
-                %ta3: tensor<?x?x?xf32>, %tb3: tensor<?x?x?xf32>, %tc3: tensor<?x?x?xf32>) {
-  linalg.batch_matmul %a3, %b3, %c3 : (memref<?x?x?xf32>, memref<?x?x?xf32>, memref<?x?x?xf32>) -> ()
-  linalg.batch_matmul %ta3, %tb3, %c3 : (tensor<?x?x?xf32>, tensor<?x?x?xf32>, memref<?x?x?xf32>) -> ()
-  return
+                %ta3: tensor<?x?x?xf32>, %tb3: tensor<?x?x?xf32>, %tc3: tensor<?x?x?xf32>)
+  -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>)
+{
+  linalg.batch_matmul ins(%a3, %b3: memref<?x?x?xf32>, memref<?x?x?xf32>)
+                     outs(%c3: memref<?x?x?xf32>)
+  linalg.batch_matmul ins(%ta3, %tb3: tensor<?x?x?xf32>, tensor<?x?x?xf32>)
+                     outs(%c3: memref<?x?x?xf32>)
+  %res1 = linalg.batch_matmul ins(%ta3, %tb3: tensor<?x?x?xf32>, tensor<?x?x?xf32>)
+                     init(%tc3: tensor<?x?x?xf32>)
+                  -> tensor<?x?x?xf32>
+  %res2 = linalg.batch_matmul ins(%ta3, %b3: tensor<?x?x?xf32>, memref<?x?x?xf32>)
+                     init(%tc3: tensor<?x?x?xf32>)
+                  -> tensor<?x?x?xf32>
+  return %res1, %res2 : tensor<?x?x?xf32>, tensor<?x?x?xf32>
 }
 // CHECK-LABEL: func @named_ops
+//       CHECK:   linalg.batch_matmul
+//       CHECK:   linalg.batch_matmul
 //       CHECK:   linalg.batch_matmul
 //       CHECK:   linalg.batch_matmul
 

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: not %clang_cc1 -fsyntax-only -ast-dump %s | FileCheck %s
 
 void f() {
   int *ptr = malloc(sizeof(int) * 10); // expected-warning{{implicitly declaring library function 'malloc' with type}} \
@@ -62,10 +61,6 @@ extern float fmaxf(float, float);
 
 struct __jmp_buf_tag {};
 void sigsetjmp(struct __jmp_buf_tag[1], int); // expected-warning{{declaration of built-in function 'sigsetjmp' requires the declaration of the 'jmp_buf' type, commonly provided in the header <setjmp.h>.}}
-
-// CHECK:     FunctionDecl {{.*}} <line:[[@LINE-2]]:1, col:44> col:6 sigsetjmp '
-// CHECK-NOT: FunctionDecl
-// CHECK:     ReturnsTwiceAttr {{.*}} <{{.*}}> Implicit
 
 // PR40692
 void pthread_create(); // no warning expected

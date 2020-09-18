@@ -34,6 +34,7 @@
 #include <sys/chio.h>
 #include <sys/clockctl.h>
 #include <sys/cpuio.h>
+#include <sys/dkbad.h>
 #include <sys/dkio.h>
 #include <sys/drvctlio.h>
 #include <sys/dvdio.h>

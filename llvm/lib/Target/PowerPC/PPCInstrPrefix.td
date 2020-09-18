@@ -481,6 +481,13 @@ class XX2_BF3_XO5_XB6_XO9<bits<6> opcode, bits<5> xo2, bits<9> xo, dag OOL,
   let Inst{31}    = 0;
 }
 
+// X-Form: [ PO RT BI /// XO / ]
+class XForm_XT5_BI5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                    string asmstr, InstrItinClass itin, list<dag> pattern>
+  : XForm_base_r3xo<opcode, xo, OOL, IOL, asmstr, itin, pattern> {
+  let B = 0;
+}
+
 multiclass MLS_DForm_R_SI34_RTA5_MEM_p<bits<6> opcode, dag OOL, dag IOL,
                                        dag PCRel_IOL, string asmstr,
                                        InstrItinClass itin> {
@@ -877,6 +884,26 @@ let Predicates = [PrefixInstrs] in {
 }
 
 let Predicates = [IsISA3_1] in {
+  def SETBC : XForm_XT5_BI5<31, 384, (outs gprc:$RT), (ins crbitrc:$BI),
+                            "setbc $RT, $BI", IIC_IntCompare, []>;
+  def SETBCR : XForm_XT5_BI5<31, 416, (outs gprc:$RT), (ins crbitrc:$BI),
+                             "setbcr $RT, $BI", IIC_IntCompare, []>;
+  def SETNBC : XForm_XT5_BI5<31, 448, (outs gprc:$RT), (ins crbitrc:$BI),
+                             "setnbc $RT, $BI", IIC_IntCompare, []>;
+  def SETNBCR : XForm_XT5_BI5<31, 480, (outs gprc:$RT), (ins crbitrc:$BI),
+                              "setnbcr $RT, $BI", IIC_IntCompare, []>;
+
+  let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
+    def SETBC8 : XForm_XT5_BI5<31, 384, (outs g8rc:$RT), (ins crbitrc:$BI),
+                               "setbc $RT, $BI", IIC_IntCompare, []>;
+    def SETBCR8 : XForm_XT5_BI5<31, 416, (outs g8rc:$RT), (ins crbitrc:$BI),
+                                "setbcr $RT, $BI", IIC_IntCompare, []>;
+    def SETNBC8 : XForm_XT5_BI5<31, 448, (outs g8rc:$RT), (ins crbitrc:$BI),
+                                "setnbc $RT, $BI", IIC_IntCompare, []>;
+    def SETNBCR8 : XForm_XT5_BI5<31, 480, (outs g8rc:$RT), (ins crbitrc:$BI),
+                                 "setnbcr $RT, $BI", IIC_IntCompare, []>;
+  }
+
   def VSLDBI : VNForm_VTAB5_SD3<22, 0, (outs vrrc:$VRT),
                                 (ins vrrc:$VRA, vrrc:$VRB, u3imm:$SH),
                                 "vsldbi $VRT, $VRA, $VRB, $SH",
@@ -1046,19 +1073,23 @@ let Predicates = [IsISA3_1] in {
   def VCNTMBB : VXForm_RD5_MP_VB5<1602, 12, (outs g8rc:$rD),
                                   (ins vrrc:$vB, u1imm:$MP),
                                   "vcntmbb $rD, $vB, $MP", IIC_VecGeneral,
-                                  []>;
+                                  [(set i64:$rD, (int_ppc_altivec_vcntmbb
+                                        v16i8:$vB, timm:$MP))]>;
   def VCNTMBH : VXForm_RD5_MP_VB5<1602, 13, (outs g8rc:$rD),
                                   (ins vrrc:$vB, u1imm:$MP),
                                   "vcntmbh $rD, $vB, $MP", IIC_VecGeneral,
-                                  []>;
+                                  [(set i64:$rD, (int_ppc_altivec_vcntmbh
+                                        v8i16:$vB, timm:$MP))]>;
   def VCNTMBW : VXForm_RD5_MP_VB5<1602, 14, (outs g8rc:$rD),
                                   (ins vrrc:$vB, u1imm:$MP),
                                   "vcntmbw $rD, $vB, $MP", IIC_VecGeneral,
-                                  []>;
+                                  [(set i64:$rD, (int_ppc_altivec_vcntmbw
+                                        v4i32:$vB, timm:$MP))]>;
   def VCNTMBD : VXForm_RD5_MP_VB5<1602, 15, (outs g8rc:$rD),
                                   (ins vrrc:$vB, u1imm:$MP),
                                   "vcntmbd $rD, $vB, $MP", IIC_VecGeneral,
-                                  []>;
+                                  [(set i64:$rD, (int_ppc_altivec_vcntmbd
+                                        v2i64:$vB, timm:$MP))]>;
   def VEXTDUBVLX : VAForm_1a<24, (outs vrrc:$vD),
                              (ins vrrc:$vA, vrrc:$vB, gprc:$rC),
                              "vextdubvlx $vD, $vA, $vB, $rC",

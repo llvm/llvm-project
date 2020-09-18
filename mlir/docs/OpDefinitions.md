@@ -699,6 +699,14 @@ The available directives are as follows:
     -   `input` must be either an operand or result [variable](#variables), the
         `operands` directive, or the `results` directive.
 
+*   `type_ref` ( input )
+
+    -   Represents a reference to the type of the given input that must have
+        already been resolved.
+    -   `input` must be either an operand or result [variable](#variables), the
+        `operands` directive, or the `results` directive.
+    -   Used to pass previously parsed types to custom directives.
+
 #### Literals
 
 A literal is either a keyword or punctuation surrounded by \`\`.
@@ -762,6 +770,10 @@ declarative parameter to `parse` method argument is detailed below:
     -   Single: `Type &`
     -   Optional: `Type &`
     -   Variadic: `SmallVectorImpl<Type> &`
+*   TypeRef Directives
+    -   Single: `Type`
+    -   Optional: `Type`
+    -   Variadic: `const SmallVectorImpl<Type> &`
 
 When a variable is optional, the value should only be specified if the variable
 is present. Otherwise, the value should remain `None` or null.
@@ -785,6 +797,10 @@ declarative parameter to `print` method argument is detailed below:
     -   Single: `Block *`
     -   Variadic: `SuccessorRange`
 *   Type Directives
+    -   Single: `Type`
+    -   Optional: `Type`
+    -   Variadic: `TypeRange`
+*   TypeRef Directives
     -   Single: `Type`
     -   Optional: `Type`
     -   Variadic: `TypeRange`

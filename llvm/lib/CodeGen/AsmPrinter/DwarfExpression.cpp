@@ -18,11 +18,8 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
-#include <cassert>
-#include <cstdint>
 
 using namespace llvm;
 

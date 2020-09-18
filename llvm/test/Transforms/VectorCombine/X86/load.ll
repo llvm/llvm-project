@@ -466,3 +466,33 @@ define <2 x float> @load_f32_insert_v2f32_asan(float* align 16 dereferenceable(1
   %r = insertelement <2 x float> undef, float %s, i32 0
   ret <2 x float> %r
 }
+
+declare float* @getscaleptr()
+define void @PR47558_multiple_use_load(<2 x float>* nocapture nonnull %resultptr, <2 x float>* nocapture nonnull readonly %opptr) {
+; CHECK-LABEL: @PR47558_multiple_use_load(
+; CHECK-NEXT:    [[SCALEPTR:%.*]] = tail call nonnull align 16 dereferenceable(64) float* @getscaleptr()
+; CHECK-NEXT:    [[OP:%.*]] = load <2 x float>, <2 x float>* [[OPPTR:%.*]], align 4
+; CHECK-NEXT:    [[SCALE:%.*]] = load float, float* [[SCALEPTR]], align 16
+; CHECK-NEXT:    [[T1:%.*]] = insertelement <2 x float> undef, float [[SCALE]], i32 0
+; CHECK-NEXT:    [[T2:%.*]] = insertelement <2 x float> [[T1]], float [[SCALE]], i32 1
+; CHECK-NEXT:    [[T3:%.*]] = fmul <2 x float> [[OP]], [[T2]]
+; CHECK-NEXT:    [[T4:%.*]] = extractelement <2 x float> [[T3]], i32 0
+; CHECK-NEXT:    [[RESULT0:%.*]] = insertelement <2 x float> undef, float [[T4]], i32 0
+; CHECK-NEXT:    [[T5:%.*]] = extractelement <2 x float> [[T3]], i32 1
+; CHECK-NEXT:    [[RESULT1:%.*]] = insertelement <2 x float> [[RESULT0]], float [[T5]], i32 1
+; CHECK-NEXT:    store <2 x float> [[RESULT1]], <2 x float>* [[RESULTPTR:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+  %scaleptr = tail call nonnull align 16 dereferenceable(64) float* @getscaleptr()
+  %op = load <2 x float>, <2 x float>* %opptr, align 4
+  %scale = load float, float* %scaleptr, align 16
+  %t1 = insertelement <2 x float> undef, float %scale, i32 0
+  %t2 = insertelement <2 x float> %t1, float %scale, i32 1
+  %t3 = fmul <2 x float> %op, %t2
+  %t4 = extractelement <2 x float> %t3, i32 0
+  %result0 = insertelement <2 x float> undef, float %t4, i32 0
+  %t5 = extractelement <2 x float> %t3, i32 1
+  %result1 = insertelement <2 x float> %result0, float %t5, i32 1
+  store <2 x float> %result1, <2 x float>* %resultptr, align 8
+  ret void
+}

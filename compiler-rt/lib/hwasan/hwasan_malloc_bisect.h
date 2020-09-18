@@ -28,7 +28,7 @@ static u32 malloc_hash(StackTrace *stack, uptr orig_size) {
   return H.get();
 }
 
-static INLINE bool malloc_bisect(StackTrace *stack, uptr orig_size) {
+static inline bool malloc_bisect(StackTrace *stack, uptr orig_size) {
   uptr left = flags()->malloc_bisect_left;
   uptr right = flags()->malloc_bisect_right;
   if (LIKELY(left == 0 && right == 0))

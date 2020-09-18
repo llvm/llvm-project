@@ -17080,6 +17080,18 @@ vec_expandm(vector unsigned __int128 __a) {
   return __builtin_altivec_vexpandqm(__a);
 }
 
+/* vec_cntm */
+
+#define vec_cntm(__a, __mp)                                                    \
+  _Generic((__a), vector unsigned char                                         \
+           : __builtin_altivec_vcntmbb((__a), (unsigned int)(__mp)),           \
+             vector unsigned short                                             \
+           : __builtin_altivec_vcntmbh((__a), (unsigned int)(__mp)),           \
+             vector unsigned int                                               \
+           : __builtin_altivec_vcntmbw((__a), (unsigned int)(__mp)),           \
+             vector unsigned long long                                         \
+           : __builtin_altivec_vcntmbd((__a), (unsigned int)(__mp)))
+
 /* vec_pdep */
 
 static __inline__ vector unsigned long long __ATTRS_o_ai

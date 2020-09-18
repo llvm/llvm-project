@@ -88,6 +88,7 @@
 #include "llvm/IR/DerivedUser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -1217,27 +1218,58 @@ public:
   BasicBlock *getPhiArgBlock() const { return DefIterator.getPhiArgBlock(); }
 
 private:
+  /// Returns true if \p Ptr is guaranteed to be loop invariant for any possible
+  /// loop. In particular, this guarantees that it only references a single
+  /// MemoryLocation during execution of the containing function.
+  bool IsGuaranteedLoopInvariant(Value *Ptr) const {
+    auto IsGuaranteedLoopInvariantBase = [](Value *Ptr) {
+      Ptr = Ptr->stripPointerCasts();
+      if (!isa<Instruction>(Ptr))
+        return true;
+      return isa<AllocaInst>(Ptr);
+    };
+
+    Ptr = Ptr->stripPointerCasts();
+    if (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
+      return IsGuaranteedLoopInvariantBase(GEP->getPointerOperand()) &&
+             GEP->hasAllConstantIndices();
+    }
+    return IsGuaranteedLoopInvariantBase(Ptr);
+  }
+
   void fillInCurrentPair() {
     CurrentPair.first = *DefIterator;
+    CurrentPair.second = Location;
     if (WalkingPhi && Location.Ptr) {
+      // Mark size as unknown, if the location is not guaranteed to be
+      // loop-invariant for any possible loop in the function. Setting the size
+      // to unknown guarantees that any memory accesses that access locations
+      // after the pointer are considered as clobbers, which is important to
+      // catch loop carried dependences.
+      if (Location.Ptr &&
+          !IsGuaranteedLoopInvariant(const_cast<Value *>(Location.Ptr)))
+        CurrentPair.second = Location.getWithNewSize(LocationSize::unknown());
       PHITransAddr Translator(
           const_cast<Value *>(Location.Ptr),
           OriginalAccess->getBlock()->getModule()->getDataLayout(), nullptr);
+
       if (!Translator.PHITranslateValue(OriginalAccess->getBlock(),
                                         DefIterator.getPhiArgBlock(), DT,
                                         true)) {
-        if (Translator.getAddr() != Location.Ptr) {
-          CurrentPair.second = Location.getWithNewPtr(Translator.getAddr());
+        Value *TransAddr = Translator.getAddr();
+        if (TransAddr != Location.Ptr) {
+          CurrentPair.second = CurrentPair.second.getWithNewPtr(TransAddr);
+
+          if (TransAddr &&
+              !IsGuaranteedLoopInvariant(const_cast<Value *>(TransAddr)))
+            CurrentPair.second =
+                CurrentPair.second.getWithNewSize(LocationSize::unknown());
+
           if (PerformedPhiTranslation)
             *PerformedPhiTranslation = true;
-          return;
         }
-      } else {
-        CurrentPair.second = Location.getWithNewSize(LocationSize::unknown());
-        return;
       }
     }
-    CurrentPair.second = Location;
   }
 
   MemoryAccessPair CurrentPair;

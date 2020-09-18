@@ -9,6 +9,8 @@
 #ifndef LLD_COFF_DEBUGTYPES_H
 #define LLD_COFF_DEBUGTYPES_H
 
+#include "lld/Common/LLVM.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -25,14 +27,15 @@ class NativeSession;
 namespace lld {
 namespace coff {
 
+using llvm::codeview::TypeIndex;
+
 class ObjFile;
 class PDBInputFile;
-struct CVIndexMap;
 class TypeMerger;
 
 class TpiSource {
 public:
-  enum TpiKind { Regular, PCH, UsingPCH, PDB, UsingPDB };
+  enum TpiKind { Regular, PCH, UsingPCH, PDB, PDBIpi, UsingPDB };
 
   TpiSource(TpiKind k, ObjFile *f);
   virtual ~TpiSource();
@@ -48,8 +51,8 @@ public:
   /// If the object does not use a type server PDB (compiled with /Z7), we merge
   /// all the type and item records from the .debug$S stream and fill in the
   /// caller-provided ObjectIndexMap.
-  virtual llvm::Expected<const CVIndexMap *> mergeDebugT(TypeMerger *m,
-                                                         CVIndexMap *indexMap);
+  virtual Error mergeDebugT(TypeMerger *m);
+
   /// Is this a dependent file that needs to be processed first, before other
   /// OBJs?
   virtual bool isDependency() const { return false; }
@@ -64,6 +67,15 @@ public:
 
   const TpiKind kind;
   ObjFile *file;
+
+  // Storage for tpiMap or ipiMap, depending on the kind of source.
+  llvm::SmallVector<TypeIndex, 0> indexMapStorage;
+
+  // Source type index to PDB type index mapping for type and item records.
+  // These mappings will be the same for /Z7 objects, and distinct for /Zi
+  // objects.
+  llvm::ArrayRef<TypeIndex> tpiMap;
+  llvm::ArrayRef<TypeIndex> ipiMap;
 };
 
 TpiSource *makeTpiSource(ObjFile *file);

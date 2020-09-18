@@ -183,6 +183,7 @@ fun:strtoull=custom
 
 # Functions that produce an output that is computed from the input, but is not
 # necessarily data dependent.
+fun:bcmp=custom
 fun:memchr=custom
 fun:memcmp=custom
 fun:strcasecmp=custom

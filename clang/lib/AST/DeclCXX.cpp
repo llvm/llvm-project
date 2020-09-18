@@ -3301,7 +3301,12 @@ static const char *getAccessName(AccessSpecifier AS) {
   llvm_unreachable("Invalid access specifier!");
 }
 
-const StreamableDiagnosticBase &clang::
-operator<<(const StreamableDiagnosticBase &DB, AccessSpecifier AS) {
+const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
+                                           AccessSpecifier AS) {
+  return DB << getAccessName(AS);
+}
+
+const PartialDiagnostic &clang::operator<<(const PartialDiagnostic &DB,
+                                           AccessSpecifier AS) {
   return DB << getAccessName(AS);
 }

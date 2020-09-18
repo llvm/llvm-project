@@ -26,6 +26,7 @@
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -35,13 +36,29 @@ using namespace mlir::linalg;
 /// Forward declarations.
 template <typename NamedStructuredOpType>
 static void buildNamedStructuredOpRegionAndAttributes(
-    Builder &builder, OperationState &result, TypeRange operandTypes,
-    TypeRange tensorResultTypes);
+    OpBuilder &opBuilder, OperationState &result, TypeRange inputTypes,
+    TypeRange outputBufferTypes, TypeRange initTensorTypes,
+    TypeRange resultTypes);
+
 template <typename NamedStructuredOpType>
-static void printNamedStructuredOp(OpAsmPrinter &p, NamedStructuredOpType op);
+static ParseResult
+parseNamedStructuredOpRegion(OpAsmParser &parser, Region &region,
+                             TypeRange inputTypes, TypeRange outputBufferTypes,
+                             TypeRange initTensorTypes, TypeRange resultTypes);
+static ParseResult
+parseNamedStructuredOpResults(OpAsmParser &parser,
+                              SmallVectorImpl<Type> &resultTypes);
+
 template <typename NamedStructuredOpType>
 static ParseResult parseNamedStructuredOp(OpAsmParser &parser,
                                           OperationState &result);
+
+static void printNamedStructuredOpResults(OpAsmPrinter &p,
+                                          TypeRange resultTypes);
+
+template <typename NamedStructuredOpType>
+static void printNamedStructuredOp(OpAsmPrinter &p, NamedStructuredOpType op);
+
 template <typename NamedStructuredOpType>
 static LogicalResult verifyNamedStructuredOp(NamedStructuredOpType op);
 
@@ -248,11 +265,6 @@ template <typename GenericOpType>
 static LogicalResult verifyGenericOp(GenericOpType op) {
   auto nInputViews = op.getNumInputs();
   auto nLoops = op.getNumLoops();
-  auto nInputsAndOutputBuffers = op.getNumInputsAndOutputBuffers();
-  if (nInputsAndOutputBuffers != llvm::size(op.views()))
-    return op.emitOpError("expected exactly ")
-           << nInputsAndOutputBuffers
-           << " inputs (tensor or buffer) and output buffer operands";
 
   auto &region = op.region();
   if (!llvm::hasSingleElement(region))
@@ -302,8 +314,27 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
   return success();
 }
 
-static LogicalResult verify(GenericOp op) { return verifyGenericOp(op); }
-static LogicalResult verify(IndexedGenericOp op) { return verifyGenericOp(op); }
+static LogicalResult verify(GenericOp op) {
+  // Temporarily hoisted here to avoid duplicating more code.
+  // TODO: uniformize with named structured ops.
+  auto nInputsAndOutputBuffers = op.getNumInputsAndOutputBuffers();
+  if (nInputsAndOutputBuffers != llvm::size(op.views()))
+    return op.emitOpError("expected exactly ")
+           << nInputsAndOutputBuffers
+           << " inputs (tensor or buffer) and output buffer operands";
+  return verifyGenericOp(op);
+}
+
+static LogicalResult verify(IndexedGenericOp op) {
+  // Temporarily hoisted here to avoid duplicating more code.
+  // TODO: uniformize with named structured ops.
+  auto nInputsAndOutputBuffers = op.getNumInputsAndOutputBuffers();
+  if (nInputsAndOutputBuffers != llvm::size(op.views()))
+    return op.emitOpError("expected exactly ")
+           << nInputsAndOutputBuffers
+           << " inputs (tensor or buffer) and output buffer operands";
+  return verifyGenericOp(op);
+}
 
 //===----------------------------------------------------------------------===//
 // ReshapeOp
@@ -1098,11 +1129,27 @@ static LogicalResult verify(PoolingSumOp op) {
 
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOpsInterfaces.cpp.inc"
 
+#include "mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.cpp.inc"
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgOps.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
+
+/// Return the dims that are `iteratorTypeName` loops in the LinalgOp `op`.
+/// Assumes `op` is a LinalgOp.
+void mlir::linalg::getDimsOfType(Operation *op, StringRef iteratorTypeName,
+                                 SmallVectorImpl<AffineExpr> &res) {
+  unsigned dim = 0;
+  MLIRContext *ctx = op->getContext();
+  for (auto tn :
+       cast<LinalgOp>(op).iterator_types().getAsValueRange<StringAttr>()) {
+    if (tn == iteratorTypeName)
+      res.push_back(getAffineDimExpr(dim, ctx));
+    ++dim;
+  }
+}
 
 AffineMap mlir::linalg::extractOrIdentityMap(Optional<AffineMap> maybeMap,
                                              unsigned rank,
@@ -1196,8 +1243,8 @@ std::string mlir::linalg::generateLibraryCallName(Operation *op) {
 }
 
 // TODO: Consider making all this boilerplate easy to autogenerate
-// with Tablegen. This seems a desirable property in the context of OpInterfaces
-// where a Linalg "named" op **isa** LinalgOp.
+// with Tablegen. This seems a desirable property in the context of
+// OpInterfaces where a Linalg "named" op **isa** LinalgOp.
 OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
@@ -1222,23 +1269,28 @@ OpFoldResult TransposeOp::fold(ArrayRef<Attribute>) {
 //===----------------------------------------------------------------------===//
 
 template <typename NamedStructuredOpType>
-void buildNamedStructuredOpRegionAndAttributes(Builder &builder,
-                                               OperationState &result,
-                                               TypeRange operandTypes,
-                                               TypeRange tensorResultTypes) {
-  Region &region = *result.addRegion();
-  Block *body = new Block();
+static void buildNamedStructuredOpRegionAndAttributesImpl(
+    OpBuilder &opBuilder, Region &region, TypeRange inputTypes,
+    TypeRange outputBufferTypes, TypeRange initTensorTypes,
+    TypeRange resultTypes,
+    std::function<void(unsigned, unsigned)> errorHandler) {
   // TODO: atm all operands go through getElementTypeOrSelf,
   // reconsider when we have evidence we need to.
-  for (auto t : operandTypes)
-    body->addArgument(getElementTypeOrSelf(t));
-  for (auto t : tensorResultTypes)
-    body->addArgument(getElementTypeOrSelf(t));
-  region.push_back(body);
+  SmallVector<Type, 8> argTypes;
+  for (auto containers : {inputTypes, outputBufferTypes, resultTypes})
+    for (auto t : containers)
+      argTypes.push_back(getElementTypeOrSelf(t));
 
-  OpBuilder opBuilder(builder.getContext());
-  opBuilder.setInsertionPointToStart(&region.front());
-  mlir::edsc::ScopedContext scope(opBuilder, builder.getUnknownLoc());
+  // RAII.
+  OpBuilder::InsertionGuard guard(opBuilder);
+  Block *body = opBuilder.createBlock(&region, {}, argTypes);
+  unsigned actual = body->getNumArguments();
+  unsigned expected = NamedStructuredOpType::getNumRegionArgs();
+  if (expected != actual)
+    return errorHandler(expected, actual);
+
+  opBuilder.setInsertionPointToStart(body);
+  mlir::edsc::ScopedContext scope(opBuilder, opBuilder.getUnknownLoc());
   NamedStructuredOpType::regionBuilder(*body);
 
   // indexing_maps is an auto-generated method.
@@ -1247,59 +1299,133 @@ void buildNamedStructuredOpRegionAndAttributes(Builder &builder,
 }
 
 template <typename NamedStructuredOpType>
-static void printNamedStructuredOp(OpAsmPrinter &p, NamedStructuredOpType op) {
-  std::array<StringRef, 2> silentAttrNames{getIndexingMapsAttrName(),
-                                           getIteratorTypesAttrName()};
-  p << op.getOperationName() << ' ';
-  p.printOptionalAttrDict(op.getAttrs(), silentAttrNames);
-  p << ' ' << op.getOperands();
-  p << " : (" << op.getOperandTypes() << ")";
-  auto outputTensorTypes = op.getResultTypes();
-  if (!outputTensorTypes.empty())
-    p << " -> (" << outputTensorTypes << ")";
+void buildNamedStructuredOpRegionAndAttributes(OpBuilder &opBuilder,
+                                               OperationState &result,
+                                               TypeRange inputTypes,
+                                               TypeRange outputBufferTypes,
+                                               TypeRange initTensorTypes,
+                                               TypeRange resultTypes) {
+  Region &region = *result.addRegion();
+  buildNamedStructuredOpRegionAndAttributesImpl<NamedStructuredOpType>(
+      opBuilder, region, inputTypes, outputBufferTypes, initTensorTypes,
+      resultTypes, [&](unsigned expected, unsigned actual) {
+        llvm::errs() << "region expects " << expected << " args, got "
+                     << actual;
+        assert(expected != actual && "incorrect number of arguments");
+      });
+}
+
+template <typename NamedStructuredOpType>
+static ParseResult
+parseNamedStructuredOpRegion(OpAsmParser &parser, Region &region,
+                             TypeRange inputTypes, TypeRange outputBufferTypes,
+                             TypeRange initTensorTypes, TypeRange resultTypes) {
+  ParseResult res = success();
+  OpBuilder opBuilder(parser.getBuilder().getContext());
+  buildNamedStructuredOpRegionAndAttributesImpl<NamedStructuredOpType>(
+      opBuilder, region, inputTypes, outputBufferTypes, initTensorTypes,
+      resultTypes, [&](unsigned expected, unsigned actual) {
+        res = parser.emitError(parser.getCurrentLocation(),
+                               llvm::formatv("region expects {0} args, got {1}",
+                                             expected, actual));
+      });
+  return res;
+}
+
+static ParseResult
+parseNamedStructuredOpResults(OpAsmParser &parser,
+                              SmallVectorImpl<Type> &resultTypes) {
+  if (succeeded(parser.parseOptionalArrow()))
+    if (parser.parseTypeList(resultTypes))
+      return failure();
+  return success();
 }
 
 template <typename NamedStructuredOpType>
 static ParseResult parseNamedStructuredOp(OpAsmParser &parser,
                                           OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 8> operandsInfo;
-  result.getContext()->getOrLoadDialect<StandardOpsDialect>();
+  llvm::SMLoc inputsOperandsLoc, outputBuffersOperandsLoc,
+      initTensorsOperandsLoc;
+  SmallVector<OpAsmParser::OperandType, 4> inputsOperands,
+      outputBuffersOperands, initTensorsOperands;
+  SmallVector<Type, 1> inputsTypes, outputBuffersTypes, initTensorsTypes,
+      outputTensorsTypes;
+  std::unique_ptr<Region> regionRegion = std::make_unique<Region>();
 
-  // Optional attributes may be added.
-  if (parser.parseOperandList(operandsInfo) ||
-      parser.parseOptionalAttrDict(result.attributes))
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseKeyword("ins") || parser.parseLParen())
     return failure();
 
-  SmallVector<Type, 8> operandTypes;
-  if (parser.parseColon() || parser.parseLParen() ||
-      parser.parseTypeList(operandTypes) || parser.parseRParen())
+  inputsOperandsLoc = parser.getCurrentLocation();
+  if (parser.parseOperandList(inputsOperands) || parser.parseColon() ||
+      parser.parseTypeList(inputsTypes) || parser.parseRParen())
     return failure();
 
-  // Generic ops may specify that a subset of its outputs are tensors. Such
-  // outputs are specified in the result type.
-  SmallVector<Type, 8> tensorResultTypes;
-  if (parser.parseOptionalArrowTypeList(tensorResultTypes))
+  if (succeeded(parser.parseOptionalKeyword("outs"))) {
+    outputBuffersOperandsLoc = parser.getCurrentLocation();
+    if (parser.parseLParen() ||
+        parser.parseOperandList(outputBuffersOperands) || parser.parseColon() ||
+        parser.parseTypeList(outputBuffersTypes) || parser.parseRParen())
+      return failure();
+  }
+  if (succeeded(parser.parseOptionalKeyword("init"))) {
+    initTensorsOperandsLoc = parser.getCurrentLocation();
+    if (parser.parseLParen() || parser.parseOperandList(initTensorsOperands) ||
+        parser.parseColon() || parser.parseTypeList(initTensorsTypes) ||
+        parser.parseRParen())
+      return failure();
+  }
+
+  if (parseNamedStructuredOpResults(parser, outputTensorsTypes))
     return failure();
 
-  if (!tensorResultTypes.empty())
-    result.addTypes(tensorResultTypes);
+  if (parseNamedStructuredOpRegion<NamedStructuredOpType>(
+          parser, *regionRegion, inputsTypes, outputBuffersTypes,
+          initTensorsTypes, outputTensorsTypes))
+    return failure();
 
-  // The number of parsed arguments must equal
-  // the number of expected arguments for the current operation.
-  auto parsedArgs = operandsInfo.size();
-  auto expectedArgs = NamedStructuredOpType::getNumInputs() +
-                      NamedStructuredOpType::getNumOutputs();
-  if (parsedArgs != expectedArgs)
-    return parser.emitError(parser.getNameLoc(),
-                            "expects " + std::to_string(expectedArgs) +
-                                " operands, but found " +
-                                std::to_string(parsedArgs));
+  if (parser.resolveOperands(inputsOperands, inputsTypes, inputsOperandsLoc,
+                             result.operands) ||
+      parser.resolveOperands(outputBuffersOperands, outputBuffersTypes,
+                             outputBuffersOperandsLoc, result.operands) ||
+      parser.resolveOperands(initTensorsOperands, initTensorsTypes,
+                             initTensorsOperandsLoc, result.operands))
+    return failure();
 
-  buildNamedStructuredOpRegionAndAttributes<NamedStructuredOpType>(
-      parser.getBuilder(), result, operandTypes, tensorResultTypes);
+  result.addTypes(outputTensorsTypes);
+  result.addRegion(std::move(regionRegion));
+  result.addAttribute("operand_segment_sizes",
+                      parser.getBuilder().getI32VectorAttr(
+                          {static_cast<int32_t>(inputsOperands.size()),
+                           static_cast<int32_t>(outputBuffersOperands.size()),
+                           static_cast<int32_t>(initTensorsOperands.size())}));
+  return success();
+}
 
-  return parser.resolveOperands(operandsInfo, operandTypes,
-                                parser.getCurrentLocation(), result.operands);
+static void printNamedStructuredOpResults(OpAsmPrinter &p,
+                                          TypeRange resultTypes) {
+  if (resultTypes.empty())
+    return;
+  p << "-> " << resultTypes;
+}
+
+template <typename NamedStructuredOpType>
+static void printNamedStructuredOp(OpAsmPrinter &p, NamedStructuredOpType op) {
+  p << op.getOperationName();
+  p.printOptionalAttrDict(op.getAttrs(),
+                          /*elidedAttrs=*/{"operand_segment_sizes"});
+  p << " ins(" << op.inputs() << " : " << op.inputs().getTypes() << ")";
+  if (!op.output_buffers().empty())
+    p << " outs(" << op.output_buffers() << " : "
+      << op.output_buffers().getTypes() << ")";
+  if (!op.init_tensors().empty())
+    p << " init(" << op.init_tensors() << " : " << op.init_tensors().getTypes()
+      << ")";
+  p << " ";
+  printNamedStructuredOpResults(p, op.output_tensors().getTypes());
+  p << " ";
+
+  // Region is elided.
 }
 
 template <typename NamedStructuredOpType>
@@ -1353,8 +1479,6 @@ CANONICALIZERS_AND_FOLDERS(CopyOp)
 CANONICALIZERS_AND_FOLDERS(FillOp)
 CANONICALIZERS_AND_FOLDERS(GenericOp)
 CANONICALIZERS_AND_FOLDERS(IndexedGenericOp)
-
-#include "mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.cpp.inc"
 
 // TODO: Determine whether we can generate the folders and verifiers.
 CANONICALIZERS_AND_FOLDERS(BatchMatmulOp)
