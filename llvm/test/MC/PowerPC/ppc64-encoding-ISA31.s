@@ -351,6 +351,18 @@
 # CHECK-LE: xxblendvd 6, 63, 21, 34               # encoding: [0x00,0x00,0x00,0x05,
 # CHECK-LE-SAME:                                               0xbc,0xa8,0xdf,0x84]
             xxblendvd 6, 63, 21, 34
+# CHECK-BE: setbc 21, 11                          # encoding: [0x7e,0xab,0x03,0x00]
+# CHECK-LE: setbc 21, 11                          # encoding: [0x00,0x03,0xab,0x7e]
+            setbc 21, 11
+# CHECK-BE: setbcr 21, 11                         # encoding: [0x7e,0xab,0x03,0x40]
+# CHECK-LE: setbcr 21, 11                         # encoding: [0x40,0x03,0xab,0x7e]
+            setbcr 21, 11
+# CHECK-BE: setnbc 21, 11                         # encoding: [0x7e,0xab,0x03,0x80]
+# CHECK-LE: setnbc 21, 11                         # encoding: [0x80,0x03,0xab,0x7e]
+            setnbc 21, 11
+# CHECK-BE: setnbcr 21, 11                        # encoding: [0x7e,0xab,0x03,0xc0]
+# CHECK-LE: setnbcr 21, 11                        # encoding: [0xc0,0x03,0xab,0x7e]
+            setnbcr 21, 11
 # CHECK-BE: vsldbi 2, 3, 4, 5                     # encoding: [0x10,0x43,0x21,0x56]
 # CHECK-LE: vsldbi 2, 3, 4, 5                     # encoding: [0x56,0x21,0x43,0x10]
             vsldbi 2, 3, 4, 5
