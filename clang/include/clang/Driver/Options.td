@@ -1339,6 +1339,17 @@ def fxray_instrumentation_bundle :
   Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Select which XRay instrumentation points to emit. Options: all, none, function-entry, function-exit, function, custom. Default is 'all'.  'function' includes both 'function-entry' and 'function-exit'.">;
 
+def fxray_function_groups :
+  Joined<["-"], "fxray-function-groups=">,
+  Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Only instrument 1 of N groups">;
+
+def fxray_selected_function_group :
+  Joined<["-"], "fxray-selected-function-group=">,
+  Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"When using -fxray-function-groups, select which group of functions to instrument. Valid range is 0 to fxray-function-groups - 1">;
+
+
 def ffine_grained_bitfield_accesses : Flag<["-"],
   "ffine-grained-bitfield-accesses">, Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Use separate accesses for consecutive bitfield runs with legal widths and alignments.">;

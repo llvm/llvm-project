@@ -120,6 +120,12 @@ CODEGENOPT(XRayOmitFunctionIndex , 1, 0)
 ///< XRay instrumentation.
 VALUE_CODEGENOPT(XRayInstructionThreshold , 32, 200)
 
+///< Only instrument 1 in N functions, by dividing functions into N total groups and
+///< instrumenting only the specified group at a time. Group numbers start at 0
+///< and end at N-1.
+VALUE_CODEGENOPT(XRayTotalFunctionGroups, 32, 1)
+VALUE_CODEGENOPT(XRaySelectedFunctionGroup, 32, 0)
+
 VALUE_CODEGENOPT(PatchableFunctionEntryCount , 32, 0) ///< Number of NOPs at function entry
 VALUE_CODEGENOPT(PatchableFunctionEntryOffset , 32, 0)
 
