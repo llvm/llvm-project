@@ -6,7 +6,7 @@ typedef __WCHAR_TYPE__ wchar_t;
 #if defined(_WIN32) || defined(_M_IX86) || defined(__CYGWIN__) \
  || defined(_M_X64) || defined(__ORBIS__) || defined(SHORT_WCHAR)
   #define WCHAR_T_TYPE unsigned short
-#elif defined(__arm) || defined(__aarch64__)
+#elif defined(__arm) || defined(__aarch64__) || defined(__MVS__)
   #define WCHAR_T_TYPE unsigned int
 #elif defined(__sun)
   #if defined(__LP64__)

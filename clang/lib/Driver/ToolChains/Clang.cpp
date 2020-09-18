@@ -3409,8 +3409,8 @@ static void RenderCharacterOptions(const ArgList &Args, const llvm::Triple &T,
     } else {
       bool IsARM = T.isARM() || T.isThumb() || T.isAArch64();
       CmdArgs.push_back("-fwchar-type=int");
-      if (IsARM && !(T.isOSWindows() || T.isOSNetBSD() ||
-                     T.isOSOpenBSD()))
+      if (T.isOSzOS() ||
+          (IsARM && !(T.isOSWindows() || T.isOSNetBSD() || T.isOSOpenBSD())))
         CmdArgs.push_back("-fno-signed-wchar");
       else
         CmdArgs.push_back("-fsigned-wchar");
