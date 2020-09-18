@@ -527,9 +527,6 @@ void SchedulePostRATDList::ListScheduleTopDown() {
   // blocks are a single region).
   HazardRec->Reset();
 
-  // Release any successors of the special Entry node.
-  ReleaseSuccessors(&EntrySU);
-
   // Add all leaves to Available queue.
   for (unsigned i = 0, e = SUnits.size(); i != e; ++i) {
     // It is available if it has no predecessors.

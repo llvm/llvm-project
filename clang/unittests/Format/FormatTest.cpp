@@ -14328,6 +14328,12 @@ TEST_F(FormatTest, ParsesConfiguration) {
   CHECK_PARSE("BitFieldColonSpacing: After", BitFieldColonSpacing,
               FormatStyle::BFCS_After);
 
+  Style.SortJavaStaticImport = FormatStyle::SJSIO_Before;
+  CHECK_PARSE("SortJavaStaticImport: After", SortJavaStaticImport,
+              FormatStyle::SJSIO_After);
+  CHECK_PARSE("SortJavaStaticImport: Before", SortJavaStaticImport,
+              FormatStyle::SJSIO_Before);
+
   // FIXME: This is required because parsing a configuration simply overwrites
   // the first N elements of the list instead of resetting it.
   Style.ForEachMacros.clear();

@@ -1618,10 +1618,12 @@ struct FormatStyle {
 
   /// A vector of prefixes ordered by the desired groups for Java imports.
   ///
-  /// Each group is separated by a newline. Static imports will also follow the
-  /// same grouping convention above all non-static imports. One group's prefix
-  /// can be a subset of another - the longest prefix is always matched. Within
-  /// a group, the imports are ordered lexicographically.
+  /// One group's prefix can be a subset of another - the longest prefix is
+  /// always matched. Within a group, the imports are ordered lexicographically.
+  /// Static imports are grouped separately and follow the same group rules.
+  /// By default, static imports are placed before non-static imports,
+  /// but this behavior is changed by another option,
+  /// ``SortJavaStaticImport``.
   ///
   /// In the .clang-format configuration file, this can be configured like
   /// in the following yaml example. This will result in imports being
@@ -2015,6 +2017,29 @@ struct FormatStyle {
   ///    #include "a.h"                         #include "b.h"
   /// \endcode
   bool SortIncludes;
+
+  /// Position for Java Static imports.
+  enum SortJavaStaticImportOptions {
+    /// Static imports are placed before non-static imports.
+    /// \code{.java}
+    ///   import static org.example.function1;
+    ///
+    ///   import org.example.ClassA;
+    /// \endcode
+    SJSIO_Before,
+    /// Static imports are placed after non-static imports.
+    /// \code{.java}
+    ///   import org.example.ClassA;
+    ///
+    ///   import static org.example.function1;
+    /// \endcode
+    SJSIO_After,
+  };
+
+  /// When sorting Java imports, by default static imports are placed before
+  /// non-static imports. If ``JavaStaticImportAfterImport`` is ``After``,
+  /// static imports are placed after non-static imports.
+  SortJavaStaticImportOptions SortJavaStaticImport;
 
   /// If ``true``, clang-format will sort using declarations.
   ///
@@ -2435,6 +2460,7 @@ struct FormatStyle {
                R.PenaltyBreakTemplateDeclaration &&
            PointerAlignment == R.PointerAlignment &&
            RawStringFormats == R.RawStringFormats &&
+           SortJavaStaticImport == R.SortJavaStaticImport &&
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&
            SpaceAfterLogicalNot == R.SpaceAfterLogicalNot &&
            SpaceAfterTemplateKeyword == R.SpaceAfterTemplateKeyword &&

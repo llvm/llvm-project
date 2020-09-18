@@ -168,6 +168,9 @@ def PositiveIntAttrOp : TEST_Op<"positive_int_attr"> {
 def TypeArrayAttrOp : TEST_Op<"type_array_attr"> {
   let arguments = (ins TypeArrayAttr:$attr);
 }
+def TypeArrayAttrWithDefaultOp : TEST_Op<"type_array_attr_with_default"> {
+  let arguments = (ins DefaultValuedAttr<TypeArrayAttr, "{}">:$attr);
+}
 def TypeStringAttrWithTypeOp : TEST_Op<"string_attr_with_type"> {
   let arguments = (ins TypedStrAttr<AnyType>:$attr);
   let assemblyFormat = "$attr attr-dict";

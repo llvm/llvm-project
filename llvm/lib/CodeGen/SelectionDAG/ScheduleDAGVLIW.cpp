@@ -166,9 +166,6 @@ void ScheduleDAGVLIW::scheduleNodeTopDown(SUnit *SU, unsigned CurCycle) {
 void ScheduleDAGVLIW::listScheduleTopDown() {
   unsigned CurCycle = 0;
 
-  // Release any successors of the special Entry node.
-  releaseSuccessors(&EntrySU);
-
   // All leaves to AvailableQueue.
   for (unsigned i = 0, e = SUnits.size(); i != e; ++i) {
     // It is available if it has no predecessors.

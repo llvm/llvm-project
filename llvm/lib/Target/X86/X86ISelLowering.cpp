@@ -8655,10 +8655,14 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
     SDValue BOperand;
     SDValue ZeroExtended = isSplatZeroExtended(BVOp, NumElts, EltType);
     if ((ZeroExtended && ZeroExtended.getOpcode() == ISD::BITCAST) ||
+        (ZeroExtended && ZeroExtended.getOpcode() == ISD::ZERO_EXTEND &&
+         ZeroExtended.getOperand(0).getOpcode() == ISD::BITCAST) ||
         (Ld && Ld.getOpcode() == ISD::ZERO_EXTEND &&
          Ld.getOperand(0).getOpcode() == ISD::BITCAST)) {
-      if (ZeroExtended)
+      if (ZeroExtended && ZeroExtended.getOpcode() == ISD::BITCAST)
         BOperand = ZeroExtended.getOperand(0);
+      else if (ZeroExtended)
+        BOperand = ZeroExtended.getOperand(0).getOperand(0);
       else
         BOperand = Ld.getOperand(0).getOperand(0);
       MVT MaskVT = BOperand.getSimpleValueType();

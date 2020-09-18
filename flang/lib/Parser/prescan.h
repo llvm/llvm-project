@@ -33,11 +33,16 @@ class Preprocessor;
 
 class Prescanner {
 public:
-  Prescanner(Messages &, CookedSource &, AllSources &, Preprocessor &,
+  Prescanner(Messages &, CookedSource &, Preprocessor &,
       common::LanguageFeatureControl);
   Prescanner(const Prescanner &);
 
-  Messages &messages() const { return messages_; }
+  const AllSources &allSources() const { return allSources_; }
+  AllSources &allSources() { return allSources_; }
+  const Messages &messages() const { return messages_; }
+  Messages &messages() { return messages_; }
+  const Preprocessor &preprocessor() const { return preprocessor_; }
+  Preprocessor &preprocessor() { return preprocessor_; }
 
   Prescanner &set_fixedForm(bool yes) {
     inFixedForm_ = yes;
@@ -181,8 +186,8 @@ private:
 
   Messages &messages_;
   CookedSource &cooked_;
-  AllSources &allSources_;
   Preprocessor &preprocessor_;
+  AllSources &allSources_;
   common::LanguageFeatureControl features_;
   bool inFixedForm_{false};
   int fixedFormColumnLimit_{72};
