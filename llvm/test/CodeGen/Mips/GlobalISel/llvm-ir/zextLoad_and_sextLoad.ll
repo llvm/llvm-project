@@ -113,9 +113,8 @@ entry:
 define i64 @load4_s32_to_sextLoad4_s64(i32* %px) {
 ; MIPS32-LABEL: load4_s32_to_sextLoad4_s64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    lw $1, 0($4)
-; MIPS32-NEXT:    sra $3, $1, 31
-; MIPS32-NEXT:    move $2, $1
+; MIPS32-NEXT:    lw $2, 0($4)
+; MIPS32-NEXT:    sra $3, $2, 31
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:

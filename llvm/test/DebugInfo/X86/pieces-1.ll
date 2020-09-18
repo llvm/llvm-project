@@ -16,7 +16,7 @@
 ; CHECK: .debug_loc contents:
 ;
 
-; CHECK: (0x0000000000000000, 0x[[LTMP3:.*]]): DW_OP_reg5 RDI, DW_OP_piece 0x8, DW_OP_reg4 RSI, DW_OP_piece 0x4
+; CHECK: (0x0000000000000006, 0x[[LTMP3:.*]]): DW_OP_reg5 RDI, DW_OP_piece 0x8, DW_OP_reg0 RAX, DW_OP_piece 0x4
 ; 0x0000000000000006 - 0x0000000000000008: rbp-8, piece 0x8, rax, piece 0x4 )
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
