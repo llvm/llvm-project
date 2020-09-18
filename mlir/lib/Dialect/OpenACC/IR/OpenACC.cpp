@@ -545,10 +545,14 @@ static void print(OpAsmPrinter &printer, DataOp &op) {
 //===----------------------------------------------------------------------===//
 
 /// Parse acc.loop operation
-/// operation := `acc.loop` `gang`? `vector`? `worker`?
-///                         `private` `(` value-list `)`?
-///                         `reduction` `(` value-list `)`?
-///                         region attr-dict?
+/// operation := `acc.loop`
+///              (`gang` ( `(` (`num=` value)? (`,` `static=` value `)`)? )? )?
+///              (`vector` ( `(` value `)` )? )? (`worker` (`(` value `)`)? )?
+///              (`vector_length` `(` value `)`)?
+///              (`tile` `(` value-list `)`)?
+///              (`private` `(` value-list `)`)?
+///              (`reduction` `(` value-list `)`)?
+///              region attr-dict?
 static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &result) {
   Builder &builder = parser.getBuilder();
   unsigned executionMapping = OpenACCExecMapping::NONE;
@@ -558,7 +562,7 @@ static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &result) {
   bool hasWorkerNum = false, hasVectorLength = false, hasGangNum = false;
   bool hasGangStatic = false;
   OpAsmParser::OperandType workerNum, vectorLength, gangNum, gangStatic;
-  Type intType = builder.getI64Type();
+  Type gangNumType, gangStaticType, workerType, vectorLengthType;
 
   // gang?
   if (succeeded(parser.parseOptionalKeyword(LoopOp::getGangKeyword())))
@@ -568,9 +572,9 @@ static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &result) {
   if (succeeded(parser.parseOptionalLParen())) {
     if (succeeded(parser.parseOptionalKeyword(LoopOp::getGangNumKeyword()))) {
       hasGangNum = true;
-      parser.parseColon();
-      if (parser.parseOperand(gangNum) ||
-          parser.resolveOperand(gangNum, intType, result.operands)) {
+      parser.parseEqual();
+      if (parser.parseOperand(gangNum) || parser.parseColonType(gangNumType) ||
+          parser.resolveOperand(gangNum, gangNumType, result.operands)) {
         return failure();
       }
     }
@@ -578,9 +582,10 @@ static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &result) {
     if (succeeded(
             parser.parseOptionalKeyword(LoopOp::getGangStaticKeyword()))) {
       hasGangStatic = true;
-      parser.parseColon();
+      parser.parseEqual();
       if (parser.parseOperand(gangStatic) ||
-          parser.resolveOperand(gangStatic, intType, result.operands)) {
+          parser.parseColonType(gangStaticType) ||
+          parser.resolveOperand(gangStatic, gangStaticType, result.operands)) {
         return failure();
       }
     }
@@ -595,8 +600,8 @@ static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &result) {
   // optional worker operand
   if (succeeded(parser.parseOptionalLParen())) {
     hasWorkerNum = true;
-    if (parser.parseOperand(workerNum) ||
-        parser.resolveOperand(workerNum, intType, result.operands) ||
+    if (parser.parseOperand(workerNum) || parser.parseColonType(workerType) ||
+        parser.resolveOperand(workerNum, workerType, result.operands) ||
         parser.parseRParen()) {
       return failure();
     }
@@ -610,7 +615,9 @@ static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &result) {
   if (succeeded(parser.parseOptionalLParen())) {
     hasVectorLength = true;
     if (parser.parseOperand(vectorLength) ||
-        parser.resolveOperand(vectorLength, intType, result.operands) ||
+        parser.parseColonType(vectorLengthType) ||
+        parser.resolveOperand(vectorLength, vectorLengthType,
+                              result.operands) ||
         parser.parseRParen()) {
       return failure();
     }
@@ -671,12 +678,14 @@ static void print(OpAsmPrinter &printer, LoopOp &op) {
     if (gangNum || gangStatic) {
       printer << "(";
       if (gangNum) {
-        printer << LoopOp::getGangNumKeyword() << ": " << gangNum;
+        printer << LoopOp::getGangNumKeyword() << "=" << gangNum << ": "
+                << gangNum.getType();
         if (gangStatic)
           printer << ", ";
       }
       if (gangStatic)
-        printer << LoopOp::getGangStaticKeyword() << ": " << gangStatic;
+        printer << LoopOp::getGangStaticKeyword() << "=" << gangStatic << ": "
+                << gangStatic.getType();
       printer << ")";
     }
   }
@@ -686,7 +695,7 @@ static void print(OpAsmPrinter &printer, LoopOp &op) {
 
     // Print optional worker operand if present
     if (Value workerNum = op.workerNum())
-      printer << "(" << workerNum << ")";
+      printer << "(" << workerNum << ": " << workerNum.getType() << ")";
   }
 
   if (execMapping & OpenACCExecMapping::VECTOR) {
@@ -694,7 +703,7 @@ static void print(OpAsmPrinter &printer, LoopOp &op) {
 
     // Print optional vector operand if present
     if (Value vectorLength = op.vectorLength())
-      printer << "(" << vectorLength << ")";
+      printer << "(" << vectorLength << ": " << vectorLength.getType() << ")";
   }
 
   // tile()?
