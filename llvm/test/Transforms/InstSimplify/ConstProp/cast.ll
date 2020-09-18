@@ -49,10 +49,10 @@ define float @nan_f64_trunc() {
   ret float %f
 }
 
-define <2 x half> @nan_v2f32_trunc() {
-; CHECK-LABEL: @nan_v2f32_trunc(
-; CHECK-NEXT:    ret <2 x half> <half 0xH7C00, half 0xH7C37>
+define <3 x half> @nan_v3f64_trunc() {
+; CHECK-LABEL: @nan_v3f64_trunc(
+; CHECK-NEXT:    ret <3 x half> <half 0xH7C00, half 0xH7C00, half 0xH7E00>
 ;
-  %f = fptrunc <2 x float> <float 0x7FF0000100000000, float 0x7FF0DEAD00000000> to <2 x half>
-  ret <2 x half> %f
+  %f = fptrunc <3 x double> <double 0x7FF0020000000000, double 0x7FF003FFFFFFFFFF, double 0x7FF8000000000001> to <3 x half>
+  ret <3 x half> %f
 }
