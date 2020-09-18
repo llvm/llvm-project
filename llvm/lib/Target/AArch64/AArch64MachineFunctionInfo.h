@@ -284,15 +284,14 @@ public:
   void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
 
   unsigned getJumpTableEntrySize(int Idx) const {
-    auto It = JumpTableEntryInfo.find(Idx);
-    if (It != JumpTableEntryInfo.end())
-      return It->second.first;
-    return 4;
+    return JumpTableEntryInfo[Idx].first;
   }
   MCSymbol *getJumpTableEntryPCRelSymbol(int Idx) const {
-    return JumpTableEntryInfo.find(Idx)->second.second;
+    return JumpTableEntryInfo[Idx].second;
   }
   void setJumpTableEntryInfo(int Idx, unsigned Size, MCSymbol *PCRelSym) {
+    if ((unsigned)Idx >= JumpTableEntryInfo.size())
+      JumpTableEntryInfo.resize(Idx+1);
     JumpTableEntryInfo[Idx] = std::make_pair(Size, PCRelSym);
   }
 
@@ -353,7 +352,7 @@ private:
   MILOHContainer LOHContainerSet;
   SetOfInstructions LOHRelated;
 
-  DenseMap<int, std::pair<unsigned, MCSymbol *>> JumpTableEntryInfo;
+  SmallVector<std::pair<unsigned, MCSymbol *>, 2> JumpTableEntryInfo;
 };
 
 namespace yaml {

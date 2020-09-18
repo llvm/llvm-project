@@ -86,6 +86,8 @@ bool AArch64ExpandHardenedPseudos::expandMI(MachineInstr &MI) {
     //     cmp xEntry, #<size of table> ; if table size fits in 12-bit immediate
     //     csel xEntry, xEntry, xzr, ls
     //     ldrsw xScratch, [xTable, xEntry, lsl #2] ; kill xEntry, xScratch = xEntry
+    //   Ltmp:
+    //     adr xTable, Ltmp
     //     add xDest, xTable, xScratch ; kill xTable, xDest = xTable
     //     br xDest
 
@@ -147,6 +149,11 @@ bool AArch64ExpandHardenedPseudos::expandMI(MachineInstr &MI) {
       .addReg(AArch64::X16)
       .addImm(0)
       .addImm(1);
+
+    // Really an ADR with a label attached.
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::JumpTableAnchor), AArch64::X17)
+      .addJumpTableIndex(JTI);
+
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXrs), AArch64::X16)
       .addReg(AArch64::X17)
       .addReg(AArch64::X16)

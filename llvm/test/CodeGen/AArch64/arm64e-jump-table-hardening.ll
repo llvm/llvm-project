@@ -7,7 +7,9 @@
 ; CHECK: adrp  [[JTPAGE:x[0-9]+]], LJTI0_0@PAGE
 ; CHECK: add   x[[JT:[0-9]+]], [[JTPAGE]], LJTI0_0@PAGEOFF
 ; CHECK: ldrsw [[OFFSET:x[0-9]+]], [x[[JT]], [[INDEX2]], lsl #2]
-; CHECK: add   [[DEST:x[0-9]+]], x[[JT]], [[OFFSET]]
+; CHECK: Ltmp0:
+; CHECK:   adr [[TABLE:x[0-9]+]], Ltmp0
+; CHECK: add   [[DEST:x[0-9]+]], [[TABLE]], [[OFFSET]]
 ; CHECK: br    [[DEST]]
 
 define i32 @test_jumptable(i32 %in) "jump-table-hardening" {
@@ -41,9 +43,9 @@ lbl5:
 }
 
 ; CHECK: LJTI0_0:
-; CHECK-NEXT: .long LBB{{[0-9_]+}}-LJTI0_0
-; CHECK-NEXT: .long LBB{{[0-9_]+}}-LJTI0_0
-; CHECK-NEXT: .long LBB{{[0-9_]+}}-LJTI0_0
-; CHECK-NEXT: .long LBB{{[0-9_]+}}-LJTI0_0
-; CHECK-NEXT: .long LBB{{[0-9_]+}}-LJTI0_0
-; CHECK-NEXT: .long LBB{{[0-9_]+}}-LJTI0_0
+; CHECK-NEXT: .long LBB{{[0-9_]+}}-Ltmp0
+; CHECK-NEXT: .long LBB{{[0-9_]+}}-Ltmp0
+; CHECK-NEXT: .long LBB{{[0-9_]+}}-Ltmp0
+; CHECK-NEXT: .long LBB{{[0-9_]+}}-Ltmp0
+; CHECK-NEXT: .long LBB{{[0-9_]+}}-Ltmp0
+; CHECK-NEXT: .long LBB{{[0-9_]+}}-Ltmp0

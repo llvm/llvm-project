@@ -6417,6 +6417,9 @@ SDValue AArch64TargetLowering::LowerBR_JT(SDValue Op,
   SDValue Entry = Op.getOperand(2);
   int JTI = cast<JumpTableSDNode>(JT.getNode())->getIndex();
 
+  auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
+  AFI->setJumpTableEntryInfo(JTI, 4, nullptr);
+
   // With aarch64-hardened-codegen, we only expand the full jump table dispatch
   // sequence later, to guarantee the integrity of the intermediate values.
   if (DAG.getMachineFunction().getFunction()
