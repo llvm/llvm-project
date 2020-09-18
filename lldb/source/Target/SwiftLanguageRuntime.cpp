@@ -228,7 +228,7 @@ public:
 
   llvm::Optional<uint64_t> GetMemberVariableOffset(CompilerType instance_type,
                                                    ValueObject *instance,
-                                                   ConstString member_name,
+                                                   llvm::StringRef member_name,
                                                    Status *error) {
     STUB_LOG();
     return {};
@@ -2083,8 +2083,8 @@ bool SwiftLanguageRuntime::IsStoredInlineInBuffer(CompilerType type) {
 }
 
 llvm::Optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffset(
-    CompilerType instance_type, ValueObject *instance, ConstString member_name,
-    Status *error) {
+    CompilerType instance_type, ValueObject *instance,
+    llvm::StringRef member_name, Status *error) {
   FORWARD(GetMemberVariableOffset, instance_type, instance, member_name, error);
 }
 

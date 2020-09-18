@@ -6837,8 +6837,8 @@ static llvm::Optional<uint64_t> GetInstanceVariableOffset_Metadata(
   }
 
   Status error;
-  llvm::Optional<uint64_t> offset = runtime->GetMemberVariableOffset(
-      type, valobj, ConstString(ivar_name), &error);
+  llvm::Optional<uint64_t> offset =
+      runtime->GetMemberVariableOffset(type, valobj, ivar_name, &error);
   if (offset)
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "for %s: %llu", ivar_name.str().c_str(),
                *offset);

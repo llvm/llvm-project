@@ -463,7 +463,7 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
       if (llvm::isa<::swift::TupleType>(swift_type)) {
         Status error;
         llvm::Optional<uint64_t> result = runtime->GetMemberVariableOffset(
-            {swift_ast, swift_type}, nativeStorage_sp.get(), ConstString("1"),
+            {swift_ast, swift_type}, nativeStorage_sp.get(), "1",
             &error);
         if (result)
           m_key_stride_padded = result.getValue();

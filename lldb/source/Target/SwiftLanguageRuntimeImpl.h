@@ -100,14 +100,13 @@ public:
   llvm::Optional<uint64_t>
   GetMemberVariableOffsetRemoteAST(CompilerType instance_type,
                                    ValueObject *instance,
-                                   ConstString member_name);
-  llvm::Optional<uint64_t>
-  GetMemberVariableOffsetRemoteMirrors(CompilerType instance_type,
-                                       ValueObject *instance,
-                                       ConstString member_name, Status *error);
+                                   llvm::StringRef member_name);
+  llvm::Optional<uint64_t> GetMemberVariableOffsetRemoteMirrors(
+      CompilerType instance_type, ValueObject *instance,
+      llvm::StringRef member_name, Status *error);
   llvm::Optional<uint64_t> GetMemberVariableOffset(CompilerType instance_type,
                                                    ValueObject *instance,
-                                                   ConstString member_name,
+                                                   llvm::StringRef member_name,
                                                    Status *error);
 
   /// Like \p BindGenericTypeParameters but for TypeSystemSwiftTypeRef.
