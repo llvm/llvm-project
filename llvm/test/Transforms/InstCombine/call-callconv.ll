@@ -6,8 +6,10 @@
 
 define arm_aapcscc i32 @_abs(i32 %i) nounwind readnone {
 ; CHECK-LABEL: @_abs(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.abs.i32(i32 [[I:%.*]], i1 true)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[I:%.*]], 0
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[I]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[NEG]], i32 [[I]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %call = tail call arm_aapcscc i32 @abs(i32 %i) nounwind readnone
   ret i32 %call
@@ -17,8 +19,10 @@ declare arm_aapcscc i32 @abs(i32) nounwind readnone
 
 define arm_aapcscc i32 @_labs(i32 %i) nounwind readnone {
 ; CHECK-LABEL: @_labs(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.abs.i32(i32 [[I:%.*]], i1 true)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[I:%.*]], 0
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[I]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[NEG]], i32 [[I]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %call = tail call arm_aapcscc i32 @labs(i32 %i) nounwind readnone
   ret i32 %call
