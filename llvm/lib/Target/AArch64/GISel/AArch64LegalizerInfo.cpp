@@ -657,6 +657,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
+  getActionDefinitionsBuilder(G_ABS).lowerIf(
+      [=](const LegalityQuery &Query) { return Query.Types[0].isScalar(); });
+
   computeTables();
   verify(*ST.getInstrInfo());
 }

@@ -3090,6 +3090,22 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_SSHLSAT:
   case G_USHLSAT:
     return lowerShlSat(MI);
+  case G_ABS: {
+    // Expand %res = G_ABS %a into:
+    // %v1 = G_ASHR %a, scalar_size-1
+    // %v2 = G_ADD %a, %v1
+    // %res = G_XOR %v2, %v1
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    Register OpReg = MI.getOperand(1).getReg();
+    auto ShiftAmt =
+        MIRBuilder.buildConstant(DstTy, DstTy.getScalarSizeInBits() - 1);
+    auto Shift =
+        MIRBuilder.buildAShr(DstTy, OpReg, ShiftAmt);
+    auto Add = MIRBuilder.buildAdd(DstTy, OpReg, Shift);
+    MIRBuilder.buildXor(MI.getOperand(0).getReg(), Add, Shift);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   }
 }
 
