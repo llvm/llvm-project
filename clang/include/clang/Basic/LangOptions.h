@@ -432,8 +432,7 @@ public:
   }
 
   bool isFPConstrained() const {
-    return getRoundingMode() !=
-               static_cast<unsigned>(RoundingMode::NearestTiesToEven) ||
+    return getRoundingMode() != llvm::RoundingMode::NearestTiesToEven ||
            getFPExceptionMode() != LangOptions::FPE_Ignore ||
            getAllowFEnvAccess();
   }
@@ -453,8 +452,8 @@ public:
 
   // We can define most of the accessors automatically:
 #define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
-  unsigned get##NAME() const {                                                 \
-    return static_cast<unsigned>(TYPE((Value & NAME##Mask) >> NAME##Shift));   \
+  TYPE get##NAME() const {                                                     \
+    return static_cast<TYPE>((Value & NAME##Mask) >> NAME##Shift);             \
   }                                                                            \
   void set##NAME(TYPE value) {                                                 \
     Value = (Value & ~NAME##Mask) | (storage_type(value) << NAME##Shift);      \
@@ -561,7 +560,7 @@ public:
   bool has##NAME##Override() const {                                           \
     return OverrideMask & FPOptions::NAME##Mask;                               \
   }                                                                            \
-  unsigned get##NAME##Override() const {                                       \
+  TYPE get##NAME##Override() const {                                           \
     assert(has##NAME##Override());                                             \
     return Options.get##NAME();                                                \
   }                                                                            \
