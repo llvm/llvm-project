@@ -4703,8 +4703,9 @@ bool AArch64InstructionSelector::selectInsertElt(
 bool AArch64InstructionSelector::tryOptConstantBuildVec(
     MachineInstr &I, LLT DstTy, MachineRegisterInfo &MRI) const {
   assert(I.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
-  assert(DstTy.getSizeInBits() <= 128 && "Unexpected build_vec type!");
-  if (DstTy.getSizeInBits() < 32)
+  unsigned DstSize = DstTy.getSizeInBits();
+  assert(DstSize <= 128 && "Unexpected build_vec type!");
+  if (DstSize < 32)
     return false;
   // Check if we're building a constant vector, in which case we want to
   // generate a constant pool load instead of a vector insert sequence.
@@ -4725,6 +4726,24 @@ bool AArch64InstructionSelector::tryOptConstantBuildVec(
   }
   Constant *CV = ConstantVector::get(Csts);
   MachineIRBuilder MIB(I);
+  if (CV->isNullValue()) {
+    // Until the importer can support immAllZerosV in pattern leaf nodes,
+    // select a zero move manually here.
+    Register DstReg = I.getOperand(0).getReg();
+    if (DstSize == 128) {
+      auto Mov = MIB.buildInstr(AArch64::MOVIv2d_ns, {DstReg}, {}).addImm(0);
+      I.eraseFromParent();
+      return constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
+    } else if (DstSize == 64) {
+      auto Mov =
+          MIB.buildInstr(AArch64::MOVIv2d_ns, {&AArch64::FPR128RegClass}, {})
+              .addImm(0);
+      MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {})
+          .addReg(Mov.getReg(0), 0, AArch64::dsub);
+      I.eraseFromParent();
+      return RBI.constrainGenericRegister(DstReg, AArch64::FPR64RegClass, MRI);
+    }
+  }
   auto *CPLoad = emitLoadFromConstantPool(CV, MIB);
   if (!CPLoad) {
     LLVM_DEBUG(dbgs() << "Could not generate cp load for build_vector");
