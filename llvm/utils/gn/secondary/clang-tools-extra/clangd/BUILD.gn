@@ -1,3 +1,4 @@
+import("//clang-tools-extra/clangd/quality/gen_decision_forest.gni")
 import("//clang-tools-extra/clangd/xpc/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 
@@ -20,35 +21,10 @@ write_cmake_config("features") {
   public_configs = [ ":features_config" ]
 }
 
-action("CompletionModelCpp") {
-  script = "quality/CompletionModelCodegen.py"
-  outputs = [
-    "$target_gen_dir/CompletionModel.cpp",
-    "$target_gen_dir/CompletionModel.h",
-  ]
-  args = [
-    "--model",
-    rebase_path("quality/model", root_build_dir),
-    "--output_dir",
-    rebase_path(target_gen_dir, root_build_dir),
-    "--filename",
-    "CompletionModel",
-    "--cpp_class",
-    "clang::clangd::Example",
-  ]
-}
-
-config("CompletionModelConfig") {
-  cflags = [ "-Wno-unused-label" ]
-}
-
-source_set("CompletionModel") {
-  configs += [
-    "//llvm/utils/gn/build:clang_code",
-    ":CompletionModelConfig",
-  ]
-  deps = [ ":CompletionModelCpp" ]
-  sources = get_target_outputs(":CompletionModelCpp")
+gen_decision_forest("CompletionModel") {
+  model = "quality/model"
+  filename = "CompletionModel"
+  cpp_class = "clang::clangd::Example"
 }
 
 static_library("clangd") {
