@@ -59,9 +59,18 @@ inline int integerBitsToTypeCode(unsigned bits) {
   // clang-format on
 }
 
-// FIXME: LOGICAL has no type codes defined; using integer for now
+// Always use CFI_type_Bool and let the rest get sorted out by the elem_size.
+// NB: do *not* use the CFI_type_intN_t codes. The flang runtime will choke.
 inline int logicalBitsToTypeCode(unsigned bits) {
-  llvm_unreachable("logical type has no direct support; use integer");
+  // clang-format off
+  switch (bits) {
+  case 8:
+  case 16:
+  case 32:
+  case 64: return CFI_type_Bool;
+  default: llvm_unreachable("unsupported logical size");
+  }
+  // clang-format on
 }
 
 inline int realBitsToTypeCode(unsigned bits) {
@@ -74,6 +83,10 @@ inline int realBitsToTypeCode(unsigned bits) {
   default:  llvm_unreachable("unsupported real size");
   }
   // clang-format on
+}
+
+static constexpr int derivedToTypeCode() {
+  return CFI_type_struct;
 }
 
 } // namespace fir

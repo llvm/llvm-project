@@ -1273,6 +1273,12 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
       return {this->genConstantOffset(loc, rewriter, width / 8),
               this->genConstantOffset(loc, rewriter, typeCode)};
     };
+    auto doLogical =
+        [&](unsigned width) -> std::tuple<mlir::Value, mlir::Value> {
+      int typeCode = fir::logicalBitsToTypeCode(width);
+      return {this->genConstantOffset(loc, rewriter, width / 8),
+              this->genConstantOffset(loc, rewriter, typeCode)};
+    };
     auto doFloat = [&](unsigned width) -> std::tuple<mlir::Value, mlir::Value> {
       int typeCode = fir::realBitsToTypeCode(width);
       return {this->genConstantOffset(loc, rewriter, width / 8),
@@ -1319,11 +1325,8 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     if (auto ty = boxEleTy.dyn_cast<fir::CharacterType>())
       return doCharacter(getKindMap().getCharacterBitsize(ty.getFKind()),
                          ty.getLen());
-    if (auto ty = boxEleTy.dyn_cast<fir::LogicalType>()) {
-      // TODO: doesn't the runtime need to know these are LOGICAL? Pretend they
-      // are INTEGER for now.
-      return doInteger(getKindMap().getLogicalBitsize(ty.getFKind()));
-    }
+    if (auto ty = boxEleTy.dyn_cast<fir::LogicalType>())
+      return doLogical(getKindMap().getLogicalBitsize(ty.getFKind()));
     if (auto seqTy = boxEleTy.dyn_cast<fir::SequenceType>()) {
       if (auto charTy = seqTy.getEleTy().dyn_cast<fir::CharacterType>()) {
         // TODO: assumes the row is the length of the CHARACTER. This is true by
