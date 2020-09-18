@@ -609,8 +609,9 @@ std::string tools::FindDebugInLibraryPath() {
   return "";
 }
 
-void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC, const ArgList &Args,
-					  ArgStringList &CmdArgs) {
+void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
+                                          const ArgList &Args,
+                                          ArgStringList &CmdArgs) {
   const Driver &D = TC.getDriver();
   std::string CandidateRPath = FindDebugInLibraryPath();
   if (CandidateRPath.empty())
@@ -1625,7 +1626,7 @@ bool tools::GetSDLFromOffloadArchive(Compilation &C, const Driver &D,
     for (auto AOB : AOBFileNames) {
       if (llvm::sys::fs::exists(AOB)) {
         ArchiveOfBundles = AOB;
-	FoundAOB = true;
+        FoundAOB = true;
         break;
       }
     }
