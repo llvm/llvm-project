@@ -53,6 +53,7 @@ public:
     ResultsDirective,
     SuccessorsDirective,
     TypeDirective,
+    TypeRefDirective,
 
     /// This element is a literal.
     Literal,
@@ -230,7 +231,19 @@ private:
   /// The operand that is used to format the directive.
   std::unique_ptr<Element> operand;
 };
-} // end anonymous namespace
+
+/// This class represents the `type_ref` directive.
+class TypeRefDirective
+    : public DirectiveElement<Element::Kind::TypeRefDirective> {
+public:
+  TypeRefDirective(std::unique_ptr<Element> arg) : operand(std::move(arg)) {}
+  Element *getOperand() const { return operand.get(); }
+
+private:
+  /// The operand that is used to format the directive.
+  std::unique_ptr<Element> operand;
+};
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // LiteralElement
@@ -805,6 +818,19 @@ static void genElementParserStorage(Element *element, OpMethodBody &body) {
            << llvm::formatv(
                   "  ::llvm::ArrayRef<::mlir::Type> {0}Types({0}RawTypes);\n",
                   name);
+  } else if (auto *dir = dyn_cast<TypeRefDirective>(element)) {
+    ArgumentLengthKind lengthKind;
+    StringRef name = getTypeListName(dir->getOperand(), lengthKind);
+    // Refer to the previously encountered TypeDirective for name.
+    // Take a `const ::mlir::SmallVector<::mlir::Type, 1> &` in the declaration
+    // to properly track the types that will be parsed and pushed later on.
+    if (lengthKind != ArgumentLengthKind::Single)
+      body << "  const ::mlir::SmallVector<::mlir::Type, 1> &" << name
+           << "TypesRef(" << name << "Types);\n";
+    else
+      body << llvm::formatv(
+          "  ::llvm::ArrayRef<::mlir::Type> {0}RawTypesRef({0}RawTypes);\n",
+          name);
   } else if (auto *dir = dyn_cast<FunctionalTypeDirective>(element)) {
     ArgumentLengthKind ignored;
     body << "  ::llvm::ArrayRef<::mlir::Type> "
@@ -844,6 +870,15 @@ static void genCustomParameterParser(Element &param, OpMethodBody &body) {
     else
       body << llvm::formatv("{0}Successor", name);
 
+  } else if (auto *dir = dyn_cast<TypeRefDirective>(&param)) {
+    ArgumentLengthKind lengthKind;
+    StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
+    if (lengthKind == ArgumentLengthKind::Variadic)
+      body << llvm::formatv("{0}TypesRef", listName);
+    else if (lengthKind == ArgumentLengthKind::Optional)
+      body << llvm::formatv("{0}TypeRef", listName);
+    else
+      body << formatv("{0}RawTypesRef[0]", listName);
   } else if (auto *dir = dyn_cast<TypeDirective>(&param)) {
     ArgumentLengthKind lengthKind;
     StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
@@ -876,6 +911,16 @@ static void genCustomDirectiveParser(CustomDirective *dir, OpMethodBody &body) {
             "{0}Operand;\n",
             operand->getVar()->name);
       }
+    } else if (auto *dir = dyn_cast<TypeRefDirective>(&param)) {
+      // Reference to an optional which may or may not have been set.
+      // Retrieve from vector if not empty.
+      ArgumentLengthKind lengthKind;
+      StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
+      if (lengthKind == ArgumentLengthKind::Optional)
+        body << llvm::formatv(
+            "    ::mlir::Type {0}TypeRef = {0}TypesRef.empty() "
+            "? Type() : {0}TypesRef[0];\n",
+            listName);
     } else if (auto *dir = dyn_cast<TypeDirective>(&param)) {
       ArgumentLengthKind lengthKind;
       StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
@@ -907,6 +952,9 @@ static void genCustomDirectiveParser(CustomDirective *dir, OpMethodBody &body) {
       body << llvm::formatv("    if ({0}Operand.hasValue())\n"
                             "      {0}Operands.push_back(*{0}Operand);\n",
                             var->name);
+    } else if (auto *dir = dyn_cast<TypeRefDirective>(&param)) {
+      // In the `type_ref` case, do not parse a new Type that needs to be added.
+      // Just do nothing here.
     } else if (auto *dir = dyn_cast<TypeDirective>(&param)) {
       ArgumentLengthKind lengthKind;
       StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
@@ -1101,6 +1149,15 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
   } else if (isa<SuccessorsDirective>(element)) {
     body << llvm::formatv(successorListParserCode, "full");
 
+  } else if (auto *dir = dyn_cast<TypeRefDirective>(element)) {
+    ArgumentLengthKind lengthKind;
+    StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
+    if (lengthKind == ArgumentLengthKind::Variadic)
+      body << llvm::formatv(variadicTypeParserCode, listName);
+    else if (lengthKind == ArgumentLengthKind::Optional)
+      body << llvm::formatv(optionalTypeParserCode, listName);
+    else
+      body << formatv(typeParserCode, listName);
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
     ArgumentLengthKind lengthKind;
     StringRef listName = getTypeListName(dir->getOperand(), lengthKind);
@@ -1431,6 +1488,17 @@ static void genCustomDirectivePrinter(CustomDirective *customDir,
     } else if (auto *successor = dyn_cast<SuccessorVariable>(&param)) {
       body << successor->getVar()->name << "()";
 
+    } else if (auto *dir = dyn_cast<TypeRefDirective>(&param)) {
+      auto *typeOperand = dir->getOperand();
+      auto *operand = dyn_cast<OperandVariable>(typeOperand);
+      auto *var = operand ? operand->getVar()
+                          : cast<ResultVariable>(typeOperand)->getVar();
+      if (var->isVariadic())
+        body << var->name << "().getTypes()";
+      else if (var->isOptional())
+        body << llvm::formatv("({0}() ? {0}().getType() : Type())", var->name);
+      else
+        body << var->name << "().getType()";
     } else if (auto *dir = dyn_cast<TypeDirective>(&param)) {
       auto *typeOperand = dir->getOperand();
       auto *operand = dyn_cast<OperandVariable>(typeOperand);
@@ -1604,6 +1672,9 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
     body << "  p << ";
     genTypeOperandPrinter(dir->getOperand(), body) << ";\n";
+  } else if (auto *dir = dyn_cast<TypeRefDirective>(element)) {
+    body << "  p << ";
+    genTypeOperandPrinter(dir->getOperand(), body) << ";\n";
   } else if (auto *dir = dyn_cast<FunctionalTypeDirective>(element)) {
     body << "  p.printFunctionalType(";
     genTypeOperandPrinter(dir->getInputs(), body) << ", ";
@@ -1670,6 +1741,7 @@ public:
     kw_results,
     kw_successors,
     kw_type,
+    kw_type_ref,
     keyword_end,
 
     // String valued tokens.
@@ -1874,6 +1946,7 @@ Token FormatLexer::lexIdentifier(const char *tokStart) {
           .Case("results", Token::kw_results)
           .Case("successors", Token::kw_successors)
           .Case("type", Token::kw_type)
+          .Case("type_ref", Token::kw_type_ref)
           .Default(Token::identifier);
   return Token(kind, str);
 }
@@ -1994,8 +2067,9 @@ private:
   LogicalResult parseSuccessorsDirective(std::unique_ptr<Element> &element,
                                          llvm::SMLoc loc, bool isTopLevel);
   LogicalResult parseTypeDirective(std::unique_ptr<Element> &element, Token tok,
-                                   bool isTopLevel);
-  LogicalResult parseTypeDirectiveOperand(std::unique_ptr<Element> &element);
+                                   bool isTopLevel, bool isTypeRef = false);
+  LogicalResult parseTypeDirectiveOperand(std::unique_ptr<Element> &element,
+                                          bool isTypeRef = false);
 
   //===--------------------------------------------------------------------===//
   // Lexer Utilities
@@ -2440,6 +2514,8 @@ LogicalResult FormatParser::parseDirective(std::unique_ptr<Element> &element,
     return parseResultsDirective(element, dirTok.getLoc(), isTopLevel);
   case Token::kw_successors:
     return parseSuccessorsDirective(element, dirTok.getLoc(), isTopLevel);
+  case Token::kw_type_ref:
+    return parseTypeDirective(element, dirTok, isTopLevel, /*isTypeRef=*/true);
   case Token::kw_type:
     return parseTypeDirective(element, dirTok, isTopLevel);
 
@@ -2505,7 +2581,10 @@ LogicalResult FormatParser::parseOptional(std::unique_ptr<Element> &element,
     return ::mlir::success();
   };
   for (auto &ele : elements) {
-    if (auto *typeEle = dyn_cast<TypeDirective>(ele.get())) {
+    if (auto *typeEle = dyn_cast<TypeRefDirective>(ele.get())) {
+      if (failed(checkTypeOperand(typeEle->getOperand())))
+        return failure();
+    } else if (auto *typeEle = dyn_cast<TypeDirective>(ele.get())) {
       if (failed(checkTypeOperand(typeEle->getOperand())))
         return ::mlir::failure();
     } else if (auto *typeEle = dyn_cast<FunctionalTypeDirective>(ele.get())) {
@@ -2565,7 +2644,7 @@ LogicalResult FormatParser::parseOptionalChildElement(
       // Literals, custom directives, and type directives may be used,
       // but they can't anchor the group.
       .Case<LiteralElement, CustomDirective, FunctionalTypeDirective,
-            OptionalElement, TypeDirective>([&](Element *) {
+            OptionalElement, TypeRefDirective, TypeDirective>([&](Element *) {
         if (isAnchor)
           return emitError(childLoc, "only variables can be used to anchor "
                                      "an optional group");
@@ -2628,6 +2707,13 @@ FormatParser::parseCustomDirective(std::unique_ptr<Element> &element,
   // After parsing all of the elements, ensure that all type directives refer
   // only to variables.
   for (auto &ele : elements) {
+    if (auto *typeEle = dyn_cast<TypeRefDirective>(ele.get())) {
+      if (!isa<OperandVariable, ResultVariable>(typeEle->getOperand())) {
+        return emitError(curLoc,
+                         "type_ref directives within a custom directive "
+                         "may only refer to variables");
+      }
+    }
     if (auto *typeEle = dyn_cast<TypeDirective>(ele.get())) {
       if (!isa<OperandVariable, ResultVariable>(typeEle->getOperand())) {
         return emitError(curLoc, "type directives within a custom directive "
@@ -2649,8 +2735,8 @@ LogicalResult FormatParser::parseCustomDirectiveParameter(
     return ::mlir::failure();
 
   // Verify that the element can be placed within a custom directive.
-  if (!isa<TypeDirective, AttributeVariable, OperandVariable, RegionVariable,
-           SuccessorVariable>(parameters.back().get())) {
+  if (!isa<TypeRefDirective, TypeDirective, AttributeVariable, OperandVariable,
+           RegionVariable, SuccessorVariable>(parameters.back().get())) {
     return emitError(childLoc, "only variables and types may be used as "
                                "parameters to a custom directive");
   }
@@ -2727,22 +2813,26 @@ FormatParser::parseSuccessorsDirective(std::unique_ptr<Element> &element,
 
 LogicalResult
 FormatParser::parseTypeDirective(std::unique_ptr<Element> &element, Token tok,
-                                 bool isTopLevel) {
+                                 bool isTopLevel, bool isTypeRef) {
   llvm::SMLoc loc = tok.getLoc();
   if (!isTopLevel)
     return emitError(loc, "'type' is only valid as a top-level directive");
 
   std::unique_ptr<Element> operand;
   if (failed(parseToken(Token::l_paren, "expected '(' before argument list")) ||
-      failed(parseTypeDirectiveOperand(operand)) ||
+      failed(parseTypeDirectiveOperand(operand, isTypeRef)) ||
       failed(parseToken(Token::r_paren, "expected ')' after argument list")))
     return ::mlir::failure();
-  element = std::make_unique<TypeDirective>(std::move(operand));
+  if (isTypeRef)
+    element = std::make_unique<TypeRefDirective>(std::move(operand));
+  else
+    element = std::make_unique<TypeDirective>(std::move(operand));
   return ::mlir::success();
 }
 
 LogicalResult
-FormatParser::parseTypeDirectiveOperand(std::unique_ptr<Element> &element) {
+FormatParser::parseTypeDirectiveOperand(std::unique_ptr<Element> &element,
+                                        bool isTypeRef) {
   llvm::SMLoc loc = curToken.getLoc();
   if (failed(parseElement(element, /*isTopLevel=*/false)))
     return ::mlir::failure();
@@ -2752,23 +2842,36 @@ FormatParser::parseTypeDirectiveOperand(std::unique_ptr<Element> &element) {
 
   if (auto *var = dyn_cast<OperandVariable>(element.get())) {
     unsigned opIdx = var->getVar() - op.operand_begin();
-    if (fmt.allOperandTypes || seenOperandTypes.test(opIdx))
+    if (!isTypeRef && (fmt.allOperandTypes || seenOperandTypes.test(opIdx)))
       return emitError(loc, "'type' of '" + var->getVar()->name +
                                 "' is already bound");
+    if (isTypeRef && !(fmt.allOperandTypes || seenOperandTypes.test(opIdx)))
+      return emitError(loc, "'type_ref' of '" + var->getVar()->name +
+                                "' is not bound by a prior 'type' directive");
     seenOperandTypes.set(opIdx);
   } else if (auto *var = dyn_cast<ResultVariable>(element.get())) {
     unsigned resIdx = var->getVar() - op.result_begin();
-    if (fmt.allResultTypes || seenResultTypes.test(resIdx))
+    if (!isTypeRef && (fmt.allResultTypes || seenResultTypes.test(resIdx)))
       return emitError(loc, "'type' of '" + var->getVar()->name +
                                 "' is already bound");
+    if (isTypeRef && !(fmt.allResultTypes || seenResultTypes.test(resIdx)))
+      return emitError(loc, "'type_ref' of '" + var->getVar()->name +
+                                "' is not bound by a prior 'type' directive");
     seenResultTypes.set(resIdx);
   } else if (isa<OperandsDirective>(&*element)) {
-    if (fmt.allOperandTypes || seenOperandTypes.any())
+    if (!isTypeRef && (fmt.allOperandTypes || seenOperandTypes.any()))
       return emitError(loc, "'operands' 'type' is already bound");
+    if (isTypeRef && !(fmt.allOperandTypes || seenOperandTypes.all()))
+      return emitError(
+          loc,
+          "'operands' 'type_ref' is not bound by a prior 'type' directive");
     fmt.allOperandTypes = true;
   } else if (isa<ResultsDirective>(&*element)) {
-    if (fmt.allResultTypes || seenResultTypes.any())
+    if (!isTypeRef && (fmt.allResultTypes || seenResultTypes.any()))
       return emitError(loc, "'results' 'type' is already bound");
+    if (isTypeRef && !(fmt.allResultTypes || seenResultTypes.all()))
+      return emitError(
+          loc, "'results' 'type_ref' is not bound by a prior 'type' directive");
     fmt.allResultTypes = true;
   } else {
     return emitError(loc, "invalid argument to 'type' directive");

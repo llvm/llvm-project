@@ -30,7 +30,8 @@ func @alloc_1d_filled_f32(%s1 : index, %f : f32) -> memref<?xf32> {
 }
 
 func @conv_1d(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>) {
-  linalg.conv_1d %arg0, %arg1, %arg2 : (memref<?xf32>, memref<?xf32>, memref<?xf32>)
+  linalg.conv_1d ins (%arg0, %arg1: memref<?xf32>, memref<?xf32>)
+                outs (%arg2: memref<?xf32>)
   return
 }
 
