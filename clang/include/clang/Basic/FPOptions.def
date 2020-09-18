@@ -14,7 +14,7 @@
 
 // OPTION(name, type, width, previousName)
 OPTION(FPContractMode, LangOptions::FPModeKind, 2, First)
-OPTION(RoundingMode, RoundingMode, 3, FPContractMode)
+OPTION(RoundingMode, LangOptions::RoundingMode, 3, FPContractMode)
 OPTION(FPExceptionMode, LangOptions::FPExceptionModeKind, 2, RoundingMode)
 OPTION(AllowFEnvAccess, bool, 1, FPExceptionMode)
 OPTION(AllowFPReassociate, bool, 1, AllowFEnvAccess)
