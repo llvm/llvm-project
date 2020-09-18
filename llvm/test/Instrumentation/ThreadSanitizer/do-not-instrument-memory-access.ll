@@ -2,7 +2,8 @@
 ; - Instruction profiler counter instrumentation has known intended races.
 ; - The gcov counters array has a known intended race.
 ;
-; RUN: opt < %s -tsan -S | FileCheck %s
+; RUN: opt < %s -tsan -S -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %s -passes='function(tsan),module(tsan-module)' -S | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9"
