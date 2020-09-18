@@ -418,12 +418,14 @@ namespace {
 // Any instruction that defines a 32-bit result zeros out the high half of the
 // register. Truncate can be lowered to EXTRACT_SUBREG. CopyFromReg may
 // be copying from a truncate. But any other 32-bit operation will zero-extend
-// up to 64 bits.
+// up to 64 bits. AssertSext/AssertZext aren't saying anything about the upper
+// 32 bits, they're probably just qualifying a CopyFromReg.
 // FIXME: X86 also checks for CMOV here. Do we need something similar?
 static inline bool isDef32(const SDNode &N) {
   unsigned Opc = N.getOpcode();
   return Opc != ISD::TRUNCATE && Opc != TargetOpcode::EXTRACT_SUBREG &&
-         Opc != ISD::CopyFromReg;
+         Opc != ISD::CopyFromReg && Opc != ISD::AssertSext &&
+         Opc != ISD::AssertZext;
 }
 
 } // end anonymous namespace
