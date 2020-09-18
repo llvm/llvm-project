@@ -1,4 +1,17 @@
+<!--===- docs/Intrinsics.md 
+  
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+  
+-->
+
 # A categorization of standard (2018) and extended Fortran intrinsic procedures
+
+```eval_rst
+.. contents::
+   :local:
+```
 
 This note attempts to group the intrinsic procedures of Fortran into categories
 of functions or subroutines with similar interfaces as an aid to
@@ -45,14 +58,14 @@ Intrinsic modules are not covered here.
    may appear within the brackets to preserve the order of arguments
    (e.g., `COUNT`).
 
-# Elemental intrinsic functions
+## Elemental intrinsic functions
 
 Pure elemental semantics apply to these functions, to wit: when one or more of
 the actual arguments are arrays, the arguments must be conformable, and
 the result is also an array.
 Scalar arguments are expanded when the arguments are not all scalars.
 
-## Elemental intrinsic functions that may have unrestricted specific procedures
+### Elemental intrinsic functions that may have unrestricted specific procedures
 
 When an elemental intrinsic function is documented here as having an
 _unrestricted specific name_, that name may be passed as an actual
@@ -341,7 +354,7 @@ that is present in `SET`, or zero if none is.
 `VERIFY` is essentially the opposite: it returns the index of the first (or last) character
 in `STRING` that is *not* present in `SET`, or zero if all are.
 
-# Transformational intrinsic functions
+## Transformational intrinsic functions
 
 This category comprises a large collection of intrinsic functions that
 are collected together because they somehow transform their arguments
@@ -364,7 +377,7 @@ Some general rules apply to the transformational intrinsic functions:
 1. The type `any` here denotes any intrinsic or derived type.
 1. The notation `(..)` denotes an array of any rank (but not an assumed-rank array).
 
-## Logical reduction transformational intrinsic functions
+### Logical reduction transformational intrinsic functions
 ```
 ALL(LOGICAL(k) MASK(..) [, DIM ]) -> LOGICAL(k)
 ANY(LOGICAL(k) MASK(..) [, DIM ]) -> LOGICAL(k)
@@ -372,7 +385,7 @@ COUNT(LOGICAL(any) MASK(..) [, DIM, KIND=KIND(0) ]) -> INTEGER(KIND)
 PARITY(LOGICAL(k) MASK(..) [, DIM ]) -> LOGICAL(k)
 ```
 
-## Numeric reduction transformational intrinsic functions
+### Numeric reduction transformational intrinsic functions
 ```
 IALL(INTEGER(k) ARRAY(..) [, DIM, MASK ]) -> INTEGER(k)
 IANY(INTEGER(k) ARRAY(..) [, DIM, MASK ]) -> INTEGER(k)
@@ -384,7 +397,7 @@ SUM(numeric ARRAY(..) [, DIM, MASK ]) -> numeric
 
 `NORM2` generalizes `HYPOT` by computing `SQRT(SUM(X*X))` while avoiding spurious overflows.
 
-## Extrema reduction transformational intrinsic functions
+### Extrema reduction transformational intrinsic functions
 ```
 MAXVAL(relational(k) ARRAY(..) [, DIM, MASK ]) -> relational(k)
 MINVAL(relational(k) ARRAY(..) [, DIM, MASK ]) -> relational(k)
@@ -411,7 +424,7 @@ MAXLOC(relational ARRAY(..) [, DIM, MASK, KIND=KIND(0), BACK=.FALSE. ])
 MINLOC(relational ARRAY(..) [, DIM, MASK, KIND=KIND(0), BACK=.FALSE. ])
 ```
 
-## Data rearrangement transformational intrinsic functions
+### Data rearrangement transformational intrinsic functions
 The optional `DIM` argument to these functions must be a scalar integer of
 any kind, and it takes a default value of 1 when absent.
 
@@ -467,7 +480,7 @@ UNPACK(any VECTOR(n), LOGICAL(any) MASK(..), FIELD) -> type and kind of VECTOR, 
 ```
 `FIELD` has same type and kind as `VECTOR` and is conformable with `MASK`.
 
-## Other transformational intrinsic functions
+### Other transformational intrinsic functions
 ```
 BESSEL_JN(INTEGER(n1) N1, INTEGER(n2) N2, REAL(k) X) -> REAL(k) vector (MAX(N2-N1+1,0))
 BESSEL_YN(INTEGER(n1) N1, INTEGER(n2) N2, REAL(k) X) -> REAL(k) vector (MAX(N2-N1+1,0))
@@ -509,7 +522,7 @@ At least one argument must be present in a call to `SELECTED_REAL_KIND`.
 An assumed-rank array may be passed to `SHAPE`, and if it is associated with an assumed-size array,
 the last element of the result will be -1.
 
-## Coarray transformational intrinsic functions
+### Coarray transformational intrinsic functions
 ```
 FAILED_IMAGES([scalar TEAM_TYPE TEAM, KIND=KIND(0)]) -> INTEGER(KIND) vector
 GET_TEAM([scalar INTEGER(?) LEVEL]) -> scalar TEAM_TYPE
@@ -524,10 +537,10 @@ THIS_IMAGE([COARRAY, DIM, scalar TEAM_TYPE TEAM]) -> default INTEGER
 The result of `THIS_IMAGE` is a scalar if `DIM` is present or if `COARRAY` is absent,
 and a vector whose length is the corank of `COARRAY` otherwise.
 
-# Inquiry intrinsic functions
+## Inquiry intrinsic functions
 These are neither elemental nor transformational; all are pure.
 
-## Type inquiry intrinsic functions
+### Type inquiry intrinsic functions
 All of these functions return constants.
 The value of the argument is not used, and may well be undefined.
 ```
@@ -546,7 +559,7 @@ RANGE(INTEGER(k) or REAL(k) or COMPLEX(k) X(..)) -> scalar default INTEGER
 TINY(REAL(k) X(..)) -> scalar REAL(k)
 ```
 
-## Bound and size inquiry intrinsic functions
+### Bound and size inquiry intrinsic functions
 The results are scalar when `DIM` is present, and a vector of length=(co)rank(`(CO)ARRAY`)
 when `DIM` is absent.
 ```
@@ -559,7 +572,7 @@ UCOBOUND(any COARRAY [, DIM, KIND=KIND(0) ]) -> INTEGER(KIND)
 
 Assumed-rank arrays may be used with `LBOUND`, `SIZE`, and `UBOUND`.
 
-## Object characteristic inquiry intrinsic functions
+### Object characteristic inquiry intrinsic functions
 ```
 ALLOCATED(any type ALLOCATABLE ARRAY) -> scalar default LOGICAL
 ALLOCATED(any type ALLOCATABLE SCALAR) -> scalar default LOGICAL
@@ -576,11 +589,11 @@ The arguments to `EXTENDS_TYPE_OF` must be of extensible derived types or be unl
 
 An assumed-rank array may be used with `IS_CONTIGUOUS` and `RANK`.
 
-# Intrinsic subroutines
+## Intrinsic subroutines
 
 (*TODO*: complete these descriptions)
 
-## One elemental intrinsic subroutine
+### One elemental intrinsic subroutine
 ```
 INTERFACE
   SUBROUTINE MVBITS(FROM, FROMPOS, LEN, TO, TOPOS)
@@ -594,7 +607,7 @@ INTERFACE
 END INTERFACE
 ```
 
-## Non-elemental intrinsic subroutines
+### Non-elemental intrinsic subroutines
 ```
 CALL CPU_TIME(REAL INTENT(OUT) TIME)
 ```
@@ -619,7 +632,7 @@ CALL RANDOM_SEED([SIZE, PUT, GET])
 CALL SYSTEM_CLOCK([COUNT, COUNT_RATE, COUNT_MAX])
 ```
 
-## Atomic intrinsic subroutines
+### Atomic intrinsic subroutines
 ```
 CALL ATOMIC_ADD(ATOM, VALUE [, STAT=])
 CALL ATOMIC_AND(ATOM, VALUE [, STAT=])
@@ -634,7 +647,7 @@ CALL ATOMIC_REF(VALUE, ATOM [, STAT=])
 CALL ATOMIC_XOR(ATOM, VALUE [, STAT=])
 ```
 
-## Collective intrinsic subroutines
+### Collective intrinsic subroutines
 ```
 CALL CO_BROADCAST
 CALL CO_MAX
@@ -643,8 +656,8 @@ CALL CO_REDUCE
 CALL CO_SUM
 ```
 
-# Non-standard intrinsics
-## PGI
+## Non-standard intrinsics
+### PGI
 ```
 AND, OR, XOR
 LSHIFT, RSHIFT, SHIFT
@@ -658,7 +671,7 @@ JINT, JNINT, KNINT
 LOC
 ```
 
-## Intel
+### Intel
 ```
 DCMPLX(X,Y), QCMPLX(X,Y)
 DREAL(DOUBLE COMPLEX A) -> DOUBLE PRECISION
@@ -681,12 +694,12 @@ CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, LOC
 MALLOC
 ```
 
-# Intrinsic Procedure Support in f18
+## Intrinsic Procedure Support in f18
 This section gives an overview of the support inside f18 libraries for the
 intrinsic procedures listed above.
 It may be outdated, refer to f18 code base for the actual support status.
 
-## Semantic Analysis
+### Semantic Analysis
 F18 semantic expression analysis phase detects intrinsic procedure references,
 validates the argument types and deduces the return types.
 This phase currently supports all the intrinsic procedures listed above but the ones in the table below.
@@ -702,7 +715,7 @@ This phase currently supports all the intrinsic procedures listed above but the 
 | Collective intrinsic subroutines | CO_BROADCAST &al. |
 
 
-## Intrinsic Function Folding
+### Intrinsic Function Folding
 Fortran Constant Expressions can contain references to a certain number of
 intrinsic functions (see Fortran 2018 standard section 10.1.12 for more details).
 Constant Expressions may be used to define kind arguments. Therefore, the semantic
@@ -716,7 +729,7 @@ arrays when an implementation is provided for the scalars (regardless of whether
 it is using host hardware types or not).
 The status of intrinsic function folding support is given in the sub-sections below.
 
-### Intrinsic Functions with Host Independent Folding Support
+#### Intrinsic Functions with Host Independent Folding Support
 Implementations using f18 scalar types enables folding intrinsic functions
 on any host and with any possible type kind supported by f18. The intrinsic functions
 listed below are folded using host independent implementations.
@@ -728,7 +741,7 @@ listed below are folded using host independent implementations.
 | COMPLEX | CMPLX, CONJG |
 | LOGICAL | BGE, BGT, BLE, BLT |
 
-### Intrinsic Functions with Host Dependent Folding Support
+#### Intrinsic Functions with Host Dependent Folding Support
 Implementations using the host runtime may not be available for all supported
 f18 types depending on the host hardware types and the libraries available on the host.
 The actual support on a host depends on what the host hardware types are.

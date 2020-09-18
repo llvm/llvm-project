@@ -127,9 +127,8 @@ LogicalResult LoopUnroll::runOnAffineForOp(AffineForOp forOp) {
   if (unrollFull)
     return loopUnrollFull(forOp);
   // Otherwise, unroll by the given unroll factor.
-  if (unrollUpToFactor) {
+  if (unrollUpToFactor)
     return loopUnrollUpToFactor(forOp, unrollFactor);
-  }
   return loopUnrollByFactor(forOp, unrollFactor);
 }
 

@@ -2047,9 +2047,11 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
       Value *Operand = II->getOperand(0);
       II->eraseFromParent();
       // Prune the operand, it's most likely dead.
-      RecursivelyDeleteTriviallyDeadInstructions(
-          Operand, TLInfo, nullptr,
-          [&](Value *V) { removeAllAssertingVHReferences(V); });
+      resetIteratorIfInvalidatedWhileCalling(BB, [&]() {
+        RecursivelyDeleteTriviallyDeadInstructions(
+            Operand, TLInfo, nullptr,
+            [&](Value *V) { removeAllAssertingVHReferences(V); });
+      });
       return true;
     }
 
@@ -5274,22 +5276,11 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   // If we have no uses, recursively delete the value and all dead instructions
   // using it.
   if (Repl->use_empty()) {
-    // This can cause recursive deletion, which can invalidate our iterator.
-    // Use a WeakTrackingVH to hold onto it in case this happens.
-    Value *CurValue = &*CurInstIterator;
-    WeakTrackingVH IterHandle(CurValue);
-    BasicBlock *BB = CurInstIterator->getParent();
-
-    RecursivelyDeleteTriviallyDeadInstructions(
-        Repl, TLInfo, nullptr,
-        [&](Value *V) { removeAllAssertingVHReferences(V); });
-
-    if (IterHandle != CurValue) {
-      // If the iterator instruction was recursively deleted, start over at the
-      // start of the block.
-      CurInstIterator = BB->begin();
-      SunkAddrs.clear();
-    }
+    resetIteratorIfInvalidatedWhileCalling(CurInstIterator->getParent(), [&]() {
+      RecursivelyDeleteTriviallyDeadInstructions(
+          Repl, TLInfo, nullptr,
+          [&](Value *V) { removeAllAssertingVHReferences(V); });
+    });
   }
   ++NumMemoryInsts;
   return true;
@@ -5818,6 +5809,12 @@ bool CodeGenPrepare::optimizePhiType(
   Visited.insert(I);
   SmallPtrSet<Instruction *, 4> Defs;
   SmallPtrSet<Instruction *, 4> Uses;
+  // This works by adding extra bitcasts between load/stores and removing
+  // existing bicasts. If we have a phi(bitcast(load)) or a store(bitcast(phi))
+  // we can get in the situation where we remove a bitcast in one iteration
+  // just to add it again in the next. We need to ensure that at least one
+  // bitcast we remove are anchored to something that will not change back.
+  bool AnyAnchored = false;
 
   while (!Worklist.empty()) {
     Instruction *II = Worklist.pop_back_val();
@@ -5834,6 +5831,8 @@ bool CodeGenPrepare::optimizePhiType(
             Worklist.push_back(OpPhi);
           }
         } else if (auto *OpLoad = dyn_cast<LoadInst>(V)) {
+          if (!OpLoad->isSimple())
+            return false;
           if (!Defs.count(OpLoad)) {
             Defs.insert(OpLoad);
             Worklist.push_back(OpLoad);
@@ -5851,9 +5850,12 @@ bool CodeGenPrepare::optimizePhiType(
           if (!Defs.count(OpBC)) {
             Defs.insert(OpBC);
             Worklist.push_back(OpBC);
+            AnyAnchored |= !isa<LoadInst>(OpBC->getOperand(0)) &&
+                           !isa<ExtractElementInst>(OpBC->getOperand(0));
           }
-        } else if (!isa<UndefValue>(V))
+        } else if (!isa<UndefValue>(V)) {
           return false;
+        }
       }
     }
 
@@ -5868,7 +5870,7 @@ bool CodeGenPrepare::optimizePhiType(
           Worklist.push_back(OpPhi);
         }
       } else if (auto *OpStore = dyn_cast<StoreInst>(V)) {
-        if (OpStore->getOperand(0) != II)
+        if (!OpStore->isSimple() || OpStore->getOperand(0) != II)
           return false;
         Uses.insert(OpStore);
       } else if (auto *OpBC = dyn_cast<BitCastInst>(V)) {
@@ -5877,12 +5879,15 @@ bool CodeGenPrepare::optimizePhiType(
         if (OpBC->getType() != ConvertTy)
           return false;
         Uses.insert(OpBC);
-      } else
+        AnyAnchored |=
+            any_of(OpBC->users(), [](User *U) { return !isa<StoreInst>(U); });
+      } else {
         return false;
+      }
     }
   }
 
-  if (!ConvertTy || !TLI->shouldConvertPhiType(PhiTy, ConvertTy))
+  if (!ConvertTy || !AnyAnchored || !TLI->shouldConvertPhiType(PhiTy, ConvertTy))
     return false;
 
   LLVM_DEBUG(dbgs() << "Converting " << *I << "\n  and connected nodes to "
@@ -5893,11 +5898,13 @@ bool CodeGenPrepare::optimizePhiType(
   ValueToValueMap ValMap;
   ValMap[UndefValue::get(PhiTy)] = UndefValue::get(ConvertTy);
   for (Instruction *D : Defs) {
-    if (isa<BitCastInst>(D))
+    if (isa<BitCastInst>(D)) {
       ValMap[D] = D->getOperand(0);
-    else
+      DeletedInstrs.insert(D);
+    } else {
       ValMap[D] =
           new BitCastInst(D, ConvertTy, D->getName() + ".bc", D->getNextNode());
+    }
   }
   for (PHINode *Phi : PhiNodes)
     ValMap[Phi] = PHINode::Create(ConvertTy, Phi->getNumIncomingValues(),
@@ -5908,15 +5915,17 @@ bool CodeGenPrepare::optimizePhiType(
     for (int i = 0, e = Phi->getNumIncomingValues(); i < e; i++)
       NewPhi->addIncoming(ValMap[Phi->getIncomingValue(i)],
                           Phi->getIncomingBlock(i));
+    Visited.insert(NewPhi);
   }
   // And finally pipe up the stores and bitcasts
   for (Instruction *U : Uses) {
     if (isa<BitCastInst>(U)) {
       DeletedInstrs.insert(U);
       U->replaceAllUsesWith(ValMap[U->getOperand(0)]);
-    } else
+    } else {
       U->setOperand(0,
                     new BitCastInst(ValMap[U->getOperand(0)], PhiTy, "bc", U));
+    }
   }
 
   // Save the removed phis to be deleted later.

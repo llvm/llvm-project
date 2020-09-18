@@ -1,5 +1,17 @@
-Fortran I/O Runtime Library Internal Design
-===========================================
+<!--===- docs/IORuntimeInternals.md
+
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+-->
+
+# Fortran I/O Runtime Library Internal Design
+
+```eval_rst
+.. contents::
+   :local:
+```
 
 This note is meant to be an overview of the design of the *implementation*
 of the f18 Fortran compiler's runtime support library for I/O statements.
@@ -58,8 +70,7 @@ template library of fast conversion algorithms used to interpret
 floating-point values in Fortran source programs and to emit them
 to module files.
 
-Overview of Classes
-===================
+## Overview of Classes
 
 A suite of C++ classes and class templates are composed to construct
 the Fortran I/O runtime support library.
@@ -71,16 +82,16 @@ classes are in the process of being vigorously rearranged and
 modified; use `grep` or an IDE to discover these classes in
 the source for now.  (Sorry!)
 
-`Terminator`
-----------
+### `Terminator`
+
 A general facility for the entire library, `Terminator` latches a
 source program statement location in terms of an unowned pointer to
 its source file path name and line number and uses them to construct
 a fatal error message if needed.
 It is used for both user program errors and internal runtime library crashes.
 
-`IoErrorHandler`
---------------
+### `IoErrorHandler`
+
 When I/O error conditions arise at runtime that the Fortran program
 might have the privilege to handle itself via `ERR=`, `END=`, or
 `EOR=` labels and/or by an `IOSTAT=` variable, this subclass of
@@ -88,8 +99,8 @@ might have the privilege to handle itself via `ERR=`, `END=`, or
 It sorts out priorities in the case of multiple errors and determines
 the final `IOSTAT=` value at the end of an I/O statement.
 
-`MutableModes`
-------------
+### `MutableModes`
+
 Fortran's formatted I/O statements are affected by a suite of
 modes that can be configured by `OPEN` statements, overridden by
 data transfer I/O statement control lists, and further overridden
@@ -100,8 +111,8 @@ order to properly isolate their modifications.
 The modes in force at the time each data item is processed constitute
 a member of each `DataEdit`.
 
-`DataEdit`
---------
+### `DataEdit`
+
 Represents a single data edit descriptor from a `FORMAT` statement
 or `FMT=` character value, with some hidden extensions to also
 support formatting of list-directed transfers.
@@ -111,8 +122,8 @@ For simplicity and efficiency, each data edit descriptor is
 encoded in the `DataEdit` as a simple capitalized character
 (or two) and some optional field widths.
 
-`FormatControl<>`
----------------
+### `FormatControl<>`
+
 This class template traverses a `FORMAT` statement's contents (or `FMT=`
 character value) to extract data edit descriptors like `E20.14` to
 serve each item in an I/O data transfer statement's *io-list*,
@@ -134,32 +145,32 @@ output strings or record positionings at the end of the *io-list*.
 The `DefaultFormatControlCallbacks` structure summarizes the API
 expected by `FormatControl` from its class template actual arguments.
 
-`OpenFile`
---------
+### `OpenFile`
+
 This class encapsulates all (I hope) the operating system interfaces
 used to interact with the host's filesystems for operations on
 external units.
 Asynchronous I/O interfaces are faked for now with synchronous
 operations and deferred results.
 
-`ConnectionState`
----------------
+### `ConnectionState`
+
 An active connection to an external or internal unit maintains
 the common parts of its state in this subclass of `ConnectionAttributes`.
 The base class holds state that should not change during the
 lifetime of the connection, while the subclass maintains state
 that may change during I/O statement execution.
 
-`InternalDescriptorUnit`
-----------------------
+### `InternalDescriptorUnit`
+
 When I/O is being performed from/to a Fortran `CHARACTER` array
 rather than an external file, this class manages the standard
 interoperable descriptor used to access its elements as records.
 It has the necessary interfaces to serve as an actual argument
 to the `FormatControl` class template.
 
-`FileFrame<>`
------------
+### `FileFrame<>`
+
 This CRTP class template isolates all of the complexity involved between
 an external unit's `OpenFile` and the buffering requirements
 imposed by the capabilities of Fortran `FORMAT` control edit
@@ -184,8 +195,8 @@ a frame may come up short.
 As a CRTP class template, `FileFrame` accesses the raw filesystem
 facilities it needs from `*this`.
 
-`ExternalFileUnit`
-----------------
+### `ExternalFileUnit`
+
 This class mixes in `ConnectionState`, `OpenFile`, and
 `FileFrame<ExternalFileUnit>` to represent the state of an open
 (or soon to be opened) external file descriptor as a Fortran
@@ -202,8 +213,8 @@ Static member functions `LookUp()`, `LookUpOrCrash()`, and `LookUpOrCreate()`
 probe the map to convert Fortran `UNIT=` numbers from I/O statements
 into references to active units.
 
-`IoStatementBase`
----------------
+### `IoStatementBase`
+
 The subclasses of `IoStatementBase` each encapsulate and maintain
 the state of one active Fortran I/O statement across the several
 I/O runtime library API function calls it may comprise.
@@ -231,8 +242,8 @@ the I/O API supports a means whereby the code generated for the Fortran
 program may supply stack space to the I/O runtime support library
 for this purpose.
 
-`IoStatementState`
-----------------
+### `IoStatementState`
+
 F18's Fortran I/O runtime support library defines and implements an API
 that uses a sequence of function calls to implement each Fortran I/O
 statement.
@@ -261,8 +272,8 @@ unit, the library has to treat that (expected to be rare) situation
 as a weird variation of internal I/O since there's no `ExternalFileUnit`
 available to hold its `IoStatementBase` subclass or `IoStatementState`.
 
-A Narrative Overview Of `PRINT *, 'HELLO, WORLD'`
-=================================================
+## A Narrative Overview Of `PRINT *, 'HELLO, WORLD'`
+
 1. When the compiled Fortran program begins execution at the `main()`
 entry point exported from its main program, it calls `ProgramStart()`
 with its arguments and environment.

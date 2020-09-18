@@ -355,10 +355,17 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
     }
 
     // Special case for s_setreg_b32
-    if (Opc == AMDGPU::S_SETREG_B32 && OpToFold->isImm()) {
-      MI->setDesc(TII->get(AMDGPU::S_SETREG_IMM32_B32));
-      appendFoldCandidate(FoldList, MI, OpNo, OpToFold);
-      return true;
+    if (OpToFold->isImm()) {
+      unsigned ImmOpc = 0;
+      if (Opc == AMDGPU::S_SETREG_B32)
+        ImmOpc = AMDGPU::S_SETREG_IMM32_B32;
+      else if (Opc == AMDGPU::S_SETREG_B32_mode)
+        ImmOpc = AMDGPU::S_SETREG_IMM32_B32_mode;
+      if (ImmOpc) {
+        MI->setDesc(TII->get(ImmOpc));
+        appendFoldCandidate(FoldList, MI, OpNo, OpToFold);
+        return true;
+      }
     }
 
     // If we are already folding into another operand of MI, then
@@ -1237,6 +1244,11 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
         foldOperand(OpToFold, UseMI, OpNo, FoldList,
                     CopiesToReplace);
       } else {
+        // Skip updating literal use if it's used in the same REQ_SQUENCE as,
+        // if that literal could be inlined, it's just a single use.
+        if (NonInlineUse && NonInlineUse->getParent() == UseMI &&
+            UseMI->isRegSequence())
+          continue;
         if (++NumLiteralUses == 1) {
           NonInlineUse = &*Use;
           NonInlineUseOpNo = OpNo;

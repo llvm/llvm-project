@@ -854,6 +854,24 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
   if (CannotTailPredicate)
     return false;
 
+  const MCInstrDesc &MCID = MI->getDesc();
+  uint64_t Flags = MCID.TSFlags;
+  if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
+    return true;
+
+  if (MI->getOpcode() == ARM::MVE_VPSEL ||
+      MI->getOpcode() == ARM::MVE_VPNOT) {
+    // TODO: Allow VPSEL and VPNOT, we currently cannot because:
+    // 1) It will use the VPR as a predicate operand, but doesn't have to be
+    //    instead a VPT block, which means we can assert while building up
+    //    the VPT block because we don't find another VPT or VPST to being a new
+    //    one.
+    // 2) VPSEL still requires a VPR operand even after tail predicating,
+    //    which means we can't remove it unless there is another
+    //    instruction, such as vcmp, that can provide the VPR def.
+    return false;
+  }
+
   if (isVCTP(MI)) {
     // If we find another VCTP, check whether it uses the same value as the main VCTP.
     // If it does, store it in the SecondaryVCTPs set, else refuse it.
@@ -874,28 +892,17 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
     if (MI->getOpcode() != ARM::MVE_VPST) {
       assert(MI->findRegisterDefOperandIdx(ARM::VPR) != -1 &&
              "VPT does not implicitly define VPR?!");
+      CurrentPredicate.clear();
       CurrentPredicate.insert(MI);
     }
 
     VPTBlocks.emplace_back(MI, CurrentPredicate);
     CurrentBlock = &VPTBlocks.back();
     return true;
-  } else if (MI->getOpcode() == ARM::MVE_VPSEL ||
-             MI->getOpcode() == ARM::MVE_VPNOT) {
-    // TODO: Allow VPSEL and VPNOT, we currently cannot because:
-    // 1) It will use the VPR as a predicate operand, but doesn't have to be
-    //    instead a VPT block, which means we can assert while building up
-    //    the VPT block because we don't find another VPT or VPST to being a new
-    //    one.
-    // 2) VPSEL still requires a VPR operand even after tail predicating,
-    //    which means we can't remove it unless there is another
-    //    instruction, such as vcmp, that can provide the VPR def.
-    return false;
   }
 
   bool IsUse = false;
   bool IsDef = false;
-  const MCInstrDesc &MCID = MI->getDesc();
   for (int i = MI->getNumOperands() - 1; i >= 0; --i) {
     const MachineOperand &MO = MI->getOperand(i);
     if (!MO.isReg() || MO.getReg() != ARM::VPR)
@@ -913,6 +920,16 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
     }
   }
 
+  // If this instruction defines the VPR, update the predicate for the
+  // proceeding instructions.
+  if (IsDef) {
+    // Clear the existing predicate when we're not in VPT Active state.
+    if (!isVectorPredicated(MI))
+      CurrentPredicate.clear();
+    CurrentPredicate.insert(MI);
+    LLVM_DEBUG(dbgs() << "ARM Loops: Adding Predicate: " << *MI);
+  }
+
   // If we find a vpr def that is not already predicated on the vctp, we've
   // got disjoint predicates that may not be equivalent when we do the
   // conversion.
@@ -921,16 +938,12 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
     return false;
   }
 
-  uint64_t Flags = MCID.TSFlags;
-  if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
-    return true;
-
   // If we find an instruction that has been marked as not valid for tail
   // predication, only allow the instruction if it's contained within a valid
   // VPT block.
-  if ((Flags & ARMII::ValidForTailPredication) == 0 && !IsUse) {
+  if ((Flags & ARMII::ValidForTailPredication) == 0) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Can't tail predicate: " << *MI);
-    return false;
+    return IsUse;
   }
 
   // If the instruction is already explicitly predicated, then the conversion
@@ -1298,6 +1311,12 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
              E = ++MachineBasicBlock::iterator(Divergent->MI); I != E; ++I)
           RemovePredicate(&*I);
 
+        // Check if the instruction defining vpr is a vcmp so it can be combined
+        // with the VPST This should be the divergent instruction
+        MachineInstr *VCMP = VCMPOpcodeToVPT(Divergent->MI->getOpcode()) != 0
+                                 ? Divergent->MI
+                                 : nullptr;
+
         unsigned Size = 0;
         auto E = MachineBasicBlock::reverse_iterator(Divergent->MI);
         auto I = MachineBasicBlock::reverse_iterator(Insts.back().MI);
@@ -1307,13 +1326,32 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
           ++Size;
           ++I;
         }
-        // Create a VPST (with a null mask for now, we'll recompute it later).
-        MachineInstrBuilder MIB = BuildMI(*InsertAt->getParent(), InsertAt,
-                                          InsertAt->getDebugLoc(),
-                                          TII->get(ARM::MVE_VPST));
-        MIB.addImm(0);
-        LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: " << *Block.getPredicateThen());
-        LLVM_DEBUG(dbgs() << "ARM Loops: Created VPST: " << *MIB);
+        MachineInstrBuilder MIB;
+        LLVM_DEBUG(dbgs() << "ARM Loops: Removing VPST: "
+                          << *Block.getPredicateThen());
+        if (VCMP) {
+          // Combine the VPST and VCMP into a VPT
+          MIB =
+              BuildMI(*InsertAt->getParent(), InsertAt, InsertAt->getDebugLoc(),
+                      TII->get(VCMPOpcodeToVPT(VCMP->getOpcode())));
+          MIB.addImm(ARMVCC::Then);
+          // Register one
+          MIB.add(VCMP->getOperand(1));
+          // Register two
+          MIB.add(VCMP->getOperand(2));
+          // The comparison code, e.g. ge, eq, lt
+          MIB.add(VCMP->getOperand(3));
+          LLVM_DEBUG(dbgs()
+                     << "ARM Loops: Combining with VCMP to VPT: " << *MIB);
+          LoLoop.ToRemove.insert(VCMP);
+        } else {
+          // Create a VPST (with a null mask for now, we'll recompute it later)
+          // or a VPT in case there was a VCMP right before it
+          MIB = BuildMI(*InsertAt->getParent(), InsertAt,
+                        InsertAt->getDebugLoc(), TII->get(ARM::MVE_VPST));
+          MIB.addImm(0);
+          LLVM_DEBUG(dbgs() << "ARM Loops: Created VPST: " << *MIB);
+        }
         LoLoop.ToRemove.insert(Block.getPredicateThen());
         LoLoop.BlockMasksToRecompute.insert(MIB.getInstr());
       }

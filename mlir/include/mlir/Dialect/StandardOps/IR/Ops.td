@@ -1511,6 +1511,8 @@ def DynamicTensorFromElementsOp : Std_Op<"dynamic_tensor_from_elements",
               "ValueRange dynamicExtents, "
               "function_ref<void(OpBuilder &, Location, ValueRange)>">,
   ];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1613,7 +1615,6 @@ def ExtractElementOp : Std_Op<"extract_element",
 
 def TensorFromElementsOp : Std_Op<"tensor_from_elements", [
     NoSideEffect,
-    SameOperandsAndResultElementType,
     TypesMatchWith<"operand types match result element type",
                    "result", "elements", "SmallVector<Type, 2>("
                    "$_self.cast<ShapedType>().getDimSize(0), "
@@ -1638,7 +1639,11 @@ def TensorFromElementsOp : Std_Op<"tensor_from_elements", [
   // This op is fully verified by its traits.
   let verifier = ?;
 
+  let skipDefaultBuilders = 1;
   let builders = [
+    OpBuilder<"OpBuilder &b, OperationState &result, Type elementType,"
+    "ValueRange elements">,
+    // Special case builder for when `elements` has size >=1.
     OpBuilder<"OpBuilder &b, OperationState &result, ValueRange elements">
   ];
 
@@ -2440,10 +2445,10 @@ def SignExtendIOp : Std_Op<"sexti",
 def SIToFPOp : CastOp<"sitofp">, Arguments<(ins AnyType:$in)> {
   let summary = "cast from integer type to floating-point";
   let description = [{
-    Cast from a value interpreted as signed integer to the corresponding
-    floating-point value. If the value cannot be exactly represented, it is
-    rounded using the default rounding mode. Only scalars are currently
-    supported.
+    Cast from a value interpreted as signed or vector of signed integers to the
+    corresponding floating-point scalar or vector value. If the value cannot be
+    exactly represented, it is rounded using the default rounding mode. Scalars
+    and vector types are currently supported.
   }];
 
   let extraClassDeclaration = [{
@@ -2992,6 +2997,8 @@ def TensorCastOp : CastOp<"tensor_cast"> {
     /// The result of a tensor_cast is always a tensor.
     TensorType getType() { return getResult().getType().cast<TensorType>(); }
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3121,10 +3128,10 @@ def TruncateIOp : Std_Op<"trunci", [NoSideEffect, SameOperandsAndResultShape]> {
 def UIToFPOp : CastOp<"uitofp">, Arguments<(ins AnyType:$in)> {
   let summary = "cast from unsigned integer type to floating-point";
   let description = [{
-    Cast from a value interpreted as unsigned integer to the corresponding
-    floating-point value. If the value cannot be exactly represented, it is
-    rounded using the default rounding mode. Only scalars are currently
-    supported.
+    Cast from a value interpreted as unsigned integer or vector of unsigned
+    integers to the corresponding scalar or vector floating-point value. If the
+    value cannot be exactly represented, it is rounded using the default
+    rounding mode. Scalars and vector types are currently supported.
   }];
 
   let extraClassDeclaration = [{

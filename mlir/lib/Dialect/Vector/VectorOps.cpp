@@ -929,6 +929,17 @@ static LogicalResult verify(BroadcastOp op) {
   return success();
 }
 
+OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
+  if (!operands[0])
+    return {};
+  auto vectorType = getVectorType();
+  if (operands[0].getType().isIntOrIndexOrFloat())
+    return DenseElementsAttr::get(vectorType, operands[0]);
+  if (auto attr = operands[0].dyn_cast<SplatElementsAttr>())
+    return DenseElementsAttr::get(vectorType, attr.getSplatValue());
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // ShuffleOp
 //===----------------------------------------------------------------------===//
@@ -2688,11 +2699,5 @@ void mlir::vector::populateVectorToVectorCanonicalizationPatterns(
                   TransposeFolder>(context);
 }
 
-namespace mlir {
-namespace vector {
-
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Vector/VectorOps.cpp.inc"
-
-} // namespace vector
-} // namespace mlir

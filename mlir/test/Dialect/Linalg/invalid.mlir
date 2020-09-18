@@ -35,14 +35,21 @@ func @store_number_of_indices(%v : memref<f32>) {
 
 func @transpose_not_permutation(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>) {
   // expected-error @+1 {{expected a permutation map}}
-  linalg.transpose %v (i, j) -> (i, i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
+  linalg.transpose %v (i, j) -> (i, i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>> to memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
 }
 
 // -----
 
 func @transpose_bad_rank(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>) {
   // expected-error @+1 {{expected a permutation map of same rank as the view}}
-  linalg.transpose %v (i) -> (i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
+  linalg.transpose %v (i) -> (i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>> to memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
+}
+
+// -----
+
+func @transpose_wrong_type(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>) {
+  // expected-error @+1 {{output type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>' does not match transposed input type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>'}}
+  linalg.transpose %v (i, j) -> (j, i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>> to memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
 }
 
 // -----
@@ -106,7 +113,7 @@ func @generic_mismatched_num_returns(%arg0: memref<f32>) {
 // -----
 
 func @generic_symbol_in_map(%arg0: memref<i32>) {
-  // expected-error @+1 {{expected the number of symbols in indexing_map #0 to match target rank}}
+  // expected-error @+1 {{expected the number of symbols in indexing_map #0 to match rank of operand `symbol_source`}}
   linalg.generic {
     args_in = 0,
     args_out = 1,
@@ -505,5 +512,22 @@ func @pooling_rank_mismatch(%arg0: memref<?x?x?xf32>,
 func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?xf32>, %c3: memref<?x?x?xf32>) {
   // expected-error @+1 {{op expected indexing_map #1 results to match view rank: 'memref<?x?xf32>'}}
   linalg.batch_matmul %a3, %b3, %c3 : (memref<?x?x?xf32>, memref<?x?xf32>, memref<?x?x?xf32>) -> ()
+  return
+}
+
+// -----
+
+func @generic(%arg0: tensor<?x?xi4>) {
+  // expected-error @+1 {{unexpected #results > #outputs}}
+  linalg.generic  {
+    args_in = 1,
+    args_out = 1,
+    indexing_maps = [ affine_map<(i) -> (i)> ],
+    iterator_types = ["parallel"]
+  } %arg0 {
+    ^bb(%0: i4) :
+      %1 = std.addi %0, %0: i4
+      linalg.yield %1, %1: i4, i4
+  } : tensor<?x?xi4> -> (tensor<?x?xi4>, tensor<?x?xi4>)
   return
 }

@@ -4,8 +4,7 @@
 
 ; CHECK-LABEL: void @empty()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    %0 = atomicrmw add i64* getelementptr inbounds ([2 x i64], [2 x i64]* @__llvm_gcov_ctr, i64 0, i64 0), i64 1 monotonic, !dbg [[DBG:![0-9]+]]
-; CHECK-NEXT:    %1 = atomicrmw add i64* getelementptr inbounds ([2 x i64], [2 x i64]* @__llvm_gcov_ctr, i64 0, i64 1), i64 1 monotonic, !dbg [[DBG]]
+; CHECK-NEXT:    %0 = atomicrmw add i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__llvm_gcov_ctr, i64 0, i64 0), i64 1 monotonic, !dbg [[DBG:![0-9]+]]
 ; CHECK-NEXT:    ret void, !dbg [[DBG]]
 
 define dso_local void @empty() !dbg !5 {

@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMScalarOpts
   BDCE.cpp
   CallSiteSplitting.cpp
   ConstantHoisting.cpp
+  ConstraintElimination.cpp
   CorrelatedValuePropagation.cpp
   DCE.cpp
   DeadStoreElimination.cpp

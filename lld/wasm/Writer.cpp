@@ -11,6 +11,7 @@
 #include "InputChunks.h"
 #include "InputEvent.h"
 #include "InputGlobal.h"
+#include "MapFile.h"
 #include "OutputSections.h"
 #include "OutputSegment.h"
 #include "Relocations.h"
@@ -461,6 +462,25 @@ void Writer::populateTargetFeatures() {
   if (!config->checkFeatures)
     return;
 
+  if (!config->relocatable && used.count("mutable-globals") == 0) {
+    for (const Symbol *sym : out.importSec->importedSymbols) {
+      if (auto *global = dyn_cast<GlobalSymbol>(sym)) {
+        if (global->getGlobalType()->Mutable) {
+          error(Twine("mutable global imported but 'mutable-globals' feature "
+                      "not present in inputs: `") +
+                toString(*sym) + "`. Use --no-check-features to suppress.");
+        }
+      }
+    }
+    for (const Symbol *sym : out.exportSec->exportedSymbols) {
+      if (auto *global = dyn_cast<GlobalSymbol>(sym)) {
+        error(Twine("mutable global exported but 'mutable-globals' feature "
+                    "not present in inputs: `") +
+              toString(*sym) + "`. Use --no-check-features to suppress.");
+      }
+    }
+  }
+
   if (config->sharedMemory) {
     if (disallowed.count("shared-mem"))
       error("--shared-memory is disallowed by " + disallowed["shared-mem"] +
@@ -579,6 +599,7 @@ void Writer::calculateExports() {
 
     LLVM_DEBUG(dbgs() << "Export: " << name << "\n");
     out.exportSec->exports.push_back(export_);
+    out.exportSec->exportedSymbols.push_back(sym);
   }
 }
 
@@ -1051,8 +1072,6 @@ void Writer::run() {
   createSyntheticSections();
   log("-- populateProducers");
   populateProducers();
-  log("-- populateTargetFeatures");
-  populateTargetFeatures();
   log("-- calculateImports");
   calculateImports();
   log("-- layoutMemory");
@@ -1095,6 +1114,8 @@ void Writer::run() {
   calculateCustomSections();
   log("-- populateSymtab");
   populateSymtab();
+  log("-- populateTargetFeatures");
+  populateTargetFeatures();
   log("-- addSections");
   addSections();
 
@@ -1113,6 +1134,9 @@ void Writer::run() {
   createHeader();
   log("-- finalizeSections");
   finalizeSections();
+
+  log("-- writeMapFile");
+  writeMapFile(outputSections);
 
   log("-- openFile");
   openFile();

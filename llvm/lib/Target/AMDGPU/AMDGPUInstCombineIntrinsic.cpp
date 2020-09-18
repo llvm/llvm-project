@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUTargetTransformInfo.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 
 using namespace llvm;
@@ -928,11 +929,6 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
   unsigned NewNumElts = DemandedElts.countPopulation();
   if (!NewNumElts)
     return UndefValue::get(II.getType());
-
-  // FIXME: Allow v3i16/v3f16 in buffer and image intrinsics when the types are
-  // fully supported.
-  if (II.getType()->getScalarSizeInBits() == 16 && NewNumElts == 3)
-    return nullptr;
 
   if (NewNumElts >= VWidth && DemandedElts.isMask()) {
     if (DMaskIdx >= 0)

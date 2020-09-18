@@ -62,11 +62,8 @@ static void NormalizeCompilerDirectiveCommentMarker(TokenSequence &dir) {
 
 void Prescanner::Prescan(ProvenanceRange range) {
   startProvenance_ = range.start();
-  std::size_t offset{0};
-  const SourceFile *source{
-      allSources_.GetSourceFile(startProvenance_, &offset)};
-  CHECK(source);
-  start_ = source->content().data() + offset;
+  start_ = allSources_.GetSource(range);
+  CHECK(start_);
   limit_ = start_ + range.size();
   nextLine_ = start_;
   const bool beganInFixedForm{inFixedForm_};
@@ -75,7 +72,7 @@ void Prescanner::Prescan(ProvenanceRange range) {
         "too many nested INCLUDE/#include files, possibly circular"_err_en_US);
     return;
   }
-  while (nextLine_ < limit_) {
+  while (!IsAtEnd()) {
     Statement();
   }
   if (inFixedForm_ != beganInFixedForm) {
@@ -232,7 +229,7 @@ void Prescanner::Statement() {
 }
 
 TokenSequence Prescanner::TokenizePreprocessorDirective() {
-  CHECK(nextLine_ < limit_ && !inPreprocessorDirective_);
+  CHECK(!IsAtEnd() && !inPreprocessorDirective_);
   inPreprocessorDirective_ = true;
   BeginStatementAndAdvance();
   TokenSequence tokens;
@@ -360,7 +357,7 @@ void Prescanner::SkipCComments() {
         break;
       }
     } else if (inPreprocessorDirective_ && at_[0] == '\\' && at_ + 2 < limit_ &&
-        at_[1] == '\n' && nextLine_ < limit_) {
+        at_[1] == '\n' && !IsAtEnd()) {
       BeginSourceLineAndAdvance();
     } else {
       break;
@@ -804,7 +801,7 @@ bool Prescanner::IsNextLinePreprocessorDirective() const {
 }
 
 bool Prescanner::SkipCommentLine(bool afterAmpersand) {
-  if (nextLine_ >= limit_) {
+  if (IsAtEnd()) {
     if (afterAmpersand && prescannerNesting_ > 0) {
       // A continuation marker at the end of the last line in an
       // include file inhibits the newline for that line.
@@ -843,7 +840,7 @@ bool Prescanner::SkipCommentLine(bool afterAmpersand) {
 }
 
 const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
-  if (nextLine_ >= limit_) {
+  if (IsAtEnd()) {
     return nullptr;
   }
   tabInCurrentLine_ = false;
@@ -995,7 +992,7 @@ bool Prescanner::FreeFormContinuation() {
 // arguments to span multiple lines.
 bool Prescanner::IsImplicitContinuation() const {
   return !inPreprocessorDirective_ && !inCharLiteral_ &&
-      delimiterNesting_ > 0 && nextLine_ < limit_ &&
+      delimiterNesting_ > 0 && !IsAtEnd() &&
       ClassifyLine(nextLine_).kind == LineClassification::Kind::Source;
 }
 

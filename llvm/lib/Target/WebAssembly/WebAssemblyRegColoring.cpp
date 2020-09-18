@@ -106,8 +106,8 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
       continue;
 
     LiveInterval *LI = &Liveness->getInterval(VReg);
-    assert(LI->weight == 0.0f);
-    LI->weight = computeWeight(MRI, MBFI, VReg);
+    assert(LI->weight() == 0.0f);
+    LI->setWeight(computeWeight(MRI, MBFI, VReg));
     LLVM_DEBUG(LI->dump());
     SortedIntervals.push_back(LI);
   }
@@ -118,10 +118,10 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
   // TODO: Investigate more intelligent sorting heuristics. For starters, we
   // should try to coalesce adjacent live intervals before non-adjacent ones.
   llvm::sort(SortedIntervals, [MRI](LiveInterval *LHS, LiveInterval *RHS) {
-    if (MRI->isLiveIn(LHS->reg) != MRI->isLiveIn(RHS->reg))
-      return MRI->isLiveIn(LHS->reg);
-    if (LHS->weight != RHS->weight)
-      return LHS->weight > RHS->weight;
+    if (MRI->isLiveIn(LHS->reg()) != MRI->isLiveIn(RHS->reg()))
+      return MRI->isLiveIn(LHS->reg());
+    if (LHS->weight() != RHS->weight())
+      return LHS->weight() > RHS->weight();
     if (LHS->empty() || RHS->empty())
       return !LHS->empty() && RHS->empty();
     return *LHS < *RHS;
@@ -135,14 +135,14 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   for (size_t I = 0, E = SortedIntervals.size(); I < E; ++I) {
     LiveInterval *LI = SortedIntervals[I];
-    unsigned Old = LI->reg;
+    unsigned Old = LI->reg();
     size_t Color = I;
     const TargetRegisterClass *RC = MRI->getRegClass(Old);
 
     // Check if it's possible to reuse any of the used colors.
     if (!MRI->isLiveIn(Old))
       for (unsigned C : UsedColors.set_bits()) {
-        if (MRI->getRegClass(SortedIntervals[C]->reg) != RC)
+        if (MRI->getRegClass(SortedIntervals[C]->reg()) != RC)
           continue;
         for (LiveInterval *OtherLI : Assignments[C])
           if (!OtherLI->empty() && OtherLI->overlaps(*LI))
@@ -152,7 +152,7 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
       continue_outer:;
       }
 
-    unsigned New = SortedIntervals[Color]->reg;
+    unsigned New = SortedIntervals[Color]->reg();
     SlotMapping[I] = New;
     Changed |= Old != New;
     UsedColors.set(Color);
@@ -160,7 +160,7 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
     // If we reassigned the stack pointer, update the debug frame base info.
     if (Old != New && MFI.isFrameBaseVirtual() && MFI.getFrameBaseVreg() == Old)
       MFI.setFrameBaseVreg(New);
-    LLVM_DEBUG(dbgs() << "Assigning vreg" << Register::virtReg2Index(LI->reg)
+    LLVM_DEBUG(dbgs() << "Assigning vreg" << Register::virtReg2Index(LI->reg())
                       << " to vreg" << Register::virtReg2Index(New) << "\n");
   }
   if (!Changed)
@@ -168,7 +168,7 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
 
   // Rewrite register operands.
   for (size_t I = 0, E = SortedIntervals.size(); I < E; ++I) {
-    unsigned Old = SortedIntervals[I]->reg;
+    unsigned Old = SortedIntervals[I]->reg();
     unsigned New = SlotMapping[I];
     if (Old != New)
       MRI->replaceRegWith(Old, New);

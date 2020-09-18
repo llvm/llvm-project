@@ -50,7 +50,7 @@ public:
     unsigned ID;
     unsigned char Kind;
     unsigned char Param;
-    unsigned short Flags;
+    unsigned int Flags;
     unsigned short GroupID;
     unsigned short AliasID;
     const char *AliasArgs;
@@ -152,7 +152,7 @@ public:
   ///
   /// \return The vector of flags which start with Cur.
   std::vector<std::string> findByPrefix(StringRef Cur,
-                                        unsigned short DisableFlags) const;
+                                        unsigned int DisableFlags) const;
 
   /// Find the OptTable option that most closely matches the given string.
   ///

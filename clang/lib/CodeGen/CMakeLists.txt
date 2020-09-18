@@ -92,7 +92,6 @@ add_clang_library(clangCodeGen
   LINK_LIBS
   clangAnalysis
   clangAST
-  clangASTMatchers
   clangBasic
   clangFrontend
   clangLex

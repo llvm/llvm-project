@@ -1,5 +1,17 @@
-Fortran For C Programmers
-=========================
+<!--===- docs/FortranForCProgrammers.md
+
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+-->
+
+# Fortran For C Programmers
+
+```eval_rst
+.. contents::
+   :local:
+```
 
 This note is limited to essential information about Fortran so that
 a C or C++ programmer can get started more quickly with the language,
@@ -8,8 +20,8 @@ to write or modify Fortran code.
 Please see other sources to learn about Fortran's rich history,
 current applications, and modern best practices in new code.
 
-Know This At Least
-------------------
+## Know This At Least
+
 * There have been many implementations of Fortran, often from competing
   vendors, and the standard language has been defined by U.S. and
   international standards organizations.  The various editions of
@@ -45,8 +57,8 @@ Know This At Least
   interfaces in compiled "modules", as well as legacy mechanisms for
   sharing data and interconnecting subprograms.
 
-A Rosetta Stone
----------------
+## A Rosetta Stone
+
 Fortran's language standard and other documentation uses some terminology
 in particular ways that might be unfamiliar.
 
@@ -73,8 +85,8 @@ in particular ways that might be unfamiliar.
 | Type-bound procedure | Kind of a C++ member function but not really |
 | Unformatted | Raw binary |
 
-Data Types
-----------
+## Data Types
+
 There are five built-in ("intrinsic") types: `INTEGER`, `REAL`, `COMPLEX`,
 `LOGICAL`, and `CHARACTER`.
 They are parameterized with "kind" values, which should be treated as
@@ -109,8 +121,8 @@ Last, there are "typeless" binary constants that can be used in a few
 situations, like static data initialization or immediate conversion,
 where type is not necessary.
 
-Arrays
-------
+## Arrays
+
 Arrays are not types in Fortran.
 Being an array is a property of an object or function, not of a type.
 Unlike C, one cannot have an array of arrays or an array of pointers,
@@ -125,8 +137,8 @@ And yes, the default lower bound on each dimension is 1, not 0.
 Expressions can manipulate arrays as multidimensional values, and
 the compiler will create the necessary loops.
 
-Allocatables
-------------
+## Allocatables
+
 Modern Fortran programs use `ALLOCATABLE` data extensively.
 Such variables and derived type components are allocated dynamically.
 They are automatically deallocated when they go out of scope, much
@@ -139,8 +151,8 @@ and follow up all the references that are made in the documentation
 from the description of `ALLOCATABLE` to other topics; it's a feature
 that interacts with much of the rest of the language.)
 
-I/O
----
+## I/O
+
 Fortran's input/output features are built into the syntax of the language,
 rather than being defined by library interfaces as in C and C++.
 There are means for raw binary I/O and for "formatted" transfers to
@@ -165,8 +177,8 @@ One can also use compiler-generated formatting in "list-directed" I/O,
 in which the compiler derives reasonable default formats based on
 data types.
 
-Subprograms
------------
+## Subprograms
+
 Fortran has both `FUNCTION` and `SUBROUTINE` subprograms.
 They share the same name space, but functions cannot be called as
 subroutines or vice versa.
@@ -180,8 +192,8 @@ their own internal procedures.
 As is the case with C++ lambda expressions, internal procedures can
 reference names from their host subprograms.
 
-Modules
--------
+## Modules
+
 Modern Fortran has good support for separate compilation and namespace
 management.
 The *module* is the basic unit of compilation, although independent
@@ -196,8 +208,8 @@ All references to objects in modules are done with direct names or
 aliases that have been added to the local scope, as Fortran has no means
 of qualifying references with module names.
 
-Arguments
----------
+## Arguments
+
 Functions and subroutines have "dummy" arguments that are dynamically
 associated with actual arguments during calls.
 Essentially, all argument passing in Fortran is by reference, not value.
@@ -228,8 +240,8 @@ scope.
 This is the opposite of the assumptions under which a C or C++ compiler must
 labor when trying to optimize code with pointers.
 
-Overloading
------------
+## Overloading
+
 Fortran supports a form of overloading via its interface feature.
 By default, an interface is a means for specifying prototypes for a
 set of subroutines and functions.
@@ -242,8 +254,8 @@ A similar feature can be used for generic type-bound procedures.
 This feature can be used to overload the built-in operators and some
 I/O statements, too.
 
-Polymorphism
-------------
+## Polymorphism
+
 Fortran code can be written to accept data of some derived type or
 any extension thereof using `CLASS`, deferring the actual type to
 execution, rather than the usual `TYPE` syntax.
@@ -253,8 +265,8 @@ Fortran's `SELECT TYPE` construct is used to distinguish between
 possible specific types dynamically, when necessary.  It's a
 little like C++17's `std::visit()` on a discriminated union.
 
-Pointers
---------
+## Pointers
+
 Pointers are objects in Fortran, not data types.
 Pointers can point to data, arrays, and subprograms.
 A pointer can only point to data that has the `TARGET` attribute.
@@ -279,8 +291,8 @@ out of scope.
 A legacy feature, "Cray pointers", implements dynamic base addressing of
 one variable using an address stored in another.
 
-Preprocessing
--------------
+## Preprocessing
+
 There is no standard preprocessing feature, but every real Fortran implementation
 has some support for passing Fortran source code through a variant of
 the standard C source preprocessor.
@@ -294,8 +306,8 @@ suffix (e.g., "foo.F90") or a compiler command line option.
 (Since the F18 compiler always runs its built-in preprocessing stage,
 no special option or filename suffix is required.)
 
-"Object Oriented" Programming
------------------------------
+## "Object Oriented" Programming
+
 Fortran doesn't have member functions (or subroutines) in the sense
 that C++ does, in which a function has immediate access to the members
 of a specific instance of a derived type.
@@ -317,8 +329,8 @@ There's a lot more that can be said about type-bound procedures (e.g., how they
 support overloading) but this should be enough to get you started with
 the most common usage.
 
-Pitfalls
---------
+## Pitfalls
+
 Variable initializers, e.g. `INTEGER :: J=123`, are _static_ initializers!
 They imply that the variable is stored in static storage, not on the stack,
 and the initialized value lasts only until the variable is assigned.

@@ -22,7 +22,6 @@
 namespace llvm {
 
 class Module;
-class JITSymbolResolver;
 
 namespace orc {
 

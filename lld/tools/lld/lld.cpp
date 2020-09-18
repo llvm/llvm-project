@@ -92,7 +92,12 @@ static bool isPETarget(std::vector<const char *> &v) {
       continue;
     return isPETargetName(*(it + 1));
   }
+
+#ifdef LLD_DEFAULT_LD_LLD_IS_MINGW
+  return true;
+#else
   return false;
+#endif
 }
 
 static Flavor parseProgname(StringRef progname) {

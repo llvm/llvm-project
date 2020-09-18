@@ -1,3 +1,18 @@
+<!--===- docs/ArrayComposition.md 
+  
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+  
+-->
+
+# Array Composition
+
+```eval_rst
+.. contents::
+   :local:
+```
+
 This note attempts to describe the motivation for and design of an
 implementation of Fortran 90 (and later) array expression evaluation that
 minimizes the use of dynamically allocated temporary storage for
@@ -26,8 +41,8 @@ Other Fortran intrinsic functions are technically transformational (e.g.,
 `COMMAND_ARGUMENT_COUNT`) but not of interest for this note.
 The generic `REDUCE` is also not considered here.
 
-Arrays as functions
-===================
+## Arrays as functions
+
 A whole array can be viewed as a function that maps its indices to the values
 of its elements.
 Specifically, it is a map from a tuple of integers to its element type.
@@ -37,8 +52,8 @@ and the shape of the array delimits the domain of the map.
 `REAL :: A(N,M)` can be seen as a function mapping ordered pairs of integers
 `(J,K)` with `1<=J<=N` and `1<=J<=M` to real values.
 
-Array expressions as functions
-==============================
+## Array expressions as functions
+
 The same perspective can be taken of an array expression comprising
 intrinsic operators and elemental functions.
 Fortran doesn't allow one to apply subscripts directly to an expression,
@@ -75,8 +90,8 @@ side variable as an operand of the right-hand side expression, and any
 function calls on the right-hand side are elemental or scalar-valued,
 we can avoid the use of a temporary.
 
-Transformational intrinsic functions as function composition
-============================================================
+## Transformational intrinsic functions as function composition
+
 Many of the transformational intrinsic functions listed above
 can, when their array arguments are viewed as functions over their
 index tuples, be seen as compositions of those functions with
@@ -119,8 +134,8 @@ More completely:
 * `SPREAD(A,DIM=d,NCOPIES=n)` for compile-time `d` simply
   applies `A` to a reduced index tuple.
 
-Determination of rank and shape
-===============================
+## Determination of rank and shape
+
 An important part of evaluating array expressions without the use of
 temporary storage is determining the shape of the result prior to,
 or without, evaluating the elements of the result.
@@ -165,8 +180,8 @@ In cases where the analyzed shape is known at compile time, we should
 be able to have the opportunity to avoid heap allocation in favor of
 stack storage, if the scope of the variable is local.
 
-Automatic reallocation of allocatables
-======================================
+## Automatic reallocation of allocatables
+
 Fortran 2003 introduced the ability to assign non-conforming array expressions
 to ALLOCATABLE arrays with the implied semantics of reallocation to the
 new shape.
@@ -174,8 +189,8 @@ The implementation of this feature also becomes more straightforward if
 our implementation of array expressions has decoupled calculation of shapes
 from the evaluation of the elements of the result.
 
-Rewriting rules
-===============
+## Rewriting rules
+
 Let `{...}` denote an ordered tuple of 1-based indices, e.g. `{j,k}`, into
 the result of an array expression or subexpression.
 

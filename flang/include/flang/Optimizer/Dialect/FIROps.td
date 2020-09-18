@@ -21,6 +21,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def fir_Dialect : Dialect {
   let name = "fir";
+  let cppNamespace = "::fir";
 }
 
 // Types and predicates

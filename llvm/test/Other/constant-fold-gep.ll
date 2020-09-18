@@ -11,7 +11,8 @@
 ; RUN: opt -S -o - -instcombine -globalopt -data-layout="e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64" < %s | FileCheck --check-prefix=TO %s
 
 ; "SCEV" - ScalarEvolution with default target layout
-; RUN: opt -analyze -scalar-evolution < %s | FileCheck --check-prefix=SCEV %s
+; RUN: opt -analyze -scalar-evolution < %s -enable-new-pm=0 | FileCheck --check-prefix=SCEV %s
+; RUN: opt -passes='print<scalar-evolution>' < %s -disable-output 2>&1 | FileCheck --check-prefix=SCEV %s
 
 
 ; The automatic constant folder in opt does not have targetdata access, so

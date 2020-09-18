@@ -247,8 +247,8 @@ define <2 x double> @test_simplify6v(<2 x double> %x) {
 
 ; Check pow(x, 0.5) -> fabs(sqrt(x)), where x != -infinity.
 
-define float @test_simplify7(float %x) {
-; CHECK-LABEL: @test_simplify7(
+define float @powf_libcall_to_select_sqrt(float %x) {
+; CHECK-LABEL: @powf_libcall_to_select_sqrt(
 ; ANY-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]])
 ; ANY-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SQRTF]])
 ; ANY-NEXT:    [[ISINF:%.*]] = fcmp oeq float [[X]], 0xFFF0000000000000
@@ -275,8 +275,8 @@ define float @test_simplify7(float %x) {
   ret float %retval
 }
 
-define double @test_simplify8(double %x) {
-; CHECK-LABEL: @test_simplify8(
+define double @pow_libcall_to_select_sqrt(double %x) {
+; CHECK-LABEL: @pow_libcall_to_select_sqrt(
 ; LIB-NEXT:    [[SQRT:%.*]] = call double @sqrt(double [[X:%.*]])
 ; LIB-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
 ; LIB-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[X]], 0xFFF0000000000000

@@ -1605,8 +1605,6 @@ template <class _Rp, class _Alloc>
     struct _LIBCPP_TEMPLATE_VIS uses_allocator<promise<_Rp>, _Alloc>
         : public true_type {};
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-
 // packaged_task
 
 template<class _Fp> class __packaged_task_base;
@@ -2158,6 +2156,8 @@ __make_async_assoc_state(_Fp&& __f)
     return future<_Rp>(__h.get());
 }
 
+#ifndef _LIBCPP_CXX03_LANG
+
 template <class _Fp, class... _Args>
 class _LIBCPP_HIDDEN __async_func
 {
@@ -2225,7 +2225,7 @@ async(_Fp&& __f, _Args&&... __args)
                                     _VSTD::forward<_Args>(__args)...);
 }
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+#endif // C++03
 
 // shared_future
 

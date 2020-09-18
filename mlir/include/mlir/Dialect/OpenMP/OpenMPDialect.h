@@ -16,16 +16,10 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 
+#include "mlir/Dialect/OpenMP/OpenMPOpsDialect.h.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.h.inc"
-
-namespace mlir {
-namespace omp {
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOps.h.inc"
-
-#include "mlir/Dialect/OpenMP/OpenMPOpsDialect.h.inc"
-} // namespace omp
-} // namespace mlir
 
 #endif // MLIR_DIALECT_OPENMP_OPENMPDIALECT_H_

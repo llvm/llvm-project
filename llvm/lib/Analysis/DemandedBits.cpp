@@ -115,7 +115,7 @@ void DemandedBits::determineLiveOperandBits(
   default: break;
   case Instruction::Call:
   case Instruction::Invoke:
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(UserI))
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(UserI)) {
       switch (II->getIntrinsicID()) {
       default: break;
       case Intrinsic::bswap:
@@ -170,7 +170,16 @@ void DemandedBits::determineLiveOperandBits(
         }
         break;
       }
+      case Intrinsic::umax:
+      case Intrinsic::umin:
+      case Intrinsic::smax:
+      case Intrinsic::smin:
+        // If low bits of result are not demanded, they are also not demanded
+        // for the min/max operands.
+        AB = APInt::getBitsSetFrom(BitWidth, AOut.countTrailingZeros());
+        break;
       }
+    }
     break;
   case Instruction::Add:
     if (AOut.isMask()) {

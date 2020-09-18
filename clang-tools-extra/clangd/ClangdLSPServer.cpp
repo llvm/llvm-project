@@ -57,7 +57,7 @@ llvm::Optional<int64_t> decodeVersion(llvm::StringRef Encoded) {
   int64_t Result;
   if (llvm::to_integer(Encoded, Result, 10))
     return Result;
-  else if (!Encoded.empty()) // Empty can be e.g. diagnostics on close.
+  if (!Encoded.empty()) // Empty can be e.g. diagnostics on close.
     elog("unexpected non-numeric version {0}", Encoded);
   return llvm::None;
 }
@@ -147,13 +147,9 @@ llvm::Error validateEdits(const DraftStore &DraftMgr, const FileEdits &FE) {
   if (!InvalidFileCount)
     return llvm::Error::success();
   if (InvalidFileCount == 1)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "File must be saved first: " +
-                                       LastInvalidFile);
-  return llvm::createStringError(
-      llvm::inconvertibleErrorCode(),
-      "Files must be saved first: " + LastInvalidFile + " (and " +
-          llvm::to_string(InvalidFileCount - 1) + " others)");
+    return error("File must be saved first: {0}", LastInvalidFile);
+  return error("Files must be saved first: {0} (and {1} others)",
+               LastInvalidFile, InvalidFileCount - 1);
 }
 
 } // namespace
@@ -284,10 +280,9 @@ public:
       }
     }
     if (OldestCB)
-      OldestCB->second(llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          llvm::formatv("failed to receive a client reply for request ({0})",
-                        OldestCB->first)));
+      OldestCB->second(
+          error("failed to receive a client reply for request ({0})",
+                OldestCB->first));
     return ID;
   }
 
@@ -661,8 +656,7 @@ void ClangdLSPServer::onSync(const NoParams &Params,
   if (Server->blockUntilIdleForTest(/*TimeoutSeconds=*/60))
     Reply(nullptr);
   else
-    Reply(llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                  "Not idle after a minute"));
+    Reply(error("Not idle after a minute"));
 }
 
 void ClangdLSPServer::onDocumentDidOpen(
@@ -729,9 +723,7 @@ void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
             std::string Reason = Response->failureReason
                                      ? *Response->failureReason
                                      : "unknown reason";
-            return Reply(llvm::createStringError(
-                llvm::inconvertibleErrorCode(),
-                ("edits were not applied: " + Reason).c_str()));
+            return Reply(error("edits were not applied: {0}", Reason));
           }
           return Reply(SuccessMessage);
         });
@@ -752,9 +744,7 @@ void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
              Params.tweakArgs) {
     auto Code = DraftMgr.getDraft(Params.tweakArgs->file.file());
     if (!Code)
-      return Reply(llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          "trying to apply a code action for a non-added file"));
+      return Reply(error("trying to apply a code action for a non-added file"));
 
     auto Action = [this, ApplyEdit, Reply = std::move(Reply),
                    File = Params.tweakArgs->file, Code = std::move(*Code)](

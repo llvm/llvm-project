@@ -236,6 +236,56 @@ entry:
   ret i64 %z
 }
 
+define arm_aapcs_vfpcc i64 @add_v8i16_v8i32_v8i64_zext(<8 x i16> %x, <8 x i16> %y, <8 x i16> %b) {
+; CHECK-LABEL: add_v8i16_v8i32_v8i64_zext:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vpt.i16 eq, q2, zr
+; CHECK-NEXT:    vmlalvt.u16 r0, r1, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <8 x i16> %b, zeroinitializer
+  %xx = zext <8 x i16> %x to <8 x i32>
+  %yy = zext <8 x i16> %y to <8 x i32>
+  %m = mul <8 x i32> %xx, %yy
+  %ma = zext <8 x i32> %m to <8 x i64>
+  %s = select <8 x i1> %c, <8 x i64> %ma, <8 x i64> zeroinitializer
+  %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %s)
+  ret i64 %z
+}
+
+define arm_aapcs_vfpcc i64 @add_v8i16_v8i32_v8i64_sext(<8 x i16> %x, <8 x i16> %y, <8 x i16> %b) {
+; CHECK-LABEL: add_v8i16_v8i32_v8i64_sext:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vpt.i16 eq, q2, zr
+; CHECK-NEXT:    vmlalvt.s16 r0, r1, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <8 x i16> %b, zeroinitializer
+  %xx = sext <8 x i16> %x to <8 x i32>
+  %yy = sext <8 x i16> %y to <8 x i32>
+  %m = mul <8 x i32> %xx, %yy
+  %ma = sext <8 x i32> %m to <8 x i64>
+  %s = select <8 x i1> %c, <8 x i64> %ma, <8 x i64> zeroinitializer
+  %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %s)
+  ret i64 %z
+}
+
+define arm_aapcs_vfpcc i64 @add_v8i16_v8i32_v8i64_sextzext(<8 x i16> %x, <8 x i16> %y, <8 x i16> %b) {
+; CHECK-LABEL: add_v8i16_v8i32_v8i64_sextzext:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vpt.i16 eq, q2, zr
+; CHECK-NEXT:    vmlalvt.s16 r0, r1, q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <8 x i16> %b, zeroinitializer
+  %xx = sext <8 x i16> %x to <8 x i32>
+  %m = mul <8 x i32> %xx, %xx
+  %ma = zext <8 x i32> %m to <8 x i64>
+  %s = select <8 x i1> %c, <8 x i64> %ma, <8 x i64> zeroinitializer
+  %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %s)
+  ret i64 %z
+}
+
 define arm_aapcs_vfpcc i64 @add_v2i16_v2i64_zext(<2 x i16> %x, <2 x i16> %y, <2 x i16> %b) {
 ; CHECK-LABEL: add_v2i16_v2i64_zext:
 ; CHECK:       @ %bb.0: @ %entry
@@ -367,6 +417,56 @@ entry:
   %yy = sext <16 x i8> %y to <16 x i32>
   %m = mul <16 x i32> %xx, %yy
   %s = select <16 x i1> %c, <16 x i32> %m, <16 x i32> zeroinitializer
+  %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %s)
+  ret i32 %z
+}
+
+define arm_aapcs_vfpcc i32 @add_v16i8_v16i16_v16i32_zext(<16 x i8> %x, <16 x i8> %y, <16 x i8> %b) {
+; CHECK-LABEL: add_v16i8_v16i16_v16i32_zext:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vpt.i8 eq, q2, zr
+; CHECK-NEXT:    vmlavt.u8 r0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <16 x i8> %b, zeroinitializer
+  %xx = zext <16 x i8> %x to <16 x i16>
+  %yy = zext <16 x i8> %y to <16 x i16>
+  %m = mul <16 x i16> %xx, %yy
+  %ma = zext <16 x i16> %m to <16 x i32>
+  %s = select <16 x i1> %c, <16 x i32> %ma, <16 x i32> zeroinitializer
+  %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %s)
+  ret i32 %z
+}
+
+define arm_aapcs_vfpcc i32 @add_v16i8_v16i16_v16i32_sext(<16 x i8> %x, <16 x i8> %y, <16 x i8> %b) {
+; CHECK-LABEL: add_v16i8_v16i16_v16i32_sext:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vpt.i8 eq, q2, zr
+; CHECK-NEXT:    vmlavt.s8 r0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <16 x i8> %b, zeroinitializer
+  %xx = sext <16 x i8> %x to <16 x i16>
+  %yy = sext <16 x i8> %y to <16 x i16>
+  %m = mul <16 x i16> %xx, %yy
+  %ma = sext <16 x i16> %m to <16 x i32>
+  %s = select <16 x i1> %c, <16 x i32> %ma, <16 x i32> zeroinitializer
+  %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %s)
+  ret i32 %z
+}
+
+define arm_aapcs_vfpcc i32 @add_v16i8_v16i16_v16i32_sextzext(<16 x i8> %x, <16 x i8> %y, <16 x i8> %b) {
+; CHECK-LABEL: add_v16i8_v16i16_v16i32_sextzext:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vpt.i8 eq, q2, zr
+; CHECK-NEXT:    vmlavt.s8 r0, q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <16 x i8> %b, zeroinitializer
+  %xx = sext <16 x i8> %x to <16 x i16>
+  %m = mul <16 x i16> %xx, %xx
+  %ma = zext <16 x i16> %m to <16 x i32>
+  %s = select <16 x i1> %c, <16 x i32> %ma, <16 x i32> zeroinitializer
   %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %s)
   ret i32 %z
 }
@@ -1668,6 +1768,59 @@ entry:
   ret i64 %r
 }
 
+define arm_aapcs_vfpcc i64 @add_v8i16_v8i32_v8i64_acc_zext(<8 x i16> %x, <8 x i16> %y, <8 x i16> %b, i64 %a) {
+; CHECK-LABEL: add_v8i16_v8i32_v8i64_acc_zext:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vpt.i16 eq, q2, zr
+; CHECK-NEXT:    vmlalvat.u16 r0, r1, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <8 x i16> %b, zeroinitializer
+  %xx = zext <8 x i16> %x to <8 x i32>
+  %yy = zext <8 x i16> %y to <8 x i32>
+  %m = mul <8 x i32> %xx, %yy
+  %ma = zext <8 x i32> %m to <8 x i64>
+  %s = select <8 x i1> %c, <8 x i64> %ma, <8 x i64> zeroinitializer
+  %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %s)
+  %r = add i64 %z, %a
+  ret i64 %r
+}
+
+define arm_aapcs_vfpcc i64 @add_v8i16_v8i32_v8i64_acc_sext(<8 x i16> %x, <8 x i16> %y, <8 x i16> %b, i64 %a) {
+; CHECK-LABEL: add_v8i16_v8i32_v8i64_acc_sext:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vpt.i16 eq, q2, zr
+; CHECK-NEXT:    vmlalvat.s16 r0, r1, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <8 x i16> %b, zeroinitializer
+  %xx = sext <8 x i16> %x to <8 x i32>
+  %yy = sext <8 x i16> %y to <8 x i32>
+  %m = mul <8 x i32> %xx, %yy
+  %ma = sext <8 x i32> %m to <8 x i64>
+  %s = select <8 x i1> %c, <8 x i64> %ma, <8 x i64> zeroinitializer
+  %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %s)
+  %r = add i64 %z, %a
+  ret i64 %r
+}
+
+define arm_aapcs_vfpcc i64 @add_v8i16_v8i32_v8i64_acc_sextzext(<8 x i16> %x, <8 x i16> %y, <8 x i16> %b, i64 %a) {
+; CHECK-LABEL: add_v8i16_v8i32_v8i64_acc_sextzext:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vpt.i16 eq, q2, zr
+; CHECK-NEXT:    vmlalvat.s16 r0, r1, q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <8 x i16> %b, zeroinitializer
+  %xx = sext <8 x i16> %x to <8 x i32>
+  %m = mul <8 x i32> %xx, %xx
+  %ma = zext <8 x i32> %m to <8 x i64>
+  %s = select <8 x i1> %c, <8 x i64> %ma, <8 x i64> zeroinitializer
+  %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %s)
+  %r = add i64 %z, %a
+  ret i64 %r
+}
+
 define arm_aapcs_vfpcc i64 @add_v2i16_v2i64_acc_zext(<2 x i16> %x, <2 x i16> %y, <2 x i16> %b, i64 %a) {
 ; CHECK-LABEL: add_v2i16_v2i64_acc_zext:
 ; CHECK:       @ %bb.0: @ %entry
@@ -1810,6 +1963,59 @@ entry:
   %yy = sext <16 x i8> %y to <16 x i32>
   %m = mul <16 x i32> %xx, %yy
   %s = select <16 x i1> %c, <16 x i32> %m, <16 x i32> zeroinitializer
+  %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %s)
+  %r = add i32 %z, %a
+  ret i32 %r
+}
+
+define arm_aapcs_vfpcc i32 @add_v16i8_v16i16_v16i32_acc_zext(<16 x i8> %x, <16 x i8> %y, <16 x i8> %b, i32 %a) {
+; CHECK-LABEL: add_v16i8_v16i16_v16i32_acc_zext:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vpt.i8 eq, q2, zr
+; CHECK-NEXT:    vmlavat.u8 r0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <16 x i8> %b, zeroinitializer
+  %xx = zext <16 x i8> %x to <16 x i16>
+  %yy = zext <16 x i8> %y to <16 x i16>
+  %m = mul <16 x i16> %xx, %yy
+  %ma = zext <16 x i16> %m to <16 x i32>
+  %s = select <16 x i1> %c, <16 x i32> %ma, <16 x i32> zeroinitializer
+  %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %s)
+  %r = add i32 %z, %a
+  ret i32 %r
+}
+
+define arm_aapcs_vfpcc i32 @add_v16i8_v16i16_v16i32_acc_sext(<16 x i8> %x, <16 x i8> %y, <16 x i8> %b, i32 %a) {
+; CHECK-LABEL: add_v16i8_v16i16_v16i32_acc_sext:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vpt.i8 eq, q2, zr
+; CHECK-NEXT:    vmlavat.s8 r0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <16 x i8> %b, zeroinitializer
+  %xx = sext <16 x i8> %x to <16 x i16>
+  %yy = sext <16 x i8> %y to <16 x i16>
+  %m = mul <16 x i16> %xx, %yy
+  %ma = sext <16 x i16> %m to <16 x i32>
+  %s = select <16 x i1> %c, <16 x i32> %ma, <16 x i32> zeroinitializer
+  %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %s)
+  %r = add i32 %z, %a
+  ret i32 %r
+}
+
+define arm_aapcs_vfpcc i32 @add_v16i8_v16i16_v16i32_acc_sextzext(<16 x i8> %x, <16 x i8> %y, <16 x i8> %b, i32 %a) {
+; CHECK-LABEL: add_v16i8_v16i16_v16i32_acc_sextzext:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vpt.i8 eq, q2, zr
+; CHECK-NEXT:    vmlavat.s8 r0, q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %c = icmp eq <16 x i8> %b, zeroinitializer
+  %xx = sext <16 x i8> %x to <16 x i16>
+  %m = mul <16 x i16> %xx, %xx
+  %ma = zext <16 x i16> %m to <16 x i32>
+  %s = select <16 x i1> %c, <16 x i32> %ma, <16 x i32> zeroinitializer
   %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %s)
   %r = add i32 %z, %a
   ret i32 %r

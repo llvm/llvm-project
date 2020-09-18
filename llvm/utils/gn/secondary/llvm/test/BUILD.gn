@@ -167,6 +167,12 @@ write_lit_config("lit_site_cfg") {
     extra_values += [ "LLVM_ENABLE_LIBXML2=0" ]  # Must be 0.
   }
 
+  if (llvm_enable_expensive_checks) {
+    extra_values += [ "LLVM_ENABLE_EXPENSIVE_CHECKS=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_EXPENSIVE_CHECKS=0" ]  # Must be 0.
+  }
+
   if (llvm_enable_threads) {
     extra_values += [ "LLVM_ENABLE_THREADS=1" ]
   } else {

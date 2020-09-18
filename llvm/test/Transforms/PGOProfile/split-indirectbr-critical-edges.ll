@@ -37,3 +37,27 @@ if.end:                                           ; preds = %if.end.preheader, %
   indirectbr i8* %2, [label %for.cond2, label %if.end]
 ; CHECK: indirectbr i8* %2, [label %for.cond2, label %if.end]
 }
+
+;; If an indirectbr critical edge cannot be split, ignore it.
+;; The edge will not be profiled.
+; CHECK-LABEL: @cannot_split(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.instrprof.increment
+; CHECK-NOT:     call void @llvm.instrprof.increment
+define i32 @cannot_split(i8* nocapture readonly %p) {
+entry:
+  %targets = alloca <2 x i8*>, align 16
+  store <2 x i8*> <i8* blockaddress(@cannot_split, %indirect), i8* blockaddress(@cannot_split, %end)>, <2 x i8*>* %targets, align 16
+  %arrayidx2 = getelementptr inbounds i8, i8* %p, i64 1
+  %0 = load i8, i8* %arrayidx2
+  %idxprom = sext i8 %0 to i64
+  %arrayidx3 = getelementptr inbounds <2 x i8*>, <2 x i8*>* %targets, i64 0, i64 %idxprom
+  %1 = load i8*, i8** %arrayidx3, align 8
+  br label %indirect
+
+indirect:                                         ; preds = %entry, %indirect
+  indirectbr i8* %1, [label %indirect, label %end]
+
+end:                                              ; preds = %indirect
+  ret i32 0
+}

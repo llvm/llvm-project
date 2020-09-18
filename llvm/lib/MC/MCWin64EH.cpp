@@ -264,8 +264,7 @@ static int64_t GetAbsDifference(MCStreamer &Streamer, const MCSymbol *LHS,
   return value;
 }
 
-static uint32_t
-ARM64CountOfUnwindCodes(const std::vector<WinEH::Instruction> &Insns) {
+static uint32_t ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
   uint32_t Count = 0;
   for (const auto &I : Insns) {
     switch (static_cast<Win64EH::UnwindOpcodes>(I.Operation)) {
@@ -544,6 +543,111 @@ FindMatchingEpilog(const std::vector<WinEH::Instruction>& EpilogInstrs,
   return nullptr;
 }
 
+static void simplifyOpcodes(std::vector<WinEH::Instruction> &Instructions,
+                            bool Reverse) {
+  unsigned PrevOffset = -1;
+  unsigned PrevRegister = -1;
+
+  auto VisitInstruction = [&](WinEH::Instruction &Inst) {
+    // Convert 2-byte opcodes into equivalent 1-byte ones.
+    if (Inst.Operation == Win64EH::UOP_SaveRegP && Inst.Register == 29) {
+      Inst.Operation = Win64EH::UOP_SaveFPLR;
+      Inst.Register = -1;
+    } else if (Inst.Operation == Win64EH::UOP_SaveRegPX &&
+               Inst.Register == 29) {
+      Inst.Operation = Win64EH::UOP_SaveFPLRX;
+      Inst.Register = -1;
+    } else if (Inst.Operation == Win64EH::UOP_SaveRegPX &&
+               Inst.Register == 19 && Inst.Offset <= 248) {
+      Inst.Operation = Win64EH::UOP_SaveR19R20X;
+      Inst.Register = -1;
+    } else if (Inst.Operation == Win64EH::UOP_AddFP && Inst.Offset == 0) {
+      Inst.Operation = Win64EH::UOP_SetFP;
+    } else if (Inst.Operation == Win64EH::UOP_SaveRegP &&
+               Inst.Register == PrevRegister + 2 &&
+               Inst.Offset == PrevOffset + 16) {
+      Inst.Operation = Win64EH::UOP_SaveNext;
+      Inst.Register = -1;
+      Inst.Offset = 0;
+      // Intentionally not creating UOP_SaveNext for float register pairs,
+      // as current versions of Windows (up to at least 20.04) is buggy
+      // regarding SaveNext for float pairs.
+    }
+    // Update info about the previous instruction, for detecting if
+    // the next one can be made a UOP_SaveNext
+    if (Inst.Operation == Win64EH::UOP_SaveR19R20X) {
+      PrevOffset = 0;
+      PrevRegister = 19;
+    } else if (Inst.Operation == Win64EH::UOP_SaveRegPX) {
+      PrevOffset = 0;
+      PrevRegister = Inst.Register;
+    } else if (Inst.Operation == Win64EH::UOP_SaveRegP) {
+      PrevOffset = Inst.Offset;
+      PrevRegister = Inst.Register;
+    } else if (Inst.Operation == Win64EH::UOP_SaveNext) {
+      PrevRegister += 2;
+      PrevOffset += 16;
+    } else {
+      PrevRegister = -1;
+      PrevOffset = -1;
+    }
+  };
+
+  // Iterate over instructions in a forward order (for prologues),
+  // backwards for epilogues (i.e. always reverse compared to how the
+  // opcodes are stored).
+  if (Reverse) {
+    for (auto It = Instructions.rbegin(); It != Instructions.rend(); It++)
+      VisitInstruction(*It);
+  } else {
+    for (WinEH::Instruction &Inst : Instructions)
+      VisitInstruction(Inst);
+  }
+}
+
+static int checkPackedEpilog(MCStreamer &streamer, WinEH::FrameInfo *info,
+                             int PrologCodeBytes) {
+  // Can only pack if there's one single epilog
+  if (info->EpilogMap.size() != 1)
+    return -1;
+
+  const std::vector<WinEH::Instruction> &Epilog =
+      info->EpilogMap.begin()->second;
+
+  // Can pack if the epilog is a subset of the prolog but not vice versa
+  if (Epilog.size() > info->Instructions.size())
+    return -1;
+
+  // Check that the epilog actually is a perfect match for the end (backwrds)
+  // of the prolog.
+  for (int I = Epilog.size() - 1; I >= 0; I--) {
+    if (info->Instructions[I] != Epilog[Epilog.size() - 1 - I])
+      return -1;
+  }
+
+  // Check that the epilog actually is at the very end of the function,
+  // otherwise it can't be packed.
+  uint32_t DistanceFromEnd = (uint32_t)GetAbsDifference(
+      streamer, info->FuncletOrFuncEnd, info->EpilogMap.begin()->first);
+  if (DistanceFromEnd / 4 != Epilog.size())
+    return -1;
+
+  int Offset = Epilog.size() == info->Instructions.size()
+                   ? 0
+                   : ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction>(
+                         &info->Instructions[Epilog.size()],
+                         info->Instructions.size() - Epilog.size()));
+
+  // Check that the offset and prolog size fits in the first word; it's
+  // unclear whether the epilog count in the extension word can be taken
+  // as packed epilog offset.
+  if (Offset > 31 || PrologCodeBytes > 124)
+    return -1;
+
+  info->EpilogMap.clear();
+  return Offset;
+}
+
 // Populate the .xdata section.  The format of .xdata on ARM64 is documented at
 // https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
 static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
@@ -571,6 +675,10 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
                      "did get unwind info that can't be emitted");
     return;
   }
+
+  simplifyOpcodes(info->Instructions, false);
+  for (auto &I : info->EpilogMap)
+    simplifyOpcodes(I.second, true);
 
   MCContext &context = streamer.getContext();
   MCSymbol *Label = context.createTempSymbol();
@@ -618,6 +726,8 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   uint32_t PrologCodeBytes = ARM64CountOfUnwindCodes(info->Instructions);
   uint32_t TotalCodeBytes = PrologCodeBytes;
 
+  int PackedEpilogOffset = checkPackedEpilog(streamer, info, PrologCodeBytes);
+
   // Process epilogs.
   MapVector<MCSymbol *, uint32_t> EpilogInfo;
   // Epilogs processed so far.
@@ -650,15 +760,17 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   uint32_t CodeWordsMod = TotalCodeBytes % 4;
   if (CodeWordsMod)
     CodeWords++;
-  uint32_t EpilogCount = info->EpilogMap.size();
+  uint32_t EpilogCount =
+      PackedEpilogOffset >= 0 ? PackedEpilogOffset : info->EpilogMap.size();
   bool ExtensionWord = EpilogCount > 31 || TotalCodeBytes > 124;
   if (!ExtensionWord) {
     row1 |= (EpilogCount & 0x1F) << 22;
     row1 |= (CodeWords & 0x1F) << 27;
   }
-  // E is always 0 right now, TODO: packed epilog setup
   if (info->HandlesExceptions) // X
     row1 |= 1 << 20;
+  if (PackedEpilogOffset >= 0) // E
+    row1 |= 1 << 21;
   row1 |= FuncLength & 0x3FFFF;
   streamer.emitInt32(row1);
 

@@ -8517,6 +8517,10 @@ bool ASTContext::areCompatibleSveTypes(QualType FirstType,
         else if (VT->getVectorKind() == VectorType::SveFixedLengthDataVector)
           return VT->getElementType().getCanonicalType() ==
                  FirstType->getSveEltType(*this);
+        else if (VT->getVectorKind() == VectorType::GenericVector)
+          return getTypeSize(SecondType) == getLangOpts().ArmSveVectorBits &&
+                 hasSameType(VT->getElementType(),
+                             getBuiltinVectorTypeInfo(BT).ElementType);
       }
     }
     return false;
@@ -11295,9 +11299,9 @@ OMPTraitInfo &ASTContext::getNewOMPTraitInfo() {
   return *OMPTraitInfoVector.back();
 }
 
-const DiagnosticBuilder &
-clang::operator<<(const DiagnosticBuilder &DB,
-                  const ASTContext::SectionInfo &Section) {
+const StreamableDiagnosticBase &clang::
+operator<<(const StreamableDiagnosticBase &DB,
+           const ASTContext::SectionInfo &Section) {
   if (Section.Decl)
     return DB << Section.Decl;
   return DB << "a prior #pragma section";

@@ -128,13 +128,11 @@ namespace impl {
 AffineMap getTransferMinorIdentityMap(MemRefType memRefType,
                                       VectorType vectorType);
 } // namespace impl
+} // end namespace vector
+} // end namespace mlir
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Vector/VectorOps.h.inc"
-
 #include "mlir/Dialect/Vector/VectorOpsDialect.h.inc"
-
-} // end namespace vector
-} // end namespace mlir
 
 #endif // MLIR_DIALECT_VECTOR_VECTOROPS_H

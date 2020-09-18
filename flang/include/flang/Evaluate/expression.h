@@ -717,7 +717,8 @@ public:
     return values_.end();
   }
 
-  const Expr<SomeType> *Find(const Symbol &) const; // can return null
+  // can return nullopt
+  std::optional<Expr<SomeType>> Find(const Symbol &) const;
 
   StructureConstructor &Add(const semantics::Symbol &, Expr<SomeType> &&);
   int Rank() const { return 0; }
@@ -725,6 +726,7 @@ public:
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
+  std::optional<Expr<SomeType>> CreateParentComponent(const Symbol &) const;
   Result result_;
   StructureConstructorValues values_;
 };

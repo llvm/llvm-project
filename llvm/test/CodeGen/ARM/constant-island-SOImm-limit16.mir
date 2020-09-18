@@ -1,0 +1,62 @@
+# RUN: sed -e "s/SPACEBYTES/100/g" %s | sed -e "s/OFFSET/116/g" > %t.mir
+# RUN: llc %t.mir --filetype=obj -start-before=arm-cp-islands -o - | \
+# RUN: llvm-objdump --arch=armv8a --disassemble - | FileCheck %t.mir
+
+# RUN: sed -e "s/SPACEBYTES/400/g" %s | sed -e "s/OFFSET/12/g" > %t.mir
+# RUN: llc %t.mir --filetype=obj -start-before=arm-cp-islands -o - | \
+# RUN: llvm-objdump --arch=armv8a --disassemble - | FileCheck %t.mir
+
+# RUN: sed -e "s/SPACEBYTES/800/g" %s | sed -e "s/OFFSET/12/g" > %t.mir
+# RUN: llc %t.mir --filetype=obj -start-before=arm-cp-islands -o - | \
+# RUN: llvm-objdump --arch=armv8a --disassemble - | FileCheck %t.mir
+
+--- |
+  target triple = "armv8.2a-arm-none-eabi"
+
+  define dso_local i32 @main() #0 { ret i32 0 }
+
+  attributes #0 = { "frame-pointer"="all" } !4 = !{i32 210}
+
+...
+---
+
+name:            main
+alignment:       4
+tracksRegLiveness: true
+constants:
+
+-
+ id:              0
+ value:           half 0xH5440
+ alignment:       2
+-
+ id:              1
+ value:           half 0xH5441
+ alignment:       2
+
+machineFunctionInfo: {}
+body:             |
+
+  bb.0 (%ir-block.0):
+    liveins: $lr
+
+    $sp = frame-setup STMDB_UPD $sp, 14, $noreg, killed $r11, killed $lr
+    $r11 = frame-setup MOVr killed $sp, 14, $noreg, $noreg
+    $sp = frame-setup SUBri killed $sp, 80, 14, $noreg, $noreg
+
+    ; Test handling of 16-bit constant pool entries.
+    ; 2 consecutive entries: 1 is 4-byte aligned, 1 is not 4-byte aligned.
+
+    renamable $r1 = LEApcrel %const.0, 14, $noreg
+    renamable $r1 = LDRH killed renamable $r1, $noreg, 0, 14, $noreg :: (load 2 from constant-pool)
+    renamable $r1 = LEApcrel %const.1, 14, $noreg
+    renamable $r1 = LDRH killed renamable $r1, $noreg, 0, 14, $noreg :: (load 2 from constant-pool)
+
+    renamable $r0 = SPACE SPACEBYTES, undef renamable $r0
+
+    $sp = frame-destroy MOVr $r11, 14, $noreg, $noreg
+    $sp = frame-destroy LDMIA_RET $sp, 14, $noreg, def $r11, def $pc, implicit killed $r0
+
+ # CHECK: add r1, pc, #OFFSET
+---
+...

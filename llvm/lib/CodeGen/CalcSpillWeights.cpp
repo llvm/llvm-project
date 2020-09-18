@@ -86,7 +86,7 @@ static bool isRematerializable(const LiveInterval &LI,
                                const LiveIntervals &LIS,
                                VirtRegMap *VRM,
                                const TargetInstrInfo &TII) {
-  unsigned Reg = LI.reg;
+  unsigned Reg = LI.reg();
   unsigned Original = VRM ? VRM->getOriginal(Reg) : 0;
   for (LiveInterval::const_vni_iterator I = LI.vni_begin(), E = LI.vni_end();
        I != E; ++I) {
@@ -140,7 +140,7 @@ void VirtRegAuxInfo::calculateSpillWeightAndHint(LiveInterval &li) {
   // Check if unspillable.
   if (weight < 0)
     return;
-  li.weight = weight;
+  li.setWeight(weight);
 }
 
 float VirtRegAuxInfo::futureWeight(LiveInterval &li, SlotIndex start,
@@ -159,10 +159,10 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
   unsigned numInstr = 0; // Number of instructions using li
   SmallPtrSet<MachineInstr*, 8> visited;
 
-  std::pair<unsigned, unsigned> TargetHint = mri.getRegAllocationHint(li.reg);
+  std::pair<unsigned, unsigned> TargetHint = mri.getRegAllocationHint(li.reg());
 
   if (li.isSpillable() && VRM) {
-    Register Reg = li.reg;
+    Register Reg = li.reg();
     Register Original = VRM->getOriginal(Reg);
     const LiveInterval &OrigInt = LIS.getInterval(Original);
     // li comes from a split of OrigInt. If OrigInt was marked
@@ -215,7 +215,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
   std::set<CopyHint> CopyHints;
 
   for (MachineRegisterInfo::reg_instr_nodbg_iterator
-           I = mri.reg_instr_nodbg_begin(li.reg),
+           I = mri.reg_instr_nodbg_begin(li.reg()),
            E = mri.reg_instr_nodbg_end();
        I != E;) {
     MachineInstr *mi = &*(I++);
@@ -243,7 +243,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
 
       // Calculate instr weight.
       bool reads, writes;
-      std::tie(reads, writes) = mi->readsWritesVirtualRegister(li.reg);
+      std::tie(reads, writes) = mi->readsWritesVirtualRegister(li.reg());
       weight = LiveIntervals::getSpillWeight(writes, reads, &MBFI, *mi);
 
       // Give extra weight to what looks like a loop induction variable update.
@@ -256,7 +256,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
     // Get allocation hints from copies.
     if (!mi->isCopy())
       continue;
-    Register hint = copyHint(mi, li.reg, tri, mri);
+    Register hint = copyHint(mi, li.reg(), tri, mri);
     if (!hint)
       continue;
     // Force hweight onto the stack so that x86 doesn't add hidden precision,
@@ -275,7 +275,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
   if (updateLI && CopyHints.size()) {
     // Remove a generic hint if previously added by target.
     if (TargetHint.first == 0 && TargetHint.second)
-      mri.clearSimpleHint(li.reg);
+      mri.clearSimpleHint(li.reg());
 
     std::set<unsigned> HintedRegs;
     for (auto &Hint : CopyHints) {
@@ -283,7 +283,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
           (TargetHint.first != 0 && Hint.Reg == TargetHint.second))
         // Don't add the same reg twice or the target-type hint again.
         continue;
-      mri.addRegAllocationHint(li.reg, Hint.Reg);
+      mri.addRegAllocationHint(li.reg(), Hint.Reg);
     }
 
     // Weakly boost the spill weight of hinted registers.

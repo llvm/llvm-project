@@ -38,7 +38,7 @@ Expected<const amd_kernel_code_t *> KernelSym::getAmdKernelCodeT(
   const object::ELF64LEObjectFile::Elf_Shdr *Text) const {
   assert(Text);
 
-  auto ArrayOr = CodeObject->getELFFile()->getSectionContentsAsArray<uint8_t>(Text);
+  auto ArrayOr = CodeObject->getELFFile()->getSectionContentsAsArray<uint8_t>(*Text);
   if (!ArrayOr)
     return ArrayOr.takeError();
 
@@ -63,7 +63,7 @@ FunctionSym::getAddress(const HSACodeObject *CodeObject,
                         const object::ELF64LEObjectFile::Elf_Shdr *Text) const {
   assert(Text);
   auto ElfHeader = CodeObject->getELFFile()->getHeader();
-  if (ElfHeader->e_type == ELF::ET_REL) {
+  if (ElfHeader.e_type == ELF::ET_REL) {
     return st_value + Text->sh_addr;
   }
 
@@ -180,7 +180,7 @@ void HSACodeObject::InitMarkers() const {
 
 HSACodeObject::note_iterator HSACodeObject::notes_begin() const {
   if (auto NotesOr = getNoteSection()) {
-    if (auto ContentsOr = getELFFile()->getSectionContentsAsArray<uint8_t>(*NotesOr))
+    if (auto ContentsOr = getELFFile()->getSectionContentsAsArray<uint8_t>(**NotesOr))
       return const_varsize_item_iterator<ELFNote>(*ContentsOr);
   }
 
@@ -232,7 +232,7 @@ HSACodeObject::getCode(const FunctionSym *Function) const {
   if (!TextOr)
     return TextOr.takeError();
 
-  auto SecBytesOr = getELFFile()->getSectionContentsAsArray<uint8_t>(*TextOr);
+  auto SecBytesOr = getELFFile()->getSectionContentsAsArray<uint8_t>(**TextOr);
   if (!SecBytesOr)
     return SecBytesOr.takeError();
 
@@ -269,7 +269,7 @@ HSACodeObject::getSectionByName(StringRef Name) const {
     return SectionsOr.takeError();
 
   for (const auto &Sec : *SectionsOr) {
-    auto SecNameOr = ELF->getSectionName(&Sec);
+    auto SecNameOr = ELF->getSectionName(Sec);
     if (!SecNameOr) {
       return SecNameOr.takeError();
     } else if (*SecNameOr == Name) {
@@ -287,7 +287,7 @@ Expected<uint32_t> HSACodeObject::getSectionIdxByName(StringRef Name) const {
     return SectionsOr.takeError();
 
   for (const auto &Sec : *SectionsOr) {
-    auto SecNameOr = ELF->getSectionName(&Sec);
+    auto SecNameOr = ELF->getSectionName(Sec);
     if (!SecNameOr) {
       return SecNameOr.takeError();
     } else if (*SecNameOr == Name) {

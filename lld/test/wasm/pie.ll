@@ -1,4 +1,4 @@
-; RUN: llc -relocation-model=pic -filetype=obj %s -o %t.o
+; RUN: llc -relocation-model=pic -mattr=+mutable-globals -filetype=obj %s -o %t.o
 ; RUN: wasm-ld --no-gc-sections --allow-undefined -pie -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 

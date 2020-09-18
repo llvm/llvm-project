@@ -119,6 +119,7 @@ public:
     MSVC2017 = 1910,
     MSVC2017_5 = 1912,
     MSVC2017_7 = 1914,
+    MSVC2019 = 1920,
   };
 
   /// Clang versions with different platform ABI conformance.
@@ -496,6 +497,8 @@ public:
   FPOptionsOverride() {}
   FPOptionsOverride(const LangOptions &LO)
       : Options(LO), OverrideMask(OverrideMaskBits) {}
+  FPOptionsOverride(FPOptions FPO)
+      : Options(FPO), OverrideMask(OverrideMaskBits) {}
 
   bool requiresTrailingStorage() const { return OverrideMask != 0; }
 

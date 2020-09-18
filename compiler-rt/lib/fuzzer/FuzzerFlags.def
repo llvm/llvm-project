@@ -171,8 +171,9 @@ FUZZER_FLAG_INT(ignore_remaining_args, 0, "If 1, ignore all arguments passed "
 FUZZER_FLAG_STRING(focus_function, "Experimental. "
      "Fuzzing will focus on inputs that trigger calls to this function. "
      "If -focus_function=auto and -data_flow_trace is used, libFuzzer "
-     "will choose the focus functions automatically.")
-FUZZER_FLAG_INT(entropic, 0, "Experimental. Enables entropic power schedule.")
+     "will choose the focus functions automatically. Disables -entropic when "
+     "specified.")
+FUZZER_FLAG_INT(entropic, 1, "Enables entropic power schedule.")
 FUZZER_FLAG_INT(entropic_feature_frequency_threshold, 0xFF, "Experimental. If "
      "entropic is enabled, all features which are observed less often than "
      "the specified value are considered as rare.")

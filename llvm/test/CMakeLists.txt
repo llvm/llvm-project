@@ -17,6 +17,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_BYE_LINK_INTO_TOOLS
   LLVM_HAVE_TF_AOT
   LLVM_HAVE_TF_API
+  LLVM_ENABLE_EXPENSIVE_CHECKS
   )
 
 configure_lit_site_cfg(

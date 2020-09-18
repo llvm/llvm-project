@@ -67,11 +67,13 @@ public:
   // underlying record.
   bool operator==(const Dialect &other) const;
 
+  bool operator!=(const Dialect &other) const { return !(*this == other); }
+
   // Compares two dialects by comparing the names of the dialects.
   bool operator<(const Dialect &other) const;
 
   // Returns whether the dialect is defined.
-  operator bool() const { return def != nullptr; }
+  explicit operator bool() const { return def != nullptr; }
 
 private:
   const llvm::Record *def;

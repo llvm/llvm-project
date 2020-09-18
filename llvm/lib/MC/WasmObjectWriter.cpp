@@ -939,9 +939,8 @@ uint32_t WasmObjectWriter::writeDataSection(const MCAsmLayout &Layout) {
     if (Segment.InitFlags & wasm::WASM_SEGMENT_HAS_MEMINDEX)
       encodeULEB128(0, W.OS); // memory index
     if ((Segment.InitFlags & wasm::WASM_SEGMENT_IS_PASSIVE) == 0) {
-      W.OS << char(Segment.Offset > std::numeric_limits<int32_t>().max()
-                     ? wasm::WASM_OPCODE_I64_CONST
-                     : wasm::WASM_OPCODE_I32_CONST);
+      W.OS << char(Segment.Offset > INT32_MAX ? wasm::WASM_OPCODE_I64_CONST
+                                              : wasm::WASM_OPCODE_I32_CONST);
       encodeSLEB128(Segment.Offset, W.OS); // offset
       W.OS << char(wasm::WASM_OPCODE_END);
     }

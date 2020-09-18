@@ -31,8 +31,8 @@ struct TiledLinalgOp {
 };
 
 /// Populates patterns for vectorization of all ConvN-D ops.
-void populateConvVectorizationPatterns(MLIRContext *context,
-                                       OwningRewritePatternList &patterns);
+void populateConvVectorizationPatterns(
+    MLIRContext *context, SmallVectorImpl<OwningRewritePatternList> &patterns);
 
 /// Performs standalone tiling of a single LinalgOp by `tileSizes`.
 /// and permute the loop nest according to `interchangeVector`
@@ -313,6 +313,13 @@ struct LinalgTilingPattern : public LinalgBaseTilingPattern {
                       PatternBenefit benefit = 1)
       : LinalgBaseTilingPattern(OpTy::getOperationName(), context, options,
                                 marker, benefit) {}
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    if (failed(LinalgBaseTilingPattern::matchAndRewrite(op, rewriter)))
+      return failure();
+    rewriter.eraseOp(op);
+    return success();
+  }
 };
 
 ///
@@ -415,7 +422,8 @@ enum class LinalgLoweringType {
   AffineLoops = 2,
   ParallelLoops = 3
 };
-template <typename OpTy> struct LinalgLoweringPattern : public RewritePattern {
+template <typename OpTy>
+struct LinalgLoweringPattern : public RewritePattern {
   LinalgLoweringPattern(MLIRContext *context, LinalgLoweringType loweringType,
                         LinalgMarker marker = LinalgMarker(),
                         PatternBenefit benefit = 1)
@@ -581,6 +589,10 @@ public:
 
   LogicalResult matchAndRewrite(ConvOp minOp,
                                 PatternRewriter &rewriter) const override;
+
+  // TODO: Make these pass arguments.
+  static const int tileSize = 3;
+  static const int noTile = 1;
 };
 
 //===----------------------------------------------------------------------===//

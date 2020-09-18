@@ -16,6 +16,8 @@
 using namespace mlir;
 using namespace mlir::tblgen;
 Dialect::Dialect(const llvm::Record *def) : def(def) {
+  if (def == nullptr)
+    return;
   for (StringRef dialect : def->getValueAsListOfStrings("dependentDialects"))
     dependentDialects.push_back(dialect);
 }

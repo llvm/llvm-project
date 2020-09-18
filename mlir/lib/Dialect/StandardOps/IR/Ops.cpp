@@ -11,6 +11,7 @@
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Matchers.h"
@@ -215,6 +216,26 @@ static LogicalResult foldMemRefCast(Operation *op) {
     }
   }
   return success(folded);
+}
+
+//===----------------------------------------------------------------------===//
+// Common cast compatibility check for vector types.
+//===----------------------------------------------------------------------===//
+
+/// This method checks for cast compatibility of vector types.
+/// If 'a' and 'b' are vector types, and they are cast compatible,
+/// it calls the 'areElementsCastCompatible' function to check for
+/// element cast compatibility.
+/// Returns 'true' if the vector types are cast compatible,  and 'false'
+/// otherwise.
+static bool areVectorCastSimpleCompatible(
+    Type a, Type b, function_ref<bool(Type, Type)> areElementsCastCompatible) {
+  if (auto va = a.dyn_cast<VectorType>())
+    if (auto vb = b.dyn_cast<VectorType>())
+      return va.getShape().equals(vb.getShape()) &&
+             areElementsCastCompatible(va.getElementType(),
+                                       vb.getElementType());
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1710,6 +1731,101 @@ void DynamicTensorFromElementsOp::build(
   bodyBuilder(b, result.location, bodyBlock->getArguments());
 }
 
+namespace {
+
+/// Canonicalizes dynamic_tensor_from_elements operations with a constant
+/// operand into the equivalent operation with the operand expressed in the
+/// result type, instead. We also insert a type cast to make sure that the
+/// resulting IR is still well-typed.
+struct StaticDynamicTensorFromElements
+    : public OpRewritePattern<DynamicTensorFromElementsOp> {
+  using OpRewritePattern<DynamicTensorFromElementsOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DynamicTensorFromElementsOp tensorFromElements,
+                                PatternRewriter &rewriter) const final {
+    auto resultType =
+        tensorFromElements.getResult().getType().cast<RankedTensorType>();
+
+    if (resultType.hasStaticShape())
+      return failure();
+
+    SmallVector<Value, 4> newOperands;
+    SmallVector<int64_t, 4> newShape;
+    auto operandsIt = tensorFromElements.dynamicExtents().begin();
+
+    for (int64_t dim : resultType.getShape()) {
+      if (dim != RankedTensorType::kDynamicSize) {
+        newShape.push_back(dim);
+        continue;
+      }
+      APInt index;
+      if (!matchPattern(*operandsIt, m_ConstantInt(&index))) {
+        newShape.push_back(RankedTensorType::kDynamicSize);
+        newOperands.push_back(*operandsIt++);
+        continue;
+      }
+      newShape.push_back(index.getSExtValue());
+      operandsIt++;
+    }
+
+    if (newOperands.size() == tensorFromElements.dynamicExtents().size())
+      return failure();
+
+    auto loc = tensorFromElements.getLoc();
+    auto newOp = rewriter.create<DynamicTensorFromElementsOp>(
+        loc, RankedTensorType::get(newShape, resultType.getElementType()),
+        newOperands);
+    rewriter.inlineRegionBefore(tensorFromElements.body(), newOp.body(),
+                                newOp.body().begin());
+    rewriter.replaceOpWithNewOp<TensorCastOp>(tensorFromElements, resultType,
+                                              newOp);
+    return success();
+  }
+};
+
+/// Canonicalizes the pattern of the form
+///
+/// %tensor = dynamic_tensor_from_elements %x {
+///   ^bb0(%arg0: index):  // no predecessors
+///   <computation>
+///   yield %1 : index
+/// } : tensor<?xindex>
+/// %extracted_element = extract_element %tensor[%c0] : tensor<?xi32>
+///
+/// to just <computation> with %arg0 replaced by %c0. We only do this if the
+/// dynamic_tensor_from_elements operation has no side-effects.
+struct ExtractElementFromDynamicTensorFromElements
+    : public OpRewritePattern<ExtractElementOp> {
+  using OpRewritePattern<ExtractElementOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractElementOp extract,
+                                PatternRewriter &rewriter) const final {
+    auto tensorFromElements =
+        extract.aggregate().getDefiningOp<DynamicTensorFromElementsOp>();
+    if (!tensorFromElements || !wouldOpBeTriviallyDead(tensorFromElements))
+      return failure();
+
+    BlockAndValueMapping mapping;
+    Block *body = tensorFromElements.getBody();
+    mapping.map(body->getArguments(), extract.indices());
+    for (auto &op : body->without_terminator())
+      rewriter.clone(op, mapping);
+
+    auto yield = cast<YieldOp>(body->getTerminator());
+
+    rewriter.replaceOp(extract, mapping.lookupOrDefault(yield.value()));
+    return success();
+  }
+};
+
+} // namespace
+
+void DynamicTensorFromElementsOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
+  results.insert<ExtractElementFromDynamicTensorFromElements,
+                 StaticDynamicTensorFromElements>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // ExtractElementOp
 //===----------------------------------------------------------------------===//
@@ -1757,11 +1873,17 @@ OpFoldResult ExtractElementOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 void TensorFromElementsOp::build(OpBuilder &builder, OperationState &result,
+                                 Type elementType, ValueRange elements) {
+  Type resultTy = RankedTensorType::get({static_cast<int64_t>(elements.size())},
+                                        elementType);
+  result.addOperands(elements);
+  result.addTypes(resultTy);
+}
+
+void TensorFromElementsOp::build(OpBuilder &builder, OperationState &result,
                                  ValueRange elements) {
   assert(!elements.empty() && "expected at least one element");
-  Type resultTy = RankedTensorType::get({static_cast<int64_t>(elements.size())},
-                                        elements.front().getType());
-  build(builder, result, resultTy, elements);
+  build(builder, result, elements.front().getType(), elements);
 }
 
 namespace {
@@ -1781,16 +1903,16 @@ struct ExtractElementFromTensorFromElements
     if (extract.indices().size() != 1)
       return failure();
 
-    auto tensor_from_elements = dyn_cast_or_null<TensorFromElementsOp>(
+    auto tensorFromElements = dyn_cast_or_null<TensorFromElementsOp>(
         extract.aggregate().getDefiningOp());
-    if (tensor_from_elements == nullptr)
+    if (tensorFromElements == nullptr)
       return failure();
 
     APInt index;
     if (!matchPattern(*extract.indices().begin(), m_ConstantInt(&index)))
       return failure();
     rewriter.replaceOp(extract,
-                       tensor_from_elements.getOperand(index.getZExtValue()));
+                       tensorFromElements.getOperand(index.getZExtValue()));
     return success();
   }
 };
@@ -1810,11 +1932,7 @@ bool FPExtOp::areCastCompatible(Type a, Type b) {
   if (auto fa = a.dyn_cast<FloatType>())
     if (auto fb = b.dyn_cast<FloatType>())
       return fa.getWidth() < fb.getWidth();
-  if (auto va = a.dyn_cast<VectorType>())
-    if (auto vb = b.dyn_cast<VectorType>())
-      return va.getShape().equals(vb.getShape()) &&
-             areCastCompatible(va.getElementType(), vb.getElementType());
-  return false;
+  return areVectorCastSimpleCompatible(a, b, areCastCompatible);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1822,7 +1940,9 @@ bool FPExtOp::areCastCompatible(Type a, Type b) {
 //===----------------------------------------------------------------------===//
 
 bool FPToSIOp::areCastCompatible(Type a, Type b) {
-  return a.isa<FloatType>() && b.isSignlessInteger();
+  if (a.isa<FloatType>() && b.isSignlessInteger())
+    return true;
+  return areVectorCastSimpleCompatible(a, b, areCastCompatible);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1830,7 +1950,9 @@ bool FPToSIOp::areCastCompatible(Type a, Type b) {
 //===----------------------------------------------------------------------===//
 
 bool FPToUIOp::areCastCompatible(Type a, Type b) {
-  return a.isa<FloatType>() && b.isSignlessInteger();
+  if (a.isa<FloatType>() && b.isSignlessInteger())
+    return true;
+  return areVectorCastSimpleCompatible(a, b, areCastCompatible);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1841,11 +1963,7 @@ bool FPTruncOp::areCastCompatible(Type a, Type b) {
   if (auto fa = a.dyn_cast<FloatType>())
     if (auto fb = b.dyn_cast<FloatType>())
       return fa.getWidth() > fb.getWidth();
-  if (auto va = a.dyn_cast<VectorType>())
-    if (auto vb = b.dyn_cast<VectorType>())
-      return va.getShape().equals(vb.getShape()) &&
-             areCastCompatible(va.getElementType(), vb.getElementType());
-  return false;
+  return areVectorCastSimpleCompatible(a, b, areCastCompatible);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2285,7 +2403,9 @@ OpFoldResult SignedRemIOp::fold(ArrayRef<Attribute> operands) {
 
 // sitofp is applicable from integer types to float types.
 bool SIToFPOp::areCastCompatible(Type a, Type b) {
-  return a.isSignlessInteger() && b.isa<FloatType>();
+  if (a.isSignlessInteger() && b.isa<FloatType>())
+    return true;
+  return areVectorCastSimpleCompatible(a, b, areCastCompatible);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2365,7 +2485,9 @@ OpFoldResult SubIOp::fold(ArrayRef<Attribute> operands) {
 
 // uitofp is applicable from integer types to float types.
 bool UIToFPOp::areCastCompatible(Type a, Type b) {
-  return a.isSignlessInteger() && b.isa<FloatType>();
+  if (a.isSignlessInteger() && b.isa<FloatType>())
+    return true;
+  return areVectorCastSimpleCompatible(a, b, areCastCompatible);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3039,6 +3161,87 @@ bool TensorCastOp::areCastCompatible(Type a, Type b) {
 
 OpFoldResult TensorCastOp::fold(ArrayRef<Attribute> operands) {
   return impl::foldCastOp(*this);
+}
+
+/// Compute a TensorType that has the joined shape knowledge of the two
+/// given TensorTypes. The element types need to match.
+static TensorType joinShapes(TensorType one, TensorType two) {
+  assert(one.getElementType() == two.getElementType());
+
+  if (!one.hasRank())
+    return two;
+  if (!two.hasRank())
+    return one;
+
+  int64_t rank = one.getRank();
+  if (rank != two.getRank())
+    return {};
+
+  SmallVector<int64_t, 4> join;
+  join.reserve(rank);
+  for (int64_t i = 0; i < rank; ++i) {
+    if (one.isDynamicDim(i)) {
+      join.push_back(two.getDimSize(i));
+      continue;
+    }
+    if (two.isDynamicDim(i)) {
+      join.push_back(one.getDimSize(i));
+      continue;
+    }
+    if (one.getDimSize(i) != two.getDimSize(i))
+      return {};
+    join.push_back(one.getDimSize(i));
+  }
+  return RankedTensorType::get(join, one.getElementType());
+}
+
+namespace {
+
+/// Replaces chains of two tensor_cast operations by a single tensor_cast
+/// operation if doing so does not remove runtime constraints.
+struct ChainedTensorCast : public OpRewritePattern<TensorCastOp> {
+  using OpRewritePattern<TensorCastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TensorCastOp tensorCast,
+                                PatternRewriter &rewriter) const final {
+    auto tensorCastOperand =
+        tensorCast.getOperand().getDefiningOp<TensorCastOp>();
+
+    if (!tensorCastOperand)
+      return failure();
+
+    auto sourceType =
+        tensorCastOperand.getOperand().getType().cast<TensorType>();
+    auto intermediateType = tensorCastOperand.getType().cast<TensorType>();
+    auto resultType = tensorCast.getType().cast<TensorType>();
+
+    // We can remove the intermediate cast if joining all three produces the
+    // same result as just joining the source and result shapes.
+    auto firstJoin =
+        joinShapes(joinShapes(sourceType, intermediateType), resultType);
+
+    // The join might not exist if the cast sequence would fail at runtime.
+    if (!firstJoin)
+      return failure();
+
+    // The newJoin always exists if the above join exists, it might just contain
+    // less information. If so, we cannot drop the intermediate cast, as doing
+    // so would remove runtime checks.
+    auto newJoin = joinShapes(sourceType, resultType);
+    if (firstJoin != newJoin)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<TensorCastOp>(tensorCast, resultType,
+                                              tensorCastOperand.getOperand());
+    return success();
+  }
+};
+
+} // namespace
+
+void TensorCastOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
+  results.insert<ChainedTensorCast>(context);
 }
 
 //===----------------------------------------------------------------------===//

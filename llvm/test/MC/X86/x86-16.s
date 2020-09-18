@@ -1056,3 +1056,8 @@ foo:
 // CHECK:  encoding: [0x0f,0x84,A,A]
 // CHECK:  fixup A - offset: 2, value: foo-2, kind: FK_PCRel_2
 {disp32} je foo
+
+// CHECK: movl nearer, %ebx
+// CHECK:  encoding: [0x66,0x8b,0x1e,A,A]
+// CHECK:  fixup A - offset: 3, value: nearer, kind: FK_Data_2
+movl    nearer, %ebx

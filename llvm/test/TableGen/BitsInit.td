@@ -38,8 +38,8 @@ def {
   bits<2> D8 = { 0 };    // type mismatch.  RHS doesn't have enough bits
 
   bits<8> E;
-  let E{7-0} = {0,0,1,?,?,?,?,?};
-  let E{3-0} = 0b0010;
+  let E{7...0} = {0,0,1,?,?,?,?,?};
+  let E{3...0} = 0b0010;
 
   bits<8> F1 = { 0, 1, 0b1001, 0, 0b0 }; // ok
   bits<7> F2 = { 0, 1, 0b1001, 0, 0b0 }; // LHS doesn't have enough bits
@@ -50,7 +50,7 @@ def {
   bits<8> G3 = { 0, 1, { 0b1001 }, 0, 0b0 }; // ok
 
   bits<16> H;
-  let H{15-0} = { { 0b11001100 }, 0b00110011 };
+  let H{15...0} = { { 0b11001100 }, 0b00110011 };
   bits<16> I = { G1, G2 };
 
   // Make sure we can initialise ints with bits<> values.

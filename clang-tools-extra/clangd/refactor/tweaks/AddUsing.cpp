@@ -169,8 +169,7 @@ findInsertionPoint(const Tweak::Selection &Inputs,
       return Tok.kind() == tok::l_brace;
     });
     if (Tok == Toks.end() || Tok->endLocation().isInvalid()) {
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Namespace with no {");
+      return error("Namespace with no {");
     }
     if (!Tok->endLocation().isMacroID()) {
       InsertionPointData Out;
@@ -183,8 +182,7 @@ findInsertionPoint(const Tweak::Selection &Inputs,
   // top level decl.
   auto TLDs = Inputs.AST->getLocalTopLevelDecls();
   if (TLDs.empty()) {
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Cannot find place to insert \"using\"");
+    return error("Cannot find place to insert \"using\"");
   }
   InsertionPointData Out;
   Out.Loc = SM.getExpansionLoc(TLDs[0]->getBeginLoc());
@@ -272,9 +270,7 @@ Expected<Tweak::Effect> AddUsing::apply(const Selection &Inputs) {
   auto SpelledTokens = TB.spelledForExpanded(
       TB.expandedTokens(QualifierToRemove.getSourceRange()));
   if (!SpelledTokens) {
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "Could not determine length of the qualifier");
+    return error("Could not determine length of the qualifier");
   }
   unsigned Length =
       syntax::Token::range(SM, SpelledTokens->front(), SpelledTokens->back())

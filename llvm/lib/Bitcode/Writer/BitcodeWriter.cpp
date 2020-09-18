@@ -86,6 +86,9 @@ static cl::opt<unsigned>
     IndexThreshold("bitcode-mdindex-threshold", cl::Hidden, cl::init(25),
                    cl::desc("Number of metadatas above which we emit an index "
                             "to enable lazy-loading"));
+static cl::opt<uint32_t> FlushThreshold(
+    "bitcode-flush-threshold", cl::Hidden, cl::init(512),
+    cl::desc("The threshold (unit M) for flushing LLVM bitcode."));
 
 static cl::opt<bool> WriteRelBFToSummary(
     "write-relbf-to-summary", cl::Hidden, cl::init(false),
@@ -4453,8 +4456,8 @@ static void writeBitcodeHeader(BitstreamWriter &Stream) {
   Stream.Emit(0xD, 4);
 }
 
-BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer)
-    : Buffer(Buffer), Stream(new BitstreamWriter(Buffer)) {
+BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer, raw_fd_stream *FS)
+    : Buffer(Buffer), Stream(new BitstreamWriter(Buffer, FS, FlushThreshold)) {
   writeBitcodeHeader(*Stream);
 }
 
@@ -4565,7 +4568,7 @@ void llvm::WriteBitcodeToFile(const Module &M, raw_ostream &Out,
   if (TT.isOSDarwin() || TT.isOSBinFormatMachO())
     Buffer.insert(Buffer.begin(), BWH_HeaderSize, 0);
 
-  BitcodeWriter Writer(Buffer);
+  BitcodeWriter Writer(Buffer, dyn_cast<raw_fd_stream>(&Out));
   Writer.writeModule(M, ShouldPreserveUseListOrder, Index, GenerateHash,
                      ModHash);
   Writer.writeSymtab();
@@ -4575,7 +4578,8 @@ void llvm::WriteBitcodeToFile(const Module &M, raw_ostream &Out,
     emitDarwinBCHeaderAndTrailer(Buffer, TT);
 
   // Write the generated bitstream to "Out".
-  Out.write((char*)&Buffer.front(), Buffer.size());
+  if (!Buffer.empty())
+    Out.write((char *)&Buffer.front(), Buffer.size());
 }
 
 void IndexBitcodeWriter::write() {
@@ -4829,11 +4833,10 @@ void llvm::EmbedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
   std::string Data;
   ArrayRef<uint8_t> ModuleData;
   Triple T(M.getTargetTriple());
-  // Create a constant that contains the bitcode.
-  // In case of embedding a marker, ignore the input Buf and use the empty
-  // ArrayRef. It is also legal to create a bitcode marker even Buf is empty.
+
   if (EmbedBitcode) {
-    if (!isBitcode((const unsigned char *)Buf.getBufferStart(),
+    if (Buf.getBufferSize() == 0 ||
+        !isBitcode((const unsigned char *)Buf.getBufferStart(),
                    (const unsigned char *)Buf.getBufferEnd())) {
       // If the input is LLVM Assembly, bitcode is produced by serializing
       // the module. Use-lists order need to be preserved in this case.

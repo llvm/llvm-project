@@ -454,11 +454,5 @@ static LogicalResult verify(TypeOp op) {
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
-namespace mlir {
-namespace pdl {
-
 #define GET_OP_CLASSES
 #include "mlir/Dialect/PDL/IR/PDLOps.cpp.inc"
-
-} // end namespace pdl
-} // end namespace mlir

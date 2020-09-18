@@ -121,7 +121,7 @@ bool hasHardwareCRC32ARMPosix() { return false; }
 // initialized after the other globals, so we can check its value to know if
 // calling getauxval is safe.
 extern "C" SANITIZER_WEAK_ATTRIBUTE char *__progname;
-INLINE bool areBionicGlobalsInitialized() {
+inline bool areBionicGlobalsInitialized() {
   return !SANITIZER_ANDROID || (&__progname && __progname);
 }
 

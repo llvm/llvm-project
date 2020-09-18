@@ -46,9 +46,11 @@ const std::type_info* test4_typeid() { return &typeid(b); }
 
 const std::type_info* test5_typeid() { return &typeid(v); }
 // CHECK: define dso_local %struct.type_info* @"?test5_typeid@@YAPBUtype_info@@XZ"()
-// CHECK:        [[RT:%.*]] = call i8* @__RTtypeid(i8* bitcast (%struct.V* @"?v@@3UV@@A" to i8*))
-// CHECK-NEXT:   [[RET:%.*]] = bitcast i8* [[RT]] to %struct.type_info*
-// CHECK-NEXT:   ret %struct.type_info* [[RET]]
+// CHECK:   ret %struct.type_info* bitcast (%rtti.TypeDescriptor7* @"??_R0?AUV@@@8" to %struct.type_info*)
+
+const std::type_info *test6_typeid() { return &typeid((V &)v); }
+// CHECK: define dso_local %struct.type_info* @"?test6_typeid@@YAPBUtype_info@@XZ"()
+// CHECK:   ret %struct.type_info* bitcast (%rtti.TypeDescriptor7* @"??_R0?AUV@@@8" to %struct.type_info*)
 
 namespace PR26329 {
 struct Polymorphic {

@@ -25,21 +25,6 @@ kmp_target_offload_kind_t TargetOffloadPolicy = tgt_default;
 std::mutex TargetOffloadMtx;
 
 ////////////////////////////////////////////////////////////////////////////////
-/// dump a table of all the host-target pointer pairs on failure
-static void dumpTargetPointerMappings() {
-  for (const auto &Device : Devices) {
-    fprintf(stderr, "Device %d:\n", Device.DeviceID);
-    fprintf(stderr, "%-18s %-18s %s\n", "Host Ptr", "Target Ptr", "Size (B)");
-    for (const auto &HostTargetMap : Device.HostDataToTargetMap) {
-      fprintf(stderr, DPxMOD " " DPxMOD " %lu\n",
-              DPxPTR(HostTargetMap.HstPtrBegin),
-              DPxPTR(HostTargetMap.TgtPtrBegin),
-              HostTargetMap.HstPtrEnd - HostTargetMap.HstPtrBegin);
-    }
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
 /// manage the success or failure of a target construct
 static void HandleDefaultTargetOffload() {
   TargetOffloadMtx.lock();
@@ -76,9 +61,11 @@ static void HandleTargetOutcome(bool success) {
     case tgt_mandatory:
       if (!success) {
         if (getInfoLevel() > 1)
-          dumpTargetPointerMappings();
+          for (const auto &Device : Devices)
+            dumpTargetPointerMappings(Device);
         else
-          FAILURE_MESSAGE("run with env LIBOMPTARGET_INFO>1 to dump tables\n");
+          FAILURE_MESSAGE("run with env LIBOMPTARGET_INFO>1 to dump host-target"
+                          "pointer maps\n");
 
         FATAL_MESSAGE0(1, "failure of target construct while offloading is mandatory");
       }

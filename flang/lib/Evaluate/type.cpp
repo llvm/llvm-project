@@ -207,7 +207,7 @@ static const semantics::Symbol *FindParentComponent(
   return nullptr;
 }
 
-static const semantics::DerivedTypeSpec *GetParentTypeSpec(
+const semantics::DerivedTypeSpec *GetParentTypeSpec(
     const semantics::DerivedTypeSpec &derived) {
   if (const semantics::Symbol * parent{FindParentComponent(derived)}) {
     return &parent->get<semantics::ObjectEntityDetails>()

@@ -406,3 +406,13 @@ TEST(LegalizerInfoTest, MMOAlignment) {
                                   32, 8, AtomicOrdering::NotAtomic }));
   }
 }
+
+// This code sequence doesn't do anything, but it covers a previously uncovered
+// codepath that used to crash in MSVC x86_32 debug mode.
+TEST(LegalizerInfoTest, MSVCDebugMiscompile) {
+  const LLT S1 = LLT::scalar(1);
+  const LLT P0 = LLT::pointer(0, 32);
+  LegalizerInfo LI;
+  auto Builder = LI.getActionDefinitionsBuilder(TargetOpcode::G_PTRTOINT);
+  (void)Builder.legalForCartesianProduct({S1}, {P0});
+}

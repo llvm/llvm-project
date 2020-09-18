@@ -2240,15 +2240,9 @@ define arm_aapcs_vfpcc void @ssatmul_4_q7(i8* nocapture readonly %pSrcA, i8* noc
 ; CHECK-NEXT:    ldrsb r0, [r12], #1
 ; CHECK-NEXT:    ldrsb r1, [r6], #1
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    asrs r1, r0, #7
-; CHECK-NEXT:    cmn.w r1, #128
-; CHECK-NEXT:    mvn r1, #127
-; CHECK-NEXT:    it gt
-; CHECK-NEXT:    asrgt r1, r0, #7
-; CHECK-NEXT:    cmp r1, #127
-; CHECK-NEXT:    it ge
-; CHECK-NEXT:    movge r1, #127
-; CHECK-NEXT:    strb r1, [r4], #1
+; CHECK-NEXT:    asrs r0, r0, #7
+; CHECK-NEXT:    ssat r0, #8, r0
+; CHECK-NEXT:    strb r0, [r4], #1
 ; CHECK-NEXT:    le lr, .LBB13_7
 ; CHECK-NEXT:  .LBB13_8: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}

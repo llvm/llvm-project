@@ -1,8 +1,20 @@
-Fortran Preprocessing
-=====================
+<!--===- docs/Preprocessing.md 
+  
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+  
+-->
 
-Behavior common to (nearly) all compilers:
-------------------------------------------
+# Fortran Preprocessing
+
+```eval_rst
+.. contents::
+   :local:
+```
+
+## Behavior common to (nearly) all compilers:
+
 * Macro and argument names are sensitive to case.
 * Fixed form right margin clipping after column 72 (or 132)
   has precedence over macro name recognition, and also over
@@ -31,9 +43,8 @@ Behavior common to (nearly) all compilers:
 * A `#define` directive intermixed with continuation lines can't
   define a macro that's invoked earlier in the same continued statement.
 
-Behavior that is not consistent over all extant compilers but which
-probably should be uncontroversial:
------------------------------------
+## Behavior that is not consistent over all extant compilers but which probably should be uncontroversial:
+
 * Invoked macro names can straddle a Fortran line continuation.
 * ... unless implicit fixed form card padding intervenes; i.e.,
   in fixed form, a continued macro name has to be split at column
@@ -57,8 +68,8 @@ probably should be uncontroversial:
   directive indicator.
 * `#define KWM !` allows KWM to signal a comment.
 
-Judgement calls, where precedents are unclear:
-----------------------------------------------
+## Judgement calls, where precedents are unclear:
+
 * Expressions in `#if` and `#elif` should support both Fortran and C
   operators; e.g., `#if 2 .LT. 3` should work.
 * If a function-like macro does not close its parentheses, line
@@ -76,16 +87,16 @@ Judgement calls, where precedents are unclear:
   lines, it may or may not affect text in the continued statement that
   appeared before the directive.
 
-Behavior that few compilers properly support (or none), but should:
--------------------------------------------------------------------
+## Behavior that few compilers properly support (or none), but should:
+
 * A macro invocation can straddle free form continuation lines in all of their
   forms, with continuation allowed in the name, before the arguments, and
   within the arguments.
 * Directives can be capitalized in free form, too.
 * `__VA_ARGS__` and `__VA_OPT__` work in variadic function-like macros.
 
-In short, a Fortran preprocessor should work as if:
----------------------------------------------------
+## In short, a Fortran preprocessor should work as if:
+
 1. Fixed form lines are padded up to column 72 (or 132) and clipped thereafter.
 2. Fortran comments are removed.
 3. C-style line continuations are processed in preprocessing directives.
@@ -117,8 +128,7 @@ text.
 OpenMP-style directives that look like comments are not addressed by
 this scheme but are obvious extensions.
 
-Appendix
-========
+## Appendix
 `N` in the table below means "not supported"; this doesn't
 mean a bug, it just means that a particular behavior was
 not observed.

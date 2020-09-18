@@ -866,8 +866,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                 LinkCXXRuntimes) ||
                     D.CCCIsCXX();
 
-  NeedsHeapProfRt = Args.hasFlag(options::OPT_fmemory_profile,
-                                 options::OPT_fno_memory_profile, false);
+  NeedsMemProfRt = Args.hasFlag(options::OPT_fmemory_profile,
+                                options::OPT_fno_memory_profile, false);
 
   // Finally, initialize the set of available and recoverable sanitizers.
   Sanitizers.Mask |= Kinds;
@@ -929,10 +929,10 @@ static bool hasTargetFeatureMTE(const llvm::opt::ArgStringList &CmdArgs) {
 void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs,
                             types::ID InputType) const {
-  // NVPTX doesn't currently support sanitizers.  Bailing out here means that
-  // e.g. -fsanitize=address applies only to host code, which is what we want
-  // for now.
-  if (TC.getTriple().isNVPTX() || TC.getTriple().isAMDGCN())
+  // NVPTX/AMDGPU doesn't currently support sanitizers.  Bailing out here means
+  // that e.g. -fsanitize=address applies only to host code, which is what we
+  // want for now.
+  if (TC.getTriple().isNVPTX() || TC.getTriple().isAMDGPU())
     return;
 
   // Translate available CoverageFeatures to corresponding clang-cc1 flags.

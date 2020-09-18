@@ -366,12 +366,14 @@ private:
 class syntax::TreeBuilder {
 public:
   TreeBuilder(syntax::Arena &Arena) : Arena(Arena), Pending(Arena) {
-    for (const auto &T : Arena.tokenBuffer().expandedTokens())
+    for (const auto &T : Arena.getTokenBuffer().expandedTokens())
       LocationToToken.insert({T.location().getRawEncoding(), &T});
   }
 
-  llvm::BumpPtrAllocator &allocator() { return Arena.allocator(); }
-  const SourceManager &sourceManager() const { return Arena.sourceManager(); }
+  llvm::BumpPtrAllocator &allocator() { return Arena.getAllocator(); }
+  const SourceManager &sourceManager() const {
+    return Arena.getSourceManager();
+  }
 
   /// Populate children for \p New node, assuming it covers tokens from \p
   /// Range.
@@ -421,13 +423,13 @@ public:
 
   /// Finish building the tree and consume the root node.
   syntax::TranslationUnit *finalize() && {
-    auto Tokens = Arena.tokenBuffer().expandedTokens();
+    auto Tokens = Arena.getTokenBuffer().expandedTokens();
     assert(!Tokens.empty());
     assert(Tokens.back().kind() == tok::eof);
 
     // Build the root of the tree, consuming all the children.
     Pending.foldChildren(Arena, Tokens.drop_back(),
-                         new (Arena.allocator()) syntax::TranslationUnit);
+                         new (Arena.getAllocator()) syntax::TranslationUnit);
 
     auto *TU = cast<syntax::TranslationUnit>(std::move(Pending).finalize());
     TU->assertInvariantsRecursive();
@@ -451,7 +453,7 @@ public:
     assert(First.isValid());
     assert(Last.isValid());
     assert(First == Last ||
-           Arena.sourceManager().isBeforeInTranslationUnit(First, Last));
+           Arena.getSourceManager().isBeforeInTranslationUnit(First, Last));
     return llvm::makeArrayRef(findToken(First), std::next(findToken(Last)));
   }
 
@@ -540,7 +542,7 @@ private:
   }
 
   void setRole(syntax::Node *N, NodeRole R) {
-    assert(N->role() == NodeRole::Detached);
+    assert(N->getRole() == NodeRole::Detached);
     N->setRole(R);
   }
 
@@ -552,14 +554,14 @@ private:
   /// Ensures that added nodes properly nest and cover the whole token stream.
   struct Forest {
     Forest(syntax::Arena &A) {
-      assert(!A.tokenBuffer().expandedTokens().empty());
-      assert(A.tokenBuffer().expandedTokens().back().kind() == tok::eof);
+      assert(!A.getTokenBuffer().expandedTokens().empty());
+      assert(A.getTokenBuffer().expandedTokens().back().kind() == tok::eof);
       // Create all leaf nodes.
       // Note that we do not have 'eof' in the tree.
-      for (auto &T : A.tokenBuffer().expandedTokens().drop_back()) {
-        auto *L = new (A.allocator()) syntax::Leaf(&T);
+      for (const auto &T : A.getTokenBuffer().expandedTokens().drop_back()) {
+        auto *L = new (A.getAllocator()) syntax::Leaf(&T);
         L->Original = true;
-        L->CanModify = A.tokenBuffer().spelledForExpanded(T).hasValue();
+        L->CanModify = A.getTokenBuffer().spelledForExpanded(T).hasValue();
         Trees.insert(Trees.end(), {&T, L});
       }
     }
@@ -572,7 +574,7 @@ private:
       assert((std::next(It) == Trees.end() ||
               std::next(It)->first == Range.end()) &&
              "no child with the specified range");
-      assert(It->second->role() == NodeRole::Detached &&
+      assert(It->second->getRole() == NodeRole::Detached &&
              "re-assigning role for a child");
       It->second->setRole(Role);
     }
@@ -581,7 +583,7 @@ private:
     void foldChildren(const syntax::Arena &A, ArrayRef<syntax::Token> Tokens,
                       syntax::Tree *Node) {
       // Attach children to `Node`.
-      assert(Node->firstChild() == nullptr && "node already has children");
+      assert(Node->getFirstChild() == nullptr && "node already has children");
 
       auto *FirstToken = Tokens.begin();
       auto BeginChildren = Trees.lower_bound(FirstToken);
@@ -597,14 +599,15 @@ private:
       // We need to go in reverse order, because we can only prepend.
       for (auto It = EndChildren; It != BeginChildren; --It) {
         auto *C = std::prev(It)->second;
-        if (C->role() == NodeRole::Detached)
+        if (C->getRole() == NodeRole::Detached)
           C->setRole(NodeRole::Unknown);
         Node->prependChildLowLevel(C);
       }
 
       // Mark that this node came from the AST and is backed by the source code.
       Node->Original = true;
-      Node->CanModify = A.tokenBuffer().spelledForExpanded(Tokens).hasValue();
+      Node->CanModify =
+          A.getTokenBuffer().spelledForExpanded(Tokens).hasValue();
 
       Trees.erase(BeginChildren, EndChildren);
       Trees.insert({FirstToken, Node});
@@ -624,12 +627,12 @@ private:
         unsigned CoveredTokens =
             It != Trees.end()
                 ? (std::next(It)->first - It->first)
-                : A.tokenBuffer().expandedTokens().end() - It->first;
+                : A.getTokenBuffer().expandedTokens().end() - It->first;
 
         R += std::string(
-            formatv("- '{0}' covers '{1}'+{2} tokens\n", It->second->kind(),
-                    It->first->text(A.sourceManager()), CoveredTokens));
-        R += It->second->dump(A.sourceManager());
+            formatv("- '{0}' covers '{1}'+{2} tokens\n", It->second->getKind(),
+                    It->first->text(A.getSourceManager()), CoveredTokens));
+        R += It->second->dump(A.getSourceManager());
       }
       return R;
     }
@@ -1123,7 +1126,7 @@ public:
   syntax::CallArguments *
   buildCallArguments(CallExpr::arg_range ArgsAndDefaultArgs) {
     auto Args = dropDefaultArgs(ArgsAndDefaultArgs);
-    for (const auto &Arg : Args) {
+    for (auto *Arg : Args) {
       Builder.markExprChild(Arg, syntax::NodeRole::ListElement);
       const auto *DelimiterToken =
           std::next(Builder.findToken(Arg->getEndLoc()));

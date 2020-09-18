@@ -24,9 +24,26 @@ syntax::TranslationUnit *buildSyntaxTree(Arena &A,
 
 // Create syntax trees from subtrees not backed by the source code.
 
-clang::syntax::Leaf *createPunctuation(clang::syntax::Arena &A,
-                                       clang::tok::TokenKind K);
-clang::syntax::EmptyStatement *createEmptyStatement(clang::syntax::Arena &A);
+// Synthesis of Leafs
+/// Create `Leaf` from token with `Spelling` and assert it has the desired
+/// `TokenKind`.
+syntax::Leaf *createLeaf(syntax::Arena &A, tok::TokenKind K,
+                         StringRef Spelling);
+
+/// Infer the token spelling from its `TokenKind`, then create `Leaf` from
+/// this token
+syntax::Leaf *createLeaf(syntax::Arena &A, tok::TokenKind K);
+
+// Synthesis of Trees
+/// Creates the concrete syntax node according to the specified `NodeKind` `K`.
+/// Returns it as a pointer to the base class `Tree`.
+syntax::Tree *
+createTree(syntax::Arena &A,
+           std::vector<std::pair<syntax::Node *, syntax::NodeRole>> Children,
+           syntax::NodeKind K);
+
+// Synthesis of Syntax Nodes
+syntax::EmptyStatement *createEmptyStatement(syntax::Arena &A);
 
 } // namespace syntax
 } // namespace clang

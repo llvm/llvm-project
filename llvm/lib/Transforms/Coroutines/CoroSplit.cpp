@@ -1564,6 +1564,42 @@ static void createDevirtTriggerFunc(CallGraph &CG, CallGraphSCC &SCC) {
 }
 
 /// Replace a call to llvm.coro.prepare.retcon.
+static void replacePrepare(CallInst *Prepare, LazyCallGraph &CG,
+                           LazyCallGraph::SCC &C) {
+  auto CastFn = Prepare->getArgOperand(0); // as an i8*
+  auto Fn = CastFn->stripPointerCasts();   // as its original type
+
+  // Attempt to peephole this pattern:
+  //    %0 = bitcast [[TYPE]] @some_function to i8*
+  //    %1 = call @llvm.coro.prepare.retcon(i8* %0)
+  //    %2 = bitcast %1 to [[TYPE]]
+  // ==>
+  //    %2 = @some_function
+  for (auto UI = Prepare->use_begin(), UE = Prepare->use_end(); UI != UE;) {
+    // Look for bitcasts back to the original function type.
+    auto *Cast = dyn_cast<BitCastInst>((UI++)->getUser());
+    if (!Cast || Cast->getType() != Fn->getType())
+      continue;
+
+    // Replace and remove the cast.
+    Cast->replaceAllUsesWith(Fn);
+    Cast->eraseFromParent();
+  }
+
+  // Replace any remaining uses with the function as an i8*.
+  // This can never directly be a callee, so we don't need to update CG.
+  Prepare->replaceAllUsesWith(CastFn);
+  Prepare->eraseFromParent();
+
+  // Kill dead bitcasts.
+  while (auto *Cast = dyn_cast<BitCastInst>(CastFn)) {
+    if (!Cast->use_empty())
+      break;
+    CastFn = Cast->getOperand(0);
+    Cast->eraseFromParent();
+  }
+}
+/// Replace a call to llvm.coro.prepare.retcon.
 static void replacePrepare(CallInst *Prepare, CallGraph &CG) {
   auto CastFn = Prepare->getArgOperand(0); // as an i8*
   auto Fn = CastFn->stripPointerCasts(); // as its original type
@@ -1618,6 +1654,19 @@ static void replacePrepare(CallInst *Prepare, CallGraph &CG) {
   }
 }
 
+static bool replaceAllPrepares(Function *PrepareFn, LazyCallGraph &CG,
+                               LazyCallGraph::SCC &C) {
+  bool Changed = false;
+  for (auto PI = PrepareFn->use_begin(), PE = PrepareFn->use_end(); PI != PE;) {
+    // Intrinsics can only be used in calls.
+    auto *Prepare = cast<CallInst>((PI++)->getUser());
+    replacePrepare(Prepare, CG, C);
+    Changed = true;
+  }
+
+  return Changed;
+}
+
 /// Remove calls to llvm.coro.prepare.retcon, a barrier meant to prevent
 /// IPO from operating on calls to a retcon coroutine before it's been
 /// split.  This is only safe to do after we've split all retcon
@@ -1656,7 +1705,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     return PreservedAnalyses::all();
 
   // Check for uses of llvm.coro.prepare.retcon.
-  const auto *PrepareFn = M.getFunction("llvm.coro.prepare.retcon");
+  auto *PrepareFn = M.getFunction("llvm.coro.prepare.retcon");
   if (PrepareFn && PrepareFn->use_empty())
     PrepareFn = nullptr;
 
@@ -1670,8 +1719,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     return PreservedAnalyses::all();
 
   if (Coroutines.empty())
-    llvm_unreachable("new pass manager cannot yet handle "
-                     "'llvm.coro.prepare.retcon'");
+    replaceAllPrepares(PrepareFn, CG, C);
 
   // Split all the coroutines.
   for (LazyCallGraph::Node *N : Coroutines) {
@@ -1704,8 +1752,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
   }
 
   if (PrepareFn)
-    llvm_unreachable("new pass manager cannot yet handle "
-                     "'llvm.coro.prepare.retcon'");
+    replaceAllPrepares(PrepareFn, CG, C);
 
   return PreservedAnalyses::none();
 }

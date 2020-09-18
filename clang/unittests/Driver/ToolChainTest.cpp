@@ -35,7 +35,7 @@ TEST(ToolChainTest, VFSGCCInstallation) {
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   Driver TheDriver("/bin/clang", "arm-linux-gnueabihf", Diags,
-                   InMemoryFileSystem);
+                   "clang LLVM compiler", InMemoryFileSystem);
 
   const char *EmptyFiles[] = {
       "foo.cpp",
@@ -89,7 +89,7 @@ TEST(ToolChainTest, VFSGCCInstallationRelativeDir) {
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   Driver TheDriver("/home/test/bin/clang", "arm-linux-gnueabi", Diags,
-                   InMemoryFileSystem);
+                   "clang LLVM compiler", InMemoryFileSystem);
 
   const char *EmptyFiles[] = {
       "foo.cpp", "/home/test/lib/gcc/arm-linux-gnueabi/4.6.1/crtbegin.o",
@@ -130,13 +130,13 @@ TEST(ToolChainTest, DefaultDriverMode) {
       new llvm::vfs::InMemoryFileSystem);
 
   Driver CCDriver("/home/test/bin/clang", "arm-linux-gnueabi", Diags,
-                  InMemoryFileSystem);
+                  "clang LLVM compiler", InMemoryFileSystem);
   CCDriver.setCheckInputsExist(false);
   Driver CXXDriver("/home/test/bin/clang++", "arm-linux-gnueabi", Diags,
-                   InMemoryFileSystem);
+                   "clang LLVM compiler", InMemoryFileSystem);
   CXXDriver.setCheckInputsExist(false);
   Driver CLDriver("/home/test/bin/clang-cl", "arm-linux-gnueabi", Diags,
-                  InMemoryFileSystem);
+                  "clang LLVM compiler", InMemoryFileSystem);
   CLDriver.setCheckInputsExist(false);
 
   std::unique_ptr<Compilation> CC(CCDriver.BuildCompilation(

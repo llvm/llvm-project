@@ -945,7 +945,7 @@ static bool isUniformDefinition(Value value,
 /// vectorization strategy in 'state'.
 static Value vectorizeUniform(Value value, VectorizationState *state) {
   OpBuilder builder(value.getContext());
-  builder.setInsertionPointAfter(value);
+  builder.setInsertionPointAfterValue(value);
 
   auto vectorTy = getVectorType(value.getType(), state->strategy);
   auto bcast = builder.create<BroadcastOp>(value.getLoc(), vectorTy, value);

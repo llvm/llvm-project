@@ -384,7 +384,12 @@ void EventThreadFunction() {
             break;
           case lldb::eStateSuspended:
             break;
-          case lldb::eStateStopped:
+          case lldb::eStateStopped: {
+            if (g_vsc.waiting_for_run_in_terminal) {
+              g_vsc.waiting_for_run_in_terminal = false;
+              g_vsc.request_in_terminal_cv.notify_one();
+            }
+          }
             // Only report a stopped event if the process was not restarted.
             if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
               SendStdOutStdErr(process);
@@ -1374,6 +1379,9 @@ void request_initialize(const llvm::json::Object &request) {
     filters.emplace_back(CreateExceptionBreakpointFilter(exc_bp));
   }
   body.try_emplace("exceptionBreakpointFilters", std::move(filters));
+  // The debug adapter supports launching a debugee in intergrated VSCode
+  // terminal.
+  body.try_emplace("supportsRunInTerminalRequest", true);
   // The debug adapter supports stepping back via the stepBack and
   // reverseContinue requests.
   body.try_emplace("supportsStepBack", false);
@@ -1431,6 +1439,49 @@ void request_initialize(const llvm::json::Object &request) {
 
   response.try_emplace("body", std::move(body));
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+}
+
+void request_runInTerminal(const llvm::json::Object &launch_request,
+                           llvm::json::Object &launch_response) {
+  // We have already created a target that has a valid "program" path to the
+  // executable. We will attach to the next process whose name matches that
+  // of the target's.
+  g_vsc.is_attach = true;
+  lldb::SBAttachInfo attach_info;
+  lldb::SBError error;
+  attach_info.SetWaitForLaunch(true, /*async*/ true);
+  g_vsc.target.Attach(attach_info, error);
+
+  llvm::json::Object reverse_request =
+      CreateRunInTerminalReverseRequest(launch_request);
+  llvm::json::Object reverse_response;
+  lldb_vscode::PacketStatus status =
+      g_vsc.SendReverseRequest(reverse_request, reverse_response);
+  if (status != lldb_vscode::PacketStatus::Success)
+    error.SetErrorString("Process cannot be launched by IDE.");
+
+  if (error.Success()) {
+    // Wait for the attach stop event to happen or for a timeout.
+    g_vsc.waiting_for_run_in_terminal = true;
+    static std::mutex mutex;
+    std::unique_lock<std::mutex> locker(mutex);
+    g_vsc.request_in_terminal_cv.wait_for(locker, std::chrono::seconds(10));
+
+    auto attached_pid = g_vsc.target.GetProcess().GetProcessID();
+    if (attached_pid == LLDB_INVALID_PROCESS_ID)
+      error.SetErrorString("Failed to attach to a process");
+    else
+      SendProcessEvent(Attach);
+  }
+
+  if (error.Fail()) {
+    launch_response["success"] = llvm::json::Value(false);
+    EmplaceSafeString(launch_response, "message",
+                      std::string(error.GetCString()));
+  } else {
+    launch_response["success"] = llvm::json::Value(true);
+    g_vsc.SendJSON(CreateEventObject("initialized"));
+  }
 }
 
 // "LaunchRequest": {
@@ -1501,6 +1552,12 @@ void request_launch(const llvm::json::Object &request) {
   if (status.Fail()) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", status.GetCString());
+    g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
+  if (GetBoolean(arguments, "runInTerminal", false)) {
+    request_runInTerminal(request, response);
     g_vsc.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
@@ -2831,45 +2888,41 @@ void request__testGetTargetBreakpoints(const llvm::json::Object &request) {
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
 
-const std::map<std::string, RequestCallback> &GetRequestHandlers() {
-#define REQUEST_CALLBACK(name)                                                 \
-  { #name, request_##name }
-  static std::map<std::string, RequestCallback> g_request_handlers = {
-      // VSCode Debug Adaptor requests
-      REQUEST_CALLBACK(attach),
-      REQUEST_CALLBACK(completions),
-      REQUEST_CALLBACK(continue),
-      REQUEST_CALLBACK(configurationDone),
-      REQUEST_CALLBACK(disconnect),
-      REQUEST_CALLBACK(evaluate),
-      REQUEST_CALLBACK(exceptionInfo),
-      REQUEST_CALLBACK(getCompileUnits),
-      REQUEST_CALLBACK(initialize),
-      REQUEST_CALLBACK(launch),
-      REQUEST_CALLBACK(next),
-      REQUEST_CALLBACK(pause),
-      REQUEST_CALLBACK(scopes),
-      REQUEST_CALLBACK(setBreakpoints),
-      REQUEST_CALLBACK(setExceptionBreakpoints),
-      REQUEST_CALLBACK(setFunctionBreakpoints),
-      REQUEST_CALLBACK(setVariable),
-      REQUEST_CALLBACK(source),
-      REQUEST_CALLBACK(stackTrace),
-      REQUEST_CALLBACK(stepIn),
-      REQUEST_CALLBACK(stepOut),
-      REQUEST_CALLBACK(threads),
-      REQUEST_CALLBACK(variables),
-      // Testing requests
-      REQUEST_CALLBACK(_testGetTargetBreakpoints),
-  };
-#undef REQUEST_CALLBACK
-  return g_request_handlers;
+void RegisterRequestCallbacks() {
+  g_vsc.RegisterRequestCallback("attach", request_attach);
+  g_vsc.RegisterRequestCallback("completions", request_completions);
+  g_vsc.RegisterRequestCallback("continue", request_continue);
+  g_vsc.RegisterRequestCallback("configurationDone", request_configurationDone);
+  g_vsc.RegisterRequestCallback("disconnect", request_disconnect);
+  g_vsc.RegisterRequestCallback("evaluate", request_evaluate);
+  g_vsc.RegisterRequestCallback("exceptionInfo", request_exceptionInfo);
+  g_vsc.RegisterRequestCallback("getCompileUnits", request_getCompileUnits);
+  g_vsc.RegisterRequestCallback("initialize", request_initialize);
+  g_vsc.RegisterRequestCallback("launch", request_launch);
+  g_vsc.RegisterRequestCallback("next", request_next);
+  g_vsc.RegisterRequestCallback("pause", request_pause);
+  g_vsc.RegisterRequestCallback("scopes", request_scopes);
+  g_vsc.RegisterRequestCallback("setBreakpoints", request_setBreakpoints);
+  g_vsc.RegisterRequestCallback("setExceptionBreakpoints",
+                                request_setExceptionBreakpoints);
+  g_vsc.RegisterRequestCallback("setFunctionBreakpoints",
+                                request_setFunctionBreakpoints);
+  g_vsc.RegisterRequestCallback("setVariable", request_setVariable);
+  g_vsc.RegisterRequestCallback("source", request_source);
+  g_vsc.RegisterRequestCallback("stackTrace", request_stackTrace);
+  g_vsc.RegisterRequestCallback("stepIn", request_stepIn);
+  g_vsc.RegisterRequestCallback("stepOut", request_stepOut);
+  g_vsc.RegisterRequestCallback("threads", request_threads);
+  g_vsc.RegisterRequestCallback("variables", request_variables);
+  // Testing requests
+  g_vsc.RegisterRequestCallback("_testGetTargetBreakpoints",
+                                request__testGetTargetBreakpoints);
 }
 
 } // anonymous namespace
 
 static void printHelp(LLDBVSCodeOptTable &table, llvm::StringRef tool_name) {
-  std::string usage_str = tool_name.str() + "options";
+  std::string usage_str = tool_name.str() + " options";
   table.PrintHelp(llvm::outs(), usage_str.c_str(), "LLDB VSCode", false);
 
   std::string examples = R"___(
@@ -2894,6 +2947,8 @@ int main(int argc, char *argv[]) {
 
   // Initialize LLDB first before we do anything.
   lldb::SBDebugger::Initialize();
+
+  RegisterRequestCallbacks();
 
   int portno = -1;
 
@@ -2937,49 +2992,17 @@ int main(int argc, char *argv[]) {
     g_vsc.output.descriptor =
         StreamDescriptor::from_file(fileno(stdout), false);
   }
-  auto request_handlers = GetRequestHandlers();
   uint32_t packet_idx = 0;
   while (!g_vsc.sent_terminated_event) {
-    std::string json = g_vsc.ReadJSON();
-    if (json.empty())
+    llvm::json::Object object;
+    lldb_vscode::PacketStatus status = g_vsc.GetNextObject(object);
+    if (status == lldb_vscode::PacketStatus::EndOfFile)
       break;
+    if (status != lldb_vscode::PacketStatus::Success)
+      return 1; // Fatal error
 
-    llvm::StringRef json_sref(json);
-    llvm::Expected<llvm::json::Value> json_value = llvm::json::parse(json_sref);
-    if (!json_value) {
-      auto error = json_value.takeError();
-      if (g_vsc.log) {
-        std::string error_str;
-        llvm::raw_string_ostream strm(error_str);
-        strm << error;
-        strm.flush();
-
-        *g_vsc.log << "error: failed to parse JSON: " << error_str << std::endl
-                   << json << std::endl;
-      }
+    if (!g_vsc.HandleObject(object))
       return 1;
-    }
-
-    auto object = json_value->getAsObject();
-    if (!object) {
-      if (g_vsc.log)
-        *g_vsc.log << "error: json packet isn't a object" << std::endl;
-      return 1;
-    }
-
-    const auto packet_type = GetString(object, "type");
-    if (packet_type == "request") {
-      const auto command = GetString(object, "command");
-      auto handler_pos = request_handlers.find(std::string(command));
-      if (handler_pos != request_handlers.end()) {
-        handler_pos->second(*object);
-      } else {
-        if (g_vsc.log)
-          *g_vsc.log << "error: unhandled command \"" << command.data()
-                     << std::endl;
-        return 1;
-      }
-    }
     ++packet_idx;
   }
 

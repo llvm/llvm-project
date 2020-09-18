@@ -94,9 +94,9 @@ class SuspendedThreadsListLinux : public SuspendedThreadsList {
   bool ContainsTid(tid_t thread_id) const;
   void Append(tid_t tid);
 
-  PtraceRegistersStatus GetRegistersAndSP(uptr index, uptr *buffer,
+  PtraceRegistersStatus GetRegistersAndSP(uptr index,
+                                          InternalMmapVector<uptr> *buffer,
                                           uptr *sp) const override;
-  uptr RegisterCount() const override;
 
  private:
   InternalMmapVector<tid_t> thread_ids_;
@@ -533,7 +533,7 @@ void SuspendedThreadsListLinux::Append(tid_t tid) {
 }
 
 PtraceRegistersStatus SuspendedThreadsListLinux::GetRegistersAndSP(
-    uptr index, uptr *buffer, uptr *sp) const {
+    uptr index, InternalMmapVector<uptr> *buffer, uptr *sp) const {
   pid_t tid = GetThreadID(index);
   regs_struct regs;
   int pterrno;
@@ -559,13 +559,11 @@ PtraceRegistersStatus SuspendedThreadsListLinux::GetRegistersAndSP(
   }
 
   *sp = regs.REG_SP;
-  internal_memcpy(buffer, &regs, sizeof(regs));
+  buffer->resize(RoundUpTo(sizeof(regs), sizeof(uptr)) / sizeof(uptr));
+  internal_memcpy(buffer->data(), &regs, sizeof(regs));
   return REGISTERS_AVAILABLE;
 }
 
-uptr SuspendedThreadsListLinux::RegisterCount() const {
-  return sizeof(regs_struct) / sizeof(uptr);
-}
 } // namespace __sanitizer
 
 #endif  // SANITIZER_LINUX && (defined(__x86_64__) || defined(__mips__)

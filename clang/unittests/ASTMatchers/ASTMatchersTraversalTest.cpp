@@ -741,6 +741,164 @@ TEST(ForEachArgumentWithParam, HandlesBoundNodesForNonMatches) {
     std::make_unique<VerifyIdIsBoundTo<VarDecl>>("v", 4)));
 }
 
+TEST(ForEachArgumentWithParamType, ReportsNoFalsePositives) {
+  StatementMatcher ArgumentY =
+      declRefExpr(to(varDecl(hasName("y")))).bind("arg");
+  TypeMatcher IntType = qualType(isInteger()).bind("type");
+  StatementMatcher CallExpr =
+      callExpr(forEachArgumentWithParamType(ArgumentY, IntType));
+
+  // IntParam does not match.
+  EXPECT_TRUE(notMatches("void f(int* i) { int* y; f(y); }", CallExpr));
+  // ArgumentY does not match.
+  EXPECT_TRUE(notMatches("void f(int i) { int x; f(x); }", CallExpr));
+}
+
+TEST(ForEachArgumentWithParamType, MatchesCXXMemberCallExpr) {
+  StatementMatcher ArgumentY =
+      declRefExpr(to(varDecl(hasName("y")))).bind("arg");
+  TypeMatcher IntType = qualType(isInteger()).bind("type");
+  StatementMatcher CallExpr =
+      callExpr(forEachArgumentWithParamType(ArgumentY, IntType));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "struct S {"
+      "  const S& operator[](int i) { return *this; }"
+      "};"
+      "void f(S S1) {"
+      "  int y = 1;"
+      "  S1[y];"
+      "}",
+      CallExpr, std::make_unique<VerifyIdIsBoundTo<QualType>>("type", 1)));
+
+  StatementMatcher CallExpr2 =
+      callExpr(forEachArgumentWithParamType(ArgumentY, IntType));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "struct S {"
+      "  static void g(int i);"
+      "};"
+      "void f() {"
+      "  int y = 1;"
+      "  S::g(y);"
+      "}",
+      CallExpr2, std::make_unique<VerifyIdIsBoundTo<QualType>>("type", 1)));
+}
+
+TEST(ForEachArgumentWithParamType, MatchesCallExpr) {
+  StatementMatcher ArgumentY =
+      declRefExpr(to(varDecl(hasName("y")))).bind("arg");
+  TypeMatcher IntType = qualType(isInteger()).bind("type");
+  StatementMatcher CallExpr =
+      callExpr(forEachArgumentWithParamType(ArgumentY, IntType));
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "void f(int i) { int y; f(y); }", CallExpr,
+      std::make_unique<VerifyIdIsBoundTo<QualType>>("type")));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "void f(int i) { int y; f(y); }", CallExpr,
+      std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("arg")));
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "void f(int i, int j) { int y; f(y, y); }", CallExpr,
+      std::make_unique<VerifyIdIsBoundTo<QualType>>("type", 2)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "void f(int i, int j) { int y; f(y, y); }", CallExpr,
+      std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("arg", 2)));
+}
+
+TEST(ForEachArgumentWithParamType, MatchesConstructExpr) {
+  StatementMatcher ArgumentY =
+      declRefExpr(to(varDecl(hasName("y")))).bind("arg");
+  TypeMatcher IntType = qualType(isInteger()).bind("type");
+  StatementMatcher ConstructExpr =
+      cxxConstructExpr(forEachArgumentWithParamType(ArgumentY, IntType));
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "struct C {"
+      "  C(int i) {}"
+      "};"
+      "int y = 0;"
+      "C Obj(y);",
+      ConstructExpr, std::make_unique<VerifyIdIsBoundTo<QualType>>("type")));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "struct C {"
+      "  C(int i) {}"
+      "};"
+      "int y = 0;"
+      "C Obj(y);",
+      ConstructExpr, std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("arg")));
+}
+
+TEST(ForEachArgumentWithParamType, HandlesKandRFunctions) {
+  StatementMatcher ArgumentY =
+      declRefExpr(to(varDecl(hasName("y")))).bind("arg");
+  TypeMatcher IntType = qualType(isInteger()).bind("type");
+  StatementMatcher CallExpr =
+      callExpr(forEachArgumentWithParamType(ArgumentY, IntType));
+
+  EXPECT_TRUE(matchesC("void f();\n"
+                       "void call_it(void) { int x, y; f(x, y); }\n"
+                       "void f(a, b) int a, b; {}\n"
+                       "void call_it2(void) { int x, y; f(x, y); }",
+                       CallExpr));
+}
+
+TEST(ForEachArgumentWithParamType, HandlesBoundNodesForNonMatches) {
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "void g(int i, int j) {"
+      "  int a;"
+      "  int b;"
+      "  int c;"
+      "  g(a, 0);"
+      "  g(a, b);"
+      "  g(0, b);"
+      "}",
+      functionDecl(
+          forEachDescendant(varDecl().bind("v")),
+          forEachDescendant(callExpr(forEachArgumentWithParamType(
+              declRefExpr(to(decl(equalsBoundNode("v")))), qualType())))),
+      std::make_unique<VerifyIdIsBoundTo<VarDecl>>("v", 4)));
+}
+
+TEST(ForEachArgumentWithParamType, MatchesFunctionPtrCalls) {
+  StatementMatcher ArgumentY =
+      declRefExpr(to(varDecl(hasName("y")))).bind("arg");
+  TypeMatcher IntType = qualType(builtinType()).bind("type");
+  StatementMatcher CallExpr =
+      callExpr(forEachArgumentWithParamType(ArgumentY, IntType));
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "void f(int i) {"
+      "void (*f_ptr)(int) = f; int y; f_ptr(y); }",
+      CallExpr, std::make_unique<VerifyIdIsBoundTo<QualType>>("type")));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "void f(int i) {"
+      "void (*f_ptr)(int) = f; int y; f_ptr(y); }",
+      CallExpr, std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("arg")));
+}
+
+TEST(ForEachArgumentWithParamType, MatchesMemberFunctionPtrCalls) {
+  StatementMatcher ArgumentY =
+      declRefExpr(to(varDecl(hasName("y")))).bind("arg");
+  TypeMatcher IntType = qualType(builtinType()).bind("type");
+  StatementMatcher CallExpr =
+      callExpr(forEachArgumentWithParamType(ArgumentY, IntType));
+
+  StringRef S = "struct A {\n"
+                "  int f(int i) { return i + 1; }\n"
+                "  int (A::*x)(int);\n"
+                "};\n"
+                "void f() {\n"
+                "  int y = 42;\n"
+                "  A a;\n"
+                "  a.x = &A::f;\n"
+                "  (a.*(a.x))(y);\n"
+                "}";
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      S, CallExpr, std::make_unique<VerifyIdIsBoundTo<QualType>>("type")));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      S, CallExpr, std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("arg")));
+}
+
 TEST(QualType, hasCanonicalType) {
   EXPECT_TRUE(notMatches("typedef int &int_ref;"
                            "int a;"
@@ -1454,10 +1612,49 @@ TEST(HasBody, FindsBodyOfForWhileDoLoops) {
                       doStmt(hasBody(compoundStmt()))));
   EXPECT_TRUE(matches("void f() { int p[2]; for (auto x : p) {} }",
                       cxxForRangeStmt(hasBody(compoundStmt()))));
+}
+
+TEST(HasBody, FindsBodyOfFunctions) {
   EXPECT_TRUE(matches("void f() {}", functionDecl(hasBody(compoundStmt()))));
   EXPECT_TRUE(notMatches("void f();", functionDecl(hasBody(compoundStmt()))));
-  EXPECT_TRUE(matches("void f(); void f() {}",
-                      functionDecl(hasBody(compoundStmt()))));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "void f(); void f() {}",
+      functionDecl(hasBody(compoundStmt())).bind("func"),
+      std::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("func", 1)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "class C { void f(); }; void C::f() {}",
+      cxxMethodDecl(hasBody(compoundStmt())).bind("met"),
+      std::make_unique<VerifyIdIsBoundTo<CXXMethodDecl>>("met", 1)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "class C { C(); }; C::C() {}",
+      cxxConstructorDecl(hasBody(compoundStmt())).bind("ctr"),
+      std::make_unique<VerifyIdIsBoundTo<CXXConstructorDecl>>("ctr", 1)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "class C { ~C(); }; C::~C() {}",
+      cxxDestructorDecl(hasBody(compoundStmt())).bind("dtr"),
+      std::make_unique<VerifyIdIsBoundTo<CXXDestructorDecl>>("dtr", 1)));
+}
+
+TEST(HasAnyBody, FindsAnyBodyOfFunctions) {
+  EXPECT_TRUE(matches("void f() {}", functionDecl(hasAnyBody(compoundStmt()))));
+  EXPECT_TRUE(notMatches("void f();",
+                         functionDecl(hasAnyBody(compoundStmt()))));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "void f(); void f() {}",
+      functionDecl(hasAnyBody(compoundStmt())).bind("func"),
+      std::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("func", 2)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "class C { void f(); }; void C::f() {}",
+      cxxMethodDecl(hasAnyBody(compoundStmt())).bind("met"),
+      std::make_unique<VerifyIdIsBoundTo<CXXMethodDecl>>("met", 2)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "class C { C(); }; C::C() {}",
+      cxxConstructorDecl(hasAnyBody(compoundStmt())).bind("ctr"),
+      std::make_unique<VerifyIdIsBoundTo<CXXConstructorDecl>>("ctr", 2)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "class C { ~C(); }; C::~C() {}",
+      cxxDestructorDecl(hasAnyBody(compoundStmt())).bind("dtr"),
+      std::make_unique<VerifyIdIsBoundTo<CXXDestructorDecl>>("dtr", 2)));
 }
 
 TEST(HasAnySubstatement, MatchesForTopLevelCompoundStatement) {

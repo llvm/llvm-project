@@ -47,12 +47,24 @@ define fp128 @test_v1f128(<1 x fp128> %a) nounwind {
 define float @test_v3f32(<3 x float> %a) nounwind {
 ; CHECK-LABEL: test_v3f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-8388608
+; CHECK-NEXT:    mov w8, #2143289344
 ; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    mov v0.s[3], v1.s[0]
 ; CHECK-NEXT:    fmaxnmv s0, v0.4s
 ; CHECK-NEXT:    ret
   %b = call nnan float @llvm.experimental.vector.reduce.fmax.v3f32(<3 x float> %a)
+  ret float %b
+}
+
+define float @test_v3f32_ninf(<3 x float> %a) nounwind {
+; CHECK-LABEL: test_v3f32_ninf:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #2143289344
+; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-NEXT:    fmaxnmv s0, v0.4s
+; CHECK-NEXT:    ret
+  %b = call nnan ninf float @llvm.experimental.vector.reduce.fmax.v3f32(<3 x float> %a)
   ret float %b
 }
 

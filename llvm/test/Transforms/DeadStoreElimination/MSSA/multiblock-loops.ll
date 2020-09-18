@@ -9,7 +9,7 @@ define void @test13(i32* noalias %P) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR:%.*]]
 ; CHECK:       for:
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 false, label [[FOR]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
@@ -29,7 +29,7 @@ define void @test14(i32* noalias %P) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR:%.*]]
 ; CHECK:       for:
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 false, label [[FOR]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
@@ -48,12 +48,12 @@ define void @test18(i32* noalias %P) {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to i8*
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[FOR:%.*]]
 ; CHECK:       for:
-; CHECK-NEXT:    store i8 1, i8* [[P2]]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P]]
-; CHECK-NEXT:    store i8 2, i8* [[P2]]
+; CHECK-NEXT:    store i8 1, i8* [[P2]], align 1
+; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P]], align 4
+; CHECK-NEXT:    store i8 2, i8* [[P2]], align 1
 ; CHECK-NEXT:    br i1 false, label [[FOR]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
@@ -111,6 +111,7 @@ define void @test_loop(i32 %N, i32* noalias nocapture readonly %A, i32* noalias 
 ; CHECK:       for.body4.lr.ph:
 ; CHECK-NEXT:    [[I_028:%.*]] = phi i32 [ [[INC11:%.*]], [[FOR_COND_CLEANUP3:%.*]] ], [ 0, [[FOR_BODY4_LR_PH_PREHEADER]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[I_028]]
+; CHECK-NEXT:    store i32 0, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I_028]], [[N]]
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.body4:
@@ -183,7 +184,7 @@ define void @loop_multiple_def_uses(i32* noalias %P) {
 ; CHECK-NEXT:    br i1 [[C1]], label [[FOR_BODY:%.*]], label [[END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[FOR_HEADER]]
 ; CHECK:       end:
 ; CHECK-NEXT:    store i32 3, i32* [[P]], align 4
@@ -220,7 +221,7 @@ define void @loop_multiple_def_uses_partial_write(i32* noalias %p) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[C:%.*]] = bitcast i32* [[P]] to i8*
 ; CHECK-NEXT:    store i8 1, i8* [[C]], align 4
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[FOR_HEADER]]
 ; CHECK:       end:
 ; CHECK-NEXT:    store i32 3, i32* [[P]], align 4
@@ -257,7 +258,7 @@ define void @loop_multiple_def_uses_mayalias_write(i32* %p, i32* %q) {
 ; CHECK-NEXT:    br i1 [[C1]], label [[FOR_BODY:%.*]], label [[END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    store i32 1, i32* [[Q:%.*]], align 4
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[FOR_HEADER]]
 ; CHECK:       end:
 ; CHECK-NEXT:    store i32 3, i32* [[P]], align 4
@@ -314,3 +315,44 @@ bb1:                                              ; preds = %bb1, %bb
 }
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)
+
+@x = global [10 x i16] zeroinitializer, align 1
+
+; Make sure we do not eliminate the store in %do.body, because it writes to
+; multiple locations in the loop and the store in %if.end10 only stores to
+; the last one.
+define i16 @test_loop_carried_dep() {
+; CHECK-LABEL: @test_loop_carried_dep(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[DO_BODY:%.*]]
+; CHECK:       do.body:
+; CHECK-NEXT:    [[I_0:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[IF_END:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [10 x i16], [10 x i16]* @x, i16 0, i16 [[I_0]]
+; CHECK-NEXT:    store i16 2, i16* [[ARRAYIDX2]], align 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i16 [[I_0]], 4
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[IF_END10:%.*]], label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i16 [[I_0]], 1
+; CHECK-NEXT:    br label [[DO_BODY]]
+; CHECK:       if.end10:
+; CHECK-NEXT:    store i16 1, i16* [[ARRAYIDX2]], align 1
+; CHECK-NEXT:    ret i16 0
+;
+entry:
+  br label %do.body
+
+do.body:                                          ; preds = %if.end, %entry
+  %i.0 = phi i16 [ 0, %entry ], [ %inc, %if.end ]
+  %arrayidx2 = getelementptr inbounds [10 x i16], [10 x i16]* @x, i16 0, i16 %i.0
+  store i16 2, i16* %arrayidx2, align 1
+  %exitcond = icmp eq i16 %i.0, 4
+  br i1 %exitcond, label %if.end10, label %if.end
+
+if.end:                                           ; preds = %do.body
+  %inc = add nuw nsw i16 %i.0, 1
+  br label %do.body
+
+if.end10:                                         ; preds = %do.body
+  store i16 1, i16* %arrayidx2, align 1
+  ret i16 0
+}

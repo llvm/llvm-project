@@ -289,8 +289,8 @@ public:
     return DwarfUnit::getHeaderSize() + DWOIdSize;
   }
   unsigned getLength() {
-    return sizeof(uint32_t) + // Length field
-        getHeaderSize() + getUnitDie().getSize();
+    return Asm->getUnitLengthFieldByteSize() + // Length field
+           getHeaderSize() + getUnitDie().getSize();
   }
 
   void emitHeader(bool UseOffsets) override;

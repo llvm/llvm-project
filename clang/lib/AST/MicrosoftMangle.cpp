@@ -378,8 +378,10 @@ private:
   void mangleFunctionClass(const FunctionDecl *FD);
   void mangleCallingConvention(CallingConv CC);
   void mangleCallingConvention(const FunctionType *T);
-  void mangleIntegerLiteral(const llvm::APSInt &Number, bool IsBoolean);
-  void mangleExpression(const Expr *E);
+  void mangleIntegerLiteral(const llvm::APSInt &Number,
+                            const NonTypeTemplateParmDecl *PD = nullptr,
+                            QualType TemplateArgType = QualType());
+  void mangleExpression(const Expr *E, const NonTypeTemplateParmDecl *PD);
   void mangleThrowSpecification(const FunctionProtoType *T);
 
   void mangleTemplateArgs(const TemplateDecl *TD,
@@ -1357,24 +1359,36 @@ MicrosoftCXXNameMangler::mangleUnscopedTemplateName(const TemplateDecl *TD) {
   mangleUnqualifiedName(TD);
 }
 
-void MicrosoftCXXNameMangler::mangleIntegerLiteral(const llvm::APSInt &Value,
-                                                   bool IsBoolean) {
+void MicrosoftCXXNameMangler::mangleIntegerLiteral(
+    const llvm::APSInt &Value, const NonTypeTemplateParmDecl *PD,
+    QualType TemplateArgType) {
   // <integer-literal> ::= $0 <number>
-  Out << "$0";
-  // Make sure booleans are encoded as 0/1.
-  if (IsBoolean && Value.getBoolValue())
-    mangleNumber(1);
-  else if (Value.isSigned())
+  Out << "$";
+
+  // Since MSVC 2019, add 'M[<type>]' after '$' for auto template parameter when
+  // argument is integer.
+  if (getASTContext().getLangOpts().isCompatibleWithMSVC(
+          LangOptions::MSVC2019) &&
+      PD && PD->getType()->getTypeClass() == Type::Auto &&
+      !TemplateArgType.isNull()) {
+    Out << "M";
+    mangleType(TemplateArgType, SourceRange(), QMM_Drop);
+  }
+
+  Out << "0";
+
+  if (Value.isSigned())
     mangleNumber(Value.getSExtValue());
   else
     mangleNumber(Value.getZExtValue());
 }
 
-void MicrosoftCXXNameMangler::mangleExpression(const Expr *E) {
+void MicrosoftCXXNameMangler::mangleExpression(
+    const Expr *E, const NonTypeTemplateParmDecl *PD) {
   // See if this is a constant expression.
   if (Optional<llvm::APSInt> Value =
           E->getIntegerConstantExpr(Context.getASTContext())) {
-    mangleIntegerLiteral(*Value, E->getType()->isBooleanType());
+    mangleIntegerLiteral(*Value, PD, E->getType());
     return;
   }
 
@@ -1448,10 +1462,12 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
     }
     break;
   }
-  case TemplateArgument::Integral:
+  case TemplateArgument::Integral: {
+    QualType T = TA.getIntegralType();
     mangleIntegerLiteral(TA.getAsIntegral(),
-                         TA.getIntegralType()->isBooleanType());
+                         cast<NonTypeTemplateParmDecl>(Parm), T);
     break;
+  }
   case TemplateArgument::NullPtr: {
     QualType T = TA.getNullPtrType();
     if (const MemberPointerType *MPT = T->getAs<MemberPointerType>()) {
@@ -1473,16 +1489,18 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
         // However, we are free to use 0 *if* we would use multiple fields for
         // non-nullptr member pointers.
         if (!RD->nullFieldOffsetIsZero()) {
-          mangleIntegerLiteral(llvm::APSInt::get(-1), /*IsBoolean=*/false);
+          mangleIntegerLiteral(llvm::APSInt::get(-1),
+                               cast<NonTypeTemplateParmDecl>(Parm), T);
           return;
         }
       }
     }
-    mangleIntegerLiteral(llvm::APSInt::getUnsigned(0), /*IsBoolean=*/false);
+    mangleIntegerLiteral(llvm::APSInt::getUnsigned(0),
+                         cast<NonTypeTemplateParmDecl>(Parm), T);
     break;
   }
   case TemplateArgument::Expression:
-    mangleExpression(TA.getAsExpr());
+    mangleExpression(TA.getAsExpr(), cast<NonTypeTemplateParmDecl>(Parm));
     break;
   case TemplateArgument::Pack: {
     ArrayRef<TemplateArgument> TemplateArgs = TA.getPackAsArray();
@@ -1814,8 +1832,7 @@ void MicrosoftCXXNameMangler::mangleAddressSpaceType(QualType T,
   if (Context.getASTContext().addressSpaceMapManglingFor(AS)) {
     unsigned TargetAS = Context.getASTContext().getTargetAddressSpace(AS);
     Extra.mangleSourceName("_AS");
-    Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(TargetAS),
-                               /*IsBoolean*/ false);
+    Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(TargetAS));
   } else {
     switch (AS) {
     default:
@@ -2707,8 +2724,7 @@ void MicrosoftCXXNameMangler::mangleType(const VectorType *T, Qualifiers Quals,
     Stream << "?$";
     Extra.mangleSourceName("__vector");
     Extra.mangleType(QualType(ET, 0), Range, QMM_Escape);
-    Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getNumElements()),
-                               /*IsBoolean=*/false);
+    Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getNumElements()));
 
     mangleArtificialTagType(TTK_Union, TemplateMangling, {"__clang"});
   }
@@ -2947,7 +2963,7 @@ void MicrosoftCXXNameMangler::mangleType(const PipeType *T, Qualifiers,
   Stream << "?$";
   Extra.mangleSourceName("ocl_pipe");
   Extra.mangleType(ElementType, Range, QMM_Escape);
-  Extra.mangleIntegerLiteral(llvm::APSInt::get(T->isReadOnly()), true);
+  Extra.mangleIntegerLiteral(llvm::APSInt::get(T->isReadOnly()));
 
   mangleArtificialTagType(TTK_Struct, TemplateMangling, {"__clang"});
 }
@@ -2987,8 +3003,7 @@ void MicrosoftCXXNameMangler::mangleType(const ExtIntType *T, Qualifiers,
     Extra.mangleSourceName("_UExtInt");
   else
     Extra.mangleSourceName("_ExtInt");
-  Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getNumBits()),
-                             /*IsBoolean=*/false);
+  Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getNumBits()));
 
   mangleArtificialTagType(TTK_Struct, TemplateMangling, {"__clang"});
 }

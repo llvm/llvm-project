@@ -1366,11 +1366,9 @@ void DwarfCompileUnit::addLocationList(DIE &Die, dwarf::Attribute Attribute,
   if (DisableDwarfLocations)
     return;
 
-  dwarf::Form Form = dwarf::DW_FORM_data4;
-  if (DD->getDwarfVersion() == 4)
-    Form =dwarf::DW_FORM_sec_offset;
-  if (DD->getDwarfVersion() >= 5)
-    Form =dwarf::DW_FORM_loclistx;
+  dwarf::Form Form = (DD->getDwarfVersion() >= 5)
+                         ? dwarf::DW_FORM_loclistx
+                         : DD->getDwarfSectionOffsetForm();
   Die.addValue(DIEValueAllocator, Attribute, Form, DIELocList(Index));
 }
 

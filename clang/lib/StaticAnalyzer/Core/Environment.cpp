@@ -15,6 +15,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -85,6 +86,12 @@ SVal Environment::lookupExpr(const EnvironmentEntry &E) const {
 SVal Environment::getSVal(const EnvironmentEntry &Entry,
                           SValBuilder& svalBuilder) const {
   const Stmt *S = Entry.getStmt();
+  assert(!isa<ObjCForCollectionStmt>(S) &&
+         "Use ExprEngine::hasMoreIteration()!");
+  assert((isa<Expr>(S) || isa<ReturnStmt>(S)) &&
+         "Environment can only argue about Exprs, since only they express "
+         "a value! Any non-expression statement stored in Environment is a "
+         "result of a hack!");
   const LocationContext *LCtx = Entry.getLocationContext();
 
   switch (S->getStmtClass()) {
@@ -109,6 +116,7 @@ SVal Environment::getSVal(const EnvironmentEntry &Entry,
   case Stmt::StringLiteralClass:
   case Stmt::TypeTraitExprClass:
   case Stmt::SizeOfPackExprClass:
+  case Stmt::PredefinedExprClass:
     // Known constants; defer to SValBuilder.
     return svalBuilder.getConstantVal(cast<Expr>(S)).getValue();
 
@@ -183,12 +191,15 @@ EnvironmentManager::removeDeadBindings(Environment Env,
              F.getTreeFactory());
 
   // Iterate over the block-expr bindings.
-  for (Environment::iterator I = Env.begin(), E = Env.end();
-       I != E; ++I) {
+  for (Environment::iterator I = Env.begin(), End = Env.end(); I != End; ++I) {
     const EnvironmentEntry &BlkExpr = I.getKey();
     const SVal &X = I.getData();
 
-    if (SymReaper.isLive(BlkExpr.getStmt(), BlkExpr.getLocationContext())) {
+    const Expr *E = dyn_cast<Expr>(BlkExpr.getStmt());
+    if (!E)
+      continue;
+
+    if (SymReaper.isLive(E, BlkExpr.getLocationContext())) {
       // Copy the binding to the new map.
       EBMapRef = EBMapRef.add(BlkExpr, X);
 

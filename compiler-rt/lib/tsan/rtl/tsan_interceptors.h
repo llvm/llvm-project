@@ -22,7 +22,7 @@ class ScopedInterceptor {
 LibIgnore *libignore();
 
 #if !SANITIZER_GO
-INLINE bool in_symbolizer() {
+inline bool in_symbolizer() {
   cur_thread_init();
   return UNLIKELY(cur_thread()->in_symbolizer);
 }

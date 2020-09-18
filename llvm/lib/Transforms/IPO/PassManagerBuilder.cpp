@@ -153,6 +153,11 @@ cl::opt<bool> EnableMatrix(
     "enable-matrix", cl::init(false), cl::Hidden,
     cl::desc("Enable lowering of the matrix intrinsics"));
 
+cl::opt<bool> EnableConstraintElimination(
+    "enable-constraint-elimination", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Enable pass to eliminate conditions based on linear constraints."));
+
 cl::opt<AttributorRunOption> AttributorRun(
     "attributor-enable", cl::Hidden, cl::init(AttributorRunOption::NONE),
     cl::desc("Enable the attributor inter-procedural deduction pass."),
@@ -380,6 +385,9 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
       MPM.add(createCFGSimplificationPass());
     }
   }
+
+  if (EnableConstraintElimination)
+    MPM.add(createConstraintEliminationPass());
 
   if (OptLevel > 1) {
     // Speculative execution if the target has divergent branches; otherwise nop.

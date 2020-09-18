@@ -54,8 +54,8 @@ entry:
 ; CHECK: ldrh w8, [sp, #12]
 ; CHECK: str w8, [sp, #8]
 ; CHECK: ldr w8, [sp, #8]
-; CHECK: ; kill: def $x8 killed $w8
-; CHECK: str x8, [sp]
+; CHECK: mov x9, x8
+; CHECK: str x9, [sp]
 ; CHECK: ldr x0, [sp]
 ; CHECK: ret
   %a.addr = alloca i8, align 1
@@ -109,8 +109,8 @@ entry:
 ; CHECK: strh w8, [sp, #12]
 ; CHECK: ldrsh w8, [sp, #12]
 ; CHECK: str w8, [sp, #8]
-; CHECK: ldrsw x8, [sp, #8]
-; CHECK: str x8, [sp]
+; CHECK: ldrsw x9, [sp, #8]
+; CHECK: str x9, [sp]
 ; CHECK: ldr x0, [sp]
 ; CHECK: ret
   %a.addr = alloca i8, align 1

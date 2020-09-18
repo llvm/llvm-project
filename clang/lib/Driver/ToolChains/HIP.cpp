@@ -90,6 +90,8 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   if (C.getDriver().isSaveTempsEnabled())
     LldArgs.push_back("-save-temps");
 
+  addLinkerCompressDebugSectionsOption(TC, Args, LldArgs);
+
   LldArgs.append({"-o", Output.getFilename()});
   for (auto Input : Inputs)
     LldArgs.push_back(Input.getFilename());
@@ -275,6 +277,10 @@ void HIPToolChain::addClangTargetOptions(
   if (DriverArgs.hasFlag(options::OPT_fgpu_allow_device_init,
                          options::OPT_fno_gpu_allow_device_init, false))
     CC1Args.push_back("-fgpu-allow-device-init");
+
+  if (DriverArgs.hasFlag(options::OPT_fgpu_defer_diag,
+                         options::OPT_fno_gpu_defer_diag, false))
+    CC1Args.push_back("-fgpu-defer-diag");
 
   CC1Args.push_back("-fcuda-allow-variadic-functions");
 

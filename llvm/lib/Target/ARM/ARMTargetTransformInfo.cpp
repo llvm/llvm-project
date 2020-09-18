@@ -26,6 +26,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
@@ -1859,6 +1860,20 @@ void ARMTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
 bool ARMTTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
                                        TTI::ReductionFlags Flags) const {
   return ST->hasMVEIntegerOps();
+}
+
+bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty,
+                                       TTI::ReductionFlags Flags) const {
+  if (!ST->hasMVEIntegerOps())
+    return false;
+
+  unsigned ScalarBits = Ty->getScalarSizeInBits();
+  switch (Opcode) {
+  case Instruction::Add:
+    return ScalarBits <= 32;
+  default:
+    return false;
+  }
 }
 
 bool ARMTTIImpl::preferPredicatedReductionSelect(

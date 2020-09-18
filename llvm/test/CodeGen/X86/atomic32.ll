@@ -70,8 +70,8 @@ define void @atomic_fetch_and32() nounwind {
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    andl $5, %ecx
 ; X64-NEXT:    lock cmpxchgl %ecx, {{.*}}(%rip)
-; X64-NEXT:    sete %cl
-; X64-NEXT:    testb $1, %cl
+; X64-NEXT:    sete %dl
+; X64-NEXT:    testb $1, %dl
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -94,8 +94,8 @@ define void @atomic_fetch_and32() nounwind {
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    andl $5, %ecx
 ; X86-NEXT:    lock cmpxchgl %ecx, sc32
-; X86-NEXT:    sete %cl
-; X86-NEXT:    testb $1, %cl
+; X86-NEXT:    sete %dl
+; X86-NEXT:    testb $1, %dl
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
@@ -124,8 +124,8 @@ define void @atomic_fetch_or32() nounwind {
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    orl $5, %ecx
 ; X64-NEXT:    lock cmpxchgl %ecx, {{.*}}(%rip)
-; X64-NEXT:    sete %cl
-; X64-NEXT:    testb $1, %cl
+; X64-NEXT:    sete %dl
+; X64-NEXT:    testb $1, %dl
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -148,8 +148,8 @@ define void @atomic_fetch_or32() nounwind {
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    orl $5, %ecx
 ; X86-NEXT:    lock cmpxchgl %ecx, sc32
-; X86-NEXT:    sete %cl
-; X86-NEXT:    testb $1, %cl
+; X86-NEXT:    sete %dl
+; X86-NEXT:    testb $1, %dl
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
@@ -178,8 +178,8 @@ define void @atomic_fetch_xor32() nounwind {
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    xorl $5, %ecx
 ; X64-NEXT:    lock cmpxchgl %ecx, {{.*}}(%rip)
-; X64-NEXT:    sete %cl
-; X64-NEXT:    testb $1, %cl
+; X64-NEXT:    sete %dl
+; X64-NEXT:    testb $1, %dl
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -202,8 +202,8 @@ define void @atomic_fetch_xor32() nounwind {
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    xorl $5, %ecx
 ; X86-NEXT:    lock cmpxchgl %ecx, sc32
-; X86-NEXT:    sete %cl
-; X86-NEXT:    testb $1, %cl
+; X86-NEXT:    sete %dl
+; X86-NEXT:    testb $1, %dl
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
@@ -234,8 +234,8 @@ define void @atomic_fetch_nand32(i32 %x) nounwind {
 ; X64-NEXT:    andl %edx, %ecx
 ; X64-NEXT:    notl %ecx
 ; X64-NEXT:    lock cmpxchgl %ecx, {{.*}}(%rip)
-; X64-NEXT:    sete %cl
-; X64-NEXT:    testb $1, %cl
+; X64-NEXT:    sete %sil
+; X64-NEXT:    testb $1, %sil
 ; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    jne .LBB5_2
 ; X64-NEXT:    jmp .LBB5_1
@@ -244,6 +244,7 @@ define void @atomic_fetch_nand32(i32 %x) nounwind {
 ;
 ; X86-LABEL: atomic_fetch_nand32:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl sc32, %ecx
@@ -257,13 +258,14 @@ define void @atomic_fetch_nand32(i32 %x) nounwind {
 ; X86-NEXT:    andl %edx, %ecx
 ; X86-NEXT:    notl %ecx
 ; X86-NEXT:    lock cmpxchgl %ecx, sc32
-; X86-NEXT:    sete %cl
-; X86-NEXT:    testb $1, %cl
+; X86-NEXT:    sete %bl
+; X86-NEXT:    testb $1, %bl
 ; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X86-NEXT:    jne .LBB5_2
 ; X86-NEXT:    jmp .LBB5_1
 ; X86-NEXT:  .LBB5_2: # %atomicrmw.end
 ; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
   %t1 = atomicrmw nand i32* @sc32, i32 %x acquire
   ret void
@@ -283,8 +285,8 @@ define void @atomic_fetch_max32(i32 %x) nounwind {
 ; X64-NEXT:    subl %edx, %ecx
 ; X64-NEXT:    cmovgl %eax, %edx
 ; X64-NEXT:    lock cmpxchgl %edx, {{.*}}(%rip)
-; X64-NEXT:    sete %dl
-; X64-NEXT:    testb $1, %dl
+; X64-NEXT:    sete %sil
+; X64-NEXT:    testb $1, %sil
 ; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    jne .LBB6_2
@@ -294,6 +296,7 @@ define void @atomic_fetch_max32(i32 %x) nounwind {
 ;
 ; X86-CMOV-LABEL: atomic_fetch_max32:
 ; X86-CMOV:       # %bb.0:
+; X86-CMOV-NEXT:    pushl %ebx
 ; X86-CMOV-NEXT:    subl $12, %esp
 ; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-CMOV-NEXT:    movl sc32, %ecx
@@ -307,18 +310,20 @@ define void @atomic_fetch_max32(i32 %x) nounwind {
 ; X86-CMOV-NEXT:    subl %edx, %ecx
 ; X86-CMOV-NEXT:    cmovgl %eax, %edx
 ; X86-CMOV-NEXT:    lock cmpxchgl %edx, sc32
-; X86-CMOV-NEXT:    sete %dl
-; X86-CMOV-NEXT:    testb $1, %dl
+; X86-CMOV-NEXT:    sete %bl
+; X86-CMOV-NEXT:    testb $1, %bl
 ; X86-CMOV-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-CMOV-NEXT:    movl %ecx, (%esp) # 4-byte Spill
 ; X86-CMOV-NEXT:    jne .LBB6_2
 ; X86-CMOV-NEXT:    jmp .LBB6_1
 ; X86-CMOV-NEXT:  .LBB6_2: # %atomicrmw.end
 ; X86-CMOV-NEXT:    addl $12, %esp
+; X86-CMOV-NEXT:    popl %ebx
 ; X86-CMOV-NEXT:    retl
 ;
 ; X86-NOCMOV-LABEL: atomic_fetch_max32:
 ; X86-NOCMOV:       # %bb.0:
+; X86-NOCMOV-NEXT:    pushl %ebx
 ; X86-NOCMOV-NEXT:    pushl %esi
 ; X86-NOCMOV-NEXT:    subl $20, %esp
 ; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -347,18 +352,20 @@ define void @atomic_fetch_max32(i32 %x) nounwind {
 ; X86-NOCMOV-NEXT:    movl %ecx, %eax
 ; X86-NOCMOV-NEXT:    movl (%esp), %edx # 4-byte Reload
 ; X86-NOCMOV-NEXT:    lock cmpxchgl %edx, sc32
-; X86-NOCMOV-NEXT:    sete %dl
-; X86-NOCMOV-NEXT:    testb $1, %dl
+; X86-NOCMOV-NEXT:    sete %bl
+; X86-NOCMOV-NEXT:    testb $1, %bl
 ; X86-NOCMOV-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOCMOV-NEXT:    jne .LBB6_2
 ; X86-NOCMOV-NEXT:    jmp .LBB6_1
 ; X86-NOCMOV-NEXT:  .LBB6_2: # %atomicrmw.end
 ; X86-NOCMOV-NEXT:    addl $20, %esp
 ; X86-NOCMOV-NEXT:    popl %esi
+; X86-NOCMOV-NEXT:    popl %ebx
 ; X86-NOCMOV-NEXT:    retl
 ;
 ; X86-NOX87-LABEL: atomic_fetch_max32:
 ; X86-NOX87:       # %bb.0:
+; X86-NOX87-NEXT:    pushl %ebx
 ; X86-NOX87-NEXT:    pushl %esi
 ; X86-NOX87-NEXT:    subl $20, %esp
 ; X86-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -387,14 +394,15 @@ define void @atomic_fetch_max32(i32 %x) nounwind {
 ; X86-NOX87-NEXT:    movl %ecx, %eax
 ; X86-NOX87-NEXT:    movl (%esp), %edx # 4-byte Reload
 ; X86-NOX87-NEXT:    lock cmpxchgl %edx, sc32
-; X86-NOX87-NEXT:    sete %dl
-; X86-NOX87-NEXT:    testb $1, %dl
+; X86-NOX87-NEXT:    sete %bl
+; X86-NOX87-NEXT:    testb $1, %bl
 ; X86-NOX87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOX87-NEXT:    jne .LBB6_2
 ; X86-NOX87-NEXT:    jmp .LBB6_1
 ; X86-NOX87-NEXT:  .LBB6_2: # %atomicrmw.end
 ; X86-NOX87-NEXT:    addl $20, %esp
 ; X86-NOX87-NEXT:    popl %esi
+; X86-NOX87-NEXT:    popl %ebx
 ; X86-NOX87-NEXT:    retl
   %t1 = atomicrmw max  i32* @sc32, i32 %x acquire
   ret void
@@ -414,8 +422,8 @@ define void @atomic_fetch_min32(i32 %x) nounwind {
 ; X64-NEXT:    subl %edx, %ecx
 ; X64-NEXT:    cmovlel %eax, %edx
 ; X64-NEXT:    lock cmpxchgl %edx, {{.*}}(%rip)
-; X64-NEXT:    sete %dl
-; X64-NEXT:    testb $1, %dl
+; X64-NEXT:    sete %sil
+; X64-NEXT:    testb $1, %sil
 ; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    jne .LBB7_2
@@ -425,6 +433,7 @@ define void @atomic_fetch_min32(i32 %x) nounwind {
 ;
 ; X86-CMOV-LABEL: atomic_fetch_min32:
 ; X86-CMOV:       # %bb.0:
+; X86-CMOV-NEXT:    pushl %ebx
 ; X86-CMOV-NEXT:    subl $12, %esp
 ; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-CMOV-NEXT:    movl sc32, %ecx
@@ -438,18 +447,20 @@ define void @atomic_fetch_min32(i32 %x) nounwind {
 ; X86-CMOV-NEXT:    subl %edx, %ecx
 ; X86-CMOV-NEXT:    cmovlel %eax, %edx
 ; X86-CMOV-NEXT:    lock cmpxchgl %edx, sc32
-; X86-CMOV-NEXT:    sete %dl
-; X86-CMOV-NEXT:    testb $1, %dl
+; X86-CMOV-NEXT:    sete %bl
+; X86-CMOV-NEXT:    testb $1, %bl
 ; X86-CMOV-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-CMOV-NEXT:    movl %ecx, (%esp) # 4-byte Spill
 ; X86-CMOV-NEXT:    jne .LBB7_2
 ; X86-CMOV-NEXT:    jmp .LBB7_1
 ; X86-CMOV-NEXT:  .LBB7_2: # %atomicrmw.end
 ; X86-CMOV-NEXT:    addl $12, %esp
+; X86-CMOV-NEXT:    popl %ebx
 ; X86-CMOV-NEXT:    retl
 ;
 ; X86-NOCMOV-LABEL: atomic_fetch_min32:
 ; X86-NOCMOV:       # %bb.0:
+; X86-NOCMOV-NEXT:    pushl %ebx
 ; X86-NOCMOV-NEXT:    pushl %esi
 ; X86-NOCMOV-NEXT:    subl $20, %esp
 ; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -478,18 +489,20 @@ define void @atomic_fetch_min32(i32 %x) nounwind {
 ; X86-NOCMOV-NEXT:    movl %ecx, %eax
 ; X86-NOCMOV-NEXT:    movl (%esp), %edx # 4-byte Reload
 ; X86-NOCMOV-NEXT:    lock cmpxchgl %edx, sc32
-; X86-NOCMOV-NEXT:    sete %dl
-; X86-NOCMOV-NEXT:    testb $1, %dl
+; X86-NOCMOV-NEXT:    sete %bl
+; X86-NOCMOV-NEXT:    testb $1, %bl
 ; X86-NOCMOV-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOCMOV-NEXT:    jne .LBB7_2
 ; X86-NOCMOV-NEXT:    jmp .LBB7_1
 ; X86-NOCMOV-NEXT:  .LBB7_2: # %atomicrmw.end
 ; X86-NOCMOV-NEXT:    addl $20, %esp
 ; X86-NOCMOV-NEXT:    popl %esi
+; X86-NOCMOV-NEXT:    popl %ebx
 ; X86-NOCMOV-NEXT:    retl
 ;
 ; X86-NOX87-LABEL: atomic_fetch_min32:
 ; X86-NOX87:       # %bb.0:
+; X86-NOX87-NEXT:    pushl %ebx
 ; X86-NOX87-NEXT:    pushl %esi
 ; X86-NOX87-NEXT:    subl $20, %esp
 ; X86-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -518,14 +531,15 @@ define void @atomic_fetch_min32(i32 %x) nounwind {
 ; X86-NOX87-NEXT:    movl %ecx, %eax
 ; X86-NOX87-NEXT:    movl (%esp), %edx # 4-byte Reload
 ; X86-NOX87-NEXT:    lock cmpxchgl %edx, sc32
-; X86-NOX87-NEXT:    sete %dl
-; X86-NOX87-NEXT:    testb $1, %dl
+; X86-NOX87-NEXT:    sete %bl
+; X86-NOX87-NEXT:    testb $1, %bl
 ; X86-NOX87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOX87-NEXT:    jne .LBB7_2
 ; X86-NOX87-NEXT:    jmp .LBB7_1
 ; X86-NOX87-NEXT:  .LBB7_2: # %atomicrmw.end
 ; X86-NOX87-NEXT:    addl $20, %esp
 ; X86-NOX87-NEXT:    popl %esi
+; X86-NOX87-NEXT:    popl %ebx
 ; X86-NOX87-NEXT:    retl
   %t1 = atomicrmw min  i32* @sc32, i32 %x acquire
   ret void
@@ -545,8 +559,8 @@ define void @atomic_fetch_umax32(i32 %x) nounwind {
 ; X64-NEXT:    subl %edx, %ecx
 ; X64-NEXT:    cmoval %eax, %edx
 ; X64-NEXT:    lock cmpxchgl %edx, {{.*}}(%rip)
-; X64-NEXT:    sete %dl
-; X64-NEXT:    testb $1, %dl
+; X64-NEXT:    sete %sil
+; X64-NEXT:    testb $1, %sil
 ; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    jne .LBB8_2
@@ -556,6 +570,7 @@ define void @atomic_fetch_umax32(i32 %x) nounwind {
 ;
 ; X86-CMOV-LABEL: atomic_fetch_umax32:
 ; X86-CMOV:       # %bb.0:
+; X86-CMOV-NEXT:    pushl %ebx
 ; X86-CMOV-NEXT:    subl $12, %esp
 ; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-CMOV-NEXT:    movl sc32, %ecx
@@ -569,18 +584,20 @@ define void @atomic_fetch_umax32(i32 %x) nounwind {
 ; X86-CMOV-NEXT:    subl %edx, %ecx
 ; X86-CMOV-NEXT:    cmoval %eax, %edx
 ; X86-CMOV-NEXT:    lock cmpxchgl %edx, sc32
-; X86-CMOV-NEXT:    sete %dl
-; X86-CMOV-NEXT:    testb $1, %dl
+; X86-CMOV-NEXT:    sete %bl
+; X86-CMOV-NEXT:    testb $1, %bl
 ; X86-CMOV-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-CMOV-NEXT:    movl %ecx, (%esp) # 4-byte Spill
 ; X86-CMOV-NEXT:    jne .LBB8_2
 ; X86-CMOV-NEXT:    jmp .LBB8_1
 ; X86-CMOV-NEXT:  .LBB8_2: # %atomicrmw.end
 ; X86-CMOV-NEXT:    addl $12, %esp
+; X86-CMOV-NEXT:    popl %ebx
 ; X86-CMOV-NEXT:    retl
 ;
 ; X86-NOCMOV-LABEL: atomic_fetch_umax32:
 ; X86-NOCMOV:       # %bb.0:
+; X86-NOCMOV-NEXT:    pushl %ebx
 ; X86-NOCMOV-NEXT:    pushl %esi
 ; X86-NOCMOV-NEXT:    subl $20, %esp
 ; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -609,18 +626,20 @@ define void @atomic_fetch_umax32(i32 %x) nounwind {
 ; X86-NOCMOV-NEXT:    movl %ecx, %eax
 ; X86-NOCMOV-NEXT:    movl (%esp), %edx # 4-byte Reload
 ; X86-NOCMOV-NEXT:    lock cmpxchgl %edx, sc32
-; X86-NOCMOV-NEXT:    sete %dl
-; X86-NOCMOV-NEXT:    testb $1, %dl
+; X86-NOCMOV-NEXT:    sete %bl
+; X86-NOCMOV-NEXT:    testb $1, %bl
 ; X86-NOCMOV-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOCMOV-NEXT:    jne .LBB8_2
 ; X86-NOCMOV-NEXT:    jmp .LBB8_1
 ; X86-NOCMOV-NEXT:  .LBB8_2: # %atomicrmw.end
 ; X86-NOCMOV-NEXT:    addl $20, %esp
 ; X86-NOCMOV-NEXT:    popl %esi
+; X86-NOCMOV-NEXT:    popl %ebx
 ; X86-NOCMOV-NEXT:    retl
 ;
 ; X86-NOX87-LABEL: atomic_fetch_umax32:
 ; X86-NOX87:       # %bb.0:
+; X86-NOX87-NEXT:    pushl %ebx
 ; X86-NOX87-NEXT:    pushl %esi
 ; X86-NOX87-NEXT:    subl $20, %esp
 ; X86-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -649,14 +668,15 @@ define void @atomic_fetch_umax32(i32 %x) nounwind {
 ; X86-NOX87-NEXT:    movl %ecx, %eax
 ; X86-NOX87-NEXT:    movl (%esp), %edx # 4-byte Reload
 ; X86-NOX87-NEXT:    lock cmpxchgl %edx, sc32
-; X86-NOX87-NEXT:    sete %dl
-; X86-NOX87-NEXT:    testb $1, %dl
+; X86-NOX87-NEXT:    sete %bl
+; X86-NOX87-NEXT:    testb $1, %bl
 ; X86-NOX87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOX87-NEXT:    jne .LBB8_2
 ; X86-NOX87-NEXT:    jmp .LBB8_1
 ; X86-NOX87-NEXT:  .LBB8_2: # %atomicrmw.end
 ; X86-NOX87-NEXT:    addl $20, %esp
 ; X86-NOX87-NEXT:    popl %esi
+; X86-NOX87-NEXT:    popl %ebx
 ; X86-NOX87-NEXT:    retl
   %t1 = atomicrmw umax i32* @sc32, i32 %x acquire
   ret void
@@ -676,8 +696,8 @@ define void @atomic_fetch_umin32(i32 %x) nounwind {
 ; X64-NEXT:    subl %edx, %ecx
 ; X64-NEXT:    cmovbel %eax, %edx
 ; X64-NEXT:    lock cmpxchgl %edx, {{.*}}(%rip)
-; X64-NEXT:    sete %dl
-; X64-NEXT:    testb $1, %dl
+; X64-NEXT:    sete %sil
+; X64-NEXT:    testb $1, %sil
 ; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    jne .LBB9_2
@@ -687,6 +707,7 @@ define void @atomic_fetch_umin32(i32 %x) nounwind {
 ;
 ; X86-CMOV-LABEL: atomic_fetch_umin32:
 ; X86-CMOV:       # %bb.0:
+; X86-CMOV-NEXT:    pushl %ebx
 ; X86-CMOV-NEXT:    subl $12, %esp
 ; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-CMOV-NEXT:    movl sc32, %ecx
@@ -700,18 +721,20 @@ define void @atomic_fetch_umin32(i32 %x) nounwind {
 ; X86-CMOV-NEXT:    subl %edx, %ecx
 ; X86-CMOV-NEXT:    cmovbel %eax, %edx
 ; X86-CMOV-NEXT:    lock cmpxchgl %edx, sc32
-; X86-CMOV-NEXT:    sete %dl
-; X86-CMOV-NEXT:    testb $1, %dl
+; X86-CMOV-NEXT:    sete %bl
+; X86-CMOV-NEXT:    testb $1, %bl
 ; X86-CMOV-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-CMOV-NEXT:    movl %ecx, (%esp) # 4-byte Spill
 ; X86-CMOV-NEXT:    jne .LBB9_2
 ; X86-CMOV-NEXT:    jmp .LBB9_1
 ; X86-CMOV-NEXT:  .LBB9_2: # %atomicrmw.end
 ; X86-CMOV-NEXT:    addl $12, %esp
+; X86-CMOV-NEXT:    popl %ebx
 ; X86-CMOV-NEXT:    retl
 ;
 ; X86-NOCMOV-LABEL: atomic_fetch_umin32:
 ; X86-NOCMOV:       # %bb.0:
+; X86-NOCMOV-NEXT:    pushl %ebx
 ; X86-NOCMOV-NEXT:    pushl %esi
 ; X86-NOCMOV-NEXT:    subl $20, %esp
 ; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -740,18 +763,20 @@ define void @atomic_fetch_umin32(i32 %x) nounwind {
 ; X86-NOCMOV-NEXT:    movl %ecx, %eax
 ; X86-NOCMOV-NEXT:    movl (%esp), %edx # 4-byte Reload
 ; X86-NOCMOV-NEXT:    lock cmpxchgl %edx, sc32
-; X86-NOCMOV-NEXT:    sete %dl
-; X86-NOCMOV-NEXT:    testb $1, %dl
+; X86-NOCMOV-NEXT:    sete %bl
+; X86-NOCMOV-NEXT:    testb $1, %bl
 ; X86-NOCMOV-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOCMOV-NEXT:    jne .LBB9_2
 ; X86-NOCMOV-NEXT:    jmp .LBB9_1
 ; X86-NOCMOV-NEXT:  .LBB9_2: # %atomicrmw.end
 ; X86-NOCMOV-NEXT:    addl $20, %esp
 ; X86-NOCMOV-NEXT:    popl %esi
+; X86-NOCMOV-NEXT:    popl %ebx
 ; X86-NOCMOV-NEXT:    retl
 ;
 ; X86-NOX87-LABEL: atomic_fetch_umin32:
 ; X86-NOX87:       # %bb.0:
+; X86-NOX87-NEXT:    pushl %ebx
 ; X86-NOX87-NEXT:    pushl %esi
 ; X86-NOX87-NEXT:    subl $20, %esp
 ; X86-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -780,14 +805,15 @@ define void @atomic_fetch_umin32(i32 %x) nounwind {
 ; X86-NOX87-NEXT:    movl %ecx, %eax
 ; X86-NOX87-NEXT:    movl (%esp), %edx # 4-byte Reload
 ; X86-NOX87-NEXT:    lock cmpxchgl %edx, sc32
-; X86-NOX87-NEXT:    sete %dl
-; X86-NOX87-NEXT:    testb $1, %dl
+; X86-NOX87-NEXT:    sete %bl
+; X86-NOX87-NEXT:    testb $1, %bl
 ; X86-NOX87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOX87-NEXT:    jne .LBB9_2
 ; X86-NOX87-NEXT:    jmp .LBB9_1
 ; X86-NOX87-NEXT:  .LBB9_2: # %atomicrmw.end
 ; X86-NOX87-NEXT:    addl $20, %esp
 ; X86-NOX87-NEXT:    popl %esi
+; X86-NOX87-NEXT:    popl %ebx
 ; X86-NOX87-NEXT:    retl
   %t1 = atomicrmw umin i32* @sc32, i32 %x acquire
   ret void

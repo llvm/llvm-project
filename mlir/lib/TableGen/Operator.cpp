@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -278,7 +279,7 @@ void Operator::populateTypeInferenceInfo(
 
   // Skip cases currently being custom generated.
   // TODO: Remove special cases.
-  if (getTrait("OpTrait::SameOperandsAndResultType"))
+  if (getTrait("::mlir::OpTrait::SameOperandsAndResultType"))
     return;
 
   // We create equivalence classes of argument/result types where arguments
@@ -563,6 +564,21 @@ void Operator::print(llvm::raw_ostream &os) const {
     else
       os << "[operand] " << arg.get<NamedTypeConstraint *>()->name << '\n';
   }
+}
+
+Operator::NamespaceEmitter::NamespaceEmitter(raw_ostream &os, Operator &op)
+    : os(os) {
+  auto dialect = op.getDialect();
+  if (!dialect)
+    return;
+  llvm::SplitString(dialect.getCppNamespace(), namespaces, "::");
+  for (StringRef ns : namespaces)
+    os << "namespace " << ns << " {\n";
+}
+
+Operator::NamespaceEmitter::~NamespaceEmitter() {
+  for (StringRef ns : llvm::reverse(namespaces))
+    os << "} // namespace " << ns << "\n";
 }
 
 auto Operator::VariableDecoratorIterator::unwrap(llvm::Init *init)

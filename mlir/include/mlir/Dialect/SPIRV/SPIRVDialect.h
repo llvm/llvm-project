@@ -20,9 +20,9 @@ namespace spirv {
 
 enum class Decoration : uint32_t;
 
-#include "mlir/Dialect/SPIRV/SPIRVOpsDialect.h.inc"
-
 } // end namespace spirv
 } // end namespace mlir
+
+#include "mlir/Dialect/SPIRV/SPIRVOpsDialect.h.inc"
 
 #endif // MLIR_DIALECT_SPIRV_SPIRVDIALECT_H_

@@ -271,9 +271,5 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
   return success();
 }
 
-namespace mlir {
-namespace omp {
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOps.cpp.inc"
-} // namespace omp
-} // namespace mlir

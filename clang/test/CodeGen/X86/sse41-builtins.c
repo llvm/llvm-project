@@ -248,57 +248,49 @@ __m128 test_mm_insert_ps(__m128 x, __m128 y) {
 
 __m128i test_mm_max_epi8(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_max_epi8
-  // CHECK:       [[CMP:%.*]] = icmp sgt <16 x i8> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  select <16 x i1> [[CMP]], <16 x i8> [[X]], <16 x i8> [[Y]]
+  // CHECK: call <16 x i8> @llvm.smax.v16i8(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   return _mm_max_epi8(x, y);
 }
 
 __m128i test_mm_max_epi32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_max_epi32
-  // CHECK:       [[CMP:%.*]] = icmp sgt <4 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  select <4 x i1> [[CMP]], <4 x i32> [[X]], <4 x i32> [[Y]]
+  // CHECK: call <4 x i32> @llvm.smax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_max_epi32(x, y);
 }
 
 __m128i test_mm_max_epu16(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_max_epu16
-  // CHECK:       [[CMP:%.*]] = icmp ugt <8 x i16> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  select <8 x i1> [[CMP]], <8 x i16> [[X]], <8 x i16> [[Y]]
+  // CHECK: call <8 x i16> @llvm.umax.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_max_epu16(x, y);
 }
 
 __m128i test_mm_max_epu32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_max_epu32
-  // CHECK:       [[CMP:%.*]] = icmp ugt <4 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  select <4 x i1> [[CMP]], <4 x i32> [[X]], <4 x i32> [[Y]]
+  // CHECK: call <4 x i32> @llvm.umax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_max_epu32(x, y);
 }
 
 __m128i test_mm_min_epi8(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_min_epi8
-  // CHECK:       [[CMP:%.*]] = icmp slt <16 x i8> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  select <16 x i1> [[CMP]], <16 x i8> [[X]], <16 x i8> [[Y]]
+  // CHECK: call <16 x i8> @llvm.smin.v16i8(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   return _mm_min_epi8(x, y);
 }
 
 __m128i test_mm_min_epi32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_min_epi32
-  // CHECK:       [[CMP:%.*]] = icmp slt <4 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  select <4 x i1> [[CMP]], <4 x i32> [[X]], <4 x i32> [[Y]]
+  // CHECK: call <4 x i32> @llvm.smin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_min_epi32(x, y);
 }
 
 __m128i test_mm_min_epu16(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_min_epu16
-  // CHECK:       [[CMP:%.*]] = icmp ult <8 x i16> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  select <8 x i1> [[CMP]], <8 x i16> [[X]], <8 x i16> [[Y]]
+  // CHECK: call <8 x i16> @llvm.umin.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_min_epu16(x, y);
 }
 
 __m128i test_mm_min_epu32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_min_epu32
-  // CHECK:       [[CMP:%.*]] = icmp ult <4 x i32> [[X:%.*]], [[Y:%.*]]
-  // CHECK-NEXT:  select <4 x i1> [[CMP]], <4 x i32> [[X]], <4 x i32> [[Y]]
+  // CHECK: call <4 x i32> @llvm.umin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_min_epu32(x, y);
 }
 

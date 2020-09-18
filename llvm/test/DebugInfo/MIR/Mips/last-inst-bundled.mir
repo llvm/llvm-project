@@ -21,7 +21,7 @@
 #
 # Check that last bundled instruction of block gets recognized as end of basic block.
 # CHECK: bb.2.if.end
-# CHECK-NEXT: DBG_VALUE $s0, $noreg, !12, !DIExpression(), debug-location !17
+# CHECK-NEXT: DBG_VALUE $s0, $noreg, !12, !DIExpression()
 
 --- |
   ; ModuleID = '<stdin>'

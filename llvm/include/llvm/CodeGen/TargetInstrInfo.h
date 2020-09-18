@@ -1270,6 +1270,17 @@ public:
     return false;
   }
 
+  /// Returns true if MI's Def is NullValueReg, and the MI
+  /// does not change the Zero value. i.e. cases such as rax = shr rax, X where
+  /// NullValueReg = rax. Note that if the NullValueReg is non-zero, this
+  /// function can return true even if becomes zero. Specifically cases such as
+  /// NullValueReg = shl NullValueReg, 63.
+  virtual bool preservesZeroValueInReg(const MachineInstr *MI,
+                                       const Register NullValueReg,
+                                       const TargetRegisterInfo *TRI) const {
+    return false;
+  }
+
   /// If the instruction is an increment of a constant value, return the amount.
   virtual bool getIncrementValue(const MachineInstr &MI, int &Value) const {
     return false;

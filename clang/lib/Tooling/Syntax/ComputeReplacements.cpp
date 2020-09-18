@@ -32,13 +32,14 @@ void enumerateTokenSpans(const syntax::Tree *Root, ProcessTokensFn Callback) {
   private:
     void process(const syntax::Node *N) {
       if (auto *T = dyn_cast<syntax::Tree>(N)) {
-        for (auto *C = T->firstChild(); C != nullptr; C = C->nextSibling())
+        for (const auto *C = T->getFirstChild(); C != nullptr;
+             C = C->getNextSibling())
           process(C);
         return;
       }
 
       auto *L = cast<syntax::Leaf>(N);
-      if (SpanEnd == L->token() && SpanIsOriginal == L->isOriginal()) {
+      if (SpanEnd == L->getToken() && SpanIsOriginal == L->isOriginal()) {
         // Extend the current span.
         ++SpanEnd;
         return;
@@ -47,7 +48,7 @@ void enumerateTokenSpans(const syntax::Tree *Root, ProcessTokensFn Callback) {
       if (SpanBegin)
         Callback(llvm::makeArrayRef(SpanBegin, SpanEnd), SpanIsOriginal);
       // Start recording a new span.
-      SpanBegin = L->token();
+      SpanBegin = L->getToken();
       SpanEnd = SpanBegin + 1;
       SpanIsOriginal = L->isOriginal();
     }
@@ -63,8 +64,8 @@ void enumerateTokenSpans(const syntax::Tree *Root, ProcessTokensFn Callback) {
 
 syntax::FileRange rangeOfExpanded(const syntax::Arena &A,
                                   llvm::ArrayRef<syntax::Token> Expanded) {
-  auto &Buffer = A.tokenBuffer();
-  auto &SM = A.sourceManager();
+  const auto &Buffer = A.getTokenBuffer();
+  const auto &SM = A.getSourceManager();
 
   // Check that \p Expanded actually points into expanded tokens.
   assert(Buffer.expandedTokens().begin() <= Expanded.begin());
@@ -84,8 +85,8 @@ syntax::FileRange rangeOfExpanded(const syntax::Arena &A,
 tooling::Replacements
 syntax::computeReplacements(const syntax::Arena &A,
                             const syntax::TranslationUnit &TU) {
-  auto &Buffer = A.tokenBuffer();
-  auto &SM = A.sourceManager();
+  const auto &Buffer = A.getTokenBuffer();
+  const auto &SM = A.getSourceManager();
 
   tooling::Replacements Replacements;
   // Text inserted by the replacement we are building now.

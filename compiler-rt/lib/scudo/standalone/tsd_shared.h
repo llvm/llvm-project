@@ -9,8 +9,16 @@
 #ifndef SCUDO_TSD_SHARED_H_
 #define SCUDO_TSD_SHARED_H_
 
-#include "linux.h" // for getAndroidTlsPtr()
 #include "tsd.h"
+
+#if SCUDO_HAS_PLATFORM_TLS_SLOT
+// This is a platform-provided header that needs to be on the include path when
+// Scudo is compiled. It must declare a function with the prototype:
+//   uintptr_t *getPlatformAllocatorTlsSlot()
+// that returns the address of a thread-local word of storage reserved for
+// Scudo, that must be zero-initialized in newly created threads.
+#include "scudo_platform_tls_slot.h"
+#endif
 
 namespace scudo {
 
@@ -80,26 +88,21 @@ struct TSDRegistrySharedT {
   }
 
 private:
-  ALWAYS_INLINE void setCurrentTSD(TSD<Allocator> *CurrentTSD) {
-#if _BIONIC
-    *getAndroidTlsPtr() = reinterpret_cast<uptr>(CurrentTSD);
-#elif SCUDO_LINUX
-    ThreadTSD = CurrentTSD;
+  ALWAYS_INLINE uptr *getTlsPtr() const {
+#if SCUDO_HAS_PLATFORM_TLS_SLOT
+    return reinterpret_cast<uptr *>(getPlatformAllocatorTlsSlot());
 #else
-    CHECK_EQ(
-        pthread_setspecific(PThreadKey, reinterpret_cast<void *>(CurrentTSD)),
-        0);
+    static thread_local uptr ThreadTSD;
+    return &ThreadTSD;
 #endif
   }
 
+  ALWAYS_INLINE void setCurrentTSD(TSD<Allocator> *CurrentTSD) {
+    *getTlsPtr() = reinterpret_cast<uptr>(CurrentTSD);
+  }
+
   ALWAYS_INLINE TSD<Allocator> *getCurrentTSD() {
-#if _BIONIC
-    return reinterpret_cast<TSD<Allocator> *>(*getAndroidTlsPtr());
-#elif SCUDO_LINUX
-    return ThreadTSD;
-#else
-    return reinterpret_cast<TSD<Allocator> *>(pthread_getspecific(PThreadKey));
-#endif
+    return reinterpret_cast<TSD<Allocator> *>(*getTlsPtr());
   }
 
   bool setNumberOfTSDs(u32 N) {
@@ -195,16 +198,7 @@ private:
   HybridMutex Mutex;
   HybridMutex MutexTSDs;
   TSD<Allocator> TSDs[TSDsArraySize];
-#if SCUDO_LINUX && !_BIONIC
-  static THREADLOCAL TSD<Allocator> *ThreadTSD;
-#endif
 };
-
-#if SCUDO_LINUX && !_BIONIC
-template <class Allocator, u32 TSDsArraySize, u32 DefaultTSDCount>
-THREADLOCAL TSD<Allocator>
-    *TSDRegistrySharedT<Allocator, TSDsArraySize, DefaultTSDCount>::ThreadTSD;
-#endif
 
 } // namespace scudo
 

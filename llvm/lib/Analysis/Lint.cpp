@@ -365,6 +365,11 @@ void Lint::visitCallBase(CallBase &I) {
       visitMemoryReference(I, I.getArgOperand(0), MemoryLocation::UnknownSize,
                            None, nullptr, MemRef::Read | MemRef::Write);
       break;
+    case Intrinsic::get_active_lane_mask:
+      if (auto *TripCount = dyn_cast<ConstantInt>(I.getArgOperand(1)))
+        Assert(!TripCount->isZero(), "get_active_lane_mask: operand #2 "
+               "must be greater than 0", &I);
+      break;
     }
 }
 

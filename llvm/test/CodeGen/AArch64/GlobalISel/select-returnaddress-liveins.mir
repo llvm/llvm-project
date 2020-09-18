@@ -19,7 +19,6 @@ body:             |
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $w0, $x0, $lr
   ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $lr
-  ; CHECK:   B %bb.1
   ; CHECK: bb.1:
   ; CHECK:   [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
   ; CHECK:   $x0 = COPY [[COPY1]]
@@ -47,7 +46,6 @@ body:             |
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $w0, $x0, $lr
   ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $lr
-  ; CHECK:   B %bb.1
   ; CHECK: bb.1:
   ; CHECK:   [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
   ; CHECK:   $x0 = COPY [[COPY1]]
@@ -78,7 +76,6 @@ body:             |
   ; CHECK:   liveins: $w0, $x0, $lr
   ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $lr
   ; CHECK:   [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
-  ; CHECK:   B %bb.1
   ; CHECK: bb.1:
   ; CHECK:   $x0 = COPY [[COPY1]]
   ; CHECK:   [[COPY2:%[0-9]+]]:gpr64 = COPY [[COPY]]

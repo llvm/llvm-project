@@ -3114,6 +3114,8 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   bool Changed = TTracker->Transfers.size() != 0;
 
   delete MTracker;
+  delete TTracker;
+  MTracker = nullptr;
   VTracker = nullptr;
   TTracker = nullptr;
 

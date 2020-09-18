@@ -1,6 +1,19 @@
-## Implementation of `CHARACTER` types in f18
+<!--===- docs/Character.md
 
-### Kinds and Character Sets
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+-->
+
+# Implementation of `CHARACTER` types in f18
+
+```eval_rst
+.. contents::
+   :local:
+```
+
+## Kinds and Character Sets
 
 The f18 compiler and runtime support three kinds of the intrinsic
 `CHARACTER` type of Fortran 2018.
@@ -40,7 +53,7 @@ We might want to support one or more environment variables to change these
 assumptions, especially for `KIND=1` users of ISO-8859 character sets
 besides Latin-1.
 
-### Lengths
+## Lengths
 
 Allocatable `CHARACTER` objects in Fortran may defer the specification
 of their lengths until the time of their allocation or whole (non-substring)
@@ -68,7 +81,7 @@ Fortran substrings are rather like subscript triplets into a hidden
 "zero" dimension of a scalar `CHARACTER` value, but they cannot have
 strides.
 
-### Concatenation
+## Concatenation
 
 Fortran has one `CHARACTER`-valued intrinsic operator, `//`, which
 concatenates its operands (10.1.5.3).
@@ -97,7 +110,7 @@ The result of `//` may be used
 The f18 compiler has a general (but slow) means of implementing concatenation
 and a specialized (fast) option to optimize the most common case.
 
-#### General concatenation
+### General concatenation
 
 In the most general case, the f18 compiler's generated code and
 runtime support library represent the result as a deferred-length allocatable
@@ -122,7 +135,7 @@ When the left-hand side of a `CHARACTER` assignment is a deferred-length
 allocatable and the right-hand side is a temporary, use of the runtime's
 `MoveAlloc()` subroutine instead can save an allocation and a copy.
 
-#### Optimized concatenation
+### Optimized concatenation
 
 Scalar `CHARACTER(KIND=1)` expressions evaluated as the right-hand sides of
 assignments to independent substrings or whole variables that are not

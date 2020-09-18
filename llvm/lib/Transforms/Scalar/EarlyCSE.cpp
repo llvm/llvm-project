@@ -196,6 +196,11 @@ static bool matchSelectWithOptionalNotCond(Value *V, Value *&Cond, Value *&A,
   case CmpInst::ICMP_ULT: Flavor = SPF_UMIN; break;
   case CmpInst::ICMP_SGT: Flavor = SPF_SMAX; break;
   case CmpInst::ICMP_SLT: Flavor = SPF_SMIN; break;
+  // Non-strict inequalities.
+  case CmpInst::ICMP_ULE: Flavor = SPF_UMIN; break;
+  case CmpInst::ICMP_UGE: Flavor = SPF_UMAX; break;
+  case CmpInst::ICMP_SLE: Flavor = SPF_SMIN; break;
+  case CmpInst::ICMP_SGE: Flavor = SPF_SMAX; break;
   default: break;
   }
 

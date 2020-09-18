@@ -217,6 +217,8 @@ private:
 const semantics::DerivedTypeSpec *GetDerivedTypeSpec(const DynamicType &);
 const semantics::DerivedTypeSpec *GetDerivedTypeSpec(
     const std::optional<DynamicType> &);
+const semantics::DerivedTypeSpec *GetParentTypeSpec(
+    const semantics::DerivedTypeSpec &);
 
 std::string DerivedTypeSpecAsFortran(const semantics::DerivedTypeSpec &);
 

@@ -19,7 +19,7 @@ include "mlir/Interfaces/VectorInterfaces.td"
 
 def Vector_Dialect : Dialect {
   let name = "vector";
-  let cppNamespace = "vector";
+  let cppNamespace = "::mlir::vector";
   let hasConstantMaterializer = 1;
 }
 
@@ -270,6 +270,7 @@ def Vector_BroadcastOp :
     }
   }];
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($vector)";
+  let hasFolder = 1;
 }
 
 def Vector_ShuffleOp :

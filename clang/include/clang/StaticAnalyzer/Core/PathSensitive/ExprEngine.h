@@ -869,6 +869,23 @@ private:
   void handleConstructor(const Expr *E, ExplodedNode *Pred,
                          ExplodedNodeSet &Dst);
 
+public:
+  /// Note whether this loop has any more iteratios to model. These methods are
+  /// essentially an interface for a GDM trait. Further reading in
+  /// ExprEngine::VisitObjCForCollectionStmt().
+  LLVM_NODISCARD static ProgramStateRef
+  setWhetherHasMoreIteration(ProgramStateRef State,
+                             const ObjCForCollectionStmt *O,
+                             const LocationContext *LC, bool HasMoreIteraton);
+
+  LLVM_NODISCARD static ProgramStateRef
+  removeIterationState(ProgramStateRef State, const ObjCForCollectionStmt *O,
+                       const LocationContext *LC);
+
+  LLVM_NODISCARD static bool hasMoreIteration(ProgramStateRef State,
+                                              const ObjCForCollectionStmt *O,
+                                              const LocationContext *LC);
+private:
   /// Store the location of a C++ object corresponding to a statement
   /// until the statement is actually encountered. For example, if a DeclStmt
   /// has CXXConstructExpr as its initializer, the object would be considered
