@@ -22,7 +22,7 @@ public:
     ~SBBlock ();
 
     %feature("docstring",
-    "Does this block represent an inlined function?"
+    "Is this block contained within an inlined function?"
     ) IsInlined;
     bool
     IsInlined () const;
