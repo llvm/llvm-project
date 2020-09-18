@@ -329,6 +329,12 @@ BUILTIN(__builtin_altivec_vexpandwm, "V4UiV4Ui", "")
 BUILTIN(__builtin_altivec_vexpanddm, "V2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vexpandqm, "V1ULLLiV1ULLLi", "")
 
+// P10 Vector Count with Mask built-ins.
+BUILTIN(__builtin_altivec_vcntmbb, "ULLiV16UcUi", "")
+BUILTIN(__builtin_altivec_vcntmbh, "ULLiV8UsUi", "")
+BUILTIN(__builtin_altivec_vcntmbw, "ULLiV4UiUi", "")
+BUILTIN(__builtin_altivec_vcntmbd, "ULLiV2ULLiUi", "")
+
 // P10 Vector Parallel Bits built-ins.
 BUILTIN(__builtin_altivec_vpdepd, "V2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vpextd, "V2ULLiV2ULLiV2ULLi", "")
