@@ -1432,7 +1432,7 @@ def StrArrayAttr : TypedArrayAttrBase<StrAttr, "string array attribute"> {
   let constBuilderCall = "$_builder.getStrArrayAttr($0)";
 }
 def TypeArrayAttr : TypedArrayAttrBase<TypeAttr, "type array attribute"> {
-  let constBuilderCall = ?;
+  let constBuilderCall = "$_builder.getTypeArrayAttr($0)";
 }
 
 // Attribute information for an Attribute field within a StructAttr.
