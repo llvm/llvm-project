@@ -58,6 +58,7 @@ syntax::Tree *allocateTree(syntax::Arena &A, syntax::NodeKind Kind) {
   switch (Kind) {
   case syntax::NodeKind::Leaf:
     assert(false);
+    break; 
   case syntax::NodeKind::TranslationUnit:
     return new (A.getAllocator()) syntax::TranslationUnit;
   case syntax::NodeKind::UnknownExpression:
