@@ -250,6 +250,62 @@ TEST_F(SortImportsTestJava, FormatPariallyOnShouldNotReorder) {
                  "import org.c;\n"));
 }
 
+TEST_F(SortImportsTestJava, SortJavaStaticImport) {
+  FmtStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;
+  EXPECT_EQ("import static com.test.a;\n"
+            "\n"
+            "import static org.a;\n"
+            "\n"
+            "import static com.a;\n"
+            "\n"
+            "import com.test.b;\n"
+            "\n"
+            "import org.b;\n"
+            "\n"
+            "import com.b;\n",
+            sort("import static com.test.a;\n"
+                 "import static org.a;\n"
+                 "import static com.a;\n"
+                 "import com.test.b;\n"
+                 "import org.b;\n"
+                 "import com.b;\n"));
+
+  FmtStyle.SortJavaStaticImport = FormatStyle::SJSIO_After;
+  EXPECT_EQ("import com.test.b;\n"
+            "import com.test.c;\n"
+            "\n"
+            "import org.b;\n"
+            "\n"
+            "import com.b;\n"
+            "\n"
+            "import static com.test.a;\n"
+            "\n"
+            "import static org.a;\n"
+            "\n"
+            "import static com.a;\n",
+            sort("import static com.test.a;\n"
+                 "import static org.a;\n"
+                 "import static com.a;\n"
+                 "import com.test.b;\n"
+                 "import org.b;\n"
+                 "import com.b;\n"
+                 "import com.test.c;\n"));
+}
+
+TEST_F(SortImportsTestJava, SortJavaStaticImportAsGroup) {
+  FmtStyle.SortJavaStaticImport = FormatStyle::SJSIO_After;
+
+  EXPECT_EQ("import com.test.a;\n"
+            "import com.test.b;\n"
+            "\n"
+            "import static org.a;\n"
+            "import static org.b;\n",
+            sort("import com.test.a;\n"
+                 "import static org.a;\n"
+                 "import com.test.b;\n"
+                 "import static org.b;\n"));
+}
+
 TEST_F(SortImportsTestJava, DeduplicateImports) {
   EXPECT_EQ("import org.a;\n", sort("import org.a;\n"
                                     "import org.a;\n"));
