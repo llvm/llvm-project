@@ -1155,8 +1155,9 @@ define i8 @negate_abs(i8 %x, i8 %y) {
 ; CHECK-LABEL: @negate_abs(
 ; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
-; CHECK-NEXT:    [[T3:%.*]] = sub i8 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[T1:%.*]] = icmp slt i8 [[X]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[T1]], i8 [[X]], i8 [[T0]], !prof !0
+; CHECK-NEXT:    [[T3:%.*]] = add i8 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[T3]]
 ;
   %t0 = sub i8 0, %x
@@ -1170,7 +1171,8 @@ define i8 @negate_nabs(i8 %x, i8 %y) {
 ; CHECK-LABEL: @negate_nabs(
 ; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
+; CHECK-NEXT:    [[T1:%.*]] = icmp slt i8 [[X]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[T1]], i8 [[T0]], i8 [[X]], !prof !0
 ; CHECK-NEXT:    [[T3:%.*]] = add i8 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[T3]]
 ;
