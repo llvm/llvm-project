@@ -296,6 +296,7 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_single_read(<8 x i3
 ; VI-NEXT:  BB2_1: ; =>This Inner Loop Header: Depth=1
 ; VI-NEXT:    v_readfirstlane_b32 s2, v0
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[2:3], s2, v0
+; VI-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
 ; VI-NEXT:    v_readfirstlane_b32 s12, v6
 ; VI-NEXT:    v_readfirstlane_b32 s13, v7
@@ -306,11 +307,7 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_single_read(<8 x i3
 ; VI-NEXT:    v_readfirstlane_b32 s17, v11
 ; VI-NEXT:    v_readfirstlane_b32 s18, v12
 ; VI-NEXT:    v_readfirstlane_b32 s19, v13
-; VI-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
-; VI-NEXT:    s_nop 0
-; VI-NEXT:    s_nop 0
-; VI-NEXT:    s_nop 0
-; VI-NEXT:    s_nop 0
+; VI-NEXT:    s_nop 4
 ; VI-NEXT:    image_sample v[14:17], v2, s[12:19], s[8:11] dmask:0xf
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v14
@@ -353,6 +350,7 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_single_read(<8 x i3
 ; GFX9-NEXT:  BB2_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX9-NEXT:    v_cmp_eq_u32_e64 s[2:3], s2, v0
+; GFX9-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_readfirstlane_b32 s12, v6
 ; GFX9-NEXT:    v_readfirstlane_b32 s13, v7
@@ -363,11 +361,7 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_single_read(<8 x i3
 ; GFX9-NEXT:    v_readfirstlane_b32 s17, v11
 ; GFX9-NEXT:    v_readfirstlane_b32 s18, v12
 ; GFX9-NEXT:    v_readfirstlane_b32 s19, v13
-; GFX9-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    s_nop 4
 ; GFX9-NEXT:    image_sample v[14:17], v2, s[12:19], s[8:11] dmask:0xf
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v14
@@ -412,22 +406,19 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_single_read(<8 x i3
 ; GFX10-32-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX10-32-NEXT:  BB2_1: ; =>This Inner Loop Header: Depth=1
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s1, s1, v0
+; GFX10-32-NEXT:    s_and_saveexec_b32 s1, s1
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s12, v6
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s13, v7
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s14, v8
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s15, v9
-; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s1, s1, v0
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s16, v10
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s17, v11
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s18, v12
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s19, v13
-; GFX10-32-NEXT:    s_and_saveexec_b32 s1, s1
-; GFX10-32-NEXT:    s_nop 0
-; GFX10-32-NEXT:    s_nop 0
-; GFX10-32-NEXT:    s_nop 0
-; GFX10-32-NEXT:    s_nop 0
+; GFX10-32-NEXT:    s_nop 4
 ; GFX10-32-NEXT:    image_sample v[14:17], v2, s[12:19], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-32-NEXT:    v_or_b32_e32 v1, v1, v14
@@ -471,22 +462,19 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_single_read(<8 x i3
 ; GFX10-64-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX10-64-NEXT:  BB2_1: ; =>This Inner Loop Header: Depth=1
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[2:3], s2, v0
+; GFX10-64-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
 ; GFX10-64-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s12, v6
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s13, v7
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s14, v8
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s15, v9
-; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[2:3], s2, v0
 ; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s16, v10
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s17, v11
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s18, v12
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s19, v13
-; GFX10-64-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
-; GFX10-64-NEXT:    s_nop 0
-; GFX10-64-NEXT:    s_nop 0
-; GFX10-64-NEXT:    s_nop 0
-; GFX10-64-NEXT:    s_nop 0
+; GFX10-64-NEXT:    s_nop 4
 ; GFX10-64-NEXT:    image_sample v[14:17], v2, s[12:19], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    v_or_b32_e32 v1, v1, v14
@@ -697,19 +685,19 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_multi_rl(<8 x i32> 
 ; PRE-GFX10-NEXT:    v_mov_b32_e32 v3, 0
 ; PRE-GFX10-NEXT:    s_mov_b64 s[6:7], exec
 ; PRE-GFX10-NEXT:  BB4_1: ; =>This Inner Loop Header: Depth=1
-; PRE-GFX10-NEXT:    v_readfirstlane_b32 s12, v4
-; PRE-GFX10-NEXT:    v_cmp_eq_u32_e64 s[8:9], s12, v4
-; PRE-GFX10-NEXT:    v_readfirstlane_b32 s10, v6
+; PRE-GFX10-NEXT:    v_readfirstlane_b32 s10, v4
+; PRE-GFX10-NEXT:    v_cmp_eq_u32_e64 s[8:9], s10, v4
 ; PRE-GFX10-NEXT:    s_and_saveexec_b64 s[20:21], s[8:9]
-; PRE-GFX10-NEXT:    s_bfe_i64 s[8:9], s[12:13], 0x200000
-; PRE-GFX10-NEXT:    s_lshl_b64 s[8:9], s[8:9], 5
-; PRE-GFX10-NEXT:    s_add_u32 s8, s0, s8
-; PRE-GFX10-NEXT:    s_addc_u32 s9, s1, s9
 ; PRE-GFX10-NEXT:    s_bfe_i64 s[10:11], s[10:11], 0x200000
-; PRE-GFX10-NEXT:    s_lshl_b64 s[10:11], s[10:11], 4
-; PRE-GFX10-NEXT:    s_add_u32 s16, s2, s10
-; PRE-GFX10-NEXT:    s_addc_u32 s17, s3, s11
-; PRE-GFX10-NEXT:    s_load_dwordx8 s[8:15], s[8:9], 0x0
+; PRE-GFX10-NEXT:    s_lshl_b64 s[10:11], s[10:11], 5
+; PRE-GFX10-NEXT:    s_add_u32 s10, s0, s10
+; PRE-GFX10-NEXT:    v_readfirstlane_b32 s8, v6
+; PRE-GFX10-NEXT:    s_addc_u32 s11, s1, s11
+; PRE-GFX10-NEXT:    s_bfe_i64 s[8:9], s[8:9], 0x200000
+; PRE-GFX10-NEXT:    s_lshl_b64 s[8:9], s[8:9], 4
+; PRE-GFX10-NEXT:    s_add_u32 s16, s2, s8
+; PRE-GFX10-NEXT:    s_addc_u32 s17, s3, s9
+; PRE-GFX10-NEXT:    s_load_dwordx8 s[8:15], s[10:11], 0x0
 ; PRE-GFX10-NEXT:    s_load_dwordx4 s[16:19], s[16:17], 0x0
 ; PRE-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; PRE-GFX10-NEXT:    image_sample v[7:10], v5, s[8:15], s[16:19] dmask:0xf
@@ -739,20 +727,20 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_multi_rl(<8 x i32> 
 ; GFX10-32-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX10-32-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX10-32-NEXT:  BB4_1: ; =>This Inner Loop Header: Depth=1
-; GFX10-32-NEXT:    v_readfirstlane_b32 s8, v4
-; GFX10-32-NEXT:    v_readfirstlane_b32 s6, v6
-; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s7, s8, v4
+; GFX10-32-NEXT:    v_readfirstlane_b32 s6, v4
+; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s7, s6, v4
 ; GFX10-32-NEXT:    s_and_saveexec_b32 s20, s7
-; GFX10-32-NEXT:    s_bfe_i64 s[8:9], s[8:9], 0x200000
-; GFX10-32-NEXT:    s_lshl_b64 s[8:9], s[8:9], 5
-; GFX10-32-NEXT:    s_add_u32 s8, s0, s8
-; GFX10-32-NEXT:    s_addc_u32 s9, s1, s9
 ; GFX10-32-NEXT:    s_bfe_i64 s[6:7], s[6:7], 0x200000
-; GFX10-32-NEXT:    s_lshl_b64 s[6:7], s[6:7], 4
-; GFX10-32-NEXT:    s_add_u32 s6, s2, s6
-; GFX10-32-NEXT:    s_addc_u32 s7, s3, s7
-; GFX10-32-NEXT:    s_load_dwordx8 s[8:15], s[8:9], 0x0
-; GFX10-32-NEXT:    s_load_dwordx4 s[16:19], s[6:7], 0x0
+; GFX10-32-NEXT:    v_readfirstlane_b32 s8, v6
+; GFX10-32-NEXT:    s_lshl_b64 s[6:7], s[6:7], 5
+; GFX10-32-NEXT:    s_add_u32 s6, s0, s6
+; GFX10-32-NEXT:    s_addc_u32 s7, s1, s7
+; GFX10-32-NEXT:    s_bfe_i64 s[8:9], s[8:9], 0x200000
+; GFX10-32-NEXT:    s_lshl_b64 s[8:9], s[8:9], 4
+; GFX10-32-NEXT:    s_add_u32 s16, s2, s8
+; GFX10-32-NEXT:    s_addc_u32 s17, s3, s9
+; GFX10-32-NEXT:    s_load_dwordx8 s[8:15], s[6:7], 0x0
+; GFX10-32-NEXT:    s_load_dwordx4 s[16:19], s[16:17], 0x0
 ; GFX10-32-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-32-NEXT:    image_sample v[7:10], v5, s[8:15], s[16:19] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
@@ -780,11 +768,11 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_multi_rl(<8 x i32> 
 ; GFX10-64-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX10-64-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX10-64-NEXT:  BB4_1: ; =>This Inner Loop Header: Depth=1
-; GFX10-64-NEXT:    v_readfirstlane_b32 s12, v4
-; GFX10-64-NEXT:    v_readfirstlane_b32 s10, v6
-; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[8:9], s12, v4
+; GFX10-64-NEXT:    v_readfirstlane_b32 s10, v4
+; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[8:9], s10, v4
 ; GFX10-64-NEXT:    s_and_saveexec_b64 s[20:21], s[8:9]
-; GFX10-64-NEXT:    s_bfe_i64 s[8:9], s[12:13], 0x200000
+; GFX10-64-NEXT:    s_bfe_i64 s[8:9], s[10:11], 0x200000
+; GFX10-64-NEXT:    v_readfirstlane_b32 s10, v6
 ; GFX10-64-NEXT:    s_lshl_b64 s[8:9], s[8:9], 5
 ; GFX10-64-NEXT:    s_add_u32 s8, s0, s8
 ; GFX10-64-NEXT:    s_addc_u32 s9, s1, s9
@@ -987,8 +975,9 @@ define amdgpu_ps void @test_waterfall_non_uniform_img_single_store(<8 x i32> add
 ; VI-NEXT:    flat_load_dwordx4 v[11:14], v[11:12]
 ; VI-NEXT:    s_mov_b64 s[0:1], exec
 ; VI-NEXT:  BB6_1: ; =>This Inner Loop Header: Depth=1
-; VI-NEXT:    v_readfirstlane_b32 s7, v0
-; VI-NEXT:    v_cmp_eq_u32_e64 s[8:9], s7, v0
+; VI-NEXT:    v_readfirstlane_b32 s0, v0
+; VI-NEXT:    v_cmp_eq_u32_e64 s[0:1], s0, v0
+; VI-NEXT:    s_and_saveexec_b64 s[8:9], s[0:1]
 ; VI-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
 ; VI-NEXT:    v_readfirstlane_b32 s0, v7
 ; VI-NEXT:    v_readfirstlane_b32 s1, v8
@@ -999,11 +988,7 @@ define amdgpu_ps void @test_waterfall_non_uniform_img_single_store(<8 x i32> add
 ; VI-NEXT:    v_readfirstlane_b32 s5, v12
 ; VI-NEXT:    v_readfirstlane_b32 s6, v13
 ; VI-NEXT:    v_readfirstlane_b32 s7, v14
-; VI-NEXT:    s_and_saveexec_b64 s[8:9], s[8:9]
-; VI-NEXT:    s_nop 0
-; VI-NEXT:    s_nop 0
-; VI-NEXT:    s_nop 0
-; VI-NEXT:    s_nop 0
+; VI-NEXT:    s_nop 4
 ; VI-NEXT:    image_store v[2:5], v6, s[0:7] dmask:0xf unorm
 ; VI-NEXT:    s_xor_b64 exec, exec, s[8:9]
 ; VI-NEXT:    s_cbranch_execnz BB6_1
@@ -1023,8 +1008,9 @@ define amdgpu_ps void @test_waterfall_non_uniform_img_single_store(<8 x i32> add
 ; GFX9-NEXT:    global_load_dwordx4 v[11:14], v[11:12], off offset:16
 ; GFX9-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX9-NEXT:  BB6_1: ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    v_readfirstlane_b32 s7, v0
-; GFX9-NEXT:    v_cmp_eq_u32_e64 s[8:9], s7, v0
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    v_cmp_eq_u32_e64 s[0:1], s0, v0
+; GFX9-NEXT:    s_and_saveexec_b64 s[8:9], s[0:1]
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v7
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v8
@@ -1035,11 +1021,7 @@ define amdgpu_ps void @test_waterfall_non_uniform_img_single_store(<8 x i32> add
 ; GFX9-NEXT:    v_readfirstlane_b32 s5, v12
 ; GFX9-NEXT:    v_readfirstlane_b32 s6, v13
 ; GFX9-NEXT:    v_readfirstlane_b32 s7, v14
-; GFX9-NEXT:    s_and_saveexec_b64 s[8:9], s[8:9]
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    s_nop 4
 ; GFX9-NEXT:    image_store v[2:5], v6, s[0:7] dmask:0xf unorm
 ; GFX9-NEXT:    s_xor_b64 exec, exec, s[8:9]
 ; GFX9-NEXT:    s_cbranch_execnz BB6_1
@@ -1061,23 +1043,20 @@ define amdgpu_ps void @test_waterfall_non_uniform_img_single_store(<8 x i32> add
 ; GFX10-32-NEXT:    global_load_dwordx4 v[7:10], v[11:12], off
 ; GFX10-32-NEXT:    global_load_dwordx4 v[11:14], v[11:12], off offset:16
 ; GFX10-32-NEXT:  BB6_1: ; =>This Inner Loop Header: Depth=1
-; GFX10-32-NEXT:    v_readfirstlane_b32 s7, v0
+; GFX10-32-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s0, s0, v0
+; GFX10-32-NEXT:    s_and_saveexec_b32 s8, s0
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s0, v7
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s1, v8
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s2, v9
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s3, v10
-; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s8, s7, v0
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s4, v11
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s5, v12
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s6, v13
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s7, v14
-; GFX10-32-NEXT:    s_and_saveexec_b32 s8, s8
-; GFX10-32-NEXT:    s_nop 0
-; GFX10-32-NEXT:    s_nop 0
-; GFX10-32-NEXT:    s_nop 0
-; GFX10-32-NEXT:    s_nop 0
+; GFX10-32-NEXT:    s_nop 4
 ; GFX10-32-NEXT:    image_store v[2:5], v6, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm
 ; GFX10-32-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-32-NEXT:    s_xor_b32 exec_lo, exec_lo, s8
@@ -1099,23 +1078,20 @@ define amdgpu_ps void @test_waterfall_non_uniform_img_single_store(<8 x i32> add
 ; GFX10-64-NEXT:    global_load_dwordx4 v[7:10], v[11:12], off
 ; GFX10-64-NEXT:    global_load_dwordx4 v[11:14], v[11:12], off offset:16
 ; GFX10-64-NEXT:  BB6_1: ; =>This Inner Loop Header: Depth=1
-; GFX10-64-NEXT:    v_readfirstlane_b32 s7, v0
+; GFX10-64-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[0:1], s0, v0
+; GFX10-64-NEXT:    s_and_saveexec_b64 s[8:9], s[0:1]
 ; GFX10-64-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s0, v7
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s1, v8
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s2, v9
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s3, v10
-; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[8:9], s7, v0
 ; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s4, v11
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s5, v12
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s6, v13
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s7, v14
-; GFX10-64-NEXT:    s_and_saveexec_b64 s[8:9], s[8:9]
-; GFX10-64-NEXT:    s_nop 0
-; GFX10-64-NEXT:    s_nop 0
-; GFX10-64-NEXT:    s_nop 0
-; GFX10-64-NEXT:    s_nop 0
+; GFX10-64-NEXT:    s_nop 4
 ; GFX10-64-NEXT:    image_store v[2:5], v6, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm
 ; GFX10-64-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-64-NEXT:    s_xor_b64 exec, exec, s[8:9]

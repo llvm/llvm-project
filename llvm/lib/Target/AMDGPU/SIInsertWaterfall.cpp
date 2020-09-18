@@ -624,7 +624,8 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
       } else {
         Item.RFLRegs.push_back(RFLDstReg);
         // Insert function to expand to required size here
-        readFirstLaneReg(LoopBB, MRI, RI, TII, J, DL, RFLDstReg, RFLSrcReg,
+        MachineBasicBlock::iterator RFLInsert(RFLMI);
+        readFirstLaneReg(LoopBB, MRI, RI, TII, RFLInsert, DL, RFLDstReg, RFLSrcReg,
                          *RFLSrcOp);
       }
     }

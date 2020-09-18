@@ -89,6 +89,8 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img(<8 x i32> addrspace
 ; GCN: v_readfirstlane_b32 s[[FIRSTVAL:[0-9]+]], [[INDEX:v[0-9]+]]
 ; GCN-64-DAG: v_cmp_eq_u32_e64 [[EXEC2:s[[0-9]+:[0-9]+]]], s[[FIRSTVAL]], [[INDEX]]
 ; GCN-32-DAG: v_cmp_eq_u32_e64 [[EXEC2:s[0-9]+]], s[[FIRSTVAL]], [[INDEX]]
+; GCN-64: s_and_saveexec_b64 [[EXEC3:s[[0-9]+:[0-9]+]]], [[EXEC2]]
+; GCN-32: s_and_saveexec_b32 [[EXEC3:s[0-9]+]], [[EXEC2]]
 ; GCN-DAG: v_readfirstlane_b32 s[[FIRSTRSRC:[0-9]+]], v[[RSRCSTART]]
 ; GCN-DAG: v_readfirstlane_b32 s[[ENDRSRC:[0-9]+]], v[[RSRCEND]]
 ; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
@@ -97,8 +99,6 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img(<8 x i32> addrspace
 ; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
 ; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
 ; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
-; GCN-64: s_and_saveexec_b64 [[EXEC3:s[[0-9]+:[0-9]+]]], [[EXEC2]]
-; GCN-32: s_and_saveexec_b32 [[EXEC3:s[0-9]+]], [[EXEC2]]
 ; GCN: image_sample v{{\[}}[[VALSTART:[0-9]+]]:[[VALEND:[0-9]+]]{{\]}}, v{{[0-9]+}}, s{{\[}}[[FIRSTRSRC]]:[[ENDRSRC]]{{\]}}, s[{{[0-9]+:[0-9]+}}] dmask:0xf
 ; GCN-DAG: v_or_b32_e32 v[[DSTSTART]], v[[DSTSTART]], v[[VALSTART]]
 ; GCN-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
@@ -184,12 +184,12 @@ define amdgpu_ps void @test_multiple_groups(i32 addrspace(1)* inreg %out1, i32 a
 ; GCN-32: s_mov_b32 [[EXEC:s[0-9]+]], exec
 ; GCN: {{^}}BB4_1:
 ; GCN: v_readfirstlane_b32 s[[FIRSTVAL:[0-9]+]], [[IDX:v[0-9]+]]
-; GCN-64-DAG: v_cmp_eq_u32_e64 [[EXEC2:s[[0-9]+:[0-9]+]]], s[[FIRSTVAL]], [[IDX]]
-; GCN-32-DAG: v_cmp_eq_u32_e64 [[EXEC2:s[0-9]+]], s[[FIRSTVAL]], [[IDX]]
-; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64: v_cmp_eq_u32_e64 [[EXEC2:s[[0-9]+:[0-9]+]]], s[[FIRSTVAL]], [[IDX]]
+; GCN-32: v_cmp_eq_u32_e64 [[EXEC2:s[0-9]+]], s[[FIRSTVAL]], [[IDX]]
 ; GCN-64: s_and_saveexec_b64 [[EXEC3:s[[0-9]+:[0-9]+]]], [[EXEC2]]
 ; GCN-32: s_and_saveexec_b32 [[EXEC3:s[0-9]+]], [[EXEC2]]
-; GCN: s_lshl_b64 [[FIRSTVALSHIFTED:s[[0-9]+:[0-9]+]]], s{{\[}}[[FIRSTVAL]]:{{[0-9]+}}], 5
+; GCN-DAG: s_lshl_b64 [[FIRSTVALSHIFTED:s[[0-9]+:[0-9]+]]], s{{\[}}[[FIRSTVAL]]:{{[0-9]+}}], 5
+; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: s_load_dwordx8 [[PTR:s\[[0-9]+:[0-9]+\]]], [[FIRSTVALSHIFTED]], 0x0
 ; GCN: s_load_dwordx4 [[PTR2:s\[[0-9]+:[0-9]+\]]], s[{{[0-9]+:[0-9]+}}], 0x0 
 ; GCN: s_waitcnt lgkmcnt(0)
@@ -280,6 +280,8 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uni_img_2_idx(<8 x i32> addrspa
 ; GCN: v_readfirstlane_b32 s[[FIRSTVAL:[0-9]+]], [[INDEX:v[0-9]+]]
 ; GCN-64-DAG: v_cmp_eq_u32_e64 [[EXEC2:s[[0-9]+:[0-9]+]]], s[[FIRSTVAL]], [[INDEX]]
 ; GCN-32-DAG: v_cmp_eq_u32_e64 [[EXEC2:s[0-9]+]], s[[FIRSTVAL]], [[INDEX]]
+; GCN-64: s_and_saveexec_b64 [[EXEC3:s[[0-9]+:[0-9]+]]], [[EXEC2]]
+; GCN-32: s_and_saveexec_b32 [[EXEC3:s[0-9]+]], [[EXEC2]]
 ; GCN-DAG: v_readfirstlane_b32 s[[FIRSTRSRC:[0-9]+]], v[[RSRCSTART]]
 ; GCN-DAG: v_readfirstlane_b32 s[[ENDRSRC:[0-9]+]], v[[RSRCEND]]
 ; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
@@ -288,8 +290,6 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uni_img_2_idx(<8 x i32> addrspa
 ; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
 ; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
 ; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
-; GCN-64: s_and_saveexec_b64 [[EXEC3:s[[0-9]+:[0-9]+]]], [[EXEC2]]
-; GCN-32: s_and_saveexec_b32 [[EXEC3:s[0-9]+]], [[EXEC2]]
 ; PRE_GFX10: image_store v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}, s{{\[}}[[FIRSTRSRC]]:[[ENDRSRC]]{{\]}} dmask:0xf unorm
 ; GFX-10: image_store v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}, s{{\[}}[[FIRSTRSRC]]:[[ENDRSRC]]{{\]}} dmask:0xf dim:SQ_RSRC_IMG_1D unorm
 ; GCN-64: s_xor_b64 exec, exec, [[EXEC3]]
