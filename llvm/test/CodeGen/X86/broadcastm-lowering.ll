@@ -29,20 +29,11 @@ define <2 x i64> @test_mm_epi64(<8 x i16> %a, <8 x i16> %b) {
 ; X86-AVX512CD-NEXT:    vzeroupper
 ; X86-AVX512CD-NEXT:    retl
 ;
-; X64-AVX512VLCDBW-LABEL: test_mm_epi64:
-; X64-AVX512VLCDBW:       # %bb.0: # %entry
-; X64-AVX512VLCDBW-NEXT:    vpcmpeqw %xmm1, %xmm0, %k0
-; X64-AVX512VLCDBW-NEXT:    vpbroadcastmb2q %k0, %xmm0
-; X64-AVX512VLCDBW-NEXT:    retq
-;
-; X86-AVX512VLCDBW-LABEL: test_mm_epi64:
-; X86-AVX512VLCDBW:       # %bb.0: # %entry
-; X86-AVX512VLCDBW-NEXT:    vpcmpeqw %xmm1, %xmm0, %k0
-; X86-AVX512VLCDBW-NEXT:    kmovd %k0, %eax
-; X86-AVX512VLCDBW-NEXT:    movzbl %al, %eax
-; X86-AVX512VLCDBW-NEXT:    vmovd %eax, %xmm0
-; X86-AVX512VLCDBW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3],zero,zero,zero,zero,xmm0[0,1,2,3],zero,zero,zero,zero
-; X86-AVX512VLCDBW-NEXT:    retl
+; AVX512VLCDBW-LABEL: test_mm_epi64:
+; AVX512VLCDBW:       # %bb.0: # %entry
+; AVX512VLCDBW-NEXT:    vpcmpeqw %xmm1, %xmm0, %k0
+; AVX512VLCDBW-NEXT:    vpbroadcastmb2q %k0, %xmm0
+; AVX512VLCDBW-NEXT:    ret{{[l|q]}}
 entry:
   %0 = icmp eq <8 x i16> %a, %b
   %1 = bitcast <8 x i1> %0 to i8
@@ -91,39 +82,19 @@ entry:
 }
 
 define <8 x i64> @test_mm512_epi64(<8 x i32> %a, <8 x i32> %b) {
-; X64-AVX512CD-LABEL: test_mm512_epi64:
-; X64-AVX512CD:       # %bb.0: # %entry
-; X64-AVX512CD-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; X64-AVX512CD-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; X64-AVX512CD-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
-; X64-AVX512CD-NEXT:    vpbroadcastmb2q %k0, %zmm0
-; X64-AVX512CD-NEXT:    retq
+; AVX512CD-LABEL: test_mm512_epi64:
+; AVX512CD:       # %bb.0: # %entry
+; AVX512CD-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512CD-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512CD-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; AVX512CD-NEXT:    vpbroadcastmb2q %k0, %zmm0
+; AVX512CD-NEXT:    ret{{[l|q]}}
 ;
-; X86-AVX512CD-LABEL: test_mm512_epi64:
-; X86-AVX512CD:       # %bb.0: # %entry
-; X86-AVX512CD-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; X86-AVX512CD-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; X86-AVX512CD-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
-; X86-AVX512CD-NEXT:    kmovw %k0, %eax
-; X86-AVX512CD-NEXT:    movzbl %al, %eax
-; X86-AVX512CD-NEXT:    vmovd %eax, %xmm0
-; X86-AVX512CD-NEXT:    vpbroadcastq %xmm0, %zmm0
-; X86-AVX512CD-NEXT:    retl
-;
-; X64-AVX512VLCDBW-LABEL: test_mm512_epi64:
-; X64-AVX512VLCDBW:       # %bb.0: # %entry
-; X64-AVX512VLCDBW-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0
-; X64-AVX512VLCDBW-NEXT:    vpbroadcastmb2q %k0, %zmm0
-; X64-AVX512VLCDBW-NEXT:    retq
-;
-; X86-AVX512VLCDBW-LABEL: test_mm512_epi64:
-; X86-AVX512VLCDBW:       # %bb.0: # %entry
-; X86-AVX512VLCDBW-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0
-; X86-AVX512VLCDBW-NEXT:    kmovd %k0, %eax
-; X86-AVX512VLCDBW-NEXT:    movzbl %al, %eax
-; X86-AVX512VLCDBW-NEXT:    vmovd %eax, %xmm0
-; X86-AVX512VLCDBW-NEXT:    vpbroadcastq %xmm0, %zmm0
-; X86-AVX512VLCDBW-NEXT:    retl
+; AVX512VLCDBW-LABEL: test_mm512_epi64:
+; AVX512VLCDBW:       # %bb.0: # %entry
+; AVX512VLCDBW-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0
+; AVX512VLCDBW-NEXT:    vpbroadcastmb2q %k0, %zmm0
+; AVX512VLCDBW-NEXT:    ret{{[l|q]}}
 entry:
   %0 = icmp eq <8 x i32> %a, %b
   %1 = bitcast <8 x i1> %0 to i8
@@ -156,20 +127,11 @@ define <4 x i64> @test_mm256_epi64(<8 x i32> %a, <8 x i32> %b) {
 ; X86-AVX512CD-NEXT:    vpbroadcastq %xmm0, %ymm0
 ; X86-AVX512CD-NEXT:    retl
 ;
-; X64-AVX512VLCDBW-LABEL: test_mm256_epi64:
-; X64-AVX512VLCDBW:       # %bb.0: # %entry
-; X64-AVX512VLCDBW-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0
-; X64-AVX512VLCDBW-NEXT:    vpbroadcastmb2q %k0, %ymm0
-; X64-AVX512VLCDBW-NEXT:    retq
-;
-; X86-AVX512VLCDBW-LABEL: test_mm256_epi64:
-; X86-AVX512VLCDBW:       # %bb.0: # %entry
-; X86-AVX512VLCDBW-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0
-; X86-AVX512VLCDBW-NEXT:    kmovd %k0, %eax
-; X86-AVX512VLCDBW-NEXT:    movzbl %al, %eax
-; X86-AVX512VLCDBW-NEXT:    vmovd %eax, %xmm0
-; X86-AVX512VLCDBW-NEXT:    vpbroadcastq %xmm0, %ymm0
-; X86-AVX512VLCDBW-NEXT:    retl
+; AVX512VLCDBW-LABEL: test_mm256_epi64:
+; AVX512VLCDBW:       # %bb.0: # %entry
+; AVX512VLCDBW-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0
+; AVX512VLCDBW-NEXT:    vpbroadcastmb2q %k0, %ymm0
+; AVX512VLCDBW-NEXT:    ret{{[l|q]}}
 entry:
   %0 = icmp eq <8 x i32> %a, %b
   %1 = bitcast <8 x i1> %0 to i8
