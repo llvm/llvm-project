@@ -869,6 +869,8 @@ def PointerToEnumCast : DiagGroup<"pointer-to-enum-cast",
 def PointerToIntCast : DiagGroup<"pointer-to-int-cast",
                                  [PointerToEnumCast, VoidPointerToIntCast]>;
 
+def FUseLdPath : DiagGroup<"fuse-ld-path">;
+
 def Move : DiagGroup<"move", [
     PessimizingMove,
     RedundantMove,
@@ -887,7 +889,8 @@ def Extra : DiagGroup<"extra", [
     UnusedParameter,
     NullPointerArithmetic,
     EmptyInitStatement,
-    StringConcatation
+    StringConcatation,
+    FUseLdPath,
   ]>;
 
 def Most : DiagGroup<"most", [
