@@ -49,7 +49,7 @@ void AddRunTimeLibs(const ToolChain &TC, const Driver &D,
                     llvm::opt::ArgStringList &CmdArgs,
                     const llvm::opt::ArgList &Args);
 
-const char *SplitDebugName(const llvm::opt::ArgList &Args,
+const char *SplitDebugName(const JobAction &JA, const llvm::opt::ArgList &Args,
                            const InputInfo &Input, const InputInfo &Output);
 
 void SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,

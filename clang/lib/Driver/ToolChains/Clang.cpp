@@ -4811,7 +4811,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     (isa<AssembleJobAction>(JA) || isa<CompileJobAction>(JA) ||
                      isa<BackendJobAction>(JA));
   if (SplitDWARF) {
-    const char *SplitDWARFOut = SplitDebugName(Args, Input, Output);
+    const char *SplitDWARFOut = SplitDebugName(JA, Args, Input, Output);
     CmdArgs.push_back("-split-dwarf-file");
     CmdArgs.push_back(SplitDWARFOut);
     if (DwarfFission == DwarfFissionKind::Split) {
@@ -7105,7 +7105,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   if (getDebugFissionKind(D, Args, A) == DwarfFissionKind::Split &&
       T.isOSBinFormatELF()) {
     CmdArgs.push_back("-split-dwarf-output");
-    CmdArgs.push_back(SplitDebugName(Args, Input, Output));
+    CmdArgs.push_back(SplitDebugName(JA, Args, Input, Output));
   }
 
   assert(Input.isFilename() && "Invalid input.");
