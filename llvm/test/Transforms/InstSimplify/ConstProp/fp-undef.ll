@@ -540,7 +540,7 @@ define <2 x double> @frem_undef_op0_constant_vec(<2 x double> %x) {
 
 define <2 x double> @maximum_nan_op0_vec_partial_undef_op1_undef(<2 x double> %x) {
 ; CHECK-LABEL: @maximum_nan_op0_vec_partial_undef_op1_undef(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double undef>
 ;
   %r = call <2 x double> @llvm.maximum.v2f64(<2 x double> <double 0x7ff8000000000000, double undef>, <2 x double> undef)
   ret <2 x double> %r
@@ -556,7 +556,7 @@ define <2 x double> @maximum_nan_op1_vec_partial_undef_op0_undef(<2 x double> %x
 
 define <2 x double> @minimum_nan_op0_vec_partial_undef_op1_undef(<2 x double> %x) {
 ; CHECK-LABEL: @minimum_nan_op0_vec_partial_undef_op1_undef(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double undef>
 ;
   %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> <double 0x7ff8000000000000, double undef>, <2 x double> undef)
   ret <2 x double> %r
@@ -572,7 +572,7 @@ define <2 x double> @minimum_nan_op1_vec_partial_undef_op0_undef(<2 x double> %x
 
 define <2 x double> @maxnum_nan_op0_vec_partial_undef_op1_undef(<2 x double> %x) {
 ; CHECK-LABEL: @maxnum_nan_op0_vec_partial_undef_op1_undef(
-; CHECK-NEXT:    ret <2 x double> undef
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double undef>
 ;
   %r = call <2 x double> @llvm.maxnum.v2f64(<2 x double> <double 0x7ff8000000000000, double undef>, <2 x double> undef)
   ret <2 x double> %r
@@ -588,7 +588,7 @@ define <2 x double> @maxnum_nan_op1_vec_partial_undef_op0_undef(<2 x double> %x)
 
 define <2 x double> @minnum_nan_op0_vec_partial_undef_op1_undef(<2 x double> %x) {
 ; CHECK-LABEL: @minnum_nan_op0_vec_partial_undef_op1_undef(
-; CHECK-NEXT:    ret <2 x double> undef
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double undef>
 ;
   %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> <double 0x7ff8000000000000, double undef>, <2 x double> undef)
   ret <2 x double> %r
