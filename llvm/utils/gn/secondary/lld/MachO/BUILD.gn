@@ -36,6 +36,7 @@ static_library("MachO2") {
     "Symbols.cpp",
     "SyntheticSections.cpp",
     "Target.cpp",
+    "UnwindInfoSection.cpp",
     "Writer.cpp",
   ]
 }
