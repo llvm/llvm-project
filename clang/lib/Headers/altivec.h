@@ -17092,6 +17092,33 @@ vec_expandm(vector unsigned __int128 __a) {
              vector unsigned long long                                         \
            : __builtin_altivec_vcntmbd((__a), (unsigned int)(__mp)))
 
+/* vec_gen[b|h|w|d|q]m */
+
+static __inline__ vector unsigned char __ATTRS_o_ai
+vec_genbm(unsigned long long __bm) {
+  return __builtin_altivec_mtvsrbm(__bm);
+}
+
+static __inline__ vector unsigned short __ATTRS_o_ai
+vec_genhm(unsigned long long __bm) {
+  return __builtin_altivec_mtvsrhm(__bm);
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_genwm(unsigned long long __bm) {
+  return __builtin_altivec_mtvsrwm(__bm);
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_gendm(unsigned long long __bm) {
+  return __builtin_altivec_mtvsrdm(__bm);
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_genqm(unsigned long long __bm) {
+  return __builtin_altivec_mtvsrqm(__bm);
+}
+
 /* vec_pdep */
 
 static __inline__ vector unsigned long long __ATTRS_o_ai

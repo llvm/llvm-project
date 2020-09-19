@@ -268,6 +268,71 @@ unsigned long long test_vec_cntm_ull(void) {
   return vec_cntm(vulla, 0);
 }
 
+vector unsigned char test_vec_genbm(void) {
+  // CHECK: @llvm.ppc.altivec.mtvsrbm(i64 %{{.+}})
+  // CHECK-NEXT: ret <16 x i8>
+  return vec_genbm(ulla);
+}
+
+vector unsigned char test_vec_genbm_imm(void) {
+  // CHECK: store i64 1
+  // CHECK: @llvm.ppc.altivec.mtvsrbm(i64 %{{.+}})
+  // CHECK-NEXT: ret <16 x i8>
+  return vec_genbm(1);
+}
+
+vector unsigned char test_vec_genbm_imm2(void) {
+  // CHECK: store i64 255
+  // CHECK: @llvm.ppc.altivec.mtvsrbm(i64 %{{.+}})
+  // CHECK-NEXT: ret <16 x i8>
+  return vec_genbm(255);
+}
+
+vector unsigned char test_vec_genbm_imm3(void) {
+  // CHECK: store i64 65535
+  // CHECK: @llvm.ppc.altivec.mtvsrbm(i64 %{{.+}})
+  // CHECK-NEXT: ret <16 x i8>
+  return vec_genbm(65535);
+}
+
+vector unsigned char test_vec_genbm_imm4(void) {
+  // CHECK: store i64 65536
+  // CHECK: @llvm.ppc.altivec.mtvsrbm(i64 %{{.+}})
+  // CHECK-NEXT: ret <16 x i8>
+  return vec_genbm(65536);
+}
+
+vector unsigned char test_vec_genbm_imm5(void) {
+  // CHECK: store i64 65546
+  // CHECK: @llvm.ppc.altivec.mtvsrbm(i64 %{{.+}})
+  // CHECK-NEXT: ret <16 x i8>
+  return vec_genbm(65546);
+}
+
+vector unsigned short test_vec_genhm(void) {
+  // CHECK: @llvm.ppc.altivec.mtvsrhm(i64 %{{.+}})
+  // CHECK-NEXT: ret <8 x i16>
+  return vec_genhm(ulla);
+}
+
+vector unsigned int test_vec_genwm(void) {
+  // CHECK: @llvm.ppc.altivec.mtvsrwm(i64 %{{.+}})
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_genwm(ulla);
+}
+
+vector unsigned long long test_vec_gendm(void) {
+  // CHECK: @llvm.ppc.altivec.mtvsrdm(i64 %{{.+}})
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_gendm(ulla);
+}
+
+vector unsigned __int128 test_vec_genqm(void) {
+  // CHECK: @llvm.ppc.altivec.mtvsrqm(i64 %{{.+}})
+  // CHECK-NEXT: ret <1 x i128>
+  return vec_genqm(ulla);
+}
+
 unsigned long long test_vgnb_1(void) {
   // CHECK: @llvm.ppc.altivec.vgnb(<1 x i128> %{{.+}}, i32 2)
   // CHECK-NEXT: ret i64
