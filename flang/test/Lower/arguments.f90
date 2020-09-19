@@ -21,3 +21,12 @@ end subroutine
 ! CHECK: }
 end program test1
 
+! CHECK-LABEL: func @_QPsub2
+function sub2(r)
+  real :: r(20)
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %arg0
+  ! CHECK: = fir.call @_QPf(%[[coor]]) : (!fir.ref<f32>) -> f32
+  sub2 = f(r(1))
+  ! CHECK: return %{{.*}} : f32
+end function sub2
+

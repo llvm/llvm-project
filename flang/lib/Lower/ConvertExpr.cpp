@@ -1265,11 +1265,13 @@ private:
 
   template <typename A>
   fir::ExtendedValue gen(const Fortran::evaluate::FunctionRef<A> &func) {
-    assert(func.GetType().has_value() && "function has no type");
+    if (!func.GetType().has_value())
+      mlir::emitError(getLoc(), "internal: a function must have a type");
     auto resTy = genType(*func.GetType());
     auto retVal = genProcedureRef(func, llvm::ArrayRef<mlir::Type>{resTy});
+    auto casted = builder.createConvert(getLoc(), resTy, fir::getBase(retVal));
     auto mem = builder.create<fir::AllocaOp>(getLoc(), resTy);
-    builder.create<fir::StoreOp>(getLoc(), fir::getBase(retVal), mem);
+    builder.create<fir::StoreOp>(getLoc(), casted, mem);
     return mem.getResult();
   }
 
@@ -1382,7 +1384,7 @@ private:
               Fortran::evaluate::UnwrapWholeSymbolDataRef(*expr)) {
         argVal = symMap.lookupSymbol(*argSymbol);
       } else {
-        auto exv = genval(*expr);
+        auto exv = genExtAddr(*expr);
         // FIXME: should use the box values, etc.
         argVal = fir::getBase(exv);
       }
@@ -1560,9 +1562,12 @@ private:
     if constexpr (inRefSet<std::decay_t<decltype(a)>>) {
       return gen(a);
     } else {
+      auto val = fir::getBase(genval(a));
+      // Functions are always referent.
+      if (val.getType().template isa<mlir::FunctionType>())
+        return val;
       // Since `a` is not itself a valid referent, determine its value and
       // create a temporary location for referencing.
-      auto val = fir::getBase(genval(a));
       auto mem = builder.create<fir::AllocaOp>(getLoc(), val.getType());
       builder.create<fir::StoreOp>(getLoc(), val, mem);
       return mem.getResult();
