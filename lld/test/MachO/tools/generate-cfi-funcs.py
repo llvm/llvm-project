@@ -4,6 +4,7 @@
 The purpose is to produce object-file test inputs to lld with a
 variety of compact unwind encodings.
 """
+from __future__ import print_function
 import random
 import argparse
 import string
@@ -18,7 +19,7 @@ saved_regs = ["%r15", "%r14", "%r13", "%r12", "%rbx"]
 saved_regs_combined = list(list(permutations(saved_regs, i))
                            for i in range(0,6))
 
-def print_function(name: str):
+def print_function(name):
   global lsda_odds
   have_lsda = (random.random() < lsda_odds)
   frame_size = random.randint(4, 64) * 16
@@ -32,41 +33,42 @@ def print_function(name: str):
   if func_size_high % 0x10 == 0:
     func_size_low += 1
 
-  print(f"""\
-### {name} regs={reg_count} frame={frame_size} lsda={have_lsda} size={func_size}
+  print("""\
+### %s regs=%d frame=%d lsda=%s size=%d
     .section __TEXT,__text,regular,pure_instructions
     .p2align 4, 0x90
-    .globl {name}
-{name}:
-    .cfi_startproc""")
+    .globl %s
+%s:
+    .cfi_startproc""" % (
+        name, reg_count, frame_size, have_lsda, func_size, name, name))
   if have_lsda:
     global lsda_n
     lsda_n += 1
-    print(f"""\
+    print("""\
     .cfi_personality 155, ___gxx_personality_v0
-    .cfi_lsda 16, Lexception{lsda_n}""")
-  print(f"""\
-    pushq %rbp
-    .cfi_def_cfa_offset {frame_size}
-    .cfi_offset %rbp, {frame_offset+(6*8)}
-    movq %rsp, %rbp
-    .cfi_def_cfa_register %rbp""")
+    .cfi_lsda 16, Lexception%d""" % lsda_n)
+  print("""\
+    pushq %%rbp
+    .cfi_def_cfa_offset %d
+    .cfi_offset %%rbp, %d
+    movq %%rsp, %%rbp
+    .cfi_def_cfa_register %%rbp""" % (frame_size, frame_offset + 6*8))
   for i in range(reg_count):
-    print(f".cfi_offset {regs_saved[i]}, {frame_offset+(i*8)}")
-  print(f"""\
-    .fill {func_size - 6}
-    popq %rbp
+    print(".cfi_offset %s, %d" % (regs_saved[i], frame_offset+(i*8)))
+  print("""\
+    .fill %d
+    popq %%rbp
     retq
     .cfi_endproc
-""")
+""" % (func_size - 6))
 
   if have_lsda:
-    print(f"""\
+    print("""\
     .section __TEXT,__gcc_except_tab
     .p2align 2
-Lexception{lsda_n}:
+Lexception%d:
     .space 0x10
-""")
+""" % lsda_n)
   return func_size
 
 def random_seed():
@@ -103,22 +105,22 @@ compact unwind entries, plus some more. The calculatation is sloppy.
   global lsda_odds
   lsda_odds = args.lsda / 100.0
 
-  print(f"""\
-### seed={args.seed} lsda={lsda_odds} p2align={p2align}
+  print("""\
+### seed=%s lsda=%f p2align=%d
     .section __TEXT,__text,regular,pure_instructions
-    .p2align {p2align}, 0x90
-""")
+    .p2align %d, 0x90
+""" % (args.seed, lsda_odds, p2align, p2align))
 
   size = 0
   base = (1 << p2align)
   if args.functions:
     for n in range(args.functions):
-      size += print_function(f"x{size+base:08x}")
+      size += print_function("x%08x" % (size+base))
   else:
     while size < (args.pages << 24):
-      size += print_function(f"x{size+base:08x}")
+      size += print_function("x%08x" % (size+base))
 
-  print(f"""\
+  print("""\
     .section __TEXT,__text,regular,pure_instructions
     .globl _main
     .p2align 4, 0x90
