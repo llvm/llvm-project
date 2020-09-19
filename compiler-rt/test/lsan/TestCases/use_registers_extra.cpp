@@ -6,7 +6,7 @@
 // RUN: %env_lsan_opts="" %run %t 2>&1
 
 // FIXME: Support more platforms.
-// REQUIRES: x86-target-arch
+// REQUIRES: x86-target-arch && linux
 
 #include "sanitizer_common/print_address.h"
 #include <assert.h>
