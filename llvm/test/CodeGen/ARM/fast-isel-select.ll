@@ -21,12 +21,14 @@ entry:
 define i32 @t2(i1 %c, i32 %a) nounwind readnone {
 entry:
 ; ARM: t2
-; ARM: tst {{r[0-9]+}}, #1
-; ARM: moveq {{r[0-9]+}}, #20
+; ARM: tst r0, #1
+; ARM: moveq r{{[1-9]}}, #20
+; ARM: mov r0, r{{[1-9]}}
 ; THUMB-LABEL: t2
-; THUMB: tst.w {{r[0-9]+}}, #1
+; THUMB: tst.w r0, #1
 ; THUMB: it eq
-; THUMB: moveq {{r[0-9]+}}, #20
+; THUMB: moveq r{{[1-9]}}, #20
+; THUMB: mov r0, r{{[1-9]}}
   %0 = select i1 %c, i32 %a, i32 20
   ret i32 %0
 }
@@ -41,7 +43,7 @@ entry:
 ; THUMB: tst.w r0, #1
 ; THUMB: it ne
 ; THUMB: movne r2, r1
-; THUMB: adds r0, r2, r1
+; THUMB: add.w r0, r2, r1
   %0 = select i1 %c, i32 %a, i32 %b
   %1 = add i32 %0, %a
   ret i32 %1
@@ -65,12 +67,14 @@ entry:
 define i32 @t5(i1 %c, i32 %a) nounwind readnone {
 entry:
 ; ARM: t5
-; ARM: tst {{r[0-9]+}}, #1
-; ARM: mvneq {{r[0-9]+}}, #1
+; ARM: tst r0, #1
+; ARM: mvneq r{{[1-9]}}, #1
+; ARM: mov r0, r{{[1-9]}}
 ; THUMB: t5
-; THUMB: tst.w {{r[0-9]+}}, #1
+; THUMB: tst.w r0, #1
 ; THUMB: it eq
-; THUMB: mvneq {{r[0-9]+}}, #1
+; THUMB: mvneq r{{[1-9]}}, #1
+; THUMB: mov r0, r{{[1-9]}}
   %0 = select i1 %c, i32 %a, i32 -2
   ret i32 %0
 }
@@ -79,12 +83,14 @@ entry:
 define i32 @t6(i1 %c, i32 %a) nounwind readnone {
 entry:
 ; ARM: t6
-; ARM: tst {{r[0-9]+}}, #1
-; ARM: mvneq {{r[0-9]+}}, #978944
+; ARM: tst r0, #1
+; ARM: mvneq r{{[1-9]}}, #978944
+; ARM: mov r0, r{{[1-9]}}
 ; THUMB: t6
-; THUMB: tst.w {{r[0-9]+}}, #1
+; THUMB: tst.w r0, #1
 ; THUMB: it eq
-; THUMB: mvneq {{r[0-9]+}}, #978944
+; THUMB: mvneq r{{[1-9]}}, #978944
+; THUMB: mov r0, r{{[1-9]}}
   %0 = select i1 %c, i32 %a, i32 -978945
   ret i32 %0
 }

@@ -9,8 +9,9 @@
 define void @prologue_end_test() nounwind uwtable !dbg !4 {
   ; CHECK: prologue_end_test:
   ; CHECK: .cfi_startproc
+  ; CHECK: sub sp, sp
   ; CHECK: stp x29, x30
-  ; CHECK: mov x29, sp
+  ; CHECK: add x29, sp
   ; CHECK: .loc 1 3 3 prologue_end
   ; CHECK: bl _func
   ; CHECK: bl _func

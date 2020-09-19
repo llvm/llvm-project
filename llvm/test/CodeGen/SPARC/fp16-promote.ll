@@ -124,12 +124,15 @@ define void @test_fptrunc_float(float %f, half* %p) nounwind {
 ;
 ; V8-UNOPT-LABEL: test_fptrunc_float:
 ; V8-UNOPT:       ! %bb.0:
-; V8-UNOPT-NEXT:    save %sp, -96, %sp
-; V8-UNOPT-NEXT:    mov %i0, %o0
-; V8-UNOPT-NEXT:    st %o0, [%fp+-4]
-; V8-UNOPT-NEXT:    call __gnu_f2h_ieee
+; V8-UNOPT-NEXT:    save %sp, -104, %sp
+; V8-UNOPT-NEXT:    st %i0, [%fp+-4]
 ; V8-UNOPT-NEXT:    ld [%fp+-4], %f0
-; V8-UNOPT-NEXT:    sth %o0, [%i1]
+; V8-UNOPT-NEXT:    mov %i0, %o0
+; V8-UNOPT-NEXT:    st %i1, [%fp+-8] ! 4-byte Folded Spill
+; V8-UNOPT-NEXT:    call __gnu_f2h_ieee
+; V8-UNOPT-NEXT:    st %f0, [%fp+-12]
+; V8-UNOPT-NEXT:    ld [%fp+-8], %i0 ! 4-byte Folded Reload
+; V8-UNOPT-NEXT:    sth %o0, [%i0]
 ; V8-UNOPT-NEXT:    ret
 ; V8-UNOPT-NEXT:    restore
 ;
@@ -173,19 +176,21 @@ define void @test_fptrunc_double(double %d, half* %p) nounwind {
 ; V8-UNOPT-LABEL: test_fptrunc_double:
 ; V8-UNOPT:       ! %bb.0:
 ; V8-UNOPT-NEXT:    save %sp, -112, %sp
-; V8-UNOPT-NEXT:    mov %i1, %i3
+; V8-UNOPT-NEXT:    ! implicit-def: $i4_i5
 ; V8-UNOPT-NEXT:    mov %i0, %i4
-; V8-UNOPT-NEXT:    ! implicit-def: $i0_i1
-; V8-UNOPT-NEXT:    mov %i4, %i0
-; V8-UNOPT-NEXT:    mov %i3, %i1
-; V8-UNOPT-NEXT:    std %i0, [%fp+-8]
+; V8-UNOPT-NEXT:    mov %i1, %i5
+; V8-UNOPT-NEXT:    std %i4, [%fp+-8]
 ; V8-UNOPT-NEXT:    ldd [%fp+-8], %f0
 ; V8-UNOPT-NEXT:    std %f0, [%fp+-16]
 ; V8-UNOPT-NEXT:    ldd [%fp+-16], %i0
-; V8-UNOPT-NEXT:    mov %i0, %o0
-; V8-UNOPT-NEXT:    call __truncdfhf2
+; V8-UNOPT-NEXT:    mov %i0, %i3
+; V8-UNOPT-NEXT:    ! kill: def $i1 killed $i1 killed $i0_i1
+; V8-UNOPT-NEXT:    mov %i3, %o0
 ; V8-UNOPT-NEXT:    mov %i1, %o1
-; V8-UNOPT-NEXT:    sth %o0, [%i2]
+; V8-UNOPT-NEXT:    call __truncdfhf2
+; V8-UNOPT-NEXT:    st %i2, [%fp+-20]
+; V8-UNOPT-NEXT:    ld [%fp+-20], %i0 ! 4-byte Folded Reload
+; V8-UNOPT-NEXT:    sth %o0, [%i0]
 ; V8-UNOPT-NEXT:    ret
 ; V8-UNOPT-NEXT:    restore
 ;
@@ -236,18 +241,21 @@ define void @test_fadd(half* %p, half* %q) nounwind {
 ;
 ; V8-UNOPT-LABEL: test_fadd:
 ; V8-UNOPT:       ! %bb.0:
-; V8-UNOPT-NEXT:    save %sp, -104, %sp
-; V8-UNOPT-NEXT:    call __gnu_h2f_ieee
+; V8-UNOPT-NEXT:    save %sp, -112, %sp
 ; V8-UNOPT-NEXT:    lduh [%i0], %o0
-; V8-UNOPT-NEXT:    st %f0, [%fp+-8] ! 4-byte Folded Spill
+; V8-UNOPT-NEXT:    st %i1, [%fp+-8] ! 4-byte Folded Spill
 ; V8-UNOPT-NEXT:    call __gnu_h2f_ieee
-; V8-UNOPT-NEXT:    lduh [%i1], %o0
-; V8-UNOPT-NEXT:    fmovs %f0, %f1
-; V8-UNOPT-NEXT:    ld [%fp+-8], %f0 ! 4-byte Folded Reload
-; V8-UNOPT-NEXT:    fadds %f0, %f1, %f0
+; V8-UNOPT-NEXT:    st %i0, [%fp+-12]
+; V8-UNOPT-NEXT:    ld [%fp+-8], %i0 ! 4-byte Folded Reload
+; V8-UNOPT-NEXT:    lduh [%i0], %o0
+; V8-UNOPT-NEXT:    call __gnu_h2f_ieee
+; V8-UNOPT-NEXT:    st %f0, [%fp+-16]
+; V8-UNOPT-NEXT:    ld [%fp+-16], %f1 ! 4-byte Folded Reload
+; V8-UNOPT-NEXT:    fadds %f1, %f0, %f0
 ; V8-UNOPT-NEXT:    st %f0, [%fp+-4]
 ; V8-UNOPT-NEXT:    call __gnu_f2h_ieee
 ; V8-UNOPT-NEXT:    ld [%fp+-4], %o0
+; V8-UNOPT-NEXT:    ld [%fp+-12], %i0 ! 4-byte Folded Reload
 ; V8-UNOPT-NEXT:    sth %o0, [%i0]
 ; V8-UNOPT-NEXT:    ret
 ; V8-UNOPT-NEXT:    restore
@@ -310,18 +318,21 @@ define void @test_fmul(half* %p, half* %q) nounwind {
 ;
 ; V8-UNOPT-LABEL: test_fmul:
 ; V8-UNOPT:       ! %bb.0:
-; V8-UNOPT-NEXT:    save %sp, -104, %sp
-; V8-UNOPT-NEXT:    call __gnu_h2f_ieee
+; V8-UNOPT-NEXT:    save %sp, -112, %sp
 ; V8-UNOPT-NEXT:    lduh [%i0], %o0
-; V8-UNOPT-NEXT:    st %f0, [%fp+-8] ! 4-byte Folded Spill
+; V8-UNOPT-NEXT:    st %i1, [%fp+-8] ! 4-byte Folded Spill
 ; V8-UNOPT-NEXT:    call __gnu_h2f_ieee
-; V8-UNOPT-NEXT:    lduh [%i1], %o0
-; V8-UNOPT-NEXT:    fmovs %f0, %f1
-; V8-UNOPT-NEXT:    ld [%fp+-8], %f0 ! 4-byte Folded Reload
-; V8-UNOPT-NEXT:    fmuls %f0, %f1, %f0
+; V8-UNOPT-NEXT:    st %i0, [%fp+-12]
+; V8-UNOPT-NEXT:    ld [%fp+-8], %i0 ! 4-byte Folded Reload
+; V8-UNOPT-NEXT:    lduh [%i0], %o0
+; V8-UNOPT-NEXT:    call __gnu_h2f_ieee
+; V8-UNOPT-NEXT:    st %f0, [%fp+-16]
+; V8-UNOPT-NEXT:    ld [%fp+-16], %f1 ! 4-byte Folded Reload
+; V8-UNOPT-NEXT:    fmuls %f1, %f0, %f0
 ; V8-UNOPT-NEXT:    st %f0, [%fp+-4]
 ; V8-UNOPT-NEXT:    call __gnu_f2h_ieee
 ; V8-UNOPT-NEXT:    ld [%fp+-4], %o0
+; V8-UNOPT-NEXT:    ld [%fp+-12], %i0 ! 4-byte Folded Reload
 ; V8-UNOPT-NEXT:    sth %o0, [%i0]
 ; V8-UNOPT-NEXT:    ret
 ; V8-UNOPT-NEXT:    restore
