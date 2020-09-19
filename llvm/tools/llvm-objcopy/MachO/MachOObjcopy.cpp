@@ -215,7 +215,7 @@ static Error processLoadCommands(const CopyConfig &Config, Object &Obj) {
                                "rpath " + RPath +
                                    " would create a duplicate load command");
     RPaths.insert(RPath);
-    Obj.addLoadCommand(buildRPathLoadCommand(RPath));
+    Obj.LoadCommands.push_back(buildRPathLoadCommand(RPath));
   }
 
   return Error::success();
