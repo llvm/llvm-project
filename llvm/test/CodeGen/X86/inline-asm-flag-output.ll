@@ -726,7 +726,7 @@ define i32 @test_ccnp(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #APP
 ; X32-NEXT:    cmp %ecx,(%esi)
 ; X32-NEXT:    #NO_APP
-; X32-NEXT:    setp %al
+; X32-NEXT:    setnp %al
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    retl
 ;
@@ -736,7 +736,7 @@ define i32 @test_ccnp(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
-; X64-NEXT:    setp %al
+; X64-NEXT:    setnp %al
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i32 asm "cmp $2,$1", "={@ccnp},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
