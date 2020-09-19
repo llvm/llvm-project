@@ -368,3 +368,17 @@ body:             |
     %2:_(<8 x s16>) = G_LSHR %0, %1
     $q0 = COPY %2
 ...
+---
+name: test_shl_v4i16
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_shl_v4i16
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
+    ; CHECK: [[SHL:%[0-9]+]]:_(<4 x s16>) = G_SHL [[COPY]], [[COPY1]](<4 x s16>)
+    ; CHECK: $d0 = COPY [[SHL]](<4 x s16>)
+    %0:_(<4 x s16>) = COPY $d0
+    %1:_(<4 x s16>) = COPY $d1
+    %2:_(<4 x s16>) = G_SHL %0, %1
+    $d0 = COPY %2
+...

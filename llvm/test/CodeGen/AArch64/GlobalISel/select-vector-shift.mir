@@ -351,3 +351,24 @@ body:             |
     RET_ReallyLR implicit $q0
 
 ...
+---
+name:            shl_v4i16
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $d0, $d1
+    ; CHECK-LABEL: name: shl_v4i16
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
+    ; CHECK: [[USHLv4i16_:%[0-9]+]]:fpr64 = USHLv4i16 [[COPY]], [[COPY1]]
+    ; CHECK: $d0 = COPY [[USHLv4i16_]]
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:fpr(<4 x s16>) = COPY $d0
+    %1:fpr(<4 x s16>) = COPY $d1
+    %2:fpr(<4 x s16>) = G_SHL %0, %1(<4 x s16>)
+    $d0 = COPY %2(<4 x s16>)
+    RET_ReallyLR implicit $d0
+...
