@@ -60,6 +60,7 @@ set(LLVM_TEST_DEPENDS
           llvm-ar
           llvm-as
           llvm-bcanalyzer
+          llvm-bitcode-strip
           llvm-c-test
           llvm-cat
           llvm-cfi-verify
