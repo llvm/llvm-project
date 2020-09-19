@@ -1054,22 +1054,28 @@ let Predicates = [IsISA3_1] in {
                                            v1i128:$vB))]>;
   def MTVSRBM : VXForm_RD5_XO5_RS5<1602, 16, (outs vrrc:$vD), (ins g8rc:$rB),
                                    "mtvsrbm $vD, $rB", IIC_VecGeneral,
-                                   []>;
+                                   [(set v16i8:$vD,
+                                         (int_ppc_altivec_mtvsrbm i64:$rB))]>;
   def MTVSRHM : VXForm_RD5_XO5_RS5<1602, 17, (outs vrrc:$vD), (ins g8rc:$rB),
                                    "mtvsrhm $vD, $rB", IIC_VecGeneral,
-                                   []>;
+                                   [(set v8i16:$vD,
+                                         (int_ppc_altivec_mtvsrhm i64:$rB))]>;
   def MTVSRWM : VXForm_RD5_XO5_RS5<1602, 18, (outs vrrc:$vD), (ins g8rc:$rB),
                                    "mtvsrwm $vD, $rB", IIC_VecGeneral,
-                                   []>;
+                                   [(set v4i32:$vD,
+                                         (int_ppc_altivec_mtvsrwm i64:$rB))]>;
   def MTVSRDM : VXForm_RD5_XO5_RS5<1602, 19, (outs vrrc:$vD), (ins g8rc:$rB),
                                    "mtvsrdm $vD, $rB", IIC_VecGeneral,
-                                   []>;
+                                   [(set v2i64:$vD,
+                                         (int_ppc_altivec_mtvsrdm i64:$rB))]>;
   def MTVSRQM : VXForm_RD5_XO5_RS5<1602, 20, (outs vrrc:$vD), (ins g8rc:$rB),
                                    "mtvsrqm $vD, $rB", IIC_VecGeneral,
-                                   []>;
+                                   [(set v1i128:$vD,
+                                         (int_ppc_altivec_mtvsrqm i64:$rB))]>;
   def MTVSRBMI : DXForm<4, 10, (outs vrrc:$vD), (ins u16imm64:$D),
                         "mtvsrbmi $vD, $D", IIC_VecGeneral,
-                        []>;
+                        [(set v16i8:$vD,
+                              (int_ppc_altivec_mtvsrbm imm:$D))]>;
   def VCNTMBB : VXForm_RD5_MP_VB5<1602, 12, (outs g8rc:$rD),
                                   (ins vrrc:$vB, u1imm:$MP),
                                   "vcntmbb $rD, $vB, $MP", IIC_VecGeneral,

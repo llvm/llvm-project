@@ -335,6 +335,13 @@ BUILTIN(__builtin_altivec_vcntmbh, "ULLiV8UsUi", "")
 BUILTIN(__builtin_altivec_vcntmbw, "ULLiV4UiUi", "")
 BUILTIN(__builtin_altivec_vcntmbd, "ULLiV2ULLiUi", "")
 
+// P10 Move to VSR with Mask built-ins.
+BUILTIN(__builtin_altivec_mtvsrbm, "V16UcULLi", "")
+BUILTIN(__builtin_altivec_mtvsrhm, "V8UsULLi", "")
+BUILTIN(__builtin_altivec_mtvsrwm, "V4UiULLi", "")
+BUILTIN(__builtin_altivec_mtvsrdm, "V2ULLiULLi", "")
+BUILTIN(__builtin_altivec_mtvsrqm, "V1ULLLiULLi", "")
+
 // P10 Vector Parallel Bits built-ins.
 BUILTIN(__builtin_altivec_vpdepd, "V2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vpextd, "V2ULLiV2ULLiV2ULLi", "")
