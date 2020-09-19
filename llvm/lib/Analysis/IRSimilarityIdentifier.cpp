@@ -20,8 +20,9 @@
 using namespace llvm;
 using namespace IRSimilarity;
 
-IRInstructionData::IRInstructionData(Instruction &I, bool Legality)
-    : Inst(&I), Legal(Legality) {
+IRInstructionData::IRInstructionData(Instruction &I, bool Legality,
+                                     IRInstructionDataList &IDList)
+    : Inst(&I), Legal(Legality), IDL(&IDList) {
   // Here we collect the operands to be used to determine whether two
   // instructions are similar to one another.
   for (Use &OI : I.operands())
@@ -63,6 +64,8 @@ void IRInstructionMapper::convertToUnsignedVec(
 
   if (HaveLegalRange) {
     mapToIllegalUnsigned(It, IntegerMappingForBB, InstrListForBB, true);
+    for_each(InstrListForBB,
+             [this](IRInstructionData *ID) { this->IDL->push_back(*ID); });
     InstrList.insert(InstrList.end(), InstrListForBB.begin(),
                      InstrListForBB.end());
     IntegerMapping.insert(IntegerMapping.end(), IntegerMappingForBB.begin(),
@@ -87,7 +90,7 @@ unsigned IRInstructionMapper::mapToLegalUnsigned(
 
   // Get the integer for this instruction or give it the current
   // LegalInstrNumber.
-  IRInstructionData *ID = allocateIRInstructionData(*It, true);
+  IRInstructionData *ID = allocateIRInstructionData(*It, true, *IDL);
   InstrListForBB.push_back(ID);
 
   // Add to the instruction list
@@ -117,8 +120,14 @@ unsigned IRInstructionMapper::mapToLegalUnsigned(
 }
 
 IRInstructionData *
-IRInstructionMapper::allocateIRInstructionData(Instruction &I, bool Legality) {
-  return new (InstDataAllocator->Allocate()) IRInstructionData(I, Legality);
+IRInstructionMapper::allocateIRInstructionData(Instruction &I, bool Legality,
+                                               IRInstructionDataList &IDL) {
+  return new (InstDataAllocator->Allocate()) IRInstructionData(I, Legality, IDL);
+}
+
+IRInstructionDataList *
+IRInstructionMapper::allocateIRInstructionDataList() {
+  return new (IDLAllocator->Allocate()) IRInstructionDataList();
 }
 
 // TODO: This is the same as the MachineOutliner, and should be consolidated
@@ -135,7 +144,7 @@ unsigned IRInstructionMapper::mapToIllegalUnsigned(
 
   IRInstructionData *ID = nullptr;
   if (!End)
-    ID = allocateIRInstructionData(*It, false);
+    ID = allocateIRInstructionData(*It, false, *IDL);
   InstrListForBB.push_back(ID);
 
   // Remember that we added an illegal number last time.
