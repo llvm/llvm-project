@@ -98,13 +98,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder(G_SHL)
-      .legalFor({{s32, s32},
-                 {s64, s64},
-                 {v2s32, v2s32},
-                 {v4s32, v4s32},
-                 {v2s64, v2s64},
-                 {v16s8, v16s8},
-                 {v8s16, v8s16}})
+      .legalFor({
+          {s32, s32},
+          {s64, s64},
+          {v16s8, v16s8},
+          {v4s16, v4s16},
+          {v8s16, v8s16},
+          {v2s32, v2s32},
+          {v4s32, v4s32},
+          {v2s64, v2s64},
+
+      })
       .clampScalar(1, s32, s64)
       .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0)
