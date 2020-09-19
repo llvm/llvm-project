@@ -28,6 +28,9 @@ set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   Option
   )
+  
+include(${CMAKE_CURRENT_SOURCE_DIR}/quality/CompletionModel.cmake)
+gen_decision_forest(${CMAKE_CURRENT_SOURCE_DIR}/quality/model CompletionModel clang::clangd::Example)
 
 if(MSVC AND NOT CLANG_CL)
  set_source_files_properties(CompileCommands.cpp PROPERTIES COMPILE_FLAGS -wd4130) # disables C4130: logical operation on address of string constant
@@ -77,6 +80,7 @@ add_clang_library(clangDaemon
   TUScheduler.cpp
   URI.cpp
   XRefs.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/CompletionModel.cpp
 
   index/Background.cpp
   index/BackgroundIndexLoader.cpp
@@ -116,6 +120,11 @@ add_clang_library(clangDaemon
   DEPENDS
   omp_gen
   )
+
+# Include generated CompletionModel headers.
+target_include_directories(clangDaemon PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+)
 
 clang_target_link_libraries(clangDaemon
   PRIVATE
