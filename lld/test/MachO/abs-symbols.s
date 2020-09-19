@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem %t.o -o %t
+# RUN: %lld -lSystem %t.o -o %t
 # RUN: llvm-objdump --macho --syms --exports-trie %t | FileCheck %s
 
 # CHECK-LABEL: SYMBOL TABLE:

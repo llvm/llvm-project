@@ -7,7 +7,7 @@
 ## far-out edge case that should be safe to ignore.
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: not lld -flavor darwinnew -dylib %t.o -o %t.dylib 2>&1 | FileCheck %s
+# RUN: not %lld -dylib %t.o -o %t.dylib 2>&1 | FileCheck %s
 # CHECK: error: found defined symbol with illegal name ___dso_handle
 
 .globl _main, ___dso_handle
