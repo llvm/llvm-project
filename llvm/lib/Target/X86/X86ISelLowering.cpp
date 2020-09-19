@@ -38084,7 +38084,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     // Low bits known zero.
     Known.Zero.setLowBits(ShAmt);
-    break;
+    return false;
   }
   case X86ISD::VSRLI: {
     unsigned ShAmt = Op.getConstantOperandVal(1);
@@ -38103,7 +38103,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     // High bits known zero.
     Known.Zero.setHighBits(ShAmt);
-    break;
+    return false;
   }
   case X86ISD::VSRAI: {
     SDValue Op0 = Op.getOperand(0);
@@ -38152,7 +38152,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     // High bits are known one.
     if (Known.One[BitWidth - ShAmt - 1])
       Known.One.setHighBits(ShAmt);
-    break;
+    return false;
   }
   case X86ISD::PEXTRB:
   case X86ISD::PEXTRW: {
