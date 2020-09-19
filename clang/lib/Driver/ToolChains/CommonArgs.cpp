@@ -902,15 +902,23 @@ bool tools::areOptimizationsEnabled(const ArgList &Args) {
   return false;
 }
 
-const char *tools::SplitDebugName(const ArgList &Args, const InputInfo &Input,
+const char *tools::SplitDebugName(const JobAction &JA, const ArgList &Args,
+                                  const InputInfo &Input,
                                   const InputInfo &Output) {
+  // Adds '_' and GPU arch to the stem of .dwo file for HIP, which is
+  // expected by gdb.
+  auto AddPostfix = [JA](auto &F) {
+    if (JA.getOffloadingDeviceKind() == Action::OFK_HIP)
+      F += (Twine("_") + JA.getOffloadingArch()).str();
+  };
   if (Arg *A = Args.getLastArg(options::OPT_gsplit_dwarf_EQ))
     if (StringRef(A->getValue()) == "single")
       return Args.MakeArgString(Output.getFilename());
 
   Arg *FinalOutput = Args.getLastArg(options::OPT_o);
   if (FinalOutput && Args.hasArg(options::OPT_c)) {
-    SmallString<128> T(FinalOutput->getValue());
+    SmallString<128> T(llvm::sys::path::stem(FinalOutput->getValue()));
+    AddPostfix(T);
     llvm::sys::path::replace_extension(T, "dwo");
     return Args.MakeArgString(T);
   } else {
@@ -918,6 +926,7 @@ const char *tools::SplitDebugName(const ArgList &Args, const InputInfo &Input,
     SmallString<128> T(
         Args.getLastArgValue(options::OPT_fdebug_compilation_dir));
     SmallString<128> F(llvm::sys::path::stem(Input.getBaseInput()));
+    AddPostfix(F);
     llvm::sys::path::replace_extension(F, "dwo");
     T += F;
     return Args.MakeArgString(F);

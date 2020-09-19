@@ -55,7 +55,7 @@ void tools::MinGW::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_gsplit_dwarf))
     SplitDebugInfo(getToolChain(), C, *this, JA, Args, Output,
-                   SplitDebugName(Args, Inputs[0], Output));
+                   SplitDebugName(JA, Args, Inputs[0], Output));
 }
 
 void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
