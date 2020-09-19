@@ -49954,7 +49954,7 @@ static X86::CondCode parseConstraintCode(llvm::StringRef Constraint) {
                            .Case("{@ccnl}", X86::COND_GE)
                            .Case("{@ccnle}", X86::COND_G)
                            .Case("{@ccno}", X86::COND_NO)
-                           .Case("{@ccnp}", X86::COND_P)
+                           .Case("{@ccnp}", X86::COND_NP)
                            .Case("{@ccns}", X86::COND_NS)
                            .Case("{@cco}", X86::COND_O)
                            .Case("{@ccp}", X86::COND_P)
