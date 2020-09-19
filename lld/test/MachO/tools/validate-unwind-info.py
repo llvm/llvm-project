@@ -3,6 +3,7 @@
 """Validate compact unwind info by cross checking the llvm-objdump
 reports of the input object file vs final linked output.
 """
+from __future__ import print_function
 import sys
 import argparse
 import re
@@ -25,11 +26,11 @@ def main():
 
   object_encodings_list = [(symbol, encoding, personality, lsda)
     for symbol, encoding, personality, lsda in
-    re.findall(rf"start:\s+0x{hex}+\s+(\w+)\s+" +
-               rf"length:\s+0x{hex}+\s+" +
-               rf"compact encoding:\s+0x({hex}+)(?:\s+" +
-               rf"personality function:\s+0x({hex}+)\s+\w+\s+" +
-               rf"LSDA:\s+0x({hex}+)\s+\w+(?: \+ 0x{hex}+)?)?",
+    re.findall(r"start:\s+0x%s+\s+(\w+)\s+" % hex +
+               r"length:\s+0x%s+\s+" % hex +
+               r"compact encoding:\s+0x(%s+)(?:\s+" % hex +
+               r"personality function:\s+0x(%s+)\s+\w+\s+" % hex +
+               r"LSDA:\s+0x(%s+)\s+\w+(?: \+ 0x%s+)?)?" % (hex, hex),
                objdump_string, re.DOTALL)]
   object_encodings_map = {symbol:encoding
     for symbol, encoding, _, _ in object_encodings_list}
@@ -38,21 +39,21 @@ def main():
 
   program_symbols_map = {address:symbol
     for address, symbol in
-    re.findall(rf"^{hex8}({hex8}) g\s+F __TEXT,__text (x\1)$",
+    re.findall(r"^%s(%s) g\s+F __TEXT,__text (x\1)$" % (hex8, hex8),
                objdump_string, re.MULTILINE)}
   if not program_symbols_map:
     sys.exit("no program symbols found in input")
 
   program_common_encodings = (
-    re.findall(rf"^\s+encoding\[\d+\]: 0x({hex}+)$",
+    re.findall(r"^\s+encoding\[\d+\]: 0x(%s+)$" % hex,
                objdump_string, re.MULTILINE))
   if not program_common_encodings:
     sys.exit("no common encodings found in input")
 
   program_encodings_map = {program_symbols_map[address]:encoding
     for address, encoding in
-    re.findall(rf"^\s+\[\d+\]: function offset=0x({hex}+), " +
-               rf"encoding\[\d+\]=0x({hex}+)$",
+    re.findall(r"^\s+\[\d+\]: function offset=0x(%s+), " % hex +
+               r"encoding\[\d+\]=0x(%s+)$" % hex,
                objdump_string, re.MULTILINE)}
   if not object_encodings_map:
     sys.exit("no program encodings found in input")
@@ -66,13 +67,14 @@ def main():
     if fold:
       del object_encodings_map[symbol]
     if args.debug:
-      print(f"{'delete' if fold else 'retain'} {symbol} with {encoding}")
+      print("%s %s with %s" % (
+              'delete' if fold else 'retain', symbol, encoding))
     encoding0 = encoding
 
   if program_encodings_map != object_encodings_map:
     if args.debug:
-      pprint(f"program encodings map:\n{program_encodings_map}")
-      pprint(f"object encodings map:\n{object_encodings_map}")
+      pprint("program encodings map:\n" + program_encodings_map)
+      pprint("object encodings map:\n" + object_encodings_map)
     sys.exit("encoding maps differ")
 
   # Count frequency of object-file folded encodings
@@ -87,8 +89,8 @@ def main():
 
   if program_common_encodings != encoding_frequencies:
     if args.debug:
-      pprint(f"program common encodings:\n{program_common_encodings}")
-      pprint(f"object encoding frequencies:\n{encoding_frequencies}")
+      pprint("program common encodings:\n" + program_common_encodings)
+      pprint("object encoding frequencies:\n" + encoding_frequencies)
     sys.exit("encoding frequencies differ")
 
 
