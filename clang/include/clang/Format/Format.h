@@ -2523,7 +2523,8 @@ struct FormatStyle {
 private:
   FormatStyleSet StyleSet;
 
-  friend std::error_code parseConfiguration(StringRef Text, FormatStyle *Style);
+  friend std::error_code parseConfiguration(StringRef Text, FormatStyle *Style,
+                                            bool AllowUnknownOptions);
 };
 
 /// Returns a format style complying with the LLVM coding standards:
@@ -2578,7 +2579,11 @@ bool getPredefinedStyle(StringRef Name, FormatStyle::LanguageKind Language,
 ///
 /// When ``BasedOnStyle`` is not present, options not present in the YAML
 /// document, are retained in \p Style.
-std::error_code parseConfiguration(StringRef Text, FormatStyle *Style);
+///
+/// If AllowUnknownOptions is true, no errors are emitted if unknown
+/// format options are occured.
+std::error_code parseConfiguration(StringRef Text, FormatStyle *Style,
+                                   bool AllowUnknownOptions = false);
 
 /// Gets configuration in a YAML string.
 std::string configurationAsText(const FormatStyle &Style);
@@ -2715,6 +2720,9 @@ extern const char *DefaultFallbackStyle;
 /// language if the filename isn't sufficient.
 /// \param[in] FS The underlying file system, in which the file resides. By
 /// default, the file system is the real file system.
+/// \param[in] AllowUnknownOptions If true, unknown format options only
+///             emit a warning. If false, errors are emitted on unknown format
+///             options.
 ///
 /// \returns FormatStyle as specified by ``StyleName``. If ``StyleName`` is
 /// "file" and no file is found, returns ``FallbackStyle``. If no style could be
@@ -2722,7 +2730,8 @@ extern const char *DefaultFallbackStyle;
 llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
                                      StringRef FallbackStyle,
                                      StringRef Code = "",
-                                     llvm::vfs::FileSystem *FS = nullptr);
+                                     llvm::vfs::FileSystem *FS = nullptr,
+                                     bool AllowUnknownOptions = false);
 
 // Guesses the language from the ``FileName`` and ``Code`` to be formatted.
 // Defaults to FormatStyle::LK_Cpp.

@@ -16315,9 +16315,12 @@ TEST(FormatStyle, GetStyleOfFile) {
                                                   "InvalidKey: InvalidValue")));
   ASSERT_TRUE(
       FS.addFile("/d/test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("int i;")));
-  auto Style7 = getStyle("file", "/d/.clang-format", "LLVM", "", &FS);
-  ASSERT_FALSE((bool)Style7);
-  llvm::consumeError(Style7.takeError());
+  auto Style7a = getStyle("file", "/d/.clang-format", "LLVM", "", &FS);
+  ASSERT_FALSE((bool)Style7a);
+  llvm::consumeError(Style7a.takeError());
+
+  auto Style7b = getStyle("file", "/d/.clang-format", "LLVM", "", &FS, true);
+  ASSERT_TRUE((bool)Style7b);
 
   // Test 8: inferred per-language defaults apply.
   auto StyleTd = getStyle("file", "x.td", "llvm", "", &FS);

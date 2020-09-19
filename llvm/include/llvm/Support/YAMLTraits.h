@@ -789,6 +789,7 @@ public:
   virtual NodeKind getNodeKind() = 0;
 
   virtual void setError(const Twine &) = 0;
+  virtual void setAllowUnknownKeys(bool Allow);
 
   template <typename T>
   void enumCase(T &Val, const char* Str, const T ConstVal) {
@@ -1495,6 +1496,9 @@ private:
   void setError(HNode *hnode, const Twine &message);
   void setError(Node *node, const Twine &message);
 
+  void reportWarning(HNode *hnode, const Twine &message);
+  void reportWarning(Node *hnode, const Twine &message);
+
 public:
   // These are only used by operator>>. They could be private
   // if those templated things could be made friends.
@@ -1503,6 +1507,8 @@ public:
 
   /// Returns the current node that's being parsed by the YAML Parser.
   const Node *getCurrentNode() const;
+
+  void setAllowUnknownKeys(bool Allow) override;
 
 private:
   SourceMgr                           SrcMgr; // must be before Strm
@@ -1514,6 +1520,7 @@ private:
   std::vector<bool>                   BitValuesUsed;
   HNode *CurrentNode = nullptr;
   bool                                ScalarMatchFound = false;
+  bool AllowUnknownKeys = false;
 };
 
 ///
