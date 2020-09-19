@@ -68,7 +68,9 @@ using namespace lld::macho;
 // TODO(gkm): how do we align the 2nd-level pages?
 
 UnwindInfoSection::UnwindInfoSection()
-    : SyntheticSection(segment_names::text, section_names::unwindInfo) {}
+    : SyntheticSection(segment_names::text, section_names::unwindInfo) {
+  align = WordSize; // TODO(gkm): make this 4 KiB ?
+}
 
 bool UnwindInfoSection::isNeeded() const {
   return (compactUnwindSection != nullptr);
