@@ -1,3 +1,4 @@
+import("//clang-tools-extra/clangd/quality/gen_decision_forest.gni")
 import("//clang-tools-extra/clangd/xpc/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 
@@ -20,10 +21,17 @@ write_cmake_config("features") {
   public_configs = [ ":features_config" ]
 }
 
+gen_decision_forest("CompletionModel") {
+  model = "quality/model"
+  filename = "CompletionModel"
+  cpp_class = "clang::clangd::Example"
+}
+
 static_library("clangd") {
   output_name = "clangDaemon"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":CompletionModel",
     ":features",
     "//clang-tools-extra/clang-tidy",
     "//clang-tools-extra/clang-tidy:all-checks",
