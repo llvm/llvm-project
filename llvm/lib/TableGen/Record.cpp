@@ -2112,9 +2112,11 @@ void Record::setName(Init *NewName) {
 
 void Record::getDirectSuperClasses(SmallVectorImpl<Record *> &Classes) const {
   ArrayRef<std::pair<Record *, SMRange>> SCs = getSuperClasses();
+
+  // Superclasses are in post-order, so the final one is a direct
+  // superclass. All of its transitive superclases immediately precede it,
+  // so we can step through the direct superclasses in reverse order.
   while (!SCs.empty()) {
-    // Superclasses are in reverse preorder, so 'back' is a direct superclass,
-    // and its transitive superclasses are directly preceding it.
     Record *SC = SCs.back().first;
     SCs = SCs.drop_back(1 + SC->getSuperClasses().size());
     Classes.push_back(SC);
