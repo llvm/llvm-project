@@ -20,10 +20,13 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Verifier.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
+
+using namespace PatternMatch;
 
 // We use this fixture to ensure that we clean up ScalarEvolution before
 // deleting the PassManager.
@@ -915,6 +918,55 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
   TestNoCanonicalIV(GetAR5);
   TestNarrowCanonicalIV(GetAR5);
   TestMatchingCanonicalIV(GetAR5, ARBitWidth);
+}
+
+TEST_F(ScalarEvolutionExpanderTest, ExpandNonIntegralPtrWithNullBase) {
+  LLVMContext C;
+  SMDiagnostic Err;
+
+  std::unique_ptr<Module> M =
+      parseAssemblyString("target datalayout = "
+                          "\"e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:"
+                          "128-n8:16:32:64-S128-ni:1-p2:32:8:8:32-ni:2\""
+                          "define float addrspace(1)* @test(i64 %offset) { "
+                          "  %ptr = getelementptr inbounds float, float "
+                          "addrspace(1)* null, i64 %offset"
+                          "  ret float addrspace(1)* %ptr"
+                          "}",
+                          Err, C);
+
+  assert(M && "Could not parse module?");
+  assert(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "test", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto &I = GetInstByName(F, "ptr");
+    auto PtrPlus1 =
+        SE.getAddExpr(SE.getSCEV(&I), SE.getConstant(I.getType(), 1));
+    SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+
+    Value *V = Exp.expandCodeFor(PtrPlus1, I.getType(), &I);
+    I.replaceAllUsesWith(V);
+
+    // Check the expander created bitcast (gep i8* null, %offset).
+    auto *Cast = dyn_cast<BitCastInst>(V);
+    EXPECT_TRUE(Cast);
+    EXPECT_EQ(Cast->getType(), I.getType());
+    auto *GEP = dyn_cast<GetElementPtrInst>(Cast->getOperand(0));
+    EXPECT_TRUE(GEP);
+    EXPECT_TRUE(cast<Constant>(GEP->getPointerOperand())->isNullValue());
+    EXPECT_EQ(cast<PointerType>(GEP->getPointerOperand()->getType())
+                  ->getAddressSpace(),
+              cast<PointerType>(I.getType())->getAddressSpace());
+
+    // Check the expander created the expected index computation: add (shl
+    // %offset, 2), 1.
+    Value *Arg;
+    EXPECT_TRUE(
+        match(GEP->getOperand(1),
+              m_Add(m_Shl(m_Value(Arg), m_SpecificInt(2)), m_SpecificInt(1))));
+    EXPECT_EQ(Arg, &*F.arg_begin());
+    EXPECT_FALSE(verifyFunction(F, &errs()));
+  });
 }
 
 } // end namespace llvm
