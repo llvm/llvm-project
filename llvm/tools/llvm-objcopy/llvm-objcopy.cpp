@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm-objcopy.h"
 #include "Buffer.h"
 #include "COFF/COFFObjcopy.h"
 #include "CopyConfig.h"
@@ -56,36 +55,6 @@ namespace objcopy {
 
 // The name this program was invoked as.
 StringRef ToolName;
-
-LLVM_ATTRIBUTE_NORETURN void error(Twine Message) {
-  WithColor::error(errs(), ToolName) << Message << "\n";
-  exit(1);
-}
-
-LLVM_ATTRIBUTE_NORETURN void error(Error E) {
-  assert(E);
-  std::string Buf;
-  raw_string_ostream OS(Buf);
-  logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
-  WithColor::error(errs(), ToolName) << Buf;
-  exit(1);
-}
-
-LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, std::error_code EC) {
-  assert(EC);
-  error(createFileError(File, EC));
-}
-
-LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
-  assert(E);
-  std::string Buf;
-  raw_string_ostream OS(Buf);
-  logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
-  WithColor::error(errs(), ToolName) << "'" << File << "': " << Buf;
-  exit(1);
-}
 
 ErrorSuccess reportWarning(Error E) {
   assert(E);
