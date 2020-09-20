@@ -2374,7 +2374,7 @@ BoUpSLP::~BoUpSLP() {
 void BoUpSLP::eraseInstructions(ArrayRef<Value *> AV) {
   for (auto *V : AV) {
     if (auto *I = dyn_cast<Instruction>(V))
-      eraseInstruction(I, /*ReplaceWithUndef=*/true);
+      eraseInstruction(I, /*ReplaceOpsWithUndef=*/true);
   };
 }
 

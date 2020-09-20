@@ -446,7 +446,7 @@ Register FastISel::materializeConstant(const Value *V, MVT VT) {
             getRegForValue(ConstantInt::get(V->getContext(), SIntVal));
         if (IntegerReg)
           Reg = fastEmit_r(IntVT.getSimpleVT(), VT, ISD::SINT_TO_FP, IntegerReg,
-                           /*Kill=*/false);
+                           /*Op0IsKill=*/false);
       }
     }
   } else if (const auto *Op = dyn_cast<Operator>(V)) {
@@ -1789,13 +1789,13 @@ bool FastISel::selectFNeg(const User *I, const Value *In) {
     return false;
 
   Register IntResultReg = fastEmit_ri_(
-      IntVT.getSimpleVT(), ISD::XOR, IntReg, /*IsKill=*/true,
+      IntVT.getSimpleVT(), ISD::XOR, IntReg, /*Op0IsKill=*/true,
       UINT64_C(1) << (VT.getSizeInBits() - 1), IntVT.getSimpleVT());
   if (!IntResultReg)
     return false;
 
   ResultReg = fastEmit_r(IntVT.getSimpleVT(), VT.getSimpleVT(), ISD::BITCAST,
-                         IntResultReg, /*IsKill=*/true);
+                         IntResultReg, /*Op0IsKill=*/true);
   if (!ResultReg)
     return false;
 
