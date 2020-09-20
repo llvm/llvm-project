@@ -1,8 +1,20 @@
 # Make sure "llvm-profdata show" works for sample profile in binary compact format
 
-# RUN: llvm-profdata show -sample %S/Inputs/compat-sample.profdata  | FileCheck %s 
+# RUN: llvm-profdata show -sample %S/Inputs/compat-sample.profdata | FileCheck %s
 
-# CHECK: Function: 15822663052811949562: 17, 0, 6 sampled lines 
+# CHECK: Function: 15822663052811949562: 17, 0, 6 sampled lines
 # CHECK-NEXT: Samples collected in the function's body {
 # CHECK: Samples collected in inlined callsites {
 # CHECK-NEXT: 1: inlined callee: 6309742469962978389: 17, 0, 1
+
+# RUN: llvm-profdata show -hot-func-list -sample %S/Inputs/compat-sample.profdata | FileCheck %s --check-prefix=HOTFUNC
+# HOTFUNC:      24753993 out of 24754010 profile counts (100.00%) are from hot functions.
+# HOTFUNC:       Total sample (%)       Max sample        Entry sample    Function name
+# HOTFUNC-NEXT:  24753993 (100.00%)     1284671           1284671         16429767378996342100
+
+# Make sure "llvm-profdata overlap" works for sample profile in binary compact format
+# RUN: llvm-profdata overlap -sample %S/Inputs/compat-sample.profdata %S/Inputs/compat-sample.profdata | FileCheck %s --check-prefix=OVERLAP
+
+# OVERLAP:      Program level:
+# OVERLAP-NEXT:   Whole program profile similarity: 100.000%
+# OVERLAP-NEXT:   Whole program sample overlap: 100.000%
