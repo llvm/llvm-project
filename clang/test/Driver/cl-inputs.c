@@ -32,7 +32,9 @@
 // WARN-NOT: note
 
 // MSYS2_ARG_CONV_EXCL tells MSYS2 to skip conversion of the specified argument.
-// RUN: env LIB=%S/Inputs/cl-libs MSYS2_ARG_CONV_EXCL="/TP;/c" %clang_cl /c /TP cl-test.lib -### 2>&1 | FileCheck -check-prefix=TPlib %s
+// Add a dummy "other" entry to the path as well, to check that it's split
+// around semicolons even on unix.
+// RUN: env LIB="other;%S/Inputs/cl-libs" MSYS2_ARG_CONV_EXCL="/TP;/c" %clang_cl /c /TP cl-test.lib -### 2>&1 | FileCheck -check-prefix=TPlib %s
 // TPlib: warning: cl-test.lib: 'linker' input unused
 // TPlib: warning: argument unused during compilation: '/TP'
 // TPlib-NOT: cl-test.lib
