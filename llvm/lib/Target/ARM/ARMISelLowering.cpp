@@ -13448,6 +13448,12 @@ static SDValue PerformVMOVrhCombine(SDNode *N,
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
+  // fold (VMOVrh (fpconst x)) -> const x
+  if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N0)) {
+    APFloat V = C->getValueAPF();
+    return DCI.DAG.getConstant(V.bitcastToAPInt().getZExtValue(), SDLoc(N), VT);
+  }
+
   // fold (VMOVrh (load x)) -> (zextload (i16*)x)
   if (ISD::isNormalLoad(N0.getNode()) && N0.hasOneUse()) {
     LoadSDNode *LN0 = cast<LoadSDNode>(N0);
