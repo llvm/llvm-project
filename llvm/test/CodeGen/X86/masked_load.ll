@@ -6504,8 +6504,7 @@ define <2 x i64> @mload_constmask_v2i64(<2 x i64>* %addr, <2 x i64> %dst) {
 ; X86-AVX512-LABEL: mload_constmask_v2i64:
 ; X86-AVX512:       ## %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    vpinsrd $2, 8(%eax), %xmm0, %xmm0
-; X86-AVX512-NEXT:    vpinsrd $3, 12(%eax), %xmm0, %xmm0
+; X86-AVX512-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; X86-AVX512-NEXT:    retl
   %res = call <2 x i64> @llvm.masked.load.v2i64.p0v2i64(<2 x i64>* %addr, i32 4, <2 x i1> <i1 0, i1 1>, <2 x i64> %dst)
   ret <2 x i64> %res
@@ -7109,10 +7108,9 @@ define <4 x i64> @load_one_mask_bit_set3(<4 x i64>* %addr, <4 x i64> %val) {
 ; X86-AVX512-LABEL: load_one_mask_bit_set3:
 ; X86-AVX512:       ## %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X86-AVX512-NEXT:    vpinsrd $0, 16(%eax), %xmm1, %xmm1
-; X86-AVX512-NEXT:    vpinsrd $1, 20(%eax), %xmm1, %xmm1
-; X86-AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; X86-AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; X86-AVX512-NEXT:    vmovlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
+; X86-AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X86-AVX512-NEXT:    retl
   %res = call <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>* %addr, i32 4, <4 x i1> <i1 false, i1 false, i1 true, i1 false>, <4 x i64> %val)
   ret <4 x i64> %res
