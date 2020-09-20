@@ -49218,7 +49218,7 @@ static SDValue combinePMULDQ(SDNode *N, SelectionDAG &DAG,
   // If the input is an extend_invec and the SimplifyDemandedBits call didn't
   // convert it to any_extend_invec, due to the LegalOperations check, do the
   // conversion directly to a vector shuffle manually. This exposes combine
-  // opportunities missed by combineExtInVec not calling
+  // opportunities missed by combineEXTEND_VECTOR_INREG not calling
   // combineX86ShufflesRecursively on SSE4.1 targets.
   // FIXME: This is basically a hack around several other issues related to
   // ANY_EXTEND_VECTOR_INREG.
@@ -49246,9 +49246,9 @@ static SDValue combinePMULDQ(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineExtInVec(SDNode *N, SelectionDAG &DAG,
-                               TargetLowering::DAGCombinerInfo &DCI,
-                               const X86Subtarget &Subtarget) {
+static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
+                                          TargetLowering::DAGCombinerInfo &DCI,
+                                          const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   SDValue In = N->getOperand(0);
   unsigned Opcode = N->getOpcode();
@@ -49577,8 +49577,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SIGN_EXTEND_INREG: return combineSignExtendInReg(N, DAG, Subtarget);
   case ISD::ANY_EXTEND_VECTOR_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
-  case ISD::ZERO_EXTEND_VECTOR_INREG: return combineExtInVec(N, DAG, DCI,
-                                                             Subtarget);
+  case ISD::ZERO_EXTEND_VECTOR_INREG:
+    return combineEXTEND_VECTOR_INREG(N, DAG, DCI, Subtarget);
   case ISD::SETCC:          return combineSetCC(N, DAG, Subtarget);
   case X86ISD::SETCC:       return combineX86SetCC(N, DAG, Subtarget);
   case X86ISD::BRCOND:      return combineBrCond(N, DAG, Subtarget);
