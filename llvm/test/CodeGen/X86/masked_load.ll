@@ -7235,43 +7235,43 @@ define <16 x i64> @load_one_mask_bit_set6(<16 x i64>* %addr, <16 x i64> %val) {
 ;
 ; AVX512F-LABEL: load_one_mask_bit_set6:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    movb $4, %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0 {%k1}
 ; AVX512F-NEXT:    movb $36, %al
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vmovdqu64 64(%rdi), %zmm1 {%k1}
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512F-NEXT:    vpinsrq $0, 16(%rdi), %xmm2, %xmm2
+; AVX512F-NEXT:    vinserti32x4 $1, %xmm2, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: load_one_mask_bit_set6:
 ; AVX512VLDQ:       ## %bb.0:
-; AVX512VLDQ-NEXT:    movb $4, %al
-; AVX512VLDQ-NEXT:    kmovw %eax, %k1
-; AVX512VLDQ-NEXT:    vmovdqu64 (%rdi), %zmm0 {%k1}
 ; AVX512VLDQ-NEXT:    movb $36, %al
 ; AVX512VLDQ-NEXT:    kmovw %eax, %k1
 ; AVX512VLDQ-NEXT:    vmovdqu64 64(%rdi), %zmm1 {%k1}
+; AVX512VLDQ-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512VLDQ-NEXT:    vpinsrq $0, 16(%rdi), %xmm2, %xmm2
+; AVX512VLDQ-NEXT:    vinserti32x4 $1, %xmm2, %zmm0, %zmm0
 ; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: load_one_mask_bit_set6:
 ; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    movb $4, %al
-; AVX512VLBW-NEXT:    kmovd %eax, %k1
-; AVX512VLBW-NEXT:    vmovdqu64 (%rdi), %zmm0 {%k1}
 ; AVX512VLBW-NEXT:    movb $36, %al
 ; AVX512VLBW-NEXT:    kmovd %eax, %k1
 ; AVX512VLBW-NEXT:    vmovdqu64 64(%rdi), %zmm1 {%k1}
+; AVX512VLBW-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512VLBW-NEXT:    vpinsrq $0, 16(%rdi), %xmm2, %xmm2
+; AVX512VLBW-NEXT:    vinserti32x4 $1, %xmm2, %zmm0, %zmm0
 ; AVX512VLBW-NEXT:    retq
 ;
 ; X86-AVX512-LABEL: load_one_mask_bit_set6:
 ; X86-AVX512:       ## %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    movb $4, %cl
-; X86-AVX512-NEXT:    kmovd %ecx, %k1
-; X86-AVX512-NEXT:    vmovdqu64 (%eax), %zmm0 {%k1}
 ; X86-AVX512-NEXT:    movb $36, %cl
 ; X86-AVX512-NEXT:    kmovd %ecx, %k1
 ; X86-AVX512-NEXT:    vmovdqu64 64(%eax), %zmm1 {%k1}
+; X86-AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; X86-AVX512-NEXT:    vmovlps {{.*#+}} xmm2 = mem[0,1],xmm2[2,3]
+; X86-AVX512-NEXT:    vinsertf32x4 $1, %xmm2, %zmm0, %zmm0
 ; X86-AVX512-NEXT:    retl
   %res = call <16 x i64> @llvm.masked.load.v16i64.p0v16i64(<16 x i64>* %addr, i32 4, <16 x i1> <i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false>, <16 x i64> %val)
   ret <16 x i64> %res

@@ -4943,48 +4943,23 @@ define void @one_mask_bit_set6(<16 x i64>* %addr, <16 x i64> %val) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: one_mask_bit_set6:
-; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    movb $8, %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovdqu64 %zmm1, 64(%rdi) {%k1}
-; AVX512F-NEXT:    movb $64, %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rdi) {%k1}
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512VLDQ-LABEL: one_mask_bit_set6:
-; AVX512VLDQ:       ## %bb.0:
-; AVX512VLDQ-NEXT:    movb $8, %al
-; AVX512VLDQ-NEXT:    kmovw %eax, %k1
-; AVX512VLDQ-NEXT:    vmovdqu64 %zmm1, 64(%rdi) {%k1}
-; AVX512VLDQ-NEXT:    movb $64, %al
-; AVX512VLDQ-NEXT:    kmovw %eax, %k1
-; AVX512VLDQ-NEXT:    vmovdqu64 %zmm0, (%rdi) {%k1}
-; AVX512VLDQ-NEXT:    vzeroupper
-; AVX512VLDQ-NEXT:    retq
-;
-; AVX512VLBW-LABEL: one_mask_bit_set6:
-; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    movb $8, %al
-; AVX512VLBW-NEXT:    kmovd %eax, %k1
-; AVX512VLBW-NEXT:    vmovdqu64 %zmm1, 64(%rdi) {%k1}
-; AVX512VLBW-NEXT:    movb $64, %al
-; AVX512VLBW-NEXT:    kmovd %eax, %k1
-; AVX512VLBW-NEXT:    vmovdqu64 %zmm0, (%rdi) {%k1}
-; AVX512VLBW-NEXT:    vzeroupper
-; AVX512VLBW-NEXT:    retq
+; AVX512-LABEL: one_mask_bit_set6:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
+; AVX512-NEXT:    vmovlps %xmm0, 48(%rdi)
+; AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; AVX512-NEXT:    vpextrq $1, %xmm0, 88(%rdi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
 ;
 ; X86-AVX512-LABEL: one_mask_bit_set6:
 ; X86-AVX512:       ## %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    movb $8, %cl
-; X86-AVX512-NEXT:    kmovd %ecx, %k1
-; X86-AVX512-NEXT:    vmovdqu64 %zmm1, 64(%eax) {%k1}
-; X86-AVX512-NEXT:    movb $64, %cl
-; X86-AVX512-NEXT:    kmovd %ecx, %k1
-; X86-AVX512-NEXT:    vmovdqu64 %zmm0, (%eax) {%k1}
+; X86-AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
+; X86-AVX512-NEXT:    vmovlps %xmm0, 48(%eax)
+; X86-AVX512-NEXT:    vextractf128 $1, %ymm1, %xmm0
+; X86-AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X86-AVX512-NEXT:    vmovlps %xmm0, 88(%eax)
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
   call void @llvm.masked.store.v16i64.p0v16i64(<16 x i64> %val, <16 x i64>* %addr, i32 4, <16 x i1><i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false>)

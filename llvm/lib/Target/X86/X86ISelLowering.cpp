@@ -44454,7 +44454,7 @@ static int getOneTrueElt(SDValue V) {
     auto *ConstNode = dyn_cast<ConstantSDNode>(Op);
     if (!ConstNode)
       return -1;
-    if (ConstNode->getAPIntValue().isAllOnesValue()) {
+    if (ConstNode->getAPIntValue().countTrailingOnes() >= 1) {
       // If we already found a one, this is too many.
       if (TrueIndex >= 0)
         return -1;
