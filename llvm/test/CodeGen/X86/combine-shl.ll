@@ -342,11 +342,11 @@ define <8 x i32> @combine_vec_shl_zext_lshr0(<8 x i16> %x) {
 ;
 ; SSE41-LABEL: combine_vec_shl_zext_lshr0:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pand {{.*}}(%rip), %xmm0
-; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
+; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE41-NEXT:    pxor %xmm2, %xmm2
+; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; SSE41-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_shl_zext_lshr0:
@@ -374,12 +374,12 @@ define <8 x i32> @combine_vec_shl_zext_lshr1(<8 x i16> %x) {
 ;
 ; SSE41-LABEL: combine_vec_shl_zext_lshr1:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmulhuw {{.*}}(%rip), %xmm0
-; SSE41-NEXT:    pmullw {{.*}}(%rip), %xmm0
-; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
+; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    pmulhuw {{.*}}(%rip), %xmm1
+; SSE41-NEXT:    pxor %xmm2, %xmm2
+; SSE41-NEXT:    pmullw {{.*}}(%rip), %xmm1
+; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; SSE41-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_shl_zext_lshr1:

@@ -49279,9 +49279,9 @@ static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
   }
 
   // Attempt to combine as a shuffle.
-  // TODO: SSE ZERO_EXTEND_VECTOR_INREG support.
+  // TODO: General ZERO_EXTEND_VECTOR_INREG support.
   if (Opcode == ISD::ANY_EXTEND_VECTOR_INREG ||
-      (Opcode == ISD::ZERO_EXTEND_VECTOR_INREG && Subtarget.hasAVX())) {
+      (Opcode == ISD::ZERO_EXTEND_VECTOR_INREG && Subtarget.hasSSE41())) {
     SDValue Op(N, 0);
     if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(In.getValueType()))
       if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
