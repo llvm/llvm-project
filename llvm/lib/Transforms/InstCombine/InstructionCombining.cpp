@@ -2813,6 +2813,9 @@ Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
       if (SI->isVolatile())
         return nullptr;
 
+    // A value may still have uses before we process it here (for example, in
+    // another unreachable block), so convert those to undef.
+    replaceInstUsesWith(*Prev, UndefValue::get(Prev->getType()));
     eraseInstFromFunction(*Prev);
     return &I;
   }
