@@ -976,18 +976,18 @@ define void @zext_v16i8_v16i64(<16 x i8> %x, <16 x i64>* %y) nounwind "min-legal
 define void @sext_v16i8_v16i64(<16 x i8> %x, <16 x i64>* %y) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: sext_v16i8_v16i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovsxbw %xmm0, %ymm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; CHECK-NEXT:    vpmovsxwq %xmm1, %ymm1
-; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[2,3,2,3]
-; CHECK-NEXT:    vpmovsxwq %xmm3, %ymm3
-; CHECK-NEXT:    vpmovsxwq %xmm0, %ymm0
+; CHECK-NEXT:    vpmovsxbw %xmm0, %ymm1
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; CHECK-NEXT:    vpmovsxwq %xmm2, %ymm2
-; CHECK-NEXT:    vmovdqa %ymm2, 64(%rdi)
+; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
+; CHECK-NEXT:    vpmovsxwq %xmm3, %ymm3
+; CHECK-NEXT:    vpmovsxwq %xmm1, %ymm1
+; CHECK-NEXT:    vpmovsxbq %xmm0, %ymm0
 ; CHECK-NEXT:    vmovdqa %ymm0, (%rdi)
+; CHECK-NEXT:    vmovdqa %ymm1, 64(%rdi)
 ; CHECK-NEXT:    vmovdqa %ymm3, 96(%rdi)
-; CHECK-NEXT:    vmovdqa %ymm1, 32(%rdi)
+; CHECK-NEXT:    vmovdqa %ymm2, 32(%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %a = sext <16 x i8> %x to <16 x i64>
