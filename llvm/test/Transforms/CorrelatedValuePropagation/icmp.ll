@@ -995,14 +995,10 @@ define void @test_icmp_mask_two_values(i32 %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 10
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[A]], 10
-; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ule i32 [[A]], 11
-; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i32 [[A]], 10
-; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[A]], 11
-; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 false)
+; CHECK-NEXT:    call void @check1(i1 false)
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
 ; CHECK-NEXT:    ret void
@@ -1032,8 +1028,7 @@ define void @test_icmp_mask_bit_set(i32 %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 32
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[A]], 32
-; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
+; CHECK-NEXT:    call void @check1(i1 true)
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp uge i32 [[A]], 33
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    ret void
@@ -1061,8 +1056,7 @@ define void @test_icmp_mask_bit_unset(i32 %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ule i32 [[A]], -33
-; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
+; CHECK-NEXT:    call void @check1(i1 true)
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ule i32 [[A]], -34
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    ret void

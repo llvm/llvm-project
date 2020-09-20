@@ -36,6 +36,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 using namespace llvm;
@@ -1144,6 +1145,19 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
   CmpInst::Predicate SwappedPred = CmpInst::getSwappedPredicate(EdgePred);
   if (matchICmpOperand(Offset, RHS, Val, SwappedPred))
     return getValueFromSimpleICmpCondition(SwappedPred, LHS, Offset);
+
+  // If (Val & Mask) == C then all the masked bits are known and we can compute
+  // a value range based on that.
+  const APInt *Mask, *C;
+  if (EdgePred == ICmpInst::ICMP_EQ &&
+      match(LHS, m_And(m_Specific(Val), m_APInt(Mask))) &&
+      match(RHS, m_APInt(C))) {
+    KnownBits Known;
+    Known.Zero = ~*C & *Mask;
+    Known.One = *C & *Mask;
+    return ValueLatticeElement::getRange(
+        ConstantRange::fromKnownBits(Known, /*IsSigned*/ false));
+  }
 
   return ValueLatticeElement::getOverdefined();
 }
