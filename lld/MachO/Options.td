@@ -104,11 +104,9 @@ def syslibroot : Separate<["-"], "syslibroot">,
      Group<grp_libs>;
 def search_paths_first : Flag<["-"], "search_paths_first">,
      HelpText<"Search for lib<name>.dylib and lib<name>.a at each step in traversing search path (default for Xcode 4 and later)">,
-     Flags<[HelpHidden]>,
      Group<grp_libs>;
 def search_dylibs_first : Flag<["-"], "search_dylibs_first">,
      HelpText<"Search for lib<name>.dylib on first pass, then for lib<name>.a on second pass through search path (default for Xcode 3 and earlier)">,
-     Flags<[HelpHidden]>,
      Group<grp_libs>;
 def framework : Separate<["-"], "framework">,
      MetaVarName<"<name>">,
