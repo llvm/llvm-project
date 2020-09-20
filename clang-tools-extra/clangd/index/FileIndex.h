@@ -97,7 +97,7 @@ private:
   size_t Version = 0;
   llvm::StringMap<std::shared_ptr<SymbolSlab>> SymbolsSnapshot;
   llvm::StringMap<RefSlabAndCountReferences> RefsSnapshot;
-  llvm::StringMap<std::shared_ptr<RelationSlab>> RelatiosSnapshot;
+  llvm::StringMap<std::shared_ptr<RelationSlab>> RelationsSnapshot;
 };
 
 /// This manages symbols from files and an in-memory index on all symbols.
