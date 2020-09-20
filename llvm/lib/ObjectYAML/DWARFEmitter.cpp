@@ -1033,9 +1033,10 @@ DWARFYAML::emitDebugSections(StringRef YAMLString, bool IsLittleEndian,
   if (YIn.error())
     return createStringError(YIn.error(), GeneratedDiag.getMessage());
 
+  cantFail(Error::success());
+
   StringMap<std::unique_ptr<MemoryBuffer>> DebugSections;
   Error Err = Error::success();
-  cantFail(std::move(Err));
 
   for (StringRef SecName : DI.getNonEmptySectionNames())
     Err = joinErrors(std::move(Err),
