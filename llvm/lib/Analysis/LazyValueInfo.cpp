@@ -1096,6 +1096,26 @@ static bool matchICmpOperand(const APInt *&Offset, Value *LHS, Value *Val,
   return false;
 }
 
+/// Get value range for a "(Val + Offset) Pred RHS" condition.
+static ValueLatticeElement getValueFromSimpleICmpCondition(
+    CmpInst::Predicate Pred, Value *RHS, const APInt *Offset) {
+  ConstantRange RHSRange(RHS->getType()->getIntegerBitWidth(),
+                         /*isFullSet=*/true);
+  if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS))
+    RHSRange = ConstantRange(CI->getValue());
+  else if (Instruction *I = dyn_cast<Instruction>(RHS))
+    if (auto *Ranges = I->getMetadata(LLVMContext::MD_range))
+      RHSRange = getConstantRangeFromMetadata(*Ranges);
+
+  ConstantRange TrueValues =
+      ConstantRange::makeAllowedICmpRegion(Pred, RHSRange);
+
+  if (Offset)
+    TrueValues = TrueValues.subtract(*Offset);
+
+  return ValueLatticeElement::getRange(std::move(TrueValues));
+}
+
 static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
                                                      bool isTrueDest) {
   Value *LHS = ICI->getOperand(0);
@@ -1118,30 +1138,14 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
     return ValueLatticeElement::getOverdefined();
 
   const APInt *Offset = nullptr;
-  if (!matchICmpOperand(Offset, LHS, Val, EdgePred)) {
-    std::swap(LHS, RHS);
-    EdgePred = CmpInst::getSwappedPredicate(EdgePred);
-    if (!matchICmpOperand(Offset, LHS, Val, EdgePred))
-      return ValueLatticeElement::getOverdefined();
-  }
+  if (matchICmpOperand(Offset, LHS, Val, EdgePred))
+    return getValueFromSimpleICmpCondition(EdgePred, RHS, Offset);
 
-  // Calculate the range of values that are allowed by the comparison.
-  ConstantRange RHSRange(RHS->getType()->getIntegerBitWidth(),
-                         /*isFullSet=*/true);
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS))
-    RHSRange = ConstantRange(CI->getValue());
-  else if (Instruction *I = dyn_cast<Instruction>(RHS))
-    if (auto *Ranges = I->getMetadata(LLVMContext::MD_range))
-      RHSRange = getConstantRangeFromMetadata(*Ranges);
+  CmpInst::Predicate SwappedPred = CmpInst::getSwappedPredicate(EdgePred);
+  if (matchICmpOperand(Offset, RHS, Val, SwappedPred))
+    return getValueFromSimpleICmpCondition(SwappedPred, LHS, Offset);
 
-  // If we're interested in the false dest, invert the condition
-  ConstantRange TrueValues =
-      ConstantRange::makeAllowedICmpRegion(EdgePred, RHSRange);
-
-  if (Offset) // Apply the offset from above.
-    TrueValues = TrueValues.subtract(*Offset);
-
-  return ValueLatticeElement::getRange(std::move(TrueValues));
+  return ValueLatticeElement::getOverdefined();
 }
 
 // Handle conditions of the form
