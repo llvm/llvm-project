@@ -1181,3 +1181,39 @@ if.end:                                           ; preds = %entry, %if.then
   %cmp1 = icmp ne i32 %a.0, 0
   ret i1  %cmp1
 }
+
+; This would crash trying to delete an instruction (conv)
+; that still had uses because the user (the phi) was not
+; updated to remove a use from an unreachable block (g.exit).
+
+define void @main(i1 %cond, i16 %x) {
+; CHECK-LABEL: @main(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    unreachable
+; CHECK:       g.exit:
+; CHECK-NEXT:    br label [[FOR_COND]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.cond
+
+for.cond:
+  %p = phi double [ %conv, %g.exit ], [ undef, %entry ]
+  br i1 %cond, label %for.end, label %for.body
+
+for.body:
+  %conv = sitofp i16 %x to double
+  unreachable
+
+g.exit:
+  br label %for.cond
+
+for.end:
+  store double %p, double* undef
+  ret void
+}
