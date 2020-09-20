@@ -49278,6 +49278,10 @@ static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Fold EXTEND_VECTOR_INREG(EXTEND_VECTOR_INREG(X)) -> EXTEND_VECTOR_INREG(X).
+  if (Opcode == In.getOpcode())
+    return DAG.getNode(Opcode, SDLoc(N), VT, In.getOperand(0));
+
   // Attempt to combine as a shuffle.
   // TODO: General ZERO_EXTEND_VECTOR_INREG support.
   if (Opcode == ISD::ANY_EXTEND_VECTOR_INREG ||
