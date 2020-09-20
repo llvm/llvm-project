@@ -1030,9 +1030,13 @@ void Sema::emitAndClearUnusedLocalTypedefWarnings() {
 /// is parsed. Note that the ASTContext may have already injected some
 /// declarations.
 void Sema::ActOnStartOfTranslationUnit() {
-  if (getLangOpts().ModulesTS &&
-      (getLangOpts().getCompilingModule() == LangOptions::CMK_ModuleInterface ||
-       getLangOpts().getCompilingModule() == LangOptions::CMK_None)) {
+  if (getLangOpts().CPlusPlusModules &&
+      getLangOpts().getCompilingModule() == LangOptions::CMK_HeaderUnit)
+    HandleStartOfHeaderUnit();
+  else if (getLangOpts().ModulesTS &&
+           (getLangOpts().getCompilingModule() ==
+                LangOptions::CMK_ModuleInterface ||
+            getLangOpts().getCompilingModule() == LangOptions::CMK_None)) {
     // We start in an implied global module fragment.
     SourceLocation StartOfTU =
         SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
