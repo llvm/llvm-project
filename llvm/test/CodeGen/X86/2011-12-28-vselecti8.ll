@@ -18,11 +18,10 @@ target triple = "x86_64-apple-darwin11.2.0"
 define void @foo8(float* nocapture %RET) nounwind {
 ; CHECK-LABEL: foo8:
 ; CHECK:       ## %bb.0: ## %allocas
-; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [1.0E+2,2.0E+0,1.0E+2,4.0E+0]
-; CHECK-NEXT:    movups %xmm1, (%rdi)
-; CHECK-NEXT:    movups %xmm0, 16(%rdi)
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.0E+2,2.0E+0,1.0E+2,4.0E+0]
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [1.0E+2,6.0E+0,1.0E+2,8.0E+0]
+; CHECK-NEXT:    movups %xmm1, 16(%rdi)
+; CHECK-NEXT:    movups %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
 allocas:
   %resultvec.i = select <8 x i1> <i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, <8 x i8> <i8 100, i8 100, i8 100, i8 100, i8 100, i8 100, i8 100, i8 100>
