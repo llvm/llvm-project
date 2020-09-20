@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_IRTRANSFORMLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_IRTRANSFORMLAYER_H
 
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include <memory>
@@ -27,7 +28,7 @@ namespace orc {
 /// before operating on the module.
 class IRTransformLayer : public IRLayer {
 public:
-  using TransformFunction = std::function<Expected<ThreadSafeModule>(
+  using TransformFunction = unique_function<Expected<ThreadSafeModule>(
       ThreadSafeModule, MaterializationResponsibility &R)>;
 
   IRTransformLayer(ExecutionSession &ES, IRLayer &BaseLayer,
