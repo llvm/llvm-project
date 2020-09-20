@@ -147,11 +147,11 @@ public:
     : MinSize(MinSize), IsScalable(Scalable) {}
 
   static constexpr TypeSize Fixed(uint64_t Size) {
-    return TypeSize(Size, /*IsScalable=*/false);
+    return TypeSize(Size, /*Scalable=*/false);
   }
 
   static constexpr TypeSize Scalable(uint64_t MinSize) {
-    return TypeSize(MinSize, /*IsScalable=*/true);
+    return TypeSize(MinSize, /*Scalable=*/true);
   }
 
   // Scalable vector types with the same minimum size as a fixed size type are

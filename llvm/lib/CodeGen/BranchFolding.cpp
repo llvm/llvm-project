@@ -134,17 +134,18 @@ bool BranchFolderPass::runOnMachineFunction(MachineFunction &MF) {
                                  MF.getSubtarget().getRegisterInfo());
 }
 
-BranchFolder::BranchFolder(bool defaultEnableTailMerge, bool CommonHoist,
+BranchFolder::BranchFolder(bool DefaultEnableTailMerge, bool CommonHoist,
                            MBFIWrapper &FreqInfo,
                            const MachineBranchProbabilityInfo &ProbInfo,
-                           ProfileSummaryInfo *PSI,
-                           unsigned MinTailLength)
+                           ProfileSummaryInfo *PSI, unsigned MinTailLength)
     : EnableHoistCommonCode(CommonHoist), MinCommonTailLength(MinTailLength),
       MBBFreqInfo(FreqInfo), MBPI(ProbInfo), PSI(PSI) {
   if (MinCommonTailLength == 0)
     MinCommonTailLength = TailMergeSize;
   switch (FlagEnableTailMerge) {
-  case cl::BOU_UNSET: EnableTailMerge = defaultEnableTailMerge; break;
+  case cl::BOU_UNSET:
+    EnableTailMerge = DefaultEnableTailMerge;
+    break;
   case cl::BOU_TRUE: EnableTailMerge = true; break;
   case cl::BOU_FALSE: EnableTailMerge = false; break;
   }
