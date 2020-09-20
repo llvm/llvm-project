@@ -7175,36 +7175,138 @@ define <8 x double> @load_one_mask_bit_set5(<8 x double>* %addr, <8 x double> %v
   ret <8 x double> %res
 }
 
+define <16 x i64> @load_one_mask_bit_set6(<16 x i64>* %addr, <16 x i64> %val) {
+; SSE2-LABEL: load_one_mask_bit_set6:
+; SSE2:       ## %bb.0:
+; SSE2-NEXT:    movq %rdi, %rax
+; SSE2-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
+; SSE2-NEXT:    movlps {{.*#+}} xmm5 = mem[0,1],xmm5[2,3]
+; SSE2-NEXT:    movsd {{.*#+}} xmm8 = mem[0],zero
+; SSE2-NEXT:    movlhps {{.*#+}} xmm6 = xmm6[0],xmm8[0]
+; SSE2-NEXT:    movaps %xmm7, 112(%rdi)
+; SSE2-NEXT:    movaps %xmm4, 64(%rdi)
+; SSE2-NEXT:    movaps %xmm3, 48(%rdi)
+; SSE2-NEXT:    movaps %xmm2, 32(%rdi)
+; SSE2-NEXT:    movaps %xmm0, (%rdi)
+; SSE2-NEXT:    movaps %xmm5, 80(%rdi)
+; SSE2-NEXT:    movaps %xmm1, 16(%rdi)
+; SSE2-NEXT:    movaps %xmm6, 96(%rdi)
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: load_one_mask_bit_set6:
+; SSE42:       ## %bb.0:
+; SSE42-NEXT:    movq %rdi, %rax
+; SSE42-NEXT:    pinsrq $0, 16(%rsi), %xmm1
+; SSE42-NEXT:    pinsrq $0, 80(%rsi), %xmm5
+; SSE42-NEXT:    pinsrq $1, 104(%rsi), %xmm6
+; SSE42-NEXT:    movaps %xmm7, 112(%rdi)
+; SSE42-NEXT:    movaps %xmm4, 64(%rdi)
+; SSE42-NEXT:    movaps %xmm3, 48(%rdi)
+; SSE42-NEXT:    movaps %xmm2, 32(%rdi)
+; SSE42-NEXT:    movaps %xmm0, (%rdi)
+; SSE42-NEXT:    movdqa %xmm6, 96(%rdi)
+; SSE42-NEXT:    movdqa %xmm5, 80(%rdi)
+; SSE42-NEXT:    movdqa %xmm1, 16(%rdi)
+; SSE42-NEXT:    retq
+;
+; AVX1-LABEL: load_one_mask_bit_set6:
+; AVX1:       ## %bb.0:
+; AVX1-NEXT:    vmovapd {{.*#+}} ymm4 = [0,0,18446744073709551615,0]
+; AVX1-NEXT:    vmaskmovpd (%rdi), %ymm4, %ymm5
+; AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm5[2],ymm0[3]
+; AVX1-NEXT:    vmaskmovpd 64(%rdi), %ymm4, %ymm4
+; AVX1-NEXT:    vblendpd {{.*#+}} ymm2 = ymm2[0,1],ymm4[2],ymm2[3]
+; AVX1-NEXT:    vmovapd {{.*#+}} ymm4 = [0,18446744073709551615,0,0]
+; AVX1-NEXT:    vmaskmovpd 96(%rdi), %ymm4, %ymm4
+; AVX1-NEXT:    vblendpd {{.*#+}} ymm3 = ymm3[0],ymm4[1],ymm3[2,3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: load_one_mask_bit_set6:
+; AVX2:       ## %bb.0:
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,0,18446744073709551615,0]
+; AVX2-NEXT:    vpmaskmovq (%rdi), %ymm4, %ymm5
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm5[4,5],ymm0[6,7]
+; AVX2-NEXT:    vpmaskmovq 64(%rdi), %ymm4, %ymm4
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm4[4,5],ymm2[6,7]
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,18446744073709551615,0,0]
+; AVX2-NEXT:    vpmaskmovq 96(%rdi), %ymm4, %ymm4
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm3 = ymm3[0,1],ymm4[2,3],ymm3[4,5,6,7]
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: load_one_mask_bit_set6:
+; AVX512F:       ## %bb.0:
+; AVX512F-NEXT:    movb $4, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0 {%k1}
+; AVX512F-NEXT:    movb $36, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovdqu64 64(%rdi), %zmm1 {%k1}
+; AVX512F-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: load_one_mask_bit_set6:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    movb $4, %al
+; AVX512VLDQ-NEXT:    kmovw %eax, %k1
+; AVX512VLDQ-NEXT:    vmovdqu64 (%rdi), %zmm0 {%k1}
+; AVX512VLDQ-NEXT:    movb $36, %al
+; AVX512VLDQ-NEXT:    kmovw %eax, %k1
+; AVX512VLDQ-NEXT:    vmovdqu64 64(%rdi), %zmm1 {%k1}
+; AVX512VLDQ-NEXT:    retq
+;
+; AVX512VLBW-LABEL: load_one_mask_bit_set6:
+; AVX512VLBW:       ## %bb.0:
+; AVX512VLBW-NEXT:    movb $4, %al
+; AVX512VLBW-NEXT:    kmovd %eax, %k1
+; AVX512VLBW-NEXT:    vmovdqu64 (%rdi), %zmm0 {%k1}
+; AVX512VLBW-NEXT:    movb $36, %al
+; AVX512VLBW-NEXT:    kmovd %eax, %k1
+; AVX512VLBW-NEXT:    vmovdqu64 64(%rdi), %zmm1 {%k1}
+; AVX512VLBW-NEXT:    retq
+;
+; X86-AVX512-LABEL: load_one_mask_bit_set6:
+; X86-AVX512:       ## %bb.0:
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512-NEXT:    movb $4, %cl
+; X86-AVX512-NEXT:    kmovd %ecx, %k1
+; X86-AVX512-NEXT:    vmovdqu64 (%eax), %zmm0 {%k1}
+; X86-AVX512-NEXT:    movb $36, %cl
+; X86-AVX512-NEXT:    kmovd %ecx, %k1
+; X86-AVX512-NEXT:    vmovdqu64 64(%eax), %zmm1 {%k1}
+; X86-AVX512-NEXT:    retl
+  %res = call <16 x i64> @llvm.masked.load.v16i64.p0v16i64(<16 x i64>* %addr, i32 4, <16 x i1> <i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false>, <16 x i64> %val)
+  ret <16 x i64> %res
+}
+
 define i32 @pr38986(i1 %c, i32* %p) {
 ; SSE-LABEL: pr38986:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    testb $1, %dil
 ; SSE-NEXT:    ## implicit-def: $eax
-; SSE-NEXT:    je LBB44_2
+; SSE-NEXT:    je LBB45_2
 ; SSE-NEXT:  ## %bb.1: ## %cond.load
 ; SSE-NEXT:    movl (%rsi), %eax
-; SSE-NEXT:  LBB44_2: ## %else
+; SSE-NEXT:  LBB45_2: ## %else
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: pr38986:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    testb $1, %dil
 ; AVX-NEXT:    ## implicit-def: $eax
-; AVX-NEXT:    je LBB44_2
+; AVX-NEXT:    je LBB45_2
 ; AVX-NEXT:  ## %bb.1: ## %cond.load
 ; AVX-NEXT:    movl (%rsi), %eax
-; AVX-NEXT:  LBB44_2: ## %else
+; AVX-NEXT:  LBB45_2: ## %else
 ; AVX-NEXT:    retq
 ;
 ; X86-AVX512-LABEL: pr38986:
 ; X86-AVX512:       ## %bb.0:
 ; X86-AVX512-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X86-AVX512-NEXT:    ## implicit-def: $eax
-; X86-AVX512-NEXT:    je LBB44_2
+; X86-AVX512-NEXT:    je LBB45_2
 ; X86-AVX512-NEXT:  ## %bb.1: ## %cond.load
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    movl (%eax), %eax
-; X86-AVX512-NEXT:  LBB44_2: ## %else
+; X86-AVX512-NEXT:  LBB45_2: ## %else
 ; X86-AVX512-NEXT:    retl
  %vc = insertelement <1 x i1> undef, i1 %c, i32 0
  %vp = bitcast i32* %p to <1 x i32>*
@@ -7240,6 +7342,7 @@ declare <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>*, i32, <8 x i1>,
 declare <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>*, i32, <4 x i1>, <4 x float>)
 declare <2 x float> @llvm.masked.load.v2f32.p0v2f32(<2 x float>*, i32, <2 x i1>, <2 x float>)
 
+declare <16 x i64> @llvm.masked.load.v16i64.p0v16i64(<16 x i64>*, i32, <16 x i1>, <16 x i64>)
 declare <8 x i64> @llvm.masked.load.v8i64.p0v8i64(<8 x i64>*, i32, <8 x i1>, <8 x i64>)
 declare <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>*, i32, <4 x i1>, <4 x i64>)
 declare <2 x i64> @llvm.masked.load.v2i64.p0v2i64(<2 x i64>*, i32, <2 x i1>, <2 x i64>)
