@@ -248,6 +248,7 @@ GCNMinRegScheduler::schedule(ArrayRef<const SUnit*> TopRoots,
   for (auto SU : TopRoots) {
     RQ.push_back(*new (Alloc.Allocate()) Candidate(SU, StepNo));
   }
+  releaseSuccessors(&DAG.EntrySU, StepNo);
 
   while (!RQ.empty()) {
     LLVM_DEBUG(dbgs() << "\n=== Picking candidate, Step = " << StepNo
