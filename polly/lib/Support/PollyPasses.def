@@ -28,4 +28,6 @@ SCOP_PASS("polly-import-jscop", JSONImportPass())
 SCOP_PASS("print<polly-ast>", IslAstPrinterPass(outs()))
 SCOP_PASS("print<polly-dependences>", DependenceInfoPrinterPass(outs()))
 SCOP_PASS("polly-codegen", CodeGenerationPass())
+SCOP_PASS("polly-simplify", SimplifyPass())
+SCOP_PASS("print<polly-simplify>", SimplifyPrinterPass(outs()))
 #undef SCOP_PASS
