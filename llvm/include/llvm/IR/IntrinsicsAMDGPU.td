@@ -1699,7 +1699,7 @@ class AMDGPUGlobalAtomicRtn<LLVMType vt> : Intrinsic <
 def int_amdgcn_global_atomic_csub : AMDGPUGlobalAtomicRtn<llvm_i32_ty>;
 
 // uint4 llvm.amdgcn.image.bvh.intersect.ray <node_ptr>, <ray_extent>, <ray_origin>,
-//                                           <ray_dir>, ray_inv_dir>, <texture_descr>
+//                                           <ray_dir>, <ray_inv_dir>, <texture_descr>
 def int_amdgcn_image_bvh_intersect_ray :
   Intrinsic<[llvm_v4i32_ty],
             [llvm_anyint_ty, llvm_float_ty, llvm_v4f32_ty, llvm_anyvector_ty,
