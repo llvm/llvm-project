@@ -1345,7 +1345,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       //   types of all non-static data members are structural types or
       //   (possibly multidimensional) array thereof
       // We deal with class types elsewhere.
-      if (!T->isScalarType() && !T->isLValueReferenceType())
+      if (!T->isStructuralType())
         data().StructuralIfLiteral = false;
     }
 

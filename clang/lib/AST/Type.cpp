@@ -2600,7 +2600,8 @@ bool Type::isStructuralType() const {
   // C++20 [temp.param]p6:
   //   A structural type is one of the following:
   //   -- a scalar type; or
-  if (isScalarType())
+  //   -- a vector type [Clang extension]; or
+  if (isScalarType() || isVectorType())
     return true;
   //   -- an lvalue reference type; or
   if (isLValueReferenceType())
