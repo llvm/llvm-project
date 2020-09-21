@@ -54,6 +54,16 @@ def vfp_f16imm : Operand<f16>,
   let ParserMatchClass = FPImmOperand;
 }
 
+def vfp_f32f16imm_xform : SDNodeXForm<fpimm, [{
+      APFloat InVal = N->getValueAPF();
+      uint32_t enc = ARM_AM::getFP32FP16Imm(InVal);
+      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
+    }]>;
+
+def vfp_f32f16imm : PatLeaf<(f32 fpimm), [{
+      return ARM_AM::getFP32FP16Imm(N->getValueAPF()) != -1;
+    }], vfp_f32f16imm_xform>;
+
 def vfp_f32imm_xform : SDNodeXForm<fpimm, [{
       APFloat InVal = N->getValueAPF();
       uint32_t enc = ARM_AM::getFP32Imm(InVal);
@@ -2635,6 +2645,11 @@ def FCONSTH : VFPAI<(outs HPR:$Sd), (ins vfp_f16imm:$imm),
 
   let isUnpredicable = 1;
 }
+}
+
+def : Pat<(f32 (vfp_f32f16imm:$imm)),
+          (f32 (COPY_TO_REGCLASS (f16 (FCONSTH (vfp_f32f16imm_xform (f32 $imm)))), SPR))> {
+  let Predicates = [HasFullFP16];
 }
 
 //===----------------------------------------------------------------------===//
