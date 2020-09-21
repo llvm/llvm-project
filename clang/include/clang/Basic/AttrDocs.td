@@ -3731,6 +3731,28 @@ The return type is left unmodified.
   }];
 }
 
+def SwiftNameDocs : Documentation {
+  let Category = SwiftDocs;
+  let Heading = "swift_name";
+  let Content = [{
+The ``swift_name`` attribute provides the spelling for the transformed name when
+the interface is imported into the Swift language.
+
+The argument is the single string representation of the Swift function name.
+The name may be a compound Swift name.  For a type, enum constant, property, or
+variable declaration, the name must be a simple or qualified identifier.
+
+  .. code-block:: c
+
+    @interface I
+    - (void) methodWithInt:(int)i __attribute__((__swift_name__("I.method(int:)")))
+    @end
+
+    void __attribute__((__swift_name__("function()"))) f(void) {
+    }
+  }];
+}
+
 def OMPDeclareSimdDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "#pragma omp declare simd";

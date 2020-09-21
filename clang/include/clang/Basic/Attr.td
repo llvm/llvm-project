@@ -2144,16 +2144,6 @@ def Regparm : TypeAttr {
   let ASTNode = 0;
 }
 
-def SwiftName : InheritableAttr {
-  let Spellings = [GCC<"swift_name">];
-  let Args = [StringArgument<"Name">];
-  // Proper subject list disabled because of the custom error needed.
-  // Let's avoid merge conflicts for now.
-//  let Subjects = SubjectList<[EnumConstant, ObjCProtocol, ObjCClassMethod],
-//                             ErrorDiag, "ExpectedSwiftNameSubjects">;
-  let Documentation = [Undocumented];
-}
-
 def SwiftNewtype : InheritableAttr {
   let Spellings = [GNU<"swift_newtype">, GNU<"swift_wrapper">];
   let Subjects = SubjectList<[TypedefName], ErrorDiag, "ExpectedType">;
@@ -2238,6 +2228,12 @@ def SwiftError : InheritableAttr {
   ];
   let Subjects = SubjectList<[Function, ObjCMethod], ErrorDiag>;
   let Documentation = [SwiftErrorDocs];
+}
+
+def SwiftName : InheritableAttr {
+  let Spellings = [GNU<"swift_name">];
+  let Args = [StringArgument<"Name">];
+  let Documentation = [SwiftNameDocs];
 }
 
 def NoDeref : TypeAttr {
