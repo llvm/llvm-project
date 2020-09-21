@@ -998,7 +998,11 @@ def : ProcessorModel<"generic", NoSchedModel, [
 def : ProcessorModel<"cortex-a35", CortexA53Model, [ProcA35]>;
 def : ProcessorModel<"cortex-a34", CortexA53Model, [ProcA35]>;
 def : ProcessorModel<"cortex-a53", CortexA53Model, [ProcA53]>;
+
+// FIXME: the A55 model (see AArch64SchedA55.td) needs some improvements, so
+// use the A53 model for now.
 def : ProcessorModel<"cortex-a55", CortexA53Model, [ProcA55]>;
+
 def : ProcessorModel<"cortex-a57", CortexA57Model, [ProcA57]>;
 def : ProcessorModel<"cortex-a65", CortexA53Model, [ProcA65]>;
 def : ProcessorModel<"cortex-a65ae", CortexA53Model, [ProcA65]>;
