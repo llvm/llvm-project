@@ -277,6 +277,7 @@ class sve_int_ptrue<bits<2> sz8_64, bits<3> opc, string asm, PPRRegOp pprty,
   let Inst{3-0}   = Pd;
 
   let Defs = !if(!eq (opc{0}, 1), [NZCV], []);
+  let isReMaterializable = 1;
 }
 
 multiclass sve_int_ptrue<bits<3> opc, string asm, SDPatternOperator op> {
@@ -499,6 +500,8 @@ class sve_int_pfalse<bits<6> opc, string asm>
   let Inst{9}     = opc{0};
   let Inst{8-4}   = 0b00000;
   let Inst{3-0}   = Pd;
+
+  let isReMaterializable = 1;
 }
 
 class sve_int_ptest<bits<6> opc, string asm>

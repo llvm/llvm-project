@@ -66,6 +66,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
@@ -240,6 +241,11 @@ class StmtComparer {
 
   bool IsStmtEquivalent(const IntegerLiteral *E1, const IntegerLiteral *E2) {
     return E1->getValue() == E2->getValue();
+  }
+
+  bool IsStmtEquivalent(const MemberExpr *E1, const MemberExpr *E2) {
+    return IsStructurallyEquivalent(Context, E1->getFoundDecl(),
+                                    E2->getFoundDecl());
   }
 
   bool IsStmtEquivalent(const ObjCStringLiteral *E1,
@@ -1364,6 +1370,17 @@ IsStructurallyEquivalentLambdas(StructuralEquivalenceContext &Context,
 /// Determine structural equivalence of two records.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      RecordDecl *D1, RecordDecl *D2) {
+
+  // Check for equivalent structure names.
+  IdentifierInfo *Name1 = D1->getIdentifier();
+  if (!Name1 && D1->getTypedefNameForAnonDecl())
+    Name1 = D1->getTypedefNameForAnonDecl()->getIdentifier();
+  IdentifierInfo *Name2 = D2->getIdentifier();
+  if (!Name2 && D2->getTypedefNameForAnonDecl())
+    Name2 = D2->getTypedefNameForAnonDecl()->getIdentifier();
+  if (!IsStructurallyEquivalent(Name1, Name2))
+    return false;
+
   if (D1->isUnion() != D2->isUnion()) {
     if (Context.Complain) {
       Context.Diag2(D2->getLocation(), Context.getApplicableDiagnostic(
@@ -1598,6 +1615,16 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      EnumDecl *D1, EnumDecl *D2) {
 
+  // Check for equivalent enum names.
+  IdentifierInfo *Name1 = D1->getIdentifier();
+  if (!Name1 && D1->getTypedefNameForAnonDecl())
+    Name1 = D1->getTypedefNameForAnonDecl()->getIdentifier();
+  IdentifierInfo *Name2 = D2->getIdentifier();
+  if (!Name2 && D2->getTypedefNameForAnonDecl())
+    Name2 = D2->getTypedefNameForAnonDecl()->getIdentifier();
+  if (!IsStructurallyEquivalent(Name1, Name2))
+    return false;
+
   // Compare the definitions of these two enums. If either or both are
   // incomplete (i.e. forward declared), we assume that they are equivalent.
   D1 = D1->getDefinition();
@@ -1824,7 +1851,26 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     TypedefNameDecl *D1, TypedefNameDecl *D2) {
+  if (!IsStructurallyEquivalent(D1->getIdentifier(), D2->getIdentifier()))
+    return false;
+
+  return IsStructurallyEquivalent(Context, D1->getUnderlyingType(),
+                                  D2->getUnderlyingType());
+}
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      FunctionDecl *D1, FunctionDecl *D2) {
+  if (!IsStructurallyEquivalent(D1->getIdentifier(), D2->getIdentifier()))
+    return false;
+
+  if (D1->isOverloadedOperator()) {
+    if (!D2->isOverloadedOperator())
+      return false;
+    if (D1->getOverloadedOperator() != D2->getOverloadedOperator())
+      return false;
+  }
+
   // FIXME: Consider checking for function attributes as well.
   if (!IsStructurallyEquivalent(Context, D1->getType(), D2->getType()))
     return false;
@@ -2018,136 +2064,21 @@ bool StructuralEquivalenceContext::CheckCommonEquivalence(Decl *D1, Decl *D2) {
 
 bool StructuralEquivalenceContext::CheckKindSpecificEquivalence(
     Decl *D1, Decl *D2) {
-  // FIXME: Switch on all declaration kinds. For now, we're just going to
-  // check the obvious ones.
-  if (auto *Record1 = dyn_cast<RecordDecl>(D1)) {
-    if (auto *Record2 = dyn_cast<RecordDecl>(D2)) {
-      // Check for equivalent structure names.
-      IdentifierInfo *Name1 = Record1->getIdentifier();
-      if (!Name1 && Record1->getTypedefNameForAnonDecl())
-        Name1 = Record1->getTypedefNameForAnonDecl()->getIdentifier();
-      IdentifierInfo *Name2 = Record2->getIdentifier();
-      if (!Name2 && Record2->getTypedefNameForAnonDecl())
-        Name2 = Record2->getTypedefNameForAnonDecl()->getIdentifier();
-      if (!::IsStructurallyEquivalent(Name1, Name2) ||
-          !::IsStructurallyEquivalent(*this, Record1, Record2))
-        return false;
-    } else {
-      // Record/non-record mismatch.
-      return false;
-    }
-  } else if (auto *Enum1 = dyn_cast<EnumDecl>(D1)) {
-    if (auto *Enum2 = dyn_cast<EnumDecl>(D2)) {
-      // Check for equivalent enum names.
-      IdentifierInfo *Name1 = Enum1->getIdentifier();
-      if (!Name1 && Enum1->getTypedefNameForAnonDecl())
-        Name1 = Enum1->getTypedefNameForAnonDecl()->getIdentifier();
-      IdentifierInfo *Name2 = Enum2->getIdentifier();
-      if (!Name2 && Enum2->getTypedefNameForAnonDecl())
-        Name2 = Enum2->getTypedefNameForAnonDecl()->getIdentifier();
-      if (!::IsStructurallyEquivalent(Name1, Name2) ||
-          !::IsStructurallyEquivalent(*this, Enum1, Enum2))
-        return false;
-    } else {
-      // Enum/non-enum mismatch
-      return false;
-    }
-  } else if (const auto *Typedef1 = dyn_cast<TypedefNameDecl>(D1)) {
-    if (const auto *Typedef2 = dyn_cast<TypedefNameDecl>(D2)) {
-      if (!::IsStructurallyEquivalent(Typedef1->getIdentifier(),
-                                      Typedef2->getIdentifier()) ||
-          !::IsStructurallyEquivalent(*this, Typedef1->getUnderlyingType(),
-                                      Typedef2->getUnderlyingType()))
-        return false;
-    } else {
-      // Typedef/non-typedef mismatch.
-      return false;
-    }
-  } else if (auto *ClassTemplate1 = dyn_cast<ClassTemplateDecl>(D1)) {
-    if (auto *ClassTemplate2 = dyn_cast<ClassTemplateDecl>(D2)) {
-      if (!::IsStructurallyEquivalent(*this, ClassTemplate1,
-                                      ClassTemplate2))
-        return false;
-    } else {
-      // Class template/non-class-template mismatch.
-      return false;
-    }
-  } else if (auto *FunctionTemplate1 = dyn_cast<FunctionTemplateDecl>(D1)) {
-    if (auto *FunctionTemplate2 = dyn_cast<FunctionTemplateDecl>(D2)) {
-      if (!::IsStructurallyEquivalent(*this, FunctionTemplate1,
-                                      FunctionTemplate2))
-        return false;
-    } else {
-      // Class template/non-class-template mismatch.
-      return false;
-    }
-  } else if (auto *ConceptDecl1 = dyn_cast<ConceptDecl>(D1)) {
-    if (auto *ConceptDecl2 = dyn_cast<ConceptDecl>(D2)) {
-      if (!::IsStructurallyEquivalent(*this, ConceptDecl1, ConceptDecl2))
-        return false;
-    } else {
-      // Concept/non-concept mismatch.
-      return false;
-    }
-  } else if (auto *TTP1 = dyn_cast<TemplateTypeParmDecl>(D1)) {
-    if (auto *TTP2 = dyn_cast<TemplateTypeParmDecl>(D2)) {
-      if (!::IsStructurallyEquivalent(*this, TTP1, TTP2))
-        return false;
-    } else {
-      // Kind mismatch.
-      return false;
-    }
-  } else if (auto *NTTP1 = dyn_cast<NonTypeTemplateParmDecl>(D1)) {
-    if (auto *NTTP2 = dyn_cast<NonTypeTemplateParmDecl>(D2)) {
-      if (!::IsStructurallyEquivalent(*this, NTTP1, NTTP2))
-        return false;
-    } else {
-      // Kind mismatch.
-      return false;
-    }
-  } else if (auto *TTP1 = dyn_cast<TemplateTemplateParmDecl>(D1)) {
-    if (auto *TTP2 = dyn_cast<TemplateTemplateParmDecl>(D2)) {
-      if (!::IsStructurallyEquivalent(*this, TTP1, TTP2))
-        return false;
-    } else {
-      // Kind mismatch.
-      return false;
-    }
-  } else if (auto *MD1 = dyn_cast<CXXMethodDecl>(D1)) {
-    if (auto *MD2 = dyn_cast<CXXMethodDecl>(D2)) {
-      if (!::IsStructurallyEquivalent(*this, MD1, MD2))
-        return false;
-    } else {
-      // Kind mismatch.
-      return false;
-    }
-  } else if (FunctionDecl *FD1 = dyn_cast<FunctionDecl>(D1)) {
-    if (FunctionDecl *FD2 = dyn_cast<FunctionDecl>(D2)) {
-      if (FD1->isOverloadedOperator()) {
-        if (!FD2->isOverloadedOperator())
-          return false;
-        if (FD1->getOverloadedOperator() != FD2->getOverloadedOperator())
-          return false;
-      }
-      if (!::IsStructurallyEquivalent(FD1->getIdentifier(),
-                                      FD2->getIdentifier()))
-        return false;
-      if (!::IsStructurallyEquivalent(*this, FD1, FD2))
-        return false;
-    } else {
-      // Kind mismatch.
-      return false;
-    }
-  } else if (FriendDecl *FrD1 = dyn_cast<FriendDecl>(D1)) {
-    if (FriendDecl *FrD2 = dyn_cast<FriendDecl>(D2)) {
-        if (!::IsStructurallyEquivalent(*this, FrD1, FrD2))
-          return false;
-    } else {
-      // Kind mismatch.
-      return false;
-    }
-  }
 
+  // Kind mismatch.
+  if (D1->getKind() != D2->getKind())
+    return false;
+
+  // Cast the Decls to their actual subclass so that the right overload of
+  // IsStructurallyEquivalent is called.
+  switch (D1->getKind()) {
+#define ABSTRACT_DECL(DECL)
+#define DECL(DERIVED, BASE)                                                    \
+  case Decl::Kind::DERIVED:                                                    \
+    return ::IsStructurallyEquivalent(*this, static_cast<DERIVED##Decl *>(D1), \
+                                      static_cast<DERIVED##Decl *>(D2));
+#include "clang/AST/DeclNodes.inc"
+  }
   return true;
 }
 
