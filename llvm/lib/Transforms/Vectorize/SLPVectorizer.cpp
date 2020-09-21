@@ -4147,19 +4147,12 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL) {
       // Add to our 'need-to-extract' list.
       if (TreeEntry *E = getTreeEntry(VL[i])) {
         // Find which lane we need to extract.
-        int FoundLane = -1;
-        for (unsigned Lane = 0, LE = E->Scalars.size(); Lane != LE; ++Lane) {
-          // Is this the lane of the scalar that we are looking for ?
-          if (E->Scalars[Lane] == VL[i]) {
-            FoundLane = Lane;
-            break;
-          }
-        }
-        assert(FoundLane >= 0 && "Could not find the correct lane");
+        unsigned FoundLane =
+            std::distance(E->Scalars.begin(), find(E->Scalars, VL[i]));
+        assert(FoundLane < E->Scalars.size() && "Could not find extract lane");
         if (!E->ReuseShuffleIndices.empty()) {
-          FoundLane =
-              std::distance(E->ReuseShuffleIndices.begin(),
-                            llvm::find(E->ReuseShuffleIndices, FoundLane));
+          FoundLane = std::distance(E->ReuseShuffleIndices.begin(),
+                                    find(E->ReuseShuffleIndices, FoundLane));
         }
         ExternalUses.push_back(ExternalUser(VL[i], Insrt, FoundLane));
       }
