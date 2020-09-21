@@ -54,8 +54,6 @@ define void @pass_double(double* %p) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:    .seh_handlerdata
-; CHECK-NEXT:    .text
 ; CHECK-NEXT:    .seh_endproc
   %v = load double, double* %p
   call void @take_double(double %v)
@@ -73,8 +71,6 @@ define void @pass_float(float* %p) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:    .seh_handlerdata
-; CHECK-NEXT:    .text
 ; CHECK-NEXT:    .seh_endproc
   %v = load float, float* %p
   call void @take_float(float %v)
@@ -98,8 +94,6 @@ define void @call_double(double* %p) {
 ; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    popq %rsi
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:    .seh_handlerdata
-; CHECK-NEXT:    .text
 ; CHECK-NEXT:    .seh_endproc
   %v = call double @produce_double()
   store double %v, double* %p
@@ -120,8 +114,6 @@ define void @call_float(float* %p) {
 ; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    popq %rsi
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:    .seh_handlerdata
-; CHECK-NEXT:    .text
 ; CHECK-NEXT:    .seh_endproc
   %v = call float @produce_float()
   store float %v, float* %p
