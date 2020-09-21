@@ -9,11 +9,11 @@
 define i32 @fastisel_select(i1 %exchSub2211_, i1 %trunc_8766) {
 ; CHECK-LABEL: fastisel_select:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    ## kill: def $sil killed $sil killed $esi
-; CHECK-NEXT:    ## kill: def $dil killed $dil killed $edi
+; CHECK-NEXT:    movb %sil, %dl
+; CHECK-NEXT:    movb %dil, %cl
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    subb %sil, %dil
-; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    subb %dl, %cl
+; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    movl $1204476887, %ecx ## imm = 0x47CADBD7
 ; CHECK-NEXT:    cmovnel %ecx, %eax
 ; CHECK-NEXT:    retq
