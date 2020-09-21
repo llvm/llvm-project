@@ -1712,9 +1712,8 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     // values followed by a splat followed by the 2nd binary operation:
     // bo (splat X), (bo Y, OtherOp) --> bo (splat (bo X, Y)), OtherOp
     Value *NewBO = Builder.CreateBinOp(Opcode, X, Y);
-    UndefValue *Undef = UndefValue::get(Inst.getType());
     SmallVector<int, 8> NewMask(MaskC.size(), SplatIndex);
-    Value *NewSplat = Builder.CreateShuffleVector(NewBO, Undef, NewMask);
+    Value *NewSplat = Builder.CreateShuffleVector(NewBO, NewMask);
     Instruction *R = BinaryOperator::Create(Opcode, NewSplat, OtherOp);
 
     // Intersect FMF on both new binops. Other (poison-generating) flags are
