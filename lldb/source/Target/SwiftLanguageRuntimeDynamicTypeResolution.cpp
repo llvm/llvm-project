@@ -765,7 +765,7 @@ SwiftLanguageRuntimeImpl::emplaceClangTypeInfo(
 llvm::Optional<uint64_t>
 SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
     CompilerType instance_type, ValueObject *instance,
-    ConstString member_name) {
+    llvm::StringRef member_name) {
   auto *scratch_ctx =
       llvm::cast<SwiftASTContext>(instance_type.GetTypeSystem());
   if (scratch_ctx->HasFatalErrors())
@@ -777,7 +777,7 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
       GetCanonicalSwiftType(instance_type).getPointer();
 
   // Perform the cache lookup.
-  MemberID key{swift_type, member_name.GetCString()};
+  MemberID key{swift_type, ConstString(member_name).GetCString()};
   auto it = m_member_offsets.find(key);
   if (it != m_member_offsets.end())
     return it->second;
@@ -818,7 +818,7 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
               bound.GetTypeName().AsCString());
 
           swift_type = GetCanonicalSwiftType(bound).getPointer();
-          MemberID key{swift_type, member_name.GetCString()};
+          MemberID key{swift_type, ConstString(member_name).GetCString()};
           auto it = m_member_offsets.find(key);
           if (it != m_member_offsets.end())
             return it->second;
@@ -834,15 +834,15 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
 
   // Use RemoteAST to determine the member offset.
   if (safe_to_use_remote_ast) {
-    swift::remoteAST::Result<uint64_t> result = remote_ast->getOffsetOfMember(
-        swift_type, optmeta, member_name.GetStringRef());
+    swift::remoteAST::Result<uint64_t> result =
+        remote_ast->getOffsetOfMember(swift_type, optmeta, member_name);
     if (result) {
       LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
                 "[MemberVariableOffsetResolver] offset discovered = %" PRIu64,
                 (uint64_t)result.getValue());
 
       // Cache this result.
-      MemberID key{swift_type, member_name.GetCString()};
+      MemberID key{swift_type, ConstString(member_name).GetCString()};
       m_member_offsets.insert({key, result.getValue()});
       return result.getValue();
     }
@@ -856,8 +856,10 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
 }
 
 llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteMirrors(
-    CompilerType instance_type, ValueObject *instance, ConstString member_name,
+    CompilerType instance_type, ValueObject *instance, llvm::StringRef member_name,
     Status *error) {
+  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+            "using remote mirrors");
   auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
       instance_type.GetTypeSystem());
   if (!ts) {
@@ -866,78 +868,58 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemote
     return {};
   }
 
-  // Try remote mirrors.
-  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-            "[GetMemberVariableOffsetRemoteMirrors] using remote mirrors");
-  if (const swift::reflection::TypeInfo *type_info = GetTypeInfo(
-          instance_type,
-          instance ? instance->GetExecutionContextRef().GetFrameSP().get()
-                   : nullptr)) {
-    auto record_type_info =
-        llvm::dyn_cast<swift::reflection::RecordTypeInfo>(type_info);
-    if (record_type_info) {
-      // Handle tuples.
-      LLDB_LOGF(
-          GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-          "[GetMemberVariableOffsetRemoteMirrors] using record type info");
-      if (record_type_info->getRecordKind() ==
-          swift::reflection::RecordKind::Tuple) {
-        unsigned tuple_idx;
-        if (member_name.GetStringRef().getAsInteger(10, tuple_idx) ||
-            tuple_idx >= record_type_info->getNumFields()) {
-          if (error)
-            error->SetErrorString("tuple index out of bounds");
-          return {};
-        }
-        return record_type_info->getFields()[tuple_idx].Offset;
-      }
+  // Try the static type metadata.
+  auto frame = instance ? instance->GetExecutionContextRef().GetFrameSP().get()
+                        : nullptr;
+  if (auto *ti = llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(
+          GetTypeInfo(instance_type, frame))) {
+    auto fields = ti->getFields();
+    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+              "using record type info");
 
-      // Handle other record types.
-      for (auto &field : record_type_info->getFields()) {
-        if (ConstString(field.Name) == member_name)
-          return field.Offset;
+    // Handle tuples.
+    if (ti->getRecordKind() == swift::reflection::RecordKind::Tuple) {
+      unsigned tuple_idx;
+      if (member_name.getAsInteger(10, tuple_idx) ||
+          tuple_idx >= ti->getNumFields()) {
+        if (error)
+          error->SetErrorString("tuple index out of bounds");
+        return {};
       }
+      return fields[tuple_idx].Offset;
     }
+
+    // Handle other record types.
+   for (auto &field : fields)
+      if (StringRef(field.Name) == member_name)
+        return field.Offset;
   }
 
-  lldb::addr_t pointer = instance->GetPointerValue();
-  auto *reflection_ctx = GetReflectionContext();
-  if (!reflection_ctx)
-    return {};
+  // Try the instance type metadata.
+  bool did_log = false;
+  llvm::Optional<uint64_t> result;
+  if (instance)
+    ForEachSuperClassTypeInfo(
+        *instance, [&](const swift::reflection::RecordTypeInfo &ti) -> bool {
+          if (!did_log) {
+            did_log = true;
+            LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                      "using instance type info");
+          }
+          for (auto &field : ti.getFields())
+            if (StringRef(field.Name) == member_name) {
+              result = field.Offset;
+              return true;
+            }
+          return false;
+        });
 
-  auto find_field =
-      [&](const swift::reflection::TypeInfo *ti) -> llvm::Optional<uint64_t> {
-    auto class_type_info =
-        llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti);
-    if (class_type_info) {
-      for (auto &field : class_type_info->getFields()) {
-        if (ConstString(field.Name) == member_name)
-          return field.Offset;
-      }
-    }
-    return {};
-  };
-
-  LLDBTypeInfoProvider provider(*this, *ts);
-  auto md_ptr = reflection_ctx->readMetadataFromInstance(pointer);
-  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-            "[GetMemberVariableOffsetRemoteMirrors] using instance type info");
-  while (md_ptr && *md_ptr) {
-    if (auto offset =
-            find_field(reflection_ctx->getMetadataTypeInfo(*md_ptr, &provider)))
-      return offset;
-
-    // Continue with the base class.
-    md_ptr = reflection_ctx->readSuperClassFromClassMetadata(*md_ptr);
-  }
-
-  return {};
+  return result;
 }
 
-  
 llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
-    CompilerType instance_type, ValueObject *instance, ConstString member_name,
-    Status *error) {
+    CompilerType instance_type, ValueObject *instance,
+    llvm::StringRef member_name, Status *error) {
   llvm::Optional<uint64_t> offset;
 
   if (!instance_type.IsValid())
@@ -945,7 +927,7 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
 
   LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
             "[GetMemberVariableOffset] asked to resolve offset for member %s",
-            member_name.AsCString());
+            member_name.str().c_str());
 
   // Using the module context for RemoteAST is cheaper bit only safe
   // when there is no dynamic type resolution involved.
@@ -984,16 +966,54 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
   if (offset) {
     LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
               "[GetMemberVariableOffset] offset of %s is %d",
-              member_name.AsCString(), *offset);
+              member_name.str().c_str(), *offset);
   } else {
     LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
               "[GetMemberVariableOffset] failed for %s",
-              member_name.AsCString());
+              member_name.str().c_str());
     if (error)
       error->SetErrorStringWithFormat("could not resolve member offset");
   }
   return offset;
 }
+
+bool SwiftLanguageRuntimeImpl::ForEachSuperClassTypeInfo(
+    ValueObject &instance,
+    std::function<bool(const swift::reflection::RecordTypeInfo &rti)> fn) {
+  lldb::addr_t pointer = instance.GetPointerValue();
+  auto *reflection_ctx = GetReflectionContext();
+  if (!reflection_ctx)
+    return false;
+
+  auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
+      instance.GetCompilerType().GetTypeSystem());
+  if (!ts)
+    return false;
+
+  LLDBTypeInfoProvider provider(*this, *ts);
+  auto md_ptr = reflection_ctx->readMetadataFromInstance(pointer);
+  if (!md_ptr)
+    return false;
+
+  // Class object.
+  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+            "found RecordTypeInfo for instance");
+  while (md_ptr && *md_ptr) {
+    auto *ti = reflection_ctx->getMetadataTypeInfo(*md_ptr, &provider);
+    if (auto *class_type_info =
+            llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti)) {
+      if (fn(*class_type_info))
+        return true;
+    }
+
+    // Continue with the base class.
+    md_ptr = reflection_ctx->readSuperClassFromClassMetadata(*md_ptr);
+  }
+  return false;
+}
+
+
+
 bool SwiftLanguageRuntime::IsSelf(Variable &variable) {
   // A variable is self if its name if "self", and it's either a
   // function argument or a local variable and it's scope is a
