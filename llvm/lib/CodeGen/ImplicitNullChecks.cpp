@@ -208,7 +208,7 @@ class ImplicitNullChecks : public MachineFunctionPass {
 
   /// Return true if \p FaultingMI can be hoisted from after the
   /// instructions in \p InstsSeenSoFar to before them.  Set \p Dependence to a
-  /// non-null value if we also need to (and legally can) hoist a depedency.
+  /// non-null value if we also need to (and legally can) hoist a dependency.
   bool canHoistInst(MachineInstr *FaultingMI,
                     ArrayRef<MachineInstr *> InstsSeenSoFar,
                     MachineBasicBlock *NullSucc, MachineInstr *&Dependence);
@@ -281,12 +281,12 @@ bool ImplicitNullChecks::canReorder(const MachineInstr *A,
   // between A and B here -- for instance, we should not be dealing with heap
   // load-store dependencies here.
 
-  for (auto MOA : A->operands()) {
+  for (const auto &MOA : A->operands()) {
     if (!(MOA.isReg() && MOA.getReg()))
       continue;
 
     Register RegA = MOA.getReg();
-    for (auto MOB : B->operands()) {
+    for (const auto &MOB : B->operands()) {
       if (!(MOB.isReg() && MOB.getReg()))
         continue;
 
@@ -413,7 +413,7 @@ ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
 
 bool ImplicitNullChecks::canDependenceHoistingClobberLiveIns(
     MachineInstr *DependenceMI, MachineBasicBlock *NullSucc) {
-  for (auto &DependenceMO : DependenceMI->operands()) {
+  for (const auto &DependenceMO : DependenceMI->operands()) {
     if (!(DependenceMO.isReg() && DependenceMO.getReg()))
       continue;
 
