@@ -1,5 +1,14 @@
 // RUN: %clang_cc1 -std=c++11 -S -triple armv7-none-eabi -fmerge-all-constants -emit-llvm -o - %s | FileCheck %s
 
+// This creates and lifetime-extends a 'const char[5]' temporary.
+// CHECK: @_ZGR19extended_string_ref_ = internal constant [5 x i8] c"hi\00\00\00",
+// CHECK: @extended_string_ref = constant [5 x i8]* @_ZGR19extended_string_ref_,
+const char (&extended_string_ref)[5] = {"hi"};
+
+// This binds directly to a string literal object.
+// CHECK: @nonextended_string_ref = constant [3 x i8]* @.str
+const char (&nonextended_string_ref)[3] = {"hi"};
+
 namespace reference {
   struct A {
     int i1, i2;
