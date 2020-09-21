@@ -706,7 +706,7 @@ void IrreducibleGraph::addEdges(const BlockNode &Node,
 ///
 /// In addition to loops, this algorithm has limited support for irreducible
 /// SCCs, which are SCCs with multiple entry blocks.  Irreducible SCCs are
-/// discovered on they fly, and modelled as loops with multiple headers.
+/// discovered on the fly, and modelled as loops with multiple headers.
 ///
 /// The headers of irreducible sub-SCCs consist of its entry blocks and all
 /// nodes that are targets of a backedge within it (excluding backedges within
