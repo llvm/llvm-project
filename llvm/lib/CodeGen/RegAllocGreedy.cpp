@@ -890,8 +890,7 @@ bool RAGreedy::canEvictInterference(LiveInterval &VirtReg, Register PhysReg,
       return false;
 
     // Check if any interfering live range is heavier than MaxWeight.
-    for (unsigned i = Q.interferingVRegs().size(); i; --i) {
-      LiveInterval *Intf = Q.interferingVRegs()[i - 1];
+    for (LiveInterval *Intf : reverse(Q.interferingVRegs())) {
       assert(Register::isVirtualRegister(Intf->reg()) &&
              "Only expecting virtual register interference from query");
 
@@ -971,9 +970,7 @@ bool RAGreedy::canEvictInterferenceInRange(LiveInterval &VirtReg,
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
 
     // Check if any interfering live range is heavier than MaxWeight.
-    for (unsigned i = Q.interferingVRegs().size(); i; --i) {
-      LiveInterval *Intf = Q.interferingVRegs()[i - 1];
-
+    for (const LiveInterval *Intf : reverse(Q.interferingVRegs())) {
       // Check if interference overlast the segment in interest.
       if (!Intf->overlaps(Start, End))
         continue;
@@ -1066,8 +1063,7 @@ void RAGreedy::evictInterference(LiveInterval &VirtReg, Register PhysReg,
   }
 
   // Evict them second. This will invalidate the queries.
-  for (unsigned i = 0, e = Intfs.size(); i != e; ++i) {
-    LiveInterval *Intf = Intfs[i];
+  for (LiveInterval *Intf : Intfs) {
     // The same VirtReg may be present in multiple RegUnits. Skip duplicates.
     if (!VRM->hasPhys(Intf->reg()))
       continue;
@@ -2525,8 +2521,7 @@ RAGreedy::mayRecolorAllInterferences(unsigned PhysReg, LiveInterval &VirtReg,
       CutOffInfo |= CO_Interf;
       return false;
     }
-    for (unsigned i = Q.interferingVRegs().size(); i; --i) {
-      LiveInterval *Intf = Q.interferingVRegs()[i - 1];
+    for (LiveInterval *Intf : reverse(Q.interferingVRegs())) {
       // If Intf is done and sit on the same register class as VirtReg,
       // it would not be recolorable as it is in the same state as VirtReg.
       // However, if VirtReg has tied defs and Intf doesn't, then
