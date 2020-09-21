@@ -1756,9 +1756,9 @@ private:
     Last->ReorderIndices.append(ReorderIndices.begin(), ReorderIndices.end());
     Last->setOperations(S);
     if (Vectorized) {
-      for (int i = 0, e = VL.size(); i != e; ++i) {
-        assert(!getTreeEntry(VL[i]) && "Scalar already in tree!");
-        ScalarToTreeEntry[VL[i]] = Last;
+      for (Value *V : VL) {
+        assert(!getTreeEntry(V) && "Scalar already in tree!");
+        ScalarToTreeEntry[V] = Last;
       }
       // Update the scheduler bundle to point to this TreeEntry.
       unsigned Lane = 0;
@@ -2691,10 +2691,10 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       auto *PH = cast<PHINode>(VL0);
 
       // Check for terminator values (e.g. invoke).
-      for (unsigned j = 0; j < VL.size(); ++j)
+      for (Value *V : VL)
         for (unsigned i = 0, e = PH->getNumIncomingValues(); i < e; ++i) {
           Instruction *Term = dyn_cast<Instruction>(
-              cast<PHINode>(VL[j])->getIncomingValueForBlock(
+              cast<PHINode>(V)->getIncomingValueForBlock(
                   PH->getIncomingBlock(i)));
           if (Term && Term->isTerminator()) {
             LLVM_DEBUG(dbgs()
@@ -2715,8 +2715,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       for (unsigned i = 0, e = PH->getNumIncomingValues(); i < e; ++i) {
         ValueList Operands;
         // Prepare the operand vector.
-        for (Value *j : VL)
-          Operands.push_back(cast<PHINode>(j)->getIncomingValueForBlock(
+        for (Value *V : VL)
+          Operands.push_back(cast<PHINode>(V)->getIncomingValueForBlock(
               PH->getIncomingBlock(i)));
         TE->setOperand(i, Operands);
         OperandsVec.push_back(Operands);
@@ -2975,8 +2975,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       for (unsigned i = 0, e = VL0->getNumOperands(); i < e; ++i) {
         ValueList Operands;
         // Prepare the operand vector.
-        for (Value *j : VL)
-          Operands.push_back(cast<Instruction>(j)->getOperand(i));
+        for (Value *V : VL)
+          Operands.push_back(cast<Instruction>(V)->getOperand(i));
 
         buildTree_rec(Operands, Depth + 1, {TE, i});
       }
