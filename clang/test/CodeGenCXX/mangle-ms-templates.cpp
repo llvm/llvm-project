@@ -310,3 +310,20 @@ struct UUIDType4 : UUIDType3<G> {
 template struct UUIDType4<&__uuidof(uuid)>;
 // CHECK: "?bar@?$UUIDType4@$1?_GUID_12345678_1234_1234_1234_1234567890ab@@3U__s_GUID@@B@@QAEXXZ"
 // CHECK: "?foo@?$UUIDType3@$1?_GUID_12345678_1234_1234_1234_1234567890ab@@3U__s_GUID@@B@@QAEXXZ"
+
+#ifdef _WIN64
+template<__int128 N> struct Int128 {};
+template<unsigned __int128 N> struct UInt128 {};
+// X64: define {{.*}} @"?fun_int128@@YAXU?$Int128@$0A@@@@Z"(
+void fun_int128(Int128<0>) {}
+// X64: define {{.*}} @"?fun_int128@@YAXU?$Int128@$0?0@@@Z"(
+void fun_int128(Int128<-1>) {}
+// X64: define {{.*}} @"?fun_int128@@YAXU?$Int128@$0DPPPPPPPPPPPPPPPAAAAAAAAAAAAAAAB@@@@Z"(
+void fun_int128(Int128<(__int128)9223372036854775807 * (__int128)9223372036854775807>) {}
+// X64: define {{.*}} @"?fun_uint128@@YAXU?$UInt128@$0A@@@@Z"(
+void fun_uint128(UInt128<0>) {}
+// X64: define {{.*}} @"?fun_uint128@@YAXU?$UInt128@$0?0@@@Z"(
+void fun_uint128(UInt128<(unsigned __int128)-1>) {}
+// X64: define {{.*}} @"?fun_uint128@@YAXU?$UInt128@$0DPPPPPPPPPPPPPPPAAAAAAAAAAAAAAAB@@@@Z"(
+void fun_uint128(UInt128<(unsigned __int128)9223372036854775807 * (unsigned __int128)9223372036854775807>) {}
+#endif
