@@ -32,15 +32,15 @@ template<_Complex float ci> struct ComplexFloat; // cxx17-error {{cannot have ty
 template<_Complex int ci> struct ComplexInt; // cxx17-error {{cannot have type '_Complex int' before C++20}}
 template<_ExtInt(42) ei> struct ExtInt;
 
-// atomic and vector types aren't scalar types
-// FIXME: Consider permitting vector types here.
+// atomic types aren't scalar types
 template<_Atomic float ci> struct AtomicFloat; // expected-error {{cannot have type '_Atomic(float)'}}
 template<_Atomic int ci> struct AtomicInt; // expected-error {{cannot have type '_Atomic(int)'}}
 
+// we allow vector types as an extension
 typedef __attribute__((ext_vector_type(4))) int VI4;
 typedef __attribute__((ext_vector_type(4))) float VF4;
-template<VI4> struct VectorInt; // expected-error {{cannot have type 'VI4'}}
-template<VF4> struct VectorFloat; // expected-error {{cannot have type 'VF4'}}
+template<VI4> struct VectorInt; // cxx17-error {{cannot have type 'VI4'}}
+template<VF4> struct VectorFloat; // cxx17-error {{cannot have type 'VF4'}}
 
 struct A2 {};
 
@@ -64,6 +64,8 @@ public:
   _Complex int ci;
   _Complex float cf;
   _ExtInt(42) ei;
+  VI4 vi4;
+  VF4 vf4;
 };
 
 template<B> struct ClassNTTP {}; // cxx17-error {{cannot have type 'B'}}
@@ -119,8 +121,6 @@ struct MutableField {
 };
 template<MutableField> struct WithMutableField {}; // cxx17-error {{cannot have type}} cxx20-error {{is not a structural type}}
 
-template<typename T> struct BadExtType { T t; }; // cxx20-note 4{{has a non-static data member of non-structural type}}
+template<typename T> struct BadExtType { T t; }; // cxx20-note 2{{has a non-static data member of non-structural type}}
 template<BadExtType<_Atomic float> > struct AtomicFloatField; // cxx17-error {{cannot have type}} cxx20-error {{is not a structural type}}
 template<BadExtType<_Atomic int> > struct AtomicInt; // cxx17-error {{cannot have type}} cxx20-error {{is not a structural type}}
-template<BadExtType<VI4> > struct VectorInt; // cxx17-error {{cannot have type}} cxx20-error {{is not a structural type}}
-template<BadExtType<VF4> > struct VectorFloat; // cxx17-error {{cannot have type}} cxx20-error {{is not a structural type}}
