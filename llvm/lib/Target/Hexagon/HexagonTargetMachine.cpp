@@ -16,6 +16,7 @@
 #include "HexagonMachineScheduler.h"
 #include "HexagonTargetObjectFile.h"
 #include "HexagonTargetTransformInfo.h"
+#include "HexagonVectorLoopCarriedReuse.h"
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -137,7 +138,7 @@ namespace llvm {
   void initializeHexagonGenMuxPass(PassRegistry&);
   void initializeHexagonHardwareLoopsPass(PassRegistry&);
   void initializeHexagonLoopIdiomRecognizePass(PassRegistry&);
-  void initializeHexagonVectorLoopCarriedReusePass(PassRegistry&);
+  void initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PassRegistry &);
   void initializeHexagonNewValueJumpPass(PassRegistry&);
   void initializeHexagonOptAddrModePass(PassRegistry&);
   void initializeHexagonPacketizerPass(PassRegistry&);
@@ -145,7 +146,7 @@ namespace llvm {
   void initializeHexagonSplitDoubleRegsPass(PassRegistry&);
   void initializeHexagonVExtractPass(PassRegistry&);
   Pass *createHexagonLoopIdiomPass();
-  Pass *createHexagonVectorLoopCarriedReusePass();
+  Pass *createHexagonVectorLoopCarriedReuseLegacyPass();
 
   FunctionPass *createHexagonBitSimplify();
   FunctionPass *createHexagonBranchRelaxation();
@@ -196,7 +197,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
   initializeHexagonGenMuxPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
   initializeHexagonLoopIdiomRecognizePass(PR);
-  initializeHexagonVectorLoopCarriedReusePass(PR);
+  initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PR);
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
   initializeHexagonPacketizerPass(PR);
@@ -266,10 +267,10 @@ void HexagonTargetMachine::adjustPassManager(PassManagerBuilder &PMB) {
       PM.add(createHexagonLoopIdiomPass());
     });
   PMB.addExtension(
-    PassManagerBuilder::EP_LoopOptimizerEnd,
-    [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
-      PM.add(createHexagonVectorLoopCarriedReusePass());
-    });
+      PassManagerBuilder::EP_LoopOptimizerEnd,
+      [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+        PM.add(createHexagonVectorLoopCarriedReuseLegacyPass());
+      });
 }
 
 TargetTransformInfo
