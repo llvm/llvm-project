@@ -1586,6 +1586,22 @@ TEST_F(StructuralEquivalenceStmtTest, IntegerLiteralDifferentTypes) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+TEST_F(StructuralEquivalenceStmtTest, MemberExpr) {
+  std::string ClassSrc = "struct C { int a; int b; };";
+  auto t = makeStmts(ClassSrc + "int wrapper() { C c; return c.a; }",
+                     ClassSrc + "int wrapper() { C c; return c.a; }",
+                     Lang_CXX03, memberExpr());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, MemberExprDifferentMember) {
+  std::string ClassSrc = "struct C { int a; int b; };";
+  auto t = makeStmts(ClassSrc + "int wrapper() { C c; return c.a; }",
+                     ClassSrc + "int wrapper() { C c; return c.b; }",
+                     Lang_CXX03, memberExpr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
 TEST_F(StructuralEquivalenceStmtTest, ObjCStringLiteral) {
   auto t =
       makeWrappedStmts("@\"a\"", "@\"a\"", Lang_OBJCXX, fallbackExprMatcher());
