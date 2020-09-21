@@ -1347,27 +1347,35 @@ private:
   // Equality tracking implementation
   //===------------------------------------------------------------------===//
 
-  ProgramStateRef trackEQ(ProgramStateRef State, SymbolRef Sym,
-                          const llvm::APSInt &Int,
+  ProgramStateRef trackEQ(RangeSet NewConstraint, ProgramStateRef State,
+                          SymbolRef Sym, const llvm::APSInt &Int,
                           const llvm::APSInt &Adjustment) {
-    if (auto Equality = EqualityInfo::extract(Sym, Int, Adjustment)) {
-      // Extract function assumes that we gave it Sym + Adjustment != Int,
-      // so the result should be opposite.
-      Equality->invert();
-      return track(State, *Equality);
-    }
-
-    return State;
+    return track<true>(NewConstraint, State, Sym, Int, Adjustment);
   }
 
-  ProgramStateRef trackNE(ProgramStateRef State, SymbolRef Sym,
-                          const llvm::APSInt &Int,
+  ProgramStateRef trackNE(RangeSet NewConstraint, ProgramStateRef State,
+                          SymbolRef Sym, const llvm::APSInt &Int,
                           const llvm::APSInt &Adjustment) {
+    return track<false>(NewConstraint, State, Sym, Int, Adjustment);
+  }
+
+  template <bool EQ>
+  ProgramStateRef track(RangeSet NewConstraint, ProgramStateRef State,
+                        SymbolRef Sym, const llvm::APSInt &Int,
+                        const llvm::APSInt &Adjustment) {
+    if (NewConstraint.isEmpty())
+      // This is an infeasible assumption.
+      return nullptr;
+
+    ProgramStateRef NewState = setConstraint(State, Sym, NewConstraint);
     if (auto Equality = EqualityInfo::extract(Sym, Int, Adjustment)) {
-      return track(State, *Equality);
+      // If the original assumption is not Sym + Adjustment !=/</> Int,
+      // we should invert IsEquality flag.
+      Equality->IsEquality = Equality->IsEquality != EQ;
+      return track(NewState, *Equality);
     }
 
-    return State;
+    return NewState;
   }
 
   ProgramStateRef track(ProgramStateRef State, EqualityInfo ToTrack) {
@@ -2042,12 +2050,7 @@ RangeConstraintManager::assumeSymNE(ProgramStateRef St, SymbolRef Sym,
 
   RangeSet New = getRange(St, Sym).Delete(getBasicVals(), F, Point);
 
-  if (New.isEmpty())
-    // this is infeasible assumption
-    return nullptr;
-
-  ProgramStateRef NewState = setConstraint(St, Sym, New);
-  return trackNE(NewState, Sym, Int, Adjustment);
+  return trackNE(New, St, Sym, Int, Adjustment);
 }
 
 ProgramStateRef
@@ -2063,12 +2066,7 @@ RangeConstraintManager::assumeSymEQ(ProgramStateRef St, SymbolRef Sym,
   llvm::APSInt AdjInt = AdjustmentType.convert(Int) - Adjustment;
   RangeSet New = getRange(St, Sym).Intersect(getBasicVals(), F, AdjInt, AdjInt);
 
-  if (New.isEmpty())
-    // this is infeasible assumption
-    return nullptr;
-
-  ProgramStateRef NewState = setConstraint(St, Sym, New);
-  return trackEQ(NewState, Sym, Int, Adjustment);
+  return trackEQ(New, St, Sym, Int, Adjustment);
 }
 
 RangeSet RangeConstraintManager::getSymLTRange(ProgramStateRef St,
@@ -2104,7 +2102,7 @@ RangeConstraintManager::assumeSymLT(ProgramStateRef St, SymbolRef Sym,
                                     const llvm::APSInt &Int,
                                     const llvm::APSInt &Adjustment) {
   RangeSet New = getSymLTRange(St, Sym, Int, Adjustment);
-  return New.isEmpty() ? nullptr : setConstraint(St, Sym, New);
+  return trackNE(New, St, Sym, Int, Adjustment);
 }
 
 RangeSet RangeConstraintManager::getSymGTRange(ProgramStateRef St,
@@ -2140,7 +2138,7 @@ RangeConstraintManager::assumeSymGT(ProgramStateRef St, SymbolRef Sym,
                                     const llvm::APSInt &Int,
                                     const llvm::APSInt &Adjustment) {
   RangeSet New = getSymGTRange(St, Sym, Int, Adjustment);
-  return New.isEmpty() ? nullptr : setConstraint(St, Sym, New);
+  return trackNE(New, St, Sym, Int, Adjustment);
 }
 
 RangeSet RangeConstraintManager::getSymGERange(ProgramStateRef St,
