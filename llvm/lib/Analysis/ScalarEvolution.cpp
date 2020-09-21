@@ -6365,6 +6365,16 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         const SCEV *ClampedY = getUMinExpr(X, Y);
         return getMinusSCEV(X, ClampedY, SCEV::FlagNUW);
       }
+      case Intrinsic::uadd_sat: {
+        const SCEV *X = getSCEV(II->getArgOperand(0));
+        const SCEV *Y = getSCEV(II->getArgOperand(1));
+        const SCEV *ClampedX = getUMinExpr(
+            X, getMinusSCEV(
+                   getConstant(cast<ConstantInt>(
+                       Constant::getAllOnesValue(II->getType()))),
+                   Y, (SCEV::NoWrapFlags)(SCEV::FlagNSW | SCEV::FlagNUW)));
+        return getAddExpr(ClampedX, Y, SCEV::FlagNUW);
+      }
       default:
         break;
       }

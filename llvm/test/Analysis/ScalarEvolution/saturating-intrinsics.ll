@@ -13,7 +13,7 @@ define i32 @uadd_sat(i32 %x, i32 %y) {
 ; CHECK-LABEL: 'uadd_sat'
 ; CHECK-NEXT:  Classifying expressions for: @uadd_sat
 ; CHECK-NEXT:    %z = call i32 @llvm.uadd.sat.i32(i32 %x, i32 %y)
-; CHECK-NEXT:    --> %z U: full-set S: full-set
+; CHECK-NEXT:    --> (((-1 + (-1 * %y)) umin %x) + %y)<nuw> U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @uadd_sat
 ;
   %z = call i32 @llvm.uadd.sat.i32(i32 %x, i32 %y)
