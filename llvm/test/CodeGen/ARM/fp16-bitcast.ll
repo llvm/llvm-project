@@ -152,12 +152,8 @@ define half @constcall() {
 ;
 ; CHECK-FP16-HARD-LABEL: constcall:
 ; CHECK-FP16-HARD:       @ %bb.0: @ %entry
-; CHECK-FP16-HARD-NEXT:    vldr s0, .LCPI4_0
+; CHECK-FP16-HARD-NEXT:    vmov.f16 s0, #1.000000e+01
 ; CHECK-FP16-HARD-NEXT:    b ccc
-; CHECK-FP16-HARD-NEXT:    .p2align 2
-; CHECK-FP16-HARD-NEXT:  @ %bb.1:
-; CHECK-FP16-HARD-NEXT:  .LCPI4_0:
-; CHECK-FP16-HARD-NEXT:    .long 0x00004900 @ float 2.61874657E-41
 entry:
   %call = tail call fast half @ccc(half 0xH4900)
   ret half %call
