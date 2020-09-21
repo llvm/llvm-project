@@ -156,6 +156,7 @@ using llvm::MCPhysReg;
   static const MCPhysReg RRegs[32] = PPC_REGS0_31(PPC::R); \
   static const MCPhysReg XRegs[32] = PPC_REGS0_31(PPC::X); \
   static const MCPhysReg FRegs[32] = PPC_REGS0_31(PPC::F); \
+  static const MCPhysReg VSRpRegs[32] = PPC_REGS0_31(PPC::VSRp); \
   static const MCPhysReg SPERegs[32] = PPC_REGS0_31(PPC::S); \
   static const MCPhysReg VFRegs[32] = PPC_REGS0_31(PPC::VF); \
   static const MCPhysReg VRegs[32] = PPC_REGS0_31(PPC::V); \
