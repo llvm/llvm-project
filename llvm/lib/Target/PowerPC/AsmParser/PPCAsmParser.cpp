@@ -290,6 +290,11 @@ public:
     return (unsigned) Imm.Val;
   }
 
+  unsigned getVSRpEvenReg() const {
+    assert(isVSRpEvenRegNumber() && "Invalid access!");
+    return (unsigned) Imm.Val >> 1;
+  }
+
   unsigned getCCReg() const {
     assert(isCCRegNumber() && "Invalid access!");
     return (unsigned) (Kind == Immediate ? Imm.Val : Expr.CRVal);
@@ -402,6 +407,9 @@ public:
                                   (getImm() & 3) == 0); }
   bool isImmZero() const { return Kind == Immediate && getImm() == 0; }
   bool isRegNumber() const { return Kind == Immediate && isUInt<5>(getImm()); }
+  bool isVSRpEvenRegNumber() const {
+    return Kind == Immediate && isUInt<6>(getImm()) && ((getImm() & 1) == 0);
+  }
   bool isVSRegNumber() const {
     return Kind == Immediate && isUInt<6>(getImm());
   }
@@ -500,6 +508,11 @@ public:
   void addRegSPERCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(SPERegs[getReg()]));
+  }
+
+  void addRegVSRpRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(VSRpRegs[getVSRpEvenReg()]));
   }
 
   void addRegCRBITRCOperands(MCInst &Inst, unsigned N) const {

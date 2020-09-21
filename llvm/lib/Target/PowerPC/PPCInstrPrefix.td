@@ -517,10 +517,79 @@ multiclass 8LS_DForm_R_SI34_XT6_RA5_p<bits<5> opcode, dag OOL, dag IOL,
                                     isPCRel;
 }
 
+def PPCRegVSRpRCAsmOperand : AsmOperandClass {
+  let Name = "RegVSRpRC"; let PredicateMethod = "isVSRpEvenRegNumber";
+}
+
+def vsrprc : RegisterOperand<VSRpRC> {
+  let ParserMatchClass = PPCRegVSRpRCAsmOperand;
+}
+
+class DQForm_XTp5_RA17_MEM<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
+                           string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<5> XTp;
+  bits<17> DQ_RA;
+  let Pattern = pattern;
+
+  let Inst{6-9} = XTp{3-0};
+  let Inst{10} = XTp{4};
+  let Inst{11-15} = DQ_RA{16-12};  // Register #
+  let Inst{16-27} = DQ_RA{11-0};   // Displacement.
+  let Inst{28-31} = xo;
+}
+
+class XForm_XTp5_XAB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                      string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin>, XFormMemOp {
+  bits<5> XTp;
+  bits<5> A;
+  bits<5> B;
+
+  let Pattern = pattern;
+  let Inst{6-9} = XTp{3-0};
+  let Inst{10} = XTp{4};
+  let Inst{11-15} = A;
+  let Inst{16-20} = B;
+  let Inst{21-30} = xo;
+  let Inst{31} = 0;
+}
+
+class 8LS_DForm_R_XTp5_SI34_MEM<bits<6> opcode, dag OOL, dag IOL, string asmstr,
+                                InstrItinClass itin, list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<5> XTp;
+  bits<39> D_RA;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-10} = 0;
+  let Inst{11} = PCRel;
+  let Inst{12-13} = 0;
+  let Inst{14-31} = D_RA{33-16}; // Imm18
+
+  // The instruction.
+  let Inst{38-41} = XTp{3-0};
+  let Inst{42}    = XTp{4};
+  let Inst{43-47} = D_RA{38-34};   // Register #
+  let Inst{48-63} = D_RA{15-0};    // D
+}
+
+multiclass 8LS_DForm_R_XTp5_SI34_MEM_p<bits<6> pref, bits<6> opcode, dag OOL,
+                                       dag IOL, dag PCRel_IOL,
+                                       string asmstr, InstrItinClass itin> {
+  def NAME : 8LS_DForm_R_XTp5_SI34_MEM<opcode, OOL, IOL,
+                                       !strconcat(asmstr, ", 0"), itin, []>;
+  def pc : 8LS_DForm_R_XTp5_SI34_MEM<opcode, OOL, PCRel_IOL,
+                                     !strconcat(asmstr, ", 1"), itin, []>,
+                                     isPCRel;
+}
+
 def PrefixInstrs : Predicate<"Subtarget->hasPrefixInstrs()">;
 def IsISA3_1 : Predicate<"Subtarget->isISA3_1()">;
-def PairedVectorMemops : Predicate<"PPCSubTarget->pairedVectorMemops()">;
-def MMA : Predicate<"PPCSubTarget->hasMMA()">;
+def PairedVectorMemops : Predicate<"Subtarget->pairedVectorMemops()">;
+def MMA : Predicate<"Subtarget->hasMMA()">;
 
 def RCCp {
   dag AToVSRC = (COPY_TO_REGCLASS $XA, VSRC);
@@ -669,6 +738,36 @@ let Predicates = [PrefixInstrs] in {
       8LS_DForm_R_SI34_RTA5_p<61, (outs), (ins g8rc:$RS, memri34:$D_RA),
                               (ins g8rc:$RS, memri34_pcrel:$D_RA),
                               "pstd $RS, $D_RA", IIC_LdStLFD>;
+  }
+}
+
+let mayLoad = 1, mayStore = 0, Predicates = [PairedVectorMemops] in {
+  def LXVP : DQForm_XTp5_RA17_MEM<6, 0, (outs vsrprc:$XTp),
+                                  (ins memrix16:$DQ_RA), "lxvp $XTp, $DQ_RA",
+                                  IIC_LdStLFD, []>;
+  def LXVPX : XForm_XTp5_XAB5<31, 333, (outs vsrprc:$XTp), (ins memrr:$src),
+                              "lxvpx $XTp, $src", IIC_LdStLFD,
+                              [(set v4i64:$XTp, (load xaddr:$src))]>;
+  let Predicates = [PrefixInstrs] in {
+    defm PLXVP :
+      8LS_DForm_R_XTp5_SI34_MEM_p<1, 58, (outs vsrprc:$XTp), (ins memri34:$D_RA),
+                                  (ins memri34_pcrel:$D_RA), "plxvp $XTp, $D_RA",
+                                  IIC_LdStLFD>;
+  }
+}
+
+let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops] in {
+  def STXVP : DQForm_XTp5_RA17_MEM<6, 1, (outs), (ins vsrprc:$XTp,
+                                   memrix16:$DQ_RA), "stxvp $XTp, $DQ_RA",
+                                   IIC_LdStLFD, []>;
+  def STXVPX : XForm_XTp5_XAB5<31, 461, (outs), (ins vsrprc:$XTp, memrr:$dst),
+                               "stxvpx $XTp, $dst", IIC_LdStLFD,
+                               [(store v4i64:$XTp, xaddr:$dst)]>;
+  let Predicates = [PrefixInstrs] in {
+    defm PSTXVP :
+      8LS_DForm_R_XTp5_SI34_MEM_p<1, 62, (outs), (ins vsrprc:$XTp, memri34:$D_RA),
+                                  (ins vsrprc:$XTp, memri34_pcrel:$D_RA),
+                                  "pstxvp $XTp, $D_RA", IIC_LdStLFD>;
   }
 }
 
