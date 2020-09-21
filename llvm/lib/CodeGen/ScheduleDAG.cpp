@@ -63,6 +63,7 @@ ScheduleDAG::~ScheduleDAG() = default;
 
 void ScheduleDAG::clearDAG() {
   SUnits.clear();
+  EntrySU = SUnit();
   ExitSU = SUnit();
 }
 
@@ -351,7 +352,9 @@ LLVM_DUMP_METHOD void SUnit::dumpAttributes() const {
 }
 
 LLVM_DUMP_METHOD void ScheduleDAG::dumpNodeName(const SUnit &SU) const {
-  if (&SU == &ExitSU)
+  if (&SU == &EntrySU)
+    dbgs() << "EntrySU";
+  else if (&SU == &ExitSU)
     dbgs() << "ExitSU";
   else
     dbgs() << "SU(" << SU.NodeNum << ")";
@@ -653,7 +656,7 @@ std::vector<int> ScheduleDAGTopologicalSort::GetSubGraph(const SUnit &StartSU,
     for (int I = SU->Preds.size()-1; I >= 0; --I) {
       const SUnit *Pred = SU->Preds[I].getSUnit();
       unsigned s = Pred->NodeNum;
-      // Edges to non-SUnits are allowed but ignored (e.g. ExitSU).
+      // Edges to non-SUnits are allowed but ignored (e.g. EntrySU).
       if (Pred->isBoundaryNode())
         continue;
       if (Node2Index[s] == LowerBound) {

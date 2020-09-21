@@ -234,7 +234,7 @@ public:
   virtual void leaveMBB() {};
 
   /// Notify this strategy that all roots have been released (including those
-  /// that depend on ExitSU).
+  /// that depend on EntrySU or ExitSU).
   virtual void registerRoots() {}
 
   /// Pick the next node to schedule, or return NULL. Set IsTopNode to true to

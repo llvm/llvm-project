@@ -415,8 +415,8 @@ void ScheduleDAGRRList::ReleasePred(SUnit *SU, const SDep *PredEdge) {
   }
 
   // If all the node's successors are scheduled, this node is ready
-  // to be scheduled.
-  if (PredSU->NumSuccsLeft == 0) {
+  // to be scheduled. Ignore the special EntrySU node.
+  if (PredSU->NumSuccsLeft == 0 && PredSU != &EntrySU) {
     PredSU->isAvailable = true;
 
     unsigned Height = PredSU->getHeight();
