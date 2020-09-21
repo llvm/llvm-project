@@ -1620,6 +1620,10 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
   SDLoc dl(N);
   SDValue Chain = Strict ? N->getOperand(0) : DAG.getEntryNode();
 
+  // TODO: Any other flags to propagate?
+  SDNodeFlags Flags;
+  Flags.setNoFPExcept(N->getFlags().hasNoFPExcept());
+
   // First do an SINT_TO_FP, whether the original was signed or unsigned.
   // When promoting partial word types to i32 we must honor the signedness,
   // though.
@@ -1630,8 +1634,8 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
     Lo = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
                                    APInt(NVT.getSizeInBits(), 0)), dl, NVT);
     if (Strict) {
-      Hi = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {NVT, MVT::Other},
-                       {Chain, Src});
+      Hi = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl,
+                       DAG.getVTList(NVT, MVT::Other), {Chain, Src}, Flags);
       Chain = Hi.getValue(1);
     } else
       Hi = DAG.getNode(ISD::SINT_TO_FP, dl, NVT, Src);
@@ -1690,12 +1694,12 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
     break;
   }
 
-  // TODO: Are there fast-math-flags to propagate to this FADD?
+  // TODO: Are there other fast-math-flags to propagate to this FADD?
   SDValue NewLo = DAG.getConstantFP(
       APFloat(APFloat::PPCDoubleDouble(), APInt(128, Parts)), dl, MVT::ppcf128);
   if (Strict) {
-    Lo = DAG.getNode(ISD::STRICT_FADD, dl, {VT, MVT::Other},
-                     {Chain, Hi, NewLo});
+    Lo = DAG.getNode(ISD::STRICT_FADD, dl, DAG.getVTList(VT, MVT::Other),
+                     {Chain, Hi, NewLo}, Flags);
     Chain = Lo.getValue(1);
     ReplaceValueWith(SDValue(N, 1), Chain);
   } else

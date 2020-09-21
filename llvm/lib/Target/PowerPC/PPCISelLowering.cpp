@@ -8090,14 +8090,20 @@ static SDValue convertFPToInt(SDValue Op, SelectionDAG &DAG,
   bool IsStrict = Op->isStrictFPOpcode();
   bool IsSigned = Op.getOpcode() == ISD::FP_TO_SINT ||
                   Op.getOpcode() == ISD::STRICT_FP_TO_SINT;
+
+  // TODO: Any other flags to propagate?
+  SDNodeFlags Flags;
+  Flags.setNoFPExcept(Op->getFlags().hasNoFPExcept());
+
   // For strict nodes, source is the second operand.
   SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
   SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
   assert(Src.getValueType().isFloatingPoint());
   if (Src.getValueType() == MVT::f32) {
     if (IsStrict) {
-      Src = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {MVT::f64, MVT::Other},
-                        {Chain, Src});
+      Src =
+          DAG.getNode(ISD::STRICT_FP_EXTEND, dl,
+                      DAG.getVTList(MVT::f64, MVT::Other), {Chain, Src}, Flags);
       Chain = Src.getValue(1);
     } else
       Src = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Src);
@@ -8117,7 +8123,8 @@ static SDValue convertFPToInt(SDValue Op, SelectionDAG &DAG,
   }
   if (IsStrict) {
     Opc = getPPCStrictOpcode(Opc);
-    Conv = DAG.getNode(Opc, dl, {MVT::f64, MVT::Other}, {Chain, Src});
+    Conv = DAG.getNode(Opc, dl, DAG.getVTList(MVT::f64, MVT::Other),
+                       {Chain, Src}, Flags);
   } else {
     Conv = DAG.getNode(Opc, dl, MVT::f64, Src);
   }
@@ -8398,6 +8405,11 @@ static SDValue convertIntToFP(SDValue Op, SDValue Src, SelectionDAG &DAG,
   bool IsSigned = Op.getOpcode() == ISD::SINT_TO_FP ||
                   Op.getOpcode() == ISD::STRICT_SINT_TO_FP;
   SDLoc dl(Op);
+
+  // TODO: Any other flags to propagate?
+  SDNodeFlags Flags;
+  Flags.setNoFPExcept(Op->getFlags().hasNoFPExcept());
+
   // If we have FCFIDS, then use it when converting to single-precision.
   // Otherwise, convert to double-precision and then round.
   bool IsSingle = Op.getValueType() == MVT::f32 && Subtarget.hasFPCVT();
@@ -8407,8 +8419,8 @@ static SDValue convertIntToFP(SDValue Op, SDValue Src, SelectionDAG &DAG,
   if (Op->isStrictFPOpcode()) {
     if (!Chain)
       Chain = Op.getOperand(0);
-    return DAG.getNode(getPPCStrictOpcode(ConvOpc), dl, {ConvTy, MVT::Other},
-                       {Chain, Src});
+    return DAG.getNode(getPPCStrictOpcode(ConvOpc), dl,
+                       DAG.getVTList(ConvTy, MVT::Other), {Chain, Src}, Flags);
   } else
     return DAG.getNode(ConvOpc, dl, ConvTy, Src);
 }
@@ -8464,6 +8476,10 @@ SDValue PPCTargetLowering::LowerINT_TO_FPVector(SDValue Op, SelectionDAG &DAG,
   assert((Op.getValueType() == MVT::v2f64 || Op.getValueType() == MVT::v4f32) &&
          "Supports conversions to v2f64/v4f32 only.");
 
+  // TODO: Any other flags to propagate?
+  SDNodeFlags Flags;
+  Flags.setNoFPExcept(Op->getFlags().hasNoFPExcept());
+
   bool SignedConv = Opc == ISD::SINT_TO_FP || Opc == ISD::STRICT_SINT_TO_FP;
   bool FourEltRes = Op.getValueType() == MVT::v4f32;
 
@@ -8503,8 +8519,8 @@ SDValue PPCTargetLowering::LowerINT_TO_FPVector(SDValue Op, SelectionDAG &DAG,
     Extend = DAG.getNode(ISD::BITCAST, dl, IntermediateVT, Arrange);
 
   if (IsStrict)
-    return DAG.getNode(Opc, dl, {Op.getValueType(), MVT::Other},
-                       {Op.getOperand(0), Extend});
+    return DAG.getNode(Opc, dl, DAG.getVTList(Op.getValueType(), MVT::Other),
+                       {Op.getOperand(0), Extend}, Flags);
 
   return DAG.getNode(Opc, dl, Op.getValueType(), Extend);
 }
@@ -8517,6 +8533,10 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
   bool IsStrict = Op->isStrictFPOpcode();
   SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
   SDValue Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
+
+  // TODO: Any other flags to propagate?
+  SDNodeFlags Flags;
+  Flags.setNoFPExcept(Op->getFlags().hasNoFPExcept());
 
   EVT InVT = Src.getValueType();
   EVT OutVT = Op.getValueType();
@@ -8667,8 +8687,9 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
 
     if (Op.getValueType() == MVT::f32 && !Subtarget.hasFPCVT()) {
       if (IsStrict)
-        FP = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {MVT::f32, MVT::Other},
-                         {Chain, FP, DAG.getIntPtrConstant(0, dl)});
+        FP = DAG.getNode(ISD::STRICT_FP_ROUND, dl,
+                         DAG.getVTList(MVT::f32, MVT::Other),
+                         {Chain, FP, DAG.getIntPtrConstant(0, dl)}, Flags);
       else
         FP = DAG.getNode(ISD::FP_ROUND, dl, MVT::f32, FP,
                          DAG.getIntPtrConstant(0, dl));
@@ -8747,8 +8768,9 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
     Chain = FP.getValue(1);
   if (Op.getValueType() == MVT::f32 && !Subtarget.hasFPCVT()) {
     if (IsStrict)
-      FP = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {MVT::f32, MVT::Other},
-                       {Chain, FP, DAG.getIntPtrConstant(0, dl)});
+      FP = DAG.getNode(ISD::STRICT_FP_ROUND, dl,
+                       DAG.getVTList(MVT::f32, MVT::Other),
+                       {Chain, FP, DAG.getIntPtrConstant(0, dl)}, Flags);
     else
       FP = DAG.getNode(ISD::FP_ROUND, dl, MVT::f32, FP,
                        DAG.getIntPtrConstant(0, dl));
