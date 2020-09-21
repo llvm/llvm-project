@@ -1263,13 +1263,13 @@ def VGET_LOW_A64  : NoTestOpInst<"vget_low", ".Q", "dPl", OP_LO>;
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar Shift
 // Scalar Shift Left
-def SCALAR_SHL: SInst<"vshl", "111", "SlSUl">;
+def SCALAR_SHL: SInst<"vshl", "11(S1)", "SlSUl">;
 // Scalar Saturating Shift Left
-def SCALAR_QSHL: SInst<"vqshl", "111", "ScSsSiSlSUcSUsSUiSUl">;
+def SCALAR_QSHL: SInst<"vqshl", "11(S1)", "ScSsSiSlSUcSUsSUiSUl">;
 // Scalar Saturating Rounding Shift Left
-def SCALAR_QRSHL: SInst<"vqrshl", "111", "ScSsSiSlSUcSUsSUiSUl">;
+def SCALAR_QRSHL: SInst<"vqrshl", "11(S1)", "ScSsSiSlSUcSUsSUiSUl">;
 // Scalar Shift Rounding Left
-def SCALAR_RSHL: SInst<"vrshl", "111", "SlSUl">;
+def SCALAR_RSHL: SInst<"vrshl", "11(S1)", "SlSUl">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar Shift (Immediate)
