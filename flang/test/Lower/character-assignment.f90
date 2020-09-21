@@ -28,6 +28,7 @@ subroutine assign1(lhs, rhs)
     ! CHECK-DAG: %[[tmp_addr:.*]] = fir.coordinate_of %[[tmp2]], %[[i]]
     ! CHECK: fir.store %[[rhs_elt]] to %[[tmp_addr]]
   ! CHECK-NEXT: }
+  ! CHECK: %[[lhs:.*]]:2 = fir.unboxchar %arg0
 
   ! Copy of temp into lhs
   ! CHECK: fir.do_loop %[[ii:.*]] =
@@ -40,8 +41,9 @@ subroutine assign1(lhs, rhs)
   ! CHECK-NEXT: }
 
   ! Padding
-  ! CHECK: %[[c32:.*]] = constant 32 : i8
-  ! CHECK: %[[blank:.*]] = fir.convert %[[c32]] : (i8) -> !fir.char<1>
+  ! CHECK-DAG: %[[lhs:.*]]:2 = fir.unboxchar %arg0
+  ! CHECK-DAG: %[[c32:.*]] = constant 32 : i8
+  ! CHECK-DAG: %[[blank:.*]] = fir.convert %[[c32]] : (i8) -> !fir.char<1>
   ! CHECK: fir.do_loop %[[ij:.*]] =
     ! CHECK: %[[lhs_addr2:.*]] = fir.convert %[[lhs]]#0
     ! CHECK: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs_addr2]], %[[ij]]
@@ -106,6 +108,7 @@ subroutine assign_constant(lhs)
   ! CHECK: }
 
   ! Padding
+  ! CHECK-DAG: %[[lhs:.*]]:2 = fir.unboxchar %arg0
   ! CHECK-DAG: %[[c32:.*]] = constant 32 : i8
   ! CHECK-DAG: %[[blank:.*]] = fir.convert %[[c32]] : (i8) -> !fir.char<1>
   ! CHECK: fir.do_loop %[[j:.*]] = %{{.*}} to %{{.*}} {

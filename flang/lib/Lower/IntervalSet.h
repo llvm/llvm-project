@@ -46,6 +46,7 @@ struct IntervalSet {
         m.insert({lo, up});
       }
     } else {
+      auto i1 = i;
       if (i == end() || i->first > lo)
         i = std::prev(i);
       // i->first <= lo
@@ -55,11 +56,17 @@ struct IntervalSet {
       }
       // i->second < up
       if (i->second < lo) {
-        // i < [lo..up]
-        m.insert({lo, up});
-        return;
+        if (i1 == end() || i1->first > up) {
+          // i < [lo..up] < i1
+          m.insert({lo, up});
+          return;
+        }
+        // i < [lo..up], i1->first <= up  -->  [lo..up] union [i1..?]
+        i = i1;
+      } else {
+        // i->first <= lo, lo <= i->second  -->  [i->first..up] union [i..?]
+        lo = i->first;
       }
-      lo = i->first;
       auto j = m.upper_bound(up);
       // up < j->first
       auto cu = std::prev(j)->second;

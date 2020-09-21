@@ -1621,10 +1621,8 @@ private:
               if (isCharacterCategory(lhsType->category())) {
                 // Fortran 2018 10.2.1.3 p10 and p11
                 // Generating value for lhs to get fir.boxchar.
-                Fortran::lower::ExpressionContext context;
-                auto lhs = fir::getBase(genExprAddr(assign.lhs));
-                auto rhs = createSomeExtendedExpression(
-                    toLocation(), *this, assign.rhs, localSymbols, context);
+                auto lhs = genExprAddr(assign.lhs);
+                auto rhs = genExprValue(assign.rhs);
                 Fortran::lower::CharacterExprHelper{*builder, loc}.createAssign(
                     lhs, rhs);
                 return;
