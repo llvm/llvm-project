@@ -51,6 +51,19 @@ TEST_P(SynthesisTest, Leaf_Punctuation) {
   )txt"));
 }
 
+TEST_P(SynthesisTest, Leaf_Punctuation_CXX) {
+  if (!GetParam().isCXX())
+    return;
+
+  buildTree("", GetParam());
+
+  auto *Leaf = createLeaf(*Arena, tok::coloncolon);
+
+  EXPECT_TRUE(treeDumpEqual(Leaf, R"txt(
+'::' Detached synthesized
+  )txt"));
+}
+
 TEST_P(SynthesisTest, Leaf_Keyword) {
   buildTree("", GetParam());
 
@@ -58,6 +71,19 @@ TEST_P(SynthesisTest, Leaf_Keyword) {
 
   EXPECT_TRUE(treeDumpEqual(Leaf, R"txt(
 'if' Detached synthesized
+  )txt"));
+}
+
+TEST_P(SynthesisTest, Leaf_Keyword_CXX11) {
+  if (!GetParam().isCXX11OrLater())
+    return;
+
+  buildTree("", GetParam());
+
+  auto *Leaf = createLeaf(*Arena, tok::kw_nullptr);
+
+  EXPECT_TRUE(treeDumpEqual(Leaf, R"txt(
+'nullptr' Detached synthesized
   )txt"));
 }
 
