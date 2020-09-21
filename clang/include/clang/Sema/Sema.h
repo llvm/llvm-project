@@ -7300,6 +7300,8 @@ public:
                             NonTypeTemplateParmDecl *ConstrainedParameter,
                             SourceLocation EllipsisLoc);
 
+  bool RequireStructuralType(QualType T, SourceLocation Loc);
+
   QualType CheckNonTypeTemplateParameterType(TypeSourceInfo *&TSI,
                                              SourceLocation Loc);
   QualType CheckNonTypeTemplateParameterType(QualType T, SourceLocation Loc);
