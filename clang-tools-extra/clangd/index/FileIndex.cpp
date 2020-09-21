@@ -245,9 +245,9 @@ void FileSymbols::update(llvm::StringRef Key,
     RefsSnapshot[Key] = std::move(Item);
   }
   if (!Relations)
-    RelatiosSnapshot.erase(Key);
+    RelationsSnapshot.erase(Key);
   else
-    RelatiosSnapshot[Key] = std::move(Relations);
+    RelationsSnapshot[Key] = std::move(Relations);
 }
 
 std::unique_ptr<SymbolIndex>
@@ -266,7 +266,7 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
       if (FileAndRefs.second.CountReferences)
         MainFileRefs.push_back(RefSlabs.back().get());
     }
-    for (const auto &FileAndRelations : RelatiosSnapshot)
+    for (const auto &FileAndRelations : RelationsSnapshot)
       RelationSlabs.push_back(FileAndRelations.second);
 
     if (Version)
