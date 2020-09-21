@@ -1,13 +1,11 @@
 // REQUIRES: aarch64
-// RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
-// RUN: echo "SECTIONS { \
-// RUN:       .text_low 0x2000: { *(.text_low) } \
-// RUN:       .text_high 0x8002000 : { *(.text_high) } \
-// RUN:       } " > %t.script
-// RUN: ld.lld --script %t.script %t.o -o %t
-// RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t | FileCheck %s
-// RUN: llvm-nm --no-sort --special-syms %t | FileCheck --check-prefix=NM %s
+// RUN: split-file %s %t
+// RUN: llvm-mc -filetype=obj -triple=aarch64 %t/asm -o %t.o
+// RUN: ld.lld --script %t/lds %t.o -o %t/out
+// RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t/out | FileCheck %s
+// RUN: llvm-nm --no-sort --special-syms %t/out | FileCheck --check-prefix=NM %s
 
+//--- asm
 // Check that we have the out of branch range calculation right. The immediate
 // field is signed so we have a slightly higher negative displacement.
  .section .text_low, "ax", %progbits
@@ -65,3 +63,13 @@ high_target:
 /// Global symbols.
 // NM-NEXT: T _start
 // NM-NEXT: T high_target
+
+//--- lds
+PHDRS {
+  low PT_LOAD FLAGS(0x1 | 0x4);
+  high PT_LOAD FLAGS(0x1 | 0x4);
+}
+SECTIONS {
+  .text_low 0x2000: { *(.text_low) } :low
+  .text_high 0x8002000 : { *(.text_high) } :high
+}
