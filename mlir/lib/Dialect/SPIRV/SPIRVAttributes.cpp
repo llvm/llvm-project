@@ -77,23 +77,32 @@ struct VerCapExtAttributeStorage : public AttributeStorage {
 };
 
 struct TargetEnvAttributeStorage : public AttributeStorage {
-  using KeyTy = std::pair<Attribute, Attribute>;
+  using KeyTy = std::tuple<Attribute, Vendor, DeviceType, uint32_t, Attribute>;
 
-  TargetEnvAttributeStorage(Attribute triple, Attribute limits)
-      : triple(triple), limits(limits) {}
+  TargetEnvAttributeStorage(Attribute triple, Vendor vendorID,
+                            DeviceType deviceType, uint32_t deviceID,
+                            Attribute limits)
+      : triple(triple), limits(limits), vendorID(vendorID),
+        deviceType(deviceType), deviceID(deviceID) {}
 
   bool operator==(const KeyTy &key) const {
-    return key.first == triple && key.second == limits;
+    return key ==
+           std::make_tuple(triple, vendorID, deviceType, deviceID, limits);
   }
 
   static TargetEnvAttributeStorage *
   construct(AttributeStorageAllocator &allocator, const KeyTy &key) {
     return new (allocator.allocate<TargetEnvAttributeStorage>())
-        TargetEnvAttributeStorage(key.first, key.second);
+        TargetEnvAttributeStorage(std::get<0>(key), std::get<1>(key),
+                                  std::get<2>(key), std::get<3>(key),
+                                  std::get<4>(key));
   }
 
   Attribute triple;
   Attribute limits;
+  Vendor vendorID;
+  DeviceType deviceType;
+  uint32_t deviceID;
 };
 } // namespace detail
 } // namespace spirv
@@ -268,10 +277,13 @@ LogicalResult spirv::VerCapExtAttr::verifyConstructionInvariants(
 //===----------------------------------------------------------------------===//
 
 spirv::TargetEnvAttr spirv::TargetEnvAttr::get(spirv::VerCapExtAttr triple,
+                                               Vendor vendorID,
+                                               DeviceType deviceType,
+                                               uint32_t deviceID,
                                                DictionaryAttr limits) {
   assert(triple && limits && "expected valid triple and limits");
   MLIRContext *context = triple.getContext();
-  return Base::get(context, triple, limits);
+  return Base::get(context, triple, vendorID, deviceType, deviceID, limits);
 }
 
 StringRef spirv::TargetEnvAttr::getKindName() { return "target_env"; }
@@ -300,12 +312,24 @@ ArrayAttr spirv::TargetEnvAttr::getCapabilitiesAttr() {
   return getTripleAttr().getCapabilitiesAttr();
 }
 
+spirv::Vendor spirv::TargetEnvAttr::getVendorID() {
+  return getImpl()->vendorID;
+}
+
+spirv::DeviceType spirv::TargetEnvAttr::getDeviceType() {
+  return getImpl()->deviceType;
+}
+
+uint32_t spirv::TargetEnvAttr::getDeviceID() { return getImpl()->deviceID; }
+
 spirv::ResourceLimitsAttr spirv::TargetEnvAttr::getResourceLimits() {
   return getImpl()->limits.cast<spirv::ResourceLimitsAttr>();
 }
 
 LogicalResult spirv::TargetEnvAttr::verifyConstructionInvariants(
-    Location loc, spirv::VerCapExtAttr triple, DictionaryAttr limits) {
+    Location loc, spirv::VerCapExtAttr /*triple*/, spirv::Vendor /*vendorID*/,
+    spirv::DeviceType /*deviceType*/, uint32_t /*deviceID*/,
+    DictionaryAttr limits) {
   if (!limits.isa<spirv::ResourceLimitsAttr>())
     return emitError(loc, "expected spirv::ResourceLimitsAttr for limits");
 

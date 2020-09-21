@@ -108,8 +108,6 @@ private:
   void emitIfBreak(MachineInstr &MI);
   void emitLoop(MachineInstr &MI);
 
-  MachineBasicBlock *splitBlock(MachineInstr &MI, MachineBasicBlock *BB,
-                                LiveIntervals *LIS);
   MachineBasicBlock *emitEndCf(MachineInstr &MI);
 
   void findMaskOperands(MachineInstr &MI, unsigned OpNo,
@@ -493,42 +491,6 @@ SILowerControlFlow::skipIgnoreExecInstsTrivialSucc(
   } while (true);
 }
 
-MachineBasicBlock *SILowerControlFlow::splitBlock(MachineInstr &MI,
-                                                  MachineBasicBlock *BB,
-                                                  LiveIntervals *LIS) {
-  MachineBasicBlock::iterator SplitPoint(&MI);
-  ++SplitPoint;
-
-  if (SplitPoint == BB->end()) {
-    // Don't bother with a new block.
-    return BB;
-  }
-
-  // Make sure we add any physregs we define in the block as liveins to the new
-  // block.
-  LivePhysRegs LiveRegs(*TRI);
-  LiveRegs.addLiveOuts(*BB);
-  for (auto I = BB->rbegin(), E = SplitPoint.getReverse(); I != E; ++I)
-    LiveRegs.stepBackward(*I);
-
-  MachineFunction *MF = BB->getParent();
-  MachineBasicBlock *SplitBB
-    = MF->CreateMachineBasicBlock(BB->getBasicBlock());
-
-  MF->insert(++MachineFunction::iterator(BB), SplitBB);
-  SplitBB->splice(SplitBB->begin(), BB, SplitPoint, BB->end());
-
-  SplitBB->transferSuccessorsAndUpdatePHIs(BB);
-  BB->addSuccessor(SplitBB);
-
-  addLiveIns(*SplitBB, LiveRegs);
-
-  if (LIS)
-    LIS->insertMBBInMaps(SplitBB, &MI);
-
-  return SplitBB;
-}
-
 MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
@@ -551,7 +513,7 @@ MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
   unsigned Opcode = OrOpc;
   MachineBasicBlock *SplitBB = &MBB;
   if (NeedBlockSplit) {
-    SplitBB = splitBlock(MI, &MBB, LIS);
+    SplitBB = MBB.splitAt(MI, /*UpdateLiveIns*/true, LIS);
     Opcode = OrTermrOpc;
     InsPt = MI;
   }

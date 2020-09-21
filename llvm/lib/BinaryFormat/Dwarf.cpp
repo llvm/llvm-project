@@ -795,6 +795,17 @@ StringRef llvm::dwarf::FormatString(bool IsDWARF64) {
   return FormatString(IsDWARF64 ? DWARF64 : DWARF32);
 }
 
+StringRef llvm::dwarf::RLEString(unsigned RLE) {
+  switch (RLE) {
+  default:
+    return StringRef();
+#define HANDLE_DW_RLE(ID, NAME)                                                \
+  case DW_RLE_##NAME:                                                          \
+    return "DW_RLE_" #NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  }
+}
+
 constexpr char llvm::dwarf::EnumTraits<Attribute>::Type[];
 constexpr char llvm::dwarf::EnumTraits<Form>::Type[];
 constexpr char llvm::dwarf::EnumTraits<Index>::Type[];

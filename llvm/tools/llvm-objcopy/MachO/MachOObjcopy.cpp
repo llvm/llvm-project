@@ -181,13 +181,9 @@ static Error processLoadCommands(const CopyConfig &Config, Object &Obj) {
   for (LoadCommand &LC : Obj.LoadCommands) {
     switch (LC.MachOLoadCommand.load_command_data.cmd) {
     case MachO::LC_ID_DYLIB:
-      if (Config.SharedLibId) {
-        StringRef Id = Config.SharedLibId.getValue();
-        if (Id.empty())
-          return createStringError(errc::invalid_argument,
-                                   "cannot specify an empty id");
-        updateLoadCommandPayloadString<MachO::dylib_command>(LC, Id);
-      }
+      if (Config.SharedLibId)
+        updateLoadCommandPayloadString<MachO::dylib_command>(
+            LC, *Config.SharedLibId);
       break;
 
     case MachO::LC_RPATH: {
@@ -219,7 +215,7 @@ static Error processLoadCommands(const CopyConfig &Config, Object &Obj) {
                                "rpath " + RPath +
                                    " would create a duplicate load command");
     RPaths.insert(RPath);
-    Obj.addLoadCommand(buildRPathLoadCommand(RPath));
+    Obj.LoadCommands.push_back(buildRPathLoadCommand(RPath));
   }
 
   return Error::success();

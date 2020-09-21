@@ -1493,6 +1493,8 @@ bool AArch64InstructionSelector::selectVectorSHL(
     Opc = ImmVal ? AArch64::SHLv4i32_shift : AArch64::USHLv4i32;
   } else if (Ty == LLT::vector(2, 32)) {
     Opc = ImmVal ? AArch64::SHLv2i32_shift : AArch64::USHLv2i32;
+  } else if (Ty == LLT::vector(4, 16)) {
+    Opc = ImmVal ? AArch64::SHLv4i16_shift : AArch64::USHLv4i16;
   } else {
     LLVM_DEBUG(dbgs() << "Unhandled G_SHL type");
     return false;

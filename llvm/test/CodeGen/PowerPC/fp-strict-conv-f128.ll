@@ -835,9 +835,9 @@ define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, i32* %addr1, i64* %addr2
 ; MIR: renamable $v{{[0-9]+}} = nofpexcept XSCVQPUDZ
 ;
 ; MIR: renamable $f{{[0-9]+}} = nofpexcept FADD
-; MIR: renamable $f{{[0-9]+}} = XSCVDPSXWS
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVDPSXWS
 ; MIR: renamable $f{{[0-9]+}} = nofpexcept FADD
-; MIR: renamable $f{{[0-9]+}} = XSCVDPSXWS
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVDPSXWS
 entry:
   %conv1 = tail call i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128 %m, metadata !"fpexcept.ignore") #0
   store volatile i32 %conv1, i32* %addr1, align 4

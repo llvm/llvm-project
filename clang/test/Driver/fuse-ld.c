@@ -1,10 +1,18 @@
-// RUN: %clang %s -### \
-// RUN:     -fuse-ld=/usr/local/bin/or1k-linux-ld 2>&1 \
-// RUN:     -target x86_64-unknown-linux \
-// RUN:   | FileCheck %s --check-prefix=CHECK-ABSOLUTE-LD
+/// The absolute path warning is enabled by -Wfuse-ld-path and -Wextra.
+// RUN: %clang %s -### -target x86_64-unknown-linux -Wfuse-ld-path \
+// RUN:   -fuse-ld=/usr/local/bin/or1k-linux-ld 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=CHECK-ABSOLUTE-LD
 // CHECK-ABSOLUTE-LD: warning: '-fuse-ld=' taking a path is deprecated. Use '--ld-path=' instead
 // CHECK-ABSOLUTE-LD: /usr/local/bin/or1k-linux-ld
 
+// RUN: %clang %s -### -target x86_64-unknown-linux -Wextra \
+// RUN:   -fuse-ld=/usr/local/bin/or1k-linux-ld 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=CHECK-ABSOLUTE-LD
+
+// RUN: %clang %s -### -target x86_64-unknown-linux \
+// RUN:   -fuse-ld=/usr/local/bin/or1k-linux-ld 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=CHECK-NO-WARN
+// CHECK-NO-WARN-NOT: warning:
 
 // RUN: %clang %s -### \
 // RUN:     -target x86_64-unknown-freebsd 2>&1 \

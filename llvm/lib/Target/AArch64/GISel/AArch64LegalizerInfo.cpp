@@ -90,7 +90,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
-      .legalFor({s32, s64, v2s32, v4s32, v2s64, v8s16, v16s8})
+      .legalFor({s32, s64, v2s32, v4s32, v2s64, v4s16, v8s16, v16s8})
       .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0)
       .clampNumElements(0, v2s32, v4s32)
@@ -98,13 +98,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder(G_SHL)
-      .legalFor({{s32, s32},
-                 {s64, s64},
-                 {v2s32, v2s32},
-                 {v4s32, v4s32},
-                 {v2s64, v2s64},
-                 {v16s8, v16s8},
-                 {v8s16, v8s16}})
+      .legalFor({
+          {s32, s32},
+          {s64, s64},
+          {v16s8, v16s8},
+          {v4s16, v4s16},
+          {v8s16, v8s16},
+          {v2s32, v2s32},
+          {v4s32, v4s32},
+          {v2s64, v2s64},
+
+      })
       .clampScalar(1, s32, s64)
       .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0)
@@ -656,6 +660,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_DYN_STACKALLOC).lower();
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
+
+  getActionDefinitionsBuilder(G_ABS).lowerIf(
+      [=](const LegalityQuery &Query) { return Query.Types[0].isScalar(); });
 
   computeTables();
   verify(*ST.getInstrInfo());

@@ -50,6 +50,8 @@
 namespace llvm {
 namespace IRSimilarity {
 
+struct IRInstructionDataList;
+
 /// This represents what is and is not supported when finding similarity in
 /// Instructions.
 ///
@@ -116,7 +118,7 @@ struct IRInstructionData : ilist_node<IRInstructionData> {
   /// operands. This extra information allows for similarity matching to make
   /// assertions that allow for more flexibility when checking for whether an
   /// Instruction performs the same operation.
-  IRInstructionData(Instruction &I, bool Legality);
+  IRInstructionData(Instruction &I, bool Legality, IRInstructionDataList &IDL);
 
   /// Hashes \p Value based on its opcode, types, and operand types.
   /// Two IRInstructionData instances produce the same hash when they perform
@@ -155,7 +157,11 @@ struct IRInstructionData : ilist_node<IRInstructionData> {
         llvm::hash_value(ID.Inst->getType()),
         llvm::hash_combine_range(OperTypes.begin(), OperTypes.end()));
   }
+
+  IRInstructionDataList *IDL = nullptr;
 };
+
+struct IRInstructionDataList : simple_ilist<IRInstructionData> {};
 
 /// Compare one IRInstructionData class to another IRInstructionData class for
 /// whether they are performing a the same operation, and can mapped to the
@@ -263,13 +269,28 @@ struct IRInstructionMapper {
   /// with the information.
   SpecificBumpPtrAllocator<IRInstructionData> *InstDataAllocator = nullptr;
 
+  /// This allocator pointer is in charge of creating the IRInstructionDataList
+  /// so it is not deallocated until whatever external tool is using it is done
+  /// with the information.
+  SpecificBumpPtrAllocator<IRInstructionDataList> *IDLAllocator = nullptr;
+
   /// Get an allocated IRInstructionData struct using the InstDataAllocator.
   ///
   /// \param I - The Instruction to wrap with IRInstructionData.
   /// \param Legality - A boolean value that is true if the instruction is to
   /// be considered for similarity, and false if not.
+  /// \param IDL - The InstructionDataList that the IRInstructionData is
+  /// inserted into.
   /// \returns An allocated IRInstructionData struct.
-  IRInstructionData *allocateIRInstructionData(Instruction &I, bool Legality);
+  IRInstructionData *allocateIRInstructionData(Instruction &I, bool Legality,
+                                               IRInstructionDataList &IDL);
+
+  /// Get an allocated IRInstructionDataList object using the IDLAllocator.
+  ///
+  /// \returns An allocated IRInstructionDataList object.
+  IRInstructionDataList *allocateIRInstructionDataList();
+
+  IRInstructionDataList *IDL = nullptr;
 
   /// Maps the Instructions in a BasicBlock \p BB to legal or illegal integers
   /// determined by \p InstrType. Two Instructions are mapped to the same value
@@ -306,8 +327,9 @@ struct IRInstructionMapper {
       BasicBlock::iterator &It, std::vector<unsigned> &IntegerMappingForBB,
       std::vector<IRInstructionData *> &InstrListForBB, bool End = false);
 
-  IRInstructionMapper(SpecificBumpPtrAllocator<IRInstructionData> *IDA)
-      : InstDataAllocator(IDA) {
+  IRInstructionMapper(SpecificBumpPtrAllocator<IRInstructionData> *IDA,
+                      SpecificBumpPtrAllocator<IRInstructionDataList> *IDLA)
+      : InstDataAllocator(IDA), IDLAllocator(IDLA) {
     // Make sure that the implementation of DenseMapInfo<unsigned> hasn't
     // changed.
     assert(DenseMapInfo<unsigned>::getEmptyKey() == static_cast<unsigned>(-1) &&
@@ -315,6 +337,9 @@ struct IRInstructionMapper {
     assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
                static_cast<unsigned>(-2) &&
            "DenseMapInfo<unsigned>'s tombstone key isn't -2!");
+
+    IDL = new (IDLAllocator->Allocate())
+        IRInstructionDataList();
   }
 
   /// Custom InstVisitor to classify different instructions for whether it can

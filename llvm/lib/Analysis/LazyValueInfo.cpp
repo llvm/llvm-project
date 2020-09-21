@@ -36,6 +36,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 using namespace llvm;
@@ -1096,6 +1097,26 @@ static bool matchICmpOperand(const APInt *&Offset, Value *LHS, Value *Val,
   return false;
 }
 
+/// Get value range for a "(Val + Offset) Pred RHS" condition.
+static ValueLatticeElement getValueFromSimpleICmpCondition(
+    CmpInst::Predicate Pred, Value *RHS, const APInt *Offset) {
+  ConstantRange RHSRange(RHS->getType()->getIntegerBitWidth(),
+                         /*isFullSet=*/true);
+  if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS))
+    RHSRange = ConstantRange(CI->getValue());
+  else if (Instruction *I = dyn_cast<Instruction>(RHS))
+    if (auto *Ranges = I->getMetadata(LLVMContext::MD_range))
+      RHSRange = getConstantRangeFromMetadata(*Ranges);
+
+  ConstantRange TrueValues =
+      ConstantRange::makeAllowedICmpRegion(Pred, RHSRange);
+
+  if (Offset)
+    TrueValues = TrueValues.subtract(*Offset);
+
+  return ValueLatticeElement::getRange(std::move(TrueValues));
+}
+
 static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
                                                      bool isTrueDest) {
   Value *LHS = ICI->getOperand(0);
@@ -1118,30 +1139,27 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
     return ValueLatticeElement::getOverdefined();
 
   const APInt *Offset = nullptr;
-  if (!matchICmpOperand(Offset, LHS, Val, EdgePred)) {
-    std::swap(LHS, RHS);
-    EdgePred = CmpInst::getSwappedPredicate(EdgePred);
-    if (!matchICmpOperand(Offset, LHS, Val, EdgePred))
-      return ValueLatticeElement::getOverdefined();
+  if (matchICmpOperand(Offset, LHS, Val, EdgePred))
+    return getValueFromSimpleICmpCondition(EdgePred, RHS, Offset);
+
+  CmpInst::Predicate SwappedPred = CmpInst::getSwappedPredicate(EdgePred);
+  if (matchICmpOperand(Offset, RHS, Val, SwappedPred))
+    return getValueFromSimpleICmpCondition(SwappedPred, LHS, Offset);
+
+  // If (Val & Mask) == C then all the masked bits are known and we can compute
+  // a value range based on that.
+  const APInt *Mask, *C;
+  if (EdgePred == ICmpInst::ICMP_EQ &&
+      match(LHS, m_And(m_Specific(Val), m_APInt(Mask))) &&
+      match(RHS, m_APInt(C))) {
+    KnownBits Known;
+    Known.Zero = ~*C & *Mask;
+    Known.One = *C & *Mask;
+    return ValueLatticeElement::getRange(
+        ConstantRange::fromKnownBits(Known, /*IsSigned*/ false));
   }
 
-  // Calculate the range of values that are allowed by the comparison.
-  ConstantRange RHSRange(RHS->getType()->getIntegerBitWidth(),
-                         /*isFullSet=*/true);
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS))
-    RHSRange = ConstantRange(CI->getValue());
-  else if (Instruction *I = dyn_cast<Instruction>(RHS))
-    if (auto *Ranges = I->getMetadata(LLVMContext::MD_range))
-      RHSRange = getConstantRangeFromMetadata(*Ranges);
-
-  // If we're interested in the false dest, invert the condition
-  ConstantRange TrueValues =
-      ConstantRange::makeAllowedICmpRegion(EdgePred, RHSRange);
-
-  if (Offset) // Apply the offset from above.
-    TrueValues = TrueValues.subtract(*Offset);
-
-  return ValueLatticeElement::getRange(std::move(TrueValues));
+  return ValueLatticeElement::getOverdefined();
 }
 
 // Handle conditions of the form

@@ -347,9 +347,9 @@ void MachineFunction::assignBeginEndSections() {
 /// Allocate a new MachineInstr. Use this instead of `new MachineInstr'.
 MachineInstr *MachineFunction::CreateMachineInstr(const MCInstrDesc &MCID,
                                                   const DebugLoc &DL,
-                                                  bool NoImp) {
+                                                  bool NoImplicit) {
   return new (InstructionRecycler.Allocate<MachineInstr>(Allocator))
-    MachineInstr(*this, MCID, DL, NoImp);
+      MachineInstr(*this, MCID, DL, NoImplicit);
 }
 
 /// Create a new MachineInstr which is a copy of the 'Orig' instruction,

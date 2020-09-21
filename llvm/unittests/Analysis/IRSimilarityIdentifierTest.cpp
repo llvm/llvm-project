@@ -33,7 +33,8 @@ static std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
 void getVectors(Module &M, std::vector<IRInstructionData *> &InstrList,
                 std::vector<unsigned> &UnsignedVec) {
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
-  IRInstructionMapper Mapper(&InstDataAllocator);
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
 
   for (Function &F : M)
     for (BasicBlock &BB : F)
@@ -296,7 +297,6 @@ TEST(IRInstructionMapper, ZextTypeDifference) {
   ASSERT_TRUE(UnsignedVec.size() == 3);
   ASSERT_TRUE(UnsignedVec[0] != UnsignedVec[1]);
 }
-
 
 // Checks that the sexts that have the different type parameters map to the
 // different unsigned integers.

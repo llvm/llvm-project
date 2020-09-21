@@ -7,6 +7,7 @@ target triple = "x86_64-apple-macosx10.10.0"
 
 declare void @check1(i1) #1
 declare void @check2(i1) #1
+declare void @llvm.assume(i1)
 
 ; Make sure we propagate the value of %tmp35 to the true/false cases
 
@@ -16,10 +17,10 @@ define void @test1(i64 %tmp35) {
 ; CHECK-NEXT:    [[TMP36:%.*]] = icmp sgt i64 [[TMP35:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP36]], label [[BB_TRUE:%.*]], label [[BB_FALSE:%.*]]
 ; CHECK:       bb_true:
-; CHECK-NEXT:    tail call void @check1(i1 false) [[ATTR0:#.*]]
+; CHECK-NEXT:    tail call void @check1(i1 false) [[ATTR1:#.*]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb_false:
-; CHECK-NEXT:    tail call void @check2(i1 true) [[ATTR0]]
+; CHECK-NEXT:    tail call void @check2(i1 true) [[ATTR1]]
 ; CHECK-NEXT:    unreachable
 ;
 bb:
@@ -55,7 +56,7 @@ define void @test2(i64 %tmp35, i1 %inner_cmp) {
 ; CHECK-NEXT:    tail call void @check1(i1 false)
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb_false:
-; CHECK-NEXT:    tail call void @check2(i1 true) [[ATTR0]]
+; CHECK-NEXT:    tail call void @check2(i1 true) [[ATTR1]]
 ; CHECK-NEXT:    unreachable
 ;
 bb:
@@ -619,6 +620,48 @@ exit:
   ret i1 %iv
 }
 
+define i1 @test_br_cmp_with_offset(i64 %idx) {
+; CHECK-LABEL: @test_br_cmp_with_offset(
+; CHECK-NEXT:    [[IDX_OFF1:%.*]] = add i64 [[IDX:%.*]], -5
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[IDX_OFF1]], 3
+; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    [[IDX_OFF2:%.*]] = add nsw i64 [[IDX]], -1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[IDX_OFF2]], 10
+; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK:       if.false:
+; CHECK-NEXT:    ret i1 undef
+;
+  %idx.off1 = add i64 %idx, -5
+  %cmp1 = icmp ult i64 %idx.off1, 3
+  br i1 %cmp1, label %if.true, label %if.false
+
+if.true:
+  %idx.off2 = add i64 %idx, -1
+  %cmp2 = icmp ult i64 %idx.off2, 10
+  ret i1 %cmp2
+
+if.false:
+  ret i1 undef
+}
+
+define i1 @test_assume_cmp_with_offset(i64 %idx) {
+; CHECK-LABEL: @test_assume_cmp_with_offset(
+; CHECK-NEXT:    [[IDX_OFF1:%.*]] = add i64 [[IDX:%.*]], -5
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[IDX_OFF1]], 3
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP1]])
+; CHECK-NEXT:    [[IDX_OFF2:%.*]] = add i64 [[IDX]], -1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[IDX_OFF2]], 10
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %idx.off1 = add i64 %idx, -5
+  %cmp1 = icmp ult i64 %idx.off1, 3
+  tail call void @llvm.assume(i1 %cmp1)
+  %idx.off2 = add i64 %idx, -1
+  %cmp2 = icmp ult i64 %idx.off2, 10
+  ret i1 %cmp2
+}
+
 define void @test_cmp_phi(i8 %a) {
 ; CHECK-LABEL: @test_cmp_phi(
 ; CHECK-NEXT:  entry:
@@ -986,6 +1029,132 @@ if.false:
   call void @check1(i1 %cmp4)
   %cmp5 = icmp sle i32 %b, 42
   call void @check1(i1 %cmp5)
+  ret void
+}
+
+define void @test_icmp_mask_two_values(i32 %a) {
+; CHECK-LABEL: @test_icmp_mask_two_values(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 10
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 false)
+; CHECK-NEXT:    call void @check1(i1 false)
+; CHECK-NEXT:    ret void
+; CHECK:       if.false:
+; CHECK-NEXT:    ret void
+;
+  %and = and i32 %a, -2
+  %cmp = icmp eq i32 %and, 10
+  br i1 %cmp, label %if.true, label %if.false
+
+if.true:
+  %cmp2 = icmp uge i32 %a, 10
+  call void @check1(i1 %cmp2)
+  %cmp3 = icmp ule i32 %a, 11
+  call void @check1(i1 %cmp3)
+  %cmp4 = icmp ult i32 %a, 10
+  call void @check1(i1 %cmp4)
+  %cmp5 = icmp ugt i32 %a, 11
+  call void @check1(i1 %cmp5)
+  ret void
+
+if.false:
+  ret void
+}
+
+define void @test_icmp_mask_bit_set(i32 %a) {
+; CHECK-LABEL: @test_icmp_mask_bit_set(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 32
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp uge i32 [[A]], 33
+; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
+; CHECK-NEXT:    ret void
+; CHECK:       if.false:
+; CHECK-NEXT:    ret void
+;
+  %and = and i32 %a, 32
+  %cmp = icmp eq i32 %and, 32
+  br i1 %cmp, label %if.true, label %if.false
+
+if.true:
+  %cmp2 = icmp uge i32 %a, 32
+  call void @check1(i1 %cmp2)
+  %cmp3 = icmp uge i32 %a, 33
+  call void @check1(i1 %cmp3)
+  ret void
+
+if.false:
+  ret void
+}
+
+define void @test_icmp_mask_bit_unset(i32 %a) {
+; CHECK-LABEL: @test_icmp_mask_bit_unset(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ule i32 [[A]], -34
+; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
+; CHECK-NEXT:    ret void
+; CHECK:       if.false:
+; CHECK-NEXT:    ret void
+;
+  %and = and i32 %a, 32
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %if.true, label %if.false
+
+if.true:
+  %cmp2 = icmp ule i32 %a, -33
+  call void @check1(i1 %cmp2)
+  %cmp3 = icmp ule i32 %a, -34
+  call void @check1(i1 %cmp3)
+  ret void
+
+if.false:
+  ret void
+}
+
+define void @test_icmp_mask_wrong_predicate(i32 %a) {
+; CHECK-LABEL: @test_icmp_mask_wrong_predicate(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 10
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[A]], 10
+; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ule i32 [[A]], 11
+; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i32 [[A]], 10
+; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[A]], 11
+; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
+; CHECK-NEXT:    ret void
+; CHECK:       if.false:
+; CHECK-NEXT:    ret void
+;
+  %and = and i32 %a, -2
+  %cmp = icmp ne i32 %and, 10
+  br i1 %cmp, label %if.true, label %if.false
+
+if.true:
+  %cmp2 = icmp uge i32 %a, 10
+  call void @check1(i1 %cmp2)
+  %cmp3 = icmp ule i32 %a, 11
+  call void @check1(i1 %cmp3)
+  %cmp4 = icmp ult i32 %a, 10
+  call void @check1(i1 %cmp4)
+  %cmp5 = icmp ugt i32 %a, 11
+  call void @check1(i1 %cmp5)
+  ret void
+
+if.false:
   ret void
 }
 
