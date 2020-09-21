@@ -6418,17 +6418,16 @@ class HorizontalReduction {
       return isMinMax() ? 3 : 2;
     }
 
-    /// Checks if the operation has the same parent as \p P.
-    bool hasSameParent(Instruction *I, Value *P, bool IsRedOp) const {
+    /// Checks if the instruction is in basic block \p BB.
+    /// For a min/max reduction check that both compare and select are in \p BB.
+    bool hasSameParent(Instruction *I, BasicBlock *BB, bool IsRedOp) const {
       assert(Kind != RK_None && !!*this && LHS && RHS &&
              "Expected reduction operation.");
-      if (!IsRedOp)
-        return I->getParent() == P;
-      if (isMinMax()) {
+      if (IsRedOp && isMinMax()) {
         auto *Cmp = cast<Instruction>(cast<SelectInst>(I)->getCondition());
-        return I->getParent() == P && Cmp && Cmp->getParent() == P;
+        return I->getParent() == BB && Cmp && Cmp->getParent() == BB;
       }
-      return I->getParent() == P;
+      return I->getParent() == BB;
     }
 
     /// Expected number of uses for reduction operations/reduced values.
