@@ -53,7 +53,8 @@ public:
 
   /// Lower \p lhs = \p rhs where \p lhs and \p rhs are scalar characters.
   /// It handles cases where \p lhs and \p rhs may overlap.
-  void createAssign(mlir::Value lhs, const fir::ExtendedValue &rhs);
+  void createAssign(const fir::ExtendedValue &lhs,
+                    const fir::ExtendedValue &rhs);
 
   /// Lower an assignment where the buffer and LEN parameter are known and do
   /// not need to be unboxed.
