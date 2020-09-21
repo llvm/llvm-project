@@ -604,12 +604,12 @@ getFramePointerKind(const ArgList &Args, const llvm::Triple &Triple) {
   bool OmitFP = A && A->getOption().matches(options::OPT_fomit_frame_pointer);
   bool NoOmitFP =
       A && A->getOption().matches(options::OPT_fno_omit_frame_pointer);
-  bool KeepLeaf = Args.hasFlag(options::OPT_momit_leaf_frame_pointer,
-                               options::OPT_mno_omit_leaf_frame_pointer,
-                               Triple.isAArch64() || Triple.isPS4CPU());
+  bool OmitLeafFP = Args.hasFlag(options::OPT_momit_leaf_frame_pointer,
+                                 options::OPT_mno_omit_leaf_frame_pointer,
+                                 Triple.isAArch64() || Triple.isPS4CPU());
   if (NoOmitFP || mustUseNonLeafFramePointerForTarget(Triple) ||
       (!OmitFP && useFramePointerForTargetByDefault(Args, Triple))) {
-    if (KeepLeaf)
+    if (OmitLeafFP)
       return CodeGenOptions::FramePointerKind::NonLeaf;
     return CodeGenOptions::FramePointerKind::All;
   }
