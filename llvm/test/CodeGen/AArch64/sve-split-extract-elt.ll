@@ -127,8 +127,7 @@ define i64 @split_extract_8i64_idx(<vscale x 8 x i64> %a, i32 %idx) {
 define i16 @promote_extract_4i16(<vscale x 4 x i16> %a) {
 ; CHECK-LABEL: promote_extract_4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, z0.s[1]
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    mov w0, v0.s[1]
 ; CHECK-NEXT:    ret
   %ext = extractelement <vscale x 4 x i16> %a, i32 1
   ret i16 %ext
@@ -137,8 +136,7 @@ define i16 @promote_extract_4i16(<vscale x 4 x i16> %a) {
 define i8 @split_extract_32i8(<vscale x 32 x i8> %a) {
 ; CHECK-LABEL: split_extract_32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.b, z0.b[3]
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    umov w0, v0.b[3]
 ; CHECK-NEXT:    ret
   %ext = extractelement <vscale x 32 x i8> %a, i32 3
   ret i8 %ext

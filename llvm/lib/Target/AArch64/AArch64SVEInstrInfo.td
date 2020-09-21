@@ -152,6 +152,8 @@ def AArch64fmaxv_p   : SDNode<"AArch64ISD::FMAXV_PRED",   SDT_AArch64Reduce>;
 def AArch64fmaxnmv_p : SDNode<"AArch64ISD::FMAXNMV_PRED", SDT_AArch64Reduce>;
 def AArch64fminv_p   : SDNode<"AArch64ISD::FMINV_PRED",   SDT_AArch64Reduce>;
 def AArch64fminnmv_p : SDNode<"AArch64ISD::FMINNMV_PRED", SDT_AArch64Reduce>;
+def AArch64saddv_p   : SDNode<"AArch64ISD::SADDV_PRED",   SDT_AArch64Reduce>;
+def AArch64uaddv_p   : SDNode<"AArch64ISD::UADDV_PRED",   SDT_AArch64Reduce>;
 def AArch64smaxv_p   : SDNode<"AArch64ISD::SMAXV_PRED",   SDT_AArch64Reduce>;
 def AArch64umaxv_p   : SDNode<"AArch64ISD::UMAXV_PRED",   SDT_AArch64Reduce>;
 def AArch64sminv_p   : SDNode<"AArch64ISD::SMINV_PRED",   SDT_AArch64Reduce>;
@@ -307,8 +309,8 @@ let Predicates = [HasSVE] in {
   defm MLS_ZPmZZ : sve_int_mlas_vvv_pred<0b1, "mls", int_aarch64_sve_mls, sub, AArch64mul_p_oneuse>;
 
   // SVE predicated integer reductions.
-  defm SADDV_VPZ : sve_int_reduce_0_saddv<0b000, "saddv", int_aarch64_sve_saddv>;
-  defm UADDV_VPZ : sve_int_reduce_0_uaddv<0b001, "uaddv", int_aarch64_sve_uaddv, int_aarch64_sve_saddv>;
+  defm SADDV_VPZ : sve_int_reduce_0_saddv<0b000, "saddv", AArch64saddv_p>;
+  defm UADDV_VPZ : sve_int_reduce_0_uaddv<0b001, "uaddv", AArch64uaddv_p>;
   defm SMAXV_VPZ : sve_int_reduce_1<0b000, "smaxv", AArch64smaxv_p>;
   defm UMAXV_VPZ : sve_int_reduce_1<0b001, "umaxv", AArch64umaxv_p>;
   defm SMINV_VPZ : sve_int_reduce_1<0b010, "sminv", AArch64sminv_p>;
@@ -482,15 +484,6 @@ let Predicates = [HasSVE] in {
   defm FMINNMV_VPZ : sve_fp_fast_red<0b101, "fminnmv", AArch64fminnmv_p>;
   defm FMAXV_VPZ   : sve_fp_fast_red<0b110, "fmaxv",   AArch64fmaxv_p>;
   defm FMINV_VPZ   : sve_fp_fast_red<0b111, "fminv",   AArch64fminv_p>;
-
-  // Use more efficient NEON instructions to extract elements within the NEON
-  // part (first 128bits) of an SVE register.
-  def : Pat<(vector_extract (nxv8f16 ZPR:$Zs), (i64 0)),
-            (f16 (EXTRACT_SUBREG (v8f16 (EXTRACT_SUBREG ZPR:$Zs, zsub)), hsub))>;
-  def : Pat<(vector_extract (nxv4f32 ZPR:$Zs), (i64 0)),
-            (f32 (EXTRACT_SUBREG (v4f32 (EXTRACT_SUBREG ZPR:$Zs, zsub)), ssub))>;
-  def : Pat<(vector_extract (nxv2f64 ZPR:$Zs), (i64 0)),
-            (f64 (EXTRACT_SUBREG (v2f64 (EXTRACT_SUBREG ZPR:$Zs, zsub)), dsub))>;
 
   // Splat immediate (unpredicated)
   defm DUP_ZI   : sve_int_dup_imm<"dup">;
@@ -2162,6 +2155,28 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
                                        (DUP_ZR_D $index)),
                         $src)>;
 
+  // Extract element from vector with scalar index
+  def : Pat<(i32 (vector_extract (nxv16i8 ZPR:$vec), GPR64:$index)),
+            (LASTB_RPZ_B (WHILELS_PXX_B XZR, GPR64:$index), ZPR:$vec)>;
+  def : Pat<(i32 (vector_extract (nxv8i16 ZPR:$vec), GPR64:$index)),
+            (LASTB_RPZ_H (WHILELS_PXX_H XZR, GPR64:$index), ZPR:$vec)>;
+  def : Pat<(i32 (vector_extract (nxv4i32 ZPR:$vec), GPR64:$index)),
+            (LASTB_RPZ_S (WHILELS_PXX_S XZR, GPR64:$index), ZPR:$vec)>;
+  def : Pat<(i64 (vector_extract (nxv2i64 ZPR:$vec), GPR64:$index)),
+            (LASTB_RPZ_D (WHILELS_PXX_D XZR, GPR64:$index), ZPR:$vec)>;
+  def : Pat<(f16 (vector_extract (nxv8f16 ZPR:$vec), GPR64:$index)),
+            (LASTB_VPZ_H (WHILELS_PXX_H XZR, GPR64:$index), ZPR:$vec)>;
+  def : Pat<(f16 (vector_extract (nxv4f16 ZPR:$vec), GPR64:$index)),
+            (LASTB_VPZ_H (WHILELS_PXX_S XZR, GPR64:$index), ZPR:$vec)>;
+  def : Pat<(f16 (vector_extract (nxv2f16 ZPR:$vec), GPR64:$index)),
+            (LASTB_VPZ_H (WHILELS_PXX_D XZR, GPR64:$index), ZPR:$vec)>;
+  def : Pat<(f32 (vector_extract (nxv4f32 ZPR:$vec), GPR64:$index)),
+            (LASTB_VPZ_S (WHILELS_PXX_S XZR, GPR64:$index), ZPR:$vec)>;
+  def : Pat<(f32 (vector_extract (nxv2f32 ZPR:$vec), GPR64:$index)),
+            (LASTB_VPZ_S (WHILELS_PXX_D XZR, GPR64:$index), ZPR:$vec)>;
+  def : Pat<(f64 (vector_extract (nxv2f64 ZPR:$vec), GPR64:$index)),
+            (LASTB_VPZ_D (WHILELS_PXX_D XZR, GPR64:$index), ZPR:$vec)>;
+
   // Extract element from vector with immediate index
   def : Pat<(i32 (vector_extract (nxv16i8 ZPR:$vec), sve_elm_idx_extdup_b:$index)),
             (EXTRACT_SUBREG (DUP_ZZI_B ZPR:$vec, sve_elm_idx_extdup_b:$index), ssub)>;
@@ -2173,34 +2188,54 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
             (EXTRACT_SUBREG (DUP_ZZI_D ZPR:$vec, sve_elm_idx_extdup_d:$index), dsub)>;
   def : Pat<(f16 (vector_extract (nxv8f16 ZPR:$vec), sve_elm_idx_extdup_h:$index)),
             (EXTRACT_SUBREG (DUP_ZZI_H ZPR:$vec, sve_elm_idx_extdup_h:$index), hsub)>;
+  def : Pat<(f16 (vector_extract (nxv8f16 ZPR:$vec), sve_elm_idx_extdup_h:$index)),
+            (EXTRACT_SUBREG (DUP_ZZI_H ZPR:$vec, sve_elm_idx_extdup_h:$index), hsub)>;
+  def : Pat<(f16 (vector_extract (nxv4f16 ZPR:$vec), sve_elm_idx_extdup_s:$index)),
+            (EXTRACT_SUBREG (DUP_ZZI_S ZPR:$vec, sve_elm_idx_extdup_s:$index), hsub)>;
+  def : Pat<(f16 (vector_extract (nxv2f16 ZPR:$vec), sve_elm_idx_extdup_d:$index)),
+            (EXTRACT_SUBREG (DUP_ZZI_D ZPR:$vec, sve_elm_idx_extdup_d:$index), hsub)>;
   def : Pat<(f32 (vector_extract (nxv4f32 ZPR:$vec), sve_elm_idx_extdup_s:$index)),
             (EXTRACT_SUBREG (DUP_ZZI_S ZPR:$vec, sve_elm_idx_extdup_s:$index), ssub)>;
+  def : Pat<(f32 (vector_extract (nxv2f32 ZPR:$vec), sve_elm_idx_extdup_d:$index)),
+            (EXTRACT_SUBREG (DUP_ZZI_D ZPR:$vec, sve_elm_idx_extdup_d:$index), ssub)>;
   def : Pat<(f64 (vector_extract (nxv2f64 ZPR:$vec), sve_elm_idx_extdup_d:$index)),
             (EXTRACT_SUBREG (DUP_ZZI_D ZPR:$vec, sve_elm_idx_extdup_d:$index), dsub)>;
 
-  // Extract element from vector with scalar index
-  def : Pat<(i32 (vector_extract (nxv16i8 ZPR:$vec), GPR64:$index)),
-            (LASTB_RPZ_B (WHILELS_PXX_B XZR, GPR64:$index),
-                         ZPR:$vec)>;
-  def : Pat<(i32 (vector_extract (nxv8i16 ZPR:$vec), GPR64:$index)),
-            (LASTB_RPZ_H (WHILELS_PXX_H XZR, GPR64:$index),
-                         ZPR:$vec)>;
-  def : Pat<(i32 (vector_extract (nxv4i32 ZPR:$vec), GPR64:$index)),
-            (LASTB_RPZ_S (WHILELS_PXX_S XZR, GPR64:$index),
-                         ZPR:$vec)>;
-  def : Pat<(i64 (vector_extract (nxv2i64 ZPR:$vec), GPR64:$index)),
-            (LASTB_RPZ_D (WHILELS_PXX_D XZR, GPR64:$index),
-                         ZPR:$vec)>;
+  // Extract element from vector with immediate index that's within the bottom 128-bits.
+  let AddedComplexity = 1 in {
+  def : Pat<(i32 (vector_extract (nxv16i8 ZPR:$vec), VectorIndexB:$index)),
+            (i32 (UMOVvi8 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index))>;
+  def : Pat<(i32 (vector_extract (nxv8i16 ZPR:$vec), VectorIndexH:$index)),
+            (i32 (UMOVvi16 (v8i16 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexH:$index))>;
+  def : Pat<(i32 (vector_extract (nxv4i32 ZPR:$vec), VectorIndexS:$index)),
+            (i32 (UMOVvi32 (v4i32 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexS:$index))>;
+  def : Pat<(i64 (vector_extract (nxv2i64 ZPR:$vec), VectorIndexD:$index)),
+            (i64 (UMOVvi64 (v2i64 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexD:$index))>;
+  }
 
-  def : Pat<(f16 (vector_extract (nxv8f16 ZPR:$vec), GPR64:$index)),
-            (LASTB_VPZ_H (WHILELS_PXX_H XZR, GPR64:$index),
-                         ZPR:$vec)>;
-  def : Pat<(f32 (vector_extract (nxv4f32 ZPR:$vec), GPR64:$index)),
-            (LASTB_VPZ_S (WHILELS_PXX_S XZR, GPR64:$index),
-                         ZPR:$vec)>;
-  def : Pat<(f64 (vector_extract (nxv2f64 ZPR:$vec), GPR64:$index)),
-            (LASTB_VPZ_D (WHILELS_PXX_D XZR, GPR64:$index),
-                         ZPR:$vec)>;
+  // Extract first element from vector.
+  let AddedComplexity = 2 in {
+  def : Pat<(vector_extract (nxv16i8 ZPR:$Zs), (i64 0)),
+            (i32 (EXTRACT_SUBREG ZPR:$Zs, ssub))>;
+  def : Pat<(vector_extract (nxv8i16 ZPR:$Zs), (i64 0)),
+            (i32 (EXTRACT_SUBREG ZPR:$Zs, ssub))>;
+  def : Pat<(vector_extract (nxv4i32 ZPR:$Zs), (i64 0)),
+            (i32 (EXTRACT_SUBREG ZPR:$Zs, ssub))>;
+  def : Pat<(vector_extract (nxv2i64 ZPR:$Zs), (i64 0)),
+            (i64 (EXTRACT_SUBREG ZPR:$Zs, dsub))>;
+  def : Pat<(vector_extract (nxv8f16 ZPR:$Zs), (i64 0)),
+            (f16 (EXTRACT_SUBREG ZPR:$Zs, hsub))>;
+  def : Pat<(vector_extract (nxv4f16 ZPR:$Zs), (i64 0)),
+            (f16 (EXTRACT_SUBREG ZPR:$Zs, hsub))>;
+  def : Pat<(vector_extract (nxv2f16 ZPR:$Zs), (i64 0)),
+            (f16 (EXTRACT_SUBREG ZPR:$Zs, hsub))>;
+  def : Pat<(vector_extract (nxv4f32 ZPR:$Zs), (i64 0)),
+            (f32 (EXTRACT_SUBREG ZPR:$Zs, ssub))>;
+  def : Pat<(vector_extract (nxv2f32 ZPR:$Zs), (i64 0)),
+            (f32 (EXTRACT_SUBREG ZPR:$Zs, ssub))>;
+  def : Pat<(vector_extract (nxv2f64 ZPR:$Zs), (i64 0)),
+            (f64 (EXTRACT_SUBREG ZPR:$Zs, dsub))>;
+  }
 }
 
 let Predicates = [HasSVE, HasMatMulInt8] in {

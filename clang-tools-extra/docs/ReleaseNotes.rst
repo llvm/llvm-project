@@ -85,6 +85,12 @@ New checks
   Finds structs that are inefficiently packed or aligned, and recommends
   packing and/or aligning of said structs as needed.
 
+- New :doc:`cppcoreguidelines-prefer-member-initializer
+  <clang-tidy/checks/cppcoreguidelines-prefer-member-initializer>` check.
+
+  Finds member initializations in the constructor body which can be placed into
+  the initialization list instead.
+
 - New :doc:`bugprone-misplaced-pointer-arithmetic-in-alloc
   <clang-tidy/checks/bugprone-misplaced-pointer-arithmetic-in-alloc>` check.
 
