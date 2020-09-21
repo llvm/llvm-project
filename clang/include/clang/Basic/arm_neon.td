@@ -830,7 +830,7 @@ def XTN2 : SOpInst<"vmovn_high", "(<Q)<Q", "silUsUiUl", OP_XTN>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Signed integer saturating extract and unsigned narrow to high
-def SQXTUN2 : SOpInst<"vqmovun_high", "(<U)(<q).", "HsHiHl", OP_SQXTUN>;
+def SQXTUN2 : SOpInst<"vqmovun_high", "(<U)(<Uq).", "HsHiHl", OP_SQXTUN>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Integer saturating extract and narrow to high
@@ -1498,7 +1498,7 @@ def SCALAR_SQDMULL : SInst<"vqdmull", "(1>)11", "SsSi">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar Signed Saturating Extract Unsigned Narrow
-def SCALAR_SQXTUN : SInst<"vqmovun", "(1<)1", "SsSiSl">;
+def SCALAR_SQXTUN : SInst<"vqmovun", "(U1<)1", "SsSiSl">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar Signed Saturating Extract Narrow
