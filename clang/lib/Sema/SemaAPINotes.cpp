@@ -315,10 +315,14 @@ static void ProcessAPINotes(Sema &S, Decl *D,
   if (!info.SwiftName.empty()) {
     handleAPINotedAttribute<SwiftNameAttr>(S, D, true, metadata,
                                            [&]() -> SwiftNameAttr * {
-      auto &APINoteName = S.getASTContext().Idents.get("SwiftName API Note");
-      
-      if (!S.DiagnoseSwiftName(D, info.SwiftName, D->getLocation(),
-                               &APINoteName)) {
+      AttributeFactory AF{};
+      AttributePool AP{AF};
+      auto &C = S.getASTContext();
+      ParsedAttr *SNA = AP.create(&C.Idents.get("swift_name"), SourceRange(),
+                                  nullptr, SourceLocation(), nullptr, nullptr,
+                                  nullptr, ParsedAttr::AS_GNU);
+
+      if (!S.DiagnoseSwiftName(D, info.SwiftName, D->getLocation(), *SNA)) {
         return nullptr;
       }
 
