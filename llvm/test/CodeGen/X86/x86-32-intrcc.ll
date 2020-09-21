@@ -42,9 +42,9 @@ define x86_intrcc void @test_isr_ecode(%struct.interrupt_frame* %frame, i32 %eco
   ; CHECK0-LABEL: test_isr_ecode
   ; CHECK0: pushl %ecx
   ; CHECK0: pushl %eax
-  ; CHECK0: movl 8(%esp), %eax
-  ; CHECK0: leal 12(%esp), %ecx
-  ; CHECK0: movl 8(%ecx), %ecx
+  ; CHECK0: movl 8(%esp), %ecx
+  ; CHECK0: leal 12(%esp), %eax
+  ; CHECK0: movl 8(%eax), %eax
   ; CHECK0: popl %eax
   ; CHECK0: popl %ecx
   ; CHECK0: addl $4, %esp
