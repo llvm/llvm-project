@@ -8,21 +8,29 @@ TableGen BackEnds
 Introduction
 ============
 
-TableGen backends are at the core of TableGen's functionality. The source files
-provide the semantics to a generated (in memory) structure, but it's up to the
-backend to print this out in a way that is meaningful to the user (normally a
-C program including a file or a textual list of warnings, options and error
-messages).
+TableGen backends are at the core of TableGen's functionality. The source
+files provide the classes and records that are parsed and end up as a
+collection of record instances, but it's up to the backend to interpret and
+print the records in a way that is meaningful to the user (normally a C++
+include file or a textual list of warnings, options, and error messages).
 
-TableGen is used by both LLVM and Clang with very different goals. LLVM uses it
-as a way to automate the generation of massive amounts of information regarding
-instructions, schedules, cores and architecture features. Some backends generate
-output that is consumed by more than one source file, so they need to be created
-in a way that is easy to use pre-processor tricks. Some backends can also print
-C code structures, so that they can be directly included as-is.
+TableGen is used by both LLVM, Clang, and MLIR with very different goals.
+LLVM uses it as a way to automate the generation of massive amounts of
+information regarding instructions, schedules, cores, and architecture
+features. Some backends generate output that is consumed by more than one
+source file, so they need to be created in a way that makes it is easy for
+preprocessor tricks to be used. Some backends can also print C++ code
+structures, so that they can be directly included as-is.
 
 Clang, on the other hand, uses it mainly for diagnostic messages (errors,
 warnings, tips) and attributes, so more on the textual end of the scale.
+
+MLIR uses TableGen to define operations, operation dialects, and operation
+traits.
+
+See the :doc:`TableGen Programmer's Reference <./ProgRef>` for an in-depth
+description of TableGen, and :doc:`TableGen Backend Developer's Guide
+<./BackGuide>` for a guide to writing a new backend.
 
 LLVM BackEnds
 =============
@@ -928,17 +936,3 @@ in ``-print-records``.
   These values are not expected to be needed by backends. The standard
   ``printable`` field can be used to extract a representation of them
   in TableGen source syntax if necessary.
-
-How to write a back-end
-=======================
-
-TODO.
-
-Until we get a step-by-step HowTo for writing TableGen backends, you can at
-least grab the boilerplate (build system, new files, etc.) from Clang's
-r173931.
-
-TODO: How they work, how to write one.  This section should not contain details
-about any particular backend, except maybe ``-print-enums`` as an example.  This
-should highlight the APIs in ``TableGen/Record.h``.
-
