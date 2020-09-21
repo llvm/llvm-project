@@ -6359,6 +6359,12 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       case Intrinsic::smin:
         return getSMinExpr(getSCEV(II->getArgOperand(0)),
                            getSCEV(II->getArgOperand(1)));
+      case Intrinsic::usub_sat: {
+        const SCEV *X = getSCEV(II->getArgOperand(0));
+        const SCEV *Y = getSCEV(II->getArgOperand(1));
+        const SCEV *ClampedY = getUMinExpr(X, Y);
+        return getMinusSCEV(X, ClampedY, SCEV::FlagNUW);
+      }
       default:
         break;
       }

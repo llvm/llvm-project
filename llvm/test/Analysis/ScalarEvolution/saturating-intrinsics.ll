@@ -35,7 +35,7 @@ define i32 @usub_sat(i32 %x, i32 %y) {
 ; CHECK-LABEL: 'usub_sat'
 ; CHECK-NEXT:  Classifying expressions for: @usub_sat
 ; CHECK-NEXT:    %z = call i32 @llvm.usub.sat.i32(i32 %x, i32 %y)
-; CHECK-NEXT:    --> %z U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (%x umin %y)) + %x) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @usub_sat
 ;
   %z = call i32 @llvm.usub.sat.i32(i32 %x, i32 %y)
