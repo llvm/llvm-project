@@ -167,6 +167,23 @@ TranslationUnit Detached
 )txt"));
 }
 
+TEST_P(BuildSyntaxTreeTest, Simple_BackslashInsideToken) {
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+in\
+t a;
+)cpp",
+      R"txt(
+TranslationUnit Detached
+`-SimpleDeclaration
+  |-'in\
+t'
+  |-SimpleDeclarator Declarator
+  | `-'a'
+  `-';'
+)txt"));
+}
+
 TEST_P(BuildSyntaxTreeTest, If) {
   EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
