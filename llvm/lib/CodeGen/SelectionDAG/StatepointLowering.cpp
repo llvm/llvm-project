@@ -818,10 +818,9 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     DAG.getMachineNode(TargetOpcode::STATEPOINT, getCurSDLoc(), NodeTys, Ops);
   DAG.setNodeMemRefs(StatepointMCNode, MemRefs);
 
-
   // For values lowered to tied-defs, create the virtual registers.  Note that
-  // for simplicity, we *always* create a vreg even within a single block. 
-  DenseMap<const Value *, Register> VirtRegs;
+  // for simplicity, we *always* create a vreg even within a single block.
+  DenseMap<SDValue, Register> VirtRegs;
   for (const auto *Relocate : SI.GCRelocates) {
     Value *Derived = Relocate->getDerivedPtr();
     SDValue SD = getValue(Derived);
@@ -829,7 +828,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
       continue;
 
     // Handle multiple gc.relocates of the same input efficiently.
-    if (VirtRegs.count(Derived))
+    if (VirtRegs.count(SD))
       continue;
 
     SDValue Relocated = SDValue(StatepointMCNode, LowerAsVReg[SD]);
@@ -841,8 +840,8 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     SDValue Chain = DAG.getRoot();
     RFV.getCopyToRegs(Relocated, DAG, getCurSDLoc(), Chain, nullptr);
     PendingExports.push_back(Chain);
-    
-    VirtRegs[Derived] = Reg; 
+
+    VirtRegs[SD] = Reg;
   }
 
   // Record for later use how each relocation was lowered.  This is needed to
@@ -857,8 +856,8 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     RecordType Record;
     if (LowerAsVReg.count(SDV)) {
       Record.type = RecordType::VReg;
-      assert(VirtRegs.count(V));
-      Record.payload.Reg = VirtRegs[V];
+      assert(VirtRegs.count(SDV));
+      Record.payload.Reg = VirtRegs[SDV];
     } else if (Loc.getNode()) {
       Record.type = RecordType::Spill;
       Record.payload.FI = cast<FrameIndexSDNode>(Loc)->getIndex();
