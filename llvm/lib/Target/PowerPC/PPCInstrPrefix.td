@@ -747,7 +747,7 @@ let mayLoad = 1, mayStore = 0, Predicates = [PairedVectorMemops] in {
                                   IIC_LdStLFD, []>;
   def LXVPX : XForm_XTp5_XAB5<31, 333, (outs vsrprc:$XTp), (ins memrr:$src),
                               "lxvpx $XTp, $src", IIC_LdStLFD,
-                              [(set v4i64:$XTp, (load xaddr:$src))]>;
+                              []>;
   let Predicates = [PrefixInstrs] in {
     defm PLXVP :
       8LS_DForm_R_XTp5_SI34_MEM_p<1, 58, (outs vsrprc:$XTp), (ins memri34:$D_RA),
@@ -762,7 +762,7 @@ let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops] in {
                                    IIC_LdStLFD, []>;
   def STXVPX : XForm_XTp5_XAB5<31, 461, (outs), (ins vsrprc:$XTp, memrr:$dst),
                                "stxvpx $XTp, $dst", IIC_LdStLFD,
-                               [(store v4i64:$XTp, xaddr:$dst)]>;
+                               []>;
   let Predicates = [PrefixInstrs] in {
     defm PSTXVP :
       8LS_DForm_R_XTp5_SI34_MEM_p<1, 62, (outs), (ins vsrprc:$XTp, memri34:$D_RA),
