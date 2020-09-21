@@ -17,9 +17,12 @@
 namespace mlir {
 namespace python {
 
+class PyBlock;
+class PyLocation;
 class PyMlirContext;
 class PyModule;
 class PyOperation;
+class PyType;
 
 /// Template for a reference to a concrete type which captures a python
 /// reference to its underlying python object.
@@ -111,6 +114,14 @@ public:
   /// Gets the count of live operations associated with this context.
   /// Used for testing.
   size_t getLiveOperationCount();
+
+  /// Creates an operation. See corresponding python docstring.
+  pybind11::object
+  createOperation(std::string name, PyLocation location,
+                  llvm::Optional<std::vector<PyType *>> results,
+                  llvm::Optional<pybind11::dict> attributes,
+                  llvm::Optional<std::vector<PyBlock *>> successors,
+                  int regions);
 
 private:
   PyMlirContext(MlirContext context);
@@ -227,6 +238,10 @@ public:
   }
 
   bool isAttached() { return attached; }
+  void setAttached() {
+    assert(!attached && "operation already attached");
+    attached = true;
+  }
   void checkValid();
 
 private:
