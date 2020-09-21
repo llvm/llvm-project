@@ -77,8 +77,8 @@ entry:
 ; Make sure the assembler puts the .xdata and .pdata in sections with the right
 ; names.
 ; GNUOBJ: .text$_Z3fooi
-; GNUOBJ: .xdata$_Z3fooi
 ; GNUOBJ: .data$gv
+; GNUOBJ: .xdata$_Z3fooi
 ; GNUOBJ: .pdata$_Z3fooi
 
 declare dso_local i32 @_Z3bari(i32)

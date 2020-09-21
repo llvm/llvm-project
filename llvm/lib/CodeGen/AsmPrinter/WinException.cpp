@@ -258,11 +258,11 @@ void WinException::endFuncletImpl() {
     if (F.hasPersonalityFn())
       Per = classifyEHPersonality(F.getPersonalityFn()->stripPointerCasts());
 
-    // Emit an UNWIND_INFO struct describing the prologue.
-    Asm->OutStreamer->EmitWinEHHandlerData();
-
     if (Per == EHPersonality::MSVC_CXX && shouldEmitPersonality &&
         !CurrentFuncletEntry->isCleanupFuncletEntry()) {
+      // Emit an UNWIND_INFO struct describing the prologue.
+      Asm->OutStreamer->EmitWinEHHandlerData();
+
       // If this is a C++ catch funclet (or the parent function),
       // emit a reference to the LSDA for the parent function.
       StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F.getName());
@@ -271,9 +271,22 @@ void WinException::endFuncletImpl() {
       Asm->OutStreamer->emitValue(create32bitRef(FuncInfoXData), 4);
     } else if (Per == EHPersonality::MSVC_Win64SEH && MF->hasEHFunclets() &&
                !CurrentFuncletEntry->isEHFuncletEntry()) {
+      // Emit an UNWIND_INFO struct describing the prologue.
+      Asm->OutStreamer->EmitWinEHHandlerData();
+
       // If this is the parent function in Win64 SEH, emit the LSDA immediately
       // following .seh_handlerdata.
       emitCSpecificHandlerTable(MF);
+    } else if (shouldEmitPersonality || shouldEmitLSDA) {
+      // Emit an UNWIND_INFO struct describing the prologue.
+      Asm->OutStreamer->EmitWinEHHandlerData();
+      // In these cases, no further info is written to the .xdata section
+      // right here, but is written by e.g. emitExceptionTable in endFunction()
+      // above.
+    } else {
+      // No need to emit the EH handler data right here if nothing needs
+      // writing to the .xdata section; it will be emitted for all
+      // functions that need it in the end anyway.
     }
 
     // Switch back to the funclet start .text section now that we are done
