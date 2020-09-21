@@ -6339,6 +6339,14 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
 
     if (auto *II = dyn_cast<IntrinsicInst>(U)) {
       switch (II->getIntrinsicID()) {
+      case Intrinsic::abs: {
+        const SCEV *Op = getSCEV(II->getArgOperand(0));
+        SCEV::NoWrapFlags Flags =
+            cast<ConstantInt>(II->getArgOperand(1))->isOne()
+                ? SCEV::FlagNSW
+                : SCEV::FlagAnyWrap;
+        return getSMaxExpr(Op, getNegativeSCEV(Op, Flags));
+      }
       case Intrinsic::umax:
         return getUMaxExpr(getSCEV(II->getArgOperand(0)),
                            getSCEV(II->getArgOperand(1)));

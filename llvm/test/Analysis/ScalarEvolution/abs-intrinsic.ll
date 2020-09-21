@@ -8,7 +8,7 @@ define i32 @abs_nonsw(i32 %x) {
 ; CHECK-LABEL: 'abs_nonsw'
 ; CHECK-NEXT:  Classifying expressions for: @abs_nonsw
 ; CHECK-NEXT:    %r = call i32 @llvm.abs.i32(i32 %x, i1 false)
-; CHECK-NEXT:    --> %r U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * %x) smax %x) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @abs_nonsw
 ;
   %r = call i32 @llvm.abs.i32(i32 %x, i1 0)
@@ -19,7 +19,7 @@ define i32 @abs_nsw(i32 %x) {
 ; CHECK-LABEL: 'abs_nsw'
 ; CHECK-NEXT:  Classifying expressions for: @abs_nsw
 ; CHECK-NEXT:    %r = call i32 @llvm.abs.i32(i32 %x, i1 true)
-; CHECK-NEXT:    --> %r U: [0,-2147483648) S: full-set
+; CHECK-NEXT:    --> ((-1 * %x)<nsw> smax %x) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @abs_nsw
 ;
   %r = call i32 @llvm.abs.i32(i32 %x, i1 1)
