@@ -28,22 +28,21 @@ using namespace sys;
 //===          independent code.
 //===----------------------------------------------------------------------===//
 
-Optional<std::string>
-Process::FindInEnvPath(StringRef EnvName, StringRef FileName, char Separator) {
-  return FindInEnvPath(EnvName, FileName, {}, Separator);
+Optional<std::string> Process::FindInEnvPath(StringRef EnvName,
+                                             StringRef FileName) {
+  return FindInEnvPath(EnvName, FileName, {});
 }
 
 Optional<std::string> Process::FindInEnvPath(StringRef EnvName,
                                              StringRef FileName,
-                                             ArrayRef<std::string> IgnoreList,
-                                             char Separator) {
+                                             ArrayRef<std::string> IgnoreList) {
   assert(!path::is_absolute(FileName));
   Optional<std::string> FoundPath;
   Optional<std::string> OptPath = Process::GetEnv(EnvName);
   if (!OptPath.hasValue())
     return FoundPath;
 
-  const char EnvPathSeparatorStr[] = {Separator, '\0'};
+  const char EnvPathSeparatorStr[] = {EnvPathSeparator, '\0'};
   SmallVector<StringRef, 8> Dirs;
   SplitString(OptPath.getValue(), Dirs, EnvPathSeparatorStr);
 

@@ -29,7 +29,6 @@
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Program.h"
 #include <system_error>
 
 namespace llvm {
@@ -108,12 +107,10 @@ public:
   /// considered.
   static Optional<std::string> FindInEnvPath(StringRef EnvName,
                                              StringRef FileName,
-                                             ArrayRef<std::string> IgnoreList,
-                                             char Separator = EnvPathSeparator);
+                                             ArrayRef<std::string> IgnoreList);
 
   static Optional<std::string> FindInEnvPath(StringRef EnvName,
-                                             StringRef FileName,
-                                             char Separator = EnvPathSeparator);
+                                             StringRef FileName);
 
   // This functions ensures that the standard file descriptors (input, output,
   // and error) are properly mapped to a file descriptor before we use any of
