@@ -233,6 +233,21 @@ void AssumingOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
   patterns.insert<AssumingWithTrue>(context);
 }
 
+// See RegionBranchOpInterface in Interfaces/ControlFlowInterfaces.td
+void AssumingOp::getSuccessorRegions(
+    Optional<unsigned> index, ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &regions) {
+  // AssumingOp has unconditional control flow into the region and back to the
+  // parent, so return the correct RegionSuccessor purely based on the index
+  // being None or 0.
+  if (index.hasValue()) {
+    regions.push_back(RegionSuccessor(getResults()));
+    return;
+  }
+
+  regions.push_back(RegionSuccessor(&doRegion()));
+}
+
 void AssumingOp::inlineRegionIntoParent(AssumingOp &op,
                                         PatternRewriter &rewriter) {
   auto *blockBeforeAssuming = rewriter.getInsertionBlock();
