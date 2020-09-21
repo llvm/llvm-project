@@ -1,5 +1,5 @@
-; RUN: opt < %s -data-layout="e-p:32:32:32-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-n8:16:32" -basic-aa -gvn -S -die | FileCheck %s
-; RUN: opt < %s -data-layout="E-p:32:32:32-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-n32"      -basic-aa -gvn -S -die | FileCheck %s
+; RUN: opt < %s -data-layout="e-p:32:32:32-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-n8:16:32" -basic-aa -gvn -S -dce | FileCheck %s
+; RUN: opt < %s -data-layout="E-p:32:32:32-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-n32"      -basic-aa -gvn -S -dce | FileCheck %s
 
 ;; Trivial RLE test.
 define i32 @test0(i32 %V, i32* %P) {
@@ -772,7 +772,7 @@ entry:
 
   %tmp3 = load i8, i8* getelementptr inbounds (%widening1, %widening1* @f, i64 0, i32 4), align 1
   %conv4 = zext i8 %tmp3 to i32
-  %add3 = add nsw i32 %add2, %conv3
+  %add3 = add nsw i32 %add2, %conv4
 
   ret i32 %add3
 ; CHECK-LABEL: @test_widening2(
