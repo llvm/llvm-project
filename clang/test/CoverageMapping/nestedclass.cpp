@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name nestedclass.cpp %s > %tmapping
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name nestedclass.cpp %s > %tmapping
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-OUTER
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-INNER
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-INNERMOST
