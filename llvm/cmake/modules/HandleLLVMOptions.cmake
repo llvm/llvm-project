@@ -400,6 +400,8 @@ elseif(MINGW) # FIXME: Also cygwin?
   endif()
 endif()
 
+option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
+
 if( MSVC )
   include(ChooseMSVCCRT)
 
