@@ -100,14 +100,13 @@ public:
   llvm::Optional<uint64_t>
   GetMemberVariableOffsetRemoteAST(CompilerType instance_type,
                                    ValueObject *instance,
-                                   ConstString member_name);
-  llvm::Optional<uint64_t>
-  GetMemberVariableOffsetRemoteMirrors(CompilerType instance_type,
-                                       ValueObject *instance,
-                                       ConstString member_name, Status *error);
+                                   llvm::StringRef member_name);
+  llvm::Optional<uint64_t> GetMemberVariableOffsetRemoteMirrors(
+      CompilerType instance_type, ValueObject *instance,
+      llvm::StringRef member_name, Status *error);
   llvm::Optional<uint64_t> GetMemberVariableOffset(CompilerType instance_type,
                                                    ValueObject *instance,
-                                                   ConstString member_name,
+                                                   llvm::StringRef member_name,
                                                    Status *error);
 
   /// Like \p BindGenericTypeParameters but for TypeSystemSwiftTypeRef.
@@ -161,6 +160,14 @@ protected:
   /// type metadata alone.
   const swift::reflection::TypeRef *GetTypeRef(CompilerType type,
                                                Module *module = nullptr);
+
+  /// If \p instance points to a Swift object, retrieve its
+  /// RecordTypeInfo pass it to the callback \p fn. Repeat the process
+  /// with all superclasses. If \p fn returns \p true, early exit and
+  /// return \ptrue. Otherwise return \p false.
+  bool ForEachSuperClassTypeInfo(
+      ValueObject &instance,
+      std::function<bool(const swift::reflection::RecordTypeInfo &rti)> fn);
 
   // Classes that inherit from SwiftLanguageRuntime can see and modify these
   Value::ValueType GetValueType(Value::ValueType static_value_type,
