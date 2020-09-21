@@ -4712,15 +4712,14 @@ InputInfo Driver::BuildJobsForActionNoCache(
     if (isa<OffloadWrapperJobAction>(JA)) {
       // Openmp offloading needs a name prepended for -save-temps.
       // See examples/hip-openmp/aomp_hip_launch_test and smoke flags.
+      OffloadingPrefix += "-wrapper";
       if (Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {
-        OffloadingPrefix += "-wrapper";
         if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o))
           NewBI += FinalOutput->getValue();
         else
           NewBI += getDefaultImageName();
-        BaseInput = NewBI.c_str();
+        BaseInput = C.getArgs().MakeArgString(NewBI.c_str());
       } else {
-        OffloadingPrefix += "-wrapper";
         if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o))
           BaseInput = FinalOutput->getValue();
         else
