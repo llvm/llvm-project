@@ -4138,24 +4138,25 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL) {
       isa<StoreInst>(VL[0]) ? cast<StoreInst>(VL[0])->getValueOperand() : VL[0];
   FixedVectorType *VecTy = FixedVectorType::get(Val0->getType(), VL.size());
   Value *Vec = UndefValue::get(VecTy);
-  for (unsigned i = 0; i < VecTy->getNumElements(); ++i) {
-    Vec = Builder.CreateInsertElement(Vec, VL[i], Builder.getInt32(i));
-    if (auto *Insrt = dyn_cast<InsertElementInst>(Vec)) {
-      GatherSeq.insert(Insrt);
-      CSEBlocks.insert(Insrt->getParent());
-
-      // Add to our 'need-to-extract' list.
-      if (TreeEntry *E = getTreeEntry(VL[i])) {
-        // Find which lane we need to extract.
-        unsigned FoundLane =
-            std::distance(E->Scalars.begin(), find(E->Scalars, VL[i]));
-        assert(FoundLane < E->Scalars.size() && "Could not find extract lane");
-        if (!E->ReuseShuffleIndices.empty()) {
-          FoundLane = std::distance(E->ReuseShuffleIndices.begin(),
-                                    find(E->ReuseShuffleIndices, FoundLane));
-        }
-        ExternalUses.push_back(ExternalUser(VL[i], Insrt, FoundLane));
+  unsigned InsIndex = 0;
+  for (Value *Val : VL) {
+    Vec = Builder.CreateInsertElement(Vec, Val, Builder.getInt32(InsIndex++));
+    auto *InsElt = dyn_cast<InsertElementInst>(Vec);
+    if (!InsElt)
+      continue;
+    GatherSeq.insert(InsElt);
+    CSEBlocks.insert(InsElt->getParent());
+    // Add to our 'need-to-extract' list.
+    if (TreeEntry *Entry = getTreeEntry(Val)) {
+      // Find which lane we need to extract.
+      unsigned FoundLane = std::distance(Entry->Scalars.begin(),
+                                         find(Entry->Scalars, Val));
+      assert(FoundLane < Entry->Scalars.size() && "Couldn't find extract lane");
+      if (!Entry->ReuseShuffleIndices.empty()) {
+        FoundLane = std::distance(Entry->ReuseShuffleIndices.begin(),
+                                  find(Entry->ReuseShuffleIndices, FoundLane));
       }
+      ExternalUses.push_back(ExternalUser(Val, InsElt, FoundLane));
     }
   }
 
