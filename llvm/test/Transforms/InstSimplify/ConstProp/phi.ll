@@ -1,7 +1,7 @@
 ; This is a basic sanity check for constant propagation.  The add instruction
 ; should be eliminated.
 
-; RUN: opt < %s -instsimplify -die -S | not grep phi
+; RUN: opt < %s -instsimplify -dce -S | not grep phi
 
 define i32 @test(i1 %B) {
 BB0:

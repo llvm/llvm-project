@@ -1,4 +1,4 @@
-; RUN: opt < %s -deadargelim -die -S > %t
+; RUN: opt < %s -deadargelim -dce -S > %t
 ; RUN: cat %t | not grep DEAD
 ; RUN: cat %t | grep LIVE | count 4
 
