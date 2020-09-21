@@ -163,6 +163,63 @@ BinaryOperatorExpression Detached synthesized
   )txt"));
 }
 
+TEST_P(SynthesisTest, DeepCopy_Synthesized) {
+  buildTree("", GetParam());
+
+  auto *LeafContinue = createLeaf(*Arena, tok::kw_continue);
+  auto *LeafSemiColon = createLeaf(*Arena, tok::semi);
+  auto *StatementContinue = createTree(*Arena,
+                                       {{LeafContinue, NodeRole::LiteralToken},
+                                        {LeafSemiColon, NodeRole::Unknown}},
+                                       NodeKind::ContinueStatement);
+
+  auto *Copy = deepCopy(*Arena, StatementContinue);
+  EXPECT_TRUE(
+      treeDumpEqual(Copy, StatementContinue->dump(Arena->getSourceManager())));
+  // FIXME: Test that copy is independent of original, once the Mutations API is
+  // more developed.
+}
+
+TEST_P(SynthesisTest, DeepCopy_Original) {
+  auto *OriginalTree = buildTree("int a;", GetParam());
+
+  auto *Copy = deepCopy(*Arena, OriginalTree);
+  EXPECT_TRUE(treeDumpEqual(Copy, R"txt(
+TranslationUnit Detached synthesized
+`-SimpleDeclaration synthesized
+  |-'int' synthesized
+  |-SimpleDeclarator Declarator synthesized
+  | `-'a' synthesized
+  `-';' synthesized
+  )txt"));
+}
+
+TEST_P(SynthesisTest, DeepCopy_Child) {
+  auto *OriginalTree = buildTree("int a;", GetParam());
+
+  auto *Copy = deepCopy(*Arena, OriginalTree->getFirstChild());
+  EXPECT_TRUE(treeDumpEqual(Copy, R"txt(
+SimpleDeclaration Detached synthesized
+|-'int' synthesized
+|-SimpleDeclarator Declarator synthesized
+| `-'a' synthesized
+`-';' synthesized
+  )txt"));
+}
+
+TEST_P(SynthesisTest, DeepCopy_Macro) {
+  auto *OriginalTree = buildTree(R"cpp(
+#define HALF_IF if (1+
+#define HALF_IF_2 1) {}
+void test() {
+  HALF_IF HALF_IF_2 else {}
+})cpp",
+                                 GetParam());
+
+  auto *Copy = deepCopy(*Arena, OriginalTree);
+  EXPECT_TRUE(Copy == nullptr);
+}
+
 TEST_P(SynthesisTest, Statement_EmptyStatement) {
   buildTree("", GetParam());
 

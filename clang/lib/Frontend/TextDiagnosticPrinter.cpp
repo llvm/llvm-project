@@ -135,10 +135,10 @@ void TextDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
   if (!Info.getLocation().isValid()) {
     TextDiagnostic::printDiagnosticLevel(OS, Level, DiagOpts->ShowColors,
                                          DiagOpts->CLFallbackMode);
-    TextDiagnostic::printDiagnosticMessage(OS, Level, DiagMessageStream.str(),
-                                           OS.tell() - StartOfLocationInfo,
-                                           DiagOpts->MessageLength,
-                                           DiagOpts->ShowColors);
+    TextDiagnostic::printDiagnosticMessage(
+        OS, /*IsSupplemental=*/Level == DiagnosticsEngine::Note,
+        DiagMessageStream.str(), OS.tell() - StartOfLocationInfo,
+        DiagOpts->MessageLength, DiagOpts->ShowColors);
     OS.flush();
     return;
   }
