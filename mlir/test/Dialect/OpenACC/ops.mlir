@@ -379,6 +379,12 @@ func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf3
   } attributes {defaultAttr = "none"}
   acc.parallel {
   } attributes {defaultAttr = "present"}
+  acc.parallel {
+  } attributes {asyncAttr}
+  acc.parallel {
+  } attributes {waitAttr}
+  acc.parallel {
+  } attributes {selfAttr}
   return
 }
 
@@ -438,6 +444,12 @@ func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf3
 // CHECK-NEXT: } attributes {defaultAttr = "none"}
 // CHECK:      acc.parallel {
 // CHECK-NEXT: } attributes {defaultAttr = "present"}
+// CHECK:      acc.parallel {
+// CHECK-NEXT: } attributes {asyncAttr}
+// CHECK:      acc.parallel {
+// CHECK-NEXT: } attributes {waitAttr}
+// CHECK:      acc.parallel {
+// CHECK-NEXT: } attributes {selfAttr}
 
 // -----
 
