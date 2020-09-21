@@ -680,7 +680,7 @@ void ScheduleDAGMI::releasePred(SUnit *SU, SDep *PredEdge) {
     PredSU->BotReadyCycle = SU->BotReadyCycle + PredEdge->getLatency();
 
   --PredSU->NumSuccsLeft;
-  if (PredSU->NumSuccsLeft == 0)
+  if (PredSU->NumSuccsLeft == 0 && PredSU != &EntrySU)
     SchedImpl->releaseBottomNode(PredSU);
 }
 
@@ -853,7 +853,7 @@ void ScheduleDAGMI::initQueues(ArrayRef<SUnit*> TopRoots,
   NextClusterSucc = nullptr;
   NextClusterPred = nullptr;
 
-  // Release all DAG roots for scheduling, not including ExitSU.
+  // Release all DAG roots for scheduling, not including EntrySU/ExitSU.
   //
   // Nodes with unreleased weak edges can still be roots.
   // Release top roots in forward order.
@@ -867,6 +867,7 @@ void ScheduleDAGMI::initQueues(ArrayRef<SUnit*> TopRoots,
     SchedImpl->releaseBottomNode(*I);
   }
 
+  releaseSuccessors(&EntrySU);
   releasePredecessors(&ExitSU);
 
   SchedImpl->registerRoots();
@@ -1167,6 +1168,8 @@ void ScheduleDAGMILive::updatePressureDiffs(
 
 void ScheduleDAGMILive::dump() const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  if (EntrySU.getInstr() != nullptr)
+    dumpNodeAll(EntrySU);
   for (const SUnit &SU : SUnits) {
     dumpNodeAll(SU);
     if (ShouldTrackPressure) {
