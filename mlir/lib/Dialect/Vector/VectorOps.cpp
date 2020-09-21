@@ -132,11 +132,10 @@ static LogicalResult verify(ReductionOp op) {
   auto kind = op.kind();
   Type eltType = op.dest().getType();
   if (kind == "add" || kind == "mul" || kind == "min" || kind == "max") {
-    if (!eltType.isF32() && !eltType.isF64() &&
-        !eltType.isSignlessInteger(32) && !eltType.isSignlessInteger(64))
+    if (!eltType.isSignlessIntOrFloat())
       return op.emitOpError("unsupported reduction type");
   } else if (kind == "and" || kind == "or" || kind == "xor") {
-    if (!eltType.isSignlessInteger(32) && !eltType.isSignlessInteger(64))
+    if (!eltType.isSignlessInteger())
       return op.emitOpError("unsupported reduction type");
   } else {
     return op.emitOpError("unknown reduction kind: ") << kind;
@@ -146,7 +145,7 @@ static LogicalResult verify(ReductionOp op) {
   if (!op.acc().empty()) {
     if (kind != "add" && kind != "mul")
       return op.emitOpError("no accumulator for reduction kind: ") << kind;
-    if (!eltType.isF32() && !eltType.isF64())
+    if (!eltType.isa<FloatType>())
       return op.emitOpError("no accumulator for type: ") << eltType;
   }
 

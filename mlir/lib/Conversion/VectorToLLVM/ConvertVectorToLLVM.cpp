@@ -561,7 +561,7 @@ public:
     auto kind = reductionOp.kind();
     Type eltType = reductionOp.dest().getType();
     Type llvmType = typeConverter.convertType(eltType);
-    if (eltType.isSignlessInteger(32) || eltType.isSignlessInteger(64)) {
+    if (eltType.isSignlessInteger()) {
       // Integer reductions: add/mul/min/max/and/or/xor.
       if (kind == "add")
         rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_add>(
@@ -588,7 +588,7 @@ public:
         return failure();
       return success();
 
-    } else if (eltType.isF32() || eltType.isF64()) {
+    } else if (eltType.isa<FloatType>()) {
       // Floating-point reductions: add/mul/min/max
       if (kind == "add") {
         // Optional accumulator (or zero).
