@@ -1,6 +1,6 @@
 // Ensure that declarations without definitions don't have maps emitted for them
 
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s > %t
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s > %t
 // FileCheck -input-file %t %s
 // RUN: FileCheck -check-prefix BAR -input-file %t %s
 

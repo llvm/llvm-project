@@ -1,5 +1,4 @@
-// RUN: %strip_comments > %t.stripped.cpp
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -std=c++1z -triple %itanium_abi_triple -main-file-name if.cpp %t.stripped.cpp | FileCheck %s
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -std=c++1z -triple %itanium_abi_triple -main-file-name if.cpp %s | FileCheck %s
 
 int nop() { return 0; }
 
