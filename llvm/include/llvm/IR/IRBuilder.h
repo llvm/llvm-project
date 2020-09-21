@@ -2431,6 +2431,13 @@ public:
     return Insert(new ShuffleVectorInst(V1, V2, Mask), Name);
   }
 
+  /// Create a unary shuffle. The second vector operand of the IR instruction
+  /// is undefined.
+  Value *CreateShuffleVector(Value *V, ArrayRef<int> Mask,
+                             const Twine &Name = "") {
+    return CreateShuffleVector(V, UndefValue::get(V->getType()), Mask, Name);
+  }
+
   Value *CreateExtractValue(Value *Agg,
                             ArrayRef<unsigned> Idxs,
                             const Twine &Name = "") {
