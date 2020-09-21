@@ -21,6 +21,7 @@ config.test_source_root = os.path.dirname(__file__)
 
 # Choose between standalone and LSan+ASan modes.
 lsan_lit_test_mode = get_required_attr(config, 'lsan_lit_test_mode')
+
 if lsan_lit_test_mode == "Standalone":
   config.name = "LeakSanitizer-Standalone"
   lsan_cflags = ["-fsanitize=leak"]
@@ -35,7 +36,8 @@ else:
 config.name += config.name_suffix
 
 # Platform-specific default LSAN_OPTIONS for lit tests.
-default_lsan_opts = 'detect_leaks=1'
+default_common_opts_str = ':'.join(list(config.default_sanitizer_opts))
+default_lsan_opts = default_common_opts_str + ':detect_leaks=1'
 if config.host_os == 'Darwin':
   # On Darwin, we default to `abort_on_error=1`, which would make tests run
   # much slower. Let's override this and run lit tests with 'abort_on_error=0'.
@@ -53,6 +55,8 @@ if lit.util.which('strace'):
   config.available_features.add('strace')
 
 clang_cflags = ["-O0", config.target_cflags] + config.debug_info_flags
+if config.android:
+  clang_cflags = clang_cflags + ["-fno-emulated-tls"]
 clang_cxxflags = config.cxx_mode_flags + clang_cflags
 lsan_incdir = config.test_source_root + "/../"
 clang_lsan_cflags = clang_cflags + lsan_cflags + ["-I%s" % lsan_incdir]
@@ -74,6 +78,10 @@ supported_linux = config.host_os == 'Linux' and config.host_arch in ['x86_64', '
 supported_darwin = config.host_os == 'Darwin' and config.target_arch in ['x86_64']
 supported_netbsd = config.host_os == 'NetBSD' and config.target_arch in ['x86_64', 'i386']
 if not (supported_linux or supported_darwin or supported_netbsd):
+  config.unsupported = True
+
+# Only run the tests on Android, if required API level is present.
+if config.android and 'android-thread-properties-api' not in config.available_features:
   config.unsupported = True
 
 # Don't support Thumb due to broken fast unwinder

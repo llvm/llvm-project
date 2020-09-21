@@ -1,5 +1,5 @@
 // Regression test. Disabler should not depend on TSD validity.
-// RUN: LSAN_BASE="report_objects=1:use_registers=0:use_stacks=0:use_globals=0:use_tls=1:use_ld_allocations=0"
+// RUN: LSAN_BASE="report_objects=1:use_registers=0:use_stacks=0:use_tls=1:use_ld_allocations=0"
 // RUN: %clang_lsan %s -o %t
 // RUN: %env_lsan_opts=$LSAN_BASE %run %t
 
