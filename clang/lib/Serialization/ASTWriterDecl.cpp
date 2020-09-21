@@ -96,6 +96,7 @@ namespace clang {
     void VisitFieldDecl(FieldDecl *D);
     void VisitMSPropertyDecl(MSPropertyDecl *D);
     void VisitMSGuidDecl(MSGuidDecl *D);
+    void VisitTemplateParamObjectDecl(TemplateParamObjectDecl *D);
     void VisitIndirectFieldDecl(IndirectFieldDecl *D);
     void VisitVarDecl(VarDecl *D);
     void VisitImplicitParamDecl(ImplicitParamDecl *D);
@@ -963,6 +964,12 @@ void ASTDeclWriter::VisitMSGuidDecl(MSGuidDecl *D) {
   for (auto C : Parts.Part4And5)
     Record.push_back(C);
   Code = serialization::DECL_MS_GUID;
+}
+
+void ASTDeclWriter::VisitTemplateParamObjectDecl(TemplateParamObjectDecl *D) {
+  VisitValueDecl(D);
+  Record.AddAPValue(D->getValue());
+  Code = serialization::DECL_TEMPLATE_PARAM_OBJECT;
 }
 
 void ASTDeclWriter::VisitIndirectFieldDecl(IndirectFieldDecl *D) {

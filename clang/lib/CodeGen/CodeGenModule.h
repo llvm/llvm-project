@@ -859,6 +859,10 @@ public:
   /// Get the address of a GUID.
   ConstantAddress GetAddrOfMSGuidDecl(const MSGuidDecl *GD);
 
+  /// Get the address of a template parameter object.
+  ConstantAddress
+  GetAddrOfTemplateParamObject(const TemplateParamObjectDecl *TPO);
+
   /// Get the address of the thunk for the given global decl.
   llvm::Constant *GetAddrOfThunk(StringRef Name, llvm::Type *FnTy,
                                  GlobalDecl GD);

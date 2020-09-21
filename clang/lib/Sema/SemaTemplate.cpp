@@ -1441,6 +1441,7 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
     return QualType();
   }
 
+  Diag(Loc, diag::warn_cxx17_compat_template_nontype_parm_type) << T;
   return T.getUnqualifiedType();
 }
 
@@ -6857,9 +6858,12 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
   assert(!ParamType.hasQualifiers() &&
          "non-type template parameter type cannot be qualified");
 
+  // FIXME: When Param is a reference, should we check that Arg is an lvalue?
   if (CTAK == CTAK_Deduced &&
-      !Context.hasSameType(ParamType.getNonLValueExprType(Context),
-                           Arg->getType())) {
+      (ParamType->isReferenceType()
+           ? !Context.hasSameType(ParamType.getNonReferenceType(),
+                                  Arg->getType())
+           : !Context.hasSameUnqualifiedType(ParamType, Arg->getType()))) {
     // FIXME: If either type is dependent, we skip the check. This isn't
     // correct, since during deduction we're supposed to have replaced each
     // template parameter with some unique (non-dependent) placeholder.
@@ -6915,12 +6919,38 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       *this, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
   if (getLangOpts().CPlusPlus17) {
+    QualType CanonParamType = Context.getCanonicalType(ParamType);
+
+    // Avoid making a copy when initializing a template parameter of class type
+    // from a template parameter object of the same type. This is going beyond
+    // the standard, but is required for soundness: in
+    //   template<A a> struct X { X *p; X<a> *q; };
+    // ... we need p and q to have the same type.
+    //
+    // Similarly, don't inject a call to a copy constructor when initializing
+    // from a template parameter of the same type.
+    Expr *InnerArg = Arg;
+    while (auto *SNTTP = dyn_cast<SubstNonTypeTemplateParmExpr>(InnerArg))
+      InnerArg = SNTTP->getReplacement();
+    if (ParamType->isRecordType() && isa<DeclRefExpr>(InnerArg) &&
+        Context.hasSameUnqualifiedType(ParamType, InnerArg->getType())) {
+      NamedDecl *ND = cast<DeclRefExpr>(InnerArg)->getDecl();
+      if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
+        Converted = TemplateArgument(TPO, CanonParamType);
+        return Arg;
+      }
+      if (isa<NonTypeTemplateParmDecl>(ND)) {
+        Converted = TemplateArgument(Arg);
+        return Arg;
+      }
+    }
+
     // C++17 [temp.arg.nontype]p1:
     //   A template-argument for a non-type template parameter shall be
     //   a converted constant expression of the type of the template-parameter.
     APValue Value;
     ExprResult ArgResult = CheckConvertedConstantExpression(
-        Arg, ParamType, Value, CCEK_TemplateArg);
+        Arg, ParamType, Value, CCEK_TemplateArg, Param);
     if (ArgResult.isInvalid())
       return ExprError();
 
@@ -6930,8 +6960,6 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       Converted = TemplateArgument(ArgResult.get());
       return ArgResult;
     }
-
-    QualType CanonParamType = Context.getCanonicalType(ParamType);
 
     // Convert the APValue to a TemplateArgument.
     switch (Value.getKind()) {
@@ -7002,6 +7030,13 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
                      : TemplateArgument(CanonParamType, /*isNullPtr*/true);
       break;
     }
+    case APValue::Struct:
+    case APValue::Union:
+      // Get or create the corresponding template parameter object.
+      Converted = TemplateArgument(
+          Context.getTemplateParamObjectDecl(CanonParamType, Value),
+          CanonParamType);
+      break;
     case APValue::AddrLabelDiff:
       return Diag(StartLoc, diag::err_non_type_template_arg_addr_label_diff);
     case APValue::FixedPoint:
@@ -7010,8 +7045,6 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     case APValue::ComplexFloat:
     case APValue::Vector:
     case APValue::Array:
-    case APValue::Struct:
-    case APValue::Union:
       return Diag(StartLoc, diag::err_non_type_template_arg_unsupported)
              << ParamType;
     }
@@ -7505,6 +7538,11 @@ Sema::BuildExpressionFromDeclTemplateArgument(const TemplateArgument &Arg,
     RefExpr = CreateBuiltinUnaryOp(Loc, UO_AddrOf, RefExpr.get());
     if (RefExpr.isInvalid())
       return ExprError();
+  } else if (ParamType->isRecordType()) {
+    assert(isa<TemplateParamObjectDecl>(VD) &&
+           "arg for class template param not a template parameter object");
+    // No conversions apply in this case.
+    return RefExpr;
   } else {
     assert(ParamType->isReferenceType() &&
            "unexpected type for decl template argument");

@@ -1978,6 +1978,8 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
     // ... the address of an object with static storage duration,
     if (const VarDecl *VD = dyn_cast<VarDecl>(D))
       return VD->hasGlobalStorage();
+    if (isa<TemplateParamObjectDecl>(D))
+      return true;
     // ... the address of a function,
     // ... the address of a GUID [MS extension],
     return isa<FunctionDecl>(D) || isa<MSGuidDecl>(D);
@@ -3978,6 +3980,16 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         return CompleteObject();
       }
       return CompleteObject(LVal.Base, &V, GD->getType());
+    }
+
+    // Allow reading from template parameter objects.
+    if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(D)) {
+      if (isModification(AK)) {
+        Info.FFDiag(E, diag::note_constexpr_modify_global);
+        return CompleteObject();
+      }
+      return CompleteObject(LVal.Base, const_cast<APValue *>(&TPO->getValue()),
+                            TPO->getType());
     }
 
     // In C++98, const, non-volatile integers initialized with ICEs are ICEs.
@@ -8026,14 +8038,13 @@ static bool EvaluateLValue(const Expr *E, LValue &Result, EvalInfo &Info,
 }
 
 bool LValueExprEvaluator::VisitDeclRefExpr(const DeclRefExpr *E) {
-  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(E->getDecl()))
-    return Success(FD);
-  if (const VarDecl *VD = dyn_cast<VarDecl>(E->getDecl()))
+  const NamedDecl *D = E->getDecl();
+  if (isa<FunctionDecl, MSGuidDecl, TemplateParamObjectDecl>(D))
+    return Success(cast<ValueDecl>(D));
+  if (const VarDecl *VD = dyn_cast<VarDecl>(D))
     return VisitVarDecl(E, VD);
-  if (const BindingDecl *BD = dyn_cast<BindingDecl>(E->getDecl()))
+  if (const BindingDecl *BD = dyn_cast<BindingDecl>(D))
     return Visit(BD->getBinding());
-  if (const MSGuidDecl *GD = dyn_cast<MSGuidDecl>(E->getDecl()))
-    return Success(GD);
   return Error(E);
 }
 
