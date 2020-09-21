@@ -145,7 +145,7 @@ struct IRInstructionData : ilist_node<IRInstructionData> {
   /// instructions, so it will also be hashed to a different value that any of
   /// the previous instructions.
   ///
-  /// \param [in] Value - The IRInstructionData instance to be hashed.
+  /// \param [in] ID - The IRInstructionData instance to be hashed.
   /// \returns A hash_value of the IRInstructionData.
   friend hash_code hash_value(const IRInstructionData &ID) {
     SmallVector<Type *, 4> OperTypes;
@@ -308,8 +308,8 @@ struct IRInstructionMapper {
   /// \param [in] It - The Instruction to be mapped to an integer.
   /// \param [in,out] IntegerMappingForBB - Vector of unsigned integers to
   /// append to.
-  /// \param [in,out] InstrList - Vector of InstructionData to append
-  /// to. \returns The integer \p It was mapped to.
+  /// \param [in,out] InstrListForBB - Vector of InstructionData to append to.
+  /// \returns The integer \p It was mapped to.
   unsigned mapToLegalUnsigned(BasicBlock::iterator &It,
                               std::vector<unsigned> &IntegerMappingForBB,
                               std::vector<IRInstructionData *> &InstrListForBB);
@@ -319,7 +319,7 @@ struct IRInstructionMapper {
   /// \param [in] It - The \p Instruction to be mapped to an integer.
   /// \param [in,out] IntegerMappingForBB - Vector of unsigned integers to
   /// append to.
-  /// \param [in,out] InstrList - Vector of IRInstructionData to append to.
+  /// \param [in,out] InstrListForBB - Vector of IRInstructionData to append to.
   /// \param End - true if creating a dummy IRInstructionData at the end of a
   /// basic block.
   /// \returns The integer \p It was mapped to.
