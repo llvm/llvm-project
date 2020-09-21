@@ -653,7 +653,6 @@ DynamicSymbols:
   - Name: foo
 
 ## Check how we print global GOT entries when they are unnamed section symbols.
-## TODO: we should print proper symbol names instead of descriptions.
 # RUN: yaml2obj --docnum=5 %s -o %t.err8.o
 # RUN: llvm-readobj -A %t.err8.o 2>&1 | FileCheck %s -DFILE=%t.err8.o --check-prefix=SEC-SYMS-LLVM
 # RUN: llvm-readelf -A %t.err8.o 2>&1 | FileCheck %s -DFILE=%t.err8.o --check-prefix=SEC-SYMS-GNU
@@ -661,7 +660,8 @@ DynamicSymbols:
 # SEC-SYMS-LLVM:      Global entries [
 # SEC-SYMS-LLVM-NEXT:   Entry {
 # SEC-SYMS-LLVM:          Section: Absolute (0xFFF1)
-# SEC-SYMS-LLVM-NEXT:     Name: Absolute (0)
+# SEC-SYMS-LLVM-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff1 (SHN_ABS)
+# SEC-SYMS-LLVM-NEXT:     Name: <?> (0)
 # SEC-SYMS-LLVM-NEXT:   }
 # SEC-SYMS-LLVM-NEXT:   Entry {
 # SEC-SYMS-LLVM:          Section: .got (0x1)
@@ -669,15 +669,18 @@ DynamicSymbols:
 # SEC-SYMS-LLVM-NEXT:   }
 # SEC-SYMS-LLVM-NEXT:   Entry {
 # SEC-SYMS-LLVM:          Section: Common (0xFFF2)
-# SEC-SYMS-LLVM-NEXT:     Name: Common (0)
+# SEC-SYMS-LLVM-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff2 (SHN_COMMON)
+# SEC-SYMS-LLVM-NEXT:     Name: <?> (0)
 # SEC-SYMS-LLVM-NEXT:   }
 # SEC-SYMS-LLVM-NEXT: ]
 
 # SEC-SYMS-GNU:      Global entries:
 # SEC-SYMS-GNU-NEXT:  {{.*}} Ndx Name
-# SEC-SYMS-GNU-NEXT:  {{.*}} ABS Absolute
+# SEC-SYMS-GNU-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff1 (SHN_ABS)
+# SEC-SYMS-GNU-NEXT:  {{.*}} ABS <?>
 # SEC-SYMS-GNU-NEXT:  {{.*}}   1 .got
-# SEC-SYMS-GNU-NEXT:  {{.*}} COM Common
+# SEC-SYMS-GNU-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff2 (SHN_COMMON)
+# SEC-SYMS-GNU-NEXT:  {{.*}} COM <?>
 
 --- !ELF
 FileHeader:

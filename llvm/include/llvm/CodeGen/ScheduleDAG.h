@@ -560,6 +560,7 @@ class TargetRegisterInfo;
     MachineFunction &MF;                ///< Machine function
     MachineRegisterInfo &MRI;           ///< Virtual/real register map
     std::vector<SUnit> SUnits;          ///< The scheduling units.
+    SUnit EntrySU;                      ///< Special node for the region entry.
     SUnit ExitSU;                       ///< Special node for the region exit.
 
 #ifdef NDEBUG

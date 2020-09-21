@@ -746,8 +746,14 @@ def GPU_HostRegisterOp : GPU_Op<"host_register">,
     Arguments<(ins AnyUnrankedMemRef:$value)> {
   let summary = "Registers a memref for access from device.";
   let description = [{
-    This op registers the host memory pointed to by a memref to be accessed from
-    a device.
+    This op maps the provided host buffer into the device address space.
+
+    This operation may not be supported in every environment, there is not yet a
+    way to check at runtime whether this feature is supported.
+
+    Writes from the host are guaranteed to be visible to device kernels that are
+    launched afterwards. Writes from the device are guaranteed to be visible on
+    the host after synchronizing with the device kernel completion.
   }];
 
   let assemblyFormat = "$value attr-dict `:` type($value)";
