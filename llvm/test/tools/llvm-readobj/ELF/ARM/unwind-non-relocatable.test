@@ -1,0 +1,94 @@
+## Check that we dump the unwind information for a non-relocatable input properly.
+
+## Check that we correctly decode function addresses and that we are able to
+## locate corresponding STT_FUNC symbols and dump function names properly.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj -u %t | FileCheck --check-prefix=UNWIND %s
+# RUN: llvm-readelf -u %t | FileCheck --check-prefix=UNWIND %s
+
+# UNWIND:      UnwindInformation {
+# UNWIND-NEXT:   UnwindIndexTable {
+# UNWIND-NEXT:     SectionIndex: 2
+# UNWIND-NEXT:     SectionName: .ARM.exidx
+# UNWIND-NEXT:     SectionOffset: 0x34
+# UNWIND-NEXT:     Entries [
+# UNWIND-NEXT:       Entry {
+# UNWIND-NEXT:         FunctionAddress: 0x230
+# UNWIND-NEXT:         FunctionName: func1
+# UNWIND-NEXT:         Model: Compact (Inline)
+# UNWIND-NEXT:         PersonalityIndex: 0
+# UNWIND-NEXT:         Opcodes [
+# UNWIND-NEXT:           0xB0      ; finish
+# UNWIND-NEXT:           0xB0      ; finish
+# UNWIND-NEXT:           0xB0      ; finish
+# UNWIND-NEXT:         ]
+# UNWIND-NEXT:       }
+# UNWIND-NEXT:       Entry {
+# UNWIND-NEXT:         FunctionAddress: 0x234
+# UNWIND-NEXT:         FunctionName: func2
+# UNWIND-NEXT:         Model: Compact (Inline)
+# UNWIND-NEXT:         PersonalityIndex: 0
+# UNWIND-NEXT:         Opcodes [
+# UNWIND-NEXT:           0x9B      ; vsp = r11
+# UNWIND-NEXT:           0x84 0x80 ; pop {fp, lr}
+# UNWIND-NEXT:         ]
+# UNWIND-NEXT:       }
+# UNWIND-NEXT:       Entry {
+# UNWIND-NEXT:         FunctionAddress: 0x248
+# UNWIND-NEXT:         FunctionName: func3
+# UNWIND-NEXT:         Model: Compact (Inline)
+# UNWIND-NEXT:         PersonalityIndex: 0
+# UNWIND-NEXT:         Opcodes [
+# UNWIND-NEXT:           0xB0      ; finish
+# UNWIND-NEXT:           0xB0      ; finish
+# UNWIND-NEXT:           0xB0      ; finish
+# UNWIND-NEXT:         ]
+# UNWIND-NEXT:       }
+# UNWIND-NEXT:       Entry {
+# UNWIND-NEXT:         FunctionAddress: 0x24C
+# UNWIND-NEXT:         Model: CantUnwind
+# UNWIND-NEXT:       }
+# UNWIND-NEXT:     ]
+# UNWIND-NEXT:   }
+# UNWIND-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_ARM
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Address: 0x230
+  - Name:    .ARM.exidx
+    Type:    SHT_ARM_EXIDX
+    Address: 0x24C
+    ContentArray: [
+## Entry 1. Address of .ARM.exidx (0x24C) + entry offset (0) + 0x7fffffe4 == 0x230 (func1).
+                    0xE4, 0xFF, 0xFF, 0x7F, ## Word(0) = 0x7fffffe4 (31 bit).
+                    0xB0, 0xB0, 0xB0, 0x80, ## Word(1): arbitrary opcodes.
+## Entry 2. Address of .ARM.exidx (0x24C) + entry offset (8) + 0x7fffffe0 == 0x234 (func2).
+                    0xE0, 0xFF, 0xFF, 0x7F, ## Word(0) = 0x7fffffe0 (31 bit).
+                    0x80, 0x84, 0x9B, 0x80, ## Word(1): arbitrary opcodes.
+## Entry 3. Address of .ARM.exidx (0x24C) + entry offset (16) + 0x7fffffec == 0x248 (func2).
+                    0xEC, 0xFF, 0xFF, 0x7F, ## Word(0) = 0x7fffffec (31 bit).
+                    0xB0, 0xB0, 0xB0, 0x80, ## Word(1): arbitrary opcodes.
+## Entry 4. Address of .ARM.exidx (0x24C) + entry offset (24) + 0x7fffffe8 == 0x24C.
+                    0xE8, 0xFF, 0xFF, 0x7F, ## Word(0) = 0x7fffffe8 (31 bit).
+                    0x01, 0x00, 0x00, 0x00  ## Word(1) == EXIDX_CANTUNWIND
+                  ]
+Symbols:
+  - Name:    func1
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x230
+  - Name:    func2
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x234
+  - Name:    func3
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x248
