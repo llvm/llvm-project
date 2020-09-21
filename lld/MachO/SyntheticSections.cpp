@@ -441,6 +441,7 @@ ExportSection::ExportSection()
     : LinkEditSection(segment_names::linkEdit, section_names::export_) {}
 
 void ExportSection::finalizeContents() {
+  trieBuilder.setImageBase(in.header->addr);
   // TODO: We should check symbol visibility.
   for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
