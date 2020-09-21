@@ -123,7 +123,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       return IsArch32Bit ? "crt0.o" : "crt0_64.o";
   };
 
-  if (!Args.hasArg(options::OPT_nostdlib)) {
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
     CmdArgs.push_back(
         Args.MakeArgString(ToolChain.GetFilePath(getCrt0Basename())));
   }

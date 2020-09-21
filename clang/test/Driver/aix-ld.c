@@ -331,6 +331,38 @@
 // CHECK-LD64-NOSTDLIBXX-LCXX-NOT: "-lc++"
 // CHECK-LD64-NOSTDLIBXX-LCXX:     "-lc"
 
+// Check powerpc64-ibm-aix7.1.0.0, 32-bit. -nostartfiles.
+// RUN: %clangxx -no-canonical-prefixes %s 2>&1 -### \
+// RUN:        -nostartfiles \
+// RUN:        -target powerpc-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD32-NOSTARTFILES-LCXX %s
+// CHECK-LD32-NOSTARTFILES-LCXX:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
+// CHECK-LD32-NOSTARTFILES-LCXX:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD32-NOSTARTFILES-LCXX:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD32-NOSTARTFILES-LCXX:     "-b32"
+// CHECK-LD32-NOSTARTFILES-LCXX:     "-bpT:0x10000000" "-bpD:0x20000000"
+// CHECK-LD32-NOSTARTFILES-LCXX-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-NOSTARTFILES-LCXX:     "-L[[SYSROOT]]/usr/lib"
+// CHECK-LD32-NOSTARTFILES-LCXX      "-lc++"
+// CHECK-LD32-NOSTARTFILES-LCXX:     "-lc"
+
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. -nostartfiles.
+// RUN: %clangxx -no-canonical-prefixes %s 2>&1 -### \
+// RUN:        -nostartfiles \
+// RUN:        -target powerpc-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD32-NOSTARTFILES-LCXX %s
+// CHECK-LD64-NOSTARTFILES-LCXX:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
+// CHECK-LD64-NOSTARTFILES-LCXX:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD64-NOSTARTFILES-LCXX:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD64-NOSTARTFILES-LCXX:     "-b64"
+// CHECK-LD64-NOSTARTFILES-LCXX:     "-bpT:0x100000000" "-bpD:0x110000000"
+// CHECK-LD64-NOSTARTFILES-LCXX-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0_64.o"
+// CHECK-LD64-NOSTARTFILES-LCXX:     "-L[[SYSROOT]]/usr/lib"
+// CHECK-LD64-NOSTARTFILES-LCXX:     "-lc++"
+// CHECK-LD64-NOSTARTFILES-LCXX:     "-lc"
+
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. -stdlib=libstdc++ invokes fatal error.
 // RUN: not --crash %clangxx -no-canonical-prefixes %s 2>&1 -### \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
