@@ -1518,7 +1518,7 @@ private:
   void setInsertPointAfterBundle(TreeEntry *E);
 
   /// \returns a vector from a collection of scalars in \p VL.
-  Value *Gather(ArrayRef<Value *> VL, FixedVectorType *Ty);
+  Value *gather(ArrayRef<Value *> VL);
 
   /// \returns whether the VectorizableTree is fully vectorizable and will
   /// be beneficial even the tree height is tiny.
@@ -4133,10 +4133,12 @@ void BoUpSLP::setInsertPointAfterBundle(TreeEntry *E) {
   Builder.SetCurrentDebugLocation(Front->getDebugLoc());
 }
 
-Value *BoUpSLP::Gather(ArrayRef<Value *> VL, FixedVectorType *Ty) {
-  Value *Vec = UndefValue::get(Ty);
-  // Generate the 'InsertElement' instruction.
-  for (unsigned i = 0; i < Ty->getNumElements(); ++i) {
+Value *BoUpSLP::gather(ArrayRef<Value *> VL) {
+  Value *Val0 =
+      isa<StoreInst>(VL[0]) ? cast<StoreInst>(VL[0])->getValueOperand() : VL[0];
+  FixedVectorType *VecTy = FixedVectorType::get(Val0->getType(), VL.size());
+  Value *Vec = UndefValue::get(VecTy);
+  for (unsigned i = 0; i < VecTy->getNumElements(); ++i) {
     Vec = Builder.CreateInsertElement(Vec, VL[i], Builder.getInt32(i));
     if (auto *Insrt = dyn_cast<InsertElementInst>(Vec)) {
       GatherSeq.insert(Insrt);
@@ -4193,10 +4195,6 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
     }
   }
 
-  Type *ScalarTy = S.OpValue->getType();
-  if (StoreInst *SI = dyn_cast<StoreInst>(S.OpValue))
-    ScalarTy = SI->getValueOperand()->getType();
-
   // Check that every instruction appears once in this bundle.
   SmallVector<int, 4> ReuseShuffleIndicies;
   SmallVector<Value *, 4> UniqueValues;
@@ -4216,18 +4214,17 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
     else
       VL = UniqueValues;
   }
-  auto *VecTy = FixedVectorType::get(ScalarTy, VL.size());
 
-  Value *V = Gather(VL, VecTy);
+  Value *Vec = gather(VL);
   if (!ReuseShuffleIndicies.empty()) {
-    V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
-                                    ReuseShuffleIndicies, "shuffle");
-    if (auto *I = dyn_cast<Instruction>(V)) {
+    Vec = Builder.CreateShuffleVector(Vec, UndefValue::get(Vec->getType()),
+                                      ReuseShuffleIndicies, "shuffle");
+    if (auto *I = dyn_cast<Instruction>(Vec)) {
       GatherSeq.insert(I);
       CSEBlocks.insert(I->getParent());
     }
   }
-  return V;
+  return Vec;
 }
 
 Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
@@ -4238,32 +4235,30 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     return E->VectorizedValue;
   }
 
-  Instruction *VL0 = E->getMainOp();
-  Type *ScalarTy = VL0->getType();
-  if (StoreInst *SI = dyn_cast<StoreInst>(VL0))
-    ScalarTy = SI->getValueOperand()->getType();
-  auto *VecTy = FixedVectorType::get(ScalarTy, E->Scalars.size());
-
   bool NeedToShuffleReuses = !E->ReuseShuffleIndices.empty();
-
   if (E->State == TreeEntry::NeedToGather) {
     setInsertPointAfterBundle(E);
-    auto *V = Gather(E->Scalars, VecTy);
+    Value *Vec = gather(E->Scalars);
     if (NeedToShuffleReuses) {
-      V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
-                                      E->ReuseShuffleIndices, "shuffle");
-      if (auto *I = dyn_cast<Instruction>(V)) {
+      Vec = Builder.CreateShuffleVector(Vec, UndefValue::get(Vec->getType()),
+                                        E->ReuseShuffleIndices, "shuffle");
+      if (auto *I = dyn_cast<Instruction>(Vec)) {
         GatherSeq.insert(I);
         CSEBlocks.insert(I->getParent());
       }
     }
-    E->VectorizedValue = V;
-    return V;
+    E->VectorizedValue = Vec;
+    return Vec;
   }
 
   assert(E->State == TreeEntry::Vectorize && "Unhandled state");
   unsigned ShuffleOrOp =
       E->isAltShuffle() ? (unsigned)Instruction::ShuffleVector : E->getOpcode();
+  Instruction *VL0 = E->getMainOp();
+  Type *ScalarTy = VL0->getType();
+  if (auto *Store = dyn_cast<StoreInst>(VL0))
+    ScalarTy = Store->getValueOperand()->getType();
+  auto *VecTy = FixedVectorType::get(ScalarTy, E->Scalars.size());
   switch (ShuffleOrOp) {
     case Instruction::PHI: {
       auto *PH = cast<PHINode>(VL0);
