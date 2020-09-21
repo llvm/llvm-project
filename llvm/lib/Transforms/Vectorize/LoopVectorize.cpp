@@ -2272,8 +2272,7 @@ Value *InnerLoopVectorizer::reverseVector(Value *Vec) {
   for (unsigned i = 0; i < VF.getKnownMinValue(); ++i)
     ShuffleMask.push_back(VF.getKnownMinValue() - i - 1);
 
-  return Builder.CreateShuffleVector(Vec, UndefValue::get(Vec->getType()),
-                                     ShuffleMask, "reverse");
+  return Builder.CreateShuffleVector(Vec, ShuffleMask, "reverse");
 }
 
 // Return whether we allow using masked interleave-groups (for dealing with
@@ -2396,10 +2395,9 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         Value *GroupMask = MaskForGaps;
         if (BlockInMask) {
           Value *BlockInMaskPart = State.get(BlockInMask, Part);
-          auto *Undefs = UndefValue::get(BlockInMaskPart->getType());
           assert(!VF.isScalable() && "scalable vectors not yet supported.");
           Value *ShuffledMask = Builder.CreateShuffleVector(
-              BlockInMaskPart, Undefs,
+              BlockInMaskPart,
               createReplicatedMask(InterleaveFactor, VF.getKnownMinValue()),
               "interleaved.mask");
           GroupMask = MaskForGaps
@@ -2432,7 +2430,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
           createStrideMask(I, InterleaveFactor, VF.getKnownMinValue());
       for (unsigned Part = 0; Part < UF; Part++) {
         Value *StridedVec = Builder.CreateShuffleVector(
-            NewLoads[Part], UndefVec, StrideMask, "strided.vec");
+            NewLoads[Part], StrideMask, "strided.vec");
 
         // If this member has different type, cast the result type.
         if (Member->getType() != ScalarTy) {
@@ -2482,16 +2480,14 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
     // Interleave the elements in the wide vector.
     assert(!VF.isScalable() && "scalable vectors not yet supported.");
     Value *IVec = Builder.CreateShuffleVector(
-        WideVec, UndefVec,
-        createInterleaveMask(VF.getKnownMinValue(), InterleaveFactor),
+        WideVec, createInterleaveMask(VF.getKnownMinValue(), InterleaveFactor),
         "interleaved.vec");
 
     Instruction *NewStoreInstr;
     if (BlockInMask) {
       Value *BlockInMaskPart = State.get(BlockInMask, Part);
-      auto *Undefs = UndefValue::get(BlockInMaskPart->getType());
       Value *ShuffledMask = Builder.CreateShuffleVector(
-          BlockInMaskPart, Undefs,
+          BlockInMaskPart,
           createReplicatedMask(InterleaveFactor, VF.getKnownMinValue()),
           "interleaved.mask");
       NewStoreInstr = Builder.CreateMaskedStore(
