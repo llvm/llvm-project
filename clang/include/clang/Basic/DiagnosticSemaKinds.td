@@ -4423,6 +4423,28 @@ def note_template_nontype_parm_prev_declaration : Note<
   "previous non-type template parameter with type %0 is here">;
 def err_template_nontype_parm_bad_type : Error<
   "a non-type template parameter cannot have type %0">;
+def err_template_nontype_parm_bad_structural_type : Error<
+  "a non-type template parameter cannot have type %0 before C++20">;
+def err_template_nontype_parm_incomplete : Error<
+  "non-type template parameter has incomplete type %0">;
+def err_template_nontype_parm_not_literal : Error<
+  "non-type template parameter has non-literal type %0">;
+def err_template_nontype_parm_rvalue_ref : Error<
+  "non-type template parameter has rvalue reference type %0">;
+def err_template_nontype_parm_not_structural : Error<
+  "type %0 of non-type template parameter is not a structural type">;
+def note_not_structural_non_public : Note<
+  "%0 is not a structural type because it has a "
+  "%select{non-static data member|base class}1 that is not public">;
+def note_not_structural_mutable_field : Note<
+  "%0 is not a structural type because it has a mutable "
+  "non-static data member">;
+def note_not_structural_rvalue_ref_field : Note<
+  "%0 is not a structural type because it has a non-static data member "
+  "of rvalue reference type">;
+def note_not_structural_subobject : Note<
+  "%0 is not a structural type because it has a "
+  "%select{non-static data member|base class}1 of non-structural type %2">;
 def warn_cxx14_compat_template_nontype_parm_auto_type : Warning<
   "non-type template parameters declared with %0 are incompatible with C++ "
   "standards before C++17">,
@@ -4542,6 +4564,8 @@ def err_non_type_template_arg_subobject : Error<
   "non-type template argument refers to subobject '%0'">;
 def err_non_type_template_arg_addr_label_diff : Error<
   "template argument / label address difference / what did you expect?">;
+def err_non_type_template_arg_unsupported : Error<
+  "sorry, non-type template argument of type %0 is not yet supported">;
 def err_template_arg_not_convertible : Error<
   "non-type template argument of type %0 cannot be converted to a value "
   "of type %1">;
