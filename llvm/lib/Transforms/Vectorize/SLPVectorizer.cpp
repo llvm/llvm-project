@@ -4186,8 +4186,7 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
             for (int Idx : E->ReuseShuffleIndices)
               if (UsedIdxs.insert(Idx).second)
                 UniqueIdxs.emplace_back(Idx);
-            V = Builder.CreateShuffleVector(V, UndefValue::get(V->getType()),
-                                            UniqueIdxs);
+            V = Builder.CreateShuffleVector(V, UniqueIdxs);
           }
         }
         return V;
@@ -4217,8 +4216,7 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
 
   Value *Vec = gather(VL);
   if (!ReuseShuffleIndicies.empty()) {
-    Vec = Builder.CreateShuffleVector(Vec, UndefValue::get(Vec->getType()),
-                                      ReuseShuffleIndicies, "shuffle");
+    Vec = Builder.CreateShuffleVector(Vec, ReuseShuffleIndicies, "shuffle");
     if (auto *I = dyn_cast<Instruction>(Vec)) {
       GatherSeq.insert(I);
       CSEBlocks.insert(I->getParent());
@@ -4240,8 +4238,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     setInsertPointAfterBundle(E);
     Value *Vec = gather(E->Scalars);
     if (NeedToShuffleReuses) {
-      Vec = Builder.CreateShuffleVector(Vec, UndefValue::get(Vec->getType()),
-                                        E->ReuseShuffleIndices, "shuffle");
+      Vec = Builder.CreateShuffleVector(Vec, E->ReuseShuffleIndices, "shuffle");
       if (auto *I = dyn_cast<Instruction>(Vec)) {
         GatherSeq.insert(I);
         CSEBlocks.insert(I->getParent());
@@ -4266,10 +4263,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Builder.SetCurrentDebugLocation(PH->getDebugLoc());
       PHINode *NewPhi = Builder.CreatePHI(VecTy, PH->getNumIncomingValues());
       Value *V = NewPhi;
-      if (NeedToShuffleReuses) {
-        V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
-                                        E->ReuseShuffleIndices, "shuffle");
-      }
+      if (NeedToShuffleReuses)
+        V = Builder.CreateShuffleVector(V, E->ReuseShuffleIndices, "shuffle");
+
       E->VectorizedValue = V;
 
       // PHINodes may have multiple entries from the same block. We want to
@@ -4302,15 +4298,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         SmallVector<int, 4> Mask;
         inversePermutation(E->ReorderIndices, Mask);
         Builder.SetInsertPoint(VL0);
-        V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy), Mask,
-                                        "reorder_shuffle");
+        V = Builder.CreateShuffleVector(V, Mask, "reorder_shuffle");
       }
       if (NeedToShuffleReuses) {
         // TODO: Merge this shuffle with the ReorderShuffleMask.
         if (E->ReorderIndices.empty())
           Builder.SetInsertPoint(VL0);
-        V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
-                                        E->ReuseShuffleIndices, "shuffle");
+        V = Builder.CreateShuffleVector(V, E->ReuseShuffleIndices, "shuffle");
       }
       E->VectorizedValue = V;
       return V;
@@ -4326,13 +4320,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (!E->ReorderIndices.empty()) {
         SmallVector<int, 4> Mask;
         inversePermutation(E->ReorderIndices, Mask);
-        NewV = Builder.CreateShuffleVector(NewV, UndefValue::get(VecTy), Mask,
-                                           "reorder_shuffle");
+        NewV = Builder.CreateShuffleVector(NewV, Mask, "reorder_shuffle");
       }
       if (NeedToShuffleReuses) {
         // TODO: Merge this shuffle with the ReorderShuffleMask.
-        NewV = Builder.CreateShuffleVector(NewV, UndefValue::get(VecTy),
-                                           E->ReuseShuffleIndices, "shuffle");
+        NewV = Builder.CreateShuffleVector(NewV, E->ReuseShuffleIndices,
+                                           "shuffle");
       }
       E->VectorizedValue = NewV;
       return NewV;
@@ -4360,10 +4353,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
       auto *CI = cast<CastInst>(VL0);
       Value *V = Builder.CreateCast(CI->getOpcode(), InVec, VecTy);
-      if (NeedToShuffleReuses) {
-        V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
-                                        E->ReuseShuffleIndices, "shuffle");
-      }
+      if (NeedToShuffleReuses)
+        V = Builder.CreateShuffleVector(V, E->ReuseShuffleIndices, "shuffle");
+
       E->VectorizedValue = V;
       ++NumVectorInstructions;
       return V;
@@ -4383,10 +4375,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
       Value *V = Builder.CreateCmp(P0, L, R);
       propagateIRFlags(V, E->Scalars, VL0);
-      if (NeedToShuffleReuses) {
-        V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
-                                        E->ReuseShuffleIndices, "shuffle");
-      }
+      if (NeedToShuffleReuses)
+        V = Builder.CreateShuffleVector(V, E->ReuseShuffleIndices, "shuffle");
+
       E->VectorizedValue = V;
       ++NumVectorInstructions;
       return V;
@@ -4404,10 +4395,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
 
       Value *V = Builder.CreateSelect(Cond, True, False);
-      if (NeedToShuffleReuses) {
-        V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
-                                        E->ReuseShuffleIndices, "shuffle");
-      }
+      if (NeedToShuffleReuses)
+        V = Builder.CreateShuffleVector(V, E->ReuseShuffleIndices, "shuffle");
+
       E->VectorizedValue = V;
       ++NumVectorInstructions;
       return V;
@@ -4428,10 +4418,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (auto *I = dyn_cast<Instruction>(V))
         V = propagateMetadata(I, E->Scalars);
 
-      if (NeedToShuffleReuses) {
-        V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
-                                        E->ReuseShuffleIndices, "shuffle");
-      }
+      if (NeedToShuffleReuses)
+        V = Builder.CreateShuffleVector(V, E->ReuseShuffleIndices, "shuffle");
+
       E->VectorizedValue = V;
       ++NumVectorInstructions;
 
@@ -4472,10 +4461,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (auto *I = dyn_cast<Instruction>(V))
         V = propagateMetadata(I, E->Scalars);
 
-      if (NeedToShuffleReuses) {
-        V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
-                                        E->ReuseShuffleIndices, "shuffle");
-      }
+      if (NeedToShuffleReuses)
+        V = Builder.CreateShuffleVector(V, E->ReuseShuffleIndices, "shuffle");
+
       E->VectorizedValue = V;
       ++NumVectorInstructions;
 
@@ -4507,13 +4495,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (IsReorder) {
         SmallVector<int, 4> Mask;
         inversePermutation(E->ReorderIndices, Mask);
-        V = Builder.CreateShuffleVector(V, UndefValue::get(V->getType()),
-                                        Mask, "reorder_shuffle");
+        V = Builder.CreateShuffleVector(V, Mask, "reorder_shuffle");
       }
       if (NeedToShuffleReuses) {
         // TODO: Merge this shuffle with the ReorderShuffleMask.
-        V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
-                                        E->ReuseShuffleIndices, "shuffle");
+        V = Builder.CreateShuffleVector(V, E->ReuseShuffleIndices, "shuffle");
       }
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -4531,9 +4517,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (IsReorder) {
         SmallVector<int, 4> Mask(E->ReorderIndices.begin(),
                                  E->ReorderIndices.end());
-        VecValue = Builder.CreateShuffleVector(
-            VecValue, UndefValue::get(VecValue->getType()), Mask,
-            "reorder_shuffle");
+        VecValue = Builder.CreateShuffleVector(VecValue, Mask, "reorder_shuf");
       }
       Value *ScalarPtr = SI->getPointerOperand();
       Value *VecPtr = Builder.CreateBitCast(
@@ -4548,10 +4532,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         ExternalUses.push_back(ExternalUser(ScalarPtr, cast<User>(VecPtr), 0));
 
       Value *V = propagateMetadata(ST, E->Scalars);
-      if (NeedToShuffleReuses) {
-        V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
-                                        E->ReuseShuffleIndices, "shuffle");
-      }
+      if (NeedToShuffleReuses)
+        V = Builder.CreateShuffleVector(V, E->ReuseShuffleIndices, "shuffle");
+
       E->VectorizedValue = V;
       ++NumVectorInstructions;
       return V;
@@ -4588,10 +4571,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (Instruction *I = dyn_cast<Instruction>(V))
         V = propagateMetadata(I, E->Scalars);
 
-      if (NeedToShuffleReuses) {
-        V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
-                                        E->ReuseShuffleIndices, "shuffle");
-      }
+      if (NeedToShuffleReuses)
+        V = Builder.CreateShuffleVector(V, E->ReuseShuffleIndices, "shuffle");
+
       E->VectorizedValue = V;
       ++NumVectorInstructions;
 
@@ -4652,10 +4634,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         ExternalUses.push_back(ExternalUser(ScalarArg, cast<User>(V), 0));
 
       propagateIRFlags(V, E->Scalars, VL0);
-      if (NeedToShuffleReuses) {
-        V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
-                                        E->ReuseShuffleIndices, "shuffle");
-      }
+      if (NeedToShuffleReuses)
+        V = Builder.CreateShuffleVector(V, E->ReuseShuffleIndices, "shuffle");
+
       E->VectorizedValue = V;
       ++NumVectorInstructions;
       return V;
@@ -4720,10 +4701,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *V = Builder.CreateShuffleVector(V0, V1, Mask);
       if (Instruction *I = dyn_cast<Instruction>(V))
         V = propagateMetadata(I, E->Scalars);
-      if (NeedToShuffleReuses) {
-        V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
-                                        E->ReuseShuffleIndices, "shuffle");
-      }
+      if (NeedToShuffleReuses)
+        V = Builder.CreateShuffleVector(V, E->ReuseShuffleIndices, "shuffle");
+
       E->VectorizedValue = V;
       ++NumVectorInstructions;
 
@@ -7157,11 +7137,10 @@ private:
       auto LeftMask = createRdxShuffleMask(ReduxWidth, i, true, true);
       auto RightMask = createRdxShuffleMask(ReduxWidth, i, true, false);
 
-      Value *LeftShuf = Builder.CreateShuffleVector(
-          TmpVec, UndefValue::get(TmpVec->getType()), LeftMask, "rdx.shuf.l");
-      Value *RightShuf = Builder.CreateShuffleVector(
-          TmpVec, UndefValue::get(TmpVec->getType()), (RightMask),
-          "rdx.shuf.r");
+      Value *LeftShuf =
+          Builder.CreateShuffleVector(TmpVec, LeftMask, "rdx.shuf.l");
+      Value *RightShuf =
+          Builder.CreateShuffleVector(TmpVec, RightMask, "rdx.shuf.r");
       OperationData VectReductionData(ReductionData.getOpcode(), LeftShuf,
                                       RightShuf, ReductionData.getKind());
       TmpVec = VectReductionData.createOp(Builder, "op.rdx", ReductionOps);
