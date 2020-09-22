@@ -614,16 +614,17 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry,
   case wasm::R_WASM_MEMORY_ADDR_REL_SLEB64:
   case wasm::R_WASM_MEMORY_ADDR_I32:
   case wasm::R_WASM_MEMORY_ADDR_I64: {
-    // Provisional value is address of the global
+    // Provisional value is address of the global plus the offset
     const MCSymbolWasm *Base =
         cast<MCSymbolWasm>(Layout.getBaseSymbol(*RelEntry.Symbol));
     // For undefined symbols, use zero
     if (!Base->isDefined())
       return 0;
-    const wasm::WasmDataReference &Ref = DataLocations[Base];
-    const WasmDataSegment &Segment = DataSegments[Ref.Segment];
+    const wasm::WasmDataReference &BaseRef = DataLocations[Base],
+                                  &SymRef = DataLocations[RelEntry.Symbol];
+    const WasmDataSegment &Segment = DataSegments[BaseRef.Segment];
     // Ignore overflow. LLVM allows address arithmetic to silently wrap.
-    return Segment.Offset + Ref.Offset + RelEntry.Addend;
+    return Segment.Offset + BaseRef.Offset + SymRef.Offset + RelEntry.Addend;
   }
   default:
     llvm_unreachable("invalid relocation type");
@@ -1230,8 +1231,11 @@ void WasmObjectWriter::prepareImports(
     // Register types for all functions, including those with private linkage
     // (because wasm always needs a type signature).
     if (WS.isFunction()) {
-      const MCSymbolWasm *Base = cast<MCSymbolWasm>(Layout.getBaseSymbol(S));
-      registerFunctionType(*Base);
+      const auto *BS = Layout.getBaseSymbol(S);
+      if (!BS)
+        report_fatal_error(Twine(S.getName()) +
+                           ": absolute addressing not supported!");
+      registerFunctionType(*cast<MCSymbolWasm>(BS));
     }
 
     if (WS.isEvent())
@@ -1565,7 +1569,11 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
 
     assert(S.isDefined());
 
-    const MCSymbolWasm *Base = cast<MCSymbolWasm>(Layout.getBaseSymbol(S));
+    const auto *BS = Layout.getBaseSymbol(S);
+    if (!BS)
+      report_fatal_error(Twine(S.getName()) +
+                         ": absolute addressing not supported!");
+    const MCSymbolWasm *Base = cast<MCSymbolWasm>(BS);
 
     // Find the target symbol of this weak alias and export that index
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
