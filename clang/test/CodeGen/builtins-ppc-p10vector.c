@@ -106,6 +106,18 @@ vector unsigned long long test_vec_dive_ull(void) {
   return vec_dive(vulla, vullb);
 }
 
+vector unsigned __int128 test_vec_dive_u128(void) {
+  // CHECK: @llvm.ppc.altivec.vdiveuq(<1 x i128> %{{.+}}, <1 x i128> %{{.+}})
+  // CHECK-NEXT: ret <1 x i128>
+  return vec_dive(vui128a, vui128b);
+}
+
+vector signed __int128 test_vec_dive_s128(void) {
+  // CHECK: @llvm.ppc.altivec.vdivesq(<1 x i128> %{{.+}}, <1 x i128> %{{.+}})
+  // CHECK-NEXT: ret <1 x i128>
+  return vec_dive(vsi128a, vsi128b);
+}
+
 vector signed int test_vec_mulh_si(void) {
   // CHECK: @llvm.ppc.altivec.vmulhsw(<4 x i32> %{{.+}}, <4 x i32> %{{.+}})
   // CHECK-NEXT: ret <4 x i32>
