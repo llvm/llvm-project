@@ -1550,10 +1550,12 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
             continue;
           }
         }
-        // If the destination register of the loads is the same register, bail
-        // and keep looking. A load-pair instruction with both destination
-        // registers the same is UNPREDICTABLE and will result in an exception.
-        if (MayLoad && Reg == getLdStRegOp(MI).getReg()) {
+        // If the destination register of one load is the same register or a
+        // sub/super register of the other load, bail and keep looking. A
+        // load-pair instruction with both destination registers the same is
+        // UNPREDICTABLE and will result in an exception.
+        if (MayLoad &&
+            TRI->isSuperOrSubRegisterEq(Reg, getLdStRegOp(MI).getReg())) {
           LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
                                             TRI);
           MemInsns.push_back(&MI);
