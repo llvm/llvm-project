@@ -11,6 +11,7 @@
 
 int main() {
   int msgq = msgget(IPC_PRIVATE, 0666);
+  if (msgq == -1) perror("msgget:");
   assert(msgq != -1);
 
   struct msg_s {
