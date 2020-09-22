@@ -309,10 +309,13 @@ def ConvOp : PoolingBase_Op<"conv", [NInputs<2>, NOutputs<1>]> {
       // This may evolve in the future.
       unsigned nWin =
         nPar - getNumBatchDimensions() - getNumInputFeatureDimensions();
-      SmallVector<StringRef, 8> iters(nPar, getParallelIteratorTypeName());
+      SmallVector<StringRef, 8> iters;
       iters.reserve(nPar + nRed + nWin);
-      iters.append(nRed, getReductionIteratorTypeName());
+      iters.append(nPar - getNumOutputFeatureDimensions(),
+                   getParallelIteratorTypeName());
       iters.append(nWin, getWindowIteratorTypeName());
+      iters.append(nRed, getReductionIteratorTypeName());
+      iters.append(getNumOutputFeatureDimensions(), getParallelIteratorTypeName());
       return Builder(getContext()).getStrArrayAttr(iters);
     }
 
@@ -337,13 +340,13 @@ def ConvOp : PoolingBase_Op<"conv", [NInputs<2>, NOutputs<1>]> {
       //  * output filter dimensions (ks with #ks = 1 for now)
       auto bs = makeAffineDimExprs(getNumBatchDimensions(), idx, context);
       auto xs = makeAffineDimExprs(nWin, idx, context);
-      auto ks = makeAffineDimExprs(
-        getNumOutputFeatureDimensions(), idx, context);
+      // Window reduction dims: sum_{z[0], ..., z[N-1], q}
+      auto zs = makeAffineDimExprs(nWin, idx, context);
       // Non-window reduction dim: sum_{z[0], ..., z[N-1], q}
       auto qs = makeAffineDimExprs(
         getNumInputFeatureDimensions(), idx, context);
-      // Window reduction dims: sum_{z[0], ..., z[N-1], q}
-      auto zs = makeAffineDimExprs(nWin, idx, context);
+      auto ks = makeAffineDimExprs(
+        getNumOutputFeatureDimensions(), idx, context);
       // Construct the weighedSum expression.
       auto ws = weightedPoolingInputIndex(*this, xs, zs);
       return Builder(getContext()).getAffineMapArrayAttr({
