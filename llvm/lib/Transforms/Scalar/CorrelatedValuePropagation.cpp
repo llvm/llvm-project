@@ -613,10 +613,15 @@ static bool isNonPositive(Value *V, LazyValueInfo *LVI, Instruction *CxtI) {
   return Result == LazyValueInfo::True;
 }
 
-static bool allOperandsAreNonNegative(BinaryOperator *SDI, LazyValueInfo *LVI) {
-  return all_of(SDI->operands(),
-                [&](Value *Op) { return isNonNegative(Op, LVI, SDI); });
-}
+enum class Domain { NonNegative, NonPositive, Unknown };
+
+Domain getDomain(Value *V, LazyValueInfo *LVI, Instruction *CxtI) {
+  if (isNonNegative(V, LVI, CxtI))
+    return Domain::NonNegative;
+  if (isNonPositive(V, LVI, CxtI))
+    return Domain::NonPositive;
+  return Domain::Unknown;
+};
 
 /// Try to shrink a udiv/urem's width down to the smallest power of two that's
 /// sufficient to contain its operands.
@@ -661,18 +666,51 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
 }
 
 static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
-  if (SDI->getType()->isVectorTy() || !allOperandsAreNonNegative(SDI, LVI))
+  if (SDI->getType()->isVectorTy())
     return false;
 
+  struct Operand {
+    Value *V;
+    Domain D;
+  };
+  std::array<Operand, 2> Ops;
+
+  for (const auto I : zip(Ops, SDI->operands())) {
+    Operand &Op = std::get<0>(I);
+    Op.V = std::get<1>(I);
+    Op.D = getDomain(Op.V, LVI, SDI);
+    if (Op.D == Domain::Unknown)
+      return false;
+  }
+
+  // We know domains of both of the operands!
   ++NumSRems;
-  auto *BO = BinaryOperator::CreateURem(SDI->getOperand(0), SDI->getOperand(1),
-                                        SDI->getName(), SDI);
-  BO->setDebugLoc(SDI->getDebugLoc());
-  SDI->replaceAllUsesWith(BO);
+
+  // We need operands to be non-negative, so negate each one that isn't.
+  for (Operand &Op : Ops) {
+    if (Op.D == Domain::NonNegative)
+      continue;
+    auto *BO =
+        BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg", SDI);
+    BO->setDebugLoc(SDI->getDebugLoc());
+    Op.V = BO;
+  }
+
+  auto *URem =
+      BinaryOperator::CreateURem(Ops[0].V, Ops[1].V, SDI->getName(), SDI);
+  URem->setDebugLoc(SDI->getDebugLoc());
+
+  Value *Res = URem;
+
+  // If the divident was non-positive, we need to negate the result.
+  if (Ops[0].D == Domain::NonPositive)
+    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg", SDI);
+
+  SDI->replaceAllUsesWith(Res);
   SDI->eraseFromParent();
 
-  // Try to process our new urem.
-  processUDivOrURem(BO, LVI);
+  // Try to simplify our new urem.
+  processUDivOrURem(URem, LVI);
 
   return true;
 }
@@ -686,24 +724,16 @@ static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
   if (SDI->getType()->isVectorTy())
     return false;
 
-  enum class Domain { NonNegative, NonPositive, Unknown };
-  auto getDomain = [&](Value *V) {
-    if (isNonNegative(V, LVI, SDI))
-      return Domain::NonNegative;
-    if (isNonPositive(V, LVI, SDI))
-      return Domain::NonPositive;
-    return Domain::Unknown;
-  };
-
   struct Operand {
     Value *V;
     Domain D;
   };
   std::array<Operand, 2> Ops;
+
   for (const auto I : zip(Ops, SDI->operands())) {
     Operand &Op = std::get<0>(I);
     Op.V = std::get<1>(I);
-    Op.D = getDomain(Op.V);
+    Op.D = getDomain(Op.V, LVI, SDI);
     if (Op.D == Domain::Unknown)
       return false;
   }

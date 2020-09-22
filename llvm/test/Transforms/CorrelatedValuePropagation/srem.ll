@@ -90,8 +90,9 @@ define i8 @test6_pos_neg(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C0]])
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sle i8 [[Y:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C1]])
-; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X]], [[Y]]
-; CHECK-NEXT:    ret i8 [[REM]]
+; CHECK-NEXT:    [[Y_NONNEG:%.*]] = sub i8 0, [[Y]]
+; CHECK-NEXT:    [[REM1:%.*]] = urem i8 [[X]], [[Y_NONNEG]]
+; CHECK-NEXT:    ret i8 [[REM1]]
 ;
   %c0 = icmp sge i8 %x, 0
   call void @llvm.assume(i1 %c0)
@@ -107,8 +108,10 @@ define i8 @test7_neg_pos(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C0]])
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sge i8 [[Y:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C1]])
-; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X]], [[Y]]
-; CHECK-NEXT:    ret i8 [[REM]]
+; CHECK-NEXT:    [[X_NONNEG:%.*]] = sub i8 0, [[X]]
+; CHECK-NEXT:    [[REM1:%.*]] = urem i8 [[X_NONNEG]], [[Y]]
+; CHECK-NEXT:    [[REM1_NEG:%.*]] = sub i8 0, [[REM1]]
+; CHECK-NEXT:    ret i8 [[REM1_NEG]]
 ;
   %c0 = icmp sle i8 %x, 0
   call void @llvm.assume(i1 %c0)
@@ -124,8 +127,11 @@ define i8 @test8_neg_neg(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C0]])
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sle i8 [[Y:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C1]])
-; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X]], [[Y]]
-; CHECK-NEXT:    ret i8 [[REM]]
+; CHECK-NEXT:    [[X_NONNEG:%.*]] = sub i8 0, [[X]]
+; CHECK-NEXT:    [[Y_NONNEG:%.*]] = sub i8 0, [[Y]]
+; CHECK-NEXT:    [[REM1:%.*]] = urem i8 [[X_NONNEG]], [[Y_NONNEG]]
+; CHECK-NEXT:    [[REM1_NEG:%.*]] = sub i8 0, [[REM1]]
+; CHECK-NEXT:    ret i8 [[REM1_NEG]]
 ;
   %c0 = icmp sle i8 %x, 0
   call void @llvm.assume(i1 %c0)
