@@ -144,6 +144,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  {v4s32, v4s32},
                  {v2s64, v2s64},
                  {v16s8, v16s8},
+                 {v4s16, v4s16},
                  {v8s16, v8s16}})
       .clampScalar(1, s32, s64)
       .clampScalar(0, s32, s64)
