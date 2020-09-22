@@ -6425,12 +6425,9 @@ class HorizontalReduction {
       if (!IsRedOp)
         return I->getParent() == P;
       if (isMinMax()) {
-        // SelectInst must be used twice while the condition op must have single
-        // use only.
         auto *Cmp = cast<Instruction>(cast<SelectInst>(I)->getCondition());
         return I->getParent() == P && Cmp && Cmp->getParent() == P;
       }
-      // Arithmetic reduction operation must be used once only.
       return I->getParent() == P;
     }
 
@@ -6438,10 +6435,14 @@ class HorizontalReduction {
     bool hasRequiredNumberOfUses(Instruction *I, bool IsReductionOp) const {
       assert(Kind != RK_None && !!*this && LHS && RHS &&
              "Expected reduction operation.");
+      // SelectInst must be used twice while the condition op must have single
+      // use only.
       if (isMinMax())
         return I->hasNUses(2) &&
                (!IsReductionOp ||
                 cast<SelectInst>(I)->getCondition()->hasOneUse());
+
+      // Arithmetic reduction operation must be used once only.
       return I->hasOneUse();
     }
 
