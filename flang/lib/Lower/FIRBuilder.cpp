@@ -203,11 +203,9 @@ Fortran::lower::FirOpBuilder::createShape(mlir::Location loc,
     auto shapeTy =
         fir::ShapeShiftType::get(getContext(), box.getExtents().size());
     llvm::SmallVector<mlir::Value, 8> pairs;
-    for (const auto &pair : llvm::zip(box.getLBounds(), box.getExtents())) {
-      auto lb = createConvert(loc, idxTy, std::get<0>(pair));
-      pairs.push_back(lb);
-      auto ext = createConvert(loc, idxTy, std::get<1>(pair));
-      pairs.push_back(ext);
+    for (auto [fst,snd] : llvm::zip(box.getLBounds(), box.getExtents())) {
+      pairs.push_back(createConvert(loc, idxTy, fst));
+      pairs.push_back(createConvert(loc, idxTy, snd));
     }
     return create<fir::ShapeShiftOp>(loc, shapeTy, pairs);
   };

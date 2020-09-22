@@ -811,12 +811,9 @@ private:
           idx.push_back(builder.createIntegerConstant(getLoc(), idxTy, i));
           auto charVal = builder.create<fir::ExtractValueOp>(getLoc(), chTy,
                                                              constant, idx);
-          for (const auto &pair : llvm::zip(subscripts, con.lbounds())) {
-            const auto &dim = std::get<0>(pair);
-            const auto &lb = std::get<1>(pair);
+          for (auto [dim,lb] : llvm::zip(subscripts, con.lbounds()))
             idx.push_back(
                 builder.createIntegerConstant(getLoc(), idxTy, dim - lb));
-          }
           array = builder.create<fir::InsertValueOp>(getLoc(), arrayTy, array,
                                                      charVal, idx);
         }
@@ -834,12 +831,9 @@ private:
         auto constant =
             fir::getBase(genScalarLit<TC, KIND>(con.At(subscripts), con));
         llvm::SmallVector<mlir::Value, 8> idx;
-        for (const auto &pair : llvm::zip(subscripts, con.lbounds())) {
-          const auto &dim = std::get<0>(pair);
-          const auto &lb = std::get<1>(pair);
+        for (auto [dim,lb] : llvm::zip(subscripts, con.lbounds()))
           idx.push_back(
               builder.createIntegerConstant(getLoc(), idxTy, dim - lb));
-        }
         auto insVal = builder.createConvert(getLoc(), eleTy, constant);
         array = builder.create<fir::InsertValueOp>(getLoc(), arrayTy, array,
                                                    insVal, idx);
@@ -1079,8 +1073,8 @@ private:
       assert(arr.getExtents().size() == aref.subscript().size());
       unsigned idx = 0;
       unsigned dim = 0;
-      for (const auto &pair : llvm::zip(arr.getExtents(), aref.subscript())) {
-        auto subVal = genComponent(std::get<1>(pair));
+      for (auto [ext,sub] : llvm::zip(arr.getExtents(), aref.subscript())) {
+        auto subVal = genComponent(sub);
         if (auto *trip = std::get_if<fir::RangeBoxValue>(&subVal)) {
           // access A(i:j:k), decl A(m:n), iterspace (t1..)
           auto tlb = builder.createConvert(loc, idxTy, std::get<0>(*trip));
@@ -1093,7 +1087,7 @@ private:
           auto scaled = builder.create<mlir::MulIOp>(loc, del, delta);
           auto prod = builder.create<mlir::MulIOp>(loc, scaled, sum);
           total = builder.create<mlir::AddIOp>(loc, prod, total);
-          if (auto ext = std::get<0>(pair))
+          if (ext)
             delta = builder.create<mlir::MulIOp>(loc, delta, ext);
         } else {
           auto *v = std::get_if<fir::ExtendedValue>(&subVal);
@@ -1104,7 +1098,7 @@ private:
             auto diff = builder.create<mlir::SubIOp>(loc, val, lb);
             auto prod = builder.create<mlir::MulIOp>(loc, delta, diff);
             total = builder.create<mlir::AddIOp>(loc, prod, total);
-            if (auto ext = std::get<0>(pair))
+            if (ext)
               delta = builder.create<mlir::MulIOp>(loc, delta, ext);
           } else {
             TODO("");
@@ -1161,10 +1155,10 @@ private:
       auto shapeType = fir::ShapeShiftType::get(builder.getContext(),
                                                 arr.getExtents().size());
       SmallVector<mlir::Value, 8> shapeArgs;
-      for (const auto &pair : llvm::zip(arr.getLBounds(), arr.getExtents())) {
-        auto lb = builder.createConvert(loc, idxTy, std::get<0>(pair));
+      for (auto [lbnd,ext] : llvm::zip(arr.getLBounds(), arr.getExtents())) {
+        auto lb = builder.createConvert(loc, idxTy, lbnd);
         shapeArgs.push_back(lb);
-        shapeArgs.push_back(std::get<1>(pair));
+        shapeArgs.push_back(ext);
       }
       return builder.create<fir::ShapeShiftOp>(loc, shapeType, shapeArgs);
     };
@@ -1372,19 +1366,18 @@ private:
     // optional/alternate return arguments. Statement functions cannot be
     // recursive (directly or indirectly) so it is safe to add dummy symbols to
     // the local map here.
-    for (const auto &pair :
+    for (auto [arg,bind] :
          llvm::zip(details.dummyArgs(), procRef.arguments())) {
-      assert(std::get<0>(pair) && "alternate return in statement function");
-      const auto &dummySymbol = *std::get<0>(pair);
-      assert(std::get<1>(pair) && "optional argument in statement function");
-      const auto *expr = std::get<1>(pair)->UnwrapExpr();
+      assert(arg && "alternate return in statement function");
+      assert(bind && "optional argument in statement function");
+      const auto *expr = bind->UnwrapExpr();
       // TODO: assumed type in statement function, that surprisingly seems
       // allowed, probably because nobody thought of restricting this usage.
       // gfortran/ifort compiles this.
       assert(expr && "assumed type used as statement function argument");
       // As per Fortran 2018 C1580, statement function arguments can only be
       // scalars, so just pass the box with the address.
-      symMap.addSymbol(dummySymbol, genExtAddr(*expr));
+      symMap.addSymbol(*arg, genExtAddr(*expr));
     }
     auto result = genval(details.stmtFunction().value());
     LLVM_DEBUG(llvm::dbgs() << "stmt-function: " << result << '\n');
@@ -1516,9 +1509,8 @@ private:
 
     // Deal with potential mismatches in arguments types. Passing an array to
     // a scalar argument should for instance be tolerated here.
-    for (const auto &op : llvm::zip(caller.getInputs(), funcType.getInputs())) {
-      auto cast = builder.convertWithSemantics(getLoc(), std::get<1>(op),
-                                               std::get<0>(op));
+    for (auto [fst,snd] : llvm::zip(caller.getInputs(), funcType.getInputs())) {
+      auto cast = builder.convertWithSemantics(getLoc(), snd, fst);
       operands.push_back(cast);
     }
 
