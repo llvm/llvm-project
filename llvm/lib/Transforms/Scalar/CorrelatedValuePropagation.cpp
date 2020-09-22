@@ -633,18 +633,20 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
 
   // Find the smallest power of two bitwidth that's sufficient to hold Instr's
   // operands.
-  auto OrigWidth = Instr->getType()->getIntegerBitWidth();
-  ConstantRange OperandRange(OrigWidth, /*isFullSet=*/false);
+
+  // What is the smallest bit width that can accomodate the entire value ranges
+  // of both of the operands?
+  unsigned MaxActiveBits = 0;
   for (Value *Operand : Instr->operands()) {
-    OperandRange = OperandRange.unionWith(
-        LVI->getConstantRange(Operand, Instr->getParent()));
+    ConstantRange CR = LVI->getConstantRange(Operand, Instr->getParent());
+    MaxActiveBits = std::max(CR.getActiveBits(), MaxActiveBits);
   }
   // Don't shrink below 8 bits wide.
-  unsigned NewWidth = std::max<unsigned>(
-      PowerOf2Ceil(OperandRange.getUnsignedMax().getActiveBits()), 8);
+  unsigned NewWidth = std::max<unsigned>(PowerOf2Ceil(MaxActiveBits), 8);
+
   // NewWidth might be greater than OrigWidth if OrigWidth is not a power of
   // two.
-  if (NewWidth >= OrigWidth)
+  if (NewWidth >= Instr->getType()->getIntegerBitWidth())
     return false;
 
   ++NumUDivs;
