@@ -11,7 +11,7 @@
 // template <class Alloc>
 // struct allocator_traits
 // {
-//     static pointer allocate(allocator_type& a, size_type n);
+//     static constexpr pointer allocate(allocator_type& a, size_type n);
 //     ...
 // };
 

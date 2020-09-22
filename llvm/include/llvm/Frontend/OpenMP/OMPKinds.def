@@ -483,9 +483,9 @@ __OMP_RTL(__tgt_target_data_begin_mapper, false, Void, Int64, Int32, VoidPtrPtr,
           VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
 __OMP_RTL(__tgt_target_data_begin_nowait_mapper, false, Void, Int64, Int32,
           VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
-__OMP_RTL(__tgt_target_data_begin_mapper_issue, false, AsyncInfo, Int64, Int32,
-          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
-__OMP_RTL(__tgt_target_data_begin_mapper_wait, false, Void, Int64, AsyncInfo)
+__OMP_RTL(__tgt_target_data_begin_mapper_issue, false, Void, Int64, Int32,
+          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, AsyncInfoPtr)
+__OMP_RTL(__tgt_target_data_begin_mapper_wait, false, Void, Int64, AsyncInfoPtr)
 __OMP_RTL(__tgt_target_data_end_mapper, false, Void, Int64, Int32, VoidPtrPtr,
           VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr)
 __OMP_RTL(__tgt_target_data_end_nowait_mapper, false, Void, Int64, Int32,

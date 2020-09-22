@@ -133,6 +133,10 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_shared)) {
     CmdArgs.push_back(
         Args.MakeArgString(ToolChain.GetFilePath(getCrt0Basename())));
+
+    if (D.CCCIsCXX())
+      CmdArgs.push_back(Args.MakeArgString(
+          ToolChain.GetFilePath(IsArch32Bit ? "crti.o" : "crti_64.o")));
   }
 
   // Collect all static constructor and destructor functions in CXX mode. This
