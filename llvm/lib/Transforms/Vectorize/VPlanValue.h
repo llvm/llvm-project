@@ -31,6 +31,7 @@ class raw_ostream;
 class Value;
 class VPSlotTracker;
 class VPUser;
+class VPRecipeBase;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
@@ -178,6 +179,9 @@ public:
   const_operand_range operands() const {
     return const_operand_range(op_begin(), op_end());
   }
+
+  /// Method to support type inquiry through isa, cast, and dyn_cast.
+  static inline bool classof(const VPRecipeBase *Recipe);
 };
 class VPlan;
 class VPBasicBlock;
