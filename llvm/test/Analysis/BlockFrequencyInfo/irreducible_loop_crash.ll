@@ -1,4 +1,4 @@
-; RUN: opt < %s -analyze -block-freq
+; RUN: opt < %s -analyze -block-freq -enable-new-pm=0
 ; RUN: opt < %s -passes='print<block-freq>' -disable-output
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
