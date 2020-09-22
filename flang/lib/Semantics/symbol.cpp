@@ -258,7 +258,7 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
               return has<SubprogramNameDetails>() || has<EntityDetails>();
             },
             [&](const DerivedTypeDetails &) {
-              auto *derived{detailsIf<DerivedTypeDetails>()};
+              auto *derived{this->detailsIf<DerivedTypeDetails>()};
               return derived && derived->isForwardReferenced();
             },
             [](const auto &) { return false; },
