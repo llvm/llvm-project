@@ -641,6 +641,33 @@ TEST_F(ConstantRangeTest, SetDifference) {
   EXPECT_EQ(E.difference(A), F);
 }
 
+TEST_F(ConstantRangeTest, getActiveBits) {
+  unsigned Bits = 4;
+  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+    unsigned Exact = 0;
+    ForeachNumInConstantRange(CR, [&](const APInt &N) {
+      Exact = std::max(Exact, N.getActiveBits());
+    });
+
+    unsigned ResultCR = CR.getActiveBits();
+    EXPECT_EQ(Exact, ResultCR);
+  });
+}
+TEST_F(ConstantRangeTest, losslessUnsignedTruncationZeroext) {
+  unsigned Bits = 4;
+  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+    unsigned MinBitWidth = CR.getActiveBits();
+    if (MinBitWidth == 0) {
+      EXPECT_TRUE(CR.isEmptySet() || (CR.isSingleElement() &&
+                                      CR.getSingleElement()->isNullValue()));
+      return;
+    }
+    if (MinBitWidth == Bits)
+      return;
+    EXPECT_EQ(CR, CR.truncate(MinBitWidth).zeroExtend(Bits));
+  });
+}
+
 TEST_F(ConstantRangeTest, SubtractAPInt) {
   EXPECT_EQ(Full.subtract(APInt(16, 4)), Full);
   EXPECT_EQ(Empty.subtract(APInt(16, 4)), Empty);

@@ -261,6 +261,10 @@ public:
     return !operator==(CR);
   }
 
+  /// Compute the maximal number of active bits needed to represent every value
+  /// in this range.
+  unsigned getActiveBits() const;
+
   /// Subtract the specified constant from the endpoints of this constant range.
   ConstantRange subtract(const APInt &CI) const;
 
