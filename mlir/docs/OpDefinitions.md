@@ -572,10 +572,13 @@ convenience build methods with `OpBuilder`.
 
 `OpBuilder` is a class that takes the parameter list and the optional `build()`
 method body. They are separated because we need to generate op declaration and
-definition into separate files. The parameter list should _include_ `Builder
-*builder, OperationState &state`. If the `body` is not provided, _only_ the
-builder declaration will be generated; this provides a way to define complicated
-builders entirely in C++ files.
+definition into separate files. The parameter list should not include `OpBuilder
+&builder, OperationState &state` as they will be inserted automatically and the
+placeholders `$_builder` and `$_state` used. For legacy/to be deprecated reason
+if the `OpBuilder` parameter starts with `OpBuilder` param, then the parameter
+is used. If the `body` is not provided, only the builder declaration will be
+generated; this provides a way to define complicated builders entirely in C++
+files.
 
 For example, for the following op:
 
@@ -595,8 +598,8 @@ def MyOp : ... {
   ...
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, float val = 0.5f", [{
-      state.addAttribute("attr", builder.getF32FloatAttr(val));
+    OpBuilder<"float val = 0.5f", [{
+      $_state.addAttribute("attr", $_builder.getF32FloatAttr(val));
     }]>
   ];
 }
