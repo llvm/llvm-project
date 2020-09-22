@@ -200,12 +200,12 @@ static bool allSameBlock(ArrayRef<Value *> VL) {
   if (!I0)
     return false;
   BasicBlock *BB = I0->getParent();
-  for (int i = 1, e = VL.size(); i < e; i++) {
-    Instruction *I = dyn_cast<Instruction>(VL[i]);
-    if (!I)
+  for (int I = 1, E = VL.size(); I < E; I++) {
+    auto *II = dyn_cast<Instruction>(VL[I]);
+    if (!II)
       return false;
 
-    if (BB != I->getParent())
+    if (BB != II->getParent())
       return false;
   }
   return true;
@@ -2692,10 +2692,10 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       // Check for terminator values (e.g. invoke).
       for (Value *V : VL)
-        for (unsigned i = 0, e = PH->getNumIncomingValues(); i < e; ++i) {
+        for (unsigned I = 0, E = PH->getNumIncomingValues(); I < E; ++I) {
           Instruction *Term = dyn_cast<Instruction>(
               cast<PHINode>(V)->getIncomingValueForBlock(
-                  PH->getIncomingBlock(i)));
+                  PH->getIncomingBlock(I)));
           if (Term && Term->isTerminator()) {
             LLVM_DEBUG(dbgs()
                        << "SLP: Need to swizzle PHINodes (terminator use).\n");
@@ -2712,13 +2712,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       // Keeps the reordered operands to avoid code duplication.
       SmallVector<ValueList, 2> OperandsVec;
-      for (unsigned i = 0, e = PH->getNumIncomingValues(); i < e; ++i) {
+      for (unsigned I = 0, E = PH->getNumIncomingValues(); I < E; ++I) {
         ValueList Operands;
         // Prepare the operand vector.
         for (Value *V : VL)
           Operands.push_back(cast<PHINode>(V)->getIncomingValueForBlock(
-              PH->getIncomingBlock(i)));
-        TE->setOperand(i, Operands);
+              PH->getIncomingBlock(I)));
+        TE->setOperand(I, Operands);
         OperandsVec.push_back(Operands);
       }
       for (unsigned OpIdx = 0, OpE = OperandsVec.size(); OpIdx != OpE; ++OpIdx)
@@ -3472,31 +3472,31 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
         DeadCost += TTI->getShuffleCost(
             TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
       }
-      for (unsigned i = 0, e = VL.size(); i < e; ++i) {
-        Instruction *E = cast<Instruction>(VL[i]);
+      for (unsigned I = 0, E = VL.size(); I < E; ++I) {
+        Instruction *EI = cast<Instruction>(VL[I]);
         // If all users are going to be vectorized, instruction can be
         // considered as dead.
         // The same, if have only one user, it will be vectorized for sure.
-        if (areAllUsersVectorized(E)) {
+        if (areAllUsersVectorized(EI)) {
           // Take credit for instruction that will become dead.
-          if (E->hasOneUse()) {
-            Instruction *Ext = E->user_back();
+          if (EI->hasOneUse()) {
+            Instruction *Ext = EI->user_back();
             if ((isa<SExtInst>(Ext) || isa<ZExtInst>(Ext)) &&
                 all_of(Ext->users(),
                        [](User *U) { return isa<GetElementPtrInst>(U); })) {
               // Use getExtractWithExtendCost() to calculate the cost of
               // extractelement/ext pair.
               DeadCost -= TTI->getExtractWithExtendCost(
-                  Ext->getOpcode(), Ext->getType(), VecTy, i);
+                  Ext->getOpcode(), Ext->getType(), VecTy, I);
               // Add back the cost of s|zext which is subtracted separately.
               DeadCost += TTI->getCastInstrCost(
-                  Ext->getOpcode(), Ext->getType(), E->getType(),
+                  Ext->getOpcode(), Ext->getType(), EI->getType(),
                   TTI::getCastContextHint(Ext), CostKind, Ext);
               continue;
             }
           }
           DeadCost -=
-              TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, i);
+              TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, I);
         }
       }
       return DeadCost;
@@ -4024,9 +4024,9 @@ int BoUpSLP::getGatherCost(FixedVectorType *Ty,
                            const DenseSet<unsigned> &ShuffledIndices) const {
   unsigned NumElts = Ty->getNumElements();
   APInt DemandedElts = APInt::getNullValue(NumElts);
-  for (unsigned i = 0; i < NumElts; ++i)
-    if (!ShuffledIndices.count(i))
-      DemandedElts.setBit(i);
+  for (unsigned I = 0; I < NumElts; ++I)
+    if (!ShuffledIndices.count(I))
+      DemandedElts.setBit(I);
   int Cost = TTI->getScalarizationOverhead(Ty, DemandedElts, /*Insert*/ true,
                                            /*Extract*/ false);
   if (!ShuffledIndices.empty())
@@ -4304,10 +4304,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       return V;
     }
     case Instruction::ExtractValue: {
-      LoadInst *LI = cast<LoadInst>(E->getSingleOperand(0));
+      auto *LI = cast<LoadInst>(E->getSingleOperand(0));
       Builder.SetInsertPoint(LI);
-      PointerType *PtrTy =
-          PointerType::get(VecTy, LI->getPointerAddressSpace());
+      auto *PtrTy = PointerType::get(VecTy, LI->getPointerAddressSpace());
       Value *Ptr = Builder.CreateBitCast(LI->getOperand(0), PtrTy);
       LoadInst *V = Builder.CreateAlignedLoad(VecTy, Ptr, LI->getAlign());
       Value *NewV = propagateMetadata(V, E->Scalars);
