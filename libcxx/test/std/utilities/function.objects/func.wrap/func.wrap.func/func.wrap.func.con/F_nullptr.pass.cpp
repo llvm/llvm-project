@@ -167,14 +167,14 @@ void test_imp() {
     { // Check that the null value is detected
         TestFn tf = nullptr;
         std::function<Fn> f = tf;
-        assert(f.template target<TestFn>() == nullptr);
+        RTTI_ASSERT(f.template target<TestFn>() == nullptr);
     }
     { // Check that the non-null value is detected.
         TestFn tf = Creator<TestFn>::create();
         assert(tf != nullptr);
         std::function<Fn> f = tf;
-        assert(f.template target<TestFn>() != nullptr);
-        assert(*f.template target<TestFn>() == tf);
+        RTTI_ASSERT(f.template target<TestFn>() != nullptr);
+        RTTI_ASSERT(*f.template target<TestFn>() == tf);
     }
 }
 
