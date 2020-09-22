@@ -106,6 +106,18 @@ vector unsigned long long test_vec_dive_ull(void) {
   return vec_dive(vulla, vullb);
 }
 
+vector unsigned __int128 test_vec_dive_u128(void) {
+  // CHECK: @llvm.ppc.altivec.vdiveuq(<1 x i128> %{{.+}}, <1 x i128> %{{.+}})
+  // CHECK-NEXT: ret <1 x i128>
+  return vec_dive(vui128a, vui128b);
+}
+
+vector signed __int128 test_vec_dive_s128(void) {
+  // CHECK: @llvm.ppc.altivec.vdivesq(<1 x i128> %{{.+}}, <1 x i128> %{{.+}})
+  // CHECK-NEXT: ret <1 x i128>
+  return vec_dive(vsi128a, vsi128b);
+}
+
 vector signed int test_vec_mulh_si(void) {
   // CHECK: @llvm.ppc.altivec.vmulhsw(<4 x i32> %{{.+}}, <4 x i32> %{{.+}})
   // CHECK-NEXT: ret <4 x i32>
@@ -176,6 +188,318 @@ vector unsigned long long test_vpextd(void) {
   // CHECK: @llvm.ppc.altivec.vpextd(<2 x i64>
   // CHECK-NEXT: ret <2 x i64>
   return vec_pext(vulla, vullb);
+}
+
+vector unsigned char test_vec_stril_uc(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vstribl(<16 x i8> %{{.+}})
+  // CHECK-BE-NEXT: ret <16 x i8>
+  // CHECK-LE: @llvm.ppc.altivec.vstribr(<16 x i8> %{{.+}})
+  // CHECK-LE-NEXT: ret <16 x i8>
+  return vec_stril(vuca);
+}
+
+vector signed char test_vec_stril_sc(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vstribl(<16 x i8> %{{.+}})
+  // CHECK-BE-NEXT: ret <16 x i8>
+  // CHECK-LE: @llvm.ppc.altivec.vstribr(<16 x i8> %{{.+}})
+  // CHECK-LE-NEXT: ret <16 x i8>
+  return vec_stril(vsca);
+}
+
+vector unsigned short test_vec_stril_us(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vstrihl(<8 x i16> %{{.+}})
+  // CHECK-BE-NEXT: ret <8 x i16>
+  // CHECK-LE: @llvm.ppc.altivec.vstrihr(<8 x i16> %{{.+}})
+  // CHECK-LE-NEXT: ret <8 x i16>
+  return vec_stril(vusa);
+}
+
+vector signed short test_vec_stril_ss(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vstrihl(<8 x i16> %{{.+}})
+  // CHECK-BE-NEXT: ret <8 x i16>
+  // CHECK-LE: @llvm.ppc.altivec.vstrihr(<8 x i16> %{{.+}})
+  // CHECK-LE-NEXT: ret <8 x i16>
+  return vec_stril(vssa);
+}
+
+int test_vec_stril_p_uc(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vstribl.p(i32 0, <16 x i8> %{{.+}})
+  // CHECK-BE-NEXT: ret i32
+  // CHECK-LE: @llvm.ppc.altivec.vstribr.p(i32 0, <16 x i8> %{{.+}})
+  // CHECK-LE-NEXT: ret i32
+  return vec_stril_p(vuca);
+}
+
+int test_vec_stril_p_sc(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vstribl.p(i32 0, <16 x i8> %{{.+}})
+  // CHECK-BE-NEXT: ret i32
+  // CHECK-LE: @llvm.ppc.altivec.vstribr.p(i32 0, <16 x i8> %{{.+}})
+  // CHECK-LE-NEXT: ret i32
+  return vec_stril_p(vsca);
+}
+
+int test_vec_stril_p_us(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vstrihl.p(i32 0, <8 x i16> %{{.+}})
+  // CHECK-BE-NEXT: ret i32
+  // CHECK-LE: @llvm.ppc.altivec.vstrihr.p(i32 0, <8 x i16> %{{.+}})
+  // CHECK-LE-NEXT: ret i32
+  return vec_stril_p(vusa);
+}
+
+int test_vec_stril_p_ss(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vstrihl.p(i32 0, <8 x i16> %{{.+}})
+  // CHECK-BE-NEXT: ret i32
+  // CHECK-LE: @llvm.ppc.altivec.vstrihr.p(i32 0, <8 x i16> %{{.+}})
+  // CHECK-LE-NEXT: ret i32
+  return vec_stril_p(vssa);
+}
+
+vector unsigned char test_vec_stril_p_uc_2(vector unsigned char *ptr, int len) {
+  // CHECK-BE: icmp slt i32
+  // CHECK-BE: br i1
+  // CHECK-BE: for.body:
+  // CHECK-BE: @llvm.ppc.altivec.vstribl.p(i32 0, <16 x i8> %{{.+}})
+  // CHECK-BE: if.then:
+  // CHECK-BE: @llvm.ppc.altivec.vstribl(<16 x i8> %{{.+}})
+  // CHECK-BE: ret <16 x i8>
+  // CHECK-LE: icmp slt i32
+  // CHECK-LE: br i1
+  // CHECK-LE: for.body:
+  // CHECK-LE: @llvm.ppc.altivec.vstribr.p(i32 0, <16 x i8> %{{.+}})
+  // CHECK-LE: if.then:
+  // CHECK-LE: @llvm.ppc.altivec.vstribr(<16 x i8> %{{.+}})
+  // CHECK-LE: ret <16 x i8>
+  for (int i = 0; i < len; i++) {
+    if (vec_stril_p(*(ptr + i))) {
+      return vec_stril(*(ptr + i));
+    }
+  }
+  return vec_stril(*(ptr));
+}
+
+vector signed char test_vec_stril_p_sc_2(vector signed char *ptr, int len) {
+  // CHECK-BE: icmp slt i32
+  // CHECK-BE: br i1
+  // CHECK-BE: for.body:
+  // CHECK-BE: @llvm.ppc.altivec.vstribl.p(i32 0, <16 x i8> %{{.+}})
+  // CHECK-BE: if.then:
+  // CHECK-BE: @llvm.ppc.altivec.vstribl(<16 x i8> %{{.+}})
+  // CHECK-BE: ret <16 x i8>
+  // CHECK-LE: icmp slt i32
+  // CHECK-LE: br i1
+  // CHECK-LE: for.body:
+  // CHECK-LE: @llvm.ppc.altivec.vstribr.p(i32 0, <16 x i8> %{{.+}})
+  // CHECK-LE: if.then:
+  // CHECK-LE: @llvm.ppc.altivec.vstribr(<16 x i8> %{{.+}})
+  // CHECK-LE: ret <16 x i8>
+  for (int i = 0; i < len; i++) {
+    if (vec_stril_p(*(ptr + i))) {
+      return vec_stril(*(ptr + i));
+    }
+  }
+  return vec_stril(*(ptr));
+}
+
+vector unsigned short test_vec_stril_p_us_2(vector unsigned short *ptr, int len) {
+  // CHECK-BE: icmp slt i32
+  // CHECK-BE: br i1
+  // CHECK-BE: for.body:
+  // CHECK-BE: @llvm.ppc.altivec.vstrihl.p(i32 0, <8 x i16> %{{.+}})
+  // CHECK-BE: if.then:
+  // CHECK-BE: @llvm.ppc.altivec.vstrihl(<8 x i16> %{{.+}})
+  // CHECK-BE: ret <8 x i16>
+  // CHECK-LE: icmp slt i32
+  // CHECK-LE: br i1
+  // CHECK-LE: for.body:
+  // CHECK-LE: @llvm.ppc.altivec.vstrihr.p(i32 0, <8 x i16> %{{.+}})
+  // CHECK-LE: if.then:
+  // CHECK-LE: @llvm.ppc.altivec.vstrihr(<8 x i16> %{{.+}})
+  // CHECK-LE: ret <8 x i16>
+  for (int i = 0; i < len; i++) {
+    if (vec_stril_p(*(ptr + i))) {
+      return vec_stril(*(ptr + i));
+    }
+  }
+  return vec_stril(*(ptr));
+}
+
+vector signed short test_vec_stril_p_ss_2(vector signed short *ptr, int len) {
+  // CHECK-BE: icmp slt i32
+  // CHECK-BE: br i1
+  // CHECK-BE: for.body:
+  // CHECK-BE: @llvm.ppc.altivec.vstrihl.p(i32 0, <8 x i16> %{{.+}})
+  // CHECK-BE: if.then:
+  // CHECK-BE: @llvm.ppc.altivec.vstrihl(<8 x i16> %{{.+}})
+  // CHECK-BE: ret <8 x i16>
+  // CHECK-LE: icmp slt i32
+  // CHECK-LE: br i1
+  // CHECK-LE: for.body:
+  // CHECK-LE: @llvm.ppc.altivec.vstrihr.p(i32 0, <8 x i16> %{{.+}})
+  // CHECK-LE: if.then:
+  // CHECK-LE: @llvm.ppc.altivec.vstrihr(<8 x i16> %{{.+}})
+  // CHECK-LE: ret <8 x i16>
+  for (int i = 0; i < len; i++) {
+    if (vec_stril_p(*(ptr + i))) {
+      return vec_stril(*(ptr + i));
+    }
+  }
+  return vec_stril(*(ptr));
+}
+
+vector unsigned char test_vec_strir_uc(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vstribr(<16 x i8> %{{.+}})
+  // CHECK-BE-NEXT: ret <16 x i8>
+  // CHECK-LE: @llvm.ppc.altivec.vstribl(<16 x i8> %{{.+}})
+  // CHECK-LE-NEXT: ret <16 x i8>
+  return vec_strir(vuca);
+}
+
+vector signed char test_vec_strir_sc(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vstribr(<16 x i8> %{{.+}})
+  // CHECK-BE-NEXT: ret <16 x i8>
+  // CHECK-LE: @llvm.ppc.altivec.vstribl(<16 x i8> %{{.+}})
+  // CHECK-LE-NEXT: ret <16 x i8>
+  return vec_strir(vsca);
+}
+
+vector unsigned short test_vec_strir_us(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vstrihr(<8 x i16> %{{.+}})
+  // CHECK-BE-NEXT: ret <8 x i16>
+  // CHECK-LE: @llvm.ppc.altivec.vstrihl(<8 x i16> %{{.+}})
+  // CHECK-LE-NEXT: ret <8 x i16>
+  return vec_strir(vusa);
+}
+
+vector signed short test_vec_strir_ss(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vstrihr(<8 x i16> %{{.+}})
+  // CHECK-BE-NEXT: ret <8 x i16>
+  // CHECK-LE: @llvm.ppc.altivec.vstrihl(<8 x i16> %{{.+}})
+  // CHECK-LE-NEXT: ret <8 x i16>
+  return vec_strir(vssa);
+}
+
+int test_vec_strir_p_uc(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vstribr.p(i32 0, <16 x i8> %{{.+}})
+  // CHECK-BE-NEXT: ret i32
+  // CHECK-LE: @llvm.ppc.altivec.vstribl.p(i32 0, <16 x i8> %{{.+}})
+  // CHECK-LE-NEXT: ret i32
+  return vec_strir_p(vuca);
+}
+
+int test_vec_strir_p_sc(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vstribr.p(i32 0, <16 x i8> %{{.+}})
+  // CHECK-BE-NEXT: ret i32
+  // CHECK-LE: @llvm.ppc.altivec.vstribl.p(i32 0, <16 x i8> %{{.+}})
+  // CHECK-LE-NEXT: ret i32
+  return vec_strir_p(vsca);
+}
+
+int test_vec_strir_p_us(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vstrihr.p(i32 0, <8 x i16> %{{.+}})
+  // CHECK-BE-NEXT: ret i32
+  // CHECK-LE: @llvm.ppc.altivec.vstrihl.p(i32 0, <8 x i16> %{{.+}})
+  // CHECK-LE-NEXT: ret i32
+  return vec_strir_p(vusa);
+}
+
+int test_vec_strir_p_ss(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vstrihr.p(i32 0, <8 x i16> %{{.+}})
+  // CHECK-BE-NEXT: ret i32
+  // CHECK-LE: @llvm.ppc.altivec.vstrihl.p(i32 0, <8 x i16> %{{.+}})
+  // CHECK-LE-NEXT: ret i32
+  return vec_strir_p(vssa);
+}
+
+vector unsigned char test_vec_strir_p_uc_2(vector unsigned char *ptr, int len) {
+  // CHECK-BE: icmp slt i32
+  // CHECK-BE: br i1
+  // CHECK-BE: for.body:
+  // CHECK-BE: @llvm.ppc.altivec.vstribr.p(i32 0, <16 x i8> %{{.+}})
+  // CHECK-BE: if.then:
+  // CHECK-BE: @llvm.ppc.altivec.vstribr(<16 x i8> %{{.+}})
+  // CHECK-BE: ret <16 x i8>
+  // CHECK-LE: icmp slt i32
+  // CHECK-LE: br i1
+  // CHECK-LE: for.body:
+  // CHECK-LE: @llvm.ppc.altivec.vstribl.p(i32 0, <16 x i8> %{{.+}})
+  // CHECK-LE: if.then:
+  // CHECK-LE: @llvm.ppc.altivec.vstribl(<16 x i8> %{{.+}})
+  // CHECK-LE: ret <16 x i8>
+  for (int i = 0; i < len; i++) {
+    if (vec_strir_p(*(ptr + i))) {
+      return vec_strir(*(ptr + i));
+    }
+  }
+  return vec_strir(*(ptr));
+}
+
+vector signed char test_vec_strir_p_sc_2(vector signed char *ptr, int len) {
+  // CHECK-BE: icmp slt i32
+  // CHECK-BE: br i1
+  // CHECK-BE: for.body:
+  // CHECK-BE: @llvm.ppc.altivec.vstribr.p(i32 0, <16 x i8> %{{.+}})
+  // CHECK-BE: if.then:
+  // CHECK-BE: @llvm.ppc.altivec.vstribr(<16 x i8> %{{.+}})
+  // CHECK-BE: ret <16 x i8>
+  // CHECK-LE: icmp slt i32
+  // CHECK-LE: br i1
+  // CHECK-LE: for.body:
+  // CHECK-LE: @llvm.ppc.altivec.vstribl.p(i32 0, <16 x i8> %{{.+}})
+  // CHECK-LE: if.then:
+  // CHECK-LE: @llvm.ppc.altivec.vstribl(<16 x i8> %{{.+}})
+  // CHECK-LE: ret <16 x i8>
+  for (int i = 0; i < len; i++) {
+    if (vec_strir_p(*(ptr + i))) {
+      return vec_strir(*(ptr + i));
+    }
+  }
+  return vec_strir(*(ptr));
+}
+
+vector unsigned short test_vec_strir_p_us_2(vector unsigned short *ptr, int len) {
+  // CHECK-BE: icmp slt i32
+  // CHECK-BE: br i1
+  // CHECK-BE: for.body:
+  // CHECK-BE: @llvm.ppc.altivec.vstrihr.p(i32 0, <8 x i16> %{{.+}})
+  // CHECK-BE: if.then:
+  // CHECK-BE: @llvm.ppc.altivec.vstrihr(<8 x i16> %{{.+}})
+  // CHECK-BE: ret <8 x i16>
+  // CHECK-LE: icmp slt i32
+  // CHECK-LE: br i1
+  // CHECK-LE: for.body:
+  // CHECK-LE: @llvm.ppc.altivec.vstrihl.p(i32 0, <8 x i16> %{{.+}})
+  // CHECK-LE: if.then:
+  // CHECK-LE: @llvm.ppc.altivec.vstrihl(<8 x i16> %{{.+}})
+  // CHECK-LE: ret <8 x i16>
+  for (int i = 0; i < len; i++) {
+    if (vec_strir_p(*(ptr + i))) {
+      return vec_strir(*(ptr + i));
+    }
+  }
+  return vec_strir(*(ptr));
+}
+
+vector signed short test_vec_strir_p_ss_2(vector signed short *ptr, int len) {
+  // CHECK-BE: icmp slt i32
+  // CHECK-BE: br i1
+  // CHECK-BE: for.body:
+  // CHECK-BE: @llvm.ppc.altivec.vstrihr.p(i32 0, <8 x i16> %{{.+}})
+  // CHECK-BE: if.then:
+  // CHECK-BE: @llvm.ppc.altivec.vstrihr(<8 x i16> %{{.+}})
+  // CHECK-BE: ret <8 x i16>
+  // CHECK-LE: icmp slt i32
+  // CHECK-LE: br i1
+  // CHECK-LE: for.body:
+  // CHECK-LE: @llvm.ppc.altivec.vstrihl.p(i32 0, <8 x i16> %{{.+}})
+  // CHECK-LE: if.then:
+  // CHECK-LE: @llvm.ppc.altivec.vstrihl(<8 x i16> %{{.+}})
+  // CHECK-LE: ret <8 x i16>
+  for (int i = 0; i < len; i++) {
+    if (vec_strir_p(*(ptr + i))) {
+      return vec_strir(*(ptr + i));
+    }
+  }
+  return vec_strir(*(ptr));
 }
 
 unsigned int test_vec_extractm_uc(void) {

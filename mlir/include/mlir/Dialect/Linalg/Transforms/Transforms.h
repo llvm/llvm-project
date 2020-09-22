@@ -114,7 +114,7 @@ struct LinalgPromotionOptions {
     useFullTileBuffersDefault = use;
     return *this;
   }
-  /// Allow the use of dynamicaly-sized buffers.
+  /// Allow the use of dynamically-sized buffers.
   bool dynamicBuffers = false;
   LinalgPromotionOptions &setDynamicBuffers(unsigned dynamic) {
     dynamicBuffers = dynamic;
@@ -187,8 +187,8 @@ LogicalResult linalgOpToParallelLoops(OpBuilder &builder, Operation *op);
 LogicalResult linalgOpToAffineLoops(OpBuilder &builder, Operation *op);
 
 //===----------------------------------------------------------------------===//
-// Preconditions that ensure the corresponding transformation suceeds and can be
-// applied as a rewrite pattern.
+// Preconditions that ensure the corresponding transformation succeeds and can
+// be applied as a rewrite pattern.
 //===----------------------------------------------------------------------===//
 /// Emits a `generic` or `indexed_generic` operation with the `indexing_maps`
 /// and `iterator_types` permutated according to `permutation`.

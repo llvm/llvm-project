@@ -1020,13 +1020,21 @@ let Predicates = [IsISA3_1] in {
                                                               v16i8:$VRB, 
                                                               i32:$SH))]>;
   defm VSTRIBR : VXForm_VTB5_RCr<13, 1, (outs vrrc:$vT), (ins vrrc:$vB),
-                                 "vstribr", "$vT, $vB", IIC_VecGeneral, []>;
+                                 "vstribr", "$vT, $vB", IIC_VecGeneral,
+				 [(set v16i8:$vT,
+                                       (int_ppc_altivec_vstribr v16i8:$vB))]>;
   defm VSTRIBL : VXForm_VTB5_RCr<13, 0, (outs vrrc:$vT), (ins vrrc:$vB),
-                                 "vstribl", "$vT, $vB", IIC_VecGeneral, []>;
+                                 "vstribl", "$vT, $vB", IIC_VecGeneral,
+                                 [(set v16i8:$vT,
+                                       (int_ppc_altivec_vstribl v16i8:$vB))]>;
   defm VSTRIHR : VXForm_VTB5_RCr<13, 3, (outs vrrc:$vT), (ins vrrc:$vB),
-                                 "vstrihr", "$vT, $vB", IIC_VecGeneral, []>;
+                                 "vstrihr", "$vT, $vB", IIC_VecGeneral,
+                                 [(set v8i16:$vT,
+                                       (int_ppc_altivec_vstrihr v8i16:$vB))]>;
   defm VSTRIHL : VXForm_VTB5_RCr<13, 2, (outs vrrc:$vT), (ins vrrc:$vB),
-                                 "vstrihl", "$vT, $vB", IIC_VecGeneral, []>;
+                                 "vstrihl", "$vT, $vB", IIC_VecGeneral,
+                                 [(set v8i16:$vT,
+                                       (int_ppc_altivec_vstrihl v8i16:$vB))]>;
   def VINSW :
     VXForm_1<207, (outs vrrc:$vD), (ins vrrc:$vDi, u4imm:$UIM, gprc:$rB),
              "vinsw $vD, $rB, $UIM", IIC_VecGeneral,
@@ -1427,9 +1435,13 @@ let Predicates = [IsISA3_1] in {
                         "vdivuq $vD, $vA, $vB", IIC_VecGeneral,
                         [(set v1i128:$vD, (udiv v1i128:$vA, v1i128:$vB))]>;
   def VDIVESQ : VXForm_1<779, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vdivesq $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vdivesq $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v1i128:$vD, (int_ppc_altivec_vdivesq v1i128:$vA,
+			       v1i128:$vB))]>;
   def VDIVEUQ : VXForm_1<523, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vdiveuq $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vdiveuq $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v1i128:$vD, (int_ppc_altivec_vdiveuq v1i128:$vA,
+			       v1i128:$vB))]>;
   def VCMPEQUQ : VCMP <455, "vcmpequq $vD, $vA, $vB" , v1i128>;
   def VCMPGTSQ : VCMP <903, "vcmpgtsq $vD, $vA, $vB" , v1i128>;
   def VCMPGTUQ : VCMP <647, "vcmpgtuq $vD, $vA, $vB" , v1i128>;
