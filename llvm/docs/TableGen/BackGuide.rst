@@ -690,11 +690,9 @@ Instances of the following classes can be printed using the ``<<`` operator:
 ``RecordVal``, and
 ``Init``.
 
-A constant and two helper functions are provided for producing the output
-file.  The constant ``MAX_LINE_LEN`` specifies the maximum length of output
-lines.  The helper function ``printLine`` prints a horizontal line comment.
-The helper function ``emitSourceFileHeader`` prints the header comment that
-should be included at the top of every output file.
+The helper function ``emitSourceFileHeader()`` prints the header comment
+that should be included at the top of every output file. A call to it is
+included in the skeleton backend file ``TableGenBackendSkeleton.cpp``.
 
 Printing Error Messages
 =======================
@@ -780,9 +778,53 @@ Classes are shown with their template arguments, parent classes (following
 fields. Note that anonymous records are named ``anonymous_0``,
 ``anonymous_1``, etc.
 
-
-
 The ``PrintDetailedRecords`` Backend
 ------------------------------------
 
-[to come]
+The TableGen command option ``--print-detailed-records`` invokes a backend
+that prints all the global variables, classes, and records defined in the
+source files. The output looks like this.
+
+.. code-block:: text
+
+  DETAILED RECORDS for file llvm-project\llvm\lib\target\arc\arc.td
+  
+  -------------------- Global Variables (5) --------------------
+  
+  AMDGPUBufferIntrinsics = [int_amdgcn_buffer_load_format, ...
+  AMDGPUImageDimAtomicIntrinsics = [int_amdgcn_image_atomic_swap_1d, ...
+  ...
+  -------------------- Classes (758) --------------------
+  
+  AMDGPUBufferLoad  |IntrinsicsAMDGPU.td:879|
+    Template args:
+      LLVMType AMDGPUBufferLoad:data_ty = llvm_any_ty  |IntrinsicsAMDGPU.td:879|
+    Superclasses: (SDPatternOperator) Intrinsic AMDGPURsrcIntrinsic
+    Fields:
+      list<SDNodeProperty> Properties = [SDNPMemOperand]  |Intrinsics.td:348|
+      string LLVMName = ""  |Intrinsics.td:343|
+  ...
+  -------------------- Records (12303) --------------------
+  
+  AMDGPUSample_lz_o  |IntrinsicsAMDGPU.td:560|
+    Defm sequence: |IntrinsicsAMDGPU.td:584| |IntrinsicsAMDGPU.td:566|
+    Superclasses: AMDGPUSampleVariant
+    Fields:
+      string UpperCaseMod = "_LZ_O"  |IntrinsicsAMDGPU.td:542|
+      string LowerCaseMod = "_lz_o"  |IntrinsicsAMDGPU.td:543|
+  ...
+
+* Global variables defined with outer ``defvar`` statements are shown with
+  their values.
+
+* The classes are shown with their source location, template arguments,
+  superclasses, and fields. 
+
+* The records are shown with their source location, ``defm`` sequence,
+  superclasses, and fields.
+
+Superclasses are shown in the order processed, with indirect superclasses in
+parentheses. Each field is shown with its value and the source location at
+which it was set.
+The ``defm`` sequence gives the locations of the ``defm`` statements that
+were involved in generating the record, in the order they were invoked.

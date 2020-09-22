@@ -90,6 +90,8 @@ int llvm::TableGenMain(const char *argv0, TableGenMainFn *MainFn) {
     return reportError(argv0, "Could not open input file '" + InputFilename +
                                   "': " + EC.message() + "\n");
 
+  Records.saveInputFilename(InputFilename);
+
   // Tell SrcMgr about this buffer, which is what TGParser will pick up.
   SrcMgr.AddNewSourceBuffer(std::move(*FileOrErr), SMLoc());
 
