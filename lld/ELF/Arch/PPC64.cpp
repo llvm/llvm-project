@@ -840,16 +840,49 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
     relocateNoSym(loc, R_PPC64_TPREL16_HA, val);
     break;
   }
+  case R_PPC64_GOT_TPREL_PCREL34: {
+    const uint64_t pldRT = readPrefixedInstruction(loc) & 0x0000000003e00000;
+    // paddi RT(from pld), r13, symbol@tprel, 0
+    writePrefixedInstruction(loc, 0x06000000380d0000 | pldRT);
+    relocateNoSym(loc, R_PPC64_TPREL34, val);
+    break;
+  }
   case R_PPC64_TLS: {
-    uint32_t primaryOp = getPrimaryOpCode(read32(loc));
-    if (primaryOp != 31)
-      error("unrecognized instruction for IE to LE R_PPC64_TLS");
-    uint32_t secondaryOp = (read32(loc) & 0x000007FE) >> 1; // bits 21-30
-    uint32_t dFormOp = getPPCDFormOp(secondaryOp);
-    if (dFormOp == 0)
-      error("unrecognized instruction for IE to LE R_PPC64_TLS");
-    write32(loc, ((dFormOp << 26) | (read32(loc) & 0x03FFFFFF)));
-    relocateNoSym(loc + offset, R_PPC64_TPREL16_LO, val);
+    const uintptr_t locAsInt = reinterpret_cast<uintptr_t>(loc);
+    if (locAsInt % 4 == 0) {
+      uint32_t primaryOp = getPrimaryOpCode(read32(loc));
+      if (primaryOp != 31)
+        error("unrecognized instruction for IE to LE R_PPC64_TLS");
+      uint32_t secondaryOp = (read32(loc) & 0x000007FE) >> 1; // bits 21-30
+      uint32_t dFormOp = getPPCDFormOp(secondaryOp);
+      if (dFormOp == 0)
+        error("unrecognized instruction for IE to LE R_PPC64_TLS");
+      write32(loc, ((dFormOp << 26) | (read32(loc) & 0x03FFFFFF)));
+      relocateNoSym(loc + offset, R_PPC64_TPREL16_LO, val);
+    } else if (locAsInt % 4 == 1) {
+      // If the offset is not 4 byte aligned then we have a PCRel type reloc.
+      // This version of the relocation is offset by one byte from the
+      // instruction it references.
+      uint32_t tlsInstr = read32(loc - 1);
+      uint32_t primaryOp = getPrimaryOpCode(tlsInstr);
+      if (primaryOp != 31)
+        errorOrWarn("unrecognized instruction for IE to LE R_PPC64_TLS");
+      uint32_t secondaryOp = (tlsInstr & 0x000007FE) >> 1; // bits 21-30
+      // The add is a special case and should be turned into a nop. The paddi
+      // that comes before it will already have computed the address of the
+      // symbol.
+      if (secondaryOp == 266) {
+        write32(loc - 1, NOP);
+      } else {
+        uint32_t dFormOp = getPPCDFormOp(secondaryOp);
+        if (dFormOp == 0)
+          errorOrWarn("unrecognized instruction for IE to LE R_PPC64_TLS");
+        write32(loc - 1, ((dFormOp << 26) | (tlsInstr & 0x03FF0000)));
+      }
+    } else {
+      errorOrWarn("R_PPC64_TLS must be either 4 byte aligned or one byte "
+                  "offset from 4 byte aligned");
+    }
     break;
   }
   default:
@@ -889,6 +922,7 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
   case R_PPC64_TOC16_LO:
     return R_GOTREL;
   case R_PPC64_GOT_PCREL34:
+  case R_PPC64_GOT_TPREL_PCREL34:
   case R_PPC64_PCREL_OPT:
     return R_GOT_PC;
   case R_PPC64_TOC16_HA:
@@ -1237,6 +1271,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   }
   case R_PPC64_GOT_PCREL34:
+  case R_PPC64_GOT_TPREL_PCREL34:
   case R_PPC64_TPREL34: {
     const uint64_t si0Mask = 0x00000003ffff0000;
     const uint64_t si1Mask = 0x000000000000ffff;
