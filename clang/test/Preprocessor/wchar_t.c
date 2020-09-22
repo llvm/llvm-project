@@ -48,6 +48,11 @@
 // CHECK-ARM64-AAPCS64-DAG: #define __WCHAR_TYPE__ unsigned int
 // CHECK-ARM64-AAPCS64-DAG: #define __WCHAR_UNSIGNED__ 1
 
+// RUN: %clang_cc1 -triple s390x-none-zos -fwchar-type=int -fno-signed-wchar -dM -E %s -o - | FileCheck %s -check-prefix CHECK-ZOS
+// CHECK-ZOS: #define __WCHAR_MAX__ 4294967295U
+// CHECK-ZOS: #define __WCHAR_TYPE__ unsigned int
+// CHECK-ZOS: #define __WCHAR_UNSIGNED__ 1
+
 // RUN: %clang_cc1 -triple xcore-unknown-unknown -fwchar-type=char -fno-signed-wchar -dM -E %s -o - | FileCheck %s -check-prefix CHECK-XCORE
 // CHECK-XCORE-DAG: #define __WCHAR_MAX__ 255
 // CHECK-XCORE-DAG: #define __WCHAR_TYPE__ unsigned char
