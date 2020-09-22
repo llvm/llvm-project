@@ -973,12 +973,13 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
   // alter the predicate upon themselves.
   const MCInstrDesc &MCID = MI->getDesc();
   bool IsUse = false;
-  for (int i = MI->getNumOperands() - 1; i >= 0; --i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  unsigned LastOpIdx = MI->getNumOperands() - 1;
+  for (auto &Op : enumerate(reverse(MCID.operands()))) {
+    const MachineOperand &MO = MI->getOperand(LastOpIdx - Op.index());
     if (!MO.isReg() || !MO.isUse() || MO.getReg() != ARM::VPR)
       continue;
 
-    if (ARM::isVpred(MCID.OpInfo[i].OperandType)) {
+    if (ARM::isVpred(Op.value().OperandType)) {
       VPTState::addInst(MI);
       IsUse = true;
     } else if (MI->getOpcode() != ARM::MVE_VPST) {
