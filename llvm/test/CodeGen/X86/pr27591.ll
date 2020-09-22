@@ -9,9 +9,8 @@ define void @test1(i32 %x) #0 {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    cmpl $0, %edi
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    movl %eax, %edi
+; CHECK-NEXT:    movzbl %al, %edi
+; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    callq callee1
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
@@ -27,10 +26,9 @@ define void @test2(i32 %x) #0 {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    cmpl $0, %edi
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    negl %eax
-; CHECK-NEXT:    movl %eax, %edi
+; CHECK-NEXT:    movzbl %al, %edi
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    negl %edi
 ; CHECK-NEXT:    callq callee2
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq

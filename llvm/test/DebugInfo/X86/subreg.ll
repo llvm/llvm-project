@@ -3,7 +3,7 @@
 ; We are testing that a value in a 16 bit register gets reported as
 ; being in its superregister.
 
-; CHECK: .byte   85                      # super-register DW_OP_reg5
+; CHECK: .byte   80                      # super-register DW_OP_reg0
 ; No need to a piece at offset 0.
 ; CHECK-NOT: DW_OP_piece
 ; CHECK-NOT: DW_OP_bit_piece
