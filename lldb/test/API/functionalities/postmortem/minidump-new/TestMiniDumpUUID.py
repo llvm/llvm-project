@@ -12,6 +12,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfReproducer # Modules are not orphaned and it finds the module with the same UUID from test_partial_uuid_match.
 class MiniDumpUUIDTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -213,6 +214,7 @@ class MiniDumpUUIDTestCase(TestBase):
         cmd = 'settings set target.exec-search-paths "%s"' % (os.path.dirname(so_path))
         self.dbg.HandleCommand(cmd)
         modules = self.get_minidump_modules("linux-arm-breakpad-uuid-match.yaml")
+        import pdb; pdb.set_trace()
         self.assertEqual(1, len(modules))
         # LLDB makes up it own UUID as well when there is no build ID so we
         # will check that this matches.
@@ -315,7 +317,6 @@ class MiniDumpUUIDTestCase(TestBase):
                 "a", "", "01020304-0506-0708-090A-0B0C0D0E0F10").IsValid())
         self.assertFalse(self.target.AddModule("a", "", "01020305").IsValid())
 
-    @skipIfReproducer # Modules are not orphaned and it finds the module with the same UUID from test_partial_uuid_match.
     def test_remove_placeholder_add_real_module(self):
         """
             Test that removing a placeholder module and adding back the real
