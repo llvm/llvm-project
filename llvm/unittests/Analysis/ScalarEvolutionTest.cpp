@@ -1165,4 +1165,25 @@ TEST_F(ScalarEvolutionsTest, SCEVrewriteUnknowns) {
               cast<SCEVAddRecExpr>(ScevIV)->getStepRecurrence(SE));
   });
 }
+
+TEST_F(ScalarEvolutionsTest, SCEVAddNUW) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString("define void @foo(i32 %x) { "
+                                                  "  ret void "
+                                                  "} ",
+                                                  Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto *X = SE.getSCEV(getArgByName(F, "x"));
+    auto *One = SE.getOne(X->getType());
+    auto *Sum = SE.getAddExpr(X, One, SCEV::FlagNUW);
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_UGE, Sum, X));
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_UGT, Sum, X));
+  });
+}
+
 }  // end namespace llvm
