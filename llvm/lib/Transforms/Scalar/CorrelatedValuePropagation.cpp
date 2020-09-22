@@ -58,6 +58,8 @@ STATISTIC(NumMemAccess, "Number of memory access targets propagated");
 STATISTIC(NumCmps,      "Number of comparisons propagated");
 STATISTIC(NumReturns,   "Number of return values propagated");
 STATISTIC(NumDeadCases, "Number of switch cases removed");
+STATISTIC(NumSDivSRemsNarrowed,
+          "Number of sdivs/srems whose width was decreased");
 STATISTIC(NumSDivs,     "Number of sdiv converted to udiv");
 STATISTIC(NumUDivURemsNarrowed,
           "Number of udivs/urems whose width was decreased");
@@ -624,6 +626,60 @@ Domain getDomain(Value *V, LazyValueInfo *LVI, Instruction *CxtI) {
   return Domain::Unknown;
 };
 
+/// Try to shrink a sdiv/srem's width down to the smallest power of two that's
+/// sufficient to contain its operands.
+static bool narrowSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
+  assert(Instr->getOpcode() == Instruction::SDiv ||
+         Instr->getOpcode() == Instruction::SRem);
+  if (Instr->getType()->isVectorTy())
+    return false;
+
+  // Find the smallest power of two bitwidth that's sufficient to hold Instr's
+  // operands.
+  unsigned OrigWidth = Instr->getType()->getIntegerBitWidth();
+
+  // What is the smallest bit width that can accomodate the entire value ranges
+  // of both of the operands?
+  std::array<Optional<ConstantRange>, 2> CRs;
+  unsigned MinSignedBits = 0;
+  for (auto I : zip(Instr->operands(), CRs)) {
+    std::get<1>(I) = LVI->getConstantRange(std::get<0>(I), Instr->getParent());
+    MinSignedBits = std::max(std::get<1>(I)->getMinSignedBits(), MinSignedBits);
+  }
+
+  // sdiv/srem is UB if divisor is -1 and divident is INT_MIN, so unless we can
+  // prove that such a combination is impossible, we need to bump the bitwidth.
+  if (CRs[1]->contains(APInt::getAllOnesValue(OrigWidth)) &&
+      CRs[0]->contains(
+          APInt::getSignedMinValue(MinSignedBits).sextOrSelf(OrigWidth)))
+    ++MinSignedBits;
+
+  // Don't shrink below 8 bits wide.
+  unsigned NewWidth = std::max<unsigned>(PowerOf2Ceil(MinSignedBits), 8);
+
+  // NewWidth might be greater than OrigWidth if OrigWidth is not a power of
+  // two.
+  if (NewWidth >= OrigWidth)
+    return false;
+
+  ++NumSDivSRemsNarrowed;
+  IRBuilder<> B{Instr};
+  auto *TruncTy = Type::getIntNTy(Instr->getContext(), NewWidth);
+  auto *LHS = B.CreateTruncOrBitCast(Instr->getOperand(0), TruncTy,
+                                     Instr->getName() + ".lhs.trunc");
+  auto *RHS = B.CreateTruncOrBitCast(Instr->getOperand(1), TruncTy,
+                                     Instr->getName() + ".rhs.trunc");
+  auto *BO = B.CreateBinOp(Instr->getOpcode(), LHS, RHS, Instr->getName());
+  auto *Sext = B.CreateSExt(BO, Instr->getType(), Instr->getName() + ".sext");
+  if (auto *BinOp = dyn_cast<BinaryOperator>(BO))
+    if (BinOp->getOpcode() == Instruction::SDiv)
+      BinOp->setIsExact(Instr->isExact());
+
+  Instr->replaceAllUsesWith(Sext);
+  Instr->eraseFromParent();
+  return true;
+}
+
 /// Try to shrink a udiv/urem's width down to the smallest power of two that's
 /// sufficient to contain its operands.
 static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
@@ -669,6 +725,7 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
 }
 
 static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
+  assert(SDI->getOpcode() == Instruction::SRem);
   if (SDI->getType()->isVectorTy())
     return false;
 
@@ -724,6 +781,7 @@ static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
 /// conditions, this can sometimes prove conditions instcombine can't by
 /// exploiting range information.
 static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
+  assert(SDI->getOpcode() == Instruction::SDiv);
   if (SDI->getType()->isVectorTy())
     return false;
 
@@ -772,6 +830,23 @@ static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
   processUDivOrURem(UDiv, LVI);
 
   return true;
+}
+
+static bool processSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
+  assert(Instr->getOpcode() == Instruction::SDiv ||
+         Instr->getOpcode() == Instruction::SRem);
+  if (Instr->getType()->isVectorTy())
+    return false;
+
+  if (Instr->getOpcode() == Instruction::SDiv)
+    if (processSDiv(Instr, LVI))
+      return true;
+
+  if (Instr->getOpcode() == Instruction::SRem)
+    if (processSRem(Instr, LVI))
+      return true;
+
+  return narrowSDivOrSRem(Instr, LVI);
 }
 
 static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
@@ -935,10 +1010,8 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
         BBChanged |= processCallSite(cast<CallBase>(*II), LVI);
         break;
       case Instruction::SRem:
-        BBChanged |= processSRem(cast<BinaryOperator>(II), LVI);
-        break;
       case Instruction::SDiv:
-        BBChanged |= processSDiv(cast<BinaryOperator>(II), LVI);
+        BBChanged |= processSDivOrSRem(cast<BinaryOperator>(II), LVI);
         break;
       case Instruction::UDiv:
       case Instruction::URem:
