@@ -95,6 +95,13 @@ static void uninstallExceptionOrSignalHandlers();
 
 CrashRecoveryContextCleanup::~CrashRecoveryContextCleanup() {}
 
+CrashRecoveryContext::CrashRecoveryContext() {
+  // On Windows, if abort() was previously triggered (and caught by a previous
+  // CrashRecoveryContext) the Windows CRT removes our installed signal handler,
+  // so we need to install it again.
+  sys::DisableSystemDialogsOnCrash();
+}
+
 CrashRecoveryContext::~CrashRecoveryContext() {
   // Reclaim registered resources.
   CrashRecoveryContextCleanup *i = head;
