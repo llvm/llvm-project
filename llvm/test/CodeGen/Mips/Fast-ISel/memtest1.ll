@@ -17,9 +17,15 @@ declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1)
 define void @cpy(i8* %src, i32 %i) {
   ; ALL-LABEL:  cpy:
 
-  ; ALL:        lw    $[[T0:[0-9]+]], %got(dest)(${{[0-9]+}})
-  ; ALL:        lw    $[[T2:[0-9]+]], %got(memcpy)(${{[0-9]+}})
-  ; ALL:        jalr  $[[T2]]
+  ; ALL-DAG:        lw    $[[T0:[0-9]+]], %got(dest)(${{[0-9]+}})
+  ; ALL-DAG:        sw    $4, 24($sp)
+  ; ALL-DAG:        move  $4, $[[T0]]
+  ; ALL-DAG:        sw    $5, 20($sp)
+  ; ALL-DAG:        lw    $[[T1:[0-9]+]], 24($sp)
+  ; ALL-DAG:        move  $5, $[[T1]]
+  ; ALL-DAG:        lw    $6, 20($sp)
+  ; ALL-DAG:        lw    $[[T2:[0-9]+]], %got(memcpy)(${{[0-9]+}})
+  ; ALL:            jalr  $[[T2]]
   ; ALL-NEXT:       nop
   ; ALL-NOT:        {{.*}}$2{{.*}}
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* getelementptr inbounds ([50 x i8], [50 x i8]* @dest, i32 0, i32 0), i8* %src, i32 %i, i1 false)
@@ -30,8 +36,14 @@ define void @mov(i8* %src, i32 %i) {
   ; ALL-LABEL:  mov:
 
 
-  ; ALL:        lw    $[[T0:[0-9]+]], %got(dest)(${{[0-9]+}})
-  ; ALL:        lw    $[[T2:[0-9]+]], %got(memmove)(${{[0-9]+}})
+  ; ALL-DAG:        lw    $[[T0:[0-9]+]], %got(dest)(${{[0-9]+}})
+  ; ALL-DAG:        sw    $4, 24($sp)
+  ; ALL-DAG:        move  $4, $[[T0]]
+  ; ALL-DAG:        sw    $5, 20($sp)
+  ; ALL-DAG:        lw    $[[T1:[0-9]+]], 24($sp)
+  ; ALL-DAG:        move  $5, $[[T1]]
+  ; ALL-DAG:        lw    $6, 20($sp)
+  ; ALL-DAG:        lw    $[[T2:[0-9]+]], %got(memmove)(${{[0-9]+}})
   ; ALL:            jalr  $[[T2]]
   ; ALL-NEXT:       nop
   ; ALL-NOT:        {{.*}}$2{{.*}}
@@ -42,8 +54,15 @@ define void @mov(i8* %src, i32 %i) {
 define void @clear(i32 %i) {
   ; ALL-LABEL:  clear:
 
-  ; ALL:        lw    $[[T0:[0-9]+]], %got(dest)(${{[0-9]+}})
-  ; ALL:        lw    $[[T2:[0-9]+]], %got(memset)(${{[0-9]+}})
+  ; ALL-DAG:        lw    $[[T0:[0-9]+]], %got(dest)(${{[0-9]+}})
+  ; ALL-DAG:        sw    $4, 16($sp)
+  ; ALL-DAG:        move  $4, $[[T0]]
+  ; ALL-DAG:        addiu $[[T1:[0-9]+]], $zero, 42
+  ; 32R1-DAG:       sll   $[[T2:[0-9]+]], $[[T1]], 24
+  ; 32R1-DAG:       sra   $5, $[[T2]], 24
+  ; 32R2-DAG:       seb   $5, $[[T1]]
+  ; ALL-DAG:        lw    $6, 16($sp)
+  ; ALL-DAG:        lw    $[[T2:[0-9]+]], %got(memset)(${{[0-9]+}})
   ; ALL:            jalr  $[[T2]]
   ; ALL-NEXT:       nop
   ; ALL-NOT:        {{.*}}$2{{.*}}

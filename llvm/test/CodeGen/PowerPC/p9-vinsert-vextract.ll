@@ -145,37 +145,19 @@ entry:
 }
 
 define <8 x i16> @shuffle_vector_halfword_8_1(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_halfword_8_1:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 6
-; CHECK-OPT-NEXT:    vinserth 3, 2, 14
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_halfword_8_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 6
+; CHECK-NEXT:    vinserth 3, 2, 14
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_halfword_8_1:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 6
-; CHECK-O0-NEXT:    vinserth 2, 3, 14
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_halfword_8_1:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 12
-; CHECK-BE-OPT-NEXT:    vinserth 3, 2, 0
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_halfword_8_1:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 12
-; CHECK-BE-O0-NEXT:    vinserth 2, 3, 0
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_halfword_8_1:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 12
+; CHECK-BE-NEXT:    vinserth 3, 2, 0
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 1, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i16> %vecins
@@ -184,255 +166,131 @@ entry:
 ; The following testcases take one halfword element from the first vector and
 ; inserts it at various locations in the second vector
 define <8 x i16> @shuffle_vector_halfword_9_7(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_halfword_9_7:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 10
-; CHECK-OPT-NEXT:    vinserth 3, 2, 12
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_halfword_9_7:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 10
+; CHECK-NEXT:    vinserth 3, 2, 12
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_halfword_9_7:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 10
-; CHECK-O0-NEXT:    vinserth 2, 3, 12
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_halfword_9_7:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 8
-; CHECK-BE-OPT-NEXT:    vinserth 3, 2, 2
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_halfword_9_7:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 8
-; CHECK-BE-O0-NEXT:    vinserth 2, 3, 2
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_halfword_9_7:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 8
+; CHECK-BE-NEXT:    vinserth 3, 2, 2
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 8, i32 7, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i16> %vecins
 }
 
 define <8 x i16> @shuffle_vector_halfword_10_4(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_halfword_10_4:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vinserth 3, 2, 10
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_halfword_10_4:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vinserth 3, 2, 10
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_halfword_10_4:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vinserth 2, 3, 10
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_halfword_10_4:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 2
-; CHECK-BE-OPT-NEXT:    vinserth 3, 2, 4
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_halfword_10_4:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 2
-; CHECK-BE-O0-NEXT:    vinserth 2, 3, 4
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_halfword_10_4:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 2
+; CHECK-BE-NEXT:    vinserth 3, 2, 4
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 8, i32 9, i32 4, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i16> %vecins
 }
 
 define <8 x i16> @shuffle_vector_halfword_11_2(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_halfword_11_2:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 4
-; CHECK-OPT-NEXT:    vinserth 3, 2, 8
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_halfword_11_2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 4
+; CHECK-NEXT:    vinserth 3, 2, 8
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_halfword_11_2:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 4
-; CHECK-O0-NEXT:    vinserth 2, 3, 8
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_halfword_11_2:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 14
-; CHECK-BE-OPT-NEXT:    vinserth 3, 2, 6
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_halfword_11_2:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 14
-; CHECK-BE-O0-NEXT:    vinserth 2, 3, 6
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_halfword_11_2:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 14
+; CHECK-BE-NEXT:    vinserth 3, 2, 6
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 8, i32 9, i32 10, i32 2, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i16> %vecins
 }
 
 define <8 x i16> @shuffle_vector_halfword_12_6(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_halfword_12_6:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 12
-; CHECK-OPT-NEXT:    vinserth 3, 2, 6
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_halfword_12_6:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 12
+; CHECK-NEXT:    vinserth 3, 2, 6
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_halfword_12_6:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 12
-; CHECK-O0-NEXT:    vinserth 2, 3, 6
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_halfword_12_6:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 6
-; CHECK-BE-OPT-NEXT:    vinserth 3, 2, 8
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_halfword_12_6:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 6
-; CHECK-BE-O0-NEXT:    vinserth 2, 3, 8
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_halfword_12_6:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 6
+; CHECK-BE-NEXT:    vinserth 3, 2, 8
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 6, i32 13, i32 14, i32 15>
   ret <8 x i16> %vecins
 }
 
 define <8 x i16> @shuffle_vector_halfword_13_3(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_halfword_13_3:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 2
-; CHECK-OPT-NEXT:    vinserth 3, 2, 4
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_halfword_13_3:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 2
+; CHECK-NEXT:    vinserth 3, 2, 4
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_halfword_13_3:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 2
-; CHECK-O0-NEXT:    vinserth 2, 3, 4
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_halfword_13_3:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vinserth 3, 2, 10
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_halfword_13_3:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vinserth 2, 3, 10
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_halfword_13_3:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vinserth 3, 2, 10
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 3, i32 14, i32 15>
   ret <8 x i16> %vecins
 }
 
 define <8 x i16> @shuffle_vector_halfword_14_5(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_halfword_14_5:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 14
-; CHECK-OPT-NEXT:    vinserth 3, 2, 2
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_halfword_14_5:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 14
+; CHECK-NEXT:    vinserth 3, 2, 2
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_halfword_14_5:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 14
-; CHECK-O0-NEXT:    vinserth 2, 3, 2
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_halfword_14_5:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 4
-; CHECK-BE-OPT-NEXT:    vinserth 3, 2, 12
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_halfword_14_5:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 4
-; CHECK-BE-O0-NEXT:    vinserth 2, 3, 12
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_halfword_14_5:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 4
+; CHECK-BE-NEXT:    vinserth 3, 2, 12
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 5, i32 15>
   ret <8 x i16> %vecins
 }
 
 define <8 x i16> @shuffle_vector_halfword_15_0(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_halfword_15_0:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 8
-; CHECK-OPT-NEXT:    vinserth 3, 2, 0
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_halfword_15_0:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 8
+; CHECK-NEXT:    vinserth 3, 2, 0
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_halfword_15_0:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 8
-; CHECK-O0-NEXT:    vinserth 2, 3, 0
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_halfword_15_0:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 10
-; CHECK-BE-OPT-NEXT:    vinserth 3, 2, 14
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_halfword_15_0:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 10
-; CHECK-BE-O0-NEXT:    vinserth 2, 3, 14
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_halfword_15_0:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 10
+; CHECK-BE-NEXT:    vinserth 3, 2, 14
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 0>
   ret <8 x i16> %vecins
@@ -860,588 +718,302 @@ entry:
 ; The following testcases take one byte element from the first vector and
 ; inserts it at various locations in the second vector
 define <16 x i8> @shuffle_vector_byte_16_8(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_byte_16_8:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vinsertb 3, 2, 15
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_byte_16_8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vinsertb 3, 2, 15
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_byte_16_8:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vinsertb 2, 3, 15
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_byte_16_8:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 1
-; CHECK-BE-OPT-NEXT:    vinsertb 3, 2, 0
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_byte_16_8:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 1
-; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 0
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_byte_16_8:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 1
+; CHECK-BE-NEXT:    vinsertb 3, 2, 0
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 8, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
 
 define <16 x i8> @shuffle_vector_byte_17_1(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_byte_17_1:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 7
-; CHECK-OPT-NEXT:    vinsertb 3, 2, 14
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_byte_17_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 7
+; CHECK-NEXT:    vinsertb 3, 2, 14
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_byte_17_1:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 7
-; CHECK-O0-NEXT:    vinsertb 2, 3, 14
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_byte_17_1:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 10
-; CHECK-BE-OPT-NEXT:    vinsertb 3, 2, 1
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_byte_17_1:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 10
-; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 1
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_byte_17_1:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 10
+; CHECK-BE-NEXT:    vinsertb 3, 2, 1
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 1, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
 
 define <16 x i8> @shuffle_vector_byte_18_10(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_byte_18_10:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 14
-; CHECK-OPT-NEXT:    vinsertb 3, 2, 13
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_byte_18_10:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 14
+; CHECK-NEXT:    vinsertb 3, 2, 13
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_byte_18_10:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 14
-; CHECK-O0-NEXT:    vinsertb 2, 3, 13
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_byte_18_10:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 3
-; CHECK-BE-OPT-NEXT:    vinsertb 3, 2, 2
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_byte_18_10:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 3
-; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 2
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_byte_18_10:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 3
+; CHECK-BE-NEXT:    vinsertb 3, 2, 2
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 10, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
 
 define <16 x i8> @shuffle_vector_byte_19_3(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_byte_19_3:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 5
-; CHECK-OPT-NEXT:    vinsertb 3, 2, 12
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_byte_19_3:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 5
+; CHECK-NEXT:    vinsertb 3, 2, 12
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_byte_19_3:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 5
-; CHECK-O0-NEXT:    vinsertb 2, 3, 12
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_byte_19_3:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 12
-; CHECK-BE-OPT-NEXT:    vinsertb 3, 2, 3
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_byte_19_3:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 12
-; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 3
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_byte_19_3:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 12
+; CHECK-BE-NEXT:    vinsertb 3, 2, 3
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 3, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
 
 define <16 x i8> @shuffle_vector_byte_20_12(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_byte_20_12:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 12
-; CHECK-OPT-NEXT:    vinsertb 3, 2, 11
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_byte_20_12:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 12
+; CHECK-NEXT:    vinsertb 3, 2, 11
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_byte_20_12:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 12
-; CHECK-O0-NEXT:    vinsertb 2, 3, 11
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_byte_20_12:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 5
-; CHECK-BE-OPT-NEXT:    vinsertb 3, 2, 4
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_byte_20_12:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 5
-; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 4
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_byte_20_12:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 5
+; CHECK-BE-NEXT:    vinsertb 3, 2, 4
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 12, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
 
 define <16 x i8> @shuffle_vector_byte_21_5(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_byte_21_5:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 3
-; CHECK-OPT-NEXT:    vinsertb 3, 2, 10
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_byte_21_5:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 3
+; CHECK-NEXT:    vinsertb 3, 2, 10
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_byte_21_5:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 3
-; CHECK-O0-NEXT:    vinsertb 2, 3, 10
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_byte_21_5:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 14
-; CHECK-BE-OPT-NEXT:    vinsertb 3, 2, 5
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_byte_21_5:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 14
-; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 5
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_byte_21_5:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 14
+; CHECK-BE-NEXT:    vinsertb 3, 2, 5
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 5, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
 
 define <16 x i8> @shuffle_vector_byte_22_14(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_byte_22_14:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 10
-; CHECK-OPT-NEXT:    vinsertb 3, 2, 9
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_byte_22_14:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 10
+; CHECK-NEXT:    vinsertb 3, 2, 9
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_byte_22_14:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 10
-; CHECK-O0-NEXT:    vinsertb 2, 3, 9
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_byte_22_14:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 7
-; CHECK-BE-OPT-NEXT:    vinsertb 3, 2, 6
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_byte_22_14:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 7
-; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 6
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_byte_22_14:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 7
+; CHECK-BE-NEXT:    vinsertb 3, 2, 6
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 14, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
 
 define <16 x i8> @shuffle_vector_byte_23_7(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_byte_23_7:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 1
-; CHECK-OPT-NEXT:    vinsertb 3, 2, 8
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_byte_23_7:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 1
+; CHECK-NEXT:    vinsertb 3, 2, 8
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_byte_23_7:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 1
-; CHECK-O0-NEXT:    vinsertb 2, 3, 8
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_byte_23_7:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vinsertb 3, 2, 7
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_byte_23_7:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 7
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_byte_23_7:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vinsertb 3, 2, 7
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
 
 define <16 x i8> @shuffle_vector_byte_24_0(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_byte_24_0:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 8
-; CHECK-OPT-NEXT:    vinsertb 3, 2, 7
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_byte_24_0:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 8
+; CHECK-NEXT:    vinsertb 3, 2, 7
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_byte_24_0:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 8
-; CHECK-O0-NEXT:    vinsertb 2, 3, 7
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_byte_24_0:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 9
-; CHECK-BE-OPT-NEXT:    vinsertb 3, 2, 8
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_byte_24_0:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 9
-; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 8
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_byte_24_0:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 9
+; CHECK-BE-NEXT:    vinsertb 3, 2, 8
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 0, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
 
 define <16 x i8> @shuffle_vector_byte_25_9(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_byte_25_9:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 15
-; CHECK-OPT-NEXT:    vinsertb 3, 2, 6
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_byte_25_9:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 15
+; CHECK-NEXT:    vinsertb 3, 2, 6
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_byte_25_9:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 15
-; CHECK-O0-NEXT:    vinsertb 2, 3, 6
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_byte_25_9:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 2
-; CHECK-BE-OPT-NEXT:    vinsertb 3, 2, 9
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_byte_25_9:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 2
-; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 9
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_byte_25_9:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 2
+; CHECK-BE-NEXT:    vinsertb 3, 2, 9
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 9, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
 
 define <16 x i8> @shuffle_vector_byte_26_2(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_byte_26_2:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 6
-; CHECK-OPT-NEXT:    vinsertb 3, 2, 5
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_byte_26_2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 6
+; CHECK-NEXT:    vinsertb 3, 2, 5
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_byte_26_2:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 6
-; CHECK-O0-NEXT:    vinsertb 2, 3, 5
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_byte_26_2:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 11
-; CHECK-BE-OPT-NEXT:    vinsertb 3, 2, 10
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_byte_26_2:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 11
-; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 10
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_byte_26_2:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 11
+; CHECK-BE-NEXT:    vinsertb 3, 2, 10
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 2, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
 
 define <16 x i8> @shuffle_vector_byte_27_11(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_byte_27_11:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 13
-; CHECK-OPT-NEXT:    vinsertb 3, 2, 4
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_byte_27_11:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 13
+; CHECK-NEXT:    vinsertb 3, 2, 4
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_byte_27_11:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 13
-; CHECK-O0-NEXT:    vinsertb 2, 3, 4
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_byte_27_11:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 4
-; CHECK-BE-OPT-NEXT:    vinsertb 3, 2, 11
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_byte_27_11:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 4
-; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 11
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_byte_27_11:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 4
+; CHECK-BE-NEXT:    vinsertb 3, 2, 11
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 11, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
 
 define <16 x i8> @shuffle_vector_byte_28_4(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_byte_28_4:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 4
-; CHECK-OPT-NEXT:    vinsertb 3, 2, 3
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_byte_28_4:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 4
+; CHECK-NEXT:    vinsertb 3, 2, 3
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_byte_28_4:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 4
-; CHECK-O0-NEXT:    vinsertb 2, 3, 3
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_byte_28_4:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 13
-; CHECK-BE-OPT-NEXT:    vinsertb 3, 2, 12
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_byte_28_4:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 13
-; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 12
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_byte_28_4:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 13
+; CHECK-BE-NEXT:    vinsertb 3, 2, 12
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 4, i32 29, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
 
 define <16 x i8> @shuffle_vector_byte_29_13(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_byte_29_13:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 11
-; CHECK-OPT-NEXT:    vinsertb 3, 2, 2
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_byte_29_13:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 11
+; CHECK-NEXT:    vinsertb 3, 2, 2
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_byte_29_13:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 11
-; CHECK-O0-NEXT:    vinsertb 2, 3, 2
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_byte_29_13:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 6
-; CHECK-BE-OPT-NEXT:    vinsertb 3, 2, 13
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_byte_29_13:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 6
-; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 13
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_byte_29_13:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 6
+; CHECK-BE-NEXT:    vinsertb 3, 2, 13
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 13, i32 30, i32 31>
   ret <16 x i8> %vecins
 }
 
 define <16 x i8> @shuffle_vector_byte_30_6(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_byte_30_6:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 2
-; CHECK-OPT-NEXT:    vinsertb 3, 2, 1
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_byte_30_6:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 2
+; CHECK-NEXT:    vinsertb 3, 2, 1
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_byte_30_6:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 2
-; CHECK-O0-NEXT:    vinsertb 2, 3, 1
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_byte_30_6:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 15
-; CHECK-BE-OPT-NEXT:    vinsertb 3, 2, 14
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_byte_30_6:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 15
-; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 14
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_byte_30_6:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 15
+; CHECK-BE-NEXT:    vinsertb 3, 2, 14
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 6, i32 31>
   ret <16 x i8> %vecins
 }
 
 define <16 x i8> @shuffle_vector_byte_31_15(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-OPT-LABEL: shuffle_vector_byte_31_15:
-; CHECK-OPT:       # %bb.0: # %entry
-; CHECK-OPT-NEXT:    vsldoi 2, 2, 2, 9
-; CHECK-OPT-NEXT:    vinsertb 3, 2, 0
-; CHECK-OPT-NEXT:    vmr 2, 3
-; CHECK-OPT-NEXT:    blr
+; CHECK-LABEL: shuffle_vector_byte_31_15:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsldoi 2, 2, 2, 9
+; CHECK-NEXT:    vinsertb 3, 2, 0
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    blr
 ;
-; CHECK-O0-LABEL: shuffle_vector_byte_31_15:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-O0-NEXT:    vmr 3, 2
-; CHECK-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-O0-NEXT:    vsldoi 3, 3, 3, 9
-; CHECK-O0-NEXT:    vinsertb 2, 3, 0
-; CHECK-O0-NEXT:    blr
-;
-; CHECK-BE-OPT-LABEL: shuffle_vector_byte_31_15:
-; CHECK-BE-OPT:       # %bb.0: # %entry
-; CHECK-BE-OPT-NEXT:    vsldoi 2, 2, 2, 8
-; CHECK-BE-OPT-NEXT:    vinsertb 3, 2, 15
-; CHECK-BE-OPT-NEXT:    vmr 2, 3
-; CHECK-BE-OPT-NEXT:    blr
-;
-; CHECK-BE-O0-LABEL: shuffle_vector_byte_31_15:
-; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    stxv 35, -16(1) # 16-byte Folded Spill
-; CHECK-BE-O0-NEXT:    vmr 3, 2
-; CHECK-BE-O0-NEXT:    lxv 34, -16(1) # 16-byte Folded Reload
-; CHECK-BE-O0-NEXT:    vsldoi 3, 3, 3, 8
-; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 15
-; CHECK-BE-O0-NEXT:    blr
+; CHECK-BE-LABEL: shuffle_vector_byte_31_15:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    vsldoi 2, 2, 2, 8
+; CHECK-BE-NEXT:    vinsertb 3, 2, 15
+; CHECK-BE-NEXT:    vmr 2, 3
+; CHECK-BE-NEXT:    blr
 entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 15>
   ret <16 x i8> %vecins
@@ -1749,8 +1321,8 @@ define <8 x i16> @insert_halfword_0(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-O0-LABEL: insert_halfword_0:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinserth 2, 3, 14
 ; CHECK-O0-NEXT:    blr
@@ -1763,8 +1335,8 @@ define <8 x i16> @insert_halfword_0(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_halfword_0:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinserth 2, 3, 0
 ; CHECK-BE-O0-NEXT:    blr
@@ -1782,8 +1354,8 @@ define <8 x i16> @insert_halfword_1(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-O0-LABEL: insert_halfword_1:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinserth 2, 3, 12
 ; CHECK-O0-NEXT:    blr
@@ -1796,8 +1368,8 @@ define <8 x i16> @insert_halfword_1(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_halfword_1:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinserth 2, 3, 2
 ; CHECK-BE-O0-NEXT:    blr
@@ -1815,8 +1387,8 @@ define <8 x i16> @insert_halfword_2(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-O0-LABEL: insert_halfword_2:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinserth 2, 3, 10
 ; CHECK-O0-NEXT:    blr
@@ -1829,8 +1401,8 @@ define <8 x i16> @insert_halfword_2(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_halfword_2:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinserth 2, 3, 4
 ; CHECK-BE-O0-NEXT:    blr
@@ -1848,8 +1420,8 @@ define <8 x i16> @insert_halfword_3(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-O0-LABEL: insert_halfword_3:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinserth 2, 3, 8
 ; CHECK-O0-NEXT:    blr
@@ -1862,8 +1434,8 @@ define <8 x i16> @insert_halfword_3(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_halfword_3:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinserth 2, 3, 6
 ; CHECK-BE-O0-NEXT:    blr
@@ -1881,8 +1453,8 @@ define <8 x i16> @insert_halfword_4(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-O0-LABEL: insert_halfword_4:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinserth 2, 3, 6
 ; CHECK-O0-NEXT:    blr
@@ -1895,8 +1467,8 @@ define <8 x i16> @insert_halfword_4(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_halfword_4:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinserth 2, 3, 8
 ; CHECK-BE-O0-NEXT:    blr
@@ -1914,8 +1486,8 @@ define <8 x i16> @insert_halfword_5(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-O0-LABEL: insert_halfword_5:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinserth 2, 3, 4
 ; CHECK-O0-NEXT:    blr
@@ -1928,8 +1500,8 @@ define <8 x i16> @insert_halfword_5(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_halfword_5:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinserth 2, 3, 10
 ; CHECK-BE-O0-NEXT:    blr
@@ -1947,8 +1519,8 @@ define <8 x i16> @insert_halfword_6(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-O0-LABEL: insert_halfword_6:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinserth 2, 3, 2
 ; CHECK-O0-NEXT:    blr
@@ -1961,8 +1533,8 @@ define <8 x i16> @insert_halfword_6(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_halfword_6:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinserth 2, 3, 12
 ; CHECK-BE-O0-NEXT:    blr
@@ -1980,8 +1552,8 @@ define <8 x i16> @insert_halfword_7(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-O0-LABEL: insert_halfword_7:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinserth 2, 3, 0
 ; CHECK-O0-NEXT:    blr
@@ -1994,8 +1566,8 @@ define <8 x i16> @insert_halfword_7(<8 x i16> %a, i16 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_halfword_7:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinserth 2, 3, 14
 ; CHECK-BE-O0-NEXT:    blr
@@ -2015,8 +1587,8 @@ define <16 x i8> @insert_byte_0(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-O0-LABEL: insert_byte_0:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinsertb 2, 3, 15
 ; CHECK-O0-NEXT:    blr
@@ -2029,8 +1601,8 @@ define <16 x i8> @insert_byte_0(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_byte_0:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 0
 ; CHECK-BE-O0-NEXT:    blr
@@ -2048,8 +1620,8 @@ define <16 x i8> @insert_byte_1(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-O0-LABEL: insert_byte_1:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinsertb 2, 3, 14
 ; CHECK-O0-NEXT:    blr
@@ -2062,8 +1634,8 @@ define <16 x i8> @insert_byte_1(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_byte_1:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 1
 ; CHECK-BE-O0-NEXT:    blr
@@ -2081,8 +1653,8 @@ define <16 x i8> @insert_byte_2(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-O0-LABEL: insert_byte_2:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinsertb 2, 3, 13
 ; CHECK-O0-NEXT:    blr
@@ -2095,8 +1667,8 @@ define <16 x i8> @insert_byte_2(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_byte_2:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 2
 ; CHECK-BE-O0-NEXT:    blr
@@ -2114,8 +1686,8 @@ define <16 x i8> @insert_byte_3(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-O0-LABEL: insert_byte_3:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinsertb 2, 3, 12
 ; CHECK-O0-NEXT:    blr
@@ -2128,8 +1700,8 @@ define <16 x i8> @insert_byte_3(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_byte_3:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 3
 ; CHECK-BE-O0-NEXT:    blr
@@ -2147,8 +1719,8 @@ define <16 x i8> @insert_byte_4(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-O0-LABEL: insert_byte_4:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinsertb 2, 3, 11
 ; CHECK-O0-NEXT:    blr
@@ -2161,8 +1733,8 @@ define <16 x i8> @insert_byte_4(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_byte_4:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 4
 ; CHECK-BE-O0-NEXT:    blr
@@ -2180,8 +1752,8 @@ define <16 x i8> @insert_byte_5(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-O0-LABEL: insert_byte_5:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinsertb 2, 3, 10
 ; CHECK-O0-NEXT:    blr
@@ -2194,8 +1766,8 @@ define <16 x i8> @insert_byte_5(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_byte_5:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 5
 ; CHECK-BE-O0-NEXT:    blr
@@ -2213,8 +1785,8 @@ define <16 x i8> @insert_byte_6(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-O0-LABEL: insert_byte_6:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinsertb 2, 3, 9
 ; CHECK-O0-NEXT:    blr
@@ -2227,8 +1799,8 @@ define <16 x i8> @insert_byte_6(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_byte_6:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 6
 ; CHECK-BE-O0-NEXT:    blr
@@ -2246,8 +1818,8 @@ define <16 x i8> @insert_byte_7(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-O0-LABEL: insert_byte_7:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinsertb 2, 3, 8
 ; CHECK-O0-NEXT:    blr
@@ -2260,8 +1832,8 @@ define <16 x i8> @insert_byte_7(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_byte_7:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 7
 ; CHECK-BE-O0-NEXT:    blr
@@ -2279,8 +1851,8 @@ define <16 x i8> @insert_byte_8(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-O0-LABEL: insert_byte_8:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinsertb 2, 3, 7
 ; CHECK-O0-NEXT:    blr
@@ -2293,8 +1865,8 @@ define <16 x i8> @insert_byte_8(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_byte_8:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 8
 ; CHECK-BE-O0-NEXT:    blr
@@ -2312,8 +1884,8 @@ define <16 x i8> @insert_byte_9(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-O0-LABEL: insert_byte_9:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinsertb 2, 3, 6
 ; CHECK-O0-NEXT:    blr
@@ -2326,8 +1898,8 @@ define <16 x i8> @insert_byte_9(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_byte_9:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 9
 ; CHECK-BE-O0-NEXT:    blr
@@ -2345,8 +1917,8 @@ define <16 x i8> @insert_byte_10(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-O0-LABEL: insert_byte_10:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinsertb 2, 3, 5
 ; CHECK-O0-NEXT:    blr
@@ -2359,8 +1931,8 @@ define <16 x i8> @insert_byte_10(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_byte_10:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 10
 ; CHECK-BE-O0-NEXT:    blr
@@ -2378,8 +1950,8 @@ define <16 x i8> @insert_byte_11(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-O0-LABEL: insert_byte_11:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinsertb 2, 3, 4
 ; CHECK-O0-NEXT:    blr
@@ -2392,8 +1964,8 @@ define <16 x i8> @insert_byte_11(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_byte_11:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 11
 ; CHECK-BE-O0-NEXT:    blr
@@ -2411,8 +1983,8 @@ define <16 x i8> @insert_byte_12(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-O0-LABEL: insert_byte_12:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinsertb 2, 3, 3
 ; CHECK-O0-NEXT:    blr
@@ -2425,8 +1997,8 @@ define <16 x i8> @insert_byte_12(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_byte_12:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 12
 ; CHECK-BE-O0-NEXT:    blr
@@ -2444,8 +2016,8 @@ define <16 x i8> @insert_byte_13(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-O0-LABEL: insert_byte_13:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinsertb 2, 3, 2
 ; CHECK-O0-NEXT:    blr
@@ -2458,8 +2030,8 @@ define <16 x i8> @insert_byte_13(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_byte_13:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 13
 ; CHECK-BE-O0-NEXT:    blr
@@ -2477,8 +2049,8 @@ define <16 x i8> @insert_byte_14(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-O0-LABEL: insert_byte_14:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinsertb 2, 3, 1
 ; CHECK-O0-NEXT:    blr
@@ -2491,8 +2063,8 @@ define <16 x i8> @insert_byte_14(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_byte_14:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 14
 ; CHECK-BE-O0-NEXT:    blr
@@ -2510,8 +2082,8 @@ define <16 x i8> @insert_byte_15(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-O0-LABEL: insert_byte_15:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    mr 3, 5
-; CHECK-O0-NEXT:    mtfprwz 0, 3
+; CHECK-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-O0-NEXT:    vinsertb 2, 3, 0
 ; CHECK-O0-NEXT:    blr
@@ -2524,8 +2096,8 @@ define <16 x i8> @insert_byte_15(<16 x i8> %a, i8 %b) {
 ;
 ; CHECK-BE-O0-LABEL: insert_byte_15:
 ; CHECK-BE-O0:       # %bb.0: # %entry
-; CHECK-BE-O0-NEXT:    mr 3, 5
-; CHECK-BE-O0-NEXT:    mtfprwz 0, 3
+; CHECK-BE-O0-NEXT:    # kill: def $r5 killed $r5 killed $x5
+; CHECK-BE-O0-NEXT:    mtfprwz 0, 5
 ; CHECK-BE-O0-NEXT:    xscpsgndp 35, 0, 0
 ; CHECK-BE-O0-NEXT:    vinsertb 2, 3, 15
 ; CHECK-BE-O0-NEXT:    blr
