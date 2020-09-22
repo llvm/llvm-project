@@ -966,7 +966,8 @@ bool PPC64LongBranchThunk::isCompatibleWith(const InputSection &isec,
 void PPC64PCRelLongBranchThunk::writeTo(uint8_t *buf) {
   int64_t offset = destination.getVA() - getThunkTargetSym()->getVA();
   if (!isInt<34>(offset))
-    fatal("offset overflow 34 bits, please compile using the large code model");
+    reportRangeError(buf, offset, 34, destination,
+                     "PC-relative long branch stub offset");
   uint64_t paddi = PADDI_R12_NO_DISP | (((offset >> 16) & 0x3ffff) << 32) |
                    (offset & 0xffff);
 
