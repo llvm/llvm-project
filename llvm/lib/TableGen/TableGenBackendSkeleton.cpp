@@ -47,6 +47,8 @@ public:
 
 void SkeletonEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("Skeleton data structures", OS);
+
+  (void)Records; // To suppress unused variable warning; remove on use.
 }
 
 namespace llvm {
