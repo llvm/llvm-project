@@ -2720,8 +2720,6 @@ loop_a:
 ; CHECK-NEXT:    br label %loop_begin.us
 ;
 ; CHECK:       loop_begin.us:
-; CHECK-NEXT:    %[[V1_US:.*]] = load i1, i1* %ptr
-; CHECK-NEXT:    %[[OR_US:.*]] = or i1 %[[V1_US]], true
 ; CHECK-NEXT:    br label %loop_a.us
 ;
 ; CHECK:       loop_a.us:
@@ -2796,12 +2794,6 @@ loop_begin:
 ; CHECK-NEXT:    br label %loop_begin.us
 ;
 ; CHECK:       loop_begin.us:
-; CHECK-NEXT:    %[[V1_US:.*]] = load i1, i1* %ptr1
-; CHECK-NEXT:    %[[V2_US:.*]] = load i1, i1* %ptr2
-; CHECK-NEXT:    %[[AND1_US:.*]] = and i1 %[[V1_US]], %cond1
-; CHECK-NEXT:    %[[OR1_US:.*]] = or i1 %[[V2_US]], %cond2
-; CHECK-NEXT:    %[[AND2_US:.*]] = and i1 %[[AND1_US]], %[[OR1_US]]
-; CHECK-NEXT:    %[[AND3_US:.*]] = and i1 %[[AND2_US]], %cond3
 ; CHECK-NEXT:    br label %loop_b.us
 ;
 ; CHECK:       loop_b.us:
@@ -2883,12 +2875,6 @@ loop_begin:
 ; CHECK-NEXT:    br label %loop_begin.us
 ;
 ; CHECK:       loop_begin.us:
-; CHECK-NEXT:    %[[V1_US:.*]] = load i1, i1* %ptr1
-; CHECK-NEXT:    %[[V2_US:.*]] = load i1, i1* %ptr2
-; CHECK-NEXT:    %[[OR1_US:.*]] = or i1 %[[V1_US]], %cond1
-; CHECK-NEXT:    %[[AND1_US:.*]] = and i1 %[[V2_US]], %cond2
-; CHECK-NEXT:    %[[OR2_US:.*]] = or i1 %[[OR1_US]], %[[AND1_US]]
-; CHECK-NEXT:    %[[OR3_US:.*]] = or i1 %[[OR2_US]], %cond3
 ; CHECK-NEXT:    br label %loop_b.us
 ;
 ; CHECK:       loop_b.us:
