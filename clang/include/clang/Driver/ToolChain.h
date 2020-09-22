@@ -575,6 +575,9 @@ public:
   // given compilation arguments.
   virtual UnwindLibType GetUnwindLibType(const llvm::opt::ArgList &Args) const;
 
+  // Detect the highest available version of libc++ in base path.
+  virtual std::string detectLibcxxIncludePath(StringRef Base) const;
+
   /// AddClangCXXStdlibIncludeArgs - Add the clang -cc1 level arguments to set
   /// the include paths to use for the given C++ standard library type.
   virtual void
