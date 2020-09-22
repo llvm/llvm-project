@@ -215,8 +215,8 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
 
   // run semantics
   auto &parseTree = *parsing.parseTree();
-  Fortran::semantics::Semantics semantics{semanticsContext, parseTree,
-                                          parsing.cooked()};
+  Fortran::semantics::Semantics semantics(semanticsContext, parseTree,
+                                          parsing.cooked().AsCharBlock());
   semantics.Perform();
   semantics.EmitMessages(llvm::errs());
   if (semantics.AnyFatalError()) {
