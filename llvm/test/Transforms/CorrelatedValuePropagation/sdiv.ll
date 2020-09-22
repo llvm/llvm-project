@@ -271,8 +271,11 @@ define i64 @test11_i15_i15(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i64 [[DIV]]
+; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i16
+; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i16
+; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i16 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
+; CHECK-NEXT:    [[DIV_SEXT:%.*]] = sext i16 [[DIV1]] to i64
+; CHECK-NEXT:    ret i64 [[DIV_SEXT]]
 ;
 entry:
   %c0 = icmp sle i64 %x, 16383
@@ -306,8 +309,11 @@ define i64 @test12_i16_i16(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i64 [[DIV]]
+; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i32
+; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i32
+; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i32 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
+; CHECK-NEXT:    [[DIV_SEXT:%.*]] = sext i32 [[DIV1]] to i64
+; CHECK-NEXT:    ret i64 [[DIV_SEXT]]
 ;
 entry:
   %c0 = icmp sle i64 %x, 32767
@@ -338,8 +344,11 @@ define i64 @test13_i16_u15(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i64 [[DIV]]
+; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i16
+; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i16
+; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i16 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
+; CHECK-NEXT:    [[DIV_SEXT:%.*]] = sext i16 [[DIV1]] to i64
+; CHECK-NEXT:    ret i64 [[DIV_SEXT]]
 ;
 entry:
   %c0 = icmp sle i64 %x, 32767
@@ -371,8 +380,11 @@ define i64 @test14_i16safe_i16(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i64 [[DIV]]
+; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i16
+; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i16
+; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i16 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
+; CHECK-NEXT:    [[DIV_SEXT:%.*]] = sext i16 [[DIV1]] to i64
+; CHECK-NEXT:    ret i64 [[DIV_SEXT]]
 ;
 entry:
   %c0 = icmp sle i64 %x, 32767
@@ -403,8 +415,11 @@ define i64 @test15_i16safe_u15(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i64 [[DIV]]
+; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i16
+; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i16
+; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i16 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
+; CHECK-NEXT:    [[DIV_SEXT:%.*]] = sext i16 [[DIV1]] to i64
+; CHECK-NEXT:    ret i64 [[DIV_SEXT]]
 ;
 entry:
   %c0 = icmp sle i64 %x, 32767
@@ -435,8 +450,11 @@ define i64 @test16_i4_i4(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i64 [[DIV]]
+; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i8
+; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i8
+; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i8 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
+; CHECK-NEXT:    [[DIV_SEXT:%.*]] = sext i8 [[DIV1]] to i64
+; CHECK-NEXT:    ret i64 [[DIV_SEXT]]
 ;
 entry:
   %c0 = icmp sle i64 %x, 3
@@ -469,8 +487,11 @@ define i64 @test17_i9_i9(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i64 [[DIV]]
+; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i16
+; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i16
+; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i16 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
+; CHECK-NEXT:    [[DIV_SEXT:%.*]] = sext i16 [[DIV1]] to i64
+; CHECK-NEXT:    ret i64 [[DIV_SEXT]]
 ;
 entry:
   %c0 = icmp sle i64 %x, 255
@@ -569,8 +590,11 @@ define i64 @test20_i16_i18(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i64 [[DIV]]
+; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i32
+; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i32
+; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i32 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
+; CHECK-NEXT:    [[DIV_SEXT:%.*]] = sext i32 [[DIV1]] to i64
+; CHECK-NEXT:    ret i64 [[DIV_SEXT]]
 ;
 entry:
   %c0 = icmp sle i64 %x, 16383
@@ -601,8 +625,11 @@ define i64 @test21_i18_i16(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i64 [[DIV]]
+; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i32
+; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i32
+; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i32 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
+; CHECK-NEXT:    [[DIV_SEXT:%.*]] = sext i32 [[DIV1]] to i64
+; CHECK-NEXT:    ret i64 [[DIV_SEXT]]
 ;
 entry:
   %c0 = icmp sle i64 %x, 65535
@@ -635,8 +662,11 @@ define i64 @test22_i16_i16(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i64 [[DIV]]
+; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i32
+; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i32
+; CHECK-NEXT:    [[DIV1:%.*]] = sdiv exact i32 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
+; CHECK-NEXT:    [[DIV_SEXT:%.*]] = sext i32 [[DIV1]] to i64
+; CHECK-NEXT:    ret i64 [[DIV_SEXT]]
 ;
 entry:
   %c0 = icmp sle i64 %x, 32767
