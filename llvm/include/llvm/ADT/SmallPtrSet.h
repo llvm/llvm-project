@@ -378,6 +378,9 @@ public:
   iterator find(ConstPtrType Ptr) const {
     return makeIterator(find_imp(ConstPtrTraits::getAsVoidPointer(Ptr)));
   }
+  bool contains(ConstPtrType Ptr) const {
+    return find_imp(ConstPtrTraits::getAsVoidPointer(Ptr)) != EndPointer();
+  }
 
   template <typename IterT>
   void insert(IterT I, IterT E) {
