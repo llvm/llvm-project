@@ -6,25 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: -fno-rtti
+// Make sure the TEST_HAS_NO_EXCEPTIONS macro is NOT defined when exceptions
+// are enabled.
 
-// "support/test_macros.hpp"
-
-// #define TEST_HAS_NO_RTTI
+// UNSUPPORTED: no-exceptions
 
 #include "test_macros.h"
 
-#if defined(TEST_HAS_NO_RTTI)
-#error Macro defined unexpectedly
+#ifdef TEST_HAS_NO_EXCEPTIONS
+#  error "TEST_HAS_NO_EXCEPTIONS should NOT be defined"
 #endif
 
-struct A { virtual ~A() {} };
-struct B : A {};
-
 int main(int, char**) {
-    A* ptr = new B;
-    (void)dynamic_cast<B*>(ptr);
-    delete ptr;
-
-  return 0;
+    try { (void)0; } catch (...) { }
+    return 0;
 }

@@ -156,8 +156,8 @@ void test_cast_non_copyable_type()
 void test_cast_array() {
     int arr[3];
     std::any a(arr);
-    assert(a.type() == typeid(int*)); // contained value is decayed
-//  We can't get an array out
+    RTTI_ASSERT(a.type() == typeid(int*)); // contained value is decayed
+    // We can't get an array out
     int (*p)[3] = std::any_cast<int[3]>(&a);
     assert(p == nullptr);
 }

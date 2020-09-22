@@ -6,20 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: no-exceptions
+// Make sure the TEST_HAS_NO_EXCEPTIONS macro is defined when exceptions are
+// disabled.
 
-// "support/test_macros.hpp"
-
-// #define TEST_HAS_NO_EXCEPTIONS
+// REQUIRES: no-exceptions
 
 #include "test_macros.h"
 
-#if defined(TEST_HAS_NO_EXCEPTIONS)
-#error macro defined unexpectedly
+#ifndef TEST_HAS_NO_EXCEPTIONS
+#  error "TEST_HAS_NO_EXCEPTIONS should be defined"
 #endif
 
 int main(int, char**) {
-    try { ((void)0); } catch (...) {}
-
-  return 0;
+    try { (void)0; } catch (...) { } // expected-error {{exceptions disabled}}
+    return 0;
 }

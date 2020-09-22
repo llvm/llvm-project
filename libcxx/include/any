@@ -156,7 +156,7 @@ namespace __any_imp
   template <class _Tp>
   inline _LIBCPP_INLINE_VISIBILITY
   constexpr const void* __get_fallback_typeid() {
-      return &__unique_typeinfo<decay_t<_Tp>>::__id;
+      return &__unique_typeinfo<remove_cv_t<remove_reference_t<_Tp>>>::__id;
   }
 
   template <class _Tp>

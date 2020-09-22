@@ -50,11 +50,13 @@ int main(int, char**)
         assert(B::count == 1);
         assert(p.use_count() == 1);
         assert(p.get() == ptr);
-        test_deleter<A>* d = std::get_deleter<test_deleter<A> >(p);
         assert(test_deleter<A>::count == 1);
         assert(test_deleter<A>::dealloc_count == 0);
+#ifndef TEST_HAS_NO_RTTI
+        test_deleter<A>* d = std::get_deleter<test_deleter<A> >(p);
         assert(d);
         assert(d->state() == 3);
+#endif
     }
     assert(A::count == 0);
     assert(test_deleter<A>::count == 0);
@@ -67,11 +69,13 @@ int main(int, char**)
         assert(B::count == 1);
         assert(p.use_count() == 1);
         assert(p.get() == ptr);
-        test_deleter<A>* d = std::get_deleter<test_deleter<A> >(p);
         assert(test_deleter<A>::count == 1);
         assert(test_deleter<A>::dealloc_count == 1);
+#ifndef TEST_HAS_NO_RTTI
+        test_deleter<A>* d = std::get_deleter<test_deleter<A> >(p);
         assert(d);
         assert(d->state() == 3);
+#endif
     }
     assert(A::count == 0);
     assert(test_deleter<A>::count == 0);
