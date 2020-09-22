@@ -52,6 +52,7 @@ void registerTestConvertGPUKernelToCubinPass();
 void registerTestConvertGPUKernelToHsacoPass();
 void registerTestDominancePass();
 void registerTestDialect(DialectRegistry &);
+void registerTestDynamicPipelinePass();
 void registerTestExpandTanhPass();
 void registerTestFunc();
 void registerTestGpuMemoryPromotionPass();
@@ -108,6 +109,7 @@ void registerTestPasses() {
   registerTestAffineLoopParametricTilingPass();
   registerTestBufferPlacementPreparationPass();
   registerTestDominancePass();
+  registerTestDynamicPipelinePass();
   registerTestFunc();
   registerTestExpandTanhPass();
   registerTestGpuMemoryPromotionPass();

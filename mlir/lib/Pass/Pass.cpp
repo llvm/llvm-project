@@ -357,8 +357,21 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
     return op->emitOpError() << "trying to schedule a pass on an operation not "
                                 "marked as 'IsolatedFromAbove'";
 
-  pass->passState.emplace(op, am);
-
+  // Initialize the pass state with a callback for the pass to dynamically
+  // execute a pipeline on the currently visited operation.
+  pass->passState.emplace(
+      op, am, [&](OpPassManager &pipeline, Operation *root) {
+        if (!op->isAncestor(root)) {
+          root->emitOpError()
+              << "Trying to schedule a dynamic pipeline on an "
+                 "operation that isn't "
+                 "nested under the current operation the pass is process";
+          return failure();
+        }
+        AnalysisManager nestedAm = am.nest(root);
+        return OpToOpPassAdaptor::runPipeline(pipeline.getPasses(), root,
+                                              nestedAm);
+      });
   // Instrument before the pass has run.
   PassInstrumentor *pi = am.getPassInstrumentor();
   if (pi)
@@ -839,8 +852,6 @@ PassInstrumentor *AnalysisManager::getPassInstrumentor() const {
 
 /// Get an analysis manager for the given child operation.
 AnalysisManager AnalysisManager::nest(Operation *op) {
-  assert(op->getParentOp() == impl->getOperation() &&
-         "'op' has a different parent operation");
   auto it = impl->childAnalyses.find(op);
   if (it == impl->childAnalyses.end())
     it = impl->childAnalyses
