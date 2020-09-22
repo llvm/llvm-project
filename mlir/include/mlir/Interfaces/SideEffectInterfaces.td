@@ -20,7 +20,7 @@ include "mlir/IR/OpBase.td"
 // Resource Bindings
 //===----------------------------------------------------------------------===//
 
-// A generic resource that can be attachted to a general base side effect.
+// A generic resource that can be attached to a general base side effect.
 class Resource<string resourceName> {
   /// The resource that the associated effect is being applied to.
   string name = resourceName;

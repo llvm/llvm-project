@@ -946,7 +946,7 @@ def Vector_TransferReadOp :
     The permutation_map [attribute](../LangRef.md#attributes) is an
     [affine-map](Affine.md#affine-maps) which specifies the transposition on the
     slice to match the vector shape. The permutation map may be implicit and
-    ommitted from parsing and printing if it is the canonical minor identity map
+    omitted from parsing and printing if it is the canonical minor identity map
     (i.e. if it does not permute or broadcast any dimension).
 
     The size of the slice is specified by the size of the vector, given as the
@@ -1110,7 +1110,7 @@ def Vector_TransferWriteOp :
     The permutation_map [attribute](../LangRef.md#attributes) is an
     [affine-map](Affine.md#affine-maps) which specifies the transposition on the
     slice to match the vector shape. The permutation map may be implicit and
-    ommitted from parsing and printing if it is the canonical minor identity map
+    omitted from parsing and printing if it is the canonical minor identity map
     (i.e. if it does not permute or broadcast any dimension).
 
     The size of the slice is specified by the size of the vector.

@@ -231,7 +231,7 @@ def PDL_OperationOp
     omitted.
 
     When used within a rewriting context, i.e. when defined within a
-    `pdl.rewrite`, all of the result types must be "inferrable". This means that
+    `pdl.rewrite`, all of the result types must be "inferable". This means that
     the type must be attributable to either a constant type value or the result
     type of another entity, such as an attribute, the result of a
     `createNative`, or the result type of another operation. If the result type
