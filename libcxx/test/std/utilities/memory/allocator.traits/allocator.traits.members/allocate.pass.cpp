@@ -11,7 +11,7 @@
 // template <class Alloc>
 // struct allocator_traits
 // {
-//     static pointer allocate(allocator_type& a, size_type n);
+//     static constexpr pointer allocate(allocator_type& a, size_type n);
 //     ...
 // };
 
@@ -27,25 +27,37 @@ struct A
 {
     typedef T value_type;
 
-    value_type* allocate(std::size_t n)
+    TEST_CONSTEXPR_CXX20 A() {}
+
+    TEST_CONSTEXPR_CXX20 value_type* allocate(std::size_t n)
     {
         assert(n == 10);
-        return reinterpret_cast<value_type*>(static_cast<std::uintptr_t>(0xDEADBEEF));
+        return &storage;
     }
+
+    value_type storage;
 };
+
+TEST_CONSTEXPR_CXX20 bool test()
+{
+    {
+        A<int> a;
+        assert(std::allocator_traits<A<int> >::allocate(a, 10) == &a.storage);
+    }
+    {
+        typedef A<IncompleteHolder*> Alloc;
+        Alloc a;
+        assert(std::allocator_traits<Alloc>::allocate(a, 10) == &a.storage);
+    }
+
+    return true;
+}
 
 int main(int, char**)
 {
-  {
-    A<int> a;
-    assert(std::allocator_traits<A<int> >::allocate(a, 10) == reinterpret_cast<int*>(static_cast<std::uintptr_t>(0xDEADBEEF)));
-  }
-  {
-    typedef IncompleteHolder* VT;
-    typedef A<VT> Alloc;
-    Alloc a;
-    assert(std::allocator_traits<Alloc >::allocate(a, 10) == reinterpret_cast<VT*>(static_cast<std::uintptr_t>(0xDEADBEEF)));
-  }
-
-  return 0;
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+    return 0;
 }

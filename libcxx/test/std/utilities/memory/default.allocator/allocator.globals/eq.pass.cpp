@@ -11,11 +11,11 @@
 // allocator:
 
 // template <class T1, class T2>
-//   bool
+//   constexpr bool
 //   operator==(const allocator<T1>&, const allocator<T2>&) throw();
 //
 // template <class T1, class T2>
-//   bool
+//   constexpr bool
 //   operator!=(const allocator<T1>&, const allocator<T2>&) throw();
 
 #include <memory>
@@ -23,12 +23,23 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool test()
 {
     std::allocator<int> a1;
     std::allocator<int> a2;
     assert(a1 == a2);
     assert(!(a1 != a2));
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+
+    return 0;
 }
