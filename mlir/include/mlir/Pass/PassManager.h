@@ -36,6 +36,7 @@ class PassInstrumentor;
 
 namespace detail {
 struct OpPassManagerImpl;
+struct PassExecutionState;
 } // end namespace detail
 
 //===----------------------------------------------------------------------===//
@@ -119,6 +120,7 @@ private:
 
   /// Allow access to the constructor.
   friend class PassManager;
+  friend class Pass;
 
   /// Allow access.
   friend detail::OpPassManagerImpl;
