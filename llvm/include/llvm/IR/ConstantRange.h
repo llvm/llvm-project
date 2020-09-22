@@ -265,6 +265,10 @@ public:
   /// in this range.
   unsigned getActiveBits() const;
 
+  /// Compute the maximal number of bits needed to represent every value
+  /// in this signed range.
+  unsigned getMinSignedBits() const;
+
   /// Subtract the specified constant from the endpoints of this constant range.
   ConstantRange subtract(const APInt &CI) const;
 
