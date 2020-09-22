@@ -440,7 +440,7 @@ def Shape_WithOp : Shape_Op<"with_shape", [NoSideEffect]> {
     value and shape equal to `shape`. If the ValueShape and given `shape` are
     non-conformant, then the returned ValueShape will represent an error of
     this mismatch. Similarly if either inputs are in an error state, then an
-    error is popagated.
+    error is propagated.
 
     Usage:
       %0 = shape.with_shape %1, %2 : tensor<...>, !shape.shape

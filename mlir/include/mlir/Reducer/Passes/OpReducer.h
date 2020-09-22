@@ -86,7 +86,7 @@ public:
   /// Return the name of this reducer class.
   StringRef getName() { return impl->getName(); }
 
-  /// Return the initial transformSpace cointaing the transformable indices.
+  /// Return the initial transformSpace containing the transformable indices.
   std::vector<bool> initTransformSpace(ModuleOp module) {
     return impl->initTransformSpace(module);
   }

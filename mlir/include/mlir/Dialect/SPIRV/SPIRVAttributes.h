@@ -43,7 +43,7 @@ public:
   using Base::Base;
 
   /// Gets a InterfaceVarABIAttr.
-  static InterfaceVarABIAttr get(uint32_t descirptorSet, uint32_t binding,
+  static InterfaceVarABIAttr get(uint32_t descriptorSet, uint32_t binding,
                                  Optional<StorageClass> storageClass,
                                  MLIRContext *context);
   static InterfaceVarABIAttr get(IntegerAttr descriptorSet, IntegerAttr binding,

@@ -30,7 +30,7 @@ namespace ReductionTreeUtils {
 /// Update the golden module's content with that of the reduced module.
 void updateGoldenModule(ModuleOp &golden, ModuleOp reduced);
 
-/// Update the the smallest node traversed so far in the reduction tree and
+/// Update the smallest node traversed so far in the reduction tree and
 /// print the debugging information for the currNode being traversed.
 void updateSmallestNode(ReductionNode *currNode, ReductionNode *&smallestNode,
                         std::vector<int> path);
@@ -40,7 +40,7 @@ void updateSmallestNode(ReductionNode *currNode, ReductionNode *&smallestNode,
 std::vector<bool> createTransformSpace(ModuleOp module, int numIndices);
 
 /// Create the specified number of variants by applying the transform method
-/// to different ranges of indices in the parent module. The isDeletion bolean
+/// to different ranges of indices in the parent module. The isDeletion boolean
 /// specifies if the transformation is the deletion of indices.
 void createVariants(ReductionNode *parent, const Tester &test, int numVariants,
                     llvm::function_ref<void(ModuleOp, int, int)> transform,
