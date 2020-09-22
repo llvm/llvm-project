@@ -255,27 +255,24 @@ void syntax::Node::assertInvariantsRecursive() const {
 }
 
 syntax::Leaf *syntax::Tree::findFirstLeaf() {
-  auto *T = this;
-  while (auto *C = T->getFirstChild()) {
+  for (auto *C = getFirstChild(); C; C = C->getNextSibling()) {
     if (auto *L = dyn_cast<syntax::Leaf>(C))
       return L;
-    T = cast<syntax::Tree>(C);
+    if (auto *L = cast<syntax::Tree>(C)->findFirstLeaf())
+      return L;
   }
   return nullptr;
 }
 
 syntax::Leaf *syntax::Tree::findLastLeaf() {
-  auto *T = this;
-  while (auto *C = T->getFirstChild()) {
-    // Find the last child.
-    while (auto *Next = C->getNextSibling())
-      C = Next;
-
+  syntax::Leaf *Last = nullptr;
+  for (auto *C = getFirstChild(); C; C = C->getNextSibling()) {
     if (auto *L = dyn_cast<syntax::Leaf>(C))
-      return L;
-    T = cast<syntax::Tree>(C);
+      Last = L;
+    else if (auto *L = cast<syntax::Tree>(C)->findLastLeaf())
+      Last = L;
   }
-  return nullptr;
+  return Last;
 }
 
 syntax::Node *syntax::Tree::findChild(NodeRole R) {
