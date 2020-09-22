@@ -1952,12 +1952,15 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
          "non-argument/CSR objects cannot be accessed through the frame pointer");
 
   if (isSVE) {
-    int64_t OffsetToSVEArea =
+    int64_t OffsetFromSPToSVEArea =
         MFI.getStackSize() - AFI->getCalleeSavedStackSize();
-    StackOffset FPOffset = {ObjectOffset, MVT::nxv1i8};
+    int64_t OffsetFromFPToSVEArea =
+        -AFI->getCalleeSaveBaseToFrameRecordOffset();
+    StackOffset FPOffset = StackOffset(OffsetFromFPToSVEArea, MVT::i8) +
+                           StackOffset(ObjectOffset, MVT::nxv1i8);
     StackOffset SPOffset = SVEStackSize +
                            StackOffset(ObjectOffset, MVT::nxv1i8) +
-                           StackOffset(OffsetToSVEArea, MVT::i8);
+                           StackOffset(OffsetFromSPToSVEArea, MVT::i8);
     // Always use the FP for SVE spills if available and beneficial.
     if (hasFP(MF) &&
         (SPOffset.getBytes() ||
