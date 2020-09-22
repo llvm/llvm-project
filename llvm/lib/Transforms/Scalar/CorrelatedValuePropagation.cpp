@@ -59,7 +59,8 @@ STATISTIC(NumCmps,      "Number of comparisons propagated");
 STATISTIC(NumReturns,   "Number of return values propagated");
 STATISTIC(NumDeadCases, "Number of switch cases removed");
 STATISTIC(NumSDivs,     "Number of sdiv converted to udiv");
-STATISTIC(NumUDivs,     "Number of udivs whose width was decreased");
+STATISTIC(NumUDivURemsNarrowed,
+          "Number of udivs/urems whose width was decreased");
 STATISTIC(NumAShrs,     "Number of ashr converted to lshr");
 STATISTIC(NumSRems,     "Number of srem converted to urem");
 STATISTIC(NumSExt,      "Number of sext converted to zext");
@@ -649,7 +650,7 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   if (NewWidth >= Instr->getType()->getIntegerBitWidth())
     return false;
 
-  ++NumUDivs;
+  ++NumUDivURemsNarrowed;
   IRBuilder<> B{Instr};
   auto *TruncTy = Type::getIntNTy(Instr->getContext(), NewWidth);
   auto *LHS = B.CreateTruncOrBitCast(Instr->getOperand(0), TruncTy,
