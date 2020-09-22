@@ -90,6 +90,9 @@ public:
   void printAsOperand(raw_ostream &OS, VPSlotTracker &Tracker) const;
   void print(raw_ostream &OS, VPSlotTracker &Tracker) const;
 
+  /// Dump the value to stderr (for debugging).
+  void dump() const;
+
   unsigned getNumUsers() const { return Users.size(); }
   void addUser(VPUser &User) { Users.push_back(&User); }
 
