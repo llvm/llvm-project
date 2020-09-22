@@ -18,6 +18,12 @@
 #include <memory>
 #include <set>
 
+namespace llvm {
+namespace json {
+class Object;
+}
+} // namespace llvm
+
 namespace lldb_private {
 typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp,
                                          const ArchSpec &arch);
@@ -105,6 +111,7 @@ typedef lldb::REPLSP (*REPLCreateInstance)(Status &error,
                                            const char *repl_options);
 typedef int (*ComparisonFunction)(const void *, const void *);
 typedef void (*DebuggerInitializeCallback)(Debugger &debugger);
+typedef lldb::TraceSP (*TraceCreateInstance)();
 
 } // namespace lldb_private
 
