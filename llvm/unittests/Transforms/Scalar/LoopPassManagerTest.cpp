@@ -1390,7 +1390,7 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
   // have no PHI nodes and there is always a single i-dom.
   auto EraseLoop = [](Loop &L, BasicBlock &IDomBB,
                       LoopStandardAnalysisResults &AR, LPMUpdater &Updater) {
-    assert(L.empty() && "Can only delete leaf loops with this routine!");
+    assert(L.isInnermost() && "Can only delete leaf loops with this routine!");
     SmallVector<BasicBlock *, 4> LoopBBs(L.block_begin(), L.block_end());
     Updater.markLoopAsDeleted(L, L.getName());
     IDomBB.getTerminator()->replaceUsesOfWith(L.getHeader(),
