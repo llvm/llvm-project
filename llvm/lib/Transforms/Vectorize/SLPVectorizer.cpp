@@ -7421,9 +7421,7 @@ static bool tryToVectorizeHorReductionOrInstOperands(
 bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Value *V,
                                                  BasicBlock *BB, BoUpSLP &R,
                                                  TargetTransformInfo *TTI) {
-  if (!V)
-    return false;
-  auto *I = dyn_cast<Instruction>(V);
+  auto *I = dyn_cast_or_null<Instruction>(V);
   if (!I)
     return false;
 
