@@ -20,7 +20,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
-#include <variant>
 
 namespace fir {
 class CharBoxValue;

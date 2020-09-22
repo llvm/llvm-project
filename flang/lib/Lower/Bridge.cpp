@@ -12,6 +12,7 @@
 
 #include "flang/Lower/Bridge.h"
 #include "../../runtime/iostat.h"
+#include "BoxAnalyzer.h"
 #include "SymbolMap.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/CharacterExpr.h"
@@ -95,21 +96,6 @@ struct IncrementLoopInfo {
 };
 } // namespace
 
-static bool symIsChar(const Fortran::semantics::Symbol &sym) {
-  return sym.GetType()->category() ==
-         Fortran::semantics::DeclTypeSpec::Character;
-}
-
-static bool symIsArray(const Fortran::semantics::Symbol &sym) {
-  const auto *det = sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
-  return det && det->IsArray();
-}
-
-static bool isExplicitShape(const Fortran::semantics::Symbol &sym) {
-  const auto *det = sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
-  return det && det->IsArray() && det->shape().IsExplicitShape();
-}
-
 // Retrieve a copy of a character literal string from a SomeExpr.
 template <int KIND>
 static llvm::Optional<std::tuple<std::string, std::size_t>>
@@ -148,102 +134,6 @@ getCharacterLiteralCopy(const std::optional<A> &x) {
     return getCharacterLiteralCopy(*x);
   return llvm::None;
 }
-
-namespace {
-struct SymbolBoxAnalyzer {
-  using FromBox = std::monostate;
-
-  explicit SymbolBoxAnalyzer(const Fortran::semantics::Symbol &sym)
-      : sym{sym} {}
-  SymbolBoxAnalyzer() = delete;
-  SymbolBoxAnalyzer(const SymbolBoxAnalyzer &) = delete;
-
-  /// Run the analysis on the symbol. Used to determine the type of index to
-  /// save in the symbol map.
-  void analyze() {
-    isChar = symIsChar(sym);
-    if (isChar) {
-      const auto &lenParam = sym.GetType()->characterTypeSpec().length();
-      if (auto expr = lenParam.GetExplicit()) {
-        auto len = Fortran::evaluate::AsGenericExpr(std::move(*expr));
-        auto asInt = Fortran::evaluate::ToInt64(len);
-        if (asInt) {
-          charLen = *asInt;
-        } else {
-          charLen = len;
-          staticSize = false;
-        }
-      } else {
-        charLen = FromBox{};
-        staticSize = false;
-      }
-    }
-    isArray = symIsArray(sym);
-    for (const auto &subs : getSymShape()) {
-      auto low = subs.lbound().GetExplicit();
-      auto high = subs.ubound().GetExplicit();
-      if (staticSize && low && high) {
-        auto lb = Fortran::evaluate::ToInt64(*low);
-        auto ub = Fortran::evaluate::ToInt64(*high);
-        if (lb && ub) {
-          staticLBound.push_back(*lb);
-          staticShape.push_back(*ub - *lb + 1);
-          continue;
-        }
-      }
-      staticSize = false;
-      dynamicBound.push_back(&subs);
-    }
-  }
-
-  /// Get the shape of an analyzed symbol.
-  const Fortran::semantics::ArraySpec &getSymShape() {
-    return sym.get<Fortran::semantics::ObjectEntityDetails>().shape();
-  }
-
-  /// Get the CHARACTER's LEN value, if there is one.
-  llvm::Optional<int64_t> getCharLenConst() {
-    if (isChar)
-      if (auto *res = std::get_if<int64_t>(&charLen))
-        return {*res};
-    return {};
-  }
-
-  /// Get the CHARACTER's LEN expression, if there is one.
-  llvm::Optional<Fortran::semantics::SomeExpr> getCharLenExpr() {
-    if (isChar)
-      if (auto *res = std::get_if<Fortran::semantics::SomeExpr>(&charLen))
-        return {*res};
-    return {};
-  }
-
-  /// Is it a CHARACTER with a constant LEN?
-  bool charConstSize() const {
-    return isChar && std::holds_alternative<int64_t>(charLen);
-  }
-
-  /// Symbol is neither a CHARACTER nor an array.
-  bool isTrivial() const { return !(isChar || isArray); }
-
-  /// Return true iff all the lower bound values are the constant 1.
-  bool lboundIsAllOnes() const {
-    return staticSize &&
-           llvm::all_of(staticLBound, [](int64_t v) { return v == 1; });
-  }
-
-  llvm::SmallVector<int64_t, 8> staticLBound;
-  llvm::SmallVector<int64_t, 8> staticShape;
-  llvm::SmallVector<const Fortran::semantics::ShapeSpec *, 8> dynamicBound;
-  bool staticSize{true};
-  bool isChar{false};
-  bool isArray{false};
-
-private:
-  std::variant<FromBox, int64_t, Fortran::semantics::SomeExpr> charLen{
-      FromBox{}};
-  const Fortran::semantics::Symbol &sym;
-};
-} // namespace
 
 //===----------------------------------------------------------------------===//
 // FirConverter
@@ -1887,7 +1777,7 @@ private:
     } else if (sym.has<Fortran::semantics::CommonBlockDetails>()) {
       llvm_unreachable("COMMON symbol processed elsewhere");
     } else {
-      TODO(""); // Procedure pointer or something else
+      TODO("global"); // Procedure pointer or something else
     }
   }
 
@@ -2027,13 +1917,17 @@ private:
   /// which its properties depend will already have been visited.
   void instantiateLocal(const Fortran::lower::pft::Variable &var,
                         llvm::DenseMap<std::size_t, mlir::Value> &storeMap) {
+    assert(!var.isAlias());
+    mapSymbolAttributes(var, storeMap);
+  }
+
+  void
+  instantiateLocalAlias(const Fortran::lower::pft::Variable &var,
+                        llvm::DenseMap<std::size_t, mlir::Value> &storeMap) {
+    assert(var.isAlias());
     const auto &sym = var.getSymbol();
     const auto loc = genLocation(sym.name());
     auto idxTy = builder->getIndexType();
-    if (!var.isAlias()) {
-      mapSymbolAttributes(var, storeMap, mlir::Value{});
-      return;
-    }
     auto aliasOffset = var.getAlias();
     assert(storeMap.count(aliasOffset));
     auto store = storeMap.find(aliasOffset)->second;
@@ -2052,97 +1946,337 @@ private:
 
   void mapSymbolAttributes(const Fortran::lower::pft::Variable &var,
                            llvm::DenseMap<std::size_t, mlir::Value> &storeMap,
-                           mlir::Value preAlloc) {
+                           mlir::Value preAlloc = {}) {
     const auto &sym = var.getSymbol();
     const auto loc = genLocation(sym.name());
     auto idxTy = builder->getIndexType();
     const auto isDummy = Fortran::semantics::IsDummy(sym);
     const auto isResult = Fortran::semantics::IsFunctionResult(sym);
+    const auto replace = isDummy || isResult;
+    const auto isHostAssoc =
+        Fortran::semantics::IsHostAssociated(sym, sym.owner());
     Fortran::lower::CharacterExprHelper charHelp{*builder, loc};
-    SymbolBoxAnalyzer sba(sym);
-    sba.analyze();
+    Fortran::lower::BoxAnalyzer sba;
+    sba.analyze(sym);
 
-    if (sba.isTrivial()) {
-      if (isDummy) {
-        // This is an argument.
-        assert(lookupSymbol(sym) && "must already be in map");
-        return;
-      }
-      // TODO: What about lower host-associated variables? (They probably need
-      // to be handled as dummy parameters.)
-
-      // Otherwise, it's a local variable or function result.
-      auto local = createNewLocal(loc, var, preAlloc);
-      addSymbol(sym, local);
-      return;
-    }
-
-    // The non-trivial cases are when we have an argument or local that has a
-    // repetition value. Arguments might be passed as simple pointers and need
-    // to be cast to a multi-dimensional array with constant bounds (possibly
-    // with a missing column), bounds computed in the callee (here), or with
-    // bounds from the caller (boxed somewhere else). Locals have the same
-    // properties except they are never boxed arguments from the caller and
-    // never having a missing column size.
-
-    // Arguments (and some results) already have a symbolBox with the address.
-    auto maybeSymbolBox = lookupSymbol(sym);
-    mlir::Value addr =
-        maybeSymbolBox ? maybeSymbolBox.getAddr() : mlir::Value{};
-    mlir::Value len;
-    [[maybe_unused]] bool mustBeDummy = false;
-
-    if (sba.isChar) {
-      // if element type is a CHARACTER, determine the LEN value
-      if (isDummy || isResult) {
-        auto unboxchar = charHelp.createUnboxChar(addr);
-        addr = unboxchar.first;
-        if (auto c = sba.getCharLenConst()) {
-          // Set/override LEN with a constant
-          len = builder->createIntegerConstant(loc, idxTy, *c);
-        } else if (auto e = sba.getCharLenExpr()) {
-          // Set/override LEN with an expression
-          len = createFIRExpr(loc, &*e);
+    // The origin must be \vec{1}.
+    auto populateShape = [&](auto &shapes, const auto &bounds) {
+      for (auto *spec : bounds) {
+        if (auto low = spec->lbound().GetExplicit()) {
+          if (auto high = spec->ubound().GetExplicit()) {
+            Fortran::semantics::SomeExpr highEx{*high};
+            auto ub = createFIRExpr(loc, &highEx);
+            shapes.emplace_back(builder->createConvert(loc, idxTy, ub));
+          } else if (spec->ubound().isAssumed()) {
+            shapes.emplace_back(mlir::Value{});
+          } else {
+            TODO("upper bound");
+          }
         } else {
-          // LEN is from the boxchar
-          len = unboxchar.second;
-          mustBeDummy = true;
+          TODO("lower bound");
         }
-        // XXX: Subsequent lowering expects a CHARACTER variable to not be in a
-        // boxchar. We assert that here. We might want to reconsider this
-        // precondition.
-        assert(!addr.getType().isa<fir::BoxCharType>() &&
-               "dummy CHARACTER argument must be unboxed");
-      } else {
-        // local CHARACTER variable
-        if (auto c = sba.getCharLenConst())
-          len = builder->createIntegerConstant(loc, idxTy, *c);
-        else if (auto e = sba.getCharLenExpr())
-          len = builder->createConvert(loc, charHelp.getLengthType(),
-                                       createFIRExpr(loc, &*e));
-        else
-          len = builder->createIntegerConstant(loc, idxTy, sym.size());
-        assert(!addr);
       }
-    }
+    };
 
-    if (sba.isArray) {
-      // if object is an array process the lower bound and extent values
-      llvm::SmallVector<mlir::Value, 8> extents;
-      llvm::SmallVector<mlir::Value, 8> lbounds;
-      mustBeDummy = !isExplicitShape(sym) &&
-                    !Fortran::semantics::IsAllocatableOrPointer(sym);
-      if (sba.staticSize) {
-        // object shape is constant
-        auto castTy = builder->getRefType(genType(var));
-        if (addr)
-          addr = builder->createConvert(loc, castTy, addr);
-        if (sba.lboundIsAllOnes()) {
-          // if lower bounds are all ones, build simple shaped object
-          llvm::SmallVector<mlir::Value, 8> shape;
-          for (auto i : sba.staticShape)
-            shape.push_back(builder->createIntegerConstant(loc, idxTy, i));
-          if (sba.isChar) {
+    auto genLBoundsAndExtents =
+        [&](const Fortran::semantics::SomeExpr &lowEx,
+            const Fortran::semantics::SomeExpr &highEx) {
+          auto lb = createFIRExpr(loc, &lowEx);
+          auto ub = createFIRExpr(loc, &highEx);
+          auto ty = ub.getType();
+          auto diff = builder->create<mlir::SubIOp>(loc, ty, ub, lb);
+          auto one = builder->createIntegerConstant(loc, ty, 1);
+          auto sz = builder->create<mlir::AddIOp>(loc, ty, diff, one);
+          auto idx = builder->createConvert(loc, idxTy, sz);
+          return std::pair<mlir::Value, mlir::Value>{lb, idx};
+        };
+
+    // The origin is not \vec{1}.
+    auto populateLBoundsExtents = [&](auto &lbounds, auto &extents,
+                                      const auto &bounds) {
+      for (auto *spec : bounds) {
+        if (auto low = spec->lbound().GetExplicit()) {
+          if (auto high = spec->ubound().GetExplicit()) {
+            // let the folder deal with the common `ub - <const> + 1` case
+            auto [lb, idx] =
+                genLBoundsAndExtents(Fortran::semantics::SomeExpr{*low},
+                                     Fortran::semantics::SomeExpr{*high});
+            lbounds.emplace_back(lb);
+            extents.emplace_back(idx);
+            continue;
+          } else if (spec->ubound().isAssumed()) {
+            // An assumed size array. The extent is not computed.
+            Fortran::semantics::SomeExpr lowEx{*low};
+            lbounds.emplace_back(createFIRExpr(loc, &lowEx));
+            extents.emplace_back(mlir::Value{});
+          } else {
+            TODO("upper bound");
+          }
+        } else {
+          TODO("lower bound");
+        }
+      }
+    };
+
+    if (isHostAssoc)
+      TODO("host associated");
+
+    sba.match(
+        //===--------------------------------------------------------------===//
+        // Trivial case.
+        //===--------------------------------------------------------------===//
+        [&](const Fortran::lower::details::ScalarSym &) {
+          if (isDummy) {
+            // This is an argument.
+            if (!lookupSymbol(sym))
+              mlir::emitError(loc, "symbol \"")
+                  << toStringRef(sym.name()) << "\" must already be in map";
+            return;
+          }
+          // Otherwise, it's a local variable or function result.
+          auto local = createNewLocal(loc, var, preAlloc);
+          addSymbol(sym, local);
+        },
+
+        //===--------------------------------------------------------------===//
+        // The non-trivial cases are when we have an argument or local that has
+        // a repetition value. Arguments might be passed as simple pointers and
+        // need to be cast to a multi-dimensional array with constant bounds
+        // (possibly with a missing column), bounds computed in the callee
+        // (here), or with bounds from the caller (boxed somewhere else). Locals
+        // have the same properties except they are never boxed arguments from
+        // the caller and never having a missing column size.
+        //===--------------------------------------------------------------===//
+
+        [&](const Fortran::lower::details::ScalarStaticChar &x) {
+          // type is a CHARACTER, determine the LEN value
+          auto charLen = x.charLen();
+          if (replace) {
+            auto symBox = lookupSymbol(sym);
+            auto unboxchar = charHelp.createUnboxChar(symBox.getAddr());
+            auto boxAddr = unboxchar.first;
+            // Set/override LEN with a constant
+            auto len = builder->createIntegerConstant(loc, idxTy, charLen);
+            addCharSymbol(sym, boxAddr, len, true);
+            return;
+          }
+          auto len = builder->createIntegerConstant(loc, idxTy, charLen);
+          if (preAlloc) {
+            addCharSymbol(sym, preAlloc, len);
+            return;
+          }
+          auto charTy = genType(var);
+          auto local = charHelp.createCharacterTemp(charTy, charLen);
+          addCharSymbol(sym, local.getBuffer(), local.getLen());
+        },
+
+        //===--------------------------------------------------------------===//
+
+        [&](const Fortran::lower::details::ScalarDynamicChar &x) {
+          // type is a CHARACTER, determine the LEN value
+          auto charLen = x.charLen();
+          if (replace) {
+            auto symBox = lookupSymbol(sym);
+            auto unboxchar = charHelp.createUnboxChar(symBox.getAddr());
+            auto boxAddr = unboxchar.first;
+            mlir::Value len;
+            if (charLen) {
+              // Set/override LEN with an expression
+              len = createFIRExpr(loc, &*charLen);
+            } else {
+              // LEN is from the boxchar
+              len = unboxchar.second;
+            }
+            addCharSymbol(sym, boxAddr, len, true);
+            return;
+          }
+          // local CHARACTER variable
+          mlir::Value len;
+          if (charLen)
+            len = createFIRExpr(loc, &*charLen);
+          else
+            len = builder->createIntegerConstant(loc, idxTy, sym.size());
+          if (preAlloc) {
+            addCharSymbol(sym, preAlloc, len);
+            return;
+          }
+          auto local = charHelp.createCharacterTemp(genType(var), len);
+          addCharSymbol(sym, local.getBuffer(), local.getLen());
+        },
+
+        //===--------------------------------------------------------------===//
+
+        [&](const Fortran::lower::details::StaticArray &x) {
+          // object shape is constant, not a character
+          auto castTy = builder->getRefType(genType(var));
+          mlir::Value addr = lookupSymbol(sym).getAddr();
+          if (addr)
+            addr = builder->createConvert(loc, castTy, addr);
+          if (x.lboundAllOnes()) {
+            // if lower bounds are all ones, build simple shaped object
+            llvm::SmallVector<mlir::Value, 8> shape;
+            for (auto i : x.shapes)
+              shape.push_back(builder->createIntegerConstant(loc, idxTy, i));
+            mlir::Value local =
+                replace ? addr : createNewLocal(loc, var, preAlloc);
+            localSymbols.addSymbolWithShape(sym, local, shape, replace);
+            return;
+          }
+          // If object is an array process the lower bound and extent values by
+          // constructing constants and populating the lbounds and extents.
+          llvm::SmallVector<mlir::Value, 8> extents;
+          llvm::SmallVector<mlir::Value, 8> lbounds;
+          for (auto [fst, snd] : llvm::zip(x.lbounds, x.shapes)) {
+            lbounds.emplace_back(
+                builder->createIntegerConstant(loc, idxTy, fst));
+            extents.emplace_back(
+                builder->createIntegerConstant(loc, idxTy, snd));
+          }
+          mlir::Value local =
+              replace ? addr : createNewLocal(loc, var, preAlloc, extents);
+          assert(replace || Fortran::lower::isExplicitShape(sym) ||
+                 Fortran::semantics::IsAllocatableOrPointer(sym));
+          localSymbols.addSymbolWithBounds(sym, local, extents, lbounds,
+                                           replace);
+        },
+
+        //===--------------------------------------------------------------===//
+
+        [&](const Fortran::lower::details::DynamicArray &x) {
+          // cast to the known constant parts from the declaration
+          auto castTy = builder->getRefType(genType(var));
+          mlir::Value addr = lookupSymbol(sym).getAddr();
+          if (addr)
+            addr = builder->createConvert(loc, castTy, addr);
+          if (x.lboundAllOnes()) {
+            // if lower bounds are all ones, build simple shaped object
+            llvm::SmallVector<mlir::Value, 8> shapes;
+            populateShape(shapes, x.bounds);
+            if (isDummy || isResult) {
+              localSymbols.addSymbolWithShape(sym, addr, shapes, true);
+              return;
+            }
+            // local array with computed bounds
+            assert(Fortran::lower::isExplicitShape(sym) ||
+                   Fortran::semantics::IsAllocatableOrPointer(sym));
+            auto local = createNewLocal(loc, var, preAlloc, shapes);
+            localSymbols.addSymbolWithShape(sym, local, shapes);
+            return;
+          }
+          // if object is an array process the lower bound and extent values
+          llvm::SmallVector<mlir::Value, 8> extents;
+          llvm::SmallVector<mlir::Value, 8> lbounds;
+          populateLBoundsExtents(lbounds, extents, x.bounds);
+          if (isDummy || isResult) {
+            localSymbols.addSymbolWithBounds(sym, addr, extents, lbounds, true);
+            return;
+          }
+          // local array with computed bounds
+          assert(Fortran::lower::isExplicitShape(sym) ||
+                 Fortran::semantics::IsAllocatableOrPointer(sym));
+          auto local = createNewLocal(loc, var, preAlloc, extents);
+          localSymbols.addSymbolWithBounds(sym, local, extents, lbounds);
+        },
+
+        //===--------------------------------------------------------------===//
+
+        [&](const Fortran::lower::details::StaticArrayStaticChar &x) {
+          // if element type is a CHARACTER, determine the LEN value
+          auto charLen = x.charLen();
+          mlir::Value addr;
+          mlir::Value len;
+          if (isDummy || isResult) {
+            auto symBox = lookupSymbol(sym);
+            auto unboxchar = charHelp.createUnboxChar(symBox.getAddr());
+            addr = unboxchar.first;
+            // Set/override LEN with a constant
+            len = builder->createIntegerConstant(loc, idxTy, charLen);
+          } else {
+            // local CHARACTER variable
+            len = builder->createIntegerConstant(loc, idxTy, charLen);
+          }
+
+          // object shape is constant
+          auto castTy = builder->getRefType(genType(var));
+          if (addr)
+            addr = builder->createConvert(loc, castTy, addr);
+
+          if (x.lboundAllOnes()) {
+            // if lower bounds are all ones, build simple shaped object
+            llvm::SmallVector<mlir::Value, 8> shape;
+            for (auto i : x.shapes)
+              shape.push_back(builder->createIntegerConstant(loc, idxTy, i));
+            mlir::Value local =
+                replace ? addr : createNewLocal(loc, var, preAlloc);
+            localSymbols.addCharSymbolWithShape(sym, local, len, shape,
+                                                replace);
+            return;
+          }
+
+          // if object is an array process the lower bound and extent values
+          llvm::SmallVector<mlir::Value, 8> extents;
+          llvm::SmallVector<mlir::Value, 8> lbounds;
+          // construct constants and populate `bounds`
+          for (auto [fst, snd] : llvm::zip(x.lbounds, x.shapes)) {
+            lbounds.emplace_back(
+                builder->createIntegerConstant(loc, idxTy, fst));
+            extents.emplace_back(
+                builder->createIntegerConstant(loc, idxTy, snd));
+          }
+
+          if (isDummy || isResult) {
+            localSymbols.addCharSymbolWithBounds(sym, addr, len, extents,
+                                                 lbounds, true);
+            return;
+          }
+          // local CHARACTER array with computed bounds
+          assert(Fortran::lower::isExplicitShape(sym) ||
+                 Fortran::semantics::IsAllocatableOrPointer(sym));
+          llvm::SmallVector<mlir::Value, 8> shape = {len};
+          shape.append(extents.begin(), extents.end());
+          auto local = createNewLocal(loc, var, preAlloc, shape);
+          localSymbols.addCharSymbolWithBounds(sym, local, len, extents,
+                                               lbounds);
+        },
+
+        //===--------------------------------------------------------------===//
+
+        [&](const Fortran::lower::details::StaticArrayDynamicChar &x) {
+          mlir::Value addr;
+          mlir::Value len;
+          bool mustBeDummy = false;
+          auto charLen = x.charLen();
+          // if element type is a CHARACTER, determine the LEN value
+          if (isDummy || isResult) {
+            auto symBox = lookupSymbol(sym);
+            auto unboxchar = charHelp.createUnboxChar(symBox.getAddr());
+            addr = unboxchar.first;
+            if (charLen) {
+              // Set/override LEN with an expression
+              len = createFIRExpr(loc, &*charLen);
+            } else {
+              // LEN is from the boxchar
+              len = unboxchar.second;
+              mustBeDummy = true;
+            }
+          } else {
+            // local CHARACTER variable
+            if (charLen)
+              len = createFIRExpr(loc, &*charLen);
+            else
+              len = builder->createIntegerConstant(loc, idxTy, sym.size());
+          }
+
+          // cast to the known constant parts from the declaration
+          auto castTy = builder->getRefType(genType(var));
+          if (addr)
+            addr = builder->createConvert(loc, castTy, addr);
+
+          if (x.lboundAllOnes()) {
+            // if lower bounds are all ones, build simple shaped object
+            llvm::SmallVector<mlir::Value, 8> shape;
+            for (auto i : x.shapes)
+              shape.push_back(builder->createIntegerConstant(loc, idxTy, i));
             if (isDummy || isResult) {
               localSymbols.addCharSymbolWithShape(sym, addr, len, shape, true);
               return;
@@ -2152,104 +2286,158 @@ private:
             localSymbols.addCharSymbolWithShape(sym, local, len, shape);
             return;
           }
+
+          // if object is an array process the lower bound and extent values
+          llvm::SmallVector<mlir::Value, 8> extents;
+          llvm::SmallVector<mlir::Value, 8> lbounds;
+
+          // construct constants and populate `bounds`
+          for (auto [fst, snd] : llvm::zip(x.lbounds, x.shapes)) {
+            lbounds.emplace_back(
+                builder->createIntegerConstant(loc, idxTy, fst));
+            extents.emplace_back(
+                builder->createIntegerConstant(loc, idxTy, snd));
+          }
           if (isDummy || isResult) {
-            localSymbols.addSymbolWithShape(sym, addr, shape, true);
+            localSymbols.addCharSymbolWithBounds(sym, addr, len, extents,
+                                                 lbounds, true);
             return;
           }
-          // local array with constant size
-          auto local = createNewLocal(loc, var, preAlloc);
-          localSymbols.addSymbolWithShape(sym, local, shape);
-          return;
-        }
-      } else {
-        // cast to the known constant parts from the declaration
-        auto castTy = builder->getRefType(genType(var));
-        if (addr)
-          addr = builder->createConvert(loc, castTy, addr);
-      }
-      // construct constants and populate `bounds`
-      for (const auto &i : llvm::zip(sba.staticLBound, sba.staticShape)) {
-        auto fst = builder->createIntegerConstant(loc, idxTy, std::get<0>(i));
-        auto snd = builder->createIntegerConstant(loc, idxTy, std::get<1>(i));
-        lbounds.emplace_back(fst);
-        extents.emplace_back(snd);
-      }
+          // local CHARACTER array with computed bounds
+          assert((!mustBeDummy) &&
+                 (Fortran::lower::isExplicitShape(sym) ||
+                  Fortran::semantics::IsAllocatableOrPointer(sym)));
+          llvm::SmallVector<mlir::Value, 8> shape;
+          shape.push_back(len);
+          shape.append(extents.begin(), extents.end());
+          auto local = createNewLocal(loc, var, preAlloc, shape);
+          localSymbols.addCharSymbolWithBounds(sym, local, len, extents,
+                                               lbounds);
+        },
 
-      // default array case: populate `bounds` with lower and extent values
-      for (const auto &spec : sba.dynamicBound) {
-        auto low = spec->lbound().GetExplicit();
-        auto high = spec->ubound().GetExplicit();
-        if (low && high) {
-          // let the folder deal with the common `ub - 1 + 1` case
-          Fortran::semantics::SomeExpr lowEx{*low};
-          auto lb = createFIRExpr(loc, &lowEx);
-          Fortran::semantics::SomeExpr highEx{*high};
-          auto ub = createFIRExpr(loc, &highEx);
-          auto ty = ub.getType();
-          auto diff = builder->create<mlir::SubIOp>(loc, ty, ub, lb);
-          auto one = builder->createIntegerConstant(loc, ty, 1);
-          auto sz = builder->create<mlir::AddIOp>(loc, ty, diff, one);
-          auto idx = builder->createConvert(loc, idxTy, sz);
-          lbounds.emplace_back(lb);
-          extents.emplace_back(idx);
-          continue;
-        }
-        if (low && spec->ubound().isAssumed()) {
-          // An assumed size array. The extent is not computed.
-          Fortran::semantics::SomeExpr lowEx{*low};
-          auto lb = createFIRExpr(loc, &lowEx);
-          lbounds.emplace_back(lb);
-          extents.emplace_back(mlir::Value{});
-        }
-        break;
-      }
+        //===--------------------------------------------------------------===//
 
-      if (sba.isChar) {
-        if (isDummy || isResult) {
-          localSymbols.addCharSymbolWithBounds(sym, addr, len, extents, lbounds,
-                                               true);
-          return;
-        }
-        // local CHARACTER array with computed bounds
-        assert(!mustBeDummy);
-        llvm::SmallVector<mlir::Value, 8> shape;
-        shape.push_back(len);
-        shape.append(extents.begin(), extents.end());
-        auto local = createNewLocal(loc, var, preAlloc, shape);
-        localSymbols.addCharSymbolWithBounds(sym, local, len, extents, lbounds);
-        return;
-      }
-      if (isDummy || isResult) {
-        localSymbols.addSymbolWithBounds(sym, addr, extents, lbounds, true);
-        return;
-      }
-      // local array with computed bounds
-      assert(!mustBeDummy);
-      auto local = createNewLocal(loc, var, preAlloc, extents);
-      localSymbols.addSymbolWithBounds(sym, local, extents, lbounds);
-      return;
-    }
+        [&](const Fortran::lower::details::DynamicArrayStaticChar &x) {
+          mlir::Value addr;
+          mlir::Value len;
+          auto charLen = x.charLen();
+          // if element type is a CHARACTER, determine the LEN value
+          if (isDummy || isResult) {
+            auto symBox = lookupSymbol(sym);
+            auto unboxchar = charHelp.createUnboxChar(symBox.getAddr());
+            addr = unboxchar.first;
+            // Set/override LEN with a constant
+            len = builder->createIntegerConstant(loc, idxTy, charLen);
+          } else {
+            // local CHARACTER variable
+            len = builder->createIntegerConstant(loc, idxTy, charLen);
+          }
 
-    // not an array, so process as scalar argument
-    if (sba.isChar) {
-      if (isDummy || isResult) {
-        addCharSymbol(sym, addr, len, true);
-        return;
-      }
-      assert(!mustBeDummy);
-      auto charTy = genType(var);
-      fir::CharBoxValue local = preAlloc
-                                    ? fir::CharBoxValue(preAlloc, len)
-                                    : charHelp.createCharacterTemp(charTy, len);
-      addCharSymbol(sym, local.getBuffer(), local.getLen());
-      return;
-    }
-    if (isDummy) {
-      addSymbol(sym, addr, true);
-      return;
-    }
-    auto local = createNewLocal(loc, var, preAlloc);
-    addSymbol(sym, local);
+          // cast to the known constant parts from the declaration
+          auto castTy = builder->getRefType(genType(var));
+          if (addr)
+            addr = builder->createConvert(loc, castTy, addr);
+          if (x.lboundAllOnes()) {
+            // if lower bounds are all ones, build simple shaped object
+            llvm::SmallVector<mlir::Value, 8> shape;
+            populateShape(shape, x.bounds);
+            if (isDummy || isResult) {
+              localSymbols.addCharSymbolWithShape(sym, addr, len, shape, true);
+              return;
+            }
+            // local CHARACTER array with constant size
+            auto local = createNewLocal(loc, var, preAlloc);
+            localSymbols.addCharSymbolWithShape(sym, local, len, shape);
+            return;
+          }
+          // if object is an array process the lower bound and extent values
+          llvm::SmallVector<mlir::Value, 8> extents;
+          llvm::SmallVector<mlir::Value, 8> lbounds;
+          populateLBoundsExtents(lbounds, extents, x.bounds);
+          if (isDummy || isResult) {
+            localSymbols.addCharSymbolWithBounds(sym, addr, len, extents,
+                                                 lbounds, true);
+            return;
+          }
+          // local CHARACTER array with computed bounds
+          assert(Fortran::lower::isExplicitShape(sym) ||
+                 Fortran::semantics::IsAllocatableOrPointer(sym));
+          llvm::SmallVector<mlir::Value, 8> shape;
+          shape.push_back(len);
+          shape.append(extents.begin(), extents.end());
+          auto local = createNewLocal(loc, var, preAlloc, shape);
+          localSymbols.addCharSymbolWithBounds(sym, local, len, extents,
+                                               lbounds);
+        },
+
+        //===--------------------------------------------------------------===//
+
+        [&](const Fortran::lower::details::DynamicArrayDynamicChar &x) {
+          mlir::Value addr;
+          mlir::Value len;
+          auto charLen = x.charLen();
+          // if element type is a CHARACTER, determine the LEN value
+          if (isDummy || isResult) {
+            auto symBox = lookupSymbol(sym);
+            auto unboxchar = charHelp.createUnboxChar(symBox.getAddr());
+            addr = unboxchar.first;
+            if (charLen) {
+              // Set/override LEN with an expression
+              len = createFIRExpr(loc, &*charLen);
+            } else {
+              len = unboxchar.second;
+            }
+          } else {
+            // local CHARACTER variable
+            if (charLen)
+              len = createFIRExpr(loc, &*charLen);
+            else
+              len = builder->createIntegerConstant(loc, idxTy, sym.size());
+          }
+
+          // cast to the known constant parts from the declaration
+          auto castTy = builder->getRefType(genType(var));
+          if (addr)
+            addr = builder->createConvert(loc, castTy, addr);
+          if (x.lboundAllOnes()) {
+            // if lower bounds are all ones, build simple shaped object
+            llvm::SmallVector<mlir::Value, 8> shape;
+            populateShape(shape, x.bounds);
+            if (isDummy || isResult) {
+              localSymbols.addCharSymbolWithShape(sym, addr, len, shape, true);
+              return;
+            }
+            // local CHARACTER array with constant size
+            auto local = createNewLocal(loc, var, preAlloc);
+            localSymbols.addCharSymbolWithShape(sym, local, len, shape);
+            return;
+          }
+          // Process the lower bound and extent values.
+          llvm::SmallVector<mlir::Value, 8> extents;
+          llvm::SmallVector<mlir::Value, 8> lbounds;
+          populateLBoundsExtents(lbounds, extents, x.bounds);
+          if (isDummy || isResult) {
+            localSymbols.addCharSymbolWithBounds(sym, addr, len, extents,
+                                                 lbounds, true);
+            return;
+          }
+          // local CHARACTER array with computed bounds
+          assert(Fortran::lower::isExplicitShape(sym) ||
+                 Fortran::semantics::IsAllocatableOrPointer(sym));
+          llvm::SmallVector<mlir::Value, 8> shape;
+          shape.push_back(len);
+          shape.append(extents.begin(), extents.end());
+          auto local = createNewLocal(loc, var, preAlloc, shape);
+          localSymbols.addCharSymbolWithBounds(sym, local, len, extents,
+                                               lbounds);
+        },
+
+        //===--------------------------------------------------------------===//
+
+        [&](const Fortran::lower::BoxAnalyzer::None &) {
+          mlir::emitError(loc, "symbol analysis failed on ")
+              << toStringRef(sym.name());
+        });
   }
 
   using CommonBlockMap =
@@ -2415,6 +2603,8 @@ private:
           storeMap, *cmnBlkMap);
     } else if (var.isGlobal()) {
       instantiateGlobal(var, storeMap);
+    } else if (var.isAlias()) {
+      instantiateLocalAlias(var, storeMap);
     } else {
       instantiateLocal(var, storeMap);
     }

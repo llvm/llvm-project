@@ -240,11 +240,10 @@ void Fortran::lower::genDateAndTime(Fortran::lower::FirOpBuilder &builder,
   mlir::Value zoneLen;
   splitArg(zone, zoneBuffer, zoneLen);
 
-  llvm::SmallVector<mlir::Value, 2> args{dateBuffer, timeBuffer, zoneBuffer,
+  llvm::SmallVector<mlir::Value, 8> args{dateBuffer, timeBuffer, zoneBuffer,
                                          dateLen,    timeLen,    zoneLen};
-  llvm::SmallVector<mlir::Value, 2> operands;
-  for (const auto &op : llvm::zip(args, callee.getType().getInputs()))
-    operands.emplace_back(
-        builder.convertWithSemantics(loc, std::get<1>(op), std::get<0>(op)));
+  llvm::SmallVector<mlir::Value, 8> operands;
+  for (auto [fst,snd] : llvm::zip(args, callee.getType().getInputs()))
+    operands.emplace_back(builder.convertWithSemantics(loc, snd, fst));
   builder.create<fir::CallOp>(loc, callee, operands);
 }

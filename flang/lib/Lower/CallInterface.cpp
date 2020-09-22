@@ -236,8 +236,8 @@ void Fortran::lower::CallInterface<T>::mapPassedEntities() {
   if constexpr (std::is_same_v<T, Fortran::lower::CalleeInterface>) {
     assert(inputs.size() == func.front().getArguments().size() &&
            "function previously created with different number of arguments");
-    for (const auto &pair : llvm::zip(inputs, func.front().getArguments()))
-      mapBackInputToPassedEntity(std::get<0>(pair), std::get<1>(pair));
+    for (auto [fst,snd] : llvm::zip(inputs, func.front().getArguments()))
+      mapBackInputToPassedEntity(fst, snd);
   } else {
     // On the caller side, map the index of the mlir argument position
     // to Fortran ActualArguments.
@@ -357,12 +357,10 @@ public:
     // Handle arguments
     const auto &argumentEntities =
         getEntityContainer(interface.side().getCallDescription());
-    for (const auto &pair :
-         llvm::zip(procedure.dummyArguments, argumentEntities)) {
-      const auto &dummyCharacteristic = std::get<0>(pair);
+    for (auto pair : llvm::zip(procedure.dummyArguments, argumentEntities)) {
       std::visit(
           Fortran::common::visitors{
-              [&](const auto &dummy) {
+	      [&](const auto &dummy) {
                 const auto &entity = getDataObjectEntity(std::get<1>(pair));
                 handleImplicitDummy(dummy, entity);
               },
@@ -370,7 +368,7 @@ public:
                 // nothing to do
               },
           },
-          dummyCharacteristic.u);
+          std::get<0>(pair).u);
     }
   }
   void buildExplicitInterface(
