@@ -10,7 +10,7 @@
 #define LLDB_UTILITY_GDBREMOTE_H
 
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Reproducer.h"
+#include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
