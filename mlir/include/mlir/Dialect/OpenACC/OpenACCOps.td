@@ -81,7 +81,7 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
   let summary = "parallel construct";
   let description = [{
     The "acc.parallel" operation represents a parallel construct block. It has
-    one region to be executued in parallel on the current device.
+    one region to be executed in parallel on the current device.
 
     Example:
 

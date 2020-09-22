@@ -33,7 +33,7 @@ extern "C" {
  * instead of typedefs enables some type safety as structs are not implicitly
  * convertible to each other.
  *
- * Instaces of these types may or may not own the underlying object (most often
+ * Instances of these types may or may not own the underlying object (most often
  * only point to an IR fragment without owning it). The ownership semantics is
  * defined by how an instance of the type was obtained.
  */
@@ -67,7 +67,7 @@ struct MlirNamedAttribute {
 };
 typedef struct MlirNamedAttribute MlirNamedAttribute;
 
-/** A callback for returning string referenes.
+/** A callback for returning string references.
  *
  * This function is called back by the functions that need to return a reference
  * to the portion of the string with the following arguments:
@@ -226,7 +226,7 @@ intptr_t mlirOperationGetNumAttributes(MlirOperation op);
 /** Return `pos`-th attribute of the operation. */
 MlirNamedAttribute mlirOperationGetAttribute(MlirOperation op, intptr_t pos);
 
-/** Returns an attrbute attached to the operation given its name. */
+/** Returns an attribute attached to the operation given its name. */
 MlirAttribute mlirOperationGetAttributeByName(MlirOperation op,
                                               const char *name);
 
@@ -363,7 +363,7 @@ int mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2);
 void mlirAttributePrint(MlirAttribute attr, MlirStringCallback callback,
                         void *userData);
 
-/** Prints the attrbute to the standard error stream. */
+/** Prints the attribute to the standard error stream. */
 void mlirAttributeDump(MlirAttribute attr);
 
 /** Associates an attribute with the name. Takes ownership of neither. */

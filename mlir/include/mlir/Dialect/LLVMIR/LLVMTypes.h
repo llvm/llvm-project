@@ -50,8 +50,8 @@ class LLVMIntegerType;
 /// Base class for LLVM dialect types.
 ///
 /// The LLVM dialect in MLIR fully reflects the LLVM IR type system, prodiving a
-/// sperate MLIR type for each LLVM IR type. All types are represted as separate
-/// subclasses and are compatible with the isa/cast infrastructure. For
+/// separate MLIR type for each LLVM IR type. All types are represented as
+/// separate subclasses and are compatible with the isa/cast infrastructure. For
 /// convenience, the base class provides most of the APIs available on
 /// llvm::Type in addition to MLIR-compatible APIs.
 ///
@@ -422,7 +422,7 @@ public:
 class LLVMStructType : public Type::TypeBase<LLVMStructType, LLVMType,
                                              detail::LLVMStructTypeStorage> {
 public:
-  /// Inherit base construtors.
+  /// Inherit base constructors.
   using Base::Base;
 
   /// Checks if the given type can be contained in a structure type.

@@ -69,7 +69,7 @@ public:
   static TypeID getTypeID() { return TypeID::get<ConcreteT>(); }
 
   /// Provide an implementation of 'classof' that compares the type id of the
-  /// provided value with that of the concerete type.
+  /// provided value with that of the concrete type.
   template <typename T> static bool classof(T val) {
     static_assert(std::is_convertible<ConcreteT, T>::value,
                   "casting from a non-convertible type");
