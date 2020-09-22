@@ -295,8 +295,35 @@ private:
     return addr;
   }
 
-  mlir::Value genLoad(mlir::Value addr) {
-    return builder.create<fir::LoadOp>(getLoc(), addr);
+  /// Generate a load of a value from an address.
+  mlir::Value genLoad(const fir::ExtendedValue &addr) {
+    auto loc = getLoc();
+    return addr.match(
+        [&](const fir::CharBoxValue &box) -> mlir::Value {
+          auto buffer = box.getBuffer();
+          auto len = dyn_cast<mlir::ConstantOp>(box.getLen().getDefiningOp());
+          if (!len) {
+            // TODO: return an emboxchar?
+            mlir::emitError(loc, "cannot load a variable length char");
+            return {};
+          }
+          auto lenAttr = len.value().dyn_cast<mlir::IntegerAttr>();
+          if (!lenAttr) {
+            mlir::emitError(loc, "length must be integer");
+            return {};
+          }
+          auto lenConst = lenAttr.getValue().getSExtValue();
+          fir::SequenceType::Shape shape = {lenConst};
+          auto baseTy =
+              Fortran::lower::CharacterExprHelper::getCharacterType(box);
+          auto charTy =
+              builder.getRefType(fir::SequenceType::get(shape, baseTy));
+          auto casted = builder.createConvert(loc, charTy, buffer);
+          return builder.create<fir::LoadOp>(loc, casted);
+        },
+        [&](const auto &v) -> mlir::Value {
+          return builder.create<fir::LoadOp>(loc, fir::getBase(v));
+        });
   }
 
   // FIXME: replace this
@@ -1097,21 +1124,26 @@ private:
       llvm::report_fatal_error("TODO: array slice not supported");
     };
     return si.match(
-        [&](const Fortran::lower::SymbolBox::FullDim &arr) {
+        [&](const Fortran::lower::SymbolBox::FullDim &arr)
+            -> fir::ExtendedValue {
           if (!inArrayContext() && isSlice(aref))
             return genArraySlice(arr);
           return genFullDim(arr, one);
         },
-        [&](const Fortran::lower::SymbolBox::CharFullDim &arr) {
-          return genFullDim(arr, arr.getLen());
+        [&](const Fortran::lower::SymbolBox::CharFullDim &arr)
+            -> fir::ExtendedValue {
+          auto len = arr.getLen();
+          return fir::CharBoxValue(genFullDim(arr, len), len);
         },
-        [&](const Fortran::lower::SymbolBox::Derived &arr) {
-          TODO();
-          return mlir::Value{};
+        [&](const Fortran::lower::SymbolBox::Derived &arr)
+            -> fir::ExtendedValue {
+          // TODO: implement
+          mlir::emitError(loc, "not implemented: array of derived type");
+          return {};
         },
-        [&](const auto &) {
-          TODO();
-          return mlir::Value{};
+        [&](const auto &) -> fir::ExtendedValue {
+          mlir::emitError(loc, "internal: array lowering failed");
+          return {};
         });
   }
 
@@ -1235,7 +1267,7 @@ private:
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::ArrayRef &aref) {
-    return genLoad(fir::getBase(gen(aref)));
+    return genLoad(gen(aref));
   }
 
   fir::ExtendedValue gen(const Fortran::evaluate::CoarrayRef &coref) {
