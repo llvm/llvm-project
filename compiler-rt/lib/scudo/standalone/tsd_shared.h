@@ -26,7 +26,6 @@ template <class Allocator, u32 TSDsArraySize, u32 DefaultTSDCount>
 struct TSDRegistrySharedT {
   void initLinkerInitialized(Allocator *Instance) {
     Instance->initLinkerInitialized();
-    CHECK_EQ(pthread_key_create(&PThreadKey, nullptr), 0); // For non-TLS
     for (u32 I = 0; I < TSDsArraySize; I++)
       TSDs[I].initLinkerInitialized(Instance);
     const u32 NumberOfCPUs = getNumberOfCPUs();
@@ -39,10 +38,7 @@ struct TSDRegistrySharedT {
     initLinkerInitialized(Instance);
   }
 
-  void unmapTestOnly() {
-    setCurrentTSD(nullptr);
-    pthread_key_delete(PThreadKey);
-  }
+  void unmapTestOnly() { setCurrentTSD(nullptr); }
 
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance,
                                      UNUSED bool MinimalInit) {
@@ -201,7 +197,6 @@ private:
     return CurrentTSD;
   }
 
-  pthread_key_t PThreadKey;
   atomic_u32 CurrentIndex;
   u32 NumberOfTSDs;
   u32 NumberOfCoPrimes;
