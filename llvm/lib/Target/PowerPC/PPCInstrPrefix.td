@@ -1142,7 +1142,7 @@ let Predicates = [IsISA3_1] in {
   def VEXPANDBM : VXForm_RD5_XO5_RS5<1602, 0, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpandbm $vD, $vB", IIC_VecGeneral,
                                      [(set v16i8:$vD, (int_ppc_altivec_vexpandbm
-					   v16i8:$vB))]>;
+                                           v16i8:$vB))]>;
   def VEXPANDHM : VXForm_RD5_XO5_RS5<1602, 1, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpandhm $vD, $vB", IIC_VecGeneral,
                                      [(set v8i16:$vD, (int_ppc_altivec_vexpandhm
