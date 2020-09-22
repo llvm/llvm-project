@@ -9,6 +9,7 @@
 #include "lldb/Target/TraceSettingsParser.h"
 
 #include <regex>
+#include <sstream>
 
 #include "Plugins/Process/Utility/HistoryThread.h"
 #include "lldb/Core/Debugger.h"
