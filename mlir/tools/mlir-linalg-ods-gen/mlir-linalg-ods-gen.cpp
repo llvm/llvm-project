@@ -1452,7 +1452,7 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
       let arguments = (ins Variadic<AnyShaped>:$inputs,
                            Variadic<AnyMemRef>:$output_buffers,
                            Variadic<AnyRankedTensor>:$init_tensors);
-      let results = (outs Variadic<AnyRankedTensor>:$output_tensors);
+      let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
       let regions = (region AnyRegion:$region);
 
       let builders = [ OpBuilder<

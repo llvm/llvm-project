@@ -470,8 +470,6 @@ func @f8(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 
 #id_2d = affine_map<(i, j) -> (i, j)>
 #pointwise_2d_trait = {
-  args_in = 2,
-  args_out = 1,
   indexing_maps = [#id_2d, #id_2d, #id_2d],
   iterator_types = ["parallel", "parallel"]
 }
@@ -483,13 +481,14 @@ func @pointwise(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
   %c0 = constant 0 : index
   %c3 = constant 3 : index
   %c2 = constant 2 : index
-  linalg.generic #pointwise_2d_trait %A, %A, %B {
+  linalg.generic #pointwise_2d_trait
+      ins(%A, %A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
+                  memref<?x?xf32, offset: 0, strides: [?, ?]>)
+     outs(%B : memref<?x?xf32, offset: 0, strides: [?, ?]>) {
   ^bb0(%E: f32, %arg5: f32, %arg6: f32):   // no predecessors
     %2 = addf %E, %arg5 : f32
     linalg.yield %2 : f32
-  }: memref<?x?xf32, offset: 0, strides: [?, ?]>,
-     memref<?x?xf32, offset: 0, strides: [?, ?]>,
-     memref<?x?xf32, offset: 0, strides: [?, ?]>
+  }
   %0 = dim %B, %c0 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   %1 = dim %B, %c1 : memref<?x?xf32, offset: 0, strides: [?, ?]>
   scf.for %arg4 = %c0 to %0 step %c2 {
@@ -503,13 +502,14 @@ func @pointwise(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
       %6 = std.subview %D[%arg4, %arg5][%c2, %c3][%c1, %c1] :
         memref<?x?xf32, offset: 0, strides: [?, ?]> to
         memref<?x?xf32, offset: ?, strides: [?, ?]>
-      linalg.generic #pointwise_2d_trait %4, %5, %6 {
+      linalg.generic #pointwise_2d_trait
+        ins(%4, %5: memref<?x?xf32, offset: ?, strides: [?, ?]>,
+                    memref<?x?xf32, offset: ?, strides: [?, ?]>)
+       outs(%6 : memref<?x?xf32, offset: ?, strides: [?, ?]>) {
       ^bb0(%arg6: f32, %arg7: f32, %arg8: f32):       // no predecessors
         %7 = mulf %arg6, %arg7 : f32
         linalg.yield %7 : f32
-      }: memref<?x?xf32, offset: ?, strides: [?, ?]>,
-         memref<?x?xf32, offset: ?, strides: [?, ?]>,
-         memref<?x?xf32, offset: ?, strides: [?, ?]>
+      }
     }
   }
   return
@@ -527,8 +527,6 @@ func @pointwise(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 
 #id_2d = affine_map<(i, j) -> (i, j)>
 #pointwise_2d_trait = {
-  args_in = 2,
-  args_out = 1,
   indexing_maps = [#id_2d, #id_2d, #id_2d],
   iterator_types = ["parallel", "parallel"]
 }
@@ -542,13 +540,13 @@ func @pointwise_no_view(%M: index, %N: index) {
   %C = alloc (%M, %N): memref<?x?xf32>
   %D = alloc (%M, %N): memref<?x?xf32>
   %E = alloc (%M, %N): memref<?x?xf32>
-  linalg.generic #pointwise_2d_trait %A, %A, %B {
+  linalg.generic #pointwise_2d_trait
+    ins(%A, %A : memref<?x?xf32>, memref<?x?xf32>)
+   outs(%B : memref<?x?xf32>) {
   ^bb0(%e: f32, %arg5: f32, %arg6: f32):   // no predecessors
     %2 = addf %e, %arg5 : f32
     linalg.yield %2 : f32
-  }: memref<?x?xf32>,
-     memref<?x?xf32>,
-     memref<?x?xf32>
+  }
   %0 = dim %B, %c0 : memref<?x?xf32>
   %1 = dim %B, %c1 : memref<?x?xf32>
   scf.for %arg4 = %c0 to %0 step %c2 {
@@ -562,13 +560,14 @@ func @pointwise_no_view(%M: index, %N: index) {
       %6 = std.subview %D[%arg4, %arg5][%c2, %c3][%c1, %c1] :
         memref<?x?xf32> to
         memref<?x?xf32, offset: ?, strides: [?, ?]>
-      linalg.generic #pointwise_2d_trait %4, %5, %6 {
+      linalg.generic #pointwise_2d_trait
+        ins(%4, %5: memref<?x?xf32, offset: ?, strides: [?, ?]>,
+                    memref<?x?xf32, offset: ?, strides: [?, ?]>)
+       outs(%6 : memref<?x?xf32, offset: ?, strides: [?, ?]>) {
       ^bb0(%arg6: f32, %arg7: f32, %arg8: f32):       // no predecessors
         %7 = mulf %arg6, %arg7 : f32
         linalg.yield %7 : f32
-      }: memref<?x?xf32, offset: ?, strides: [?, ?]>,
-         memref<?x?xf32, offset: ?, strides: [?, ?]>,
-         memref<?x?xf32, offset: ?, strides: [?, ?]>
+      }
     }
   }
   return
@@ -596,25 +595,23 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
   %c1 = constant 1 : index
   %0 = alloc() {temp = true} : memref<100x10xf32>
   linalg.generic {
-    args_in = 1 : i64,
-    args_out = 1 : i64,
     indexing_maps = [#map0, #map1],
-    iterator_types = ["parallel", "parallel"]
-  } %arg1, %0 {
+    iterator_types = ["parallel", "parallel"]}
+    ins(%arg1 : memref<100xf32>)
+   outs(%0 : memref<100x10xf32>) {
       ^bb0(%arg3: f32, %arg4: f32): // no predecessors
         linalg.yield %arg3 : f32
-      }: memref<100xf32>, memref<100x10xf32>
+      }
   %1 = alloc() {temp = true} : memref<100x10xf32>
   linalg.generic {
-    args_in = 2 : i64,
-    args_out = 1 : i64,
     indexing_maps = [#map1, #map1, #map1],
-    iterator_types = ["parallel", "parallel"]
-  } %arg0, %0, %1 {
+    iterator_types = ["parallel", "parallel"]}
+    ins(%arg0, %0: memref<100x10xf32>, memref<100x10xf32>)
+   outs(%1 : memref<100x10xf32>) {
       ^bb0(%arg3: f32, %arg4: f32, %arg5: f32): // no predecessors
         %2 = subf %arg3, %arg4 : f32
         linalg.yield %2 : f32
-      }: memref<100x10xf32>, memref<100x10xf32>, memref<100x10xf32>
+      }
   dealloc %0 : memref<100x10xf32>
   %2 = dim %1, %c0 : memref<100x10xf32>
   %3 = dim %1, %c1 : memref<100x10xf32>
@@ -627,16 +624,14 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
       %7 = std.subview %arg2[%i, %j][%c1, %c1][%c1, %c1] :
       memref<100x10xf32> to memref<?x?xf32, #map2>
       linalg.generic {
-        args_in = 1 : i64,
-        args_out = 1 : i64,
         indexing_maps = [#map1, #map1],
-        iterator_types = ["parallel", "parallel"]
-      } %6, %7 {
+        iterator_types = ["parallel", "parallel"]}
+        ins(%6 : memref<?x?xf32, #map2>)
+       outs(%7 : memref<?x?xf32, #map2>) {
           ^bb0(%arg3: f32, %arg4: f32):     // no predecessors
             %8 = exp %arg3 : f32
             linalg.yield %8 : f32
-          }: memref<?x?xf32, #map2>,
-             memref<?x?xf32, #map2>
+          }
     }
   }
  dealloc %1 : memref<100x10xf32>

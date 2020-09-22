@@ -105,12 +105,14 @@ func @matmul(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 }
 func @vectorization_test(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
                          %C: memref<8x32xf32>) {
-  linalg.generic #matmul_trait %A, %B, %C {
+  linalg.generic #matmul_trait
+    ins(%A, %B : memref<8x16xf32>, memref<16x32xf32>)
+   outs(%C : memref<8x32xf32>) {
     ^bb(%a: f32, %b: f32, %c: f32) :
       %d = mulf %a, %b: f32
       %e = addf %c, %d: f32
       linalg.yield %e : f32
-  } : memref<8x16xf32>, memref<16x32xf32>, memref<8x32xf32>
+  }
   return
 }
 // CHECK-LABEL: func @vectorization_test
@@ -122,12 +124,14 @@ func @vectorization_test(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
 
 func @vectorization_test_integer(%A: memref<8x16xi32>, %B: memref<16x32xi32>,
                                  %C: memref<8x32xi32>) {
-  linalg.generic #matmul_trait %A, %B, %C {
+  linalg.generic #matmul_trait
+    ins(%A, %B : memref<8x16xi32>, memref<16x32xi32>)
+   outs(%C : memref<8x32xi32>) {
     ^bb(%a: i32, %b: i32, %c: i32) :
       %d = muli %a, %b: i32
       %e = addi %c, %d: i32
       linalg.yield %e : i32
-  } : memref<8x16xi32>, memref<16x32xi32>, memref<8x32xi32>
+  }
   return
 }
 // CHECK-LABEL: func @vectorization_test_integer
@@ -187,23 +191,24 @@ func @test_vectorize_copy_scalar(%A : memref<f32>, %B : memref<f32>) {
 func @permute_generic(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
            %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
            %C: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
-  linalg.generic #generic_matmul_trait %A, %B, %C {
+  linalg.generic #generic_matmul_trait
+    ins(%A, %B : memref<?x?xf32, offset: ?, strides: [?, 1]>,
+                 memref<?x?xf32, offset: ?, strides: [?, 1]>)
+   outs(%C : memref<?x?xf32, offset: ?, strides: [?, 1]>) {
     ^bb(%a: f32, %b: f32, %c: f32):
       %d = mulf %a, %b: f32
       %e = addf %c, %d: f32
       linalg.yield %e: f32
-  }: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-     memref<?x?xf32, offset: ?, strides: [?, 1]>,
-     memref<?x?xf32, offset: ?, strides: [?, 1]>
+  }
   return
 }
 // CHECK-LABEL:  func @permute_generic
-// CHECK:        linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
+// CHECK:        linalg.generic {
 // CHECK-SAME:   indexing_maps = [#[[$kn]], #[[$nm]], #[[$km]]],
 // CHECK-SAME:   iterator_types = ["parallel", "reduction", "parallel"],
-// CHECK-SAME:   library_call = "linalg_matmul"} %{{.*}}, %{{.*}}, %{{.*}}
+// CHECK-SAME:   library_call = "linalg_matmul"}
 // CHECK:          memref<?x?xf32, #[[$STRIDED_2D_u_1]]>,
-// CHECK-SAME:     memref<?x?xf32, #[[$STRIDED_2D_u_1]]>,
+// CHECK-SAME:     memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 // CHECK-SAME:     memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 
 #indexed_matmul_trait = {
@@ -217,23 +222,24 @@ func @permute_generic_indexed(
     %A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
     %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
     %C: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
-  linalg.indexed_generic #indexed_matmul_trait %A, %B, %C {
+  linalg.indexed_generic #indexed_matmul_trait
+    ins(%A, %B : memref<?x?xf32, offset: ?, strides: [?, 1]>,
+                 memref<?x?xf32, offset: ?, strides: [?, 1]>)
+   outs(%C : memref<?x?xf32, offset: ?, strides: [?, 1]>) {
     ^bb(%i: index, %j: index, %k: index, %a: f32, %b: f32, %c: f32):
       %d = mulf %a, %b: f32
       %e = addf %c, %d: f32
       linalg.yield %e: f32
-  } : memref<?x?xf32, offset: ?, strides: [?, 1]>,
-      memref<?x?xf32, offset: ?, strides: [?, 1]>,
-      memref<?x?xf32, offset: ?, strides: [?, 1]>
+  }
   return
 }
 // CHECK-LABEL:  func @permute_generic_indexed
-// CHECK:        linalg.indexed_generic {args_in = 2 : i64, args_out = 1 : i64,
+// CHECK:        linalg.indexed_generic {
 // CHECK-SAME:     indexing_maps = [#[[$kn]], #[[$nm]], #[[$km]]],
 // CHECK-SAME:     iterator_types = ["parallel", "reduction", "parallel"],
-// CHECK-SAME:     library_call = "linalg_matmul_indexed"} %{{.*}}, %{{.*}}, %{{.*}}
+// CHECK-SAME:     library_call = "linalg_matmul_indexed"}
 // CHECK:            memref<?x?xf32, #[[$STRIDED_2D_u_1]]>,
-// CHECK-SAME:       memref<?x?xf32, #[[$STRIDED_2D_u_1]]>,
+// CHECK-SAME:       memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 // CHECK-SAME:       memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 
 func @matvec_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,

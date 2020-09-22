@@ -182,8 +182,6 @@ func @no_fold_memref_reshape(%arg0 : memref<?x?xf32>) -> memref<?x?xf32>
 ]
 
 #trait = {
-  args_in = 1,
-  args_out = 1,
   indexing_maps = #accesses,
   iterator_types = ["parallel"]
 }
@@ -193,10 +191,10 @@ func @dce_zero_memref(%arg0 : memref<0xf32>, %arg1: tensor<0xf32>) -> tensor<0xf
   linalg.copy(%arg0, %arg0): memref<0xf32>, memref<0xf32>
 
   // tensor<0xf32> cannot be dce'ed
-  %1 = linalg.generic #trait %arg1 {
+  %1 = linalg.generic #trait ins(%arg1 : tensor<0xf32>) {
   ^bb(%0: f32) :
     linalg.yield %0 : f32
-  } : tensor<0xf32> -> tensor<0xf32>
+  } -> tensor<0xf32>
 
   return %1: tensor<0xf32>
 }

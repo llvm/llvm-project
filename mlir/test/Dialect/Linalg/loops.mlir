@@ -560,12 +560,15 @@ func @pooling_sum(%arg0: memref<?x?xf32>,
   doc = "B(i,j,k), C(i,k,j) = foo(A(i, j), B(i,j,k), C(i,k,j))"
 }
 func @generic_region(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg2: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  linalg.generic #trait2 %arg0, %arg1, %arg2 {
+  linalg.generic #trait2
+    ins(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>)
+   outs(%arg1, %arg2 : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
+                       memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
     ^bb0(%a: f32, %b: f32, %c: f32):
       %d = mulf %a, %b : f32
       %e = addf %c, %d : f32
       linalg.yield %d, %e : f32, f32
-  }: memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
+  }
   return
 }
 // CHECKLOOP-LABEL: @generic_region
@@ -602,7 +605,10 @@ func @indexed_generic_region(
         %arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
         %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
         %arg2: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  linalg.indexed_generic #trait4 %arg0, %arg1, %arg2 {
+  linalg.indexed_generic #trait4
+      ins(%arg0 : memref<?x?xf32, offset: ?, strides: [?, 1]>)
+     outs(%arg1, %arg2 : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
+                         memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
     ^bb0(%i: index, %j: index, %k: index, %a: f32, %b: f32, %c: f32):
       %result_1 = mulf %a, %b : f32
 
@@ -613,9 +619,7 @@ func @indexed_generic_region(
 
       %result_2 = addf %c, %ijk_float : f32
       linalg.yield %result_1, %result_2 : f32, f32
-  }: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-     memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
-     memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
+  }
   return
 }
 
@@ -666,10 +670,12 @@ func @indexed_generic_region(
 
 func @generic_op_zero_rank(%arg0: memref<f32>, %arg1: memref<3x4xf32>)
 {
-  linalg.generic #trait_broadcast %arg0, %arg1 {
+  linalg.generic #trait_broadcast
+      ins(%arg0 : memref<f32>)
+     outs(%arg1 : memref<3x4xf32>) {
     ^bb(%a: f32, %b: f32) :
       linalg.yield %a : f32
-  } : memref<f32>, memref<3x4xf32>
+  }
   return
 }
 
@@ -690,13 +696,15 @@ func @generic_op_zero_rank(%arg0: memref<f32>, %arg1: memref<3x4xf32>)
 
 func @indexed_generic_op_zero_rank(%arg0: memref<i32>, %arg1: memref<3x4xi32>)
 {
-  linalg.indexed_generic #trait_broadcast %arg0, %arg1 {
+  linalg.indexed_generic #trait_broadcast
+      ins(%arg0 : memref<i32>)
+     outs(%arg1 : memref<3x4xi32>) {
     ^bb(%i: index, %j: index, %a: i32, %b: i32) :
       %ij = addi %i, %j : index
       %ij_int = index_cast %ij : index to i32
       %result = addi %a, %ij_int : i32
       linalg.yield %result : i32
-  } : memref<i32>, memref<3x4xi32>
+  }
   return
 }
 
@@ -736,11 +744,13 @@ func @indexed_generic_op_zero_rank(%arg0: memref<i32>, %arg1: memref<3x4xi32>)
 
 func @generic_op_1D_reduce(%arg0: memref<?xf32>, %arg1: memref<f32>)
 {
-  linalg.generic #trait_reduce_1D %arg0, %arg1 {
+  linalg.generic #trait_reduce_1D
+      ins(%arg0 : memref<?xf32>)
+     outs(%arg1 : memref<f32>) {
     ^bb(%a: f32, %b: f32) :
       %0 = addf %a, %b : f32
       linalg.yield %0 : f32
-  } : memref<?xf32>, memref<f32>
+  }
   return
 }
 // CHECKLOOP-LABEL: @generic_op_1D_reduce
@@ -780,14 +790,16 @@ func @indexed_generic_op_1D_reduce(%arg0: memref<?xf32>,
                                    %arg1: memref<f32>,
                                    %arg2: memref<f32>)
 {
-  linalg.indexed_generic #trait_reduce_init_1D %arg0, %arg1, %arg2 {
+  linalg.indexed_generic #trait_reduce_init_1D
+      ins(%arg0, %arg1 : memref<?xf32>, memref<f32>)
+     outs(%arg2 : memref<f32>) {
     ^bb(%i : index, %a: f32, %b: f32, %c: f32) :
       %0 = constant 0 : index
       %1 = cmpi "eq", %0, %i : index
       %2 = select %1, %b, %c : f32
       %3 = addf %a, %2 : f32
       linalg.yield %3 : f32
-  } : memref<?xf32>, memref<f32>, memref<f32>
+  }
   return
 }
 // CHECKLOOP-LABEL: @indexed_generic_op_1D_reduce
@@ -823,10 +835,10 @@ func @indexed_generic_op_1D_reduce(%arg0: memref<?xf32>,
 }
 func @generic_const_init(%arg0: memref<?xf32>) {
         %cst = constant 1.0 : f32
-  linalg.generic #trait_const_fill %arg0 {
+  linalg.generic #trait_const_fill outs(%arg0 : memref<?xf32>) {
     ^bb0(%arg1: f32):   // no predecessors
       linalg.yield %cst : f32
-    }: memref<?xf32>
+    }
     return
 }
 // CHECKLOOP-LABEL: @generic_const_init
@@ -855,11 +867,13 @@ func @generic_const_init(%arg0: memref<?xf32>) {
 }
 func @scalar_code(%arg0: memref<f32>, %arg1 : memref<f32>, %arg2 : memref<f32>)
 {
-  linalg.generic #scalar_trait %arg0, %arg1, %arg2 {
+  linalg.generic #scalar_trait
+    ins(%arg0, %arg1 : memref<f32>, memref<f32>)
+   outs(%arg2 : memref<f32>) {
   ^bb(%a : f32, %b : f32, %c : f32) :
     %0 = addf %a, %b : f32
     linalg.yield %0 : f32
-  } : memref<f32>, memref<f32>, memref<f32>
+  }
   return
 }
 // CHECKLOOP-LABEL: @scalar_code
@@ -944,14 +958,14 @@ func @named_batch_matmul(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memre
 }
 
 func @conv1d(%in : memref<?xf32>, %filter : memref<?xf32>, %out :  memref<?xf32>) -> () {
-  linalg.generic #conv_1d_trait %in, %filter, %out {
+  linalg.generic #conv_1d_trait
+      ins(%in, %filter : memref<?xf32>, memref<?xf32>)
+     outs(%out : memref<?xf32>) {
     ^bb0(%a: f32, %b: f32, %c: f32) :
       %d = mulf %a, %b : f32
       %e = addf %c, %d : f32
       linalg.yield %e : f32
-  } : memref<?xf32>,
-      memref<?xf32>,
-      memref<?xf32>
+  }
   return
 }
 
@@ -1012,14 +1026,14 @@ func @conv1d(%in : memref<?xf32>, %filter : memref<?xf32>, %out :  memref<?xf32>
 }
 
 func @conv2d(%in : memref<?x?xf32>, %filter : memref<?x?xf32>, %out :  memref<?x?xf32>) -> () {
-  linalg.generic #conv_2d_trait %in, %filter, %out {
+  linalg.generic #conv_2d_trait
+      ins(%in, %filter : memref<?x?xf32>, memref<?x?xf32>)
+     outs(%out : memref<?x?xf32>) {
     ^bb0(%a: f32, %b: f32, %c: f32) :
       %d = mulf %a, %b : f32
       %e = addf %c, %d : f32
       linalg.yield %e : f32
-  } : memref<?x?xf32>,
-      memref<?x?xf32>,
-      memref<?x?xf32>
+  }
   return
 }
 
@@ -1096,14 +1110,14 @@ func @conv2d(%in : memref<?x?xf32>, %filter : memref<?x?xf32>, %out :  memref<?x
 }
 
 func @conv3d(%in : memref<?x?x?xf32>, %filter : memref<?x?x?xf32>, %out :  memref<?x?x?xf32>) -> () {
-  linalg.generic #conv_3d_trait %in, %filter, %out {
+  linalg.generic #conv_3d_trait
+      ins(%in, %filter : memref<?x?x?xf32>, memref<?x?x?xf32>)
+     outs(%out : memref<?x?x?xf32>) {
     ^bb0(%a: f32, %b: f32, %c: f32) :
       %d = mulf %a, %b : f32
       %e = addf %c, %d : f32
       linalg.yield %e : f32
-  } : memref<?x?x?xf32>,
-      memref<?x?x?xf32>,
-      memref<?x?x?xf32>
+  }
   return
 }
 
@@ -1196,14 +1210,14 @@ func @conv3d(%in : memref<?x?x?xf32>, %filter : memref<?x?x?xf32>, %out :  memre
 }
 
 func @conv4d(%in : memref<?x?x?x?xf32>, %filter : memref<?x?x?x?xf32>, %out :  memref<?x?x?x?xf32>) -> () {
-  linalg.generic #conv_4d_trait %in, %filter, %out {
+  linalg.generic #conv_4d_trait
+      ins(%in, %filter : memref<?x?x?x?xf32>, memref<?x?x?x?xf32>)
+     outs(%out : memref<?x?x?x?xf32>) {
     ^bb0(%a: f32, %b: f32, %c: f32) :
       %d = mulf %a, %b : f32
       %e = addf %c, %d : f32
       linalg.yield %e : f32
-  } : memref<?x?x?x?xf32>,
-      memref<?x?x?x?xf32>,
-      memref<?x?x?x?xf32>
+  }
   return
 }
 

@@ -157,14 +157,14 @@ func @test_with_temp_usage_after_copy() -> memref<5xf32> {
   %temp = alloc() : memref<5xf32>
   linalg.copy(%ret, %temp) : memref<5xf32>, memref<5xf32>
   linalg.generic {
-    args_in = 1 : i64,
-    args_out = 1 : i64,
     indexing_maps = [#map0, #map0],
-    iterator_types = ["parallel"]} %temp, %res {
+    iterator_types = ["parallel"]}
+    ins(%temp : memref<5xf32>)
+   outs(%res : memref<5xf32>) {
   ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
     %tmp1 = exp %gen1_arg0 : f32
     linalg.yield %tmp1 : f32
-  }: memref<5xf32>, memref<5xf32>
+  }
   dealloc %ret : memref<5xf32>
   return %temp : memref<5xf32>
 }
@@ -231,18 +231,18 @@ func @test_ReuseCopyTargetAsSource(%arg0: memref<2xf32>, %result: memref<2xf32>)
   // CHECK-NOT: %{{.*}} = alloc
   %temp = alloc() : memref<2xf32>
   // CHECK-NEXT: linalg.generic
-  // CHECK-SAME: %[[ARG0]], %[[RES]]
+  // CHECK-SAME: ins(%[[ARG0]]{{.*}}outs(%[[RES]]
   // CHECK-NOT: linalg.copy(%{{.*}}, %[[RES]])
   // CHECK-NOT: dealloc %{{.*}}
   linalg.generic {
-    args_in = 1 : i64,
-    args_out = 1 : i64,
     indexing_maps = [#map0, #map0],
-    iterator_types = ["parallel"]} %arg0, %temp {
+    iterator_types = ["parallel"]}
+    ins(%arg0 : memref<2xf32>)
+   outs(%temp : memref<2xf32>) {
   ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
     %tmp2 = exp %gen2_arg0 : f32
     linalg.yield %tmp2 : f32
-  }: memref<2xf32>, memref<2xf32>
+  }
   "linalg.copy"(%temp, %result) : (memref<2xf32>, memref<2xf32>) -> ()
   dealloc %temp : memref<2xf32>
   // CHECK: return
@@ -261,23 +261,23 @@ func @test_ReuseCopyTargetAsSource(%arg0: memref<2xf32>){
   %to = alloc() : memref<2xf32>
   %temp = alloc() : memref<2xf32>
   linalg.generic {
-    args_in = 1 : i64,
-    args_out = 1 : i64,
     indexing_maps = [#map0, #map0],
-    iterator_types = ["parallel"]} %arg0, %temp {
+    iterator_types = ["parallel"]}
+    ins(%arg0 : memref<2xf32>)
+   outs(%temp : memref<2xf32>) {
   ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
     %tmp1 = exp %gen1_arg0 : f32
     linalg.yield %tmp1 : f32
-  }: memref<2xf32>, memref<2xf32>
+  }
   linalg.generic {
-    args_in = 1 : i64,
-    args_out = 1 : i64,
     indexing_maps = [#map0, #map0],
-    iterator_types = ["parallel"]} %arg0, %to {
+    iterator_types = ["parallel"]}
+    ins(%arg0 : memref<2xf32>)
+   outs(%to : memref<2xf32>) {
   ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
     %tmp2 = exp %gen2_arg0 : f32
     linalg.yield %tmp2 : f32
-  }: memref<2xf32>, memref<2xf32>
+  }
   // CHECK: linalg.copy
   "linalg.copy"(%temp, %to) : (memref<2xf32>, memref<2xf32>) -> ()
   dealloc %temp : memref<2xf32>
