@@ -54,7 +54,7 @@ int main(int, char**)
         assert(test_deleter<A>::count == 1);
         assert(test_deleter<A>::dealloc_count == 0);
 #ifndef TEST_HAS_NO_RTTI
-        std::get_deleter<test_deleter<A> >(p)
+        test_deleter<A>* d = std::get_deleter<test_deleter<A> >(p);
         assert(d);
         assert(d->state() == 3);
 #endif
