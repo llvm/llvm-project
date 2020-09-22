@@ -256,12 +256,54 @@ namespace {
       return isPredicatedOnVCTP(Insts.front(), Exclusive);
     }
 
-    static bool isValid() {
+    // If this block begins with a VPT, we can check whether it's using
+    // at least one predicated input(s), as well as possible loop invariant
+    // which would result in it being implicitly predicated.
+    static bool hasImplicitlyValidVPT(VPTState &Block,
+                                      ReachingDefAnalysis &RDA) {
+      SmallVectorImpl<MachineInstr *> &Insts = Block.getInsts();
+      MachineInstr *VPT = Insts.front();
+      assert(isVPTOpcode(VPT->getOpcode()) &&
+             "Expected VPT block to begin with VPT/VPST");
+
+      if (VPT->getOpcode() == ARM::MVE_VPST)
+        return false;
+
+      auto IsOperandPredicated = [&](MachineInstr *MI, unsigned Idx) {
+        MachineInstr *Op = RDA.getMIOperand(MI, MI->getOperand(Idx));
+        return Op && PredicatedInsts.count(Op) && isPredicatedOnVCTP(Op);
+      };
+
+      auto IsOperandInvariant = [&](MachineInstr *MI, unsigned Idx) {
+        MachineOperand &MO = MI->getOperand(Idx);
+        if (!MO.isReg() || !MO.getReg())
+          return true;
+
+        SmallPtrSet<MachineInstr *, 2> Defs;
+        RDA.getGlobalReachingDefs(MI, MO.getReg(), Defs);
+        if (Defs.empty())
+          return true;
+
+        for (auto *Def : Defs)
+          if (Def->getParent() == VPT->getParent())
+            return false;
+        return true;
+      };
+
+      // Check that at least one of the operands is directly predicated on a
+      // vctp and allow an invariant value too.
+      return (IsOperandPredicated(VPT, 1) || IsOperandPredicated(VPT, 2)) &&
+             (IsOperandPredicated(VPT, 1) || IsOperandInvariant(VPT, 1)) &&
+             (IsOperandPredicated(VPT, 2) || IsOperandInvariant(VPT, 2));
+    }
+
+    static bool isValid(ReachingDefAnalysis &RDA) {
       // All predication within the loop should be based on vctp. If the block
       // isn't predicated on entry, check whether the vctp is within the block
       // and that all other instructions are then predicated on it.
       for (auto &Block : Blocks) {
-        if (isEntryPredicatedOnVCTP(Block))
+        if (isEntryPredicatedOnVCTP(Block, false) ||
+            hasImplicitlyValidVPT(Block, RDA))
           continue;
 
         SmallVectorImpl<MachineInstr *> &Insts = Block.getInsts();
@@ -517,7 +559,7 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
     return false;
   }
 
-  if (!VPTState::isValid())
+  if (!VPTState::isValid(RDA))
     return false;
 
   if (!ValidateLiveOuts()) {

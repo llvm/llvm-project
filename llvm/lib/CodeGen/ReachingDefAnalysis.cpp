@@ -433,7 +433,6 @@ MachineInstr *ReachingDefAnalysis::getUniqueReachingMIDef(MachineInstr *MI,
   if (LocalDef && InstIds.lookup(LocalDef) < InstIds.lookup(MI))
     return LocalDef;
 
-  SmallPtrSet<MachineBasicBlock*, 4> VisitedBBs;
   SmallPtrSet<MachineInstr*, 2> Incoming;
   MachineBasicBlock *Parent = MI->getParent();
   for (auto *Pred : Parent->predecessors())
