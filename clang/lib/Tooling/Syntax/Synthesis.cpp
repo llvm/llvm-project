@@ -190,7 +190,7 @@ syntax::Tree *allocateTree(syntax::Arena &A, syntax::NodeKind Kind) {
 
 syntax::Tree *clang::syntax::createTree(
     syntax::Arena &A,
-    std::vector<std::pair<syntax::Node *, syntax::NodeRole>> Children,
+    ArrayRef<std::pair<syntax::Node *, syntax::NodeRole>> Children,
     syntax::NodeKind K) {
   auto *T = allocateTree(A, K);
   FactoryImpl::setCanModify(T);

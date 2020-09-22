@@ -39,7 +39,7 @@ syntax::Leaf *createLeaf(syntax::Arena &A, tok::TokenKind K);
 /// Returns it as a pointer to the base class `Tree`.
 syntax::Tree *
 createTree(syntax::Arena &A,
-           std::vector<std::pair<syntax::Node *, syntax::NodeRole>> Children,
+           ArrayRef<std::pair<syntax::Node *, syntax::NodeRole>> Children,
            syntax::NodeKind K);
 
 // Synthesis of Syntax Nodes
