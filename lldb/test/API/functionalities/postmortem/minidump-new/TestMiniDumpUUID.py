@@ -214,7 +214,6 @@ class MiniDumpUUIDTestCase(TestBase):
         cmd = 'settings set target.exec-search-paths "%s"' % (os.path.dirname(so_path))
         self.dbg.HandleCommand(cmd)
         modules = self.get_minidump_modules("linux-arm-breakpad-uuid-match.yaml")
-        import pdb; pdb.set_trace()
         self.assertEqual(1, len(modules))
         # LLDB makes up it own UUID as well when there is no build ID so we
         # will check that this matches.
