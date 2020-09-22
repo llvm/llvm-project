@@ -41,6 +41,22 @@ entry:
   ret i32 %0
 }
 
+define void @LocalExecValueStore(i32 %in) {
+; CHECK-S-LABEL: LocalExecValueStore:
+; CHECK-S:       # %bb.0: # %entry
+; CHECK-S-NEXT:    paddi r4, r13, x@TPREL, 0
+; CHECK-S-NEXT:    stw r3, 0(r4)
+; CHECK-S-NEXT:    blr
+; CHECK-O-LABEL: <LocalExecValueStore>:
+; CHECK-O:         40: paddi 4, 13, 0, 0
+; CHECK-O-NEXT:    0000000000000040:  R_PPC64_TPREL34 x
+; CHECK-O-NEXT:    48: stw 3, 0(4)
+; CHECK-O-NEXT:    4c: blr
+entry:
+  store i32 %in, i32* @x, align 4
+  ret void
+}
+
 define i32 @LocalExecValueLoadOffset() {
 ; CHECK-S-LABEL: LocalExecValueLoadOffset:
 ; CHECK-S:       # %bb.0: # %entry
@@ -48,10 +64,10 @@ define i32 @LocalExecValueLoadOffset() {
 ; CHECK-S-NEXT:    lwz r3, 12(r3)
 ; CHECK-S-NEXT:    blr
 ; CHECK-O-LABEL: <LocalExecValueLoadOffset>:
-; CHECK-O:         40: paddi 3, 13, 0, 0
-; CHECK-O-NEXT:    0000000000000040:  R_PPC64_TPREL34 y
-; CHECK-O-NEXT:    48: lwz 3, 12(3)
-; CHECK-O-NEXT:    4c: blr
+; CHECK-O:         60: paddi 3, 13, 0, 0
+; CHECK-O-NEXT:    0000000000000060:  R_PPC64_TPREL34 y
+; CHECK-O-NEXT:    68: lwz 3, 12(3)
+; CHECK-O-NEXT:    6c: blr
 entry:
   %0 = load i32, i32* getelementptr inbounds ([5 x i32], [5 x i32]* @y, i64 0, i64 3), align 4
   ret i32 %0
@@ -65,10 +81,10 @@ define i32* @LocalExecValueLoadOffsetNoLoad() {
 ; CHECK-S-NEXT:    addi r3, r3, 12
 ; CHECK-S-NEXT:    blr
 ; CHECK-O-LABEL: <LocalExecValueLoadOffsetNoLoad>:
-; CHECK-O:         60: paddi 3, 13, 0, 0
-; CHECK-O-NEXT:    0000000000000060:  R_PPC64_TPREL34 y
-; CHECK-O-NEXT:    68: addi 3, 3, 12
-; CHECK-O-NEXT:    6c: blr
+; CHECK-O:         80: paddi 3, 13, 0, 0
+; CHECK-O-NEXT:    0000000000000080:  R_PPC64_TPREL34 y
+; CHECK-O-NEXT:    88: addi 3, 3, 12
+; CHECK-O-NEXT:    8c: blr
 entry:
   ret i32* getelementptr inbounds ([5 x i32], [5 x i32]* @y, i64 0, i64 3)
 }
