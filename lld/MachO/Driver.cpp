@@ -525,6 +525,9 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   config->runtimePaths = args::getStrings(args, OPT_rpath);
   config->allLoad = args.hasArg(OPT_all_load);
 
+  if (const opt::Arg *arg = args.getLastArg(OPT_static, OPT_dynamic))
+    config->staticLink = (arg->getOption().getID() == OPT_static);
+
   std::vector<StringRef> &roots = config->systemLibraryRoots;
   for (const Arg *arg : args.filtered(OPT_syslibroot))
     roots.push_back(arg->getValue());
@@ -603,6 +606,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_arch:
     case OPT_syslibroot:
     case OPT_sectcreate:
+    case OPT_dynamic:
       // handled elsewhere
       break;
     default:
