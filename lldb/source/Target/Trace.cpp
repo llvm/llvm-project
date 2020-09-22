@@ -8,7 +8,6 @@
 
 #include "lldb/Target/Trace.h"
 
-#include <regex>
 #include <sstream>
 
 #include "llvm/Support/Format.h"
