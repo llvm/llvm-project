@@ -420,6 +420,14 @@ unsigned ConstantRange::getActiveBits() const {
   return getUnsignedMax().getActiveBits();
 }
 
+unsigned ConstantRange::getMinSignedBits() const {
+  if (isEmptySet())
+    return 0;
+
+  return std::max(getSignedMin().getMinSignedBits(),
+                  getSignedMax().getMinSignedBits());
+}
+
 ConstantRange ConstantRange::subtract(const APInt &Val) const {
   assert(Val.getBitWidth() == getBitWidth() && "Wrong bit width");
   // If the set is empty or full, don't modify the endpoints.
