@@ -234,9 +234,10 @@ int PPCTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
 
 int PPCTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                   const APInt &Imm, Type *Ty,
-                                  TTI::TargetCostKind CostKind) {
+                                  TTI::TargetCostKind CostKind,
+                                  Instruction *Inst) {
   if (DisablePPCConstHoist)
-    return BaseT::getIntImmCostInst(Opcode, Idx, Imm, Ty, CostKind);
+    return BaseT::getIntImmCostInst(Opcode, Idx, Imm, Ty, CostKind, Inst);
 
   assert(Ty->isIntegerTy());
 
