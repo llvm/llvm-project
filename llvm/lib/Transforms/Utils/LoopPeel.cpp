@@ -304,7 +304,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // Only try to peel innermost loops by default.
   // The constraint can be relaxed by the target in TTI.getUnrollingPreferences
   // or by the flag -unroll-allow-loop-nests-peeling.
-  if (!PP.AllowLoopNestsPeeling && !L->empty())
+  if (!PP.AllowLoopNestsPeeling && !L->isInnermost())
     return;
 
   // If the user provided a peel count, use that.

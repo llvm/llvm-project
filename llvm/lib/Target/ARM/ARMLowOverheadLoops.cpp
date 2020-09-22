@@ -1043,7 +1043,7 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
 
   bool Changed = false;
   for (auto ML : *MLI) {
-    if (!ML->getParentLoop())
+    if (ML->isOutermost())
       Changed |= ProcessLoop(ML);
   }
   Changed |= RevertNonLoops();
