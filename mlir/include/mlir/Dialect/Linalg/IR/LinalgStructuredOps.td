@@ -40,11 +40,12 @@ def NamedStructuredOpTrait : NativeOpTrait<"linalg::NamedStructuredOpTrait">;
 // depending on the specific Linalg op.
 class LinalgStructuredBase_Op<string mnemonic, list<OpTrait> props>
   : Op<Linalg_Dialect, mnemonic,
-       !listconcat(props, [StructuredOpTraits, LinalgStructuredInterface])> {
+       !listconcat(props, [LinalgStructuredInterface])> {
 }
 
 class LinalgStructured_Op<string mnemonic, list<OpTrait> props>
-  : LinalgStructuredBase_Op<mnemonic, props> {
+  : LinalgStructuredBase_Op<mnemonic,
+       !listconcat(props, [StructuredOpTraits])> {
   code libraryCallName = [{
     std::string getLibraryCallName() {
       return generateLibraryCallName(getOperation());
@@ -460,43 +461,38 @@ class LinalgOperandOfRank<int rank>: Type<
     CPred<"$_self.cast<ShapedType>().getRank() == " # rank>]
   >>;
 
-class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic,
-    [SingleBlockImplicitTerminator<"YieldOp">]> {
-  let arguments = (ins Variadic<LinalgOperand>:$views,
-                   I64Attr:$args_in,
-                   I64Attr:$args_out,
-                   AffineMapArrayAttr:$indexing_maps,
-                   ArrayAttr:$iterator_types,
-                   OptionalAttr<StrAttr>:$doc,
-                   OptionalAttr<StrAttr>:$library_call,
-                   Confined<OptionalAttr<I64Attr>,
-                     [IntMinValue<0>]>:$symbol_source);
-  let results = (outs Variadic<AnyRankedTensor>:$output_tensors);
+class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic, [
+    NamedStructuredOpTrait,
+    AttrSizedOperandSegments,
+    SingleBlockImplicitTerminator<"YieldOp">]> {
+  let arguments = (ins Variadic<AnyShaped>:$inputs,
+                       Variadic<AnyMemRef>:$output_buffers,
+                       Variadic<AnyRankedTensor>:$init_tensors,
+                       AffineMapArrayAttr:$indexing_maps,
+                       ArrayAttr:$iterator_types,
+                       OptionalAttr<StrAttr>:$doc,
+                       OptionalAttr<StrAttr>:$library_call,
+                       Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>
+                         :$symbol_source);
+  let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
   let regions = (region AnyRegion:$region);
   let extraClassDeclaration = [{
     SmallVector<StringRef, 8> linalgTraitAttrNames() {
       return SmallVector<StringRef, 8>{
-        getArgsInAttrName(), getArgsOutAttrName(), getDocAttrName(),
+        getDocAttrName(),
         getIndexingMapsAttrName(), getLibraryCallAttrName(),
         getIteratorTypesAttrName(), getSymbolSourceAttrName()
       };
     }
-
-    unsigned getNumInputs() { return args_in(); }
-
-    unsigned getNumOutputs() { return args_out(); }
-
     StringRef getLibraryCallName() {
       return library_call().hasValue() ? library_call().getValue() : "";
     }
-
     llvm::Optional<unsigned> getSymbolSource() {
       auto ss = symbol_source();
       return ss.hasValue() ?
         llvm::Optional<unsigned>(ss.getValue()) : llvm::None;
     }
   }];
-
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parseGenericOp(parser, result); }];
 }
@@ -505,18 +501,19 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic,
 def GenericOp : GenericOpBase<"generic"> {
   let description = [{
     Generic Linalg op form where the key properties of the computation are
-    specified as attributes. In pretty form, a linalg.generic op is written as:
+    specified as attributes. In pretty form, a `linalg.generic` op is written
+    as:
 
       ```mlir
-      linalg.generic #trait_attribute %A, %B, %C {other-attributes} :
-        memref<?x?xf32, stride_specification>,
-        memref<?x?xf32, stride_specification>,
-        memref<?x?xf32, stride_specification>
+      linalg.generic #trait_attribute
+          ins(%A, %B : memref<?x?xf32, stride_specification>,
+                       memref<?x?xf32, stride_specification>)
+          outs(%C : memref<?x?xf32, stride_specification>)
+          attrs = {other-optional-attributes}
+          {region}
       ```
 
     Where #trait_attributes is an alias of a dictionary attribute containing:
-      - args_in: an I64Attr representing the number of input (readonly) views
-      - args_out: an I64Attr representing the number of output (readwrite) views
       - doc [optional]: a documentation string
       - indexing_maps: a list of AffineMapAttr, one AffineMapAttr per each input
         and output view. Such AffineMapAttr specifies the mapping between the
@@ -547,22 +544,22 @@ def GenericOp : GenericOpBase<"generic"> {
         doc = "C(m, n) += A(m, k) * B(k, n)",
         indexing_maps = #matmul_accesses,
         library_call = "linalg_matmul",
-        args_in = 2,
-        args_out = 1,
         iterator_types = ["parallel", "parallel", "reduction"]
       }
       ```
 
     And can be reused in multiple places as:
       ```mlir
-      linalg.generic #matmul_trait %A, %B, %C [other-attributes] {
+      linalg.generic #matmul_trait
+        ins(%A, %B : memref<?x?xf32, stride_specification>,
+                     memref<?x?xf32, stride_specification>)
+        outs(%C : memref<?x?xf32, stride_specification>)
+        {other-optional-attributes} {
         ^bb0(%a: f32, %b: f32, %c: f32) :
           %d = mulf %a, %b: f32
           %e = addf %c, %d: f32
           linalg.yield %e : f32
-      } : memref<?x?xf32, stride_specification>,
-          memref<?x?xf32, stride_specification>,
-          memref<?x?xf32, stride_specification>
+      }
       ```
 
     This may lower to either:
@@ -591,30 +588,29 @@ def GenericOp : GenericOpBase<"generic"> {
     ```
 
     To allow progressive lowering from the value world (a.k.a tensor values) to
-    the buffer world (a.k.a memref values), a `linalg.generic` op accepts
-    mixing input and output ranked tensor values with input and output memrefs.
+    the buffer world (a.k.a memref values), a `linalg.generic` op allows mixing
+    tensors and buffers operands and tensor results.
 
     ```mlir
-    %C = linalg.generic #trait_attribute %A, %B {other-attributes} {region} :
-      tensor<?x?xf32>,
-      memref<?x?xf32, stride_specification>
+    %C = linalg.generic #trait_attribute
+      ins(%A, %B : tensor<?x?xf32>, memref<?x?xf32, stride_specification>)
+      init(%C : tensor<?x?xf32>)
+      {other-optional-attributes}
+      {region}
       -> (tensor<?x?xf32>)
     ```
 
-    In this case, the number of outputs (args_out) must match the sum of (1) the
-    number of output buffer operands and (2) the number of tensor return values.
-    The semantics is that the `linalg.indexed_generic` op produces (i.e.
-    allocates and fills) its tensor return values.
+    The `init` operand and the conventions around mixing tensors and buffers are
+    described in more detail in the "Tensors and Buffers: Conventions and
+    Limitations" section in the [Linalg Document](../docs/Linalg.md)
 
     Tensor values must be legalized by a buffer allocation pass before most
-    transformations can be applied. Such legalization moves tensor return values
+    transformations can be applied. Such legalizations move tensor return values
     into output buffer operands and updates the region arguments accordingly.
 
-    Transformations that create control-flow around linalg.indexed_generic
-    operations are not expected to work with tensors because SSA values do not
-    escape naturally. Still, transformations and rewrites that take advantage of
-    tensor SSA values are expected to be useful and will be added in the near
-    future.
+    The `symbol_source` attribute allows selecting a particular operand and
+    introducing symbols for each operand dimension. Such symbols can then be
+    used in the indexing maps.
 
     Example of 1D convolution with symbols:
     ```mlir
@@ -632,14 +628,14 @@ def GenericOp : GenericOpBase<"generic"> {
       symbol_source = 1
     }
 
-    linalg.generic #conv_1d_trait %in, %filter, %out {
+    linalg.generic #conv_1d_trait
+      ins(%in, %filter : memref<?xf32>, memref<?xf32>)
+      outs(%out : memref<?xf32>) {
       ^bb0(%a: f32, %b: f32, %c: f32) :
         %d = mulf %a, %b : f32
         %e = addf %c, %d : f32
         linalg.yield %e : f32
-    } : memref<?xf32>,
-        memref<?xf32>,
-        memref<?xf32>
+    }
     ```
     where symbol s0 will be substituted with `dim %filter, %c0` i.e. the first
     and only dimension of the second operand as specified by the symbol_source
@@ -648,12 +644,28 @@ def GenericOp : GenericOpBase<"generic"> {
 
   let builders = [
     OpBuilder<
-      "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTypes, "
-      "ValueRange args, int64_t argsIn, int64_t argsOut, "
+      "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTensorTypes,"
+      "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors, "
       "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
+      "StringRef doc, StringRef libraryCall, IntegerAttr symbolSource, "
+      "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">,
+    OpBuilder<
+      "OpBuilder &builder, OperationState &result, "
+      "ValueRange inputs, ValueRange outputBuffers, "
+      "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
+      "StringRef doc, StringRef libraryCall, IntegerAttr symbolSource, "
+      "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">,
+    OpBuilder<
+      "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTensorTypes,"
+      "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors, "
+      "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
+      "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">,
+    OpBuilder<
+      "OpBuilder &builder, OperationState &result, ValueRange inputs, "
+      "ValueRange outputBuffers, ArrayRef<AffineMap> indexingMaps, "
+      "ArrayRef<StringRef> iteratorTypes, "
       "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">
   ];
-
   let verifier = [{ return ::verify(*this); }];
 
   let hasFolder = 1;
@@ -665,19 +677,19 @@ def GenericOp : GenericOpBase<"generic"> {
 def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
   let description = [{
     Indexed Generic Linalg op form where the key properties of the computation
-    are specified as attributes. In pretty form, a linalg.indexed_generic op is
-    written as:
+    are specified as attributes. In pretty form, a `linalg.indexed_generic` op
+    is written as:
 
       ```mlir
-      linalg.indexed_generic #trait_attribute %A, %B, %C {other-attributes} :
-        memref<?x?xf32, stride_specification>,
-        memref<?x?xf32, stride_specification>,
-        memref<?x?xf32, stride_specification>
+      linalg.indexed_generic #trait_attribute
+          ins(%A, %B : memref<?x?xf32, stride_specification>,
+                       memref<?x?xf32, stride_specification>)
+          outs(%C : memref<?x?xf32, stride_specification>)
+          attrs = {other-optional-attributes}
+          {region}
       ```
 
     Where #trait_attributes is an alias of a dictionary attribute containing:
-      - args_in: an I64Attr representing the number of input (readonly) views
-      - args_out: an I64Attr representing the number of output (readwrite) views
       - doc [optional]: a documentation string
       - indexing_maps: a list of AffineMapAttr, one AffineMapAttr per each input
         and output view. Such AffineMapAttr specifies the mapping between the
@@ -705,8 +717,6 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
       doc = "C(m, n) += A(m, k) * B(k, n)",
       indexing_maps = #matmul_accesses,
       library_call = "linalg_matmul",
-      args_in = 2,
-      args_out = 1,
       iterator_types = ["parallel", "parallel", "reduction"]
     }
     ```
@@ -714,23 +724,25 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
     And can be reused in multiple places as:
 
     ```mlir
-    linalg.indexed_generic #matmul_trait %A, %B, %C [other-attributes] {
+      linalg.indexed_generic #matmul_trait
+        ins(%A, %B : memref<?x?xf32, stride_specification>,
+                     memref<?x?xf32, stride_specification>)
+        outs(%C : memref<?x?xf32, stride_specification>) {
       (%offset_m: index, %offset_n: index, %offset_k: index,
        %a: f32, %b: f32, %c: f32) :
         "some_optional_computation"(%offset_m, %offset_n, %offset_k)
         %d = mulf %a, %b: f32
         %e = addf %c, %d: f32
         linalg_yield %e : f32
-    } : memref<?x?xf32, stride_specification>,
-        memref<?x?xf32, stride_specification>,
-        memref<?x?xf32, stride_specification>
+    }
     ```
 
     This may lower to either:
 
     ```mlir
     call @linalg_matmul(%offset_m, %offset_n, %offset_k, %A, %B, %C) :
-      (memref<?x?xf32, stride_specification>,
+      (index, index, index,
+       memref<?x?xf32, stride_specification>,
        memref<?x?xf32, stride_specification>,
        memref<?x?xf32, stride_specification>)
       -> ()
@@ -756,42 +768,83 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
 
     To allow progressive lowering from the value world (a.k.a tensor values) to
     the buffer world (a.k.a memref values), a `linalg.indexed_generic` op
-    accepts mixing input and output ranked tensor values with input and output
-    memrefs.
+    allows mixing tensors and buffers operands and tensor results.
 
     ```mlir
-    %C = linalg.indexed_generic #trait_attribute %A, %B {other-attributes}
-    : tensor<?x?xf32>,
-      memref<?x?xf32, stride_specification>
+    %C = linalg.indexed_generic #trait_attribute
+      ins(%A, %B : tensor<?x?xf32>, memref<?x?xf32, stride_specification>)
+      init(%C : tensor<?x?xf32>)
+      {other-optional-attributes}
+      {region_with_index_arguments}
       -> (tensor<?x?xf32>)
     ```
 
-    In this case, the number of outputs (args_out) must match the sum of (1) the
-    number of output buffer operands and (2) the number of tensor return values.
-    The semantics is that the `linalg.indexed_generic` op produces (i.e.
-    allocates and fills) its return values.
+    The `init` operand and the conventions around mixing tensors and buffers are
+    described in more detail in the "Tensors and Buffers: Conventions and
+    Limitations" section in the [Linalg Document](../docs/Linalg.md)
 
     Tensor values must be legalized by a buffer allocation pass before most
-    transformations can be applied. Such legalization moves tensor return values
-    into output buffer operands and updates the region argument accordingly.
+    transformations can be applied. Such legalizations move tensor return values
+    into output buffer operands and update the region arguments accordingly.
 
-    Transformations that create control-flow around linalg.indexed_generic
-    operations are not expected to work with tensors because SSA values do not
-    escape naturally. Still, transformations and rewrites that take advantage of
-    tensor SSA values are expected to be useful and will be added in the near
-    future.
+    The `symbol_source` attribute allows selecting a particular operand and
+    introducing symbols for each operand dimension. Such symbols can then be
+    used in the indexing maps.
+
+    Example of 1D convolution with symbols:
+    ```mlir
+    #conv_1d_accesses = [
+      affine_map<(m, n)[dimN] -> (m + n - dimN floordiv 2)>, // in
+      affine_map<(m, n)[dimN] -> (n)>, // filter
+      affine_map<(m, n)[dimN] -> (m)> // out
+    ]
+
+    #conv_1d_trait = {
+      doc = "O(m) += I(m + n - size(n) floordiv 2) * K(n)",
+      indexing_maps = #conv_1d_accesses,
+      library_call  = "linalg_conv_1d",
+      iterator_types = ["parallel", "parallel"],
+      symbol_source = 1
+    }
+
+    linalg.generic #conv_1d_trait
+      ins(%in, %filter : memref<?xf32>, memref<?xf32>)
+      outs(%out : memref<?xf32>) {
+      ^bb0(%a: f32, %b: f32, %c: f32) :
+        %d = mulf %a, %b : f32
+        %e = addf %c, %d : f32
+        linalg.yield %e : f32
+    }
+    ```
+    where symbol s0 will be substituted with `dim %filter, %c0` i.e. the first
+    and only dimension of the second operand as specified by the symbol_source
+    attribute.
   }];
 
   let builders = [
     OpBuilder<
-      "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTypes, "
-      "ValueRange args, int64_t argsIn, int64_t argsOut, "
+      "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTensorTypes,"
+      "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors, "
       "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
-      "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> "
-      "= nullptr">
+      "StringRef doc, StringRef libraryCall, IntegerAttr symbolSource, "
+      "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> = nullptr">,
+    OpBuilder<
+      "OpBuilder &builder, OperationState &result, "
+      "ValueRange inputs, ValueRange outputBuffers, "
+      "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
+      "StringRef doc, StringRef libraryCall, IntegerAttr symbolSource, "
+      "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> = nullptr">,
+    OpBuilder<
+      "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTensorTypes,"
+      "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors, "
+      "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
+      "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> = nullptr">,
+    OpBuilder<
+      "OpBuilder &builder, OperationState &result, ValueRange inputs, "
+      "ValueRange outputBuffers, ArrayRef<AffineMap> indexingMaps, "
+      "ArrayRef<StringRef> iteratorTypes, "
+      "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> = nullptr">
   ];
-
-
   let verifier = [{ return ::verify(*this); }];
 
   let hasFolder = 1;

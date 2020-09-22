@@ -349,11 +349,13 @@ func @fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: f32) {
 
 func @pointwise(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?x?xf32, offset: ?, strides: [?, 1]>,
                 %arg2: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
-  linalg.generic #pointwise_2d_trait %arg0, %arg1, %arg2 {
+  linalg.generic #pointwise_2d_trait
+    ins(%arg0, %arg1 : memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>)
+    outs(%arg2 : memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   ^bb0(%arg4: f32, %arg5: f32, %arg6: f32):   // no predecessors
     %4 = addf %arg4, %arg5 : f32
     linalg.yield %4 : f32
-  }: memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>
+  }
   return
 }
 // TILE-2-LABEL: func @pointwise
