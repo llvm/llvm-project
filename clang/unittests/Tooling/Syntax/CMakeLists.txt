@@ -7,6 +7,7 @@ add_clang_unittest(SyntaxTests
   BuildTreeTest.cpp
   MutationsTest.cpp
   SynthesisTest.cpp
+  TreeTest.cpp
   TokensTest.cpp
 )
 

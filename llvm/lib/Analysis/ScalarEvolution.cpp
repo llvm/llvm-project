@@ -5114,8 +5114,13 @@ const SCEV *ScalarEvolution::createNodeForPHI(PHINode *PN) {
   if (const SCEV *S = createNodeFromSelectLikePHI(PN))
     return S;
 
+  // If the PHI has a single incoming value, follow that value, unless the
+  // PHI's incoming blocks are in a different loop, in which case doing so
+  // risks breaking LCSSA form. Instcombine would normally zap these, but
+  // it doesn't have DominatorTree information, so it may miss cases.
   if (Value *V = SimplifyInstruction(PN, {getDataLayout(), &TLI, &DT, &AC}))
-    return getSCEV(V);
+    if (LI.replacementPreservesLCSSAForm(PN, V))
+      return getSCEV(V);
 
   // If it's not a loop phi, we can't handle it yet.
   return getUnknown(PN);
@@ -6368,11 +6373,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       case Intrinsic::uadd_sat: {
         const SCEV *X = getSCEV(II->getArgOperand(0));
         const SCEV *Y = getSCEV(II->getArgOperand(1));
-        const SCEV *ClampedX = getUMinExpr(
-            X, getMinusSCEV(
-                   getConstant(cast<ConstantInt>(
-                       Constant::getAllOnesValue(II->getType()))),
-                   Y, (SCEV::NoWrapFlags)(SCEV::FlagNSW | SCEV::FlagNUW)));
+        const SCEV *ClampedX = getUMinExpr(X, getNotSCEV(Y));
         return getAddExpr(ClampedX, Y, SCEV::FlagNUW);
       }
       default:

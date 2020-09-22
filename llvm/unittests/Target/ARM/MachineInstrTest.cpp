@@ -747,6 +747,28 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VORRimmi16:
     case MVE_VORRimmi32:
     case MVE_VPST:
+    case MVE_VPTv16i8:
+    case MVE_VPTv8i16:
+    case MVE_VPTv4i32:
+    case MVE_VPTv16i8r:
+    case MVE_VPTv8i16r:
+    case MVE_VPTv4i32r:
+    case MVE_VPTv16s8:
+    case MVE_VPTv8s16:
+    case MVE_VPTv4s32:
+    case MVE_VPTv16s8r:
+    case MVE_VPTv8s16r:
+    case MVE_VPTv4s32r:
+    case MVE_VPTv16u8:
+    case MVE_VPTv8u16:
+    case MVE_VPTv4u32:
+    case MVE_VPTv16u8r:
+    case MVE_VPTv8u16r:
+    case MVE_VPTv4u32r:
+    case MVE_VPTv8f16:
+    case MVE_VPTv4f32:
+    case MVE_VPTv8f16r:
+    case MVE_VPTv4f32r:
     case MVE_VQABSs16:
     case MVE_VQABSs32:
     case MVE_VQABSs8:

@@ -13,8 +13,7 @@
 define <4 x i32> @f3(<4 x i32>* %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: @f3(
 ; CHECK-NEXT:    [[V0:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[A0:%.*]], i32 4, <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i32> [[A1:%.*]])
-; CHECK-NEXT:    [[V1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[A0]], i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> undef)
-; CHECK-NEXT:    [[V2:%.*]] = add <4 x i32> [[V0]], [[V1]]
+; CHECK-NEXT:    [[V2:%.*]] = add <4 x i32> [[V0]], [[V0]]
 ; CHECK-NEXT:    ret <4 x i32> [[V2]]
 ;
   %v0 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %a0, i32 4, <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i32> %a1)
@@ -60,8 +59,7 @@ define <4 x i32> @f5(<4 x i32>* %a0, <4 x i32> %a1) {
 ; Expect the first store to be removed.
 define void @f6(<4 x i32> %a0, <4 x i32>* %a1) {
 ; CHECK-LABEL: @f6(
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> [[A0:%.*]], <4 x i32>* [[A1:%.*]], i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 true>)
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> [[A0]], <4 x i32>* [[A1]], i32 4, <4 x i1> <i1 true, i1 true, i1 false, i1 true>)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> [[A0:%.*]], <4 x i32>* [[A1:%.*]], i32 4, <4 x i1> <i1 true, i1 true, i1 false, i1 true>)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %a0, <4 x i32>* %a1, i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 true>)
@@ -90,7 +88,6 @@ define void @f7(<4 x i32> %a0, <4 x i32>* %a1) {
 define <4 x i32> @f8(<4 x i32>* %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: @f8(
 ; CHECK-NEXT:    [[V0:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[A0:%.*]], i32 4, <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i32> [[A1:%.*]])
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> [[V0]], <4 x i32>* [[A0]], i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 true>)
 ; CHECK-NEXT:    ret <4 x i32> [[V0]]
 ;
   %v0 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %a0, i32 4, <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i32> %a1)
@@ -119,8 +116,7 @@ define <4 x i32> @f9(<4 x i32>* %a0, <4 x i32> %a1) {
 define <4 x i32> @fa(<4 x i32> %a0, <4 x i32>* %a1) {
 ; CHECK-LABEL: @fa(
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> [[A0:%.*]], <4 x i32>* [[A1:%.*]], i32 4, <4 x i1> <i1 true, i1 true, i1 false, i1 true>)
-; CHECK-NEXT:    [[V0:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[A1]], i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> undef)
-; CHECK-NEXT:    ret <4 x i32> [[V0]]
+; CHECK-NEXT:    ret <4 x i32> [[A0]]
 ;
   call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %a0, <4 x i32>* %a1, i32 4, <4 x i1> <i1 true, i1 true, i1 false, i1 true>)
   %v0 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %a1, i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> undef)

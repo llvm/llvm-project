@@ -399,7 +399,7 @@ def CARRYRC : RegisterClass<"PPC", [i32], 32, (add CARRY, XER)> {
 
 // Allocate in the same order as the underlying VSX registers.
 def VSRpRC :
-  RegisterClass<"PPC", [v4i64,v4f64,v8i32,v8f32,v16i16,v32i8,v256i1], 128,
+  RegisterClass<"PPC", [v256i1], 128,
                 (add (sequence "VSRp%u", 0, 6),
                      (sequence "VSRp%u", 15, 7), VSRp17, VSRp18,
                      VSRp16, VSRp19, VSRp20, VSRp21, VSRp22, VSRp23,

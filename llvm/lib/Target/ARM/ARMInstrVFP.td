@@ -2500,8 +2500,7 @@ let DecoderMethod = "DecodeForVMRSandVMSR" in {
                                 "vmrs", "\t$Rt, fpcxts", []>;
  }
 
- let Predicates = [HasV8_1MMainline, HasMVEInt],
-                   D=MVEDomain, validForTailPredication=1 in {
+ let Predicates = [HasV8_1MMainline, HasMVEInt] in {
    // System level VPR/P0 -> GPR
    let Uses = [VPR] in
    def VMRS_VPR : MovFromVFP<0b1100 /* vpr */, (outs GPR:$Rt), (ins),
@@ -2861,8 +2860,7 @@ let Defs = [FPSCR] in {
   }
 }
 
-let Predicates = [HasV8_1MMainline, HasMVEInt],
-                  D=MVEDomain, validForTailPredication=1 in {
+let Predicates = [HasV8_1MMainline, HasMVEInt] in {
   let Uses = [VPR] in {
     defm VSTR_VPR          : vfp_vstrldr_sysreg<0b0,0b1100, "vpr">;
   }

@@ -377,3 +377,37 @@
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-LIBSTDCXX %s
 // CHECK-LD-LIBSTDCXX: LLVM ERROR: linking libstdc++ unimplemented on AIX
+
+// Check powerpc64-ibm-aix7.1.0.0, 32-bit. -shared.
+// RUN: %clang -no-canonical-prefixes %s 2>&1 -### \
+// RUN:        -shared \
+// RUN:        -target powerpc-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD32-SHARED %s
+// CHECK-LD32-SHARED:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
+// CHECK-LD32-SHARED:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD32-SHARED:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD32-SHARED:     "-bM:SRE"
+// CHECK-LD32-SHARED:     "-bnoentry"
+// CHECK-LD32-SHARED:     "-b32"
+// CHECK-LD32-SHARED:     "-bpT:0x10000000" "-bpD:0x20000000"
+// CHECK-LD32-SHARED-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-SHARED:     "-L[[SYSROOT]]/usr/lib"
+// CHECK-LD32-SHARED:     "-lc"
+
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. -shared.
+// RUN: %clang -no-canonical-prefixes %s 2>&1 -### \
+// RUN:        -shared \
+// RUN:        -target powerpc64-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD64-SHARED %s
+// CHECK-LD64-SHARED:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
+// CHECK-LD64-SHARED:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD64-SHARED:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD64-SHARED:     "-bM:SRE"
+// CHECK-LD64-SHARED:     "-bnoentry"
+// CHECK-LD64-SHARED:     "-b64"
+// CHECK-LD64-SHARED:     "-bpT:0x100000000" "-bpD:0x110000000"
+// CHECK-LD64-SHARED-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0_64.o"
+// CHECK-LD64-SHARED:     "-L[[SYSROOT]]/usr/lib"
+// CHECK-LD64-SHARED:     "-lc"

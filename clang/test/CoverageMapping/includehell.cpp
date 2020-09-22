@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name includehell.cpp %s > %tmapping
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name includehell.cpp %s > %tmapping
 
 int main() {
   int x = 0;
@@ -51,7 +51,6 @@ int main() {
 // CHECK-START: File [[START3]], 4:29 -> 5:1 = #9
 
 // CHECK-CODE:      File [[CODE1:[0-9]]], 1:1 -> 14:1 = #1
-// CHECK-CODE:      Skipped,File [[CODE1]], 1:1 -> 1:41 = 0
 // CHECK-CODE-NEXT: File [[CODE1]], 4:5 -> 4:11 = #1
 // CHECK-CODE: File [[CODE1]], 4:13 -> 6:2 = #2
 // CHECK-CODE: File [[CODE1]], 6:8 -> 8:2 = (#1 - #2)
@@ -59,7 +58,6 @@ int main() {
 // CHECK-CODE: File [[CODE1]], 9:11 -> 11:2 = #3
 // CHECK-CODE: File [[CODE1]], 11:8 -> 13:2 = (#1 - #3)
 // CHECK-CODE:      File [[CODE2:[0-9]]], 1:1 -> 14:1 = #5
-// CHECK-CODE:      Skipped,File [[CODE2]], 1:1 -> 1:41 = 0
 // CHECK-CODE-NEXT: File [[CODE2]], 4:5 -> 4:11 = #5
 // CHECK-CODE: File [[CODE2]], 4:13 -> 6:2 = #6
 // CHECK-CODE: File [[CODE2]], 6:8 -> 8:2 = (#5 - #6)

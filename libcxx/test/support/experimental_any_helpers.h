@@ -15,12 +15,6 @@
 
 #include "test_macros.h"
 
-#if !defined(TEST_HAS_NO_RTTI)
-#define RTTI_ASSERT(X) assert(X)
-#else
-#define RTTI_ASSERT(X)
-#endif
-
 template <class T>
   struct IsSmallObject
     : public std::integral_constant<bool

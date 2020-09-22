@@ -6,7 +6,7 @@
 ;   return 0;
 ; }
 
-define i32 @isel_line_test2() nounwind uwtable !dbg !5 {
+define i32 @isel_line_test2(i32 %arg) nounwind uwtable !dbg !5 {
   ; The stack adjustment should be part of the prologue.
   ; CHECK: isel_line_test2:
   ; CHECK: {{subq|leaq}} {{.*}}, %rsp
@@ -14,8 +14,9 @@ define i32 @isel_line_test2() nounwind uwtable !dbg !5 {
   ; CHECK: movl $400, %edi
   ; CHECK: callq callme
 entry:
+  ; %arg should get spilled here, so we need to setup a stackframe
   %call = call i32 @callme(i32 400), !dbg !10
-  ret i32 0, !dbg !12
+  ret i32 %arg, !dbg !12
 }
 
 declare i32 @callme(i32)

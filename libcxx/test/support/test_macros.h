@@ -242,6 +242,12 @@
 #define TEST_HAS_NO_RTTI
 #endif
 
+#if !defined(TEST_HAS_NO_RTTI)
+# define RTTI_ASSERT(X) assert(X)
+#else
+# define RTTI_ASSERT(X)
+#endif
+
 #if !TEST_HAS_FEATURE(cxx_exceptions) && !defined(__cpp_exceptions) \
      && !defined(__EXCEPTIONS)
 #define TEST_HAS_NO_EXCEPTIONS

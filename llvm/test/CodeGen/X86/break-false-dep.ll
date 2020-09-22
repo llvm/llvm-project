@@ -519,8 +519,6 @@ define void @loopdep3() {
 ; SSE-WIN-NEXT:    addq $160, %rsp
 ; SSE-WIN-NEXT:    popq %rsi
 ; SSE-WIN-NEXT:    retq
-; SSE-WIN-NEXT:    .seh_handlerdata
-; SSE-WIN-NEXT:    .text
 ; SSE-WIN-NEXT:    .seh_endproc
 ;
 ; AVX-LABEL: loopdep3:
@@ -597,8 +595,6 @@ define void @loopdep3() {
 ; AVX-NEXT:    addq $160, %rsp
 ; AVX-NEXT:    popq %rsi
 ; AVX-NEXT:    retq
-; AVX-NEXT:    .seh_handlerdata
-; AVX-NEXT:    .text
 ; AVX-NEXT:    .seh_endproc
 entry:
   br label %for.cond1.preheader
@@ -716,8 +712,6 @@ define double @inlineasmdep(i64 %arg) {
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; SSE-WIN-NEXT:    addq $168, %rsp
 ; SSE-WIN-NEXT:    retq
-; SSE-WIN-NEXT:    .seh_handlerdata
-; SSE-WIN-NEXT:    .text
 ; SSE-WIN-NEXT:    .seh_endproc
 ;
 ; AVX-LABEL: inlineasmdep:
@@ -775,8 +769,6 @@ define double @inlineasmdep(i64 %arg) {
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; AVX-NEXT:    addq $168, %rsp
 ; AVX-NEXT:    retq
-; AVX-NEXT:    .seh_handlerdata
-; AVX-NEXT:    .text
 ; AVX-NEXT:    .seh_endproc
 top:
   tail call void asm sideeffect "", "~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{dirflag},~{fpsr},~{flags}"()
@@ -879,8 +871,6 @@ define double @truedeps(float %arg) {
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; SSE-WIN-NEXT:    addq $184, %rsp
 ; SSE-WIN-NEXT:    retq
-; SSE-WIN-NEXT:    .seh_handlerdata
-; SSE-WIN-NEXT:    .text
 ; SSE-WIN-NEXT:    .seh_endproc
 ;
 ; AVX-LABEL: truedeps:
@@ -942,8 +932,6 @@ define double @truedeps(float %arg) {
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; AVX-NEXT:    addq $184, %rsp
 ; AVX-NEXT:    retq
-; AVX-NEXT:    .seh_handlerdata
-; AVX-NEXT:    .text
 ; AVX-NEXT:    .seh_endproc
 top:
   tail call void asm sideeffect "", "~{xmm6},~{dirflag},~{fpsr},~{flags}"()
@@ -1043,8 +1031,6 @@ define double @clearence(i64 %arg) {
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; SSE-WIN-NEXT:    addq $168, %rsp
 ; SSE-WIN-NEXT:    retq
-; SSE-WIN-NEXT:    .seh_handlerdata
-; SSE-WIN-NEXT:    .text
 ; SSE-WIN-NEXT:    .seh_endproc
 ;
 ; AVX-LABEL: clearence:
@@ -1104,8 +1090,6 @@ define double @clearence(i64 %arg) {
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; AVX-NEXT:    addq $168, %rsp
 ; AVX-NEXT:    retq
-; AVX-NEXT:    .seh_handlerdata
-; AVX-NEXT:    .text
 ; AVX-NEXT:    .seh_endproc
 top:
   tail call void asm sideeffect "", "~{xmm6},~{dirflag},~{fpsr},~{flags}"()
@@ -1416,8 +1400,6 @@ define void @loopclearance2(double* nocapture %y, i64* %x, double %c1, double %c
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; SSE-WIN-NEXT:    addq $152, %rsp
 ; SSE-WIN-NEXT:    retq
-; SSE-WIN-NEXT:    .seh_handlerdata
-; SSE-WIN-NEXT:    .text
 ; SSE-WIN-NEXT:    .seh_endproc
 ;
 ; AVX1-LABEL: loopclearance2:
@@ -1499,8 +1481,6 @@ define void @loopclearance2(double* nocapture %y, i64* %x, double %c1, double %c
 ; AVX1-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; AVX1-NEXT:    addq $152, %rsp
 ; AVX1-NEXT:    retq
-; AVX1-NEXT:    .seh_handlerdata
-; AVX1-NEXT:    .text
 ; AVX1-NEXT:    .seh_endproc
 ;
 ; AVX512VL-LABEL: loopclearance2:
@@ -1582,8 +1562,6 @@ define void @loopclearance2(double* nocapture %y, i64* %x, double %c1, double %c
 ; AVX512VL-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; AVX512VL-NEXT:    addq $152, %rsp
 ; AVX512VL-NEXT:    retq
-; AVX512VL-NEXT:    .seh_handlerdata
-; AVX512VL-NEXT:    .text
 ; AVX512VL-NEXT:    .seh_endproc
 entry:
   tail call void asm sideeffect "", "~{xmm7},~{dirflag},~{fpsr},~{flags}"()

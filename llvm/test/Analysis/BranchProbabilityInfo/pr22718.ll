@@ -1,4 +1,4 @@
-; RUN: opt < %s -analyze -branch-prob | FileCheck %s
+; RUN: opt < %s -analyze -branch-prob -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
 ; In this test, the else clause is taken about 90% of the time. This was not

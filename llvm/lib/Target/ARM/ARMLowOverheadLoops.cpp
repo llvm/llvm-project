@@ -73,6 +73,29 @@ using namespace llvm;
 #define DEBUG_TYPE "arm-low-overhead-loops"
 #define ARM_LOW_OVERHEAD_LOOPS_NAME "ARM Low Overhead Loops pass"
 
+static bool isVectorPredicated(MachineInstr *MI) {
+  int PIdx = llvm::findFirstVPTPredOperandIdx(*MI);
+  return PIdx != -1 && MI->getOperand(PIdx + 1).getReg() == ARM::VPR;
+}
+
+static bool isVectorPredicate(MachineInstr *MI) {
+  return MI->findRegisterDefOperandIdx(ARM::VPR) != -1;
+}
+
+static bool hasVPRUse(MachineInstr *MI) {
+  return MI->findRegisterUseOperandIdx(ARM::VPR) != -1;
+}
+
+static bool isDomainMVE(MachineInstr *MI) {
+  uint64_t Domain = MI->getDesc().TSFlags & ARMII::DomainMask;
+  return Domain == ARMII::DomainMVE;
+}
+
+static bool shouldInspect(MachineInstr &MI) {
+  return isDomainMVE(&MI) || isVectorPredicate(&MI) ||
+    hasVPRUse(&MI);
+}
+
 namespace {
 
   using InstSet = SmallPtrSetImpl<MachineInstr *>;
@@ -563,11 +586,6 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   return true;
 }
 
-static bool isVectorPredicated(MachineInstr *MI) {
-  int PIdx = llvm::findFirstVPTPredOperandIdx(*MI);
-  return PIdx != -1 && MI->getOperand(PIdx + 1).getReg() == ARM::VPR;
-}
-
 static bool isRegInClass(const MachineOperand &MO,
                          const TargetRegisterClass *Class) {
   return MO.isReg() && MO.getReg() && Class->contains(MO.getReg());
@@ -703,9 +721,7 @@ bool LowOverheadLoop::ValidateLiveOuts() {
   MachineBasicBlock *Header = ML.getHeader();
 
   for (auto &MI : *Header) {
-    const MCInstrDesc &MCID = MI.getDesc();
-    uint64_t Flags = MCID.TSFlags;
-    if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
+    if (!shouldInspect(MI))
       continue;
 
     if (isVCTP(&MI) || isVPTOpcode(MI.getOpcode()))
@@ -854,9 +870,7 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
   if (CannotTailPredicate)
     return false;
 
-  const MCInstrDesc &MCID = MI->getDesc();
-  uint64_t Flags = MCID.TSFlags;
-  if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
+  if (!shouldInspect(*MI))
     return true;
 
   if (MI->getOpcode() == ARM::MVE_VPSEL ||
@@ -901,6 +915,9 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
     return true;
   }
 
+  // Inspect uses first so that any instructions that alter the VPR don't
+  // alter the predicate upon themselves.
+  const MCInstrDesc &MCID = MI->getDesc();
   bool IsUse = false;
   bool IsDef = false;
   for (int i = MI->getNumOperands() - 1; i >= 0; --i) {
@@ -941,8 +958,11 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
   // If we find an instruction that has been marked as not valid for tail
   // predication, only allow the instruction if it's contained within a valid
   // VPT block.
-  if ((Flags & ARMII::ValidForTailPredication) == 0) {
-    LLVM_DEBUG(dbgs() << "ARM Loops: Can't tail predicate: " << *MI);
+  bool RequiresExplicitPredication =
+    (MCID.TSFlags & ARMII::ValidForTailPredication) == 0;
+  if (isDomainMVE(MI) && RequiresExplicitPredication) {
+    LLVM_DEBUG(if (!IsUse)
+               dbgs() << "ARM Loops: Can't tail predicate: " << *MI);
     return IsUse;
   }
 

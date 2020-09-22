@@ -1,5 +1,5 @@
-; RUN: llc < %s | FileCheck %s
-; RUN: llc -O0 < %s | FileCheck %s
+; RUN: llc < %s | FileCheck -check-prefixes=CHECK,OPT %s
+; RUN: llc -O0 < %s | FileCheck -check-prefixes=CHECK,OPTNONE %s
 
 ; Make sure we insert DW_OP_deref when spilling indirect DBG_VALUE instructions.
 
@@ -21,10 +21,18 @@
 ; }
 
 ; CHECK-LABEL: _Z10get_stringv:
-; CHECK: #DEBUG_VALUE: get_string:result <- [$rdi+0]
-; CHECK: movq   %rdi, [[OFFS:[0-9]+]](%rsp)          # 8-byte Spill
-; CHECK: #DEBUG_VALUE: get_string:result <- [DW_OP_plus_uconst [[OFFS]], DW_OP_deref] [$rsp+0]
-; CHECK: callq  _ZN6stringC1Ei
+
+; OPT: #DEBUG_VALUE: get_string:result <- [$rdi+0]
+; OPT: movq   %rdi, [[OFFS:[0-9]+]](%rsp)          # 8-byte Spill
+; OPT: #DEBUG_VALUE: get_string:result <- [DW_OP_plus_uconst [[OFFS]], DW_OP_deref] [$rsp+0]
+; OPT: callq  _ZN6stringC1Ei
+
+; OPTNONE: #DEBUG_VALUE: get_string:result <- [DW_OP_deref] [$rsp+0]
+; OPTNONE: movq   %rdi, %rax
+; OPTNONE: movq   %rax, [[OFFS:[0-9]+]](%rsp)          # 8-byte Spill
+; OPTNONE: #DEBUG_VALUE: get_string:result <- [$rdi+0]
+; OPTNONE: callq  _ZN6stringC1Ei
+
 ; CHECK: #APP
 ; CHECK: #NO_APP
 
