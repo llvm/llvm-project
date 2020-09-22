@@ -1020,13 +1020,21 @@ let Predicates = [IsISA3_1] in {
                                                               v16i8:$VRB, 
                                                               i32:$SH))]>;
   defm VSTRIBR : VXForm_VTB5_RCr<13, 1, (outs vrrc:$vT), (ins vrrc:$vB),
-                                 "vstribr", "$vT, $vB", IIC_VecGeneral, []>;
+                                 "vstribr", "$vT, $vB", IIC_VecGeneral,
+				 [(set v16i8:$vT,
+                                       (int_ppc_altivec_vstribr v16i8:$vB))]>;
   defm VSTRIBL : VXForm_VTB5_RCr<13, 0, (outs vrrc:$vT), (ins vrrc:$vB),
-                                 "vstribl", "$vT, $vB", IIC_VecGeneral, []>;
+                                 "vstribl", "$vT, $vB", IIC_VecGeneral,
+                                 [(set v16i8:$vT,
+                                       (int_ppc_altivec_vstribl v16i8:$vB))]>;
   defm VSTRIHR : VXForm_VTB5_RCr<13, 3, (outs vrrc:$vT), (ins vrrc:$vB),
-                                 "vstrihr", "$vT, $vB", IIC_VecGeneral, []>;
+                                 "vstrihr", "$vT, $vB", IIC_VecGeneral,
+                                 [(set v8i16:$vT,
+                                       (int_ppc_altivec_vstrihr v8i16:$vB))]>;
   defm VSTRIHL : VXForm_VTB5_RCr<13, 2, (outs vrrc:$vT), (ins vrrc:$vB),
-                                 "vstrihl", "$vT, $vB", IIC_VecGeneral, []>;
+                                 "vstrihl", "$vT, $vB", IIC_VecGeneral,
+                                 [(set v8i16:$vT,
+                                       (int_ppc_altivec_vstrihl v8i16:$vB))]>;
   def VINSW :
     VXForm_1<207, (outs vrrc:$vD), (ins vrrc:$vDi, u4imm:$UIM, gprc:$rB),
              "vinsw $vD, $rB, $UIM", IIC_VecGeneral,

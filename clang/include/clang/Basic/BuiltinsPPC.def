@@ -348,6 +348,16 @@ BUILTIN(__builtin_altivec_mtvsrqm, "V1ULLLiULLi", "")
 BUILTIN(__builtin_altivec_vpdepd, "V2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vpextd, "V2ULLiV2ULLiV2ULLi", "")
 
+// P10 Vector String Isolate Built-ins.
+BUILTIN(__builtin_altivec_vstribr, "V16cV16c", "")
+BUILTIN(__builtin_altivec_vstribl, "V16cV16c", "")
+BUILTIN(__builtin_altivec_vstrihr, "V8sV8s", "")
+BUILTIN(__builtin_altivec_vstrihl, "V8sV8s", "")
+BUILTIN(__builtin_altivec_vstribr_p, "iiV16c", "")
+BUILTIN(__builtin_altivec_vstribl_p, "iiV16c", "")
+BUILTIN(__builtin_altivec_vstrihr_p, "iiV8s", "")
+BUILTIN(__builtin_altivec_vstrihl_p, "iiV8s", "")
+
 // P10 Vector Centrifuge built-in.
 BUILTIN(__builtin_altivec_vcfuged, "V2ULLiV2ULLiV2ULLi", "")
 
