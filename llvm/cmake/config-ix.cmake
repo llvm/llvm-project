@@ -126,8 +126,8 @@ if(LLVM_ENABLE_ZLIB)
     # Check if zlib we found is usable; for example, we may have found a 32-bit
     # library on a 64-bit system which would result in a link-time failure.
     cmake_push_check_state()
-    set(CMAKE_REQUIRED_INCLUDES ${ZLIB_INCLUDE_DIRS})
-    set(CMAKE_REQUIRED_LIBRARIES ${ZLIB_LIBRARY})
+    list(APPEND CMAKE_REQUIRED_INCLUDES ${ZLIB_INCLUDE_DIRS})
+    list(APPEND CMAKE_REQUIRED_LIBRARIES ${ZLIB_LIBRARY})
     check_symbol_exists(compress2 zlib.h HAVE_ZLIB)
     cmake_pop_check_state()
     if(LLVM_ENABLE_ZLIB STREQUAL FORCE_ON AND NOT HAVE_ZLIB)
@@ -147,8 +147,8 @@ if(LLVM_ENABLE_LIBXML2)
     # Check if libxml2 we found is usable; for example, we may have found a 32-bit
     # library on a 64-bit system which would result in a link-time failure.
     cmake_push_check_state()
-    set(CMAKE_REQUIRED_INCLUDES ${LIBXML2_INCLUDE_DIRS})
-    set(CMAKE_REQUIRED_LIBRARIES ${LIBXML2_LIBRARIES})
+    list(APPEND CMAKE_REQUIRED_INCLUDES ${LIBXML2_INCLUDE_DIRS})
+    list(APPEND CMAKE_REQUIRED_LIBRARIES ${LIBXML2_LIBRARIES})
     check_symbol_exists(xmlReadMemory libxml/xmlreader.h HAVE_LIBXML2)
     cmake_pop_check_state()
     if(LLVM_ENABLE_LIBXML2 STREQUAL FORCE_ON AND NOT HAVE_LIBXML2)
