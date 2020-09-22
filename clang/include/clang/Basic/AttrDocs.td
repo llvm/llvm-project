@@ -3735,7 +3735,7 @@ def SwiftNameDocs : Documentation {
   let Category = SwiftDocs;
   let Heading = "swift_name";
   let Content = [{
-The ``swift_name`` attribute provides the name of the declaration in Swift.  f
+The ``swift_name`` attribute provides the name of the declaration in Swift. If
 this attribute is absent, the name is transformed according to the algorithm
 built into the Swift compiler.
 
