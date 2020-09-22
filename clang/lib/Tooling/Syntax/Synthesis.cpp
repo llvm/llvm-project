@@ -201,25 +201,11 @@ syntax::Tree *clang::syntax::createTree(
   return T;
 }
 
-namespace {
-bool canModifyAllDescendants(const syntax::Node *N) {
+syntax::Node *clang::syntax::deepCopyExpandingMacros(syntax::Arena &A,
+                                                     const syntax::Node *N) {
   if (const auto *L = dyn_cast<syntax::Leaf>(N))
-    return L->canModify();
-
-  const auto *T = cast<syntax::Tree>(N);
-
-  if (!T->canModify())
-    return false;
-  for (const auto *Child = T->getFirstChild(); Child;
-       Child = Child->getNextSibling())
-    if (!canModifyAllDescendants(Child))
-      return false;
-
-  return true;
-}
-
-syntax::Node *deepCopyImpl(syntax::Arena &A, const syntax::Node *N) {
-  if (const auto *L = dyn_cast<syntax::Leaf>(N))
+    // `L->getToken()` gives us the expanded token, thus we implicitly expand
+    // any macros here.
     return createLeaf(A, L->getToken()->kind(),
                       L->getToken()->text(A.getSourceManager()));
 
@@ -227,17 +213,9 @@ syntax::Node *deepCopyImpl(syntax::Arena &A, const syntax::Node *N) {
   std::vector<std::pair<syntax::Node *, syntax::NodeRole>> Children;
   for (const auto *Child = T->getFirstChild(); Child;
        Child = Child->getNextSibling())
-    Children.push_back({deepCopyImpl(A, Child), Child->getRole()});
+    Children.push_back({deepCopyExpandingMacros(A, Child), Child->getRole()});
 
   return createTree(A, Children, N->getKind());
-}
-} // namespace
-
-syntax::Node *clang::syntax::deepCopy(syntax::Arena &A, const Node *N) {
-  if (!canModifyAllDescendants(N))
-    return nullptr;
-
-  return deepCopyImpl(A, N);
 }
 
 syntax::EmptyStatement *clang::syntax::createEmptyStatement(syntax::Arena &A) {

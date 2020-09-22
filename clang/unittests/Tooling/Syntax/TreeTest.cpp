@@ -22,8 +22,8 @@ private:
     std::vector<std::pair<Node *, NodeRole>> ChildrenWithRoles;
     ChildrenWithRoles.reserve(Children.size());
     for (const auto *Child : Children) {
-      ChildrenWithRoles.push_back(
-          std::make_pair(deepCopy(*Arena, Child), NodeRole::Unknown));
+      ChildrenWithRoles.push_back(std::make_pair(
+          deepCopyExpandingMacros(*Arena, Child), NodeRole::Unknown));
     }
     return clang::syntax::createTree(*Arena, ChildrenWithRoles,
                                      NodeKind::UnknownExpression);
