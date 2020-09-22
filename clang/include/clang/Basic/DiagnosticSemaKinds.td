@@ -4042,13 +4042,15 @@ def warn_attr_swift_name_function
   : Warning<"%0 attribute argument must be a string literal specifying a Swift function name">,
     InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_invalid_identifier
-  : Warning<"%0 attribute has invalid identifier for %select{base|context|parameter}1 name">,
+  : Warning<"%0 attribute has invalid identifier for the %select{base|context|parameter}1 name">,
     InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_decl_kind
   : Warning<"%0 attribute cannot be applied to this declaration">,
     InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_subscript_invalid_parameter
-  : Warning<"%0 attribute for 'subscript' must %select{be a getter or setter|have at least one parameter|have a 'self:' parameter}1">,
+  : Warning<"%0 attribute for 'subscript' must %select{be a getter or setter|"
+        "have at least one parameter|"
+        "have a 'self:' parameter}1">,
     InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_missing_parameters
   : Warning<"%0 attribute is missing parameter label clause">,

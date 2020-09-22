@@ -4279,15 +4279,15 @@ NoSpeculativeLoadHardeningAttr *Sema::mergeNoSpeculativeLoadHardeningAttr(
 
 SwiftNameAttr *Sema::mergeSwiftNameAttr(Decl *D, const SwiftNameAttr &SNA,
                                         StringRef Name, bool Override) {
-  if (const auto *Inline = D->getAttr<SwiftNameAttr>()) {
+  if (const auto *PrevSNA = D->getAttr<SwiftNameAttr>()) {
     if (Override) {
       // FIXME: warn about incompatible override
       return nullptr;
     }
 
-    if (Inline->getName() != Name && !Inline->isImplicit()) {
-      Diag(Inline->getLocation(), diag::err_attributes_are_not_compatible)
-          << Inline << &SNA;
+    if (PrevSNA->getName() != Name && !PrevSNA->isImplicit()) {
+      Diag(PrevSNA->getLocation(), diag::err_attributes_are_not_compatible)
+          << PrevSNA << &SNA;
       Diag(SNA.getLoc(), diag::note_conflicting_attribute);
     }
 
@@ -5711,6 +5711,14 @@ static void handleSwiftError(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) SwiftErrorAttr(S.Context, AL, Convention));
 }
 
+// For a function, this will validate a compound Swift name, e.g.
+// <code>init(foo:bar:baz:)</code> or <code>controllerForName(_:)</code>, and
+// the function will output the number of parameter names, and whether this is a
+// single-arg initializer.
+//
+// For a type, enum constant, property, or variable declaration, this will
+// validate either a simple identifier, or a qualified
+// <code>context.identifier</code> name.
 static bool
 validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
                           StringRef Name, unsigned &SwiftParamCount,
@@ -5745,24 +5753,24 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
     BaseName = ContextName;
     ContextName = StringRef();
   } else if (ContextName.empty() || !isValidIdentifier(ContextName)) {
-    S.Diag(Loc, diag::warn_attr_swift_name_invalid_identifier) << AL
-        << /*context*/ 1;
+    S.Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
+        << AL << /*context*/ 1;
     return false;
   } else {
     IsMember = true;
   }
 
   if (!isValidIdentifier(BaseName) || BaseName == "_") {
-    S.Diag(Loc, diag::warn_attr_swift_name_invalid_identifier) << AL
-      << /*basename*/ 0;
+    S.Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
+        << AL << /*basename*/ 0;
     return false;
   }
 
   bool IsSubscript = BaseName == "subscript";
   // A subscript accessor must be a getter or setter.
   if (IsSubscript && !IsGetter && !IsSetter) {
-    S.Diag(Loc, diag::warn_attr_swift_name_subscript_invalid_parameter) << AL
-        << /* getter or setter */ 0;
+    S.Diag(Loc, diag::warn_attr_swift_name_subscript_invalid_parameter)
+        << AL << /* getter or setter */ 0;
     return false;
   }
 
@@ -5770,13 +5778,15 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
     S.Diag(Loc, diag::warn_attr_swift_name_missing_parameters) << AL;
     return false;
   }
-  Parameters = Parameters.drop_back();  // ')'
+
+  assert(Parameters.back() == ')' && "expected ')'");
+  Parameters = Parameters.drop_back(); // ')'
 
   if (Parameters.empty()) {
     // Setters and subscripts must have at least one parameter.
     if (IsSubscript) {
-      S.Diag(Loc, diag::warn_attr_swift_name_subscript_invalid_parameter) << AL
-          << /* have at least one parameter */1;
+      S.Diag(Loc, diag::warn_attr_swift_name_subscript_invalid_parameter)
+          << AL << /* have at least one parameter */1;
       return false;
     }
 
@@ -5801,8 +5811,8 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
     std::tie(CurrentParam, Parameters) = Parameters.split(':');
 
     if (!isValidIdentifier(CurrentParam)) {
-      S.Diag(Loc, diag::warn_attr_swift_name_invalid_identifier) << AL
-          << /*parameter*/2;
+      S.Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
+          << AL << /*parameter*/2;
       return false;
     }
 
@@ -5832,8 +5842,8 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
 
   // Only instance subscripts are currently supported.
   if (IsSubscript && !SelfLocation) {
-    S.Diag(Loc, diag::warn_attr_swift_name_subscript_invalid_parameter) << AL
-        << /*have a 'self:' parameter*/2;
+    S.Diag(Loc, diag::warn_attr_swift_name_subscript_invalid_parameter)
+        << AL << /*have a 'self:' parameter*/2;
     return false;
   }
 

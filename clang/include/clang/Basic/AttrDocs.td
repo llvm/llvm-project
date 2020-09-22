@@ -3735,20 +3735,22 @@ def SwiftNameDocs : Documentation {
   let Category = SwiftDocs;
   let Heading = "swift_name";
   let Content = [{
-The ``swift_name`` attribute provides the spelling for the transformed name when
-the interface is imported into the Swift language.
+The ``swift_name`` attribute provides the name of the declaration in Swift.  f
+this attribute is absent, the name is transformed according to the algorithm
+built into the Swift compiler.
 
-The argument is the single string representation of the Swift function name.
-The name may be a compound Swift name.  For a type, enum constant, property, or
-variable declaration, the name must be a simple or qualified identifier.
+The argument is a string literal that contains the Swift name of the function,
+variable, or type. When renaming a function, the name may be a compound Swift
+name.  For a type, enum constant, property, or variable declaration, the name
+must be a simple or qualified identifier.
 
   .. code-block:: c
 
-    @interface I
-    - (void) methodWithInt:(int)i __attribute__((__swift_name__("I.method(int:)")))
+    @interface URL
+    - (void) initWithString:(NSString *)s __attribute__((__swift_name__("URL.init(_:)")))
     @end
 
-    void __attribute__((__swift_name__("function()"))) f(void) {
+    void __attribute__((__swift_name__("squareRoot()"))) sqrt(double v) {
     }
   }];
 }
