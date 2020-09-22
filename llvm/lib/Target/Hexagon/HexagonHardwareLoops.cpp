@@ -390,7 +390,7 @@ bool HexagonHardwareLoops::runOnMachineFunction(MachineFunction &MF) {
   TRI = HST.getRegisterInfo();
 
   for (auto &L : *MLI)
-    if (!L->getParentLoop()) {
+    if (L->isOutermost()) {
       bool L0Used = false;
       bool L1Used = false;
       Changed |= convertToHardwareLoop(L, L0Used, L1Used);

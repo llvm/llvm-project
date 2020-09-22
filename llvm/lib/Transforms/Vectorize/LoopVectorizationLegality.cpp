@@ -431,7 +431,7 @@ bool LoopVectorizationLegality::isUniform(Value *V) {
 }
 
 bool LoopVectorizationLegality::canVectorizeOuterLoop() {
-  assert(!TheLoop->empty() && "We are not vectorizing an outer loop.");
+  assert(!TheLoop->isInnermost() && "We are not vectorizing an outer loop.");
   // Store the result and return it at the end instead of exiting early, in case
   // allowExtraAnalysis is used to report multiple reasons for not vectorizing.
   bool Result = true;
@@ -1055,7 +1055,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 // Helper function to canVectorizeLoopNestCFG.
 bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
                                                     bool UseVPlanNativePath) {
-  assert((UseVPlanNativePath || Lp->empty()) &&
+  assert((UseVPlanNativePath || Lp->isInnermost()) &&
          "VPlan-native path is not enabled.");
 
   // TODO: ORE should be improved to show more accurate information when an
@@ -1165,7 +1165,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
 
   // Specific checks for outer loops. We skip the remaining legal checks at this
   // point because they don't support outer loops.
-  if (!TheLoop->empty()) {
+  if (!TheLoop->isInnermost()) {
     assert(UseVPlanNativePath && "VPlan-native path is not enabled.");
 
     if (!canVectorizeOuterLoop()) {
@@ -1182,7 +1182,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
     return Result;
   }
 
-  assert(TheLoop->empty() && "Inner loop expected.");
+  assert(TheLoop->isInnermost() && "Inner loop expected.");
   // Check if we can if-convert non-single-bb loops.
   unsigned NumBlocks = TheLoop->getNumBlocks();
   if (NumBlocks != 1 && !canVectorizeWithIfConvert()) {
