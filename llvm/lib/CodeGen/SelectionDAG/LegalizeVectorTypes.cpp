@@ -4580,11 +4580,11 @@ SDValue DAGTypeLegalizer::WidenVecOp_STORE(SDNode *N) {
   if (!ST->getMemoryVT().getScalarType().isByteSized())
     return TLI.scalarizeVectorStore(ST, DAG);
 
-  SmallVector<SDValue, 16> StChain;
   if (ST->isTruncatingStore())
-    GenWidenVectorTruncStores(StChain, ST);
-  else
-    GenWidenVectorStores(StChain, ST);
+    return TLI.scalarizeVectorStore(ST, DAG);
+
+  SmallVector<SDValue, 16> StChain;
+  GenWidenVectorStores(StChain, ST);
 
   if (StChain.size() == 1)
     return StChain[0];
@@ -5222,54 +5222,6 @@ void DAGTypeLegalizer::GenWidenVectorStores(SmallVectorImpl<SDValue> &StChain,
       // Restore index back to be relative to the original widen element type.
       Idx = Idx * NewVTWidth.getFixedSize() / ValEltWidth;
     }
-  }
-}
-
-void
-DAGTypeLegalizer::GenWidenVectorTruncStores(SmallVectorImpl<SDValue> &StChain,
-                                            StoreSDNode *ST) {
-  // For extension loads, it may not be more efficient to truncate the vector
-  // and then store it. Instead, we extract each element and then store it.
-  SDValue Chain = ST->getChain();
-  SDValue BasePtr = ST->getBasePtr();
-  MachineMemOperand::Flags MMOFlags = ST->getMemOperand()->getFlags();
-  AAMDNodes AAInfo = ST->getAAInfo();
-  SDValue ValOp = GetWidenedVector(ST->getValue());
-  SDLoc dl(ST);
-
-  EVT StVT = ST->getMemoryVT();
-  EVT ValVT = ValOp.getValueType();
-
-  // It must be true that the wide vector type is bigger than where we need to
-  // store.
-  assert(StVT.isVector() && ValOp.getValueType().isVector());
-  assert(StVT.isScalableVector() == ValOp.getValueType().isScalableVector());
-  assert(StVT.bitsLT(ValOp.getValueType()));
-
-  if (StVT.isScalableVector())
-    report_fatal_error("Generating widen scalable vector truncating stores not "
-                       "yet supported");
-
-  // For truncating stores, we can not play the tricks of chopping legal vector
-  // types and bitcast it to the right type. Instead, we unroll the store.
-  EVT StEltVT  = StVT.getVectorElementType();
-  EVT ValEltVT = ValVT.getVectorElementType();
-  unsigned Increment = ValEltVT.getSizeInBits() / 8;
-  unsigned NumElts = StVT.getVectorNumElements();
-  SDValue EOp = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ValEltVT, ValOp,
-                            DAG.getVectorIdxConstant(0, dl));
-  StChain.push_back(
-      DAG.getTruncStore(Chain, dl, EOp, BasePtr, ST->getPointerInfo(), StEltVT,
-                        ST->getOriginalAlign(), MMOFlags, AAInfo));
-  unsigned Offset = Increment;
-  for (unsigned i=1; i < NumElts; ++i, Offset += Increment) {
-    SDValue NewBasePtr =
-        DAG.getObjectPtrOffset(dl, BasePtr, TypeSize::Fixed(Offset));
-    SDValue EOp = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ValEltVT, ValOp,
-                              DAG.getVectorIdxConstant(0, dl));
-    StChain.push_back(DAG.getTruncStore(
-        Chain, dl, EOp, NewBasePtr, ST->getPointerInfo().getWithOffset(Offset),
-        StEltVT, ST->getOriginalAlign(), MMOFlags, AAInfo));
   }
 }
 
