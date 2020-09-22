@@ -8,6 +8,7 @@
 
 #include "Quality.h"
 #include "AST.h"
+#include "CompletionModel.h"
 #include "FileDistance.h"
 #include "SourceCode.h"
 #include "URI.h"
@@ -484,6 +485,34 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
 
 float evaluateSymbolAndRelevance(float SymbolQuality, float SymbolRelevance) {
   return SymbolQuality * SymbolRelevance;
+}
+
+float evaluateDecisionForest(const SymbolQualitySignals &Quality,
+                             const SymbolRelevanceSignals &Relevance) {
+  Example E;
+  E.setIsDeprecated(Quality.Deprecated);
+  E.setIsReservedName(Quality.ReservedName);
+  E.setIsImplementationDetail(Quality.ImplementationDetail);
+  E.setNumReferences(Quality.References);
+  E.setSymbolCategory(Quality.Category);
+
+  SymbolRelevanceSignals::DerivedSignals Derived =
+      Relevance.calculateDerivedSignals();
+  E.setIsNameInContext(Derived.NameMatchesContext);
+  E.setIsForbidden(Relevance.Forbidden);
+  E.setIsInBaseClass(Relevance.InBaseClass);
+  E.setFileProximityDistance(Derived.FileProximityDistance);
+  E.setSemaFileProximityScore(Relevance.SemaFileProximityScore);
+  E.setSymbolScopeDistance(Derived.ScopeProximityDistance);
+  E.setSemaSaysInScope(Relevance.SemaSaysInScope);
+  E.setScope(Relevance.Scope);
+  E.setContextKind(Relevance.Context);
+  E.setIsInstanceMember(Relevance.IsInstanceMember);
+  E.setHadContextType(Relevance.HadContextType);
+  E.setHadSymbolType(Relevance.HadSymbolType);
+  E.setTypeMatchesPreferred(Relevance.TypeMatchesPreferred);
+  E.setFilterLength(Relevance.FilterLength);
+  return Evaluate(E);
 }
 
 // Produces an integer that sorts in the same order as F.
