@@ -568,4 +568,4 @@ void DecodeVPERMV3Mask(ArrayRef<uint64_t> RawMask, const APInt &UndefElts,
   }
 }
 
-} // llvm namespace
+} // namespace llvm
