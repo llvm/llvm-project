@@ -108,16 +108,18 @@ public:
     auto shapeOp = dyn_cast<ShapeOp>(shapeVal.getDefiningOp());
     llvm::SmallVector<mlir::Value, 8> shapeOpers;
     llvm::SmallVector<mlir::Value, 8> shiftOpers;
+    unsigned rank;
     if (shapeOp) {
       populateShape(shapeOpers, shapeOp);
+      rank = shapeOp.getType().cast<ShapeType>().getRank();
     } else {
       auto shiftOp = dyn_cast<ShapeShiftOp>(shapeVal.getDefiningOp());
       assert(shiftOp && "shape is neither fir.shape nor fir.shape_shift");
       populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
+      rank = shiftOp.getType().cast<ShapeShiftType>().getRank();
     }
     mlir::NamedAttrList attrs;
     auto idxTy = rewriter.getIndexType();
-    auto rank = shapeOp.getType().cast<ShapeType>().getRank();
     auto rankAttr = rewriter.getIntegerAttr(idxTy, rank);
     attrs.push_back(rewriter.getNamedAttr(XEmboxOp::rankAttrName(), rankAttr));
     auto lenParamSize = embox.lenParams().size();
@@ -159,16 +161,18 @@ public:
     auto shapeOp = dyn_cast<ShapeOp>(shapeVal.getDefiningOp());
     llvm::SmallVector<mlir::Value, 8> shapeOpers;
     llvm::SmallVector<mlir::Value, 8> shiftOpers;
+    unsigned rank;
     if (shapeOp) {
       populateShape(shapeOpers, shapeOp);
+      rank = shapeOp.getType().cast<ShapeType>().getRank();
     } else {
       auto shiftOp = dyn_cast<ShapeShiftOp>(shapeVal.getDefiningOp());
       if (shiftOp)
         populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
+      rank = shiftOp.getType().cast<ShapeShiftType>().getRank();
     }
     mlir::NamedAttrList attrs;
     auto idxTy = rewriter.getIndexType();
-    auto rank = shapeOp.getType().cast<ShapeType>().getRank();
     auto rankAttr = rewriter.getIntegerAttr(idxTy, rank);
     attrs.push_back(
         rewriter.getNamedAttr(XArrayCoorOp::rankAttrName(), rankAttr));
@@ -180,8 +184,7 @@ public:
     auto idxAttr = rewriter.getIntegerAttr(idxTy, indexSize);
     attrs.push_back(
         rewriter.getNamedAttr(XArrayCoorOp::indexAttrName(), idxAttr));
-    auto shapeSize = shapeOp.getNumOperands();
-    auto dimAttr = rewriter.getIntegerAttr(idxTy, shapeSize);
+    auto dimAttr = rewriter.getIntegerAttr(idxTy, shapeOpers.size());
     attrs.push_back(
         rewriter.getNamedAttr(XArrayCoorOp::shapeAttrName(), dimAttr));
     llvm::SmallVector<mlir::Value, 8> sliceOpers;
