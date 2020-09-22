@@ -354,6 +354,26 @@ DynamicSymbols:
 # VERSIONED-SEC-SYM-GNU-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0x0 (SHN_UNDEF)
 # VERSIONED-SEC-SYM-GNU-NEXT:     3: {{.*}} UND <?>
 
+## Check we print a proper warning when an unnamed versioned section symbol has st_shndx = SHN_XINDEX, but there
+## is no SHT_SYMTAB_SHNDX section in the object.
+# RUN: yaml2obj %s -DTYPE=STT_SECTION -DNAME="''" -DINDEX=SHN_XINDEX --docnum=6 -o %t6.sec.xindex.sym
+# RUN: llvm-readobj -V --dyn-symbols %t6.sec.xindex.sym 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t6.sec.xindex.sym --check-prefix=VERSIONED-SEC-SYM-XINDEX-LLVM
+# RUN: llvm-readelf -V --dyn-symbols %t6.sec.xindex.sym 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t6.sec.xindex.sym --check-prefix=VERSIONED-SEC-SYM-XINDEX-GNU
+
+# VERSIONED-SEC-SYM-XINDEX-LLVM:       Name: (0)
+# VERSIONED-SEC-SYM-XINDEX-LLVM:       Name: foo (12)
+# VERSIONED-SEC-SYM-XINDEX-LLVM:      warning: '[[FILE]]': extended symbol index (2) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# VERSIONED-SEC-SYM-XINDEX-LLVM-NEXT: Symbol {
+# VERSIONED-SEC-SYM-XINDEX-LLVM-NEXT:  Name: <?> (0)
+# VERSIONED-SEC-SYM-XINDEX-LLVM:       Name: <?> (0)
+
+# VERSIONED-SEC-SYM-XINDEX-GNU:      Symbol table '.dynsym' contains 4 entries:
+# VERSIONED-SEC-SYM-XINDEX-GNU:         Num: {{.*}} Ndx Name
+# VERSIONED-SEC-SYM-XINDEX-GNU:      warning: '[[FILE]]': extended symbol index (2) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# VERSIONED-SEC-SYM-XINDEX-GNU-NEXT:      2: {{.*}} RSV[0xffff] <?>
+
 ## Case 8: Check what we print when:
 ## a) The dynamic symbol table does not exist.
 # RUN: yaml2obj %s --docnum=7 -o %t7
