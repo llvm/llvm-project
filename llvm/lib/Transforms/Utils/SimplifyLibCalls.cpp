@@ -1722,7 +1722,8 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
 
   // pow(x, n) -> x * x * x * ...
   const APFloat *ExpoF;
-  if (AllowApprox && match(Expo, m_APFloat(ExpoF))) {
+  if (AllowApprox && match(Expo, m_APFloat(ExpoF)) &&
+      !ExpoF->isExactlyValue(0.5) && !ExpoF->isExactlyValue(-0.5)) {
     // We limit to a max of 7 multiplications, thus the maximum exponent is 32.
     // If the exponent is an integer+0.5 we generate a call to sqrt and an
     // additional fmul.
