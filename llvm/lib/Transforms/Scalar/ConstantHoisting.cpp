@@ -366,9 +366,9 @@ void ConstantHoistingPass::collectConstantCandidates(
                                     ConstInt->getValue(), ConstInt->getType(),
                                     TargetTransformInfo::TCK_SizeAndLatency);
   else
-    Cost = TTI->getIntImmCostInst(Inst->getOpcode(), Idx, ConstInt->getValue(),
-                                  ConstInt->getType(),
-                                  TargetTransformInfo::TCK_SizeAndLatency);
+    Cost = TTI->getIntImmCostInst(
+        Inst->getOpcode(), Idx, ConstInt->getValue(), ConstInt->getType(),
+        TargetTransformInfo::TCK_SizeAndLatency, Inst);
 
   // Ignore cheap integer constants.
   if (Cost > TargetTransformInfo::TCC_Basic) {
@@ -418,8 +418,9 @@ void ConstantHoistingPass::collectConstantCandidates(
   // usually lowered to a load from constant pool. Such operation is unlikely
   // to be cheaper than compute it by <Base + Offset>, which can be lowered to
   // an ADD instruction or folded into Load/Store instruction.
-  int Cost = TTI->getIntImmCostInst(Instruction::Add, 1, Offset, PtrIntTy,
-                                    TargetTransformInfo::TCK_SizeAndLatency);
+  int Cost =
+      TTI->getIntImmCostInst(Instruction::Add, 1, Offset, PtrIntTy,
+                             TargetTransformInfo::TCK_SizeAndLatency, Inst);
   ConstCandVecType &ExprCandVec = ConstGEPCandMap[BaseGV];
   ConstCandMapType::iterator Itr;
   bool Inserted;
