@@ -33,7 +33,10 @@ static int64_t getInteger(opt::InputArgList &args, unsigned key,
     return Default;
 
   int64_t v;
-  if (to_integer(a->getValue(), v, base))
+  StringRef s = a->getValue();
+  if (base == 16 && (s.startswith("0x") || s.startswith("0X")))
+    s = s.drop_front(2);
+  if (to_integer(s, v, base))
     return v;
 
   StringRef spelling = args.getArgString(a->getIndex());
