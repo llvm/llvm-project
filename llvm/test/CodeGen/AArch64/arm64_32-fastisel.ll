@@ -17,9 +17,8 @@ declare [2 x i32] @callee()
 define void @test_struct_return(i32* %addr) {
 ; CHECK-LABEL: test_struct_return:
 ; CHECK: bl _callee
-; CHECK: x[[COPYX0:[0-9]+]], x0
-; CHECK-DAG: lsr [[HI:x[0-9]+]], x[[COPYX0]], #32
-; CHECK-DAG: str w[[COPYX0]]
+; CHECK-DAG: lsr [[HI:x[0-9]+]], x0, #32
+; CHECK-DAG: str w0
   %res = call [2 x i32] @callee()
   %res.0 = extractvalue [2 x i32] %res, 0
   store i32 %res.0, i32* %addr
