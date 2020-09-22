@@ -2349,4 +2349,22 @@ TEST_F(ConstantRangeTest, binaryXor) {
   EXPECT_TRUE(R0_99.binaryXor(R16_35).isFullSet());
 }
 
+TEST_F(ConstantRangeTest, binaryNot) {
+  TestUnsignedUnaryOpExhaustive(
+      [](const ConstantRange &CR) { return CR.binaryNot(); },
+      [](const APInt &N) { return ~N; });
+  TestUnsignedUnaryOpExhaustive(
+      [](const ConstantRange &CR) {
+        return CR.binaryXor(
+            ConstantRange(APInt::getAllOnesValue(CR.getBitWidth())));
+      },
+      [](const APInt &N) { return ~N; });
+  TestUnsignedUnaryOpExhaustive(
+      [](const ConstantRange &CR) {
+        return ConstantRange(APInt::getAllOnesValue(CR.getBitWidth()))
+            .binaryXor(CR);
+      },
+      [](const APInt &N) { return ~N; });
+}
+
 }  // anonymous namespace
