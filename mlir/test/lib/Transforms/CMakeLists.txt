@@ -11,7 +11,6 @@ add_mlir_library(MLIRTestTransforms
   TestConvertGPUKernelToCubin.cpp
   TestConvertGPUKernelToHsaco.cpp
   TestDominance.cpp
-  TestDynamicPipeline.cpp
   TestLoopFusion.cpp
   TestGpuMemoryPromotion.cpp
   TestGpuParallelLoopMapping.cpp
