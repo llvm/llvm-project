@@ -57,8 +57,7 @@ including but not limited to:
 We use TableGen as the language for specifying operation information. TableGen
 itself just provides syntax for writing records; the syntax and constructs
 allowed in a TableGen file (typically with filename suffix `.td`) can be found
-[here][TableGenIntro]. The formal language specification can be found
-[here][TableGenRef]. _Roughly_ speaking,
+[here][TableGenProgRef].
 
 *   TableGen `class` is similar to C++ class; it can be templated and
     subclassed.
@@ -72,7 +71,7 @@ allowed in a TableGen file (typically with filename suffix `.td`) can be found
     be anything, including `dag` itself. We can have names attached to both the
     operator and the arguments like `(MyOp:$op_name MyArg:$arg_name)`.
 
-Please see the [language introduction][TableGenIntro] to learn about all the
+Please see the [language reference][TableGenProgRef] to learn about all the
 types and expressions supported by TableGen.
 
 ## Operation Definition
@@ -1508,8 +1507,7 @@ requirements that were desirable:
     TODO: document expectation if the dependent op's definition changes.
 
 [TableGen]: https://llvm.org/docs/TableGen/index.html
-[TableGenIntro]: https://llvm.org/docs/TableGen/LangIntro.html
-[TableGenRef]: https://llvm.org/docs/TableGen/LangRef.html
+[TableGenProgRef]: https://llvm.org/docs/TableGen/ProgRef.html
 [TableGenBackend]: https://llvm.org/docs/TableGen/BackEnds.html#introduction
 [OpBase]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/OpBase.td
 [OpDefinitionsGen]: https://github.com/llvm/llvm-project/blob/master/mlir/tools/mlir-tblgen/OpDefinitionsGen.cpp
