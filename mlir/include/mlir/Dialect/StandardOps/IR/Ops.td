@@ -492,6 +492,43 @@ def AssumeAlignmentOp : Std_Op<"assume_alignment"> {
   let assemblyFormat = "$memref `,` $alignment attr-dict `:` type($memref)";
 }
 
+//===----------------------------------------------------------------------===//
+// AtanOp
+//===----------------------------------------------------------------------===//
+
+def AtanOp : FloatUnaryOp<"atan", []>{
+  let summary = "arcus tangent of the given value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.atan` ssa-use `:` type
+    ```
+
+    The `atan` operation computes the arcus tangent of a given value.  It takes
+    one operand and returns one result of the same type.  This type may be a
+    float scalar type, a vector whose element type is float, or a tensor of
+    floats.  It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Arcus tangent of scalar value.
+    %a = atan %b : f64
+
+    // SIMD vector element-wise arcus tangent.
+    %f = atan %g : vector<4xf32>
+
+    // Tensor element-wise arcus tangent.
+    %x = atan %y : tensor<4x?xf8>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicRMWOp
+//===----------------------------------------------------------------------===//
+
 def AtomicRMWOp : Std_Op<"atomic_rmw", [
       AllTypesMatch<["value", "result"]>,
       TypesMatchWith<"value type matches element type of memref",
@@ -1354,6 +1391,10 @@ def CosOp : FloatUnaryOp<"cos"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// SinOp
+//===----------------------------------------------------------------------===//
+
 def SinOp : FloatUnaryOp<"sin"> {
   let summary = "sine of the specified value";
   let description = [{
@@ -1382,7 +1423,6 @@ def SinOp : FloatUnaryOp<"sin"> {
     ```
   }];
 }
-
 
 //===----------------------------------------------------------------------===//
 // DeallocOp
