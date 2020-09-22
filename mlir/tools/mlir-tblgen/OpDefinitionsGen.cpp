@@ -47,6 +47,7 @@ static cl::opt<std::string> opExcFilter(
 
 static const char *const tblgenNamePrefix = "tblgen_";
 static const char *const generatedArgName = "odsArg";
+static const char *const builder = "odsBuilder";
 static const char *const builderOpState = "odsState";
 
 // The logic to calculate the actual value range for a declared operand/result
@@ -1177,16 +1178,34 @@ void OpEmitter::genBuilder() {
     if (listInit) {
       for (Init *init : listInit->getValues()) {
         Record *builderDef = cast<DefInit>(init)->getDef();
-        StringRef params = builderDef->getValueAsString("params");
+        StringRef params = builderDef->getValueAsString("params").trim();
+        // TODO: Remove this and just generate the builder/state always.
+        bool skipParamGen = params.startswith("OpBuilder") ||
+                            params.startswith("mlir::OpBuilder") ||
+                            params.startswith("::mlir::OpBuilder");
         StringRef body = builderDef->getValueAsString("body");
         bool hasBody = !body.empty();
 
         OpMethod::Property properties =
             hasBody ? OpMethod::MP_Static : OpMethod::MP_StaticDeclaration;
+        std::string paramStr =
+            skipParamGen ? params.str()
+                         : llvm::formatv("::mlir::OpBuilder &{0}, "
+                                         "::mlir::OperationState &{1}, {2}",
+                                         builder, builderOpState, params)
+                               .str();
         auto *method =
-            opClass.addMethodAndPrune("void", "build", properties, params);
-        if (hasBody)
-          method->body() << body;
+            opClass.addMethodAndPrune("void", "build", properties, paramStr);
+        if (hasBody) {
+          if (skipParamGen) {
+            method->body() << body;
+          } else {
+            FmtContext fctx;
+            fctx.withBuilder(builder);
+            fctx.addSubst("_state", builderOpState);
+            method->body() << tgfmt(body, &fctx);
+          }
+        }
       }
     }
     if (op.skipDefaultBuilders()) {
