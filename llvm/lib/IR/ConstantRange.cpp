@@ -413,6 +413,13 @@ bool ConstantRange::contains(const ConstantRange &Other) const {
   return Other.getUpper().ule(Upper) && Lower.ule(Other.getLower());
 }
 
+unsigned ConstantRange::getActiveBits() const {
+  if (isEmptySet())
+    return 0;
+
+  return getUnsignedMax().getActiveBits();
+}
+
 ConstantRange ConstantRange::subtract(const APInt &Val) const {
   assert(Val.getBitWidth() == getBitWidth() && "Wrong bit width");
   // If the set is empty or full, don't modify the endpoints.
