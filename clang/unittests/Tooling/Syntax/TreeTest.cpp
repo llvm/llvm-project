@@ -9,6 +9,8 @@
 #include "clang/Tooling/Syntax/Tree.h"
 #include "TreeTestBase.h"
 #include "clang/Tooling/Syntax/BuildTree.h"
+#include "clang/Tooling/Syntax/Nodes.h"
+#include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -120,6 +122,233 @@ TEST_P(TreeTest, LastLeaf) {
     ASSERT_TRUE(Tree->findLastLeaf() != nullptr);
     EXPECT_EQ(Tree->findLastLeaf()->getToken()->kind(), tok::r_paren);
   }
+}
+
+class ListTest : public SyntaxTreeTest {
+private:
+  std::string dumpQuotedTokensOrNull(const Node *N) {
+    return N ? "'" +
+                   StringRef(N->dumpTokens(Arena->getSourceManager()))
+                       .trim()
+                       .str() +
+                   "'"
+             : "null";
+  }
+
+protected:
+  std::string
+  dumpElementsAndDelimiters(ArrayRef<List::ElementAndDelimiter<Node>> EDs) {
+    std::string Storage;
+    llvm::raw_string_ostream OS(Storage);
+
+    OS << "[";
+
+    llvm::interleaveComma(
+        EDs, OS, [&OS, this](const List::ElementAndDelimiter<Node> &ED) {
+          OS << "(" << dumpQuotedTokensOrNull(ED.element) << ", "
+             << dumpQuotedTokensOrNull(ED.delimiter) << ")";
+        });
+
+    OS << "]";
+
+    return OS.str();
+  }
+
+  std::string dumpNodes(ArrayRef<Node *> Nodes) {
+    std::string Storage;
+    llvm::raw_string_ostream OS(Storage);
+
+    OS << "[";
+
+    llvm::interleaveComma(Nodes, OS, [&OS, this](const Node *N) {
+      OS << dumpQuotedTokensOrNull(N);
+    });
+
+    OS << "]";
+
+    return OS.str();
+  }
+};
+
+INSTANTIATE_TEST_CASE_P(TreeTests, ListTest,
+                        ::testing::ValuesIn(allTestClangConfigs()), );
+
+/// "a, b, c"  <=> [("a", ","), ("b", ","), ("c", null)]
+TEST_P(ListTest, List_Separated_WellFormed) {
+  buildTree("", GetParam());
+
+  // "a, b, c"
+  auto *List = dyn_cast<syntax::List>(syntax::createTree(
+      *Arena,
+      {
+          {createLeaf(*Arena, tok::identifier, "a"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::comma), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, tok::identifier, "b"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::comma), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, tok::identifier, "c"), NodeRole::ListElement},
+      },
+      NodeKind::CallArguments));
+
+  EXPECT_EQ(dumpElementsAndDelimiters(List->getElementsAsNodesAndDelimiters()),
+            "[('a', ','), ('b', ','), ('c', null)]");
+  EXPECT_EQ(dumpNodes(List->getElementsAsNodes()), "['a', 'b', 'c']");
+}
+
+/// "a,  , c"  <=> [("a", ","), (null, ","), ("c", null)]
+TEST_P(ListTest, List_Separated_MissingElement) {
+  buildTree("", GetParam());
+
+  // "a,  , c"
+  auto *List = dyn_cast<syntax::List>(syntax::createTree(
+      *Arena,
+      {
+          {createLeaf(*Arena, tok::identifier, "a"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::comma), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, tok::comma), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, tok::identifier, "c"), NodeRole::ListElement},
+      },
+      NodeKind::CallArguments));
+
+  EXPECT_EQ(dumpElementsAndDelimiters(List->getElementsAsNodesAndDelimiters()),
+            "[('a', ','), (null, ','), ('c', null)]");
+  EXPECT_EQ(dumpNodes(List->getElementsAsNodes()), "['a', null, 'c']");
+}
+
+/// "a, b  c"  <=> [("a", ","), ("b", null), ("c", null)]
+TEST_P(ListTest, List_Separated_MissingDelimiter) {
+  buildTree("", GetParam());
+
+  // "a, b  c"
+  auto *List = dyn_cast<syntax::List>(syntax::createTree(
+      *Arena,
+      {
+          {createLeaf(*Arena, tok::identifier, "a"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::comma), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, tok::identifier, "b"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::identifier, "c"), NodeRole::ListElement},
+      },
+      NodeKind::CallArguments));
+
+  EXPECT_EQ(dumpElementsAndDelimiters(List->getElementsAsNodesAndDelimiters()),
+            "[('a', ','), ('b', null), ('c', null)]");
+  EXPECT_EQ(dumpNodes(List->getElementsAsNodes()), "['a', 'b', 'c']");
+}
+
+/// "a, b,"    <=> [("a", ","), ("b", ","), (null, null)]
+TEST_P(ListTest, List_Separated_MissingLastElement) {
+  buildTree("", GetParam());
+
+  // "a, b, c"
+  auto *List = dyn_cast<syntax::List>(syntax::createTree(
+      *Arena,
+      {
+          {createLeaf(*Arena, tok::identifier, "a"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::comma), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, tok::identifier, "b"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::comma), NodeRole::ListDelimiter},
+      },
+      NodeKind::CallArguments));
+
+  EXPECT_EQ(dumpElementsAndDelimiters(List->getElementsAsNodesAndDelimiters()),
+            "[('a', ','), ('b', ','), (null, null)]");
+  EXPECT_EQ(dumpNodes(List->getElementsAsNodes()), "['a', 'b', null]");
+}
+
+/// "a:: b:: c::" <=> [("a", "::"), ("b", "::"), ("c", "::")]
+TEST_P(ListTest, List_Terminated_WellFormed) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  buildTree("", GetParam());
+
+  // "a:: b:: c::"
+  auto *List = dyn_cast<syntax::List>(syntax::createTree(
+      *Arena,
+      {
+          {createLeaf(*Arena, tok::identifier, "a"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, tok::identifier, "b"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, tok::identifier, "c"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
+      },
+      NodeKind::NestedNameSpecifier));
+
+  EXPECT_EQ(dumpElementsAndDelimiters(List->getElementsAsNodesAndDelimiters()),
+            "[('a', '::'), ('b', '::'), ('c', '::')]");
+  EXPECT_EQ(dumpNodes(List->getElementsAsNodes()), "['a', 'b', 'c']");
+}
+
+/// "a::  :: c::" <=> [("a", "::"), (null, "::"), ("c", "::")]
+TEST_P(ListTest, List_Terminated_MissingElement) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  buildTree("", GetParam());
+
+  // "a:: b:: c::"
+  auto *List = dyn_cast<syntax::List>(syntax::createTree(
+      *Arena,
+      {
+          {createLeaf(*Arena, tok::identifier, "a"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, tok::identifier, "c"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
+      },
+      NodeKind::NestedNameSpecifier));
+
+  EXPECT_EQ(dumpElementsAndDelimiters(List->getElementsAsNodesAndDelimiters()),
+            "[('a', '::'), (null, '::'), ('c', '::')]");
+  EXPECT_EQ(dumpNodes(List->getElementsAsNodes()), "['a', null, 'c']");
+}
+
+/// "a:: b  c::" <=> [("a", "::"), ("b", null), ("c", "::")]
+TEST_P(ListTest, List_Terminated_MissingDelimiter) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  buildTree("", GetParam());
+
+  // "a:: b  c::"
+  auto *List = dyn_cast<syntax::List>(syntax::createTree(
+      *Arena,
+      {
+          {createLeaf(*Arena, tok::identifier, "a"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, tok::identifier, "b"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::identifier, "c"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
+      },
+      NodeKind::NestedNameSpecifier));
+
+  EXPECT_EQ(dumpElementsAndDelimiters(List->getElementsAsNodesAndDelimiters()),
+            "[('a', '::'), ('b', null), ('c', '::')]");
+  EXPECT_EQ(dumpNodes(List->getElementsAsNodes()), "['a', 'b', 'c']");
+}
+
+/// "a:: b:: c"  <=> [("a", "::"), ("b", "::"), ("c", null)]
+TEST_P(ListTest, List_Terminated_MissingLastDelimiter) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  buildTree("", GetParam());
+
+  // "a:: b:: c"
+  auto *List = dyn_cast<syntax::List>(syntax::createTree(
+      *Arena,
+      {
+          {createLeaf(*Arena, tok::identifier, "a"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, tok::identifier, "b"), NodeRole::ListElement},
+          {createLeaf(*Arena, tok::coloncolon), NodeRole::ListDelimiter},
+          {createLeaf(*Arena, tok::identifier, "c"), NodeRole::ListElement},
+      },
+      NodeKind::NestedNameSpecifier));
+
+  EXPECT_EQ(dumpElementsAndDelimiters(List->getElementsAsNodesAndDelimiters()),
+            "[('a', '::'), ('b', '::'), ('c', null)]");
+  EXPECT_EQ(dumpNodes(List->getElementsAsNodes()), "['a', 'b', 'c']");
 }
 
 } // namespace
