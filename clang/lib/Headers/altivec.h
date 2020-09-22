@@ -3366,6 +3366,16 @@ static __inline__ vector unsigned long long __ATTRS_o_ai
 vec_dive(vector unsigned long long __a, vector unsigned long long __b) {
   return __builtin_altivec_vdiveud(__a, __b);
 }
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_dive(vector unsigned __int128 __a, vector unsigned __int128 __b) {
+  return __builtin_altivec_vdiveuq(__a, __b);
+}
+
+static __inline__ vector signed __int128 __ATTRS_o_ai
+vec_dive(vector signed __int128 __a, vector signed __int128 __b) {
+  return __builtin_altivec_vdivesq(__a, __b);
+}
 #endif
 
 #ifdef __POWER10_VECTOR__
