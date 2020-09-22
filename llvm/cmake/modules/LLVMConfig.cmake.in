@@ -52,16 +52,14 @@ set(LLVM_ENABLE_THREADS @LLVM_ENABLE_THREADS@)
 
 set(LLVM_ENABLE_UNWIND_TABLES @LLVM_ENABLE_UNWIND_TABLES@)
 
-include(CMakeFindDependencyMacro)
-
 set(LLVM_ENABLE_ZLIB @LLVM_ENABLE_ZLIB@)
 if(LLVM_ENABLE_ZLIB)
-  find_dependency(ZLIB)
+  find_package(ZLIB)
 endif()
 
 set(LLVM_ENABLE_LIBXML2 @LLVM_ENABLE_LIBXML2@)
 if(LLVM_ENABLE_LIBXML2)
-  find_dependency(LibXml2)
+  find_package(LibXml2)
 endif()
 
 set(LLVM_WITH_Z3 @LLVM_WITH_Z3@)
