@@ -24,14 +24,11 @@ entry:
 ; CHECK: blr
 
 ; CHECK-FISL-LABEL: @main
-; CHECK-FISL: stxvd2x 36, 1, 3
-; CHECK-FISL: vmr 4, 3
-; CHECK-FISL: lxvd2x 35, 1, 3
-; CHECK-FISL: 3, 144
-; CHCEK-FISL: stxvd2x 36, 1, 3
-; CHECK-FISL: vmr 4, 2
+; CHECK-FISL: stxvd2x 34
+; CHECK-FISL: vmr 2, 3
+; CHECK-FISL: vmr 3, 4
+; CHECK-FISL: lxvd2x 36
 ; CHECK-FISL: bl sv
-
 ; CHECK-FISL: lxvd2x [[VC:[0-9]+]],
 ; CHECK-FISL: xvadddp 34, 34, [[VC]]
 ; CHECK-FISL: blr
@@ -39,3 +36,4 @@ entry:
 
 attributes #0 = { noinline nounwind readnone }
 attributes #1 = { nounwind }
+
