@@ -944,13 +944,6 @@ private:
   ///   ST:      store of a widen value
   void GenWidenVectorStores(SmallVectorImpl<SDValue> &StChain, StoreSDNode *ST);
 
-  /// Helper function to generate a set of stores to store a truncate widen
-  /// vector into non-widen memory.
-  ///   StChain: list of chains for the stores we have generated
-  ///   ST:      store of a widen value
-  void GenWidenVectorTruncStores(SmallVectorImpl<SDValue> &StChain,
-                                 StoreSDNode *ST);
-
   /// Modifies a vector input (widen or narrows) to a vector of NVT.  The
   /// input vector must have the same element type as NVT.
   /// When FillWithZeroes is "on" the vector will be widened with zeroes.
