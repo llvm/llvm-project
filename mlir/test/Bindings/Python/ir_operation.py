@@ -1,10 +1,13 @@
 # RUN: %PYTHON %s | FileCheck %s
 
+import gc
 import mlir
 
 def run(f):
   print("\nTEST:", f.__name__)
   f()
+  gc.collect()
+  assert mlir.ir.Context._get_live_count() == 0
 
 
 # CHECK-LABEL: TEST: testDetachedRegionBlock

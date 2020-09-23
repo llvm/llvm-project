@@ -1,10 +1,14 @@
 # RUN: %PYTHON %s | FileCheck %s
 
+import gc
 import mlir
 
 def run(f):
   print("\nTEST:", f.__name__)
   f()
+  gc.collect()
+  assert mlir.ir.Context._get_live_count() == 0
+
 
 # Verify successful parse.
 # CHECK-LABEL: TEST: testParseSuccess
@@ -12,6 +16,9 @@ def run(f):
 def testParseSuccess():
   ctx = mlir.ir.Context()
   module = ctx.parse_module(r"""module @successfulParse {}""")
+  print("CLEAR CONTEXT")
+  ctx = None  # Ensure that module captures the context.
+  gc.collect()
   module.dump()  # Just outputs to stderr. Verifies that it functions.
   print(str(module))
 
@@ -47,3 +54,33 @@ def testRoundtripUnicode():
   print(str(module))
 
 run(testRoundtripUnicode)
+
+
+# Tests that module.operation works and correctly interns instances.
+# CHECK-LABEL: TEST: testModuleOperation
+def testModuleOperation():
+  ctx = mlir.ir.Context()
+  module = ctx.parse_module(r"""module @successfulParse {}""")
+  op1 = module.operation
+  assert ctx._get_live_operation_count() == 1
+  # CHECK: module @successfulParse
+  print(op1)
+
+  # Ensure that operations are the same on multiple calls.
+  op2 = module.operation
+  assert ctx._get_live_operation_count() == 1
+  assert op1 is op2
+
+  # Ensure that if module is de-referenced, the operations are still valid.
+  module = None
+  gc.collect()
+  print(op1)
+
+  # Collect and verify lifetime.
+  op1 = None
+  op2 = None
+  gc.collect()
+  print("LIVE OPERATIONS:", ctx._get_live_operation_count())
+  assert ctx._get_live_operation_count() == 0
+
+run(testModuleOperation)
