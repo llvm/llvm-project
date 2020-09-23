@@ -146,7 +146,7 @@ class DEntry<string str, int val1> {
 }
 
 def DFoo : DEntry<"foo", 1>;
-// ERROR1: [[@LINE+1]]:1: error: Record 'DBar' in table 'DTable' is missing field 'Val1'
+// ERROR1: [[@LINE+1]]:1: error: Record 'DBar' for table 'DTable' is missing field 'Val1'
 def DBar : DEntry<"bar", ?>;
 
 def DTable : GenericTable {

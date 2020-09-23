@@ -15,6 +15,7 @@
 #define LLVM_TABLEGEN_ERROR_H
 
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/TableGen/Record.h"
 
 namespace llvm {
 
@@ -33,6 +34,10 @@ void PrintError(const Twine &Msg);
 
 LLVM_ATTRIBUTE_NORETURN void PrintFatalError(const Twine &Msg);
 LLVM_ATTRIBUTE_NORETURN void PrintFatalError(ArrayRef<SMLoc> ErrorLoc,
+                                             const Twine &Msg);
+LLVM_ATTRIBUTE_NORETURN void PrintFatalError(const Record *Rec,
+                                             const Twine &Msg);
+LLVM_ATTRIBUTE_NORETURN void PrintFatalError(const RecordVal *RecVal,
                                              const Twine &Msg);
 
 extern SourceMgr SrcMgr;
