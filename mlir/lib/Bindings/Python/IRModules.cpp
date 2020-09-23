@@ -24,6 +24,22 @@ using llvm::SmallVector;
 // Docstrings (trivial, non-duplicated docstrings are included inline).
 //------------------------------------------------------------------------------
 
+static const char kContextCreateOperationDocstring[] =
+    R"(Creates a new operation.
+
+Args:
+  name: Operation name (e.g. "dialect.operation").
+  location: A Location object.
+  results: Sequence of Type representing op result types.
+  attributes: Dict of str:Attribute.
+  successors: List of Block for the operation's successors.
+  regions: Number of regions to create.
+
+Returns:
+  A new "detached" Operation object. Detached operations can be added
+  to blocks, which causes them to become "attached."
+)";
+
 static const char kContextParseDocstring[] =
     R"(Parses a module's assembly format from a string.
 
@@ -59,6 +75,13 @@ static const char kTypeStrDunderDocstring[] =
 
 static const char kDumpDocstring[] =
     R"(Dumps a debug representation of the object to stderr.)";
+
+static const char kAppendBlockDocstring[] =
+    R"(Appends a new block, with argument types as positional args.
+
+Returns:
+  The created block.
+)";
 
 //------------------------------------------------------------------------------
 // Conversion utilities.
@@ -265,11 +288,25 @@ public:
     throw SetPyError(PyExc_IndexError, "attempt to access out of bounds block");
   }
 
+  PyBlock appendBlock(py::args pyArgTypes) {
+    operation->checkValid();
+    llvm::SmallVector<MlirType, 4> argTypes;
+    argTypes.reserve(pyArgTypes.size());
+    for (auto &pyArg : pyArgTypes) {
+      argTypes.push_back(pyArg.cast<PyType &>().type);
+    }
+
+    MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data());
+    mlirRegionAppendOwnedBlock(region, block);
+    return PyBlock(operation, block);
+  }
+
   static void bind(py::module &m) {
     py::class_<PyBlockList>(m, "BlockList")
         .def("__getitem__", &PyBlockList::dunderGetItem)
         .def("__iter__", &PyBlockList::dunderIter)
-        .def("__len__", &PyBlockList::dunderLen);
+        .def("__len__", &PyBlockList::dunderLen)
+        .def("append", &PyBlockList::appendBlock, kAppendBlockDocstring);
   }
 
 private:
@@ -352,11 +389,41 @@ public:
                      "attempt to access out of bounds operation");
   }
 
+  void insert(int index, PyOperation &newOperation) {
+    parentOperation->checkValid();
+    newOperation.checkValid();
+    if (index < 0) {
+      throw SetPyError(
+          PyExc_IndexError,
+          "only positive insertion indices are supported for operations");
+    }
+    if (newOperation.isAttached()) {
+      throw SetPyError(
+          PyExc_ValueError,
+          "attempt to insert an operation that has already been inserted");
+    }
+    // TODO: Needing to do this check is unfortunate, especially since it will
+    // be a forward-scan, just like the following call to
+    // mlirBlockInsertOwnedOperation. Switch to insert before/after once
+    // D88148 lands.
+    if (index > dunderLen()) {
+      throw SetPyError(PyExc_IndexError,
+                       "attempt to insert operation past end");
+    }
+    mlirBlockInsertOwnedOperation(block, index, newOperation.get());
+    newOperation.setAttached();
+    // TODO: Rework the parentKeepAlive so as to avoid ownership hazards under
+    // the new ownership.
+  }
+
   static void bind(py::module &m) {
     py::class_<PyOperationList>(m, "OperationList")
         .def("__getitem__", &PyOperationList::dunderGetItem)
         .def("__iter__", &PyOperationList::dunderIter)
-        .def("__len__", &PyOperationList::dunderLen);
+        .def("__len__", &PyOperationList::dunderLen)
+        .def("insert", &PyOperationList::insert, py::arg("index"),
+             py::arg("operation"),
+             "Inserts an operation at an indexed position");
   }
 
 private:
@@ -415,6 +482,87 @@ PyMlirContext::LiveContextMap &PyMlirContext::getLiveContexts() {
 size_t PyMlirContext::getLiveCount() { return getLiveContexts().size(); }
 
 size_t PyMlirContext::getLiveOperationCount() { return liveOperations.size(); }
+
+py::object PyMlirContext::createOperation(
+    std::string name, PyLocation location,
+    llvm::Optional<std::vector<PyType *>> results,
+    llvm::Optional<py::dict> attributes,
+    llvm::Optional<std::vector<PyBlock *>> successors, int regions) {
+  llvm::SmallVector<MlirType, 4> mlirResults;
+  llvm::SmallVector<MlirBlock, 4> mlirSuccessors;
+  llvm::SmallVector<std::pair<std::string, MlirAttribute>, 4> mlirAttributes;
+
+  // General parameter validation.
+  if (regions < 0)
+    throw SetPyError(PyExc_ValueError, "number of regions must be >= 0");
+
+  // Unpack/validate results.
+  if (results) {
+    mlirResults.reserve(results->size());
+    for (PyType *result : *results) {
+      // TODO: Verify result type originate from the same context.
+      if (!result)
+        throw SetPyError(PyExc_ValueError, "result type cannot be None");
+      mlirResults.push_back(result->type);
+    }
+  }
+  // Unpack/validate attributes.
+  if (attributes) {
+    mlirAttributes.reserve(attributes->size());
+    for (auto &it : *attributes) {
+
+      auto name = it.first.cast<std::string>();
+      auto &attribute = it.second.cast<PyAttribute &>();
+      // TODO: Verify attribute originates from the same context.
+      mlirAttributes.emplace_back(std::move(name), attribute.attr);
+    }
+  }
+  // Unpack/validate successors.
+  if (successors) {
+    llvm::SmallVector<MlirBlock, 4> mlirSuccessors;
+    mlirSuccessors.reserve(successors->size());
+    for (auto *successor : *successors) {
+      // TODO: Verify successor originate from the same context.
+      if (!successor)
+        throw SetPyError(PyExc_ValueError, "successor block cannot be None");
+      mlirSuccessors.push_back(successor->get());
+    }
+  }
+
+  // Apply unpacked/validated to the operation state. Beyond this
+  // point, exceptions cannot be thrown or else the state will leak.
+  MlirOperationState state = mlirOperationStateGet(name.c_str(), location.loc);
+  if (!mlirResults.empty())
+    mlirOperationStateAddResults(&state, mlirResults.size(),
+                                 mlirResults.data());
+  if (!mlirAttributes.empty()) {
+    // Note that the attribute names directly reference bytes in
+    // mlirAttributes, so that vector must not be changed from here
+    // on.
+    llvm::SmallVector<MlirNamedAttribute, 4> mlirNamedAttributes;
+    mlirNamedAttributes.reserve(mlirAttributes.size());
+    for (auto &it : mlirAttributes)
+      mlirNamedAttributes.push_back(
+          mlirNamedAttributeGet(it.first.c_str(), it.second));
+    mlirOperationStateAddAttributes(&state, mlirNamedAttributes.size(),
+                                    mlirNamedAttributes.data());
+  }
+  if (!mlirSuccessors.empty())
+    mlirOperationStateAddSuccessors(&state, mlirSuccessors.size(),
+                                    mlirSuccessors.data());
+  if (regions) {
+    llvm::SmallVector<MlirRegion, 4> mlirRegions;
+    mlirRegions.resize(regions);
+    for (int i = 0; i < regions; ++i)
+      mlirRegions[i] = mlirRegionCreate();
+    mlirOperationStateAddOwnedRegions(&state, mlirRegions.size(),
+                                      mlirRegions.data());
+  }
+
+  // Construct the operation.
+  MlirOperation operation = mlirOperationCreate(&state);
+  return PyOperation::createDetached(getRef(), operation).releaseObject();
+}
 
 //------------------------------------------------------------------------------
 // PyModule
@@ -1153,6 +1301,11 @@ void mlir::python::populateIRSubmodule(py::module &m) {
           [](PyMlirContext &self, bool value) {
             mlirContextSetAllowUnregisteredDialects(self.get(), value);
           })
+      .def("create_operation", &PyMlirContext::createOperation, py::arg("name"),
+           py::arg("location"), py::arg("results") = py::none(),
+           py::arg("attributes") = py::none(),
+           py::arg("successors") = py::none(), py::arg("regions") = 0,
+           kContextCreateOperationDocstring)
       .def(
           "parse_module",
           [](PyMlirContext &self, const std::string moduleAsm) {
