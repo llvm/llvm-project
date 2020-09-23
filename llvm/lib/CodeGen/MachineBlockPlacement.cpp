@@ -418,7 +418,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
   /// The return value is used to model tail duplication cost.
   BlockFrequency getBlockCountOrFrequency(const MachineBasicBlock *BB) {
     if (UseProfileCount) {
-      auto Count = MBFI->getMBFI().getBlockProfileCount(BB);
+      auto Count = MBFI->getBlockProfileCount(BB);
       if (Count)
         return *Count;
       else
