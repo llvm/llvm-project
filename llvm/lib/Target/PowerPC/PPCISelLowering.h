@@ -381,6 +381,10 @@ namespace llvm {
     /// sym\@got\@dtprel\@l.
     ADDI_DTPREL_L,
 
+    /// G8RC = PADDI_DTPREL %x3, Symbol - For the pc-rel based local-dynamic TLS
+    /// model, produces a PADDI8 instruction that adds X3 to sym\@dtprel.
+    PADDI_DTPREL,
+
     /// VRRC = VADD_SPLAT Elt, EltSize - Temporary node to be expanded
     /// during instruction selection to optimize a BUILD_VECTOR into
     /// operations on splats.  This is necessary to avoid losing these
