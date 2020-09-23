@@ -182,14 +182,6 @@ that you close the review manually. In the web UI, under "Leap Into Action" put
 the git revision number in the Comment, set the Action to "Close Revision" and
 click Submit.  Note the review must have been Accepted first.
 
-Arcanist also adds extra tags that are mostly noise in the commit message, for
-this reason avoid using `arc land` and push commits to master directly with git
-after removing tags other than "Reviewed by" and "Differential Revision".
-You can run `llvm/utils/git/arcfilter.sh` to clean the commit message of the
-current "HEAD" commit automatically. You can also setup a git hook to catch this
-for you (see :ref:`git_pre_push_hook`).
-
-
 Committing someone's change from Phabricator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
