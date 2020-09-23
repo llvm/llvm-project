@@ -61,7 +61,7 @@ ret.bb:                                          ; preds = %else, %main_body
 
 ; GCN: ; %UnifiedReturnBlock
 ; GCN-NEXT: s_or_b64 exec, exec
-; GCN-NOT: s_waitcnt
+; GCN-NEXT: s_waitcnt
 
 ; GCN: BB{{[0-9]+_[0-9]+}}: ; %else
 ; GCN: s_and_saveexec_b64 [[SAVE_EXEC:s\[[0-9]+:[0-9]+\]]], vcc

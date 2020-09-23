@@ -9,6 +9,7 @@ define i32 @global_atomic_csub(i32 addrspace(1)* %ptr, i32 %data) {
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
 ; GCN-NEXT:    ; implicit-def: $vcc_hi
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* %ptr, i32 %data)
   ret i32 %ret
@@ -27,6 +28,7 @@ define i32 @global_atomic_csub_offset(i32 addrspace(1)* %ptr, i32 %data) {
 ; GCN-NEXT:    v_add_co_u32_e64 v0, vcc_lo, v0, v3
 ; GCN-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v4, vcc_lo
 ; GCN-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 1024
   %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* %gep, i32 %data)
@@ -40,6 +42,7 @@ define void @global_atomic_csub_nortn(i32 addrspace(1)* %ptr, i32 %data) {
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
 ; GCN-NEXT:    ; implicit-def: $vcc_hi
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* %ptr, i32 %data)
   ret void
@@ -58,6 +61,7 @@ define void @global_atomic_csub_offset_nortn(i32 addrspace(1)* %ptr, i32 %data) 
 ; GCN-NEXT:    v_add_co_u32_e64 v0, vcc_lo, v0, v3
 ; GCN-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v4, vcc_lo
 ; GCN-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 1024
   %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* %gep, i32 %data)

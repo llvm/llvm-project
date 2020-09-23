@@ -15,6 +15,7 @@ define i32 @divergent_if_swap_brtarget_order0(i32 %value) {
 ; CHECK-NEXT:    global_load_dword v0, v[0:1], off
 ; CHECK-NEXT:  BB0_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %c = icmp ne i32 %value, 0
@@ -41,6 +42,7 @@ define i32 @divergent_if_swap_brtarget_order1(i32 %value) {
 ; CHECK-NEXT:    global_load_dword v0, v[0:1], off
 ; CHECK-NEXT:  BB1_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %c = icmp ne i32 %value, 0
@@ -69,6 +71,7 @@ define i32 @divergent_if_nonboolean_condition0(i32 %value) {
 ; CHECK-NEXT:    global_load_dword v0, v[0:1], off
 ; CHECK-NEXT:  BB2_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %c = trunc i32 %value to i1
@@ -99,6 +102,7 @@ define i32 @divergent_if_nonboolean_condition1(i32 addrspace(1)* %ptr) {
 ; CHECK-NEXT:    global_load_dword v0, v[0:1], off
 ; CHECK-NEXT:  BB3_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %value = load i32, i32 addrspace(1)* %ptr
@@ -163,6 +167,7 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:  BB4_5: ; %Flow
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:  BB4_6: ; %bb12
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %tmp = load i32, i32 addrspace(4)* @external_constant

@@ -17,6 +17,7 @@ define amdgpu_ps <4 x float> @sample_l_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GCN-NEXT:    s_mov_b32 s10, s12
 ; GCN-NEXT:    s_mov_b32 s11, s13
 ; GCN-NEXT:    image_sample_lz v[0:3], v0, s[0:7], s[8:11] dmask:0xf
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.l.1d.v4f32.f32(i32 15, float %s, float 0.000000e+00, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
@@ -39,6 +40,7 @@ define amdgpu_ps <4 x float> @sample_l_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GCN-NEXT:    s_mov_b32 s10, s12
 ; GCN-NEXT:    s_mov_b32 s11, s13
 ; GCN-NEXT:    image_sample_lz v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.l.2d.v4f32.f32(i32 15, float %s, float %t, float -0.000000e+00, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
@@ -61,6 +63,7 @@ define amdgpu_ps <4 x float> @sample_c_l_1d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GCN-NEXT:    s_mov_b32 s10, s12
 ; GCN-NEXT:    s_mov_b32 s11, s13
 ; GCN-NEXT:    image_sample_c_lz v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.1d.v4f32.f32(i32 15, float %zcompare, float %s, float -2.000000e+00, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
@@ -83,6 +86,7 @@ define amdgpu_ps <4 x float> @sample_c_l_2d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GCN-NEXT:    s_mov_b32 s10, s12
 ; GCN-NEXT:    s_mov_b32 s11, s13
 ; GCN-NEXT:    image_sample_c_lz v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.2d.v4f32.f32(i32 15, float %zcompare, float %s, float %t, float 0.000000e+00, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
@@ -105,6 +109,7 @@ define amdgpu_ps <4 x float> @sample_l_o_1d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GCN-NEXT:    s_mov_b32 s10, s12
 ; GCN-NEXT:    s_mov_b32 s11, s13
 ; GCN-NEXT:    image_sample_lz_o v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.l.o.1d.v4f32.f32(i32 15, i32 %offset, float %s, float 0.000000e+00, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
@@ -127,6 +132,7 @@ define amdgpu_ps <4 x float> @sample_l_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GCN-NEXT:    s_mov_b32 s10, s12
 ; GCN-NEXT:    s_mov_b32 s11, s13
 ; GCN-NEXT:    image_sample_lz_o v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.l.o.2d.v4f32.f32(i32 15, i32 %offset, float %s, float %t, float 0.000000e+00, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
@@ -149,6 +155,7 @@ define amdgpu_ps <4 x float> @sample_c_l_o_1d(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GCN-NEXT:    s_mov_b32 s10, s12
 ; GCN-NEXT:    s_mov_b32 s11, s13
 ; GCN-NEXT:    image_sample_c_lz_o v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.o.1d.v4f32.f32(i32 15, i32 %offset, float %zcompare, float %s, float 0.000000e+00, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
@@ -171,6 +178,7 @@ define amdgpu_ps <4 x float> @sample_c_l_o_2d(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GCN-NEXT:    s_mov_b32 s10, s12
 ; GCN-NEXT:    s_mov_b32 s11, s13
 ; GCN-NEXT:    image_sample_c_lz_o v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.o.2d.v4f32.f32(i32 15, i32 %offset, float %zcompare, float %s, float %t, float 0.000000e+00, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
@@ -193,6 +201,7 @@ define amdgpu_ps <4 x float> @gather4_l_2d(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GCN-NEXT:    s_mov_b32 s10, s12
 ; GCN-NEXT:    s_mov_b32 s11, s13
 ; GCN-NEXT:    image_gather4_lz v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.gather4.l.2d.v4f32.f32(i32 15, float %s, float %t, float 0.000000e+00, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
@@ -215,6 +224,7 @@ define amdgpu_ps <4 x float> @gather4_c_l_2d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GCN-NEXT:    s_mov_b32 s10, s12
 ; GCN-NEXT:    s_mov_b32 s11, s13
 ; GCN-NEXT:    image_gather4_c_lz v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.gather4.c.l.2d.v4f32.f32(i32 15, float %zcompare, float %s, float %t, float 0.000000e+00, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
@@ -237,6 +247,7 @@ define amdgpu_ps <4 x float> @gather4_l_o_2d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GCN-NEXT:    s_mov_b32 s10, s12
 ; GCN-NEXT:    s_mov_b32 s11, s13
 ; GCN-NEXT:    image_gather4_lz_o v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.gather4.l.o.2d.v4f32.f32(i32 15, i32 %offset, float %s, float %t, float 0.000000e+00, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
@@ -259,6 +270,7 @@ define amdgpu_ps <4 x float> @gather4_c_l_o_2d(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GCN-NEXT:    s_mov_b32 s10, s12
 ; GCN-NEXT:    s_mov_b32 s11, s13
 ; GCN-NEXT:    image_gather4_c_lz_o v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.gather4.c.l.o.2d.v4f32.f32(i32 15, i32 %offset, float %zcompare, float %s, float %t, float 0.000000e+00, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)

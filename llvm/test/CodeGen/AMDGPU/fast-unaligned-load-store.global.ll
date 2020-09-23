@@ -128,6 +128,7 @@ define i32 @global_load_2xi16_align1(i16 addrspace(1)* %p) #0 {
 ; GFX7-UNALIGNED:       ; %bb.0:
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    flat_load_dword v0, v[0:1]
+; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_load_2xi16_align1:
@@ -217,12 +218,14 @@ define i32 @global_load_2xi16_align4(i16 addrspace(1)* %p) #0 {
 ; GFX7-ALIGNED:       ; %bb.0:
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-ALIGNED-NEXT:    flat_load_dword v0, v[0:1]
+; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-ALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-UNALIGNED-LABEL: global_load_2xi16_align4:
 ; GFX7-UNALIGNED:       ; %bb.0:
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    flat_load_dword v0, v[0:1]
+; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: global_load_2xi16_align4:

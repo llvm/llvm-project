@@ -4,6 +4,7 @@
 
 ; GCN-LABEL: {{^}}i1_func_void:
 ; GCN: buffer_load_ubyte v0, off
+; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define i1 @i1_func_void() #0 {
   %val = load i1, i1 addrspace(1)* undef
@@ -13,6 +14,7 @@ define i1 @i1_func_void() #0 {
 ; FIXME: Missing and?
 ; GCN-LABEL: {{^}}i1_zeroext_func_void:
 ; GCN: buffer_load_ubyte v0, off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define zeroext i1 @i1_zeroext_func_void() #0 {
   %val = load i1, i1 addrspace(1)* undef
@@ -31,6 +33,7 @@ define signext i1 @i1_signext_func_void() #0 {
 
 ; GCN-LABEL: {{^}}i8_func_void:
 ; GCN: buffer_load_ubyte v0, off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define i8 @i8_func_void() #0 {
   %val = load i8, i8 addrspace(1)* undef
@@ -39,6 +42,7 @@ define i8 @i8_func_void() #0 {
 
 ; GCN-LABEL: {{^}}i8_zeroext_func_void:
 ; GCN: buffer_load_ubyte v0, off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define zeroext i8 @i8_zeroext_func_void() #0 {
   %val = load i8, i8 addrspace(1)* undef
@@ -47,6 +51,7 @@ define zeroext i8 @i8_zeroext_func_void() #0 {
 
 ; GCN-LABEL: {{^}}i8_signext_func_void:
 ; GCN: buffer_load_sbyte v0, off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define signext i8 @i8_signext_func_void() #0 {
   %val = load i8, i8 addrspace(1)* undef
@@ -55,6 +60,7 @@ define signext i8 @i8_signext_func_void() #0 {
 
 ; GCN-LABEL: {{^}}i16_func_void:
 ; GCN: buffer_load_ushort v0, off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define i16 @i16_func_void() #0 {
   %val = load i16, i16 addrspace(1)* undef
@@ -63,6 +69,7 @@ define i16 @i16_func_void() #0 {
 
 ; GCN-LABEL: {{^}}i16_zeroext_func_void:
 ; GCN: buffer_load_ushort v0, off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define zeroext i16 @i16_zeroext_func_void() #0 {
   %val = load i16, i16 addrspace(1)* undef
@@ -71,6 +78,7 @@ define zeroext i16 @i16_zeroext_func_void() #0 {
 
 ; GCN-LABEL: {{^}}i16_signext_func_void:
 ; GCN: buffer_load_sshort v0, off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define signext i16 @i16_signext_func_void() #0 {
   %val = load i16, i16 addrspace(1)* undef
@@ -79,6 +87,7 @@ define signext i16 @i16_signext_func_void() #0 {
 
 ; GCN-LABEL: {{^}}i32_func_void:
 ; GCN: buffer_load_dword v0, off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define i32 @i32_func_void() #0 {
   %val = load i32, i32 addrspace(1)* undef
@@ -88,6 +97,7 @@ define i32 @i32_func_void() #0 {
 ; GCN-LABEL: {{^}}i48_func_void:
 ; GCN: buffer_load_dword v0, off
 ; GCN-NEXT: buffer_load_ushort v1, off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define i48 @i48_func_void() #0 {
   %val = load i48, i48 addrspace(1)* undef, align 8
@@ -97,6 +107,7 @@ define i48 @i48_func_void() #0 {
 ; GCN-LABEL: {{^}}i48_zeroext_func_void:
 ; GCN: buffer_load_dword v0, off
 ; GCN-NEXT: buffer_load_ushort v1, off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define zeroext i48 @i48_zeroext_func_void() #0 {
   %val = load i48, i48 addrspace(1)* undef, align 8
@@ -106,6 +117,7 @@ define zeroext i48 @i48_zeroext_func_void() #0 {
 ; GCN-LABEL: {{^}}i48_signext_func_void:
 ; GCN: buffer_load_dword v0, off
 ; GCN-NEXT: buffer_load_sshort v1, off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define signext i48 @i48_signext_func_void() #0 {
   %val = load i48, i48 addrspace(1)* undef, align 8
@@ -113,6 +125,8 @@ define signext i48 @i48_signext_func_void() #0 {
 }
 
 ; GCN-LABEL: {{^}}i63_func_void:
+; GCN: s_waitcnt
+; GCN-NEXT: s_setpc_b64
 define i63 @i63_func_void(i63 %val) #0 {
   ret i63 %val
 }
@@ -140,6 +154,7 @@ define signext i63 @i63_signext_func_void(i63 %val) #0 {
 
 ; GCN-LABEL: {{^}}i64_func_void:
 ; GCN: buffer_load_dwordx2 v[0:1], off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define i64 @i64_func_void() #0 {
   %val = load i64, i64 addrspace(1)* undef
@@ -149,6 +164,7 @@ define i64 @i64_func_void() #0 {
 ; GCN-LABEL: {{^}}i65_func_void:
 ; GCN-DAG: buffer_load_dwordx2 v[0:1], off
 ; GCN-DAG: buffer_load_ubyte v2, off
+; GCN: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define i65 @i65_func_void() #0 {
   %val = load i65, i65 addrspace(1)* undef
@@ -157,6 +173,7 @@ define i65 @i65_func_void() #0 {
 
 ; GCN-LABEL: {{^}}f32_func_void:
 ; GCN: buffer_load_dword v0, off, s[4:7], 0
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define float @f32_func_void() #0 {
   %val = load float, float addrspace(1)* undef
@@ -165,6 +182,7 @@ define float @f32_func_void() #0 {
 
 ; GCN-LABEL: {{^}}f64_func_void:
 ; GCN: buffer_load_dwordx2 v[0:1], off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define double @f64_func_void() #0 {
   %val = load double, double addrspace(1)* undef
@@ -173,6 +191,7 @@ define double @f64_func_void() #0 {
 
 ; GCN-LABEL: {{^}}v2f64_func_void:
 ; GCN: buffer_load_dwordx4 v[0:3], off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <2 x double> @v2f64_func_void() #0 {
   %val = load <2 x double>, <2 x double> addrspace(1)* undef
@@ -181,6 +200,7 @@ define <2 x double> @v2f64_func_void() #0 {
 
 ; GCN-LABEL: {{^}}v2i32_func_void:
 ; GCN: buffer_load_dwordx2 v[0:1], off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <2 x i32> @v2i32_func_void() #0 {
   %val = load <2 x i32>, <2 x i32> addrspace(1)* undef
@@ -189,6 +209,7 @@ define <2 x i32> @v2i32_func_void() #0 {
 
 ; GCN-LABEL: {{^}}v3i32_func_void:
 ; GCN: buffer_load_dwordx3 v[0:2], off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <3 x i32> @v3i32_func_void() #0 {
   %val = load <3 x i32>, <3 x i32> addrspace(1)* undef
@@ -197,6 +218,7 @@ define <3 x i32> @v3i32_func_void() #0 {
 
 ; GCN-LABEL: {{^}}v4i32_func_void:
 ; GCN: buffer_load_dwordx4 v[0:3], off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <4 x i32> @v4i32_func_void() #0 {
   %val = load <4 x i32>, <4 x i32> addrspace(1)* undef
@@ -206,6 +228,7 @@ define <4 x i32> @v4i32_func_void() #0 {
 ; GCN-LABEL: {{^}}v5i32_func_void:
 ; GCN-DAG: buffer_load_dword v4, off
 ; GCN-DAG: buffer_load_dwordx4 v[0:3], off
+; GCN: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <5 x i32> @v5i32_func_void() #0 {
   %val = load volatile <5 x i32>, <5 x i32> addrspace(1)* undef
@@ -215,6 +238,7 @@ define <5 x i32> @v5i32_func_void() #0 {
 ; GCN-LABEL: {{^}}v8i32_func_void:
 ; GCN-DAG: buffer_load_dwordx4 v[0:3], off
 ; GCN-DAG: buffer_load_dwordx4 v[4:7], off
+; GCN: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <8 x i32> @v8i32_func_void() #0 {
   %ptr = load volatile <8 x i32> addrspace(1)*, <8 x i32> addrspace(1)* addrspace(4)* undef
@@ -227,6 +251,7 @@ define <8 x i32> @v8i32_func_void() #0 {
 ; GCN-DAG: buffer_load_dwordx4 v[4:7], off
 ; GCN-DAG: buffer_load_dwordx4 v[8:11], off
 ; GCN-DAG: buffer_load_dwordx4 v[12:15], off
+; GCN: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <16 x i32> @v16i32_func_void() #0 {
   %ptr = load volatile <16 x i32> addrspace(1)*, <16 x i32> addrspace(1)* addrspace(4)* undef
@@ -243,6 +268,7 @@ define <16 x i32> @v16i32_func_void() #0 {
 ; GCN-DAG: buffer_load_dwordx4 v[20:23], off
 ; GCN-DAG: buffer_load_dwordx4 v[24:27], off
 ; GCN-DAG: buffer_load_dwordx4 v[28:31], off
+; GCN: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <32 x i32> @v32i32_func_void() #0 {
   %ptr = load volatile <32 x i32> addrspace(1)*, <32 x i32> addrspace(1)* addrspace(4)* undef
@@ -252,6 +278,7 @@ define <32 x i32> @v32i32_func_void() #0 {
 
 ; GCN-LABEL: {{^}}v2i64_func_void:
 ; GCN: buffer_load_dwordx4 v[0:3], off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <2 x i64> @v2i64_func_void() #0 {
   %val = load <2 x i64>, <2 x i64> addrspace(1)* undef
@@ -261,6 +288,7 @@ define <2 x i64> @v2i64_func_void() #0 {
 ; GCN-LABEL: {{^}}v3i64_func_void:
 ; GCN-DAG: buffer_load_dwordx4 v[0:3], off
 ; GCN-DAG: buffer_load_dwordx4 v[4:7], off
+; GCN: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <3 x i64> @v3i64_func_void() #0 {
   %ptr = load volatile <3 x i64> addrspace(1)*, <3 x i64> addrspace(1)* addrspace(4)* undef
@@ -271,6 +299,7 @@ define <3 x i64> @v3i64_func_void() #0 {
 ; GCN-LABEL: {{^}}v4i64_func_void:
 ; GCN: buffer_load_dwordx4 v[0:3], off
 ; GCN: buffer_load_dwordx4 v[4:7], off
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <4 x i64> @v4i64_func_void() #0 {
   %ptr = load volatile <4 x i64> addrspace(1)*, <4 x i64> addrspace(1)* addrspace(4)* undef
@@ -282,6 +311,7 @@ define <4 x i64> @v4i64_func_void() #0 {
 ; GCN-DAG: buffer_load_dwordx4 v[0:3], off
 ; GCN-DAG: buffer_load_dwordx4 v[4:7], off
 ; GCN-DAG: buffer_load_dwordx4 v[8:11], off
+; GCN: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <5 x i64> @v5i64_func_void() #0 {
   %ptr = load volatile <5 x i64> addrspace(1)*, <5 x i64> addrspace(1)* addrspace(4)* undef
@@ -294,6 +324,7 @@ define <5 x i64> @v5i64_func_void() #0 {
 ; GCN-DAG: buffer_load_dwordx4 v[4:7], off
 ; GCN-DAG: buffer_load_dwordx4 v[8:11], off
 ; GCN-DAG: buffer_load_dwordx4 v[12:15], off
+; GCN: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <8 x i64> @v8i64_func_void() #0 {
   %ptr = load volatile <8 x i64> addrspace(1)*, <8 x i64> addrspace(1)* addrspace(4)* undef
@@ -310,6 +341,7 @@ define <8 x i64> @v8i64_func_void() #0 {
 ; GCN-DAG: buffer_load_dwordx4 v[20:23], off
 ; GCN-DAG: buffer_load_dwordx4 v[24:27], off
 ; GCN-DAG: buffer_load_dwordx4 v[28:31], off
+; GCN: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <16 x i64> @v16i64_func_void() #0 {
   %ptr = load volatile <16 x i64> addrspace(1)*, <16 x i64> addrspace(1)* addrspace(4)* undef
@@ -319,6 +351,7 @@ define <16 x i64> @v16i64_func_void() #0 {
 
 ; GCN-LABEL: {{^}}v2i16_func_void:
 ; GFX9: buffer_load_dword v0, off
+; GFX9-NEXT: s_waitcnt vmcnt(0)
 ; GFX9-NEXT: s_setpc_b64
 define <2 x i16> @v2i16_func_void() #0 {
   %val = load <2 x i16>, <2 x i16> addrspace(1)* undef
@@ -327,6 +360,7 @@ define <2 x i16> @v2i16_func_void() #0 {
 
 ; GCN-LABEL: {{^}}v3i16_func_void:
 ; GFX9: buffer_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off
+; GFX9-NEXT: s_waitcnt vmcnt(0)
 ; GFX9-NEXT: s_setpc_b64
 define <3 x i16> @v3i16_func_void() #0 {
   %val = load <3 x i16>, <3 x i16> addrspace(1)* undef
@@ -335,6 +369,7 @@ define <3 x i16> @v3i16_func_void() #0 {
 
 ; GCN-LABEL: {{^}}v4i16_func_void:
 ; GFX9: buffer_load_dwordx2 v[0:1], off
+; GFX9-NEXT: s_waitcnt vmcnt(0)
 ; GFX9-NEXT: s_setpc_b64
 define <4 x i16> @v4i16_func_void() #0 {
   %val = load <4 x i16>, <4 x i16> addrspace(1)* undef
@@ -343,6 +378,7 @@ define <4 x i16> @v4i16_func_void() #0 {
 
 ; GCN-LABEL: {{^}}v4f16_func_void:
 ; GFX9: buffer_load_dwordx2 v[0:1], off
+; GFX9-NEXT: s_waitcnt vmcnt(0)
 ; GFX9-NEXT: s_setpc_b64
 define <4 x half> @v4f16_func_void() #0 {
   %val = load <4 x half>, <4 x half> addrspace(1)* undef
@@ -354,6 +390,7 @@ define <4 x half> @v4f16_func_void() #0 {
 ; GCN-LABEL: {{^}}v5i16_func_void:
 ; GFX9: buffer_load_dwordx2 v[0:1]
 ; GFX9-NEXT: global_load_short_d16 v2
+; GFX9-NEXT: s_waitcnt
 ; GFX9-NEXT: s_setpc_b64
 define <5 x i16> @v5i16_func_void() #0 {
   %ptr = load volatile <5 x i16> addrspace(1)*, <5 x i16> addrspace(1)* addrspace(4)* undef
@@ -363,6 +400,7 @@ define <5 x i16> @v5i16_func_void() #0 {
 
 ; GCN-LABEL: {{^}}v8i16_func_void:
 ; GFX9-DAG: buffer_load_dwordx4 v[0:3], off
+; GFX9: s_waitcnt vmcnt(0)
 ; GFX9-NEXT: s_setpc_b64
 define <8 x i16> @v8i16_func_void() #0 {
   %ptr = load volatile <8 x i16> addrspace(1)*, <8 x i16> addrspace(1)* addrspace(4)* undef
@@ -373,6 +411,7 @@ define <8 x i16> @v8i16_func_void() #0 {
 ; GCN-LABEL: {{^}}v16i16_func_void:
 ; GFX9: buffer_load_dwordx4 v[0:3], off
 ; GFX9: buffer_load_dwordx4 v[4:7], off
+; GFX9: s_waitcnt vmcnt(0)
 ; GFX9-NEXT: s_setpc_b64
 define <16 x i16> @v16i16_func_void() #0 {
   %ptr = load volatile <16 x i16> addrspace(1)*, <16 x i16> addrspace(1)* addrspace(4)* undef
@@ -408,6 +447,7 @@ define <4  x i8> @v4i8_func_void() #0 {
 ; GCN-LABEL: {{^}}struct_i8_i32_func_void:
 ; GCN-DAG: buffer_load_dword v1
 ; GCN-DAG: buffer_load_ubyte v0
+; GCN: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define {i8, i32} @struct_i8_i32_func_void() #0 {
   %val = load { i8, i32 }, { i8, i32 } addrspace(1)* undef
@@ -467,6 +507,7 @@ define void @void_func_sret_struct_i8_i32({ i8, i32 } addrspace(5)* sret %arg0) 
 ; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:120{{$}}
 ; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:124{{$}}
 ; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:128{{$}}
+; GFX9: s_waitcnt vmcnt(0)
 ; GFX9-NEXT: s_setpc_b64
 define <33 x i32> @v33i32_func_void() #0 {
   %ptr = load volatile <33 x i32> addrspace(1)*, <33 x i32> addrspace(1)* addrspace(4)* undef
@@ -508,6 +549,7 @@ define <33 x i32> @v33i32_func_void() #0 {
 ; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:120{{$}}
 ; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:124{{$}}
 ; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:128{{$}}
+; GFX9: s_waitcnt vmcnt(0)
 ; GFX9-NEXT: s_setpc_b64
 define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
   %ptr = load volatile { <32 x i32>, i32 } addrspace(1)*, { <32 x i32>, i32 } addrspace(1)* addrspace(4)* undef
@@ -549,6 +591,7 @@ define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
 ; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:244{{$}}
 ; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:248{{$}}
 ; GFX9-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], 0 offen offset:252{{$}}
+; GFX9: s_waitcnt vmcnt(0)
 ; GFX9-NEXT: s_setpc_b64
 define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {
   %ptr = load volatile { i32, <32 x i32> } addrspace(1)*, { i32, <32 x i32> } addrspace(1)* addrspace(4)* undef

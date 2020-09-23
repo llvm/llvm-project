@@ -33,6 +33,7 @@ define void @callee_no_stack_no_fp_elim_nonleaf() #2 {
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: v_mov_b32_e32 v0, 0{{$}}
 ; GCN-NEXT: buffer_store_dword v0, off, s[0:3], s32{{$}}
+; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @callee_with_stack() #0 {
   %alloca = alloca i32, addrspace(5)
@@ -52,6 +53,7 @@ define void @callee_with_stack() #0 {
 ; GCN-NEXT: buffer_store_dword v0, off, s[0:3], s33 offset:4{{$}}
 ; GCN-NEXT: s_sub_u32 s32, s32, 0x200
 ; GCN-NEXT: s_mov_b32 s33, s4
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define void @callee_with_stack_no_fp_elim_all() #1 {
   %alloca = alloca i32, addrspace(5)
@@ -64,6 +66,7 @@ define void @callee_with_stack_no_fp_elim_all() #1 {
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: v_mov_b32_e32 v0, 0{{$}}
 ; GCN-NEXT: buffer_store_dword v0, off, s[0:3], s32{{$}}
+; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @callee_with_stack_no_fp_elim_non_leaf() #2 {
   %alloca = alloca i32, addrspace(5)
@@ -96,6 +99,8 @@ define void @callee_with_stack_no_fp_elim_non_leaf() #2 {
 ; GCN-NEXT: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GCN-NEXT: buffer_load_dword [[CSR_VGPR]], off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
+; GCN-NEXT: s_waitcnt vmcnt(0)
+
 ; GCN-NEXT: s_setpc_b64
 define void @callee_with_stack_and_call() #0 {
   %alloca = alloca i32, addrspace(5)
@@ -130,6 +135,7 @@ define void @callee_with_stack_and_call() #0 {
 ; GCN-NEXT: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GCN-NEXT: buffer_load_dword [[CSR_VGPR]], off, s[0:3], s32 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define void @callee_no_stack_with_call() #0 {
   call void @external_void_func_void()
@@ -155,6 +161,7 @@ declare hidden void @external_void_func_void() #0
 ; GCN: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GCN-NEXT: buffer_load_dword [[CSR_VGPR]], off, s[0:3], s32 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
+; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @callee_func_sgpr_spill_no_calls(i32 %in) #0 {
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}"() #0
@@ -212,6 +219,7 @@ define void @spill_only_csr_sgpr() {
 ; GCN: s_add_u32 s32, s32, 0x300
 ; GCN-NEXT: s_sub_u32 s32, s32, 0x300
 ; GCN-NEXT: s_mov_b32 s33, s4
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define void @callee_with_stack_no_fp_elim_csr_vgpr() #1 {
   %alloca = alloca i32, addrspace(5)
@@ -234,6 +242,7 @@ define void @callee_with_stack_no_fp_elim_csr_vgpr() #1 {
 ; GCN: s_add_u32 s32, s32, 0x300
 ; GCN-NEXT: s_sub_u32 s32, s32, 0x300
 ; GCN-NEXT: v_readlane_b32 s33, v1, 63
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define void @last_lane_vgpr_for_fp_csr() #1 {
   %alloca = alloca i32, addrspace(5)
@@ -267,6 +276,7 @@ define void @last_lane_vgpr_for_fp_csr() #1 {
 ; GCN: s_add_u32 s32, s32, 0x300
 ; GCN-NEXT: s_sub_u32 s32, s32, 0x300
 ; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define void @no_new_vgpr_for_fp_csr() #1 {
   %alloca = alloca i32, addrspace(5)
@@ -294,6 +304,7 @@ define void @no_new_vgpr_for_fp_csr() #1 {
 ; GCN-NEXT: buffer_store_dword [[ZERO]], off, s[0:3], s33
 ; GCN-NEXT: s_sub_u32 s32, s32, 0x100000
 ; GCN-NEXT: s_mov_b32 s33, s4
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define void @realign_stack_no_fp_elim() #1 {
   %alloca = alloca i32, align 8192, addrspace(5)
@@ -315,6 +326,7 @@ define void @realign_stack_no_fp_elim() #1 {
 ; GCN-NEXT: v_readlane_b32 s5, v1, 1
 ; GCN-NEXT: s_sub_u32 s32, s32, 0x200
 ; GCN-NEXT: v_readlane_b32 s33, v1, 2
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64 s[4:5]
 define void @no_unused_non_csr_sgpr_for_fp() #1 {
   %alloca = alloca i32, addrspace(5)
@@ -353,6 +365,7 @@ define void @no_unused_non_csr_sgpr_for_fp() #1 {
 ; GCN-NEXT: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GCN-NEXT: buffer_load_dword [[CSR_VGPR]], off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define void @no_unused_non_csr_sgpr_for_fp_no_scratch_vgpr() #1 {
   %alloca = alloca i32, addrspace(5)
@@ -399,6 +412,7 @@ define void @no_unused_non_csr_sgpr_for_fp_no_scratch_vgpr() #1 {
 ; GCN-NEXT: v_mov_b32_e32 [[SCRATCH_VGPR:v[0-9]+]], 0x1008
 ; GCN-NEXT: buffer_load_dword [[CSR_VGPR]], [[SCRATCH_VGPR]], s[0:3], s32 offen ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define void @scratch_reg_needed_mubuf_offset([4096 x i8] addrspace(5)* byval align 4 %arg) #1 {
   %alloca = alloca i32, addrspace(5)
@@ -422,8 +436,7 @@ define void @scratch_reg_needed_mubuf_offset([4096 x i8] addrspace(5)* byval ali
 }
 
 ; GCN-LABEL: {{^}}local_empty_func:
-; GCN: ; %bb.0:
-; GCN-NEXT: s_waitcnt
+; GCN: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define internal void @local_empty_func() #0 {
   ret void

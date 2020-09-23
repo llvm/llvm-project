@@ -6,6 +6,7 @@ define void @global_atomic_fadd_f32(float addrspace(1)* %ptr, float %data) {
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    global_atomic_add_f32 v[0:1], v2, off
+; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
   %ret = call float @llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32(float addrspace(1)* %ptr, float %data)
   ret void
@@ -22,6 +23,7 @@ define void @global_atomic_fadd_f32_off_2048(float addrspace(1)* %ptr, float %da
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v3
 ; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v4, vcc
 ; GFX908-NEXT:    global_atomic_add_f32 v[0:1], v2, off
+; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 512
   %ret = call float @llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32(float addrspace(1)* %gep, float %data)
@@ -39,6 +41,7 @@ define void @global_atomic_fadd_f32_off_neg2047(float addrspace(1)* %ptr, float 
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v3
 ; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v4, vcc
 ; GFX908-NEXT:    global_atomic_add_f32 v[0:1], v2, off
+; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 -511
   %ret = call float @llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32(float addrspace(1)* %gep, float %data)
@@ -68,6 +71,7 @@ define void @global_atomic_fadd_v2f16(<2 x half> addrspace(1)* %ptr, <2 x half> 
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    global_atomic_pk_add_f16 v[0:1], v2, off
+; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
   %ret = call <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1v2f16.v2f16(<2 x half> addrspace(1)* %ptr, <2 x half> %data)
   ret void
@@ -84,6 +88,7 @@ define void @global_atomic_fadd_v2f16_off_neg2047(<2 x half> addrspace(1)* %ptr,
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v3
 ; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v4, vcc
 ; GFX908-NEXT:    global_atomic_pk_add_f16 v[0:1], v2, off
+; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %ptr, i64 -511
   %ret = call <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1v2f16.v2f16(<2 x half> addrspace(1)* %gep, <2 x half> %data)

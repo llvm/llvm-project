@@ -111,7 +111,6 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX9-NEXT: global_store_dwordx4 v[0:1], v[0:3], off
 ; GFX9-NEXT: s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT: s_swappc_b64 s[30:31], s[4:5]
-; GFX9-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT: image_gather4_c_b_cl v[0:3], v[40:47], s[36:43], s[4:7] dmask:0x1
 
 ; GFX9: buffer_load_dword v44, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -147,8 +146,6 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX10-NEXT: global_store_dwordx4 v[0:1], v[0:3], off
 ; GFX10-NEXT: s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT: s_swappc_b64 s[30:31], s[4:5]
-; GFX10-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT: s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT: image_gather4_c_b_cl v[0:3], [v44, v43, v42, v41, v40], s[36:43], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_2D
 
 ; GFX10: buffer_load_dword v44, off, s[0:3], s33

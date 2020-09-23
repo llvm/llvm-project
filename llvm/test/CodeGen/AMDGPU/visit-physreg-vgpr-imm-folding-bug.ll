@@ -7,7 +7,6 @@
 ; CHECK: v_mov_b32_e32 v0, 0{{$}}
 ; CHECK: v_mov_b32_e32 v1, 2.0{{$}}
 ; CHECK:    s_swappc_b64
-; CHECK-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT: v_add_f64 v[0:1], v[0:1], 0
 ; CHECK:    s_swappc_b64
 define amdgpu_kernel void @vgpr_multi_use_imm_fold() {

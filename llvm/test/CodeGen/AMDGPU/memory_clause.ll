@@ -157,6 +157,7 @@ define void @mubuf_clause(<4 x i32> addrspace(5)* noalias nocapture readonly %ar
 ; GCN-NEXT:    buffer_store_dword v17, v1, s[0:3], 0 offen offset:56
 ; GCN-NEXT:    s_waitcnt vmcnt(15)
 ; GCN-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen offset:60
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -229,6 +230,7 @@ define void @load_global_d16_hi(i16 addrspace(1)* %in, i16 %reg, <2 x i16> addrs
 ; GCN-NEXT:    global_store_dword v[3:4], v5, off
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    global_store_dword v[3:4], v2, off offset:128
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %gep = getelementptr inbounds i16, i16 addrspace(1)* %in, i64 32
@@ -257,6 +259,7 @@ define void @load_global_d16_lo(i16 addrspace(1)* %in, i32 %reg, <2 x i16> addrs
 ; GCN-NEXT:    global_store_dword v[3:4], v5, off
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    global_store_dword v[3:4], v2, off offset:128
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %gep = getelementptr inbounds i16, i16 addrspace(1)* %in, i64 32

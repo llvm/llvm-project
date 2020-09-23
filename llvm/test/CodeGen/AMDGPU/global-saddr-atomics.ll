@@ -2651,6 +2651,7 @@ define amdgpu_ps float @global_inc_saddr_i32_rtn(i8 addrspace(1)* inreg %sbase, 
 ; GCN-LABEL: global_inc_saddr_i32_rtn:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_atomic_inc v0, v0, v1, s[2:3] glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
@@ -2664,6 +2665,7 @@ define amdgpu_ps float @global_inc_saddr_i32_rtn_neg128(i8 addrspace(1)* inreg %
 ; GCN-LABEL: global_inc_saddr_i32_rtn_neg128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_atomic_inc v0, v0, v1, s[2:3] offset:-128 glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
@@ -2703,6 +2705,7 @@ define amdgpu_ps <2 x float> @global_inc_saddr_i64_rtn(i8 addrspace(1)* inreg %s
 ; GCN-LABEL: global_inc_saddr_i64_rtn:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_atomic_inc_x2 v[0:1], v0, v[1:2], s[2:3] glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
@@ -2716,6 +2719,7 @@ define amdgpu_ps <2 x float> @global_inc_saddr_i64_rtn_neg128(i8 addrspace(1)* i
 ; GCN-LABEL: global_inc_saddr_i64_rtn_neg128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_atomic_inc_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
@@ -2762,6 +2766,7 @@ define amdgpu_ps float @global_dec_saddr_i32_rtn(i8 addrspace(1)* inreg %sbase, 
 ; GCN-LABEL: global_dec_saddr_i32_rtn:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_atomic_dec v0, v0, v1, s[2:3] glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
@@ -2775,6 +2780,7 @@ define amdgpu_ps float @global_dec_saddr_i32_rtn_neg128(i8 addrspace(1)* inreg %
 ; GCN-LABEL: global_dec_saddr_i32_rtn_neg128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_atomic_dec v0, v0, v1, s[2:3] offset:-128 glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
@@ -2814,6 +2820,7 @@ define amdgpu_ps <2 x float> @global_dec_saddr_i64_rtn(i8 addrspace(1)* inreg %s
 ; GCN-LABEL: global_dec_saddr_i64_rtn:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_atomic_dec_x2 v[0:1], v0, v[1:2], s[2:3] glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
@@ -2827,6 +2834,7 @@ define amdgpu_ps <2 x float> @global_dec_saddr_i64_rtn_neg128(i8 addrspace(1)* i
 ; GCN-LABEL: global_dec_saddr_i64_rtn_neg128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_atomic_dec_x2 v[0:1], v0, v[1:2], s[2:3] offset:-128 glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
