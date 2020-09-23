@@ -90,7 +90,7 @@ the record name, the vector of field names and their values, and the vector of
 superclasses of the record.
 
 The record name is stored as a pointer to an ``Init`` (see `Init`_), which
-is a class whose instances hold TableGen values (sometimes refered to as
+is a class whose instances hold TableGen values (sometimes referred to as
 *initializers*). The field names and values are stored in a vector of
 ``RecordVal`` instances (see `RecordVal`_), each of which contains both the
 field name and its value. The superclass vector contains a sequence of
@@ -343,7 +343,7 @@ The ``CodeInit`` class is a subclass of ``TypedInit``. Its instances
 represent arbitrary-length strings produced from ``code`` literals in the
 TableGen files. It includes a data member that contains a ``StringRef`` of
 the value. It also includes a data member specifying the source code
-location of the code stirng.
+location of the code string.
 
 The class provides the usual ``get()`` and ``getValue()`` functions. The
 latter function returns the ``StringRef``.
