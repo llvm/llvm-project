@@ -78,10 +78,11 @@ static int appendUnsigned(char **Buffer, const char *BufferEnd, u64 Num,
 static int appendSignedDecimal(char **Buffer, const char *BufferEnd, s64 Num,
                                u8 MinNumberLength, bool PadWithZero) {
   const bool Negative = (Num < 0);
-  return appendNumber(Buffer, BufferEnd,
-                      static_cast<u64>(Negative ? -Num : Num), 10,
-                      MinNumberLength, PadWithZero, Negative,
-                      /*Upper=*/false);
+  const u64 UnsignedNum = (Num == INT64_MIN)
+                              ? static_cast<u64>(INT64_MAX) + 1
+                              : static_cast<u64>(Negative ? -Num : Num);
+  return appendNumber(Buffer, BufferEnd, UnsignedNum, 10, MinNumberLength,
+                      PadWithZero, Negative, /*Upper=*/false);
 }
 
 // Use the fact that explicitly requesting 0 Width (%0s) results in UB and
@@ -158,16 +159,18 @@ int formatString(char *Buffer, uptr BufferLength, const char *Format,
     CHECK(!((Precision >= 0 || LeftJustified) && *Cur != 's'));
     switch (*Cur) {
     case 'd': {
-      DVal = HaveLL ? va_arg(Args, s64)
-                    : HaveZ ? va_arg(Args, sptr) : va_arg(Args, int);
+      DVal = HaveLL  ? va_arg(Args, s64)
+             : HaveZ ? va_arg(Args, sptr)
+                     : va_arg(Args, int);
       Res += appendSignedDecimal(&Buffer, BufferEnd, DVal, Width, PadWithZero);
       break;
     }
     case 'u':
     case 'x':
     case 'X': {
-      UVal = HaveLL ? va_arg(Args, u64)
-                    : HaveZ ? va_arg(Args, uptr) : va_arg(Args, unsigned);
+      UVal = HaveLL  ? va_arg(Args, u64)
+             : HaveZ ? va_arg(Args, uptr)
+                     : va_arg(Args, unsigned);
       const bool Upper = (*Cur == 'X');
       Res += appendUnsigned(&Buffer, BufferEnd, UVal, (*Cur == 'u') ? 10 : 16,
                             Width, PadWithZero, Upper);
