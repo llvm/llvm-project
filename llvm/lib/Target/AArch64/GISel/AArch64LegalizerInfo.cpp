@@ -24,6 +24,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 #include <initializer_list>
+#include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "aarch64-legalinfo"
 
@@ -373,7 +374,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalarOrEltIf(
           [=](const LegalityQuery &Query) { return Query.Types[1] == v2p0; }, 0,
           s64)
-      .widenScalarOrEltToNextPow2(1);
+      .widenScalarOrEltToNextPow2(1)
+      .clampNumElements(0, v2s32, v4s32);
 
   getActionDefinitionsBuilder(G_FCMP)
       .legalFor({{s32, s32}, {s32, s64}})
@@ -412,7 +414,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalIf(ExtLegalFunc)
       .clampScalar(0, s64, s64); // Just for s128, others are handled above.
 
-  getActionDefinitionsBuilder(G_TRUNC).alwaysLegal();
+  getActionDefinitionsBuilder(G_TRUNC)
+      .minScalarOrEltIf(
+          [=](const LegalityQuery &Query) { return Query.Types[0].isVector(); },
+          0, s8)
+      .customIf([=](const LegalityQuery &Query) {
+        LLT DstTy = Query.Types[0];
+        LLT SrcTy = Query.Types[1];
+        return DstTy == v8s8 && SrcTy.getSizeInBits() > 128;
+      })
+      .alwaysLegal();
 
   getActionDefinitionsBuilder(G_SEXT_INREG).legalFor({s32, s64}).lower();
 
@@ -709,9 +720,58 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeShlAshrLshr(MI, MRI, MIRBuilder, Observer);
   case TargetOpcode::G_GLOBAL_VALUE:
     return legalizeSmallCMGlobalValue(MI, MRI, MIRBuilder, Observer);
+  case TargetOpcode::G_TRUNC:
+    return legalizeVectorTrunc(MI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
+}
+
+static void extractParts(Register Reg, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &MIRBuilder, LLT Ty, int NumParts,
+                         SmallVectorImpl<Register> &VRegs) {
+  for (int I = 0; I < NumParts; ++I)
+    VRegs.push_back(MRI.createGenericVirtualRegister(Ty));
+  MIRBuilder.buildUnmerge(VRegs, Reg);
+}
+
+bool AArch64LegalizerInfo::legalizeVectorTrunc(
+    MachineInstr &MI, LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  // Similar to how operand splitting is done in SelectiondDAG, we can handle
+  // %res(v8s8) = G_TRUNC %in(v8s32) by generating:
+  //   %inlo(<4x s32>), %inhi(<4 x s32>) = G_UNMERGE %in(<8 x s32>)
+  //   %lo16(<4 x s16>) = G_TRUNC %inlo
+  //   %hi16(<4 x s16>) = G_TRUNC %inhi
+  //   %in16(<8 x s16>) = G_CONCAT_VECTORS %lo16, %hi16
+  //   %res(<8 x s8>) = G_TRUNC %in16
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT SrcTy = MRI.getType(SrcReg);
+  assert(isPowerOf2_32(DstTy.getSizeInBits()) &&
+         isPowerOf2_32(SrcTy.getSizeInBits()));
+
+  // Split input type.
+  LLT SplitSrcTy = SrcTy.changeNumElements(SrcTy.getNumElements() / 2);
+  // First, split the source into two smaller vectors.
+  SmallVector<Register, 2> SplitSrcs;
+  extractParts(SrcReg, MRI, MIRBuilder, SplitSrcTy, 2, SplitSrcs);
+
+  // Truncate the splits into intermediate narrower elements.
+  LLT InterTy = SplitSrcTy.changeElementSize(DstTy.getScalarSizeInBits() * 2);
+  for (unsigned I = 0; I < SplitSrcs.size(); ++I)
+    SplitSrcs[I] = MIRBuilder.buildTrunc(InterTy, SplitSrcs[I]).getReg(0);
+
+  auto Concat = MIRBuilder.buildConcatVectors(
+      DstTy.changeElementSize(DstTy.getScalarSizeInBits() * 2), SplitSrcs);
+
+  Helper.Observer.changingInstr(MI);
+  MI.getOperand(1).setReg(Concat.getReg(0));
+  Helper.Observer.changedInstr(MI);
+  return true;
 }
 
 bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
