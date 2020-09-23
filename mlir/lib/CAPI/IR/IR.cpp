@@ -10,7 +10,6 @@
 
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Utils.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Module.h"
@@ -26,10 +25,6 @@ using namespace mlir;
 
 MlirContext mlirContextCreate() {
   auto *context = new MLIRContext(/*loadAllDialects=*/false);
-  // TODO: Come up with a story for which dialects to load into the context
-  // and do not expand this beyond StandardOps until done so. This is loaded
-  // by default here because it is hard to make progress otherwise.
-  context->loadDialect<StandardOpsDialect>();
   return wrap(context);
 }
 
