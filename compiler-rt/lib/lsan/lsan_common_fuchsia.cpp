@@ -51,7 +51,7 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {}
 // behavior and causes rare race conditions.
 void HandleLeaks() {}
 
-// This is defined differently in asan_fuchsiap.cpp and lsan_fuchsia.cpp.
+// This is defined differently in asan_fuchsia.cpp and lsan_fuchsia.cpp.
 bool UseExitcodeOnLeak();
 
 int ExitHook(int status) {
