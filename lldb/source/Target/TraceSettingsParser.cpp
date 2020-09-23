@@ -8,7 +8,6 @@
 
 #include "lldb/Target/TraceSettingsParser.h"
 
-#include <regex>
 #include <sstream>
 
 #include "Plugins/Process/Utility/HistoryThread.h"
@@ -123,12 +122,7 @@ StringRef TraceSettingsParser::GetSchema() {
   if (schema.empty()) {
     std::ostringstream schema_builder;
     schema_builder << "{\n \"trace\": ";
-
-    // We need to add spaces to indent correctly the plugin schema
-    std::string plugin_schema(GetPluginSchema());
-    plugin_schema = std::regex_replace(plugin_schema, std::regex("\n"), "\n  ");
-    schema_builder << plugin_schema << ",\n";
-
+    schema_builder << GetPluginSchema().str() << ",\n";
     schema_builder << R"(  "processes": [
     {
       "pid": integer,
