@@ -56,14 +56,10 @@ int main(int, char**)
     }
     {
         std::locale l(LOCALE_fr_FR_UTF_8);
-#if defined(TEST_HAS_GLIBC)
-        const char sep = ' ';
 // The below tests work around GLIBC's use of U202F as LC_NUMERIC thousands_sep.
-# if TEST_GLIBC_PREREQ(2, 27)
-        const wchar_t wsep = L'\u202f';
-# else
-        const wchar_t wsep = L' ';
-# endif
+#if defined(_CS_GNU_LIBC_VERSION)
+        const char sep = ' ';
+        const wchar_t wsep = glibc_version_less_than("2.27") ? L' ' : L'\u202f';
 #else
         const char sep = ',';
         const wchar_t wsep = L',';
