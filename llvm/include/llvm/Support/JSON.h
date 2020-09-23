@@ -706,6 +706,7 @@ public:
 /// json::OStream allows writing well-formed JSON without materializing
 /// all structures as json::Value ahead of time.
 /// It's faster, lower-level, and less safe than OS << json::Value.
+/// It also allows emitting more constructs, such as comments.
 ///
 /// Only one "top-level" object can be written to a stream.
 /// Simplest usage involves passing lambdas (Blocks) to fill in containers:
@@ -791,6 +792,10 @@ class OStream {
     Contents();
     objectEnd();
   }
+  /// Emit a JavaScript comment associated with the next printed value.
+  /// The string must be valid until the next attribute or value is emitted.
+  /// Comments are not part of standard JSON, and many parsers reject them!
+  void comment(llvm::StringRef);
 
   // High level functions to output object attributes.
   // Valid only within an object (any number of times).
@@ -826,6 +831,7 @@ class OStream {
   }
 
   void valueBegin();
+  void flushComment();
   void newline();
 
   enum Context {
@@ -838,6 +844,7 @@ class OStream {
     bool HasValue = false;
   };
   llvm::SmallVector<State, 16> Stack; // Never empty.
+  llvm::StringRef PendingComment;
   llvm::raw_ostream &OS;
   unsigned IndentSize;
   unsigned Indent = 0;
