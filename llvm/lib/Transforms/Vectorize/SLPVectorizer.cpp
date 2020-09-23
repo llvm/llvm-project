@@ -6371,9 +6371,8 @@ class HorizontalReduction {
 
     /// Construction for reduced values. They are identified by opcode only and
     /// don't have associated LHS/RHS values.
-    explicit OperationData(Value *V) {
-      if (auto *I = dyn_cast<Instruction>(V))
-        Opcode = I->getOpcode();
+    explicit OperationData(Instruction &I) {
+      Opcode = I.getOpcode();
     }
 
     /// Constructor for reduction operations with opcode and its left and
@@ -6631,17 +6630,17 @@ class HorizontalReduction {
     }
   }
 
-  static OperationData getOperationData(Value *V) {
-    if (!V)
+  static OperationData getOperationData(Instruction *I) {
+    if (!I)
       return OperationData();
 
     Value *LHS;
     Value *RHS;
-    if (m_BinOp(m_Value(LHS), m_Value(RHS)).match(V)) {
-      return OperationData(cast<BinaryOperator>(V)->getOpcode(), LHS, RHS,
+    if (m_BinOp(m_Value(LHS), m_Value(RHS)).match(I)) {
+      return OperationData(cast<BinaryOperator>(I)->getOpcode(), LHS, RHS,
                            RK_Arithmetic);
     }
-    if (auto *Select = dyn_cast<SelectInst>(V)) {
+    if (auto *Select = dyn_cast<SelectInst>(I)) {
       // Look for a min/max pattern.
       if (m_UMin(m_Value(LHS), m_Value(RHS)).match(Select)) {
         return OperationData(Instruction::ICmp, LHS, RHS, RK_UMin);
@@ -6675,22 +6674,22 @@ class HorizontalReduction {
         if (match(Cond, m_Cmp(Pred, m_Specific(LHS), m_Instruction(L2)))) {
           if (!isa<ExtractElementInst>(RHS) ||
               !L2->isIdenticalTo(cast<Instruction>(RHS)))
-            return OperationData(V);
+            return OperationData(*I);
         } else if (match(Cond, m_Cmp(Pred, m_Instruction(L1), m_Specific(RHS)))) {
           if (!isa<ExtractElementInst>(LHS) ||
               !L1->isIdenticalTo(cast<Instruction>(LHS)))
-            return OperationData(V);
+            return OperationData(*I);
         } else {
           if (!isa<ExtractElementInst>(LHS) || !isa<ExtractElementInst>(RHS))
-            return OperationData(V);
+            return OperationData(*I);
           if (!match(Cond, m_Cmp(Pred, m_Instruction(L1), m_Instruction(L2))) ||
               !L1->isIdenticalTo(cast<Instruction>(LHS)) ||
               !L2->isIdenticalTo(cast<Instruction>(RHS)))
-            return OperationData(V);
+            return OperationData(*I);
         }
         switch (Pred) {
         default:
-          return OperationData(V);
+          return OperationData(*I);
 
         case CmpInst::ICMP_ULT:
         case CmpInst::ICMP_ULE:
@@ -6710,7 +6709,7 @@ class HorizontalReduction {
         }
       }
     }
-    return OperationData(V);
+    return OperationData(*I);
   }
 
 public:
