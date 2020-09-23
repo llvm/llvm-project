@@ -37,6 +37,10 @@
 // or comparison predicate.  These are used to create a hash to map instructions
 // to integers to be used in similarity matching in sequences of instructions
 //
+// Terminology:
+// An IRSimilarityCandidate is a region of IRInstructionData (wrapped
+// Instructions), usually used to denote a region of similarity has been found.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ANALYSIS_IRSIMILARITYIDENTIFIER_H
@@ -386,6 +390,137 @@ struct IRInstructionMapper {
   InstructionClassification InstClassifier;
 };
 
+/// This is a class that wraps a range of IRInstructionData from one point to
+/// another in the vector of IRInstructionData, which is a region of the
+/// program.  It is also responsible for defining the structure within this
+/// region of instructions.
+///
+/// The structure of a region is defined through a value numbering system
+/// assigned to each unique value in a region at the creation of the
+/// IRSimilarityCandidate.
+///
+/// For example, for each Instruction we add a mapping for each new
+/// value seen in that Instruction.
+/// IR:                    Mapping Added:
+/// %add1 = add i32 %a, c1    %add1 -> 3, %a -> 1, c1 -> 2
+/// %add2 = add i32 %a, %1    %add2 -> 4
+/// %add3 = add i32 c2, c1    %add3 -> 6, c2 -> 5
+///
+/// We can compare IRSimilarityCandidates against one another.
+/// The \ref isSimilar function compares each IRInstructionData against one
+/// another and if we have the same sequences of IRInstructionData that would
+/// create the same hash, we have similar IRSimilarityCandidates.
+class IRSimilarityCandidate {
+private:
+  /// The start index of this IRSimilarityCandidate in the instruction list.
+  unsigned StartIdx = 0;
+
+  /// The number of instructions in this IRSimilarityCandidate.
+  unsigned Len = 0;
+
+  /// The first instruction in this IRSimilarityCandidate.
+  IRInstructionData *FirstInst = nullptr;
+
+  /// The last instruction in this IRSimilarityCandidate.
+  IRInstructionData *LastInst = nullptr;
+
+  /// Global Value Numbering structures
+  /// @{
+  /// Stores the mapping of the value to the number assigned to it in the
+  /// IRSimilarityCandidate.
+  DenseMap<Value *, unsigned> ValueToNumber;
+  /// Stores the mapping of the number to the value assigned this number.
+  DenseMap<unsigned, Value *> NumberToValue;
+  /// @}
+
+public:
+  /// \param StartIdx - The starting location of the region.
+  /// \param StartIdx - The length of the region.
+  /// \param FirstInstIt - The starting IRInstructionData of the region.
+  /// \param LastInstIt - The ending IRInstructionData of the region.
+  IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
+                        IRInstructionData *FirstInstIt,
+                        IRInstructionData *LastInstIt);
+
+  /// \param A - The first IRInstructionCandidate to compare.
+  /// \param B - The second IRInstructionCandidate to compare.
+  /// \returns True when every IRInstructionData in \p A is similar to every
+  /// IRInstructionData in \p B.
+  static bool isSimilar(const IRSimilarityCandidate &A,
+                        const IRSimilarityCandidate &B);
+  /// Compare the start and end indices of the two IRSimilarityCandidates for
+  /// whether they overlap. If the start instruction of one
+  /// IRSimilarityCandidate is less than the end instruction of the other, and
+  /// the start instruction of one is greater than the start instruction of the
+  /// other, they overlap.
+  ///
+  /// \returns true if the IRSimilarityCandidates do not have overlapping
+  /// instructions.
+  static bool overlap(const IRSimilarityCandidate &A,
+                      const IRSimilarityCandidate &B);
+
+  /// \returns the number of instructions in this Candidate.
+  unsigned getLength() const { return Len; }
+
+  /// \returns the start index of this IRSimilarityCandidate.
+  unsigned getStartIdx() const { return StartIdx; }
+
+  /// \returns the end index of this IRSimilarityCandidate.
+  unsigned getEndIdx() const { return StartIdx + Len - 1; }
+
+  /// \returns The first IRInstructionData.
+  IRInstructionData *front() const { return FirstInst; }
+  /// \returns The last IRInstructionData.
+  IRInstructionData *back() const { return LastInst; }
+
+  /// \returns The first Instruction.
+  Instruction *frontInstruction() { return FirstInst->Inst; }
+  /// \returns The last Instruction
+  Instruction *backInstruction() { return LastInst->Inst; }
+
+  /// \returns The BasicBlock the IRSimilarityCandidate starts in.
+  BasicBlock *getStartBB() { return FirstInst->Inst->getParent(); }
+  /// \returns The BasicBlock the IRSimilarityCandidate ends in.
+  BasicBlock *getEndBB() { return LastInst->Inst->getParent(); }
+
+  /// \returns The Function that the IRSimilarityCandidate is located in.
+  Function *getFunction() { return getStartBB()->getParent(); }
+
+  /// Finds the positive number associated with \p V if it has been mapped.
+  /// \param [in] V - the Value to find.
+  /// \returns The positive number corresponding to the value.
+  /// \returns None if not present.
+  Optional<unsigned> getGVN(Value *V) {
+    assert(V != nullptr && "Value is a nullptr?");
+    DenseMap<Value *, unsigned>::iterator VNIt = ValueToNumber.find(V);
+    if (VNIt == ValueToNumber.end())
+      return None;
+    return VNIt->second;
+  }
+
+  /// Finds the Value associate with \p Num if it exists.
+  /// \param [in] Num - the number to find.
+  /// \returns The Value associated with the number.
+  /// \returns None if not present.
+  Optional<Value *> fromGVN(unsigned Num) {
+    DenseMap<unsigned, Value *>::iterator VNIt = NumberToValue.find(Num);
+    if (VNIt == NumberToValue.end())
+      return None;
+    assert(VNIt->second != nullptr && "Found value is a nullptr!");
+    return VNIt->second;
+  }
+
+  /// \param RHS -The IRSimilarityCandidate to compare against
+  /// \returns true if the IRSimilarityCandidate is occurs after the
+  /// IRSimilarityCandidate in the program.
+  bool operator<(const IRSimilarityCandidate &RHS) const {
+    return getStartIdx() > RHS.getStartIdx();
+  }
+
+  using iterator = IRInstructionDataList::iterator;
+  iterator begin() const { return iterator(front()); }
+  iterator end() const { return std::next(iterator(back())); }
+};
 } // end namespace IRSimilarity
 } // end namespace llvm
 
