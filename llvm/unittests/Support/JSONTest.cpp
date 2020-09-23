@@ -8,6 +8,7 @@
 
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -459,6 +460,17 @@ TEST(JSONTest, Stream) {
   "baz": "xyz"
 })";
   EXPECT_EQ(Pretty, StreamStuff(2));
+}
+
+TEST(JSONTest, Path) {
+  Path::Root R("foo");
+  Path P = R, A = P.field("a"), B = P.field("b");
+  A.index(1).field("c").index(2).report("boom");
+  EXPECT_THAT_ERROR(R.getError(), FailedWithMessage("boom at foo.a[1].c[2]"));
+  B.field("d").field("e").report("bam");
+  EXPECT_THAT_ERROR(R.getError(), FailedWithMessage("bam at foo.b.d.e"));
+  P.report("oh no");
+  EXPECT_THAT_ERROR(R.getError(), FailedWithMessage("oh no when parsing foo"));
 }
 
 } // namespace

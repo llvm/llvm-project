@@ -557,6 +557,75 @@ inline bool Object::erase(StringRef K) {
   return M.erase(ObjectKey(K));
 }
 
+/// A "cursor" marking a position within a Value.
+/// The Value is a tree, and this is the path from the root to the current node.
+/// This is used to associate errors with particular subobjects.
+class Path {
+public:
+  class Root;
+
+  /// Records that the value at the current path is invalid.
+  /// Message is e.g. "expected number" and becomes part of the final error.
+  /// This overwrites any previously written error message in the root.
+  void report(llvm::StringLiteral Message);
+
+  /// The root may be treated as a Path.
+  Path(Root &R) : Parent(nullptr), Seg(&R) {}
+  /// Derives a path for an array element: this[Index]
+  Path index(unsigned Index) const { return Path(this, Segment(Index)); }
+  /// Derives a path for an object field: this.Field
+  Path field(StringRef Field) const { return Path(this, Segment(Field)); }
+
+private:
+  /// One element in a JSON path: an object field (.foo) or array index [27].
+  /// Exception: the root Path encodes a pointer to the Path::Root.
+  class Segment {
+    uintptr_t Pointer;
+    unsigned Offset;
+
+  public:
+    Segment() = default;
+    Segment(Root *R) : Pointer(reinterpret_cast<uintptr_t>(R)) {}
+    Segment(llvm::StringRef Field)
+        : Pointer(reinterpret_cast<uintptr_t>(Field.data())),
+          Offset(static_cast<unsigned>(Field.size())) {}
+    Segment(unsigned Index) : Pointer(0), Offset(Index) {}
+
+    bool isField() const { return Pointer != 0; }
+    StringRef field() const {
+      return StringRef(reinterpret_cast<const char *>(Pointer), Offset);
+    }
+    unsigned index() const { return Offset; }
+    Root *root() const { return reinterpret_cast<Root *>(Pointer); }
+  };
+
+  const Path *Parent;
+  Segment Seg;
+
+  Path(const Path *Parent, Segment S) : Parent(Parent), Seg(S) {}
+};
+
+/// The root is the trivial Path to the root value.
+/// It also stores the latest reported error and the path where it occurred.
+class Path::Root {
+  llvm::StringRef Name;
+  llvm::StringLiteral ErrorMessage;
+  std::vector<Path::Segment> ErrorPath; // Only valid in error state. Reversed.
+
+  friend void Path::report(llvm::StringLiteral Message);
+
+public:
+  Root(llvm::StringRef Name = "") : Name(Name), ErrorMessage("") {}
+  // No copy/move allowed as there are incoming pointers.
+  Root(Root &&) = delete;
+  Root &operator=(Root &&) = delete;
+  Root(const Root &) = delete;
+  Root &operator=(const Root &) = delete;
+
+  /// Returns the last error reported, or else a generic error.
+  Error getError() const;
+};
+
 // Standard deserializers are provided for primitive types.
 // See comments on Value.
 inline bool fromJSON(const Value &E, std::string &Out) {
