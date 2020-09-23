@@ -57,6 +57,32 @@ global variable or function should be in after translation.
   let Heading = "section, __declspec(allocate)";
 }
 
+def InitPriorityDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+In C++, the order in which global variables are initialized across translation
+units is unspecified, unlike the ordering within a single translation unit. The
+``init_priority`` attribute allows you to specify a relative ordering for the
+initialization of objects declared at namespace scope in C++. The priority is
+given as an integer constant expression between 101 and 65535 (inclusive).
+Priorities outside of that range are reserved for use by the implementation. A
+lower value indicates a higher priority of initialization. Note that only the
+relative ordering of values is important. For example:
+
+.. code-block:: c++
+
+  struct SomeType { SomeType(); };
+  __attribute__((init_priority(200))) SomeType Obj1;
+  __attribute__((init_priority(101))) SomeType Obj2;
+
+``Obj1`` will be initialized *before* ``Obj2`` despite the usual order of
+initialization being the opposite.
+
+This attribute is only supported for C++ and Objective-C++ and is ignored in
+other language modes.
+  }];
+}
+
 def InitSegDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
