@@ -2895,7 +2895,6 @@ public:
   uint64_t getGotAddress(const Entry * E) const;
   int64_t getGotOffset(const Entry * E) const;
   const Elf_Sym *getGotSym(const Entry *E) const;
-  Elf_Sym_Range getGotDynSyms() const { return GotDynSyms; }
 
   uint64_t getPltAddress(const Entry * E) const;
   const Elf_Sym *getPltSym(const Entry *E) const;
@@ -5785,7 +5784,7 @@ void GNUStyle<ELFT>::printMipsGOT(const MipsGOTParser<ELFT> &Parser) {
       const Elf_Sym &Sym = *Parser.getGotSym(&E);
       const Elf_Sym &FirstSym = this->dumper().dynamic_symbols()[0];
       std::string SymName = this->dumper().getFullSymbolName(
-          Sym, &FirstSym - &Sym, this->dumper().getDynamicStringTable(), false);
+          Sym, &Sym - &FirstSym, this->dumper().getDynamicStringTable(), false);
 
       OS.PadToColumn(2);
       OS << to_string(format_hex_no_prefix(Parser.getGotAddress(&E), 8 + Bias));
@@ -5840,7 +5839,7 @@ void GNUStyle<ELFT>::printMipsPLT(const MipsGOTParser<ELFT> &Parser) {
           *cantFail(this->Obj.template getEntry<const Elf_Sym>(
               *Parser.getPltSymTable(), 0));
       std::string SymName = this->dumper().getFullSymbolName(
-          Sym, &FirstSym - &Sym, this->dumper().getDynamicStringTable(), false);
+          Sym, &Sym - &FirstSym, this->dumper().getDynamicStringTable(), false);
 
       OS.PadToColumn(2);
       OS << to_string(format_hex_no_prefix(Parser.getPltAddress(&E), 8 + Bias));
@@ -6708,11 +6707,12 @@ void LLVMStyle<ELFT>::printMipsGOT(const MipsGOTParser<ELFT> &Parser) {
       const Elf_Sym &Sym = *Parser.getGotSym(&E);
       W.printHex("Value", Sym.st_value);
       W.printEnum("Type", Sym.getType(), makeArrayRef(ElfSymbolTypes));
-      printSymbolSection(Sym, &Sym - this->dumper().dynamic_symbols().begin());
+
+      const unsigned SymIndex = &Sym - this->dumper().dynamic_symbols().begin();
+      printSymbolSection(Sym, SymIndex);
 
       std::string SymName = this->dumper().getFullSymbolName(
-          Sym, &Sym - &Parser.getGotDynSyms()[0],
-          this->dumper().getDynamicStringTable(), true);
+          Sym, SymIndex, this->dumper().getDynamicStringTable(), true);
       W.printNumber("Name", SymName, Sym.st_name);
     }
   }
