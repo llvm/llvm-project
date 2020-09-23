@@ -67,31 +67,20 @@ entry:
 define arm_aapcs_vfpcc <2 x double> @fneg_float64_t(<2 x double> %src) {
 ; CHECK-LABEL: fneg_float64_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vldr d0, .LCPI2_0
-; CHECK-NEXT:    vmov r2, r3, d9
-; CHECK-NEXT:    vmov r4, r5, d0
-; CHECK-NEXT:    mov r0, r4
-; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    bl __aeabi_dsub
-; CHECK-NEXT:    vmov r2, r3, d8
-; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    mov r0, r4
-; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    bl __aeabi_dsub
-; CHECK-NEXT:    vmov d8, r0, r1
-; CHECK-NEXT:    vmov q0, q4
-; CHECK-NEXT:    vpop {d8, d9}
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
-; CHECK-NEXT:    .p2align 3
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI2_0:
-; CHECK-NEXT:    .long 0 @ double -0
-; CHECK-NEXT:    .long 2147483648
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, #16
+; CHECK-NEXT:    vstr d1, [sp]
+; CHECK-NEXT:    ldrb.w r0, [sp, #7]
+; CHECK-NEXT:    vstr d0, [sp, #8]
+; CHECK-NEXT:    ldrb.w r1, [sp, #15]
+; CHECK-NEXT:    eor r0, r0, #128
+; CHECK-NEXT:    strb.w r0, [sp, #7]
+; CHECK-NEXT:    vldr d1, [sp]
+; CHECK-NEXT:    eor r0, r1, #128
+; CHECK-NEXT:    strb.w r0, [sp, #15]
+; CHECK-NEXT:    vldr d0, [sp, #8]
+; CHECK-NEXT:    add sp, #16
+; CHECK-NEXT:    bx lr
 entry:
   %0 = fsub nnan ninf nsz <2 x double> <double 0.0e0, double 0.0e0>, %src
   ret <2 x double> %0
