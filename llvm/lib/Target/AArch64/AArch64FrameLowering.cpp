@@ -579,6 +579,12 @@ static bool windowsRequiresStackProbe(MachineFunction &MF,
          !F.hasFnAttribute("no-stack-arg-probe");
 }
 
+static bool needsWinCFI(const MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+         F.needsUnwindTableEntry();
+}
+
 bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
     MachineFunction &MF, uint64_t StackBumpBytes) const {
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
@@ -587,6 +593,18 @@ bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
 
   if (AFI->getLocalStackSize() == 0)
+    return false;
+
+  // For WinCFI, if optimizing for size, prefer to not combine the stack bump
+  // (to force a stp with predecrement) to match the packed unwind format,
+  // provided that there actually are any callee saved registers to merge the
+  // decrement with.
+  // This is potentially marginally slower, but allows using the packed
+  // unwind format for functions that both have a local area and callee saved
+  // registers. Using the packed unwind format notably reduces the size of
+  // the unwind info.
+  if (needsWinCFI(MF) && AFI->getCalleeSavedStackSize() > 0 &&
+      MF.getFunction().hasOptSize())
     return false;
 
   // 512 is the maximum immediate for stp/ldp that will be used for
@@ -980,12 +998,6 @@ static void adaptForLdStOpt(MachineBasicBlock &MBB,
   //
   // ldp      x26, x25, [sp], #64
   //
-}
-
-static bool needsWinCFI(const MachineFunction &MF) {
-  const Function &F = MF.getFunction();
-  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
-         F.needsUnwindTableEntry();
 }
 
 static bool isTargetWindows(const MachineFunction &MF) {
