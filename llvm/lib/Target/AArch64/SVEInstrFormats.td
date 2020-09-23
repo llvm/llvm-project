@@ -2299,22 +2299,17 @@ multiclass sve_fp_2op_p_zd<bits<7> opc, string asm,
   def : SVE_1_Op_Passthru_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME)>;
 }
 
-multiclass sve_fp_2op_p_zd_HSD<bits<5> opc, string asm, SDPatternOperator op_merge,
-                                                SDPatternOperator op_pt = null_frag> {
+multiclass sve_fp_2op_p_zd_HSD<bits<5> opc, string asm, SDPatternOperator op> {
   def _H : sve_fp_2op_p_zd<{ 0b01, opc }, asm, ZPR16, ZPR16, ElementSizeH>;
   def _S : sve_fp_2op_p_zd<{ 0b10, opc }, asm, ZPR32, ZPR32, ElementSizeS>;
   def _D : sve_fp_2op_p_zd<{ 0b11, opc }, asm, ZPR64, ZPR64, ElementSizeD>;
 
-  def : SVE_3_Op_Pat<nxv8f16, op_merge, nxv8f16, nxv8i1, nxv8f16, !cast<Instruction>(NAME # _H)>;
-  def : SVE_3_Op_Pat<nxv4f32, op_merge, nxv4f32, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _S)>;
-  def : SVE_3_Op_Pat<nxv2f64, op_merge, nxv2f64, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
-
-  def : SVE_1_Op_Passthru_Pat<nxv8f16, op_pt, nxv8i1, nxv8f16, !cast<Instruction>(NAME # _H)>;
-  def : SVE_1_Op_Passthru_Pat<nxv4f16, op_pt, nxv4i1, nxv4f16, !cast<Instruction>(NAME # _H)>;
-  def : SVE_1_Op_Passthru_Pat<nxv2f16, op_pt, nxv2i1, nxv2f16, !cast<Instruction>(NAME # _H)>;
-  def : SVE_1_Op_Passthru_Pat<nxv4f32, op_pt, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _S)>;
-  def : SVE_1_Op_Passthru_Pat<nxv2f32, op_pt, nxv2i1, nxv2f32, !cast<Instruction>(NAME # _S)>;
-  def : SVE_1_Op_Passthru_Pat<nxv2f64, op_pt, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
+  def : SVE_1_Op_Passthru_Pat<nxv8f16, op, nxv8i1, nxv8f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_1_Op_Passthru_Pat<nxv4f16, op, nxv4i1, nxv4f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_1_Op_Passthru_Pat<nxv2f16, op, nxv2i1, nxv2f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_1_Op_Passthru_Pat<nxv4f32, op, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_1_Op_Passthru_Pat<nxv2f32, op, nxv2i1, nxv2f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_1_Op_Passthru_Pat<nxv2f64, op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve2_fp_flogb<string asm, SDPatternOperator op> {
