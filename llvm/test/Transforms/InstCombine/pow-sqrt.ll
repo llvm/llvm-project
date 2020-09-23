@@ -70,6 +70,18 @@ define float @powf_intrinsic_half_fast(float %x) {
 
 ; If we can disregard INFs, no need for a select.
 
+define double @pow_libcall_half_no_FMF_base_ninf(i32 %x) {
+; CHECK-LABEL: @pow_libcall_half_no_FMF_base_ninf(
+; CHECK-NEXT:    [[CONV:%.*]] = uitofp i32 [[X:%.*]] to double
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @sqrt(double [[CONV]])
+; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
+; CHECK-NEXT:    ret double [[ABS]]
+;
+  %conv = uitofp i32 %x to double
+  %pow = call double @pow(double %conv, double 5.0e-01)
+  ret double %pow
+}
+
 define double @pow_libcall_half_ninf(double %x) {
 ; CHECK-LABEL: @pow_libcall_half_ninf(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call ninf double @sqrt(double [[X:%.*]])
