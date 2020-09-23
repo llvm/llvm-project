@@ -17837,6 +17837,14 @@ vec_blendv(vector double __a, vector double __b,
   return __builtin_vsx_xxblendvd(__a, __b, __c);
 }
 
+/* vec_replace_elt */
+
+#define vec_replace_elt __builtin_altivec_vec_replace_elt
+
+/* vec_replace_unaligned */
+
+#define vec_replace_unaligned __builtin_altivec_vec_replace_unaligned
+
 /* vec_splati */
 
 #define vec_splati(__a)                                                        \
