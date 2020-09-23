@@ -383,7 +383,7 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
                               AnySuccessor:$unwindDest);
 
   let builders = [OpBuilder<
-    "OpBuilder &b, OperationState &result, ArrayRef<Type> tys, "
+    "OpBuilder &b, OperationState &result, TypeRange tys, "
     "FlatSymbolRefAttr callee, ValueRange ops, Block* normal, "
     "ValueRange normalOps, Block* unwind, ValueRange unwindOps",
     [{
@@ -391,7 +391,7 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
       build(b, result, tys, ops, normal, normalOps, unwind, unwindOps);
     }]>,
     OpBuilder<
-    "OpBuilder &b, OperationState &result, ArrayRef<Type> tys, "
+    "OpBuilder &b, OperationState &result, TypeRange tys, "
     "ValueRange ops, Block* normal, "
     "ValueRange normalOps, Block* unwind, ValueRange unwindOps",
     [{

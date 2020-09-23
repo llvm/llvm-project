@@ -657,16 +657,16 @@ def AffineParallelOp : Affine_Op<"parallel",
 
   let builders = [
     OpBuilder<"OpBuilder &builder, OperationState &result, "
-              "ArrayRef<Type> resultTypes, "
+              "TypeRange resultTypes, "
               "ArrayRef<AtomicRMWKind> reductions, "
               "ArrayRef<int64_t> ranges">,
     OpBuilder<"OpBuilder &builder, OperationState &result, "
-              "ArrayRef<Type> resultTypes, "
+              "TypeRange resultTypes, "
               "ArrayRef<AtomicRMWKind> reductions, "
               "AffineMap lbMap, ValueRange lbArgs, "
               "AffineMap ubMap, ValueRange ubArgs">,
     OpBuilder<"OpBuilder &builder, OperationState &result, "
-              "ArrayRef<Type> resultTypes, "
+              "TypeRange resultTypes, "
               "ArrayRef<AtomicRMWKind> reductions, "
               "AffineMap lbMap, ValueRange lbArgs, "
               "AffineMap ubMap, ValueRange ubArgs, "
