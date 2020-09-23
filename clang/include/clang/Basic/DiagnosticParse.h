@@ -15,7 +15,7 @@ namespace clang {
 namespace diag {
 enum {
 #define DIAG(ENUM, FLAGS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, NOWERROR,      \
-             SHOWINSYSHEADER, CATEGORY)                                        \
+             SHOWINSYSHEADER, DEFERRABLE, CATEGORY)                            \
   ENUM,
 #define PARSESTART
 #include "clang/Basic/DiagnosticParseKinds.inc"
