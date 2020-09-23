@@ -918,7 +918,7 @@ const char *tools::SplitDebugName(const JobAction &JA, const ArgList &Args,
   if (FinalOutput && Args.hasArg(options::OPT_c)) {
     SmallString<128> T(FinalOutput->getValue());
     llvm::sys::path::remove_filename(T);
-    T += llvm::sys::path::stem(FinalOutput->getValue());
+    llvm::sys::path::append(T, llvm::sys::path::stem(FinalOutput->getValue()));
     AddPostfix(T);
     return Args.MakeArgString(T);
   } else {
