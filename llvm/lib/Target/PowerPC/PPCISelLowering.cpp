@@ -888,6 +888,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::SREM, MVT::v2i64, Legal);
       setOperationAction(ISD::UREM, MVT::v4i32, Legal);
       setOperationAction(ISD::SREM, MVT::v4i32, Legal);
+      setOperationAction(ISD::UREM, MVT::v1i128, Legal);
+      setOperationAction(ISD::SREM, MVT::v1i128, Legal);
       setOperationAction(ISD::UDIV, MVT::v1i128, Legal);
       setOperationAction(ISD::SDIV, MVT::v1i128, Legal);
     }
