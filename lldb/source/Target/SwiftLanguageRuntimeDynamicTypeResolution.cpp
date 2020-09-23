@@ -1324,10 +1324,10 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
     return ts.GetTypeFromMangledTypename(mangled_name);
   }
 
-  swift::Demangle::Demangler Dem;
+  swift::Demangle::Demangler dem;
   swift::Demangle::NodePointer canonical =
       TypeSystemSwiftTypeRef::GetCanonicalDemangleTree(
-          ts.GetModule(), Dem, mangled_name.GetStringRef());
+          ts.GetModule(), dem, mangled_name.GetStringRef());
 
   // Build the list of type substitutions.
   swift::reflection::GenericArgumentMap substitutions;
@@ -1369,8 +1369,8 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
   // Apply the substitutions.
   const swift::reflection::TypeRef *bound_type_ref =
       type_ref->subst(reflection_ctx->getBuilder(), substitutions);
-  swift::Demangle::NodePointer node = bound_type_ref->getDemangling(Dem);
-  CompilerType bound_type = ts.RemangleAsType(Dem, node);
+  swift::Demangle::NodePointer node = bound_type_ref->getDemangling(dem);
+  CompilerType bound_type = ts.RemangleAsType(dem, node);
 
   // Import the type into the scratch context. Subsequent conversions
   // to Swift types must be performed in the scratch context, since
@@ -2082,14 +2082,14 @@ lldb::addr_t SwiftLanguageRuntime::FixupAddress(lldb::addr_t addr,
 const swift::reflection::TypeRef *
 SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type, Module *module) {
   // Demangle the mangled name.
-  swift::Demangle::Demangler Dem;
+  swift::Demangle::Demangler dem;
   ConstString mangled_name = type.GetMangledTypeName();
   auto *ts = llvm::dyn_cast_or_null<TypeSystemSwift>(type.GetTypeSystem());
   if (!ts)
     return nullptr;
   swift::Demangle::NodePointer node =
       TypeSystemSwiftTypeRef::GetCanonicalDemangleTree(
-          module ? module : ts->GetModule(), Dem, mangled_name.GetStringRef());
+          module ? module : ts->GetModule(), dem, mangled_name.GetStringRef());
   if (!node)
     return nullptr;
 
