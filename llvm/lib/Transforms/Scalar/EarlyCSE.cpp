@@ -1127,7 +1127,9 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
 
   // For stores check the result values before checking memory generation
   // (otherwise isSameMemGeneration may crash).
-  Value *Result = MemInst.isStore() ? getOrCreateResult(Matching, Other->getType()) : nullptr;
+  Value *Result = MemInst.isStore()
+                      ? getOrCreateResult(Matching, Other->getType())
+                      : nullptr;
   if (MemInst.isStore() && InVal.DefInst != Result)
     return nullptr;
 
