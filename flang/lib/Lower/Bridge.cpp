@@ -2038,8 +2038,8 @@ private:
     llvm::SmallVector<mlir::Value, 1> offs{
         builder->createIntegerConstant(loc, idxTy, sym.offset() - aliasOffset)};
     auto ptr = builder->create<fir::CoordinateOp>(loc, i8Ptr, base, offs);
-    auto preAlloc =
-        builder->createConvert(loc, builder->getRefType(genType(sym)), ptr);
+    auto preAlloc = builder->createConvert(
+        loc, builder->getRefType(genTypeWithCharFixup(sym)), ptr);
 
     mapSymbolAttributes(var, storeMap, preAlloc);
   }
