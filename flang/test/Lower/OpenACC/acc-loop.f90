@@ -70,7 +70,7 @@ program acc_loop
   END DO
 
 !CHECK:      [[GANGNUM1:%.*]] = constant 8 : i32
-!CHECK-NEXT: acc.loop gang(num: [[GANGNUM1]]) {
+!CHECK-NEXT: acc.loop gang(num=[[GANGNUM1]]: i32) {
 !CHECK:        fir.do_loop
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
@@ -81,7 +81,7 @@ program acc_loop
   END DO
 
 !CHECK:      [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK-NEXT: acc.loop gang(num: [[GANGNUM2]]) {
+!CHECK-NEXT: acc.loop gang(num=[[GANGNUM2]]: i32) {
 !CHECK:        fir.do_loop
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
@@ -91,7 +91,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-!CHECK: acc.loop gang(num: %{{.*}}, static: %{{.*}}) {
+!CHECK: acc.loop gang(num=%{{.*}}: i32, static=%{{.*}}: i32) {
 !CHECK:        fir.do_loop
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
@@ -112,7 +112,7 @@ program acc_loop
   END DO
 
 !CHECK: [[CONSTANT128:%.*]] = constant 128 : i32
-!CHECK:      acc.loop vector([[CONSTANT128]]) {
+!CHECK:      acc.loop vector([[CONSTANT128]]: i32) {
 !CHECK:        fir.do_loop
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
@@ -123,7 +123,7 @@ program acc_loop
   END DO
 
 !CHECK:      [[VECTORLENGTH:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK:      acc.loop vector([[VECTORLENGTH]]) {
+!CHECK:      acc.loop vector([[VECTORLENGTH]]: i32) {
 !CHECK:        fir.do_loop
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
@@ -144,7 +144,7 @@ program acc_loop
   END DO
 
 !CHECK: [[WORKER128:%.*]] = constant 128 : i32
-!CHECK:      acc.loop worker([[WORKER128]]) {
+!CHECK:      acc.loop worker([[WORKER128]]: i32) {
 !CHECK:        fir.do_loop
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
