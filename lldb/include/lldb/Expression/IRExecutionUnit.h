@@ -102,10 +102,7 @@ public:
 
   lldb::ModuleSP GetJITModule();
 
-  lldb::ModuleSP CreateJITModule(const char *name,
-                                 const FileSpec *limit_file_ptr = NULL,
-                                 uint32_t limit_start_line = 0,
-                                 uint32_t limit_end_line = 0);
+  lldb::ModuleSP CreateJITModule(const char *name);
 
   /// Accessor for the mutex that guards LLVM::getGlobalContext()
   static std::recursive_mutex &GetLLVMGlobalContextMutex();

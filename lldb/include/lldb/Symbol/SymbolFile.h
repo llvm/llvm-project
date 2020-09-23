@@ -314,13 +314,6 @@ public:
   virtual std::vector<lldb::DataBufferSP>
   GetASTData(lldb::LanguageType language);
 
-  // Used for the REPL to limit source file ranges that are valid within "file".
-  // Since
-  // breakpoint setting call fall through, we need to stop the fall through from
-  // happening
-  virtual bool SetLimitSourceFileRange(const FileSpec &file,
-                                       uint32_t first_line, uint32_t last_line);
-
   struct RegisterInfoResolver {
     virtual ~RegisterInfoResolver(); // anchor
 
@@ -343,15 +336,6 @@ public:
   virtual void Dump(Stream &s);
 
 protected:
-  class SourceRange {
-  public:
-    SourceRange(const FileSpec &f, uint32_t first, uint32_t last)
-        : file(f), first_line(first), last_line(last) {}
-    FileSpec file;
-    uint32_t first_line;
-    uint32_t last_line;
-  };
-
   void AssertModuleLock();
   virtual uint32_t CalculateNumCompileUnits() = 0;
   virtual lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t idx) = 0;
@@ -368,7 +352,6 @@ protected:
   Symtab *m_symtab = nullptr;
   uint32_t m_abilities;
   bool m_calculated_abilities;
-  std::vector<SourceRange> m_limit_source_ranges;
 
 private:
   SymbolFile(const SymbolFile &) = delete;
