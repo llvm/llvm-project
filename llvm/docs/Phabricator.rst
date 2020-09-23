@@ -187,7 +187,7 @@ this reason avoid using `arc land` and push commits to master directly with git
 after removing tags other than "Reviewed by" and "Differential Revision".
 You can run `llvm/utils/git/arcfilter.sh` to clean the commit message of the
 current "HEAD" commit automatically. You can also setup a git hook to catch this
-for you (see `Getting Started <GettingStarted.html#git-pre-push-hook>`).
+for you (see :ref:`git_pre_push_hook`).
 
 
 Committing someone's change from Phabricator
