@@ -485,6 +485,8 @@ bool FunctionResult::CanBeReturnedViaImplicitInterface() const {
         if (const auto *param{type.charLength()}) {
           if (const auto &expr{param->GetExplicit()}) {
             return IsConstantExpr(*expr); // 15.4.2.2(4)(c)
+          } else if (param->isAssumed()) {
+            return true;
           }
         }
         return false;
