@@ -28,6 +28,8 @@ class MBFIWrapper {
 
   BlockFrequency getBlockFreq(const MachineBasicBlock *MBB) const;
   void setBlockFreq(const MachineBasicBlock *MBB, BlockFrequency F);
+  Optional<uint64_t> getBlockProfileCount(const MachineBasicBlock *MBB) const;
+
   raw_ostream &printBlockFreq(raw_ostream &OS,
                               const MachineBasicBlock *MBB) const;
   raw_ostream &printBlockFreq(raw_ostream &OS,
