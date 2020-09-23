@@ -114,8 +114,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[C]](s32)
-    ; CHECK: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC]], [[TRUNC1]](s16)
+    ; CHECK: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC]], [[C]](s32)
     ; CHECK: $h0 = COPY [[SHL]](s16)
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_CONSTANT i32 2
