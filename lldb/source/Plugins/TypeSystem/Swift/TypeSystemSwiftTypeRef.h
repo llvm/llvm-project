@@ -285,6 +285,13 @@ private:
   DemangleCanonicalType(swift::Demangle::Demangler &Dem,
                         lldb::opaque_compiler_type_t type);
 
+  /// If \p node is a Struct/Class/Typedef in the __C module, return a
+  /// Swiftified node by looking up the name in the corresponding APINotes and
+  /// optionally putting it into the correctly named module.
+  swift::Demangle::NodePointer GetSwiftified(swift::Demangle::Demangler &Dem,
+                                             swift::Demangle::NodePointer node,
+                                             bool resolve_objc_module);
+
   /// Replace all "__C" module names with their actual Clang module
   /// names.  This is the recursion step of \p
   /// GetDemangleTreeForPrinting(). Don't call it directly.
