@@ -55,10 +55,9 @@ def SPV_BranchOp : SPV_Op<"Branch", [
 
   let builders = [
     OpBuilder<
-      "OpBuilder &, OperationState &state, "
       "Block *successor, ValueRange arguments = {}", [{
-        state.addSuccessors(successor);
-        state.addOperands(arguments);
+        $_state.addSuccessors(successor);
+        $_state.addOperands(arguments);
       }]
     >
   ];
@@ -137,7 +136,7 @@ def SPV_BranchConditionalOp : SPV_Op<"BranchConditional", [
 
   let builders = [
     OpBuilder<
-      "OpBuilder &builder, OperationState &state, Value condition, "
+      "Value condition, "
       "Block *trueBlock, ValueRange trueArguments, "
       "Block *falseBlock, ValueRange falseArguments, "
       "Optional<std::pair<uint32_t, uint32_t>> weights = {}",
@@ -145,10 +144,10 @@ def SPV_BranchConditionalOp : SPV_Op<"BranchConditional", [
         ArrayAttr weightsAttr;
         if (weights) {
           weightsAttr =
-              builder.getI32ArrayAttr({static_cast<int32_t>(weights->first),
+              $_builder.getI32ArrayAttr({static_cast<int32_t>(weights->first),
                                        static_cast<int32_t>(weights->second)});
         }
-        build(builder, state, condition, trueArguments, falseArguments,
+        build($_builder, $_state, condition, trueArguments, falseArguments,
               weightsAttr, trueBlock, falseBlock);
       }]
     >
@@ -290,7 +289,7 @@ def SPV_LoopOp : SPV_Op<"loop", [InFunctionScope]> {
 
   let regions = (region AnyRegion:$body);
 
-  let builders = [OpBuilder<"OpBuilder &builder, OperationState &state">];
+  let builders = [OpBuilder<"">];
 
   let extraClassDeclaration = [{
     // Returns the entry block.

@@ -67,13 +67,12 @@ def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
   // using `builder.create<ConstantOp>(...)`.
   let builders = [
     // Build a constant with a given constant tensor value.
-    OpBuilder<"OpBuilder &builder, OperationState &state, "
-              "DenseElementsAttr value", [{
-      build(builder, state, value.getType(), value);
+    OpBuilder<"DenseElementsAttr value", [{
+      build($_builder, $_state, value.getType(), value);
     }]>,
 
     // Build a constant with a given constant floating-point value.
-    OpBuilder<"OpBuilder &builder, OperationState &state, double value">
+    OpBuilder<"double value">
   ];
 
   // Invoke a static verify method to verify this constant operation.
@@ -96,7 +95,7 @@ def AddOp : Toy_Op<"add", [NoSideEffect]> {
 
   // Allow building an AddOp with from the two input operands.
   let builders = [
-    OpBuilder<"OpBuilder &b, OperationState &state, Value lhs, Value rhs">
+    OpBuilder<"Value lhs, Value rhs">
   ];
 }
 
@@ -131,8 +130,7 @@ def GenericCallOp : Toy_Op<"generic_call"> {
 
   // Add custom build methods for the generic call operation.
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, "
-              "StringRef callee, ArrayRef<Value> arguments">
+    OpBuilder<"StringRef callee, ArrayRef<Value> arguments">
   ];
 }
 
@@ -152,7 +150,7 @@ def MulOp : Toy_Op<"mul", [NoSideEffect]> {
 
   // Allow building a MulOp with from the two input operands.
   let builders = [
-    OpBuilder<"OpBuilder &b, OperationState &state, Value lhs, Value rhs">
+    OpBuilder<"Value lhs, Value rhs">
   ];
 }
 
@@ -218,9 +216,9 @@ def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
   let assemblyFormat = "($input^ `:` type($input))? attr-dict ";
 
   // Allow building a ReturnOp with no return operand.
-  let builders = [OpBuilder<
-    "OpBuilder &b, OperationState &state", [{ build(b, state, llvm::None); }]
-  >];
+  let builders = [
+    OpBuilder<"", [{ build($_builder, $_state, llvm::None); }]>
+  ];
 
   // Provide extra utility definitions on the c++ operation class definition.
   let extraClassDeclaration = [{
@@ -246,7 +244,7 @@ def TransposeOp : Toy_Op<"transpose", [NoSideEffect]> {
 
   // Allow building a TransposeOp with from the input operand.
   let builders = [
-    OpBuilder<"OpBuilder &b, OperationState &state, Value input">
+    OpBuilder<"Value input">
   ];
 
   // Invoke a static verify method to verify this transpose operation.

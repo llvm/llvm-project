@@ -95,8 +95,7 @@ def SPV_AccessChainOp : SPV_Op<"AccessChain", [NoSideEffect]> {
     SPV_AnyPtr:$component_ptr
   );
 
-  let builders = [OpBuilder<[{OpBuilder &builder, OperationState &state,
-                              Value basePtr, ValueRange indices}]>];
+  let builders = [OpBuilder<[{Value basePtr, ValueRange indices}]>];
 
   let hasCanonicalizer = 1;
 }
@@ -272,8 +271,7 @@ def SPV_ExecutionModeOp : SPV_Op<"ExecutionMode", [InModuleScope]> {
 
   let autogenSerialization = 0;
 
-  let builders = [OpBuilder<[{OpBuilder &builder, OperationState &state,
-                              spirv::FuncOp function,
+  let builders = [OpBuilder<[{spirv::FuncOp function,
                               spirv::ExecutionMode executionMode,
                               ArrayRef<int32_t> params}]>];
 }
@@ -327,7 +325,6 @@ def SPV_LoadOp : SPV_Op<"Load", []> {
 
   let builders = [
     OpBuilder<[{
-      OpBuilder &builder, OperationState &state,
       Value basePtr, IntegerAttr memory_access = {},
       IntegerAttr alignment = {}
     }]>
@@ -429,11 +426,11 @@ def SPV_StoreOp : SPV_Op<"Store", []> {
   let results = (outs);
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, "
+    OpBuilder<
       "Value ptr, Value value, ArrayRef<NamedAttribute> namedAttrs = {}", [{
-      state.addOperands(ptr);
-      state.addOperands(value);
-      state.addAttributes(namedAttrs);
+      $_state.addOperands(ptr);
+      $_state.addOperands(value);
+      $_state.addAttributes(namedAttrs);
     }]>
   ];
 }
