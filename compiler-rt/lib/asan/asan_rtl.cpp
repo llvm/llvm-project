@@ -498,10 +498,15 @@ static void AsanInitInternal() {
   force_interface_symbols();  // no-op.
   SanitizerInitializeUnwinder();
 
-#if CAN_SANITIZE_LEAKS
-  __lsan::InitCommonLsan();
-  InstallAtExitCheckLeaks();
-#endif
+  if (CAN_SANITIZE_LEAKS) {
+    __lsan::InitCommonLsan();
+    if (common_flags()->detect_leaks && common_flags()->leak_check_at_exit) {
+      if (flags()->halt_on_error)
+        Atexit(__lsan::DoLeakCheck);
+      else
+        Atexit(__lsan::DoRecoverableLeakCheckVoid);
+    }
+  }
 
 #if CAN_SANITIZE_UB
   __ubsan::InitAsPlugin();

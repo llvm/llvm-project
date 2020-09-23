@@ -103,7 +103,9 @@ extern "C" void __lsan_init() {
   InitializeThreadRegistry();
   InstallDeadlySignalHandlers(LsanOnDeadlySignal);
   InitializeMainThread();
-  InstallAtExitCheckLeaks();
+
+  if (common_flags()->detect_leaks && common_flags()->leak_check_at_exit)
+    Atexit(DoLeakCheck);
 
   InitializeCoverage(common_flags()->coverage, common_flags()->coverage_dir);
 
