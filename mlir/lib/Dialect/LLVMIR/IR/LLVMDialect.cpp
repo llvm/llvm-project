@@ -247,7 +247,7 @@ void StoreOp::build(OpBuilder &builder, OperationState &result, Value value,
                     Value addr, unsigned alignment, bool isVolatile,
                     bool isNonTemporal) {
   result.addOperands({value, addr});
-  result.addTypes(ArrayRef<Type>{});
+  result.addTypes({});
   if (isVolatile)
     result.addAttribute(kVolatileAttrName, builder.getUnitAttr());
   if (isNonTemporal)
@@ -1787,7 +1787,7 @@ Value mlir::LLVM::createGlobalString(Location loc, OpBuilder &builder,
       loc, LLVM::LLVMType::getInt64Ty(ctx),
       builder.getIntegerAttr(builder.getIndexType(), 0));
   return builder.create<LLVM::GEPOp>(loc, LLVM::LLVMType::getInt8PtrTy(ctx),
-                                     globalPtr, ArrayRef<Value>({cst0, cst0}));
+                                     globalPtr, ValueRange{cst0, cst0});
 }
 
 bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {

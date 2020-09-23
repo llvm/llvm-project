@@ -2460,7 +2460,7 @@ LogicalResult AffinePrefetchOp::fold(ArrayRef<Attribute> cstOperands,
 //===----------------------------------------------------------------------===//
 
 void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
-                             ArrayRef<Type> resultTypes,
+                             TypeRange resultTypes,
                              ArrayRef<AtomicRMWKind> reductions,
                              ArrayRef<int64_t> ranges) {
   SmallVector<AffineExpr, 8> lbExprs(ranges.size(),
@@ -2475,7 +2475,7 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
 }
 
 void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
-                             ArrayRef<Type> resultTypes,
+                             TypeRange resultTypes,
                              ArrayRef<AtomicRMWKind> reductions,
                              AffineMap lbMap, ValueRange lbArgs,
                              AffineMap ubMap, ValueRange ubArgs) {
@@ -2490,7 +2490,7 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
 }
 
 void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
-                             ArrayRef<Type> resultTypes,
+                             TypeRange resultTypes,
                              ArrayRef<AtomicRMWKind> reductions,
                              AffineMap lbMap, ValueRange lbArgs,
                              AffineMap ubMap, ValueRange ubArgs,

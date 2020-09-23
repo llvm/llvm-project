@@ -255,7 +255,7 @@ struct FoldToCallOpPattern : public OpRewritePattern<FoldToCallOp> {
 
   LogicalResult matchAndRewrite(FoldToCallOp op,
                                 PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<CallOp>(op, ArrayRef<Type>(), op.calleeAttr(),
+    rewriter.replaceOpWithNewOp<CallOp>(op, TypeRange(), op.calleeAttr(),
                                         ValueRange());
     return success();
   }

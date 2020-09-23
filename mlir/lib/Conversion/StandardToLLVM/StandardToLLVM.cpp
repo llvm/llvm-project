@@ -2189,7 +2189,7 @@ struct DeallocOpLowering : public ConvertOpToLLVMPattern<DeallocOp> {
         op->getLoc(), getVoidPtrType(),
         memref.allocatedPtr(rewriter, op->getLoc()));
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-        op, ArrayRef<Type>(), rewriter.getSymbolRefAttr(freeFunc), casted);
+        op, TypeRange(), rewriter.getSymbolRefAttr(freeFunc), casted);
     return success();
   }
 };
@@ -2714,13 +2714,13 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<ReturnOp> {
 
     // If ReturnOp has 0 or 1 operand, create it and return immediately.
     if (numArguments == 0) {
-      rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
-          op, ArrayRef<Type>(), ArrayRef<Value>(), op->getAttrs());
+      rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, TypeRange(), ValueRange(),
+                                                  op->getAttrs());
       return success();
     }
     if (numArguments == 1) {
       rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
-          op, ArrayRef<Type>(), updatedOperands, op->getAttrs());
+          op, TypeRange(), updatedOperands, op->getAttrs());
       return success();
     }
 
@@ -2735,7 +2735,7 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<ReturnOp> {
           op->getLoc(), packedType, packed, updatedOperands[i],
           rewriter.getI64ArrayAttr(i));
     }
-    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, ArrayRef<Type>(), packed,
+    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, TypeRange(), packed,
                                                 op->getAttrs());
     return success();
   }

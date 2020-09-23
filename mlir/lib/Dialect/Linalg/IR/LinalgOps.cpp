@@ -98,9 +98,8 @@ static LogicalResult foldMemRefCast(Operation *op) {
 // GenericOps
 //===----------------------------------------------------------------------===//
 void GenericOp::build(
-    OpBuilder &builder, OperationState &result,
-    ArrayRef<Type> resultTensorTypes, ValueRange inputs,
-    ValueRange outputBuffers, ValueRange initTensors,
+    OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,
+    ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors,
     ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes,
     StringRef doc, StringRef libraryCall, IntegerAttr symbolSource,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild) {
@@ -130,7 +129,7 @@ void GenericOp::build(
     ArrayRef<StringRef> iteratorTypes, StringRef doc, StringRef libraryCall,
     IntegerAttr symbolSource,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild) {
-  build(builder, result, ArrayRef<Type>{}, inputs, outputBuffers, ValueRange{},
+  build(builder, result, TypeRange{}, inputs, outputBuffers, ValueRange{},
         indexingMaps, iteratorTypes, doc, libraryCall, symbolSource, bodyBuild);
 }
 
@@ -146,9 +145,8 @@ void GenericOp::build(
 }
 
 void GenericOp::build(
-    OpBuilder &builder, OperationState &result,
-    ArrayRef<Type> resultTensorTypes, ValueRange inputs,
-    ValueRange outputBuffers, ValueRange initTensors,
+    OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,
+    ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors,
     ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild) {
   build(builder, result, resultTensorTypes, inputs, outputBuffers, initTensors,
@@ -159,9 +157,8 @@ void GenericOp::build(
 }
 
 void IndexedGenericOp::build(
-    OpBuilder &builder, OperationState &result,
-    ArrayRef<Type> resultTensorTypes, ValueRange inputs,
-    ValueRange outputBuffers, ValueRange initTensors,
+    OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,
+    ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors,
     ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes,
     StringRef doc, StringRef libraryCall, IntegerAttr symbolSource,
     function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>
@@ -196,7 +193,7 @@ void IndexedGenericOp::build(
     IntegerAttr symbolSource,
     function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>
         bodyBuild) {
-  build(builder, result, ArrayRef<Type>{}, inputs, outputBuffers, ValueRange{},
+  build(builder, result, TypeRange{}, inputs, outputBuffers, ValueRange{},
         indexingMaps, iteratorTypes, doc, libraryCall, symbolSource, bodyBuild);
 }
 
@@ -213,9 +210,8 @@ void IndexedGenericOp::build(
 }
 
 void IndexedGenericOp::build(
-    OpBuilder &builder, OperationState &result,
-    ArrayRef<Type> resultTensorTypes, ValueRange inputs,
-    ValueRange outputBuffers, ValueRange initTensors,
+    OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,
+    ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors,
     ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes,
     function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>
         bodyBuild) {
