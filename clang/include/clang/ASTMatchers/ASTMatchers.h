@@ -1162,7 +1162,7 @@ AST_MATCHER(TemplateArgument, isIntegral) {
   return Node.getKind() == TemplateArgument::Integral;
 }
 
-/// Matches a TemplateArgument that referes to an integral type.
+/// Matches a TemplateArgument that refers to an integral type.
 ///
 /// Given
 /// \code
@@ -6572,7 +6572,7 @@ extern const AstTypeMatcher<InjectedClassNameType> injectedClassNameType;
 /// \endcode
 extern const AstTypeMatcher<DecayedType> decayedType;
 
-/// Matches the decayed type, whos decayed type matches \c InnerMatcher
+/// Matches the decayed type, whoes decayed type matches \c InnerMatcher
 AST_MATCHER_P(DecayedType, hasDecayedType, internal::Matcher<QualType>,
               InnerType) {
   return InnerType.matches(Node.getDecayedType(), Finder, Builder);
