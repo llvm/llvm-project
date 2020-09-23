@@ -29,8 +29,8 @@ class SPV_LogicalBinaryOp<string mnemonic, Type operandsType,
 
   let builders = [
     OpBuilder<
-      "OpBuilder &builder, OperationState &state, Value lhs, Value rhs",
-      "::buildLogicalBinaryOp(builder, state, lhs, rhs);">
+      "Value lhs, Value rhs",
+      "::buildLogicalBinaryOp($_builder, $_state, lhs, rhs);">
   ];
 }
 
@@ -860,8 +860,7 @@ def SPV_SelectOp : SPV_Op<"Select",
     SPV_SelectType:$result
   );
 
-  let builders = [OpBuilder<[{OpBuilder &builder, OperationState &state,
-                              Value cond, Value trueValue,
+  let builders = [OpBuilder<[{Value cond, Value trueValue,
                               Value falseValue}]>];
 
   let assemblyFormat = [{
