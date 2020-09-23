@@ -169,7 +169,8 @@ public:
     if (!ArgType)
       return;
 
-    if (isUncountedPtr(ArgType)) {
+    Optional<bool> IsUncountedPtr = isUncountedPtr(ArgType);
+    if (IsUncountedPtr && *IsUncountedPtr) {
       const Expr *const InitExpr = V->getInit();
       if (!InitExpr)
         return; // FIXME: later on we might warn on uninitialized vars too

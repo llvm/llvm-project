@@ -76,19 +76,15 @@ public:
               (AccSpec == AS_none && RD->isClass()))
             return false;
 
-          llvm::Optional<const clang::CXXRecordDecl *> MaybeRefCntblBaseRD =
+          llvm::Optional<const CXXRecordDecl *> RefCntblBaseRD =
               isRefCountable(Base);
-          if (!MaybeRefCntblBaseRD.hasValue())
+          if (!RefCntblBaseRD || !(*RefCntblBaseRD))
             return false;
 
-          const CXXRecordDecl *RefCntblBaseRD = MaybeRefCntblBaseRD.getValue();
-          if (!RefCntblBaseRD)
-            return false;
-
-          const auto *Dtor = RefCntblBaseRD->getDestructor();
+          const auto *Dtor = (*RefCntblBaseRD)->getDestructor();
           if (!Dtor || !Dtor->isVirtual()) {
             ProblematicBaseSpecifier = Base;
-            ProblematicBaseClass = RefCntblBaseRD;
+            ProblematicBaseClass = *RefCntblBaseRD;
             return true;
           }
 
