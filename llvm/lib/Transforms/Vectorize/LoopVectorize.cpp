@@ -189,7 +189,7 @@ namespace PreferPredicateTy {
     PredicateElseScalarEpilogue,
     PredicateOrDontVectorize
   };
-}
+} // namespace PreferPredicateTy
 
 static cl::opt<PreferPredicateTy::Option> PreferPredicateOverEpilogue(
     "prefer-predicate-over-epilogue",
