@@ -12,7 +12,6 @@
 ; GFX900: ds_write_b16 [[ZERO]], v2
 ; GFX900-NEXT: s_waitcnt lgkmcnt(1)
 ; GFX900-NEXT: v_mov_b32_e32 v0, v1
-; GFX900-NEXT: s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT: s_setpc_b64 s[30:31]
 define <2 x i16> @load_local_lo_hi_v2i16_multi_use_lo(i16 addrspace(3)* noalias %in) #0 {
 entry:
@@ -34,7 +33,6 @@ entry:
 ; GFX900-DAG: s_waitcnt lgkmcnt(0)
 ; GFX900-DAG: ds_write_b16 [[ZERO]], [[HI]]
 ; GFX900: v_lshl_or_b32 [[HI]], [[HI]], 16, [[AND]]
-; GFX900-NEXT: s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT: s_setpc_b64 s[30:31]
 define <2 x i16> @load_local_lo_hi_v2i16_multi_use_hi(i16 addrspace(3)* noalias %in) #0 {
 entry:
@@ -56,7 +54,6 @@ entry:
 ; GFX900-NEXT: ds_write_b16 v2, v0
 ; GFX900-NEXT: v_and_b32_e32 v1, 0xffff, v3
 ; GFX900-NEXT: v_lshl_or_b32 v0, v0, 16, v1
-; GFX900-NEXT: s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT: s_setpc_b64 s[30:31]
 define <2 x i16> @load_local_lo_hi_v2i16_multi_use_lohi(i16 addrspace(3)* noalias %in, i16 addrspace(3)* noalias %out0, i16 addrspace(3)* noalias %out1) #0 {
 entry:
@@ -73,7 +70,6 @@ entry:
 ; GCN-LABEL: {{^}}load_local_hi_v2i16_undeflo:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: ds_read_u16_d16_hi v0, v0
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: ds_read_u16 v
@@ -106,7 +102,6 @@ entry:
 ; GFX900-NEXT: ds_read_u16_d16_hi v1, v0
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v1, off{{$}}
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: ds_read_u16 v
@@ -158,7 +153,6 @@ entry:
 ; GFX900-NEXT: ds_read_u16_d16_hi v1, v0
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v1, off{{$}}
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: ds_read_u16 v
@@ -176,7 +170,6 @@ entry:
 ; GFX900-NEXT: ds_read_u8_d16_hi v1, v0
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v1, off{{$}}
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: ds_read_u8 v
@@ -195,7 +188,6 @@ entry:
 ; GFX900-NEXT: ds_read_i8_d16_hi v1, v0
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v1, off{{$}}
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: ds_read_i8 v
@@ -214,7 +206,6 @@ entry:
 ; GFX900-NEXT: ds_read_u8_d16_hi v1, v0
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v1, off{{$}}
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: ds_read_u8 v
@@ -235,7 +226,6 @@ entry:
 ; GFX900-NEXT: ds_read_i8_d16_hi v1, v0
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v1, off{{$}}
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: ds_read_i8 v
@@ -256,7 +246,6 @@ entry:
 ; GFX900-NEXT: global_load_short_d16_hi v2, v[0:1], off offset:-4094
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 define void @load_global_hi_v2i16_reglo_vreg(i16 addrspace(1)* %in, i16 %reg) #0 {
 entry:
@@ -273,7 +262,6 @@ entry:
 ; GFX900-NEXT: global_load_short_d16_hi v2, v[0:1], off offset:-4094
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 define void @load_global_hi_v2f16_reglo_vreg(half addrspace(1)* %in, half %reg) #0 {
 entry:
@@ -290,7 +278,6 @@ entry:
 ; GFX900-NEXT: global_load_ubyte_d16_hi v2, v[0:1], off offset:-4095
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 define void @load_global_hi_v2i16_reglo_vreg_zexti8(i8 addrspace(1)* %in, i16 %reg) #0 {
 entry:
@@ -308,7 +295,6 @@ entry:
 ; GFX900-NEXT: global_load_sbyte_d16_hi v2, v[0:1], off offset:-4095
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 define void @load_global_hi_v2i16_reglo_vreg_sexti8(i8 addrspace(1)* %in, i16 %reg) #0 {
 entry:
@@ -326,7 +312,6 @@ entry:
 ; GFX900-NEXT: global_load_sbyte_d16_hi v2, v[0:1], off offset:-4095
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 define void @load_global_hi_v2f16_reglo_vreg_sexti8(i8 addrspace(1)* %in, half %reg) #0 {
 entry:
@@ -345,7 +330,6 @@ entry:
 ; GFX900-NEXT: global_load_ubyte_d16_hi v2, v[0:1], off offset:-4095
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 define void @load_global_hi_v2f16_reglo_vreg_zexti8(i8 addrspace(1)* %in, half %reg) #0 {
 entry:
@@ -364,7 +348,6 @@ entry:
 ; GFX900-NEXT: flat_load_short_d16_hi v2, v[0:1]
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v2
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: flat_load_ushort v{{[0-9]+}}
@@ -385,7 +368,6 @@ entry:
 ; GFX900-NEXT: flat_load_short_d16_hi v2, v[0:1]
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v2
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: flat_load_ushort v{{[0-9]+}}
@@ -406,7 +388,6 @@ entry:
 ; GFX900-NEXT: flat_load_ubyte_d16_hi v2, v[0:1]
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v2
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: flat_load_ubyte v{{[0-9]+}}
@@ -428,7 +409,6 @@ entry:
 ; GFX900-NEXT: flat_load_sbyte_d16_hi v2, v[0:1]
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v2
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: flat_load_sbyte v{{[0-9]+}}
@@ -450,7 +430,6 @@ entry:
 ; GFX900-NEXT: flat_load_ubyte_d16_hi v2, v[0:1]
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v2
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: flat_load_ubyte v{{[0-9]+}}
@@ -473,7 +452,6 @@ entry:
 ; GFX900-NEXT: flat_load_sbyte_d16_hi v2, v[0:1]
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v2
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: flat_load_sbyte v{{[0-9]+}}
@@ -496,7 +474,6 @@ entry:
 ; GFX900: buffer_load_short_d16_hi v0, off, s[0:3], s32 offset:4094{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s32 offset:4094{{$}}
@@ -515,7 +492,6 @@ entry:
 ; GFX900: buffer_load_short_d16_hi v0, off, s[0:3], s32 offset:4094{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s32 offset:4094{{$}}
@@ -534,7 +510,6 @@ entry:
 ; GFX900: buffer_load_short_d16_hi v0, off, s[0:3], 0 offset:4094{{$}}
 ; GFX900: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], 0 offset:4094{{$}}
@@ -552,7 +527,6 @@ entry:
 ; GFX900-NEXT: buffer_load_short_d16_hi v1, off, s[0:3], 0 offset:4094{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], 0 offset:4094{{$}}
@@ -570,7 +544,6 @@ entry:
 ; GFX900: buffer_load_ubyte_d16_hi v0, off, s[0:3], s32 offset:4095{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: buffer_load_ubyte v{{[0-9]+}}, off, s[0:3], s32 offset:4095{{$}}
@@ -590,7 +563,6 @@ entry:
 ; GFX900: buffer_load_ubyte_d16_hi v0, off, s[0:3], s32 offset:4095{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: buffer_load_ubyte v{{[0-9]+}}, off, s[0:3], s32 offset:4095{{$}}
@@ -611,7 +583,6 @@ entry:
 ; GFX900: buffer_load_sbyte_d16_hi v0, off, s[0:3], s32 offset:4095{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: buffer_load_sbyte v{{[0-9]+}}, off, s[0:3], s32 offset:4095{{$}}
@@ -632,7 +603,6 @@ entry:
 ; GFX900: buffer_load_sbyte_d16_hi v0, off, s[0:3], s32 offset:4095{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: buffer_load_sbyte v{{[0-9]+}}, off, s[0:3], s32 offset:4095{{$}}
@@ -652,7 +622,6 @@ entry:
 ; GFX900-NEXT: buffer_load_ubyte_d16_hi v1, off, s[0:3], 0 offset:4094{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: buffer_load_ubyte v0, off, s[0:3], 0 offset:4094{{$}}
@@ -671,7 +640,6 @@ entry:
 ; GFX900-NEXT: buffer_load_sbyte_d16_hi v1, off, s[0:3], 0 offset:4094{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: buffer_load_sbyte v0, off, s[0:3], 0 offset:4094{{$}}
@@ -690,7 +658,6 @@ entry:
 ; GFX900-NEXT: buffer_load_ubyte_d16_hi v1, off, s[0:3], 0 offset:4094{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; NO-D16-HI: buffer_load_ubyte v0, off, s[0:3], 0 offset:4094{{$}}
@@ -710,7 +677,6 @@ entry:
 ; GFX900-NEXT: global_load_short_d16_hi v2, v[0:1], off offset:-4094
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; GFX803: flat_load_ushort
@@ -730,7 +696,6 @@ entry:
 ; GFX900-NEXT: global_load_short_d16_hi v2, v[0:1], off offset:-4094
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
 ; GFX803: flat_load_ushort
@@ -750,7 +715,6 @@ entry:
 ; GFX900-NEXT: global_load_sbyte_d16_hi v2, v[0:1], off offset:-4095
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 define void @load_constant_hi_v2f16_reglo_vreg_sexti8(i8 addrspace(4)* %in, half %reg) #0 {
 entry:
@@ -769,7 +733,6 @@ entry:
 ; GFX900-NEXT: global_load_ubyte_d16_hi v2, v[0:1], off offset:-4095
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 define void @load_constant_hi_v2f16_reglo_vreg_zexti8(i8 addrspace(4)* %in, half %reg) #0 {
 entry:
@@ -977,7 +940,6 @@ entry:
 ; GFX900: buffer_load_ushort v0, off, s[0:3], s32{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: buffer_load_short_d16_hi v0, off, s[0:3], s32 offset:2
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 define <2 x i16> @load_private_v2i16_split(i16 addrspace(5)* byval %in) #0 {
 entry:
@@ -998,7 +960,6 @@ entry:
 ; GFX900-NEXT: ds_write_b16 v1, v0
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: v_mov_b32_e32 v0, [[COPY]]
-; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 define <2 x i16> @load_local_hi_v2i16_store_local_lo(i16 %reg, i16 addrspace(3)* %in) #0 {
 entry:

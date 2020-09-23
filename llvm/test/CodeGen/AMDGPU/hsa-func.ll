@@ -27,7 +27,7 @@
 
 ; ELF: Symbol {
 ; ELF: Name: simple
-; ELF: Size: 36
+; ELF: Size: 32
 ; ELF: Type: Function (0x2)
 ; ELF: }
 

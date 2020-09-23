@@ -8,7 +8,6 @@ define <2 x half> @chain_hi_to_lo_private() {
 ; GCN-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:2
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_short_d16_hi v0, off, s[0:3], 0
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %gep_lo = getelementptr inbounds half, half addrspace(5)* null, i64 1
@@ -29,7 +28,6 @@ define <2 x half> @chain_hi_to_lo_private_different_bases(half addrspace(5)* %ba
 ; GCN-NEXT:    buffer_load_ushort v0, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_short_d16_hi v0, v1, s[0:3], 0 offen
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %load_lo = load half, half addrspace(5)* %base_lo
@@ -68,7 +66,6 @@ define <2 x half> @chain_hi_to_lo_group() {
 ; GCN-NEXT:    ds_read_u16 v0, v1 offset:2
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_read_u16_d16_hi v0, v1
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %gep_lo = getelementptr inbounds half, half addrspace(3)* null, i64 1
@@ -89,7 +86,6 @@ define <2 x half> @chain_hi_to_lo_group_different_bases(half addrspace(3)* %base
 ; GCN-NEXT:    ds_read_u16 v0, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_read_u16_d16_hi v0, v1
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %load_lo = load half, half addrspace(3)* %base_lo
@@ -112,7 +108,6 @@ define <2 x half> @chain_hi_to_lo_global() {
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_load_short_d16_hi v0, v[1:2], off
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %gep_lo = getelementptr inbounds half, half addrspace(1)* null, i64 1
@@ -133,7 +128,6 @@ define <2 x half> @chain_hi_to_lo_global_different_bases(half addrspace(1)* %bas
 ; GCN-NEXT:    global_load_ushort v0, v[0:1], off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_load_short_d16_hi v0, v[2:3], off
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %load_lo = load half, half addrspace(1)* %base_lo
@@ -156,7 +150,6 @@ define <2 x half> @chain_hi_to_lo_flat() {
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    flat_load_short_d16_hi v0, v[1:2]
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %gep_lo = getelementptr inbounds half, half* null, i64 1
@@ -177,7 +170,6 @@ define <2 x half> @chain_hi_to_lo_flat_different_bases(half* %base_lo, half* %ba
 ; GCN-NEXT:    flat_load_ushort v0, v[0:1]
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    flat_load_short_d16_hi v0, v[2:3]
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %load_lo = load half, half* %base_lo

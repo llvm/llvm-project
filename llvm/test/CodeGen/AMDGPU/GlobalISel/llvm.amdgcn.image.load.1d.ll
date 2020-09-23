@@ -15,7 +15,6 @@ define amdgpu_ps float @load_1d_f32_x(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX6-NEXT:    s_mov_b32 s6, s8
 ; GFX6-NEXT:    s_mov_b32 s7, s9
 ; GFX6-NEXT:    image_load v0, v0, s[0:7] dmask:0x1 unorm
-; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: load_1d_f32_x:
@@ -29,7 +28,6 @@ define amdgpu_ps float @load_1d_f32_x(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX8-NEXT:    s_mov_b32 s6, s8
 ; GFX8-NEXT:    s_mov_b32 s7, s9
 ; GFX8-NEXT:    image_load v0, v0, s[0:7] dmask:0x1 unorm
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_f32_x:
@@ -44,7 +42,6 @@ define amdgpu_ps float @load_1d_f32_x(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
   %v = call float @llvm.amdgcn.image.load.1d.f32.i32(i32 1, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret float %v
@@ -62,7 +59,6 @@ define amdgpu_ps float @load_1d_f32_y(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX6-NEXT:    s_mov_b32 s6, s8
 ; GFX6-NEXT:    s_mov_b32 s7, s9
 ; GFX6-NEXT:    image_load v0, v0, s[0:7] dmask:0x2 unorm
-; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: load_1d_f32_y:
@@ -76,7 +72,6 @@ define amdgpu_ps float @load_1d_f32_y(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX8-NEXT:    s_mov_b32 s6, s8
 ; GFX8-NEXT:    s_mov_b32 s7, s9
 ; GFX8-NEXT:    image_load v0, v0, s[0:7] dmask:0x2 unorm
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_f32_y:
@@ -91,7 +86,6 @@ define amdgpu_ps float @load_1d_f32_y(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v0, v0, s[0:7] dmask:0x2 dim:SQ_RSRC_IMG_1D unorm
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
   %v = call float @llvm.amdgcn.image.load.1d.f32.i32(i32 2, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret float %v
@@ -109,7 +103,6 @@ define amdgpu_ps float @load_1d_f32_z(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX6-NEXT:    s_mov_b32 s6, s8
 ; GFX6-NEXT:    s_mov_b32 s7, s9
 ; GFX6-NEXT:    image_load v0, v0, s[0:7] dmask:0x4 unorm
-; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: load_1d_f32_z:
@@ -123,7 +116,6 @@ define amdgpu_ps float @load_1d_f32_z(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX8-NEXT:    s_mov_b32 s6, s8
 ; GFX8-NEXT:    s_mov_b32 s7, s9
 ; GFX8-NEXT:    image_load v0, v0, s[0:7] dmask:0x4 unorm
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_f32_z:
@@ -138,7 +130,6 @@ define amdgpu_ps float @load_1d_f32_z(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v0, v0, s[0:7] dmask:0x4 dim:SQ_RSRC_IMG_1D unorm
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
   %v = call float @llvm.amdgcn.image.load.1d.f32.i32(i32 4, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret float %v
@@ -156,7 +147,6 @@ define amdgpu_ps float @load_1d_f32_w(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX6-NEXT:    s_mov_b32 s6, s8
 ; GFX6-NEXT:    s_mov_b32 s7, s9
 ; GFX6-NEXT:    image_load v0, v0, s[0:7] dmask:0x8 unorm
-; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: load_1d_f32_w:
@@ -170,7 +160,6 @@ define amdgpu_ps float @load_1d_f32_w(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX8-NEXT:    s_mov_b32 s6, s8
 ; GFX8-NEXT:    s_mov_b32 s7, s9
 ; GFX8-NEXT:    image_load v0, v0, s[0:7] dmask:0x8 unorm
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_f32_w:
@@ -185,7 +174,6 @@ define amdgpu_ps float @load_1d_f32_w(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v0, v0, s[0:7] dmask:0x8 dim:SQ_RSRC_IMG_1D unorm
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
   %v = call float @llvm.amdgcn.image.load.1d.f32.i32(i32 8, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret float %v
@@ -203,7 +191,6 @@ define amdgpu_ps <2 x float> @load_1d_v2f32_xy(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX6-NEXT:    s_mov_b32 s6, s8
 ; GFX6-NEXT:    s_mov_b32 s7, s9
 ; GFX6-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x3 unorm
-; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: load_1d_v2f32_xy:
@@ -217,7 +204,6 @@ define amdgpu_ps <2 x float> @load_1d_v2f32_xy(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX8-NEXT:    s_mov_b32 s6, s8
 ; GFX8-NEXT:    s_mov_b32 s7, s9
 ; GFX8-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x3 unorm
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_v2f32_xy:
@@ -232,7 +218,6 @@ define amdgpu_ps <2 x float> @load_1d_v2f32_xy(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
   %v = call <2 x float> @llvm.amdgcn.image.load.1d.v2f32.i32(i32 3, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret <2 x float> %v
@@ -250,7 +235,6 @@ define amdgpu_ps <2 x float> @load_1d_v2f32_xz(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX6-NEXT:    s_mov_b32 s6, s8
 ; GFX6-NEXT:    s_mov_b32 s7, s9
 ; GFX6-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x5 unorm
-; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: load_1d_v2f32_xz:
@@ -264,7 +248,6 @@ define amdgpu_ps <2 x float> @load_1d_v2f32_xz(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX8-NEXT:    s_mov_b32 s6, s8
 ; GFX8-NEXT:    s_mov_b32 s7, s9
 ; GFX8-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x5 unorm
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_v2f32_xz:
@@ -279,7 +262,6 @@ define amdgpu_ps <2 x float> @load_1d_v2f32_xz(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x5 dim:SQ_RSRC_IMG_1D unorm
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
   %v = call <2 x float> @llvm.amdgcn.image.load.1d.v2f32.i32(i32 5, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret <2 x float> %v
@@ -297,7 +279,6 @@ define amdgpu_ps <2 x float> @load_1d_v2f32_xw(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX6-NEXT:    s_mov_b32 s6, s8
 ; GFX6-NEXT:    s_mov_b32 s7, s9
 ; GFX6-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x9 unorm
-; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: load_1d_v2f32_xw:
@@ -311,7 +292,6 @@ define amdgpu_ps <2 x float> @load_1d_v2f32_xw(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX8-NEXT:    s_mov_b32 s6, s8
 ; GFX8-NEXT:    s_mov_b32 s7, s9
 ; GFX8-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x9 unorm
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_v2f32_xw:
@@ -326,7 +306,6 @@ define amdgpu_ps <2 x float> @load_1d_v2f32_xw(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x9 dim:SQ_RSRC_IMG_1D unorm
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
   %v = call <2 x float> @llvm.amdgcn.image.load.1d.v2f32.i32(i32 9, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret <2 x float> %v
@@ -344,7 +323,6 @@ define amdgpu_ps <2 x float> @load_1d_v2f32_yz(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX6-NEXT:    s_mov_b32 s6, s8
 ; GFX6-NEXT:    s_mov_b32 s7, s9
 ; GFX6-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x6 unorm
-; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: load_1d_v2f32_yz:
@@ -358,7 +336,6 @@ define amdgpu_ps <2 x float> @load_1d_v2f32_yz(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX8-NEXT:    s_mov_b32 s6, s8
 ; GFX8-NEXT:    s_mov_b32 s7, s9
 ; GFX8-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x6 unorm
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_v2f32_yz:
@@ -373,7 +350,6 @@ define amdgpu_ps <2 x float> @load_1d_v2f32_yz(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x6 dim:SQ_RSRC_IMG_1D unorm
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
   %v = call <2 x float> @llvm.amdgcn.image.load.1d.v2f32.i32(i32 6, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret <2 x float> %v
@@ -391,7 +367,6 @@ define amdgpu_ps <3 x float> @load_1d_v3f32_xyz(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX6-NEXT:    s_mov_b32 s6, s8
 ; GFX6-NEXT:    s_mov_b32 s7, s9
 ; GFX6-NEXT:    image_load v[0:2], v0, s[0:7] dmask:0x7 unorm
-; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: load_1d_v3f32_xyz:
@@ -405,7 +380,6 @@ define amdgpu_ps <3 x float> @load_1d_v3f32_xyz(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX8-NEXT:    s_mov_b32 s6, s8
 ; GFX8-NEXT:    s_mov_b32 s7, s9
 ; GFX8-NEXT:    image_load v[0:2], v0, s[0:7] dmask:0x7 unorm
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_v3f32_xyz:
@@ -420,7 +394,6 @@ define amdgpu_ps <3 x float> @load_1d_v3f32_xyz(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v[0:2], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D unorm
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
   %v = call <3 x float> @llvm.amdgcn.image.load.1d.v3f32.i32(i32 7, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret <3 x float> %v
@@ -438,7 +411,6 @@ define amdgpu_ps <4 x float> @load_1d_v4f32_xyzw(<8 x i32> inreg %rsrc, i32 %s) 
 ; GFX6-NEXT:    s_mov_b32 s6, s8
 ; GFX6-NEXT:    s_mov_b32 s7, s9
 ; GFX6-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm
-; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: load_1d_v4f32_xyzw:
@@ -452,7 +424,6 @@ define amdgpu_ps <4 x float> @load_1d_v4f32_xyzw(<8 x i32> inreg %rsrc, i32 %s) 
 ; GFX8-NEXT:    s_mov_b32 s6, s8
 ; GFX8-NEXT:    s_mov_b32 s7, s9
 ; GFX8-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_v4f32_xyzw:
@@ -467,7 +438,6 @@ define amdgpu_ps <4 x float> @load_1d_v4f32_xyzw(<8 x i32> inreg %rsrc, i32 %s) 
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret <4 x float> %v

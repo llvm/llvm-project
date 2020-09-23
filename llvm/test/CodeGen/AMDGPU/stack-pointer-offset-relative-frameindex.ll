@@ -37,6 +37,8 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; GCN-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GCN-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GCN-NEXT:    s_cbranch_execz BB0_2

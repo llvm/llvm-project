@@ -1668,7 +1668,6 @@ define void @shl_or_k(i32 addrspace(1)* %out, i32 %in) {
 ; GCN-NEXT:    s_mov_b32 s5, s6
 ; GCN-NEXT:    v_or_b32_e32 v2, 4, v2
 ; GCN-NEXT:    buffer_store_dword v2, v[0:1], s[4:7], 0 addr64
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; EG-LABEL: shl_or_k:
@@ -1701,7 +1700,6 @@ define void @shl_or_k_two_uses(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1,
 ; GCN-NEXT:    v_lshlrev_b32_e32 v5, 2, v4
 ; GCN-NEXT:    buffer_store_dword v5, v[0:1], s[4:7], 0 addr64
 ; GCN-NEXT:    buffer_store_dword v4, v[2:3], s[4:7], 0 addr64
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; EG-LABEL: shl_or_k_two_uses:

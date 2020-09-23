@@ -6,7 +6,6 @@
 ; VARABI: v_and_b32_e32 [[ID:v[0-9]+]], 0x3ff, v0
 ; FIXEDABI: v_and_b32_e32 [[ID:v[0-9]+]], 0x3ff, v31
 ; GCN-NEXT: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[ID]]
-; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @use_workitem_id_x() #1 {
   %val = call i32 @llvm.amdgcn.workitem.id.x()
@@ -19,7 +18,6 @@ define void @use_workitem_id_x() #1 {
 ; VARABI: v_bfe_u32 [[ID:v[0-9]+]], v0, 10, 10
 ; FIXEDABI: v_bfe_u32 [[ID:v[0-9]+]], v31, 10, 10
 ; GCN-NEXT: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[ID]]
-; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @use_workitem_id_y() #1 {
   %val = call i32 @llvm.amdgcn.workitem.id.y()
@@ -32,7 +30,6 @@ define void @use_workitem_id_y() #1 {
 ; VARABI: v_bfe_u32 [[ID:v[0-9]+]], v0, 20, 10
 ; FIXEDABI: v_bfe_u32 [[ID:v[0-9]+]], v31, 20, 10
 ; GCN-NEXT: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[ID]]
-; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @use_workitem_id_z() #1 {
   %val = call i32 @llvm.amdgcn.workitem.id.z()
@@ -50,7 +47,6 @@ define void @use_workitem_id_z() #1 {
 
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDX]]
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDY]]
-; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @use_workitem_id_xy() #1 {
   %val0 = call i32 @llvm.amdgcn.workitem.id.x()
@@ -75,7 +71,6 @@ define void @use_workitem_id_xy() #1 {
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDX]]
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDY]]
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDZ]]
-; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @use_workitem_id_xyz() #1 {
   %val0 = call i32 @llvm.amdgcn.workitem.id.x()
@@ -97,7 +92,6 @@ define void @use_workitem_id_xyz() #1 {
 
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDX]]
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDZ]]
-; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @use_workitem_id_xz() #1 {
   %val0 = call i32 @llvm.amdgcn.workitem.id.x()
@@ -117,7 +111,6 @@ define void @use_workitem_id_xz() #1 {
 
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDY]]
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]:[0-9]+\]}}, [[IDZ]]
-; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @use_workitem_id_yz() #1 {
   %val0 = call i32 @llvm.amdgcn.workitem.id.y()
@@ -400,8 +393,7 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_z() #1 {
 ; VARABI: v_and_b32_e32 v32, 0x3ff, v32
 ; VARABI: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, v32
 
-; VARABI: s_waitcnt
-; VARABI-NEXT: s_setpc_b64
+; VARABI: s_setpc_b64
 
 ; FIXEDABI: v_and_b32_e32 v31, 0x3ff, v31
 ; FIXEDABI: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32{{$}}
@@ -708,8 +700,7 @@ define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
 ; VARABI-NEXT: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, [[BFE_Y]]
 ; VARABI-NEXT: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, [[BFE_Z]]
 
-; VARABI: s_waitcnt
-; VARABI-NEXT: s_setpc_b64
+; VARABI: s_setpc_b64
 
 
 ; FIXEDABI: v_and_b32_e32 [[AND_X:v[0-9]+]], 0x3ff, v31
@@ -813,8 +804,7 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_xyz() #1 {
 ; GCN-DAG: v_bfe_u32 [[IDZ:v[0-9]+]], v31, 20, 10
 ; GCN-DAG: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+]}}, [[IDZ]]
 
-; GCN: s_waitcnt
-; GCN-NEXT: s_setpc_b64
+; GCN: s_setpc_b64
 ; GCN: ScratchSize: 0
 define void @too_many_args_use_workitem_id_x_stack_yz(
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,

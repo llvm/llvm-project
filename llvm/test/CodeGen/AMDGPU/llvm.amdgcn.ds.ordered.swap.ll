@@ -7,7 +7,6 @@
 ; GCN: s_mov_b32 m0, s0
 ; VIGFX9-NEXT: s_nop 0
 ; GCN-NEXT: ds_ordered_count v{{[0-9]+}}, v0 offset:4868 gds
-; GCN-NEXT: s_waitcnt expcnt(0) lgkmcnt(0)
 define amdgpu_cs float @ds_ordered_swap(i32 addrspace(2)* inreg %gds, i32 %value) {
   %val = call i32@llvm.amdgcn.ds.ordered.swap(i32 addrspace(2)* %gds, i32 %value, i32 0, i32 0, i1 false, i32 1, i1 true, i1 true)
   %r = bitcast i32 %val to float
@@ -26,7 +25,6 @@ define amdgpu_cs float @ds_ordered_swap(i32 addrspace(2)* inreg %gds, i32 %value
 ; // Wait for expcnt(0) before modifying EXEC
 ; GCN-NEXT: s_waitcnt expcnt(0)
 ; GCN-NEXT: s_or_b64 exec, exec, s[[SAVED]]
-; GCN-NEXT: s_waitcnt lgkmcnt(0)
 define amdgpu_cs float @ds_ordered_swap_conditional(i32 addrspace(2)* inreg %gds, i32 %value) {
 entry:
   %c = icmp ne i32 %value, 0

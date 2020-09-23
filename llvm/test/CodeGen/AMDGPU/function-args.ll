@@ -763,7 +763,6 @@ define void @void_func_v32i32_v16i32_v16f32(<32 x i32> %arg0, <16 x i32> %arg1, 
 ; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v1
 ; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v2
 ; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v3
-; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @void_func_v3f32_wasted_reg(<3 x float> %arg0, i32 %arg1) #0 {
   %arg0.0 = extractelement <3 x float> %arg0, i32 0
@@ -782,7 +781,6 @@ define void @void_func_v3f32_wasted_reg(<3 x float> %arg0, i32 %arg1) #0 {
 ; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v1
 ; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v2
 ; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v3
-; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @void_func_v3i32_wasted_reg(<3 x i32> %arg0, i32 %arg1) #0 {
   %arg0.0 = extractelement <3 x i32> %arg0, i32 0

@@ -59,7 +59,6 @@ define amdgpu_ps float @valley_partially_undef_copy() #0 {
 ; CHECK-NEXT:    s_mov_b32 s3, 0xf000
 ; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
 bb:
   %tmp = load volatile i32, i32 addrspace(1)* undef, align 4

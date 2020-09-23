@@ -199,7 +199,6 @@ define void @func_non_entry_block_static_alloca_align4(i32 addrspace(1)* %out, i
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
 ; GCN-NEXT:    s_sub_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_mov_b32 s33, s8
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 
 entry:
@@ -263,7 +262,6 @@ define void @func_non_entry_block_static_alloca_align64(i32 addrspace(1)* %out, 
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
 ; GCN-NEXT:    s_sub_u32 s32, s32, 0x2000
 ; GCN-NEXT:    s_mov_b32 s33, s8
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cond = icmp eq i32 %arg.cond, 0
