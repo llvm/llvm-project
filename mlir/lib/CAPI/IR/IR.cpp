@@ -268,6 +268,31 @@ void mlirRegionInsertOwnedBlock(MlirRegion region, intptr_t pos,
   blockList.insert(std::next(blockList.begin(), pos), unwrap(block));
 }
 
+void mlirRegionInsertOwnedBlockAfter(MlirRegion region, MlirBlock reference,
+                                     MlirBlock block) {
+  Region *cppRegion = unwrap(region);
+  if (mlirBlockIsNull(reference)) {
+    cppRegion->getBlocks().insert(cppRegion->begin(), unwrap(block));
+    return;
+  }
+
+  assert(unwrap(reference)->getParent() == unwrap(region) &&
+         "expected reference block to belong to the region");
+  cppRegion->getBlocks().insertAfter(Region::iterator(unwrap(reference)),
+                                     unwrap(block));
+}
+
+void mlirRegionInsertOwnedBlockBefore(MlirRegion region, MlirBlock reference,
+                                      MlirBlock block) {
+  if (mlirBlockIsNull(reference))
+    return mlirRegionAppendOwnedBlock(region, block);
+
+  assert(unwrap(reference)->getParent() == unwrap(region) &&
+         "expected reference block to belong to the region");
+  unwrap(region)->getBlocks().insert(Region::iterator(unwrap(reference)),
+                                     unwrap(block));
+}
+
 void mlirRegionDestroy(MlirRegion region) {
   delete static_cast<Region *>(region.ptr);
 }
@@ -304,6 +329,33 @@ void mlirBlockInsertOwnedOperation(MlirBlock block, intptr_t pos,
                                    MlirOperation operation) {
   auto &opList = unwrap(block)->getOperations();
   opList.insert(std::next(opList.begin(), pos), unwrap(operation));
+}
+
+void mlirBlockInsertOwnedOperationAfter(MlirBlock block,
+                                        MlirOperation reference,
+                                        MlirOperation operation) {
+  Block *cppBlock = unwrap(block);
+  if (mlirOperationIsNull(reference)) {
+    cppBlock->getOperations().insert(cppBlock->begin(), unwrap(operation));
+    return;
+  }
+
+  assert(unwrap(reference)->getBlock() == unwrap(block) &&
+         "expected reference operation to belong to the block");
+  cppBlock->getOperations().insertAfter(Block::iterator(unwrap(reference)),
+                                        unwrap(operation));
+}
+
+void mlirBlockInsertOwnedOperationBefore(MlirBlock block,
+                                         MlirOperation reference,
+                                         MlirOperation operation) {
+  if (mlirOperationIsNull(reference))
+    return mlirBlockAppendOwnedOperation(block, operation);
+
+  assert(unwrap(reference)->getBlock() == unwrap(block) &&
+         "expected reference operation to belong to the block");
+  unwrap(block)->getOperations().insert(Block::iterator(unwrap(reference)),
+                                        unwrap(operation));
 }
 
 void mlirBlockDestroy(MlirBlock block) { delete unwrap(block); }
