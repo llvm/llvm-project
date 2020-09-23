@@ -993,7 +993,7 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
     NewVT = EltTy;
   IntermediateVT = NewVT;
 
-  unsigned LaneSizeInBits = NewVT.getScalarSizeInBits().getFixedSize();
+  unsigned LaneSizeInBits = NewVT.getScalarSizeInBits();
 
   // Convert sizes such as i33 to i64.
   if (!isPowerOf2_32(LaneSizeInBits))
@@ -1002,8 +1002,7 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
   MVT DestVT = TLI->getRegisterType(NewVT);
   RegisterVT = DestVT;
   if (EVT(DestVT).bitsLT(NewVT))    // Value is expanded, e.g. i64 -> i16.
-    return NumVectorRegs *
-           (LaneSizeInBits / DestVT.getScalarSizeInBits().getFixedSize());
+    return NumVectorRegs * (LaneSizeInBits / DestVT.getScalarSizeInBits());
 
   // Otherwise, promotion or legal types use the same number of registers as
   // the vector decimated to the appropriate level.
