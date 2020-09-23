@@ -149,7 +149,7 @@ void test3() {
   // Call to -initWith: with elided retain of consumed argument.
   // CHECK-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: bitcast
-  // CHECK-NEXT: [[INIT:%.*]] = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8* 
+  // CHECK-NEXT: [[INIT:%.*]] = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8*
   // CHECK-NEXT: bitcast
   // CHECK-NEXT: [[INIT:%.*]] = bitcast
   // Assignment for initialization, retention elided.
@@ -1046,7 +1046,7 @@ void test37(void) {
   return test43_produce();
   // CHECK:      call i8* @test43_produce()
   // CHECK-NEXT: notail call i8* @llvm.objc.retainAutoreleasedReturnValue(
-  // CHECK-NEXT: ret 
+  // CHECK-NEXT: ret
 }
 @end
 
@@ -1440,7 +1440,7 @@ void test62(void) {
 @synthesize address;
 @end
 // CHECK: tail call i8* @objc_getProperty
-// CHECK: call void @objc_setProperty 
+// CHECK: call void @objc_setProperty
 
 // Verify that we successfully parse and preserve this attribute in
 // this position.
@@ -1538,14 +1538,14 @@ struct AggDtor getAggDtor(void);
 void test71(void) {
   // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP1:[^ ]+]] to i8*
   // CHECK: call void @llvm.lifetime.start.p0i8({{[^,]+}}, i8* %[[T]])
-  // CHECK: call void @getAggDtor(%struct.AggDtor* sret align 8 %[[TMP1]])
+  // CHECK: call void @getAggDtor(%struct.AggDtor* sret(%struct.AggDtor) align 8 %[[TMP1]])
   // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP1]] to i8**
   // CHECK: call void @__destructor_8_s40(i8** %[[T]])
   // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP1:[^ ]+]] to i8*
   // CHECK: call void @llvm.lifetime.end.p0i8({{[^,]+}}, i8* %[[T]])
   // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP2:[^ ]+]] to i8*
   // CHECK: call void @llvm.lifetime.start.p0i8({{[^,]+}}, i8* %[[T]])
-  // CHECK: call void @getAggDtor(%struct.AggDtor* sret align 8 %[[TMP2]])
+  // CHECK: call void @getAggDtor(%struct.AggDtor* sret(%struct.AggDtor) align 8 %[[TMP2]])
   // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP2]] to i8**
   // CHECK: call void @__destructor_8_s40(i8** %[[T]])
   // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP2:[^ ]+]] to i8*

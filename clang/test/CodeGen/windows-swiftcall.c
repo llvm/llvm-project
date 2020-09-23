@@ -12,7 +12,7 @@
 /*****************************************************************************/
 
 SWIFTCALL void indirect_result_1(OUT int *arg0, OUT float *arg1) {}
-// CHECK-LABEL: define {{.*}} void @indirect_result_1(i32* noalias sret align 4 dereferenceable(4){{.*}}, float* noalias align 4 dereferenceable(4){{.*}})
+// CHECK-LABEL: define {{.*}} void @indirect_result_1(i32* noalias sret(i32*) align 4 dereferenceable(4){{.*}}, float* noalias align 4 dereferenceable(4){{.*}})
 
 // TODO: maybe this shouldn't suppress sret.
 SWIFTCALL int indirect_result_2(OUT int *arg0, OUT float *arg1) {  __builtin_unreachable(); }
@@ -20,7 +20,7 @@ SWIFTCALL int indirect_result_2(OUT int *arg0, OUT float *arg1) {  __builtin_unr
 
 typedef struct { char array[1024]; } struct_reallybig;
 SWIFTCALL struct_reallybig indirect_result_3(OUT int *arg0, OUT float *arg1) { __builtin_unreachable(); }
-// CHECK-LABEL: define {{.*}} void @indirect_result_3({{.*}}* noalias sret {{.*}}, i32* noalias align 4 dereferenceable(4){{.*}}, float* noalias align 4 dereferenceable(4){{.*}})
+// CHECK-LABEL: define {{.*}} void @indirect_result_3({{.*}}* noalias sret({{.*}}) {{.*}}, i32* noalias align 4 dereferenceable(4){{.*}}, float* noalias align 4 dereferenceable(4){{.*}})
 
 SWIFTCALL void context_1(CONTEXT void *self) {}
 // CHECK-LABEL: define {{.*}} void @context_1(i8* swiftself

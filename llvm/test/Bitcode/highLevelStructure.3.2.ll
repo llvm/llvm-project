@@ -35,7 +35,7 @@ module asm "some assembly"
 declare void @ParamAttr1(i8 zeroext)
 ; CHECK: declare void @ParamAttr2(i8* nest)
 declare void @ParamAttr2(i8* nest)
-; CHECK: declare void @ParamAttr3(i8* sret)
+; CHECK: declare void @ParamAttr3(i8* sret(i8))
 declare void @ParamAttr3(i8* sret)
 ; CHECK: declare void @ParamAttr4(i8 signext)
 declare void @ParamAttr4(i8 signext)

@@ -16,5 +16,5 @@ void baz() {
   zed(a);
 }
 
-// CHECK: declare void @_Z3fooPv(%class.SMLoc* sret align 4, i8*)
+// CHECK: declare void @_Z3fooPv(%class.SMLoc* sret(%class.SMLoc) align 4, i8*)
 // CHECK: declare void @_Z3zed5SMLoc(%class.SMLoc*)

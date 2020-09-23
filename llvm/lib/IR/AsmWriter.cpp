@@ -4288,12 +4288,15 @@ void AssemblyWriter::writeAttribute(const Attribute &Attr, bool InAttrGroup) {
   }
 
   assert((Attr.hasAttribute(Attribute::ByVal) ||
+          Attr.hasAttribute(Attribute::StructRet) ||
           Attr.hasAttribute(Attribute::ByRef) ||
           Attr.hasAttribute(Attribute::Preallocated)) &&
          "unexpected type attr");
 
   if (Attr.hasAttribute(Attribute::ByVal)) {
     Out << "byval";
+  } else if (Attr.hasAttribute(Attribute::StructRet)) {
+    Out << "sret";
   } else if (Attr.hasAttribute(Attribute::ByRef)) {
     Out << "byref";
   } else {
