@@ -233,9 +233,11 @@ PPCMCCodeEmitter::getMemRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
     assert((SRE->getKind() == MCSymbolRefExpr::VK_PCREL ||
             SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_PCREL ||
             SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_TLSGD_PCREL ||
+            SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_TLSLD_PCREL ||
             SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_TPREL_PCREL) &&
            "VariantKind must be VK_PCREL or VK_PPC_GOT_PCREL or "
-           "VK_PPC_GOT_TLSGD_PCREL or VK_PPC_GOT_TPREL_PCREL");
+           "VK_PPC_GOT_TLSGD_PCREL or VK_PPC_GOT_TLSLD_PCREL or "
+           "VK_PPC_GOT_TPREL_PCREL.");
     // Generate the fixup for the relocation.
     Fixups.push_back(
         MCFixup::create(0, Expr,
