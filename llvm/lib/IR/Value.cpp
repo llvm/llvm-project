@@ -804,7 +804,7 @@ Align Value::getPointerAlignment(const DataLayout &DL) const {
     const MaybeAlign Alignment = A->getParamAlign();
     if (!Alignment && A->hasStructRetAttr()) {
       // An sret parameter has at least the ABI alignment of the return type.
-      Type *EltTy = cast<PointerType>(A->getType())->getElementType();
+      Type *EltTy = A->getParamStructRetType();
       if (EltTy->isSized())
         return DL.getABITypeAlign(EltTy);
     }
