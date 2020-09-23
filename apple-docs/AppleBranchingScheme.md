@@ -31,7 +31,7 @@ Critically, however, none of these branches *depend on* the
 
 Today there are a few non-trivial differences from LLVM, but we are
 actively working on either upstreaming or reverting those differences. The goal
-is to fully eliminate all differences between `apple/master` and
+is to fully eliminate all differences between `apple/main` and
 `llvm.org/master`.
 
 Any LLVM development that does not depend on the Swift repository should happen
@@ -40,7 +40,7 @@ through upstream LLVM are those that are either directly related to upstreaming
 content or that are needed because of the existing differences (e.g., resolving
 merge conflicts or fixing build errors).
 
-- [apple/master](https://github.com/apple/llvm-project/tree/apple/master) is
+- [apple/main](https://github.com/apple/llvm-project/tree/apple/main) is
   directly downstream of
   [llvm.org/master](https://github.com/apple/llvm-project/tree/llvm.org/master).
   There is a gated automerger that does testing before merging in.  Most
@@ -48,11 +48,9 @@ merge conflicts or fixing build errors).
   (see also <http://llvm.org/docs/Contributing.html>).
 - `apple/stable/*`: These branches are periodic stabilization branches, where
   fixes are cherry-picked from LLVM.  At time of writing:
-    - [apple/stable/20200108](https://github.com/apple/llvm-project/tree/apple/stable/20200108)
-      is the most recent stabilization branch.
-    - [apple/stable/20190619](https://github.com/apple/llvm-project/tree/apple/stable/20190619)
+    - [apple/stable/20200714](https://github.com/apple/llvm-project/tree/apple/stable/20200714)
       is the current stabilization branch for
-      [swift/master](https://github.com/apple/llvm-project/tree/swift/master)
+      [swift/main](https://github.com/apple/llvm-project/tree/swift/main)
       (see below).
 
 ## Downstream branches that depend on [Swift](https://github.com/apple/swift)
@@ -68,16 +66,16 @@ the upstream LLVM repository.
 
 These are the most important branches:
 
-- [swift/master-next](https://github.com/apple/llvm-project/tree/swift/master-next)
+- [swift/next](https://github.com/apple/llvm-project/tree/swift/next)
   is downstream of
-  [apple/master](https://github.com/apple/llvm-project/tree/apple/master) and
+  [apple/main](https://github.com/apple/llvm-project/tree/apple/main) and
   aligned with Swift's
-  [master-next](https://github.com/apple/swift/tree/master-next) branch.
-- [swift/master](https://github.com/apple/llvm-project/tree/swift/master) is
+  [next](https://github.com/apple/swift/tree/next) branch.
+- [swift/main](https://github.com/apple/llvm-project/tree/swift/main) is
   downstream of a stabilization branch in `apple/stable/*`
-  ([apple/stable/20190619](https://github.com/apple/llvm-project/tree/apple/stable/20190619),
+  ([apple/stable/20200714](https://github.com/apple/llvm-project/tree/apple/stable/20190714),
   as of time of writing) and aligned with Swift's
-  [master](https://github.com/apple/swift/tree/master) branch.
+  [main](https://github.com/apple/swift/tree/main) branch.
 
 ## Historical trivia: mappings to branches from before the monorepo transition
 
@@ -85,7 +83,7 @@ Before the LLVM project's monorepo transition, Apple maintained downstream
 forks of various split repositories.  Here is a mapping from a few of the new
 branches in the llvm-project monorepo to their original split repositories.
 
-- [apple/master](https://github.com/apple/llvm-project/tree/apple/master) was
+- [apple/main](https://github.com/apple/llvm-project/tree/apple/main) was
   generated from the `upstream-with-swift` branches in
   [swift-clang](https://github.com/apple/swift-clang/),
   [swift-llvm](https://github.com/apple/swift-llvm/),
@@ -93,10 +91,10 @@ branches in the llvm-project monorepo to their original split repositories.
   [swift-clang-tools-extra](https://github.com/apple/swift-clang-tools-extra/),
   and [swift-libcxx](https://github.com/apple/swift-libcxx/), with the notable
   **exclusion** of [swift-lldb](https://github.com/apple/swift-lldb/),
-- [swift/master-next](https://github.com/apple/llvm-project/tree/swift/master-next)
+- [swift/next](https://github.com/apple/llvm-project/tree/swift/next)
   was generated from the `upstream-with-swift` branch in
   [swift-lldb](https://github.com/apple/swift-lldb/), interleaved with merges
-  from [apple/master](https://github.com/apple/llvm-project/tree/apple/master).
+  from [apple/main](https://github.com/apple/llvm-project/tree/apple/main).
 - [apple/stable/20190104](https://github.com/apple/llvm-project/tree/apple/stable/20190104)
   was generated from the `swift-5.1-branch` branches in
   [swift-clang](https://github.com/apple/swift-clang/),
@@ -110,5 +108,5 @@ branches in the llvm-project monorepo to their original split repositories.
   [swift-lldb](https://github.com/apple/swift-lldb/), interleaved with merges
   from
   [apple/stable/20190104](https://github.com/apple/llvm-project/tree/apple/stable/20190104).
-- [swift/master](https://github.com/apple/llvm-project/tree/swift/master) was
+- [swift/main](https://github.com/apple/llvm-project/tree/swift/main) was
   generated from the `stable` branch from all six split repos.
