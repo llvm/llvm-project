@@ -3,8 +3,6 @@
 ## are printed if the section is somehow invalid.
 
 # RUN: yaml2obj %s -o %t1
-## FIXME: 1) Relocations should print section symbol names when they are not empty.
-##        2) We should still print a relocation even when we are unable to lookup a symbol name.
 # RUN: llvm-readobj %t1 --symbols --relocations 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t1 --check-prefix=LLVM1 --implicit-check-not="warning:"
 # RUN: llvm-readelf %t1 --symbols --relocations 2>&1 | \
@@ -13,50 +11,50 @@
 # LLVM1:      Relocations [
 # LLVM1-NEXT:   Section (4) .rela.foo {
 # LLVM1-NEXT:     0x1 R_X86_64_NONE .foo 0x0
-# LLVM1-NEXT:     0x2 R_X86_64_NONE .foo 0x0
-# LLVM1-NEXT: warning: '[[FILE]]': unable to print relocation 3 in SHT_RELA section with index 4: invalid section index: 67
-# LLVM1-NEXT: warning: '[[FILE]]': unable to print relocation 4 in SHT_RELA section with index 4: invalid section index: 67
+# LLVM1-NEXT:     0x2 R_X86_64_NONE symbol1 0x0
+# LLVM1-NEXT: warning: '[[FILE]]': invalid section index: 67
+# LLVM1-NEXT:     0x3 R_X86_64_NONE <section 67> 0x0
+# LLVM1-NEXT:     0x4 R_X86_64_NONE symbol2 0x0
 # LLVM1-NEXT:     0x5 R_X86_64_NONE .bar 0x0
-# LLVM1-NEXT:     0x6 R_X86_64_NONE .bar 0x0
-# LLVM1-NEXT: warning: '[[FILE]]': unable to print relocation 7 in SHT_RELA section with index 4: invalid section index: 66
-# LLVM1-NEXT: warning: '[[FILE]]': unable to print relocation 8 in SHT_RELA section with index 4: invalid section index: 66
+# LLVM1-NEXT:     0x6 R_X86_64_NONE symbol3 0x0
+# LLVM1-NEXT: warning: '[[FILE]]': invalid section index: 66
+# LLVM1-NEXT:     0x7 R_X86_64_NONE <section 66> 0x0
+# LLVM1-NEXT:     0x8 R_X86_64_NONE symbol4 0x0
 # LLVM1-NEXT:   }
 # LLVM1-NEXT: ]
 
 # LLVM1: Name: (0)
 # LLVM1: Name: .foo (0)
 # LLVM1: Name: symbol1 (25)
-# LLVM1: warning: '[[FILE]]': invalid section index: 67
 # LLVM1: Name: <section 67> (0)
 # LLVM1: Name: symbol2 (17)
 # LLVM1: Name: .bar (0)
 # LLVM1: Name: symbol3 (9)
-# LLVM1: warning: '[[FILE]]': invalid section index: 66
 # LLVM1: Name: <section 66> (0)
 # LLVM1: Name: symbol4 (1)
 
 # GNU1:      Relocation section '.rela.foo' at offset 0x58 contains 8 entries:
 # GNU1-NEXT:  Offset     Info    Type         Sym. Value  Symbol's Name + Addend
 # GNU1-NEXT: 00000001  00000100 R_X86_64_NONE   00000000   .foo + 0
-# GNU1-NEXT: 00000002  00000200 R_X86_64_NONE   00000000   .foo + 0
-# GNU1-NEXT: warning: '[[FILE]]': unable to print relocation 3 in SHT_RELA section with index 4: invalid section index: 67
-# GNU1-NEXT: warning: '[[FILE]]': unable to print relocation 4 in SHT_RELA section with index 4: invalid section index: 67
+# GNU1-NEXT: 00000002  00000200 R_X86_64_NONE   00000000   symbol1 + 0
+# GNU1-NEXT: warning: '[[FILE]]': invalid section index: 67
+# GNU1-NEXT: 00000003  00000300 R_X86_64_NONE   00000000   <section 67> + 0
+# GNU1-NEXT: 00000004  00000400 R_X86_64_NONE   00000000   symbol2 + 0
 # GNU1-NEXT: 00000005  00000500 R_X86_64_NONE   00000000   .bar + 0
-# GNU1-NEXT: 00000006  00000600 R_X86_64_NONE   00000000   .bar + 0
-# GNU1-NEXT: warning: '[[FILE]]': unable to print relocation 7 in SHT_RELA section with index 4: invalid section index: 66
-# GNU1-NEXT: warning: '[[FILE]]': unable to print relocation 8 in SHT_RELA section with index 4: invalid section index: 66
+# GNU1-NEXT: 00000006  00000600 R_X86_64_NONE   00000000   symbol3 + 0
+# GNU1-NEXT: warning: '[[FILE]]': invalid section index: 66
+# GNU1-NEXT: 00000007  00000700 R_X86_64_NONE   00000000   <section 66> + 0
+# GNU1-NEXT: 00000008  00000800 R_X86_64_NONE   00000000   symbol4 + 0
 
 # GNU1:      Symbol table '.symtab' contains 9 entries:
 # GNU1-NEXT:    Num: {{.*}} Type    {{.*}} Ndx Name
 # GNU1-NEXT:      0: {{.*}} NOTYPE  {{.*}} UND {{$}}
 # GNU1-NEXT:      1: {{.*}} SECTION {{.*}}  1 .foo
 # GNU1-NEXT:      2: {{.*}} SECTION {{.*}}  1 symbol1
-# GNU1-NEXT: warning: '[[FILE]]': invalid section index: 67
 # GNU1-NEXT:      3: {{.*}} SECTION {{.*}} 67 <section 67>
 # GNU1-NEXT:      4: {{.*}} SECTION {{.*}} 67 symbol2
 # GNU1-NEXT:      5: {{.*}} SECTION {{.*}}  2 .bar
 # GNU1-NEXT:      6: {{.*}} SECTION {{.*}}  2 symbol3
-# GNU1-NEXT: warning: '[[FILE]]': invalid section index: 66
 # GNU1-NEXT:      7: {{.*}} SECTION {{.*}} 66 <section 66>
 # GNU1-NEXT:      8: {{.*}} SECTION {{.*}} 66 symbol4
 
