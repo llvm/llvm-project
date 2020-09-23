@@ -1420,8 +1420,8 @@ void OpEmitter::buildParamList(SmallVectorImpl<OpMethodParameter> &paramList,
 
   /// Insert parameters for each successor.
   for (const NamedSuccessor &succ : op.getSuccessors()) {
-    StringRef type = succ.isVariadic() ? "::llvm::ArrayRef<::mlir::Block *>"
-                                       : "::mlir::Block *";
+    StringRef type =
+        succ.isVariadic() ? "::mlir::BlockRange" : "::mlir::Block *";
     paramList.emplace_back(type, succ.name);
   }
 
@@ -1888,12 +1888,14 @@ void OpEmitter::genSuccessorVerifier(OpMethodBody &body) {
     if (successor.constraint.getPredicate().isNull())
       continue;
 
-    body << "    for (::mlir::Block *successor : ";
-    body << formatv(successor.isVariadic()
-                        ? "{0}()"
-                        : "::llvm::ArrayRef<::mlir::Block *>({0}())",
-                    successor.name);
-    body << ") {\n";
+    if (successor.isVariadic()) {
+      body << formatv("    for (::mlir::Block *successor : {0}()) {\n",
+                      successor.name);
+    } else {
+      body << "    {\n";
+      body << formatv("      ::mlir::Block *successor = {0}();\n",
+                      successor.name);
+    }
     auto constraint = tgfmt(successor.constraint.getConditionTemplate(),
                             &verifyCtx.withSelf("successor"))
                           .str();

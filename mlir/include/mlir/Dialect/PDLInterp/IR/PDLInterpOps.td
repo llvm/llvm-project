@@ -771,7 +771,7 @@ def PDLInterp_SwitchAttributeOp
 
   let builders = [
     OpBuilder<"Value attribute, ArrayRef<Attribute> caseValues,"
-              "Block *defaultDest, ArrayRef<Block *> dests", [{
+              "Block *defaultDest, BlockRange dests", [{
     build($_builder, $_state, attribute, $_builder.getArrayAttr(caseValues),
           defaultDest, dests);
   }]>];
@@ -804,7 +804,7 @@ def PDLInterp_SwitchOperandCountOp
 
   let builders = [
     OpBuilder<"Value operation, ArrayRef<int32_t> counts, "
-              "Block *defaultDest, ArrayRef<Block *> dests", [{
+              "Block *defaultDest, BlockRange dests", [{
     build($_builder, $_state, operation, $_builder.getI32VectorAttr(counts),
           defaultDest, dests);
   }]>];
@@ -838,7 +838,7 @@ def PDLInterp_SwitchOperationNameOp
 
   let builders = [
     OpBuilder<"Value operation, ArrayRef<OperationName> names, "
-              "Block *defaultDest, ArrayRef<Block *> dests", [{
+              "Block *defaultDest, BlockRange dests", [{
       auto stringNames = llvm::to_vector<8>(llvm::map_range(names,
           [](OperationName name) { return name.getStringRef(); }));
       build($_builder, $_state, operation, $_builder.getStrArrayAttr(stringNames),
@@ -874,7 +874,7 @@ def PDLInterp_SwitchResultCountOp
 
   let builders = [
     OpBuilder<"Value operation, ArrayRef<int32_t> counts, Block *defaultDest, "
-              "ArrayRef<Block *> dests", [{
+              "BlockRange dests", [{
     build($_builder, $_state, operation, $_builder.getI32VectorAttr(counts),
           defaultDest, dests);
   }]>];
@@ -906,7 +906,7 @@ def PDLInterp_SwitchTypeOp : PDLInterp_SwitchOp<"switch_type", [NoSideEffect]> {
 
   let builders = [
     OpBuilder<"Value edge, TypeRange types, Block *defaultDest, "
-              "ArrayRef<Block *> dests", [{
+              "BlockRange dests", [{
       build($_builder, $_state, edge, $_builder.getTypeArrayAttr(types),
             defaultDest, dests);
     }]>,
