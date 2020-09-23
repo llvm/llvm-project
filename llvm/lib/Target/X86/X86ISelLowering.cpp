@@ -38332,6 +38332,25 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
             Op, TLO.DAG.getNode(X86ISD::BEXTR, DL, VT, Op0,
                                 TLO.DAG.getConstant(MaskedVal1, DL, VT)));
       }
+
+      unsigned Shift = Cst1->getAPIntValue().extractBitsAsZExtValue(8, 0);
+      unsigned Length = Cst1->getAPIntValue().extractBitsAsZExtValue(8, 8);
+
+      // If the length is 0, the result is 0.
+      if (Length == 0) {
+        Known.setAllZero();
+        return false;
+      }
+
+      if ((Shift + Length) <= BitWidth) {
+        APInt DemandedMask = APInt::getBitsSet(BitWidth, Shift, Shift + Length);
+        if (SimplifyDemandedBits(Op0, DemandedMask, Known, TLO, Depth + 1))
+          return true;
+
+        Known = Known.extractBits(Length, Shift);
+        Known = Known.zextOrTrunc(BitWidth);
+        return false;
+      }
     }
 
     KnownBits Known1;
