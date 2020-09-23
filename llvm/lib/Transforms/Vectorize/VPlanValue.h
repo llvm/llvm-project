@@ -10,9 +10,9 @@
 /// This file contains the declarations of the entities induced by Vectorization
 /// Plans, e.g. the instructions the VPlan intends to generate if executed.
 /// VPlan models the following entities:
-/// VPValue
-///  |-- VPUser
-///  |    |-- VPInstruction
+/// VPValue   VPUser
+///    |        |
+///   VPInstruction
 /// These are documented in docs/VectorizationPlan.rst.
 ///
 //===----------------------------------------------------------------------===//
@@ -76,7 +76,7 @@ public:
   /// are actually instantiated. Values of this enumeration are kept in the
   /// SubclassID field of the VPValue objects. They are used for concrete
   /// type identification.
-  enum { VPValueSC, VPUserSC, VPInstructionSC };
+  enum { VPValueSC, VPInstructionSC };
 
   VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV) {}
   VPValue(const VPValue &) = delete;
@@ -132,35 +132,25 @@ raw_ostream &operator<<(raw_ostream &OS, const VPValue &V);
 
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
-class VPUser : public VPValue {
+class VPUser {
   SmallVector<VPValue *, 2> Operands;
 
-protected:
-  VPUser(const unsigned char SC) : VPValue(SC) {}
-  VPUser(const unsigned char SC, ArrayRef<VPValue *> Operands) : VPValue(SC) {
+public:
+  VPUser() {}
+  VPUser(ArrayRef<VPValue *> Operands) {
     for (VPValue *Operand : Operands)
       addOperand(Operand);
   }
 
-public:
-  VPUser() : VPValue(VPValue::VPUserSC) {}
-  VPUser(ArrayRef<VPValue *> Operands) : VPUser(VPValue::VPUserSC, Operands) {}
   VPUser(std::initializer_list<VPValue *> Operands)
       : VPUser(ArrayRef<VPValue *>(Operands)) {}
-  template <typename IterT>
-  VPUser(iterator_range<IterT> Operands) : VPValue(VPValue::VPUserSC) {
+  template <typename IterT> VPUser(iterator_range<IterT> Operands) {
     for (VPValue *Operand : Operands)
       addOperand(Operand);
   }
 
   VPUser(const VPUser &) = delete;
   VPUser &operator=(const VPUser &) = delete;
-
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPValue *V) {
-    return V->getVPValueID() >= VPUserSC &&
-           V->getVPValueID() <= VPInstructionSC;
-  }
 
   void addOperand(VPValue *Operand) {
     Operands.push_back(Operand);
