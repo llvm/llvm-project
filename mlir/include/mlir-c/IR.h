@@ -91,6 +91,12 @@ int mlirContextEqual(MlirContext ctx1, MlirContext ctx2);
 /** Takes an MLIR context owned by the caller and destroys it. */
 void mlirContextDestroy(MlirContext context);
 
+/** Sets whether unregistered dialects are allowed in this context. */
+void mlirContextSetAllowUnregisteredDialects(MlirContext context, int allow);
+
+/** Returns whether the context allows unregistered dialects. */
+int mlirContextGetAllowUnregisteredDialects(MlirContext context);
+
 /*============================================================================*/
 /* Location API.                                                              */
 /*============================================================================*/

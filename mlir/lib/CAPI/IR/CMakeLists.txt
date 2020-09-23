@@ -12,6 +12,7 @@ add_mlir_library(MLIRCAPIIR
   ${MLIR_MAIN_INCLUDE_DIR}/mlir-c
 
   LINK_LIBS PUBLIC
+  MLIRStandardOps
   MLIRIR
   MLIRParser
   MLIRSupport
