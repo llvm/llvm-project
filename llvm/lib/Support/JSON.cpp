@@ -7,7 +7,9 @@
 //===---------------------------------------------------------------------===//
 
 #include "llvm/Support/JSON.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cctype>
@@ -197,6 +199,40 @@ bool operator==(const Value &L, const Value &R) {
     return *L.getAsObject() == *R.getAsObject();
   }
   llvm_unreachable("Unknown value kind");
+}
+
+void Path::report(llvm::StringLiteral Msg) {
+  // Walk up to the root context, and count the number of segments.
+  unsigned Count = 0;
+  const Path *P;
+  for (P = this; P->Parent != nullptr; P = P->Parent)
+    ++Count;
+  Path::Root *R = P->Seg.root();
+  // Fill in the error message and copy the path (in reverse order).
+  R->ErrorMessage = Msg;
+  R->ErrorPath.resize(Count);
+  auto It = R->ErrorPath.begin();
+  for (P = this; P->Parent != nullptr; P = P->Parent)
+    *It++ = P->Seg;
+}
+
+Error Path::Root::getError() const {
+  std::string S;
+  raw_string_ostream OS(S);
+  OS << (ErrorMessage.empty() ? "invalid JSON contents" : ErrorMessage);
+  if (ErrorPath.empty()) {
+    if (!Name.empty())
+      OS << " when parsing " << Name;
+  } else {
+    OS << " at " << (Name.empty() ? "(root)" : Name);
+    for (const Path::Segment &S : llvm::reverse(ErrorPath)) {
+      if (S.isField())
+        OS << '.' << S.field();
+      else
+        OS << '[' << S.index() << ']';
+    }
+  }
+  return createStringError(llvm::inconvertibleErrorCode(), OS.str());
 }
 
 namespace {
