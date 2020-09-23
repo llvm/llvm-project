@@ -505,7 +505,7 @@ public:
 
   void SetFlags(uint32_t flags) { m_flags = flags; }
 
-  void SetFlags(std::string elf_abi);
+  void SetFlags(const std::string &elf_abi);
 
 protected:
   bool IsEqualTo(const ArchSpec &rhs, bool exact_match) const;

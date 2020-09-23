@@ -1,0 +1,14 @@
+# RUN: echo "CHECK: %t.home" > %t.check
+
+# RUN: rm -rf %t.repro
+# RUN: rm -rf %t.home
+# RUN: mkdir -p %t.repro
+# RUN: mkdir -p %t.home
+# RUN: echo "print 95000 + 126" > %t.home/.lldbinit
+# RUN: env HOME=%t.home %lldb-init -b -s %S/Inputs/HomeDir.in --capture --capture-path %t.repro | FileCheck %s
+
+# RUN: cat %t.repro/home.txt | FileCheck %t.check
+# RUN: %lldb -b -o 'reproducer dump -p home -f %t.repro' | FileCheck %t.check
+
+# RUN: %lldb --replay %t.repro | FileCheck %s
+# CHECK: 95126
