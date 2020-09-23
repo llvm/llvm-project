@@ -209,16 +209,16 @@ bool TGParser::SetValue(Record *CurRec, SMLoc Loc, Init *ValName,
     V = BitsInit::get(NewBits);
   }
 
-  if (RV->setValue(V)) {
+  if (RV->setValue(V, Loc)) {
     std::string InitType;
     if (BitsInit *BI = dyn_cast<BitsInit>(V))
       InitType = (Twine("' of type bit initializer with length ") +
                   Twine(BI->getNumBits())).str();
     else if (TypedInit *TI = dyn_cast<TypedInit>(V))
       InitType = (Twine("' of type '") + TI->getType()->getAsString()).str();
-    return Error(Loc, "Value '" + ValName->getAsUnquotedString() +
+    return Error(Loc, "Field '" + ValName->getAsUnquotedString() +
                           "' of type '" + RV->getType()->getAsString() +
-                          "' is incompatible with initializer '" +
+                          "' is incompatible with value '" +
                           V->getAsString() + InitType + "'");
   }
   return false;
@@ -1294,7 +1294,8 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     return nullptr;
   }
 
-  case tgtok::XForEach: { // Value ::= !foreach '(' Id ',' Value ',' Value ')'
+  case tgtok::XForEach: {
+    // Value ::= !foreach '(' Id ',' Value ',' Value ')'
     SMLoc OpLoc = Lex.getLoc();
     Lex.Lex(); // eat the operation
     if (Lex.getCode() != tgtok::l_paren) {
@@ -1367,8 +1368,8 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       return nullptr;
     }
 
-    // We need to create a temporary record to provide a scope for the iteration
-    // variable while parsing top-level foreach's.
+    // We need to create a temporary record to provide a scope for the
+    // iteration variable.
     std::unique_ptr<Record> ParseRecTmp;
     Record *ParseRec = CurRec;
     if (!ParseRec) {
@@ -1544,7 +1545,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     return ParseOperationCond(CurRec, ItemType);
 
   case tgtok::XFoldl: {
-    // Value ::= !foldl '(' Id ',' Id ',' Value ',' Value ',' Value ')'
+    // Value ::= !foldl '(' Value ',' Value ',' Id ',' Id ',' Expr ')'
     Lex.Lex(); // eat the operation
     if (!consume(tgtok::l_paren)) {
       TokError("expected '(' after !foldl");
@@ -1627,8 +1628,8 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     }
     Lex.Lex(); // eat the ','
 
-    // We need to create a temporary record to provide a scope for the iteration
-    // variable while parsing top-level foreach's.
+    // We need to create a temporary record to provide a scope for the
+    // two variables.
     std::unique_ptr<Record> ParseRecTmp;
     Record *ParseRec = CurRec;
     if (!ParseRec) {
@@ -2419,7 +2420,7 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
   }
 
   // Add the value.
-  if (AddValue(CurRec, IdLoc, RecordVal(DeclName, Type, HasField)))
+  if (AddValue(CurRec, IdLoc, RecordVal(DeclName, IdLoc, Type, HasField)))
     return nullptr;
 
   // If a value is present, parse it.
