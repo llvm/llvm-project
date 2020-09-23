@@ -1,4 +1,5 @@
-; RUN: opt -analyze -scalar-evolution %s | FileCheck %s
+; RUN: opt -analyze -scalar-evolution %s -enable-new-pm=0 | FileCheck %s
+; RUN: opt -passes='print<scalar-evolution>' -disable-output %s 2>&1 | FileCheck %s
 
 ; Test case for PR40961. The loop guard limit the max backedge-taken count.
 
