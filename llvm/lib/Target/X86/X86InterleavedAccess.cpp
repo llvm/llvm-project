@@ -211,7 +211,7 @@ void X86InterleavedAccessGroup::decompose(
     VecBasePtr = Builder.CreateBitCast(LI->getPointerOperand(), VecBasePtrTy);
   }
   // Generate N loads of T type.
-  assert(VecBaseTy->getPrimitiveSizeInBits().isByteSized() &&
+  assert(VecBaseTy->getPrimitiveSizeInBits().isKnownMultipleOf(8) &&
          "VecBaseTy's size must be a multiple of 8");
   const Align FirstAlignment = LI->getAlign();
   const Align SubsequentAlignment = commonAlignment(

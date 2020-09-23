@@ -353,7 +353,9 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL, ElementCount VF) {
   // with a <VF x Ty> vector.
   if (VF.isVector()) {
     auto *VectorTy = VectorType::get(Ty, VF);
-    return VF * DL.getTypeAllocSize(Ty) != DL.getTypeStoreSize(VectorTy);
+    return TypeSize::get(VF.getKnownMinValue() *
+                             DL.getTypeAllocSize(Ty).getFixedValue(),
+                         VF.isScalable()) != DL.getTypeStoreSize(VectorTy);
   }
 
   // If the vectorization factor is one, we just check if an array of type Ty
@@ -2166,7 +2168,7 @@ Value *InnerLoopVectorizer::getOrCreateVectorValue(Value *V, unsigned Part) {
 
     // If we aren't vectorizing, we can just copy the scalar map values over to
     // the vector map.
-    if (VF == 1) {
+    if (VF.isScalar()) {
       VectorLoopValueMap.setVectorValue(V, Part, ScalarValue);
       return ScalarValue;
     }
@@ -2242,7 +2244,7 @@ InnerLoopVectorizer::getOrCreateScalarValue(Value *V,
   // extractelement instruction.
   auto *U = getOrCreateVectorValue(V, Instance.Part);
   if (!U->getType()->isVectorTy()) {
-    assert(VF == 1 && "Value not scalarized has non-vector type");
+    assert(VF.isScalar() && "Value not scalarized has non-vector type");
     return U;
   }
 
@@ -3933,7 +3935,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   if (RK == RecurrenceDescriptor::RK_IntegerMinMax ||
       RK == RecurrenceDescriptor::RK_FloatMinMax) {
     // MinMax reduction have the start value as their identify.
-    if (VF == 1 || IsInLoopReductionPhi) {
+    if (VF.isScalar() || IsInLoopReductionPhi) {
       VectorStart = Identity = ReductionStartValue;
     } else {
       VectorStart = Identity =
@@ -3943,7 +3945,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
     // Handle other reduction kinds:
     Constant *Iden = RecurrenceDescriptor::getRecurrenceIdentity(
         RK, MinMaxKind, VecTy->getScalarType());
-    if (VF == 1 || IsInLoopReductionPhi) {
+    if (VF.isScalar() || IsInLoopReductionPhi) {
       Identity = Iden;
       // This vector is the Identity vector where the first element is the
       // incoming scalar reduction.
@@ -4343,7 +4345,7 @@ void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, VPUser &Operands,
               ? Builder.CreateInBoundsGEP(GEP->getSourceElementType(), Ptr,
                                           Indices)
               : Builder.CreateGEP(GEP->getSourceElementType(), Ptr, Indices);
-      assert((VF == 1 || NewGEP->getType()->isVectorTy()) &&
+      assert((VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
              "NewGEP is not a pointer vector");
       VectorLoopValueMap.setVectorValue(GEP, Part, NewGEP);
       addMetadata(NewGEP, GEP);
@@ -8413,7 +8415,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (VF.Width == 1) {
+  if (VF.Width.isScalar()) {
     LLVM_DEBUG(dbgs() << "LV: Vectorization is possible but not beneficial.\n");
     VecDiagMsg = std::make_pair(
         "VectorizationNotBeneficial",
