@@ -136,6 +136,19 @@ struct SymbolRelevanceSignals {
   // Whether the item matches the type expected in the completion context.
   bool TypeMatchesPreferred = false;
 
+  /// Set of derived signals computed by calculateDerivedSignals(). Must not be
+  /// set explicitly.
+  struct DerivedSignals {
+    /// Whether Name contains some word from context.
+    bool NameMatchesContext = false;
+    /// Min distance between SymbolURI and all the headers included by the TU.
+    unsigned FileProximityDistance = FileDistance::Unreachable;
+    /// Min distance between SymbolScope and all the available scopes.
+    unsigned ScopeProximityDistance = FileDistance::Unreachable;
+  };
+
+  DerivedSignals calculateDerivedSignals() const;
+
   void merge(const CodeCompletionResult &SemaResult);
   void merge(const Symbol &IndexResult);
 
