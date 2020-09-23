@@ -15,6 +15,7 @@
 #include "flang/Lower/FIRBuilder.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
@@ -87,19 +88,34 @@ genOMP(Fortran::lower::AbstractConverter &absConv,
     auto &firOpBuilder = absConv.getFirOpBuilder();
     auto currentLocation = absConv.getCurrentLocation();
     auto insertPt = firOpBuilder.saveInsertionPoint();
+
+    // Clauses.
+    // FIXME: Add support for other clauses.
+    mlir::Value numThreads;
+
+    const auto &parallelOpClauseList =
+        std::get<Fortran::parser::OmpClauseList>(blockDirective.t);
+    for (const auto &clause : parallelOpClauseList.v) {
+      if (const auto &numThreadsClause =
+              std::get_if<Fortran::parser::OmpClause::NumThreads>(&clause.u)) {
+        // OMPIRBuilder expects `NUM_THREAD` clause as a `Value`.
+        numThreads = absConv.genExprValue(
+            *Fortran::semantics::GetExpr(numThreadsClause->v));
+      }
+    }
     llvm::ArrayRef<mlir::Type> argTy;
-    mlir::ValueRange range;
-    llvm::SmallVector<int32_t, 6> operandSegmentSizes(6 /*Size=*/,
-                                                      0 /*Value=*/);
-    // create and insert the operation.
+    Attribute defaultValue, procBindValue;
+    // Create and insert the operation.
+    // Create the Op with empty ranges for clauses that are yet to be lowered.
     auto parallelOp = firOpBuilder.create<mlir::omp::ParallelOp>(
-        currentLocation, argTy, range);
-    parallelOp.setAttr(mlir::omp::ParallelOp::getOperandSegmentSizeAttr(),
-                       firOpBuilder.getI32VectorAttr(operandSegmentSizes));
-    parallelOp.getRegion().push_back(new Block{});
+        currentLocation, argTy, Value(), numThreads,
+        defaultValue.dyn_cast_or_null<StringAttr>(), ValueRange(), ValueRange(),
+        ValueRange(), ValueRange(),
+        procBindValue.dyn_cast_or_null<StringAttr>());
+    firOpBuilder.createBlock(&parallelOp.getRegion());
     auto &block = parallelOp.getRegion().back();
     firOpBuilder.setInsertionPointToStart(&block);
-    // ensure the block is well-formed.
+    // Ensure the block is well-formed.
     firOpBuilder.create<mlir::omp::TerminatorOp>(currentLocation);
     firOpBuilder.restoreInsertionPoint(insertPt);
   }
