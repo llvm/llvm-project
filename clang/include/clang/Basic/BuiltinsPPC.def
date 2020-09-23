@@ -156,6 +156,11 @@ BUILTIN(__builtin_altivec_vcmpgtsd, "V2LLiV2LLiV2LLi", "")
 BUILTIN(__builtin_altivec_vcmpgtud, "V2LLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vcmpgtfp, "V4iV4fV4f", "")
 
+// P10 Vector compare builtins.
+BUILTIN(__builtin_altivec_vcmpequq, "V1LLLiV1ULLLiV1ULLLi", "")
+BUILTIN(__builtin_altivec_vcmpgtsq, "V1LLLiV1SLLLiV1SLLLi", "")
+BUILTIN(__builtin_altivec_vcmpgtuq, "V1LLLiV1ULLLiV1ULLLi", "")
+
 BUILTIN(__builtin_altivec_vmaxsb, "V16ScV16ScV16Sc", "")
 BUILTIN(__builtin_altivec_vmaxub, "V16UcV16UcV16Uc", "")
 BUILTIN(__builtin_altivec_vmaxsh, "V8SsV8SsV8Ss", "")
