@@ -52,13 +52,13 @@ void Pass::copyOptionValuesFrom(const Pass *other) {
 
 /// Prints out the pass in the textual representation of pipelines. If this is
 /// an adaptor pass, print with the op_name(sub_pass,...) format.
-void Pass::printAsTextualPipeline(raw_ostream &os) {
+void Pass::printAsTextualPipeline(raw_ostream &os, bool filterVerifier) {
   // Special case for adaptors to use the 'op_name(sub_passes)' format.
   if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(this)) {
     llvm::interleaveComma(adaptor->getPassManagers(), os,
                           [&](OpPassManager &pm) {
                             os << pm.getOpName() << "(";
-                            pm.printAsTextualPipeline(os);
+                            pm.printAsTextualPipeline(os, filterVerifier);
                             os << ")";
                           });
     return;
@@ -73,7 +73,6 @@ void Pass::printAsTextualPipeline(raw_ostream &os) {
     os << "unknown<" << getName() << ">";
   passOptions.print(os);
 }
-
 
 //===----------------------------------------------------------------------===//
 // Verifier Passes
@@ -315,22 +314,31 @@ Identifier OpPassManager::getOpName(MLIRContext &context) const {
 
 /// Prints out the given passes as the textual representation of a pipeline.
 static void printAsTextualPipeline(ArrayRef<std::unique_ptr<Pass>> passes,
-                                   raw_ostream &os) {
+                                   raw_ostream &os,
+                                   bool filterVerifier = true) {
   // Filter out passes that are not part of the public pipeline.
   auto filteredPasses =
-      llvm::make_filter_range(passes, [](const std::unique_ptr<Pass> &pass) {
-        return !isa<VerifierPass>(pass);
+      llvm::make_filter_range(passes, [&](const std::unique_ptr<Pass> &pass) {
+        return !filterVerifier || !isa<VerifierPass>(pass);
       });
   llvm::interleaveComma(filteredPasses, os,
                         [&](const std::unique_ptr<Pass> &pass) {
-                          pass->printAsTextualPipeline(os);
+                          pass->printAsTextualPipeline(os, filterVerifier);
                         });
 }
 
 /// Prints out the passes of the pass manager as the textual representation
 /// of pipelines.
-void OpPassManager::printAsTextualPipeline(raw_ostream &os) {
-  ::printAsTextualPipeline(impl->passes, os);
+void OpPassManager::printAsTextualPipeline(raw_ostream &os,
+                                           bool filterVerifier) {
+  ::printAsTextualPipeline(impl->passes, os, filterVerifier);
+}
+
+void OpPassManager::dump() {
+  llvm::errs() << "Pass Manager with " << impl->passes.size() << " passes: ";
+  ::printAsTextualPipeline(impl->passes, llvm::errs(),
+                           /*filterVerifier=*/false);
+  llvm::errs() << "\n";
 }
 
 static void registerDialectsForPipeline(const OpPassManager &pm,
