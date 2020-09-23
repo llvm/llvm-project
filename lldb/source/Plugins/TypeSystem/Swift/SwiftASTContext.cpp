@@ -119,6 +119,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/XcodeSDK.h"
+#include "lldb/Utility/ReproducerProvider.h"
 #include "llvm/ADT/ScopeExit.h"
 
 #include "Plugins/Platform/MacOSX/PlatformDarwin.h"
