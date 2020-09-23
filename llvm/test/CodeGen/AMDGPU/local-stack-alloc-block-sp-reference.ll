@@ -103,6 +103,7 @@ define void @func_local_stack_offset_uses_sp(i64 addrspace(1)* %out, i8 addrspac
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v6, vcc
 ; GCN-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %pin.low = alloca i32, align 8192, addrspace(5)

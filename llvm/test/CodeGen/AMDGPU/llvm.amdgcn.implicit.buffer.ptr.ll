@@ -5,6 +5,7 @@
 ; GCN: s_load_dwordx2 s[4:5], s[0:1], 0x0
 ; GCN: buffer_store_dword v0, off, s[4:7], 0 offset:4
 ; GCN: s_load_dword s{{[0-9]+}}, s[0:1], 0x0
+; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: ; return
 define amdgpu_ps i32 @test_ps() #1 {
   %alloca = alloca i32, addrspace(5)

@@ -66,7 +66,6 @@ define amdgpu_kernel void @call_no_wait_after_call(i32 addrspace(1)* %ptr, i32) 
 ; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    v_mov_b32_e32 v40, 0
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s34
 ; GCN-NEXT:    v_mov_b32_e32 v1, s35
 ; GCN-NEXT:    global_store_dword v[0:1], v40, off
@@ -90,7 +89,6 @@ define amdgpu_kernel void @call_no_wait_after_call_return_val(i32 addrspace(1)* 
 ; GCN-NEXT:    s_addc_u32 s5, s5, func.return@rel32@hi+12
 ; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, s34
 ; GCN-NEXT:    v_mov_b32_e32 v2, s35
 ; GCN-NEXT:    global_store_dword v[1:2], v0, off
