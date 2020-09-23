@@ -459,6 +459,7 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
   SmallSetVector<Node *, 4> DemotedCallTargets;
   SmallSetVector<Node *, 4> NewCallEdges;
   SmallSetVector<Node *, 4> NewRefEdges;
+  SmallSetVector<Node *, 4> NewNodes;
 
   // First walk the function and handle all called functions. We do this first
   // because if there is a single call edge, whether there are ref edges is
@@ -467,19 +468,23 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
     if (auto *CB = dyn_cast<CallBase>(&I))
       if (Function *Callee = CB->getCalledFunction())
         if (Visited.insert(Callee).second && !Callee->isDeclaration()) {
-          Node &CalleeN = *G.lookup(*Callee);
-          Edge *E = N->lookup(CalleeN);
+          Node *CalleeN = G.lookup(*Callee);
+          if (!CalleeN) {
+            CalleeN = &G.get(*Callee);
+            NewNodes.insert(CalleeN);
+          }
+          Edge *E = N->lookup(*CalleeN);
           assert((E || !FunctionPass) &&
                  "No function transformations should introduce *new* "
                  "call edges! Any new calls should be modeled as "
                  "promoted existing ref edges!");
-          bool Inserted = RetainedEdges.insert(&CalleeN).second;
+          bool Inserted = RetainedEdges.insert(CalleeN).second;
           (void)Inserted;
           assert(Inserted && "We should never visit a function twice.");
           if (!E)
-            NewCallEdges.insert(&CalleeN);
+            NewCallEdges.insert(CalleeN);
           else if (!E->isCall())
-            PromotedRefTargets.insert(&CalleeN);
+            PromotedRefTargets.insert(CalleeN);
         }
 
   // Now walk all references.
@@ -490,21 +495,28 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
           Worklist.push_back(C);
 
   auto VisitRef = [&](Function &Referee) {
-    Node &RefereeN = *G.lookup(Referee);
-    Edge *E = N->lookup(RefereeN);
+    Node *RefereeN = G.lookup(Referee);
+    if (!RefereeN) {
+      RefereeN = &G.get(Referee);
+      NewNodes.insert(RefereeN);
+    }
+    Edge *E = N->lookup(*RefereeN);
     assert((E || !FunctionPass) &&
            "No function transformations should introduce *new* ref "
            "edges! Any new ref edges would require IPO which "
            "function passes aren't allowed to do!");
-    bool Inserted = RetainedEdges.insert(&RefereeN).second;
+    bool Inserted = RetainedEdges.insert(RefereeN).second;
     (void)Inserted;
     assert(Inserted && "We should never visit a function twice.");
     if (!E)
-      NewRefEdges.insert(&RefereeN);
+      NewRefEdges.insert(RefereeN);
     else if (E->isCall())
-      DemotedCallTargets.insert(&RefereeN);
+      DemotedCallTargets.insert(RefereeN);
   };
   LazyCallGraph::visitReferences(Worklist, Visited, VisitRef);
+
+  for (Node *NewNode : NewNodes)
+    G.initNode(*NewNode, *C);
 
   // Handle new ref edges.
   for (Node *RefTarget : NewRefEdges) {
