@@ -1,16 +1,21 @@
 # RUN: %PYTHON %s | FileCheck %s
 
+import gc
 import mlir
 
 def run(f):
   print("\nTEST:", f.__name__)
   f()
+  gc.collect()
+  assert mlir.ir.Context._get_live_count() == 0
 
 
 # CHECK-LABEL: TEST: testParsePrint
 def testParsePrint():
   ctx = mlir.ir.Context()
   t = ctx.parse_type("i32")
+  ctx = None
+  gc.collect()
   # CHECK: i32
   print(str(t))
   # CHECK: Type(i32)

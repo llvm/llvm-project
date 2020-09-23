@@ -19,31 +19,60 @@ namespace python {
 
 class PyMlirContext;
 class PyModule;
+class PyOperation;
 
-/// Holds a C++ PyMlirContext and associated py::object, making it convenient
-/// to have an auto-releasing C++-side keep-alive reference to the context.
-/// The reference to the PyMlirContext is a simple C++ reference and the
-/// py::object holds the reference count which keeps it alive.
-class PyMlirContextRef {
+/// Template for a reference to a concrete type which captures a python
+/// reference to its underlying python object.
+template <typename T>
+class PyObjectRef {
 public:
-  PyMlirContextRef(PyMlirContext &referrent, pybind11::object object)
-      : referrent(referrent), object(std::move(object)) {}
-  ~PyMlirContextRef() {}
+  PyObjectRef(T *referrent, pybind11::object object)
+      : referrent(referrent), object(std::move(object)) {
+    assert(this->referrent &&
+           "cannot construct PyObjectRef with null referrent");
+    assert(this->object && "cannot construct PyObjectRef with null object");
+  }
+  PyObjectRef(PyObjectRef &&other)
+      : referrent(other.referrent), object(std::move(other.object)) {
+    other.referrent = nullptr;
+    assert(!other.object);
+  }
+  PyObjectRef(const PyObjectRef &other)
+      : referrent(other.referrent), object(other.object /* copies */) {}
+  ~PyObjectRef() {}
 
-  /// Releases the object held by this instance, causing its reference count
-  /// to remain artifically inflated by one. This must be used to return
-  /// the referenced PyMlirContext from a function. Otherwise, the destructor
-  /// of this reference would be called prior to the default take_ownership
-  /// policy assuming that the reference count has been transferred to it.
-  PyMlirContext *release();
+  int getRefCount() {
+    if (!object)
+      return 0;
+    return object.ref_count();
+  }
 
-  PyMlirContext &operator->() { return referrent; }
-  pybind11::object getObject() { return object; }
+  /// Releases the object held by this instance, returning it.
+  /// This is the proper thing to return from a function that wants to return
+  /// the reference. Note that this does not work from initializers.
+  pybind11::object releaseObject() {
+    assert(referrent && object);
+    referrent = nullptr;
+    auto stolen = std::move(object);
+    return stolen;
+  }
+
+  T *operator->() {
+    assert(referrent && object);
+    return referrent;
+  }
+  pybind11::object getObject() {
+    assert(referrent && object);
+    return object;
+  }
+  operator bool() const { return referrent && object; }
 
 private:
-  PyMlirContext &referrent;
+  T *referrent;
   pybind11::object object;
 };
+
+using PyMlirContextRef = PyObjectRef<PyMlirContext>;
 
 /// Wrapper around MlirContext.
 class PyMlirContext {
@@ -51,6 +80,16 @@ public:
   PyMlirContext() = delete;
   PyMlirContext(const PyMlirContext &) = delete;
   PyMlirContext(PyMlirContext &&) = delete;
+
+  /// For the case of a python __init__ (py::init) method, pybind11 is quite
+  /// strict about needing to return a pointer that is not yet associated to
+  /// an py::object. Since the forContext() method acts like a pool, possibly
+  /// returning a recycled context, it does not satisfy this need. The usual
+  /// way in python to accomplish such a thing is to override __new__, but
+  /// that is also not supported by pybind11. Instead, we use this entry
+  /// point which always constructs a fresh context (which cannot alias an
+  /// existing one because it is fresh).
+  static PyMlirContext *createNewContextForInit();
 
   /// Returns a context reference for the singleton PyMlirContext wrapper for
   /// the given context.
@@ -63,29 +102,37 @@ public:
   /// Gets a strong reference to this context, which will ensure it is kept
   /// alive for the life of the reference.
   PyMlirContextRef getRef() {
-    return PyMlirContextRef(
-        *this, pybind11::reinterpret_borrow<pybind11::object>(handle));
+    return PyMlirContextRef(this, pybind11::cast(this));
   }
 
   /// Gets the count of live context objects. Used for testing.
   static size_t getLiveCount();
 
+  /// Gets the count of live operations associated with this context.
+  /// Used for testing.
+  size_t getLiveOperationCount();
+
 private:
   PyMlirContext(MlirContext context);
-
   // Interns the mapping of live MlirContext::ptr to PyMlirContext instances,
   // preserving the relationship that an MlirContext maps to a single
   // PyMlirContext wrapper. This could be replaced in the future with an
   // extension mechanism on the MlirContext for stashing user pointers.
   // Note that this holds a handle, which does not imply ownership.
   // Mappings will be removed when the context is destructed.
-  using LiveContextMap =
-      llvm::DenseMap<void *, std::pair<pybind11::handle, PyMlirContext *>>;
+  using LiveContextMap = llvm::DenseMap<void *, PyMlirContext *>;
   static LiveContextMap &getLiveContexts();
 
+  // Interns all live operations associated with this context. Operations
+  // tracked in this map are valid. When an operation is invalidated, it is
+  // removed from this map, and while it still exists as an instance, any
+  // attempt to access it will raise an error.
+  using LiveOperationMap =
+      llvm::DenseMap<void *, std::pair<pybind11::handle, PyOperation *>>;
+  LiveOperationMap liveOperations;
+
   MlirContext context;
-  // The handle is set as part of lookup with forContext() (post construction).
-  pybind11::handle handle;
+  friend class PyOperation;
 };
 
 /// Base class for all objects that directly or indirectly depend on an
@@ -94,7 +141,10 @@ private:
 /// Immutable objects that depend on a context extend this directly.
 class BaseContextObject {
 public:
-  BaseContextObject(PyMlirContextRef ref) : contextRef(std::move(ref)) {}
+  BaseContextObject(PyMlirContextRef ref) : contextRef(std::move(ref)) {
+    assert(this->contextRef &&
+           "context object constructed with null context ref");
+  }
 
   /// Accesses the context reference.
   PyMlirContextRef &getContext() { return contextRef; }
@@ -112,22 +162,90 @@ public:
 };
 
 /// Wrapper around MlirModule.
+/// This is the top-level, user-owned object that contains regions/ops/blocks.
+class PyModule;
+using PyModuleRef = PyObjectRef<PyModule>;
 class PyModule : public BaseContextObject {
 public:
-  PyModule(PyMlirContextRef contextRef, MlirModule module)
-      : BaseContextObject(std::move(contextRef)), module(module) {}
+  /// Creates a reference to the module
+  static PyModuleRef create(PyMlirContextRef contextRef, MlirModule module);
   PyModule(PyModule &) = delete;
-  PyModule(PyModule &&other)
-      : BaseContextObject(std::move(other.getContext())) {
-    module = other.module;
-    other.module.ptr = nullptr;
-  }
   ~PyModule() {
     if (module.ptr)
       mlirModuleDestroy(module);
   }
 
+  /// Gets the backing MlirModule.
+  MlirModule get() { return module; }
+
+  /// Gets a strong reference to this module.
+  PyModuleRef getRef() {
+    return PyModuleRef(this,
+                       pybind11::reinterpret_borrow<pybind11::object>(handle));
+  }
+
+private:
+  PyModule(PyMlirContextRef contextRef, MlirModule module)
+      : BaseContextObject(std::move(contextRef)), module(module) {}
   MlirModule module;
+  pybind11::handle handle;
+};
+
+/// Wrapper around PyOperation.
+/// Operations exist in either an attached (dependent) or detached (top-level)
+/// state. In the detached state (as on creation), an operation is owned by
+/// the creator and its lifetime extends either until its reference count
+/// drops to zero or it is attached to a parent, at which point its lifetime
+/// is bounded by its top-level parent reference.
+class PyOperation;
+using PyOperationRef = PyObjectRef<PyOperation>;
+class PyOperation : public BaseContextObject {
+public:
+  ~PyOperation();
+  /// Returns a PyOperation for the given MlirOperation, optionally associating
+  /// it with a parentKeepAlive (which must match on all such calls for the
+  /// same operation).
+  static PyOperationRef
+  forOperation(PyMlirContextRef contextRef, MlirOperation operation,
+               pybind11::object parentKeepAlive = pybind11::object());
+
+  /// Creates a detached operation. The operation must not be associated with
+  /// any existing live operation.
+  static PyOperationRef
+  createDetached(PyMlirContextRef contextRef, MlirOperation operation,
+                 pybind11::object parentKeepAlive = pybind11::object());
+
+  /// Gets the backing operation.
+  MlirOperation get() {
+    checkValid();
+    return operation;
+  }
+
+  PyOperationRef getRef() {
+    return PyOperationRef(
+        this, pybind11::reinterpret_borrow<pybind11::object>(handle));
+  }
+
+  bool isAttached() { return attached; }
+  void checkValid();
+
+private:
+  PyOperation(PyMlirContextRef contextRef, MlirOperation operation);
+  static PyOperationRef createInstance(PyMlirContextRef contextRef,
+                                       MlirOperation operation,
+                                       pybind11::object parentKeepAlive);
+
+  MlirOperation operation;
+  pybind11::handle handle;
+  // Keeps the parent alive, regardless of whether it is an Operation or
+  // Module.
+  // TODO: As implemented, this facility is only sufficient for modeling the
+  // trivial module parent back-reference. Generalize this to also account for
+  // transitions from detached to attached and address TODOs in the
+  // ir_operation.py regarding testing corresponding lifetime guarantees.
+  pybind11::object parentKeepAlive;
+  bool attached = true;
+  bool valid = true;
 };
 
 /// Wrapper around an MlirRegion.
