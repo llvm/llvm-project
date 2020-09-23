@@ -33,5 +33,6 @@ int main() {
   assert(len == MSG_BUFLEN);
   assert(msg.mtype == rcv_msg.mtype);
   assert(!memcmp(msg.string, rcv_msg.string, MSG_BUFLEN));
+  msgctl(msgq, IPC_RMID, NULL);
   return 0;
 }
