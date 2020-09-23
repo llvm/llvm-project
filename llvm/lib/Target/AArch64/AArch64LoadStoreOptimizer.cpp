@@ -1186,8 +1186,10 @@ bool AArch64LoadStoreOpt::findMatchingStore(
     // store instruction writes and the stored value is not modified, we can
     // promote the load. Since we do not handle stores with pre-/post-index,
     // it's unnecessary to check if BaseReg is modified by the store itself.
+    // Also we can't handle stores without an immediate offset operand,
+    // while the operand might be the address for a global variable.
     if (MI.mayStore() && isMatchingStore(LoadMI, MI) &&
-        BaseReg == getLdStBaseOp(MI).getReg() &&
+        BaseReg == getLdStBaseOp(MI).getReg() && getLdStOffsetOp(MI).isImm() &&
         isLdOffsetInRangeOfSt(LoadMI, MI, TII) &&
         ModifiedRegUnits.available(getLdStRegOp(MI).getReg())) {
       StoreI = MBBI;
