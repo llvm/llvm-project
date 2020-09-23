@@ -88,26 +88,29 @@ void MachOOptTable::printHelp(const char *argv0, bool showHidden) const {
   lld::outs() << "\n";
 }
 
-static Optional<std::string> findWithExtension(StringRef base,
-                                               ArrayRef<StringRef> extensions) {
-  for (StringRef ext : extensions) {
-    Twine location = base + ext;
-    if (fs::exists(location))
-      return location.str();
+static Optional<std::string>
+findAlongPathsWithExtensions(StringRef name, ArrayRef<StringRef> extensions) {
+  llvm::SmallString<261> base;
+  for (StringRef dir : config->librarySearchPaths) {
+    base = dir;
+    path::append(base, Twine("lib") + name);
+    for (StringRef ext : extensions) {
+      Twine location = base + ext;
+      if (fs::exists(location))
+        return location.str();
+    }
   }
   return {};
 }
 
 static Optional<std::string> findLibrary(StringRef name) {
-  llvm::SmallString<261> location;
-  for (StringRef dir : config->librarySearchPaths) {
-      location = dir;
-      path::append(location, Twine("lib") + name);
-      if (Optional<std::string> path =
-              findWithExtension(location, {".tbd", ".dylib", ".a"}))
-        return path;
+  if (config->searchDylibsFirst) {
+    if (Optional<std::string> path =
+            findAlongPathsWithExtensions(name, {".tbd", ".dylib"}))
+      return path;
+    return findAlongPathsWithExtensions(name, {".a"});
   }
-  return {};
+  return findAlongPathsWithExtensions(name, {".tbd", ".dylib", ".a"});
 }
 
 static Optional<std::string> findFramework(StringRef name) {
@@ -543,6 +546,10 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
 
   getLibrarySearchPaths(args, roots, config->librarySearchPaths);
   getFrameworkSearchPaths(args, roots, config->frameworkSearchPaths);
+  if (const opt::Arg *arg =
+          args.getLastArg(OPT_search_paths_first, OPT_search_dylibs_first))
+    config->searchDylibsFirst =
+        (arg && arg->getOption().getID() == OPT_search_dylibs_first);
   config->forceLoadObjC = args.hasArg(OPT_ObjC);
 
   if (args.hasArg(OPT_v)) {
