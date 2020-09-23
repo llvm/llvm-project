@@ -1191,8 +1191,9 @@ void OpEmitter::genBuilder() {
         std::string paramStr =
             skipParamGen ? params.str()
                          : llvm::formatv("::mlir::OpBuilder &{0}, "
-                                         "::mlir::OperationState &{1}, {2}",
-                                         builder, builderOpState, params)
+                                         "::mlir::OperationState &{1}{2}{3}",
+                                         builder, builderOpState,
+                                         params.empty() ? "" : ", ", params)
                                .str();
         auto *method =
             opClass.addMethodAndPrune("void", "build", properties, paramStr);
