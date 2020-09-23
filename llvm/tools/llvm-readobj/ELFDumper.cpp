@@ -1079,23 +1079,6 @@ ELFDumper<ELFT>::getRelocationTarget(const Relocation<ELFT> &R,
   if (!Sym)
     return RelSymbol<ELFT>(nullptr, "");
 
-  // The st_name field of a STT_SECTION is usually 0 (empty string).
-  // This code block returns the section name.
-  if (Sym->getType() == ELF::STT_SECTION) {
-    Expected<const Elf_Shdr *> SecOrErr =
-        Obj.getSection(*Sym, SymTab, ShndxTable);
-    if (!SecOrErr)
-      return SecOrErr.takeError();
-    // A section symbol describes the section at index 0.
-    if (*SecOrErr == nullptr)
-      return RelSymbol<ELFT>(Sym, "");
-
-    Expected<StringRef> NameOrErr = Obj.getSectionName(**SecOrErr);
-    if (!NameOrErr)
-      return NameOrErr.takeError();
-    return RelSymbol<ELFT>(Sym, NameOrErr->str());
-  }
-
   Expected<StringRef> StrTableOrErr = Obj.getStringTableForSymtab(*SymTab);
   if (!StrTableOrErr)
     return StrTableOrErr.takeError();
@@ -1103,7 +1086,7 @@ ELFDumper<ELFT>::getRelocationTarget(const Relocation<ELFT> &R,
   const Elf_Sym *FirstSym =
       cantFail(Obj.template getEntry<Elf_Sym>(*SymTab, 0));
   std::string SymbolName = getFullSymbolName(
-      *Sym, FirstSym - Sym, *StrTableOrErr, SymTab->sh_type == SHT_DYNSYM);
+      *Sym, Sym - FirstSym, *StrTableOrErr, SymTab->sh_type == SHT_DYNSYM);
   return RelSymbol<ELFT>(Sym, SymbolName);
 }
 
