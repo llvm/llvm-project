@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCParser/AsmLexer.h"
+#include "third_party/llvm/llvm-project/llvm/include/llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
@@ -271,11 +272,33 @@ static unsigned doHexLookAhead(const char *&CurPtr, unsigned DefaultRadix,
   return DefaultRadix;
 }
 
+static const char *findLastDigit(const char *CurPtr, unsigned DefaultRadix) {
+  while (hexDigitValue(*CurPtr) < DefaultRadix) {
+    ++CurPtr;
+  }
+  return CurPtr;
+}
+
 static AsmToken intToken(StringRef Ref, APInt &Value)
 {
   if (Value.isIntN(64))
     return AsmToken(AsmToken::Integer, Ref, Value);
   return AsmToken(AsmToken::BigNum, Ref, Value);
+}
+
+static std::string radixName(unsigned Radix) {
+  switch (Radix) {
+  case 2:
+    return "binary";
+  case 8:
+    return "octal";
+  case 10:
+    return "decimal";
+  case 16:
+    return "hexadecimal";
+  default:
+    return "base-" + std::to_string(Radix);
+  }
 }
 
 /// LexDigit: First character is [0-9].
@@ -286,16 +309,46 @@ static AsmToken intToken(StringRef Ref, APInt &Value)
 ///   Hex integer: 0x[0-9a-fA-F]+ or [0x]?[0-9][0-9a-fA-F]*[hH]
 ///   Decimal integer: [1-9][0-9]*
 AsmToken AsmLexer::LexDigit() {
-  // MASM-flavor binary integer: [01]+[bB]
+  // MASM-flavor binary integer: [01]+[yY] (if DefaultRadix < 16, [bByY])
+  // MASM-flavor octal integer: [0-7]+[oOqQ]
+  // MASM-flavor decimal integer: [0-9]+[tT] (if DefaultRadix < 16, [dDtT])
   // MASM-flavor hexadecimal integer: [0-9][0-9a-fA-F]*[hH]
   if (LexMasmIntegers && isdigit(CurPtr[-1])) {
-    const char *FirstNonBinary = (CurPtr[-1] != '0' && CurPtr[-1] != '1') ?
-                                   CurPtr - 1 : nullptr;
+    const char *FirstNonBinary =
+        (CurPtr[-1] != '0' && CurPtr[-1] != '1') ? CurPtr - 1 : nullptr;
+    const char *FirstNonDecimal =
+        (CurPtr[-1] < '0' || CurPtr[-1] > '9') ? CurPtr - 1 : nullptr;
     const char *OldCurPtr = CurPtr;
     while (isHexDigit(*CurPtr)) {
-      if (*CurPtr != '0' && *CurPtr != '1' && !FirstNonBinary)
-        FirstNonBinary = CurPtr;
+      switch (*CurPtr) {
+      default:
+        if (!FirstNonDecimal) {
+          FirstNonDecimal = CurPtr;
+        }
+        LLVM_FALLTHROUGH;
+      case '9':
+      case '8':
+      case '7':
+      case '6':
+      case '5':
+      case '4':
+      case '3':
+      case '2':
+        if (!FirstNonBinary) {
+          FirstNonBinary = CurPtr;
+        }
+        break;
+      case '1':
+      case '0':
+        break;
+      }
       ++CurPtr;
+    }
+    if (*CurPtr == '.') {
+      // MASM float literals (other than hex floats) always contain a ".", and
+      // are always written in decimal.
+      ++CurPtr;
+      return LexFloatLiteral();
     }
 
     unsigned Radix = 0;
@@ -303,26 +356,59 @@ AsmToken AsmLexer::LexDigit() {
       // hexadecimal number
       ++CurPtr;
       Radix = 16;
-    } else if (FirstNonBinary && FirstNonBinary + 1 == CurPtr &&
-               (*FirstNonBinary == 'b' || *FirstNonBinary == 'B'))
+    } else if (*CurPtr == 't' || *CurPtr == 'T') {
+      // decimal number
+      ++CurPtr;
+      Radix = 10;
+    } else if (*CurPtr == 'o' || *CurPtr == 'O' || *CurPtr == 'q' ||
+               *CurPtr == 'Q') {
+      // octal number
+      ++CurPtr;
+      Radix = 8;
+    } else if (*CurPtr == 'y' || *CurPtr == 'Y') {
+      // binary number
+      ++CurPtr;
       Radix = 2;
+    } else if (FirstNonDecimal && FirstNonDecimal + 1 == CurPtr &&
+               DefaultRadix < 14 &&
+               (*FirstNonDecimal == 'd' || *FirstNonDecimal == 'D')) {
+      Radix = 10;
+    } else if (FirstNonBinary && FirstNonBinary + 1 == CurPtr &&
+               DefaultRadix < 12 &&
+               (*FirstNonBinary == 'b' || *FirstNonBinary == 'B')) {
+      Radix = 2;
+    }
 
-    if (Radix == 2 || Radix == 16) {
+    if (Radix) {
       StringRef Result(TokStart, CurPtr - TokStart);
       APInt Value(128, 0, true);
 
       if (Result.drop_back().getAsInteger(Radix, Value))
-        return ReturnError(TokStart, Radix == 2 ? "invalid binary number" :
-                             "invalid hexdecimal number");
+        return ReturnError(TokStart, "invalid " + radixName(Radix) + " number");
 
       // MSVC accepts and ignores type suffices on integer literals.
       SkipIgnoredIntegerSuffix(CurPtr);
 
       return intToken(Result, Value);
-   }
+    }
 
-    // octal/decimal integers, or floating point numbers, fall through
+    // default-radix integers, or floating point numbers, fall through
     CurPtr = OldCurPtr;
+  }
+
+  // MASM default-radix integers: [0-9a-fA-F]+
+  // (All other integer literals have a radix specifier.)
+  if (LexMasmIntegers) {
+    CurPtr = findLastDigit(CurPtr, 16);
+    StringRef Result(TokStart, CurPtr - TokStart);
+
+    APInt Value(128, 0, true);
+    if (Result.getAsInteger(DefaultRadix, Value)) {
+      return ReturnError(TokStart,
+                         "invalid " + radixName(DefaultRadix) + " number");
+    }
+
+    return intToken(Result, Value);
   }
 
   // Decimal integer: [1-9][0-9]*
@@ -339,13 +425,9 @@ AsmToken AsmLexer::LexDigit() {
     StringRef Result(TokStart, CurPtr - TokStart);
 
     APInt Value(128, 0, true);
-    if (Result.getAsInteger(Radix, Value))
-      return ReturnError(TokStart, !isHex ? "invalid decimal number" :
-                           "invalid hexdecimal number");
-
-    // Consume the [hH].
-    if (LexMasmIntegers && Radix == 16)
-      ++CurPtr;
+    if (Result.getAsInteger(Radix, Value)) {
+      return ReturnError(TokStart, "invalid " + radixName(Radix) + " number");
+    }
 
     // The darwin/x86 (and x86-64) assembler accepts and ignores type
     // suffices on integer literals.
@@ -416,11 +498,9 @@ AsmToken AsmLexer::LexDigit() {
   // Either octal or hexadecimal.
   APInt Value(128, 0, true);
   unsigned Radix = doHexLookAhead(CurPtr, 8, LexMasmIntegers);
-  bool isHex = Radix == 16;
   StringRef Result(TokStart, CurPtr - TokStart);
   if (Result.getAsInteger(Radix, Value))
-    return ReturnError(TokStart, !isHex ? "invalid octal number" :
-                       "invalid hexdecimal number");
+    return ReturnError(TokStart, "invalid " + radixName(Radix) + " number");
 
   // Consume the [hH].
   if (Radix == 16)

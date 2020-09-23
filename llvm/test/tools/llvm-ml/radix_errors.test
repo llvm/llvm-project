@@ -1,0 +1,60 @@
+; RUN: not llvm-ml -filetype=asm %s 2>&1 | FileCheck %s
+
+.code
+
+t1:
+mov eax, 120b
+mov eax, 120y
+.radix 11
+mov eax, 120b
+mov eax, 120y
+.radix 10
+
+; CHECK: error: invalid decimal number
+; CHECK: error: invalid binary number
+; CHECK: error: invalid base-11 number
+; CHECK: error: invalid binary number
+
+t2:
+mov eax, 190o
+mov eax, 190q
+.radix 13
+mov eax, 190o
+mov eax, 190q
+.radix 10
+
+; CHECK: error: invalid octal number
+; CHECK: error: invalid octal number
+; CHECK: error: invalid octal number
+; CHECK: error: invalid octal number
+
+t3:
+mov eax, 1f0d
+mov eax, 1f0t
+.radix 13
+mov eax, 1f0d
+mov eax, 1f0t
+.radix 10
+
+; CHECK: error: invalid decimal number
+; CHECK: error: invalid decimal number
+; CHECK: error: invalid base-13 number
+; CHECK: error: invalid decimal number
+
+t4:
+mov eax, 10e
+.radix 16
+.radix 10
+mov eax, 10e
+
+; CHECK: error: invalid decimal number
+; CHECK: error: invalid decimal number
+
+t5:
+.radix 9
+mov eax, 9
+.radix 10
+
+; CHECK: error: invalid base-9 number
+
+END

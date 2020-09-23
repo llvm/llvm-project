@@ -1662,6 +1662,9 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       if ((Done = SM.isValidEndState()))
         break;
       return Error(Tok.getLoc(), "unknown token in expression");
+    case AsmToken::Error:
+      return Error(getLexer().getErrLoc(), getLexer().getErr());
+      break;
     case AsmToken::EndOfStatement:
       Done = true;
       break;

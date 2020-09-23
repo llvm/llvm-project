@@ -132,7 +132,6 @@ class COFFMasmParser : public MCAsmParserExtension {
     // option
     // popcontext
     // pushcontext
-    // .radix
     // .safeseh
 
     // Procedure directives
