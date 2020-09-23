@@ -9,6 +9,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cctype>
 
 namespace llvm {
@@ -633,7 +634,38 @@ void llvm::json::OStream::valueBegin() {
   }
   if (Stack.back().Ctx == Array)
     newline();
+  flushComment();
   Stack.back().HasValue = true;
+}
+
+void OStream::comment(llvm::StringRef Comment) {
+  assert(PendingComment.empty() && "Only one comment per value!");
+  PendingComment = Comment;
+}
+
+void OStream::flushComment() {
+  if (PendingComment.empty())
+    return;
+  OS << (IndentSize ? "/* " : "/*");
+  // Be sure not to accidentally emit "*/". Transform to "* /".
+  while (!PendingComment.empty()) {
+    auto Pos = PendingComment.find("*/");
+    if (Pos == StringRef::npos) {
+      OS << PendingComment;
+      PendingComment = "";
+    } else {
+      OS << PendingComment.take_front(Pos) << "* /";
+      PendingComment = PendingComment.drop_front(Pos + 2);
+    }
+  }
+  OS << (IndentSize ? " */" : "*/");
+  // Comments are on their own line unless attached to an attribute value.
+  if (Stack.size() > 1 && Stack.back().Ctx == Singleton) {
+    if (IndentSize)
+      OS << ' ';
+  } else {
+    newline();
+  }
 }
 
 void llvm::json::OStream::newline() {
@@ -657,6 +689,7 @@ void llvm::json::OStream::arrayEnd() {
   if (Stack.back().HasValue)
     newline();
   OS << ']';
+  assert(PendingComment.empty());
   Stack.pop_back();
   assert(!Stack.empty());
 }
@@ -675,6 +708,7 @@ void llvm::json::OStream::objectEnd() {
   if (Stack.back().HasValue)
     newline();
   OS << '}';
+  assert(PendingComment.empty());
   Stack.pop_back();
   assert(!Stack.empty());
 }
@@ -684,6 +718,7 @@ void llvm::json::OStream::attributeBegin(llvm::StringRef Key) {
   if (Stack.back().HasValue)
     OS << ',';
   newline();
+  flushComment();
   Stack.back().HasValue = true;
   Stack.emplace_back();
   Stack.back().Ctx = Singleton;
@@ -701,6 +736,7 @@ void llvm::json::OStream::attributeBegin(llvm::StringRef Key) {
 void llvm::json::OStream::attributeEnd() {
   assert(Stack.back().Ctx == Singleton);
   assert(Stack.back().HasValue && "Attribute must have a value");
+  assert(PendingComment.empty());
   Stack.pop_back();
   assert(Stack.back().Ctx == Object);
 }
