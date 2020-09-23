@@ -60,7 +60,6 @@ define amdgpu_kernel void @opencl_kernel_implicitarg_ptr([112 x i8]) #1 {
 ; GCN-LABEL: {{^}}func_implicitarg_ptr:
 ; GCN: s_waitcnt
 ; GCN: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
-; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @func_implicitarg_ptr() #0 {
   %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
@@ -72,7 +71,6 @@ define void @func_implicitarg_ptr() #0 {
 ; GCN-LABEL: {{^}}opencl_func_implicitarg_ptr:
 ; GCN: s_waitcnt
 ; GCN: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
-; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @opencl_func_implicitarg_ptr() #0 {
   %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
@@ -158,7 +156,6 @@ define void @opencl_func_call_implicitarg_ptr_func() #0 {
 ; GCN-DAG: s_mov_b64 [[NULL:s\[[0-9]+:[0-9]+\]]], 0
 ; GCN-DAG: s_load_dword s{{[0-9]+}}, [[NULL]], 0x0
 ; GCN: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
-; GCN: s_waitcnt lgkmcnt(0)
 define void @func_kernarg_implicitarg_ptr() #0 {
   %kernarg.segment.ptr = call i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
   %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
@@ -174,7 +171,6 @@ define void @func_kernarg_implicitarg_ptr() #0 {
 ; GCN-DAG: s_mov_b64 [[NULL:s\[[0-9]+:[0-9]+\]]], 0
 ; GCN-DAG: s_load_dword s{{[0-9]+}}, [[NULL]], 0x0
 ; GCN: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
-; GCN: s_waitcnt lgkmcnt(0)
 define void @opencl_func_kernarg_implicitarg_ptr() #0 {
   %kernarg.segment.ptr = call i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
   %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()

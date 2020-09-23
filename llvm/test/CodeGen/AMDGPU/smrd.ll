@@ -694,7 +694,7 @@ exit:
 ;
 ; GCN-LABEL: {{^}}arg_divergence:
 ; GCN: buffer_load_dword v0, v0,
-; GCN-NEXT: s_waitcnt
+; GCN-NOT: s_waitcnt
 ; GCN-NEXT: ; return to shader part epilog
 define amdgpu_cs float @arg_divergence(i32 inreg %unused, <3 x i32> %arg4) #0 {
 main_body:

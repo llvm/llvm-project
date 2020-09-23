@@ -271,7 +271,6 @@ define <4 x float> @insertelement_to_sgpr() nounwind {
 ; GCN-NEXT:    s_mov_b32 s10, s12
 ; GCN-NEXT:    s_mov_b32 s11, s12
 ; GCN-NEXT:    image_gather4_lz v[0:3], v[0:1], s[4:11], s[12:15] dmask:0x1
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %tmp = load <4 x i32>, <4 x i32> addrspace(4)* undef
   %tmp1 = insertelement <4 x i32> %tmp, i32 0, i32 0

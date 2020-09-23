@@ -1405,7 +1405,6 @@ define void @mul_inline_imm_0.5_i16(i16 addrspace(1)* %out, i16 %x) {
 ; GFX10-NEXT:    v_mul_lo_u16_e64 v2, 0x3800, v2 ; encoding: [0x02,0x00,0x05,0xd7,0xff,0x04,0x02,0x00,0x00,0x38,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    global_store_short v[0:1], v2, off ; encoding: [0x00,0x80,0x68,0xdc,0x00,0x02,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
 ;
 ; VI-LABEL: mul_inline_imm_0.5_i16:
@@ -1413,7 +1412,6 @@ define void @mul_inline_imm_0.5_i16(i16 addrspace(1)* %out, i16 %x) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
 ; VI-NEXT:    v_mul_lo_u16_e32 v2, 0x3800, v2 ; encoding: [0xff,0x04,0x04,0x52,0x00,0x38,0x00,0x00]
 ; VI-NEXT:    flat_store_short v[0:1], v2 ; encoding: [0x00,0x00,0x68,0xdc,0x00,0x02,0x00,0x00]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0) ; encoding: [0x70,0x00,0x8c,0xbf]
 ; VI-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x1d,0x80,0xbe]
 ;
 ; SI-LABEL: mul_inline_imm_0.5_i16:
@@ -1426,7 +1424,6 @@ define void @mul_inline_imm_0.5_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_mov_b32 s5, s6
 ; SI-NEXT:    v_mul_u32_u24_e32 v2, 0x3800, v2
 ; SI-NEXT:    buffer_store_short v2, v[0:1], s[4:7], 0 addr64
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = mul i16 %x, bitcast (half 0.5 to i16)
   store i16 %y, i16 addrspace(1)* %out
@@ -1441,7 +1438,6 @@ define void @mul_inline_imm_neg_0.5_i16(i16 addrspace(1)* %out, i16 %x) {
 ; GFX10-NEXT:    v_mul_lo_u16_e64 v2, 0xb800, v2 ; encoding: [0x02,0x00,0x05,0xd7,0xff,0x04,0x02,0x00,0x00,0xb8,0xff,0xff]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    global_store_short v[0:1], v2, off ; encoding: [0x00,0x80,0x68,0xdc,0x00,0x02,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
 ;
 ; VI-LABEL: mul_inline_imm_neg_0.5_i16:
@@ -1449,7 +1445,6 @@ define void @mul_inline_imm_neg_0.5_i16(i16 addrspace(1)* %out, i16 %x) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
 ; VI-NEXT:    v_mul_lo_u16_e32 v2, 0xb800, v2 ; encoding: [0xff,0x04,0x04,0x52,0x00,0xb8,0xff,0xff]
 ; VI-NEXT:    flat_store_short v[0:1], v2 ; encoding: [0x00,0x00,0x68,0xdc,0x00,0x02,0x00,0x00]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0) ; encoding: [0x70,0x00,0x8c,0xbf]
 ; VI-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x1d,0x80,0xbe]
 ;
 ; SI-LABEL: mul_inline_imm_neg_0.5_i16:
@@ -1462,7 +1457,6 @@ define void @mul_inline_imm_neg_0.5_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_mov_b32 s5, s6
 ; SI-NEXT:    v_mul_u32_u24_e32 v2, 0xb800, v2
 ; SI-NEXT:    buffer_store_short v2, v[0:1], s[4:7], 0 addr64
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = mul i16 %x, bitcast (half -0.5 to i16)
   store i16 %y, i16 addrspace(1)* %out
@@ -1477,7 +1471,6 @@ define void @mul_inline_imm_1.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; GFX10-NEXT:    v_mul_lo_u16_e64 v2, 0x3c00, v2 ; encoding: [0x02,0x00,0x05,0xd7,0xff,0x04,0x02,0x00,0x00,0x3c,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    global_store_short v[0:1], v2, off ; encoding: [0x00,0x80,0x68,0xdc,0x00,0x02,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
 ;
 ; VI-LABEL: mul_inline_imm_1.0_i16:
@@ -1485,7 +1478,6 @@ define void @mul_inline_imm_1.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
 ; VI-NEXT:    v_mul_lo_u16_e32 v2, 0x3c00, v2 ; encoding: [0xff,0x04,0x04,0x52,0x00,0x3c,0x00,0x00]
 ; VI-NEXT:    flat_store_short v[0:1], v2 ; encoding: [0x00,0x00,0x68,0xdc,0x00,0x02,0x00,0x00]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0) ; encoding: [0x70,0x00,0x8c,0xbf]
 ; VI-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x1d,0x80,0xbe]
 ;
 ; SI-LABEL: mul_inline_imm_1.0_i16:
@@ -1498,7 +1490,6 @@ define void @mul_inline_imm_1.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_mov_b32 s5, s6
 ; SI-NEXT:    v_mul_u32_u24_e32 v2, 0x3c00, v2
 ; SI-NEXT:    buffer_store_short v2, v[0:1], s[4:7], 0 addr64
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = mul i16 %x, bitcast (half 1.0 to i16)
   store i16 %y, i16 addrspace(1)* %out
@@ -1513,7 +1504,6 @@ define void @mul_inline_imm_neg_1.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; GFX10-NEXT:    v_mul_lo_u16_e64 v2, 0xbc00, v2 ; encoding: [0x02,0x00,0x05,0xd7,0xff,0x04,0x02,0x00,0x00,0xbc,0xff,0xff]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    global_store_short v[0:1], v2, off ; encoding: [0x00,0x80,0x68,0xdc,0x00,0x02,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
 ;
 ; VI-LABEL: mul_inline_imm_neg_1.0_i16:
@@ -1521,7 +1511,6 @@ define void @mul_inline_imm_neg_1.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
 ; VI-NEXT:    v_mul_lo_u16_e32 v2, 0xbc00, v2 ; encoding: [0xff,0x04,0x04,0x52,0x00,0xbc,0xff,0xff]
 ; VI-NEXT:    flat_store_short v[0:1], v2 ; encoding: [0x00,0x00,0x68,0xdc,0x00,0x02,0x00,0x00]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0) ; encoding: [0x70,0x00,0x8c,0xbf]
 ; VI-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x1d,0x80,0xbe]
 ;
 ; SI-LABEL: mul_inline_imm_neg_1.0_i16:
@@ -1534,7 +1523,6 @@ define void @mul_inline_imm_neg_1.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_mov_b32 s5, s6
 ; SI-NEXT:    v_mul_u32_u24_e32 v2, 0xbc00, v2
 ; SI-NEXT:    buffer_store_short v2, v[0:1], s[4:7], 0 addr64
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = mul i16 %x, bitcast (half -1.0 to i16)
   store i16 %y, i16 addrspace(1)* %out
@@ -1549,7 +1537,6 @@ define void @shl_inline_imm_2.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; GFX10-NEXT:    v_lshlrev_b16_e64 v2, v2, 0x4000 ; encoding: [0x02,0x00,0x14,0xd7,0x02,0xff,0x01,0x00,0x00,0x40,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    global_store_short v[0:1], v2, off ; encoding: [0x00,0x80,0x68,0xdc,0x00,0x02,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
 ;
 ; VI-LABEL: shl_inline_imm_2.0_i16:
@@ -1558,7 +1545,6 @@ define void @shl_inline_imm_2.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; VI-NEXT:    s_movk_i32 s4, 0x4000 ; encoding: [0x00,0x40,0x04,0xb0]
 ; VI-NEXT:    v_lshlrev_b16_e64 v2, v2, s4 ; encoding: [0x02,0x00,0x2a,0xd1,0x02,0x09,0x00,0x00]
 ; VI-NEXT:    flat_store_short v[0:1], v2 ; encoding: [0x00,0x00,0x68,0xdc,0x00,0x02,0x00,0x00]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0) ; encoding: [0x70,0x00,0x8c,0xbf]
 ; VI-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x1d,0x80,0xbe]
 ;
 ; SI-LABEL: shl_inline_imm_2.0_i16:
@@ -1571,7 +1557,6 @@ define void @shl_inline_imm_2.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_mov_b32 s5, s6
 ; SI-NEXT:    v_lshl_b32_e32 v2, 0x4000, v2
 ; SI-NEXT:    buffer_store_short v2, v[0:1], s[4:7], 0 addr64
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = shl i16 bitcast (half 2.0 to i16), %x
   store i16 %y, i16 addrspace(1)* %out
@@ -1586,7 +1571,6 @@ define void @shl_inline_imm_neg_2.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; GFX10-NEXT:    v_lshlrev_b16_e64 v2, v2, 0xc000 ; encoding: [0x02,0x00,0x14,0xd7,0x02,0xff,0x01,0x00,0x00,0xc0,0xff,0xff]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    global_store_short v[0:1], v2, off ; encoding: [0x00,0x80,0x68,0xdc,0x00,0x02,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
 ;
 ; VI-LABEL: shl_inline_imm_neg_2.0_i16:
@@ -1595,7 +1579,6 @@ define void @shl_inline_imm_neg_2.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; VI-NEXT:    s_movk_i32 s4, 0xc000 ; encoding: [0x00,0xc0,0x04,0xb0]
 ; VI-NEXT:    v_lshlrev_b16_e64 v2, v2, s4 ; encoding: [0x02,0x00,0x2a,0xd1,0x02,0x09,0x00,0x00]
 ; VI-NEXT:    flat_store_short v[0:1], v2 ; encoding: [0x00,0x00,0x68,0xdc,0x00,0x02,0x00,0x00]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0) ; encoding: [0x70,0x00,0x8c,0xbf]
 ; VI-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x1d,0x80,0xbe]
 ;
 ; SI-LABEL: shl_inline_imm_neg_2.0_i16:
@@ -1608,7 +1591,6 @@ define void @shl_inline_imm_neg_2.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_mov_b32 s5, s6
 ; SI-NEXT:    v_lshl_b32_e32 v2, 0xffffc000, v2
 ; SI-NEXT:    buffer_store_short v2, v[0:1], s[4:7], 0 addr64
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = shl i16 bitcast (half -2.0 to i16), %x
   store i16 %y, i16 addrspace(1)* %out
@@ -1623,7 +1605,6 @@ define void @mul_inline_imm_4.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; GFX10-NEXT:    v_mul_lo_u16_e64 v2, 0x4400, v2 ; encoding: [0x02,0x00,0x05,0xd7,0xff,0x04,0x02,0x00,0x00,0x44,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    global_store_short v[0:1], v2, off ; encoding: [0x00,0x80,0x68,0xdc,0x00,0x02,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
 ;
 ; VI-LABEL: mul_inline_imm_4.0_i16:
@@ -1631,7 +1612,6 @@ define void @mul_inline_imm_4.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
 ; VI-NEXT:    v_mul_lo_u16_e32 v2, 0x4400, v2 ; encoding: [0xff,0x04,0x04,0x52,0x00,0x44,0x00,0x00]
 ; VI-NEXT:    flat_store_short v[0:1], v2 ; encoding: [0x00,0x00,0x68,0xdc,0x00,0x02,0x00,0x00]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0) ; encoding: [0x70,0x00,0x8c,0xbf]
 ; VI-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x1d,0x80,0xbe]
 ;
 ; SI-LABEL: mul_inline_imm_4.0_i16:
@@ -1644,7 +1624,6 @@ define void @mul_inline_imm_4.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_mov_b32 s5, s6
 ; SI-NEXT:    v_mul_u32_u24_e32 v2, 0x4400, v2
 ; SI-NEXT:    buffer_store_short v2, v[0:1], s[4:7], 0 addr64
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = mul i16 %x, bitcast (half 4.0 to i16)
   store i16 %y, i16 addrspace(1)* %out
@@ -1659,7 +1638,6 @@ define void @mul_inline_imm_neg_4.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; GFX10-NEXT:    v_mul_lo_u16_e64 v2, 0xc400, v2 ; encoding: [0x02,0x00,0x05,0xd7,0xff,0x04,0x02,0x00,0x00,0xc4,0xff,0xff]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    global_store_short v[0:1], v2, off ; encoding: [0x00,0x80,0x68,0xdc,0x00,0x02,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
 ;
 ; VI-LABEL: mul_inline_imm_neg_4.0_i16:
@@ -1667,7 +1645,6 @@ define void @mul_inline_imm_neg_4.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
 ; VI-NEXT:    v_mul_lo_u16_e32 v2, 0xc400, v2 ; encoding: [0xff,0x04,0x04,0x52,0x00,0xc4,0xff,0xff]
 ; VI-NEXT:    flat_store_short v[0:1], v2 ; encoding: [0x00,0x00,0x68,0xdc,0x00,0x02,0x00,0x00]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0) ; encoding: [0x70,0x00,0x8c,0xbf]
 ; VI-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x1d,0x80,0xbe]
 ;
 ; SI-LABEL: mul_inline_imm_neg_4.0_i16:
@@ -1680,7 +1657,6 @@ define void @mul_inline_imm_neg_4.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_mov_b32 s5, s6
 ; SI-NEXT:    v_mul_u32_u24_e32 v2, 0xc400, v2
 ; SI-NEXT:    buffer_store_short v2, v[0:1], s[4:7], 0 addr64
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = mul i16 %x, bitcast (half -4.0 to i16)
   store i16 %y, i16 addrspace(1)* %out
@@ -1695,7 +1671,6 @@ define void @mul_inline_imm_inv2pi_i16(i16 addrspace(1)* %out, i16 %x) {
 ; GFX10-NEXT:    v_mul_lo_u16_e64 v2, 0x3118, v2 ; encoding: [0x02,0x00,0x05,0xd7,0xff,0x04,0x02,0x00,0x18,0x31,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    global_store_short v[0:1], v2, off ; encoding: [0x00,0x80,0x68,0xdc,0x00,0x02,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
 ;
 ; VI-LABEL: mul_inline_imm_inv2pi_i16:
@@ -1703,7 +1678,6 @@ define void @mul_inline_imm_inv2pi_i16(i16 addrspace(1)* %out, i16 %x) {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
 ; VI-NEXT:    v_mul_lo_u16_e32 v2, 0x3118, v2 ; encoding: [0xff,0x04,0x04,0x52,0x18,0x31,0x00,0x00]
 ; VI-NEXT:    flat_store_short v[0:1], v2 ; encoding: [0x00,0x00,0x68,0xdc,0x00,0x02,0x00,0x00]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0) ; encoding: [0x70,0x00,0x8c,0xbf]
 ; VI-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x1d,0x80,0xbe]
 ;
 ; SI-LABEL: mul_inline_imm_inv2pi_i16:
@@ -1716,7 +1690,6 @@ define void @mul_inline_imm_inv2pi_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_mov_b32 s5, s6
 ; SI-NEXT:    v_mul_u32_u24_e32 v2, 0x3118, v2
 ; SI-NEXT:    buffer_store_short v2, v[0:1], s[4:7], 0 addr64
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = mul i16 %x, bitcast (half 0xH3118 to i16)
   store i16 %y, i16 addrspace(1)* %out

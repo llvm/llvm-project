@@ -630,7 +630,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; GCN-LABEL: {{^}}test_call_external_i32_func_i32_imm:
 ; GCN: v_mov_b32_e32 v0, 42
 ; GCN: s_swappc_b64 s[30:31],
-; GCN-NOT: s_waitcnt
+; GCN: s_waitcnt
 ; GCN: buffer_store_dword v0, off, s[36:39], 0
 define amdgpu_kernel void @test_call_external_i32_func_i32_imm(i32 addrspace(1)* %out) #0 {
   %val = call i32 @external_i32_func_i32(i32 42)

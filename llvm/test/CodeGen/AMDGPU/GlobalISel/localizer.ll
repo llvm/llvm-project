@@ -203,7 +203,6 @@ define void @localize_internal_globals(i1 %cond) {
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX9-NEXT:  BB2_4: ; %bb2
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 entry:
   br i1 %cond, label %bb0, label %bb1

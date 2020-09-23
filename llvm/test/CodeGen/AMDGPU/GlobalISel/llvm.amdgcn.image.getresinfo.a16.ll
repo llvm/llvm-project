@@ -14,7 +14,6 @@ define amdgpu_ps <4 x float> @getresinfo_1d(<8 x i32> inreg %rsrc, i16 %mip) {
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm a16
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: getresinfo_1d:
@@ -29,7 +28,6 @@ define amdgpu_ps <4 x float> @getresinfo_1d(<8 x i32> inreg %rsrc, i16 %mip) {
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm a16
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.1d.v4f32.i16(i32 15, i16 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -48,7 +46,6 @@ define amdgpu_ps <4 x float> @getresinfo_2d(<8 x i32> inreg %rsrc, i16 %mip) {
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm a16
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: getresinfo_2d:
@@ -63,7 +60,6 @@ define amdgpu_ps <4 x float> @getresinfo_2d(<8 x i32> inreg %rsrc, i16 %mip) {
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm a16
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.2d.v4f32.i16(i32 15, i16 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -82,7 +78,6 @@ define amdgpu_ps <4 x float> @getresinfo_3d(<8 x i32> inreg %rsrc, i16 %mip) {
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm a16
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: getresinfo_3d:
@@ -97,7 +92,6 @@ define amdgpu_ps <4 x float> @getresinfo_3d(<8 x i32> inreg %rsrc, i16 %mip) {
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm a16
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.3d.v4f32.i16(i32 15, i16 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -116,7 +110,6 @@ define amdgpu_ps <4 x float> @getresinfo_cube(<8 x i32> inreg %rsrc, i16 %mip) {
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm a16 da
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: getresinfo_cube:
@@ -131,7 +124,6 @@ define amdgpu_ps <4 x float> @getresinfo_cube(<8 x i32> inreg %rsrc, i16 %mip) {
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_CUBE unorm a16
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.cube.v4f32.i16(i32 15, i16 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -150,7 +142,6 @@ define amdgpu_ps <4 x float> @getresinfo_1darray(<8 x i32> inreg %rsrc, i16 %mip
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm a16 da
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: getresinfo_1darray:
@@ -165,7 +156,6 @@ define amdgpu_ps <4 x float> @getresinfo_1darray(<8 x i32> inreg %rsrc, i16 %mip
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY unorm a16
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.1darray.v4f32.i16(i32 15, i16 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -184,7 +174,6 @@ define amdgpu_ps <4 x float> @getresinfo_2darray(<8 x i32> inreg %rsrc, i16 %mip
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm a16 da
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: getresinfo_2darray:
@@ -199,7 +188,6 @@ define amdgpu_ps <4 x float> @getresinfo_2darray(<8 x i32> inreg %rsrc, i16 %mip
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY unorm a16
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.2darray.v4f32.i16(i32 15, i16 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -218,7 +206,6 @@ define amdgpu_ps <4 x float> @getresinfo_2dmsaa(<8 x i32> inreg %rsrc, i16 %mip)
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm a16
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: getresinfo_2dmsaa:
@@ -233,7 +220,6 @@ define amdgpu_ps <4 x float> @getresinfo_2dmsaa(<8 x i32> inreg %rsrc, i16 %mip)
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA unorm a16
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.2dmsaa.v4f32.i16(i32 15, i16 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -252,7 +238,6 @@ define amdgpu_ps <4 x float> @getresinfo_2darraymsaa(<8 x i32> inreg %rsrc, i16 
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm a16 da
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: getresinfo_2darraymsaa:
@@ -267,7 +252,6 @@ define amdgpu_ps <4 x float> @getresinfo_2darraymsaa(<8 x i32> inreg %rsrc, i16 
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm a16
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.2darraymsaa.v4f32.i16(i32 15, i16 %mip, <8 x i32> %rsrc, i32 0, i32 0)

@@ -9,32 +9,27 @@ define amdgpu_ps <4 x float> @load_1d(<8 x i32> inreg %rsrc, i32 %s) {
 ; VERDE-LABEL: load_1d:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_1d:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_1d:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_1d:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm ; encoding: [0x00,0x1f,0x00,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
@@ -55,7 +50,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ; VERDE-NEXT:    s_mov_b32 s10, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_1d_tfe:
@@ -71,7 +65,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ; FIJI-NEXT:    s_mov_b32 s10, -1
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_1d_tfe:
@@ -87,7 +80,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ; GFX6789-NEXT:    v_mov_b32_e32 v6, s9
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[5:6], v4, off
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_1d_tfe:
@@ -98,7 +90,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ; NOPRT-NEXT:    v_mov_b32_e32 v6, s9
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    global_store_dword v[5:6], v4, off
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_tfe:
@@ -115,7 +106,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ; GFX10-NEXT:    v_mov_b32_e32 v5, s8 ; encoding: [0x08,0x02,0x0a,0x7e]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[5:6], v4, off ; encoding: [0x00,0x80,0x70,0xdc,0x05,0x04,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
@@ -139,7 +129,6 @@ define amdgpu_ps <4 x float> @load_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ; VERDE-NEXT:    s_mov_b32 s10, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_1d_lwe:
@@ -155,7 +144,6 @@ define amdgpu_ps <4 x float> @load_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ; FIJI-NEXT:    s_mov_b32 s10, -1
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_1d_lwe:
@@ -171,7 +159,6 @@ define amdgpu_ps <4 x float> @load_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ; GFX6789-NEXT:    v_mov_b32_e32 v6, s9
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[5:6], v4, off
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_1d_lwe:
@@ -182,7 +169,6 @@ define amdgpu_ps <4 x float> @load_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ; NOPRT-NEXT:    v_mov_b32_e32 v6, s9
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    global_store_dword v[5:6], v4, off
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_lwe:
@@ -199,7 +185,6 @@ define amdgpu_ps <4 x float> @load_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ; GFX10-NEXT:    v_mov_b32_e32 v5, s8 ; encoding: [0x08,0x02,0x0a,0x7e]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[5:6], v4, off ; encoding: [0x00,0x80,0x70,0xdc,0x05,0x04,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>, i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 2, i32 0)
@@ -213,32 +198,27 @@ define amdgpu_ps <4 x float> @load_2d(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 ; VERDE-LABEL: load_2d:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf unorm
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_2d:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf unorm
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_2d:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf unorm
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_2d:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf unorm
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_2d:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm ; encoding: [0x08,0x1f,0x00,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
@@ -260,7 +240,6 @@ define amdgpu_ps <4 x float> @load_2d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ; VERDE-NEXT:    s_mov_b32 s10, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_2d_tfe:
@@ -277,7 +256,6 @@ define amdgpu_ps <4 x float> @load_2d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ; FIJI-NEXT:    s_mov_b32 s10, -1
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_2d_tfe:
@@ -294,7 +272,6 @@ define amdgpu_ps <4 x float> @load_2d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ; GFX6789-NEXT:    v_mov_b32_e32 v6, s9
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[5:6], v4, off
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_2d_tfe:
@@ -305,7 +282,6 @@ define amdgpu_ps <4 x float> @load_2d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ; NOPRT-NEXT:    v_mov_b32_e32 v6, s9
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    global_store_dword v[5:6], v4, off
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_2d_tfe:
@@ -323,7 +299,6 @@ define amdgpu_ps <4 x float> @load_2d_tfe(<8 x i32> inreg %rsrc, i32 addrspace(1
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s9 ; encoding: [0x09,0x02,0x0c,0x7e]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[5:6], v4, off ; encoding: [0x00,0x80,0x70,0xdc,0x05,0x04,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.2d.v4f32i32.i32(i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 1, i32 0)
@@ -337,32 +312,27 @@ define amdgpu_ps <4 x float> @load_3d(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32
 ; VERDE-LABEL: load_3d:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_3d:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_3d:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_3d:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_3d:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm ; encoding: [0x10,0x1f,0x00,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.3d.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %r, <8 x i32> %rsrc, i32 0, i32 0)
@@ -385,7 +355,6 @@ define amdgpu_ps <4 x float> @load_3d_tfe_lwe(<8 x i32> inreg %rsrc, i32 addrspa
 ; VERDE-NEXT:    s_mov_b32 s10, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_3d_tfe_lwe:
@@ -403,7 +372,6 @@ define amdgpu_ps <4 x float> @load_3d_tfe_lwe(<8 x i32> inreg %rsrc, i32 addrspa
 ; FIJI-NEXT:    s_mov_b32 s10, -1
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_3d_tfe_lwe:
@@ -421,7 +389,6 @@ define amdgpu_ps <4 x float> @load_3d_tfe_lwe(<8 x i32> inreg %rsrc, i32 addrspa
 ; GFX6789-NEXT:    v_mov_b32_e32 v6, s9
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[5:6], v4, off
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_3d_tfe_lwe:
@@ -432,7 +399,6 @@ define amdgpu_ps <4 x float> @load_3d_tfe_lwe(<8 x i32> inreg %rsrc, i32 addrspa
 ; NOPRT-NEXT:    v_mov_b32_e32 v6, s9
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    global_store_dword v[5:6], v4, off
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_3d_tfe_lwe:
@@ -451,7 +417,6 @@ define amdgpu_ps <4 x float> @load_3d_tfe_lwe(<8 x i32> inreg %rsrc, i32 addrspa
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s9 ; encoding: [0x09,0x02,0x0c,0x7e]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[5:6], v4, off ; encoding: [0x00,0x80,0x70,0xdc,0x05,0x04,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.3d.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %r, <8 x i32> %rsrc, i32 3, i32 0)
@@ -465,32 +430,27 @@ define amdgpu_ps <4 x float> @load_cube(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i
 ; VERDE-LABEL: load_cube:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm da
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_cube:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm da
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_cube:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm da
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_cube:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm da
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_cube:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_CUBE unorm ; encoding: [0x18,0x1f,0x00,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.cube.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %slice, <8 x i32> %rsrc, i32 0, i32 0)
@@ -513,7 +473,6 @@ define amdgpu_ps <4 x float> @load_cube_lwe(<8 x i32> inreg %rsrc, i32 addrspace
 ; VERDE-NEXT:    s_mov_b32 s10, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_cube_lwe:
@@ -531,7 +490,6 @@ define amdgpu_ps <4 x float> @load_cube_lwe(<8 x i32> inreg %rsrc, i32 addrspace
 ; FIJI-NEXT:    s_mov_b32 s10, -1
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_cube_lwe:
@@ -549,7 +507,6 @@ define amdgpu_ps <4 x float> @load_cube_lwe(<8 x i32> inreg %rsrc, i32 addrspace
 ; GFX6789-NEXT:    v_mov_b32_e32 v6, s9
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[5:6], v4, off
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_cube_lwe:
@@ -560,7 +517,6 @@ define amdgpu_ps <4 x float> @load_cube_lwe(<8 x i32> inreg %rsrc, i32 addrspace
 ; NOPRT-NEXT:    v_mov_b32_e32 v6, s9
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    global_store_dword v[5:6], v4, off
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_cube_lwe:
@@ -579,7 +535,6 @@ define amdgpu_ps <4 x float> @load_cube_lwe(<8 x i32> inreg %rsrc, i32 addrspace
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s9 ; encoding: [0x09,0x02,0x0c,0x7e]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[5:6], v4, off ; encoding: [0x00,0x80,0x70,0xdc,0x05,0x04,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.cube.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %slice, <8 x i32> %rsrc, i32 2, i32 0)
@@ -593,32 +548,27 @@ define amdgpu_ps <4 x float> @load_1darray(<8 x i32> inreg %rsrc, i32 %s, i32 %s
 ; VERDE-LABEL: load_1darray:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf unorm da
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_1darray:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf unorm da
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_1darray:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf unorm da
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_1darray:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf unorm da
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1darray:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY unorm ; encoding: [0x20,0x1f,0x00,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.1darray.v4f32.i32(i32 15, i32 %s, i32 %slice, <8 x i32> %rsrc, i32 0, i32 0)
@@ -640,7 +590,6 @@ define amdgpu_ps <4 x float> @load_1darray_tfe(<8 x i32> inreg %rsrc, i32 addrsp
 ; VERDE-NEXT:    s_mov_b32 s10, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_1darray_tfe:
@@ -657,7 +606,6 @@ define amdgpu_ps <4 x float> @load_1darray_tfe(<8 x i32> inreg %rsrc, i32 addrsp
 ; FIJI-NEXT:    s_mov_b32 s10, -1
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_1darray_tfe:
@@ -674,7 +622,6 @@ define amdgpu_ps <4 x float> @load_1darray_tfe(<8 x i32> inreg %rsrc, i32 addrsp
 ; GFX6789-NEXT:    v_mov_b32_e32 v6, s9
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[5:6], v4, off
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_1darray_tfe:
@@ -685,7 +632,6 @@ define amdgpu_ps <4 x float> @load_1darray_tfe(<8 x i32> inreg %rsrc, i32 addrsp
 ; NOPRT-NEXT:    v_mov_b32_e32 v6, s9
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    global_store_dword v[5:6], v4, off
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1darray_tfe:
@@ -703,7 +649,6 @@ define amdgpu_ps <4 x float> @load_1darray_tfe(<8 x i32> inreg %rsrc, i32 addrsp
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s9 ; encoding: [0x09,0x02,0x0c,0x7e]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[5:6], v4, off ; encoding: [0x00,0x80,0x70,0xdc,0x05,0x04,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.1darray.v4f32i32.i32(i32 15, i32 %s, i32 %slice, <8 x i32> %rsrc, i32 1, i32 0)
@@ -717,32 +662,27 @@ define amdgpu_ps <4 x float> @load_2darray(<8 x i32> inreg %rsrc, i32 %s, i32 %t
 ; VERDE-LABEL: load_2darray:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm da
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_2darray:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm da
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_2darray:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm da
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_2darray:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm da
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_2darray:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY unorm ; encoding: [0x28,0x1f,0x00,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.2darray.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %slice, <8 x i32> %rsrc, i32 0, i32 0)
@@ -765,7 +705,6 @@ define amdgpu_ps <4 x float> @load_2darray_lwe(<8 x i32> inreg %rsrc, i32 addrsp
 ; VERDE-NEXT:    s_mov_b32 s10, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_2darray_lwe:
@@ -783,7 +722,6 @@ define amdgpu_ps <4 x float> @load_2darray_lwe(<8 x i32> inreg %rsrc, i32 addrsp
 ; FIJI-NEXT:    s_mov_b32 s10, -1
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_2darray_lwe:
@@ -801,7 +739,6 @@ define amdgpu_ps <4 x float> @load_2darray_lwe(<8 x i32> inreg %rsrc, i32 addrsp
 ; GFX6789-NEXT:    v_mov_b32_e32 v6, s9
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[5:6], v4, off
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_2darray_lwe:
@@ -812,7 +749,6 @@ define amdgpu_ps <4 x float> @load_2darray_lwe(<8 x i32> inreg %rsrc, i32 addrsp
 ; NOPRT-NEXT:    v_mov_b32_e32 v6, s9
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    global_store_dword v[5:6], v4, off
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_2darray_lwe:
@@ -831,7 +767,6 @@ define amdgpu_ps <4 x float> @load_2darray_lwe(<8 x i32> inreg %rsrc, i32 addrsp
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s9 ; encoding: [0x09,0x02,0x0c,0x7e]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[5:6], v4, off ; encoding: [0x00,0x80,0x70,0xdc,0x05,0x04,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.2darray.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %slice, <8 x i32> %rsrc, i32 2, i32 0)
@@ -845,32 +780,27 @@ define amdgpu_ps <4 x float> @load_2dmsaa(<8 x i32> inreg %rsrc, i32 %s, i32 %t,
 ; VERDE-LABEL: load_2dmsaa:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_2dmsaa:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_2dmsaa:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_2dmsaa:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_2dmsaa:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA unorm ; encoding: [0x30,0x1f,0x00,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.2dmsaa.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
@@ -893,7 +823,6 @@ define amdgpu_ps <4 x float> @load_2dmsaa_both(<8 x i32> inreg %rsrc, i32 addrsp
 ; VERDE-NEXT:    s_mov_b32 s10, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_2dmsaa_both:
@@ -911,7 +840,6 @@ define amdgpu_ps <4 x float> @load_2dmsaa_both(<8 x i32> inreg %rsrc, i32 addrsp
 ; FIJI-NEXT:    s_mov_b32 s10, -1
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_2dmsaa_both:
@@ -929,7 +857,6 @@ define amdgpu_ps <4 x float> @load_2dmsaa_both(<8 x i32> inreg %rsrc, i32 addrsp
 ; GFX6789-NEXT:    v_mov_b32_e32 v6, s9
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[5:6], v4, off
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_2dmsaa_both:
@@ -940,7 +867,6 @@ define amdgpu_ps <4 x float> @load_2dmsaa_both(<8 x i32> inreg %rsrc, i32 addrsp
 ; NOPRT-NEXT:    v_mov_b32_e32 v6, s9
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    global_store_dword v[5:6], v4, off
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_2dmsaa_both:
@@ -959,7 +885,6 @@ define amdgpu_ps <4 x float> @load_2dmsaa_both(<8 x i32> inreg %rsrc, i32 addrsp
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s9 ; encoding: [0x09,0x02,0x0c,0x7e]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[5:6], v4, off ; encoding: [0x00,0x80,0x70,0xdc,0x05,0x04,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.2dmsaa.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 3, i32 0)
@@ -973,32 +898,27 @@ define amdgpu_ps <4 x float> @load_2darraymsaa(<8 x i32> inreg %rsrc, i32 %s, i3
 ; VERDE-LABEL: load_2darraymsaa:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load v[0:3], v[0:3], s[0:7] dmask:0xf unorm da
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_2darraymsaa:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load v[0:3], v[0:3], s[0:7] dmask:0xf unorm da
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_2darraymsaa:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load v[0:3], v[0:3], s[0:7] dmask:0xf unorm da
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_2darraymsaa:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load v[0:3], v[0:3], s[0:7] dmask:0xf unorm da
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_2darraymsaa:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load v[0:3], v[0:3], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm ; encoding: [0x38,0x1f,0x00,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.2darraymsaa.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
@@ -1022,7 +942,6 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, i32 ad
 ; VERDE-NEXT:    s_mov_b32 s10, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_2darraymsaa_tfe:
@@ -1041,7 +960,6 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, i32 ad
 ; FIJI-NEXT:    s_mov_b32 s10, -1
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_2darraymsaa_tfe:
@@ -1060,7 +978,6 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, i32 ad
 ; GFX6789-NEXT:    v_mov_b32_e32 v6, s9
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[5:6], v4, off
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_2darraymsaa_tfe:
@@ -1071,7 +988,6 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, i32 ad
 ; NOPRT-NEXT:    v_mov_b32_e32 v6, s9
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    global_store_dword v[5:6], v4, off
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_2darraymsaa_tfe:
@@ -1091,7 +1007,6 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, i32 ad
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s9 ; encoding: [0x09,0x02,0x0c,0x7e]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[5:6], v4, off ; encoding: [0x00,0x80,0x70,0xdc,0x05,0x04,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.2darraymsaa.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %fragid, <8 x i32> %rsrc, i32 1, i32 0)
@@ -1105,32 +1020,27 @@ define amdgpu_ps <4 x float> @load_mip_1d(<8 x i32> inreg %rsrc, i32 %s, i32 %mi
 ; VERDE-LABEL: load_mip_1d:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load_mip v[0:3], v[0:1], s[0:7] dmask:0xf unorm
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_mip_1d:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load_mip v[0:3], v[0:1], s[0:7] dmask:0xf unorm
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_mip_1d:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load_mip v[0:3], v[0:1], s[0:7] dmask:0xf unorm
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_mip_1d:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load_mip v[0:3], v[0:1], s[0:7] dmask:0xf unorm
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_mip_1d:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load_mip v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm ; encoding: [0x00,0x1f,0x04,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32(i32 15, i32 %s, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -1152,7 +1062,6 @@ define amdgpu_ps <4 x float> @load_mip_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspa
 ; VERDE-NEXT:    s_mov_b32 s10, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_mip_1d_lwe:
@@ -1169,7 +1078,6 @@ define amdgpu_ps <4 x float> @load_mip_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspa
 ; FIJI-NEXT:    s_mov_b32 s10, -1
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_mip_1d_lwe:
@@ -1186,7 +1094,6 @@ define amdgpu_ps <4 x float> @load_mip_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspa
 ; GFX6789-NEXT:    v_mov_b32_e32 v6, s9
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[5:6], v4, off
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_mip_1d_lwe:
@@ -1197,7 +1104,6 @@ define amdgpu_ps <4 x float> @load_mip_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspa
 ; NOPRT-NEXT:    v_mov_b32_e32 v6, s9
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    global_store_dword v[5:6], v4, off
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_mip_1d_lwe:
@@ -1215,7 +1121,6 @@ define amdgpu_ps <4 x float> @load_mip_1d_lwe(<8 x i32> inreg %rsrc, i32 addrspa
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s9 ; encoding: [0x09,0x02,0x0c,0x7e]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[5:6], v4, off ; encoding: [0x00,0x80,0x70,0xdc,0x05,0x04,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.mip.1d.v4f32i32.i32(i32 15, i32 %s, i32 %mip, <8 x i32> %rsrc, i32 2, i32 0)
@@ -1229,32 +1134,27 @@ define amdgpu_ps <4 x float> @load_mip_2d(<8 x i32> inreg %rsrc, i32 %s, i32 %t,
 ; VERDE-LABEL: load_mip_2d:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load_mip v[0:3], v[0:2], s[0:7] dmask:0xf unorm
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_mip_2d:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load_mip v[0:3], v[0:2], s[0:7] dmask:0xf unorm
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_mip_2d:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load_mip v[0:3], v[0:2], s[0:7] dmask:0xf unorm
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_mip_2d:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load_mip v[0:3], v[0:2], s[0:7] dmask:0xf unorm
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_mip_2d:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load_mip v[0:3], v[0:2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm ; encoding: [0x08,0x1f,0x04,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -1277,7 +1177,6 @@ define amdgpu_ps <4 x float> @load_mip_2d_tfe(<8 x i32> inreg %rsrc, i32 addrspa
 ; VERDE-NEXT:    s_mov_b32 s10, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_mip_2d_tfe:
@@ -1295,7 +1194,6 @@ define amdgpu_ps <4 x float> @load_mip_2d_tfe(<8 x i32> inreg %rsrc, i32 addrspa
 ; FIJI-NEXT:    s_mov_b32 s10, -1
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    buffer_store_dword v4, off, s[8:11], 0
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_mip_2d_tfe:
@@ -1313,7 +1211,6 @@ define amdgpu_ps <4 x float> @load_mip_2d_tfe(<8 x i32> inreg %rsrc, i32 addrspa
 ; GFX6789-NEXT:    v_mov_b32_e32 v6, s9
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[5:6], v4, off
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_mip_2d_tfe:
@@ -1324,7 +1221,6 @@ define amdgpu_ps <4 x float> @load_mip_2d_tfe(<8 x i32> inreg %rsrc, i32 addrspa
 ; NOPRT-NEXT:    v_mov_b32_e32 v6, s9
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    global_store_dword v[5:6], v4, off
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_mip_2d_tfe:
@@ -1343,7 +1239,6 @@ define amdgpu_ps <4 x float> @load_mip_2d_tfe(<8 x i32> inreg %rsrc, i32 addrspa
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s9 ; encoding: [0x09,0x02,0x0c,0x7e]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[5:6], v4, off ; encoding: [0x00,0x80,0x70,0xdc,0x05,0x04,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.mip.2d.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %mip, <8 x i32> %rsrc, i32 1, i32 0)
@@ -1678,7 +1573,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask3(<8 x i32> inreg %rsrc, i32 a
 ; VERDE-NEXT:    s_mov_b32 s10, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v3, off, s[8:11], 0
-; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_1d_tfe_V4_dmask3:
@@ -1693,7 +1587,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask3(<8 x i32> inreg %rsrc, i32 a
 ; FIJI-NEXT:    s_mov_b32 s10, -1
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    buffer_store_dword v3, off, s[8:11], 0
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_1d_tfe_V4_dmask3:
@@ -1708,7 +1601,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask3(<8 x i32> inreg %rsrc, i32 a
 ; GFX6789-NEXT:    v_mov_b32_e32 v5, s9
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[4:5], v3, off
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_1d_tfe_V4_dmask3:
@@ -1719,7 +1611,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask3(<8 x i32> inreg %rsrc, i32 a
 ; NOPRT-NEXT:    v_mov_b32_e32 v5, s9
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    global_store_dword v[4:5], v3, off
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_tfe_V4_dmask3:
@@ -1735,7 +1626,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask3(<8 x i32> inreg %rsrc, i32 a
 ; GFX10-NEXT:    v_mov_b32_e32 v4, s8 ; encoding: [0x08,0x02,0x08,0x7e]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[4:5], v3, off ; encoding: [0x00,0x80,0x70,0xdc,0x04,0x03,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 7, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
@@ -1757,7 +1647,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask2(<8 x i32> inreg %rsrc, i32 a
 ; VERDE-NEXT:    s_mov_b32 s10, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v2, off, s[8:11], 0
-; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_1d_tfe_V4_dmask2:
@@ -1771,7 +1660,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask2(<8 x i32> inreg %rsrc, i32 a
 ; FIJI-NEXT:    s_mov_b32 s10, -1
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    buffer_store_dword v2, off, s[8:11], 0
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_1d_tfe_V4_dmask2:
@@ -1785,7 +1673,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask2(<8 x i32> inreg %rsrc, i32 a
 ; GFX6789-NEXT:    v_mov_b32_e32 v4, s9
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[3:4], v2, off
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_1d_tfe_V4_dmask2:
@@ -1796,7 +1683,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask2(<8 x i32> inreg %rsrc, i32 a
 ; NOPRT-NEXT:    v_mov_b32_e32 v4, s9
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    global_store_dword v[3:4], v2, off
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_tfe_V4_dmask2:
@@ -1811,7 +1697,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask2(<8 x i32> inreg %rsrc, i32 a
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s8 ; encoding: [0x08,0x02,0x06,0x7e]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[3:4], v2, off ; encoding: [0x00,0x80,0x70,0xdc,0x03,0x02,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 6, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
@@ -1832,7 +1717,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask1(<8 x i32> inreg %rsrc, i32 a
 ; VERDE-NEXT:    s_mov_b32 s10, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v1, off, s[8:11], 0
-; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_1d_tfe_V4_dmask1:
@@ -1845,7 +1729,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask1(<8 x i32> inreg %rsrc, i32 a
 ; FIJI-NEXT:    s_mov_b32 s10, -1
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    buffer_store_dword v1, off, s[8:11], 0
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_1d_tfe_V4_dmask1:
@@ -1858,7 +1741,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask1(<8 x i32> inreg %rsrc, i32 a
 ; GFX6789-NEXT:    v_mov_b32_e32 v3, s9
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[2:3], v1, off
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_1d_tfe_V4_dmask1:
@@ -1869,7 +1751,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask1(<8 x i32> inreg %rsrc, i32 a
 ; NOPRT-NEXT:    v_mov_b32_e32 v3, s9
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    global_store_dword v[2:3], v1, off
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_tfe_V4_dmask1:
@@ -1883,7 +1764,6 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask1(<8 x i32> inreg %rsrc, i32 a
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s8 ; encoding: [0x08,0x02,0x04,0x7e]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[2:3], v1, off ; encoding: [0x00,0x80,0x70,0xdc,0x02,0x01,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 8, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
@@ -1904,7 +1784,6 @@ define amdgpu_ps <2 x float> @load_1d_tfe_V2_dmask1(<8 x i32> inreg %rsrc, i32 a
 ; VERDE-NEXT:    s_mov_b32 s10, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v1, off, s[8:11], 0
-; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_1d_tfe_V2_dmask1:
@@ -1917,7 +1796,6 @@ define amdgpu_ps <2 x float> @load_1d_tfe_V2_dmask1(<8 x i32> inreg %rsrc, i32 a
 ; FIJI-NEXT:    s_mov_b32 s10, -1
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    buffer_store_dword v1, off, s[8:11], 0
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_1d_tfe_V2_dmask1:
@@ -1930,7 +1808,6 @@ define amdgpu_ps <2 x float> @load_1d_tfe_V2_dmask1(<8 x i32> inreg %rsrc, i32 a
 ; GFX6789-NEXT:    v_mov_b32_e32 v3, s9
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[2:3], v1, off
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_1d_tfe_V2_dmask1:
@@ -1941,7 +1818,6 @@ define amdgpu_ps <2 x float> @load_1d_tfe_V2_dmask1(<8 x i32> inreg %rsrc, i32 a
 ; NOPRT-NEXT:    v_mov_b32_e32 v3, s9
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    global_store_dword v[2:3], v1, off
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_tfe_V2_dmask1:
@@ -1955,7 +1831,6 @@ define amdgpu_ps <2 x float> @load_1d_tfe_V2_dmask1(<8 x i32> inreg %rsrc, i32 a
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s8 ; encoding: [0x08,0x02,0x04,0x7e]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[2:3], v1, off ; encoding: [0x00,0x80,0x70,0xdc,0x02,0x01,0x7d,0x00]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<2 x float>,i32} @llvm.amdgcn.image.load.1d.v2f32i32.i32(i32 8, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
@@ -1970,32 +1845,27 @@ define amdgpu_ps <4 x float> @load_mip_3d(<8 x i32> inreg %rsrc, i32 %s, i32 %t,
 ; VERDE-LABEL: load_mip_3d:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf unorm
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_mip_3d:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf unorm
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_mip_3d:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf unorm
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_mip_3d:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf unorm
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_mip_3d:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm ; encoding: [0x10,0x1f,0x04,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.3d.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %r, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2006,32 +1876,27 @@ define amdgpu_ps <4 x float> @load_mip_cube(<8 x i32> inreg %rsrc, i32 %s, i32 %
 ; VERDE-LABEL: load_mip_cube:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf unorm da
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_mip_cube:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf unorm da
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_mip_cube:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf unorm da
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_mip_cube:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf unorm da
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_mip_cube:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_CUBE unorm ; encoding: [0x18,0x1f,0x04,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.cube.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2042,32 +1907,27 @@ define amdgpu_ps <4 x float> @load_mip_1darray(<8 x i32> inreg %rsrc, i32 %s, i3
 ; VERDE-LABEL: load_mip_1darray:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load_mip v[0:3], v[0:2], s[0:7] dmask:0xf unorm da
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_mip_1darray:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load_mip v[0:3], v[0:2], s[0:7] dmask:0xf unorm da
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_mip_1darray:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load_mip v[0:3], v[0:2], s[0:7] dmask:0xf unorm da
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_mip_1darray:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load_mip v[0:3], v[0:2], s[0:7] dmask:0xf unorm da
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_mip_1darray:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load_mip v[0:3], v[0:2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY unorm ; encoding: [0x20,0x1f,0x04,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.1darray.v4f32.i32(i32 15, i32 %s, i32 %slice, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2078,32 +1938,27 @@ define amdgpu_ps <4 x float> @load_mip_2darray(<8 x i32> inreg %rsrc, i32 %s, i3
 ; VERDE-LABEL: load_mip_2darray:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf unorm da
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_mip_2darray:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf unorm da
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_mip_2darray:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf unorm da
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_mip_2darray:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf unorm da
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_mip_2darray:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY unorm ; encoding: [0x28,0x1f,0x04,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.2darray.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2548,32 +2403,27 @@ define amdgpu_ps <4 x float> @getresinfo_1d(<8 x i32> inreg %rsrc, i32 %mip) {
 ; VERDE-LABEL: getresinfo_1d:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: getresinfo_1d:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: getresinfo_1d:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: getresinfo_1d:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: getresinfo_1d:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm ; encoding: [0x00,0x1f,0x38,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.1d.v4f32.i32(i32 15, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2584,32 +2434,27 @@ define amdgpu_ps <4 x float> @getresinfo_2d(<8 x i32> inreg %rsrc, i32 %mip) {
 ; VERDE-LABEL: getresinfo_2d:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: getresinfo_2d:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: getresinfo_2d:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: getresinfo_2d:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: getresinfo_2d:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm ; encoding: [0x08,0x1f,0x38,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.2d.v4f32.i32(i32 15, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2620,32 +2465,27 @@ define amdgpu_ps <4 x float> @getresinfo_3d(<8 x i32> inreg %rsrc, i32 %mip) {
 ; VERDE-LABEL: getresinfo_3d:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: getresinfo_3d:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: getresinfo_3d:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: getresinfo_3d:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: getresinfo_3d:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm ; encoding: [0x10,0x1f,0x38,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.3d.v4f32.i32(i32 15, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2656,32 +2496,27 @@ define amdgpu_ps <4 x float> @getresinfo_cube(<8 x i32> inreg %rsrc, i32 %mip) {
 ; VERDE-LABEL: getresinfo_cube:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm da
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: getresinfo_cube:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm da
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: getresinfo_cube:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm da
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: getresinfo_cube:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm da
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: getresinfo_cube:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_CUBE unorm ; encoding: [0x18,0x1f,0x38,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.cube.v4f32.i32(i32 15, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2692,32 +2527,27 @@ define amdgpu_ps <4 x float> @getresinfo_1darray(<8 x i32> inreg %rsrc, i32 %mip
 ; VERDE-LABEL: getresinfo_1darray:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm da
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: getresinfo_1darray:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm da
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: getresinfo_1darray:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm da
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: getresinfo_1darray:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm da
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: getresinfo_1darray:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY unorm ; encoding: [0x20,0x1f,0x38,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.1darray.v4f32.i32(i32 15, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2728,32 +2558,27 @@ define amdgpu_ps <4 x float> @getresinfo_2darray(<8 x i32> inreg %rsrc, i32 %mip
 ; VERDE-LABEL: getresinfo_2darray:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm da
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: getresinfo_2darray:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm da
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: getresinfo_2darray:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm da
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: getresinfo_2darray:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm da
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: getresinfo_2darray:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY unorm ; encoding: [0x28,0x1f,0x38,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.2darray.v4f32.i32(i32 15, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2764,32 +2589,27 @@ define amdgpu_ps <4 x float> @getresinfo_2dmsaa(<8 x i32> inreg %rsrc, i32 %mip)
 ; VERDE-LABEL: getresinfo_2dmsaa:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: getresinfo_2dmsaa:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: getresinfo_2dmsaa:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: getresinfo_2dmsaa:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: getresinfo_2dmsaa:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA unorm ; encoding: [0x30,0x1f,0x38,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.2dmsaa.v4f32.i32(i32 15, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2800,32 +2620,27 @@ define amdgpu_ps <4 x float> @getresinfo_2darraymsaa(<8 x i32> inreg %rsrc, i32 
 ; VERDE-LABEL: getresinfo_2darraymsaa:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm da
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: getresinfo_2darraymsaa:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm da
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: getresinfo_2darraymsaa:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm da
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: getresinfo_2darraymsaa:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm da
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: getresinfo_2darraymsaa:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm ; encoding: [0x38,0x1f,0x38,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.2darraymsaa.v4f32.i32(i32 15, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2836,32 +2651,27 @@ define amdgpu_ps float @load_1d_V1(<8 x i32> inreg %rsrc, i32 %s) {
 ; VERDE-LABEL: load_1d_V1:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load v0, v0, s[0:7] dmask:0x8 unorm
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_1d_V1:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load v0, v0, s[0:7] dmask:0x8 unorm
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_1d_V1:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load v0, v0, s[0:7] dmask:0x8 unorm
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_1d_V1:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load v0, v0, s[0:7] dmask:0x8 unorm
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_V1:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load v0, v0, s[0:7] dmask:0x8 dim:SQ_RSRC_IMG_1D unorm ; encoding: [0x00,0x18,0x00,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call float @llvm.amdgcn.image.load.1d.f32.i32(i32 8, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2872,32 +2682,27 @@ define amdgpu_ps <2 x float> @load_1d_V2(<8 x i32> inreg %rsrc, i32 %s) {
 ; VERDE-LABEL: load_1d_V2:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x9 unorm
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_1d_V2:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x9 unorm
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_1d_V2:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x9 unorm
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_1d_V2:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x9 unorm
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_V2:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x9 dim:SQ_RSRC_IMG_1D unorm ; encoding: [0x00,0x19,0x00,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <2 x float> @llvm.amdgcn.image.load.1d.v2f32.i32(i32 9, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2970,32 +2775,27 @@ define amdgpu_ps <4 x float> @load_1d_glc(<8 x i32> inreg %rsrc, i32 %s) {
 ; VERDE-LABEL: load_1d_glc:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm glc
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_1d_glc:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm glc
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_1d_glc:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm glc
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_1d_glc:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm glc
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_glc:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc ; encoding: [0x00,0x3f,0x00,0xf0,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 1)
@@ -3006,32 +2806,27 @@ define amdgpu_ps <4 x float> @load_1d_slc(<8 x i32> inreg %rsrc, i32 %s) {
 ; VERDE-LABEL: load_1d_slc:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm slc
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_1d_slc:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm slc
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_1d_slc:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm slc
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_1d_slc:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm slc
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_slc:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm slc ; encoding: [0x00,0x1f,0x00,0xf2,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 2)
@@ -3042,32 +2837,27 @@ define amdgpu_ps <4 x float> @load_1d_glc_slc(<8 x i32> inreg %rsrc, i32 %s) {
 ; VERDE-LABEL: load_1d_glc_slc:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm glc slc
-; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: load_1d_glc_slc:
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm glc slc
-; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: load_1d_glc_slc:
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm glc slc
-; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: load_1d_glc_slc:
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm glc slc
-; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_1d_glc_slc:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc slc ; encoding: [0x00,0x3f,0x00,0xf2,0x00,0x00,0x00,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 3)
@@ -3254,7 +3044,6 @@ define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, float addrspace(3)
 ; VERDE-NEXT:    ds_write_b32 v0, v3
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    v_mov_b32_e32 v0, v1
-; VERDE-NEXT:    s_waitcnt lgkmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; FIJI-LABEL: image_load_mmo:
@@ -3265,7 +3054,6 @@ define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, float addrspace(3)
 ; FIJI-NEXT:    ds_write2_b32 v0, v3, v3 offset1:4
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    v_mov_b32_e32 v0, v1
-; FIJI-NEXT:    s_waitcnt lgkmcnt(0)
 ; FIJI-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: image_load_mmo:
@@ -3275,7 +3063,6 @@ define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, float addrspace(3)
 ; GFX6789-NEXT:    ds_write2_b32 v0, v3, v3 offset1:4
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    v_mov_b32_e32 v0, v1
-; GFX6789-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: image_load_mmo:
@@ -3285,7 +3072,6 @@ define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, float addrspace(3)
 ; NOPRT-NEXT:    ds_write2_b32 v0, v3, v3 offset1:4
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    v_mov_b32_e32 v0, v1
-; NOPRT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: image_load_mmo:
@@ -3296,7 +3082,6 @@ define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, float addrspace(3)
 ; GFX10-NEXT:    ds_write2_b32 v0, v2, v2 offset1:4 ; encoding: [0x00,0x04,0x38,0xd8,0x00,0x02,0x02,0x00]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v1 ; encoding: [0x01,0x03,0x00,0x7e]
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0) ; encoding: [0x7f,0xc0,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
   store float 0.000000e+00, float addrspace(3)* %lds
   %c0 = extractelement <2 x i32> %c, i32 0

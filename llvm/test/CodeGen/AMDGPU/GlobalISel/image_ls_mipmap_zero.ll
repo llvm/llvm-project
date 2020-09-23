@@ -14,7 +14,6 @@ define amdgpu_ps <4 x float> @load_mip_1d(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_mip_1d:
@@ -29,7 +28,6 @@ define amdgpu_ps <4 x float> @load_mip_1d(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32(i32 15, i32 %s, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
@@ -48,7 +46,6 @@ define amdgpu_ps <4 x float> @load_mip_2d(<8 x i32> inreg %rsrc, i32 %s, i32 %t)
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf unorm
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_mip_2d:
@@ -63,7 +60,6 @@ define amdgpu_ps <4 x float> @load_mip_2d(<8 x i32> inreg %rsrc, i32 %s, i32 %t)
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32(i32 15, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
@@ -82,7 +78,6 @@ define amdgpu_ps <4 x float> @load_mip_3d(<8 x i32> inreg %rsrc, i32 %s, i32 %t,
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_mip_3d:
@@ -97,7 +92,6 @@ define amdgpu_ps <4 x float> @load_mip_3d(<8 x i32> inreg %rsrc, i32 %s, i32 %t,
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.3d.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %u, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
@@ -116,7 +110,6 @@ define amdgpu_ps <4 x float> @load_mip_1darray(<8 x i32> inreg %rsrc, i32 %s, i3
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf unorm da
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_mip_1darray:
@@ -131,7 +124,6 @@ define amdgpu_ps <4 x float> @load_mip_1darray(<8 x i32> inreg %rsrc, i32 %s, i3
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY unorm
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.1darray.v4f32.i32(i32 15, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
@@ -150,7 +142,6 @@ define amdgpu_ps <4 x float> @load_mip_2darray(<8 x i32> inreg %rsrc, i32 %s, i3
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm da
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_mip_2darray:
@@ -165,7 +156,6 @@ define amdgpu_ps <4 x float> @load_mip_2darray(<8 x i32> inreg %rsrc, i32 %s, i3
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY unorm
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.2darray.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %u, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
@@ -184,7 +174,6 @@ define amdgpu_ps <4 x float> @load_mip_cube(<8 x i32> inreg %rsrc, i32 %s, i32 %
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf unorm da
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: load_mip_cube:
@@ -199,7 +188,6 @@ define amdgpu_ps <4 x float> @load_mip_cube(<8 x i32> inreg %rsrc, i32 %s, i32 %
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_load v[0:3], v[0:2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_CUBE unorm
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.cube.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %u, i32 0, <8 x i32> %rsrc, i32 0, i32 0)

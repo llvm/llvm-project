@@ -10,7 +10,6 @@ define <3 x i32> @load_lds_v3i32(<3 x i32> addrspace(3)* %ptr) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    ds_read_b96 v[0:2], v0
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-LABEL: load_lds_v3i32:
@@ -18,7 +17,6 @@ define <3 x i32> @load_lds_v3i32(<3 x i32> addrspace(3)* %ptr) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
 ; GFX7-NEXT:    ds_read_b96 v[0:2], v0
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
   %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr
   ret <3 x i32> %load
@@ -205,7 +203,6 @@ define <3 x i32> @load_lds_v3i32_align4(<3 x i32> addrspace(3)* %ptr) {
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX9-NEXT:    ds_read2_b32 v[0:1], v0 offset1:1
 ; GFX9-NEXT:    ds_read_b32 v2, v2 offset:8
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-LABEL: load_lds_v3i32_align4:
@@ -215,7 +212,6 @@ define <3 x i32> @load_lds_v3i32_align4(<3 x i32> addrspace(3)* %ptr) {
 ; GFX7-NEXT:    s_mov_b32 m0, -1
 ; GFX7-NEXT:    ds_read2_b32 v[0:1], v0 offset1:1
 ; GFX7-NEXT:    ds_read_b32 v2, v2 offset:8
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
   %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr, align 4
   ret <3 x i32> %load
@@ -228,7 +224,6 @@ define <3 x i32> @load_lds_v3i32_align8(<3 x i32> addrspace(3)* %ptr) {
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX9-NEXT:    ds_read_b64 v[0:1], v0
 ; GFX9-NEXT:    ds_read_b32 v2, v2 offset:8
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-LABEL: load_lds_v3i32_align8:
@@ -238,7 +233,6 @@ define <3 x i32> @load_lds_v3i32_align8(<3 x i32> addrspace(3)* %ptr) {
 ; GFX7-NEXT:    s_mov_b32 m0, -1
 ; GFX7-NEXT:    ds_read_b64 v[0:1], v0
 ; GFX7-NEXT:    ds_read_b32 v2, v2 offset:8
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
   %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr, align 8
   ret <3 x i32> %load
@@ -249,7 +243,6 @@ define <3 x i32> @load_lds_v3i32_align16(<3 x i32> addrspace(3)* %ptr) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    ds_read_b96 v[0:2], v0
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-LABEL: load_lds_v3i32_align16:
@@ -257,7 +250,6 @@ define <3 x i32> @load_lds_v3i32_align16(<3 x i32> addrspace(3)* %ptr) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
 ; GFX7-NEXT:    ds_read_b96 v[0:2], v0
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
   %load = load <3 x i32>, <3 x i32> addrspace(3)* %ptr, align 16
   ret <3 x i32> %load
