@@ -410,6 +410,28 @@ struct IRInstructionMapper {
 /// The \ref isSimilar function compares each IRInstructionData against one
 /// another and if we have the same sequences of IRInstructionData that would
 /// create the same hash, we have similar IRSimilarityCandidates.
+///
+/// We can also compare the structure of IRSimilarityCandidates. If we can
+/// create a mapping of registers in the region contained by one
+/// IRSimilarityCandidate to the region contained by different
+/// IRSimilarityCandidate, they can be considered structurally similar.
+///
+/// IRSimilarityCandidate1:   IRSimilarityCandidate2:
+/// %add1 = add i32 %a, %b    %add1 = add i32 %d, %e
+/// %add2 = add i32 %a, %c    %add2 = add i32 %d, %f
+/// %add3 = add i32 c1, c2    %add3 = add i32 c3, c4
+///
+/// Can have the following mapping from candidate to candidate of:
+/// %a -> %d, %b -> %e, %c -> %f, c1 -> c3, c2 -> c4
+/// and can be considered similar.
+///
+/// IRSimilarityCandidate1:   IRSimilarityCandidate2:
+/// %add1 = add i32 %a, %b    %add1 = add i32 %d, c4
+/// %add2 = add i32 %a, %c    %add2 = add i32 %d, %f
+/// %add3 = add i32 c1, c2    %add3 = add i32 c3, c4
+///
+/// We cannot create the same mapping since the use of c4 is not used in the
+/// same way as %b or c2.
 class IRSimilarityCandidate {
 private:
   /// The start index of this IRSimilarityCandidate in the instruction list.
@@ -448,6 +470,37 @@ public:
   /// IRInstructionData in \p B.
   static bool isSimilar(const IRSimilarityCandidate &A,
                         const IRSimilarityCandidate &B);
+
+  /// \param A - The first IRInstructionCandidate to compare.
+  /// \param B - The second IRInstructionCandidate to compare.
+  /// \returns True when every IRInstructionData in \p A is structurally similar
+  /// to \p B.
+  static bool compareStructure(const IRSimilarityCandidate &A,
+                               const IRSimilarityCandidate &B);
+
+  struct OperandMapping {
+    /// The IRSimilarityCandidate that holds the instruction the OperVals were
+    /// pulled from.
+    const IRSimilarityCandidate &IRSC;
+
+    /// The operand values to be analyzed.
+    ArrayRef<Value *> &OperVals;
+
+    /// The current mapping of global value numbers from one IRSimilarityCandidate
+    /// to another IRSimilarityCandidate.
+    DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMapping;
+  };
+
+  /// Compare the operands in \p A and \p B and check that the current mapping
+  /// of global value numbers from \p A to \p B and \p B to \A is consistent.
+  ///
+  /// \param A - The first IRInstructionCandidate, operand values, and current
+  /// operand mappings to compare.
+  /// \param B - The second IRInstructionCandidate, operand values, and current
+  /// operand mappings to compare.
+  /// \returns true if the IRSimilarityCandidates operands are compatible.
+  static bool compareOperandMapping(OperandMapping A, OperandMapping B);
+
   /// Compare the start and end indices of the two IRSimilarityCandidates for
   /// whether they overlap. If the start instruction of one
   /// IRSimilarityCandidate is less than the end instruction of the other, and
@@ -521,6 +574,7 @@ public:
   iterator begin() const { return iterator(front()); }
   iterator end() const { return std::next(iterator(back())); }
 };
+
 } // end namespace IRSimilarity
 } // end namespace llvm
 
