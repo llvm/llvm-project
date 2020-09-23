@@ -2881,16 +2881,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     // represent them.
     if (Ty.isVector())
       return UnableToLegalize;
-    LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
-    Type *ZeroTy = getFloatTypeForLLT(Ctx, Ty);
-    if (!ZeroTy)
-      return UnableToLegalize;
-    ConstantFP &ZeroForNegation =
-        *cast<ConstantFP>(ConstantFP::getZeroValueForNegation(ZeroTy));
-    auto Zero = MIRBuilder.buildFConstant(Ty, ZeroForNegation);
+    auto SignMask =
+        MIRBuilder.buildConstant(Ty, APInt::getSignMask(Ty.getSizeInBits()));
     Register SubByReg = MI.getOperand(1).getReg();
-    Register ZeroReg = Zero.getReg(0);
-    MIRBuilder.buildFSub(Res, ZeroReg, SubByReg, MI.getFlags());
+    MIRBuilder.buildXor(Res, SubByReg, SignMask);
     MI.eraseFromParent();
     return Legalized;
   }

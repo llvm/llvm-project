@@ -689,16 +689,8 @@ body:             |
     ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY $r0
     %0(s32) = COPY $r0
     ; HARD: [[R:%[0-9]+]]:_(s32) = G_FNEG [[X]]
-    ; SOFT-NOT: G_FNEG
-    ; SOFT-DAG: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
-    ; SOFT: ADJCALLSTACKDOWN
-    ; SOFT-DAG: $r0 = COPY [[ZERO]]
-    ; SOFT-DAG: $r1 = COPY [[X]]
-    ; SOFT-AEABI: BL{{.*}} &__aeabi_fsub, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; SOFT-DEFAULT: BL{{.*}} &__subsf3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY $r0
-    ; SOFT: ADJCALLSTACKUP
-    ; SOFT-NOT: G_FNEG
+    ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
+    ; SOFT: [[R:%[0-9]+]]:_(s32) = G_XOR [[X]], [[ZERO]]
     %1(s32) = G_FNEG %0
     ; CHECK: $r0 = COPY [[R]]
     $r0 = COPY %1(s32)
@@ -730,20 +722,14 @@ body:             |
     ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]]
     %2(s64) = G_MERGE_VALUES %0(s32), %1(s32)
     ; HARD: [[R:%[0-9]+]]:_(s64) = G_FNEG [[X]]
-    ; SOFT-NOT: G_FNEG
-    ; SOFT-DAG: [[NEGATIVE_ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
-    ; SOFT-DAG: [[POSITIVE_ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; SOFT: ADJCALLSTACKDOWN
-    ; SOFT-DAG: $r{{[0-1]}} = COPY [[NEGATIVE_ZERO]]
-    ; SOFT-DAG: $r{{[0-1]}} = COPY [[POSITIVE_ZERO]]
-    ; SOFT-DAG: $r{{[2-3]}} = COPY [[X0]]
-    ; SOFT-DAG: $r{{[2-3]}} = COPY [[X1]]
-    ; SOFT-AEABI: BL{{.*}} &__aeabi_dsub, {{.*}}, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
-    ; SOFT-DEFAULT: BL{{.*}} &__subdf3, {{.*}}, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
-    ; SOFT: ADJCALLSTACKUP
-    ; SOFT-NOT: G_FNEG
+    ; HARD: G_UNMERGE_VALUES [[R]](s64)
+    ; SOFT: [[POSITIVE_ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT: [[NEGATIVE_ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
+    ; SOFT: [[LOWR:%[0-9]+]]:_(s32) = G_XOR [[X0]], [[POSITIVE_ZERO]]
+    ; SOFT: [[HIGHR:%[0-9]+]]:_(s32) = G_XOR [[X1]], [[NEGATIVE_ZERO]]
+    ; SOFT: $r0 = COPY [[LOWR]]
+    ; SOFT: $r1 = COPY [[HIGHR]]
     %3(s64) = G_FNEG %2
-    ; HARD-DAG: G_UNMERGE_VALUES [[R]](s64)
     %4(s32),%5(s32) = G_UNMERGE_VALUES %3(s64)
     $r0 = COPY %4(s32)
     $r1 = COPY %5(s32)
