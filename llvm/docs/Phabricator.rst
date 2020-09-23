@@ -39,6 +39,21 @@ the command line. To get you set up, follow the
 
 You can learn more about how to use arc to interact with
 Phabricator in the `Arcanist User Guide`_.
+The basic way of creating a revision for the current commit in your local
+repository is to run:
+
+::
+
+  arc diff HEAD~
+
+
+If you later update your commit message, you need to add the `--verbatim`
+option to have `arc` update the description on Phabricator:
+
+::
+
+  arc diff --edit --verbatim
+
 
 .. _phabricator-request-review-web:
 
