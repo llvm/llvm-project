@@ -1,5 +1,6 @@
 ; Ensure calling bypassing the driver with -fembed-bitcode embeds bitcode pre-
 ; optimizations
+; REQUIRES: x86-registered-target
 
 ; RUN: %clang_cc1 -O2 -triple x86_64-unknown-linux-gnu -emit-obj %s -o %t.o -fembed-bitcode=all
 ; RUN: llvm-objcopy --dump-section=.llvmbc=%t.bc %t.o /dev/null
