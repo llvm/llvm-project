@@ -513,6 +513,7 @@ define amdgpu_ps i128 @extractelement_sgpr_v4i128_idx0(<4 x i128> addrspace(4)* 
 ; GCN-LABEL: extractelement_sgpr_v4i128_idx0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx16 s[0:15], s[2:3], 0x0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
   %vector = load <4 x i128>, <4 x i128> addrspace(4)* %ptr
   %element = extractelement <4 x i128> %vector, i32 0
@@ -569,12 +570,14 @@ define i128 @extractelement_vgpr_v4i128_idx0(<4 x i128> addrspace(1)* %ptr) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: extractelement_vgpr_v4i128_idx0:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-LABEL: extractelement_vgpr_v4i128_idx0:
@@ -584,6 +587,7 @@ define i128 @extractelement_vgpr_v4i128_idx0(<4 x i128> addrspace(1)* %ptr) {
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:    buffer_load_dwordx4 v[0:3], v[0:1], s[4:7], 0 addr64
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
   %vector = load <4 x i128>, <4 x i128> addrspace(1)* %ptr
   %element = extractelement <4 x i128> %vector, i32 0

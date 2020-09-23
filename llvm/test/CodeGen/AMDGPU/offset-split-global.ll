@@ -10,6 +10,7 @@ define i8 @global_inst_valu_offset_1(i8 addrspace(1)* %p) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_1:
@@ -18,6 +19,7 @@ define i8 @global_inst_valu_offset_1(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:1
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 1
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -29,6 +31,7 @@ define i8 @global_inst_valu_offset_11bit_max(i8 addrspace(1)* %p) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:2047
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_11bit_max:
@@ -37,6 +40,7 @@ define i8 @global_inst_valu_offset_11bit_max(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:2047
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 2047
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -48,6 +52,7 @@ define i8 @global_inst_valu_offset_12bit_max(i8 addrspace(1)* %p) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:4095
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_12bit_max:
@@ -58,6 +63,7 @@ define i8 @global_inst_valu_offset_12bit_max(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:2047
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 4095
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -71,6 +77,7 @@ define i8 @global_inst_valu_offset_13bit_max(i8 addrspace(1)* %p) {
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x1000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:4095
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_13bit_max:
@@ -81,6 +88,7 @@ define i8 @global_inst_valu_offset_13bit_max(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:2047
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 8191
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -92,6 +100,7 @@ define i8 @global_inst_valu_offset_neg_11bit_max(i8 addrspace(1)* %p) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:-2048
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_neg_11bit_max:
@@ -100,6 +109,7 @@ define i8 @global_inst_valu_offset_neg_11bit_max(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:-2048
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 -2048
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -111,6 +121,7 @@ define i8 @global_inst_valu_offset_neg_12bit_max(i8 addrspace(1)* %p) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:-4096
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_neg_12bit_max:
@@ -121,6 +132,7 @@ define i8 @global_inst_valu_offset_neg_12bit_max(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, -1, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 -4096
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -134,6 +146,7 @@ define i8 @global_inst_valu_offset_neg_13bit_max(i8 addrspace(1)* %p) {
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffe000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_neg_13bit_max:
@@ -144,6 +157,7 @@ define i8 @global_inst_valu_offset_neg_13bit_max(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, -1, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 -8192
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -155,6 +169,7 @@ define i8 @global_inst_valu_offset_2x_11bit_max(i8 addrspace(1)* %p) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:4095
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_2x_11bit_max:
@@ -165,6 +180,7 @@ define i8 @global_inst_valu_offset_2x_11bit_max(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:2047
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 4095
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -178,6 +194,7 @@ define i8 @global_inst_valu_offset_2x_12bit_max(i8 addrspace(1)* %p) {
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x1000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:4095
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_2x_12bit_max:
@@ -188,6 +205,7 @@ define i8 @global_inst_valu_offset_2x_12bit_max(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:2047
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 8191
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -201,6 +219,7 @@ define i8 @global_inst_valu_offset_2x_13bit_max(i8 addrspace(1)* %p) {
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x3000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:4095
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_2x_13bit_max:
@@ -211,6 +230,7 @@ define i8 @global_inst_valu_offset_2x_13bit_max(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:2047
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 16383
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -222,6 +242,7 @@ define i8 @global_inst_valu_offset_2x_neg_11bit_max(i8 addrspace(1)* %p) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:-4096
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_2x_neg_11bit_max:
@@ -232,6 +253,7 @@ define i8 @global_inst_valu_offset_2x_neg_11bit_max(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, -1, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 -4096
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -245,6 +267,7 @@ define i8 @global_inst_valu_offset_2x_neg_12bit_max(i8 addrspace(1)* %p) {
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffe000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_2x_neg_12bit_max:
@@ -255,6 +278,7 @@ define i8 @global_inst_valu_offset_2x_neg_12bit_max(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, -1, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 -8192
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -268,6 +292,7 @@ define i8 @global_inst_valu_offset_2x_neg_13bit_max(i8 addrspace(1)* %p) {
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffc000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_2x_neg_13bit_max:
@@ -278,6 +303,7 @@ define i8 @global_inst_valu_offset_2x_neg_13bit_max(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, -1, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 -16384
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -292,6 +318,7 @@ define i8 @global_inst_valu_offset_64bit_11bit_split0(i8 addrspace(1)* %p) {
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 2, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:2047
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_64bit_11bit_split0:
@@ -302,6 +329,7 @@ define i8 @global_inst_valu_offset_64bit_11bit_split0(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 2, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:2047
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 8589936639
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -316,6 +344,7 @@ define i8 @global_inst_valu_offset_64bit_11bit_split1(i8 addrspace(1)* %p) {
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 2, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:2048
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_64bit_11bit_split1:
@@ -326,6 +355,7 @@ define i8 @global_inst_valu_offset_64bit_11bit_split1(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 2, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 8589936640
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -340,6 +370,7 @@ define i8 @global_inst_valu_offset_64bit_12bit_split0(i8 addrspace(1)* %p) {
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 2, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:4095
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_64bit_12bit_split0:
@@ -350,6 +381,7 @@ define i8 @global_inst_valu_offset_64bit_12bit_split0(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 2, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:2047
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 8589938687
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -364,6 +396,7 @@ define i8 @global_inst_valu_offset_64bit_12bit_split1(i8 addrspace(1)* %p) {
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x1000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 2, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_64bit_12bit_split1:
@@ -374,6 +407,7 @@ define i8 @global_inst_valu_offset_64bit_12bit_split1(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 2, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 8589938688
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -388,6 +422,7 @@ define i8 @global_inst_valu_offset_64bit_13bit_split0(i8 addrspace(1)* %p) {
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x1000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 2, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:4095
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_64bit_13bit_split0:
@@ -398,6 +433,7 @@ define i8 @global_inst_valu_offset_64bit_13bit_split0(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 2, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:2047
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 8589942783
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -412,6 +448,7 @@ define i8 @global_inst_valu_offset_64bit_13bit_split1(i8 addrspace(1)* %p) {
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0x2000, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 2, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_64bit_13bit_split1:
@@ -422,6 +459,7 @@ define i8 @global_inst_valu_offset_64bit_13bit_split1(i8 addrspace(1)* %p) {
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 2, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 8589942784
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -437,6 +475,7 @@ define i8 @global_inst_valu_offset_64bit_11bit_neg_high_split0(i8 addrspace(1)* 
 ; GFX9-NEXT:    v_bfrev_b32_e32 v2, 1
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:-2049
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_64bit_11bit_neg_high_split0:
@@ -447,6 +486,7 @@ define i8 @global_inst_valu_offset_64bit_11bit_neg_high_split0(i8 addrspace(1)* 
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0x80000000, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:-1
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 -9223372036854773761
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -462,6 +502,7 @@ define i8 @global_inst_valu_offset_64bit_11bit_neg_high_split1(i8 addrspace(1)* 
 ; GFX9-NEXT:    v_bfrev_b32_e32 v2, 1
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:-2048
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_64bit_11bit_neg_high_split1:
@@ -472,6 +513,7 @@ define i8 @global_inst_valu_offset_64bit_11bit_neg_high_split1(i8 addrspace(1)* 
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0x80000000, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 -9223372036854773760
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -487,6 +529,7 @@ define i8 @global_inst_valu_offset_64bit_12bit_neg_high_split0(i8 addrspace(1)* 
 ; GFX9-NEXT:    v_bfrev_b32_e32 v2, 1
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:-1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_64bit_12bit_neg_high_split0:
@@ -497,6 +540,7 @@ define i8 @global_inst_valu_offset_64bit_12bit_neg_high_split0(i8 addrspace(1)* 
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0x80000000, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:-1
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 -9223372036854771713
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -512,6 +556,7 @@ define i8 @global_inst_valu_offset_64bit_12bit_neg_high_split1(i8 addrspace(1)* 
 ; GFX9-NEXT:    v_bfrev_b32_e32 v2, 1
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_64bit_12bit_neg_high_split1:
@@ -522,6 +567,7 @@ define i8 @global_inst_valu_offset_64bit_12bit_neg_high_split1(i8 addrspace(1)* 
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0x80000000, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 -9223372036854771712
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -537,6 +583,7 @@ define i8 @global_inst_valu_offset_64bit_13bit_neg_high_split0(i8 addrspace(1)* 
 ; GFX9-NEXT:    v_bfrev_b32_e32 v2, 1
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:-1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_64bit_13bit_neg_high_split0:
@@ -547,6 +594,7 @@ define i8 @global_inst_valu_offset_64bit_13bit_neg_high_split0(i8 addrspace(1)* 
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0x80000000, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:-1
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 -9223372036854767617
   %load = load i8, i8 addrspace(1)* %gep, align 4
@@ -562,6 +610,7 @@ define i8 @global_inst_valu_offset_64bit_13bit_neg_high_split1(i8 addrspace(1)* 
 ; GFX9-NEXT:    v_bfrev_b32_e32 v2, 1
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: global_inst_valu_offset_64bit_13bit_neg_high_split1:
@@ -572,6 +621,7 @@ define i8 @global_inst_valu_offset_64bit_13bit_neg_high_split1(i8 addrspace(1)* 
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0x80000000, v1, vcc_lo
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, i8 addrspace(1)* %p, i64 -9223372036854767616
   %load = load i8, i8 addrspace(1)* %gep, align 4

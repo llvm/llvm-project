@@ -21,7 +21,6 @@ declare void @external_void_func_i32(i32) #0
 ; GCN-DAG: v_writelane_b32 v40, s31, 1
 
 ; GCN: s_swappc_b64
-; GCN-NEXT: s_waitcnt vmcnt(0)
 
 ; GCN: v_readlane_b32 s4, v40, 0
 ; GCN: v_readlane_b32 s5, v40, 1
@@ -31,6 +30,7 @@ declare void @external_void_func_i32(i32) #0
 ; GCN: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GCN-NEXT: buffer_load_dword v40, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64 s[4:5]
 define void @test_func_call_external_void_func_i32_imm() #0 {
   call void @external_void_func_i32(i32 42)
@@ -43,7 +43,6 @@ define void @test_func_call_external_void_func_i32_imm() #0 {
 ; GCN-DAG: s_add_u32 s32, s32, 0x1400{{$}}
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:
 ; GCN: s_swappc_b64
-; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN: s_sub_u32 s32, s32, 0x1400{{$}}
 ; GCN: s_setpc_b64
 define void @test_func_call_external_void_func_i32_imm_stack_use() #0 {

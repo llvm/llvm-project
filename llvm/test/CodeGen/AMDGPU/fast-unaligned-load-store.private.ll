@@ -55,6 +55,7 @@ define void @private_store_2xi16_align2(i16 addrspace(5)* %p, i16 addrspace(5)* 
 ; GFX7-ALIGNED-NEXT:    v_add_i32_e32 v2, vcc, 2, v1
 ; GFX7-ALIGNED-NEXT:    buffer_store_short v3, v1, s[0:3], 0 offen
 ; GFX7-ALIGNED-NEXT:    buffer_store_short v0, v2, s[0:3], 0 offen
+; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-ALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-UNALIGNED-LABEL: private_store_2xi16_align2:
@@ -65,6 +66,7 @@ define void @private_store_2xi16_align2(i16 addrspace(5)* %p, i16 addrspace(5)* 
 ; GFX7-UNALIGNED-NEXT:    v_add_i32_e32 v2, vcc, 2, v1
 ; GFX7-UNALIGNED-NEXT:    buffer_store_short v3, v1, s[0:3], 0 offen
 ; GFX7-UNALIGNED-NEXT:    buffer_store_short v0, v2, s[0:3], 0 offen
+; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: private_store_2xi16_align2:
@@ -74,6 +76,7 @@ define void @private_store_2xi16_align2(i16 addrspace(5)* %p, i16 addrspace(5)* 
 ; GFX9-NEXT:    buffer_store_short v0, v1, s[0:3], 0 offen
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 2
 ; GFX9-NEXT:    buffer_store_short v0, v1, s[0:3], 0 offen offset:2
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep.r = getelementptr i16, i16 addrspace(5)* %r, i64 1
   store i16 1, i16 addrspace(5)* %r, align 2
@@ -108,6 +111,7 @@ define i32 @private_load_2xi16_align1(i16 addrspace(5)* %p) #0 {
 ; GFX7-UNALIGNED:       ; %bb.0:
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: private_load_2xi16_align1:
@@ -145,6 +149,7 @@ define void @private_store_2xi16_align1(i16 addrspace(5)* %p, i16 addrspace(5)* 
 ; GFX7-ALIGNED-NEXT:    buffer_store_byte v4, v3, s[0:3], 0 offen
 ; GFX7-ALIGNED-NEXT:    buffer_store_byte v4, v1, s[0:3], 0 offen
 ; GFX7-ALIGNED-NEXT:    buffer_store_byte v0, v2, s[0:3], 0 offen
+; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-ALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-UNALIGNED-LABEL: private_store_2xi16_align1:
@@ -152,6 +157,7 @@ define void @private_store_2xi16_align1(i16 addrspace(5)* %p, i16 addrspace(5)* 
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    v_mov_b32_e32 v0, 0x20001
 ; GFX7-UNALIGNED-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: private_store_2xi16_align1:
@@ -159,6 +165,7 @@ define void @private_store_2xi16_align1(i16 addrspace(5)* %p, i16 addrspace(5)* 
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x20001
 ; GFX9-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %gep.r = getelementptr i16, i16 addrspace(5)* %r, i64 1
   store i16 1, i16 addrspace(5)* %r, align 1
@@ -179,12 +186,14 @@ define i32 @private_load_2xi16_align4(i16 addrspace(5)* %p) #0 {
 ; GFX7-ALIGNED:       ; %bb.0:
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-ALIGNED-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-ALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-UNALIGNED-LABEL: private_load_2xi16_align4:
 ; GFX7-UNALIGNED:       ; %bb.0:
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: private_load_2xi16_align4:
@@ -224,6 +233,7 @@ define void @private_store_2xi16_align4(i16 addrspace(5)* %p, i16 addrspace(5)* 
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0x20001
 ; GCN-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %gep.r = getelementptr i16, i16 addrspace(5)* %r, i64 1
   store i16 1, i16 addrspace(5)* %r, align 4

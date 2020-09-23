@@ -10,7 +10,6 @@ declare hidden void @external_void_func_void() #0
 ; GCN-NEXT: s_addc_u32 s35, s35,
 ; GCN-NEXT: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64 s[30:31], s[34:35]
-; GCN-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 
 ; GCN-NEXT: #ASMSTART
 ; GCN-NEXT: #ASMEND
@@ -31,7 +30,6 @@ define amdgpu_kernel void @test_kernel_call_external_void_func_void_clobber_s30_
 ; GCN: v_writelane_b32 v40, s31, 3
 
 ; GCN: s_swappc_b64
-; GCN-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT: ;;#ASMSTART
 ; GCN-NEXT: ;;#ASMEND
 ; GCN-NEXT: s_swappc_b64
@@ -57,7 +55,6 @@ define void @test_func_call_external_void_func_void_clobber_s30_s31_call_externa
 ; GCN: s_mov_b32 s33, s32
 ; GCN: s_add_u32 s32, s32, 0x400
 ; GCN: s_swappc_b64
-; GCN-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT: s_swappc_b64
 
 ; GCN: v_readlane_b32 s33, v40, 4
@@ -109,7 +106,6 @@ define amdgpu_kernel void @test_call_void_func_void_clobber_vcc(i32 addrspace(1)
 ; GCN-LABEL: {{^}}test_call_void_func_void_mayclobber_s31:
 ; GCN: s_mov_b32 s33, s31
 ; GCN-NEXT: s_swappc_b64
-; GCN-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT: s_mov_b32 s31, s33
 define amdgpu_kernel void @test_call_void_func_void_mayclobber_s31(i32 addrspace(1)* %out) #0 {
   %s31 = call i32 asm sideeffect "; def $0", "={s31}"()
@@ -121,7 +117,6 @@ define amdgpu_kernel void @test_call_void_func_void_mayclobber_s31(i32 addrspace
 ; GCN-LABEL: {{^}}test_call_void_func_void_mayclobber_v31:
 ; GCN: v_mov_b32_e32 v40, v31
 ; GCN-NEXT: s_swappc_b64
-; GCN-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT: v_mov_b32_e32 v31, v40
 define amdgpu_kernel void @test_call_void_func_void_mayclobber_v31(i32 addrspace(1)* %out) #0 {
   %v31 = call i32 asm sideeffect "; def $0", "={v31}"()
@@ -168,7 +163,6 @@ define amdgpu_kernel void @test_call_void_func_void_preserves_s33(i32 addrspace(
 
 ; GCN-NOT: s34
 ; GCN: s_swappc_b64 s[30:31], s[4:5]
-; GCN-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 
 ; GCN-NOT: s34
 

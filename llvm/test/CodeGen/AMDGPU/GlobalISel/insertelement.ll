@@ -826,6 +826,7 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[11:14], off
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[15:18], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f64_const_s_v_v:
@@ -890,6 +891,7 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[11:14], off
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[15:18], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %insert = insertelement <8 x double> <double 1.0, double 2.0, double 3.0, double 4.0, double 5.0, double 6.0, double 7.0, double 8.0>, double %val, i32 %idx

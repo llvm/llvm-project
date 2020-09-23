@@ -12,6 +12,7 @@
 ; GFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, [[ZEROREG]], {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_FMT_32_32_SINT] idxen glc
 ; GFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, [[ZEROREG]], {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_FMT_32_FLOAT] idxen slc
 ; GFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, [[ZEROREG]], {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_FMT_32_FLOAT] idxen glc dlc
+; GCN: s_waitcnt
 define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>, <4 x float>} @tbuffer_load(<4 x i32> inreg) {
 main_body:
     %vdata     = call <4 x i32> @llvm.amdgcn.struct.tbuffer.load.v4i32(<4 x i32> %0, i32 0, i32 0, i32 0, i32 78, i32 0)
@@ -47,6 +48,7 @@ main_body:
 ; GFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, [[ZEROREG]], {{s\[[0-9]+:[0-9]+\]}}, 61 format:[BUF_FMT_10_10_10_2_SSCALED] idxen offset:4095
 ; GFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, [[ZEROREG]], {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} format:[BUF_FMT_32_32_UINT] idxen offset:73
 ; GFX10: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, [[ZEROREG]], {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:1
+; GCN: s_waitcnt
 define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>} @tbuffer_load_immoffs_large(<4 x i32> inreg, i32 inreg %soffs) {
     %vdata     = call <4 x i32> @llvm.amdgcn.struct.tbuffer.load.v4i32(<4 x i32> %0, i32 0, i32 4095, i32 61, i32 47, i32 0)
     %vdata_glc = call <4 x i32> @llvm.amdgcn.struct.tbuffer.load.v4i32(<4 x i32> %0, i32 0, i32 73, i32 %soffs, i32 62, i32 0)
@@ -124,3 +126,4 @@ declare i32 @llvm.amdgcn.struct.tbuffer.load.i32(<4 x i32>, i32, i32, i32, i32, 
 declare <2 x i32> @llvm.amdgcn.struct.tbuffer.load.v2i32(<4 x i32>, i32, i32, i32, i32, i32)
 declare <4 x i32> @llvm.amdgcn.struct.tbuffer.load.v4i32(<4 x i32>, i32, i32, i32, i32, i32)
 declare <4 x float> @llvm.amdgcn.struct.tbuffer.load.v4f32(<4 x i32>, i32, i32, i32, i32, i32)
+

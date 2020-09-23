@@ -53,15 +53,27 @@ define float @v_uitofp_to_f32_lshr8_mask255(i32 %arg0) nounwind {
 }
 
 define float @v_uitofp_to_f32_multi_use_lshr8_mask255(i32 %arg0) nounwind {
-; GCN-LABEL: v_uitofp_to_f32_multi_use_lshr8_mask255:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
-; GCN-NEXT:    v_cvt_f32_ubyte1_e32 v0, v0
-; GCN-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-NEXT:    s_mov_b32 s6, -1
-; GCN-NEXT:    buffer_store_dword v1, off, s[4:7], 0
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_uitofp_to_f32_multi_use_lshr8_mask255:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
+; SI-NEXT:    v_cvt_f32_ubyte1_e32 v0, v0
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    buffer_store_dword v1, off, s[4:7], 0
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_uitofp_to_f32_multi_use_lshr8_mask255:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
+; VI-NEXT:    v_cvt_f32_ubyte1_e32 v0, v0
+; VI-NEXT:    s_mov_b32 s7, 0xf000
+; VI-NEXT:    s_mov_b32 s6, -1
+; VI-NEXT:    buffer_store_dword v1, off, s[4:7], 0
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %lshr.8 = lshr i32 %arg0, 8
   store i32 %lshr.8, i32 addrspace(1)* undef
   %masked = and i32 %lshr.8, 255

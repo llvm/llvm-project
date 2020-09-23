@@ -6,6 +6,7 @@ define <4 x half> @shuffle_v4f16_23uu(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off offset:4
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -21,6 +22,7 @@ define <4 x half> @shuffle_v4f16_234u(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v2
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -33,6 +35,7 @@ define <4 x half> @shuffle_v4f16_u1u3(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -59,6 +62,7 @@ define <4 x half> @shuffle_v4f16_u3uu(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off offset:4
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -74,6 +78,7 @@ define <4 x half> @shuffle_v4f16_3u6u(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    global_load_dword v1, v[2:3], off offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -89,6 +94,7 @@ define <4 x half> @shuffle_v4f16_3uu7(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    global_load_dword v1, v[2:3], off offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -155,6 +161,7 @@ define <4 x half> @shuffle_v4f16_0123(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -168,6 +175,7 @@ define <4 x half> @shuffle_v4f16_0145(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX9-NEXT:    global_load_dword v1, v[2:3], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -181,6 +189,7 @@ define <4 x half> @shuffle_v4f16_0167(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX9-NEXT:    global_load_dword v1, v[2:3], off offset:4
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -222,6 +231,7 @@ define <4 x half> @shuffle_v4f16_2345(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off offset:4
 ; GFX9-NEXT:    global_load_dword v1, v[2:3], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -235,6 +245,7 @@ define <4 x half> @shuffle_v4f16_2367(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off offset:4
 ; GFX9-NEXT:    global_load_dword v1, v[2:3], off offset:4
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -250,6 +261,7 @@ define <4 x half> @shuffle_v4f16_4501(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    global_load_dword v1, v[0:1], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -265,6 +277,7 @@ define <4 x half> @shuffle_v4f16_4523(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    global_load_dword v1, v[0:1], off offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -291,6 +304,7 @@ define <4 x half> @shuffle_v4f16_4567(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[2:3], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -306,6 +320,7 @@ define <4 x half> @shuffle_v4f16_6701(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    global_load_dword v1, v[0:1], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -321,6 +336,7 @@ define <4 x half> @shuffle_v4f16_6723(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    global_load_dword v1, v[0:1], off offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -366,6 +382,7 @@ define <4 x half> @shuffle_v4f16_2356(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_and_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -383,6 +400,7 @@ define <4 x half> @shuffle_v4f16_5623(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_and_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -460,6 +478,7 @@ define <4 x i16> @shuffle_v4i16_2356(<4 x i16> addrspace(1)* %arg0, <4 x i16> ad
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_and_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x i16>, <4 x i16> addrspace(1)* %arg0
   %val1 = load <4 x i16>, <4 x i16> addrspace(1)* %arg1
@@ -473,6 +492,7 @@ define <4 x i16> @shuffle_v4i16_0167(<4 x i16> addrspace(1)* %arg0, <4 x i16> ad
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX9-NEXT:    global_load_dword v1, v[2:3], off offset:4
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x i16>, <4 x i16> addrspace(1)* %arg0
   %val1 = load <4 x i16>, <4 x i16> addrspace(1)* %arg1
@@ -602,6 +622,7 @@ define <4 x half> @shuffle_v8f16_0123(<8 x half> addrspace(1)* %arg0, <8 x half>
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <8 x half>, <8 x half> addrspace(1)* %arg0
   %val1 = load <8 x half>, <8 x half> addrspace(1)* %arg1
@@ -615,6 +636,7 @@ define <4 x half> @shuffle_v8f16_4589(<8 x half> addrspace(1)* %arg0, <8 x half>
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off offset:8
 ; GFX9-NEXT:    global_load_dword v1, v[2:3], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <8 x half>, <8 x half> addrspace(1)* %arg0
   %val1 = load <8 x half>, <8 x half> addrspace(1)* %arg1
@@ -630,6 +652,7 @@ define <4 x half> @shuffle_v8f16_10_11_2_3(<8 x half> addrspace(1)* %arg0, <8 x 
 ; GFX9-NEXT:    global_load_dword v1, v[0:1], off offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <8 x half>, <8 x half> addrspace(1)* %arg0
   %val1 = load <8 x half>, <8 x half> addrspace(1)* %arg1
@@ -647,6 +670,7 @@ define <4 x half> @shuffle_v8f16_13_14_2_3(<8 x half> addrspace(1)* %arg0, <8 x 
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_and_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <8 x half>, <8 x half> addrspace(1)* %arg0
   %val1 = load <8 x half>, <8 x half> addrspace(1)* %arg1

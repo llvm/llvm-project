@@ -220,8 +220,8 @@ bb:
 
 ; GCN-LABEL: store_vscnt_private:
 ; GCN:         buffer_store_dword
-; GFX8_9-NOT:  s_waitcnt vmcnt(0)
-; GFX10-NOT:   s_waitcnt_vscnt null, 0x0
+; GFX8_9:      s_waitcnt vmcnt(0)
+; GFX10:       s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64
 define void @store_vscnt_private(i32 addrspace(5)* %p) {
   store i32 0, i32 addrspace(5)* %p
@@ -231,8 +231,8 @@ define void @store_vscnt_private(i32 addrspace(5)* %p) {
 ; GCN-LABEL: store_vscnt_global:
 ; GFX8:        flat_store_dword
 ; GFX9_10:     global_store_dword
-; GFX8_9-NOT:  s_waitcnt vmcnt(0)
-; GFX10-NOT:   s_waitcnt_vscnt null, 0x0
+; GFX8_9:      s_waitcnt vmcnt(0)
+; GFX10:       s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64
 define void @store_vscnt_global(i32 addrspace(1)* %p) {
   store i32 0, i32 addrspace(1)* %p
@@ -241,9 +241,9 @@ define void @store_vscnt_global(i32 addrspace(1)* %p) {
 
 ; GCN-LABEL: store_vscnt_flat:
 ; GCN:         flat_store_dword
-; GFX8_9-NOT:  s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
-; GFX10-NOT:   s_waitcnt lgkmcnt(0){{$}}
-; GFX10-NOT:   s_waitcnt_vscnt null, 0x0
+; GFX8_9:      s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX10:       s_waitcnt lgkmcnt(0){{$}}
+; GFX10:       s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64
 define void @store_vscnt_flat(i32* %p) {
   store i32 0, i32* %p

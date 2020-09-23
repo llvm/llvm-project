@@ -20,7 +20,7 @@ define fastcc i32 @i32_fastcc_i32_i32(i32 %arg0, i32 %arg1) #1 {
 ; CIVI-NEXT: v_add_{{i|u}}32_e32 v0, vcc, v0, v1
 ; GFX9-NEXT: v_add_u32_e32 v0, v0, v1
 ; GCN: buffer_store_dword [[K]], off, s[0:3], s32 offset:20
-; GCN-NOT: s_waitcnt vmcnt(0)
+; GCN: s_waitcnt vmcnt(0)
 ; GCN: s_setpc_b64
 ; GCN: ; ScratchSize: 68
 define fastcc i32 @i32_fastcc_i32_i32_stack_object(i32 %arg0, i32 %arg1) #1 {

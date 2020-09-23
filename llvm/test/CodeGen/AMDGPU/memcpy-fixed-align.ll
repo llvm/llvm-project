@@ -24,6 +24,7 @@ define void @memcpy_fixed_align(i8 addrspace(5)*  %dst, i8 addrspace(1)* %src) {
 ; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:8
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca [40 x i8], addrspace(5)
   %cast = bitcast [40 x i8] addrspace(5)* %alloca to i8 addrspace(5)*

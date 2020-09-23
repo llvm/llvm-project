@@ -1085,6 +1085,7 @@ declare void @external_void_func_void() #1
 ; GCN-NEXT: s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
 ; GFX1032-NEXT: s_mov_b32 exec_lo, [[COPY_EXEC1]]
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define void @callee_no_stack_with_call() #1 {
   call void @external_void_func_void()
