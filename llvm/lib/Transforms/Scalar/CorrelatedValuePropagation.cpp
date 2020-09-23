@@ -624,7 +624,7 @@ Domain getDomain(Value *V, LazyValueInfo *LVI, Instruction *CxtI) {
   if (isNonPositive(V, LVI, CxtI))
     return Domain::NonPositive;
   return Domain::Unknown;
-};
+}
 
 /// Try to shrink a sdiv/srem's width down to the smallest power of two that's
 /// sufficient to contain its operands.
