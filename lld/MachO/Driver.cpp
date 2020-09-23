@@ -469,7 +469,7 @@ static void warnIfDeprecatedOption(const opt::Option &opt) {
 }
 
 static void warnIfUnimplementedOption(const opt::Option &opt) {
-  if (!opt.getGroup().isValid())
+  if (!opt.getGroup().isValid() || !opt.hasFlag(DriverFlag::HelpHidden))
     return;
   switch (opt.getGroup().getID()) {
   case OPT_grp_deprecated:
@@ -562,6 +562,8 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   for (const auto &arg : args) {
     const auto &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
+    warnIfUnimplementedOption(opt);
+    // TODO: are any of these better handled via filtered() or getLastArg()?
     switch (arg->getOption().getID()) {
     case OPT_INPUT:
       addFile(arg->getValue());
@@ -593,27 +595,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_platform_version:
       handlePlatformVersion(arg);
       break;
-    case OPT_all_load:
-    case OPT_o:
-    case OPT_dylib:
-    case OPT_e:
-    case OPT_F:
-    case OPT_L:
-    case OPT_ObjC:
-    case OPT_headerpad:
-    case OPT_headerpad_max_install_names:
-    case OPT_install_name:
-    case OPT_rpath:
-    case OPT_sub_library:
-    case OPT_Z:
-    case OPT_arch:
-    case OPT_syslibroot:
-    case OPT_sectcreate:
-    case OPT_dynamic:
-      // handled elsewhere
-      break;
     default:
-      warnIfUnimplementedOption(opt);
       break;
     }
   }
