@@ -232,7 +232,7 @@ private:
 /// matching dialect.
 /// This allows for decoupling the list of dialects "available" from the
 /// dialects loaded in the Context. The parser in particular will lazily load
-/// dialects in in the Context as operations are encountered.
+/// dialects in the Context as operations are encountered.
 class DialectRegistry {
   using MapTy =
       std::map<std::string, std::pair<TypeID, DialectAllocatorFunction>>;
@@ -284,7 +284,7 @@ private:
 };
 
 /// Deprecated: this provides a global registry for convenience, while we're
-/// transitionning the registration mechanism to a stateless approach.
+/// transitioning the registration mechanism to a stateless approach.
 DialectRegistry &getGlobalDialectRegistry();
 
 /// This controls globally whether the dialect registry is / isn't enabled.
