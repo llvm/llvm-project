@@ -479,5 +479,6 @@ class MiniDumpNewTestCase(TestBase):
         # Check that we loaded the module from the sysroot
         self.assertEqual(self.target.GetNumModules(), 1)
         module = self.target.GetModuleAtIndex(0)
-        spec = module.GetFileSpec()
-        self.assertEqual(spec.GetDirectory(), exe_dir)
+        spec_dir_norm = os.path.normcase(module.GetFileSpec().GetDirectory())
+        exe_dir_norm = os.path.normcase(exe_dir)
+        self.assertEqual(spec_dir_norm, exe_dir_norm)
