@@ -1125,6 +1125,12 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
   Instruction *Matching = MemInstMatching ? MemInst.get() : InVal.DefInst;
   Instruction *Other = MemInstMatching ? InVal.DefInst : MemInst.get();
 
+  // For stores check the result values before checking memory generation
+  // (otherwise isSameMemGeneration may crash).
+  Value *Result = MemInst.isStore() ? getOrCreateResult(Matching, Other->getType()) : nullptr;
+  if (MemInst.isStore() && InVal.DefInst != Result)
+    return nullptr;
+
   // Deal with non-target memory intrinsics.
   bool MatchingNTI = isHandledNonTargetIntrinsic(Matching);
   bool OtherNTI = isHandledNonTargetIntrinsic(Other);
@@ -1140,7 +1146,10 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
       !isSameMemGeneration(InVal.Generation, CurrentGeneration, InVal.DefInst,
                            MemInst.get()))
     return nullptr;
-  return getOrCreateResult(Matching, Other->getType());
+
+  if (!Result)
+    Result = getOrCreateResult(Matching, Other->getType());
+  return Result;
 }
 
 bool EarlyCSE::overridingStores(const ParseMemoryInst &Earlier,
