@@ -71,6 +71,18 @@ void DebugTranslation::translate(LLVMFuncOp func, llvm::Function &llvmFunc) {
   if (!compileUnit || !func.walk(interruptIfValidLocation).wasInterrupted())
     return;
 
+  // If we are to create debug info for the function, we need to ensure that all
+  // inlinable calls in it are with debug info, otherwise the LLVM verifier will
+  // complain. For now, be more restricted and treat all calls as inlinable.
+  const bool hasCallWithoutDebugInfo =
+      func.walk([](LLVM::CallOp call) {
+            return call.getLoc().isa<UnknownLoc>() ? WalkResult::interrupt()
+                                                   : WalkResult::advance();
+          })
+          .wasInterrupted();
+  if (hasCallWithoutDebugInfo)
+    return;
+
   FileLineColLoc fileLoc = extractFileLoc(func.getLoc());
   auto *file = translateFile(fileLoc ? fileLoc.getFilename() : "<unknown>");
   unsigned line = fileLoc ? fileLoc.getLine() : 0;
