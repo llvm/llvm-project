@@ -12,7 +12,15 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Twine.h"
+
+namespace pybind11 {
+namespace detail {
+template <typename T>
+struct type_caster<llvm::Optional<T>> : optional_caster<llvm::Optional<T>> {};
+} // namespace detail
+} // namespace pybind11
 
 namespace mlir {
 namespace python {
