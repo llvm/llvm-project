@@ -1,0 +1,111 @@
+Basic Block : bb
+Program Point 0, instr :  %tmp = alloca i32, align 4, live_set =  {%arg %arg1 }.
+Program Point 1, instr :  %tmp2 = alloca i32, align 4, live_set =  {%arg %arg1 %tmp }.
+Program Point 2, instr :  %tmp3 = alloca i8**, align 8, live_set =  {%arg %arg1 %tmp %tmp2 }.
+Program Point 3, instr :  %tmp4 = alloca i32, align 4, live_set =  {%arg %arg1 %tmp %tmp2 %tmp3 }.
+Program Point 4, instr :  %tmp5 = alloca i32, align 4, live_set =  {%arg %arg1 %tmp %tmp2 %tmp3 %tmp4 }.
+Program Point 5, instr :  store i32 0, i32* %tmp, align 4, live_set =  {%arg %arg1 %tmp %tmp2 %tmp3 %tmp4 %tmp5 }.
+Program Point 6, instr :  store i32 %arg, i32* %tmp2, align 4, live_set =  {%arg %arg1 %tmp2 %tmp3 %tmp4 %tmp5 }.
+Program Point 7, instr :  call void @llvm.dbg.declare(metadata i32* %tmp2, metadata !1586, metadata !DIExpression()), !dbg !1587, live_set =  {%arg1 %tmp3 %tmp4 %tmp5 }.
+Program Point 8, instr :  store i8** %arg1, i8*** %tmp3, align 8, live_set =  {%arg1 %tmp3 %tmp4 %tmp5 }.
+Program Point 9, instr :  call void @llvm.dbg.declare(metadata i8*** %tmp3, metadata !1588, metadata !DIExpression()), !dbg !1589, live_set =  {%tmp4 %tmp5 }.
+Program Point 10, instr :  call void @llvm.dbg.declare(metadata i32* %tmp4, metadata !1590, metadata !DIExpression()), !dbg !1591, live_set =  {%tmp4 %tmp5 }.
+Program Point 11, instr :  store i32 90, i32* %tmp4, align 4, !dbg !1589, live_set =  {%tmp4 %tmp5 }.
+Program Point 12, instr :  call void @llvm.dbg.declare(metadata i32* %tmp5, metadata !1592, metadata !DIExpression()), !dbg !1593, live_set =  {%tmp4 %tmp5 }.
+Program Point 13, instr :  store i32 89, i32* %tmp5, align 4, !dbg !1591, live_set =  {%tmp4 %tmp5 }.
+Program Point 14, instr :  %tmp6 = load i32, i32* %tmp4, align 4, !dbg !1592, live_set =  {%tmp4 %tmp5 }.
+Program Point 15, instr :  %tmp7 = icmp sge i32 %tmp6, 90, !dbg !1594, live_set =  {%tmp4 %tmp5 %tmp6 }.
+Program Point 16, instr :  br i1 %tmp7, label %bb8, label %bb9, !dbg !1595, live_set =  {%tmp4 %tmp5 %tmp7 }.
+
+For Basic Block bb; OUT_SET =  {%tmp4 %tmp5 %tmp7 }.
+
+Basic Block : bb8
+Program Point 17, instr :  store i32 700, i32* %tmp4, align 4, !dbg !1596, live_set =  {%tmp4 %tmp5 }.
+Program Point 18, instr :  store i32 800, i32* %tmp5, align 4, !dbg !1598, live_set =  {%tmp5 }.
+Program Point 19, instr :  br label %bb10, !dbg !1599, live_set =  {}.
+Program Point 20, instr :  %tmp = alloca i32, align 4, live_set =  {%arg %arg1 }.
+Program Point 21, instr :  %tmp2 = alloca i32, align 4, live_set =  {%arg %arg1 %tmp }.
+Program Point 22, instr :  %tmp3 = alloca i8**, align 8, live_set =  {%arg %arg1 %tmp %tmp2 }.
+Program Point 23, instr :  %tmp4 = alloca i32, align 4, live_set =  {%arg %arg1 %tmp %tmp2 %tmp3 }.
+Program Point 24, instr :  %tmp5 = alloca i32, align 4, live_set =  {%arg %arg1 %tmp %tmp2 %tmp3 %tmp4 }.
+Program Point 25, instr :  store i32 0, i32* %tmp, align 4, live_set =  {%arg %arg1 %tmp %tmp2 %tmp3 %tmp4 %tmp5 }.
+Program Point 26, instr :  store i32 %arg, i32* %tmp2, align 4, live_set =  {%arg %arg1 %tmp2 %tmp3 %tmp4 %tmp5 }.
+Program Point 27, instr :  call void @llvm.dbg.declare(metadata i32* %tmp2, metadata !1586, metadata !DIExpression()), !dbg !1587, live_set =  {%arg1 %tmp3 %tmp4 %tmp5 }.
+Program Point 28, instr :  store i8** %arg1, i8*** %tmp3, align 8, live_set =  {%arg1 %tmp3 %tmp4 %tmp5 }.
+Program Point 29, instr :  call void @llvm.dbg.declare(metadata i8*** %tmp3, metadata !1588, metadata !DIExpression()), !dbg !1589, live_set =  {%tmp4 %tmp5 }.
+Program Point 30, instr :  call void @llvm.dbg.declare(metadata i32* %tmp4, metadata !1590, metadata !DIExpression()), !dbg !1591, live_set =  {%tmp4 %tmp5 }.
+Program Point 31, instr :  store i32 90, i32* %tmp4, align 4, !dbg !1589, live_set =  {%tmp4 %tmp5 }.
+Program Point 32, instr :  call void @llvm.dbg.declare(metadata i32* %tmp5, metadata !1592, metadata !DIExpression()), !dbg !1593, live_set =  {%tmp4 %tmp5 }.
+Program Point 33, instr :  store i32 89, i32* %tmp5, align 4, !dbg !1591, live_set =  {%tmp4 %tmp5 }.
+Program Point 34, instr :  %tmp6 = load i32, i32* %tmp4, align 4, !dbg !1592, live_set =  {%tmp4 %tmp5 }.
+Program Point 35, instr :  %tmp7 = icmp sge i32 %tmp6, 90, !dbg !1594, live_set =  {%tmp4 %tmp5 %tmp6 }.
+Program Point 36, instr :  br i1 %tmp7, label %bb8, label %bb9, !dbg !1595, live_set =  {%tmp4 %tmp5 %tmp7 }.
+
+For Basic Block bb8; OUT_SET =  {%tmp4 %tmp5 %tmp7 }.
+
+Basic Block : bb9
+Program Point 37, instr :  store i32 80, i32* %tmp4, align 4, !dbg !1600, live_set =  {%tmp4 %tmp5 }.
+Program Point 38, instr :  store i32 80, i32* %tmp5, align 4, !dbg !1602, live_set =  {%tmp5 }.
+Program Point 39, instr :  br label %bb10, live_set =  {}.
+Program Point 40, instr :  store i32 700, i32* %tmp4, align 4, !dbg !1596, live_set =  {%tmp4 %tmp5 }.
+Program Point 41, instr :  store i32 800, i32* %tmp5, align 4, !dbg !1598, live_set =  {%tmp5 }.
+Program Point 42, instr :  br label %bb10, !dbg !1599, live_set =  {}.
+Program Point 43, instr :  %tmp = alloca i32, align 4, live_set =  {%arg %arg1 }.
+Program Point 44, instr :  %tmp2 = alloca i32, align 4, live_set =  {%arg %arg1 %tmp }.
+Program Point 45, instr :  %tmp3 = alloca i8**, align 8, live_set =  {%arg %arg1 %tmp %tmp2 }.
+Program Point 46, instr :  %tmp4 = alloca i32, align 4, live_set =  {%arg %arg1 %tmp %tmp2 %tmp3 }.
+Program Point 47, instr :  %tmp5 = alloca i32, align 4, live_set =  {%arg %arg1 %tmp %tmp2 %tmp3 %tmp4 }.
+Program Point 48, instr :  store i32 0, i32* %tmp, align 4, live_set =  {%arg %arg1 %tmp %tmp2 %tmp3 %tmp4 %tmp5 }.
+Program Point 49, instr :  store i32 %arg, i32* %tmp2, align 4, live_set =  {%arg %arg1 %tmp2 %tmp3 %tmp4 %tmp5 }.
+Program Point 50, instr :  call void @llvm.dbg.declare(metadata i32* %tmp2, metadata !1586, metadata !DIExpression()), !dbg !1587, live_set =  {%arg1 %tmp3 %tmp4 %tmp5 }.
+Program Point 51, instr :  store i8** %arg1, i8*** %tmp3, align 8, live_set =  {%arg1 %tmp3 %tmp4 %tmp5 }.
+Program Point 52, instr :  call void @llvm.dbg.declare(metadata i8*** %tmp3, metadata !1588, metadata !DIExpression()), !dbg !1589, live_set =  {%tmp4 %tmp5 }.
+Program Point 53, instr :  call void @llvm.dbg.declare(metadata i32* %tmp4, metadata !1590, metadata !DIExpression()), !dbg !1591, live_set =  {%tmp4 %tmp5 }.
+Program Point 54, instr :  store i32 90, i32* %tmp4, align 4, !dbg !1589, live_set =  {%tmp4 %tmp5 }.
+Program Point 55, instr :  call void @llvm.dbg.declare(metadata i32* %tmp5, metadata !1592, metadata !DIExpression()), !dbg !1593, live_set =  {%tmp4 %tmp5 }.
+Program Point 56, instr :  store i32 89, i32* %tmp5, align 4, !dbg !1591, live_set =  {%tmp4 %tmp5 }.
+Program Point 57, instr :  %tmp6 = load i32, i32* %tmp4, align 4, !dbg !1592, live_set =  {%tmp4 %tmp5 }.
+Program Point 58, instr :  %tmp7 = icmp sge i32 %tmp6, 90, !dbg !1594, live_set =  {%tmp4 %tmp5 %tmp6 }.
+Program Point 59, instr :  br i1 %tmp7, label %bb8, label %bb9, !dbg !1595, live_set =  {%tmp4 %tmp5 %tmp7 }.
+
+For Basic Block bb9; OUT_SET =  {%tmp4 %tmp5 %tmp7 }.
+
+Basic Block : bb10
+Program Point 60, instr :  ret i32 0, !dbg !1603, live_set =  {}.
+Program Point 61, instr :  store i32 80, i32* %tmp4, align 4, !dbg !1600, live_set =  {%tmp4 %tmp5 }.
+Program Point 62, instr :  store i32 80, i32* %tmp5, align 4, !dbg !1602, live_set =  {%tmp5 }.
+Program Point 63, instr :  br label %bb10, live_set =  {}.
+Program Point 64, instr :  store i32 700, i32* %tmp4, align 4, !dbg !1596, live_set =  {%tmp4 %tmp5 }.
+Program Point 65, instr :  store i32 800, i32* %tmp5, align 4, !dbg !1598, live_set =  {%tmp5 }.
+Program Point 66, instr :  br label %bb10, !dbg !1599, live_set =  {}.
+Program Point 67, instr :  %tmp = alloca i32, align 4, live_set =  {%arg %arg1 }.
+Program Point 68, instr :  %tmp2 = alloca i32, align 4, live_set =  {%arg %arg1 %tmp }.
+Program Point 69, instr :  %tmp3 = alloca i8**, align 8, live_set =  {%arg %arg1 %tmp %tmp2 }.
+Program Point 70, instr :  %tmp4 = alloca i32, align 4, live_set =  {%arg %arg1 %tmp %tmp2 %tmp3 }.
+Program Point 71, instr :  %tmp5 = alloca i32, align 4, live_set =  {%arg %arg1 %tmp %tmp2 %tmp3 %tmp4 }.
+Program Point 72, instr :  store i32 0, i32* %tmp, align 4, live_set =  {%arg %arg1 %tmp %tmp2 %tmp3 %tmp4 %tmp5 }.
+Program Point 73, instr :  store i32 %arg, i32* %tmp2, align 4, live_set =  {%arg %arg1 %tmp2 %tmp3 %tmp4 %tmp5 }.
+Program Point 74, instr :  call void @llvm.dbg.declare(metadata i32* %tmp2, metadata !1586, metadata !DIExpression()), !dbg !1587, live_set =  {%arg1 %tmp3 %tmp4 %tmp5 }.
+Program Point 75, instr :  store i8** %arg1, i8*** %tmp3, align 8, live_set =  {%arg1 %tmp3 %tmp4 %tmp5 }.
+Program Point 76, instr :  call void @llvm.dbg.declare(metadata i8*** %tmp3, metadata !1588, metadata !DIExpression()), !dbg !1589, live_set =  {%tmp4 %tmp5 }.
+Program Point 77, instr :  call void @llvm.dbg.declare(metadata i32* %tmp4, metadata !1590, metadata !DIExpression()), !dbg !1591, live_set =  {%tmp4 %tmp5 }.
+Program Point 78, instr :  store i32 90, i32* %tmp4, align 4, !dbg !1589, live_set =  {%tmp4 %tmp5 }.
+Program Point 79, instr :  call void @llvm.dbg.declare(metadata i32* %tmp5, metadata !1592, metadata !DIExpression()), !dbg !1593, live_set =  {%tmp4 %tmp5 }.
+Program Point 80, instr :  store i32 89, i32* %tmp5, align 4, !dbg !1591, live_set =  {%tmp4 %tmp5 }.
+Program Point 81, instr :  %tmp6 = load i32, i32* %tmp4, align 4, !dbg !1592, live_set =  {%tmp4 %tmp5 }.
+Program Point 82, instr :  %tmp7 = icmp sge i32 %tmp6, 90, !dbg !1594, live_set =  {%tmp4 %tmp5 %tmp6 }.
+Program Point 83, instr :  br i1 %tmp7, label %bb8, label %bb9, !dbg !1595, live_set =  {%tmp4 %tmp5 %tmp7 }.
+
+For Basic Block bb10; OUT_SET =  {%tmp4 %tmp5 %tmp7 }.
+
+Histogram : 
+#live_count , #program_points_count  
+
+0, 6
+1, 5
+7, 4
+6, 8
+5, 4
+4, 12
+3, 12
+2, 33
