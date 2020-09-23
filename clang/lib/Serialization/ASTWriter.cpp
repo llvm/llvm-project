@@ -2352,13 +2352,22 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
     uint64_t StartOffset = Stream.GetCurrentBitNo() - MacroOffsetsBase;
     assert((StartOffset >> 32) == 0 && "Macro identifiers offset too large");
 
-    // Emit the macro directives in reverse source order.
-    for (; MD; MD = MD->getPrevious()) {
-      // Once we hit an ignored macro, we're done: the rest of the chain
-      // will all be ignored macros.
-      if (shouldIgnoreMacro(MD, IsModule, PP))
-        break;
-
+    // Write out any exported module macros.
+    bool EmittedModuleMacros = false;
+    // C+=20 Header Units are compiled module interfaces, but they preserve
+    // macros that are live (i.e. have a defined value) at the end of the
+    // compilation.  So when writing a header unit, we preserve only the final
+    // value of each macro (and discard any that are undefined).  Header units
+    // do not have sub-modules (although they might import other header units).
+    // PCH files, conversely, retain the history of each macro's define/undef
+    // and of leaf macros in sub modules.
+    if (IsModule && WritingModule->isHeaderUnit()) {
+      // This is for the main TU when it is a C++20 header unit.
+      // We preserve the final state of defined macros, and we do not emit ones
+      // that are undefined.
+      if (!MD || shouldIgnoreMacro(MD, IsModule, PP) ||
+          MD->getKind() == MacroDirective::MD_Undefine)
+        continue;
       AddSourceLocation(MD->getLocation(), Record);
       Record.push_back(MD->getKind());
       if (auto *DefMD = dyn_cast<DefMacroDirective>(MD)) {
@@ -2366,35 +2375,51 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
       } else if (auto *VisMD = dyn_cast<VisibilityMacroDirective>(MD)) {
         Record.push_back(VisMD->isPublic());
       }
-    }
-
-    // Write out any exported module macros.
-    bool EmittedModuleMacros = false;
-    // We write out exported module macros for PCH as well.
-    auto Leafs = PP.getLeafModuleMacros(Name);
-    SmallVector<ModuleMacro*, 8> Worklist(Leafs.begin(), Leafs.end());
-    llvm::DenseMap<ModuleMacro*, unsigned> Visits;
-    while (!Worklist.empty()) {
-      auto *Macro = Worklist.pop_back_val();
-
-      // Emit a record indicating this submodule exports this macro.
-      ModuleMacroRecord.push_back(
-          getSubmoduleID(Macro->getOwningModule()));
-      ModuleMacroRecord.push_back(getMacroRef(Macro->getMacroInfo(), Name));
-      for (auto *M : Macro->overrides())
-        ModuleMacroRecord.push_back(getSubmoduleID(M->getOwningModule()));
-
+      ModuleMacroRecord.push_back(getSubmoduleID(WritingModule));
+      ModuleMacroRecord.push_back(getMacroRef(MD->getMacroInfo(), Name));
       Stream.EmitRecord(PP_MODULE_MACRO, ModuleMacroRecord);
       ModuleMacroRecord.clear();
-
-      // Enqueue overridden macros once we've visited all their ancestors.
-      for (auto *M : Macro->overrides())
-        if (++Visits[M] == M->getNumOverridingMacros())
-          Worklist.push_back(M);
-
       EmittedModuleMacros = true;
-    }
+    } else {
+      // Emit the macro directives in reverse source order.
+      for (; MD; MD = MD->getPrevious()) {
+        // Once we hit an ignored macro, we're done: the rest of the chain
+        // will all be ignored macros.
+        if (shouldIgnoreMacro(MD, IsModule, PP))
+          break;
+        AddSourceLocation(MD->getLocation(), Record);
+        Record.push_back(MD->getKind());
+        if (auto *DefMD = dyn_cast<DefMacroDirective>(MD)) {
+          Record.push_back(getMacroRef(DefMD->getInfo(), Name));
+        } else if (auto *VisMD = dyn_cast<VisibilityMacroDirective>(MD)) {
+          Record.push_back(VisMD->isPublic());
+        }
+      }
 
+      // We write out exported module macros for PCH as well.
+      auto Leafs = PP.getLeafModuleMacros(Name);
+      SmallVector<ModuleMacro *, 8> Worklist(Leafs.begin(), Leafs.end());
+      llvm::DenseMap<ModuleMacro *, unsigned> Visits;
+      while (!Worklist.empty()) {
+        auto *Macro = Worklist.pop_back_val();
+
+        // Emit a record indicating this submodule exports this macro.
+        ModuleMacroRecord.push_back(getSubmoduleID(Macro->getOwningModule()));
+        ModuleMacroRecord.push_back(getMacroRef(Macro->getMacroInfo(), Name));
+        for (auto *M : Macro->overrides())
+          ModuleMacroRecord.push_back(getSubmoduleID(M->getOwningModule()));
+
+        Stream.EmitRecord(PP_MODULE_MACRO, ModuleMacroRecord);
+        ModuleMacroRecord.clear();
+
+        // Enqueue overridden macros once we've visited all their ancestors.
+        for (auto *M : Macro->overrides())
+          if (++Visits[M] == M->getNumOverridingMacros())
+            Worklist.push_back(M);
+
+        EmittedModuleMacros = true;
+      }
+    }
     if (Record.empty() && !EmittedModuleMacros)
       continue;
 
