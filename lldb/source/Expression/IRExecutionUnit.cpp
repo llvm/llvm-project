@@ -1353,10 +1353,7 @@ lldb::ModuleSP IRExecutionUnit::GetJITModule() {
   return m_jit_module_wp.lock();
 }
 
-lldb::ModuleSP IRExecutionUnit::CreateJITModule(const char *name,
-                                                const FileSpec *limit_file_ptr,
-                                                uint32_t limit_start_line,
-                                                uint32_t limit_end_line) {
+lldb::ModuleSP IRExecutionUnit::CreateJITModule(const char *name) {
   lldb::ModuleSP jit_module_sp(m_jit_module_wp.lock());
   if (jit_module_sp)
     return jit_module_sp;
@@ -1386,11 +1383,6 @@ lldb::ModuleSP IRExecutionUnit::CreateJITModule(const char *name,
       FileSpec jit_file;
       jit_file.GetFilename() = const_name;
       jit_module_sp->SetFileSpecAndObjectName(jit_file, ConstString());
-
-      if (limit_file_ptr)
-        if (SymbolFile *symbol_file = jit_module_sp->GetSymbolFile())
-          symbol_file->SetLimitSourceFileRange(
-              *limit_file_ptr, limit_start_line, limit_end_line);
 
       target->GetImages().Append(jit_module_sp);
       return jit_module_sp;

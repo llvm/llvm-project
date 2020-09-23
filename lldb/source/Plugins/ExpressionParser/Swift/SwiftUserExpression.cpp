@@ -438,19 +438,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     StreamString jit_module_name;
     jit_module_name.Printf("%s%u", FunctionName(),
                            m_options.GetExpressionNumber());
-    const char *limit_file = m_options.GetPoundLineFilePath();
-    FileSpec limit_file_spec;
-    uint32_t limit_start_line = 0;
-    uint32_t limit_end_line = 0;
-    if (limit_file) {
-      limit_file_spec.SetFile(limit_file, FileSpec::Style::native);
-      limit_start_line = m_options.GetPoundLineLine();
-      limit_end_line = limit_start_line +
-                       std::count(m_expr_text.begin(), m_expr_text.end(), '\n');
-    }
-    m_execution_unit_sp->CreateJITModule(jit_module_name.GetString().data(),
-                                         limit_file ? &limit_file_spec : NULL,
-                                         limit_start_line, limit_end_line);
+    m_execution_unit_sp->CreateJITModule(jit_module_name.GetString().data());
   }
 
   if (jit_error.Success()) {
