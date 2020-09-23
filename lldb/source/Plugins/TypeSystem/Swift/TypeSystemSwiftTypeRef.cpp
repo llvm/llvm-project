@@ -486,6 +486,70 @@ static StringRef GetObjCTypeName(swift::Demangle::NodePointer node) {
   return {};
 }
 
+swift::Demangle::NodePointer
+TypeSystemSwiftTypeRef::GetSwiftified(swift::Demangle::Demangler &Dem,
+                                      swift::Demangle::NodePointer node,
+                                      bool resolve_objc_module) {
+  StringRef ident = GetObjCTypeName(node);
+  if (ident.empty())
+    return node;
+  auto *Module = GetModule();
+  if (!Module)
+    return node;
+
+  // This is an imported Objective-C type; look it up in the
+  // debug info.
+  TypeSP clang_type = LookupClangType(*Module, ident);
+  if (!clang_type)
+    return node;
+
+  // Extract the toplevel Clang module name from the debug info.
+  llvm::SmallVector<CompilerContext, 4> DeclCtx;
+  clang_type->GetDeclContext(DeclCtx);
+  StringRef toplevel_module;
+  if (resolve_objc_module) {
+    for (auto &Context : DeclCtx)
+      if (Context.kind == CompilerContextKind::Module) {
+        toplevel_module = Context.name.GetStringRef();
+        break;
+      }
+    if (toplevel_module.empty())
+      return node;
+  } else {
+    toplevel_module = swift::MANGLING_MODULE_OBJC;
+  }
+
+  // Create a new node with the Clang module instead of "__C".
+  NodePointer renamed = Dem.createNode(node->getKind());
+  NodePointer module = Dem.createNode(Node::Kind::Module, toplevel_module);
+  renamed->addChild(module, Dem);
+
+  // This order is significant, because of `typedef tag`.
+  swift::ClangTypeKind kinds[] = {swift::ClangTypeKind::Typedef,
+                                  swift::ClangTypeKind::Tag,
+                                  swift::ClangTypeKind::ObjCProtocol};
+  clang::NamedDecl *clang_decl = nullptr;
+  CompilerType compiler_type = clang_type->GetForwardCompilerType();
+  auto *clang_ts =
+      llvm::dyn_cast_or_null<TypeSystemClang>(compiler_type.GetTypeSystem());
+  if (!clang_ts)
+    return node;
+  clang::QualType qual_type = ClangUtil::GetQualType(compiler_type);
+  for (auto kind : kinds) {
+    clang_decl = llvm::dyn_cast_or_null<clang::NamedDecl>(
+        GetDeclForTypeAndKind(qual_type, kind));
+    if (clang_decl)
+      break;
+  }
+  if (!clang_decl)
+    return node;
+
+  std::string swift_name = GetSwiftName(clang_decl, *clang_ts);
+  NodePointer identifier = Dem.createNode(Node::Kind::Identifier, swift_name);
+  renamed->addChild(identifier, Dem);
+  return renamed;
+}
+
 swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetNodeForPrintingImpl(
     swift::Demangle::Demangler &Dem, swift::Demangle::NodePointer node,
     bool resolve_objc_module, bool desugar) {
@@ -501,68 +565,8 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetNodeForPrintingImpl(
   switch (kind) {
   case Node::Kind::Class:
   case Node::Kind::Structure:
-  case Node::Kind::TypeAlias: {
-    StringRef ident = GetObjCTypeName(node);
-    if (ident.empty())
-      return node;
-
-    auto *Module = GetModule();
-    if (!Module)
-      return node;
-
-    // This is an imported Objective-C type; look it up in the
-    // debug info.
-    TypeSP clang_type = LookupClangType(*Module, ident);
-    if (!clang_type)
-      return node;
-
-    // Extract the toplevel Clang module name from the debug info.
-    llvm::SmallVector<CompilerContext, 4> DeclCtx;
-    clang_type->GetDeclContext(DeclCtx);
-    StringRef toplevel_module;
-    if (resolve_objc_module) {
-      for (auto &Context : DeclCtx)
-        if (Context.kind == CompilerContextKind::Module) {
-          toplevel_module = Context.name.GetStringRef();
-          break;
-        }
-      if (toplevel_module.empty())
-        break;
-    } else {
-      toplevel_module = swift::MANGLING_MODULE_OBJC;
-    }
-
-    // Create a new node with the Clang module instead of "__C".
-    NodePointer renamed = Dem.createNode(kind);
-    NodePointer module =
-        Dem.createNode(Node::Kind::Module, toplevel_module);
-    renamed->addChild(module, Dem);
-
-    // This order is significant, because of `typedef tag`.
-    swift::ClangTypeKind kinds[] = {swift::ClangTypeKind::Typedef,
-                                    swift::ClangTypeKind::Tag,
-                                    swift::ClangTypeKind::ObjCProtocol};
-    clang::NamedDecl *clang_decl = nullptr;
-    CompilerType compiler_type = clang_type->GetForwardCompilerType();
-    auto *clang_ts =
-        llvm::dyn_cast_or_null<TypeSystemClang>(compiler_type.GetTypeSystem());
-    if (!clang_ts)
-      break;
-    clang::QualType qual_type = ClangUtil::GetQualType(compiler_type);
-    for (auto kind : kinds) {
-      clang_decl = llvm::dyn_cast_or_null<clang::NamedDecl>(
-          GetDeclForTypeAndKind(qual_type, kind));
-      if (clang_decl)
-        break;
-    }
-    if (!clang_decl)
-      break;
-
-    std::string swift_name = GetSwiftName(clang_decl, *clang_ts);
-    NodePointer identifier = Dem.createNode(Node::Kind::Identifier, swift_name);
-    renamed->addChild(identifier, Dem);
-    return renamed;
-  }
+  case Node::Kind::TypeAlias:
+    return GetSwiftified(Dem, node, resolve_objc_module);
 
   //
   // The remaining cases are all about bug-for-bug compatibility
