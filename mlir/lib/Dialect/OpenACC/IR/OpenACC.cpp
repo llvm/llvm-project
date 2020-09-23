@@ -119,7 +119,6 @@ static OptionalParseResult parseOptionalOperandAndType(OpAsmParser &parser,
                                                        StringRef keyword,
                                                        OperationState &result) {
   OpAsmParser::OperandType operand;
-  Type type;
   if (succeeded(parser.parseOptionalKeyword(keyword))) {
     return failure(parser.parseLParen() ||
                    parseOperandAndType(parser, result) || parser.parseRParen());
