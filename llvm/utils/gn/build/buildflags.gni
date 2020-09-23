@@ -1,6 +1,15 @@
 declare_args() {
   # Whether to build with debug information.
   is_debug = false
+
+  # Whether to build with tsan.
+  use_tsan = false
+
+  # Whether to build with ubsan.
+  use_ubsan = false
+
+  # Whether to build with asan.
+  use_asan = false
 }
 
 # args that depend on other args must live in a later declare_args() block.
