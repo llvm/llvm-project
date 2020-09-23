@@ -689,11 +689,10 @@ def umbrella : Separate<["-"], "umbrella">,
      Group<grp_rare>;
 def headerpad : Separate<["-"], "headerpad">,
      MetaVarName<"<size>">,
-     HelpText<"Allocate hex <size> extra space for future expansion of the load commands via install_name_tool">,
+     HelpText<"Allocate hex <size> extra space for future expansion of the load commands via install_name_tool (default is 0x20)">,
      Group<grp_rare>;
 def headerpad_max_install_names : Flag<["-"], "headerpad_max_install_names">,
      HelpText<"Allocate extra space so all load-command paths can expand to MAXPATHLEN via install_name_tool">,
-     Flags<[HelpHidden]>,
      Group<grp_rare>;
 def bind_at_load : Flag<["-"], "bind_at_load">,
      HelpText<"Tell dyld to bind all symbols at load time, rather than lazily">,

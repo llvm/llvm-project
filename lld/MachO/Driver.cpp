@@ -521,6 +521,8 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   config->installName =
       args.getLastArgValue(OPT_install_name, config->outputFile);
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
+  config->headerPadMaxInstallNames =
+      args.hasArg(OPT_headerpad_max_install_names);
   config->outputType = args.hasArg(OPT_dylib) ? MH_DYLIB : MH_EXECUTE;
   config->runtimePaths = args::getStrings(args, OPT_rpath);
   config->allLoad = args.hasArg(OPT_all_load);
@@ -599,6 +601,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_L:
     case OPT_ObjC:
     case OPT_headerpad:
+    case OPT_headerpad_max_install_names:
     case OPT_install_name:
     case OPT_rpath:
     case OPT_sub_library:
