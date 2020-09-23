@@ -50,6 +50,7 @@ protected: // Can only create subclasses.
   bool AllowAtInIdentifier;
   bool IsAtStartOfStatement = true;
   bool LexMasmIntegers = false;
+  unsigned DefaultRadix = 10;
   AsmCommentConsumer *CommentConsumer = nullptr;
 
   MCAsmLexer();
@@ -142,6 +143,9 @@ public:
 
   bool getAllowAtInIdentifier() { return AllowAtInIdentifier; }
   void setAllowAtInIdentifier(bool v) { AllowAtInIdentifier = v; }
+
+  unsigned getDefaultRadix() const { return DefaultRadix; }
+  void setDefaultRadix(unsigned Radix) { DefaultRadix = Radix; }
 
   void setCommentConsumer(AsmCommentConsumer *CommentConsumer) {
     this->CommentConsumer = CommentConsumer;
