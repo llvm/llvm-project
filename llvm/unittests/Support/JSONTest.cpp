@@ -373,12 +373,19 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS << "(" << S.S << ", " << (S.I ? std::to_string(*S.I) : "None")
             << ", " << S.B << ")";
 }
-bool fromJSON(const Value &E, CustomStruct &R) {
-  ObjectMapper O(E);
+bool fromJSON(const Value &E, CustomStruct &R, Path P) {
+  ObjectMapper O(E, P);
   if (!O || !O.map("str", R.S) || !O.map("int", R.I))
     return false;
   O.map("bool", R.B);
   return true;
+}
+
+static std::string errorContext(const Value &V, const Path::Root &R) {
+  std::string Context;
+  llvm::raw_string_ostream OS(Context);
+  R.printErrorContext(V, OS);
+  return OS.str();
 }
 
 TEST(JSONTest, Deserialize) {
@@ -404,16 +411,58 @@ TEST(JSONTest, Deserialize) {
       CustomStruct("bar", llvm::None, false),
       CustomStruct("baz", llvm::None, false),
   };
-  ASSERT_TRUE(fromJSON(J, R));
+  Path::Root Root("CustomStruct");
+  ASSERT_TRUE(fromJSON(J, R, Root));
   EXPECT_EQ(R, Expected);
 
+  (*J.getAsObject()->getArray("foo"))[0] = 123;
+  ASSERT_FALSE(fromJSON(J, R, Root));
+  EXPECT_EQ("expected object at CustomStruct.foo[0]",
+            toString(Root.getError()));
+  const char *ExpectedDump = R"({
+  "foo": [
+    /* error: expected object */
+    123,
+    { ... },
+    { ... }
+  ]
+})";
+  EXPECT_EQ(ExpectedDump, errorContext(J, Root));
+
   CustomStruct V;
-  EXPECT_FALSE(fromJSON(nullptr, V)) << "Not an object " << V;
-  EXPECT_FALSE(fromJSON(Object{}, V)) << "Missing required field " << V;
-  EXPECT_FALSE(fromJSON(Object{{"str", 1}}, V)) << "Wrong type " << V;
+  EXPECT_FALSE(fromJSON(nullptr, V, Root));
+  EXPECT_EQ("expected object when parsing CustomStruct",
+            toString(Root.getError()));
+
+  EXPECT_FALSE(fromJSON(Object{}, V, Root));
+  EXPECT_EQ("missing value at CustomStruct.str", toString(Root.getError()));
+
+  EXPECT_FALSE(fromJSON(Object{{"str", 1}}, V, Root));
+  EXPECT_EQ("expected string at CustomStruct.str", toString(Root.getError()));
+
   // Optional<T> must parse as the correct type if present.
-  EXPECT_FALSE(fromJSON(Object{{"str", 1}, {"int", "string"}}, V))
-      << "Wrong type for Optional<T> " << V;
+  EXPECT_FALSE(fromJSON(Object{{"str", "1"}, {"int", "string"}}, V, Root));
+  EXPECT_EQ("expected integer at CustomStruct.int", toString(Root.getError()));
+}
+
+TEST(JSONTest, ParseDeserialize) {
+  auto E = parse<std::vector<CustomStruct>>(R"json(
+    [{"str": "foo", "int": 42}, {"int": 42}]
+  )json");
+  EXPECT_THAT_EXPECTED(E, FailedWithMessage("missing value at (root)[1].str"));
+
+  E = parse<std::vector<CustomStruct>>(R"json(
+    [{"str": "foo", "int": 42}, {"str": "bar"}
+  )json");
+  EXPECT_THAT_EXPECTED(
+      E,
+      FailedWithMessage("[3:2, byte=50]: Expected , or ] after array element"));
+
+  E = parse<std::vector<CustomStruct>>(R"json(
+    [{"str": "foo", "int": 42}]
+  )json");
+  EXPECT_THAT_EXPECTED(E, Succeeded());
+  EXPECT_THAT(*E, testing::SizeIs(1));
 }
 
 TEST(JSONTest, Stream) {
@@ -481,9 +530,6 @@ TEST(JSONTest, Path) {
                    {"f", "a moderately long string: 48 characters in total"},
                }}}},
   };
-  std::string Err;
-  raw_string_ostream OS(Err);
-  R.printErrorContext(V, OS);
   const char *Expected = R"({
   "a": [ ... ],
   "b": {
@@ -496,7 +542,7 @@ TEST(JSONTest, Path) {
     }
   }
 })";
-  EXPECT_EQ(Expected, OS.str());
+  EXPECT_EQ(Expected, errorContext(V, R));
 }
 
 } // namespace
