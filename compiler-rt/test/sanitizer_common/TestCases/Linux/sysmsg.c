@@ -25,6 +25,7 @@ int main() {
   int res = msgsnd(msgq, &msg, MSG_BUFLEN, IPC_NOWAIT);
   if (res) {
     fprintf(stderr, "Error sending message! %s\n", strerror(errno));
+    msgctl(msgq, IPC_RMID, NULL);
     return -1;
   }
 
