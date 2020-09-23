@@ -39,7 +39,6 @@ namespace __lsan {
 void InitializeInterceptors();
 void ReplaceSystemMalloc();
 void LsanOnDeadlySignal(int signo, void *siginfo, void *context);
-void InstallAtExitCheckLeaks();
 
 #define ENSURE_LSAN_INITED do {   \
   CHECK(!lsan_init_is_running);   \

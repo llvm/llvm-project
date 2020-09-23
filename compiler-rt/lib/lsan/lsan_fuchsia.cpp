@@ -76,13 +76,6 @@ void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches) {
       caches);
 }
 
-// On Fuchsia, leak detection is done by a special hook after atexit hooks.
-// So this doesn't install any atexit hook like on other platforms.
-void InstallAtExitCheckLeaks() {}
-
-// ASan defines this to check its `halt_on_error` flag.
-bool UseExitcodeOnLeak() { return true; }
-
 }  // namespace __lsan
 
 // These are declared (in extern "C") by <zircon/sanitizer.h>.

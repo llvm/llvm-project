@@ -1,5 +1,4 @@
-//===-- asan_win.cpp
-//------------------------------------------------------===//>
+//===-- asan_win.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,8 +14,9 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_WINDOWS
 #define WIN32_LEAN_AND_MEAN
-#include <stdlib.h>
 #include <windows.h>
+
+#include <stdlib.h>
 
 #include "asan_interceptors.h"
 #include "asan_internal.h"
@@ -49,8 +49,8 @@ uptr __asan_get_shadow_memory_dynamic_address() {
 static LPTOP_LEVEL_EXCEPTION_FILTER default_seh_handler;
 static LPTOP_LEVEL_EXCEPTION_FILTER user_seh_handler;
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE long __asan_unhandled_exception_filter(
-    EXCEPTION_POINTERS *info) {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE
+long __asan_unhandled_exception_filter(EXCEPTION_POINTERS *info) {
   EXCEPTION_RECORD *exception_record = info->ExceptionRecord;
   CONTEXT *context = info->ContextRecord;
 
@@ -186,8 +186,6 @@ void InitializePlatformInterceptors() {
                                              (uptr *)&REAL(RtlRaiseException)));
   }
 }
-
-void InstallAtExitCheckLeaks() {}
 
 void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
   UNIMPLEMENTED();
