@@ -27,6 +27,8 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 
+#include <algorithm>
+
 using namespace llvm;
 using namespace llvm::MachO;
 using namespace lld;
@@ -208,7 +210,9 @@ public:
 //   * LC_REEXPORT_DYLIB
 class LCDylib : public LoadCommand {
 public:
-  LCDylib(LoadCommandType type, StringRef path) : type(type), path(path) {}
+  LCDylib(LoadCommandType type, StringRef path) : type(type), path(path) {
+    instanceCount++;
+  }
 
   uint32_t getSize() const override {
     return alignTo(sizeof(dylib_command) + path.size() + 1, 8);
@@ -226,10 +230,15 @@ public:
     buf[path.size()] = '\0';
   }
 
+  static uint32_t getInstanceCount() { return instanceCount; }
+
 private:
   LoadCommandType type;
   StringRef path;
+  static uint32_t instanceCount;
 };
+
+uint32_t LCDylib::instanceCount = 0;
 
 class LCLoadDylinker : public LoadCommand {
 public:
@@ -366,6 +375,12 @@ void Writer::createLoadCommands() {
             make<LCDylib>(LC_REEXPORT_DYLIB, dylibFile->dylibName));
     }
   }
+
+  const uint32_t MACOS_MAXPATHLEN = 1024;
+  config->headerPad = std::max(
+      config->headerPad, (config->headerPadMaxInstallNames
+                              ? LCDylib::getInstanceCount() * MACOS_MAXPATHLEN
+                              : 0));
 }
 
 static size_t getSymbolPriority(const SymbolPriorityEntry &entry,
