@@ -1213,6 +1213,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::UDIV, VT, Custom);
   setOperationAction(ISD::UMAX, VT, Custom);
   setOperationAction(ISD::UMIN, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
   setOperationAction(ISD::VSELECT, VT, Custom);
   setOperationAction(ISD::XOR, VT, Custom);
   setOperationAction(ISD::ZERO_EXTEND, VT, Custom);
@@ -9623,9 +9624,13 @@ static SDValue getReductionSDNode(unsigned Op, SDLoc DL, SDValue ScalarOp,
 
 SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
                                               SelectionDAG &DAG) const {
+  SDValue VecOp = Op.getOperand(0);
+
   SDLoc dl(Op);
   switch (Op.getOpcode()) {
   case ISD::VECREDUCE_ADD:
+    if (useSVEForFixedLengthVectorVT(VecOp.getValueType()))
+      return LowerFixedLengthReductionToSVE(AArch64ISD::UADDV_PRED, Op, DAG);
     return getReductionSDNode(AArch64ISD::UADDV, dl, Op, DAG);
   case ISD::VECREDUCE_SMAX:
     return getReductionSDNode(AArch64ISD::SMAXV, dl, Op, DAG);
@@ -15950,6 +15955,32 @@ SDValue AArch64TargetLowering::LowerToScalableOp(SDValue Op,
 
   auto ScalableRes = DAG.getNode(Op.getOpcode(), SDLoc(Op), ContainerVT, Ops);
   return convertFromScalableVector(DAG, VT, ScalableRes);
+}
+
+SDValue AArch64TargetLowering::LowerFixedLengthReductionToSVE(unsigned Opcode,
+    SDValue ScalarOp, SelectionDAG &DAG) const {
+  SDLoc DL(ScalarOp);
+  SDValue VecOp = ScalarOp.getOperand(0);
+  EVT SrcVT = VecOp.getValueType();
+
+  SDValue Pg = getPredicateForVector(DAG, DL, SrcVT);
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, SrcVT);
+  VecOp = convertToScalableVector(DAG, ContainerVT, VecOp);
+
+  // UADDV always returns an i64 result.
+  EVT ResVT = (Opcode == AArch64ISD::UADDV_PRED) ? MVT::i64 :
+                                                   SrcVT.getVectorElementType();
+
+  SDValue Rdx = DAG.getNode(Opcode, DL, getPackedSVEVectorVT(ResVT), Pg, VecOp);
+  SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT,
+                            Rdx, DAG.getConstant(0, DL, MVT::i64));
+
+  // This is needed for UADDV, since it returns an i64 result. The VEC_REDUCE
+  // nodes expect an element size result.
+  if (ResVT != ScalarOp.getValueType())
+    Res = DAG.getNode(ISD::TRUNCATE, DL, ScalarOp.getValueType(), Res);
+
+  return Res;
 }
 
 SDValue
