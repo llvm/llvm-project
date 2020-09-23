@@ -766,7 +766,7 @@ struct LoweredPHIRecord {
   LoweredPHIRecord(PHINode *pn, unsigned Sh)
     : PN(pn), Shift(Sh), Width(0) {}
 };
-}
+} // namespace
 
 namespace llvm {
   template<>
@@ -787,7 +787,7 @@ namespace llvm {
              LHS.Width == RHS.Width;
     }
   };
-}
+} // namespace llvm
 
 
 /// This is an integer PHI and we know that it has an illegal type: see if it is
