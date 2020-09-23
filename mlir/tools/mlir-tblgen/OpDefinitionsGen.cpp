@@ -1252,7 +1252,7 @@ void OpEmitter::genCollectiveParamBuilder() {
   SmallVector<OpMethodParameter, 4> paramList;
   paramList.emplace_back("::mlir::OpBuilder &", "");
   paramList.emplace_back("::mlir::OperationState &", builderOpState);
-  paramList.emplace_back("::llvm::ArrayRef<::mlir::Type>", "resultTypes");
+  paramList.emplace_back("::mlir::TypeRange", "resultTypes");
   paramList.emplace_back("::mlir::ValueRange", "operands");
   // Provide default value for `attributes` when its the last parameter
   StringRef attributesDefaultValue = op.getNumVariadicRegions() ? "" : "{}";
@@ -1322,8 +1322,8 @@ void OpEmitter::buildParamList(SmallVectorImpl<OpMethodParameter> &paramList,
       if (resultName.empty())
         resultName = std::string(formatv("resultType{0}", i));
 
-      StringRef type = result.isVariadic() ? "::llvm::ArrayRef<::mlir::Type>"
-                                           : "::mlir::Type";
+      StringRef type =
+          result.isVariadic() ? "::mlir::TypeRange" : "::mlir::Type";
       OpMethodParameter::Property properties = OpMethodParameter::PP_None;
       if (result.isOptional())
         properties = OpMethodParameter::PP_Optional;
@@ -1333,7 +1333,7 @@ void OpEmitter::buildParamList(SmallVectorImpl<OpMethodParameter> &paramList,
     }
   } break;
   case TypeParamKind::Collective: {
-    paramList.emplace_back("::llvm::ArrayRef<::mlir::Type>", "resultTypes");
+    paramList.emplace_back("::mlir::TypeRange", "resultTypes");
     resultTypeNames.push_back("resultTypes");
   } break;
   }
