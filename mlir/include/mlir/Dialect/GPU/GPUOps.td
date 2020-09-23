@@ -205,8 +205,8 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
 
   let builders = [
     OpBuilder<"OpBuilder &builder, OperationState &result, StringRef name, "
-              "FunctionType type, ArrayRef<Type> workgroupAttributions = {}, "
-              "ArrayRef<Type> privateAttributions = {}, "
+              "FunctionType type, TypeRange workgroupAttributions = {}, "
+              "TypeRange privateAttributions = {}, "
               "ArrayRef<NamedAttribute> attrs = {}">
   ];
 

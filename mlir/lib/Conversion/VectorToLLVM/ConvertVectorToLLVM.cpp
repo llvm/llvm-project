@@ -1382,7 +1382,7 @@ private:
   // Helper to emit a call.
   static void emitCall(ConversionPatternRewriter &rewriter, Location loc,
                        Operation *ref, ValueRange params = ValueRange()) {
-    rewriter.create<LLVM::CallOp>(loc, ArrayRef<Type>{},
+    rewriter.create<LLVM::CallOp>(loc, TypeRange(),
                                   rewriter.getSymbolRefAttr(ref), params);
   }
 
