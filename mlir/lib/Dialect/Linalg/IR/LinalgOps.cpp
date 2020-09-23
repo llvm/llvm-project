@@ -540,6 +540,7 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
       reshapeOp.getResultType().hasStaticShape() &&
       reshapeSrcOp.getSrcType() == reshapeOp.getResultType())
     return reshapeSrcOp.src();
+  // Reshape of a constant can be replaced with a new constant.
   if (auto elements = operands.front().dyn_cast_or_null<DenseElementsAttr>()) {
     return elements.reshape(
         reshapeOp.getResult().getType().template cast<ShapedType>());
