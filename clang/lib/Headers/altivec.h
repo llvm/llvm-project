@@ -3007,6 +3007,42 @@ static __inline__ vector double __ATTRS_o_ai vec_cpsgn(vector double __a,
 
 #define vec_vctuxs __builtin_altivec_vctuxs
 
+/* vec_signext */
+
+#ifdef __POWER9_VECTOR__
+static __inline__ vector signed int __ATTRS_o_ai
+vec_signexti(vector signed char __a) {
+  return __builtin_altivec_vextsb2w(__a);
+}
+
+static __inline__ vector signed int __ATTRS_o_ai
+vec_signexti(vector signed short __a) {
+  return __builtin_altivec_vextsh2w(__a);
+}
+
+static __inline__ vector signed long long __ATTRS_o_ai
+vec_signextll(vector signed char __a) {
+  return __builtin_altivec_vextsb2d(__a);
+}
+
+static __inline__ vector signed long long __ATTRS_o_ai
+vec_signextll(vector signed short __a) {
+  return __builtin_altivec_vextsh2d(__a);
+}
+
+static __inline__ vector signed long long __ATTRS_o_ai
+vec_signextll(vector signed int __a) {
+  return __builtin_altivec_vextsw2d(__a);
+}
+#endif
+
+#ifdef __POWER10_VECTOR__
+static __inline__ vector signed __int128 __ATTRS_o_ai
+vec_signextq(vector signed long long __a) {
+  return __builtin_altivec_vextsd2q(__a);
+}
+#endif
+
 /* vec_signed */
 
 static __inline__ vector signed int __ATTRS_o_ai
@@ -17267,6 +17303,16 @@ vec_mod(vector signed long long __a, vector signed long long __b) {
 static __inline__ vector unsigned long long __ATTRS_o_ai
 vec_mod(vector unsigned long long __a, vector unsigned long long __b) {
   return __a % __b;
+}
+
+static __inline__ vector signed __int128 __ATTRS_o_ai
+vec_mod(vector signed __int128 __a, vector signed __int128 __b) {
+  return __a % __b;
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_mod(vector unsigned __int128 __a, vector unsigned __int128 __b) {
+  return  __a % __b;
 }
 
 /* vec_sldbi */
