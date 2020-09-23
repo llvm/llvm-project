@@ -254,8 +254,8 @@ TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
   }
 }
 
-const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
-                                           TemplateName N) {
+const StreamingDiagnostic &clang::operator<<(const StreamingDiagnostic &DB,
+                                             TemplateName N) {
   std::string NameStr;
   llvm::raw_string_ostream OS(NameStr);
   LangOptions LO;
@@ -266,20 +266,6 @@ const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
   OS << '\'';
   OS.flush();
   return DB << NameStr;
-}
-
-const PartialDiagnostic&clang::operator<<(const PartialDiagnostic &PD,
-                                           TemplateName N) {
-  std::string NameStr;
-  llvm::raw_string_ostream OS(NameStr);
-  LangOptions LO;
-  LO.CPlusPlus = true;
-  LO.Bool = true;
-  OS << '\'';
-  N.print(OS, PrintingPolicy(LO));
-  OS << '\'';
-  OS.flush();
-  return PD << NameStr;
 }
 
 void TemplateName::dump(raw_ostream &OS) const {

@@ -1487,16 +1487,14 @@ public:
       // If we aren't active, there is nothing to do.
       if (!isActive()) return;
 
-      // Otherwise, we need to emit the diagnostic. First flush the underlying
-      // DiagnosticBuilder data, and clear the diagnostic builder itself so it
-      // won't emit the diagnostic in its own destructor.
+      // Otherwise, we need to emit the diagnostic. First clear the diagnostic
+      // builder itself so it won't emit the diagnostic in its own destructor.
       //
       // This seems wasteful, in that as written the DiagnosticBuilder dtor will
       // do its own needless checks to see if the diagnostic needs to be
       // emitted. However, because we take care to ensure that the builder
       // objects never escape, a sufficiently smart compiler will be able to
       // eliminate that code.
-      FlushCounts();
       Clear();
 
       // Dispatch to Sema to emit the diagnostic.
@@ -1510,6 +1508,17 @@ public:
       const DiagnosticBuilder &BaseDiag = Diag;
       BaseDiag << Value;
       return Diag;
+    }
+
+    // It is necessary to limit this to rvalue reference to avoid calling this
+    // function with a bitfield lvalue argument since non-const reference to
+    // bitfield is not allowed.
+    template <typename T, typename = typename std::enable_if<
+                              !std::is_lvalue_reference<T>::value>::type>
+    const SemaDiagnosticBuilder &operator<<(T &&V) const {
+      const StreamableDiagnosticBase &DB = *this;
+      DB << std::move(V);
+      return *this;
     }
   };
 

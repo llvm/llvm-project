@@ -100,8 +100,8 @@ private:
   friend class DependentStoredDeclsMap;
 
   DependentDiagnostic(const PartialDiagnostic &PDiag,
-                      PartialDiagnostic::Storage *Storage)
-    : Diag(PDiag, Storage) {}
+                      DiagnosticStorage *Storage)
+      : Diag(PDiag, Storage) {}
 
   static DependentDiagnostic *Create(ASTContext &Context,
                                      DeclContext *Parent,
