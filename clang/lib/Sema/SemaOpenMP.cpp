@@ -14413,7 +14413,7 @@ OMPClause *Sema::ActOnOpenMPLastprivateClause(
         if (!isOpenMPCapturedDecl(D))
           ExprCaptures.push_back(Ref->getDecl());
       }
-      if (TopDVar.CKind == OMPC_firstprivate ||
+      if ((TopDVar.CKind == OMPC_firstprivate && !TopDVar.PrivateCopy) ||
           (!isOpenMPCapturedDecl(D) &&
            Ref->getDecl()->hasAttr<OMPCaptureNoInitAttr>())) {
         ExprResult RefRes = DefaultLvalueConversion(Ref);
