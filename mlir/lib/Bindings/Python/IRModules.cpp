@@ -9,6 +9,7 @@
 #include "IRModules.h"
 #include "PybindUtils.h"
 
+#include "mlir-c/Registration.h"
 #include "mlir-c/StandardAttributes.h"
 #include "mlir-c/StandardTypes.h"
 #include "llvm/ADT/SmallVector.h"
@@ -454,6 +455,7 @@ PyMlirContext::~PyMlirContext() {
 
 PyMlirContext *PyMlirContext::createNewContextForInit() {
   MlirContext context = mlirContextCreate();
+  mlirRegisterAllDialects(context);
   return new PyMlirContext(context);
 }
 
