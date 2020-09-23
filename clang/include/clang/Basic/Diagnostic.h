@@ -1043,6 +1043,35 @@ public:
   }
 };
 
+/// The streaming interface shared between DiagnosticBuilder and
+/// PartialDiagnostic.
+///
+/// Any new type of argument accepted by DiagnosticBuilder and PartialDiagnostic
+/// should be implemented as a '<<' operator of StreamableDiagnosticBase, e.g.
+///
+/// const StreamableDiagnosticBase&
+/// operator<<(const StreamableDiagnosticBase&, NewArgType);
+///
+class StreamableDiagnosticBase {
+public:
+  virtual void AddString(StringRef S) const = 0;
+  virtual void AddTaggedVal(intptr_t V,
+                            DiagnosticsEngine::ArgumentKind Kind) const = 0;
+  virtual void AddSourceRange(const CharSourceRange &R) const = 0;
+  virtual void AddFixItHint(const FixItHint &Hint) const = 0;
+
+  /// Conversion of StreamableDiagnosticBase to bool always returns \c true.
+  ///
+  /// This allows is to be used in boolean error contexts (where \c true is
+  /// used to indicate that an error has occurred), like:
+  /// \code
+  /// return Diag(...);
+  /// \endcode
+  operator bool() const { return true; }
+
+  virtual ~StreamableDiagnosticBase() {}
+};
+
 //===----------------------------------------------------------------------===//
 // DiagnosticBuilder
 //===----------------------------------------------------------------------===//
@@ -1059,7 +1088,7 @@ public:
 /// This ensures that compilers with somewhat reasonable optimizers will promote
 /// the common fields to registers, eliminating increments of the NumArgs field,
 /// for example.
-class DiagnosticBuilder {
+class DiagnosticBuilder : public StreamableDiagnosticBase {
   friend class DiagnosticsEngine;
   friend class PartialDiagnostic;
 
@@ -1137,12 +1166,27 @@ public:
     NumArgs = D.NumArgs;
   }
 
+  template <typename T> const DiagnosticBuilder &operator<<(const T &V) const {
+    const StreamableDiagnosticBase &DB = *this;
+    DB << V;
+    return *this;
+  }
+
+  // It is necessary to limit this to rvalue reference to avoid calling this
+  // function with a bitfield lvalue argument since non-const reference to
+  // bitfield is not allowed.
+  template <typename T, typename = typename std::enable_if<
+                            !std::is_lvalue_reference<T>::value>::type>
+  const DiagnosticBuilder &operator<<(T &&V) const {
+    const StreamableDiagnosticBase &DB = *this;
+    DB << std::move(V);
+    return *this;
+  }
+
   DiagnosticBuilder &operator=(const DiagnosticBuilder &) = delete;
 
   /// Emits the diagnostic.
-  ~DiagnosticBuilder() {
-    Emit();
-  }
+  virtual ~DiagnosticBuilder() { Emit(); }
 
   /// Forces the diagnostic to be emitted.
   const DiagnosticBuilder &setForceEmit() const {
@@ -1150,16 +1194,7 @@ public:
     return *this;
   }
 
-  /// Conversion of DiagnosticBuilder to bool always returns \c true.
-  ///
-  /// This allows is to be used in boolean error contexts (where \c true is
-  /// used to indicate that an error has occurred), like:
-  /// \code
-  /// return Diag(...);
-  /// \endcode
-  operator bool() const { return true; }
-
-  void AddString(StringRef S) const {
+  void AddString(StringRef S) const override {
     assert(isActive() && "Clients must not add to cleared diagnostic!");
     assert(NumArgs < DiagnosticsEngine::MaxArguments &&
            "Too many arguments to diagnostic!");
@@ -1167,7 +1202,8 @@ public:
     DiagObj->DiagArgumentsStr[NumArgs++] = std::string(S);
   }
 
-  void AddTaggedVal(intptr_t V, DiagnosticsEngine::ArgumentKind Kind) const {
+  void AddTaggedVal(intptr_t V,
+                    DiagnosticsEngine::ArgumentKind Kind) const override {
     assert(isActive() && "Clients must not add to cleared diagnostic!");
     assert(NumArgs < DiagnosticsEngine::MaxArguments &&
            "Too many arguments to diagnostic!");
@@ -1175,12 +1211,12 @@ public:
     DiagObj->DiagArgumentsVal[NumArgs++] = V;
   }
 
-  void AddSourceRange(const CharSourceRange &R) const {
+  void AddSourceRange(const CharSourceRange &R) const override {
     assert(isActive() && "Clients must not add to cleared diagnostic!");
     DiagObj->DiagRanges.push_back(R);
   }
 
-  void AddFixItHint(const FixItHint &Hint) const {
+  void AddFixItHint(const FixItHint &Hint) const override {
     assert(isActive() && "Clients must not add to cleared diagnostic!");
     if (!Hint.isNull())
       DiagObj->DiagFixItHints.push_back(Hint);
@@ -1205,20 +1241,21 @@ inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           StringRef S) {
+inline const StreamableDiagnosticBase &
+operator<<(const StreamableDiagnosticBase &DB, StringRef S) {
   DB.AddString(S);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           const char *Str) {
+inline const StreamableDiagnosticBase &
+operator<<(const StreamableDiagnosticBase &DB, const char *Str) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(Str),
                   DiagnosticsEngine::ak_c_string);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB, int I) {
+inline const StreamableDiagnosticBase &
+operator<<(const StreamableDiagnosticBase &DB, int I) {
   DB.AddTaggedVal(I, DiagnosticsEngine::ak_sint);
   return DB;
 }
@@ -1226,26 +1263,27 @@ inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB, int I) {
 // We use enable_if here to prevent that this overload is selected for
 // pointers or other arguments that are implicitly convertible to bool.
 template <typename T>
-inline std::enable_if_t<std::is_same<T, bool>::value, const DiagnosticBuilder &>
-operator<<(const DiagnosticBuilder &DB, T I) {
+inline std::enable_if_t<std::is_same<T, bool>::value,
+                        const StreamableDiagnosticBase &>
+operator<<(const StreamableDiagnosticBase &DB, T I) {
   DB.AddTaggedVal(I, DiagnosticsEngine::ak_sint);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           unsigned I) {
+inline const StreamableDiagnosticBase &
+operator<<(const StreamableDiagnosticBase &DB, unsigned I) {
   DB.AddTaggedVal(I, DiagnosticsEngine::ak_uint);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           tok::TokenKind I) {
+inline const StreamableDiagnosticBase &
+operator<<(const StreamableDiagnosticBase &DB, tok::TokenKind I) {
   DB.AddTaggedVal(static_cast<unsigned>(I), DiagnosticsEngine::ak_tokenkind);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           const IdentifierInfo *II) {
+inline const StreamableDiagnosticBase &
+operator<<(const StreamableDiagnosticBase &DB, const IdentifierInfo *II) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(II),
                   DiagnosticsEngine::ak_identifierinfo);
   return DB;
@@ -1258,63 +1296,64 @@ inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
 template <typename T>
 inline std::enable_if_t<
     std::is_same<std::remove_const_t<T>, DeclContext>::value,
-    const DiagnosticBuilder &>
-operator<<(const DiagnosticBuilder &DB, T *DC) {
+    const StreamableDiagnosticBase &>
+operator<<(const StreamableDiagnosticBase &DB, T *DC) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(DC),
                   DiagnosticsEngine::ak_declcontext);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           SourceRange R) {
+inline const StreamableDiagnosticBase &
+operator<<(const StreamableDiagnosticBase &DB, SourceRange R) {
   DB.AddSourceRange(CharSourceRange::getTokenRange(R));
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           ArrayRef<SourceRange> Ranges) {
+inline const StreamableDiagnosticBase &
+operator<<(const StreamableDiagnosticBase &DB, ArrayRef<SourceRange> Ranges) {
   for (SourceRange R : Ranges)
     DB.AddSourceRange(CharSourceRange::getTokenRange(R));
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           const CharSourceRange &R) {
+inline const StreamableDiagnosticBase &
+operator<<(const StreamableDiagnosticBase &DB, const CharSourceRange &R) {
   DB.AddSourceRange(R);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           const FixItHint &Hint) {
+inline const StreamableDiagnosticBase &
+operator<<(const StreamableDiagnosticBase &DB, const FixItHint &Hint) {
   DB.AddFixItHint(Hint);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           ArrayRef<FixItHint> Hints) {
+inline const StreamableDiagnosticBase &
+operator<<(const StreamableDiagnosticBase &DB, ArrayRef<FixItHint> Hints) {
   for (const FixItHint &Hint : Hints)
     DB.AddFixItHint(Hint);
   return DB;
 }
 
-inline const DiagnosticBuilder &
-operator<<(const DiagnosticBuilder &DB,
+inline const StreamableDiagnosticBase &
+operator<<(const StreamableDiagnosticBase &DB,
            const llvm::Optional<SourceRange> &Opt) {
   if (Opt)
     DB << *Opt;
   return DB;
 }
 
-inline const DiagnosticBuilder &
-operator<<(const DiagnosticBuilder &DB,
+inline const StreamableDiagnosticBase &
+operator<<(const StreamableDiagnosticBase &DB,
            const llvm::Optional<CharSourceRange> &Opt) {
   if (Opt)
     DB << *Opt;
   return DB;
 }
 
-inline const DiagnosticBuilder &
-operator<<(const DiagnosticBuilder &DB, const llvm::Optional<FixItHint> &Opt) {
+inline const StreamableDiagnosticBase &
+operator<<(const StreamableDiagnosticBase &DB,
+           const llvm::Optional<FixItHint> &Opt) {
   if (Opt)
     DB << *Opt;
   return DB;
@@ -1324,8 +1363,8 @@ operator<<(const DiagnosticBuilder &DB, const llvm::Optional<FixItHint> &Opt) {
 /// context-sensitive keyword.
 using DiagNullabilityKind = std::pair<NullabilityKind, bool>;
 
-const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                    DiagNullabilityKind nullability);
+const StreamableDiagnosticBase &operator<<(const StreamableDiagnosticBase &DB,
+                                           DiagNullabilityKind nullability);
 
 inline DiagnosticBuilder DiagnosticsEngine::Report(SourceLocation Loc,
                                                    unsigned DiagID) {
@@ -1337,8 +1376,8 @@ inline DiagnosticBuilder DiagnosticsEngine::Report(SourceLocation Loc,
   return DiagnosticBuilder(this);
 }
 
-const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                    llvm::Error &&E);
+const StreamableDiagnosticBase &operator<<(const StreamableDiagnosticBase &DB,
+                                           llvm::Error &&E);
 
 inline DiagnosticBuilder DiagnosticsEngine::Report(unsigned DiagID) {
   return Report(SourceLocation(), DiagID);
