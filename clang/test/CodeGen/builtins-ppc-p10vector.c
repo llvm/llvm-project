@@ -1481,3 +1481,21 @@ vector unsigned __int128 test_vec_xl_zext_i64(void) {
   // CHECK: ret <1 x i128>
   return vec_xl_zext(llb, ullap);
 }
+
+vector signed __int128 test_vec_signextq_s128(void) {
+    // CHECK: @llvm.ppc.altivec.vextsd2q(<2 x i64>
+    // CHECK-NEXT: ret <1 x i128>
+    return vec_signextq(vslla);
+}
+
+vector unsigned __int128 test_vec_mod_u128(void) {
+    // CHECK: urem <1 x i128>
+    // CHECK-NEXT: ret <1 x i128>
+    return vec_mod(vui128a, vui128b);
+}
+
+vector signed __int128 test_vec_mod_s128(void) {
+    // CHECK: srem <1 x i128>
+    // CHECK-NEXT: ret <1 x i128>
+    return vec_mod(vsi128a, vsi128b);
+}
