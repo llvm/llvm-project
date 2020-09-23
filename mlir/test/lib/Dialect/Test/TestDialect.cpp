@@ -364,6 +364,17 @@ parseCustomDirectiveSuccessors(OpAsmParser &parser, Block *&successor,
   varSuccessors.append(2, varSuccessor);
   return success();
 }
+static ParseResult parseCustomDirectiveAttributes(OpAsmParser &parser,
+                                                  IntegerAttr &attr,
+                                                  IntegerAttr &optAttr) {
+  if (parser.parseAttribute(attr))
+    return failure();
+  if (succeeded(parser.parseOptionalComma())) {
+    if (parser.parseAttribute(optAttr))
+      return failure();
+  }
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // Printing
@@ -416,6 +427,13 @@ static void printCustomDirectiveSuccessors(OpAsmPrinter &printer,
   printer << successor;
   if (!varSuccessors.empty())
     printer << ", " << varSuccessors.front();
+}
+static void printCustomDirectiveAttributes(OpAsmPrinter &printer,
+                                           Attribute attribute,
+                                           Attribute optAttribute) {
+  printer << attribute;
+  if (optAttribute)
+    printer << ", " << optAttribute;
 }
 
 //===----------------------------------------------------------------------===//
