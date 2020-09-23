@@ -500,12 +500,7 @@ static void AsanInitInternal() {
 
   if (CAN_SANITIZE_LEAKS) {
     __lsan::InitCommonLsan();
-    if (common_flags()->detect_leaks && common_flags()->leak_check_at_exit) {
-      if (flags()->halt_on_error)
-        Atexit(__lsan::DoLeakCheck);
-      else
-        Atexit(__lsan::DoRecoverableLeakCheckVoid);
-    }
+    InstallAtExitCheckLeaks();
   }
 
 #if CAN_SANITIZE_UB
