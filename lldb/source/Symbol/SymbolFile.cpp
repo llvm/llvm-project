@@ -111,16 +111,6 @@ bool SymbolFile::ForceInlineSourceFileCheck() {
   return m_objfile_sp->GetType() == ObjectFile::eTypeJIT;
 }
 
-bool SymbolFile::SetLimitSourceFileRange(const FileSpec &file,
-                                         uint32_t first_line,
-                                         uint32_t last_line) {
-  if (file && first_line <= last_line) {
-    m_limit_source_ranges.push_back(SourceRange(file, first_line, last_line));
-    return true;
-  }
-  return false;
-}
-
 std::vector<lldb::DataBufferSP>
 SymbolFile::GetASTData(lldb::LanguageType language) {
   // SymbolFile subclasses must add this functionality
