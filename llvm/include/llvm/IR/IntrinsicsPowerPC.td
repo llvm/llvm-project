@@ -370,6 +370,18 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   def int_ppc_altivec_vcmpgtuq : GCCBuiltin<"__builtin_altivec_vcmpgtuq">,
               Intrinsic<[llvm_v1i128_ty], [llvm_v1i128_ty, llvm_v1i128_ty],
                         [IntrNoMem]>;
+  def int_ppc_altivec_vcmpequq_p : GCCBuiltin<"__builtin_altivec_vcmpequq_p">,
+              Intrinsic<[llvm_i32_ty],
+                        [llvm_i32_ty,llvm_v1i128_ty,llvm_v1i128_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vcmpgtsq_p : GCCBuiltin<"__builtin_altivec_vcmpgtsq_p">,
+              Intrinsic<[llvm_i32_ty],
+                        [llvm_i32_ty,llvm_v1i128_ty,llvm_v1i128_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vcmpgtuq_p : GCCBuiltin<"__builtin_altivec_vcmpgtuq_p">,
+              Intrinsic<[llvm_i32_ty],
+                        [llvm_i32_ty,llvm_v1i128_ty,llvm_v1i128_ty],
+                        [IntrNoMem]>;
 
   // Predicate Comparisons.  The first operand specifies interpretation of CR6.
   def int_ppc_altivec_vcmpbfp_p : GCCBuiltin<"__builtin_altivec_vcmpbfp_p">,

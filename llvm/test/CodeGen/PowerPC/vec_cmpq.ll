@@ -248,3 +248,31 @@ define <1 x i128> @test_vcmpgtuq(<1 x i128> %x, <1 x i128> %y) {
 ; CHECK: vcmpgtuq {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: blr
 }
+
+declare i32 @llvm.ppc.altivec.vcmpequq.p(i32, <1 x i128>, <1 x i128>) nounwind readnone
+declare i32 @llvm.ppc.altivec.vcmpgtsq.p(i32, <1 x i128>, <1 x i128>) nounwind readnone
+declare i32 @llvm.ppc.altivec.vcmpgtuq.p(i32, <1 x i128>, <1 x i128>) nounwind readnone
+
+define i32 @test_vcmpequq_p(<1 x i128> %x, <1 x i128> %y) {
+      %tmp = tail call i32 @llvm.ppc.altivec.vcmpequq.p(i32 2, <1 x i128> %x, <1 x i128> %y)
+      ret i32 %tmp
+; CHECK-LABEL: test_vcmpequq_p:
+; CHECK: vcmpequq. {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
+; CHECK: blr
+}
+
+define i32 @test_vcmpgtsq_p(<1 x i128> %x, <1 x i128> %y) {
+      %tmp = tail call i32 @llvm.ppc.altivec.vcmpgtsq.p(i32 2, <1 x i128> %x, <1 x i128> %y)
+      ret i32 %tmp
+; CHECK-LABEL: test_vcmpgtsq_p
+; CHECK: vcmpgtsq. {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
+; CHECK: blr
+}
+
+define i32 @test_vcmpgtuq_p(<1 x i128> %x, <1 x i128> %y) {
+      %tmp = tail call i32 @llvm.ppc.altivec.vcmpgtuq.p(i32 2, <1 x i128> %x, <1 x i128> %y)
+      ret i32 %tmp
+; CHECK-LABEL: test_vcmpgtuq_p
+; CHECK: vcmpgtuq. {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
+; CHECK: blr
+}

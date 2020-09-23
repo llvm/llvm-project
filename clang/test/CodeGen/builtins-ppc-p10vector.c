@@ -1589,3 +1589,171 @@ vector bool __int128 test_vec_cmple_u128(void) {
   // CHECK-NEXT: ret <1 x i128>
   return vec_cmple(vui128a, vui128b);
 }
+
+int test_vec_any_eq_u128(void) {
+  // CHECK-LABEL: @test_vec_any_eq_u128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpequq.p(i32 1, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_any_eq(vui128a, vui128b);
+}
+
+int test_vec_any_eq_s128(void) {
+  // CHECK-LABEL: @test_vec_any_eq_s128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpequq.p(i32 1, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_any_eq(vsi128a, vsi128b);
+}
+
+int test_vec_any_ne_s128(void) {
+  // CHECK-LABEL: @test_vec_any_ne_s128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpequq.p(i32 3, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_any_ne(vsi128a, vsi128b);
+}
+
+int test_vec_any_ne_u128(void) {
+  // CHECK-LABEL: @test_vec_any_ne_u128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpequq.p(i32 3, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_any_ne(vui128a, vui128b);
+}
+
+int test_vec_any_lt_s128(void) {
+  // CHECK-LABEL: @test_vec_any_lt_s128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpgtsq.p(i32 1, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_any_lt(vsi128a, vsi128b);
+}
+
+int test_vec_any_lt_u128(void) {
+  // CHECK-LABEL: @test_vec_any_lt_u128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpgtuq.p(i32 1, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_any_lt(vui128a, vui128b);
+}
+
+int test_vec_any_gt_s128(void) {
+  // CHECK-LABEL: @test_vec_any_gt_s128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpgtsq.p(i32 1, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_any_gt(vsi128a, vsi128b);
+}
+
+int test_vec_any_gt_u128(void) {
+  // CHECK-LABEL: @test_vec_any_gt_u128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpgtuq.p(i32 1, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_any_gt(vui128a, vui128b);
+}
+
+int test_vec_any_le_s128(void) {
+  // CHECK-LABEL: @test_vec_any_le_s128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpgtsq.p(i32 3, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_any_le(vsi128a, vsi128b);
+}
+
+int test_vec_any_le_u128(void) {
+  // CHECK-LABEL: @test_vec_any_le_u128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpgtuq.p(i32 3, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_any_le(vui128a, vui128b);
+}
+
+int test_vec_any_ge_s128(void) {
+  // CHECK-LABEL: @test_vec_any_ge_s128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpgtsq.p(i32 3, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_any_ge(vsi128a, vsi128b);
+}
+
+int test_vec_any_ge_u128(void) {
+  // CHECK-LABEL: @test_vec_any_ge_u128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpgtuq.p(i32 3, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_any_ge(vui128a, vui128b);
+}
+
+int test_vec_all_eq_s128(void) {
+  // CHECK-LABEL: @test_vec_all_eq_s128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpequq.p(i32 2, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_all_eq(vsi128a, vsi128b);
+}
+
+int test_vec_all_eq_u128(void) {
+  // CHECK-LABEL: @test_vec_all_eq_u128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpequq.p(i32 2, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_all_eq(vui128a, vui128b);
+}
+
+int test_vec_all_ne_s128(void) {
+  // CHECK-LABEL: @test_vec_all_ne_s128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpequq.p(i32 0, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_all_ne(vsi128a, vsi128b);
+}
+
+int test_vec_all_ne_u128(void) {
+  // CHECK-LABEL: @test_vec_all_ne_u128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpequq.p(i32 0, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_all_ne(vui128a, vui128b);
+}
+
+int test_vec_all_lt_s128(void) {
+  // CHECK-LABEL: @test_vec_all_lt_s128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpgtsq.p(i32 2, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_all_lt(vsi128a, vsi128b);
+}
+
+int test_vec_all_lt_u128(void) {
+  // CHECK-LABEL: @test_vec_all_lt_u128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpgtuq.p(i32 2, <1 x i128> %2, <1 x i128> %3)
+  // CHECK: ret i32
+  return vec_all_lt(vui128a, vui128b);
+}
+
+int test_vec_all_gt_s128(void) {
+  // CHECK-LABEL: @test_vec_all_gt_s128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpgtsq.p(i32 2, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_all_gt(vsi128a, vsi128b);
+}
+
+int test_vec_all_gt_u128(void) {
+  // CHECK-LABEL: @test_vec_all_gt_u128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpgtuq.p(i32 2, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_all_gt(vui128a, vui128b);
+}
+
+int test_vec_all_le_s128(void) {
+  // CHECK-LABEL: @test_vec_all_le_s128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpgtsq.p(i32 0, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_all_le(vsi128a, vsi128b);
+}
+
+int test_vec_all_le_u128(void) {
+  // CHECK-LABEL: @test_vec_all_le_u128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpgtuq.p(i32 0, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_all_le(vui128a, vui128b);
+}
+
+int test_vec_all_ge_s128(void) {
+  // CHECK-LABEL: @test_vec_all_ge_s128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpgtsq.p(i32 0, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_all_ge(vsi128a, vsi128b);
+}
+
+int test_vec_all_ge_u128(void) {
+  // CHECK-LABEL: @test_vec_all_ge_u128(
+  // CHECK: call i32 @llvm.ppc.altivec.vcmpgtuq.p(i32 0, <1 x i128> %2, <1 x i128> %3)
+  // CHECK-NEXT: ret i32
+  return vec_all_ge(vui128a, vui128b);
+}
