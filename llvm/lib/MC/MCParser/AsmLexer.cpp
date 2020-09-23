@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCParser/AsmLexer.h"
-#include "third_party/llvm/llvm-project/llvm/include/llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
@@ -19,6 +18,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <cassert>
