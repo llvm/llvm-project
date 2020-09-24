@@ -348,12 +348,6 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
 //===----------------------------------------------------------------------===//
 
 void WebAssemblyPassConfig::addIRPasses() {
-  // Runs LowerAtomicPass if necessary
-  addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));
-
-  // This is a no-op if atomics are not used in the module
-  addPass(createAtomicExpandPass());
-
   // Add signatures to prototype-less function declarations
   addPass(createWebAssemblyAddMissingPrototypes());
 
@@ -388,6 +382,12 @@ void WebAssemblyPassConfig::addIRPasses() {
 
   // Expand indirectbr instructions to switches.
   addPass(createIndirectBrExpandPass());
+
+  // Lower atomics and TLS if necessary
+  addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));
+
+  // This is a no-op if atomics are not used in the module
+  addPass(createAtomicExpandPass());
 
   TargetPassConfig::addIRPasses();
 }

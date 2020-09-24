@@ -6,8 +6,8 @@ target triple = "wasm32-unknown-unknown"
 %struct.__jmp_buf_tag = type { [6 x i32], i32, [32 x i32] }
 
 @global_var = global i32 0, align 4
-; CHECK-DAG: __THREW__ = external global i32
-; CHECK-DAG: __threwValue = external global i32
+; CHECK-DAG: __THREW__ = external thread_local(localexec) global i32
+; CHECK-DAG: __threwValue = external thread_local(localexec) global i32
 
 ; Test a simple setjmp - longjmp sequence
 define void @setjmp_longjmp() {
