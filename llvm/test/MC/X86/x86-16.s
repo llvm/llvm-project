@@ -547,7 +547,11 @@ jmp	$0x7ace,$0x7ace
 ljmp	$0x7ace,$0x7ace
 
 // CHECK: calll a
+// CHECK: calll a
+// CHECK: calll a
  calll a
+data32 call a
+data32 callw a
 
 // CHECK:	incb	%al # encoding: [0xfe,0xc0]
 	incb %al
