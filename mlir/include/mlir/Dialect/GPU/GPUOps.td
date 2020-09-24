@@ -18,12 +18,9 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-// Type constraint accepting standard integers, indices and wrapped LLVM integer
-// types.
-def IntLikeOrLLVMInt : TypeConstraint<
-  Or<[AnySignlessInteger.predicate, Index.predicate,
-      LLVM_AnyInteger.predicate]>,
-  "integer, index or LLVM dialect equivalent">;
+// Type constraint accepting standard integers, indices.
+def IntOrIndex : TypeConstraint<
+  Or<[AnySignlessInteger.predicate, Index.predicate]>, "integer or index">;
 
 //===----------------------------------------------------------------------===//
 // GPU Dialect operations.
@@ -299,9 +296,9 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
 }
 
 def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
-    Arguments<(ins IntLikeOrLLVMInt:$gridSizeX, IntLikeOrLLVMInt:$gridSizeY,
-               IntLikeOrLLVMInt:$gridSizeZ, IntLikeOrLLVMInt:$blockSizeX,
-               IntLikeOrLLVMInt:$blockSizeY, IntLikeOrLLVMInt:$blockSizeZ,
+    Arguments<(ins IntOrIndex:$gridSizeX, IntOrIndex:$gridSizeY,
+               IntOrIndex:$gridSizeZ, IntOrIndex:$blockSizeX,
+               IntOrIndex:$blockSizeY, IntOrIndex:$blockSizeZ,
                Variadic<AnyType>:$operands)>,
     Results<(outs)> {
   let summary = "Launches a function as a GPU kerneel";
@@ -333,7 +330,7 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
 
       // This module creates a separate compilation unit for the GPU compiler.
       gpu.module @kernels {
-        func @kernel_1(%arg0 : f32, %arg1 : !llvm<"float*">)
+        func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>)
             attributes { nvvm.kernel = true } {
 
           // Operations that produce block/thread IDs and dimensions are
@@ -365,7 +362,7 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
                         %arg0, %arg1)      // Arguments passed to the kernel.
             { kernel_module = @kernels,    // Module containing the kernel.
               kernel = "kernel_1" }        // Kernel function.
-            : (index, index, index, index, index, index, f32, !llvm<"float*">)
+            : (index, index, index, index, index, index, f32, memref<?xf32, 1>)
               -> ()
     }
     ```
