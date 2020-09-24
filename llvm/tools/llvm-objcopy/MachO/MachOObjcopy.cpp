@@ -259,7 +259,11 @@ static Error addSection(StringRef SecName, StringRef Filename, Object &Obj) {
   for (LoadCommand &LC : Obj.LoadCommands) {
     Optional<StringRef> SegName = LC.getSegmentName();
     if (SegName && SegName == TargetSegName) {
+      uint64_t Addr = *LC.getSegmentVMAddr();
+      for (const std::unique_ptr<Section> &S : LC.Sections)
+        Addr = std::max(Addr, S->Addr + S->Size);
       LC.Sections.push_back(std::make_unique<Section>(Sec));
+      LC.Sections.back()->Addr = Addr;
       return Error::success();
     }
   }
@@ -268,6 +272,7 @@ static Error addSection(StringRef SecName, StringRef Filename, Object &Obj) {
   // Insert a new section into it.
   LoadCommand &NewSegment = Obj.addSegment(TargetSegName);
   NewSegment.Sections.push_back(std::make_unique<Section>(Sec));
+  NewSegment.Sections.back()->Addr = *NewSegment.getSegmentVMAddr();
   return Error::success();
 }
 
