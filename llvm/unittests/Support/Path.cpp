@@ -88,11 +88,19 @@ TEST(is_separator, Works) {
 TEST(is_absolute_gnu, Works) {
   // Test tuple <Path, ExpectedPosixValue, ExpectedWindowsValue>.
   const std::tuple<StringRef, bool, bool> Paths[] = {
-      {"", false, false},  {"/", true, true},      {"/foo", true, true},
-      {"\\", false, true}, {"\\foo", false, true}, {"foo", false, false},
-      {"c", false, false}, {"c:", false, true},    {"c:\\", false, true},
-      {"!:", false, true}, {"xx:", false, false},  {"c:abc\\", false, true},
-      {":", false, false}};
+      std::make_tuple("", false, false),
+      std::make_tuple("/", true, true),
+      std::make_tuple("/foo", true, true),
+      std::make_tuple("\\", false, true),
+      std::make_tuple("\\foo", false, true),
+      std::make_tuple("foo", false, false),
+      std::make_tuple("c", false, false),
+      std::make_tuple("c:", false, true),
+      std::make_tuple("c:\\", false, true),
+      std::make_tuple("!:", false, true),
+      std::make_tuple("xx:", false, false),
+      std::make_tuple("c:abc\\", false, true),
+      std::make_tuple(":", false, false)};
 
   for (const auto &Path : Paths) {
     EXPECT_EQ(path::is_absolute_gnu(std::get<0>(Path), path::Style::posix),
