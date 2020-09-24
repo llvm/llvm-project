@@ -1,0 +1,41 @@
+## Check how obj2yaml dumps SHT_MIPS_ABIFLAGS sections.
+
+# RUN: yaml2obj %s -o %t
+# RUN: obj2yaml %t | FileCheck %s
+
+# CHECK:      Sections:
+# CHECK-NEXT:   - Name:         .MIPS.abiflags
+# CHECK-NEXT:     Type:         SHT_MIPS_ABIFLAGS
+# CHECK-NEXT:     AddressAlign: 0x0000000000000008
+# CHECK-NEXT:     EntSize:      0x0000000000000018
+# CHECK-NEXT:     ISA:          MIPS64
+# CHECK-NEXT:     ISARevision:  0x05
+# CHECK-NEXT:     ISAExtension: EXT_OCTEON3
+# CHECK-NEXT:     ASEs:         [ DSP, DSPR2, VIRT ]
+# CHECK-NEXT:     FpABI:        FP_DOUBLE
+# CHECK-NEXT:     GPRSize:      REG_64
+# CHECK-NEXT:     CPR1Size:     REG_64
+# CHECK-NEXT:     Flags1:       [ ODDSPREG ]
+# CHECK-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Sections:
+  - Name:         .MIPS.abiflags
+    Type:         SHT_MIPS_ABIFLAGS
+    AddressAlign: 8
+    Version:      0
+    ISA:          MIPS64
+    ISARevision:  5
+    ISAExtension: EXT_OCTEON3
+    ASEs:         [ DSP, DSPR2, VIRT ]
+    FpABI:        FP_DOUBLE
+    GPRSize:      REG_64
+    CPR1Size:     REG_64
+    CPR2Size:     REG_NONE
+    Flags1:       [ ODDSPREG ]
+    Flags2:       0x0
