@@ -2597,9 +2597,6 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
                                    AMK == Sema::AMK_Override);
   else if (const auto *OA = dyn_cast<OptimizeNoneAttr>(Attr))
     NewAttr = S.mergeOptimizeNoneAttr(D, *OA);
-  else if (const auto *SNA = dyn_cast<SwiftNameAttr>(Attr))
-    NewAttr = S.mergeSwiftNameAttr(D, *SNA, SNA->getName(),
-                                   AMK == Sema::AMK_Override);
   else if (const auto *InternalLinkageA = dyn_cast<InternalLinkageAttr>(Attr))
     NewAttr = S.mergeInternalLinkageAttr(D, *InternalLinkageA);
   else if (const auto *CommonA = dyn_cast<CommonAttr>(Attr))
