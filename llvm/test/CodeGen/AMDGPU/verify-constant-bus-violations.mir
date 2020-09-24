@@ -1,0 +1,27 @@
+# RUN: not --crash llc -march=amdgcn -mcpu=gfx900 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX9-ERR %s
+# RUN: not --crash llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX10-ERR %s
+
+# GFX9-ERR: *** Bad machine code: VOP* instruction violates constant bus restriction ***
+# GFX9-ERR: $vgpr0 = V_CNDMASK_B32_e64 0, $sgpr0, 0, -1, killed $sgpr0_sgpr1, implicit $exec
+---
+name:           sgpr_reuse_2sgpr
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '' }
+body:            |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    $vgpr0 = V_CNDMASK_B32_e64 0, $sgpr0, 0, -1, killed $sgpr0_sgpr1, implicit $exec
+...
+
+# GFX10-ERR: *** Bad machine code: VOP* instruction violates constant bus restriction ***
+# GFX10-ERR: $vgpr0 = V_CNDMASK_B32_e64 0, $sgpr0, 0, $sgpr2, killed $sgpr0_sgpr1, implicit $exec
+---
+name:           sgpr_reuse_3sgpr
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '' }
+  - { reg: '$sgpr2', virtual-reg: '' }
+body:            |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr2
+    $vgpr0 = V_CNDMASK_B32_e64 0, $sgpr0, 0, $sgpr2, killed $sgpr0_sgpr1, implicit $exec
+...
