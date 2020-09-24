@@ -247,14 +247,10 @@ public:
             void (ClangdLSPServer::*Handler)(const Param &, Callback<Result>)) {
     Calls[Method] = [Method, Handler, this](llvm::json::Value RawParams,
                                             ReplyOnce Reply) {
-      Param P;
-      if (fromJSON(RawParams, P)) {
-        (Server.*Handler)(P, std::move(Reply));
-      } else {
-        elog("Failed to decode {0} request.", Method);
-        Reply(llvm::make_error<LSPError>("failed to decode request",
-                                         ErrorCode::InvalidRequest));
-      }
+      auto P = parse<Param>(RawParams, Method, "request");
+      if (!P)
+        return Reply(P.takeError());
+      (Server.*Handler)(*P, std::move(Reply));
     };
   }
 
@@ -292,14 +288,12 @@ public:
             void (ClangdLSPServer::*Handler)(const Param &)) {
     Notifications[Method] = [Method, Handler,
                              this](llvm::json::Value RawParams) {
-      Param P;
-      if (!fromJSON(RawParams, P)) {
-        elog("Failed to decode {0} request.", Method);
-        return;
-      }
+      llvm::Expected<Param> P = parse<Param>(RawParams, Method, "request");
+      if (!P)
+        return llvm::consumeError(P.takeError());
       trace::Span Tracer(Method, LSPLatency);
       SPAN_ATTACH(Tracer, "Params", RawParams);
-      (Server.*Handler)(P);
+      (Server.*Handler)(*P);
     };
   }
 
