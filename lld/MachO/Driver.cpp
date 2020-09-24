@@ -164,10 +164,11 @@ static bool warnIfNotDirectory(StringRef option, StringRef path) {
   return true;
 }
 
-static void getSearchPaths(std::vector<StringRef> &paths, unsigned optionCode,
-                           opt::InputArgList &args,
-                           const std::vector<StringRef> &roots,
-                           const SmallVector<StringRef, 2> &systemPaths) {
+static std::vector<StringRef>
+getSearchPaths(unsigned optionCode, opt::InputArgList &args,
+               const std::vector<StringRef> &roots,
+               const SmallVector<StringRef, 2> &systemPaths) {
+  std::vector<StringRef> paths;
   StringRef optionLetter{optionCode == OPT_F ? "F" : "L"};
   for (StringRef path : args::getStrings(args, optionCode)) {
     // NOTE: only absolute paths are re-rooted to syslibroot(s)
@@ -189,7 +190,7 @@ static void getSearchPaths(std::vector<StringRef> &paths, unsigned optionCode,
 
   // `-Z` suppresses the standard "system" search paths.
   if (args.hasArg(OPT_Z))
-    return;
+    return paths;
 
   for (auto const &path : systemPaths) {
     for (auto root : roots) {
@@ -199,19 +200,34 @@ static void getSearchPaths(std::vector<StringRef> &paths, unsigned optionCode,
         paths.push_back(saver.save(buffer.str()));
     }
   }
+  return paths;
 }
 
-static void getLibrarySearchPaths(opt::InputArgList &args,
-                                  const std::vector<StringRef> &roots,
-                                  std::vector<StringRef> &paths) {
-  getSearchPaths(paths, OPT_L, args, roots, {"/usr/lib", "/usr/local/lib"});
+static std::vector<StringRef> getSystemLibraryRoots(opt::InputArgList &args) {
+  std::vector<StringRef> roots;
+  for (const Arg *arg : args.filtered(OPT_syslibroot))
+    roots.push_back(arg->getValue());
+  // NOTE: the final `-syslibroot` being `/` will ignore all roots
+  if (roots.size() && roots.back() == "/")
+    roots.clear();
+  // NOTE: roots can never be empty - add an empty root to simplify the library
+  // and framework search path computation.
+  if (roots.empty())
+    roots.emplace_back("");
+  return roots;
 }
 
-static void getFrameworkSearchPaths(opt::InputArgList &args,
-                                    const std::vector<StringRef> &roots,
-                                    std::vector<StringRef> &paths) {
-  getSearchPaths(paths, OPT_F, args, roots,
-                 {"/Library/Frameworks", "/System/Library/Frameworks"});
+static std::vector<StringRef>
+getLibrarySearchPaths(opt::InputArgList &args,
+                      const std::vector<StringRef> &roots) {
+  return getSearchPaths(OPT_L, args, roots, {"/usr/lib", "/usr/local/lib"});
+}
+
+static std::vector<StringRef>
+getFrameworkSearchPaths(opt::InputArgList &args,
+                        const std::vector<StringRef> &roots) {
+  return getSearchPaths(OPT_F, args, roots,
+                        {"/Library/Frameworks", "/System/Library/Frameworks"});
 }
 
 // Returns slices of MB by parsing MB as an archive file.
@@ -557,28 +573,20 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   config->outputType = args.hasArg(OPT_dylib) ? MH_DYLIB : MH_EXECUTE;
   config->runtimePaths = args::getStrings(args, OPT_rpath);
   config->allLoad = args.hasArg(OPT_all_load);
+  config->forceLoadObjC = args.hasArg(OPT_ObjC);
 
   if (const opt::Arg *arg = args.getLastArg(OPT_static, OPT_dynamic))
     config->staticLink = (arg->getOption().getID() == OPT_static);
 
-  std::vector<StringRef> &roots = config->systemLibraryRoots;
-  for (const Arg *arg : args.filtered(OPT_syslibroot))
-    roots.push_back(arg->getValue());
-  // NOTE: the final `-syslibroot` being `/` will ignore all roots
-  if (roots.size() && roots.back() == "/")
-    roots.clear();
-  // NOTE: roots can never be empty - add an empty root to simplify the library
-  // and framework search path computation.
-  if (roots.empty())
-    roots.emplace_back("");
-
-  getLibrarySearchPaths(args, roots, config->librarySearchPaths);
-  getFrameworkSearchPaths(args, roots, config->frameworkSearchPaths);
+  config->systemLibraryRoots = getSystemLibraryRoots(args);
+  config->librarySearchPaths =
+      getLibrarySearchPaths(args, config->systemLibraryRoots);
+  config->frameworkSearchPaths =
+      getFrameworkSearchPaths(args, config->systemLibraryRoots);
   if (const opt::Arg *arg =
           args.getLastArg(OPT_search_paths_first, OPT_search_dylibs_first))
     config->searchDylibsFirst =
         (arg && arg->getOption().getID() == OPT_search_dylibs_first);
-  config->forceLoadObjC = args.hasArg(OPT_ObjC);
 
   if (args.hasArg(OPT_v)) {
     message(getLLDVersion());
