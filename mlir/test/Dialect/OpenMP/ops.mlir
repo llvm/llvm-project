@@ -8,10 +8,11 @@ func @omp_barrier() -> () {
 
 func @omp_master() -> () {
   // CHECK: omp.master
-  "omp.master" ()({
+  omp.master {
     // CHECK: omp.terminator
     omp.terminator
-  }):()->()
+  }
+
   return
 }
 
