@@ -21,13 +21,13 @@ include "mlir/Interfaces/CopyOpInterface.td"
 
 // The Linalg `NInputs` trait provides the API for ops that are known
 // to have a specified number of inputs, all passed as operands.
-// See Linalg/LinalgTraits.h for implementation details an usage.
+// See Linalg/LinalgTraits.h for implementation details and usage.
 class NInputs<int args_in> :
   NativeOpTrait<"linalg::NInputs<" # !cast<string>(args_in) # ">::Impl"> {}
 
 // The Linalg `NOutputs` trait provides the API for ops that are known
 // to have a specified number of outputs, all passed as operands.
-// See Linalg/LinalgTraits.h for implementation details an usage.
+// See Linalg/LinalgTraits.h for implementation details and usage.
 class NOutputs<int args_out> :
   NativeOpTrait<"linalg::NOutputs<" # !cast<string>(args_out) # ">::Impl"> {}
 

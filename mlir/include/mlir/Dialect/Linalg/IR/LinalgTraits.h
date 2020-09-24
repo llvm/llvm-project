@@ -62,7 +62,7 @@ class StructuredOpTraits
 public:
   static LogicalResult verifyTrait(Operation *op) {
     ConcreteType concreteOp = cast<ConcreteType>(op);
-    auto nOperands = cast<ConcreteType>(op).getNumInputsAndOutputBuffers();
+    auto nOperands = concreteOp.getNumInputsAndOutputBuffers();
     if (failed(OpTrait::impl::verifyAtLeastNOperands(op, nOperands)))
       return failure();
     if (op->getNumResults() > concreteOp.getNumOutputs())
