@@ -21,6 +21,9 @@ vector signed __int128 vsi128a, vsi128b;
 vector unsigned __int128 vui128a, vui128b, vui128c;
 vector float vfa, vfb;
 vector double vda, vdb;
+float fa;
+double da;
+signed int sia;
 signed int *iap;
 unsigned int uia, uib, *uiap;
 signed char *cap;
@@ -1009,6 +1012,126 @@ vector double test_vec_blend_d(void) {
   // CHECK-NEXT: bitcast <2 x i64> %{{.*}} to <2 x double>
   // CHECK-NEXT: ret <2 x double>
   return vec_blendv(vda, vdb, vullc);
+}
+
+vector signed int test_vec_replace_elt_si(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinsw(<4 x i32> %{{.+}}, i32 %{{.+}}, i32 0
+  // CHECK-BE-NEXT: ret <4 x i32>
+  // CHECK-LE: @llvm.ppc.altivec.vinsw(<4 x i32> %{{.+}}, i32 %{{.+}}, i32 12
+  // CHECK-LE-NEXT: ret <4 x i32>
+  return vec_replace_elt(vsia, sia, 0);
+}
+
+vector unsigned int test_vec_replace_elt_ui(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinsw(<4 x i32> %{{.+}}, i32 %{{.+}}, i32 4
+  // CHECK-BE-NEXT: ret <4 x i32>
+  // CHECK-LE: @llvm.ppc.altivec.vinsw(<4 x i32> %{{.+}}, i32 %{{.+}}, i32 8
+  // CHECK-LE-NEXT: ret <4 x i32>
+  return vec_replace_elt(vuia, uia, 1);
+}
+
+vector float test_vec_replace_elt_f(void) {
+  // CHECK-BE: bitcast float %{{.+}} to i32
+  // CHECK-BE-NEXT: @llvm.ppc.altivec.vinsw(<4 x i32> %{{.+}}, i32 %{{.+}}, i32 8
+  // CHECK-BE-NEXT: bitcast <4 x i32> %{{.*}} to <4 x float>
+  // CHECK-BE-NEXT: ret <4 x float>
+  // CHECK-LE: bitcast float %{{.+}} to i32
+  // CHECK-LE-NEXT: @llvm.ppc.altivec.vinsw(<4 x i32> %{{.+}}, i32 %{{.+}}, i32 4
+  // CHECK-LE-NEXT: bitcast <4 x i32> %{{.*}} to <4 x float>
+  // CHECK-LE-NEXT: ret <4 x float>
+  return vec_replace_elt(vfa, fa, 2);
+}
+
+vector signed long long test_vec_replace_elt_sll(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinsd(<2 x i64> %{{.+}}, i64 %{{.+}}, i32 0
+  // CHECK-BE-NEXT: ret <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vinsd(<2 x i64> %{{.+}}, i64 %{{.+}}, i32 8
+  // CHECK-LE-NEXT: ret <2 x i64>
+  return vec_replace_elt(vslla, llb, 0);
+}
+
+vector unsigned long long test_vec_replace_elt_ull(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinsd(<2 x i64> %{{.+}}, i64 %{{.+}}, i32 0
+  // CHECK-BE-NEXT: ret <2 x i64>
+  // CHECK-LE: @llvm.ppc.altivec.vinsd(<2 x i64> %{{.+}}, i64 %{{.+}}, i32 8
+  // CHECK-LE-NEXT: ret <2 x i64>
+  return vec_replace_elt(vulla, ulla, 0);
+}
+
+vector double test_vec_replace_elt_d(void) {
+  // CHECK-BE: bitcast double %{{.+}} to i64
+  // CHECK-BE-NEXT: @llvm.ppc.altivec.vinsd(<2 x i64> %{{.+}}, i64 %{{.+}}, i32 8
+  // CHECK-BE-NEXT: bitcast <2 x i64> %{{.*}} to <2 x double>
+  // CHECK-BE-NEXT: ret <2 x double>
+  // CHECK-LE: bitcast double %{{.+}} to i64
+  // CHECK-LE-NEXT: @llvm.ppc.altivec.vinsd(<2 x i64> %{{.+}}, i64 %{{.+}}, i32 0
+  // CHECK-LE-NEXT: bitcast <2 x i64> %{{.*}} to <2 x double>
+  // CHECK-LE-NEXT: ret <2 x double>
+  return vec_replace_elt(vda, da, 1);
+}
+
+vector unsigned char test_vec_replace_unaligned_si(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinsw(<4 x i32> %{{.+}}, i32 %{{.+}}, i32 6
+  // CHECK-BE-NEXT: bitcast <4 x i32> %{{.*}} to <16 x i8>
+  // CHECK-BE-NEXT: ret <16 x i8>
+  // CHECK-LE: @llvm.ppc.altivec.vinsw(<4 x i32> %{{.+}}, i32 %{{.+}}, i32 6
+  // CHECK-LE-NEXT: bitcast <4 x i32> %{{.*}} to <16 x i8>
+  // CHECK-LE-NEXT: ret <16 x i8>
+  return vec_replace_unaligned(vsia, sia, 6);
+}
+
+vector unsigned char test_vec_replace_unaligned_ui(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinsw(<4 x i32> %{{.+}}, i32 %{{.+}}, i32 8
+  // CHECK-BE-NEXT: bitcast <4 x i32> %{{.*}} to <16 x i8>
+  // CHECK-BE-NEXT: ret <16 x i8>
+  // CHECK-LE: @llvm.ppc.altivec.vinsw(<4 x i32> %{{.+}}, i32 %{{.+}}, i32 4
+  // CHECK-LE-NEXT: bitcast <4 x i32> %{{.*}} to <16 x i8>
+  // CHECK-LE-NEXT: ret <16 x i8>
+  return vec_replace_unaligned(vuia, uia, 8);
+}
+
+vector unsigned char test_vec_replace_unaligned_f(void) {
+  // CHECK-BE: bitcast float %{{.+}} to i32
+  // CHECK-BE-NEXT: @llvm.ppc.altivec.vinsw(<4 x i32> %{{.+}}, i32 %{{.+}}, i32 12
+  // CHECK-BE-NEXT: bitcast <4 x i32> %{{.*}} to <16 x i8>
+  // CHECK-BE-NEXT: ret <16 x i8>
+  // CHECK-LE: bitcast float %{{.+}} to i32
+  // CHECK-LE-NEXT: @llvm.ppc.altivec.vinsw(<4 x i32> %{{.+}}, i32 %{{.+}}, i32 0
+  // CHECK-LE-NEXT: bitcast <4 x i32> %{{.*}} to <16 x i8>
+  // CHECK-LE-NEXT: ret <16 x i8>
+  return vec_replace_unaligned(vfa, fa, 12);
+}
+
+vector unsigned char test_vec_replace_unaligned_sll(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinsd(<2 x i64> %{{.+}}, i64 %{{.+}}, i32 6
+  // CHECK-BE-NEXT: bitcast <2 x i64> %{{.*}} to <16 x i8>
+  // CHECK-BE-NEXT: ret <16 x i8>
+  // CHECK-LE: @llvm.ppc.altivec.vinsd(<2 x i64> %{{.+}}, i64 %{{.+}}, i32 2
+  // CHECK-LE-NEXT: bitcast <2 x i64> %{{.*}} to <16 x i8>
+  // CHECK-LE-NEXT: ret <16 x i8>
+  return vec_replace_unaligned(vslla, llb, 6);
+}
+
+vector unsigned char test_vec_replace_unaligned_ull(void) {
+  // CHECK-BE: @llvm.ppc.altivec.vinsd(<2 x i64> %{{.+}}, i64 %{{.+}}, i32 7
+  // CHECK-BE-NEXT: bitcast <2 x i64> %{{.*}} to <16 x i8>
+  // CHECK-BE-NEXT: ret <16 x i8>
+  // CHECK-LE: @llvm.ppc.altivec.vinsd(<2 x i64> %{{.+}}, i64 %{{.+}}, i32 1
+  // CHECK-LE-NEXT: bitcast <2 x i64> %{{.*}} to <16 x i8>
+  // CHECK-LE-NEXT: ret <16 x i8>
+  return vec_replace_unaligned(vulla, ulla, 7);
+}
+
+vector unsigned char test_vec_replace_unaligned_d(void) {
+  // CHECK-BE: bitcast double %{{.+}} to i64
+  // CHECK-BE-NEXT: @llvm.ppc.altivec.vinsd(<2 x i64> %{{.+}}, i64 %{{.+}}, i32 8
+  // CHECK-BE-NEXT: bitcast <2 x i64> %{{.*}} to <16 x i8>
+  // CHECK-BE-NEXT: ret <16 x i8>
+  // CHECK-LE: bitcast double %{{.+}} to i64
+  // CHECK-LE-NEXT: @llvm.ppc.altivec.vinsd(<2 x i64> %{{.+}}, i64 %{{.+}}, i32 0
+  // CHECK-LE-NEXT: bitcast <2 x i64> %{{.*}} to <16 x i8>
+  // CHECK-LE-NEXT: ret <16 x i8>
+  return vec_replace_unaligned(vda, da, 8);
 }
 
 vector unsigned char test_vec_insertl_uc(void) {

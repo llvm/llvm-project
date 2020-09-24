@@ -409,6 +409,8 @@ BUILTIN(__builtin_altivec_vinshvlx, "V8UsV8UsUiV8Us", "")
 BUILTIN(__builtin_altivec_vinshvrx, "V8UsV8UsUiV8Us", "")
 BUILTIN(__builtin_altivec_vinswvlx, "V4UiV4UiUiV4Ui", "")
 BUILTIN(__builtin_altivec_vinswvrx, "V4UiV4UiUiV4Ui", "")
+BUILTIN(__builtin_altivec_vec_replace_elt, "V4UiV4UiUiIi", "t")
+BUILTIN(__builtin_altivec_vec_replace_unaligned, "V4UiV4UiUiIi", "t")
 
 // P10 Vector Extract built-ins.
 BUILTIN(__builtin_altivec_vextdubvlx, "V2ULLiV16UcV16UcUi", "")
