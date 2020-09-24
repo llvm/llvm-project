@@ -173,8 +173,8 @@ IRSimilarityCandidate::IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
   assert(LastInstIt != nullptr && "Instruction is nullptr!");
   assert(StartIdx + Len > StartIdx &&
          "Overflow for IRSimilarityCandidate range?");
-  assert(Len - 1 ==
-             std::distance(iterator(FirstInstIt), iterator(LastInstIt)) &&
+  assert(Len - 1 == static_cast<unsigned>(std::distance(
+                        iterator(FirstInstIt), iterator(LastInstIt))) &&
          "Length of the first and last IRInstructionData do not match the "
          "given length");
 
