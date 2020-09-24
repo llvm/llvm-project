@@ -342,6 +342,21 @@ Changes to the LLVM tools
 * llvm-lib supports adding import library objects in addition to regular
   object files
 
+External Open Source Projects Using LLVM 11
+===========================================
+
+Zig Programming Language
+------------------------
+
+`Zig <https://ziglang.org>`_  is a general-purpose programming language and
+toolchain for maintaining robust, optimal, and reusable software. In addition
+to supporting LLVM as an optional backend, Zig links Clang and LLD to provide
+an out-of-the-box cross compilation experience, not only for Zig code but for
+C and C++ code as well. Using a sophisticated caching system, Zig lazily builds
+from source compiler-rt, mingw-w64, musl, glibc, libcxx, libcxxabi, and
+libunwind for the selected target - a "batteries included" drop-in for GCC/Clang
+that works the same on every platform.
+
 Additional Information
 ======================
 
