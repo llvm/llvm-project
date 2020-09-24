@@ -2779,7 +2779,7 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {
     const uint64_t StoreSize = DL.getTypeStoreSize(CV->getType());
 
-    if (StoreSize < 8) {
+    if (StoreSize <= 8) {
       if (AP.isVerbose())
         AP.OutStreamer->GetCommentOS() << format("0x%" PRIx64 "\n",
                                                  CI->getZExtValue());
