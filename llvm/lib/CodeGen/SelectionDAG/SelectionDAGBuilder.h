@@ -783,8 +783,7 @@ private:
   void processIntegerCallValue(const Instruction &I,
                                SDValue Value, bool IsSigned);
 
-  void HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB,
-                                       bool Preprocess);
+  void HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB);
 
   void emitInlineAsmError(const CallBase &Call, const Twine &Message);
 
