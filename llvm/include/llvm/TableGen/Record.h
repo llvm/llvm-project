@@ -338,6 +338,7 @@ private:
   virtual void anchor();
 
 public:
+  /// Get the kind (type) of the value.
   InitKind getKind() const { return Kind; }
 
 protected:
@@ -348,63 +349,61 @@ public:
   Init &operator=(const Init &) = delete;
   virtual ~Init() = default;
 
-  /// This virtual method should be overridden by values that may
-  /// not be completely specified yet.
+  /// Is this a complete value with no unset (uninitialized) subvalues?
   virtual bool isComplete() const { return true; }
 
   /// Is this a concrete and fully resolved value without any references or
   /// stuck operations? Unset values are concrete.
   virtual bool isConcrete() const { return false; }
 
-  /// Print out this value.
+  /// Print this value.
   void print(raw_ostream &OS) const { OS << getAsString(); }
 
-  /// Convert this value to a string form.
+  /// Convert this value to a literal form.
   virtual std::string getAsString() const = 0;
-  /// Convert this value to a string form,
-  /// without adding quote markers.  This primaruly affects
-  /// StringInits where we will not surround the string value with
-  /// quotes.
+
+  /// Convert this value to a literal form,
+  /// without adding quotes around a string.
   virtual std::string getAsUnquotedString() const { return getAsString(); }
 
-  /// Debugging method that may be called through a debugger, just
+  /// Debugging method that may be called through a debugger; just
   /// invokes print on stderr.
   void dump() const;
 
-  /// If this initializer is convertible to Ty, return an initializer whose
-  /// type is-a Ty, generating a !cast operation if required. Otherwise, return
-  /// nullptr.
+  /// If this value is convertible to type \p Ty, return a value whose
+  /// type is \p Ty, generating a !cast operation if required.
+  /// Otherwise, return null.
   virtual Init *getCastTo(RecTy *Ty) const = 0;
 
-  /// Convert to an initializer whose type is-a Ty, or return nullptr if this
-  /// is not possible (this can happen if the initializer's type is convertible
-  /// to Ty, but there are unresolved references).
+  /// Convert to a value whose type is \p Ty, or return null if this
+  /// is not possible. This can happen if the value's type is convertible
+  /// to \p Ty, but there are unresolved references.
   virtual Init *convertInitializerTo(RecTy *Ty) const = 0;
 
-  /// This method is used to implement the bitrange
-  /// selection operator.  Given an initializer, it selects the specified bits
-  /// out, returning them as a new init of bits type.  If it is not legal to use
-  /// the bit subscript operator on this initializer, return null.
+  /// This function is used to implement the bit range
+  /// selection operator. Given a value, it selects the specified bits,
+  /// returning them as a new \p Init of type \p bits. If it is not legal
+  /// to use the bit selection operator on this value, null is returned.
   virtual Init *convertInitializerBitRange(ArrayRef<unsigned> Bits) const {
     return nullptr;
   }
 
-  /// This method is used to implement the list slice
-  /// selection operator.  Given an initializer, it selects the specified list
-  /// elements, returning them as a new init of list type.  If it is not legal
-  /// to take a slice of this, return null.
+  /// This function is used to implement the list slice
+  /// selection operator.  Given a value, it selects the specified list
+  /// elements, returning them as a new \p Init of type \p list. If it
+  /// is not legal to use the slice operator, null is returned.
   virtual Init *convertInitListSlice(ArrayRef<unsigned> Elements) const {
     return nullptr;
   }
 
-  /// This method is used to implement the FieldInit class.
-  /// Implementors of this method should return the type of the named field if
-  /// they are of record type.
+  /// This function is used to implement the FieldInit class.
+  /// Implementors of this method should return the type of the named
+  /// field if they are of type record.
   virtual RecTy *getFieldType(StringInit *FieldName) const {
     return nullptr;
   }
 
-  /// This method is used by classes that refer to other
+  /// This function is used by classes that refer to other
   /// variables which may not be defined at the time the expression is formed.
   /// If a value is set for the variable later, this method will be called on
   /// users of the value to allow the value to propagate out.
@@ -412,8 +411,7 @@ public:
     return const_cast<Init *>(this);
   }
 
-  /// This method is used to return the initializer for the specified
-  /// bit.
+  /// Get the \p Init value of the specified bit.
   virtual Init *getBit(unsigned Bit) const = 0;
 };
 
@@ -449,8 +447,7 @@ public:
 
   /// This method is used to implement the FieldInit class.
   /// Implementors of this method should return the type of the named field if
-  /// they are of record type.
-  ///
+  /// they are of type record.
   RecTy *getFieldType(StringInit *FieldName) const override;
 };
 
@@ -1711,26 +1708,34 @@ raw_ostream &operator<<(raw_ostream &OS, const Record &R);
 
 class RecordKeeper {
   friend class RecordRecTy;
+
   using RecordMap = std::map<std::string, std::unique_ptr<Record>, std::less<>>;
+
   RecordMap Classes, Defs;
   FoldingSet<RecordRecTy> RecordTypePool;
   std::map<std::string, Init *, std::less<>> ExtraGlobals;
   unsigned AnonCounter = 0;
 
 public:
+  /// Get the map of classes.
   const RecordMap &getClasses() const { return Classes; }
+
+  /// Get the map of records (defs).
   const RecordMap &getDefs() const { return Defs; }
 
+  /// Get the class with the specified name.
   Record *getClass(StringRef Name) const {
     auto I = Classes.find(Name);
     return I == Classes.end() ? nullptr : I->second.get();
   }
 
+  /// Get the concrete record with the specified name.
   Record *getDef(StringRef Name) const {
     auto I = Defs.find(Name);
     return I == Defs.end() ? nullptr : I->second.get();
   }
 
+  /// Get the \p Init value of the specified global variable.
   Init *getGlobal(StringRef Name) const {
     if (Record *R = getDef(Name))
       return R->getDefInit();
@@ -1762,11 +1767,10 @@ public:
   Init *getNewAnonymousName();
 
   //===--------------------------------------------------------------------===//
-  // High-level helper methods, useful for tablegen backends...
+  // High-level helper methods, useful for tablegen backends.
 
-  /// This method returns all concrete definitions
-  /// that derive from the specified class name.  A class with the specified
-  /// name must exist.
+  /// Get all the concrete records that inherit from the specified
+  /// class. The class must be defined.
   std::vector<Record *> getAllDerivedDefinitions(StringRef ClassName) const;
 
   void dump() const;
