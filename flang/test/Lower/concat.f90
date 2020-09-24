@@ -39,11 +39,8 @@ subroutine concat_1(a, b)
     ! CHECK: fir.store %[[b_elt]] to %[[temp_addr2]]
   ! CHECK: }
 
-  ! CHECK: %[[embox_temp:.*]] = fir.emboxchar %[[temp]], %[[len]]
-
   ! IO runtime call
-  ! CHECK: %[[result:.*]]:2 = fir.unboxchar %[[embox_temp]]
-  ! CHECK-DAG: %[[raddr:.*]] = fir.convert %[[result]]#0
-  ! CHECK-DAG: %[[rlen:.*]] = fir.convert %[[result]]#1
+  ! CHECK-DAG: %[[raddr:.*]] = fir.convert %[[temp]]
+  ! CHECK-DAG: %[[rlen:.*]] = fir.convert %[[len]]
   ! CHECK: call @{{.*}}OutputAscii(%{{.*}}, %[[raddr]], %[[rlen]])
 end subroutine

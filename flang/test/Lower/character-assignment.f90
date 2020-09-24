@@ -76,15 +76,12 @@ subroutine assign_substring1(str, rhs, lb, ub)
   ! CHECK-DAG: %[[cmp_len:.*]] = cmpi "slt", %[[pre_lhs_len]], %[[c0]]
 
   ! CHECK-DAG: %[[lhs_len:.*]] = select %[[cmp_len]], %[[c0]], %[[pre_lhs_len]]
-  ! CHECK: %[[lhs_box:.*]] = fir.emboxchar %[[lhs_addr]], %[[lhs_len]]
 
   ! The rest of the assignment is just as the one above, only test that the
-  ! substring box is the one used
+  ! substring is the one used as lhs.
   ! ...
-  ! CHECK: %[[lhs:.*]]:2 = fir.unboxchar %[[lhs_box]]
-  ! ...
-  ! CHECK: %[[lhs2:.*]] = fir.convert %[[lhs]]#0
-  ! CHECK-NEXT: fir.coordinate_of %[[lhs2]], %arg4
+  ! CHECK: %[[lhs_addr3:.*]] = fir.convert %[[lhs_addr]]
+  ! CHECK-NEXT: fir.coordinate_of %[[lhs_addr3]], %arg4
   ! ...
 end subroutine
 

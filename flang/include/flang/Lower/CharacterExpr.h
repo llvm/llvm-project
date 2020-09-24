@@ -153,6 +153,15 @@ public:
   /// previous.
   static bool isArray(mlir::Type type);
 
+  /// Temporary helper to help migrating towards properties of
+  /// ExtendedValue containing characters.
+  /// Mainly, this ensure that characters are always CharArrayBoxValue,
+  /// CharBoxValue, or BoxValue and that the base address is not a boxchar.
+  /// Return the argument if this is not a character.
+  /// TODO: Create and propagate ExtendedValue according to properties listed
+  /// above instead of fixing it when needed.
+  fir::ExtendedValue cleanUpCharacterExtendedValue(const fir::ExtendedValue &);
+
 private:
   fir::CharBoxValue materializeValue(mlir::Value str);
   fir::CharBoxValue toDataLengthPair(mlir::Value character);
