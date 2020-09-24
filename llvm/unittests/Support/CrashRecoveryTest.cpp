@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Triple.h"
+#include "llvm/Config/config.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -21,6 +22,12 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOGDI
 #include <windows.h>
+#endif
+
+#ifdef LLVM_ON_UNIX
+#ifdef HAVE_SIGNAL_H
+#include <signal.h>
+#endif
 #endif
 
 using namespace llvm;
