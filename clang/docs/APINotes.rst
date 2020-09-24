@@ -3,13 +3,13 @@ API Notes: Annotations Without Modifying Headers
 ================================================
 
 **The Problem:** You have headers you want to use, but you also want to add
-extra information to some of the APIs. You don't want to put that information
-in the headers themselves---perhaps because you want to keep them clean for
-other clients, or perhaps because they're from some open source project and you
-don't want to modify them at all.
+extra information to the API. You don't want to put that information in the
+headers themselves --- perhaps because you want to keep them clean for other
+clients, or perhaps because they're from some open source project and you don't
+want to modify them at all.
 
-**Incomplete solution:** Redeclare all the interesting APIs in your own header
-and add the attributes you want. Unfortunately, this:
+**Incomplete solution:** Redeclare all the interesting parts of the API in your
+own header and add the attributes you want. Unfortunately, this:
 
 * doesn't work with attributes that must be present on a definition
 * doesn't allow changing the definition in other ways
@@ -25,7 +25,7 @@ API notes use a YAML-based file format. YAML is a format best explained by
 example, so here is a `small example`__ from the compiler test suite of API
 notes for a hypothetical "SomeKit" framework.
 
-__ https://github.com/apple/swift-clang/blob/upstream-with-swift/test/APINotes/Inputs/Frameworks/SomeKit.framework/Headers/SomeKit.apinotes
+__ test/APINotes/Inputs/Frameworks/SomeKit.framework/Headers/SomeKit.apinotes
 
 
 Usage
@@ -42,7 +42,7 @@ PrivateHeaders directory as well, though it does not need an additional
 "_private" suffix on its name.
 
 Clang will search for API notes files next to module maps only when passed the
-``-fapinotes-modules`` option.
+``-fapi-notes-modules`` option.
 
 
 Limitations
@@ -58,7 +58,7 @@ Limitations
 Many API notes affect how a C API is imported into Swift. In order to change
 that behavior while still remaining backwards-compatible, API notes can be
 selectively applied based on the Swift compatibility version provided to the
-compiler (e.g. ``-fapinotes-swift-version=5``). The rule is that an
+compiler (e.g. ``-fapi-notes-swift-version=5``). The rule is that an
 explicitly-versioned API note applies to that version *and all earlier
 versions,* and any applicable explicitly-versioned API note takes precedence
 over an unversioned API note.
@@ -145,7 +145,7 @@ declaration kind), all of which are optional:
 
 :SwiftName:
 
-  Equivalent to NS_SWIFT_NAME. For a method, must include the full Swift name
+  Equivalent to ``NS_SWIFT_NAME``. For a method, must include the full Swift name
   with all arguments. Use "_" to omit an argument label.
 
   ::
@@ -159,7 +159,7 @@ declaration kind), all of which are optional:
 
 :Availability, AvailabilityMsg:
 
-  A value of "nonswift" is equivalent to NS_SWIFT_UNAVAILABLE. A value of
+  A value of "nonswift" is equivalent to ``NS_SWIFT_UNAVAILABLE``. A value of
   "available" can be used in the "SwiftVersions" section to undo the effect of
   "nonswift".
 
@@ -184,10 +184,10 @@ declaration kind), all of which are optional:
   Used for properties and globals. There are four options, identified by their
   initials:
 
-  - "N"onnull (``_Nonnull``)
-  - "O"ptional (``_Nullable``)
-  - "U"nspecified (``_Null_unspecified``)
-  - "S"calar (deprecated)
+  - ``Nonnull`` or ``N`` (corresponding to ``_Nonnull``)
+  - ``Optional`` or ``O`` (corresponding to ``_Nullable``)
+  - ``Unspecified`` or ``U`` (corresponding to ``_Null_unspecified``)
+  - ``Scalar`` or ``S`` (deprecated)
 
   Note that 'Nullability' is overridden by 'Type', even in a "SwiftVersions"
   section.
@@ -230,9 +230,10 @@ declaration kind), all of which are optional:
   compatibility, when existing type information has been made more precise in a
   header. Prefer 'Nullability' and other annotations when possible.
 
-  Note that the type is *not* parsed in the context where it will be used,
-  which means that macros are not available and nullability must be applied
-  explicitly (even in an ``NS_ASSUME_NONNULL_BEGIN`` section).
+  We parse the specified type as if it appeared at the location of the
+  declaration whose type is being modified.  Macros are not available and
+  nullability must be applied explicitly (even in an ``NS_ASSUME_NONNULL_BEGIN``
+  section).
 
   ::
 
@@ -246,9 +247,10 @@ declaration kind), all of which are optional:
   should ideally only be used for Swift backwards compatibility, when existing
   type information has been made more precise in a header.
 
-  Note that the type is *not* parsed in the context where it will be used,
-  which means that macros are not available and nullability must be applied
-  explicitly (even in an ``NS_ASSUME_NONNULL_BEGIN`` section).
+  We parse the specified type as if it appeared at the location of the
+  declaration whose type is being modified.  Macros are not available and
+  nullability must be applied explicitly (even in an ``NS_ASSUME_NONNULL_BEGIN``
+  section).
 
   ::
 
@@ -269,9 +271,9 @@ declaration kind), all of which are optional:
 
 :NSErrorDomain:
 
-  Used for NSError code enums. The value is the name of the associated domain
-  NSString constant; an empty string ("") means the enum is a normal enum
-  rather than an error code.
+  Used for ``NSError`` code enums. The value is the name of the associated
+  domain ``NSString`` constant; an empty string (``""``) means the enum is a
+  normal enum rather than an error code.
 
   ::
 
@@ -280,7 +282,7 @@ declaration kind), all of which are optional:
 
 :SwiftWrapper:
 
-  Controls NS_STRING_ENUM and NS_EXTENSIBLE_STRING_ENUM. There are three
+  Controls ``NS_STRING_ENUM`` and ``NS_EXTENSIBLE_STRING_ENUM``. There are three
   options:
 
   - "struct" (extensible)
@@ -297,7 +299,7 @@ declaration kind), all of which are optional:
 
 :EnumKind:
 
-  Has the same effect as NS_ENUM and NS_OPTIONS. There are four options:
+  Has the same effect as ``NS_ENUM`` and ``NS_OPTIONS``. There are four options:
 
   - "NSEnum" / "CFEnum"
   - "NSClosedEnum" / "CFClosedEnum"
@@ -329,7 +331,7 @@ declaration kind), all of which are optional:
 
 :NoEscape:
 
-  Used only for block parameters. Equivalent to NS_NOESCAPE.	
+  Used only for block parameters. Equivalent to ``NS_NOESCAPE``.
 
   ::
 
@@ -352,7 +354,7 @@ declaration kind), all of which are optional:
 
 :DesignatedInit:
 
-  Used for init methods. Equivalent to NS_DESIGNATED_INITIALIZER.	
+  Used for init methods. Equivalent to ``NS_DESIGNATED_INITIALIZER``.
 
   ::
 
