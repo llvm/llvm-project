@@ -19,8 +19,9 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
-#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -421,6 +422,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   };
 
   const LLT S1 = LLT::scalar(1);
+  const LLT S8 = LLT::scalar(8);
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
@@ -429,6 +431,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const LLT S512 = LLT::scalar(512);
   const LLT MaxScalar = LLT::scalar(MaxRegisterSize);
 
+  const LLT V2S8 = LLT::vector(2, 8);
   const LLT V2S16 = LLT::vector(2, 16);
   const LLT V4S16 = LLT::vector(4, 16);
 
@@ -586,10 +589,19 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .widenScalarToNextPow2(0, 32)
     .scalarize(0);
 
-  getActionDefinitionsBuilder({G_UMULH, G_SMULH})
-    .legalFor({S32})
-    .clampScalar(0, S32, S32)
-    .scalarize(0);
+  auto &Mulh = getActionDefinitionsBuilder({G_UMULH, G_SMULH})
+                   .legalFor({S32})
+                   .maxScalarOrElt(0, S32);
+
+  if (ST.hasVOP3PInsts()) {
+    Mulh
+      .clampMaxNumElements(0, S8, 2)
+      .lowerFor({V2S8});
+  }
+
+  Mulh
+    .scalarize(0)
+    .lower();
 
   // Report legal for any types we can handle anywhere. For the cases only legal
   // on the SALU, RegBankSelect will be able to re-legalize.
