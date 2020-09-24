@@ -159,7 +159,6 @@ private:
     OpenMPDirectiveKind Directive = OMPD_unknown;
     DeclarationNameInfo DirectiveName;
     Scope *CurScope = nullptr;
-    DeclContext *Context = nullptr;
     SourceLocation ConstructLoc;
     /// Set of 'depend' clauses with 'sink|source' dependence kind. Required to
     /// get the data (loop counters etc.) about enclosing loop-based construct.
@@ -919,7 +918,6 @@ public:
     const SharingMapTy *Top = getTopOfStackOrNull();
     return Top ? Top->CurScope : nullptr;
   }
-  void setContext(DeclContext *DC) { getTopOfStack().Context = DC; }
   SourceLocation getConstructLoc() const {
     const SharingMapTy *Top = getTopOfStackOrNull();
     return Top ? Top->ConstructLoc : SourceLocation();
@@ -1533,17 +1531,11 @@ bool DSAStackTy::isOpenMPLocal(VarDecl *D, const_iterator I) const {
   for (const_iterator E = end(); I != E; ++I) {
     if (isImplicitOrExplicitTaskingRegion(I->Directive) ||
         isOpenMPTargetExecutionDirective(I->Directive)) {
-      if (I->CurScope) {
-        Scope *TopScope = I->CurScope->getParent();
-        Scope *CurScope = getCurScope();
-        while (CurScope && CurScope != TopScope && !CurScope->isDeclScope(D))
-          CurScope = CurScope->getParent();
-        return CurScope != TopScope;
-      }
-      for (DeclContext *DC = D->getDeclContext(); DC; DC = DC->getParent())
-        if (I->Context == DC)
-          return true;
-      return false;
+      Scope *TopScope = I->CurScope ? I->CurScope->getParent() : nullptr;
+      Scope *CurScope = getCurScope();
+      while (CurScope && CurScope != TopScope && !CurScope->isDeclScope(D))
+        CurScope = CurScope->getParent();
+      return CurScope != TopScope;
     }
   }
   return false;
@@ -4156,7 +4148,6 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   default:
     llvm_unreachable("Unknown OpenMP directive");
   }
-  DSAStack->setContext(CurContext);
 }
 
 int Sema::getNumberOfConstructScopes(unsigned Level) const {
