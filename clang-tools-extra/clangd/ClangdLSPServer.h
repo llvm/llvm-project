@@ -180,22 +180,39 @@ private:
   std::unique_ptr<MessageHandler> MsgHandler;
   std::mutex TranspWriter;
 
+  template <typename T>
+  static Expected<T> parse(const llvm::json::Value &Raw,
+                           llvm::StringRef PayloadName,
+                           llvm::StringRef PayloadKind) {
+    T Result;
+    llvm::json::Path::Root Root;
+    if (!fromJSON(Raw, Result, Root)) {
+      elog("Failed to decode {0} {1}: {2}", PayloadName, PayloadKind,
+           Root.getError());
+      // Dump the relevant parts of the broken message.
+      std::string Context;
+      llvm::raw_string_ostream OS(Context);
+      Root.printErrorContext(Raw, OS);
+      vlog("{0}", OS.str());
+      // Report the error (e.g. to the client).
+      return llvm::make_error<LSPError>(
+          llvm::formatv("failed to decode {0} {1}: {2}", PayloadName,
+                        PayloadKind, fmt_consume(Root.getError())),
+          ErrorCode::InvalidParams);
+    }
+    return std::move(Result);
+  }
+
   template <typename Response>
   void call(StringRef Method, llvm::json::Value Params, Callback<Response> CB) {
     // Wrap the callback with LSP conversion and error-handling.
     auto HandleReply =
-        [CB = std::move(CB), Ctx = Context::current().clone()](
+        [CB = std::move(CB), Ctx = Context::current().clone(),
+         Method = Method.str()](
             llvm::Expected<llvm::json::Value> RawResponse) mutable {
-          Response Rsp;
-          if (!RawResponse) {
-            CB(RawResponse.takeError());
-          } else if (fromJSON(*RawResponse, Rsp)) {
-            CB(std::move(Rsp));
-          } else {
-            elog("Failed to decode {0} response", *RawResponse);
-            CB(llvm::make_error<LSPError>("failed to decode response",
-                                          ErrorCode::InvalidParams));
-          }
+          if (!RawResponse)
+            return CB(RawResponse.takeError());
+          CB(parse<Response>(*RawResponse, Method, "response"));
         };
     callRaw(Method, std::move(Params), std::move(HandleReply));
   }

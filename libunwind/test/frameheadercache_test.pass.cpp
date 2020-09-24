@@ -5,7 +5,6 @@
 // Only run this test under supported configurations.
 
 #if defined(_LIBUNWIND_USE_DL_ITERATE_PHDR) &&                                 \
-    defined(_LIBUNWIND_SUPPORT_DWARF_INDEX) &&                                 \
     defined(_LIBUNWIND_USE_FRAME_HEADER_CACHE)
 
 #include <link.h>

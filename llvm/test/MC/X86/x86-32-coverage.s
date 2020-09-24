@@ -10888,3 +10888,7 @@ xsusldtrk
 // CHECK: xresldtrk
 // CHECK: encoding: [0xf2,0x0f,0x01,0xe9]
 xresldtrk
+
+// CHECK: tdcall
+// CHECK: encoding: [0x66,0x0f,0x01,0xcc]
+tdcall
