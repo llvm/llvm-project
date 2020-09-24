@@ -669,9 +669,6 @@ defm hip_new_launch_api : OptInFFlag<"hip-new-launch-api",
   "Use", "Don't use", " new kernel launching API for HIP">;
 defm gpu_allow_device_init : OptInFFlag<"gpu-allow-device-init",
   "Allow", "Don't allow", " device side init function in HIP">;
-defm gpu_defer_diag : OptInFFlag<"gpu-defer-diag",
-  "Defer", "Don't defer", " host/device related diagnostic messages"
-  " for CUDA/HIP">;
 def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
   Flags<[CC1Option]>,
   HelpText<"Default max threads per block for kernel launch bounds for HIP">;

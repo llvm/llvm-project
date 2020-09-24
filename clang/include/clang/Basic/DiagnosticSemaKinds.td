@@ -4100,8 +4100,6 @@ def err_ovl_static_nonstatic_member : Error<
   "static and non-static member functions with the same parameter types "
   "cannot be overloaded">;
 
-let Deferrable = 1 in {
-
 def err_ovl_no_viable_function_in_call : Error<
   "no matching function for call to %0">;
 def err_ovl_no_viable_member_function_in_call : Error<
@@ -4414,8 +4412,6 @@ def err_addr_ovl_not_func_ptrref : Error<
   "address of overloaded function %0 cannot be converted to type %1">;
 def err_addr_ovl_no_qualifier : Error<
   "cannot form member pointer of type %0 without '&' and class name">;
-
-} // let Deferrable
 
 // C++11 Literal Operators
 def err_ovl_no_viable_literal_operator : Error<
