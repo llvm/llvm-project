@@ -73,6 +73,11 @@ using namespace llvm;
 #define DEBUG_TYPE "arm-low-overhead-loops"
 #define ARM_LOW_OVERHEAD_LOOPS_NAME "ARM Low Overhead Loops pass"
 
+static cl::opt<bool>
+DisableTailPredication("arm-loloops-disable-tailpred", cl::Hidden,
+    cl::desc("Disable tail-predication in the ARM LowOverheadLoop pass"),
+    cl::init(false));
+
 static bool isVectorPredicated(MachineInstr *MI) {
   int PIdx = llvm::findFirstVPTPredOperandIdx(*MI);
   return PIdx != -1 && MI->getOperand(PIdx + 1).getReg() == ARM::VPR;
@@ -506,6 +511,11 @@ MachineInstr *LowOverheadLoop::isSafeToDefineLR() {
 
 bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   assert(!VCTPs.empty() && "VCTP instruction expected but is not set");
+
+  if (DisableTailPredication) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: tail-predication is disabled\n");
+    return false;
+  }
 
   if (!VPTState::isValid())
     return false;
