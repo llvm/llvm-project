@@ -152,35 +152,47 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -8
+  ; CHECK:   $r3 = tMOVr $r1, 14 /* CC::al */, $noreg
+  ; CHECK:   tCMPi8 renamable $r1, 4, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   t2IT 10, 8, implicit-def $itstate
+  ; CHECK:   renamable $r3 = tMOVi8 $noreg, 4, 10 /* CC::ge */, killed $cpsr, implicit killed renamable $r3, implicit killed $itstate
+  ; CHECK:   renamable $r12 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   renamable $r3, dead $cpsr = tSUBrr renamable $r1, killed renamable $r3, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
+  ; CHECK:   renamable $r3, dead $cpsr = tADDi8 killed renamable $r3, 3, 14 /* CC::al */, $noreg
+  ; CHECK:   dead renamable $lr = nuw nsw t2ADDrs killed renamable $r12, killed renamable $r3, 19, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r3 = tMOVr $r1, 14 /* CC::al */, $noreg
   ; CHECK:   $r12 = tMOVr $r0, 14 /* CC::al */, $noreg
   ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r3
+  ; CHECK:   $r4 = tMOVr $lr, 14 /* CC::al */, $noreg
   ; CHECK: bb.1.do.body.i:
   ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
-  ; CHECK:   liveins: $lr, $q0, $r0, $r1, $r2, $r12
+  ; CHECK:   liveins: $lr, $q0, $r0, $r1, $r2, $r4, $r12
   ; CHECK:   renamable $r12, renamable $q1 = MVE_VLDRWU32_post killed renamable $r12, 16, 0, $noreg :: (load 16 from %ir.pSrc.addr.0.i2, align 4)
   ; CHECK:   renamable $q0 = nnan ninf nsz arcp contract afn reassoc MVE_VADDf32 killed renamable $q0, killed renamable $q1, 0, killed $noreg, killed renamable $q0
   ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.1
   ; CHECK: bb.2.arm_mean_f32_mve.exit:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   liveins: $q0, $r0, $r1, $r2
+  ; CHECK:   liveins: $q0, $r0, $r1, $r2, $r4
   ; CHECK:   $s4 = VMOVSR $r1, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = MVE_DLSTP_32 $r1
+  ; CHECK:   $lr = t2DLS killed $r4
   ; CHECK:   renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s3, killed renamable $s3, 14 /* CC::al */, $noreg, implicit killed $q0
   ; CHECK:   renamable $s4 = VUITOS killed renamable $s4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $s0 = nnan ninf nsz arcp contract afn reassoc VDIVS killed renamable $s0, killed renamable $s4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r3 = VMOVRS killed renamable $s0, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
   ; CHECK:   renamable $q1 = MVE_VDUP32 killed renamable $r3, 0, $noreg, undef renamable $q1
-  ; CHECK:   dead $r3 = tMOVr $r1, 14 /* CC::al */, $noreg
+  ; CHECK:   $r3 = tMOVr $r1, 14 /* CC::al */, $noreg
   ; CHECK: bb.3.do.body:
   ; CHECK:   successors: %bb.3(0x7c000000), %bb.4(0x04000000)
-  ; CHECK:   liveins: $lr, $q0, $q1, $r0, $r1, $r2
-  ; CHECK:   renamable $r0, renamable $q2 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg :: (load 16 from %ir.pSrc.addr.01, align 4)
-  ; CHECK:   renamable $q2 = nnan ninf nsz arcp contract afn reassoc MVE_VSUBf32 killed renamable $q2, renamable $q1, 0, $noreg, undef renamable $q2
-  ; CHECK:   renamable $q0 = nnan ninf nsz arcp contract afn reassoc MVE_VFMAf32 killed renamable $q0, killed renamable $q2, killed renamable $q2, 0, killed $noreg
-  ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.3
+  ; CHECK:   liveins: $lr, $q0, $q1, $r0, $r1, $r2, $r3
+  ; CHECK:   renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
+  ; CHECK:   renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg
+  ; CHECK:   MVE_VPST 2, implicit $vpr
+  ; CHECK:   renamable $r0, renamable $q2 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr :: (load 16 from %ir.pSrc.addr.01, align 4)
+  ; CHECK:   renamable $q2 = nnan ninf nsz arcp contract afn reassoc MVE_VSUBf32 killed renamable $q2, renamable $q1, 1, renamable $vpr, undef renamable $q2
+  ; CHECK:   renamable $q0 = nnan ninf nsz arcp contract afn reassoc MVE_VFMAf32 killed renamable $q0, killed renamable $q2, killed renamable $q2, 1, killed renamable $vpr
+  ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.3
   ; CHECK: bb.4.do.end:
   ; CHECK:   liveins: $q0, $r1, $r2
   ; CHECK:   renamable $r0, dead $cpsr = tSUBi3 killed renamable $r1, 1, 14 /* CC::al */, $noreg

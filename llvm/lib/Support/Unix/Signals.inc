@@ -331,7 +331,7 @@ static void RegisterHandlers() { // Not signal-safe.
     registerHandler(S, SignalKind::IsInfo);
 }
 
-static void UnregisterHandlers() {
+void sys::unregisterHandlers() {
   // Restore all of the signal handlers to how they were before we showed up.
   for (unsigned i = 0, e = NumRegisteredSignals.load(); i != e; ++i) {
     sigaction(RegisteredSignalInfo[i].SigNo,
@@ -367,7 +367,7 @@ static RETSIGTYPE SignalHandler(int Sig) {
   // crashes when we return and the signal reissues.  This also ensures that if
   // we crash in our signal handler that the program will terminate immediately
   // instead of recursing in the signal handler.
-  UnregisterHandlers();
+  sys::unregisterHandlers();
 
   // Unmask all potentially blocked kill signals.
   sigset_t SigMask;

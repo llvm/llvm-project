@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/User.h"
+#include "llvm/Support/SuffixTree.h"
 
 using namespace llvm;
 using namespace IRSimilarity;
@@ -173,8 +174,8 @@ IRSimilarityCandidate::IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
   assert(LastInstIt != nullptr && "Instruction is nullptr!");
   assert(StartIdx + Len > StartIdx &&
          "Overflow for IRSimilarityCandidate range?");
-  assert(Len - 1 ==
-             std::distance(iterator(FirstInstIt), iterator(LastInstIt)) &&
+  assert(Len - 1 == static_cast<unsigned>(std::distance(
+                        iterator(FirstInstIt), iterator(LastInstIt))) &&
          "Length of the first and last IRInstructionData do not match the "
          "given length");
 
@@ -239,6 +240,159 @@ bool IRSimilarityCandidate::isSimilar(const IRSimilarityCandidate &A,
                 });
 }
 
+/// Determine if operand number \p TargetArgVal is in the current mapping set
+/// for operand number \p SourceArgVal.
+///
+/// \param [in, out] CurrentSrcTgtNumberMapping current mapping of global
+/// value numbers from source IRSimilarityCandidate to target
+/// IRSimilarityCandidate.
+/// \param [in] SourceArgVal The global value number for an operand in the
+/// in the original candidate.
+/// \param [in] TargetArgVal The global value number for the corresponding
+/// operand in the other candidate.
+/// \returns True if there exists a mapping and false if not.
+bool checkNumberingAndReplace(
+    DenseMap<unsigned, DenseSet<unsigned>> &CurrentSrcTgtNumberMapping,
+    unsigned SourceArgVal, unsigned TargetArgVal) {
+  // We are given two unsigned integers representing the global values of
+  // the operands in different IRSimilarityCandidates and a current mapping
+  // between the two.
+  //
+  // Source Operand GVN: 1
+  // Target Operand GVN: 2
+  // CurrentMapping: {1: {1, 2}}
+  //
+  // Since we have mapping, and the target operand is contained in the set, we
+  // update it to:
+  // CurrentMapping: {1: {2}}
+  // and can return true. But, if the mapping was
+  // CurrentMapping: {1: {3}}
+  // we would return false.
+
+  bool WasInserted;
+  DenseMap<unsigned, DenseSet<unsigned>>::iterator Val;
+
+  std::tie(Val, WasInserted) = CurrentSrcTgtNumberMapping.insert(
+      std::make_pair(SourceArgVal, DenseSet<unsigned>({TargetArgVal})));
+
+  // If we created a new mapping, then we are done.
+  if (WasInserted)
+    return true;
+
+  // If there is more than one option in the mapping set, and the target value
+  // is included in the mapping set replace that set with one that only includes
+  // the target value, as it is the only valid mapping via the non commutative
+  // instruction.
+
+  DenseSet<unsigned> &TargetSet = Val->second;
+  if (TargetSet.size() > 1 && TargetSet.find(TargetArgVal) != TargetSet.end()) {
+    TargetSet.clear();
+    TargetSet.insert(TargetArgVal);
+    return true;
+  }
+
+  // Return true if we can find the value in the set.
+  return TargetSet.find(TargetArgVal) != TargetSet.end();
+}
+
+bool IRSimilarityCandidate::compareOperandMapping(OperandMapping A,
+                                                  OperandMapping B) {
+  // Iterators to keep track of where we are in the operands for each
+  // Instruction.
+  ArrayRef<Value *>::iterator VItA = A.OperVals.begin();
+  ArrayRef<Value *>::iterator VItB = B.OperVals.begin();
+  unsigned OperandLength = A.OperVals.size();
+
+  // For each operand, get the value numbering and ensure it is consistent.
+  for (unsigned Idx = 0; Idx < OperandLength; Idx++, VItA++, VItB++) {
+    unsigned OperValA = A.IRSC.ValueToNumber.find(*VItA)->second;
+    unsigned OperValB = B.IRSC.ValueToNumber.find(*VItB)->second;
+
+    // Attempt to add a set with only the target value.  If there is no mapping
+    // we can create it here.
+    //
+    // For an instruction like a subtraction:
+    // IRSimilarityCandidateA:  IRSimilarityCandidateB:
+    // %resultA = sub %a, %b    %resultB = sub %d, %e
+    //
+    // We map %a -> %d and %b -> %e.
+    //
+    // And check to see whether their mapping is consistent in
+    // checkNumberingAndReplace.
+
+    if (!checkNumberingAndReplace(A.ValueNumberMapping, OperValA, OperValB))
+      return false;
+
+    if (!checkNumberingAndReplace(B.ValueNumberMapping, OperValB, OperValA))
+      return false;
+  }
+  return true;
+}
+
+bool IRSimilarityCandidate::compareStructure(const IRSimilarityCandidate &A,
+                                             const IRSimilarityCandidate &B) {
+  if (A.getLength() != B.getLength())
+    return false;
+
+  if (A.ValueToNumber.size() != B.ValueToNumber.size())
+    return false;
+
+  iterator ItA = A.begin();
+  iterator ItB = B.begin();
+
+  // These sets create a create a mapping between the values in one candidate
+  // to values in the other candidate.  If we create a set with one element,
+  // and that same element maps to the original element in the candidate
+  // we have a good mapping.
+  DenseMap<unsigned, DenseSet<unsigned>> ValueNumberMappingA;
+  DenseMap<unsigned, DenseSet<unsigned>> ValueNumberMappingB;
+  DenseMap<unsigned, DenseSet<unsigned>>::iterator ValueMappingIt;
+
+  bool WasInserted;
+
+  // Iterate over the instructions contained in each candidate
+  unsigned SectionLength = A.getStartIdx() + A.getLength();
+  for (unsigned Loc = A.getStartIdx(); Loc < SectionLength;
+       ItA++, ItB++, Loc++) {
+    // Make sure the instructions are similar to one another.
+    if (!isClose(*ItA, *ItB))
+      return false;
+
+    Instruction *IA = ItA->Inst;
+    Instruction *IB = ItB->Inst;
+
+    if (!ItA->Legal || !ItB->Legal)
+      return false;
+
+    // Get the operand sets for the instructions.
+    ArrayRef<Value *> OperValsA = ItA->OperVals;
+    ArrayRef<Value *> OperValsB = ItB->OperVals;
+
+    unsigned InstValA = A.ValueToNumber.find(IA)->second;
+    unsigned InstValB = B.ValueToNumber.find(IB)->second;
+
+    // Ensure that the mappings for the instructions exists.
+    std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingA.insert(
+        std::make_pair(InstValA, DenseSet<unsigned>({InstValB})));
+    if (!WasInserted && ValueMappingIt->second.find(InstValB) ==
+                            ValueMappingIt->second.end())
+      return false;
+
+    std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingB.insert(
+        std::make_pair(InstValB, DenseSet<unsigned>({InstValA})));
+    if (!WasInserted && ValueMappingIt->second.find(InstValA) ==
+                            ValueMappingIt->second.end())
+      return false;
+
+    // TODO: Handle commutative instructions by mapping one operand to many
+    // operands instead only mapping a single operand to a single operand.
+    if (!compareOperandMapping({A, OperValsA, ValueNumberMappingA},
+                               {B, OperValsB, ValueNumberMappingB}))
+      return false;
+  }
+  return true;
+}
+
 bool IRSimilarityCandidate::overlap(const IRSimilarityCandidate &A,
                                     const IRSimilarityCandidate &B) {
   auto DoesOverlap = [](const IRSimilarityCandidate &X,
@@ -250,4 +404,243 @@ bool IRSimilarityCandidate::overlap(const IRSimilarityCandidate &A,
   };
 
   return DoesOverlap(A, B) || DoesOverlap(B, A);
+}
+
+void IRSimilarityIdentifier::populateMapper(
+    Module &M, std::vector<IRInstructionData *> &InstrList,
+    std::vector<unsigned> &IntegerMapping) {
+
+  std::vector<IRInstructionData *> InstrListForModule;
+  std::vector<unsigned> IntegerMappingForModule;
+  // Iterate over the functions in the module to map each Instruction in each
+  // BasicBlock to an unsigned integer.
+  for (Function &F : M) {
+
+    if (F.empty())
+      continue;
+
+    for (BasicBlock &BB : F) {
+
+      if (BB.sizeWithoutDebug() < 2)
+        continue;
+
+      // BB has potential to have similarity since it has a size greater than 2
+      // and can therefore match other regions greater than 2. Map it to a list
+      // of unsigned integers.
+      Mapper.convertToUnsignedVec(BB, InstrListForModule,
+                                  IntegerMappingForModule);
+    }
+  }
+
+  // Insert the InstrListForModule at the end of the overall InstrList so that
+  // we can have a long InstrList for the entire set of Modules being analyzed.
+  InstrList.insert(InstrList.end(), InstrListForModule.begin(),
+                   InstrListForModule.end());
+  // Do the same as above, but for IntegerMapping.
+  IntegerMapping.insert(IntegerMapping.end(), IntegerMappingForModule.begin(),
+                     IntegerMappingForModule.end());
+}
+
+void IRSimilarityIdentifier::populateMapper(
+    ArrayRef<std::unique_ptr<Module>> &Modules,
+    std::vector<IRInstructionData *> &InstrList,
+    std::vector<unsigned> &IntegerMapping) {
+
+  // Iterate over, and map the instructions in each module.
+  for (const std::unique_ptr<Module> &M : Modules)
+    populateMapper(*M, InstrList, IntegerMapping);
+}
+
+/// From a repeated subsequence, find all the different instances of the
+/// subsequence from the \p InstrList, and create an IRSimilarityCandidate from
+/// the IRInstructionData in subsequence.
+///
+/// \param [in] Mapper - The instruction mapper for sanity checks.
+/// \param [in] InstrList - The vector that holds the instruction data.
+/// \param [in] IntegerMapping - The vector that holds the mapped integers.
+/// \param [out] CandsForRepSubstring - The vector to store the generated
+/// IRSimilarityCandidates.
+static void createCandidatesFromSuffixTree(
+    IRInstructionMapper Mapper, std::vector<IRInstructionData *> &InstrList,
+    std::vector<unsigned> &IntegerMapping, SuffixTree::RepeatedSubstring &RS,
+    std::vector<IRSimilarityCandidate> &CandsForRepSubstring) {
+
+  unsigned StringLen = RS.Length;
+  unsigned NumFound = 0;
+  unsigned PreviousIdx = 0;
+
+  // Create an IRSimilarityCandidate for instance of this subsequence \p RS.
+  for (const unsigned &StartIdx : RS.StartIndices) {
+    unsigned EndIdx = StartIdx + StringLen - 1;
+
+    // Check that this subsequence does not contain an illegal instruction.
+    bool ContainsIllegal = false;
+    for (unsigned CurrIdx = StartIdx; CurrIdx <= EndIdx; CurrIdx++) {
+      unsigned Key = IntegerMapping[CurrIdx];
+      if (Key > Mapper.IllegalInstrNumber) {
+        ContainsIllegal = true;
+        break;
+      }
+    }
+
+    // If we have an illegal instruction, we should not create an
+    // IRSimilarityCandidate for this region.
+    if (ContainsIllegal)
+      continue;
+
+    PreviousIdx = EndIdx;
+    NumFound++;
+
+    // We are getting iterators to the instructions in this region of code
+    // by advancing the start and end indices from the start of the
+    // InstrList.
+    std::vector<IRInstructionData *>::iterator StartIt = InstrList.begin();
+    std::advance(StartIt, StartIdx);
+    std::vector<IRInstructionData *>::iterator EndIt = InstrList.begin();
+    std::advance(EndIt, EndIdx);
+
+    CandsForRepSubstring.emplace_back(StartIdx, StringLen, *StartIt, *EndIt);
+  }
+}
+
+/// From the list of IRSimilarityCandidates, perform a comparison between each
+/// IRSimilarityCandidate to determine if there are overlapping
+/// IRInstructionData, or if they do not have the same structure.
+///
+/// \param [in] CandsForRepSubstring - The vector containing the
+/// IRSimilarityCandidates.
+/// \param [out] StructuralGroups - the mapping of unsigned integers to vector
+/// of IRSimilarityCandidates where each of the IRSimilarityCandidates in the
+/// vector are structurally similar to one another.
+static void findCandidateStructures(
+    std::vector<IRSimilarityCandidate> &CandsForRepSubstring,
+    DenseMap<unsigned, SimilarityGroup> &StructuralGroups) {
+  std::vector<IRSimilarityCandidate>::iterator CandIt, CandEndIt, InnerCandIt,
+      InnerCandEndIt;
+
+  // IRSimilarityCandidates each have a structure for operand use.  It is
+  // possible that two instances of the same subsequences have different
+  // structure. Each type of structure found is assigned a number.  This
+  // DenseMap maps an IRSimilarityCandidate to which type of similarity
+  // discovered it fits within.
+  DenseMap<IRSimilarityCandidate *, unsigned> CandToGroup;
+
+  // Find the compatibility from each candidate to the others to determine
+  // which candidates overlap and which have the same structure by mapping
+  // each structure to a different group.
+  bool SameStructure;
+  bool Inserted;
+  unsigned CurrentGroupNum = 0;
+  unsigned OuterGroupNum;
+  DenseMap<IRSimilarityCandidate *, unsigned>::iterator CandToGroupIt;
+  DenseMap<IRSimilarityCandidate *, unsigned>::iterator CandToGroupItInner;
+  DenseMap<unsigned, SimilarityGroup>::iterator CurrentGroupPair;
+
+  // Iterate over the candidates to determine its structural and overlapping
+  // compatibility with other instructions
+  for (CandIt = CandsForRepSubstring.begin(),
+      CandEndIt = CandsForRepSubstring.end();
+       CandIt != CandEndIt; CandIt++) {
+
+    // Determine if it has an assigned structural group already.
+    CandToGroupIt = CandToGroup.find(&*CandIt);
+    if (CandToGroupIt == CandToGroup.end()) {
+      // If not, we assign it one, and add it to our mapping.
+      std::tie(CandToGroupIt, Inserted) =
+          CandToGroup.insert(std::make_pair(&*CandIt, CurrentGroupNum++));
+    }
+
+    // Get the structural group number from the iterator.
+    OuterGroupNum = CandToGroupIt->second;
+
+    // Check if we already have a list of IRSimilarityCandidates for the current
+    // structural group.  Create one if one does not exist.
+    CurrentGroupPair = StructuralGroups.find(OuterGroupNum);
+    if (CurrentGroupPair == StructuralGroups.end())
+      std::tie(CurrentGroupPair, Inserted) = StructuralGroups.insert(
+          std::make_pair(OuterGroupNum, SimilarityGroup({*CandIt})));
+
+    // Iterate over the IRSimilarityCandidates following the current
+    // IRSimilarityCandidate in the list to determine whether the two
+    // IRSimilarityCandidates are compatible.  This is so we do not repeat pairs
+    // of IRSimilarityCandidates.
+    for (InnerCandIt = std::next(CandIt),
+        InnerCandEndIt = CandsForRepSubstring.end();
+         InnerCandIt != InnerCandEndIt; InnerCandIt++) {
+
+      // We check if the inner item has a group already, if it does, we skip it.
+      CandToGroupItInner = CandToGroup.find(&*InnerCandIt);
+      if (CandToGroupItInner != CandToGroup.end())
+        continue;
+
+      // Otherwise we determine if they have the same structure and add it to
+      // vector if they match.
+      SameStructure =
+          IRSimilarityCandidate::compareStructure(*CandIt, *InnerCandIt);
+      if (!SameStructure)
+        continue;
+
+      CandToGroup.insert(std::make_pair(&*InnerCandIt, OuterGroupNum));
+      CurrentGroupPair->second.push_back(*InnerCandIt);
+    }
+  }
+}
+
+void IRSimilarityIdentifier::findCandidates(
+    std::vector<IRInstructionData *> &InstrList,
+    std::vector<unsigned> &IntegerMapping) {
+  SuffixTree ST(IntegerMapping);
+
+  std::vector<IRSimilarityCandidate> CandsForRepSubstring;
+  std::vector<SimilarityGroup> NewCandidateGroups;
+
+  DenseMap<unsigned, SimilarityGroup> StructuralGroups;
+
+  // Iterate over the subsequences found by the Suffix Tree to create
+  // IRSimilarityCandidates for each repeated subsequence and determine which
+  // instances are structurally similar to one another.
+  for (auto It = ST.begin(), Et = ST.end(); It != Et; ++It) {
+    createCandidatesFromSuffixTree(Mapper, InstrList, IntegerMapping, *It,
+                                   CandsForRepSubstring);
+
+    if (CandsForRepSubstring.size() < 2)
+      continue;
+
+    findCandidateStructures(CandsForRepSubstring, StructuralGroups);
+    for (std::pair<unsigned, SimilarityGroup> &Group : StructuralGroups)
+      // We only add the group if it contains more than one
+      // IRSimilarityCandidate.  If there is only one, that means there is no
+      // other repeated subsequence with the same structure.
+      if (Group.second.size() > 1)
+        SimilarityCandidates->push_back(Group.second);
+
+    CandsForRepSubstring.clear();
+    StructuralGroups.clear();
+    NewCandidateGroups.clear();
+  }
+}
+
+SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(
+    ArrayRef<std::unique_ptr<Module>> Modules) {
+  resetSimilarityCandidates();
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> IntegerMapping;
+
+  populateMapper(Modules, InstrList, IntegerMapping);
+  findCandidates(InstrList, IntegerMapping);
+
+  return SimilarityCandidates.getValue();
+}
+
+SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(Module &M) {
+  resetSimilarityCandidates();
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> IntegerMapping;
+
+  populateMapper(M, InstrList, IntegerMapping);
+  findCandidates(InstrList, IntegerMapping);
+
+  return SimilarityCandidates.getValue();
 }

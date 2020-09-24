@@ -37,7 +37,6 @@ class Function;
 /// (typically Loop or SCC).
 class PrintIRInstrumentation {
 public:
-  PrintIRInstrumentation() = default;
   ~PrintIRInstrumentation();
 
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
@@ -60,7 +59,6 @@ private:
 
 class OptNoneInstrumentation {
 public:
-  OptNoneInstrumentation() {}
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
 private:

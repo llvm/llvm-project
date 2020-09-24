@@ -341,7 +341,8 @@ class PrinterContext {
     return Location + Place;
   }
 
-  ErrorOr<StringRef> FunctionAtAddress(unsigned Section, uint64_t Address) const;
+  ErrorOr<StringRef> FunctionAtAddress(uint64_t Address,
+                                       Optional<unsigned> SectionIndex) const;
   const Elf_Shdr *FindExceptionTable(unsigned IndexTableIndex,
                                      off_t IndexTableOffset) const;
 
@@ -363,8 +364,8 @@ const size_t PrinterContext<ET>::IndexTableEntrySize = 8;
 
 template <typename ET>
 ErrorOr<StringRef>
-PrinterContext<ET>::FunctionAtAddress(unsigned Section,
-                                      uint64_t Address) const {
+PrinterContext<ET>::FunctionAtAddress(uint64_t Address,
+                                      Optional<unsigned> SectionIndex) const {
   if (!Symtab)
     return inconvertibleErrorCode();
   auto StrTableOrErr = ELF.getStringTableForSymtab(*Symtab);
@@ -372,9 +373,11 @@ PrinterContext<ET>::FunctionAtAddress(unsigned Section,
     reportError(StrTableOrErr.takeError(), FileName);
   StringRef StrTable = *StrTableOrErr;
 
-  for (const Elf_Sym &Sym : unwrapOrError(FileName, ELF.symbols(Symtab)))
-    if (Sym.st_shndx == Section && Sym.st_value == Address &&
-        Sym.getType() == ELF::STT_FUNC) {
+  for (const Elf_Sym &Sym : unwrapOrError(FileName, ELF.symbols(Symtab))) {
+    if (SectionIndex && *SectionIndex != Sym.st_shndx)
+      continue;
+
+    if (Sym.st_value == Address && Sym.getType() == ELF::STT_FUNC) {
       auto NameOrErr = Sym.getName(StrTable);
       if (!NameOrErr) {
         // TODO: Actually report errors helpfully.
@@ -383,6 +386,8 @@ PrinterContext<ET>::FunctionAtAddress(unsigned Section,
       }
       return *NameOrErr;
     }
+  }
+
   return inconvertibleErrorCode();
 }
 
@@ -485,7 +490,8 @@ void PrinterContext<ET>::PrintExceptionTable(const Elf_Shdr *IT,
 
     uint64_t Address = PREL31(Word, EHT->sh_addr);
     SW.printHex("PersonalityRoutineAddress", Address);
-    if (ErrorOr<StringRef> Name = FunctionAtAddress(EHT->sh_link, Address))
+    if (ErrorOr<StringRef> Name =
+            FunctionAtAddress(Address, (unsigned)EHT->sh_link))
       SW.printString("PersonalityRoutineName", *Name);
   }
 }
@@ -518,6 +524,7 @@ void PrinterContext<ET>::PrintIndexTable(unsigned SectionIndex,
   const support::ulittle32_t *Data =
     reinterpret_cast<const support::ulittle32_t *>(Contents->data());
   const unsigned Entries = IT->sh_size / IndexTableEntrySize;
+  const bool IsRelocatable = ELF.getHeader().e_type == ELF::ET_REL;
 
   ListScope E(SW, "Entries");
   for (unsigned Entry = 0; Entry < Entries; ++Entry) {
@@ -533,9 +540,31 @@ void PrinterContext<ET>::PrintIndexTable(unsigned SectionIndex,
       continue;
     }
 
-    const uint64_t Offset = PREL31(Word0, IT->sh_addr);
-    SW.printHex("FunctionAddress", Offset);
-    if (ErrorOr<StringRef> Name = FunctionAtAddress(IT->sh_link, Offset))
+    // FIXME: For a relocatable object ideally we might want to:
+    // 1) Find a relocation for the offset of Word0.
+    // 2) Verify this relocation is of an expected type (R_ARM_PREL31) and
+    //    verify the symbol index.
+    // 3) Resolve the relocation using it's symbol value, addend etc.
+    // Currently the code assumes that Word0 contains an addend of a
+    // R_ARM_PREL31 REL relocation that references a section symbol. RELA
+    // relocations are not supported and it works because addresses of sections
+    // are nulls in relocatable objects.
+    //
+    // For a non-relocatable object, Word0 contains a place-relative signed
+    // offset to the referenced entity.
+    const uint64_t Address =
+        IsRelocatable
+            ? PREL31(Word0, IT->sh_addr)
+            : PREL31(Word0, IT->sh_addr + Entry * IndexTableEntrySize);
+    SW.printHex("FunctionAddress", Address);
+
+    // In a relocatable output we might have many .ARM.exidx sections linked to
+    // their code sections via the sh_link field. For a non-relocatable ELF file
+    // the sh_link field is not reliable, because we have one .ARM.exidx section
+    // normally, but might have many code sections.
+    Optional<unsigned> SecIndex =
+        IsRelocatable ? Optional<unsigned>(IT->sh_link) : None;
+    if (ErrorOr<StringRef> Name = FunctionAtAddress(Address, SecIndex))
       SW.printString("FunctionName", *Name);
 
     if (Word1 == EXIDX_CANTUNWIND) {

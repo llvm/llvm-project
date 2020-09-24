@@ -60,6 +60,7 @@ public:
   MachHeaderSection *header = nullptr;
   StringTableSection *stringTableSection = nullptr;
   SymtabSection *symtabSection = nullptr;
+  IndirectSymtabSection *indirectSymtabSection = nullptr;
   UnwindInfoSection *unwindInfoSection = nullptr;
 };
 
@@ -105,13 +106,20 @@ public:
 
 class LCDysymtab : public LoadCommand {
 public:
+  LCDysymtab(IndirectSymtabSection *indirectSymtabSection)
+      : indirectSymtabSection(indirectSymtabSection) {}
+
   uint32_t getSize() const override { return sizeof(dysymtab_command); }
 
   void writeTo(uint8_t *buf) const override {
     auto *c = reinterpret_cast<dysymtab_command *>(buf);
     c->cmd = LC_DYSYMTAB;
     c->cmdsize = getSize();
+    c->indirectsymoff = indirectSymtabSection->fileOff;
+    c->nindirectsyms = indirectSymtabSection->getNumSymbols();
   }
+
+  IndirectSymtabSection *indirectSymtabSection = nullptr;
 };
 
 class LCSegment : public LoadCommand {
@@ -163,6 +171,8 @@ public:
       sectHdr->align = Log2_32(osec->align);
       sectHdr->flags = osec->flags;
       sectHdr->size = osec->getSize();
+      sectHdr->reserved1 = osec->reserved1;
+      sectHdr->reserved2 = osec->reserved2;
     }
   }
 
@@ -339,7 +349,7 @@ void Writer::createLoadCommands() {
   in.header->addLoadCommand(
       make<LCDyldInfo>(in.binding, in.weakBinding, in.lazyBinding, in.exports));
   in.header->addLoadCommand(make<LCSymtab>(symtabSection, stringTableSection));
-  in.header->addLoadCommand(make<LCDysymtab>());
+  in.header->addLoadCommand(make<LCDysymtab>(indirectSymtabSection));
   for (StringRef path : config->runtimePaths)
     in.header->addLoadCommand(make<LCRPath>(path));
 
@@ -366,8 +376,11 @@ void Writer::createLoadCommands() {
   uint64_t dylibOrdinal = 1;
   for (InputFile *file : inputFiles) {
     if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
-      in.header->addLoadCommand(
-          make<LCDylib>(LC_LOAD_DYLIB, dylibFile->dylibName));
+      // TODO: dylibs that are only referenced by weak refs should also be
+      // loaded via LC_LOAD_WEAK_DYLIB.
+      LoadCommandType lcType =
+          dylibFile->forceWeakImport ? LC_LOAD_WEAK_DYLIB : LC_LOAD_DYLIB;
+      in.header->addLoadCommand(make<LCDylib>(lcType, dylibFile->dylibName));
       dylibFile->ordinal = dylibOrdinal++;
 
       if (dylibFile->reexport)
@@ -438,11 +451,12 @@ static int sectionOrder(OutputSection *osec) {
         .Default(0);
   } else if (segname == segment_names::linkEdit) {
     return StringSwitch<int>(osec->name)
-        .Case(section_names::binding, -6)
-        .Case(section_names::weakBinding, -5)
-        .Case(section_names::lazyBinding, -4)
-        .Case(section_names::export_, -3)
-        .Case(section_names::symbolTable, -2)
+        .Case(section_names::binding, -7)
+        .Case(section_names::weakBinding, -6)
+        .Case(section_names::lazyBinding, -5)
+        .Case(section_names::export_, -4)
+        .Case(section_names::symbolTable, -3)
+        .Case(section_names::indirectSymbolTable, -2)
         .Case(section_names::stringTable, -1)
         .Default(0);
   }
@@ -494,6 +508,7 @@ void Writer::createOutputSections() {
   stringTableSection = make<StringTableSection>();
   unwindInfoSection = make<UnwindInfoSection>(); // TODO(gkm): only when no -r
   symtabSection = make<SymtabSection>(*stringTableSection);
+  indirectSymtabSection = make<IndirectSymtabSection>();
 
   switch (config->outputType) {
   case MH_EXECUTE:
@@ -614,6 +629,7 @@ void Writer::run() {
   in.lazyBinding->finalizeContents();
   in.exports->finalizeContents();
   symtabSection->finalizeContents();
+  indirectSymtabSection->finalizeContents();
 
   // Now that __LINKEDIT is filled out, do a proper calculation of its
   // addresses and offsets.

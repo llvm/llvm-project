@@ -64,12 +64,10 @@ def l : Joined<["-"], "l">,
 def weak_l : Joined<["-"], "weak-l">,
      MetaVarName<"<name>">,
      HelpText<"Like -l<name>, but mark library and its references as weak imports">,
-     Flags<[HelpHidden]>,
      Group<grp_libs>;
 def weak_library : Separate<["-"], "weak_library">,
      MetaVarName<"<path>">,
      HelpText<"Like bare <path>, but mark library and its references as weak imports">,
-     Flags<[HelpHidden]>,
      Group<grp_libs>;
 def reexport_l : Joined<["-"], "reexport-l">,
      MetaVarName<"<name>">,
@@ -115,7 +113,6 @@ def framework : Separate<["-"], "framework">,
 def weak_framework : Separate<["-"], "weak_framework">,
      MetaVarName<"<name>">,
      HelpText<"Like -framework <name>, but mark framework and its references as weak imports">,
-     Flags<[HelpHidden]>,
      Group<grp_libs>;
 def reexport_framework : Separate<["-"], "reexport_framework">,
      MetaVarName<"<name>">,
@@ -857,6 +854,10 @@ def not_for_dyld_shared_cache : Flag<["-"], "not_for_dyld_shared_cache">,
      HelpText<"Prevent system dylibs from being placed into the dylib shared cache">,
      Flags<[HelpHidden]>,
      Group<grp_rare>;
+def mllvm : Separate<["-"], "mllvm">,
+     HelpText<"Options to pass to LLVM">,
+     Flags<[HelpHidden]>,
+     Group<grp_rare>;
 
 def grp_deprecated : OptionGroup<"deprecated">, HelpText<"DEPRECATED">;
 
@@ -1192,10 +1193,6 @@ def uikitformac_version_min : Flag<["-"], "uikitformac_version_min">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;
 def mcpu : Flag<["-"], "mcpu">,
-     HelpText<"This option is undocumented in ld64">,
-     Flags<[HelpHidden]>,
-     Group<grp_undocumented>;
-def mllvm : Flag<["-"], "mllvm">,
      HelpText<"This option is undocumented in ld64">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;

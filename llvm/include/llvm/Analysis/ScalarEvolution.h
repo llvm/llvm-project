@@ -1900,6 +1900,9 @@ private:
   /// Assign A and B to LHS and RHS, respectively.
   bool matchURem(const SCEV *Expr, const SCEV *&LHS, const SCEV *&RHS);
 
+  /// Try to apply information from loop guards for \p L to \p Expr.
+  const SCEV *applyLoopGuards(const SCEV *Expr, const Loop *L);
+
   /// Look for a SCEV expression with type `SCEVType` and operands `Ops` in
   /// `UniqueSCEVs`.
   ///

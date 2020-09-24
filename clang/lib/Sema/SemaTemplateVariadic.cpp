@@ -368,8 +368,8 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
       Locations.push_back(Unexpanded[I].second);
   }
 
-  DiagnosticBuilder DB = Diag(Loc, diag::err_unexpanded_parameter_pack)
-                         << (int)UPPC << (int)Names.size();
+  auto DB = Diag(Loc, diag::err_unexpanded_parameter_pack)
+            << (int)UPPC << (int)Names.size();
   for (size_t I = 0, E = std::min(Names.size(), (size_t)2); I != E; ++I)
     DB << Names[I];
 

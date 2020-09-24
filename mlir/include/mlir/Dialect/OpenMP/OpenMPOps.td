@@ -138,6 +138,8 @@ def MasterOp : OpenMP_Op<"master"> {
   }];
 
   let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = "$region attr-dict";
 }
 
 //===----------------------------------------------------------------------===//

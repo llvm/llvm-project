@@ -232,28 +232,58 @@ namespace llvm {
       return getSizeInBits() == VT.getSizeInBits();
     }
 
+    /// Return true if we know at compile time this has more bits than VT.
+    bool knownBitsGT(EVT VT) const {
+      return TypeSize::isKnownGT(getSizeInBits(), VT.getSizeInBits());
+    }
+
+    /// Return true if we know at compile time this has more than or the same
+    /// bits as VT.
+    bool knownBitsGE(EVT VT) const {
+      return TypeSize::isKnownGE(getSizeInBits(), VT.getSizeInBits());
+    }
+
+    /// Return true if we know at compile time this has fewer bits than VT.
+    bool knownBitsLT(EVT VT) const {
+      return TypeSize::isKnownLT(getSizeInBits(), VT.getSizeInBits());
+    }
+
+    /// Return true if we know at compile time this has fewer than or the same
+    /// bits as VT.
+    bool knownBitsLE(EVT VT) const {
+      return TypeSize::isKnownLE(getSizeInBits(), VT.getSizeInBits());
+    }
+
     /// Return true if this has more bits than VT.
     bool bitsGT(EVT VT) const {
       if (EVT::operator==(VT)) return false;
-      return getSizeInBits() > VT.getSizeInBits();
+      assert(isScalableVector() == VT.isScalableVector() &&
+             "Comparison between scalable and fixed types");
+      return knownBitsGT(VT);
     }
 
     /// Return true if this has no less bits than VT.
     bool bitsGE(EVT VT) const {
       if (EVT::operator==(VT)) return true;
-      return getSizeInBits() >= VT.getSizeInBits();
+      assert(isScalableVector() == VT.isScalableVector() &&
+             "Comparison between scalable and fixed types");
+      return knownBitsGE(VT);
     }
 
     /// Return true if this has less bits than VT.
     bool bitsLT(EVT VT) const {
       if (EVT::operator==(VT)) return false;
-      return getSizeInBits() < VT.getSizeInBits();
+      assert(isScalableVector() == VT.isScalableVector() &&
+             "Comparison between scalable and fixed types");
+      return knownBitsLT(VT);
     }
 
     /// Return true if this has no more bits than VT.
     bool bitsLE(EVT VT) const {
       if (EVT::operator==(VT)) return true;
-      return getSizeInBits() <= VT.getSizeInBits();
+      assert(isScalableVector() == VT.isScalableVector() &&
+             "Comparison between scalable and fixed types");
+      return knownBitsLE(VT);
     }
 
     /// Return the SimpleValueType held in the specified simple EVT.

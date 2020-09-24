@@ -772,7 +772,10 @@ void CanonicalIncludes::addSystemHeadersMapping(const LangOptions &Language) {
                   MaxSuffixComponents;
          }) != SystemHeaderMap->keys().end());
 
-  StdSuffixHeaderMapping = SystemHeaderMap;
+  // FIXME: Suffix mapping contains invalid entries for C, so only enable it for
+  // CPP.
+  if (Language.CPlusPlus)
+    StdSuffixHeaderMapping = SystemHeaderMap;
 }
 
 } // namespace clangd

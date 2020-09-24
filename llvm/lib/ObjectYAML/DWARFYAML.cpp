@@ -217,7 +217,7 @@ void MappingTraits<DWARFYAML::LineTableOpcode>::mapping(
     IO &IO, DWARFYAML::LineTableOpcode &LineTableOpcode) {
   IO.mapRequired("Opcode", LineTableOpcode.Opcode);
   if (LineTableOpcode.Opcode == dwarf::DW_LNS_extended_op) {
-    IO.mapRequired("ExtLen", LineTableOpcode.ExtLen);
+    IO.mapOptional("ExtLen", LineTableOpcode.ExtLen);
     IO.mapRequired("SubOpcode", LineTableOpcode.SubOpcode);
   }
 

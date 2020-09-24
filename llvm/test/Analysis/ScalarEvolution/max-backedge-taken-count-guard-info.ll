@@ -6,7 +6,7 @@
 define void @test_guard_less_than_16(i32* nocapture %a, i64 %i) {
 ; CHECK-LABEL: Determining loop execution counts for: @test_guard_less_than_16
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (15 + (-1 * %i))
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 15
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (15 + (-1 * %i))
 ;
 entry:
@@ -50,7 +50,7 @@ exit:
 define void @test_guard_uge_16_branches_flipped(i32* nocapture %a, i64 %i) {
 ; CHECK-LABEL: Determining loop execution counts for: @test_guard_uge_16_branches_flipped
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (15 + (-1 * %i))
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 15
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (15 + (-1 * %i))
 ;
 entry:
@@ -72,7 +72,7 @@ exit:
 define void @test_multiple_const_guards_order1(i32* nocapture %a, i64 %i) {
 ; CHECK-LABEL: @test_multiple_const_guards_order1
 ; CHECK:       Loop %loop: backedge-taken count is %i
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 9
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is %i
 ;
 entry:
@@ -98,7 +98,7 @@ exit:
 define void @test_multiple_const_guards_order2(i32* nocapture %a, i64 %i) {
 ; CHECK-LABEL: @test_multiple_const_guards_order2
 ; CHECK:       Loop %loop: backedge-taken count is %i
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 9
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is %i
 ;
 entry:
