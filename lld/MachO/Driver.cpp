@@ -613,7 +613,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
       break;
     case OPT_weak_library: {
       auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(arg->getValue()));
-      if (dylibFile != nullptr)
+      if (dylibFile)
         dylibFile->forceWeakImport = true;
       break;
     }
@@ -628,7 +628,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
       StringRef name = arg->getValue();
       if (Optional<std::string> path = findLibrary(name)) {
         auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path));
-        if (opt.getID() == OPT_weak_l && dylibFile != nullptr)
+        if (opt.getID() == OPT_weak_l && dylibFile)
           dylibFile->forceWeakImport = true;
         break;
       }
@@ -640,7 +640,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
       StringRef name = arg->getValue();
       if (Optional<std::string> path = findFramework(name)) {
         auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path));
-        if (opt.getID() == OPT_weak_framework && dylibFile != nullptr)
+        if (opt.getID() == OPT_weak_framework && dylibFile)
           dylibFile->forceWeakImport = true;
         break;
       }
