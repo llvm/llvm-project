@@ -168,10 +168,10 @@ def ReifyRankedShapedTypeOpInterface :
         rank of the corresponding result. If the shape of a particular
         result cannot be computed it must be empty.
       }],
-      /*retTy=*/"LogicalResult",
+      /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"reifyResultShapes",
       /*args=*/(ins "::mlir::OpBuilder &":$builder,
-        "ReifiedRankedShapedTypeDims &":$reifiedReturnShapes)
+        "::mlir::ReifiedRankedShapedTypeDims &":$reifiedReturnShapes)
     >
   ];
 }

@@ -115,7 +115,7 @@ def FuncOp : Builtin_Op<"func", [
     /// Returns the region on the current operation that is callable. This may
     /// return null in the case of an external callable object, e.g. an external
     /// function.
-    Region *getCallableRegion() { return isExternal() ? nullptr : &getBody(); }
+    ::mlir::Region *getCallableRegion() { return isExternal() ? nullptr : &getBody(); }
 
     /// Returns the results types that the callable region produces when
     /// executed.
