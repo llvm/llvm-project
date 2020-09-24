@@ -2433,6 +2433,10 @@ void Verifier::visitFunction(const Function &F) {
                  "function must have a single !dbg attachment", &F, I.second);
         AssertDI(isa<DISubprogram>(I.second),
                  "function !dbg attachment must be a subprogram", &F, I.second);
+        AssertDI(cast<DISubprogram>(I.second)->isDistinct(),
+                 "function definition may only have a distinct !dbg attachment",
+                 &F);
+
         auto *SP = cast<DISubprogram>(I.second);
         const Function *&AttachedTo = DISubprogramAttachments[SP];
         AssertDI(!AttachedTo || AttachedTo == &F,
