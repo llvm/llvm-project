@@ -1685,7 +1685,7 @@ TEST(IRSimilarityIdentifier, InstructionDifference) {
   std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
   getSimilarities(*M, SimilarityCandidates);
 
-  ASSERT_TRUE(SimilarityCandidates.size() == 0);
+  ASSERT_TRUE(SimilarityCandidates.empty());
 }
 
 // This test checks to see whether we can detect similarity for commutativen
@@ -1708,7 +1708,7 @@ TEST(IRSimilarityIdentifier, CommutativeSimilarity) {
   std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
   getSimilarities(*M, SimilarityCandidates);
 
-  ASSERT_TRUE(SimilarityCandidates.size() == 0);
+  ASSERT_TRUE(SimilarityCandidates.empty());
 }
 
 // Check that we are not finding commutative similarity in non commutative
@@ -1733,7 +1733,7 @@ TEST(IRSimilarityIdentifier, NonCommutativeDifference) {
   std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
   getSimilarities(*M, SimilarityCandidates);
 
-  ASSERT_TRUE(SimilarityCandidates.size() == 0);
+  ASSERT_TRUE(SimilarityCandidates.empty());
 }
 
 // Check that we find similarity despite changing the register names.
@@ -1820,5 +1820,5 @@ TEST(IRSimilarityIdentifier, ConstantMappingDifference) {
   std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
   getSimilarities(*M, SimilarityCandidates);
 
-  ASSERT_TRUE(SimilarityCandidates.size() == 0);
+  ASSERT_TRUE(SimilarityCandidates.empty());
 }
