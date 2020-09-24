@@ -3012,6 +3012,17 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       return Error(NameLoc, "'data32' is not supported in 64-bit mode");
     // Hack to 'data16' for the table lookup.
     PatchedName = "data16";
+
+    if (getLexer().isNot(AsmToken::EndOfStatement)) {
+      StringRef Next = Parser.getTok().getString();
+      // Parse data32 call as calll.
+      if (Next == "call" || Next == "callw") {
+        getLexer().Lex();
+        Name = "calll";
+        PatchedName = Name;
+        isPrefix = false;
+      }
+    }
   }
 
   Operands.push_back(X86Operand::CreateToken(PatchedName, NameLoc));
