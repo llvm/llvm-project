@@ -28,7 +28,7 @@ exit:
 define void @test_guard_less_than_16_operands_swapped(i32* nocapture %a, i64 %i) {
 ; CHECK-LABEL: Determining loop execution counts for: @test_guard_less_than_16_operands_swapped
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (15 + (-1 * %i))
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 15
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (15 + (-1 * %i))
 ;
 entry:
