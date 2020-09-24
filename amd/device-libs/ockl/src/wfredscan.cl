@@ -339,17 +339,19 @@ red10_##T##_##OP(T x) \
 { \
     T r, v; \
  \
-    v = T##_dpp(ID, x, DPP_ROW_XMASK(0x1), 0xf, 0xf, IDZ); \
+    v = T##_dpp(ID, x, DPP_ROW_SL(1), 0xf, 0xf, IDZ); \
     r = T##_##OP(x, v); \
  \
-    v = T##_dpp(ID, r, DPP_ROW_XMASK(0x2), 0xf, 0xf, IDZ); \
+    v = T##_dpp(ID, r, DPP_ROW_SL(2), 0xf, 0xf, IDZ); \
     r = T##_##OP(r, v); \
  \
-    v = T##_dpp(ID, r, DPP_ROW_XMASK(0x4), 0xf, 0xf, IDZ); \
+    v = T##_dpp(ID, r, DPP_ROW_SL(4), 0xf, 0xf, IDZ); \
     r = T##_##OP(r, v); \
  \
-    v = T##_dpp(ID, r, DPP_ROW_XMASK(0x8), 0xf, 0xf, IDZ); \
+    v = T##_dpp(ID, r, DPP_ROW_SL(8), 0xf, 0xf, IDZ); \
     r = T##_##OP(r, v); \
+ \
+    r = T##_dpp(ID, r, DPP_ROW_SHARE(0), 0xf, 0xf, IDZ); \
  \
     v = T##_permlanex16(ID, r, 0, 0, IDZ); \
     r = T##_##OP(r, v); \
