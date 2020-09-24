@@ -4319,25 +4319,6 @@ OptimizeNoneAttr *Sema::mergeOptimizeNoneAttr(Decl *D,
   return ::new (Context) OptimizeNoneAttr(Context, CI);
 }
 
-SwiftNameAttr *Sema::mergeSwiftNameAttr(Decl *D, const AttributeCommonInfo &CI,
-                                        StringRef Name, bool Override) {
-  if (SwiftNameAttr *Inline = D->getAttr<SwiftNameAttr>()) {
-    if (Override) {
-      // FIXME: Warn about an incompatible override.
-      return nullptr;
-    }
-
-    if (Inline->getName() != Name && !Inline->isImplicit()) {
-      Diag(Inline->getLocation(), diag::warn_attribute_ignored) << Inline;
-      Diag(CI.getLoc(), diag::note_conflicting_attribute);
-    }
-
-    D->dropAttr<SwiftNameAttr>();
-  }
-
-  return ::new (Context) SwiftNameAttr(Context, CI, Name);
-}
-
 SpeculativeLoadHardeningAttr *Sema::mergeSpeculativeLoadHardeningAttr(
     Decl *D, const SpeculativeLoadHardeningAttr &AL) {
   if (checkAttrMutualExclusion<NoSpeculativeLoadHardeningAttr>(*this, D, AL))
