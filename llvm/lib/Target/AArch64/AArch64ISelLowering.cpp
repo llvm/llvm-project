@@ -6628,17 +6628,34 @@ SDValue AArch64TargetLowering::LowerRETURNADDR(SDValue Op,
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
   unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  SDValue ReturnAddress;
   if (Depth) {
     SDValue FrameAddr = LowerFRAMEADDR(Op, DAG);
     SDValue Offset = DAG.getConstant(8, DL, getPointerTy(DAG.getDataLayout()));
-    return DAG.getLoad(VT, DL, DAG.getEntryNode(),
-                       DAG.getNode(ISD::ADD, DL, VT, FrameAddr, Offset),
-                       MachinePointerInfo());
+    ReturnAddress = DAG.getLoad(
+        VT, DL, DAG.getEntryNode(),
+        DAG.getNode(ISD::ADD, DL, VT, FrameAddr, Offset), MachinePointerInfo());
+  } else {
+    // Return LR, which contains the return address. Mark it an implicit
+    // live-in.
+    unsigned Reg = MF.addLiveIn(AArch64::LR, &AArch64::GPR64RegClass);
+    ReturnAddress = DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, VT);
   }
 
-  // Return LR, which contains the return address. Mark it an implicit live-in.
-  unsigned Reg = MF.addLiveIn(AArch64::LR, &AArch64::GPR64RegClass);
-  return DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, VT);
+  // The XPACLRI instruction assembles to a hint-space instruction before
+  // Armv8.3-A therefore this instruction can be safely used for any pre
+  // Armv8.3-A architectures. On Armv8.3-A and onwards XPACI is available so use
+  // that instead.
+  SDNode *St;
+  if (Subtarget->hasV8_3aOps()) {
+    St = DAG.getMachineNode(AArch64::XPACI, DL, VT, ReturnAddress);
+  } else {
+    // XPACLRI operates on LR therefore we must move the operand accordingly.
+    SDValue Chain =
+        DAG.getCopyToReg(DAG.getEntryNode(), DL, AArch64::LR, ReturnAddress);
+    St = DAG.getMachineNode(AArch64::XPACLRI, DL, VT, Chain);
+  }
+  return SDValue(St, 0);
 }
 
 /// LowerShiftRightParts - Lower SRA_PARTS, which returns two
