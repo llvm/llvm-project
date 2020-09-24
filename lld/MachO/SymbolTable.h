@@ -19,7 +19,6 @@ namespace macho {
 
 class ArchiveFile;
 class DylibFile;
-class InputFile;
 class InputSection;
 class MachHeaderSection;
 class Symbol;
@@ -36,8 +35,6 @@ public:
                      bool isWeakDef);
 
   Symbol *addUndefined(StringRef name);
-
-  Symbol *addCommon(StringRef name, InputFile *, uint64_t size, uint32_t align);
 
   Symbol *addDylib(StringRef name, DylibFile *file, bool isWeakDef, bool isTlv);
 
