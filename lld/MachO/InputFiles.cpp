@@ -387,7 +387,7 @@ static Optional<DylibFile *> loadReexport(StringRef path, DylibFile *umbrella) {
 
   // TODO: Expand @loader_path, @executable_path etc
 
-  if (currentTopLevelTapi != nullptr) {
+  if (currentTopLevelTapi) {
     for (InterfaceFile &child :
          make_pointee_range(currentTopLevelTapi->documents())) {
       if (path == child.getInstallName())
