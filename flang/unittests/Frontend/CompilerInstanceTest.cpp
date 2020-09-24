@@ -7,14 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/CompilerInstance.h"
-#include "gtest/gtest.h"
-#include "flang/Frontend/CompilerInvocation.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Driver/Options.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "llvm/Support/raw_ostream.h"
 
-#include <filesystem>
+#include "gtest/gtest.h"
+
 using namespace llvm;
 using namespace Fortran::frontend;
 
