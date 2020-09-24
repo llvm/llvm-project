@@ -1841,14 +1841,15 @@ TEST(APFloatTest, convert) {
   EXPECT_TRUE(test.bitwiseIsEqual(X87QNaN));
   EXPECT_FALSE(losesInfo);
 
-  // FIXME: This is wrong - NaN becomes Inf.
+  // The payload is lost in truncation, but we must retain NaN, so we set the bit after the quiet bit.
   APInt payload(52, 1);
   test = APFloat::getSNaN(APFloat::IEEEdouble(), false, &payload);
   status = test.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &losesInfo);
-  EXPECT_EQ(0x7f800000, test.bitcastToAPInt());
+  EXPECT_EQ(0x7fa00000, test.bitcastToAPInt());
   EXPECT_TRUE(losesInfo);
   EXPECT_EQ(status, APFloat::opOK);
 
+  // The payload is lost in truncation. QNaN remains QNaN.
   test = APFloat::getQNaN(APFloat::IEEEdouble(), false, &payload);
   status = test.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &losesInfo);
   EXPECT_EQ(0x7fc00000, test.bitcastToAPInt());
