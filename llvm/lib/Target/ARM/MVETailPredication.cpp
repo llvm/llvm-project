@@ -66,7 +66,7 @@ using namespace llvm;
 #define DESC "Transform predicated vector loops to use MVE tail predication"
 
 cl::opt<TailPredication::Mode> EnableTailPredication(
-   "tail-predication", cl::desc("MVE tail-predication options"),
+   "tail-predication", cl::desc("MVE tail-predication pass options"),
    cl::init(TailPredication::Disabled),
    cl::values(clEnumValN(TailPredication::Disabled, "disabled",
                          "Don't tail-predicate loops"),
