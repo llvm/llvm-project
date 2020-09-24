@@ -72,6 +72,8 @@ public:
 
   uint32_t stubsIndex = UINT32_MAX;
 
+  uint32_t symtabIndex = UINT32_MAX;
+
 protected:
   Symbol(Kind k, StringRefZ name) : symbolKind(k), name(name) {}
 
