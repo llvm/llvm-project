@@ -237,11 +237,12 @@ static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef mb) {
   return v;
 }
 
-static void addFile(StringRef path) {
+static InputFile *addFile(StringRef path) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
-    return;
+    return nullptr;
   MemoryBufferRef mbref = *buffer;
+  InputFile *newFile = nullptr;
 
   switch (identify_magic(mbref.getBuffer())) {
   case file_magic::archive: {
@@ -270,25 +271,27 @@ static void addFile(StringRef path) {
             inputFiles.push_back(make<ObjFile>(member));
     }
 
-    inputFiles.push_back(make<ArchiveFile>(std::move(file)));
+    newFile = make<ArchiveFile>(std::move(file));
     break;
   }
   case file_magic::macho_object:
-    inputFiles.push_back(make<ObjFile>(mbref));
+    newFile = make<ObjFile>(mbref);
     break;
   case file_magic::macho_dynamically_linked_shared_lib:
-    inputFiles.push_back(make<DylibFile>(mbref));
+    newFile = make<DylibFile>(mbref);
     break;
   case file_magic::tapi_file: {
     Optional<DylibFile *> dylibFile = makeDylibFromTAPI(mbref);
     if (!dylibFile)
-      return;
-    inputFiles.push_back(*dylibFile);
+      return nullptr;
+    newFile = *dylibFile;
     break;
   }
   default:
     error(path + ": unhandled file type");
   }
+  inputFiles.push_back(newFile);
+  return newFile;
 }
 
 static void addFileList(StringRef path) {
@@ -596,29 +599,41 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     warnIfDeprecatedOption(opt);
     warnIfUnimplementedOption(opt);
     // TODO: are any of these better handled via filtered() or getLastArg()?
-    switch (arg->getOption().getID()) {
+    switch (opt.getID()) {
     case OPT_INPUT:
       addFile(arg->getValue());
       break;
+    case OPT_weak_library: {
+      auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(arg->getValue()));
+      if (dylibFile != nullptr)
+        dylibFile->forceWeakImport = true;
+      break;
+    }
     case OPT_filelist:
       addFileList(arg->getValue());
       break;
     case OPT_force_load:
       forceLoadArchive(arg->getValue());
       break;
-    case OPT_l: {
+    case OPT_l:
+    case OPT_weak_l: {
       StringRef name = arg->getValue();
       if (Optional<std::string> path = findLibrary(name)) {
-        addFile(*path);
+        auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path));
+        if (opt.getID() == OPT_weak_l && dylibFile != nullptr)
+          dylibFile->forceWeakImport = true;
         break;
       }
       error("library not found for -l" + name);
       break;
     }
-    case OPT_framework: {
+    case OPT_framework:
+    case OPT_weak_framework: {
       StringRef name = arg->getValue();
       if (Optional<std::string> path = findFramework(name)) {
-        addFile(*path);
+        auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path));
+        if (opt.getID() == OPT_weak_framework && dylibFile != nullptr)
+          dylibFile->forceWeakImport = true;
         break;
       }
       error("framework not found for -framework " + name);
