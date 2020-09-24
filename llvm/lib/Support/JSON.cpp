@@ -288,8 +288,8 @@ void abbreviateChildren(const Value &V, OStream &JOS, raw_ostream &OS) {
   switch (V.kind()) {
   case Value::Array:
     JOS.array([&] {
-      for (const auto &V : *V.getAsArray())
-        abbreviate(V, JOS, OS);
+      for (const auto &I : *V.getAsArray())
+        abbreviate(I, JOS, OS);
     });
     break;
   case Value::Object:
