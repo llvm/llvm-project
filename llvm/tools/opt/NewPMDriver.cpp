@@ -140,68 +140,72 @@ bool tryParsePipelineText(PassBuilder &PB,
 
 /// If one of the EPPipeline command line options was given, register callbacks
 /// for parsing and inserting the given pipeline
-static void registerEPCallbacks(PassBuilder &PB, bool DebugLogging) {
+static void registerEPCallbacks(PassBuilder &PB, bool VerifyEachPass,
+                                bool DebugLogging) {
   if (tryParsePipelineText<FunctionPassManager>(PB, PeepholeEPPipeline))
     PB.registerPeepholeEPCallback(
-        [&PB, DebugLogging](FunctionPassManager &PM,
-                            PassBuilder::OptimizationLevel Level) {
+        [&PB, VerifyEachPass, DebugLogging](
+            FunctionPassManager &PM, PassBuilder::OptimizationLevel Level) {
           ExitOnError Err("Unable to parse PeepholeEP pipeline: ");
-          Err(PB.parsePassPipeline(PM, PeepholeEPPipeline, DebugLogging));
+          Err(PB.parsePassPipeline(PM, PeepholeEPPipeline, VerifyEachPass,
+                                   DebugLogging));
         });
   if (tryParsePipelineText<LoopPassManager>(PB,
                                             LateLoopOptimizationsEPPipeline))
     PB.registerLateLoopOptimizationsEPCallback(
-        [&PB, DebugLogging](LoopPassManager &PM,
-                            PassBuilder::OptimizationLevel Level) {
+        [&PB, VerifyEachPass, DebugLogging](
+            LoopPassManager &PM, PassBuilder::OptimizationLevel Level) {
           ExitOnError Err("Unable to parse LateLoopOptimizationsEP pipeline: ");
           Err(PB.parsePassPipeline(PM, LateLoopOptimizationsEPPipeline,
-                                   DebugLogging));
+                                   VerifyEachPass, DebugLogging));
         });
   if (tryParsePipelineText<LoopPassManager>(PB, LoopOptimizerEndEPPipeline))
     PB.registerLoopOptimizerEndEPCallback(
-        [&PB, DebugLogging](LoopPassManager &PM,
-                            PassBuilder::OptimizationLevel Level) {
+        [&PB, VerifyEachPass, DebugLogging](
+            LoopPassManager &PM, PassBuilder::OptimizationLevel Level) {
           ExitOnError Err("Unable to parse LoopOptimizerEndEP pipeline: ");
           Err(PB.parsePassPipeline(PM, LoopOptimizerEndEPPipeline,
-                                   DebugLogging));
+                                   VerifyEachPass, DebugLogging));
         });
   if (tryParsePipelineText<FunctionPassManager>(PB,
                                                 ScalarOptimizerLateEPPipeline))
     PB.registerScalarOptimizerLateEPCallback(
-        [&PB, DebugLogging](FunctionPassManager &PM,
-                            PassBuilder::OptimizationLevel Level) {
+        [&PB, VerifyEachPass, DebugLogging](
+            FunctionPassManager &PM, PassBuilder::OptimizationLevel Level) {
           ExitOnError Err("Unable to parse ScalarOptimizerLateEP pipeline: ");
           Err(PB.parsePassPipeline(PM, ScalarOptimizerLateEPPipeline,
-                                   DebugLogging));
+                                   VerifyEachPass, DebugLogging));
         });
   if (tryParsePipelineText<CGSCCPassManager>(PB, CGSCCOptimizerLateEPPipeline))
     PB.registerCGSCCOptimizerLateEPCallback(
-        [&PB, DebugLogging](CGSCCPassManager &PM,
-                            PassBuilder::OptimizationLevel Level) {
+        [&PB, VerifyEachPass, DebugLogging](
+            CGSCCPassManager &PM, PassBuilder::OptimizationLevel Level) {
           ExitOnError Err("Unable to parse CGSCCOptimizerLateEP pipeline: ");
           Err(PB.parsePassPipeline(PM, CGSCCOptimizerLateEPPipeline,
-                                   DebugLogging));
+                                   VerifyEachPass, DebugLogging));
         });
   if (tryParsePipelineText<FunctionPassManager>(PB, VectorizerStartEPPipeline))
     PB.registerVectorizerStartEPCallback(
-        [&PB, DebugLogging](FunctionPassManager &PM,
-                            PassBuilder::OptimizationLevel Level) {
+        [&PB, VerifyEachPass, DebugLogging](
+            FunctionPassManager &PM, PassBuilder::OptimizationLevel Level) {
           ExitOnError Err("Unable to parse VectorizerStartEP pipeline: ");
           Err(PB.parsePassPipeline(PM, VectorizerStartEPPipeline,
-                                   DebugLogging));
+                                   VerifyEachPass, DebugLogging));
         });
   if (tryParsePipelineText<ModulePassManager>(PB, PipelineStartEPPipeline))
     PB.registerPipelineStartEPCallback(
-        [&PB, DebugLogging](ModulePassManager &PM) {
+        [&PB, VerifyEachPass, DebugLogging](ModulePassManager &PM) {
           ExitOnError Err("Unable to parse PipelineStartEP pipeline: ");
-          Err(PB.parsePassPipeline(PM, PipelineStartEPPipeline, DebugLogging));
+          Err(PB.parsePassPipeline(PM, PipelineStartEPPipeline, VerifyEachPass,
+                                   DebugLogging));
         });
   if (tryParsePipelineText<FunctionPassManager>(PB, OptimizerLastEPPipeline))
     PB.registerOptimizerLastEPCallback(
-        [&PB, DebugLogging](ModulePassManager &PM,
-                            PassBuilder::OptimizationLevel) {
+        [&PB, VerifyEachPass, DebugLogging](ModulePassManager &PM,
+                                            PassBuilder::OptimizationLevel) {
           ExitOnError Err("Unable to parse OptimizerLastEP pipeline: ");
-          Err(PB.parsePassPipeline(PM, OptimizerLastEPPipeline, DebugLogging));
+          Err(PB.parsePassPipeline(PM, OptimizerLastEPPipeline, VerifyEachPass,
+                                   DebugLogging));
         });
 }
 
@@ -270,15 +274,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   PTO.LoopUnrolling = !DisableLoopUnrolling;
   PTO.Coroutines = Coroutines;
   PassBuilder PB(TM, PTO, P, &PIC);
-  registerEPCallbacks(PB, DebugPM);
-
-  if (VerifyEachPass) {
-    // No verifier support for CGSCC/Loop passes.
-    PB.registerAfterParsingFunctionPassCallback(
-        [](FunctionPassManager &FPM) { FPM.addPass(VerifierPass()); });
-    PB.registerAfterParsingModulePassCallback(
-        [](ModulePassManager &MPM) { MPM.addPass(VerifierPass()); });
-  }
+  registerEPCallbacks(PB, VerifyEachPass, DebugPM);
 
   // Load requested pass plugins and let them register pass builder callbacks
   for (auto &PluginFN : PassPlugins) {
@@ -388,7 +384,8 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   if (!PassPipeline.empty()) {
     assert(Passes.empty() &&
            "PassPipeline and Passes should not both contain passes");
-    if (auto Err = PB.parsePassPipeline(MPM, PassPipeline, DebugPM)) {
+    if (auto Err =
+            PB.parsePassPipeline(MPM, PassPipeline, VerifyEachPass, DebugPM)) {
       errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
       return false;
     }
@@ -397,7 +394,8 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
     std::string ModifiedPassName(PassName.begin(), PassName.end());
     if (PB.isAnalysisPassName(PassName))
       ModifiedPassName = "require<" + ModifiedPassName + ">";
-    if (auto Err = PB.parsePassPipeline(MPM, ModifiedPassName, DebugPM)) {
+    if (auto Err = PB.parsePassPipeline(MPM, ModifiedPassName, VerifyEachPass,
+                                        DebugPM)) {
       errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
       return false;
     }
