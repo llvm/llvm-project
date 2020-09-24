@@ -123,4 +123,11 @@ TEST(CrashRecoveryTest, CallOutputDebugString) {
   EXPECT_TRUE(CrashRecoveryContext().RunSafely(outputString));
 }
 
+TEST(CrashRecoveryTest, Abort) {
+  llvm::CrashRecoveryContext::Enable();
+  auto A = []() { abort(); };
+  EXPECT_FALSE(CrashRecoveryContext().RunSafely(A));
+  // Test a second time to ensure we reinstall the abort signal handler.
+  EXPECT_FALSE(CrashRecoveryContext().RunSafely(A));
+}
 #endif
