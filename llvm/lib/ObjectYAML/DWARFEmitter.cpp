@@ -480,30 +480,45 @@ static void emitFileEntry(raw_ostream &OS, const DWARFYAML::File &File) {
   encodeULEB128(File.Length, OS);
 }
 
+static void writeExtendedOpcode(const DWARFYAML::LineTableOpcode &Op,
+                                uint8_t AddrSize, bool IsLittleEndian,
+                                raw_ostream &OS) {
+  // The first byte of extended opcodes is a zero byte. The next bytes are an
+  // ULEB128 integer giving the number of bytes in the instruction itself (does
+  // not include the first zero byte or the size). We serialize the instruction
+  // itself into the OpBuffer and then write the size of the buffer and the
+  // buffer to the real output stream.
+  std::string OpBuffer;
+  raw_string_ostream OpBufferOS(OpBuffer);
+  writeInteger((uint8_t)Op.SubOpcode, OpBufferOS, IsLittleEndian);
+  switch (Op.SubOpcode) {
+  case dwarf::DW_LNE_set_address:
+    cantFail(writeVariableSizedInteger(Op.Data, AddrSize, OpBufferOS,
+                                       IsLittleEndian));
+    break;
+  case dwarf::DW_LNE_define_file:
+    emitFileEntry(OpBufferOS, Op.FileEntry);
+    break;
+  case dwarf::DW_LNE_set_discriminator:
+    encodeULEB128(Op.Data, OpBufferOS);
+    break;
+  case dwarf::DW_LNE_end_sequence:
+    break;
+  default:
+    for (auto OpByte : Op.UnknownOpcodeData)
+      writeInteger((uint8_t)OpByte, OpBufferOS, IsLittleEndian);
+  }
+  uint64_t ExtLen = Op.ExtLen.getValueOr(OpBuffer.size());
+  encodeULEB128(ExtLen, OS);
+  OS.write(OpBuffer.data(), OpBuffer.size());
+}
+
 static void writeLineTableOpcode(const DWARFYAML::LineTableOpcode &Op,
                                  uint8_t OpcodeBase, uint8_t AddrSize,
                                  raw_ostream &OS, bool IsLittleEndian) {
   writeInteger((uint8_t)Op.Opcode, OS, IsLittleEndian);
   if (Op.Opcode == 0) {
-    encodeULEB128(Op.ExtLen, OS);
-    writeInteger((uint8_t)Op.SubOpcode, OS, IsLittleEndian);
-    switch (Op.SubOpcode) {
-    case dwarf::DW_LNE_set_address:
-      cantFail(
-          writeVariableSizedInteger(Op.Data, AddrSize, OS, IsLittleEndian));
-      break;
-    case dwarf::DW_LNE_define_file:
-      emitFileEntry(OS, Op.FileEntry);
-      break;
-    case dwarf::DW_LNE_set_discriminator:
-      encodeULEB128(Op.Data, OS);
-      break;
-    case dwarf::DW_LNE_end_sequence:
-      break;
-    default:
-      for (auto OpByte : Op.UnknownOpcodeData)
-        writeInteger((uint8_t)OpByte, OS, IsLittleEndian);
-    }
+    writeExtendedOpcode(Op, AddrSize, IsLittleEndian, OS);
   } else if (Op.Opcode < OpcodeBase) {
     switch (Op.Opcode) {
     case dwarf::DW_LNS_copy:
