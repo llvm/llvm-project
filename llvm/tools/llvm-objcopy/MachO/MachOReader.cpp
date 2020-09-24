@@ -111,7 +111,7 @@ extractSections(const object::MachOObjectFile::LoadCommandInfo &LoadCmd,
     assert(S.NReloc == S.Relocations.size() &&
            "Incorrect number of relocations");
   }
-  return Sections;
+  return std::move(Sections);
 }
 
 Error MachOReader::readLoadCommands(Object &O) const {
@@ -334,7 +334,7 @@ Expected<std::unique_ptr<Object>> MachOReader::create() const {
   readFunctionStartsData(*Obj);
   readIndirectSymbolTable(*Obj);
   readSwiftVersion(*Obj);
-  return Obj;
+  return std::move(Obj);
 }
 
 } // end namespace macho
