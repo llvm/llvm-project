@@ -260,7 +260,7 @@ public:
   /// Return the canonicalized Demangle tree for a Swift mangled type name.
   static swift::Demangle::NodePointer
   GetCanonicalDemangleTree(lldb_private::Module *Module,
-                           swift::Demangle::Demangler &Dem,
+                           swift::Demangle::Demangler &dem,
                            llvm::StringRef mangled_name);
 
   /// Use API notes to determine the swiftified name of \p clang_decl.
@@ -269,7 +269,7 @@ public:
 
   /// Wrap \p node as \p Global(TypeMangling(node)), remangle the type
   /// and create a CompilerType from it.
-  CompilerType RemangleAsType(swift::Demangle::Demangler &Dem,
+  CompilerType RemangleAsType(swift::Demangle::Demangler &dem,
                               swift::Demangle::NodePointer node);
 
 private:
@@ -283,21 +283,28 @@ private:
   ///
   /// \return the child of Type or a nullptr.
   swift::Demangle::NodePointer
-  DemangleCanonicalType(swift::Demangle::Demangler &Dem,
+  DemangleCanonicalType(swift::Demangle::Demangler &dem,
                         lldb::opaque_compiler_type_t type);
+
+  /// If \p node is a Struct/Class/Typedef in the __C module, return a
+  /// Swiftified node by looking up the name in the corresponding APINotes and
+  /// optionally putting it into the correctly named module.
+  swift::Demangle::NodePointer GetSwiftified(swift::Demangle::Demangler &dem,
+                                             swift::Demangle::NodePointer node,
+                                             bool resolve_objc_module);
 
   /// Replace all "__C" module names with their actual Clang module
   /// names.  This is the recursion step of \p
   /// GetDemangleTreeForPrinting(). Don't call it directly.
   swift::Demangle::NodePointer
-  GetNodeForPrintingImpl(swift::Demangle::Demangler &Dem,
+  GetNodeForPrintingImpl(swift::Demangle::Demangler &dem,
                          swift::Demangle::NodePointer node,
                          bool resolve_objc_module, bool desugar = true);
 
   /// Return the demangle tree representation with all "__C" module
   /// names with their actual Clang module names.
   swift::Demangle::NodePointer
-  GetDemangleTreeForPrinting(swift::Demangle::Demangler &Dem,
+  GetDemangleTreeForPrinting(swift::Demangle::Demangler &dem,
                              const char *mangled_name,
                              bool resolve_objc_module);
 
