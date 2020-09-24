@@ -436,6 +436,34 @@ static bool markSubLibrary(StringRef searchName) {
   return false;
 }
 
+// Replaces common symbols with defined symbols residing in __common sections.
+// This function must be called after all symbol names are resolved (i.e. after
+// all InputFiles have been loaded.) As a result, later operations won't see
+// any CommonSymbols.
+static void replaceCommonSymbols() {
+  for (macho::Symbol *sym : symtab->getSymbols()) {
+    auto *common = dyn_cast<CommonSymbol>(sym);
+    if (common == nullptr)
+      continue;
+
+    auto *isec = make<InputSection>();
+    isec->file = common->file;
+    isec->name = section_names::common;
+    isec->segname = segment_names::data;
+    isec->align = common->align;
+    // Casting to size_t will truncate large values on 32-bit architectures,
+    // but it's not really worth supporting the linking of 64-bit programs on
+    // 32-bit archs.
+    isec->data = {nullptr, static_cast<size_t>(common->size)};
+    isec->flags = S_ZEROFILL;
+    inputSections.push_back(isec);
+
+    replaceSymbol<Defined>(sym, sym->getName(), isec, /*value=*/0,
+                           /*isWeakDef=*/false,
+                           /*isExternal=*/true);
+  }
+}
+
 static inline char toLowerDash(char x) {
   if (x >= 'A' && x <= 'Z')
     return x - 'A' + 'a';
@@ -640,6 +668,8 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     if (!markSubLibrary(searchName))
       error("-sub_library " + searchName + " does not match a supplied dylib");
   }
+
+  replaceCommonSymbols();
 
   StringRef orderFile = args.getLastArgValue(OPT_order_file);
   if (!orderFile.empty())
