@@ -38,7 +38,14 @@ void getVectors(Module &M, IRInstructionMapper &Mapper,
       Mapper.convertToUnsignedVec(BB, InstrList, UnsignedVec);
 }
 
-// Checks that different opcodes are mapped to different values.
+void getSimilarities(
+    Module &M,
+    std::vector<std::vector<IRSimilarityCandidate>> &SimilarityCandidates) {
+  IRSimilarityIdentifier Identifier;
+  SimilarityCandidates = Identifier.findSimilarity(M);
+}
+
+// Checks that different opcodes are mapped to different values
 TEST(IRInstructionMapper, OpcodeDifferentiation) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
@@ -1624,4 +1631,194 @@ TEST(IRSimilarityCandidate, DifferentNameSameStructure) {
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
 
   ASSERT_TRUE(longSimCandCompare(InstrList, true));
+}
+
+// Checks that two sets of identical instructions are found to be the same.
+// Both sequences of adds have the same operand ordering, and the same
+// instructions, making them strcturally equivalent.
+TEST(IRSimilarityIdentifier, IdentitySimilarity) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = sub i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %a, %b
+                             %3 = sub i32 %b, %a
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 1);
+  for (std::vector<IRSimilarityCandidate> &Cands : SimilarityCandidates) {
+    ASSERT_TRUE(Cands.size() == 2);
+    unsigned InstIdx = 0;
+    for (IRSimilarityCandidate &Cand : Cands) {
+      ASSERT_TRUE(Cand.getStartIdx() == InstIdx);
+      InstIdx += 3;
+    }
+  }
+}
+
+// Checks that incorrect sequences are not found as similar.  In this case,
+// we have different sequences of instructions.
+TEST(IRSimilarityIdentifier, InstructionDifference) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b, i32 %c, i32 %d) {
+                          bb0:
+                             %0 = sub i32 %a, %b
+                             %1 = add i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %c, %d
+                             %3 = sub i32 %d, %c
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 0);
+}
+
+// This test checks to see whether we can detect similarity for commutativen
+// instructions where the operands have been reversed.  Right now, we cannot.
+TEST(IRSimilarityIdentifier, CommutativeSimilarity) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %a, %b
+                             %3 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 0);
+}
+
+// Check that we are not finding commutative similarity in non commutative
+// instructions.  That is, while the instruction and operands used are the same
+// in the two subtraction sequences, they cannot be counted as the same since
+// a subtraction is not commutative.
+TEST(IRSimilarityIdentifier, NonCommutativeDifference) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = sub i32 %a, %b
+                             %1 = sub i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = sub i32 %a, %b
+                             %3 = sub i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 0);
+}
+
+// Check that we find similarity despite changing the register names.
+TEST(IRSimilarityIdentifier, MappingSimilarity) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b, i32 %c, i32 %d) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = sub i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %c, %d
+                             %3 = sub i32 %d, %c
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 1);
+  for (std::vector<IRSimilarityCandidate> &Cands : SimilarityCandidates) {
+    ASSERT_TRUE(Cands.size() == 2);
+    unsigned InstIdx = 0;
+    for (IRSimilarityCandidate &Cand : Cands) {
+      ASSERT_TRUE(Cand.getStartIdx() == InstIdx);
+      InstIdx += 3;
+    }
+  }
+}
+
+// Checks that constants are detected as the same operand in each use in the
+// sequences of instructions.  Also checks that we can find structural
+// equivalence using constants.  In this case the 1 has the same use pattern as
+// %a.
+TEST(IRSimilarityIdentifier, ConstantMappingSimilarity) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 1, %b
+                             %1 = icmp sgt i32 %b, 1
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %a, %b
+                             %3 = icmp sgt i32 %b, %a
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 1);
+  for (std::vector<IRSimilarityCandidate> &Cands : SimilarityCandidates) {
+    ASSERT_TRUE(Cands.size() == 2);
+    unsigned InstIdx = 0;
+    for (IRSimilarityCandidate &Cand : Cands) {
+      ASSERT_TRUE(Cand.getStartIdx() == InstIdx);
+      InstIdx += 3;
+    }
+  }
+}
+
+// Check that constants are uniquely identified. i.e. two different constants
+// are not considered the same.  This means that this should not find any
+// structural similarity.
+TEST(IRSimilarityIdentifier, ConstantMappingDifference) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 1, %b
+                             %1 = icmp sgt i32 %b, 2
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %a, %b
+                             %3 = icmp slt i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 0);
 }
