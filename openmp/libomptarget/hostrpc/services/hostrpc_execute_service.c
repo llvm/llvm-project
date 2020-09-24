@@ -195,7 +195,7 @@ static void hostrpc_handler_SERVICE_MALLOC(uint64_t *payload) {
   payload[1] = (uint64_t)ptr;
 }
 static void hostrpc_handler_SERVICE_FREE(uint64_t *payload) {
-  char *device_buffer = (char *)payload[1];
+  char *device_buffer = (char *)payload[0];
   atmi_free(device_buffer);
 }
 
