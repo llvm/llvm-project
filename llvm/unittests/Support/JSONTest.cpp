@@ -465,12 +465,38 @@ TEST(JSONTest, Stream) {
 TEST(JSONTest, Path) {
   Path::Root R("foo");
   Path P = R, A = P.field("a"), B = P.field("b");
+  P.report("oh no");
+  EXPECT_THAT_ERROR(R.getError(), FailedWithMessage("oh no when parsing foo"));
   A.index(1).field("c").index(2).report("boom");
   EXPECT_THAT_ERROR(R.getError(), FailedWithMessage("boom at foo.a[1].c[2]"));
   B.field("d").field("e").report("bam");
   EXPECT_THAT_ERROR(R.getError(), FailedWithMessage("bam at foo.b.d.e"));
-  P.report("oh no");
-  EXPECT_THAT_ERROR(R.getError(), FailedWithMessage("oh no when parsing foo"));
+
+  Value V = Object{
+      {"a", Array{42}},
+      {"b",
+       Object{{"d",
+               Object{
+                   {"e", Array{1, Object{{"x", "y"}}}},
+                   {"f", "a moderately long string: 48 characters in total"},
+               }}}},
+  };
+  std::string Err;
+  raw_string_ostream OS(Err);
+  R.printErrorContext(V, OS);
+  const char *Expected = R"({
+  "a": [ ... ],
+  "b": {
+    "d": {
+      "e": /* error: bam */ [
+        1,
+        { ... }
+      ],
+      "f": "a moderately long string: 48 characte..."
+    }
+  }
+})";
+  EXPECT_EQ(Expected, OS.str());
 }
 
 } // namespace

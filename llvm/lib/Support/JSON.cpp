@@ -236,6 +236,133 @@ Error Path::Root::getError() const {
 }
 
 namespace {
+
+std::vector<const Object::value_type *> sortedElements(const Object &O) {
+  std::vector<const Object::value_type *> Elements;
+  for (const auto &E : O)
+    Elements.push_back(&E);
+  llvm::sort(Elements,
+             [](const Object::value_type *L, const Object::value_type *R) {
+               return L->first < R->first;
+             });
+  return Elements;
+}
+
+// Prints a one-line version of a value that isn't our main focus.
+// We interleave writes to OS and JOS, exploiting the lack of extra buffering.
+// This is OK as we own the implementation.
+// FIXME: once we have a "write custom serialized value" API, use it here.
+void abbreviate(const Value &V, OStream &JOS, raw_ostream &OS) {
+  switch (V.kind()) {
+  case Value::Array:
+    JOS.array([&] {
+      if (!V.getAsArray()->empty())
+        OS << " ... ";
+    });
+    break;
+  case Value::Object:
+    JOS.object([&] {
+      if (!V.getAsObject()->empty())
+        OS << " ... ";
+    });
+    break;
+  case Value::String: {
+    llvm::StringRef S = *V.getAsString();
+    if (S.size() < 40) {
+      JOS.value(V);
+    } else {
+      std::string Truncated = fixUTF8(S.take_front(37));
+      Truncated.append("...");
+      JOS.value(Truncated);
+    }
+    break;
+  }
+  default:
+    JOS.value(V);
+  }
+}
+
+// Prints a semi-expanded version of a value that is our main focus.
+// Array/Object entries are printed, but not recursively as they may be huge.
+void abbreviateChildren(const Value &V, OStream &JOS, raw_ostream &OS) {
+  switch (V.kind()) {
+  case Value::Array:
+    JOS.array([&] {
+      for (const auto &V : *V.getAsArray())
+        abbreviate(V, JOS, OS);
+    });
+    break;
+  case Value::Object:
+    JOS.object([&] {
+      for (const auto *KV : sortedElements(*V.getAsObject())) {
+        JOS.attributeBegin(KV->first);
+        abbreviate(KV->second, JOS, OS);
+        JOS.attributeEnd();
+      }
+    });
+    break;
+  default:
+    JOS.value(V);
+  }
+}
+
+} // namespace
+
+void Path::Root::printErrorContext(const Value &R, raw_ostream &OS) const {
+  OStream JOS(OS, /*IndentSize=*/2);
+  // PrintValue recurses down the path, printing the ancestors of our target.
+  // Siblings of nodes along the path are printed with abbreviate(), and the
+  // target itself is printed with the somewhat richer abbreviateChildren().
+  // 'Recurse' is the lambda itself, to allow recursive calls.
+  auto PrintValue = [&](const Value &V, ArrayRef<Segment> Path, auto &Recurse) {
+    // Print the target node itself, with the error as a comment.
+    // Also used if we can't follow our path, e.g. it names a field that
+    // *should* exist but doesn't.
+    auto HighlightCurrent = [&] {
+      std::string Comment = "error: ";
+      Comment.append(ErrorMessage.data(), ErrorMessage.size());
+      JOS.comment(Comment);
+      abbreviateChildren(V, JOS, OS);
+    };
+    if (Path.empty()) // We reached our target.
+      return HighlightCurrent();
+    const Segment &S = Path.back(); // Path is in reverse order.
+    if (S.isField()) {
+      // Current node is an object, path names a field.
+      llvm::StringRef FieldName = S.field();
+      const Object *O = V.getAsObject();
+      if (!O || !O->get(FieldName))
+        return HighlightCurrent();
+      JOS.object([&] {
+        for (const auto *KV : sortedElements(*O)) {
+          JOS.attributeBegin(KV->first);
+          if (FieldName.equals(KV->first))
+            Recurse(KV->second, Path.drop_back(), Recurse);
+          else
+            abbreviate(KV->second, JOS, OS);
+          JOS.attributeEnd();
+        }
+      });
+    } else {
+      // Current node is an array, path names an element.
+      const Array *A = V.getAsArray();
+      if (!A || S.index() >= A->size())
+        return HighlightCurrent();
+      JOS.array([&] {
+        unsigned Current = 0;
+        for (const auto &V : *A) {
+          if (Current++ == S.index())
+            Recurse(V, Path.drop_back(), Recurse);
+          else
+            abbreviate(V, JOS, OS);
+        }
+      });
+    }
+  };
+  PrintValue(R, ErrorPath, PrintValue);
+}
+
+namespace {
 // Simple recursive-descent JSON parser.
 class Parser {
 public:
@@ -554,17 +681,6 @@ Expected<Value> parse(StringRef JSON) {
   return P.takeError();
 }
 char ParseError::ID = 0;
-
-static std::vector<const Object::value_type *> sortedElements(const Object &O) {
-  std::vector<const Object::value_type *> Elements;
-  for (const auto &E : O)
-    Elements.push_back(&E);
-  llvm::sort(Elements,
-             [](const Object::value_type *L, const Object::value_type *R) {
-               return L->first < R->first;
-             });
-  return Elements;
-}
 
 bool isUTF8(llvm::StringRef S, size_t *ErrOffset) {
   // Fast-path for ASCII, which is valid UTF-8.
