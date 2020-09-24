@@ -133,7 +133,7 @@ public:
   ///
   /// \return
   ///     A const reference to this object.
-  ConstString operator=(ConstString rhs) {
+  ConstString operator=(const ConstString &rhs) {
     m_string = rhs.m_string;
     return *this;
   }
@@ -150,7 +150,7 @@ public:
   /// \return
   ///     true if this object is equal to \a rhs.
   ///     false if this object is not equal to \a rhs.
-  bool operator==(ConstString rhs) const {
+  bool operator==(const ConstString &rhs) const {
     // We can do a pointer compare to compare these strings since they must
     // come from the same pool in order to be equal.
     return m_string == rhs.m_string;
@@ -192,7 +192,7 @@ public:
   /// \return
   ///     \b true if this object is not equal to \a rhs.
   ///     \b false if this object is equal to \a rhs.
-  bool operator!=(ConstString rhs) const {
+  bool operator!=(const ConstString &rhs) const {
     return m_string != rhs.m_string;
   }
 
@@ -209,7 +209,7 @@ public:
   /// \return \b true if this object is not equal to \a rhs, false otherwise.
   bool operator!=(const char *rhs) const { return !(*this == rhs); }
 
-  bool operator<(ConstString rhs) const;
+  bool operator<(const ConstString &rhs) const;
 
   /// Get the string value as a C string.
   ///
@@ -279,7 +279,7 @@ public:
   ///     will be tested, otherwise character case will be ignored
   ///
   /// \return \b true if this object is equal to \a rhs, \b false otherwise.
-  static bool Equals(ConstString lhs, ConstString rhs,
+  static bool Equals(const ConstString &lhs, const ConstString &rhs,
                      const bool case_sensitive = true);
 
   /// Compare two string objects.
@@ -303,7 +303,7 @@ public:
   ///     will be performed, otherwise character case will be ignored
   ///
   /// \return -1 if lhs < rhs, 0 if lhs == rhs, 1 if lhs > rhs
-  static int Compare(ConstString lhs, ConstString rhs,
+  static int Compare(const ConstString &lhs, const ConstString &rhs,
                      const bool case_sensitive = true);
 
   /// Dump the object description to a stream.
@@ -371,7 +371,7 @@ public:
   ///     The already uniqued mangled ConstString to correlate the
   ///     soon to be uniqued version of \a demangled.
   void SetStringWithMangledCounterpart(llvm::StringRef demangled,
-                                       ConstString mangled);
+                                       const ConstString &mangled);
 
   /// Retrieve the mangled or demangled counterpart for a mangled or demangled
   /// ConstString.
@@ -452,7 +452,7 @@ protected:
 };
 
 /// Stream the string value \a str to the stream \a s
-Stream &operator<<(Stream &s, ConstString str);
+Stream &operator<<(Stream &s, const ConstString &str);
 
 } // namespace lldb_private
 
@@ -473,11 +473,11 @@ template <> struct DenseMapInfo<lldb_private::ConstString> {
     return lldb_private::ConstString::FromStringPoolPointer(
         DenseMapInfo<const char *>::getTombstoneKey());
   }
-  static unsigned getHashValue(lldb_private::ConstString val) {
+  static unsigned getHashValue(const lldb_private::ConstString &val) {
     return DenseMapInfo<const char *>::getHashValue(val.m_string);
   }
-  static bool isEqual(lldb_private::ConstString LHS,
-                      lldb_private::ConstString RHS) {
+  static bool isEqual(const lldb_private::ConstString &LHS,
+                      const lldb_private::ConstString &RHS) {
     return LHS == RHS;
   }
 };
@@ -491,7 +491,8 @@ template <> struct ScalarTraits<lldb_private::ConstString> {
 };
 } // namespace yaml
 
-inline raw_ostream &operator<<(raw_ostream &os, lldb_private::ConstString s) {
+inline raw_ostream &operator<<(raw_ostream &os,
+                               const lldb_private::ConstString &s) {
   os << s.GetStringRef();
   return os;
 }

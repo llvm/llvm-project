@@ -613,7 +613,7 @@ std::string ArchSpec::GetTargetABI() const {
   return abi;
 }
 
-void ArchSpec::SetFlags(std::string elf_abi) {
+void ArchSpec::SetFlags(const std::string &elf_abi) {
 
   uint32_t flag = GetFlags();
   if (IsMIPS()) {

@@ -160,7 +160,7 @@ bool Scalar::GetData(DataExtractor &data, size_t limit_byte_size) const {
 void Scalar::GetBytes(llvm::MutableArrayRef<uint8_t> storage) const {
   assert(storage.size() >= GetByteSize());
 
-  const auto &store = [&](const llvm::APInt val) {
+  const auto &store = [&](const llvm::APInt &val) {
     StoreIntToMemory(val, storage.data(), (val.getBitWidth() + 7) / 8);
   };
   switch (GetCategory(m_type)) {

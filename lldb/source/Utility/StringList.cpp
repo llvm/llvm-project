@@ -212,7 +212,7 @@ StringList &StringList::operator<<(const std::string &str) {
   return *this;
 }
 
-StringList &StringList::operator<<(StringList strings) {
+StringList &StringList::operator<<(const StringList &strings) {
   AppendList(strings);
   return *this;
 }
