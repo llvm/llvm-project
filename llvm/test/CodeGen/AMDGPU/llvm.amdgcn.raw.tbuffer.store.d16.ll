@@ -3,7 +3,6 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PREGFX10,PREGFX10-PACKED %s
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,GFX10,GFX10-PACKED %s
 
-
 ; GCN-LABEL: {{^}}tbuffer_store_d16_x:
 ; GCN-DAG: s_load_dwordx4
 ; GCN-DAG: s_load_dword s[[S_LO:[0-9]+]]
