@@ -680,27 +680,27 @@ static void ProcessAPINotes(Sema &S, TypedefNameDecl *D,
   using SwiftWrapperKind = api_notes::SwiftWrapperKind;
 
   if (auto swiftWrapper = info.SwiftWrapper) {
-    handleAPINotedAttribute<SwiftNewtypeAttr>(S, D,
+    handleAPINotedAttribute<SwiftNewTypeAttr>(S, D,
       *swiftWrapper != SwiftWrapperKind::None, metadata,
       [&] {
-        SwiftNewtypeAttr::NewtypeKind kind;
+        SwiftNewTypeAttr::NewtypeKind kind;
         switch (*swiftWrapper) {
         case SwiftWrapperKind::None:
           llvm_unreachable("Shouldn't build an attribute");
 
         case SwiftWrapperKind::Struct:
-          kind = SwiftNewtypeAttr::NK_Struct;
+          kind = SwiftNewTypeAttr::NK_Struct;
           break;
 
         case SwiftWrapperKind::Enum:
-          kind = SwiftNewtypeAttr::NK_Enum;
+          kind = SwiftNewTypeAttr::NK_Enum;
           break;
         }
         AttributeCommonInfo syntaxInfo{SourceRange(),
-                                       AttributeCommonInfo::AT_SwiftNewtype,
+                                       AttributeCommonInfo::AT_SwiftNewType,
                                        AttributeCommonInfo::AS_GNU,
-                                       SwiftNewtypeAttr::GNU_swift_wrapper};
-        return new (S.Context) SwiftNewtypeAttr(S.Context, syntaxInfo, kind);
+                                       SwiftNewTypeAttr::GNU_swift_wrapper};
+        return new (S.Context) SwiftNewTypeAttr(S.Context, syntaxInfo, kind);
     });
   }
 
