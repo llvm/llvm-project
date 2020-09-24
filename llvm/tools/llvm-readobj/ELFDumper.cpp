@@ -5277,7 +5277,7 @@ template <class ELFT> void GNUStyle<ELFT>::printNotes() {
       PrintHeader(expectedToOptional(this->Obj.getSectionName(S)), S.sh_offset,
                   S.sh_size);
       Error Err = Error::success();
-      for (const Elf_Note &Note : this->Obj.notes(S, Err))
+      for (const Elf_Note Note : this->Obj.notes(S, Err))
         ProcessNote(Note);
       if (Err)
         reportError(std::move(Err), this->FileName);
@@ -5296,7 +5296,7 @@ template <class ELFT> void GNUStyle<ELFT>::printNotes() {
         continue;
       PrintHeader(/*SecName=*/None, P.p_offset, P.p_filesz);
       Error Err = Error::success();
-      for (const Elf_Note &Note : this->Obj.notes(P, Err))
+      for (const Elf_Note Note : this->Obj.notes(P, Err))
         ProcessNote(Note);
       if (Err)
         reportError(std::move(Err), this->FileName);
