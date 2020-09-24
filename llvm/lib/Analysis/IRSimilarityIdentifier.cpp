@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/User.h"
+#include "llvm/Support/SuffixTree.h"
 
 using namespace llvm;
 using namespace IRSimilarity;
@@ -389,7 +390,6 @@ bool IRSimilarityCandidate::compareStructure(const IRSimilarityCandidate &A,
                                {B, OperValsB, ValueNumberMappingB}))
       return false;
   }
-
   return true;
 }
 
@@ -404,4 +404,243 @@ bool IRSimilarityCandidate::overlap(const IRSimilarityCandidate &A,
   };
 
   return DoesOverlap(A, B) || DoesOverlap(B, A);
+}
+
+void IRSimilarityIdentifier::populateMapper(
+    Module &M, std::vector<IRInstructionData *> &InstrList,
+    std::vector<unsigned> &IntegerMapping) {
+
+  std::vector<IRInstructionData *> InstrListForModule;
+  std::vector<unsigned> IntegerMappingForModule;
+  // Iterate over the functions in the module to map each Instruction in each
+  // BasicBlock to an unsigned integer.
+  for (Function &F : M) {
+
+    if (F.empty())
+      continue;
+
+    for (BasicBlock &BB : F) {
+
+      if (BB.sizeWithoutDebug() < 2)
+        continue;
+
+      // BB has potential to have similarity since it has a size greater than 2
+      // and can therefore match other regions greater than 2. Map it to a list
+      // of unsigned integers.
+      Mapper.convertToUnsignedVec(BB, InstrListForModule,
+                                  IntegerMappingForModule);
+    }
+  }
+
+  // Insert the InstrListForModule at the end of the overall InstrList so that
+  // we can have a long InstrList for the entire set of Modules being analyzed.
+  InstrList.insert(InstrList.end(), InstrListForModule.begin(),
+                   InstrListForModule.end());
+  // Do the same as above, but for IntegerMapping.
+  IntegerMapping.insert(IntegerMapping.end(), IntegerMappingForModule.begin(),
+                     IntegerMappingForModule.end());
+}
+
+void IRSimilarityIdentifier::populateMapper(
+    ArrayRef<std::unique_ptr<Module>> &Modules,
+    std::vector<IRInstructionData *> &InstrList,
+    std::vector<unsigned> &IntegerMapping) {
+
+  // Iterate over, and map the instructions in each module.
+  for (const std::unique_ptr<Module> &M : Modules)
+    populateMapper(*M, InstrList, IntegerMapping);
+}
+
+/// From a repeated subsequence, find all the different instances of the
+/// subsequence from the \p InstrList, and create an IRSimilarityCandidate from
+/// the IRInstructionData in subsequence.
+///
+/// \param [in] Mapper - The instruction mapper for sanity checks.
+/// \param [in] InstrList - The vector that holds the instruction data.
+/// \param [in] IntegerMapping - The vector that holds the mapped integers.
+/// \param [out] CandsForRepSubstring - The vector to store the generated
+/// IRSimilarityCandidates.
+static void createCandidatesFromSuffixTree(
+    IRInstructionMapper Mapper, std::vector<IRInstructionData *> &InstrList,
+    std::vector<unsigned> &IntegerMapping, SuffixTree::RepeatedSubstring &RS,
+    std::vector<IRSimilarityCandidate> &CandsForRepSubstring) {
+
+  unsigned StringLen = RS.Length;
+  unsigned NumFound = 0;
+  unsigned PreviousIdx = 0;
+
+  // Create an IRSimilarityCandidate for instance of this subsequence \p RS.
+  for (const unsigned &StartIdx : RS.StartIndices) {
+    unsigned EndIdx = StartIdx + StringLen - 1;
+
+    // Check that this subsequence does not contain an illegal instruction.
+    bool ContainsIllegal = false;
+    for (unsigned CurrIdx = StartIdx; CurrIdx <= EndIdx; CurrIdx++) {
+      unsigned Key = IntegerMapping[CurrIdx];
+      if (Key > Mapper.IllegalInstrNumber) {
+        ContainsIllegal = true;
+        break;
+      }
+    }
+
+    // If we have an illegal instruction, we should not create an
+    // IRSimilarityCandidate for this region.
+    if (ContainsIllegal)
+      continue;
+
+    PreviousIdx = EndIdx;
+    NumFound++;
+
+    // We are getting iterators to the instructions in this region of code
+    // by advancing the start and end indices from the start of the
+    // InstrList.
+    std::vector<IRInstructionData *>::iterator StartIt = InstrList.begin();
+    std::advance(StartIt, StartIdx);
+    std::vector<IRInstructionData *>::iterator EndIt = InstrList.begin();
+    std::advance(EndIt, EndIdx);
+
+    CandsForRepSubstring.emplace_back(StartIdx, StringLen, *StartIt, *EndIt);
+  }
+}
+
+/// From the list of IRSimilarityCandidates, perform a comparison between each
+/// IRSimilarityCandidate to determine if there are overlapping
+/// IRInstructionData, or if they do not have the same structure.
+///
+/// \param [in] CandsForRepSubstring - The vector containing the
+/// IRSimilarityCandidates.
+/// \param [out] StructuralGroups - the mapping of unsigned integers to vector
+/// of IRSimilarityCandidates where each of the IRSimilarityCandidates in the
+/// vector are structurally similar to one another.
+static void findCandidateStructures(
+    std::vector<IRSimilarityCandidate> &CandsForRepSubstring,
+    DenseMap<unsigned, SimilarityGroup> &StructuralGroups) {
+  std::vector<IRSimilarityCandidate>::iterator CandIt, CandEndIt, InnerCandIt,
+      InnerCandEndIt;
+
+  // IRSimilarityCandidates each have a structure for operand use.  It is
+  // possible that two instances of the same subsequences have different
+  // structure. Each type of structure found is assigned a number.  This
+  // DenseMap maps an IRSimilarityCandidate to which type of similarity
+  // discovered it fits within.
+  DenseMap<IRSimilarityCandidate *, unsigned> CandToGroup;
+
+  // Find the compatibility from each candidate to the others to determine
+  // which candidates overlap and which have the same structure by mapping
+  // each structure to a different group.
+  bool SameStructure;
+  bool Inserted;
+  unsigned CurrentGroupNum = 0;
+  unsigned OuterGroupNum;
+  DenseMap<IRSimilarityCandidate *, unsigned>::iterator CandToGroupIt;
+  DenseMap<IRSimilarityCandidate *, unsigned>::iterator CandToGroupItInner;
+  DenseMap<unsigned, SimilarityGroup>::iterator CurrentGroupPair;
+
+  // Iterate over the candidates to determine its structural and overlapping
+  // compatibility with other instructions
+  for (CandIt = CandsForRepSubstring.begin(),
+      CandEndIt = CandsForRepSubstring.end();
+       CandIt != CandEndIt; CandIt++) {
+
+    // Determine if it has an assigned structural group already.
+    CandToGroupIt = CandToGroup.find(&*CandIt);
+    if (CandToGroupIt == CandToGroup.end()) {
+      // If not, we assign it one, and add it to our mapping.
+      std::tie(CandToGroupIt, Inserted) =
+          CandToGroup.insert(std::make_pair(&*CandIt, CurrentGroupNum++));
+    }
+
+    // Get the structural group number from the iterator.
+    OuterGroupNum = CandToGroupIt->second;
+
+    // Check if we already have a list of IRSimilarityCandidates for the current
+    // structural group.  Create one if one does not exist.
+    CurrentGroupPair = StructuralGroups.find(OuterGroupNum);
+    if (CurrentGroupPair == StructuralGroups.end())
+      std::tie(CurrentGroupPair, Inserted) = StructuralGroups.insert(
+          std::make_pair(OuterGroupNum, SimilarityGroup({*CandIt})));
+
+    // Iterate over the IRSimilarityCandidates following the current
+    // IRSimilarityCandidate in the list to determine whether the two
+    // IRSimilarityCandidates are compatible.  This is so we do not repeat pairs
+    // of IRSimilarityCandidates.
+    for (InnerCandIt = std::next(CandIt),
+        InnerCandEndIt = CandsForRepSubstring.end();
+         InnerCandIt != InnerCandEndIt; InnerCandIt++) {
+
+      // We check if the inner item has a group already, if it does, we skip it.
+      CandToGroupItInner = CandToGroup.find(&*InnerCandIt);
+      if (CandToGroupItInner != CandToGroup.end())
+        continue;
+
+      // Otherwise we determine if they have the same structure and add it to
+      // vector if they match.
+      SameStructure =
+          IRSimilarityCandidate::compareStructure(*CandIt, *InnerCandIt);
+      if (!SameStructure)
+        continue;
+
+      CandToGroup.insert(std::make_pair(&*InnerCandIt, OuterGroupNum));
+      CurrentGroupPair->second.push_back(*InnerCandIt);
+    }
+  }
+}
+
+void IRSimilarityIdentifier::findCandidates(
+    std::vector<IRInstructionData *> &InstrList,
+    std::vector<unsigned> &IntegerMapping) {
+  SuffixTree ST(IntegerMapping);
+
+  std::vector<IRSimilarityCandidate> CandsForRepSubstring;
+  std::vector<SimilarityGroup> NewCandidateGroups;
+
+  DenseMap<unsigned, SimilarityGroup> StructuralGroups;
+
+  // Iterate over the subsequences found by the Suffix Tree to create
+  // IRSimilarityCandidates for each repeated subsequence and determine which
+  // instances are structurally similar to one another.
+  for (auto It = ST.begin(), Et = ST.end(); It != Et; ++It) {
+    createCandidatesFromSuffixTree(Mapper, InstrList, IntegerMapping, *It,
+                                   CandsForRepSubstring);
+
+    if (CandsForRepSubstring.size() < 2)
+      continue;
+
+    findCandidateStructures(CandsForRepSubstring, StructuralGroups);
+    for (std::pair<unsigned, SimilarityGroup> &Group : StructuralGroups)
+      // We only add the group if it contains more than one
+      // IRSimilarityCandidate.  If there is only one, that means there is no
+      // other repeated subsequence with the same structure.
+      if (Group.second.size() > 1)
+        SimilarityCandidates->push_back(Group.second);
+
+    CandsForRepSubstring.clear();
+    StructuralGroups.clear();
+    NewCandidateGroups.clear();
+  }
+}
+
+SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(
+    ArrayRef<std::unique_ptr<Module>> Modules) {
+  resetSimilarityCandidates();
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> IntegerMapping;
+
+  populateMapper(Modules, InstrList, IntegerMapping);
+  findCandidates(InstrList, IntegerMapping);
+
+  return SimilarityCandidates.getValue();
+}
+
+SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(Module &M) {
+  resetSimilarityCandidates();
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> IntegerMapping;
+
+  populateMapper(M, InstrList, IntegerMapping);
+  findCandidates(InstrList, IntegerMapping);
+
+  return SimilarityCandidates.getValue();
 }
