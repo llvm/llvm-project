@@ -3509,7 +3509,7 @@ def SwiftBridgeDocs : Documentation {
 The ``swift_bridge`` attribute indicates that the declaration to which the
 attribute appertains is bridged to the named Swift type.
 
-  .. code-block:: c
+  .. code-block:: objc
 
     __attribute__((__objc_root__))
     @interface Base
@@ -3535,7 +3535,7 @@ the attribute appertains is imported into Swift, it should refer to the bridged
 Swift type (e.g. Swift's ``String``) rather than the Objective-C type as written
 (e.g. ``NSString``).
 
-  .. code-block:: c
+  .. code-block:: objc
 
     @interface NSString;
     typedef NSString *AliasedString __attribute__((__swift_bridged_typedef__));
@@ -3572,28 +3572,28 @@ the imported API. When calling the API, Swift will always pass a valid address
 initialized to a null pointer.
 
 * ``swift_error(none)`` means that the function should not be imported as
-throwing. The error parameter and result type will be imported normally.
+  throwing. The error parameter and result type will be imported normally.
 
 * ``swift_error(null_result)`` means that calls to the function should be
-considered to have thrown if they return a null value. The return type must be
-a pointer type, and it will be imported into Swift with a non-optional type.
-This is the default error convention for Objective-C methods that return
-pointers.
+  considered to have thrown if they return a null value. The return type must be
+  a pointer type, and it will be imported into Swift with a non-optional type.
+  This is the default error convention for Objective-C methods that return
+  pointers.
 
 * ``swift_error(zero_result)`` means that calls to the function should be
-considered to have thrown if they return a zero result. The return type must be
-an integral type. If the return type would have been imported as ``Bool``, it
-is instead imported as ``Void``. This is the default error convention for
-Objective-C methods that return a type that would be imported as ``Bool``.
+  considered to have thrown if they return a zero result. The return type must be
+  an integral type. If the return type would have been imported as ``Bool``, it
+  is instead imported as ``Void``. This is the default error convention for
+  Objective-C methods that return a type that would be imported as ``Bool``.
 
 * ``swift_error(nonzero_result)`` means that calls to the function should be
-considered to have thrown if they return a non-zero result. The return type must
-be an integral type. If the return type would have been imported as ``Bool``,
-it is instead imported as ``Void``.
+  considered to have thrown if they return a non-zero result. The return type must
+  be an integral type. If the return type would have been imported as ``Bool``,
+  it is instead imported as ``Void``.
 
 * ``swift_error(nonnull_error)`` means that calls to the function should be
-considered to have thrown if they leave a non-null error in the error parameter.
-The return type is left unmodified.
+  considered to have thrown if they leave a non-null error in the error parameter.
+  The return type is left unmodified.
 
   }];
 }
@@ -3611,7 +3611,7 @@ variable, or type. When renaming a function, the name may be a compound Swift
 name.  For a type, enum constant, property, or variable declaration, the name
 must be a simple or qualified identifier.
 
-  .. code-block:: c
+  .. code-block:: objc
 
     @interface URL
     - (void) initWithString:(NSString *)s __attribute__((__swift_name__("URL.init(_:)")))
