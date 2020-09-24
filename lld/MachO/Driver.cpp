@@ -523,6 +523,8 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   stderrOS.enable_colors(stderrOS.has_colors());
   // TODO: Set up error handler properly, e.g. the errorLimitExceededMsg
 
+  errorHandler().cleanupCallback = []() { freeArena(); };
+
   MachOOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
 
@@ -676,6 +678,5 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   if (canExitEarly)
     exitLld(errorCount() ? 1 : 0);
 
-  freeArena();
   return !errorCount();
 }

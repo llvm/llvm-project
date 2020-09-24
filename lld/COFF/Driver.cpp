@@ -68,6 +68,17 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   lld::stdoutOS = &stdoutOS;
   lld::stderrOS = &stderrOS;
 
+  errorHandler().cleanupCallback = []() {
+    freeArena();
+    ObjFile::instances.clear();
+    PDBInputFile::instances.clear();
+    ImportFile::instances.clear();
+    BitcodeFile::instances.clear();
+    memset(MergeChunk::instances, 0, sizeof(MergeChunk::instances));
+    TpiSource::clear();
+    OutputSection::clear();
+  };
+
   errorHandler().logName = args::getFilenameWithoutExe(args[0]);
   errorHandler().errorLimitExceededMsg =
       "too many errors emitted, stopping now"
@@ -84,13 +95,6 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   // Call exit() if we can to avoid calling destructors.
   if (canExitEarly)
     exitLld(errorCount() ? 1 : 0);
-
-  freeArena();
-  ObjFile::instances.clear();
-  ImportFile::instances.clear();
-  BitcodeFile::instances.clear();
-  memset(MergeChunk::instances, 0, sizeof(MergeChunk::instances));
-  TpiSource::clear();
 
   return !errorCount();
 }
@@ -1204,6 +1208,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   v.push_back("lld-link (LLVM option parsing)");
   for (auto *arg : args.filtered(OPT_mllvm))
     v.push_back(arg->getValue());
+  cl::ResetAllOptionOccurrences();
   cl::ParseCommandLineOptions(v.size(), v.data());
 
   // Handle /errorlimit early, because error() depends on it.
