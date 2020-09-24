@@ -857,6 +857,10 @@ def not_for_dyld_shared_cache : Flag<["-"], "not_for_dyld_shared_cache">,
      HelpText<"Prevent system dylibs from being placed into the dylib shared cache">,
      Flags<[HelpHidden]>,
      Group<grp_rare>;
+def mllvm : Separate<["-"], "mllvm">,
+     HelpText<"Options to pass to LLVM">,
+     Flags<[HelpHidden]>,
+     Group<grp_rare>;
 
 def grp_deprecated : OptionGroup<"deprecated">, HelpText<"DEPRECATED">;
 
@@ -1192,10 +1196,6 @@ def uikitformac_version_min : Flag<["-"], "uikitformac_version_min">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;
 def mcpu : Flag<["-"], "mcpu">,
-     HelpText<"This option is undocumented in ld64">,
-     Flags<[HelpHidden]>,
-     Group<grp_undocumented>;
-def mllvm : Flag<["-"], "mllvm">,
      HelpText<"This option is undocumented in ld64">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;
