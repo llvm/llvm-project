@@ -84,10 +84,11 @@ Symbol *SymbolTable::addCommon(StringRef name, InputFile *file, uint64_t size,
     if (auto *common = dyn_cast<CommonSymbol>(s)) {
       if (size < common->size)
         return s;
-    } else if (!isa<Undefined>(s)) {
-      error("TODO: implement common symbol resolution with other symbol kinds");
+    } else if (isa<Defined>(s)) {
       return s;
     }
+    // Common symbols take priority over all non-Defined symbols, so in case of
+    // a name conflict, we fall through to the replaceSymbol() call below.
   }
 
   replaceSymbol<CommonSymbol>(s, name, file, size, align);
