@@ -94,7 +94,7 @@ exit:
 define void @test_guard_eq_12(i32* nocapture %a, i64 %N) {
 ; CHECK-LABEL: Determining loop execution counts for: @test_guard_eq_12
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is %N
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 12
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is %N
 ;
 entry:
