@@ -478,96 +478,6 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
 }
 
-; CHECK-LABEL: wrong_tripcount_arg
-; CHECK:       vector.body:
-; CHECK:       call <4 x i1> @llvm.arm.mve.vctp32
-; CHECK-NOT:   call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32
-; CHECK:       vector.body35:
-; CHECK:       call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32
-; CHECK-NOT:   call <4 x i1> @llvm.arm.mve.vctp32
-; CHECK:       ret void
-;
-define dso_local void @wrong_tripcount_arg(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32* noalias nocapture %D, i32 %N1, i32 %N2) local_unnamed_addr #0 {
-entry:
-  %cmp29 = icmp sgt i32 %N1, 0
-  %0 = add i32 %N1, 3
-  %1 = lshr i32 %0, 2
-  %2 = shl nuw i32 %1, 2
-  %3 = add i32 %2, -4
-  %4 = lshr i32 %3, 2
-  %5 = add nuw nsw i32 %4, 1
-  br i1 %cmp29, label %vector.ph, label %for.cond4.preheader
-
-vector.ph:                                        ; preds = %entry
-  call void @llvm.set.loop.iterations.i32(i32 %5)
-  br label %vector.body
-
-vector.body:                                      ; preds = %vector.body, %vector.ph
-  %lsr.iv62 = phi i32* [ %scevgep63, %vector.body ], [ %D, %vector.ph ]
-  %lsr.iv59 = phi i32* [ %scevgep60, %vector.body ], [ %C, %vector.ph ]
-  %lsr.iv56 = phi i32* [ %scevgep57, %vector.body ], [ %B, %vector.ph ]
-  %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %6 = phi i32 [ %5, %vector.ph ], [ %8, %vector.body ]
-  %lsr.iv5658 = bitcast i32* %lsr.iv56 to <4 x i32>*
-  %lsr.iv5961 = bitcast i32* %lsr.iv59 to <4 x i32>*
-  %lsr.iv6264 = bitcast i32* %lsr.iv62 to <4 x i32>*
-  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N1)
-  %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv5658, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
-  %wide.masked.load32 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv5961, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
-  %7 = add nsw <4 x i32> %wide.masked.load32, %wide.masked.load
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %7, <4 x i32>* %lsr.iv6264, i32 4, <4 x i1> %active.lane.mask)
-  %index.next = add i32 %index, 4
-  %scevgep57 = getelementptr i32, i32* %lsr.iv56, i32 4
-  %scevgep60 = getelementptr i32, i32* %lsr.iv59, i32 4
-  %scevgep63 = getelementptr i32, i32* %lsr.iv62, i32 4
-  %8 = call i32 @llvm.loop.decrement.reg.i32(i32 %6, i32 1)
-  %9 = icmp ne i32 %8, 0
-  br i1 %9, label %vector.body, label %for.cond4.preheader
-
-for.cond4.preheader:                              ; preds = %vector.body, %entry
-  %cmp527 = icmp sgt i32 %N2, 0
-  %10 = add i32 %N2, 3
-  %11 = lshr i32 %10, 2
-  %12 = shl nuw i32 %11, 2
-  %13 = add i32 %12, -4
-  %14 = lshr i32 %13, 2
-  %15 = add nuw nsw i32 %14, 1
-  br i1 %cmp527, label %vector.ph36, label %for.cond.cleanup6
-
-vector.ph36:                                      ; preds = %for.cond4.preheader
-  call void @llvm.set.loop.iterations.i32(i32 %15)
-  br label %vector.body35
-
-vector.body35:                                    ; preds = %vector.body35, %vector.ph36
-  %lsr.iv53 = phi i32* [ %scevgep54, %vector.body35 ], [ %A, %vector.ph36 ]
-  %lsr.iv50 = phi i32* [ %scevgep51, %vector.body35 ], [ %C, %vector.ph36 ]
-  %lsr.iv = phi i32* [ %scevgep, %vector.body35 ], [ %B, %vector.ph36 ]
-  %index40 = phi i32 [ 0, %vector.ph36 ], [ %index.next41, %vector.body35 ]
-  %16 = phi i32 [ %15, %vector.ph36 ], [ %18, %vector.body35 ]
-  %lsr.iv49 = bitcast i32* %lsr.iv to <4 x i32>*
-  %lsr.iv5052 = bitcast i32* %lsr.iv50 to <4 x i32>*
-  %lsr.iv5355 = bitcast i32* %lsr.iv53 to <4 x i32>*
-
-; This has N1 as the tripcount / element count, which is the tripcount of the
-; first loop and not this one:
-  %active.lane.mask46 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index40, i32 %N1)
-
-  %wide.masked.load47 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv49, i32 4, <4 x i1> %active.lane.mask46, <4 x i32> undef)
-  %wide.masked.load48 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv5052, i32 4, <4 x i1> %active.lane.mask46, <4 x i32> undef)
-  %17 = add nsw <4 x i32> %wide.masked.load48, %wide.masked.load47
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %17, <4 x i32>* %lsr.iv5355, i32 4, <4 x i1> %active.lane.mask46)
-  %index.next41 = add i32 %index40, 4
-  %scevgep = getelementptr i32, i32* %lsr.iv, i32 4
-  %scevgep51 = getelementptr i32, i32* %lsr.iv50, i32 4
-  %scevgep54 = getelementptr i32, i32* %lsr.iv53, i32 4
-  %18 = call i32 @llvm.loop.decrement.reg.i32(i32 %16, i32 1)
-  %19 = icmp ne i32 %18, 0
-  br i1 %19, label %vector.body35, label %for.cond.cleanup6
-
-for.cond.cleanup6:                                ; preds = %vector.body35, %for.cond4.preheader
-  ret void
-}
-
 ; CHECK-LABEL: tripcount_arg_not_invariant
 ; CHECK:       call <4 x i1> @llvm.get.active.lane.mask
 ; CHECK-NOT:   vctp
@@ -618,6 +528,58 @@ vector.body:                                      ; preds = %vector.body, %vecto
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
 }
+
+; CHECK-LABEL: addrec_base_not_zero
+; CHECK:       call <4 x i1> @llvm.get.active.lane.mask
+; CHECK-NOT:   vctp
+; CHECK:       ret void
+;
+define dso_local void @addrec_base_not_zero(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C, i32 %N) local_unnamed_addr #0 {
+entry:
+  %cmp8 = icmp sgt i32 %N, 0
+  %0 = add i32 %N, 3
+  %1 = lshr i32 %0, 2
+  %2 = shl nuw i32 %1, 2
+  %3 = add i32 %2, -4
+  %4 = lshr i32 %3, 2
+  %5 = add nuw nsw i32 %4, 1
+  br i1 %cmp8, label %vector.ph, label %for.cond.cleanup
+
+vector.ph:                                        ; preds = %entry
+  %trip.count.minus.1 = add i32 %N, -1
+  call void @llvm.set.loop.iterations.i32(i32 %5)
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %vector.ph
+  %lsr.iv17 = phi i32* [ %scevgep18, %vector.body ], [ %A, %vector.ph ]
+  %lsr.iv14 = phi i32* [ %scevgep15, %vector.body ], [ %C, %vector.ph ]
+  %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %B, %vector.ph ]
+
+; AddRec base is not 0:
+  %index = phi i32 [ 1, %vector.ph ], [ %index.next, %vector.body ]
+
+  %6 = phi i32 [ %5, %vector.ph ], [ %8, %vector.body ]
+  %lsr.iv13 = bitcast i32* %lsr.iv to <4 x i32>*
+  %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
+  %lsr.iv1719 = bitcast i32* %lsr.iv17 to <4 x i32>*
+  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
+  %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv13, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
+  %wide.masked.load12 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv1416, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
+  %7 = add nsw <4 x i32> %wide.masked.load12, %wide.masked.load
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %7, <4 x i32>* %lsr.iv1719, i32 4, <4 x i1> %active.lane.mask)
+  %index.next = add i32 %index, 4
+  %scevgep = getelementptr i32, i32* %lsr.iv, i32 4
+  %scevgep15 = getelementptr i32, i32* %lsr.iv14, i32 4
+  %scevgep18 = getelementptr i32, i32* %lsr.iv17, i32 4
+  %8 = call i32 @llvm.loop.decrement.reg.i32(i32 %6, i32 1)
+  %9 = icmp ne i32 %8, 0
+  ;br i1 %9, label %vector.body, label %for.cond.cleanup
+  br i1 %9, label %vector.body, label %vector.ph
+
+for.cond.cleanup:                                 ; preds = %vector.body, %entry
+  ret void
+}
+
 
 declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32 immarg, <16 x i1>, <16 x i8>)
 declare void @llvm.masked.store.v16i8.p0v16i8(<16 x i8>, <16 x i8>*, i32 immarg, <16 x i1>)
