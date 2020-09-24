@@ -150,7 +150,7 @@ should be considered as an experimental feature. For this reason it is disabled
 by default. This will change once the new driver replaces the _throwaway_
 driver, `flang`.
 
-In order to build the new driver, add `-DBUILD_FLANG_NEW_DRIVER=ON` to your
+In order to build the new driver, add `-DFLANG_BUILD_NEW_DRIVER=ON` to your
 CMake invocation line. Additionally, when building out-of-tree, use `CLANG_DIR`
 (similarly to `LLVM_DIR` and `MLIR_DIR`) to find the installed Clang
 components.
