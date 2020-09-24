@@ -90,27 +90,19 @@ LogicalResult BroadcastOpConverter::matchAndRewrite(
   Value one = rewriter.create<ConstantIndexOp>(loc, 1);
 
   // Find smaller and greater rank and extent tensor.
-  Value lhsRank = rewriter.create<DimOp>(loc, transformed.lhs(), zero);
-  Value rhsRank = rewriter.create<DimOp>(loc, transformed.rhs(), zero);
-  Value lhsSmaller =
+  Value lhsRank = rewriter.create<DimOp>(loc, op.lhs(), zero);
+  Value rhsRank = rewriter.create<DimOp>(loc, op.rhs(), zero);
+  Value lhsRankULE =
       rewriter.create<CmpIOp>(loc, CmpIPredicate::ule, lhsRank, rhsRank);
   Type indexTy = rewriter.getIndexType();
-  Type extentTensorTy = op.getType();
-  auto ifOp = rewriter.create<IfOp>(
-      loc, TypeRange{indexTy, extentTensorTy, indexTy, extentTensorTy},
-      lhsSmaller,
-      [&](OpBuilder &b, Location loc) {
-        b.create<scf::YieldOp>(loc, ValueRange{lhsRank, transformed.lhs(),
-                                               rhsRank, transformed.rhs()});
-      },
-      [&](OpBuilder &b, Location loc) {
-        b.create<scf::YieldOp>(loc, ValueRange{rhsRank, transformed.rhs(),
-                                               lhsRank, transformed.lhs()});
-      });
-  Value smallerRank = ifOp.getResult(0);
-  Value smallerOperand = ifOp.getResult(1);
-  Value greaterRank = ifOp.getResult(2);
-  Value greaterOperand = ifOp.getResult(3);
+  Value lesserRank =
+      rewriter.create<SelectOp>(loc, lhsRankULE, lhsRank, rhsRank);
+  Value greaterRank =
+      rewriter.create<SelectOp>(loc, lhsRankULE, rhsRank, lhsRank);
+  Value lesserRankOperand =
+      rewriter.create<SelectOp>(loc, lhsRankULE, op.lhs(), op.rhs());
+  Value greaterRankOperand =
+      rewriter.create<SelectOp>(loc, lhsRankULE, op.rhs(), op.lhs());
 
   // Allocate stack memory for the broadcasted extent tensor.
   Type memTy = MemRefType::get({ShapedType::kDynamicSize}, indexTy);
@@ -118,11 +110,11 @@ LogicalResult BroadcastOpConverter::matchAndRewrite(
 
   // Copy extents from greater operand that are not challenged.
   Value rankDiff =
-      rewriter.create<SubIOp>(loc, indexTy, greaterRank, smallerRank);
+      rewriter.create<SubIOp>(loc, indexTy, greaterRank, lesserRank);
   rewriter.create<ForOp>(loc, zero, rankDiff, one, llvm::None,
                          [&](OpBuilder &b, Location loc, Value iv, ValueRange) {
                            Value extent = b.create<ExtractElementOp>(
-                               loc, greaterOperand, ValueRange{iv});
+                               loc, greaterRankOperand, ValueRange{iv});
                            b.create<StoreOp>(loc, extent, mem, ValueRange{iv});
                            b.create<scf::YieldOp>(loc);
                          });
@@ -132,16 +124,16 @@ LogicalResult BroadcastOpConverter::matchAndRewrite(
       loc, rankDiff, greaterRank, one, llvm::None,
       [&](OpBuilder &b, Location loc, Value iv, ValueRange) {
         Value greaterOperandExtent =
-            b.create<ExtractElementOp>(loc, greaterOperand, ValueRange{iv});
+            b.create<ExtractElementOp>(loc, greaterRankOperand, ValueRange{iv});
         Value greaterOperandExtentIsOne =
             b.create<CmpIOp>(loc, CmpIPredicate::eq, greaterOperandExtent, one);
         auto ifOp = b.create<IfOp>(
             loc, TypeRange{indexTy}, greaterOperandExtentIsOne,
             [&](OpBuilder &b, Location loc) {
               Value ivShifted = b.create<SubIOp>(loc, indexTy, iv, rankDiff);
-              Value smallerOperandExtent = b.create<ExtractElementOp>(
-                  loc, smallerOperand, ValueRange{ivShifted});
-              b.create<scf::YieldOp>(loc, smallerOperandExtent);
+              Value lesserRankOperandExtent = b.create<ExtractElementOp>(
+                  loc, lesserRankOperand, ValueRange{ivShifted});
+              b.create<scf::YieldOp>(loc, lesserRankOperandExtent);
             },
             [&](OpBuilder &b, Location loc) {
               b.create<scf::YieldOp>(loc, greaterOperandExtent);
