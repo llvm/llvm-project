@@ -1,6 +1,7 @@
 # REQUIRES: x86
 
 ################ Place dynlib in %tD, and archive in %tA
+# RUN: rm -rf %t %tA %tD
 # RUN: mkdir -p %t %tA %tD
 #
 # RUN: llvm-mc -filetype obj -triple x86_64-apple-darwin %p/Inputs/libhello.s -o %t/hello.o
