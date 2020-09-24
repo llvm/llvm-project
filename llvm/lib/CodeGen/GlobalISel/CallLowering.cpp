@@ -375,13 +375,15 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
             << "Load/store a split arg to/from the stack not implemented yet");
         return false;
       }
-      MVT VT = MVT::getVT(Args[i].Ty);
-      unsigned Size = VT == MVT::iPTR ? DL.getPointerSize()
-                                      : alignTo(VT.getSizeInBits(), 8) / 8;
+
+      EVT LocVT = VA.getValVT();
+      unsigned MemSize = LocVT == MVT::iPTR ? DL.getPointerSize()
+                                            : LocVT.getStoreSize();
+
       unsigned Offset = VA.getLocMemOffset();
       MachinePointerInfo MPO;
-      Register StackAddr = Handler.getStackAddress(Size, Offset, MPO);
-      Handler.assignValueToAddress(Args[i], StackAddr, Size, MPO, VA);
+      Register StackAddr = Handler.getStackAddress(MemSize, Offset, MPO);
+      Handler.assignValueToAddress(Args[i], StackAddr, MemSize, MPO, VA);
     } else {
       // FIXME: Support byvals and other weirdness
       return false;
