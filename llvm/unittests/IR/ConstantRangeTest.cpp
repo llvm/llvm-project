@@ -59,6 +59,12 @@ static void ForeachNumInConstantRange(const ConstantRange &CR, Fn TestFn) {
   }
 }
 
+unsigned GetNumValuesInConstantRange(const ConstantRange &CR) {
+  unsigned NumValues = 0;
+  ForeachNumInConstantRange(CR, [&NumValues](const APInt &) { ++NumValues; });
+  return NumValues;
+}
+
 struct OpRangeGathererBase {
   void account(const APInt &N);
   ConstantRange getRange();
@@ -106,6 +112,79 @@ struct SignedOpRangeGatherer : public OpRangeGathererBase {
     return ConstantRange::getNonEmpty(Min, Max + 1);
   }
 };
+
+struct AccumulatedPrecisionData {
+  unsigned NumActualValues;
+  unsigned NumValuesInActualCR;
+  unsigned NumValuesInExactCR;
+
+  // If NumValuesInActualCR and NumValuesInExactCR are identical, and are not
+  // equal to the NumActualValues, then the implementation is
+  // overly conservatively correct, i.e. imprecise.
+
+  void reset() {
+    NumActualValues = 0;
+    NumValuesInActualCR = 0;
+    NumValuesInExactCR = 0;
+  }
+};
+
+template <typename OpRangeGathererTy, typename Fn1, typename Fn2>
+static void TestUnaryOpExhaustive(Fn1 RangeFn, Fn2 IntFn,
+                                  AccumulatedPrecisionData &Total) {
+  Total.reset();
+
+  constexpr unsigned Bits = 4;
+
+  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+    // We'll want to record each true new value, for precision testing.
+    SmallDenseSet<APInt, 1 << Bits> ExactValues;
+
+    // What constant range does ConstantRange method return?
+    ConstantRange ActualCR = RangeFn(CR);
+
+    // We'll want to sanity-check the ActualCR, so this will build our own CR.
+    OpRangeGathererTy ExactR(CR.getBitWidth());
+
+    // Let's iterate for each value in the original constant range.
+    ForeachNumInConstantRange(CR, [&](const APInt &N) {
+      // For this singular value, what is the true new value?
+      const APInt NewN = IntFn(N);
+
+      // Constant range provided by ConstantRange method must be conservatively
+      // correct, it must contain the true new value.
+      EXPECT_TRUE(ActualCR.contains(NewN));
+
+      // Record this true new value in our own constant range.
+      ExactR.account(NewN);
+
+      // And record the new true value itself.
+      ExactValues.insert(NewN);
+    });
+
+    // So, what range did we grok by exhaustively looking over each value?
+    ConstantRange ExactCR = ExactR.getRange();
+
+    // So, how many new values are there actually, and as per the ranges?
+    unsigned NumActualValues = ExactValues.size();
+    unsigned NumValuesInExactCR = GetNumValuesInConstantRange(ExactCR);
+    unsigned NumValuesInActualCR = GetNumValuesInConstantRange(ActualCR);
+
+    // Ranges should contain at least as much values as there actually was,
+    // but it is possible they will contain extras.
+    EXPECT_GE(NumValuesInExactCR, NumActualValues);
+    EXPECT_GE(NumValuesInActualCR, NumActualValues);
+
+    // We expect that OpRangeGathererTy produces the exactly identical range
+    // to what the ConstantRange method does.
+    EXPECT_EQ(ExactR.getRange(), ActualCR);
+
+    // For precision testing, accumulate the overall numbers.
+    Total.NumActualValues += NumActualValues;
+    Total.NumValuesInActualCR += NumValuesInActualCR;
+    Total.NumValuesInExactCR += NumValuesInExactCR;
+  });
+}
 
 template <typename Fn1, typename Fn2>
 static void TestUnsignedUnaryOpExhaustive(Fn1 RangeFn, Fn2 IntFn,
@@ -2400,9 +2479,16 @@ TEST_F(ConstantRangeTest, binaryXor) {
 }
 
 TEST_F(ConstantRangeTest, binaryNot) {
-  TestUnsignedUnaryOpExhaustive(
+  AccumulatedPrecisionData Precision;
+
+  TestUnaryOpExhaustive<UnsignedOpRangeGatherer>(
       [](const ConstantRange &CR) { return CR.binaryNot(); },
-      [](const APInt &N) { return ~N; });
+      [](const APInt &N) { return ~N; }, Precision);
+  // FIXME: the implementation is not precise.
+  EXPECT_EQ(Precision.NumActualValues, 1936u);
+  EXPECT_EQ(Precision.NumValuesInActualCR, 2496u);
+  EXPECT_EQ(Precision.NumValuesInExactCR, 2496u);
+
   TestUnsignedUnaryOpExhaustive(
       [](const ConstantRange &CR) {
         return CR.binaryXor(
