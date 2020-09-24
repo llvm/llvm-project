@@ -943,8 +943,8 @@ static void genCustomDirectiveParser(CustomDirective *dir, OpMethodBody &body) {
       if (var->attr.isOptional())
         body << llvm::formatv("    if ({0}Attr)\n  ", var->name);
 
-      body << llvm::formatv(
-          "    result.attributes.addAttribute(\"{0}\", {0}Attr);", var->name);
+      body << llvm::formatv("    result.addAttribute(\"{0}\", {0}Attr);\n",
+                            var->name);
     } else if (auto *operand = dyn_cast<OperandVariable>(&param)) {
       const NamedTypeConstraint *var = operand->getVar();
       if (!var->isOptional())

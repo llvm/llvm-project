@@ -16,10 +16,10 @@ Sections:
     Info:            .debug_foo
     Relocations:
       - Offset:          0x1
-        Symbol:          .debug_foo
+        Symbol:          1
         Type:            R_X86_64_32
       - Offset:          0x2
-        Symbol:          .notdebug_foo
+        Symbol:          2
         Type:            R_X86_64_32
 ## This section should not be involved in relocations.
   - Name:            .debug_bar
@@ -44,12 +44,10 @@ Sections:
     Flags:           [ SHF_GROUP ]
     Content:         '00'
 Symbols:
-  - Name:    .debug_foo
-    Type:    STT_SECTION
+  - Type:    STT_SECTION
     Section: .debug_foo
     Binding:  STB_GLOBAL
-  - Name:    .notdebug_foo
-    Type:    STT_SECTION
+  - Type:    STT_SECTION
     Section: .notdebug_foo
     Binding:  STB_GLOBAL
   - Name:    .Linfo_string0

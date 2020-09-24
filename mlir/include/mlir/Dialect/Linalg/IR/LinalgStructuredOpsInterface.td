@@ -531,7 +531,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       (ins "OpBuilder &":$builder, "Location":$loc,
            "ValueRange":$operands,
            "ArrayRef<NamedAttribute>":$attributes), [{
-        return builder.create<ConcreteOp>(loc, ArrayRef<Type>{}, operands,
+        return builder.create<ConcreteOp>(loc, TypeRange{}, operands,
                                           attributes);
       }]
     >,

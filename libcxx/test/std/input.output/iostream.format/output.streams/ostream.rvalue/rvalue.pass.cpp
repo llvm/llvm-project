@@ -10,12 +10,8 @@
 
 // <ostream>
 
-// template <class charT, class traits = char_traits<charT> >
-//   class basic_ostream;
-
-// template <class charT, class traits, class T>
-//   basic_ostream<charT, traits>&
-//   operator<<(basic_ostream<charT, traits>&& os, const T& x);
+// template <class Stream, class T>
+// Stream&& operator<<(Stream&& os, const T& x);
 
 #include <ostream>
 #include <cassert>
@@ -55,19 +51,32 @@ protected:
         }
 };
 
+struct Int {
+    int value;
+    template <class CharT>
+    friend void operator<<(std::basic_ostream<CharT>& os, Int const& self) {
+        os << self.value;
+    }
+};
 
 int main(int, char**)
 {
     {
         testbuf<char> sb;
-        std::ostream(&sb) << "testing...";
-        assert(sb.str() == "testing...");
+        std::ostream os(&sb);
+        Int const i = {123};
+        std::ostream&& result = (std::move(os) << i);
+        assert(&result == &os);
+        assert(sb.str() == "123");
     }
     {
         testbuf<wchar_t> sb;
-        std::wostream(&sb) << L"123";
+        std::wostream os(&sb);
+        Int const i = {123};
+        std::wostream&& result = (std::move(os) << i);
+        assert(&result == &os);
         assert(sb.str() == L"123");
     }
 
-  return 0;
+    return 0;
 }

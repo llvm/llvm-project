@@ -101,18 +101,50 @@ static ParseResult parseOptionalOperand(OpAsmParser &parser, StringRef keyword,
   return success();
 }
 
+static ParseResult parseOperandAndType(OpAsmParser &parser,
+                                       OperationState &result) {
+  OpAsmParser::OperandType operand;
+  Type type;
+  if (parser.parseOperand(operand) || parser.parseColonType(type) ||
+      parser.resolveOperand(operand, type, result.operands))
+    return failure();
+  return success();
+}
+
+/// Parse optional operand and its type wrapped in parenthesis prefixed with
+/// a keyword.
+/// Example:
+///   keyword `(` %vectorLength: i64 `)`
 static OptionalParseResult parseOptionalOperandAndType(OpAsmParser &parser,
                                                        StringRef keyword,
                                                        OperationState &result) {
   OpAsmParser::OperandType operand;
-  Type type;
   if (succeeded(parser.parseOptionalKeyword(keyword))) {
-    if (parser.parseLParen() || parser.parseOperand(operand) ||
-        parser.parseColonType(type) ||
-        parser.resolveOperand(operand, type, result.operands) ||
-        parser.parseRParen())
-      return failure();
-    return success();
+    return failure(parser.parseLParen() ||
+                   parseOperandAndType(parser, result) || parser.parseRParen());
+  }
+  return llvm::None;
+}
+
+/// Parse optional operand and its type wrapped in parenthesis.
+/// Example:
+///   `(` %vectorLength: i64 `)`
+static OptionalParseResult parseOptionalOperandAndType(OpAsmParser &parser,
+                                                       OperationState &result) {
+  if (succeeded(parser.parseOptionalLParen())) {
+    return failure(parseOperandAndType(parser, result) || parser.parseRParen());
+  }
+  return llvm::None;
+}
+
+/// Parse optional operand with its type prefixed with prefixKeyword `=`.
+/// Example:
+///   num=%gangNum: i32
+static OptionalParseResult parserOptionalOperandAndTypeWithPrefix(
+    OpAsmParser &parser, OperationState &result, StringRef prefixKeyword) {
+  if (succeeded(parser.parseOptionalKeyword(prefixKeyword))) {
+    parser.parseEqual();
+    return parseOperandAndType(parser, result);
   }
   return llvm::None;
 }
@@ -600,10 +632,7 @@ static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &result) {
   SmallVector<Type, 8> operandTypes;
   SmallVector<OpAsmParser::OperandType, 8> privateOperands, reductionOperands;
   SmallVector<OpAsmParser::OperandType, 8> tileOperands;
-  bool hasWorkerNum = false, hasVectorLength = false, hasGangNum = false;
-  bool hasGangStatic = false;
-  OpAsmParser::OperandType workerNum, vectorLength, gangNum, gangStatic;
-  Type gangNumType, gangStaticType, workerType, vectorLengthType;
+  OptionalParseResult gangNum, gangStatic, worker, vector;
 
   // gang?
   if (succeeded(parser.parseOptionalKeyword(LoopOp::getGangKeyword())))
@@ -611,25 +640,16 @@ static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &result) {
 
   // optional gang operand
   if (succeeded(parser.parseOptionalLParen())) {
-    if (succeeded(parser.parseOptionalKeyword(LoopOp::getGangNumKeyword()))) {
-      hasGangNum = true;
-      parser.parseEqual();
-      if (parser.parseOperand(gangNum) || parser.parseColonType(gangNumType) ||
-          parser.resolveOperand(gangNum, gangNumType, result.operands)) {
-        return failure();
-      }
-    }
+    gangNum = parserOptionalOperandAndTypeWithPrefix(
+        parser, result, LoopOp::getGangNumKeyword());
+    if (gangNum.hasValue() && failed(*gangNum))
+      return failure();
     parser.parseOptionalComma();
-    if (succeeded(
-            parser.parseOptionalKeyword(LoopOp::getGangStaticKeyword()))) {
-      hasGangStatic = true;
-      parser.parseEqual();
-      if (parser.parseOperand(gangStatic) ||
-          parser.parseColonType(gangStaticType) ||
-          parser.resolveOperand(gangStatic, gangStaticType, result.operands)) {
-        return failure();
-      }
-    }
+    gangStatic = parserOptionalOperandAndTypeWithPrefix(
+        parser, result, LoopOp::getGangStaticKeyword());
+    if (gangStatic.hasValue() && failed(*gangStatic))
+      return failure();
+    parser.parseOptionalComma();
     if (failed(parser.parseRParen()))
       return failure();
   }
@@ -639,30 +659,18 @@ static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &result) {
     executionMapping |= OpenACCExecMapping::WORKER;
 
   // optional worker operand
-  if (succeeded(parser.parseOptionalLParen())) {
-    hasWorkerNum = true;
-    if (parser.parseOperand(workerNum) || parser.parseColonType(workerType) ||
-        parser.resolveOperand(workerNum, workerType, result.operands) ||
-        parser.parseRParen()) {
-      return failure();
-    }
-  }
+  worker = parseOptionalOperandAndType(parser, result);
+  if (worker.hasValue() && failed(*worker))
+    return failure();
 
   // vector?
   if (succeeded(parser.parseOptionalKeyword(LoopOp::getVectorKeyword())))
     executionMapping |= OpenACCExecMapping::VECTOR;
 
   // optional vector operand
-  if (succeeded(parser.parseOptionalLParen())) {
-    hasVectorLength = true;
-    if (parser.parseOperand(vectorLength) ||
-        parser.parseColonType(vectorLengthType) ||
-        parser.resolveOperand(vectorLength, vectorLengthType,
-                              result.operands) ||
-        parser.parseRParen()) {
-      return failure();
-    }
-  }
+  vector = parseOptionalOperandAndType(parser, result);
+  if (vector.hasValue() && failed(*vector))
+    return failure();
 
   // tile()?
   if (failed(parseOperandList(parser, LoopOp::getTileKeyword(), tileOperands,
@@ -692,10 +700,10 @@ static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &result) {
 
   result.addAttribute(LoopOp::getOperandSegmentSizeAttr(),
                       builder.getI32VectorAttr(
-                          {static_cast<int32_t>(hasGangNum ? 1 : 0),
-                           static_cast<int32_t>(hasGangStatic ? 1 : 0),
-                           static_cast<int32_t>(hasWorkerNum ? 1 : 0),
-                           static_cast<int32_t>(hasVectorLength ? 1 : 0),
+                          {static_cast<int32_t>(gangNum.hasValue() ? 1 : 0),
+                           static_cast<int32_t>(gangStatic.hasValue() ? 1 : 0),
+                           static_cast<int32_t>(worker.hasValue() ? 1 : 0),
+                           static_cast<int32_t>(vector.hasValue() ? 1 : 0),
                            static_cast<int32_t>(tileOperands.size()),
                            static_cast<int32_t>(privateOperands.size()),
                            static_cast<int32_t>(reductionOperands.size())}));

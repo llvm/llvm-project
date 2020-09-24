@@ -91,6 +91,12 @@ int mlirContextEqual(MlirContext ctx1, MlirContext ctx2);
 /** Takes an MLIR context owned by the caller and destroys it. */
 void mlirContextDestroy(MlirContext context);
 
+/** Sets whether unregistered dialects are allowed in this context. */
+void mlirContextSetAllowUnregisteredDialects(MlirContext context, int allow);
+
+/** Returns whether the context allows unregistered dialects. */
+int mlirContextGetAllowUnregisteredDialects(MlirContext context);
+
 /*============================================================================*/
 /* Location API.                                                              */
 /*============================================================================*/
@@ -259,9 +265,22 @@ MlirBlock mlirRegionGetFirstBlock(MlirRegion region);
 void mlirRegionAppendOwnedBlock(MlirRegion region, MlirBlock block);
 
 /** Takes a block owned by the caller and inserts it at `pos` to the given
- * region. */
+ * region. This is an expensive operation that linearly scans the region, prefer
+ * insertAfter/Before instead. */
 void mlirRegionInsertOwnedBlock(MlirRegion region, intptr_t pos,
                                 MlirBlock block);
+
+/** Takes a block owned by the caller and inserts it after the (non-owned)
+ * reference block in the given region. The reference block must belong to the
+ * region. If the reference block is null, prepends the block to the region. */
+void mlirRegionInsertOwnedBlockAfter(MlirRegion region, MlirBlock reference,
+                                     MlirBlock block);
+
+/** Takes a block owned by the caller and inserts it before the (non-owned)
+ * reference block in the given region. The reference block must belong to the
+ * region. If the reference block is null, appends the block to the region. */
+void mlirRegionInsertOwnedBlockBefore(MlirRegion region, MlirBlock reference,
+                                      MlirBlock block);
 
 /*============================================================================*/
 /* Block API.                                                                 */
@@ -288,9 +307,24 @@ MlirOperation mlirBlockGetFirstOperation(MlirBlock block);
 void mlirBlockAppendOwnedOperation(MlirBlock block, MlirOperation operation);
 
 /** Takes an operation owned by the caller and inserts it as `pos` to the block.
- */
+   This is an expensive operation that scans the block linearly, prefer
+   insertBefore/After instead. */
 void mlirBlockInsertOwnedOperation(MlirBlock block, intptr_t pos,
                                    MlirOperation operation);
+
+/** Takes an operation owned by the caller and inserts it after the (non-owned)
+ * reference operation in the given block. If the reference is null, prepends
+ * the operation. Otherwise, the reference must belong to the block. */
+void mlirBlockInsertOwnedOperationAfter(MlirBlock block,
+                                        MlirOperation reference,
+                                        MlirOperation operation);
+
+/** Takes an operation owned by the caller and inserts it before the (non-owned)
+ * reference operation in the given block. If the reference is null, appends the
+ * operation. Otherwise, the reference must belong to the block. */
+void mlirBlockInsertOwnedOperationBefore(MlirBlock block,
+                                         MlirOperation reference,
+                                         MlirOperation operation);
 
 /** Returns the number of arguments of the block. */
 intptr_t mlirBlockGetNumArguments(MlirBlock block);

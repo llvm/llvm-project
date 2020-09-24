@@ -73,7 +73,7 @@ void ManualDWARFIndex::Index() {
 
   // Share one thread pool across operations to avoid the overhead of
   // recreating the threads.
-  llvm::ThreadPool pool;
+  llvm::ThreadPool pool(llvm::optimal_concurrency(units_to_index.size()));
 
   // Create a task runner that extracts dies for each DWARF unit in a
   // separate thread.

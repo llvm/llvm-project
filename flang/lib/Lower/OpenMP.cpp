@@ -15,12 +15,13 @@
 #include "flang/Lower/FIRBuilder.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 #define TODO() llvm_unreachable("not yet implemented")
 
-static void genOMP(Fortran::lower::AbstractConverter &absConv,
+static void genOMP(Fortran::lower::AbstractConverter &converter,
                    Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenMPSimpleStandaloneConstruct
                        &simpleStandaloneConstruct) {
@@ -31,16 +32,16 @@ static void genOMP(Fortran::lower::AbstractConverter &absConv,
   default:
     break;
   case llvm::omp::Directive::OMPD_barrier:
-    absConv.getFirOpBuilder().create<mlir::omp::BarrierOp>(
-        absConv.getCurrentLocation());
+    converter.getFirOpBuilder().create<mlir::omp::BarrierOp>(
+        converter.getCurrentLocation());
     break;
   case llvm::omp::Directive::OMPD_taskwait:
-    absConv.getFirOpBuilder().create<mlir::omp::TaskwaitOp>(
-        absConv.getCurrentLocation());
+    converter.getFirOpBuilder().create<mlir::omp::TaskwaitOp>(
+        converter.getCurrentLocation());
     break;
   case llvm::omp::Directive::OMPD_taskyield:
-    absConv.getFirOpBuilder().create<mlir::omp::TaskyieldOp>(
-        absConv.getCurrentLocation());
+    converter.getFirOpBuilder().create<mlir::omp::TaskyieldOp>(
+        converter.getCurrentLocation());
     break;
   case llvm::omp::Directive::OMPD_target_enter_data:
     TODO();
@@ -54,14 +55,14 @@ static void genOMP(Fortran::lower::AbstractConverter &absConv,
 }
 
 static void
-genOMP(Fortran::lower::AbstractConverter &absConv,
+genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPStandaloneConstruct &standaloneConstruct) {
   std::visit(
       Fortran::common::visitors{
           [&](const Fortran::parser::OpenMPSimpleStandaloneConstruct
                   &simpleStandaloneConstruct) {
-            genOMP(absConv, eval, simpleStandaloneConstruct);
+            genOMP(converter, eval, simpleStandaloneConstruct);
           },
           [&](const Fortran::parser::OpenMPFlushConstruct &flushConstruct) {
             TODO();
@@ -76,7 +77,7 @@ genOMP(Fortran::lower::AbstractConverter &absConv,
 }
 
 static void
-genOMP(Fortran::lower::AbstractConverter &absConv,
+genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPBlockConstruct &blockConstruct) {
   const auto &blockDirective =
@@ -84,29 +85,44 @@ genOMP(Fortran::lower::AbstractConverter &absConv,
   const auto &parallelDirective =
       std::get<Fortran::parser::OmpBlockDirective>(blockDirective.t);
   if (parallelDirective.v == llvm::omp::OMPD_parallel) {
-    auto &firOpBuilder = absConv.getFirOpBuilder();
-    auto currentLocation = absConv.getCurrentLocation();
+    auto &firOpBuilder = converter.getFirOpBuilder();
+    auto currentLocation = converter.getCurrentLocation();
     auto insertPt = firOpBuilder.saveInsertionPoint();
+
+    // Clauses.
+    // FIXME: Add support for other clauses.
+    mlir::Value numThreads;
+
+    const auto &parallelOpClauseList =
+        std::get<Fortran::parser::OmpClauseList>(blockDirective.t);
+    for (const auto &clause : parallelOpClauseList.v) {
+      if (const auto &numThreadsClause =
+              std::get_if<Fortran::parser::OmpClause::NumThreads>(&clause.u)) {
+        // OMPIRBuilder expects `NUM_THREAD` clause as a `Value`.
+        numThreads = converter.genExprValue(
+            *Fortran::semantics::GetExpr(numThreadsClause->v));
+      }
+    }
     llvm::ArrayRef<mlir::Type> argTy;
-    mlir::ValueRange range;
-    llvm::SmallVector<int32_t, 6> operandSegmentSizes(6 /*Size=*/,
-                                                      0 /*Value=*/);
-    // create and insert the operation.
+    Attribute defaultValue, procBindValue;
+    // Create and insert the operation.
+    // Create the Op with empty ranges for clauses that are yet to be lowered.
     auto parallelOp = firOpBuilder.create<mlir::omp::ParallelOp>(
-        currentLocation, argTy, range);
-    parallelOp.setAttr(mlir::omp::ParallelOp::getOperandSegmentSizeAttr(),
-                       firOpBuilder.getI32VectorAttr(operandSegmentSizes));
-    parallelOp.getRegion().push_back(new Block{});
+        currentLocation, argTy, Value(), numThreads,
+        defaultValue.dyn_cast_or_null<StringAttr>(), ValueRange(), ValueRange(),
+        ValueRange(), ValueRange(),
+        procBindValue.dyn_cast_or_null<StringAttr>());
+    firOpBuilder.createBlock(&parallelOp.getRegion());
     auto &block = parallelOp.getRegion().back();
     firOpBuilder.setInsertionPointToStart(&block);
-    // ensure the block is well-formed.
+    // Ensure the block is well-formed.
     firOpBuilder.create<mlir::omp::TerminatorOp>(currentLocation);
     firOpBuilder.restoreInsertionPoint(insertPt);
   }
 }
 
 void Fortran::lower::genOpenMPConstruct(
-    Fortran::lower::AbstractConverter &absConv,
+    Fortran::lower::AbstractConverter &converter,
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenMPConstruct &ompConstruct) {
 
@@ -114,7 +130,7 @@ void Fortran::lower::genOpenMPConstruct(
       common::visitors{
           [&](const Fortran::parser::OpenMPStandaloneConstruct
                   &standaloneConstruct) {
-            genOMP(absConv, eval, standaloneConstruct);
+            genOMP(converter, eval, standaloneConstruct);
           },
           [&](const Fortran::parser::OpenMPSectionsConstruct
                   &sectionsConstruct) { TODO(); },
@@ -122,7 +138,7 @@ void Fortran::lower::genOpenMPConstruct(
             TODO();
           },
           [&](const Fortran::parser::OpenMPBlockConstruct &blockConstruct) {
-            genOMP(absConv, eval, blockConstruct);
+            genOMP(converter, eval, blockConstruct);
           },
           [&](const Fortran::parser::OpenMPAtomicConstruct &atomicConstruct) {
             TODO();

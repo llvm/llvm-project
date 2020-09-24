@@ -721,13 +721,13 @@ def CallOp : Std_Op<"call", [CallOpInterface, MemRefsNormalizable]> {
       result.addTypes(callee.getType().getResults());
   }]>, OpBuilder<
     "OpBuilder &builder, OperationState &result, SymbolRefAttr callee,"
-    "ArrayRef<Type> results, ValueRange operands = {}", [{
+    "TypeRange results, ValueRange operands = {}", [{
       result.addOperands(operands);
       result.addAttribute("callee", callee);
       result.addTypes(results);
   }]>, OpBuilder<
     "OpBuilder &builder, OperationState &result, StringRef callee,"
-    "ArrayRef<Type> results, ValueRange operands = {}", [{
+    "TypeRange results, ValueRange operands = {}", [{
       build(builder, result, builder.getSymbolRefAttr(callee), results,
             operands);
   }]>];
@@ -2812,7 +2812,7 @@ def SubViewOp : Std_Op<"subview", [
   let results = (outs AnyMemRef:$result);
 
   let builders = [
-    // Build a SubViewOp with mized static and dynamic entries.
+    // Build a SubViewOp with mixed static and dynamic entries.
     OpBuilder<
       "OpBuilder &b, OperationState &result, Value source, "
       "ArrayRef<int64_t> staticOffsets, ArrayRef<int64_t> staticSizes,"

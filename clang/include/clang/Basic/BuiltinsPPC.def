@@ -156,6 +156,14 @@ BUILTIN(__builtin_altivec_vcmpgtsd, "V2LLiV2LLiV2LLi", "")
 BUILTIN(__builtin_altivec_vcmpgtud, "V2LLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vcmpgtfp, "V4iV4fV4f", "")
 
+// P10 Vector compare builtins.
+BUILTIN(__builtin_altivec_vcmpequq, "V1LLLiV1ULLLiV1ULLLi", "")
+BUILTIN(__builtin_altivec_vcmpgtsq, "V1LLLiV1SLLLiV1SLLLi", "")
+BUILTIN(__builtin_altivec_vcmpgtuq, "V1LLLiV1ULLLiV1ULLLi", "")
+BUILTIN(__builtin_altivec_vcmpequq_p, "iiV1ULLLiV1LLLi", "")
+BUILTIN(__builtin_altivec_vcmpgtsq_p, "iiV1SLLLiV1SLLLi", "")
+BUILTIN(__builtin_altivec_vcmpgtuq_p, "iiV1ULLLiV1ULLLi", "")
+
 BUILTIN(__builtin_altivec_vmaxsb, "V16ScV16ScV16Sc", "")
 BUILTIN(__builtin_altivec_vmaxub, "V16UcV16UcV16Uc", "")
 BUILTIN(__builtin_altivec_vmaxsh, "V8SsV8SsV8Ss", "")
@@ -303,6 +311,16 @@ BUILTIN(__builtin_altivec_vrldmi, "V2ULLiV2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vrlwnm, "V4UiV4UiV4Ui", "")
 BUILTIN(__builtin_altivec_vrldnm, "V2ULLiV2ULLiV2ULLi", "")
 
+// P9 Vector extend sign builtins.
+BUILTIN(__builtin_altivec_vextsb2w, "V4SiV16Sc", "")
+BUILTIN(__builtin_altivec_vextsb2d, "V2SLLiV16Sc", "")
+BUILTIN(__builtin_altivec_vextsh2w, "V4SiV8Ss", "")
+BUILTIN(__builtin_altivec_vextsh2d, "V2SLLiV8Ss", "")
+BUILTIN(__builtin_altivec_vextsw2d, "V2SLLiV4Si", "")
+
+// P10 Vector extend sign builtins.
+BUILTIN(__builtin_altivec_vextsd2q, "V1SLLLiV2SLLi", "")
+
 // P10 Vector Extract with Mask built-ins.
 BUILTIN(__builtin_altivec_vextractbm, "UiV16Uc", "")
 BUILTIN(__builtin_altivec_vextracthm, "UiV8Us", "")
@@ -391,6 +409,8 @@ BUILTIN(__builtin_altivec_vinshvlx, "V8UsV8UsUiV8Us", "")
 BUILTIN(__builtin_altivec_vinshvrx, "V8UsV8UsUiV8Us", "")
 BUILTIN(__builtin_altivec_vinswvlx, "V4UiV4UiUiV4Ui", "")
 BUILTIN(__builtin_altivec_vinswvrx, "V4UiV4UiUiV4Ui", "")
+BUILTIN(__builtin_altivec_vec_replace_elt, "V4UiV4UiUiIi", "t")
+BUILTIN(__builtin_altivec_vec_replace_unaligned, "V4UiV4UiUiIi", "t")
 
 // P10 Vector Extract built-ins.
 BUILTIN(__builtin_altivec_vextdubvlx, "V2ULLiV16UcV16UcUi", "")

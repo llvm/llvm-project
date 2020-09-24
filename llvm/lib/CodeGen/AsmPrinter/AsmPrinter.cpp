@@ -3022,7 +3022,7 @@ static void emitBasicBlockLoopComments(const MachineBasicBlock &MBB,
   OS.indent(Loop->getLoopDepth()*2-2);
 
   OS << "This ";
-  if (Loop->empty())
+  if (Loop->isInnermost())
     OS << "Inner ";
   OS << "Loop Header: Depth=" + Twine(Loop->getLoopDepth()) << '\n';
 

@@ -1205,8 +1205,9 @@ Instruction *InstCombinerImpl::
 static Instruction *factorizeMathWithShlOps(BinaryOperator &I,
                                             InstCombiner::BuilderTy &Builder) {
   // TODO: Also handle mul by doubling the shift amount?
-  assert(I.getOpcode() == Instruction::Add ||
-         I.getOpcode() == Instruction::Sub && "Expected add/sub");
+  assert((I.getOpcode() == Instruction::Add ||
+          I.getOpcode() == Instruction::Sub) &&
+         "Expected add/sub");
   auto *Op0 = dyn_cast<BinaryOperator>(I.getOperand(0));
   auto *Op1 = dyn_cast<BinaryOperator>(I.getOperand(1));
   if (!Op0 || !Op1 || !(Op0->hasOneUse() || Op1->hasOneUse()))

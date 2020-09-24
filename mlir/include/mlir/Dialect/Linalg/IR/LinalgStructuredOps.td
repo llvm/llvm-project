@@ -644,7 +644,7 @@ def GenericOp : GenericOpBase<"generic"> {
 
   let builders = [
     OpBuilder<
-      "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTensorTypes,"
+      "OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,"
       "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors, "
       "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
       "StringRef doc, StringRef libraryCall, IntegerAttr symbolSource, "
@@ -656,7 +656,7 @@ def GenericOp : GenericOpBase<"generic"> {
       "StringRef doc, StringRef libraryCall, IntegerAttr symbolSource, "
       "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">,
     OpBuilder<
-      "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTensorTypes,"
+      "OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,"
       "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors, "
       "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
       "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">,
@@ -823,7 +823,7 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
 
   let builders = [
     OpBuilder<
-      "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTensorTypes,"
+      "OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,"
       "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors, "
       "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
       "StringRef doc, StringRef libraryCall, IntegerAttr symbolSource, "
@@ -835,7 +835,7 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
       "StringRef doc, StringRef libraryCall, IntegerAttr symbolSource, "
       "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> = nullptr">,
     OpBuilder<
-      "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTensorTypes,"
+      "OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,"
       "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors, "
       "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
       "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> = nullptr">,

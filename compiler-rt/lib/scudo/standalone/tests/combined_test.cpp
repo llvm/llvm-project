@@ -82,11 +82,16 @@ template <class Config> static void testAllocator() {
   using AllocatorT = TestAllocator<Config>;
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
-  EXPECT_FALSE(Allocator->isOwned(&Mutex));
-  EXPECT_FALSE(Allocator->isOwned(&Allocator));
-  scudo::u64 StackVariable = 0x42424242U;
-  EXPECT_FALSE(Allocator->isOwned(&StackVariable));
-  EXPECT_EQ(StackVariable, 0x42424242U);
+  static scudo::u8 StaticBuffer[scudo::Chunk::getHeaderSize() + 1];
+  EXPECT_FALSE(
+      Allocator->isOwned(&StaticBuffer[scudo::Chunk::getHeaderSize()]));
+
+  scudo::u8 StackBuffer[scudo::Chunk::getHeaderSize() + 1];
+  for (scudo::uptr I = 0; I < sizeof(StackBuffer); I++)
+    StackBuffer[I] = 0x42U;
+  EXPECT_FALSE(Allocator->isOwned(&StackBuffer[scudo::Chunk::getHeaderSize()]));
+  for (scudo::uptr I = 0; I < sizeof(StackBuffer); I++)
+    EXPECT_EQ(StackBuffer[I], 0x42U);
 
   constexpr scudo::uptr MinAlignLog = FIRST_32_SECOND_64(3U, 4U);
 

@@ -99,11 +99,14 @@ enum NodeType : unsigned {
   FFLOOR_MERGE_PASSTHRU,
   FNEARBYINT_MERGE_PASSTHRU,
   FNEG_MERGE_PASSTHRU,
+  FRECPX_MERGE_PASSTHRU,
   FRINT_MERGE_PASSTHRU,
   FROUND_MERGE_PASSTHRU,
   FROUNDEVEN_MERGE_PASSTHRU,
   FSQRT_MERGE_PASSTHRU,
   FTRUNC_MERGE_PASSTHRU,
+  UINT_TO_FP_MERGE_PASSTHRU,
+  SINT_TO_FP_MERGE_PASSTHRU,
   FCVTZU_MERGE_PASSTHRU,
   FCVTZS_MERGE_PASSTHRU,
   SIGN_EXTEND_INREG_MERGE_PASSTHRU,
@@ -903,6 +906,7 @@ private:
   SDValue LowerVectorFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVectorINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerXOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
@@ -924,6 +928,8 @@ private:
   SDValue LowerFixedLengthVectorIntExtendToSVE(SDValue Op,
                                                SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorLoadToSVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthReductionToSVE(unsigned Opcode, SDValue ScalarOp,
+                                         SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorSelectToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorSetccToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorStoreToSVE(SDValue Op, SelectionDAG &DAG) const;

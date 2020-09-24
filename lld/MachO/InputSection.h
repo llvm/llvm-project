@@ -29,10 +29,10 @@ struct Reloc {
   // The offset from the start of the subsection that this relocation belongs
   // to.
   uint32_t offset;
-  // Adding this offset to the address of the target symbol or subsection gives
-  // the destination that this relocation refers to.
+  // Adding this offset to the address of the referent symbol or subsection
+  // gives the destination that this relocation refers to.
   uint64_t addend;
-  llvm::PointerUnion<Symbol *, InputSection *> target;
+  llvm::PointerUnion<Symbol *, InputSection *> referent;
 };
 
 inline bool isZeroFill(uint8_t flags) {

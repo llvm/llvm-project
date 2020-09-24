@@ -94,6 +94,18 @@ Instruction *InstCombinerImpl::PromoteCastOfAllocation(BitCastInst &CI,
   Type *CastElTy = PTy->getElementType();
   if (!AllocElTy->isSized() || !CastElTy->isSized()) return nullptr;
 
+  // This optimisation does not work for cases where the cast type
+  // is scalable and the allocated type is not. This because we need to
+  // know how many times the casted type fits into the allocated type.
+  // For the opposite case where the allocated type is scalable and the
+  // cast type is not this leads to poor code quality due to the
+  // introduction of 'vscale' into the calculations. It seems better to
+  // bail out for this case too until we've done a proper cost-benefit
+  // analysis.
+  bool AllocIsScalable = isa<ScalableVectorType>(AllocElTy);
+  bool CastIsScalable = isa<ScalableVectorType>(CastElTy);
+  if (AllocIsScalable != CastIsScalable) return nullptr;
+
   Align AllocElTyAlign = DL.getABITypeAlign(AllocElTy);
   Align CastElTyAlign = DL.getABITypeAlign(CastElTy);
   if (CastElTyAlign < AllocElTyAlign) return nullptr;
@@ -103,14 +115,15 @@ Instruction *InstCombinerImpl::PromoteCastOfAllocation(BitCastInst &CI,
   // same, we open the door to infinite loops of various kinds.
   if (!AI.hasOneUse() && CastElTyAlign == AllocElTyAlign) return nullptr;
 
-  uint64_t AllocElTySize = DL.getTypeAllocSize(AllocElTy);
-  uint64_t CastElTySize = DL.getTypeAllocSize(CastElTy);
+  // The alloc and cast types should be either both fixed or both scalable.
+  uint64_t AllocElTySize = DL.getTypeAllocSize(AllocElTy).getKnownMinSize();
+  uint64_t CastElTySize = DL.getTypeAllocSize(CastElTy).getKnownMinSize();
   if (CastElTySize == 0 || AllocElTySize == 0) return nullptr;
 
   // If the allocation has multiple uses, only promote it if we're not
   // shrinking the amount of memory being allocated.
-  uint64_t AllocElTyStoreSize = DL.getTypeStoreSize(AllocElTy);
-  uint64_t CastElTyStoreSize = DL.getTypeStoreSize(CastElTy);
+  uint64_t AllocElTyStoreSize = DL.getTypeStoreSize(AllocElTy).getKnownMinSize();
+  uint64_t CastElTyStoreSize = DL.getTypeStoreSize(CastElTy).getKnownMinSize();
   if (!AI.hasOneUse() && CastElTyStoreSize < AllocElTyStoreSize) return nullptr;
 
   // See if we can satisfy the modulus by pulling a scale out of the array
@@ -124,6 +137,9 @@ Instruction *InstCombinerImpl::PromoteCastOfAllocation(BitCastInst &CI,
   // do the xform.
   if ((AllocElTySize*ArraySizeScale) % CastElTySize != 0 ||
       (AllocElTySize*ArrayOffset   ) % CastElTySize != 0) return nullptr;
+
+  // We don't currently support arrays of scalable types.
+  assert(!AllocIsScalable || (ArrayOffset == 1 && ArraySizeScale == 0));
 
   unsigned Scale = (AllocElTySize*ArraySizeScale)/CastElTySize;
   Value *Amt = nullptr;

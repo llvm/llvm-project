@@ -14,14 +14,14 @@ using namespace llvm;
 
 StringRef TraceIntelPTSettingsParser::GetPluginSchema() {
   return R"({
-  "type": "intel-pt",
-  "pt_cpu": {
-    "vendor": "intel" | "unknown",
-    "family": integer,
-    "model": integer,
-    "stepping": integer
-  }
-})";
+    "type": "intel-pt",
+    "pt_cpu": {
+      "vendor": "intel" | "unknown",
+      "family": integer,
+      "model": integer,
+      "stepping": integer
+    }
+  })";
 }
 
 llvm::Error TraceIntelPTSettingsParser::ParsePTCPU(const json::Object &trace) {

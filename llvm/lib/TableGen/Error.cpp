@@ -11,11 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/TableGen/Error.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Error.h"
+#include "llvm/TableGen/Record.h"
 #include <cstdlib>
 
 namespace llvm {
@@ -81,6 +82,24 @@ void PrintFatalError(const Twine &Msg) {
 
 void PrintFatalError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg) {
   PrintError(ErrorLoc, Msg);
+  // The following call runs the file cleanup handlers.
+  sys::RunInterruptHandlers();
+  std::exit(1);
+}
+
+// This method takes a Record and uses the source location
+// stored in it.
+void PrintFatalError(const Record *Rec, const Twine &Msg) {
+  PrintError(Rec->getLoc(), Msg);
+  // The following call runs the file cleanup handlers.
+  sys::RunInterruptHandlers();
+  std::exit(1);
+}
+
+// This method takes a RecordVal and uses the source location
+// stored in it.
+void PrintFatalError(const RecordVal *RecVal, const Twine &Msg) {
+  PrintError(RecVal->getLoc(), Msg);
   // The following call runs the file cleanup handlers.
   sys::RunInterruptHandlers();
   std::exit(1);

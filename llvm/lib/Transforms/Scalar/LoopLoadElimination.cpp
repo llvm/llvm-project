@@ -623,7 +623,7 @@ eliminateLoadsAcrossLoops(Function &F, LoopInfo &LI, DominatorTree &DT,
   for (Loop *TopLevelLoop : LI)
     for (Loop *L : depth_first(TopLevelLoop))
       // We only handle inner-most loops.
-      if (L->empty())
+      if (L->isInnermost())
         Worklist.push_back(L);
 
   // Now walk the identified inner loops.

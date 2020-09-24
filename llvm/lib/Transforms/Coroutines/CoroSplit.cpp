@@ -1484,13 +1484,6 @@ static void updateCallGraphAfterCoroutineSplit(
 
   postSplitCleanup(N.getFunction());
 
-  // To insert the newly created coroutine funclets 'f.resume', 'f.destroy', and
-  // 'f.cleanup' into the same SCC as the coroutine 'f' they were outlined from,
-  // we make use of the CallGraphUpdater class, which can modify the internal
-  // state of the LazyCallGraph.
-  for (Function *Clone : Clones)
-    CG.addNewFunctionIntoRefSCC(*Clone, C.getOuterRefSCC());
-
   // We've inserted instructions into coroutine 'f' that reference the three new
   // coroutine funclets. We must now update the call graph so that reference
   // edges between 'f' and its funclets are added to it. LazyCallGraph only

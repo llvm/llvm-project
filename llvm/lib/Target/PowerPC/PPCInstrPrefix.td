@@ -1142,7 +1142,7 @@ let Predicates = [IsISA3_1] in {
   def VEXPANDBM : VXForm_RD5_XO5_RS5<1602, 0, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpandbm $vD, $vB", IIC_VecGeneral,
                                      [(set v16i8:$vD, (int_ppc_altivec_vexpandbm
-					   v16i8:$vB))]>;
+                                           v16i8:$vB))]>;
   def VEXPANDHM : VXForm_RD5_XO5_RS5<1602, 1, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpandhm $vD, $vB", IIC_VecGeneral,
                                      [(set v8i16:$vD, (int_ppc_altivec_vexpandhm
@@ -1449,11 +1449,14 @@ let Predicates = [IsISA3_1] in {
   def VCMPGTSQ_rec : VCMPo <903, "vcmpgtsq. $vD, $vA, $vB" , v1i128>;
   def VCMPGTUQ_rec : VCMPo <647, "vcmpgtuq. $vD, $vA, $vB" , v1i128>;
   def VMODSQ : VXForm_1<1803, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vmodsq $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vmodsq $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v1i128:$vD, (srem v1i128:$vA, v1i128:$vB))]>;
   def VMODUQ : VXForm_1<1547, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vmoduq $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vmoduq $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v1i128:$vD, (urem v1i128:$vA, v1i128:$vB))]>;
   def VEXTSD2Q : VXForm_RD5_XO5_RS5<1538, 27, (outs vrrc:$vD), (ins vrrc:$vB),
-                                    "vextsd2q $vD, $vB", IIC_VecGeneral, []>;
+                               "vextsd2q $vD, $vB", IIC_VecGeneral,
+                               [(set v1i128:$vD, (int_ppc_altivec_vextsd2q v2i64:$vB))]>;
   def VCMPUQ : VXForm_BF3_VAB5<257, (outs crrc:$BF), (ins vrrc:$vA, vrrc:$vB),
                                "vcmpuq $BF, $vA, $vB", IIC_VecGeneral, []>;
   def VCMPSQ : VXForm_BF3_VAB5<321, (outs crrc:$BF), (ins vrrc:$vA, vrrc:$vB),

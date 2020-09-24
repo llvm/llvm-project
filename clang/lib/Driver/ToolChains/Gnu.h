@@ -212,6 +212,9 @@ public:
     /// The set of multilibs that the detected installation supports.
     MultilibSet Multilibs;
 
+    // Gentoo-specific toolchain configurations are stored here.
+    const std::string GentooConfigDir = "/etc/env.d/gcc";
+
   public:
     explicit GCCInstallationDetector(const Driver &D) : IsValid(false), D(D) {}
     void init(const llvm::Triple &TargetTriple, const llvm::opt::ArgList &Args,

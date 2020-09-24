@@ -5300,9 +5300,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
         // of the BuildVec must mask the bottom bits of the extended element
         // type
         if (ConstantSDNode *Splat = BVec->getConstantSplatNode()) {
-          TypeSize ElementSize =
+          uint64_t ElementSize =
               LoadVT.getVectorElementType().getScalarSizeInBits();
-          if (Splat->getAPIntValue().isMask((uint64_t)ElementSize)) {
+          if (Splat->getAPIntValue().isMask(ElementSize)) {
             return DAG.getMaskedLoad(
                 ExtVT, SDLoc(N), MLoad->getChain(), MLoad->getBasePtr(),
                 MLoad->getOffset(), MLoad->getMask(), MLoad->getPassThru(),

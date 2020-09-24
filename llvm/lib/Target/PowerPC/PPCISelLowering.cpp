@@ -888,6 +888,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::SREM, MVT::v2i64, Legal);
       setOperationAction(ISD::UREM, MVT::v4i32, Legal);
       setOperationAction(ISD::SREM, MVT::v4i32, Legal);
+      setOperationAction(ISD::UREM, MVT::v1i128, Legal);
+      setOperationAction(ISD::SREM, MVT::v1i128, Legal);
       setOperationAction(ISD::UDIV, MVT::v1i128, Legal);
       setOperationAction(ISD::SDIV, MVT::v1i128, Legal);
     }
@@ -1003,7 +1005,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
         setOperationAction(ISD::SUB, MVT::v2i64, Expand);
       }
 
-      setOperationAction(ISD::SETCC, MVT::v1i128, Expand);
+      if (Subtarget.isISA3_1())
+        setOperationAction(ISD::SETCC, MVT::v1i128, Legal);
+      else
+        setOperationAction(ISD::SETCC, MVT::v1i128, Expand);
 
       setOperationAction(ISD::LOAD, MVT::v2i64, Promote);
       AddPromotedToType (ISD::LOAD, MVT::v2i64, MVT::v2f64);
@@ -1497,6 +1502,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::ADDI_TLSLD_L_ADDR: return "PPCISD::ADDI_TLSLD_L_ADDR";
   case PPCISD::ADDIS_DTPREL_HA: return "PPCISD::ADDIS_DTPREL_HA";
   case PPCISD::ADDI_DTPREL_L:   return "PPCISD::ADDI_DTPREL_L";
+  case PPCISD::PADDI_DTPREL:
+    return "PPCISD::PADDI_DTPREL";
   case PPCISD::VADD_SPLAT:      return "PPCISD::VADD_SPLAT";
   case PPCISD::SC:              return "PPCISD::SC";
   case PPCISD::CLRBHRB:         return "PPCISD::CLRBHRB";
@@ -3096,6 +3103,14 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
   }
 
   if (Model == TLSModel::LocalDynamic) {
+    if (Subtarget.isUsingPCRelativeCalls()) {
+      SDValue TGA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
+                                               PPCII::MO_GOT_TLSLD_PCREL_FLAG);
+      SDValue MatPCRel =
+          DAG.getNode(PPCISD::TLS_DYNAMIC_MAT_PCREL_ADDR, dl, PtrVT, TGA);
+      return DAG.getNode(PPCISD::PADDI_DTPREL, dl, PtrVT, MatPCRel, TGA);
+    }
+
     SDValue TGA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, 0);
     SDValue GOTPtr;
     if (is64bit) {
@@ -10200,6 +10215,26 @@ static bool getVectorCompareInfo(SDValue Intrin, int &CompareOpc,
       return false;
     break;
 
+  case Intrinsic::ppc_altivec_vcmpequq:
+  case Intrinsic::ppc_altivec_vcmpgtsq:
+  case Intrinsic::ppc_altivec_vcmpgtuq:
+    if (!Subtarget.isISA3_1())
+      return false;
+    switch (IntrinsicID) {
+    default:
+      llvm_unreachable("Unknown comparison intrinsic.");
+    case Intrinsic::ppc_altivec_vcmpequq:
+      CompareOpc = 455;
+      break;
+    case Intrinsic::ppc_altivec_vcmpgtsq:
+      CompareOpc = 903;
+      break;
+    case Intrinsic::ppc_altivec_vcmpgtuq:
+      CompareOpc = 647;
+      break;
+    }
+    break;
+
   // VSX predicate comparisons use the same infrastructure
   case Intrinsic::ppc_vsx_xvcmpeqdp_p:
   case Intrinsic::ppc_vsx_xvcmpgedp_p:
@@ -10322,6 +10357,26 @@ static bool getVectorCompareInfo(SDValue Intrin, int &CompareOpc,
       CompareOpc = 711;
     else
       return false;
+    break;
+  case Intrinsic::ppc_altivec_vcmpequq_p:
+  case Intrinsic::ppc_altivec_vcmpgtsq_p:
+  case Intrinsic::ppc_altivec_vcmpgtuq_p:
+    if (!Subtarget.isISA3_1())
+      return false;
+    switch (IntrinsicID) {
+    default:
+      llvm_unreachable("Unknown comparison intrinsic.");
+    case Intrinsic::ppc_altivec_vcmpequq_p:
+      CompareOpc = 455;
+      break;
+    case Intrinsic::ppc_altivec_vcmpgtsq_p:
+      CompareOpc = 903;
+      break;
+    case Intrinsic::ppc_altivec_vcmpgtuq_p:
+      CompareOpc = 647;
+      break;
+    }
+    isDot = true;
     break;
   }
   return true;
@@ -15189,16 +15244,19 @@ void PPCTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     case Intrinsic::ppc_altivec_vcmpequh_p:
     case Intrinsic::ppc_altivec_vcmpequw_p:
     case Intrinsic::ppc_altivec_vcmpequd_p:
+    case Intrinsic::ppc_altivec_vcmpequq_p:
     case Intrinsic::ppc_altivec_vcmpgefp_p:
     case Intrinsic::ppc_altivec_vcmpgtfp_p:
     case Intrinsic::ppc_altivec_vcmpgtsb_p:
     case Intrinsic::ppc_altivec_vcmpgtsh_p:
     case Intrinsic::ppc_altivec_vcmpgtsw_p:
     case Intrinsic::ppc_altivec_vcmpgtsd_p:
+    case Intrinsic::ppc_altivec_vcmpgtsq_p:
     case Intrinsic::ppc_altivec_vcmpgtub_p:
     case Intrinsic::ppc_altivec_vcmpgtuh_p:
     case Intrinsic::ppc_altivec_vcmpgtuw_p:
     case Intrinsic::ppc_altivec_vcmpgtud_p:
+    case Intrinsic::ppc_altivec_vcmpgtuq_p:
       Known.Zero = ~1U;  // All bits but the low one are known to be zero.
       break;
     }

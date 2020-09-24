@@ -449,7 +449,7 @@ bool LoopInvariantCodeMotion::runOnLoop(
   // specifically moving instructions across the loop boundary and so it is
   // especially in need of sanity checking here.
   assert(L->isLCSSAForm(*DT) && "Loop not left in LCSSA form after LICM!");
-  assert((!L->getParentLoop() || L->getParentLoop()->isLCSSAForm(*DT)) &&
+  assert((L->isOutermost() || L->getParentLoop()->isLCSSAForm(*DT)) &&
          "Parent loop not left in LCSSA form after LICM!");
 
   if (MSSAU.get() && VerifyMemorySSA)

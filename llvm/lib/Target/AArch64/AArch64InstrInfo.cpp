@@ -294,6 +294,31 @@ bool AArch64InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     }
   }
 
+  // If we're allowed to modify and the block ends in a unconditional branch
+  // which could simply fallthrough, remove the branch.  (Note: This case only
+  // matters when we can't understand the whole sequence, otherwise it's also
+  // handled by BranchFolding.cpp.)
+  if (AllowModify && isUncondBranchOpcode(LastOpc) &&
+      MBB.isLayoutSuccessor(getBranchDestBlock(*LastInst))) {
+    LastInst->eraseFromParent();
+    LastInst = SecondLastInst;
+    LastOpc = LastInst->getOpcode();
+    if (I == MBB.begin() || !isUnpredicatedTerminator(*--I)) {
+      assert(!isUncondBranchOpcode(LastOpc) &&
+             "unreachable unconditional branches removed above");
+
+      if (isCondBranchOpcode(LastOpc)) {
+        // Block ends with fall-through condbranch.
+        parseCondBranch(LastInst, TBB, Cond);
+        return false;
+      }
+      return true; // Can't handle indirect branch.
+    } else {
+      SecondLastInst = &*I;
+      SecondLastOpc = SecondLastInst->getOpcode();
+    }
+  }
+
   // If there are three terminators, we don't know what sort of block this is.
   if (SecondLastInst && I != MBB.begin() && isUnpredicatedTerminator(*--I))
     return true;

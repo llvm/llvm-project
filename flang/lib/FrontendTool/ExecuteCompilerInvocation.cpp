@@ -22,7 +22,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *flang) {
   if (flang->GetFrontendOpts().showHelp_) {
     clang::driver::getDriverOptTable().PrintHelp(llvm::outs(),
         "flang-new -fc1 [options] file...", "LLVM 'Flang' Compiler",
-        /*Include=*/clang::driver::options::FlangOption,
+        /*Include=*/clang::driver::options::FC1Option,
         /*Exclude=*/0, /*ShowAllAliases=*/false);
     return true;
   }

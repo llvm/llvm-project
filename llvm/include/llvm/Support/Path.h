@@ -451,9 +451,47 @@ bool has_extension(const Twine &path, Style style = Style::native);
 
 /// Is path absolute?
 ///
+/// According to cppreference.com, C++17 states: "An absolute path is a path
+/// that unambiguously identifies the location of a file without reference to
+/// an additional starting location."
+///
+/// In other words, the rules are:
+/// 1) POSIX style paths with nonempty root directory are absolute.
+/// 2) Windows style paths with nonempty root name and root directory are
+///    absolute.
+/// 3) No other paths are absolute.
+///
+/// \see has_root_name
+/// \see has_root_directory
+///
 /// @param path Input path.
 /// @result True if the path is absolute, false if it is not.
 bool is_absolute(const Twine &path, Style style = Style::native);
+
+/// Is path absolute using GNU rules?
+///
+/// GNU rules are:
+/// 1) Paths starting with a path separator are absolute.
+/// 2) Windows style paths are also absolute if they start with a character
+///    followed by ':'.
+/// 3) No other paths are absolute.
+///
+/// On Windows style the path "C:\Users\Default" has "C:" as root name and "\"
+/// as root directory.
+///
+/// Hence "C:" on Windows is absolute under GNU rules and not absolute under
+/// C++17 because it has no root directory. Likewise "/" and "\" on Windows are
+/// absolute under GNU and are not absolute under C++17 due to empty root name.
+///
+/// \see has_root_name
+/// \see has_root_directory
+///
+/// @param path Input path.
+/// @param style The style of \p path (e.g. Windows or POSIX). "native" style
+/// means to derive the style from the host.
+/// @result True if the path is absolute following GNU rules, false if it is
+/// not.
+bool is_absolute_gnu(const Twine &path, Style style = Style::native);
 
 /// Is path relative?
 ///

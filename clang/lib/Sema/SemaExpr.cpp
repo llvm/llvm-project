@@ -6068,8 +6068,6 @@ static bool checkArgsForPlaceholders(Sema &S, MultiExprArg args) {
       ExprResult result = S.CheckPlaceholderExpr(args[i]);
       if (result.isInvalid()) hasInvalid = true;
       else args[i] = result.get();
-    } else if (hasInvalid) {
-      (void)S.CorrectDelayedTyposInExpr(args[i]);
     }
   }
   return hasInvalid;

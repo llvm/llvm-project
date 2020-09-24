@@ -2006,8 +2006,8 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   //
   // ```c++
   // static void build(OpBuilder &, OperationState &odsState,
-  //                   ArrayRef<Type> resultTypes,
-  //                   ArrayRef<Value> operands,
+  //                   TypeRange resultTypes,
+  //                   ValueRange operands,
   //                   ArrayRef<NamedAttribute> attributes);
   // ```
   list<OpBuilder> builders = ?;

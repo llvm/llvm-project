@@ -32,3 +32,12 @@ FooRecord::NestedNamespace::type x; // expected-error {{no member named 'NestedN
 void cast_expr(int g) { +int(n)(g); } // expected-error {{undeclared identifier 'n'}}
 
 void bind() { for (const auto& [test,_] : _test_) { }; } // expected-error {{undeclared identifier '_test_'}}
+
+namespace NoCrash {
+class S {
+  void Function(int a) {
+    unknown1(unknown2, Function, unknown3); // expected-error 2{{use of undeclared identifier}} \
+                                               expected-error {{reference to non-static member function must be called}}
+  }
+};
+}

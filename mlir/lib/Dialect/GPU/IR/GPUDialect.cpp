@@ -475,8 +475,8 @@ BlockArgument GPUFuncOp::addPrivateAttribution(Type type) {
 
 void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
                       StringRef name, FunctionType type,
-                      ArrayRef<Type> workgroupAttributions,
-                      ArrayRef<Type> privateAttributions,
+                      TypeRange workgroupAttributions,
+                      TypeRange privateAttributions,
                       ArrayRef<NamedAttribute> attrs) {
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));

@@ -88,26 +88,29 @@ void MachOOptTable::printHelp(const char *argv0, bool showHidden) const {
   lld::outs() << "\n";
 }
 
-static Optional<std::string> findWithExtension(StringRef base,
-                                               ArrayRef<StringRef> extensions) {
-  for (StringRef ext : extensions) {
-    Twine location = base + ext;
-    if (fs::exists(location))
-      return location.str();
+static Optional<std::string>
+findAlongPathsWithExtensions(StringRef name, ArrayRef<StringRef> extensions) {
+  llvm::SmallString<261> base;
+  for (StringRef dir : config->librarySearchPaths) {
+    base = dir;
+    path::append(base, Twine("lib") + name);
+    for (StringRef ext : extensions) {
+      Twine location = base + ext;
+      if (fs::exists(location))
+        return location.str();
+    }
   }
   return {};
 }
 
 static Optional<std::string> findLibrary(StringRef name) {
-  llvm::SmallString<261> location;
-  for (StringRef dir : config->librarySearchPaths) {
-      location = dir;
-      path::append(location, Twine("lib") + name);
-      if (Optional<std::string> path =
-              findWithExtension(location, {".tbd", ".dylib", ".a"}))
-        return path;
+  if (config->searchDylibsFirst) {
+    if (Optional<std::string> path =
+            findAlongPathsWithExtensions(name, {".tbd", ".dylib"}))
+      return path;
+    return findAlongPathsWithExtensions(name, {".a"});
   }
-  return {};
+  return findAlongPathsWithExtensions(name, {".tbd", ".dylib", ".a"});
 }
 
 static Optional<std::string> findFramework(StringRef name) {
@@ -161,10 +164,11 @@ static bool warnIfNotDirectory(StringRef option, StringRef path) {
   return true;
 }
 
-static void getSearchPaths(std::vector<StringRef> &paths, unsigned optionCode,
-                           opt::InputArgList &args,
-                           const std::vector<StringRef> &roots,
-                           const SmallVector<StringRef, 2> &systemPaths) {
+static std::vector<StringRef>
+getSearchPaths(unsigned optionCode, opt::InputArgList &args,
+               const std::vector<StringRef> &roots,
+               const SmallVector<StringRef, 2> &systemPaths) {
+  std::vector<StringRef> paths;
   StringRef optionLetter{optionCode == OPT_F ? "F" : "L"};
   for (StringRef path : args::getStrings(args, optionCode)) {
     // NOTE: only absolute paths are re-rooted to syslibroot(s)
@@ -186,7 +190,7 @@ static void getSearchPaths(std::vector<StringRef> &paths, unsigned optionCode,
 
   // `-Z` suppresses the standard "system" search paths.
   if (args.hasArg(OPT_Z))
-    return;
+    return paths;
 
   for (auto const &path : systemPaths) {
     for (auto root : roots) {
@@ -196,19 +200,34 @@ static void getSearchPaths(std::vector<StringRef> &paths, unsigned optionCode,
         paths.push_back(saver.save(buffer.str()));
     }
   }
+  return paths;
 }
 
-static void getLibrarySearchPaths(opt::InputArgList &args,
-                                  const std::vector<StringRef> &roots,
-                                  std::vector<StringRef> &paths) {
-  getSearchPaths(paths, OPT_L, args, roots, {"/usr/lib", "/usr/local/lib"});
+static std::vector<StringRef> getSystemLibraryRoots(opt::InputArgList &args) {
+  std::vector<StringRef> roots;
+  for (const Arg *arg : args.filtered(OPT_syslibroot))
+    roots.push_back(arg->getValue());
+  // NOTE: the final `-syslibroot` being `/` will ignore all roots
+  if (roots.size() && roots.back() == "/")
+    roots.clear();
+  // NOTE: roots can never be empty - add an empty root to simplify the library
+  // and framework search path computation.
+  if (roots.empty())
+    roots.emplace_back("");
+  return roots;
 }
 
-static void getFrameworkSearchPaths(opt::InputArgList &args,
-                                    const std::vector<StringRef> &roots,
-                                    std::vector<StringRef> &paths) {
-  getSearchPaths(paths, OPT_F, args, roots,
-                 {"/Library/Frameworks", "/System/Library/Frameworks"});
+static std::vector<StringRef>
+getLibrarySearchPaths(opt::InputArgList &args,
+                      const std::vector<StringRef> &roots) {
+  return getSearchPaths(OPT_L, args, roots, {"/usr/lib", "/usr/local/lib"});
+}
+
+static std::vector<StringRef>
+getFrameworkSearchPaths(opt::InputArgList &args,
+                        const std::vector<StringRef> &roots) {
+  return getSearchPaths(OPT_F, args, roots,
+                        {"/Library/Frameworks", "/System/Library/Frameworks"});
 }
 
 // Returns slices of MB by parsing MB as an archive file.
@@ -234,11 +253,12 @@ static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef mb) {
   return v;
 }
 
-static void addFile(StringRef path) {
+static InputFile *addFile(StringRef path) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
-    return;
+    return nullptr;
   MemoryBufferRef mbref = *buffer;
+  InputFile *newFile = nullptr;
 
   switch (identify_magic(mbref.getBuffer())) {
   case file_magic::archive: {
@@ -267,25 +287,27 @@ static void addFile(StringRef path) {
             inputFiles.push_back(make<ObjFile>(member));
     }
 
-    inputFiles.push_back(make<ArchiveFile>(std::move(file)));
+    newFile = make<ArchiveFile>(std::move(file));
     break;
   }
   case file_magic::macho_object:
-    inputFiles.push_back(make<ObjFile>(mbref));
+    newFile = make<ObjFile>(mbref);
     break;
   case file_magic::macho_dynamically_linked_shared_lib:
-    inputFiles.push_back(make<DylibFile>(mbref));
+    newFile = make<DylibFile>(mbref);
     break;
   case file_magic::tapi_file: {
     Optional<DylibFile *> dylibFile = makeDylibFromTAPI(mbref);
     if (!dylibFile)
-      return;
-    inputFiles.push_back(*dylibFile);
+      return nullptr;
+    newFile = *dylibFile;
     break;
   }
   default:
     error(path + ": unhandled file type");
   }
+  inputFiles.push_back(newFile);
+  return newFile;
 }
 
 static void addFileList(StringRef path) {
@@ -469,7 +491,7 @@ static void warnIfDeprecatedOption(const opt::Option &opt) {
 }
 
 static void warnIfUnimplementedOption(const opt::Option &opt) {
-  if (!opt.getGroup().isValid())
+  if (!opt.getGroup().isValid() || !opt.hasFlag(DriverFlag::HelpHidden))
     return;
   switch (opt.getGroup().getID()) {
   case OPT_grp_deprecated:
@@ -521,27 +543,25 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   config->installName =
       args.getLastArgValue(OPT_install_name, config->outputFile);
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
+  config->headerPadMaxInstallNames =
+      args.hasArg(OPT_headerpad_max_install_names);
   config->outputType = args.hasArg(OPT_dylib) ? MH_DYLIB : MH_EXECUTE;
   config->runtimePaths = args::getStrings(args, OPT_rpath);
   config->allLoad = args.hasArg(OPT_all_load);
+  config->forceLoadObjC = args.hasArg(OPT_ObjC);
 
   if (const opt::Arg *arg = args.getLastArg(OPT_static, OPT_dynamic))
     config->staticLink = (arg->getOption().getID() == OPT_static);
 
-  std::vector<StringRef> &roots = config->systemLibraryRoots;
-  for (const Arg *arg : args.filtered(OPT_syslibroot))
-    roots.push_back(arg->getValue());
-  // NOTE: the final `-syslibroot` being `/` will ignore all roots
-  if (roots.size() && roots.back() == "/")
-    roots.clear();
-  // NOTE: roots can never be empty - add an empty root to simplify the library
-  // and framework search path computation.
-  if (roots.empty())
-    roots.emplace_back("");
-
-  getLibrarySearchPaths(args, roots, config->librarySearchPaths);
-  getFrameworkSearchPaths(args, roots, config->frameworkSearchPaths);
-  config->forceLoadObjC = args.hasArg(OPT_ObjC);
+  config->systemLibraryRoots = getSystemLibraryRoots(args);
+  config->librarySearchPaths =
+      getLibrarySearchPaths(args, config->systemLibraryRoots);
+  config->frameworkSearchPaths =
+      getFrameworkSearchPaths(args, config->systemLibraryRoots);
+  if (const opt::Arg *arg =
+          args.getLastArg(OPT_search_paths_first, OPT_search_dylibs_first))
+    config->searchDylibsFirst =
+        (arg && arg->getOption().getID() == OPT_search_dylibs_first);
 
   if (args.hasArg(OPT_v)) {
     message(getLLDVersion());
@@ -560,29 +580,43 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   for (const auto &arg : args) {
     const auto &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
-    switch (arg->getOption().getID()) {
+    warnIfUnimplementedOption(opt);
+    // TODO: are any of these better handled via filtered() or getLastArg()?
+    switch (opt.getID()) {
     case OPT_INPUT:
       addFile(arg->getValue());
       break;
+    case OPT_weak_library: {
+      auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(arg->getValue()));
+      if (dylibFile)
+        dylibFile->forceWeakImport = true;
+      break;
+    }
     case OPT_filelist:
       addFileList(arg->getValue());
       break;
     case OPT_force_load:
       forceLoadArchive(arg->getValue());
       break;
-    case OPT_l: {
+    case OPT_l:
+    case OPT_weak_l: {
       StringRef name = arg->getValue();
       if (Optional<std::string> path = findLibrary(name)) {
-        addFile(*path);
+        auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path));
+        if (opt.getID() == OPT_weak_l && dylibFile)
+          dylibFile->forceWeakImport = true;
         break;
       }
       error("library not found for -l" + name);
       break;
     }
-    case OPT_framework: {
+    case OPT_framework:
+    case OPT_weak_framework: {
       StringRef name = arg->getValue();
       if (Optional<std::string> path = findFramework(name)) {
-        addFile(*path);
+        auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path));
+        if (opt.getID() == OPT_weak_framework && dylibFile)
+          dylibFile->forceWeakImport = true;
         break;
       }
       error("framework not found for -framework " + name);
@@ -591,26 +625,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_platform_version:
       handlePlatformVersion(arg);
       break;
-    case OPT_all_load:
-    case OPT_o:
-    case OPT_dylib:
-    case OPT_e:
-    case OPT_F:
-    case OPT_L:
-    case OPT_ObjC:
-    case OPT_headerpad:
-    case OPT_install_name:
-    case OPT_rpath:
-    case OPT_sub_library:
-    case OPT_Z:
-    case OPT_arch:
-    case OPT_syslibroot:
-    case OPT_sectcreate:
-    case OPT_dynamic:
-      // handled elsewhere
-      break;
     default:
-      warnIfUnimplementedOption(opt);
       break;
     }
   }

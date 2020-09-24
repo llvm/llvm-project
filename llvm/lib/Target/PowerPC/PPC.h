@@ -123,10 +123,19 @@ FunctionPass *createPPCCTRLoops();
     /// TLS Initial Exec model.
     MO_TPREL_FLAG = 64,
 
+    /// MO_TLSLD_FLAG - If this bit is set the symbol reference is relative to
+    /// TLS Local Dynamic model.
+    MO_TLSLD_FLAG = 128,
+
     /// MO_GOT_TLSGD_PCREL_FLAG - A combintaion of flags, if these bits are set
     /// they should produce the relocation @got@tlsgd@pcrel.
     /// Fix up is VK_PPC_GOT_TLSGD_PCREL
     MO_GOT_TLSGD_PCREL_FLAG = MO_PCREL_FLAG | MO_GOT_FLAG | MO_TLSGD_FLAG,
+
+    /// MO_GOT_TLSLD_PCREL_FLAG - A combintaion of flags, if these bits are set
+    /// they should produce the relocation @got@tlsld@pcrel.
+    /// Fix up is VK_PPC_GOT_TLSLD_PCREL
+    MO_GOT_TLSLD_PCREL_FLAG = MO_PCREL_FLAG | MO_GOT_FLAG | MO_TLSLD_FLAG,
 
     /// MO_GOT_TPREL_PCREL_FLAG - A combintaion of flags, if these bits are set
     /// they should produce the relocation @got@tprel@pcrel.

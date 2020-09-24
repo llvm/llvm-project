@@ -4686,7 +4686,7 @@ char *Buffer = new (getASTContext(), 1) char[Name.size() + 1];
 void ValueDecl::anchor() {}
 
 bool ValueDecl::isWeak() const {
-  for (const auto *I : getMostRecentDecl()->attrs())
+  for (const auto *I : attrs())
     if (isa<WeakAttr>(I) || isa<WeakRefAttr>(I))
       return true;
 

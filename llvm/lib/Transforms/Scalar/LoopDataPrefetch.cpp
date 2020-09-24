@@ -271,7 +271,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
   bool MadeChange = false;
 
   // Only prefetch in the inner-most loop
-  if (!L->empty())
+  if (!L->isInnermost())
     return MadeChange;
 
   SmallPtrSet<const Value *, 32> EphValues;

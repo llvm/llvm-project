@@ -1308,6 +1308,18 @@ TTI::ReductionKind TTI::matchVectorSplittingReduction(
   return RD->Kind;
 }
 
+TTI::ReductionKind
+TTI::matchVectorReduction(const ExtractElementInst *Root, unsigned &Opcode,
+                          VectorType *&Ty, bool &IsPairwise) {
+  TTI::ReductionKind RdxKind = matchVectorSplittingReduction(Root, Opcode, Ty);
+  if (RdxKind != TTI::ReductionKind::RK_None) {
+    IsPairwise = false;
+    return RdxKind;
+  }
+  IsPairwise = true;
+  return matchPairwiseReduction(Root, Opcode, Ty);
+}
+
 int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 

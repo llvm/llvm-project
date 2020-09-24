@@ -641,6 +641,59 @@ TEST_F(ConstantRangeTest, SetDifference) {
   EXPECT_EQ(E.difference(A), F);
 }
 
+TEST_F(ConstantRangeTest, getActiveBits) {
+  unsigned Bits = 4;
+  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+    unsigned Exact = 0;
+    ForeachNumInConstantRange(CR, [&](const APInt &N) {
+      Exact = std::max(Exact, N.getActiveBits());
+    });
+
+    unsigned ResultCR = CR.getActiveBits();
+    EXPECT_EQ(Exact, ResultCR);
+  });
+}
+TEST_F(ConstantRangeTest, losslessUnsignedTruncationZeroext) {
+  unsigned Bits = 4;
+  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+    unsigned MinBitWidth = CR.getActiveBits();
+    if (MinBitWidth == 0) {
+      EXPECT_TRUE(CR.isEmptySet() || (CR.isSingleElement() &&
+                                      CR.getSingleElement()->isNullValue()));
+      return;
+    }
+    if (MinBitWidth == Bits)
+      return;
+    EXPECT_EQ(CR, CR.truncate(MinBitWidth).zeroExtend(Bits));
+  });
+}
+
+TEST_F(ConstantRangeTest, getMinSignedBits) {
+  unsigned Bits = 4;
+  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+    unsigned Exact = 0;
+    ForeachNumInConstantRange(CR, [&](const APInt &N) {
+      Exact = std::max(Exact, N.getMinSignedBits());
+    });
+
+    unsigned ResultCR = CR.getMinSignedBits();
+    EXPECT_EQ(Exact, ResultCR);
+  });
+}
+TEST_F(ConstantRangeTest, losslessSignedTruncationSignext) {
+  unsigned Bits = 4;
+  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+    unsigned MinBitWidth = CR.getMinSignedBits();
+    if (MinBitWidth == 0) {
+      EXPECT_TRUE(CR.isEmptySet());
+      return;
+    }
+    if (MinBitWidth == Bits)
+      return;
+    EXPECT_EQ(CR, CR.truncate(MinBitWidth).signExtend(Bits));
+  });
+}
+
 TEST_F(ConstantRangeTest, SubtractAPInt) {
   EXPECT_EQ(Full.subtract(APInt(16, 4)), Full);
   EXPECT_EQ(Empty.subtract(APInt(16, 4)), Empty);
@@ -2347,6 +2400,24 @@ TEST_F(ConstantRangeTest, binaryXor) {
   EXPECT_TRUE(R16_35.binaryXor(R16_35).isFullSet());
   EXPECT_TRUE(R16_35.binaryXor(R0_99).isFullSet());
   EXPECT_TRUE(R0_99.binaryXor(R16_35).isFullSet());
+}
+
+TEST_F(ConstantRangeTest, binaryNot) {
+  TestUnsignedUnaryOpExhaustive(
+      [](const ConstantRange &CR) { return CR.binaryNot(); },
+      [](const APInt &N) { return ~N; });
+  TestUnsignedUnaryOpExhaustive(
+      [](const ConstantRange &CR) {
+        return CR.binaryXor(
+            ConstantRange(APInt::getAllOnesValue(CR.getBitWidth())));
+      },
+      [](const APInt &N) { return ~N; });
+  TestUnsignedUnaryOpExhaustive(
+      [](const ConstantRange &CR) {
+        return ConstantRange(APInt::getAllOnesValue(CR.getBitWidth()))
+            .binaryXor(CR);
+      },
+      [](const APInt &N) { return ~N; });
 }
 
 }  // anonymous namespace

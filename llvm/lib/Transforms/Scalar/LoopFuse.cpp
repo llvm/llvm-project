@@ -1483,7 +1483,7 @@ private:
         continue;
       LI.changeLoopFor(BB, FC0.L);
     }
-    while (!FC1.L->empty()) {
+    while (!FC1.L->isInnermost()) {
       const auto &ChildLoopIt = FC1.L->begin();
       Loop *ChildLoop = *ChildLoopIt;
       FC1.L->removeChildLoop(ChildLoopIt);
@@ -1777,7 +1777,7 @@ private:
         continue;
       LI.changeLoopFor(BB, FC0.L);
     }
-    while (!FC1.L->empty()) {
+    while (!FC1.L->isInnermost()) {
       const auto &ChildLoopIt = FC1.L->begin();
       Loop *ChildLoop = *ChildLoopIt;
       FC1.L->removeChildLoop(ChildLoopIt);

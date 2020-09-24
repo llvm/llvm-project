@@ -1455,8 +1455,9 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
       let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
       let regions = (region AnyRegion:$region);
 
+      let skipDefaultBuilders = 1;
       let builders = [ OpBuilder<
-        "OpBuilder &b, OperationState &result,"
+        "OpBuilder &b, OperationState &result, "
         "ValueRange inputs, ValueRange outputBuffers",
         [{{
           result.addOperands(inputs);
@@ -1493,6 +1494,14 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
             TypeRange(outputBuffers),
             TypeRange(initTensors),
             resultTensorTypes);
+        }]>, OpBuilder<
+        "OpBuilder &b, OperationState &result, TypeRange resultTensorTypes,"
+        "ValueRange operands, ArrayRef<NamedAttribute> attributes = {{}",
+        [{{
+          result.addOperands(operands);
+          result.addAttributes(attributes);
+          result.addTypes(resultTensorTypes);
+          (void)result.addRegion();
         }]>
       ];
       let printer = [{{ return ::printNamedStructuredOp(p, *this); }];
