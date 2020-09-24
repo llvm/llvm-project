@@ -2545,6 +2545,7 @@ The goal of this rule is to make sure that any uncounted local variable is backe
 These are examples of cases that we consider safe:
 
   .. code-block:: cpp
+
     void foo1() {
       RefPtr<RefCountable> counted;
       // The scope of uncounted is EMBEDDED in the scope of counted.
