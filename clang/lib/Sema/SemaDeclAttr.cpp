@@ -5868,7 +5868,7 @@ bool Sema::DiagnoseSwiftName(Decl *D, StringRef Name, SourceLocation Loc,
 
       if (!F->hasWrittenPrototype()) {
         Diag(Loc, diag::warn_attribute_wrong_decl_type) << AL
-            << /* non-K&R-style functions */12;
+            << ExpectedFunctionWithProtoType;
         return false;
       }
     }
