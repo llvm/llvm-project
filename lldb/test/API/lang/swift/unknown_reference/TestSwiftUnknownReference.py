@@ -29,9 +29,6 @@ class TestSwiftUnknownReference(lldbtest.TestBase):
         lldbutil.check_variable(self, m_string, summary='"world"')
 
     
-    @expectedFailureAll(bugnumber="rdar://60396797",
-                        oslist=lldbplatform.darwin_all,
-                        setting=('symbols.use-swift-clangimporter', 'false'))
     @swiftTest
     def test_unknown_objc_ref(self):
         """Test unknown references to Objective-C objects."""
