@@ -488,7 +488,6 @@ public:
   /// preferred when a pipeline is largely of one type, but one or just a few
   /// passes are of different types(See PassBuilder.cpp for examples).
   Error parsePassPipeline(ModulePassManager &MPM, StringRef PipelineText,
-                          bool VerifyEachPass = true,
                           bool DebugLogging = false);
 
   /// {{@ Parse a textual pass pipeline description into a specific PassManager
@@ -499,13 +498,10 @@ public:
   ///
   ///   function(lpass)
   Error parsePassPipeline(CGSCCPassManager &CGPM, StringRef PipelineText,
-                          bool VerifyEachPass = true,
                           bool DebugLogging = false);
   Error parsePassPipeline(FunctionPassManager &FPM, StringRef PipelineText,
-                          bool VerifyEachPass = true,
                           bool DebugLogging = false);
   Error parsePassPipeline(LoopPassManager &LPM, StringRef PipelineText,
-                          bool VerifyEachPass = true,
                           bool DebugLogging = false);
   /// @}}
 
@@ -682,13 +678,49 @@ public:
   /// PassManagers and populate the passed ModulePassManager.
   void registerParseTopLevelPipelineCallback(
       const std::function<bool(ModulePassManager &, ArrayRef<PipelineElement>,
-                               bool VerifyEachPass, bool DebugLogging)> &C) {
+                               bool DebugLogging)> &C) {
     TopLevelPipelineParsingCallbacks.push_back(C);
   }
 
   /// Enable or disable the hot/cold splitting optimization. By default, it is
   /// disabled.
   void setEnableHotColdSplitting(bool Enabled);
+
+  /// {{@ Register callbacks for before/after parsing passes.
+  /// For example, to add a verifier pass after each parsed pass.
+  void registerBeforeParsingModulePassCallback(
+      const std::function<void(ModulePassManager &)> &C) {
+    ModulePassBeforeParsingCallbacks.push_back(C);
+  }
+  void registerBeforeParsingCGSCCPassCallback(
+      const std::function<void(CGSCCPassManager &)> &C) {
+    CGSCCPassBeforeParsingCallbacks.push_back(C);
+  }
+  void registerBeforeParsingFunctionPassCallback(
+      const std::function<void(FunctionPassManager &)> &C) {
+    FunctionPassBeforeParsingCallbacks.push_back(C);
+  }
+  void registerBeforeParsingLoopPassCallback(
+      const std::function<void(LoopPassManager &)> &C) {
+    LoopPassBeforeParsingCallbacks.push_back(C);
+  }
+  void registerAfterParsingModulePassCallback(
+      const std::function<void(ModulePassManager &)> &C) {
+    ModulePassAfterParsingCallbacks.push_back(C);
+  }
+  void registerAfterParsingCGSCCPassCallback(
+      const std::function<void(CGSCCPassManager &)> &C) {
+    CGSCCPassAfterParsingCallbacks.push_back(C);
+  }
+  void registerAfterParsingFunctionPassCallback(
+      const std::function<void(FunctionPassManager &)> &C) {
+    FunctionPassAfterParsingCallbacks.push_back(C);
+  }
+  void registerAfterParsingLoopPassCallback(
+      const std::function<void(LoopPassManager &)> &C) {
+    LoopPassAfterParsingCallbacks.push_back(C);
+  }
+  /// @}}
 
   /// Add PGOInstrumenation passes for O0 only.
   void addPGOInstrPassesForO0(ModulePassManager &MPM, bool DebugLogging,
@@ -712,27 +744,27 @@ private:
   parsePipelineText(StringRef Text);
 
   Error parseModulePass(ModulePassManager &MPM, const PipelineElement &E,
-                        bool VerifyEachPass, bool DebugLogging);
+                        bool DebugLogging);
   Error parseCGSCCPass(CGSCCPassManager &CGPM, const PipelineElement &E,
-                       bool VerifyEachPass, bool DebugLogging);
+                       bool DebugLogging);
   Error parseFunctionPass(FunctionPassManager &FPM, const PipelineElement &E,
-                          bool VerifyEachPass, bool DebugLogging);
+                          bool DebugLogging);
   Error parseLoopPass(LoopPassManager &LPM, const PipelineElement &E,
-                      bool VerifyEachPass, bool DebugLogging);
+                      bool DebugLogging);
   bool parseAAPassName(AAManager &AA, StringRef Name);
 
   Error parseLoopPassPipeline(LoopPassManager &LPM,
                               ArrayRef<PipelineElement> Pipeline,
-                              bool VerifyEachPass, bool DebugLogging);
+                              bool DebugLogging);
   Error parseFunctionPassPipeline(FunctionPassManager &FPM,
                                   ArrayRef<PipelineElement> Pipeline,
-                                  bool VerifyEachPass, bool DebugLogging);
+                                  bool DebugLogging);
   Error parseCGSCCPassPipeline(CGSCCPassManager &CGPM,
                                ArrayRef<PipelineElement> Pipeline,
-                               bool VerifyEachPass, bool DebugLogging);
+                               bool DebugLogging);
   Error parseModulePassPipeline(ModulePassManager &MPM,
                                 ArrayRef<PipelineElement> Pipeline,
-                                bool VerifyEachPass, bool DebugLogging);
+                                bool DebugLogging);
 
   void addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
                          OptimizationLevel Level, bool RunProfileGen, bool IsCS,
@@ -765,7 +797,7 @@ private:
               2>
       ModulePipelineParsingCallbacks;
   SmallVector<std::function<bool(ModulePassManager &, ArrayRef<PipelineElement>,
-                                 bool VerifyEachPass, bool DebugLogging)>,
+                                 bool DebugLogging)>,
               2>
       TopLevelPipelineParsingCallbacks;
   // CGSCC callbacks
@@ -792,8 +824,28 @@ private:
   // AA callbacks
   SmallVector<std::function<bool(StringRef Name, AAManager &AA)>, 2>
       AAParsingCallbacks;
+<<<<<<< HEAD
   // Tunable passes
   bool SplitColdCode = false;
+=======
+  // Before/after pass parsing callbacks
+  SmallVector<std::function<void(ModulePassManager &)>, 2>
+      ModulePassBeforeParsingCallbacks;
+  SmallVector<std::function<void(ModulePassManager &)>, 2>
+      ModulePassAfterParsingCallbacks;
+  SmallVector<std::function<void(CGSCCPassManager &)>, 2>
+      CGSCCPassBeforeParsingCallbacks;
+  SmallVector<std::function<void(CGSCCPassManager &)>, 2>
+      CGSCCPassAfterParsingCallbacks;
+  SmallVector<std::function<void(FunctionPassManager &)>, 2>
+      FunctionPassBeforeParsingCallbacks;
+  SmallVector<std::function<void(FunctionPassManager &)>, 2>
+      FunctionPassAfterParsingCallbacks;
+  SmallVector<std::function<void(LoopPassManager &)>, 2>
+      LoopPassBeforeParsingCallbacks;
+  SmallVector<std::function<void(LoopPassManager &)>, 2>
+      LoopPassAfterParsingCallbacks;
+>>>>>>> refs/am/changes/111aa4e36614d9a056cf5040d4d7bbfddeb9ebb2_apple/main
 };
 
 /// This utility template takes care of adding require<> and invalidate<>
