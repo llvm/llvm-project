@@ -11,13 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "gtest/gtest.h"
 #include "llvm/Analysis/IRSimilarityIdentifier.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/SourceMgr.h"
-#include "gtest/gtest.h"
 
 using namespace llvm;
 using namespace IRSimilarity;
@@ -1311,8 +1311,7 @@ TEST(IRInstructionMapper, RepeatedIllegalLength) {
 // A helper function that accepts an instruction list from a module made up of
 // two blocks of two legal instructions and terminator, and checks them for
 // instruction similarity.
-static bool longSimCandCompare(std::vector<IRInstructionData *> &InstrList,
-                               bool Structure = false) {
+static bool longSimCandCompare(std::vector<IRInstructionData *> &InstrList) {
   std::vector<IRInstructionData *>::iterator Start, End;
 
   Start = InstrList.begin();
@@ -1327,8 +1326,6 @@ static bool longSimCandCompare(std::vector<IRInstructionData *> &InstrList,
   std::advance(Start, 3);
   std::advance(End, 4);
   IRSimilarityCandidate Cand2(3, 2, *Start, *End);
-  if (Structure)
-    return IRSimilarityCandidate::compareStructure(Cand1, Cand2);
   return IRSimilarityCandidate::isSimilar(Cand1, Cand2);
 }
 
@@ -1525,103 +1522,4 @@ TEST(IRSimilarityCandidate, IllegalInCandidate) {
   std::advance(End, 5);
   IRSimilarityCandidate Cand2(3, 3, *Start, *End);
   ASSERT_FALSE(IRSimilarityCandidate::isSimilar(Cand1, Cand2));
-}
-
-// Checks that different structure, in this case, where we introduce a new
-// needed input in one region, is recognized as different.
-TEST(IRSimilarityCandidate, DifferentStructure) {
-  StringRef ModuleString = R"(
-                          define i32 @f(i32 %a, i32 %b) {
-                          bb0:
-                             %0 = add i32 %a, %b
-                             %1 = add i32 %b, %a
-                             ret i32 0
-                          bb1:
-                             %2 = add i32 %a, %b
-                             %3 = add i32 %b, %0
-                             ret i32 0
-                          })";
-  LLVMContext Context;
-  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
-
-  std::vector<IRInstructionData *> InstrList;
-  std::vector<unsigned> UnsignedVec;
-
-  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
-  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
-  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
-  getVectors(*M, Mapper, InstrList, UnsignedVec);
-
-  // Check to make sure that we have a long enough region.
-  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(6));
-  // Check that the instructions were added correctly to both vectors.
-  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
-
-  ASSERT_FALSE(longSimCandCompare(InstrList, true));
-}
-
-// Checks that the same structure is recognized between two candidates. The
-// items %a and %b are used in the same way in both sets of instructions.
-TEST(IRSimilarityCandidate, SameStructure) {
-  StringRef ModuleString = R"(
-                          define i32 @f(i32 %a, i32 %b) {
-                          bb0:
-                             %0 = add i32 %a, %b
-                             %1 = sub i32 %b, %a
-                             ret i32 0
-                          bb1:
-                             %2 = add i32 %a, %b
-                             %3 = sub i32 %b, %a
-                             ret i32 0
-                          })";
-  LLVMContext Context;
-  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
-
-  std::vector<IRInstructionData *> InstrList;
-  std::vector<unsigned> UnsignedVec;
-
-  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
-  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
-  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
-  getVectors(*M, Mapper, InstrList, UnsignedVec);
-
-  // Check to make sure that we have a long enough region.
-  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(6));
-  // Check that the instructions were added correctly to both vectors.
-  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
-
-  ASSERT_TRUE(longSimCandCompare(InstrList, true));
-}
-
-// Checks that the same structure is recognized between two candidates. While
-// the input names are reversed, they still perform the same overall operation.
-TEST(IRSimilarityCandidate, DifferentNameSameStructure) {
-  StringRef ModuleString = R"(
-                          define i32 @f(i32 %a, i32 %b) {
-                          bb0:
-                             %0 = add i32 %a, %b
-                             %1 = add i32 %b, %a
-                             ret i32 0
-                          bb1:
-                             %2 = add i32 %b, %a
-                             %3 = add i32 %a, %b
-                             ret i32 0
-                          })";
-  LLVMContext Context;
-  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
-
-  std::vector<IRInstructionData *> InstrList;
-  std::vector<unsigned> UnsignedVec;
-
-  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
-  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
-  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
-  getVectors(*M, Mapper, InstrList, UnsignedVec);
-
-  // Check to make sure that we have a long enough region.
-  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(6));
-  // Check that the instructions were added correctly to both vectors.
-  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
-
-  ASSERT_TRUE(longSimCandCompare(InstrList, true));
 }
