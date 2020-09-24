@@ -253,7 +253,14 @@ inline bool operator!=(const Array &L, const Array &R) { return !(L == R); }
 /// === Converting JSON values to C++ types ===
 ///
 /// The convention is to have a deserializer function findable via ADL:
-///     fromJSON(const json::Value&, T&)->bool
+///     fromJSON(const json::Value&, T&, Path) -> bool
+///
+/// The return value indicates overall success, and Path is used for precise
+/// error reporting. (The Path::Root passed in at the top level fromJSON call
+/// captures any nested error and can render it in context).
+/// If conversion fails, fromJSON calls Path::report() and immediately returns.
+/// This ensures that the first fatal error survives.
+///
 /// Deserializers are provided for:
 ///   - bool
 ///   - int and int64_t
@@ -636,79 +643,90 @@ public:
 
 // Standard deserializers are provided for primitive types.
 // See comments on Value.
-inline bool fromJSON(const Value &E, std::string &Out) {
+inline bool fromJSON(const Value &E, std::string &Out, Path P) {
   if (auto S = E.getAsString()) {
     Out = std::string(*S);
     return true;
   }
+  P.report("expected string");
   return false;
 }
-inline bool fromJSON(const Value &E, int &Out) {
+inline bool fromJSON(const Value &E, int &Out, Path P) {
   if (auto S = E.getAsInteger()) {
     Out = *S;
     return true;
   }
+  P.report("expected integer");
   return false;
 }
-inline bool fromJSON(const Value &E, int64_t &Out) {
+inline bool fromJSON(const Value &E, int64_t &Out, Path P) {
   if (auto S = E.getAsInteger()) {
     Out = *S;
     return true;
   }
+  P.report("expected integer");
   return false;
 }
-inline bool fromJSON(const Value &E, double &Out) {
+inline bool fromJSON(const Value &E, double &Out, Path P) {
   if (auto S = E.getAsNumber()) {
     Out = *S;
     return true;
   }
+  P.report("expected number");
   return false;
 }
-inline bool fromJSON(const Value &E, bool &Out) {
+inline bool fromJSON(const Value &E, bool &Out, Path P) {
   if (auto S = E.getAsBoolean()) {
     Out = *S;
     return true;
   }
+  P.report("expected boolean");
   return false;
 }
-inline bool fromJSON(const Value &E, std::nullptr_t &Out) {
+inline bool fromJSON(const Value &E, std::nullptr_t &Out, Path P) {
   if (auto S = E.getAsNull()) {
     Out = *S;
     return true;
   }
+  P.report("expected null");
   return false;
 }
-template <typename T> bool fromJSON(const Value &E, llvm::Optional<T> &Out) {
+template <typename T>
+bool fromJSON(const Value &E, llvm::Optional<T> &Out, Path P) {
   if (E.getAsNull()) {
     Out = llvm::None;
     return true;
   }
   T Result;
-  if (!fromJSON(E, Result))
+  if (!fromJSON(E, Result, P))
     return false;
   Out = std::move(Result);
   return true;
 }
-template <typename T> bool fromJSON(const Value &E, std::vector<T> &Out) {
+template <typename T>
+bool fromJSON(const Value &E, std::vector<T> &Out, Path P) {
   if (auto *A = E.getAsArray()) {
     Out.clear();
     Out.resize(A->size());
     for (size_t I = 0; I < A->size(); ++I)
-      if (!fromJSON((*A)[I], Out[I]))
+      if (!fromJSON((*A)[I], Out[I], P.index(I)))
         return false;
     return true;
   }
+  P.report("expected array");
   return false;
 }
 template <typename T>
-bool fromJSON(const Value &E, std::map<std::string, T> &Out) {
+bool fromJSON(const Value &E, std::map<std::string, T> &Out, Path P) {
   if (auto *O = E.getAsObject()) {
     Out.clear();
     for (const auto &KV : *O)
-      if (!fromJSON(KV.second, Out[std::string(llvm::StringRef(KV.first))]))
+      if (!fromJSON(KV.second, Out[std::string(llvm::StringRef(KV.first))],
+                    P.field(KV.first)))
         return false;
     return true;
   }
+  P.report("expected object");
   return false;
 }
 
@@ -721,42 +739,50 @@ template <typename T> Value toJSON(const llvm::Optional<T> &Opt) {
 ///
 /// Example:
 /// \code
-///   bool fromJSON(const Value &E, MyStruct &R) {
-///     ObjectMapper O(E);
+///   bool fromJSON(const Value &E, MyStruct &R, Path P) {
+///     ObjectMapper O(E, P);
 ///     if (!O || !O.map("mandatory_field", R.MandatoryField))
-///       return false;
+///       return false; // error details are already reported
 ///     O.map("optional_field", R.OptionalField);
 ///     return true;
 ///   }
 /// \endcode
 class ObjectMapper {
 public:
-  ObjectMapper(const Value &E) : O(E.getAsObject()) {}
+  /// If O is not an object, this mapper is invalid and an error is reported.
+  ObjectMapper(const Value &E, Path P) : O(E.getAsObject()), P(P) {
+    if (!O)
+      P.report("expected object");
+  }
 
   /// True if the expression is an object.
   /// Must be checked before calling map().
-  operator bool() { return O; }
+  operator bool() const { return O; }
 
-  /// Maps a property to a field, if it exists.
-  template <typename T> bool map(StringRef Prop, T &Out) {
+  /// Maps a property to a field.
+  /// If the property is missing or invalid, reports an error.
+  template <typename T> bool map(StringLiteral Prop, T &Out) {
     assert(*this && "Must check this is an object before calling map()");
     if (const Value *E = O->get(Prop))
-      return fromJSON(*E, Out);
+      return fromJSON(*E, Out, P.field(Prop));
+    P.field(Prop).report("missing value");
     return false;
   }
 
   /// Maps a property to a field, if it exists.
+  /// If the property exists and is invalid, reports an error.
   /// (Optional requires special handling, because missing keys are OK).
-  template <typename T> bool map(StringRef Prop, llvm::Optional<T> &Out) {
+  template <typename T> bool map(StringLiteral Prop, llvm::Optional<T> &Out) {
     assert(*this && "Must check this is an object before calling map()");
     if (const Value *E = O->get(Prop))
-      return fromJSON(*E, Out);
+      return fromJSON(*E, Out, P.field(Prop));
     Out = llvm::None;
     return true;
   }
 
 private:
   const Object *O;
+  Path P;
 };
 
 /// Parses the provided JSON source, or returns a ParseError.
@@ -779,6 +805,20 @@ public:
     return llvm::inconvertibleErrorCode();
   }
 };
+
+/// Version of parse() that converts the parsed value to the type T.
+/// RootName describes the root object and is used in error messages.
+template <typename T>
+Expected<T> parse(const llvm::StringRef &JSON, const char *RootName = "") {
+  auto V = parse(JSON);
+  if (!V)
+    return V.takeError();
+  Path::Root R(RootName);
+  T Result;
+  if (fromJSON(*V, Result, R))
+    return std::move(Result);
+  return R.getError();
+}
 
 /// json::OStream allows writing well-formed JSON without materializing
 /// all structures as json::Value ahead of time.

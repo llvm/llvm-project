@@ -104,7 +104,9 @@ Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
     Ctx.emitError("Unable to parse JSON Value as spec (" + Message + "): " + S);
     return None;
   };
-  json::ObjectMapper Mapper(Value);
+  // FIXME: accept a Path as a parameter, and use it for error reporting.
+  json::Path::Root Root("tensor_spec");
+  json::ObjectMapper Mapper(Value, Root);
   if (!Mapper)
     return EmitError("Value is not a dict");
 
