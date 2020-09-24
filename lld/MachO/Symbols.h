@@ -14,6 +14,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace lld {
 namespace macho {
@@ -36,6 +37,7 @@ public:
   enum Kind {
     DefinedKind,
     UndefinedKind,
+    CommonKind,
     DylibKind,
     LazyKind,
     DSOHandleKind,
@@ -115,6 +117,35 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == UndefinedKind; }
 };
 
+// On Unix, it is traditionally allowed to write variable definitions without
+// initialization expressions (such as "int foo;") to header files. These are
+// called tentative definitions.
+//
+// Using tentative definitions is usually considered a bad practice; you should
+// write only declarations (such as "extern int foo;") to header files.
+// Nevertheless, the linker and the compiler have to do something to support
+// bad code by allowing duplicate definitions for this particular case.
+//
+// The compiler creates common symbols when it sees tentative definitions.
+// (You can suppress this behavior and let the compiler create a regular
+// defined symbol by passing -fno-common.) When linking the final binary, if
+// there are remaining common symbols after name resolution is complete, the
+// linker converts them to regular defined symbols in a __common section.
+class CommonSymbol : public Symbol {
+public:
+  CommonSymbol(StringRefZ name, InputFile *file, uint64_t size, uint32_t align)
+      : Symbol(CommonKind, name), file(file), size(size),
+        align(align != 1 ? align : llvm::PowerOf2Ceil(size)) {
+    // TODO: cap maximum alignment
+  }
+
+  static bool classof(const Symbol *s) { return s->kind() == CommonKind; }
+
+  InputFile *const file;
+  const uint64_t size;
+  const uint32_t align;
+};
+
 class DylibSymbol : public Symbol {
 public:
   DylibSymbol(DylibFile *file, StringRefZ name, bool isWeakDef, bool isTlv)
@@ -183,8 +214,10 @@ public:
 union SymbolUnion {
   alignas(Defined) char a[sizeof(Defined)];
   alignas(Undefined) char b[sizeof(Undefined)];
-  alignas(DylibSymbol) char c[sizeof(DylibSymbol)];
-  alignas(LazySymbol) char d[sizeof(LazySymbol)];
+  alignas(CommonSymbol) char c[sizeof(CommonSymbol)];
+  alignas(DylibSymbol) char d[sizeof(DylibSymbol)];
+  alignas(LazySymbol) char e[sizeof(LazySymbol)];
+  alignas(DSOHandle) char f[sizeof(DSOHandle)];
 };
 
 template <typename T, typename... ArgT>
