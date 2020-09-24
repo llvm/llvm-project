@@ -378,26 +378,100 @@ ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
   if (MI.getDesc().getNumDefs() > 1)
    return SR_Unsuitable;
 
-  // FIXME: This handles only simple addressing mode.
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, TRI))
+  if (!MI.mayLoadOrStore() || MI.isPredicable())
     return SR_Unsuitable;
+  auto AM = TII->getAddrModeFromMemoryOp(MI, TRI);
+  if (!AM)
+    return SR_Unsuitable;
+  auto AddrMode = *AM;
+  const Register BaseReg = AddrMode.BaseReg, ScaledReg = AddrMode.ScaledReg;
+  int64_t Displacement = AddrMode.Displacement;
 
   // We need the base of the memory instruction to be same as the register
   // where the null check is performed (i.e. PointerReg).
-  if (!BaseOp->isReg() || BaseOp->getReg() != PointerReg)
+  if (BaseReg != PointerReg && ScaledReg != PointerReg)
+    return SR_Unsuitable;
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  unsigned PointerRegSizeInBits = TRI->getRegSizeInBits(PointerReg, MRI);
+  // Bail out of the sizes of BaseReg, ScaledReg and PointerReg are not the
+  // same.
+  if ((BaseReg &&
+       TRI->getRegSizeInBits(BaseReg, MRI) != PointerRegSizeInBits) ||
+      (ScaledReg &&
+       TRI->getRegSizeInBits(ScaledReg, MRI) != PointerRegSizeInBits))
     return SR_Unsuitable;
 
-  // Scalable offsets are a part of scalable vectors (SVE for AArch64). That
-  // target is in-practice unsupported for ImplicitNullChecks.
-  if (OffsetIsScalable)
-    return SR_Unsuitable;
+  // Returns true if RegUsedInAddr is used for calculating the displacement
+  // depending on addressing mode. Also calculates the Displacement.
+  auto CalculateDisplacementFromAddrMode = [&](Register RegUsedInAddr,
+                                               int64_t Multiplier) {
+    // The register can be NoRegister, which is defined as zero for all targets.
+    // Consider instruction of interest as `movq 8(,%rdi,8), %rax`. Here the
+    // ScaledReg is %rdi, while there is no BaseReg.
+    if (!RegUsedInAddr)
+      return false;
+    assert(Multiplier && "expected to be non-zero!");
+    MachineInstr *ModifyingMI = nullptr;
+    for (auto It = std::next(MachineBasicBlock::const_reverse_iterator(&MI));
+         It != MI.getParent()->rend(); It++) {
+      const MachineInstr *CurrMI = &*It;
+      if (CurrMI->modifiesRegister(RegUsedInAddr, TRI)) {
+        ModifyingMI = const_cast<MachineInstr *>(CurrMI);
+        break;
+      }
+    }
+    if (!ModifyingMI)
+      return false;
+    // Check for the const value defined in register by ModifyingMI. This means
+    // all other previous values for that register has been invalidated.
+    int64_t ImmVal;
+    if (!TII->getConstValDefinedInReg(*ModifyingMI, RegUsedInAddr, ImmVal))
+      return false;
+    // Calculate the reg size in bits, since this is needed for bailing out in
+    // case of overflow.
+    int32_t RegSizeInBits = TRI->getRegSizeInBits(RegUsedInAddr, MRI);
+    APInt ImmValC(RegSizeInBits, ImmVal, true /*IsSigned*/);
+    APInt MultiplierC(RegSizeInBits, Multiplier);
+    assert(MultiplierC.isStrictlyPositive() &&
+           "expected to be a positive value!");
+    bool IsOverflow;
+    // Sign of the product depends on the sign of the ImmVal, since Multiplier
+    // is always positive.
+    APInt Product = ImmValC.smul_ov(MultiplierC, IsOverflow);
+    if (IsOverflow)
+      return false;
+    APInt DisplacementC(64, Displacement, true /*isSigned*/);
+    DisplacementC = Product.sadd_ov(DisplacementC, IsOverflow);
+    if (IsOverflow)
+      return false;
 
-  if (!MI.mayLoadOrStore() || MI.isPredicable())
+    // We only handle diplacements upto 64 bits wide.
+    if (DisplacementC.getActiveBits() > 64)
+      return false;
+    Displacement = DisplacementC.getSExtValue();
+    return true;
+  };
+
+  // If a register used in the address is constant, fold it's effect into the
+  // displacement for ease of analysis.
+  bool BaseRegIsConstVal = false, ScaledRegIsConstVal = false;
+  if (CalculateDisplacementFromAddrMode(BaseReg, 1))
+    BaseRegIsConstVal = true;
+  if (CalculateDisplacementFromAddrMode(ScaledReg, AddrMode.Scale))
+    ScaledRegIsConstVal = true;
+
+  // The register which is not null checked should be part of the Displacement
+  // calculation, otherwise we do not know whether the Displacement is made up
+  // by some symbolic values.
+  // This matters because we do not want to incorrectly assume that load from
+  // falls in the zeroth faulting page in the "sane offset check" below.
+  if ((BaseReg && BaseReg != PointerReg && !BaseRegIsConstVal) ||
+      (ScaledReg && ScaledReg != PointerReg && !ScaledRegIsConstVal))
     return SR_Unsuitable;
 
   // We want the mem access to be issued at a sane offset from PointerReg,
   // so that if PointerReg is null then the access reliably page faults.
-  if (!(-PageSize < Offset && Offset < PageSize))
+  if (!(-PageSize < Displacement && Displacement < PageSize))
     return SR_Unsuitable;
 
   // Finally, check whether the current memory access aliases with previous one.
