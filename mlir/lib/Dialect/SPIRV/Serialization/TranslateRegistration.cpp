@@ -38,7 +38,7 @@ using namespace mlir;
 // `inputFilename` and returns a module containing the SPIR-V module.
 static OwningModuleRef deserializeModule(const llvm::MemoryBuffer *input,
                                          MLIRContext *context) {
-  Builder builder(context);
+  context->loadDialect<spirv::SPIRVDialect>();
 
   // Make sure the input stream can be treated as a stream of SPIR-V words
   auto start = input->getBufferStart();
