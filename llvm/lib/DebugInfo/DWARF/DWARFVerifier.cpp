@@ -172,6 +172,15 @@ unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit) {
       NumUnitErrors += verifyDebugInfoForm(Die, AttrValue);
     }
 
+    if (Die.hasChildren()) {
+      if (Die.getFirstChild().isValid() &&
+          Die.getFirstChild().getTag() == DW_TAG_null) {
+        warn() << dwarf::TagString(Die.getTag())
+               << " has DW_CHILDREN_yes but DIE has no children: ";
+        Die.dump(OS);
+      }
+    }
+
     NumUnitErrors += verifyDebugInfoCallSite(Die);
   }
 
