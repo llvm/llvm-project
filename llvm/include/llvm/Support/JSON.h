@@ -624,6 +624,14 @@ public:
 
   /// Returns the last error reported, or else a generic error.
   Error getError() const;
+  /// Print the root value with the error shown inline as a comment.
+  /// Unrelated parts of the value are elided for brevity, e.g.
+  ///   {
+  ///      "id": 42,
+  ///      "name": /* expected string */ null,
+  ///      "properties": { ... }
+  ///   }
+  void printErrorContext(const Value &, llvm::raw_ostream &) const;
 };
 
 // Standard deserializers are provided for primitive types.
