@@ -100,7 +100,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -142,15 +141,6 @@ using namespace clang::serialization;
 using namespace clang::serialization::reader;
 using llvm::BitstreamCursor;
 using llvm::RoundingMode;
-
-#define DEBUG_TYPE "modules"
-
-ALWAYS_ENABLED_STATISTIC(NumTryLoadModule, "Number of times tried to load a "
-                                           "module. Includes failed attempts "
-                                           "and using cached results.");
-ALWAYS_ENABLED_STATISTIC(NumReadASTCore,
-                         "Number of ReadASTCore() invocations. Includes only "
-                         "actual AST core parsing and ignores cached results.");
 
 //===----------------------------------------------------------------------===//
 // ChainedASTReaderListener implementation
@@ -4213,7 +4203,6 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
                                             SourceLocation ImportLoc,
                                             unsigned ClientLoadCapabilities,
                                             SmallVectorImpl<ImportedSubmodule> *Imported) {
-  ++NumTryLoadModule;
   llvm::SaveAndRestore<SourceLocation>
     SetCurImportLocRAII(CurrentImportLoc, ImportLoc);
 
@@ -4563,7 +4552,6 @@ ASTReader::ReadASTCore(StringRef FileName,
     return Failure;
   }
 
-  ++NumReadASTCore;
   // This is used for compatibility with older PCH formats.
   bool HaveReadControlBlock = false;
   while (true) {
