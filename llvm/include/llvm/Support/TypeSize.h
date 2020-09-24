@@ -157,23 +157,54 @@ public:
   // Scalable vector types with the same minimum size as a fixed size type are
   // not guaranteed to be the same size at runtime, so they are never
   // considered to be equal.
-  friend bool operator==(const TypeSize &LHS, const TypeSize &RHS) {
-    return LHS.MinSize == RHS.MinSize && LHS.IsScalable == RHS.IsScalable;
+  bool operator==(const TypeSize &RHS) const {
+    return MinSize == RHS.MinSize && IsScalable == RHS.IsScalable;
   }
 
-  friend bool operator!=(const TypeSize &LHS, const TypeSize &RHS) {
-    return !(LHS == RHS);
-  }
+  bool operator!=(const TypeSize &RHS) const { return !(*this == RHS); }
 
-  // For many cases, size ordering between scalable and fixed size types cannot
+  // For some cases, size ordering between scalable and fixed size types cannot
   // be determined at compile time, so such comparisons aren't allowed.
   //
   // e.g. <vscale x 2 x i16> could be bigger than <4 x i32> with a runtime
   // vscale >= 5, equal sized with a vscale of 4, and smaller with
   // a vscale <= 3.
   //
-  // If the scalable flags match, just perform the requested comparison
-  // between the minimum sizes.
+  // All the functions below make use of the fact vscale is always >= 1, which
+  // means that <vscale x 4 x i32> is guaranteed to be >= <4 x i32>, etc.
+
+  static bool isKnownLT(const TypeSize &LHS, const TypeSize &RHS) {
+    if (!LHS.IsScalable || RHS.IsScalable)
+      return LHS.MinSize < RHS.MinSize;
+
+    // LHS.IsScalable = true, RHS.IsScalable = false
+    return false;
+  }
+
+  static bool isKnownGT(const TypeSize &LHS, const TypeSize &RHS) {
+    if (LHS.IsScalable || !RHS.IsScalable)
+      return LHS.MinSize > RHS.MinSize;
+
+    // LHS.IsScalable = false, RHS.IsScalable = true
+    return false;
+  }
+
+  static bool isKnownLE(const TypeSize &LHS, const TypeSize &RHS) {
+    if (!LHS.IsScalable || RHS.IsScalable)
+      return LHS.MinSize <= RHS.MinSize;
+
+    // LHS.IsScalable = true, RHS.IsScalable = false
+    return false;
+  }
+
+  static bool isKnownGE(const TypeSize &LHS, const TypeSize &RHS) {
+    if (LHS.IsScalable || !RHS.IsScalable)
+      return LHS.MinSize >= RHS.MinSize;
+
+    // LHS.IsScalable = false, RHS.IsScalable = true
+    return false;
+  }
+
   friend bool operator<(const TypeSize &LHS, const TypeSize &RHS) {
     assert(LHS.IsScalable == RHS.IsScalable &&
            "Ordering comparison of scalable and fixed types");
