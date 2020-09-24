@@ -568,6 +568,28 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
     }
   }
 
+  // Could inserting the [W|D]LSTP cause some unintended affects? In a perfect
+  // world the [w|d]lstp instruction would be last instruction in the preheader
+  // and so it would only affect instructions within the loop body. But due to
+  // scheduling, and/or the logic in this pass (above), the insertion point can
+  // be moved earlier. So if the Loop Start isn't the last instruction in the
+  // preheader, and if the initial element count is smaller than the vector
+  // width, the Loop Start instruction will immediately generate one or more
+  // false lane mask which can, incorrectly, affect the proceeding MVE
+  // instructions in the preheader.
+  auto cannotInsertWDLSTPBetween = [](MachineInstr *Begin,
+                                      MachineInstr *End) {
+    auto I = MachineBasicBlock::iterator(Begin);
+    auto E = MachineBasicBlock::iterator(End);
+    for (; I != E; ++I)
+      if (shouldInspect(*I))
+        return true;
+    return false;
+  };
+
+  if (cannotInsertWDLSTPBetween(StartInsertPt, &InsertBB->back()))
+    return false;
+
   // Especially in the case of while loops, InsertBB may not be the
   // preheader, so we need to check that the register isn't redefined
   // before entering the loop.
