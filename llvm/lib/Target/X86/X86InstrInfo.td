@@ -3092,6 +3092,8 @@ include "X86InstrSVM.td"
 include "X86InstrTSX.td"
 include "X86InstrSGX.td"
 
+include "X86InstrTDX.td"
+
 // AMX instructions
 include "X86InstrAMX.td"
 
