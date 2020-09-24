@@ -597,11 +597,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalarOrElt(0, s8); // Worst case, we need at least s8.
 
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
-      .legalIf([=](const LegalityQuery &Query) {
-        const LLT &VecTy = Query.Types[0];
-        // TODO: Support s8 and s16
-        return VecTy == v2s32 || VecTy == v4s32 || VecTy == v2s64;
-      });
+      .legalIf(typeInSet(0, {v8s16, v2s32, v4s32, v2s64}));
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
       .legalFor({{v8s8, s8},
