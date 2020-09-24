@@ -954,24 +954,54 @@ namespace llvm {
       return getSizeInBits().isByteSized();
     }
 
+    /// Return true if we know at compile time this has more bits than VT.
+    bool knownBitsGT(MVT VT) const {
+      return TypeSize::isKnownGT(getSizeInBits(), VT.getSizeInBits());
+    }
+
+    /// Return true if we know at compile time this has more than or the same
+    /// bits as VT.
+    bool knownBitsGE(MVT VT) const {
+      return TypeSize::isKnownGE(getSizeInBits(), VT.getSizeInBits());
+    }
+
+    /// Return true if we know at compile time this has fewer bits than VT.
+    bool knownBitsLT(MVT VT) const {
+      return TypeSize::isKnownLT(getSizeInBits(), VT.getSizeInBits());
+    }
+
+    /// Return true if we know at compile time this has fewer than or the same
+    /// bits as VT.
+    bool knownBitsLE(MVT VT) const {
+      return TypeSize::isKnownLE(getSizeInBits(), VT.getSizeInBits());
+    }
+
     /// Return true if this has more bits than VT.
     bool bitsGT(MVT VT) const {
-      return getSizeInBits() > VT.getSizeInBits();
+      assert(isScalableVector() == VT.isScalableVector() &&
+             "Comparison between scalable and fixed types");
+      return knownBitsGT(VT);
     }
 
     /// Return true if this has no less bits than VT.
     bool bitsGE(MVT VT) const {
-      return getSizeInBits() >= VT.getSizeInBits();
+      assert(isScalableVector() == VT.isScalableVector() &&
+             "Comparison between scalable and fixed types");
+      return knownBitsGE(VT);
     }
 
     /// Return true if this has less bits than VT.
     bool bitsLT(MVT VT) const {
-      return getSizeInBits() < VT.getSizeInBits();
+      assert(isScalableVector() == VT.isScalableVector() &&
+             "Comparison between scalable and fixed types");
+      return knownBitsLT(VT);
     }
 
     /// Return true if this has no more bits than VT.
     bool bitsLE(MVT VT) const {
-      return getSizeInBits() <= VT.getSizeInBits();
+      assert(isScalableVector() == VT.isScalableVector() &&
+             "Comparison between scalable and fixed types");
+      return knownBitsLE(VT);
     }
 
     static MVT getFloatingPointVT(unsigned BitWidth) {
