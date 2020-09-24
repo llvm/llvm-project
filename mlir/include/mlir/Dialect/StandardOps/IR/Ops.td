@@ -1831,7 +1831,8 @@ def IndexCastOp : CastOp<"index_cast">, Arguments<(ins AnyType:$in)> {
 def LoadOp : Std_Op<"load",
      [TypesMatchWith<"result type matches element type of 'memref'",
                      "memref", "result",
-                     "$_self.cast<MemRefType>().getElementType()">]> {
+                     "$_self.cast<MemRefType>().getElementType()">,
+                     MemRefsNormalizable]> {
   let summary = "load operation";
   let description = [{
     The `load` op reads an element from a memref specified by an index list. The
@@ -2580,7 +2581,8 @@ def SqrtOp : FloatUnaryOp<"sqrt"> {
 def StoreOp : Std_Op<"store",
      [TypesMatchWith<"type of 'value' matches element type of 'memref'",
                      "memref", "value",
-                     "$_self.cast<MemRefType>().getElementType()">]> {
+                     "$_self.cast<MemRefType>().getElementType()">,
+                     MemRefsNormalizable]> {
   let summary = "store operation";
   let description = [{
     Store a value to a memref location given by indices. The value stored should
