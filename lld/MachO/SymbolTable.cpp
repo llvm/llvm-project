@@ -74,6 +74,26 @@ Symbol *SymbolTable::addUndefined(StringRef name) {
   return s;
 }
 
+Symbol *SymbolTable::addCommon(StringRef name, InputFile *file, uint64_t size,
+                               uint32_t align) {
+  Symbol *s;
+  bool wasInserted;
+  std::tie(s, wasInserted) = insert(name);
+
+  if (!wasInserted) {
+    if (auto *common = dyn_cast<CommonSymbol>(s)) {
+      if (size < common->size)
+        return s;
+    } else if (!isa<Undefined>(s)) {
+      error("TODO: implement common symbol resolution with other symbol kinds");
+      return s;
+    }
+  }
+
+  replaceSymbol<CommonSymbol>(s, name, file, size, align);
+  return s;
+}
+
 Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file, bool isWeakDef,
                               bool isTlv) {
   Symbol *s;
