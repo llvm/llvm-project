@@ -187,7 +187,8 @@ private:
     T Result;
     llvm::json::Path::Root Root;
     if (!fromJSON(Raw, Result, Root)) {
-      elog("Failed to decode {0} {1}", PayloadName, PayloadKind);
+      elog("Failed to decode {0} {1}: {2}", PayloadName, PayloadKind,
+           Root.getError());
       // Dump the relevant parts of the broken message.
       std::string Context;
       llvm::raw_string_ostream OS(Context);
@@ -195,7 +196,8 @@ private:
       vlog("{0}", OS.str());
       // Report the error (e.g. to the client).
       return llvm::make_error<LSPError>(
-          llvm::formatv("failed to decode {0} {1}", PayloadName, PayloadKind),
+          llvm::formatv("failed to decode {0} {1}: {2}", PayloadName,
+                        PayloadKind, fmt_consume(Root.getError())),
           ErrorCode::InvalidParams);
     }
     return std::move(Result);
