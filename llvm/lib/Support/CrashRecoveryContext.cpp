@@ -375,9 +375,10 @@ static void CrashRecoverySignalHandler(int Signal) {
   sigaddset(&SigMask, Signal);
   sigprocmask(SIG_UNBLOCK, &SigMask, nullptr);
 
-  // As per convention, -2 indicates a crash or timeout as opposed to failure to
-  // execute (see llvm/include/llvm/Support/Program.h)
-  int RetCode = -2;
+  // Return the same error code as if the program crashed, as mentioned in the
+  // section "Exit Status for Commands":
+  // https://pubs.opengroup.org/onlinepubs/9699919799/xrat/V4_xcu_chap02.html
+  int RetCode = 128 + Signal;
 
   // Don't consider a broken pipe as a crash (see clang/lib/Driver/Driver.cpp)
   if (Signal == SIGPIPE)
