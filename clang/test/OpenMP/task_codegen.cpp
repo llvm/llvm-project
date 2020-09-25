@@ -389,4 +389,51 @@ struct S1 {
 // CHECK-LABEL: taskinit
 // CHECK: call i8* @__kmpc_omp_task_alloc(
 
+#ifdef UNTIEDRT
+// FIXME: There is a buffer overflow in IrBuilder mode.
+template <typename T = void>
+void foobar() {
+  float a;
+#pragma omp parallel
+#pragma omp single
+  {
+    double b;
+#pragma omp task
+    a += b;
+  }
+}
+
+// UNTIEDRT: define void @{{.+}}xxxx{{.+}}()
+void xxxx() {
+  // UNTIEDRT: call void @{{.+}}foobar{{.+}}()
+  foobar();
+}
+// UNTIEDRT: define {{.*}}void @{{.+}}foobar{{.+}}()
+// UNTIEDRT: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, float*)* [[PAR_OUTLINED:@.+]] to void (i32*, i32*, ...)*), float* %{{.+}})
+
+// UNTIEDRT: define internal void [[PAR_OUTLINED]](i32* {{.+}}, i32* {{.+}}, float* {{.*}}[[A_ADDR:%.+]])
+// UNTIEDRT: [[A_ADDR_REF:%.+]] = alloca float*,
+// UNTIEDRT: [[B_ADDR:%.+]] = alloca double,
+// UNTIEDRT: [[A_ADDR:%.+]] = load float*, float** [[A_ADDR_REF]],
+
+// Copy `a` to the list of shared variables
+// UNTIEDRT: [[SHARED_A:%.+]] = getelementptr inbounds %{{.+}}, [[SHAREDS_TY:%.+]]* [[SHAREDS:%.+]], i32 0, i32 0
+// UNTIEDRT: store float* [[A_ADDR]], float** [[SHARED_A]],
+
+// Allocate task.
+// UNTIEDRT: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* {{.+}}, i32 {{.+}}, i32 1, i64 48, i64 8, i32 (i32, i8*)* bitcast (i32 (i32, [[T_TASK_TY:%.+]]*)* @{{.+}} to i32 (i32, i8*)*))
+// UNTIEDRT: [[TD:%.+]] = bitcast i8* [[RES]] to [[T_TASK_TY]]*
+// Copy shared vars.
+// UNTIEDRT: [[TD_TASK:%.+]] = getelementptr inbounds [[T_TASK_TY]], [[T_TASK_TY]]* [[TD]], i32 0, i32 0
+// UNTIEDRT: [[TD_TASK_SHARES_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[TD_TASK]], i32 0, i32 0
+// UNTIEDRT: [[TD_TASK_SHARES:%.+]] = load i8*, i8** [[TD_TASK_SHARES_REF]],
+// UNTIEDRT: [[SHAREDS_BC:%.+]] = bitcast [[SHAREDS_TY]]* [[SHAREDS]] to i8*
+// UNTIEDRT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TD_TASK_SHARES]], i8* align 8 [[SHAREDS_BC]], i64 8, i1 false)
+
+// Copy firstprivate value of `b`.
+// UNTIEDRT: [[TD_TASK_PRIVS:%.+]] = getelementptr inbounds [[T_TASK_TY]], [[T_TASK_TY]]* [[TD]], i32 0, i32 1
+// UNTIEDRT: [[TD_TASK_PRIVS_B:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[TD_TASK_PRIVS]], i32 0, i32 0
+// UNTIEDRT: [[B_VAL:%.+]] = load double, double* [[B_ADDR]],
+// UNTIEDRT: store double [[B_VAL]], double* [[TD_TASK_PRIVS_B]],
+#endif // UNTIEDRT
 #endif
