@@ -249,7 +249,7 @@ exit:
 define void @test_guard_ult_ne(i32* nocapture readonly %data, i64 %count) {
 ; CHECK-LABEL: @test_guard_ult_ne
 ; CHECK:       Loop %loop: backedge-taken count is (-1 + %count)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 3
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
 ;
 entry:
