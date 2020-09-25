@@ -15,16 +15,9 @@
 #include "SymbolMap.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/FIRBuilder.h"
+#include "flang/Lower/Todo.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
-
-#undef TODO
-#define TODO(MSG)                                                              \
-  {                                                                            \
-    mlir::emitError(converter.getCurrentLocation(), "not yet implemented")     \
-        << MSG;                                                                \
-    exit(1);                                                                   \
-  }
 
 //===----------------------------------------------------------------------===//
 // TEAM statements and constructs
