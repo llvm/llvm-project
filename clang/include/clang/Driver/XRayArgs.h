@@ -33,7 +33,7 @@ class XRayArgs {
   bool XRayIgnoreLoops = false;
   bool XRayFunctionIndex;
   int XRayFunctionGroups = 1;
-  int XRaySelectedFunctionGroup;
+  int XRaySelectedFunctionGroup = 0;
 
 public:
   /// Parses the XRay arguments from an argument list.
