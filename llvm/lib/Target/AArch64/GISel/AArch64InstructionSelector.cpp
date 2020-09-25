@@ -4881,21 +4881,22 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
 
     if (Depth == 0 && IntrinID == Intrinsic::returnaddress) {
-      if (MFReturnAddr) {
-        MIRBuilder.buildCopy({DstReg}, MFReturnAddr);
-        I.eraseFromParent();
-        return true;
+      if (!MFReturnAddr) {
+        // Insert the copy from LR/X30 into the entry block, before it can be
+        // clobbered by anything.
+        MFI.setReturnAddressIsTaken(true);
+        MFReturnAddr = getFunctionLiveInPhysReg(MF, TII, AArch64::LR,
+                                                AArch64::GPR64RegClass);
       }
 
-      MFI.setReturnAddressIsTaken(true);
+      if (STI.hasV8_3aOps()) {
+        MIRBuilder.buildInstr(AArch64::XPACI, {DstReg}, {MFReturnAddr});
+      } else {
+        MIRBuilder.buildCopy({Register(AArch64::LR)}, {MFReturnAddr});
+        MIRBuilder.buildInstr(AArch64::XPACLRI);
+        MIRBuilder.buildCopy({DstReg}, {Register(AArch64::LR)});
+      }
 
-      // Insert the copy from LR/X30 into the entry block, before it can be
-      // clobbered by anything.
-      Register LiveInLR = getFunctionLiveInPhysReg(MF, TII, AArch64::LR,
-                                                   AArch64::GPR64spRegClass);
-      MIRBuilder.buildCopy(DstReg, LiveInLR);
-
-      MFReturnAddr = LiveInLR;
       I.eraseFromParent();
       return true;
     }
@@ -4915,7 +4916,16 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
       MIRBuilder.buildCopy({DstReg}, {FrameAddr});
     else {
       MFI.setReturnAddressIsTaken(true);
-      MIRBuilder.buildInstr(AArch64::LDRXui, {DstReg}, {FrameAddr}).addImm(1);
+
+      if (STI.hasV8_3aOps()) {
+        Register TmpReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+        MIRBuilder.buildInstr(AArch64::LDRXui, {TmpReg}, {FrameAddr}).addImm(1);
+        MIRBuilder.buildInstr(AArch64::XPACI, {DstReg}, {TmpReg});
+      } else {
+        MIRBuilder.buildInstr(AArch64::LDRXui, {Register(AArch64::LR)}, {FrameAddr}).addImm(1);
+        MIRBuilder.buildInstr(AArch64::XPACLRI);
+        MIRBuilder.buildCopy({DstReg}, {Register(AArch64::LR)});
+      }
     }
 
     I.eraseFromParent();
