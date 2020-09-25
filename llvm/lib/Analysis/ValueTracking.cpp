@@ -4871,7 +4871,7 @@ bool llvm::canCreatePoison(const Operator *Op) {
   return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/true);
 }
 
-static bool programUndefinedIfUndefOrPoison(const Instruction *Inst,
+static bool programUndefinedIfUndefOrPoison(const Value *V,
                                             bool PoisonOnly);
 
 static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
@@ -4931,10 +4931,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
       return true;
   }
 
-  if (auto *I = dyn_cast<Instruction>(V)) {
-    if (programUndefinedIfUndefOrPoison(I, PoisonOnly))
-      return true;
-  }
+  if (programUndefinedIfUndefOrPoison(V, PoisonOnly))
+    return true;
 
   // CxtI may be null or a cloned instruction.
   if (!CtxI || !CtxI->getParent() || !DT)
@@ -5161,7 +5159,7 @@ bool llvm::mustTriggerUB(const Instruction *I,
   return false;
 }
 
-static bool programUndefinedIfUndefOrPoison(const Instruction *Inst,
+static bool programUndefinedIfUndefOrPoison(const Value *V,
                                             bool PoisonOnly) {
   // We currently only look for uses of values within the same basic
   // block, as that makes it easier to guarantee that the uses will be
@@ -5170,9 +5168,20 @@ static bool programUndefinedIfUndefOrPoison(const Instruction *Inst,
   // FIXME: Expand this to consider uses beyond the same basic block. To do
   // this, look out for the distinction between post-dominance and strong
   // post-dominance.
-  const BasicBlock *BB = Inst->getParent();
+  const BasicBlock *BB = nullptr;
+  BasicBlock::const_iterator Begin;
+  if (const auto *Inst = dyn_cast<Instruction>(V)) {
+    BB = Inst->getParent();
+    Begin = Inst->getIterator();
+    Begin++;
+  } else if (const auto *Arg = dyn_cast<Argument>(V)) {
+    BB = &Arg->getParent()->getEntryBlock();
+    Begin = BB->begin();
+  } else {
+    return false;
+  }
 
-  BasicBlock::const_iterator Begin = Inst->getIterator(), End = BB->end();
+  BasicBlock::const_iterator End = BB->end();
 
   if (!PoisonOnly) {
     // Be conservative & just check whether a value is passed to a noundef
@@ -5185,7 +5194,7 @@ static bool programUndefinedIfUndefOrPoison(const Instruction *Inst,
       if (const auto *CB = dyn_cast<CallBase>(&I)) {
         for (unsigned i = 0; i < CB->arg_size(); ++i) {
           if (CB->paramHasAttr(i, Attribute::NoUndef) &&
-              CB->getArgOperand(i) == Inst)
+              CB->getArgOperand(i) == V)
             return true;
         }
       }
@@ -5199,27 +5208,26 @@ static bool programUndefinedIfUndefOrPoison(const Instruction *Inst,
   // does.
   SmallSet<const Value *, 16> YieldsPoison;
   SmallSet<const BasicBlock *, 4> Visited;
-  YieldsPoison.insert(Inst);
-  Visited.insert(Inst->getParent());
+
+  YieldsPoison.insert(V);
+  auto Propagate = [&](const User *User) {
+    if (propagatesPoison(cast<Operator>(User)))
+      YieldsPoison.insert(User);
+  };
+  for_each(V->users(), Propagate);
+  Visited.insert(BB);
 
   unsigned Iter = 0;
   while (Iter++ < MaxAnalysisRecursionDepth) {
     for (auto &I : make_range(Begin, End)) {
-      if (&I != Inst) {
-        if (mustTriggerUB(&I, YieldsPoison))
-          return true;
-        if (!isGuaranteedToTransferExecutionToSuccessor(&I))
-          return false;
-      }
+      if (mustTriggerUB(&I, YieldsPoison))
+        return true;
+      if (!isGuaranteedToTransferExecutionToSuccessor(&I))
+        return false;
 
       // Mark poison that propagates from I through uses of I.
-      if (YieldsPoison.count(&I)) {
-        for (const User *User : I.users()) {
-          const Instruction *UserI = cast<Instruction>(User);
-          if (propagatesPoison(cast<Operator>(UserI)))
-            YieldsPoison.insert(User);
-        }
-      }
+      if (YieldsPoison.count(&I))
+        for_each(I.users(), Propagate);
     }
 
     if (auto *NextBB = BB->getSingleSuccessor()) {

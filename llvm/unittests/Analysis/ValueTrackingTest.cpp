@@ -768,6 +768,16 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBePoison_exploitBranchCond) {
   }
 }
 
+TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison) {
+  parseAssembly("declare void @f(i32 noundef)"
+                "define void @test(i32 %x) {\n"
+                "  %A = bitcast i32 %x to i32\n"
+                "  call void @f(i32 noundef %x)\n"
+                "  ret void\n"
+                "}\n");
+  EXPECT_EQ(isGuaranteedNotToBeUndefOrPoison(A), true);
+}
+
 TEST(ValueTracking, canCreatePoisonOrUndef) {
   std::string AsmHead =
       "declare i32 @g(i32)\n"
