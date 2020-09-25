@@ -51,7 +51,6 @@ subdirectories =
  llvm-rc
  llvm-reduce
  llvm-rtdyld
- llvm-sim
  llvm-size
  llvm-split
  llvm-undname
