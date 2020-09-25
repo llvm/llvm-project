@@ -3121,8 +3121,11 @@ TEST_F(AArch64GISelMITest, FewerElementsInsertVectorElt) {
   CHECK: [[IMPDEF_V3S16:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
   CHECK: [[ONE_1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   CHECK: [[SUB_INSERT_7_V3S16:%[0-9]+]]:_(<3 x s16>) = G_INSERT_VECTOR_ELT [[BUILD2]]:_, [[INSERT_VAL]]:_(s16), [[ONE_1]]
+
+  CHECK: [[WIDE_CONCAT_DEAD:%[0-9]+]]:_(<24 x s16>) = G_CONCAT_VECTORS [[BUILD0]]:_(<3 x s16>), [[BUILD1]]:_(<3 x s16>), [[SUB_INSERT_7_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>)
   CHECK: [[WIDE_CONCAT:%[0-9]+]]:_(<24 x s16>) = G_CONCAT_VECTORS [[BUILD0]]:_(<3 x s16>), [[BUILD1]]:_(<3 x s16>), [[SUB_INSERT_7_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>), [[IMPDEF_V3S16]]:_(<3 x s16>)
-  CHECK: [[INSERT_V8_7_1:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[WIDE_CONCAT]]:_(<24 x s16>), 0
+  CHECK: [[INSERT_V8_7_1:%[0-9]+]]:_(<8 x s16>), %{{[0-9]+}}:_(<8 x s16>), %{{[0-9]+}}:_(<8 x s16>) = G_UNMERGE_VALUES [[WIDE_CONCAT]]:_(<24 x s16>)
+
 
   CHECK: G_STORE [[INSERT_V8_7_0]]
   CHECK: G_STORE [[INSERT_V8_7_1]]

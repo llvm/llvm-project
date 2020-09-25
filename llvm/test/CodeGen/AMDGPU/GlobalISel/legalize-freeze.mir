@@ -423,9 +423,9 @@ body: |
 
     ; CHECK-LABEL: name: test_freeze_v33s32
     ; CHECK: [[DEF:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<528 x s32>) = G_CONCAT_VECTORS [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>)
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<33 x s32>) = G_EXTRACT [[CONCAT_VECTORS]](<528 x s32>), 0
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32), [[UV32:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[EXTRACT]](<33 x s32>)
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<16 x s32>)
+    ; CHECK: [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<16 x s32>)
+    ; CHECK: [[UV32:%[0-9]+]]:_(s32), [[UV33:%[0-9]+]]:_(s32), [[UV34:%[0-9]+]]:_(s32), [[UV35:%[0-9]+]]:_(s32), [[UV36:%[0-9]+]]:_(s32), [[UV37:%[0-9]+]]:_(s32), [[UV38:%[0-9]+]]:_(s32), [[UV39:%[0-9]+]]:_(s32), [[UV40:%[0-9]+]]:_(s32), [[UV41:%[0-9]+]]:_(s32), [[UV42:%[0-9]+]]:_(s32), [[UV43:%[0-9]+]]:_(s32), [[UV44:%[0-9]+]]:_(s32), [[UV45:%[0-9]+]]:_(s32), [[UV46:%[0-9]+]]:_(s32), [[UV47:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<16 x s32>)
     ; CHECK: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32), [[UV3]](s32), [[UV4]](s32), [[UV5]](s32), [[UV6]](s32), [[UV7]](s32), [[UV8]](s32), [[UV9]](s32), [[UV10]](s32), [[UV11]](s32), [[UV12]](s32), [[UV13]](s32), [[UV14]](s32), [[UV15]](s32)
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[UV16]](s32), [[UV17]](s32), [[UV18]](s32), [[UV19]](s32), [[UV20]](s32), [[UV21]](s32), [[UV22]](s32), [[UV23]](s32), [[UV24]](s32), [[UV25]](s32), [[UV26]](s32), [[UV27]](s32), [[UV28]](s32), [[UV29]](s32), [[UV30]](s32), [[UV31]](s32)
@@ -433,9 +433,9 @@ body: |
     ; CHECK: [[FREEZE:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[BUILD_VECTOR]]
     ; CHECK: [[FREEZE1:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[BUILD_VECTOR1]]
     ; CHECK: [[FREEZE2:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[BUILD_VECTOR2]]
-    ; CHECK: [[CONCAT_VECTORS1:%[0-9]+]]:_(<528 x s32>) = G_CONCAT_VECTORS [[FREEZE]](<16 x s32>), [[FREEZE1]](<16 x s32>), [[FREEZE2]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>)
-    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(<33 x s32>) = G_EXTRACT [[CONCAT_VECTORS1]](<528 x s32>), 0
-    ; CHECK: S_NOP 0, implicit [[EXTRACT1]](<33 x s32>)
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<528 x s32>) = G_CONCAT_VECTORS [[FREEZE]](<16 x s32>), [[FREEZE1]](<16 x s32>), [[FREEZE2]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>)
+    ; CHECK: [[UV48:%[0-9]+]]:_(<33 x s32>), [[UV49:%[0-9]+]]:_(<33 x s32>), [[UV50:%[0-9]+]]:_(<33 x s32>), [[UV51:%[0-9]+]]:_(<33 x s32>), [[UV52:%[0-9]+]]:_(<33 x s32>), [[UV53:%[0-9]+]]:_(<33 x s32>), [[UV54:%[0-9]+]]:_(<33 x s32>), [[UV55:%[0-9]+]]:_(<33 x s32>), [[UV56:%[0-9]+]]:_(<33 x s32>), [[UV57:%[0-9]+]]:_(<33 x s32>), [[UV58:%[0-9]+]]:_(<33 x s32>), [[UV59:%[0-9]+]]:_(<33 x s32>), [[UV60:%[0-9]+]]:_(<33 x s32>), [[UV61:%[0-9]+]]:_(<33 x s32>), [[UV62:%[0-9]+]]:_(<33 x s32>), [[UV63:%[0-9]+]]:_(<33 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<528 x s32>)
+    ; CHECK: S_NOP 0, implicit [[UV48]](<33 x s32>)
     %0:_(<33 x s32>) = G_IMPLICIT_DEF
     %1:_(<33 x s32>) = G_FREEZE %0
     S_NOP 0, implicit %1
@@ -591,15 +591,15 @@ body: |
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[BUILD_VECTOR1]](<2 x s32>)
     ; CHECK: [[DEF1:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<2 x s16>), [[TRUNC1]](<2 x s16>), [[DEF1]](<2 x s16>)
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<6 x s16>), 0
+    ; CHECK: [[UV3:%[0-9]+]]:_(<3 x s16>), [[UV4:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
     ; CHECK: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT]](<3 x s16>), 0
+    ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[UV3]](<3 x s16>), 0
     ; CHECK: [[FREEZE:%[0-9]+]]:_(<4 x s16>) = G_FREEZE [[INSERT]]
-    ; CHECK: [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[FREEZE]](<4 x s16>)
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
+    ; CHECK: [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[FREEZE]](<4 x s16>)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV5]](<2 x s16>)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV4]](<2 x s16>)
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV6]](<2 x s16>)
     ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
@@ -644,17 +644,17 @@ body: |
     ; CHECK: [[TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[BUILD_VECTOR2]](<2 x s32>)
     ; CHECK: [[DEF1:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<10 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<2 x s16>), [[TRUNC1]](<2 x s16>), [[TRUNC2]](<2 x s16>), [[DEF1]](<2 x s16>), [[DEF1]](<2 x s16>)
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<5 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<10 x s16>), 0
+    ; CHECK: [[UV5:%[0-9]+]]:_(<5 x s16>), [[UV6:%[0-9]+]]:_(<5 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<10 x s16>)
     ; CHECK: [[DEF2:%[0-9]+]]:_(<6 x s16>) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT:%[0-9]+]]:_(<6 x s16>) = G_INSERT [[DEF2]], [[EXTRACT]](<5 x s16>), 0
+    ; CHECK: [[INSERT:%[0-9]+]]:_(<6 x s16>) = G_INSERT [[DEF2]], [[UV5]](<5 x s16>), 0
     ; CHECK: [[FREEZE:%[0-9]+]]:_(<6 x s16>) = G_FREEZE [[INSERT]]
-    ; CHECK: [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[FREEZE]](<6 x s16>)
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV5]](<2 x s16>)
+    ; CHECK: [[UV7:%[0-9]+]]:_(<2 x s16>), [[UV8:%[0-9]+]]:_(<2 x s16>), [[UV9:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[FREEZE]](<6 x s16>)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV7]](<2 x s16>)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV6]](<2 x s16>)
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV8]](<2 x s16>)
     ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; CHECK: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV7]](<2 x s16>)
+    ; CHECK: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV9]](<2 x s16>)
     ; CHECK: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
