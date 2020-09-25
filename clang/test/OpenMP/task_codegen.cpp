@@ -389,49 +389,4 @@ struct S1 {
 // CHECK-LABEL: taskinit
 // CHECK: call i8* @__kmpc_omp_task_alloc(
 
-template <typename T = void>
-void foobar() {
-  float a;
-#pragma omp parallel
-#pragma omp single
-  {
-    double b;
-#pragma omp task
-    a += b;
-  }
-}
-
-// CHECK: define void @{{.+}}xxxx{{.+}}()
-void xxxx() {
-  // CHECK: call void @{{.+}}foobar{{.+}}()
-  foobar();
-}
-// CHECK: define {{.*}}void @{{.+}}foobar{{.+}}()
-// CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, float*)* [[PAR_OUTLINED:@.+]] to void (i32*, i32*, ...)*), float* %{{.+}})
-
-// CHECK: define internal void [[PAR_OUTLINED]](i32* {{.+}}, i32* {{.+}}, float* {{.*}}[[A_ADDR:%.+]])
-// UNTIEDRT: [[A_ADDR_REF:%.+]] = alloca float*,
-// CHECK: [[B_ADDR:%.+]] = alloca double,
-// UNTIEDRT: [[A_ADDR:%.+]] = load float*, float** [[A_ADDR_REF]],
-
-// Copy `a` to the list of shared variables
-// CHECK: [[SHARED_A:%.+]] = getelementptr inbounds %{{.+}}, [[SHAREDS_TY:%.+]]* [[SHAREDS:%.+]], i32 0, i32 0
-// CHECK: store float* [[A_ADDR]], float** [[SHARED_A]],
-
-// Allocate task.
-// CHECK: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* {{.+}}, i32 {{.+}}, i32 1, i64 48, i64 8, i32 (i32, i8*)* bitcast (i32 (i32, [[T_TASK_TY:%.+]]*)* @{{.+}} to i32 (i32, i8*)*))
-// CHECK: [[TD:%.+]] = bitcast i8* [[RES]] to [[T_TASK_TY]]*
-// Copy shared vars.
-// CHECK: [[TD_TASK:%.+]] = getelementptr inbounds [[T_TASK_TY]], [[T_TASK_TY]]* [[TD]], i32 0, i32 0
-// CHECK: [[TD_TASK_SHARES_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[TD_TASK]], i32 0, i32 0
-// CHECK: [[TD_TASK_SHARES:%.+]] = load i8*, i8** [[TD_TASK_SHARES_REF]],
-// CHECK: [[SHAREDS_BC:%.+]] = bitcast [[SHAREDS_TY]]* [[SHAREDS]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TD_TASK_SHARES]], i8* align 8 [[SHAREDS_BC]], i64 8, i1 false)
-
-// Copy firstprivate value of `b`.
-// CHECK: [[TD_TASK_PRIVS:%.+]] = getelementptr inbounds [[T_TASK_TY]], [[T_TASK_TY]]* [[TD]], i32 0, i32 1
-// CHECK: [[TD_TASK_PRIVS_B:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[TD_TASK_PRIVS]], i32 0, i32 0
-// CHECK: [[B_VAL:%.+]] = load double, double* [[B_ADDR]],
-// CHECK: store double [[B_VAL]], double* [[TD_TASK_PRIVS_B]],
-
 #endif
