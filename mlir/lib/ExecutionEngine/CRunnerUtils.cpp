@@ -25,6 +25,8 @@
 // details of our vectors. Also useful for direct LLVM IR output.
 extern "C" void print_i32(int32_t i) { fprintf(stdout, "%" PRId32, i); }
 extern "C" void print_i64(int64_t l) { fprintf(stdout, "%" PRId64, l); }
+extern "C" void printU32(uint32_t i) { fprintf(stdout, "%" PRIu32, i); }
+extern "C" void printU64(uint64_t l) { fprintf(stdout, "%" PRIu64, l); }
 extern "C" void print_f32(float f) { fprintf(stdout, "%g", f); }
 extern "C" void print_f64(double d) { fprintf(stdout, "%lg", d); }
 extern "C" void print_open() { fputs("( ", stdout); }
