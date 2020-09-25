@@ -789,7 +789,7 @@ private:
     llvm::SmallVector<mlir::Value, 8> lbounds;
     llvm::SmallVector<mlir::Value, 8> extents;
     auto idxTy = builder.getIndexType();
-    for (const auto &[lb, extent] : llvm::zip(con.lbounds(), con.shape())) {
+    for (auto [lb, extent] : llvm::zip(con.lbounds(), con.shape())) {
       lbounds.push_back(builder.createIntegerConstant(getLoc(), idxTy, lb - 1));
       extents.push_back(builder.createIntegerConstant(getLoc(), idxTy, extent));
     }
@@ -811,7 +811,7 @@ private:
           idx.push_back(builder.createIntegerConstant(getLoc(), idxTy, i));
           auto charVal = builder.create<fir::ExtractValueOp>(getLoc(), chTy,
                                                              constant, idx);
-          for (auto [dim,lb] : llvm::zip(subscripts, con.lbounds()))
+          for (auto [dim, lb] : llvm::zip(subscripts, con.lbounds()))
             idx.push_back(
                 builder.createIntegerConstant(getLoc(), idxTy, dim - lb));
           array = builder.create<fir::InsertValueOp>(getLoc(), arrayTy, array,
@@ -827,16 +827,77 @@ private:
       auto arrayTy = fir::SequenceType::get(shape, eleTy);
       mlir::Value array = builder.create<fir::UndefOp>(getLoc(), arrayTy);
       Fortran::evaluate::ConstantSubscripts subscripts = con.lbounds();
+      bool foundRange = false;
+      mlir::Value rangeValue;
+      llvm::SmallVector<mlir::Value, 8> rangeStartIdx;
+      Fortran::evaluate::ConstantSubscripts rangeStartSubscripts;
+      uint64_t elemsInRange = 0;
+      const uint64_t minRangeSize = 2;
+
       do {
         auto constant =
             fir::getBase(genScalarLit<TC, KIND>(con.At(subscripts), con));
-        llvm::SmallVector<mlir::Value, 8> idx;
-        for (auto [dim,lb] : llvm::zip(subscripts, con.lbounds()))
-          idx.push_back(
-              builder.createIntegerConstant(getLoc(), idxTy, dim - lb));
+        auto createIndexes = [&](Fortran::evaluate::ConstantSubscripts subs) {
+          llvm::SmallVector<mlir::Value, 8> idx;
+          for (auto [dim, lb] : llvm::zip(subs, con.lbounds()))
+            // Add normalized upper bound index to idx.
+            idx.push_back(
+                builder.createIntegerConstant(getLoc(), idxTy, dim - lb));
+
+          return idx;
+        };
+
+        auto idx = createIndexes(subscripts);
         auto insVal = builder.createConvert(getLoc(), eleTy, constant);
-        array = builder.create<fir::InsertValueOp>(getLoc(), arrayTy, array,
-                                                   insVal, idx);
+        auto nextSubs = subscripts;
+
+        // Check to see if the next value is the same as the current value
+        bool nextIsSame = con.IncrementSubscripts(nextSubs) &&
+                          con.At(subscripts) == con.At(nextSubs);
+        bool newRange = (nextIsSame != foundRange) && !foundRange;
+        bool endOfRange = (nextIsSame != foundRange) && foundRange;
+        bool continueRange = nextIsSame && foundRange;
+
+        if (newRange) {
+          // Mark the start of the range
+          rangeStartIdx = idx;
+          rangeStartSubscripts = subscripts;
+          rangeValue = insVal;
+          foundRange = true;
+          elemsInRange = 1;
+        } else if (endOfRange) {
+          ++elemsInRange;
+          if (elemsInRange >= minRangeSize) {
+            // Zip together the upper and lower bounds of the range for each
+            // index in the form [lb0, up0, lb1, up1, ... , lbn, upn] to pass
+            // to the InserOnEangeOp.
+            llvm::SmallVector<mlir::Value, 8> zippedRange;
+            for (size_t i = 0; i < idx.size(); ++i) {
+              zippedRange.push_back(rangeStartIdx[i]);
+              zippedRange.push_back(idx[i]);
+            }
+            array = builder.create<fir::InsertOnRangeOp>(
+                getLoc(), arrayTy, array, rangeValue, zippedRange);
+          } else {
+            while (true) {
+              idx = createIndexes(rangeStartSubscripts);
+              array = builder.create<fir::InsertValueOp>(
+                  getLoc(), arrayTy, array, rangeValue, idx);
+              if (rangeStartSubscripts == subscripts)
+                break;
+              con.IncrementSubscripts(rangeStartSubscripts);
+            }
+          }
+          foundRange = false;
+        } else if (continueRange) {
+          // Loop until the end of the range is found.
+          ++elemsInRange;
+          continue;
+        } else /* no range */ {
+          // If a range has not been found then insert the current value.
+          array = builder.create<fir::InsertValueOp>(getLoc(), arrayTy, array,
+                                                     insVal, idx);
+        }
       } while (con.IncrementSubscripts(subscripts));
       return fir::ArrayBoxValue{array, extents, lbounds};
     }
@@ -1073,7 +1134,7 @@ private:
       assert(arr.getExtents().size() == aref.subscript().size());
       unsigned idx = 0;
       unsigned dim = 0;
-      for (auto [ext,sub] : llvm::zip(arr.getExtents(), aref.subscript())) {
+      for (auto [ext, sub] : llvm::zip(arr.getExtents(), aref.subscript())) {
         auto subVal = genComponent(sub);
         if (auto *trip = std::get_if<fir::RangeBoxValue>(&subVal)) {
           // access A(i:j:k), decl A(m:n), iterspace (t1..)
@@ -1155,7 +1216,7 @@ private:
       auto shapeType = fir::ShapeShiftType::get(builder.getContext(),
                                                 arr.getExtents().size());
       SmallVector<mlir::Value, 8> shapeArgs;
-      for (auto [lbnd,ext] : llvm::zip(arr.getLBounds(), arr.getExtents())) {
+      for (auto [lbnd, ext] : llvm::zip(arr.getLBounds(), arr.getExtents())) {
         auto lb = builder.createConvert(loc, idxTy, lbnd);
         shapeArgs.push_back(lb);
         shapeArgs.push_back(ext);
@@ -1366,7 +1427,7 @@ private:
     // optional/alternate return arguments. Statement functions cannot be
     // recursive (directly or indirectly) so it is safe to add dummy symbols to
     // the local map here.
-    for (auto [arg,bind] :
+    for (auto [arg, bind] :
          llvm::zip(details.dummyArgs(), procRef.arguments())) {
       assert(arg && "alternate return in statement function");
       assert(bind && "optional argument in statement function");
@@ -1509,7 +1570,8 @@ private:
 
     // Deal with potential mismatches in arguments types. Passing an array to
     // a scalar argument should for instance be tolerated here.
-    for (auto [fst,snd] : llvm::zip(caller.getInputs(), funcType.getInputs())) {
+    for (auto [fst, snd] :
+         llvm::zip(caller.getInputs(), funcType.getInputs())) {
       auto cast = builder.convertWithSemantics(getLoc(), snd, fst);
       operands.push_back(cast);
     }
