@@ -1114,6 +1114,7 @@ TEST_P(MemorySanitizerIpTest, recvmsg) {
   } while (0)
 
 TEST(MemorySanitizer, gethostent) {
+  sethostent(0);
   struct hostent *he = gethostent();
   ASSERT_NE((void *)NULL, he);
   EXPECT_HOSTENT_NOT_POISONED(he);
@@ -1177,6 +1178,7 @@ TEST(MemorySanitizer, gethostbyaddr) {
 
 #if !defined(__NetBSD__)
 TEST(MemorySanitizer, gethostent_r) {
+  sethostent(0);
   char buf[2000];
   struct hostent he;
   struct hostent *result;
