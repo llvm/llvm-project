@@ -144,9 +144,11 @@ __OMP_IMPLICIT_CLAUSE_NO_CLASS(unknown, "unknown")
 __OMP_TYPE(Void)
 __OMP_TYPE(Int1)
 __OMP_TYPE(Int8)
+__OMP_TYPE(Int16)
 __OMP_TYPE(Int32)
 __OMP_TYPE(Int64)
 __OMP_TYPE(Int8Ptr)
+__OMP_TYPE(Int16Ptr)
 __OMP_TYPE(Int32Ptr)
 __OMP_TYPE(Int64Ptr)
 
@@ -499,6 +501,13 @@ __OMP_RTL(__tgt_push_mapper_component, false, Void, VoidPtr, VoidPtr, VoidPtr,
           Int64, Int64)
 __OMP_RTL(__kmpc_task_allow_completion_event, false, VoidPtr, IdentPtr,
           /* Int */ Int32, /* kmp_task_t */ VoidPtr)
+
+__OMP_RTL(__kmpc_data_sharing_init_stack, false, Void, )
+__OMP_RTL(__kmpc_data_sharing_init_stack_spmd, false, Void, ) 
+__OMP_RTL(__kmpc_data_sharing_coalesced_push_stack, false, VoidPtr, SizeTy,
+          Int16)
+__OMP_RTL(__kmpc_data_sharing_push_stack, false, VoidPtr, SizeTy, Int16)
+__OMP_RTL(__kmpc_data_sharing_pop_stack, false, Void, VoidPtr)
 
 /// Note that device runtime functions (in the following) do not necessarily
 /// need attributes as we expect to see the definitions.
