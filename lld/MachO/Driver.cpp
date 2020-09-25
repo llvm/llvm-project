@@ -660,6 +660,9 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     }
   }
 
+  config->isPic = config->outputType == MH_DYLIB ||
+                  (config->outputType == MH_EXECUTE && args.hasArg(OPT_pie));
+
   // Now that all dylibs have been loaded, search for those that should be
   // re-exported.
   for (opt::Arg *arg : args.filtered(OPT_sub_library)) {
