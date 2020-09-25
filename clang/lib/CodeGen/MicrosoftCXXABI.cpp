@@ -825,7 +825,7 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
   switch (CGM.getTarget().getTriple().getArch()) {
   default:
     // FIXME: Implement for other architectures.
-    return RAA_Default;
+    return RAA_Indirect;
 
   case llvm::Triple::thumb:
     // Pass things indirectly for now because it is simple.
