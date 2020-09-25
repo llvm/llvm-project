@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -fmodules -fno-implicit-modules -x c -I%S/Inputs/asm-goto -emit-llvm -o - %s -fmodule-file=%t/a.pcm | FileCheck %s
 #include "a.h"
 
-// CHECK-LABEL: define i32 @foo(
+// CHECK-LABEL: define {{.*}} @foo(
 // CHECK: callbr {{.*}} "=r,X,{{.*}}"(i8* blockaddress(@foo, %indirect))
 // CHECK-NEXT: to label %asm.fallthrough [label %indirect]
 
