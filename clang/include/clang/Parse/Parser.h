@@ -2804,6 +2804,14 @@ private:
                                        SourceLocation ScopeLoc,
                                        ParsedAttr::Syntax Syntax);
 
+  void ParseSwiftNewTypeAttribute(IdentifierInfo &AttrName,
+                                  SourceLocation AttrNameLoc,
+                                  ParsedAttributes &Attrs,
+                                  SourceLocation *EndLoc,
+                                  IdentifierInfo *ScopeName,
+                                  SourceLocation ScopeLoc,
+                                  ParsedAttr::Syntax Syntax);
+
   void ParseTypeTagForDatatypeAttribute(IdentifierInfo &AttrName,
                                         SourceLocation AttrNameLoc,
                                         ParsedAttributes &Attrs,

@@ -106,12 +106,12 @@ define void @test6_2(i8** %p, i8* %q) {
 define void @test7_1(i32* inalloca %a) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test7_1
-; IS__TUNIT____-SAME: (i32* inalloca nocapture nofree writeonly [[A:%.*]]) [[ATTR1]] {
+; IS__TUNIT____-SAME: (i32* inalloca nocapture nofree nonnull writeonly dereferenceable(4) [[A:%.*]]) [[ATTR1]] {
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test7_1
-; IS__CGSCC____-SAME: (i32* inalloca nocapture nofree writeonly [[A:%.*]]) [[ATTR1]] {
+; IS__CGSCC____-SAME: (i32* inalloca nocapture nofree nonnull writeonly dereferenceable(4) [[A:%.*]]) [[ATTR1]] {
 ; IS__CGSCC____-NEXT:    ret void
 ;
   ret void
@@ -163,11 +163,17 @@ declare void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32>%val, <4 x i32*>, i32, 
 ; CHECK-NOT: readnone
 ; CHECK-NOT: readonly
 define void @test9(<4 x i32*> %ptrs, <4 x i32>%val) {
-; CHECK: Function Attrs: nounwind willreturn
-; CHECK-LABEL: define {{[^@]+}}@test9
-; CHECK-SAME: (<4 x i32*> [[PTRS:%.*]], <4 x i32> [[VAL:%.*]]) [[ATTR4:#.*]] {
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> [[VAL]], <4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>) [[ATTR11:#.*]]
-; CHECK-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: nounwind willreturn writeonly
+; IS__TUNIT____-LABEL: define {{[^@]+}}@test9
+; IS__TUNIT____-SAME: (<4 x i32*> [[PTRS:%.*]], <4 x i32> [[VAL:%.*]]) [[ATTR4:#.*]] {
+; IS__TUNIT____-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> [[VAL]], <4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>) [[ATTR11:#.*]]
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: nounwind willreturn writeonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test9
+; IS__CGSCC____-SAME: (<4 x i32*> [[PTRS:%.*]], <4 x i32> [[VAL:%.*]]) [[ATTR4:#.*]] {
+; IS__CGSCC____-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> [[VAL]], <4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>) [[ATTR12:#.*]]
+; IS__CGSCC____-NEXT:    ret void
 ;
   call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32>%val, <4 x i32*> %ptrs, i32 4, <4 x i1><i1 true, i1 false, i1 true, i1 false>)
   ret void
@@ -176,11 +182,17 @@ define void @test9(<4 x i32*> %ptrs, <4 x i32>%val) {
 ; CHECK: declare <4 x i32> @llvm.masked.gather
 declare <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*>, i32, <4 x i1>, <4 x i32>)
 define <4 x i32> @test10(<4 x i32*> %ptrs) {
-; CHECK: Function Attrs: nounwind readonly willreturn
-; CHECK-LABEL: define {{[^@]+}}@test10
-; CHECK-SAME: (<4 x i32*> [[PTRS:%.*]]) [[ATTR5:#.*]] {
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>, <4 x i32> undef) [[ATTR12:#.*]]
-; CHECK-NEXT:    ret <4 x i32> [[RES]]
+; IS__TUNIT____: Function Attrs: nounwind readonly willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@test10
+; IS__TUNIT____-SAME: (<4 x i32*> [[PTRS:%.*]]) [[ATTR5:#.*]] {
+; IS__TUNIT____-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>, <4 x i32> undef) [[ATTR12:#.*]]
+; IS__TUNIT____-NEXT:    ret <4 x i32> [[RES]]
+;
+; IS__CGSCC____: Function Attrs: nounwind readonly willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test10
+; IS__CGSCC____-SAME: (<4 x i32*> [[PTRS:%.*]]) [[ATTR5:#.*]] {
+; IS__CGSCC____-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>, <4 x i32> undef) [[ATTR13:#.*]]
+; IS__CGSCC____-NEXT:    ret <4 x i32> [[RES]]
 ;
   %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1><i1 true, i1 false, i1 true, i1 false>, <4 x i32>undef)
   ret <4 x i32> %res
@@ -202,11 +214,17 @@ define <4 x i32> @test11_2(<4 x i32*> %ptrs) {
 declare <4 x i32> @test12_1(<4 x i32*>) argmemonly nounwind
 ; CHECK-NOT: readnone
 define <4 x i32> @test12_2(<4 x i32*> %ptrs) {
-; CHECK: Function Attrs: argmemonly nounwind
-; CHECK-LABEL: define {{[^@]+}}@test12_2
-; CHECK-SAME: (<4 x i32*> [[PTRS:%.*]]) [[ATTR7:#.*]] {
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @test12_1(<4 x i32*> [[PTRS]]) [[ATTR13:#.*]]
-; CHECK-NEXT:    ret <4 x i32> [[RES]]
+; IS__TUNIT____: Function Attrs: argmemonly nounwind
+; IS__TUNIT____-LABEL: define {{[^@]+}}@test12_2
+; IS__TUNIT____-SAME: (<4 x i32*> [[PTRS:%.*]]) [[ATTR7:#.*]] {
+; IS__TUNIT____-NEXT:    [[RES:%.*]] = call <4 x i32> @test12_1(<4 x i32*> [[PTRS]]) [[ATTR13:#.*]]
+; IS__TUNIT____-NEXT:    ret <4 x i32> [[RES]]
+;
+; IS__CGSCC____: Function Attrs: argmemonly nounwind
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test12_2
+; IS__CGSCC____-SAME: (<4 x i32*> [[PTRS:%.*]]) [[ATTR7:#.*]] {
+; IS__CGSCC____-NEXT:    [[RES:%.*]] = call <4 x i32> @test12_1(<4 x i32*> [[PTRS]]) [[ATTR14:#.*]]
+; IS__CGSCC____-NEXT:    ret <4 x i32> [[RES]]
 ;
   %res = call <4 x i32> @test12_1(<4 x i32*> %ptrs)
   ret <4 x i32> %res

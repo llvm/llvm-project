@@ -1419,22 +1419,12 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
           ? Divergent
           : nullptr;
 
-        unsigned Size = 0;
-        auto E = MachineBasicBlock::reverse_iterator(Divergent);
-        auto I = MachineBasicBlock::reverse_iterator(Insts.back());
-        MachineInstr *InsertAt = nullptr;
-        while (I != E) {
-          InsertAt = &*I;
-          ++Size;
-          ++I;
-        }
-
         MachineInstrBuilder MIB;
         if (VCMP) {
           // Combine the VPST and VCMP into a VPT
-          MIB =
-              BuildMI(*InsertAt->getParent(), InsertAt, InsertAt->getDebugLoc(),
-                      TII->get(VCMPOpcodeToVPT(VCMP->getOpcode())));
+          MIB = BuildMI(*Divergent->getParent(), Divergent,
+                        Divergent->getDebugLoc(),
+                        TII->get(VCMPOpcodeToVPT(VCMP->getOpcode())));
           MIB.addImm(ARMVCC::Then);
           // Register one
           MIB.add(VCMP->getOperand(1));
@@ -1448,8 +1438,8 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
         } else {
           // Create a VPST (with a null mask for now, we'll recompute it later)
           // or a VPT in case there was a VCMP right before it
-          MIB = BuildMI(*InsertAt->getParent(), InsertAt,
-                        InsertAt->getDebugLoc(), TII->get(ARM::MVE_VPST));
+          MIB = BuildMI(*Divergent->getParent(), Divergent,
+                        Divergent->getDebugLoc(), TII->get(ARM::MVE_VPST));
           MIB.addImm(0);
           LLVM_DEBUG(dbgs() << "ARM Loops: Created VPST: " << *MIB);
         }
