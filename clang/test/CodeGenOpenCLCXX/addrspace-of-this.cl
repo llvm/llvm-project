@@ -114,7 +114,7 @@ __kernel void test__global() {
 // Test the address space of 'this' when invoking the operator+
 // COMMON: [[C1GEN:%[.a-z0-9]+]] = addrspacecast %class.C* %c1 to %class.C addrspace(4)*
 // COMMON: [[C2GEN:%[.a-z0-9]+]] = addrspacecast %class.C* %c2 to %class.C addrspace(4)*
-// COMMON: call spir_func void @_ZNU3AS41CplERU3AS4KS_(%class.C* sret align 4 %c3, %class.C addrspace(4)* [[C1GEN]], %class.C addrspace(4)* align 4 dereferenceable(4) [[C2GEN]])
+// COMMON: call spir_func void @_ZNU3AS41CplERU3AS4KS_(%class.C* sret(%class.C) align 4 %c3, %class.C addrspace(4)* [[C1GEN]], %class.C addrspace(4)* align 4 dereferenceable(4) [[C2GEN]])
 
 // Test the address space of 'this' when invoking the move constructor
 // COMMON: [[C4GEN:%[.a-z0-9]+]] = addrspacecast %class.C* %c4 to %class.C addrspace(4)*
@@ -134,7 +134,7 @@ __kernel void test__global() {
 
 // Tests address space of inline members
 //COMMON: @_ZNU3AS41C3getEv(%class.C addrspace(4)* %this)
-//COMMON: @_ZNU3AS41CplERU3AS4KS_(%class.C* noalias sret align 4 %agg.result, %class.C addrspace(4)* %this
+//COMMON: @_ZNU3AS41CplERU3AS4KS_(%class.C* noalias sret(%class.C) align 4 %agg.result, %class.C addrspace(4)* %this
 #define TEST(AS)             \
   __kernel void test##AS() { \
     AS C c;                  \

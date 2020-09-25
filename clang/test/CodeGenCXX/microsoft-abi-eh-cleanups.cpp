@@ -18,9 +18,9 @@ void HasEHCleanup() {
 // WIN32-LABEL: define dso_local void @"?HasEHCleanup@@YAXXZ"() {{.*}} {
 // WIN32:   %[[base:.*]] = call i8* @llvm.stacksave()
 //    If this call throws, we have to restore the stack.
-// WIN32:   call void @"?getA@@YA?AUA@@XZ"(%struct.A* sret align 4 %{{.*}})
+// WIN32:   call void @"?getA@@YA?AUA@@XZ"(%struct.A* sret(%struct.A) align 4 %{{.*}})
 //    If this call throws, we have to cleanup the first temporary.
-// WIN32:   invoke void @"?getA@@YA?AUA@@XZ"(%struct.A* sret align 4 %{{.*}})
+// WIN32:   invoke void @"?getA@@YA?AUA@@XZ"(%struct.A* sret(%struct.A) align 4 %{{.*}})
 //    If this call throws, we have to cleanup the stacksave.
 // WIN32:   call i32 @"?TakesTwo@@YAHUA@@0@Z"
 // WIN32:   call void @llvm.stackrestore

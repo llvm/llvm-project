@@ -1057,8 +1057,8 @@ Currently, only the following parameter attributes are defined:
     ``byval`` parameters). This is not a valid attribute for return
     values.
 
-    The byval attribute also supports an optional type argument, which must be
-    the same as the pointee type of the argument.
+    The byval attribute also supports an optional type argument, which
+    must be the same as the pointee type of the argument.
 
     The byval attribute also supports specifying an alignment with the
     align attribute. It indicates the alignment of the stack slot to
@@ -1144,13 +1144,17 @@ Currently, only the following parameter attributes are defined:
     See :doc:`InAlloca` for more information on how to use this
     attribute.
 
-``sret``
+``sret`` or ``sret(<ty>)``
     This indicates that the pointer parameter specifies the address of a
     structure that is the return value of the function in the source
     program. This pointer must be guaranteed by the caller to be valid:
     loads and stores to the structure may be assumed by the callee not
     to trap and to be properly aligned. This is not a valid attribute
     for return values.
+
+    The sret attribute also supports an optional type argument, which
+    must be the same as the pointee type of the argument. In the
+    future this will be required.
 
 .. _attr_align:
 

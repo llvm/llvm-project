@@ -61,7 +61,7 @@ void f12_1(struct s12 a0) {}
 
 // Check that sret parameter is accounted for when checking available integer
 // registers.
-// CHECK: define void @f13(%struct.s13_0* noalias sret align 8 %agg.result, i32 %a, i32 %b, i32 %c, i32 %d, {{.*}}* byval({{.*}}) align 8 %e, i32 %f)
+// CHECK: define void @f13(%struct.s13_0* noalias sret(%struct.s13_0) align 8 %agg.result, i32 %a, i32 %b, i32 %c, i32 %d, {{.*}}* byval({{.*}}) align 8 %e, i32 %f)
 
 struct s13_0 { long long f0[3]; };
 struct s13_1 { long long f0[2]; };
