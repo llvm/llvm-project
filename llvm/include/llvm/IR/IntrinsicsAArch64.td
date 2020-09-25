@@ -1300,7 +1300,7 @@ class AdvSIMD_GatherLoad_VS_Intrinsic
                   llvm_anyvector_ty,
                   llvm_i64_ty
                 ],
-                [IntrReadMem, IntrArgMemOnly]>;
+                [IntrReadMem]>;
 
 class AdvSIMD_ScatterStore_SV_64b_Offsets_Intrinsic
     : Intrinsic<[],
@@ -1329,7 +1329,7 @@ class AdvSIMD_ScatterStore_VS_Intrinsic
                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                  llvm_anyvector_ty, llvm_i64_ty
                ],
-               [IntrWriteMem, IntrArgMemOnly]>;
+               [IntrWriteMem]>;
 
 
 class SVE_gather_prf_SV
