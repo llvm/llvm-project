@@ -246,6 +246,32 @@ exit:
   ret void
 }
 
+define void @test_guard_ult_ne(i32* nocapture readonly %data, i64 %count) {
+; CHECK-LABEL: @test_guard_ult_ne
+; CHECK:       Loop %loop: backedge-taken count is (-1 + %count)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %count)
+;
+entry:
+  %cmp.ult = icmp ult i64 %count, 5
+  br i1 %cmp.ult, label %guardbb, label %exit
+
+guardbb:
+  %cmp.ne = icmp ne i64 %count, 0
+  br i1 %cmp.ne, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %guardbb ]
+  %idx = getelementptr inbounds i32, i32* %data, i64 %iv
+  store i32 1, i32* %idx, align 4
+  %iv.next = add nuw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %count
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ; Test case for PR47247. Both the guard condition and the assume limit the
 ; max backedge-taken count.
 
