@@ -9,26 +9,26 @@
 
 ## Check that we pick the definition with the larger size, regardless of
 ## its alignment.
-# RUN: lld -flavor darwinnew %t/test.o %t/smaller-size.o -order_file %t/order -o %t/test
+# RUN: %lld %t/test.o %t/smaller-size.o -order_file %t/order -o %t/test
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=SMALLER-ALIGNMENT
-# RUN: lld -flavor darwinnew %t/smaller-size.o %t/test.o -order_file %t/order -o %t/test
+# RUN: %lld %t/smaller-size.o %t/test.o -order_file %t/order -o %t/test
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=SMALLER-ALIGNMENT
 
 ## When the sizes are equal, we pick the symbol whose file occurs later in the
 ## command-line argument list.
-# RUN: lld -flavor darwinnew %t/test.o %t/same-size.o -order_file %t/order -o %t/test
+# RUN: %lld %t/test.o %t/same-size.o -order_file %t/order -o %t/test
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=LARGER-ALIGNMENT
-# RUN: lld -flavor darwinnew %t/same-size.o %t/test.o -order_file %t/order -o %t/test
+# RUN: %lld %t/same-size.o %t/test.o -order_file %t/order -o %t/test
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=SMALLER-ALIGNMENT
 
-# RUN: lld -flavor darwinnew %t/test.o %t/zero-align.o -order_file %t/order -o %t/test
+# RUN: %lld %t/test.o %t/zero-align.o -order_file %t/order -o %t/test
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=LARGER-ALIGNMENT
-# RUN: lld -flavor darwinnew %t/zero-align.o %t/test.o -order_file %t/order -o %t/test
+# RUN: %lld %t/zero-align.o %t/test.o -order_file %t/order -o %t/test
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=LARGER-ALIGNMENT
 
-# RUN: lld -flavor darwinnew %t/test.o %t/zero-align-round-up.o -order_file %t/order -o %t/test
+# RUN: %lld %t/test.o %t/zero-align-round-up.o -order_file %t/order -o %t/test
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=LARGER-ALIGNMENT
-# RUN: lld -flavor darwinnew %t/zero-align-round-up.o %t/test.o -order_file %t/order -o %t/test
+# RUN: %lld %t/zero-align-round-up.o %t/test.o -order_file %t/order -o %t/test
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=LARGER-ALIGNMENT
 
 # SMALLER-ALIGNMENT-LABEL: Sections:

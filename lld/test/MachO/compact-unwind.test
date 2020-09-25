@@ -16,6 +16,6 @@
 
 # RUN: %python %S/tools/generate-cfi-funcs.py --seed=johnnyapple >%t.s
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 -o %t.o %t.s
-# RUN: lld -flavor darwinnew -Z -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t %t.o
+# RUN: %lld -Z -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t %t.o
 # RUN: llvm-objdump --unwind-info --syms %t %t.o >%t.dump
 # RUN: %python %S/tools/validate-unwind-info.py %t.dump

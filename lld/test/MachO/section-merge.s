@@ -6,7 +6,7 @@
 # RUN: echo ".globl _baz; .data; .p2align 3; _baz: .byte 0xba" | llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t/baz.o
 # RUN: echo ".globl _qux; .data; .p2align 0; _qux: .quad 0xdeadbeef" | llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t/qux.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/main.o
-# RUN: lld -flavor darwinnew -o %t/output %t/foo.o %t/bar.o %t/baz.o %t/qux.o %t/main.o
+# RUN: %lld -o %t/output %t/foo.o %t/bar.o %t/baz.o %t/qux.o %t/main.o
 
 # RUN: llvm-objdump --syms --section=__data --full-contents %t/output | FileCheck %s
 # CHECK:     SYMBOL TABLE:

@@ -5,44 +5,44 @@
 # RUN: mkdir -p %t %tA %tD
 #
 # RUN: llvm-mc -filetype obj -triple x86_64-apple-darwin %p/Inputs/libhello.s -o %t/hello.o
-# RUN: lld -flavor darwinnew -dylib -install_name @executable_path/libhello.dylib %t/hello.o -o %t/libhello.dylib
+# RUN: %lld -dylib -install_name @executable_path/libhello.dylib %t/hello.o -o %t/libhello.dylib
 #
 # RUN: llvm-mc -filetype obj -triple x86_64-apple-darwin %p/Inputs/libgoodbye.s -o %t/goodbye.o
-# RUN: lld -flavor darwinnew -dylib -install_name @executable_path/libgoodbye.dylib %t/goodbye.o -o %tD/libgoodbye.dylib
+# RUN: %lld -dylib -install_name @executable_path/libgoodbye.dylib %t/goodbye.o -o %tD/libgoodbye.dylib
 # RUN: llvm-ar --format=darwin crs %tA/libgoodbye.a %t/goodbye.o
 #
 # RUN: llvm-mc -filetype obj -triple x86_64-apple-darwin %s -o %t/test.o
 
 ################ default, which is the same as -search_paths_first
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
+# RUN: %lld -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
 # RUN:     -L%tA -L%tD -L%t -lhello -lgoodbye -lSystem %t/test.o
 # RUN: llvm-objdump --macho --dylibs-used %t/test | FileCheck --check-prefix=ARCHIVE %s
 
 ################ Test all permutations of -L%t{A,D} with -search_paths_first
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
+# RUN: %lld -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
 # RUN:     -L%tA -L%tD -L%t -lhello -lgoodbye -lSystem %t/test.o -search_paths_first
 # RUN: llvm-objdump --macho --dylibs-used %t/test | FileCheck --check-prefix=ARCHIVE %s
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
+# RUN: %lld -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
 # RUN:     -L%tD -L%tA -L%t -lhello -lgoodbye -lSystem %t/test.o -search_paths_first
 # RUN: llvm-objdump --macho --dylibs-used %t/test | FileCheck --check-prefix=DYLIB %s
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
+# RUN: %lld -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
 # RUN:     -L%tA       -L%t -lhello -lgoodbye -lSystem %t/test.o -search_paths_first
 # RUN: llvm-objdump --macho --dylibs-used %t/test | FileCheck --check-prefix=ARCHIVE %s
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
+# RUN: %lld -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
 # RUN:     -L%tD      -L%t -lhello -lgoodbye -lSystem %t/test.o -search_paths_first
 # RUN: llvm-objdump --macho --dylibs-used %t/test | FileCheck --check-prefix=DYLIB %s
 
 ################ Test all permutations of -L%t{A,D} with -search_dylibs_first
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
+# RUN: %lld -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
 # RUN:     -L%tA -L%tD -L%t -lhello -lgoodbye -lSystem %t/test.o -search_dylibs_first
 # RUN: llvm-objdump --macho --dylibs-used %t/test | FileCheck --check-prefix=DYLIB %s
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
+# RUN: %lld -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
 # RUN:     -L%tD -L%tA -L%t -lhello -lgoodbye -lSystem %t/test.o -search_dylibs_first
 # RUN: llvm-objdump --macho --dylibs-used %t/test | FileCheck --check-prefix=DYLIB %s
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
+# RUN: %lld -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
 # RUN:     -L%tA       -L%t -lhello -lgoodbye -lSystem %t/test.o -search_dylibs_first
 # RUN: llvm-objdump --macho --dylibs-used %t/test | FileCheck --check-prefix=ARCHIVE %s
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
+# RUN: %lld -L%S/Inputs/MacOSX.sdk/usr/lib -o %t/test -Z \
 # RUN:     -L%tD       -L%t -lhello -lgoodbye -lSystem %t/test.o -search_dylibs_first
 # RUN: llvm-objdump --macho --dylibs-used %t/test | FileCheck --check-prefix=DYLIB %s
 

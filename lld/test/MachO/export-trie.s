@@ -6,7 +6,7 @@
 ## the image base starts at a non-zero address. This allows us to verify that
 ## addresses in the export trie are correctly encoded as relative to the image
 ## base.
-# RUN: lld -flavor darwinnew %t.o -o %t
+# RUN: %lld %t.o -o %t
 
 # RUN: llvm-objdump --syms --exports-trie %t | FileCheck %s --check-prefix=EXPORTS
 # EXPORTS-LABEL: SYMBOL TABLE:

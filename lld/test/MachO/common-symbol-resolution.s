@@ -9,7 +9,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/calls-foo.s -o %t/calls-foo.o
 
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem -order_file %t/order -dylib %t/libfoo.o -o %t/libfoo.dylib
+# RUN: %lld -lSystem -order_file %t/order -dylib %t/libfoo.o -o %t/libfoo.dylib
 
 # RUN: rm -f %t/defined.a %t/weak-defined-and-common.a
 # RUN: llvm-ar rcs %t/defined.a %t/defined.o
@@ -20,39 +20,39 @@
 ## regardless of whether it is weak. Moreover, the resolved symbol in the output
 ## file will always be non-weak, even if the winning input symbol definition was
 ## weak.
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem -order_file %t/order %t/common.o %t/weak-common.o %t/test.o -o %t/test
+# RUN: %lld -lSystem -order_file %t/order %t/common.o %t/weak-common.o %t/test.o -o %t/test
 # RUN: llvm-objdump --syms %t/test | FileCheck %s --check-prefix=LARGER-COMMON
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem -order_file %t/order %t/weak-common.o %t/common.o %t/test.o -o %t/test
+# RUN: %lld -lSystem -order_file %t/order %t/weak-common.o %t/common.o %t/test.o -o %t/test
 # RUN: llvm-objdump --syms %t/test | FileCheck %s --check-prefix=LARGER-COMMON
 
 ## Defined symbols are the only ones that take precedence over common symbols.
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem -order_file %t/order %t/defined.o %t/common.o %t/test.o -o %t/test
+# RUN: %lld -lSystem -order_file %t/order %t/defined.o %t/common.o %t/test.o -o %t/test
 # RUN: llvm-objdump --syms %t/test | FileCheck %s --check-prefix=DEFINED
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem -order_file %t/order %t/common.o %t/defined.o %t/test.o -o %t/test
+# RUN: %lld -lSystem -order_file %t/order %t/common.o %t/defined.o %t/test.o -o %t/test
 # RUN: llvm-objdump --syms %t/test | FileCheck %s --check-prefix=DEFINED
 
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem -order_file %t/order %t/weak-defined.o %t/common.o %t/test.o -o %t/test
+# RUN: %lld -lSystem -order_file %t/order %t/weak-defined.o %t/common.o %t/test.o -o %t/test
 # RUN: llvm-objdump --syms %t/test | FileCheck %s --check-prefix=WEAK-DEFINED
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem -order_file %t/order %t/common.o %t/weak-defined.o %t/test.o -o %t/test
+# RUN: %lld -lSystem -order_file %t/order %t/common.o %t/weak-defined.o %t/test.o -o %t/test
 # RUN: llvm-objdump --syms %t/test | FileCheck %s --check-prefix=WEAK-DEFINED
 
 ## Common symbols take precedence over archive symbols.
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem -order_file %t/order %t/defined.a %t/weak-common.o %t/test.o -o %t/test
+# RUN: %lld -lSystem -order_file %t/order %t/defined.a %t/weak-common.o %t/test.o -o %t/test
 # RUN: llvm-objdump --syms %t/test | FileCheck %s --check-prefix=LARGER-COMMON
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem -order_file %t/order %t/weak-common.o %t/defined.a %t/test.o -o %t/test
+# RUN: %lld -lSystem -order_file %t/order %t/weak-common.o %t/defined.a %t/test.o -o %t/test
 # RUN: llvm-objdump --syms %t/test | FileCheck %s --check-prefix=LARGER-COMMON
 
 ## If an archive has both a common and a defined symbol, the defined one should
 ## win.
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem -order_file %t/order %t/weak-defined-and-common.a %t/calls-foo.o -o %t/calls-foo
+# RUN: %lld -lSystem -order_file %t/order %t/weak-defined-and-common.a %t/calls-foo.o -o %t/calls-foo
 # RUN: llvm-objdump --syms %t/calls-foo | FileCheck %s --check-prefix=WEAK-DEFINED
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem -order_file %t/order %t/calls-foo.o %t/weak-defined-and-common.a -o %t/calls-foo
+# RUN: %lld -lSystem -order_file %t/order %t/calls-foo.o %t/weak-defined-and-common.a -o %t/calls-foo
 # RUN: llvm-objdump --syms %t/calls-foo | FileCheck %s --check-prefix=WEAK-DEFINED
 
 ## Common symbols take precedence over dylib symbols.
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem -order_file %t/order %t/libfoo.dylib %t/weak-common.o %t/test.o -o %t/test
+# RUN: %lld -lSystem -order_file %t/order %t/libfoo.dylib %t/weak-common.o %t/test.o -o %t/test
 # RUN: llvm-objdump --syms %t/test | FileCheck %s --check-prefix=LARGER-COMMON
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem -order_file %t/order %t/weak-common.o %t/libfoo.dylib %t/test.o -o %t/test
+# RUN: %lld -lSystem -order_file %t/order %t/weak-common.o %t/libfoo.dylib %t/test.o -o %t/test
 # RUN: llvm-objdump --syms %t/test | FileCheck %s --check-prefix=LARGER-COMMON
 
 # LARGER-COMMON-LABEL: SYMBOL TABLE:

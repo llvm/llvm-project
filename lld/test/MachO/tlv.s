@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: mkdir -p %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/test.o
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/test %t/test.o
+# RUN: %lld -lSystem -o %t/test %t/test.o
 # RUN: llvm-readobj --file-headers %t/test | FileCheck %s --check-prefix=HEADER
 # RUN: llvm-objdump -D %t/test | FileCheck %s
 
