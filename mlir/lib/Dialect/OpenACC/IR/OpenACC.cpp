@@ -449,19 +449,19 @@ static void print(OpAsmPrinter &printer, ParallelOp &op) {
 //===----------------------------------------------------------------------===//
 
 /// Parse acc.data operation
-/// operation := `acc.parallel` (`present` `(` value-list `)`)?
-///                             (`copy` `(` value-list `)`)?
-///                             (`copyin` `(` value-list `)`)?
-///                             (`copyin_readonly` `(` value-list `)`)?
-///                             (`copyout` `(` value-list `)`)?
-///                             (`copyout_zero` `(` value-list `)`)?
-///                             (`create` `(` value-list `)`)?
-///                             (`create_zero` `(` value-list `)`)?
-///                             (`no_create` `(` value-list `)`)?
-///                             (`delete` `(` value-list `)`)?
-///                             (`attach` `(` value-list `)`)?
-///                             (`detach` `(` value-list `)`)?
-///                             region attr-dict?
+/// operation := `acc.data` (`present` `(` value-list `)`)?
+///                         (`copy` `(` value-list `)`)?
+///                         (`copyin` `(` value-list `)`)?
+///                         (`copyin_readonly` `(` value-list `)`)?
+///                         (`copyout` `(` value-list `)`)?
+///                         (`copyout_zero` `(` value-list `)`)?
+///                         (`create` `(` value-list `)`)?
+///                         (`create_zero` `(` value-list `)`)?
+///                         (`no_create` `(` value-list `)`)?
+///                         (`delete` `(` value-list `)`)?
+///                         (`attach` `(` value-list `)`)?
+///                         (`detach` `(` value-list `)`)?
+///                         region attr-dict?
 static ParseResult parseDataOp(OpAsmParser &parser, OperationState &result) {
   Builder &builder = parser.getBuilder();
   SmallVector<OpAsmParser::OperandType, 2> presentOperands, copyOperands,
