@@ -952,7 +952,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, OpMethodBody &body) {
       body << llvm::formatv("    if ({0}Operand.hasValue())\n"
                             "      {0}Operands.push_back(*{0}Operand);\n",
                             var->name);
-    } else if (auto *dir = dyn_cast<TypeRefDirective>(&param)) {
+    } else if (isa<TypeRefDirective>(&param)) {
       // In the `type_ref` case, do not parse a new Type that needs to be added.
       // Just do nothing here.
     } else if (auto *dir = dyn_cast<TypeDirective>(&param)) {
