@@ -399,10 +399,18 @@ LLVM_DUMP_METHOD void SplitEditor::dump() const {
 }
 #endif
 
+LiveInterval::SubRange &SplitEditor::getSubRangeForMaskExact(LaneBitmask LM,
+                                                             LiveInterval &LI) {
+  for (LiveInterval::SubRange &S : LI.subranges())
+    if (S.LaneMask == LM)
+      return S;
+  llvm_unreachable("SubRange for this mask not found");
+}
+
 LiveInterval::SubRange &SplitEditor::getSubRangeForMask(LaneBitmask LM,
                                                         LiveInterval &LI) {
   for (LiveInterval::SubRange &S : LI.subranges())
-    if (S.LaneMask == LM)
+    if ((S.LaneMask & LM) == LM)
       return S;
   llvm_unreachable("SubRange for this mask not found");
 }
@@ -1247,8 +1255,8 @@ void SplitEditor::extendPHIRange(MachineBasicBlock &B, LiveIntervalCalc &LIC,
     LiveInterval &PLI = Edit->getParent();
     // Need the cast because the inputs to ?: would otherwise be deemed
     // "incompatible": SubRange vs LiveInterval.
-    LiveRange &PSR = !LM.all() ? getSubRangeForMask(LM, PLI)
-                               : static_cast<LiveRange&>(PLI);
+    LiveRange &PSR = !LM.all() ? getSubRangeForMaskExact(LM, PLI)
+                               : static_cast<LiveRange &>(PLI);
     if (PSR.liveAt(LastUse))
       LIC.extend(LR, End, /*PhysReg=*/0, Undefs);
   }
@@ -1283,7 +1291,7 @@ void SplitEditor::extendPHIKillRanges() {
         continue;
       unsigned RegIdx = RegAssign.lookup(V->def);
       LiveInterval &LI = LIS.getInterval(Edit->get(RegIdx));
-      LiveInterval::SubRange &S = getSubRangeForMask(PS.LaneMask, LI);
+      LiveInterval::SubRange &S = getSubRangeForMaskExact(PS.LaneMask, LI);
       if (removeDeadSegment(V->def, S))
         continue;
 
