@@ -110,10 +110,10 @@ public:
     auto Obj = Compile(*M);
     if (!Obj)
       return Obj.takeError();
-    if (auto Err = BaseLayer.addObject(std::move(K), std::move(*Obj)))
+    if (auto Err = BaseLayer.addObject(K, std::move(*Obj)))
       return Err;
     if (NotifyCompiled)
-      NotifyCompiled(std::move(K), std::move(M));
+      NotifyCompiled(K, std::move(M));
     return Error::success();
   }
 
