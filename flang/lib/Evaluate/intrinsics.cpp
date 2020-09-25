@@ -84,6 +84,7 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
     subscript, // address-sized integer
     size, // default KIND= for SIZE(), UBOUND, &c.
     addressable, // for PRESENT(), &c.; anything (incl. procedure) but BOZ
+    nullPointerType, // for ASSOCIATED(NULL())
 )
 
 struct TypePattern {
@@ -151,6 +152,9 @@ static constexpr TypePattern SameType{AnyType, KindCode::same};
 // universal extension feature.
 static constexpr TypePattern OperandReal{RealType, KindCode::operand};
 static constexpr TypePattern OperandIntOrReal{IntOrRealType, KindCode::operand};
+
+// For ASSOCIATED, the first argument is a typeless pointer
+static constexpr TypePattern AnyPointer{AnyType, KindCode::nullPointerType};
 
 // For DOT_PRODUCT and MATMUL, the result type depends on the arguments
 static constexpr TypePattern ResultLogical{LogicalType, KindCode::likeMultiply};
@@ -278,7 +282,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"asind", {{"x", SameFloating}}, SameFloating},
     {"asinh", {{"x", SameFloating}}, SameFloating},
     {"associated",
-        {{"pointer", Addressable, Rank::known},
+        {{"pointer", AnyPointer, Rank::known},
             {"target", Addressable, Rank::known, Optionality::optional}},
         DefaultLogical, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"atan", {{"x", SameFloating}}, SameFloating},
@@ -1140,6 +1144,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         if (d.typePattern.kindCode == KindCode::addressable ||
             d.rank == Rank::reduceOperation) {
           continue;
+        } else if (d.typePattern.kindCode == KindCode::nullPointerType) {
+          continue;
         } else {
           messages.Say(
               "Actual argument for '%s=' may not be a procedure"_err_en_US,
@@ -1214,6 +1220,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           d.keyword, name);
       break;
     case KindCode::addressable:
+    case KindCode::nullPointerType:
       argOk = true;
       break;
     default:
@@ -1504,6 +1511,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   // Characterize the specific intrinsic procedure.
   characteristics::DummyArguments dummyArgs;
   std::optional<int> sameDummyArg;
+
   for (std::size_t j{0}; j < dummies; ++j) {
     const IntrinsicDummyArgument &d{dummy[std::min(j, dummyArgPatterns - 1)]};
     if (const auto &arg{rearranged[j]}) {
@@ -1707,6 +1715,7 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
   if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1) &&
       arguments[0]) {
     if (Expr<SomeType> * mold{arguments[0]->UnwrapExpr()}) {
+      bool goodProcPointer{true};
       if (IsAllocatableOrPointer(*mold)) {
         characteristics::DummyArguments args;
         std::optional<characteristics::FunctionResult> fResult;
@@ -1716,10 +1725,15 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
           CHECK(last);
           auto procPointer{
               characteristics::Procedure::Characterize(*last, intrinsics)};
-          CHECK(procPointer);
-          args.emplace_back("mold"s,
-              characteristics::DummyProcedure{common::Clone(*procPointer)});
-          fResult.emplace(std::move(*procPointer));
+          // procPointer is null if there was an error with the analysis
+          // associated with the procedure pointer
+          if (procPointer) {
+            args.emplace_back("mold"s,
+                characteristics::DummyProcedure{common::Clone(*procPointer)});
+            fResult.emplace(std::move(*procPointer));
+          } else {
+            goodProcPointer = false;
+          }
         } else if (auto type{mold->GetType()}) {
           // MOLD= object pointer
           characteristics::TypeAndShape typeAndShape{
@@ -1731,13 +1745,15 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
           context.messages().Say(
               "MOLD= argument to NULL() lacks type"_err_en_US);
         }
-        fResult->attrs.set(characteristics::FunctionResult::Attr::Pointer);
-        characteristics::Procedure::Attrs attrs;
-        attrs.set(characteristics::Procedure::Attr::NullPointer);
-        characteristics::Procedure chars{
-            std::move(*fResult), std::move(args), attrs};
-        return SpecificCall{
-            SpecificIntrinsic{"null"s, std::move(chars)}, std::move(arguments)};
+        if (goodProcPointer) {
+          fResult->attrs.set(characteristics::FunctionResult::Attr::Pointer);
+          characteristics::Procedure::Attrs attrs;
+          attrs.set(characteristics::Procedure::Attr::NullPointer);
+          characteristics::Procedure chars{
+              std::move(*fResult), std::move(args), attrs};
+          return SpecificCall{SpecificIntrinsic{"null"s, std::move(chars)},
+              std::move(arguments)};
+        }
       }
     }
     context.messages().Say(
@@ -1833,9 +1849,105 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
   }
 }
 
+static bool CheckAssociated(SpecificCall &call,
+    parser::ContextualMessages &messages,
+    const IntrinsicProcTable &intrinsics) {
+  bool ok{true};
+  if (const auto &pointerArg{call.arguments[0]}) {
+    if (const auto *pointerExpr{pointerArg->UnwrapExpr()}) {
+      if (const Symbol * pointerSymbol{GetLastSymbol(*pointerExpr)}) {
+        if (!pointerSymbol->attrs().test(semantics::Attr::POINTER)) {
+          AttachDeclaration(
+              messages.Say("POINTER= argument of ASSOCIATED() must be a "
+                           "POINTER"_err_en_US),
+              *pointerSymbol);
+        } else {
+          const auto pointerProc{characteristics::Procedure::Characterize(
+              *pointerSymbol, intrinsics)};
+          if (const auto &targetArg{call.arguments[1]}) {
+            if (const auto *targetExpr{targetArg->UnwrapExpr()}) {
+              std::optional<characteristics::Procedure> targetProc{
+                  std::nullopt};
+              const Symbol *targetSymbol{GetLastSymbol(*targetExpr)};
+              bool isCall{false};
+              std::string targetName;
+              if (const auto *targetProcRef{// target is a function call
+                      std::get_if<ProcedureRef>(&targetExpr->u)}) {
+                if (auto targetRefedChars{
+                        characteristics::Procedure::Characterize(
+                            *targetProcRef, intrinsics)}) {
+                  targetProc = *targetRefedChars;
+                  targetName = targetProcRef->proc().GetName() + "()";
+                  isCall = true;
+                }
+              } else if (targetSymbol && !targetProc) {
+                // proc that's not a call
+                targetProc = characteristics::Procedure::Characterize(
+                    *targetSymbol, intrinsics);
+                targetName = targetSymbol->name().ToString();
+              }
+
+              if (pointerProc) {
+                if (targetProc) {
+                  // procedure pointer and procedure target
+                  if (std::optional<parser::MessageFixedText> msg{
+                          CheckProcCompatibility(
+                              isCall, pointerProc, &*targetProc)}) {
+                    AttachDeclaration(
+                        messages.Say(std::move(*msg),
+                            "pointer '" + pointerSymbol->name().ToString() +
+                                "'",
+                            targetName),
+                        *pointerSymbol);
+                  }
+                } else {
+                  // procedure pointer and object target
+                  if (!IsNullPointer(*targetExpr)) {
+                    AttachDeclaration(
+                        messages.Say(
+                            "POINTER= argument '%s' is a procedure "
+                            "pointer but the TARGET= argument '%s' is not a "
+                            "procedure or procedure pointer"_err_en_US,
+                            pointerSymbol->name(), targetName),
+                        *pointerSymbol);
+                  }
+                }
+              } else if (targetProc) {
+                // object pointer and procedure target
+                AttachDeclaration(
+                    messages.Say("POINTER= argument '%s' is an object pointer "
+                                 "but the TARGET= argument '%s' is a "
+                                 "procedure designator"_err_en_US,
+                        pointerSymbol->name(), targetName),
+                    *pointerSymbol);
+              } else {
+                // object pointer and target
+                if (const auto pointerType{pointerArg->GetType()}) {
+                  if (const auto targetType{targetArg->GetType()}) {
+                    ok = pointerType->IsTkCompatibleWith(*targetType);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } else {
+    // No arguments to ASSOCIATED()
+    ok = false;
+  }
+  if (!ok) {
+    messages.Say(
+        "Arguments of ASSOCIATED() must be a POINTER and an optional valid target"_err_en_US);
+  }
+  return ok;
+}
+
 // Applies any semantic checks peculiar to an intrinsic.
-static bool ApplySpecificChecks(
-    SpecificCall &call, parser::ContextualMessages &messages) {
+static bool ApplySpecificChecks(SpecificCall &call,
+    parser::ContextualMessages &messages,
+    const IntrinsicProcTable &intrinsics) {
   bool ok{true};
   const std::string &name{call.specificIntrinsic.name};
   if (name == "allocated") {
@@ -1851,18 +1963,7 @@ static bool ApplySpecificChecks(
           "Argument of ALLOCATED() must be an ALLOCATABLE object or component"_err_en_US);
     }
   } else if (name == "associated") {
-    if (const auto &arg{call.arguments[0]}) {
-      if (const auto *expr{arg->UnwrapExpr()}) {
-        if (const Symbol * symbol{GetLastSymbol(*expr)}) {
-          ok = symbol->attrs().test(semantics::Attr::POINTER);
-          // TODO: validate the TARGET= argument vs. the pointer
-        }
-      }
-    }
-    if (!ok) {
-      messages.Say(
-          "Arguments of ASSOCIATED() must be a POINTER and an optional valid target"_err_en_US);
-    }
+    return CheckAssociated(call, messages, intrinsics);
   } else if (name == "loc") {
     if (const auto &arg{call.arguments[0]}) {
       ok = arg->GetAssumedTypeDummy() || GetLastSymbol(arg->UnwrapExpr());
@@ -1964,7 +2065,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
   for (auto iter{genericRange.first}; iter != genericRange.second; ++iter) {
     if (auto specificCall{
             matchOrBufferMessages(*iter->second, genericBuffer)}) {
-      ApplySpecificChecks(*specificCall, context.messages());
+      ApplySpecificChecks(*specificCall, context.messages(), intrinsics);
       return specificCall;
     }
   }

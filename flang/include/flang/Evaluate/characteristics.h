@@ -234,6 +234,7 @@ struct DummyArgument {
   bool IsOptional() const;
   void SetOptional(bool = true);
   bool CanBePassedViaImplicitInterface() const;
+  bool IsTypelessIntrinsicDummy() const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
   // name and pass are not characteristics and so does not participate in
   // operator== but are needed to determine if procedures are distinguishable
