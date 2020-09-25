@@ -12622,6 +12622,12 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       if (isa<SCEVConstant>(RHS))
         RewriteMap[LHSUnknown->getValue()] = RHS;
       break;
+    case CmpInst::ICMP_NE:
+      if (isa<SCEVConstant>(RHS) &&
+          cast<SCEVConstant>(RHS)->getValue()->isNullValue())
+        RewriteMap[LHSUnknown->getValue()] =
+            getUMaxExpr(LHS, getOne(RHS->getType()));
+      break;
     default:
       break;
     }
