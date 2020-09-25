@@ -806,6 +806,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v2f16, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v2i16, Custom);
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v3f16, Custom);
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v3i16, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v4f16, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v4i16, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v8f16, Custom);
@@ -817,6 +819,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::v2i16, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::v2f16, Custom);
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::v3i16, Custom);
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::v3f16, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::v4f16, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::v4i16, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::f16, Custom);
@@ -4560,15 +4564,27 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   return SDValue();
 }
 
+// Used for D16: Casts the result of an instruction into the right vector,
+// packs values if loads return unpacked values.
 static SDValue adjustLoadValueTypeImpl(SDValue Result, EVT LoadVT,
                                        const SDLoc &DL,
                                        SelectionDAG &DAG, bool Unpacked) {
   if (!LoadVT.isVector())
     return Result;
 
+  // Cast back to the original packed type or to a larger type that is a
+  // multiple of 32 bit for D16. Widening the return type is a required for
+  // legalization.
+  EVT FittingLoadVT = LoadVT;
+  if ((LoadVT.getVectorNumElements() % 2) == 1) {
+    FittingLoadVT =
+        EVT::getVectorVT(*DAG.getContext(), LoadVT.getVectorElementType(),
+                         LoadVT.getVectorNumElements() + 1);
+  }
+
   if (Unpacked) { // From v2i32/v4i32 back to v2f16/v4f16.
     // Truncate to v2i16/v4i16.
-    EVT IntLoadVT = LoadVT.changeTypeToInteger();
+    EVT IntLoadVT = FittingLoadVT.changeTypeToInteger();
 
     // Workaround legalizer not scalarizing truncate after vector op
     // legalization but not creating intermediate vector trunc.
@@ -4577,14 +4593,18 @@ static SDValue adjustLoadValueTypeImpl(SDValue Result, EVT LoadVT,
     for (SDValue &Elt : Elts)
       Elt = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Elt);
 
+    // Pad illegal v1i16/v3fi6 to v4i16
+    if ((LoadVT.getVectorNumElements() % 2) == 1)
+      Elts.push_back(DAG.getUNDEF(MVT::i16));
+
     Result = DAG.getBuildVector(IntLoadVT, DL, Elts);
 
     // Bitcast to original type (v2f16/v4f16).
-    return DAG.getNode(ISD::BITCAST, DL, LoadVT, Result);
+    return DAG.getNode(ISD::BITCAST, DL, FittingLoadVT, Result);
   }
 
   // Cast back to the original packed type.
-  return DAG.getNode(ISD::BITCAST, DL, LoadVT, Result);
+  return DAG.getNode(ISD::BITCAST, DL, FittingLoadVT, Result);
 }
 
 SDValue SITargetLowering::adjustLoadValueType(unsigned Opcode,
@@ -4598,10 +4618,16 @@ SDValue SITargetLowering::adjustLoadValueType(unsigned Opcode,
   EVT LoadVT = M->getValueType(0);
 
   EVT EquivLoadVT = LoadVT;
-  if (Unpacked && LoadVT.isVector()) {
-    EquivLoadVT = LoadVT.isVector() ?
-      EVT::getVectorVT(*DAG.getContext(), MVT::i32,
-                       LoadVT.getVectorNumElements()) : LoadVT;
+  if (LoadVT.isVector()) {
+    if (Unpacked) {
+      EquivLoadVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
+                                     LoadVT.getVectorNumElements());
+    } else if ((LoadVT.getVectorNumElements() % 2) == 1) {
+      // Widen v3f16 to legal type
+      EquivLoadVT =
+          EVT::getVectorVT(*DAG.getContext(), LoadVT.getVectorElementType(),
+                           LoadVT.getVectorNumElements() + 1);
+    }
   }
 
   // Change from v4f16/v2f16 to EquivLoadVT.
@@ -4612,8 +4638,6 @@ SDValue SITargetLowering::adjustLoadValueType(unsigned Opcode,
       IsIntrinsic ? (unsigned)ISD::INTRINSIC_W_CHAIN : Opcode, DL,
       VTList, Ops, M->getMemoryVT(),
       M->getMemOperand());
-  if (!Unpacked) // Just adjusted the opcode.
-    return Load;
 
   SDValue Adjusted = adjustLoadValueTypeImpl(Load, LoadVT, DL, DAG, Unpacked);
 
@@ -4817,8 +4841,9 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
     if (SDValue Res = LowerINTRINSIC_W_CHAIN(SDValue(N, 0), DAG)) {
       if (Res.getOpcode() == ISD::MERGE_VALUES) {
         // FIXME: Hacky
-        Results.push_back(Res.getOperand(0));
-        Results.push_back(Res.getOperand(1));
+        for (unsigned I = 0; I < Res.getNumOperands(); I++) {
+          Results.push_back(Res.getOperand(I));
+        }
       } else {
         Results.push_back(Res);
         Results.push_back(Res.getValue(1));
@@ -5848,13 +5873,20 @@ static SDValue constructRetValue(SelectionDAG &DAG,
   if (IsD16)
     Data = adjustLoadValueTypeImpl(Data, ReqRetVT, DL, DAG, Unpacked);
 
+  EVT LegalReqRetVT = ReqRetVT;
   if (!ReqRetVT.isVector()) {
     if (!Data.getValueType().isInteger())
       Data = DAG.getNode(ISD::BITCAST, DL, Data.getValueType().changeTypeToInteger(), Data);
     Data = DAG.getNode(ISD::TRUNCATE, DL, ReqRetVT.changeTypeToInteger(), Data);
+  } else {
+    // We need to widen the return vector to a legal type
+    if ((ReqRetVT.getVectorNumElements() % 2) == 1) {
+      LegalReqRetVT =
+          EVT::getVectorVT(*DAG.getContext(), ReqRetVT.getVectorElementType(),
+                           ReqRetVT.getVectorNumElements() + 1);
+    }
   }
-
-  Data = DAG.getNode(ISD::BITCAST, DL, ReqRetVT, Data);
+  Data = DAG.getNode(ISD::BITCAST, DL, LegalReqRetVT, Data);
 
   if (TexFail)
     return DAG.getMergeValues({Data, TexFail, SDValue(Result, 1)}, DL);
@@ -7401,17 +7433,28 @@ SDValue SITargetLowering::handleD16VData(SDValue VData,
     return VData;
 
   SDLoc DL(VData);
-  assert((StoreVT.getVectorNumElements() != 3) && "Handle v3f16");
+  unsigned NumElements = StoreVT.getVectorNumElements();
 
   if (Subtarget->hasUnpackedD16VMem()) {
     // We need to unpack the packed data to store.
     EVT IntStoreVT = StoreVT.changeTypeToInteger();
     SDValue IntVData = DAG.getNode(ISD::BITCAST, DL, IntStoreVT, VData);
 
-    EVT EquivStoreVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
-                                        StoreVT.getVectorNumElements());
+    EVT EquivStoreVT =
+        EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumElements);
     SDValue ZExt = DAG.getNode(ISD::ZERO_EXTEND, DL, EquivStoreVT, IntVData);
     return DAG.UnrollVectorOp(ZExt.getNode());
+  } else if (NumElements == 3) {
+    EVT IntStoreVT =
+        EVT::getIntegerVT(*DAG.getContext(), StoreVT.getStoreSizeInBits());
+    SDValue IntVData = DAG.getNode(ISD::BITCAST, DL, IntStoreVT, VData);
+
+    EVT WidenedStoreVT = EVT::getVectorVT(
+        *DAG.getContext(), StoreVT.getVectorElementType(), NumElements + 1);
+    EVT WidenedIntVT = EVT::getIntegerVT(*DAG.getContext(),
+                                         WidenedStoreVT.getStoreSizeInBits());
+    SDValue ZExt = DAG.getNode(ISD::ZERO_EXTEND, DL, WidenedIntVT, IntVData);
+    return DAG.getNode(ISD::BITCAST, DL, WidenedStoreVT, ZExt);
   }
 
   assert(isTypeLegal(StoreVT));
@@ -7591,8 +7634,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     EVT VDataVT = VData.getValueType();
     EVT EltType = VDataVT.getScalarType();
     bool IsD16 = IsFormat && (EltType.getSizeInBits() == 16);
-    if (IsD16)
+    if (IsD16) {
       VData = handleD16VData(VData, DAG);
+      VDataVT = VData.getValueType();
+    }
 
     if (!isTypeLegal(VDataVT)) {
       VData =
@@ -7636,8 +7681,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     EVT EltType = VDataVT.getScalarType();
     bool IsD16 = IsFormat && (EltType.getSizeInBits() == 16);
 
-    if (IsD16)
+    if (IsD16) {
       VData = handleD16VData(VData, DAG);
+      VDataVT = VData.getValueType();
+    }
 
     if (!isTypeLegal(VDataVT)) {
       VData =
