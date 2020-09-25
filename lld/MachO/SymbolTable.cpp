@@ -131,9 +131,11 @@ Symbol *SymbolTable::addDSOHandle(const MachHeaderSection *header) {
   bool wasInserted;
   std::tie(s, wasInserted) = insert(DSOHandle::name);
   if (!wasInserted) {
+    // FIXME: Make every symbol (including absolute symbols) contain a
+    // reference to their originating file, then add that file name to this
+    // error message.
     if (auto *defined = dyn_cast<Defined>(s))
-      error("found defined symbol from " + defined->isec->file->getName() +
-            " with illegal name " + DSOHandle::name);
+      error("found defined symbol with illegal name " + DSOHandle::name);
   }
   replaceSymbol<DSOHandle>(s, header);
   return s;

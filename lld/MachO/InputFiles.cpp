@@ -222,6 +222,50 @@ void InputFile::parseRelocations(const section_64 &sec,
   }
 }
 
+static macho::Symbol *createDefined(const structs::nlist_64 &sym,
+                                    StringRef name, InputSection *isec,
+                                    uint32_t value) {
+  if (sym.n_type & N_EXT)
+    // Global defined symbol
+    return symtab->addDefined(name, isec, value, sym.n_desc & N_WEAK_DEF);
+  // Local defined symbol
+  return make<Defined>(name, isec, value, sym.n_desc & N_WEAK_DEF,
+                       /*isExternal=*/false);
+}
+
+// Absolute symbols are defined symbols that do not have an associated
+// InputSection. They cannot be weak.
+static macho::Symbol *createAbsolute(const structs::nlist_64 &sym,
+                                     StringRef name) {
+  if (sym.n_type & N_EXT)
+    return symtab->addDefined(name, nullptr, sym.n_value, /*isWeakDef=*/false);
+  return make<Defined>(name, nullptr, sym.n_value, /*isWeakDef=*/false,
+                       /*isExternal=*/false);
+}
+
+macho::Symbol *InputFile::parseNonSectionSymbol(const structs::nlist_64 &sym,
+                                                StringRef name) {
+  uint8_t type = sym.n_type & N_TYPE;
+  switch (type) {
+  case N_UNDF:
+    return sym.n_value == 0
+               ? symtab->addUndefined(name)
+               : symtab->addCommon(name, this, sym.n_value,
+                                   1 << GET_COMM_ALIGN(sym.n_desc));
+  case N_ABS:
+    return createAbsolute(sym, name);
+  case N_PBUD:
+  case N_INDR:
+    error("TODO: support symbols of type " + std::to_string(type));
+    return nullptr;
+  case N_SECT:
+    llvm_unreachable(
+        "N_SECT symbols should not be passed to parseNonSectionSymbol");
+  default:
+    llvm_unreachable("invalid symbol type");
+  }
+}
+
 void InputFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
                              const char *strtab, bool subsectionsViaSymbols) {
   // resize(), not reserve(), because we are going to create N_ALT_ENTRY symbols
@@ -229,26 +273,12 @@ void InputFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
   symbols.resize(nList.size());
   std::vector<size_t> altEntrySymIdxs;
 
-  auto createDefined = [&](const structs::nlist_64 &sym, InputSection *isec,
-                           uint32_t value) -> Symbol * {
-    StringRef name = strtab + sym.n_strx;
-    if (sym.n_type & N_EXT)
-      // Global defined symbol
-      return symtab->addDefined(name, isec, value, sym.n_desc & N_WEAK_DEF);
-    // Local defined symbol
-    return make<Defined>(name, isec, value, sym.n_desc & N_WEAK_DEF,
-                         /*isExternal=*/false);
-  };
-
   for (size_t i = 0, n = nList.size(); i < n; ++i) {
     const structs::nlist_64 &sym = nList[i];
+    StringRef name = strtab + sym.n_strx;
 
-    if ((sym.n_type & N_TYPE) == N_UNDF) {
-      StringRef name = strtab + sym.n_strx;
-      symbols[i] = sym.n_value == 0
-                       ? symtab->addUndefined(name)
-                       : symtab->addCommon(name, this, sym.n_value,
-                                           1 << GET_COMM_ALIGN(sym.n_desc));
+    if ((sym.n_type & N_TYPE) != N_SECT) {
+      symbols[i] = parseNonSectionSymbol(sym, name);
       continue;
     }
 
@@ -260,7 +290,7 @@ void InputFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
     // use the same subsection. Otherwise, we must split the sections along
     // symbol boundaries.
     if (!subsectionsViaSymbols) {
-      symbols[i] = createDefined(sym, subsecMap[0], offset);
+      symbols[i] = createDefined(sym, name, subsecMap[0], offset);
       continue;
     }
 
@@ -282,7 +312,7 @@ void InputFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
     if (firstSize == 0) {
       // Alias of an existing symbol, or the first symbol in the section. These
       // are handled by reusing the existing section.
-      symbols[i] = createDefined(sym, firstIsec, 0);
+      symbols[i] = createDefined(sym, name, firstIsec, 0);
       continue;
     }
 
@@ -298,15 +328,16 @@ void InputFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
 
     subsecMap[offset] = secondIsec;
     // By construction, the symbol will be at offset zero in the new section.
-    symbols[i] = createDefined(sym, secondIsec, 0);
+    symbols[i] = createDefined(sym, name, secondIsec, 0);
   }
 
   for (size_t idx : altEntrySymIdxs) {
     const structs::nlist_64 &sym = nList[idx];
+    StringRef name = strtab + sym.n_strx;
     SubsectionMap &subsecMap = subsections[sym.n_sect - 1];
     uint32_t off = sym.n_value - sectionHeaders[sym.n_sect - 1].addr;
     InputSection *subsec = findContainingSubsection(subsecMap, &off);
-    symbols[idx] = createDefined(sym, subsec, off);
+    symbols[idx] = createDefined(sym, name, subsec, off);
   }
 }
 
