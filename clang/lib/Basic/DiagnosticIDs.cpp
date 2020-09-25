@@ -33,7 +33,7 @@ struct StaticDiagInfoRec;
 // platforms. See "How To Write Shared Libraries" by Ulrich Drepper.
 struct StaticDiagInfoDescriptionStringTable {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, DEFERRABLE, CATEGORY)                            \
+             SHOWINSYSHEADER, CATEGORY)                                        \
   char ENUM##_desc[sizeof(DESC)];
   // clang-format off
 #include "clang/Basic/DiagnosticCommonKinds.inc"
@@ -54,9 +54,9 @@ struct StaticDiagInfoDescriptionStringTable {
 
 const StaticDiagInfoDescriptionStringTable StaticDiagInfoDescriptions = {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, DEFERRABLE, CATEGORY)                            \
+             SHOWINSYSHEADER, CATEGORY)                                        \
   DESC,
-  // clang-format off
+// clang-format off
 #include "clang/Basic/DiagnosticCommonKinds.inc"
 #include "clang/Basic/DiagnosticDriverKinds.inc"
 #include "clang/Basic/DiagnosticFrontendKinds.inc"
@@ -79,9 +79,9 @@ extern const StaticDiagInfoRec StaticDiagInfo[];
 // StaticDiagInfoRec would have extra padding on 64-bit platforms.
 const uint32_t StaticDiagInfoDescriptionOffsets[] = {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, DEFERRABLE, CATEGORY)                            \
+             SHOWINSYSHEADER, CATEGORY)                                        \
   offsetof(StaticDiagInfoDescriptionStringTable, ENUM##_desc),
-  // clang-format off
+// clang-format off
 #include "clang/Basic/DiagnosticCommonKinds.inc"
 #include "clang/Basic/DiagnosticDriverKinds.inc"
 #include "clang/Basic/DiagnosticFrontendKinds.inc"
@@ -114,7 +114,6 @@ struct StaticDiagInfoRec {
   unsigned SFINAE : 2;
   unsigned WarnNoWerror : 1;
   unsigned WarnShowInSystemHeader : 1;
-  unsigned Deferrable : 1;
   unsigned Category : 6;
 
   uint16_t OptionGroupIndex;
@@ -169,7 +168,7 @@ VALIDATE_DIAG_SIZE(REFACTORING)
 
 const StaticDiagInfoRec StaticDiagInfo[] = {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, DEFERRABLE, CATEGORY)                            \
+             SHOWINSYSHEADER, CATEGORY)                                        \
   {                                                                            \
       diag::ENUM,                                                              \
       DEFAULT_SEVERITY,                                                        \
@@ -177,11 +176,10 @@ const StaticDiagInfoRec StaticDiagInfo[] = {
       DiagnosticIDs::SFINAE,                                                   \
       NOWERROR,                                                                \
       SHOWINSYSHEADER,                                                         \
-      DEFERRABLE,                                                              \
       CATEGORY,                                                                \
       GROUP,                                                                   \
       STR_SIZE(DESC, uint16_t)},
-  // clang-format off
+// clang-format off
 #include "clang/Basic/DiagnosticCommonKinds.inc"
 #include "clang/Basic/DiagnosticDriverKinds.inc"
 #include "clang/Basic/DiagnosticFrontendKinds.inc"
@@ -334,12 +332,6 @@ DiagnosticIDs::getDiagnosticSFINAEResponse(unsigned DiagID) {
   if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
     return static_cast<DiagnosticIDs::SFINAEResponse>(Info->SFINAE);
   return SFINAE_Report;
-}
-
-bool DiagnosticIDs::isDeferrable(unsigned DiagID) {
-  if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
-    return Info->Deferrable;
-  return false;
 }
 
 /// getBuiltinDiagClass - Return the class field of the diagnostic.
