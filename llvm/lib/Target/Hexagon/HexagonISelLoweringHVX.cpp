@@ -1248,12 +1248,19 @@ HexagonTargetLowering::LowerHvxConcatVectors(SDValue Op, SelectionDAG &DAG)
           continue;
         }
         // A few less complicated cases.
-        if (V.getOpcode() == ISD::Constant)
-          Elems[i] = DAG.getSExtOrTrunc(V, dl, NTy);
-        else if (V.isUndef())
-          Elems[i] = DAG.getUNDEF(NTy);
-        else
-          llvm_unreachable("Unexpected vector element");
+        switch (V.getOpcode()) {
+          case ISD::Constant:
+            Elems[i] = DAG.getSExtOrTrunc(V, dl, NTy);
+            break;
+          case ISD::UNDEF:
+            Elems[i] = DAG.getUNDEF(NTy);
+            break;
+          case ISD::TRUNCATE:
+            Elems[i] = V.getOperand(0);
+            break;
+          default:
+            llvm_unreachable("Unexpected vector element");
+        }
       }
     }
     return DAG.getBuildVector(VecTy, dl, Elems);
