@@ -1867,6 +1867,19 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TEAMS_REG)(void (*fn)(void *),
   KA_TRACE(20, ("GOMP_teams_reg exit: T#%d\n", gtid));
 }
 
+void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASKWAIT_DEPEND)(void **depend) {
+  MKLOC(loc, "GOMP_taskwait_depend");
+  int gtid = __kmp_entry_gtid();
+  KA_TRACE(20, ("GOMP_taskwait_depend: T#%d\n", gtid));
+  kmp_gomp_depends_info_t gomp_depends(depend);
+  kmp_int32 ndeps = gomp_depends.get_num_deps();
+  kmp_depend_info_t dep_list[ndeps];
+  for (kmp_int32 i = 0; i < ndeps; i++)
+    dep_list[i] = gomp_depends.get_kmp_depend(i);
+  __kmpc_omp_wait_deps(&loc, gtid, ndeps, dep_list, 0, NULL);
+  KA_TRACE(20, ("GOMP_taskwait_depend exit: T#%d\n", gtid));
+}
+
 /* The following sections of code create aliases for the GOMP_* functions, then
    create versioned symbols using the assembler directive .symver. This is only
    pertinent for ELF .so library. The KMP_VERSION_SYMBOL macro is defined in
@@ -2039,6 +2052,7 @@ KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_PARALLEL_LOOP_NONMONOTONIC_RUNTIME, 50,
 KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_PARALLEL_LOOP_MAYBE_NONMONOTONIC_RUNTIME,
                    50, "GOMP_5.0");
 KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_TEAMS_REG, 50, "GOMP_5.0");
+KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_TASKWAIT_DEPEND, 50, "GOMP_5.0");
 
 #endif // KMP_USE_VERSION_SYMBOLS
 
