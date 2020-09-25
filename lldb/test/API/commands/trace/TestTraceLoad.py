@@ -39,19 +39,56 @@ class TestTraceLoad(TestBase):
     def testLoadInvalidTraces(self):
         src_dir = self.getSourceDir()
         # We test first an invalid type
-        trace_definition_file = os.path.join(src_dir, "intelpt-trace", "trace_bad.json")
-        self.expect("trace load -v " + trace_definition_file, error=True,
-          substrs=['error: JSON value is expected to be "object"', "Value", "123", "Schema"])
+        self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad.json"), error=True,
+          substrs=['''error: expected object at settings.processes[0]
 
-        # Now we test a missing field
-        trace_definition_file2 = os.path.join(src_dir, "intelpt-trace", "trace_bad2.json")
-        self.expect("trace load -v " + trace_definition_file2, error=True,
-            substrs=['error: JSON object is missing the "triple" field.', "Value", "pid", "12345", "Schema"])
+Context:
+{
+  "processes": [
+    /* error: expected object */
+    123
+  ],
+  "trace": { ... }
+}
+
+Schema:
+{
+ "trace": {
+    "type": "intel-pt",
+    "pt_cpu": {
+      "vendor": "intel" | "unknown",
+      "family": integer,
+      "model": integer,
+      "stepping": integer
+    }
+  },'''])
+
+        # Now we test a missing field in the global settings
+        self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad2.json"), error=True,
+            substrs=['error: missing value at settings.processes[1].triple', "Context", "Schema"])
+
+        # Now we test a missing field in the intel-pt settings
+        self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad4.json"), error=True,
+            substrs=['''error: missing value at settings.trace.pt_cpu.family
+
+Context:
+{
+  "pt_cpu": /* error: missing value */ {
+    "model": 79,
+    "stepping": 1,
+    "vendor": "intel"
+  },
+  "type": "intel-pt"
+}''', "Schema"])
+
+        # Now we test an incorrect load address in the intel-pt settings
+        self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad5.json"), error=True,
+            substrs=['error: expected numeric string at settings.processes[0].modules[0].loadAddress',
+                     '"loadAddress": /* error: expected numeric string */ 400000,', "Schema"])
 
         # The following wrong schema will have a valid target and an invalid one. In the case of failure,
         # no targets should be created.
         self.assertEqual(self.dbg.GetNumTargets(), 0)
-        trace_definition_file2 = os.path.join(src_dir, "intelpt-trace", "trace_bad3.json")
-        self.expect("trace load -v " + trace_definition_file2, error=True,
-            substrs=['error: JSON object is missing the "pid" field.'])
+        self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad3.json"), error=True,
+            substrs=['error: missing value at settings.processes[1].pid'])
         self.assertEqual(self.dbg.GetNumTargets(), 0)

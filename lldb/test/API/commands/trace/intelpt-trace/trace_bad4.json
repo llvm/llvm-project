@@ -1,0 +1,12 @@
+{
+  "trace": {
+    "type": "intel-pt",
+    "pt_cpu": {
+      "vendor": "intel",
+      "model": 79,
+      "stepping": 1
+    }
+  },
+  "processes": [
+  ]
+}
