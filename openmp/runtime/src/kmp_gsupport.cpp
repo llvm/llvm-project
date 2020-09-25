@@ -361,12 +361,9 @@ static
 #endif
 }
 
-#ifndef KMP_DEBUG
-static
-#endif /* KMP_DEBUG */
-    void
-    __kmp_GOMP_fork_call(ident_t *loc, int gtid, void (*unwrapped_task)(void *),
-                         microtask_t wrapper, int argc, ...) {
+static void __kmp_GOMP_fork_call(ident_t *loc, int gtid, unsigned num_threads,
+                                 unsigned flags, void (*unwrapped_task)(void *),
+                                 microtask_t wrapper, int argc, ...) {
   int rc;
   kmp_info_t *thr = __kmp_threads[gtid];
   kmp_team_t *team = thr->th.th_team;
@@ -375,6 +372,10 @@ static
   va_list ap;
   va_start(ap, argc);
 
+  if (num_threads != 0)
+    __kmp_push_num_threads(loc, gtid, num_threads);
+  if (flags != 0)
+    __kmp_push_proc_bind(loc, gtid, (kmp_proc_bind_t)flags);
   rc = __kmp_fork_call(loc, gtid, fork_context_gnu, argc, wrapper,
                        __kmp_invoke_task_func, kmp_va_addr_of(ap));
 
@@ -403,14 +404,6 @@ static
 #endif
 }
 
-static void __kmp_GOMP_serialized_parallel(ident_t *loc, kmp_int32 gtid,
-                                           void (*task)(void *)) {
-#if OMPT_SUPPORT
-  OMPT_STORE_RETURN_ADDRESS(gtid);
-#endif
-  __kmp_serialized_parallel(loc, gtid);
-}
-
 void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_START)(void (*task)(void *),
                                                        void *data,
                                                        unsigned num_threads) {
@@ -428,18 +421,9 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_START)(void (*task)(void *),
 
   MKLOC(loc, "GOMP_parallel_start");
   KA_TRACE(20, ("GOMP_parallel_start: T#%d\n", gtid));
-
-  if (__kmpc_ok_to_fork(&loc) && (num_threads != 1)) {
-    if (num_threads != 0) {
-      __kmp_push_num_threads(&loc, gtid, num_threads);
-    }
-    __kmp_GOMP_fork_call(&loc, gtid, task,
-                         (microtask_t)__kmp_GOMP_microtask_wrapper, 2, task,
-                         data);
-  } else {
-    __kmp_GOMP_serialized_parallel(&loc, gtid, task);
-  }
-
+  __kmp_GOMP_fork_call(&loc, gtid, num_threads, 0u, task,
+                       (microtask_t)__kmp_GOMP_microtask_wrapper, 2, task,
+                       data);
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled) {
     __ompt_get_task_info_internal(0, NULL, NULL, &frame, NULL, NULL);
@@ -460,25 +444,22 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_END)(void) {
   if (!thr->th.th_team->t.t_serialized) {
     __kmp_run_after_invoked_task(gtid, __kmp_tid_from_gtid(gtid), thr,
                                  thr->th.th_team);
-
-#if OMPT_SUPPORT
-    if (ompt_enabled.enabled) {
-      // Implicit task is finished here, in the barrier we might schedule
-      // deferred tasks,
-      // these don't see the implicit task on the stack
-      OMPT_CUR_TASK_INFO(thr)->frame.exit_frame = ompt_data_none;
-    }
-#endif
-
-    __kmp_join_call(&loc, gtid
-#if OMPT_SUPPORT
-                    ,
-                    fork_context_gnu
-#endif
-                    );
-  } else {
-    __kmpc_end_serialized_parallel(&loc, gtid);
   }
+#if OMPT_SUPPORT
+  if (ompt_enabled.enabled) {
+    // Implicit task is finished here, in the barrier we might schedule
+    // deferred tasks,
+    // these don't see the implicit task on the stack
+    OMPT_CUR_TASK_INFO(thr)->frame.exit_frame = ompt_data_none;
+  }
+#endif
+
+  __kmp_join_call(&loc, gtid
+#if OMPT_SUPPORT
+                  ,
+                  fork_context_gnu
+#endif
+                  );
 }
 
 // Loop worksharing constructs
@@ -1073,19 +1054,11 @@ LOOP_DOACROSS_RUNTIME_START_ULL(
                                                                                \
     ompt_pre();                                                                \
                                                                                \
-    if (__kmpc_ok_to_fork(&loc) && (num_threads != 1)) {                       \
-      if (num_threads != 0) {                                                  \
-        __kmp_push_num_threads(&loc, gtid, num_threads);                       \
-      }                                                                        \
-      __kmp_GOMP_fork_call(&loc, gtid, task,                                   \
-                           (microtask_t)__kmp_GOMP_parallel_microtask_wrapper, \
-                           9, task, data, num_threads, &loc, (schedule), lb,   \
-                           (str > 0) ? (ub - 1) : (ub + 1), str, chunk_sz);    \
-      IF_OMPT_SUPPORT(OMPT_STORE_RETURN_ADDRESS(gtid));                        \
-    } else {                                                                   \
-      __kmp_GOMP_serialized_parallel(&loc, gtid, task);                        \
-      IF_OMPT_SUPPORT(OMPT_STORE_RETURN_ADDRESS(gtid));                        \
-    }                                                                          \
+    __kmp_GOMP_fork_call(&loc, gtid, num_threads, 0u, task,                    \
+                         (microtask_t)__kmp_GOMP_parallel_microtask_wrapper,   \
+                         9, task, data, num_threads, &loc, (schedule), lb,     \
+                         (str > 0) ? (ub - 1) : (ub + 1), str, chunk_sz);      \
+    IF_OMPT_SUPPORT(OMPT_STORE_RETURN_ADDRESS(gtid));                          \
                                                                                \
     KMP_DISPATCH_INIT(&loc, gtid, (schedule), lb,                              \
                       (str > 0) ? (ub - 1) : (ub + 1), str, chunk_sz,          \
@@ -1332,17 +1305,10 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_SECTIONS_START)(
   MKLOC(loc, "GOMP_parallel_sections_start");
   KA_TRACE(20, ("GOMP_parallel_sections_start: T#%d\n", gtid));
 
-  if (__kmpc_ok_to_fork(&loc) && (num_threads != 1)) {
-    if (num_threads != 0) {
-      __kmp_push_num_threads(&loc, gtid, num_threads);
-    }
-    __kmp_GOMP_fork_call(&loc, gtid, task,
-                         (microtask_t)__kmp_GOMP_parallel_microtask_wrapper, 9,
-                         task, data, num_threads, &loc, kmp_nm_dynamic_chunked,
-                         (kmp_int)1, (kmp_int)count, (kmp_int)1, (kmp_int)1);
-  } else {
-    __kmp_GOMP_serialized_parallel(&loc, gtid, task);
-  }
+  __kmp_GOMP_fork_call(&loc, gtid, num_threads, 0u, task,
+                       (microtask_t)__kmp_GOMP_parallel_microtask_wrapper, 9,
+                       task, data, num_threads, &loc, kmp_nm_dynamic_chunked,
+                       (kmp_int)1, (kmp_int)count, (kmp_int)1, (kmp_int)1);
 
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled) {
@@ -1403,19 +1369,9 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL)(void (*task)(void *),
     OMPT_STORE_RETURN_ADDRESS(gtid);
   }
 #endif
-  if (__kmpc_ok_to_fork(&loc) && (num_threads != 1)) {
-    if (num_threads != 0) {
-      __kmp_push_num_threads(&loc, gtid, num_threads);
-    }
-    if (flags != 0) {
-      __kmp_push_proc_bind(&loc, gtid, (kmp_proc_bind_t)flags);
-    }
-    __kmp_GOMP_fork_call(&loc, gtid, task,
-                         (microtask_t)__kmp_GOMP_microtask_wrapper, 2, task,
-                         data);
-  } else {
-    __kmp_GOMP_serialized_parallel(&loc, gtid, task);
-  }
+  __kmp_GOMP_fork_call(&loc, gtid, num_threads, flags, task,
+                       (microtask_t)__kmp_GOMP_microtask_wrapper, 2, task,
+                       data);
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled) {
     task_info = __ompt_get_task_info_object(0);
@@ -1450,20 +1406,10 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_SECTIONS)(void (*task)(void *),
   OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
 
-  if (__kmpc_ok_to_fork(&loc) && (num_threads != 1)) {
-    if (num_threads != 0) {
-      __kmp_push_num_threads(&loc, gtid, num_threads);
-    }
-    if (flags != 0) {
-      __kmp_push_proc_bind(&loc, gtid, (kmp_proc_bind_t)flags);
-    }
-    __kmp_GOMP_fork_call(&loc, gtid, task,
-                         (microtask_t)__kmp_GOMP_parallel_microtask_wrapper, 9,
-                         task, data, num_threads, &loc, kmp_nm_dynamic_chunked,
-                         (kmp_int)1, (kmp_int)count, (kmp_int)1, (kmp_int)1);
-  } else {
-    __kmp_GOMP_serialized_parallel(&loc, gtid, task);
-  }
+  __kmp_GOMP_fork_call(&loc, gtid, num_threads, flags, task,
+                       (microtask_t)__kmp_GOMP_parallel_microtask_wrapper, 9,
+                       task, data, num_threads, &loc, kmp_nm_dynamic_chunked,
+                       (kmp_int)1, (kmp_int)count, (kmp_int)1, (kmp_int)1);
 
 #if OMPT_SUPPORT
   OMPT_STORE_RETURN_ADDRESS(gtid);
@@ -1488,20 +1434,10 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_SECTIONS)(void (*task)(void *),
          gtid, lb, ub, str, chunk_sz));                                        \
                                                                                \
     ompt_pre();                                                                \
-    if (__kmpc_ok_to_fork(&loc) && (num_threads != 1)) {                       \
-      if (num_threads != 0) {                                                  \
-        __kmp_push_num_threads(&loc, gtid, num_threads);                       \
-      }                                                                        \
-      if (flags != 0) {                                                        \
-        __kmp_push_proc_bind(&loc, gtid, (kmp_proc_bind_t)flags);              \
-      }                                                                        \
-      __kmp_GOMP_fork_call(&loc, gtid, task,                                   \
-                           (microtask_t)__kmp_GOMP_parallel_microtask_wrapper, \
-                           9, task, data, num_threads, &loc, (schedule), lb,   \
-                           (str > 0) ? (ub - 1) : (ub + 1), str, chunk_sz);    \
-    } else {                                                                   \
-      __kmp_GOMP_serialized_parallel(&loc, gtid, task);                        \
-    }                                                                          \
+    __kmp_GOMP_fork_call(&loc, gtid, num_threads, flags, task,                 \
+                         (microtask_t)__kmp_GOMP_parallel_microtask_wrapper,   \
+                         9, task, data, num_threads, &loc, (schedule), lb,     \
+                         (str > 0) ? (ub - 1) : (ub + 1), str, chunk_sz);      \
                                                                                \
     IF_OMPT_SUPPORT(OMPT_STORE_RETURN_ADDRESS(gtid);)                          \
     KMP_DISPATCH_INIT(&loc, gtid, (schedule), lb,                              \
@@ -1856,6 +1792,25 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_DOACROSS_ULL_WAIT)(
   va_end(args);
 }
 
+// fn: the function each master thread of new team will call
+// data: argument to fn
+// num_teams, thread_limit: max bounds on respective ICV
+// flags: unused
+void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TEAMS_REG)(void (*fn)(void *),
+                                                  void *data,
+                                                  unsigned num_teams,
+                                                  unsigned thread_limit,
+                                                  unsigned flags) {
+  MKLOC(loc, "GOMP_teams_reg");
+  int gtid = __kmp_entry_gtid();
+  KA_TRACE(20, ("GOMP_teams_reg: T#%d num_teams=%u thread_limit=%u flag=%u\n",
+                gtid, num_teams, thread_limit, flags));
+  __kmpc_push_num_teams(&loc, gtid, num_teams, thread_limit);
+  __kmpc_fork_teams(&loc, 2, (microtask_t)__kmp_GOMP_microtask_wrapper, fn,
+                    data);
+  KA_TRACE(20, ("GOMP_teams_reg exit: T#%d\n", gtid));
+}
+
 /* The following sections of code create aliases for the GOMP_* functions, then
    create versioned symbols using the assembler directive .symver. This is only
    pertinent for ELF .so library. The KMP_VERSION_SYMBOL macro is defined in
@@ -2027,6 +1982,7 @@ KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_PARALLEL_LOOP_NONMONOTONIC_RUNTIME, 50,
                    "GOMP_5.0");
 KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_PARALLEL_LOOP_MAYBE_NONMONOTONIC_RUNTIME,
                    50, "GOMP_5.0");
+KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_TEAMS_REG, 50, "GOMP_5.0");
 
 #endif // KMP_USE_VERSION_SYMBOLS
 
