@@ -13,6 +13,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -1302,6 +1303,77 @@ TEST(InstructionsTest, UnaryOperator) {
 
   F->deleteValue();
   I->deleteValue();
+}
+
+TEST(InstructionsTest, DropLocation) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"(
+      declare void @callee()
+
+      define void @no_parent_scope() {
+        call void @callee()           ; I1: Call with no location.
+        call void @callee(), !dbg !11 ; I2: Call with location.
+        ret void, !dbg !11            ; I3: Non-call with location.
+      }
+
+      define void @with_parent_scope() !dbg !8 {
+        call void @callee()           ; I1: Call with no location.
+        call void @callee(), !dbg !11 ; I2: Call with location.
+        ret void, !dbg !11            ; I3: Non-call with location.
+      }
+
+      !llvm.dbg.cu = !{!0}
+      !llvm.module.flags = !{!3, !4}
+      !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+      !1 = !DIFile(filename: "t2.c", directory: "foo")
+      !2 = !{}
+      !3 = !{i32 2, !"Dwarf Version", i32 4}
+      !4 = !{i32 2, !"Debug Info Version", i32 3}
+      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
+      !9 = !DISubroutineType(types: !10)
+      !10 = !{null}
+      !11 = !DILocation(line: 2, column: 7, scope: !8, inlinedAt: !12)
+      !12 = !DILocation(line: 3, column: 8, scope: !8)
+  )");
+  ASSERT_TRUE(M);
+
+  {
+    Function *NoParentScopeF =
+        cast<Function>(M->getNamedValue("no_parent_scope"));
+    BasicBlock &BB = NoParentScopeF->front();
+
+    auto *I1 = BB.getFirstNonPHI();
+    auto *I2 = I1->getNextNode();
+    auto *I3 = BB.getTerminator();
+
+    EXPECT_EQ(I1->getDebugLoc(), DebugLoc());
+    I1->dropLocation();
+    EXPECT_EQ(I1->getDebugLoc(), DebugLoc());
+
+    EXPECT_EQ(I2->getDebugLoc().getLine(), 2U);
+    I2->dropLocation();
+    EXPECT_EQ(I1->getDebugLoc(), DebugLoc());
+
+    EXPECT_EQ(I3->getDebugLoc().getLine(), 2U);
+    I3->dropLocation();
+    EXPECT_EQ(I3->getDebugLoc(), DebugLoc());
+  }
+
+  {
+    Function *WithParentScopeF =
+        cast<Function>(M->getNamedValue("with_parent_scope"));
+    BasicBlock &BB = WithParentScopeF->front();
+
+    auto *I2 = BB.getFirstNonPHI()->getNextNode();
+
+    MDNode *Scope = cast<MDNode>(WithParentScopeF->getSubprogram());
+    EXPECT_EQ(I2->getDebugLoc().getLine(), 2U);
+    I2->dropLocation();
+    EXPECT_EQ(I2->getDebugLoc().getLine(), 0U);
+    EXPECT_EQ(I2->getDebugLoc().getScope(), Scope);
+    EXPECT_EQ(I2->getDebugLoc().getInlinedAt(), nullptr);
+  }
 }
 
 } // end anonymous namespace
