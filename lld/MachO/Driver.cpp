@@ -88,6 +88,24 @@ void MachOOptTable::printHelp(const char *argv0, bool showHidden) const {
   lld::outs() << "\n";
 }
 
+HeaderFileType getOutputType(const opt::InputArgList &args) {
+  // TODO: -r, -dylinker, -preload...
+  opt::Arg *outputArg = args.getLastArg(OPT_bundle, OPT_dylib, OPT_execute);
+  if (outputArg == nullptr)
+    return MH_EXECUTE;
+
+  switch (outputArg->getOption().getID()) {
+  case OPT_bundle:
+    return MH_BUNDLE;
+  case OPT_dylib:
+    return MH_DYLIB;
+  case OPT_execute:
+    return MH_EXECUTE;
+  default:
+    llvm_unreachable("internal error");
+  }
+}
+
 static Optional<std::string>
 findAlongPathsWithExtensions(StringRef name, ArrayRef<StringRef> extensions) {
   llvm::SmallString<261> base;
@@ -575,7 +593,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   config->headerPadMaxInstallNames =
       args.hasArg(OPT_headerpad_max_install_names);
-  config->outputType = args.hasArg(OPT_dylib) ? MH_DYLIB : MH_EXECUTE;
+  config->outputType = getOutputType(args);
   config->runtimePaths = args::getStrings(args, OPT_rpath);
   config->allLoad = args.hasArg(OPT_all_load);
   config->forceLoadObjC = args.hasArg(OPT_ObjC);
@@ -661,6 +679,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   }
 
   config->isPic = config->outputType == MH_DYLIB ||
+                  config->outputType == MH_BUNDLE ||
                   (config->outputType == MH_EXECUTE && args.hasArg(OPT_pie));
 
   // Now that all dylibs have been loaded, search for those that should be
