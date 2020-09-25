@@ -377,6 +377,8 @@ void Writer::createLoadCommands() {
   case MH_DYLIB:
     in.header->addLoadCommand(make<LCDylib>(LC_ID_DYLIB, config->installName));
     break;
+  case MH_BUNDLE:
+    break;
   default:
     llvm_unreachable("unhandled output file type");
   }
@@ -532,6 +534,7 @@ void Writer::createOutputSections() {
     make<PageZeroSection>();
     break;
   case MH_DYLIB:
+  case MH_BUNDLE:
     break;
   default:
     llvm_unreachable("unhandled output file type");
