@@ -11311,9 +11311,9 @@ OMPTraitInfo &ASTContext::getNewOMPTraitInfo() {
   return *OMPTraitInfoVector.back();
 }
 
-const StreamableDiagnosticBase &clang::
-operator<<(const StreamableDiagnosticBase &DB,
-           const ASTContext::SectionInfo &Section) {
+const DiagnosticBuilder &
+clang::operator<<(const DiagnosticBuilder &DB,
+                  const ASTContext::SectionInfo &Section) {
   if (Section.Decl)
     return DB << Section.Decl;
   return DB << "a prior #pragma section";
