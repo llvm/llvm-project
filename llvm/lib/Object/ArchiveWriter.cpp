@@ -359,22 +359,21 @@ getSymbols(MemoryBufferRef Buf, raw_ostream &SymNames, bool &HasObject) {
   // reference to it, thus SymbolicFile should be destroyed first.
   LLVMContext Context;
   std::unique_ptr<object::SymbolicFile> Obj;
-  if (identify_magic(Buf.getBuffer()) == file_magic::bitcode) {
+
+  const file_magic Type = identify_magic(Buf.getBuffer());
+  // Treat unsupported file types as having no symbols.
+  if (!object::SymbolicFile::isSymbolicFile(Type, &Context))
+    return Ret;
+  if (Type == file_magic::bitcode) {
     auto ObjOrErr = object::SymbolicFile::createSymbolicFile(
         Buf, file_magic::bitcode, &Context);
-    if (!ObjOrErr) {
-      // FIXME: check only for "not an object file" errors.
-      consumeError(ObjOrErr.takeError());
-      return Ret;
-    }
+    if (!ObjOrErr)
+      return ObjOrErr.takeError();
     Obj = std::move(*ObjOrErr);
   } else {
     auto ObjOrErr = object::SymbolicFile::createSymbolicFile(Buf);
-    if (!ObjOrErr) {
-      // FIXME: check only for "not an object file" errors.
-      consumeError(ObjOrErr.takeError());
-      return Ret;
-    }
+    if (!ObjOrErr)
+      return ObjOrErr.takeError();
     Obj = std::move(*ObjOrErr);
   }
 
@@ -393,7 +392,7 @@ getSymbols(MemoryBufferRef Buf, raw_ostream &SymNames, bool &HasObject) {
 static Expected<std::vector<MemberData>>
 computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
                   object::Archive::Kind Kind, bool Thin, bool Deterministic,
-                  ArrayRef<NewArchiveMember> NewMembers) {
+                  bool NeedSymbols, ArrayRef<NewArchiveMember> NewMembers) {
   static char PaddingData[8] = {'\n', '\n', '\n', '\n', '\n', '\n', '\n', '\n'};
 
   // This ignores the symbol table, but we only need the value mod 8 and the
@@ -494,13 +493,17 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
                       ModTime, Size);
     Out.flush();
 
-    Expected<std::vector<unsigned>> Symbols =
-        getSymbols(Buf, SymNames, HasObject);
-    if (auto E = Symbols.takeError())
-      return std::move(E);
+    std::vector<unsigned> Symbols;
+    if (NeedSymbols) {
+      Expected<std::vector<unsigned>> SymbolsOrErr =
+          getSymbols(Buf, SymNames, HasObject);
+      if (auto E = SymbolsOrErr.takeError())
+        return std::move(E);
+      Symbols = std::move(*SymbolsOrErr);
+    }
 
     Pos += Header.size() + Data.size() + Padding.size();
-    Ret.push_back({std::move(*Symbols), std::move(Header), Data, Padding});
+    Ret.push_back({std::move(Symbols), std::move(Header), Data, Padding});
   }
   // If there are no symbols, emit an empty symbol table, to satisfy Solaris
   // tools, older versions of which expect a symbol table in a non-empty
@@ -564,8 +567,9 @@ static Error writeArchiveToStream(raw_ostream &Out,
   SmallString<0> StringTableBuf;
   raw_svector_ostream StringTable(StringTableBuf);
 
-  Expected<std::vector<MemberData>> DataOrErr = computeMemberData(
-      StringTable, SymNames, Kind, Thin, Deterministic, NewMembers);
+  Expected<std::vector<MemberData>> DataOrErr =
+      computeMemberData(StringTable, SymNames, Kind, Thin, Deterministic,
+                        WriteSymtab, NewMembers);
   if (Error E = DataOrErr.takeError())
     return E;
   std::vector<MemberData> &Data = *DataOrErr;
