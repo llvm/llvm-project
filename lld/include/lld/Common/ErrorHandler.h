@@ -99,12 +99,20 @@ public:
   bool fatalWarnings = false;
   bool verbose = false;
   bool vsDiagnostics = false;
+  bool disableOutput = false;
+  std::function<void()> cleanupCallback;
 
   void error(const Twine &msg);
   LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &msg);
   void log(const Twine &msg);
   void message(const Twine &msg);
   void warn(const Twine &msg);
+
+  void reset() {
+    if (cleanupCallback)
+      cleanupCallback();
+    *this = ErrorHandler();
+  }
 
   std::unique_ptr<llvm::FileOutputBuffer> outputBuffer;
 
