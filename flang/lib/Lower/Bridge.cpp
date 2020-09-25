@@ -25,6 +25,7 @@
 #include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
+#include "flang/Lower/Todo.h"
 #include "flang/Lower/Support/BoxValue.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
@@ -44,9 +45,6 @@
 #include "llvm/Support/MD5.h"
 
 #define DEBUG_TYPE "flang-lower-bridge"
-
-#undef TODO
-#define TODO() llvm_unreachable("not yet implemented");
 
 static llvm::cl::opt<bool> dumpBeforeFir(
     "fdebug-dump-pre-fir", llvm::cl::init(false),
@@ -1185,7 +1183,7 @@ private:
           },
           s.u);
     }
-    TODO();
+    TODO("");
   }
 
   void genFIR(const Fortran::parser::ForallAssignmentStmt &s) {
@@ -1227,7 +1225,7 @@ private:
     auto selectType = selectExpr.getType();
     Fortran::lower::CharacterExprHelper helper{*builder, loc};
     if (helper.isCharacter(selectExpr.getType())) {
-      TODO();
+      TODO("");
     }
     llvm::SmallVector<mlir::Attribute, 10> attrList;
     llvm::SmallVector<mlir::Value, 10> valueList;
@@ -1292,13 +1290,13 @@ private:
   void genFIR(const Fortran::parser::ElseStmt &) {}       // nop
   void genFIR(const Fortran::parser::EndIfStmt &) {}      // nop
 
-  void genFIR(const Fortran::parser::AssociateConstruct &) { TODO(); }
-  void genFIR(const Fortran::parser::AssociateStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::EndAssociateStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::AssociateConstruct &) { TODO(""); }
+  void genFIR(const Fortran::parser::AssociateStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::EndAssociateStmt &) { TODO(""); }
 
-  void genFIR(const Fortran::parser::BlockConstruct &) { TODO(); }
-  void genFIR(const Fortran::parser::BlockStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::EndBlockStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::BlockConstruct &) { TODO(""); }
+  void genFIR(const Fortran::parser::BlockStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::EndBlockStmt &) { TODO(""); }
 
   void genFIR(const Fortran::parser::ChangeTeamConstruct &construct) {
     genChangeTeamConstruct(*this, getEval(), construct);
@@ -1310,17 +1308,17 @@ private:
     genEndChangeTeamStmt(*this, getEval(), stmt);
   }
 
-  void genFIR(const Fortran::parser::CriticalConstruct &) { TODO(); }
-  void genFIR(const Fortran::parser::CriticalStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::EndCriticalStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::CriticalConstruct &) { TODO(""); }
+  void genFIR(const Fortran::parser::CriticalStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::EndCriticalStmt &) { TODO(""); }
 
-  void genFIR(const Fortran::parser::SelectRankConstruct &) { TODO(); }
-  void genFIR(const Fortran::parser::SelectRankStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::SelectRankCaseStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::SelectRankConstruct &) { TODO(""); }
+  void genFIR(const Fortran::parser::SelectRankStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::SelectRankCaseStmt &) { TODO(""); }
 
-  void genFIR(const Fortran::parser::SelectTypeConstruct &) { TODO(); }
-  void genFIR(const Fortran::parser::SelectTypeStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::TypeGuardStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::SelectTypeConstruct &) { TODO(""); }
+  void genFIR(const Fortran::parser::SelectTypeStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::TypeGuardStmt &) { TODO(""); }
 
   //===--------------------------------------------------------------------===//
   // IO statements (see io.h)
@@ -1427,9 +1425,9 @@ private:
   // Memory allocation and deallocation
   //===--------------------------------------------------------------------===//
 
-  void genFIR(const Fortran::parser::AllocateStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::AllocateStmt &) { TODO(""); }
 
-  void genFIR(const Fortran::parser::DeallocateStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::DeallocateStmt &) { TODO(""); }
 
   /// Nullify pointer object list
   ///
@@ -1450,7 +1448,7 @@ private:
                 auto cast = builder->createConvert(loc, ty, zero);
                 builder->create<fir::StoreOp>(loc, cast, load);
               },
-              [&](const Fortran::parser::StructureComponent &) { TODO(); },
+              [&](const Fortran::parser::StructureComponent &) { TODO(""); },
           },
           po.u);
     }
@@ -1491,7 +1489,7 @@ private:
         auto up = builder->create<mlir::SubIOp>(loc, ub, one);
         extents.push_back(up);
       } else {
-        TODO();
+        TODO("");
       }
     }
     // Iteration space is created with outermost columns, innermost rows
@@ -1597,7 +1595,7 @@ private:
 
               // Scalar assignment
               if (isHeap) {
-                TODO();
+                TODO("");
               }
               if (isNumericScalarCategory(lhsType->category())) {
                 // Fortran 2018 10.2.1.3 p8 and p9
@@ -1634,36 +1632,36 @@ private:
               if (lhsType->category() ==
                   Fortran::common::TypeCategory::Derived) {
                 // Fortran 2018 10.2.1.3 p12 and p13
-                TODO();
+                TODO("");
               }
               llvm_unreachable("unknown category");
             },
             [&](const Fortran::evaluate::ProcedureRef &) {
               // Defined assignment: call ProcRef
-              TODO();
+              TODO("");
             },
             [&](const Fortran::evaluate::Assignment::BoundsSpec &) {
               // Pointer assignment with possibly empty bounds-spec
-              TODO();
+              TODO("");
             },
             [&](const Fortran::evaluate::Assignment::BoundsRemapping &) {
               // Pointer assignment with bounds-remapping
-              TODO();
+              TODO("");
             },
         },
         assign.u);
   }
 
-  void genFIR(const Fortran::parser::WhereConstruct &) { TODO(); }
-  void genFIR(const Fortran::parser::WhereConstructStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::MaskedElsewhereStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::ElsewhereStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::EndWhereStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::WhereStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::WhereConstruct &) { TODO(""); }
+  void genFIR(const Fortran::parser::WhereConstructStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::MaskedElsewhereStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::ElsewhereStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::EndWhereStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::WhereStmt &) { TODO(""); }
 
-  void genFIR(const Fortran::parser::ForallConstructStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::EndForallStmt &) { TODO(); }
-  void genFIR(const Fortran::parser::ForallStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::ForallConstructStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::EndForallStmt &) { TODO(""); }
+  void genFIR(const Fortran::parser::ForallStmt &) { TODO(""); }
 
   void genFIR(const Fortran::parser::PointerAssignmentStmt &stmt) {
     genAssignment(*stmt.typedAssignment->v);
@@ -1717,7 +1715,7 @@ private:
     genPauseStatement(*this, stmt);
   }
 
-  void genFIR(const Fortran::parser::NamelistStmt &) { TODO(); }
+  void genFIR(const Fortran::parser::NamelistStmt &) { TODO(""); }
 
   // call FAIL IMAGE in runtime
   void genFIR(const Fortran::parser::FailImageStmt &stmt) {
@@ -1846,7 +1844,7 @@ private:
       auto linkage = builder->createInternalLinkage();
       if (details->init()) {
         if (!sym.GetType()->AsIntrinsic()) {
-          TODO(); // Derived type / polymorphic
+          TODO(""); // Derived type / polymorphic
         }
         auto symTy = genType(var);
         if (symTy.isa<fir::CharacterType>()) {
@@ -1881,7 +1879,7 @@ private:
     } else if (sym.has<Fortran::semantics::CommonBlockDetails>()) {
       llvm_unreachable("COMMON symbol processed elsewhere");
     } else {
-      TODO(); // Procedure pointer or something else
+      TODO(""); // Procedure pointer or something else
     }
   }
 

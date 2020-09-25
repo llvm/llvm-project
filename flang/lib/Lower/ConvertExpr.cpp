@@ -21,6 +21,7 @@
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/Runtime.h"
+#include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
@@ -32,9 +33,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#define DEBUG_TYPE "flang-lower-expr"
 
-#define TODO() llvm_unreachable("not yet implemented")
+#define DEBUG_TYPE "flang-lower-expr"
 
 static llvm::cl::opt<bool> generateArrayCoordinate(
     "gen-array-coor",
@@ -175,7 +175,7 @@ private:
         return builder.create<OpTy>(getLoc(), *lhs, *rhs);
       }
     // binary ops can appear in array contexts
-    TODO();
+    TODO("");
   }
   template <typename OpTy, typename A>
   mlir::Value createBinaryOp(const A &ex) {
@@ -215,7 +215,7 @@ private:
     if (auto *lhs = left.getUnboxed())
       if (auto *rhs = right.getUnboxed())
         return builder.create<OpTy>(getLoc(), pred, *lhs, *rhs);
-    TODO();
+    TODO("");
   }
   template <typename OpTy, typename A>
   mlir::Value createCompareOp(const A &ex, mlir::CmpIPredicate pred) {
@@ -229,7 +229,7 @@ private:
     if (auto *lhs = left.getUnboxed())
       if (auto *rhs = right.getUnboxed())
         return builder.create<OpTy>(getLoc(), pred, *lhs, *rhs);
-    TODO();
+    TODO("");
   }
   template <typename OpTy, typename A>
   mlir::Value createFltCmpOp(const A &ex, mlir::CmpFPredicate pred) {
@@ -368,7 +368,7 @@ private:
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::BOZLiteralConstant &) {
-    TODO();
+    TODO("");
   }
   /// Return indirection to function designated in ProcedureDesignator.
   /// The type of the function indirection is not guaranteed to match the one
@@ -407,10 +407,10 @@ private:
     return builder.createNullConstant(location);
   }
   fir::ExtendedValue genval(const Fortran::evaluate::StructureConstructor &) {
-    TODO();
+    TODO("");
   }
   fir::ExtendedValue genval(const Fortran::evaluate::ImpliedDoIndex &) {
-    TODO();
+    TODO("");
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::DescriptorInquiry &desc) {
@@ -425,19 +425,19 @@ private:
                            .getLengthType();
         res = builder.create<fir::BoxCharLenOp>(getLoc(), lenType, descRef);
       } else if (descType.isa<fir::BoxType>()) {
-        TODO();
+        TODO("");
       } else {
         llvm_unreachable("not a descriptor");
       }
       break;
     default:
-      TODO();
+      TODO("");
     }
     return res;
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::TypeParamInquiry &) {
-    TODO();
+    TODO("");
   }
 
   mlir::Value extractComplexPart(mlir::Value cplx, bool isImagPart) {
@@ -590,7 +590,7 @@ private:
 
   template <int KIND>
   fir::ExtendedValue genval(const Fortran::evaluate::SetLength<KIND> &) {
-    TODO();
+    TODO("");
   }
 
   mlir::Value createComplexCompare(mlir::Value cplx1, mlir::Value cplx2,
@@ -892,11 +892,11 @@ private:
 
   template <typename A>
   fir::ExtendedValue genval(const Fortran::evaluate::ArrayConstructor<A> &) {
-    TODO();
+    TODO("");
   }
 
-  fir::ExtendedValue gen(const Fortran::evaluate::ComplexPart &) { TODO(); }
-  fir::ExtendedValue genval(const Fortran::evaluate::ComplexPart &) { TODO(); }
+  fir::ExtendedValue gen(const Fortran::evaluate::ComplexPart &) { TODO(""); }
+  fir::ExtendedValue genval(const Fortran::evaluate::ComplexPart &) { TODO(""); }
 
   /// Reference to a substring.
   fir::ExtendedValue gen(const Fortran::evaluate::Substring &s) {
@@ -905,7 +905,7 @@ private:
         Fortran::common::visitors{
             [&](const Fortran::evaluate::DataRef &x) { return gen(x); },
             [&](const Fortran::evaluate::StaticDataObject::Pointer &)
-                -> fir::ExtendedValue { TODO(); },
+                -> fir::ExtendedValue { TODO(""); },
         },
         s.parent());
     llvm::SmallVector<mlir::Value, 2> bounds;
@@ -1006,7 +1006,7 @@ private:
     auto c = gen(cmpt);
     if (auto *val = c.getUnboxed())
       return genLoad(*val);
-    TODO();
+    TODO("");
   }
 
   // Determine the result type after removing `dims` dimensions from the array
@@ -1035,7 +1035,7 @@ private:
         return genval(*sub);
       return genIntegerConstant<8>(builder.getContext(), 1);
     }
-    TODO();
+    TODO("");
   }
 
   fir::ExtendedValue
@@ -1110,7 +1110,7 @@ private:
             if (auto ext = std::get<0>(pair))
               delta = builder.create<mlir::MulIOp>(loc, delta, ext);
           } else {
-            TODO();
+            TODO("");
           }
         }
         ++dim;
@@ -1181,11 +1181,11 @@ private:
             auto val = builder.createConvert(loc, idxTy, *sval);
             arrayCoorArgs.push_back(val);
           } else {
-            TODO();
+            TODO("");
           }
         } else {
           // RangedBoxValue
-          TODO();
+          TODO("");
         }
       }
       return builder.create<fir::ArrayCoorOp>(
@@ -1194,21 +1194,21 @@ private:
     return si.match(
         [&](const Fortran::lower::SymbolBox::FullDim &arr) {
           if (!inArrayContext() && isSlice(aref)) {
-            TODO();
+            TODO("");
             return mlir::Value{};
           }
           return genWithShape(arr);
         },
         [&](const Fortran::lower::SymbolBox::CharFullDim &arr) {
-          TODO();
+          TODO("");
           return mlir::Value{};
         },
         [&](const Fortran::lower::SymbolBox::Derived &arr) {
-          TODO();
+          TODO("");
           return mlir::Value{};
         },
         [&](const auto &) {
-          TODO();
+          TODO("");
           return mlir::Value{};
         });
   }
@@ -1237,7 +1237,7 @@ private:
             assert(adj && "boxed value not handled");
             args.push_back(builder.create<mlir::SubIOp>(loc, ty, *val, adj));
           } else {
-            TODO();
+            TODO("");
           }
         } else {
           auto *range = std::get_if<fir::RangeBoxValue>(&subBox);
@@ -1405,10 +1405,10 @@ private:
     for (const auto &arg : caller.getPassedArguments()) {
       const auto *actual = arg.entity;
       if (!actual)
-        TODO(); // optional arguments
+        TODO(""); // optional arguments
       const auto *expr = actual->UnwrapExpr();
       if (!expr)
-        TODO(); // assumed type arguments
+        TODO(""); // assumed type arguments
 
       mlir::Value argRef;
       mlir::Value argVal;
@@ -1453,7 +1453,7 @@ private:
         }
         caller.placeInput(arg, boxChar);
       } else if (arg.passBy == PassBy::Box) {
-        TODO(); // generate emboxing if need.
+        TODO(""); // generate emboxing if need.
       } else if (arg.passBy == PassBy::AddressAndLength) {
         Fortran::lower::CharacterExprHelper helper{builder, getLoc()};
         auto ch = helper.materializeCharacter(argRef);
@@ -1474,7 +1474,7 @@ private:
         auto ch = helper.createUnboxChar(resRef);
         caller.placeAddressAndLengthInput(*resultArg, ch.first, ch.second);
       } else {
-        TODO(); // Pass descriptor
+        TODO(""); // Pass descriptor
       }
     }
 
