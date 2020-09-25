@@ -682,9 +682,7 @@ public:
   /// PassManagers and populate the passed ModulePassManager.
   void registerParseTopLevelPipelineCallback(
       const std::function<bool(ModulePassManager &, ArrayRef<PipelineElement>,
-                               bool VerifyEachPass, bool DebugLogging)> &C) {
-    TopLevelPipelineParsingCallbacks.push_back(C);
-  }
+                               bool VerifyEachPass, bool DebugLogging)> &C);
 
   /// Enable or disable the hot/cold splitting optimization. By default, it is
   /// disabled.
