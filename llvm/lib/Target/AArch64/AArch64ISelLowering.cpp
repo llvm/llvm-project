@@ -1092,6 +1092,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::UMAX, MVT::v2i64, Custom);
       setOperationAction(ISD::UMIN, MVT::v1i64, Custom);
       setOperationAction(ISD::UMIN, MVT::v2i64, Custom);
+      setOperationAction(ISD::VECREDUCE_SMAX, MVT::v2i64, Custom);
+      setOperationAction(ISD::VECREDUCE_SMIN, MVT::v2i64, Custom);
     }
   }
 
@@ -1219,6 +1221,10 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::UMAX, VT, Custom);
   setOperationAction(ISD::UMIN, VT, Custom);
   setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
   setOperationAction(ISD::VSELECT, VT, Custom);
   setOperationAction(ISD::XOR, VT, Custom);
   setOperationAction(ISD::ZERO_EXTEND, VT, Custom);
@@ -9650,18 +9656,27 @@ static SDValue getReductionSDNode(unsigned Op, SDLoc DL, SDValue ScalarOp,
 
 SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
                                               SelectionDAG &DAG) const {
-  SDValue VecOp = Op.getOperand(0);
+  SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
 
   SDLoc dl(Op);
   switch (Op.getOpcode()) {
   case ISD::VECREDUCE_ADD:
-    if (useSVEForFixedLengthVectorVT(VecOp.getValueType()))
+    if (useSVEForFixedLengthVectorVT(SrcVT))
       return LowerFixedLengthReductionToSVE(AArch64ISD::UADDV_PRED, Op, DAG);
     return getReductionSDNode(AArch64ISD::UADDV, dl, Op, DAG);
-  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMAX: {
+    bool OverrideNEON = SrcVT.getVectorElementType() == MVT::i64;
+    if (useSVEForFixedLengthVectorVT(SrcVT, OverrideNEON))
+      return LowerFixedLengthReductionToSVE(AArch64ISD::SMAXV_PRED, Op, DAG);
     return getReductionSDNode(AArch64ISD::SMAXV, dl, Op, DAG);
-  case ISD::VECREDUCE_SMIN:
+  }
+  case ISD::VECREDUCE_SMIN: {
+    bool OverrideNEON = SrcVT.getVectorElementType() == MVT::i64;
+    if (useSVEForFixedLengthVectorVT(SrcVT, OverrideNEON))
+      return LowerFixedLengthReductionToSVE(AArch64ISD::SMINV_PRED, Op, DAG);
     return getReductionSDNode(AArch64ISD::SMINV, dl, Op, DAG);
+  }
   case ISD::VECREDUCE_UMAX:
     return getReductionSDNode(AArch64ISD::UMAXV, dl, Op, DAG);
   case ISD::VECREDUCE_UMIN:
@@ -16001,10 +16016,9 @@ SDValue AArch64TargetLowering::LowerFixedLengthReductionToSVE(unsigned Opcode,
   SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT,
                             Rdx, DAG.getConstant(0, DL, MVT::i64));
 
-  // This is needed for UADDV, since it returns an i64 result. The VEC_REDUCE
-  // nodes expect an element size result.
+  // The VEC_REDUCE nodes expect an element size result.
   if (ResVT != ScalarOp.getValueType())
-    Res = DAG.getNode(ISD::TRUNCATE, DL, ScalarOp.getValueType(), Res);
+    Res = DAG.getAnyExtOrTrunc(Res, DL, ScalarOp.getValueType());
 
   return Res;
 }
