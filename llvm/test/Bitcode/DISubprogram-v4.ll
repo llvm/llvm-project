@@ -24,8 +24,8 @@ define void @_Z3foov() !dbg !9 {
 !8 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
                              file: !2, isOptimized: true, flags: "-O2")
 
-; CHECK: !9 = !DISubprogram(scope: null, spFlags: 0)
-!9 = !DISubprogram(isDefinition: false)
+; CHECK: !9 = distinct !DISubprogram(scope: null, spFlags: 0)
+!9 = distinct !DISubprogram(isDefinition: false)
 
 ; CHECK: !10 = distinct !DISubprogram({{.*}}, spFlags: DISPFlagPureVirtual | DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized,
 !10 = distinct !DISubprogram(name: "foo", linkageName: "_Zfoov", scope: !1,
