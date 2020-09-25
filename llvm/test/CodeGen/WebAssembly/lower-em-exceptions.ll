@@ -5,8 +5,8 @@ target triple = "wasm32-unknown-unknown"
 
 @_ZTIi = external constant i8*
 @_ZTIc = external constant i8*
-; CHECK-DAG: __THREW__ = external global i32
-; CHECK-DAG: __threwValue = external global i32
+; CHECK-DAG: __THREW__ = external thread_local(localexec) global i32
+; CHECK-DAG: __threwValue = external thread_local(localexec) global i32
 
 ; Test invoke instruction with clauses (try-catch block)
 define void @clause() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {

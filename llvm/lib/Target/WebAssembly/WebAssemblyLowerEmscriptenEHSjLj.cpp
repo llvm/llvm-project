@@ -315,9 +315,12 @@ static bool canThrow(const Value *V) {
 // which will generate an import and asssumes that it will exist at link time.
 static GlobalVariable *getGlobalVariableI32(Module &M, IRBuilder<> &IRB,
                                             const char *Name) {
-
-  auto *GV =
-      dyn_cast<GlobalVariable>(M.getOrInsertGlobal(Name, IRB.getInt32Ty()));
+  auto Int32Ty = IRB.getInt32Ty();
+  auto *GV = dyn_cast<GlobalVariable>(M.getOrInsertGlobal(Name, Int32Ty, [&]() {
+    return new GlobalVariable(M, Int32Ty, false,
+                              GlobalVariable::ExternalLinkage, nullptr, Name,
+                              nullptr, GlobalValue::LocalExecTLSModel);
+  }));
   if (!GV)
     report_fatal_error(Twine("unable to create global: ") + Name);
 
