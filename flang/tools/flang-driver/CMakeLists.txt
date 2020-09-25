@@ -17,6 +17,7 @@ target_link_libraries(flang-new
   flangFrontendTool
   clangDriver
   clangBasic
+  clangFrontend
   LLVMSupport
   LLVMTarget
   LLVMOption
