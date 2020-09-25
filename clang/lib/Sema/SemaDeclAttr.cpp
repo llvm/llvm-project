@@ -7884,9 +7884,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
 
   // Swift attributes.
-  case ParsedAttr::AT_SwiftPrivate:
-    handleSimpleAttribute<SwiftPrivateAttr>(S, D, AL);
-    break;
   case ParsedAttr::AT_SwiftBridge:
     handleSwiftBridge(S, D, AL);
     break;
@@ -7904,6 +7901,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case ParsedAttr::AT_SwiftObjCMembers:
     handleSimpleAttribute<SwiftObjCMembersAttr>(S, D, AL);
+    break;
+  case ParsedAttr::AT_SwiftPrivate:
+    handleSimpleAttribute<SwiftPrivateAttr>(S, D, AL);
     break;
 
   // XRay attributes.

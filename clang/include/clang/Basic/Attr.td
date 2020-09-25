@@ -2144,11 +2144,6 @@ def Regparm : TypeAttr {
   let ASTNode = 0;
 }
 
-def SwiftPrivate : InheritableAttr {
-  let Spellings = [GCC<"swift_private">];
-  let Documentation = [Undocumented];
-}
-
 def SwiftImportAsNonGeneric : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
@@ -2234,6 +2229,11 @@ def SwiftNewType : InheritableAttr {
   let Subjects = SubjectList<[TypedefName], ErrorDiag>;
   let Documentation = [SwiftNewTypeDocs];
   let HasCustomParsing = 1;
+}
+
+def SwiftPrivate : InheritableAttr {
+  let Spellings = [GNU<"swift_private">];
+  let Documentation = [SwiftPrivateDocs];
 }
 
 def NoDeref : TypeAttr {
