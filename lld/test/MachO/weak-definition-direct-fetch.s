@@ -8,9 +8,9 @@
 # RUN: echo ".globl _foo; .section __TEXT,nonweak; _foo:" | llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t/foo.o
 # RUN: echo ".globl _foo; .weak_definition _foo; .section __TEXT,weak; _foo:" | llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t/weakfoo.o
 
-# RUN: lld -flavor darwinnew -dylib -install_name \
+# RUN: %lld -dylib -install_name \
 # RUN:   @executable_path/libfoo.dylib %t/foo.o -o %t/libfoo.dylib
-# RUN: lld -flavor darwinnew -dylib -install_name \
+# RUN: %lld -dylib -install_name \
 # RUN:   @executable_path/libweakfoo.dylib %t/weakfoo.o -o %t/libweakfoo.dylib
 
 # RUN: llvm-objdump --macho --exports-trie %t/libweakfoo.dylib | FileCheck %s --check-prefix WEAK-DYLIB-CHECK
@@ -42,46 +42,46 @@
 ## For dylibs and object files, the non-weak symbol always wins. But the weak
 ## flag has no effect when we are dealing with two archive symbols.
 
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/weak-nonweak-dylibs -Z -L%t -lweakfoo -lfoo %t/test.o
+# RUN: %lld -lSystem -o %t/weak-nonweak-dylibs -L%t -lweakfoo -lfoo %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-nonweak-dylibs | FileCheck %s --check-prefix=PREFER-NONWEAK-DYLIB
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/nonweak-weak-dylibs -Z -L%t -lfoo -lweakfoo %t/test.o
+# RUN: %lld -lSystem -o %t/nonweak-weak-dylibs -L%t -lfoo -lweakfoo %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/nonweak-weak-dylibs | FileCheck %s --check-prefix=PREFER-NONWEAK-DYLIB
 
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/weak-nonweak-objs -Z -L%t %t/weakfoo.o %t/foo.o %t/test.o
+# RUN: %lld -lSystem -o %t/weak-nonweak-objs -L%t %t/weakfoo.o %t/foo.o %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-nonweak-objs | FileCheck %s --check-prefix=PREFER-NONWEAK-OBJECT
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/nonweak-weak-objs -Z -L%t %t/foo.o %t/weakfoo.o %t/test.o
+# RUN: %lld -lSystem -o %t/nonweak-weak-objs -L%t %t/foo.o %t/weakfoo.o %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/nonweak-weak-objs | FileCheck %s --check-prefix=PREFER-NONWEAK-OBJECT
 
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/weak-nonweak-archives -Z -L%t %t/weakfoo.a %t/foo.a %t/test.o
+# RUN: %lld -lSystem -o %t/weak-nonweak-archives -L%t %t/weakfoo.a %t/foo.a %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-nonweak-archives | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/nonweak-weak-archives -Z -L%t %t/foo.a %t/weakfoo.a %t/test.o
+# RUN: %lld -lSystem -o %t/nonweak-weak-archives -L%t %t/foo.a %t/weakfoo.a %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/nonweak-weak-archives | FileCheck %s --check-prefix=PREFER-NONWEAK-OBJECT
 
 ## The remaining lines test symbol pairs of different types.
 
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/weak-dylib-weak-ar -Z -L%t -lweakfoo %t/weakfoo.a %t/test.o
+# RUN: %lld -lSystem -o %t/weak-dylib-weak-ar -L%t -lweakfoo %t/weakfoo.a %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-dylib-weak-ar | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/weak-ar-weak-dylib -Z -L%t %t/weakfoo.a -lweakfoo %t/test.o
+# RUN: %lld -lSystem -o %t/weak-ar-weak-dylib -L%t %t/weakfoo.a -lweakfoo %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ar-weak-dylib | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/weak-ar-nonweak-dylib -Z -L%t %t/weakfoo.a -lfoo %t/test.o
+# RUN: %lld -lSystem -o %t/weak-ar-nonweak-dylib -L%t %t/weakfoo.a -lfoo %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ar-nonweak-dylib | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/nonweak-dylib-weak-ar -Z -L%t -lfoo %t/weakfoo.a %t/test.o
+# RUN: %lld -lSystem -o %t/nonweak-dylib-weak-ar -L%t -lfoo %t/weakfoo.a %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/nonweak-dylib-weak-ar | FileCheck %s --check-prefix=PREFER-NONWEAK-DYLIB
 
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/weak-dylib-weak-obj -Z -L%t -lweakfoo %t/weakfoo.o %t/test.o
+# RUN: %lld -lSystem -o %t/weak-dylib-weak-obj -L%t -lweakfoo %t/weakfoo.o %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-dylib-weak-obj | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/weak-obj-weak-dylib -Z -L%t %t/weakfoo.o -lweakfoo %t/test.o
+# RUN: %lld -lSystem -o %t/weak-obj-weak-dylib -L%t %t/weakfoo.o -lweakfoo %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-obj-weak-dylib | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/weak-obj-nonweak-dylib -Z -L%t %t/weakfoo.o -lfoo %t/test.o
+# RUN: %lld -lSystem -o %t/weak-obj-nonweak-dylib -L%t %t/weakfoo.o -lfoo %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-obj-nonweak-dylib | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/nonweak-dylib-weak-obj -Z -L%t -lfoo %t/weakfoo.o %t/test.o
+# RUN: %lld -lSystem -o %t/nonweak-dylib-weak-obj -L%t -lfoo %t/weakfoo.o %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/nonweak-dylib-weak-obj | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/weak-obj-nonweak-ar -Z -L%t %t/weakfoo.o %t/foo.a %t/test.o
+# RUN: %lld -lSystem -o %t/weak-obj-nonweak-ar -L%t %t/weakfoo.o %t/foo.a %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-obj-nonweak-ar | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/nonweak-ar-weak-obj -Z -L%t %t/foo.a %t/weakfoo.o %t/test.o
+# RUN: %lld -lSystem -o %t/nonweak-ar-weak-obj -L%t %t/foo.a %t/weakfoo.o %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/nonweak-ar-weak-obj | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 
 .globl _main

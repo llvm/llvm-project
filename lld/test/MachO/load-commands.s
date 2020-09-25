@@ -1,9 +1,9 @@
 # REQUIRES: x86
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/test.o
-# RUN: lld -flavor darwinnew -o %t/executable %t/test.o
-# RUN: lld -flavor darwinnew -bundle -o %t/bundle %t/test.o
-# RUN: lld -flavor darwinnew -dylib -o %t/dylib %t/test.o
+# RUN: %lld -o %t/executable %t/test.o
+# RUN: %lld -bundle -o %t/bundle %t/test.o
+# RUN: %lld -dylib -o %t/dylib %t/test.o
 
 ## These load commands should be in every final output binary.
 # COMMON-DAG: cmd LC_DYLD_INFO_ONLY

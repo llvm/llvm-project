@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %s -o %t.o
-# RUN: lld -flavor darwinnew -pie -syslibroot %S/Inputs/MacOSX.sdk -lSystem %t.o -o %t
+# RUN: %lld -pie -lSystem %t.o -o %t
 # RUN: llvm-objdump --macho --unwind-info --rebase %t | FileCheck %s
 
 ## Check that we do not add rebase opcodes to the compact unwind section.

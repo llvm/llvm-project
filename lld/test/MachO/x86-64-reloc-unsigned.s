@@ -1,9 +1,9 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: lld -flavor darwinnew -o %t %t.o
+# RUN: %lld -o %t %t.o
 # RUN: llvm-objdump --macho --rebase --full-contents %t | FileCheck %s
 
-# RUN: lld -flavor darwinnew -pie -o %t-pie %t.o
+# RUN: %lld -pie -o %t-pie %t.o
 # RUN: llvm-objdump --macho --rebase %t-pie | FileCheck %s --check-prefix=PIE
 
 # CHECK:       Contents of section __DATA,foo:

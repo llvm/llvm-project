@@ -13,25 +13,25 @@
 
 # RUN: echo "%t/first.o" > filelist
 # RUN: echo "%t/second.o" >> filelist
-# RUN: lld -flavor darwinnew -Z -filelist filelist %t/test.o -o %t/test
+# RUN: %lld -filelist filelist %t/test.o -o %t/test
 # RUN: llvm-objdump --syms %t/test | FileCheck %s --check-prefix=FIRST
 
 # RUN: echo "%t/second.o" > filelist
 # RUN: echo "%t/first.o" >> filelist
-# RUN: lld -flavor darwinnew -Z -filelist filelist %t/test.o -o %t/test
+# RUN: %lld -filelist filelist %t/test.o -o %t/test
 # RUN: llvm-objdump --syms %t/test | FileCheck %s --check-prefix=SECOND
 
 # RUN: echo "%t/first.o" > filelist
-# RUN: lld -flavor darwinnew -Z -filelist filelist %t/second.o %t/test.o -o %t/test
+# RUN: %lld -filelist filelist %t/second.o %t/test.o -o %t/test
 # RUN: llvm-objdump --syms %t/test | FileCheck %s --check-prefix=FIRST
-# RUN: lld -flavor darwinnew -Z %t/second.o -filelist filelist %t/test.o -o %t/test
+# RUN: %lld %t/second.o -filelist filelist %t/test.o -o %t/test
 # RUN: llvm-objdump --syms %t/test | FileCheck %s --check-prefix=SECOND
 
 # RUN: echo "%t/first.o" > filelist-1
 # RUN: echo "%t/second.o" > filelist-2
-# RUN: lld -flavor darwinnew -Z -filelist filelist-1 -filelist filelist-2 %t/test.o -o %t/test
+# RUN: %lld -filelist filelist-1 -filelist filelist-2 %t/test.o -o %t/test
 # RUN: llvm-objdump --syms %t/test | FileCheck %s --check-prefix=FIRST
-# RUN: lld -flavor darwinnew -Z -filelist filelist-2 -filelist filelist-1 %t/test.o -o %t/test
+# RUN: %lld -filelist filelist-2 -filelist filelist-1 %t/test.o -o %t/test
 # RUN: llvm-objdump --syms %t/test | FileCheck %s --check-prefix=SECOND
 
 .globl _main

@@ -8,10 +8,10 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %p/Inputs/libgoodbye.s \
 # RUN:   -o %t/libgoodbye.o
 # RUN: echo "" | llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t/libsuper.o
-# RUN: lld -flavor darwinnew -dylib %t/libhello.o -o %t/libhello.dylib
-# RUN: lld -flavor darwinnew -dylib -L%t -sub_library libhello -lhello \
+# RUN: %lld -dylib %t/libhello.o -o %t/libhello.dylib
+# RUN: %lld -dylib -L%t -sub_library libhello -lhello \
 # RUN:   %t/libgoodbye.o -o %t/libgoodbye.dylib
-# RUN: lld -flavor darwinnew -dylib -L%t -sub_library libgoodbye -lgoodbye -install_name \
+# RUN: %lld -dylib -L%t -sub_library libgoodbye -lgoodbye -install_name \
 # RUN:   @executable_path/libsuper.dylib %t/libsuper.o -o %t/libsuper.dylib
 
 
@@ -37,7 +37,7 @@
 # SUPER-HEADERS:     name    [[DIR]]/libgoodbye.dylib
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/sub-library.o
-# RUN: lld -flavor darwinnew -o %t/sub-library -L%t -lsuper %t/sub-library.o
+# RUN: %lld -o %t/sub-library -L%t -lsuper %t/sub-library.o
 
 # RUN: llvm-objdump --macho --bind %t/sub-library | FileCheck %s
 # CHECK-LABEL: Bind table:
@@ -46,11 +46,11 @@
 
 
 ## Check that we fail gracefully if the sub-library is missing
-# RUN: not lld -flavor darwinnew -dylib -Z -o %t/sub-library -sub_library libmissing %t/sub-library.o 2>&1 \
+# RUN: not %lld -dylib -o %t/sub-library -sub_library libmissing %t/sub-library.o 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=MISSING-SUB-LIBRARY
 # MISSING-SUB-LIBRARY: error: -sub_library libmissing does not match a supplied dylib
 # RUN: rm -f %t/libgoodbye.dylib
-# RUN: not lld -flavor darwinnew -o %t/sub-library -Z -L%t -lsuper %t/sub-library.o 2>&1 \
+# RUN: not %lld -o %t/sub-library -L%t -lsuper %t/sub-library.o 2>&1 \
 # RUN:  | FileCheck %s --check-prefix=MISSING-REEXPORT -DDIR=%t
 # MISSING-REEXPORT: error: unable to locate re-export with install name [[DIR]]/libgoodbye.dylib
 
