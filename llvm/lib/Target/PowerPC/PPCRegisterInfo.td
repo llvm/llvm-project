@@ -18,6 +18,8 @@ def sub_32 : SubRegIndex<32>;
 def sub_64 : SubRegIndex<64>;
 def sub_vsx0 : SubRegIndex<128>;
 def sub_vsx1 : SubRegIndex<128>;
+def sub_pair0 : SubRegIndex<256>;
+def sub_pair1 : SubRegIndex<256>;
 }
 
 
@@ -94,6 +96,12 @@ class CR<bits<3> num, string n, list<Register> subregs> : PPCReg<n> {
 // CRBIT - One of the 32 1-bit condition register fields
 class CRBIT<bits<5> num, string n> : PPCReg<n> {
   let HWEncoding{4-0} = num;
+}
+
+// ACC - One of the 8 512-bit VSX accumulators.
+class ACC<bits<3> num, string n, list<Register> subregs> : PPCReg<n> {
+  let HWEncoding{2-0} = num;
+  let SubRegs = subregs;
 }
 
 // VSR Pairs - One of the 32 paired even-odd consecutive VSRs.
@@ -395,6 +403,21 @@ def CTRRC8 : RegisterClass<"PPC", [i64], 64, (add CTR8)> {
 def VRSAVERC : RegisterClass<"PPC", [i32], 32, (add VRSAVE)>;
 def CARRYRC : RegisterClass<"PPC", [i32], 32, (add CARRY, XER)> {
   let CopyCost = -1;
+}
+
+let SubRegIndices = [sub_pair0, sub_pair1] in {
+  def ACC0 : ACC<0, "acc0", [VSRp0, VSRp1]>, DwarfRegNum<[0, 0]>;
+  def ACC1 : ACC<1, "acc1", [VSRp2, VSRp3]>, DwarfRegNum<[0, 0]>;
+  def ACC2 : ACC<2, "acc2", [VSRp4, VSRp5]>, DwarfRegNum<[0, 0]>;
+  def ACC3 : ACC<3, "acc3", [VSRp6, VSRp7]>, DwarfRegNum<[0, 0]>;
+  def ACC4 : ACC<4, "acc4", [VSRp8, VSRp9]>, DwarfRegNum<[0, 0]>;
+  def ACC5 : ACC<5, "acc5", [VSRp10, VSRp11]>, DwarfRegNum<[0, 0]>;
+  def ACC6 : ACC<6, "acc6", [VSRp12, VSRp13]>, DwarfRegNum<[0, 0]>;
+  def ACC7 : ACC<7, "acc7", [VSRp14, VSRp15]>, DwarfRegNum<[0, 0]>;
+}
+def ACCRC : RegisterClass<"PPC", [v512i1], 128, (add ACC0, ACC1, ACC2, ACC3,
+                                                      ACC4, ACC5, ACC6, ACC7)> {
+  let Size = 512;
 }
 
 // Allocate in the same order as the underlying VSX registers.
