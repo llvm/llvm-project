@@ -497,6 +497,15 @@ public:
   // in a configured macro expansion.
   llvm::Optional<MacroExpansion> MacroCtx;
 
+  /// When macro expansion introduces nodes with children, those are marked as
+  /// \c MacroParent.
+  /// FIXME: The formatting code currently hard-codes the assumption that
+  /// child nodes are introduced by blocks following an opening brace.
+  /// This is deeply baked into the code and disentangling this will require
+  /// signficant refactorings. \c MacroParent allows us to special-case the
+  /// cases in which we treat parents as block-openers for now.
+  bool MacroParent = false;
+
   bool is(tok::TokenKind Kind) const { return Tok.is(Kind); }
   bool is(TokenType TT) const { return getType() == TT; }
   bool is(const IdentifierInfo *II) const {
