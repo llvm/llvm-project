@@ -16,6 +16,7 @@
 
 #include "mlir/Dialect/Traits.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/Function.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/RegionKindInterface.h"
@@ -28,7 +29,6 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "TestOpEnums.h.inc"
-
 
 #include "TestOpStructs.h.inc"
 #include "TestOpsDialect.h.inc"
