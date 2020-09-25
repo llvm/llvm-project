@@ -466,8 +466,6 @@ static void createCandidatesFromSuffixTree(
     std::vector<IRSimilarityCandidate> &CandsForRepSubstring) {
 
   unsigned StringLen = RS.Length;
-  unsigned NumFound = 0;
-  unsigned PreviousIdx = 0;
 
   // Create an IRSimilarityCandidate for instance of this subsequence \p RS.
   for (const unsigned &StartIdx : RS.StartIndices) {
@@ -487,9 +485,6 @@ static void createCandidatesFromSuffixTree(
     // IRSimilarityCandidate for this region.
     if (ContainsIllegal)
       continue;
-
-    PreviousIdx = EndIdx;
-    NumFound++;
 
     // We are getting iterators to the instructions in this region of code
     // by advancing the start and end indices from the start of the
