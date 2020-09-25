@@ -279,15 +279,20 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   } else {
     // run the default canned pipeline
     pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
+
+    // simplify the IR
     pm.addPass(mlir::createCanonicalizerPass());
     pm.addPass(fir::createCSEPass());
-    // pm.addPass(fir::createPromoteToAffinePass());
+    pm.addPass(mlir::createInlinerPass());
+    pm.addPass(mlir::createCSEPass());
+
+    // convert control flow to CFG form
     pm.addPass(fir::createFirToCfgPass());
     pm.addPass(fir::createControlFlowLoweringPass());
     pm.addPass(mlir::createLowerToCFGPass());
-    // pm.addPass(fir::createMemToRegPass());
-    pm.addPass(mlir::createCSEPass());
+
     pm.addPass(mlir::createCanonicalizerPass());
+    pm.addPass(fir::createCSEPass());
   }
 
   if (emitLLVM) {
@@ -295,6 +300,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     pm.addPass(fir::createFirCodeGenRewritePass());
     pm.addPass(fir::createFirTargetRewritePass());
     pm.addPass(fir::createFIRToLLVMPass(nameUniquer));
+    
     std::error_code ec;
     llvm::ToolOutputFile outFile(outputName + ".ll", ec,
                                  llvm::sys::fs::OF_None);

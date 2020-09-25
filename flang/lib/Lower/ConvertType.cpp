@@ -8,22 +8,13 @@
 
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Lower/Todo.h"
 #include "flang/Lower/Utils.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-
-#undef QUOTE
-#undef TODO
-#define QUOTE(X) #X
-#define TODO(S)                                                                \
-  {                                                                            \
-    emitError(__FILE__ ":" QUOTE(__LINE__) ": type lowering of " S             \
-                                           " not implemented");                \
-    exit(1);                                                                   \
-  }
 
 template <typename A>
 bool isConstant(const Fortran::evaluate::Expr<A> &e) {
