@@ -1643,13 +1643,83 @@ struct InsertValueOpConversion
 
 /// InsertOnRange inserts a value into a sequence over a range of offsets.
 struct InsertOnRangeOpConversion
-    : public FIROpAndTypeConversion<fir::InsertOnRangeOp> {
+    : public FIROpAndTypeConversion<fir::InsertOnRangeOp>,
+      public ValueOpCommon {
   using FIROpAndTypeConversion::FIROpAndTypeConversion;
+
+  // Increments an array of subscripts in a row major fasion.
+  void incrementSubscripts(const SmallVector<uint64_t, 8> &dims,
+                     SmallVector<uint64_t, 8> &subscripts) const {
+    for (size_t i = dims.size(); i > 0; --i) {
+      if (++subscripts[i - 1] < dims[i - 1]) {
+        return;
+      }
+      subscripts[i - 1] = 0;
+    }
+  }
 
   mlir::LogicalResult
   doRewrite(fir::InsertOnRangeOp range, mlir::Type ty, OperandTy operands,
             mlir::ConversionPatternRewriter &rewriter) const override {
-    TODO("");
+    assert(fir::allConstants(operands.drop_front(2)));
+
+    llvm::SmallVector<mlir::Attribute, 8> lowerBound;
+    llvm::SmallVector<mlir::Attribute, 8> upperBound;
+    llvm::SmallVector<uint64_t, 8> dims;
+    auto type = operands[0].getType().dyn_cast<mlir::LLVM::LLVMType>();
+
+    // Iterativly extract the array dimensions from it's type.
+    while (type.isArrayTy()) {
+      dims.push_back(type.getArrayNumElements());
+      type = type.getArrayElementType();
+    }
+
+    // Unzip the upper and lower bound subscripts.
+    for (std::size_t i = 2; i + 1 < operands.size(); i += 2) {
+      lowerBound.push_back(ExtractValueOpConversion::getValue(operands[i]));
+      upperBound.push_back(ExtractValueOpConversion::getValue(operands[i + 1]));
+    }
+
+    llvm::SmallVector<uint64_t, 8> lBounds;
+    llvm::SmallVector<uint64_t, 8> uBounds;
+
+    // Extract the integer value from the attribute bounds and convert to row
+    // major format.
+    for (size_t i = lowerBound.size(); i > 0; --i) {
+      lBounds.push_back(lowerBound[i - 1].cast<IntegerAttr>().getInt());
+      uBounds.push_back(upperBound[i - 1].cast<IntegerAttr>().getInt());
+    }
+
+    auto subscripts(lBounds);
+    auto loc = range.getLoc();
+    mlir::Value lastOp = operands[0];
+    mlir::Value insertVal = operands[1];
+
+    while (subscripts != uBounds) {
+      // Convert uint64_t's to Attribute's.
+      llvm::SmallVector<mlir::Attribute, 8> subscriptAttrs;
+      for (const auto &subscript : subscripts)
+        subscriptAttrs.push_back(
+            IntegerAttr::get(rewriter.getI64Type(), subscript));
+      mlir::ArrayRef<mlir::Attribute> arrayRef(subscriptAttrs);
+      lastOp = rewriter.create<mlir::LLVM::InsertValueOp>(
+          loc, ty, lastOp, insertVal,
+          ArrayAttr::get(arrayRef, range.getContext()));
+
+      incrementSubscripts(dims, subscripts);
+    }
+
+    // Convert uint64_t's to Attribute's.
+    llvm::SmallVector<mlir::Attribute, 8> subscriptAttrs;
+    for (const auto &subscript : subscripts)
+      subscriptAttrs.push_back(
+          IntegerAttr::get(rewriter.getI64Type(), subscript));
+    mlir::ArrayRef<mlir::Attribute> arrayRef(subscriptAttrs);
+
+    rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
+        range, ty, lastOp, insertVal,
+        ArrayAttr::get(arrayRef, range.getContext()));
+
     return success();
   }
 };
