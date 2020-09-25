@@ -107,7 +107,7 @@ SBAddress SBInstruction::GetAddress() {
   SBAddress sb_addr;
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp && inst_sp->GetAddress().IsValid())
-    sb_addr.SetAddress(&inst_sp->GetAddress());
+    sb_addr.SetAddress(inst_sp->GetAddress());
   return LLDB_RECORD_RESULT(sb_addr);
 }
 

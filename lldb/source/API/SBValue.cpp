@@ -1356,7 +1356,7 @@ lldb::SBAddress SBValue::GetAddress() {
     }
   }
 
-  return LLDB_RECORD_RESULT(SBAddress(new Address(addr)));
+  return LLDB_RECORD_RESULT(SBAddress(Address(addr)));
 }
 
 lldb::SBData SBValue::GetPointeeData(uint32_t item_idx, uint32_t item_count) {
