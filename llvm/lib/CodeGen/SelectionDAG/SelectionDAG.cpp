@@ -9766,16 +9766,16 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue, APInt &SplatUndef,
 
 SDValue BuildVectorSDNode::getSplatValue(const APInt &DemandedElts,
                                          BitVector *UndefElements) const {
+  unsigned NumOps = getNumOperands();
   if (UndefElements) {
     UndefElements->clear();
-    UndefElements->resize(getNumOperands());
+    UndefElements->resize(NumOps);
   }
-  assert(getNumOperands() == DemandedElts.getBitWidth() &&
-         "Unexpected vector size");
+  assert(NumOps == DemandedElts.getBitWidth() && "Unexpected vector size");
   if (!DemandedElts)
     return SDValue();
   SDValue Splatted;
-  for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
+  for (unsigned i = 0; i != NumOps; ++i) {
     if (!DemandedElts[i])
       continue;
     SDValue Op = getOperand(i);

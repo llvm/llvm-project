@@ -20,7 +20,8 @@
 # CHECK-NEXT:     Type: Section (0xE)
 # CHECK-NEXT:     Section: __text (0x1)
 # CHECK-NEXT:     RefType:
-# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     Flags [ (0x80)
+# CHECK-NEXT:       WeakDef (0x80)
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Value:
 # CHECK-NEXT:   }
@@ -42,6 +43,7 @@ foo:
   .asciz "Hello world!\n"
 
 .text
+.weak_definition bar
 .global bar
 .global _main
 

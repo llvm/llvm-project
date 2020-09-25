@@ -727,6 +727,25 @@ int main(int argc, char **argv) {
   if (OutputThinLTOBC)
     M->addModuleFlag(Module::Error, "EnableSplitLTOUnit", SplitLTOUnit);
 
+  // Add an appropriate TargetLibraryInfo pass for the module's triple.
+  TargetLibraryInfoImpl TLII(ModuleTriple);
+
+  // The -disable-simplify-libcalls flag actually disables all builtin optzns.
+  if (DisableSimplifyLibCalls)
+    TLII.disableAllFunctions();
+  else {
+    // Disable individual builtin functions in TargetLibraryInfo.
+    LibFunc F;
+    for (auto &FuncName : DisableBuiltins)
+      if (TLII.getLibFunc(FuncName, F))
+        TLII.setUnavailable(F);
+      else {
+        errs() << argv[0] << ": cannot disable nonexistent builtin function "
+               << FuncName << '\n';
+        return 1;
+      }
+  }
+
   // If `-passes=` is specified, use NPM.
   // If `-enable-new-pm` is specified and there are no codegen passes, use NPM.
   // e.g. `-enable-new-pm -sroa` will use NPM.
@@ -769,9 +788,9 @@ int main(int argc, char **argv) {
     // The user has asked to use the new pass manager and provided a pipeline
     // string. Hand off the rest of the functionality to the new code for that
     // layer.
-    return runPassPipeline(argv[0], *M, TM.get(), Out.get(), ThinLinkOut.get(),
-                           RemarksFile.get(), PassPipeline, Passes, OK, VK,
-                           PreserveAssemblyUseListOrder,
+    return runPassPipeline(argv[0], *M, TM.get(), &TLII, Out.get(),
+                           ThinLinkOut.get(), RemarksFile.get(), PassPipeline,
+                           Passes, OK, VK, PreserveAssemblyUseListOrder,
                            PreserveBitcodeUseListOrder, EmitSummaryIndex,
                            EmitModuleHash, EnableDebugify, Coroutines)
                ? 0
@@ -786,25 +805,6 @@ int main(int argc, char **argv) {
     Passes.enableDebugifyEach();
 
   bool AddOneTimeDebugifyPasses = EnableDebugify && !DebugifyEach;
-
-  // Add an appropriate TargetLibraryInfo pass for the module's triple.
-  TargetLibraryInfoImpl TLII(ModuleTriple);
-
-  // The -disable-simplify-libcalls flag actually disables all builtin optzns.
-  if (DisableSimplifyLibCalls)
-    TLII.disableAllFunctions();
-  else {
-    // Disable individual builtin functions in TargetLibraryInfo.
-    LibFunc F;
-    for (auto &FuncName : DisableBuiltins)
-      if (TLII.getLibFunc(FuncName, F))
-        TLII.setUnavailable(F);
-      else {
-        errs() << argv[0] << ": cannot disable nonexistent builtin function "
-               << FuncName << '\n';
-        return 1;
-      }
-  }
 
   Passes.add(new TargetLibraryInfoWrapperPass(TLII));
 

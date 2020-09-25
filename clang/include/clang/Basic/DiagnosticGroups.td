@@ -557,6 +557,7 @@ def StringCompare : DiagGroup<"string-compare">;
 def StringPlusInt : DiagGroup<"string-plus-int">;
 def StringPlusChar : DiagGroup<"string-plus-char">;
 def StrncatSize : DiagGroup<"strncat-size">;
+def SwiftNameAttribute : DiagGroup<"swift-name-attribute">;
 def IntInBoolContext : DiagGroup<"int-in-bool-context">;
 def TautologicalTypeLimitCompare : DiagGroup<"tautological-type-limit-compare">;
 def TautologicalUnsignedZeroCompare : DiagGroup<"tautological-unsigned-zero-compare">;
@@ -869,6 +870,8 @@ def PointerToEnumCast : DiagGroup<"pointer-to-enum-cast",
 def PointerToIntCast : DiagGroup<"pointer-to-int-cast",
                                  [PointerToEnumCast, VoidPointerToIntCast]>;
 
+def FUseLdPath : DiagGroup<"fuse-ld-path">;
+
 def Move : DiagGroup<"move", [
     PessimizingMove,
     RedundantMove,
@@ -887,7 +890,8 @@ def Extra : DiagGroup<"extra", [
     UnusedParameter,
     NullPointerArithmetic,
     EmptyInitStatement,
-    StringConcatation
+    StringConcatation,
+    FUseLdPath,
   ]>;
 
 def Most : DiagGroup<"most", [

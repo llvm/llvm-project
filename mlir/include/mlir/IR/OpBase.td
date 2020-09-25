@@ -571,6 +571,10 @@ class VectorOfLengthAndType<list<int> allowedLengths,
 
 def AnyVector : VectorOf<[AnyType]>;
 
+// Shaped types.
+
+def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped">;
+
 // Tensor types.
 
 // Any tensor type whose element type is from the given `allowedTypes` list
@@ -1428,7 +1432,7 @@ def StrArrayAttr : TypedArrayAttrBase<StrAttr, "string array attribute"> {
   let constBuilderCall = "$_builder.getStrArrayAttr($0)";
 }
 def TypeArrayAttr : TypedArrayAttrBase<TypeAttr, "type array attribute"> {
-  let constBuilderCall = ?;
+  let constBuilderCall = "$_builder.getTypeArrayAttr($0)";
 }
 
 // Attribute information for an Attribute field within a StructAttr.

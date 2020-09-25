@@ -2743,6 +2743,43 @@ TEST_F(FormatTest, FormatTryAsAVariable) {
   verifyFormat("int catch, size;");
   verifyFormat("catch = foo();");
   verifyFormat("if (catch < size) {\n  return true;\n}");
+
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+  Style.BraceWrapping.BeforeCatch = true;
+  verifyFormat("try {\n"
+               "  int bar = 1;\n"
+               "}\n"
+               "catch (...) {\n"
+               "  int bar = 1;\n"
+               "}",
+               Style);
+  verifyFormat("#if NO_EX\n"
+               "try\n"
+               "#endif\n"
+               "{\n"
+               "}\n"
+               "#if NO_EX\n"
+               "catch (...) {\n"
+               "}",
+               Style);
+  verifyFormat("try /* abc */ {\n"
+               "  int bar = 1;\n"
+               "}\n"
+               "catch (...) {\n"
+               "  int bar = 1;\n"
+               "}",
+               Style);
+  verifyFormat("try\n"
+               "// abc\n"
+               "{\n"
+               "  int bar = 1;\n"
+               "}\n"
+               "catch (...) {\n"
+               "  int bar = 1;\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, FormatSEHTryCatch) {
@@ -14291,6 +14328,12 @@ TEST_F(FormatTest, ParsesConfiguration) {
   CHECK_PARSE("BitFieldColonSpacing: After", BitFieldColonSpacing,
               FormatStyle::BFCS_After);
 
+  Style.SortJavaStaticImport = FormatStyle::SJSIO_Before;
+  CHECK_PARSE("SortJavaStaticImport: After", SortJavaStaticImport,
+              FormatStyle::SJSIO_After);
+  CHECK_PARSE("SortJavaStaticImport: Before", SortJavaStaticImport,
+              FormatStyle::SJSIO_Before);
+
   // FIXME: This is required because parsing a configuration simply overwrites
   // the first N elements of the list instead of resetting it.
   Style.ForEachMacros.clear();
@@ -16272,9 +16315,12 @@ TEST(FormatStyle, GetStyleOfFile) {
                                                   "InvalidKey: InvalidValue")));
   ASSERT_TRUE(
       FS.addFile("/d/test.cpp", 0, llvm::MemoryBuffer::getMemBuffer("int i;")));
-  auto Style7 = getStyle("file", "/d/.clang-format", "LLVM", "", &FS);
-  ASSERT_FALSE((bool)Style7);
-  llvm::consumeError(Style7.takeError());
+  auto Style7a = getStyle("file", "/d/.clang-format", "LLVM", "", &FS);
+  ASSERT_FALSE((bool)Style7a);
+  llvm::consumeError(Style7a.takeError());
+
+  auto Style7b = getStyle("file", "/d/.clang-format", "LLVM", "", &FS, true);
+  ASSERT_TRUE((bool)Style7b);
 
   // Test 8: inferred per-language defaults apply.
   auto StyleTd = getStyle("file", "x.td", "llvm", "", &FS);

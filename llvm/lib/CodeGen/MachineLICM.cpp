@@ -90,7 +90,7 @@ static cl::opt<UseBFI>
 DisableHoistingToHotterBlocks("disable-hoisting-to-hotter-blocks",
                               cl::desc("Disable hoisting instructions to"
                               " hotter blocks"),
-                              cl::init(UseBFI::None), cl::Hidden,
+                              cl::init(UseBFI::PGO), cl::Hidden,
                               cl::values(clEnumValN(UseBFI::None, "none",
                               "disable the feature"),
                               clEnumValN(UseBFI::PGO, "pgo",

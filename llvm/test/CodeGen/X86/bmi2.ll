@@ -76,6 +76,25 @@ define i32 @pdep32_load(i32 %x, i32* %y)   {
   ret i32 %tmp
 }
 
+define i32 @pdep32_anyext(i16 %x)   {
+; X86-LABEL: pdep32_anyext:
+; X86:       # %bb.0:
+; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $-1431655766, %ecx # imm = 0xAAAAAAAA
+; X86-NEXT:    pdepl %ecx, %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: pdep32_anyext:
+; X64:       # %bb.0:
+; X64-NEXT:    movswl %di, %eax
+; X64-NEXT:    movl $-1431655766, %ecx # imm = 0xAAAAAAAA
+; X64-NEXT:    pdepl %ecx, %eax, %eax
+; X64-NEXT:    retq
+  %x1 = sext i16 %x to i32
+  %tmp = tail call i32 @llvm.x86.bmi.pdep.32(i32 %x1, i32 -1431655766)
+  ret i32 %tmp
+}
+
 declare i32 @llvm.x86.bmi.pdep.32(i32, i32)
 
 define i32 @pext32(i32 %x, i32 %y)   {

@@ -154,8 +154,11 @@ public:
       case 'r':
       case 'f':
       case 'v':
-        if (RegName[1] == 's')
+        if (RegName[1] == 's') {
+          if (RegName[2] == 'p')
+            return RegName + 3;
           return RegName + 2;
+        }
         return RegName + 1;
       case 'c': if (RegName[1] == 'r') return RegName + 2;
     }

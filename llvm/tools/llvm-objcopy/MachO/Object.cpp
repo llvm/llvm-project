@@ -111,10 +111,6 @@ Error Object::removeSections(
   return Error::success();
 }
 
-void Object::addLoadCommand(LoadCommand LC) {
-  LoadCommands.push_back(std::move(LC));
-}
-
 template <typename SegmentType>
 static void constructSegment(SegmentType &Seg,
                              llvm::MachO::LoadCommandType CmdType,

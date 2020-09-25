@@ -1,0 +1,8 @@
+[
+    {
+        "name": "ContextKind",
+        "kind": "ENUM",
+        "type": "clang::CodeCompletionContext::Kind",
+        "header": "clang/Sema/CodeCompleteConsumer.h"
+    }
+]

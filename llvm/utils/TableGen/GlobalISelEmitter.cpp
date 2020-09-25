@@ -2729,12 +2729,13 @@ protected:
   unsigned InsnID;
   const Record *RegisterDef;
   bool IsDef;
+  const CodeGenTarget &Target;
 
 public:
-  AddRegisterRenderer(unsigned InsnID, const Record *RegisterDef,
-                      bool IsDef = false)
+  AddRegisterRenderer(unsigned InsnID, const CodeGenTarget &Target,
+                      const Record *RegisterDef, bool IsDef = false)
       : OperandRenderer(OR_Register), InsnID(InsnID), RegisterDef(RegisterDef),
-        IsDef(IsDef) {}
+        IsDef(IsDef), Target(Target) {}
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_Register;
@@ -2742,13 +2743,17 @@ public:
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     Table << MatchTable::Opcode("GIR_AddRegister")
-          << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
-          << MatchTable::NamedValue(
-                 (RegisterDef->getValue("Namespace")
-                      ? RegisterDef->getValueAsString("Namespace")
-                      : ""),
-                 RegisterDef->getName())
-          << MatchTable::Comment("AddRegisterRegFlags");
+          << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID);
+    if (RegisterDef->getName() != "zero_reg") {
+      Table << MatchTable::NamedValue(
+                   (RegisterDef->getValue("Namespace")
+                        ? RegisterDef->getValueAsString("Namespace")
+                        : ""),
+                   RegisterDef->getName());
+    } else {
+      Table << MatchTable::NamedValue(Target.getRegNamespace(), "NoRegister");
+    }
+    Table << MatchTable::Comment("AddRegisterRegFlags");
 
     // TODO: This is encoded as a 64-bit element, but only 16 or 32-bits are
     // really needed for a physical register reference. We can pack the
@@ -4419,7 +4424,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
       return failedImport("Dst operand has an unsupported type");
 
     if (ChildRec->isSubClassOf("Register")) {
-      DstMIBuilder.addRenderer<AddRegisterRenderer>(ChildRec);
+      DstMIBuilder.addRenderer<AddRegisterRenderer>(Target, ChildRec);
       return InsertPt;
     }
 
@@ -4479,7 +4484,8 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
         &Target.getInstruction(RK.getDef("COPY")));
     BuildMIAction &CopyToPhysRegMIBuilder =
         *static_cast<BuildMIAction *>(InsertPt->get());
-    CopyToPhysRegMIBuilder.addRenderer<AddRegisterRenderer>(PhysInput.first,
+    CopyToPhysRegMIBuilder.addRenderer<AddRegisterRenderer>(Target,
+                                                            PhysInput.first,
                                                             true);
     CopyToPhysRegMIBuilder.addRenderer<CopyPhysRegRenderer>(PhysInput.first);
   }
@@ -4870,7 +4876,7 @@ Error GlobalISelEmitter::importDefaultOperandRenderers(
         IDMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
         DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
       } else {
-        DstMIBuilder.addRenderer<AddRegisterRenderer>(Def);
+        DstMIBuilder.addRenderer<AddRegisterRenderer>(Target, Def);
       }
       continue;
     }

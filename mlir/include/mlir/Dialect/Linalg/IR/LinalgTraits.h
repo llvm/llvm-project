@@ -71,6 +71,80 @@ public:
   }
 };
 
+/// This class provides a verifier for structured ops that are known to operate
+/// on buffers or tensors and that support `ins`, `outs` and `init` arguments.
+/// This trait must be used in conjunction with an op definition or a trait that
+/// provides the methods `getNumInputs` and `getNumOutputs`.
+///
+/// Use as a trait as follows:
+///
+///   class MatmulOp : public Op<MatmulOp, OpTrait::NamedStructuredOpTrait> {
+///
+template <typename ConcreteType>
+class NamedStructuredOpTrait
+    : public OpTrait::TraitBase<ConcreteType, NamedStructuredOpTrait> {
+public:
+  unsigned getNumInputs() {
+    return cast<ConcreteType>(this->getOperation()).inputs().size();
+  }
+  unsigned getNumOutputs() {
+    ConcreteType concreteOp = cast<ConcreteType>(this->getOperation());
+    return concreteOp.output_buffers().size() +
+           concreteOp.result_tensors().size();
+  }
+  static LogicalResult verifyTrait(Operation *op) {
+    ConcreteType concreteOp = cast<ConcreteType>(op);
+    unsigned nInputAndBufferOperands =
+        concreteOp.getNumInputsAndOutputBuffers();
+    if (failed(
+            OpTrait::impl::verifyAtLeastNOperands(op, nInputAndBufferOperands)))
+      return failure();
+
+    SmallVector<AffineExpr, 4> redDims;
+    concreteOp.getReductionDims(redDims);
+    // If no result and no reduction, only check there is no init tensor and we
+    // are done.
+    if (redDims.empty() || op->getNumResults() == 0) {
+      if (!concreteOp.init_tensors().empty())
+        return op->emitError("expected empty `init` when op has no "
+                             "results or no reduction dims");
+      return success();
+    }
+
+    // Only a single tensor result supported atm.
+    if (op->getNumResults() != 1)
+      return op->emitError(
+          "expected single tensor result when reduction present");
+
+    if (concreteOp.init_tensors().size() != op->getNumResults())
+      return op->emitError(
+          "expected #init tensors to match #results when reduction present");
+
+    for (unsigned idx = 0, e = op->getNumResults(); idx < e; ++idx)
+      if (concreteOp.init_tensors()[idx].getType() != op->getResultTypes()[idx])
+        return op->emitError("expected init tensor #")
+               << idx << " of the same type as result #" << idx;
+
+    // Output tensor indexing map may not depend on reduction index.
+    // TODO: this is not yet tested. Add a test when linalg.generic switches to
+    // this representation.
+    for (unsigned idx = 0, e = concreteOp.getNumOutputs(); idx < e; ++idx) {
+      AffineMap outputMap = concreteOp.getOutputIndexingMap(idx);
+      for (auto expr : outputMap.getResults()) {
+        for (auto dim : redDims) {
+          unsigned pos = dim.cast<AffineDimExpr>().getPosition();
+          if (expr.isFunctionOfDim(pos))
+            return op->emitError(
+                       "unexpected single tensor output indexing map ")
+                   << "is function of reduction dim @" << pos;
+        }
+      }
+    }
+
+    return success();
+  }
+};
+
 } // namespace linalg
 } // namespace OpTrait
 } // namespace mlir

@@ -772,7 +772,7 @@ void LogMessageOnPrintf(const char *str) {
 // initialized after the vDSO function pointers, so if it exists, is not null
 // and is not empty, we can use clock_gettime.
 extern "C" SANITIZER_WEAK_ATTRIBUTE char *__progname;
-INLINE bool CanUseVDSO() {
+inline bool CanUseVDSO() {
   // Bionic is safe, it checks for the vDSO function pointers to be initialized.
   if (SANITIZER_ANDROID)
     return true;

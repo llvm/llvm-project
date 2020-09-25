@@ -25,7 +25,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     //===------------------------------------------------------------------===//
     InterfaceMethod<
       /*desc=*/[{
-        Return the number of parallel loops within the current operation.
+        Return the number of parallel loops.
       }],
       /*retTy=*/"unsigned",
       /*methodName=*/"getNumParallelLoops",
@@ -38,7 +38,19 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Return the number of reduction loops within the current operation.
+        Return the dims that are parallel loops.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"getParallelDims",
+      /*args=*/(ins "SmallVectorImpl<AffineExpr> &":$res),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return getDimsOfType($_op, getParallelIteratorTypeName(), res);
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the number of reduction loops.
       }],
       /*retTy=*/"unsigned",
       /*methodName=*/"getNumReductionLoops",
@@ -51,7 +63,19 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Return the number of window loops within the current operation.
+        Return the dims that are reduction loops.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"getReductionDims",
+      /*args=*/(ins "SmallVectorImpl<AffineExpr> &":$res),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return getDimsOfType($_op, getReductionIteratorTypeName(), res);
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the number of window loops.
       }],
       /*retTy=*/"unsigned",
       /*methodName=*/"getNumWindowLoops",
@@ -60,6 +84,18 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*defaultImplementation=*/[{
         return getNumIterators(getWindowIteratorTypeName(),
                                $_op.iterator_types());
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the dims that are window loops.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"getWindowDims",
+      /*args=*/(ins "SmallVectorImpl<AffineExpr> &":$res),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return getDimsOfType($_op.getOperation(), getWindowIteratorTypeName(), res);
       }]
     >,
     InterfaceMethod<
@@ -99,14 +135,14 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     //   linalg.indexed_generic ops).
     InterfaceMethod<
       /*desc=*/[{
-        Return the number of inputs from the current operation.
+        Return the number of inputs.
       }],
       /*retTy=*/"unsigned",
       /*methodName=*/"getNumInputs"
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Return the number of outputs from the current operation.
+        Return the number of outputs.
       }],
       /*retTy=*/"unsigned",
       /*methodName=*/"getNumOutputs"
@@ -160,7 +196,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Return the input operands from the current operation.
+        Return the input operands.
       }],
       /*retTy=*/"Operation::operand_range",
       /*methodName=*/"getInputs",
@@ -187,7 +223,6 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         return res;
       }]
     >,
-
     //===------------------------------------------------------------------===//
     // Output arguments handling.
     //===------------------------------------------------------------------===//
@@ -267,7 +302,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       }]>,
     InterfaceMethod<
       /*desc=*/[{
-        Return the output buffers (operands) from the current operation.
+        Return the output buffers (operands).
       }],
       /*retTy=*/"Operation::operand_range",
       /*methodName=*/"getOutputBuffers",
@@ -354,7 +389,9 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
           return getInputShapedType(i);
         if (i < getNumInputsAndOutputBuffers())
           return getOutputBufferType(i - $_op.getNumInputs());
-        return getOutputTensorTypes()[i - getNumInputsAndOutputBuffers()];
+        return this->getOperation()->getResult(
+          i - getNumInputsAndOutputBuffers()).
+          getType().template cast<ShapedType>();
       }]>,
     InterfaceMethod<
       /*desc=*/[{
@@ -408,11 +445,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return llvm::to_vector<4>(
-            llvm::map_range($_op.indexing_maps(),
-                            [](Attribute attr) -> AffineMap {
-              return attr.cast<AffineMapAttr>().getValue();
-            }));
+        return llvm::to_vector<4>($_op.indexing_maps().template getAsValueRange<AffineMapAttr>());
       }]
     >,
     InterfaceMethod<
@@ -425,10 +458,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         assert(i < getNumInputsAndOutputs());
-        return $_op.indexing_maps()
-            .getValue()[i]
-            .template cast<AffineMapAttr>()
-            .getValue();
+        return getIndexingMaps()[i];
       }]
     >,
     InterfaceMethod<
@@ -441,10 +471,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         assert(i < $_op.getNumInputs());
-        return $_op.indexing_maps()
-            .getValue()[i]
-            .template cast<AffineMapAttr>()
-            .getValue();
+        return getIndexingMaps()[i];
       }]
     >,
     InterfaceMethod<
@@ -457,10 +484,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         assert(i < $_op.getNumOutputs());
-        return $_op.indexing_maps()
-            .getValue()[i + $_op.getNumInputs()]
-            .template cast<AffineMapAttr>()
-            .getValue();
+        return getIndexingMaps()[i + $_op.getNumInputs()];
       }]
     >,
     InterfaceMethod<

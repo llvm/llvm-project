@@ -777,11 +777,11 @@ bool MachineCSE::isPRECandidate(MachineInstr *MI) {
       MI->getNumExplicitDefs() != 1)
     return false;
 
-  for (auto def : MI->defs())
+  for (const auto &def : MI->defs())
     if (!Register::isVirtualRegister(def.getReg()))
       return false;
 
-  for (auto use : MI->uses())
+  for (const auto &use : MI->uses())
     if (use.isReg() && !Register::isVirtualRegister(use.getReg()))
       return false;
 

@@ -126,6 +126,20 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
   assert(SE.getTypeSizeInBits(V->getType()) == SE.getTypeSizeInBits(Ty) &&
          "InsertNoopCastOfTo cannot change sizes!");
 
+  auto *PtrTy = dyn_cast<PointerType>(Ty);
+  // inttoptr only works for integral pointers. For non-integral pointers, we
+  // can create a GEP on i8* null  with the integral value as index. Note that
+  // it is safe to use GEP of null instead of inttoptr here, because only
+  // expressions already based on a GEP of null should be converted to pointers
+  // during expansion.
+  if (Op == Instruction::IntToPtr && DL.isNonIntegralPointerType(PtrTy)) {
+    auto *Int8PtrTy = Builder.getInt8PtrTy(PtrTy->getAddressSpace());
+    assert(DL.getTypeAllocSize(Int8PtrTy->getElementType()) == 1 &&
+           "alloc size of i8 must by 1 byte for the GEP to be correct");
+    auto *GEP = Builder.CreateGEP(
+        Builder.getInt8Ty(), Constant::getNullValue(Int8PtrTy), V, "uglygep");
+    return Builder.CreateBitCast(GEP, Ty);
+  }
   // Short-circuit unnecessary bitcasts.
   if (Op == Instruction::BitCast) {
     if (V->getType() == Ty)
@@ -2382,8 +2396,8 @@ bool SCEVExpander::isHighCostExpansionHelper(
       costAndCollectOperands<SCEVNAryExpr>(WorkItem, TTI, CostKind, Worklist);
     BudgetRemaining -= Cost;
     return BudgetRemaining < 0;
-  } else if (const auto *NAry = dyn_cast<SCEVAddRecExpr>(S)) {
-    assert(NAry->getNumOperands() >= 2 &&
+  } else if (isa<SCEVAddRecExpr>(S)) {
+    assert(cast<SCEVAddRecExpr>(S)->getNumOperands() >= 2 &&
            "Polynomial should be at least linear");
     BudgetRemaining -= costAndCollectOperands<SCEVAddRecExpr>(
       WorkItem, TTI, CostKind, Worklist);

@@ -36,7 +36,7 @@ class OpenACC_Op<string mnemonic, list<OpTrait> traits = []> :
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
-// Reduction operation enumeration
+// Reduction operation enumeration.
 def OpenACC_ReductionOpAdd : StrEnumAttrCase<"redop_add">;
 def OpenACC_ReductionOpMul : StrEnumAttrCase<"redop_mul">;
 def OpenACC_ReductionOpMax : StrEnumAttrCase<"redop_max">;
@@ -60,6 +60,9 @@ def OpenACC_ReductionOpAttr : StrEnumAttr<"ReductionOpAttr",
   let cppNamespace = "::mlir::acc";
 }
 
+// Type used in operation below.
+def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
+
 //===----------------------------------------------------------------------===//
 // 2.5.1 parallel Construct
 //===----------------------------------------------------------------------===//
@@ -78,7 +81,7 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
   let summary = "parallel construct";
   let description = [{
     The "acc.parallel" operation represents a parallel construct block. It has
-    one region to be executued in parallel on the current device.
+    one region to be executed in parallel on the current device.
 
     Example:
 
@@ -90,13 +93,16 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     ```
   }];
 
-  let arguments = (ins Optional<Index>:$async,
-                       Variadic<Index>:$waitOperands,
-                       Optional<Index>:$numGangs,
-                       Optional<Index>:$numWorkers,
-                       Optional<Index>:$vectorLength,
+  let arguments = (ins Optional<IntOrIndex>:$async,
+                       UnitAttr:$asyncAttr,
+                       Variadic<IntOrIndex>:$waitOperands,
+                       UnitAttr:$waitAttr,
+                       Optional<IntOrIndex>:$numGangs,
+                       Optional<IntOrIndex>:$numWorkers,
+                       Optional<IntOrIndex>:$vectorLength,
                        Optional<I1>:$ifCond,
                        Optional<I1>:$selfCond,
+                       UnitAttr:$selfAttr,
                        OptionalAttr<OpenACC_ReductionOpAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands,
                        Variadic<AnyType>:$copyOperands,
@@ -118,12 +124,15 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
 
   let extraClassDeclaration = [{
     static StringRef getAsyncKeyword() { return "async"; }
+    static StringRef getAsyncAttrName() { return "asyncAttr"; }
     static StringRef getWaitKeyword() { return "wait"; }
+    static StringRef getWaitAttrName() { return "waitAttr"; }
     static StringRef getNumGangsKeyword() { return "num_gangs"; }
     static StringRef getNumWorkersKeyword() { return "num_workers"; }
     static StringRef getVectorLengthKeyword() { return "vector_length"; }
     static StringRef getIfKeyword() { return "if"; }
     static StringRef getSelfKeyword() { return "self"; }
+    static StringRef getSelfAttrName() { return "selfAttr"; }
     static StringRef getReductionKeyword() { return "reduction"; }
     static StringRef getCopyKeyword() { return "copy"; }
     static StringRef getCopyinKeyword() { return "copyin"; }
@@ -172,8 +181,11 @@ def OpenACC_DataOp : OpenACC_Op<"data",
   let arguments = (ins Variadic<AnyType>:$presentOperands,
                        Variadic<AnyType>:$copyOperands,
                        Variadic<AnyType>:$copyinOperands,
+                       Variadic<AnyType>:$copyinReadonlyOperands,
                        Variadic<AnyType>:$copyoutOperands,
+                       Variadic<AnyType>:$copyoutZeroOperands,
                        Variadic<AnyType>:$createOperands,
+                       Variadic<AnyType>:$createZeroOperands,
                        Variadic<AnyType>:$noCreateOperands,
                        Variadic<AnyType>:$deleteOperands,
                        Variadic<AnyType>:$attachOperands,
@@ -186,9 +198,12 @@ def OpenACC_DataOp : OpenACC_Op<"data",
     static StringRef getDeleteKeyword() { return "delete"; }
     static StringRef getDetachKeyword() { return "detach"; }
     static StringRef getCopyinKeyword() { return "copyin"; }
+    static StringRef getCopyinReadonlyKeyword() { return "copyin_readonly"; }
     static StringRef getCopyKeyword() { return "copy"; }
     static StringRef getCopyoutKeyword() { return "copyout"; }
+    static StringRef getCopyoutZeroKeyword() { return "copyout_zero"; }
     static StringRef getCreateKeyword() { return "create"; }
+    static StringRef getCreateZeroKeyword() { return "create_zero"; }
     static StringRef getNoCreateKeyword() { return "no_create"; }
     static StringRef getPresentKeyword() { return "present"; }
   }];
@@ -241,14 +256,14 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
 
   let arguments = (ins OptionalAttr<I64Attr>:$collapse,
-                       Optional<AnyInteger>:$gangNum,
-                       Optional<AnyInteger>:$gangStatic,
-                       Optional<AnyInteger>:$workerNum,
-                       Optional<AnyInteger>:$vectorLength,
+                       Optional<IntOrIndex>:$gangNum,
+                       Optional<IntOrIndex>:$gangStatic,
+                       Optional<IntOrIndex>:$workerNum,
+                       Optional<IntOrIndex>:$vectorLength,
                        UnitAttr:$seq,
                        UnitAttr:$independent,
                        UnitAttr:$auto_,
-                       Variadic<AnyInteger>:$tileOperands,
+                       Variadic<IntOrIndex>:$tileOperands,
                        Variadic<AnyType>:$privateOperands,
                        OptionalAttr<OpenACC_ReductionOpAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands,
@@ -301,4 +316,3 @@ def OpenACC_YieldOp : OpenACC_Op<"yield", [Terminator,
 }
 
 #endif // OPENACC_OPS
-

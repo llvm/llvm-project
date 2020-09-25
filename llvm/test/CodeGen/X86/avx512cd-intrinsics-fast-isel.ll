@@ -3,20 +3,11 @@
 ; RUN: llc < %s -fast-isel -mtriple=x86_64-unknown -mattr=+avx512cd | FileCheck %s --check-prefixes=CHECK,X64
 
 define <8 x i64> @test_mm512_broadcastmb_epi64(<8 x i64> %a, <8 x i64> %b) {
-; X86-LABEL: test_mm512_broadcastmb_epi64:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
-; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    movzbl %al, %eax
-; X86-NEXT:    vmovd %eax, %xmm0
-; X86-NEXT:    vpbroadcastq %xmm0, %zmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm512_broadcastmb_epi64:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
-; X64-NEXT:    vpbroadcastmb2q %k0, %zmm0
-; X64-NEXT:    retq
+; CHECK-LABEL: test_mm512_broadcastmb_epi64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
+; CHECK-NEXT:    vpbroadcastmb2q %k0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %0 = icmp eq <8 x i64> %a, %b
   %1 = bitcast <8 x i1> %0 to i8

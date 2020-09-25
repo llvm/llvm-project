@@ -230,8 +230,66 @@ def DirectiveTypeZOperandInvalidH : TestFormat_Op<"type_operand_invalid_h", [{
 def DirectiveTypeZOperandInvalidI : TestFormat_Op<"type_operand_invalid_i", [{
   type($result) type($result)
 }]>, Results<(outs I64:$result)>;
+
+//===----------------------------------------------------------------------===//
+// type_ref
+
+// CHECK: error: 'type_ref' of 'operand' is not bound by a prior 'type' directive
+def DirectiveTypeZZTypeRefOperandInvalidC : TestFormat_Op<"type_ref_operand_invalid_c", [{
+  type_ref($operand) type(operands)
+}]>, Arguments<(ins I64:$operand)>;
+// CHECK: error: 'operands' 'type_ref' is not bound by a prior 'type' directive
+def DirectiveTypeZZTypeRefOperandInvalidD : TestFormat_Op<"type_ref_operand_invalid_d", [{
+  type_ref(operands) type($operand)
+}]>, Arguments<(ins I64:$operand)>;
+// CHECK: error: 'type_ref' of 'operand' is not bound by a prior 'type' directive
+def DirectiveTypeZZTypeRefOperandInvalidE : TestFormat_Op<"type_ref_operand_invalid_e", [{
+  type_ref($operand) type($operand)
+}]>, Arguments<(ins I64:$operand)>;
+// CHECK: error: 'type_ref' of 'result' is not bound by a prior 'type' directive
+def DirectiveTypeZZTypeRefOperandInvalidG : TestFormat_Op<"type_ref_operand_invalid_g", [{
+  type_ref($result) type(results)
+}]>, Results<(outs I64:$result)>;
+// CHECK: error: 'results' 'type_ref' is not bound by a prior 'type' directive
+def DirectiveTypeZZTypeRefOperandInvalidH : TestFormat_Op<"type_ref_operand_invalid_h", [{
+  type_ref(results) type($result)
+}]>, Results<(outs I64:$result)>;
+// CHECK: error: 'type_ref' of 'result' is not bound by a prior 'type' directive
+def DirectiveTypeZZTypeRefOperandInvalidI : TestFormat_Op<"type_ref_operand_invalid_i", [{
+  type_ref($result) type($result)
+}]>, Results<(outs I64:$result)>;
+
+// CHECK-NOT: error
+def DirectiveTypeZZTypeRefOperandB : TestFormat_Op<"type_ref_operand_valid_b", [{
+  type_ref(operands) attr-dict
+}]>;
+// CHECK-NOT: error
+def DirectiveTypeZZTypeRefOperandD : TestFormat_Op<"type_ref_operand_valid_d", [{
+  type(operands) type_ref($operand) attr-dict
+}]>, Arguments<(ins I64:$operand)>;
+// CHECK-NOT: error
+def DirectiveTypeZZTypeRefOperandE : TestFormat_Op<"type_ref_operand_valid_e", [{
+  type($operand) type_ref($operand) attr-dict
+}]>, Arguments<(ins I64:$operand)>;
+// CHECK-NOT: error
+def DirectiveTypeZZTypeRefOperandF : TestFormat_Op<"type_ref_operand_valid_f", [{
+  type(results) type_ref(results) attr-dict
+}]>;
+// CHECK-NOT: error
+def DirectiveTypeZZTypeRefOperandG : TestFormat_Op<"type_ref_operand_valid_g", [{
+  type($result) type_ref(results) attr-dict
+}]>, Results<(outs I64:$result)>;
+// CHECK-NOT: error
+def DirectiveTypeZZTypeRefOperandH : TestFormat_Op<"type_ref_operand_valid_h", [{
+  type(results) type_ref($result) attr-dict
+}]>, Results<(outs I64:$result)>;
+// CHECK-NOT: error
+def DirectiveTypeZZTypeRefOperandI : TestFormat_Op<"type_ref_operand_valid_i", [{
+  type($result) type_ref($result) attr-dict
+}]>, Results<(outs I64:$result)>;
+
 // CHECK-NOT: error:
-def DirectiveTypeZOperandValid : TestFormat_Op<"type_operand_valid", [{
+def DirectiveTypeZZZOperandValid : TestFormat_Op<"type_operand_valid", [{
   type(operands) type(results) attr-dict
 }]>;
 

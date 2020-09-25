@@ -6,8 +6,6 @@
 ]
 
 #trait = {
-  args_in = 1,
-  args_out = 1,
   iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel"],
   indexing_maps = #accesses,
   library_call = "some_external_func"
@@ -15,10 +13,11 @@
 
 func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>) -> tensor<?x1x?x1x?xf32>
 {
-  %0 = linalg.generic #trait %arg0 {
+  %0 = linalg.generic #trait
+    ins(%arg0 : tensor<?x1x?xf32>) {
        ^bb0(%arg1 : f32) :
          linalg.yield %arg1 : f32
-       } : tensor<?x1x?xf32> -> tensor<?x1x?x1x?xf32>
+       } -> tensor<?x1x?x1x?xf32>
   return %0 : tensor<?x1x?x1x?xf32>
 }
 //   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
@@ -40,8 +39,6 @@ func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>) -> tensor<?x1x?x1x?xf32>
 #map0 = affine_map<(i, j) -> (i, j)>
 #access = [#map0, #map0]
 #trait = {
-  args_in = 1,
-  args_out = 1,
   iterator_types = ["parallel", "parallel"],
   indexing_maps = #access,
   library_call = "some_external_func"
@@ -49,10 +46,11 @@ func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>) -> tensor<?x1x?x1x?xf32>
 
 func @drop_all_loops(%arg0 : tensor<1x1xf32>) -> tensor<1x1xf32>
 {
-  %0 = linalg.generic #trait %arg0 {
+  %0 = linalg.generic #trait
+    ins(%arg0 : tensor<1x1xf32>) {
        ^bb0(%arg1: f32) :
          linalg.yield %arg1 : f32
-       } : tensor<1x1xf32> -> tensor<1x1xf32>
+       } -> tensor<1x1xf32>
   return %0 : tensor<1x1xf32>
 }
 //   CHECK-DAG: #[[$MAP0:.*]] = affine_map<() -> ()>
@@ -70,18 +68,17 @@ func @drop_all_loops(%arg0 : tensor<1x1xf32>) -> tensor<1x1xf32>
 ]
 
 #trait = {
-  args_in = 1,
-  args_out = 1,
   indexing_maps = #accesses,
   iterator_types = ["parallel"],
   library_call = "some_external_fn"
 }
 
 func @leading_dim_1_canonicalization(%arg0: tensor<1x5xf32>) -> tensor<5xf32> {
-  %0 = linalg.generic #trait %arg0 {
+  %0 = linalg.generic #trait
+    ins(%arg0 : tensor<1x5xf32>) {
   ^bb0(%arg2: f32):     // no predecessors
     linalg.yield %arg2 : f32
-  }  : tensor<1x5xf32> -> tensor<5xf32>
+  } -> tensor<5xf32>
   return %0 : tensor<5xf32>
 }
 //   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
@@ -100,8 +97,6 @@ func @leading_dim_1_canonicalization(%arg0: tensor<1x5xf32>) -> tensor<5xf32> {
 ]
 
 #trait = {
-  args_in = 2,
-  args_out = 1,
   indexing_maps = #accesses,
   iterator_types = ["parallel", "parallel"],
   library_call = "some_external_fn"
@@ -113,11 +108,12 @@ func @broadcast_test(%arg0 : tensor<5xf32>, %arg1 : tensor<5xf32>) -> tensor<5x5
        tensor<5xf32> into tensor<1x5xf32>
   %1 = linalg.tensor_reshape %arg1 [affine_map<(d0, d1) -> (d0, d1)>] :
        tensor<5xf32> into tensor<5x1xf32>
-  %2 = linalg.generic #trait %0, %1 {
+  %2 = linalg.generic #trait
+    ins(%0, %1 : tensor<1x5xf32>, tensor<5x1xf32>) {
        ^bb0(%arg2: f32, %arg3: f32):
          %3 = addf %arg2, %arg3 : f32
          linalg.yield %3 : f32
-       } : tensor<1x5xf32>, tensor<5x1xf32> -> tensor<5x5xf32>
+       } -> tensor<5x5xf32>
   return %2 : tensor<5x5xf32>
 }
 //   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d1)>
@@ -138,8 +134,6 @@ func @broadcast_test(%arg0 : tensor<5xf32>, %arg1 : tensor<5xf32>) -> tensor<5x5
 ]
 
 #trait = {
-  args_in = 1,
-  args_out = 1,
   indexing_maps = #accesses,
   iterator_types = ["parallel", "parallel"],
   library_call = "some_external_fn"
@@ -147,10 +141,11 @@ func @broadcast_test(%arg0 : tensor<5xf32>, %arg1 : tensor<5xf32>) -> tensor<5x5
 
 func @broadcast_scalar(%arg0 : tensor<1x1xf32>) -> tensor<?x?xf32>
 {
-   %0 = linalg.generic #trait %arg0 {
-        ^bb0(%arg1 : f32):
-	  linalg.yield %arg1 : f32
-	} : tensor<1x1xf32> -> tensor<?x?xf32>
+   %0 = linalg.generic #trait
+    ins(%arg0 : tensor<1x1xf32>) {
+      ^bb0(%arg1 : f32):
+        linalg.yield %arg1 : f32
+   } -> tensor<?x?xf32>
    return %0 : tensor<?x?xf32>
 }
 //   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> ()>

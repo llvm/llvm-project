@@ -51,6 +51,19 @@ TEST_P(SynthesisTest, Leaf_Punctuation) {
   )txt"));
 }
 
+TEST_P(SynthesisTest, Leaf_Punctuation_CXX) {
+  if (!GetParam().isCXX())
+    return;
+
+  buildTree("", GetParam());
+
+  auto *Leaf = createLeaf(*Arena, tok::coloncolon);
+
+  EXPECT_TRUE(treeDumpEqual(Leaf, R"txt(
+'::' Detached synthesized
+  )txt"));
+}
+
 TEST_P(SynthesisTest, Leaf_Keyword) {
   buildTree("", GetParam());
 
@@ -58,6 +71,19 @@ TEST_P(SynthesisTest, Leaf_Keyword) {
 
   EXPECT_TRUE(treeDumpEqual(Leaf, R"txt(
 'if' Detached synthesized
+  )txt"));
+}
+
+TEST_P(SynthesisTest, Leaf_Keyword_CXX11) {
+  if (!GetParam().isCXX11OrLater())
+    return;
+
+  buildTree("", GetParam());
+
+  auto *Leaf = createLeaf(*Arena, tok::kw_nullptr);
+
+  EXPECT_TRUE(treeDumpEqual(Leaf, R"txt(
+'nullptr' Detached synthesized
   )txt"));
 }
 
@@ -134,6 +160,96 @@ BinaryOperatorExpression Detached synthesized
 |-'+' OperatorToken synthesized
 `-IntegerLiteralExpression RightHandSide synthesized
   `-'2' LiteralToken synthesized
+  )txt"));
+}
+
+TEST_P(SynthesisTest, DeepCopy_Synthesized) {
+  buildTree("", GetParam());
+
+  auto *LeafContinue = createLeaf(*Arena, tok::kw_continue);
+  auto *LeafSemiColon = createLeaf(*Arena, tok::semi);
+  auto *StatementContinue = createTree(*Arena,
+                                       {{LeafContinue, NodeRole::LiteralToken},
+                                        {LeafSemiColon, NodeRole::Unknown}},
+                                       NodeKind::ContinueStatement);
+
+  auto *Copy = deepCopyExpandingMacros(*Arena, StatementContinue);
+  EXPECT_TRUE(
+      treeDumpEqual(Copy, StatementContinue->dump(Arena->getSourceManager())));
+  // FIXME: Test that copy is independent of original, once the Mutations API is
+  // more developed.
+}
+
+TEST_P(SynthesisTest, DeepCopy_Original) {
+  auto *OriginalTree = buildTree("int a;", GetParam());
+
+  auto *Copy = deepCopyExpandingMacros(*Arena, OriginalTree);
+  EXPECT_TRUE(treeDumpEqual(Copy, R"txt(
+TranslationUnit Detached synthesized
+`-SimpleDeclaration synthesized
+  |-'int' synthesized
+  |-SimpleDeclarator Declarator synthesized
+  | `-'a' synthesized
+  `-';' synthesized
+  )txt"));
+}
+
+TEST_P(SynthesisTest, DeepCopy_Child) {
+  auto *OriginalTree = buildTree("int a;", GetParam());
+
+  auto *Copy = deepCopyExpandingMacros(*Arena, OriginalTree->getFirstChild());
+  EXPECT_TRUE(treeDumpEqual(Copy, R"txt(
+SimpleDeclaration Detached synthesized
+|-'int' synthesized
+|-SimpleDeclarator Declarator synthesized
+| `-'a' synthesized
+`-';' synthesized
+  )txt"));
+}
+
+TEST_P(SynthesisTest, DeepCopy_Macro) {
+  auto *OriginalTree = buildTree(R"cpp(
+#define HALF_IF if (1+
+#define HALF_IF_2 1) {}
+void test() {
+  HALF_IF HALF_IF_2 else {}
+})cpp",
+                                 GetParam());
+
+  auto *Copy = deepCopyExpandingMacros(*Arena, OriginalTree);
+
+  // The syntax tree stores already expanded Tokens, we can only see whether the
+  // macro was expanded when computing replacements. The dump does show that
+  // nodes in the copy are `modifiable`.
+  EXPECT_TRUE(treeDumpEqual(Copy, R"txt(
+TranslationUnit Detached synthesized
+`-SimpleDeclaration synthesized
+  |-'void' synthesized
+  |-SimpleDeclarator Declarator synthesized
+  | |-'test' synthesized
+  | `-ParametersAndQualifiers synthesized
+  |   |-'(' OpenParen synthesized
+  |   `-')' CloseParen synthesized
+  `-CompoundStatement synthesized
+    |-'{' OpenParen synthesized
+    |-IfStatement Statement synthesized
+    | |-'if' IntroducerKeyword synthesized
+    | |-'(' synthesized
+    | |-BinaryOperatorExpression synthesized
+    | | |-IntegerLiteralExpression LeftHandSide synthesized
+    | | | `-'1' LiteralToken synthesized
+    | | |-'+' OperatorToken synthesized
+    | | `-IntegerLiteralExpression RightHandSide synthesized
+    | |   `-'1' LiteralToken synthesized
+    | |-')' synthesized
+    | |-CompoundStatement ThenStatement synthesized
+    | | |-'{' OpenParen synthesized
+    | | `-'}' CloseParen synthesized
+    | |-'else' ElseKeyword synthesized
+    | `-CompoundStatement ElseStatement synthesized
+    |   |-'{' OpenParen synthesized
+    |   `-'}' CloseParen synthesized
+    `-'}' CloseParen synthesized
   )txt"));
 }
 

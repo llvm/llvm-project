@@ -1,8 +1,16 @@
+import("//clang-tools-extra/clangd/quality/gen_decision_forest.gni")
 import("//llvm/utils/unittest/unittest.gni")
+
+gen_decision_forest("DecisionForestRuntimeTest") {
+  model = "decision_forest_model"
+  filename = "DecisionForestRuntimeTest"
+  cpp_class = "::ns1::ns2::test::Example"
+}
 
 unittest("ClangdTests") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":DecisionForestRuntimeTest",
     "//clang-tools-extra/clang-tidy",
     "//clang-tools-extra/clangd",
     "//clang-tools-extra/clangd:features",
@@ -28,6 +36,9 @@ unittest("ClangdTests") {
 
     # To pick up the generated inc files.
     "$target_gen_dir/../../clangd/tool",
+
+    # To pick up the generated DecisionForestRuntimeTest.h file.
+    target_gen_dir,
   ]
   sources = [
     "ASTTests.cpp",
@@ -44,6 +55,7 @@ unittest("ClangdTests") {
     "ConfigCompileTests.cpp",
     "ConfigProviderTests.cpp",
     "ConfigYAMLTests.cpp",
+    "DecisionForestTests.cpp",
     "DexTests.cpp",
     "DiagnosticsTests.cpp",
     "DraftStoreTests.cpp",

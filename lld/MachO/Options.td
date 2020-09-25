@@ -37,7 +37,6 @@ def dylinker : Flag<["-"], "dylinker">,
      Group<grp_kind>;
 def dynamic : Flag<["-"], "dynamic">,
      HelpText<"Link dynamically (default)">,
-     Flags<[HelpHidden]>,
      Group<grp_kind>;
 def static : Flag<["-"], "static">,
      HelpText<"Link statically">,

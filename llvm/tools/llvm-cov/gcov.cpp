@@ -115,6 +115,11 @@ int gcovMain(int argc, const char *argv[]) {
                           cl::Grouping, cl::NotHidden,
                           cl::aliasopt(Intermediate));
 
+  cl::opt<bool> Demangle("demangled-names", cl::init(false),
+                         cl::desc("Demangle function names"));
+  cl::alias DemangleA("m", cl::desc("Alias for --demangled-names"),
+                      cl::Grouping, cl::NotHidden, cl::aliasopt(Demangle));
+
   cl::opt<bool> NoOutput("n", cl::Grouping, cl::init(false),
                          cl::desc("Do not output any .gcov files"));
   cl::alias NoOutputA("no-output", cl::aliasopt(NoOutput));
@@ -163,8 +168,8 @@ int gcovMain(int argc, const char *argv[]) {
 
   GCOV::Options Options(AllBlocks, BranchProb, BranchCount, FuncSummary,
                         PreservePaths, UncondBranch, Intermediate, LongNames,
-                        NoOutput, RelativeOnly, UseStdout, HashFilenames,
-                        SourcePrefix);
+                        Demangle, NoOutput, RelativeOnly, UseStdout,
+                        HashFilenames, SourcePrefix);
 
   for (const auto &SourceFile : SourceFiles)
     reportCoverage(SourceFile, ObjectDir, InputGCNO, InputGCDA, DumpGCOV,

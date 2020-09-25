@@ -34,3 +34,9 @@ d8f0e6caa91e230a486c948ab643174e40bdf215
 
 # Cleanup __config indention. NFC.
 2b772b930e097ed6f06d698a51e291c7fd318baa
+
+# Fixing whitespace problems
+94b2dd0998230c758abd92c99d3700c971f7a31a
+
+# Wiped out some non-ascii characters that snuck into the copyright.
+5b08a8a43254ed30bd953e869b0fd9fc1e8b82d0

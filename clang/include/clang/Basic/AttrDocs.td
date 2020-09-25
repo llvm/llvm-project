@@ -3572,6 +3572,30 @@ The return type is left unmodified.
   }];
 }
 
+def SwiftNameDocs : Documentation {
+  let Category = SwiftDocs;
+  let Heading = "swift_name";
+  let Content = [{
+The ``swift_name`` attribute provides the name of the declaration in Swift. If
+this attribute is absent, the name is transformed according to the algorithm
+built into the Swift compiler.
+
+The argument is a string literal that contains the Swift name of the function,
+variable, or type. When renaming a function, the name may be a compound Swift
+name.  For a type, enum constant, property, or variable declaration, the name
+must be a simple or qualified identifier.
+
+  .. code-block:: c
+
+    @interface URL
+    - (void) initWithString:(NSString *)s __attribute__((__swift_name__("URL.init(_:)")))
+    @end
+
+    void __attribute__((__swift_name__("squareRoot()"))) sqrt(double v) {
+    }
+  }];
+}
+
 def OMPDeclareSimdDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "#pragma omp declare simd";

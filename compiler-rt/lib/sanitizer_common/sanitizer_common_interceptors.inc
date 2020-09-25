@@ -445,8 +445,10 @@ INTERCEPTOR(int, strcmp, const char *s1, const char *s2) {
     c2 = (unsigned char)s2[i];
     if (c1 != c2 || c1 == '\0') break;
   }
-  COMMON_INTERCEPTOR_READ_STRING(ctx, s1, i + 1);
-  COMMON_INTERCEPTOR_READ_STRING(ctx, s2, i + 1);
+  if (common_flags()->intercept_strcmp) {
+    COMMON_INTERCEPTOR_READ_STRING(ctx, s1, i + 1);
+    COMMON_INTERCEPTOR_READ_STRING(ctx, s2, i + 1);
+  }
   int result = CharCmpX(c1, c2);
   CALL_WEAK_INTERCEPTOR_HOOK(__sanitizer_weak_hook_strcmp, GET_CALLER_PC(), s1,
                              s2, result);

@@ -1659,7 +1659,11 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     // register allocation.
     MI.setDesc(get(AMDGPU::S_XOR_B32));
     break;
-
+  case AMDGPU::S_OR_B64_term:
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(get(AMDGPU::S_OR_B64));
+    break;
   case AMDGPU::S_OR_B32_term:
     // This is only a terminator to get the correct spill code placement during
     // register allocation.
@@ -2236,6 +2240,7 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
     case AMDGPU::SI_MASK_BRANCH:
     case AMDGPU::S_MOV_B64_term:
     case AMDGPU::S_XOR_B64_term:
+    case AMDGPU::S_OR_B64_term:
     case AMDGPU::S_ANDN2_B64_term:
     case AMDGPU::S_MOV_B32_term:
     case AMDGPU::S_XOR_B32_term:

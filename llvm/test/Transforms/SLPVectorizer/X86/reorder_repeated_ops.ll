@@ -14,11 +14,10 @@ define void @hoge() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i16> undef, i16 [[T]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> [[TMP0]], i16 undef, i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i16> [[TMP1]] to <2 x i32>
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> undef, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw <2 x i32> <i32 63, i32 undef>, [[REORDER_SHUFFLE]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw <2 x i32> <i32 undef, i32 63>, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub <2 x i32> [[TMP3]], undef
-; CHECK-NEXT:    [[SHUFFLE5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[SHUFFLE5]], <i32 undef, i32 15, i32 31, i32 47>
+; CHECK-NEXT:    [[SHUFFLE5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[SHUFFLE5]], <i32 15, i32 31, i32 47, i32 undef>
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.vector.reduce.smax.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[T19:%.*]] = select i1 undef, i32 [[TMP6]], i32 undef
 ; CHECK-NEXT:    [[T20:%.*]] = icmp sgt i32 [[T19]], 63

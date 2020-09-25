@@ -12,6 +12,7 @@
 #include <pybind11/pybind11.h>
 
 #include "mlir-c/IR.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace mlir {
 namespace python {
@@ -19,28 +20,105 @@ namespace python {
 class PyMlirContext;
 class PyModule;
 
+/// Holds a C++ PyMlirContext and associated py::object, making it convenient
+/// to have an auto-releasing C++-side keep-alive reference to the context.
+/// The reference to the PyMlirContext is a simple C++ reference and the
+/// py::object holds the reference count which keeps it alive.
+class PyMlirContextRef {
+public:
+  PyMlirContextRef(PyMlirContext &referrent, pybind11::object object)
+      : referrent(referrent), object(std::move(object)) {}
+  ~PyMlirContextRef() {}
+
+  /// Releases the object held by this instance, causing its reference count
+  /// to remain artifically inflated by one. This must be used to return
+  /// the referenced PyMlirContext from a function. Otherwise, the destructor
+  /// of this reference would be called prior to the default take_ownership
+  /// policy assuming that the reference count has been transferred to it.
+  PyMlirContext *release();
+
+  PyMlirContext &operator->() { return referrent; }
+  pybind11::object getObject() { return object; }
+
+private:
+  PyMlirContext &referrent;
+  pybind11::object object;
+};
+
 /// Wrapper around MlirContext.
 class PyMlirContext {
 public:
-  PyMlirContext() { context = mlirContextCreate(); }
-  ~PyMlirContext() { mlirContextDestroy(context); }
+  PyMlirContext() = delete;
+  PyMlirContext(const PyMlirContext &) = delete;
+  PyMlirContext(PyMlirContext &&) = delete;
+
+  /// Returns a context reference for the singleton PyMlirContext wrapper for
+  /// the given context.
+  static PyMlirContextRef forContext(MlirContext context);
+  ~PyMlirContext();
+
+  /// Accesses the underlying MlirContext.
+  MlirContext get() { return context; }
+
+  /// Gets a strong reference to this context, which will ensure it is kept
+  /// alive for the life of the reference.
+  PyMlirContextRef getRef() {
+    return PyMlirContextRef(
+        *this, pybind11::reinterpret_borrow<pybind11::object>(handle));
+  }
+
+  /// Gets the count of live context objects. Used for testing.
+  static size_t getLiveCount();
+
+private:
+  PyMlirContext(MlirContext context);
+
+  // Interns the mapping of live MlirContext::ptr to PyMlirContext instances,
+  // preserving the relationship that an MlirContext maps to a single
+  // PyMlirContext wrapper. This could be replaced in the future with an
+  // extension mechanism on the MlirContext for stashing user pointers.
+  // Note that this holds a handle, which does not imply ownership.
+  // Mappings will be removed when the context is destructed.
+  using LiveContextMap =
+      llvm::DenseMap<void *, std::pair<pybind11::handle, PyMlirContext *>>;
+  static LiveContextMap &getLiveContexts();
 
   MlirContext context;
+  // The handle is set as part of lookup with forContext() (post construction).
+  pybind11::handle handle;
+};
+
+/// Base class for all objects that directly or indirectly depend on an
+/// MlirContext. The lifetime of the context will extend at least to the
+/// lifetime of these instances.
+/// Immutable objects that depend on a context extend this directly.
+class BaseContextObject {
+public:
+  BaseContextObject(PyMlirContextRef ref) : contextRef(std::move(ref)) {}
+
+  /// Accesses the context reference.
+  PyMlirContextRef &getContext() { return contextRef; }
+
+private:
+  PyMlirContextRef contextRef;
 };
 
 /// Wrapper around an MlirLocation.
-class PyLocation {
+class PyLocation : public BaseContextObject {
 public:
-  PyLocation(MlirLocation loc) : loc(loc) {}
+  PyLocation(PyMlirContextRef contextRef, MlirLocation loc)
+      : BaseContextObject(std::move(contextRef)), loc(loc) {}
   MlirLocation loc;
 };
 
 /// Wrapper around MlirModule.
-class PyModule {
+class PyModule : public BaseContextObject {
 public:
-  PyModule(MlirModule module) : module(module) {}
+  PyModule(PyMlirContextRef contextRef, MlirModule module)
+      : BaseContextObject(std::move(contextRef)), module(module) {}
   PyModule(PyModule &) = delete;
-  PyModule(PyModule &&other) {
+  PyModule(PyModule &&other)
+      : BaseContextObject(std::move(other.getContext())) {
     module = other.module;
     other.module.ptr = nullptr;
   }
@@ -120,9 +198,10 @@ private:
 
 /// Wrapper around the generic MlirAttribute.
 /// The lifetime of a type is bound by the PyContext that created it.
-class PyAttribute {
+class PyAttribute : public BaseContextObject {
 public:
-  PyAttribute(MlirAttribute attr) : attr(attr) {}
+  PyAttribute(PyMlirContextRef contextRef, MlirAttribute attr)
+      : BaseContextObject(std::move(contextRef)), attr(attr) {}
   bool operator==(const PyAttribute &other);
 
   MlirAttribute attr;
@@ -153,9 +232,10 @@ private:
 
 /// Wrapper around the generic MlirType.
 /// The lifetime of a type is bound by the PyContext that created it.
-class PyType {
+class PyType : public BaseContextObject {
 public:
-  PyType(MlirType type) : type(type) {}
+  PyType(PyMlirContextRef contextRef, MlirType type)
+      : BaseContextObject(std::move(contextRef)), type(type) {}
   bool operator==(const PyType &other);
   operator MlirType() const { return type; }
 

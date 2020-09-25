@@ -149,7 +149,7 @@ MlirAttribute mlirOpaqueAttrGet(MlirContext ctx, const char *dialectNamespace,
                                 intptr_t dataLength, const char *data,
                                 MlirType type);
 
-/** Returns the namepsace of the dialect with which the given opaque attribute
+/** Returns the namespace of the dialect with which the given opaque attribute
  * is associated. The namespace string is owned by the context. */
 const char *mlirOpaqueAttrGetDialectNamespace(MlirAttribute attr);
 

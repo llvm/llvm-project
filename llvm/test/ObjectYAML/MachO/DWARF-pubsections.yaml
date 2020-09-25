@@ -327,26 +327,26 @@ DWARF:
         Name:            char
 ...
 
-#CHECK: DWARF:           
-#CHECK:   debug_pubnames:  
-#CHECK:     Length:          0x0000000000000017
-#CHECK:     Version:         2
-#CHECK:     UnitOffset:      0
-#CHECK:     UnitSize:        121
-#CHECK:     Entries:         
-#CHECK:       - DieOffset:       0x0000002A
-#CHECK:         Name:            main
-#CHECK:   debug_pubtypes:  
-#CHECK:     Length:          0x000000000000001F
-#CHECK:     Version:         2
-#CHECK:     UnitOffset:      0
-#CHECK:     UnitSize:        121
-#CHECK:     Entries:         
-#CHECK:       - DieOffset:       0x00000060
-#CHECK:         Name:            int
-#CHECK:       - DieOffset:       0x00000071
-#CHECK:         Name:            char
-#CHECK: ...
+#      CHECK: DWARF:
+#      CHECK:   debug_pubnames:
+# CHECK-NEXT:     Length:          0x0000000000000017
+# CHECK-NEXT:     Version:         2
+# CHECK-NEXT:     UnitOffset:      0
+# CHECK-NEXT:     UnitSize:        121
+# CHECK-NEXT:     Entries:
+# CHECK-NEXT:       - DieOffset:       0x0000002A
+# CHECK-NEXT:         Name:            main
+# CHECK-NEXT:   debug_pubtypes:
+# CHECK-NEXT:     Length:          0x000000000000001F
+# CHECK-NEXT:     Version:         2
+# CHECK-NEXT:     UnitOffset:      0
+# CHECK-NEXT:     UnitSize:        121
+# CHECK-NEXT:     Entries:
+# CHECK-NEXT:       - DieOffset:       0x00000060
+# CHECK-NEXT:         Name:            int
+# CHECK-NEXT:       - DieOffset:       0x00000071
+# CHECK-NEXT:         Name:            char
+# CHECK-NEXT: ...
 
 ## b) Test that yaml2obj will not emit the .debug_pubnames/.debug_pubtypes section's
 ## contents, if the "debug_pubnames"/"debug_pubtypes" entry doesn't exist in the

@@ -119,6 +119,10 @@ struct UnwindInfoSections {
   // No dso_base for SEH or ARM EHABI.
   uintptr_t       dso_base;
 #endif
+#if defined(_LIBUNWIND_USE_DL_ITERATE_PHDR) &&                                 \
+    defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
+  uintptr_t       text_segment_length;
+#endif
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
   uintptr_t       dwarf_section;
   uintptr_t       dwarf_section_length;
@@ -410,7 +414,7 @@ static bool checkAddrInSegment(const Elf_Phdr *phdr, size_t image_base,
     uintptr_t end = begin + phdr->p_memsz;
     if (cbdata->targetAddr >= begin && cbdata->targetAddr < end) {
       cbdata->sects->dso_base = begin;
-      cbdata->sects->dwarf_section_length = phdr->p_memsz;
+      cbdata->sects->text_segment_length = phdr->p_memsz;
       return true;
     }
   }
@@ -450,8 +454,12 @@ static int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo,
       found_hdr = EHHeaderParser<LocalAddressSpace>::decodeEHHdr(
           *cbdata->addressSpace, eh_frame_hdr_start, phdr->p_memsz,
           hdrInfo);
-      if (found_hdr)
+      if (found_hdr) {
+        // .eh_frame_hdr records the start of .eh_frame, but not its size.
+        // Rely on a zero terminator to find the end of the section.
         cbdata->sects->dwarf_section = hdrInfo.eh_frame_ptr;
+        cbdata->sects->dwarf_section_length = UINTPTR_MAX;
+      }
     } else if (!found_obj) {
       found_obj = checkAddrInSegment(phdr, image_base, cbdata);
     }
@@ -462,7 +470,6 @@ static int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo,
       return 1;
     }
   }
-  cbdata->sects->dwarf_section_length = 0;
   return 0;
 }
 

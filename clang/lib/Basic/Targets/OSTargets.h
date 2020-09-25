@@ -776,7 +776,9 @@ protected:
 
 public:
   ZOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {}
+      : OSTargetInfo<Target>(Triple, Opts) {
+    this->WCharType = TargetInfo::UnsignedInt;
+  }
 };
 
 void addWindowsDefines(const llvm::Triple &Triple, const LangOptions &Opts,

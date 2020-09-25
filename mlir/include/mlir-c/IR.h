@@ -33,7 +33,7 @@ extern "C" {
  * instead of typedefs enables some type safety as structs are not implicitly
  * convertible to each other.
  *
- * Instaces of these types may or may not own the underlying object (most often
+ * Instances of these types may or may not own the underlying object (most often
  * only point to an IR fragment without owning it). The ownership semantics is
  * defined by how an instance of the type was obtained.
  */
@@ -67,7 +67,7 @@ struct MlirNamedAttribute {
 };
 typedef struct MlirNamedAttribute MlirNamedAttribute;
 
-/** A callback for returning string referenes.
+/** A callback for returning string references.
  *
  * This function is called back by the functions that need to return a reference
  * to the portion of the string with the following arguments:
@@ -103,6 +103,9 @@ MlirLocation mlirLocationFileLineColGet(MlirContext context,
 /** Creates a location with unknown position owned by the given context. */
 MlirLocation mlirLocationUnknownGet(MlirContext context);
 
+/** Gets the context that a location was created with. */
+MlirContext mlirLocationGetContext(MlirLocation location);
+
 /** Prints a location by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
  * several times with consecutive chunks of the string. */
@@ -118,6 +121,9 @@ MlirModule mlirModuleCreateEmpty(MlirLocation location);
 
 /** Parses a module from the string and transfers ownership to the caller. */
 MlirModule mlirModuleCreateParse(MlirContext context, const char *module);
+
+/** Gets the context that a module was created with. */
+MlirContext mlirModuleGetContext(MlirModule module);
 
 /** Checks whether a module is null. */
 inline int mlirModuleIsNull(MlirModule module) { return !module.ptr; }
@@ -220,7 +226,7 @@ intptr_t mlirOperationGetNumAttributes(MlirOperation op);
 /** Return `pos`-th attribute of the operation. */
 MlirNamedAttribute mlirOperationGetAttribute(MlirOperation op, intptr_t pos);
 
-/** Returns an attrbute attached to the operation given its name. */
+/** Returns an attribute attached to the operation given its name. */
 MlirAttribute mlirOperationGetAttributeByName(MlirOperation op,
                                               const char *name);
 
@@ -342,6 +348,9 @@ void mlirTypeDump(MlirType type);
 /** Parses an attribute. The attribute is owned by the context. */
 MlirAttribute mlirAttributeParseGet(MlirContext context, const char *attr);
 
+/** Gets the context that an attribute was created with. */
+MlirContext mlirAttributeGetContext(MlirAttribute attribute);
+
 /** Checks whether an attribute is null. */
 inline int mlirAttributeIsNull(MlirAttribute attr) { return !attr.ptr; }
 
@@ -354,7 +363,7 @@ int mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2);
 void mlirAttributePrint(MlirAttribute attr, MlirStringCallback callback,
                         void *userData);
 
-/** Prints the attrbute to the standard error stream. */
+/** Prints the attribute to the standard error stream. */
 void mlirAttributeDump(MlirAttribute attr);
 
 /** Associates an attribute with the name. Takes ownership of neither. */

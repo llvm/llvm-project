@@ -587,15 +587,12 @@ MCSymbol *EHStreamer::emitExceptionTable() {
     Asm->emitSLEB128(Action.ValueForTypeID);
 
     // Action Record
-    //
-    //   Self-relative signed displacement in bytes of the next action record,
-    //   or 0 if there is no next action record.
     if (VerboseAsm) {
-      if (Action.NextAction == 0) {
+      if (Action.Previous == unsigned(-1)) {
         Asm->OutStreamer->AddComment("  No further actions");
       } else {
-        unsigned NextAction = Entry + (Action.NextAction + 1) / 2;
-        Asm->OutStreamer->AddComment("  Continue to action "+Twine(NextAction));
+        Asm->OutStreamer->AddComment("  Continue to action " +
+                                     Twine(Action.Previous + 1));
       }
     }
     Asm->emitSLEB128(Action.NextAction);

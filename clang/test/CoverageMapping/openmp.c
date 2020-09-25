@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fopenmp -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name openmp.c %s | FileCheck %s
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fopenmp -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name openmp.c %s | FileCheck %s
 
 // CHECK: openmp.c:{{.+}}omp_outlined{{.+}}:
 // CHECK: File 0, 10:3 -> 10:31

@@ -92,29 +92,29 @@ static void replaceValue(Value &Old, Value &New) {
 }
 
 bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
-  // Match insert of scalar load.
+  // Match insert into fixed vector of scalar load.
+  auto *Ty = dyn_cast<FixedVectorType>(I.getType());
   Value *Scalar;
-  if (!match(&I, m_InsertElt(m_Undef(), m_Value(Scalar), m_ZeroInt())))
+  if (!Ty || !match(&I, m_InsertElt(m_Undef(), m_Value(Scalar), m_ZeroInt())) ||
+      !Scalar->hasOneUse())
     return false;
-  auto *Load = dyn_cast<LoadInst>(Scalar);
-  Type *ScalarTy = Scalar->getType();
+
   // Do not vectorize scalar load (widening) if atomic/volatile or under
   // asan/hwasan/memtag/tsan. The widened load may load data from dirty regions
   // or create data races non-existent in the source.
+  auto *Load = dyn_cast<LoadInst>(Scalar);
   if (!Load || !Load->isSimple() ||
       Load->getFunction()->hasFnAttribute(Attribute::SanitizeMemTag) ||
       mustSuppressSpeculation(*Load))
-    return false;
-  auto *Ty = dyn_cast<FixedVectorType>(I.getType());
-  if (!Ty)
     return false;
 
   // TODO: Extend this to match GEP with constant offsets.
   Value *PtrOp = Load->getPointerOperand()->stripPointerCasts();
   assert(isa<PointerType>(PtrOp->getType()) && "Expected a pointer type");
 
-  unsigned MinVectorSize = TTI.getMinVectorRegisterBitWidth();
+  Type *ScalarTy = Scalar->getType();
   uint64_t ScalarSize = ScalarTy->getPrimitiveSizeInBits();
+  unsigned MinVectorSize = TTI.getMinVectorRegisterBitWidth();
   if (!ScalarSize || !MinVectorSize || MinVectorSize % ScalarSize != 0)
     return false;
 
@@ -154,7 +154,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     SmallVector<int, 16> Mask(OutputNumElts, UndefMaskElem);
     for (unsigned i = 0; i < OutputNumElts && i < MinVecNumElts; ++i)
       Mask[i] = i;
-    VecLd = Builder.CreateShuffleVector(VecLd, UndefValue::get(MinVecTy), Mask);
+    VecLd = Builder.CreateShuffleVector(VecLd, Mask);
   }
   replaceValue(I, *VecLd);
   ++NumVecLoad;
@@ -304,8 +304,7 @@ static Value *createShiftShuffle(Value *Vec, unsigned OldIndex,
   auto *VecTy = cast<FixedVectorType>(Vec->getType());
   SmallVector<int, 32> ShufMask(VecTy->getNumElements(), UndefMaskElem);
   ShufMask[NewIndex] = OldIndex;
-  Value *Undef = UndefValue::get(VecTy);
-  return Builder.CreateShuffleVector(Vec, Undef, ShufMask, "shift");
+  return Builder.CreateShuffleVector(Vec, ShufMask, "shift");
 }
 
 /// Given an extract element instruction with constant index operand, shuffle
@@ -475,8 +474,7 @@ bool VectorCombine::foldBitcastShuf(Instruction &I) {
   // bitcast (shuf V, MaskC) --> shuf (bitcast V), MaskC'
   ++NumShufOfBitcast;
   Value *CastV = Builder.CreateBitCast(V, DestTy);
-  Value *Shuf =
-      Builder.CreateShuffleVector(CastV, UndefValue::get(DestTy), NewMask);
+  Value *Shuf = Builder.CreateShuffleVector(CastV, NewMask);
   replaceValue(I, *Shuf);
   return true;
 }

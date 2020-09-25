@@ -12,6 +12,8 @@
 
 // template<class T, class U> shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U>& r);
 
+// UNSUPPORTED: -fno-rtti
+
 #include <memory>
 #include <type_traits>
 #include <cassert>

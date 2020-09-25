@@ -17,7 +17,7 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #include "asan_internal.h"
 
-static INLINE bool EarlyMalloc() {
+static inline bool EarlyMalloc() {
   return SANITIZER_RTEMS &&
          (!__asan::asan_inited || __asan::asan_init_is_running);
 }

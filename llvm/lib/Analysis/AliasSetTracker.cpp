@@ -23,6 +23,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
@@ -734,8 +735,6 @@ AliasSetTracker::ASTCallbackVH::operator=(Value *V) {
 namespace {
 
   class AliasSetPrinter : public FunctionPass {
-    AliasSetTracker *Tracker;
-
   public:
     static char ID; // Pass identification, replacement for typeid
 
@@ -750,12 +749,11 @@ namespace {
 
     bool runOnFunction(Function &F) override {
       auto &AAWP = getAnalysis<AAResultsWrapperPass>();
-      Tracker = new AliasSetTracker(AAWP.getAAResults());
+      AliasSetTracker Tracker(AAWP.getAAResults());
       errs() << "Alias sets for function '" << F.getName() << "':\n";
       for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I)
-        Tracker->add(&*I);
-      Tracker->print(errs());
-      delete Tracker;
+        Tracker.add(&*I);
+      Tracker.print(errs());
       return false;
     }
   };
@@ -769,3 +767,16 @@ INITIALIZE_PASS_BEGIN(AliasSetPrinter, "print-alias-sets",
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(AliasSetPrinter, "print-alias-sets",
                 "Alias Set Printer", false, true)
+
+AliasSetsPrinterPass::AliasSetsPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+PreservedAnalyses AliasSetsPrinterPass::run(Function &F,
+                                            FunctionAnalysisManager &AM) {
+  auto &AA = AM.getResult<AAManager>(F);
+  AliasSetTracker Tracker(AA);
+  OS << "Alias sets for function '" << F.getName() << "':\n";
+  for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I)
+    Tracker.add(&*I);
+  Tracker.print(OS);
+  return PreservedAnalyses::all();
+}

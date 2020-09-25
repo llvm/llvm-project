@@ -227,10 +227,14 @@ void OpPassManagerImpl::splitAdaptorPasses() {
   std::swap(passes, oldPasses);
 
   for (std::unique_ptr<Pass> &pass : oldPasses) {
+    // Ignore verifier passes, they are added back in the "addPass()" calls.
+    if (isa<VerifierPass>(pass.get()))
+      continue;
+
     // If this pass isn't an adaptor, move it directly to the new pass list.
     auto *currentAdaptor = dyn_cast<OpToOpPassAdaptor>(pass.get());
     if (!currentAdaptor) {
-      passes.push_back(std::move(pass));
+      addPass(std::move(pass));
       continue;
     }
 

@@ -196,7 +196,7 @@ static bool ReadCode(const std::string &path, std::string &code,
   const size_t max_size = code.max_size();
   if (file_size > max_size) {
     error_sp->Printf("file at path '%s' too large: "
-                     "file_size = %llu, max_size = %llu\n",
+                     "file_size = %zu, max_size = %zu\n",
                      path.c_str(), file_size, max_size);
     return false;
   }

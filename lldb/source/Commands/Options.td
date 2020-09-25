@@ -1175,3 +1175,19 @@ let Command = "watchpoint delete" in {
   def watchpoint_delete_force : Option<"force", "f">, Group<1>,
     Desc<"Delete all watchpoints without querying for confirmation.">;
 }
+
+let Command = "trace load" in {
+  def trace_load_verbose : Option<"verbose", "v">, Group<1>,
+    Desc<"Show verbose trace load logging for debugging the plug-in "
+    "implementation.">;
+}
+
+let Command = "trace dump" in {
+  def trace_dump_verbose : Option<"verbose", "v">, Group<1>,
+    Desc<"Show verbose trace information.">;
+}
+
+let Command = "trace schema" in {
+  def trace_schema_verbose : Option<"verbose", "v">, Group<1>,
+    Desc<"Show verbose trace schema logging for debugging the plug-in.">;
+}

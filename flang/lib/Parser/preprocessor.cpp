@@ -73,15 +73,6 @@ TokenSequence Definition::Tokenize(const std::vector<std::string> &argNames,
   return result;
 }
 
-static std::size_t AfterLastNonBlank(const TokenSequence &tokens) {
-  for (std::size_t j{tokens.SizeInTokens()}; j > 0; --j) {
-    if (!tokens.TokenAt(j - 1).IsBlank()) {
-      return j;
-    }
-  }
-  return 0;
-}
-
 static TokenSequence Stringify(
     const TokenSequence &tokens, AllSources &allSources) {
   TokenSequence result;
@@ -104,15 +95,56 @@ static TokenSequence Stringify(
   return result;
 }
 
-TokenSequence Definition::Apply(
-    const std::vector<TokenSequence> &args, AllSources &allSources) {
+constexpr bool IsTokenPasting(CharBlock opr) {
+  return opr.size() == 2 && opr[0] == '#' && opr[1] == '#';
+}
+
+static bool AnyTokenPasting(const TokenSequence &text) {
+  std::size_t tokens{text.SizeInTokens()};
+  for (std::size_t j{0}; j < tokens; ++j) {
+    if (IsTokenPasting(text.TokenAt(j))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static TokenSequence TokenPasting(TokenSequence &&text) {
+  if (!AnyTokenPasting(text)) {
+    return std::move(text);
+  }
   TokenSequence result;
+  std::size_t tokens{text.SizeInTokens()};
   bool pasting{false};
+  for (std::size_t j{0}; j < tokens; ++j) {
+    if (IsTokenPasting(text.TokenAt(j))) {
+      if (!pasting) {
+        while (!result.empty() &&
+            result.TokenAt(result.SizeInTokens() - 1).IsBlank()) {
+          result.pop_back();
+        }
+        if (!result.empty()) {
+          result.ReopenLastToken();
+          pasting = true;
+        }
+      }
+    } else if (pasting && text.TokenAt(j).IsBlank()) {
+    } else {
+      result.Put(text, j, 1);
+      pasting = false;
+    }
+  }
+  return result;
+}
+
+TokenSequence Definition::Apply(
+    const std::vector<TokenSequence> &args, Prescanner &prescanner) {
+  TokenSequence result;
   bool skipping{false};
   int parenthesesNesting{0};
   std::size_t tokens{replacement_.SizeInTokens()};
   for (std::size_t j{0}; j < tokens; ++j) {
-    const CharBlock &token{replacement_.TokenAt(j)};
+    CharBlock token{replacement_.TokenAt(j)};
     std::size_t bytes{token.size()};
     if (skipping) {
       if (bytes == 1) {
@@ -124,44 +156,49 @@ TokenSequence Definition::Apply(
       }
       continue;
     }
-    if (bytes == 2 && token[0] == '~') {
+    if (bytes == 2 && token[0] == '~') { // argument substitution
       std::size_t index = token[1] - 'A';
       if (index >= args.size()) {
         continue;
       }
-      std::size_t afterLastNonBlank{AfterLastNonBlank(result)};
-      if (afterLastNonBlank > 0 &&
-          result.TokenAt(afterLastNonBlank - 1).ToString() == "#") {
-        // stringifying
-        while (result.SizeInTokens() >= afterLastNonBlank) {
+      std::size_t prev{j};
+      while (prev > 0 && replacement_.TokenAt(prev - 1).IsBlank()) {
+        --prev;
+      }
+      if (prev > 0 && replacement_.TokenAt(prev - 1).size() == 1 &&
+          replacement_.TokenAt(prev - 1)[0] ==
+              '#') { // stringify argument without macro replacement
+        std::size_t resultSize{result.SizeInTokens()};
+        while (resultSize > 0 && result.TokenAt(resultSize - 1).empty()) {
           result.pop_back();
         }
-        result.Put(Stringify(args[index], allSources));
+        CHECK(resultSize > 0 &&
+            result.TokenAt(resultSize - 1) == replacement_.TokenAt(prev - 1));
+        result.pop_back();
+        result.Put(Stringify(args[index], prescanner.allSources()));
       } else {
-        std::size_t argTokens{args[index].SizeInTokens()};
-        for (std::size_t k{0}; k < argTokens; ++k) {
-          if (!pasting || !args[index].TokenAt(k).IsBlank()) {
-            result.Put(args[index], k);
-            pasting = false;
+        const TokenSequence *arg{&args[index]};
+        std::optional<TokenSequence> replaced;
+        // Don't replace macros in the actual argument if it is preceded or
+        // followed by the token-pasting operator ## in the replacement text.
+        if (prev == 0 || !IsTokenPasting(replacement_.TokenAt(prev - 1))) {
+          auto next{replacement_.SkipBlanks(j + 1)};
+          if (next >= tokens || !IsTokenPasting(replacement_.TokenAt(next))) {
+            // Apply macro replacement to the actual argument
+            replaced =
+                prescanner.preprocessor().MacroReplacement(*arg, prescanner);
+            if (replaced) {
+              arg = &*replaced;
+            }
           }
         }
+        result.Put(DEREF(arg));
       }
-    } else if (bytes == 2 && token[0] == '#' && token[1] == '#') {
-      // Token pasting operator in body (not expanded argument); discard any
-      // immediately preceding white space, then reopen the last token.
-      while (!result.empty() &&
-          result.TokenAt(result.SizeInTokens() - 1).IsBlank()) {
-        result.pop_back();
-      }
-      if (!result.empty()) {
-        result.ReopenLastToken();
-        pasting = true;
-      }
-    } else if (pasting && token.IsBlank()) {
-      // Delete whitespace immediately following ## in the body.
     } else if (bytes == 11 && isVariadic_ &&
         token.ToString() == "__VA_ARGS__") {
-      Provenance commaProvenance{allSources.CompilerInsertionProvenance(',')};
+      Provenance commaProvenance{
+          prescanner.preprocessor().allSources().CompilerInsertionProvenance(
+              ',')};
       for (std::size_t k{argumentCount_}; k < args.size(); ++k) {
         if (k > argumentCount_) {
           result.Put(","s, commaProvenance);
@@ -186,7 +223,7 @@ TokenSequence Definition::Apply(
       result.Put(replacement_, j);
     }
   }
-  return result;
+  return TokenPasting(std::move(result));
 }
 
 static std::string FormatTime(const std::time_t &now, const char *format) {
@@ -218,7 +255,7 @@ void Preprocessor::Define(std::string macro, std::string value) {
 void Preprocessor::Undefine(std::string macro) { definitions_.erase(macro); }
 
 std::optional<TokenSequence> Preprocessor::MacroReplacement(
-    const TokenSequence &input, const Prescanner &prescanner) {
+    const TokenSequence &input, Prescanner &prescanner) {
   // Do quick scan for any use of a defined name.
   std::size_t tokens{input.SizeInTokens()};
   std::size_t j;
@@ -271,7 +308,8 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
         }
       }
       def.set_isDisabled(true);
-      TokenSequence replaced{ReplaceMacros(def.replacement(), prescanner)};
+      TokenSequence replaced{
+          TokenPasting(ReplaceMacros(def.replacement(), prescanner))};
       def.set_isDisabled(false);
       if (!replaced.empty()) {
         ProvenanceRange from{def.replacement().GetProvenanceRange()};
@@ -333,7 +371,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
     }
     def.set_isDisabled(true);
     TokenSequence replaced{
-        ReplaceMacros(def.Apply(args, allSources_), prescanner)};
+        ReplaceMacros(def.Apply(args, prescanner), prescanner)};
     def.set_isDisabled(false);
     if (!replaced.empty()) {
       ProvenanceRange from{def.replacement().GetProvenanceRange()};
@@ -348,7 +386,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
 }
 
 TokenSequence Preprocessor::ReplaceMacros(
-    const TokenSequence &tokens, const Prescanner &prescanner) {
+    const TokenSequence &tokens, Prescanner &prescanner) {
   if (std::optional<TokenSequence> repl{MacroReplacement(tokens, prescanner)}) {
     return std::move(*repl);
   }

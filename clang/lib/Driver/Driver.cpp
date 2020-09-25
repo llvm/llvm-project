@@ -2085,7 +2085,7 @@ bool Driver::DiagnoseInputExistence(const DerivedArgList &Args, StringRef Value,
 
   if (IsCLMode()) {
     if (!llvm::sys::path::is_absolute(Twine(Value)) &&
-        llvm::sys::Process::FindInEnvPath("LIB", Value))
+        llvm::sys::Process::FindInEnvPath("LIB", Value, ';'))
       return true;
 
     if (Args.hasArg(options::OPT__SLASH_link) && Ty == types::TY_Object) {

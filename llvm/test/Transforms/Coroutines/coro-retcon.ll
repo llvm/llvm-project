@@ -74,7 +74,6 @@ entry:
 ; CHECK-NEXT:    call void @print(i32 [[INC]])
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[SLOT]], align 4
 ; CHECK-NEXT:    [[INC:%.*]] = add i32 [[LOAD]], 1
-; CHECK-NEXT:    store i32 [[INC]], i32* [[SLOT]], align 4
 ; CHECK-NEXT:    call void @print(i32 [[INC]])
 ; CHECK-NEXT:    ret i32 0
 

@@ -49,6 +49,8 @@ void TargetLoweringObjectFile::Initialize(MCContext &ctx,
   // Reset various EH DWARF encodings.
   PersonalityEncoding = LSDAEncoding = TTypeEncoding = dwarf::DW_EH_PE_absptr;
   CallSiteEncoding = dwarf::DW_EH_PE_uleb128;
+
+  this->TM = &TM;
 }
 
 TargetLoweringObjectFile::~TargetLoweringObjectFile() {
@@ -136,6 +138,50 @@ void TargetLoweringObjectFile::emitPersonalityValue(MCStreamer &Streamer,
                                                     const MCSymbol *Sym) const {
 }
 
+void TargetLoweringObjectFile::emitCGProfile(MCStreamer &Streamer,
+                                             Module &M) const {
+  MCContext &C = getContext();
+  SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
+  M.getModuleFlagsMetadata(ModuleFlags);
+
+  MDNode *CFGProfile = nullptr;
+
+  for (const auto &MFE : ModuleFlags) {
+    StringRef Key = MFE.Key->getString();
+    if (Key == "CG Profile") {
+      CFGProfile = cast<MDNode>(MFE.Val);
+      break;
+    }
+  }
+
+  if (!CFGProfile)
+    return;
+
+  auto GetSym = [this](const MDOperand &MDO) -> MCSymbol * {
+    if (!MDO)
+      return nullptr;
+    auto *V = cast<ValueAsMetadata>(MDO);
+    const Function *F = cast<Function>(V->getValue());
+    return TM->getSymbol(F);
+  };
+
+  for (const auto &Edge : CFGProfile->operands()) {
+    MDNode *E = cast<MDNode>(Edge);
+    const MCSymbol *From = GetSym(E->getOperand(0));
+    const MCSymbol *To = GetSym(E->getOperand(1));
+    // Skip null functions. This can happen if functions are dead stripped after
+    // the CGProfile pass has been run.
+    if (!From || !To)
+      continue;
+    uint64_t Count = cast<ConstantAsMetadata>(E->getOperand(2))
+                         ->getValue()
+                         ->getUniqueInteger()
+                         .getZExtValue();
+    Streamer.emitCGProfileEntry(
+        MCSymbolRefExpr::create(From, MCSymbolRefExpr::VK_None, C),
+        MCSymbolRefExpr::create(To, MCSymbolRefExpr::VK_None, C), Count);
+  }
+}
 
 /// getKindForGlobal - This is a top-level target-independent classifier for
 /// a global object.  Given a global variable and information from the TM, this

@@ -328,6 +328,56 @@ bool AArch64InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return true;
 }
 
+bool AArch64InstrInfo::analyzeBranchPredicate(MachineBasicBlock &MBB,
+                                              MachineBranchPredicate &MBP,
+                                              bool AllowModify) const {
+  // For the moment, handle only a block which ends with a cb(n)zx followed by
+  // a fallthrough.  Why this?  Because it is a common form.
+  // TODO: Should we handle b.cc?
+
+  MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
+  if (I == MBB.end())
+    return true;
+
+  // Skip over SpeculationBarrierEndBB terminators
+  if (I->getOpcode() == AArch64::SpeculationBarrierISBDSBEndBB ||
+      I->getOpcode() == AArch64::SpeculationBarrierSBEndBB) {
+    --I;
+  }
+
+  if (!isUnpredicatedTerminator(*I))
+    return true;
+
+  // Get the last instruction in the block.
+  MachineInstr *LastInst = &*I;
+  unsigned LastOpc = LastInst->getOpcode();
+  if (!isCondBranchOpcode(LastOpc))
+    return true;
+
+  switch (LastOpc) {
+  default:
+    return true;
+  case AArch64::CBZW:
+  case AArch64::CBZX:
+  case AArch64::CBNZW:
+  case AArch64::CBNZX:
+    break;
+  };
+
+  MBP.TrueDest = LastInst->getOperand(1).getMBB();
+  assert(MBP.TrueDest && "expected!");
+  MBP.FalseDest = MBB.getNextNode();
+
+  MBP.ConditionDef = nullptr;
+  MBP.SingleUseCondition = false;
+
+  MBP.LHS = LastInst->getOperand(0);
+  MBP.RHS = MachineOperand::CreateImm(0);
+  MBP.Predicate = LastOpc == AArch64::CBNZX ? MachineBranchPredicate::PRED_NE
+                                            : MachineBranchPredicate::PRED_EQ;
+  return false;
+}
+
 bool AArch64InstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
   if (Cond[0].getImm() != -1) {

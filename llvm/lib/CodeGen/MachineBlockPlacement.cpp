@@ -3359,8 +3359,8 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   // No tail merging opportunities if the block number is less than four.
   if (MF.size() > 3 && EnableTailMerge) {
     unsigned TailMergeSize = TailDupSize + 1;
-    BranchFolder BF(/*EnableTailMerge=*/true, /*CommonHoist=*/false, *MBFI,
-                    *MBPI, PSI, TailMergeSize);
+    BranchFolder BF(/*DefaultEnableTailMerge=*/true, /*CommonHoist=*/false,
+                    *MBFI, *MBPI, PSI, TailMergeSize);
 
     if (BF.OptimizeFunction(MF, TII, MF.getSubtarget().getRegisterInfo(), MLI,
                             /*AfterPlacement=*/true)) {

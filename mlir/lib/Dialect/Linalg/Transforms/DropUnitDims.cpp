@@ -261,12 +261,14 @@ static UnitExtentReplacementInfo replaceUnitExtents(AffineMap indexMap,
 }
 
 namespace {
+
 /// Pattern to replace tensors operands/results that are unit extents.
 struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    if (!genericOp.hasTensorSemantics())
+    // TODO: support init_tensors and reductions.
+    if (!genericOp.hasTensorSemantics() || !genericOp.init_tensors().empty())
       return failure();
 
     MLIRContext *context = rewriter.getContext();
@@ -283,8 +285,7 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOp> {
       reassociationMaps.push_back(replacementInfo.reassociation);
       newIndexingMaps.push_back(replacementInfo.indexMap);
       newInputOutputTypes.push_back(replacementInfo.type);
-      doCanonicalization =
-          doCanonicalization || replacementInfo.type != std::get<1>(it);
+      doCanonicalization |= replacementInfo.type != std::get<1>(it);
     }
 
     // If the indexing maps of the result operation are not invertible (i.e. not
@@ -295,32 +296,40 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOp> {
 
     // If any operand type change, insert a reshape to convert from the original
     // type to the new type.
-    SmallVector<Value, 4> newOperands;
-    newOperands.reserve(genericOp.getNumOperands());
-    for (auto operand : llvm::enumerate(genericOp.getOperands())) {
-      if (operand.value().getType() == newInputOutputTypes[operand.index()]) {
-        newOperands.push_back(operand.value());
-      } else {
-        newOperands.push_back(rewriter.create<linalg::TensorReshapeOp>(
-            loc, newInputOutputTypes[operand.index()], operand.value(),
-            reassociationMaps[operand.index()]));
+    // TODO: get rid of flattenedIdx which assumes operand order and contiguity.
+    unsigned flattenedIdx = 0;
+    auto insertReshapes = [&](ValueRange values) {
+      SmallVector<Value, 4> res;
+      res.reserve(values.size());
+      for (auto operand : llvm::enumerate(values)) {
+        if (operand.value().getType() == newInputOutputTypes[flattenedIdx])
+          res.push_back(operand.value());
+        else
+          res.push_back(rewriter.create<linalg::TensorReshapeOp>(
+              loc, newInputOutputTypes[flattenedIdx], operand.value(),
+              reassociationMaps[flattenedIdx]));
+        ++flattenedIdx;
       }
-    }
+      return res;
+    };
+
+    SmallVector<Value, 4> newInputs = insertReshapes(genericOp.inputs());
+    SmallVector<Value, 4> newOutputBuffers =
+        insertReshapes(genericOp.output_buffers());
+    SmallVector<Value, 4> newInitTensors =
+        insertReshapes(genericOp.init_tensors());
 
     // If any result type change, insert a reshape to convert from the original
     // type to the new type.
     SmallVector<Type, 4> resultTypes;
     resultTypes.reserve(genericOp.getNumResults());
     for (unsigned i : llvm::seq<unsigned>(0, genericOp.getNumResults()))
-      resultTypes.push_back(
-          newInputOutputTypes[i + genericOp.getNumOperands()]);
+      resultTypes.push_back(newInputOutputTypes[i + genericOp.getNumInputs()]);
     GenericOp replacementOp = rewriter.create<GenericOp>(
-        loc, resultTypes, newOperands, genericOp.args_in(),
-        genericOp.args_out(), rewriter.getAffineMapArrayAttr(newIndexingMaps),
-        genericOp.iterator_types(),
-        /*doc = */ nullptr,
-        /*library_call = */ nullptr,
-        /*symbol_source = */ nullptr);
+        loc, resultTypes, newInputs, newOutputBuffers, newInitTensors,
+        newIndexingMaps,
+        llvm::to_vector<4>(
+            genericOp.iterator_types().getAsValueRange<StringAttr>()));
     rewriter.inlineRegionBefore(genericOp.region(), replacementOp.region(),
                                 replacementOp.region().begin());
 
@@ -332,12 +341,11 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOp> {
       RankedTensorType origResultType = genericOp.getResult(result.index())
                                             .getType()
                                             .cast<RankedTensorType>();
-      if (origResultType != result.value().getType()) {
+      if (origResultType != result.value().getType())
         resultReplacements.push_back(rewriter.create<linalg::TensorReshapeOp>(
             loc, origResultType, result.value(), reassociationMaps[index]));
-      } else {
+      else
         resultReplacements.push_back(result.value());
-      }
     }
     rewriter.replaceOp(genericOp, resultReplacements);
     return success();

@@ -1582,6 +1582,12 @@ TEST(FindReferences, WithinAST) {
           f.[[^~]]Foo();
         }
       )cpp",
+      R"cpp(// Lambda capture initializer
+        void foo() {
+          int [[w^aldo]] = 42;
+          auto lambda = [x = [[waldo]]](){};
+        }
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);

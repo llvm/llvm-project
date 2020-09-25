@@ -593,3 +593,15 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O2
 )
+
+add_entrypoint_object(
+  hypotf
+  SRCS
+    hypotf.cpp
+  HDRS
+    hypotf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)

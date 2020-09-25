@@ -664,6 +664,12 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
    },
+   {"name": "__cpp_lib_constexpr_dynamic_alloc",
+    "values": {
+      "c++2a": int(201907)
+    },
+    "headers": ["memory"]
+   },
 ]], key=lambda tc: tc["name"])
 
 def get_std_dialects():
@@ -994,25 +1000,27 @@ def create_table(grid, indent):
   indent_str = ' '*indent
   col_widths = make_widths(grid)
   num_cols = len(grid[0])
-  result = indent_str + add_divider(col_widths, 2)
+  result = [indent_str + add_divider(col_widths, 2)]
   header_flag = 2
   for row_i in range(0, len(grid)):
     row = grid[row_i]
-    result = result + indent_str + ' '.join([pad_cell(row[i], col_widths[i]) for i in range(0, len(row))]) + '\n'
+    line = indent_str + ' '.join([pad_cell(row[i], col_widths[i]) for i in range(0, len(row))])
+    result.append(line.rstrip())
     is_cxx_header = row[0].startswith('**')
     if row_i == len(grid) - 1:
       header_flag = 2
-    result = result + indent_str + add_divider(col_widths, 1 if is_cxx_header else header_flag)
+    separator = indent_str + add_divider(col_widths, 1 if is_cxx_header else header_flag)
+    result.append(separator.rstrip())
     header_flag = 0
-  return result
+  return '\n'.join(result)
 
 def add_divider(widths, header_flag):
   if header_flag == 2:
-    return ' '.join(['='*w for w in widths]) + '\n'
+    return ' '.join(['='*w for w in widths])
   if header_flag == 1:
-    return '-'.join(['-'*w for w in widths]) + '\n'
+    return '-'.join(['-'*w for w in widths])
   else:
-    return ' '.join(['-'*w for w in widths]) + '\n'
+    return ' '.join(['-'*w for w in widths])
 
 def pad_cell(s, length, left_align=True):
   padding = ((length - len(s)) * ' ')

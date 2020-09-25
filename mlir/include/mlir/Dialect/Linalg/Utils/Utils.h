@@ -149,7 +149,7 @@ enum class DistributionMethod {
   /// scf.parallel(%iv)= (%lb + %procId * %step) to (%ub) step (%step * %nprocs)
   Cyclic = 0,
 
-  /// Cyclic distribtuion where the number of processors can be assumed to be
+  /// Cyclic distribution where the number of processors can be assumed to be
   /// more than or equal to the number of iterations of the distributed loop. In
   /// such cases, a simple in-bounds check is enough (instead of materializing a
   /// loop). Distributes the following loop
@@ -165,7 +165,7 @@ enum class DistributionMethod {
   /// }
   CyclicNumProcsGeNumIters = 1,
 
-  /// Cyclic distribtuion where the number of processors can be assumed to be
+  /// Cyclic distribution where the number of processors can be assumed to be
   ///  equal to the number of iterations of the distributed loop. In such cases,
   ///  no bounds check is needed. Distributes the following loop
   ///

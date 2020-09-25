@@ -6,10 +6,9 @@
 
 # NOSYMTAB:      --- !ELF
 # NOSYMTAB-NEXT:  FileHeader:
-# NOSYMTAB-NEXT:    Class:           ELFCLASS64
-# NOSYMTAB-NEXT:    Data:            ELFDATA2LSB
-# NOSYMTAB-NEXT:    Type:            ET_DYN
-# NOSYMTAB-NEXT:    Machine:         EM_NONE
+# NOSYMTAB-NEXT:    Class: ELFCLASS64
+# NOSYMTAB-NEXT:    Data:  ELFDATA2LSB
+# NOSYMTAB-NEXT:    Type:  ET_DYN
 # NOSYMTAB-NEXT: ...
 
 --- !ELF
@@ -26,10 +25,9 @@ FileHeader:
 
 # SYMTAB:      --- !ELF
 # SYMTAB-NEXT:  FileHeader:
-# SYMTAB-NEXT:   Class:   ELFCLASS64
-# SYMTAB-NEXT:   Data:    ELFDATA2LSB
-# SYMTAB-NEXT:   Type:    ET_DYN
-# SYMTAB-NEXT:   Machine: EM_NONE
+# SYMTAB-NEXT:   Class: ELFCLASS64
+# SYMTAB-NEXT:   Data:  ELFDATA2LSB
+# SYMTAB-NEXT:   Type:  ET_DYN
 # SYMTAB-NEXT:  Symbols: []
 # SYMTAB-NEXT: ...
 

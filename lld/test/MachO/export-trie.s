@@ -1,33 +1,42 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: lld -flavor darwinnew -dylib %t.o -o %t.dylib
 
-# RUN: llvm-objdump --syms --exports-trie %t.dylib | \
-# RUN:   FileCheck %s --check-prefix=EXPORTS
+## We are intentionally building an executable here instead of a dylib / bundle
+## in order that the `__PAGEZERO` segment is present, which in turn means that
+## the image base starts at a non-zero address. This allows us to verify that
+## addresses in the export trie are correctly encoded as relative to the image
+## base.
+# RUN: lld -flavor darwinnew %t.o -o %t
+
+# RUN: llvm-objdump --syms --exports-trie %t | FileCheck %s --check-prefix=EXPORTS
 # EXPORTS-LABEL: SYMBOL TABLE:
+# EXPORTS-DAG:   [[#%x, MAIN_ADDR:]] {{.*}} _main
 # EXPORTS-DAG:   [[#%x, HELLO_ADDR:]] {{.*}} _hello
 # EXPORTS-DAG:   [[#%x, HELLO_WORLD_ADDR:]] {{.*}} _hello_world
 # EXPORTS-DAG:   [[#%x, HELLO_ITS_ME_ADDR:]] {{.*}} _hello_its_me
 # EXPORTS-DAG:   [[#%x, HELLO_ITS_YOU_ADDR:]] {{.*}} _hello_its_you
 # EXPORTS-LABEL: Exports trie:
+# EXPORTS-DAG:   0x{{0*}}[[#%X, MAIN_ADDR]] _main
 # EXPORTS-DAG:   0x{{0*}}[[#%X, HELLO_ADDR]] _hello
 # EXPORTS-DAG:   0x{{0*}}[[#%X, HELLO_WORLD_ADDR]] _hello_world
 # EXPORTS-DAG:   0x{{0*}}[[#%x, HELLO_ITS_ME_ADDR:]] _hello_its_me
 # EXPORTS-DAG:   0x{{0*}}[[#%x, HELLO_ITS_YOU_ADDR:]] _hello_its_you
 
 ## Check that we are sharing prefixes in the trie.
-# RUN: obj2yaml %t.dylib | FileCheck %s
+# RUN: obj2yaml %t | FileCheck %s
 # CHECK-LABEL: ExportTrie:
 # CHECK: Name: ''
-# CHECK: Name: _hello
+# CHECK: Name: _
+# CHECK: Name: main
+# CHECK: Name: hello
 # CHECK: Name: _
 # CHECK: Name: world
 # CHECK: Name: its_
-# CHECK: Name: me
 # CHECK: Name: you
+# CHECK: Name: me
 
 .section __TEXT,__cstring
-.globl _hello, _hello_world, _hello_its_me, _hello_its_you
+.globl _hello, _hello_world, _hello_its_me, _hello_its_you, _main
 
 ## Test for when an entire symbol name is a prefix of another.
 _hello:
@@ -42,3 +51,6 @@ _hello_its_me:
 
 _hello_its_you:
 .asciz "Hello, it's you\n"
+
+_main:
+  ret

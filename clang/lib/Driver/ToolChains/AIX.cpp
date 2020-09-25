@@ -92,6 +92,12 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_static))
     CmdArgs.push_back("-bnso");
 
+  // Add options for shared libraries.
+  if (Args.hasArg(options::OPT_shared)) {
+    CmdArgs.push_back("-bM:SRE");
+    CmdArgs.push_back("-bnoentry");
+  }
+
   // Specify linker output file.
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
@@ -123,9 +129,14 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       return IsArch32Bit ? "crt0.o" : "crt0_64.o";
   };
 
-  if (!Args.hasArg(options::OPT_nostdlib)) {
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
+                   options::OPT_shared)) {
     CmdArgs.push_back(
         Args.MakeArgString(ToolChain.GetFilePath(getCrt0Basename())));
+
+    if (D.CCCIsCXX())
+      CmdArgs.push_back(Args.MakeArgString(
+          ToolChain.GetFilePath(IsArch32Bit ? "crti.o" : "crti_64.o")));
   }
 
   // Collect all static constructor and destructor functions in CXX mode. This

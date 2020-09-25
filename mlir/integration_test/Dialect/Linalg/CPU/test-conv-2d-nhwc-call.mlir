@@ -9,17 +9,13 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=1,1,1,1" -test-conv-vectorization \
-// RUN:   -convert-linalg-to-loops -test-vector-contraction-conversion=vector-outerproduct=0 \
-// RUN:   -convert-vector-to-scf -convert-linalg-to-llvm | \
+// RUN: mlir-opt %s -test-conv-vectorization -convert-linalg-to-llvm | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=2,3,3,2" -linalg-tile="linalg-tile-sizes=1,1,1,1" \
-// RUN:   -test-conv-vectorization -convert-linalg-to-loops \
-// RUN:   -test-vector-contraction-conversion=vector-outerproduct=0 \
-// RUN:   -convert-vector-to-scf -convert-linalg-to-llvm | \
+// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=2,3,3,2" \
+// RUN:   -test-conv-vectorization -convert-linalg-to-llvm | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
@@ -34,7 +30,8 @@ func @alloc_4d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %s4 : index, %f
 }
 
 func @conv_2d_nhwc(%arg0: memref<?x?x?x?xf32>, %arg1: memref<?x?x?x?xf32>, %arg2: memref<?x?x?x?xf32>) {
-  linalg.conv_2d_nhwc %arg0, %arg1, %arg2 : (memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>)
+  linalg.conv_2d_nhwc ins (%arg0, %arg1: memref<?x?x?x?xf32>, memref<?x?x?x?xf32>)
+                     outs (%arg2: memref<?x?x?x?xf32>)
   return
 }
 

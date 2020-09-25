@@ -60,7 +60,8 @@ struct Edge {
 struct ExportInfo {
   uint64_t address;
   uint8_t flags = 0;
-  explicit ExportInfo(const Symbol &sym) : address(sym.getVA()) {
+  ExportInfo(const Symbol &sym, uint64_t imageBase)
+      : address(sym.getVA() - imageBase) {
     if (sym.isWeakDef())
       flags |= EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION;
     if (sym.isTlv())
@@ -199,7 +200,7 @@ tailcall:
 
   if (isTerminal) {
     assert(j - i == 1); // no duplicate symbols
-    node->info = ExportInfo(*pivotSymbol);
+    node->info = ExportInfo(*pivotSymbol, imageBase);
   } else {
     // This is the tail-call-optimized version of the following:
     // sortAndBuild(vec.slice(i, j - i), node, lastPos, pos + 1);

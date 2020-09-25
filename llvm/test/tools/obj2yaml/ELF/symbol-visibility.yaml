@@ -4,10 +4,9 @@
 
 # CHECK:      --- !ELF
 # CHECK-NEXT: FileHeader:
-# CHECK-NEXT:   Class:   ELFCLASS64
-# CHECK-NEXT:   Data:    ELFDATA2LSB
-# CHECK-NEXT:   Type:    ET_REL
-# CHECK-NEXT:   Machine: EM_NONE
+# CHECK-NEXT:   Class: ELFCLASS64
+# CHECK-NEXT:   Data:  ELFDATA2LSB
+# CHECK-NEXT:   Type:  ET_REL
 # CHECK-NEXT: Symbols:
 # CHECK-NEXT:   - Name: default
 # CHECK-NEXT:   - Name: internal

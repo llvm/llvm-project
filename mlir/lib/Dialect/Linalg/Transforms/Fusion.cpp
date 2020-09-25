@@ -499,32 +499,31 @@ struct FuseGenericOpsOnTensors {
                           consumerIndexMaps.end());
 
     // Generate the fused op.
+    // Tensor-level fusion is only on ops without initTensors and outputBuffers.
     LinalgOp fusedOp;
     if (isa<GenericOp>(producer.getOperation()) &&
         isa<GenericOp>(consumer.getOperation())) {
       fusedOp =
           rewriter
-              .create<GenericOp>(
-                  rewriter.getUnknownLoc(),
-                  consumer.getOperation()->getResultTypes(), fusedOperands,
-                  rewriter.getI64IntegerAttr(fusedOperands.size()),
-                  rewriter.getI64IntegerAttr(
-                      consumer.getOperation()->getNumResults()),
-                  rewriter.getArrayAttr(fusedIndexMaps),
-                  consumer.iterator_types(),
-                  /*doc=*/nullptr,
-                  /*library_call=*/nullptr,
-                  /*symbol_source=*/nullptr)
+              .create<GenericOp>(consumer.getLoc(),
+                                 consumer.getOperation()->getResultTypes(),
+                                 /*inputs=*/fusedOperands,
+                                 /*outputBuffers=*/ValueRange{},
+                                 /*initTensors=*/ValueRange{},
+                                 rewriter.getArrayAttr(fusedIndexMaps),
+                                 consumer.iterator_types(),
+                                 /*doc=*/nullptr,
+                                 /*library_call=*/nullptr,
+                                 /*symbol_source=*/nullptr)
               .getOperation();
     } else {
       fusedOp =
           rewriter
               .create<IndexedGenericOp>(
-                  rewriter.getUnknownLoc(),
-                  consumer.getOperation()->getResultTypes(), fusedOperands,
-                  rewriter.getI64IntegerAttr(fusedOperands.size()),
-                  rewriter.getI64IntegerAttr(
-                      consumer.getOperation()->getNumResults()),
+                  consumer.getLoc(), consumer.getOperation()->getResultTypes(),
+                  /*inputs=*/fusedOperands,
+                  /*outputBuffers=*/ValueRange{},
+                  /*initTensors=*/ValueRange{},
                   rewriter.getArrayAttr(fusedIndexMaps),
                   consumer.iterator_types(),
                   /*doc=*/nullptr,
@@ -812,9 +811,10 @@ struct FuseTensorReshapeOpAsProducer {
         }));
     LinalgOp fusedOp = createLinalgOpOfSameType(
         consumer, rewriter, rewriter.getUnknownLoc(),
-        consumerOp->getResultTypes(), fusedOperands,
-        rewriter.getI64IntegerAttr(fusedOperands.size()),
-        rewriter.getI64IntegerAttr(consumerOp->getNumResults()),
+        consumerOp->getResultTypes(),
+        /*inputs=*/fusedOperands,
+        /*outputBuffers=*/ValueRange{},
+        /*initTensors=*/ValueRange{}, // no init tensors for now.
         rewriter.getArrayAttr(indexMapAttrs), consumer.iterator_types(),
         /*doc=*/nullptr,
         /*library_call=*/nullptr,
@@ -871,10 +871,10 @@ struct FuseTensorReshapeOpAsConsumer {
     Operation *producerOp = producer.getOperation();
     LinalgOp fusedOp = createLinalgOpOfSameType(
         producer, rewriter, rewriter.getUnknownLoc(), consumer.getResultType(),
-        producerOp->getOperands(),
-        rewriter.getI64IntegerAttr(producerOp->getNumOperands()),
-        rewriter.getI64IntegerAttr(1), rewriter.getArrayAttr(indexMapAttrs),
-        producer.iterator_types(),
+        /*inputs=*/producerOp->getOperands(),
+        /*outputBuffers=*/ValueRange{},
+        /*initTensors=*/ValueRange{}, // no init tensors for now.
+        rewriter.getArrayAttr(indexMapAttrs), producer.iterator_types(),
         /*doc=*/nullptr,
         /*library_call=*/nullptr,
         /*symbol_source=*/nullptr);
@@ -932,10 +932,10 @@ struct FuseTensorReshapeOpAsConsumer {
     }
 
     int rank = dstShape.size();
-    int numArgsIn = producer.getNumInputs();
-    int numArgsOut = producer.getNumOutputs();
     auto genericOp = rewriter.create<linalg::GenericOp>(
-        loc, resultTypes, args, numArgsIn, numArgsOut,
+        loc, resultTypes, /*inputs=*/args,
+        /*outputBuffers=*/ValueRange{},
+        /*initTensors=*/ValueRange{},
         SmallVector<AffineMap, 3>(args.size() + resultTypes.size(),
                                   rewriter.getMultiDimIdentityMap(rank)),
         SmallVector<StringRef, 3>(rank, getParallelIteratorTypeName()));
@@ -995,9 +995,10 @@ struct FuseConstantOpAsProducer {
 
     LinalgOp fusedOp = createLinalgOpOfSameType(
         consumer, rewriter, rewriter.getUnknownLoc(),
-        consumerOp->getResultTypes(), fusedOperands,
-        rewriter.getI64IntegerAttr(consumerOp->getNumOperands() - 1),
-        rewriter.getI64IntegerAttr(consumerOp->getNumResults()),
+        consumerOp->getResultTypes(),
+        /*inputs=*/fusedOperands,
+        /*outputBuffers=*/ValueRange{},
+        /*initTensors=*/ValueRange{}, // no init tensors for now.
         rewriter.getAffineMapArrayAttr(fusedIndexMaps),
         consumer.iterator_types(),
         /*doc=*/nullptr,

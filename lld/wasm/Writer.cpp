@@ -473,7 +473,7 @@ void Writer::populateTargetFeatures() {
       }
     }
     for (const Symbol *sym : out.exportSec->exportedSymbols) {
-      if (auto *global = dyn_cast<GlobalSymbol>(sym)) {
+      if (isa<GlobalSymbol>(sym)) {
         error(Twine("mutable global exported but 'mutable-globals' feature "
                     "not present in inputs: `") +
               toString(*sym) + "`. Use --no-check-features to suppress.");

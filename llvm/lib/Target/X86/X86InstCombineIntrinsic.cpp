@@ -16,6 +16,7 @@
 #include "X86TargetTransformInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 
 using namespace llvm;
@@ -998,6 +999,20 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         return IC.replaceInstUsesWith(II, II.getArgOperand(0));
       }
 
+      if (MaskC->getValue().isShiftedMask()) {
+        // any single contingous sequence of 1s anywhere in the mask simply
+        // describes a subset of the input bits shifted to the appropriate
+        // position.  Replace with the straight forward IR.
+        unsigned ShiftAmount = MaskC->getValue().countTrailingZeros();
+        Value *Input = II.getArgOperand(0);
+        Value *Masked = IC.Builder.CreateAnd(Input, II.getArgOperand(1));
+        Value *Shifted = IC.Builder.CreateLShr(Masked,
+                                               ConstantInt::get(II.getType(),
+                                                                ShiftAmount));
+        return IC.replaceInstUsesWith(II, Shifted);
+      }
+
+
       if (auto *SrcC = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
         uint64_t Src = SrcC->getZExtValue();
         uint64_t Mask = MaskC->getZExtValue();
@@ -1028,6 +1043,18 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       }
       if (MaskC->isAllOnesValue()) {
         return IC.replaceInstUsesWith(II, II.getArgOperand(0));
+      }
+      if (MaskC->getValue().isShiftedMask()) {
+        // any single contingous sequence of 1s anywhere in the mask simply
+        // describes a subset of the input bits shifted to the appropriate
+        // position.  Replace with the straight forward IR.
+        unsigned ShiftAmount = MaskC->getValue().countTrailingZeros();
+        Value *Input = II.getArgOperand(0);
+        Value *Shifted = IC.Builder.CreateShl(Input,
+                                              ConstantInt::get(II.getType(),
+                                                               ShiftAmount));
+        Value *Masked = IC.Builder.CreateAnd(Shifted, II.getArgOperand(1));
+        return IC.replaceInstUsesWith(II, Masked);
       }
 
       if (auto *SrcC = dyn_cast<ConstantInt>(II.getArgOperand(0))) {

@@ -1701,8 +1701,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     bool changed = target->needsThunks && tc.createThunks(outputSections);
 
     // With Thunk Size much smaller than branch range we expect to
-    // converge quickly; if we get to 10 something has gone wrong.
-    if (changed && tc.pass >= 10) {
+    // converge quickly; if we get to 15 something has gone wrong.
+    if (changed && tc.pass >= 15) {
       error("thunk creation not converged");
       break;
     }

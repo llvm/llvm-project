@@ -8,6 +8,8 @@
 
 // test type_info
 
+// UNSUPPORTED: -fno-rtti
+
 #include <typeinfo>
 #include <string>
 #include <cstring>

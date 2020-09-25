@@ -28,11 +28,10 @@ define i16 @test(i32 %key) {
 ; CHECK-O0-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edi
 ; CHECK-O0-NEXT:    callq gen
-; CHECK-O0-NEXT:    movswl %ax, %ecx
-; CHECK-O0-NEXT:    movsbl %dl, %esi
-; CHECK-O0-NEXT:    addl %esi, %ecx
-; CHECK-O0-NEXT:    # kill: def $cx killed $cx killed $ecx
-; CHECK-O0-NEXT:    movw %cx, %ax
+; CHECK-O0-NEXT:    cwtl
+; CHECK-O0-NEXT:    movsbl %dl, %ecx
+; CHECK-O0-NEXT:    addl %ecx, %eax
+; CHECK-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-O0-NEXT:    popq %rcx
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
@@ -80,16 +79,16 @@ define i32 @test2(i32 %key) #0 {
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edi
 ; CHECK-O0-NEXT:    movq %rsp, %rax
 ; CHECK-O0-NEXT:    callq gen2
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edx
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %esi
-; CHECK-O0-NEXT:    movl (%rsp), %edi
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %r8d
-; CHECK-O0-NEXT:    addl %r8d, %edi
-; CHECK-O0-NEXT:    addl %esi, %edi
-; CHECK-O0-NEXT:    addl %edx, %edi
-; CHECK-O0-NEXT:    addl %ecx, %edi
-; CHECK-O0-NEXT:    movl %edi, %eax
+; CHECK-O0-NEXT:    movl (%rsp), %esi
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edi
+; CHECK-O0-NEXT:    addl %edi, %esi
+; CHECK-O0-NEXT:    addl %edx, %esi
+; CHECK-O0-NEXT:    addl %ecx, %esi
+; CHECK-O0-NEXT:    addl %eax, %esi
+; CHECK-O0-NEXT:    movl %esi, %eax
 ; CHECK-O0-NEXT:    addq $24, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
@@ -264,17 +263,17 @@ define void @consume_i1_ret() {
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-O0-NEXT:    callq produce_i1_ret
 ; CHECK-O0-NEXT:    andb $1, %al
-; CHECK-O0-NEXT:    movzbl %al, %esi
-; CHECK-O0-NEXT:    movl %esi, var
+; CHECK-O0-NEXT:    movzbl %al, %eax
+; CHECK-O0-NEXT:    movl %eax, var
 ; CHECK-O0-NEXT:    andb $1, %dl
-; CHECK-O0-NEXT:    movzbl %dl, %esi
-; CHECK-O0-NEXT:    movl %esi, var
+; CHECK-O0-NEXT:    movzbl %dl, %eax
+; CHECK-O0-NEXT:    movl %eax, var
 ; CHECK-O0-NEXT:    andb $1, %cl
-; CHECK-O0-NEXT:    movzbl %cl, %esi
-; CHECK-O0-NEXT:    movl %esi, var
+; CHECK-O0-NEXT:    movzbl %cl, %eax
+; CHECK-O0-NEXT:    movl %eax, var
 ; CHECK-O0-NEXT:    andb $1, %r8b
-; CHECK-O0-NEXT:    movzbl %r8b, %esi
-; CHECK-O0-NEXT:    movl %esi, var
+; CHECK-O0-NEXT:    movzbl %r8b, %eax
+; CHECK-O0-NEXT:    movl %eax, var
 ; CHECK-O0-NEXT:    popq %rax
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq

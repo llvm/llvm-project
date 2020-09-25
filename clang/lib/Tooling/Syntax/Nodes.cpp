@@ -226,23 +226,23 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeRole R) {
 // vector
 std::vector<syntax::NameSpecifier *>
 syntax::NestedNameSpecifier::getSpecifiers() {
-  auto specifiersAsNodes = getElementsAsNodes();
+  auto SpecifiersAsNodes = getElementsAsNodes();
   std::vector<syntax::NameSpecifier *> Children;
-  for (const auto &element : specifiersAsNodes) {
-    Children.push_back(llvm::cast<syntax::NameSpecifier>(element));
+  for (const auto &Element : SpecifiersAsNodes) {
+    Children.push_back(llvm::cast<syntax::NameSpecifier>(Element));
   }
   return Children;
 }
 
 std::vector<syntax::List::ElementAndDelimiter<syntax::NameSpecifier>>
 syntax::NestedNameSpecifier::getSpecifiersAndDoubleColons() {
-  auto specifiersAsNodesAndDoubleColons = getElementsAsNodesAndDelimiters();
+  auto SpecifiersAsNodesAndDoubleColons = getElementsAsNodesAndDelimiters();
   std::vector<syntax::List::ElementAndDelimiter<syntax::NameSpecifier>>
       Children;
-  for (const auto &specifierAndDoubleColon : specifiersAsNodesAndDoubleColons) {
+  for (const auto &SpecifierAndDoubleColon : SpecifiersAsNodesAndDoubleColons) {
     Children.push_back(
-        {llvm::cast<syntax::NameSpecifier>(specifierAndDoubleColon.element),
-         specifierAndDoubleColon.delimiter});
+        {llvm::cast<syntax::NameSpecifier>(SpecifierAndDoubleColon.element),
+         SpecifierAndDoubleColon.delimiter});
   }
   return Children;
 }

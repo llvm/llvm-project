@@ -167,6 +167,23 @@ TranslationUnit Detached
 )txt"));
 }
 
+TEST_P(BuildSyntaxTreeTest, Simple_BackslashInsideToken) {
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+in\
+t a;
+)cpp",
+      R"txt(
+TranslationUnit Detached
+`-SimpleDeclaration
+  |-'in\
+t'
+  |-SimpleDeclarator Declarator
+  | `-'a'
+  `-';'
+)txt"));
+}
+
 TEST_P(BuildSyntaxTreeTest, If) {
   EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
@@ -3838,48 +3855,7 @@ TranslationUnit Detached
 )txt"));
 }
 
-TEST_P(BuildSyntaxTreeTest, NonModifiableNodes) {
-  // Some nodes are non-modifiable, they are marked with 'I:'.
-  EXPECT_TRUE(treeDumpEqual(
-      R"cpp(
-#define HALF_IF if (1+
-#define HALF_IF_2 1) {}
-void test() {
-  HALF_IF HALF_IF_2 else {}
-})cpp",
-      R"txt(
-TranslationUnit Detached
-`-SimpleDeclaration
-  |-'void'
-  |-SimpleDeclarator Declarator
-  | |-'test'
-  | `-ParametersAndQualifiers
-  |   |-'(' OpenParen
-  |   `-')' CloseParen
-  `-CompoundStatement
-    |-'{' OpenParen
-    |-IfStatement Statement
-    | |-'if' IntroducerKeyword unmodifiable
-    | |-'(' unmodifiable
-    | |-BinaryOperatorExpression unmodifiable
-    | | |-IntegerLiteralExpression LeftHandSide unmodifiable
-    | | | `-'1' LiteralToken unmodifiable
-    | | |-'+' OperatorToken unmodifiable
-    | | `-IntegerLiteralExpression RightHandSide unmodifiable
-    | |   `-'1' LiteralToken unmodifiable
-    | |-')' unmodifiable
-    | |-CompoundStatement ThenStatement unmodifiable
-    | | |-'{' OpenParen unmodifiable
-    | | `-'}' CloseParen unmodifiable
-    | |-'else' ElseKeyword
-    | `-CompoundStatement ElseStatement
-    |   |-'{' OpenParen
-    |   `-'}' CloseParen
-    `-'}' CloseParen
-)txt"));
-}
-
-TEST_P(BuildSyntaxTreeTest, ModifiableNodes) {
+TEST_P(BuildSyntaxTreeTest, Macro_ObjectLike_Leaf) {
   // All nodes can be mutated.
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
@@ -3923,6 +3899,195 @@ TranslationUnit Detached
     | `-'}' CloseParen
     `-'}' CloseParen
 )txt"));
+}
+
+TEST_P(BuildSyntaxTreeTest, Macro_ObjectLike_MatchTree) {
+  // Some nodes are unmodifiable, they are marked with 'unmodifiable'.
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+#define BRACES {}
+
+void test() BRACES
+)cpp",
+      R"txt(
+TranslationUnit Detached
+`-SimpleDeclaration
+  |-'void'
+  |-SimpleDeclarator Declarator
+  | |-'test'
+  | `-ParametersAndQualifiers
+  |   |-'(' OpenParen
+  |   `-')' CloseParen
+  `-CompoundStatement
+    |-'{' OpenParen unmodifiable
+    `-'}' CloseParen unmodifiable
+)txt"));
+}
+
+TEST_P(BuildSyntaxTreeTest, Macro_ObjectLike_MismatchTree) {
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+#define HALF_IF if (1+
+#define HALF_IF_2 1) {}
+void test() {
+  HALF_IF HALF_IF_2 else {}
+})cpp",
+      R"txt(
+TranslationUnit Detached
+`-SimpleDeclaration
+  |-'void'
+  |-SimpleDeclarator Declarator
+  | |-'test'
+  | `-ParametersAndQualifiers
+  |   |-'(' OpenParen
+  |   `-')' CloseParen
+  `-CompoundStatement
+    |-'{' OpenParen
+    |-IfStatement Statement
+    | |-'if' IntroducerKeyword unmodifiable
+    | |-'(' unmodifiable
+    | |-BinaryOperatorExpression unmodifiable
+    | | |-IntegerLiteralExpression LeftHandSide unmodifiable
+    | | | `-'1' LiteralToken unmodifiable
+    | | |-'+' OperatorToken unmodifiable
+    | | `-IntegerLiteralExpression RightHandSide unmodifiable
+    | |   `-'1' LiteralToken unmodifiable
+    | |-')' unmodifiable
+    | |-CompoundStatement ThenStatement unmodifiable
+    | | |-'{' OpenParen unmodifiable
+    | | `-'}' CloseParen unmodifiable
+    | |-'else' ElseKeyword
+    | `-CompoundStatement ElseStatement
+    |   |-'{' OpenParen
+    |   `-'}' CloseParen
+    `-'}' CloseParen
+)txt"));
+}
+
+TEST_P(BuildSyntaxTreeTest, Macro_FunctionLike_ModifiableArguments) {
+  // FIXME: Note that the substitutions for `X` and `Y` are marked modifiable.
+  // However we cannot change `X` freely. Indeed if we change its substitution
+  // in the condition we should also change it the then-branch.
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+#define MIN(X,Y) X < Y ? X : Y
+
+void test() {
+  MIN(1,2);
+}
+)cpp",
+      R"txt(
+TranslationUnit Detached
+`-SimpleDeclaration
+  |-'void'
+  |-SimpleDeclarator Declarator
+  | |-'test'
+  | `-ParametersAndQualifiers
+  |   |-'(' OpenParen
+  |   `-')' CloseParen
+  `-CompoundStatement
+    |-'{' OpenParen
+    |-ExpressionStatement Statement
+    | |-UnknownExpression Expression
+    | | |-BinaryOperatorExpression unmodifiable
+    | | | |-IntegerLiteralExpression LeftHandSide
+    | | | | `-'1' LiteralToken
+    | | | |-'<' OperatorToken unmodifiable
+    | | | `-IntegerLiteralExpression RightHandSide
+    | | |   `-'2' LiteralToken
+    | | |-'?' unmodifiable
+    | | |-IntegerLiteralExpression
+    | | | `-'1' LiteralToken
+    | | |-':' unmodifiable
+    | | `-IntegerLiteralExpression
+    | |   `-'2' LiteralToken
+    | `-';'
+    `-'}' CloseParen
+)txt"));
+}
+
+TEST_P(BuildSyntaxTreeTest, Macro_FunctionLike_MismatchTree) {
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+#define HALF_IF(X) if (X &&
+#define HALF_IF_2(Y) Y) {}
+void test() {
+  HALF_IF(1) HALF_IF_2(0) else {}
+})cpp",
+      R"txt(
+TranslationUnit Detached
+`-SimpleDeclaration
+  |-'void'
+  |-SimpleDeclarator Declarator
+  | |-'test'
+  | `-ParametersAndQualifiers
+  |   |-'(' OpenParen
+  |   `-')' CloseParen
+  `-CompoundStatement
+    |-'{' OpenParen
+    |-IfStatement Statement
+    | |-'if' IntroducerKeyword unmodifiable
+    | |-'(' unmodifiable
+    | |-BinaryOperatorExpression unmodifiable
+    | | |-IntegerLiteralExpression LeftHandSide
+    | | | `-'1' LiteralToken
+    | | |-'&&' OperatorToken unmodifiable
+    | | `-IntegerLiteralExpression RightHandSide
+    | |   `-'0' LiteralToken
+    | |-')' unmodifiable
+    | |-CompoundStatement ThenStatement unmodifiable
+    | | |-'{' OpenParen unmodifiable
+    | | `-'}' CloseParen unmodifiable
+    | |-'else' ElseKeyword
+    | `-CompoundStatement ElseStatement
+    |   |-'{' OpenParen
+    |   `-'}' CloseParen
+    `-'}' CloseParen
+)txt"));
+}
+
+TEST_P(BuildSyntaxTreeTest, Macro_FunctionLike_Variadic) {
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+#define CALL(F_NAME, ...) F_NAME(__VA_ARGS__)
+
+void f(int);
+void g(int, int);
+void test() [[{
+  CALL(f, 0);
+  CALL(g, 0, 1);
+}]]
+)cpp",
+      {R"txt(
+CompoundStatement
+|-'{' OpenParen
+|-ExpressionStatement Statement
+| |-CallExpression Expression
+| | |-IdExpression Callee
+| | | `-UnqualifiedId UnqualifiedId
+| | |   `-'f'
+| | |-'(' OpenParen unmodifiable
+| | |-CallArguments Arguments
+| | | `-IntegerLiteralExpression ListElement
+| | |   `-'0' LiteralToken
+| | `-')' CloseParen unmodifiable
+| `-';'
+|-ExpressionStatement Statement
+| |-CallExpression Expression
+| | |-IdExpression Callee
+| | | `-UnqualifiedId UnqualifiedId
+| | |   `-'g'
+| | |-'(' OpenParen unmodifiable
+| | |-CallArguments Arguments
+| | | |-IntegerLiteralExpression ListElement
+| | | | `-'0' LiteralToken
+| | | |-',' ListDelimiter
+| | | `-IntegerLiteralExpression ListElement
+| | |   `-'1' LiteralToken
+| | `-')' CloseParen unmodifiable
+| `-';'
+`-'}' CloseParen
+)txt"}));
 }
 
 TEST_P(BuildSyntaxTreeTest, InitDeclarator_Equal) {

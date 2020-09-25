@@ -151,32 +151,6 @@ static cl::opt<unsigned> SwitchPeelThreshold(
 // store [4096 x i8] %data, [4096 x i8]* %buffer
 static const unsigned MaxParallelChains = 64;
 
-// Return the calling convention if the Value passed requires ABI mangling as it
-// is a parameter to a function or a return value from a function which is not
-// an intrinsic.
-static Optional<CallingConv::ID> getABIRegCopyCC(const Value *V) {
-  if (auto *R = dyn_cast<ReturnInst>(V))
-    return R->getParent()->getParent()->getCallingConv();
-
-  if (auto *CI = dyn_cast<CallInst>(V)) {
-    const bool IsInlineAsm = CI->isInlineAsm();
-    const bool IsIndirectFunctionCall =
-        !IsInlineAsm && !CI->getCalledFunction();
-
-    // It is possible that the call instruction is an inline asm statement or an
-    // indirect function call in which case the return value of
-    // getCalledFunction() would be nullptr.
-    const bool IsInstrinsicCall =
-        !IsInlineAsm && !IsIndirectFunctionCall &&
-        CI->getCalledFunction()->getIntrinsicID() != Intrinsic::not_intrinsic;
-
-    if (!IsInlineAsm && !IsInstrinsicCall)
-      return CI->getCallingConv();
-  }
-
-  return None;
-}
-
 static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                       const SDValue *Parts, unsigned NumParts,
                                       MVT PartVT, EVT ValueVT, const Value *V,
@@ -1587,7 +1561,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
     unsigned InReg = FuncInfo.InitializeRegForValue(Inst);
 
     RegsForValue RFV(*DAG.getContext(), TLI, DAG.getDataLayout(), InReg,
-                     Inst->getType(), getABIRegCopyCC(V));
+                     Inst->getType(), None);
     SDValue Chain = DAG.getEntryNode();
     return RFV.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(), Chain, nullptr, V);
   }
@@ -5520,7 +5494,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     if (VMI != FuncInfo.ValueMap.end()) {
       const auto &TLI = DAG.getTargetLoweringInfo();
       RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), VMI->second,
-                       V->getType(), getABIRegCopyCC(V));
+                       V->getType(), None);
       if (RFV.occupiesMultipleRegs()) {
         splitMultiRegDbgValue(RFV.getRegsAndSizes());
         return true;

@@ -331,8 +331,6 @@ struct Object {
 
   void updateLoadCommandIndexes();
 
-  void addLoadCommand(LoadCommand LC);
-
   /// Creates a new segment load command in the object and returns a reference
   /// to the newly created load command. The caller should verify that SegName
   /// is not too long (SegName.size() should be less than or equal to 16).

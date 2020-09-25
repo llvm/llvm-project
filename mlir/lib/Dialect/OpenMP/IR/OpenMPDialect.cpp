@@ -126,14 +126,14 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
                                    OperationState &result) {
   std::pair<OpAsmParser::OperandType, Type> ifCond;
   std::pair<OpAsmParser::OperandType, Type> numThreads;
-  llvm::SmallVector<OpAsmParser::OperandType, 4> privates;
-  llvm::SmallVector<Type, 4> privateTypes;
-  llvm::SmallVector<OpAsmParser::OperandType, 4> firstprivates;
-  llvm::SmallVector<Type, 4> firstprivateTypes;
-  llvm::SmallVector<OpAsmParser::OperandType, 4> shareds;
-  llvm::SmallVector<Type, 4> sharedTypes;
-  llvm::SmallVector<OpAsmParser::OperandType, 4> copyins;
-  llvm::SmallVector<Type, 4> copyinTypes;
+  SmallVector<OpAsmParser::OperandType, 4> privates;
+  SmallVector<Type, 4> privateTypes;
+  SmallVector<OpAsmParser::OperandType, 4> firstprivates;
+  SmallVector<Type, 4> firstprivateTypes;
+  SmallVector<OpAsmParser::OperandType, 4> shareds;
+  SmallVector<Type, 4> sharedTypes;
+  SmallVector<OpAsmParser::OperandType, 4> copyins;
+  SmallVector<Type, 4> copyinTypes;
   std::array<int, 6> segments{0, 0, 0, 0, 0, 0};
   llvm::StringRef keyword;
   bool defaultVal = false;
@@ -264,8 +264,8 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
                       parser.getBuilder().getI32VectorAttr(segments));
 
   Region *body = result.addRegion();
-  llvm::SmallVector<OpAsmParser::OperandType, 4> regionArgs;
-  llvm::SmallVector<Type, 4> regionArgTypes;
+  SmallVector<OpAsmParser::OperandType, 4> regionArgs;
+  SmallVector<Type, 4> regionArgTypes;
   if (parser.parseRegion(*body, regionArgs, regionArgTypes))
     return failure();
   return success();

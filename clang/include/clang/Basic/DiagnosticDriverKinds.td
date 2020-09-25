@@ -463,8 +463,9 @@ def warn_drv_msvc_not_found : Warning<
   "try running Clang from a developer command prompt">,
   InGroup<DiagGroup<"msvc-not-found">>;
 
-def warn_drv_use_ld_non_word : Warning<
-  "'-fuse-ld=' taking a path is deprecated. Use '--ld-path=' instead">;
+def warn_drv_fuse_ld_path : Warning<
+  "'-fuse-ld=' taking a path is deprecated. Use '--ld-path=' instead">,
+  InGroup<FUseLdPath>, DefaultIgnore;
 
 def warn_drv_fine_grained_bitfield_accesses_ignored : Warning<
   "option '-ffine-grained-bitfield-accesses' cannot be enabled together with a sanitizer; flag ignored">,

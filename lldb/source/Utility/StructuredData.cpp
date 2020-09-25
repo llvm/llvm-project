@@ -42,7 +42,12 @@ StructuredData::ParseJSONFromFile(const FileSpec &input_spec, Status &error) {
                                     buffer_or_error.getError().message());
     return return_sp;
   }
-  return ParseJSON(buffer_or_error.get()->getBuffer().str());
+  llvm::Expected<json::Value> value =
+      json::parse(buffer_or_error.get()->getBuffer().str());
+  if (value)
+    return ParseJSONValue(*value);
+  error.SetErrorString(toString(value.takeError()));
+  return StructuredData::ObjectSP();
 }
 
 static StructuredData::ObjectSP ParseJSONValue(json::Value &value) {

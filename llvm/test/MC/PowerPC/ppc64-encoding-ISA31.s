@@ -23,6 +23,44 @@
 # CHECK-LE: pstxv 33, -8589934592(31), 0    # encoding: [0x00,0x00,0x02,0x04
 # CHECK-LE-SAME:                                         0x00,0x00,0x3f,0xdc]
             pstxv 33, -8589934592(31), 0
+# CHECK-BE: lxvp 2, 32(4)                      # encoding: [0x18,0x44,0x00,0x20]
+# CHECK-LE: lxvp 2, 32(4)                      # encoding: [0x20,0x00,0x44,0x18]
+            lxvp 2, 32(4)
+# CHECK-BE: lxvp 34, 64(4)                     # encoding: [0x18,0x64,0x00,0x40]
+# CHECK-LE: lxvp 34, 64(4)                     # encoding: [0x40,0x00,0x64,0x18]
+            lxvp 34, 64(4)
+# CHECK-BE: plxvp 2, -8589934592(0), 1         # encoding: [0x04,0x12,0x00,0x00,
+# CHECK-BE-SAME:                                            0xe8,0x40,0x00,0x00]
+# CHECK-LE: plxvp 2, -8589934592(0), 1         # encoding: [0x00,0x00,0x12,0x04,
+# CHECK-LE-SAME:                                            0x00,0x00,0x40,0xe8]
+            plxvp 2, -8589934592(0), 1
+# CHECK-BE: plxvp 34, 8589934591(3), 0         # encoding: [0x04,0x01,0xff,0xff,
+# CHECK-BE-SAME:                                            0xe8,0x63,0xff,0xff]
+# CHECK-LE: plxvp 34, 8589934591(3), 0         # encoding: [0xff,0xff,0x01,0x04,
+# CHECK-LE-SAME:                                            0xff,0xff,0x63,0xe8]
+            plxvp 34, 8589934591(3), 0
+# CHECK-BE: stxvp 2, 32(4)                     # encoding: [0x18,0x44,0x00,0x21]
+# CHECK-LE: stxvp 2, 32(4)                     # encoding: [0x21,0x00,0x44,0x18]
+            stxvp 2, 32(4)
+# CHECK-BE: stxvp 34, 64(4)                    # encoding: [0x18,0x64,0x00,0x41]
+# CHECK-LE: stxvp 34, 64(4)                    # encoding: [0x41,0x00,0x64,0x18]
+            stxvp 34, 64(4)
+# CHECK-BE: pstxvp 2, -8589934592(0), 1        # encoding: [0x04,0x12,0x00,0x00,
+# CHECK-BE-SAME:                                            0xf8,0x40,0x00,0x00]
+# CHECK-LE: pstxvp 2, -8589934592(0), 1        # encoding: [0x00,0x00,0x12,0x04
+# CHECK-LE-SAME:                                            0x00,0x00,0x40,0xf8]
+            pstxvp 2, -8589934592(0), 1
+# CHECK-BE: pstxvp 34, 8589934591(3), 0        # encoding: [0x04,0x01,0xff,0xff
+# CHECK-BE-SAME:                                            0xf8,0x63,0xff,0xff]
+# CHECK-LE: pstxvp 34, 8589934591(3), 0        # encoding: [0xff,0xff,0x01,0x04
+# CHECK-LE-SAME:                                            0xff,0xff,0x63,0xf8]
+            pstxvp 34, 8589934591(3), 0
+# CHECK-BE: lxvpx 2, 3, 4                      # encoding: [0x7c,0x43,0x22,0x9a]
+# CHECK-LE: lxvpx 2, 3, 4                      # encoding: [0x9a,0x22,0x43,0x7c]
+            lxvpx 2, 3, 4
+# CHECK-BE: stxvpx 34, 6, 4                    # encoding: [0x7c,0x66,0x23,0x9a]
+# CHECK-LE: stxvpx 34, 6, 4                    # encoding: [0x9a,0x23,0x66,0x7c]
+            stxvpx 34, 6, 4
 # CHECK-BE: paddi 1, 2, 8589934591, 0             # encoding: [0x06,0x01,0xff,0xff
 # CHECK-BE-SAME:                                               0x38,0x22,0xff,0xff]
 # CHECK-LE: paddi 1, 2, 8589934591, 0             # encoding: [0xff,0xff,0x01,0x06
@@ -351,6 +389,18 @@
 # CHECK-LE: xxblendvd 6, 63, 21, 34               # encoding: [0x00,0x00,0x00,0x05,
 # CHECK-LE-SAME:                                               0xbc,0xa8,0xdf,0x84]
             xxblendvd 6, 63, 21, 34
+# CHECK-BE: setbc 21, 11                          # encoding: [0x7e,0xab,0x03,0x00]
+# CHECK-LE: setbc 21, 11                          # encoding: [0x00,0x03,0xab,0x7e]
+            setbc 21, 11
+# CHECK-BE: setbcr 21, 11                         # encoding: [0x7e,0xab,0x03,0x40]
+# CHECK-LE: setbcr 21, 11                         # encoding: [0x40,0x03,0xab,0x7e]
+            setbcr 21, 11
+# CHECK-BE: setnbc 21, 11                         # encoding: [0x7e,0xab,0x03,0x80]
+# CHECK-LE: setnbc 21, 11                         # encoding: [0x80,0x03,0xab,0x7e]
+            setnbc 21, 11
+# CHECK-BE: setnbcr 21, 11                        # encoding: [0x7e,0xab,0x03,0xc0]
+# CHECK-LE: setnbcr 21, 11                        # encoding: [0xc0,0x03,0xab,0x7e]
+            setnbcr 21, 11
 # CHECK-BE: vsldbi 2, 3, 4, 5                     # encoding: [0x10,0x43,0x21,0x56]
 # CHECK-LE: vsldbi 2, 3, 4, 5                     # encoding: [0x56,0x21,0x43,0x10]
             vsldbi 2, 3, 4, 5

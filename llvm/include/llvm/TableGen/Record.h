@@ -1440,14 +1440,15 @@ class Record {
   SmallVector<Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
 
-  // All superclasses in the inheritance forest in reverse preorder (yes, it
+  // All superclasses in the inheritance forest in post-order (yes, it
   // must be a forest; diamond-shaped inheritance is not allowed).
   SmallVector<std::pair<Record *, SMRange>, 0> SuperClasses;
 
   // Tracks Record instances. Not owned by Record.
   RecordKeeper &TrackedRecords;
 
-  DefInit *TheInit = nullptr;
+  // The DefInit corresponding to this record.
+  DefInit *CorrespondingDefInit = nullptr;
 
   // Unique record ID.
   unsigned ID;
@@ -1471,8 +1472,8 @@ public:
       : Record(StringInit::get(N), locs, records, false, Class) {}
 
   // When copy-constructing a Record, we must still guarantee a globally unique
-  // ID number.  Don't copy TheInit either since it's owned by the original
-  // record. All other fields can be copied normally.
+  // ID number. Don't copy CorrespondingDefInit either, since it's owned by the
+  // original record. All other fields can be copied normally.
   Record(const Record &O)
     : Name(O.Name), Locs(O.Locs), TemplateArgs(O.TemplateArgs),
       Values(O.Values), SuperClasses(O.SuperClasses),
@@ -1586,7 +1587,8 @@ public:
   }
 
   void addSuperClass(Record *R, SMRange Range) {
-    assert(!TheInit && "changing type of record after it has been referenced");
+    assert(!CorrespondingDefInit &&
+           "changing type of record after it has been referenced");
     assert(!isSubClassOf(R) && "Already subclassing record!");
     SuperClasses.push_back(std::make_pair(R, Range));
   }

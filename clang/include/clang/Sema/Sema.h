@@ -1834,6 +1834,16 @@ public:
     }
   };
 
+  /// Do a check to make sure \p Name looks like a legal argument for the
+  /// swift_name attribute applied to decl \p D.  Raise a diagnostic if the name
+  /// is invalid for the given declaration.
+  ///
+  /// \p AL is used to provide caret diagnostics in case of a malformed name.
+  ///
+  /// \returns true if the name is a valid swift name for \p D, false otherwise.
+  bool DiagnoseSwiftName(Decl *D, StringRef Name, SourceLocation Loc,
+                         const ParsedAttr &AL);
+
   /// A derivative of BoundTypeDiagnoser for which the diagnostic's type
   /// parameter is preceded by a 0/1 enum that is 1 if the type is sizeless.
   /// For example, a diagnostic with no other parameters would generally have
@@ -3059,6 +3069,8 @@ public:
   SpeculativeLoadHardeningAttr *
   mergeSpeculativeLoadHardeningAttr(Decl *D,
                                     const SpeculativeLoadHardeningAttr &AL);
+  SwiftNameAttr *mergeSwiftNameAttr(Decl *D, const SwiftNameAttr &SNA,
+                                    StringRef Name, bool Override);
   OptimizeNoneAttr *mergeOptimizeNoneAttr(Decl *D,
                                           const AttributeCommonInfo &CI);
   InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D, const ParsedAttr &AL);
@@ -3813,6 +3825,7 @@ public:
                               RedeclarationKind Redecl
                                 = NotForRedeclaration);
   bool LookupBuiltin(LookupResult &R);
+  void LookupNecessaryTypesForBuiltin(Scope *S, unsigned ID);
   bool LookupName(LookupResult &R, Scope *S,
                   bool AllowBuiltinCreation = false);
   bool LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
@@ -3972,6 +3985,8 @@ public:
   ObjCInterfaceDecl *getObjCInterfaceDecl(IdentifierInfo *&Id,
                                           SourceLocation IdLoc,
                                           bool TypoCorrection = false);
+  FunctionDecl *CreateBuiltin(IdentifierInfo *II, QualType Type, unsigned ID,
+                              SourceLocation Loc);
   NamedDecl *LazilyCreateBuiltin(IdentifierInfo *II, unsigned ID,
                                  Scope *S, bool ForRedeclaration,
                                  SourceLocation Loc);
@@ -7235,6 +7250,8 @@ public:
   bool AttachTypeConstraint(AutoTypeLoc TL,
                             NonTypeTemplateParmDecl *ConstrainedParameter,
                             SourceLocation EllipsisLoc);
+
+  bool RequireStructuralType(QualType T, SourceLocation Loc);
 
   QualType CheckNonTypeTemplateParameterType(TypeSourceInfo *&TSI,
                                              SourceLocation Loc);

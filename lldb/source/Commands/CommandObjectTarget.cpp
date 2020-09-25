@@ -907,6 +907,7 @@ protected:
         CompileUnit *comp_unit = nullptr;
         if (frame) {
           SymbolContext sc = frame->GetSymbolContext(eSymbolContextCompUnit);
+          comp_unit = sc.comp_unit;
           if (sc.comp_unit) {
             const bool can_create = true;
             VariableListSP comp_unit_varlist_sp(

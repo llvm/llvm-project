@@ -5480,7 +5480,7 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     // minimum(X, nan) -> nan
     // maximum(X, nan) -> nan
     if (match(Op1, m_NaN()))
-      return PropagateNaN ? Op1 : Op0;
+      return PropagateNaN ? propagateNaN(cast<Constant>(Op1)) : Op0;
 
     // In the following folds, inf can be replaced with the largest finite
     // float, if the ninf flag is set.

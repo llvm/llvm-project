@@ -240,7 +240,8 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   Y->Header.OSABI = Obj.getHeader().e_ident[ELF::EI_OSABI];
   Y->Header.ABIVersion = Obj.getHeader().e_ident[ELF::EI_ABIVERSION];
   Y->Header.Type = Obj.getHeader().e_type;
-  Y->Header.Machine = ELFYAML::ELF_EM(Obj.getHeader().e_machine);
+  if (Obj.getHeader().e_machine != 0)
+    Y->Header.Machine = ELFYAML::ELF_EM(Obj.getHeader().e_machine);
   Y->Header.Flags = Obj.getHeader().e_flags;
   Y->Header.Entry = Obj.getHeader().e_entry;
 
@@ -522,7 +523,7 @@ ELFDumper<ELFT>::dumpSections() {
 
     // Recognize some special SHT_PROGBITS sections by name.
     if (Sec.sh_type == ELF::SHT_PROGBITS) {
-      auto NameOrErr = getUniquedSectionName(&Sec);
+      auto NameOrErr = Obj.getSectionName(Sec);
       if (!NameOrErr)
         return NameOrErr.takeError();
 

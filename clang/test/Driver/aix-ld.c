@@ -14,6 +14,7 @@
 // CHECK-LD32:     "-b32"
 // CHECK-LD32:     "-bpT:0x10000000" "-bpD:0x20000000"
 // CHECK-LD32:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
 // CHECK-LD32:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-NOT: "-lc++"
 // CHECK-LD32:     "-lc"
@@ -31,6 +32,7 @@
 // CHECK-LD64:     "-b64"
 // CHECK-LD64:     "-bpT:0x100000000" "-bpD:0x110000000"
 // CHECK-LD64:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0_64.o"
+// CHECK-LD64-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti_64.o"
 // CHECK-LD64:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD64-NOT: "-lc++"
 // CHECK-LD64:     "-lc"
@@ -49,6 +51,7 @@
 // CHECK-LD32-PTHREAD:     "-b32"
 // CHECK-LD32-PTHREAD:     "-bpT:0x10000000" "-bpD:0x20000000"
 // CHECK-LD32-PTHREAD:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-PTHREAD-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
 // CHECK-LD32-PTHREAD:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-PTHREAD-NOT: "-lc++"
 // CHECK-LD32-PTHREAD:     "-lpthreads"
@@ -68,6 +71,7 @@
 // CHECK-LD64-PTHREAD:     "-b64"
 // CHECK-LD64-PTHREAD:     "-bpT:0x100000000" "-bpD:0x110000000"
 // CHECK-LD64-PTHREAD:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0_64.o"
+// CHECK-LD64-PTHREAD-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti_64.o"
 // CHECK-LD64-PTHREAD:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD64-PTHREAD-NOT: "-lc++"
 // CHECK-LD64-PTHREAD:     "-lpthreads"
@@ -87,6 +91,7 @@
 // CHECK-LD32-PROF:     "-b32"
 // CHECK-LD32-PROF:     "-bpT:0x10000000" "-bpD:0x20000000"
 // CHECK-LD32-PROF:     "[[SYSROOT]]/usr/lib{{/|\\\\}}mcrt0.o"
+// CHECK-LD32-PROF-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
 // CHECK-LD32-PROF:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-PROF-NOT: "-lc++"
 // CHECK-LD32-PROF:     "-lc"
@@ -105,6 +110,7 @@
 // CHECK-LD64-GPROF:     "-b64"
 // CHECK-LD64-GPROF:     "-bpT:0x100000000" "-bpD:0x110000000"
 // CHECK-LD64-GPROF:     "[[SYSROOT]]/usr/lib{{/|\\\\}}gcrt0_64.o"
+// CHECK-LD64-GPROF-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti_64.o"
 // CHECK-LD64-GPROF:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD64-GPROF-NOT: "-lc++"
 // CHECK-LD64-GPROF:     "-lc"
@@ -123,6 +129,7 @@
 // CHECK-LD32-STATIC:     "-b32"
 // CHECK-LD32-STATIC:     "-bpT:0x10000000" "-bpD:0x20000000"
 // CHECK-LD32-STATIC:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-STATIC-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
 // CHECK-LD32-STATIC:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-STATIC-NOT: "-lc++"
 // CHECK-LD32-STATIC:     "-lc"
@@ -141,6 +148,7 @@
 // CHECK-LD32-LIBP:     "-b32"
 // CHECK-LD32-LIBP:     "-bpT:0x10000000" "-bpD:0x20000000"
 // CHECK-LD32-LIBP:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-LIBP-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
 // CHECK-LD32-LIBP:     "-L[[SYSROOT]]/powerpc-ibm-aix7.1.0.0"
 // CHECK-LD32-LIBP:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-LIBP-NOT: "-lc++"
@@ -161,6 +169,7 @@
 // CHECK-LD32-NO-STD-LIB:     "-b32"
 // CHECK-LD32-NO-STD-LIB:     "-bpT:0x10000000" "-bpD:0x20000000"
 // CHECK-LD32-NO-STD-LIB-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-NO-STD-LIB-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
 // CHECK-LD32-NO-STD-LIB:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-NO-STD-LIB-NOT: "-lc++"
 // CHECK-LD32-NO-STD-LIB-NOT: "-lpthreads"
@@ -181,6 +190,7 @@
 // CHECK-LD64-NO-DEFAULT-LIBS:     "-b64"
 // CHECK-LD64-NO-DEFAULT-LIBS:     "-bpT:0x100000000" "-bpD:0x110000000"
 // CHECK-LD64-NO-DEFAULT-LIBS:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0_64.o"
+// CHECK-LD64-NO-DEFAULT-LIBS-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti_64.o"
 // CHECK-LD64-NO-DEFAULT-LIBS:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD64-NO-DEFAULT-LIBS-NOT: "-lc++"
 // CHECK-LD64-NO-DEFAULT-LIBS-NOT: "-lpthreads"
@@ -199,6 +209,7 @@
 // CHECK-LD32-CXX-ARG-ORDER:     "-b32"
 // CHECK-LD32-CXX-ARG-ORDER:     "-bpT:0x10000000" "-bpD:0x20000000"
 // CHECK-LD32-CXX-ARG-ORDER:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-CXX-ARG-ORDER:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
 // CHECK-LD32-CXX-ARG-ORDER:     "-bcdtors:all:0:s"
 // CHECK-LD32-CXX-ARG-ORDER:     "-bnocdtors"
 // CHECK-LD32-CXX-ARG-ORDER-NOT: "-bcdtors:all:0:s"
@@ -216,6 +227,7 @@
 // CHECK-LD32-CXX-ARG-LCXX:     "-b32"
 // CHECK-LD32-CXX-ARG-LCXX:     "-bpT:0x10000000" "-bpD:0x20000000"
 // CHECK-LD32-CXX-ARG-LCXX:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-CXX-ARG-LCXX:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
 // CHECK-LD32-CXX-ARG-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-CXX-ARG-LCXX:     "-lc++"
 // CHECK-LD32-CXX-ARG-LCXX:     "-lc"
@@ -231,6 +243,7 @@
 // CHECK-LD64-CXX-ARG-LCXX:     "-b64"
 // CHECK-LD64-CXX-ARG-LCXX:     "-bpT:0x100000000" "-bpD:0x110000000"
 // CHECK-LD64-CXX-ARG-LCXX:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0_64.o"
+// CHECK-LD64-CXX-ARG-LCXX:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti_64.o"
 // CHECK-LD64-CXX-ARG-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD64-CXX-ARG-LCXX:     "-lc++"
 // CHECK-LD64-CXX-ARG-LCXX:     "-lc"
@@ -247,6 +260,7 @@
 // CHECK-LD32-NODEFLIB-LCXX:     "-b32"
 // CHECK-LD32-NODEFLIB-LCXX:     "-bpT:0x10000000" "-bpD:0x20000000"
 // CHECK-LD32-NODEFLIB-LCXX:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-NODEFLIB-LCXX:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
 // CHECK-LD32-NODEFLIB-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-NODEFLIB-LCXX-NOT: "-lc++"
 // CHECK-LD32-NODEFLIB-LCXX-NOT: "-lc"
@@ -263,6 +277,7 @@
 // CHECK-LD64-NODEFLIB-LCXX:     "-b64"
 // CHECK-LD64-NODEFLIB-LCXX:     "-bpT:0x100000000" "-bpD:0x110000000"
 // CHECK-LD64-NODEFLIB-LCXX:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0_64.o"
+// CHECK-LD64-NODEFLIB-LCXX:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti_64.o"
 // CHECK-LD64-NODEFLIB-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD64-NODEFLIB-LCXX-NOT: "-lc++"
 // CHECK-LD64-NODEFLIB-LCXX-NOT: "-lc"
@@ -279,6 +294,7 @@
 // CHECK-LD32-NOSTDLIB-LCXX:     "-b32"
 // CHECK-LD32-NOSTDLIB-LCXX:     "-bpT:0x10000000" "-bpD:0x20000000"
 // CHECK-LD32-NOSTDLIB-LCXX-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-NOSTDLIB-LCXX-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
 // CHECK-LD32-NOSTDLIB-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-NOSTDLIB-LCXX-NOT: "-lc++"
 // CHECK-LD32-NOSTDLIB-LCXX-NOT: "-lc"
@@ -295,11 +311,13 @@
 // CHECK-LD64-NOSTDLIB-LCXX:     "-b64"
 // CHECK-LD64-NOSTDLIB-LCXX:     "-bpT:0x100000000" "-bpD:0x110000000"
 // CHECK-LD64-NOSTDLIB-LCXX-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0_64.o"
+// CHECK-LD64-NOSTDLIB-LCXX-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti_64.o"
 // CHECK-LD64-NOSTDLIB-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD64-NOSTDLIB-LCXX-NOT: "-lc++"
 // CHECK-LD64-NOSTDLIB-LCXX-NOT: "-lc"
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. -nostdlib++.
+// Note: crti is still linked for initialization/finalization functionality.
 // RUN: %clangxx -no-canonical-prefixes %s 2>&1 -### \
 // RUN:        -nostdlib++ \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
@@ -311,6 +329,7 @@
 // CHECK-LD32-NOSTDLIBXX-LCXX:     "-b32"
 // CHECK-LD32-NOSTDLIBXX-LCXX:     "-bpT:0x10000000" "-bpD:0x20000000"
 // CHECK-LD32-NOSTDLIBXX-LCXX:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-NOSTDLIBXX-LCXX:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
 // CHECK-LD32-NOSTDLIBXX-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-NOSTDLIBXX-LCXX-NOT: "-lc++"
 // CHECK-LD32-NOSTDLIBXX-LCXX:     "-lc"
@@ -327,9 +346,44 @@
 // CHECK-LD64-NOSTDLIBXX-LCXX:     "-b64"
 // CHECK-LD64-NOSTDLIBXX-LCXX:     "-bpT:0x100000000" "-bpD:0x110000000"
 // CHECK-LD64-NOSTDLIBXX-LCXX:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0_64.o"
+// CHECK-LD64-NOSTDLIBXX-LCXX:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti_64.o"
 // CHECK-LD64-NOSTDLIBXX-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD64-NOSTDLIBXX-LCXX-NOT: "-lc++"
 // CHECK-LD64-NOSTDLIBXX-LCXX:     "-lc"
+
+// Check powerpc64-ibm-aix7.1.0.0, 32-bit. -nostartfiles.
+// RUN: %clangxx -no-canonical-prefixes %s 2>&1 -### \
+// RUN:        -nostartfiles \
+// RUN:        -target powerpc-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD32-NOSTARTFILES-LCXX %s
+// CHECK-LD32-NOSTARTFILES-LCXX:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
+// CHECK-LD32-NOSTARTFILES-LCXX:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD32-NOSTARTFILES-LCXX:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD32-NOSTARTFILES-LCXX:     "-b32"
+// CHECK-LD32-NOSTARTFILES-LCXX:     "-bpT:0x10000000" "-bpD:0x20000000"
+// CHECK-LD32-NOSTARTFILES-LCXX-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-NOSTARTFILES-LCXX-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
+// CHECK-LD32-NOSTARTFILES-LCXX:     "-L[[SYSROOT]]/usr/lib"
+// CHECK-LD32-NOSTARTFILES-LCXX      "-lc++"
+// CHECK-LD32-NOSTARTFILES-LCXX:     "-lc"
+
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. -nostartfiles.
+// RUN: %clangxx -no-canonical-prefixes %s 2>&1 -### \
+// RUN:        -nostartfiles \
+// RUN:        -target powerpc-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD32-NOSTARTFILES-LCXX %s
+// CHECK-LD64-NOSTARTFILES-LCXX:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
+// CHECK-LD64-NOSTARTFILES-LCXX:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD64-NOSTARTFILES-LCXX:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD64-NOSTARTFILES-LCXX:     "-b64"
+// CHECK-LD64-NOSTARTFILES-LCXX:     "-bpT:0x100000000" "-bpD:0x110000000"
+// CHECK-LD64-NOSTARTFILES-LCXX-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0_64.o"
+// CHECK-LD64-NOSTARTFILES-LCXX-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti_64.o"
+// CHECK-LD64-NOSTARTFILES-LCXX:     "-L[[SYSROOT]]/usr/lib"
+// CHECK-LD64-NOSTARTFILES-LCXX:     "-lc++"
+// CHECK-LD64-NOSTARTFILES-LCXX:     "-lc"
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. -stdlib=libstdc++ invokes fatal error.
 // RUN: not --crash %clangxx -no-canonical-prefixes %s 2>&1 -### \
@@ -345,3 +399,42 @@
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-LIBSTDCXX %s
 // CHECK-LD-LIBSTDCXX: LLVM ERROR: linking libstdc++ unimplemented on AIX
+
+// Check powerpc64-ibm-aix7.1.0.0, 32-bit. -shared.
+// RUN: %clangxx -x c++ -no-canonical-prefixes %s 2>&1 -### \
+// RUN:        -shared \
+// RUN:        -target powerpc-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD32-SHARED %s
+// CHECK-LD32-SHARED:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
+// CHECK-LD32-SHARED:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD32-SHARED:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD32-SHARED:     "-bM:SRE"
+// CHECK-LD32-SHARED:     "-bnoentry"
+// CHECK-LD32-SHARED:     "-b32"
+// CHECK-LD32-SHARED:     "-bpT:0x10000000" "-bpD:0x20000000"
+// CHECK-LD32-SHARED-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-SHARED-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
+// CHECK-LD32-SHARED:     "-L[[SYSROOT]]/usr/lib"
+// CHECK-LD32-SHARED:     "-lc++"
+// CHECK-LD32-SHARED:     "-lc"
+
+
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. -shared.
+// RUN: %clangxx -x c++ -no-canonical-prefixes %s 2>&1 -### \
+// RUN:        -shared \
+// RUN:        -target powerpc64-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD64-SHARED %s
+// CHECK-LD64-SHARED:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
+// CHECK-LD64-SHARED:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD64-SHARED:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD64-SHARED:     "-bM:SRE"
+// CHECK-LD64-SHARED:     "-bnoentry"
+// CHECK-LD64-SHARED:     "-b64"
+// CHECK-LD64-SHARED:     "-bpT:0x100000000" "-bpD:0x110000000"
+// CHECK-LD64-SHARED-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0_64.o"
+// CHECK-LD64-SHARED-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti_64.o"
+// CHECK-LD64-SHARED:     "-L[[SYSROOT]]/usr/lib"
+// CHECK-LD64-SHARED:     "-lc++"
+// CHECK-LD64-SHARED:     "-lc"

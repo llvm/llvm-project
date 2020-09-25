@@ -553,6 +553,7 @@ StringRef GDBIndexEntryLinkageString(GDBIndexEntryLinkage Linkage);
 StringRef IndexString(unsigned Idx);
 StringRef FormatString(DwarfFormat Format);
 StringRef FormatString(bool IsDWARF64);
+StringRef RLEString(unsigned RLE);
 /// @}
 
 /// \defgroup DwarfConstantsParsing Dwarf constants parsing functions

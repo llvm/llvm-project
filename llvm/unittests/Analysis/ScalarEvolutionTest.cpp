@@ -149,6 +149,12 @@ static Instruction *getInstructionByName(Function &F, StringRef Name) {
   llvm_unreachable("Expected to find instruction!");
 }
 
+static Value *getArgByName(Function &F, StringRef Name) {
+  for (auto &Arg : F.args())
+    if (Arg.getName() == Name)
+      return &Arg;
+  llvm_unreachable("Expected to find instruction!");
+}
 TEST_F(ScalarEvolutionsTest, CommutativeExprOperandOrder) {
   LLVMContext C;
   SMDiagnostic Err;
@@ -1117,6 +1123,66 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     EXPECT_EQ(diff(ScevV0, ScevIV), None);
     EXPECT_EQ(diff(ScevIVNext, ScevV3), None);
     EXPECT_EQ(diff(ScevYY, ScevV3), None);
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, SCEVrewriteUnknowns) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "define void @foo(i32 %i) { "
+      "entry: "
+      "  %cmp3 = icmp ult i32 %i, 16 "
+      "  br i1 %cmp3, label %loop.body, label %exit "
+      "loop.body: "
+      "  %iv = phi i32 [ %iv.next, %loop.body ], [ %i, %entry ] "
+      "  %iv.next = add nsw i32 %iv, 1 "
+      "  %cmp = icmp eq i32 %iv.next, 16 "
+      "  br i1 %cmp, label %exit, label %loop.body "
+      "exit: "
+      "  ret void "
+      "} ",
+      Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto *ScevIV = SE.getSCEV(getInstructionByName(F, "iv")); // {0,+,1}
+    auto *ScevI = SE.getSCEV(getArgByName(F, "i"));           // {0,+,1}
+
+    ValueToSCEVMapTy RewriteMap;
+    RewriteMap[cast<SCEVUnknown>(ScevI)->getValue()] =
+        SE.getUMinExpr(ScevI, SE.getConstant(ScevI->getType(), 17));
+    auto *WithUMin = SCEVParameterRewriter::rewrite(ScevIV, SE, RewriteMap);
+
+    EXPECT_NE(WithUMin, ScevIV);
+    auto *AR = dyn_cast<SCEVAddRecExpr>(WithUMin);
+    EXPECT_TRUE(AR);
+    EXPECT_EQ(AR->getStart(),
+              SE.getUMinExpr(ScevI, SE.getConstant(ScevI->getType(), 17)));
+    EXPECT_EQ(AR->getStepRecurrence(SE),
+              cast<SCEVAddRecExpr>(ScevIV)->getStepRecurrence(SE));
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, SCEVAddNUW) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString("define void @foo(i32 %x) { "
+                                                  "  ret void "
+                                                  "} ",
+                                                  Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto *X = SE.getSCEV(getArgByName(F, "x"));
+    auto *One = SE.getOne(X->getType());
+    auto *Sum = SE.getAddExpr(X, One, SCEV::FlagNUW);
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_UGE, Sum, X));
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_UGT, Sum, X));
   });
 }
 

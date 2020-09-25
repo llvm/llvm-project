@@ -21,8 +21,13 @@
 
 # RUN: lld -flavor darwinnew -o %t %t.o -headerpad 11
 # RUN: llvm-objdump --macho --all-headers %t | FileCheck %s --check-prefix=PAD11
-# PAD11:      magic        cputype  cpusubtype  caps    filetype ncmds sizeofcmds               flags
-# PAD11-NEXT: MH_MAGIC_64  X86_64   ALL         LIB64   EXECUTE  9     [[#%u, CMDSIZE:]] {{.*}}
+# RUN: lld -flavor darwinnew -o %t %t.o -headerpad 0x11
+# RUN: llvm-objdump --macho --all-headers %t | FileCheck %s --check-prefix=PAD11
+# RUN: lld -flavor darwinnew -o %t %t.o -headerpad 0X11
+# RUN: llvm-objdump --macho --all-headers %t | FileCheck %s --check-prefix=PAD11
+
+# PAD11:      magic        {{.+}}  ncmds sizeofcmds        flags
+# PAD11-NEXT: MH_MAGIC_64  {{.+}}  9     [[#%u, CMDSIZE:]] {{.*}}
 # PAD11:      sectname __text
 # PAD11-NEXT: segname __TEXT
 # PAD11-NEXT: addr

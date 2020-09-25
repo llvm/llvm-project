@@ -53,8 +53,6 @@ def ComplexTensorOp : TEST_Op<"complex_f64_tensor"> {
   let results = (outs TensorOf<[ComplexF64]>);
 }
 
-def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped">;
-
 def TupleOp : TEST_Op<"tuple_32_bit"> {
   let results = (outs TupleOf<[I32, F32]>);
 }
@@ -169,6 +167,9 @@ def PositiveIntAttrOp : TEST_Op<"positive_int_attr"> {
 
 def TypeArrayAttrOp : TEST_Op<"type_array_attr"> {
   let arguments = (ins TypeArrayAttr:$attr);
+}
+def TypeArrayAttrWithDefaultOp : TEST_Op<"type_array_attr_with_default"> {
+  let arguments = (ins DefaultValuedAttr<TypeArrayAttr, "{}">:$attr);
 }
 def TypeStringAttrWithTypeOp : TEST_Op<"string_attr_with_type"> {
   let arguments = (ins TypedStrAttr<AnyType>:$attr);
@@ -1061,14 +1062,14 @@ def MixedVResultOp3 : TEST_Op<"mixed_variadic_out3",
   // result type. So need to provide a builder not requiring result types.
   let builders = [
     OpBuilder<
-      "OpBuilder &builder, OperationState &state, IntegerAttr count",
+      "IntegerAttr count",
       [{
-        auto i32Type = builder.getIntegerType(32);
-        state.addTypes(i32Type); // $output1
+        auto i32Type = $_builder.getIntegerType(32);
+        $_state.addTypes(i32Type); // $output1
         SmallVector<Type, 4> types(count.getInt(), i32Type);
-        state.addTypes(types); // $output2
-        state.addTypes(types); // $output3
-        state.addAttribute("count", count);
+        $_state.addTypes(types); // $output2
+        $_state.addTypes(types); // $output3
+        $_state.addAttribute("count", count);
       }]>
   ];
 }
@@ -1513,6 +1514,22 @@ def FormatCustomDirectiveResults
   let assemblyFormat = [{
     custom<CustomDirectiveResults>(
       type($result), type($optResult), type($varResults)
+    )
+    attr-dict
+  }];
+}
+
+def FormatCustomDirectiveResultsWithTypeRefs
+    : TEST_Op<"format_custom_directive_results_with_type_refs",
+              [AttrSizedResultSegments]> {
+  let results = (outs AnyType:$result, Optional<AnyType>:$optResult,
+                      Variadic<AnyType>:$varResults);
+  let assemblyFormat = [{
+    custom<CustomDirectiveResults>(
+      type($result), type($optResult), type($varResults)
+    )
+    custom<CustomDirectiveWithTypeRefs>(
+      type_ref($result), type_ref($optResult), type_ref($varResults)
     )
     attr-dict
   }];

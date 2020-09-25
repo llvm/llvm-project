@@ -1,9 +1,9 @@
 // RUN: mlir-linalg-ods-gen %s -gen-ods-decl=1 | FileCheck %s --check-prefix=ODS
 // RUN: mlir-linalg-ods-gen %s -gen-impl=1 | FileCheck %s --check-prefix=IMPL
 
-// ODS-LABEL: def Test1Op : LinalgNamedStructured_Op<"test1", [
-//  ODS-NEXT:   NInputs<2>
-//  ODS-NEXT:   NOutputs<1>
+// ODS-LABEL: def Test1Op : LinalgStructuredBase_Op<"test1", [
+//  ODS-NEXT:   NamedStructuredOpTrait
+//  ODS-NEXT:   AttrSizedOperandSegments
 //  ODS-NEXT:   SingleBlockImplicitTerminator<"YieldOp">
 //
 // IMPL-LABEL:  ArrayAttr Test1Op::iterator_types() {
@@ -25,9 +25,9 @@ def test1(A: f32(M, K), B: f32(K)) -> (C: f32(M)) {
   C(m) = std_addf<k>(std_mulf(A(m, k), B(k)));
 }
 
-// ODS-LABEL: def Test2Op : LinalgNamedStructured_Op<"test2", [
-//  ODS-NEXT:   NInputs<2>
-//  ODS-NEXT:   NOutputs<1>
+// ODS-LABEL: def Test2Op : LinalgStructuredBase_Op<"test2", [
+//  ODS-NEXT:   NamedStructuredOpTrait
+//  ODS-NEXT:   AttrSizedOperandSegments
 //  ODS-NEXT:   SingleBlockImplicitTerminator<"YieldOp">
 //
 // IMPL-LABEL:  ArrayAttr Test2Op::iterator_types() {
@@ -49,9 +49,9 @@ def test2(A: f32(M, K), B: f32(K, N)) -> (C: f32(M, N)) {
   C(m, n) = std_addf<k>(std_mulf(A(m, k), B(k, n)));
 }
 
-// ODS-LABEL: def Test3Op : LinalgNamedStructured_Op<"test3", [
-//  ODS-NEXT:   NInputs<2>
-//  ODS-NEXT:   NOutputs<1>
+// ODS-LABEL: def Test3Op : LinalgStructuredBase_Op<"test3", [
+//  ODS-NEXT:   NamedStructuredOpTrait
+//  ODS-NEXT:   AttrSizedOperandSegments
 //  ODS-NEXT:   SingleBlockImplicitTerminator<"YieldOp">
 //
 // IMPL-LABEL:  ArrayAttr Test3Op::iterator_types() {

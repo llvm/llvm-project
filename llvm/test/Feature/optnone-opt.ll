@@ -2,7 +2,7 @@
 ; RUN: opt -O1 -S -debug -enable-new-pm=0 %s 2>&1 | FileCheck %s --check-prefix=O1
 ; RUN: opt -O2 -S -debug -enable-new-pm=0 %s 2>&1 | FileCheck %s --check-prefix=O1 --check-prefix=O2O3
 ; RUN: opt -O3 -S -debug -enable-new-pm=0 %s 2>&1 | FileCheck %s --check-prefix=O1 --check-prefix=O2O3
-; RUN: opt -dce -die -gvn-hoist -loweratomic -S -debug -enable-new-pm=0 %s 2>&1 | FileCheck %s --check-prefix=MORE
+; RUN: opt -dce -gvn-hoist -loweratomic -S -debug -enable-new-pm=0 %s 2>&1 | FileCheck %s --check-prefix=MORE
 ; RUN: opt -indvars -licm -loop-deletion -loop-extract -loop-idiom -loop-instsimplify -loop-reduce -loop-reroll -loop-rotate -loop-unroll -loop-unswitch -enable-new-pm=0 -S -debug %s 2>&1 | FileCheck %s --check-prefix=LOOP
 ; RUN: opt -enable-npm-optnone     -S -debug-pass-manager -enable-new-pm %s 2>&1 | FileCheck %s --check-prefix=NPM-O0
 ; RUN: opt -enable-npm-optnone -O1 -S -debug-pass-manager -enable-new-pm %s 2>&1 | FileCheck %s --check-prefix=NPM-O1
@@ -65,7 +65,6 @@ attributes #0 = { optnone noinline }
 
 ; Additional IR passes that opt doesn't turn on by default.
 ; MORE-DAG: Skipping pass 'Dead Code Elimination'
-; MORE-DAG: Skipping pass 'Dead Instruction Elimination'
 ; NPM-MORE-DAG: Skipping pass: DCEPass
 ; NPM-MORE-DAG: Skipping pass: GVNHoistPass
 

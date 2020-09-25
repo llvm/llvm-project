@@ -35,6 +35,10 @@ constexpr const char symbolTable[] = "__symbol_table";
 constexpr const char stringTable[] = "__string_table";
 constexpr const char got[] = "__got";
 constexpr const char threadPtrs[] = "__thread_ptrs";
+constexpr const char unwindInfo[] = "__unwind_info";
+// these are not synthetic, but in service of synthetic __unwind_info
+constexpr const char compactUnwind[] = "__compact_unwind";
+constexpr const char ehFrame[] = "__eh_frame";
 
 } // namespace section_names
 

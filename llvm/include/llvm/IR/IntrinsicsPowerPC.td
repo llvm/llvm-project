@@ -467,6 +467,32 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   def int_ppc_altivec_vexpandqm : GCCBuiltin<"__builtin_altivec_vexpandqm">,
               Intrinsic<[llvm_v1i128_ty], [llvm_v1i128_ty], [IntrNoMem]>;
 
+  // P10 Vector Count with Mask intrinsics.
+  def int_ppc_altivec_vcntmbb : GCCBuiltin<"__builtin_altivec_vcntmbb">,
+              Intrinsic<[llvm_i64_ty], [llvm_v16i8_ty, llvm_i32_ty],
+                        [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_ppc_altivec_vcntmbh : GCCBuiltin<"__builtin_altivec_vcntmbh">,
+              Intrinsic<[llvm_i64_ty], [llvm_v8i16_ty, llvm_i32_ty],
+                        [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_ppc_altivec_vcntmbw : GCCBuiltin<"__builtin_altivec_vcntmbw">,
+              Intrinsic<[llvm_i64_ty], [llvm_v4i32_ty, llvm_i32_ty],
+                        [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_ppc_altivec_vcntmbd : GCCBuiltin<"__builtin_altivec_vcntmbd">,
+              Intrinsic<[llvm_i64_ty], [llvm_v2i64_ty, llvm_i32_ty],
+                        [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+  // P10 Move to VSR with Mask Intrinsics.
+  def int_ppc_altivec_mtvsrbm : GCCBuiltin<"__builtin_altivec_mtvsrbm">,
+              Intrinsic<[llvm_v16i8_ty], [llvm_i64_ty], [IntrNoMem]>;
+  def int_ppc_altivec_mtvsrhm : GCCBuiltin<"__builtin_altivec_mtvsrhm">,
+              Intrinsic<[llvm_v8i16_ty], [llvm_i64_ty], [IntrNoMem]>;
+  def int_ppc_altivec_mtvsrwm : GCCBuiltin<"__builtin_altivec_mtvsrwm">,
+              Intrinsic<[llvm_v4i32_ty], [llvm_i64_ty], [IntrNoMem]>;
+  def int_ppc_altivec_mtvsrdm : GCCBuiltin<"__builtin_altivec_mtvsrdm">,
+              Intrinsic<[llvm_v2i64_ty], [llvm_i64_ty], [IntrNoMem]>;
+  def int_ppc_altivec_mtvsrqm : GCCBuiltin<"__builtin_altivec_mtvsrqm">,
+              Intrinsic<[llvm_v1i128_ty], [llvm_i64_ty], [IntrNoMem]>;
+
   // P10 Vector Parallel Bits Deposit/Extract Doubleword Builtins.
   def int_ppc_altivec_vpdepd : GCCBuiltin<"__builtin_altivec_vpdepd">,
               Intrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty],
@@ -474,6 +500,25 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   def int_ppc_altivec_vpextd : GCCBuiltin<"__builtin_altivec_vpextd">,
               Intrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty],
                         [IntrNoMem]>;
+
+  // P10 Vector String Isolate Intrinsics.
+  def int_ppc_altivec_vstribr : GCCBuiltin<"__builtin_altivec_vstribr">,
+              Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty], [IntrNoMem]>;
+  def int_ppc_altivec_vstribl : GCCBuiltin<"__builtin_altivec_vstribl">,
+              Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty], [IntrNoMem]>;
+  def int_ppc_altivec_vstrihr : GCCBuiltin<"__builtin_altivec_vstrihr">,
+              Intrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty], [IntrNoMem]>;
+  def int_ppc_altivec_vstrihl : GCCBuiltin<"__builtin_altivec_vstrihl">,
+              Intrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty], [IntrNoMem]>;
+  // Predicate Intrinsics: The first operand specifies interpretation of CR6.
+  def int_ppc_altivec_vstribr_p : GCCBuiltin<"__builtin_altivec_vstribr_p">,
+              Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_v16i8_ty], [IntrNoMem]>;
+  def int_ppc_altivec_vstribl_p : GCCBuiltin<"__builtin_altivec_vstribl_p">,
+              Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_v16i8_ty], [IntrNoMem]>;
+  def int_ppc_altivec_vstrihr_p : GCCBuiltin<"__builtin_altivec_vstrihr_p">,
+              Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_v8i16_ty], [IntrNoMem]>;
+  def int_ppc_altivec_vstrihl_p : GCCBuiltin<"__builtin_altivec_vstrihl_p">,
+              Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_v8i16_ty], [IntrNoMem]>;
 
   // P10 Vector Centrifuge Builtin.
   def int_ppc_altivec_vcfuged : GCCBuiltin<"__builtin_altivec_vcfuged">,
@@ -981,6 +1026,8 @@ def int_ppc_altivec_vdivesw : PowerPC_Vec_WWW_Intrinsic<"vdivesw">;
 def int_ppc_altivec_vdiveuw : PowerPC_Vec_WWW_Intrinsic<"vdiveuw">;
 def int_ppc_altivec_vdivesd : PowerPC_Vec_DDD_Intrinsic<"vdivesd">;
 def int_ppc_altivec_vdiveud : PowerPC_Vec_DDD_Intrinsic<"vdiveud">;
+def int_ppc_altivec_vdivesq : PowerPC_Vec_QQQ_Intrinsic<"vdivesq">;
+def int_ppc_altivec_vdiveuq : PowerPC_Vec_QQQ_Intrinsic<"vdiveuq">;
 
 // Vector Multiply High Intrinsics.
 def int_ppc_altivec_vmulhsw : PowerPC_Vec_WWW_Intrinsic<"vmulhsw">;

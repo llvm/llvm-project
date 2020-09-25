@@ -246,9 +246,9 @@ void MappingTraits<DWARFYAML::LineTable>::mapping(
   IO.mapRequired("LineRange", LineTable.LineRange);
   IO.mapRequired("OpcodeBase", LineTable.OpcodeBase);
   IO.mapRequired("StandardOpcodeLengths", LineTable.StandardOpcodeLengths);
-  IO.mapRequired("IncludeDirs", LineTable.IncludeDirs);
-  IO.mapRequired("Files", LineTable.Files);
-  IO.mapRequired("Opcodes", LineTable.Opcodes);
+  IO.mapOptional("IncludeDirs", LineTable.IncludeDirs);
+  IO.mapOptional("Files", LineTable.Files);
+  IO.mapOptional("Opcodes", LineTable.Opcodes);
 }
 
 void MappingTraits<DWARFYAML::SegAddrPair>::mapping(

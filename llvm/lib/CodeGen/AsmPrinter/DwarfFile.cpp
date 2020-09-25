@@ -10,10 +10,9 @@
 #include "DwarfCompileUnit.h"
 #include "DwarfDebug.h"
 #include "DwarfUnit.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/CodeGen/DIE.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/MC/MCStreamer.h"
 #include <algorithm>
 #include <cstdint>

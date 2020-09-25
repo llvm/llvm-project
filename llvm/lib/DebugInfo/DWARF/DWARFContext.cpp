@@ -548,8 +548,7 @@ void DWARFContext::dump(
                                    DObj->getLineSection().Data)) {
     DWARFDataExtractor LineData(*DObj, DObj->getLineSection(), isLittleEndian(),
                                 0);
-    DWARFDebugLine::SectionParser Parser(LineData, *this, compile_units(),
-                                         type_units());
+    DWARFDebugLine::SectionParser Parser(LineData, *this, normal_units());
     DumpLineSection(Parser, DumpOpts, *Off);
   }
 
@@ -558,8 +557,7 @@ void DWARFContext::dump(
                      DObj->getLineDWOSection().Data)) {
     DWARFDataExtractor LineData(*DObj, DObj->getLineDWOSection(),
                                 isLittleEndian(), 0);
-    DWARFDebugLine::SectionParser Parser(LineData, *this, dwo_compile_units(),
-                                         dwo_type_units());
+    DWARFDebugLine::SectionParser Parser(LineData, *this, dwo_units());
     DumpLineSection(Parser, DumpOpts, *Off);
   }
 
@@ -1711,16 +1709,17 @@ public:
           // FIXME: Use the other dwo range section when we emit it.
           RangesDWOSection.Data = Data;
         }
-      } else if (Name == "debug_info") {
+      } else if (InfoSectionMap *Sections =
+                     StringSwitch<InfoSectionMap *>(Name)
+                         .Case("debug_info", &InfoSections)
+                         .Case("debug_info.dwo", &InfoDWOSections)
+                         .Case("debug_types", &TypesSections)
+                         .Case("debug_types.dwo", &TypesDWOSections)
+                         .Default(nullptr)) {
         // Find debug_info and debug_types data by section rather than name as
         // there are multiple, comdat grouped, of these sections.
-        InfoSections[Section].Data = Data;
-      } else if (Name == "debug_info.dwo") {
-        InfoDWOSections[Section].Data = Data;
-      } else if (Name == "debug_types") {
-        TypesSections[Section].Data = Data;
-      } else if (Name == "debug_types.dwo") {
-        TypesDWOSections[Section].Data = Data;
+        DWARFSectionMap &S = (*Sections)[Section];
+        S.Data = Data;
       }
 
       if (RelocatedSection == Obj.section_end())

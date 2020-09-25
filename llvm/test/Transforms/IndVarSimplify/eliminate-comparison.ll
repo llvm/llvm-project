@@ -14,7 +14,7 @@ define void @foo(i64 %n, i32* nocapture %p) nounwind {
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i64 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label [[PRE:%.*]], label [[RETURN:%.*]]
 ; CHECK:       pre:
-; CHECK-NEXT:    [[T3:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i32 [[T3]], 0
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -23,7 +23,7 @@ define void @foo(i64 %n, i32* nocapture %p) nounwind {
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [0 x double], [0 x double]* @X, i64 0, i64 [[I]]
-; CHECK-NEXT:    store double 3.200000e+00, double* [[ARRAYIDX]]
+; CHECK-NEXT:    store double 3.200000e+00, double* [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I]], 1
@@ -144,7 +144,7 @@ define void @func_10() nounwind {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    store i64 [[INDVARS_IV]], i64* null
+; CHECK-NEXT:    store i64 [[INDVARS_IV]], i64* null, align 8
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[RETURN:%.*]]
 ; CHECK:       return:
@@ -334,7 +334,7 @@ declare void @side_effect()
 define void @func_13(i32* %len.ptr) {
 ; CHECK-LABEL: @func_13(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4, [[RNG0:!range !.*]]
 ; CHECK-NEXT:    [[LEN_IS_ZERO:%.*]] = icmp eq i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_IS_ZERO]], label [[LEAVE:%.*]], label [[LOOP_PREHEADER:%.*]]
 ; CHECK:       loop.preheader:
@@ -378,7 +378,7 @@ leave:
 define void @func_14(i32* %len.ptr) {
 ; CHECK-LABEL: @func_14(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4, [[RNG0]]
 ; CHECK-NEXT:    [[LEN_IS_ZERO:%.*]] = icmp eq i32 [[LEN]], 0
 ; CHECK-NEXT:    [[LEN_IS_INT_MIN:%.*]] = icmp eq i32 [[LEN]], -2147483648
 ; CHECK-NEXT:    [[NO_ENTRY:%.*]] = or i1 [[LEN_IS_ZERO]], [[LEN_IS_INT_MIN]]
@@ -426,7 +426,7 @@ leave:
 define void @func_15(i32* %len.ptr) {
 ; CHECK-LABEL: @func_15(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4, [[RNG0]]
 ; CHECK-NEXT:    [[LEN_ADD_1:%.*]] = add i32 [[LEN]], 1
 ; CHECK-NEXT:    [[LEN_ADD_1_IS_ZERO:%.*]] = icmp eq i32 [[LEN_ADD_1]], 0
 ; CHECK-NEXT:    br i1 [[LEN_ADD_1_IS_ZERO]], label [[LEAVE:%.*]], label [[LOOP_PREHEADER:%.*]]
@@ -471,7 +471,7 @@ leave:
 define void @func_16(i32* %len.ptr) {
 ; CHECK-LABEL: @func_16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4, [[RNG0]]
 ; CHECK-NEXT:    [[LEN_ADD_5:%.*]] = add i32 [[LEN]], 5
 ; CHECK-NEXT:    [[ENTRY_COND_0:%.*]] = icmp slt i32 [[LEN]], 2147483643
 ; CHECK-NEXT:    [[ENTRY_COND_1:%.*]] = icmp slt i32 4, [[LEN_ADD_5]]
@@ -522,7 +522,7 @@ leave:
 define void @func_17(i32* %len.ptr) {
 ; CHECK-LABEL: @func_17(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4
 ; CHECK-NEXT:    [[LEN_ADD_5:%.*]] = add i32 [[LEN]], -5
 ; CHECK-NEXT:    [[ENTRY_COND_0:%.*]] = icmp slt i32 [[LEN]], -2147483643
 ; CHECK-NEXT:    [[ENTRY_COND_1:%.*]] = icmp slt i32 -6, [[LEN_ADD_5]]
@@ -579,7 +579,7 @@ leave:
 define i1 @func_18(i16* %tmp20, i32* %len.addr) {
 ; CHECK-LABEL: @func_18(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_ADDR:%.*]], !range !0
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_ADDR:%.*]], align 4, [[RNG0]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[BB2:%.*]], label [[BB0_PREHEADER:%.*]]
 ; CHECK:       bb0.preheader:
@@ -591,7 +591,7 @@ define i1 @func_18(i16* %tmp20, i32* %len.addr) {
 ; CHECK-NEXT:    br i1 true, label [[STAY:%.*]], label [[BB2_LOOPEXIT:%.*]]
 ; CHECK:       stay:
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i16, i16* [[TMP20:%.*]], i32 [[VAR_1]]
-; CHECK-NEXT:    [[TMP26:%.*]] = load i16, i16* [[TMP25]]
+; CHECK-NEXT:    [[TMP26:%.*]] = load i16, i16* [[TMP25]], align 2
 ; CHECK-NEXT:    [[TMP29:%.*]] = icmp eq i16 [[TMP26]], 0
 ; CHECK-NEXT:    br i1 [[TMP29]], label [[BB1]], label [[BB2_LOOPEXIT]]
 ; CHECK:       bb1:
@@ -641,7 +641,7 @@ bb3:
 define void @func_19(i32* %length.ptr) {
 ; CHECK-LABEL: @func_19(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], align 4, [[RNG0]]
 ; CHECK-NEXT:    [[LENGTH_IS_NONZERO:%.*]] = icmp ne i32 [[LENGTH]], 0
 ; CHECK-NEXT:    br i1 [[LENGTH_IS_NONZERO]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
 ; CHECK:       loop.preheader:
@@ -684,7 +684,7 @@ leave:
 define void @func_20(i32* %length.ptr) {
 ; CHECK-LABEL: @func_20(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]]
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], align 4
 ; CHECK-NEXT:    [[LENGTH_IS_NONZERO:%.*]] = icmp ne i32 [[LENGTH]], 0
 ; CHECK-NEXT:    br i1 [[LENGTH_IS_NONZERO]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
 ; CHECK:       loop.preheader:
@@ -730,7 +730,7 @@ leave:
 define void @func_21(i32* %length.ptr) {
 ; CHECK-LABEL: @func_21(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], align 4, [[RNG0]]
 ; CHECK-NEXT:    [[LIM:%.*]] = sub i32 [[LENGTH]], 1
 ; CHECK-NEXT:    [[ENTRY_COND:%.*]] = icmp sgt i32 [[LENGTH]], 1
 ; CHECK-NEXT:    br i1 [[ENTRY_COND]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
@@ -775,7 +775,7 @@ leave:
 define void @func_22(i32* %length.ptr) {
 ; CHECK-LABEL: @func_22(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], align 4, [[RNG0]]
 ; CHECK-NEXT:    [[ENTRY_COND:%.*]] = icmp sgt i32 [[LENGTH]], 1
 ; CHECK-NEXT:    br i1 [[ENTRY_COND]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
 ; CHECK:       loop.preheader:
@@ -817,7 +817,7 @@ leave:
 define void @func_23(i32* %length.ptr) {
 ; CHECK-LABEL: @func_23(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], align 4, [[RNG0]]
 ; CHECK-NEXT:    [[ENTRY_COND:%.*]] = icmp ult i32 4, [[LENGTH]]
 ; CHECK-NEXT:    br i1 [[ENTRY_COND]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
 ; CHECK:       loop.preheader:
@@ -858,7 +858,7 @@ leave:
 define void @func_24(i32* %init.ptr) {
 ; CHECK-LABEL: @func_24(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INIT:%.*]] = load i32, i32* [[INIT_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[INIT:%.*]] = load i32, i32* [[INIT_PTR:%.*]], align 4, [[RNG0]]
 ; CHECK-NEXT:    [[ENTRY_COND:%.*]] = icmp ugt i32 [[INIT]], 4
 ; CHECK-NEXT:    br i1 [[ENTRY_COND]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
 ; CHECK:       loop.preheader:

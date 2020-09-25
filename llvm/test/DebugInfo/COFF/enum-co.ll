@@ -31,7 +31,7 @@
 ; CHECK: Arch: x86_64
 ; CHECK: AddressSize: 64bit
 ; CHECK: CodeViewTypes [
-; CHECK:   Section: .debug$T (6)
+; CHECK:   Section: .debug$T (5)
 ; CHECK:   Magic: 0x4
 ; CHECK:   Enum ({{.*}}) {
 ; CHECK:     TypeLeafKind: LF_ENUM (0x1507)

@@ -512,3 +512,44 @@ TEST(ScudoCombinedTest, OddEven) {
     EXPECT_TRUE(Found);
   }
 }
+
+TEST(ScudoCombinedTest, DisableMemInit) {
+  using AllocatorT = TestAllocator<scudo::AndroidConfig>;
+  using SizeClassMap = AllocatorT::PrimaryT::SizeClassMap;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  std::vector<void *> Ptrs(65536, nullptr);
+
+  Allocator->setOption(scudo::Option::ThreadDisableMemInit, 1);
+
+  constexpr scudo::uptr MinAlignLog = FIRST_32_SECOND_64(3U, 4U);
+
+  // Test that if mem-init is disabled on a thread, calloc should still work as
+  // expected. This is tricky to ensure when MTE is enabled, so this test tries
+  // to exercise the relevant code on our MTE path.
+  for (scudo::uptr ClassId = 1U; ClassId <= 8; ClassId++) {
+    const scudo::uptr Size =
+        SizeClassMap::getSizeByClassId(ClassId) - scudo::Chunk::getHeaderSize();
+    if (Size < 8)
+      continue;
+    for (unsigned I = 0; I != Ptrs.size(); ++I) {
+      Ptrs[I] = Allocator->allocate(Size, Origin);
+      memset(Ptrs[I], 0xaa, Size);
+    }
+    for (unsigned I = 0; I != Ptrs.size(); ++I)
+      Allocator->deallocate(Ptrs[I], Origin, Size);
+    for (unsigned I = 0; I != Ptrs.size(); ++I) {
+      Ptrs[I] = Allocator->allocate(Size - 8, Origin);
+      memset(Ptrs[I], 0xbb, Size - 8);
+    }
+    for (unsigned I = 0; I != Ptrs.size(); ++I)
+      Allocator->deallocate(Ptrs[I], Origin, Size - 8);
+    for (unsigned I = 0; I != Ptrs.size(); ++I) {
+      Ptrs[I] = Allocator->allocate(Size, Origin, 1U << MinAlignLog, true);
+      for (scudo::uptr J = 0; J < Size; ++J)
+        ASSERT_EQ((reinterpret_cast<char *>(Ptrs[I]))[J], 0);
+    }
+  }
+
+  Allocator->setOption(scudo::Option::ThreadDisableMemInit, 0);
+}

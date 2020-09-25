@@ -308,6 +308,25 @@ parseCustomDirectiveResults(OpAsmParser &parser, Type &operandType,
     return failure();
   return success();
 }
+static ParseResult
+parseCustomDirectiveWithTypeRefs(OpAsmParser &parser, Type operandType,
+                                 Type optOperandType,
+                                 const SmallVectorImpl<Type> &varOperandTypes) {
+  if (parser.parseKeyword("type_refs_capture"))
+    return failure();
+
+  Type operandType2, optOperandType2;
+  SmallVector<Type, 1> varOperandTypes2;
+  if (parseCustomDirectiveResults(parser, operandType2, optOperandType2,
+                                  varOperandTypes2))
+    return failure();
+
+  if (operandType != operandType2 || optOperandType != optOperandType2 ||
+      varOperandTypes != varOperandTypes2)
+    return failure();
+
+  return success();
+}
 static ParseResult parseCustomDirectiveOperandsAndTypes(
     OpAsmParser &parser, OpAsmParser::OperandType &operand,
     Optional<OpAsmParser::OperandType> &optOperand,
@@ -364,6 +383,14 @@ static void printCustomDirectiveResults(OpAsmPrinter &printer, Type operandType,
   if (optOperandType)
     printer << ", " << optOperandType;
   printer << " -> (" << varOperandTypes << ")";
+}
+static void printCustomDirectiveWithTypeRefs(OpAsmPrinter &printer,
+                                             Type operandType,
+                                             Type optOperandType,
+                                             TypeRange varOperandTypes) {
+  printer << " type_refs_capture ";
+  printCustomDirectiveResults(printer, operandType, optOperandType,
+                              varOperandTypes);
 }
 static void
 printCustomDirectiveOperandsAndTypes(OpAsmPrinter &printer, Value operand,

@@ -31,8 +31,8 @@ struct TiledLinalgOp {
 };
 
 /// Populates patterns for vectorization of all ConvN-D ops.
-void populateConvVectorizationPatterns(MLIRContext *context,
-                                       OwningRewritePatternList &patterns);
+void populateConvVectorizationPatterns(
+    MLIRContext *context, SmallVectorImpl<OwningRewritePatternList> &patterns);
 
 /// Performs standalone tiling of a single LinalgOp by `tileSizes`.
 /// and permute the loop nest according to `interchangeVector`
@@ -114,7 +114,7 @@ struct LinalgPromotionOptions {
     useFullTileBuffersDefault = use;
     return *this;
   }
-  /// Allow the use of dynamicaly-sized buffers.
+  /// Allow the use of dynamically-sized buffers.
   bool dynamicBuffers = false;
   LinalgPromotionOptions &setDynamicBuffers(unsigned dynamic) {
     dynamicBuffers = dynamic;
@@ -187,8 +187,8 @@ LogicalResult linalgOpToParallelLoops(OpBuilder &builder, Operation *op);
 LogicalResult linalgOpToAffineLoops(OpBuilder &builder, Operation *op);
 
 //===----------------------------------------------------------------------===//
-// Preconditions that ensure the corresponding transformation suceeds and can be
-// applied as a rewrite pattern.
+// Preconditions that ensure the corresponding transformation succeeds and can
+// be applied as a rewrite pattern.
 //===----------------------------------------------------------------------===//
 /// Emits a `generic` or `indexed_generic` operation with the `indexing_maps`
 /// and `iterator_types` permutated according to `permutation`.
@@ -589,6 +589,10 @@ public:
 
   LogicalResult matchAndRewrite(ConvOp minOp,
                                 PatternRewriter &rewriter) const override;
+
+  // TODO: Make these pass arguments.
+  static const int tileSize = 3;
+  static const int noTile = 1;
 };
 
 //===----------------------------------------------------------------------===//

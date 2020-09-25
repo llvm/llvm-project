@@ -81,8 +81,6 @@
 #include <sys/shm.h>
 #undef _KERNEL
 
-#undef INLINE  // to avoid clashes with sanitizers' definitions
-
 #undef IOC_DIRMASK
 
 // Include these after system headers to avoid name clashes and ambiguities.

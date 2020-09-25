@@ -20,6 +20,7 @@ unittest("SyntaxTests") {
     "MutationsTest.cpp",
     "SynthesisTest.cpp",
     "TokensTest.cpp",
+    "TreeTest.cpp",
     "TreeTestBase.cpp",
   ]
 }

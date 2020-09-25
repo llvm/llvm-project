@@ -314,7 +314,8 @@ public:
   }
 
   unsigned getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Imm,
-                             Type *Ty, TTI::TargetCostKind CostKind) {
+                             Type *Ty, TTI::TargetCostKind CostKind,
+                             Instruction *Inst = nullptr) {
     return TTI::TCC_Free;
   }
 

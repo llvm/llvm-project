@@ -653,6 +653,9 @@ public:
   virtual void print(raw_ostream &O, const Twine &Indent,
                      VPSlotTracker &SlotTracker) const = 0;
 
+  /// Dump the recipe to stderr (for debugging).
+  void dump() const;
+
   /// Insert an unlinked recipe into a basic block immediately before
   /// the specified recipe.
   void insertBefore(VPRecipeBase *InsertPos);

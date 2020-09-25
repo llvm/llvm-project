@@ -26,7 +26,7 @@ namespace detail {
 
 /// This class represents an abstract interface. An interface is a simplified
 /// mechanism for attaching concept based polymorphism to a class hierarchy. An
-/// interace is comprised of two components:
+/// interface is comprised of two components:
 /// * The derived interface class: This is what users interact with, and invoke
 ///   methods on.
 /// * An interface `Trait` class: This is the class that is attached to the

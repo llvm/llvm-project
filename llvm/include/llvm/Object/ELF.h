@@ -337,19 +337,17 @@ getSection(typename ELFT::ShdrRange Sections, uint32_t Index) {
 
 template <class ELFT>
 inline Expected<uint32_t>
-getExtendedSymbolTableIndex(const typename ELFT::Sym &Sym,
-                            const typename ELFT::Sym &FirstSym,
+getExtendedSymbolTableIndex(const typename ELFT::Sym &Sym, unsigned SymIndex,
                             ArrayRef<typename ELFT::Word> ShndxTable) {
   assert(Sym.st_shndx == ELF::SHN_XINDEX);
-  unsigned Index = &Sym - &FirstSym;
-  if (Index >= ShndxTable.size())
+  if (SymIndex >= ShndxTable.size())
     return createError(
-        "extended symbol index (" + Twine(Index) +
+        "extended symbol index (" + Twine(SymIndex) +
         ") is past the end of the SHT_SYMTAB_SHNDX section of size " +
         Twine(ShndxTable.size()));
 
   // The size of the table was checked in getSHNDXTable.
-  return ShndxTable[Index];
+  return ShndxTable[SymIndex];
 }
 
 template <class ELFT>
@@ -359,7 +357,7 @@ ELFFile<ELFT>::getSectionIndex(const Elf_Sym &Sym, Elf_Sym_Range Syms,
   uint32_t Index = Sym.st_shndx;
   if (Index == ELF::SHN_XINDEX) {
     Expected<uint32_t> ErrorOrIndex =
-        getExtendedSymbolTableIndex<ELFT>(Sym, *Syms.begin(), ShndxTable);
+        getExtendedSymbolTableIndex<ELFT>(Sym, &Sym - Syms.begin(), ShndxTable);
     if (!ErrorOrIndex)
       return ErrorOrIndex.takeError();
     return *ErrorOrIndex;

@@ -11,6 +11,7 @@ add_clang_executable(clangd-index-server
 target_link_libraries(clangd-index-server
   PRIVATE
   clangDaemon
+  clangdSupport
 
   RemoteIndexProtos
   clangdRemoteMarshalling

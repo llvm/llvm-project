@@ -74,7 +74,6 @@ protected:
 
   bool applySubprogramDefinitionAttributes(const DISubprogram *SP, DIE &SPDie);
 
-  bool shareAcrossDWOCUs() const;
   bool isShareableAcrossCUs(const DINode *D) const;
 
 public:

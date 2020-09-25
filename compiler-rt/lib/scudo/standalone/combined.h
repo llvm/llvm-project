@@ -275,8 +275,10 @@ public:
     }
 #endif // GWP_ASAN_HOOKS
 
-    const FillContentsMode FillContents =
-        ZeroContents ? ZeroFill : Options.FillContents;
+    const FillContentsMode FillContents = ZeroContents ? ZeroFill
+                                          : TSDRegistry.getDisableMemInit()
+                                              ? NoFill
+                                              : Options.FillContents;
 
     if (UNLIKELY(Alignment > MaxAlignment)) {
       if (Options.MayReturnNull)
@@ -405,7 +407,17 @@ public:
             PrevEnd = NextPage;
           TaggedPtr = reinterpret_cast<void *>(TaggedUserPtr);
           resizeTaggedChunk(PrevEnd, TaggedUserPtr + Size, BlockEnd);
-          if (Size) {
+          if (UNLIKELY(FillContents != NoFill && !Header.OriginOrWasZeroed)) {
+            // If an allocation needs to be zeroed (i.e. calloc) we can normally
+            // avoid zeroing the memory now since we can rely on memory having
+            // been zeroed on free, as this is normally done while setting the
+            // UAF tag. But if tagging was disabled per-thread when the memory
+            // was freed, it would not have been retagged and thus zeroed, and
+            // therefore it needs to be zeroed now.
+            memset(TaggedPtr, 0,
+                   Min(Size, roundUpTo(PrevEnd - TaggedUserPtr,
+                                       archMemoryTagGranuleSize())));
+          } else if (Size) {
             // Clear any stack metadata that may have previously been stored in
             // the chunk data.
             memset(TaggedPtr, 0, archMemoryTagGranuleSize());
@@ -438,7 +450,7 @@ public:
     }
     Header.ClassId = ClassId & Chunk::ClassIdMask;
     Header.State = Chunk::State::Allocated;
-    Header.Origin = Origin & Chunk::OriginMask;
+    Header.OriginOrWasZeroed = Origin & Chunk::OriginMask;
     Header.SizeOrUnusedBytes =
         (ClassId ? Size : SecondaryBlockEnd - (UserPtr + Size)) &
         Chunk::SizeOrUnusedBytesMask;
@@ -483,12 +495,12 @@ public:
     if (UNLIKELY(Header.State != Chunk::State::Allocated))
       reportInvalidChunkState(AllocatorAction::Deallocating, Ptr);
     if (Options.DeallocTypeMismatch) {
-      if (Header.Origin != Origin) {
+      if (Header.OriginOrWasZeroed != Origin) {
         // With the exception of memalign'd chunks, that can be still be free'd.
-        if (UNLIKELY(Header.Origin != Chunk::Origin::Memalign ||
+        if (UNLIKELY(Header.OriginOrWasZeroed != Chunk::Origin::Memalign ||
                      Origin != Chunk::Origin::Malloc))
           reportDeallocTypeMismatch(AllocatorAction::Deallocating, Ptr,
-                                    Header.Origin, Origin);
+                                    Header.OriginOrWasZeroed, Origin);
       }
     }
 
@@ -541,9 +553,10 @@ public:
     // applications think that it is OK to realloc a memalign'ed pointer, which
     // will trigger this check. It really isn't.
     if (Options.DeallocTypeMismatch) {
-      if (UNLIKELY(OldHeader.Origin != Chunk::Origin::Malloc))
+      if (UNLIKELY(OldHeader.OriginOrWasZeroed != Chunk::Origin::Malloc))
         reportDeallocTypeMismatch(AllocatorAction::Reallocating, OldPtr,
-                                  OldHeader.Origin, Chunk::Origin::Malloc);
+                                  OldHeader.OriginOrWasZeroed,
+                                  Chunk::Origin::Malloc);
     }
 
     void *BlockBegin = getBlockBegin(OldPtr, &OldHeader);
@@ -1017,14 +1030,17 @@ private:
     Chunk::UnpackedHeader NewHeader = *Header;
     if (UNLIKELY(NewHeader.ClassId && useMemoryTagging())) {
       u8 PrevTag = extractTag(loadTag(reinterpret_cast<uptr>(Ptr)));
-      uptr TaggedBegin, TaggedEnd;
-      const uptr OddEvenMask = computeOddEvenMaskForPointerMaybe(
-          reinterpret_cast<uptr>(getBlockBegin(Ptr, &NewHeader)),
-          SizeClassMap::getSizeByClassId(NewHeader.ClassId));
-      // Exclude the previous tag so that immediate use after free is detected
-      // 100% of the time.
-      setRandomTag(Ptr, Size, OddEvenMask | (1UL << PrevTag), &TaggedBegin,
-                   &TaggedEnd);
+      if (!TSDRegistry.getDisableMemInit()) {
+        uptr TaggedBegin, TaggedEnd;
+        const uptr OddEvenMask = computeOddEvenMaskForPointerMaybe(
+            reinterpret_cast<uptr>(getBlockBegin(Ptr, &NewHeader)),
+            SizeClassMap::getSizeByClassId(NewHeader.ClassId));
+        // Exclude the previous tag so that immediate use after free is detected
+        // 100% of the time.
+        setRandomTag(Ptr, Size, OddEvenMask | (1UL << PrevTag), &TaggedBegin,
+                     &TaggedEnd);
+      }
+      NewHeader.OriginOrWasZeroed = !TSDRegistry.getDisableMemInit();
       storeDeallocationStackMaybe(Ptr, PrevTag);
     }
     // If the quarantine is disabled, the actual size of a chunk is 0 or larger

@@ -92,7 +92,6 @@ DWARF:
           DirIdx:  2
           ModTime: 3
           Length:  4
-      Opcodes: []
 
 ## Generate and verify a big endian DWARF32 .debug_line section.
 
@@ -211,9 +210,6 @@ DWARF:
       LineRange:             14
       OpcodeBase:            13
       StandardOpcodeLengths: []
-      IncludeDirs:           []
-      Files:                 []
-      Opcodes:               []
 
 ## e) Test that yaml2obj emits an error message when both the "Content" and the
 ## "debug_line" entry are specified at the same time.
@@ -240,9 +236,6 @@ DWARF:
       LineRange:             14
       OpcodeBase:            13
       StandardOpcodeLengths: []
-      IncludeDirs:           []
-      Files:                 []
-      Opcodes:               []
 
 ## f) Test that all the properties can be overridden by the section header when
 ## the "debug_line" entry doesn't exist.
@@ -307,9 +300,6 @@ DWARF:
       LineRange:             14
       OpcodeBase:            13
       StandardOpcodeLengths: []
-      IncludeDirs:           []
-      Files:                 []
-      Opcodes:               []
 
 ## h) Test that the address size is inferred from the target machine.
 
@@ -355,8 +345,6 @@ DWARF:
       LineRange:             14
       OpcodeBase:            13
       StandardOpcodeLengths: []
-      IncludeDirs:           []
-      Files:                 []
       Opcodes:
         - Opcode:    DW_LNS_extended_op
           ExtLen:    9
@@ -439,8 +427,6 @@ DWARF:
       LineRange:             14
       OpcodeBase:            13
       StandardOpcodeLengths: []
-      IncludeDirs:           []
-      Files:                 []
       Opcodes:
         - Opcode:    DW_LNS_copy
         - Opcode:    DW_LNS_advance_pc
@@ -591,3 +577,42 @@ DWARF:
         - Opcode:    DW_LNS_extended_op
           ExtLen:    1
           SubOpcode: DW_LNE_end_sequence
+
+## k) Test that we can omit the include_directories, file_names and opcodes
+## fields of the line table.
+
+# RUN: yaml2obj --docnum=11 %s -o %t11.o
+# RUN: llvm-readelf --hex-dump=.debug_line %t11.o | \
+# RUN:   FileCheck %s --check-prefix=OMIT-FIELDS
+
+#      OMIT-FIELDS: Hex dump of section '.debug_line':
+# OMIT-FIELDS-NEXT: 0x00000000 11000000 04000b00 00000101 01fb0e04 ................
+##                             ^-------                            unit_length (4-byte)
+##                                      ^---                       version (2-byte)
+##                                          ^--------              header_length (4-byte)
+##                                                   ^-            minimum_instruction_length (1-byte)
+##                                                     ^-          maximum_operations_per_instruction (1-byte)
+##                                                        ^-       default_is_stmt (1-byte)
+##                                                          ^-     line_base (1-byte) -5
+##                                                            ^-   line_range (1-byte)
+##                                                              ^- opcode_base (1-byte)
+# OMIT-FIELDS-NEXT: 0x00000010 00010100 00                         .....
+##                             ^-----                              standard_opcode_lengths (3-byte)
+##                                   ^-                            include_directories null byte (1-byte)
+##                                      ^-                         file_names null byte (1-byte)
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_line:
+    - Version:               4
+      MinInstLength:         1
+      MaxOpsPerInst:         1
+      DefaultIsStmt:         1
+      LineBase:              251
+      LineRange:             14
+      OpcodeBase:            4
+      StandardOpcodeLengths: [ 0, 1, 1 ]

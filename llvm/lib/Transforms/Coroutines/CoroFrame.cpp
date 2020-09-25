@@ -870,33 +870,34 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
           Arg->getParent()->removeParamAttr(Arg->getArgNo(),
                                             Attribute::NoCapture);
 
-        } else if (auto *II = dyn_cast<InvokeInst>(CurrentValue)) {
-          // If we are spilling the result of the invoke instruction, split the
-          // normal edge and insert the spill in the new block.
-          auto NewBB = SplitEdge(II->getParent(), II->getNormalDest());
-          InsertPt = NewBB->getTerminator();
-        } else if (isa<PHINode>(CurrentValue)) {
-          // Skip the PHINodes and EH pads instructions.
-          BasicBlock *DefBlock = cast<Instruction>(E.def())->getParent();
-          if (auto *CSI = dyn_cast<CatchSwitchInst>(DefBlock->getTerminator()))
-            InsertPt = splitBeforeCatchSwitch(CSI);
-          else
-            InsertPt = &*DefBlock->getFirstInsertionPt();
         } else if (auto CSI = dyn_cast<AnyCoroSuspendInst>(CurrentValue)) {
           // Don't spill immediately after a suspend; splitting assumes
           // that the suspend will be followed by a branch.
           InsertPt = CSI->getParent()->getSingleSuccessor()->getFirstNonPHI();
         } else {
-          auto *I = cast<Instruction>(E.def());
-          assert(!I->isTerminator() && "unexpected terminator");
-          // For all other values, the spill is placed immediately after
-          // the definition.
-          if (DT.dominates(CB, I)) {
-            InsertPt = I->getNextNode();
-          } else {
-            // Unless, it is not dominated by CoroBegin, then it will be
+          auto *I = cast<Instruction>(CurrentValue);
+          if (!DT.dominates(CB, I)) {
+            // If it is not dominated by CoroBegin, then spill should be
             // inserted immediately after CoroFrame is computed.
             InsertPt = FramePtr->getNextNode();
+          } else if (auto *II = dyn_cast<InvokeInst>(I)) {
+            // If we are spilling the result of the invoke instruction, split
+            // the normal edge and insert the spill in the new block.
+            auto *NewBB = SplitEdge(II->getParent(), II->getNormalDest());
+            InsertPt = NewBB->getTerminator();
+          } else if (isa<PHINode>(I)) {
+            // Skip the PHINodes and EH pads instructions.
+            BasicBlock *DefBlock = I->getParent();
+            if (auto *CSI =
+                    dyn_cast<CatchSwitchInst>(DefBlock->getTerminator()))
+              InsertPt = splitBeforeCatchSwitch(CSI);
+            else
+              InsertPt = &*DefBlock->getFirstInsertionPt();
+          } else {
+            assert(!I->isTerminator() && "unexpected terminator");
+            // For all other values, the spill is placed immediately after
+            // the definition.
+            InsertPt = I->getNextNode();
           }
         }
 

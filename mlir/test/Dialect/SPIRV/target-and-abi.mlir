@@ -127,6 +127,36 @@ func @target_env() attributes {
 
 // -----
 
+func @target_env_vendor_id() attributes {
+  // CHECK:      spv.target_env = #spv.target_env<
+  // CHECK-SAME:   #spv.vce<v1.0, [], []>,
+  // CHECK-SAME:   NVIDIA,
+  // CHECK-SAME:   {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, NVIDIA, {}>
+} { return }
+
+// -----
+
+func @target_env_vendor_id_device_type() attributes {
+  // CHECK:      spv.target_env = #spv.target_env<
+  // CHECK-SAME:   #spv.vce<v1.0, [], []>,
+  // CHECK-SAME:   AMD:DiscreteGPU,
+  // CHECK-SAME:   {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, AMD:DiscreteGPU, {}>
+} { return }
+
+// -----
+
+func @target_env_vendor_id_device_type_device_id() attributes {
+  // CHECK:      spv.target_env = #spv.target_env<
+  // CHECK-SAME:   #spv.vce<v1.0, [], []>,
+  // CHECK-SAME:   Qualcomm:IntegratedGPU:100925441,
+  // CHECK-SAME:   {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, Qualcomm:IntegratedGPU:0x6040001, {}>
+} { return }
+
+// -----
+
 func @target_env_extra_fields() attributes {
   // expected-error @+6 {{expected '>'}}
   spv.target_env = #spv.target_env<

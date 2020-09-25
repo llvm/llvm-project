@@ -6787,6 +6787,142 @@
    </array>
   </dict>
   </dict>
+  <dict>
+   <key>path</key>
+   <array>
+    <dict>
+     <key>kind</key><string>control</string>
+     <key>edges</key>
+      <array>
+       <dict>
+        <key>start</key>
+         <array>
+          <dict>
+           <key>line</key><integer>537</integer>
+           <key>col</key><integer>3</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+          <dict>
+           <key>line</key><integer>537</integer>
+           <key>col</key><integer>5</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+         </array>
+        <key>end</key>
+         <array>
+          <dict>
+           <key>line</key><integer>539</integer>
+           <key>col</key><integer>3</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+          <dict>
+           <key>line</key><integer>539</integer>
+           <key>col</key><integer>15</integer>
+           <key>file</key><integer>0</integer>
+          </dict>
+         </array>
+       </dict>
+      </array>
+    </dict>
+    <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>539</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>539</integer>
+         <key>col</key><integer>3</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>539</integer>
+         <key>col</key><integer>26</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>0</integer>
+     <key>extended_message</key>
+     <string>The value 0 is assigned to &apos;a&apos;</string>
+     <key>message</key>
+     <string>The value 0 is assigned to &apos;a&apos;</string>
+    </dict>
+    <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>540</integer>
+      <key>col</key><integer>13</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>540</integer>
+         <key>col</key><integer>10</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>540</integer>
+         <key>col</key><integer>15</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>0</integer>
+     <key>extended_message</key>
+     <string>Division by zero</string>
+     <key>message</key>
+     <string>Division by zero</string>
+    </dict>
+   </array>
+   <key>macro_expansions</key>
+   <array>
+    <dict>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>539</integer>
+      <key>col</key><integer>3</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>name</key><string>BZ44493_GNUVA</string>
+     <key>expansion</key><string>--(a);</string>
+    </dict>
+   </array>
+   <key>description</key><string>Division by zero</string>
+   <key>category</key><string>Logic error</string>
+   <key>type</key><string>Division by zero</string>
+   <key>check_name</key><string>core.DivideZero</string>
+   <!-- This hash is experimental and going to change! -->
+   <key>issue_hash_content_of_line_in_context</key><string>21c6d180d8c8c30cf730b7a7136980a9</string>
+  <key>issue_context_kind</key><string>function</string>
+  <key>issue_context</key><string>bz44493</string>
+  <key>issue_hash_function_offset</key><string>4</string>
+  <key>location</key>
+  <dict>
+   <key>line</key><integer>540</integer>
+   <key>col</key><integer>13</integer>
+   <key>file</key><integer>0</integer>
+  </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>536</integer>
+    <integer>537</integer>
+    <integer>538</integer>
+    <integer>539</integer>
+    <integer>540</integer>
+   </array>
+  </dict>
+  </dict>
  </array>
  <key>files</key>
  <array>

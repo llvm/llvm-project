@@ -1,167 +1,53 @@
 // RUN: mlir-opt %s -test-conv-vectorization --cse | FileCheck %s
 
-// CHECK-DAG:  #[[$map0:.*]] = affine_map<(d0) -> (d0)>
-// CHECK-DAG:  #[[$map1:.*]] = affine_map<(d0) -> ()>
-// CHECK-DAG:  #[[$map2:.*]] = affine_map<(d0, d1, d2) -> (d1, d2)>
-// CHECK-DAG:  #[[$map3:.*]] = affine_map<(d0, d1) -> (d0, d1)>
-// CHECK-DAG:  #[[$map4:.*]] = affine_map<(d0, d1) -> ()>
-// CHECK-DAG:  #[[$map5:.*]] = affine_map<(d0, d1, d2, d3) -> (d1, d2, d3)>
-// CHECK-DAG:  #[[$map6:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-// CHECK-DAG:  #[[$map7:.*]] = affine_map<(d0, d1, d2) -> ()>
-// CHECK-DAG:  #[[$map8:.*]] = affine_map<(d0, d1, d2, d3, d4) -> (d1, d2, d3, d4)>
-// CHECK-DAG:  #[[$map9:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
-// CHECK-DAG:  #[[$map10:.*]] = affine_map<(d0, d1, d2, d3) -> ()>
+// CHECK-DAG:  #[[$map0:.*]] = affine_map<(d0)[s0] -> (1, -d0 + s0)>
+// CHECK-DAG:  #[[$map1:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
+// CHECK-DAG:  #[[$map2:.*]] = affine_map<(d0, d1) -> (d0 + d1)>
+// CHECK-DAG:  #[[$map3:.*]] = affine_map<(d0, d1)[s0] -> (3, -d0 - d1 + s0)>
+// CHECK-DAG:  #[[$map4:.*]] = affine_map<(d0)[s0] -> (3, -d0 + s0)>
+// CHECK-DAG:  #[[$map5:.*]] = affine_map<(d0) -> (d0)>
 
-func @conv_1d(%arg0: memref<3xf32>, %arg1: memref<3xf32>, %arg2: memref<?xf32>) {
-  linalg.conv_1d %arg0, %arg1, %arg2 : (memref<3xf32>, memref<3xf32>, memref<?xf32>)
+func @conv_1d(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>) {
+  linalg.conv_1d ins(%arg0, %arg1 : memref<?xf32>, memref<?xf32>)
+                outs(%arg2 : memref<?xf32>)
   return
 }
 
 // CHECK-LABEL: @conv_1d
-//  CHECK-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<3xf32>
-//  CHECK-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<3xf32>
+//  CHECK-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<?xf32>
+//  CHECK-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<?xf32>
 //  CHECK-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?xf32
-//       CHECK:   %[[c0:.*]] = constant 0 : index
-//       CHECK:   %[[cst:.*]] = constant 0.000000e+00 : f32
-//       CHECK:   %[[v0:.*]] = vector.transfer_read %[[arg0]][%[[c0]]], %[[cst]] : memref<3xf32>, vector<3xf32>
-//       CHECK:   %[[v1:.*]] = vector.transfer_read %[[arg1]][%[[c0]]], %[[cst]] : memref<3xf32>, vector<3xf32>
-//       CHECK:   %[[v2:.*]] = vector.contract {indexing_maps = [#[[$map0]], #[[$map0]], #[[$map1]]], iterator_types = ["reduction"]} %[[v0]], %[[v1]], %[[cst]] : vector<3xf32>, vector<3xf32> into f32
-//       CHECK:   store %[[v2]], %[[arg2]][%[[c0]]] : memref<?xf32>
-//       CHECK:   return
-
-func @conv_1d_ncw(%arg0: memref<1x3x3xf32>, %arg1: memref<1x3x3xf32>, %arg2: memref<?x?x?xf32>) {
-  linalg.conv_1d_ncw %arg0, %arg1, %arg2 : (memref<1x3x3xf32>, memref<1x3x3xf32>, memref<?x?x?xf32>)
-  return
-}
-
-// CHECK-LABEL: @conv_1d_ncw
-//  CHECK-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<1x3x3xf32>
-//  CHECK-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<1x3x3xf32>
-//  CHECK-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?x?x?xf32
-//       CHECK:   %[[c0:.*]] = constant 0 : index
-//       CHECK:   %[[cst:.*]] = constant 0.000000e+00 : f32
-//       CHECK:   %[[v0:.*]] = vector.transfer_read %[[arg0]][%[[c0]], %[[c0]], %[[c0]]], %[[cst]] : memref<1x3x3xf32>, vector<3x3xf32>
-//       CHECK:   %[[v1:.*]] = vector.transfer_read %[[arg1]][%[[c0]], %[[c0]], %[[c0]]], %[[cst]] : memref<1x3x3xf32>, vector<3x3xf32>
-//       CHECK:   %[[v2:.*]] = vector.contract {indexing_maps = [#[[$map3]], #[[$map3]], #[[$map4]]], iterator_types = ["reduction", "reduction"]} %[[v0]], %[[v1]], %[[cst]] : vector<3x3xf32>, vector<3x3xf32> into f32
-//       CHECK:   store %[[v2]], %[[arg2]][%[[c0]], %[[c0]], %[[c0]]] : memref<?x?x?xf32>
-//       CHECK:   return
-
-
-func @conv_1d_nwc(%arg0: memref<1x3x3xf32>, %arg1: memref<1x3x3xf32>, %arg2: memref<?x?x?xf32>) {
-  linalg.conv_1d_nwc %arg0, %arg1, %arg2 : (memref<1x3x3xf32>, memref<1x3x3xf32>, memref<?x?x?xf32>)
-  return
-}
-
-// CHECK-LABEL: @conv_1d_nwc
-//  CHECK-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<1x3x3xf32>
-//  CHECK-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<1x3x3xf32>
-//  CHECK-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?x?x?xf32
-//       CHECK:   %[[c0:.*]] = constant 0 : index
-//       CHECK:   %[[cst:.*]] = constant 0.000000e+00 : f32
-//       CHECK:   %[[v0:.*]] = vector.transfer_read %[[arg0]][%[[c0]], %[[c0]], %[[c0]]], %[[cst]] : memref<1x3x3xf32>, vector<3x3xf32>
-//       CHECK:   %[[v1:.*]] = vector.transfer_read %[[arg1]][%[[c0]], %[[c0]], %[[c0]]], %[[cst]] : memref<1x3x3xf32>, vector<3x3xf32>
-//       CHECK:   %[[v2:.*]] = vector.contract {indexing_maps = [#[[$map3]], #[[$map3]], #[[$map4]]], iterator_types = ["reduction", "reduction"]} %[[v0]], %[[v1]], %[[cst]] : vector<3x3xf32>, vector<3x3xf32> into f32
-//       CHECK:   store %[[v2]], %[[arg2]][%[[c0]], %[[c0]], %[[c0]]] : memref<?x?x?xf32>
-//       CHECK:   return
-
-func @conv_2d(%arg0: memref<3x3xf32>, %arg1: memref<3x3xf32>, %arg2: memref<?x?xf32>) {
-  linalg.conv_2d %arg0, %arg1, %arg2 : (memref<3x3xf32>, memref<3x3xf32>, memref<?x?xf32>)
-  return
-}
-
-// CHECK-LABEL: @conv_2d
-//  CHECK-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<3x3xf32>
-//  CHECK-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<3x3xf32>
-//  CHECK-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?x?xf32
-//       CHECK:   %[[c0:.*]] = constant 0 : index
-//       CHECK:   %[[cst:.*]] = constant 0.000000e+00 : f32
-//       CHECK:   %[[v0:.*]] = vector.transfer_read %[[arg0]][%[[c0]], %[[c0]]], %[[cst]] : memref<3x3xf32>, vector<3x3xf32>
-//       CHECK:   %[[v1:.*]] = vector.transfer_read %[[arg1]][%[[c0]], %[[c0]]], %[[cst]] : memref<3x3xf32>, vector<3x3xf32>
-//       CHECK:   %[[v2:.*]] = vector.contract {indexing_maps = [#[[$map3]], #[[$map3]], #[[$map4]]], iterator_types = ["reduction", "reduction"]} %[[v0]], %[[v1]], %[[cst]] : vector<3x3xf32>, vector<3x3xf32> into f32
-//       CHECK:   store %[[v2]], %[[arg2]][%[[c0]], %[[c0]]] : memref<?x?xf32>
-//       CHECK:   return
-
-func @conv_2d_nchw(%arg0: memref<1x3x3x3xf32>, %arg1: memref<1x3x3x3xf32>, %arg2: memref<?x?x?x?xf32>) {
-  linalg.conv_2d_nchw %arg0, %arg1, %arg2 : (memref<1x3x3x3xf32>, memref<1x3x3x3xf32>, memref<?x?x?x?xf32>)
-  return
-}
-
-// CHECK-LABEL: @conv_2d_nchw
-//  CHECK-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<1x3x3x3xf32>
-//  CHECK-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<1x3x3x3xf32>
-//  CHECK-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?x?x?x?xf32
-//       CHECK:   %[[c0:.*]] = constant 0 : index
-//       CHECK:   %[[cst:.*]] = constant 0.000000e+00 : f32
-//       CHECK:   %[[v0:.*]] = vector.transfer_read %[[arg0]][%[[c0]], %[[c0]], %[[c0]], %[[c0]]], %[[cst]] : memref<1x3x3x3xf32>, vector<3x3x3xf32>
-//       CHECK:   %[[v1:.*]] = vector.transfer_read %[[arg1]][%[[c0]], %[[c0]], %[[c0]], %[[c0]]], %[[cst]] : memref<1x3x3x3xf32>, vector<3x3x3xf32>
-//       CHECK:   %[[v2:.*]] = vector.contract {indexing_maps = [#[[$map6]], #[[$map6]], #[[$map7]]], iterator_types = ["reduction", "reduction", "reduction"]} %[[v0]], %[[v1]], %[[cst]] : vector<3x3x3xf32>, vector<3x3x3xf32> into f32
-//       CHECK:   store %[[v2]], %[[arg2]][%[[c0]], %[[c0]], %[[c0]], %[[c0]]] : memref<?x?x?x?xf32>
-//       CHECK:   return
-
-func @conv_2d_nhwc(%arg0: memref<1x3x3x3xf32>, %arg1: memref<1x3x3x3xf32>, %arg2: memref<?x?x?x?xf32>) {
-  linalg.conv_2d_nhwc %arg0, %arg1, %arg2 : (memref<1x3x3x3xf32>, memref<1x3x3x3xf32>, memref<?x?x?x?xf32>)
-  return
-}
-
-// CHECK-LABEL: @conv_2d_nhwc
-//  CHECK-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<1x3x3x3xf32>
-//  CHECK-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<1x3x3x3xf32>
-//  CHECK-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?x?x?x?xf32
-//       CHECK:   %[[c0:.*]] = constant 0 : index
-//       CHECK:   %[[cst:.*]] = constant 0.000000e+00 : f32
-//       CHECK:   %[[v0:.*]] = vector.transfer_read %[[arg0]][%[[c0]], %[[c0]], %[[c0]], %[[c0]]], %[[cst]] : memref<1x3x3x3xf32>, vector<3x3x3xf32>
-//       CHECK:   %[[v1:.*]] = vector.transfer_read %[[arg1]][%[[c0]], %[[c0]], %[[c0]], %[[c0]]], %[[cst]] : memref<1x3x3x3xf32>, vector<3x3x3xf32>
-//       CHECK:   %[[v2:.*]] = vector.contract {indexing_maps = [#[[$map6]], #[[$map6]], #[[$map7]]], iterator_types = ["reduction", "reduction", "reduction"]} %[[v0]], %[[v1]], %[[cst]] : vector<3x3x3xf32>, vector<3x3x3xf32> into f32
-//       CHECK:   store %[[v2]], %[[arg2]][%[[c0]], %[[c0]], %[[c0]], %[[c0]]] : memref<?x?x?x?xf32>
-//       CHECK:   return
-
-func @conv_3d(%arg0: memref<3x3x3xf32>, %arg1: memref<3x3x3xf32>, %arg2: memref<?x?x?xf32>) {
-  linalg.conv_3d %arg0, %arg1, %arg2 : (memref<3x3x3xf32>, memref<3x3x3xf32>, memref<?x?x?xf32>)
-  return
-}
-
-// CHECK-LABEL: @conv_3d
-//  CHECK-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<3x3x3xf32>
-//  CHECK-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<3x3x3xf32>
-//  CHECK-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?x?x?xf32
-//       CHECK:   %[[c0:.*]] = constant 0 : index
-//       CHECK:   %[[cst:.*]] = constant 0.000000e+00 : f32
-//       CHECK:   %[[v0:.*]] = vector.transfer_read %[[arg0]][%[[c0]], %[[c0]], %[[c0]]], %[[cst]] : memref<3x3x3xf32>, vector<3x3x3xf32>
-//       CHECK:   %[[v1:.*]] = vector.transfer_read %[[arg1]][%[[c0]], %[[c0]], %[[c0]]], %[[cst]] : memref<3x3x3xf32>, vector<3x3x3xf32>
-//       CHECK:   %[[v2:.*]] = vector.contract {indexing_maps = [#[[$map6]], #[[$map6]], #[[$map7]]], iterator_types = ["reduction", "reduction", "reduction"]} %[[v0]], %[[v1]], %[[cst]] : vector<3x3x3xf32>, vector<3x3x3xf32> into f32
-//       CHECK:   store %[[v2]], %[[arg2]][%[[c0]], %[[c0]], %[[c0]]] : memref<?x?x?xf32>
-//       CHECK:   return
-
-func @conv_3d_ncdhw(%arg0: memref<1x3x3x3x3xf32>, %arg1: memref<1x3x3x3x3xf32>, %arg2: memref<?x?x?x?x?xf32>) {
-  linalg.conv_3d_ncdhw %arg0, %arg1, %arg2 : (memref<1x3x3x3x3xf32>, memref<1x3x3x3x3xf32>, memref<?x?x?x?x?xf32>)
-  return
-}
-
-// CHECK-LABEL: @conv_3d_ncdhw
-//  CHECK-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<1x3x3x3x3xf32>
-//  CHECK-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<1x3x3x3x3xf32>
-//  CHECK-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?x?x?x?x?xf32
-//       CHECK:   %[[c0:.*]] = constant 0 : index
-//       CHECK:   %[[cst:.*]] = constant 0.000000e+00 : f32
-//       CHECK:   %[[v0:.*]] = vector.transfer_read %[[arg0]][%[[c0]], %[[c0]], %[[c0]], %[[c0]], %[[c0]]], %[[cst]] : memref<1x3x3x3x3xf32>, vector<3x3x3x3xf32>
-//       CHECK:   %[[v1:.*]] = vector.transfer_read %[[arg1]][%[[c0]], %[[c0]], %[[c0]], %[[c0]], %[[c0]]], %[[cst]] : memref<1x3x3x3x3xf32>, vector<3x3x3x3xf32>
-//       CHECK:   %[[v2:.*]] = vector.contract {indexing_maps = [#[[$map9]], #[[$map9]], #[[$map10]]], iterator_types = ["reduction", "reduction", "reduction", "reduction"]} %[[v0]], %[[v1]], %[[cst]] : vector<3x3x3x3xf32>, vector<3x3x3x3xf32> into f32
-//       CHECK:   store %[[v2]], %[[arg2]][%[[c0]], %[[c0]], %[[c0]], %[[c0]], %[[c0]]] : memref<?x?x?x?x?xf32>
-//       CHECK:   return
-
-func @conv_3d_ndhwc(%arg0: memref<1x3x3x3x3xf32>, %arg1: memref<1x3x3x3x3xf32>, %arg2: memref<?x?x?x?x?xf32>) {
-  linalg.conv_3d_ndhwc %arg0, %arg1, %arg2 : (memref<1x3x3x3x3xf32>, memref<1x3x3x3x3xf32>, memref<?x?x?x?x?xf32>)
-  return
-}
-
-// CHECK-LABEL: @conv_3d_ndhwc
-//  CHECK-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<1x3x3x3x3xf32>
-//  CHECK-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<1x3x3x3x3xf32>
-//  CHECK-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?x?x?x?x?xf32
-//       CHECK:   %[[c0:.*]] = constant 0 : index
-//       CHECK:   %[[cst:.*]] = constant 0.000000e+00 : f32
-//       CHECK:   %[[v0:.*]] = vector.transfer_read %[[arg0]][%[[c0]], %[[c0]], %[[c0]], %[[c0]], %[[c0]]], %[[cst]] : memref<1x3x3x3x3xf32>, vector<3x3x3x3xf32>
-//       CHECK:   %[[v1:.*]] = vector.transfer_read %[[arg1]][%[[c0]], %[[c0]], %[[c0]], %[[c0]], %[[c0]]], %[[cst]] : memref<1x3x3x3x3xf32>, vector<3x3x3x3xf32>
-//       CHECK:   %[[v2:.*]] = vector.contract {indexing_maps = [#[[$map9]], #[[$map9]], #[[$map10]]], iterator_types = ["reduction", "reduction", "reduction", "reduction"]} %[[v0]], %[[v1]], %[[cst]] : vector<3x3x3x3xf32>, vector<3x3x3x3xf32> into f32
-//       CHECK:   store %[[v2]], %[[arg2]][%[[c0]], %[[c0]], %[[c0]], %[[c0]], %[[c0]]] : memref<?x?x?x?x?xf32>
-//       CHECK:   return
+//   CHECK-DAG:   %[[c12:.*]] = constant 12 : index
+//   CHECK-DAG:   %[[c4:.*]] = constant 4 : index
+//   CHECK-DAG:   %[[cst:.*]] = constant 0.000000e+00 : f32
+//   CHECK-DAG:   %[[c3:.*]] = constant 3 : index
+//   CHECK-DAG:   %[[c0:.*]] = constant 0 : index
+//   CHECK-DAG:   %[[c1:.*]] = constant 1 : index
+//       CHECK:   %[[v0:.*]] = dim %[[arg1]], %[[c0]] : memref<?xf32>
+//       CHECK:   %[[v1:.*]] = dim %[[arg2]], %[[c0]] : memref<?xf32>
+//       CHECK:   %[[v2:.*]] = dim %[[arg0]], %[[c0]] : memref<?xf32>
+//       CHECK:   %[[v3:.*]] = alloc(%[[c12]]) : memref<?xi8>
+//       CHECK:   %[[v4:.*]] = alloc(%[[c12]]) : memref<?xi8>
+//       CHECK:   %[[v5:.*]] = alloc(%[[c4]]) : memref<?xi8>
+//       CHECK:   %[[v6:.*]] = std.view %[[v3]][%[[c0]]][] : memref<?xi8> to memref<3xf32>
+//       CHECK:   %[[v7:.*]] = std.view %[[v4]][%[[c0]]][] : memref<?xi8> to memref<3xf32>
+//       CHECK:   %[[v8:.*]] = std.view %[[v5]][%[[c0]]][] : memref<?xi8> to memref<1xf32>
+//       CHECK:   scf.for %[[arg3:.*]] = %[[c0]] to %[[v1]] step %[[c1]] {
+//       CHECK:     %[[v9:.*]] = affine.min #[[$map0]](%[[arg3]])[%[[v1]]]
+//       CHECK:     %[[v10:.*]] = subview %[[arg2]][%[[arg3]]] [%[[v9]]] [1]  : memref<?xf32> to memref<?xf32, #[[$map1]]>
+//       CHECK:     %[[v11:.*]] = subview %[[v8]][0] [%[[v9]]] [1]  : memref<1xf32> to memref<?xf32>
+//       CHECK:     scf.for %[[arg4:.*]] = %[[c0]] to %[[v0]] step %[[c3]] {
+//       CHECK:       %[[v12:.*]] = affine.apply #[[$map2]](%[[arg3]], %[[arg4]])
+//       CHECK:       %[[v13:.*]] = affine.min #[[$map3]](%[[arg3]], %[[arg4]])[%[[v2]]]
+//       CHECK:       %[[v14:.*]] = subview %arg0[%12] [%13] [1]  : memref<?xf32> to memref<?xf32, #[[$map1]]>
+//       CHECK:       %[[v15:.*]] = affine.min #[[$map4]](%arg4)[%0]
+//       CHECK:       %[[v16:.*]] = subview %[[arg1]][%[[arg4]]] [%[[v15]]] [1]  : memref<?xf32> to memref<?xf32, #[[$map1]]>
+//       CHECK:       %[[v17:.*]] = subview %[[v6]][0] [%[[v13]]] [1]  : memref<3xf32> to memref<?xf32>
+//       CHECK:       %[[v19:.*]] = vector.transfer_read %[[v6]][%[[c0]]], %[[cst]] {masked = [false]} : memref<3xf32>, vector<3xf32>
+//       CHECK:       %[[v20:.*]] = vector.transfer_read %[[v7]][%[[c0]]], %[[cst]] {masked = [false]} : memref<3xf32>, vector<3xf32>
+//       CHECK:       %[[v21:.*]] = mulf %[[v19]], %[[v20]] : vector<3xf32>
+//       CHECK:       %[[v22:.*]] = vector.reduction "add", %[[v21]], %[[cst]] : vector<3xf32> into f32
+//       CHECK:       store %[[v22]], %[[v8]][%[[c0]]] : memref<1xf32>
+//       CHECK:       scf.for %[[arg5:.*]] = %[[c0]] to %[[v9]] step %[[c1]] {
+//       CHECK:         %[[v23:.*]] = load %[[v11]][%[[arg5]]] : memref<?xf32>
+//       CHECK:         store %[[v23]], %[[v10]][%[[arg5]]] : memref<?xf32, #[[$map1]]>

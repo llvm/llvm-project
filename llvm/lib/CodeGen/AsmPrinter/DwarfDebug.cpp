@@ -218,8 +218,8 @@ static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
   const DIExpression *Expr = MI->getDebugExpression();
   assert(MI->getNumOperands() == 4);
   if (MI->getDebugOperand(0).isReg()) {
-    auto RegOp = MI->getDebugOperand(0);
-    auto Op1 = MI->getDebugOffset();
+    const auto &RegOp = MI->getDebugOperand(0);
+    const auto &Op1 = MI->getDebugOffset();
     // If the second operand is an immediate, this is a
     // register-indirect address.
     assert((!Op1.isImm() || (Op1.getImm() == 0)) && "unexpected offset");
@@ -227,7 +227,7 @@ static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
     return DbgValueLoc(Expr, MLoc);
   }
   if (MI->getDebugOperand(0).isTargetIndex()) {
-    auto Op = MI->getDebugOperand(0);
+    const auto &Op = MI->getDebugOperand(0);
     return DbgValueLoc(Expr,
                        TargetIndexLocation(Op.getIndex(), Op.getOffset()));
   }
@@ -699,7 +699,7 @@ static void interpretValues(const MachineInstr *CurMI,
         Register FP = TRI.getFrameRegister(*MF);
         bool IsSPorFP = (RegLoc == SP) || (RegLoc == FP);
         if (TRI.isCalleeSavedPhysReg(RegLoc, *MF) || IsSPorFP) {
-          MachineLocation MLoc(RegLoc, /*IsIndirect=*/IsSPorFP);
+          MachineLocation MLoc(RegLoc, /*Indirect=*/IsSPorFP);
           finishCallSiteParams(MLoc, ParamValue->second,
                                ForwardedRegWorklist[ParamFwdReg], Params);
         } else {
@@ -2506,7 +2506,7 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
         }) && "all values are expected to be fragments");
     assert(llvm::is_sorted(Values) && "fragments are expected to be sorted");
 
-    for (auto Fragment : Values)
+    for (const auto &Fragment : Values)
       DwarfDebug::emitDebugLocValue(AP, BT, Fragment, DwarfExpr);
 
   } else {

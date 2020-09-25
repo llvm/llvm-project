@@ -1048,25 +1048,6 @@ static bool tryConstantFoldOp(MachineRegisterInfo &MRI,
   if (!Src0->isImm() && !Src1->isImm())
     return false;
 
-  if (MI->getOpcode() == AMDGPU::V_LSHL_OR_B32 ||
-      MI->getOpcode() == AMDGPU::V_LSHL_ADD_U32 ||
-      MI->getOpcode() == AMDGPU::V_AND_OR_B32) {
-    if (Src0->isImm() && Src0->getImm() == 0) {
-      // v_lshl_or_b32 0, X, Y -> copy Y
-      // v_lshl_or_b32 0, X, K -> v_mov_b32 K
-      // v_lshl_add_b32 0, X, Y -> copy Y
-      // v_lshl_add_b32 0, X, K -> v_mov_b32 K
-      // v_and_or_b32 0, X, Y -> copy Y
-      // v_and_or_b32 0, X, K -> v_mov_b32 K
-      bool UseCopy = TII->getNamedOperand(*MI, AMDGPU::OpName::src2)->isReg();
-      MI->RemoveOperand(Src1Idx);
-      MI->RemoveOperand(Src0Idx);
-
-      MI->setDesc(TII->get(UseCopy ? AMDGPU::COPY : AMDGPU::V_MOV_B32_e32));
-      return true;
-    }
-  }
-
   // and k0, k1 -> v_mov_b32 (k0 & k1)
   // or k0, k1 -> v_mov_b32 (k0 | k1)
   // xor k0, k1 -> v_mov_b32 (k0 ^ k1)

@@ -81,23 +81,28 @@ Sections:
       - Tag:   DT_NULL
         Value: 0x0000000000000000
 DynamicSymbols:
-  - Name:    ccc
+  - Name:    [[NAME=ccc]]
     Binding: STB_GLOBAL
-  - Name:    aaa
+    Type:    [[TYPE=STT_NOTYPE]]
+  - Name:    [[NAME=aaa]]
     Section: .hash
     Binding: STB_GLOBAL
     Value:   0x0000000000001000
-  - Name:    ddd
+    Type:    [[TYPE=STT_NOTYPE]]
+  - Name:    [[NAME=ddd]]
     Index:   SHN_ABS
     Binding: STB_GLOBAL
     Value:   0x0000000000000001
-  - Name:    eee
+    Type:    [[TYPE=STT_NOTYPE]]
+  - Name:    [[NAME=eee]]
     Section: .gnu.hash
     Binding: STB_GLOBAL
-  - Name:    bbb
+    Type:    [[TYPE=STT_NOTYPE]]
+  - Name:    [[NAME=bbb]]
     Section: .hash
     Binding: STB_WEAK
     Value:   0x0000000000001001
+    Type:    [[TYPE=STT_NOTYPE]]
 ProgramHeaders:
   - Type:  PT_LOAD
     Flags: [ PF_R, PF_X ]
@@ -105,6 +110,28 @@ ProgramHeaders:
       - Section: .hash
       - Section: .gnu.hash
       - Section: .dynamic
+
+## Check what we print for unnamed section symbols.
+# RUN: yaml2obj --docnum=1 -DBITS=64 -DTYPE=STT_SECTION -DNAME="''" %s -o %t1-sec-syms.so
+# RUN: llvm-readelf --hash-symbols %t1-sec-syms.so 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t1-sec-syms.so --check-prefix=UNNAMED-SEC-SYMS
+
+# UNNAMED-SEC-SYMS:      Symbol table of .hash for image:
+# UNNAMED-SEC-SYMS-NEXT:  Num   {{.*}} Ndx Name
+# UNNAMED-SEC-SYMS-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0x0 (SHN_UNDEF)
+# UNNAMED-SEC-SYMS-NEXT:    1   {{.*}} UND <?>
+# UNNAMED-SEC-SYMS-NEXT:    5   {{.*}}   1 .hash
+# UNNAMED-SEC-SYMS-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff1 (SHN_ABS)
+# UNNAMED-SEC-SYMS-NEXT:    3   {{.*}} ABS <?>
+# UNNAMED-SEC-SYMS-NEXT:    2   {{.*}}   1 .hash
+# UNNAMED-SEC-SYMS-NEXT:    4   {{.*}}   2 .gnu.hash
+# UNNAMED-SEC-SYMS-EMPTY:
+# UNNAMED-SEC-SYMS:      Symbol table of .gnu.hash for image:
+# UNNAMED-SEC-SYMS-NEXT:  Num {{.*}} Ndx Name
+# UNNAMED-SEC-SYMS-NEXT:    2 {{.*}}   1 .hash
+# UNNAMED-SEC-SYMS-NEXT:    3 {{.*}} ABS <?>
+# UNNAMED-SEC-SYMS-NEXT:    4 {{.*}}   2 .gnu.hash
+# UNNAMED-SEC-SYMS-NEXT:    5 {{.*}}   1 .hash
 
 ## Check the output when only .hash section is present.
 

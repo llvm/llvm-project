@@ -37,7 +37,6 @@ class AssumptionCache;
 class ProfileSummaryInfo;
 class TargetLibraryInfo;
 class TargetTransformInfo;
-struct KnownBits;
 
 /// The core instruction combiner logic.
 ///

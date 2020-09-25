@@ -1,8 +1,10 @@
 // This test checks if internal linkage symbols get unique names with
 // -funique-internal-linkage-names option.
 // RUN: %clang_cc1 -triple x86_64 -x c++ -S -emit-llvm -o - < %s | FileCheck %s --check-prefix=PLAIN
-// RUN: %clang_cc1 -triple x86_64 -x c++ -S -emit-llvm -funique-internal-linkage-names -o - < %s | FileCheck %s --check-prefix=UNIQUE
-// RUN: %clang_cc1 -triple x86_64 -x c++ -S -emit-llvm -fexperimental-new-pass-manager -funique-internal-linkage-names -o - < %s | FileCheck %s --check-prefix=UNIQUE
+// RUN: %clang_cc1 -triple x86_64 -x c++ -O0 -S -emit-llvm -funique-internal-linkage-names -o - < %s | FileCheck %s --check-prefix=UNIQUE
+// RUN: %clang_cc1 -triple x86_64 -x c++ -O1 -S -emit-llvm -funique-internal-linkage-names -o - < %s | FileCheck %s --check-prefix=UNIQUEO1
+// RUN: %clang_cc1 -triple x86_64 -x c++ -O0 -S -emit-llvm -fexperimental-new-pass-manager -funique-internal-linkage-names -o - < %s | FileCheck %s --check-prefix=UNIQUE
+// RUN: %clang_cc1 -triple x86_64 -x c++ -O1 -S -emit-llvm -fexperimental-new-pass-manager -funique-internal-linkage-names -o - < %s | FileCheck %s --check-prefix=UNIQUEO1
 
 static int glob;
 static int foo() {
@@ -59,3 +61,7 @@ int mver_call() {
 // UNIQUE: define weak_odr i32 ()* @_ZL4mverv.resolver()
 // UNIQUE: define internal i32 @_ZL4mverv.{{[0-9a-f]+}}()
 // UNIQUE: define internal i32 @_ZL4mverv.sse4.2.{{[0-9a-f]+}}
+// UNIQUEO1: define internal i32 @_ZL3foov.{{[0-9a-f]+}}()
+// UNIQUEO1: define weak_odr i32 ()* @_ZL4mverv.resolver()
+// UNIQUEO1: define internal i32 @_ZL4mverv.{{[0-9a-f]+}}()
+// UNIQUEO1: define internal i32 @_ZL4mverv.sse4.2.{{[0-9a-f]+}}

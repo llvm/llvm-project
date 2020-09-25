@@ -385,7 +385,7 @@ Code Generation Options
     :option:`-Og` Like :option:`-O1`. In future versions, this option might
     disable different optimizations in order to improve debuggability.
 
-    :option:`-O` Equivalent to :option:`-O2`.
+    :option:`-O` Equivalent to :option:`-O1`.
 
     :option:`-O4` and higher
 

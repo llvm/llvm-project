@@ -41,6 +41,7 @@ void registerSimpleParametricTilingPass();
 void registerSliceAnalysisTestPass();
 void registerSymbolTestPasses();
 void registerTestAffineDataCopyPass();
+void registerTestAffineLoopParametricTilingPass();
 void registerTestAffineLoopUnswitchingPass();
 void registerTestAllReduceLoweringPass();
 void registerTestBufferPlacementPreparationPass();
@@ -104,6 +105,7 @@ void registerTestPasses() {
 #if MLIR_ROCM_CONVERSIONS_ENABLED
   registerTestConvertGPUKernelToHsacoPass();
 #endif
+  registerTestAffineLoopParametricTilingPass();
   registerTestBufferPlacementPreparationPass();
   registerTestDominancePass();
   registerTestFunc();

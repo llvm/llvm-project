@@ -649,10 +649,13 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx,
   }
   if (!DidRemat) {
     LaneBitmask LaneMask;
-    if (LI->hasSubRanges()) {
+    if (OrigLI.hasSubRanges()) {
       LaneMask = LaneBitmask::getNone();
-      for (LiveInterval::SubRange &S : LI->subranges())
-        LaneMask |= S.LaneMask;
+      for (LiveInterval::SubRange &S : OrigLI.subranges()) {
+        if (S.liveAt(UseIdx))
+          LaneMask |= S.LaneMask;
+      }
+      assert(LaneMask.any() && "Interval has no live subranges");
     } else {
       LaneMask = LaneBitmask::getAll();
     }
