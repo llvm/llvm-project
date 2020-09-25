@@ -736,6 +736,7 @@ static std::error_code fillStatus(int StatRet, const struct stat &Status,
 }
 
 std::error_code status(const Twine &Path, file_status &Result, bool Follow) {
+  ++NumStatusCalls;
   SmallString<128> PathStorage;
   StringRef P = Path.toNullTerminatedStringRef(PathStorage);
 
@@ -745,6 +746,7 @@ std::error_code status(const Twine &Path, file_status &Result, bool Follow) {
 }
 
 std::error_code status(int FD, file_status &Result) {
+  ++NumStatusCalls;
   struct stat Status;
   int StatRet = ::fstat(FD, &Status);
   return fillStatus(StatRet, Status, Result);
