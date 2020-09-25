@@ -145,7 +145,7 @@ def FeatureNoRVCHints
                        "Disable RVC Hint Instructions.">;
 def HasRVCHints : Predicate<"Subtarget->enableRVCHintInstrs()">,
                   AssemblerPredicate<(all_of(not FeatureNoRVCHints)),
-                                     "RVC Hint Instructions">;
+                                      "RVC Hint Instructions">;
 
 def FeatureStdExtV
     : SubtargetFeature<"experimental-v", "HasStdExtV", "true",
@@ -216,18 +216,20 @@ include "RISCVCallingConv.td"
 include "RISCVInstrInfo.td"
 include "RISCVRegisterBanks.td"
 include "RISCVSchedRocket.td"
+include "RISCVSchedBullet.td"
 
 //===----------------------------------------------------------------------===//
 // RISC-V processors supported.
 //===----------------------------------------------------------------------===//
 
 def : ProcessorModel<"generic-rv32", NoSchedModel, []>;
-
 def : ProcessorModel<"generic-rv64", NoSchedModel, [Feature64Bit]>;
 
 def : ProcessorModel<"rocket-rv32", RocketModel, []>;
-
 def : ProcessorModel<"rocket-rv64", RocketModel, [Feature64Bit]>;
+
+def : ProcessorModel<"bullet-rv32", BulletModel, []>;
+def : ProcessorModel<"bullet-rv64", BulletModel, [Feature64Bit]>;
 
 def : ProcessorModel<"sifive-e31", RocketModel, [FeatureStdExtA,
                                                  FeatureStdExtC,

@@ -3535,9 +3535,14 @@ TEST(MemorySanitizer, uname) {
 }
 
 TEST(MemorySanitizer, gethostname) {
-  char buf[100];
-  int res = gethostname(buf, 100);
-  ASSERT_EQ(0, res);
+  char buf[1000];
+  EXPECT_EQ(-1, gethostname(buf, 1));
+  EXPECT_EQ(ENAMETOOLONG, errno);
+  EXPECT_NOT_POISONED(buf[0]);
+  EXPECT_POISONED(buf[1]);
+
+  __msan_poison(buf, sizeof(buf));
+  EXPECT_EQ(0, gethostname(buf, sizeof(buf)));
   EXPECT_NOT_POISONED(strlen(buf));
 }
 
