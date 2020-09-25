@@ -199,6 +199,11 @@ namespace AliasDeclEndLocation {
   B something_else;
 }
 
+class PR47176 {
+  friend void f(PR47176, int = 0) noexcept(true) {}
+};
+static_assert(noexcept(f(PR47176())), "");
+
 struct Base { virtual void f() = 0; virtual void g() = 0; virtual void h() = 0; };
 struct MemberComponentOrder : Base {
   void f() override __asm__("foobar") __attribute__(( )) {}
