@@ -462,7 +462,7 @@ private:
 
 public:
   /// \param StartIdx - The starting location of the region.
-  /// \param StartIdx - The length of the region.
+  /// \param Len - The length of the region.
   /// \param FirstInstIt - The starting IRInstructionData of the region.
   /// \param LastInstIt - The ending IRInstructionData of the region.
   IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
