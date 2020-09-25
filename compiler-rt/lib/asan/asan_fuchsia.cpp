@@ -14,15 +14,16 @@
 #include "sanitizer_common/sanitizer_fuchsia.h"
 #if SANITIZER_FUCHSIA
 
-#include "asan_interceptors.h"
-#include "asan_internal.h"
-#include "asan_stack.h"
-#include "asan_thread.h"
-
 #include <limits.h>
 #include <zircon/sanitizer.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
+
+#  include "asan_interceptors.h"
+#  include "asan_internal.h"
+#  include "asan_stack.h"
+#  include "asan_thread.h"
+#  include "lsan/lsan_common.h"
 
 namespace __asan {
 
@@ -235,7 +236,17 @@ void FlushUnneededASanShadowMemory(uptr p, uptr size) {
   __sanitizer_fill_shadow(p, size, 0, 0);
 }
 
+// On Fuchsia, leak detection is done by a special hook after atexit hooks.
+// So this doesn't install any atexit hook like on other platforms.
+void InstallAtExitCheckLeaks() {}
+
 }  // namespace __asan
+
+namespace __lsan {
+
+bool UseExitcodeOnLeak() { return __asan::flags()->halt_on_error; }
+
+}  // namespace __lsan
 
 // These are declared (in extern "C") by <zircon/sanitizer.h>.
 // The system runtime will call our definitions directly.

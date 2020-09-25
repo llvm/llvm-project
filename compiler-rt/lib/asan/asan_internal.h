@@ -123,6 +123,8 @@ void *AsanDlSymNext(const char *sym);
 // `dlopen()` specific initialization inside this function.
 bool HandleDlopenInit();
 
+void InstallAtExitCheckLeaks();
+
 // Add convenient macro for interface functions that may be represented as
 // weak hooks.
 #define ASAN_MALLOC_HOOK(ptr, size)                                   \
