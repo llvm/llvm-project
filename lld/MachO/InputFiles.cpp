@@ -243,10 +243,12 @@ void InputFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
   for (size_t i = 0, n = nList.size(); i < n; ++i) {
     const structs::nlist_64 &sym = nList[i];
 
-    // Undefined symbol
-    if (!sym.n_sect) {
+    if ((sym.n_type & N_TYPE) == N_UNDF) {
       StringRef name = strtab + sym.n_strx;
-      symbols[i] = symtab->addUndefined(name);
+      symbols[i] = sym.n_value == 0
+                       ? symtab->addUndefined(name)
+                       : symtab->addCommon(name, this, sym.n_value,
+                                           1 << GET_COMM_ALIGN(sym.n_desc));
       continue;
     }
 

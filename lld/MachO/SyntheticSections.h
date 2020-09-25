@@ -26,6 +26,7 @@ namespace macho {
 namespace section_names {
 
 constexpr const char pageZero[] = "__pagezero";
+constexpr const char common[] = "__common";
 constexpr const char header[] = "__mach_header";
 constexpr const char binding[] = "__binding";
 constexpr const char weakBinding[] = "__weak_binding";
