@@ -15,7 +15,7 @@ entry:
 
 attributes #0 = { "sign-return-address"="non-leaf" }
 
-attributes #1 = { "branch-target-enforcement" }
+attributes #1 = { "branch-target-enforcement"="true" }
 
 ; No common attribute, no note section
 ; ASM: warning: not setting BTI in feature flags

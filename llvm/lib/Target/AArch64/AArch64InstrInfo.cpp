@@ -5842,84 +5842,20 @@ AArch64InstrInfo::findRegisterToSaveLRTo(const outliner::Candidate &C) const {
 static bool
 outliningCandidatesSigningScopeConsensus(const outliner::Candidate &a,
                                          const outliner::Candidate &b) {
-  const Function &Fa = a.getMF()->getFunction();
-  const Function &Fb = b.getMF()->getFunction();
+  const auto &MFIa = a.getMF()->getInfo<AArch64FunctionInfo>();
+  const auto &MFIb = b.getMF()->getInfo<AArch64FunctionInfo>();
 
-  // If none of the functions have the "sign-return-address" attribute their
-  // signing behaviour is equal
-  if (!Fa.hasFnAttribute("sign-return-address") &&
-      !Fb.hasFnAttribute("sign-return-address")) {
-    return true;
-  }
-
-  // If both functions have the "sign-return-address" attribute their signing
-  // behaviour is equal, if the values of the attributes are equal
-  if (Fa.hasFnAttribute("sign-return-address") &&
-      Fb.hasFnAttribute("sign-return-address")) {
-    StringRef ScopeA =
-        Fa.getFnAttribute("sign-return-address").getValueAsString();
-    StringRef ScopeB =
-        Fb.getFnAttribute("sign-return-address").getValueAsString();
-    return ScopeA.equals(ScopeB);
-  }
-
-  // If function B doesn't have the "sign-return-address" attribute but A does,
-  // the functions' signing behaviour is equal if A's value for
-  // "sign-return-address" is "none" and vice versa.
-  if (Fa.hasFnAttribute("sign-return-address")) {
-    StringRef ScopeA =
-        Fa.getFnAttribute("sign-return-address").getValueAsString();
-    return ScopeA.equals("none");
-  }
-
-  if (Fb.hasFnAttribute("sign-return-address")) {
-    StringRef ScopeB =
-        Fb.getFnAttribute("sign-return-address").getValueAsString();
-    return ScopeB.equals("none");
-  }
-
-  llvm_unreachable("Unkown combination of sign-return-address attributes");
+  return MFIa->shouldSignReturnAddress(false) == MFIb->shouldSignReturnAddress(false) &&
+         MFIa->shouldSignReturnAddress(true) == MFIb->shouldSignReturnAddress(true);
 }
 
 static bool
 outliningCandidatesSigningKeyConsensus(const outliner::Candidate &a,
                                        const outliner::Candidate &b) {
-  const Function &Fa = a.getMF()->getFunction();
-  const Function &Fb = b.getMF()->getFunction();
+  const auto &MFIa = a.getMF()->getInfo<AArch64FunctionInfo>();
+  const auto &MFIb = b.getMF()->getInfo<AArch64FunctionInfo>();
 
-  // If none of the functions have the "sign-return-address-key" attribute
-  // their keys are equal
-  if (!Fa.hasFnAttribute("sign-return-address-key") &&
-      !Fb.hasFnAttribute("sign-return-address-key")) {
-    return true;
-  }
-
-  // If both functions have the "sign-return-address-key" attribute their
-  // keys are equal if the values of "sign-return-address-key" are equal
-  if (Fa.hasFnAttribute("sign-return-address-key") &&
-      Fb.hasFnAttribute("sign-return-address-key")) {
-    StringRef KeyA =
-        Fa.getFnAttribute("sign-return-address-key").getValueAsString();
-    StringRef KeyB =
-        Fb.getFnAttribute("sign-return-address-key").getValueAsString();
-    return KeyA.equals(KeyB);
-  }
-
-  // If B doesn't have the "sign-return-address-key" attribute, both keys are
-  // equal, if function a has the default key (a_key)
-  if (Fa.hasFnAttribute("sign-return-address-key")) {
-    StringRef KeyA =
-        Fa.getFnAttribute("sign-return-address-key").getValueAsString();
-    return KeyA.equals_lower("a_key");
-  }
-
-  if (Fb.hasFnAttribute("sign-return-address-key")) {
-    StringRef KeyB =
-        Fb.getFnAttribute("sign-return-address-key").getValueAsString();
-    return KeyB.equals_lower("a_key");
-  }
-
-  llvm_unreachable("Unkown combination of sign-return-address-key attributes");
+  return MFIa->shouldSignWithBKey() == MFIb->shouldSignWithBKey();
 }
 
 static bool outliningCandidatesV8_3OpsConsensus(const outliner::Candidate &a,
@@ -5975,9 +5911,10 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
   // v8.3a RET can be replaced by RETAA/RETAB and no AUT instruction is
   // necessary. However, at this point we don't know if the outlined function
   // will have a RET instruction so we assume the worst.
-  const Function &FCF = FirstCand.getMF()->getFunction();
   const TargetRegisterInfo &TRI = getRegisterInfo();
-  if (FCF.hasFnAttribute("sign-return-address")) {
+  if (FirstCand.getMF()
+          ->getInfo<AArch64FunctionInfo>()
+          ->shouldSignReturnAddress(true)) {
     // One PAC and one AUT instructions
     NumBytesToCreateFrame += 8;
 
@@ -6106,7 +6043,7 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
   NumBytesToCreateFrame += 4;
 
   bool HasBTI = any_of(RepeatedSequenceLocs, [](outliner::Candidate &C) {
-    return C.getMF()->getFunction().hasFnAttribute("branch-target-enforcement");
+    return C.getMF()->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement();
   });
 
   // We check to see if CFI Instructions are present, and if they are
@@ -6811,27 +6748,11 @@ void AArch64InstrInfo::buildOutlinedFrame(
   // If a bunch of candidates reach this point they must agree on their return
   // address signing. It is therefore enough to just consider the signing
   // behaviour of one of them
-  const Function &CF = OF.Candidates.front().getMF()->getFunction();
-  bool ShouldSignReturnAddr = false;
-  if (CF.hasFnAttribute("sign-return-address")) {
-    StringRef Scope =
-        CF.getFnAttribute("sign-return-address").getValueAsString();
-    if (Scope.equals("all"))
-      ShouldSignReturnAddr = true;
-    else if (Scope.equals("non-leaf") && !IsLeafFunction)
-      ShouldSignReturnAddr = true;
-  }
+  const auto &MFI = *OF.Candidates.front().getMF()->getInfo<AArch64FunctionInfo>();
+  bool ShouldSignReturnAddr = MFI.shouldSignReturnAddress(!IsLeafFunction);
 
   // a_key is the default
-  bool ShouldSignReturnAddrWithAKey = true;
-  if (CF.hasFnAttribute("sign-return-address-key")) {
-    const StringRef Key =
-        CF.getFnAttribute("sign-return-address-key").getValueAsString();
-    // Key can either be a_key or b_key
-    assert((Key.equals_lower("a_key") || Key.equals_lower("b_key")) &&
-           "Return address signing key must be either a_key or b_key");
-    ShouldSignReturnAddrWithAKey = Key.equals_lower("a_key");
-  }
+  bool ShouldSignReturnAddrWithAKey = !MFI.shouldSignWithBKey();
 
   // If this is a tail call outlined function, then there's already a return.
   if (OF.FrameConstructionID == MachineOutlinerTailCall ||

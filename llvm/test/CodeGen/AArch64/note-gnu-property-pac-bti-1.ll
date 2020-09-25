@@ -8,7 +8,7 @@ entry:
   ret i32 0
 }
 
-attributes #0 = { "branch-target-enforcement" }
+attributes #0 = { "branch-target-enforcement"="true" }
 
 ; BTI attribute present
 ; ASM:	    .word	3221225472
