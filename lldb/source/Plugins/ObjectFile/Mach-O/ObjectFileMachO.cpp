@@ -5519,7 +5519,8 @@ std::string ObjectFileMachO::GetIdentifierString() {
   return result;
 }
 
-bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &address, UUID &uuid) {
+bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &address, UUID &uuid,
+                                                ObjectFile::BinaryType &type) {
   address = LLDB_INVALID_ADDRESS;
   uuid.Clear();
   ModuleSP module_sp(GetModule());
@@ -5542,24 +5543,43 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &address, UUID &uuid) {
         // "main bin spec" (main binary specification) data payload is
         // formatted:
         //    uint32_t version       [currently 1]
-        //    uint32_t type          [0 == unspecified, 1 == kernel, 2 == user
-        //    process] uint64_t address       [ UINT64_MAX if address not
-        //    specified ] uuid_t   uuid          [ all zero's if uuid not
-        //    specified ] uint32_t log2_pagesize [ process page size in log base
-        //    2, e.g. 4k pages are 12.  0 for unspecified ]
+        //    uint32_t type          [0 == unspecified, 1 == kernel,
+        //                            2 == user process, 3 == firmware ]
+        //    uint64_t address       [ UINT64_MAX if address not specified ]
+        //    uuid_t   uuid          [ all zero's if uuid not specified ]
+        //    uint32_t log2_pagesize [ process page size in log base
+        //                             2, e.g. 4k pages are 12.
+        //                             0 for unspecified ]
+        //    uint32_t unused        [ for alignment ]
 
         if (strcmp("main bin spec", data_owner) == 0 && size >= 32) {
           offset = fileoff;
           uint32_t version;
           if (m_data.GetU32(&offset, &version, 1) != nullptr && version == 1) {
-            uint32_t type = 0;
+            uint32_t binspec_type = 0;
             uuid_t raw_uuid;
             memset(raw_uuid, 0, sizeof(uuid_t));
 
-            if (m_data.GetU32(&offset, &type, 1) &&
+            if (m_data.GetU32(&offset, &binspec_type, 1) &&
                 m_data.GetU64(&offset, &address, 1) &&
                 m_data.CopyData(offset, sizeof(uuid_t), raw_uuid) != 0) {
               uuid = UUID::fromOptionalData(raw_uuid, sizeof(uuid_t));
+              // convert the "main bin spec" type into our
+              // ObjectFile::BinaryType enum
+              switch (binspec_type) {
+              case 0:
+                type = eBinaryTypeUnknown;
+                break;
+              case 1:
+                type = eBinaryTypeKernel;
+                break;
+              case 2:
+                type = eBinaryTypeUser;
+                break;
+              case 3:
+                type = eBinaryTypeStandalone;
+                break;
+              }
               return true;
             }
           }
