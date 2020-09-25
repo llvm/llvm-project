@@ -576,6 +576,9 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
     Depth = depth;
   if (printSymbolizedStackTrace(Argv0, StackTrace, Depth, OS))
     return;
+  OS << "Stack dump without symbol names (ensure you have llvm-symbolizer in "
+        "your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point "
+        "to it):\n";
 #if HAVE_DLFCN_H && HAVE_DLADDR
   int width = 0;
   for (int i = 0; i < depth; ++i) {

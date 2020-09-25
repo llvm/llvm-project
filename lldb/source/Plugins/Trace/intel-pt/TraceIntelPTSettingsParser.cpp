@@ -24,45 +24,21 @@ StringRef TraceIntelPTSettingsParser::GetPluginSchema() {
   })";
 }
 
-llvm::Error TraceIntelPTSettingsParser::ParsePTCPU(const json::Object &trace) {
-  llvm::Expected<const json::Object &> pt_cpu =
-      json_helpers::GetObjectOrError(trace, "pt_cpu");
-  if (!pt_cpu)
-    return pt_cpu.takeError();
-
-  llvm::Expected<llvm::StringRef> vendor =
-      json_helpers::GetStringOrError(*pt_cpu, "vendor");
-  if (!vendor)
-    return vendor.takeError();
-
-  llvm::Expected<int64_t> family =
-      json_helpers::GetIntegerOrError(*pt_cpu, "family");
-  if (!family)
-    return family.takeError();
-
-  llvm::Expected<int64_t> model =
-      json_helpers::GetIntegerOrError(*pt_cpu, "model");
-  if (!model)
-    return model.takeError();
-
-  llvm::Expected<int64_t> stepping =
-      json_helpers::GetIntegerOrError(*pt_cpu, "stepping");
-  if (!stepping)
-    return stepping.takeError();
-
-  m_pt_cpu = {vendor->compare("intel") == 0 ? pcv_intel : pcv_unknown,
-              static_cast<uint16_t>(*family), static_cast<uint8_t>(*model),
-              static_cast<uint8_t>(*stepping)};
-  return llvm::Error::success();
+void TraceIntelPTSettingsParser::ParsePTCPU(const JSONPTCPU &pt_cpu) {
+  m_pt_cpu = {pt_cpu.vendor.compare("intel") == 0 ? pcv_intel : pcv_unknown,
+              static_cast<uint16_t>(pt_cpu.family),
+              static_cast<uint8_t>(pt_cpu.model),
+              static_cast<uint8_t>(pt_cpu.stepping)};
 }
 
-llvm::Error TraceIntelPTSettingsParser::ParsePluginSettings() {
-  llvm::Expected<const json::Object &> trace =
-      json_helpers::GetObjectOrError(m_settings, "trace");
-  if (!trace)
-    return trace.takeError();
-  if (llvm::Error err = ParsePTCPU(*trace))
-    return err;
+llvm::Error TraceIntelPTSettingsParser::ParsePluginSettings(
+    const llvm::json::Value &plugin_settings) {
+  json::Path::Root root("settings.trace");
+  JSONIntelPTSettings settings;
+  if (!json::fromJSON(plugin_settings, settings, root))
+    return CreateJSONError(root, plugin_settings);
+
+  ParsePTCPU(settings.pt_cpu);
 
   m_trace.m_pt_cpu = m_pt_cpu;
   return llvm::Error::success();

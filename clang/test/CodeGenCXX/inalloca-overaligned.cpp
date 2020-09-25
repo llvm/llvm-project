@@ -85,3 +85,27 @@ int pass_inalloca_both() {
 // CHECK: [[TMP:%[^ ]*]] = alloca %struct.Both, align 8
 // CHECK: call x86_thiscallcc %struct.Both* @"??0Both@@QAE@XZ"(%struct.Both* [[TMP]])
 // CHECK: call i32 @"?receive_inalloca_both@@Y{{.*}}"(<{ %struct.NonTrivial, %struct.Both* }>* inalloca %argmem)
+
+// Here we have a type that is:
+// - overaligned
+// - not trivially copyable
+// - can be "passed in registers" due to [[trivial_abi]]
+// Clang should pass it directly.
+struct [[trivial_abi]] alignas(8) MyPtr {
+  MyPtr();
+  MyPtr(const MyPtr &o);
+  ~MyPtr();
+  int *ptr;
+};
+
+int receiveMyPtr(MyPtr o) { return *o.ptr; }
+
+// CHECK-LABEL: define dso_local i32 @"?receiveMyPtr@@Y{{.*}}"
+// CHECK-SAME: (%struct.MyPtr* %o)
+
+int passMyPtr() { return receiveMyPtr(MyPtr()); }
+
+// CHECK-LABEL: define dso_local i32 @"?passMyPtr@@Y{{.*}}"
+// CHECK: [[TMP:%[^ ]*]] = alloca %struct.MyPtr, align 8
+// CHECK: call x86_thiscallcc %struct.MyPtr* @"??0MyPtr@@QAE@XZ"(%struct.MyPtr* [[TMP]])
+// CHECK: call i32 @"?receiveMyPtr@@Y{{.*}}"(%struct.MyPtr* [[TMP]])

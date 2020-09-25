@@ -82,6 +82,11 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
     set(CUDA_ARCH ${CUDA_ARCH} -gencode arch=compute_${sm},code=sm_${sm})
   endforeach()
 
+  # Override default MAX_SM in src/target_impl.h if requested
+  if (DEFINED LIBOMPTARGET_NVPTX_MAX_SM)
+    set(MAX_SM_DEFINITION "-DMAX_SM=${LIBOMPTARGET_NVPTX_MAX_SM}")
+  endif()
+
   # Activate RTL message dumps if requested by the user.
   set(LIBOMPTARGET_NVPTX_DEBUG FALSE CACHE BOOL
     "Activate NVPTX device RTL debug messages.")
@@ -96,7 +101,7 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
   list(APPEND CUDA_NVCC_FLAGS -I${devicertl_base_directory}
                               -I${devicertl_nvptx_directory}/src)
   cuda_add_library(omptarget-nvptx STATIC ${cuda_src_files} ${omp_data_objects}
-      OPTIONS ${CUDA_ARCH} ${CUDA_DEBUG})
+      OPTIONS ${CUDA_ARCH} ${CUDA_DEBUG} ${MAX_SM_DEFINITION})
 
   # Install device RTL under the lib destination folder.
   install(TARGETS omptarget-nvptx ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}")
@@ -159,7 +164,7 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
         get_filename_component(outfile ${src} NAME)
 
         add_custom_command(OUTPUT ${outfile}-sm_${sm}.bc
-          COMMAND ${LIBOMPTARGET_NVPTX_SELECTED_CUDA_COMPILER} ${bc_flags} ${cuda_arch}
+          COMMAND ${LIBOMPTARGET_NVPTX_SELECTED_CUDA_COMPILER} ${bc_flags} ${cuda_arch} ${MAX_SM_DEFINITION}
             -c ${infile} -o ${outfile}-sm_${sm}.bc
           DEPENDS ${infile}
           IMPLICIT_DEPENDS CXX ${infile}

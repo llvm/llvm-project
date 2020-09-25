@@ -74,6 +74,27 @@ Symbol *SymbolTable::addUndefined(StringRef name) {
   return s;
 }
 
+Symbol *SymbolTable::addCommon(StringRef name, InputFile *file, uint64_t size,
+                               uint32_t align) {
+  Symbol *s;
+  bool wasInserted;
+  std::tie(s, wasInserted) = insert(name);
+
+  if (!wasInserted) {
+    if (auto *common = dyn_cast<CommonSymbol>(s)) {
+      if (size < common->size)
+        return s;
+    } else if (isa<Defined>(s)) {
+      return s;
+    }
+    // Common symbols take priority over all non-Defined symbols, so in case of
+    // a name conflict, we fall through to the replaceSymbol() call below.
+  }
+
+  replaceSymbol<CommonSymbol>(s, name, file, size, align);
+  return s;
+}
+
 Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file, bool isWeakDef,
                               bool isTlv) {
   Symbol *s;

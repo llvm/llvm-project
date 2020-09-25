@@ -307,6 +307,7 @@ static void parseLLVMOptions(const LinkingContext &ctx) {
     for (unsigned i = 0; i != numArgs; ++i)
       args[i + 1] = ctx.llvmOptions()[i];
     args[numArgs + 1] = nullptr;
+    llvm::cl::ResetAllOptionOccurrences();
     llvm::cl::ParseCommandLineOptions(numArgs + 1, args);
   }
 }

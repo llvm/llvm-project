@@ -67,20 +67,6 @@ public:
     return 0;
   }
 
-  /// As next(), but allow duplicates to be returned, and stop before the
-  /// Limit'th register in the RegisterClassInfo allocation order.
-  ///
-  /// This can produce more than Limit registers if there are hints.
-  unsigned nextWithDups(unsigned Limit) {
-    if (Pos < 0)
-      return Hints.end()[Pos++];
-    if (HardHints)
-      return 0;
-    if (Pos < int(Limit))
-      return Order[Pos++];
-    return 0;
-  }
-
   /// Start over from the beginning.
   void rewind() { Pos = -int(Hints.size()); }
 

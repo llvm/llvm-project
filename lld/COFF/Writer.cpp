@@ -88,6 +88,8 @@ OutputSection *Chunk::getOutputSection() const {
   return osidx == 0 ? nullptr : outputSections[osidx - 1];
 }
 
+void OutputSection::clear() { outputSections.clear(); }
+
 namespace {
 
 class DebugDirectoryChunk : public NonSectionChunk {
@@ -600,9 +602,6 @@ void Writer::finalizeAddresses() {
 // The main function of the writer.
 void Writer::run() {
   ScopedTimer t1(codeLayoutTimer);
-
-  // First, clear the output sections from previous runs
-  outputSections.clear();
 
   createImportTables();
   createSections();

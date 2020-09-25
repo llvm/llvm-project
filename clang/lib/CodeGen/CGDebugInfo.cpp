@@ -2281,22 +2281,20 @@ static bool hasExplicitMemberDefinition(CXXRecordDecl::method_iterator I,
 }
 
 static bool canUseCtorHoming(const CXXRecordDecl *RD) {
-  // Constructor homing can be used for classes that have at least one
-  // constructor and have no trivial or constexpr constructors.
+  // Constructor homing can be used for classes that cannnot be constructed
+  // without emitting code for one of their constructors. This is classes that
+  // don't have trivial or constexpr constructors, or can be created from
+  // aggregate initialization. Also skip lambda objects because they don't call
+  // constructors.
+
   // Skip this optimization if the class or any of its methods are marked
   // dllimport.
-  if (RD->isLambda() || RD->hasConstexprNonCopyMoveConstructor() ||
-      isClassOrMethodDLLImport(RD))
+  if (isClassOrMethodDLLImport(RD))
     return false;
 
-  if (RD->ctors().empty())
-    return false;
-
-  for (const auto *Ctor : RD->ctors())
-    if (Ctor->isTrivial() && !Ctor->isCopyOrMoveConstructor())
-      return false;
-
-  return true;
+  return !RD->isLambda() && !RD->isAggregate() &&
+         !RD->hasTrivialDefaultConstructor() &&
+         !RD->hasConstexprNonCopyMoveConstructor();
 }
 
 static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,

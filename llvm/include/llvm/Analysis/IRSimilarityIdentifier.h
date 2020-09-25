@@ -52,6 +52,8 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
 
 namespace llvm {
@@ -695,6 +697,50 @@ private:
 };
 
 } // end namespace IRSimilarity
+
+/// An analysis pass based on legacy pass manager that runs and returns
+/// IRSimilarityIdentifier run on the Module.
+class IRSimilarityIdentifierWrapperPass : public ModulePass {
+  std::unique_ptr<IRSimilarity::IRSimilarityIdentifier> IRSI;
+
+public:
+  static char ID;
+  IRSimilarityIdentifierWrapperPass();
+
+  IRSimilarity::IRSimilarityIdentifier &getIRSI() { return *IRSI; }
+  const IRSimilarity::IRSimilarityIdentifier &getIRSI() const { return *IRSI; }
+
+  bool doInitialization(Module &M) override;
+  bool doFinalization(Module &M) override;
+  bool runOnModule(Module &M) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+};
+
+/// An analysis pass that runs and returns the IRSimilarityIdentifier run on the
+/// Module.
+class IRSimilarityAnalysis : public AnalysisInfoMixin<IRSimilarityAnalysis> {
+public:
+  typedef IRSimilarity::IRSimilarityIdentifier Result;
+
+  Result run(Module &M, ModuleAnalysisManager &);
+
+private:
+  friend AnalysisInfoMixin<IRSimilarityAnalysis>;
+  static AnalysisKey Key;
+};
+
+/// Printer pass that uses \c IRSimilarityAnalysis.
+class IRSimilarityAnalysisPrinterPass
+    : public PassInfoMixin<IRSimilarityAnalysisPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit IRSimilarityAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_IRSIMILARITYIDENTIFIER_H

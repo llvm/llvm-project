@@ -387,7 +387,14 @@ void LegalizerHelper::buildWidenedRemergeToDst(Register DstReg, LLT LCMTy,
   }
 
   if (LCMTy.isVector()) {
-    MIRBuilder.buildExtract(DstReg, Remerge, 0);
+    unsigned NumDefs = LCMTy.getSizeInBits() / DstTy.getSizeInBits();
+    SmallVector<Register, 8> UnmergeDefs(NumDefs);
+    UnmergeDefs[0] = DstReg;
+    for (unsigned I = 1; I != NumDefs; ++I)
+      UnmergeDefs[I] = MRI.createGenericVirtualRegister(DstTy);
+
+    MIRBuilder.buildUnmerge(UnmergeDefs,
+                            MIRBuilder.buildMerge(LCMTy, RemergeRegs));
     return;
   }
 

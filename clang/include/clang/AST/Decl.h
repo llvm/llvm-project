@@ -4513,8 +4513,14 @@ public:
 
 /// Insertion operator for diagnostics.  This allows sending NamedDecl's
 /// into a diagnostic with <<.
-inline const StreamableDiagnosticBase &
-operator<<(const StreamableDiagnosticBase &PD, const NamedDecl *ND) {
+inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
+                                           const NamedDecl* ND) {
+  DB.AddTaggedVal(reinterpret_cast<intptr_t>(ND),
+                  DiagnosticsEngine::ak_nameddecl);
+  return DB;
+}
+inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
+                                           const NamedDecl* ND) {
   PD.AddTaggedVal(reinterpret_cast<intptr_t>(ND),
                   DiagnosticsEngine::ak_nameddecl);
   return PD;

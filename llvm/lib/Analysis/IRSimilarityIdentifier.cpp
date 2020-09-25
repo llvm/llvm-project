@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/User.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/SuffixTree.h"
 
 using namespace llvm;
@@ -466,8 +467,6 @@ static void createCandidatesFromSuffixTree(
     std::vector<IRSimilarityCandidate> &CandsForRepSubstring) {
 
   unsigned StringLen = RS.Length;
-  unsigned NumFound = 0;
-  unsigned PreviousIdx = 0;
 
   // Create an IRSimilarityCandidate for instance of this subsequence \p RS.
   for (const unsigned &StartIdx : RS.StartIndices) {
@@ -487,9 +486,6 @@ static void createCandidatesFromSuffixTree(
     // IRSimilarityCandidate for this region.
     if (ContainsIllegal)
       continue;
-
-    PreviousIdx = EndIdx;
-    NumFound++;
 
     // We are getting iterators to the instructions in this region of code
     // by advancing the start and end indices from the start of the
@@ -644,3 +640,58 @@ SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(Module &M) {
 
   return SimilarityCandidates.getValue();
 }
+
+INITIALIZE_PASS(IRSimilarityIdentifierWrapperPass, "ir-similarity-identifier",
+                "ir-similarity-identifier", false, true)
+
+IRSimilarityIdentifierWrapperPass::IRSimilarityIdentifierWrapperPass()
+    : ModulePass(ID) {
+  initializeIRSimilarityIdentifierWrapperPassPass(
+      *PassRegistry::getPassRegistry());
+}
+
+bool IRSimilarityIdentifierWrapperPass::doInitialization(Module &M) {
+  IRSI.reset(new IRSimilarityIdentifier(M));
+  return false;
+}
+
+bool IRSimilarityIdentifierWrapperPass::doFinalization(Module &M) {
+  IRSI.reset();
+  return false;
+}
+
+bool IRSimilarityIdentifierWrapperPass::runOnModule(Module &M) {
+  // All the real work is done in the constructor for the pass.
+  IRSI.reset(new IRSimilarityIdentifier(M));
+  return false;
+}
+
+AnalysisKey IRSimilarityAnalysis::Key;
+IRSimilarityIdentifier IRSimilarityAnalysis::run(Module &M,
+                                               ModuleAnalysisManager &) {
+
+  return IRSimilarityIdentifier(M);
+}
+
+PreservedAnalyses
+IRSimilarityAnalysisPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
+  IRSimilarityIdentifier &IRSI = AM.getResult<IRSimilarityAnalysis>(M);
+  Optional<SimilarityGroupList> &SimilarityCandidatesOpt = IRSI.getSimilarity();
+
+  for (std::vector<IRSimilarityCandidate> &CandVec : *SimilarityCandidatesOpt) {
+    OS << CandVec.size() << " candidates of length "
+       << CandVec.begin()->getLength() << ".  Found in: \n";
+    for (IRSimilarityCandidate &Cand : CandVec) {
+      OS << "  Function: " << Cand.front()->Inst->getFunction()->getName().str()
+         << ",  Basic Block: ";
+      if (Cand.front()->Inst->getParent()->getName().str() == "")
+        OS << "(unnamed)\n";
+      else
+        OS << Cand.front()->Inst->getParent()->getName().str() << "\n";
+    }
+  }
+
+  return PreservedAnalyses::all();
+}
+
+char IRSimilarityIdentifierWrapperPass::ID = 0;

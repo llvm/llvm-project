@@ -80,6 +80,27 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
   lld::stdoutOS = &stdoutOS;
   lld::stderrOS = &stderrOS;
 
+  errorHandler().cleanupCallback = []() {
+    freeArena();
+
+    inputSections.clear();
+    outputSections.clear();
+    archiveFiles.clear();
+    binaryFiles.clear();
+    bitcodeFiles.clear();
+    lazyObjFiles.clear();
+    objectFiles.clear();
+    sharedFiles.clear();
+    backwardReferences.clear();
+
+    tar = nullptr;
+    memset(&in, 0, sizeof(in));
+
+    partitions = {Partition()};
+
+    SharedFile::vernauxNum = 0;
+  };
+
   errorHandler().logName = args::getFilenameWithoutExe(args[0]);
   errorHandler().errorLimitExceededMsg =
       "too many errors emitted, stopping now (use "
@@ -87,27 +108,12 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
   errorHandler().exitEarly = canExitEarly;
   stderrOS.enable_colors(stderrOS.has_colors());
 
-  inputSections.clear();
-  outputSections.clear();
-  archiveFiles.clear();
-  binaryFiles.clear();
-  bitcodeFiles.clear();
-  lazyObjFiles.clear();
-  objectFiles.clear();
-  sharedFiles.clear();
-  backwardReferences.clear();
-
   config = make<Configuration>();
   driver = make<LinkerDriver>();
   script = make<LinkerScript>();
   symtab = make<SymbolTable>();
 
-  tar = nullptr;
-  memset(&in, 0, sizeof(in));
-
   partitions = {Partition()};
-
-  SharedFile::vernauxNum = 0;
 
   config->progName = args[0];
 
@@ -119,8 +125,10 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
   if (canExitEarly)
     exitLld(errorCount() ? 1 : 0);
 
-  freeArena();
-  return !errorCount();
+  bool ret = errorCount() == 0;
+  if (!canExitEarly)
+    errorHandler().reset();
+  return ret;
 }
 
 // Parses a linker -m option.
@@ -887,6 +895,7 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   raw_string_ostream os(err);
 
   const char *argv[] = {config->progName.data(), opt.data()};
+  cl::ResetAllOptionOccurrences();
   if (cl::ParseCommandLineOptions(2, argv, "", &os))
     return;
   os.flush();

@@ -249,14 +249,9 @@ body: |
     ; GFX8: [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; GFX8: [[BSWAP:%[0-9]+]]:_(<2 x s16>) = G_BSWAP [[BITCAST]]
     ; GFX8: [[BSWAP1:%[0-9]+]]:_(<2 x s16>) = G_BSWAP [[BITCAST1]]
-    ; GFX8: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BSWAP]](<2 x s16>), [[BSWAP1]](<2 x s16>), [[DEF]](<2 x s16>)
-    ; GFX8: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<6 x s16>), 0
-    ; GFX8: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; GFX8: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
-    ; GFX8: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT]](<4 x s16>)
-    ; GFX8: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+    ; GFX8: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[BSWAP]](<2 x s16>)
     ; GFX8: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C1]](s32)
-    ; GFX8: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
+    ; GFX8: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[BSWAP1]](<2 x s16>)
     ; GFX8: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST3]], [[C1]](s32)
     ; GFX8: [[COPY6:%[0-9]+]]:_(s32) = COPY [[BITCAST2]](s32)
     ; GFX8: [[COPY7:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)

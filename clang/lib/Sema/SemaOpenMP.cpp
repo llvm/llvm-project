@@ -159,6 +159,7 @@ private:
     OpenMPDirectiveKind Directive = OMPD_unknown;
     DeclarationNameInfo DirectiveName;
     Scope *CurScope = nullptr;
+    DeclContext *Context = nullptr;
     SourceLocation ConstructLoc;
     /// Set of 'depend' clauses with 'sink|source' dependence kind. Required to
     /// get the data (loop counters etc.) about enclosing loop-based construct.
@@ -918,6 +919,7 @@ public:
     const SharingMapTy *Top = getTopOfStackOrNull();
     return Top ? Top->CurScope : nullptr;
   }
+  void setContext(DeclContext *DC) { getTopOfStack().Context = DC; }
   SourceLocation getConstructLoc() const {
     const SharingMapTy *Top = getTopOfStackOrNull();
     return Top ? Top->ConstructLoc : SourceLocation();
@@ -1531,11 +1533,17 @@ bool DSAStackTy::isOpenMPLocal(VarDecl *D, const_iterator I) const {
   for (const_iterator E = end(); I != E; ++I) {
     if (isImplicitOrExplicitTaskingRegion(I->Directive) ||
         isOpenMPTargetExecutionDirective(I->Directive)) {
-      Scope *TopScope = I->CurScope ? I->CurScope->getParent() : nullptr;
-      Scope *CurScope = getCurScope();
-      while (CurScope && CurScope != TopScope && !CurScope->isDeclScope(D))
-        CurScope = CurScope->getParent();
-      return CurScope != TopScope;
+      if (I->CurScope) {
+        Scope *TopScope = I->CurScope->getParent();
+        Scope *CurScope = getCurScope();
+        while (CurScope && CurScope != TopScope && !CurScope->isDeclScope(D))
+          CurScope = CurScope->getParent();
+        return CurScope != TopScope;
+      }
+      for (DeclContext *DC = D->getDeclContext(); DC; DC = DC->getParent())
+        if (I->Context == DC)
+          return true;
+      return false;
     }
   }
   return false;
@@ -1888,27 +1896,27 @@ enum class FunctionEmissionStatus {
 };
 } // anonymous namespace
 
-Sema::SemaDiagnosticBuilder Sema::diagIfOpenMPDeviceCode(SourceLocation Loc,
-                                                         unsigned DiagID) {
+Sema::DeviceDiagBuilder Sema::diagIfOpenMPDeviceCode(SourceLocation Loc,
+                                                     unsigned DiagID) {
   assert(LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
          "Expected OpenMP device compilation.");
 
   FunctionDecl *FD = getCurFunctionDecl();
-  SemaDiagnosticBuilder::Kind Kind = SemaDiagnosticBuilder::K_Nop;
+  DeviceDiagBuilder::Kind Kind = DeviceDiagBuilder::K_Nop;
   if (FD) {
     FunctionEmissionStatus FES = getEmissionStatus(FD);
     switch (FES) {
     case FunctionEmissionStatus::Emitted:
-      Kind = SemaDiagnosticBuilder::K_Immediate;
+      Kind = DeviceDiagBuilder::K_Immediate;
       break;
     case FunctionEmissionStatus::Unknown:
       Kind = isOpenMPDeviceDelayedContext(*this)
-                 ? SemaDiagnosticBuilder::K_Deferred
-                 : SemaDiagnosticBuilder::K_Immediate;
+                 ? DeviceDiagBuilder::K_Deferred
+                 : DeviceDiagBuilder::K_Immediate;
       break;
     case FunctionEmissionStatus::TemplateDiscarded:
     case FunctionEmissionStatus::OMPDiscarded:
-      Kind = SemaDiagnosticBuilder::K_Nop;
+      Kind = DeviceDiagBuilder::K_Nop;
       break;
     case FunctionEmissionStatus::CUDADiscarded:
       llvm_unreachable("CUDADiscarded unexpected in OpenMP device compilation");
@@ -1916,30 +1924,30 @@ Sema::SemaDiagnosticBuilder Sema::diagIfOpenMPDeviceCode(SourceLocation Loc,
     }
   }
 
-  return SemaDiagnosticBuilder(Kind, Loc, DiagID, getCurFunctionDecl(), *this);
+  return DeviceDiagBuilder(Kind, Loc, DiagID, getCurFunctionDecl(), *this);
 }
 
-Sema::SemaDiagnosticBuilder Sema::diagIfOpenMPHostCode(SourceLocation Loc,
-                                                       unsigned DiagID) {
+Sema::DeviceDiagBuilder Sema::diagIfOpenMPHostCode(SourceLocation Loc,
+                                                   unsigned DiagID) {
   assert(LangOpts.OpenMP && !LangOpts.OpenMPIsDevice &&
          "Expected OpenMP host compilation.");
   FunctionEmissionStatus FES = getEmissionStatus(getCurFunctionDecl());
-  SemaDiagnosticBuilder::Kind Kind = SemaDiagnosticBuilder::K_Nop;
+  DeviceDiagBuilder::Kind Kind = DeviceDiagBuilder::K_Nop;
   switch (FES) {
   case FunctionEmissionStatus::Emitted:
-    Kind = SemaDiagnosticBuilder::K_Immediate;
+    Kind = DeviceDiagBuilder::K_Immediate;
     break;
   case FunctionEmissionStatus::Unknown:
-    Kind = SemaDiagnosticBuilder::K_Deferred;
+    Kind = DeviceDiagBuilder::K_Deferred;
     break;
   case FunctionEmissionStatus::TemplateDiscarded:
   case FunctionEmissionStatus::OMPDiscarded:
   case FunctionEmissionStatus::CUDADiscarded:
-    Kind = SemaDiagnosticBuilder::K_Nop;
+    Kind = DeviceDiagBuilder::K_Nop;
     break;
   }
 
-  return SemaDiagnosticBuilder(Kind, Loc, DiagID, getCurFunctionDecl(), *this);
+  return DeviceDiagBuilder(Kind, Loc, DiagID, getCurFunctionDecl(), *this);
 }
 
 static OpenMPDefaultmapClauseKind
@@ -4148,6 +4156,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   default:
     llvm_unreachable("Unknown OpenMP directive");
   }
+  DSAStack->setContext(CurContext);
 }
 
 int Sema::getNumberOfConstructScopes(unsigned Level) const {
@@ -14413,7 +14422,7 @@ OMPClause *Sema::ActOnOpenMPLastprivateClause(
         if (!isOpenMPCapturedDecl(D))
           ExprCaptures.push_back(Ref->getDecl());
       }
-      if (TopDVar.CKind == OMPC_firstprivate ||
+      if ((TopDVar.CKind == OMPC_firstprivate && !TopDVar.PrivateCopy) ||
           (!isOpenMPCapturedDecl(D) &&
            Ref->getDecl()->hasAttr<OMPCaptureNoInitAttr>())) {
         ExprResult RefRes = DefaultLvalueConversion(Ref);

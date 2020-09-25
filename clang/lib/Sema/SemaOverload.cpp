@@ -11522,19 +11522,9 @@ void OverloadCandidateSet::NoteCandidates(PartialDiagnosticAt PD,
     StringRef Opc, SourceLocation OpLoc,
     llvm::function_ref<bool(OverloadCandidate &)> Filter) {
 
-  bool DeferHint = false;
-  if (S.getLangOpts().CUDA && S.getLangOpts().GPUDeferDiag) {
-    // Defer diagnostic for CUDA/HIP if there are wrong-sided candidates.
-    auto WrongSidedCands =
-        CompleteCandidates(S, OCD_AllCandidates, Args, OpLoc, [](auto &Cand) {
-          return Cand.Viable == false &&
-                 Cand.FailureKind == ovl_fail_bad_target;
-        });
-    DeferHint = WrongSidedCands.size();
-  }
   auto Cands = CompleteCandidates(S, OCD, Args, OpLoc, Filter);
 
-  S.Diag(PD.first, PD.second, DeferHint);
+  S.Diag(PD.first, PD.second);
 
   NoteCandidates(S, Args, Cands, Opc, OpLoc);
 

@@ -111,7 +111,7 @@ public:
   /// \return
   ///   An error object containing the reason if there is a failure.
   llvm::Error ParseSettings(Debugger &debugger,
-                            const llvm::json::Object &settings,
+                            const llvm::json::Value &settings,
                             llvm::StringRef settings_dir);
 
   /// Get the JSON schema of the settings for the trace plug-in.

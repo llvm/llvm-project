@@ -3053,6 +3053,11 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     applyMappingImage(MI, OpdMapper, MRI, RSrcIntrin->RsrcArg);
     return;
   }
+  case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY: {
+    unsigned N = MI.getNumExplicitOperands() - 2;
+    executeInWaterfallLoop(MI, MRI, { N });
+    return;
+  }
   case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS: {
     auto IntrID = MI.getIntrinsicID();
     switch (IntrID) {
@@ -4241,6 +4246,14 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // to derive the register bank from the MCInstrDesc.
     assert(RSrcIntrin->IsImage);
     return getImageMapping(MRI, MI, RSrcIntrin->RsrcArg);
+  }
+  case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY: {
+    unsigned N = MI.getNumExplicitOperands() - 2;
+    OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 128);
+    OpdsMapping[N] = getSGPROpMapping(MI.getOperand(N).getReg(), MRI, *TRI);
+    for (unsigned I = 2; I < N; ++I)
+      OpdsMapping[I] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
+    break;
   }
   case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS: {
     auto IntrID = MI.getIntrinsicID();

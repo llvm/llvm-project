@@ -86,7 +86,16 @@ enum NodeType {
   /// the parent's frame or return address, and so on.
   FRAMEADDR,
   RETURNADDR,
+
+  /// ADDROFRETURNADDR - Represents the llvm.addressofreturnaddress intrinsic.
+  /// This node takes no operand, returns a target-specific pointer to the
+  /// place in the stack frame where the return address of the current
+  /// function is stored.
   ADDROFRETURNADDR,
+
+  /// SPONENTRY - Represents the llvm.sponentry intrinsic. Takes no argument
+  /// and returns the stack pointer value at the entry of the current
+  /// function calling this intrinsic.
   SPONENTRY,
 
   /// LOCAL_RECOVER - Represents the llvm.localrecover intrinsic.

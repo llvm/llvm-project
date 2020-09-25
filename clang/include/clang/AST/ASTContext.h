@@ -3064,9 +3064,8 @@ private:
 };
 
 /// Insertion operator for diagnostics.
-const StreamableDiagnosticBase &
-operator<<(const StreamableDiagnosticBase &DB,
-           const ASTContext::SectionInfo &Section);
+const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
+                                    const ASTContext::SectionInfo &Section);
 
 /// Utility function for constructing a nullary selector.
 inline Selector GetNullarySelector(StringRef name, ASTContext &Ctx) {

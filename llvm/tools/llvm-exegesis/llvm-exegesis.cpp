@@ -406,7 +406,7 @@ static void analysisMain() {
   if (AnalysisClustersOutputFile.empty() &&
       AnalysisInconsistenciesOutputFile.empty()) {
     ExitWithError(
-        "for --mode=analysis: At least one of --analysis-clusters-output-file"
+        "for --mode=analysis: At least one of --analysis-clusters-output-file "
         "and --analysis-inconsistencies-output-file must be specified");
   }
 
