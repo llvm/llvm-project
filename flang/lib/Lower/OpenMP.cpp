@@ -87,7 +87,6 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   if (parallelDirective.v == llvm::omp::OMPD_parallel) {
     auto &firOpBuilder = converter.getFirOpBuilder();
     auto currentLocation = converter.getCurrentLocation();
-    auto insertPt = firOpBuilder.saveInsertionPoint();
 
     // Clauses.
     // FIXME: Add support for other clauses.
@@ -117,7 +116,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     firOpBuilder.setInsertionPointToStart(&block);
     // Ensure the block is well-formed.
     firOpBuilder.create<mlir::omp::TerminatorOp>(currentLocation);
-    firOpBuilder.restoreInsertionPoint(insertPt);
+
+    // Place the insertion point to the start of the first block.
+    firOpBuilder.setInsertionPointToStart(&block);
   }
 }
 
