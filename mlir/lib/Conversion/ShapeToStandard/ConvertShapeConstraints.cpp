@@ -124,7 +124,7 @@ namespace {
 // `shape.const_witness true`.
 class ConvertShapeConstraints
     : public ConvertShapeConstraintsBase<ConvertShapeConstraints> {
-  void runOnOperation() {
+  void runOnOperation() override {
     auto func = getOperation();
     auto *context = &getContext();
 
