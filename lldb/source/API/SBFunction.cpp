@@ -152,7 +152,7 @@ SBAddress SBFunction::GetStartAddress() {
 
   SBAddress addr;
   if (m_opaque_ptr)
-    addr.SetAddress(&m_opaque_ptr->GetAddressRange().GetBaseAddress());
+    addr.SetAddress(m_opaque_ptr->GetAddressRange().GetBaseAddress());
   return LLDB_RECORD_RESULT(addr);
 }
 
@@ -163,7 +163,7 @@ SBAddress SBFunction::GetEndAddress() {
   if (m_opaque_ptr) {
     addr_t byte_size = m_opaque_ptr->GetAddressRange().GetByteSize();
     if (byte_size > 0) {
-      addr.SetAddress(&m_opaque_ptr->GetAddressRange().GetBaseAddress());
+      addr.SetAddress(m_opaque_ptr->GetAddressRange().GetBaseAddress());
       addr->Slide(byte_size);
     }
   }
