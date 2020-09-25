@@ -379,8 +379,7 @@ ProgramStateRef ExprEngine::updateObjectsUnderConstruction(
       assert(Init->isAnyMemberInitializer() &&
              "Base and delegating initializers should have been handled by"
              "computeObjectUnderConstruction()");
-      return addObjectUnderConstruction(State, ICC->getCXXCtorInitializer(),
-                                        LCtx, V);
+      return addObjectUnderConstruction(State, Init, LCtx, V);
     }
     case ConstructionContext::NewAllocatedObjectKind: {
       return State;
