@@ -438,6 +438,20 @@ class MetadataLoader::MetadataLoaderImpl {
   /// Index that keeps track of where to find a metadata record in the stream.
   std::vector<uint64_t> GlobalMetadataBitPosIndex;
 
+  /// Cursor position of the start of the global decl attachments, to enable
+  /// loading using the index built for lazy loading, instead of forward
+  /// references.
+  uint64_t GlobalDeclAttachmentPos = 0;
+
+#ifndef NDEBUG
+  /// Sanity check that we end up parsing all of the global decl attachments.
+  unsigned NumGlobalDeclAttachSkipped = 0;
+  unsigned NumGlobalDeclAttachParsed = 0;
+#endif
+
+  /// Load the global decl attachments, using the index built for lazy loading.
+  Expected<bool> loadGlobalDeclAttachments();
+
   /// Populate the index above to enable lazily loading of metadata, and load
   /// the named metadata as well as the transitively referenced global
   /// Metadata.
@@ -681,8 +695,10 @@ Expected<bool>
 MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
   IndexCursor = Stream;
   SmallVector<uint64_t, 64> Record;
+  GlobalDeclAttachmentPos = 0;
   // Get the abbrevs, and preload record positions to make them lazy-loadable.
   while (true) {
+    uint64_t SavedPos = IndexCursor.GetCurrentBitNo();
     Expected<BitstreamEntry> MaybeEntry = IndexCursor.advanceSkippingSubblocks(
         BitstreamCursor::AF_DontPopBlockAtEnd);
     if (!MaybeEntry)
@@ -817,25 +833,11 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
         break;
       }
       case bitc::METADATA_GLOBAL_DECL_ATTACHMENT: {
-        // FIXME: we need to do this early because we don't materialize global
-        // value explicitly.
-        if (Error Err = IndexCursor.JumpToBit(CurrentPos))
-          return std::move(Err);
-        Record.clear();
-        if (Expected<unsigned> MaybeRecord =
-                IndexCursor.readRecord(Entry.ID, Record))
-          ;
-        else
-          return MaybeRecord.takeError();
-        if (Record.size() % 2 == 0)
-          return error("Invalid record");
-        unsigned ValueID = Record[0];
-        if (ValueID >= ValueList.size())
-          return error("Invalid record");
-        if (auto *GO = dyn_cast<GlobalObject>(ValueList[ValueID]))
-          if (Error Err = parseGlobalObjectAttachment(
-                  *GO, ArrayRef<uint64_t>(Record).slice(1)))
-            return std::move(Err);
+        if (!GlobalDeclAttachmentPos)
+          GlobalDeclAttachmentPos = SavedPos;
+#ifndef NDEBUG
+        NumGlobalDeclAttachSkipped++;
+#endif
         break;
       }
       case bitc::METADATA_KIND:
@@ -885,6 +887,83 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
   }
 }
 
+// Load the global decl attachments after building the lazy loading index.
+// We don't load them "lazily" - all global decl attachments must be
+// parsed since they aren't materialized on demand. However, by delaying
+// their parsing until after the index is created, we can use the index
+// instead of creating temporaries.
+Expected<bool> MetadataLoader::MetadataLoaderImpl::loadGlobalDeclAttachments() {
+  // Nothing to do if we didn't find any of these metadata records.
+  if (!GlobalDeclAttachmentPos)
+    return true;
+  // Use a temporary cursor so that we don't mess up the main Stream cursor or
+  // the lazy loading IndexCursor (which holds the necessary abbrev ids).
+  BitstreamCursor TempCursor = Stream;
+  SmallVector<uint64_t, 64> Record;
+  // Jump to the position before the first global decl attachment, so we can
+  // scan for the first BitstreamEntry record.
+  if (Error Err = TempCursor.JumpToBit(GlobalDeclAttachmentPos))
+    return std::move(Err);
+  while (true) {
+    Expected<BitstreamEntry> MaybeEntry = TempCursor.advanceSkippingSubblocks(
+        BitstreamCursor::AF_DontPopBlockAtEnd);
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
+
+    switch (Entry.Kind) {
+    case BitstreamEntry::SubBlock: // Handled for us already.
+    case BitstreamEntry::Error:
+      return error("Malformed block");
+    case BitstreamEntry::EndBlock:
+      // Sanity check that we parsed them all.
+      assert(NumGlobalDeclAttachSkipped == NumGlobalDeclAttachParsed);
+      return true;
+    case BitstreamEntry::Record:
+      break;
+    }
+    uint64_t CurrentPos = TempCursor.GetCurrentBitNo();
+    Expected<unsigned> MaybeCode = TempCursor.skipRecord(Entry.ID);
+    if (!MaybeCode)
+      return MaybeCode.takeError();
+    if (MaybeCode.get() != bitc::METADATA_GLOBAL_DECL_ATTACHMENT) {
+      // Anything other than a global decl attachment signals the end of
+      // these records. sanity check that we parsed them all.
+      assert(NumGlobalDeclAttachSkipped == NumGlobalDeclAttachParsed);
+      return true;
+    }
+#ifndef NDEBUG
+    NumGlobalDeclAttachParsed++;
+#endif
+    // FIXME: we need to do this early because we don't materialize global
+    // value explicitly.
+    if (Error Err = TempCursor.JumpToBit(CurrentPos))
+      return std::move(Err);
+    Record.clear();
+    if (Expected<unsigned> MaybeRecord =
+            TempCursor.readRecord(Entry.ID, Record))
+      ;
+    else
+      return MaybeRecord.takeError();
+    if (Record.size() % 2 == 0)
+      return error("Invalid record");
+    unsigned ValueID = Record[0];
+    if (ValueID >= ValueList.size())
+      return error("Invalid record");
+    if (auto *GO = dyn_cast<GlobalObject>(ValueList[ValueID])) {
+      // Need to save and restore the current position since
+      // parseGlobalObjectAttachment will resolve all forward references which
+      // would require parsing from locations stored in the index.
+      CurrentPos = TempCursor.GetCurrentBitNo();
+      if (Error Err = parseGlobalObjectAttachment(
+              *GO, ArrayRef<uint64_t>(Record).slice(1)))
+        return std::move(Err);
+      if (Error Err = TempCursor.JumpToBit(CurrentPos))
+        return std::move(Err);
+    }
+  }
+}
+
 /// Parse a METADATA_BLOCK. If ModuleLevel is true then we are parsing
 /// module level metadata.
 Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
@@ -913,6 +992,14 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
       // on-demand.
       MetadataList.resize(MDStringRef.size() +
                           GlobalMetadataBitPosIndex.size());
+
+      // Now that we have built the index, load the global decl attachments
+      // that were deferred during that process. This avoids creating
+      // temporaries.
+      SuccessOrErr = loadGlobalDeclAttachments();
+      if (!SuccessOrErr)
+        return SuccessOrErr.takeError();
+      assert(SuccessOrErr.get());
 
       // Reading the named metadata created forward references and/or
       // placeholders, that we flush here.
@@ -2025,7 +2112,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseGlobalObjectAttachment(
     auto K = MDKindMap.find(Record[I]);
     if (K == MDKindMap.end())
       return error("Invalid ID");
-    MDNode *MD = MetadataList.getMDNodeFwdRefOrNull(Record[I + 1]);
+    MDNode *MD =
+        dyn_cast_or_null<MDNode>(getMetadataFwdRefOrLoad(Record[I + 1]));
     if (!MD)
       return error("Invalid metadata attachment: expect fwd ref to MDNode");
     GO.addMetadata(K->second, *MD);
