@@ -34,8 +34,6 @@ it assumes the existence of several environment variables that are specific
 to Buildkite. It also assumes that it is running in a context where the HEAD
 commit contains the Phabricator ID of the review to update.
 """)
-    parser.add_argument('--token', type=str, required=True,
-        help="The Conduit token to use to authenticate with {}.".format(LLVM_REVIEWS_API))
     args = parser.parse_args(argv)
 
     for var in ('BUILDKITE_LABEL', 'BUILDKITE_JOB_ID', 'BUILDKITE_BUILD_URL', 'CONDUIT_TOKEN'):

@@ -89,3 +89,7 @@ func @test_load_store(%arg0 : memref<1x16x14x14xf32>) -> () {
     // CHECK: dealloc %[[v1]] : memref<1x16x14x14xf32>
     return
 }
+
+// Test with an arbitrary op that references the function symbol.
+
+"test.op_funcref"() {func = @test_norm_mix} : () -> ()

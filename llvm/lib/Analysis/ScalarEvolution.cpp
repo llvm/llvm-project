@@ -12593,6 +12593,11 @@ const SCEV* ScalarEvolution::computeMaxBackedgeTakenCount(const Loop *L) {
 const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
   auto CollectCondition = [&](ICmpInst::Predicate Predicate, const SCEV *LHS,
                               const SCEV *RHS, ValueToSCEVMapTy &RewriteMap) {
+    if (!isa<SCEVUnknown>(LHS)) {
+      std::swap(LHS, RHS);
+      Predicate = CmpInst::getSwappedPredicate(Predicate);
+    }
+
     // For now, limit to conditions that provide information about unknown
     // expressions.
     auto *LHSUnknown = dyn_cast<SCEVUnknown>(LHS);
@@ -12613,6 +12618,10 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
       }
       break;
     }
+    case CmpInst::ICMP_EQ:
+      if (isa<SCEVConstant>(RHS))
+        RewriteMap[LHSUnknown->getValue()] = RHS;
+      break;
     default:
       break;
     }

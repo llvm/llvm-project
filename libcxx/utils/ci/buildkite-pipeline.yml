@@ -16,66 +16,66 @@
 
 steps:
   - label: "C++03"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx03 | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx03"
     agents:
       queue: "libcxx-builders"
 
   - label: "C++11"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx11 | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx11"
     agents:
       queue: "libcxx-builders"
 
   - label: "C++14"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx14 | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx14"
     agents:
       queue: "libcxx-builders"
 
   - label: "C++17"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx17 | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx17"
     agents:
       queue: "libcxx-builders"
 
   - label: "C++20"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx2a | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx2a"
     agents:
       queue: "libcxx-builders"
 
   - label: "-fno-exceptions"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-noexceptions | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-noexceptions"
     agents:
       queue: "libcxx-builders"
 
   - label: "32 bits"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-32bit | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-32bit"
     agents:
       queue: "libcxx-builders"
 
   - label: "GCC/C++20"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-gcc | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-gcc"
     agents:
       queue: "libcxx-builders"
 
   - label: "ASAN"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-asan | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-asan"
     agents:
       queue: "libcxx-builders"
 
   - label: "TSAN"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-tsan | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-tsan"
     agents:
       queue: "libcxx-builders"
 
   - label: "UBSAN"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-ubsan | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-ubsan"
     agents:
       queue: "libcxx-builders"
 
   - label: "With LLVM's libunwind"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-with_llvm_unwinder | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-with_llvm_unwinder"
     agents:
       queue: "libcxx-builders"
 
   - label: "Single-threaded"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-singlethreaded | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-singlethreaded"
     agents:
       queue: "libcxx-builders"
