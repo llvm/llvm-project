@@ -173,6 +173,12 @@ static DecodeStatus DecodeSPERCRegisterClass(MCInst &Inst, uint64_t RegNo,
   return decodeRegisterClass(Inst, RegNo, SPERegs);
 }
 
+static DecodeStatus DecodeACCRCRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                             uint64_t Address,
+                                             const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, ACCRegs);
+}
+
 static DecodeStatus DecodeVSRpRCRegisterClass(MCInst &Inst, uint64_t RegNo,
                                               uint64_t Address,
                                               const void *Decoder) {

@@ -586,6 +586,30 @@ multiclass 8LS_DForm_R_XTp5_SI34_MEM_p<bits<6> pref, bits<6> opcode, dag OOL,
                                      isPCRel;
 }
 
+def PPCRegACCRCAsmOperand : AsmOperandClass {
+  let Name = "RegACCRC"; let PredicateMethod = "isACCRegNumber";
+}
+
+def acc : RegisterOperand<ACCRC> {
+  let ParserMatchClass = PPCRegACCRCAsmOperand;
+}
+
+// [PO AS XO2 XO]
+class XForm_AT3<bits<6> opcode, bits<5> xo2, bits<10> xo, dag OOL, dag IOL,
+                    string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<3> AT;
+
+  let Pattern = pattern;
+
+  let Inst{6-8}  = AT;
+  let Inst{9-10}  = 0;
+  let Inst{11-15} = xo2;
+  let Inst{16-20} = 0;
+  let Inst{21-30} = xo;
+  let Inst{31} = 0;
+}
+
 def PrefixInstrs : Predicate<"Subtarget->hasPrefixInstrs()">;
 def IsISA3_1 : Predicate<"Subtarget->isISA3_1()">;
 def PairedVectorMemops : Predicate<"Subtarget->pairedVectorMemops()">;
@@ -738,6 +762,25 @@ let Predicates = [PrefixInstrs] in {
       8LS_DForm_R_SI34_RTA5_p<61, (outs), (ins g8rc:$RS, memri34:$D_RA),
                               (ins g8rc:$RS, memri34_pcrel:$D_RA),
                               "pstd $RS, $D_RA", IIC_LdStLFD>;
+  }
+}
+
+let Predicates = [MMA] in {
+  def XXMFACC :
+    XForm_AT3<31, 0, 177, (outs acc:$ASo), (ins acc:$AS), "xxmfacc $AS",
+              IIC_VecGeneral, []>, RegConstraint<"$ASo = $AS">,
+              NoEncode<"$ASo">;
+  def XXMTACC :
+    XForm_AT3<31, 1, 177, (outs acc:$AT), (ins acc:$ATi), "xxmtacc $AT",
+              IIC_VecGeneral, []>, RegConstraint<"$ATi = $AT">,
+              NoEncode<"$ATi">;
+  // We define XXSETACCZ as rematerializable to undo CSE of that intrinsic in
+  // the backend. We avoid CSE here because it generates a copy of the acc
+  // register and this copy is more expensive than calling the intrinsic again.
+  let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
+    def XXSETACCZ :
+      XForm_AT3<31, 3, 177, (outs acc:$AT), (ins), "xxsetaccz $AT",
+                IIC_VecGeneral, []>;
   }
 }
 
