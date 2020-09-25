@@ -2835,3 +2835,9 @@ bool PassBuilder::isAnalysisPassName(StringRef PassName) {
 #include "PassRegistry.def"
   return false;
 }
+
+void PassBuilder::registerParseTopLevelPipelineCallback(
+    const std::function<bool(ModulePassManager &, ArrayRef<PipelineElement>,
+                             bool VerifyEachPass, bool DebugLogging)> &C) {
+  TopLevelPipelineParsingCallbacks.push_back(C);
+}
