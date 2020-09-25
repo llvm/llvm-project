@@ -813,7 +813,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
       if (!A->hasStructRetAttr())
         return false;
 
-      Type *StructTy = cast<PointerType>(A->getType())->getElementType();
+      Type *StructTy = A->getParamStructRetType();
       if (!StructTy->isSized()) {
         // The call may never return and hence the copy-instruction may never
         // be executed, and therefore it's not safe to say "the destination
