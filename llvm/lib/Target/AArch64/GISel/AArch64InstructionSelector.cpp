@@ -2971,6 +2971,24 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       return constrainSelectedInstRegOperands(*MovMI, TII, TRI, RBI);
     }
   }
+  case AArch64::G_DUP: {
+    // When the scalar of G_DUP is an s8/s16 gpr, they can't be selected by
+    // imported patterns. Do it manually here. Avoiding generating s16 gpr is
+    // difficult because at RBS we may end up pessimizing the fpr case if we
+    // decided to add an anyextend to fix this. Manual selection is the most
+    // robust solution for now.
+    Register SrcReg = I.getOperand(1).getReg();
+    if (RBI.getRegBank(SrcReg, MRI, TRI)->getID() != AArch64::GPRRegBankID)
+      return false; // We expect the fpr regbank case to be imported.
+    LLT SrcTy = MRI.getType(SrcReg);
+    if (SrcTy.getSizeInBits() == 16)
+      I.setDesc(TII.get(AArch64::DUPv8i16gpr));
+    else if (SrcTy.getSizeInBits() == 8)
+      I.setDesc(TII.get(AArch64::DUPv16i8gpr));
+    else
+      return false;
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  }
   case TargetOpcode::G_INTRINSIC_TRUNC:
     return selectIntrinsicTrunc(I, MRI);
   case TargetOpcode::G_INTRINSIC_ROUND:
