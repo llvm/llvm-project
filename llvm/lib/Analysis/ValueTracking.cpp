@@ -4881,6 +4881,9 @@ static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
   if (Depth >= MaxAnalysisRecursionDepth)
     return false;
 
+  if (isa<MetadataAsValue>(V))
+    return false;
+
   if (const auto *A = dyn_cast<Argument>(V)) {
     if (A->hasAttribute(Attribute::NoUndef))
       return true;
