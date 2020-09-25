@@ -380,8 +380,8 @@ void Sema::DiagnoseUnterminatedPragmaPack() {
     // The user might have already reset the alignment, so suggest replacing
     // the reset with a pop.
     if (IsInnermost && PackStack.CurrentValue == PackStack.DefaultValue) {
-      auto DB = Diag(PackStack.CurrentPragmaLocation,
-                     diag::note_pragma_pack_pop_instead_reset);
+      DiagnosticBuilder DB = Diag(PackStack.CurrentPragmaLocation,
+                                  diag::note_pragma_pack_pop_instead_reset);
       SourceLocation FixItLoc = Lexer::findLocationAfterToken(
           PackStack.CurrentPragmaLocation, tok::l_paren, SourceMgr, LangOpts,
           /*SkipTrailing=*/false);
