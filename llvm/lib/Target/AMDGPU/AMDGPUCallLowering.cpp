@@ -129,13 +129,17 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
     }
   }
 
-  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,
+  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t MemSize,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
 
+    // The reported memory location may be wider than the value.
+    const LLT RegTy = MRI.getType(ValVReg);
+    MemSize = std::min(static_cast<uint64_t>(RegTy.getSizeInBytes()), MemSize);
+
     // FIXME: Get alignment
     auto MMO = MF.getMachineMemOperand(
-        MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, Size,
+        MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, MemSize,
         inferAlignFromPtrInfo(MF, MPO));
     MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
   }
