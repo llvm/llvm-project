@@ -679,5 +679,6 @@
   GOMP_parallel_loop_nonmonotonic_runtime
 #define KMP_API_NAME_GOMP_PARALLEL_LOOP_MAYBE_NONMONOTONIC_RUNTIME             \
   GOMP_parallel_loop_maybe_nonmonotonic_runtime
+#define KMP_API_NAME_GOMP_TEAMS_REG GOMP_teams_reg
 
 #endif /* KMP_FTN_OS_H */
