@@ -2939,6 +2939,41 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
         Result->Provenance[i] = BitPart::Unset;
       return Result;
     }
+
+    // Handle intrinsic calls.
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      Intrinsic::ID IntrinsicID = II->getIntrinsicID();
+
+      // Funnel 'double' shifts take 3 operands, 2 inputs and the shift
+      // amount (modulo).
+      // fshl(X,Y,Z): (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+      // fshr(X,Y,Z): (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+      const APInt *Amt;
+      if ((IntrinsicID == Intrinsic::fshl || IntrinsicID == Intrinsic::fshr) &&
+          match(II->getArgOperand(2), m_APInt(Amt))) {
+
+        // We can treat fshr as a fshl by flipping the modulo amount.
+        unsigned ModAmt = Amt->urem(BitWidth);
+        if (IntrinsicID == Intrinsic::fshr)
+          ModAmt = BitWidth - ModAmt;
+
+        const auto &LHS = collectBitParts(II->getArgOperand(0), MatchBSwaps,
+                                          MatchBitReversals, BPS, Depth + 1);
+        const auto &RHS = collectBitParts(II->getArgOperand(1), MatchBSwaps,
+                                          MatchBitReversals, BPS, Depth + 1);
+
+        // Check we have both sources and they are from the same provider.
+        if (!LHS || !RHS || !LHS->Provider || LHS->Provider != RHS->Provider)
+          return Result;
+
+        Result = BitPart(LHS->Provider, BitWidth);
+        for (unsigned I = 0; I < (BitWidth - ModAmt); ++I)
+          Result->Provenance[I + ModAmt] = LHS->Provenance[I];
+        for (unsigned I = 0; I < ModAmt; ++I)
+          Result->Provenance[I] = RHS->Provenance[I + BitWidth - ModAmt];
+        return Result;
+      }
+    }
   }
 
   // Okay, we got to something that isn't a shift, 'or' or 'and'.  This must be
