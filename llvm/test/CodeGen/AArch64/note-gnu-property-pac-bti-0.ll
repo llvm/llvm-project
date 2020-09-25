@@ -4,7 +4,7 @@
 ; RUN:   llvm-readelf --notes - | FileCheck %s --check-prefix=OBJ
 @x = common dso_local global i32 0, align 4
 
-attributes #0 = { "branch-target-enforcement" }
+attributes #0 = { "branch-target-enforcement"="true" }
 
 ; Both attributes present in a file with no functions.
 ; ASM:	    .word	3221225472

@@ -11,7 +11,7 @@ entry:
 
 declare dso_local i32 @g()
 
-attributes #0 = { "branch-target-enforcement" }
+attributes #0 = { "branch-target-enforcement"="true" }
 
 ; Declarations don't prevent setting BTI
 ; ASM:	    .word	3221225472

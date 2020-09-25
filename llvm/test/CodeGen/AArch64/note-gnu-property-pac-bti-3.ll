@@ -8,7 +8,7 @@ entry:
   ret i32 0
 }
 
-attributes #0 = { "branch-target-enforcement" "sign-return-address"="non-leaf" }
+attributes #0 = { "branch-target-enforcement"="true" "sign-return-address"="non-leaf" }
 
 ; Both attribute present
 ; ASM:	    .word	3221225472

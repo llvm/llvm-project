@@ -385,31 +385,6 @@ MachineBasicBlock::iterator AArch64FrameLowering::eliminateCallFramePseudoInstr(
   return MBB.erase(I);
 }
 
-static bool ShouldSignReturnAddress(MachineFunction &MF) {
-  // The function should be signed in the following situations:
-  // - sign-return-address=all
-  // - sign-return-address=non-leaf and the functions spills the LR
-
-  const Function &F = MF.getFunction();
-  if (!F.hasFnAttribute("sign-return-address"))
-    return false;
-
-  StringRef Scope = F.getFnAttribute("sign-return-address").getValueAsString();
-  if (Scope.equals("none"))
-    return false;
-
-  if (Scope.equals("all"))
-    return true;
-
-  assert(Scope.equals("non-leaf") && "Expected all, none or non-leaf");
-
-  for (const auto &Info : MF.getFrameInfo().getCalleeSavedInfo())
-    if (Info.getReg() == AArch64::LR)
-      return true;
-
-  return false;
-}
-
 // Convenience function to create a DWARF expression for
 //   Expr + NumBytes + NumVGScaledBytes * AArch64::VG
 static void appendVGScaledOffsetExpr(SmallVectorImpl<char> &Expr,
@@ -1017,17 +992,6 @@ static void adaptForLdStOpt(MachineBasicBlock &MBB,
   //
 }
 
-static bool ShouldSignWithAKey(MachineFunction &MF) {
-  const Function &F = MF.getFunction();
-  if (!F.hasFnAttribute("sign-return-address-key"))
-    return true;
-
-  const StringRef Key =
-      F.getFnAttribute("sign-return-address-key").getValueAsString();
-  assert(Key.equals_lower("a_key") || Key.equals_lower("b_key"));
-  return Key.equals_lower("a_key");
-}
-
 static bool needsWinCFI(const MachineFunction &MF) {
   const Function &F = MF.getFunction();
   return MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
@@ -1080,14 +1044,15 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // to determine the end of the prologue.
   DebugLoc DL;
 
-  if (ShouldSignReturnAddress(MF)) {
-    if (ShouldSignWithAKey(MF))
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACIASP))
-          .setMIFlag(MachineInstr::FrameSetup);
-    else {
+  const auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
+  if (MFnI.shouldSignReturnAddress()) {
+    if (MFnI.shouldSignWithBKey()) {
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITBKEY))
           .setMIFlag(MachineInstr::FrameSetup);
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACIBSP))
+          .setMIFlag(MachineInstr::FrameSetup);
+    } else {
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACIASP))
           .setMIFlag(MachineInstr::FrameSetup);
     }
 
@@ -1532,7 +1497,8 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 
 static void InsertReturnAddressAuth(MachineFunction &MF,
                                     MachineBasicBlock &MBB) {
-  if (!ShouldSignReturnAddress(MF))
+  const auto &MFI = *MF.getInfo<AArch64FunctionInfo>();
+  if (!MFI.shouldSignReturnAddress())
     return;
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
@@ -1549,13 +1515,13 @@ static void InsertReturnAddressAuth(MachineFunction &MF,
   if (Subtarget.hasPA() && MBBI != MBB.end() &&
       MBBI->getOpcode() == AArch64::RET_ReallyLR) {
     BuildMI(MBB, MBBI, DL,
-            TII->get(ShouldSignWithAKey(MF) ? AArch64::RETAA : AArch64::RETAB))
+            TII->get(MFI.shouldSignWithBKey() ? AArch64::RETAB : AArch64::RETAA))
         .copyImplicitOps(*MBBI);
     MBB.erase(MBBI);
   } else {
     BuildMI(
         MBB, MBBI, DL,
-        TII->get(ShouldSignWithAKey(MF) ? AArch64::AUTIASP : AArch64::AUTIBSP))
+        TII->get(MFI.shouldSignWithBKey() ? AArch64::AUTIBSP : AArch64::AUTIASP))
         .setMIFlag(MachineInstr::FrameDestroy);
   }
 }
