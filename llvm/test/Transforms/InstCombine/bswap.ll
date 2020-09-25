@@ -231,6 +231,69 @@ define i16 @test10(i32 %a) {
   ret i16 %conv
 }
 
+define i64 @PR39793_bswap_u64_as_u32(i64 %0) {
+; CHECK-LABEL: @PR39793_bswap_u64_as_u32(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 24
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 255
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 65280
+; CHECK-NEXT:    [[TMP6:%.*]] = or i64 [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP7]], 16711680
+; CHECK-NEXT:    [[TMP9:%.*]] = or i64 [[TMP6]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shl i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP11:%.*]] = and i64 [[TMP10]], 4278190080
+; CHECK-NEXT:    [[TMP12:%.*]] = or i64 [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    ret i64 [[TMP12]]
+;
+  %2 = lshr i64 %0, 24
+  %3 = and i64 %2, 255
+  %4 = lshr i64 %0, 8
+  %5 = and i64 %4, 65280
+  %6 = or i64 %3, %5
+  %7 = shl i64 %0, 8
+  %8 = and i64 %7, 16711680
+  %9 = or i64 %6, %8
+  %10 = shl i64 %0, 24
+  %11 = and i64 %10, 4278190080
+  %12 = or i64 %9, %11
+  ret i64 %12
+}
+
+define i64 @PR39793_bswap_u64_as_u16(i64 %0) {
+; CHECK-LABEL: @PR39793_bswap_u64_as_u16(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 255
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 65280
+; CHECK-NEXT:    [[TMP6:%.*]] = or i64 [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    ret i64 [[TMP6]]
+;
+  %2 = lshr i64 %0, 8
+  %3 = and i64 %2, 255
+  %4 = shl i64 %0, 8
+  %5 = and i64 %4, 65280
+  %6 = or i64 %3, %5
+  ret i64 %6
+}
+
+define i32 @PR39793_bswap_u32_as_u16(i32 %0) {
+; CHECK-LABEL: @PR39793_bswap_u32_as_u16(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0:%.*]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 255
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 65280
+; CHECK-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    ret i32 [[TMP6]]
+;
+  %2 = lshr i32 %0, 8
+  %3 = and i32 %2, 255
+  %4 = shl i32 %0, 8
+  %5 = and i32 %4, 65280
+  %6 = or i32 %3, %5
+  ret i32 %6
+}
+
 define i32 @shuf_4bytes(<4 x i8> %x) {
 ; CHECK-LABEL: @shuf_4bytes(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[X:%.*]] to i32
