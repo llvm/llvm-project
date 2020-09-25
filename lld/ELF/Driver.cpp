@@ -125,7 +125,10 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
   if (canExitEarly)
     exitLld(errorCount() ? 1 : 0);
 
-  return !errorCount();
+  bool ret = errorCount() == 0;
+  if (!canExitEarly)
+    errorHandler().reset();
+  return ret;
 }
 
 // Parses a linker -m option.

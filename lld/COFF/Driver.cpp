@@ -96,7 +96,10 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   if (canExitEarly)
     exitLld(errorCount() ? 1 : 0);
 
-  return !errorCount();
+  bool ret = errorCount() == 0;
+  if (!canExitEarly)
+    errorHandler().reset();
+  return ret;
 }
 
 // Parse options of the form "old;new".
