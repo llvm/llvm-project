@@ -90,3 +90,7 @@ add_lit_testsuite(check-clang-tools "Running the Clang extra tools' regression t
   )
 
 set_target_properties(check-clang-tools PROPERTIES FOLDER "Clang extra tools' tests")
+
+add_lit_testsuites(CLANG-EXTRA ${CMAKE_CURRENT_SOURCE_DIR}
+  DEPENDS ${CLANG_TOOLS_TEST_DEPS}
+  )
