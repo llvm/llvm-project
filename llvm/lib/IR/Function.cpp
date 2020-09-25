@@ -140,12 +140,13 @@ bool Argument::hasPointeeInMemoryValueAttr() const {
     return false;
   AttributeList Attrs = getParent()->getAttributes();
   return Attrs.hasParamAttribute(getArgNo(), Attribute::ByVal) ||
+         Attrs.hasParamAttribute(getArgNo(), Attribute::StructRet) ||
          Attrs.hasParamAttribute(getArgNo(), Attribute::InAlloca) ||
          Attrs.hasParamAttribute(getArgNo(), Attribute::Preallocated) ||
          Attrs.hasParamAttribute(getArgNo(), Attribute::ByRef);
 }
 
-/// For a byval, inalloca, or preallocated parameter, get the in-memory
+/// For a byval, sret, inalloca, or preallocated parameter, get the in-memory
 /// parameter type.
 static Type *getMemoryParamAllocType(AttributeSet ParamAttrs, Type *ArgTy) {
   // FIXME: All the type carrying attributes are mutually exclusive, so there
@@ -157,10 +158,11 @@ static Type *getMemoryParamAllocType(AttributeSet ParamAttrs, Type *ArgTy) {
   if (Type *PreAllocTy = ParamAttrs.getPreallocatedType())
     return PreAllocTy;
 
-  // FIXME: inalloca always depends on pointee element type. It's also possible
-  // for byval to miss it.
+  // FIXME: sret and inalloca always depends on pointee element type. It's also
+  // possible for byval to miss it.
   if (ParamAttrs.hasAttribute(Attribute::InAlloca) ||
       ParamAttrs.hasAttribute(Attribute::ByVal) ||
+      ParamAttrs.hasAttribute(Attribute::StructRet) ||
       ParamAttrs.hasAttribute(Attribute::Preallocated))
     return cast<PointerType>(ArgTy)->getElementType();
 
@@ -194,6 +196,11 @@ MaybeAlign Argument::getParamAlign() const {
 Type *Argument::getParamByValType() const {
   assert(getType()->isPointerTy() && "Only pointers have byval types");
   return getParent()->getParamByValType(getArgNo());
+}
+
+Type *Argument::getParamStructRetType() const {
+  assert(getType()->isPointerTy() && "Only pointers have sret types");
+  return getParent()->getParamStructRetType(getArgNo());
 }
 
 Type *Argument::getParamByRefType() const {
