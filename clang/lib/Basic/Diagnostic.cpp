@@ -40,6 +40,9 @@
 
 using namespace clang;
 
+static_assert(sizeof(DiagnosticBuilder) <= 2 * sizeof(void *),
+              "DiagnosticBuilder should be small, see class doc comments");
+
 const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
                                            DiagNullabilityKind nullability) {
   StringRef string;
