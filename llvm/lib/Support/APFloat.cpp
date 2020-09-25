@@ -2242,6 +2242,21 @@ IEEEFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
     if (!X86SpecialNan && semantics == &semX87DoubleExtended)
       APInt::tcSetBit(significandParts(), semantics->precision - 1);
 
+    // If we are truncating NaN, it is possible that we shifted out all of the
+    // set bits in a signalling NaN payload. But NaN must remain NaN, so some
+    // bit in the significand must be set (otherwise it is Inf).
+    // This can only happen with sNaN. Set the 1st bit after the quiet bit,
+    // so that we still have an sNaN.
+    // FIXME: Set quiet and return opInvalidOp (on convert of any sNaN).
+    //        But this requires fixing LLVM to parse 32-bit hex FP or ignoring
+    //        conversions while parsing IR.
+    if (APInt::tcIsZero(significandParts(), newPartCount)) {
+      assert(shift < 0 && "Should not lose NaN payload on extend");
+      assert(semantics->precision >= 3 && "Unexpectedly narrow significand");
+      assert(*losesInfo && "Missing payload should have set lost info");
+      APInt::tcSetBit(significandParts(), semantics->precision - 3);
+    }
+
     // gcc forces the Quiet bit on, which means (float)(double)(float_sNan)
     // does not give you back the same bits.  This is dubious, and we
     // don't currently do it.  You're really supposed to get
