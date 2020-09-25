@@ -476,6 +476,12 @@ struct OpenMPOpt {
       : M(*(*SCC.begin())->getParent()), SCC(SCC), CGUpdater(CGUpdater),
         OREGetter(OREGetter), OMPInfoCache(OMPInfoCache), A(A) {}
 
+  /// Check if any remarks are enabled for openmp-opt
+  bool remarksEnabled() {
+    auto &Ctx = M.getContext();
+    return Ctx.getDiagHandlerPtr()->isAnyRemarkEnabled(DEBUG_TYPE);
+  }
+
   /// Run all OpenMP optimizations on the underlying SCC/ModuleSlice.
   bool run() {
     if (SCC.empty())
@@ -503,6 +509,8 @@ struct OpenMPOpt {
     Changed |= deleteParallelRegions();
     if (HideMemoryTransferLatency)
       Changed |= hideMemTransfersLatency();
+    if (remarksEnabled())
+      analysisGlobalization();
 
     return Changed;
   }
@@ -693,6 +701,28 @@ private:
     RFI.foreachUse(SCC, SplitMemTransfers);
 
     return Changed;
+  }
+
+  void analysisGlobalization() {
+    auto &RFI =
+        OMPInfoCache.RFIs[OMPRTL___kmpc_data_sharing_coalesced_push_stack];
+
+    auto checkGlobalization = [&](Use &U, Function &Decl) {
+      if (CallInst *CI = getCallIfRegularCall(U, &RFI)) {
+        auto Remark = [&](OptimizationRemarkAnalysis ORA) {
+          return ORA
+                 << "Found thread data sharing on the GPU. "
+                 << "Expect degraded performance due to data globalization.";
+        };
+        emitRemark<OptimizationRemarkAnalysis>(CI, "OpenMPGlobalization",
+                                               Remark);
+      }
+
+      return false;
+    };
+
+    RFI.foreachUse(SCC, checkGlobalization);
+    return;
   }
 
   /// Maps the values stored in the offload arrays passed as arguments to
