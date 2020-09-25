@@ -1,0 +1,81 @@
+#===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+#===----------------------------------------------------------------------===##
+
+#
+# This file describes the various pre-commit CI bots used to test libc++.
+#
+# This file should never contain logic -- all the logic must be offloaded
+# into scripts. This is critical to being able to reproduce CI issues outside
+# of the CI environment, which is important for debugging.
+#
+
+steps:
+  - label: "C++03"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx03 | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-builders"
+
+  - label: "C++11"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx11 | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-builders"
+
+  - label: "C++14"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx14 | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-builders"
+
+  - label: "C++17"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx17 | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-builders"
+
+  - label: "C++20"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx2a | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-builders"
+
+  - label: "-fno-exceptions"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-noexceptions | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-builders"
+
+  - label: "32 bits"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-32bit | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-builders"
+
+  - label: "GCC/C++20"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-gcc | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-builders"
+
+  - label: "ASAN"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-asan | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-builders"
+
+  - label: "TSAN"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-tsan | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-builders"
+
+  - label: "UBSAN"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-ubsan | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-builders"
+
+  - label: "With LLVM's libunwind"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-with_llvm_unwinder | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-builders"
+
+  - label: "Single-threaded"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-singlethreaded | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-builders"
