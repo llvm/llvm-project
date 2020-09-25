@@ -74,7 +74,6 @@ typedef struct lprofFilename {
   unsigned OwnsFilenamePat;
   const char *ProfilePathPrefix;
   char PidChars[MAX_PID_SIZE];
-  char *TmpDir;
   char Hostname[COMPILER_RT_MAX_HOSTLEN];
   unsigned NumPids;
   unsigned NumHosts;
@@ -91,8 +90,8 @@ typedef struct lprofFilename {
   ProfileNameSpecifier PNS;
 } lprofFilename;
 
-static lprofFilename lprofCurFilename = {0, 0, 0, {0}, NULL, {0},
-                                         0, 0, 0, {0}, 0,    PNS_unknown};
+static lprofFilename lprofCurFilename = {0, 0, 0,   {0}, {0},        0,
+                                         0, 0, {0}, 0,   PNS_unknown};
 
 static int ProfileMergeRequested = 0;
 static int isProfileMergeRequested() { return ProfileMergeRequested; }
@@ -774,14 +773,6 @@ static int parseFilenamePattern(const char *FilenamePat,
                       FilenamePat);
             return -1;
           }
-      } else if (FilenamePat[I] == 't') {
-        lprofCurFilename.TmpDir = getenv("TMPDIR");
-        if (!lprofCurFilename.TmpDir) {
-          PROF_WARN("Unable to get the TMPDIR environment variable, referenced "
-                    "in %s. Using the default path.",
-                    FilenamePat);
-          return -1;
-        }
       } else if (FilenamePat[I] == 'c') {
         if (__llvm_profile_is_continuous_mode_enabled()) {
           PROF_WARN("%%c specifier can only be specified once in %s.\n",
@@ -883,19 +874,12 @@ static int getCurFilenameLength() {
     return 0;
 
   if (!(lprofCurFilename.NumPids || lprofCurFilename.NumHosts ||
-<<<<<<< HEAD
         lprofCurFilename.MergePoolSize || lprofCurFilename.NumExitSignals))
-||||||| parent of 62c372770d2e... [profile] Add %t LLVM_PROFILE_FILE option to substitute $TMPDIR
-        lprofCurFilename.MergePoolSize))
-=======
-        lprofCurFilename.TmpDir || lprofCurFilename.MergePoolSize))
->>>>>>> 62c372770d2e... [profile] Add %t LLVM_PROFILE_FILE option to substitute $TMPDIR
     return strlen(lprofCurFilename.FilenamePat);
 
   Len = strlen(lprofCurFilename.FilenamePat) +
         lprofCurFilename.NumPids * (strlen(lprofCurFilename.PidChars) - 2) +
-        lprofCurFilename.NumHosts * (strlen(lprofCurFilename.Hostname) - 2) +
-        (lprofCurFilename.TmpDir ? (strlen(lprofCurFilename.TmpDir) - 1) : 0);
+        lprofCurFilename.NumHosts * (strlen(lprofCurFilename.Hostname) - 2);
   if (lprofCurFilename.MergePoolSize)
     Len += SIGLEN;
   for (I = 0; I < lprofCurFilename.NumExitSignals; ++I) {
@@ -912,24 +896,16 @@ static int getCurFilenameLength() {
  * current filename pattern string is directly returned, unless ForceUseBuf
  * is enabled. */
 static const char *getCurFilename(char *FilenameBuf, int ForceUseBuf) {
-  int I, J, PidLength, HostNameLength, TmpDirLength, FilenamePatLength;
+  int I, J, PidLength, HostNameLength, FilenamePatLength;
   const char *FilenamePat = lprofCurFilename.FilenamePat;
 
   if (!lprofCurFilename.FilenamePat || !lprofCurFilename.FilenamePat[0])
     return 0;
 
   if (!(lprofCurFilename.NumPids || lprofCurFilename.NumHosts ||
-<<<<<<< HEAD
         lprofCurFilename.MergePoolSize ||
         __llvm_profile_is_continuous_mode_enabled() ||
         lprofCurFilename.NumExitSignals)) {
-||||||| parent of 62c372770d2e... [profile] Add %t LLVM_PROFILE_FILE option to substitute $TMPDIR
-        lprofCurFilename.MergePoolSize ||
-        __llvm_profile_is_continuous_mode_enabled())) {
-=======
-        lprofCurFilename.TmpDir || lprofCurFilename.MergePoolSize ||
-        __llvm_profile_is_continuous_mode_enabled())) {
->>>>>>> 62c372770d2e... [profile] Add %t LLVM_PROFILE_FILE option to substitute $TMPDIR
     if (!ForceUseBuf)
       return lprofCurFilename.FilenamePat;
 
@@ -941,7 +917,6 @@ static const char *getCurFilename(char *FilenameBuf, int ForceUseBuf) {
 
   PidLength = strlen(lprofCurFilename.PidChars);
   HostNameLength = strlen(lprofCurFilename.Hostname);
-  TmpDirLength = lprofCurFilename.TmpDir ? strlen(lprofCurFilename.TmpDir) : 0;
   /* Construct the new filename. */
   for (I = 0, J = 0; FilenamePat[I]; ++I)
     if (FilenamePat[I] == '%') {
@@ -951,17 +926,9 @@ static const char *getCurFilename(char *FilenameBuf, int ForceUseBuf) {
       } else if (FilenamePat[I] == 'h') {
         memcpy(FilenameBuf + J, lprofCurFilename.Hostname, HostNameLength);
         J += HostNameLength;
-<<<<<<< HEAD
       } else if (containsExitOnSignalSpecifier(FilenamePat, I)) {
         while (FilenamePat[I] != 'x')
           ++I;
-||||||| parent of 62c372770d2e... [profile] Add %t LLVM_PROFILE_FILE option to substitute $TMPDIR
-=======
-      } else if (FilenamePat[I] == 't') {
-        memcpy(FilenameBuf + J, lprofCurFilename.TmpDir, TmpDirLength);
-        FilenameBuf[J + TmpDirLength] = DIR_SEPARATOR;
-        J += TmpDirLength + 1;
->>>>>>> 62c372770d2e... [profile] Add %t LLVM_PROFILE_FILE option to substitute $TMPDIR
       } else {
         if (!getMergePoolSize(FilenamePat, &I))
           continue;
