@@ -13,9 +13,9 @@ entry:
   ret i32 0
 }
 
-attributes #0 = { "branch-target-enforcement" "sign-return-address"="non-leaf" }
+attributes #0 = { "branch-target-enforcement"="true" "sign-return-address"="non-leaf" }
 
-attributes #1 = { "branch-target-enforcement" }
+attributes #1 = { "branch-target-enforcement"="true" }
 
 ; Only the common atttribute (BTI)
 ; ASM:	    .word	3221225472
