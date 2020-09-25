@@ -3,29 +3,29 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-arm-none-eabi"
 
-  define hidden i32 @simple_external() "branch-target-enforcement" {
+  define hidden i32 @simple_external() "branch-target-enforcement"="true" {
   entry:
     ret i32 0
   }
 
-  define internal i32 @simple_internal() "branch-target-enforcement" {
+  define internal i32 @simple_internal() "branch-target-enforcement"="true" {
   entry:
     ret i32 0
   }
 
-  define hidden i32 @ptr_auth() "branch-target-enforcement" {
-  entry:
-    tail call void asm sideeffect "", "~{lr}"()
-    ret i32 0
-  }
-
-  define hidden i32 @ptr_auth_b() "branch-target-enforcement" {
+  define hidden i32 @ptr_auth() "branch-target-enforcement"="true" {
   entry:
     tail call void asm sideeffect "", "~{lr}"()
     ret i32 0
   }
 
-  define hidden i32 @jump_table(i32 %a) "branch-target-enforcement" {
+  define hidden i32 @ptr_auth_b() "branch-target-enforcement"="true" {
+  entry:
+    tail call void asm sideeffect "", "~{lr}"()
+    ret i32 0
+  }
+
+  define hidden i32 @jump_table(i32 %a) "branch-target-enforcement"="true" {
   entry:
     switch i32 %a, label %sw.epilog [
       i32 1, label %sw.bb
@@ -61,7 +61,7 @@
 
   @label_address.addr = internal unnamed_addr global i8* blockaddress(@label_address, %return), align 8
 
-  define hidden i32 @label_address() "branch-target-enforcement" {
+  define hidden i32 @label_address() "branch-target-enforcement"="true" {
   entry:
     %0 = load i8*, i8** @label_address.addr, align 8
     indirectbr i8* %0, [label %return, label %lab2]
@@ -79,7 +79,7 @@
     ret i32 %merge2
   }
 
-  define hidden i32 @label_address_entry() "branch-target-enforcement" {
+  define hidden i32 @label_address_entry() "branch-target-enforcement"="true" {
   entry:
     %0 = load i8*, i8** @label_address.addr, align 8
     indirectbr i8* %0, [label %return, label %lab2]
@@ -97,7 +97,7 @@
     ret i32 %merge2
   }
 
-  define hidden i32 @debug_ptr_auth() "branch-target-enforcement" {
+  define hidden i32 @debug_ptr_auth() "branch-target-enforcement"="true" {
   entry:
     tail call void asm sideeffect "", "~{lr}"()
     ret i32 0
