@@ -63,6 +63,9 @@ Changes to the LLVM IR
 * Added the ``byref`` attribute to better represent argument passing
   for the `amdgpu_kernel` calling convention.
 
+* Added type parameter to the ``sret`` attribute to continue work on
+  removing pointer element types.
+
 Changes to building LLVM
 ------------------------
 

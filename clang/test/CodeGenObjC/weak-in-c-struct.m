@@ -179,7 +179,7 @@ void test_argument_Weak(Weak *a) {
   calleeWeak(*a);
 }
 
-// COMMON: define void @test_return_Weak(%[[STRUCT_WEAK]]* noalias sret align {{.*}} %[[AGG_RESULT:.*]], %[[STRUCT_WEAK]]* %[[A:.*]])
+// COMMON: define void @test_return_Weak(%[[STRUCT_WEAK]]* noalias sret(%[[STRUCT_WEAK]]) align {{.*}} %[[AGG_RESULT:.*]], %[[STRUCT_WEAK]]* %[[A:.*]])
 // COMMON: %[[A_ADDR:.*]] = alloca %[[STRUCT_WEAK]]*
 // COMMON: store %[[STRUCT_WEAK]]* %[[A]], %[[STRUCT_WEAK]]** %[[A_ADDR]]
 // COMMON: %[[V0:.*]] = load %[[STRUCT_WEAK]]*, %[[STRUCT_WEAK]]** %[[A_ADDR]]

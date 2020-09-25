@@ -19,7 +19,7 @@ MyMatrix<T, C, R> transpose(const MyMatrix<T, R, C> &M) {
 
 void test_transpose_template1() {
   // CHECK-LABEL: define void @_Z24test_transpose_template1v()
-  // CHECK:         call void @_Z9transposeIiLj4ELj10EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(%struct.MyMatrix.0* sret align 4 %M1_t, %struct.MyMatrix* nonnull align 4 dereferenceable(160) %M1)
+  // CHECK:         call void @_Z9transposeIiLj4ELj10EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(%struct.MyMatrix.0* sret(%struct.MyMatrix.0) align 4 %M1_t, %struct.MyMatrix* nonnull align 4 dereferenceable(160) %M1)
 
   // CHECK-LABEL: define linkonce_odr void @_Z9transposeIiLj4ELj10EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(
   // CHECK:         [[M:%.*]] = load <40 x i32>, <40 x i32>* {{.*}}, align 4
@@ -31,9 +31,9 @@ void test_transpose_template1() {
 
 void test_transpose_template2(MyMatrix<double, 7, 6> &M) {
   // CHECK-LABEL: define void @_Z24test_transpose_template2R8MyMatrixIdLj7ELj6EE(
-  // CHECK:         call void @_Z9transposeIdLj7ELj6EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(%struct.MyMatrix.2* sret align 8 %ref.tmp1, %struct.MyMatrix.1* nonnull align 8 dereferenceable(336) %0)
-  // CHECK-NEXT:    call void @_Z9transposeIdLj6ELj7EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(%struct.MyMatrix.1* sret align 8 %ref.tmp, %struct.MyMatrix.2* nonnull align 8 dereferenceable(336) %ref.tmp1)
-  // CHECK-NEXT:    call void @_Z9transposeIdLj7ELj6EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(%struct.MyMatrix.2* sret align 8 %M2_t, %struct.MyMatrix.1* nonnull align 8 dereferenceable(336) %ref.tmp)
+  // CHECK:         call void @_Z9transposeIdLj7ELj6EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(%struct.MyMatrix.2* sret(%struct.MyMatrix.2) align 8 %ref.tmp1, %struct.MyMatrix.1* nonnull align 8 dereferenceable(336) %0)
+  // CHECK-NEXT:    call void @_Z9transposeIdLj6ELj7EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(%struct.MyMatrix.1* sret(%struct.MyMatrix.1) align 8 %ref.tmp, %struct.MyMatrix.2* nonnull align 8 dereferenceable(336) %ref.tmp1)
+  // CHECK-NEXT:    call void @_Z9transposeIdLj7ELj6EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(%struct.MyMatrix.2* sret(%struct.MyMatrix.2) align 8 %M2_t, %struct.MyMatrix.1* nonnull align 8 dereferenceable(336) %ref.tmp)
 
   // CHECK-LABEL: define linkonce_odr void @_Z9transposeIdLj7ELj6EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(
   // CHECK:         [[M:%.*]] = load <42 x double>, <42 x double>* {{.*}}, align 8

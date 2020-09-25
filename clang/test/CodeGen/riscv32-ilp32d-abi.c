@@ -119,7 +119,7 @@ struct double_int32_s f_ret_double_int32_s() {
 // CHECK: define void @f_double_int64_s_arg(%struct.double_int64_s* %a)
 void f_double_int64_s_arg(struct double_int64_s a) {}
 
-// CHECK: define void @f_ret_double_int64_s(%struct.double_int64_s* noalias sret align 8 %agg.result)
+// CHECK: define void @f_ret_double_int64_s(%struct.double_int64_s* noalias sret(%struct.double_int64_s) align 8 %agg.result)
 struct double_int64_s f_ret_double_int64_s() {
   return (struct double_int64_s){1.0, 2};
 }
@@ -243,7 +243,7 @@ struct int_double_int_s { int a; double b; int c; };
 // CHECK: define void @f_int_double_int_s_arg(%struct.int_double_int_s* %a)
 void f_int_double_int_s_arg(struct int_double_int_s a) {}
 
-// CHECK: define void @f_ret_int_double_int_s(%struct.int_double_int_s* noalias sret align 8 %agg.result)
+// CHECK: define void @f_ret_int_double_int_s(%struct.int_double_int_s* noalias sret(%struct.int_double_int_s) align 8 %agg.result)
 struct int_double_int_s f_ret_int_double_int_s() {
   return (struct int_double_int_s){1, 2.0, 3};
 }
@@ -253,7 +253,7 @@ struct int64_double_s { int64_t a; double b; };
 // CHECK: define void @f_int64_double_s_arg(%struct.int64_double_s* %a)
 void f_int64_double_s_arg(struct int64_double_s a) {}
 
-// CHECK: define void @f_ret_int64_double_s(%struct.int64_double_s* noalias sret align 8 %agg.result)
+// CHECK: define void @f_ret_int64_double_s(%struct.int64_double_s* noalias sret(%struct.int64_double_s) align 8 %agg.result)
 struct int64_double_s f_ret_int64_double_s() {
   return (struct int64_double_s){1, 2.0};
 }
@@ -263,7 +263,7 @@ struct char_char_double_s { char a; char b; double c; };
 // CHECK-LABEL: define void @f_char_char_double_s_arg(%struct.char_char_double_s* %a)
 void f_char_char_double_s_arg(struct char_char_double_s a) {}
 
-// CHECK: define void @f_ret_char_char_double_s(%struct.char_char_double_s* noalias sret align 8 %agg.result)
+// CHECK: define void @f_ret_char_char_double_s(%struct.char_char_double_s* noalias sret(%struct.char_char_double_s) align 8 %agg.result)
 struct char_char_double_s f_ret_char_char_double_s() {
   return (struct char_char_double_s){1, 2, 3.0};
 }

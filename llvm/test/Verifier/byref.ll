@@ -56,7 +56,7 @@ define void @byref_nest(i32* byref(i32) nest) {
   ret void
 }
 
-; CHECK: Wrong types for attribute: inalloca nest noalias nocapture nonnull readnone readonly sret byref(i32) byval(i32) preallocated(i32) dereferenceable(1) dereferenceable_or_null(1)
+; CHECK: Wrong types for attribute: inalloca nest noalias nocapture nonnull readnone readonly byref(i32) byval(i32) preallocated(i32) sret(i32) dereferenceable(1) dereferenceable_or_null(1)
 ; CHECK-NEXT: void (i32)* @byref_non_pointer
 define void @byref_non_pointer(i32 byref(i32)) {
   ret void
