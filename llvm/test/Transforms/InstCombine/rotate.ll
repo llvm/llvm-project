@@ -105,8 +105,8 @@ define <2 x i32> @rotr_v2i32_constant_nonsplat(<2 x i32> %x) {
   ret <2 x i32> %r
 }
 
-define <2 x i36> @rotl_v2i16_constant_nonsplat(<2 x i36> %x) {
-; CHECK-LABEL: @rotl_v2i16_constant_nonsplat(
+define <2 x i36> @rotl_v2i36_constant_nonsplat(<2 x i36> %x) {
+; CHECK-LABEL: @rotl_v2i36_constant_nonsplat(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i36> [[X:%.*]], <i36 21, i36 11>
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i36> [[X]], <i36 15, i36 25>
 ; CHECK-NEXT:    [[R:%.*]] = or <2 x i36> [[SHL]], [[SHR]]
