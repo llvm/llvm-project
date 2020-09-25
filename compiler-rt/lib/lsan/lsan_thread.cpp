@@ -83,6 +83,11 @@ u32 ThreadTid(uptr uid) {
   return thread_registry->FindThread(FindThreadByUid, (void *)uid);
 }
 
+void ThreadDetach(u32 tid) {
+  CHECK_NE(tid, kInvalidTid);
+  thread_registry->DetachThread(tid, /* arg */ nullptr);
+}
+
 void ThreadJoin(u32 tid) {
   CHECK_NE(tid, kInvalidTid);
   thread_registry->JoinThread(tid, /* arg */ nullptr);
