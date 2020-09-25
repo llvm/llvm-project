@@ -6853,7 +6853,7 @@ public:
     BoUpSLP::ExtraValueToDebugLocsMap ExternallyUsedValues;
     // The same extra argument may be used several times, so log each attempt
     // to use it.
-    for (std::pair<Instruction *, Value *> &Pair : ExtraArgs) {
+    for (const std::pair<Instruction *, Value *> &Pair : ExtraArgs) {
       assert(Pair.first && "DebugLoc must be set.");
       ExternallyUsedValues[Pair.second].push_back(Pair.first);
     }
@@ -6908,7 +6908,7 @@ public:
     Value *VectorizedTree = nullptr;
     unsigned i = 0;
     while (i < NumReducedVals - ReduxWidth + 1 && ReduxWidth > 2) {
-      ArrayRef<Value *> VL = makeArrayRef(&ReducedVals[i], ReduxWidth);
+      ArrayRef<Value *> VL(&ReducedVals[i], ReduxWidth);
       V.buildTree(VL, ExternallyUsedValues, IgnoreList);
       Optional<ArrayRef<unsigned>> Order = V.bestOrder();
       if (Order) {
@@ -7664,7 +7664,7 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
     unsigned MaxElts = MaxVecRegSize / EltSize;
     for (unsigned BI = 0, BE = Entry.second.size(); BI < BE; BI += MaxElts) {
       auto Len = std::min<unsigned>(BE - BI, MaxElts);
-      auto GEPList = makeArrayRef(&Entry.second[BI], Len);
+      ArrayRef<GetElementPtrInst *> GEPList(&Entry.second[BI], Len);
 
       // Initialize a set a candidate getelementptrs. Note that we use a
       // SetVector here to preserve program order. If the index computations
