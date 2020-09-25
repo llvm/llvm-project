@@ -6803,30 +6803,47 @@ SDValue AArch64TargetLowering::LowerRETURNADDR(SDValue Op,
 
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
-  SDValue ReturnAddr;
-  SDValue FrameAddr;
   unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  SDValue ReturnAddress;
   if (Depth) {
     SDNodeFlags Flags;
     Flags.setNoUnsignedWrap(true);
-    FrameAddr = LowerFRAMEADDR(Op, DAG);
+    SDValue FrameAddr = LowerFRAMEADDR(Op, DAG);
     SDValue Offset = DAG.getConstant(8, DL, getPointerTy(DAG.getDataLayout()));
-    ReturnAddr = DAG.getLoad(VT, DL, DAG.getEntryNode(),
-                     DAG.getNode(ISD::ADD, DL, VT, FrameAddr, Offset, Flags),
-                     MachinePointerInfo());
+    ReturnAddress = DAG.getLoad(
+        VT, DL, DAG.getEntryNode(),
+        DAG.getNode(ISD::ADD, DL, VT, FrameAddr, Offset), MachinePointerInfo());
   } else {
-    unsigned LRReg = MF.addLiveIn(AArch64::LR, &AArch64::GPR64RegClass);
-    ReturnAddr = DAG.getCopyFromReg(DAG.getEntryNode(), DL, LRReg, VT);
+    // Return LR, which contains the return address. Mark it an implicit
+    // live-in.
+    unsigned Reg = MF.addLiveIn(AArch64::LR, &AArch64::GPR64RegClass);
+    ReturnAddress = DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, VT);
   }
 
   // If we're doing LR signing, we need to fixup ReturnAddr: strip it.
-  if (!MF.getFunction().hasFnAttribute("ptrauth-returns"))
-    return ReturnAddr;
+  if (MF.getFunction().hasFnAttribute("ptrauth-returns"))
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
+                       DAG.getConstant(Intrinsic::ptrauth_strip, DL, MVT::i32),
+                       ReturnAddress,
+                       DAG.getConstant(AArch64PACKey::IB, DL, MVT::i32));
+  // If not, on Darwin, we know we will never seen a frame with a signed LR.
+  else if (Subtarget->isTargetDarwin())
+    return ReturnAddress;
 
-  return DAG.getNode(
-        ISD::INTRINSIC_WO_CHAIN, DL, VT,
-        DAG.getConstant(Intrinsic::ptrauth_strip, DL, MVT::i32), ReturnAddr,
-        DAG.getConstant(AArch64PACKey::IB, DL, MVT::i32));
+  // The XPACLRI instruction assembles to a hint-space instruction before
+  // Armv8.3-A therefore this instruction can be safely used for any pre
+  // Armv8.3-A architectures. On Armv8.3-A and onwards XPACI is available so use
+  // that instead.
+  SDNode *St;
+  if (Subtarget->hasV8_3aOps()) {
+    St = DAG.getMachineNode(AArch64::XPACI, DL, VT, ReturnAddress);
+  } else {
+    // XPACLRI operates on LR therefore we must move the operand accordingly.
+    SDValue Chain =
+        DAG.getCopyToReg(DAG.getEntryNode(), DL, AArch64::LR, ReturnAddress);
+    St = DAG.getMachineNode(AArch64::XPACLRI, DL, VT, Chain);
+  }
+  return SDValue(St, 0);
 }
 
 /// LowerShiftRightParts - Lower SRA_PARTS, which returns two
