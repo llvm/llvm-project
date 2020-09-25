@@ -364,6 +364,10 @@ private:
   llvm::raw_svector_ostream os{contents};
 };
 
+// Adds stubs and bindings where necessary (e.g. if the symbol is a
+// DylibSymbol.)
+void prepareBranchTarget(Symbol *);
+
 // Stores a trie that describes the set of exported symbols.
 class ExportSection : public LinkEditSection {
 public:

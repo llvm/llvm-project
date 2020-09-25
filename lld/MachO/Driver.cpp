@@ -697,7 +697,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   if (!orderFile.empty())
     parseOrderFile(orderFile);
 
-  if (config->outputType == MH_EXECUTE && !isa<Defined>(config->entry)) {
+  if (config->outputType == MH_EXECUTE && isa<Undefined>(config->entry)) {
     error("undefined symbol: " + config->entry->getName());
     return false;
   }
