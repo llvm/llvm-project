@@ -27,7 +27,7 @@ define void @f4(i8 inreg %0)
 }
 
 define void @f5(i8* sret %0)
-; CHECK: define void @f5(i8* sret %0)
+; CHECK: define void @f5(i8* sret(i8) %0)
 {
         ret void;
 }

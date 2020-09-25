@@ -245,7 +245,7 @@ void initializeLoopInterchangePass(PassRegistry&);
 void initializeLoopLoadEliminationPass(PassRegistry&);
 void initializeLoopPassPass(PassRegistry&);
 void initializeLoopPredicationLegacyPassPass(PassRegistry&);
-void initializeLoopRerollPass(PassRegistry&);
+void initializeLoopRerollLegacyPassPass(PassRegistry &);
 void initializeLoopRotateLegacyPassPass(PassRegistry&);
 void initializeLoopSimplifyCFGLegacyPassPass(PassRegistry&);
 void initializeLoopSimplifyPass(PassRegistry&);

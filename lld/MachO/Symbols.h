@@ -89,18 +89,17 @@ public:
         overridesWeakDef(false), weakDef(isWeakDef), external(isExternal) {}
 
   bool isWeakDef() const override { return weakDef; }
-
-  bool isTlv() const override { return isThreadLocalVariables(isec->flags); }
+  bool isTlv() const override {
+    return !isAbsolute() && isThreadLocalVariables(isec->flags);
+  }
 
   bool isExternal() const { return external; }
+  bool isAbsolute() const { return isec == nullptr; }
+
+  uint64_t getVA() const override;
+  uint64_t getFileOffset() const override;
 
   static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
-
-  uint64_t getVA() const override { return isec->getVA() + value; }
-
-  uint64_t getFileOffset() const override {
-    return isec->getFileOffset() + value;
-  }
 
   InputSection *isec;
   uint32_t value;

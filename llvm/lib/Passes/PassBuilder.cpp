@@ -154,6 +154,7 @@
 #include "llvm/Transforms/Scalar/LoopLoadElimination.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Scalar/LoopPredication.h"
+#include "llvm/Transforms/Scalar/LoopReroll.h"
 #include "llvm/Transforms/Scalar/LoopRotation.h"
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
 #include "llvm/Transforms/Scalar/LoopSink.h"
@@ -2834,4 +2835,10 @@ bool PassBuilder::isAnalysisPassName(StringRef PassName) {
     return true;
 #include "PassRegistry.def"
   return false;
+}
+
+void PassBuilder::registerParseTopLevelPipelineCallback(
+    const std::function<bool(ModulePassManager &, ArrayRef<PipelineElement>,
+                             bool VerifyEachPass, bool DebugLogging)> &C) {
+  TopLevelPipelineParsingCallbacks.push_back(C);
 }

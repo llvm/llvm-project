@@ -431,11 +431,7 @@ declare i32 @llvm.fshr.i32(i32, i32, i32)
 
 define i32 @funnel_unary(i32 %abcd) {
 ; CHECK-LABEL: @funnel_unary(
-; CHECK-NEXT:    [[DABC:%.*]] = call i32 @llvm.fshl.i32(i32 [[ABCD:%.*]], i32 [[ABCD]], i32 24)
-; CHECK-NEXT:    [[BCDA:%.*]] = call i32 @llvm.fshl.i32(i32 [[ABCD]], i32 [[ABCD]], i32 8)
-; CHECK-NEXT:    [[DZBZ:%.*]] = and i32 [[DABC]], -16711936
-; CHECK-NEXT:    [[ZCZA:%.*]] = and i32 [[BCDA]], 16711935
-; CHECK-NEXT:    [[DCBA:%.*]] = or i32 [[DZBZ]], [[ZCZA]]
+; CHECK-NEXT:    [[DCBA:%.*]] = call i32 @llvm.bswap.i32(i32 [[ABCD:%.*]])
 ; CHECK-NEXT:    ret i32 [[DCBA]]
 ;
   %dabc = call i32 @llvm.fshl.i32(i32 %abcd, i32 %abcd, i32 24)
@@ -448,13 +444,7 @@ define i32 @funnel_unary(i32 %abcd) {
 
 define i32 @funnel_binary(i32 %abcd) {
 ; CHECK-LABEL: @funnel_binary(
-; CHECK-NEXT:    [[CDZZ:%.*]] = shl i32 [[ABCD:%.*]], 16
-; CHECK-NEXT:    [[DCDZ:%.*]] = call i32 @llvm.fshl.i32(i32 [[ABCD]], i32 [[CDZZ]], i32 24)
-; CHECK-NEXT:    [[ZZAB:%.*]] = lshr i32 [[ABCD]], 16
-; CHECK-NEXT:    [[ZABA:%.*]] = call i32 @llvm.fshl.i32(i32 [[ZZAB]], i32 [[ABCD]], i32 8)
-; CHECK-NEXT:    [[DCZZ:%.*]] = and i32 [[DCDZ]], -65536
-; CHECK-NEXT:    [[ZZBA:%.*]] = and i32 [[ZABA]], 65535
-; CHECK-NEXT:    [[DCBA:%.*]] = or i32 [[DCZZ]], [[ZZBA]]
+; CHECK-NEXT:    [[DCBA:%.*]] = call i32 @llvm.bswap.i32(i32 [[ABCD:%.*]])
 ; CHECK-NEXT:    ret i32 [[DCBA]]
 ;
   %cdzz = shl i32 %abcd, 16

@@ -67,11 +67,12 @@ public:
 // LC_DYLD_INFO_ONLY stores the offsets of symbol import/export information.
 class LCDyldInfo : public LoadCommand {
 public:
-  LCDyldInfo(BindingSection *bindingSection,
+  LCDyldInfo(RebaseSection *rebaseSection, BindingSection *bindingSection,
              WeakBindingSection *weakBindingSection,
              LazyBindingSection *lazyBindingSection,
              ExportSection *exportSection)
-      : bindingSection(bindingSection), weakBindingSection(weakBindingSection),
+      : rebaseSection(rebaseSection), bindingSection(bindingSection),
+        weakBindingSection(weakBindingSection),
         lazyBindingSection(lazyBindingSection), exportSection(exportSection) {}
 
   uint32_t getSize() const override { return sizeof(dyld_info_command); }
@@ -80,6 +81,10 @@ public:
     auto *c = reinterpret_cast<dyld_info_command *>(buf);
     c->cmd = LC_DYLD_INFO_ONLY;
     c->cmdsize = getSize();
+    if (rebaseSection->isNeeded()) {
+      c->rebase_off = rebaseSection->fileOff;
+      c->rebase_size = rebaseSection->getFileSize();
+    }
     if (bindingSection->isNeeded()) {
       c->bind_off = bindingSection->fileOff;
       c->bind_size = bindingSection->getFileSize();
@@ -98,6 +103,7 @@ public:
     }
   }
 
+  RebaseSection *rebaseSection;
   BindingSection *bindingSection;
   WeakBindingSection *weakBindingSection;
   LazyBindingSection *lazyBindingSection;
@@ -188,7 +194,13 @@ class LCMain : public LoadCommand {
     auto *c = reinterpret_cast<entry_point_command *>(buf);
     c->cmd = LC_MAIN;
     c->cmdsize = getSize();
-    c->entryoff = config->entry->getFileOffset();
+
+    if (config->entry->isInStubs())
+      c->entryoff =
+          in.stubs->fileOff + config->entry->stubsIndex * target->stubSize;
+    else
+      c->entryoff = config->entry->getFileOffset();
+
     c->stacksize = 0;
   }
 };
@@ -333,6 +345,12 @@ public:
 
 void Writer::scanRelocations() {
   for (InputSection *isec : inputSections) {
+    // We do not wish to add rebase opcodes for __LD,__compact_unwind, because
+    // it doesn't actually end up in the final binary. TODO: filtering it out
+    // before Writer runs might be cleaner...
+    if (isec->segname == segment_names::ld)
+      continue;
+
     for (Reloc &r : isec->relocs) {
       if (auto *s = r.referent.dyn_cast<lld::macho::Symbol *>()) {
         if (isa<Undefined>(s))
@@ -340,14 +358,18 @@ void Writer::scanRelocations() {
                 sys::path::filename(isec->file->getName()));
         else
           target->prepareSymbolRelocation(s, isec, r);
+      } else {
+        assert(r.referent.is<InputSection *>());
+        if (!r.pcrel)
+          in.rebase->addEntry(isec, r.offset);
       }
     }
   }
 }
 
 void Writer::createLoadCommands() {
-  in.header->addLoadCommand(
-      make<LCDyldInfo>(in.binding, in.weakBinding, in.lazyBinding, in.exports));
+  in.header->addLoadCommand(make<LCDyldInfo>(
+      in.rebase, in.binding, in.weakBinding, in.lazyBinding, in.exports));
   in.header->addLoadCommand(make<LCSymtab>(symtabSection, stringTableSection));
   in.header->addLoadCommand(make<LCDysymtab>(indirectSymtabSection));
   for (StringRef path : config->runtimePaths)
@@ -360,6 +382,8 @@ void Writer::createLoadCommands() {
     break;
   case MH_DYLIB:
     in.header->addLoadCommand(make<LCDylib>(LC_ID_DYLIB, config->installName));
+    break;
+  case MH_BUNDLE:
     break;
   default:
     llvm_unreachable("unhandled output file type");
@@ -451,6 +475,7 @@ static int sectionOrder(OutputSection *osec) {
         .Default(0);
   } else if (segname == segment_names::linkEdit) {
     return StringSwitch<int>(osec->name)
+        .Case(section_names::rebase, -8)
         .Case(section_names::binding, -7)
         .Case(section_names::weakBinding, -6)
         .Case(section_names::lazyBinding, -5)
@@ -515,6 +540,7 @@ void Writer::createOutputSections() {
     make<PageZeroSection>();
     break;
   case MH_DYLIB:
+  case MH_BUNDLE:
     break;
   default:
     llvm_unreachable("unhandled output file type");
@@ -597,6 +623,7 @@ void Writer::run() {
   OutputSegment *linkEditSegment =
       getOrCreateOutputSegment(segment_names::linkEdit);
 
+  prepareBranchTarget(config->entry);
   scanRelocations();
   if (in.stubHelper->isNeeded())
     in.stubHelper->setup();
@@ -624,6 +651,7 @@ void Writer::run() {
       assignAddresses(seg);
 
   // Fill __LINKEDIT contents.
+  in.rebase->finalizeContents();
   in.binding->finalizeContents();
   in.weakBinding->finalizeContents();
   in.lazyBinding->finalizeContents();
@@ -649,6 +677,7 @@ void macho::writeResult() { Writer().run(); }
 
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
+  in.rebase = make<RebaseSection>();
   in.binding = make<BindingSection>();
   in.weakBinding = make<WeakBindingSection>();
   in.lazyBinding = make<LazyBindingSection>();

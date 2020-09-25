@@ -65,6 +65,8 @@ protected:
   void parseSymbols(ArrayRef<lld::structs::nlist_64> nList, const char *strtab,
                     bool subsectionsViaSymbols);
 
+  Symbol *parseNonSectionSymbol(const structs::nlist_64 &sym, StringRef name);
+
   void parseRelocations(const llvm::MachO::section_64 &, SubsectionMap &);
 
 private:

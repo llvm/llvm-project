@@ -9,13 +9,13 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %p/Inputs/libhello.s \
 # RUN:   -o %t/libhello.o
-# RUN: lld -flavor darwinnew -dylib -L%S/Inputs/MacOSX.sdk/usr/lib \
+# RUN: %lld -dylib \
 # RUN:   -install_name @executable_path/libhello.dylib %t/libhello.o \
 # RUN:   -o %t/libhello.dylib
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/test.o
-# RUN: lld -flavor darwinnew -o %t/test \
-# RUN:   -L%S/Inputs/MacOSX.sdk/usr/lib -L%t -lhello %t/test.o -lSystem
+# RUN: %lld -o %t/test \
+# RUN:   -L%t -lhello %t/test.o -lSystem
 
 # RUN: llvm-objdump --macho --all-headers %t/test | FileCheck %s
 
