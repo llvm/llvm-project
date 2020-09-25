@@ -6,8 +6,12 @@
 #import <Foo/Baz.h>
 @import Foo.Private;
 
-// CHECK: warning: umbrella header for module 'Foo' does not include header 'Bar.h'
-// CHECK: warning: umbrella header for module 'Foo.Private' does not include header 'Baz.h'
+// CHECK: While building module 'Foo' imported from {{.*[/\]}}incomplete-umbrella.m:4:
+// CHECK-NEXT: In file included from <module-includes>:1:
+// CHECK-NEXT: {{.*Foo[.]framework[/\]Headers[/\]}}FooPublic.h:2:1: warning: umbrella header for module 'Foo' does not include header 'Bar.h'
+// CHECK: While building module 'Foo' imported from {{.*[/\]}}incomplete-umbrella.m:4:
+// CHECK-NEXT: In file included from <module-includes>:2:
+// CHECK-NEXT: {{.*Foo[.]framework[/\]PrivateHeaders[/\]}}Foo.h:2:1: warning: umbrella header for module 'Foo.Private' does not include header 'Baz.h'
 int foo() {
   int a = BAR_PUBLIC;
   int b = BAZ_PRIVATE;
