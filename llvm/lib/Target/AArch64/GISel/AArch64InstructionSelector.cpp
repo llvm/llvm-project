@@ -3799,7 +3799,10 @@ static std::pair<unsigned, unsigned>
 getInsertVecEltOpInfo(const RegisterBank &RB, unsigned EltSize) {
   unsigned Opc, SubregIdx;
   if (RB.getID() == AArch64::GPRRegBankID) {
-    if (EltSize == 32) {
+    if (EltSize == 16) {
+      Opc = AArch64::INSvi16gpr;
+      SubregIdx = AArch64::ssub;
+    } else if (EltSize == 32) {
       Opc = AArch64::INSvi32gpr;
       SubregIdx = AArch64::ssub;
     } else if (EltSize == 64) {
