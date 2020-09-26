@@ -47,6 +47,8 @@ define void @test3_lifetime_end_partial() {
 ; CHECK-NEXT:    [[A_0:%.*]] = bitcast i32* [[A]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 2, i8* [[A_0]])
 ; CHECK-NEXT:    [[A_1:%.*]] = getelementptr i8, i8* [[A_0]], i64 1
+; CHECK-NEXT:    [[A_2:%.*]] = getelementptr i8, i8* [[A_0]], i64 2
+; CHECK-NEXT:    store i8 20, i8* [[A_2]], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 2, i8* [[A_0]])
 ; CHECK-NEXT:    call void @use(i8* [[A_1]])
 ; CHECK-NEXT:    ret void
@@ -126,6 +128,7 @@ define void @test5_lifetime_end_partial(i32* %A) {
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 2, i8* [[A_0]])
 ; CHECK-NEXT:    [[A_1:%.*]] = getelementptr i8, i8* [[A_0]], i64 1
 ; CHECK-NEXT:    [[A_2:%.*]] = getelementptr i8, i8* [[A_0]], i64 2
+; CHECK-NEXT:    store i8 20, i8* [[A_2]], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 2, i8* [[A_0]])
 ; CHECK-NEXT:    call void @use(i8* [[A_1]])
 ; CHECK-NEXT:    store i8 30, i8* [[A_1]], align 1
