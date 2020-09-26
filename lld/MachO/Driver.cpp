@@ -88,7 +88,7 @@ void MachOOptTable::printHelp(const char *argv0, bool showHidden) const {
   lld::outs() << "\n";
 }
 
-HeaderFileType getOutputType(const opt::InputArgList &args) {
+static HeaderFileType getOutputType(const opt::InputArgList &args) {
   // TODO: -r, -dylinker, -preload...
   opt::Arg *outputArg = args.getLastArg(OPT_bundle, OPT_dylib, OPT_execute);
   if (outputArg == nullptr)

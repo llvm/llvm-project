@@ -324,7 +324,7 @@ struct InputAnnotation {
 };
 
 /// Get an abbreviation for the check type.
-std::string GetCheckTypeAbbreviation(Check::FileCheckType Ty) {
+static std::string GetCheckTypeAbbreviation(Check::FileCheckType Ty) {
   switch (Ty) {
   case Check::CheckPlain:
     if (Ty.getCount() > 1)
