@@ -3483,3 +3483,17 @@ def ReleaseHandle : InheritableParamAttr {
   let Subjects = SubjectList<[ParmVar]>;
   let Documentation = [ReleaseHandleDocs];
 }
+
+// Custom attributes for P2:
+def Cogtext : InheritableAttr {
+  let Spellings = [Clang<"cogtext">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [CogtextDocs];
+}
+
+// Custom attributes for P2:
+def Cogmain : InheritableAttr {
+  let Spellings = [Clang<"cogmain">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [CogmainDocs];
+}

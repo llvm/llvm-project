@@ -60,6 +60,10 @@ namespace lld {
 
         void P2::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
+            if (rel.sym->isLocal()) {
+                LLVM_DEBUG(outs() << "symbol is local\n");
+            }
+
             LLVM_DEBUG(outs() << "relocate: " << rel.sym->getName() << "\n");
             LLVM_DEBUG(outs() << "reloc value is " << (int)val << "\n");
 

@@ -37,6 +37,9 @@ namespace llvm {
         P2TargetLowering TLInfo;
         SelectionDAGTargetInfo TSInfo;
 
+        // this subtarget is used when compiling "cogtext" functions
+        bool is_cogex;
+
     public:
         // implementation generated in P2GenSubtargetInfo.inc
         void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
@@ -44,13 +47,15 @@ namespace llvm {
         /// This constructor initializes the data members to match that
         /// of the specified triple.
         ///
-        P2Subtarget(const Triple &TT, const std::string &CPU, const std::string &FS, const P2TargetMachine &TM);
+        P2Subtarget(const Triple &TT, const std::string &CPU, const std::string &FS, const P2TargetMachine &TM, bool cogex);
 
         const TargetFrameLowering *getFrameLowering() const override { return &FrameLowering; }
         const P2InstrInfo *getInstrInfo() const override { return &InstrInfo; }
         const TargetRegisterInfo *getRegisterInfo() const override { return &InstrInfo.getRegisterInfo(); }
         const P2TargetLowering *getTargetLowering() const override { return &TLInfo; }
         const SelectionDAGTargetInfo *getSelectionDAGInfo() const override { return &TSInfo; }
+
+        bool isCogex() const {return is_cogex;}
 
     };
 

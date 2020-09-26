@@ -1680,6 +1680,16 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       B.addAttribute(llvm::Attribute::MinSize);
   }
 
+    // we check for cogtext or cogmain attribute on functions
+  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
+    if (FD->hasAttr<CogtextAttr>()) {
+      B.addAttribute(llvm::Attribute::Cogtext);
+    }
+    if (FD->hasAttr<CogmainAttr>()) {
+      B.addAttribute(llvm::Attribute::Cogmain);
+    }
+  }
+
   F->addAttributes(llvm::AttributeList::FunctionIndex, B);
 
   unsigned alignment = D->getMaxAlignment() / Context.getCharWidth();

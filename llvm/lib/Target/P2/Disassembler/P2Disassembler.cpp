@@ -80,6 +80,8 @@ static DecodeStatus DecodeCordicInstruction(MCInst &Inst, unsigned Insn, uint64_
 static DecodeStatus DecodeGetQInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeCallInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 
+static DecodeStatus decodeCogJumpTarget(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
+
 #include "P2GenDisassemblerTables.inc"
 
 static MCOperand getConditionOperand(unsigned inst) {
@@ -91,6 +93,15 @@ static DecodeStatus DecodeP2GPRRegisterClass(MCInst &Inst, unsigned RegNo, uint6
 	unsigned Register = getRegForField(RegNo);
 	Inst.addOperand(MCOperand::createReg(Register));
 	return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeCogJumpTarget(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder) {
+    int32_t s_field = fieldFromInstruction(Insn, 0, 9);
+    if (s_field > 0xff) {
+        s_field = -((~s_field & 0x1ff) + 1);
+    }
+    Inst.addOperand(MCOperand::createImm(s_field));
+    return MCDisassembler::Success;
 }
 
 static DecodeStatus DecodeCallInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder) {

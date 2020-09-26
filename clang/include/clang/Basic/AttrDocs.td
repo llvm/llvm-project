@@ -354,7 +354,7 @@ def NoMergeDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
 If a statement is marked ``nomerge`` and contains call experessions, those call
-expressions inside the statement will not be merged during optimization. This 
+expressions inside the statement will not be merged during optimization. This
 attribute can be used to prevent the optimizer from obscuring the source
 location of certain calls. For example, it will prevent tail merging otherwise
 identical code sequences that raise an exception or terminate the program. Tail
@@ -4691,15 +4691,15 @@ def CFGuardDocs : Documentation {
   let Content = [{
 Code can indicate CFG checks are not wanted with the ``__declspec(guard(nocf))``
 attribute. This directs the compiler to not insert any CFG checks for the entire
-function. This approach is typically used only sparingly in specific situations 
-where the programmer has manually inserted "CFG-equivalent" protection. The 
-programmer knows that they are calling through some read-only function table 
-whose address is obtained through read-only memory references and for which the 
-index is masked to the function table limit. This approach may also be applied 
-to small wrapper functions that are not inlined and that do nothing more than 
-make a call through a function pointer. Since incorrect usage of this directive 
-can compromise the security of CFG, the programmer must be very careful using 
-the directive. Typically, this usage is limited to very small functions that 
+function. This approach is typically used only sparingly in specific situations
+where the programmer has manually inserted "CFG-equivalent" protection. The
+programmer knows that they are calling through some read-only function table
+whose address is obtained through read-only memory references and for which the
+index is masked to the function table limit. This approach may also be applied
+to small wrapper functions that are not inlined and that do nothing more than
+make a call through a function pointer. Since incorrect usage of this directive
+can compromise the security of CFG, the programmer must be very careful using
+the directive. Typically, this usage is limited to very small functions that
 only call one function.
 
 `Control Flow Guard documentation <https://docs.microsoft.com/en-us/windows/win32/secbp/pe-metadata>`
@@ -5017,5 +5017,26 @@ to and from secure state, respectively, and prevent flow of information
 to non-secure state, except via return values. See `ARMv8-M Security Extensions:
 Requirements on Development Tools - Engineering Specification Documentation
 <https://developer.arm.com/docs/ecm0359818/latest/>`_ for more information.
+  }];
+}
+
+def CogtextDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "CogText";
+  let Content = [{
+  Clang for P2 supports ``__attribute__((cogtext))`` attribute to mark a function
+  that should be compiled to run in cogex, rather than the default hubex. Typically,
+  this would be used to make a function that would run in a new cog--hubex functions
+  can't call functions marked as cogtext (unless it's a speciall libcall function defined
+  by the backend)
+  }];
+}
+
+def CogmainDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "CogMain";
+  let Content = [{
+  Clang for P2 supports ``__attribute__((cogmain))`` attribute to mark that a function
+  is the entry function for a new cog in cogex mode.
   }];
 }

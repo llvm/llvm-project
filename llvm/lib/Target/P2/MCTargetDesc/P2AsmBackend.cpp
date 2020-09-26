@@ -14,8 +14,10 @@
 
 #include "MCTargetDesc/P2FixupKinds.h"
 #include "MCTargetDesc/P2AsmBackend.h"
-
 #include "MCTargetDesc/P2MCTargetDesc.h"
+
+#include "P2Subtarget.h"
+
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCValue.h"
@@ -31,7 +33,7 @@
 #define DEBUG_TYPE "p2-asm-backend"
 
 using namespace llvm;
-static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value, MCContext *Ctx = nullptr) {
+static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value, bool cogex, MCContext *Ctx = nullptr) {
 
     unsigned Kind = Fixup.getKind();
 
@@ -46,6 +48,12 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value, MCContext
         case P2::fixup_P2_PC20:
             Value -= 4; // a relative jump automatically includes the next instruction, so reduce the jump by 1 instruction (4 bytes)
             Value &= 0xfffff; // mask the 20 bits in case the relative jump is negative
+
+            break;
+        case P2::fixup_P2_PCCOG9:
+            Value -= 4;
+            Value /= 4;
+            Value &= 0x1ff;
             break;
         default:
             return 0;
@@ -53,6 +61,7 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value, MCContext
 
     return Value;
 }
+
 
 std::unique_ptr<MCObjectTargetWriter> P2AsmBackend::createObjectTargetWriter() const {
     return createP2ELFObjectWriter(MCELFObjectTargetWriter::getOSABI(OSType));
@@ -63,15 +72,23 @@ void P2AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                         uint64_t Value, bool IsResolved,
                         const MCSubtargetInfo *STI) const {
 
+    const P2Subtarget *subtarget = static_cast<const P2Subtarget*>(STI);
+
     MCFixupKind Kind = Fixup.getKind();
-    Value = adjustFixupValue(Fixup, Value);
+    // turns out--you don't need to know if this is hub or cog because of how the JMP instruction works,
+    // but going to leave it in for future potential future use.
+    Value = adjustFixupValue(Fixup, Value, subtarget->isCogex());
+    uint64_t Mask = ((uint64_t)(-1) >> (64 - getFixupKindInfo(Kind).TargetSize));
 
     if (!Value)
         return; // Doesn't change encoding.
 
     LLVM_DEBUG(errs() << "-- applying fixup for ");
-
     LLVM_DEBUG(Target.dump(); errs() << "\n");
+    if (subtarget->isCogex())
+        LLVM_DEBUG(errs() << "fixup is for a cogex function\n");
+
+    LLVM_DEBUG(errs() << "new value is " << Value << "\n");
 
     // Where do we start in the object
     unsigned Offset = Fixup.getOffset();
@@ -88,7 +105,6 @@ void P2AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 
     LLVM_DEBUG(errs() << "current value is: " << CurVal << "\n");
 
-    uint64_t Mask = ((uint64_t)(-1) >> (64 - getFixupKindInfo(Kind).TargetSize));
     CurVal |= Value & Mask;
 
     LLVM_DEBUG(errs() << "masked value is: " << CurVal << "\n");
@@ -111,7 +127,8 @@ const MCFixupKindInfo &P2AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
         { "fixup_P2_20",        0,      20,   0},
         { "fixup_P2_PC20",      0,      20,   MCFixupKindInfo::FKF_IsPCRel},
         { "fixup_P2_AUG20",     0,      20,   0},
-        { "fixup_P2_COG9",      0,      9,    0}
+        { "fixup_P2_COG9",      0,      9,    0},
+        { "fixup_P2_PCCOG9",    0,      9,    MCFixupKindInfo::FKF_IsPCRel}
     };
 
     if (Kind < FirstTargetFixupKind)

@@ -1600,6 +1600,8 @@ static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
   case Attribute::Speculatable:
   case Attribute::StrictFP:
   case Attribute::NullPointerIsValid:
+  case Attribute::Cogtext:
+  case Attribute::Cogmain:
     return true;
   default:
     break;

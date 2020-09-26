@@ -58,6 +58,12 @@ namespace llvm {
         // record the relocation and return zero.
         unsigned getJumpTargetOpValue(const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const;
 
+        // Return binary encoding of the jump target
+        // target operand for instruction based jumps, such as djnz r0, #function_addr.
+        // If the machine operand requires relocation,
+        // record the relocation and return zero.
+        unsigned getCogJumpTargetOpValue(const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const;
+
         // Return binary encoding of the call
         // target operand, such as call #function_addr.
         // If the machine operand requires relocation,

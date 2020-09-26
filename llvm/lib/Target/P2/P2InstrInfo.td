@@ -29,6 +29,13 @@ def jmptarget    : Operand<OtherVT> {
     let OperandType = "OPERAND_PCREL";
 }
 
+def cogjmptarget  : Operand<OtherVT> {
+    let EncoderMethod = "getCogJumpTargetOpValue";
+    let DecoderMethod = "decodeCogJumpTarget";
+    let OperandType = "OPERAND_PCREL";
+}
+
+
 def calltarget : Operand<iPTR> {
     let EncoderMethod = "encodeCallTarget";
 }
@@ -42,12 +49,6 @@ def imm9 : PatLeaf<(i32 imm), [{ // select this leaf when the immediate is betwe
     int32_t v = N->getZExtValue();
     return (v >= 0) && (v < (1 << 9));
 }]>;
-
-/*
-def P2MemAsmOperand : AsmOperandClass {
-  let Name = "Mem";
-}
-*/
 
 def addr : ComplexPattern<iPTR, 1, "selectAddr", [], []>;
 
@@ -261,22 +262,22 @@ let DecoderMethod = "DecodeJumpInstruction", isBarrier = 1, isBranch = 1, isTerm
 
 let Constraints = "$s1 = $d" in {
     def DJNZrr  : P2InstIDS<0b101101101, 0b0, (outs P2GPR:$d), (ins P2GPR:$s1, P2GPR:$s), "djnz $d, $s">;
-    def DJNZri  : P2InstIDS<0b101101101, 0b1, (outs P2GPR:$d), (ins P2GPR:$s1, jmptarget:$s), "djnz $d, #$s">;
+    def DJNZri  : P2InstIDS<0b101101101, 0b1, (outs P2GPR:$d), (ins P2GPR:$s1, cogjmptarget:$s), "djnz $d, #$s">;
 }
 
 def TJZrr   : P2InstIDS<0b101110010, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "tjz $d, $s">;
-def TJZri   : P2InstIDS<0b101110010, 0b1, (outs), (ins P2GPR:$d, jmptarget:$s), "tjz $d, #$s">;
+def TJZri   : P2InstIDS<0b101110010, 0b1, (outs), (ins P2GPR:$d, cogjmptarget:$s), "tjz $d, #$s">;
 
 def TJNZrr  : P2InstIDS<0b101110011, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "tjnz $d, $s">;
-def TJNZri  : P2InstIDS<0b101110011, 0b1, (outs), (ins P2GPR:$d, jmptarget:$s), "tjnz $d, #$s">;
+def TJNZri  : P2InstIDS<0b101110011, 0b1, (outs), (ins P2GPR:$d, cogjmptarget:$s), "tjnz $d, #$s">;
 
 def REPrr   : P2InstLIDS<0b11001101, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "rep $d, $s">;
 def REPri   : P2InstLIDS<0b11001101, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "rep $d, #$s">;
 def REPir   : P2InstLIDS<0b11001101, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "rep #$d, $s">;
 def REPii   : P2InstLIDS<0b11001101, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "rep #$d, #$s">;
 
-def TESTr   : P2InstCZIDS<0b0111110, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "test $d, $s">;
-def TESTi   : P2InstCZIDS<0b0111110, 0b1, (outs), (ins P2GPR:$d, s9imm:$s), "test $d, #$s">;
+def TESTrr  : P2InstCZIDS<0b0111110, 0b0, (outs), (ins P2GPR:$d, P2GPR:$s), "test $d, $s">;
+def TESTri  : P2InstCZIDS<0b0111110, 0b1, (outs), (ins P2GPR:$d, s9imm:$s), "test $d, #$s">;
 
 // Patterns for various branch conditions and types of branch instructions
 // unsigned comparison
@@ -413,16 +414,6 @@ def WRLUTri     : P2InstLIDS<0b11000011, 0b01, (outs), (ins P2GPR:$d, s9imm:$s),
 def WRLUTir     : P2InstLIDS<0b11000011, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "wrlut #$d, $s">;
 def WRLUTii     : P2InstLIDS<0b11000011, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "wrlut #$d, #$s">;
 
-def XINITrr     : P2InstLIDS<0b11001010, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "xinit $d, $s">;
-def XINITri     : P2InstLIDS<0b11001010, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "xinit $d, #$s">;
-def XINITir     : P2InstLIDS<0b11001010, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "xinit #$d, $s">;
-def XINITii     : P2InstLIDS<0b11001010, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "xinit #$d, #$s">;
-
-def XCONTrr     : P2InstLIDS<0b11001100, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "xcont $d, $s">;
-def XCONTri     : P2InstLIDS<0b11001100, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "xcont $d, #$s">;
-def XCONTir     : P2InstLIDS<0b11001100, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "xcont #$d, $s">;
-def XCONTii     : P2InstLIDS<0b11001100, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "xcont #$d, #$s">;
-
 def RDFASTrr    : P2InstLIDS<0b11000111, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "rdfast $d, $s">;
 def RDFASTri    : P2InstLIDS<0b11000111, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "rdfast $d, #$s">;
 def RDFASTir    : P2InstLIDS<0b11000111, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "rdfast #$d, $s">;
@@ -465,7 +456,7 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1 in {
 }
 
 let isCall = 1, Uses = [PTRA], DecoderMethod = "DecodeCallInstruction" in {
-    def CALLa    : P2InstRA<0b1101101, 0b0, (outs), (ins calltarget:$a), "call #$a">;
+    def CALLa    : P2InstRA<0b1101101, 0b1, (outs), (ins calltarget:$a), "call #$a">; // use this for relative function calls in cog mode.
     def CALLAa   : P2InstRA<0b1101110, 0b0, (outs), (ins calltarget:$a), "calla #$a">; // mainly use this for direct function calls
     def CALLr    : P2InstCZD<0b1101011, 0b000101101, (outs), (ins P2GPR:$d), "call $d">;
     def CALLAr   : P2InstCZD<0b1101011, 0b000101110, (outs), (ins P2GPR:$d), "calla $d">; // mainly use this for function calls with register input
@@ -490,7 +481,6 @@ def : Pat<(P2CALL (i32 P2GPR:$d)), (CALLAr P2GPR:$d, always, noeff)>;
 /*--------------------------------*/
 /* I/O and hardware control       */
 /*--------------------------------*/
-
 
 let DecoderMethod = "DecodeIOInstruction" in {
     def DIRLr       : P2InstCZLD<0b1101011, 0b001000000, 0b0, (outs P2GPR:$dir), (ins P2GPR:$d), "dirl $d">;
@@ -574,6 +564,19 @@ def LOCKTRYi    : P2InstCLD<0b1101011, 0b000000110, 0b1, (outs), (ins s9imm:$d),
 
 def LOCKRELr    : P2InstCLD<0b1101011, 0b000000111, 0b0, (outs), (ins P2GPR:$d), "lockrel $d">;
 def LOCKRELi    : P2InstCLD<0b1101011, 0b000000111, 0b1, (outs), (ins s9imm:$d), "lockrel #$d">;
+
+def SETXFRQr    : P2InstLD<0b1101011, 0b000011101, 0b0, (outs), (ins P2GPR:$d), "setxfrq $d">;
+def SETXFRQi    : P2InstLD<0b1101011, 0b000011101, 0b1, (outs), (ins s9imm:$d), "setxfrq #$d">;
+
+def XINITrr     : P2InstLIDS<0b11001010, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "xinit $d, $s">;
+def XINITri     : P2InstLIDS<0b11001010, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "xinit $d, #$s">;
+def XINITir     : P2InstLIDS<0b11001010, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "xinit #$d, $s">;
+def XINITii     : P2InstLIDS<0b11001010, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "xinit #$d, #$s">;
+
+def XCONTrr     : P2InstLIDS<0b11001100, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s), "xcont $d, $s">;
+def XCONTri     : P2InstLIDS<0b11001100, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "xcont $d, #$s">;
+def XCONTir     : P2InstLIDS<0b11001100, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "xcont #$d, $s">;
+def XCONTii     : P2InstLIDS<0b11001100, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "xcont #$d, #$s">;
 
 /*--------------------------------*/
 /* Interrupts and events          */

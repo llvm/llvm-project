@@ -129,7 +129,6 @@ class P2Inst<bits<5> type, dag outs, dag inputs, string asmstr>: Instruction {
     let AsmString = asmstr;
 
     // TSFlags layout should be kept in sync with P2InstrInfo.h.
-    //let TSFlags{3-0} = condition; // put the effect bits into the TSFlags field for use by the instruction printer
     let TSFlags{8-4} = type; // the style of instruction (i.e subclass below) for the code emitter to know the operand positions and such
 
     let DecoderNamespace = "P2";

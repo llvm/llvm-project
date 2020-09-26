@@ -13,10 +13,10 @@
 //
 
 #include "P2MCCodeEmitter.h"
+#include "P2Subtarget.h"
 
 #include "MCTargetDesc/P2BaseInfo.h"
 #include "MCTargetDesc/P2FixupKinds.h"
-//#include "MCTargetDesc/P2MCExpr.h"
 #include "MCTargetDesc/P2MCTargetDesc.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -81,14 +81,39 @@ unsigned P2MCCodeEmitter::getJumpTargetOpValue(const MCInst &MI, unsigned OpNo, 
                                                 const MCSubtargetInfo &STI) const {
     const MCOperand &MO = MI.getOperand(OpNo);
     // If the destination is an immediate, we have nothing to do.
-    if (MO.isImm()) return MO.getImm();
+
+    if (MO.isImm()) {
+        LLVM_DEBUG(errs() << "jump offset = " << MO.getImm() << "\n");
+        return MO.getImm();
+    }
 
     assert(MO.isExpr() && "getJumpTargetOpValue expects only expressions");
 
     LLVM_DEBUG(errs() << "--- creating fixup for jump operand\n");
 
     const MCExpr *Expr = MO.getExpr();
+    LLVM_DEBUG(Expr->dump());
     Fixups.push_back(MCFixup::create(0, Expr, MCFixupKind(P2::fixup_P2_PC20)));
+    return 0;
+}
+
+unsigned P2MCCodeEmitter::getCogJumpTargetOpValue(const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
+                                                const MCSubtargetInfo &STI) const {
+    const MCOperand &MO = MI.getOperand(OpNo);
+    // If the destination is an immediate, we have nothing to do.
+
+    if (MO.isImm()) {
+        LLVM_DEBUG(errs() << "cog jump offset = " << MO.getImm() << "\n");
+        return MO.getImm();
+    }
+
+    assert(MO.isExpr() && "getCogJumpTargetOpValue expects only expressions");
+
+    LLVM_DEBUG(errs() << "--- creating fixup for cog jump operand\n");
+
+    const MCExpr *Expr = MO.getExpr();
+    LLVM_DEBUG(Expr->dump());
+    Fixups.push_back(MCFixup::create(0, Expr, MCFixupKind(P2::fixup_P2_PCCOG9)));
     return 0;
 }
 
@@ -108,11 +133,16 @@ unsigned P2MCCodeEmitter::encodeCallTarget(const MCInst &MI, unsigned OpNo, Smal
         LLVM_DEBUG(expr->dump());
 
         if (expr->getSymbol().isExternal()) {
-            LLVM_DEBUG(errs() << "creating COG fixup\n");
+            LLVM_DEBUG(errs() << "creating libcall (cog9) fixup fixup\n");
             FixupKind = static_cast<MCFixupKind>(P2::fixup_P2_COG9);
         } else {
-            LLVM_DEBUG(errs() << "creating normal fixup\n");
-            FixupKind = static_cast<MCFixupKind>(P2::fixup_P2_20);
+            if (MI.getOpcode() == P2::CALLa) {
+                LLVM_DEBUG(errs() << "creating relative call fixup\n");
+                FixupKind = static_cast<MCFixupKind>(P2::fixup_P2_PC20);
+            } else {
+                LLVM_DEBUG(errs() << "creating normal callfixup\n");
+                FixupKind = static_cast<MCFixupKind>(P2::fixup_P2_20);
+            }
         }
 
         Fixups.push_back(MCFixup::create(0, MO.getExpr(), FixupKind, MI.getLoc()));
@@ -124,80 +154,6 @@ unsigned P2MCCodeEmitter::encodeCallTarget(const MCInst &MI, unsigned OpNo, Smal
     auto Target = MO.getImm();
     return Target;
 }
-
-// unsigned P2MCCodeEmitter::encodeCondition(const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
-//                                             const MCSubtargetInfo &STI) const {
-//     const MCOperand &MO = MI.getOperand(OpNo);
-
-//     LLVM_DEBUG(errs() << "--- encode condition for operand: ");
-//     LLVM_DEBUG(MO.dump());
-
-//     llvm_unreachable("can't encode yet!");
-
-//     return 0;
-
-//     // if (MO.isExpr()) {
-//     //     LLVM_DEBUG(errs() << "call target for operand is an expression of kind: ");
-//     //     LLVM_DEBUG(errs() << (unsigned)MO.getExpr()->getKind() << "\n");
-//     //     MCFixupKind FixupKind;
-//     //     const MCSymbolRefExpr* expr = static_cast<const MCSymbolRefExpr*>(MO.getExpr());
-
-//     //     LLVM_DEBUG(expr->dump());
-
-//     //     if (expr->getSymbol().isExternal()) {
-//     //         LLVM_DEBUG(errs() << "creating COG fixup\n");
-//     //         FixupKind = static_cast<MCFixupKind>(P2::fixup_P2_COG9);
-//     //     } else {
-//     //         LLVM_DEBUG(errs() << "creating normal fixup\n");
-//     //         FixupKind = static_cast<MCFixupKind>(P2::fixup_P2_20);
-//     //     }
-
-//     //     Fixups.push_back(MCFixup::create(0, MO.getExpr(), FixupKind, MI.getLoc()));
-//     //     return 0;
-//     // }
-
-//     // assert(MO.isImm() && "non-immediate expression not handled by encodeCallTarget");
-
-//     // auto Target = MO.getImm();
-//     // return Target;
-// }
-
-// unsigned P2MCCodeEmitter::encodeEffect(const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
-//                                             const MCSubtargetInfo &STI) const {
-//     const MCOperand &MO = MI.getOperand(OpNo);
-
-//     LLVM_DEBUG(errs() << "--- encode effect for operand: ");
-//     LLVM_DEBUG(MO.dump());
-
-//     llvm_unreachable("can't encode yet!");
-
-//     return 0;
-
-//     // if (MO.isExpr()) {
-//     //     LLVM_DEBUG(errs() << "call target for operand is an expression of kind: ");
-//     //     LLVM_DEBUG(errs() << (unsigned)MO.getExpr()->getKind() << "\n");
-//     //     MCFixupKind FixupKind;
-//     //     const MCSymbolRefExpr* expr = static_cast<const MCSymbolRefExpr*>(MO.getExpr());
-
-//     //     LLVM_DEBUG(expr->dump());
-
-//     //     if (expr->getSymbol().isExternal()) {
-//     //         LLVM_DEBUG(errs() << "creating COG fixup\n");
-//     //         FixupKind = static_cast<MCFixupKind>(P2::fixup_P2_COG9);
-//     //     } else {
-//     //         LLVM_DEBUG(errs() << "creating normal fixup\n");
-//     //         FixupKind = static_cast<MCFixupKind>(P2::fixup_P2_20);
-//     //     }
-
-//     //     Fixups.push_back(MCFixup::create(0, MO.getExpr(), FixupKind, MI.getLoc()));
-//     //     return 0;
-//     // }
-
-//     // assert(MO.isImm() && "non-immediate expression not handled by encodeCallTarget");
-
-//     // auto Target = MO.getImm();
-//     // return Target;
-// }
 
 unsigned P2MCCodeEmitter::getExprOpValue(const MCInst &MI, const MCExpr *Expr, SmallVectorImpl<MCFixup> &Fixups,
                                             const MCSubtargetInfo &STI) const {

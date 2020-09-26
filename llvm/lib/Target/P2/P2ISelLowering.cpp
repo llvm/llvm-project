@@ -123,6 +123,8 @@ P2TargetLowering::P2TargetLowering(const P2TargetMachine &TM) : TargetLowering(T
 
     setLibcallName(RTLIB::SDIV_I32, "__sdiv");
     setLibcallName(RTLIB::SREM_I32, "__srem");
+    setLibcallName(RTLIB::MEMCPY, "__memcpy");
+    setLibcallName(RTLIB::MEMSET, "__memset");
 }
 
 SDValue P2TargetLowering::lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {

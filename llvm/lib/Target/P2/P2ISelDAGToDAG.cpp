@@ -99,26 +99,30 @@ bool P2DAGToDAGISel::selectAddr(SDValue addr, SDValue &addr_result) {
     }
 
     if (CurDAG->isBaseWithConstantOffset(addr)) {
-        LLVM_DEBUG(errs() << "select addr: value is base with offset");
+        LLVM_DEBUG(errs() << "select addr: value is base with offset\n");
         ConstantSDNode *CN = dyn_cast<ConstantSDNode>(addr.getOperand(1));
+
+        if (!isInt<9>(CN->getSExtValue())) {
+            LLVM_DEBUG(addr.dump());
+            llvm_unreachable("offset in address offset is too large!");
+        }
+
         SDValue base;
         SDNode *add;
-        if (isInt<9>(CN->getSExtValue())) {
-            base = addr.getOperand(0);
-            LLVM_DEBUG(errs() << "...base is: ");
-            LLVM_DEBUG(base.dump());
 
-            SDValue off = CurDAG->getTargetConstant(CN->getZExtValue(), DL, MVT::i32);
-            SDValue cond = CurDAG->getTargetConstant(P2::ALWAYS, DL, MVT::i32);
-            SDValue eff = CurDAG->getTargetConstant(P2::NOEFF, DL, MVT::i32);
-            SDValue ops[] = {base, off, cond, eff};
+        base = addr.getOperand(0);
+        LLVM_DEBUG(errs() << "...base is: ");
+        LLVM_DEBUG(base.dump());
 
-            add = CurDAG->getMachineNode(P2::ADDri, DL, vt, ops);
-            addr_result = SDValue(add, 0);
+        SDValue off = CurDAG->getTargetConstant(CN->getZExtValue(), DL, MVT::i32);
+        SDValue cond = CurDAG->getTargetConstant(P2::ALWAYS, DL, MVT::i32);
+        SDValue eff = CurDAG->getTargetConstant(P2::NOEFF, DL, MVT::i32);
+        SDValue ops[] = {base, off, cond, eff};
 
-            return true;
-        }
-        llvm_unreachable("offset in address offset is too large!");
+        add = CurDAG->getMachineNode(P2::ADDri, DL, vt, ops);
+        addr_result = SDValue(add, 0);
+
+        return true;
     }
 
     addr_result = addr;

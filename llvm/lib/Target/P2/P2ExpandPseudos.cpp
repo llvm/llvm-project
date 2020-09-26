@@ -1,4 +1,4 @@
-//===- P2ExpandPseudosPass - P2 expand pseudo loads -----------*- C++ -*-===//
+//===- P2ExpandPseudosPass - P2 expand pseudo instructions ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass expands stores with large offsets into an appropriate sequence.
+// This pass expands pseudo instructions into real propeller instrucitons
 //===----------------------------------------------------------------------===//
 
 #include "P2.h"

@@ -288,3 +288,7 @@ def : MergeRule<"adjustCallerStackProbes">;
 def : MergeRule<"adjustCallerStackProbeSize">;
 def : MergeRule<"adjustMinLegalVectorWidth">;
 def : MergeRule<"adjustNullPointerValidAttr">;
+
+// P2 specific attributes
+def Cogtext : EnumAttr<"cogtext">;
+def Cogmain : EnumAttr<"cogmain">;

@@ -99,6 +99,16 @@ void P2FrameLowering::emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) 
     LLVM_DEBUG(errs() << "prologue mbb\n");
     LLVM_DEBUG(MBB.dump());
 
+    if (MF.getFunction().hasFnAttribute(Attribute::Cogmain)) {
+        LLVM_DEBUG(errs() << "cog entry function, saving ptra to r0\n");
+        DebugLoc DL = MBB.findDebugLoc(MBBI);
+        BuildMI(MBB, MBBI, DL, TII->get(P2::MOVrr))
+            .addReg(P2::R0)
+            .addReg(P2::PTRA)
+            .addImm(P2::ALWAYS)
+            .addImm(P2::NOEFF);
+    }
+
     // the stack gets preallocated for incoming arguments + 4 bytes for the PC/SW + regs already saved to the stack,
     // so don't allocate that in the prologue
     uint64_t StackSize = MFI.getStackSize() - 4 - P2FI->getIncomingArgSize() - P2FI->getCalleeSavedFrameSize();
@@ -148,12 +158,17 @@ void P2FrameLowering::determineCalleeSaves(MachineFunction &MF, BitVector &Saved
 
     LLVM_DEBUG(errs() << "=== Function: " << MF.getName() << " ===\n");
     LLVM_DEBUG(errs() << "Determining callee saves\n");
+
     // hack for now: if this is the __start, __entry, or main function, skip saving anything since we have no stack to save to,
     // or in the case of main, there's no reason to save it since main should never return
     // maybe we should instead make this a separate pass to just remove the prologue/epilogue for these functions
-    auto fn_name = MF.getName();
-    if (fn_name == "__start" || fn_name == "__entry" || fn_name == "main")
+    // auto fn_name = MF.getName();
+    // if (fn_name == "__start" || fn_name == "__entry" || fn_name == "main")
+    //     return;
+
+    if (MF.getFunction().hasFnAttribute(Attribute::Cogmain)) {
         return;
+    }
 
     TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
     // eventually might need to add to this to re-order the frame index based to match what will happen in spilling/restoring

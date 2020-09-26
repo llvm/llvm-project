@@ -41,6 +41,9 @@ namespace llvm {
             // 9 bit fixup for cog based functions
             fixup_P2_COG9,
 
+            // 9 bit PC relative fixup. same as PC20, but divides by 4
+            fixup_P2_PCCOG9,
+
             // Marker
             LastTargetFixupKind,
             NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind

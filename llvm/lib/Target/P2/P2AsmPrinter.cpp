@@ -39,9 +39,10 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "P2-asm-printer"
+#define DEBUG_TYPE "p2-asm-printer"
 
 bool P2AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
+    LLVM_DEBUG(errs() << "asm printer run on machine function\n");
     P2FI = MF.getInfo<P2FunctionInfo>();
     AsmPrinter::runOnMachineFunction(MF);
     return true;
