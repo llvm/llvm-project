@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -ffp-exception-behavior=strict -Wno-unknown-pragmas %s
 
+// REQUIRES: x86-registered-target
+
 #pragma STDC FENV_ROUND FE_DYNAMIC
 
 // nextUp(1.F) == 0x1.000002p0F
