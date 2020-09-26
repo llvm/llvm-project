@@ -2949,7 +2949,7 @@ Attribute ``trivial_abi`` has no effect in the following cases:
 - Copy constructors and move constructors of the class are all deleted.
 - The class has a base class that is non-trivial for the purposes of calls.
 - The class has a non-static data member whose type is non-trivial for the
-purposes of calls, which includes:
+  purposes of calls, which includes:
 
   - classes that are non-trivial for the purposes of calls
   - __weak-qualified types in Objective-C++
@@ -3694,11 +3694,10 @@ deprecated, only exists for compatibility purposes, and should not be used in
 new code.
 
 * ``swift_newtype(struct)`` means that a Swift struct will be created for this
-typedef.
+  typedef.
 
 * ``swift_newtype(enum)`` means that a Swift enum will be created for this
-ypedef.
-
+  typedef.
 
   .. code-block:: c
 
