@@ -114,9 +114,7 @@ public:
     return DistroVal == Fedora || (DistroVal >= RHEL5 && DistroVal <= RHEL7);
   }
 
-  bool IsOpenSUSE() const {
-    return DistroVal == OpenSUSE;
-  }
+  bool IsOpenSUSE() const { return DistroVal == OpenSUSE; }
 
   bool IsDebian() const {
     return DistroVal >= DebianLenny && DistroVal <= DebianBullseye;
@@ -126,13 +124,9 @@ public:
     return DistroVal >= UbuntuHardy && DistroVal <= UbuntuGroovy;
   }
 
-  bool IsAlpineLinux() const {
-    return DistroVal == AlpineLinux;
-  }
+  bool IsAlpineLinux() const { return DistroVal == AlpineLinux; }
 
-  bool IsGentoo() const {
-    return DistroVal == Gentoo;
-  }
+  bool IsGentoo() const { return DistroVal == Gentoo; }
 
   /// @}
 };
