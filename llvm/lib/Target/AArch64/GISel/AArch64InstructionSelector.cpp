@@ -1496,6 +1496,10 @@ bool AArch64InstructionSelector::selectVectorSHL(
     Opc = ImmVal ? AArch64::SHLv2i32_shift : AArch64::USHLv2i32;
   } else if (Ty == LLT::vector(4, 16)) {
     Opc = ImmVal ? AArch64::SHLv4i16_shift : AArch64::USHLv4i16;
+  } else if (Ty == LLT::vector(8, 16)) {
+    Opc = ImmVal ? AArch64::SHLv8i16_shift : AArch64::USHLv8i16;
+  } else if (Ty == LLT::vector(16, 8)) {
+    Opc = ImmVal ? AArch64::SHLv16i8_shift : AArch64::USHLv16i8;
   } else {
     LLVM_DEBUG(dbgs() << "Unhandled G_SHL type");
     return false;
@@ -1551,6 +1555,9 @@ bool AArch64InstructionSelector::selectVectorAshrLshr(
     NegOpc = AArch64::NEGv4i16;
   } else if (Ty == LLT::vector(8, 16)) {
     Opc = IsASHR ? AArch64::SSHLv8i16 : AArch64::USHLv8i16;
+    NegOpc = AArch64::NEGv8i16;
+  } else if (Ty == LLT::vector(16, 8)) {
+    Opc = IsASHR ? AArch64::SSHLv16i8 : AArch64::USHLv16i8;
     NegOpc = AArch64::NEGv8i16;
   } else {
     LLVM_DEBUG(dbgs() << "Unhandled G_ASHR type");
