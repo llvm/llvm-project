@@ -37,6 +37,7 @@ struct X86_64 : TargetInfo {
 
   void relaxGotLoad(uint8_t *loc, uint8_t type) const override;
   const TargetInfo::RelocAttrs &getRelocAttrs(uint8_t type) const override;
+  uint64_t getPageSize() const override { return 4 * 1024; }
 };
 
 } // namespace

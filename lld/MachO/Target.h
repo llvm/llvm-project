@@ -29,7 +29,6 @@ enum : uint64_t {
   // We are currently only supporting 64-bit targets since macOS and iOS are
   // deprecating 32-bit apps.
   WordSize = 8,
-  PageSize = 4096,
   PageZeroSize = 1ull << 32, // XXX should be 4096 for 32-bit targets
   MaxAlignmentPowerOf2 = 32,
 };
@@ -49,7 +48,7 @@ enum class RelocAttrBits {
   TLV = 1 << 10,       // Pertains to Thread-Local Variable slots
   DYSYM8 = 1 << 11,    // Requires DySym width to be 8 bytes
   LOAD = 1 << 12,      // Relaxable indirect load
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ LOAD),
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ (1 << 13) - 1),
 };
 
 class TargetInfo {
@@ -86,6 +85,8 @@ public:
 
   virtual const RelocAttrs &getRelocAttrs(uint8_t type) const = 0;
 
+  virtual uint64_t getPageSize() const = 0;
+
   bool hasAttr(uint8_t type, RelocAttrBits bit) const {
     return getRelocAttrs(type).hasAttr(bit);
   }
@@ -106,6 +107,7 @@ public:
 };
 
 TargetInfo *createX86_64TargetInfo();
+TargetInfo *createARM64TargetInfo();
 
 extern TargetInfo *target;
 

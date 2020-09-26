@@ -60,11 +60,11 @@ void InputSection::writeTo(uint8_t *buf) {
   memcpy(buf, data.data(), data.size());
 
   for (size_t i = 0; i < relocs.size(); i++) {
-    const Reloc &r = relocs[i];
-    uint8_t *loc = buf + r.offset;
-    auto *fromSym = target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)
+    auto *fromSym = target->hasAttr(relocs[i].type, RelocAttrBits::SUBTRAHEND)
                         ? relocs[i++].referent.dyn_cast<Symbol *>()
                         : nullptr;
+    const Reloc &r = relocs[i];
+    uint8_t *loc = buf + r.offset;
     uint64_t referentVA = 0;
     if (fromSym) {
       auto *toSym = r.referent.dyn_cast<Symbol *>();
