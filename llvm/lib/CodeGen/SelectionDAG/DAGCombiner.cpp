@@ -24,6 +24,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -3703,6 +3704,37 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
       APInt C1 = NC1->getAPIntValue();
       return DAG.getVScale(SDLoc(N), VT, C0 * C1);
     }
+
+  // Fold ((mul x, 0/undef) -> 0,
+  //       (mul x, 1) -> x) -> x)
+  // -> and(x, mask)
+  // We can replace vectors with '0' and '1' factors with a clearing mask.
+  if (VT.isFixedLengthVector()) {
+    unsigned NumElts = VT.getVectorNumElements();
+    SmallBitVector ClearMask;
+    ClearMask.reserve(NumElts);
+    auto IsClearMask = [&ClearMask](ConstantSDNode *V) {
+      if (!V || V->isNullValue()) {
+        ClearMask.push_back(true);
+        return true;
+      }
+      ClearMask.push_back(false);
+      return V->isOne();
+    };
+    if ((!LegalOperations || TLI.isOperationLegalOrCustom(ISD::AND, VT)) &&
+        ISD::matchUnaryPredicate(N1, IsClearMask, /*AllowUndefs*/ true)) {
+      assert(N1.getOpcode() == ISD::BUILD_VECTOR && "Unknown constant vector");
+      SDLoc DL(N);
+      EVT LegalSVT = N1.getOperand(0).getValueType();
+      SDValue Zero = DAG.getConstant(0, DL, LegalSVT);
+      SDValue AllOnes = DAG.getAllOnesConstant(DL, LegalSVT);
+      SmallVector<SDValue, 16> Mask(NumElts, AllOnes);
+      for (unsigned I = 0; I != NumElts; ++I)
+        if (ClearMask[I])
+          Mask[I] = Zero;
+      return DAG.getNode(ISD::AND, DL, VT, N0, DAG.getBuildVector(VT, DL, Mask));
+    }
+  }
 
   // reassociate mul
   if (SDValue RMUL = reassociateOps(ISD::MUL, SDLoc(N), N0, N1, N->getFlags()))

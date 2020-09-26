@@ -75,7 +75,7 @@ The ``RecordKeeper`` class provides a few useful functions.
 
 * Functions to get a subset of the records based on their parent classes.
 
-* Functions to get individual classes, records, and globals.
+* Functions to get individual classes, records, and globals, by name.
 
 A ``RecordKeeper`` instance can be printed to an output stream with the ``<<``
 operator.
@@ -252,14 +252,13 @@ corresponding to the record inheriting from those superclasses.
 The ``Init`` class is used to represent TableGen values.  The name derives
 from *initialization value*. This class should not be confused with the
 ``RecordVal`` class, which represents record fields, both their names and
-values. The ``Init`` class is the base class for a series of
-subclasses, one for each of the available value types.
-
-The primary data member
-of ``Init`` is an enumerated type that represents the specific type of the
-value.
+values. The ``Init`` class is the base class for a series of subclasses, one
+for each of the available value types. The primary data member of ``Init``
+is an enumerated type that represents the specific type of the value.
 
 The ``Init`` class provides a few useful functions.
+
+* A function to get the type enumerator.
 
 * A boolean virtual function to determine whether a value is completely
   specified; that is, has no uninitialized subvalues.
@@ -268,6 +267,8 @@ The ``Init`` class provides a few useful functions.
 
 * Virtual functions to cast the value to other types, implement the bit
   range feature of TableGen, and implement the list slice feature.
+
+* A virtual function to get a particular bit of the value.
 
 The subclasses that inherit directly from ``Init`` are
 ``UnsetInit`` and ``TypedInit``.

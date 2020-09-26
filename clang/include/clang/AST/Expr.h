@@ -413,6 +413,10 @@ public:
     return ClassifyImpl(Ctx, &Loc);
   }
 
+  /// Returns the set of floating point options that apply to this expression.
+  /// Only meaningful for operations on floating point values.
+  FPOptions getFPFeaturesInEffect(const LangOptions &LO) const;
+
   /// getValueKindForType - Given a formal return or parameter type,
   /// give its value kind.
   static ExprValueKind getValueKindForType(QualType T) {

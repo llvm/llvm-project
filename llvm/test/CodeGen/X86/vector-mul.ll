@@ -1520,50 +1520,21 @@ define <2 x i64> @mul_v2i64_neg_17_65(<2 x i64> %a0) nounwind {
 define <2 x i64> @mul_v2i64_0_1(<2 x i64> %a0) nounwind {
 ; X86-LABEL: mul_v2i64_0_1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [0,0,1,0]
-; X86-NEXT:    movdqa %xmm0, %xmm2
-; X86-NEXT:    pmuludq %xmm1, %xmm2
-; X86-NEXT:    psrlq $32, %xmm0
-; X86-NEXT:    pmuludq %xmm1, %xmm0
-; X86-NEXT:    psllq $32, %xmm0
-; X86-NEXT:    paddq %xmm2, %xmm0
+; X86-NEXT:    xorps %xmm1, %xmm1
+; X86-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_v2i64_0_1:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
-; X64-NEXT:    movdqa %xmm0, %xmm2
-; X64-NEXT:    pmuludq %xmm1, %xmm2
-; X64-NEXT:    psrlq $32, %xmm0
-; X64-NEXT:    pmuludq %xmm1, %xmm0
-; X64-NEXT:    psllq $32, %xmm0
-; X64-NEXT:    paddq %xmm2, %xmm0
+; X64-NEXT:    xorps %xmm1, %xmm1
+; X64-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
 ; X64-NEXT:    retq
 ;
-; X64-XOP-LABEL: mul_v2i64_0_1:
-; X64-XOP:       # %bb.0:
-; X64-XOP-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
-; X64-XOP-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
-; X64-XOP-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; X64-XOP-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
-; X64-XOP-NEXT:    vpsllq $32, %xmm0, %xmm0
-; X64-XOP-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
-; X64-XOP-NEXT:    retq
-;
-; X64-AVX2-LABEL: mul_v2i64_0_1:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
-; X64-AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
-; X64-AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpsllq $32, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
-; X64-AVX2-NEXT:    retq
-;
-; X64-AVX512DQ-LABEL: mul_v2i64_0_1:
-; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vpmullq {{.*}}(%rip), %xmm0, %xmm0
-; X64-AVX512DQ-NEXT:    retq
+; X64-AVX-LABEL: mul_v2i64_0_1:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; X64-AVX-NEXT:    retq
   %1 = mul <2 x i64> %a0, <i64 0, i64 1>
   ret <2 x i64> %1
 }
