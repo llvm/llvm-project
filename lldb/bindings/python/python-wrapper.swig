@@ -532,7 +532,8 @@ LLDBSwigPythonCreateScriptedStopHook
         }
         else {
           error.SetErrorStringWithFormat("Class \"%s\" is missing the required "
-                                         "handle_stop callback.");
+                                         "handle_stop callback.",
+                                         python_class_name);
           result.release();
         }
     }
