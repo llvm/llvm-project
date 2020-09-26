@@ -2241,18 +2241,43 @@ Init *Record::getValueInit(StringRef FieldName) const {
 }
 
 StringRef Record::getValueAsString(StringRef FieldName) const {
-  const RecordVal *R = getValue(FieldName);
-  if (!R || !R->getValue())
+  llvm::Optional<StringRef> S = getValueAsOptionalString(FieldName);
+  if (!S.hasValue())
     PrintFatalError(getLoc(), "Record `" + getName() +
       "' does not have a field named `" + FieldName + "'!\n");
+  return S.getValue();
+}
+llvm::Optional<StringRef>
+Record::getValueAsOptionalString(StringRef FieldName) const {
+  const RecordVal *R = getValue(FieldName);
+  if (!R || !R->getValue())
+    return llvm::Optional<StringRef>();
+  if (isa<UnsetInit>(R->getValue()))
+    return llvm::Optional<StringRef>();
 
   if (StringInit *SI = dyn_cast<StringInit>(R->getValue()))
     return SI->getValue();
   if (CodeInit *CI = dyn_cast<CodeInit>(R->getValue()))
     return CI->getValue();
 
-  PrintFatalError(getLoc(), "Record `" + getName() + "', field `" + FieldName + 
-                                "' exists but does not have a string value");
+  PrintFatalError(getLoc(),
+                  "Record `" + getName() + "', ` field `" + FieldName +
+                      "' exists but does not have a string initializer!");
+}
+llvm::Optional<StringRef>
+Record::getValueAsOptionalCode(StringRef FieldName) const {
+  const RecordVal *R = getValue(FieldName);
+  if (!R || !R->getValue())
+    return llvm::Optional<StringRef>();
+  if (isa<UnsetInit>(R->getValue()))
+    return llvm::Optional<StringRef>();
+
+  if (CodeInit *CI = dyn_cast<CodeInit>(R->getValue()))
+    return CI->getValue();
+
+  PrintFatalError(getLoc(),
+                  "Record `" + getName() + "', field `" + FieldName +
+                      "' exists but does not have a code initializer!");
 }
 
 BitsInit *Record::getValueAsBitsInit(StringRef FieldName) const {

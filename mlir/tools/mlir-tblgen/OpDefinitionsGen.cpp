@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpFormatGen.h"
+#include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
@@ -158,23 +159,6 @@ static bool canUseUnwrappedRawValue(const tblgen::Attribute &attr) {
 //===----------------------------------------------------------------------===//
 // Op emitter
 //===----------------------------------------------------------------------===//
-
-namespace {
-// Simple RAII helper for defining ifdef-undef-endif scopes.
-class IfDefScope {
-public:
-  IfDefScope(StringRef name, raw_ostream &os) : name(name), os(os) {
-    os << "#ifdef " << name << "\n"
-       << "#undef " << name << "\n\n";
-  }
-
-  ~IfDefScope() { os << "\n#endif  // " << name << "\n\n"; }
-
-private:
-  StringRef name;
-  raw_ostream &os;
-};
-} // end anonymous namespace
 
 namespace {
 // Helper class to emit a record into the given output stream.
@@ -2181,7 +2165,7 @@ static void emitOpClasses(const std::vector<Record *> &defs, raw_ostream &os,
     os << "#undef GET_OP_FWD_DEFINES\n";
     for (auto *def : defs) {
       Operator op(*def);
-      Operator::NamespaceEmitter emitter(os, op);
+      NamespaceEmitter emitter(os, op.getDialect());
       os << "class " << op.getCppClassName() << ";\n";
     }
     os << "#endif\n\n";
@@ -2190,7 +2174,7 @@ static void emitOpClasses(const std::vector<Record *> &defs, raw_ostream &os,
   IfDefScope scope("GET_OP_CLASSES", os);
   for (auto *def : defs) {
     Operator op(*def);
-    Operator::NamespaceEmitter emitter(os, op);
+    NamespaceEmitter emitter(os, op.getDialect());
     if (emitDecl) {
       os << formatv(opCommentHeader, op.getQualCppClassName(), "declarations");
       OpOperandAdaptorEmitter::emitDecl(op, os);
