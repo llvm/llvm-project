@@ -972,7 +972,7 @@ define <4 x i16> @abspattern2(<4 x i16> %a) nounwind {
 ; DAG-NEXT: ret
 
 ; For GlobalISel, this generates terrible code until we can pattern match this to abs.
-; GISEL-DAG: sub.4h
+; GISEL-DAG: neg.4h
 ; GISEL-DAG: cmgt.4h
 ; GISEL: csel
 ; GISEL: csel
@@ -1015,8 +1015,8 @@ define <8 x i16> @abspattern5(<8 x i16> %a) nounwind {
 ; DAG: abs.8h
 ; DAG-NEXT: ret
 
-; GISEL: cmgt.8h
-; GISEL: sub.8h
+; GISEL-DAG: cmgt.8h
+; GISEL-DAG: neg.8h
 ; GISEL: csel
 ; GISEL: csel
 ; GISEL: csel
