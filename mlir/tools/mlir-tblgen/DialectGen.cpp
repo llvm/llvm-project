@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
@@ -155,12 +156,7 @@ static void emitDialectDecl(Dialect &dialect,
   }
 
   // Emit all nested namespaces.
-  StringRef cppNamespace = dialect.getCppNamespace();
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(cppNamespace, namespaces, "::");
-
-  for (auto ns : namespaces)
-    os << "namespace " << ns << " {\n";
+  NamespaceEmitter nsEmitter(os, dialect);
 
   // Emit the start of the decl.
   std::string cppName = dialect.getCppClassName();
@@ -188,10 +184,6 @@ static void emitDialectDecl(Dialect &dialect,
 
   // End the dialect decl.
   os << "};\n";
-
-  // Close all nested namespaces in reverse order.
-  for (auto ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
 }
 
 static bool emitDialectDecls(const llvm::RecordKeeper &recordKeeper,
