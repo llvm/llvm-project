@@ -2239,9 +2239,13 @@ bool LowerTypeTestsModule::lower() {
 
 PreservedAnalyses LowerTypeTestsPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  bool Changed =
-      LowerTypeTestsModule(M, ExportSummary, ImportSummary, DropTypeTests)
-          .lower();
+  bool Changed;
+  if (UseCommandLine)
+    Changed = LowerTypeTestsModule::runForTesting(M);
+  else
+    Changed =
+        LowerTypeTestsModule(M, ExportSummary, ImportSummary, DropTypeTests)
+            .lower();
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
