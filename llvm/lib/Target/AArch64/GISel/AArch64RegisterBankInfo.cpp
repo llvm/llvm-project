@@ -13,6 +13,7 @@
 
 #include "AArch64RegisterBankInfo.h"
 #include "AArch64InstrInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
@@ -837,10 +838,17 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     // Get the instruction that defined the source operand reg, and check if
     // it's a floating point operation. Or, if it's a type like s16 which
-    // doesn't have a exact size gpr register class.
+    // doesn't have a exact size gpr register class. The exception is if the
+    // build_vector has all constant operands, which may be better to leave as
+    // gpr without copies, so it can be matched in imported patterns.
     MachineInstr *DefMI = MRI.getVRegDef(VReg);
     unsigned DefOpc = DefMI->getOpcode();
     const LLT SrcTy = MRI.getType(VReg);
+    if (all_of(MI.operands(), [&](const MachineOperand &Op) {
+          return Op.isDef() || MRI.getVRegDef(Op.getReg())->getOpcode() ==
+                                   TargetOpcode::G_CONSTANT;
+        }))
+      break;
     if (isPreISelGenericFloatingPointOpcode(DefOpc) ||
         SrcTy.getSizeInBits() < 32) {
       // Have a floating point op.
