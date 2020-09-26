@@ -3963,9 +3963,8 @@ int LLVMGetMaskValue(LLVMValueRef SVInst, unsigned Elt) {
   ShuffleVectorInst *I = cast<ShuffleVectorInst>(P);
   return I->getMaskValue(Elt);
 }
-const int LLVMUndefMaskElem =
-    -1; // not actually accessible as ShuffleVectorInst::UndefMaskElem, so we
-        // hardcode it here
+
+int LLVMGetUndefMaskElem(void) { return UndefMaskElem; }
 
 LLVMBool LLVMIsAtomicSingleThread(LLVMValueRef AtomicInst) {
   Value *P = unwrap<Value>(AtomicInst);
