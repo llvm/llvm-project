@@ -38,7 +38,7 @@ This document describes the available MLIR passes and their contracts.
 
 ## `scf` Dialect Passes
 
-[include "ScfPasses.md"]
+[include "SCFPasses.md"]
 
 ## `shape` Dialect Passes
 
