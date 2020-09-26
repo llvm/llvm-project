@@ -4686,7 +4686,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     break;
 
   case ISD::INTRINSIC_WO_CHAIN: {
-    if (!PPCSubTarget->isISA3_1())
+    if (!Subtarget->isISA3_1())
       break;
     unsigned Opcode = 0;
     switch (N->getConstantOperandVal(0)) {
