@@ -144,6 +144,9 @@ and data members. Users are *strongly advised* to define macros for the various
 attributes; example definitions can be found in :ref:`mutexheader`, below.
 The following documentation assumes the use of macros.
 
+The attributes only control assumptions made by thread safety analysis and the
+warnings it issues.  They don't affect generated code or behavior at run-time.
+
 For historical reasons, prior versions of thread safety used macro names that
 were very lock-centric.  These macros have since been renamed to fit a more
 general capability model.  The prior names are still in use, and will be
@@ -447,10 +450,11 @@ ASSERT_CAPABILITY(...) and ASSERT_SHARED_CAPABILITY(...)
 
 *Previously:*  ``ASSERT_EXCLUSIVE_LOCK``, ``ASSERT_SHARED_LOCK``
 
-These are attributes on a function or method that does a run-time test to see
-whether the calling thread holds the given capability.  The function is assumed
-to fail (no return) if the capability is not held.  See :ref:`mutexheader`,
-below, for example uses.
+These are attributes on a function or method which asserts the calling thread
+already holds the given capability, for example by performing a run-time test
+and terminating if the capability is not held.  Presence of this annotation
+causes the analysis to assume the capability is held after calls to the
+annotated function.  See :ref:`mutexheader`, below, for example uses.
 
 
 GUARDED_VAR and PT_GUARDED_VAR
