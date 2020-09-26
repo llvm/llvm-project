@@ -446,8 +446,8 @@ static TargetMachine* GetTargetMachine(Triple TheTriple, StringRef CPUStr,
 void initializeExampleIRTransforms(llvm::PassRegistry &Registry);
 #endif
 
-
-void exportDebugifyStats(llvm::StringRef Path, const DebugifyStatsMap &Map) {
+static void exportDebugifyStats(llvm::StringRef Path,
+                                const DebugifyStatsMap &Map) {
   std::error_code EC;
   raw_fd_ostream OS{Path, EC};
   if (EC) {
