@@ -224,7 +224,7 @@ static void PrintStackAllocations(StackAllocationsRingBuffer *sa,
     frame_desc.append("  record_addr:0x%zx record:0x%zx",
                       reinterpret_cast<uptr>(record_addr), record);
     if (SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc)) {
-      RenderFrame(&frame_desc, " %F %L\n", 0, frame->info,
+      RenderFrame(&frame_desc, " %F %L\n", 0, frame->info.address, &frame->info,
                   common_flags()->symbolize_vs_style,
                   common_flags()->strip_path_prefix);
       frame->ClearAll();
