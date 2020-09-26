@@ -85,7 +85,9 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
   // This includes instructions that could write to memory, and loads that are
   // marked volatile.
   for (auto &I : L->blocks())
-    if (any_of(*I, [](Instruction &I) { return I.mayHaveSideEffects(); }))
+    if (any_of(*I, [](Instruction &I) {
+          return I.mayHaveSideEffects() && !I.isDroppable();
+        }))
       return false;
   return true;
 }
