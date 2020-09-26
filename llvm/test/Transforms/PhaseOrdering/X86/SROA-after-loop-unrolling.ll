@@ -39,7 +39,9 @@ define dso_local void @_Z3fooi(i32 %cnt) {
 ; OLDPM-NEXT:    [[INCDEC_PTR_3:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* [[ARR]], i64 0, i32 0, i64 4
 ; OLDPM-NEXT:    [[INC_4:%.*]] = add nsw i32 [[CNT]], 5
 ; OLDPM-NEXT:    store i32 [[INC_4]], i32* [[INCDEC_PTR_3]], align 16
+; OLDPM-NEXT:    [[INCDEC_PTR_4:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* [[ARR]], i64 0, i32 0, i64 5
 ; OLDPM-NEXT:    [[INC_5:%.*]] = add nsw i32 [[CNT]], 6
+; OLDPM-NEXT:    store i32 [[INC_5]], i32* [[INCDEC_PTR_4]], align 4
 ; OLDPM-NEXT:    [[TMP5:%.*]] = load i32, i32* [[ARRAYDECAY_I_I_I]], align 16
 ; OLDPM-NEXT:    call void @_Z3usei(i32 [[TMP5]])
 ; OLDPM-NEXT:    [[TMP6:%.*]] = load i32, i32* [[INCDEC_PTR]], align 4
