@@ -434,14 +434,16 @@ class LazyValueInfoImpl {
   void solve();
 
 public:
-  /// This is the query interface to determine the lattice
-  /// value for the specified Value* at the end of the specified block.
+  /// This is the query interface to determine the lattice value for the
+  /// specified Value* at the context instruction (if specified) or at the
+  /// start of the block.
   ValueLatticeElement getValueInBlock(Value *V, BasicBlock *BB,
                                       Instruction *CxtI = nullptr);
 
-  /// This is the query interface to determine the lattice
-  /// value for the specified Value* at the specified instruction (generally
-  /// from an assume intrinsic).
+  /// This is the query interface to determine the lattice value for the
+  /// specified Value* at the specified instruction using only information
+  /// from assumes/guards and range metadata. Unlike getValueInBlock(), no
+  /// recursive query is performed.
   ValueLatticeElement getValueAt(Value *V, Instruction *CxtI);
 
   /// This is the query interface to determine the lattice
