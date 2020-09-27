@@ -3943,12 +3943,19 @@ LLVMValueRef LLVMBuildAtomicCmpXchg(LLVMBuilderRef B, LLVMValueRef Ptr,
 unsigned LLVMGetNumMaskElements(LLVMValueRef ShuffleVectorInst);
 
 /**
+ * \returns a constant that specifies that the result of a \c ShuffleVectorInst
+ * is undefined.
+ */
+int LLVMGetUndefMaskElem(void);
+
+/**
  * Get the mask value at position Elt in the mask of a ShuffleVector
- * instruction. Return LLVMUndefMaskElem if the mask value is undef at that
- * position.
+ * instruction.
+ *
+ * \Returns the result of \c LLVMGetUndefMaskElem() if the mask value is undef
+ * at that position.
  */
 int LLVMGetMaskValue(LLVMValueRef ShuffleVectorInst, unsigned Elt);
-extern const int LLVMUndefMaskElem;
 
 LLVMBool LLVMIsAtomicSingleThread(LLVMValueRef AtomicInst);
 void LLVMSetAtomicSingleThread(LLVMValueRef AtomicInst, LLVMBool SingleThread);
