@@ -235,8 +235,8 @@ body:             |
 
     ; CHECK-LABEL: name: shl_cimm_32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s64)
     ; CHECK: $w0 = COPY [[SHL]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
