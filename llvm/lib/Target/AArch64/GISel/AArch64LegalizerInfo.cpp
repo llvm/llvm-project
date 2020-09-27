@@ -756,16 +756,14 @@ bool AArch64LegalizerInfo::legalizeShlAshrLshr(
   // If the shift amount is a G_CONSTANT, promote it to a 64 bit type so the
   // imported patterns can select it later. Either way, it will be legal.
   Register AmtReg = MI.getOperand(2).getReg();
-  auto *CstMI = MRI.getVRegDef(AmtReg);
-  assert(CstMI && "expected to find a vreg def");
-  if (CstMI->getOpcode() != TargetOpcode::G_CONSTANT)
+  auto VRegAndVal = getConstantVRegValWithLookThrough(AmtReg, MRI);
+  if (!VRegAndVal)
     return true;
   // Check the shift amount is in range for an immediate form.
-  unsigned Amount = CstMI->getOperand(1).getCImm()->getZExtValue();
+  int64_t Amount = VRegAndVal->Value;
   if (Amount > 31)
     return true; // This will have to remain a register variant.
-  assert(MRI.getType(AmtReg).getSizeInBits() == 32);
-  auto ExtCst = MIRBuilder.buildZExt(LLT::scalar(64), AmtReg);
+  auto ExtCst = MIRBuilder.buildConstant(LLT::scalar(64), Amount);
   MI.getOperand(2).setReg(ExtCst.getReg(0));
   return true;
 }
