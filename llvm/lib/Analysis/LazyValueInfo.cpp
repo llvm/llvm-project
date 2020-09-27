@@ -1744,7 +1744,7 @@ LazyValueInfo::getPredicateOnEdge(unsigned Pred, Value *V, Constant *C,
 
 LazyValueInfo::Tristate
 LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
-                              Instruction *CxtI) {
+                              Instruction *CxtI, bool UseBlockValue) {
   // Is or is not NonNull are common predicates being queried. If
   // isKnownNonZero can tell us the result of the predicate, we can
   // return it quickly. But this is only a fastpath, and falling
@@ -1758,7 +1758,10 @@ LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
     else if (Pred == ICmpInst::ICMP_NE)
       return LazyValueInfo::True;
   }
-  ValueLatticeElement Result = getImpl(PImpl, AC, M).getValueAt(V, CxtI);
+
+  ValueLatticeElement Result = UseBlockValue
+      ? getImpl(PImpl, AC, M).getValueInBlock(V, CxtI->getParent(), CxtI)
+      : getImpl(PImpl, AC, M).getValueAt(V, CxtI);
   Tristate Ret = getPredicateResult(Pred, C, Result, DL, TLI);
   if (Ret != Unknown)
     return Ret;
