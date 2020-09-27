@@ -4794,20 +4794,18 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
   case ISD::VECREDUCE_FMUL:
     NeutralElem = DAG.getConstantFP(1.0, dl, ElemVT);
     break;
-  case ISD::VECREDUCE_FMAX:
-    // This has maxnum semantics, so NaN represents missing data. We must clear
-    // 'nnan' if it was set because the NaN would be a poison value.
-    NeutralElem = DAG.getConstantFP(
-        std::numeric_limits<double>::quiet_NaN(), dl, ElemVT);
-    Flags.setNoNaNs(false);
-    break;
   case ISD::VECREDUCE_FMIN:
-    // This has minnum semantics, so NaN represents missing data. We must clear
-    // 'nnan' if it was set because the NaN would be a poison value.
-    NeutralElem = DAG.getConstantFP(
-        std::numeric_limits<double>::quiet_NaN(), dl, ElemVT);
-    Flags.setNoNaNs(false);
-    break;
+  case ISD::VECREDUCE_FMAX: {
+    // Neutral element for fminnum is NaN, Inf or FLT_MAX, depending on FMF.
+    const fltSemantics &Semantics = DAG.EVTToAPFloatSemantics(ElemVT);
+    APFloat NeutralAF = !Flags.hasNoNaNs() ? APFloat::getQNaN(Semantics) :
+                        !Flags.hasNoInfs() ? APFloat::getInf(Semantics) :
+                        APFloat::getLargest(Semantics);
+    if (N->getOpcode() == ISD::VECREDUCE_FMAX)
+      NeutralAF.changeSign();
+
+    NeutralElem = DAG.getConstantFP(NeutralAF, dl, ElemVT);
+  }
   }
 
   // Pad the vector with the neutral element.
