@@ -98,8 +98,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder(G_SHL)
+      .customIf([=](const LegalityQuery &Query) {
+        const auto &SrcTy = Query.Types[0];
+        const auto &AmtTy = Query.Types[1];
+        return !SrcTy.isVector() && SrcTy.getSizeInBits() == 32 &&
+               AmtTy.getSizeInBits() == 32;
+      })
       .legalFor({
           {s32, s32},
+          {s32, s64},
           {s64, s64},
           {v16s8, v16s8},
           {v4s16, v4s16},
