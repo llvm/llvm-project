@@ -370,7 +370,6 @@ body:             |
   ; CHECK:   [[PHI5:%[0-9]+]]:gprc = PHI [[LI2]], %bb.2, %27, %bb.17
   ; CHECK:   [[PHI6:%[0-9]+]]:g8rc_and_g8rc_nox0 = PHI [[ADDI8_]], %bb.2, %55, %bb.17
   ; CHECK:   [[PHI7:%[0-9]+]]:g8rc_and_g8rc_nox0 = PHI [[ADDI8_1]], %bb.2, %15, %bb.17
-  ; CHECK:   [[ADDI8_4:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[PHI7]], 8
   ; CHECK:   [[LWZU:%[0-9]+]]:gprc, [[LWZU1:%[0-9]+]]:g8rc_and_g8rc_nox0 = LWZU 8, [[PHI6]] :: (load 4 from %ir.46, !tbaa !2)
   ; CHECK:   [[COPY10:%[0-9]+]]:gprc_and_gprc_nor0 = COPY [[PHI4]].sub_32
   ; CHECK:   [[MULHWU1:%[0-9]+]]:gprc = MULHWU [[COPY10]], [[ORI]]
@@ -396,6 +395,7 @@ body:             |
   ; CHECK: bb.12 (%ir-block.60):
   ; CHECK:   successors: %bb.15(0x2aaaaaab), %bb.13(0x55555555)
   ; CHECK:   [[PHI8:%[0-9]+]]:gprc = PHI [[ADDI2]], %bb.11, [[ISEL1]], %bb.10
+  ; CHECK:   [[ADDI8_4:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[PHI7]], 8
   ; CHECK:   [[COPY13:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY [[ADDI8_4]]
   ; CHECK:   [[ADD4_3:%[0-9]+]]:gprc = nsw ADD4 [[PHI8]], [[ADD4_2]]
   ; CHECK:   STW killed [[ADD4_3]], 0, [[ADDI8_4]] :: (store 4 into %ir.44, !tbaa !2)
