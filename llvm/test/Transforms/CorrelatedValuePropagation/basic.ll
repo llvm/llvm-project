@@ -295,7 +295,6 @@ declare nonnull i8* @return_nonnull()
 define i1 @call_attribute() {
 ; CHECK-LABEL: @call_attribute(
 ; CHECK-NEXT:    [[A:%.*]] = call i8* @return_nonnull()
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[A]], null
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 false
@@ -319,7 +318,6 @@ define i1 @umin(i32 %a, i32 %b) {
 ; CHECK:       b_guard:
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[SEL_CMP]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[MIN]], 7
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    ret i1 false
@@ -356,7 +354,6 @@ define i1 @smin(i32 %a, i32 %b) {
 ; CHECK:       b_guard:
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp sle i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[SEL_CMP]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[MIN]], 7
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    ret i1 false
@@ -393,7 +390,6 @@ define i1 @smax(i32 %a, i32 %b) {
 ; CHECK:       b_guard:
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp sge i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[SEL_CMP]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[MAX]], 7
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    ret i1 false
@@ -430,7 +426,6 @@ define i1 @umax(i32 %a, i32 %b) {
 ; CHECK:       b_guard:
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp uge i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[SEL_CMP]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[MAX]], 7
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    ret i1 false
@@ -465,7 +460,6 @@ define i1 @clamp_low1(i32 %a) {
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp eq i32 [[A]], 5
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], -1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 5, i32 [[A]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[SEL]], 4
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    ret i1 false
@@ -497,7 +491,6 @@ define i1 @clamp_low2(i32 %a) {
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp ne i32 [[A]], 5
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], -1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 [[A]], i32 5
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[SEL]], 4
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    ret i1 false
@@ -529,7 +522,6 @@ define i1 @clamp_high1(i32 %a) {
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp eq i32 [[A]], 5
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 5, i32 [[A]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[SEL]], 6
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    ret i1 false
@@ -561,7 +553,6 @@ define i1 @clamp_high2(i32 %a) {
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp ne i32 [[A]], 5
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 [[A]], i32 5
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[SEL]], 6
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    ret i1 false
@@ -594,7 +585,6 @@ define i1 @clamp_high3(i32 %a) {
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp ne i32 [[A]], 5
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 100
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 [[A]], i32 5
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[SEL]], 105
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    ret i1 false
@@ -821,7 +811,6 @@ define i1 @zext_unknown(i8 %a) {
 ; CHECK-LABEL: @zext_unknown(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A32:%.*]] = zext i8 [[A:%.*]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[A32]], 256
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
@@ -839,7 +828,6 @@ define i1 @trunc_unknown(i32 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A8:%.*]] = trunc i32 [[A:%.*]] to i8
 ; CHECK-NEXT:    [[A32:%.*]] = sext i8 [[A8]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[A32]], 128
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
@@ -894,7 +882,6 @@ define i1 @and_unknown(i32 %a) {
 ; CHECK-LABEL: @and_unknown(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 128
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[AND]], 128
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
@@ -911,7 +898,6 @@ define i1 @lshr_unknown(i32 %a) {
 ; CHECK-LABEL: @lshr_unknown(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = lshr i32 [[A:%.*]], 30
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[AND]], 128
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
@@ -928,7 +914,6 @@ define i1 @urem_unknown(i32 %a) {
 ; CHECK-LABEL: @urem_unknown(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UREM:%.*]] = urem i32 [[A:%.*]], 30
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[UREM]], 30
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
@@ -945,8 +930,6 @@ define i1 @srem_unknown(i32 %a) {
 ; CHECK-LABEL: @srem_unknown(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SREM:%.*]] = srem i32 [[A:%.*]], 30
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[SREM]], 30
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[SREM]], -30
 ; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:
 ; CHECK-NEXT:    ret i1 true
@@ -968,8 +951,6 @@ define i1 @sdiv_unknown(i32 %a) {
 ; CHECK-LABEL: @sdiv_unknown(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SREM:%.*]] = sdiv i32 [[A:%.*]], 123
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[SREM]], 17459217
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[SREM]], -17459217
 ; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:
 ; CHECK-NEXT:    ret i1 true
@@ -991,7 +972,6 @@ define i1 @uadd_sat_unknown(i32 %a) {
 ; CHECK-LABEL: @uadd_sat_unknown(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[A:%.*]], i32 100)
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp uge i32 [[VAL]], 100
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[VAL]], 100
 ; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:
@@ -1014,7 +994,6 @@ define i1 @usub_sat_unknown(i32 %a) {
 ; CHECK-LABEL: @usub_sat_unknown(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A:%.*]], i32 100)
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 [[VAL]], -101
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[VAL]], -101
 ; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:
@@ -1037,7 +1016,6 @@ define i1 @sadd_sat_unknown(i32 %a) {
 ; CHECK-LABEL: @sadd_sat_unknown(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[A:%.*]], i32 100)
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[VAL]], -2147483548
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[VAL]], -2147483548
 ; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:
@@ -1060,7 +1038,6 @@ define i1 @ssub_sat_unknown(i32 %a) {
 ; CHECK-LABEL: @ssub_sat_unknown(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @llvm.ssub.sat.i32(i32 [[A:%.*]], i32 100)
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[VAL]], 2147483547
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[VAL]], 2147483547
 ; CHECK-NEXT:    br i1 undef, label [[EXIT1:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:
