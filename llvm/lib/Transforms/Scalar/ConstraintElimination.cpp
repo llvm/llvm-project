@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Scalar/ConstraintElimination.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstraintSystem.h"
@@ -271,6 +272,19 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   }
 
   return Changed;
+}
+
+PreservedAnalyses ConstraintEliminationPass::run(Function &F,
+                                                 FunctionAnalysisManager &AM) {
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  if (!eliminateConstraints(F, DT))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<GlobalsAA>();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 namespace {
