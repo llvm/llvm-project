@@ -236,8 +236,6 @@ define i32 @test10_narrow(i32 %x, i32 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C0]])
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[Y:%.*]], 128
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C1]])
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       end:
 ; CHECK-NEXT:    [[DIV1_LHS_TRUNC:%.*]] = trunc i32 [[X]] to i8
 ; CHECK-NEXT:    [[DIV1_RHS_TRUNC:%.*]] = trunc i32 [[Y]] to i8
 ; CHECK-NEXT:    [[DIV12:%.*]] = udiv i8 [[DIV1_LHS_TRUNC]], [[DIV1_RHS_TRUNC]]
@@ -248,9 +246,7 @@ define i32 @test10_narrow(i32 %x, i32 %y) {
   call void @llvm.assume(i1 %c0)
   %c1 = icmp ult i32 %y, 128
   call void @llvm.assume(i1 %c1)
-  br label %end
 
-end:
   %div = sdiv i32 %x, %y
   ret i32 %div
 }
@@ -269,8 +265,6 @@ define i64 @test11_i15_i15(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
 ; CHECK-NEXT:    [[C3:%.*]] = icmp sge i64 [[Y]], -16384
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       end:
 ; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i16
 ; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i16
 ; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i16 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
@@ -287,9 +281,7 @@ entry:
   call void @llvm.assume(i1 %c2)
   %c3 = icmp sge i64 %y, -16384
   call void @llvm.assume(i1 %c3)
-  br label %end
 
-end:
   %div = sdiv i64 %x, %y
   ret i64 %div
 }
@@ -307,8 +299,6 @@ define i64 @test12_i16_i16(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
 ; CHECK-NEXT:    [[C3:%.*]] = icmp sge i64 [[Y]], -32768
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       end:
 ; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i32
 ; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i32
 ; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i32 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
@@ -325,9 +315,7 @@ entry:
   call void @llvm.assume(i1 %c2)
   %c3 = icmp sge i64 %y, -32768
   call void @llvm.assume(i1 %c3)
-  br label %end
 
-end:
   %div = sdiv i64 %x, %y
   ret i64 %div
 }
@@ -342,8 +330,6 @@ define i64 @test13_i16_u15(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C1]])
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ule i64 [[Y:%.*]], 32767
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       end:
 ; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i16
 ; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i16
 ; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i16 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
@@ -358,9 +344,7 @@ entry:
 
   %c2 = icmp ule i64 %y, 32767
   call void @llvm.assume(i1 %c2)
-  br label %end
 
-end:
   %div = sdiv i64 %x, %y
   ret i64 %div
 }
@@ -378,8 +362,6 @@ define i64 @test14_i16safe_i16(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
 ; CHECK-NEXT:    [[C3:%.*]] = icmp sge i64 [[Y]], -32768
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       end:
 ; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i16
 ; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i16
 ; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i16 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
@@ -396,9 +378,7 @@ entry:
   call void @llvm.assume(i1 %c2)
   %c3 = icmp sge i64 %y, -32768
   call void @llvm.assume(i1 %c3)
-  br label %end
 
-end:
   %div = sdiv i64 %x, %y
   ret i64 %div
 }
@@ -413,8 +393,6 @@ define i64 @test15_i16safe_u15(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C1]])
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ule i64 [[Y:%.*]], 32767
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       end:
 ; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i16
 ; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i16
 ; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i16 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
@@ -429,9 +407,7 @@ entry:
 
   %c2 = icmp ule i64 %y, 32767
   call void @llvm.assume(i1 %c2)
-  br label %end
 
-end:
   %div = sdiv i64 %x, %y
   ret i64 %div
 }
@@ -448,8 +424,6 @@ define i64 @test16_i4_i4(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
 ; CHECK-NEXT:    [[C3:%.*]] = icmp sge i64 [[Y]], -4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       end:
 ; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i8
 ; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i8
 ; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i8 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
@@ -466,9 +440,7 @@ entry:
   call void @llvm.assume(i1 %c2)
   %c3 = icmp sge i64 %y, -4
   call void @llvm.assume(i1 %c3)
-  br label %end
 
-end:
   %div = sdiv i64 %x, %y
   ret i64 %div
 }
@@ -485,8 +457,6 @@ define i64 @test17_i9_i9(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
 ; CHECK-NEXT:    [[C3:%.*]] = icmp sge i64 [[Y]], -256
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       end:
 ; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i16
 ; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i16
 ; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i16 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
@@ -503,9 +473,7 @@ entry:
   call void @llvm.assume(i1 %c2)
   %c3 = icmp sge i64 %y, -256
   call void @llvm.assume(i1 %c3)
-  br label %end
 
-end:
   %div = sdiv i64 %x, %y
   ret i64 %div
 }
@@ -522,8 +490,6 @@ define i9 @test18_i9_i9(i9 %x, i9 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
 ; CHECK-NEXT:    [[C3:%.*]] = icmp sge i9 [[Y]], -256
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       end:
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i9 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i9 [[DIV]]
 ;
@@ -537,9 +503,7 @@ entry:
   call void @llvm.assume(i1 %c2)
   %c3 = icmp sge i9 %y, -256
   call void @llvm.assume(i1 %c3)
-  br label %end
 
-end:
   %div = sdiv i9 %x, %y
   ret i9 %div
 }
@@ -554,8 +518,6 @@ define i10 @test19_i10_i10(i10 %x, i10 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
 ; CHECK-NEXT:    [[C3:%.*]] = icmp sge i10 [[Y]], -256
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       end:
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i10 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i10 [[DIV]]
 ;
@@ -569,9 +531,7 @@ entry:
   call void @llvm.assume(i1 %c2)
   %c3 = icmp sge i10 %y, -256
   call void @llvm.assume(i1 %c3)
-  br label %end
 
-end:
   %div = sdiv i10 %x, %y
   ret i10 %div
 }
@@ -588,8 +548,6 @@ define i64 @test20_i16_i18(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
 ; CHECK-NEXT:    [[C3:%.*]] = icmp sge i64 [[Y]], -65536
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       end:
 ; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i32
 ; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i32
 ; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i32 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
@@ -606,9 +564,7 @@ entry:
   call void @llvm.assume(i1 %c2)
   %c3 = icmp sge i64 %y, -65536
   call void @llvm.assume(i1 %c3)
-  br label %end
 
-end:
   %div = sdiv i64 %x, %y
   ret i64 %div
 }
@@ -623,8 +579,6 @@ define i64 @test21_i18_i16(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
 ; CHECK-NEXT:    [[C3:%.*]] = icmp sge i64 [[Y]], -16384
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       end:
 ; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i32
 ; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i32
 ; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i32 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
@@ -641,9 +595,7 @@ entry:
   call void @llvm.assume(i1 %c2)
   %c3 = icmp sge i64 %y, -16384
   call void @llvm.assume(i1 %c3)
-  br label %end
 
-end:
   %div = sdiv i64 %x, %y
   ret i64 %div
 }
@@ -660,8 +612,6 @@ define i64 @test22_i16_i16(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
 ; CHECK-NEXT:    [[C3:%.*]] = icmp sge i64 [[Y]], -32768
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       end:
 ; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i64 [[X]] to i32
 ; CHECK-NEXT:    [[DIV_RHS_TRUNC:%.*]] = trunc i64 [[Y]] to i32
 ; CHECK-NEXT:    [[DIV1:%.*]] = sdiv exact i32 [[DIV_LHS_TRUNC]], [[DIV_RHS_TRUNC]]
@@ -678,9 +628,7 @@ entry:
   call void @llvm.assume(i1 %c2)
   %c3 = icmp sge i64 %y, -32768
   call void @llvm.assume(i1 %c3)
-  br label %end
 
-end:
   %div = sdiv exact i64 %x, %y
   ret i64 %div
 }

@@ -643,7 +643,8 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   std::array<Optional<ConstantRange>, 2> CRs;
   unsigned MinSignedBits = 0;
   for (auto I : zip(Instr->operands(), CRs)) {
-    std::get<1>(I) = LVI->getConstantRange(std::get<0>(I), Instr->getParent());
+    std::get<1>(I) =
+        LVI->getConstantRange(std::get<0>(I), Instr->getParent(), Instr);
     MinSignedBits = std::max(std::get<1>(I)->getMinSignedBits(), MinSignedBits);
   }
 
@@ -695,7 +696,8 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   // of both of the operands?
   unsigned MaxActiveBits = 0;
   for (Value *Operand : Instr->operands()) {
-    ConstantRange CR = LVI->getConstantRange(Operand, Instr->getParent());
+    ConstantRange CR =
+        LVI->getConstantRange(Operand, Instr->getParent(), Instr);
     MaxActiveBits = std::max(CR.getActiveBits(), MaxActiveBits);
   }
   // Don't shrink below 8 bits wide.
