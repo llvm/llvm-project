@@ -129,7 +129,7 @@ static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
   if (S->getType()->isVectorTy()) return false;
   if (isa<Constant>(S->getCondition())) return false;
 
-  Constant *C = LVI->getConstant(S->getCondition(), S->getParent(), S);
+  Constant *C = LVI->getConstant(S->getCondition(), S);
   if (!C) return false;
 
   ConstantInt *CI = dyn_cast<ConstantInt>(C);
@@ -286,7 +286,7 @@ static bool processMemAccess(Instruction *I, LazyValueInfo *LVI) {
 
   if (isa<Constant>(Pointer)) return false;
 
-  Constant *C = LVI->getConstant(Pointer, I->getParent(), I);
+  Constant *C = LVI->getConstant(Pointer, I);
   if (!C) return false;
 
   ++NumMemAccess;
@@ -432,10 +432,8 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
 // See if we can prove that the given binary op intrinsic will not overflow.
 static bool willNotOverflow(BinaryOpIntrinsic *BO, LazyValueInfo *LVI) {
-  ConstantRange LRange = LVI->getConstantRange(
-      BO->getLHS(), BO->getParent(), BO);
-  ConstantRange RRange = LVI->getConstantRange(
-      BO->getRHS(), BO->getParent(), BO);
+  ConstantRange LRange = LVI->getConstantRange(BO->getLHS(), BO);
+  ConstantRange RRange = LVI->getConstantRange(BO->getRHS(), BO);
   ConstantRange NWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
       BO->getBinaryOp(), RRange, BO->getNoWrapKind());
   return NWRegion.contains(LRange);
@@ -567,7 +565,7 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
       if (V->getType()->isVectorTy()) continue;
       if (isa<Constant>(V)) continue;
 
-      Constant *C = LVI->getConstant(V, CB.getParent(), &CB);
+      Constant *C = LVI->getConstant(V, &CB);
       if (!C) continue;
       U.set(C);
       Progress = true;
@@ -643,8 +641,7 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   std::array<Optional<ConstantRange>, 2> CRs;
   unsigned MinSignedBits = 0;
   for (auto I : zip(Instr->operands(), CRs)) {
-    std::get<1>(I) =
-        LVI->getConstantRange(std::get<0>(I), Instr->getParent(), Instr);
+    std::get<1>(I) = LVI->getConstantRange(std::get<0>(I), Instr);
     MinSignedBits = std::max(std::get<1>(I)->getMinSignedBits(), MinSignedBits);
   }
 
@@ -696,8 +693,7 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   // of both of the operands?
   unsigned MaxActiveBits = 0;
   for (Value *Operand : Instr->operands()) {
-    ConstantRange CR =
-        LVI->getConstantRange(Operand, Instr->getParent(), Instr);
+    ConstantRange CR = LVI->getConstantRange(Operand, Instr);
     MaxActiveBits = std::max(CR.getActiveBits(), MaxActiveBits);
   }
   // Don't shrink below 8 bits wide.
@@ -902,14 +898,12 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   if (NSW && NUW)
     return false;
 
-  BasicBlock *BB = BinOp->getParent();
-
   Instruction::BinaryOps Opcode = BinOp->getOpcode();
   Value *LHS = BinOp->getOperand(0);
   Value *RHS = BinOp->getOperand(1);
 
-  ConstantRange LRange = LVI->getConstantRange(LHS, BB, BinOp);
-  ConstantRange RRange = LVI->getConstantRange(RHS, BB, BinOp);
+  ConstantRange LRange = LVI->getConstantRange(LHS, BinOp);
+  ConstantRange RRange = LVI->getConstantRange(RHS, BinOp);
 
   bool Changed = false;
   bool NewNUW = false, NewNSW = false;
@@ -937,7 +931,6 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
 
   // Pattern match (and lhs, C) where C includes a superset of bits which might
   // be set in lhs.  This is a common truncation idiom created by instcombine.
-  BasicBlock *BB = BinOp->getParent();
   Value *LHS = BinOp->getOperand(0);
   ConstantInt *RHS = dyn_cast<ConstantInt>(BinOp->getOperand(1));
   if (!RHS || !RHS->getValue().isMask())
@@ -946,7 +939,7 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   // We can only replace the AND with LHS based on range info if the range does
   // not include undef.
   ConstantRange LRange =
-      LVI->getConstantRange(LHS, BB, BinOp, /*UndefAllowed=*/false);
+      LVI->getConstantRange(LHS, BinOp, /*UndefAllowed=*/false);
   if (!LRange.getUnsignedMax().ule(RHS->getValue()))
     return false;
 
@@ -958,7 +951,7 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
 
 
 static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
-  if (Constant *C = LVI->getConstant(V, At->getParent(), At))
+  if (Constant *C = LVI->getConstant(V, At))
     return C;
 
   // TODO: The following really should be sunk inside LVI's core algorithm, or

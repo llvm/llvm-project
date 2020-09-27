@@ -1586,12 +1586,12 @@ static bool isKnownNonConstant(Value *V) {
   return false;
 }
 
-Constant *LazyValueInfo::getConstant(Value *V, BasicBlock *BB,
-                                     Instruction *CxtI) {
+Constant *LazyValueInfo::getConstant(Value *V, Instruction *CxtI) {
   // Bail out early if V is known not to be a Constant.
   if (isKnownNonConstant(V))
     return nullptr;
 
+  BasicBlock *BB = CxtI->getParent();
   ValueLatticeElement Result =
       getImpl(PImpl, AC, BB->getModule()).getValueInBlock(V, BB, CxtI);
 
@@ -1605,11 +1605,11 @@ Constant *LazyValueInfo::getConstant(Value *V, BasicBlock *BB,
   return nullptr;
 }
 
-ConstantRange LazyValueInfo::getConstantRange(Value *V, BasicBlock *BB,
-                                              Instruction *CxtI,
+ConstantRange LazyValueInfo::getConstantRange(Value *V, Instruction *CxtI,
                                               bool UndefAllowed) {
   assert(V->getType()->isIntegerTy());
   unsigned Width = V->getType()->getIntegerBitWidth();
+  BasicBlock *BB = CxtI->getParent();
   ValueLatticeElement Result =
       getImpl(PImpl, AC, BB->getModule()).getValueInBlock(V, BB, CxtI);
   if (Result.isUnknown())
