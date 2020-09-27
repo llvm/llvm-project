@@ -825,16 +825,16 @@ declare i32 @statvfs(i8*, %opaque*)
 ; CHECK-LINUX: declare noundef i32 @statvfs64(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[G1]]
 declare i32 @statvfs64(i8*, %opaque*)
 
-; CHECK: declare i8* @stpcpy(i8*, i8* nocapture readonly) [[G1]]
+; CHECK: declare i8* @stpcpy(i8* noalias, i8* noalias nocapture readonly) [[G1]]
 declare i8* @stpcpy(i8*, i8*)
 
-; CHECK: declare i8* @stpncpy(i8*, i8* nocapture readonly, i64) [[G1]]
+; CHECK: declare i8* @stpncpy(i8* noalias, i8* noalias nocapture readonly, i64) [[G1]]
 declare i8* @stpncpy(i8*, i8*, i64)
 
 ; CHECK: declare i32 @strcasecmp(i8* nocapture, i8* nocapture) [[G2]]
 declare i32 @strcasecmp(i8*, i8*)
 
-; CHECK: declare i8* @strcat(i8* returned, i8* nocapture readonly) [[G1]]
+; CHECK: declare i8* @strcat(i8* noalias returned, i8* noalias nocapture readonly) [[G1]]
 declare i8* @strcat(i8*, i8*)
 
 ; CHECK: declare i8* @strchr(i8*, i32) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
@@ -861,7 +861,7 @@ declare i64 @strlen(i8*)
 ; CHECK: declare i32 @strncasecmp(i8* nocapture, i8* nocapture, i64) [[G2]]
 declare i32 @strncasecmp(i8*, i8*, i64)
 
-; CHECK: declare i8* @strncat(i8* returned, i8* nocapture readonly, i64) [[G1]]
+; CHECK: declare i8* @strncat(i8* noalias returned, i8* noalias nocapture readonly, i64) [[G1]]
 declare i8* @strncat(i8*, i8*, i64)
 
 ; CHECK: declare i32 @strncmp(i8* nocapture, i8* nocapture, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
