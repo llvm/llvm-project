@@ -1184,14 +1184,12 @@ define i1 @isNotKnownNeverNegativeInfinity_uitofp(i16 %x) {
   ret i1 %r
 }
 
-; largest signed i16 = 2^15 - 1 = 32767
+; largest magnitude signed i16 = 2^15 - 1 = 32767 --> -32768
 ; largest half (max exponent = 15 -> 2^15 * (1 + 1023/1024) = 65504
 
 define i1 @isKnownNeverInfinity_sitofp(i16 %x) {
 ; CHECK-LABEL: @isKnownNeverInfinity_sitofp(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i16 [[X:%.*]] to half
-; CHECK-NEXT:    [[R:%.*]] = fcmp une half [[F]], 0xH7C00
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %f = sitofp i16 %x to half
   %r = fcmp une half %f, 0xH7c00
@@ -1213,9 +1211,7 @@ define i1 @isNotKnownNeverInfinity_sitofp(i17 %x) {
 
 define i1 @isKnownNeverNegativeInfinity_sitofp(i16 %x) {
 ; CHECK-LABEL: @isKnownNeverNegativeInfinity_sitofp(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i16 [[X:%.*]] to half
-; CHECK-NEXT:    [[R:%.*]] = fcmp oeq half [[F]], 0xHFC00
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %f = sitofp i16 %x to half
   %r = fcmp oeq half %f, 0xHfc00
