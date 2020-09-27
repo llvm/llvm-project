@@ -43,7 +43,7 @@ define void @test4(i32 %n) {
 ; CHECK-NEXT:    [[A:%.*]] = phi i32 [ [[N]], [[ENTRY:%.*]] ], [ [[REM1:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[A]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[REM1]] = urem i32 [[A]], 6
+; CHECK-NEXT:    [[REM1]] = urem i32 [[A]], 17
 ; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp sgt i32 [[REM1]], 8
 ; CHECK-NEXT:    br i1 [[LOOPCOND]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
@@ -57,7 +57,7 @@ loop:
   %a = phi i32 [ %n, %entry ], [ %rem, %loop ]
   %cond = icmp sgt i32 %a, 4
   call void @llvm.assume(i1 %cond)
-  %rem = srem i32 %a, 6
+  %rem = srem i32 %a, 17
   %loopcond = icmp sgt i32 %rem, 8
   br i1 %loopcond, label %loop, label %exit
 
