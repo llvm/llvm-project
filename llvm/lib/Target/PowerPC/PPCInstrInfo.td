@@ -2744,6 +2744,7 @@ defm FCPSGND : XForm_28r<63, 8, (outs f8rc:$frD), (ins f8rc:$frA, f8rc:$frB),
                         [(set f64:$frD, (fcopysign f64:$frB, f64:$frA))]>;
 
 // Reciprocal estimates.
+let mayRaiseFPException = 1 in {
 defm FRE      : XForm_26r<63, 24, (outs f8rc:$frD), (ins f8rc:$frB),
                           "fre", "$frD, $frB", IIC_FPGeneral,
                           [(set f64:$frD, (PPCfre f64:$frB))]>;
@@ -2756,6 +2757,7 @@ defm FRSQRTE  : XForm_26r<63, 26, (outs f8rc:$frD), (ins f8rc:$frB),
 defm FRSQRTES : XForm_26r<59, 26, (outs f4rc:$frD), (ins f4rc:$frB),
                           "frsqrtes", "$frD, $frB", IIC_FPGeneral,
                           [(set f32:$frD, (PPCfrsqrte f32:$frB))]>;
+}
 }
 
 // XL-Form instructions.  condition register logical ops.
@@ -3124,7 +3126,7 @@ def : InstAlias<"subc. $rA, $rB, $rC", (SUBFC_rec gprc:$rA, gprc:$rC, gprc:$rB)>
 // this type.
 //
 let PPC970_Unit = 3, hasSideEffects = 0, Predicates = [HasFPU] in {  // FPU Operations.
-let Uses = [RM] in {
+let mayRaiseFPException = 1, Uses = [RM] in {
 let isCommutable = 1 in {
   defm FMADD : AForm_1r<63, 29,
                       (outs f8rc:$FRT), (ins f8rc:$FRA, f8rc:$FRC, f8rc:$FRB),
