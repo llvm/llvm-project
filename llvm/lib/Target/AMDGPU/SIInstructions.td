@@ -1552,10 +1552,27 @@ def : UMad24Pat<V_MAD_U32_U24, 1>;
 
 // BFI patterns
 
+def BFIImm32 : PatFrag<
+  (ops node:$x, node:$y, node:$z),
+  (i32 (DivergentBinFrag<or> (and node:$y, node:$x), (and node:$z, imm))),
+  [{
+    auto *X = dyn_cast<ConstantSDNode>(N->getOperand(0)->getOperand(1));
+    auto *NotX = dyn_cast<ConstantSDNode>(N->getOperand(1)->getOperand(1));
+    return X && NotX &&
+      ~(unsigned)X->getZExtValue() == (unsigned)NotX->getZExtValue();
+  }]
+>;
+
 // Definition from ISA doc:
 // (y & x) | (z & ~x)
 def : AMDGPUPat <
   (DivergentBinFrag<or> (and i32:$y, i32:$x), (and i32:$z, (not i32:$x))),
+  (V_BFI_B32 $x, $y, $z)
+>;
+
+// (y & C) | (z & ~C)
+def : AMDGPUPat <
+  (BFIImm32 i32:$x, i32:$y, i32:$z),
   (V_BFI_B32 $x, $y, $z)
 >;
 
