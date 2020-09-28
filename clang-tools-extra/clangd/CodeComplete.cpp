@@ -1632,8 +1632,8 @@ private:
     CodeCompletion::Scores Scores;
     switch (Opts.RankingModel) {
     case RM::Heuristics:
-      Scores.Quality = Quality.evaluate();
-      Scores.Relevance = Relevance.evaluate();
+      Scores.Quality = Quality.evaluateHeuristics();
+      Scores.Relevance = Relevance.evaluateHeuristics();
       Scores.Total =
           evaluateSymbolAndRelevance(Scores.Quality, Scores.Relevance);
       // NameMatch is in fact a multiplier on total score, so rescoring is
