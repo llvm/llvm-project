@@ -203,8 +203,7 @@ void UnnecessaryValueParamCheck::handleMoveFix(const ParmVarDecl &Var,
   Diag << FixItHint::CreateInsertion(CopyArgument.getBeginLoc(), "std::move(")
        << FixItHint::CreateInsertion(EndLoc, ")")
        << Inserter.createIncludeInsertion(
-              SM.getFileID(CopyArgument.getBeginLoc()), "utility",
-              /*IsAngled=*/true);
+              SM.getFileID(CopyArgument.getBeginLoc()), "<utility>");
 }
 
 } // namespace performance

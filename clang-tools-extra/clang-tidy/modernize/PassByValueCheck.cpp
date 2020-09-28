@@ -216,8 +216,7 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
               Initializer->getLParenLoc().getLocWithOffset(1), "std::move(")
        << Inserter.createIncludeInsertion(
               Result.SourceManager->getFileID(Initializer->getSourceLocation()),
-              "utility",
-              /*IsAngled=*/true);
+              "<utility>");
 }
 
 } // namespace modernize

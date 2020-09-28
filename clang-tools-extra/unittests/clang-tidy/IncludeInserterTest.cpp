@@ -43,14 +43,12 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override {
     auto Diag = diag(Result.Nodes.getNodeAs<DeclStmt>("stmt")->getBeginLoc(),
                      "foo, bar");
-    for (StringRef Header : HeadersToInclude()) {
-      Diag << Inserter.createMainFileIncludeInsertion(Header,
-                                                      IsAngledInclude());
+    for (StringRef Header : headersToInclude()) {
+      Diag << Inserter.createMainFileIncludeInsertion(Header);
     }
   }
 
-  virtual std::vector<StringRef> HeadersToInclude() const = 0;
-  virtual bool IsAngledInclude() const = 0;
+  virtual std::vector<StringRef> headersToInclude() const = 0;
 
   utils::IncludeInserter Inserter{utils::IncludeSorter::IS_Google};
 };
@@ -60,10 +58,9 @@ public:
   NonSystemHeaderInserterCheck(StringRef CheckName, ClangTidyContext *Context)
       : IncludeInserterCheckBase(CheckName, Context) {}
 
-  std::vector<StringRef> HeadersToInclude() const override {
+  std::vector<StringRef> headersToInclude() const override {
     return {"path/to/header.h"};
   }
-  bool IsAngledInclude() const override { return false; }
 };
 
 class EarlyInAlphabetHeaderInserterCheck : public IncludeInserterCheckBase {
@@ -71,10 +68,9 @@ public:
   EarlyInAlphabetHeaderInserterCheck(StringRef CheckName, ClangTidyContext *Context)
       : IncludeInserterCheckBase(CheckName, Context) {}
 
-  std::vector<StringRef> HeadersToInclude() const override {
+  std::vector<StringRef> headersToInclude() const override {
     return {"a/header.h"};
   }
-  bool IsAngledInclude() const override { return false; }
 };
 
 class MultipleHeaderInserterCheck : public IncludeInserterCheckBase {
@@ -82,10 +78,9 @@ public:
   MultipleHeaderInserterCheck(StringRef CheckName, ClangTidyContext *Context)
       : IncludeInserterCheckBase(CheckName, Context) {}
 
-  std::vector<StringRef> HeadersToInclude() const override {
+  std::vector<StringRef> headersToInclude() const override {
     return {"path/to/header.h", "path/to/header2.h", "path/to/header.h"};
   }
-  bool IsAngledInclude() const override { return false; }
 };
 
 class CSystemIncludeInserterCheck : public IncludeInserterCheckBase {
@@ -93,10 +88,9 @@ public:
   CSystemIncludeInserterCheck(StringRef CheckName, ClangTidyContext *Context)
       : IncludeInserterCheckBase(CheckName, Context) {}
 
-  std::vector<StringRef> HeadersToInclude() const override {
-    return {"stdlib.h"};
+  std::vector<StringRef> headersToInclude() const override {
+    return {"<stdlib.h>"};
   }
-  bool IsAngledInclude() const override { return true; }
 };
 
 class CXXSystemIncludeInserterCheck : public IncludeInserterCheckBase {
@@ -104,8 +98,17 @@ public:
   CXXSystemIncludeInserterCheck(StringRef CheckName, ClangTidyContext *Context)
       : IncludeInserterCheckBase(CheckName, Context) {}
 
-  std::vector<StringRef> HeadersToInclude() const override { return {"set"}; }
-  bool IsAngledInclude() const override { return true; }
+  std::vector<StringRef> headersToInclude() const override { return {"<set>"}; }
+};
+
+class InvalidIncludeInserterCheck : public IncludeInserterCheckBase {
+public:
+  InvalidIncludeInserterCheck(StringRef CheckName, ClangTidyContext *Context)
+      : IncludeInserterCheckBase(CheckName, Context) {}
+
+  std::vector<StringRef> headersToInclude() const override {
+    return {"a.h", "<stdlib.h", "cstdlib>", "b.h", "<c.h>", "<d>"};
+  }
 };
 
 template <typename Check>
@@ -595,6 +598,40 @@ void foo() {
 
   EXPECT_EQ(PostCode, runCheckOnCode<EarlyInAlphabetHeaderInserterCheck>(
                           PreCode, "workspace_folder/clang_tidy/tests/"
+                                   "insert_includes_test_header.cc"));
+}
+
+TEST(IncludeInserterTest, InvalidHeaderName) {
+  const char *PreCode = R"(
+#include "clang_tidy/tests/insert_includes_test_header.h"
+
+#include <list>
+#include <map>
+
+#include "path/to/a/header.h"
+
+void foo() {
+  int a = 0;
+})";
+  const char *PostCode = R"(
+#include "clang_tidy/tests/insert_includes_test_header.h"
+
+#include <c.h>
+
+#include <d>
+#include <list>
+#include <map>
+
+#include "a.h"
+#include "b.h"
+#include "path/to/a/header.h"
+
+void foo() {
+  int a = 0;
+})";
+
+  EXPECT_EQ(PostCode, runCheckOnCode<InvalidIncludeInserterCheck>(
+                          PreCode, "clang_tidy/tests/"
                                    "insert_includes_test_header.cc"));
 }
 
