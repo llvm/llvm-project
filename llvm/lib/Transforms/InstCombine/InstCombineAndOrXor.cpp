@@ -2113,7 +2113,7 @@ static Instruction *matchRotate(Instruction &Or) {
     const APInt *LC, *RC;
     if (match(L, m_APIntAllowUndef(LC)) && match(R, m_APIntAllowUndef(RC)))
       if (LC->ult(Width) && RC->ult(Width) && (*LC + *RC) == Width)
-        return L;
+        return ConstantInt::get(L->getType(), *LC);
 
     // For non-constant cases we don't support non-pow2 shift masks.
     // TODO: Is it worth matching urem as well?
