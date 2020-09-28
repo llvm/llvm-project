@@ -340,7 +340,7 @@ public:
 
   void Clear();
 
-  bool SymbolContextMatches(const SymbolContext &sc);
+  bool SymbolContextMatches(SymbolContext &sc);
 
   bool AddressMatches(lldb::addr_t addr);
 

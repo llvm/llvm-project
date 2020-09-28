@@ -40,11 +40,17 @@ static void PrintMessage(ArrayRef<SMLoc> Loc, SourceMgr::DiagKind Kind,
                         "instantiated from multiclass");
 }
 
-void PrintNote(const Twine &Msg) { WithColor::note() << Msg << "\n"; }
+// Functions to print notes.
+
+void PrintNote(const Twine &Msg) {
+  WithColor::note() << Msg << "\n";
+}
 
 void PrintNote(ArrayRef<SMLoc> NoteLoc, const Twine &Msg) {
   PrintMessage(NoteLoc, SourceMgr::DK_Note, Msg);
 }
+
+// Functions to print fatal notes.
 
 void PrintFatalNote(ArrayRef<SMLoc> NoteLoc, const Twine &Msg) {
   PrintNote(NoteLoc, Msg);
@@ -52,6 +58,28 @@ void PrintFatalNote(ArrayRef<SMLoc> NoteLoc, const Twine &Msg) {
   sys::RunInterruptHandlers();
   std::exit(1);
 }
+
+// This method takes a Record and uses the source location
+// stored in it.
+void PrintFatalNote(const Record *Rec, const Twine &Msg) {
+  PrintNote(Rec->getLoc(), Msg);
+  // The following call runs the file cleanup handlers.
+  sys::RunInterruptHandlers();
+  std::exit(1);
+}
+
+// This method takes a RecordVal and uses the source location
+// stored in it.
+void PrintFatalNote(const RecordVal *RecVal, const Twine &Msg) {
+  PrintNote(RecVal->getLoc(), Msg);
+  // The following call runs the file cleanup handlers.
+  sys::RunInterruptHandlers();
+  std::exit(1);
+}
+
+// Functions to print warnings.
+
+void PrintWarning(const Twine &Msg) { WithColor::warning() << Msg << "\n"; }
 
 void PrintWarning(ArrayRef<SMLoc> WarningLoc, const Twine &Msg) {
   PrintMessage(WarningLoc, SourceMgr::DK_Warning, Msg);
@@ -61,7 +89,9 @@ void PrintWarning(const char *Loc, const Twine &Msg) {
   SrcMgr.PrintMessage(SMLoc::getFromPointer(Loc), SourceMgr::DK_Warning, Msg);
 }
 
-void PrintWarning(const Twine &Msg) { WithColor::warning() << Msg << "\n"; }
+// Functions to print errors.
+
+void PrintError(const Twine &Msg) { WithColor::error() << Msg << "\n"; }
 
 void PrintError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg) {
   PrintMessage(ErrorLoc, SourceMgr::DK_Error, Msg);
@@ -71,7 +101,13 @@ void PrintError(const char *Loc, const Twine &Msg) {
   SrcMgr.PrintMessage(SMLoc::getFromPointer(Loc), SourceMgr::DK_Error, Msg);
 }
 
-void PrintError(const Twine &Msg) { WithColor::error() << Msg << "\n"; }
+// This method takes a Record and uses the source location
+// stored in it.
+void PrintError(const Record *Rec, const Twine &Msg) {
+  PrintMessage(Rec->getLoc(), SourceMgr::DK_Error, Msg);
+}
+
+// Functions to print fatal errors.
 
 void PrintFatalError(const Twine &Msg) {
   PrintError(Msg);

@@ -28,7 +28,6 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Target/SectionLoadHistory.h"
-#include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -508,8 +507,6 @@ public:
   static ArchSpec GetDefaultArchitecture();
 
   static void SetDefaultArchitecture(const ArchSpec &arch);
-
-  bool IsDummyTarget() const { return m_is_dummy_target; }
 
   /// Find a binary on the system and return its Module,
   /// or return an existing Module that is already in the Target.
@@ -1142,26 +1139,22 @@ public:
   class StopHook : public UserID {
   public:
     StopHook(const StopHook &rhs);
-    virtual ~StopHook() = default;
 
-    enum class StopHookKind  : uint32_t { CommandBased = 0, ScriptBased };
+    ~StopHook();
+
+    StringList *GetCommandPointer() { return &m_commands; }
+
+    const StringList &GetCommands() { return m_commands; }
 
     lldb::TargetSP &GetTarget() { return m_target_sp; }
+
+    void SetCommands(StringList &in_commands) { m_commands = in_commands; }
 
     // Set the specifier.  The stop hook will own the specifier, and is
     // responsible for deleting it when we're done.
     void SetSpecifier(SymbolContextSpecifier *specifier);
 
     SymbolContextSpecifier *GetSpecifier() { return m_specifier_sp.get(); }
-
-    bool ExecutionContextPasses(const ExecutionContext &exe_ctx);
-
-    // Called on stop, this gets passed the ExecutionContext for each "stop
-    // with a reason" thread.  It should add to the stream whatever text it
-    // wants to show the user, and return False to indicate it wants the target
-    // not to stop.
-    virtual bool HandleStop(ExecutionContext &exe_ctx,
-                            lldb::StreamSP output) = 0;
 
     // Set the Thread Specifier.  The stop hook will own the thread specifier,
     // and is responsible for deleting it when we're done.
@@ -1180,79 +1173,26 @@ public:
     bool GetAutoContinue() const { return m_auto_continue; }
 
     void GetDescription(Stream *s, lldb::DescriptionLevel level) const;
-    virtual void GetSubclassDescription(Stream *s,
-                                        lldb::DescriptionLevel level) const = 0;
 
-  protected:
+  private:
     lldb::TargetSP m_target_sp;
+    StringList m_commands;
     lldb::SymbolContextSpecifierSP m_specifier_sp;
     std::unique_ptr<ThreadSpec> m_thread_spec_up;
     bool m_active = true;
     bool m_auto_continue = false;
 
-    StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid);
-  };
-
-  class StopHookCommandLine : public StopHook {
-  public:
-    virtual ~StopHookCommandLine() = default;
-
-    StringList &GetCommands() { return m_commands; }
-    void SetActionFromString(const std::string &strings);
-    void SetActionFromStrings(const std::vector<std::string> &strings);
-
-    bool HandleStop(ExecutionContext &exc_ctx,
-                    lldb::StreamSP output_sp) override;
-    void GetSubclassDescription(Stream *s,
-                                lldb::DescriptionLevel level) const override;
-
-  private:
-    StringList m_commands;
     // Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
     // and fill it with commands, and SetSpecifier to set the specifier shared
     // pointer (can be null, that will match anything.)
-    StopHookCommandLine(lldb::TargetSP target_sp, lldb::user_id_t uid)
-        : StopHook(target_sp, uid) {}
+    StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid);
     friend class Target;
   };
-
-  class StopHookScripted : public StopHook {
-  public:
-    virtual ~StopHookScripted() = default;
-    bool HandleStop(ExecutionContext &exc_ctx, lldb::StreamSP output) override;
-
-    Status SetScriptCallback(std::string class_name,
-                             StructuredData::ObjectSP extra_args_sp);
-
-    void GetSubclassDescription(Stream *s,
-                                lldb::DescriptionLevel level) const override;
-
-  private:
-    std::string m_class_name;
-    /// This holds the dictionary of keys & values that can be used to
-    /// parametrize any given callback's behavior.
-    StructuredDataImpl *m_extra_args; // We own this structured data,
-                                      // but the SD itself manages the UP.
-    /// This holds the python callback object.
-    StructuredData::GenericSP m_implementation_sp; 
-
-    /// Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
-    /// and fill it with commands, and SetSpecifier to set the specifier shared
-    /// pointer (can be null, that will match anything.)
-    StopHookScripted(lldb::TargetSP target_sp, lldb::user_id_t uid)
-        : StopHook(target_sp, uid) {}
-    friend class Target;
-  };
-
   typedef std::shared_ptr<StopHook> StopHookSP;
 
-  /// Add an empty stop hook to the Target's stop hook list, and returns a
-  /// shared pointer to it in new_hook. Returns the id of the new hook.
-  StopHookSP CreateStopHook(StopHook::StopHookKind kind);
-
-  /// If you tried to create a stop hook, and that failed, call this to
-  /// remove the stop hook, as it will also reset the stop hook counter.
-  void UndoCreateStopHook(lldb::user_id_t uid);
+  // Add an empty stop hook to the Target's stop hook list, and returns a
+  // shared pointer to it in new_hook. Returns the id of the new hook.
+  StopHookSP CreateStopHook();
 
   void RunStopHooks();
 
