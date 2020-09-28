@@ -34,13 +34,13 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm"
 
 // Emscripten's asm.js-style exception handling
-static cl::opt<bool> EnableEmException(
+cl::opt<bool> EnableEmException(
     "enable-emscripten-cxx-exceptions",
     cl::desc("WebAssembly Emscripten-style exception handling"),
     cl::init(false));
 
 // Emscripten's asm.js-style setjmp/longjmp handling
-static cl::opt<bool> EnableEmSjLj(
+cl::opt<bool> EnableEmSjLj(
     "enable-emscripten-sjlj",
     cl::desc("WebAssembly Emscripten-style setjmp/longjmp handling"),
     cl::init(false));

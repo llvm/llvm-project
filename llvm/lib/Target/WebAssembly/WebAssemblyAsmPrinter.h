@@ -77,6 +77,9 @@ public:
   MVT getRegType(unsigned RegNo) const;
   std::string regToString(const MachineOperand &MO);
   WebAssemblyTargetStreamer *getTargetStreamer();
+  MCSymbolWasm *getMCSymbolForFunction(const Function *F, bool EnableEmEH,
+                                       wasm::WasmSignature *Sig,
+                                       bool &InvokeDetected);
 };
 
 } // end namespace llvm
