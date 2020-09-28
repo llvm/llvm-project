@@ -435,6 +435,8 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
     // Ceil = ElementCount + (VW-1) / VW
     auto *Ceil = SE->getUDivExpr(ECPlusVWMinus1, VW);
 
+    // Prevent unused variable warnings with TC
+    (void)TC;
     LLVM_DEBUG(
       dbgs() << "ARM TP: Analysing overflow behaviour for:\n";
       dbgs() << "ARM TP: - TripCount = "; TC->dump();
