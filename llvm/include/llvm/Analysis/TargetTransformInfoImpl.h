@@ -20,7 +20,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
-#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 
@@ -834,30 +834,17 @@ public:
   int getUserCost(const User *U, ArrayRef<const Value *> Operands,
                   TTI::TargetCostKind CostKind) {
     auto *TargetTTI = static_cast<T *>(this);
-
-    // FIXME: We shouldn't have to special-case intrinsics here.
-    if (CostKind == TTI::TCK_RecipThroughput) {
-      if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
-        IntrinsicCostAttributes CostAttrs(*II);
-        return TargetTTI->getIntrinsicInstrCost(CostAttrs, CostKind);
-      }
-    }
-
+    // Handle non-intrinsic calls, invokes, and callbr.
     // FIXME: Unlikely to be true for anything but CodeSize.
-    if (const auto *CB = dyn_cast<CallBase>(U)) {
-      const Function *F = CB->getCalledFunction();
-      if (F) {
-        FunctionType *FTy = F->getFunctionType();
-        if (Intrinsic::ID IID = F->getIntrinsicID()) {
-          IntrinsicCostAttributes Attrs(IID, *CB);
-          return TargetTTI->getIntrinsicInstrCost(Attrs, CostKind);
-        }
-
+    auto *CB = dyn_cast<CallBase>(U);
+    if (CB && !isa<IntrinsicInst>(U)) {
+      if (const Function *F = CB->getCalledFunction()) {
         if (!TargetTTI->isLoweredToCall(F))
           return TTI::TCC_Basic; // Give a basic cost if it will be lowered
 
-        return TTI::TCC_Basic * (FTy->getNumParams() + 1);
+        return TTI::TCC_Basic * (F->getFunctionType()->getNumParams() + 1);
       }
+      // For indirect or other calls, scale cost by number of arguments.
       return TTI::TCC_Basic * (CB->arg_size() + 1);
     }
 
@@ -869,6 +856,17 @@ public:
     switch (Opcode) {
     default:
       break;
+    case Instruction::Call: {
+      assert(isa<IntrinsicInst>(U) && "Unexpected non-intrinsic call");
+      auto *Intrinsic = cast<IntrinsicInst>(U);
+      // FIXME: We shouldn't have this exception for RecipThroughput.
+      if (CostKind == TTI::TCK_RecipThroughput) {
+        IntrinsicCostAttributes CostAttrs(*Intrinsic);
+        return TargetTTI->getIntrinsicInstrCost(CostAttrs, CostKind);
+      }
+      IntrinsicCostAttributes CostAttrs(Intrinsic->getIntrinsicID(), *CB);
+      return TargetTTI->getIntrinsicInstrCost(CostAttrs, CostKind);
+    }
     case Instruction::Br:
     case Instruction::Ret:
     case Instruction::PHI:
