@@ -197,10 +197,8 @@ void foo(float f) {
 // HAS_ERRNO: declare { x86_fp80, x86_fp80 } @ctanhl({ x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
 };
 
-
 // NO__ERRNO: attributes [[READNONE]] = { {{.*}}readnone{{.*}} }
-// NO__ERRNO: attributes [[NOT_READNONE]] = { nounwind "correctly{{.*}} }
+// NO__ERRNO: attributes [[NOT_READNONE]] = { nounwind {{.*}} }
 
-// HAS_ERRNO: attributes [[NOT_READNONE]] = { nounwind "correctly{{.*}} }
+// HAS_ERRNO: attributes [[NOT_READNONE]] = { nounwind {{.*}} }
 // HAS_ERRNO: attributes [[READNONE]] = { {{.*}}readnone{{.*}} }
-
