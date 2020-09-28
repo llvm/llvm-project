@@ -629,17 +629,15 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   // width, the Loop Start instruction will immediately generate one or more
   // false lane mask which can, incorrectly, affect the proceeding MVE
   // instructions in the preheader.
-  auto cannotInsertWDLSTPBetween = [](MachineInstr *Begin,
-                                      MachineInstr *End) {
-    auto I = MachineBasicBlock::iterator(Begin);
-    auto E = MachineBasicBlock::iterator(End);
+  auto cannotInsertWDLSTPBetween = [](MachineBasicBlock::iterator I,
+                                      MachineBasicBlock::iterator E) {
     for (; I != E; ++I)
       if (shouldInspect(*I))
         return true;
     return false;
   };
 
-  if (cannotInsertWDLSTPBetween(StartInsertPt, &InsertBB->back()))
+  if (cannotInsertWDLSTPBetween(StartInsertPt, InsertBB->end()))
     return false;
 
   // Especially in the case of while loops, InsertBB may not be the
