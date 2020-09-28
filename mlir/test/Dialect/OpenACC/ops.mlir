@@ -472,11 +472,7 @@ func @testdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) 
   }
   acc.data no_create(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) {
   }
-  acc.data delete(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) {
-  }
   acc.data attach(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) {
-  }
-  acc.data detach(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) {
   }
   acc.data present(%a: memref<10xf32>) copyin(%b: memref<10xf32>) copyout(%c: memref<10x10xf32>) {
   }
@@ -502,11 +498,7 @@ func @testdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) 
 // CHECK-NEXT: }
 // CHECK:      acc.data no_create([[ARGA]]: memref<10xf32>, [[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) {
 // CHECK-NEXT: }
-// CHECK:      acc.data delete([[ARGA]]: memref<10xf32>, [[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) {
-// CHECK-NEXT: }
 // CHECK:      acc.data attach([[ARGA]]: memref<10xf32>, [[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.data detach([[ARGA]]: memref<10xf32>, [[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.data present([[ARGA]]: memref<10xf32>) copyin([[ARGB]]: memref<10xf32>) copyout([[ARGC]]: memref<10x10xf32>) {
 // CHECK-NEXT: }
