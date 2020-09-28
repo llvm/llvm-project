@@ -59,11 +59,11 @@ public:
 
   /// Retrieve the name of the module for which this reader is providing API
   /// notes.
-  StringRef getModuleName() const;
+  llvm::StringRef getModuleName() const;
 
   /// Retrieve the size and modification time of the source file from
   /// which this API notes file was created, if known.
-  Optional<std::pair<off_t, time_t>> getSourceFileSizeAndModTime() const;
+  llvm::Optional<std::pair<off_t, time_t>> getSourceFileSizeAndModTime() const;
 
   /// Retrieve the module options
   ModuleOptions getModuleOptions() const;
@@ -74,7 +74,7 @@ public:
   template<typename T>
   class VersionedInfo {
     /// The complete set of results.
-    SmallVector<std::pair<VersionTuple, T>, 1> Results;
+    llvm::SmallVector<std::pair<llvm::VersionTuple, T>, 1> Results;
 
     /// The index of the result that is the "selected" set based on the desired
     /// Swift version, or \c Results.size() if nothing matched.
@@ -87,7 +87,7 @@ public:
     /// Form a versioned info set given the desired version and a set of
     /// results.
     VersionedInfo(llvm::VersionTuple version,
-                  SmallVector<std::pair<llvm::VersionTuple, T>, 1> results);
+                  llvm::SmallVector<std::pair<llvm::VersionTuple, T>, 1> results);
 
     /// Determine whether there is a result that should be applied directly
     /// to the AST.
@@ -100,8 +100,8 @@ public:
     }
 
     /// Retrieve the selected index in the result set.
-    Optional<unsigned> getSelected() const {
-      if (Selected == Results.size()) return None;
+    llvm::Optional<unsigned> getSelected() const {
+      if (Selected == Results.size()) return llvm::None;
       return Selected;
     }
 
@@ -123,28 +123,28 @@ public:
   /// \param name The name of the class we're looking for.
   ///
   /// \returns The ID, if known.
-  Optional<ContextID> lookupObjCClassID(StringRef name);
+  llvm::Optional<ContextID> lookupObjCClassID(llvm::StringRef name);
 
   /// Look for information regarding the given Objective-C class.
   ///
   /// \param name The name of the class we're looking for.
   ///
   /// \returns The information about the class, if known.
-  VersionedInfo<ObjCContextInfo> lookupObjCClassInfo(StringRef name);
+  VersionedInfo<ObjCContextInfo> lookupObjCClassInfo(llvm::StringRef name);
 
   /// Look for the context ID of the given Objective-C protocol.
   ///
   /// \param name The name of the protocol we're looking for.
   ///
   /// \returns The ID of the protocol, if known.
-  Optional<ContextID> lookupObjCProtocolID(StringRef name);
+  llvm::Optional<ContextID> lookupObjCProtocolID(llvm::StringRef name);
 
   /// Look for information regarding the given Objective-C protocol.
   ///
   /// \param name The name of the protocol we're looking for.
   ///
   /// \returns The information about the protocol, if known.
-  VersionedInfo<ObjCContextInfo> lookupObjCProtocolInfo(StringRef name);
+  VersionedInfo<ObjCContextInfo> lookupObjCProtocolInfo(llvm::StringRef name);
 
   /// Look for information regarding the given Objective-C property in
   /// the given context.
@@ -156,7 +156,7 @@ public:
   ///
   /// \returns Information about the property, if known.
   VersionedInfo<ObjCPropertyInfo> lookupObjCProperty(ContextID contextID,
-                                                     StringRef name,
+                                                     llvm::StringRef name,
                                                      bool isInstance);
 
   /// Look for information regarding the given Objective-C method in
@@ -176,21 +176,21 @@ public:
   /// \param name The name of the global variable.
   ///
   /// \returns information about the global variable, if known.
-  VersionedInfo<GlobalVariableInfo> lookupGlobalVariable(StringRef name);
+  VersionedInfo<GlobalVariableInfo> lookupGlobalVariable(llvm::StringRef name);
 
   /// Look for information regarding the given global function.
   ///
   /// \param name The name of the global function.
   ///
   /// \returns information about the global function, if known.
-  VersionedInfo<GlobalFunctionInfo> lookupGlobalFunction(StringRef name);
+  VersionedInfo<GlobalFunctionInfo> lookupGlobalFunction(llvm::StringRef name);
 
   /// Look for information regarding the given enumerator.
   ///
   /// \param name The name of the enumerator.
   ///
   /// \returns information about the enumerator, if known.
-  VersionedInfo<EnumConstantInfo> lookupEnumConstant(StringRef name);
+  VersionedInfo<EnumConstantInfo> lookupEnumConstant(llvm::StringRef name);
 
   /// Look for information regarding the given tag
   /// (struct/union/enum/C++ class).
@@ -198,14 +198,14 @@ public:
   /// \param name The name of the tag.
   ///
   /// \returns information about the tag, if known.
-  VersionedInfo<TagInfo> lookupTag(StringRef name);
+  VersionedInfo<TagInfo> lookupTag(llvm::StringRef name);
 
   /// Look for information regarding the given typedef.
   ///
   /// \param name The name of the typedef.
   ///
   /// \returns information about the typedef, if known.
-  VersionedInfo<TypedefInfo> lookupTypedef(StringRef name);
+  VersionedInfo<TypedefInfo> lookupTypedef(llvm::StringRef name);
 };
 
 } // end namespace api_notes

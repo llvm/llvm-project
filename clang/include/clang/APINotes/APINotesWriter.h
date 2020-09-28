@@ -38,7 +38,7 @@ class APINotesWriter {
 public:
   /// Create a new API notes writer with the given module name and
   /// (optional) source file.
-  APINotesWriter(StringRef moduleName, const FileEntry *sourceFile);
+  APINotesWriter(llvm::StringRef moduleName, const FileEntry *sourceFile);
   ~APINotesWriter();
 
   APINotesWriter(const APINotesWriter &) = delete;
@@ -55,7 +55,7 @@ public:
   ///
   /// \returns the ID of the class or protocol, which can be used to add
   /// properties and methods to the class/protocol.
-  ContextID addObjCContext(StringRef name, bool isClass,
+  ContextID addObjCContext(llvm::StringRef name, bool isClass,
                            const ObjCContextInfo &info,
                            llvm::VersionTuple swiftVersion);
 
@@ -64,7 +64,7 @@ public:
   /// \param contextID The context in which this property resides.
   /// \param name The name of this property.
   /// \param info Information about this property.
-  void addObjCProperty(ContextID contextID, StringRef name,
+  void addObjCProperty(ContextID contextID, llvm::StringRef name,
                        bool isInstanceProperty,
                        const ObjCPropertyInfo &info,
                        llvm::VersionTuple swiftVersion);
@@ -84,35 +84,35 @@ public:
   ///
   /// \param name The name of this global variable.
   /// \param info Information about this global variable.
-  void addGlobalVariable(StringRef name, const GlobalVariableInfo &info,
+  void addGlobalVariable(llvm::StringRef name, const GlobalVariableInfo &info,
                          llvm::VersionTuple swiftVersion);
 
   /// Add information about a global function.
   ///
   /// \param name The name of this global function.
   /// \param info Information about this global function.
-  void addGlobalFunction(StringRef name, const GlobalFunctionInfo &info,
+  void addGlobalFunction(llvm::StringRef name, const GlobalFunctionInfo &info,
                          llvm::VersionTuple swiftVersion);
 
   /// Add information about an enumerator.
   ///
   /// \param name The name of this enumerator.
   /// \param info Information about this enumerator.
-  void addEnumConstant(StringRef name, const EnumConstantInfo &info,
+  void addEnumConstant(llvm::StringRef name, const EnumConstantInfo &info,
                        llvm::VersionTuple swiftVersion);
 
   /// Add information about a tag (struct/union/enum/C++ class).
   ///
   /// \param name The name of this tag.
   /// \param info Information about this tag.
-  void addTag(StringRef name, const TagInfo &info,
+  void addTag(llvm::StringRef name, const TagInfo &info,
               llvm::VersionTuple swiftVersion);
 
   /// Add information about a typedef.
   ///
   /// \param name The name of this typedef.
   /// \param info Information about this typedef.
-  void addTypedef(StringRef name, const TypedefInfo &info,
+  void addTypedef(llvm::StringRef name, const TypedefInfo &info,
                   llvm::VersionTuple swiftVersion);
 
   /// Add module options

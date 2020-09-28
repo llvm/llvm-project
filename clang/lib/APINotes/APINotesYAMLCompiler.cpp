@@ -1,26 +1,29 @@
-//===--- APINotesYAMLCompiler.cpp - API Notes YAML format reader *- C++ -*-===//
+//===-- APINotesYAMLCompiler.cpp - API Notes YAML Format Reader -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
-//
-//===----------------------------------------------------------------------===//
-//
-// This file reads API notes specified in YAML format.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// The types defined locally are designed to represent the YAML state, which
+// adds an additional bit of state: e.g. a tri-state boolean attribute (yes, no,
+// not applied) becomes a tri-state boolean + present.  As a result, while these
+// enumerations appear to be redefining constants from the attributes table
+// data, they are distinct.
+//
+
 #include "clang/APINotes/APINotesYAMLCompiler.h"
-#include "clang/APINotes/APINotesReader.h"
 #include "clang/APINotes/Types.h"
-#include "clang/APINotes/APINotesWriter.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/StringSet.h"
-#include "llvm/Support/SourceMgr.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/YAMLTraits.h"
-#include <algorithm>
+#include <vector>
+using namespace clang;
+using namespace api_notes;
 
 /*
  
@@ -135,490 +138,587 @@ Each global variable definition is of the following form:
 
 */
 
-using llvm::StringRef;
-using namespace clang;
 namespace {
-  enum class APIAvailability {
-    Available = 0,
-    OSX,
-    IOS,
-    None,
-    NonSwift,
-  };
+enum class APIAvailability {
+  Available = 0,
+  OSX,
+  IOS,
+  None,
+  NonSwift,
+};
+} // namespace
 
-  enum class MethodKind {
-    Class,
-    Instance,
-  };
+namespace llvm {
+namespace yaml {
+template <> struct ScalarEnumerationTraits<APIAvailability> {
+  static void enumeration(IO &IO, APIAvailability &AA) {
+    IO.enumCase(AA, "OSX", APIAvailability::OSX);
+    IO.enumCase(AA, "iOS", APIAvailability::IOS);
+    IO.enumCase(AA, "none", APIAvailability::None);
+    IO.enumCase(AA, "nonswift", APIAvailability::NonSwift);
+    IO.enumCase(AA, "available", APIAvailability::Available);
+  }
+};
+} // namespace yaml
+} // namespace llvm
 
-  /// Old attribute deprecated in favor of SwiftName.
-  enum class FactoryAsInitKind {
-    /// Infer based on name and type (the default).
-    Infer,
-    /// Treat as a class method.
-    AsClassMethod,
-    /// Treat as an initializer.
-    AsInitializer
-  };
-  
-  /// Syntactic sugar for EnumExtensibility and FlagEnum
-  enum class EnumConvenienceAliasKind {
-    /// EnumExtensibility: none, FlagEnum: false
-    None,
-    /// EnumExtensibility: open, FlagEnum: false
-    CFEnum,
-    /// EnumExtensibility: open, FlagEnum: true
-    CFOptions,
-    /// EnumExtensibility: closed, FlagEnum: false
-    CFClosedEnum
-  };
+namespace {
+enum class MethodKind {
+  Class,
+  Instance,
+};
+} // namespace
 
-  struct AvailabilityItem {
-    APIAvailability Mode = APIAvailability::Available;
-    StringRef Msg;
-    AvailabilityItem() : Mode(APIAvailability::Available), Msg("") {}
-  };
+namespace llvm {
+namespace yaml {
+template <> struct ScalarEnumerationTraits<MethodKind> {
+  static void enumeration(IO &IO, MethodKind &MK) {
+    IO.enumCase(MK, "Class", MethodKind::Class);
+    IO.enumCase(MK, "Instance", MethodKind::Instance);
+  }
+};
+} // namespace yaml
+} // namespace llvm
 
-  static llvm::Optional<NullabilityKind> AbsentNullability = llvm::None;
-  static llvm::Optional<NullabilityKind> DefaultNullability =
-    NullabilityKind::NonNull;
-  typedef std::vector<clang::NullabilityKind> NullabilitySeq;
+namespace {
+struct Param {
+  unsigned Position;
+  Optional<bool> NoEscape = false;
+  Optional<NullabilityKind> Nullability;
+  Optional<RetainCountConventionKind> RetainCountConvention;
+  StringRef Type;
+};
 
-  struct Param {
-    unsigned Position;
-    Optional<bool> NoEscape = false;
-    Optional<NullabilityKind> Nullability;
-    Optional<api_notes::RetainCountConventionKind> RetainCountConvention;
-    StringRef Type;
-  };
-  typedef std::vector<Param> ParamsSeq;
+typedef std::vector<Param> ParamsSeq;
+} // namespace
 
-  struct Method {
-    StringRef Selector;
-    MethodKind Kind;
-    ParamsSeq Params;
-    NullabilitySeq Nullability;
-    Optional<NullabilityKind> NullabilityOfRet;
-    Optional<api_notes::RetainCountConventionKind> RetainCountConvention;
-    AvailabilityItem Availability;
-    Optional<bool> SwiftPrivate;
-    StringRef SwiftName;
-    FactoryAsInitKind FactoryAsInit = FactoryAsInitKind::Infer;
-    bool DesignatedInit = false;
-    bool Required = false;
-    StringRef ResultType;
-  };
-  typedef std::vector<Method> MethodsSeq;
-
-  struct Property {
-    StringRef Name;
-    llvm::Optional<MethodKind> Kind;
-    llvm::Optional<NullabilityKind> Nullability;
-    AvailabilityItem Availability;
-    Optional<bool> SwiftPrivate;
-    StringRef SwiftName;
-    Optional<bool> SwiftImportAsAccessors;
-    StringRef Type;
-  };
-  typedef std::vector<Property> PropertiesSeq;
-
-  struct Class {
-    StringRef Name;
-    bool AuditedForNullability = false;
-    AvailabilityItem Availability;
-    Optional<bool> SwiftPrivate;
-    StringRef SwiftName;
-    Optional<StringRef> SwiftBridge;
-    Optional<StringRef> NSErrorDomain;
-    Optional<bool> SwiftImportAsNonGeneric;
-    Optional<bool> SwiftObjCMembers;
-    MethodsSeq Methods;
-    PropertiesSeq Properties;
-  };
-  typedef std::vector<Class> ClassesSeq;
-
-  struct Function {
-    StringRef Name;
-    ParamsSeq Params;
-    NullabilitySeq Nullability;
-    Optional<NullabilityKind> NullabilityOfRet;
-    Optional<api_notes::RetainCountConventionKind> RetainCountConvention;
-    AvailabilityItem Availability;
-    Optional<bool> SwiftPrivate;
-    StringRef SwiftName;
-    StringRef Type;
-    StringRef ResultType;
-  };
-  typedef std::vector<Function> FunctionsSeq;
-
-  struct GlobalVariable {
-    StringRef Name;
-    llvm::Optional<NullabilityKind> Nullability;
-    AvailabilityItem Availability;
-    Optional<bool> SwiftPrivate;
-    StringRef SwiftName;
-    StringRef Type;
-  };
-  typedef std::vector<GlobalVariable> GlobalVariablesSeq;
-
-  struct EnumConstant {
-    StringRef Name;
-    AvailabilityItem Availability;
-    Optional<bool> SwiftPrivate;
-    StringRef SwiftName;
-  };
-  typedef std::vector<EnumConstant> EnumConstantsSeq;
-
-  struct Tag {
-    StringRef Name;
-    AvailabilityItem Availability;
-    StringRef SwiftName;
-    Optional<bool> SwiftPrivate;
-    Optional<StringRef> SwiftBridge;
-    Optional<StringRef> NSErrorDomain;
-    Optional<api_notes::EnumExtensibilityKind> EnumExtensibility;
-    Optional<bool> FlagEnum;
-    Optional<EnumConvenienceAliasKind> EnumConvenienceKind;
-  };
-  typedef std::vector<Tag> TagsSeq;
-
-  struct Typedef {
-    StringRef Name;
-    AvailabilityItem Availability;
-    StringRef SwiftName;
-    Optional<bool> SwiftPrivate;
-    Optional<StringRef> SwiftBridge;
-    Optional<StringRef> NSErrorDomain;
-    Optional<api_notes::SwiftWrapperKind> SwiftWrapper;
-  };
-  typedef std::vector<Typedef> TypedefsSeq;
-
-  struct TopLevelItems {
-    ClassesSeq Classes;
-    ClassesSeq Protocols;
-    FunctionsSeq Functions;
-    GlobalVariablesSeq Globals;
-    EnumConstantsSeq EnumConstants;
-    TagsSeq Tags;
-    TypedefsSeq Typedefs;
-  };
-
-  struct Versioned {
-    VersionTuple Version;
-    TopLevelItems Items;
-  };
-
-  typedef std::vector<Versioned> VersionedSeq;
-
-  struct Module {
-    StringRef Name;
-    AvailabilityItem Availability;
-    TopLevelItems TopLevel;
-    VersionedSeq SwiftVersions;
-
-    llvm::Optional<bool> SwiftInferImportAsMember = {llvm::None};
-
-    LLVM_ATTRIBUTE_DEPRECATED(
-      void dump() LLVM_ATTRIBUTE_USED,
-      "only for use within the debugger");
-  };
-}
-
-LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(clang::NullabilityKind)
-LLVM_YAML_IS_SEQUENCE_VECTOR(Method)
-LLVM_YAML_IS_SEQUENCE_VECTOR(Property)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Param)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(NullabilityKind)
+
+namespace llvm {
+namespace yaml {
+template <> struct ScalarEnumerationTraits<NullabilityKind> {
+  static void enumeration(IO &IO, NullabilityKind &NK) {
+    IO.enumCase(NK, "Nonnull", NullabilityKind::NonNull);
+    IO.enumCase(NK, "Optional", NullabilityKind::Nullable);
+    IO.enumCase(NK, "Unspecified", NullabilityKind::Unspecified);
+    // TODO: Mapping this to it's own value would allow for better cross
+    // checking. Also the default should be Unknown.
+    IO.enumCase(NK, "Scalar", NullabilityKind::Unspecified);
+
+    // Aliases for compatibility with existing APINotes.
+    IO.enumCase(NK, "N", NullabilityKind::NonNull);
+    IO.enumCase(NK, "O", NullabilityKind::Nullable);
+    IO.enumCase(NK, "U", NullabilityKind::Unspecified);
+    IO.enumCase(NK, "S", NullabilityKind::Unspecified);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<RetainCountConventionKind> {
+  static void enumeration(IO &IO, RetainCountConventionKind &RCCK) {
+    IO.enumCase(RCCK, "none", RetainCountConventionKind::None);
+    IO.enumCase(RCCK, "CFReturnsRetained",
+                RetainCountConventionKind::CFReturnsRetained);
+    IO.enumCase(RCCK, "CFReturnsNotRetained",
+                RetainCountConventionKind::CFReturnsNotRetained);
+    IO.enumCase(RCCK, "NSReturnsRetained",
+                RetainCountConventionKind::NSReturnsRetained);
+    IO.enumCase(RCCK, "NSReturnsNotRetained",
+                RetainCountConventionKind::NSReturnsNotRetained);
+  }
+};
+
+template <> struct MappingTraits<Param> {
+  static void mapping(IO &IO, Param &P) {
+    IO.mapRequired("Position", P.Position);
+    IO.mapOptional("Nullability", P.Nullability, llvm::None);
+    IO.mapOptional("RetainCountConvention", P.RetainCountConvention);
+    IO.mapOptional("NoEscape", P.NoEscape);
+    IO.mapOptional("Type", P.Type, StringRef(""));
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+namespace {
+typedef std::vector<NullabilityKind> NullabilitySeq;
+
+struct AvailabilityItem {
+  APIAvailability Mode = APIAvailability::Available;
+  StringRef Msg;
+};
+
+/// Old attribute deprecated in favor of SwiftName.
+enum class FactoryAsInitKind {
+  /// Infer based on name and type (the default).
+  Infer,
+  /// Treat as a class method.
+  AsClassMethod,
+  /// Treat as an initializer.
+  AsInitializer,
+};
+
+struct Method {
+  StringRef Selector;
+  MethodKind Kind;
+  ParamsSeq Params;
+  NullabilitySeq Nullability;
+  Optional<NullabilityKind> NullabilityOfRet;
+  Optional<RetainCountConventionKind> RetainCountConvention;
+  AvailabilityItem Availability;
+  Optional<bool> SwiftPrivate;
+  StringRef SwiftName;
+  FactoryAsInitKind FactoryAsInit = FactoryAsInitKind::Infer;
+  bool DesignatedInit = false;
+  bool Required = false;
+  StringRef ResultType;
+};
+
+typedef std::vector<Method> MethodsSeq;
+} // namespace
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(Method)
+
+namespace llvm {
+namespace yaml {
+template <> struct ScalarEnumerationTraits<FactoryAsInitKind> {
+  static void enumeration(IO &IO, FactoryAsInitKind &FIK) {
+    IO.enumCase(FIK, "A", FactoryAsInitKind::Infer);
+    IO.enumCase(FIK, "C", FactoryAsInitKind::AsClassMethod);
+    IO.enumCase(FIK, "I", FactoryAsInitKind::AsInitializer);
+  }
+};
+
+template <> struct MappingTraits<Method> {
+  static void mapping(IO &IO, Method &M) {
+    IO.mapRequired("Selector", M.Selector);
+    IO.mapRequired("MethodKind", M.Kind);
+    IO.mapOptional("Parameters", M.Params);
+    IO.mapOptional("Nullability", M.Nullability);
+    IO.mapOptional("NullabilityOfRet", M.NullabilityOfRet, llvm::None);
+    IO.mapOptional("RetainCountConvention", M.RetainCountConvention);
+    IO.mapOptional("Availability", M.Availability.Mode,
+                   APIAvailability::Available);
+    IO.mapOptional("AvailabilityMsg", M.Availability.Msg, StringRef(""));
+    IO.mapOptional("SwiftPrivate", M.SwiftPrivate);
+    IO.mapOptional("SwiftName", M.SwiftName, StringRef(""));
+    IO.mapOptional("FactoryAsInit", M.FactoryAsInit, FactoryAsInitKind::Infer);
+    IO.mapOptional("DesignatedInit", M.DesignatedInit, false);
+    IO.mapOptional("Required", M.Required, false);
+    IO.mapOptional("ResultType", M.ResultType, StringRef(""));
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+namespace {
+struct Property {
+  StringRef Name;
+  llvm::Optional<MethodKind> Kind;
+  llvm::Optional<NullabilityKind> Nullability;
+  AvailabilityItem Availability;
+  Optional<bool> SwiftPrivate;
+  StringRef SwiftName;
+  Optional<bool> SwiftImportAsAccessors;
+  StringRef Type;
+};
+
+typedef std::vector<Property> PropertiesSeq;
+} // namespace
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(Property)
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<Property> {
+  static void mapping(IO &IO, Property &P) {
+    IO.mapRequired("Name", P.Name);
+    IO.mapOptional("PropertyKind", P.Kind);
+    IO.mapOptional("Nullability", P.Nullability, llvm::None);
+    IO.mapOptional("Availability", P.Availability.Mode,
+                   APIAvailability::Available);
+    IO.mapOptional("AvailabilityMsg", P.Availability.Msg, StringRef(""));
+    IO.mapOptional("SwiftPrivate", P.SwiftPrivate);
+    IO.mapOptional("SwiftName", P.SwiftName, StringRef(""));
+    IO.mapOptional("SwiftImportAsAccessors", P.SwiftImportAsAccessors);
+    IO.mapOptional("Type", P.Type, StringRef(""));
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+namespace {
+struct Class {
+  StringRef Name;
+  bool AuditedForNullability = false;
+  AvailabilityItem Availability;
+  Optional<bool> SwiftPrivate;
+  StringRef SwiftName;
+  Optional<StringRef> SwiftBridge;
+  Optional<StringRef> NSErrorDomain;
+  Optional<bool> SwiftImportAsNonGeneric;
+  Optional<bool> SwiftObjCMembers;
+  MethodsSeq Methods;
+  PropertiesSeq Properties;
+};
+
+typedef std::vector<Class> ClassesSeq;
+} // namespace
+
 LLVM_YAML_IS_SEQUENCE_VECTOR(Class)
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<Class> {
+  static void mapping(IO &IO, Class &C) {
+    IO.mapRequired("Name", C.Name);
+    IO.mapOptional("AuditedForNullability", C.AuditedForNullability, false);
+    IO.mapOptional("Availability", C.Availability.Mode,
+                   APIAvailability::Available);
+    IO.mapOptional("AvailabilityMsg", C.Availability.Msg, StringRef(""));
+    IO.mapOptional("SwiftPrivate", C.SwiftPrivate);
+    IO.mapOptional("SwiftName", C.SwiftName, StringRef(""));
+    IO.mapOptional("SwiftBridge", C.SwiftBridge);
+    IO.mapOptional("NSErrorDomain", C.NSErrorDomain);
+    IO.mapOptional("SwiftImportAsNonGeneric", C.SwiftImportAsNonGeneric);
+    IO.mapOptional("SwiftObjCMembers", C.SwiftObjCMembers);
+    IO.mapOptional("Methods", C.Methods);
+    IO.mapOptional("Properties", C.Properties);
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+namespace {
+struct Function {
+  StringRef Name;
+  ParamsSeq Params;
+  NullabilitySeq Nullability;
+  Optional<NullabilityKind> NullabilityOfRet;
+  Optional<api_notes::RetainCountConventionKind> RetainCountConvention;
+  AvailabilityItem Availability;
+  Optional<bool> SwiftPrivate;
+  StringRef SwiftName;
+  StringRef Type;
+  StringRef ResultType;
+};
+
+typedef std::vector<Function> FunctionsSeq;
+} // namespace
+
 LLVM_YAML_IS_SEQUENCE_VECTOR(Function)
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<Function> {
+  static void mapping(IO &IO, Function &F) {
+    IO.mapRequired("Name", F.Name);
+    IO.mapOptional("Parameters", F.Params);
+    IO.mapOptional("Nullability", F.Nullability);
+    IO.mapOptional("NullabilityOfRet", F.NullabilityOfRet, llvm::None);
+    IO.mapOptional("RetainCountConvention", F.RetainCountConvention);
+    IO.mapOptional("Availability", F.Availability.Mode,
+                   APIAvailability::Available);
+    IO.mapOptional("AvailabilityMsg", F.Availability.Msg, StringRef(""));
+    IO.mapOptional("SwiftPrivate", F.SwiftPrivate);
+    IO.mapOptional("SwiftName", F.SwiftName, StringRef(""));
+    IO.mapOptional("ResultType", F.ResultType, StringRef(""));
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+namespace {
+struct GlobalVariable {
+  StringRef Name;
+  llvm::Optional<NullabilityKind> Nullability;
+  AvailabilityItem Availability;
+  Optional<bool> SwiftPrivate;
+  StringRef SwiftName;
+  StringRef Type;
+};
+
+typedef std::vector<GlobalVariable> GlobalVariablesSeq;
+} // namespace
+
 LLVM_YAML_IS_SEQUENCE_VECTOR(GlobalVariable)
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<GlobalVariable> {
+  static void mapping(IO &IO, GlobalVariable &GV) {
+    IO.mapRequired("Name", GV.Name);
+    IO.mapOptional("Nullability", GV.Nullability, llvm::None);
+    IO.mapOptional("Availability", GV.Availability.Mode,
+                   APIAvailability::Available);
+    IO.mapOptional("AvailabilityMsg", GV.Availability.Msg, StringRef(""));
+    IO.mapOptional("SwiftPrivate", GV.SwiftPrivate);
+    IO.mapOptional("SwiftName", GV.SwiftName, StringRef(""));
+    IO.mapOptional("Type", GV.Type, StringRef(""));
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+namespace {
+struct EnumConstant {
+  StringRef Name;
+  AvailabilityItem Availability;
+  Optional<bool> SwiftPrivate;
+  StringRef SwiftName;
+};
+
+typedef std::vector<EnumConstant> EnumConstantsSeq;
+} // namespace
+
 LLVM_YAML_IS_SEQUENCE_VECTOR(EnumConstant)
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<EnumConstant> {
+  static void mapping(IO &IO, EnumConstant &EC) {
+    IO.mapRequired("Name", EC.Name);
+    IO.mapOptional("Availability", EC.Availability.Mode,
+                   APIAvailability::Available);
+    IO.mapOptional("AvailabilityMsg", EC.Availability.Msg, StringRef(""));
+    IO.mapOptional("SwiftPrivate", EC.SwiftPrivate);
+    IO.mapOptional("SwiftName", EC.SwiftName, StringRef(""));
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+namespace {
+/// Syntactic sugar for EnumExtensibility and FlagEnum
+enum class EnumConvenienceAliasKind {
+  /// EnumExtensibility: none, FlagEnum: false
+  None,
+  /// EnumExtensibility: open, FlagEnum: false
+  CFEnum,
+  /// EnumExtensibility: open, FlagEnum: true
+  CFOptions,
+  /// EnumExtensibility: closed, FlagEnum: false
+  CFClosedEnum
+};
+} // namespace
+
+namespace llvm {
+namespace yaml {
+template <> struct ScalarEnumerationTraits<EnumConvenienceAliasKind> {
+  static void enumeration(IO &IO, EnumConvenienceAliasKind &ECAK) {
+    IO.enumCase(ECAK, "none", EnumConvenienceAliasKind::None);
+    IO.enumCase(ECAK, "CFEnum", EnumConvenienceAliasKind::CFEnum);
+    IO.enumCase(ECAK, "NSEnum", EnumConvenienceAliasKind::CFEnum);
+    IO.enumCase(ECAK, "CFOptions", EnumConvenienceAliasKind::CFOptions);
+    IO.enumCase(ECAK, "NSOptions", EnumConvenienceAliasKind::CFOptions);
+    IO.enumCase(ECAK, "CFClosedEnum", EnumConvenienceAliasKind::CFClosedEnum);
+    IO.enumCase(ECAK, "NSClosedEnum", EnumConvenienceAliasKind::CFClosedEnum);
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+namespace {
+struct Tag {
+  StringRef Name;
+  AvailabilityItem Availability;
+  StringRef SwiftName;
+  Optional<bool> SwiftPrivate;
+  Optional<StringRef> SwiftBridge;
+  Optional<StringRef> NSErrorDomain;
+  Optional<EnumExtensibilityKind> EnumExtensibility;
+  Optional<bool> FlagEnum;
+  Optional<EnumConvenienceAliasKind> EnumConvenienceKind;
+};
+
+typedef std::vector<Tag> TagsSeq;
+} // namespace
+
 LLVM_YAML_IS_SEQUENCE_VECTOR(Tag)
+
+namespace llvm {
+namespace yaml {
+template <> struct ScalarEnumerationTraits<EnumExtensibilityKind> {
+  static void enumeration(IO &IO, EnumExtensibilityKind &EEK) {
+    IO.enumCase(EEK, "none", EnumExtensibilityKind::None);
+    IO.enumCase(EEK, "open", EnumExtensibilityKind::Open);
+    IO.enumCase(EEK, "closed", EnumExtensibilityKind::Closed);
+  }
+};
+
+template <> struct MappingTraits<Tag> {
+  static void mapping(IO &IO, Tag &T) {
+    IO.mapRequired("Name", T.Name);
+    IO.mapOptional("Availability", T.Availability.Mode,
+                   APIAvailability::Available);
+    IO.mapOptional("AvailabilityMsg", T.Availability.Msg, StringRef(""));
+    IO.mapOptional("SwiftPrivate", T.SwiftPrivate);
+    IO.mapOptional("SwiftName", T.SwiftName, StringRef(""));
+    IO.mapOptional("SwiftBridge", T.SwiftBridge);
+    IO.mapOptional("NSErrorDomain", T.NSErrorDomain);
+    IO.mapOptional("EnumExtensibility", T.EnumExtensibility);
+    IO.mapOptional("FlagEnum", T.FlagEnum);
+    IO.mapOptional("EnumKind", T.EnumConvenienceKind);
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+namespace {
+struct Typedef {
+  StringRef Name;
+  AvailabilityItem Availability;
+  StringRef SwiftName;
+  Optional<bool> SwiftPrivate;
+  Optional<StringRef> SwiftBridge;
+  Optional<StringRef> NSErrorDomain;
+  Optional<SwiftNewTypeKind> SwiftType;
+};
+
+typedef std::vector<Typedef> TypedefsSeq;
+} // namespace
+
 LLVM_YAML_IS_SEQUENCE_VECTOR(Typedef)
+
+namespace llvm {
+namespace yaml {
+template <> struct ScalarEnumerationTraits<SwiftNewTypeKind> {
+  static void enumeration(IO &IO, SwiftNewTypeKind &SWK) {
+    IO.enumCase(SWK, "none", SwiftNewTypeKind::None);
+    IO.enumCase(SWK, "struct", SwiftNewTypeKind::Struct);
+    IO.enumCase(SWK, "enum", SwiftNewTypeKind::Enum);
+  }
+};
+
+template <> struct MappingTraits<Typedef> {
+  static void mapping(IO &IO, Typedef &T) {
+    IO.mapRequired("Name", T.Name);
+    IO.mapOptional("Availability", T.Availability.Mode,
+                   APIAvailability::Available);
+    IO.mapOptional("AvailabilityMsg", T.Availability.Msg, StringRef(""));
+    IO.mapOptional("SwiftPrivate", T.SwiftPrivate);
+    IO.mapOptional("SwiftName", T.SwiftName, StringRef(""));
+    IO.mapOptional("SwiftBridge", T.SwiftBridge);
+    IO.mapOptional("NSErrorDomain", T.NSErrorDomain);
+    IO.mapOptional("SwiftWrapper", T.SwiftType);
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+namespace {
+struct TopLevelItems {
+  ClassesSeq Classes;
+  ClassesSeq Protocols;
+  FunctionsSeq Functions;
+  GlobalVariablesSeq Globals;
+  EnumConstantsSeq EnumConstants;
+  TagsSeq Tags;
+  TypedefsSeq Typedefs;
+};
+} // namespace
+
+namespace llvm {
+namespace yaml {
+static void mapTopLevelItems(IO &IO, TopLevelItems &TLI) {
+  IO.mapOptional("Classes", TLI.Classes);
+  IO.mapOptional("Protocols", TLI.Protocols);
+  IO.mapOptional("Functions", TLI.Functions);
+  IO.mapOptional("Globals", TLI.Globals);
+  IO.mapOptional("Enumerators", TLI.EnumConstants);
+  IO.mapOptional("Tags", TLI.Tags);
+  IO.mapOptional("Typedefs", TLI.Typedefs);
+}
+} // namespace yaml
+} // namespace llvm
+
+namespace {
+struct Versioned {
+  VersionTuple Version;
+  TopLevelItems Items;
+};
+
+typedef std::vector<Versioned> VersionedSeq;
+} // namespace
+
 LLVM_YAML_IS_SEQUENCE_VECTOR(Versioned)
 
 namespace llvm {
-  namespace yaml {
-
-    template <>
-    struct ScalarEnumerationTraits<NullabilityKind > {
-      static void enumeration(IO &io, NullabilityKind  &value) {
-        io.enumCase(value, "N", NullabilityKind::NonNull);
-        io.enumCase(value, "O", NullabilityKind::Nullable);
-        io.enumCase(value, "U", NullabilityKind::Unspecified);
-        // TODO: Mapping this to it's own value would allow for better cross
-        // checking. Also the default should be Unknown.
-        io.enumCase(value, "S", NullabilityKind::Unspecified);
-      }
-    };
-
-    template <>
-    struct ScalarEnumerationTraits<FactoryAsInitKind> {
-      static void enumeration(IO &io, FactoryAsInitKind  &value) {
-        io.enumCase(value, "A", FactoryAsInitKind::Infer);
-        io.enumCase(value, "C", FactoryAsInitKind::AsClassMethod);
-        io.enumCase(value, "I", FactoryAsInitKind::AsInitializer);
-      }
-    };
-
-    template <>
-    struct ScalarEnumerationTraits<MethodKind> {
-      static void enumeration(IO &io, MethodKind &value) {
-        io.enumCase(value, "Class",    MethodKind::Class);
-        io.enumCase(value, "Instance", MethodKind::Instance);
-      }
-    };
-
-    template <>
-    struct ScalarEnumerationTraits<APIAvailability> {
-      static void enumeration(IO &io, APIAvailability &value) {
-        io.enumCase(value, "OSX",       APIAvailability::OSX);
-        io.enumCase(value, "iOS",       APIAvailability::IOS);
-        io.enumCase(value, "none",      APIAvailability::None);
-        io.enumCase(value, "nonswift",  APIAvailability::NonSwift);
-        io.enumCase(value, "available", APIAvailability::Available);
-      }
-    };
-
-    template<>
-    struct ScalarEnumerationTraits<api_notes::SwiftWrapperKind> {
-      static void enumeration(IO &io, api_notes::SwiftWrapperKind &value) {
-        io.enumCase(value, "none",      api_notes::SwiftWrapperKind::None);
-        io.enumCase(value, "struct",    api_notes::SwiftWrapperKind::Struct);
-        io.enumCase(value, "enum",      api_notes::SwiftWrapperKind::Enum);
-      }
-    };
-
-    template<>
-    struct ScalarEnumerationTraits<api_notes::EnumExtensibilityKind> {
-      static void enumeration(IO &io, api_notes::EnumExtensibilityKind &value) {
-        io.enumCase(value, "none",   api_notes::EnumExtensibilityKind::None);
-        io.enumCase(value, "open",   api_notes::EnumExtensibilityKind::Open);
-        io.enumCase(value, "closed", api_notes::EnumExtensibilityKind::Closed);
-      }
-    };
-
-    template<>
-    struct ScalarEnumerationTraits<EnumConvenienceAliasKind> {
-      static void enumeration(IO &io, EnumConvenienceAliasKind &value) {
-        io.enumCase(value, "none",      EnumConvenienceAliasKind::None);
-        io.enumCase(value, "CFEnum",    EnumConvenienceAliasKind::CFEnum);
-        io.enumCase(value, "NSEnum",    EnumConvenienceAliasKind::CFEnum);
-        io.enumCase(value, "CFOptions", EnumConvenienceAliasKind::CFOptions);
-        io.enumCase(value, "NSOptions", EnumConvenienceAliasKind::CFOptions);
-        io.enumCase(value, "CFClosedEnum",
-                    EnumConvenienceAliasKind::CFClosedEnum);
-        io.enumCase(value, "NSClosedEnum",
-                    EnumConvenienceAliasKind::CFClosedEnum);
-      }
-    };
-
-    template<>
-    struct ScalarEnumerationTraits<api_notes::RetainCountConventionKind> {
-      static void enumeration(IO &io,
-                              api_notes::RetainCountConventionKind &value) {
-        using api_notes::RetainCountConventionKind;
-        io.enumCase(value, "none", RetainCountConventionKind::None);
-        io.enumCase(value, "CFReturnsRetained",
-                    RetainCountConventionKind::CFReturnsRetained);
-        io.enumCase(value, "CFReturnsNotRetained",
-                    RetainCountConventionKind::CFReturnsNotRetained);
-        io.enumCase(value, "NSReturnsRetained",
-                    RetainCountConventionKind::NSReturnsRetained);
-        io.enumCase(value, "NSReturnsNotRetained",
-                    RetainCountConventionKind::NSReturnsNotRetained);
-      }
-    };
-
-    template <>
-    struct MappingTraits<Param> {
-      static void mapping(IO &io, Param& p) {
-        io.mapRequired("Position",              p.Position);
-        io.mapOptional("Nullability",           p.Nullability, 
-                                                AbsentNullability);
-        io.mapOptional("RetainCountConvention", p.RetainCountConvention);
-        io.mapOptional("NoEscape",              p.NoEscape);
-        io.mapOptional("Type",                  p.Type, StringRef(""));
-      }
-    };
-
-    template <>
-    struct MappingTraits<Property> {
-      static void mapping(IO &io, Property& p) {
-        io.mapRequired("Name",            p.Name);
-        io.mapOptional("PropertyKind",    p.Kind);
-        io.mapOptional("Nullability",     p.Nullability, 
-                                          AbsentNullability);
-        io.mapOptional("Availability",    p.Availability.Mode);
-        io.mapOptional("AvailabilityMsg", p.Availability.Msg);
-        io.mapOptional("SwiftPrivate",    p.SwiftPrivate);
-        io.mapOptional("SwiftName",       p.SwiftName);
-        io.mapOptional("SwiftImportAsAccessors", p.SwiftImportAsAccessors);
-        io.mapOptional("Type",            p.Type, StringRef(""));
-      }
-    };
-
-    template <>
-    struct MappingTraits<Method> {
-      static void mapping(IO &io, Method& m) {
-        io.mapRequired("Selector",              m.Selector);
-        io.mapRequired("MethodKind",            m.Kind);
-        io.mapOptional("Parameters",            m.Params);
-        io.mapOptional("Nullability",           m.Nullability);
-        io.mapOptional("NullabilityOfRet",      m.NullabilityOfRet,
-                                                AbsentNullability);
-        io.mapOptional("RetainCountConvention", m.RetainCountConvention);
-        io.mapOptional("Availability",          m.Availability.Mode);
-        io.mapOptional("AvailabilityMsg",       m.Availability.Msg);
-        io.mapOptional("SwiftPrivate",          m.SwiftPrivate);
-        io.mapOptional("SwiftName",             m.SwiftName);
-        io.mapOptional("FactoryAsInit",         m.FactoryAsInit,
-                                                FactoryAsInitKind::Infer);
-        io.mapOptional("DesignatedInit",        m.DesignatedInit, false);
-        io.mapOptional("Required",              m.Required, false);
-        io.mapOptional("ResultType",            m.ResultType, StringRef(""));
-      }
-    };
-
-    template <>
-    struct MappingTraits<Class> {
-      static void mapping(IO &io, Class& c) {
-        io.mapRequired("Name",                  c.Name);
-        io.mapOptional("AuditedForNullability", c.AuditedForNullability, false);
-        io.mapOptional("Availability",          c.Availability.Mode);
-        io.mapOptional("AvailabilityMsg",       c.Availability.Msg);
-        io.mapOptional("SwiftPrivate",          c.SwiftPrivate);
-        io.mapOptional("SwiftName",             c.SwiftName);
-        io.mapOptional("SwiftBridge",           c.SwiftBridge);
-        io.mapOptional("NSErrorDomain",         c.NSErrorDomain);
-        io.mapOptional("SwiftImportAsNonGeneric", c.SwiftImportAsNonGeneric);
-        io.mapOptional("SwiftObjCMembers",      c.SwiftObjCMembers);
-        io.mapOptional("Methods",               c.Methods);
-        io.mapOptional("Properties",            c.Properties);
-      }
-    };
-
-    template <>
-    struct MappingTraits<Function> {
-      static void mapping(IO &io, Function& f) {
-        io.mapRequired("Name",                  f.Name);
-        io.mapOptional("Parameters",            f.Params);
-        io.mapOptional("Nullability",           f.Nullability);
-        io.mapOptional("NullabilityOfRet",      f.NullabilityOfRet,
-                                                AbsentNullability);
-        io.mapOptional("RetainCountConvention", f.RetainCountConvention);
-        io.mapOptional("Availability",          f.Availability.Mode);
-        io.mapOptional("AvailabilityMsg",       f.Availability.Msg);
-        io.mapOptional("SwiftPrivate",          f.SwiftPrivate);
-        io.mapOptional("SwiftName",             f.SwiftName);
-        io.mapOptional("ResultType",            f.ResultType, StringRef(""));
-      }
-    };
-
-    template <>
-    struct MappingTraits<GlobalVariable> {
-      static void mapping(IO &io, GlobalVariable& v) {
-        io.mapRequired("Name",            v.Name);
-        io.mapOptional("Nullability",     v.Nullability,
-                                          AbsentNullability);
-        io.mapOptional("Availability",    v.Availability.Mode);
-        io.mapOptional("AvailabilityMsg", v.Availability.Msg);
-        io.mapOptional("SwiftPrivate",    v.SwiftPrivate);
-        io.mapOptional("SwiftName",       v.SwiftName);
-        io.mapOptional("Type",            v.Type, StringRef(""));
-      }
-    };
-
-    template <>
-    struct MappingTraits<EnumConstant> {
-      static void mapping(IO &io, EnumConstant& v) {
-        io.mapRequired("Name",            v.Name);
-        io.mapOptional("Availability",    v.Availability.Mode);
-        io.mapOptional("AvailabilityMsg", v.Availability.Msg);
-        io.mapOptional("SwiftPrivate",    v.SwiftPrivate);
-        io.mapOptional("SwiftName",       v.SwiftName);
-      }
-    };
-
-    template <>
-    struct MappingTraits<Tag> {
-      static void mapping(IO &io, Tag& t) {
-        io.mapRequired("Name",                  t.Name);
-        io.mapOptional("Availability",          t.Availability.Mode);
-        io.mapOptional("AvailabilityMsg",       t.Availability.Msg);
-        io.mapOptional("SwiftPrivate",          t.SwiftPrivate);
-        io.mapOptional("SwiftName",             t.SwiftName);
-        io.mapOptional("SwiftBridge",           t.SwiftBridge);
-        io.mapOptional("NSErrorDomain",         t.NSErrorDomain);
-        io.mapOptional("EnumExtensibility",     t.EnumExtensibility);
-        io.mapOptional("FlagEnum",              t.FlagEnum);
-        io.mapOptional("EnumKind",              t.EnumConvenienceKind);
-      }
-    };
-
-    template <>
-    struct MappingTraits<Typedef> {
-      static void mapping(IO &io, Typedef& t) {
-        io.mapRequired("Name",                  t.Name);
-        io.mapOptional("Availability",          t.Availability.Mode);
-        io.mapOptional("AvailabilityMsg",       t.Availability.Msg);
-        io.mapOptional("SwiftPrivate",          t.SwiftPrivate);
-        io.mapOptional("SwiftName",             t.SwiftName);
-        io.mapOptional("SwiftBridge",           t.SwiftBridge);
-        io.mapOptional("NSErrorDomain",         t.NSErrorDomain);
-        io.mapOptional("SwiftWrapper",         t.SwiftWrapper);
-      }
-    };
-
-    static void mapTopLevelItems(IO &io, TopLevelItems &i) {
-      io.mapOptional("Classes",         i.Classes);
-      io.mapOptional("Protocols",       i.Protocols);
-      io.mapOptional("Functions",       i.Functions);
-      io.mapOptional("Globals",         i.Globals);
-      io.mapOptional("Enumerators",     i.EnumConstants);
-      io.mapOptional("Tags",            i.Tags);
-      io.mapOptional("Typedefs",        i.Typedefs);
-    }
-
-    template <>
-    struct MappingTraits<Versioned> {
-      static void mapping(IO &io, Versioned& v) {
-        io.mapRequired("Version", v.Version);
-        mapTopLevelItems(io, v.Items);
-      }
-    };
-
-    template <>
-    struct MappingTraits<Module> {
-      static void mapping(IO &io, Module& m) {
-        io.mapRequired("Name",            m.Name);
-        io.mapOptional("Availability",    m.Availability.Mode);
-        io.mapOptional("AvailabilityMsg", m.Availability.Msg);
-        io.mapOptional("SwiftInferImportAsMember", m.SwiftInferImportAsMember);
-
-        mapTopLevelItems(io, m.TopLevel);
-
-        io.mapOptional("SwiftVersions",  m.SwiftVersions);
-      }
-    };
+namespace yaml {
+template <> struct MappingTraits<Versioned> {
+  static void mapping(IO &IO, Versioned &V) {
+    IO.mapRequired("Version", V.Version);
+    mapTopLevelItems(IO, V.Items);
   }
-}
+};
+} // namespace yaml
+} // namespace llvm
 
-using llvm::yaml::Input;
-using llvm::yaml::Output;
+namespace {
+struct Module {
+  StringRef Name;
+  AvailabilityItem Availability;
+  TopLevelItems TopLevel;
+  VersionedSeq SwiftVersions;
+
+  llvm::Optional<bool> SwiftInferImportAsMember = {llvm::None};
+
+  LLVM_DUMP_METHOD void dump() /*const*/;
+};
+} // namespace
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<Module> {
+  static void mapping(IO &IO, Module &M) {
+    IO.mapRequired("Name", M.Name);
+    IO.mapOptional("Availability", M.Availability.Mode,
+                   APIAvailability::Available);
+    IO.mapOptional("AvailabilityMsg", M.Availability.Msg, StringRef(""));
+    IO.mapOptional("SwiftInferImportAsMember", M.SwiftInferImportAsMember);
+    mapTopLevelItems(IO, M.TopLevel);
+    IO.mapOptional("SwiftVersions", M.SwiftVersions);
+  }
+};
+} // namespace yaml
+} // namespace llvm
 
 void Module::dump() {
-  Output yout(llvm::errs());
-  yout << *this;
+  llvm::yaml::Output OS(llvm::errs());
+  OS << *this;
 }
 
-static bool parseAPINotes(StringRef yamlInput, Module &module,
-                          llvm::SourceMgr::DiagHandlerTy diagHandler,
-                          void *diagHandlerCtxt) {
-  Input yin(yamlInput, nullptr, diagHandler, diagHandlerCtxt);
-  yin >> module;
-
-  return static_cast<bool>(yin.error());
+namespace {
+bool parseAPINotes(StringRef YI, Module &M, llvm::SourceMgr::DiagHandlerTy Diag,
+                   void *DiagContext) {
+  llvm::yaml::Input IS(YI, nullptr, Diag, DiagContext);
+  IS >> M;
+  return static_cast<bool>(IS.error());
 }
+} // namespace
+
+bool clang::api_notes::parseAndDumpAPINotes(StringRef YI,
+                                            llvm::raw_ostream &OS) {
+  Module M;
+  if (parseAPINotes(YI, M, nullptr, nullptr))
+    return true;
+
+  llvm::yaml::Output YOS(OS);
+  YOS << M;
+
+  return false;
+}
+
+#include "clang/APINotes/APINotesReader.h"
+#include "clang/APINotes/Types.h"
+#include "clang/APINotes/APINotesWriter.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/YAMLParser.h"
+#include "llvm/Support/YAMLTraits.h"
+#include <algorithm>
 
 namespace {
   using namespace api_notes;
@@ -703,7 +803,7 @@ namespace {
         outInfo.addTypeInfo(0, *nullabilityOfRet);
         audited = true;
       } else if (audited) {
-        outInfo.addTypeInfo(0, *DefaultNullability);
+        outInfo.addTypeInfo(0, NullabilityKind::NonNull);
       }
       if (audited) {
         outInfo.NullabilityAudited = audited;
@@ -791,7 +891,7 @@ namespace {
         return;
 
       if (cl.AuditedForNullability)
-        cInfo.setDefaultNullability(*DefaultNullability);
+        cInfo.setDefaultNullability(NullabilityKind::NonNull);
       if (cl.SwiftImportAsNonGeneric)
         cInfo.setSwiftImportAsNonGeneric(*cl.SwiftImportAsNonGeneric);
       if (cl.SwiftObjCMembers)
@@ -1008,7 +1108,7 @@ namespace {
         TypedefInfo typedefInfo;
         if (convertCommonType(t, typedefInfo, t.Name))
           continue;
-        typedefInfo.SwiftWrapper = t.SwiftWrapper;
+        typedefInfo.SwiftWrapper = t.SwiftType;
 
         Writer->addTypedef(t.Name, typedefInfo, swiftVersion);
       }
@@ -1051,18 +1151,6 @@ static bool compile(const Module &module,
 
   YAMLConverter c(module, sourceFile, os, diagHandler, diagHandlerCtxt);
   return c.convertModule();
-}
-
-bool api_notes::parseAndDumpAPINotes(StringRef yamlInput)  {
-  Module module;
-
-  if (parseAPINotes(yamlInput, module, nullptr, nullptr))
-    return true;
-
-  Output yout(llvm::outs());
-  yout << module;
-
-  return false;
 }
 
 /// Simple diagnostic handler that prints diagnostics to standard error.
