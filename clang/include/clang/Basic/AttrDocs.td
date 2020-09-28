@@ -75,7 +75,7 @@ relative ordering of values is important. For example:
   __attribute__((init_priority(200))) SomeType Obj1;
   __attribute__((init_priority(101))) SomeType Obj2;
 
-``Obj1`` will be initialized *before* ``Obj2`` despite the usual order of
+``Obj2`` will be initialized *before* ``Obj1`` despite the usual order of
 initialization being the opposite.
 
 This attribute is only supported for C++ and Objective-C++ and is ignored in
