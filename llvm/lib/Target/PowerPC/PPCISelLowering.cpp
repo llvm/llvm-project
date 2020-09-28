@@ -1181,6 +1181,18 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     }
   }
 
+  if (Subtarget.pairedVectorMemops()) {
+    addRegisterClass(MVT::v256i1, &PPC::VSRpRCRegClass);
+    setOperationAction(ISD::LOAD, MVT::v256i1, Custom);
+    setOperationAction(ISD::STORE, MVT::v256i1, Custom);
+  }
+  if (Subtarget.hasMMA()) {
+    addRegisterClass(MVT::v512i1, &PPC::UACCRCRegClass);
+    setOperationAction(ISD::LOAD, MVT::v512i1, Custom);
+    setOperationAction(ISD::STORE, MVT::v512i1, Custom);
+    setOperationAction(ISD::BUILD_VECTOR, MVT::v512i1, Custom);
+  }
+
   if (Subtarget.has64BitSupport())
     setOperationAction(ISD::PREFETCH, MVT::Other, Legal);
 
@@ -1523,6 +1535,10 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "PPCISD::TLS_DYNAMIC_MAT_PCREL_ADDR";
   case PPCISD::TLS_LOCAL_EXEC_MAT_ADDR:
     return "PPCISD::TLS_LOCAL_EXEC_MAT_ADDR";
+  case PPCISD::ACC_BUILD:       return "PPCISD::ACC_BUILD";
+  case PPCISD::PAIR_BUILD:      return "PPCISD::PAIR_BUILD";
+  case PPCISD::EXTRACT_VSX_REG: return "PPCISD::EXTRACT_VSX_REG";
+  case PPCISD::XXMFACC:         return "PPCISD::XXMFACC";
   case PPCISD::LD_SPLAT:        return "PPCISD::LD_SPLAT";
   case PPCISD::FNMSUB:          return "PPCISD::FNMSUB";
   case PPCISD::STRICT_FADDRTZ:
@@ -7824,6 +7840,8 @@ SDValue PPCTargetLowering::lowerEH_SJLJ_LONGJMP(SDValue Op,
 }
 
 SDValue PPCTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
+  if (Op.getValueType().isVector())
+    return LowerVectorLoad(Op, DAG);
 
   assert(Op.getValueType() == MVT::i1 &&
          "Custom lowering only for i1 loads");
@@ -7847,6 +7865,9 @@ SDValue PPCTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue PPCTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
+  if (Op.getOperand(1).getValueType().isVector())
+    return LowerVectorStore(Op, DAG);
+
   assert(Op.getOperand(1).getValueType() == MVT::i1 &&
          "Custom lowering only for i1 stores");
 
@@ -10579,6 +10600,94 @@ SDValue PPCTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
                        DAG.getConstant(InsertAtByte, dl, MVT::i32));
   }
   return Op;
+}
+
+SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  LoadSDNode *LN = cast<LoadSDNode>(Op.getNode());
+  SDValue LoadChain = LN->getChain();
+  SDValue BasePtr = LN->getBasePtr();
+  EVT VT = Op.getValueType();
+
+  if (VT != MVT::v256i1 && VT != MVT::v512i1)
+    return Op;
+
+  // Type v256i1 is used for pairs and v512i1 is used for accumulators.
+  // Here we create 2 or 4 v16i8 loads to load the pair or accumulator value in
+  // 2 or 4 vsx registers.
+  assert((VT != MVT::v512i1 || Subtarget.hasMMA()) &&
+         "Type unsupported without MMA");
+  assert((VT != MVT::v256i1 || Subtarget.pairedVectorMemops()) &&
+         "Type unsupported without paired vector support");
+  Align Alignment = LN->getAlign();
+  SmallVector<SDValue, 4> Loads;
+  SmallVector<SDValue, 4> LoadChains;
+  unsigned NumVecs = VT.getSizeInBits() / 128;
+  for (unsigned Idx = 0; Idx < NumVecs; ++Idx) {
+    SDValue Load =
+        DAG.getLoad(MVT::v16i8, dl, LoadChain, BasePtr,
+                    LN->getPointerInfo().getWithOffset(Idx * 16),
+                    commonAlignment(Alignment, Idx * 16),
+                    LN->getMemOperand()->getFlags(), LN->getAAInfo());
+    BasePtr = DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr,
+                          DAG.getConstant(16, dl, BasePtr.getValueType()));
+    Loads.push_back(Load);
+    LoadChains.push_back(Load.getValue(1));
+  }
+  if (Subtarget.isLittleEndian()) {
+    std::reverse(Loads.begin(), Loads.end());
+    std::reverse(LoadChains.begin(), LoadChains.end());
+  }
+  SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LoadChains);
+  SDValue Value =
+      DAG.getNode(VT == MVT::v512i1 ? PPCISD::ACC_BUILD : PPCISD::PAIR_BUILD,
+                  dl, VT, Loads);
+  SDValue RetOps[] = {Value, TF};
+  return DAG.getMergeValues(RetOps, dl);
+}
+
+SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  StoreSDNode *SN = cast<StoreSDNode>(Op.getNode());
+  SDValue StoreChain = SN->getChain();
+  SDValue BasePtr = SN->getBasePtr();
+  SDValue Value = SN->getValue();
+  EVT StoreVT = Value.getValueType();
+
+  if (StoreVT != MVT::v256i1 && StoreVT != MVT::v512i1)
+    return Op;
+
+  // Type v256i1 is used for pairs and v512i1 is used for accumulators.
+  // Here we create 2 or 4 v16i8 stores to store the pair or accumulator
+  // underlying registers individually.
+  assert((StoreVT != MVT::v512i1 || Subtarget.hasMMA()) &&
+         "Type unsupported without MMA");
+  assert((StoreVT != MVT::v256i1 || Subtarget.pairedVectorMemops()) &&
+         "Type unsupported without paired vector support");
+  Align Alignment = SN->getAlign();
+  SmallVector<SDValue, 4> Stores;
+  unsigned NumVecs = 2;
+  if (StoreVT == MVT::v512i1) {
+    Value = DAG.getNode(PPCISD::XXMFACC, dl, MVT::v512i1, Value);
+    NumVecs = 4;
+  }
+  for (unsigned Idx = 0; Idx < NumVecs; ++Idx) {
+    unsigned VecNum = Subtarget.isLittleEndian() ? NumVecs - 1 - Idx : Idx;
+    SDValue Elt = DAG.getNode(PPCISD::EXTRACT_VSX_REG, dl, MVT::v16i8, Value,
+                              DAG.getConstant(VecNum, dl, MVT::i64));
+    SDValue Store =
+        DAG.getStore(StoreChain, dl, Elt, BasePtr,
+                     SN->getPointerInfo().getWithOffset(Idx * 16),
+                     commonAlignment(Alignment, Idx * 16),
+                     SN->getMemOperand()->getFlags(), SN->getAAInfo());
+    BasePtr = DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr,
+                          DAG.getConstant(16, dl, BasePtr.getValueType()));
+    Stores.push_back(Store);
+  }
+  SDValue TF = DAG.getTokenFactor(dl, Stores);
+  return TF;
 }
 
 SDValue PPCTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {

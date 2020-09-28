@@ -2465,6 +2465,31 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   auto DL = MI.getDebugLoc();
 
   switch (MI.getOpcode()) {
+  case PPC::BUILD_UACC: {
+    MCRegister ACC = MI.getOperand(0).getReg();
+    MCRegister UACC = MI.getOperand(1).getReg();
+    if (ACC - PPC::ACC0 != UACC - PPC::UACC0) {
+      MCRegister SrcVSR = PPC::VSL0 + (UACC - PPC::UACC0) * 4;
+      MCRegister DstVSR = PPC::VSL0 + (ACC - PPC::ACC0) * 4;
+      // FIXME: This can easily be improved to look up to the top of the MBB
+      // to see if the inputs are XXLOR's. If they are and SrcReg is killed,
+      // we can just re-target any such XXLOR's to DstVSR + offset.
+      for (int VecNo = 0; VecNo < 4; VecNo++)
+        BuildMI(MBB, MI, DL, get(PPC::XXLOR), DstVSR + VecNo)
+            .addReg(SrcVSR + VecNo)
+            .addReg(SrcVSR + VecNo);
+    }
+    // BUILD_UACC is expanded to 4 copies of the underlying vsx regisers.
+    // So after building the 4 copies, we can replace the BUILD_UACC instruction
+    // with a NOP.
+    LLVM_FALLTHROUGH;
+  }
+  case PPC::KILL_PAIR: {
+    MI.setDesc(get(PPC::UNENCODED_NOP));
+    MI.RemoveOperand(1);
+    MI.RemoveOperand(0);
+    return true;
+  }
   case TargetOpcode::LOAD_STACK_GUARD: {
     assert(Subtarget.isTargetLinux() &&
            "Only Linux target is expected to contain LOAD_STACK_GUARD");
