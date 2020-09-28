@@ -167,6 +167,26 @@ opt<CodeCompleteOptions::CodeCompletionParse> CodeCompletionParse{
     Hidden,
 };
 
+opt<CodeCompleteOptions::CodeCompletionRankingModel> RankingModel{
+    "ranking-model",
+    cat(Features),
+    desc("Model to use to rank code-completion items"),
+    values(clEnumValN(CodeCompleteOptions::Heuristics, "heuristics",
+                      "Use hueristics to rank code completion items"),
+           clEnumValN(CodeCompleteOptions::DecisionForest, "decision_forest",
+                      "Use Decision Forest model to rank completion items")),
+    init(CodeCompleteOptions().RankingModel),
+    Hidden,
+};
+
+opt<bool> DecisionForestBase{
+    "decision-forest-base",
+    cat(Features),
+    desc("Base for exponentiating the prediction from DecisionForest."),
+    init(CodeCompleteOptions().DecisionForestBase),
+    Hidden,
+};
+
 // FIXME: also support "plain" style where signatures are always omitted.
 enum CompletionStyleFlag { Detailed, Bundled };
 opt<CompletionStyleFlag> CompletionStyle{
@@ -739,6 +759,8 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   CCOpts.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
   CCOpts.AllScopes = AllScopesCompletion;
   CCOpts.RunParser = CodeCompletionParse;
+  CCOpts.RankingModel = RankingModel;
+  CCOpts.DecisionForestBase = DecisionForestBase;
 
   RealThreadsafeFS TFS;
   std::vector<std::unique_ptr<config::Provider>> ProviderStack;
