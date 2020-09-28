@@ -958,8 +958,7 @@ define <2 x i32> @abspattern1(<2 x i32> %a) nounwind {
 
 ; GISEL: neg.2s
 ; GISEL: cmge.2s
-; GISEL: fcsel
-; GISEL: fcsel
+; GISEL: bif.8b
         %tmp1neg = sub <2 x i32> zeroinitializer, %a
         %b = icmp sge <2 x i32> %a, zeroinitializer
         %abs = select <2 x i1> %b, <2 x i32> %a, <2 x i32> %tmp1neg
@@ -974,10 +973,7 @@ define <4 x i16> @abspattern2(<4 x i16> %a) nounwind {
 ; For GlobalISel, this generates terrible code until we can pattern match this to abs.
 ; GISEL-DAG: neg.4h
 ; GISEL-DAG: cmgt.4h
-; GISEL: csel
-; GISEL: csel
-; GISEL: csel
-; GISEL: csel
+; GISEL: bif.8b
         %tmp1neg = sub <4 x i16> zeroinitializer, %a
         %b = icmp sgt <4 x i16> %a, zeroinitializer
         %abs = select <4 x i1> %b, <4 x i16> %a, <4 x i16> %tmp1neg
@@ -1000,10 +996,7 @@ define <4 x i32> @abspattern4(<4 x i32> %a) nounwind {
 ; DAG-NEXT: ret
 
 ; GISEL: cmge.4s
-; GISEL: fcsel
-; GISEL: fcsel
-; GISEL: fcsel
-; GISEL: fcsel
+; GISEL: bif.16b
         %tmp1neg = sub <4 x i32> zeroinitializer, %a
         %b = icmp sge <4 x i32> %a, zeroinitializer
         %abs = select <4 x i1> %b, <4 x i32> %a, <4 x i32> %tmp1neg
@@ -1017,14 +1010,7 @@ define <8 x i16> @abspattern5(<8 x i16> %a) nounwind {
 
 ; GISEL-DAG: cmgt.8h
 ; GISEL-DAG: neg.8h
-; GISEL: csel
-; GISEL: csel
-; GISEL: csel
-; GISEL: csel
-; GISEL: csel
-; GISEL: csel
-; GISEL: csel
-; GISEL: csel
+; GISEL: bif.16b
         %tmp1neg = sub <8 x i16> zeroinitializer, %a
         %b = icmp sgt <8 x i16> %a, zeroinitializer
         %abs = select <8 x i1> %b, <8 x i16> %a, <8 x i16> %tmp1neg
@@ -1033,8 +1019,11 @@ define <8 x i16> @abspattern5(<8 x i16> %a) nounwind {
 
 define <16 x i8> @abspattern6(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: abspattern6:
-; CHECK: abs.16b
-; CHECK-NEXT: ret
+; DAG: abs.16b
+; DAG-NEXT: ret
+
+; GISEL: cmgt.16b
+; GISEL: bit.16b
         %tmp1neg = sub <16 x i8> zeroinitializer, %a
         %b = icmp slt <16 x i8> %a, zeroinitializer
         %abs = select <16 x i1> %b, <16 x i8> %tmp1neg, <16 x i8> %a
@@ -1048,8 +1037,7 @@ define <2 x i64> @abspattern7(<2 x i64> %a) nounwind {
 
 ; GISEL: neg.2d
 ; GISEL: cmge.2d
-; GISEL: fcsel
-; GISEL: fcsel
+; GISEL: bit.16b
         %tmp1neg = sub <2 x i64> zeroinitializer, %a
         %b = icmp sle <2 x i64> %a, zeroinitializer
         %abs = select <2 x i1> %b, <2 x i64> %tmp1neg, <2 x i64> %a
