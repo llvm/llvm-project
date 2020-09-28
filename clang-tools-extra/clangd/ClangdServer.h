@@ -25,6 +25,7 @@
 #include "refactor/Tweak.h"
 #include "support/Cancellation.h"
 #include "support/Function.h"
+#include "support/MemoryTree.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
@@ -336,6 +337,9 @@ public:
   // Returns false if the timeout expires.
   LLVM_NODISCARD bool
   blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds = 10);
+
+  /// Builds a nested representation of memory used by components.
+  void profile(MemoryTree &MT) const;
 
 private:
   void formatCode(PathRef File, llvm::StringRef Code,
