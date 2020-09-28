@@ -170,12 +170,12 @@ TEST(CrashRecoveryTest, UnixCRCReturnCode) {
       Executable, "--gtest_filter=CrashRecoveryTest.UnixCRCReturnCode"};
 
   // Add LLVM_CRC_UNIXCRCRETURNCODE to the environment of the child process.
-  std::vector<StringRef> EnvTable;
-  EnvTable.push_back("LLVM_CRC_UNIXCRCRETURNCODE=1");
+  int Res = setenv("LLVM_CRC_UNIXCRCRETURNCODE", "1", 0);
+  ASSERT_EQ(Res, 0);
 
   std::string Error;
   bool ExecutionFailed;
-  int RetCode = ExecuteAndWait(Executable, argv, makeArrayRef(EnvTable), {}, 0, 0, &Error,
+  int RetCode = ExecuteAndWait(Executable, argv, {}, {}, 0, 0, &Error,
                                &ExecutionFailed);
   ASSERT_EQ(-2, RetCode);
 }
