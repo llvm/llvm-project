@@ -336,7 +336,7 @@ class PrinterContext {
 
   static uint64_t PREL31(uint32_t Address, uint32_t Place) {
     uint64_t Location = Address & 0x7fffffff;
-    if (Location & 0x04000000)
+    if (Location & 0x40000000)
       Location |= (uint64_t) ~0x7fffffff;
     return Location + Place;
   }
