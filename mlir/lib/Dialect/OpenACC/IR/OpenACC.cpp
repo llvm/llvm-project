@@ -458,21 +458,18 @@ static void print(OpAsmPrinter &printer, ParallelOp &op) {
 ///                         (`create` `(` value-list `)`)?
 ///                         (`create_zero` `(` value-list `)`)?
 ///                         (`no_create` `(` value-list `)`)?
-///                         (`delete` `(` value-list `)`)?
 ///                         (`attach` `(` value-list `)`)?
-///                         (`detach` `(` value-list `)`)?
 ///                         region attr-dict?
 static ParseResult parseDataOp(OpAsmParser &parser, OperationState &result) {
   Builder &builder = parser.getBuilder();
   SmallVector<OpAsmParser::OperandType, 2> presentOperands, copyOperands,
       copyinOperands, copyinReadonlyOperands, copyoutOperands,
       copyoutZeroOperands, createOperands, createZeroOperands, noCreateOperands,
-      deleteOperands, attachOperands, detachOperands;
+      attachOperands;
   SmallVector<Type, 2> presentOperandTypes, copyOperandTypes,
       copyinOperandTypes, copyinReadonlyOperandTypes, copyoutOperandTypes,
       copyoutZeroOperandTypes, createOperandTypes, createZeroOperandTypes,
-      noCreateOperandTypes, deleteOperandTypes, attachOperandTypes,
-      detachOperandTypes;
+      noCreateOperandTypes, attachOperandTypes;
 
   // present(value-list)?
   if (failed(parseOperandList(parser, DataOp::getPresentKeyword(),
@@ -522,19 +519,9 @@ static ParseResult parseDataOp(OpAsmParser &parser, OperationState &result) {
                               noCreateOperands, noCreateOperandTypes, result)))
     return failure();
 
-  // delete(value-list)?
-  if (failed(parseOperandList(parser, DataOp::getDeleteKeyword(),
-                              deleteOperands, deleteOperandTypes, result)))
-    return failure();
-
   // attach(value-list)?
   if (failed(parseOperandList(parser, DataOp::getAttachKeyword(),
                               attachOperands, attachOperandTypes, result)))
-    return failure();
-
-  // detach(value-list)?
-  if (failed(parseOperandList(parser, DataOp::getDetachKeyword(),
-                              detachOperands, detachOperandTypes, result)))
     return failure();
 
   // Data op region
@@ -552,9 +539,7 @@ static ParseResult parseDataOp(OpAsmParser &parser, OperationState &result) {
                            static_cast<int32_t>(createOperands.size()),
                            static_cast<int32_t>(createZeroOperands.size()),
                            static_cast<int32_t>(noCreateOperands.size()),
-                           static_cast<int32_t>(deleteOperands.size()),
-                           static_cast<int32_t>(attachOperands.size()),
-                           static_cast<int32_t>(detachOperands.size())}));
+                           static_cast<int32_t>(attachOperands.size())}));
 
   // Additional attributes
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
@@ -597,14 +582,8 @@ static void print(OpAsmPrinter &printer, DataOp &op) {
   printOperandList(op.noCreateOperands(), DataOp::getNoCreateKeyword(),
                    printer);
 
-  // delete(value-list)?
-  printOperandList(op.deleteOperands(), DataOp::getDeleteKeyword(), printer);
-
   // attach(value-list)?
   printOperandList(op.attachOperands(), DataOp::getAttachKeyword(), printer);
-
-  // detach(value-list)?
-  printOperandList(op.detachOperands(), DataOp::getDetachKeyword(), printer);
 
   printer.printRegion(op.region(),
                       /*printEntryBlockArgs=*/false,
