@@ -291,8 +291,9 @@ bool AArch64SIMDInstrOpt::shouldExitEarly(MachineFunction *MF, Subpass SP) {
   case Interleave:
     std::string Subtarget =
         std::string(SchedModel.getSubtargetInfo()->getCPU());
-    if (InterlEarlyExit.find(Subtarget) != InterlEarlyExit.end())
-      return InterlEarlyExit[Subtarget];
+    auto It = InterlEarlyExit.find(Subtarget);
+    if (It != InterlEarlyExit.end())
+      return It->second;
 
     for (auto &I : IRT) {
       OriginalMCID = &TII->get(I.OrigOpc);
