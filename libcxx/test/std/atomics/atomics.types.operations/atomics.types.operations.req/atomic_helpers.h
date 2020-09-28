@@ -51,13 +51,21 @@ struct PaddedUserAtomicType
 
 struct LargeUserAtomicType
 {
-    int i, j[127]; /* decidedly not lock-free */
+    int a[128];  /* decidedly not lock-free */
 
-    LargeUserAtomicType(int d = 0) TEST_NOEXCEPT : i(d)
-    {}
+    LargeUserAtomicType(int d = 0) TEST_NOEXCEPT
+    {
+        for (auto && e : a)
+            e = d++;
+    }
 
-    friend bool operator==(const LargeUserAtomicType& x, const LargeUserAtomicType& y)
-    { return x.i == y.i; }
+    friend bool operator==(LargeUserAtomicType const& x, LargeUserAtomicType const& y) TEST_NOEXCEPT
+    {
+        for (int i = 0; i < 128; ++i)
+            if (x.a[i] != y.a[i])
+                return false;
+        return true;
+    }
 };
 
 template < template <class TestArg> class TestFunctor >
