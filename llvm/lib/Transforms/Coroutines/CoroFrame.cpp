@@ -20,16 +20,18 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
+#include "llvm/Analysis/StackLifetime.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/circular_raw_ostream.h"
 #include "llvm/Support/OptimizedStructLayout.h"
+#include "llvm/Support/circular_raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
@@ -40,6 +42,13 @@ using namespace llvm;
 // The "coro-suspend-crossing" flag is very noisy. There is another debug type,
 // "coro-frame", which results in leaner debug spew.
 #define DEBUG_TYPE "coro-suspend-crossing"
+
+static cl::opt<bool> EnableReuseStorageInFrame(
+    "reuse-storage-in-coroutine-frame", cl::Hidden,
+    cl::desc(
+        "Enable the optimization which would reuse the storage in the coroutine \
+         frame for allocas whose liferanges are not overlapped, for testing purposes"),
+    llvm::cl::init(false));
 
 enum { SmallVectorThreshold = 32 };
 
@@ -342,10 +351,14 @@ namespace {
 // differs from the natural alignment of the alloca type we will need to insert
 // padding.
 class FrameTypeBuilder {
+public:
+  using ForSpillType = SmallVector<Spill *, 8>;
+
+private:
   struct Field {
     uint64_t Size;
     uint64_t Offset;
-    Spill *ForSpill;
+    ForSpillType ForSpill;
     Type *Ty;
     unsigned FieldIndex;
     Align Alignment;
@@ -363,7 +376,7 @@ class FrameTypeBuilder {
 
 public:
   FrameTypeBuilder(LLVMContext &Context, DataLayout const &DL)
-    : DL(DL), Context(Context) {}
+      : DL(DL), Context(Context) {}
 
   class FieldId {
     size_t Value;
@@ -374,7 +387,7 @@ public:
 
   /// Add a field to this structure for the storage of an `alloca`
   /// instruction.
-  FieldId addFieldForAlloca(AllocaInst *AI, Spill *ForSpill = nullptr,
+  FieldId addFieldForAlloca(AllocaInst *AI, ForSpillType ForSpill = {},
                             bool IsHeader = false) {
     Type *Ty = AI->getAllocatedType();
 
@@ -389,10 +402,39 @@ public:
     return addField(Ty, AI->getAlign(), ForSpill, IsHeader);
   }
 
+  /// We want to put the allocas whose lifetime-ranges are not overlapped
+  /// into one slot of coroutine frame.
+  /// Consider the example at:https://bugs.llvm.org/show_bug.cgi?id=45566
+  ///
+  ///     cppcoro::task<void> alternative_paths(bool cond) {
+  ///         if (cond) {
+  ///             big_structure a;
+  ///             process(a);
+  ///             co_await something();
+  ///         } else {
+  ///             big_structure b;
+  ///             process2(b);
+  ///             co_await something();
+  ///         }
+  ///     }
+  ///
+  /// We want to put variable a and variable b in the same slot to
+  /// reduce the size of coroutine frame.
+  ///
+  /// This function use StackLifetime algorithm to partition the AllocaInsts in
+  /// Spills to non-overlapped sets in order to put Alloca in the same
+  /// non-overlapped set into the same slot in the Coroutine Frame. Then add
+  /// field for the allocas in the same non-overlapped set by using the largest
+  /// type as the field type.
+  ///
+  /// Side Effects: Because We sort the allocas, the order of allocas in the
+  /// frame may be different with the order in the source code.
+  void addFieldForAllocas(const Function &F, SpillInfo &Spills,
+                          coro::Shape &Shape);
+
   /// Add a field to this structure.
   FieldId addField(Type *Ty, MaybeAlign FieldAlignment,
-                   Spill *ForSpill = nullptr,
-                   bool IsHeader = false) {
+                   ForSpillType ForSpill = {}, bool IsHeader = false) {
     assert(!IsFinished && "adding fields to a finished builder");
     assert(Ty && "must provide a type for a field");
 
@@ -439,6 +481,130 @@ public:
   }
 };
 } // namespace
+
+void FrameTypeBuilder::addFieldForAllocas(const Function &F, SpillInfo &Spills,
+                                          coro::Shape &Shape) {
+  DenseMap<AllocaInst *, unsigned int> AllocaIndex;
+  SmallVector<AllocaInst *, 8> Allocas;
+  DenseMap<AllocaInst *, Spill *> SpillOfAllocas;
+  using AllocaSetType = SmallVector<AllocaInst *, 4>;
+  SmallVector<AllocaSetType, 4> NonOverlapedAllocas;
+
+  // We need to add field for allocas at the end of this function. However, this
+  // function has multiple exits, so we use this helper to avoid redundant code.
+  struct RTTIHelper {
+    std::function<void()> func;
+    RTTIHelper(std::function<void()> &&func) : func(func) {}
+    ~RTTIHelper() { func(); }
+  } Helper([&]() {
+    for (auto AllocaSet : NonOverlapedAllocas) {
+      ForSpillType ForSpills;
+      for (auto Alloca : AllocaSet)
+        ForSpills.push_back(SpillOfAllocas[Alloca]);
+      auto *LargestAI = *AllocaSet.begin();
+      addFieldForAlloca(LargestAI, ForSpills);
+    }
+  });
+
+  for (auto &Spill : Spills)
+    if (AllocaInst *AI = dyn_cast<AllocaInst>(Spill.def()))
+      if (find(Allocas, AI) == Allocas.end()) {
+        SpillOfAllocas[AI] = &Spill;
+        Allocas.emplace_back(AI);
+      }
+
+  if (!Shape.ReuseFrameSlot && !EnableReuseStorageInFrame) {
+    for (auto Alloca : Allocas) {
+      AllocaIndex[Alloca] = NonOverlapedAllocas.size();
+      NonOverlapedAllocas.emplace_back(AllocaSetType(1, Alloca));
+    }
+    return;
+  }
+
+  // Because there are pathes from the lifetime.start to coro.end
+  // for each alloca, the liferanges for every alloca is overlaped
+  // in the blocks who contain coro.end and the successor blocks.
+  // So we choose to skip there blocks when we calculates the liferange
+  // for each alloca. It should be reasonable since there shouldn't be uses
+  // in these blocks and the coroutine frame shouldn't be used outside the
+  // coroutine body.
+  //
+  // Note that the user of coro.suspend may not be SwitchInst. However, this
+  // case seems too complex to handle. And it is harmless to skip these
+  // patterns since it just prevend putting the allocas to live in the same
+  // slot.
+  DenseMap<SwitchInst *, BasicBlock *> DefaultSuspendDest;
+  for (auto CoroSuspendInst : Shape.CoroSuspends) {
+    for (auto U : CoroSuspendInst->users()) {
+      if (auto *ConstSWI = dyn_cast<SwitchInst>(U)) {
+        auto *SWI = const_cast<SwitchInst *>(ConstSWI);
+        DefaultSuspendDest[SWI] = SWI->getDefaultDest();
+        SWI->setDefaultDest(SWI->getSuccessor(1));
+      }
+    }
+  }
+
+  StackLifetime StackLifetimeAnalyzer(F, Allocas,
+                                      StackLifetime::LivenessType::May);
+  StackLifetimeAnalyzer.run();
+  auto IsAllocaInferenre = [&](const AllocaInst *AI1, const AllocaInst *AI2) {
+    return StackLifetimeAnalyzer.getLiveRange(AI1).overlaps(
+        StackLifetimeAnalyzer.getLiveRange(AI2));
+  };
+  auto GetAllocaSize = [&](const AllocaInst *AI) {
+    Optional<uint64_t> RetSize = AI->getAllocationSizeInBits(DL);
+    assert(RetSize && "We can't handle scalable type now.\n");
+    return RetSize.getValue();
+  };
+  // Put larger allocas in the front. So the larger allocas have higher
+  // priority to merge, which can save more space potentially. Also each
+  // AllocaSet would be ordered. So we can get the largest Alloca in one
+  // AllocaSet easily.
+  sort(Allocas, [&](auto Iter1, auto Iter2) {
+    return GetAllocaSize(Iter1) > GetAllocaSize(Iter2);
+  });
+  for (auto Alloca : Allocas) {
+    bool Merged = false;
+    // Try to find if the Alloca is not inferenced with any existing
+    // NonOverlappedAllocaSet. If it is true, insert the alloca to that
+    // NonOverlappedAllocaSet.
+    for (auto &AllocaSet : NonOverlapedAllocas) {
+      assert(!AllocaSet.empty() && "Processing Alloca Set is not empty.\n");
+      bool CouldMerge = none_of(AllocaSet, [&](auto Iter) {
+        return IsAllocaInferenre(Alloca, Iter);
+      });
+      if (!CouldMerge)
+        continue;
+      AllocaIndex[Alloca] = AllocaIndex[*AllocaSet.begin()];
+      AllocaSet.push_back(Alloca);
+      Merged = true;
+      break;
+    }
+    if (!Merged) {
+      AllocaIndex[Alloca] = NonOverlapedAllocas.size();
+      NonOverlapedAllocas.emplace_back(AllocaSetType(1, Alloca));
+    }
+  }
+  // Recover the default target destination for each Switch statement
+  // reserved.
+  for (auto SwitchAndDefaultDest : DefaultSuspendDest) {
+    SwitchInst *SWI = SwitchAndDefaultDest.first;
+    BasicBlock *DestBB = SwitchAndDefaultDest.second;
+    SWI->setDefaultDest(DestBB);
+  }
+  // This Debug Info could tell us which allocas are merged into one slot.
+  LLVM_DEBUG(for (auto &AllocaSet
+                  : NonOverlapedAllocas) {
+    if (AllocaSet.size() > 1) {
+      dbgs() << "In Function:" << F.getName() << "\n";
+      dbgs() << "Find Union Set "
+             << "\n";
+      dbgs() << "\tAllocas are \n";
+      for (auto Alloca : AllocaSet)
+        dbgs() << "\t\t" << *Alloca << "\n";
+    }
+  });
+}
 
 void FrameTypeBuilder::finish(StructType *Ty) {
   assert(!IsFinished && "already finished!");
@@ -495,8 +661,8 @@ void FrameTypeBuilder::finish(StructType *Ty) {
     // original Spill, if there is one.
     F.Offset = Offset;
     F.FieldIndex = FieldTypes.size();
-    if (F.ForSpill) {
-      F.ForSpill->setFieldIndex(F.FieldIndex);
+    for (auto Spill : F.ForSpill) {
+      Spill->setFieldIndex(F.FieldIndex);
     }
 
     FieldTypes.push_back(F.Ty);
@@ -549,13 +715,12 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
 
     // Add header fields for the resume and destroy functions.
     // We can rely on these being perfectly packed.
-    B.addField(FnPtrTy, None, nullptr, /*header*/ true);
-    B.addField(FnPtrTy, None, nullptr, /*header*/ true);
+    B.addField(FnPtrTy, None, {}, /*header*/ true);
+    B.addField(FnPtrTy, None, {}, /*header*/ true);
 
     // Add a header field for the promise if there is one.
     if (PromiseAlloca) {
-      PromiseFieldId =
-        B.addFieldForAlloca(PromiseAlloca, nullptr, /*header*/ true);
+      PromiseFieldId = B.addFieldForAlloca(PromiseAlloca, {}, /*header*/ true);
     }
 
     // Add a field to store the suspend index.  This doesn't need to
@@ -568,9 +733,11 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
     assert(PromiseAlloca == nullptr && "lowering doesn't support promises");
   }
 
+  // Because multiple allocas may own the same field slot,
+  // we add allocas to field here.
+  B.addFieldForAllocas(F, Spills, Shape);
   Value *CurrentDef = nullptr;
-
-  // Create an entry for every spilled value.
+  // Create an entry for every spilled value which is not an AllocaInst.
   for (auto &S : Spills) {
     // We can have multiple entries in Spills for a single value, but
     // they should form a contiguous run.  Ignore all but the first.
@@ -582,11 +749,9 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
     assert(CurrentDef != PromiseAlloca &&
            "recorded spill use of promise alloca?");
 
-    if (auto *AI = dyn_cast<AllocaInst>(CurrentDef)) {
-      B.addFieldForAlloca(AI, &S);
-    } else {
+    if (!isa<AllocaInst>(CurrentDef)) {
       Type *Ty = CurrentDef->getType();
-      B.addField(Ty, None, &S);
+      B.addField(Ty, None, {&S});
     }
   }
 
@@ -820,7 +985,17 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
       }
     }
 
-    return Builder.CreateInBoundsGEP(FrameTy, FramePtr, Indices);
+    auto GEP = cast<GetElementPtrInst>(
+        Builder.CreateInBoundsGEP(FrameTy, FramePtr, Indices));
+    if (isa<AllocaInst>(Orig)) {
+      // If the type of GEP is not equal to the type of AllocaInst, it implies
+      // that the AllocaInst may be reused in the Frame slot of other
+      // AllocaInst. So we cast the GEP to the type of AllocaInst.
+      if (GEP->getResultElementType() != Orig->getType())
+        return Builder.CreateBitCast(GEP, Orig->getType(),
+                                     Orig->getName() + Twine(".cast"));
+    }
+    return GEP;
   };
 
   // Create a load instruction to reload the spilled value from the coroutine
