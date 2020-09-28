@@ -10,8 +10,9 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
+from __future__ import print_function
 
-import sys, os
+import sys, os, re
 from datetime import date
 
 # If extensions (or modules to document with autodoc) are in another directory,
