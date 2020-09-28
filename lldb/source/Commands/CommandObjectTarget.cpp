@@ -24,6 +24,7 @@
 #include "lldb/Interpreter/OptionGroupFile.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionGroupPlatform.h"
+#include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/OptionGroupString.h"
 #include "lldb/Interpreter/OptionGroupUInt64.h"
 #include "lldb/Interpreter/OptionGroupUUID.h"
@@ -4442,10 +4443,10 @@ private:
 class CommandObjectTargetStopHookAdd : public CommandObjectParsed,
                                        public IOHandlerDelegateMultiline {
 public:
-  class CommandOptions : public Options {
+  class CommandOptions : public OptionGroup {
   public:
     CommandOptions()
-        : Options(), m_line_start(0), m_line_end(UINT_MAX),
+        : OptionGroup(), m_line_start(0), m_line_end(UINT_MAX),
           m_func_name_type_mask(eFunctionNameTypeAuto),
           m_sym_ctx_specified(false), m_thread_specified(false),
           m_use_one_liner(false), m_one_liner() {}
@@ -4459,7 +4460,8 @@ public:
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                           ExecutionContext *execution_context) override {
       Status error;
-      const int short_option = m_getopt_table[option_idx].val;
+      const int short_option =
+          g_target_stop_hook_add_options[option_idx].short_option;
 
       switch (short_option) {
       case 'c':
@@ -4589,20 +4591,75 @@ public:
     // Instance variables to hold the values for one_liner options.
     bool m_use_one_liner;
     std::vector<std::string> m_one_liner;
+
     bool m_auto_continue;
   };
 
   CommandObjectTargetStopHookAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "target stop-hook add",
-                            "Add a hook to be executed when the target stops.",
+                            "Add a hook to be executed when the target stops."
+                            "The hook can either be a list of commands or an "
+                            "appropriately defined Python class.  You can also "
+                            "add filters so the hook only runs a certain stop "
+                            "points.",
                             "target stop-hook add"),
         IOHandlerDelegateMultiline("DONE",
                                    IOHandlerDelegate::Completion::LLDBCommand),
-        m_options() {}
+        m_options(), m_python_class_options("scripted stop-hook", true, 'P') {
+    SetHelpLong(
+        R"(
+Command Based stop-hooks:
+-------------------------
+  Stop hooks can run a list of lldb commands by providing one or more
+  --one-line-command options.  The commands will get run in the order they are 
+  added.  Or you can provide no commands, in which case you will enter a
+  command editor where you can enter the commands to be run.
+  
+Python Based Stop Hooks:
+------------------------
+  Stop hooks can be implemented with a suitably defined Python class, whose name
+  is passed in the --python-class option.
+  
+  When the stop hook is added, the class is initialized by calling:
+  
+    def __init__(self, target, extra_args, dict):
+    
+    target: The target that the stop hook is being added to.
+    extra_args: An SBStructuredData Dictionary filled with the -key -value 
+                option pairs passed to the command.     
+    dict: An implementation detail provided by lldb.
+
+  Then when the stop-hook triggers, lldb will run the 'handle_stop' method. 
+  The method has the signature:
+  
+    def handle_stop(self, exe_ctx, stream):
+    
+    exe_ctx: An SBExecutionContext for the thread that has stopped.
+    stream: An SBStream, anything written to this stream will be printed in the
+            the stop message when the process stops.
+
+    Return Value: The method returns "should_stop".  If should_stop is false
+                  from all the stop hook executions on threads that stopped
+                  with a reason, then the process will continue.  Note that this
+                  will happen only after all the stop hooks are run.
+    
+Filter Options:
+---------------
+  Stop hooks can be set to always run, or to only run when the stopped thread
+  matches the filter options passed on the command line.  The available filter
+  options include a shared library or a thread or queue specification, 
+  a line range in a source file, a function name or a class name.
+            )");
+    m_all_options.Append(&m_python_class_options,
+                         LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+                         LLDB_OPT_SET_FROM_TO(4, 6));
+    m_all_options.Append(&m_options);
+    m_all_options.Finalize();
+  }
 
   ~CommandObjectTargetStopHookAdd() override = default;
 
-  Options *GetOptions() override { return &m_options; }
+  Options *GetOptions() override { return &m_all_options; }
 
 protected:
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
@@ -4626,10 +4683,15 @@ protected:
           error_sp->Flush();
         }
         Target *target = GetDebugger().GetSelectedTarget().get();
-        if (target)
-          target->RemoveStopHookByID(m_stop_hook_sp->GetID());
+        if (target) {
+          target->UndoCreateStopHook(m_stop_hook_sp->GetID());
+        }
       } else {
-        m_stop_hook_sp->GetCommandPointer()->SplitIntoLines(line);
+        // The IOHandler editor is only for command lines stop hooks:
+        Target::StopHookCommandLine *hook_ptr =
+            static_cast<Target::StopHookCommandLine *>(m_stop_hook_sp.get());
+
+        hook_ptr->SetActionFromString(line);
         StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
         if (output_sp) {
           output_sp->Printf("Stop hook #%" PRIu64 " added.\n",
@@ -4646,7 +4708,10 @@ protected:
     m_stop_hook_sp.reset();
 
     Target &target = GetSelectedOrDummyTarget();
-    Target::StopHookSP new_hook_sp = target.CreateStopHook();
+    Target::StopHookSP new_hook_sp =
+        target.CreateStopHook(m_python_class_options.GetName().empty() ?
+                               Target::StopHook::StopHookKind::CommandBased
+                               : Target::StopHook::StopHookKind::ScriptBased);
 
     //  First step, make the specifier.
     std::unique_ptr<SymbolContextSpecifier> specifier_up;
@@ -4715,11 +4780,30 @@ protected:
 
     new_hook_sp->SetAutoContinue(m_options.m_auto_continue);
     if (m_options.m_use_one_liner) {
-      // Use one-liners.
-      for (auto cmd : m_options.m_one_liner)
-        new_hook_sp->GetCommandPointer()->AppendString(cmd.c_str());
+      // This is a command line stop hook:
+      Target::StopHookCommandLine *hook_ptr =
+          static_cast<Target::StopHookCommandLine *>(new_hook_sp.get());
+      hook_ptr->SetActionFromStrings(m_options.m_one_liner);
       result.AppendMessageWithFormat("Stop hook #%" PRIu64 " added.\n",
                                      new_hook_sp->GetID());
+    } else if (!m_python_class_options.GetName().empty()) {
+      // This is a scripted stop hook:
+      Target::StopHookScripted *hook_ptr =
+          static_cast<Target::StopHookScripted *>(new_hook_sp.get());
+      Status error = hook_ptr->SetScriptCallback(
+          m_python_class_options.GetName(),
+          m_python_class_options.GetStructuredData());
+      if (error.Success())
+        result.AppendMessageWithFormat("Stop hook #%" PRIu64 " added.\n",
+                                       new_hook_sp->GetID());
+      else {
+        // FIXME: Set the stop hook ID counter back.
+        result.AppendErrorWithFormat("Couldn't add stop hook: %s",
+                                     error.AsCString());
+        result.SetStatus(eReturnStatusFailed);
+        target.UndoCreateStopHook(new_hook_sp->GetID());
+        return false;
+      }
     } else {
       m_stop_hook_sp = new_hook_sp;
       m_interpreter.GetLLDBCommandsFromIOHandler("> ",   // Prompt
@@ -4732,6 +4816,9 @@ protected:
 
 private:
   CommandOptions m_options;
+  OptionGroupPythonClassWithDict m_python_class_options;
+  OptionGroupOptions m_all_options;
+
   Target::StopHookSP m_stop_hook_sp;
 };
 
