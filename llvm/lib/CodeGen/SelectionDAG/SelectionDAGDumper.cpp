@@ -832,26 +832,38 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
 
 LLVM_DUMP_METHOD void SDDbgValue::print(raw_ostream &OS) const {
   OS << " DbgVal(Order=" << getOrder() << ')';
-  if (isInvalidated()) OS << "(Invalidated)";
-  if (isEmitted()) OS << "(Emitted)";
-  switch (getKind()) {
-  case SDNODE:
-    if (getSDNode())
-      OS << "(SDNODE=" << PrintNodeId(*getSDNode()) << ':' <<  getResNo() << ')';
-    else
-      OS << "(SDNODE)";
-    break;
-  case CONST:
-    OS << "(CONST)";
-    break;
-  case FRAMEIX:
-    OS << "(FRAMEIX=" << getFrameIx() << ')';
-    break;
-  case VREG:
-    OS << "(VREG=" << getVReg() << ')';
-    break;
+  if (isInvalidated())
+    OS << "(Invalidated)";
+  if (isEmitted())
+    OS << "(Emitted)";
+  OS << "(";
+  bool Comma = false;
+  for (const SDDbgOperand &Op : getLocationOps()) {
+    if (Comma)
+      OS << ", ";
+    switch (Op.getKind()) {
+    case SDDbgOperand::SDNODE:
+      if (Op.getSDNode())
+        OS << "SDNODE=" << PrintNodeId(*Op.getSDNode()) << ':' << Op.getResNo();
+      else
+        OS << "SDNODE";
+      break;
+    case SDDbgOperand::CONST:
+      OS << "CONST";
+      break;
+    case SDDbgOperand::FRAMEIX:
+      OS << "FRAMEIX=" << Op.getFrameIx();
+      break;
+    case SDDbgOperand::VREG:
+      OS << "VREG=" << Op.getVReg();
+      break;
+    }
+    Comma = true;
   }
+  OS << ")";
   if (isIndirect()) OS << "(Indirect)";
+  if (isVariadic())
+    OS << "(Variadic)";
   OS << ":\"" << Var->getName() << '"';
 #ifndef NDEBUG
   if (Expr->getNumElements())
