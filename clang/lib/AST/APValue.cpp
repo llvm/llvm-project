@@ -77,6 +77,14 @@ QualType APValue::LValueBase::getDynamicAllocType() const {
   return QualType::getFromOpaquePtr(DynamicAllocType);
 }
 
+void APValue::LValueBase::profile(llvm::FoldingSetNodeID &ID) const {
+  ID.AddPointer(Ptr.getOpaqueValue());
+  if (is<TypeInfoLValue>() || is<DynamicAllocLValue>())
+    return;
+  ID.AddInteger(Local.CallIndex);
+  ID.AddInteger(Local.Version);
+}
+
 namespace clang {
 bool operator==(const APValue::LValueBase &LHS,
                 const APValue::LValueBase &RHS) {
@@ -93,6 +101,10 @@ APValue::LValuePathEntry::LValuePathEntry(BaseOrMemberType BaseOrMember) {
   if (const Decl *D = BaseOrMember.getPointer())
     BaseOrMember.setPointer(D->getCanonicalDecl());
   Value = reinterpret_cast<uintptr_t>(BaseOrMember.getOpaqueValue());
+}
+
+void APValue::LValuePathEntry::profile(llvm::FoldingSetNodeID &ID) const {
+  ID.AddInteger(Value);
 }
 
 namespace {
@@ -400,6 +412,147 @@ bool APValue::needsCleanup() const {
 void APValue::swap(APValue &RHS) {
   std::swap(Kind, RHS.Kind);
   std::swap(Data, RHS.Data);
+}
+
+void APValue::profile(llvm::FoldingSetNodeID &ID) const {
+  ID.AddInteger(Kind);
+
+  switch (Kind) {
+  case None:
+  case Indeterminate:
+    return;
+
+  case AddrLabelDiff:
+    ID.AddPointer(getAddrLabelDiffLHS()->getLabel()->getCanonicalDecl());
+    ID.AddPointer(getAddrLabelDiffRHS()->getLabel()->getCanonicalDecl());
+    return;
+
+  case Struct:
+    ID.AddInteger(getStructNumBases());
+    for (unsigned I = 0, N = getStructNumBases(); I != N; ++I)
+      getStructBase(I).profile(ID);
+    ID.AddInteger(getStructNumFields());
+    for (unsigned I = 0, N = getStructNumFields(); I != N; ++I)
+      getStructField(I).profile(ID);
+    return;
+
+  case Union:
+    if (!getUnionField()) {
+      ID.AddPointer(nullptr);
+      return;
+    }
+    ID.AddPointer(getUnionField()->getCanonicalDecl());
+    getUnionValue().profile(ID);
+    return;
+
+  case Array: {
+    ID.AddInteger(getArraySize());
+    if (getArraySize() == 0)
+      return;
+
+    // The profile should not depend on whether the array is expanded or
+    // not, but we don't want to profile the array filler many times for
+    // a large array. So treat all equal trailing elements as the filler.
+    // Elements are profiled in reverse order to support this, and the
+    // first profiled element is followed by a count. For example:
+    //
+    //   ['a', 'c', 'x', 'x', 'x'] is profiled as
+    //   [5, 'x', 3, 'c', 'a']
+    llvm::FoldingSetNodeID FillerID;
+    (hasArrayFiller() ? getArrayFiller() :
+     getArrayInitializedElt(getArrayInitializedElts() -
+       1)).profile(FillerID);
+    ID.AddNodeID(FillerID);
+    unsigned NumFillers = getArraySize() - getArrayInitializedElts();
+    unsigned N = getArrayInitializedElts();
+
+    // Count the number of elements equal to the last one. This loop ends
+    // by adding an integer indicating the number of such elements, with
+    // N set to the number of elements left to profile.
+    while (true) {
+      if (N == 0) {
+        // All elements are fillers.
+        assert(NumFillers == getArraySize());
+        ID.AddInteger(NumFillers);
+        break;
+      }
+
+      // No need to check if the last element is equal to the last
+      // element.
+      if (N != getArraySize()) {
+        llvm::FoldingSetNodeID ElemID;
+        getArrayInitializedElt(N - 1).profile(ElemID);
+        if (ElemID != FillerID) {
+          ID.AddInteger(NumFillers);
+          ID.AddNodeID(ElemID);
+          --N;
+          break;
+        }
+      }
+
+      // This is a filler.
+      ++NumFillers;
+      --N;
+    }
+
+    // Emit the remaining elements.
+    for (; N != 0; --N)
+      getArrayInitializedElt(N - 1).profile(ID);
+    return;
+  }
+
+  case Vector:
+    ID.AddInteger(getVectorLength());
+    for (unsigned I = 0, N = getVectorLength(); I != N; ++I)
+      getVectorElt(I).profile(ID);
+    return;
+
+  case Int:
+    // We don't need to include the sign bit; it's implied by the type.
+    getInt().APInt::Profile(ID);
+    return;
+
+  case Float:
+    getFloat().Profile(ID);
+    return;
+
+  case FixedPoint:
+    // We don't need to include the fixed-point semantics; they're
+    // implied by the type.
+    getFixedPoint().getValue().APInt::Profile(ID);
+    return;
+
+  case ComplexFloat:
+    getComplexFloatReal().Profile(ID);
+    getComplexFloatImag().Profile(ID);
+    return;
+
+  case ComplexInt:
+    getComplexIntReal().APInt::Profile(ID);
+    getComplexIntImag().APInt::Profile(ID);
+    return;
+
+  case LValue:
+    getLValueBase().profile(ID);
+    ID.AddInteger(getLValueOffset().getQuantity());
+    ID.AddInteger(isNullPointer());
+    ID.AddInteger(isLValueOnePastTheEnd());
+    // For uniqueness, we only need to profile the entries corresponding
+    // to union members, but we don't have the type here so we don't know
+    // how to interpret the entries.
+    for (LValuePathEntry E : getLValuePath())
+      E.profile(ID);
+    return;
+
+  case MemberPointer:
+    ID.AddPointer(getMemberPointerDecl());
+    ID.AddInteger(isMemberPointerToDerivedMember());
+    for (const CXXRecordDecl *D : getMemberPointerPath())
+      ID.AddPointer(D);
+    return;
+  }
+
+  llvm_unreachable("Unknown APValue kind!");
 }
 
 static double GetApproxValue(const llvm::APFloat &F) {
