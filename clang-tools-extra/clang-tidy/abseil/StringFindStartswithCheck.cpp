@@ -106,8 +106,8 @@ void StringFindStartswithCheck::check(const MatchFinder::MatchResult &Result) {
   // Create a preprocessor #include FixIt hint (CreateIncludeInsertion checks
   // whether this already exists).
   Diagnostic << IncludeInserter.createIncludeInsertion(
-      Source.getFileID(ComparisonExpr->getBeginLoc()), AbseilStringsMatchHeader,
-      false);
+      Source.getFileID(ComparisonExpr->getBeginLoc()),
+      AbseilStringsMatchHeader);
 }
 
 void StringFindStartswithCheck::registerPPCallbacks(
