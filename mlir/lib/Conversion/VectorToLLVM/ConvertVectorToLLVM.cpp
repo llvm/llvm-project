@@ -1328,17 +1328,15 @@ public:
       printer = getPrintFloat(op);
     } else if (eltType.isF64()) {
       printer = getPrintDouble(op);
+    } else if (eltType.isIndex()) {
+      printer = getPrintU64(op);
     } else if (auto intTy = eltType.dyn_cast<IntegerType>()) {
       // Integers need a zero or sign extension on the operand
       // (depending on the source type) as well as a signed or
       // unsigned print method. Up to 64-bit is supported.
       unsigned width = intTy.getWidth();
       if (intTy.isUnsigned()) {
-        if (width <= 32) {
-          if (width < 32)
-            conversion = PrintConversion::ZeroExt32;
-          printer = getPrintU32(op);
-        } else if (width <= 64) {
+        if (width <= 64) {
           if (width < 64)
             conversion = PrintConversion::ZeroExt64;
           printer = getPrintU64(op);
@@ -1347,16 +1345,12 @@ public:
         }
       } else {
         assert(intTy.isSignless() || intTy.isSigned());
-        if (width <= 32) {
+        if (width <= 64) {
           // Note that we *always* zero extend booleans (1-bit integers),
           // so that true/false is printed as 1/0 rather than -1/0.
           if (width == 1)
-            conversion = PrintConversion::ZeroExt32;
-          else if (width < 32)
-            conversion = PrintConversion::SignExt32;
-          printer = getPrintI32(op);
-        } else if (width <= 64) {
-          if (width < 64)
+            conversion = PrintConversion::ZeroExt64;
+          else if (width < 64)
             conversion = PrintConversion::SignExt64;
           printer = getPrintI64(op);
         } else {
@@ -1379,8 +1373,6 @@ public:
 private:
   enum class PrintConversion {
     None,
-    ZeroExt32,
-    SignExt32,
     ZeroExt64,
     SignExt64
   };
@@ -1391,14 +1383,6 @@ private:
     Location loc = op->getLoc();
     if (rank == 0) {
       switch (conversion) {
-      case PrintConversion::ZeroExt32:
-        value = rewriter.create<ZeroExtendIOp>(
-            loc, value, LLVM::LLVMType::getInt32Ty(rewriter.getContext()));
-        break;
-      case PrintConversion::SignExt32:
-        value = rewriter.create<SignExtendIOp>(
-            loc, value, LLVM::LLVMType::getInt32Ty(rewriter.getContext()));
-        break;
       case PrintConversion::ZeroExt64:
         value = rewriter.create<ZeroExtendIOp>(
             loc, value, LLVM::LLVMType::getInt64Ty(rewriter.getContext()));
@@ -1455,41 +1439,33 @@ private:
   }
 
   // Helpers for method names.
-  Operation *getPrintI32(Operation *op) const {
-    return getPrint(op, "print_i32",
-                    LLVM::LLVMType::getInt32Ty(op->getContext()));
-  }
   Operation *getPrintI64(Operation *op) const {
-    return getPrint(op, "print_i64",
+    return getPrint(op, "printI64",
                     LLVM::LLVMType::getInt64Ty(op->getContext()));
-  }
-  Operation *getPrintU32(Operation *op) const {
-    return getPrint(op, "printU32",
-                    LLVM::LLVMType::getInt32Ty(op->getContext()));
   }
   Operation *getPrintU64(Operation *op) const {
     return getPrint(op, "printU64",
                     LLVM::LLVMType::getInt64Ty(op->getContext()));
   }
   Operation *getPrintFloat(Operation *op) const {
-    return getPrint(op, "print_f32",
+    return getPrint(op, "printF32",
                     LLVM::LLVMType::getFloatTy(op->getContext()));
   }
   Operation *getPrintDouble(Operation *op) const {
-    return getPrint(op, "print_f64",
+    return getPrint(op, "printF64",
                     LLVM::LLVMType::getDoubleTy(op->getContext()));
   }
   Operation *getPrintOpen(Operation *op) const {
-    return getPrint(op, "print_open", {});
+    return getPrint(op, "printOpen", {});
   }
   Operation *getPrintClose(Operation *op) const {
-    return getPrint(op, "print_close", {});
+    return getPrint(op, "printClose", {});
   }
   Operation *getPrintComma(Operation *op) const {
-    return getPrint(op, "print_comma", {});
+    return getPrint(op, "printComma", {});
   }
   Operation *getPrintNewline(Operation *op) const {
-    return getPrint(op, "print_newline", {});
+    return getPrint(op, "printNewline", {});
   }
 };
 

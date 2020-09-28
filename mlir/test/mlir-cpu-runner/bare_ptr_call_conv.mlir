@@ -28,9 +28,9 @@ func @simple_add1_add2_test(%arg0: memref<2xf32>, %arg1: memref<2xf32>) {
 // External declarations.
 llvm.func @malloc(!llvm.i64) -> !llvm.ptr<i8>
 llvm.func @free(!llvm.ptr<i8>)
-func @print_f32(%arg0: f32)
-func @print_comma()
-func @print_newline()
+func @printF32(%arg0: f32)
+func @printComma()
+func @printNewline()
 
 // TODO: 'main' function currently has to be provided in LLVM dialect since
 // 'call' op is not yet supported by the bare pointer calling convention. The
@@ -54,18 +54,18 @@ func @print_newline()
 //  call @simple_add1_add2_test(%a, %b) : (memref<2xf32>, memref<2xf32>) -> ()
 //
 //  %l0 = load %a[%c0] : memref<2xf32>
-//  call @print_f32(%l0) : (f32) -> ()
-//  call @print_comma() : () -> ()
+//  call @printF32(%l0) : (f32) -> ()
+//  call @printComma() : () -> ()
 //  %l1 = load %a[%c1] : memref<2xf32>
-//  call @print_f32(%l1) : (f32) -> ()
-//  call @print_newline() : () -> ()
+//  call @printF32(%l1) : (f32) -> ()
+//  call @printNewline() : () -> ()
 //
 //  %l2 = load %b[%c0] : memref<2xf32>
-//  call @print_f32(%l2) : (f32) -> ()
-//  call @print_comma() : () -> ()
+//  call @printF32(%l2) : (f32) -> ()
+//  call @printComma() : () -> ()
 //  %l3 = load %b[%c1] : memref<2xf32>
-//  call @print_f32(%l3) : (f32) -> ()
-//  call @print_newline() : () -> ()
+//  call @printF32(%l3) : (f32) -> ()
+//  call @printNewline() : () -> ()
 //
 //  dealloc %a : memref<2xf32>
 //  dealloc %b : memref<2xf32>
@@ -144,8 +144,8 @@ llvm.func @main() {
   %60 = llvm.add %57, %59 : !llvm.i64
   %61 = llvm.getelementptr %56[%60] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
   %62 = llvm.load %61 : !llvm.ptr<float>
-  llvm.call @print_f32(%62) : (!llvm.float) -> ()
-  llvm.call @print_comma() : () -> ()
+  llvm.call @printF32(%62) : (!llvm.float) -> ()
+  llvm.call @printComma() : () -> ()
   %63 = llvm.extractvalue %20[1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>
   %64 = llvm.mlir.constant(0 : index) : !llvm.i64
   %65 = llvm.mlir.constant(1 : index) : !llvm.i64
@@ -153,8 +153,8 @@ llvm.func @main() {
   %67 = llvm.add %64, %66 : !llvm.i64
   %68 = llvm.getelementptr %63[%67] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
   %69 = llvm.load %68 : !llvm.ptr<float>
-  llvm.call @print_f32(%69) : (!llvm.float) -> ()
-  llvm.call @print_newline() : () -> ()
+  llvm.call @printF32(%69) : (!llvm.float) -> ()
+  llvm.call @printNewline() : () -> ()
   %70 = llvm.extractvalue %36[1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>
   %71 = llvm.mlir.constant(0 : index) : !llvm.i64
   %72 = llvm.mlir.constant(1 : index) : !llvm.i64
@@ -162,8 +162,8 @@ llvm.func @main() {
   %74 = llvm.add %71, %73 : !llvm.i64
   %75 = llvm.getelementptr %70[%74] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
   %76 = llvm.load %75 : !llvm.ptr<float>
-  llvm.call @print_f32(%76) : (!llvm.float) -> ()
-  llvm.call @print_comma() : () -> ()
+  llvm.call @printF32(%76) : (!llvm.float) -> ()
+  llvm.call @printComma() : () -> ()
   %77 = llvm.extractvalue %36[1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>
   %78 = llvm.mlir.constant(0 : index) : !llvm.i64
   %79 = llvm.mlir.constant(1 : index) : !llvm.i64
@@ -171,8 +171,8 @@ llvm.func @main() {
   %81 = llvm.add %78, %80 : !llvm.i64
   %82 = llvm.getelementptr %77[%81] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
   %83 = llvm.load %82 : !llvm.ptr<float>
-  llvm.call @print_f32(%83) : (!llvm.float) -> ()
-  llvm.call @print_newline() : () -> ()
+  llvm.call @printF32(%83) : (!llvm.float) -> ()
+  llvm.call @printNewline() : () -> ()
   %84 = llvm.extractvalue %20[0] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>
   %85 = llvm.bitcast %84 : !llvm.ptr<float> to !llvm.ptr<i8>
   llvm.call @free(%85) : (!llvm.ptr<i8>) -> ()
