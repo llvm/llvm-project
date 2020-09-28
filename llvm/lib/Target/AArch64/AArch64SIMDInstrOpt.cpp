@@ -221,8 +221,9 @@ shouldReplaceInst(MachineFunction *MF, const MCInstrDesc *InstDesc,
   // if so, return it.
   std::string Subtarget = std::string(SchedModel.getSubtargetInfo()->getCPU());
   auto InstID = std::make_pair(InstDesc->getOpcode(), Subtarget);
-  if (SIMDInstrTable.find(InstID) != SIMDInstrTable.end())
-    return SIMDInstrTable[InstID];
+  auto It = SIMDInstrTable.find(InstID);
+  if (It != SIMDInstrTable.end())
+    return It->second;
 
   unsigned SCIdx = InstDesc->getSchedClass();
   const MCSchedClassDesc *SCDesc =
