@@ -2967,11 +2967,13 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
 
       // Take the minimum of all incoming values.  This can't infinitely loop
       // because of our depth threshold.
-      Tmp = ComputeNumSignBits(PN->getIncomingValue(0), Depth + 1, Q);
-      for (unsigned i = 1, e = NumIncomingValues; i != e; ++i) {
+      Query RecQ = Q;
+      Tmp = TyBits;
+      for (unsigned i = 0, e = NumIncomingValues; i != e; ++i) {
         if (Tmp == 1) return Tmp;
+        RecQ.CxtI = PN->getIncomingBlock(i)->getTerminator();
         Tmp = std::min(
-            Tmp, ComputeNumSignBits(PN->getIncomingValue(i), Depth + 1, Q));
+            Tmp, ComputeNumSignBits(PN->getIncomingValue(i), Depth + 1, RecQ));
       }
       return Tmp;
     }
@@ -4939,7 +4941,20 @@ static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
         return true;
     }
 
-    if (!canCreateUndefOrPoison(Opr) && all_of(Opr->operands(), OpCheck))
+    if (const auto *PN = dyn_cast<PHINode>(V)) {
+      unsigned Num = PN->getNumIncomingValues();
+      bool IsWellDefined = true;
+      for (unsigned i = 0; i < Num; ++i) {
+        auto *TI = PN->getIncomingBlock(i)->getTerminator();
+        if (!isGuaranteedNotToBeUndefOrPoison(PN->getIncomingValue(i), TI, DT,
+                                              Depth + 1, PoisonOnly)) {
+          IsWellDefined = false;
+          break;
+        }
+      }
+      if (IsWellDefined)
+        return true;
+    } else if (!canCreateUndefOrPoison(Opr) && all_of(Opr->operands(), OpCheck))
       return true;
   }
 
