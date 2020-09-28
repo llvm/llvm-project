@@ -1198,6 +1198,9 @@ bool Equivalent<llvm::Optional<uint64_t>>(llvm::Optional<uint64_t> l,
   // thus assume that a larger number is "better".
   if (l.hasValue() && r.hasValue() && *l > *r)
     return true;
+  // Assume that any value is "better" than none.
+  if (l.hasValue() && !r.hasValue())
+    return true;
   llvm::dbgs() << l << " != " << r << "\n";
   return false;
 }
