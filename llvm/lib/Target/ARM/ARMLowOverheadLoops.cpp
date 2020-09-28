@@ -504,6 +504,8 @@ namespace {
 
     void Expand(LowOverheadLoop &LoLoop);
 
+    void DCE(MachineInstr *MI, SmallPtrSetImpl<MachineInstr *> &ToRemove);
+
     void IterationCountDCE(LowOverheadLoop &LoLoop);
   };
 }
@@ -1294,6 +1296,52 @@ void ARMLowOverheadLoops::RevertLoopEnd(MachineInstr *MI, bool SkipCmp) const {
   MI->eraseFromParent();
 }
 
+void ARMLowOverheadLoops::DCE(MachineInstr *MI,
+                              SmallPtrSetImpl<MachineInstr *> &ToRemove) {
+  // Collect the dead code and the MBBs in which they reside.
+  SmallPtrSet<MachineInstr*, 4> Killed;
+  RDA->collectKilledOperands(MI, Killed);
+  SmallPtrSet<MachineBasicBlock*, 2> BasicBlocks;
+  for (auto *Dead : Killed)
+    BasicBlocks.insert(Dead->getParent());
+
+  // Collect IT blocks in all affected basic blocks.
+  std::map<MachineInstr *, SmallPtrSet<MachineInstr *, 2>> ITBlocks;
+  for (auto *MBB : BasicBlocks) {
+    for (auto &IT : *MBB) {
+      if (IT.getOpcode() != ARM::t2IT)
+        continue;
+      RDA->getReachingLocalUses(&IT, ARM::ITSTATE, ITBlocks[&IT]);
+    }
+  }
+
+  // If we're removing all of the instructions within an IT block, then
+  // also remove the IT instruction.
+  SmallPtrSet<MachineInstr*, 2> ModifiedITs;
+  for (auto *Dead : Killed) {
+    if (MachineOperand *MO = Dead->findRegisterUseOperand(ARM::ITSTATE)) {
+      MachineInstr *IT = RDA->getMIOperand(Dead, *MO);
+      auto &CurrentBlock = ITBlocks[IT];
+      CurrentBlock.erase(Dead);
+      if (CurrentBlock.empty())
+        ModifiedITs.erase(IT);
+      else
+        ModifiedITs.insert(IT);
+    }
+  }
+
+  // Delete the killed instructions only if we don't have any IT blocks that
+  // need to be modified because we need to fixup the mask.
+  // TODO: Handle cases where IT blocks are modified.
+  if (ModifiedITs.empty()) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: Will remove iteration count:\n";
+               for (auto *MI : Killed)
+                 dbgs() << " - " << *MI);
+    ToRemove.insert(Killed.begin(), Killed.end());
+  } else
+    LLVM_DEBUG(dbgs() << "ARM Loops: Would need to modify IT block(s).\n");
+}
+
 // Perform dead code elimation on the loop iteration count setup expression.
 // If we are tail-predicating, the number of elements to be processed is the
 // operand of the VCTP instruction in the vector body, see getCount(), which is
@@ -1334,54 +1382,11 @@ void ARMLowOverheadLoops::IterationCountDCE(LowOverheadLoop &LoLoop) {
   SmallPtrSet<MachineInstr*, 4> Killed  = { LoLoop.Start, LoLoop.Dec,
                                             LoLoop.End, LoLoop.InsertPt };
   SmallPtrSet<MachineInstr*, 2> Remove;
-  if (RDA->isSafeToRemove(Def, Remove, Killed))
+  if (RDA->isSafeToRemove(Def, Remove, Killed)) {
     LoLoop.ToRemove.insert(Remove.begin(), Remove.end());
-  else {
-    LLVM_DEBUG(dbgs() << "ARM Loops: Unsafe to remove loop iteration count.\n");
-    return;
-  }
-
-  // Collect the dead code and the MBBs in which they reside.
-  RDA->collectKilledOperands(Def, Killed);
-  SmallPtrSet<MachineBasicBlock*, 2> BasicBlocks;
-  for (auto *MI : Killed)
-    BasicBlocks.insert(MI->getParent());
-
-  // Collect IT blocks in all affected basic blocks.
-  std::map<MachineInstr *, SmallPtrSet<MachineInstr *, 2>> ITBlocks;
-  for (auto *MBB : BasicBlocks) {
-    for (auto &MI : *MBB) {
-      if (MI.getOpcode() != ARM::t2IT)
-        continue;
-      RDA->getReachingLocalUses(&MI, ARM::ITSTATE, ITBlocks[&MI]);
-    }
-  }
-
-  // If we're removing all of the instructions within an IT block, then
-  // also remove the IT instruction.
-  SmallPtrSet<MachineInstr*, 2> ModifiedITs;
-  for (auto *MI : Killed) {
-    if (MachineOperand *MO = MI->findRegisterUseOperand(ARM::ITSTATE)) {
-      MachineInstr *IT = RDA->getMIOperand(MI, *MO);
-      auto &CurrentBlock = ITBlocks[IT];
-      CurrentBlock.erase(MI);
-      if (CurrentBlock.empty())
-        ModifiedITs.erase(IT);
-      else
-        ModifiedITs.insert(IT);
-    }
-  }
-
-  // Delete the killed instructions only if we don't have any IT blocks that
-  // need to be modified because we need to fixup the mask.
-  // TODO: Handle cases where IT blocks are modified.
-  if (ModifiedITs.empty()) {
-    LLVM_DEBUG(dbgs() << "ARM Loops: Will remove iteration count:\n";
-               for (auto *MI : Killed)
-                 dbgs() << " - " << *MI);
-    LoLoop.ToRemove.insert(Killed.begin(), Killed.end());
+    DCE(Def, LoLoop.ToRemove);
   } else
-    LLVM_DEBUG(dbgs() << "ARM Loops: Would need to modify IT block(s).\n");
+    LLVM_DEBUG(dbgs() << "ARM Loops: Unsafe to remove loop iteration count.\n");
 }
 
 MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
