@@ -1278,6 +1278,56 @@ public:
   }
 };
 
+/// Function type.
+class PyFunctionType : public PyConcreteType<PyFunctionType> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAFunction;
+  static constexpr const char *pyClassName = "FunctionType";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](PyMlirContext &context, std::vector<PyType> inputs,
+           std::vector<PyType> results) {
+          SmallVector<MlirType, 4> inputsRaw(inputs.begin(), inputs.end());
+          SmallVector<MlirType, 4> resultsRaw(results.begin(), results.end());
+          MlirType t = mlirFunctionTypeGet(context.get(), inputsRaw.size(),
+                                           inputsRaw.data(), resultsRaw.size(),
+                                           resultsRaw.data());
+          return PyFunctionType(context.getRef(), t);
+        },
+        py::arg("context"), py::arg("inputs"), py::arg("results"),
+        "Gets a FunctionType from a list of input and result types");
+    c.def_property_readonly(
+        "inputs",
+        [](PyFunctionType &self) {
+          MlirType t = self.type;
+          auto contextRef = self.getContext();
+          py::list types;
+          for (intptr_t i = 0, e = mlirFunctionTypeGetNumInputs(self.type);
+               i < e; ++i) {
+            types.append(PyType(contextRef, mlirFunctionTypeGetInput(t, i)));
+          }
+          return types;
+        },
+        "Returns the list of input types in the FunctionType.");
+    c.def_property_readonly(
+        "results",
+        [](PyFunctionType &self) {
+          MlirType t = self.type;
+          auto contextRef = self.getContext();
+          py::list types;
+          for (intptr_t i = 0, e = mlirFunctionTypeGetNumResults(self.type);
+               i < e; ++i) {
+            types.append(PyType(contextRef, mlirFunctionTypeGetResult(t, i)));
+          }
+          return types;
+        },
+        "Returns the list of result types in the FunctionType.");
+  }
+};
+
 } // namespace
 
 //------------------------------------------------------------------------------
@@ -1613,6 +1663,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   PyMemRefType::bind(m);
   PyUnrankedMemRefType::bind(m);
   PyTupleType::bind(m);
+  PyFunctionType::bind(m);
 
   // Container bindings.
   PyBlockIterator::bind(m);
