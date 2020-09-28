@@ -3566,6 +3566,9 @@ public:
   //                         LValue Expression Emission
   //===--------------------------------------------------------------------===//
 
+  /// Create a check that a scalar RValue is non-null.
+  llvm::Value *EmitNonNullRValueCheck(RValue RV, QualType T);
+
   /// GetUndefRValue - Get an appropriate 'undef' rvalue for the given type.
   RValue GetUndefRValue(QualType Ty);
 
