@@ -809,7 +809,7 @@ struct FunCloner {
         unsigned NumMaskElts = LLVMGetNumMaskElements(Src);
         for (unsigned i = 0; i < NumMaskElts; i++) {
           int Val = LLVMGetMaskValue(Src, i);
-          if (Val == LLVMUndefMaskElem) {
+          if (Val == LLVMGetUndefMaskElem()) {
             MaskElts.push_back(LLVMGetUndef(LLVMInt64Type()));
           } else {
             MaskElts.push_back(LLVMConstInt(LLVMInt64Type(), Val, true));
