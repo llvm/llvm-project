@@ -167,9 +167,9 @@ def ARMcmov          : SDNode<"ARMISD::CMOV", SDT_ARMCMov,
                               [SDNPInGlue]>;
 def ARMsubs          : SDNode<"ARMISD::SUBS", SDTIntBinOp, [SDNPOutGlue]>;
 
-def ARMssatnoshift   : SDNode<"ARMISD::SSAT", SDTIntSatNoShOp, []>;
+def ARMssat   : SDNode<"ARMISD::SSAT", SDTIntSatNoShOp, []>;
 
-def ARMusatnoshift   : SDNode<"ARMISD::USAT", SDTIntSatNoShOp, []>;
+def ARMusat   : SDNode<"ARMISD::USAT", SDTIntSatNoShOp, []>;
 
 def ARMbrcond        : SDNode<"ARMISD::BRCOND", SDT_ARMBrcond,
                               [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
@@ -4082,9 +4082,9 @@ def : ARMV6Pat<(int_arm_ssat GPRnopc:$a, imm1_32:$pos),
                (SSAT imm1_32:$pos, GPRnopc:$a, 0)>;
 def : ARMV6Pat<(int_arm_usat GPRnopc:$a, imm0_31:$pos),
                (USAT imm0_31:$pos, GPRnopc:$a, 0)>;
-def : ARMPat<(ARMssatnoshift GPRnopc:$Rn, imm0_31:$imm),
+def : ARMPat<(ARMssat GPRnopc:$Rn, imm0_31:$imm),
              (SSAT imm0_31:$imm, GPRnopc:$Rn, 0)>;
-def : ARMPat<(ARMusatnoshift GPRnopc:$Rn, imm0_31:$imm),
+def : ARMPat<(ARMusat GPRnopc:$Rn, imm0_31:$imm),
              (USAT imm0_31:$imm, GPRnopc:$Rn, 0)>;
 def : ARMV6Pat<(int_arm_ssat16 GPRnopc:$a, imm1_16:$pos),
                (SSAT16 imm1_16:$pos, GPRnopc:$a)>;
@@ -4098,6 +4098,14 @@ def : ARMV6Pat<(int_arm_usat (shl GPRnopc:$a, imm0_31:$shft), imm0_31:$pos),
                (USAT imm0_31:$pos, GPRnopc:$a, imm0_31:$shft)>;
 def : ARMV6Pat<(int_arm_usat (sra GPRnopc:$a, asr_imm:$shft), imm0_31:$pos),
                (USAT imm0_31:$pos, GPRnopc:$a, asr_imm:$shft)>;
+def : ARMPat<(ARMssat (shl GPRnopc:$Rn, imm0_31:$shft), imm0_31:$pos),
+               (SSAT imm0_31:$pos, GPRnopc:$Rn, imm0_31:$shft)>;                            
+def : ARMPat<(ARMssat (sra GPRnopc:$Rn, asr_imm:$shft), imm0_31:$pos),
+               (SSAT imm0_31:$pos, GPRnopc:$Rn, asr_imm:$shft)>;
+def : ARMPat<(ARMusat (shl GPRnopc:$Rn, imm0_31:$shft), imm0_31:$pos),
+               (USAT imm0_31:$pos, GPRnopc:$Rn, imm0_31:$shft)>;  
+def : ARMPat<(ARMusat (sra GPRnopc:$Rn, asr_imm:$shft), imm0_31:$pos),
+               (USAT imm0_31:$pos, GPRnopc:$Rn, asr_imm:$shft)>;
 
 
 //===----------------------------------------------------------------------===//
