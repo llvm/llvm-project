@@ -77,9 +77,8 @@ struct SymbolQualitySignals {
   void merge(const CodeCompletionResult &SemaCCResult);
   void merge(const Symbol &IndexResult);
 
-  // FIXME(usx): Rename to evaluateHeuristics().
   // Condense these signals down to a single number, higher is better.
-  float evaluate() const;
+  float evaluateHeuristics() const;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                               const SymbolQualitySignals &);
@@ -158,7 +157,7 @@ struct SymbolRelevanceSignals {
   void merge(const Symbol &IndexResult);
 
   // Condense these signals down to a single number, higher is better.
-  float evaluate() const;
+  float evaluateHeuristics() const;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                               const SymbolRelevanceSignals &);
