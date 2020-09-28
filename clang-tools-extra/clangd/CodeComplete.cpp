@@ -1625,6 +1625,43 @@ private:
     return Filter->match(C.Name);
   }
 
+  CodeCompletion::Scores
+  evaluateCompletion(const SymbolQualitySignals &Quality,
+                     const SymbolRelevanceSignals &Relevance) {
+    using RM = CodeCompleteOptions::CodeCompletionRankingModel;
+    CodeCompletion::Scores Scores;
+    switch (Opts.RankingModel) {
+    case RM::Heuristics:
+      Scores.Quality = Quality.evaluate();
+      Scores.Relevance = Relevance.evaluate();
+      Scores.Total =
+          evaluateSymbolAndRelevance(Scores.Quality, Scores.Relevance);
+      // NameMatch is in fact a multiplier on total score, so rescoring is
+      // sound.
+      Scores.ExcludingName = Relevance.NameMatch
+                                 ? Scores.Total / Relevance.NameMatch
+                                 : Scores.Quality;
+      return Scores;
+
+    case RM::DecisionForest:
+      Scores.Quality = 0;
+      Scores.Relevance = 0;
+      // Exponentiating DecisionForest prediction makes the score of each tree a
+      // multiplciative boost (like NameMatch). This allows us to weigh the
+      // prediciton score and NameMatch appropriately.
+      Scores.ExcludingName = pow(Opts.DecisionForestBase,
+                                 evaluateDecisionForest(Quality, Relevance));
+      // NeedsFixIts is not part of the DecisionForest as generating training
+      // data that needs fixits is not-feasible.
+      if (Relevance.NeedsFixIts)
+        Scores.ExcludingName *= 0.5;
+      // NameMatch should be a multiplier on total score to support rescoring.
+      Scores.Total = Relevance.NameMatch * Scores.ExcludingName;
+      return Scores;
+    }
+    llvm_unreachable("Unhandled CodeCompletion ranking model.");
+  }
+
   // Scores a candidate and adds it to the TopN structure.
   void addCandidate(TopN<ScoredBundle, ScoredBundleGreater> &Candidates,
                     CompletionCandidate::Bundle Bundle) {
@@ -1632,6 +1669,7 @@ private:
     SymbolRelevanceSignals Relevance;
     Relevance.Context = CCContextKind;
     Relevance.Name = Bundle.front().Name;
+    Relevance.FilterLength = HeuristicPrefix.Name.size();
     Relevance.Query = SymbolRelevanceSignals::CodeComplete;
     Relevance.FileProximityMatch = FileProximity.getPointer();
     if (ScopeProximity)
@@ -1680,15 +1718,7 @@ private:
       }
     }
 
-    CodeCompletion::Scores Scores;
-    Scores.Quality = Quality.evaluate();
-    Scores.Relevance = Relevance.evaluate();
-    Scores.Total = evaluateSymbolAndRelevance(Scores.Quality, Scores.Relevance);
-    // NameMatch is in fact a multiplier on total score, so rescoring is sound.
-    Scores.ExcludingName = Relevance.NameMatch
-                               ? Scores.Total / Relevance.NameMatch
-                               : Scores.Quality;
-
+    CodeCompletion::Scores Scores = evaluateCompletion(Quality, Relevance);
     if (Opts.RecordCCResult)
       Opts.RecordCCResult(toCodeCompletion(Bundle), Quality, Relevance,
                           Scores.Total);
