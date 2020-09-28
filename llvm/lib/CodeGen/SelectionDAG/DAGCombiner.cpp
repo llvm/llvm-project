@@ -19522,8 +19522,9 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     }
     if ((DestNumElts % SrcNumElts) == 0) {
       unsigned DestSrcRatio = DestNumElts / SrcNumElts;
-      if ((NVT.getVectorMinNumElements() % DestSrcRatio) == 0) {
-        ElementCount NewExtEC = NVT.getVectorElementCount() / DestSrcRatio;
+      if (NVT.getVectorElementCount().isKnownMultipleOf(DestSrcRatio)) {
+        ElementCount NewExtEC =
+            NVT.getVectorElementCount().divideCoefficientBy(DestSrcRatio);
         EVT ScalarVT = SrcVT.getScalarType();
         if ((ExtIdx % DestSrcRatio) == 0) {
           SDLoc DL(N);
@@ -20690,7 +20691,8 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
       } else if ((N1SrcSVT.getSizeInBits() % EltSizeInBits) == 0) {
         unsigned Scale = N1SrcSVT.getSizeInBits() / EltSizeInBits;
         if (NumElts.isKnownMultipleOf(Scale) && (InsIdx % Scale) == 0) {
-          NewVT = EVT::getVectorVT(Ctx, N1SrcSVT, NumElts / Scale);
+          NewVT = EVT::getVectorVT(Ctx, N1SrcSVT,
+                                   NumElts.divideCoefficientBy(Scale));
           NewIdx = DAG.getVectorIdxConstant(InsIdx / Scale, DL);
         }
       }
