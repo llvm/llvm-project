@@ -52,7 +52,9 @@ class PopulateSwitch : public Tweak {
   bool prepare(const Selection &Sel) override;
   Expected<Effect> apply(const Selection &Sel) override;
   std::string title() const override { return "Populate switch"; }
-  Intent intent() const override { return Refactor; }
+  llvm::StringLiteral kind() const override {
+    return CodeAction::REFACTOR_KIND;
+  }
 
 private:
   const DeclContext *DeclCtx = nullptr;

@@ -37,7 +37,9 @@ namespace {
 class ExpandAutoType : public Tweak {
 public:
   const char *id() const final;
-  Intent intent() const override { return Intent::Refactor;}
+  llvm::StringLiteral kind() const override {
+    return CodeAction::REFACTOR_KIND;
+  }
   bool prepare(const Selection &Inputs) override;
   Expected<Effect> apply(const Selection &Inputs) override;
   std::string title() const override;
