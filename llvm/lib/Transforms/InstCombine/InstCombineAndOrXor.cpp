@@ -2111,7 +2111,7 @@ static Instruction *matchRotate(Instruction &Or) {
     // Check for constant shift amounts that sum to the bitwidth.
     // TODO: Support non-uniform shift amounts.
     const APInt *LC, *RC;
-    if (match(L, m_APInt(LC)) && match(R, m_APInt(RC)))
+    if (match(L, m_APIntAllowUndef(LC)) && match(R, m_APIntAllowUndef(RC)))
       if (LC->ult(Width) && RC->ult(Width) && (*LC + *RC) == Width)
         return L;
 
