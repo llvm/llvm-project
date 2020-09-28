@@ -5414,6 +5414,14 @@ static bool isUndefOrEqual(int Val, int CmpVal) {
   return ((Val == SM_SentinelUndef) || (Val == CmpVal));
 }
 
+/// Return true if every element in Mask is the undef sentinel value or equal to
+/// the specified value..
+static bool isUndefOrEqual(ArrayRef<int> Mask, int CmpVal) {
+  return llvm::all_of(Mask, [CmpVal](int M) {
+    return (M == SM_SentinelUndef) || (M == CmpVal);
+  });
+}
+
 /// Val is either the undef or zero sentinel value.
 static bool isUndefOrZero(int Val) {
   return ((Val == SM_SentinelUndef) || (Val == SM_SentinelZero));
@@ -10856,8 +10864,9 @@ static bool IsElementEquivalent(int MaskSize, SDValue Op, SDValue ExpectedOp,
 /// It returns true if the mask is exactly as wide as the argument list, and
 /// each element of the mask is either -1 (signifying undef) or the value given
 /// in the argument.
-static bool isShuffleEquivalent(SDValue V1, SDValue V2, ArrayRef<int> Mask,
-                                ArrayRef<int> ExpectedMask) {
+static bool isShuffleEquivalent(ArrayRef<int> Mask, ArrayRef<int> ExpectedMask,
+                                SDValue V1 = SDValue(),
+                                SDValue V2 = SDValue()) {
   int Size = Mask.size();
   if (Size != (int)ExpectedMask.size())
     return false;
@@ -11241,21 +11250,21 @@ static SDValue lowerShuffleWithUNPCK(const SDLoc &DL, MVT VT,
                                      SelectionDAG &DAG) {
   SmallVector<int, 8> Unpckl;
   createUnpackShuffleMask(VT, Unpckl, /* Lo = */ true, /* Unary = */ false);
-  if (isShuffleEquivalent(V1, V2, Mask, Unpckl))
+  if (isShuffleEquivalent(Mask, Unpckl, V1, V2))
     return DAG.getNode(X86ISD::UNPCKL, DL, VT, V1, V2);
 
   SmallVector<int, 8> Unpckh;
   createUnpackShuffleMask(VT, Unpckh, /* Lo = */ false, /* Unary = */ false);
-  if (isShuffleEquivalent(V1, V2, Mask, Unpckh))
+  if (isShuffleEquivalent(Mask, Unpckh, V1, V2))
     return DAG.getNode(X86ISD::UNPCKH, DL, VT, V1, V2);
 
   // Commute and try again.
   ShuffleVectorSDNode::commuteMask(Unpckl);
-  if (isShuffleEquivalent(V1, V2, Mask, Unpckl))
+  if (isShuffleEquivalent(Mask, Unpckl, V1, V2))
     return DAG.getNode(X86ISD::UNPCKL, DL, VT, V2, V1);
 
   ShuffleVectorSDNode::commuteMask(Unpckh);
-  if (isShuffleEquivalent(V1, V2, Mask, Unpckh))
+  if (isShuffleEquivalent(Mask, Unpckh, V1, V2))
     return DAG.getNode(X86ISD::UNPCKH, DL, VT, V2, V1);
 
   return SDValue();
@@ -11271,9 +11280,9 @@ static SDValue lowerShuffleWithUNPCK256(const SDLoc &DL, MVT VT,
   createSplat2ShuffleMask(VT, Unpckh, /* Lo */ false);
 
   unsigned UnpackOpcode;
-  if (isShuffleEquivalent(V1, V2, Mask, Unpckl))
+  if (isShuffleEquivalent(Mask, Unpckl, V1, V2))
     UnpackOpcode = X86ISD::UNPCKL;
-  else if (isShuffleEquivalent(V1, V2, Mask, Unpckh))
+  else if (isShuffleEquivalent(Mask, Unpckh, V1, V2))
     UnpackOpcode = X86ISD::UNPCKH;
   else
     return SDValue();
@@ -13852,8 +13861,8 @@ static SDValue lowerV2F64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use one of the special instruction patterns to handle two common
   // blend patterns if a zero-blend above didn't work.
-  if (isShuffleEquivalent(V1, V2, Mask, {0, 3}) ||
-      isShuffleEquivalent(V1, V2, Mask, {1, 3}))
+  if (isShuffleEquivalent(Mask, {0, 3}, V1, V2) ||
+      isShuffleEquivalent(Mask, {1, 3}, V1, V2))
     if (SDValue V1S = getScalarValueForVectorElement(V1, Mask[0], DAG))
       // We can either use a special instruction to load over the low double or
       // to move just the low double.
@@ -14090,9 +14099,9 @@ static SDValue lowerV4F32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
     // Use even/odd duplicate instructions for masks that match their pattern.
     if (Subtarget.hasSSE3()) {
-      if (isShuffleEquivalent(V1, V2, Mask, {0, 0, 2, 2}))
+      if (isShuffleEquivalent(Mask, {0, 0, 2, 2}, V1, V2))
         return DAG.getNode(X86ISD::MOVSLDUP, DL, MVT::v4f32, V1);
-      if (isShuffleEquivalent(V1, V2, Mask, {1, 1, 3, 3}))
+      if (isShuffleEquivalent(Mask, {1, 1, 3, 3}, V1, V2))
         return DAG.getNode(X86ISD::MOVSHDUP, DL, MVT::v4f32, V1);
     }
 
@@ -14106,9 +14115,9 @@ static SDValue lowerV4F32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     // Use MOVLHPS/MOVHLPS to simulate unary shuffles. These are only valid
     // in SSE1 because otherwise they are widened to v2f64 and never get here.
     if (!Subtarget.hasSSE2()) {
-      if (isShuffleEquivalent(V1, V2, Mask, {0, 1, 0, 1}))
+      if (isShuffleEquivalent(Mask, {0, 1, 0, 1}, V1, V2))
         return DAG.getNode(X86ISD::MOVLHPS, DL, MVT::v4f32, V1, V1);
-      if (isShuffleEquivalent(V1, V2, Mask, {2, 3, 2, 3}))
+      if (isShuffleEquivalent(Mask, {2, 3, 2, 3}, V1, V2))
         return DAG.getNode(X86ISD::MOVHLPS, DL, MVT::v4f32, V1, V1);
     }
 
@@ -14150,9 +14159,9 @@ static SDValue lowerV4F32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // Use low/high mov instructions. These are only valid in SSE1 because
   // otherwise they are widened to v2f64 and never get here.
   if (!Subtarget.hasSSE2()) {
-    if (isShuffleEquivalent(V1, V2, Mask, {0, 1, 4, 5}))
+    if (isShuffleEquivalent(Mask, {0, 1, 4, 5}, V1, V2))
       return DAG.getNode(X86ISD::MOVLHPS, DL, MVT::v4f32, V1, V2);
-    if (isShuffleEquivalent(V1, V2, Mask, {2, 3, 6, 7}))
+    if (isShuffleEquivalent(Mask, {2, 3, 6, 7}, V1, V2))
       return DAG.getNode(X86ISD::MOVHLPS, DL, MVT::v4f32, V2, V1);
   }
 
@@ -14200,9 +14209,9 @@ static SDValue lowerV4I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     // so prevents folding a load into this instruction or making a copy.
     const int UnpackLoMask[] = {0, 0, 1, 1};
     const int UnpackHiMask[] = {2, 2, 3, 3};
-    if (isShuffleEquivalent(V1, V2, Mask, {0, 0, 1, 1}))
+    if (isShuffleEquivalent(Mask, {0, 0, 1, 1}, V1, V2))
       Mask = UnpackLoMask;
-    else if (isShuffleEquivalent(V1, V2, Mask, {2, 2, 3, 3}))
+    else if (isShuffleEquivalent(Mask, {2, 2, 3, 3}, V1, V2))
       Mask = UnpackHiMask;
 
     return DAG.getNode(X86ISD::PSHUFD, DL, MVT::v4i32, V1,
@@ -15832,8 +15841,8 @@ static SDValue lowerV2X128Shuffle(const SDLoc &DL, MVT VT, SDValue V1,
   if (!IsLowZero && !IsHighZero) {
     // Check for patterns which can be matched with a single insert of a 128-bit
     // subvector.
-    bool OnlyUsesV1 = isShuffleEquivalent(V1, V2, Mask, {0, 1, 0, 1});
-    if (OnlyUsesV1 || isShuffleEquivalent(V1, V2, Mask, {0, 1, 4, 5})) {
+    bool OnlyUsesV1 = isShuffleEquivalent(Mask, {0, 1, 0, 1}, V1, V2);
+    if (OnlyUsesV1 || isShuffleEquivalent(Mask, {0, 1, 4, 5}, V1, V2)) {
 
       // With AVX1, use vperm2f128 (below) to allow load folding. Otherwise,
       // this will likely become vinsertf128 which can't fold a 256-bit memop.
@@ -16575,7 +16584,7 @@ static SDValue lowerV4F64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
       return Broadcast;
 
     // Use low duplicate instructions for masks that match their pattern.
-    if (isShuffleEquivalent(V1, V2, Mask, {0, 0, 2, 2}))
+    if (isShuffleEquivalent(Mask, {0, 0, 2, 2}, V1, V2))
       return DAG.getNode(X86ISD::MOVDDUP, DL, MVT::v4f64, V1);
 
     if (!is128BitLaneCrossingShuffleMask(MVT::v4f64, Mask)) {
@@ -16799,9 +16808,9 @@ static SDValue lowerV8F32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
            "Repeated masks must be half the mask width!");
 
     // Use even/odd duplicate instructions for masks that match their pattern.
-    if (isShuffleEquivalent(V1, V2, RepeatedMask, {0, 0, 2, 2}))
+    if (isShuffleEquivalent(RepeatedMask, {0, 0, 2, 2}, V1, V2))
       return DAG.getNode(X86ISD::MOVSLDUP, DL, MVT::v8f32, V1);
-    if (isShuffleEquivalent(V1, V2, RepeatedMask, {1, 1, 3, 3}))
+    if (isShuffleEquivalent(RepeatedMask, {1, 1, 3, 3}, V1, V2))
       return DAG.getNode(X86ISD::MOVSHDUP, DL, MVT::v8f32, V1);
 
     if (V2.isUndef())
@@ -17313,9 +17322,9 @@ static SDValue lowerV4X128Shuffle(const SDLoc &DL, MVT VT, ArrayRef<int> Mask,
 
   // Check for patterns which can be matched with a single insert of a 256-bit
   // subvector.
-  bool OnlyUsesV1 = isShuffleEquivalent(V1, V2, Mask, {0, 1, 2, 3, 0, 1, 2, 3});
+  bool OnlyUsesV1 = isShuffleEquivalent(Mask, {0, 1, 2, 3, 0, 1, 2, 3}, V1, V2);
   if (OnlyUsesV1 ||
-      isShuffleEquivalent(V1, V2, Mask, {0, 1, 2, 3, 8, 9, 10, 11})) {
+      isShuffleEquivalent(Mask, {0, 1, 2, 3, 8, 9, 10, 11}, V1, V2)) {
     MVT SubVT = MVT::getVectorVT(VT.getVectorElementType(), 4);
     SDValue SubVec =
         DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVT, OnlyUsesV1 ? V1 : V2,
@@ -17400,7 +17409,7 @@ static SDValue lowerV8F64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   if (V2.isUndef()) {
     // Use low duplicate instructions for masks that match their pattern.
-    if (isShuffleEquivalent(V1, V2, Mask, {0, 0, 2, 2, 4, 4, 6, 6}))
+    if (isShuffleEquivalent(Mask, {0, 0, 2, 2, 4, 4, 6, 6}, V1, V2))
       return DAG.getNode(X86ISD::MOVDDUP, DL, MVT::v8f64, V1);
 
     if (!is128BitLaneCrossingShuffleMask(MVT::v8f64, Mask)) {
@@ -17459,9 +17468,9 @@ static SDValue lowerV16F32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     assert(RepeatedMask.size() == 4 && "Unexpected repeated mask size!");
 
     // Use even/odd duplicate instructions for masks that match their pattern.
-    if (isShuffleEquivalent(V1, V2, RepeatedMask, {0, 0, 2, 2}))
+    if (isShuffleEquivalent(RepeatedMask, {0, 0, 2, 2}, V1, V2))
       return DAG.getNode(X86ISD::MOVSLDUP, DL, MVT::v16f32, V1);
-    if (isShuffleEquivalent(V1, V2, RepeatedMask, {1, 1, 3, 3}))
+    if (isShuffleEquivalent(RepeatedMask, {1, 1, 3, 3}, V1, V2))
       return DAG.getNode(X86ISD::MOVSHDUP, DL, MVT::v16f32, V1);
 
     if (V2.isUndef())
@@ -34932,8 +34941,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // shuffle(insert_subvector(undef, sub, 0), undef, 0, 0, 0, 0)
   if (UnaryShuffle &&
       (BaseMaskEltSizeInBits == 128 || BaseMaskEltSizeInBits == 256)) {
-    SmallVector<int, 64> BroadcastMask(NumBaseMaskElts, 0);
-    if (isTargetShuffleEquivalent(BaseMask, BroadcastMask)) {
+    if (isUndefOrEqual(BaseMask, 0)) {
       SDValue Src = Inputs[0];
       if (Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
           Src.getOperand(0).isUndef() &&
@@ -35139,8 +35147,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     if ((Subtarget.hasAVX2() ||
          (Subtarget.hasAVX() && 32 <= MaskEltSizeInBits)) &&
         (!IsMaskedShuffle || NumRootElts == NumMaskElts)) {
-      SmallVector<int, 64> BroadcastMask(NumMaskElts, 0);
-      if (isTargetShuffleEquivalent(Mask, BroadcastMask)) {
+      if (isUndefOrEqual(Mask, 0)) {
         if (V1.getValueType() == MaskVT &&
             V1.getOpcode() == ISD::SCALAR_TO_VECTOR &&
             MayFoldLoad(V1.getOperand(0))) {
@@ -37338,19 +37345,20 @@ static SDValue foldShuffleOfHorizOp(SDNode *N, SelectionDAG &DAG) {
 
   // shuffle (hadd X, X), undef, [low half...high half] --> hadd X, X
   ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(N)->getMask();
+
   // TODO: Other mask possibilities like {1,1} and {1,0} could be added here,
   // but this should be tied to whatever horizontal op matching and shuffle
   // canonicalization are producing.
   if (HOp.getValueSizeInBits() == 128 &&
-      (isTargetShuffleEquivalent(Mask, {0, 0}) ||
-       isTargetShuffleEquivalent(Mask, {0, 1, 0, 1}) ||
-       isTargetShuffleEquivalent(Mask, {0, 1, 2, 3, 0, 1, 2, 3})))
+      (isShuffleEquivalent(Mask, {0, 0}) ||
+       isShuffleEquivalent(Mask, {0, 1, 0, 1}) ||
+       isShuffleEquivalent(Mask, {0, 1, 2, 3, 0, 1, 2, 3})))
     return updateHOp(HOp, DAG);
 
   if (HOp.getValueSizeInBits() == 256 &&
-      (isTargetShuffleEquivalent(Mask, {0, 0, 2, 2}) ||
-       isTargetShuffleEquivalent(Mask, {0, 1, 0, 1, 4, 5, 4, 5}) ||
-       isTargetShuffleEquivalent(
+      (isShuffleEquivalent(Mask, {0, 0, 2, 2}) ||
+       isShuffleEquivalent(Mask, {0, 1, 0, 1, 4, 5, 4, 5}) ||
+       isShuffleEquivalent(
            Mask, {0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 8, 9, 10, 11})))
     return updateHOp(HOp, DAG);
 

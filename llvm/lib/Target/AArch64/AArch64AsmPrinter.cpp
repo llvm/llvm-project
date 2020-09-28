@@ -192,33 +192,16 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     return;
 
   // Assemble feature flags that may require creation of a note section.
-  unsigned Flags = ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI |
-                   ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
+  unsigned Flags = 0;
+  if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("branch-target-enforcement")))
+    if (BTE->getZExtValue())
+      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
 
-  if (any_of(M, [](const Function &F) {
-        return !F.isDeclaration() &&
-               !F.hasFnAttribute("branch-target-enforcement");
-      })) {
-    Flags &= ~ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
-  }
-
-  if ((Flags & ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI) == 0 &&
-      any_of(M, [](const Function &F) {
-        return F.hasFnAttribute("branch-target-enforcement");
-      })) {
-    errs() << "warning: some functions compiled with BTI and some compiled "
-              "without BTI\n"
-           << "warning: not setting BTI in feature flags\n";
-  }
-
-  if (any_of(M, [](const Function &F) {
-        if (F.isDeclaration())
-          return false;
-        Attribute A = F.getFnAttribute("sign-return-address");
-        return !A.isStringAttribute() || A.getValueAsString() == "none";
-      })) {
-    Flags &= ~ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
-  }
+  if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("sign-return-address")))
+    if (Sign->getZExtValue())
+      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
 
   if (Flags == 0)
     return;
