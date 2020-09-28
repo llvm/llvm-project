@@ -398,6 +398,7 @@ Status ProcessMachCore::DoLoadCore() {
           added_module.Append(module_sp, false);
           GetTarget().ModulesDidLoad(added_module);
           m_dyld_plugin_name = DynamicLoaderDarwinKernel::GetPluginNameStatic();
+          found_main_binary_definitively = true;
         }
       }
     }
