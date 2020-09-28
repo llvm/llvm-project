@@ -187,16 +187,12 @@ def OpenACC_DataOp : OpenACC_Op<"data",
                        Variadic<AnyType>:$createOperands,
                        Variadic<AnyType>:$createZeroOperands,
                        Variadic<AnyType>:$noCreateOperands,
-                       Variadic<AnyType>:$deleteOperands,
-                       Variadic<AnyType>:$attachOperands,
-                       Variadic<AnyType>:$detachOperands);
+                       Variadic<AnyType>:$attachOperands);
 
   let regions = (region AnyRegion:$region);
 
   let extraClassDeclaration = [{
     static StringRef getAttachKeyword() { return "attach"; }
-    static StringRef getDeleteKeyword() { return "delete"; }
-    static StringRef getDetachKeyword() { return "detach"; }
     static StringRef getCopyinKeyword() { return "copyin"; }
     static StringRef getCopyinReadonlyKeyword() { return "copyin_readonly"; }
     static StringRef getCopyKeyword() { return "copy"; }
