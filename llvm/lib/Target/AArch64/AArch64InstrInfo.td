@@ -709,6 +709,7 @@ let isNotDuplicable = 1 in
 def JumpTableAnchor : Pseudo<(outs GPR64:$pc), (ins i32imm:$jti), []>,
                       Sched<[WriteI]>;
 
+let isNotDuplicable = 1 in
 def BR_JumpTable : Pseudo<(outs), (ins i32imm:$jti), []>,
                    Sched<[]> {
   let isBranch = 1;
