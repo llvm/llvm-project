@@ -225,7 +225,7 @@ private:
                          MachineIRBuilder &MIRBuilder) const;
   MachineInstr *emitCMN(MachineOperand &LHS, MachineOperand &RHS,
                         MachineIRBuilder &MIRBuilder) const;
-  MachineInstr *emitTST(const Register &LHS, const Register &RHS,
+  MachineInstr *emitTST(MachineOperand &LHS, MachineOperand &RHS,
                         MachineIRBuilder &MIRBuilder) const;
   MachineInstr *emitExtractVectorElt(Optional<Register> DstReg,
                                      const RegisterBank &DstRB, LLT ScalarTy,
@@ -3905,31 +3905,31 @@ AArch64InstructionSelector::emitCMN(MachineOperand &LHS, MachineOperand &RHS,
 }
 
 MachineInstr *
-AArch64InstructionSelector::emitTST(const Register &LHS, const Register &RHS,
+AArch64InstructionSelector::emitTST(MachineOperand &LHS, MachineOperand &RHS,
                                     MachineIRBuilder &MIRBuilder) const {
+  assert(LHS.isReg() && RHS.isReg() && "Expected register operands?");
   MachineRegisterInfo &MRI = MIRBuilder.getMF().getRegInfo();
-  unsigned RegSize = MRI.getType(LHS).getSizeInBits();
+  unsigned RegSize = MRI.getType(LHS.getReg()).getSizeInBits();
   bool Is32Bit = (RegSize == 32);
-  static const unsigned OpcTable[2][2]{{AArch64::ANDSXrr, AArch64::ANDSXri},
-                                       {AArch64::ANDSWrr, AArch64::ANDSWri}};
+  const unsigned OpcTable[3][2] = {{AArch64::ANDSXri, AArch64::ANDSWri},
+                                   {AArch64::ANDSXrs, AArch64::ANDSWrs},
+                                   {AArch64::ANDSXrr, AArch64::ANDSWrr}};
   Register ZReg = Is32Bit ? AArch64::WZR : AArch64::XZR;
+  // ANDS needs a logical immediate for its immediate form. Check if we can
+  // fold one in.
+  if (auto ValAndVReg = getConstantVRegValWithLookThrough(RHS.getReg(), MRI)) {
+    if (AArch64_AM::isLogicalImmediate(ValAndVReg->Value, RegSize)) {
+      auto TstMI = MIRBuilder.buildInstr(OpcTable[0][Is32Bit], {ZReg}, {LHS});
+      TstMI.addImm(
+          AArch64_AM::encodeLogicalImmediate(ValAndVReg->Value, RegSize));
+      constrainSelectedInstRegOperands(*TstMI, TII, TRI, RBI);
+      return &*TstMI;
+    }
+  }
 
-  // We might be able to fold in an immediate into the TST. We need to make sure
-  // it's a logical immediate though, since ANDS requires that.
-  auto ValAndVReg = getConstantVRegValWithLookThrough(RHS, MRI);
-  bool IsImmForm = ValAndVReg.hasValue() &&
-                   AArch64_AM::isLogicalImmediate(ValAndVReg->Value, RegSize);
-  unsigned Opc = OpcTable[Is32Bit][IsImmForm];
-  auto TstMI = MIRBuilder.buildInstr(Opc, {ZReg}, {LHS});
-
-  if (IsImmForm)
-    TstMI.addImm(
-        AArch64_AM::encodeLogicalImmediate(ValAndVReg->Value, RegSize));
-  else
-    TstMI.addUse(RHS);
-
-  constrainSelectedInstRegOperands(*TstMI, TII, TRI, RBI);
-  return &*TstMI;
+  if (auto Fns = selectLogicalShiftedRegister(RHS))
+    return emitInstr(OpcTable[1][Is32Bit], {ZReg}, {LHS}, MIRBuilder, Fns);
+  return emitInstr(OpcTable[2][Is32Bit], {ZReg}, {LHS, RHS}, MIRBuilder);
 }
 
 std::pair<MachineInstr *, CmpInst::Predicate>
@@ -4289,8 +4289,8 @@ MachineInstr *AArch64InstructionSelector::tryFoldIntegerCompare(
     if (!ValAndVReg || ValAndVReg->Value != 0)
       return nullptr;
 
-    return emitTST(LHSDef->getOperand(1).getReg(),
-                   LHSDef->getOperand(2).getReg(), MIRBuilder);
+    return emitTST(LHSDef->getOperand(1),
+                   LHSDef->getOperand(2), MIRBuilder);
   }
 
   return nullptr;
