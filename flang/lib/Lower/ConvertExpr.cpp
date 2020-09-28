@@ -1596,7 +1596,8 @@ private:
     } else {
       auto val = fir::getBase(genval(a));
       // Functions are always referent.
-      if (val.getType().template isa<mlir::FunctionType>())
+      if (val.getType().template isa<mlir::FunctionType>() ||
+          fir::isa_ref_type(val.getType()))
         return val;
       // Since `a` is not itself a valid referent, determine its value and
       // create a temporary location for referencing.
