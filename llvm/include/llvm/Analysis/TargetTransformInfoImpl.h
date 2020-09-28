@@ -859,11 +859,6 @@ public:
     case Instruction::Call: {
       assert(isa<IntrinsicInst>(U) && "Unexpected non-intrinsic call");
       auto *Intrinsic = cast<IntrinsicInst>(U);
-      // FIXME: We shouldn't have this exception for RecipThroughput.
-      if (CostKind == TTI::TCK_RecipThroughput) {
-        IntrinsicCostAttributes CostAttrs(*Intrinsic);
-        return TargetTTI->getIntrinsicInstrCost(CostAttrs, CostKind);
-      }
       IntrinsicCostAttributes CostAttrs(Intrinsic->getIntrinsicID(), *CB);
       return TargetTTI->getIntrinsicInstrCost(CostAttrs, CostKind);
     }
