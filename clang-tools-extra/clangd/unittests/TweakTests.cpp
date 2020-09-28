@@ -2813,6 +2813,96 @@ public:
   }
 }
 
+TWEAK_TEST(PopulateSwitch);
+TEST_F(PopulateSwitchTest, Test) {
+  struct Case {
+    CodeContext Context;
+    llvm::StringRef TestSource;
+    llvm::StringRef ExpectedSource;
+  };
+
+  Case Cases[]{
+      {
+          // No enumerators
+          Function,
+          R""(enum Enum {}; ^switch ((Enum)0) {})"",
+          "unavailable",
+      },
+      {
+          // Existing enumerators in switch
+          Function,
+          R""(enum Enum {A}; ^switch ((Enum)0) {case A:break;})"",
+          "unavailable",
+      },
+      {
+          // Body not CompoundStmt
+          Function,
+          R""(enum Enum {A}; ^switch (A);)"",
+          "unavailable",
+      },
+      {
+          // Selection on switch token
+          Function,
+          R""(enum Enum {A}; ^switch (A) {})"",
+          R""(enum Enum {A}; switch (A) {case A:break;})"",
+      },
+      {
+          // Selection on switch condition
+          Function,
+          R""(enum Enum {A}; switch (^A) {})"",
+          R""(enum Enum {A}; switch (A) {case A:break;})"",
+      },
+      {
+          // Selection in switch body
+          Function,
+          R""(enum Enum {A}; switch (A) {^})"",
+          R""(enum Enum {A}; switch (A) {case A:break;})"",
+      },
+      {
+          // Scoped enumeration
+          Function,
+          R""(enum class Enum {A}; ^switch (Enum::A) {})"",
+          R""(enum class Enum {A}; switch (Enum::A) {case Enum::A:break;})"",
+      },
+      {
+          // Scoped enumeration with multiple enumerators
+          Function,
+          R""(enum class Enum {A,B}; ^switch (Enum::A) {})"",
+          R""(enum class Enum {A,B}; )""
+          R""(switch (Enum::A) {case Enum::A:case Enum::B:break;})"",
+      },
+      {
+          // Scoped enumerations in namespace
+          File,
+          R""(
+            namespace ns { enum class Enum {A}; }
+            void function() { ^switch (ns::Enum::A) {} }
+          )"",
+          R""(
+            namespace ns { enum class Enum {A}; }
+            void function() { switch (ns::Enum::A) {case ns::Enum::A:break;} }
+          )"",
+      },
+      {
+          // Unscoped enumerations in namespace
+          File,
+          R""(
+            namespace ns { enum Enum {A}; }
+            void function() { ^switch (ns::A) {} }
+          )"",
+          R""(
+            namespace ns { enum Enum {A}; }
+            void function() { switch (ns::A) {case ns::A:break;} }
+          )"",
+      },
+  };
+
+  for (const auto &Case : Cases) {
+    Context = Case.Context;
+    EXPECT_EQ(apply(Case.TestSource), Case.ExpectedSource);
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
