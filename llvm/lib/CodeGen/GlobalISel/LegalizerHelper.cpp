@@ -1605,35 +1605,60 @@ LegalizerHelper::widenScalarUnmergeValues(MachineInstr &MI, unsigned TypeIdx,
 
   auto Unmerge = MIRBuilder.buildUnmerge(WideTy, WideSrc);
 
-  // Create a sequence of unmerges to the original results. since we may have
-  // widened the source, we will need to pad the results with dead defs to cover
-  // the source register.
-  // e.g. widen s16 to s32:
-  // %1:_(s16), %2:_(s16), %3:_(s16) = G_UNMERGE_VALUES %0:_(s48)
+  // Create a sequence of unmerges and merges to the original results. Since we
+  // may have widened the source, we will need to pad the results with dead defs
+  // to cover the source register.
+  // e.g. widen s48 to s64:
+  // %1:_(s48), %2:_(s48) = G_UNMERGE_VALUES %0:_(s96)
   //
   // =>
-  //  %4:_(s64) = G_ANYEXT %0:_(s48)
-  //  %5:_(s32), %6:_(s32) = G_UNMERGE_VALUES %4 ; Requested unmerge
-  //  %1:_(s16), %2:_(s16) = G_UNMERGE_VALUES %5 ; unpack to original regs
-  //  %3:_(s16), dead %7 = G_UNMERGE_VALUES %6 ; original reg + extra dead def
-
+  //  %4:_(s192) = G_ANYEXT %0:_(s96)
+  //  %5:_(s64), %6, %7 = G_UNMERGE_VALUES %4 ; Requested unmerge
+  //  ; unpack to GCD type, with extra dead defs
+  //  %8:_(s16), %9, %10, %11 = G_UNMERGE_VALUES %5:_(s64)
+  //  %12:_(s16), %13, dead %14, dead %15 = G_UNMERGE_VALUES %6:_(s64)
+  //  dead %16:_(s16), dead %17, dead %18, dead %18 = G_UNMERGE_VALUES %7:_(s64)
+  //  %1:_(s48) = G_MERGE_VALUES %8:_(s16), %9, %10   ; Remerge to destination
+  //  %2:_(s48) = G_MERGE_VALUES %11:_(s16), %12, %13 ; Remerge to destination
+  const LLT GCDTy = getGCDType(WideTy, DstTy);
   const int NumUnmerge = Unmerge->getNumOperands() - 1;
-  const int PartsPerUnmerge = WideTy.getSizeInBits() / DstTy.getSizeInBits();
+  const int PartsPerRemerge = DstTy.getSizeInBits() / GCDTy.getSizeInBits();
 
-  for (int I = 0; I != NumUnmerge; ++I) {
-    auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_UNMERGE_VALUES);
+  // Directly unmerge to the destination without going through a GCD type
+  // if possible
+  if (PartsPerRemerge == 1) {
+    const int PartsPerUnmerge = WideTy.getSizeInBits() / DstTy.getSizeInBits();
 
-    for (int J = 0; J != PartsPerUnmerge; ++J) {
-      int Idx = I * PartsPerUnmerge + J;
-      if (Idx < NumDst)
-        MIB.addDef(MI.getOperand(Idx).getReg());
-      else {
-        // Create dead def for excess components.
-        MIB.addDef(MRI.createGenericVirtualRegister(DstTy));
+    for (int I = 0; I != NumUnmerge; ++I) {
+      auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_UNMERGE_VALUES);
+
+      for (int J = 0; J != PartsPerUnmerge; ++J) {
+        int Idx = I * PartsPerUnmerge + J;
+        if (Idx < NumDst)
+          MIB.addDef(MI.getOperand(Idx).getReg());
+        else {
+          // Create dead def for excess components.
+          MIB.addDef(MRI.createGenericVirtualRegister(DstTy));
+        }
       }
-    }
 
-    MIB.addUse(Unmerge.getReg(I));
+      MIB.addUse(Unmerge.getReg(I));
+    }
+  } else {
+    SmallVector<Register, 16> Parts;
+    for (int J = 0; J != NumUnmerge; ++J)
+      extractGCDType(Parts, GCDTy, Unmerge.getReg(J));
+
+    SmallVector<Register, 8> RemergeParts;
+    for (int I = 0; I != NumDst; ++I) {
+      for (int J = 0; J < PartsPerRemerge; ++J) {
+        const int Idx = I * PartsPerRemerge + J;
+        RemergeParts.emplace_back(Parts[Idx]);
+      }
+
+      MIRBuilder.buildMerge(MI.getOperand(I).getReg(), RemergeParts);
+      RemergeParts.clear();
+    }
   }
 
   MI.eraseFromParent();

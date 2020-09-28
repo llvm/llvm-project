@@ -3135,4 +3135,48 @@ TEST_F(AArch64GISelMITest, FewerElementsInsertVectorElt) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+// Test widen scalar of G_UNMERGE_VALUES
+TEST_F(AArch64GISelMITest, widenScalarUnmerge) {
+  setUp();
+  if (!TM)
+    return;
+
+  DefineLegalizerInfo(A, {});
+
+  LLT S96{LLT::scalar(96)};
+  LLT S64{LLT::scalar(64)};
+  LLT S48{LLT::scalar(48)};
+
+  auto Src = B.buildAnyExt(S96, Copies[0]);
+  auto Unmerge = B.buildUnmerge(S48, Src);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  // Perform Legalization
+  B.setInsertPt(*EntryMBB, Unmerge->getIterator());
+
+  // This should create unmerges to a GCD type (S16), then remerge to S48
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*Unmerge, 0, S64));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s96) = G_ANYEXT [[COPY0]]
+  CHECK: [[ANYEXT1:%[0-9]+]]:_(s192) = G_ANYEXT [[ANYEXT]]
+  CHECK: [[UNMERGE:%[0-9]+]]:_(s64), [[UNMERGE1:%[0-9]+]]:_(s64), [[UNMERGE2:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT1]]
+  CHECK: [[UNMERGE3:%[0-9]+]]:_(s16), [[UNMERGE4:%[0-9]+]]:_(s16), [[UNMERGE5:%[0-9]+]]:_(s16), [[UNMERGE6:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[UNMERGE]]
+  CHECK: [[UNMERGE7:%[0-9]+]]:_(s16), [[UNMERGE8:%[0-9]+]]:_(s16), [[UNMERGE9:%[0-9]+]]:_(s16), [[UNMERGE10:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[UNMERGE1]]
+  CHECK: [[UNMERGE11:%[0-9]+]]:_(s16), [[UNMERGE12:%[0-9]+]]:_(s16), [[UNMERGE13:%[0-9]+]]:_(s16), [[UNMERGE14:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[UNMERGE2]]
+  CHECK: [[MERGE:%[0-9]+]]:_(s48) = G_MERGE_VALUES [[UNMERGE3]]:_(s16), [[UNMERGE4]]:_(s16), [[UNMERGE5]]:_(s16)
+  CHECK: [[MERGE1:%[0-9]+]]:_(s48) = G_MERGE_VALUES [[UNMERGE6]]:_(s16), [[UNMERGE7]]:_(s16), [[UNMERGE8]]:_(s16)
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 } // namespace
