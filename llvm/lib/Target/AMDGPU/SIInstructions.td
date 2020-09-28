@@ -1551,18 +1551,17 @@ def : IMad24Pat<V_MAD_I32_I24, 1>;
 def : UMad24Pat<V_MAD_U32_U24, 1>;
 
 // BFI patterns
-// FIXME: This should only be done for VALU inputs
 
 // Definition from ISA doc:
 // (y & x) | (z & ~x)
 def : AMDGPUPat <
-  (or (and i32:$y, i32:$x), (and i32:$z, (not i32:$x))),
+  (DivergentBinFrag<or> (and i32:$y, i32:$x), (and i32:$z, (not i32:$x))),
   (V_BFI_B32 $x, $y, $z)
 >;
 
 // 64-bit version
 def : AMDGPUPat <
-  (or (and i64:$y, i64:$x), (and i64:$z, (not i64:$x))),
+  (DivergentBinFrag<or> (and i64:$y, i64:$x), (and i64:$z, (not i64:$x))),
   (REG_SEQUENCE SReg_64,
     (V_BFI_B32 (i32 (EXTRACT_SUBREG SReg_64:$x, sub0)),
                (i32 (EXTRACT_SUBREG SReg_64:$y, sub0)),
@@ -1575,13 +1574,13 @@ def : AMDGPUPat <
 // SHA-256 Ch function
 // z ^ (x & (y ^ z))
 def : AMDGPUPat <
-  (xor i32:$z, (and i32:$x, (xor i32:$y, i32:$z))),
+  (DivergentBinFrag<xor> i32:$z, (and i32:$x, (xor i32:$y, i32:$z))),
   (V_BFI_B32 $x, $y, $z)
 >;
 
 // 64-bit version
 def : AMDGPUPat <
-  (xor i64:$z, (and i64:$x, (xor i64:$y, i64:$z))),
+  (DivergentBinFrag<xor> i64:$z, (and i64:$x, (xor i64:$y, i64:$z))),
   (REG_SEQUENCE SReg_64,
     (V_BFI_B32 (i32 (EXTRACT_SUBREG SReg_64:$x, sub0)),
                (i32 (EXTRACT_SUBREG SReg_64:$y, sub0)),
@@ -2305,12 +2304,14 @@ defm : BFEPattern <V_BFE_U32, V_BFE_I32, S_MOV_B32>;
 
 // ((x & z) | (y & (x | z))) -> BFI (XOR x, y), z, y
 def : AMDGPUPat <
-  (or (and i32:$x, i32:$z), (and i32:$y, (or i32:$x, i32:$z))),
+  (DivergentBinFrag<or> (and i32:$x, i32:$z),
+                        (and i32:$y, (or i32:$x, i32:$z))),
   (V_BFI_B32 (V_XOR_B32_e64 i32:$x, i32:$y), i32:$z, i32:$y)
 >;
 
 def : AMDGPUPat <
-  (or (and i64:$x, i64:$z), (and i64:$y, (or i64:$x, i64:$z))),
+  (DivergentBinFrag<or> (and i64:$x, i64:$z),
+                        (and i64:$y, (or i64:$x, i64:$z))),
   (REG_SEQUENCE SReg_64,
     (V_BFI_B32 (V_XOR_B32_e64 (i32 (EXTRACT_SUBREG SReg_64:$x, sub0)),
                     (i32 (EXTRACT_SUBREG SReg_64:$y, sub0))),
