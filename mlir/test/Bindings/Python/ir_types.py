@@ -392,3 +392,19 @@ def testTupleType():
   print("pos-th type in the tuple type:", tuple_type.get_type(1))
 
 run(testTupleType)
+
+
+# CHECK-LABEL: TEST: testFunctionType
+def testFunctionType():
+  ctx = mlir.ir.Context()
+  input_types = [mlir.ir.IntegerType.get_signless(ctx, 32),
+                 mlir.ir.IntegerType.get_signless(ctx, 16)]
+  result_types = [mlir.ir.IndexType(ctx)]
+  func = mlir.ir.FunctionType.get(ctx, input_types, result_types)
+  # CHECK: INPUTS: [Type(i32), Type(i16)]
+  print("INPUTS:", func.inputs)
+  # CHECK: RESULTS: [Type(index)]
+  print("RESULTS:", func.results)
+
+
+run(testFunctionType)
