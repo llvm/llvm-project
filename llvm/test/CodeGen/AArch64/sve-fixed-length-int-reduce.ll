@@ -828,6 +828,546 @@ define i64 @sminv_v32i64(<32 x i64>* %a) #0 {
   ret i64 %res
 }
 
+;
+; UMAXV
+;
+
+; Don't use SVE for 64-bit vectors.
+define i8 @umaxv_v8i8(<8 x i8> %a) #0 {
+; CHECK-LABEL: umaxv_v8i8:
+; CHECK: umaxv b0, v0.8b
+; CHECK: ret
+  %res = call i8 @llvm.experimental.vector.reduce.umax.v8i8(<8 x i8> %a)
+  ret i8 %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define i8 @umaxv_v16i8(<16 x i8> %a) #0 {
+; CHECK-LABEL: umaxv_v16i8:
+; CHECK: umaxv b0, v0.16b
+; CHECK: ret
+  %res = call i8 @llvm.experimental.vector.reduce.umax.v16i8(<16 x i8> %a)
+  ret i8 %res
+}
+
+define i8 @umaxv_v32i8(<32 x i8>* %a) #0 {
+; CHECK-LABEL: umaxv_v32i8:
+; VBITS_GE_256: ptrue [[PG:p[0-9]+]].b, vl32
+; VBITS_GE_256-NEXT: ld1b { [[OP:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_GE_256-NEXT: umaxv b[[REDUCE:[0-9]+]], [[PG]], [[OP]].b
+; VBITS_GE_256-NEXT: fmov w0, s[[REDUCE]]
+; VBITS_GE_256-NEXT: ret
+  %op = load <32 x i8>, <32 x i8>* %a
+  %res = call i8 @llvm.experimental.vector.reduce.umax.v32i8(<32 x i8> %op)
+  ret i8 %res
+}
+
+define i8 @umaxv_v64i8(<64 x i8>* %a) #0 {
+; CHECK-LABEL: umaxv_v64i8:
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].b, vl64
+; VBITS_GE_512-NEXT: ld1b { [[OP:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: umaxv b[[REDUCE:[0-9]+]], [[PG]], [[OP]].b
+; VBITS_GE_512-NEXT: fmov w0, s[[REDUCE]]
+; VBITS_GE_512-NEXT: ret
+  %op = load <64 x i8>, <64 x i8>* %a
+  %res = call i8 @llvm.experimental.vector.reduce.umax.v64i8(<64 x i8> %op)
+  ret i8 %res
+}
+
+define i8 @umaxv_v128i8(<128 x i8>* %a) #0 {
+; CHECK-LABEL: umaxv_v128i8:
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].b, vl128
+; VBITS_GE_1024-NEXT: ld1b { [[OP:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: umaxv b[[REDUCE:[0-9]+]], [[PG]], [[OP]].b
+; VBITS_GE_1024-NEXT: fmov w0, s[[REDUCE]]
+; VBITS_GE_1024-NEXT: ret
+  %op = load <128 x i8>, <128 x i8>* %a
+  %res = call i8 @llvm.experimental.vector.reduce.umax.v128i8(<128 x i8> %op)
+  ret i8 %res
+}
+
+define i8 @umaxv_v256i8(<256 x i8>* %a) #0 {
+; CHECK-LABEL: umaxv_v256i8:
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].b, vl256
+; VBITS_GE_2048-NEXT: ld1b { [[OP:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: umaxv b[[REDUCE:[0-9]+]], [[PG]], [[OP]].b
+; VBITS_GE_2048-NEXT: fmov w0, s[[REDUCE]]
+; VBITS_GE_2048-NEXT: ret
+  %op = load <256 x i8>, <256 x i8>* %a
+  %res = call i8 @llvm.experimental.vector.reduce.umax.v256i8(<256 x i8> %op)
+  ret i8 %res
+}
+
+; Don't use SVE for 64-bit vectors.
+define i16 @umaxv_v4i16(<4 x i16> %a) #0 {
+; CHECK-LABEL: umaxv_v4i16:
+; CHECK: umaxv h0, v0.4h
+; CHECK: ret
+  %res = call i16 @llvm.experimental.vector.reduce.umax.v4i16(<4 x i16> %a)
+  ret i16 %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define i16 @umaxv_v8i16(<8 x i16> %a) #0 {
+; CHECK-LABEL: umaxv_v8i16:
+; CHECK: umaxv h0, v0.8h
+; CHECK: ret
+  %res = call i16 @llvm.experimental.vector.reduce.umax.v8i16(<8 x i16> %a)
+  ret i16 %res
+}
+
+define i16 @umaxv_v16i16(<16 x i16>* %a) #0 {
+; CHECK-LABEL: umaxv_v16i16:
+; VBITS_GE_256: ptrue [[PG:p[0-9]+]].h, vl16
+; VBITS_GE_256-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_256-NEXT: umaxv h[[REDUCE:[0-9]+]], [[PG]], [[OP]].h
+; VBITS_GE_256-NEXT: fmov w0, s[[REDUCE]]
+; VBITS_GE_256-NEXT: ret
+  %op = load <16 x i16>, <16 x i16>* %a
+  %res = call i16 @llvm.experimental.vector.reduce.umax.v16i16(<16 x i16> %op)
+  ret i16 %res
+}
+
+define i16 @umaxv_v32i16(<32 x i16>* %a) #0 {
+; CHECK-LABEL: umaxv_v32i16:
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl32
+; VBITS_GE_512-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: umaxv h[[REDUCE:[0-9]+]], [[PG]], [[OP]].h
+; VBITS_GE_512-NEXT: fmov w0, s[[REDUCE]]
+; VBITS_GE_512-NEXT: ret
+  %op = load <32 x i16>, <32 x i16>* %a
+  %res = call i16 @llvm.experimental.vector.reduce.umax.v32i16(<32 x i16> %op)
+  ret i16 %res
+}
+
+define i16 @umaxv_v64i16(<64 x i16>* %a) #0 {
+; CHECK-LABEL: umaxv_v64i16:
+; VBITS_GE_1048: ptrue [[PG:p[0-9]+]].h, vl64
+; VBITS_GE_1048-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_1048-NEXT: umaxv h[[REDUCE:[0-9]+]], [[PG]], [[OP]].h
+; VBITS_GE_1048-NEXT: fmov w0, s[[REDUCE]]
+; VBITS_GE_1048-NEXT: ret
+  %op = load <64 x i16>, <64 x i16>* %a
+  %res = call i16 @llvm.experimental.vector.reduce.umax.v64i16(<64 x i16> %op)
+  ret i16 %res
+}
+
+define i16 @umaxv_v128i16(<128 x i16>* %a) #0 {
+; CHECK-LABEL: umaxv_v128i16:
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].h, vl128
+; VBITS_GE_2048-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: umaxv h[[REDUCE:[0-9]+]], [[PG]], [[OP]].h
+; VBITS_GE_2048-NEXT: fmov w0, s[[REDUCE]]
+; VBITS_GE_2048-NEXT: ret
+  %op = load <128 x i16>, <128 x i16>* %a
+  %res = call i16 @llvm.experimental.vector.reduce.umax.v128i16(<128 x i16> %op)
+  ret i16 %res
+}
+
+; Don't use SVE for 64-bit vectors.
+define i32 @umaxv_v2i32(<2 x i32> %a) #0 {
+; CHECK-LABEL: umaxv_v2i32:
+; CHECK: umaxp v0.2s, v0.2s
+; CHECK: ret
+  %res = call i32 @llvm.experimental.vector.reduce.umax.v2i32(<2 x i32> %a)
+  ret i32 %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define i32 @umaxv_v4i32(<4 x i32> %a) #0 {
+; CHECK-LABEL: umaxv_v4i32:
+; CHECK: umaxv s0, v0.4s
+; CHECK: ret
+  %res = call i32 @llvm.experimental.vector.reduce.umax.v4i32(<4 x i32> %a)
+  ret i32 %res
+}
+
+define i32 @umaxv_v8i32(<8 x i32>* %a) #0 {
+; CHECK-LABEL: umaxv_v8i32:
+; VBITS_GE_256: ptrue [[PG:p[0-9]+]].s, vl8
+; VBITS_GE_256-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_256-NEXT: umaxv [[REDUCE:s[0-9]+]], [[PG]], [[OP]].s
+; VBITS_GE_256-NEXT: fmov w0, [[REDUCE]]
+; VBITS_GE_256-NEXT: ret
+  %op = load <8 x i32>, <8 x i32>* %a
+  %res = call i32 @llvm.experimental.vector.reduce.umax.v8i32(<8 x i32> %op)
+  ret i32 %res
+}
+
+define i32 @umaxv_v16i32(<16 x i32>* %a) #0 {
+; CHECK-LABEL: umaxv_v16i32:
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
+; VBITS_GE_512-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: umaxv [[REDUCE:s[0-9]+]], [[PG]], [[OP]].s
+; VBITS_GE_512-NEXT: fmov w0, [[REDUCE]]
+; VBITS_GE_512-NEXT: ret
+  %op = load <16 x i32>, <16 x i32>* %a
+  %res = call i32 @llvm.experimental.vector.reduce.umax.v16i32(<16 x i32> %op)
+  ret i32 %res
+}
+
+define i32 @umaxv_v32i32(<32 x i32>* %a) #0 {
+; CHECK-LABEL: umaxv_v32i32:
+; VBITS_GE_1048: ptrue [[PG:p[0-9]+]].s, vl32
+; VBITS_GE_1048-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_1048-NEXT: umaxv [[REDUCE:s[0-9]+]], [[PG]], [[OP]].s
+; VBITS_GE_1048-NEXT: fmov x0, [[REDUCE]]
+; VBITS_GE_1048-NEXT: ret
+  %op = load <32 x i32>, <32 x i32>* %a
+  %res = call i32 @llvm.experimental.vector.reduce.umax.v32i32(<32 x i32> %op)
+  ret i32 %res
+}
+
+define i32 @umaxv_v64i32(<64 x i32>* %a) #0 {
+; CHECK-LABEL: umaxv_v64i32:
+; VBITS_GE_2096: ptrue [[PG:p[0-9]+]].s, vl64
+; VBITS_GE_2096-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_2096-NEXT: umaxv [[REDUCE:s[0-9]+]], [[PG]], [[OP]].s
+; VBITS_GE_2086-NEXT: fmov x0, [[REDUCE]]
+; VBITS_GE_2096-NEXT: ret
+  %op = load <64 x i32>, <64 x i32>* %a
+  %res = call i32 @llvm.experimental.vector.reduce.umax.v64i32(<64 x i32> %op)
+  ret i32 %res
+}
+
+; Nothing to do for single element vectors.
+define i64 @umaxv_v1i64(<1 x i64> %a) #0 {
+; CHECK-LABEL: umaxv_v1i64:
+; CHECK: fmov x0, d0
+; CHECK: ret
+  %res = call i64 @llvm.experimental.vector.reduce.umax.v1i64(<1 x i64> %a)
+  ret i64 %res
+}
+
+; No NEON 64-bit vector UMAXV support. Use SVE.
+define i64 @umaxv_v2i64(<2 x i64> %a) #0 {
+; CHECK-LABEL: umaxv_v2i64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl2
+; CHECK-NEXT: umaxv [[REDUCE:d[0-9]+]], [[PG]], z0.d
+; CHECK-NEXT: fmov x0, [[REDUCE]]
+; CHECK-NEXT: ret
+  %res = call i64 @llvm.experimental.vector.reduce.umax.v2i64(<2 x i64> %a)
+  ret i64 %res
+}
+
+define i64 @umaxv_v4i64(<4 x i64>* %a) #0 {
+; CHECK-LABEL: umaxv_v4i64:
+; VBITS_GE_256: ptrue [[PG:p[0-9]+]].d, vl4
+; VBITS_GE_256-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_256-NEXT: umaxv [[REDUCE:d[0-9]+]], [[PG]], [[OP]].d
+; VBITS_GE_256-NEXT: fmov x0, [[REDUCE]]
+; VBITS_GE_256-NEXT: ret
+  %op = load <4 x i64>, <4 x i64>* %a
+  %res = call i64 @llvm.experimental.vector.reduce.umax.v4i64(<4 x i64> %op)
+  ret i64 %res
+}
+
+define i64 @umaxv_v8i64(<8 x i64>* %a) #0 {
+; CHECK-LABEL: umaxv_v8i64:
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
+; VBITS_GE_512-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: umaxv [[REDUCE:d[0-9]+]], [[PG]], [[OP]].d
+; VBITS_GE_512-NEXT: fmov x0, [[REDUCE]]
+; VBITS_GE_512-NEXT: ret
+  %op = load <8 x i64>, <8 x i64>* %a
+  %res = call i64 @llvm.experimental.vector.reduce.umax.v8i64(<8 x i64> %op)
+  ret i64 %res
+}
+
+define i64 @umaxv_v16i64(<16 x i64>* %a) #0 {
+; CHECK-LABEL: umaxv_v16i64:
+; VBITS_GE_1048: ptrue [[PG:p[0-9]+]].d, vl16
+; VBITS_GE_1048-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_1048-NEXT: umaxv [[REDUCE:d[0-9]+]], [[PG]], [[OP]].d
+; VBITS_GE_1048-NEXT: fmov x0, [[REDUCE]]
+; VBITS_GE_1048-NEXT: ret
+  %op = load <16 x i64>, <16 x i64>* %a
+  %res = call i64 @llvm.experimental.vector.reduce.umax.v16i64(<16 x i64> %op)
+  ret i64 %res
+}
+
+define i64 @umaxv_v32i64(<32 x i64>* %a) #0 {
+; CHECK-LABEL: umaxv_v32i64:
+; VBITS_GE_2096: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2096-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_2096-NEXT: umaxv [[REDUCE:d[0-9]+]], [[PG]], [[OP]].d
+; VBITS_GE_2096-NEXT: fmov x0, [[REDUCE]]
+; VBITS_GE_2096-NEXT: ret
+  %op = load <32 x i64>, <32 x i64>* %a
+  %res = call i64 @llvm.experimental.vector.reduce.umax.v32i64(<32 x i64> %op)
+  ret i64 %res
+}
+
+;
+; UMINV
+;
+
+; Don't use SVE for 64-bit vectors.
+define i8 @uminv_v8i8(<8 x i8> %a) #0 {
+; CHECK-LABEL: uminv_v8i8:
+; CHECK: uminv b0, v0.8b
+; CHECK: ret
+  %res = call i8 @llvm.experimental.vector.reduce.umin.v8i8(<8 x i8> %a)
+  ret i8 %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define i8 @uminv_v16i8(<16 x i8> %a) #0 {
+; CHECK-LABEL: uminv_v16i8:
+; CHECK: uminv b0, v0.16b
+; CHECK: ret
+  %res = call i8 @llvm.experimental.vector.reduce.umin.v16i8(<16 x i8> %a)
+  ret i8 %res
+}
+
+define i8 @uminv_v32i8(<32 x i8>* %a) #0 {
+; CHECK-LABEL: uminv_v32i8:
+; VBITS_GE_256: ptrue [[PG:p[0-9]+]].b, vl32
+; VBITS_GE_256-NEXT: ld1b { [[OP:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_GE_256-NEXT: uminv b[[REDUCE:[0-9]+]], [[PG]], [[OP]].b
+; VBITS_GE_256-NEXT: fmov w0, s[[REDUCE]]
+; VBITS_GE_256-NEXT: ret
+  %op = load <32 x i8>, <32 x i8>* %a
+  %res = call i8 @llvm.experimental.vector.reduce.umin.v32i8(<32 x i8> %op)
+  ret i8 %res
+}
+
+define i8 @uminv_v64i8(<64 x i8>* %a) #0 {
+; CHECK-LABEL: uminv_v64i8:
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].b, vl64
+; VBITS_GE_512-NEXT: ld1b { [[OP:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: uminv b[[REDUCE:[0-9]+]], [[PG]], [[OP]].b
+; VBITS_GE_512-NEXT: fmov w0, s[[REDUCE]]
+; VBITS_GE_512-NEXT: ret
+  %op = load <64 x i8>, <64 x i8>* %a
+  %res = call i8 @llvm.experimental.vector.reduce.umin.v64i8(<64 x i8> %op)
+  ret i8 %res
+}
+
+define i8 @uminv_v128i8(<128 x i8>* %a) #0 {
+; CHECK-LABEL: uminv_v128i8:
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].b, vl128
+; VBITS_GE_1024-NEXT: ld1b { [[OP:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: uminv b[[REDUCE:[0-9]+]], [[PG]], [[OP]].b
+; VBITS_GE_1024-NEXT: fmov w0, s[[REDUCE]]
+; VBITS_GE_1024-NEXT: ret
+  %op = load <128 x i8>, <128 x i8>* %a
+  %res = call i8 @llvm.experimental.vector.reduce.umin.v128i8(<128 x i8> %op)
+  ret i8 %res
+}
+
+define i8 @uminv_v256i8(<256 x i8>* %a) #0 {
+; CHECK-LABEL: uminv_v256i8:
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].b, vl256
+; VBITS_GE_2048-NEXT: ld1b { [[OP:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: uminv b[[REDUCE:[0-9]+]], [[PG]], [[OP]].b
+; VBITS_GE_2048-NEXT: fmov w0, s[[REDUCE]]
+; VBITS_GE_2048-NEXT: ret
+  %op = load <256 x i8>, <256 x i8>* %a
+  %res = call i8 @llvm.experimental.vector.reduce.umin.v256i8(<256 x i8> %op)
+  ret i8 %res
+}
+
+; Don't use SVE for 64-bit vectors.
+define i16 @uminv_v4i16(<4 x i16> %a) #0 {
+; CHECK-LABEL: uminv_v4i16:
+; CHECK: uminv h0, v0.4h
+; CHECK: ret
+  %res = call i16 @llvm.experimental.vector.reduce.umin.v4i16(<4 x i16> %a)
+  ret i16 %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define i16 @uminv_v8i16(<8 x i16> %a) #0 {
+; CHECK-LABEL: uminv_v8i16:
+; CHECK: uminv h0, v0.8h
+; CHECK: ret
+  %res = call i16 @llvm.experimental.vector.reduce.umin.v8i16(<8 x i16> %a)
+  ret i16 %res
+}
+
+define i16 @uminv_v16i16(<16 x i16>* %a) #0 {
+; CHECK-LABEL: uminv_v16i16:
+; VBITS_GE_256: ptrue [[PG:p[0-9]+]].h, vl16
+; VBITS_GE_256-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_256-NEXT: uminv h[[REDUCE:[0-9]+]], [[PG]], [[OP]].h
+; VBITS_GE_256-NEXT: fmov w0, s[[REDUCE]]
+; VBITS_GE_256-NEXT: ret
+  %op = load <16 x i16>, <16 x i16>* %a
+  %res = call i16 @llvm.experimental.vector.reduce.umin.v16i16(<16 x i16> %op)
+  ret i16 %res
+}
+
+define i16 @uminv_v32i16(<32 x i16>* %a) #0 {
+; CHECK-LABEL: uminv_v32i16:
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl32
+; VBITS_GE_512-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: uminv h[[REDUCE:[0-9]+]], [[PG]], [[OP]].h
+; VBITS_GE_512-NEXT: fmov w0, s[[REDUCE]]
+; VBITS_GE_512-NEXT: ret
+  %op = load <32 x i16>, <32 x i16>* %a
+  %res = call i16 @llvm.experimental.vector.reduce.umin.v32i16(<32 x i16> %op)
+  ret i16 %res
+}
+
+define i16 @uminv_v64i16(<64 x i16>* %a) #0 {
+; CHECK-LABEL: uminv_v64i16:
+; VBITS_GE_1048: ptrue [[PG:p[0-9]+]].h, vl64
+; VBITS_GE_1048-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_1048-NEXT: uminv h[[REDUCE:[0-9]+]], [[PG]], [[OP]].h
+; VBITS_GE_1048-NEXT: fmov w0, s[[REDUCE]]
+; VBITS_GE_1048-NEXT: ret
+  %op = load <64 x i16>, <64 x i16>* %a
+  %res = call i16 @llvm.experimental.vector.reduce.umin.v64i16(<64 x i16> %op)
+  ret i16 %res
+}
+
+define i16 @uminv_v128i16(<128 x i16>* %a) #0 {
+; CHECK-LABEL: uminv_v128i16:
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].h, vl128
+; VBITS_GE_2048-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: uminv h[[REDUCE:[0-9]+]], [[PG]], [[OP]].h
+; VBITS_GE_2048-NEXT: fmov w0, s[[REDUCE]]
+; VBITS_GE_2048-NEXT: ret
+  %op = load <128 x i16>, <128 x i16>* %a
+  %res = call i16 @llvm.experimental.vector.reduce.umin.v128i16(<128 x i16> %op)
+  ret i16 %res
+}
+
+; Don't use SVE for 64-bit vectors.
+define i32 @uminv_v2i32(<2 x i32> %a) #0 {
+; CHECK-LABEL: uminv_v2i32:
+; CHECK: minp v0.2s, v0.2s
+; CHECK: ret
+  %res = call i32 @llvm.experimental.vector.reduce.umin.v2i32(<2 x i32> %a)
+  ret i32 %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define i32 @uminv_v4i32(<4 x i32> %a) #0 {
+; CHECK-LABEL: uminv_v4i32:
+; CHECK: uminv s0, v0.4s
+; CHECK: ret
+  %res = call i32 @llvm.experimental.vector.reduce.umin.v4i32(<4 x i32> %a)
+  ret i32 %res
+}
+
+define i32 @uminv_v8i32(<8 x i32>* %a) #0 {
+; CHECK-LABEL: uminv_v8i32:
+; VBITS_GE_256: ptrue [[PG:p[0-9]+]].s, vl8
+; VBITS_GE_256-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_256-NEXT: uminv [[REDUCE:s[0-9]+]], [[PG]], [[OP]].s
+; VBITS_GE_256-NEXT: fmov w0, [[REDUCE]]
+; VBITS_GE_256-NEXT: ret
+  %op = load <8 x i32>, <8 x i32>* %a
+  %res = call i32 @llvm.experimental.vector.reduce.umin.v8i32(<8 x i32> %op)
+  ret i32 %res
+}
+
+define i32 @uminv_v16i32(<16 x i32>* %a) #0 {
+; CHECK-LABEL: uminv_v16i32:
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
+; VBITS_GE_512-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: uminv [[REDUCE:s[0-9]+]], [[PG]], [[OP]].s
+; VBITS_GE_512-NEXT: fmov w0, [[REDUCE]]
+; VBITS_GE_512-NEXT: ret
+  %op = load <16 x i32>, <16 x i32>* %a
+  %res = call i32 @llvm.experimental.vector.reduce.umin.v16i32(<16 x i32> %op)
+  ret i32 %res
+}
+
+define i32 @uminv_v32i32(<32 x i32>* %a) #0 {
+; CHECK-LABEL: uminv_v32i32:
+; VBITS_GE_1048: ptrue [[PG:p[0-9]+]].s, vl32
+; VBITS_GE_1048-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_1048-NEXT: uminv [[REDUCE:s[0-9]+]], [[PG]], [[OP]].s
+; VBITS_GE_1048-NEXT: fmov w0, [[REDUCE]]
+; VBITS_GE_1048-NEXT: ret
+  %op = load <32 x i32>, <32 x i32>* %a
+  %res = call i32 @llvm.experimental.vector.reduce.umin.v32i32(<32 x i32> %op)
+  ret i32 %res
+}
+
+define i32 @uminv_v64i32(<64 x i32>* %a) #0 {
+; CHECK-LABEL: uminv_v64i32:
+; VBITS_GE_2096: ptrue [[PG:p[0-9]+]].s, vl64
+; VBITS_GE_2096-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_2096-NEXT: uminv [[REDUCE:s[0-9]+]], [[PG]], [[OP]].s
+; VBITS_GE_2086-NEXT: fmov w0, [[REDUCE]]
+; VBITS_GE_2096-NEXT: ret
+  %op = load <64 x i32>, <64 x i32>* %a
+  %res = call i32 @llvm.experimental.vector.reduce.umin.v64i32(<64 x i32> %op)
+  ret i32 %res
+}
+
+; Nothing to do for single element vectors.
+define i64 @uminv_v1i64(<1 x i64> %a) #0 {
+; CHECK-LABEL: uminv_v1i64:
+; CHECK: fmov x0, d0
+; CHECK: ret
+  %res = call i64 @llvm.experimental.vector.reduce.umin.v1i64(<1 x i64> %a)
+  ret i64 %res
+}
+
+; No NEON 64-bit vector UMINV support. Use SVE.
+define i64 @uminv_v2i64(<2 x i64> %a) #0 {
+; CHECK-LABEL: uminv_v2i64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl2
+; CHECK-NEXT: uminv [[REDUCE:d[0-9]+]], [[PG]], z0.d
+; CHECK-NEXT: fmov x0, [[REDUCE]]
+; CHECK-NEXT: ret
+  %res = call i64 @llvm.experimental.vector.reduce.umin.v2i64(<2 x i64> %a)
+  ret i64 %res
+}
+
+define i64 @uminv_v4i64(<4 x i64>* %a) #0 {
+; CHECK-LABEL: uminv_v4i64:
+; VBITS_GE_256: ptrue [[PG:p[0-9]+]].d, vl4
+; VBITS_GE_256-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_256-NEXT: uminv [[REDUCE:d[0-9]+]], [[PG]], [[OP]].d
+; VBITS_GE_256-NEXT: fmov x0, [[REDUCE]]
+; VBITS_GE_256-NEXT: ret
+  %op = load <4 x i64>, <4 x i64>* %a
+  %res = call i64 @llvm.experimental.vector.reduce.umin.v4i64(<4 x i64> %op)
+  ret i64 %res
+}
+
+define i64 @uminv_v8i64(<8 x i64>* %a) #0 {
+; CHECK-LABEL: uminv_v8i64:
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
+; VBITS_GE_512-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: uminv [[REDUCE:d[0-9]+]], [[PG]], [[OP]].d
+; VBITS_GE_512-NEXT: fmov x0, [[REDUCE]]
+; VBITS_GE_512-NEXT: ret
+  %op = load <8 x i64>, <8 x i64>* %a
+  %res = call i64 @llvm.experimental.vector.reduce.umin.v8i64(<8 x i64> %op)
+  ret i64 %res
+}
+
+define i64 @uminv_v16i64(<16 x i64>* %a) #0 {
+; CHECK-LABEL: uminv_v16i64:
+; VBITS_GE_1048: ptrue [[PG:p[0-9]+]].d, vl16
+; VBITS_GE_1048-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_1048-NEXT: uminv [[REDUCE:d[0-9]+]], [[PG]], [[OP]].d
+; VBITS_GE_1048-NEXT: fmov x0, [[REDUCE]]
+; VBITS_GE_1048-NEXT: ret
+  %op = load <16 x i64>, <16 x i64>* %a
+  %res = call i64 @llvm.experimental.vector.reduce.umin.v16i64(<16 x i64> %op)
+  ret i64 %res
+}
+
+define i64 @uminv_v32i64(<32 x i64>* %a) #0 {
+; CHECK-LABEL: uminv_v32i64:
+; VBITS_GE_2096: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2096-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_2096-NEXT: uminv [[REDUCE:d[0-9]+]], [[PG]], [[OP]].d
+; VBITS_GE_2096-NEXT: fmov x0, [[REDUCE]]
+; VBITS_GE_2096-NEXT: ret
+  %op = load <32 x i64>, <32 x i64>* %a
+  %res = call i64 @llvm.experimental.vector.reduce.umin.v32i64(<32 x i64> %op)
+  ret i64 %res
+}
+
 attributes #0 = { "target-features"="+sve" }
 
 declare i8 @llvm.experimental.vector.reduce.add.v8i8(<8 x i8>)
@@ -913,3 +1453,59 @@ declare i64 @llvm.experimental.vector.reduce.smin.v4i64(<4 x i64>)
 declare i64 @llvm.experimental.vector.reduce.smin.v8i64(<8 x i64>)
 declare i64 @llvm.experimental.vector.reduce.smin.v16i64(<16 x i64>)
 declare i64 @llvm.experimental.vector.reduce.smin.v32i64(<32 x i64>)
+
+declare i8 @llvm.experimental.vector.reduce.umax.v8i8(<8 x i8>)
+declare i8 @llvm.experimental.vector.reduce.umax.v16i8(<16 x i8>)
+declare i8 @llvm.experimental.vector.reduce.umax.v32i8(<32 x i8>)
+declare i8 @llvm.experimental.vector.reduce.umax.v64i8(<64 x i8>)
+declare i8 @llvm.experimental.vector.reduce.umax.v128i8(<128 x i8>)
+declare i8 @llvm.experimental.vector.reduce.umax.v256i8(<256 x i8>)
+
+declare i16 @llvm.experimental.vector.reduce.umax.v4i16(<4 x i16>)
+declare i16 @llvm.experimental.vector.reduce.umax.v8i16(<8 x i16>)
+declare i16 @llvm.experimental.vector.reduce.umax.v16i16(<16 x i16>)
+declare i16 @llvm.experimental.vector.reduce.umax.v32i16(<32 x i16>)
+declare i16 @llvm.experimental.vector.reduce.umax.v64i16(<64 x i16>)
+declare i16 @llvm.experimental.vector.reduce.umax.v128i16(<128 x i16>)
+
+declare i32 @llvm.experimental.vector.reduce.umax.v2i32(<2 x i32>)
+declare i32 @llvm.experimental.vector.reduce.umax.v4i32(<4 x i32>)
+declare i32 @llvm.experimental.vector.reduce.umax.v8i32(<8 x i32>)
+declare i32 @llvm.experimental.vector.reduce.umax.v16i32(<16 x i32>)
+declare i32 @llvm.experimental.vector.reduce.umax.v32i32(<32 x i32>)
+declare i32 @llvm.experimental.vector.reduce.umax.v64i32(<64 x i32>)
+
+declare i64 @llvm.experimental.vector.reduce.umax.v1i64(<1 x i64>)
+declare i64 @llvm.experimental.vector.reduce.umax.v2i64(<2 x i64>)
+declare i64 @llvm.experimental.vector.reduce.umax.v4i64(<4 x i64>)
+declare i64 @llvm.experimental.vector.reduce.umax.v8i64(<8 x i64>)
+declare i64 @llvm.experimental.vector.reduce.umax.v16i64(<16 x i64>)
+declare i64 @llvm.experimental.vector.reduce.umax.v32i64(<32 x i64>)
+
+declare i8 @llvm.experimental.vector.reduce.umin.v8i8(<8 x i8>)
+declare i8 @llvm.experimental.vector.reduce.umin.v16i8(<16 x i8>)
+declare i8 @llvm.experimental.vector.reduce.umin.v32i8(<32 x i8>)
+declare i8 @llvm.experimental.vector.reduce.umin.v64i8(<64 x i8>)
+declare i8 @llvm.experimental.vector.reduce.umin.v128i8(<128 x i8>)
+declare i8 @llvm.experimental.vector.reduce.umin.v256i8(<256 x i8>)
+
+declare i16 @llvm.experimental.vector.reduce.umin.v4i16(<4 x i16>)
+declare i16 @llvm.experimental.vector.reduce.umin.v8i16(<8 x i16>)
+declare i16 @llvm.experimental.vector.reduce.umin.v16i16(<16 x i16>)
+declare i16 @llvm.experimental.vector.reduce.umin.v32i16(<32 x i16>)
+declare i16 @llvm.experimental.vector.reduce.umin.v64i16(<64 x i16>)
+declare i16 @llvm.experimental.vector.reduce.umin.v128i16(<128 x i16>)
+
+declare i32 @llvm.experimental.vector.reduce.umin.v2i32(<2 x i32>)
+declare i32 @llvm.experimental.vector.reduce.umin.v4i32(<4 x i32>)
+declare i32 @llvm.experimental.vector.reduce.umin.v8i32(<8 x i32>)
+declare i32 @llvm.experimental.vector.reduce.umin.v16i32(<16 x i32>)
+declare i32 @llvm.experimental.vector.reduce.umin.v32i32(<32 x i32>)
+declare i32 @llvm.experimental.vector.reduce.umin.v64i32(<64 x i32>)
+
+declare i64 @llvm.experimental.vector.reduce.umin.v1i64(<1 x i64>)
+declare i64 @llvm.experimental.vector.reduce.umin.v2i64(<2 x i64>)
+declare i64 @llvm.experimental.vector.reduce.umin.v4i64(<4 x i64>)
+declare i64 @llvm.experimental.vector.reduce.umin.v8i64(<8 x i64>)
+declare i64 @llvm.experimental.vector.reduce.umin.v16i64(<16 x i64>)
+declare i64 @llvm.experimental.vector.reduce.umin.v32i64(<32 x i64>)
