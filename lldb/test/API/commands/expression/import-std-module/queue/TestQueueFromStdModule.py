@@ -6,6 +6,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class TestQueue(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -16,28 +17,69 @@ class TestQueue(TestBase):
         self.build()
 
         lldbutil.run_to_source_breakpoint(self,
-            "// Set break point at this line.", lldb.SBFileSpec("main.cpp"))
+                                          "// Set break point at this line.",
+                                          lldb.SBFileSpec("main.cpp"))
 
         self.runCmd("settings set target.import-std-module true")
 
+        queue_type = "std::queue<C, std::deque<C, std::allocator<C> > >"
+        size_type = queue_type + "::size_type"
+        value_type = "std::__deque_base<C, std::allocator<C> >::value_type"
+
         # Test std::queue functionality with a std::deque.
+        self.expect_expr(
+            "q_deque",
+            result_type=queue_type,
+            result_children=[ValueCheck(children=[ValueCheck(value="1")])])
         self.expect("expr q_deque.pop()")
         self.expect("expr q_deque.push({4})")
-        self.expect("expr (size_t)q_deque.size()", substrs=['(size_t) $0 = 1'])
-        self.expect("expr (int)q_deque.front().i", substrs=['(int) $1 = 4'])
-        self.expect("expr (int)q_deque.back().i", substrs=['(int) $2 = 4'])
-        self.expect("expr q_deque.empty()", substrs=['(bool) $3 = false'])
+        self.expect_expr("q_deque.size()",
+                         result_type=size_type,
+                         result_value="1")
+        self.expect_expr("q_deque.front()", result_type=value_type)
+        self.expect_expr("q_deque.back()", result_type=value_type)
+        self.expect_expr("q_deque.front().i",
+                         result_type="int",
+                         result_value="4")
+        self.expect_expr("q_deque.back().i",
+                         result_type="int",
+                         result_value="4")
+        self.expect_expr("q_deque.empty()",
+                         result_type="bool",
+                         result_value="false")
         self.expect("expr q_deque.pop()")
         self.expect("expr q_deque.emplace(5)")
-        self.expect("expr (int)q_deque.front().i", substrs=['(int) $4 = 5'])
+        self.expect_expr("q_deque.front().i",
+                         result_type="int",
+                         result_value="5")
 
         # Test std::queue functionality with a std::list.
+        queue_type = "std::queue<C, std::list<C, std::allocator<C> > >"
+        size_type = queue_type + "::size_type"
+        value_type = "std::list<C, std::allocator<C> >::value_type"
+        self.expect_expr(
+            "q_list",
+            result_type=queue_type,
+            result_children=[ValueCheck(children=[ValueCheck(value="1")])])
+
         self.expect("expr q_list.pop()")
         self.expect("expr q_list.push({4})")
-        self.expect("expr (size_t)q_list.size()", substrs=['(size_t) $5 = 1'])
-        self.expect("expr (int)q_list.front().i", substrs=['(int) $6 = 4'])
-        self.expect("expr (int)q_list.back().i", substrs=['(int) $7 = 4'])
-        self.expect("expr q_list.empty()", substrs=['(bool) $8 = false'])
+        self.expect_expr("q_list.size()",
+                         result_type=size_type,
+                         result_value="1")
+        self.expect_expr("q_list.front()", result_type=value_type)
+        self.expect_expr("q_list.back()", result_type=value_type)
+        self.expect_expr("q_list.front().i",
+                         result_type="int",
+                         result_value="4")
+        self.expect_expr("q_list.back().i",
+                         result_type="int",
+                         result_value="4")
+        self.expect_expr("q_list.empty()",
+                         result_type="bool",
+                         result_value="false")
         self.expect("expr q_list.pop()")
         self.expect("expr q_list.emplace(5)")
-        self.expect("expr (int)q_list.front().i", substrs=['(int) $9 = 5'])
+        self.expect_expr("q_list.front().i",
+                         result_type="int",
+                         result_value="5")

@@ -6,6 +6,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class TestDbgInfoContentForwardList(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -16,12 +17,22 @@ class TestDbgInfoContentForwardList(TestBase):
         self.build()
 
         lldbutil.run_to_source_breakpoint(self,
-            "// Set break point at this line.", lldb.SBFileSpec("main.cpp"))
+                                          "// Set break point at this line.",
+                                          lldb.SBFileSpec("main.cpp"))
 
         self.runCmd("settings set target.import-std-module true")
 
-        self.expect("expr (size_t)std::distance(a.begin(), a.end())", substrs=['(size_t) $0 = 3'])
-        self.expect("expr (int)a.front().a", substrs=['(int) $1 = 3'])
+        list_type = "std::forward_list<Foo, std::allocator<Foo> >"
+        value_type = list_type + "::value_type"
 
-        self.expect("expr (int)(a.begin()->a)", substrs=['(int) $2 = 3'])
+        # FIXME: This has three elements in it but the formatter seems to
+        # calculate the wrong size and contents.
+        self.expect_expr("a", result_type=list_type, result_summary="size=1")
+        self.expect_expr("std::distance(a.begin(), a.end())", result_value="3")
+        self.expect_expr("a.front().a", result_type="int", result_value="3")
+        self.expect_expr("a.begin()->a", result_type="int", result_value="3")
 
+        # FIXME: The value here isn't actually empty.
+        self.expect_expr("a.front()",
+                         result_type=value_type,
+                         result_children=[ValueCheck()])
