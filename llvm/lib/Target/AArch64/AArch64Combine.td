@@ -89,6 +89,6 @@ def AArch64PostLegalizerCombinerHelper
                        [copy_prop, erase_undef_store, combines_for_extload,
                         sext_trunc_sextload, shuffle_vector_pseudos,
                         hoist_logic_op_with_same_opcode_hands,
-                        and_trivial_mask, vashr_vlshr_imm]> {
+                        and_trivial_mask, vashr_vlshr_imm, xor_of_and_with_same_reg]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }
