@@ -171,8 +171,8 @@ public:
   bool SubsumesPredicate(ArrayRef<MachineOperand> Pred1,
                          ArrayRef<MachineOperand> Pred2) const override;
 
-  bool DefinesPredicate(MachineInstr &MI,
-                        std::vector<MachineOperand> &Pred) const override;
+  bool ClobbersPredicate(MachineInstr &MI, std::vector<MachineOperand> &Pred,
+                         bool SkipDead) const override;
 
   bool isPredicable(const MachineInstr &MI) const override;
 
