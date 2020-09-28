@@ -11,7 +11,7 @@ define i32 @eq_undereferenceable(i32* %p) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32* [[P:%.*]], getelementptr inbounds (i32, i32* getelementptr inbounds ([1 x i32], [1 x i32]* @x, i64 0, i64 0), i64 1)
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 2, i32* getelementptr inbounds (i32, i32* getelementptr inbounds ([1 x i32], [1 x i32]* @x, i64 0, i64 0), i64 1), align 4
+; CHECK-NEXT:    store i32 2, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* getelementptr inbounds ([1 x i32], [1 x i32]* @y, i64 0, i64 0), align 4
@@ -65,7 +65,7 @@ define i1 @eq_undereferenceable_cmp_simp(i32* %p) {
 ; CHECK-NEXT:    [[CMP_0:%.*]] = icmp eq i32* [[P:%.*]], getelementptr inbounds (i32, i32* getelementptr inbounds ([1 x i32], [1 x i32]* @x, i64 0, i64 0), i64 1)
 ; CHECK-NEXT:    br i1 [[CMP_0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 2, i32* getelementptr inbounds (i32, i32* getelementptr inbounds ([1 x i32], [1 x i32]* @x, i64 0, i64 0), i64 1), align 4
+; CHECK-NEXT:    store i32 2, i32* [[P]], align 4
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CMP_2:%.*]] = icmp eq i32* [[P]], getelementptr inbounds (i32, i32* getelementptr inbounds ([1 x i32], [1 x i32]* @x, i64 0, i64 0), i64 1)
@@ -83,4 +83,23 @@ if.then:                                          ; preds = %entry
 if.end:                                           ; preds = %if.then, %entry
   %cmp.2 = icmp eq i32* %p, getelementptr inbounds (i32, i32* getelementptr inbounds ([1 x i32], [1 x i32]* @x, i64 0, i64 0), i64 1)
   ret i1 %cmp.2
+}
+
+
+; Test cases with function pointers. Currently any replacements are allowed
+; for them.
+@FnGlobal1 = internal global void (i8*)* undef, align 8
+
+define void (i8*)* @test_global_undef_fn_ptr() {
+  %lv = load void (i8*)*, void (i8*)** @FnGlobal1, align 8
+  ret void (i8*)* %lv
+}
+
+declare void @foo(i8*)
+
+@FnGlobal2 = internal global void (i8*)* @foo, align 8
+
+define void (i8*)* @test_global_undef_fn_ptr2() {
+  %lv = load void (i8*)*, void (i8*)** @FnGlobal2, align 8
+  ret void (i8*)* %lv
 }

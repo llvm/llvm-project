@@ -510,6 +510,10 @@ bool llvm::canReplacePointersIfEqual(Value *A, Value *B, const DataLayout &DL,
   assert(Ty == B->getType() && Ty->isPointerTy() &&
          "values must have matching pointer types");
 
+  // Function pointers are not directly dereferenced using load/store
+  // instructions. Allow any replacements for now.
+  if (A->getType()->getPointerElementType()->isFunctionTy())
+    return true;
   // NOTE: The checks in the function are incomplete and currently miss illegal
   // cases! The current implementation is a starting point and the
   // implementation should be made stricter over time.
