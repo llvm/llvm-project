@@ -768,6 +768,30 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBePoison_exploitBranchCond) {
   }
 }
 
+TEST_F(ValueTrackingTest, isGuaranteedNotToBePoison_phi) {
+  parseAssembly("declare i32 @any_i32(i32)"
+                "define void @test() {\n"
+                "ENTRY:\n"
+                "  br label %LOOP\n"
+                "LOOP:\n"
+                "  %A = phi i32 [0, %ENTRY], [%A.next, %NEXT]\n"
+                "  %A.next = call i32 @any_i32(i32 %A)\n"
+                "  %cond = icmp eq i32 %A.next, 0\n"
+                "  br i1 %cond, label %NEXT, label %EXIT\n"
+                "NEXT:\n"
+                "  br label %LOOP\n"
+                "EXIT:\n"
+                "  ret void\n"
+                "}\n");
+  DominatorTree DT(*F);
+  for (auto &BB : *F) {
+    if (BB.getName() == "LOOP") {
+      EXPECT_EQ(isGuaranteedNotToBePoison(A, A, &DT), true)
+          << "isGuaranteedNotToBePoison does not hold";
+    }
+  }
+}
+
 TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison) {
   parseAssembly("declare void @f(i32 noundef)"
                 "define void @test(i32 %x) {\n"
