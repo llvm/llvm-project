@@ -67,7 +67,7 @@ using namespace llvm;
 
 cl::opt<TailPredication::Mode> EnableTailPredication(
    "tail-predication", cl::desc("MVE tail-predication pass options"),
-   cl::init(TailPredication::Disabled),
+   cl::init(TailPredication::Enabled),
    cl::values(clEnumValN(TailPredication::Disabled, "disabled",
                          "Don't tail-predicate loops"),
               clEnumValN(TailPredication::EnabledNoReductions,
