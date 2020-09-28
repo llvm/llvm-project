@@ -577,13 +577,12 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare x86_fp80 @llvm.trunc.f80(x86_fp80) [[READNONE_INTRINSIC]]
 };
 
-
 // NO__ERRNO: attributes [[READNONE]] = { {{.*}}readnone{{.*}} }
 // NO__ERRNO: attributes [[READNONE_INTRINSIC]] = { {{.*}}readnone{{.*}} }
-// NO__ERRNO: attributes [[NOT_READNONE]] = { nounwind "correctly{{.*}} }
+// NO__ERRNO: attributes [[NOT_READNONE]] = { nounwind {{.*}} }
 // NO__ERRNO: attributes [[PURE]] = { {{.*}}readonly{{.*}} }
 
-// HAS_ERRNO: attributes [[NOT_READNONE]] = { nounwind "correctly{{.*}} }
+// HAS_ERRNO: attributes [[NOT_READNONE]] = { nounwind {{.*}} }
 // HAS_ERRNO: attributes [[READNONE_INTRINSIC]] = { {{.*}}readnone{{.*}} }
 // HAS_ERRNO: attributes [[PURE]] = { {{.*}}readonly{{.*}} }
 // HAS_ERRNO: attributes [[READNONE]] = { {{.*}}readnone{{.*}} }
