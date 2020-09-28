@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "support/MemoryTree.h"
+#include "support/TestTracer.h"
+#include "support/Trace.h"
 #include "llvm/Support/Allocator.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -16,6 +18,7 @@ namespace clang {
 namespace clangd {
 namespace {
 using testing::Contains;
+using testing::ElementsAre;
 using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 
@@ -72,6 +75,46 @@ TEST(MemoryTree, DetailedNodesWithDetails) {
     EXPECT_THAT(MT.children(), Contains(WithNameAndSize("second_detail", 1)));
     EXPECT_THAT(Detail.children(), Contains(WithNameAndSize("leaf", 1)));
   }
+}
+
+TEST(MemoryTree, Record) {
+  trace::TestTracer Tracer;
+  static constexpr llvm::StringLiteral MetricName = "memory_usage";
+  static constexpr trace::Metric OutMetric(MetricName, trace::Metric::Value,
+                                           "component_name");
+  auto AddNodes = [](MemoryTree Root) {
+    Root.child("leaf").addUsage(1);
+
+    {
+      auto &Detail = Root.detail("detail");
+      Detail.addUsage(1);
+      Detail.child("leaf").addUsage(1);
+      auto &Child = Detail.child("child");
+      Child.addUsage(1);
+      Child.child("leaf").addUsage(1);
+    }
+
+    {
+      auto &Child = Root.child("child");
+      Child.addUsage(1);
+      Child.child("leaf").addUsage(1);
+    }
+    return Root;
+  };
+
+  llvm::BumpPtrAllocator Alloc;
+  record(AddNodes(MemoryTree(&Alloc)), "root", OutMetric);
+  EXPECT_THAT(Tracer.takeMetric(MetricName, "root"), ElementsAre(7));
+  EXPECT_THAT(Tracer.takeMetric(MetricName, "root.leaf"), ElementsAre(1));
+  EXPECT_THAT(Tracer.takeMetric(MetricName, "root.detail"), ElementsAre(4));
+  EXPECT_THAT(Tracer.takeMetric(MetricName, "root.detail.leaf"),
+              ElementsAre(1));
+  EXPECT_THAT(Tracer.takeMetric(MetricName, "root.detail.child"),
+              ElementsAre(2));
+  EXPECT_THAT(Tracer.takeMetric(MetricName, "root.detail.child.leaf"),
+              ElementsAre(1));
+  EXPECT_THAT(Tracer.takeMetric(MetricName, "root.child"), ElementsAre(2));
+  EXPECT_THAT(Tracer.takeMetric(MetricName, "root.child.leaf"), ElementsAre(1));
 }
 } // namespace
 } // namespace clangd
