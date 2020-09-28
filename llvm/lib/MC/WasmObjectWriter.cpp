@@ -25,6 +25,7 @@
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCWasmObjectWriter.h"
+#include "llvm/Object/WasmTraits.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/EndianStream.h"
@@ -54,50 +55,6 @@ struct SectionBookkeeping {
   // Where the contents of the section starts.
   uint64_t ContentsOffset;
   uint32_t Index;
-};
-
-// The signature of a wasm function or event, in a struct capable of being used
-// as a DenseMap key.
-// TODO: Consider using wasm::WasmSignature directly instead.
-struct WasmSignature {
-  // Support empty and tombstone instances, needed by DenseMap.
-  enum { Plain, Empty, Tombstone } State = Plain;
-
-  // The return types of the function.
-  SmallVector<wasm::ValType, 1> Returns;
-
-  // The parameter types of the function.
-  SmallVector<wasm::ValType, 4> Params;
-
-  bool operator==(const WasmSignature &Other) const {
-    return State == Other.State && Returns == Other.Returns &&
-           Params == Other.Params;
-  }
-};
-
-// Traits for using WasmSignature in a DenseMap.
-struct WasmSignatureDenseMapInfo {
-  static WasmSignature getEmptyKey() {
-    WasmSignature Sig;
-    Sig.State = WasmSignature::Empty;
-    return Sig;
-  }
-  static WasmSignature getTombstoneKey() {
-    WasmSignature Sig;
-    Sig.State = WasmSignature::Tombstone;
-    return Sig;
-  }
-  static unsigned getHashValue(const WasmSignature &Sig) {
-    uintptr_t Value = Sig.State;
-    for (wasm::ValType Ret : Sig.Returns)
-      Value += DenseMapInfo<uint32_t>::getHashValue(uint32_t(Ret));
-    for (wasm::ValType Param : Sig.Params)
-      Value += DenseMapInfo<uint32_t>::getHashValue(uint32_t(Param));
-    return Value;
-  }
-  static bool isEqual(const WasmSignature &LHS, const WasmSignature &RHS) {
-    return LHS == RHS;
-  }
 };
 
 // A wasm data segment.  A wasm binary contains only a single data section
@@ -256,8 +213,8 @@ class WasmObjectWriter : public MCObjectWriter {
   // Map from section to defining function symbol.
   DenseMap<const MCSection *, const MCSymbol *> SectionFunctions;
 
-  DenseMap<WasmSignature, uint32_t, WasmSignatureDenseMapInfo> SignatureIndices;
-  SmallVector<WasmSignature, 4> Signatures;
+  DenseMap<wasm::WasmSignature, uint32_t> SignatureIndices;
+  SmallVector<wasm::WasmSignature, 4> Signatures;
   SmallVector<WasmDataSegment, 4> DataSegments;
   unsigned NumFunctionImports = 0;
   unsigned NumGlobalImports = 0;
@@ -347,7 +304,7 @@ private:
 
   void writeValueType(wasm::ValType Ty) { W->OS << static_cast<char>(Ty); }
 
-  void writeTypeSection(ArrayRef<WasmSignature> Signatures);
+  void writeTypeSection(ArrayRef<wasm::WasmSignature> Signatures);
   void writeImportSection(ArrayRef<wasm::WasmImport> Imports, uint64_t DataSize,
                           uint32_t NumElements);
   void writeFunctionSection(ArrayRef<WasmFunction> Functions);
@@ -734,7 +691,8 @@ void WasmObjectWriter::applyRelocations(
   }
 }
 
-void WasmObjectWriter::writeTypeSection(ArrayRef<WasmSignature> Signatures) {
+void WasmObjectWriter::writeTypeSection(
+    ArrayRef<wasm::WasmSignature> Signatures) {
   if (Signatures.empty())
     return;
 
@@ -743,7 +701,7 @@ void WasmObjectWriter::writeTypeSection(ArrayRef<WasmSignature> Signatures) {
 
   encodeULEB128(Signatures.size(), W->OS);
 
-  for (const WasmSignature &Sig : Signatures) {
+  for (const wasm::WasmSignature &Sig : Signatures) {
     W->OS << char(wasm::WASM_TYPE_FUNC);
     encodeULEB128(Sig.Params.size(), W->OS);
     for (wasm::ValType Ty : Sig.Params)
@@ -1145,7 +1103,7 @@ uint32_t WasmObjectWriter::getEventType(const MCSymbolWasm &Symbol) {
 void WasmObjectWriter::registerFunctionType(const MCSymbolWasm &Symbol) {
   assert(Symbol.isFunction());
 
-  WasmSignature S;
+  wasm::WasmSignature S;
 
   if (auto *Sig = Symbol.getSignature()) {
     S.Returns = Sig->Returns;
@@ -1167,7 +1125,7 @@ void WasmObjectWriter::registerEventType(const MCSymbolWasm &Symbol) {
 
   // TODO Currently we don't generate imported exceptions, but if we do, we
   // should have a way of infering types of imported exceptions.
-  WasmSignature S;
+  wasm::WasmSignature S;
   if (auto *Sig = Symbol.getSignature()) {
     S.Returns = Sig->Returns;
     S.Params = Sig->Params;
