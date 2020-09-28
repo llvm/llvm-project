@@ -227,6 +227,9 @@ let Command = "breakpoint delete" in {
   def breakpoint_delete_dummy_breakpoints : Option<"dummy-breakpoints", "D">,
     Group<1>, Desc<"Delete Dummy breakpoints - i.e. breakpoints set before a "
     "file is provided, which prime new targets.">;
+  def breakpoint_delete_disabled : Option<"disabled", "d">, Group<1>,
+    Desc<"Delete all breakpoints which are currently disabled.  When using the disabled option "
+    "any breakpoints listed on the command line are EXCLUDED from deletion.">;
 }
 
 let Command = "breakpoint name" in {
