@@ -861,14 +861,15 @@ define amdgpu_kernel void @dynamic_insertelement_v2i16(<2 x i16> addrspace(1)* %
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; SI-NEXT:    s_load_dword s6, s[4:5], 0x2
 ; SI-NEXT:    s_load_dword s4, s[4:5], 0x3
-; SI-NEXT:    v_mov_b32_e32 v0, 0x50005
 ; SI-NEXT:    s_mov_b32 s3, 0x100f000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v1, s6
 ; SI-NEXT:    s_lshl_b32 s4, s4, 4
 ; SI-NEXT:    s_lshl_b32 s4, 0xffff, s4
-; SI-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; SI-NEXT:    s_andn2_b32 s5, s6, s4
+; SI-NEXT:    s_and_b32 s4, s4, 0x50005
+; SI-NEXT:    s_or_b32 s4, s4, s5
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -877,14 +878,15 @@ define amdgpu_kernel void @dynamic_insertelement_v2i16(<2 x i16> addrspace(1)* %
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; VI-NEXT:    s_load_dword s6, s[4:5], 0x8
 ; VI-NEXT:    s_load_dword s4, s[4:5], 0xc
-; VI-NEXT:    v_mov_b32_e32 v0, 0x50005
 ; VI-NEXT:    s_mov_b32 s3, 0x1100f000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v1, s6
 ; VI-NEXT:    s_lshl_b32 s4, s4, 4
 ; VI-NEXT:    s_lshl_b32 s4, 0xffff, s4
-; VI-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; VI-NEXT:    s_andn2_b32 s5, s6, s4
+; VI-NEXT:    s_and_b32 s4, s4, 0x50005
+; VI-NEXT:    s_or_b32 s4, s4, s5
+; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <2 x i16> %a, i16 5, i32 %b
@@ -925,18 +927,18 @@ define amdgpu_kernel void @dynamic_insertelement_v3i16(<3 x i16> addrspace(1)* %
 ; VI-NEXT:    s_mov_b32 s3, 0x1100f000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v1, s7
 ; VI-NEXT:    s_lshl_b32 s8, s4, 4
 ; VI-NEXT:    s_mov_b32 s4, 0xffff
 ; VI-NEXT:    s_lshl_b64 s[4:5], s[4:5], s8
 ; VI-NEXT:    s_mov_b32 s8, 0x50005
-; VI-NEXT:    v_mov_b32_e32 v0, s8
-; VI-NEXT:    v_bfi_b32 v0, s5, v0, v1
-; VI-NEXT:    v_mov_b32_e32 v1, s8
-; VI-NEXT:    v_mov_b32_e32 v2, s6
-; VI-NEXT:    v_bfi_b32 v1, s4, v1, v2
+; VI-NEXT:    s_mov_b32 s9, s8
+; VI-NEXT:    s_andn2_b64 s[6:7], s[6:7], s[4:5]
+; VI-NEXT:    s_and_b64 s[4:5], s[4:5], s[8:9]
+; VI-NEXT:    s_or_b64 s[4:5], s[4:5], s[6:7]
+; VI-NEXT:    v_mov_b32_e32 v0, s5
 ; VI-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:4
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], 0
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <3 x i16> %a, i16 5, i32 %b
   store <3 x i16> %vecins, <3 x i16> addrspace(1)* %out, align 8
@@ -949,14 +951,15 @@ define amdgpu_kernel void @dynamic_insertelement_v2i8(<2 x i8> addrspace(1)* %ou
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; SI-NEXT:    s_load_dword s6, s[4:5], 0xa
 ; SI-NEXT:    s_load_dword s4, s[4:5], 0x13
-; SI-NEXT:    v_mov_b32_e32 v0, 0x505
 ; SI-NEXT:    s_mov_b32 s3, 0x100f000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v1, s6
 ; SI-NEXT:    s_lshl_b32 s4, s4, 3
 ; SI-NEXT:    s_lshl_b32 s4, -1, s4
-; SI-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; SI-NEXT:    s_andn2_b32 s5, s6, s4
+; SI-NEXT:    s_and_b32 s4, s4, 0x505
+; SI-NEXT:    s_or_b32 s4, s4, s5
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -989,17 +992,19 @@ define amdgpu_kernel void @dynamic_insertelement_v3i8(<3 x i8> addrspace(1)* %ou
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; SI-NEXT:    s_load_dword s6, s[4:5], 0xa
 ; SI-NEXT:    s_load_dword s4, s[4:5], 0x13
-; SI-NEXT:    v_mov_b32_e32 v0, 0x5050505
 ; SI-NEXT:    s_mov_b32 s3, 0x100f000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v1, s6
 ; SI-NEXT:    s_lshl_b32 s4, s4, 3
 ; SI-NEXT:    s_lshl_b32 s4, 0xffff, s4
-; SI-NEXT:    v_bfi_b32 v0, s4, v0, v1
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; SI-NEXT:    s_andn2_b32 s5, s6, s4
+; SI-NEXT:    s_and_b32 s4, s4, 0x5050505
+; SI-NEXT:    s_or_b32 s4, s4, s5
+; SI-NEXT:    v_mov_b32_e32 v0, s4
+; SI-NEXT:    s_lshr_b32 s5, s4, 16
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
-; SI-NEXT:    buffer_store_byte v1, off, s[0:3], 0 offset:2
+; SI-NEXT:    v_mov_b32_e32 v0, s5
+; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:2
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: dynamic_insertelement_v3i8:
@@ -1007,17 +1012,19 @@ define amdgpu_kernel void @dynamic_insertelement_v3i8(<3 x i8> addrspace(1)* %ou
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; VI-NEXT:    s_load_dword s6, s[4:5], 0x28
 ; VI-NEXT:    s_load_dword s4, s[4:5], 0x4c
-; VI-NEXT:    v_mov_b32_e32 v0, 0x5050505
 ; VI-NEXT:    s_mov_b32 s3, 0x1100f000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v1, s6
 ; VI-NEXT:    s_lshl_b32 s4, s4, 3
 ; VI-NEXT:    s_lshl_b32 s4, 0xffff, s4
-; VI-NEXT:    v_bfi_b32 v0, s4, v0, v1
-; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; VI-NEXT:    s_andn2_b32 s5, s6, s4
+; VI-NEXT:    s_and_b32 s4, s4, 0x5050505
+; VI-NEXT:    s_or_b32 s4, s4, s5
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    s_lshr_b32 s5, s4, 16
 ; VI-NEXT:    buffer_store_short v0, off, s[0:3], 0
-; VI-NEXT:    buffer_store_byte v1, off, s[0:3], 0 offset:2
+; VI-NEXT:    v_mov_b32_e32 v0, s5
+; VI-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:2
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <3 x i8> %a, i8 5, i32 %b
   store <3 x i8> %vecins, <3 x i8> addrspace(1)* %out, align 4
@@ -1030,14 +1037,15 @@ define amdgpu_kernel void @dynamic_insertelement_v4i8(<4 x i8> addrspace(1)* %ou
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; SI-NEXT:    s_load_dword s6, s[4:5], 0xa
 ; SI-NEXT:    s_load_dword s4, s[4:5], 0x13
-; SI-NEXT:    v_mov_b32_e32 v0, 0x5050505
 ; SI-NEXT:    s_mov_b32 s3, 0x100f000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v1, s6
 ; SI-NEXT:    s_lshl_b32 s4, s4, 3
 ; SI-NEXT:    s_lshl_b32 s4, 0xffff, s4
-; SI-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; SI-NEXT:    s_andn2_b32 s5, s6, s4
+; SI-NEXT:    s_and_b32 s4, s4, 0x5050505
+; SI-NEXT:    s_or_b32 s4, s4, s5
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -1046,14 +1054,15 @@ define amdgpu_kernel void @dynamic_insertelement_v4i8(<4 x i8> addrspace(1)* %ou
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; VI-NEXT:    s_load_dword s6, s[4:5], 0x28
 ; VI-NEXT:    s_load_dword s4, s[4:5], 0x4c
-; VI-NEXT:    v_mov_b32_e32 v0, 0x5050505
 ; VI-NEXT:    s_mov_b32 s3, 0x1100f000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v1, s6
 ; VI-NEXT:    s_lshl_b32 s4, s4, 3
 ; VI-NEXT:    s_lshl_b32 s4, 0xffff, s4
-; VI-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; VI-NEXT:    s_andn2_b32 s5, s6, s4
+; VI-NEXT:    s_and_b32 s4, s4, 0x5050505
+; VI-NEXT:    s_or_b32 s4, s4, s5
+; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <4 x i8> %a, i8 5, i32 %b

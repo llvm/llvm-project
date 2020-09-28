@@ -27,7 +27,7 @@ FileHeader:
   Class:   ELFCLASS64
   Data:    ELFDATA2MSB
   Type:    ET_REL
-  Machine: EM_MIPS
+  Machine: [[MACHINE=EM_MIPS]]
 Sections:
   - Name:         .MIPS.abiflags
     Type:         SHT_MIPS_ABIFLAGS
@@ -43,3 +43,10 @@ Sections:
     CPR2Size:     REG_NONE
     Flags1:       [ ODDSPREG ]
     Flags2:       0x0
+
+## Check we don't recognize the SHT_MIPS_ABIFLAGS section for non-MIPS targets.
+
+# RUN: not yaml2obj %s -DMACHINE=EM_NONE 2>&1 | FileCheck %s --check-prefix=ERR
+
+# ERR:      error: invalid hex32 number
+# ERR-NEXT: Type: SHT_MIPS_ABIFLAGS

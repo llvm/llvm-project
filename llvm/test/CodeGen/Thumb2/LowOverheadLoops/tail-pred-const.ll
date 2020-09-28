@@ -375,7 +375,7 @@ vector.body:
   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
 
-; The induction variable %D is not an IV:
+; The induction variable %N is not an IV:
   %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %N, i32 32003)
 
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv10, i32 4, <4 x i1> %1, <4 x i32> undef)

@@ -6902,7 +6902,6 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     if (!LVI || !CtxI)
       return getWorstState(getBitWidth());
     return LVI->getConstantRange(&getAssociatedValue(),
-                                 const_cast<BasicBlock *>(CtxI->getParent()),
                                  const_cast<Instruction *>(CtxI));
   }
 

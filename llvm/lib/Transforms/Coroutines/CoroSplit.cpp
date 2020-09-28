@@ -1416,14 +1416,15 @@ namespace {
 }
 
 static coro::Shape splitCoroutine(Function &F,
-                                  SmallVectorImpl<Function *> &Clones) {
+                                  SmallVectorImpl<Function *> &Clones,
+                                  bool ReuseFrameSlot) {
   PrettyStackTraceFunction prettyStackTrace(F);
 
   // The suspend-crossing algorithm in buildCoroutineFrame get tripped
   // up by uses in unreachable blocks, so remove them as a first pass.
   removeUnreachableBlocks(F);
 
-  coro::Shape Shape(F);
+  coro::Shape Shape(F, ReuseFrameSlot);
   if (!Shape.CoroBegin)
     return Shape;
 
@@ -1740,7 +1741,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     F.removeFnAttr(CORO_PRESPLIT_ATTR);
 
     SmallVector<Function *, 4> Clones;
-    const coro::Shape Shape = splitCoroutine(F, Clones);
+    const coro::Shape Shape = splitCoroutine(F, Clones, ReuseFrameSlot);
     updateCallGraphAfterCoroutineSplit(*N, Shape, Clones, C, CG, AM, UR, FAM);
   }
 
@@ -1763,11 +1764,13 @@ namespace {
 struct CoroSplitLegacy : public CallGraphSCCPass {
   static char ID; // Pass identification, replacement for typeid
 
-  CoroSplitLegacy() : CallGraphSCCPass(ID) {
+  CoroSplitLegacy(bool ReuseFrameSlot = false)
+      : CallGraphSCCPass(ID), ReuseFrameSlot(ReuseFrameSlot) {
     initializeCoroSplitLegacyPass(*PassRegistry::getPassRegistry());
   }
 
   bool Run = false;
+  bool ReuseFrameSlot;
 
   // A coroutine is identified by the presence of coro.begin intrinsic, if
   // we don't have any, this pass has nothing to do.
@@ -1816,7 +1819,7 @@ struct CoroSplitLegacy : public CallGraphSCCPass {
       F->removeFnAttr(CORO_PRESPLIT_ATTR);
 
       SmallVector<Function *, 4> Clones;
-      const coro::Shape Shape = splitCoroutine(*F, Clones);
+      const coro::Shape Shape = splitCoroutine(*F, Clones, ReuseFrameSlot);
       updateCallGraphAfterCoroutineSplit(*F, Shape, Clones, CG, SCC);
     }
 
@@ -1847,4 +1850,6 @@ INITIALIZE_PASS_END(
     "Split coroutine into a set of functions driving its state machine", false,
     false)
 
-Pass *llvm::createCoroSplitLegacyPass() { return new CoroSplitLegacy(); }
+Pass *llvm::createCoroSplitLegacyPass(bool ReuseFrameSlot) {
+  return new CoroSplitLegacy(ReuseFrameSlot);
+}

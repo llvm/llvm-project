@@ -14,6 +14,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Support/ARMEHABI.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MipsABIFlags.h"
@@ -816,6 +817,7 @@ void ScalarEnumerationTraits<ELFYAML::MIPS_ISA>::enumeration(
   IO.enumCase(Value, "MIPS5", 5);
   IO.enumCase(Value, "MIPS32", 32);
   IO.enumCase(Value, "MIPS64", 64);
+  IO.enumFallback<Hex32>(Value);
 }
 
 void ScalarBitSetTraits<ELFYAML::MIPS_AFL_ASE>::bitset(
@@ -1266,6 +1268,13 @@ void MappingTraits<ELFYAML::SectionName>::mapping(
   IO.mapRequired("Section", sectionName.Section);
 }
 
+static void sectionMapping(IO &IO, ELFYAML::ARMIndexTableSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapOptional("Content", Section.Content);
+  IO.mapOptional("Size", Section.Size);
+  IO.mapOptional("Entries", Section.Entries);
+}
+
 static void sectionMapping(IO &IO, ELFYAML::MipsABIFlags &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Version", Section.Version, Hex16(0));
@@ -1286,6 +1295,12 @@ static void sectionMapping(IO &IO, ELFYAML::MipsABIFlags &Section) {
   IO.mapOptional("Flags2", Section.Flags2, Hex32(0));
 }
 
+static StringRef getStringValue(IO &IO, const char *Key) {
+  StringRef Val;
+  IO.mapRequired(Key, Val);
+  return Val;
+}
+
 void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     IO &IO, std::unique_ptr<ELFYAML::Chunk> &Section) {
   ELFYAML::ELF_SHT Type;
@@ -1295,15 +1310,28 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     // When the Type string does not have a "SHT_" prefix, we know it is not a
     // description of a regular ELF output section. Currently, we have one
     // special type named "Fill". See comments for Fill.
-    StringRef StrType;
-    IO.mapRequired("Type", StrType);
-    if (StrType == "Fill") {
+    if (getStringValue(IO, "Type") == "Fill") {
       Section.reset(new ELFYAML::Fill());
       fillMapping(IO, *cast<ELFYAML::Fill>(Section.get()));
       return;
     }
 
     IO.mapRequired("Type", Type);
+  }
+
+  const auto &Obj = *static_cast<ELFYAML::Object *>(IO.getContext());
+  if (Obj.getMachine() == ELF::EM_MIPS && Type == ELF::SHT_MIPS_ABIFLAGS) {
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::MipsABIFlags());
+    sectionMapping(IO, *cast<ELFYAML::MipsABIFlags>(Section.get()));
+    return;
+  }
+
+  if (Obj.getMachine() == ELF::EM_ARM && Type == ELF::SHT_ARM_EXIDX) {
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::ARMIndexTableSection());
+    sectionMapping(IO, *cast<ELFYAML::ARMIndexTableSection>(Section.get()));
+    return;
   }
 
   switch (Type) {
@@ -1347,11 +1375,6 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     if (!IO.outputting())
       Section.reset(new ELFYAML::GnuHashSection());
     sectionMapping(IO, *cast<ELFYAML::GnuHashSection>(Section.get()));
-    break;
-  case ELF::SHT_MIPS_ABIFLAGS:
-    if (!IO.outputting())
-      Section.reset(new ELFYAML::MipsABIFlags());
-    sectionMapping(IO, *cast<ELFYAML::MipsABIFlags>(Section.get()));
     break;
   case ELF::SHT_GNU_verdef:
     if (!IO.outputting())
@@ -1576,6 +1599,21 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
     return {};
   }
 
+  if (const auto *IT = dyn_cast<ELFYAML::ARMIndexTableSection>(C.get())) {
+    if (IT->Content || IT->Size) {
+      if (IT->Size && IT->Content &&
+          (uint64_t)*IT->Size < IT->Content->binary_size())
+        return "\"Size\" must be greater than or equal to the content "
+               "size";
+
+      if (IT->Entries)
+        return "\"Entries\" cannot be used with \"Content\" or \"Size\"";
+      return {};
+    }
+
+    return {};
+  }
+
   return {};
 }
 
@@ -1686,6 +1724,20 @@ void MappingTraits<ELFYAML::Relocation>::mapping(IO &IO,
     IO.mapRequired("Type", Rel.Type);
 
   IO.mapOptional("Addend", Rel.Addend, (ELFYAML::YAMLIntUInt)0);
+}
+
+void MappingTraits<ELFYAML::ARMIndexTableEntry>::mapping(
+    IO &IO, ELFYAML::ARMIndexTableEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapRequired("Offset", E.Offset);
+
+  StringRef CantUnwind = "EXIDX_CANTUNWIND";
+  if (IO.outputting() && (uint32_t)E.Value == ARM::EHABI::EXIDX_CANTUNWIND)
+    IO.mapRequired("Value", CantUnwind);
+  else if (!IO.outputting() && getStringValue(IO, "Value") == CantUnwind)
+    E.Value = ARM::EHABI::EXIDX_CANTUNWIND;
+  else
+    IO.mapRequired("Value", E.Value);
 }
 
 void MappingTraits<ELFYAML::Object>::mapping(IO &IO, ELFYAML::Object &Object) {

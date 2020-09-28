@@ -65,20 +65,19 @@ Sections:
   - Name:    .ARM.exidx
     Type:    SHT_ARM_EXIDX
     Address: 0x24C
-    ContentArray: [
-## Entry 1. Address of .ARM.exidx (0x24C) + entry offset (0) + 0x7fffffe4 == 0x230 (func1).
-                    0xE4, 0xFF, 0xFF, 0x7F, ## Word(0) = 0x7fffffe4 (31 bit).
-                    0xB0, 0xB0, 0xB0, 0x80, ## Word(1): arbitrary opcodes.
-## Entry 2. Address of .ARM.exidx (0x24C) + entry offset (8) + 0x7fffffe0 == 0x234 (func2).
-                    0xE0, 0xFF, 0xFF, 0x7F, ## Word(0) = 0x7fffffe0 (31 bit).
-                    0x80, 0x84, 0x9B, 0x80, ## Word(1): arbitrary opcodes.
-## Entry 3. Address of .ARM.exidx (0x24C) + entry offset (16) + 0x7fffffec == 0x248 (func2).
-                    0xEC, 0xFF, 0xFF, 0x7F, ## Word(0) = 0x7fffffec (31 bit).
-                    0xB0, 0xB0, 0xB0, 0x80, ## Word(1): arbitrary opcodes.
-## Entry 4. Address of .ARM.exidx (0x24C) + entry offset (24) + 0x7fffffe8 == 0x24C.
-                    0xE8, 0xFF, 0xFF, 0x7F, ## Word(0) = 0x7fffffe8 (31 bit).
-                    0x01, 0x00, 0x00, 0x00  ## Word(1) == EXIDX_CANTUNWIND
-                  ]
+    Entries:
+## Address of .ARM.exidx (0x24C) + entry offset (0) + 0x7fffffe4 (31 bit) == 0x230 (func1).
+      - Offset: 0x7FFFFFE4
+        Value:  0x80B0B0B0 ## arbitrary opcodes.
+## Address of .ARM.exidx (0x24C) + entry offset (8) + 0x7fffffe0 (31 bit) == 0x234 (func2).
+      - Offset: 0x7FFFFFE0
+        Value:  0x809B8480 ## arbitrary opcodes.
+## Address of .ARM.exidx (0x24C) + entry offset (16) + 0x7fffffec (31 bit) == 0x248 (func2).
+      - Offset: 0x7FFFFFEC
+        Value:  0x80B0B0B0 ## arbitrary opcodes.
+## Address of .ARM.exidx (0x24C) + entry offset (24) + 0x7fffffe8 (31 bit) == 0x24C.
+      - Offset: 0x7FFFFFE8
+        Value:  EXIDX_CANTUNWIND
 Symbols:
   - Name:    func1
     Type:    STT_FUNC

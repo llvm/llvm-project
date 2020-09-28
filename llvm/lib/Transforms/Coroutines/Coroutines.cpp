@@ -69,7 +69,7 @@ static void addCoroutineScalarOptimizerPasses(const PassManagerBuilder &Builder,
 
 static void addCoroutineSCCPasses(const PassManagerBuilder &Builder,
                                   legacy::PassManagerBase &PM) {
-  PM.add(createCoroSplitLegacyPass());
+  PM.add(createCoroSplitLegacyPass(Builder.OptLevel != 0));
 }
 
 static void addCoroutineOptimizerLastPasses(const PassManagerBuilder &Builder,

@@ -63,18 +63,18 @@ def OpenACC_ReductionOpAttr : StrEnumAttr<"ReductionOpAttr",
 // Type used in operation below.
 def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
 
-//===----------------------------------------------------------------------===//
-// 2.5.1 parallel Construct
-//===----------------------------------------------------------------------===//
-
-// Parallel op default enumeration
+// Parallel and data op default enumeration
 def OpenACC_DefaultNone : StrEnumAttrCase<"none">;
 def OpenACC_DefaultPresent : StrEnumAttrCase<"present">;
 def OpenACC_DefaultAttr : StrEnumAttr<"DefaultAttr",
-    "default attribute value for parallel op",
+    "default attribute values",
     [OpenACC_DefaultNone, OpenACC_DefaultPresent]> {
   let cppNamespace = "::mlir::acc";
 }
+
+//===----------------------------------------------------------------------===//
+// 2.5.1 parallel Construct
+//===----------------------------------------------------------------------===//
 
 def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     [AttrSizedOperandSegments]> {
@@ -178,7 +178,7 @@ def OpenACC_DataOp : OpenACC_Op<"data",
   }];
 
 
-  let arguments = (ins Variadic<AnyType>:$presentOperands,
+  let arguments = (ins Optional<I1>:$ifCond,
                        Variadic<AnyType>:$copyOperands,
                        Variadic<AnyType>:$copyinOperands,
                        Variadic<AnyType>:$copyinReadonlyOperands,
@@ -187,25 +187,30 @@ def OpenACC_DataOp : OpenACC_Op<"data",
                        Variadic<AnyType>:$createOperands,
                        Variadic<AnyType>:$createZeroOperands,
                        Variadic<AnyType>:$noCreateOperands,
-                       Variadic<AnyType>:$deleteOperands,
+                       Variadic<AnyType>:$presentOperands,
+                       Variadic<AnyType>:$deviceptrOperands,
                        Variadic<AnyType>:$attachOperands,
-                       Variadic<AnyType>:$detachOperands);
+                       OptionalAttr<OpenACC_DefaultAttr>:$defaultAttr);
 
   let regions = (region AnyRegion:$region);
 
-  let extraClassDeclaration = [{
-    static StringRef getAttachKeyword() { return "attach"; }
-    static StringRef getDeleteKeyword() { return "delete"; }
-    static StringRef getDetachKeyword() { return "detach"; }
-    static StringRef getCopyinKeyword() { return "copyin"; }
-    static StringRef getCopyinReadonlyKeyword() { return "copyin_readonly"; }
-    static StringRef getCopyKeyword() { return "copy"; }
-    static StringRef getCopyoutKeyword() { return "copyout"; }
-    static StringRef getCopyoutZeroKeyword() { return "copyout_zero"; }
-    static StringRef getCreateKeyword() { return "create"; }
-    static StringRef getCreateZeroKeyword() { return "create_zero"; }
-    static StringRef getNoCreateKeyword() { return "no_create"; }
-    static StringRef getPresentKeyword() { return "present"; }
+  let assemblyFormat = [{
+    ( `if` `(` $ifCond^ `)` )?
+    ( `copy` `(` $copyOperands^ `:` type($copyOperands) `)` )?
+    ( `copyin` `(` $copyinOperands^ `:` type($copyinOperands) `)` )?
+    ( `copyin_readonly` `(` $copyinReadonlyOperands^ `:`
+        type($copyinReadonlyOperands) `)` )?
+    ( `copyout` `(` $copyoutOperands^ `:` type($copyoutOperands) `)` )?
+    ( `copyout_zero` `(` $copyoutZeroOperands^ `:`
+        type($copyoutZeroOperands) `)` )?
+    ( `create` `(` $createOperands^ `:` type($createOperands) `)` )?
+    ( `create_zero` `(` $createZeroOperands^ `:`
+        type($createZeroOperands) `)` )?
+    ( `no_create` `(` $noCreateOperands^ `:` type($noCreateOperands) `)` )?
+    ( `present` `(` $presentOperands^ `:` type($presentOperands) `)` )?
+    ( `deviceptr` `(` $deviceptrOperands^ `:` type($deviceptrOperands) `)` )?
+    ( `attach` `(` $attachOperands^ `:` type($attachOperands) `)` )?
+    $region attr-dict-with-keyword
   }];
 
   let verifier = ?;

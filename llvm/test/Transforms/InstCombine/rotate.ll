@@ -65,6 +65,32 @@ define <2 x i16> @rotl_v2i16_constant_splat(<2 x i16> %x) {
   ret <2 x i16> %r
 }
 
+define <2 x i16> @rotl_v2i16_constant_splat_undef0(<2 x i16> %x) {
+; CHECK-LABEL: @rotl_v2i16_constant_splat_undef0(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i16> [[X:%.*]], <i16 undef, i16 1>
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i16> [[X]], <i16 15, i16 15>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i16> [[SHL]], [[SHR]]
+; CHECK-NEXT:    ret <2 x i16> [[R]]
+;
+  %shl = shl <2 x i16> %x, <i16 undef, i16 1>
+  %shr = lshr <2 x i16> %x, <i16 15, i16 15>
+  %r = or <2 x i16> %shl, %shr
+  ret <2 x i16> %r
+}
+
+define <2 x i16> @rotl_v2i16_constant_splat_undef1(<2 x i16> %x) {
+; CHECK-LABEL: @rotl_v2i16_constant_splat_undef1(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i16> [[X:%.*]], <i16 1, i16 1>
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i16> [[X]], <i16 15, i16 undef>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i16> [[SHL]], [[SHR]]
+; CHECK-NEXT:    ret <2 x i16> [[R]]
+;
+  %shl = shl <2 x i16> %x, <i16 1, i16 1>
+  %shr = lshr <2 x i16> %x, <i16 15, i16 undef>
+  %r = or <2 x i16> %shl, %shr
+  ret <2 x i16> %r
+}
+
 ; Non-power-of-2 vector types are allowed.
 
 define <2 x i17> @rotr_v2i17_constant_splat(<2 x i17> %x) {
@@ -74,6 +100,32 @@ define <2 x i17> @rotr_v2i17_constant_splat(<2 x i17> %x) {
 ;
   %shl = shl <2 x i17> %x, <i17 12, i17 12>
   %shr = lshr <2 x i17> %x, <i17 5, i17 5>
+  %r = or <2 x i17> %shr, %shl
+  ret <2 x i17> %r
+}
+
+define <2 x i17> @rotr_v2i17_constant_splat_undef0(<2 x i17> %x) {
+; CHECK-LABEL: @rotr_v2i17_constant_splat_undef0(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i17> [[X:%.*]], <i17 12, i17 undef>
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i17> [[X]], <i17 undef, i17 5>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i17> [[SHR]], [[SHL]]
+; CHECK-NEXT:    ret <2 x i17> [[R]]
+;
+  %shl = shl <2 x i17> %x, <i17 12, i17 undef>
+  %shr = lshr <2 x i17> %x, <i17 undef, i17 5>
+  %r = or <2 x i17> %shr, %shl
+  ret <2 x i17> %r
+}
+
+define <2 x i17> @rotr_v2i17_constant_splat_undef1(<2 x i17> %x) {
+; CHECK-LABEL: @rotr_v2i17_constant_splat_undef1(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i17> [[X:%.*]], <i17 12, i17 undef>
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i17> [[X]], <i17 5, i17 undef>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i17> [[SHR]], [[SHL]]
+; CHECK-NEXT:    ret <2 x i17> [[R]]
+;
+  %shl = shl <2 x i17> %x, <i17 12, i17 undef>
+  %shr = lshr <2 x i17> %x, <i17 5, i17 undef>
   %r = or <2 x i17> %shr, %shl
   ret <2 x i17> %r
 }
@@ -93,6 +145,32 @@ define <2 x i32> @rotr_v2i32_constant_nonsplat(<2 x i32> %x) {
   ret <2 x i32> %r
 }
 
+define <2 x i32> @rotr_v2i32_constant_nonsplat_undef0(<2 x i32> %x) {
+; CHECK-LABEL: @rotr_v2i32_constant_nonsplat_undef0(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[X:%.*]], <i32 undef, i32 19>
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> [[X]], <i32 15, i32 13>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i32> [[SHL]], [[SHR]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %shl = shl <2 x i32> %x, <i32 undef, i32 19>
+  %shr = lshr <2 x i32> %x, <i32 15, i32 13>
+  %r = or <2 x i32> %shl, %shr
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @rotr_v2i32_constant_nonsplat_undef1(<2 x i32> %x) {
+; CHECK-LABEL: @rotr_v2i32_constant_nonsplat_undef1(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[X:%.*]], <i32 17, i32 19>
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> [[X]], <i32 15, i32 undef>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i32> [[SHL]], [[SHR]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %shl = shl <2 x i32> %x, <i32 17, i32 19>
+  %shr = lshr <2 x i32> %x, <i32 15, i32 undef>
+  %r = or <2 x i32> %shl, %shr
+  ret <2 x i32> %r
+}
+
 define <2 x i36> @rotl_v2i36_constant_nonsplat(<2 x i36> %x) {
 ; CHECK-LABEL: @rotl_v2i36_constant_nonsplat(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i36> [[X:%.*]], <i36 21, i36 11>
@@ -104,6 +182,19 @@ define <2 x i36> @rotl_v2i36_constant_nonsplat(<2 x i36> %x) {
   %shr = lshr <2 x i36> %x, <i36 15, i36 25>
   %r = or <2 x i36> %shl, %shr
   ret <2 x i36> %r
+}
+
+define <3 x i36> @rotl_v3i36_constant_nonsplat_undef0(<3 x i36> %x) {
+; CHECK-LABEL: @rotl_v3i36_constant_nonsplat_undef0(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i36> [[X:%.*]], <i36 21, i36 11, i36 undef>
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <3 x i36> [[X]], <i36 15, i36 25, i36 undef>
+; CHECK-NEXT:    [[R:%.*]] = or <3 x i36> [[SHL]], [[SHR]]
+; CHECK-NEXT:    ret <3 x i36> [[R]]
+;
+  %shl = shl <3 x i36> %x, <i36 21, i36 11, i36 undef>
+  %shr = lshr <3 x i36> %x, <i36 15, i36 25, i36 undef>
+  %r = or <3 x i36> %shl, %shr
+  ret <3 x i36> %r
 }
 
 ; The most basic rotate by variable - no guards for UB due to oversized shifts.
