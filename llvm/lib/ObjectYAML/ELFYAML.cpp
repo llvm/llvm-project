@@ -816,6 +816,7 @@ void ScalarEnumerationTraits<ELFYAML::MIPS_ISA>::enumeration(
   IO.enumCase(Value, "MIPS5", 5);
   IO.enumCase(Value, "MIPS32", 32);
   IO.enumCase(Value, "MIPS64", 64);
+  IO.enumFallback<Hex32>(Value);
 }
 
 void ScalarBitSetTraits<ELFYAML::MIPS_AFL_ASE>::bitset(
@@ -1306,6 +1307,14 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     IO.mapRequired("Type", Type);
   }
 
+  const auto &Obj = *static_cast<ELFYAML::Object *>(IO.getContext());
+  if (Obj.getMachine() == ELF::EM_MIPS && Type == ELF::SHT_MIPS_ABIFLAGS) {
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::MipsABIFlags());
+    sectionMapping(IO, *cast<ELFYAML::MipsABIFlags>(Section.get()));
+    return;
+  }
+
   switch (Type) {
   case ELF::SHT_DYNAMIC:
     if (!IO.outputting())
@@ -1347,11 +1356,6 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     if (!IO.outputting())
       Section.reset(new ELFYAML::GnuHashSection());
     sectionMapping(IO, *cast<ELFYAML::GnuHashSection>(Section.get()));
-    break;
-  case ELF::SHT_MIPS_ABIFLAGS:
-    if (!IO.outputting())
-      Section.reset(new ELFYAML::MipsABIFlags());
-    sectionMapping(IO, *cast<ELFYAML::MipsABIFlags>(Section.get()));
     break;
   case ELF::SHT_GNU_verdef:
     if (!IO.outputting())
