@@ -14454,8 +14454,8 @@ StmtResult Sema::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     SmallVector<Stmt *, 4> BodyParts;
     BodyParts.append(LoopHelper.Updates.begin(), LoopHelper.Updates.end());
     BodyParts.push_back(Inner);
-    Inner = CompoundStmt::Create(Context, BodyParts, Inner->getBeginLoc(),
-                                 Inner->getEndLoc());
+    Inner = CompoundStmt::Create(Context, BodyParts, FPOptionsOverride(),
+                                 Inner->getBeginLoc(), Inner->getEndLoc());
     Inner = new (Context)
         ForStmt(Context, InitStmt.get(), CondExpr.get(), nullptr,
                 IncrStmt.get(), Inner, LoopHelper.Init->getBeginLoc(),
@@ -14729,8 +14729,9 @@ StmtResult Sema::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
   SmallVector<Stmt *> InnerBodyStmts;
   InnerBodyStmts.append(LoopHelper.Updates.begin(), LoopHelper.Updates.end());
   InnerBodyStmts.push_back(Body);
-  CompoundStmt *InnerBody = CompoundStmt::Create(
-      Context, InnerBodyStmts, Body->getBeginLoc(), Body->getEndLoc());
+  CompoundStmt *InnerBody =
+      CompoundStmt::Create(Context, InnerBodyStmts, FPOptionsOverride(),
+                           Body->getBeginLoc(), Body->getEndLoc());
   ForStmt *InnerFor = new (Context)
       ForStmt(Context, InnerInit.get(), InnerCond.get(), nullptr,
               InnerIncr.get(), InnerBody, LoopHelper.Init->getBeginLoc(),
