@@ -178,8 +178,7 @@ def OpenACC_DataOp : OpenACC_Op<"data",
   }];
 
 
-  let arguments = (ins Variadic<AnyType>:$presentOperands,
-                       Variadic<AnyType>:$copyOperands,
+  let arguments = (ins Variadic<AnyType>:$copyOperands,
                        Variadic<AnyType>:$copyinOperands,
                        Variadic<AnyType>:$copyinReadonlyOperands,
                        Variadic<AnyType>:$copyoutOperands,
@@ -187,21 +186,26 @@ def OpenACC_DataOp : OpenACC_Op<"data",
                        Variadic<AnyType>:$createOperands,
                        Variadic<AnyType>:$createZeroOperands,
                        Variadic<AnyType>:$noCreateOperands,
+                       Variadic<AnyType>:$presentOperands,
                        Variadic<AnyType>:$attachOperands);
 
   let regions = (region AnyRegion:$region);
 
-  let extraClassDeclaration = [{
-    static StringRef getAttachKeyword() { return "attach"; }
-    static StringRef getCopyinKeyword() { return "copyin"; }
-    static StringRef getCopyinReadonlyKeyword() { return "copyin_readonly"; }
-    static StringRef getCopyKeyword() { return "copy"; }
-    static StringRef getCopyoutKeyword() { return "copyout"; }
-    static StringRef getCopyoutZeroKeyword() { return "copyout_zero"; }
-    static StringRef getCreateKeyword() { return "create"; }
-    static StringRef getCreateZeroKeyword() { return "create_zero"; }
-    static StringRef getNoCreateKeyword() { return "no_create"; }
-    static StringRef getPresentKeyword() { return "present"; }
+  let assemblyFormat = [{
+    ( `copy` `(` $copyOperands^ `:` type($copyOperands) `)` )?
+    ( `copyin` `(` $copyinOperands^ `:` type($copyinOperands) `)` )?
+    ( `copyin_readonly` `(` $copyinReadonlyOperands^ `:`
+        type($copyinReadonlyOperands) `)` )?
+    ( `copyout` `(` $copyoutOperands^ `:` type($copyoutOperands) `)` )?
+    ( `copyout_zero` `(` $copyoutZeroOperands^ `:`
+        type($copyoutZeroOperands) `)` )?
+    ( `create` `(` $createOperands^ `:` type($createOperands) `)` )?
+    ( `create_zero` `(` $createZeroOperands^ `:`
+        type($createZeroOperands) `)` )?
+    ( `no_create` `(` $noCreateOperands^ `:` type($noCreateOperands) `)` )?
+    ( `present` `(` $presentOperands^ `:` type($presentOperands) `)` )?
+    ( `attach` `(` $attachOperands^ `:` type($attachOperands) `)` )?
+    $region attr-dict-with-keyword
   }];
 
   let verifier = ?;
