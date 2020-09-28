@@ -5,12 +5,35 @@
 def SDT_PPCSplat32 : SDTypeProfile<1, 3, [ SDTCisVT<0, v2i64>,
   SDTCisVec<1>, SDTCisInt<2>, SDTCisInt<3>
 ]>;
+def SDT_PPCAccBuild : SDTypeProfile<1, 4, [
+  SDTCisVT<0, v512i1>, SDTCisVT<1, v4i32>, SDTCisVT<2, v4i32>,
+                       SDTCisVT<3, v4i32>, SDTCisVT<4, v4i32>
+]>;
+def SDT_PPCPairBuild : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v256i1>, SDTCisVT<1, v4i32>, SDTCisVT<2, v4i32>
+]>;
+def SDT_PPCAccExtractVsx : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v4i32>, SDTCisVT<1, v512i1>, SDTCisInt<2>
+]>;
+def SDT_PPCPairExtractVsx : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v4i32>, SDTCisVT<1, v256i1>, SDTCisInt<2>
+]>;
+def SDT_PPCxxmfacc : SDTypeProfile<1, 1, [
+  SDTCisVT<0, v512i1>, SDTCisVT<1, v512i1>
+]>;
 
 //===----------------------------------------------------------------------===//
 // ISA 3.1 specific PPCISD nodes.
 //
 
 def PPCxxsplti32dx : SDNode<"PPCISD::XXSPLTI32DX", SDT_PPCSplat32, []>;
+def PPCAccBuild : SDNode<"PPCISD::ACC_BUILD", SDT_PPCAccBuild, []>;
+def PPCPairBuild : SDNode<"PPCISD::PAIR_BUILD", SDT_PPCPairBuild, []>;
+def PPCAccExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCAccExtractVsx,
+                       []>;
+def PPCPairExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCPairExtractVsx,
+                        []>;
+def PPCxxmfacc : SDNode<"PPCISD::XXMFACC", SDT_PPCxxmfacc, []>;
 
 //===----------------------------------------------------------------------===//
 
@@ -525,6 +548,16 @@ def vsrprc : RegisterOperand<VSRpRC> {
   let ParserMatchClass = PPCRegVSRpRCAsmOperand;
 }
 
+def PPCRegVSRpEvenRCAsmOperand : AsmOperandClass {
+  let Name = "RegVSRpEvenRC"; let PredicateMethod = "isVSRpEvenRegNumber";
+}
+
+def vsrpevenrc : RegisterOperand<VSRpRC> {
+  let ParserMatchClass = PPCRegVSRpEvenRCAsmOperand;
+  let EncoderMethod = "getVSRpEvenEncoding";
+  let DecoderMethod = "decodeVSRpEvenOperands";
+}
+
 class DQForm_XTp5_RA17_MEM<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
                            string asmstr, InstrItinClass itin, list<dag> pattern>
   : I<opcode, OOL, IOL, asmstr, itin> {
@@ -591,6 +624,10 @@ def PPCRegACCRCAsmOperand : AsmOperandClass {
 }
 
 def acc : RegisterOperand<ACCRC> {
+  let ParserMatchClass = PPCRegACCRCAsmOperand;
+}
+
+def uacc : RegisterOperand<UACCRC> {
   let ParserMatchClass = PPCRegACCRCAsmOperand;
 }
 
@@ -774,6 +811,11 @@ let Predicates = [MMA] in {
     XForm_AT3<31, 1, 177, (outs acc:$AT), (ins acc:$ATi), "xxmtacc $AT",
               IIC_VecGeneral, []>, RegConstraint<"$ATi = $AT">,
               NoEncode<"$ATi">;
+  def KILL_PAIR : PPCPostRAExpPseudo<(outs vsrprc:$XTp), (ins vsrprc:$XSp),
+                                      "#KILL_PAIR", []>,
+                                      RegConstraint<"$XTp = $XSp">;
+  def BUILD_UACC : PPCPostRAExpPseudo<(outs acc:$AT), (ins uacc:$AS),
+                                      "#BUILD_UACC $AT, $AS", []>;
   // We define XXSETACCZ as rematerializable to undo CSE of that intrinsic in
   // the backend. We avoid CSE here because it generates a copy of the acc
   // register and this copy is more expensive than calling the intrinsic again.
@@ -782,6 +824,51 @@ let Predicates = [MMA] in {
       XForm_AT3<31, 3, 177, (outs acc:$AT), (ins), "xxsetaccz $AT",
                 IIC_VecGeneral, []>;
   }
+}
+
+def Concats {
+  dag VecsToVecPair0 =
+    (v256i1 (INSERT_SUBREG
+      (INSERT_SUBREG (IMPLICIT_DEF), $vs0, sub_vsx1),
+      $vs1, sub_vsx0));
+  dag VecsToVecPair1 =
+    (v256i1 (INSERT_SUBREG
+      (INSERT_SUBREG (IMPLICIT_DEF), $vs2, sub_vsx1),
+      $vs3, sub_vsx0));
+  dag VecsToVecQuad =
+    (BUILD_UACC (INSERT_SUBREG
+                  (INSERT_SUBREG (v512i1 (IMPLICIT_DEF)),
+                                 (KILL_PAIR VecsToVecPair0), sub_pair0),
+                  (KILL_PAIR VecsToVecPair1), sub_pair1));
+}
+
+def Extracts {
+  dag Pair0 = (v256i1 (EXTRACT_SUBREG $v, sub_pair0));
+  dag Pair1 = (v256i1 (EXTRACT_SUBREG $v, sub_pair1));
+  dag Vec0 = (v4i32 (EXTRACT_SUBREG Pair0, sub_vsx0));
+  dag Vec1 = (v4i32 (EXTRACT_SUBREG Pair0, sub_vsx1));
+  dag Vec2 = (v4i32 (EXTRACT_SUBREG Pair1, sub_vsx0));
+  dag Vec3 = (v4i32 (EXTRACT_SUBREG Pair1, sub_vsx1));
+}
+
+let Predicates = [MMA] in {
+  def : Pat<(v512i1 (PPCAccBuild v4i32:$vs1, v4i32:$vs0, v4i32:$vs3, v4i32:$vs2)),
+            (XXMTACC Concats.VecsToVecQuad)>;
+  def : Pat<(v256i1 (PPCPairBuild v4i32:$vs1, v4i32:$vs0)),
+            Concats.VecsToVecPair0>;
+  def : Pat<(v512i1 (PPCxxmfacc v512i1:$AS)), (XXMFACC acc:$AS)>;
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 0))),
+            Extracts.Vec0>;
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 1))),
+            Extracts.Vec1>;
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 2))),
+            Extracts.Vec2>;
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 3))),
+            Extracts.Vec3>;
+  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, (i64 0))),
+            (v4i32 (EXTRACT_SUBREG $v, sub_vsx0))>;
+  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, (i64 1))),
+            (v4i32 (EXTRACT_SUBREG $v, sub_vsx1))>;
 }
 
 let mayLoad = 1, mayStore = 0, Predicates = [PairedVectorMemops] in {
