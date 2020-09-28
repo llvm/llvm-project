@@ -1550,8 +1550,76 @@ def : GCNPat <
 def : IMad24Pat<V_MAD_I32_I24, 1>;
 def : UMad24Pat<V_MAD_U32_U24, 1>;
 
+// BFI patterns
 // FIXME: This should only be done for VALU inputs
-defm : BFIPatterns <V_BFI_B32, S_MOV_B32, SReg_64>;
+
+// Definition from ISA doc:
+// (y & x) | (z & ~x)
+def : AMDGPUPat <
+  (or (and i32:$y, i32:$x), (and i32:$z, (not i32:$x))),
+  (V_BFI_B32 $x, $y, $z)
+>;
+
+// 64-bit version
+def : AMDGPUPat <
+  (or (and i64:$y, i64:$x), (and i64:$z, (not i64:$x))),
+  (REG_SEQUENCE SReg_64,
+    (V_BFI_B32 (i32 (EXTRACT_SUBREG SReg_64:$x, sub0)),
+               (i32 (EXTRACT_SUBREG SReg_64:$y, sub0)),
+               (i32 (EXTRACT_SUBREG SReg_64:$z, sub0))), sub0,
+    (V_BFI_B32 (i32 (EXTRACT_SUBREG SReg_64:$x, sub1)),
+               (i32 (EXTRACT_SUBREG SReg_64:$y, sub1)),
+               (i32 (EXTRACT_SUBREG SReg_64:$z, sub1))), sub1)
+>;
+
+// SHA-256 Ch function
+// z ^ (x & (y ^ z))
+def : AMDGPUPat <
+  (xor i32:$z, (and i32:$x, (xor i32:$y, i32:$z))),
+  (V_BFI_B32 $x, $y, $z)
+>;
+
+// 64-bit version
+def : AMDGPUPat <
+  (xor i64:$z, (and i64:$x, (xor i64:$y, i64:$z))),
+  (REG_SEQUENCE SReg_64,
+    (V_BFI_B32 (i32 (EXTRACT_SUBREG SReg_64:$x, sub0)),
+               (i32 (EXTRACT_SUBREG SReg_64:$y, sub0)),
+               (i32 (EXTRACT_SUBREG SReg_64:$z, sub0))), sub0,
+    (V_BFI_B32 (i32 (EXTRACT_SUBREG SReg_64:$x, sub1)),
+               (i32 (EXTRACT_SUBREG SReg_64:$y, sub1)),
+               (i32 (EXTRACT_SUBREG SReg_64:$z, sub1))), sub1)
+>;
+
+def : AMDGPUPat <
+  (fcopysign f32:$src0, f32:$src1),
+  (V_BFI_B32 (S_MOV_B32 (i32 0x7fffffff)), $src0, $src1)
+>;
+
+def : AMDGPUPat <
+  (fcopysign f32:$src0, f64:$src1),
+  (V_BFI_B32 (S_MOV_B32 (i32 0x7fffffff)), $src0,
+             (i32 (EXTRACT_SUBREG SReg_64:$src1, sub1)))
+>;
+
+def : AMDGPUPat <
+  (fcopysign f64:$src0, f64:$src1),
+  (REG_SEQUENCE SReg_64,
+    (i32 (EXTRACT_SUBREG $src0, sub0)), sub0,
+    (V_BFI_B32 (S_MOV_B32 (i32 0x7fffffff)),
+               (i32 (EXTRACT_SUBREG SReg_64:$src0, sub1)),
+               (i32 (EXTRACT_SUBREG SReg_64:$src1, sub1))), sub1)
+>;
+
+def : AMDGPUPat <
+  (fcopysign f64:$src0, f32:$src1),
+  (REG_SEQUENCE SReg_64,
+    (i32 (EXTRACT_SUBREG $src0, sub0)), sub0,
+    (V_BFI_B32 (S_MOV_B32 (i32 0x7fffffff)),
+               (i32 (EXTRACT_SUBREG SReg_64:$src0, sub1)),
+               $src1), sub1)
+>;
+
 def : ROTRPattern <V_ALIGNBIT_B32>;
 
 def : GCNPat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
@@ -2232,7 +2300,27 @@ defm : BFMPatterns <i32, S_BFM_B32, S_MOV_B32>;
 // FIXME: defm : BFMPatterns <i64, S_BFM_B64, S_MOV_B64>;
 
 defm : BFEPattern <V_BFE_U32, V_BFE_I32, S_MOV_B32>;
-defm : SHA256MaPattern <V_BFI_B32, V_XOR_B32_e64, SReg_64>;
+
+// SHA-256 Ma patterns
+
+// ((x & z) | (y & (x | z))) -> BFI (XOR x, y), z, y
+def : AMDGPUPat <
+  (or (and i32:$x, i32:$z), (and i32:$y, (or i32:$x, i32:$z))),
+  (V_BFI_B32 (V_XOR_B32_e64 i32:$x, i32:$y), i32:$z, i32:$y)
+>;
+
+def : AMDGPUPat <
+  (or (and i64:$x, i64:$z), (and i64:$y, (or i64:$x, i64:$z))),
+  (REG_SEQUENCE SReg_64,
+    (V_BFI_B32 (V_XOR_B32_e64 (i32 (EXTRACT_SUBREG SReg_64:$x, sub0)),
+                    (i32 (EXTRACT_SUBREG SReg_64:$y, sub0))),
+               (i32 (EXTRACT_SUBREG SReg_64:$z, sub0)),
+               (i32 (EXTRACT_SUBREG SReg_64:$y, sub0))), sub0,
+    (V_BFI_B32 (V_XOR_B32_e64 (i32 (EXTRACT_SUBREG SReg_64:$x, sub1)),
+                    (i32 (EXTRACT_SUBREG SReg_64:$y, sub1))),
+               (i32 (EXTRACT_SUBREG SReg_64:$z, sub1)),
+               (i32 (EXTRACT_SUBREG SReg_64:$y, sub1))), sub1)
+>;
 
 multiclass IntMed3Pat<Instruction med3Inst,
                  SDPatternOperator min,
