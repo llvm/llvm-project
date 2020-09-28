@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OBJECT_WASMTRAITS_H
-#define LLVM_OBJECT_WASMTRAITS_H
+#ifndef LLVM_BINARYFORMAT_WASMTRAITS_H
+#define LLVM_BINARYFORMAT_WASMTRAITS_H
 
 #include "llvm/ADT/Hashing.h"
 #include "llvm/BinaryFormat/Wasm.h"
@@ -65,4 +65,4 @@ template <> struct DenseMapInfo<wasm::WasmGlobalType> {
 
 } // end namespace llvm
 
-#endif // LLVM_OBJECT_WASMTRAITS_H
+#endif // LLVM_BINARYFORMAT_WASMTRAITS_H
