@@ -561,7 +561,7 @@ public:
     auto kind = reductionOp.kind();
     Type eltType = reductionOp.dest().getType();
     Type llvmType = typeConverter.convertType(eltType);
-    if (eltType.isSignlessInteger()) {
+    if (eltType.isIntOrIndex()) {
       // Integer reductions: add/mul/min/max/and/or/xor.
       if (kind == "add")
         rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_add>(
@@ -569,8 +569,16 @@ public:
       else if (kind == "mul")
         rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_mul>(
             op, llvmType, operands[0]);
+      else if (kind == "min" &&
+               (eltType.isIndex() || eltType.isUnsignedInteger()))
+        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_umin>(
+            op, llvmType, operands[0]);
       else if (kind == "min")
         rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_smin>(
+            op, llvmType, operands[0]);
+      else if (kind == "max" &&
+               (eltType.isIndex() || eltType.isUnsignedInteger()))
+        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_umax>(
             op, llvmType, operands[0]);
       else if (kind == "max")
         rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_smax>(

@@ -132,10 +132,10 @@ static LogicalResult verify(ReductionOp op) {
   auto kind = op.kind();
   Type eltType = op.dest().getType();
   if (kind == "add" || kind == "mul" || kind == "min" || kind == "max") {
-    if (!eltType.isSignlessIntOrFloat())
+    if (!eltType.isIntOrIndexOrFloat())
       return op.emitOpError("unsupported reduction type");
   } else if (kind == "and" || kind == "or" || kind == "xor") {
-    if (!eltType.isSignlessInteger())
+    if (!eltType.isIntOrIndex())
       return op.emitOpError("unsupported reduction type");
   } else {
     return op.emitOpError("unknown reduction kind: ") << kind;
