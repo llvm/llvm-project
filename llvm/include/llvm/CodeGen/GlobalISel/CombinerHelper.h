@@ -415,6 +415,14 @@ public:
   bool matchNotCmp(MachineInstr &MI, SmallVectorImpl<Register> &RegsToNegate);
   bool applyNotCmp(MachineInstr &MI, SmallVectorImpl<Register> &RegsToNegate);
 
+  /// Fold (xor (and x, y), y) -> (and (not x), y)
+  ///{
+  bool matchXorOfAndWithSameReg(MachineInstr &MI,
+                                std::pair<Register, Register> &MatchInfo);
+  bool applyXorOfAndWithSameReg(MachineInstr &MI,
+                                std::pair<Register, Register> &MatchInfo);
+  ///}
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);

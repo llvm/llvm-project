@@ -466,9 +466,10 @@ AArch64RegisterBankInfo::getSameKindOfOperandsMapping(
                                getValueMapping(RBIdx, Size), NumOperands);
 }
 
-bool AArch64RegisterBankInfo::hasFPConstraints(
-    const MachineInstr &MI, const MachineRegisterInfo &MRI,
-    const TargetRegisterInfo &TRI) const {
+bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
+                                               const MachineRegisterInfo &MRI,
+                                               const TargetRegisterInfo &TRI,
+                                               unsigned Depth) const {
   unsigned Op = MI.getOpcode();
 
   // Do we have an explicit floating point instruction?
@@ -480,14 +481,30 @@ bool AArch64RegisterBankInfo::hasFPConstraints(
   if (Op != TargetOpcode::COPY && !MI.isPHI())
     return false;
 
-  // MI is copy-like. Return true if it outputs an FPR.
-  return getRegBank(MI.getOperand(0).getReg(), MRI, TRI) ==
-         &AArch64::FPRRegBank;
+  // Check if we already know the register bank.
+  auto *RB = getRegBank(MI.getOperand(0).getReg(), MRI, TRI);
+  if (RB == &AArch64::FPRRegBank)
+    return true;
+  if (RB == &AArch64::GPRRegBank)
+    return false;
+
+  // We don't know anything.
+  //
+  // If we have a phi, we may be able to infer that it will be assigned a FPR
+  // based off of its inputs.
+  if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
+    return false;
+
+  return any_of(MI.explicit_uses(), [&](const MachineOperand &Op) {
+    return Op.isReg() &&
+           onlyDefinesFP(*MRI.getVRegDef(Op.getReg()), MRI, TRI, Depth + 1);
+  });
 }
 
 bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
                                          const MachineRegisterInfo &MRI,
-                                         const TargetRegisterInfo &TRI) const {
+                                         const TargetRegisterInfo &TRI,
+                                         unsigned Depth) const {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
@@ -496,12 +513,13 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   default:
     break;
   }
-  return hasFPConstraints(MI, MRI, TRI);
+  return hasFPConstraints(MI, MRI, TRI, Depth);
 }
 
-bool AArch64RegisterBankInfo::onlyDefinesFP(
-    const MachineInstr &MI, const MachineRegisterInfo &MRI,
-    const TargetRegisterInfo &TRI) const {
+bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
+                                            const MachineRegisterInfo &MRI,
+                                            const TargetRegisterInfo &TRI,
+                                            unsigned Depth) const {
   switch (MI.getOpcode()) {
   case AArch64::G_DUP:
   case TargetOpcode::G_SITOFP:
@@ -512,7 +530,7 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(
   default:
     break;
   }
-  return hasFPConstraints(MI, MRI, TRI);
+  return hasFPConstraints(MI, MRI, TRI, Depth);
 }
 
 const RegisterBankInfo::InstructionMapping &
