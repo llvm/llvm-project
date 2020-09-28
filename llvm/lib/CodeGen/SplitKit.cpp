@@ -663,13 +663,19 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx,
         if (S.liveAt(UseIdx))
           LaneMask |= S.LaneMask;
       }
-      assert(LaneMask.any() && "Interval has no live subranges");
     } else {
       LaneMask = LaneBitmask::getAll();
     }
 
-    ++NumCopies;
-    Def = buildCopy(Edit->getReg(), Reg, LaneMask, MBB, I, Late, RegIdx);
+    if (LaneMask.none()) {
+      const MCInstrDesc &Desc = TII.get(TargetOpcode::IMPLICIT_DEF);
+      MachineInstr *ImplicitDef = BuildMI(MBB, I, DebugLoc(), Desc, Reg);
+      SlotIndexes &Indexes = *LIS.getSlotIndexes();
+      Def = Indexes.insertMachineInstrInMaps(*ImplicitDef, Late).getRegSlot();
+    } else {
+      ++NumCopies;
+      Def = buildCopy(Edit->getReg(), Reg, LaneMask, MBB, I, Late, RegIdx);
+    }
   }
 
   // Define the value in Reg.
