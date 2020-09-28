@@ -35,6 +35,7 @@ class TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
 protected:
   MCSymbolRefExpr::VariantKind PLTRelativeVariantKind =
       MCSymbolRefExpr::VK_None;
+  const TargetMachine *TM = nullptr;
 
 public:
   TargetLoweringObjectFileELF() = default;
