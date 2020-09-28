@@ -67,9 +67,7 @@ define <2 x i16> @rotl_v2i16_constant_splat(<2 x i16> %x) {
 
 define <2 x i16> @rotl_v2i16_constant_splat_undef0(<2 x i16> %x) {
 ; CHECK-LABEL: @rotl_v2i16_constant_splat_undef0(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i16> [[X:%.*]], <i16 undef, i16 1>
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i16> [[X]], <i16 15, i16 15>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i16> [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> [[X:%.*]], <2 x i16> [[X]], <2 x i16> <i16 0, i16 1>)
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %shl = shl <2 x i16> %x, <i16 undef, i16 1>
@@ -80,9 +78,7 @@ define <2 x i16> @rotl_v2i16_constant_splat_undef0(<2 x i16> %x) {
 
 define <2 x i16> @rotl_v2i16_constant_splat_undef1(<2 x i16> %x) {
 ; CHECK-LABEL: @rotl_v2i16_constant_splat_undef1(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i16> [[X:%.*]], <i16 1, i16 1>
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i16> [[X]], <i16 15, i16 undef>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i16> [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> [[X:%.*]], <2 x i16> [[X]], <2 x i16> <i16 1, i16 1>)
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %shl = shl <2 x i16> %x, <i16 1, i16 1>
@@ -106,9 +102,7 @@ define <2 x i17> @rotr_v2i17_constant_splat(<2 x i17> %x) {
 
 define <2 x i17> @rotr_v2i17_constant_splat_undef0(<2 x i17> %x) {
 ; CHECK-LABEL: @rotr_v2i17_constant_splat_undef0(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i17> [[X:%.*]], <i17 12, i17 undef>
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i17> [[X]], <i17 undef, i17 5>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i17> [[SHR]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i17> @llvm.fshl.v2i17(<2 x i17> [[X:%.*]], <2 x i17> [[X]], <2 x i17> <i17 0, i17 12>)
 ; CHECK-NEXT:    ret <2 x i17> [[R]]
 ;
   %shl = shl <2 x i17> %x, <i17 12, i17 undef>
@@ -119,9 +113,7 @@ define <2 x i17> @rotr_v2i17_constant_splat_undef0(<2 x i17> %x) {
 
 define <2 x i17> @rotr_v2i17_constant_splat_undef1(<2 x i17> %x) {
 ; CHECK-LABEL: @rotr_v2i17_constant_splat_undef1(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i17> [[X:%.*]], <i17 12, i17 undef>
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i17> [[X]], <i17 5, i17 undef>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i17> [[SHR]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i17> @llvm.fshl.v2i17(<2 x i17> [[X:%.*]], <2 x i17> [[X]], <2 x i17> <i17 12, i17 0>)
 ; CHECK-NEXT:    ret <2 x i17> [[R]]
 ;
   %shl = shl <2 x i17> %x, <i17 12, i17 undef>
