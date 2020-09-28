@@ -127,16 +127,6 @@ extern "C" unsigned int
 LLDBSwigPythonCallBreakpointResolver(void *implementor, const char *method_name,
                                      lldb_private::SymbolContext *sym_ctx);
 
-extern "C" void *LLDBSwigPythonCreateScriptedStopHook(
-    TargetSP target_sp, const char *python_class_name,
-    const char *session_dictionary_name, lldb_private::StructuredDataImpl *args,
-    lldb_private::Status &error);
-
-extern "C" unsigned int
-LLDBSwigPythonStopHookCallHandleStop(void *implementor,
-                                     lldb::ExecutionContextRefSP exc_ctx,
-                                     lldb::StreamSP stream);
-
 extern "C" size_t LLDBSwigPython_CalculateNumChildren(void *implementor,
                                                       uint32_t max);
 
@@ -1987,60 +1977,6 @@ ScriptInterpreterPythonImpl::ScriptedBreakpointResolverSearchDepth(
   if (depth_as_int <= lldb::kLastSearchDepthKind)
     return (lldb::SearchDepth)depth_as_int;
   return lldb::eSearchDepthModule;
-}
-
-StructuredData::GenericSP ScriptInterpreterPythonImpl::CreateScriptedStopHook(
-    TargetSP target_sp, const char *class_name, StructuredDataImpl *args_data,
-    Status &error) {
-
-  if (!target_sp) {
-    error.SetErrorString("No target for scripted stop-hook.");
-    return StructuredData::GenericSP();
-  }
-
-  if (class_name == nullptr || class_name[0] == '\0') {
-    error.SetErrorString("No class name for scripted stop-hook.");
-    return StructuredData::GenericSP();
-  }
-
-  ScriptInterpreter *script_interpreter = m_debugger.GetScriptInterpreter();
-  ScriptInterpreterPythonImpl *python_interpreter =
-      static_cast<ScriptInterpreterPythonImpl *>(script_interpreter);
-
-  if (!script_interpreter) {
-    error.SetErrorString("No script interpreter for scripted stop-hook.");
-    return StructuredData::GenericSP();
-  }
-
-  void *ret_val;
-
-  {
-    Locker py_lock(this,
-                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-
-    ret_val = LLDBSwigPythonCreateScriptedStopHook(
-        target_sp, class_name, python_interpreter->m_dictionary_name.c_str(),
-        args_data, error);
-  }
-
-  return StructuredData::GenericSP(new StructuredPythonObject(ret_val));
-}
-
-bool ScriptInterpreterPythonImpl::ScriptedStopHookHandleStop(
-    StructuredData::GenericSP implementor_sp, ExecutionContext &exc_ctx,
-    lldb::StreamSP stream_sp) {
-  assert(implementor_sp &&
-         "can't call a stop hook with an invalid implementor");
-  assert(stream_sp && "can't call a stop hook with an invalid stream");
-
-  Locker py_lock(this,
-                 Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-
-  lldb::ExecutionContextRefSP exc_ctx_ref_sp(new ExecutionContextRef(exc_ctx));
-
-  bool ret_val = LLDBSwigPythonStopHookCallHandleStop(
-      implementor_sp->GetValue(), exc_ctx_ref_sp, stream_sp);
-  return ret_val;
 }
 
 StructuredData::ObjectSP
