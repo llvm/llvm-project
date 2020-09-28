@@ -63,18 +63,18 @@ def OpenACC_ReductionOpAttr : StrEnumAttr<"ReductionOpAttr",
 // Type used in operation below.
 def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
 
-//===----------------------------------------------------------------------===//
-// 2.5.1 parallel Construct
-//===----------------------------------------------------------------------===//
-
-// Parallel op default enumeration
+// Parallel and data op default enumeration
 def OpenACC_DefaultNone : StrEnumAttrCase<"none">;
 def OpenACC_DefaultPresent : StrEnumAttrCase<"present">;
 def OpenACC_DefaultAttr : StrEnumAttr<"DefaultAttr",
-    "default attribute value for parallel op",
+    "default attribute values",
     [OpenACC_DefaultNone, OpenACC_DefaultPresent]> {
   let cppNamespace = "::mlir::acc";
 }
+
+//===----------------------------------------------------------------------===//
+// 2.5.1 parallel Construct
+//===----------------------------------------------------------------------===//
 
 def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     [AttrSizedOperandSegments]> {
@@ -178,7 +178,8 @@ def OpenACC_DataOp : OpenACC_Op<"data",
   }];
 
 
-  let arguments = (ins Variadic<AnyType>:$copyOperands,
+  let arguments = (ins Optional<I1>:$ifCond,
+                       Variadic<AnyType>:$copyOperands,
                        Variadic<AnyType>:$copyinOperands,
                        Variadic<AnyType>:$copyinReadonlyOperands,
                        Variadic<AnyType>:$copyoutOperands,
@@ -187,11 +188,14 @@ def OpenACC_DataOp : OpenACC_Op<"data",
                        Variadic<AnyType>:$createZeroOperands,
                        Variadic<AnyType>:$noCreateOperands,
                        Variadic<AnyType>:$presentOperands,
-                       Variadic<AnyType>:$attachOperands);
+                       Variadic<AnyType>:$deviceptrOperands,
+                       Variadic<AnyType>:$attachOperands,
+                       OptionalAttr<OpenACC_DefaultAttr>:$defaultAttr);
 
   let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{
+    ( `if` `(` $ifCond^ `)` )?
     ( `copy` `(` $copyOperands^ `:` type($copyOperands) `)` )?
     ( `copyin` `(` $copyinOperands^ `:` type($copyinOperands) `)` )?
     ( `copyin_readonly` `(` $copyinReadonlyOperands^ `:`
@@ -204,6 +208,7 @@ def OpenACC_DataOp : OpenACC_Op<"data",
         type($createZeroOperands) `)` )?
     ( `no_create` `(` $noCreateOperands^ `:` type($noCreateOperands) `)` )?
     ( `present` `(` $presentOperands^ `:` type($presentOperands) `)` )?
+    ( `deviceptr` `(` $deviceptrOperands^ `:` type($deviceptrOperands) `)` )?
     ( `attach` `(` $attachOperands^ `:` type($attachOperands) `)` )?
     $region attr-dict-with-keyword
   }];

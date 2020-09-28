@@ -454,6 +454,9 @@ func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf3
 // -----
 
 func @testdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
+  %ifCond = constant true
+  acc.data if(%ifCond) present(%a : memref<10xf32>) {
+  }
   acc.data present(%a, %b, %c : memref<10xf32>, memref<10xf32>, memref<10x10xf32>) {
   }
   acc.data copy(%a, %b, %c : memref<10xf32>, memref<10xf32>, memref<10x10xf32>) {
@@ -472,14 +475,23 @@ func @testdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) 
   }
   acc.data no_create(%a, %b, %c : memref<10xf32>, memref<10xf32>, memref<10x10xf32>) {
   }
+  acc.data deviceptr(%a, %b, %c : memref<10xf32>, memref<10xf32>, memref<10x10xf32>) {
+  }
   acc.data attach(%a, %b, %c : memref<10xf32>, memref<10xf32>, memref<10x10xf32>) {
   }
   acc.data copyin(%b: memref<10xf32>) copyout(%c: memref<10x10xf32>) present(%a: memref<10xf32>) {
   }
+  acc.data present(%a : memref<10xf32>) {
+  } attributes { defaultAttr = "none" }
+  acc.data present(%a : memref<10xf32>) {
+  } attributes { defaultAttr = "present" }
   return
 }
 
 // CHECK:      func @testdataop([[ARGA:%.*]]: memref<10xf32>, [[ARGB:%.*]]: memref<10xf32>, [[ARGC:%.*]]: memref<10x10xf32>) {
+// CHECK:      [[IFCOND1:%.*]] = constant true
+// CHECK:      acc.data if([[IFCOND1]]) present([[ARGA]] : memref<10xf32>) {
+// CHECK-NEXT: }
 // CHECK:      acc.data present([[ARGA]], [[ARGB]], [[ARGC]] : memref<10xf32>, memref<10xf32>, memref<10x10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.data copy([[ARGA]], [[ARGB]], [[ARGC]] : memref<10xf32>, memref<10xf32>, memref<10x10xf32>) {
@@ -498,7 +510,13 @@ func @testdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) 
 // CHECK-NEXT: }
 // CHECK:      acc.data no_create([[ARGA]], [[ARGB]], [[ARGC]] : memref<10xf32>, memref<10xf32>, memref<10x10xf32>) {
 // CHECK-NEXT: }
+// CHECK:      acc.data deviceptr([[ARGA]], [[ARGB]], [[ARGC]] : memref<10xf32>, memref<10xf32>, memref<10x10xf32>) {
+// CHECK-NEXT: }
 // CHECK:      acc.data attach([[ARGA]], [[ARGB]], [[ARGC]] : memref<10xf32>, memref<10xf32>, memref<10x10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.data copyin([[ARGB]] : memref<10xf32>) copyout([[ARGC]] : memref<10x10xf32>) present([[ARGA]] : memref<10xf32>) {
 // CHECK-NEXT: }
+// CHECK:      acc.data present([[ARGA]] : memref<10xf32>) {
+// CHECK-NEXT: } attributes {defaultAttr = "none"}
+// CHECK:      acc.data present([[ARGA]] : memref<10xf32>) {
+// CHECK-NEXT: } attributes {defaultAttr = "present"}
