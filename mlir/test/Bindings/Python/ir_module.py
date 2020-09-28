@@ -84,3 +84,13 @@ def testModuleOperation():
   assert ctx._get_live_operation_count() == 0
 
 run(testModuleOperation)
+
+
+# CHECK-LABEL: TEST: testModuleCapsule
+def testModuleCapsule():
+  ctx = mlir.ir.Context()
+  module = ctx.parse_module(r"""module @successfulParse {}""")
+  # CHECK: "mlir.ir.Module._CAPIPtr"
+  print(module._CAPIPtr)
+
+run(testModuleCapsule)

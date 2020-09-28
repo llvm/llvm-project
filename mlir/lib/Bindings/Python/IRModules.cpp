@@ -9,6 +9,7 @@
 #include "IRModules.h"
 #include "PybindUtils.h"
 
+#include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/Registration.h"
 #include "mlir-c/StandardAttributes.h"
 #include "mlir-c/StandardTypes.h"
@@ -453,6 +454,17 @@ PyMlirContext::~PyMlirContext() {
   mlirContextDestroy(context);
 }
 
+py::object PyMlirContext::getCapsule() {
+  return py::reinterpret_steal<py::object>(mlirPythonContextToCapsule(get()));
+}
+
+py::object PyMlirContext::createFromCapsule(py::object capsule) {
+  MlirContext rawContext = mlirPythonCapsuleToContext(capsule.ptr());
+  if (mlirContextIsNull(rawContext))
+    throw py::error_already_set();
+  return forContext(rawContext).releaseObject();
+}
+
 PyMlirContext *PyMlirContext::createNewContextForInit() {
   MlirContext context = mlirContextCreate();
   mlirRegisterAllDialects(context);
@@ -579,6 +591,10 @@ PyModuleRef PyModule::create(PyMlirContextRef contextRef, MlirModule module) {
       py::cast(unownedModule, py::return_value_policy::take_ownership);
   unownedModule->handle = pyRef;
   return PyModuleRef(unownedModule, std::move(pyRef));
+}
+
+py::object PyModule::getCapsule() {
+  return py::reinterpret_steal<py::object>(mlirPythonModuleToCapsule(get()));
 }
 
 //------------------------------------------------------------------------------
@@ -1345,6 +1361,9 @@ void mlir::python::populateIRSubmodule(py::module &m) {
              return ref.releaseObject();
            })
       .def("_get_live_operation_count", &PyMlirContext::getLiveOperationCount)
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
+                             &PyMlirContext::getCapsule)
+      .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyMlirContext::createFromCapsule)
       .def_property(
           "allow_unregistered_dialects",
           [](PyMlirContext &self) -> bool {
@@ -1428,6 +1447,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
 
   // Mapping of Module
   py::class_<PyModule>(m, "Module")
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR, &PyModule::getCapsule)
       .def_property_readonly(
           "operation",
           [](PyModule &self) {

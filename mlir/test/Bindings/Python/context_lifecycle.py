@@ -40,3 +40,10 @@ print("Free C2")
 c2 = None
 gc.collect()
 assert mlir.ir.Context._get_live_count() == 0
+
+# Create a context, get its capsule and create from capsule.
+c4 = mlir.ir.Context()
+c4_capsule = c4._CAPIPtr
+assert '"mlir.ir.Context._CAPIPtr"' in repr(c4_capsule)
+c5 = mlir.ir.Context._CAPICreate(c4_capsule)
+assert c4 is c5
