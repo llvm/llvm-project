@@ -1338,7 +1338,7 @@ void Vectorize::runOnFunction() {
 static void
 verifyLoopNesting(const std::vector<SmallVector<AffineForOp, 2>> &loops) {
   assert(!loops.empty() && "Expected at least one loop");
-  assert(!loops[0].size() && "Expected only one root loop");
+  assert(loops[0].size() == 1 && "Expected only one root loop");
 
   // Traverse loops outer-to-inner to check some invariants.
   for (int i = 1, end = loops.size(); i < end; ++i) {
