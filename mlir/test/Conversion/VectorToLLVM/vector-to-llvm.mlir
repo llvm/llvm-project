@@ -438,9 +438,9 @@ func @vector_print_scalar_i1(%arg0: i1) {
 //
 // CHECK-LABEL: llvm.func @vector_print_scalar_i1(
 // CHECK-SAME: %[[A:.*]]: !llvm.i1)
-//       CHECK: %[[S:.*]] = llvm.zext %[[A]] : !llvm.i1 to !llvm.i32
-//       CHECK: llvm.call @print_i32(%[[S]]) : (!llvm.i32) -> ()
-//       CHECK: llvm.call @print_newline() : () -> ()
+//       CHECK: %[[S:.*]] = llvm.zext %[[A]] : !llvm.i1 to !llvm.i64
+//       CHECK: llvm.call @printI64(%[[S]]) : (!llvm.i64) -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
 
 func @vector_print_scalar_i4(%arg0: i4) {
   vector.print %arg0 : i4
@@ -448,9 +448,9 @@ func @vector_print_scalar_i4(%arg0: i4) {
 }
 // CHECK-LABEL: llvm.func @vector_print_scalar_i4(
 // CHECK-SAME: %[[A:.*]]: !llvm.i4)
-//       CHECK: %[[S:.*]] = llvm.sext %[[A]] : !llvm.i4 to !llvm.i32
-//       CHECK: llvm.call @print_i32(%[[S]]) : (!llvm.i32) -> ()
-//       CHECK: llvm.call @print_newline() : () -> ()
+//       CHECK: %[[S:.*]] = llvm.sext %[[A]] : !llvm.i4 to !llvm.i64
+//       CHECK: llvm.call @printI64(%[[S]]) : (!llvm.i64) -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
 
 func @vector_print_scalar_si4(%arg0: si4) {
   vector.print %arg0 : si4
@@ -458,9 +458,9 @@ func @vector_print_scalar_si4(%arg0: si4) {
 }
 // CHECK-LABEL: llvm.func @vector_print_scalar_si4(
 // CHECK-SAME: %[[A:.*]]: !llvm.i4)
-//       CHECK: %[[S:.*]] = llvm.sext %[[A]] : !llvm.i4 to !llvm.i32
-//       CHECK: llvm.call @print_i32(%[[S]]) : (!llvm.i32) -> ()
-//       CHECK: llvm.call @print_newline() : () -> ()
+//       CHECK: %[[S:.*]] = llvm.sext %[[A]] : !llvm.i4 to !llvm.i64
+//       CHECK: llvm.call @printI64(%[[S]]) : (!llvm.i64) -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
 
 func @vector_print_scalar_ui4(%arg0: ui4) {
   vector.print %arg0 : ui4
@@ -468,9 +468,9 @@ func @vector_print_scalar_ui4(%arg0: ui4) {
 }
 // CHECK-LABEL: llvm.func @vector_print_scalar_ui4(
 // CHECK-SAME: %[[A:.*]]: !llvm.i4)
-//       CHECK: %[[S:.*]] = llvm.zext %[[A]] : !llvm.i4 to !llvm.i32
-//       CHECK: llvm.call @printU32(%[[S]]) : (!llvm.i32) -> ()
-//       CHECK: llvm.call @print_newline() : () -> ()
+//       CHECK: %[[S:.*]] = llvm.zext %[[A]] : !llvm.i4 to !llvm.i64
+//       CHECK: llvm.call @printU64(%[[S]]) : (!llvm.i64) -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
 
 func @vector_print_scalar_i32(%arg0: i32) {
   vector.print %arg0 : i32
@@ -478,8 +478,9 @@ func @vector_print_scalar_i32(%arg0: i32) {
 }
 // CHECK-LABEL: llvm.func @vector_print_scalar_i32(
 // CHECK-SAME: %[[A:.*]]: !llvm.i32)
-//       CHECK:    llvm.call @print_i32(%[[A]]) : (!llvm.i32) -> ()
-//       CHECK:    llvm.call @print_newline() : () -> ()
+//       CHECK: %[[S:.*]] = llvm.sext %[[A]] : !llvm.i32 to !llvm.i64
+//       CHECK: llvm.call @printI64(%[[S]]) : (!llvm.i64) -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
 
 func @vector_print_scalar_ui32(%arg0: ui32) {
   vector.print %arg0 : ui32
@@ -487,8 +488,8 @@ func @vector_print_scalar_ui32(%arg0: ui32) {
 }
 // CHECK-LABEL: llvm.func @vector_print_scalar_ui32(
 // CHECK-SAME: %[[A:.*]]: !llvm.i32)
-//       CHECK:    llvm.call @printU32(%[[A]]) : (!llvm.i32) -> ()
-//       CHECK:    llvm.call @print_newline() : () -> ()
+//       CHECK: %[[S:.*]] = llvm.zext %[[A]] : !llvm.i32 to !llvm.i64
+//       CHECK: llvm.call @printU64(%[[S]]) : (!llvm.i64) -> ()
 
 func @vector_print_scalar_i40(%arg0: i40) {
   vector.print %arg0 : i40
@@ -497,8 +498,8 @@ func @vector_print_scalar_i40(%arg0: i40) {
 // CHECK-LABEL: llvm.func @vector_print_scalar_i40(
 // CHECK-SAME: %[[A:.*]]: !llvm.i40)
 //       CHECK: %[[S:.*]] = llvm.sext %[[A]] : !llvm.i40 to !llvm.i64
-//       CHECK: llvm.call @print_i64(%[[S]]) : (!llvm.i64) -> ()
-//       CHECK: llvm.call @print_newline() : () -> ()
+//       CHECK: llvm.call @printI64(%[[S]]) : (!llvm.i64) -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
 
 func @vector_print_scalar_si40(%arg0: si40) {
   vector.print %arg0 : si40
@@ -507,8 +508,8 @@ func @vector_print_scalar_si40(%arg0: si40) {
 // CHECK-LABEL: llvm.func @vector_print_scalar_si40(
 // CHECK-SAME: %[[A:.*]]: !llvm.i40)
 //       CHECK: %[[S:.*]] = llvm.sext %[[A]] : !llvm.i40 to !llvm.i64
-//       CHECK: llvm.call @print_i64(%[[S]]) : (!llvm.i64) -> ()
-//       CHECK: llvm.call @print_newline() : () -> ()
+//       CHECK: llvm.call @printI64(%[[S]]) : (!llvm.i64) -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
 
 func @vector_print_scalar_ui40(%arg0: ui40) {
   vector.print %arg0 : ui40
@@ -518,7 +519,7 @@ func @vector_print_scalar_ui40(%arg0: ui40) {
 // CHECK-SAME: %[[A:.*]]: !llvm.i40)
 //       CHECK: %[[S:.*]] = llvm.zext %[[A]] : !llvm.i40 to !llvm.i64
 //       CHECK: llvm.call @printU64(%[[S]]) : (!llvm.i64) -> ()
-//       CHECK: llvm.call @print_newline() : () -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
 
 func @vector_print_scalar_i64(%arg0: i64) {
   vector.print %arg0 : i64
@@ -526,8 +527,8 @@ func @vector_print_scalar_i64(%arg0: i64) {
 }
 // CHECK-LABEL: llvm.func @vector_print_scalar_i64(
 // CHECK-SAME: %[[A:.*]]: !llvm.i64)
-//       CHECK:    llvm.call @print_i64(%[[A]]) : (!llvm.i64) -> ()
-//       CHECK:    llvm.call @print_newline() : () -> ()
+//       CHECK:    llvm.call @printI64(%[[A]]) : (!llvm.i64) -> ()
+//       CHECK:    llvm.call @printNewline() : () -> ()
 
 func @vector_print_scalar_ui64(%arg0: ui64) {
   vector.print %arg0 : ui64
@@ -536,7 +537,16 @@ func @vector_print_scalar_ui64(%arg0: ui64) {
 // CHECK-LABEL: llvm.func @vector_print_scalar_ui64(
 // CHECK-SAME: %[[A:.*]]: !llvm.i64)
 //       CHECK:    llvm.call @printU64(%[[A]]) : (!llvm.i64) -> ()
-//       CHECK:    llvm.call @print_newline() : () -> ()
+//       CHECK:    llvm.call @printNewline() : () -> ()
+
+func @vector_print_scalar_index(%arg0: index) {
+  vector.print %arg0 : index
+  return
+}
+// CHECK-LABEL: llvm.func @vector_print_scalar_index(
+// CHECK-SAME: %[[A:.*]]: !llvm.i64)
+//       CHECK:    llvm.call @printU64(%[[A]]) : (!llvm.i64) -> ()
+//       CHECK:    llvm.call @printNewline() : () -> ()
 
 func @vector_print_scalar_f32(%arg0: f32) {
   vector.print %arg0 : f32
@@ -544,8 +554,8 @@ func @vector_print_scalar_f32(%arg0: f32) {
 }
 // CHECK-LABEL: llvm.func @vector_print_scalar_f32(
 // CHECK-SAME: %[[A:.*]]: !llvm.float)
-//       CHECK:    llvm.call @print_f32(%[[A]]) : (!llvm.float) -> ()
-//       CHECK:    llvm.call @print_newline() : () -> ()
+//       CHECK:    llvm.call @printF32(%[[A]]) : (!llvm.float) -> ()
+//       CHECK:    llvm.call @printNewline() : () -> ()
 
 func @vector_print_scalar_f64(%arg0: f64) {
   vector.print %arg0 : f64
@@ -553,8 +563,8 @@ func @vector_print_scalar_f64(%arg0: f64) {
 }
 // CHECK-LABEL: llvm.func @vector_print_scalar_f64(
 // CHECK-SAME: %[[A:.*]]: !llvm.double)
-//       CHECK:    llvm.call @print_f64(%[[A]]) : (!llvm.double) -> ()
-//       CHECK:    llvm.call @print_newline() : () -> ()
+//       CHECK:    llvm.call @printF64(%[[A]]) : (!llvm.double) -> ()
+//       CHECK:    llvm.call @printNewline() : () -> ()
 
 func @vector_print_vector(%arg0: vector<2x2xf32>) {
   vector.print %arg0 : vector<2x2xf32>
@@ -562,30 +572,30 @@ func @vector_print_vector(%arg0: vector<2x2xf32>) {
 }
 // CHECK-LABEL: llvm.func @vector_print_vector(
 // CHECK-SAME: %[[A:.*]]: !llvm.array<2 x vec<2 x float>>)
-//       CHECK:    llvm.call @print_open() : () -> ()
+//       CHECK:    llvm.call @printOpen() : () -> ()
 //       CHECK:    %[[x0:.*]] = llvm.extractvalue %[[A]][0] : !llvm.array<2 x vec<2 x float>>
-//       CHECK:    llvm.call @print_open() : () -> ()
+//       CHECK:    llvm.call @printOpen() : () -> ()
 //       CHECK:    %[[x1:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 //       CHECK:    %[[x2:.*]] = llvm.extractelement %[[x0]][%[[x1]] : !llvm.i64] : !llvm.vec<2 x float>
-//       CHECK:    llvm.call @print_f32(%[[x2]]) : (!llvm.float) -> ()
-//       CHECK:    llvm.call @print_comma() : () -> ()
+//       CHECK:    llvm.call @printF32(%[[x2]]) : (!llvm.float) -> ()
+//       CHECK:    llvm.call @printComma() : () -> ()
 //       CHECK:    %[[x3:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 //       CHECK:    %[[x4:.*]] = llvm.extractelement %[[x0]][%[[x3]] : !llvm.i64] : !llvm.vec<2 x float>
-//       CHECK:    llvm.call @print_f32(%[[x4]]) : (!llvm.float) -> ()
-//       CHECK:    llvm.call @print_close() : () -> ()
-//       CHECK:    llvm.call @print_comma() : () -> ()
+//       CHECK:    llvm.call @printF32(%[[x4]]) : (!llvm.float) -> ()
+//       CHECK:    llvm.call @printClose() : () -> ()
+//       CHECK:    llvm.call @printComma() : () -> ()
 //       CHECK:    %[[x5:.*]] = llvm.extractvalue %[[A]][1] : !llvm.array<2 x vec<2 x float>>
-//       CHECK:    llvm.call @print_open() : () -> ()
+//       CHECK:    llvm.call @printOpen() : () -> ()
 //       CHECK:    %[[x6:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 //       CHECK:    %[[x7:.*]] = llvm.extractelement %[[x5]][%[[x6]] : !llvm.i64] : !llvm.vec<2 x float>
-//       CHECK:    llvm.call @print_f32(%[[x7]]) : (!llvm.float) -> ()
-//       CHECK:    llvm.call @print_comma() : () -> ()
+//       CHECK:    llvm.call @printF32(%[[x7]]) : (!llvm.float) -> ()
+//       CHECK:    llvm.call @printComma() : () -> ()
 //       CHECK:    %[[x8:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 //       CHECK:    %[[x9:.*]] = llvm.extractelement %[[x5]][%[[x8]] : !llvm.i64] : !llvm.vec<2 x float>
-//       CHECK:    llvm.call @print_f32(%[[x9]]) : (!llvm.float) -> ()
-//       CHECK:    llvm.call @print_close() : () -> ()
-//       CHECK:    llvm.call @print_close() : () -> ()
-//       CHECK:    llvm.call @print_newline() : () -> ()
+//       CHECK:    llvm.call @printF32(%[[x9]]) : (!llvm.float) -> ()
+//       CHECK:    llvm.call @printClose() : () -> ()
+//       CHECK:    llvm.call @printClose() : () -> ()
+//       CHECK:    llvm.call @printNewline() : () -> ()
 
 func @extract_strided_slice1(%arg0: vector<4xf32>) -> vector<2xf32> {
   %0 = vector.extract_strided_slice %arg0 {offsets = [2], sizes = [2], strides = [1]} : vector<4xf32> to vector<2xf32>
