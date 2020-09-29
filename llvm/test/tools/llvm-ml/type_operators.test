@@ -196,6 +196,7 @@ mov eax, type(t6_signed)
 
 t7_single REAL4 2 DUP (?)
 t7_double REAL8 ?
+t7_extended REAL10 3 DUP (?)
 
 t7:
 ; CHECK-LABEL: t7:
@@ -213,6 +214,13 @@ mov eax, type(t7_double)
 ; CHECK: mov eax, 8
 ; CHECK: mov eax, 1
 ; CHECK: mov eax, 8
+
+mov eax, sizeof(t7_extended)
+mov eax, lengthof(t7_extended)
+mov eax, type(t7_extended)
+; CHECK: mov eax, 30
+; CHECK: mov eax, 3
+; CHECK: mov eax, 10
 
 
 t8_var FOO <>, <>
