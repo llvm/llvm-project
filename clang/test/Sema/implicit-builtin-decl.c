@@ -54,13 +54,12 @@ main(int argc, char *argv[])
 
 void snprintf() { }
 
-// PR8316 & PR40692
-void longjmp(); // expected-warning{{declaration of built-in function 'longjmp' requires the declaration of the 'jmp_buf' type, commonly provided in the header <setjmp.h>.}}
+void longjmp();
 
 extern float fmaxf(float, float);
 
 struct __jmp_buf_tag {};
-void sigsetjmp(struct __jmp_buf_tag[1], int); // expected-warning{{declaration of built-in function 'sigsetjmp' requires the declaration of the 'jmp_buf' type, commonly provided in the header <setjmp.h>.}}
+void sigsetjmp(struct __jmp_buf_tag[1], int);
 
 // PR40692
 void pthread_create(); // no warning expected
