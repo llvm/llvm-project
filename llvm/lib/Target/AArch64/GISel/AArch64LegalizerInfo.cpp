@@ -90,7 +90,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
-      .legalFor({s32, s64, v2s32, v4s32, v2s64, v4s16, v8s16, v16s8})
+      .legalFor({s32, s64, v2s32, v4s32, v4s16, v8s16, v16s8})
+      .scalarizeIf(
+          [=](const LegalityQuery &Query) {
+            return Query.Opcode == G_MUL && Query.Types[0] == v2s64;
+          },
+          0)
+      .legalFor({v2s64})
       .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0)
       .clampNumElements(0, v2s32, v4s32)
@@ -426,14 +432,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1, s8, s16, s32});
   getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({p0});
 
-  // Select
-  // FIXME: We can probably do a bit better than just scalarizing vector
-  // selects.
   getActionDefinitionsBuilder(G_SELECT)
       .legalFor({{s32, s1}, {s64, s1}, {p0, s1}})
       .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0)
-      .scalarize(0);
+      .minScalarEltSameAsIf(isVector(0), 1, 0)
+      .lowerIf(isVector(0));
 
   // Pointer-handling
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});

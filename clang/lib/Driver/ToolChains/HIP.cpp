@@ -341,7 +341,8 @@ HIPToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   const OptTable &Opts = getDriver().getOpts();
 
   for (Arg *A : Args) {
-    DAL->append(A);
+    if (!shouldSkipArgument(A))
+      DAL->append(A);
   }
 
   if (!BoundArch.empty()) {

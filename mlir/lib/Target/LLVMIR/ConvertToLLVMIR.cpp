@@ -41,6 +41,8 @@ void registerToLLVMIRTranslation() {
         llvmModule->print(output, nullptr);
         return success();
       },
-      [](DialectRegistry &registry) { registry.insert<LLVM::LLVMDialect>(); });
+      [](DialectRegistry &registry) {
+        registry.insert<LLVM::LLVMDialect, omp::OpenMPDialect>();
+      });
 }
 } // namespace mlir

@@ -104,6 +104,15 @@ class ACC<bits<3> num, string n, list<Register> subregs> : PPCReg<n> {
   let SubRegs = subregs;
 }
 
+// UACC - One of the 8 512-bit VSX accumulators prior to being primed.
+// Without using this register class, the register allocator has no way to
+// differentiate a primed accumulator from an unprimed accumulator.
+// This may result in invalid copies between primed and unprimed accumulators.
+class UACC<bits<3> num, string n, list<Register> subregs> : PPCReg<n> {
+  let HWEncoding{2-0} = num;
+  let SubRegs = subregs;
+}
+
 // VSR Pairs - One of the 32 paired even-odd consecutive VSRs.
 class VSRPair<bits<5> num, string n, list<Register> subregs> : PPCReg<n> {
   let HWEncoding{4-0} = num;
@@ -417,6 +426,22 @@ let SubRegIndices = [sub_pair0, sub_pair1] in {
 }
 def ACCRC : RegisterClass<"PPC", [v512i1], 128, (add ACC0, ACC1, ACC2, ACC3,
                                                       ACC4, ACC5, ACC6, ACC7)> {
+  let Size = 512;
+}
+
+let SubRegIndices = [sub_pair0, sub_pair1] in {
+  def UACC0 : UACC<0, "acc0", [VSRp0, VSRp1]>, DwarfRegNum<[0, 0]>;
+  def UACC1 : UACC<1, "acc1", [VSRp2, VSRp3]>, DwarfRegNum<[0, 0]>;
+  def UACC2 : UACC<2, "acc2", [VSRp4, VSRp5]>, DwarfRegNum<[0, 0]>;
+  def UACC3 : UACC<3, "acc3", [VSRp6, VSRp7]>, DwarfRegNum<[0, 0]>;
+  def UACC4 : UACC<4, "acc4", [VSRp8, VSRp9]>, DwarfRegNum<[0, 0]>;
+  def UACC5 : UACC<5, "acc5", [VSRp10, VSRp11]>, DwarfRegNum<[0, 0]>;
+  def UACC6 : UACC<6, "acc6", [VSRp12, VSRp13]>, DwarfRegNum<[0, 0]>;
+  def UACC7 : UACC<7, "acc7", [VSRp14, VSRp15]>, DwarfRegNum<[0, 0]>;
+}
+def UACCRC : RegisterClass<"PPC", [v512i1], 128,
+                           (add UACC0, UACC1, UACC2, UACC3,
+                                UACC4, UACC5, UACC6, UACC7)> {
   let Size = 512;
 }
 

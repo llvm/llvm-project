@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+// Investigation needed
+// UNSUPPORTED: gcc
+
 // <memory>
 
 // template <class T, class ...Args>
@@ -39,17 +42,24 @@ struct Counted {
 constexpr bool test()
 {
     {
-        int ints[1] = {0};
-        int* res = std::construct_at(&ints[0], 42);
-        assert(res == &ints[0]);
+        int i = 99;
+        int* res = std::construct_at(&i);
+        assert(res == &i);
+        assert(*res == 0);
+    }
+
+    {
+        int i = 0;
+        int* res = std::construct_at(&i, 42);
+        assert(res == &i);
         assert(*res == 42);
     }
 
     {
-        Foo foos[1] = {};
+        Foo foo = {};
         int count = 0;
-        Foo* res = std::construct_at(&foos[0], 42, 'x', 123.89, &count);
-        assert(res == &foos[0]);
+        Foo* res = std::construct_at(&foo, 42, 'x', 123.89, &count);
+        assert(res == &foo);
         assert(*res == Foo(42, 'x', 123.89));
         assert(count == 1);
     }

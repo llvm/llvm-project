@@ -450,6 +450,21 @@ namespace llvm {
     /// available. This is used with ADD_TLS to produce an add like PADDI.
     TLS_LOCAL_EXEC_MAT_ADDR,
 
+    /// ACC_BUILD = Build an accumulator register from 4 VSX registers.
+    ACC_BUILD,
+
+    /// PAIR_BUILD = Build a vector pair register from 2 VSX registers.
+    PAIR_BUILD,
+
+    /// EXTRACT_VSX_REG = Extract one of the underlying vsx registers of
+    /// an accumulator or pair register. This node is needed because
+    /// EXTRACT_SUBVECTOR expects the input and output vectors to have the same
+    /// element type.
+    EXTRACT_VSX_REG,
+
+    /// XXMFACC = This corresponds to the xxmfacc instruction.
+    XXMFACC,
+
     // Constrained conversion from floating point to int
     STRICT_FCTIDZ = ISD::FIRST_TARGET_STRICTFP_OPCODE,
     STRICT_FCTIWZ,

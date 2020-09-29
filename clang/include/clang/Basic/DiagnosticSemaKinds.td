@@ -8921,7 +8921,7 @@ def note_array_declared_here : Note<
   "array %0 declared here">;
 
 def warn_printf_insufficient_data_args : Warning<
-  "more '%%' conversions than data arguments">, InGroup<Format>;
+  "more '%%' conversions than data arguments">, InGroup<FormatInsufficientArgs>;
 def warn_printf_data_arg_not_used : Warning<
   "data argument not used by format string">, InGroup<FormatExtraArgs>;
 def warn_format_invalid_conversion : Warning<

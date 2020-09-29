@@ -9,6 +9,10 @@ template("gen_decision_forest") {
       "$target_gen_dir/$filename.cpp",
       "$target_gen_dir/$filename.h",
     ]
+    inputs = [
+      "$model/features.json",
+      "$model/forest.json",
+    ]
     args = [
       "--model",
       rebase_path(model, root_build_dir),

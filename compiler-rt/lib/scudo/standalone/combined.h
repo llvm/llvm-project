@@ -950,12 +950,6 @@ private:
 
   static const uptr MaxTraceSize = 64;
 
-  GlobalStats Stats;
-  TSDRegistryT TSDRegistry;
-  PrimaryT Primary;
-  SecondaryT Secondary;
-  QuarantineT Quarantine;
-
   u32 Cookie;
 
   struct {
@@ -967,6 +961,12 @@ private:
     u8 UseOddEvenTags : 1;
     u32 QuarantineMaxChunkSize; // quarantine_max_chunk_size
   } Options;
+
+  GlobalStats Stats;
+  PrimaryT Primary;
+  SecondaryT Secondary;
+  QuarantineT Quarantine;
+  TSDRegistryT TSDRegistry;
 
 #ifdef GWP_ASAN_HOOKS
   gwp_asan::GuardedPoolAllocator GuardedAlloc;

@@ -201,7 +201,7 @@ void SymbolQualitySignals::merge(const Symbol &IndexResult) {
   ReservedName = ReservedName || isReserved(IndexResult.Name);
 }
 
-float SymbolQualitySignals::evaluate() const {
+float SymbolQualitySignals::evaluateHeuristics() const {
   float Score = 1;
 
   // This avoids a sharp gradient for tail symbols, and also neatly avoids the
@@ -253,7 +253,7 @@ float SymbolQualitySignals::evaluate() const {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const SymbolQualitySignals &S) {
-  OS << llvm::formatv("=== Symbol quality: {0}\n", S.evaluate());
+  OS << llvm::formatv("=== Symbol quality: {0}\n", S.evaluateHeuristics());
   OS << llvm::formatv("\tReferences: {0}\n", S.References);
   OS << llvm::formatv("\tDeprecated: {0}\n", S.Deprecated);
   OS << llvm::formatv("\tReserved name: {0}\n", S.ReservedName);
@@ -364,7 +364,7 @@ SymbolRelevanceSignals::calculateDerivedSignals() const {
   return Derived;
 }
 
-float SymbolRelevanceSignals::evaluate() const {
+float SymbolRelevanceSignals::evaluateHeuristics() const {
   DerivedSignals Derived = calculateDerivedSignals();
   float Score = 1;
 
@@ -445,7 +445,7 @@ float SymbolRelevanceSignals::evaluate() const {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const SymbolRelevanceSignals &S) {
-  OS << llvm::formatv("=== Symbol relevance: {0}\n", S.evaluate());
+  OS << llvm::formatv("=== Symbol relevance: {0}\n", S.evaluateHeuristics());
   OS << llvm::formatv("\tName: {0}\n", S.Name);
   OS << llvm::formatv("\tName match: {0}\n", S.NameMatch);
   if (S.ContextWords)

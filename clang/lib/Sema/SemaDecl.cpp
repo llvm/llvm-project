@@ -9644,7 +9644,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   // In C builtins get merged with implicitly lazily created declarations.
   // In C++ we need to check if it's a builtin and add the BuiltinAttr here.
-  if (getLangOpts().CPlusPlus) {
+  if (getLangOpts().CPlusPlus &&
+      NewFD->getDeclContext()->getRedeclContext()->isFileContext()) {
     if (IdentifierInfo *II = Previous.getLookupName().getAsIdentifierInfo()) {
       if (unsigned BuiltinID = II->getBuiltinID()) {
         if (NewFD->getLanguageLinkage() == CLanguageLinkage) {

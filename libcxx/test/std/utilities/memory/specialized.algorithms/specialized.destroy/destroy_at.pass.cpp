@@ -34,6 +34,7 @@ struct VirtualCounted {
 
 struct DerivedCounted : VirtualCounted {
     TEST_CONSTEXPR DerivedCounted(int* counter) : VirtualCounted(counter) { }
+    TEST_CONSTEXPR_CXX20 ~DerivedCounted() override { }
     friend void operator&(DerivedCounted) = delete;
 };
 

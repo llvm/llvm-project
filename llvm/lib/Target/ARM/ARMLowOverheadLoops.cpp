@@ -921,14 +921,17 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
   if (Revert)
     return;
 
-  auto ValidateRanges = [this, &BBUtils]() {
+  // Check branch target ranges: WLS[TP] can only branch forwards and LE[TP]
+  // can only jump back.
+  auto ValidateRanges = [](MachineInstr *Start, MachineInstr *End,
+                           ARMBasicBlockUtils *BBUtils, MachineLoop &ML) {
     if (!End->getOperand(1).isMBB())
       report_fatal_error("Expected LoopEnd to target basic block");
 
     // TODO Maybe there's cases where the target doesn't have to be the header,
     // but for now be safe and revert.
     if (End->getOperand(1).getMBB() != ML.getHeader()) {
-      LLVM_DEBUG(dbgs() << "ARM Loops: LoopEnd is not targetting header.\n");
+      LLVM_DEBUG(dbgs() << "ARM Loops: LoopEnd is not targeting header.\n");
       return false;
     }
 
@@ -950,7 +953,10 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
     return true;
   };
 
-  auto FindStartInsertionPoint = [this]() -> MachineInstr* {
+  // Find a suitable position to insert the loop start instruction. It needs to
+  // be able to safely define LR.
+  auto FindStartInsertionPoint = [](MachineInstr *Start,
+                                    ReachingDefAnalysis &RDA) -> MachineInstr* {
     // We can define LR because LR already contains the same value.
     if (Start->getOperand(0).getReg() == ARM::LR)
       return Start;
@@ -983,8 +989,8 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
     return RDA.isSafeToDefRegAt(Start, ARM::LR) ? Start : nullptr;
   };
 
-  InsertPt = FindStartInsertionPoint();
-  Revert = !ValidateRanges() || !InsertPt;
+  InsertPt = FindStartInsertionPoint(Start, RDA);
+  Revert = !ValidateRanges(Start, End, BBUtils, ML) || !InsertPt;
   CannotTailPredicate = !ValidateTailPredicate(InsertPt);
 
   LLVM_DEBUG(if (!InsertPt)

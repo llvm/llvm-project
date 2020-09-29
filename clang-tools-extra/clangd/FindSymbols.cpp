@@ -116,8 +116,8 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
       return;
     }
     Relevance.merge(Sym);
-    auto Score =
-        evaluateSymbolAndRelevance(Quality.evaluate(), Relevance.evaluate());
+    auto Score = evaluateSymbolAndRelevance(Quality.evaluateHeuristics(),
+                                            Relevance.evaluateHeuristics());
     dlog("FindSymbols: {0}{1} = {2}\n{3}{4}\n", Sym.Scope, Sym.Name, Score,
          Quality, Relevance);
 

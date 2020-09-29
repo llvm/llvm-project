@@ -3110,6 +3110,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     MI.eraseFromParent();
     return Legalized;
   }
+  case G_SELECT:
+    return lowerSelect(MI);
   }
 }
 
@@ -6173,6 +6175,29 @@ LegalizerHelper::lowerSMULH_UMULH(MachineInstr &MI) {
   auto Shifted = MIRBuilder.buildInstr(ShiftOp, {WideTy}, {Mul, ShiftAmt});
   MIRBuilder.buildTrunc(Result, Shifted);
 
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
+  // Implement vector G_SELECT in terms of XOR, AND, OR.
+  Register DstReg = MI.getOperand(0).getReg();
+  Register MaskReg = MI.getOperand(1).getReg();
+  Register Op1Reg = MI.getOperand(2).getReg();
+  Register Op2Reg = MI.getOperand(3).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT MaskTy = MRI.getType(MaskReg);
+  LLT Op1Ty = MRI.getType(Op1Reg);
+  if (!DstTy.isVector())
+    return UnableToLegalize;
+
+  if (MaskTy.getSizeInBits() != Op1Ty.getSizeInBits())
+    return UnableToLegalize;
+
+  auto NotMask = MIRBuilder.buildNot(MaskTy, MaskReg);
+  auto NewOp1 = MIRBuilder.buildAnd(MaskTy, Op1Reg, MaskReg);
+  auto NewOp2 = MIRBuilder.buildAnd(MaskTy, Op2Reg, NotMask);
+  MIRBuilder.buildOr(DstReg, NewOp1, NewOp2);
   MI.eraseFromParent();
   return Legalized;
 }

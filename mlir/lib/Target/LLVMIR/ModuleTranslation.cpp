@@ -302,7 +302,7 @@ ModuleTranslation::ModuleTranslation(Operation *module,
     : mlirModule(module), llvmModule(std::move(llvmModule)),
       debugTranslation(
           std::make_unique<DebugTranslation>(module, *this->llvmModule)),
-      ompDialect(module->getContext()->getOrLoadDialect<omp::OpenMPDialect>()),
+      ompDialect(module->getContext()->getLoadedDialect("omp")),
       typeTranslator(this->llvmModule->getContext()) {
   assert(satisfiesLLVMModule(mlirModule) &&
          "mlirModule should honor LLVM's module semantics.");
@@ -639,9 +639,8 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
     return success();
   }
 
-  if (opInst.getDialect() == ompDialect) {
+  if (ompDialect && opInst.getDialect() == ompDialect)
     return convertOmpOperation(opInst, builder);
-  }
 
   return opInst.emitError("unsupported or non-LLVM operation: ")
          << opInst.getName();
