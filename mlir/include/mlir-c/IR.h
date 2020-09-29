@@ -91,6 +91,9 @@ MlirContext mlirContextCreate();
 /** Checks if two contexts are equal. */
 int mlirContextEqual(MlirContext ctx1, MlirContext ctx2);
 
+/** Checks whether a context is null. */
+inline int mlirContextIsNull(MlirContext context) { return !context.ptr; }
+
 /** Takes an MLIR context owned by the caller and destroys it. */
 void mlirContextDestroy(MlirContext context);
 
