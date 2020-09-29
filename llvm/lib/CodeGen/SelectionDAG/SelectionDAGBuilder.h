@@ -492,6 +492,10 @@ public:
   /// of the specified type Ty. Return empty SDValue() otherwise.
   SDValue getCopyFromRegs(const Value *V, Type *Ty);
 
+  /// Register a dbg_value which relies on a Value which we have not yet seen.
+  void addDanglingDebugInfo(const DbgValueInst *DI, DebugLoc DL,
+                            unsigned Order);
+
   /// If we have dangling debug info that describes \p Variable, or an
   /// overlapping part of variable considering the \p Expr, then this method
   /// will drop that debug info as it isn't valid any longer.
@@ -507,11 +511,11 @@ public:
   /// this cannot be done, produce an Undef debug value record.
   void salvageUnresolvedDbgValue(DanglingDebugInfo &DDI);
 
-  /// For a given Value, attempt to create and record a SDDbgValue in the
-  /// SelectionDAG.
-  bool handleDebugValue(const Value *V, DILocalVariable *Var,
-                        DIExpression *Expr, DebugLoc CurDL,
-                        DebugLoc InstDL, unsigned Order);
+  /// For a given list of Values, attempt to create and record a SDDbgValue in
+  /// the SelectionDAG.
+  bool handleDebugValue(ArrayRef<const Value *> Values, DILocalVariable *Var,
+                        DIExpression *Expr, DebugLoc CurDL, DebugLoc InstDL,
+                        unsigned Order, bool IsVariadic);
 
   /// Evict any dangling debug information, attempting to salvage it first.
   void resolveOrClearDbgInfo();
