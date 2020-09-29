@@ -12,11 +12,56 @@ import io
 import os
 import phabricator
 import re
+import socket
 import subprocess
 import sys
 import time
 
 LLVM_REVIEWS_API = "https://reviews.llvm.org/api/"
+
+def exponentialBackoffRetry(f, exception, maxAttempts=3):
+    """Tries calling a function, but retry with exponential backoff if the
+       function fails with the specified exception.
+    """
+    waitTime = 1
+    attempts = 0
+    while True:
+        try:
+            f()
+            break
+        except exception as e:
+            attempts += 1
+            if attempts == maxAttempts:
+                raise e
+            else:
+                time.sleep(waitTime)
+                waitTime *= 2
+
+def buildPassed(log):
+    """
+    Tries to guess whether a build has passed or not based on the logs
+    produced by it.
+
+    This is really hacky -- it would be better to use the status of the
+    script that runs the tests, however that script is being piped into
+    this script, so we can't know its exit status. What we do here is
+    basically look for abnormal CMake or Lit output, but that is tightly
+    coupled to the specific CI we're running.
+    """
+    # Lit reporting failures
+    matches = re.findall(r"^\s*Failed\s*:\s*(\d+)$", log, flags=re.MULTILINE)
+    if matches and any(int(match) > 0 for match in matches):
+        return False
+
+    # Error while running CMake
+    if 'CMake Error' in log or 'Configuring incomplete, errors occurred!' in log:
+        return False
+
+    # Ninja failed to build some target
+    if 'FAILED:' in log:
+        return False
+
+    return True
 
 def main(argv):
     parser = argparse.ArgumentParser(
@@ -31,8 +76,12 @@ with the results of the build.
 
 The script is assumed to be running inside a Buildkite agent, and as such,
 it assumes the existence of several environment variables that are specific
-to Buildkite. It also assumes that it is running in a context where the HEAD
-commit contains the Phabricator ID of the review to update.
+to Buildkite.
+
+It also assumes that it is running in a context where the HEAD commit contains
+the Phabricator ID of the review to update. If the commit does not contain the
+Phabricator ID, this script is basically a no-op. This allows running the CI
+on commits that are not triggered by a Phabricator review.
 """)
     args = parser.parse_args(argv)
 
@@ -60,7 +109,7 @@ commit contains the Phabricator ID of the review to update.
     # Then, extract information from the environment and post-process the logs.
     log.seek(0)
     log = log.read()
-    result = 'fail' if 'FAILED:' in log else 'pass'
+    result = 'pass' if buildPassed(log) else 'fail'
     resultObject = {
         'name': '{BUILDKITE_LABEL} ({BUILDKITE_BUILD_URL}#{BUILDKITE_JOB_ID})'.format(**os.environ),
         'result': result,
@@ -70,15 +119,21 @@ commit contains the Phabricator ID of the review to update.
 
     commitMessage = subprocess.check_output(['git', 'log', '--format=%B' , '-n', '1']).decode()
     phabricatorID = re.search(r'^Phabricator-ID:\s+(.+)$', commitMessage, flags=re.MULTILINE)
-    if not phabricatorID:
-        raise RuntimeError('Could not find the Phabricator ID in the commit message. '
-                           'The commit message was:\n{}'.format(commitMessage))
-    else:
-        phabricatorID = phabricatorID.group(1)
 
-    token = os.environ['CONDUIT_TOKEN']
-    phab = phabricator.Phabricator(token=token, host=LLVM_REVIEWS_API)
-    phab.harbormaster.sendmessage(buildTargetPHID=phabricatorID, type=result, unit=[resultObject])
+    # If there's a Phabricator ID in the commit, then the build was triggered
+    # by a Phabricator review -- update the results back. Otherwise, don't
+    # do anything.
+    if phabricatorID:
+        phabricatorID = phabricatorID.group(1)
+        token = os.environ['CONDUIT_TOKEN']
+        phab = phabricator.Phabricator(token=token, host=LLVM_REVIEWS_API)
+        exponentialBackoffRetry(
+            lambda: phab.harbormaster.sendmessage(buildTargetPHID=phabricatorID, type=result, unit=[resultObject]),
+            exception=socket.timeout
+        )
+    else:
+        print('The HEAD commit does not appear to be tied to a Phabricator review -- '
+              'not uploading the results to any review.')
 
 if __name__ == '__main__':
     main(sys.argv[1:])
