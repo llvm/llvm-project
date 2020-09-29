@@ -24,11 +24,32 @@
 # as /llvm in the container. Be careful, the state in /llvm is shared between
 # the container and the host machine.
 #
+# Finally, a pre-built version of this image is available on DockerHub as
+# ldionne/libcxx-builder. To use the pre-built version of the image, use
+#
+#   $ docker pull ldionne/libcxx-builder
+#   $ docker run -it <options> ldionne/libcxx-builder
+#
+# To update the image, rebuild it and push it to ldionne/libcxx-builder (which
+# will obviously only work if you have permission to do so).
+#
+#   $ docker build -t ldionne/libcxx-builder .
+#   $ docker push ldionne/libcxx-builder
+#
 
 FROM ubuntu:bionic
 
 RUN apt-get update
 RUN apt-get install -y bash curl
+
+# Install various tools used by the build or the test suite
+RUN apt-get install -y ninja-build python3 sphinx-doc git
+
+# Install the Phabricator Python module to allow uploading results to Phabricator.
+# This MUST be done before installing a recent GCC, otherwise /usr/bin/gcc is
+# overwritten to an older GCC.
+RUN apt-get install -y python3-pip
+RUN pip3 install phabricator
 
 # Install the most recently released LLVM
 RUN apt-get install -y lsb-release wget software-properties-common
@@ -39,25 +60,26 @@ RUN ln -s $(find /usr/bin -regex '.+/clang-[a-zA-Z0-9.]+') /usr/bin/clang
 # Install a recent GCC
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test
 RUN apt-get update && apt install -y gcc-10 g++-10
-RUN ln -s $(find /usr/bin -regex '.+/g\+\+-[a-zA-Z0-9.]+') /usr/bin/g++
-RUN ln -s $(find /usr/bin -regex '.+/gcc-[a-zA-Z0-9.]+') /usr/bin/gcc
+RUN ln -f -s /usr/bin/g++-10 /usr/bin/g++
+RUN ln -f -s /usr/bin/gcc-10 /usr/bin/gcc
 
 # Install a recent CMake
 RUN wget https://github.com/Kitware/CMake/releases/download/v3.18.2/cmake-3.18.2-Linux-x86_64.sh -O /tmp/install-cmake.sh
 RUN bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
 RUN rm /tmp/install-cmake.sh
 
-# Install other tools used by the build or the test suite
-RUN apt-get install -y ninja-build python3 sphinx-doc
+# Change the user to a non-root user, since some of the libc++ tests
+# (e.g. filesystem) require running as non-root. Also setup passwordless sudo.
+RUN apt-get install -y sudo
+RUN echo "ALL ALL = (ALL) NOPASSWD: ALL" >> /etc/sudoers
+RUN useradd --create-home libcxx-builder
+USER libcxx-builder
+WORKDIR /home/libcxx-builder
 
-# Install the Buildkite agent and dependencies
+# Install the Buildkite agent and dependencies. This must be done as non-root
+# for the Buildkite agent to be installed in a path where we can find it.
 RUN bash -c "$(curl -sL https://raw.githubusercontent.com/buildkite/agent/master/install.sh)"
-RUN apt-get install -y git
-ENV PATH="${PATH}:/root/.buildkite-agent/bin"
-
-# Install the Phabricator Python module to allow uploading results to Phabricator
-RUN apt-get install -y python3-pip
-RUN pip3 install phabricator
+ENV PATH="${PATH}:/home/libcxx-builder/.buildkite-agent/bin"
 
 # By default, start the Buildkite agent (this requires a token).
 CMD buildkite-agent start --tags "queue=libcxx-builders"

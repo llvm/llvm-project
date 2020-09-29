@@ -259,7 +259,8 @@ Register RABasic::selectOrSplit(LiveInterval &VirtReg,
   SmallVector<Register, 8> PhysRegSpillCands;
 
   // Check for an available register in this class.
-  AllocationOrder Order(VirtReg.reg(), *VRM, RegClassInfo, Matrix);
+  auto Order =
+      AllocationOrder::create(VirtReg.reg(), *VRM, RegClassInfo, Matrix);
   while (Register PhysReg = Order.next()) {
     // Check for interference in PhysReg
     switch (Matrix->checkInterference(VirtReg, PhysReg)) {
