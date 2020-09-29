@@ -20,6 +20,8 @@ class TraceIntelPT : public lldb_private::Trace {
 public:
   void Dump(lldb_private::Stream *s) const override;
 
+  ~TraceIntelPT() override = default;
+
   /// PluginInterface protocol
   /// \{
   lldb_private::ConstString GetPluginName() override;
