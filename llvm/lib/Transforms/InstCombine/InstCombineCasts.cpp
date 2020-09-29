@@ -836,6 +836,27 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     // TODO: Mask high bits with 'and'.
   }
 
+  // trunc (*shr (trunc A), C) --> trunc(*shr A, C)
+  if (match(Src, m_OneUse(m_Shr(m_Trunc(m_Value(A)), m_Constant(C))))) {
+    unsigned MaxShiftAmt = SrcWidth - DestWidth;
+
+    // If the shift is small enough, all zero/sign bits created by the shift are
+    // removed by the trunc.
+    // TODO: Support passing through undef shift amounts - these currently get
+    // zero'd by getIntegerCast.
+    if (match(C, m_SpecificInt_ICMP(ICmpInst::ICMP_ULE,
+                                    APInt(SrcWidth, MaxShiftAmt)))) {
+      auto *OldShift = cast<Instruction>(Src);
+      auto *ShAmt = ConstantExpr::getIntegerCast(C, A->getType(), true);
+      bool IsExact = OldShift->isExact();
+      Value *Shift =
+          OldShift->getOpcode() == Instruction::AShr
+              ? Builder.CreateAShr(A, ShAmt, OldShift->getName(), IsExact)
+              : Builder.CreateLShr(A, ShAmt, OldShift->getName(), IsExact);
+      return CastInst::CreateTruncOrBitCast(Shift, DestTy);
+    }
+  }
+
   if (Instruction *I = narrowBinOp(Trunc))
     return I;
 
