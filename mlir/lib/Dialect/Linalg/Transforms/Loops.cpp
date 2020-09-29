@@ -515,9 +515,12 @@ Optional<LinalgLoops> linalgOpToLoopsImpl(Operation *op, OpBuilder &builder) {
                                    map, getViewSizes(builder, linalgOp));
   SmallVector<Value, 4> allIvs;
   GenerateLoopNest<LoopTy>::doit(
-      loopRanges, linalgOp.iterator_types().getValue(), [&](ValueRange ivs) {
+      loopRanges, /*iterInitArgs*/ {}, linalgOp.iterator_types().getValue(),
+      [&](ValueRange ivs, ValueRange iterArgs) -> scf::ValueVector {
+        assert(iterArgs.empty() && "unexpected iterArgs");
         allIvs.append(ivs.begin(), ivs.end());
         emitScalarImplementation<IndexedValueTy>(allIvs, linalgOp);
+        return scf::ValueVector{};
       });
   // Number of loop ops might be different from the number of ivs since some
   // loops like affine.parallel and scf.parallel have multiple ivs.
