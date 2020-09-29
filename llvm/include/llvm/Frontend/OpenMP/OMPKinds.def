@@ -230,6 +230,20 @@ __OMP_FUNCTION_TYPE(TaskRoutineEntry, false, Int32, Int32,
 ///
 ///{
 
+#ifndef ICV_INIT_VALUE
+#define ICV_INIT_VALUE(Enum, Name)
+#endif
+
+#define __ICV_INIT_VALUE(Name) ICV_INIT_VALUE(ICV_##Name, #Name)
+
+__ICV_INIT_VALUE(ZERO)
+__ICV_INIT_VALUE(FALSE)
+__ICV_INIT_VALUE(IMPLEMENTATION_DEFINED)
+__ICV_INIT_VALUE(LAST)
+
+#undef __ICV_INIT_VALUE
+#undef ICV_INIT_VALUE
+
 #ifndef ICV_DATA_ENV
 #define ICV_DATA_ENV(Enum, Name, EnvVarName, Init)
 #endif
@@ -240,6 +254,7 @@ __OMP_FUNCTION_TYPE(TaskRoutineEntry, false, Int32, Int32,
 __ICV_DATA_ENV(nthreads, OMP_NUM_THREADS, ICV_IMPLEMENTATION_DEFINED)
 __ICV_DATA_ENV(active_levels, NONE, ICV_ZERO)
 __ICV_DATA_ENV(cancel, OMP_CANCELLATION, ICV_FALSE)
+__ICV_DATA_ENV(proc_bind, OMP_PROC_BIND, ICV_IMPLEMENTATION_DEFINED)
 __ICV_DATA_ENV(__last, last, ICV_LAST)
 
 #undef __ICV_DATA_ENV
@@ -265,6 +280,7 @@ __ICV_RT_SET(nthreads, omp_set_num_threads)
 __ICV_RT_GET(nthreads, omp_get_max_threads)
 __ICV_RT_GET(active_levels, omp_get_active_level)
 __ICV_RT_GET(cancel, omp_get_cancellation)
+__ICV_RT_GET(proc_bind, omp_get_proc_bind)
 
 #undef __ICV_RT_GET
 #undef ICV_RT_GET
