@@ -79,6 +79,8 @@ define amdgpu_ps void @branch(float %arg0, float %arg1) {
 ; GCN: ; %.demote
 ; GCN-32-NEXT: s_andn2_b32 [[LIVE:s[0-9]+]], [[ORIG]], exec_lo
 ; GCN-64-NEXT: s_andn2_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], [[ORIG]], exec
+; GCN: s_cbranch_scc0 [[EARLYTERM:BB[0-9]+_[0-9]+]]
+; GCN: ; %.demote
 ; GCN-32-NEXT: s_wqm_b32 [[LIVEWQM0:s[0-9]+]], [[LIVE]]
 ; GCN-64-NEXT: s_wqm_b64 [[LIVEWQM0:s\[[0-9]+:[0-9]+\]]], [[LIVE]]
 ; GCN-32-NEXT: s_and_b32 exec_lo, exec_lo, [[LIVEWQM0]]
@@ -93,6 +95,10 @@ define amdgpu_ps void @branch(float %arg0, float %arg1) {
 ; GCN-32: s_and_b32 exec_lo, exec_lo, [[LIVE]]
 ; GCN-64: s_and_b64 exec, exec, [[LIVE]]
 ; GCN: image_sample
+; GCN: [[EARLYTERM]]:
+; GCN-NEXT: s_mov
+; GCN-NEXT: exp null off, off, off, off done vm
+; GCN-NEXT: s_endpgm
 define amdgpu_ps <4 x float> @wqm_demote_1(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, i32 %idx, float %data, float %coord, float %coord2, float %z) {
 .entry:
   %z.cmp = fcmp olt float %z, 0.0
@@ -122,6 +128,8 @@ define amdgpu_ps <4 x float> @wqm_demote_1(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GCN: ; %.demote
 ; GCN-32-NEXT: s_andn2_b32 [[LIVE:s[0-9]+]], [[ORIG]], exec
 ; GCN-64-NEXT: s_andn2_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], [[ORIG]], exec
+; GCN: s_cbranch_scc0 [[EARLYTERM:BB[0-9]+_[0-9]+]]
+; GCN: ; %.demote
 ; GCN-32-NEXT: s_wqm_b32 [[LIVEWQM0:s[0-9]+]], [[LIVE]]
 ; GCN-64-NEXT: s_wqm_b64 [[LIVEWQM0:s\[[0-9]+:[0-9]+\]]], [[LIVE]]
 ; GCN-32-NEXT: s_and_b32 exec_lo, exec_lo, [[LIVEWQM0]]
@@ -136,6 +144,10 @@ define amdgpu_ps <4 x float> @wqm_demote_1(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GCN-32: s_and_b32 exec_lo, exec_lo, [[LIVE]]
 ; GCN-64: s_and_b64 exec, exec, [[LIVE]]
 ; GCN: image_sample
+; GCN: [[EARLYTERM]]:
+; GCN-NEXT: s_mov
+; GCN-NEXT: exp null off, off, off, off done vm
+; GCN-NEXT: s_endpgm
 define amdgpu_ps <4 x float> @wqm_demote_2(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, i32 %idx, float %data, float %coord, float %coord2, float %z) {
 .entry:
   %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) #0
@@ -165,8 +177,9 @@ define amdgpu_ps <4 x float> @wqm_demote_2(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GCN: v_cmp_gt_f32_e32 vcc
 ; GCN-32-NEXT: s_and_b32 [[LIVE:s[0-9]+]], [[ORIG]], vcc
 ; GCN-64-NEXT: s_and_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], [[ORIG]], vcc
-; GCN-32-NEXT: s_wqm_b32 [[LIVEWQM0:s[0-9]+]], [[LIVE]]
-; GCN-64-NEXT: s_wqm_b64 [[LIVEWQM0:s\[[0-9]+:[0-9]+\]]], [[LIVE]]
+; GCN-NEXT: s_cbranch_scc0 [[EARLYTERM:BB[0-9]+_[0-9]+]]
+; GCN-32: s_wqm_b32 [[LIVEWQM0:s[0-9]+]], [[LIVE]]
+; GCN-64: s_wqm_b64 [[LIVEWQM0:s\[[0-9]+:[0-9]+\]]], [[LIVE]]
 ; GCN-32-NEXT: s_and_b32 exec_lo, exec_lo, [[LIVEWQM0]]
 ; GCN-64-NEXT: s_and_b64 exec, exec, [[LIVEWQM0]]
 ; GCN: s_cbranch_execz
@@ -174,6 +187,10 @@ define amdgpu_ps <4 x float> @wqm_demote_2(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GCN-32: s_and_b32 exec_lo, exec_lo, [[LIVE]]
 ; GCN-64: s_and_b64 exec, exec, [[LIVE]]
 ; GCN: image_sample
+; GCN: [[EARLYTERM]]:
+; GCN-NEXT: s_mov
+; GCN-NEXT: exp null off, off, off, off done vm
+; GCN-NEXT: s_endpgm
 define amdgpu_ps <4 x float> @wqm_demote_dynamic(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, i32 %idx, float %data, float %coord, float %coord2, float %z) {
 .entry:
   %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i1 0, i32 0, i32 0) #0
@@ -197,8 +214,9 @@ define amdgpu_ps <4 x float> @wqm_demote_dynamic(<8 x i32> inreg %rsrc, <4 x i32
 ; GCN: ; %.demote0
 ; GCN-32-NEXT: s_andn2_b32 [[LIVE:s[0-9]+]], [[ORIG]], exec
 ; GCN-64-NEXT: s_andn2_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], [[ORIG]], exec
-; GCN-32-NEXT: s_wqm_b32 [[LIVEWQM0:s[0-9]+]], [[LIVE]]
-; GCN-64-NEXT: s_wqm_b64 [[LIVEWQM0:s\[[0-9]+:[0-9]+\]]], [[LIVE]]
+; GCN-NEXT: s_cbranch_scc0 [[EARLYTERM:BB[0-9]+_[0-9]+]]
+; GCN-32: s_wqm_b32 [[LIVEWQM0:s[0-9]+]], [[LIVE]]
+; GCN-64: s_wqm_b64 [[LIVEWQM0:s\[[0-9]+:[0-9]+\]]], [[LIVE]]
 ; GCN-32-NEXT: s_and_b32 exec_lo, exec_lo, [[LIVEWQM0]]
 ; GCN-64-NEXT: s_and_b64 exec, exec, [[LIVEWQM0]]
 ; GCN-NOT: s_cbranch_execz
@@ -212,10 +230,18 @@ define amdgpu_ps <4 x float> @wqm_demote_dynamic(<8 x i32> inreg %rsrc, <4 x i32
 ; GCN-32: s_and_b32 exec_lo, exec_lo, [[LIVE]]
 ; GCN-64: s_and_b64 exec, exec, [[LIVE]]
 ; GCN: ; %.demote1
+; GCN-32-NEXT: s_andn2_b32 [[LIVE]], [[LIVE]], exec
+; GCN-64-NEXT: s_andn2_b64 [[LIVE]], [[LIVE]], exec
+; GCN-NEXT: s_cbranch_scc0 [[EARLYTERM]]
+; GCN-NEXT: ; %.demote1
 ; GCN-32-NEXT: s_mov_b32 exec_lo, 0
 ; GCN-64-NEXT: s_mov_b64 exec, 0
 ; GCN: ; %.continue1
 ; GCN: exp mrt0
+; GCN: [[EARLYTERM]]:
+; GCN-NEXT: s_mov
+; GCN-NEXT: exp null off, off, off, off done vm
+; GCN-NEXT: s_endpgm
 define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 .entry:
   %p0 = extractelement <2 x float> %input, i32 0
@@ -261,8 +287,9 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; GCN: ; %.demote0
 ; GCN-32-NEXT: s_andn2_b32 [[LIVE:s[0-9]+]], [[ORIG]], exec
 ; GCN-64-NEXT: s_andn2_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], [[ORIG]], exec
-; GCN-32-NEXT: s_wqm_b32 [[LIVEWQM0:s[0-9]+]], [[LIVE]]
-; GCN-64-NEXT: s_wqm_b64 [[LIVEWQM0:s\[[0-9]+:[0-9]+\]]], [[LIVE]]
+; GCN-NEXT: s_cbranch_scc0 [[EARLYTERM:BB[0-9]+_[0-9]+]]
+; GCN-32: s_wqm_b32 [[LIVEWQM0:s[0-9]+]], [[LIVE]]
+; GCN-64: s_wqm_b64 [[LIVEWQM0:s\[[0-9]+:[0-9]+\]]], [[LIVE]]
 ; GCN-32-NEXT: s_and_b32 exec_lo, exec_lo, [[LIVEWQM0]]
 ; GCN-64-NEXT: s_and_b64 exec, exec, [[LIVEWQM0]]
 ; GCN-NOT: s_cbranch_execz
@@ -275,6 +302,7 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; GCN: ; %.demote1
 ; GCN-32: s_andn2_b32 [[LIVE]], [[LIVE]], exec
 ; GCN-64: s_andn2_b64 [[LIVE]], [[LIVE]], exec
+; GCN-NEXT: s_cbranch_scc0 [[EARLYTERM]]
 ; GCN-NOT: s_cbranch_execz
 ; GCN: ; %.continue1
 ; GCN-32: s_or_b32 exec_lo
@@ -286,6 +314,10 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; GCN-32: s_and_b32 exec_lo, exec_lo, [[LIVE]]
 ; GCN-64: s_and_b64 exec, exec, [[LIVE]]
 ; GCN: exp mrt0
+; GCN: [[EARLYTERM]]:
+; GCN-NEXT: s_mov
+; GCN-NEXT: exp null off, off, off, off done vm
+; GCN-NEXT: s_endpgm
 define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index, i32 %limit) {
 .entry:
   %p0 = extractelement <2 x float> %input, i32 0

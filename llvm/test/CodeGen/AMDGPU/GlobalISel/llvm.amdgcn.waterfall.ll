@@ -1388,18 +1388,22 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; PRE-GFX10-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v2
 ; PRE-GFX10-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; PRE-GFX10-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
-; PRE-GFX10-NEXT:    s_cbranch_execz BB10_4
+; PRE-GFX10-NEXT:    s_cbranch_execz BB10_5
 ; PRE-GFX10-NEXT:  ; %bb.3: ; %.kill
 ; PRE-GFX10-NEXT:    v_cmp_ne_u32_e64 s[2:3], 0, 0
+; PRE-GFX10-NEXT:    s_and_b64 s[4:5], s[6:7], s[2:3]
+; PRE-GFX10-NEXT:    s_cbranch_scc0 BB10_7
+; PRE-GFX10-NEXT:  ; %bb.4: ; %.kill
 ; PRE-GFX10-NEXT:    s_and_b64 exec, exec, s[2:3]
-; PRE-GFX10-NEXT:  BB10_4: ; %.exit
+; PRE-GFX10-NEXT:  BB10_5: ; %.exit
 ; PRE-GFX10-NEXT:    s_or_b64 exec, exec, s[0:1]
-; PRE-GFX10-NEXT:    s_cbranch_execz BB10_6
-; PRE-GFX10-NEXT:  ; %bb.5: ; %.exit
+; PRE-GFX10-NEXT:    s_cbranch_execz BB10_7
+; PRE-GFX10-NEXT:  ; %bb.6: ; %.exit
 ; PRE-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; PRE-GFX10-NEXT:    exp mrt0 v0, off, off, off done vm
 ; PRE-GFX10-NEXT:    s_endpgm
-; PRE-GFX10-NEXT:  BB10_6:
+; PRE-GFX10-NEXT:  BB10_7:
+; PRE-GFX10-NEXT:    s_mov_b64 exec, 0
 ; PRE-GFX10-NEXT:    exp null off, off, off, off done vm
 ; PRE-GFX10-NEXT:    s_endpgm
 ;
@@ -1442,18 +1446,22 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX10-32-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v11
 ; GFX10-32-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX10-32-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX10-32-NEXT:    s_cbranch_execz BB10_4
+; GFX10-32-NEXT:    s_cbranch_execz BB10_5
 ; GFX10-32-NEXT:  ; %bb.3: ; %.kill
 ; GFX10-32-NEXT:    v_cmp_ne_u32_e64 s1, 0, 0
+; GFX10-32-NEXT:    s_and_b32 s2, s5, s1
+; GFX10-32-NEXT:    s_cbranch_scc0 BB10_7
+; GFX10-32-NEXT:  ; %bb.4: ; %.kill
 ; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s1
-; GFX10-32-NEXT:  BB10_4: ; %.exit
+; GFX10-32-NEXT:  BB10_5: ; %.exit
 ; GFX10-32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX10-32-NEXT:    s_cbranch_execz BB10_6
-; GFX10-32-NEXT:  ; %bb.5: ; %.exit
+; GFX10-32-NEXT:    s_cbranch_execz BB10_7
+; GFX10-32-NEXT:  ; %bb.6: ; %.exit
 ; GFX10-32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-32-NEXT:    exp mrt0 v0, off, off, off done vm
 ; GFX10-32-NEXT:    s_endpgm
-; GFX10-32-NEXT:  BB10_6:
+; GFX10-32-NEXT:  BB10_7:
+; GFX10-32-NEXT:    s_mov_b32 exec_lo, 0
 ; GFX10-32-NEXT:    exp null off, off, off, off done vm
 ; GFX10-32-NEXT:    s_endpgm
 ;
@@ -1495,18 +1503,22 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX10-64-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v11
 ; GFX10-64-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX10-64-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
-; GFX10-64-NEXT:    s_cbranch_execz BB10_4
+; GFX10-64-NEXT:    s_cbranch_execz BB10_5
 ; GFX10-64-NEXT:  ; %bb.3: ; %.kill
 ; GFX10-64-NEXT:    v_cmp_ne_u32_e64 s[2:3], 0, 0
+; GFX10-64-NEXT:    s_and_b64 s[4:5], s[6:7], s[2:3]
+; GFX10-64-NEXT:    s_cbranch_scc0 BB10_7
+; GFX10-64-NEXT:  ; %bb.4: ; %.kill
 ; GFX10-64-NEXT:    s_and_b64 exec, exec, s[2:3]
-; GFX10-64-NEXT:  BB10_4: ; %.exit
+; GFX10-64-NEXT:  BB10_5: ; %.exit
 ; GFX10-64-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GFX10-64-NEXT:    s_cbranch_execz BB10_6
-; GFX10-64-NEXT:  ; %bb.5: ; %.exit
+; GFX10-64-NEXT:    s_cbranch_execz BB10_7
+; GFX10-64-NEXT:  ; %bb.6: ; %.exit
 ; GFX10-64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-64-NEXT:    exp mrt0 v0, off, off, off done vm
 ; GFX10-64-NEXT:    s_endpgm
-; GFX10-64-NEXT:  BB10_6:
+; GFX10-64-NEXT:  BB10_7:
+; GFX10-64-NEXT:    s_mov_b64 exec, 0
 ; GFX10-64-NEXT:    exp null off, off, off, off done vm
 ; GFX10-64-NEXT:    s_endpgm
   %wf_token = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 %index)

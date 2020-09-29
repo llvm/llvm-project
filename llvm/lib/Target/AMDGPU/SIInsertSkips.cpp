@@ -71,6 +71,7 @@ private:
   bool kill(MachineInstr &MI);
 
   void demoteCleanup(MachineInstr &MI);
+  void earlyTerm(MachineInstr &MI);
 
   bool skipMaskBranch(MachineInstr &MI, MachineBasicBlock &MBB);
 
@@ -412,6 +413,25 @@ void SIInsertSkips::demoteCleanup(MachineInstr &MI) {
   }
 }
 
+void SIInsertSkips::earlyTerm(MachineInstr &MI) {
+  MachineBasicBlock &MBB = *MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+
+  ensureEarlyExitBlock(MBB, true);
+
+  auto BranchMI = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_CBRANCH_SCC0))
+    .addMBB(EarlyExitBlock);
+  auto Next = std::next(MI.getIterator());
+
+  if (Next != MBB.end() && !Next->isTerminator())
+    splitBlock(MBB, *BranchMI, MDT);
+
+  MBB.addSuccessor(EarlyExitBlock);
+  MDT->getBase().insertEdge(&MBB, EarlyExitBlock);
+
+  MI.eraseFromParent();
+}
+
 // Returns true if a branch over the block was inserted.
 bool SIInsertSkips::skipMaskBranch(MachineInstr &MI,
                                    MachineBasicBlock &SrcMBB) {
@@ -437,6 +457,7 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
   SkipThreshold = SkipThresholdFlag;
 
   SmallVector<MachineInstr *, 4> KillInstrs;
+  SmallVector<MachineInstr *, 4> EarlyTermInstrs;
   bool MadeChange = false;
 
   for (MachineBasicBlock &MBB : MF) {
@@ -507,12 +528,18 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
         }
         break;
 
+      case AMDGPU::SI_EARLY_TERMINATE_SCC0:
+        EarlyTermInstrs.push_back(&MI);
+        break;
+
       default:
         break;
       }
     }
   }
 
+  for (MachineInstr *Instr : EarlyTermInstrs)
+    earlyTerm(*Instr);
   for (MachineInstr *Kill : KillInstrs) {
     skipIfDead(*Kill->getParent(), std::next(Kill->getIterator()),
                Kill->getDebugLoc());
