@@ -212,8 +212,6 @@ def OpenACC_DataOp : OpenACC_Op<"data",
     ( `attach` `(` $attachOperands^ `:` type($attachOperands) `)` )?
     $region attr-dict-with-keyword
   }];
-
-  let verifier = ?;
 }
 
 def OpenACC_TerminatorOp : OpenACC_Op<"terminator", [Terminator]> {
