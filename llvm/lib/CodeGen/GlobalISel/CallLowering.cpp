@@ -380,7 +380,8 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
 
       assert(VA.isRegLoc() && "custom loc should have been handled already");
 
-      if (OrigVT.getSizeInBits() >= VAVT.getSizeInBits() ||
+      // GlobalISel does not currently work for scalable vectors.
+      if (OrigVT.getFixedSizeInBits() >= VAVT.getFixedSizeInBits() ||
           !Handler.isIncomingArgumentHandler()) {
         // This is an argument that might have been split. There should be
         // Regs.size() ArgLocs per argument.
@@ -416,7 +417,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
     // Now that all pieces have been handled, re-pack any arguments into any
     // wider, original registers.
     if (Handler.isIncomingArgumentHandler()) {
-      if (VAVT.getSizeInBits() < OrigVT.getSizeInBits()) {
+      if (VAVT.getFixedSizeInBits() < OrigVT.getFixedSizeInBits()) {
         assert(NumArgRegs >= 2);
 
         // Merge the split registers into the expected larger result vreg
