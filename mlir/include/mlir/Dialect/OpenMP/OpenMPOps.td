@@ -124,7 +124,7 @@ def FlushOp : OpenMP_Op<"flush"> {
 
   let arguments = (ins Variadic<AnyType>:$varList);
 
-  let assemblyFormat = "attr-dict ($varList^ `:` type($varList))?";
+  let assemblyFormat = [{ ( `(` $varList^ `:` type($varList) `)` )? attr-dict}];
 }
 
 //===----------------------------------------------------------------------===//
