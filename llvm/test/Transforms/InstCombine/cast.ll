@@ -1548,7 +1548,7 @@ define i8 @trunc_lshr_sext(i8 %A) {
 
 define i8 @trunc_lshr_sext_exact(i8 %A) {
 ; ALL-LABEL: @trunc_lshr_sext_exact(
-; ALL-NEXT:    [[D:%.*]] = ashr i8 [[A:%.*]], 6
+; ALL-NEXT:    [[D:%.*]] = ashr exact i8 [[A:%.*]], 6
 ; ALL-NEXT:    ret i8 [[D]]
 ;
   %B = sext i8 %A to i32
@@ -1718,7 +1718,7 @@ define i8 @trunc_lshr_sext_wide_input(i16 %A) {
 
 define i8 @trunc_lshr_sext_wide_input_exact(i16 %A) {
 ; ALL-LABEL: @trunc_lshr_sext_wide_input_exact(
-; ALL-NEXT:    [[TMP1:%.*]] = ashr i16 [[A:%.*]], 9
+; ALL-NEXT:    [[TMP1:%.*]] = ashr exact i16 [[A:%.*]], 9
 ; ALL-NEXT:    [[D:%.*]] = trunc i16 [[TMP1]] to i8
 ; ALL-NEXT:    ret i8 [[D]]
 ;
