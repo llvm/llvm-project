@@ -241,6 +241,21 @@ Bug fixes:
 * The correct libcall is now emitted for converting a float/double to a 32-bit
   signed or unsigned integer on RV64 targets lacking the F or D extensions.
 
+Changes to the SystemZ Target
+-----------------------------
+
+* Added support for the MemorySanitizer and the LeakSanitizer.
+* Added support for the ``-fstack-clash-protection`` command line option.
+* Enhanced the assembler parser to allow using `%r0` even in an address
+  register context, and to allow specifying registers using plain integer
+  numbers instead of register names everywhere.
+* Fixed wrong code generation violating the platform ABI when passing
+  a C++ class (not struct) type having only a single member of
+  floating-point type.
+* Fixed wrong code generation when using the `vec_store_len_r` or
+  `vec_load_len_r` intrinsics with an immediate length argument of
+  16 or larger.
+* Miscellaneous codegen enhancements, in particular to improve vector code.
 
 Changes to the X86 Target
 -------------------------
