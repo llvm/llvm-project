@@ -1056,6 +1056,35 @@ if.end:                                           ; preds = %if.else, %if.then
   ret i1 %cmp1
 }
 
+define i1 @phi_allnonzerononconstant(i1 %c, i32 %a, i32* nonnull %b1, i32* nonnull %b2) {
+; CHECK-LABEL: @phi_allnonzerononconstant(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br i1 %c, label %if.then, label %if.else
+
+if.then:                                          ; preds = %entry
+  br label %if.end
+
+if.else:                                          ; preds = %entry
+  call void @dummy()
+
+  br label %if.end
+
+if.end:                                           ; preds = %if.else, %if.then
+  %x.0 = phi i32* [ %b1, %if.then ], [ %b2, %if.else ]
+  %cmp1 = icmp eq i32* %x.0, null
+  ret i1 %cmp1
+}
+
 declare void @dummy()
 
 define i1 @phi_knownnonzero_eq(i32 %n, i32 %s, i32* nocapture readonly %P) {
