@@ -9,6 +9,7 @@ CHECK-NEXT:    -Wdelete-non-virtual-dtor
 CHECK-NEXT:      -Wdelete-non-abstract-non-virtual-dtor
 CHECK-NEXT:      -Wdelete-abstract-non-virtual-dtor
 CHECK-NEXT:    -Wformat
+CHECK-NEXT:      -Wformat-insufficient-args
 CHECK-NEXT:      -Wformat-extra-args
 CHECK-NEXT:      -Wformat-zero-length
 CHECK-NEXT:      -Wnonnull
