@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 using namespace mlir;
@@ -24,7 +25,11 @@ using namespace mlir;
 std::unique_ptr<llvm::Module>
 mlir::translateModuleToLLVMIR(ModuleOp m, llvm::LLVMContext &llvmContext,
                               StringRef name) {
-  return LLVM::ModuleTranslation::translateModule<>(m, llvmContext, name);
+  auto llvmModule =
+      LLVM::ModuleTranslation::translateModule<>(m, llvmContext, name);
+  if (verifyModule(*llvmModule))
+    emitError(m.getLoc(), "LLVM IR fails to verify");
+  return llvmModule;
 }
 
 namespace mlir {
