@@ -554,3 +554,41 @@ func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>
 // CHECK:   acc.update host([[ARGA]] : memref<10xf32>) device([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) attributes {async}
 // CHECK:   acc.update host([[ARGA]] : memref<10xf32>) device([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) attributes {wait}
 // CHECK:   acc.update host([[ARGA]] : memref<10xf32>) device([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) attributes {ifPresent}
+
+// -----
+
+%i64Value = constant 1 : i64
+%i32Value = constant 1 : i32
+%idxValue = constant 1 : index
+%ifCond = constant true
+acc.wait
+acc.wait(%i64Value: i64)
+acc.wait(%i32Value: i32)
+acc.wait(%idxValue: index)
+acc.wait(%i32Value, %idxValue : i32, index)
+acc.wait async(%i64Value: i64)
+acc.wait async(%i32Value: i32)
+acc.wait async(%idxValue: index)
+acc.wait(%i32Value: i32) async(%idxValue: index)
+acc.wait(%i64Value: i64) wait_devnum(%i32Value: i32)
+acc.wait attributes {async}
+acc.wait(%i64Value: i64) async(%idxValue: index) wait_devnum(%i32Value: i32)
+acc.wait if(%ifCond)
+
+// CHECK: [[I64VALUE:%.*]] = constant 1 : i64
+// CHECK: [[I32VALUE:%.*]] = constant 1 : i32
+// CHECK: [[IDXVALUE:%.*]] = constant 1 : index
+// CHECK: [[IFCOND:%.*]] = constant true
+// CHECK: acc.wait
+// CHECK: acc.wait([[I64VALUE]] : i64)
+// CHECK: acc.wait([[I32VALUE]] : i32)
+// CHECK: acc.wait([[IDXVALUE]] : index)
+// CHECK: acc.wait([[I32VALUE]], [[IDXVALUE]] : i32, index)
+// CHECK: acc.wait async([[I64VALUE]] : i64)
+// CHECK: acc.wait async([[I32VALUE]] : i32)
+// CHECK: acc.wait async([[IDXVALUE]] : index)
+// CHECK: acc.wait([[I32VALUE]] : i32) async([[IDXVALUE]] : index)
+// CHECK: acc.wait([[I64VALUE]] : i64) wait_devnum([[I32VALUE]] : i32)
+// CHECK: acc.wait attributes {async}
+// CHECK: acc.wait([[I64VALUE]] : i64) async([[IDXVALUE]] : index) wait_devnum([[I32VALUE]] : i32)
+// CHECK: acc.wait if([[IFCOND]])

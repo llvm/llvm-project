@@ -676,5 +676,21 @@ static LogicalResult verify(acc::UpdateOp updateOp) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// WaitOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(acc::WaitOp waitOp) {
+  // The async attribute represent the async clause without value. Therefore the
+  // attribute and operand cannot appear at the same time.
+  if (waitOp.asyncOperand() && waitOp.async())
+    return waitOp.emitError("async attribute cannot appear with asyncOperand");
+
+  if (waitOp.waitDevnum() && waitOp.waitOperands().empty())
+    return waitOp.emitError("wait_devnum cannot appear without waitOperands");
+
+  return success();
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOps.cpp.inc"
