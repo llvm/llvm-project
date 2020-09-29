@@ -61,6 +61,7 @@ static_library("LLVMBPFCodeGen") {
   sources = [
     "BPFAbstractMemberAccess.cpp",
     "BPFAsmPrinter.cpp",
+    "BPFCheckAndAdjustIR.cpp",
     "BPFFrameLowering.cpp",
     "BPFISelDAGToDAG.cpp",
     "BPFISelLowering.cpp",
