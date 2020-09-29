@@ -49,6 +49,7 @@ protected: // Can only create subclasses.
   bool SkipSpace = true;
   bool AllowAtInIdentifier;
   bool IsAtStartOfStatement = true;
+  bool LexMasmHexFloats = false;
   bool LexMasmIntegers = false;
   bool UseMasmDefaultRadix = false;
   unsigned DefaultRadix = 10;
@@ -159,6 +160,9 @@ public:
 
   unsigned getMasmDefaultRadix() const { return DefaultRadix; }
   void setMasmDefaultRadix(unsigned Radix) { DefaultRadix = Radix; }
+
+  /// Set whether to lex masm-style hex float literals, such as 3f800000r.
+  void setLexMasmHexFloats(bool V) { LexMasmHexFloats = V; }
 };
 
 } // end namespace llvm

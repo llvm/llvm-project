@@ -350,6 +350,11 @@ AsmToken AsmLexer::LexDigit() {
       return LexFloatLiteral();
     }
 
+    if (LexMasmHexFloats && (*CurPtr == 'r' || *CurPtr == 'R')) {
+      ++CurPtr;
+      return AsmToken(AsmToken::Real, StringRef(TokStart, CurPtr - TokStart));
+    }
+
     unsigned Radix = 0;
     if (*CurPtr == 'h' || *CurPtr == 'H') {
       // hexadecimal number
