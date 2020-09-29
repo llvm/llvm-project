@@ -2638,6 +2638,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       return false;
 
     unsigned NumArgOperands = I.getNumArgOperands();
+    if (I.getIntrinsicID() == Intrinsic::abs) {
+      assert(NumArgOperands == 2);
+      // The last argument is just a boolean flag.
+      NumArgOperands = 1;
+    }
 
     for (unsigned i = 0; i < NumArgOperands; ++i) {
       Type *Ty = I.getArgOperand(i)->getType();
