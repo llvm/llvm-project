@@ -137,9 +137,14 @@ program acc_parallel
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
-! NOT WORKING YET
-!  !$acc parallel if(ifCondition)
-!  !$acc end parallel
+  !$acc parallel if(ifCondition)
+  !$acc end parallel
+
+!CHECK:      [[IFCOND:%.*]] = fir.load %{{.*}} : !fir.ref<!fir.logical<4>>
+!CHECK:      [[IF2:%.*]] = fir.convert [[IFCOND]] : (!fir.logical<4>) -> i1
+!CHECK:      acc.parallel if([[IF2]]) {
+!CHECK:        acc.yield
+!CHECK-NEXT: }{{$}}
 
   !$acc parallel self(.TRUE.)
   !$acc end parallel
@@ -156,9 +161,14 @@ program acc_parallel
 !CHECK:        acc.yield
 !CHECK-NEXT: } attributes {selfAttr}
 
-! NOT WORKING YET
-!  !$acc parallel self(ifCondition)
-!  !$acc end parallel
+  !$acc parallel self(ifCondition)
+  !$acc end parallel
+
+!CHECK:      [[SELFCOND:%.*]] = fir.load %{{.*}} : !fir.ref<!fir.logical<4>>
+!CHECK:      [[SELF2:%.*]] = fir.convert [[SELFCOND]] : (!fir.logical<4>) -> i1
+!CHECK:      acc.parallel self([[SELF2]]) {
+!CHECK:        acc.yield
+!CHECK-NEXT: }{{$}}
 
   !$acc parallel copy(a, b, c)
   !$acc end parallel
