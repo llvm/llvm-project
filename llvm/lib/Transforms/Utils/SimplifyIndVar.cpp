@@ -477,6 +477,7 @@ bool SimplifyIndvar::eliminateOverflowIntrinsic(WithOverflowInst *WO) {
   if (WO->use_empty())
     WO->eraseFromParent();
 
+  Changed = true;
   return true;
 }
 
