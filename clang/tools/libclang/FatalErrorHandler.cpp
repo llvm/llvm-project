@@ -9,6 +9,7 @@
 
 #include "clang-c/FatalErrorHandler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <stdlib.h>
 
 static void aborting_fatal_error_handler(void *, const std::string &reason,
                                          bool) {
