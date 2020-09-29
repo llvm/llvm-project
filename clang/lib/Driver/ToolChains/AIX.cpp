@@ -162,6 +162,9 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (Args.hasArg(options::OPT_pthreads, options::OPT_pthread))
       CmdArgs.push_back("-lpthreads");
 
+    if (D.CCCIsCXX())
+      CmdArgs.push_back("-lm");
+
     CmdArgs.push_back("-lc");
   }
 
