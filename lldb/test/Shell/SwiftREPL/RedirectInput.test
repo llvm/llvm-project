@@ -1,0 +1,17 @@
+// Test that input can be redirected from A.swift
+
+// RUN: mkdir -p %t
+// RUN: cp %S/Inputs/A.swift %t/A.swift
+// RUN: cd %t
+// RUN: %lldb --repl < %s | FileCheck %s
+
+< A.swift
+
+Foo.foo()
+// CHECK: ${{R0}}: String = "A"
+
+let y = MyPoint(x: 2, y: 2)
+// CHECK: {{^}}y: MyPoint = {
+
+y.magnitudeSquared
+// CHECK: {{^}}${{R1}}: Int = 8
