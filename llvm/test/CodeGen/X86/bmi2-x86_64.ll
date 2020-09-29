@@ -79,7 +79,6 @@ define i64 @pext64_knownbits(i64 %x, i64 %y)   {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movabsq $6148914691236517205, %rax # imm = 0x5555555555555555
 ; CHECK-NEXT:    pextq %rax, %rdi, %rax
-; CHECK-NEXT:    movl %eax, %eax
 ; CHECK-NEXT:    retq
   %tmp = tail call i64 @llvm.x86.bmi.pext.64(i64 %x, i64 6148914691236517205)
   %tmp2 = and i64 %tmp, 4294967295
