@@ -35,8 +35,6 @@ namespace lldb_private {
 /// this information.
 class Trace : public PluginInterface {
 public:
-  ~Trace() override = default;
-
   /// Dump the trace data that this plug-in has access to.
   ///
   /// This function will dump all of the trace data for all threads in a user
