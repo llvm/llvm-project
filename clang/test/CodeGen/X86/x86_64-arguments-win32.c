@@ -27,5 +27,5 @@ void f6(_Complex double a) {}
 // CHECK-LABEL: define dso_local i64 @f7()
 _Complex float f7() { return 1.0; }
 
-// CHECK-LABEL: define dso_local void @f8({ double, double }* noalias sret align 8 %agg.result)
+// CHECK-LABEL: define dso_local void @f8({ double, double }* noalias sret({ double, double }) align 8 %agg.result)
 _Complex double f8() { return 1.0; }

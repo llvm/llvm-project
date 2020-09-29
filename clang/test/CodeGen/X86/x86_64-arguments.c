@@ -47,7 +47,7 @@ void f7(e7 a0) {
 
 // Test merging/passing of upper eightbyte with X87 class.
 //
-// CHECK-LABEL: define void @f8_1(%union.u8* noalias sret align 16 %agg.result)
+// CHECK-LABEL: define void @f8_1(%union.u8* noalias sret(%union.u8) align 16 %agg.result)
 // CHECK-LABEL: define void @f8_2(%union.u8* byval(%union.u8) align 16 %a0)
 union u8 {
   long double a;
@@ -63,7 +63,7 @@ struct s9 { int a; int b; int : 0; } f9(void) { while (1) {} }
 struct s10 { int a; int b; int : 0; };
 void f10(struct s10 a0) {}
 
-// CHECK-LABEL: define void @f11(%union.anon* noalias sret align 16 %agg.result)
+// CHECK-LABEL: define void @f11(%union.anon* noalias sret(%union.anon) align 16 %agg.result)
 union { long double a; float b; } f11() { while (1) {} }
 
 // CHECK-LABEL: define i32 @f12_0()
@@ -74,7 +74,7 @@ void f12_1(struct s12 a0) {}
 
 // Check that sret parameter is accounted for when checking available integer
 // registers.
-// CHECK: define void @f13(%struct.s13_0* noalias sret align 8 %agg.result, i32 %a, i32 %b, i32 %c, i32 %d, {{.*}}* byval({{.*}}) align 8 %e, i32 %f)
+// CHECK: define void @f13(%struct.s13_0* noalias sret(%struct.s13_0) align 8 %agg.result, i32 %a, i32 %b, i32 %c, i32 %d, {{.*}}* byval({{.*}}) align 8 %e, i32 %f)
 
 struct s13_0 { long long f0[3]; };
 struct s13_1 { long long f0[2]; };
@@ -98,7 +98,7 @@ void f17(float a, float b, float c, float d, float e, float f, float g, float h,
 // Check for valid coercion.  The struct should be passed/returned as i32, not
 // as i64 for better code quality.
 // rdar://8135035
-// CHECK-LABEL: define void @f18(i32 %a, i32 %f18_arg1.coerce) 
+// CHECK-LABEL: define void @f18(i32 %a, i32 %f18_arg1.coerce)
 struct f18_s0 { int f0; };
 void f18(int a, struct f18_s0 f18_arg1) { while (1) {} }
 
@@ -123,7 +123,7 @@ struct StringRef {
 };
 
 // rdar://7375902
-// CHECK-LABEL: define i8* @f21(i64 %S.coerce0, i8* %S.coerce1) 
+// CHECK-LABEL: define i8* @f21(i64 %S.coerce0, i8* %S.coerce1)
 const char *f21(struct StringRef S) { return S.x+S.Ptr; }
 
 // PR7567
@@ -151,7 +151,7 @@ struct f24s { long a; int b; };
 
 struct f23S f24(struct f23S *X, struct f24s *P2) {
   return *X;
-  
+
   // CHECK: define { i64, i32 } @f24(%struct.f23S* %X, %struct.f24s* %P2)
 }
 

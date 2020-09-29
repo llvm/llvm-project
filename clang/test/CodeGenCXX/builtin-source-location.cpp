@@ -65,7 +65,7 @@ SL const_init_global = SL::current();
 //
 // CHECK-GLOBAL-TWO: define internal void @__cxx_global_var_init()
 // CHECK-GLOBAL-TWO-NOT: ret
-// CHECK-GLOBAL-TWO: call void @_ZN15source_location11bad_currentEjjPKcS1_(%struct.source_location* sret align 8 @runtime_init_global,
+// CHECK-GLOBAL-TWO: call void @_ZN15source_location11bad_currentEjjPKcS1_(%struct.source_location* sret(%struct.source_location) align 8 @runtime_init_global,
 // CHECK-GLOBAL-TWO-SAME: i32 1100, i32 {{[0-9]+}}, {{[^@]*}}@[[FILE]], {{[^@]*}}@[[FUNC]],
 #line 1100 "test_runtime_init.cpp"
 SL runtime_init_global = SL::bad_current();
@@ -77,7 +77,7 @@ extern "C" void test_function() {
 // CHECK-LOCAL-ONE-DAG: @[[FILE:.*]] = {{.*}}c"test_current.cpp\00"
 // CHECK-LOCAL-ONE-DAG: @[[FUNC:.*]] = {{.*}}c"test_function\00"
 //
-// CHECK-LOCAL-ONE:  call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret align 8 %local,
+// CHECK-LOCAL-ONE:  call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret(%struct.source_location) align 8 %local,
 // CHECK-LOCAL-ONE-SAME: i32 2100, i32 {{[0-9]+}},
 // CHECK-LOCAL-ONE-SAME: {{[^@]*}}@[[FILE]], {{[^@]*}}@[[FUNC]],
 #line 2100 "test_current.cpp"
@@ -102,7 +102,7 @@ struct TestInit {
 // CHECK-CTOR-GLOBAL: define internal void @__cxx_global_var_init.{{[0-9]+}}()
 // CHECK-CTOR-GLOBAL-NOT: ret
 //
-// CHECK-CTOR-GLOBAL: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret align 8 %[[TMP_ONE:[^,]*]],
+// CHECK-CTOR-GLOBAL: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret(%struct.source_location) align 8 %[[TMP_ONE:[^,]*]],
 // CHECK-CTOR-GLOBAL-SAME: i32 3400, i32 {{[0-9]+}}, {{[^@]*}}@[[FILE]], {{[^@]*}}@[[FUNC]],
 // CHECK-CTOR-GLOBAL-NEXT: call void @_ZN8TestInitC1E15source_location(%struct.TestInit* @GlobalInitVal, %struct.source_location* {{.*}}%[[TMP_ONE]])
 #line 3400 "GlobalInitVal.cpp"
@@ -117,7 +117,7 @@ extern "C" void test_init_function() {
 // CHECK-CTOR-LOCAL: define void @test_init_function()
 // CHECK-CTOR-LOCAL-NOT: ret
 //
-// CHECK-CTOR-LOCAL: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret align 8 %[[TMP:[^,]*]],
+// CHECK-CTOR-LOCAL: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret(%struct.source_location) align 8 %[[TMP:[^,]*]],
 // CHECK-CTOR-LOCAL-SAME: i32 3500, i32 {{[0-9]+}}, {{[^@]*}}@[[FILE]], {{[^@]*}}@[[FUNC]],
 // CHECK-CTOR-LOCAL-NEXT: call void @_ZN8TestInitC1E15source_location(%struct.TestInit* %init_local, %struct.source_location* {{.*}}%[[TMP]])
 #line 3500 "LocalInitVal.cpp"
@@ -153,7 +153,7 @@ extern "C" void test_init_function_constexpr() {
 // CHECK-CONSTEXPR-LOCAL-DAG: @[[FILE:.*]] = {{.*}}c"ConstexprLocal.cpp\00"
 //
 // CHECK-CONSTEXPR-LOCAL: define void @test_init_function_constexpr()
-// CHECK-CONSTEXPR-LOCAL: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret align 8 %[[TMP:[^,]*]],
+// CHECK-CONSTEXPR-LOCAL: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret(%struct.source_location) align 8 %[[TMP:[^,]*]],
 // CHECK-CONSTEXPR-LOCAL-SAME: i32 4600, i32 {{[0-9]+}}, {{[^@]*}}@[[FILE]], {{[^@]*}}@[[FUNC]]
 // CHECK-CONSTEXPR-LOCAL: call void @_ZN17TestInitConstexprC1E15source_location(%struct.TestInitConstexpr* %local_val, {{.*}}%[[TMP]])
 #line 4600 "ConstexprLocal.cpp"
@@ -189,7 +189,7 @@ extern "C" void test_agg_init() {
 //
 // CHECK-AGG-BRACE: define void @test_agg_init()
 // CHECK-AGG-BRACE: %[[I2:.*]] = getelementptr inbounds %struct.TestInitAgg, %struct.TestInitAgg* %local_brace_init, i32 0, i32 1
-// CHECK-AGG-BRACE-NEXT: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret align 8 %[[I2]],
+// CHECK-AGG-BRACE-NEXT: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret(%struct.source_location) align 8 %[[I2]],
 // CHECK-AGG-BRACE-SAME: i32 5700, i32 {{[0-9]+}}, {{[^@]*}}@[[FILE]], {{[^@]*}}@[[FUNC]]
 #line 5600 "BraceInitStart.cpp"
   TestInitAgg local_brace_init{
@@ -203,7 +203,7 @@ extern "C" void test_agg_init() {
 //
 // CHECK-AGG-EQUAL: define void @test_agg_init()
 // CHECK-AGG-EQUAL: %[[I2:.*]] = getelementptr inbounds %struct.TestInitAgg, %struct.TestInitAgg* %local_equal_init, i32 0, i32 1
-// CHECK-AGG-EQUAL-NEXT: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret align 8 %[[I2]],
+// CHECK-AGG-EQUAL-NEXT: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret(%struct.source_location) align 8 %[[I2]],
 // CHECK-AGG-EQUAL-SAME: i32 5900, i32 {{[0-9]+}}, {{[^@]*}}@[[FILE]], {{[^@]*}}@[[FUNC]]
 #line 5800 "EqualInitStart.cpp"
   TestInitAgg local_equal_init =
@@ -220,11 +220,11 @@ extern "C" void test_agg_init() {
 // CHECK-AGG-LIST: define void @test_agg_init()
 //
 // CHECK-AGG-LIST: %[[I1:.*]] =  getelementptr inbounds %struct.TestInitAgg, %struct.TestInitAgg* %local_list_init, i32 0, i32 0
-// CHECK-AGG-LIST-NEXT: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret align 8 %[[I1]],
+// CHECK-AGG-LIST-NEXT: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret(%struct.source_location) align 8 %[[I1]],
 // CHECK-AGG-LIST-SAME: i32 6100, i32 {{[0-9]+}}, {{[^@]*}}@[[FILE_ELEM]], {{[^@]*}}@[[FUNC]]
 //
 // CHECK-AGG-LIST: %[[I2:.*]] = getelementptr inbounds %struct.TestInitAgg, %struct.TestInitAgg* %local_list_init, i32 0, i32 1
-// CHECK-AGG-LIST-NEXT: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret align 8 %[[I2]],
+// CHECK-AGG-LIST-NEXT: call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret(%struct.source_location) align 8 %[[I2]],
 // CHECK-AGG-LIST-SAME: i32 6200, i32 {{[0-9]+}}, {{[^@]*}}@[[FILE_DEFAULT]], {{[^@]*}}@[[FUNC]]
 #line 6000 "InitListStart.cpp"
   TestInitAgg local_list_init =
@@ -258,7 +258,7 @@ void test_template() {
 // CHECK-TEMPL-NEXT: entry:
 // CHECK-TEMPL-NOT: ret
 //
-// CHECK-TEMPL:  call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret align 8 %[[TMP:[^,]*]],
+// CHECK-TEMPL:  call void @_ZN15source_location7currentEjjPKcS1_(%struct.source_location* sret(%struct.source_location) align 8 %[[TMP:[^,]*]],
 // CHECK-TEMPL-SAME: i32 7300, i32 {{[0-9]+}}, {{[^@]*}}@[[FILE]], {{[^@]*}}@[[FUNC]]
 #line 7300 "local_templ.cpp"
   TestTemplate<T, V> local_templ;

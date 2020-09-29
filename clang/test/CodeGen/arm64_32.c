@@ -27,4 +27,4 @@ long double LongDoubleVar = 0.0;
 
 typedef float __attribute__((ext_vector_type(16))) v16f32;
 v16f32 func(v16f32 in) { return in; }
-// CHECK: define void @func(<16 x float>* noalias sret align 16 {{%.*}}, <16 x float> {{%.*}})
+// CHECK: define void @func(<16 x float>* noalias sret(<16 x float>) align 16 {{%.*}}, <16 x float> {{%.*}})
