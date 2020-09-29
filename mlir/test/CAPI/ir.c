@@ -14,6 +14,7 @@
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/Registration.h"
 #include "mlir-c/StandardAttributes.h"
+#include "mlir-c/StandardDialect.h"
 #include "mlir-c/StandardTypes.h"
 
 #include <assert.h>
@@ -790,6 +791,42 @@ int printAffineMap(MlirContext ctx) {
   return 0;
 }
 
+int registerOnlyStd() {
+  MlirContext ctx = mlirContextCreate();
+  // The built-in dialect is always loaded.
+  if (mlirContextGetNumLoadedDialects(ctx) != 1)
+    return 1;
+
+  MlirDialect std =
+      mlirContextGetOrLoadDialect(ctx, mlirStandardDialectGetNamespace());
+  if (!mlirDialectIsNull(std))
+    return 2;
+
+  mlirContextRegisterStandardDialect(ctx);
+  if (mlirContextGetNumRegisteredDialects(ctx) != 1)
+    return 3;
+  if (mlirContextGetNumLoadedDialects(ctx) != 1)
+    return 4;
+
+  std = mlirContextGetOrLoadDialect(ctx, mlirStandardDialectGetNamespace());
+  if (mlirDialectIsNull(std))
+    return 5;
+  if (mlirContextGetNumLoadedDialects(ctx) != 2)
+    return 6;
+
+  MlirDialect alsoStd = mlirContextLoadStandardDialect(ctx);
+  if (!mlirDialectEqual(std, alsoStd))
+    return 7;
+
+  MlirStringRef stdNs = mlirDialectGetNamespace(std);
+  MlirStringRef alsoStdNs = mlirStandardDialectGetNamespace();
+  if (stdNs.length != alsoStdNs.length ||
+      strncmp(stdNs.data, alsoStdNs.data, stdNs.length))
+    return 8;
+
+  return 0;
+}
+
 int main() {
   MlirContext ctx = mlirContextCreate();
   mlirRegisterAllDialects(ctx);
@@ -934,6 +971,14 @@ int main() {
   fprintf(stderr, "@affineMap\n");
   errcode = printAffineMap(ctx);
   fprintf(stderr, "%d\n", errcode);
+
+  fprintf(stderr, "@registration\n");
+  errcode = registerOnlyStd();
+  fprintf(stderr, "%d\n", errcode);
+  // clang-format off
+  // CHECK-LABEL: @registration
+  // CHECK: 0
+  // clang-format on
 
   mlirContextDestroy(ctx);
 
