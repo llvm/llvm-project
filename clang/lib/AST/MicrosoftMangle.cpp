@@ -1323,7 +1323,7 @@ void MicrosoftCXXNameMangler::mangleSourceName(StringRef Name) {
 }
 
 void MicrosoftCXXNameMangler::mangleObjCMethodName(const ObjCMethodDecl *MD) {
-  Context.mangleObjCMethodName(MD, Out);
+  Context.mangleObjCMethodNameAsSourceName(MD, Out);
 }
 
 void MicrosoftCXXNameMangler::mangleTemplateInstantiationName(
