@@ -122,7 +122,7 @@ void vectorizeAffineLoops(
 /// loops = {{%i3}}, to vectorize only the second innermost loop;
 /// loops = {{%i1}}, to vectorize only the middle loop.
 LogicalResult
-vectorizeAffineLoopNest(const std::vector<SmallVector<AffineForOp, 2>> &loops,
+vectorizeAffineLoopNest(std::vector<SmallVector<AffineForOp, 2>> &loops,
                         const VectorizationStrategy &strategy);
 
 /// Normalize a affine.parallel op so that lower bounds are 0 and steps are 1.
