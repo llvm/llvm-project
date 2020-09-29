@@ -21,6 +21,7 @@
 #include "mlir/IR/Operation.h"
 
 DEFINE_C_API_PTR_METHODS(MlirContext, mlir::MLIRContext)
+DEFINE_C_API_PTR_METHODS(MlirDialect, mlir::Dialect)
 DEFINE_C_API_PTR_METHODS(MlirOperation, mlir::Operation)
 DEFINE_C_API_PTR_METHODS(MlirBlock, mlir::Block)
 DEFINE_C_API_PTR_METHODS(MlirRegion, mlir::Region)

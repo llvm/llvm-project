@@ -1018,8 +1018,9 @@ constexpr int S = sum(Cs); // expected-error{{must be initialized by a constant 
 }
 
 constexpr void PR28739(int n) { // expected-error {{never produces a constant}}
-  int *p = &n;
+  int *p = &n;                  // expected-note {{declared here}}
   p += (__int128)(unsigned long)-1; // expected-note {{cannot refer to element 18446744073709551615 of non-array object in a constant expression}}
+  // expected-warning@-1 {{the pointer incremented by 18446744073709551615 refers past the last possible element for an array in 64-bit address space containing 32-bit (4-byte) elements (max possible 4611686018427387904 elements)}}
 }
 
 constexpr void Void(int n) {

@@ -75,3 +75,55 @@ acc.data {
 }
 
 // -----
+
+// expected-error@+1 {{at least one value must be present in hostOperands or deviceOperands}}
+acc.update
+
+// -----
+
+%cst = constant 1 : index
+%value = alloc() : memref<10xf32>
+// expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
+acc.update wait_devnum(%cst: index) host(%value: memref<10xf32>)
+
+// -----
+
+%cst = constant 1 : index
+%value = alloc() : memref<10xf32>
+// expected-error@+1 {{async attribute cannot appear with  asyncOperand}}
+acc.update async(%cst: index) host(%value: memref<10xf32>) attributes {async}
+
+// -----
+
+%cst = constant 1 : index
+%value = alloc() : memref<10xf32>
+// expected-error@+1 {{wait attribute cannot appear with waitOperands}}
+acc.update wait(%cst: index) host(%value: memref<10xf32>) attributes {wait}
+
+// -----
+
+%cst = constant 1 : index
+// expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
+acc.wait wait_devnum(%cst: index)
+
+// -----
+
+%cst = constant 1 : index
+// expected-error@+1 {{async attribute cannot appear with asyncOperand}}
+acc.wait async(%cst: index) attributes {async}
+
+// -----
+
+acc.parallel {
+// expected-error@+1 {{'acc.init' op cannot be nested in a compute operation}}
+  acc.init
+  acc.yield
+}
+
+// -----
+
+acc.loop {
+// expected-error@+1 {{'acc.init' op cannot be nested in a compute operation}}
+  acc.init
+  acc.yield
+}
