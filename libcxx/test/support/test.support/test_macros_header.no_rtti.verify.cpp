@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Make sure the TEST_HAS_NO_RTTI macro is defined when the -fno-rtti feature
+// Make sure the TEST_HAS_NO_RTTI macro is defined when the no-rtti Lit feature
 // is defined.
 
-// REQUIRES: -fno-rtti
+// REQUIRES: no-rtti
 
 #include "test_macros.h"
 

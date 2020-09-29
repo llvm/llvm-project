@@ -872,6 +872,8 @@ def ext_bitfield_member_init: ExtWarn<
 def warn_cxx17_compat_bitfield_member_init: Warning<
   "default member initializer for bit-field is incompatible with "
   "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
+def err_anon_bitfield_member_init : Error<
+  "anonymous bit-field cannot have a default member initializer">;
 def err_incomplete_array_member_init: Error<
   "array bound cannot be deduced from a default member initializer">;
 

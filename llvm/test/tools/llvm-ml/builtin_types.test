@@ -65,12 +65,28 @@ t5_signed SQWORD -4611686018427387904
 ; CHECK-NEXT: .quad -4611686018427387904
 
 t6_single REAL4 1.3
-t6_double REAL8 1.3
+t6_single_hex REAL4 3fa66666r
 
 ; CHECK-LABEL: t6_single:
 ; CHECK-NEXT: .long 1067869798
-; CHECK-LABEL: t6_double:
+; CHECK-LABEL: t6_single_hex:
+; CHECK-NEXT: .long 1067869798
+
+t7_double REAL8 1.3
+t7_double_hex REAL8 3FF4CCCCCCCCCCCDR
+
+; CHECK-LABEL: t7_double:
 ; CHECK-NEXT: .quad 4608533498688228557
+; CHECK-LABEL: t7_double_hex:
+; CHECK-NEXT: .quad 4608533498688228557
+
+t8_extended REAL10 1.3
+t8_extended_hex REAL10 3FFFA666666666666666r
+
+; CHECK-LABEL: t8_extended:
+; CHECK-NEXT: .ascii "fffffff\246\377?"
+; CHECK-LABEL: t8_extended_hex:
+; CHECK-NEXT: .ascii "fffffff\246\377?"
 
 .code
 

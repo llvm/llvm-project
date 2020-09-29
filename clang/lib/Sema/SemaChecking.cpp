@@ -14057,11 +14057,11 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
   const ConstantArrayType *ArrayTy =
       Context.getAsConstantArrayType(BaseExpr->getType());
 
-  const Type *BaseType =
-      ArrayTy == nullptr ? nullptr : ArrayTy->getElementType().getTypePtr();
-  bool IsUnboundedArray = (BaseType == nullptr);
-  if (EffectiveType->isDependentType() ||
-      (!IsUnboundedArray && BaseType->isDependentType()))
+  if (!ArrayTy)
+    return;
+
+  const Type *BaseType = ArrayTy->getElementType().getTypePtr();
+  if (EffectiveType->isDependentType() || BaseType->isDependentType())
     return;
 
   Expr::EvalResult Result;
@@ -14069,79 +14069,14 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     return;
 
   llvm::APSInt index = Result.Val.getInt();
-  if (IndexNegated) {
-    index.setIsUnsigned(false);
+  if (IndexNegated)
     index = -index;
-  }
 
   const NamedDecl *ND = nullptr;
   if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(BaseExpr))
     ND = DRE->getDecl();
   if (const MemberExpr *ME = dyn_cast<MemberExpr>(BaseExpr))
     ND = ME->getMemberDecl();
-
-  if (IsUnboundedArray) {
-    if (index.isUnsigned() || !index.isNegative()) {
-      const auto &ASTC = getASTContext();
-      unsigned AddrBits =
-          ASTC.getTargetInfo().getPointerWidth(ASTC.getTargetAddressSpace(
-              EffectiveType->getCanonicalTypeInternal()));
-      if (index.getBitWidth() < AddrBits)
-        index = index.zext(AddrBits);
-      CharUnits ElemCharUnits = ASTC.getTypeSizeInChars(EffectiveType);
-      llvm::APInt ElemBytes(index.getBitWidth(), ElemCharUnits.getQuantity());
-      // If index has more active bits than address space, we already know
-      // we have a bounds violation to warn about.  Otherwise, compute
-      // address of (index + 1)th element, and warn about bounds violation
-      // only if that address exceeds address space.
-      if (index.getActiveBits() <= AddrBits) {
-        bool Overflow;
-        llvm::APInt Product(index);
-        Product += 1;
-        Product = Product.umul_ov(ElemBytes, Overflow);
-        if (!Overflow && Product.getActiveBits() <= AddrBits)
-          return;
-      }
-
-      // Need to compute max possible elements in address space, since that
-      // is included in diag message.
-      llvm::APInt MaxElems = llvm::APInt::getMaxValue(AddrBits);
-      MaxElems = MaxElems.zext(std::max(AddrBits + 1, ElemBytes.getBitWidth()));
-      MaxElems += 1;
-      ElemBytes = ElemBytes.zextOrTrunc(MaxElems.getBitWidth());
-      MaxElems = MaxElems.udiv(ElemBytes);
-
-      unsigned DiagID =
-          ASE ? diag::warn_array_index_exceeds_max_addressable_bounds
-              : diag::warn_ptr_arith_exceeds_max_addressable_bounds;
-
-      // Diag message shows element size in bits and in "bytes" (platform-
-      // dependent CharUnits)
-      DiagRuntimeBehavior(BaseExpr->getBeginLoc(), BaseExpr,
-                          PDiag(DiagID)
-                              << index.toString(10, true) << AddrBits
-                              << (unsigned)ASTC.toBits(ElemCharUnits)
-                              << ElemBytes.toString(10, false)
-                              << MaxElems.toString(10, false)
-                              << (unsigned)MaxElems.getLimitedValue(~0U)
-                              << IndexExpr->getSourceRange());
-
-      if (!ND) {
-        // Try harder to find a NamedDecl to point at in the note.
-        while (const auto *ASE = dyn_cast<ArraySubscriptExpr>(BaseExpr))
-          BaseExpr = ASE->getBase()->IgnoreParenCasts();
-        if (const auto *DRE = dyn_cast<DeclRefExpr>(BaseExpr))
-          ND = DRE->getDecl();
-        if (const auto *ME = dyn_cast<MemberExpr>(BaseExpr))
-          ND = ME->getMemberDecl();
-      }
-
-      if (ND)
-        DiagRuntimeBehavior(ND->getBeginLoc(), BaseExpr,
-                            PDiag(diag::note_array_declared_here) << ND);
-    }
-    return;
-  }
 
   if (index.isUnsigned() || !index.isNegative()) {
     // It is possible that the type of the base expression after
@@ -14205,8 +14140,9 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
       }
     }
 
-    unsigned DiagID = ASE ? diag::warn_array_index_exceeds_bounds
-                          : diag::warn_ptr_arith_exceeds_bounds;
+    unsigned DiagID = diag::warn_ptr_arith_exceeds_bounds;
+    if (ASE)
+      DiagID = diag::warn_array_index_exceeds_bounds;
 
     DiagRuntimeBehavior(BaseExpr->getBeginLoc(), BaseExpr,
                         PDiag(DiagID) << index.toString(10, true)
@@ -14227,11 +14163,12 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
 
   if (!ND) {
     // Try harder to find a NamedDecl to point at in the note.
-    while (const auto *ASE = dyn_cast<ArraySubscriptExpr>(BaseExpr))
+    while (const ArraySubscriptExpr *ASE =
+           dyn_cast<ArraySubscriptExpr>(BaseExpr))
       BaseExpr = ASE->getBase()->IgnoreParenCasts();
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(BaseExpr))
+    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(BaseExpr))
       ND = DRE->getDecl();
-    if (const auto *ME = dyn_cast<MemberExpr>(BaseExpr))
+    if (const MemberExpr *ME = dyn_cast<MemberExpr>(BaseExpr))
       ND = ME->getMemberDecl();
   }
 

@@ -2305,10 +2305,15 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     Declarator &DeclaratorInfo, VirtSpecifiers &VS, ExprResult &BitfieldSize,
     LateParsedAttrList &LateParsedAttrs) {
   // member-declarator:
-  //   declarator pure-specifier[opt]
+  //   declarator virt-specifier-seq[opt] pure-specifier[opt]
   //   declarator requires-clause
   //   declarator brace-or-equal-initializer[opt]
-  //   identifier[opt] ':' constant-expression
+  //   identifier attribute-specifier-seq[opt] ':' constant-expression
+  //       brace-or-equal-initializer[opt]
+  //   ':' constant-expression
+  //
+  // NOTE: the latter two productions are a proposed bugfix rather than the
+  // current grammar rules as of C++20.
   if (Tok.isNot(tok::colon))
     ParseDeclarator(DeclaratorInfo);
   else
@@ -2342,7 +2347,11 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
   }
 
   // If attributes exist after the declarator, but before an '{', parse them.
+  // However, this does not apply for [[]] attributes (which could show up
+  // before or after the __attribute__ attributes).
+  DiagnoseAndSkipCXX11Attributes();
   MaybeParseGNUAttributes(DeclaratorInfo, &LateParsedAttrs);
+  DiagnoseAndSkipCXX11Attributes();
 
   // For compatibility with code written to older Clang, also accept a
   // virt-specifier *after* the GNU attributes.
@@ -2784,7 +2793,12 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     InClassInitStyle HasInClassInit = ICIS_NoInit;
     bool HasStaticInitializer = false;
     if (Tok.isOneOf(tok::equal, tok::l_brace) && PureSpecLoc.isInvalid()) {
-      if (DeclaratorInfo.isDeclarationOfFunction()) {
+      // DRXXXX: Anonymous bit-fields cannot have a brace-or-equal-initializer.
+      if (BitfieldSize.isUsable() && !DeclaratorInfo.hasName()) {
+        // Diagnose the error and pretend there is no in-class initializer.
+        Diag(Tok, diag::err_anon_bitfield_member_init);
+        SkipUntil(tok::comma, StopAtSemi | StopBeforeMatch);
+      } else if (DeclaratorInfo.isDeclarationOfFunction()) {
         // It's a pure-specifier.
         if (!TryConsumePureSpecifier(/*AllowFunctionDefinition*/ false))
           // Parse it as an expression so that Sema can diagnose it.
@@ -2933,7 +2947,11 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     DeclaratorInfo.setCommaLoc(CommaLoc);
 
     // GNU attributes are allowed before the second and subsequent declarator.
+    // However, this does not apply for [[]] attributes (which could show up
+    // before or after the __attribute__ attributes).
+    DiagnoseAndSkipCXX11Attributes();
     MaybeParseGNUAttributes(DeclaratorInfo);
+    DiagnoseAndSkipCXX11Attributes();
 
     if (ParseCXXMemberDeclaratorBeforeInitializer(
             DeclaratorInfo, VS, BitfieldSize, LateParsedAttrs))

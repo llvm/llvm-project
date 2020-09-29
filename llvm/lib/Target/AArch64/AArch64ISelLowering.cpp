@@ -1223,6 +1223,8 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::UMAX, VT, Custom);
   setOperationAction(ISD::UMIN, VT, Custom);
   setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
+  setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
   setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
   setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
   setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
@@ -9662,8 +9664,8 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
 
   // Try to lower fixed length reductions to SVE.
   EVT SrcVT = Src.getValueType();
-  bool OverrideNEON = SrcVT.getVectorElementType() == MVT::i64 &&
-                      Op.getOpcode() != ISD::VECREDUCE_ADD;
+  bool OverrideNEON = Op.getOpcode() != ISD::VECREDUCE_ADD &&
+                      SrcVT.getVectorElementType() == MVT::i64;
   if (useSVEForFixedLengthVectorVT(SrcVT, OverrideNEON)) {
     switch (Op.getOpcode()) {
     case ISD::VECREDUCE_ADD:
@@ -9676,6 +9678,10 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
       return LowerFixedLengthReductionToSVE(AArch64ISD::UMAXV_PRED, Op, DAG);
     case ISD::VECREDUCE_UMIN:
       return LowerFixedLengthReductionToSVE(AArch64ISD::UMINV_PRED, Op, DAG);
+    case ISD::VECREDUCE_FMAX:
+      return LowerFixedLengthReductionToSVE(AArch64ISD::FMAXNMV_PRED, Op, DAG);
+    case ISD::VECREDUCE_FMIN:
+      return LowerFixedLengthReductionToSVE(AArch64ISD::FMINNMV_PRED, Op, DAG);
     default:
       llvm_unreachable("Unhandled fixed length reduction");
     }

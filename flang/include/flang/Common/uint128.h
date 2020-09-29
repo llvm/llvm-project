@@ -53,6 +53,7 @@ public:
   constexpr bool operator!() const { return !low_ && !high_; }
   constexpr explicit operator bool() const { return low_ || high_; }
   constexpr explicit operator std::uint64_t() const { return low_; }
+  constexpr explicit operator std::int64_t() const { return low_; }
   constexpr explicit operator int() const { return static_cast<int>(low_); }
 
   constexpr std::uint64_t high() const { return high_; }
