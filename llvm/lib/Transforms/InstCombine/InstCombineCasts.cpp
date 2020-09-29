@@ -801,32 +801,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     }
   }
 
-  // FIXME: Maybe combine the next two transforms to handle the no cast case
-  // more efficiently. Support vector types. Cleanup code by using m_OneUse.
-
-  // Transform trunc(lshr (zext A), Cst) to eliminate one type conversion.
-  Value *A = nullptr;
-  if (Src->hasOneUse() &&
-      match(Src, m_LShr(m_ZExt(m_Value(A)), m_ConstantInt(Cst)))) {
-    // We have three types to worry about here, the type of A, the source of
-    // the truncate (MidSize), and the destination of the truncate. We know that
-    // ASize < MidSize   and MidSize > ResultSize, but don't know the relation
-    // between ASize and ResultSize.
-    unsigned ASize = A->getType()->getPrimitiveSizeInBits();
-
-    // If the shift amount is larger than the size of A, then the result is
-    // known to be zero because all the input bits got shifted out.
-    if (Cst->getZExtValue() >= ASize)
-      return replaceInstUsesWith(Trunc, Constant::getNullValue(DestTy));
-
-    // Since we're doing an lshr and a zero extend, and know that the shift
-    // amount is smaller than ASize, it is always safe to do the shift in A's
-    // type, then zero extend or truncate to the result.
-    Value *Shift = Builder.CreateLShr(A, Cst->getZExtValue());
-    Shift->takeName(Src);
-    return CastInst::CreateIntegerCast(Shift, DestTy, false);
-  }
-
+  Value *A;
   Constant *C;
   if (match(Src, m_LShr(m_SExt(m_Value(A)), m_Constant(C)))) {
     unsigned AWidth = A->getType()->getScalarSizeInBits();
