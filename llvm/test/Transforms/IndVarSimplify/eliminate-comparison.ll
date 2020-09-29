@@ -176,32 +176,18 @@ define i32 @func_11() nounwind uwtable {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FORCOND:%.*]]
 ; CHECK:       forcond:
-; CHECK-NEXT:    [[__KEY6_0:%.*]] = phi i32 [ 2, [[ENTRY:%.*]] ], [ [[TMP37:%.*]], [[NOASSERT:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[__KEY6_0]], 10
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[NOASSERT]], label [[FORCOND38_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 false, label [[NOASSERT:%.*]], label [[FORCOND38_PREHEADER:%.*]]
 ; CHECK:       forcond38.preheader:
 ; CHECK-NEXT:    br label [[FORCOND38:%.*]]
 ; CHECK:       noassert:
-; CHECK-NEXT:    [[TMP13:%.*]] = sdiv i32 -32768, [[__KEY6_0]]
-; CHECK-NEXT:    [[TMP2936:%.*]] = shl i32 [[TMP13]], 24
-; CHECK-NEXT:    [[SEXT23:%.*]] = shl i32 [[TMP13]], 24
-; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i32 [[TMP2936]], [[SEXT23]]
-; CHECK-NEXT:    [[TMP37]] = add nuw nsw i32 [[__KEY6_0]], 1
-; CHECK-NEXT:    br i1 [[TMP32]], label [[FORCOND]], label [[ASSERT33:%.*]]
+; CHECK-NEXT:    br i1 true, label [[FORCOND]], label [[ASSERT33:%.*]]
 ; CHECK:       assert33:
 ; CHECK-NEXT:    tail call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       forcond38:
-; CHECK-NEXT:    [[__KEY8_0:%.*]] = phi i32 [ [[TMP81:%.*]], [[NOASSERT68:%.*]] ], [ 2, [[FORCOND38_PREHEADER]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[__KEY8_0]], 10
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[NOASSERT68]], label [[UNROLLEDEND:%.*]]
+; CHECK-NEXT:    br i1 false, label [[NOASSERT68:%.*]], label [[UNROLLEDEND:%.*]]
 ; CHECK:       noassert68:
-; CHECK-NEXT:    [[TMP57:%.*]] = sdiv i32 -32768, [[__KEY8_0]]
-; CHECK-NEXT:    [[SEXT34:%.*]] = shl i32 [[TMP57]], 16
-; CHECK-NEXT:    [[SEXT21:%.*]] = shl i32 [[TMP57]], 16
-; CHECK-NEXT:    [[TMP76:%.*]] = icmp eq i32 [[SEXT34]], [[SEXT21]]
-; CHECK-NEXT:    [[TMP81]] = add nuw nsw i32 [[__KEY8_0]], 1
-; CHECK-NEXT:    br i1 [[TMP76]], label [[FORCOND38]], label [[ASSERT77:%.*]]
+; CHECK-NEXT:    br i1 true, label [[FORCOND38]], label [[ASSERT77:%.*]]
 ; CHECK:       assert77:
 ; CHECK-NEXT:    tail call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -252,6 +238,73 @@ unrolledend:                                      ; preds = %forcond38
   ret i32 0
 }
 
+define i32 @func_11_flipped() nounwind uwtable {
+; CHECK-LABEL: @func_11_flipped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FORCOND:%.*]]
+; CHECK:       forcond:
+; CHECK-NEXT:    br i1 true, label [[FORCOND38_PREHEADER:%.*]], label [[NOASSERT:%.*]]
+; CHECK:       forcond38.preheader:
+; CHECK-NEXT:    br label [[FORCOND38:%.*]]
+; CHECK:       noassert:
+; CHECK-NEXT:    br i1 true, label [[FORCOND]], label [[ASSERT33:%.*]]
+; CHECK:       assert33:
+; CHECK-NEXT:    tail call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       forcond38:
+; CHECK-NEXT:    br i1 false, label [[NOASSERT68:%.*]], label [[UNROLLEDEND:%.*]]
+; CHECK:       noassert68:
+; CHECK-NEXT:    br i1 true, label [[FORCOND38]], label [[ASSERT77:%.*]]
+; CHECK:       assert77:
+; CHECK-NEXT:    tail call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       unrolledend:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %forcond
+
+forcond:                                          ; preds = %noassert, %entry
+  %__key6.0 = phi i32 [ 2, %entry ], [ %tmp37, %noassert ]
+  %tmp5 = icmp sge i32 %__key6.0, 10
+  br i1 %tmp5, label %forcond38.preheader, label %noassert
+
+forcond38.preheader:                              ; preds = %forcond
+  br label %forcond38
+
+noassert:                                         ; preds = %forbody
+  %tmp13 = sdiv i32 -32768, %__key6.0
+  %tmp2936 = shl i32 %tmp13, 24
+  %sext23 = shl i32 %tmp13, 24
+  %tmp32 = icmp eq i32 %tmp2936, %sext23
+  %tmp37 = add i32 %__key6.0, 1
+  br i1 %tmp32, label %forcond, label %assert33
+
+assert33:                                         ; preds = %noassert
+  tail call void @llvm.trap()
+  unreachable
+
+forcond38:                                        ; preds = %noassert68, %forcond38.preheader
+  %__key8.0 = phi i32 [ %tmp81, %noassert68 ], [ 2, %forcond38.preheader ]
+  %tmp46 = icmp slt i32 %__key8.0, 10
+  br i1 %tmp46, label %noassert68, label %unrolledend
+
+noassert68:                                       ; preds = %forbody39
+  %tmp57 = sdiv i32 -32768, %__key8.0
+  %sext34 = shl i32 %tmp57, 16
+  %sext21 = shl i32 %tmp57, 16
+  %tmp76 = icmp eq i32 %sext34, %sext21
+  %tmp81 = add i32 %__key8.0, 1
+  br i1 %tmp76, label %forcond38, label %assert77
+
+assert77:                                         ; preds = %noassert68
+  tail call void @llvm.trap()
+  unreachable
+
+unrolledend:                                      ; preds = %forcond38
+  ret i32 0
+}
+
 declare void @llvm.trap() noreturn nounwind
 
 ; In this case the second loop only has a single iteration, fold the header away
@@ -260,18 +313,11 @@ define i32 @func_12() nounwind uwtable {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FORCOND:%.*]]
 ; CHECK:       forcond:
-; CHECK-NEXT:    [[__KEY6_0:%.*]] = phi i32 [ 2, [[ENTRY:%.*]] ], [ [[TMP37:%.*]], [[NOASSERT:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[__KEY6_0]], 10
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[NOASSERT]], label [[FORCOND38_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 false, label [[NOASSERT:%.*]], label [[FORCOND38_PREHEADER:%.*]]
 ; CHECK:       forcond38.preheader:
 ; CHECK-NEXT:    br label [[FORCOND38:%.*]]
 ; CHECK:       noassert:
-; CHECK-NEXT:    [[TMP13:%.*]] = sdiv i32 -32768, [[__KEY6_0]]
-; CHECK-NEXT:    [[TMP2936:%.*]] = shl i32 [[TMP13]], 24
-; CHECK-NEXT:    [[SEXT23:%.*]] = shl i32 [[TMP13]], 24
-; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i32 [[TMP2936]], [[SEXT23]]
-; CHECK-NEXT:    [[TMP37]] = add nuw nsw i32 [[__KEY6_0]], 1
-; CHECK-NEXT:    br i1 [[TMP32]], label [[FORCOND]], label [[ASSERT33:%.*]]
+; CHECK-NEXT:    br i1 true, label [[FORCOND]], label [[ASSERT33:%.*]]
 ; CHECK:       assert33:
 ; CHECK-NEXT:    tail call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
