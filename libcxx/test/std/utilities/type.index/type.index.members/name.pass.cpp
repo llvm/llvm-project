@@ -12,7 +12,7 @@
 
 // const char* name() const;
 
-// UNSUPPORTED: -fno-rtti
+// UNSUPPORTED: no-rtti
 
 #include <typeindex>
 #include <string>
