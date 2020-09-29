@@ -214,10 +214,11 @@ struct GenerateLoopNest {
       typename std::conditional<std::is_same<LoopTy, AffineForOp>::value,
                                 AffineIndexedValue, StdIndexedValue>::type;
 
-  static void doit(ArrayRef<SubViewOp::Range> loopRanges,
-                   ArrayRef<Attribute> iteratorTypes,
-                   function_ref<void(ValueRange)> bodyBuilderFn,
-                   Optional<LinalgLoopDistributionOptions> = None);
+  static void
+  doit(ArrayRef<SubViewOp::Range> loopRanges, ValueRange iterArgInitValues,
+       ArrayRef<Attribute> iteratorTypes,
+       function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
+       Optional<LinalgLoopDistributionOptions> = None);
 };
 
 } // namespace linalg
