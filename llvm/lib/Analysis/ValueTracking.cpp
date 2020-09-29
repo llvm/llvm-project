@@ -2564,14 +2564,12 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     // Check if all incoming values are non-zero using recursion.
     Query RecQ = Q;
     unsigned NewDepth = std::max(Depth, MaxAnalysisRecursionDepth - 1);
-    bool AllNonZero = llvm::all_of(PN->operands(), [&](const Use &U) {
+    return llvm::all_of(PN->operands(), [&](const Use &U) {
       if (U.get() == PN)
         return true;
       RecQ.CxtI = PN->getIncomingBlock(U)->getTerminator();
       return isKnownNonZero(U.get(), DemandedElts, NewDepth, RecQ);
     });
-    if (AllNonZero)
-      return true;
   }
   // ExtractElement
   else if (const auto *EEI = dyn_cast<ExtractElementInst>(V)) {
