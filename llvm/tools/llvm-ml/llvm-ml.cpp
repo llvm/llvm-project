@@ -99,6 +99,12 @@ cl::opt<BitnessType> Bitness(cl::desc("Choose bitness:"), cl::init(m64),
                              cl::values(clEnumVal(m32, "32-bit"),
                                         clEnumVal(m64, "64-bit (default)")));
 
+static cl::opt<bool> SafeSEH(
+    "safeseh",
+    cl::desc("Mark resulting object files as either containing no "
+             "exception handlers or containing exception handlers that "
+             "are all declared with .SAFESEH. Only available in 32-bit."));
+
 static cl::opt<std::string>
 TripleName("triple", cl::desc("Target triple to assemble for, "
                               "see -version for available targets"));
@@ -195,7 +201,7 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
                          MCAsmInfo &MAI, MCSubtargetInfo &STI,
                          MCInstrInfo &MCII, MCTargetOptions &MCOptions) {
   std::unique_ptr<MCAsmParser> Parser(
-      createMCMasmParser(SrcMgr, Ctx, Str, MAI));
+      createMCMasmParser(SrcMgr, Ctx, Str, MAI, 0));
   std::unique_ptr<MCTargetAsmParser> TAP(
       TheTarget->createMCAsmParser(STI, *Parser, MCII, MCOptions));
 
@@ -239,6 +245,12 @@ int main(int argc, char **argv) {
   // Now that GetTarget() has (potentially) replaced TripleName, it's safe to
   // construct the Triple object.
   Triple TheTriple(TripleName);
+
+  if (SafeSEH && !(TheTriple.isArch32Bit() && TheTriple.isX86())) {
+    WithColor::warning()
+        << "/safeseh applies only to 32-bit X86 platforms; ignoring.\n";
+    SafeSEH = false;
+  }
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferPtr =
       MemoryBuffer::getFileOrSTDIN(InputFilename);
@@ -352,6 +364,23 @@ int main(int argc, char **argv) {
         MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(CE), *STI,
         MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
         /*DWARFMustBeAtTheEnd*/ false));
+  }
+
+  if (TheTriple.isOSBinFormatCOFF()) {
+    // Emit an absolute @feat.00 symbol. This is a features bitfield read by
+    // link.exe.
+    int64_t Feat00Flags = 0x2;
+    if (SafeSEH) {
+      // According to the PE-COFF spec, the LSB of this value marks the object
+      // for "registered SEH".  This means that all SEH handler entry points
+      // must be registered in .sxdata.  Use of any unregistered handlers will
+      // cause the process to terminate immediately.
+      Feat00Flags |= 0x1;
+    }
+    MCSymbol *Feat00Sym = Ctx.getOrCreateSymbol("@feat.00");
+    Feat00Sym->setRedefinable(true);
+    Str->emitSymbolAttribute(Feat00Sym, MCSA_Global);
+    Str->emitAssignment(Feat00Sym, MCConstantExpr::create(Feat00Flags, Ctx));
   }
 
   // Use Assembler information for parsing.
