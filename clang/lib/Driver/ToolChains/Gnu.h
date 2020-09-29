@@ -270,7 +270,8 @@ public:
                                 const llvm::opt::ArgList &Args,
                                 const std::string &LibDir,
                                 StringRef CandidateTriple,
-                                bool NeedsBiarchSuffix = false);
+                                bool NeedsBiarchSuffix, bool GCCDirExists,
+                                bool GCCCrossDirExists);
 
     bool ScanGentooConfigs(const llvm::Triple &TargetTriple,
                            const llvm::opt::ArgList &Args,
