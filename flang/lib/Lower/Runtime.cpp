@@ -15,7 +15,9 @@
 #include "flang/Lower/Support/BoxValue.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "flang-lower-runtime"
 
 using namespace Fortran::runtime;
 #define mkRTKey(X) mkKey(RTNAME(X))
@@ -75,45 +77,61 @@ void Fortran::lower::genStopStatement(
     const Fortran::parser::StopStmt &stmt) {
   auto &builder = converter.getFirOpBuilder();
   auto loc = converter.getCurrentLocation();
-  auto callee = genRuntimeFunction<mkRTKey(StopStatement)>(loc, builder);
-  auto calleeType = callee.getType();
   llvm::SmallVector<mlir::Value, 8> operands;
-  assert(calleeType.getNumInputs() == 3 &&
-         "expected 3 arguments in STOP runtime");
+  mlir::FuncOp callee;
+  mlir::FunctionType calleeType;
   // First operand is stop code (zero if absent)
   if (const auto &code =
           std::get<std::optional<Fortran::parser::StopCode>>(stmt.t)) {
-    auto expr = Fortran::semantics::GetExpr(*code);
-    assert(expr && "failed getting typed expression");
-    operands.push_back(fir::getBase(converter.genExprValue(*expr)));
+    auto expr = converter.genExprValue(*Fortran::semantics::GetExpr(*code));
+    LLVM_DEBUG(llvm::dbgs() << "stop expression: "; expr.dump();
+               llvm::dbgs() << '\n');
+    expr.match(
+        [&](const fir::CharBoxValue &x) {
+          callee = genRuntimeFunction<mkRTKey(StopStatementText)>(loc, builder);
+          calleeType = callee.getType();
+          // Creates a pair of operands for the CHARACTER and its LEN.
+          operands.push_back(
+              builder.createConvert(loc, calleeType.getInput(0), x.getAddr()));
+          operands.push_back(
+              builder.createConvert(loc, calleeType.getInput(1), x.getLen()));
+        },
+        [&](fir::UnboxedValue x) {
+          callee = genRuntimeFunction<mkRTKey(StopStatement)>(loc, builder);
+          calleeType = callee.getType();
+          auto cast = builder.createConvert(loc, calleeType.getInput(0), x);
+          operands.push_back(cast);
+        },
+        [&](auto) {
+          mlir::emitError(loc, "unhandled expression in STOP");
+          std::exit(1);
+        });
   } else {
+    callee = genRuntimeFunction<mkRTKey(StopStatement)>(loc, builder);
+    calleeType = callee.getType();
     operands.push_back(
         builder.createIntegerConstant(loc, calleeType.getInput(0), 0));
   }
+
   // Second operand indicates ERROR STOP
   bool isError = std::get<Fortran::parser::StopStmt::Kind>(stmt.t) ==
                  Fortran::parser::StopStmt::Kind::ErrorStop;
-  operands.push_back(
-      builder.createIntegerConstant(loc, calleeType.getInput(1), isError));
+  operands.push_back(builder.createIntegerConstant(
+      loc, calleeType.getInput(operands.size()), isError));
 
   // Third operand indicates QUIET (default to false).
   if (const auto &quiet =
           std::get<std::optional<Fortran::parser::ScalarLogicalExpr>>(stmt.t)) {
     auto expr = Fortran::semantics::GetExpr(*quiet);
     assert(expr && "failed getting typed expression");
-    operands.push_back(fir::getBase(converter.genExprValue(*expr)));
-  } else {
+    auto q = fir::getBase(converter.genExprValue(*expr));
     operands.push_back(
-        builder.createIntegerConstant(loc, calleeType.getInput(2), 0));
+        builder.createConvert(loc, calleeType.getInput(operands.size()), q));
+  } else {
+    operands.push_back(builder.createIntegerConstant(
+        loc, calleeType.getInput(operands.size()), 0));
   }
 
-  // Cast operands in case they have different integer/logical types
-  // compare to runtime.
-  auto i = 0;
-  for (auto &op : operands) {
-    auto type = calleeType.getInput(i++);
-    op = builder.createConvert(loc, type, op);
-  }
   builder.create<fir::CallOp>(loc, callee, operands);
   genUnreachable(builder, loc);
 }
