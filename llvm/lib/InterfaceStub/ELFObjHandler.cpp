@@ -8,11 +8,14 @@
 
 #include "llvm/InterfaceStub/ELFObjHandler.h"
 #include "llvm/InterfaceStub/ELFStub.h"
+#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using llvm::MemoryBufferRef;
@@ -37,6 +40,158 @@ struct DynamicEntries {
   Optional<uint64_t> ElfHash;
   Optional<uint64_t> GnuHash;
 };
+
+/// This initializes an ELF file header with information specific to a binary
+/// dynamic shared object.
+/// Offsets, indexes, links, etc. for section and program headers are just
+/// zero-initialized as they will be updated elsewhere.
+///
+/// @param ElfHeader Target ELFT::Ehdr to populate.
+/// @param Machine Target architecture (e_machine from ELF specifications).
+template <class ELFT>
+static void initELFHeader(typename ELFT::Ehdr &ElfHeader, uint16_t Machine) {
+  memset(&ElfHeader, 0, sizeof(ElfHeader));
+  // ELF identification.
+  ElfHeader.e_ident[EI_MAG0] = ElfMagic[EI_MAG0];
+  ElfHeader.e_ident[EI_MAG1] = ElfMagic[EI_MAG1];
+  ElfHeader.e_ident[EI_MAG2] = ElfMagic[EI_MAG2];
+  ElfHeader.e_ident[EI_MAG3] = ElfMagic[EI_MAG3];
+  ElfHeader.e_ident[EI_CLASS] = ELFT::Is64Bits ? ELFCLASS64 : ELFCLASS32;
+  bool IsLittleEndian = ELFT::TargetEndianness == support::little;
+  ElfHeader.e_ident[EI_DATA] = IsLittleEndian ? ELFDATA2LSB : ELFDATA2MSB;
+  ElfHeader.e_ident[EI_VERSION] = EV_CURRENT;
+  ElfHeader.e_ident[EI_OSABI] = ELFOSABI_NONE;
+
+  // Remainder of ELF header.
+  ElfHeader.e_type = ET_DYN;
+  ElfHeader.e_machine = Machine;
+  ElfHeader.e_version = EV_CURRENT;
+  ElfHeader.e_ehsize = sizeof(typename ELFT::Ehdr);
+  ElfHeader.e_phentsize = sizeof(typename ELFT::Phdr);
+  ElfHeader.e_shentsize = sizeof(typename ELFT::Shdr);
+}
+
+namespace {
+template <class ELFT> struct OutputSection {
+  using Elf_Shdr = typename ELFT::Shdr;
+  std::string Name;
+  Elf_Shdr Shdr;
+  uint64_t Addr;
+  uint64_t Offset;
+  uint64_t Size;
+  uint64_t Align;
+  uint32_t Index;
+  bool NoBits = true;
+};
+
+template <class T, class ELFT>
+struct ContentSection : public OutputSection<ELFT> {
+  T Content;
+  ContentSection() { this->NoBits = false; }
+};
+
+// This class just wraps StringTableBuilder for the purpose of adding a
+// default constructor.
+class ELFStringTableBuilder : public StringTableBuilder {
+public:
+  ELFStringTableBuilder() : StringTableBuilder(StringTableBuilder::ELF) {}
+};
+
+template <class ELFT> class ELFStubBuilder {
+public:
+  using Elf_Ehdr = typename ELFT::Ehdr;
+  using Elf_Shdr = typename ELFT::Shdr;
+  using Elf_Phdr = typename ELFT::Phdr;
+  using Elf_Sym = typename ELFT::Sym;
+  using Elf_Addr = typename ELFT::Addr;
+  using Elf_Dyn = typename ELFT::Dyn;
+
+  ELFStubBuilder(const ELFStubBuilder &) = delete;
+  ELFStubBuilder(ELFStubBuilder &&) = default;
+
+  explicit ELFStubBuilder(const ELFStub &Stub) {
+    // Populate string tables.
+    ShStrTab.Name = ".shstrtab";
+    ShStrTab.Align = 1;
+    DynStr.Name = ".dynstr";
+    DynStr.Align = 1;
+    for (const ELFSymbol &Sym : Stub.Symbols)
+      DynStr.Content.add(Sym.Name);
+
+    std::vector<OutputSection<ELFT> *> Sections = {&DynStr, &ShStrTab};
+    const OutputSection<ELFT> *LastSection = Sections.back();
+    // Now set the Index and put sections names into ".shstrtab".
+    uint64_t Index = 1;
+    for (OutputSection<ELFT> *Sec : Sections) {
+      Sec->Index = Index++;
+      ShStrTab.Content.add(Sec->Name);
+    }
+    ShStrTab.Content.finalize();
+    ShStrTab.Size = ShStrTab.Content.getSize();
+    DynStr.Content.finalize();
+    DynStr.Size = DynStr.Content.getSize();
+    // Calculate sections' addresses and offsets.
+    uint64_t CurrentOffset = sizeof(Elf_Ehdr);
+    for (OutputSection<ELFT> *Sec : Sections) {
+      Sec->Offset = alignTo(CurrentOffset, Sec->Align);
+      Sec->Addr = Sec->Offset;
+      CurrentOffset = Sec->Offset + Sec->Size;
+    }
+    // Write section headers of string tables.
+    fillStrTabShdr(DynStr, SHF_ALLOC);
+    fillStrTabShdr(ShStrTab);
+    // Finish initializing the ELF header.
+    initELFHeader<ELFT>(ElfHeader, Stub.Arch);
+    ElfHeader.e_shstrndx = ShStrTab.Index;
+    ElfHeader.e_shnum = LastSection->Index + 1;
+    ElfHeader.e_shoff =
+        alignTo(LastSection->Offset + LastSection->Size, sizeof(Elf_Addr));
+  }
+
+  size_t getSize() const {
+    return ElfHeader.e_shoff + ElfHeader.e_shnum * sizeof(Elf_Shdr);
+  }
+
+  void write(uint8_t *Data) const {
+    write(Data, ElfHeader);
+    DynStr.Content.write(Data + DynStr.Shdr.sh_offset);
+    ShStrTab.Content.write(Data + ShStrTab.Shdr.sh_offset);
+    writeShdr(Data, DynStr);
+    writeShdr(Data, ShStrTab);
+  }
+
+private:
+  Elf_Ehdr ElfHeader;
+  ContentSection<ELFStringTableBuilder, ELFT> DynStr;
+  ContentSection<ELFStringTableBuilder, ELFT> ShStrTab;
+
+  template <class T> static void write(uint8_t *Data, const T &Value) {
+    *reinterpret_cast<T *>(Data) = Value;
+  }
+
+  void fillStrTabShdr(ContentSection<ELFStringTableBuilder, ELFT> &StrTab,
+                      uint32_t ShFlags = 0) const {
+    StrTab.Shdr.sh_type = SHT_STRTAB;
+    StrTab.Shdr.sh_flags = ShFlags;
+    StrTab.Shdr.sh_addr = StrTab.Addr;
+    StrTab.Shdr.sh_offset = StrTab.Offset;
+    StrTab.Shdr.sh_info = 0;
+    StrTab.Shdr.sh_size = StrTab.Size;
+    StrTab.Shdr.sh_name = ShStrTab.Content.getOffset(StrTab.Name);
+    StrTab.Shdr.sh_addralign = StrTab.Align;
+    StrTab.Shdr.sh_entsize = 0;
+    StrTab.Shdr.sh_link = 0;
+  }
+
+  uint64_t shdrOffset(const OutputSection<ELFT> &Sec) const {
+    return ElfHeader.e_shoff + Sec.Index * sizeof(Elf_Shdr);
+  }
+
+  void writeShdr(uint8_t *Data, const OutputSection<ELFT> &Sec) const {
+    write(Data + shdrOffset(Sec), Sec.Shdr);
+  }
+};
+} // end anonymous namespace
 
 /// This function behaves similarly to StringRef::substr(), but attempts to
 /// terminate the returned StringRef at the first null terminator. If no null
@@ -364,6 +519,32 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
   return std::move(DestStub);
 }
 
+/// This function opens a file for writing and then writes a binary ELF stub to
+/// the file.
+///
+/// @param FilePath File path for writing the ELF binary.
+/// @param Stub Source ELFStub to generate a binary ELF stub from.
+template <class ELFT>
+static Error writeELFBinaryToFile(StringRef FilePath, const ELFStub &Stub) {
+  ELFStubBuilder<ELFT> Builder{Stub};
+  Expected<std::unique_ptr<FileOutputBuffer>> BufOrError =
+      FileOutputBuffer::create(FilePath, Builder.getSize());
+  if (!BufOrError)
+    return createStringError(errc::invalid_argument,
+                             toString(BufOrError.takeError()) +
+                                 " when trying to open `" + FilePath +
+                                 "` for writing");
+
+  // Write binary to file.
+  std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufOrError);
+  Builder.write(Buf->getBufferStart());
+
+  if (Error E = Buf->commit())
+    return E;
+
+  return Error::success();
+}
+
 Expected<std::unique_ptr<ELFStub>> readELFFile(MemoryBufferRef Buf) {
   Expected<std::unique_ptr<Binary>> BinOrErr = createBinary(Buf);
   if (!BinOrErr) {
@@ -380,8 +561,22 @@ Expected<std::unique_ptr<ELFStub>> readELFFile(MemoryBufferRef Buf) {
   } else if (auto Obj = dyn_cast<ELFObjectFile<ELF64BE>>(Bin)) {
     return buildStub(*Obj);
   }
+  return createStringError(errc::not_supported, "unsupported binary format");
+}
 
-  return createStringError(errc::not_supported, "Unsupported binary format");
+// This function wraps the ELFT writeELFBinaryToFile() so writeBinaryStub()
+// can be called without having to use ELFType templates directly.
+Error writeBinaryStub(StringRef FilePath, const ELFStub &Stub,
+                      ELFTarget OutputFormat) {
+  if (OutputFormat == ELFTarget::ELF32LE)
+    return writeELFBinaryToFile<ELF32LE>(FilePath, Stub);
+  if (OutputFormat == ELFTarget::ELF32BE)
+    return writeELFBinaryToFile<ELF32BE>(FilePath, Stub);
+  if (OutputFormat == ELFTarget::ELF64LE)
+    return writeELFBinaryToFile<ELF64LE>(FilePath, Stub);
+  if (OutputFormat == ELFTarget::ELF64BE)
+    return writeELFBinaryToFile<ELF64BE>(FilePath, Stub);
+  llvm_unreachable("invalid binary output target");
 }
 
 } // end namespace elfabi
