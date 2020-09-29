@@ -176,6 +176,7 @@ static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI, raw_ostream &OS) {
   AsmLexer Lexer(MAI);
   Lexer.setBuffer(SrcMgr.getMemoryBuffer(SrcMgr.getMainFileID())->getBuffer());
   Lexer.setLexMasmIntegers(true);
+  Lexer.useMasmDefaultRadix(true);
 
   bool Error = false;
   while (Lexer.Lex().isNot(AsmToken::Eof)) {
@@ -206,6 +207,7 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
   Parser->setShowParsedOperands(ShowInstOperands);
   Parser->setTargetParser(*TAP);
   Parser->getLexer().setLexMasmIntegers(true);
+  Parser->getLexer().useMasmDefaultRadix(true);
 
   int Res = Parser->Run(/*NoInitialTextSection=*/true);
 
