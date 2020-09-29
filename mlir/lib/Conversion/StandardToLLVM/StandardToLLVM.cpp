@@ -80,37 +80,12 @@ LogicalResult mlir::structFuncArgTypeConverter(LLVMTypeConverter &converter,
   return success();
 }
 
-/// Convert a MemRef type to a bare pointer to the MemRef element type.
-static Type convertMemRefTypeToBarePtr(LLVMTypeConverter &converter,
-                                       MemRefType type) {
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(type, strides, offset)))
-    return {};
-
-  LLVM::LLVMType elementType =
-      unwrap(converter.convertType(type.getElementType()));
-  if (!elementType)
-    return {};
-  return elementType.getPointerTo(type.getMemorySpace());
-}
-
 /// Callback to convert function argument types. It converts MemRef function
 /// arguments to bare pointers to the MemRef element type.
 LogicalResult mlir::barePtrFuncArgTypeConverter(LLVMTypeConverter &converter,
                                                 Type type,
                                                 SmallVectorImpl<Type> &result) {
-  // TODO: Add support for unranked memref.
-  if (auto memrefTy = type.dyn_cast<MemRefType>()) {
-    auto llvmTy = convertMemRefTypeToBarePtr(converter, memrefTy);
-    if (!llvmTy)
-      return failure();
-
-    result.push_back(llvmTy);
-    return success();
-  }
-
-  auto llvmTy = converter.convertType(type);
+  auto llvmTy = converter.convertCallingConventionType(type);
   if (!llvmTy)
     return failure();
 
@@ -272,14 +247,14 @@ SmallVector<Type, 2> LLVMTypeConverter::convertUnrankedMemRefSignature() {
 // Function has one VoidType result.  If MLIR Function has more than one result,
 // they are into an LLVM StructType in their order of appearance.
 LLVM::LLVMType LLVMTypeConverter::convertFunctionSignature(
-    FunctionType type, bool isVariadic,
+    FunctionType funcTy, bool isVariadic,
     LLVMTypeConverter::SignatureConversion &result) {
   // Select the argument converter depending on the calling convetion.
   auto funcArgConverter = options.useBarePtrCallConv
                               ? barePtrFuncArgTypeConverter
                               : structFuncArgTypeConverter;
   // Convert argument types one by one and check for errors.
-  for (auto &en : llvm::enumerate(type.getInputs())) {
+  for (auto &en : llvm::enumerate(funcTy.getInputs())) {
     Type type = en.value();
     SmallVector<Type, 8> converted;
     if (failed(funcArgConverter(*this, type, converted)))
@@ -296,9 +271,9 @@ LLVM::LLVMType LLVMTypeConverter::convertFunctionSignature(
   // if it returns on element, convert it, otherwise pack the result types into
   // a struct.
   LLVM::LLVMType resultType =
-      type.getNumResults() == 0
+      funcTy.getNumResults() == 0
           ? LLVM::LLVMType::getVoidTy(&getContext())
-          : unwrap(packFunctionResults(type.getResults()));
+          : unwrap(packFunctionResults(funcTy.getResults()));
   if (!resultType)
     return {};
   return LLVM::LLVMType::getFunctionTy(resultType, argTypes, isVariadic);
@@ -394,6 +369,36 @@ Type LLVMTypeConverter::convertUnrankedMemRefType(UnrankedMemRefType type) {
   return LLVM::LLVMType::getStructTy(rankTy, ptrTy);
 }
 
+/// Convert a memref type to a bare pointer to the memref element type.
+Type LLVMTypeConverter::convertMemRefToBarePtr(BaseMemRefType type) {
+  if (type.isa<UnrankedMemRefType>())
+    // Unranked memref is not supported in the bare pointer calling convention.
+    return {};
+
+  // Check that the memref has static shape, strides and offset. Otherwise, it
+  // cannot be lowered to a bare pointer.
+  auto memrefTy = type.cast<MemRefType>();
+  if (!memrefTy.hasStaticShape())
+    return {};
+
+  int64_t offset = 0;
+  SmallVector<int64_t, 4> strides;
+  if (failed(getStridesAndOffset(memrefTy, strides, offset)))
+    return {};
+
+  for (int64_t stride : strides)
+    if (ShapedType::isDynamicStrideOrOffset(stride))
+      return {};
+
+  if (ShapedType::isDynamicStrideOrOffset(offset))
+    return {};
+
+  LLVM::LLVMType elementType = unwrap(convertType(type.getElementType()));
+  if (!elementType)
+    return {};
+  return elementType.getPointerTo(type.getMemorySpace());
+}
+
 // Convert an n-D vector type to an LLVM vector type via (n-1)-D array type when
 // n > 1.
 // For example, `vector<4 x f32>` converts to `!llvm.type<"<4 x float>">` and
@@ -408,6 +413,37 @@ Type LLVMTypeConverter::convertVectorType(VectorType type) {
   for (int i = shape.size() - 2; i >= 0; --i)
     vectorType = LLVM::LLVMType::getArrayTy(vectorType, shape[i]);
   return vectorType;
+}
+
+/// Convert a type in the context of the default or bare pointer calling
+/// convention. Calling convention sensitive types, such as MemRefType and
+/// UnrankedMemRefType, are converted following the specific rules for the
+/// calling convention. Calling convention independent types are converted
+/// following the default LLVM type conversions.
+Type LLVMTypeConverter::convertCallingConventionType(Type type) {
+  if (options.useBarePtrCallConv)
+    if (auto memrefTy = type.dyn_cast<BaseMemRefType>())
+      return convertMemRefToBarePtr(memrefTy);
+
+  return convertType(type);
+}
+
+/// Promote the bare pointers in 'values' that resulted from memrefs to
+/// descriptors. 'stdTypes' holds they types of 'values' before the conversion
+/// to the LLVM-IR dialect (i.e., MemRefType, or any other Standard type).
+void LLVMTypeConverter::promoteBarePtrsToDescriptors(
+    ConversionPatternRewriter &rewriter, Location loc, ArrayRef<Type> stdTypes,
+    SmallVectorImpl<Value> &values) {
+  assert(stdTypes.size() == values.size() &&
+         "The number of types and values doesn't match");
+  for (unsigned i = 0, end = values.size(); i < end; ++i) {
+    Type stdTy = stdTypes[i];
+    if (auto memrefTy = stdTy.dyn_cast<MemRefType>())
+      values[i] = MemRefDescriptor::fromStaticShape(rewriter, loc, *this,
+                                                    memrefTy, values[i]);
+    else
+      llvm_unreachable("Unranked memrefs are not supported");
+  }
 }
 
 ConvertToLLVMPattern::ConvertToLLVMPattern(StringRef rootOpName,
@@ -1088,18 +1124,6 @@ namespace {
 struct FuncOpConversionBase : public ConvertOpToLLVMPattern<FuncOp> {
 protected:
   using ConvertOpToLLVMPattern<FuncOp>::ConvertOpToLLVMPattern;
-  using UnsignedTypePair = std::pair<unsigned, Type>;
-
-  // Gather the positions and types of memref-typed arguments in a given
-  // FunctionType.
-  void getMemRefArgIndicesAndTypes(
-      FunctionType type, SmallVectorImpl<UnsignedTypePair> &argsInfo) const {
-    argsInfo.reserve(type.getNumInputs());
-    for (auto en : llvm::enumerate(type.getInputs())) {
-      if (en.value().isa<MemRefType, UnrankedMemRefType>())
-        argsInfo.push_back({en.index(), en.value()});
-    }
-  }
 
   // Convert input FuncOp to LLVMFuncOp by using the LLVMTypeConverter provided
   // to this legalization pattern.
@@ -1192,11 +1216,10 @@ struct BarePtrFuncOpConversion : public FuncOpConversionBase {
                   ConversionPatternRewriter &rewriter) const override {
     auto funcOp = cast<FuncOp>(op);
 
-    // Store the positions and type of memref-typed arguments so that we can
-    // promote them to MemRef descriptor structs at the beginning of the
-    // function.
-    SmallVector<UnsignedTypePair, 4> promotedArgsInfo;
-    getMemRefArgIndicesAndTypes(funcOp.getType(), promotedArgsInfo);
+    // Store the type of memref-typed arguments before the conversion so that we
+    // can promote them to MemRef descriptor at the beginning of the function.
+    SmallVector<Type, 8> oldArgTypes =
+        llvm::to_vector<8>(funcOp.getType().getInputs());
 
     auto newFuncOp = convertFuncOpToLLVMFuncOp(funcOp, rewriter);
     if (!newFuncOp)
@@ -1206,27 +1229,42 @@ struct BarePtrFuncOpConversion : public FuncOpConversionBase {
       return success();
     }
 
-    // Promote bare pointers from MemRef arguments to a MemRef descriptor struct
-    // at the beginning of the function so that all the MemRefs in the function
-    // have a uniform representation.
-    Block *firstBlock = &newFuncOp.getBody().front();
-    rewriter.setInsertionPoint(firstBlock, firstBlock->begin());
-    auto funcLoc = funcOp.getLoc();
-    for (const auto &argInfo : promotedArgsInfo) {
-      // TODO: Add support for unranked MemRefs.
-      if (auto memrefType = argInfo.second.dyn_cast<MemRefType>()) {
-        // Replace argument with a placeholder (undef), promote argument to a
-        // MemRef descriptor and replace placeholder with the last instruction
-        // of the MemRef descriptor. The placeholder is needed to avoid
-        // replacing argument uses in the MemRef descriptor instructions.
-        BlockArgument arg = firstBlock->getArgument(argInfo.first);
-        Value placeHolder =
-            rewriter.create<LLVM::UndefOp>(funcLoc, arg.getType());
-        rewriter.replaceUsesOfBlockArgument(arg, placeHolder);
-        auto desc = MemRefDescriptor::fromStaticShape(
-            rewriter, funcLoc, typeConverter, memrefType, arg);
-        rewriter.replaceOp(placeHolder.getDefiningOp(), {desc});
-      }
+    // Promote bare pointers from memref arguments to memref descriptors at the
+    // beginning of the function so that all the memrefs in the function have a
+    // uniform representation.
+    Block *entryBlock = &newFuncOp.getBody().front();
+    auto blockArgs = entryBlock->getArguments();
+    assert(blockArgs.size() == oldArgTypes.size() &&
+           "The number of arguments and types doesn't match");
+
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToStart(entryBlock);
+    for (auto it : llvm::zip(blockArgs, oldArgTypes)) {
+      BlockArgument arg = std::get<0>(it);
+      Type argTy = std::get<1>(it);
+
+      // Unranked memrefs are not supported in the bare pointer calling
+      // convention. We should have bailed out before in the presence of
+      // unranked memrefs.
+      assert(!argTy.isa<UnrankedMemRefType>() &&
+             "Unranked memref is not supported");
+      auto memrefTy = argTy.dyn_cast<MemRefType>();
+      if (!memrefTy)
+        continue;
+
+      // Replace barePtr with a placeholder (undef), promote barePtr to a ranked
+      // or unranked memref descriptor and replace placeholder with the last
+      // instruction of the memref descriptor.
+      // TODO: The placeholder is needed to avoid replacing barePtr uses in the
+      // MemRef descriptor instructions. We may want to have a utility in the
+      // rewriter to properly handle this use case.
+      Location loc = op->getLoc();
+      auto placeholder = rewriter.create<LLVM::UndefOp>(loc, memrefTy);
+      rewriter.replaceUsesOfBlockArgument(arg, placeholder);
+
+      Value desc = MemRefDescriptor::fromStaticShape(
+          rewriter, loc, typeConverter, memrefTy, arg);
+      rewriter.replaceOp(placeholder, {desc});
     }
 
     rewriter.eraseOp(op);
@@ -2138,12 +2176,22 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
             rewriter.getI64ArrayAttr(i)));
       }
     }
-    if (failed(copyUnrankedDescriptors(
-            rewriter, op->getLoc(), this->typeConverter, op->getResultTypes(),
-            results, /*toDynamic=*/false)))
-      return failure();
-    rewriter.replaceOp(op, results);
 
+    if (this->typeConverter.getOptions().useBarePtrCallConv) {
+      // For the bare-ptr calling convention, promote memref results to
+      // descriptors.
+      assert(results.size() == resultTypes.size() &&
+             "The number of arguments and types doesn't match");
+      this->typeConverter.promoteBarePtrsToDescriptors(rewriter, op->getLoc(),
+                                                       resultTypes, results);
+    } else if (failed(copyUnrankedDescriptors(rewriter, op->getLoc(),
+                                              this->typeConverter, resultTypes,
+                                              results,
+                                              /*toDynamic=*/false))) {
+      return failure();
+    }
+
+    rewriter.replaceOp(op, results);
     return success();
   }
 };
@@ -2706,11 +2754,32 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<ReturnOp> {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
     unsigned numArguments = op->getNumOperands();
-    auto updatedOperands = llvm::to_vector<4>(operands);
-    copyUnrankedDescriptors(rewriter, op->getLoc(), typeConverter,
-                            op->getOperands().getTypes(), updatedOperands,
-                            /*toDynamic=*/true);
+    SmallVector<Value, 4> updatedOperands;
+
+    if (typeConverter.getOptions().useBarePtrCallConv) {
+      // For the bare-ptr calling convention, extract the aligned pointer to
+      // be returned from the memref descriptor.
+      for (auto it : llvm::zip(op->getOperands(), operands)) {
+        Type oldTy = std::get<0>(it).getType();
+        Value newOperand = std::get<1>(it);
+        if (oldTy.isa<MemRefType>()) {
+          MemRefDescriptor memrefDesc(newOperand);
+          newOperand = memrefDesc.alignedPtr(rewriter, loc);
+        } else if (oldTy.isa<UnrankedMemRefType>()) {
+          // Unranked memref is not supported in the bare pointer calling
+          // convention.
+          return failure();
+        }
+        updatedOperands.push_back(newOperand);
+      }
+    } else {
+      updatedOperands = llvm::to_vector<4>(operands);
+      copyUnrankedDescriptors(rewriter, loc, typeConverter,
+                              op->getOperands().getTypes(), updatedOperands,
+                              /*toDynamic=*/true);
+    }
 
     // If ReturnOp has 0 or 1 operand, create it and return immediately.
     if (numArguments == 0) {
@@ -2729,10 +2798,10 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<ReturnOp> {
     auto packedType = typeConverter.packFunctionResults(
         llvm::to_vector<4>(op->getOperandTypes()));
 
-    Value packed = rewriter.create<LLVM::UndefOp>(op->getLoc(), packedType);
+    Value packed = rewriter.create<LLVM::UndefOp>(loc, packedType);
     for (unsigned i = 0; i < numArguments; ++i) {
       packed = rewriter.create<LLVM::InsertValueOp>(
-          op->getLoc(), packedType, packed, updatedOperands[i],
+          loc, packedType, packed, updatedOperands[i],
           rewriter.getI64ArrayAttr(i));
     }
     rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, TypeRange(), packed,
@@ -3380,17 +3449,21 @@ void mlir::populateStdToLLVMConversionPatterns(
   populateStdToLLVMMemoryConversionPatterns(converter, patterns);
 }
 
-// Create an LLVM IR structure type if there is more than one result.
+/// Convert a non-empty list of types to be returned from a function into a
+/// supported LLVM IR type.  In particular, if more than one value is returned,
+/// create an LLVM IR structure type with elements that correspond to each of
+/// the MLIR types converted with `convertType`.
 Type LLVMTypeConverter::packFunctionResults(ArrayRef<Type> types) {
   assert(!types.empty() && "expected non-empty list of type");
 
   if (types.size() == 1)
-    return convertType(types.front());
+    return convertCallingConventionType(types.front());
 
   SmallVector<LLVM::LLVMType, 8> resultTypes;
   resultTypes.reserve(types.size());
   for (auto t : types) {
-    auto converted = convertType(t).dyn_cast_or_null<LLVM::LLVMType>();
+    auto converted =
+        convertCallingConventionType(t).dyn_cast_or_null<LLVM::LLVMType>();
     if (!converted)
       return {};
     resultTypes.push_back(converted);
@@ -3426,16 +3499,27 @@ SmallVector<Value, 4> LLVMTypeConverter::promoteOperands(Location loc,
     auto operand = std::get<0>(it);
     auto llvmOperand = std::get<1>(it);
 
-    if (operand.getType().isa<UnrankedMemRefType>()) {
-      UnrankedMemRefDescriptor::unpack(builder, loc, llvmOperand,
-                                       promotedOperands);
-      continue;
-    }
-    if (auto memrefType = operand.getType().dyn_cast<MemRefType>()) {
-      MemRefDescriptor::unpack(builder, loc, llvmOperand,
-                               operand.getType().cast<MemRefType>(),
-                               promotedOperands);
-      continue;
+    if (options.useBarePtrCallConv) {
+      // For the bare-ptr calling convention, we only have to extract the
+      // aligned pointer of a memref.
+      if (auto memrefType = operand.getType().dyn_cast<MemRefType>()) {
+        MemRefDescriptor desc(llvmOperand);
+        llvmOperand = desc.alignedPtr(builder, loc);
+      } else if (operand.getType().isa<UnrankedMemRefType>()) {
+        llvm_unreachable("Unranked memrefs are not supported");
+      }
+    } else {
+      if (operand.getType().isa<UnrankedMemRefType>()) {
+        UnrankedMemRefDescriptor::unpack(builder, loc, llvmOperand,
+                                         promotedOperands);
+        continue;
+      }
+      if (auto memrefType = operand.getType().dyn_cast<MemRefType>()) {
+        MemRefDescriptor::unpack(builder, loc, llvmOperand,
+                                 operand.getType().cast<MemRefType>(),
+                                 promotedOperands);
+        continue;
+      }
     }
 
     promotedOperands.push_back(llvmOperand);
