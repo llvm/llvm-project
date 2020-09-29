@@ -1,8 +1,8 @@
 // RUN: %clangxx_memprof -O0 %s -o %t
-// RUN: %env_memprof_opts=allocator_may_return_null=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-SUMMARY
-// RUN: %env_memprof_opts=allocator_may_return_null=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-NULL
+// RUN: %env_memprof_opts=log_path=stderr:allocator_may_return_null=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-SUMMARY
+// RUN: %env_memprof_opts=log_path=stderr:allocator_may_return_null=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-NULL
 // Test print_summary
-// RUN: %env_memprof_opts=allocator_may_return_null=0:print_summary=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOSUMMARY
+// RUN: %env_memprof_opts=log_path=stderr:allocator_may_return_null=0:print_summary=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOSUMMARY
 
 #include <stdio.h>
 #include <stdlib.h>
