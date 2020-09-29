@@ -357,5 +357,37 @@ def OpenACC_UpdateOp : OpenACC_Op<"update", [AttrSizedOperandSegments]> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// 2.16.3. Wait Directive
+//===----------------------------------------------------------------------===//
+
+def OpenACC_WaitOp : OpenACC_Op<"wait", [AttrSizedOperandSegments]> {
+  let summary = "wait operation";
+
+  let description = [{
+    The "acc.wait" operation represents the OpenACC wait executable
+    directive.
+
+    Example:
+
+    ```mlir
+    acc.wait(%value1: index)
+    acc.wait() async(%async1: i32)
+    ```
+  }];
+
+  let arguments = (ins Variadic<IntOrIndex>:$waitOperands,
+                       Optional<IntOrIndex>:$asyncOperand,
+                       Optional<IntOrIndex>:$waitDevnum,
+                       UnitAttr:$async,
+                       Optional<I1>:$ifCond);
+
+  let assemblyFormat = [{
+    ( `(` $waitOperands^ `:` type($waitOperands) `)` )?
+    ( `async` `(` $asyncOperand^ `:` type($asyncOperand) `)` )?
+    ( `wait_devnum` `(` $waitDevnum^ `:` type($waitDevnum) `)` )?
+    ( `if` `(` $ifCond^ `)` )? attr-dict-with-keyword
+  }];
+}
 
 #endif // OPENACC_OPS
