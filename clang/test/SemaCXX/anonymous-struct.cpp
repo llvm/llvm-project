@@ -171,3 +171,12 @@ union {
     } x;
   } x;
 } static_member_3;
+
+// Ensure we don't compute the linkage of a member function just because it
+// happens to have the same name as a builtin.
+namespace BuiltinName {
+  // Note that this is not an error: we didn't trigger linkage computation in this example.
+  typedef struct { // expected-warning {{anonymous non-C-compatible type}}
+    void memcpy(); // expected-note {{due to this member}}
+  } A; // expected-note {{given name 'A' for linkage purposes by this typedef}}
+}
