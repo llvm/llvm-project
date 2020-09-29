@@ -123,5 +123,5 @@ ninja -C "${BUILD_DIR}" check-cxx
 echo "+++ Running the libc++abi tests"
 ninja -C "${BUILD_DIR}" check-cxxabi
 
-echo "+++ Running the libc++ benchmarks"
-ninja -C "${BUILD_DIR}" check-cxx-benchmarks
+# echo "+++ Running the libc++ benchmarks"
+# ninja -C "${BUILD_DIR}" check-cxx-benchmarks
