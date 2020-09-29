@@ -149,6 +149,10 @@ static OptionalParseResult parserOptionalOperandAndTypeWithPrefix(
   return llvm::None;
 }
 
+static bool isComputeOperation(Operation *op) {
+  return isa<acc::ParallelOp>(op) || isa<acc::LoopOp>(op);
+}
+
 //===----------------------------------------------------------------------===//
 // ParallelOp
 //===----------------------------------------------------------------------===//
@@ -655,8 +659,21 @@ static LogicalResult verify(acc::DataOp dataOp) {
 static LogicalResult verify(acc::InitOp initOp) {
   Operation *currOp = initOp;
   while ((currOp = currOp->getParentOp())) {
-    if (isa<acc::ParallelOp>(currOp) || isa<acc::LoopOp>(currOp))
+    if (isComputeOperation(currOp))
       return initOp.emitOpError("cannot be nested in a compute operation");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ShutdownOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(acc::ShutdownOp op) {
+  Operation *currOp = op;
+  while ((currOp = currOp->getParentOp())) {
+    if (isComputeOperation(currOp))
+      return op.emitOpError("cannot be nested in a compute operation");
   }
   return success();
 }

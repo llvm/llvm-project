@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -verify-diagnostics %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -verify-diagnostics %s
 
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
 acc.loop gang {
@@ -125,5 +125,31 @@ acc.parallel {
 acc.loop {
 // expected-error@+1 {{'acc.init' op cannot be nested in a compute operation}}
   acc.init
+  acc.yield
+}
+
+// -----
+
+acc.parallel {
+// expected-error@+1 {{'acc.shutdown' op cannot be nested in a compute operation}}
+  acc.shutdown
+  acc.yield
+}
+
+// -----
+
+acc.loop {
+// expected-error@+1 {{'acc.shutdown' op cannot be nested in a compute operation}}
+  acc.shutdown
+  acc.yield
+}
+
+// -----
+
+acc.loop {
+  "some.op"() ({
+    // expected-error@+1 {{'acc.shutdown' op cannot be nested in a compute operation}}
+    acc.shutdown
+  }) : () -> ()
   acc.yield
 }
