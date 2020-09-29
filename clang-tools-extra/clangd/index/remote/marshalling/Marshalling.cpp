@@ -299,7 +299,7 @@ Marshaller::relativePathToURI(llvm::StringRef RelativePath) {
   assert(RelativePath == llvm::sys::path::convert_to_slash(RelativePath));
   if (RelativePath.empty())
     return error("Empty relative path.");
-  if (llvm::sys::path::is_absolute(RelativePath))
+  if (llvm::sys::path::is_absolute(RelativePath, llvm::sys::path::Style::posix))
     return error("RelativePath '{0}' is absolute.", RelativePath);
   llvm::SmallString<256> FullPath = llvm::StringRef(*LocalIndexRoot);
   llvm::sys::path::append(FullPath, RelativePath);
