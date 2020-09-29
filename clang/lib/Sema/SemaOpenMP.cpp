@@ -5921,7 +5921,6 @@ void Sema::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
       continue;
 
     QualType UDeclTy = UDecl->getType();
-    // TODO: Verify types for templates eventually.
     if (!UDeclTy->isDependentType()) {
       QualType NewType = Context.mergeFunctionTypes(
           FType, UDeclTy, /* OfBlockPointer */ false,
@@ -6009,6 +6008,8 @@ ExprResult Sema::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
   TargetOMPContext OMPCtx(Context, std::move(DiagUnknownTrait),
                           getCurFunctionDecl());
 
+  QualType CalleeFnType = CalleeFnDecl->getType();
+
   SmallVector<Expr *, 4> Exprs;
   SmallVector<VariantMatchInfo, 4> VMIs;
   while (CalleeFnDecl) {
@@ -6061,8 +6062,19 @@ ExprResult Sema::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
       }
       NewCall = BuildCallExpr(Scope, BestExpr, LParenLoc, ArgExprs, RParenLoc,
                               ExecConfig);
-      if (NewCall.isUsable())
-        break;
+      if (NewCall.isUsable()) {
+        if (CallExpr *NCE = dyn_cast<CallExpr>(NewCall.get())) {
+          FunctionDecl *NewCalleeFnDecl = NCE->getDirectCallee();
+          QualType NewType = Context.mergeFunctionTypes(
+              CalleeFnType, NewCalleeFnDecl->getType(),
+              /* OfBlockPointer */ false,
+              /* Unqualified */ false, /* AllowCXX */ true);
+          if (!NewType.isNull())
+            break;
+          // Don't use the call if the function type was not compatible.
+          NewCall = nullptr;
+        }
+      }
     }
 
     VMIs.erase(VMIs.begin() + BestIdx);
