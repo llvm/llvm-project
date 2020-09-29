@@ -1424,6 +1424,9 @@ public:
   void setNodeMemRefs(MachineSDNode *N,
                       ArrayRef<MachineMemOperand *> NewMemRefs);
 
+  // Calculate divergence of node \p N based on its operands.
+  bool calculateDivergence(SDNode *N);
+
   // Propagates the change in divergence to users
   void updateDivergence(SDNode * N);
 
