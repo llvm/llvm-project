@@ -524,8 +524,6 @@ static void processSaturatingInst(SaturatingInst *SI, LazyValueInfo *LVI) {
 
 /// Infer nonnull attributes for the arguments at the specified callsite.
 static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
-  SmallVector<unsigned, 4> ArgNos;
-  unsigned ArgNo = 0;
 
   if (auto *WO = dyn_cast<WithOverflowInst>(&CB)) {
     if (WO->getLHS()->getType()->isIntegerTy() && willNotOverflow(WO, LVI)) {
@@ -541,6 +539,8 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
     }
   }
 
+  bool Changed = false;
+
   // Deopt bundle operands are intended to capture state with minimal
   // perturbance of the code otherwise.  If we can find a constant value for
   // any such operand and remove a use of the original value, that's
@@ -549,7 +549,6 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
   // idiomatically, appear along rare conditional paths, it's reasonable likely
   // we may have a conditional fact with which LVI can fold.
   if (auto DeoptBundle = CB.getOperandBundle(LLVMContext::OB_deopt)) {
-    bool Progress = false;
     for (const Use &ConstU : DeoptBundle->Inputs) {
       Use &U = const_cast<Use&>(ConstU);
       Value *V = U.get();
@@ -559,11 +558,12 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
       Constant *C = LVI->getConstant(V, &CB);
       if (!C) continue;
       U.set(C);
-      Progress = true;
+      Changed = true;
     }
-    if (Progress)
-      return true;
   }
+
+  SmallVector<unsigned, 4> ArgNos;
+  unsigned ArgNo = 0;
 
   for (Value *V : CB.args()) {
     PointerType *Type = dyn_cast<PointerType>(V->getType());
@@ -582,7 +582,7 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
   assert(ArgNo == CB.arg_size() && "sanity check");
 
   if (ArgNos.empty())
-    return false;
+    return Changed;
 
   AttributeList AS = CB.getAttributes();
   LLVMContext &Ctx = CB.getContext();
