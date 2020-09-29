@@ -485,6 +485,8 @@ func @testdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) 
   } attributes { defaultAttr = "none" }
   acc.data present(%a : memref<10xf32>) {
   } attributes { defaultAttr = "present" }
+  acc.data {
+  } attributes { defaultAttr = "none" }
   return
 }
 
@@ -520,3 +522,5 @@ func @testdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) 
 // CHECK-NEXT: } attributes {defaultAttr = "none"}
 // CHECK:      acc.data present([[ARGA]] : memref<10xf32>) {
 // CHECK-NEXT: } attributes {defaultAttr = "present"}
+// CHECK:      acc.data {
+// CHECK-NEXT: } attributes {defaultAttr = "none"}
