@@ -318,4 +318,44 @@ def OpenACC_YieldOp : OpenACC_Op<"yield", [Terminator,
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
+//===----------------------------------------------------------------------===//
+// 2.14.4. Update Directive
+//===----------------------------------------------------------------------===//
+
+def OpenACC_UpdateOp : OpenACC_Op<"update", [AttrSizedOperandSegments]> {
+  let summary = "update operation";
+
+  let description = [{
+    The "acc.udpate" operation represents the OpenACC update executable
+    directive.
+    As host and self clauses are synonyms, any operands for host and self are
+    add to $hostOperands.
+
+    Example:
+
+    ```mlir
+    acc.update device(%d1 : memref<10xf32>) attributes {async}
+    ```
+  }];
+
+  let arguments = (ins Optional<IntOrIndex>:$asyncOperand,
+                       Optional<IntOrIndex>:$waitDevnum,
+                       Variadic<IntOrIndex>:$waitOperands,
+                       UnitAttr:$async,
+                       UnitAttr:$wait,
+                       Variadic<AnyType>:$hostOperands,
+                       Variadic<AnyType>:$deviceOperands,
+                       UnitAttr:$ifPresent);
+
+  let assemblyFormat = [{
+    ( `async` `(` $asyncOperand^ `:` type($asyncOperand) `)` )?
+    ( `wait_devnum` `(` $waitDevnum^ `:` type($waitDevnum) `)` )?
+    ( `wait` `(` $waitOperands^ `:` type($waitOperands) `)` )?
+    ( `host` `(` $hostOperands^ `:` type($hostOperands) `)` )?
+    ( `device` `(` $deviceOperands^ `:` type($deviceOperands) `)` )?
+    attr-dict-with-keyword
+  }];
+}
+
+
 #endif // OPENACC_OPS
