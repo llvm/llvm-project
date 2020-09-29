@@ -13,12 +13,10 @@
 #ifndef LLVM_LIB_TARGET_LANAI_LANAITARGETMACHINE_H
 #define LLVM_LIB_TARGET_LANAI_LANAITARGETMACHINE_H
 
-#include "LanaiFrameLowering.h"
 #include "LanaiISelLowering.h"
 #include "LanaiInstrInfo.h"
 #include "LanaiSelectionDAGInfo.h"
 #include "LanaiSubtarget.h"
-#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
