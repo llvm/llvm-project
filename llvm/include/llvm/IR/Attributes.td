@@ -192,7 +192,7 @@ def StackProtectStrong : EnumAttr<"sspstrong">;
 def StrictFP : EnumAttr<"strictfp">;
 
 /// Hidden pointer to structure to return.
-def StructRet : TypeAttr<"sret">;
+def StructRet : EnumAttr<"sret">;
 
 /// AddressSanitizer is on.
 def SanitizeAddress : EnumAttr<"sanitize_address">;

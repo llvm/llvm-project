@@ -412,17 +412,17 @@ define i32* @complicated_args_preallocated() {
   ret i32* %call
 }
 
-define internal void @test_sret(%struct.X* sret(%struct.X) %a, %struct.X** %b) {
+define internal void @test_sret(%struct.X* sret %a, %struct.X** %b) {
 ;
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_sret
-; IS__TUNIT____-SAME: (%struct.X* noalias nofree noundef nonnull writeonly sret(%struct.X) align 536870912 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) [[ATTR2:#.*]] {
+; IS__TUNIT____-SAME: (%struct.X* noalias nofree noundef nonnull sret writeonly align 536870912 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) [[ATTR2:#.*]] {
 ; IS__TUNIT____-NEXT:    store %struct.X* [[A]], %struct.X** [[B]], align 8
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_sret
-; IS__CGSCC____-SAME: (%struct.X* noalias nofree noundef nonnull writeonly sret(%struct.X) align 536870912 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) [[ATTR2:#.*]] {
+; IS__CGSCC____-SAME: (%struct.X* noalias nofree noundef nonnull sret writeonly align 536870912 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) [[ATTR2:#.*]] {
 ; IS__CGSCC____-NEXT:    store %struct.X* [[A]], %struct.X** [[B]], align 8
 ; IS__CGSCC____-NEXT:    ret void
 ;

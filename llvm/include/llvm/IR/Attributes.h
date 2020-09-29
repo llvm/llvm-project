@@ -108,7 +108,6 @@ public:
                                         unsigned ElemSizeArg,
                                         const Optional<unsigned> &NumElemsArg);
   static Attribute getWithByValType(LLVMContext &Context, Type *Ty);
-  static Attribute getWithStructRetType(LLVMContext &Context, Type *Ty);
   static Attribute getWithByRefType(LLVMContext &Context, Type *Ty);
   static Attribute getWithPreallocatedType(LLVMContext &Context, Type *Ty);
 
@@ -308,7 +307,6 @@ public:
   uint64_t getDereferenceableBytes() const;
   uint64_t getDereferenceableOrNullBytes() const;
   Type *getByValType() const;
-  Type *getStructRetType() const;
   Type *getByRefType() const;
   Type *getPreallocatedType() const;
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
@@ -633,9 +631,6 @@ public:
   /// Return the byval type for the specified function parameter.
   Type *getParamByValType(unsigned ArgNo) const;
 
-  /// Return the sret type for the specified function parameter.
-  Type *getParamStructRetType(unsigned ArgNo) const;
-
   /// Return the byref type for the specified function parameter.
   Type *getParamByRefType(unsigned ArgNo) const;
 
@@ -742,7 +737,6 @@ class AttrBuilder {
   uint64_t DerefOrNullBytes = 0;
   uint64_t AllocSizeArgs = 0;
   Type *ByValType = nullptr;
-  Type *StructRetType = nullptr;
   Type *ByRefType = nullptr;
   Type *PreallocatedType = nullptr;
 
@@ -830,9 +824,6 @@ public:
   /// Retrieve the byval type.
   Type *getByValType() const { return ByValType; }
 
-  /// Retrieve the sret type.
-  Type *getStructRetType() const { return StructRetType; }
-
   /// Retrieve the byref type.
   Type *getByRefType() const { return ByRefType; }
 
@@ -881,9 +872,6 @@ public:
 
   /// This turns a byval type into the form used internally in Attribute.
   AttrBuilder &addByValAttr(Type *Ty);
-
-  /// This turns a sret type into the form used internally in Attribute.
-  AttrBuilder &addStructRetAttr(Type *Ty);
 
   /// This turns a byref type into the form used internally in Attribute.
   AttrBuilder &addByRefAttr(Type *Ty);

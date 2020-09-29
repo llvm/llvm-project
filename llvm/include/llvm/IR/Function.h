@@ -474,8 +474,8 @@ public:
 
   /// Extract the sret type for a parameter.
   Type *getParamStructRetType(unsigned ArgNo) const {
-    Type *Ty = AttributeSets.getParamStructRetType(ArgNo);
-    return Ty ? Ty : (arg_begin() + ArgNo)->getType()->getPointerElementType();
+    // FIXME: Add type to attribute like byval
+    return (arg_begin() + ArgNo)->getType()->getPointerElementType();
   }
 
   /// Extract the byref type for a parameter.
