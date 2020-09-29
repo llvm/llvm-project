@@ -435,7 +435,7 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
      // are the same size, this is an obvious bitcast.
      if (ValueVT.getSizeInBits() == PartEVT.getSizeInBits()) {
        return DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
-     } else if (ValueVT.getSizeInBits() < PartEVT.getSizeInBits()) {
+     } else if (ValueVT.bitsLT(PartEVT)) {
        // Bitcast Val back the original type and extract the corresponding
        // vector we want.
        unsigned Elts = PartEVT.getSizeInBits() / ValueVT.getScalarSizeInBits();
@@ -665,14 +665,14 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
       // Promoted vector extract
       Val = DAG.getAnyExtOrTrunc(Val, DL, PartVT);
     } else {
-      if (ValueVT.getVectorNumElements() == 1) {
+      if (ValueVT.getVectorElementCount().isScalar()) {
         Val = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, PartVT, Val,
                           DAG.getVectorIdxConstant(0, DL));
       } else {
-        assert(PartVT.getSizeInBits() > ValueVT.getSizeInBits() &&
+        uint64_t ValueSize = ValueVT.getFixedSizeInBits();
+        assert(PartVT.getFixedSizeInBits() > ValueSize &&
                "lossy conversion of vector to scalar type");
-        EVT IntermediateType =
-            EVT::getIntegerVT(*DAG.getContext(), ValueVT.getSizeInBits());
+        EVT IntermediateType = EVT::getIntegerVT(*DAG.getContext(), ValueSize);
         Val = DAG.getBitcast(IntermediateType, Val);
         Val = DAG.getAnyExtOrTrunc(Val, DL, PartVT);
       }
