@@ -20,6 +20,8 @@
 
 #include <stdint.h>
 
+#include "mlir-c/Support.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -46,6 +48,7 @@ extern "C" {
   typedef struct name name
 
 DEFINE_C_API_STRUCT(MlirContext, void);
+DEFINE_C_API_STRUCT(MlirDialect, void);
 DEFINE_C_API_STRUCT(MlirOperation, void);
 DEFINE_C_API_STRUCT(MlirBlock, void);
 DEFINE_C_API_STRUCT(MlirRegion, void);
@@ -96,6 +99,39 @@ void mlirContextSetAllowUnregisteredDialects(MlirContext context, int allow);
 
 /** Returns whether the context allows unregistered dialects. */
 int mlirContextGetAllowUnregisteredDialects(MlirContext context);
+
+/** Returns the number of dialects registered with the given context. A
+ * registered dialect will be loaded if needed by the parser. */
+intptr_t mlirContextGetNumRegisteredDialects(MlirContext context);
+
+/** Returns the number of dialects loaded by the context.
+ */
+intptr_t mlirContextGetNumLoadedDialects(MlirContext context);
+
+/** Gets the dialect instance owned by the given context using the dialect
+ * namespace to identify it, loads (i.e., constructs the instance of) the
+ * dialect if necessary. If the dialect is not registered with the context,
+ * returns null. Use mlirContextLoad<Name>Dialect to load an unregistered
+ * dialect. */
+MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
+                                        MlirStringRef name);
+
+/*============================================================================*/
+/* Dialect API.                                                               */
+/*============================================================================*/
+
+/** Returns the context that owns the dialect. */
+MlirContext mlirDialectGetContext(MlirDialect dialect);
+
+/** Checks if the dialect is null. */
+int mlirDialectIsNull(MlirDialect dialect);
+
+/** Checks if two dialects that belong to the same context are equal. Dialects
+ * from different contexts will not compare equal. */
+int mlirDialectEqual(MlirDialect dialect1, MlirDialect dialect2);
+
+/** Returns the namespace of the given dialect. */
+MlirStringRef mlirDialectGetNamespace(MlirDialect dialect);
 
 /*============================================================================*/
 /* Location API.                                                              */
