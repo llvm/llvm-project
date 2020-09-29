@@ -616,10 +616,6 @@ static void AddVariableInfo(
   }
 
   if (!var_type.IsValid())
-    if (Type *var_lldb_type = variable_sp->GetType())
-      var_type = var_lldb_type->GetFullCompilerType();
-
-  if (!var_type.IsValid())
     return;
 
   if (!var_type.GetTypeSystem()->SupportsLanguage(lldb::eLanguageTypeSwift))
