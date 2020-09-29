@@ -592,3 +592,31 @@ acc.wait if(%ifCond)
 // CHECK: acc.wait attributes {async}
 // CHECK: acc.wait([[I64VALUE]] : i64) async([[IDXVALUE]] : index) wait_devnum([[I32VALUE]] : i32)
 // CHECK: acc.wait if([[IFCOND]])
+
+// -----
+
+%i64Value = constant 1 : i64
+%i32Value = constant 1 : i32
+%i32Value2 = constant 2 : i32
+%idxValue = constant 1 : index
+%ifCond = constant true
+acc.init
+acc.init device_type(%i32Value : i32)
+acc.init device_type(%i32Value, %i32Value2 : i32, i32)
+acc.init device_num(%i64Value : i64)
+acc.init device_num(%i32Value : i32)
+acc.init device_num(%idxValue : index)
+acc.init if(%ifCond)
+
+// CHECK: [[I64VALUE:%.*]] = constant 1 : i64
+// CHECK: [[I32VALUE:%.*]] = constant 1 : i32
+// CHECK: [[I32VALUE2:%.*]] = constant 2 : i32
+// CHECK: [[IDXVALUE:%.*]] = constant 1 : index
+// CHECK: [[IFCOND:%.*]] = constant true
+// CHECK: acc.init
+// CHECK: acc.init device_type([[I32VALUE]] : i32)
+// CHECK: acc.init device_type([[I32VALUE]], [[I32VALUE2]] : i32, i32)
+// CHECK: acc.init device_num([[I64VALUE]] : i64)
+// CHECK: acc.init device_num([[I32VALUE]] : i32)
+// CHECK: acc.init device_num([[IDXVALUE]] : index)
+// CHECK: acc.init if([[IFCOND]])
