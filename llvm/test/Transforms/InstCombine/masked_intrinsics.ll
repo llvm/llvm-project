@@ -100,8 +100,9 @@ define <2 x double> @load_speculative_less_aligned(<2 x double>* dereferenceable
 ; CHECK-LABEL: @load_speculative_less_aligned(
 ; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 0
 ; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* nonnull [[PTR:%.*]], i32 4, <2 x i1> [[MASK:%.*]], <2 x double> [[PTV2]])
-; CHECK-NEXT:    ret <2 x double> [[RES]]
+; CHECK-NEXT:    [[UNMASKEDLOAD:%.*]] = load <2 x double>, <2 x double>* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[MASK:%.*]], <2 x double> [[UNMASKEDLOAD]], <2 x double> [[PTV2]]
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %ptv1 = insertelement <2 x double> undef, double %pt, i64 0
   %ptv2 = insertelement <2 x double> %ptv1, double %pt, i64 1
