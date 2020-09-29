@@ -634,5 +634,20 @@ static LogicalResult verifyLoopOp(acc::LoopOp loopOp) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// DataOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(acc::DataOp dataOp) {
+  // 2.6.5. Data Construct restriction
+  // At least one copy, copyin, copyout, create, no_create, present, deviceptr,
+  // attach, or default clause must appear on a data construct.
+  if (dataOp.getOperands().size() == 0 && !dataOp.defaultAttr())
+    return dataOp.emitError("at least one operand or the default attribute "
+                            "must appear on the data operation");
+
+  return success();
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOps.cpp.inc"

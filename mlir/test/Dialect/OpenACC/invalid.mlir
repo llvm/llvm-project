@@ -68,3 +68,10 @@ acc.loop {
 } attributes {auto_, seq}
 
 // -----
+
+// expected-error@+1 {{at least one operand or the default attribute must appear on the data operation}}
+acc.data {
+  acc.yield
+}
+
+// -----
