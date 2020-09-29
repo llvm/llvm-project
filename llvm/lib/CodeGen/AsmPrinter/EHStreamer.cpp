@@ -44,15 +44,9 @@ EHStreamer::~EHStreamer() = default;
 unsigned EHStreamer::sharedTypeIDs(const LandingPadInfo *L,
                                    const LandingPadInfo *R) {
   const std::vector<int> &LIds = L->TypeIds, &RIds = R->TypeIds;
-  unsigned LSize = LIds.size(), RSize = RIds.size();
-  unsigned MinSize = LSize < RSize ? LSize : RSize;
-  unsigned Count = 0;
-
-  for (; Count != MinSize; ++Count)
-    if (LIds[Count] != RIds[Count])
-      return Count;
-
-  return Count;
+  return std::mismatch(LIds.begin(), LIds.end(), RIds.begin(), RIds.end())
+             .first -
+         LIds.begin();
 }
 
 /// Compute the actions table and gather the first action index for each landing
