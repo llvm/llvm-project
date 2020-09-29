@@ -96,8 +96,8 @@ define <2 x double> @load_speculative(<2 x double>* dereferenceable(16) align 4 
   ret <2 x double> %res
 }
 
-define <2 x double> @neg_load_spec_width(<2 x double>* dereferenceable(8) %ptr, double %pt, <2 x i1> %mask)  {
-; CHECK-LABEL: @neg_load_spec_width(
+define <2 x double> @load_speculative_less_aligned(<2 x double>* dereferenceable(16) %ptr, double %pt, <2 x i1> %mask)  {
+; CHECK-LABEL: @load_speculative_less_aligned(
 ; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 0
 ; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* nonnull [[PTR:%.*]], i32 4, <2 x i1> [[MASK:%.*]], <2 x double> [[PTV2]])
@@ -110,6 +110,7 @@ define <2 x double> @neg_load_spec_width(<2 x double>* dereferenceable(8) %ptr, 
 }
 
 ; Can't speculate since only half of required size is known deref
+
 define <2 x double> @load_spec_neg_size(<2 x double>* dereferenceable(8) %ptr, double %pt, <2 x i1> %mask)  {
 ; CHECK-LABEL: @load_spec_neg_size(
 ; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 0
@@ -158,8 +159,8 @@ define void @store_onemask(<2 x double>* %ptr, <2 x double> %val)  {
 
 define void @store_demandedelts(<2 x double>* %ptr, double %val)  {
 ; CHECK-LABEL: @store_demandedelts(
-; CHECK-NEXT:    [[VALVEC2:%.*]] = insertelement <2 x double> undef, double [[VAL:%.*]], i32 0
-; CHECK-NEXT:    call void @llvm.masked.store.v2f64.p0v2f64(<2 x double> [[VALVEC2]], <2 x double>* [[PTR:%.*]], i32 4, <2 x i1> <i1 true, i1 false>)
+; CHECK-NEXT:    [[VALVEC1:%.*]] = insertelement <2 x double> undef, double [[VAL:%.*]], i32 0
+; CHECK-NEXT:    call void @llvm.masked.store.v2f64.p0v2f64(<2 x double> [[VALVEC1]], <2 x double>* [[PTR:%.*]], i32 4, <2 x i1> <i1 true, i1 false>)
 ; CHECK-NEXT:    ret void
 ;
   %valvec1 = insertelement <2 x double> undef, double %val, i32 0
@@ -257,8 +258,8 @@ define void @scatter_zeromask(<2 x double*> %ptrs, <2 x double> %val)  {
 define void @scatter_demandedelts(double* %ptr, double %val)  {
 ; CHECK-LABEL: @scatter_demandedelts(
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr double, double* [[PTR:%.*]], <2 x i64> <i64 0, i64 undef>
-; CHECK-NEXT:    [[VALVEC2:%.*]] = insertelement <2 x double> undef, double [[VAL:%.*]], i32 0
-; CHECK-NEXT:    call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> [[VALVEC2]], <2 x double*> [[PTRS]], i32 8, <2 x i1> <i1 true, i1 false>)
+; CHECK-NEXT:    [[VALVEC1:%.*]] = insertelement <2 x double> undef, double [[VAL:%.*]], i32 0
+; CHECK-NEXT:    call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> [[VALVEC1]], <2 x double*> [[PTRS]], i32 8, <2 x i1> <i1 true, i1 false>)
 ; CHECK-NEXT:    ret void
 ;
   %ptrs = getelementptr double, double* %ptr, <2 x i64> <i64 0, i64 1>
