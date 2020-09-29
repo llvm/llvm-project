@@ -724,6 +724,9 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     }
     LI->destroy(L);
   }
+
+  if (SE)
+    SE->verify();
 }
 
 /// Checks if \p L has single exit through latch block except possibly

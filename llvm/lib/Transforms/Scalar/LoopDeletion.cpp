@@ -165,6 +165,10 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
 
   if (ExitBlock && isLoopNeverExecuted(L)) {
     LLVM_DEBUG(dbgs() << "Loop is proven to never execute, delete it!");
+    // We need to forget the loop before setting the incoming values of the exit
+    // phis to undef, so we properly invalidate the SCEV expressions for those
+    // phis.
+    SE.forgetLoop(L);
     // Set incoming value to undef for phi nodes in the exit block.
     for (PHINode &P : ExitBlock->phis()) {
       std::fill(P.incoming_values().begin(), P.incoming_values().end(),
