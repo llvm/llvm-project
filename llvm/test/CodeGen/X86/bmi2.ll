@@ -258,14 +258,12 @@ define i32 @pext32_knownbits(i32 %x)   {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl $1431655765, %ecx # imm = 0x55555555
 ; X86-NEXT:    pextl %ecx, %eax, %eax
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pext32_knownbits:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl $1431655765, %eax # imm = 0x55555555
 ; X64-NEXT:    pextl %eax, %edi, %eax
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
   %tmp = tail call i32 @llvm.x86.bmi.pext.32(i32 %x, i32 1431655765)
   %tmp2 = and i32 %tmp, 65535
