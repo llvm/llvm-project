@@ -518,7 +518,8 @@ struct OpenMPOpt {
   /// Print initial ICV values for testing.
   /// FIXME: This should be done from the Attributor once it is added.
   void printICVs() const {
-    InternalControlVar ICVs[] = {ICV_nthreads, ICV_active_levels, ICV_cancel};
+    InternalControlVar ICVs[] = {ICV_nthreads, ICV_active_levels, ICV_cancel,
+                                 ICV_proc_bind};
 
     for (Function *F : OMPInfoCache.ModuleSlice) {
       for (auto ICV : ICVs) {
