@@ -9403,7 +9403,8 @@ static bool checkTrivialClassMembers(Sema &S, CXXRecordDecl *RD,
     //       brace-or-equal-initializer
     if (CSM == Sema::CXXDefaultConstructor && FI->hasInClassInitializer()) {
       if (Diagnose)
-        S.Diag(FI->getLocation(), diag::note_nontrivial_in_class_init) << FI;
+        S.Diag(FI->getLocation(), diag::note_nontrivial_default_member_init)
+            << FI;
       return false;
     }
 
@@ -15080,9 +15081,10 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   // constructor before the initializer is lexically complete will ultimately
   // come here at which point we can diagnose it.
   RecordDecl *OutermostClass = ParentRD->getOuterLexicalRecordContext();
-  Diag(Loc, diag::err_in_class_initializer_not_yet_parsed)
+  Diag(Loc, diag::err_default_member_initializer_not_yet_parsed)
       << OutermostClass << Field;
-  Diag(Field->getEndLoc(), diag::note_in_class_initializer_not_yet_parsed);
+  Diag(Field->getEndLoc(),
+       diag::note_default_member_initializer_not_yet_parsed);
   // Recover by marking the field invalid, unless we're in a SFINAE context.
   if (!isSFINAEContext())
     Field->setInvalidDecl();

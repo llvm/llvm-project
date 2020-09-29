@@ -879,7 +879,7 @@ let Command = "target modules lookup" in {
 }
 
 let Command = "target stop hook add" in {
-  def target_stop_hook_add_one_liner : Option<"one-liner", "o">,
+  def target_stop_hook_add_one_liner : Option<"one-liner", "o">, GroupRange<1,3>,
     Arg<"OneLiner">, Desc<"Add a command for the stop hook.  Can be specified "
     "more than once, and commands will be run in the order they appear.">;
   def target_stop_hook_add_shlib : Option<"shlib", "s">, Arg<"ShlibName">,
@@ -897,19 +897,19 @@ let Command = "target stop hook add" in {
   def target_stop_hook_add_queue_name : Option<"queue-name", "q">,
     Arg<"QueueName">, Desc<"The stop hook is run only for threads in the queue "
     "whose name is given by this argument.">;
-  def target_stop_hook_add_file : Option<"file", "f">, Group<1>,
+  def target_stop_hook_add_file : Option<"file", "f">, Groups<[1,4]>,
     Arg<"Filename">, Desc<"Specify the source file within which the stop-hook "
     "is to be run.">, Completion<"SourceFile">;
-  def target_stop_hook_add_start_line : Option<"start-line", "l">, Group<1>,
+  def target_stop_hook_add_start_line : Option<"start-line", "l">, Groups<[1,4]>,
     Arg<"LineNum">, Desc<"Set the start of the line range for which the "
     "stop-hook is to be run.">;
-  def target_stop_hook_add_end_line : Option<"end-line", "e">, Group<1>,
+  def target_stop_hook_add_end_line : Option<"end-line", "e">, Groups<[1,4]>,
     Arg<"LineNum">, Desc<"Set the end of the line range for which the stop-hook"
     " is to be run.">;
-  def target_stop_hook_add_classname : Option<"classname", "c">, Group<2>,
+  def target_stop_hook_add_classname : Option<"classname", "c">, Groups<[2,5]>,
     Arg<"ClassName">,
     Desc<"Specify the class within which the stop-hook is to be run.">;
-  def target_stop_hook_add_name : Option<"name", "n">, Group<3>,
+  def target_stop_hook_add_name : Option<"name", "n">, Groups<[3,6]>,
     Arg<"FunctionName">, Desc<"Set the function name within which the stop hook"
     " will be run.">, Completion<"Symbol">;
   def target_stop_hook_add_auto_continue : Option<"auto-continue", "G">,
