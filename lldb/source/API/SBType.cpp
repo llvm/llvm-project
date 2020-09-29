@@ -9,6 +9,7 @@
 #include "lldb/API/SBType.h"
 #include "SBReproducerPrivate.h"
 #include "lldb/API/SBDefines.h"
+#include "lldb/API/SBModule.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTypeEnumMember.h"
 #include "lldb/Core/Mangled.h"
@@ -495,6 +496,17 @@ uint32_t SBType::GetTypeFlags() {
   return m_opaque_sp->GetCompilerType(true).GetTypeInfo();
 }
 
+lldb::SBModule SBType::GetModule() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBModule, SBType, GetModule);
+
+  lldb::SBModule sb_module;
+  if (!IsValid())
+    return LLDB_RECORD_RESULT(sb_module);
+
+  sb_module.SetSP(m_opaque_sp->GetModule());
+  return LLDB_RECORD_RESULT(sb_module);
+}
+
 const char *SBType::GetName() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBType, GetName);
 
@@ -950,6 +962,7 @@ void RegisterMethods<SBType>(Registry &R) {
                        (uint32_t));
   LLDB_REGISTER_METHOD(bool, SBType, IsTypeComplete, ());
   LLDB_REGISTER_METHOD(uint32_t, SBType, GetTypeFlags, ());
+  LLDB_REGISTER_METHOD(lldb::SBModule, SBType, GetModule, ());
   LLDB_REGISTER_METHOD(const char *, SBType, GetName, ());
   LLDB_REGISTER_METHOD(const char *, SBType, GetDisplayTypeName, ());
   LLDB_REGISTER_METHOD(lldb::TypeClass, SBType, GetTypeClass, ());
