@@ -296,8 +296,7 @@ llvm::Expected<Relation> Marshaller::toProtobuf(const clangd::SymbolID &Subject,
 llvm::Expected<std::string>
 Marshaller::relativePathToURI(llvm::StringRef RelativePath) {
   assert(LocalIndexRoot);
-  assert(RelativePath == llvm::sys::path::convert_to_slash(
-                             RelativePath, llvm::sys::path::Style::posix));
+  assert(RelativePath == llvm::sys::path::convert_to_slash(RelativePath));
   if (RelativePath.empty())
     return error("Empty relative path.");
   if (llvm::sys::path::is_absolute(RelativePath))
