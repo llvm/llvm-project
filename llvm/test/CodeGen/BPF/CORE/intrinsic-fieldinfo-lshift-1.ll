@@ -15,9 +15,9 @@
 ;     return r1 + r2 + r3 + r4;
 ;   }
 ; Compilation flag:
-;   clang -target bpf -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
+;   clang -target bpfel -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
 
-target triple = "bpf"
+target triple = "bpfel"
 
 %union.u1 = type { i32 }
 %struct.s1 = type { i32 }
