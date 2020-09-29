@@ -895,7 +895,6 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   raw_string_ostream os(err);
 
   const char *argv[] = {config->progName.data(), opt.data()};
-  cl::ResetAllOptionOccurrences();
   if (cl::ParseCommandLineOptions(2, argv, "", &os))
     return;
   os.flush();
@@ -1104,6 +1103,8 @@ static void readConfigs(opt::InputArgList &args) {
     else
       error(errPrefix + toString(pat.takeError()));
   }
+
+  cl::ResetAllOptionOccurrences();
 
   // Parse LTO options.
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
