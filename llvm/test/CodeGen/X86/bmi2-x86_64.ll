@@ -74,6 +74,18 @@ define i64 @pext64_load(i64 %x, i64* %y)   {
   ret i64 %tmp
 }
 
+define i64 @pext64_knownbits(i64 %x, i64 %y)   {
+; CHECK-LABEL: pext64_knownbits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movabsq $6148914691236517205, %rax # imm = 0x5555555555555555
+; CHECK-NEXT:    pextq %rax, %rdi, %rax
+; CHECK-NEXT:    movl %eax, %eax
+; CHECK-NEXT:    retq
+  %tmp = tail call i64 @llvm.x86.bmi.pext.64(i64 %x, i64 6148914691236517205)
+  %tmp2 = and i64 %tmp, 4294967295
+  ret i64 %tmp2
+}
+
 declare i64 @llvm.x86.bmi.pext.64(i64, i64)
 
 define i64 @mulx64(i64 %x, i64 %y, i64* %p)   {
