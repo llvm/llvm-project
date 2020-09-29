@@ -349,7 +349,7 @@ struct StructWithProperty {
   __declspec(property(get=GetV,)) int V10; // expected-error {{expected 'get' or 'put' in property declaration}}
   __declspec(property(get=GetV,put=SetV)) int V11; // no-warning
   __declspec(property(get=GetV,put=SetV,get=GetV)) int V12; // expected-error {{property declaration specifies 'get' accessor twice}}
-  __declspec(property(get=GetV)) int V13 = 3; // expected-error {{property declaration cannot have an in-class initializer}}
+  __declspec(property(get=GetV)) int V13 = 3; // expected-error {{property declaration cannot have a default member initializer}}
 
   int GetV() { return 123; }
   void SetV(int v) {}

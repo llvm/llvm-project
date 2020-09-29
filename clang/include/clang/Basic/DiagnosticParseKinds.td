@@ -709,7 +709,7 @@ def err_ms_property_expected_accessor_name : Error<
 def err_ms_property_expected_comma_or_rparen : Error<
   "expected ',' or ')' at end of property accessor list">;
 def err_ms_property_initializer : Error<
-  "property declaration cannot have an in-class initializer">;
+  "property declaration cannot have a default member initializer">;
 
 def warn_cxx20_compat_explicit_bool : Warning<
   "this expression will be parsed as explicit(bool) in C++20">,
@@ -859,13 +859,13 @@ def warn_cxx98_compat_defaulted_deleted_function : Warning<
   "%select{defaulted|deleted}0 function definitions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 
-// C++11 in-class member initialization
+// C++11 default member initialization
 def ext_nonstatic_member_init : ExtWarn<
-  "in-class initialization of non-static data member is a C++11 extension">,
-  InGroup<CXX11>;
+  "default member initializer for non-static data member is a C++11 "
+  "extension">, InGroup<CXX11>;
 def warn_cxx98_compat_nonstatic_member_init : Warning<
-  "in-class initialization of non-static data members is incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
+  "default member initializer for non-static data members is incompatible with "
+  "C++98">, InGroup<CXX98Compat>, DefaultIgnore;
 def ext_bitfield_member_init: ExtWarn<
   "default member initializer for bit-field is a C++20 extension">,
   InGroup<CXX20>;
@@ -873,7 +873,7 @@ def warn_cxx17_compat_bitfield_member_init: Warning<
   "default member initializer for bit-field is incompatible with "
   "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_incomplete_array_member_init: Error<
-  "array bound cannot be deduced from an in-class initializer">;
+  "array bound cannot be deduced from a default member initializer">;
 
 // C++11 alias-declaration
 def ext_alias_declaration : ExtWarn<
