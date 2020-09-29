@@ -16,7 +16,8 @@ endfunction()
 check_library_exists(c fopen "" COMPILER_RT_HAS_LIBC)
 if (COMPILER_RT_USE_BUILTINS_LIBRARY)
   include(HandleCompilerRT)
-  find_compiler_rt_library(builtins "" COMPILER_RT_BUILTINS_LIBRARY)
+  find_compiler_rt_library(builtins COMPILER_RT_BUILTINS_LIBRARY
+                           FLAGS ${SANITIZER_COMMON_FLAGS})
   # TODO(PR51389): We should check COMPILER_RT_BUILTINS_LIBRARY and report an
   # error if the value is NOTFOUND rather than silenty continuing but we first
   # need to fix find_compiler_rt_library on Darwin.
