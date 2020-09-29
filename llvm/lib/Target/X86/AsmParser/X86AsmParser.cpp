@@ -1674,6 +1674,18 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       if (ParseIntelDotOperator(SM, End))
         return true;
       break;
+    case AsmToken::Dot:
+      if (!Parser.isParsingMasm()) {
+        if ((Done = SM.isValidEndState()))
+          break;
+        return Error(Tok.getLoc(), "unknown token in expression");
+      }
+      // MASM allows spaces around the dot operator (e.g., "var . x")
+      Lex();
+      UpdateLocLex = false;
+      if (ParseIntelDotOperator(SM, End))
+        return true;
+      break;
     case AsmToken::Dollar:
       if (!Parser.isParsingMasm()) {
         if ((Done = SM.isValidEndState()))
@@ -1687,6 +1699,23 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       SMLoc IdentLoc = Tok.getLoc();
       StringRef Identifier = Tok.getString();
       UpdateLocLex = false;
+      if (Parser.isParsingMasm()) {
+        size_t DotOffset = Identifier.find_first_of('.');
+        if (DotOffset != StringRef::npos) {
+          consumeToken();
+          StringRef LHS = Identifier.slice(0, DotOffset);
+          StringRef Dot = Identifier.slice(DotOffset, DotOffset + 1);
+          StringRef RHS = Identifier.slice(DotOffset + 1, StringRef::npos);
+          if (!RHS.empty()) {
+            getLexer().UnLex(AsmToken(AsmToken::Identifier, RHS));
+          }
+          getLexer().UnLex(AsmToken(AsmToken::Dot, Dot));
+          if (!LHS.empty()) {
+            getLexer().UnLex(AsmToken(AsmToken::Identifier, LHS));
+          }
+          break;
+        }
+      }
       // (MASM only) <TYPE> PTR operator
       if (Parser.isParsingMasm()) {
         const AsmToken &NextTok = getLexer().peekTok();
@@ -1744,7 +1773,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       }
       // Symbol reference, when parsing assembly content
       InlineAsmIdentifierInfo Info;
-      AsmTypeInfo Type;
+      AsmFieldInfo FieldInfo;
       const MCExpr *Val;
       if (isParsingMSInlineAsm() || Parser.isParsingMasm()) {
         // MS Dot Operator expression
@@ -1761,8 +1790,9 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           if (int64_t Val = ParseIntelInlineAsmOperator(OpKind)) {
             if (SM.onInteger(Val, ErrMsg))
               return Error(IdentLoc, ErrMsg);
-          } else
+          } else {
             return true;
+          }
           break;
         }
         // MS InlineAsm identifier
@@ -1771,7 +1801,8 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           return Error(IdentLoc, "expected identifier");
         if (ParseIntelInlineAsmIdentifier(Val, Identifier, Info, false, End))
           return true;
-        else if (SM.onIdentifierExpr(Val, Identifier, Info, Type, true, ErrMsg))
+        else if (SM.onIdentifierExpr(Val, Identifier, Info, FieldInfo.Type,
+                                     true, ErrMsg))
           return Error(IdentLoc, ErrMsg);
         break;
       }
@@ -1784,11 +1815,35 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
             return Error(IdentLoc, ErrMsg);
           break;
         }
+        if (!getParser().lookUpType(Identifier, FieldInfo.Type)) {
+          // Field offset immediate; <TYPE>.<field specification>
+          Lex(); // eat type
+          bool EndDot = parseOptionalToken(AsmToken::Dot);
+          while (EndDot || (getTok().is(AsmToken::Identifier) &&
+                            getTok().getString().startswith("."))) {
+            getParser().parseIdentifier(Identifier);
+            if (!EndDot)
+              Identifier.consume_front(".");
+            EndDot = Identifier.consume_back(".");
+            if (getParser().lookUpField(FieldInfo.Type.Name, Identifier,
+                                        FieldInfo)) {
+              SMLoc IDEnd =
+                  SMLoc::getFromPointer(Identifier.data() + Identifier.size());
+              return Error(IdentLoc, "Unable to lookup field reference!",
+                           SMRange(IdentLoc, IDEnd));
+            }
+            if (!EndDot)
+              EndDot = parseOptionalToken(AsmToken::Dot);
+          }
+          if (SM.onInteger(FieldInfo.Offset, ErrMsg))
+            return Error(IdentLoc, ErrMsg);
+          break;
+        }
       }
-      if (getParser().parsePrimaryExpr(Val, End, &Type)) {
+      if (getParser().parsePrimaryExpr(Val, End, &FieldInfo.Type)) {
         return Error(Tok.getLoc(), "Unexpected identifier!");
-      } else if (SM.onIdentifierExpr(Val, Identifier, Info, Type, false,
-                                     ErrMsg)) {
+      } else if (SM.onIdentifierExpr(Val, Identifier, Info, FieldInfo.Type,
+                                     false, ErrMsg)) {
         return Error(IdentLoc, ErrMsg);
       }
       break;
@@ -2006,6 +2061,7 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
   StringRef DotDispStr = Tok.getString();
   if (DotDispStr.startswith("."))
     DotDispStr = DotDispStr.drop_front(1);
+  StringRef TrailingDot;
 
   // .Imm gets lexed as a real.
   if (Tok.is(AsmToken::Real)) {
@@ -2014,6 +2070,10 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
     Info.Offset = DotDisp.getZExtValue();
   } else if ((isParsingMSInlineAsm() || getParser().isParsingMasm()) &&
              Tok.is(AsmToken::Identifier)) {
+    if (DotDispStr.endswith(".")) {
+      TrailingDot = DotDispStr.substr(DotDispStr.size() - 1);
+      DotDispStr = DotDispStr.drop_back(1);
+    }
     const std::pair<StringRef, StringRef> BaseMember = DotDispStr.split('.');
     const StringRef Base = BaseMember.first, Member = BaseMember.second;
     if (getParser().lookUpField(SM.getType(), DotDispStr, Info) &&
@@ -2031,6 +2091,8 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
   const char *DotExprEndLoc = DotDispStr.data() + DotDispStr.size();
   while (Tok.getLoc().getPointer() < DotExprEndLoc)
     Lex();
+  if (!TrailingDot.empty())
+    getLexer().UnLex(AsmToken(AsmToken::Dot, TrailingDot));
   SM.addImm(Info.Offset);
   SM.setTypeInfo(Info.Type);
   return false;

@@ -6728,6 +6728,8 @@ bool MasmParser::lookUpField(const StructInfo &Structure, StringRef Member,
     Info.Type.Length = Field.LengthOf;
     if (Field.Contents.FT == FT_STRUCT)
       Info.Type.Name = Field.Contents.StructInfo.Structure.Name;
+    else
+      Info.Type.Name = "";
     return false;
   }
 
