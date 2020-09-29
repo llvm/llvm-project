@@ -18,9 +18,9 @@
 ;            __builtin_preserve_field_info(arg->bf2, FIELD_TYPE_LSHIFT_U64);
 ;   }
 ; Compilation flag:
-;   clang -target bpf -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
+;   clang -target bpfel -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
 
-target triple = "bpf"
+target triple = "bpfel"
 
 %struct.s = type { i64, i32, i32, i32, i8, i8 }
 

@@ -35,7 +35,7 @@
 ; Compilation flag:
 ;   clang -target bpfel -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
 
-target triple = "bpf"
+target triple = "bpfel"
 
 %struct.s = type { i32, i16 }
 
