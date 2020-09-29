@@ -108,6 +108,14 @@ public:
     return PyMlirContextRef(this, pybind11::cast(this));
   }
 
+  /// Gets a capsule wrapping the void* within the MlirContext.
+  pybind11::object getCapsule();
+
+  /// Creates a PyMlirContext from the MlirContext wrapped by a capsule.
+  /// Note that PyMlirContext instances are uniqued, so the returned object
+  /// may be a pre-existing object.
+  static pybind11::object createFromCapsule(pybind11::object capsule);
+
   /// Gets the count of live context objects. Used for testing.
   static size_t getLiveCount();
 
@@ -194,6 +202,12 @@ public:
     return PyModuleRef(this,
                        pybind11::reinterpret_borrow<pybind11::object>(handle));
   }
+
+  /// Gets a capsule wrapping the void* within the MlirModule.
+  /// Note that the module does not (yet) provide a corresponding factory for
+  /// constructing from a capsule as that would require uniquing PyModule
+  /// instances, which is not currently done.
+  pybind11::object getCapsule();
 
 private:
   PyModule(PyMlirContextRef contextRef, MlirModule module)
