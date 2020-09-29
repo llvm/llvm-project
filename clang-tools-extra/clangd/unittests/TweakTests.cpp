@@ -2829,9 +2829,48 @@ TEST_F(PopulateSwitchTest, Test) {
           "unavailable",
       },
       {
-          // Existing enumerators in switch
+          // All enumerators already in switch (unscoped)
           Function,
-          R""(enum Enum {A}; ^switch ((Enum)0) {case A:break;})"",
+          R""(enum Enum {A,B}; ^switch (A) {case A:break;case B:break;})"",
+          "unavailable",
+      },
+      {
+          // All enumerators already in switch (scoped)
+          Function,
+          R""(
+            enum class Enum {A,B};
+            ^switch (Enum::A) {case Enum::A:break;case Enum::B:break;}
+          )"",
+          "unavailable",
+      },
+      {
+          // Default case in switch
+          Function,
+          R""(
+            enum class Enum {A,B};
+            ^switch (Enum::A) {default:break;}
+          )"",
+          "unavailable",
+      },
+      {
+          // GNU range in switch
+          Function,
+          R""(
+            enum class Enum {A,B};
+            ^switch (Enum::A) {case Enum::A ... Enum::B:break;}
+          )"",
+          "unavailable",
+      },
+      {
+          // Value dependent case expression
+          File,
+          R""(
+            enum class Enum {A,B};
+            template<Enum Value>
+            void function() {
+                ^switch (Enum::A) {case Value:break;}
+            }
+          )"",
           "unavailable",
       },
       {
@@ -2867,9 +2906,53 @@ TEST_F(PopulateSwitchTest, Test) {
       {
           // Scoped enumeration with multiple enumerators
           Function,
-          R""(enum class Enum {A,B}; ^switch (Enum::A) {})"",
-          R""(enum class Enum {A,B}; )""
-          R""(switch (Enum::A) {case Enum::A:case Enum::B:break;})"",
+          R""(
+            enum class Enum {A,B};
+            ^switch (Enum::A) {}
+          )"",
+          R""(
+            enum class Enum {A,B};
+            switch (Enum::A) {case Enum::A:case Enum::B:break;}
+          )"",
+      },
+      {
+          // Only filling in missing enumerators (unscoped)
+          Function,
+          R""(
+            enum Enum {A,B,C};
+            ^switch (A) {case B:break;}
+          )"",
+          R""(
+            enum Enum {A,B,C};
+            switch (A) {case B:break;case A:case C:break;}
+          )"",
+      },
+      {
+          // Only filling in missing enumerators,
+          // even when using integer literals
+          Function,
+          R""(
+            enum Enum {A,B=1,C};
+            ^switch (A) {case 1:break;}
+          )"",
+          R""(
+            enum Enum {A,B=1,C};
+            switch (A) {case 1:break;case A:case C:break;}
+          )"",
+      },
+      {
+          // Only filling in missing enumerators (scoped)
+          Function,
+          R""(
+            enum class Enum {A,B,C};
+            ^switch (Enum::A)
+            {case Enum::B:break;}
+          )"",
+          R""(
+            enum class Enum {A,B,C};
+            switch (Enum::A)
+            {case Enum::B:break;case Enum::A:case Enum::C:break;}
+          )"",
       },
       {
           // Scoped enumerations in namespace
