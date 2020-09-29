@@ -831,6 +831,8 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   if (match(Src, m_LShr(m_SExt(m_Value(A)), m_Constant(C)))) {
     unsigned AWidth = A->getType()->getScalarSizeInBits();
     unsigned MaxShiftAmt = SrcWidth - std::max(DestWidth, AWidth);
+    auto *OldSh = cast<Instruction>(Src);
+    bool IsExact = OldSh->isExact();
 
     // If the shift is small enough, all zero bits created by the shift are
     // removed by the trunc.
@@ -843,7 +845,8 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
         Constant *MaxAmt = ConstantInt::get(SrcTy, DestWidth - 1, false);
         Constant *ShAmt = ConstantExpr::getUMin(C, MaxAmt);
         ShAmt = ConstantExpr::getTrunc(ShAmt, A->getType());
-        return BinaryOperator::CreateAShr(A, ShAmt);
+        return IsExact ? BinaryOperator::CreateExactAShr(A, ShAmt)
+                       : BinaryOperator::CreateAShr(A, ShAmt);
       }
       // The types are mismatched, so create a cast after shifting:
       // trunc (lshr (sext A), C) --> sext/trunc (ashr A, C)
@@ -851,7 +854,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
         Constant *MaxAmt = ConstantInt::get(SrcTy, AWidth - 1, false);
         Constant *ShAmt = ConstantExpr::getUMin(C, MaxAmt);
         ShAmt = ConstantExpr::getTrunc(ShAmt, A->getType());
-        Value *Shift = Builder.CreateAShr(A, ShAmt);
+        Value *Shift = Builder.CreateAShr(A, ShAmt, "", IsExact);
         return CastInst::CreateIntegerCast(Shift, DestTy, true);
       }
     }
