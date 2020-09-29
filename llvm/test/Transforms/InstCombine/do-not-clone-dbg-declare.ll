@@ -1,5 +1,5 @@
 
-; RUN: opt %s -instcombine -verify -S -o - | FileCheck %s
+; RUN: opt < %s -instcombine -verify -S -o - | FileCheck %s
 
 ; Hand-reduced from this example.
 ; -g -O -mllvm -disable-llvm-optzns -gno-column-info
