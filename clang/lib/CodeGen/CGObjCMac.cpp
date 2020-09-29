@@ -1079,8 +1079,8 @@ protected:
   void EmitImageInfo();
 
 public:
-  CGObjCCommonMac(CodeGen::CodeGenModule &cgm) :
-    CGObjCRuntime(cgm), VMContext(cgm.getLLVMContext()) { }
+  CGObjCCommonMac(CodeGen::CodeGenModule &cgm)
+      : CGObjCRuntime(cgm), VMContext(cgm.getLLVMContext()) {}
 
   bool isNonFragileABI() const {
     return ObjCABI == 2;
@@ -4001,18 +4001,14 @@ llvm::Function *CGObjCCommonMac::GenerateMethod(const ObjCMethodDecl *OMD,
   if (OMD->isDirectMethod()) {
     Method = GenerateDirectMethod(OMD, CD);
   } else {
-    SmallString<256> Name;
-    llvm::raw_svector_ostream OS(Name);
-    const auto &MC = CGM.getContext().createMangleContext();
-    MC->mangleObjCMethodName(OMD, OS, /*includePrefixByte=*/true,
-                             /*includeCategoryNamespace=*/true);
+    auto Name = getSymbolNameForMethod(OMD);
 
     CodeGenTypes &Types = CGM.getTypes();
     llvm::FunctionType *MethodTy =
         Types.GetFunctionType(Types.arrangeObjCMethodDeclaration(OMD));
     Method =
         llvm::Function::Create(MethodTy, llvm::GlobalValue::InternalLinkage,
-                               Name.str(), &CGM.getModule());
+                               Name, &CGM.getModule());
   }
 
   MethodDefinitions.insert(std::make_pair(OMD, Method));
@@ -4057,14 +4053,10 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
     // Replace the cached function in the map.
     I->second = Fn;
   } else {
-    SmallString<256> Name;
-    llvm::raw_svector_ostream OS(Name);
-    const auto &MC = CGM.getContext().createMangleContext();
-    MC->mangleObjCMethodName(OMD, OS, /*includePrefixByte=*/true,
-                             /*includeCategoryNamespace=*/false);
+    auto Name = getSymbolNameForMethod(OMD, /*include category*/ false);
 
     Fn = llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage,
-                                Name.str(), &CGM.getModule());
+                                Name, &CGM.getModule());
     DirectMethodDefinitions.insert(std::make_pair(COMD, Fn));
   }
 

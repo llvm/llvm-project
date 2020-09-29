@@ -308,12 +308,44 @@ void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
                                          raw_ostream &OS,
                                          bool includePrefixByte,
                                          bool includeCategoryNamespace) {
+  if (getASTContext().getLangOpts().ObjCRuntime.isGNUFamily()) {
+    // This is the mangling we've always used on the GNU runtimes, but it
+    // has obvious collisions in the face of underscores within class
+    // names, category names, and selectors; maybe we should improve it.
+
+    OS << (MD->isClassMethod() ? "_c_" : "_i_")
+       << MD->getClassInterface()->getName() << '_';
+
+    if (includeCategoryNamespace) {
+      if (auto category = MD->getCategory())
+        OS << category->getName();
+    }
+    OS << '_';
+
+    auto selector = MD->getSelector();
+    for (unsigned slotIndex = 0,
+                  numArgs = selector.getNumArgs(),
+                  slotEnd = std::max(numArgs, 1U);
+           slotIndex != slotEnd; ++slotIndex) {
+      if (auto name = selector.getIdentifierInfoForSlot(slotIndex))
+        OS << name->getName();
+
+      // Replace all the positions that would've been ':' with '_'.
+      // That's after each slot except that a unary selector doesn't
+      // end in ':'.
+      if (numArgs)
+        OS << '_';
+    }
+
+    return;
+  }
+
   // \01+[ContainerName(CategoryName) SelectorName]
   if (includePrefixByte) {
     OS << '\01';
   }
   OS << (MD->isInstanceMethod() ? '-' : '+') << '[';
-  if (const auto *CID = dyn_cast<ObjCCategoryImplDecl>(MD->getDeclContext())) {
+  if (const auto *CID = MD->getCategory()) {
     OS << CID->getClassInterface()->getName();
     if (includeCategoryNamespace) {
       OS << '(' << *CID << ')';
