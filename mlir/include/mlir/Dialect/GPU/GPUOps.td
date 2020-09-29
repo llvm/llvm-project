@@ -201,7 +201,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, StringRef name, "
+    OpBuilder<"StringRef name, "
               "FunctionType type, TypeRange workgroupAttributions = {}, "
               "TypeRange privateAttributions = {}, "
               "ArrayRef<NamedAttribute> attrs = {}">
@@ -371,11 +371,11 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, GPUFuncOp kernelFunc, "
+    OpBuilder<"GPUFuncOp kernelFunc, "
               "Value gridSizeX, Value gridSizeY, Value gridSizeZ, "
               "Value blockSizeX, Value blockSizeY, Value blockSizeZ, "
               "ValueRange kernelOperands">,
-    OpBuilder<"OpBuilder &builder, OperationState &result, GPUFuncOp kernelFunc, "
+    OpBuilder<"GPUFuncOp kernelFunc, "
               "KernelDim3 gridSize, KernelDim3 blockSize, "
               "ValueRange kernelOperands">
   ];
@@ -490,7 +490,7 @@ def GPU_LaunchOp : GPU_Op<"launch">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, Value gridSizeX,"
+    OpBuilder<"Value gridSizeX,"
               "Value gridSizeY, Value gridSizeZ, Value blockSizeX,"
               "Value blockSizeY, Value blockSizeZ">
   ];
@@ -716,8 +716,7 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
 
     ```
   }];
-  let builders = [OpBuilder<"OpBuilder &builder, OperationState &result, "
-                            "StringRef name">];
+  let builders = [OpBuilder<"StringRef name">];
   let parser = [{ return ::parseGPUModuleOp(parser, result); }];
   let printer = [{ return ::print(p, *this); }];
   let regions = (region SizedRegion<1>:$body);

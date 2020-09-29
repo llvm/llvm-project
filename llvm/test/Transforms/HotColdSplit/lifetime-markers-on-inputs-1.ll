@@ -29,10 +29,8 @@ normalPath:
   ret void
 
 ; CHECK-LABEL: codeRepl:
-; CHECK: [[local1_cast:%.*]] = bitcast i256* %local1 to i8*
-; CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[local1_cast]])
-; CHECK-NEXT: [[local2_cast:%.*]] = bitcast i256* %local2 to i8*
-; CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[local2_cast]])
+; CHECK: call void @llvm.lifetime.start.p0i256(i64 -1, i256* %local1)
+; CHECK-NEXT: call void @llvm.lifetime.start.p0i256(i64 -1, i256* %local2)
 ; CHECK-NEXT: call i1 @foo.cold.1(i8* %local1_cast, i8* %local2_cast)
 ; CHECK-NEXT: br i1
 
@@ -61,4 +59,4 @@ outlinedPathExit:
 }
 
 ; CHECK-LABEL: define {{.*}}@foo.cold.1(
-; CHECK-NOT: @llvm.lifetime
+; CHECK-NOT: call void @llvm.lifetime

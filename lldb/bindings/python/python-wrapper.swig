@@ -521,7 +521,7 @@ LLDBSwigPythonCreateScriptedStopHook
             size_t num_args = (*args_info).max_positional_args; 
             if (num_args != 2) {
               error.SetErrorStringWithFormat("Wrong number of args for "
-              "handle_stop callback, should be 2 (excluding self), got: %d", 
+              "handle_stop callback, should be 2 (excluding self), got: %zu",
               num_args);
               Py_RETURN_NONE;
             } else

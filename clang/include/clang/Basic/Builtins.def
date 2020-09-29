@@ -75,6 +75,9 @@
 //  U -> pure
 //  c -> const
 //  t -> signature is meaningless, use custom typechecking
+//  T -> type is not important to semantic analysis and codegen; recognize as
+//       builtin even if type doesn't match signature, and don't warn if we
+//       can't be sure the type is right
 //  F -> this is a libc/libm function with a '__builtin_' prefix added.
 //  f -> this is a libc/libm function without the '__builtin_' prefix. It can
 //       be followed by ':headername:' to state which header this function
@@ -896,7 +899,7 @@ LANGBUILTIN(__va_start,       "vc**.", "nt", ALL_MS_LANGUAGES)
 LANGBUILTIN(__fastfail, "vUi",    "nr", ALL_MS_LANGUAGES)
 
 // Microsoft library builtins.
-LIBBUILTIN(_setjmpex, "iJ", "fj",   "setjmpex.h", ALL_MS_LANGUAGES)
+LIBBUILTIN(_setjmpex, "iJ", "fjT", "setjmpex.h", ALL_MS_LANGUAGES)
 
 // C99 library functions
 // C99 stdarg.h
@@ -990,8 +993,8 @@ LIBBUILTIN(wmemmove,"w*w*wC*z", "f", "wchar.h", ALL_LANGUAGES)
 // In some systems setjmp is a macro that expands to _setjmp. We undefine
 // it here to avoid having two identical LIBBUILTIN entries.
 #undef setjmp
-LIBBUILTIN(setjmp, "iJ",          "fj",    "setjmp.h", ALL_LANGUAGES)
-LIBBUILTIN(longjmp, "vJi",        "fr",    "setjmp.h", ALL_LANGUAGES)
+LIBBUILTIN(setjmp, "iJ",          "fjT",   "setjmp.h", ALL_LANGUAGES)
+LIBBUILTIN(longjmp, "vJi",        "frT",   "setjmp.h", ALL_LANGUAGES)
 
 // Non-C library functions, active in GNU mode only.
 // Functions with (returns_twice) attribute (marked as "j") are still active in
@@ -1018,21 +1021,21 @@ LIBBUILTIN(strcasecmp, "icC*cC*", "f",     "strings.h", ALL_GNU_LANGUAGES)
 LIBBUILTIN(strncasecmp, "icC*cC*z", "f",   "strings.h", ALL_GNU_LANGUAGES)
 // POSIX unistd.h
 LIBBUILTIN(_exit, "vi",           "fr",    "unistd.h", ALL_GNU_LANGUAGES)
-LIBBUILTIN(vfork, "p",            "fj",    "unistd.h", ALL_LANGUAGES)
+LIBBUILTIN(vfork, "p",            "fjT",   "unistd.h", ALL_LANGUAGES)
 // POSIX pthread.h
 // FIXME: Should specify argument types.
 LIBBUILTIN(pthread_create, "",  "fC<2,3>", "pthread.h", ALL_GNU_LANGUAGES)
 
 // POSIX setjmp.h
 
-LIBBUILTIN(_setjmp, "iJ",         "fj",   "setjmp.h", ALL_LANGUAGES)
-LIBBUILTIN(__sigsetjmp, "iSJi",   "fj",   "setjmp.h", ALL_LANGUAGES)
-LIBBUILTIN(sigsetjmp, "iSJi",     "fj",   "setjmp.h", ALL_LANGUAGES)
-LIBBUILTIN(savectx, "iJ",         "fj",   "setjmp.h", ALL_LANGUAGES)
-LIBBUILTIN(getcontext, "iK*",     "fj",   "setjmp.h", ALL_LANGUAGES)
+LIBBUILTIN(_setjmp, "iJ",         "fjT",   "setjmp.h", ALL_LANGUAGES)
+LIBBUILTIN(__sigsetjmp, "iSJi",   "fjT",   "setjmp.h", ALL_LANGUAGES)
+LIBBUILTIN(sigsetjmp, "iSJi",     "fjT",   "setjmp.h", ALL_LANGUAGES)
+LIBBUILTIN(savectx, "iJ",         "fjT",   "setjmp.h", ALL_LANGUAGES)
+LIBBUILTIN(getcontext, "iK*",     "fjT",   "setjmp.h", ALL_LANGUAGES)
 
-LIBBUILTIN(_longjmp, "vJi",       "fr",    "setjmp.h", ALL_GNU_LANGUAGES)
-LIBBUILTIN(siglongjmp, "vSJi",    "fr",    "setjmp.h", ALL_GNU_LANGUAGES)
+LIBBUILTIN(_longjmp, "vJi",       "frT",   "setjmp.h", ALL_GNU_LANGUAGES)
+LIBBUILTIN(siglongjmp, "vSJi",    "frT",   "setjmp.h", ALL_GNU_LANGUAGES)
 // non-standard but very common
 LIBBUILTIN(strlcpy, "zc*cC*z",    "f",     "string.h", ALL_GNU_LANGUAGES)
 LIBBUILTIN(strlcat, "zc*cC*z",    "f",     "string.h", ALL_GNU_LANGUAGES)
