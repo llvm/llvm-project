@@ -884,6 +884,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DebugRangesBaseAddress = Args.hasArg(OPT_fdebug_ranges_base_address);
 
   setPGOInstrumentor(Opts, Args, Diags);
+  Opts.AtomicProfileUpdate = Args.hasArg(OPT_fprofile_update_EQ);
   Opts.InstrProfileOutput =
       std::string(Args.getLastArgValue(OPT_fprofile_instrument_path_EQ));
   Opts.ProfileInstrumentUsePath =
