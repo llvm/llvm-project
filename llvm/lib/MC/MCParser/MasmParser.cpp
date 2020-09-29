@@ -3425,10 +3425,13 @@ bool MasmParser::parseRealValue(const fltSemantics &Semantics, APInt &Res) {
   // We don't truly support arithmetic on floating point expressions, so we
   // have to manually parse unary prefixes.
   bool IsNeg = false;
+  SMLoc SignLoc;
   if (getLexer().is(AsmToken::Minus)) {
+    SignLoc = getLexer().getLoc();
     Lexer.Lex();
     IsNeg = true;
   } else if (getLexer().is(AsmToken::Plus)) {
+    SignLoc = getLexer().getLoc();
     Lexer.Lex();
   }
 
@@ -3450,6 +3453,20 @@ bool MasmParser::parseRealValue(const fltSemantics &Semantics, APInt &Res) {
       Value = APFloat::getZero(Semantics);
     else
       return TokError("invalid floating point literal");
+  } else if (IDVal.consume_back("r") || IDVal.consume_back("R")) {
+    // MASM hexadecimal floating-point literal; no APFloat conversion needed.
+    // To match ML64.exe, ignore the initial sign.
+    unsigned Size = Value.getSizeInBits(Semantics);
+    if (Size != (IDVal.size() << 2))
+      return TokError("invalid floating point literal");
+
+    // Consume the numeric token.
+    Lex();
+
+    Res = APInt(Size, IDVal, 16);
+    if (SignLoc.isValid())
+      return Warning(SignLoc, "MASM-style hex floats ignore explicit sign");
+    return false;
   } else if (errorToBool(
                  Value.convertFromString(IDVal, APFloat::rmNearestTiesToEven)
                      .takeError())) {

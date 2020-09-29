@@ -72,6 +72,14 @@ t6_double REAL8 1.3
 ; CHECK-LABEL: t6_double:
 ; CHECK-NEXT: .quad 4608533498688228557
 
+t7_single_hex REAL4 3f800000r
+t7_double_hex REAL8 3FF0000000000000R
+
+; CHECK-LABEL: t7_single_hex:
+; CHECK-NEXT: .long 1065353216
+; CHECK-LABEL: t7_double_hex:
+; CHECK-NEXT: .quad 4607182418800017408
+
 .code
 
 END
