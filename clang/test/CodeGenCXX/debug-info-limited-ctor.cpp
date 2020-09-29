@@ -9,7 +9,7 @@ struct B {
   B();
 } TestB;
 
-// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "C"{{.*}}DIFlagTypePassByValue
+// CHECK-DAG: ![[C:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "C"{{.*}}DIFlagTypePassByValue
 struct C {
   C() {}
 } TestC;
@@ -73,3 +73,7 @@ void f(K k) {}
 void L() {
   auto func = [&]() {};
 }
+
+// Check that types are being added to retained types list.
+// CHECK-DAG: !DICompileUnit{{.*}}retainedTypes: ![[RETAINED:[0-9]+]]
+// CHECK-DAG: ![[RETAINED]] = {{.*}}![[C]]
