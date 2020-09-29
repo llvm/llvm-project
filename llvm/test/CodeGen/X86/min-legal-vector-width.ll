@@ -857,10 +857,10 @@ define <8 x i16> @trunc_v8i64_v8i16(<8 x i64>* %x) nounwind "min-legal-vector-wi
 define <8 x i32> @trunc_v8i64_v8i32_zeroes(<8 x i64>* %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_v8i64_v8i32_zeroes:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsrlq $48, 32(%rdi), %ymm1
-; CHECK-NEXT:    vpsrlq $48, (%rdi), %ymm2
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
-; CHECK-NEXT:    vpermi2w %ymm1, %ymm2, %ymm0
+; CHECK-NEXT:    vpsrlq $48, 32(%rdi), %ymm0
+; CHECK-NEXT:    vpsrlq $48, (%rdi), %ymm1
+; CHECK-NEXT:    vpackusdw %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; CHECK-NEXT:    retq
   %a = load <8 x i64>, <8 x i64>* %x
   %b = lshr <8 x i64> %a, <i64 48, i64 48, i64 48, i64 48, i64 48, i64 48, i64 48, i64 48>
@@ -920,9 +920,10 @@ define <8 x i32> @trunc_v8i64_v8i32_sign(<8 x i64>* %x) nounwind "min-legal-vect
 define <16 x i16> @trunc_v16i32_v16i16_sign(<16 x i32>* %x) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_v16i32_v16i16_sign:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa (%rdi), %ymm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31]
-; CHECK-NEXT:    vpermi2w 32(%rdi), %ymm1, %ymm0
+; CHECK-NEXT:    vpsrad $16, 32(%rdi), %ymm0
+; CHECK-NEXT:    vpsrad $16, (%rdi), %ymm1
+; CHECK-NEXT:    vpackssdw %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; CHECK-NEXT:    retq
   %a = load <16 x i32>, <16 x i32>* %x
   %b = ashr <16 x i32> %a, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
@@ -931,20 +932,13 @@ define <16 x i16> @trunc_v16i32_v16i16_sign(<16 x i32>* %x) nounwind "min-legal-
 }
 
 define <32 x i8> @trunc_v32i16_v32i8_sign(<32 x i16>* %x) nounwind "min-legal-vector-width"="256" {
-; CHECK-AVX512-LABEL: trunc_v32i16_v32i8_sign:
-; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vpsraw $8, 32(%rdi), %ymm0
-; CHECK-AVX512-NEXT:    vpsraw $8, (%rdi), %ymm1
-; CHECK-AVX512-NEXT:    vpacksswb %ymm0, %ymm1, %ymm0
-; CHECK-AVX512-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; CHECK-AVX512-NEXT:    retq
-;
-; CHECK-VBMI-LABEL: trunc_v32i16_v32i8_sign:
-; CHECK-VBMI:       # %bb.0:
-; CHECK-VBMI-NEXT:    vmovdqa (%rdi), %ymm1
-; CHECK-VBMI-NEXT:    vmovdqa {{.*#+}} ymm0 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63]
-; CHECK-VBMI-NEXT:    vpermi2b 32(%rdi), %ymm1, %ymm0
-; CHECK-VBMI-NEXT:    retq
+; CHECK-LABEL: trunc_v32i16_v32i8_sign:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsraw $8, 32(%rdi), %ymm0
+; CHECK-NEXT:    vpsraw $8, (%rdi), %ymm1
+; CHECK-NEXT:    vpacksswb %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; CHECK-NEXT:    retq
   %a = load <32 x i16>, <32 x i16>* %x
   %b = ashr <32 x i16> %a, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   %c = trunc <32 x i16> %b to <32 x i8>

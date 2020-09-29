@@ -35351,6 +35351,9 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // Depth threshold above which we can efficiently use variable mask shuffles.
   int VariableShuffleDepth = Subtarget.hasFastVariableShuffle() ? 1 : 2;
   AllowVariableMask &= (Depth >= VariableShuffleDepth) || HasVariableMask;
+  // VPERMI2W/VPERMI2B are 3 uops on Skylake and Icelake so we require a
+  // higher depth before combining them.
+  bool AllowBWIVPERMV3 = (Depth >= 2 || HasVariableMask);
 
   bool MaskContainsZeros = isAnyZero(Mask);
 
@@ -35387,9 +35390,9 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
            MaskVT == MVT::v4f64 || MaskVT == MVT::v4i64 ||
            MaskVT == MVT::v8f32 || MaskVT == MVT::v8i32 ||
            MaskVT == MVT::v16f32 || MaskVT == MVT::v16i32)) ||
-         (Subtarget.hasBWI() &&
+         (Subtarget.hasBWI() && AllowBWIVPERMV3 &&
           (MaskVT == MVT::v16i16 || MaskVT == MVT::v32i16)) ||
-         (Subtarget.hasVBMI() &&
+         (Subtarget.hasVBMI() && AllowBWIVPERMV3 &&
           (MaskVT == MVT::v32i8 || MaskVT == MVT::v64i8)))) {
       // Adjust shuffle mask - replace SM_SentinelZero with second source index.
       for (unsigned i = 0; i != NumMaskElts; ++i)
@@ -35416,9 +35419,9 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
            MaskVT == MVT::v4f64 || MaskVT == MVT::v4i64 ||
            MaskVT == MVT::v16f32 || MaskVT == MVT::v16i32 ||
            MaskVT == MVT::v8f32 || MaskVT == MVT::v8i32)) ||
-         (Subtarget.hasBWI() &&
+         (Subtarget.hasBWI() && AllowBWIVPERMV3 &&
           (MaskVT == MVT::v16i16 || MaskVT == MVT::v32i16)) ||
-         (Subtarget.hasVBMI() &&
+         (Subtarget.hasVBMI() && AllowBWIVPERMV3 &&
           (MaskVT == MVT::v32i8 || MaskVT == MVT::v64i8)))) {
       V1 = DAG.getBitcast(MaskVT, V1);
       V2 = DAG.getBitcast(MaskVT, V2);
@@ -35588,10 +35591,10 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
          MaskVT == MVT::v4f32 || MaskVT == MVT::v4i32 || MaskVT == MVT::v8f32 ||
          MaskVT == MVT::v8i32 || MaskVT == MVT::v16f32 ||
          MaskVT == MVT::v16i32)) ||
-       (Subtarget.hasBWI() && (MaskVT == MVT::v8i16 || MaskVT == MVT::v16i16 ||
-                               MaskVT == MVT::v32i16)) ||
-       (Subtarget.hasVBMI() && (MaskVT == MVT::v16i8 || MaskVT == MVT::v32i8 ||
-                                MaskVT == MVT::v64i8)))) {
+       (Subtarget.hasBWI() && AllowBWIVPERMV3 &&
+        (MaskVT == MVT::v8i16 || MaskVT == MVT::v16i16 || MaskVT == MVT::v32i16)) ||
+       (Subtarget.hasVBMI() && AllowBWIVPERMV3 &&
+        (MaskVT == MVT::v16i8 || MaskVT == MVT::v32i8 || MaskVT == MVT::v64i8)))) {
     V1 = DAG.getBitcast(MaskVT, V1);
     V2 = DAG.getBitcast(MaskVT, V2);
     Res = lowerShuffleWithPERMV(DL, MaskVT, Mask, V1, V2, Subtarget, DAG);
