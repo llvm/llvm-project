@@ -670,9 +670,11 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   if (auto EnvFlags = llvm::sys::Process::GetEnv(FlagsEnvVar))
     log("{0}: {1}", FlagsEnvVar, *EnvFlags);
 
+  ClangdLSPServer::Options Opts;
+  Opts.UseDirBasedCDB = (CompileArgsFrom == FilesystemCompileArgs);
+
   // If --compile-commands-dir arg was invoked, check value and override default
   // path.
-  llvm::Optional<Path> CompileCommandsDirPath;
   if (!CompileCommandsDir.empty()) {
     if (llvm::sys::fs::exists(CompileCommandsDir)) {
       // We support passing both relative and absolute paths to the
@@ -686,7 +688,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
              "will be ignored.",
              EC.message());
       } else {
-        CompileCommandsDirPath = std::string(Path.str());
+        Opts.CompileCommandsDir = std::string(Path.str());
       }
     } else {
       elog("Path specified by --compile-commands-dir does not exist. The "
@@ -694,7 +696,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     }
   }
 
-  ClangdServer::Options Opts;
   switch (PCHStorage) {
   case PCHStorageFlag::Memory:
     Opts.StorePreamblesInMemory = true;
@@ -744,23 +745,22 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.PreserveRecoveryASTType = RecoveryASTType;
   Opts.FoldingRanges = FoldingRanges;
 
-  clangd::CodeCompleteOptions CCOpts;
-  CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
-  CCOpts.Limit = LimitResults;
+  Opts.CodeComplete.IncludeIneligibleResults = IncludeIneligibleResults;
+  Opts.CodeComplete.Limit = LimitResults;
   if (CompletionStyle.getNumOccurrences())
-    CCOpts.BundleOverloads = CompletionStyle != Detailed;
-  CCOpts.ShowOrigins = ShowOrigins;
-  CCOpts.InsertIncludes = HeaderInsertion;
+    Opts.CodeComplete.BundleOverloads = CompletionStyle != Detailed;
+  Opts.CodeComplete.ShowOrigins = ShowOrigins;
+  Opts.CodeComplete.InsertIncludes = HeaderInsertion;
   if (!HeaderInsertionDecorators) {
-    CCOpts.IncludeIndicator.Insert.clear();
-    CCOpts.IncludeIndicator.NoInsert.clear();
+    Opts.CodeComplete.IncludeIndicator.Insert.clear();
+    Opts.CodeComplete.IncludeIndicator.NoInsert.clear();
   }
-  CCOpts.SpeculativeIndexRequest = Opts.StaticIndex;
-  CCOpts.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
-  CCOpts.AllScopes = AllScopesCompletion;
-  CCOpts.RunParser = CodeCompletionParse;
-  CCOpts.RankingModel = RankingModel;
-  CCOpts.DecisionForestBase = DecisionForestBase;
+  Opts.CodeComplete.SpeculativeIndexRequest = Opts.StaticIndex;
+  Opts.CodeComplete.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
+  Opts.CodeComplete.AllScopes = AllScopesCompletion;
+  Opts.CodeComplete.RunParser = CodeCompletionParse;
+  Opts.CodeComplete.RankingModel = RankingModel;
+  Opts.CodeComplete.DecisionForestBase = DecisionForestBase;
 
   RealThreadsafeFS TFS;
   std::vector<std::unique_ptr<config::Provider>> ProviderStack;
@@ -819,13 +819,11 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
       return llvm::is_contained(TweakList, T.id());
     return true;
   };
-  llvm::Optional<OffsetEncoding> OffsetEncodingFromFlag;
   if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)
-    OffsetEncodingFromFlag = ForceOffsetEncoding;
+    Opts.OffsetEncoding = ForceOffsetEncoding;
 
-  clangd::RenameOptions RenameOpts;
   // Shall we allow to customize the file limit?
-  RenameOpts.AllowCrossFile = CrossFileRename;
+  Opts.Rename.AllowCrossFile = CrossFileRename;
 
   // Initialize and run ClangdLSPServer.
   // Change stdin to binary to not lose \r\n on windows.
@@ -856,10 +854,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
                                                 std::move(*Mappings));
   }
 
-  ClangdLSPServer LSPServer(
-      *TransportLayer, TFS, CCOpts, RenameOpts, CompileCommandsDirPath,
-      /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs,
-      OffsetEncodingFromFlag, Opts);
+  ClangdLSPServer LSPServer(*TransportLayer, TFS, Opts);
   llvm::set_thread_name("clangd.main");
   int ExitCode = LSPServer.run()
                      ? 0
