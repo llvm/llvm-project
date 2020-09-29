@@ -16708,14 +16708,6 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
       BitWidth = nullptr;
       ZeroWidth = false;
     }
-
-    // Only data members can have in-class initializers.
-    if (BitWidth && !II && InitStyle) {
-      Diag(Loc, diag::err_anon_bitfield_init);
-      InvalidDecl = true;
-      BitWidth = nullptr;
-      ZeroWidth = false;
-    }
   }
 
   // Check that 'mutable' is consistent with the type of the declaration.

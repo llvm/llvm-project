@@ -466,6 +466,6 @@ namespace enum_class {
     // MSVC produces a "C4353 constant 0 as function expression" for this,
     // considering the final {} to be part of the bit-width. We follow P0683R1
     // and treat it as a default member initializer.
-    enum E : int : int{}{}; // expected-error {{anonymous bit-field cannot have a default member initializer}} expected-warning {{C++20 extension}}
+    enum E : int : int{}{}; // expected-error {{anonymous bit-field cannot have a default member initializer}}
   };
 }
