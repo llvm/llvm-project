@@ -1380,6 +1380,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::FIRST_NUMBER:
     break;
     MAKE_CASE(AArch64ISD::CALL)
+    MAKE_CASE(AArch64ISD::AUTH_CALL)
+    MAKE_CASE(AArch64ISD::AUTH_TC_RETURN)
     MAKE_CASE(AArch64ISD::ADRP)
     MAKE_CASE(AArch64ISD::ADR)
     MAKE_CASE(AArch64ISD::ADDlow)
