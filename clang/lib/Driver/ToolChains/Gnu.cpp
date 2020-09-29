@@ -1939,27 +1939,36 @@ void Generic_GCC::GCCInstallationDetector::init(
   // installation available. GCC installs are ranked by version number.
   Version = GCCVersion::Parse("0.0.0");
   for (const std::string &Prefix : Prefixes) {
-    if (!D.getVFS().exists(Prefix))
+    auto &VFS = D.getVFS();
+    if (!VFS.exists(Prefix))
       continue;
     for (StringRef Suffix : CandidateLibDirs) {
       const std::string LibDir = Prefix + Suffix.str();
-      if (!D.getVFS().exists(LibDir))
+      if (!VFS.exists(LibDir))
         continue;
+      // Maybe filter out <libdir>/gcc and <libdir>/gcc-cross.
+      bool GCCDirExists = VFS.exists(LibDir + "/gcc");
+      bool GCCCrossDirExists = VFS.exists(LibDir + "/gcc-cross");
       // Try to match the exact target triple first.
-      ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, TargetTriple.str());
+      ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, TargetTriple.str(),
+                             false, GCCDirExists, GCCCrossDirExists);
       // Try rest of possible triples.
       for (StringRef Candidate : ExtraTripleAliases) // Try these first.
-        ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, Candidate);
+        ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, Candidate, false,
+                               GCCDirExists, GCCCrossDirExists);
       for (StringRef Candidate : CandidateTripleAliases)
-        ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, Candidate);
+        ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, Candidate, false,
+                               GCCDirExists, GCCCrossDirExists);
     }
     for (StringRef Suffix : CandidateBiarchLibDirs) {
       const std::string LibDir = Prefix + Suffix.str();
-      if (!D.getVFS().exists(LibDir))
+      if (!VFS.exists(LibDir))
         continue;
+      bool GCCDirExists = VFS.exists(LibDir + "/gcc");
+      bool GCCCrossDirExists = VFS.exists(LibDir + "/gcc-cross");
       for (StringRef Candidate : CandidateBiarchTripleAliases)
-        ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, Candidate,
-                               /*NeedsBiarchSuffix=*/ true);
+        ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, Candidate, true,
+                               GCCDirExists, GCCCrossDirExists);
     }
   }
 }
@@ -2450,7 +2459,7 @@ bool Generic_GCC::GCCInstallationDetector::ScanGCCForMultilibs(
 void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
     const llvm::Triple &TargetTriple, const ArgList &Args,
     const std::string &LibDir, StringRef CandidateTriple,
-    bool NeedsBiarchSuffix) {
+    bool NeedsBiarchSuffix, bool GCCDirExists, bool GCCCrossDirExists) {
   llvm::Triple::ArchType TargetArch = TargetTriple.getArch();
   // Locations relative to the system lib directory where GCC's triple-specific
   // directories might reside.
@@ -2464,11 +2473,10 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
     bool Active;
   } Suffixes[] = {
       // This is the normal place.
-      {"gcc/" + CandidateTriple.str(), "../..", true},
+      {"gcc/" + CandidateTriple.str(), "../..", GCCDirExists},
 
       // Debian puts cross-compilers in gcc-cross.
-      {"gcc-cross/" + CandidateTriple.str(), "../..",
-       TargetTriple.getOS() != llvm::Triple::Solaris},
+      {"gcc-cross/" + CandidateTriple.str(), "../..", GCCCrossDirExists},
 
       // The Freescale PPC SDK has the gcc libraries in
       // <sysroot>/usr/lib/<triple>/x.y.z so have a look there as well. Only do
