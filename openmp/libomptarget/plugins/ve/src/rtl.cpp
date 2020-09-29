@@ -11,9 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Debug.h"
-#include "omptargetplugin.h"
-
 #include <algorithm>
 #include <cassert>
 #include <cerrno>
@@ -26,13 +23,18 @@
 #include <vector>
 #include <veosinfo/veosinfo.h>
 
+#include "Debug.h"
+#include "omptargetplugin.h"
+
+#ifndef TARGET_NAME
+#define TARGET_NAME VE
+#endif
+
+#define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
+
 #ifndef TARGET_ELF_ID
 #define TARGET_ELF_ID 0
 #endif
-
-#define TARGET_NAME VE
-
-#define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
 
 #include "../../common/elf_common.c"
 
