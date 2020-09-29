@@ -319,6 +319,36 @@ def OpenACC_YieldOp : OpenACC_Op<"yield", [Terminator,
 }
 
 //===----------------------------------------------------------------------===//
+// 2.14.1. Init Directive
+//===----------------------------------------------------------------------===//
+
+def OpenACC_InitOp : OpenACC_Op<"init", [AttrSizedOperandSegments]> {
+  let summary = "init operation";
+
+  let description = [{
+    The "acc.init" operation represents the OpenACC init executable
+    directive.
+
+    Example:
+
+    ```mlir
+    acc.init
+    acc.init device_num(%dev1 : i32)
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyInteger>:$deviceTypeOperands,
+                       Optional<IntOrIndex>:$deviceNumOperand,
+                       Optional<I1>:$ifCond);
+
+  let assemblyFormat = [{
+    ( `device_type` `(` $deviceTypeOperands^ `:` type($deviceTypeOperands) `)` )?
+    ( `device_num` `(` $deviceNumOperand^ `:` type($deviceNumOperand) `)` )?
+    ( `if` `(` $ifCond^ `)` )? attr-dict-with-keyword
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // 2.14.4. Update Directive
 //===----------------------------------------------------------------------===//
 

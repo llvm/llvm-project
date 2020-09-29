@@ -111,3 +111,19 @@ acc.wait wait_devnum(%cst: index)
 %cst = constant 1 : index
 // expected-error@+1 {{async attribute cannot appear with asyncOperand}}
 acc.wait async(%cst: index) attributes {async}
+
+// -----
+
+acc.parallel {
+// expected-error@+1 {{'acc.init' op cannot be nested in a compute operation}}
+  acc.init
+  acc.yield
+}
+
+// -----
+
+acc.loop {
+// expected-error@+1 {{'acc.init' op cannot be nested in a compute operation}}
+  acc.init
+  acc.yield
+}

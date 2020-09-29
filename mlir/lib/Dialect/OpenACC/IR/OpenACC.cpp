@@ -649,6 +649,19 @@ static LogicalResult verify(acc::DataOp dataOp) {
 }
 
 //===----------------------------------------------------------------------===//
+// InitOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(acc::InitOp initOp) {
+  Operation *currOp = initOp;
+  while ((currOp = currOp->getParentOp())) {
+    if (isa<acc::ParallelOp>(currOp) || isa<acc::LoopOp>(currOp))
+      return initOp.emitOpError("cannot be nested in a compute operation");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // UpdateOp
 //===----------------------------------------------------------------------===//
 
