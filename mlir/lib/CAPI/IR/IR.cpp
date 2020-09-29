@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir-c/IR.h"
+#include "mlir-c/Support.h"
 
 #include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Utils.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Dialect.h"
@@ -40,6 +42,40 @@ void mlirContextSetAllowUnregisteredDialects(MlirContext context, int allow) {
 
 int mlirContextGetAllowUnregisteredDialects(MlirContext context) {
   return unwrap(context)->allowsUnregisteredDialects();
+}
+intptr_t mlirContextGetNumRegisteredDialects(MlirContext context) {
+  return static_cast<intptr_t>(unwrap(context)->getAvailableDialects().size());
+}
+
+// TODO: expose a cheaper way than constructing + sorting a vector only to take
+// its size.
+intptr_t mlirContextGetNumLoadedDialects(MlirContext context) {
+  return static_cast<intptr_t>(unwrap(context)->getLoadedDialects().size());
+}
+
+MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
+                                        MlirStringRef name) {
+  return wrap(unwrap(context)->getOrLoadDialect(unwrap(name)));
+}
+
+/* ========================================================================== */
+/* Dialect API.                                                               */
+/* ========================================================================== */
+
+MlirContext mlirDialectGetContext(MlirDialect dialect) {
+  return wrap(unwrap(dialect)->getContext());
+}
+
+int mlirDialectIsNull(MlirDialect dialect) {
+  return unwrap(dialect) == nullptr;
+}
+
+int mlirDialectEqual(MlirDialect dialect1, MlirDialect dialect2) {
+  return unwrap(dialect1) == unwrap(dialect2);
+}
+
+MlirStringRef mlirDialectGetNamespace(MlirDialect dialect) {
+  return wrap(unwrap(dialect)->getNamespace());
 }
 
 /* ========================================================================== */
