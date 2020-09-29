@@ -28,12 +28,12 @@ class VirtRegMap;
 class LiveRegMatrix;
 
 class LLVM_LIBRARY_VISIBILITY AllocationOrder {
-  SmallVector<MCPhysReg, 16> Hints;
+  const SmallVector<MCPhysReg, 16> Hints;
   ArrayRef<MCPhysReg> Order;
-  int Pos;
+  int Pos = 0;
 
   // If HardHints is true, *only* Hints will be returned.
-  bool HardHints;
+  const bool HardHints;
 
 public:
 
@@ -41,10 +41,16 @@ public:
   /// @param VirtReg      Virtual register to allocate for.
   /// @param VRM          Virtual register map for function.
   /// @param RegClassInfo Information about reserved and allocatable registers.
-  AllocationOrder(unsigned VirtReg,
-                  const VirtRegMap &VRM,
-                  const RegisterClassInfo &RegClassInfo,
-                  const LiveRegMatrix *Matrix);
+  static AllocationOrder create(unsigned VirtReg, const VirtRegMap &VRM,
+                                const RegisterClassInfo &RegClassInfo,
+                                const LiveRegMatrix *Matrix);
+
+  /// Create an AllocationOrder given the Hits, Order, and HardHits values.
+  /// Use the create method above - the ctor is for unittests.
+  AllocationOrder(SmallVector<MCPhysReg, 16> &&Hints, ArrayRef<MCPhysReg> Order,
+                  bool HardHints)
+      : Hints(std::move(Hints)), Order(Order),
+        Pos(-static_cast<int>(this->Hints.size())), HardHints(HardHints) {}
 
   /// Get the allocation order without reordered hints.
   ArrayRef<MCPhysReg> getOrder() const { return Order; }
@@ -52,7 +58,7 @@ public:
   /// Return the next physical register in the allocation order, or 0.
   /// It is safe to call next() again after it returned 0, it will keep
   /// returning 0 until rewind() is called.
-  unsigned next(unsigned Limit = 0) {
+  MCPhysReg next(unsigned Limit = 0) {
     if (Pos < 0)
       return Hints.end()[Pos++];
     if (HardHints)
