@@ -7380,7 +7380,10 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_waterfall_readfirstlane: {
     if (!Op->getOperand(3)->isDivergent()) {
       // If waterfall_readfirstlane is uniform, it can be removed
-      DAG.ReplaceAllUsesWith(Op.getNode(), Op->getOperand(3).getNode());
+      SDValue InChain = Op.getOperand(0);
+      SDValue OutChain = Op.getValue(1);
+      DAG.ReplaceAllUsesOfValueWith(OutChain, InChain);
+      DAG.ReplaceAllUsesOfValueWith(Op.getValue(0), Op.getOperand(3));
       return SDValue();
     }
     return Op;
