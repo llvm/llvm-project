@@ -732,6 +732,7 @@ private:
     DK_SAVEREG,
     DK_SAVEXMM128,
     DK_SETFRAME,
+    DK_RADIX,
   };
 
   /// Maps directive name --> DirectiveKind enum, for directives parsed by this
@@ -963,6 +964,9 @@ private:
                                 bool CaseInsensitive);
   // ".erre" or ".errnz", depending on ExpectZero.
   bool parseDirectiveErrorIfe(SMLoc DirectiveLoc, bool ExpectZero);
+
+  // ".radix"
+  bool parseDirectiveRadix(SMLoc DirectiveLoc);
 
   // "echo"
   bool parseDirectiveEcho();
@@ -2284,6 +2288,8 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveErrorIfe(IDLoc, true);
     case DK_ERRNZ:
       return parseDirectiveErrorIfe(IDLoc, false);
+    case DK_RADIX:
+      return parseDirectiveRadix(IDLoc);
     case DK_ECHO:
       return parseDirectiveEcho();
     }
@@ -6343,6 +6349,7 @@ void MasmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".savereg"] = DK_SAVEREG;
   DirectiveKindMap[".savexmm128"] = DK_SAVEXMM128;
   DirectiveKindMap[".setframe"] = DK_SETFRAME;
+  DirectiveKindMap[".radix"] = DK_RADIX;
   // DirectiveKindMap[".altmacro"] = DK_ALTMACRO;
   // DirectiveKindMap[".noaltmacro"] = DK_NOALTMACRO;
   DirectiveKindMap["db"] = DK_DB;
@@ -6581,6 +6588,22 @@ bool MasmParser::parseDirectiveMSAlign(SMLoc IDLoc, ParseStatementInfo &Info) {
     return Error(ExprLoc, "literal value not a power of two greater then zero");
 
   Info.AsmRewrites->emplace_back(AOK_Align, IDLoc, 5, Log2_64(IntValue));
+  return false;
+}
+
+bool MasmParser::parseDirectiveRadix(SMLoc DirectiveLoc) {
+  const SMLoc Loc = getLexer().getLoc();
+  StringRef RadixString = parseStringToEndOfStatement().trim();
+  unsigned Radix;
+  if (RadixString.getAsInteger(10, Radix)) {
+    return Error(Loc,
+                 "radix must be a decimal number in the range 2 to 16; was " +
+                     RadixString);
+  }
+  if (Radix < 2 || Radix > 16)
+    return Error(Loc, "radix must be in the range 2 to 16; was " +
+                          std::to_string(Radix));
+  getLexer().setMasmDefaultRadix(Radix);
   return false;
 }
 

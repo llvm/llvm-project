@@ -1662,6 +1662,9 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       if ((Done = SM.isValidEndState()))
         break;
       return Error(Tok.getLoc(), "unknown token in expression");
+    case AsmToken::Error:
+      return Error(getLexer().getErrLoc(), getLexer().getErr());
+      break;
     case AsmToken::EndOfStatement:
       Done = true;
       break;
@@ -2453,21 +2456,26 @@ bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands) {
       // Parse memory broadcasting ({1to<NUM>}).
       if (getLexer().getTok().getIntVal() != 1)
         return TokError("Expected 1to<NUM> at this point");
-      Parser.Lex();  // Eat "1" of 1to8
-      if (!getLexer().is(AsmToken::Identifier) ||
-          !getLexer().getTok().getIdentifier().startswith("to"))
+      StringRef Prefix = getLexer().getTok().getString();
+      Parser.Lex(); // Eat first token of 1to8
+      if (!getLexer().is(AsmToken::Identifier))
         return TokError("Expected 1to<NUM> at this point");
       // Recognize only reasonable suffixes.
+      SmallVector<char, 5> BroadcastVector;
+      StringRef BroadcastString = (Prefix + getLexer().getTok().getIdentifier())
+                                      .toStringRef(BroadcastVector);
+      if (!BroadcastString.startswith("1to"))
+        return TokError("Expected 1to<NUM> at this point");
       const char *BroadcastPrimitive =
-        StringSwitch<const char*>(getLexer().getTok().getIdentifier())
-          .Case("to2",  "{1to2}")
-          .Case("to4",  "{1to4}")
-          .Case("to8",  "{1to8}")
-          .Case("to16", "{1to16}")
-          .Default(nullptr);
+          StringSwitch<const char *>(BroadcastString)
+              .Case("1to2", "{1to2}")
+              .Case("1to4", "{1to4}")
+              .Case("1to8", "{1to8}")
+              .Case("1to16", "{1to16}")
+              .Default(nullptr);
       if (!BroadcastPrimitive)
         return TokError("Invalid memory broadcast primitive.");
-      Parser.Lex();  // Eat "toN" of 1toN
+      Parser.Lex(); // Eat trailing token of 1toN
       if (!getLexer().is(AsmToken::RCurly))
         return TokError("Expected } at this point");
       Parser.Lex();  // Eat "}"
