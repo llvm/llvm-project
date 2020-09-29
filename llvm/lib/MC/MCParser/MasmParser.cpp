@@ -634,6 +634,7 @@ private:
     DK_DW,
     DK_REAL4,
     DK_REAL8,
+    DK_REAL10,
     DK_ALIGN,
     DK_ORG,
     DK_ENDR,
@@ -771,7 +772,7 @@ private:
   bool parseDirectiveNamedValue(StringRef TypeName, unsigned Size,
                                 StringRef Name, SMLoc NameLoc);
 
-  // "real4", "real8"
+  // "real4", "real8", "real10"
   bool emitRealValues(const fltSemantics &Semantics, unsigned *Count = nullptr);
   bool addRealField(StringRef Name, const fltSemantics &Semantics, size_t Size);
   bool parseDirectiveRealValue(StringRef IDVal, const fltSemantics &Semantics,
@@ -2147,6 +2148,8 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveRealValue(IDVal, APFloat::IEEEsingle(), 4);
     case DK_REAL8:
       return parseDirectiveRealValue(IDVal, APFloat::IEEEdouble(), 8);
+    case DK_REAL10:
+      return parseDirectiveRealValue(IDVal, APFloat::x87DoubleExtended(), 10);
     case DK_STRUCT:
     case DK_UNION:
       return parseDirectiveNestedStruct(IDVal, DirKind);
@@ -2382,6 +2385,10 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     Lex();
     return parseDirectiveNamedRealValue(nextVal, APFloat::IEEEdouble(), 8,
                                         IDVal, IDLoc);
+  case DK_REAL10:
+    Lex();
+    return parseDirectiveNamedRealValue(nextVal, APFloat::x87DoubleExtended(),
+                                        10, IDVal, IDLoc);
   case DK_STRUCT:
   case DK_UNION:
     Lex();
@@ -3456,14 +3463,14 @@ bool MasmParser::parseRealValue(const fltSemantics &Semantics, APInt &Res) {
   } else if (IDVal.consume_back("r") || IDVal.consume_back("R")) {
     // MASM hexadecimal floating-point literal; no APFloat conversion needed.
     // To match ML64.exe, ignore the initial sign.
-    unsigned Size = Value.getSizeInBits(Semantics);
-    if (Size != (IDVal.size() << 2))
+    unsigned SizeInBits = Value.getSizeInBits(Semantics);
+    if (SizeInBits != (IDVal.size() << 2))
       return TokError("invalid floating point literal");
 
     // Consume the numeric token.
     Lex();
 
-    Res = APInt(Size, IDVal, 16);
+    Res = APInt(SizeInBits, IDVal, 16);
     if (SignLoc.isValid())
       return Warning(SignLoc, "MASM-style hex floats ignore explicit sign");
     return false;
@@ -3540,8 +3547,7 @@ bool MasmParser::emitRealValues(const fltSemantics &Semantics,
     return true;
 
   for (const APInt &AsInt : ValuesAsInt) {
-    getStreamer().emitIntValue(AsInt.getLimitedValue(),
-                               AsInt.getBitWidth() / 8);
+    getStreamer().emitIntValue(AsInt);
   }
   if (Count)
     *Count = ValuesAsInt.size();
@@ -3571,7 +3577,7 @@ bool MasmParser::addRealField(StringRef Name, const fltSemantics &Semantics,
 }
 
 /// parseDirectiveRealValue
-///  ::= (real4 | real8) [ expression (, expression)* ]
+///  ::= (real4 | real8 | real10) [ expression (, expression)* ]
 bool MasmParser::parseDirectiveRealValue(StringRef IDVal,
                                          const fltSemantics &Semantics,
                                          size_t Size) {
@@ -3586,7 +3592,7 @@ bool MasmParser::parseDirectiveRealValue(StringRef IDVal,
 }
 
 /// parseDirectiveNamedRealValue
-///  ::= name (real4 | real8) [ expression (, expression)* ]
+///  ::= name (real4 | real8 | real10) [ expression (, expression)* ]
 bool MasmParser::parseDirectiveNamedRealValue(StringRef TypeName,
                                               const fltSemantics &Semantics,
                                               unsigned Size, StringRef Name,
@@ -3680,8 +3686,20 @@ bool MasmParser::parseFieldInitializer(const FieldInfo &Field,
 bool MasmParser::parseFieldInitializer(const FieldInfo &Field,
                                        const RealFieldInfo &Contents,
                                        FieldInitializer &Initializer) {
-  const fltSemantics &Semantics =
-      (Field.Type == 4) ? APFloat::IEEEsingle() : APFloat::IEEEdouble();
+  const fltSemantics *Semantics;
+  switch (Field.Type) {
+  case 4:
+    Semantics = &APFloat::IEEEsingle();
+    break;
+  case 8:
+    Semantics = &APFloat::IEEEdouble();
+    break;
+  case 10:
+    Semantics = &APFloat::x87DoubleExtended();
+    break;
+  default:
+    llvm_unreachable("unknown real field type");
+  }
 
   SMLoc Loc = getTok().getLoc();
 
@@ -3689,20 +3707,20 @@ bool MasmParser::parseFieldInitializer(const FieldInfo &Field,
   if (parseOptionalToken(AsmToken::LCurly)) {
     if (Field.LengthOf == 1)
       return Error(Loc, "Cannot initialize scalar field with array value");
-    if (parseRealInstList(Semantics, AsIntValues, AsmToken::RCurly) ||
+    if (parseRealInstList(*Semantics, AsIntValues, AsmToken::RCurly) ||
         parseToken(AsmToken::RCurly))
       return true;
   } else if (parseOptionalAngleBracketOpen()) {
     if (Field.LengthOf == 1)
       return Error(Loc, "Cannot initialize scalar field with array value");
-    if (parseRealInstList(Semantics, AsIntValues, AsmToken::Greater) ||
+    if (parseRealInstList(*Semantics, AsIntValues, AsmToken::Greater) ||
         parseAngleBracketClose())
       return true;
   } else if (Field.LengthOf > 1) {
     return Error(Loc, "Cannot initialize array field with scalar value");
   } else {
     AsIntValues.emplace_back();
-    if (parseRealValue(Semantics, AsIntValues.back()))
+    if (parseRealValue(*Semantics, AsIntValues.back()))
       return true;
   }
 
@@ -6278,6 +6296,7 @@ void MasmParser::initializeDirectiveKindMap() {
   DirectiveKindMap["sqword"] = DK_SQWORD;
   DirectiveKindMap["real4"] = DK_REAL4;
   DirectiveKindMap["real8"] = DK_REAL8;
+  DirectiveKindMap["real10"] = DK_REAL10;
   DirectiveKindMap["align"] = DK_ALIGN;
   // DirectiveKindMap[".org"] = DK_ORG;
   DirectiveKindMap["extern"] = DK_EXTERN;
@@ -6732,6 +6751,7 @@ bool MasmParser::lookUpType(StringRef Name, AsmTypeInfo &Info) const {
                       .CasesLower("qword", "dq", "sqword", 8)
                       .CaseLower("real4", 4)
                       .CaseLower("real8", 8)
+                      .CaseLower("real10", 10)
                       .Default(0);
   if (Size) {
     Info.Name = Name;
