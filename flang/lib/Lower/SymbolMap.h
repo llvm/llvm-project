@@ -70,10 +70,6 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
 
   operator bool() const { return !std::holds_alternative<None>(box); }
 
-  // This operator returns the address of the boxed value. TODO: consider
-  // eliminating this in favor of explicit conversion.
-  operator mlir::Value() const { return getAddr(); }
-
   //===--------------------------------------------------------------------===//
   // Accessors
   //===--------------------------------------------------------------------===//

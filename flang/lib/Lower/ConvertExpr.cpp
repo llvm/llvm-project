@@ -241,29 +241,8 @@ private:
   mlir::Value createCharCompare(mlir::CmpIPredicate pred,
                                 const fir::ExtendedValue &left,
                                 const fir::ExtendedValue &right) {
-    if (auto *lhs = left.getUnboxed()) {
-      if (auto *rhs = right.getUnboxed())
-        return Fortran::lower::genBoxCharCompare(converter, getLoc(), pred,
-                                                 *lhs, *rhs);
-      if (auto *rhs = right.getCharBox())
-        return Fortran::lower::genBoxCharCompare(converter, getLoc(), pred,
-                                                 *lhs, rhs->getBuffer());
-    }
-    if (auto *lhs = left.getCharBox()) {
-      if (auto *rhs = right.getCharBox()) {
-        // FIXME: this should be passing the CharBoxValues and not just a buffer
-        // addresses
-        return Fortran::lower::genBoxCharCompare(
-            converter, getLoc(), pred, lhs->getBuffer(), rhs->getBuffer());
-      }
-      if (auto *rhs = right.getUnboxed())
-        return Fortran::lower::genBoxCharCompare(converter, getLoc(), pred,
-                                                 lhs->getBuffer(), *rhs);
-    }
-
-    // Error if execution reaches this point
-    mlir::emitError(getLoc(), "Unhandled character comparison");
-    exit(1);
+    return Fortran::lower::genCharCompare(converter, getLoc(), pred, left,
+                                          right);
   }
 
   template <typename A>
@@ -296,14 +275,20 @@ private:
   }
 
   /// Generate a load of a value from an address.
-  mlir::Value genLoad(const fir::ExtendedValue &addr) {
+  fir::ExtendedValue genLoad(const fir::ExtendedValue &addr) {
     auto loc = getLoc();
     return addr.match(
-        [&](const fir::CharBoxValue &box) -> mlir::Value {
+        [&](const fir::CharBoxValue &box) -> fir::ExtendedValue {
           auto buffer = box.getBuffer();
           auto len = dyn_cast<mlir::ConstantOp>(box.getLen().getDefiningOp());
           if (!len) {
             // TODO: return an emboxchar?
+            // Not sure an emboxchar would help, it would simply
+            // indirects the memory reference, so it fakes the load and then
+            // makes it harder to work with the character due to the
+            // indirection. Solutions I see are:
+            //  1. create a temp and returns a CharBoxValue pointing to it.
+            //  2. create a dynamic vector fir type that can abstract 1.
             mlir::emitError(loc, "cannot load a variable length char");
             return {};
           }
@@ -319,10 +304,17 @@ private:
           auto charTy =
               builder.getRefType(fir::SequenceType::get(shape, baseTy));
           auto casted = builder.createConvert(loc, charTy, buffer);
-          return builder.create<fir::LoadOp>(loc, casted);
+          auto val = builder.create<fir::LoadOp>(loc, casted);
+          return fir::CharBoxValue{val, box.getLen()};
         },
-        [&](const auto &v) -> mlir::Value {
+        [&](const fir::CharArrayBoxValue &v) -> fir::ExtendedValue {
+          TODO("loading character array");
+        },
+        [&](const fir::UnboxedValue &v) -> fir::ExtendedValue {
           return builder.create<fir::LoadOp>(loc, fir::getBase(v));
+        },
+        [&](const auto &v) -> fir::ExtendedValue {
+          TODO("loading array or descriptor");
         });
   }
 
@@ -395,7 +387,7 @@ private:
     if (Fortran::semantics::IsDummy(*symbol)) {
       auto val = symMap.lookupSymbol(*symbol);
       assert(val && "Dummy procedure not in symbol map");
-      return val;
+      return val.getAddr();
     }
     auto name = converter.mangleName(*symbol);
     auto func = Fortran::lower::getOrDeclareFunction(name, proc, converter);
@@ -414,26 +406,15 @@ private:
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::DescriptorInquiry &desc) {
-    auto descRef = symMap.lookupSymbol(desc.base().GetLastSymbol());
-    assert(descRef && "no mlir::Value associated to Symbol");
-    auto descType = descRef.getAddr().getType();
-    mlir::Value res{};
+    auto symBox = symMap.lookupSymbol(desc.base().GetLastSymbol());
+    assert(symBox && "no SymbolBox associated to Symbol");
     switch (desc.field()) {
     case Fortran::evaluate::DescriptorInquiry::Field::Len:
-      if (descType.isa<fir::BoxCharType>()) {
-        auto lenType = Fortran::lower::CharacterExprHelper{builder, getLoc()}
-                           .getLengthType();
-        res = builder.create<fir::BoxCharLenOp>(getLoc(), lenType, descRef);
-      } else if (descType.isa<fir::BoxType>()) {
-        TODO("");
-      } else {
-        llvm_unreachable("not a descriptor");
-      }
-      break;
+      return symBox.getCharLen().getValue();
     default:
-      TODO("");
+      TODO("descriptor inquiry other than length");
     }
-    return res;
+    llvm_unreachable("bad descriptor inquiry");
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::TypeParamInquiry &) {
@@ -568,10 +549,12 @@ private:
   fir::ExtendedValue genval(const Fortran::evaluate::Concat<KIND> &op) {
     auto lhs = genval(op.left());
     auto rhs = genval(op.right());
-    auto lhsBase = fir::getBase(lhs);
-    auto rhsBase = fir::getBase(rhs);
-    return Fortran::lower::CharacterExprHelper{builder, getLoc()}
-        .createConcatenate(lhsBase, rhsBase);
+    auto *lhsChar = lhs.getCharBox();
+    auto *rhsChar = rhs.getCharBox();
+    if (lhsChar && rhsChar)
+      return Fortran::lower::CharacterExprHelper{builder, getLoc()}
+          .createConcatenate(*lhsChar, *rhsChar);
+    llvm::report_fatal_error("TODO: character array concatenate");
   }
 
   /// MIN and MAX operations
@@ -756,10 +739,14 @@ private:
           getLoc(), llvm::ArrayRef<mlir::Type>{type}, llvm::None, attrs);
     };
 
+    auto lenp = builder.createIntegerConstant(
+        getLoc(),
+        Fortran::lower::CharacterExprHelper{builder, getLoc()}.getLengthType(),
+        len);
     // When in an initializer context, construct the literal op itself and do
     // not construct another constant object in rodata.
     if (exprCtx.inInitializer())
-      return consLit().getResult();
+      return fir::CharBoxValue{consLit().getResult(), lenp};
 
     // Otherwise, the string is in a plain old expression so "outline" the value
     // by hashconsing it to a constant literal object.
@@ -780,10 +767,6 @@ private:
           builder.createLinkOnceLinkage());
     auto addr = builder.create<fir::AddrOfOp>(getLoc(), global.resultType(),
                                               global.getSymbol());
-    auto lenp = builder.createIntegerConstant(
-        getLoc(),
-        Fortran::lower::CharacterExprHelper{builder, getLoc()}.getLengthType(),
-        len);
     return fir::CharBoxValue{addr, lenp};
   }
   /// Helper to call the correct scalar conversion based on category.
@@ -803,6 +786,13 @@ private:
   fir::ExtendedValue genArrayLit(
       const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>>
           &con) {
+    llvm::SmallVector<mlir::Value, 8> lbounds;
+    llvm::SmallVector<mlir::Value, 8> extents;
+    auto idxTy = builder.getIndexType();
+    for (const auto &[lb, extent] : llvm::zip(con.lbounds(), con.shape())) {
+      lbounds.push_back(builder.createIntegerConstant(getLoc(), idxTy, lb - 1));
+      extents.push_back(builder.createIntegerConstant(getLoc(), idxTy, extent));
+    }
     if constexpr (TC == Fortran::common::TypeCategory::Character) {
       fir::SequenceType::Shape shape;
       shape.push_back(con.LEN());
@@ -810,7 +800,6 @@ private:
       auto chTy =
           converter.genType(Fortran::common::TypeCategory::Character, KIND);
       auto arrayTy = fir::SequenceType::get(shape, chTy);
-      auto idxTy = builder.getIntegerType(32);
       mlir::Value array = builder.create<fir::UndefOp>(getLoc(), arrayTy);
       Fortran::evaluate::ConstantSubscripts subscripts = con.lbounds();
       do {
@@ -832,14 +821,13 @@ private:
                                                      charVal, idx);
         }
       } while (con.IncrementSubscripts(subscripts));
-      // FIXME: return an ArrayBoxValue
-      return array;
+      auto len = builder.createIntegerConstant(getLoc(), idxTy, con.LEN());
+      return fir::CharArrayBoxValue{array, len, extents, lbounds};
     } else {
       // Convert Ev::ConstantSubs to SequenceType::Shape
       fir::SequenceType::Shape shape(con.shape().begin(), con.shape().end());
       auto eleTy = converter.genType(TC, KIND);
       auto arrayTy = fir::SequenceType::get(shape, eleTy);
-      auto idxTy = builder.getIndexType();
       mlir::Value array = builder.create<fir::UndefOp>(getLoc(), arrayTy);
       Fortran::evaluate::ConstantSubscripts subscripts = con.lbounds();
       do {
@@ -856,8 +844,7 @@ private:
         array = builder.create<fir::InsertValueOp>(getLoc(), arrayTy, array,
                                                    insVal, idx);
       } while (con.IncrementSubscripts(subscripts));
-      // FIXME: return an ArrayBoxValue
-      return array;
+      return fir::ArrayBoxValue{array, extents, lbounds};
     }
   }
 
@@ -896,7 +883,9 @@ private:
   }
 
   fir::ExtendedValue gen(const Fortran::evaluate::ComplexPart &) { TODO(""); }
-  fir::ExtendedValue genval(const Fortran::evaluate::ComplexPart &) { TODO(""); }
+  fir::ExtendedValue genval(const Fortran::evaluate::ComplexPart &) {
+    TODO("");
+  }
 
   /// Reference to a substring.
   fir::ExtendedValue gen(const Fortran::evaluate::Substring &s) {
@@ -917,10 +906,18 @@ private:
       assert(upper && "boxed value not handled");
       bounds.push_back(upper);
     }
-    // FIXME: a string should be a CharBoxValue
-    auto addr = fir::getBase(baseString);
-    return Fortran::lower::CharacterExprHelper{builder, getLoc()}
-        .createSubstring(addr, bounds);
+    Fortran::lower::CharacterExprHelper charHelper{builder, getLoc()};
+    return baseString.match(
+        [&](const fir::CharBoxValue &x) -> fir::ExtendedValue {
+          return charHelper.createSubstring(x, bounds);
+        },
+        [&](const fir::CharArrayBoxValue &) -> fir::ExtendedValue {
+          // TODO: substring array
+          TODO("array substring lowering");
+        },
+        [&](const auto &) -> fir::ExtendedValue {
+          llvm::report_fatal_error("substring base is not a CharBox");
+        });
   }
 
   /// The value of a substring.
@@ -1253,7 +1250,13 @@ private:
       }
       auto ty = genSubType(base.getType(), args.size());
       ty = builder.getRefType(ty);
-      return builder.create<fir::CoordinateOp>(loc, ty, base, args);
+      auto addr = builder.create<fir::CoordinateOp>(loc, ty, base, args);
+      // FIXME: return may not be a scalar.
+      return box.match(
+          [&](const fir::CharArrayBoxValue &x) -> fir::ExtendedValue {
+            return fir::CharBoxValue{addr, x.getLen()};
+          },
+          [&](const auto &) -> fir::ExtendedValue { return addr; });
     }
     return genArrayRefComponent(aref);
   }
@@ -1297,14 +1300,18 @@ private:
 
   template <typename A>
   fir::ExtendedValue gen(const Fortran::evaluate::FunctionRef<A> &func) {
+    // FIXME: I find this very redudant to genref<Expr<A>>.
+    // Why do we need this ??
     if (!func.GetType().has_value())
       mlir::emitError(getLoc(), "internal: a function must have a type");
     auto resTy = genType(*func.GetType());
     auto retVal = genProcedureRef(func, llvm::ArrayRef<mlir::Type>{resTy});
-    auto casted = builder.createConvert(getLoc(), resTy, fir::getBase(retVal));
-    auto mem = builder.create<fir::AllocaOp>(getLoc(), resTy);
-    builder.create<fir::StoreOp>(getLoc(), casted, mem);
-    return mem.getResult();
+    auto retValBase = fir::getBase(retVal);
+    if (fir::isa_ref_type(retValBase.getType()))
+      return retVal;
+    auto mem = builder.create<fir::AllocaOp>(getLoc(), retValBase.getType());
+    builder.create<fir::StoreOp>(getLoc(), retValBase, mem);
+    return fir::substBase(retVal, mem.getResult());
   }
 
   /// Generate a call to an intrinsic function.
@@ -1405,78 +1412,70 @@ private:
     for (const auto &arg : caller.getPassedArguments()) {
       const auto *actual = arg.entity;
       if (!actual)
-        TODO(""); // optional arguments
+        TODO("optional argument lowering");
       const auto *expr = actual->UnwrapExpr();
       if (!expr)
-        TODO(""); // assumed type arguments
+        TODO("assumed type actual argument lowering");
 
-      mlir::Value argRef;
-      mlir::Value argVal;
-      if (const auto *argSymbol =
-              Fortran::evaluate::UnwrapWholeSymbolDataRef(*expr)) {
-        argVal = symMap.lookupSymbol(*argSymbol);
-      } else {
-        auto exv = genExtAddr(*expr);
-        // FIXME: should use the box values, etc.
-        argVal = fir::getBase(exv);
-      }
-      auto type = argVal.getType();
-      if (fir::isa_passbyref_type(type) || type.isa<mlir::FunctionType>()) {
-        argRef = argVal;
-        argVal = {};
-      }
-      assert((argVal || argRef) && "needs value or address");
-
-      // Handle cases where the argument must be passed by value
       if (arg.passBy == PassBy::Value) {
+        auto *argVal = genExtValue(*expr).getUnboxed();
         if (!argVal)
-          argVal = genLoad(argRef);
-        caller.placeInput(arg, argVal);
+          mlir::emitError(
+              getLoc(),
+              "Lowering internal error: passing non trivial value by by value");
+        else
+          caller.placeInput(arg, *argVal);
         continue;
       }
 
-      // From this point, arguments needs to be in memory.
-      if (!argRef) {
-        // expression is a value, so store it in a temporary so we can
-        // pass-by-reference
-        argRef = builder.createTemporary(getLoc(), argVal.getType());
-        builder.create<fir::StoreOp>(getLoc(), argVal, argRef);
-      }
+      auto argRef = genExtAddr(*expr);
+
+      auto helper = Fortran::lower::CharacterExprHelper{builder, getLoc()};
       if (arg.passBy == PassBy::BaseAddress) {
-        caller.placeInput(arg, argRef);
+        caller.placeInput(arg, fir::getBase(argRef));
       } else if (arg.passBy == PassBy::BoxChar) {
-        auto boxChar = argRef;
-        if (!boxChar.getType().isa<fir::BoxCharType>()) {
-          Fortran::lower::CharacterExprHelper helper{builder, getLoc()};
-          auto ch = helper.materializeCharacterOrSequence(boxChar);
-          boxChar = helper.createEmboxChar(ch.first, ch.second);
-        }
+        auto boxChar = argRef.match(
+            [&](const fir::CharBoxValue &x) { return helper.createEmbox(x); },
+            [&](const fir::CharArrayBoxValue &x) {
+              return helper.createEmbox(x);
+            },
+            [&](const fir::BoxValue &x) -> mlir::Value {
+              // Beware, descriptor content might have to be copied before
+              // and after the call to a contiguous character argument.
+              TODO("lowering actual arguments descriptor to boxchar");
+            },
+            [&](const auto &x) {
+              mlir::emitError(getLoc(), "Lowering internal error: actual "
+                                        "argument is not a character");
+              return mlir::Value{};
+            });
         caller.placeInput(arg, boxChar);
       } else if (arg.passBy == PassBy::Box) {
-        TODO(""); // generate emboxing if need.
+        TODO("passing descriptor in call"); // generate emboxing if need.
       } else if (arg.passBy == PassBy::AddressAndLength) {
-        Fortran::lower::CharacterExprHelper helper{builder, getLoc()};
-        auto ch = helper.materializeCharacter(argRef);
-        caller.placeAddressAndLengthInput(arg, ch.first, ch.second);
+        caller.placeAddressAndLengthInput(arg, fir::getBase(argRef),
+                                          fir::getLen(argRef));
       } else {
         llvm_unreachable("pass by value not handled here");
       }
     }
 
     // Handle case where caller must pass result
-    mlir::Value resRef;
-    if (auto resultArg = caller.getPassedResult()) {
-      if (resultArg->passBy == PassBy::AddressAndLength) {
-        // allocate and pass character result
-        auto len = caller.getResultLength();
-        Fortran::lower::CharacterExprHelper helper{builder, getLoc()};
-        resRef = helper.createCharacterTemp(resultType[0], len);
-        auto ch = helper.createUnboxChar(resRef);
-        caller.placeAddressAndLengthInput(*resultArg, ch.first, ch.second);
-      } else {
-        TODO(""); // Pass descriptor
+    auto resRef = [&]() -> llvm::Optional<fir::ExtendedValue> {
+      if (auto resultArg = caller.getPassedResult()) {
+        if (resultArg->passBy == PassBy::AddressAndLength) {
+          // allocate and pass character result
+          auto len = caller.getResultLength();
+          Fortran::lower::CharacterExprHelper helper{builder, getLoc()};
+          auto temp = helper.createCharacterTemp(resultType[0], len);
+          caller.placeAddressAndLengthInput(*resultArg, temp.getBuffer(),
+                                            temp.getLen());
+          return fir::ExtendedValue(temp);
+        }
+        TODO("passing hidden descriptor for result"); // Pass descriptor
       }
-    }
+      return {};
+    }();
 
     // In older Fortran, procedure argument types are inferred. This may lead
     // different view of what the function signature is in different locations.
@@ -1488,7 +1487,7 @@ private:
     mlir::Value funcPointer;
     mlir::SymbolRefAttr funcSymbolAttr;
     if (const auto *sym = caller.getIfIndirectCallSymbol()) {
-      funcPointer = symMap.lookupSymbol(*sym);
+      funcPointer = symMap.lookupSymbol(*sym).getAddr();
       assert(funcPointer &&
              "dummy procedure or procedure pointer not in symbol map");
     } else {
@@ -1526,8 +1525,9 @@ private:
     auto call = builder.create<fir::CallOp>(getLoc(), caller.getResultType(),
                                             funcSymbolAttr, operands);
     // Handle case where result was passed as argument
-    if (caller.getPassedResult())
-      return resRef;
+    if (caller.getPassedResult()) {
+      return resRef.getValue();
+    }
     if (resultType.size() == 0)
       return mlir::Value{}; // subroutine call
     // For now, Fortran returned values are implemented with a single MLIR
@@ -1594,16 +1594,18 @@ private:
     if constexpr (inRefSet<std::decay_t<decltype(a)>>) {
       return gen(a);
     } else {
-      auto val = fir::getBase(genval(a));
+      auto exv = genval(a);
+      auto valBase = fir::getBase(exv);
       // Functions are always referent.
-      if (val.getType().template isa<mlir::FunctionType>() ||
-          fir::isa_ref_type(val.getType()))
-        return val;
+      if (valBase.getType().template isa<mlir::FunctionType>() ||
+          fir::isa_ref_type(valBase.getType()))
+        return exv;
+
       // Since `a` is not itself a valid referent, determine its value and
       // create a temporary location for referencing.
-      auto mem = builder.create<fir::AllocaOp>(getLoc(), val.getType());
-      builder.create<fir::StoreOp>(getLoc(), val, mem);
-      return mem.getResult();
+      auto mem = builder.create<fir::AllocaOp>(getLoc(), valBase.getType());
+      builder.create<fir::StoreOp>(getLoc(), valBase, mem);
+      return fir::substBase(exv, mem.getResult());
     }
   }
 
