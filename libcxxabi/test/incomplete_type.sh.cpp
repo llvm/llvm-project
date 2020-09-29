@@ -14,6 +14,7 @@
 // addresses.
 
 // UNSUPPORTED: no-exceptions
+// UNSUPPORTED: -fno-rtti
 
 // NOTE: Link libc++abi explicitly and before libc++ so that libc++ doesn't drag
 // in the system libc++abi installation on OS X. (DYLD_LIBRARY_PATH is ignored
