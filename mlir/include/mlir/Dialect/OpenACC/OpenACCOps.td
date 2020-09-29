@@ -349,6 +349,36 @@ def OpenACC_InitOp : OpenACC_Op<"init", [AttrSizedOperandSegments]> {
 }
 
 //===----------------------------------------------------------------------===//
+// 2.14.2. Shutdown
+//===----------------------------------------------------------------------===//
+
+def OpenACC_ShutdownOp : OpenACC_Op<"shutdown", [AttrSizedOperandSegments]> {
+  let summary = "shutdown operation";
+
+  let description = [{
+    The "acc.shutdown" operation represents the OpenACC shutdown executable
+    directive.
+
+    Example:
+
+    ```mlir
+    acc.shutdown
+    acc.shutdown device_num(%dev1 : i32)
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyInteger>:$deviceTypeOperands,
+                       Optional<IntOrIndex>:$deviceNumOperand,
+                       Optional<I1>:$ifCond);
+
+  let assemblyFormat = [{
+    ( `device_type` `(` $deviceTypeOperands^ `:` type($deviceTypeOperands) `)` )?
+    ( `device_num` `(` $deviceNumOperand^ `:` type($deviceNumOperand) `)` )?
+    ( `if` `(` $ifCond^ `)` )? attr-dict-with-keyword
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // 2.14.4. Update Directive
 //===----------------------------------------------------------------------===//
 
