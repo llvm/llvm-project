@@ -12,7 +12,7 @@ dsymutil = '@LLDB_TEST_DSYMUTIL_CONFIGURED@'
 filecheck = '@LLDB_TEST_FILECHECK_CONFIGURED@'
 yaml2obj = '@LLDB_TEST_YAML2OBJ_CONFIGURED@'
 lldb_libs_dir = "@LLDB_LIBS_DIR_CONFIGURED@"
-lldb_framework_dir = "@LLDB_FRAMEWORK_DIR@"
+lldb_framework_dir = "@LLDB_FRAMEWORK_DIR_CONFIGURED@"
 lldb_build_intel_pt = "@LLDB_BUILD_INTEL_PT@"
 
 if __name__ == '__main__':
