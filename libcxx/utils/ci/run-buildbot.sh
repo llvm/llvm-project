@@ -57,7 +57,9 @@ x86_64-ubuntu-32bit)
 x86_64-ubuntu-gcc)
     export CC=gcc
     export CXX=g++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    # FIXME: Re-enable experimental testing on GCC. GCC cares about the order
+    #        in which we link -lc++experimental, which causes issues.
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --param enable_experimental=False")
 ;;
 x86_64-ubuntu-asan)
     export CC=clang
