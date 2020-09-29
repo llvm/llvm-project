@@ -1428,6 +1428,11 @@ TEST(LocateSymbol, NearbyIdentifier) {
 
 
       // h^i
+
+
+
+
+      int x = hi;
     )cpp",
       R"cpp(
       // prefer nearest occurrence even if several matched tokens
