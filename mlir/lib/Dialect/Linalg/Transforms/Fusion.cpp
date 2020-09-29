@@ -99,7 +99,7 @@ static LinalgOp cloneWithLoopRanges(OpBuilder &b, Location loc, LinalgOp op,
   auto operands = getAssumedNonViewOperands(op);
   clonedViews.append(operands.begin(), operands.end());
 
-  Operation *clonedOp = op.clone(b, loc, clonedViews);
+  Operation *clonedOp = op.clone(b, loc, /*resultTypes*/ {}, clonedViews);
   // When the producer is an IndexedGenercOp, we have to transform its block
   // IV arguments according to the tiling of the consumer, i.e. offset them by
   // the values computed in `loopRanges`.

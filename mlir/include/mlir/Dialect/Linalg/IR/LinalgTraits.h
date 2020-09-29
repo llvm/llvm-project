@@ -35,6 +35,17 @@ public:
   };
 };
 
+/// This class provides the API for ops that are known to not have init tensor
+/// operands. Use as a trait as follows:
+///
+///   class CopyOp : public Op<CopyOp, OpTrait::ZeroInitTensors> {
+///
+template <typename ConcreteType>
+class ZeroInitTensors : public TraitBase<ConcreteType, ZeroInitTensors> {
+public:
+  static unsigned getNumInitTensors() { return 0; }
+};
+
 /// This class provides the API for ops that are known to have a specified
 /// number of outputs, all passed as operands. Use as a trait as follows:
 ///
@@ -86,6 +97,9 @@ class NamedStructuredOpTrait
 public:
   unsigned getNumInputs() {
     return cast<ConcreteType>(this->getOperation()).inputs().size();
+  }
+  unsigned getNumInitTensors() {
+    return cast<ConcreteType>(this->getOperation()).init_tensors().size();
   }
   unsigned getNumOutputs() {
     ConcreteType concreteOp = cast<ConcreteType>(this->getOperation());

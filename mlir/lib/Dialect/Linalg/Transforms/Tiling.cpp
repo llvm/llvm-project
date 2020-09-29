@@ -405,7 +405,7 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
                                     tileSizes, allViewSizes);
         auto operands = getAssumedNonViewOperands(op);
         views.append(operands.begin(), operands.end());
-        res = op.clone(b, loc, views);
+        res = op.clone(b, loc, /*resultTypes*/ {}, views);
         return scf::ValueVector{};
       },
       options.distribution);
