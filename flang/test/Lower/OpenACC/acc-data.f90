@@ -4,10 +4,28 @@
 
 program acc_data
   real, dimension(10, 10) :: a, b, c
+  logical :: ifCondition = .TRUE.
 
 !CHECK: [[A:%.*]] = fir.alloca !fir.array<10x10xf32> {name = "a"}
 !CHECK: [[B:%.*]] = fir.alloca !fir.array<10x10xf32> {name = "b"}
 !CHECK: [[C:%.*]] = fir.alloca !fir.array<10x10xf32> {name = "c"}
+
+  !$acc data if(.TRUE.) copy(a)
+  !$acc end data
+
+!CHECK:      [[IF1:%.*]] = constant true
+!CHECK:      acc.data if([[IF1]]) copy([[A]] : !fir.ref<!fir.array<10x10xf32>>)  {
+!CHECK:        acc.terminator
+!CHECK-NEXT: }{{$}}
+
+  !$acc data copy(a) if(ifCondition)
+  !$acc end data
+
+!CHECK:      [[IFCOND:%.*]] = fir.load %{{.*}} : !fir.ref<!fir.logical<4>>
+!CHECK:      [[IF2:%.*]] = fir.convert [[IFCOND]] : (!fir.logical<4>) -> i1
+!CHECK:      acc.data if([[IF2]]) copy([[A]] : !fir.ref<!fir.array<10x10xf32>>) {
+!CHECK:        acc.terminator
+!CHECK-NEXT: }{{$}}
 
   !$acc data copy(a, b, c)
   !$acc end data
@@ -55,6 +73,13 @@ program acc_data
   !$acc end data
 
 !CHECK:      acc.data present([[A]], [[B]], [[C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
+!CHECK:        acc.terminator
+!CHECK-NEXT: }{{$}}
+
+  !$acc data deviceptr(b, c)
+  !$acc end data
+
+!CHECK:      acc.data deviceptr([[B]], [[C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 !CHECK:        acc.terminator
 !CHECK-NEXT: }{{$}}
 
