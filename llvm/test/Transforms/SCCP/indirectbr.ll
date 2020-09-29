@@ -31,7 +31,9 @@ BB1:
 define void @indbrtest2() {
 ; CHECK-LABEL: @indbrtest2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = inttoptr i64 ptrtoint (i8* blockaddress(@indbrtest2, [[BB1:%.*]]) to i64) to i8*
+; CHECK-NEXT:    [[C:%.*]] = bitcast i8* [[B]] to i8*
+; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       BB1:
 ; CHECK-NEXT:    call void @BB1_f()
 ; CHECK-NEXT:    ret void
