@@ -19,9 +19,9 @@
 ; bf1, bf1, bf3 and bf4 and the ABI alignment is 1 byte. So for bf4 access,
 ; the starting offset has to be at the beginning of field bf3.
 ; Compilation flag:
-;   clang -target bpf -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
+;   clang -target bpfel -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
 
-target triple = "bpf"
+target triple = "bpfel"
 
 %struct.s = type <{ i8, i16 }>
 

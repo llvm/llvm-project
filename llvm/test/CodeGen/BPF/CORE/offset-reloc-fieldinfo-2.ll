@@ -35,9 +35,9 @@
 ;     return ull >> __builtin_preserve_field_info(arg->b2, FIELD_RSHIFT_U64);
 ;   }
 ; Compilation flag:
-;   clang -target bpf -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
+;   clang -target bpfel -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
 
-target triple = "bpf"
+target triple = "bpfel"
 
 %struct.s = type { i32, i16 }
 
