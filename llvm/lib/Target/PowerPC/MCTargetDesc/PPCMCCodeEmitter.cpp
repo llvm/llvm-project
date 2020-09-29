@@ -94,6 +94,16 @@ getAbsCondBrEncoding(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
+unsigned
+PPCMCCodeEmitter::getVSRpEvenEncoding(const MCInst &MI, unsigned OpNo,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
+  assert(MI.getOperand(OpNo).isReg() && "Operand should be a register");
+  unsigned RegBits = getMachineOpValue(MI, MI.getOperand(OpNo), Fixups, STI)
+                     << 1;
+  return RegBits;
+}
+
 unsigned PPCMCCodeEmitter::getImm16Encoding(const MCInst &MI, unsigned OpNo,
                                        SmallVectorImpl<MCFixup> &Fixups,
                                        const MCSubtargetInfo &STI) const {

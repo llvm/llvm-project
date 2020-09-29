@@ -528,6 +528,11 @@ public:
     Inst.addOperand(MCOperand::createReg(VSRpRegs[getVSRpEvenReg()]));
   }
 
+  void addRegVSRpEvenRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(VSRpRegs[getVSRpEvenReg()]));
+  }
+
   void addRegCRBITRCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(CRBITRegs[getCRBit()]));
