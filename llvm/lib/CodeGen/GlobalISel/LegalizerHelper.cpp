@@ -2892,10 +2892,11 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     MI.RemoveOperand(1);
     Observer.changedInstr(MI);
 
-    MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
-
     auto HiPart = MIRBuilder.buildInstr(Opcode, {Ty}, {LHS, RHS});
     auto Zero = MIRBuilder.buildConstant(Ty, 0);
+
+    // Move insert point forward so we can use the Res register if needed.
+    MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
 
     // For *signed* multiply, overflow is detected by checking:
     // (hi != (lo >> bitwidth-1))
