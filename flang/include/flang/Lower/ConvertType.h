@@ -48,6 +48,7 @@ struct SomeKind;
 struct SomeType;
 template <common::TypeCategory, int>
 class Type;
+class FoldingContext;
 } // namespace evaluate
 
 namespace semantics {
@@ -95,10 +96,9 @@ inline mlir::Type translateDesignatorToFIRType(
 }
 
 /// Translate a SomeExpr to an mlir::Type.
-mlir::Type
-translateSomeExprToFIRType(mlir::MLIRContext *ctxt,
-                           common::IntrinsicTypeDefaultKinds const &defaults,
-                           const SomeExpr *expr);
+mlir::Type translateSomeExprToFIRType(mlir::MLIRContext *ctxt,
+                                      evaluate::FoldingContext &,
+                                      const SomeExpr *expr);
 
 /// Translate a Fortran::semantics::Symbol to an mlir::Type.
 mlir::Type

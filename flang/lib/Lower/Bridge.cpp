@@ -25,8 +25,8 @@
 #include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
-#include "flang/Lower/Todo.h"
 #include "flang/Lower/Support/BoxValue.h"
+#include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -323,7 +323,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   mlir::Value getSymbolAddress(Fortran::lower::SymbolRef sym) override final {
-    return fir::getBase(lookupSymbol(sym));
+    return lookupSymbol(sym).getAddr();
   }
 
   bool lookupLabelSet(Fortran::lower::SymbolRef sym,
@@ -367,8 +367,8 @@ public:
         &getMLIRContext(), bridge.getDefaultKinds(), data);
   }
   mlir::Type genType(const Fortran::lower::SomeExpr &expr) override final {
-    return Fortran::lower::translateSomeExprToFIRType(
-        &getMLIRContext(), bridge.getDefaultKinds(), &expr);
+    return Fortran::lower::translateSomeExprToFIRType(&getMLIRContext(),
+                                                      foldingContext, &expr);
   }
   mlir::Type genType(const Fortran::lower::pft::Variable &var) override final {
     return Fortran::lower::translateVariableToFIRType(
@@ -475,7 +475,8 @@ private:
   }
 
   /// Find the symbol in the local map or return null.
-  mlir::Value lookupSymbol(const Fortran::semantics::Symbol &sym) {
+  Fortran::lower::SymbolBox
+  lookupSymbol(const Fortran::semantics::Symbol &sym) {
     if (auto v = localSymbols.lookupSymbol(sym))
       return v;
     return {};
@@ -499,6 +500,8 @@ private:
       localSymbols.erase(sym);
     else if (lookupSymbol(sym))
       return false;
+    // TODO: ensure val type is fir.array<len x fir.char<kind>> like. Insert
+    // cast if needed.
     localSymbols.addCharSymbol(sym, val, len);
     return true;
   }
@@ -506,8 +509,9 @@ private:
   mlir::Value createTemp(mlir::Location loc,
                          const Fortran::semantics::Symbol &sym,
                          llvm::ArrayRef<mlir::Value> shape = {}) {
+    // FIXME: should return fir::ExtendedValue
     if (auto v = lookupSymbol(sym))
-      return v;
+      return v.getAddr();
     auto newVal = builder->createTemporary(loc, genType(sym),
                                            sym.name().ToString(), shape);
     addSymbol(sym, newVal);
@@ -583,19 +587,27 @@ private:
   void genReturnSymbol(const Fortran::semantics::Symbol &functionSymbol) {
     const auto &resultSym =
         functionSymbol.get<Fortran::semantics::SubprogramDetails>().result();
-    mlir::Value resultRef = lookupSymbol(resultSym);
+    auto resultSymBox = lookupSymbol(resultSym);
     auto loc = toLocation();
-    if (resultRef.getType().isa<fir::BoxCharType>()) {
-      builder->create<mlir::ReturnOp>(loc, resultRef);
+    if (!resultSymBox) {
+      mlir::emitError(loc, "failed lowering function return");
       return;
     }
-    // A function with multiple entry points returning different types tags
-    // all result variables with one of the largest types to allow them to
-    // share the the same storage.  Convert this to the actual type.
-    mlir::Type resultRefType = builder->getRefType(genType(resultSym));
-    if (resultRef.getType() != resultRefType)
-      resultRef = builder->createConvert(loc, resultRefType, resultRef);
-    mlir::Value resultVal = builder->create<fir::LoadOp>(loc, resultRef);
+    auto resultVal = resultSymBox.match(
+        [&](const fir::CharBoxValue &x) -> mlir::Value {
+          return Fortran::lower::CharacterExprHelper{*builder, loc}
+              .createEmboxChar(x.getBuffer(), x.getLen());
+        },
+        [&](const auto &) -> mlir::Value {
+          auto resultRef = resultSymBox.getAddr();
+          mlir::Type resultRefType = builder->getRefType(genType(resultSym));
+          // A function with multiple entry points returning different types
+          // tags all result variables with one of the largest types to allow
+          // them to share the same storage.  Convert this to the actual type.
+          if (resultRef.getType() != resultRefType)
+            resultRef = builder->createConvert(loc, resultRefType, resultRef);
+          return builder->create<fir::LoadOp>(loc, resultRef);
+        });
     builder->create<mlir::ReturnOp>(loc, resultVal);
   }
 
@@ -605,9 +617,7 @@ private:
   getAltReturnResult(const Fortran::semantics::Symbol &symbol) {
     assert(Fortran::semantics::HasAlternateReturns(symbol) &&
            "subroutine does not have alternate returns");
-    const auto returnValue = lookupSymbol(symbol);
-    assert(returnValue && "missing alternate return value");
-    return returnValue;
+    return getSymbolAddress(symbol);
   }
 
   void genFIRProcedureExit(Fortran::lower::pft::FunctionLikeUnit &funit,
@@ -778,15 +788,13 @@ private:
     //   only by an ASSIGN statement in the same scoping unit as the assigned
     //   GOTO statement.
 
+    auto loc = toLocation();
     auto &eval = getEval();
     const auto &symbolLabelMap =
         eval.getOwningProcedure()->assignSymbolLabelMap;
     const auto &symbol = *std::get<Fortran::parser::Name>(stmt.t).symbol;
-    auto variable = lookupSymbol(symbol);
-    auto loc = toLocation();
-    if (!variable)
-      variable = createTemp(loc, symbol);
-    auto selectExpr = builder->create<fir::LoadOp>(loc, variable);
+    auto selectExpr =
+        builder->create<fir::LoadOp>(loc, getSymbolAddress(symbol));
     auto iter = symbolLabelMap.find(symbol);
     if (iter == symbolLabelMap.end()) {
       // Fail for a nonconforming program unit that does not have any ASSIGN
@@ -1224,7 +1232,7 @@ private:
         Fortran::semantics::GetExpr(std::get<ScalarExpr>(stmt.t)));
     auto selectType = selectExpr.getType();
     Fortran::lower::CharacterExprHelper helper{*builder, loc};
-    if (helper.isCharacter(selectExpr.getType())) {
+    if (helper.isCharacterScalar(selectExpr.getType())) {
       TODO("");
     }
     llvm::SmallVector<mlir::Attribute, 10> attrList;
@@ -1441,7 +1449,7 @@ private:
               [&](const Fortran::parser::Name &sym) {
                 auto ty = genType(*sym.symbol);
                 auto load = builder->create<fir::LoadOp>(
-                    loc, lookupSymbol(*sym.symbol));
+                    loc, getSymbolAddress(*sym.symbol));
                 auto idxTy = builder->getIndexType();
                 auto zero = builder->create<mlir::ConstantOp>(
                     loc, idxTy, builder->getIntegerAttr(idxTy, 0));
@@ -1622,9 +1630,12 @@ private:
               }
               if (isCharacterCategory(lhsType->category())) {
                 // Fortran 2018 10.2.1.3 p10 and p11
-                // Generating value for lhs to get fir.boxchar.
                 auto lhs = genExprAddr(assign.lhs);
-                auto rhs = genExprValue(assign.rhs);
+                // Current character assignment only works with in memory
+                // characters since !fir.array<> cannot be addressed with
+                // fir.coordinate_of without being inside a !fir.ref<> or other
+                // memory types. So use genExprAddr for rhs.
+                auto rhs = genExprAddr(assign.rhs);
                 Fortran::lower::CharacterExprHelper{*builder, loc}.createAssign(
                     lhs, rhs);
                 return;
@@ -1693,13 +1704,10 @@ private:
 
   void genFIR(const Fortran::parser::AssignStmt &stmt) {
     const auto &symbol = *std::get<Fortran::parser::Name>(stmt.t).symbol;
-    auto variable = lookupSymbol(symbol);
     auto loc = toLocation();
-    if (!variable)
-      variable = createTemp(loc, symbol);
     const auto labelValue = builder->createIntegerConstant(
         loc, genType(symbol), std::get<Fortran::parser::Label>(stmt.t));
-    builder->create<fir::StoreOp>(loc, labelValue, variable);
+    builder->create<fir::StoreOp>(loc, labelValue, getSymbolAddress(symbol));
   }
 
   void genFIR(const Fortran::parser::FormatStmt &) {
@@ -2076,7 +2084,11 @@ private:
     // bounds from the caller (boxed somewhere else). Locals have the same
     // properties except they are never boxed arguments from the caller and
     // never having a missing column size.
-    mlir::Value addr = lookupSymbol(sym);
+
+    // Arguments (and some results) already have a symbolBox with the address.
+    auto maybeSymbolBox = lookupSymbol(sym);
+    mlir::Value addr =
+        maybeSymbolBox ? maybeSymbolBox.getAddr() : mlir::Value{};
     mlir::Value len;
     [[maybe_unused]] bool mustBeDummy = false;
 
@@ -2084,31 +2096,30 @@ private:
       // if element type is a CHARACTER, determine the LEN value
       if (isDummy || isResult) {
         auto unboxchar = charHelp.createUnboxChar(addr);
-        auto boxAddr = unboxchar.first;
+        addr = unboxchar.first;
         if (auto c = sba.getCharLenConst()) {
           // Set/override LEN with a constant
           len = builder->createIntegerConstant(loc, idxTy, *c);
-          addr = charHelp.createEmboxChar(boxAddr, len);
         } else if (auto e = sba.getCharLenExpr()) {
           // Set/override LEN with an expression
           len = createFIRExpr(loc, &*e);
-          addr = charHelp.createEmboxChar(boxAddr, len);
         } else {
           // LEN is from the boxchar
           len = unboxchar.second;
           mustBeDummy = true;
         }
-        // XXX: Subsequent lowering expects a CHARACTER variable to be in a
+        // XXX: Subsequent lowering expects a CHARACTER variable to not be in a
         // boxchar. We assert that here. We might want to reconsider this
         // precondition.
-        assert(addr.getType().isa<fir::BoxCharType>() &&
-               "dummy CHARACTER argument must be boxchar");
+        assert(!addr.getType().isa<fir::BoxCharType>() &&
+               "dummy CHARACTER argument must be unboxed");
       } else {
         // local CHARACTER variable
         if (auto c = sba.getCharLenConst())
           len = builder->createIntegerConstant(loc, idxTy, *c);
         else if (auto e = sba.getCharLenExpr())
-          len = createFIRExpr(loc, &*e);
+          len = builder->createConvert(loc, charHelp.getLengthType(),
+                                       createFIRExpr(loc, &*e));
         else
           len = builder->createIntegerConstant(loc, idxTy, sym.size());
         assert(!addr);
@@ -2124,14 +2135,8 @@ private:
       if (sba.staticSize) {
         // object shape is constant
         auto castTy = builder->getRefType(genType(var));
-        if (addr) {
-          // XXX: special handling for boxchar; see proviso above
-          if (auto box =
-                  dyn_cast_or_null<fir::EmboxCharOp>(addr.getDefiningOp()))
-            addr = builder->createConvert(loc, castTy, box.memref());
-          else
-            addr = builder->createConvert(loc, castTy, addr);
-        }
+        if (addr)
+          addr = builder->createConvert(loc, castTy, addr);
         if (sba.lboundIsAllOnes()) {
           // if lower bounds are all ones, build simple shaped object
           llvm::SmallVector<mlir::Value, 8> shape;
@@ -2159,14 +2164,8 @@ private:
       } else {
         // cast to the known constant parts from the declaration
         auto castTy = builder->getRefType(genType(var));
-        if (addr) {
-          // XXX: special handling for boxchar; see proviso above
-          if (auto box =
-                  dyn_cast_or_null<fir::EmboxCharOp>(addr.getDefiningOp()))
-            addr = builder->createConvert(loc, castTy, box.memref());
-          else
-            addr = builder->createConvert(loc, castTy, addr);
-        }
+        if (addr)
+          addr = builder->createConvert(loc, castTy, addr);
       }
       // construct constants and populate `bounds`
       for (const auto &i : llvm::zip(sba.staticLBound, sba.staticShape)) {
@@ -2239,13 +2238,10 @@ private:
       }
       assert(!mustBeDummy);
       auto charTy = genType(var);
-      auto c = sba.getCharLenConst();
-      // Note: `len` is the mlir ConstantOp with value `c`, if `c` is an int.
-      mlir::Value local = preAlloc
-                              ? preAlloc
-                              : (c ? charHelp.createCharacterTemp(charTy, *c)
-                                   : charHelp.createCharacterTemp(charTy, len));
-      addCharSymbol(sym, local, len);
+      fir::CharBoxValue local = preAlloc
+                                    ? fir::CharBoxValue(preAlloc, len)
+                                    : charHelp.createCharacterTemp(charTy, len);
+      addCharSymbol(sym, local.getBuffer(), local.getLen());
       return;
     }
     if (isDummy) {
@@ -2386,7 +2382,9 @@ private:
         llvm_unreachable("must be a common symbol");
       }
     }
-    auto commonAddr = lookupSymbol(common);
+    mlir::Value commonAddr;
+    if (auto symBox = lookupSymbol(common))
+      commonAddr = symBox.getAddr();
     if (!commonAddr) {
       commonAddr = builder->create<fir::AddrOfOp>(loc, global.resultType(),
                                                   global.getSymbol());
@@ -2428,6 +2426,8 @@ private:
     using PassBy = Fortran::lower::CalleeInterface::PassEntityBy;
     auto mapPassedEntity = [&](const auto arg) -> void {
       if (arg.passBy == PassBy::AddressAndLength) {
+        // TODO: now that fir call has some attributes regarding character
+        // return, this should PassBy::AddressAndLength should be retired.
         auto loc = toLocation();
         Fortran::lower::CharacterExprHelper charHelp{*builder, loc};
         auto box = charHelp.createEmboxChar(arg.firArgument, arg.firLength);
@@ -2452,9 +2452,10 @@ private:
     }
     if (auto passedResult = callee.getPassedResult()) {
       mapPassedEntity(*passedResult);
+      // FIXME: need to make sure things are OK here. addSymbol is may not be OK
       if (funit.primaryResult &&
           passedResult->entity.get() != *funit.primaryResult)
-        addSymbol(*funit.primaryResult, lookupSymbol(passedResult->entity));
+        addSymbol(*funit.primaryResult, getSymbolAddress(passedResult->entity));
     }
   }
 
@@ -2469,9 +2470,9 @@ private:
 
     mapDummiesAndResults(funit, callee);
 
-    mlir::Value primaryFuncResult;
-    llvm::SmallVector<const Fortran::semantics::Symbol *, 4>
-        deferredFuncResultList;
+    // Note: not storing Variable references because getOrderedSymbolTable
+    // below returns a temporary.
+    llvm::SmallVector<Fortran::lower::pft::Variable, 4> deferredFuncResultList;
 
     CommonBlockMap commonBlockMap;
     for (const auto &var : funit.getOrderedSymbolTable()) {
@@ -2487,6 +2488,14 @@ private:
       }
     }
 
+    // Backup actual argument for entry character results
+    // with different lengths. It needs to be added to the non
+    // primary results symbol before mapSymbolAttributes is called.
+    Fortran::lower::SymbolBox resultArg;
+    if (auto passedResult = callee.getPassedResult())
+      resultArg = lookupSymbol(passedResult->entity.get());
+
+    mlir::Value primaryFuncResultStorage;
     llvm::DenseMap<std::size_t, mlir::Value> storeMap;
     for (const auto &var : funit.getOrderedSymbolTable()) {
       if (var.isAggregateStore()) {
@@ -2498,13 +2507,21 @@ private:
         instantiateVar(var, storeMap, &commonBlockMap);
       } else if (&sym == funit.primaryResult) {
         instantiateVar(var, storeMap);
-        primaryFuncResult = lookupSymbol(sym);
+        primaryFuncResultStorage = getSymbolAddress(sym);
       } else {
-        deferredFuncResultList.push_back(&sym);
+        deferredFuncResultList.push_back(var);
       }
     }
-    for (auto altResult : deferredFuncResultList)
-      addSymbol(*altResult, primaryFuncResult);
+
+    /// TODO: should use same mechanism as equivalence?
+    /// One blocking point is character entry returns that need special handling
+    /// since they are not locally allocated but come as argument. CHARACTER(*)
+    /// is not something that fit wells with equivalence lowering.
+    for (const auto &altResult : deferredFuncResultList) {
+      if (auto passedResult = callee.getPassedResult())
+        addSymbol(altResult.getSymbol(), resultArg.getAddr());
+      mapSymbolAttributes(altResult, storeMap, primaryFuncResultStorage);
+    }
 
     // Create most function blocks in advance.
     auto *alternateEntryEval = funit.getEntryEval();

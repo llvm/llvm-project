@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertType.h"
+#include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Lower/Utils.h"
@@ -464,6 +466,64 @@ private:
   const Fortran::common::IntrinsicTypeDefaultKinds &defaults;
 };
 
+/// NewTypeBuilder simplifies the expression type conversion by operating
+/// on evaluate::DynamicType and evaluate::Shape instead of going down the
+/// expression tree. It fixes the fact that genType("array") would
+/// return the scalar type and crash code using the result to dispatch between
+/// scalar and array handling.
+/// TODO: replace the previous expression type conversion with it or fix the
+/// current one (The old one is still used for DataRef and Designator).
+struct NewTypeBuilder {
+
+  mlir::Type gen(const Fortran::lower::SomeExpr &expr) {
+    auto dynamicType = expr.GetType();
+    if (!dynamicType)
+      llvm::report_fatal_error("lowering typeless expression type");
+    auto category = dynamicType->category();
+    if (category == Fortran::common::TypeCategory::Derived)
+      TODO("derived types lowering");
+    auto shapeExpr = Fortran::evaluate::GetShape(foldingContext, expr);
+    if (!shapeExpr)
+      TODO("implied shape expression type lowering");
+
+    auto baseType = TypeBuilder{context, foldingContext.defaults()}.genFIRTy(
+        category, dynamicType->kind());
+    if (category == Fortran::common::TypeCategory::Character) {
+      auto len = fir::SequenceType::getUnknownExtent();
+      if (auto constantLen = toInt64(dynamicType->GetCharLength()))
+        len = *constantLen;
+      fir::SequenceType::Shape shape{len};
+      translateShape(shape, std::move(*shapeExpr));
+      return fir::SequenceType::get(shape, baseType);
+    }
+    // LOGICAL, INTEGER, REAL, COMPLEX
+    fir::SequenceType::Shape shape{};
+    translateShape(shape, std::move(*shapeExpr));
+    if (!shape.empty())
+      return fir::SequenceType::get(shape, baseType);
+    return baseType;
+  }
+
+  template <typename A>
+  void translateShape(A &shape, Fortran::evaluate::Shape &&shapeExpr) {
+    for (auto extentExpr : shapeExpr) {
+      auto extent = fir::SequenceType::getUnknownExtent();
+      if (auto constantExtent = toInt64(std::move(extentExpr)))
+        extent = *constantExtent;
+      shape.push_back(extent);
+    }
+  }
+
+  template <typename A>
+  std::optional<std::int64_t> toInt64(A &&expr) {
+    return Fortran::evaluate::ToInt64(
+        Fortran::evaluate::Fold(foldingContext, std::move(expr)));
+  }
+
+  mlir::MLIRContext *context;
+  Fortran::evaluate::FoldingContext &foldingContext;
+};
+
 } // namespace
 
 mlir::Type Fortran::lower::getFIRType(
@@ -488,10 +548,9 @@ mlir::Type Fortran::lower::translateDataRefToFIRType(
 }
 
 mlir::Type Fortran::lower::translateSomeExprToFIRType(
-    mlir::MLIRContext *context,
-    const Fortran::common::IntrinsicTypeDefaultKinds &defaults,
+    mlir::MLIRContext *context, Fortran::evaluate::FoldingContext &foldingCtx,
     const SomeExpr *expr) {
-  return TypeBuilder{context, defaults}.gen(*expr);
+  return NewTypeBuilder{context, foldingCtx}.gen(*expr);
 }
 
 mlir::Type Fortran::lower::translateSymbolToFIRType(
