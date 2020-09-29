@@ -6,9 +6,9 @@
 
 ; operator new routines
 declare i8* @_Znwj(i64 )
-; CHECK: declare noalias nonnull i8* @_Znwj(i64) [[G0:#[0-9]+]]
+; CHECK: declare noalias noundef nonnull i8* @_Znwj(i64) [[G0:#[0-9]+]]
 declare i8* @_Znwm(i64)
-; CHECK: declare noalias nonnull i8* @_Znwm(i64) [[G0]]
+; CHECK: declare noalias noundef nonnull i8* @_Znwm(i64) [[G0]]
 
 declare i32 @__nvvm_reflect(i8*)
 ; CHECK-NVPTX: declare noundef i32 @__nvvm_reflect(i8* noundef) [[G0:#[0-9]+]]
@@ -253,7 +253,7 @@ declare void @bcopy(i8*, i8*, i64)
 ; CHECK: declare void @bzero(i8* nocapture, i64) [[G1]]
 declare void @bzero(i8*, i64)
 
-; CHECK: declare noalias i8* @calloc(i64, i64) [[G1]]
+; CHECK: declare noalias noundef i8* @calloc(i64, i64) [[G1]]
 declare i8* @calloc(i64, i64)
 
 ; CHECK: declare double @cbrt(double) [[G0]]
@@ -451,7 +451,7 @@ declare i32 @fputs(i8*, %opaque*)
 ; CHECK: declare noundef i64 @fread(i8* nocapture noundef, i64 noundef, i64 noundef, %opaque* nocapture noundef) [[G1]]
 declare i64 @fread(i8*, i64, i64, %opaque*)
 
-; CHECK: declare void @free(i8* nocapture) [[G3:#[0-9]+]]
+; CHECK: declare void @free(i8* nocapture noundef) [[G3:#[0-9]+]]
 declare void @free(i8*)
 
 ; CHECK: declare double @frexp(double, i32* nocapture) [[G1]]
@@ -613,7 +613,7 @@ declare i32 @lstat(i8*, %opaque*)
 ; CHECK-LINUX: declare noundef i32 @lstat64(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[G1]]
 declare i32 @lstat64(i8*, %opaque*)
 
-; CHECK: declare noalias i8* @malloc(i64) [[G1]]
+; CHECK: declare noalias noundef i8* @malloc(i64) [[G1]]
 declare i8* @malloc(i64)
 
 ; CHECK-LINUX: declare noalias i8* @memalign(i64, i64) [[G0]]
@@ -726,10 +726,10 @@ declare i64 @read(i32, i8*, i64)
 ; CHECK: declare noundef i64 @readlink(i8* nocapture noundef readonly, i8* nocapture noundef, i64 noundef) [[G1]]
 declare i64 @readlink(i8*, i8*, i64)
 
-; CHECK: declare noalias i8* @realloc(i8* nocapture, i64) [[G3]]
+; CHECK: declare noalias noundef i8* @realloc(i8* nocapture, i64) [[G3]]
 declare i8* @realloc(i8*, i64)
 
-; CHECK: declare i8* @reallocf(i8*, i64)
+; CHECK: declare noundef i8* @reallocf(i8*, i64)
 declare i8* @reallocf(i8*, i64)
 
 ; CHECK: declare noundef i8* @realpath(i8* nocapture noundef readonly, i8* noundef) [[G1]]
@@ -978,7 +978,7 @@ declare i32 @utime(i8*, %opaque*)
 ; CHECK: declare noundef i32 @utimes(i8* nocapture noundef readonly, %opaque* nocapture noundef readonly) [[G1]]
 declare i32 @utimes(i8*, %opaque*)
 
-; CHECK: declare noalias i8* @valloc(i64) [[G1]]
+; CHECK: declare noalias noundef i8* @valloc(i64) [[G1]]
 declare i8* @valloc(i64)
 
 ; CHECK: declare noundef i32 @vfprintf(%opaque* nocapture noundef, i8* nocapture noundef readonly, %opaque* noundef) [[G1]]
