@@ -55,9 +55,9 @@ func @copy_transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %a
 // CHECK-LABEL: func @copy_transpose(
 //  CHECK-SAME: %[[arg0:[a-zA-z0-9]*]]: memref<?x?x?xf32, #[[$map1]]>,
 //  CHECK-SAME: %[[arg1:[a-zA-z0-9]*]]: memref<?x?x?xf32, #[[$map1]]>) {
-//       CHECK:   %[[t0:.*]] = linalg.transpose %[[arg0]]
+//       CHECK:   %[[t0:.*]] = transpose %[[arg0]]
 //  CHECK-SAME:     (d0, d1, d2) -> (d0, d2, d1) : memref<?x?x?xf32, #[[$map1]]>
-//       CHECK:   %[[t1:.*]] = linalg.transpose %[[arg1]]
+//       CHECK:   %[[t1:.*]] = transpose %[[arg1]]
 //  CHECK-SAME:     (d0, d1, d2) -> (d2, d1, d0) : memref<?x?x?xf32, #[[$map1]]>
 //       CHECK:   %[[o0:.*]] = memref_cast %[[t0]] :
 //  CHECK-SAME:     memref<?x?x?xf32, #[[$map2]]> to memref<?x?x?xf32, #[[$map8]]>
