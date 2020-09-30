@@ -1,6 +1,6 @@
 function(add_python_test_target name test_script args comment)
   set(PYTHON_TEST_COMMAND
-    ${PYTHON_EXECUTABLE}
+    ${Python3_EXECUTABLE}
     ${test_script}
     ${args}
     )
