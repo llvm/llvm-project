@@ -267,13 +267,6 @@ associated with that memory reference.
 This trait provides APIs and verifiers for operations with regions that have a
 single block that must terminate with `TerminatorOpType`.
 
-### Symbol
-
-*   `OpTrait::Symbol` -- `Symbol`
-
-This trait is used for operations that define a
-[`Symbol`](SymbolsAndSymbolTables.md#symbol).
-
 ### SymbolTable
 
 *   `OpTrait::SymbolTable` -- `SymbolTable`
