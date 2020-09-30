@@ -28,22 +28,16 @@ using namespace llvm;
 
 #define DEBUG_TYPE "calcspillweights"
 
-void llvm::calculateSpillWeightsAndHints(LiveIntervals &LIS,
-                           MachineFunction &MF,
-                           VirtRegMap *VRM,
-                           const MachineLoopInfo &MLI,
-                           const MachineBlockFrequencyInfo &MBFI,
-                           VirtRegAuxInfo::NormalizingFn norm) {
+void VirtRegAuxInfo::calculateSpillWeightsAndHints() {
   LLVM_DEBUG(dbgs() << "********** Compute Spill Weights **********\n"
                     << "********** Function: " << MF.getName() << '\n');
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  VirtRegAuxInfo VRAI(MF, LIS, VRM, MLI, MBFI, norm);
-  for (unsigned i = 0, e = MRI.getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = Register::index2VirtReg(i);
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
+    unsigned Reg = Register::index2VirtReg(I);
     if (MRI.reg_nodbg_empty(Reg))
       continue;
-    VRAI.calculateSpillWeightAndHint(LIS.getInterval(Reg));
+    calculateSpillWeightAndHint(LIS.getInterval(Reg));
   }
 }
 

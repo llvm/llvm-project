@@ -311,10 +311,9 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
   RegAllocBase::init(getAnalysis<VirtRegMap>(),
                      getAnalysis<LiveIntervals>(),
                      getAnalysis<LiveRegMatrix>());
-
-  calculateSpillWeightsAndHints(*LIS, *MF, VRM,
-                                getAnalysis<MachineLoopInfo>(),
-                                getAnalysis<MachineBlockFrequencyInfo>());
+  VirtRegAuxInfo VRAI(*MF, *LIS, VRM, getAnalysis<MachineLoopInfo>(),
+                      getAnalysis<MachineBlockFrequencyInfo>());
+  VRAI.calculateSpillWeightsAndHints();
 
   SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM));
 
