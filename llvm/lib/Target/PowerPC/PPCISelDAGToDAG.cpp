@@ -156,9 +156,6 @@ namespace {
       PPCLowering = Subtarget->getTargetLowering();
       SelectionDAGISel::runOnMachineFunction(MF);
 
-      if (!Subtarget->isSVR4ABI())
-        InsertVRSaveCode(MF);
-
       return true;
     }
 
@@ -341,8 +338,6 @@ namespace {
       return true;
     }
 
-    void InsertVRSaveCode(MachineFunction &MF);
-
     StringRef getPassName() const override {
       return "PowerPC DAG->DAG Pattern Instruction Selection";
     }
@@ -375,70 +370,6 @@ private:
   };
 
 } // end anonymous namespace
-
-/// InsertVRSaveCode - Once the entire function has been instruction selected,
-/// all virtual registers are created and all machine instructions are built,
-/// check to see if we need to save/restore VRSAVE.  If so, do it.
-void PPCDAGToDAGISel::InsertVRSaveCode(MachineFunction &Fn) {
-  // Check to see if this function uses vector registers, which means we have to
-  // save and restore the VRSAVE register and update it with the regs we use.
-  //
-  // In this case, there will be virtual registers of vector type created
-  // by the scheduler.  Detect them now.
-  bool HasVectorVReg = false;
-  for (unsigned i = 0, e = RegInfo->getNumVirtRegs(); i != e; ++i) {
-    unsigned Reg = Register::index2VirtReg(i);
-    if (RegInfo->getRegClass(Reg) == &PPC::VRRCRegClass) {
-      HasVectorVReg = true;
-      break;
-    }
-  }
-  if (!HasVectorVReg) return;  // nothing to do.
-
-  // If we have a vector register, we want to emit code into the entry and exit
-  // blocks to save and restore the VRSAVE register.  We do this here (instead
-  // of marking all vector instructions as clobbering VRSAVE) for two reasons:
-  //
-  // 1. This (trivially) reduces the load on the register allocator, by not
-  //    having to represent the live range of the VRSAVE register.
-  // 2. This (more significantly) allows us to create a temporary virtual
-  //    register to hold the saved VRSAVE value, allowing this temporary to be
-  //    register allocated, instead of forcing it to be spilled to the stack.
-
-  // Create two vregs - one to hold the VRSAVE register that is live-in to the
-  // function and one for the value after having bits or'd into it.
-  Register InVRSAVE = RegInfo->createVirtualRegister(&PPC::GPRCRegClass);
-  Register UpdatedVRSAVE = RegInfo->createVirtualRegister(&PPC::GPRCRegClass);
-
-  const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
-  MachineBasicBlock &EntryBB = *Fn.begin();
-  DebugLoc dl;
-  // Emit the following code into the entry block:
-  // InVRSAVE = MFVRSAVE
-  // UpdatedVRSAVE = UPDATE_VRSAVE InVRSAVE
-  // MTVRSAVE UpdatedVRSAVE
-  MachineBasicBlock::iterator IP = EntryBB.begin();  // Insert Point
-  BuildMI(EntryBB, IP, dl, TII.get(PPC::MFVRSAVE), InVRSAVE);
-  BuildMI(EntryBB, IP, dl, TII.get(PPC::UPDATE_VRSAVE),
-          UpdatedVRSAVE).addReg(InVRSAVE);
-  BuildMI(EntryBB, IP, dl, TII.get(PPC::MTVRSAVE)).addReg(UpdatedVRSAVE);
-
-  // Find all return blocks, outputting a restore in each epilog.
-  for (MachineFunction::iterator BB = Fn.begin(), E = Fn.end(); BB != E; ++BB) {
-    if (BB->isReturnBlock()) {
-      IP = BB->end(); --IP;
-
-      // Skip over all terminator instructions, which are part of the return
-      // sequence.
-      MachineBasicBlock::iterator I2 = IP;
-      while (I2 != BB->begin() && (--I2)->isTerminator())
-        IP = I2;
-
-      // Emit: MTVRSAVE InVRSave
-      BuildMI(*BB, IP, dl, TII.get(PPC::MTVRSAVE)).addReg(InVRSAVE);
-    }
-  }
-}
 
 /// getGlobalBaseReg - Output the instructions required to put the
 /// base address to use for accessing globals into a register.

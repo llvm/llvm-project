@@ -119,10 +119,6 @@ public:
                           unsigned FrameIndex) const;
   void lowerCRBitRestore(MachineBasicBlock::iterator II,
                          unsigned FrameIndex) const;
-  void lowerVRSAVESpilling(MachineBasicBlock::iterator II,
-                           unsigned FrameIndex) const;
-  void lowerVRSAVERestore(MachineBasicBlock::iterator II,
-                          unsigned FrameIndex) const;
 
   bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
                             int &FrameIdx) const override;
