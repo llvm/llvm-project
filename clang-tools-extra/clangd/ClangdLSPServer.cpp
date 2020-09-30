@@ -395,7 +395,7 @@ private:
   Context handlerContext() const {
     return Context::current().derive(
         kCurrentOffsetEncoding,
-        Server.Opts.OffsetEncoding.getValueOr(OffsetEncoding::UTF16));
+        Server.Opts.Encoding.getValueOr(OffsetEncoding::UTF16));
   }
 
   // We run cancelable requests in a context that does two things:
@@ -465,11 +465,11 @@ static std::vector<llvm::StringRef> semanticTokenTypes() {
 void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                                    Callback<llvm::json::Value> Reply) {
   // Determine character encoding first as it affects constructed ClangdServer.
-  if (Params.capabilities.offsetEncoding && !Opts.OffsetEncoding) {
-    Opts.OffsetEncoding = OffsetEncoding::UTF16; // fallback
+  if (Params.capabilities.offsetEncoding && !Opts.Encoding) {
+    Opts.Encoding = OffsetEncoding::UTF16; // fallback
     for (OffsetEncoding Supported : *Params.capabilities.offsetEncoding)
       if (Supported != OffsetEncoding::UnsupportedEncoding) {
-        Opts.OffsetEncoding = Supported;
+        Opts.Encoding = Supported;
         break;
       }
   }
@@ -509,8 +509,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     // Server, CDB, etc.
     WithContext MainContext(BackgroundContext.clone());
     llvm::Optional<WithContextValue> WithOffsetEncoding;
-    if (Opts.OffsetEncoding)
-      WithOffsetEncoding.emplace(kCurrentOffsetEncoding, *Opts.OffsetEncoding);
+    if (Opts.Encoding)
+      WithOffsetEncoding.emplace(kCurrentOffsetEncoding, *Opts.Encoding);
     Server.emplace(*CDB, TFS, Opts,
                    static_cast<ClangdServer::Callbacks *>(this));
   }
@@ -620,8 +620,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
              }},
             {"typeHierarchyProvider", true},
         }}}};
-  if (Opts.OffsetEncoding)
-    Result["offsetEncoding"] = *Opts.OffsetEncoding;
+  if (Opts.Encoding)
+    Result["offsetEncoding"] = *Opts.Encoding;
   if (Opts.TheiaSemanticHighlighting)
     Result.getObject("capabilities")
         ->insert(
