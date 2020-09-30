@@ -3363,6 +3363,12 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     m_ast_context_ap->addModuleLoader(std::move(memory_buffer_loader_ap));
   }
 
+  // Add a module interface checker.
+  m_ast_context_ap->addModuleInterfaceChecker(
+    std::make_unique<swift::ModuleInterfaceCheckerImpl>(*m_ast_context_ap,
+      moduleCachePath, prebuiltModuleCachePath,
+      swift::ModuleInterfaceLoaderOptions()));
+
   // 2. Create and install the module interface loader.
   //
   // The ordering of 2-4 is the same as the Swift compiler's 1-3,
@@ -3377,8 +3383,9 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   if (loading_mode != swift::ModuleLoadingMode::OnlySerialized) {
     std::unique_ptr<swift::ModuleLoader> module_interface_loader_ap(
         swift::ModuleInterfaceLoader::create(
-            *m_ast_context_ap, moduleCachePath, prebuiltModuleCachePath,
-            m_dependency_tracker.get(), loading_mode));
+          *m_ast_context_ap, *static_cast<swift::ModuleInterfaceCheckerImpl*>(
+            m_ast_context_ap->getModuleInterfaceChecker()), m_dependency_tracker.get(),
+          loading_mode));
     if (module_interface_loader_ap)
       m_ast_context_ap->addModuleLoader(std::move(module_interface_loader_ap));
   }
