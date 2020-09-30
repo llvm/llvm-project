@@ -20,9 +20,8 @@ define internal void @test() unnamed_addr nounwind {
 ; CHECK-NEXT:    ld $5, 16($sp)
 ; CHECK-NEXT:    ld $7, 32($sp)
 ; CHECK-NEXT:    lw $1, 8($sp)
-; CHECK-NEXT:    # implicit-def: $v0_64
-; CHECK-NEXT:    move $2, $1
-; CHECK-NEXT:    move $4, $2
+; CHECK-NEXT:    # implicit-def: $a0_64
+; CHECK-NEXT:    move $4, $1
 ; CHECK-NEXT:    jal use_sret
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld $ra, 40($sp) # 8-byte Folded Reload
@@ -41,15 +40,15 @@ start:
 define internal { i32, i128, i64 } @implicit_sret_impl() unnamed_addr nounwind {
 ; CHECK-LABEL: implicit_sret_impl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    move $1, $4
-; CHECK-NEXT:    daddiu $2, $zero, 20
-; CHECK-NEXT:    sd $2, 16($4)
-; CHECK-NEXT:    daddiu $2, $zero, 0
+; CHECK-NEXT:    # kill: def $at_64 killed $a0_64
+; CHECK-NEXT:    daddiu $1, $zero, 20
+; CHECK-NEXT:    sd $1, 16($4)
+; CHECK-NEXT:    daddiu $1, $zero, 0
 ; CHECK-NEXT:    sd $zero, 8($4)
-; CHECK-NEXT:    daddiu $3, $zero, 30
-; CHECK-NEXT:    sd $3, 24($4)
-; CHECK-NEXT:    addiu $3, $zero, 10
-; CHECK-NEXT:    sw $3, 0($4)
+; CHECK-NEXT:    daddiu $1, $zero, 30
+; CHECK-NEXT:    sd $1, 24($4)
+; CHECK-NEXT:    addiu $1, $zero, 10
+; CHECK-NEXT:    sw $1, 0($4)
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    nop
   ret { i32, i128, i64 } { i32 10, i128 20, i64 30 }
@@ -70,12 +69,10 @@ define internal void @test2() unnamed_addr nounwind {
 ; CHECK-NEXT:    lw $3, 4($sp)
 ; CHECK-NEXT:    # implicit-def: $a0_64
 ; CHECK-NEXT:    move $4, $3
-; CHECK-NEXT:    # implicit-def: $v1_64
-; CHECK-NEXT:    move $3, $2
-; CHECK-NEXT:    # implicit-def: $v0_64
-; CHECK-NEXT:    move $2, $1
-; CHECK-NEXT:    move $5, $3
-; CHECK-NEXT:    move $6, $2
+; CHECK-NEXT:    # implicit-def: $a1_64
+; CHECK-NEXT:    move $5, $2
+; CHECK-NEXT:    # implicit-def: $a2_64
+; CHECK-NEXT:    move $6, $1
 ; CHECK-NEXT:    jal use_sret2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
@@ -95,19 +92,19 @@ start:
 define internal { i32, i32, i32, i32, i32, i32 } @implicit_sret_impl2() unnamed_addr nounwind {
 ; CHECK-LABEL: implicit_sret_impl2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    move $1, $4
-; CHECK-NEXT:    addiu $2, $zero, 6
-; CHECK-NEXT:    sw $2, 20($4)
-; CHECK-NEXT:    addiu $2, $zero, 5
-; CHECK-NEXT:    sw $2, 16($4)
-; CHECK-NEXT:    addiu $2, $zero, 4
-; CHECK-NEXT:    sw $2, 12($4)
-; CHECK-NEXT:    addiu $2, $zero, 3
-; CHECK-NEXT:    sw $2, 8($4)
-; CHECK-NEXT:    addiu $2, $zero, 2
-; CHECK-NEXT:    sw $2, 4($4)
-; CHECK-NEXT:    addiu $2, $zero, 1
-; CHECK-NEXT:    sw $2, 0($4)
+; CHECK-NEXT:    # kill: def $at_64 killed $a0_64
+; CHECK-NEXT:    addiu $1, $zero, 6
+; CHECK-NEXT:    sw $1, 20($4)
+; CHECK-NEXT:    addiu $1, $zero, 5
+; CHECK-NEXT:    sw $1, 16($4)
+; CHECK-NEXT:    addiu $1, $zero, 4
+; CHECK-NEXT:    sw $1, 12($4)
+; CHECK-NEXT:    addiu $1, $zero, 3
+; CHECK-NEXT:    sw $1, 8($4)
+; CHECK-NEXT:    addiu $1, $zero, 2
+; CHECK-NEXT:    sw $1, 4($4)
+; CHECK-NEXT:    addiu $1, $zero, 1
+; CHECK-NEXT:    sw $1, 0($4)
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    nop
   ret { i32, i32, i32, i32, i32, i32 } { i32 1, i32 2, i32 3, i32 4, i32 5, i32 6 }

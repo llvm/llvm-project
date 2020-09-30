@@ -61,12 +61,12 @@ define dso_local void @test_sign_ext(%struct.Foo* %f, i32* %i) {
 ;
 ; CHECK-O0-LABEL: test_sign_ext:
 ; CHECK-O0:       # %bb.0: # %entry
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-O0-NEXT:    movl %eax, %edx
-; CHECK-O0-NEXT:    sarl $31, %edx
-; CHECK-O0-NEXT:    movl %eax, 8(%ecx)
-; CHECK-O0-NEXT:    movl %edx, 12(%ecx)
+; CHECK-O0-NEXT:    movl %edx, %ecx
+; CHECK-O0-NEXT:    sarl $31, %ecx
+; CHECK-O0-NEXT:    movl %edx, 8(%eax)
+; CHECK-O0-NEXT:    movl %ecx, 12(%eax)
 ; CHECK-O0-NEXT:    jmp _use_foo # TAILCALL
 entry:
   %0 = addrspacecast i32* %i to i32 addrspace(272)*
@@ -77,13 +77,21 @@ entry:
 }
 
 define dso_local void @test_zero_ext(%struct.Foo* %f, i32 addrspace(271)* %i) {
-; ALL-LABEL: test_zero_ext:
-; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; ALL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; ALL-NEXT:    movl %eax, 8(%ecx)
-; ALL-NEXT:    movl $0, 12(%ecx)
-; ALL-NEXT:    jmp _use_foo # TAILCALL
+; CHECK-LABEL: test_zero_ext:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl %eax, 8(%ecx)
+; CHECK-NEXT:    movl $0, 12(%ecx)
+; CHECK-NEXT:    jmp _use_foo # TAILCALL
+;
+; CHECK-O0-LABEL: test_zero_ext:
+; CHECK-O0:       # %bb.0: # %entry
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-O0-NEXT:    movl %ecx, 8(%eax)
+; CHECK-O0-NEXT:    movl $0, 12(%eax)
+; CHECK-O0-NEXT:    jmp _use_foo # TAILCALL
 entry:
   %0 = addrspacecast i32 addrspace(271)* %i to i32 addrspace(272)*
   %p64 = getelementptr inbounds %struct.Foo, %struct.Foo* %f, i32 0, i32 1
@@ -102,13 +110,10 @@ define dso_local void @test_trunc(%struct.Foo* %f, i32 addrspace(272)* %i) {
 ;
 ; CHECK-O0-LABEL: test_trunc:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    pushl %eax
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-O0-NEXT:    movl %ecx, (%edx)
-; CHECK-O0-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; CHECK-O0-NEXT:    popl %eax
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-O0-NEXT:    movl %ecx, (%eax)
 ; CHECK-O0-NEXT:    jmp _use_foo # TAILCALL
 entry:
   %0 = addrspacecast i32 addrspace(272)* %i to i32*
@@ -119,12 +124,19 @@ entry:
 }
 
 define dso_local void @test_noop1(%struct.Foo* %f, i32* %i) {
-; ALL-LABEL: test_noop1:
-; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; ALL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; ALL-NEXT:    movl %eax, (%ecx)
-; ALL-NEXT:    jmp _use_foo # TAILCALL
+; CHECK-LABEL: test_noop1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl %eax, (%ecx)
+; CHECK-NEXT:    jmp _use_foo # TAILCALL
+;
+; CHECK-O0-LABEL: test_noop1:
+; CHECK-O0:       # %bb.0: # %entry
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-O0-NEXT:    movl %ecx, (%eax)
+; CHECK-O0-NEXT:    jmp _use_foo # TAILCALL
 entry:
   %p32 = getelementptr inbounds %struct.Foo, %struct.Foo* %f, i32 0, i32 0
   store i32* %i, i32** %p32, align 8
@@ -144,11 +156,11 @@ define dso_local void @test_noop2(%struct.Foo* %f, i32 addrspace(272)* %i) {
 ;
 ; CHECK-O0-LABEL: test_noop2:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-O0-NEXT:    movl %ecx, 8(%edx)
-; CHECK-O0-NEXT:    movl %eax, 12(%edx)
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-O0-NEXT:    movl %edx, 8(%eax)
+; CHECK-O0-NEXT:    movl %ecx, 12(%eax)
 ; CHECK-O0-NEXT:    jmp _use_foo # TAILCALL
 entry:
   %p64 = getelementptr inbounds %struct.Foo, %struct.Foo* %f, i32 0, i32 1
@@ -171,11 +183,11 @@ define dso_local void @test_null_arg(%struct.Foo* %f) {
 ; CHECK-O0-LABEL: test_null_arg:
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    subl $12, %esp
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-O0-NEXT:    movl %esp, %ecx
-; CHECK-O0-NEXT:    movl %eax, (%ecx)
-; CHECK-O0-NEXT:    movl $0, 8(%ecx)
-; CHECK-O0-NEXT:    movl $0, 4(%ecx)
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-O0-NEXT:    movl %esp, %eax
+; CHECK-O0-NEXT:    movl %ecx, (%eax)
+; CHECK-O0-NEXT:    movl $0, 8(%eax)
+; CHECK-O0-NEXT:    movl $0, 4(%eax)
 ; CHECK-O0-NEXT:    calll _test_noop2
 ; CHECK-O0-NEXT:    addl $12, %esp
 ; CHECK-O0-NEXT:    retl
@@ -196,12 +208,12 @@ define dso_local void @test_unrecognized(%struct.Foo* %f, i32 addrspace(14)* %i)
 ;
 ; CHECK-O0-LABEL: test_unrecognized:
 ; CHECK-O0:       # %bb.0: # %entry
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-O0-NEXT:    movl %eax, %edx
-; CHECK-O0-NEXT:    sarl $31, %edx
-; CHECK-O0-NEXT:    movl %eax, 8(%ecx)
-; CHECK-O0-NEXT:    movl %edx, 12(%ecx)
+; CHECK-O0-NEXT:    movl %edx, %ecx
+; CHECK-O0-NEXT:    sarl $31, %ecx
+; CHECK-O0-NEXT:    movl %edx, 8(%eax)
+; CHECK-O0-NEXT:    movl %ecx, 12(%eax)
 ; CHECK-O0-NEXT:    jmp _use_foo # TAILCALL
 entry:
   %0 = addrspacecast i32 addrspace(14)* %i to i32 addrspace(272)*
@@ -221,13 +233,10 @@ define dso_local void @test_unrecognized2(%struct.Foo* %f, i32 addrspace(272)* %
 ;
 ; CHECK-O0-LABEL: test_unrecognized2:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    pushl %eax
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-O0-NEXT:    movl %ecx, 16(%edx)
-; CHECK-O0-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; CHECK-O0-NEXT:    popl %eax
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-O0-NEXT:    movl %ecx, 16(%eax)
 ; CHECK-O0-NEXT:    jmp _use_foo # TAILCALL
 entry:
   %0 = addrspacecast i32 addrspace(272)* %i to i32 addrspace(9)*
@@ -238,32 +247,22 @@ entry:
 }
 
 define i32 @test_load_sptr32(i32 addrspace(270)* %i) {
-; CHECK-LABEL: test_load_sptr32:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl (%eax), %eax
-; CHECK-NEXT:    retl
-; CHECK-O0-LABEL: test_load_sptr32:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-O0-NEXT:    movl (%eax), %eax
-; CHECK-O0-NEXT:    retl
+; ALL-LABEL: test_load_sptr32:
+; ALL:       # %bb.0: # %entry
+; ALL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; ALL-NEXT:    movl (%eax), %eax
+; ALL-NEXT:    retl
 entry:
   %0 = load i32, i32 addrspace(270)* %i, align 4
   ret i32 %0
 }
 
 define i32 @test_load_uptr32(i32 addrspace(271)* %i) {
-; CHECK-LABEL: test_load_uptr32:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl (%eax), %eax
-; CHECK-NEXT:    retl
-; CHECK-O0-LABEL: test_load_uptr32:
-; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-O0-NEXT:    movl (%eax), %eax
-; CHECK-O0-NEXT:    retl
+; ALL-LABEL: test_load_uptr32:
+; ALL:       # %bb.0: # %entry
+; ALL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; ALL-NEXT:    movl (%eax), %eax
+; ALL-NEXT:    retl
 entry:
   %0 = load i32, i32 addrspace(271)* %i, align 4
   ret i32 %0
@@ -275,15 +274,12 @@ define i32 @test_load_ptr64(i32 addrspace(272)* %i) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl (%eax), %eax
 ; CHECK-NEXT:    retl
+;
 ; CHECK-O0-LABEL: test_load_ptr64:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    pushl %eax
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-O0-NEXT:    movl (%ecx), %ecx
-; CHECK-O0-NEXT:    movl %eax, (%esp)
-; CHECK-O0-NEXT:    movl %ecx, %eax
-; CHECK-O0-NEXT:    popl %ecx
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-O0-NEXT:    movl (%eax), %eax
 ; CHECK-O0-NEXT:    retl
 entry:
   %0 = load i32, i32 addrspace(272)* %i, align 8
@@ -297,11 +293,12 @@ define void @test_store_sptr32(i32 addrspace(270)* %s, i32 %i) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl %eax, (%ecx)
 ; CHECK-NEXT:    retl
+;
 ; CHECK-O0-LABEL: test_store_sptr32:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-O0-NEXT:    movl %eax, (%ecx)
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-O0-NEXT:    movl %ecx, (%eax)
 ; CHECK-O0-NEXT:    retl
 entry:
   store i32 %i, i32 addrspace(270)* %s, align 4
@@ -315,11 +312,12 @@ define void @test_store_uptr32(i32 addrspace(271)* %s, i32 %i) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl %eax, (%ecx)
 ; CHECK-NEXT:    retl
+;
 ; CHECK-O0-LABEL: test_store_uptr32:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-O0-NEXT:    movl %eax, (%ecx)
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-O0-NEXT:    movl %ecx, (%eax)
 ; CHECK-O0-NEXT:    retl
 entry:
   store i32 %i, i32 addrspace(271)* %s, align 4
@@ -333,12 +331,13 @@ define void @test_store_ptr64(i32 addrspace(272)* %s, i32 %i) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl %eax, (%ecx)
 ; CHECK-NEXT:    retl
+;
 ; CHECK-O0-LABEL: test_store_ptr64:
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-O0-NEXT:    movl %edx, (%ecx)
+; CHECK-O0-NEXT:    movl %ecx, (%eax)
 ; CHECK-O0-NEXT:    retl
 entry:
   store i32 %i, i32 addrspace(272)* %s, align 8
