@@ -2841,6 +2841,20 @@ def SubViewOp : Std_Op<"subview", [
       "ArrayRef<NamedAttribute> attrs = {}">,
     // Build a SubViewOp with all dynamic entries.
     OpBuilder<
+      "OpBuilder &b, OperationState &result, Value source, "
+      "ValueRange offsets, ValueRange sizes, ValueRange strides, "
+      "ArrayRef<NamedAttribute> attrs = {}">,
+    // Build a SubViewOp with mixed static and dynamic entries
+    // and custom result type.
+    OpBuilder<
+      "OpBuilder &b, OperationState &result, MemRefType resultType, "
+      "Value source, ArrayRef<int64_t> staticOffsets, "
+      "ArrayRef<int64_t> staticSizes, ArrayRef<int64_t> staticStrides, "
+      "ValueRange offsets, ValueRange sizes, "
+      "ValueRange strides, ArrayRef<NamedAttribute> attrs = {}">,
+    // Build a SubViewOp with all dynamic entries and custom result type.
+    OpBuilder<
+      "OpBuilder &b, OperationState &result, MemRefType resultType, "
       "Value source, ValueRange offsets, ValueRange sizes, ValueRange strides, "
       "ArrayRef<NamedAttribute> attrs = {}">
   ];
