@@ -2218,7 +2218,7 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   // be misleading while debugging.
   for (auto &I : *ThenBB) {
     if (!SpeculatedStoreValue || &I != SpeculatedStore)
-      I.dropLocation();
+      I.setDebugLoc(DebugLoc());
     I.dropUnknownNonDebugMetadata();
   }
 
@@ -2878,7 +2878,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
       // When we fold the bonus instructions we want to make sure we
       // reset their debug locations in order to avoid stepping on dead
       // code caused by folding dead branches.
-      NewBonusInst->dropLocation();
+      NewBonusInst->setDebugLoc(DebugLoc());
 
       RemapInstruction(NewBonusInst, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
@@ -2902,7 +2902,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
 
     // Reset the condition debug location to avoid jumping on dead code
     // as the result of folding dead branches.
-    CondInPred->dropLocation();
+    CondInPred->setDebugLoc(DebugLoc());
 
     RemapInstruction(CondInPred, VMap,
                      RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
