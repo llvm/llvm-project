@@ -5,95 +5,95 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 
 define i32 @test1(i32 %i) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.bswap.i32(i32 [[I:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP12]]
+; CHECK-NEXT:    [[T12:%.*]] = call i32 @llvm.bswap.i32(i32 [[I:%.*]])
+; CHECK-NEXT:    ret i32 [[T12]]
 ;
-  %tmp1 = lshr i32 %i, 24
-  %tmp3 = lshr i32 %i, 8
-  %tmp4 = and i32 %tmp3, 65280
-  %tmp5 = or i32 %tmp1, %tmp4
-  %tmp7 = shl i32 %i, 8
-  %tmp8 = and i32 %tmp7, 16711680
-  %tmp9 = or i32 %tmp5, %tmp8
-  %tmp11 = shl i32 %i, 24
-  %tmp12 = or i32 %tmp9, %tmp11
-  ret i32 %tmp12
+  %t1 = lshr i32 %i, 24
+  %t3 = lshr i32 %i, 8
+  %t4 = and i32 %t3, 65280
+  %t5 = or i32 %t1, %t4
+  %t7 = shl i32 %i, 8
+  %t8 = and i32 %t7, 16711680
+  %t9 = or i32 %t5, %t8
+  %t11 = shl i32 %i, 24
+  %t12 = or i32 %t9, %t11
+  ret i32 %t12
 }
 
 define i32 @test2(i32 %arg) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.bswap.i32(i32 [[ARG:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP14]]
+; CHECK-NEXT:    [[T14:%.*]] = call i32 @llvm.bswap.i32(i32 [[ARG:%.*]])
+; CHECK-NEXT:    ret i32 [[T14]]
 ;
-  %tmp2 = shl i32 %arg, 24
-  %tmp4 = shl i32 %arg, 8
-  %tmp5 = and i32 %tmp4, 16711680
-  %tmp6 = or i32 %tmp2, %tmp5
-  %tmp8 = lshr i32 %arg, 8
-  %tmp9 = and i32 %tmp8, 65280
-  %tmp10 = or i32 %tmp6, %tmp9
-  %tmp12 = lshr i32 %arg, 24
-  %tmp14 = or i32 %tmp10, %tmp12
-  ret i32 %tmp14
+  %t2 = shl i32 %arg, 24
+  %t4 = shl i32 %arg, 8
+  %t5 = and i32 %t4, 16711680
+  %t6 = or i32 %t2, %t5
+  %t8 = lshr i32 %arg, 8
+  %t9 = and i32 %t8, 65280
+  %t10 = or i32 %t6, %t9
+  %t12 = lshr i32 %arg, 24
+  %t14 = or i32 %t10, %t12
+  ret i32 %t14
 }
 
 define i16 @test3(i16 %s) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[TMP5:%.*]] = call i16 @llvm.bswap.i16(i16 [[S:%.*]])
-; CHECK-NEXT:    ret i16 [[TMP5]]
+; CHECK-NEXT:    [[T5:%.*]] = call i16 @llvm.bswap.i16(i16 [[S:%.*]])
+; CHECK-NEXT:    ret i16 [[T5]]
 ;
-  %tmp2 = lshr i16 %s, 8
-  %tmp4 = shl i16 %s, 8
-  %tmp5 = or i16 %tmp2, %tmp4
-  ret i16 %tmp5
+  %t2 = lshr i16 %s, 8
+  %t4 = shl i16 %s, 8
+  %t5 = or i16 %t2, %t4
+  ret i16 %t5
 }
 
 define i16 @test4(i16 %s) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP5:%.*]] = call i16 @llvm.bswap.i16(i16 [[S:%.*]])
-; CHECK-NEXT:    ret i16 [[TMP5]]
+; CHECK-NEXT:    [[T5:%.*]] = call i16 @llvm.bswap.i16(i16 [[S:%.*]])
+; CHECK-NEXT:    ret i16 [[T5]]
 ;
-  %tmp2 = lshr i16 %s, 8
-  %tmp4 = shl i16 %s, 8
-  %tmp5 = or i16 %tmp4, %tmp2
-  ret i16 %tmp5
+  %t2 = lshr i16 %s, 8
+  %t4 = shl i16 %s, 8
+  %t5 = or i16 %t4, %t2
+  ret i16 %t5
 }
 
 define i16 @test5(i16 %a) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[TMP_UPGRD_3:%.*]] = call i16 @llvm.bswap.i16(i16 [[A:%.*]])
-; CHECK-NEXT:    ret i16 [[TMP_UPGRD_3]]
+; CHECK-NEXT:    [[T_UPGRD_3:%.*]] = call i16 @llvm.bswap.i16(i16 [[A:%.*]])
+; CHECK-NEXT:    ret i16 [[T_UPGRD_3]]
 ;
-  %tmp = zext i16 %a to i32
-  %tmp1 = and i32 %tmp, 65280
-  %tmp2 = ashr i32 %tmp1, 8
-  %tmp2.upgrd.1 = trunc i32 %tmp2 to i16
-  %tmp4 = and i32 %tmp, 255
-  %tmp5 = shl i32 %tmp4, 8
-  %tmp5.upgrd.2 = trunc i32 %tmp5 to i16
-  %tmp.upgrd.3 = or i16 %tmp2.upgrd.1, %tmp5.upgrd.2
-  %tmp6 = bitcast i16 %tmp.upgrd.3 to i16
-  %tmp6.upgrd.4 = zext i16 %tmp6 to i32
-  %retval = trunc i32 %tmp6.upgrd.4 to i16
+  %t = zext i16 %a to i32
+  %t1 = and i32 %t, 65280
+  %t2 = ashr i32 %t1, 8
+  %t2.upgrd.1 = trunc i32 %t2 to i16
+  %t4 = and i32 %t, 255
+  %t5 = shl i32 %t4, 8
+  %t5.upgrd.2 = trunc i32 %t5 to i16
+  %t.upgrd.3 = or i16 %t2.upgrd.1, %t5.upgrd.2
+  %t6 = bitcast i16 %t.upgrd.3 to i16
+  %t6.upgrd.4 = zext i16 %t6 to i32
+  %retval = trunc i32 %t6.upgrd.4 to i16
   ret i16 %retval
 }
 
 ; PR2842
 define i32 @test6(i32 %x) nounwind readnone {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.bswap.i32(i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP7]]
+; CHECK-NEXT:    [[T7:%.*]] = call i32 @llvm.bswap.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[T7]]
 ;
-  %tmp = shl i32 %x, 16
+  %t = shl i32 %x, 16
   %x.mask = and i32 %x, 65280
-  %tmp1 = lshr i32 %x, 16
-  %tmp2 = and i32 %tmp1, 255
-  %tmp3 = or i32 %x.mask, %tmp
-  %tmp4 = or i32 %tmp3, %tmp2
-  %tmp5 = shl i32 %tmp4, 8
-  %tmp6 = lshr i32 %x, 24
-  %tmp7 = or i32 %tmp5, %tmp6
-  ret i32 %tmp7
+  %t1 = lshr i32 %x, 16
+  %t2 = and i32 %t1, 255
+  %t3 = or i32 %x.mask, %t
+  %t4 = or i32 %t3, %t2
+  %t5 = shl i32 %t4, 8
+  %t6 = lshr i32 %x, 24
+  %t7 = or i32 %t5, %t6
+  ret i32 %t7
 }
 
 declare void @extra_use(i32)
@@ -451,4 +451,202 @@ define i32 @funnel_binary(i32 %abcd) {
   %zzba = and i32 %zaba,  65535
   %dcba = or i32 %dczz, %zzba
   ret i32 %dcba
+}
+
+; PR47191 - deep IR trees prevent ADD/XOR instructions being simplified to OR.
+
+define i64 @PR47191_problem1(i64 %0) {
+; CHECK-LABEL: @PR47191_problem1(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 56
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 65280
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 16711680
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP7]], 4278190080
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP0]], 56
+; CHECK-NEXT:    [[TMP10:%.*]] = shl i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP11:%.*]] = and i64 [[TMP10]], 71776119061217280
+; CHECK-NEXT:    [[TMP12:%.*]] = shl i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP13:%.*]] = and i64 [[TMP12]], 280375465082880
+; CHECK-NEXT:    [[TMP14:%.*]] = or i64 [[TMP9]], [[TMP2]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i64 [[TMP14]], [[TMP4]]
+; CHECK-NEXT:    [[TMP16:%.*]] = or i64 [[TMP15]], [[TMP6]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or i64 [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[TMP18:%.*]] = or i64 [[TMP17]], [[TMP11]]
+; CHECK-NEXT:    [[TMP19:%.*]] = or i64 [[TMP18]], [[TMP13]]
+; CHECK-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP21:%.*]] = and i64 [[TMP20]], 1095216660480
+; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[TMP19]], [[TMP21]]
+; CHECK-NEXT:    ret i64 [[TMP22]]
+;
+  %2 = lshr i64 %0, 56
+  %3 = lshr i64 %0, 40
+  %4 = and i64 %3, 65280
+  %5 = lshr i64 %0, 24
+  %6 = and i64 %5, 16711680
+  %7 = lshr i64 %0, 8
+  %8 = and i64 %7, 4278190080
+  %9 = shl i64 %0, 56
+  %10 = shl i64 %0, 40
+  %11 = and i64 %10, 71776119061217280
+  %12 = shl i64 %0, 24
+  %13 = and i64 %12, 280375465082880
+  %14 = or i64 %9, %2
+  %15 = or i64 %14, %4
+  %16 = or i64 %15, %6
+  %17 = or i64 %16, %8
+  %18 = or i64 %17, %11
+  %19 = or i64 %18, %13
+  %20 = shl i64 %0, 8
+  %21 = and i64 %20, 1095216660480
+  %22 = add i64 %19, %21
+  ret i64 %22
+}
+
+define i64 @PR47191_problem2(i64 %0) {
+; CHECK-LABEL: @PR47191_problem2(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 56
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 65280
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 16711680
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP7]], 4278190080
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP0]], 56
+; CHECK-NEXT:    [[TMP10:%.*]] = shl i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP11:%.*]] = and i64 [[TMP10]], 71776119061217280
+; CHECK-NEXT:    [[TMP12:%.*]] = or i64 [[TMP9]], [[TMP2]]
+; CHECK-NEXT:    [[TMP13:%.*]] = or i64 [[TMP12]], [[TMP4]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or i64 [[TMP13]], [[TMP6]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i64 [[TMP14]], [[TMP8]]
+; CHECK-NEXT:    [[TMP16:%.*]] = or i64 [[TMP15]], [[TMP11]]
+; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP18:%.*]] = and i64 [[TMP17]], 280375465082880
+; CHECK-NEXT:    [[TMP19:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP20:%.*]] = and i64 [[TMP19]], 1095216660480
+; CHECK-NEXT:    [[TMP21:%.*]] = or i64 [[TMP20]], [[TMP18]]
+; CHECK-NEXT:    [[TMP22:%.*]] = xor i64 [[TMP21]], [[TMP16]]
+; CHECK-NEXT:    ret i64 [[TMP22]]
+;
+  %2 = lshr i64 %0, 56
+  %3 = lshr i64 %0, 40
+  %4 = and i64 %3, 65280
+  %5 = lshr i64 %0, 24
+  %6 = and i64 %5, 16711680
+  %7 = lshr i64 %0, 8
+  %8 = and i64 %7, 4278190080
+  %9 = shl i64 %0, 56
+  %10 = shl i64 %0, 40
+  %11 = and i64 %10, 71776119061217280
+  %12 = or i64 %9, %2
+  %13 = or i64 %12, %4
+  %14 = or i64 %13, %6
+  %15 = or i64 %14, %8
+  %16 = or i64 %15, %11
+  %17 = shl i64 %0, 24
+  %18 = and i64 %17, 280375465082880
+  %19 = shl i64 %0, 8
+  %20 = and i64 %19, 1095216660480
+  %21 = or i64 %20, %18
+  %22 = xor i64 %21, %16
+  ret i64 %22
+}
+
+define i64 @PR47191_problem3(i64 %0) {
+; CHECK-LABEL: @PR47191_problem3(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 56
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 65280
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 16711680
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP7]], 4278190080
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP0]], 56
+; CHECK-NEXT:    [[TMP10:%.*]] = shl i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP11:%.*]] = and i64 [[TMP10]], 71776119061217280
+; CHECK-NEXT:    [[TMP12:%.*]] = or i64 [[TMP9]], [[TMP2]]
+; CHECK-NEXT:    [[TMP13:%.*]] = or i64 [[TMP12]], [[TMP4]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or i64 [[TMP13]], [[TMP6]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i64 [[TMP14]], [[TMP8]]
+; CHECK-NEXT:    [[TMP16:%.*]] = or i64 [[TMP15]], [[TMP11]]
+; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP18:%.*]] = and i64 [[TMP17]], 280375465082880
+; CHECK-NEXT:    [[TMP19:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP20:%.*]] = and i64 [[TMP19]], 1095216660480
+; CHECK-NEXT:    [[TMP21:%.*]] = or i64 [[TMP20]], [[TMP18]]
+; CHECK-NEXT:    [[TMP22:%.*]] = xor i64 [[TMP21]], [[TMP16]]
+; CHECK-NEXT:    ret i64 [[TMP22]]
+;
+  %2 = lshr i64 %0, 56
+  %3 = lshr i64 %0, 40
+  %4 = and i64 %3, 65280
+  %5 = lshr i64 %0, 24
+  %6 = and i64 %5, 16711680
+  %7 = lshr i64 %0, 8
+  %8 = and i64 %7, 4278190080
+  %9 = shl i64 %0, 56
+  %10 = shl i64 %0, 40
+  %11 = and i64 %10, 71776119061217280
+  %12 = or i64 %9, %2
+  %13 = or i64 %12, %4
+  %14 = or i64 %13, %6
+  %15 = or i64 %14, %8
+  %16 = or i64 %15, %11
+  %17 = shl i64 %0, 24
+  %18 = and i64 %17, 280375465082880
+  %19 = shl i64 %0, 8
+  %20 = and i64 %19, 1095216660480
+  %21 = or i64 %20, %18
+  %22 = xor i64 %21, %16
+  ret i64 %22
+}
+
+define i64 @PR47191_problem4(i64 %0) {
+; CHECK-LABEL: @PR47191_problem4(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 56
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 56
+; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 65280
+; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 71776119061217280
+; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = lshr i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP12:%.*]] = and i64 [[TMP11]], 16711680
+; CHECK-NEXT:    [[TMP13:%.*]] = or i64 [[TMP10]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = shl i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP15:%.*]] = and i64 [[TMP14]], 280375465082880
+; CHECK-NEXT:    [[TMP16:%.*]] = or i64 [[TMP13]], [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = lshr i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP18:%.*]] = and i64 [[TMP17]], 4278190080
+; CHECK-NEXT:    [[TMP19:%.*]] = or i64 [[TMP16]], [[TMP18]]
+; CHECK-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP21:%.*]] = and i64 [[TMP20]], 1095216660480
+; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[TMP19]], [[TMP21]]
+; CHECK-NEXT:    ret i64 [[TMP22]]
+;
+  %2 = lshr i64 %0, 56
+  %3 = shl i64 %0, 56
+  %4 = or i64 %2, %3
+  %5 = lshr i64 %0, 40
+  %6 = and i64 %5, 65280
+  %7 = or i64 %4, %6
+  %8 = shl i64 %0, 40
+  %9 = and i64 %8, 71776119061217280
+  %10 = or i64 %7, %9
+  %11 = lshr i64 %0, 24
+  %12 = and i64 %11, 16711680
+  %13 = or i64 %10, %12
+  %14 = shl i64 %0, 24
+  %15 = and i64 %14, 280375465082880
+  %16 = or i64 %13, %15
+  %17 = lshr i64 %0, 8
+  %18 = and i64 %17, 4278190080
+  %19 = or i64 %16, %18
+  %20 = shl i64 %0, 8
+  %21 = and i64 %20, 1095216660480
+  %22 = add i64 %19, %21
+  ret i64 %22
 }
