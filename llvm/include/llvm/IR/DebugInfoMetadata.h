@@ -2583,6 +2583,16 @@ public:
     return Elements[I];
   }
 
+  /// Return the number of unique location operands referred to (via
+  /// DW_OP_LLVM_arg) in this expression; this is not necessarily the number of
+  /// instances of DW_OP_LLVM_arg within the expression.
+  /// For example, for the expression:
+  ///   (DW_OP_LLVM_arg 0, DW_OP_LLVM_arg 1, DW_OP_plus,
+  ///    DW_OP_LLVM_arg 0, DW_OP_mul)
+  /// This function would return 2, as there are two unique location operands
+  /// (0 and 1).
+  uint64_t getNumLocationOperands() const;
+
   /// Determine whether this represents a standalone constant value.
   bool isConstant() const;
 
@@ -2730,6 +2740,10 @@ public:
   /// If this is a constant offset, extract it. If there is no expression,
   /// return true with an offset of zero.
   bool extractIfOffset(int64_t &Offset) const;
+
+  /// Returns true iff this DIExpression contains at least one instance of
+  /// `DW_OP_LLVM_arg, n` for all n in [0, N).
+  bool hasAllLocationOps(unsigned N) const;
 
   /// Checks if the last 4 elements of the expression are DW_OP_constu <DWARF
   /// Address Space> DW_OP_swap DW_OP_xderef and extracts the <DWARF Address

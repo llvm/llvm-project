@@ -2172,10 +2172,15 @@ void coro::salvageDebugInfo(
     } else if (auto *StInst = dyn_cast<StoreInst>(Storage)) {
       Storage = StInst->getOperand(0);
     } else if (auto *GEPInst = dyn_cast<GetElementPtrInst>(Storage)) {
-      Expr = llvm::salvageDebugInfoImpl(*GEPInst, Expr,
-                                        /*WithStackValue=*/false, 0);
-      if (!Expr)
-        return;
+      SmallVector<Value *> AdditionalValues;
+      DIExpression *SalvagedExpr = llvm::salvageDebugInfoImpl(
+          *GEPInst, Expr,
+          /*WithStackValue=*/false, 0, AdditionalValues);
+      // Debug declares cannot currently handle additional location
+      // operands.
+      if (!SalvagedExpr || !AdditionalValues.empty())
+        break;
+      Expr = SalvagedExpr;
       Storage = GEPInst->getOperand(0);
     } else if (auto *BCInst = dyn_cast<llvm::BitCastInst>(Storage))
       Storage = BCInst->getOperand(0);

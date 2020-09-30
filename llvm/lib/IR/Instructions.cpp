@@ -1793,6 +1793,15 @@ bool GetElementPtrInst::accumulateConstantOffset(const DataLayout &DL,
   return cast<GEPOperator>(this)->accumulateConstantOffset(DL, Offset);
 }
 
+bool GetElementPtrInst::collectOffset(
+    const DataLayout &DL, unsigned BitWidth,
+    SmallDenseMap<Value *, APInt, 8> &VariableOffsets,
+    APInt &ConstantOffset) const {
+  // Delegate to the generic GEPOperator implementation.
+  return cast<GEPOperator>(this)->collectOffset(DL, BitWidth, VariableOffsets,
+                                                ConstantOffset);
+}
+
 //===----------------------------------------------------------------------===//
 //                           ExtractElementInst Implementation
 //===----------------------------------------------------------------------===//
