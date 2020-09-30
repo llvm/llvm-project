@@ -89,7 +89,7 @@ void Parser::SuggestParentheses(SourceLocation Loc, unsigned DK,
   SourceLocation EndLoc = PP.getLocForEndOfToken(ParenRange.getEnd());
   if (!ParenRange.getEnd().isFileID() || EndLoc.isInvalid()) {
     // We can't display the parentheses, so just dig the
-    // warning/error and return.
+    // warning or error and return.
     Diag(Loc, DK);
     return;
   }
@@ -329,7 +329,7 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
       return false;
 
     case tok::l_paren:
-      // Recursively skip properly-nested parens.
+      // Recursively skip properly-nested parenthesis.
       ConsumeParen();
       if (HasFlagsSet(Flags, StopAtCodeCompletion))
         SkipUntil(tok::r_paren, StopAtCodeCompletion);
