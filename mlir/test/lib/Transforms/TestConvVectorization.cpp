@@ -24,6 +24,13 @@ namespace {
 /// A pass converting MLIR Linalg ops into Vector ops.
 class TestConvVectorization
     : public PassWrapper<TestConvVectorization, OperationPass<ModuleOp>> {
+public:
+  TestConvVectorization() = default;
+  TestConvVectorization(const TestConvVectorization &) {}
+  explicit TestConvVectorization(ArrayRef<int64_t> tileSizesParam) {
+    tileSizes = tileSizesParam;
+  }
+
   void runOnOperation() override;
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -33,6 +40,10 @@ class TestConvVectorization
     registry.insert<AffineDialect>();
     registry.insert<StandardOpsDialect>();
   }
+
+  ListOption<int64_t> tileSizes{
+      *this, "tile-sizes", llvm::cl::desc("Vectorization sizes."),
+      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
 };
 } // namespace
 
@@ -47,7 +58,7 @@ void TestConvVectorization::runOnOperation() {
   target.addLegalOp<linalg::FillOp, linalg::YieldOp>();
 
   SmallVector<OwningRewritePatternList, 4> stage1Patterns;
-  linalg::populateConvVectorizationPatterns(context, stage1Patterns);
+  linalg::populateConvVectorizationPatterns(context, stage1Patterns, tileSizes);
 
   OwningRewritePatternList stage2Patterns =
       linalg::getLinalgTilingCanonicalizationPatterns(context);
