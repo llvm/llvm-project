@@ -4028,8 +4028,22 @@ void DeclarationVisitor::Post(
 }
 
 void DeclarationVisitor::Post(const parser::FinalProcedureStmt &x) {
-  for (auto &name : x.v) {
-    MakeTypeSymbol(name, FinalProcDetails{});
+  if (currScope().IsDerivedType() && currScope().symbol()) {
+    if (auto *details{currScope().symbol()->detailsIf<DerivedTypeDetails>()}) {
+      for (const auto &subrName : x.v) {
+        if (const auto *name{ResolveName(subrName)}) {
+          auto pair{
+              details->finals().emplace(name->source, DEREF(name->symbol))};
+          if (!pair.second) { // C787
+            Say(name->source,
+                "FINAL subroutine '%s' already appeared in this derived type"_err_en_US,
+                name->source)
+                .Attach(pair.first->first,
+                    "earlier appearance of this FINAL subroutine"_en_US);
+          }
+        }
+      }
+    }
   }
 }
 
