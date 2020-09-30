@@ -15,6 +15,9 @@
 #include "common/omptarget.h"
 #include "target_impl.h"
 #include "common/target_atomic.h"
+#ifdef OMPD_SUPPORT
+  #include "common/ompd-specific.h"
+#endif /*OMPD_SUPPORT*/
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -190,6 +193,9 @@ public:
           (int)numberOfActiveOMPThreads, (int)GetNumberOfWorkersInTeam(),
           (long long)(*plower), (long long)(*pupper), (long long)(*pstride),
           (int)lastiter);
+#ifdef OMPD_SUPPORT
+    ompd_set_device_thread_state(omp_state_work_parallel);
+#endif /*OMPD_SUPPORT*/
   }
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -376,6 +382,9 @@ public:
             omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid),
             omptarget_nvptx_threadPrivateContext->Chunk(tid));
     }
+#ifdef OMPD_SUPPORT
+    ompd_set_device_thread_state(omp_state_work_parallel);
+#endif /*OMPD_SUPPORT*/
   }
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -515,6 +524,9 @@ public:
 
   INLINE static void dispatch_fini() {
     // nothing
+#ifdef OMP_SUPPORT
+  ompd_reset_device_thread_state()
+#endif
   }
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -752,5 +764,8 @@ void __kmpc_for_static_init_8u_simple_generic(
 }
 
 EXTERN void __kmpc_for_static_fini(kmp_Ident *loc, int32_t global_tid) {
+#ifdef OMP_SUPPORT
+  ompd_reset_device_thread_state()
+#endif
   PRINT0(LD_IO, "call kmpc_for_static_fini\n");
 }

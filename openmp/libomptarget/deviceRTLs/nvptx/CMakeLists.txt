@@ -62,6 +62,7 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
       ${devicertl_common_directory}/src/support.cu
       ${devicertl_common_directory}/src/sync.cu
       ${devicertl_common_directory}/src/task.cu
+      ${devicertl_common_directory}/src/ompd-specific.cu
       src/target_impl.cu
   )
 
@@ -86,7 +87,11 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
   set(LIBOMPTARGET_NVPTX_DEBUG FALSE CACHE BOOL
     "Activate NVPTX device RTL debug messages.")
   if(${LIBOMPTARGET_NVPTX_DEBUG})
+    if(${CMAKE_VERBOSE})
     set(CUDA_DEBUG -DOMPTARGET_NVPTX_DEBUG=-1 -g --ptxas-options=-v)
+    else()
+      set(CUDA_DEBUG -DOMPTARGET_NVPTX_DEBUG=-1 -g)
+    endif()
   endif()
 
   # NVPTX runtime library has to be statically linked. Dynamic linking is not
@@ -136,6 +141,10 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
       set(bc_flags ${bc_flags} -DOMPTARGET_NVPTX_DEBUG=-1)
     else()
       set(bc_flags ${bc_flags} -DOMPTARGET_NVPTX_DEBUG=0)
+    endif()
+
+    if(${LIBOMPTARGET_OMPD_SUPPORT})
+      set(bc_flags ${bc_flags} -DOMPD_SUPPORT=1)
     endif()
 
     # CUDA 9 header files use the nv_weak attribute which clang is not yet prepared

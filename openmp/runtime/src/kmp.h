@@ -136,8 +136,8 @@ typedef unsigned int kmp_hwloc_depth_t;
 #include "ompt-internal.h"
 #endif
 
-#ifndef UNLIKELY
-#define UNLIKELY(x) (x)
+#if OMPD_SUPPORT
+#include "ompd-specific.h"
 #endif
 
 // Affinity format function
@@ -821,6 +821,10 @@ extern kmp_nested_proc_bind_t __kmp_nested_proc_bind;
 extern int __kmp_display_affinity;
 extern char *__kmp_affinity_format;
 static const size_t KMP_AFFINITY_FORMAT_SIZE = 512;
+extern int __kmp_tool;
+#if OMPT_SUPPORT
+extern char *__kmp_tool_libraries;
+#endif // OMPT_SUPPORT
 
 #if KMP_AFFINITY_SUPPORTED
 #define KMP_PLACE_ALL (-1)
@@ -1116,6 +1120,9 @@ extern kmp_uint64 __kmp_now_nsec();
 #if KMP_OS_WINDOWS
 #define KMP_INIT_WAIT 64U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 32U /* susequent number of spin-tests */
+#elif KMP_OS_CNK
+#define KMP_INIT_WAIT 16U /* initial number of spin-tests   */
+#define KMP_NEXT_WAIT 8U /* susequent number of spin-tests */
 #elif KMP_OS_LINUX
 #define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
@@ -3465,7 +3472,13 @@ enum fork_context_e {
 extern int __kmp_fork_call(ident_t *loc, int gtid,
                            enum fork_context_e fork_context, kmp_int32 argc,
                            microtask_t microtask, launch_t invoker,
-                           kmp_va_list ap);
+/* TODO: revert workaround for Intel(R) 64 tracker #96 */
+#if (KMP_ARCH_ARM || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64) && KMP_OS_LINUX
+                           va_list *ap
+#else
+                           va_list ap
+#endif
+                           );
 
 extern void __kmp_join_call(ident_t *loc, int gtid
 #if OMPT_SUPPORT

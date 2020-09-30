@@ -55,6 +55,12 @@ if(LIBOMPTARGET_ENABLE_DEBUG)
   add_definitions(-DOMPTARGET_DEBUG)
 endif()
 
+# OMPD support for libomptarget (currently only with cuda)
+set(LIBOMPTARGET_OMPD_SUPPORT FALSE CACHE BOOL "OMPD-support?")
+if (LIBOMPTARGET_OMPD_SUPPORT)
+  add_definitions(-DOMPD_SUPPORT=1)
+endif()
+
 include_directories(include)
 
 # Build target agnostic offloading library.

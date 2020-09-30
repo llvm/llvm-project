@@ -94,6 +94,9 @@ static int32_t nvptx_parallel_reduce_nowait(
    * 3. Warp 0 reduces to a single value.
    * 4. The reduced value is available in the thread that returns 1.
    */
+#ifdef OMPD_SUPPORT
+    ompd_set_device_thread_state(omp_state_work_reduction);
+#endif /*OMPD_SUPPORT*/
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
   uint32_t WarpsNeeded = (NumThreads + WARPSIZE - 1) / WARPSIZE;
@@ -123,6 +126,11 @@ static int32_t nvptx_parallel_reduce_nowait(
       gpu_irregular_warp_reduce(reduce_data, shflFct, WarpsNeeded,
                                 BlockThreadId);
   }
+
+#ifdef OMPD_SUPPORT
+  ompd_reset_device_thread_state();
+#endif /*OMPD_SUPPORT*/
+
   return BlockThreadId == 0;
 #else
   __kmpc_impl_lanemask_t Liveness = __kmpc_impl_activemask();
@@ -152,10 +160,20 @@ static int32_t nvptx_parallel_reduce_nowait(
       gpu_irregular_warp_reduce(reduce_data, shflFct, WarpsNeeded,
                                 BlockThreadId);
 
+#ifdef OMPD_SUPPORT
+    ompd_reset_device_thread_state();
+#endif /*OMPD_SUPPORT*/
     return BlockThreadId == 0;
   } else if (isRuntimeUninitialized /* Never an L2 parallel region without the OMP runtime */) {
+#ifdef OMPD_SUPPORT
+    ompd_reset_device_thread_state();
+#endif /*OMPD_SUPPORT*/
     return BlockThreadId == 0;
   }
+
+#ifdef OMPD_SUPPORT
+    ompd_reset_device_thread_state();
+#endif /*OMPD_SUPPORT*/
 
   // Get the OMP thread Id. This is different from BlockThreadId in the case of
   // an L2 parallel region.
@@ -205,6 +223,10 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   // Terminate all threads in non-SPMD mode except for the master thread.
   if (checkGenericMode(loc) && GetThreadIdInBlock() != GetMasterThreadID())
     return 0;
+
+#ifdef OMPD_SUPPORT
+    ompd_set_device_thread_state(omp_state_work_reduction);
+#endif /*OMPD_SUPPORT*/
 
   uint32_t ThreadId = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
 
@@ -275,11 +297,19 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     //
     // Last team processing.
     //
-    if (ThreadId >= NumRecs)
+    if (ThreadId >= NumRecs) {
+#ifdef OMPD_SUPPORT
+      ompd_reset_device_thread_state();
+#endif /*OMPD_SUPPORT*/
       return 0;
+    }
     NumThreads = roundToWarpsize(__kmpc_impl_min(NumThreads, NumRecs));
-    if (ThreadId >= NumThreads)
+    if (ThreadId >= NumThreads) {
+#ifdef OMPD_SUPPORT
+      ompd_reset_device_thread_state();
+#endif /*OMPD_SUPPORT*/
       return 0;
+    }
 
     // Load from buffer and reduce.
     glcpyFct(global_buffer, ThreadId, reduce_data);
@@ -306,6 +336,10 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
       }
     }
 
+#ifdef OMPD_SUPPORT
+    ompd_reset_device_thread_state();
+#endif /*OMPD_SUPPORT*/
+
     if (IsMaster) {
       Cnt = 0;
       IterCnt = 0;
@@ -319,6 +353,9 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     __kmpc_atomic_add((uint32_t *)&IterCnt, uint32_t(num_of_records));
   }
 
+#ifdef OMPD_SUPPORT
+  ompd_reset_device_thread_state();
+#endif /*OMPD_SUPPORT*/
   return 0;
 }
 
