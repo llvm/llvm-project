@@ -3027,7 +3027,7 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
          "Illegal bit provenance index");
 
   // If the upper bits are zero, then attempt to perform as a truncated op.
-  if (BitProvenance[BitProvenance.size() - 1] == BitPart::Unset) {
+  if (BitProvenance.back() == BitPart::Unset) {
     while (!BitProvenance.empty() && BitProvenance.back() == BitPart::Unset)
       BitProvenance = BitProvenance.drop_back();
     if (BitProvenance.empty())
