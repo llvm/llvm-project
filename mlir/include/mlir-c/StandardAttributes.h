@@ -93,6 +93,11 @@ int mlirAttributeIsAFloat(MlirAttribute attr);
 MlirAttribute mlirFloatAttrDoubleGet(MlirContext ctx, MlirType type,
                                      double value);
 
+/** Same as "mlirFloatAttrDoubleGet", but if the type is not valid for a
+ * construction of a FloatAttr, returns a null MlirAttribute. */
+MlirAttribute mlirFloatAttrDoubleGetChecked(MlirType type, double value,
+                                            MlirLocation loc);
+
 /** Returns the value stored in the given floating point attribute, interpreting
  * the value as double. */
 double mlirFloatAttrGetValueDouble(MlirAttribute attr);
