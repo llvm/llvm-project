@@ -678,7 +678,7 @@ bool ReachingDefAnalysis::isSafeToDefRegAt(MachineInstr *MI, int PhysReg,
   if (isRegUsedAfter(MI, PhysReg)) {
     if (auto *Def = getReachingLocalMIDef(MI, PhysReg)) {
       SmallPtrSet<MachineInstr*, 2> Uses;
-      getReachingLocalUses(Def, PhysReg, Uses);
+      getGlobalUses(Def, PhysReg, Uses);
       for (auto *Use : Uses)
         if (!Ignore.count(Use))
           return false;
