@@ -836,7 +836,7 @@ void f() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "bar",
-// CHECK-NEXT:    "mangledName": "-[TestObjCCategoryDecl bar]",
+// CHECK-NEXT:    "mangledName": "-[TestObjCClass(TestObjCCategoryDecl) bar]",
 // CHECK-NEXT:    "returnType": {
 // CHECK-NEXT:     "qualType": "void"
 // CHECK-NEXT:    },

@@ -320,6 +320,13 @@ public:
     return const_cast<ObjCMethodDecl*>(this)->getClassInterface();
   }
 
+  /// If this method is declared or implemented in a category, return
+  /// that category.
+  ObjCCategoryDecl *getCategory();
+  const ObjCCategoryDecl *getCategory() const {
+    return const_cast<ObjCMethodDecl*>(this)->getCategory();
+  }
+
   Selector getSelector() const { return getDeclName().getObjCSelector(); }
 
   QualType getReturnType() const { return MethodDeclType; }
