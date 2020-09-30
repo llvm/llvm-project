@@ -26,9 +26,9 @@ define arm_aapcs_vfpcc void @arm_var_f32_mve(float* %pSrc, i32 %blockSize, float
 ; CHECK-NEXT:    letp lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %arm_mean_f32_mve.exit
 ; CHECK-NEXT:    vmov s4, r1
-; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    dls lr, r4
 ; CHECK-NEXT:    vadd.f32 s0, s3, s3
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vcvt.f32.u32 s4, s4
 ; CHECK-NEXT:    vdiv.f32 s0, s0, s4
 ; CHECK-NEXT:    vmov r12, s0
