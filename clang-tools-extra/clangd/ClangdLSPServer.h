@@ -44,7 +44,7 @@ public:
     /// If not set, we search upward from the source file.
     llvm::Optional<Path> CompileCommandsDir;
     /// The offset-encoding to use, or None to negotiate it over LSP.
-    llvm::Optional<OffsetEncoding> OffsetEncoding;
+    llvm::Optional<OffsetEncoding> Encoding;
 
     /// Per-feature options. Generally ClangdServer lets these vary
     /// per-request, but LSP allows limited/no customizations.

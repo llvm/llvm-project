@@ -820,7 +820,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     return true;
   };
   if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)
-    Opts.OffsetEncoding = ForceOffsetEncoding;
+    Opts.Encoding = ForceOffsetEncoding;
 
   // Shall we allow to customize the file limit?
   Opts.Rename.AllowCrossFile = CrossFileRename;
