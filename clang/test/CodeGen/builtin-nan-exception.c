@@ -5,17 +5,27 @@
 
 // Run a variety of targets to ensure there's no target-based difference.
 
-// The builtin always produces a 64-bit (double).
 // An SNaN with no payload is formed by setting the bit after the
 // the quiet bit (MSB of the significand).
 
 // CHECK: float 0x7FF8000000000000, float 0x7FF4000000000000
-// CHECK: double 0x7FF8000000000000, double 0x7FF4000000000000
 
 float f[] = {
+  __builtin_nanf(""),
+  __builtin_nansf(""),
+};
+
+
+// Doubles are created and converted to floats.
+
+// CHECK: float 0x7FF8000000000000, float 0x7FF4000000000000
+
+float converted_to_float[] = {
   __builtin_nan(""),
   __builtin_nans(""),
 };
+
+// CHECK: double 0x7FF8000000000000, double 0x7FF4000000000000
 
 double d[] = {
   __builtin_nan(""),
