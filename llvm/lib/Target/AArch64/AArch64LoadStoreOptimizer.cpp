@@ -1564,6 +1564,15 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
           continue;
         }
 
+        // If the BaseReg has been modified, then we cannot do the optimization.
+        // For example, in the following pattern
+        //   ldr x1 [x2]
+        //   ldr x2 [x3]
+        //   ldr x4 [x2, #8],
+        // the first and third ldr cannot be converted to ldp x1, x4, [x2]
+        if (!ModifiedRegUnits.available(BaseReg))
+          return E;
+
         // If the Rt of the second instruction was not modified or used between
         // the two instructions and none of the instructions between the second
         // and first alias with the second, we can combine the second into the
