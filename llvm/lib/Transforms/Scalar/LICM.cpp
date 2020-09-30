@@ -2159,7 +2159,7 @@ bool llvm::promoteLoopAccessesToScalars(
   if (SawUnorderedAtomic)
     PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
   PreheaderLoad->setAlignment(Alignment);
-  PreheaderLoad->dropLocation();
+  PreheaderLoad->setDebugLoc(DebugLoc());
   if (AATags)
     PreheaderLoad->setAAMetadata(AATags);
   SSA.AddAvailableValue(Preheader, PreheaderLoad);
