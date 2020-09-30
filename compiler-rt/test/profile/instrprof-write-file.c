@@ -31,5 +31,5 @@ int foo(int X) {
   // CHECK2: br i1 %{{.*}}, label %{{.*}}, label %{{.*}}, !prof ![[PD2:[0-9]+]]
   return X <= 0 ? -X : X;
 }
-// CHECK: ![[PD1]] = !{!"branch_weights", i32 1, i32 2}
-// CHECK2: ![[PD2]] = !{!"branch_weights", i32 2, i32 1}
+// CHECK: ![[PD1]] = !{!"branch_weights", i64 1, i64 2}
+// CHECK2: ![[PD2]] = !{!"branch_weights", i64 2, i64 1}

@@ -220,7 +220,7 @@ define internal i32 @test_ip_range(i32 %x) {
   i32 1, label %switch.1
   i32 2, label %switch.2
   i32 3, label %switch.3
-  ], !prof !{!"branch_weights", i32 1, i32 2, i32 3, i32 4, i32 5}
+  ], !prof !{!"branch_weights", i64 1, i64 2, i64 3, i64 4, i64 5}
 
 switch.default:
   ret i32 -1
@@ -251,4 +251,4 @@ define void @call_test_ip_range() {
 
 declare void @llvm.assume(i1)
 
-; CHECK: !1 = !{!"branch_weights", i32 1, i32 5, i32 3, i32 4}
+; CHECK: !1 = !{!"branch_weights", i64 1, i64 5, i64 3, i64 4}

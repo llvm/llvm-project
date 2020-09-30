@@ -142,5 +142,5 @@ void SwitchStmt() {
   }
 }
 
-// CHECK: !7 = !{!"branch_weights", i32 [[UNLIKELY]], i32 [[LIKELY]]}
-// CHECK: !8 = !{!"branch_weights", i32 [[LIKELY]], i32 [[UNLIKELY]]}
+// CHECK: !7 = !{!"branch_weights", i64 [[UNLIKELY]], i64 [[LIKELY]]}
+// CHECK: !8 = !{!"branch_weights", i64 [[LIKELY]], i64 [[UNLIKELY]]}

@@ -32,7 +32,7 @@
 // RUN: llvm-profdata merge %S/Inputs/gcc-flag-compatibility.proftext -o %t.dir/some/path/file.prof
 // RUN: %clang %s -o - -Xclang -disable-llvm-passes -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof -fno-experimental-new-pass-manager | FileCheck -check-prefix=PROFILE-USE %s
 // RUN: %clang %s -o - -Xclang -disable-llvm-passes -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof -fexperimental-new-pass-manager | FileCheck -check-prefix=PROFILE-USE %s
-// PROFILE-USE: = !{!"branch_weights", i32 101, i32 2}
+// PROFILE-USE: = !{!"branch_weights", i64 101, i64 2}
 
 // Check that -fprofile-use=some/path reads some/path/default.profdata
 // This uses LLVM IR format profile.
@@ -54,7 +54,7 @@
 // RUN: %clang %s -o - -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof -fno-experimental-new-pass-manager | FileCheck -check-prefix=PROFILE-USE-IR %s
 // RUN: %clang %s -o - -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof -fexperimental-new-pass-manager | FileCheck -check-prefix=PROFILE-USE-IR %s
 
-// PROFILE-USE-IR: = !{!"branch_weights", i32 100, i32 1}
+// PROFILE-USE-IR: = !{!"branch_weights", i64 100, i64 1}
 
 int X = 0;
 

@@ -26,7 +26,7 @@ if.then:
   indirectbr i8* %0, [label %return, label %label2, label %label3]
 ; USE:  indirectbr i8* %0, [label %return, label %label2, label %label3]
 ; USE-SAME: !prof ![[BW_INDBR:[0-9]+]]
-; USE: ![[BW_INDBR]] = !{!"branch_weights", i32 63, i32 20, i32 5}
+; USE: ![[BW_INDBR]] = !{!"branch_weights", i64 63, i64 20, i64 5}
 
 label2:
   br label %return
