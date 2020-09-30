@@ -459,6 +459,24 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
             }));
       }]
     >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the position of buffer in inputs + outputs list
+      }],
+      /*retTy=*/"Optional<unsigned>",
+      /*methodName=*/"getIndexOfInputAndOutputBuffer",
+      /*args=*/(ins "Value":$value),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        Optional<unsigned> inputIndex = getIndexOfInput(value);
+        if (inputIndex.hasValue()) return inputIndex.getValue();
+        Optional<unsigned> outputIndex = getIndexOfOutputBuffer(value);
+        if (outputIndex.hasValue()) {
+          return $_op.getNumInputs() + outputIndex.getValue();
+        }
+        return llvm::None;
+      }]
+    >,
 
     //===------------------------------------------------------------------===//
     // Other interface methods.

@@ -58,6 +58,7 @@ void registerTestFunc();
 void registerTestGpuMemoryPromotionPass();
 void registerTestGpuParallelLoopMappingPass();
 void registerTestInterfaces();
+void registerTestLinalgFusionTransforms();
 void registerTestLinalgHoisting();
 void registerTestLinalgTransforms();
 void registerTestLivenessPass();
@@ -114,6 +115,7 @@ void registerTestPasses() {
   registerTestExpandTanhPass();
   registerTestGpuMemoryPromotionPass();
   registerTestInterfaces();
+  registerTestLinalgFusionTransforms();
   registerTestLinalgHoisting();
   registerTestLinalgTransforms();
   registerTestLivenessPass();
