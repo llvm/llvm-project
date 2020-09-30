@@ -73,9 +73,8 @@ def AffineApplyOp : Affine_Op<"apply", [NoSideEffect]> {
   // has a constant builder. That way we wouldn't need to explicitly specify the
   // result types here.
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, "
-              "AffineMap map, ValueRange mapOperands", [{
-      build(builder, result, builder.getIndexType(), map, mapOperands);
+    OpBuilder<"AffineMap map, ValueRange mapOperands", [{
+      build($_builder, $_state, $_builder.getIndexType(), map, mapOperands);
     }]>
   ];
 
@@ -214,12 +213,10 @@ def AffineForOp : Affine_Op<"for",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, "
-              "int64_t lowerBound, int64_t upperBound, int64_t step = 1, "
+    OpBuilder<"int64_t lowerBound, int64_t upperBound, int64_t step = 1, "
               "ValueRange iterArgs = llvm::None, function_ref<void(OpBuilder "
               "&, Location, Value, ValueRange)> bodyBuilder = nullptr">,
-    OpBuilder<"OpBuilder &builder, OperationState &result, "
-              "ValueRange lbOperands, AffineMap lbMap, "
+    OpBuilder<"ValueRange lbOperands, AffineMap lbMap, "
               "ValueRange ubOperands, AffineMap ubMap, "
               "int64_t step = 1, ValueRange iterArgs = llvm::None, "
               "function_ref<void(OpBuilder &, Location, Value, ValueRange)> "
@@ -413,10 +410,8 @@ def AffineIfOp : Affine_Op<"if",
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, "
-              "IntegerSet set, ValueRange args, bool withElseRegion">,
-    OpBuilder<"OpBuilder &builder, OperationState &result, "
-              "TypeRange resultTypes, IntegerSet set, ValueRange args,"
+    OpBuilder<"IntegerSet set, ValueRange args, bool withElseRegion">,
+    OpBuilder<"TypeRange resultTypes, IntegerSet set, ValueRange args,"
               "bool withElseRegion">,
   ];
 
@@ -508,14 +503,11 @@ def AffineLoadOp : AffineLoadOpBase<"load"> {
 
   let builders = [
     /// Builds an affine load op with the specified map and operands.
-    OpBuilder<"OpBuilder &builder, OperationState &result, AffineMap map, "
-                      "ValueRange operands">,
+    OpBuilder<"AffineMap map, ValueRange operands">,
     /// Builds an affine load op with an identity map and operands.
-    OpBuilder<"OpBuilder &builder, OperationState &result, Value memref, "
-                      "ValueRange indices = {}">,
+    OpBuilder<"Value memref, ValueRange indices = {}">,
     /// Builds an affine load op with the specified map and its operands.
-    OpBuilder<"OpBuilder &builder, OperationState &result, Value memref, "
-                      "AffineMap map, ValueRange mapOperands">
+    OpBuilder<"Value memref, AffineMap map, ValueRange mapOperands">
   ];
 
   let extraClassDeclaration = extraClassDeclarationBase;
@@ -530,10 +522,9 @@ class AffineMinMaxOpBase<string mnemonic, list<OpTrait> traits = []> :
   let results = (outs Index);
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, AffineMap affineMap, "
-              "ValueRange mapOperands",
+    OpBuilder<"AffineMap affineMap, ValueRange mapOperands",
     [{
-      build(builder, result, builder.getIndexType(), affineMap, mapOperands);
+      build($_builder, $_state, $_builder.getIndexType(), affineMap, mapOperands);
     }]>
   ];
 
@@ -656,17 +647,14 @@ def AffineParallelOp : Affine_Op<"parallel",
   let regions = (region SizedRegion<1>:$region);
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, "
-              "TypeRange resultTypes, "
+    OpBuilder<"TypeRange resultTypes, "
               "ArrayRef<AtomicRMWKind> reductions, "
               "ArrayRef<int64_t> ranges">,
-    OpBuilder<"OpBuilder &builder, OperationState &result, "
-              "TypeRange resultTypes, "
+    OpBuilder<"TypeRange resultTypes, "
               "ArrayRef<AtomicRMWKind> reductions, "
               "AffineMap lbMap, ValueRange lbArgs, "
               "AffineMap ubMap, ValueRange ubArgs">,
-    OpBuilder<"OpBuilder &builder, OperationState &result, "
-              "TypeRange resultTypes, "
+    OpBuilder<"TypeRange resultTypes, "
               "ArrayRef<AtomicRMWKind> reductions, "
               "AffineMap lbMap, ValueRange lbArgs, "
               "AffineMap ubMap, ValueRange ubArgs, "
@@ -736,21 +724,20 @@ def AffinePrefetchOp : Affine_Op<"prefetch"> {
                    BoolAttr:$isDataCache);
 
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, Value memref,"
-    "AffineMap map, ArrayRef<Value> mapOperands, bool isWrite,"
+    "Value memref, AffineMap map, ArrayRef<Value> mapOperands, bool isWrite,"
     "unsigned localityHint, bool isDataCache",
     [{
       assert(map.getNumInputs() == mapOperands.size()
              && "inconsistent index info");
-      auto localityHintAttr = builder.getI32IntegerAttr(localityHint);
-      auto isWriteAttr = builder.getBoolAttr(isWrite);
-      auto isDataCacheAttr = builder.getBoolAttr(isDataCache);
-      result.addOperands(memref);
-      result.addAttribute(getMapAttrName(), AffineMapAttr::get(map));
-      result.addOperands(mapOperands);
-      result.addAttribute(getLocalityHintAttrName(), localityHintAttr);
-      result.addAttribute(getIsWriteAttrName(), isWriteAttr);
-      result.addAttribute(getIsDataCacheAttrName(), isDataCacheAttr);
+      auto localityHintAttr = $_builder.getI32IntegerAttr(localityHint);
+      auto isWriteAttr = $_builder.getBoolAttr(isWrite);
+      auto isDataCacheAttr = $_builder.getBoolAttr(isDataCache);
+      $_state.addOperands(memref);
+      $_state.addAttribute(getMapAttrName(), AffineMapAttr::get(map));
+      $_state.addOperands(mapOperands);
+      $_state.addAttribute(getLocalityHintAttrName(), localityHintAttr);
+      $_state.addAttribute(getIsWriteAttrName(), isWriteAttr);
+      $_state.addAttribute(getIsDataCacheAttrName(), isDataCacheAttr);
     }]>];
 
   let extraClassDeclaration = [{
@@ -844,11 +831,9 @@ def AffineStoreOp : AffineStoreOpBase<"store"> {
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, "
-                      "Value valueToStore, Value memref, ValueRange indices">,
-    OpBuilder<"OpBuilder &builder, OperationState &result, "
-                      "Value valueToStore, Value memref, AffineMap map, "
-                      "ValueRange mapOperands">
+    OpBuilder<"Value valueToStore, Value memref, ValueRange indices">,
+    OpBuilder<"Value valueToStore, Value memref, AffineMap map, "
+              "ValueRange mapOperands">
   ];
 
   let extraClassDeclaration = extraClassDeclarationBase;
@@ -874,9 +859,9 @@ def AffineYieldOp : Affine_Op<"yield", [NoSideEffect, Terminator, ReturnLike]> {
 
   let arguments = (ins Variadic<AnyType>:$operands);
 
-  let builders = [OpBuilder<
-    "OpBuilder &b, OperationState &result", [{ build(b, result, llvm::None); }]
-  >];
+  let builders = [
+    OpBuilder<"", [{ build($_builder, $_state, llvm::None); }]>
+  ];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
