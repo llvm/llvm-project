@@ -1015,9 +1015,11 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
   // Find a suitable position to insert the loop start instruction. It needs to
   // be able to safely define LR.
   auto FindStartInsertionPoint = [](MachineInstr *Start,
+                                    MachineInstr *Dec,
                                     MachineBasicBlock::iterator &InsertPt,
                                     MachineBasicBlock *&InsertBB,
-                                    ReachingDefAnalysis &RDA) {
+                                    ReachingDefAnalysis &RDA,
+                                    InstSet &ToRemove) {
     // We can define LR because LR already contains the same value.
     if (Start->getOperand(0).getReg() == ARM::LR) {
       InsertPt = MachineBasicBlock::iterator(Start);
@@ -1033,23 +1035,29 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
              MI->getOperand(2).getImm() == ARMCC::AL;
     };
 
-    MachineBasicBlock *MBB = Start->getParent();
-
     // Find an insertion point:
     // - Is there a (mov lr, Count) before Start? If so, and nothing else
-    //   writes to Count before Start, we can insert at that mov.
+    //   writes to Count before Start, we can insert at start.
     if (auto *LRDef = RDA.getUniqueReachingMIDef(Start, ARM::LR)) {
       if (IsMoveLR(LRDef) && RDA.hasSameReachingDef(Start, LRDef, CountReg)) {
-        InsertPt = MachineBasicBlock::iterator(LRDef);
-        InsertBB = LRDef->getParent();
+        SmallPtrSet<MachineInstr *, 2> Ignore = { Dec };
+        if (!TryRemove(LRDef, RDA, ToRemove, Ignore))
+          return false;
+        InsertPt = MachineBasicBlock::iterator(Start);
+        InsertBB = Start->getParent();
         return true;
       }
     }
 
     // - Is there a (mov lr, Count) after Start? If so, and nothing else writes
-    //   to Count after Start, we can insert at that mov.
+    //   to Count after Start, we can insert at that mov (which will now be
+    //   dead).
+    MachineBasicBlock *MBB = Start->getParent();
     if (auto *LRDef = RDA.getLocalLiveOutMIDef(MBB, ARM::LR)) {
       if (IsMoveLR(LRDef) && RDA.hasSameReachingDef(Start, LRDef, CountReg)) {
+        SmallPtrSet<MachineInstr *, 2> Ignore = { Start, Dec };
+        if (!TryRemove(LRDef, RDA, ToRemove, Ignore))
+          return false;
         InsertPt = MachineBasicBlock::iterator(LRDef);
         InsertBB = LRDef->getParent();
         return true;
@@ -1066,7 +1074,8 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
     return true;
   };
 
-  if (!FindStartInsertionPoint(Start, StartInsertPt, StartInsertBB, RDA)) {
+  if (!FindStartInsertionPoint(Start, Dec, StartInsertPt, StartInsertBB, RDA,
+                               ToRemove)) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Unable to find safe insertion point.\n");
     Revert = true;
     return;
@@ -1411,9 +1420,6 @@ void ARMLowOverheadLoops::IterationCountDCE(LowOverheadLoop &LoLoop) {
   // Collect and remove the users of iteration count.
   SmallPtrSet<MachineInstr*, 4> Killed  = { LoLoop.Start, LoLoop.Dec,
                                             LoLoop.End };
-  if (LoLoop.StartInsertPt != LoLoop.StartInsertBB->end())
-    Killed.insert(&*LoLoop.StartInsertPt);
-
   if (!TryRemove(Def, *RDA, LoLoop.ToRemove, Killed))
     LLVM_DEBUG(dbgs() << "ARM Loops: Unsafe to remove loop iteration count.\n");
 }
@@ -1439,9 +1445,6 @@ MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
   if (!IsDo)
     MIB.add(Start->getOperand(1));
 
-  // If we're inserting at a mov lr, then remove it as it's redundant.
-  if (InsertPt != MBB->end())
-    LoLoop.ToRemove.insert(&*InsertPt);
   LoLoop.ToRemove.insert(Start);
   LLVM_DEBUG(dbgs() << "ARM Loops: Inserted start: " << *MIB);
   return &*MIB;
