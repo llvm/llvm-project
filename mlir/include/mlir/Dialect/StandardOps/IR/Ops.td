@@ -526,6 +526,46 @@ def AtanOp : FloatUnaryOp<"atan", []>{
 }
 
 //===----------------------------------------------------------------------===//
+// Atan2Op
+//===----------------------------------------------------------------------===//
+
+def Atan2Op : FloatArithmeticOp<"atan2">{
+  let summary = "2-argument arcus tangent of the given values";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `std.atan2` ssa-use `,` ssa-use `:` type
+    ```
+
+    The `atan2` operation takes two operands and returns one result, all of
+    which must be of the same type.  This type may be a floating point scalar
+    type, a vector whose element type is a floating point type, or a floating
+    point tensor.
+
+    The 2-argument arcus tangent `atan2(y, x)` returns the angle in the
+    Euclidian plane between the positive x-axis and the ray through the point
+    (x, y).  It is a generalization of the 1-argument arcus tangent which
+    returns the angle on the basis of the ratio y/x.
+
+    See also https://en.wikipedia.org/wiki/Atan2
+
+    Example:
+
+    ```mlir
+    // Scalar variant.
+    %a = atan2 %b, %c : f32
+
+    // SIMD vector variant.
+    %f = atan2 %g, %h : vector<4xf32>
+
+    // Tensor variant.
+    %x = atan2 %y, %z : tensor<4x?xf32>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // AtomicRMWOp
 //===----------------------------------------------------------------------===//
 
