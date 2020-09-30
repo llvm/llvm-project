@@ -403,7 +403,7 @@
 // CHECK-LD32-NOSTDLIBXX-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-NOSTDLIBXX-LCXX-NOT: "-lc++"
 // CHECK-LD32-NOSTDLIBXX-LCXX:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
-// CHECK-LD32-NOSTDLIBXX-LCXX:    "-lm"
+// CHECK-LD32-NOSTDLIBXX-LCXX:     "-lm"
 // CHECK-LD32-NOSTDLIBXX-LCXX:     "-lc"
 
 // Check powerpc64-ibm-aix7.1.0.0, 64-bit. -nostdlib++.
