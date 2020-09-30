@@ -426,15 +426,6 @@ uptr internal_sched_yield() {
   return internal_syscall(SYSCALL(sched_yield));
 }
 
-void internal__exit(int exitcode) {
-#if SANITIZER_FREEBSD || SANITIZER_OPENBSD
-  internal_syscall(SYSCALL(exit), exitcode);
-#else
-  internal_syscall(SYSCALL(exit_group), exitcode);
-#endif
-  Die();  // Unreachable.
-}
-
 unsigned int internal_sleep(unsigned int seconds) {
   struct timespec ts;
   ts.tv_sec = seconds;
@@ -450,6 +441,17 @@ uptr internal_execve(const char *filename, char *const argv[],
                           (uptr)envp);
 }
 #endif  // !SANITIZER_SOLARIS && !SANITIZER_NETBSD
+
+#if !SANITIZER_NETBSD
+void internal__exit(int exitcode) {
+#if SANITIZER_FREEBSD || SANITIZER_OPENBSD || SANITIZER_SOLARIS
+  internal_syscall(SYSCALL(exit), exitcode);
+#else
+  internal_syscall(SYSCALL(exit_group), exitcode);
+#endif
+  Die();  // Unreachable.
+}
+#endif  // !SANITIZER_NETBSD
 
 // ----------------- sanitizer_common.h
 bool FileExists(const char *filename) {
