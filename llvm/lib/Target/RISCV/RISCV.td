@@ -231,16 +231,16 @@ def : ProcessorModel<"rocket-rv64", RocketModel, [Feature64Bit]>;
 def : ProcessorModel<"bullet-rv32", BulletModel, []>;
 def : ProcessorModel<"bullet-rv64", BulletModel, [Feature64Bit]>;
 
-def : ProcessorModel<"sifive-e31", RocketModel, [FeatureStdExtA,
-                                                 FeatureStdExtC,
-                                                 FeatureStdExtM]>;
+def : ProcessorModel<"sifive-e31", RocketModel, [FeatureStdExtM,
+                                                 FeatureStdExtA,
+                                                 FeatureStdExtC]>;
 
 def : ProcessorModel<"sifive-u54", RocketModel, [Feature64Bit,
-                                                 FeatureStdExtA,
-                                                 FeatureStdExtC,
-                                                 FeatureStdExtD,
+                                                 FeatureStdExtM,
                                                  FeatureStdExtF,
-                                                 FeatureStdExtM]>;
+                                                 FeatureStdExtA,
+                                                 FeatureStdExtD,
+                                                 FeatureStdExtC]>;
 
 //===----------------------------------------------------------------------===//
 // Define the RISC-V target.

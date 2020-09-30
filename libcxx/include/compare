@@ -156,7 +156,7 @@ enum class _LIBCPP_ENUM_VIS _NCmpResult : signed char {
 
 struct _CmpUnspecifiedParam {
   _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEVAL
-  _CmpUnspecifiedParam(int _CmpUnspecifiedParam::*) {}
+  _CmpUnspecifiedParam(int _CmpUnspecifiedParam::*) noexcept {}
 
   template<typename _Tp, typename = _VSTD::enable_if_t<!_VSTD::is_same_v<_Tp, int>>>
   _CmpUnspecifiedParam(_Tp) = delete;

@@ -24,6 +24,8 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   ZeroDirectiveSupportsNonZeroValue = false;
   AsciiDirective = nullptr; // not supported
   AscizDirective = nullptr; // not supported
+  ByteListDirective = "\t.byte\t";
+  CharacterLiteralSyntax = ACLS_SingleQuotePrefix;
 
   // Use .vbyte for data definition to avoid directives that apply an implicit
   // alignment.
