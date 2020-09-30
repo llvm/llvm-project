@@ -2107,9 +2107,6 @@ LogicalResult mlir::vector::splitFullAndPartialTransferPrecondition(
   // TODO: expand support to these 2 cases.
   if (!xferOp.permutation_map().isMinorIdentity())
     return failure();
-  // TODO: relax this precondition. This will require rank-reducing subviews.
-  if (xferOp.getMemRefType().getRank() != xferOp.getTransferRank())
-    return failure();
   // Must have some masked dimension to be a candidate for splitting.
   if (!xferOp.hasMaskedDim())
     return failure();
