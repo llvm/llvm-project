@@ -7660,6 +7660,10 @@ PPCTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
     SDValue Arg = OutVals[RealResIdx];
 
+    if (Subtarget.isAIXABI() &&
+        (VA.getLocVT().isVector() || VA.getValVT().isVector()))
+      report_fatal_error("Returning vector types not yet supported on AIX.");
+
     switch (VA.getLocInfo()) {
     default: llvm_unreachable("Unknown loc info!");
     case CCValAssign::Full: break;
