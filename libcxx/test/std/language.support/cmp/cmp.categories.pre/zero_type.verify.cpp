@@ -46,9 +46,9 @@ void test_category(T v) {
   void(0 > v);
   void(v >= 0);
   void(0 >= v);
-#ifndef _LIBCPP_HAS_NO_THREE_WAY_COMPARISON
-  void(v <=> 0); // expected-error 3 {{}}
-  void(0 <=> v); // expected-error 3 {{}}
+#ifndef _LIBCPP_HAS_NO_SPACESHIP_OPERATOR
+  void(v <=> 0);
+  void(0 <=> v);
 #endif
 }
 
