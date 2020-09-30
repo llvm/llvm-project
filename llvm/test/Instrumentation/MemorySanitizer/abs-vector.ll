@@ -7,7 +7,7 @@
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define <4 x i64> @test_mm256_abs_epi8(<4 x i64> noundef %a) local_unnamed_addr #0 {
+define <4 x i64> @test_mm256_abs_epi8(<4 x i64> %a) local_unnamed_addr #0 {
 ; CHECK-LABEL: @test_mm256_abs_epi8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([100 x i64]* @__msan_param_tls to <4 x i64>*), align 8
