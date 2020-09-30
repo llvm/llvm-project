@@ -54,6 +54,15 @@ enum LCOMMType { NoAlignment, ByteAlignment, Log2Alignment };
 /// This class is intended to be used as a base class for asm
 /// properties and features specific to the target.
 class MCAsmInfo {
+public:
+  /// Assembly character literal syntax types.
+  enum AsmCharLiteralSyntax {
+    ACLS_Unknown, /// Unknown; character literals not used by LLVM for this
+                  /// target.
+    ACLS_SingleQuotePrefix, /// The desired character is prefixed by a single
+                            /// quote, e.g., `'A`.
+  };
+
 protected:
   //===------------------------------------------------------------------===//
   // Properties to be set by the target writer, used to configure asm printer.
@@ -199,6 +208,16 @@ protected:
   /// on this target.  This is commonly supported as ".asciz".  If a target
   /// doesn't support this, it can be set to null.  Defaults to "\t.asciz\t"
   const char *AscizDirective;
+
+  /// This directive accepts a comma-separated list of bytes for emission as a
+  /// string of bytes.  For targets that do not support this, it shall be set to
+  /// null.  Defaults to null.
+  const char *ByteListDirective = nullptr;
+
+  /// Form used for character literals in the assembly syntax.  Useful for
+  /// producing strings as byte lists.  If a target does not use or support
+  /// this, it shall be set to ACLS_Unknown.  Defaults to ACLS_Unknown.
+  AsmCharLiteralSyntax CharacterLiteralSyntax = ACLS_Unknown;
 
   /// These directives are used to output some unit of integer data to the
   /// current section.  If a data directive is set to null, smaller data
@@ -562,6 +581,10 @@ public:
   }
   const char *getAsciiDirective() const { return AsciiDirective; }
   const char *getAscizDirective() const { return AscizDirective; }
+  const char *getByteListDirective() const { return ByteListDirective; }
+  AsmCharLiteralSyntax characterLiteralSyntax() const {
+    return CharacterLiteralSyntax;
+  }
   bool getAlignmentIsInBytes() const { return AlignmentIsInBytes; }
   unsigned getTextAlignFillValue() const { return TextAlignFillValue; }
   const char *getGlobalDirective() const { return GlobalDirective; }
