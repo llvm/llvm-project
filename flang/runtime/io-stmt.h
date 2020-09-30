@@ -65,6 +65,7 @@ public:
   ExternalFileUnit *GetExternalFileUnit() const; // null if internal unit
   MutableModes &mutableModes();
   void BeginReadingRecord();
+  void FinishReadingRecord();
   bool Inquire(InquiryKeywordHash, char *, std::size_t);
   bool Inquire(InquiryKeywordHash, bool &);
   bool Inquire(InquiryKeywordHash, std::int64_t, bool &); // PENDING=
@@ -123,7 +124,7 @@ struct IoStatementBase : public DefaultFormatControlCallbacks {
   std::optional<DataEdit> GetNextDataEdit(IoStatementState &, int = 1);
   ExternalFileUnit *GetExternalFileUnit() const { return nullptr; }
   void BeginReadingRecord() {}
-
+  void FinishReadingRecord() {}
   bool Inquire(InquiryKeywordHash, char *, std::size_t);
   bool Inquire(InquiryKeywordHash, bool &);
   bool Inquire(InquiryKeywordHash, std::int64_t, bool &);
@@ -269,9 +270,7 @@ public:
   void HandleRelativePosition(std::int64_t);
   void HandleAbsolutePosition(std::int64_t);
   void BeginReadingRecord();
-
-private:
-  bool beganReading_{false};
+  void FinishReadingRecord();
 };
 
 template <Direction DIR, typename CHAR>
