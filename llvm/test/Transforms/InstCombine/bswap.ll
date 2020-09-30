@@ -452,3 +452,201 @@ define i32 @funnel_binary(i32 %abcd) {
   %dcba = or i32 %dczz, %zzba
   ret i32 %dcba
 }
+
+; PR47191 - deep IR trees prevent ADD/XOR instructions being simplified to OR.
+
+define i64 @PR47191_problem1(i64 %0) {
+; CHECK-LABEL: @PR47191_problem1(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 56
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 65280
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 16711680
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP7]], 4278190080
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP0]], 56
+; CHECK-NEXT:    [[TMP10:%.*]] = shl i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP11:%.*]] = and i64 [[TMP10]], 71776119061217280
+; CHECK-NEXT:    [[TMP12:%.*]] = shl i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP13:%.*]] = and i64 [[TMP12]], 280375465082880
+; CHECK-NEXT:    [[TMP14:%.*]] = or i64 [[TMP9]], [[TMP2]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i64 [[TMP14]], [[TMP4]]
+; CHECK-NEXT:    [[TMP16:%.*]] = or i64 [[TMP15]], [[TMP6]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or i64 [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[TMP18:%.*]] = or i64 [[TMP17]], [[TMP11]]
+; CHECK-NEXT:    [[TMP19:%.*]] = or i64 [[TMP18]], [[TMP13]]
+; CHECK-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP21:%.*]] = and i64 [[TMP20]], 1095216660480
+; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[TMP19]], [[TMP21]]
+; CHECK-NEXT:    ret i64 [[TMP22]]
+;
+  %2 = lshr i64 %0, 56
+  %3 = lshr i64 %0, 40
+  %4 = and i64 %3, 65280
+  %5 = lshr i64 %0, 24
+  %6 = and i64 %5, 16711680
+  %7 = lshr i64 %0, 8
+  %8 = and i64 %7, 4278190080
+  %9 = shl i64 %0, 56
+  %10 = shl i64 %0, 40
+  %11 = and i64 %10, 71776119061217280
+  %12 = shl i64 %0, 24
+  %13 = and i64 %12, 280375465082880
+  %14 = or i64 %9, %2
+  %15 = or i64 %14, %4
+  %16 = or i64 %15, %6
+  %17 = or i64 %16, %8
+  %18 = or i64 %17, %11
+  %19 = or i64 %18, %13
+  %20 = shl i64 %0, 8
+  %21 = and i64 %20, 1095216660480
+  %22 = add i64 %19, %21
+  ret i64 %22
+}
+
+define i64 @PR47191_problem2(i64 %0) {
+; CHECK-LABEL: @PR47191_problem2(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 56
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 65280
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 16711680
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP7]], 4278190080
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP0]], 56
+; CHECK-NEXT:    [[TMP10:%.*]] = shl i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP11:%.*]] = and i64 [[TMP10]], 71776119061217280
+; CHECK-NEXT:    [[TMP12:%.*]] = or i64 [[TMP9]], [[TMP2]]
+; CHECK-NEXT:    [[TMP13:%.*]] = or i64 [[TMP12]], [[TMP4]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or i64 [[TMP13]], [[TMP6]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i64 [[TMP14]], [[TMP8]]
+; CHECK-NEXT:    [[TMP16:%.*]] = or i64 [[TMP15]], [[TMP11]]
+; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP18:%.*]] = and i64 [[TMP17]], 280375465082880
+; CHECK-NEXT:    [[TMP19:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP20:%.*]] = and i64 [[TMP19]], 1095216660480
+; CHECK-NEXT:    [[TMP21:%.*]] = or i64 [[TMP20]], [[TMP18]]
+; CHECK-NEXT:    [[TMP22:%.*]] = xor i64 [[TMP21]], [[TMP16]]
+; CHECK-NEXT:    ret i64 [[TMP22]]
+;
+  %2 = lshr i64 %0, 56
+  %3 = lshr i64 %0, 40
+  %4 = and i64 %3, 65280
+  %5 = lshr i64 %0, 24
+  %6 = and i64 %5, 16711680
+  %7 = lshr i64 %0, 8
+  %8 = and i64 %7, 4278190080
+  %9 = shl i64 %0, 56
+  %10 = shl i64 %0, 40
+  %11 = and i64 %10, 71776119061217280
+  %12 = or i64 %9, %2
+  %13 = or i64 %12, %4
+  %14 = or i64 %13, %6
+  %15 = or i64 %14, %8
+  %16 = or i64 %15, %11
+  %17 = shl i64 %0, 24
+  %18 = and i64 %17, 280375465082880
+  %19 = shl i64 %0, 8
+  %20 = and i64 %19, 1095216660480
+  %21 = or i64 %20, %18
+  %22 = xor i64 %21, %16
+  ret i64 %22
+}
+
+define i64 @PR47191_problem3(i64 %0) {
+; CHECK-LABEL: @PR47191_problem3(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 56
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 65280
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 16711680
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP7]], 4278190080
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP0]], 56
+; CHECK-NEXT:    [[TMP10:%.*]] = shl i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP11:%.*]] = and i64 [[TMP10]], 71776119061217280
+; CHECK-NEXT:    [[TMP12:%.*]] = or i64 [[TMP9]], [[TMP2]]
+; CHECK-NEXT:    [[TMP13:%.*]] = or i64 [[TMP12]], [[TMP4]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or i64 [[TMP13]], [[TMP6]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i64 [[TMP14]], [[TMP8]]
+; CHECK-NEXT:    [[TMP16:%.*]] = or i64 [[TMP15]], [[TMP11]]
+; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP18:%.*]] = and i64 [[TMP17]], 280375465082880
+; CHECK-NEXT:    [[TMP19:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP20:%.*]] = and i64 [[TMP19]], 1095216660480
+; CHECK-NEXT:    [[TMP21:%.*]] = or i64 [[TMP20]], [[TMP18]]
+; CHECK-NEXT:    [[TMP22:%.*]] = xor i64 [[TMP21]], [[TMP16]]
+; CHECK-NEXT:    ret i64 [[TMP22]]
+;
+  %2 = lshr i64 %0, 56
+  %3 = lshr i64 %0, 40
+  %4 = and i64 %3, 65280
+  %5 = lshr i64 %0, 24
+  %6 = and i64 %5, 16711680
+  %7 = lshr i64 %0, 8
+  %8 = and i64 %7, 4278190080
+  %9 = shl i64 %0, 56
+  %10 = shl i64 %0, 40
+  %11 = and i64 %10, 71776119061217280
+  %12 = or i64 %9, %2
+  %13 = or i64 %12, %4
+  %14 = or i64 %13, %6
+  %15 = or i64 %14, %8
+  %16 = or i64 %15, %11
+  %17 = shl i64 %0, 24
+  %18 = and i64 %17, 280375465082880
+  %19 = shl i64 %0, 8
+  %20 = and i64 %19, 1095216660480
+  %21 = or i64 %20, %18
+  %22 = xor i64 %21, %16
+  ret i64 %22
+}
+
+define i64 @PR47191_problem4(i64 %0) {
+; CHECK-LABEL: @PR47191_problem4(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 56
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 56
+; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 65280
+; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 71776119061217280
+; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = lshr i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP12:%.*]] = and i64 [[TMP11]], 16711680
+; CHECK-NEXT:    [[TMP13:%.*]] = or i64 [[TMP10]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = shl i64 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP15:%.*]] = and i64 [[TMP14]], 280375465082880
+; CHECK-NEXT:    [[TMP16:%.*]] = or i64 [[TMP13]], [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = lshr i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP18:%.*]] = and i64 [[TMP17]], 4278190080
+; CHECK-NEXT:    [[TMP19:%.*]] = or i64 [[TMP16]], [[TMP18]]
+; CHECK-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP21:%.*]] = and i64 [[TMP20]], 1095216660480
+; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[TMP19]], [[TMP21]]
+; CHECK-NEXT:    ret i64 [[TMP22]]
+;
+  %2 = lshr i64 %0, 56
+  %3 = shl i64 %0, 56
+  %4 = or i64 %2, %3
+  %5 = lshr i64 %0, 40
+  %6 = and i64 %5, 65280
+  %7 = or i64 %4, %6
+  %8 = shl i64 %0, 40
+  %9 = and i64 %8, 71776119061217280
+  %10 = or i64 %7, %9
+  %11 = lshr i64 %0, 24
+  %12 = and i64 %11, 16711680
+  %13 = or i64 %10, %12
+  %14 = shl i64 %0, 24
+  %15 = and i64 %14, 280375465082880
+  %16 = or i64 %13, %15
+  %17 = lshr i64 %0, 8
+  %18 = and i64 %17, 4278190080
+  %19 = or i64 %16, %18
+  %20 = shl i64 %0, 8
+  %21 = and i64 %20, 1095216660480
+  %22 = add i64 %19, %21
+  ret i64 %22
+}
