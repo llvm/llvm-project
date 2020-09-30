@@ -318,25 +318,10 @@ static SmallVector<Value, 4> makeTiledViews(OpBuilder &b, Location loc,
 }
 
 template <typename LoopTy>
-Optional<TiledLinalgOp> static tileLinalgOpImpl(
-    OpBuilder &b, LinalgOp op, const LinalgTilingOptions &options) {
-  OpBuilder::InsertionGuard g(b);
-  b.setInsertionPoint(op);
-  ScopedContext scope(b, op.getLoc());
-
-  assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
-  // 1. Enforce the convention that "tiling by zero" skips tiling a particular
-  // dimension. This convention is significantly simpler to handle instead of
-  // adjusting affine maps to account for missing dimensions.
+static Optional<TiledLinalgOp>
+tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
+                 const LinalgTilingOptions &options) {
   auto nLoops = op.getNumLoops();
-  SmallVector<Value, 4> tileSizeVector =
-      options.tileSizeComputationFunction(b, op);
-  if (tileSizeVector.size() < nLoops) {
-    auto zero = std_constant_index(0);
-    tileSizeVector.append(nLoops - tileSizeVector.size(), zero);
-  }
-
-  ArrayRef<Value> tileSizes = tileSizeVector;
   // Initial tile sizes may be too big, only take the first nLoops.
   tileSizes = tileSizes.take_front(nLoops);
 
@@ -350,17 +335,7 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
       return llvm::None;
   }
 
-  // If interchangeVector is empty, use the identity. Build the permutation map
-  // otherwise.
-  auto invPermutationMap =
-      AffineMap::getMultiDimIdentityMap(tileSizes.size(), b.getContext());
-  if (!options.interchangeVector.empty())
-    invPermutationMap = inversePermutation(AffineMap::getPermutationMap(
-        options.interchangeVector, b.getContext()));
-  if (!invPermutationMap)
-    return llvm::None;
-
-  // 2. Build the tiled loop ranges.
+  // 1. Build the tiled loop ranges.
   auto allViewSizes = getViewSizes(b, op);
   // The flattened loopToOperandRangesMaps is expected to be an invertible
   // permutation map (asserted in the inverse calculation).
@@ -374,17 +349,39 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
   SmallVector<SubViewOp::Range, 4> loopRanges;
   LoopIndexToRangeIndexMap loopIndexToRangeIndex;
   std::tie(loopRanges, loopIndexToRangeIndex) = makeTiledLoopRanges(
-      b, scope.getLocation(), viewSizesToLoopsMap, allViewSizes, tileSizes);
-  if (!options.interchangeVector.empty())
-    applyPermutationToVector(loopRanges, options.interchangeVector);
+      b, op.getLoc(), viewSizesToLoopsMap, allViewSizes, tileSizes);
+  SmallVector<Attribute, 4> iteratorTypes;
+  for (auto attr :
+       enumerate(op.iterator_types().cast<ArrayAttr>().getValue())) {
+    if (loopIndexToRangeIndex.count(attr.index()))
+      iteratorTypes.push_back(attr.value());
+  }
+  // If interchangeVector is empty, use the identity. Build the permutation map
+  // otherwise.
+  auto invPermutationMap =
+      AffineMap::getMultiDimIdentityMap(tileSizes.size(), b.getContext());
+  if (!options.interchangeVector.empty()) {
+    // Based on the pruned iterations (due to zero tile size), recompute the
+    // interchange vector.
+    SmallVector<unsigned, 4> interchangeVector;
+    interchangeVector.reserve(options.interchangeVector.size());
+    for (auto pos : options.interchangeVector) {
+      auto it = loopIndexToRangeIndex.find(pos);
+      if (it == loopIndexToRangeIndex.end())
+        continue;
+      interchangeVector.push_back(it->second);
+    }
+    invPermutationMap = inversePermutation(
+        AffineMap::getPermutationMap(interchangeVector, b.getContext()));
+    if (!invPermutationMap)
+      return llvm::None;
+    applyPermutationToVector(loopRanges, interchangeVector);
+    applyPermutationToVector(iteratorTypes, interchangeVector);
+  }
 
-  // 3. Create the tiled loops.
+  // 2. Create the tiled loops.
   LinalgOp res = op;
   SmallVector<Value, 4> ivs;
-  SmallVector<Attribute, 4> iteratorTypes =
-      llvm::to_vector<4>(op.iterator_types().cast<ArrayAttr>().getValue());
-  if (!options.interchangeVector.empty())
-    applyPermutationToVector(iteratorTypes, options.interchangeVector);
   GenerateLoopNest<LoopTy>::doit(
       loopRanges, /*iterArgInitValues*/ {}, iteratorTypes,
       [&](ValueRange localIvs, ValueRange iterArgs) -> scf::ValueVector {
@@ -410,10 +407,10 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
       },
       options.distribution);
 
-  // 4. Transforms index arguments of `linalg.generic` w.r.t. to the tiling.
+  // 3. Transforms index arguments of `linalg.generic` w.r.t. to the tiling.
   transformIndexedGenericOpIndices(b, res, ivs, loopIndexToRangeIndex);
 
-  // 5. Gather the newly created loops and return them with the new op.
+  // 4. Gather the newly created loops and return them with the new op.
   SmallVector<Operation *, 8> loops;
   loops.reserve(ivs.size());
   for (auto iv : ivs) {
@@ -429,14 +426,38 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
   return TiledLinalgOp{res, loops};
 }
 
+template <typename LoopTy>
+Optional<TiledLinalgOp> static tileLinalgOpImpl(
+    OpBuilder &b, LinalgOp op, const LinalgTilingOptions &options) {
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPoint(op);
+  ScopedContext scope(b, op.getLoc());
+
+  assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
+  // Enforce the convention that "tiling by zero" skips tiling a particular
+  // dimension. This convention is significantly simpler to handle instead of
+  // adjusting affine maps to account for missing dimensions.
+  auto nLoops = op.getNumLoops();
+  SmallVector<Value, 4> tileSizeVector =
+      options.tileSizeComputationFunction(b, op);
+  if (tileSizeVector.size() < nLoops) {
+    auto zero = std_constant_index(0);
+    tileSizeVector.append(nLoops - tileSizeVector.size(), zero);
+  }
+
+  return tileLinalgOpImpl<LoopTy>(b, op, tileSizeVector, options);
+}
+
 Optional<TiledLinalgOp>
 mlir::linalg::tileLinalgOp(OpBuilder &b, LinalgOp op,
                            const LinalgTilingOptions &options) {
-  if (options.loopType == LinalgTilingLoopType::Loops)
+  switch (options.loopType) {
+  case LinalgTilingLoopType::Loops:
     return tileLinalgOpImpl<scf::ForOp>(b, op, options);
-  if (options.loopType == LinalgTilingLoopType::ParallelLoops)
+  case LinalgTilingLoopType::ParallelLoops:
     return tileLinalgOpImpl<scf::ParallelOp>(b, op, options);
-  // TODO: Impl tiling to affine loops when it makes sense.
+  default:;
+  }
   return llvm::None;
 }
 
