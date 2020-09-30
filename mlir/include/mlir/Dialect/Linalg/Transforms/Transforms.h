@@ -32,7 +32,8 @@ struct TiledLinalgOp {
 
 /// Populates patterns for vectorization of all ConvN-D ops.
 void populateConvVectorizationPatterns(
-    MLIRContext *context, SmallVectorImpl<OwningRewritePatternList> &patterns);
+    MLIRContext *context, SmallVectorImpl<OwningRewritePatternList> &patterns,
+    ArrayRef<int64_t> tileSizes);
 
 /// Performs standalone tiling of a single LinalgOp by `tileSizes`.
 /// and permute the loop nest according to `interchangeVector`
@@ -549,8 +550,8 @@ struct AffineMinSCFCanonicalizationPattern
 /// false of size 1. This ensures that the ConvOp can be lowered to vector
 /// contraction of dimensions marked in the *mask* as true.
 ///
-/// A good example is ConvNHWCOp which is 2D Conv op with channels as the last
-/// dimension. For this op we contract last 3 dimensions.
+/// A good example for vectorization is ConvNHWCOp which is 2D Conv op
+/// with channels as the last dimension. Let's vectorize last 3 dimensions.
 /// The initial op definition looks like this:
 /// ```
 /// linalg.conv_2d_nhwc  %arg0, %arg1, %arg2 :
@@ -589,10 +590,6 @@ public:
 
   LogicalResult matchAndRewrite(ConvOp minOp,
                                 PatternRewriter &rewriter) const override;
-
-  // TODO: Make these pass arguments.
-  static const int tileSize = 3;
-  static const int noTile = 1;
 };
 
 //===----------------------------------------------------------------------===//
