@@ -226,9 +226,11 @@ body:             |
   ; CHECK:   successors: %bb.2(0x40000000), %bb.5(0x40000000)
   ; CHECK:   liveins: $r1, $r2, $r3, $r4, $r5, $r7
   ; CHECK:   $r9, $r8 = t2LDRDi8 $r7, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.i14), (load 4 from %ir.i20)
-  ; CHECK:   dead renamable $lr = nuw t2ADDri renamable $r5, 20, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   renamable $lr = nuw t2ADDri renamable $r5, 20, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r6, $r12 = t2LDRDi8 $r7, 8, 14 /* CC::al */, $noreg :: (load 4 from %ir.i22), (load 4 from %ir.i24)
-  ; CHECK:   $lr = t2WLS renamable $r3, %bb.5
+  ; CHECK:   t2CMPri renamable $r3, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   tBcc %bb.5, 0 /* CC::eq */, killed $cpsr
+  ; CHECK:   tB %bb.2, 14 /* CC::al */, $noreg
   ; CHECK: bb.2.bb27:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   liveins: $lr, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r12
@@ -256,6 +258,7 @@ body:             |
   ; CHECK:   renamable $r4 = tLDRspi $sp, 7, 14 /* CC::al */, $noreg :: (load 4 from %stack.2)
   ; CHECK:   renamable $r0, dead $cpsr = tSUBi8 killed renamable $r0, 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r9, renamable $r1 = t2LDR_POST killed renamable $r1, 4, 14 /* CC::al */, $noreg :: (load 4 from %ir.i38)
+  ; CHECK:   dead $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr
   ; CHECK:   renamable $r6, renamable $r11 = t2SMLAL killed renamable $r8, killed renamable $r4, killed renamable $r6, killed renamable $r11, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r4 = tLDRspi $sp, 6, 14 /* CC::al */, $noreg :: (load 4 from %stack.3)
   ; CHECK:   $r8 = tMOVr $r5, 14 /* CC::al */, $noreg
@@ -266,7 +269,8 @@ body:             |
   ; CHECK:   renamable $r6, renamable $r11 = t2SMLAL renamable $r9, killed renamable $r4, killed renamable $r6, killed renamable $r11, 14 /* CC::al */, $noreg
   ; CHECK:   early-clobber renamable $r6, dead early-clobber renamable $r11 = MVE_ASRLr killed renamable $r6, killed renamable $r11, renamable $r3, 14 /* CC::al */, $noreg
   ; CHECK:   early-clobber renamable $r2 = t2STR_POST renamable $r6, killed renamable $r2, 4, 14 /* CC::al */, $noreg :: (store 4 into %ir.i39)
-  ; CHECK:   dead $lr = t2LEUpdate killed renamable $lr, %bb.3
+  ; CHECK:   tBcc %bb.3, 1 /* CC::ne */, killed $cpsr
+  ; CHECK:   tB %bb.4, 14 /* CC::al */, $noreg
   ; CHECK: bb.4.bb72:
   ; CHECK:   successors: %bb.5(0x80000000)
   ; CHECK:   liveins: $r5, $r6, $r7, $r9
