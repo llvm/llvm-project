@@ -529,6 +529,7 @@ enum CommandArgumentType {
   eArgTypeExpression,
   eArgTypeExpressionPath,
   eArgTypeExprFormat,
+  eArgTypeFileLineColumn,
   eArgTypeFilename,
   eArgTypeFormat,
   eArgTypeFrameIndex,
