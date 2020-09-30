@@ -12005,6 +12005,25 @@ void ScalarEvolution::verify() const {
       std::abort();
     }
   }
+
+  // Collect all valid loops currently in LoopInfo.
+  SmallPtrSet<Loop *, 32> ValidLoops;
+  SmallVector<Loop *, 32> Worklist(LI.begin(), LI.end());
+  while (!Worklist.empty()) {
+    Loop *L = Worklist.pop_back_val();
+    if (ValidLoops.contains(L))
+      continue;
+    ValidLoops.insert(L);
+    Worklist.append(L->begin(), L->end());
+  }
+  // Check for SCEV expressions referencing invalid/deleted loops.
+  for (auto &KV : ValueExprMap) {
+    auto *AR = dyn_cast<SCEVAddRecExpr>(KV.second);
+    if (!AR)
+      continue;
+    assert(ValidLoops.contains(AR->getLoop()) &&
+           "AddRec references invalid loop");
+  }
 }
 
 bool ScalarEvolution::invalidate(
