@@ -22,9 +22,9 @@ body:             |
     liveins:
     ; CHECK-LABEL: name: test_fneg_f32
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = IMPLICIT_DEF
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float -0.000000e+00
-    ; CHECK: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[C]], [[DEF]]
-    ; CHECK: $edi = COPY [[FSUB]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
+    ; CHECK: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[DEF]], [[C]]
+    ; CHECK: $edi = COPY [[XOR]](s32)
     %0(s32) = IMPLICIT_DEF
     %1(s32) = G_FNEG %0
     $edi = COPY %1
@@ -39,9 +39,9 @@ body:             |
     liveins:
     ; CHECK-LABEL: name: test_fneg_f64
     ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double -0.000000e+00
-    ; CHECK: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[C]], [[DEF]]
-    ; CHECK: $rdi = COPY [[FSUB]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -9223372036854775808
+    ; CHECK: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[DEF]], [[C]]
+    ; CHECK: $rdi = COPY [[XOR]](s64)
     %0(s64) = G_IMPLICIT_DEF
     %1(s64) = G_FNEG %0
     $rdi = COPY %1

@@ -35,6 +35,9 @@ class MachineInstr;
 /// AArch64FunctionInfo - This class is derived from MachineFunctionInfo and
 /// contains private AArch64-specific information for each MachineFunction.
 class AArch64FunctionInfo final : public MachineFunctionInfo {
+  /// Backreference to the machine function.
+  MachineFunction &MF;
+
   /// Number of bytes of arguments this function has on the stack. If the callee
   /// is expected to restore the argument stack this should be a multiple of 16,
   /// all usable during a tail call.
@@ -138,17 +141,24 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // CalleeSavedStackSize) to the address of the frame record.
   int CalleeSaveBaseToFrameRecordOffset = 0;
 
+  /// SignReturnAddress is true if PAC-RET is enabled for the function with
+  /// defaults being sign non-leaf functions only, with the B key.
+  bool SignReturnAddress = false;
+
+  /// SignReturnAddressAll modifies the default PAC-RET mode to signing leaf
+  /// functions as well.
+  bool SignReturnAddressAll = false;
+
+  /// SignWithBKey modifies the default PAC-RET mode to signing with the B key.
+  bool SignWithBKey = false;
+
+  /// BranchTargetEnforcement enables placing BTI instructions at potential
+  /// indirect branch destinations.
+  bool BranchTargetEnforcement = false;
+
 public:
-  AArch64FunctionInfo() = default;
+  explicit AArch64FunctionInfo(MachineFunction &MF);
 
-  explicit AArch64FunctionInfo(MachineFunction &MF) {
-    (void)MF;
-
-    // If we already know that the function doesn't have a redzone, set
-    // HasRedZone here.
-    if (MF.getFunction().hasFnAttribute(Attribute::NoRedZone))
-      HasRedZone = false;
-  }
   void initializeBaseYamlFields(const yaml::AArch64FunctionInfo &YamlMFI);
 
   unsigned getBytesInStackArgArea() const { return BytesInStackArgArea; }
@@ -346,6 +356,13 @@ public:
   void setCalleeSaveBaseToFrameRecordOffset(int Offset) {
     CalleeSaveBaseToFrameRecordOffset = Offset;
   }
+
+  bool shouldSignReturnAddress() const;
+  bool shouldSignReturnAddress(bool SpillsLR) const;
+
+  bool shouldSignWithBKey() const { return SignWithBKey; }
+
+  bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
 
 private:
   // Hold the lists of LOHs.

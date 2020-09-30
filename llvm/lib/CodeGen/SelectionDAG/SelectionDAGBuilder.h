@@ -740,7 +740,7 @@ private:
   void visitFence(const FenceInst &I);
   void visitPHI(const PHINode &I);
   void visitCall(const CallInst &I);
-  bool visitMemCmpCall(const CallInst &I);
+  bool visitMemCmpBCmpCall(const CallInst &I);
   bool visitMemPCpyCall(const CallInst &I);
   bool visitMemChrCall(const CallInst &I);
   bool visitStrCpyCall(const CallInst &I, bool isStpcpy);

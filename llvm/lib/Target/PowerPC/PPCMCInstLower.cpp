@@ -90,6 +90,8 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
     RefKind = MCSymbolRefExpr::VK_TPREL;
   else if (MO.getTargetFlags() == PPCII::MO_GOT_TLSGD_PCREL_FLAG)
     RefKind = MCSymbolRefExpr::VK_PPC_GOT_TLSGD_PCREL;
+  else if (MO.getTargetFlags() == PPCII::MO_GOT_TLSLD_PCREL_FLAG)
+    RefKind = MCSymbolRefExpr::VK_PPC_GOT_TLSLD_PCREL;
   else if (MO.getTargetFlags() == PPCII::MO_GOT_TPREL_PCREL_FLAG)
     RefKind = MCSymbolRefExpr::VK_PPC_GOT_TPREL_PCREL;
 

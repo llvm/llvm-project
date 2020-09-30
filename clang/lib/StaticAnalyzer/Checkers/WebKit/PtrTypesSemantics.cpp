@@ -12,6 +12,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
+#include "llvm/ADT/Optional.h"
 
 using llvm::Optional;
 using namespace clang;
@@ -20,6 +21,7 @@ namespace {
 
 bool hasPublicRefAndDeref(const CXXRecordDecl *R) {
   assert(R);
+  assert(R->hasDefinition());
 
   bool hasRef = false;
   bool hasDeref = false;
@@ -43,25 +45,29 @@ bool hasPublicRefAndDeref(const CXXRecordDecl *R) {
 
 namespace clang {
 
-const CXXRecordDecl *isRefCountable(const CXXBaseSpecifier *Base) {
+llvm::Optional<const clang::CXXRecordDecl *>
+isRefCountable(const CXXBaseSpecifier *Base) {
   assert(Base);
 
   const Type *T = Base->getType().getTypePtrOrNull();
   if (!T)
-    return nullptr;
+    return llvm::None;
 
   const CXXRecordDecl *R = T->getAsCXXRecordDecl();
   if (!R)
-    return nullptr;
+    return llvm::None;
+  if (!R->hasDefinition())
+    return llvm::None;
 
   return hasPublicRefAndDeref(R) ? R : nullptr;
 }
 
-bool isRefCountable(const CXXRecordDecl *R) {
+llvm::Optional<bool> isRefCountable(const CXXRecordDecl *R) {
   assert(R);
 
   R = R->getDefinition();
-  assert(R);
+  if (!R)
+    return llvm::None;
 
   if (hasPublicRefAndDeref(R))
     return true;
@@ -69,13 +75,24 @@ bool isRefCountable(const CXXRecordDecl *R) {
   CXXBasePaths Paths;
   Paths.setOrigin(const_cast<CXXRecordDecl *>(R));
 
-  const auto isRefCountableBase = [](const CXXBaseSpecifier *Base,
-                                     CXXBasePath &) {
-    return clang::isRefCountable(Base);
-  };
+  bool AnyInconclusiveBase = false;
+  const auto isRefCountableBase =
+      [&AnyInconclusiveBase](const CXXBaseSpecifier *Base, CXXBasePath &) {
+        Optional<const clang::CXXRecordDecl *> IsRefCountable =
+            clang::isRefCountable(Base);
+        if (!IsRefCountable) {
+          AnyInconclusiveBase = true;
+          return false;
+        }
+        return (*IsRefCountable) != nullptr;
+      };
 
-  return R->lookupInBases(isRefCountableBase, Paths,
-                          /*LookupInDependent =*/true);
+  bool BasesResult = R->lookupInBases(isRefCountableBase, Paths,
+                                      /*LookupInDependent =*/true);
+  if (AnyInconclusiveBase)
+    return llvm::None;
+
+  return BasesResult;
 }
 
 bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
@@ -95,12 +112,19 @@ bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
          || FunctionName == "Identifier";
 }
 
-bool isUncounted(const CXXRecordDecl *Class) {
+llvm::Optional<bool> isUncounted(const CXXRecordDecl *Class) {
   // Keep isRefCounted first as it's cheaper.
-  return !isRefCounted(Class) && isRefCountable(Class);
+  if (isRefCounted(Class))
+    return false;
+
+  llvm::Optional<bool> IsRefCountable = isRefCountable(Class);
+  if (!IsRefCountable)
+    return llvm::None;
+
+  return (*IsRefCountable);
 }
 
-bool isUncountedPtr(const Type *T) {
+llvm::Optional<bool> isUncountedPtr(const Type *T) {
   assert(T);
 
   if (T->isPointerType() || T->isReferenceType()) {
@@ -111,7 +135,7 @@ bool isUncountedPtr(const Type *T) {
   return false;
 }
 
-bool isGetterOfRefCounted(const CXXMethodDecl *M) {
+Optional<bool> isGetterOfRefCounted(const CXXMethodDecl *M) {
   assert(M);
 
   if (isa<CXXMethodDecl>(M)) {
@@ -133,9 +157,7 @@ bool isGetterOfRefCounted(const CXXMethodDecl *M) {
       if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
         if (auto *targetConversionType =
                 maybeRefToRawOperator->getConversionType().getTypePtrOrNull()) {
-          if (isUncountedPtr(targetConversionType)) {
-            return true;
-          }
+          return isUncountedPtr(targetConversionType);
         }
       }
     }

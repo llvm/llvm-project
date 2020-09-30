@@ -30,7 +30,7 @@ late3:
 # CHECK-NEXT: ]
 # CHECK-NEXT: SectionData (
 # CHECK-NEXT:   0000: 0A000000 0E000000 20000000 00000000
-# CHECK-NEXT:   0010: 11000000 0A000000 0B000000 00000000
+# CHECK-NEXT:   0010: 0F000000 0A000000 0B000000 00000000
 # CHECK-NEXT:   0020: 0B000000 0C000000 14000000 00000000
 # CHECK-NEXT: )
 
@@ -68,37 +68,15 @@ late3:
 # CHECK-NEXT: Section: IMAGE_SYM_UNDEFINED
 # CHECK-NEXT: BaseType:
 # CHECK-NEXT: ComplexType:
-# CHECK-NEXT: StorageClass: WeakExternal
-# CHECK-NEXT: AuxSymbolCount: 1
-# CHECK-NEXT: AuxWeakExternal {
-# CHECK-NEXT:   Linked: .weak.b.default.late
-# CHECK-NEXT:   Search: Alias
-# CHECK-NEXT: }
-# CHECK:      Name: .weak.b.default.late
-# CHECK-NEXT: Value:
-# CHECK-NEXT: Section: IMAGE_SYM_ABSOLUTE
-# CHECK-NEXT: BaseType:
-# CHECK-NEXT: ComplexType:
 # CHECK-NEXT: StorageClass: External
-# CHECK-NEXT: AuxSymbolCount: 0
+# CHECK-NEXT: AuxSymbolCount:
 # CHECK:      Name: freq
 # CHECK-NEXT: Value:
 # CHECK-NEXT: Section: IMAGE_SYM_UNDEFINED
 # CHECK-NEXT: BaseType:
 # CHECK-NEXT: ComplexType:
-# CHECK-NEXT: StorageClass: WeakExternal
-# CHECK-NEXT: AuxSymbolCount: 1
-# CHECK-NEXT: AuxWeakExternal {
-# CHECK-NEXT:   Linked: .weak.freq.default.late
-# CHECK-NEXT:   Search: Alias
-# CHECK-NEXT: }
-# CHECK:      Name: .weak.freq.default.late
-# CHECK-NEXT: Value:
-# CHECK-NEXT: Section: IMAGE_SYM_ABSOLUTE
-# CHECK-NEXT: BaseType:
-# CHECK-NEXT: ComplexType:
 # CHECK-NEXT: StorageClass: External
-# CHECK-NEXT: AuxSymbolCount: 0
+# CHECK-NEXT: AuxSymbolCount:
 
 # CHECK:      CGProfile [
 # CHECK-NEXT:   CGProfileEntry {

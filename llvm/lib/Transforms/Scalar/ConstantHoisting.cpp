@@ -951,7 +951,7 @@ bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
   // base constant.
   if (!ConstIntCandVec.empty())
     findBaseConstants(nullptr);
-  for (auto &MapEntry : ConstGEPCandMap)
+  for (const auto &MapEntry : ConstGEPCandMap)
     if (!MapEntry.second.empty())
       findBaseConstants(MapEntry.first);
 
@@ -960,7 +960,7 @@ bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
   bool MadeChange = false;
   if (!ConstIntInfoVec.empty())
     MadeChange = emitBaseConstants(nullptr);
-  for (auto MapEntry : ConstGEPInfoMap)
+  for (const auto &MapEntry : ConstGEPInfoMap)
     if (!MapEntry.second.empty())
       MadeChange |= emitBaseConstants(MapEntry.first);
 

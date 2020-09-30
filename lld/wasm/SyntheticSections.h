@@ -19,7 +19,7 @@
 
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Object/WasmTraits.h"
+#include "llvm/BinaryFormat/WasmTraits.h"
 
 #define DEBUG_TYPE "lld"
 

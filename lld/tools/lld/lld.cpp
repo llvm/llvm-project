@@ -26,6 +26,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Common/Driver.h"
+#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -33,11 +34,18 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PluginLoader.h"
+#include "llvm/Support/Signals.h"
 #include <cstdlib>
+
+#if !defined(_MSC_VER) && !defined(__MINGW32__)
+#include <signal.h> // for raise
+#include <unistd.h> // for _exit
+#endif
 
 using namespace lld;
 using namespace llvm;
@@ -133,36 +141,103 @@ static Flavor parseFlavor(std::vector<const char *> &v) {
   return parseProgname(arg0);
 }
 
-// If this function returns true, lld calls _exit() so that it quickly
-// exits without invoking destructors of globally allocated objects.
-//
-// We don't want to do that if we are running tests though, because
-// doing that breaks leak sanitizer. So, lit sets this environment variable,
-// and we use it to detect whether we are running tests or not.
-static bool canExitEarly() { return StringRef(getenv("LLD_IN_TEST")) != "1"; }
-
 /// Universal linker main(). This linker emulates the gnu, darwin, or
 /// windows linker based on the argv[0] or -flavor option.
-int main(int argc, const char **argv) {
-  InitLLVM x(argc, argv);
-
+static int lldMain(int argc, const char **argv, llvm::raw_ostream &stdoutOS,
+                   llvm::raw_ostream &stderrOS, bool exitEarly = true) {
   std::vector<const char *> args(argv, argv + argc);
   switch (parseFlavor(args)) {
   case Gnu:
     if (isPETarget(args))
-      return !mingw::link(args, canExitEarly(), llvm::outs(), llvm::errs());
-    return !elf::link(args, canExitEarly(), llvm::outs(), llvm::errs());
+      return !mingw::link(args, exitEarly, stdoutOS, stderrOS);
+    return !elf::link(args, exitEarly, stdoutOS, stderrOS);
   case WinLink:
-    return !coff::link(args, canExitEarly(), llvm::outs(), llvm::errs());
+    return !coff::link(args, exitEarly, stdoutOS, stderrOS);
   case Darwin:
-    return !mach_o::link(args, canExitEarly(), llvm::outs(), llvm::errs());
+    return !mach_o::link(args, exitEarly, stdoutOS, stderrOS);
   case DarwinNew:
-    return !macho::link(args, canExitEarly(), llvm::outs(), llvm::errs());
+    return !macho::link(args, exitEarly, stdoutOS, stderrOS);
   case Wasm:
-    return !wasm::link(args, canExitEarly(), llvm::outs(), llvm::errs());
+    return !lld::wasm::link(args, exitEarly, stdoutOS, stderrOS);
   default:
     die("lld is a generic driver.\n"
         "Invoke ld.lld (Unix), ld64.lld (macOS), lld-link (Windows), wasm-ld"
         " (WebAssembly) instead");
   }
+}
+
+// Similar to lldMain except that exceptions are caught.
+SafeReturn lld::safeLldMain(int argc, const char **argv,
+                            llvm::raw_ostream &stdoutOS,
+                            llvm::raw_ostream &stderrOS) {
+  int r = 0;
+  {
+    // The crash recovery is here only to be able to recover from arbitrary
+    // control flow when fatal() is called (through setjmp/longjmp or
+    // __try/__except).
+    llvm::CrashRecoveryContext crc;
+    if (!crc.RunSafely([&]() {
+          r = lldMain(argc, argv, stdoutOS, stderrOS, /*exitEarly=*/false);
+        }))
+      r = crc.RetCode;
+  }
+
+  // Cleanup memory and reset everything back in pristine condition. This path
+  // is only taken when LLD is in test, or when it is used as a library.
+  llvm::CrashRecoveryContext crc;
+  if (!crc.RunSafely([&]() { errorHandler().reset(); })) {
+    // The memory is corrupted beyond any possible recovery.
+    return {r, /*canRunAgain=*/false};
+  }
+  return {r, /*canRunAgain=*/true};
+}
+
+// When in lit tests, tells how many times the LLD tool should re-execute the
+// main loop with the same inputs. When not in test, returns a value of 0 which
+// signifies that LLD shall not release any memory after execution, to speed up
+// process destruction.
+static unsigned inTestVerbosity() {
+  unsigned v = 0;
+  StringRef(getenv("LLD_IN_TEST")).getAsInteger(10, v);
+  return v;
+}
+
+int main(int argc, const char **argv) {
+  InitLLVM x(argc, argv);
+
+  // Not running in lit tests, just take the shortest codepath with global
+  // exception handling and no memory cleanup on exit.
+  if (!inTestVerbosity())
+    return lldMain(argc, argv, llvm::outs(), llvm::errs());
+
+  Optional<int> mainRet;
+  CrashRecoveryContext::Enable();
+
+  for (unsigned i = inTestVerbosity(); i > 0; --i) {
+    // Disable stdout/stderr for all iterations but the last one.
+    if (i != 1)
+      errorHandler().disableOutput = true;
+
+    // Execute one iteration.
+    auto r = safeLldMain(argc, argv, llvm::outs(), llvm::errs());
+    if (!r.canRunAgain)
+      _exit(r.ret); // Exit now, can't re-execute again.
+
+    if (!mainRet) {
+      mainRet = r.ret;
+    } else if (r.ret != *mainRet) {
+      // Exit now, to fail the tests if the result is different between runs.
+      return r.ret;
+    }
+  }
+#if LLVM_ON_UNIX
+  // Re-throw the signal so it can be caught by WIFSIGNALED in
+  // llvm/lib/Support/Unix/Program.inc. This is required to correctly handle
+  // usages of `not --crash`.
+  if (*mainRet > 128) {
+    llvm::sys::unregisterHandlers();
+    raise(*mainRet - 128);
+  }
+#endif
+  return *mainRet;
 }

@@ -2855,16 +2855,16 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
         return Result;
 
       Result = BitPart(A->Provider, BitWidth);
-      for (unsigned i = 0; i < A->Provenance.size(); ++i) {
-        if (A->Provenance[i] != BitPart::Unset &&
-            B->Provenance[i] != BitPart::Unset &&
-            A->Provenance[i] != B->Provenance[i])
+      for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx) {
+        if (A->Provenance[BitIdx] != BitPart::Unset &&
+            B->Provenance[BitIdx] != BitPart::Unset &&
+            A->Provenance[BitIdx] != B->Provenance[BitIdx])
           return Result = None;
 
-        if (A->Provenance[i] == BitPart::Unset)
-          Result->Provenance[i] = B->Provenance[i];
+        if (A->Provenance[BitIdx] == BitPart::Unset)
+          Result->Provenance[BitIdx] = B->Provenance[BitIdx];
         else
-          Result->Provenance[i] = A->Provenance[i];
+          Result->Provenance[BitIdx] = A->Provenance[BitIdx];
       }
 
       return Result;
@@ -2901,13 +2901,12 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
     // unset the appropriate bits.
     if (I->getOpcode() == Instruction::And &&
         isa<ConstantInt>(I->getOperand(1))) {
-      APInt Bit(I->getType()->getPrimitiveSizeInBits(), 1);
       const APInt &AndMask = cast<ConstantInt>(I->getOperand(1))->getValue();
 
       // Check that the mask allows a multiple of 8 bits for a bswap, for an
       // early exit.
       unsigned NumMaskedBits = AndMask.countPopulation();
-      if (!MatchBitReversals && NumMaskedBits % 8 != 0)
+      if (!MatchBitReversals && (NumMaskedBits % 8) != 0)
         return Result;
 
       const auto &Res = collectBitParts(I->getOperand(0), MatchBSwaps,
@@ -2916,10 +2915,10 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
         return Result;
       Result = Res;
 
-      for (unsigned i = 0; i < BitWidth; ++i, Bit <<= 1)
+      for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx)
         // If the AndMask is zero for this bit, clear the bit.
-        if ((AndMask & Bit) == 0)
-          Result->Provenance[i] = BitPart::Unset;
+        if (AndMask[BitIdx] == 0)
+          Result->Provenance[BitIdx] = BitPart::Unset;
       return Result;
     }
 
@@ -2933,19 +2932,55 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       Result = BitPart(Res->Provider, BitWidth);
       auto NarrowBitWidth =
           cast<IntegerType>(cast<ZExtInst>(I)->getSrcTy())->getBitWidth();
-      for (unsigned i = 0; i < NarrowBitWidth; ++i)
-        Result->Provenance[i] = Res->Provenance[i];
-      for (unsigned i = NarrowBitWidth; i < BitWidth; ++i)
-        Result->Provenance[i] = BitPart::Unset;
+      for (unsigned BitIdx = 0; BitIdx < NarrowBitWidth; ++BitIdx)
+        Result->Provenance[BitIdx] = Res->Provenance[BitIdx];
+      for (unsigned BitIdx = NarrowBitWidth; BitIdx < BitWidth; ++BitIdx)
+        Result->Provenance[BitIdx] = BitPart::Unset;
       return Result;
+    }
+
+    // Handle intrinsic calls.
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      Intrinsic::ID IntrinsicID = II->getIntrinsicID();
+
+      // Funnel 'double' shifts take 3 operands, 2 inputs and the shift
+      // amount (modulo).
+      // fshl(X,Y,Z): (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+      // fshr(X,Y,Z): (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+      const APInt *Amt;
+      if ((IntrinsicID == Intrinsic::fshl || IntrinsicID == Intrinsic::fshr) &&
+          match(II->getArgOperand(2), m_APInt(Amt))) {
+
+        // We can treat fshr as a fshl by flipping the modulo amount.
+        unsigned ModAmt = Amt->urem(BitWidth);
+        if (IntrinsicID == Intrinsic::fshr)
+          ModAmt = BitWidth - ModAmt;
+
+        const auto &LHS = collectBitParts(II->getArgOperand(0), MatchBSwaps,
+                                          MatchBitReversals, BPS, Depth + 1);
+        const auto &RHS = collectBitParts(II->getArgOperand(1), MatchBSwaps,
+                                          MatchBitReversals, BPS, Depth + 1);
+
+        // Check we have both sources and they are from the same provider.
+        if (!LHS || !RHS || !LHS->Provider || LHS->Provider != RHS->Provider)
+          return Result;
+
+        unsigned StartBitRHS = BitWidth - ModAmt;
+        Result = BitPart(LHS->Provider, BitWidth);
+        for (unsigned BitIdx = 0; BitIdx < StartBitRHS; ++BitIdx)
+          Result->Provenance[BitIdx + ModAmt] = LHS->Provenance[BitIdx];
+        for (unsigned BitIdx = 0; BitIdx < ModAmt; ++BitIdx)
+          Result->Provenance[BitIdx] = RHS->Provenance[BitIdx + StartBitRHS];
+        return Result;
+      }
     }
   }
 
   // Okay, we got to something that isn't a shift, 'or' or 'and'.  This must be
   // the input value to the bswap/bitreverse.
   Result = BitPart(V, BitWidth);
-  for (unsigned i = 0; i < BitWidth; ++i)
-    Result->Provenance[i] = i;
+  for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx)
+    Result->Provenance[BitIdx] = BitIdx;
   return Result;
 }
 
@@ -2975,38 +3010,48 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   IntegerType *ITy = dyn_cast<IntegerType>(I->getType());
   if (!ITy || ITy->getBitWidth() > 128)
     return false;   // Can't do vectors or integers > 128 bits.
-  unsigned BW = ITy->getBitWidth();
 
-  unsigned DemandedBW = BW;
   IntegerType *DemandedTy = ITy;
-  if (I->hasOneUse()) {
-    if (TruncInst *Trunc = dyn_cast<TruncInst>(I->user_back())) {
+  if (I->hasOneUse())
+    if (auto *Trunc = dyn_cast<TruncInst>(I->user_back()))
       DemandedTy = cast<IntegerType>(Trunc->getType());
-      DemandedBW = DemandedTy->getBitWidth();
-    }
-  }
 
   // Try to find all the pieces corresponding to the bswap.
   std::map<Value *, Optional<BitPart>> BPS;
   auto Res = collectBitParts(I, MatchBSwaps, MatchBitReversals, BPS, 0);
   if (!Res)
     return false;
-  auto &BitProvenance = Res->Provenance;
+  ArrayRef<int8_t> BitProvenance = Res->Provenance;
+  assert(all_of(BitProvenance,
+                [](int8_t I) { return I == BitPart::Unset || 0 <= I; }) &&
+         "Illegal bit provenance index");
+
+  // If the upper bits are zero, then attempt to perform as a truncated op.
+  if (BitProvenance.back() == BitPart::Unset) {
+    while (!BitProvenance.empty() && BitProvenance.back() == BitPart::Unset)
+      BitProvenance = BitProvenance.drop_back();
+    if (BitProvenance.empty())
+      return false; // TODO - handle null value?
+    DemandedTy = IntegerType::get(I->getContext(), BitProvenance.size());
+  }
 
   // Now, is the bit permutation correct for a bswap or a bitreverse? We can
   // only byteswap values with an even number of bytes.
-  bool OKForBSwap = DemandedBW % 16 == 0, OKForBitReverse = true;
-  for (unsigned i = 0; i < DemandedBW; ++i) {
-    OKForBSwap &=
-        bitTransformIsCorrectForBSwap(BitProvenance[i], i, DemandedBW);
-    OKForBitReverse &=
-        bitTransformIsCorrectForBitReverse(BitProvenance[i], i, DemandedBW);
+  unsigned DemandedBW = DemandedTy->getBitWidth();
+  bool OKForBSwap = MatchBSwaps && (DemandedBW % 16) == 0;
+  bool OKForBitReverse = MatchBitReversals;
+  for (unsigned BitIdx = 0;
+       (BitIdx < DemandedBW) && (OKForBSwap || OKForBitReverse); ++BitIdx) {
+    OKForBSwap &= bitTransformIsCorrectForBSwap(BitProvenance[BitIdx], BitIdx,
+                                                DemandedBW);
+    OKForBitReverse &= bitTransformIsCorrectForBitReverse(BitProvenance[BitIdx],
+                                                          BitIdx, DemandedBW);
   }
 
   Intrinsic::ID Intrin;
-  if (OKForBSwap && MatchBSwaps)
+  if (OKForBSwap)
     Intrin = Intrinsic::bswap;
-  else if (OKForBitReverse && MatchBitReversals)
+  else if (OKForBitReverse)
     Intrin = Intrinsic::bitreverse;
   else
     return false;
@@ -3014,9 +3059,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   if (ITy != DemandedTy) {
     Function *F = Intrinsic::getDeclaration(I->getModule(), Intrin, DemandedTy);
     Value *Provider = Res->Provider;
-    IntegerType *ProviderTy = cast<IntegerType>(Provider->getType());
     // We may need to truncate the provider.
-    if (DemandedTy != ProviderTy) {
+    if (DemandedTy != Provider->getType()) {
       auto *Trunc = CastInst::Create(Instruction::Trunc, Provider, DemandedTy,
                                      "trunc", I);
       InsertedInsts.push_back(Trunc);

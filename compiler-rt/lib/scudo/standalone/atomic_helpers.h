@@ -106,14 +106,6 @@ inline bool atomic_compare_exchange_strong(volatile T *A, typename T::Type *Cmp,
                                    __ATOMIC_RELAXED);
 }
 
-template <typename T>
-inline bool atomic_compare_exchange_weak(volatile T *A, typename T::Type *Cmp,
-                                         typename T::Type Xchg,
-                                         memory_order MO) {
-  return __atomic_compare_exchange(&A->ValDoNotUse, Cmp, &Xchg, true, MO,
-                                   __ATOMIC_RELAXED);
-}
-
 // Clutter-reducing helpers.
 
 template <typename T>

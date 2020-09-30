@@ -1817,10 +1817,10 @@ TEST(APFloatTest, convert) {
 
   test = APFloat::getSNaN(APFloat::IEEEsingle());
   APFloat X87SNaN = APFloat::getSNaN(APFloat::x87DoubleExtended());
-  test.convert(APFloat::x87DoubleExtended(), APFloat::rmNearestTiesToEven,
-               &losesInfo);
+  APFloat::opStatus status = test.convert(APFloat::x87DoubleExtended(), APFloat::rmNearestTiesToEven, &losesInfo);
   EXPECT_TRUE(test.bitwiseIsEqual(X87SNaN));
   EXPECT_FALSE(losesInfo);
+  EXPECT_EQ(status, APFloat::opOK);
 
   test = APFloat::getQNaN(APFloat::IEEEsingle());
   APFloat X87QNaN = APFloat::getQNaN(APFloat::x87DoubleExtended());
@@ -1840,6 +1840,21 @@ TEST(APFloatTest, convert) {
                &losesInfo);
   EXPECT_TRUE(test.bitwiseIsEqual(X87QNaN));
   EXPECT_FALSE(losesInfo);
+
+  // The payload is lost in truncation, but we must retain NaN, so we set the bit after the quiet bit.
+  APInt payload(52, 1);
+  test = APFloat::getSNaN(APFloat::IEEEdouble(), false, &payload);
+  status = test.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &losesInfo);
+  EXPECT_EQ(0x7fa00000, test.bitcastToAPInt());
+  EXPECT_TRUE(losesInfo);
+  EXPECT_EQ(status, APFloat::opOK);
+
+  // The payload is lost in truncation. QNaN remains QNaN.
+  test = APFloat::getQNaN(APFloat::IEEEdouble(), false, &payload);
+  status = test.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &losesInfo);
+  EXPECT_EQ(0x7fc00000, test.bitcastToAPInt());
+  EXPECT_TRUE(losesInfo);
+  EXPECT_EQ(status, APFloat::opOK);
 }
 
 TEST(APFloatTest, PPCDoubleDouble) {

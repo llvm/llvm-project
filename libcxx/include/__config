@@ -837,6 +837,12 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_CONSTEXPR constexpr
 #endif
 
+#ifndef __cpp_consteval
+#  define _LIBCPP_CONSTEVAL _LIBCPP_CONSTEXPR
+#else
+#  define _LIBCPP_CONSTEVAL consteval
+#endif
+
 #ifdef _LIBCPP_CXX03_LANG
 #  define _LIBCPP_DEFAULT {}
 #else

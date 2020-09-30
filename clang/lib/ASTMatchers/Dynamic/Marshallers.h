@@ -58,7 +58,10 @@ template <class T> struct ArgTypeTraits<const T &> : public ArgTypeTraits<T> {
 };
 
 template <> struct ArgTypeTraits<std::string> {
-  static bool is(const VariantValue &Value) { return Value.isString(); }
+  static bool hasCorrectType(const VariantValue &Value) {
+    return Value.isString();
+  }
+  static bool hasCorrectValue(const VariantValue &Value) { return true; }
 
   static const std::string &get(const VariantValue &Value) {
     return Value.getString();
@@ -78,8 +81,11 @@ struct ArgTypeTraits<StringRef> : public ArgTypeTraits<std::string> {
 };
 
 template <class T> struct ArgTypeTraits<ast_matchers::internal::Matcher<T>> {
-  static bool is(const VariantValue &Value) {
-    return Value.isMatcher() && Value.getMatcher().hasTypedMatcher<T>();
+  static bool hasCorrectType(const VariantValue& Value) {
+    return Value.isMatcher();
+  }
+  static bool hasCorrectValue(const VariantValue &Value) {
+    return Value.getMatcher().hasTypedMatcher<T>();
   }
 
   static ast_matchers::internal::Matcher<T> get(const VariantValue &Value) {
@@ -96,7 +102,10 @@ template <class T> struct ArgTypeTraits<ast_matchers::internal::Matcher<T>> {
 };
 
 template <> struct ArgTypeTraits<bool> {
-  static bool is(const VariantValue &Value) { return Value.isBoolean(); }
+  static bool hasCorrectType(const VariantValue &Value) {
+    return Value.isBoolean();
+  }
+  static bool hasCorrectValue(const VariantValue &Value) { return true; }
 
   static bool get(const VariantValue &Value) {
     return Value.getBoolean();
@@ -112,7 +121,10 @@ template <> struct ArgTypeTraits<bool> {
 };
 
 template <> struct ArgTypeTraits<double> {
-  static bool is(const VariantValue &Value) { return Value.isDouble(); }
+  static bool hasCorrectType(const VariantValue &Value) {
+    return Value.isDouble();
+  }
+  static bool hasCorrectValue(const VariantValue &Value) { return true; }
 
   static double get(const VariantValue &Value) {
     return Value.getDouble();
@@ -128,7 +140,10 @@ template <> struct ArgTypeTraits<double> {
 };
 
 template <> struct ArgTypeTraits<unsigned> {
-  static bool is(const VariantValue &Value) { return Value.isUnsigned(); }
+  static bool hasCorrectType(const VariantValue &Value) {
+    return Value.isUnsigned();
+  }
+  static bool hasCorrectValue(const VariantValue &Value) { return true; }
 
   static unsigned get(const VariantValue &Value) {
     return Value.getUnsigned();
@@ -153,8 +168,11 @@ private:
   }
 
 public:
-  static bool is(const VariantValue &Value) {
-    return Value.isString() && getAttrKind(Value.getString());
+  static bool hasCorrectType(const VariantValue &Value) {
+    return Value.isString();
+  }
+  static bool hasCorrectValue(const VariantValue& Value) {
+    return getAttrKind(Value.getString()).hasValue();
   }
 
   static attr::Kind get(const VariantValue &Value) {
@@ -178,8 +196,11 @@ private:
   }
 
 public:
-  static bool is(const VariantValue &Value) {
-    return Value.isString() && getCastKind(Value.getString());
+  static bool hasCorrectType(const VariantValue &Value) {
+    return Value.isString();
+  }
+  static bool hasCorrectValue(const VariantValue& Value) {
+    return getCastKind(Value.getString()).hasValue();
   }
 
   static CastKind get(const VariantValue &Value) {
@@ -198,8 +219,11 @@ private:
   static Optional<llvm::Regex::RegexFlags> getFlags(llvm::StringRef Flags);
 
 public:
-  static bool is(const VariantValue &Value) {
-    return Value.isString() && getFlags(Value.getString());
+  static bool hasCorrectType(const VariantValue &Value) {
+    return Value.isString();
+  }
+  static bool hasCorrectValue(const VariantValue& Value) {
+    return getFlags(Value.getString()).hasValue();
   }
 
   static llvm::Regex::RegexFlags get(const VariantValue &Value) {
@@ -221,8 +245,11 @@ private:
   }
 
 public:
-  static bool is(const VariantValue &Value) {
-    return Value.isString() && getClauseKind(Value.getString());
+  static bool hasCorrectType(const VariantValue &Value) {
+    return Value.isString();
+  }
+  static bool hasCorrectValue(const VariantValue& Value) {
+    return getClauseKind(Value.getString()).hasValue();
   }
 
   static OpenMPClauseKind get(const VariantValue &Value) {
@@ -248,8 +275,11 @@ private:
   }
 
 public:
-  static bool is(const VariantValue &Value) {
-    return Value.isString() && getUnaryOrTypeTraitKind(Value.getString());
+  static bool hasCorrectType(const VariantValue &Value) {
+    return Value.isString();
+  }
+  static bool hasCorrectValue(const VariantValue& Value) {
+    return getUnaryOrTypeTraitKind(Value.getString()).hasValue();
   }
 
   static UnaryExprOrTypeTrait get(const VariantValue &Value) {
@@ -453,12 +483,31 @@ variadicMatcherDescriptor(StringRef MatcherName, SourceRange NameRange,
 
     const ParserValue &Arg = Args[i];
     const VariantValue &Value = Arg.Value;
-    if (!ArgTraits::is(Value)) {
+    if (!ArgTraits::hasCorrectType(Value)) {
       Error->addError(Arg.Range, Error->ET_RegistryWrongArgType)
           << (i + 1) << ArgTraits::getKind().asString() << Value.getTypeAsString();
       HasError = true;
       break;
     }
+    if (!ArgTraits::hasCorrectValue(Value)) {
+      if (llvm::Optional<std::string> BestGuess =
+              ArgTraits::getBestGuess(Value)) {
+        Error->addError(Arg.Range, Error->ET_RegistryUnknownEnumWithReplace)
+            << i + 1 << Value.getString() << *BestGuess;
+      } else if (Value.isString()) {
+        Error->addError(Arg.Range, Error->ET_RegistryValueNotFound)
+            << Value.getString();
+      } else {
+        // This isn't ideal, but it's better than reporting an empty string as
+        // the error in this case.
+        Error->addError(Arg.Range, Error->ET_RegistryWrongArgType)
+            << (i + 1) << ArgTraits::getKind().asString()
+            << Value.getTypeAsString();
+      }
+      HasError = true;
+      break;
+    }
+
     InnerArgs[i] = new ArgT(ArgTraits::get(Value));
   }
 
@@ -568,16 +617,21 @@ private:
   }
 
 #define CHECK_ARG_TYPE(index, type)                                            \
-  if (!ArgTypeTraits<type>::is(Args[index].Value)) {                           \
+  if (!ArgTypeTraits<type>::hasCorrectType(Args[index].Value)) {               \
+    Error->addError(Args[index].Range, Error->ET_RegistryWrongArgType)         \
+        << (index + 1) << ArgTypeTraits<type>::getKind().asString()            \
+        << Args[index].Value.getTypeAsString();                                \
+    return VariantMatcher();                                                   \
+  }                                                                            \
+  if (!ArgTypeTraits<type>::hasCorrectValue(Args[index].Value)) {              \
     if (llvm::Optional<std::string> BestGuess =                                \
             ArgTypeTraits<type>::getBestGuess(Args[index].Value)) {            \
       Error->addError(Args[index].Range,                                       \
                       Error->ET_RegistryUnknownEnumWithReplace)                \
           << index + 1 << Args[index].Value.getString() << *BestGuess;         \
-    } else {                                                                   \
-      Error->addError(Args[index].Range, Error->ET_RegistryWrongArgType)       \
-          << (index + 1) << ArgTypeTraits<type>::getKind().asString()          \
-          << Args[index].Value.getTypeAsString();                              \
+    } else if (Args[index].Value.isString()) {                                 \
+      Error->addError(Args[index].Range, Error->ET_RegistryValueNotFound)      \
+          << Args[index].Value.getString();                                    \
     }                                                                          \
     return VariantMatcher();                                                   \
   }
@@ -761,7 +815,7 @@ public:
           << "1 or 2" << Args.size();
       return VariantMatcher();
     }
-    if (!ArgTypeTraits<StringRef>::is(Args[0].Value)) {
+    if (!ArgTypeTraits<StringRef>::hasCorrectType(Args[0].Value)) {
       Error->addError(Args[0].Range, Error->ET_RegistryWrongArgType)
           << 1 << ArgTypeTraits<StringRef>::getKind().asString()
           << Args[0].Value.getTypeAsString();
@@ -771,16 +825,23 @@ public:
       return outvalueToVariantMatcher(
           NoFlags(ArgTypeTraits<StringRef>::get(Args[0].Value)));
     }
-    if (!ArgTypeTraits<llvm::Regex::RegexFlags>::is(Args[1].Value)) {
+    if (!ArgTypeTraits<llvm::Regex::RegexFlags>::hasCorrectType(
+            Args[1].Value)) {
+      Error->addError(Args[1].Range, Error->ET_RegistryWrongArgType)
+          << 2 << ArgTypeTraits<llvm::Regex::RegexFlags>::getKind().asString()
+          << Args[1].Value.getTypeAsString();
+      return VariantMatcher();
+    }
+    if (!ArgTypeTraits<llvm::Regex::RegexFlags>::hasCorrectValue(
+            Args[1].Value)) {
       if (llvm::Optional<std::string> BestGuess =
               ArgTypeTraits<llvm::Regex::RegexFlags>::getBestGuess(
                   Args[1].Value)) {
         Error->addError(Args[1].Range, Error->ET_RegistryUnknownEnumWithReplace)
             << 2 << Args[1].Value.getString() << *BestGuess;
       } else {
-        Error->addError(Args[1].Range, Error->ET_RegistryWrongArgType)
-            << 2 << ArgTypeTraits<llvm::Regex::RegexFlags>::getKind().asString()
-            << Args[1].Value.getTypeAsString();
+        Error->addError(Args[1].Range, Error->ET_RegistryValueNotFound)
+            << Args[1].Value.getString();
       }
       return VariantMatcher();
     }

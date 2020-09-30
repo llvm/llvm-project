@@ -1998,6 +1998,6 @@ uint8_t DWARFContext::getCUAddrSize() {
   // first compile unit. In practice the address size field is repeated across
   // various DWARF headers (at least in version 5) to make it easier to dump
   // them independently, not to enable varying the address size.
-  unit_iterator_range CUs = compile_units();
+  auto CUs = compile_units();
   return CUs.empty() ? 0 : (*CUs.begin())->getAddressByteSize();
 }

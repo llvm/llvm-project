@@ -48,6 +48,24 @@
 #define PPC64_OPD2
 #endif
 
+#if defined(__ARM_FEATURE_BTI_DEFAULT)
+  .pushsection ".note.gnu.property", "a" SEPARATOR                             \
+  .balign 8 SEPARATOR                                                          \
+  .long 4 SEPARATOR                                                            \
+  .long 0x10 SEPARATOR                                                         \
+  .long 0x5 SEPARATOR                                                          \
+  .asciz "GNU" SEPARATOR                                                       \
+  .long 0xc0000000 SEPARATOR /* GNU_PROPERTY_AARCH64_FEATURE_1_AND */          \
+  .long 4 SEPARATOR                                                            \
+  .long 3 SEPARATOR /* GNU_PROPERTY_AARCH64_FEATURE_1_BTI AND */               \
+                    /* GNU_PROPERTY_AARCH64_FEATURE_1_PAC */                   \
+  .long 0 SEPARATOR                                                            \
+  .popsection SEPARATOR
+#define AARCH64_BTI  bti c
+#else
+#define AARCH64_BTI
+#endif
+
 #define GLUE2(a, b) a ## b
 #define GLUE(a, b) GLUE2(a, b)
 #define SYMBOL_NAME(name) GLUE(__USER_LABEL_PREFIX__, name)
@@ -144,7 +162,8 @@
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
   PPC64_OPD1                                                                   \
   SYMBOL_NAME(name):                                                           \
-  PPC64_OPD2
+  PPC64_OPD2                                                                   \
+  AARCH64_BTI
 
 #if defined(__arm__)
 #if !defined(__ARM_ARCH)

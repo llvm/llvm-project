@@ -63,6 +63,9 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   if (config->outputType == MachO::MH_DYLIB && !config->hasReexports)
     hdr->flags |= MachO::MH_NO_REEXPORTED_DYLIBS;
 
+  if (config->outputType == MachO::MH_EXECUTE && config->isPic)
+    hdr->flags |= MachO::MH_PIE;
+
   if (in.exports->hasWeakSymbol || in.weakBinding->hasNonWeakDefinition())
     hdr->flags |= MachO::MH_WEAK_DEFINES;
 
@@ -87,6 +90,97 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
 
 PageZeroSection::PageZeroSection()
     : SyntheticSection(segment_names::pageZero, section_names::pageZero) {}
+
+uint64_t Location::getVA() const {
+  if (const auto *isec = section.dyn_cast<const InputSection *>())
+    return isec->getVA() + offset;
+  return section.get<const OutputSection *>()->addr + offset;
+}
+
+RebaseSection::RebaseSection()
+    : LinkEditSection(segment_names::linkEdit, section_names::rebase) {}
+
+namespace {
+struct Rebase {
+  OutputSegment *segment = nullptr;
+  uint64_t offset = 0;
+  uint64_t consecutiveCount = 0;
+};
+} // namespace
+
+// Rebase opcodes allow us to describe a contiguous sequence of rebase location
+// using a single DO_REBASE opcode. To take advantage of it, we delay emitting
+// `DO_REBASE` until we have reached the end of a contiguous sequence.
+static void encodeDoRebase(Rebase &rebase, raw_svector_ostream &os) {
+  using namespace llvm::MachO;
+  assert(rebase.consecutiveCount != 0);
+  if (rebase.consecutiveCount <= REBASE_IMMEDIATE_MASK) {
+    os << static_cast<uint8_t>(REBASE_OPCODE_DO_REBASE_IMM_TIMES |
+                               rebase.consecutiveCount);
+  } else {
+    os << static_cast<uint8_t>(REBASE_OPCODE_DO_REBASE_ULEB_TIMES);
+    encodeULEB128(rebase.consecutiveCount, os);
+  }
+  rebase.consecutiveCount = 0;
+}
+
+static void encodeRebase(const OutputSection *osec, uint64_t outSecOff,
+                         Rebase &lastRebase, raw_svector_ostream &os) {
+  using namespace llvm::MachO;
+  OutputSegment *seg = osec->parent;
+  uint64_t offset = osec->getSegmentOffset() + outSecOff;
+  if (lastRebase.segment != seg || lastRebase.offset != offset) {
+    if (lastRebase.consecutiveCount != 0)
+      encodeDoRebase(lastRebase, os);
+
+    if (lastRebase.segment != seg) {
+      os << static_cast<uint8_t>(REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB |
+                                 seg->index);
+      encodeULEB128(offset, os);
+      lastRebase.segment = seg;
+      lastRebase.offset = offset;
+    } else {
+      assert(lastRebase.offset != offset);
+      os << static_cast<uint8_t>(REBASE_OPCODE_ADD_ADDR_ULEB);
+      encodeULEB128(offset - lastRebase.offset, os);
+      lastRebase.offset = offset;
+    }
+  }
+  ++lastRebase.consecutiveCount;
+  // DO_REBASE causes dyld to both perform the binding and increment the offset
+  lastRebase.offset += WordSize;
+}
+
+void RebaseSection::finalizeContents() {
+  using namespace llvm::MachO;
+  if (locations.empty())
+    return;
+
+  raw_svector_ostream os{contents};
+  Rebase lastRebase;
+
+  os << static_cast<uint8_t>(REBASE_OPCODE_SET_TYPE_IMM | REBASE_TYPE_POINTER);
+
+  llvm::sort(locations, [](const Location &a, const Location &b) {
+    return a.getVA() < b.getVA();
+  });
+  for (const Location &loc : locations) {
+    if (const auto *isec = loc.section.dyn_cast<const InputSection *>()) {
+      encodeRebase(isec->parent, isec->outSecOff + loc.offset, lastRebase, os);
+    } else {
+      const auto *osec = loc.section.get<const OutputSection *>();
+      encodeRebase(osec, loc.offset, lastRebase, os);
+    }
+  }
+  if (lastRebase.consecutiveCount != 0)
+    encodeDoRebase(lastRebase, os);
+
+  os << static_cast<uint8_t>(REBASE_OPCODE_DONE);
+}
+
+void RebaseSection::writeTo(uint8_t *buf) const {
+  memcpy(buf, contents.data(), contents.size());
+}
 
 NonLazyPointerSectionBase::NonLazyPointerSectionBase(const char *segname,
                                                      const char *name)
@@ -184,12 +278,6 @@ static void encodeWeakOverride(const Defined *defined,
      << defined->getName() << '\0';
 }
 
-uint64_t BindingTarget::getVA() const {
-  if (auto *isec = section.dyn_cast<const InputSection *>())
-    return isec->getVA() + offset;
-  return section.get<const OutputSection *>()->addr + offset;
-}
-
 // Emit bind opcodes, which are a stream of byte-sized opcodes that dyld
 // interprets to update a record with the following fields:
 //  * segment index (of the segment to write the symbol addresses to, typically
@@ -217,11 +305,10 @@ void BindingSection::finalizeContents() {
     encodeDylibOrdinal(b.dysym, lastBinding, os);
     if (auto *isec = b.target.section.dyn_cast<const InputSection *>()) {
       encodeBinding(b.dysym, isec->parent, isec->outSecOff + b.target.offset,
-                    b.target.addend, lastBinding, os);
+                    b.addend, lastBinding, os);
     } else {
       auto *osec = b.target.section.get<const OutputSection *>();
-      encodeBinding(b.dysym, osec, b.target.offset, b.target.addend,
-                    lastBinding, os);
+      encodeBinding(b.dysym, osec, b.target.offset, b.addend, lastBinding, os);
     }
   }
   if (!bindings.empty())
@@ -251,11 +338,10 @@ void WeakBindingSection::finalizeContents() {
   for (const WeakBindingEntry &b : bindings) {
     if (auto *isec = b.target.section.dyn_cast<const InputSection *>()) {
       encodeBinding(b.symbol, isec->parent, isec->outSecOff + b.target.offset,
-                    b.target.addend, lastBinding, os);
+                    b.addend, lastBinding, os);
     } else {
       auto *osec = b.target.section.get<const OutputSection *>();
-      encodeBinding(b.symbol, osec, b.target.offset, b.target.addend,
-                    lastBinding, os);
+      encodeBinding(b.symbol, osec, b.target.offset, b.addend, lastBinding, os);
     }
   }
   if (!bindings.empty() || !definitions.empty())
@@ -284,6 +370,7 @@ void macho::addNonLazyBindingEntries(const Symbol *sym,
     if (dysym->isWeakDef())
       in.weakBinding->addEntry(sym, section, offset, addend);
   } else if (auto *defined = dyn_cast<Defined>(sym)) {
+    in.rebase->addEntry(section, offset);
     if (defined->isWeakDef() && defined->isExternal())
       in.weakBinding->addEntry(sym, section, offset, addend);
   } else if (isa<DSOHandle>(sym)) {
@@ -296,7 +383,10 @@ void macho::addNonLazyBindingEntries(const Symbol *sym,
 }
 
 StubsSection::StubsSection()
-    : SyntheticSection(segment_names::text, "__stubs") {}
+    : SyntheticSection(segment_names::text, "__stubs") {
+  flags = MachO::S_SYMBOL_STUBS;
+  reserved2 = target->stubSize;
+}
 
 uint64_t StubsSection::getSize() const {
   return entries.size() * target->stubSize;
@@ -404,8 +494,10 @@ void LazyBindingSection::writeTo(uint8_t *buf) const {
 }
 
 void LazyBindingSection::addEntry(DylibSymbol *dysym) {
-  if (entries.insert(dysym))
+  if (entries.insert(dysym)) {
     dysym->stubsHelperIndex = entries.size() - 1;
+    in.rebase->addEntry(in.lazyPointers, dysym->stubsIndex * WordSize);
+  }
 }
 
 // Unlike the non-lazy binding section, the bind opcodes in this section aren't
@@ -437,6 +529,29 @@ uint32_t LazyBindingSection::encode(const DylibSymbol &sym) {
   return opstreamOffset;
 }
 
+void macho::prepareBranchTarget(Symbol *sym) {
+  if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+    if (in.stubs->addEntry(dysym)) {
+      if (sym->isWeakDef()) {
+        in.binding->addEntry(dysym, in.lazyPointers,
+                             sym->stubsIndex * WordSize);
+        in.weakBinding->addEntry(sym, in.lazyPointers,
+                                 sym->stubsIndex * WordSize);
+      } else {
+        in.lazyBinding->addEntry(dysym);
+      }
+    }
+  } else if (auto *defined = dyn_cast<Defined>(sym)) {
+    if (defined->isWeakDef() && defined->isExternal()) {
+      if (in.stubs->addEntry(sym)) {
+        in.rebase->addEntry(in.lazyPointers, sym->stubsIndex * WordSize);
+        in.weakBinding->addEntry(sym, in.lazyPointers,
+                                 sym->stubsIndex * WordSize);
+      }
+    }
+  }
+}
+
 ExportSection::ExportSection()
     : LinkEditSection(segment_names::linkEdit, section_names::export_) {}
 
@@ -464,9 +579,12 @@ uint64_t SymtabSection::getRawSize() const {
 
 void SymtabSection::finalizeContents() {
   // TODO support other symbol types
-  for (Symbol *sym : symtab->getSymbols())
-    if (isa<Defined>(sym))
+  for (Symbol *sym : symtab->getSymbols()) {
+    if (isa<Defined>(sym) || sym->isInGot() || sym->isInStubs()) {
+      sym->symtabIndex = symbols.size();
       symbols.push_back({sym, stringTableSection.addString(sym->getName())});
+    }
+  }
 }
 
 void SymtabSection::writeTo(uint8_t *buf) const {
@@ -476,13 +594,60 @@ void SymtabSection::writeTo(uint8_t *buf) const {
     // TODO support other symbol types
     // TODO populate n_desc with more flags
     if (auto *defined = dyn_cast<Defined>(entry.sym)) {
-      nList->n_type = MachO::N_EXT | MachO::N_SECT;
-      nList->n_sect = defined->isec->parent->index;
+      if (defined->isAbsolute()) {
+        nList->n_type = MachO::N_EXT | MachO::N_ABS;
+        nList->n_sect = MachO::NO_SECT;
+        nList->n_value = defined->value;
+      } else {
+        nList->n_type = MachO::N_EXT | MachO::N_SECT;
+        nList->n_sect = defined->isec->parent->index;
+        // For the N_SECT symbol type, n_value is the address of the symbol
+        nList->n_value = defined->value + defined->isec->getVA();
+      }
       nList->n_desc |= defined->isWeakDef() ? MachO::N_WEAK_DEF : 0;
-      // For the N_SECT symbol type, n_value is the address of the symbol
-      nList->n_value = defined->value + defined->isec->getVA();
     }
     ++nList;
+  }
+}
+
+IndirectSymtabSection::IndirectSymtabSection()
+    : LinkEditSection(segment_names::linkEdit,
+                      section_names::indirectSymbolTable) {}
+
+uint32_t IndirectSymtabSection::getNumSymbols() const {
+  return in.got->getEntries().size() + in.tlvPointers->getEntries().size() +
+         in.stubs->getEntries().size();
+}
+
+bool IndirectSymtabSection::isNeeded() const {
+  return in.got->isNeeded() || in.tlvPointers->isNeeded() ||
+         in.stubs->isNeeded();
+}
+
+void IndirectSymtabSection::finalizeContents() {
+  uint32_t off = 0;
+  in.got->reserved1 = off;
+  off += in.got->getEntries().size();
+  in.tlvPointers->reserved1 = off;
+  off += in.tlvPointers->getEntries().size();
+  // There is a 1:1 correspondence between stubs and LazyPointerSection
+  // entries, so they can share the same sub-array in the table.
+  in.stubs->reserved1 = in.lazyPointers->reserved1 = off;
+}
+
+void IndirectSymtabSection::writeTo(uint8_t *buf) const {
+  uint32_t off = 0;
+  for (const Symbol *sym : in.got->getEntries()) {
+    write32le(buf + off * sizeof(uint32_t), sym->symtabIndex);
+    ++off;
+  }
+  for (const Symbol *sym : in.tlvPointers->getEntries()) {
+    write32le(buf + off * sizeof(uint32_t), sym->symtabIndex);
+    ++off;
+  }
+  for (const Symbol *sym : in.stubs->getEntries()) {
+    write32le(buf + off * sizeof(uint32_t), sym->symtabIndex);
+    ++off;
   }
 }
 

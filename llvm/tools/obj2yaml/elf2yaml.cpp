@@ -95,6 +95,8 @@ class ELFDumper {
   Expected<ELFYAML::SymverSection *> dumpSymverSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::VerneedSection *> dumpVerneedSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::Group *> dumpGroup(const Elf_Shdr *Shdr);
+  Expected<ELFYAML::ARMIndexTableSection *>
+  dumpARMIndexTableSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::MipsABIFlags *> dumpMipsABIFlags(const Elf_Shdr *Shdr);
   Expected<ELFYAML::StackSizesSection *>
   dumpStackSizesSection(const Elf_Shdr *Shdr);
@@ -460,6 +462,13 @@ ELFDumper<ELFT>::dumpSections() {
 
   auto GetDumper = [this](unsigned Type)
       -> std::function<Expected<ELFYAML::Chunk *>(const Elf_Shdr *)> {
+    if (Obj.getHeader().e_machine == ELF::EM_ARM && Type == ELF::SHT_ARM_EXIDX)
+      return [this](const Elf_Shdr *S) { return dumpARMIndexTableSection(S); };
+
+    if (Obj.getHeader().e_machine == ELF::EM_MIPS &&
+        Type == ELF::SHT_MIPS_ABIFLAGS)
+      return [this](const Elf_Shdr *S) { return dumpMipsABIFlags(S); };
+
     switch (Type) {
     case ELF::SHT_DYNAMIC:
       return [this](const Elf_Shdr *S) { return dumpDynamicSection(S); };
@@ -472,8 +481,6 @@ ELFDumper<ELFT>::dumpSections() {
       return [this](const Elf_Shdr *S) { return dumpRelrSection(S); };
     case ELF::SHT_GROUP:
       return [this](const Elf_Shdr *S) { return dumpGroup(S); };
-    case ELF::SHT_MIPS_ABIFLAGS:
-      return [this](const Elf_Shdr *S) { return dumpMipsABIFlags(S); };
     case ELF::SHT_NOBITS:
       return [this](const Elf_Shdr *S) { return dumpNoBitsSection(S); };
     case ELF::SHT_NOTE:
@@ -1343,6 +1350,33 @@ Expected<ELFYAML::Group *> ELFDumper<ELFT>::dumpGroup(const Elf_Shdr *Shdr) {
       return NameOrErr.takeError();
     S->Members.push_back({*NameOrErr});
   }
+  return S.release();
+}
+
+template <class ELFT>
+Expected<ELFYAML::ARMIndexTableSection *>
+ELFDumper<ELFT>::dumpARMIndexTableSection(const Elf_Shdr *Shdr) {
+  auto S = std::make_unique<ELFYAML::ARMIndexTableSection>();
+  if (Error E = dumpCommonSection(Shdr, *S))
+    return std::move(E);
+
+  Expected<ArrayRef<uint8_t>> ContentOrErr = Obj.getSectionContents(*Shdr);
+  if (!ContentOrErr)
+    return ContentOrErr.takeError();
+
+  if (ContentOrErr->size() % (sizeof(Elf_Word) * 2) != 0) {
+    S->Content = yaml::BinaryRef(*ContentOrErr);
+    return S.release();
+  }
+
+  ArrayRef<Elf_Word> Words(
+      reinterpret_cast<const Elf_Word *>(ContentOrErr->data()),
+      ContentOrErr->size() / sizeof(Elf_Word));
+
+  S->Entries.emplace();
+  for (size_t I = 0, E = Words.size(); I != E; I += 2)
+    S->Entries->push_back({(yaml::Hex32)Words[I], (yaml::Hex32)Words[I + 1]});
+
   return S.release();
 }
 

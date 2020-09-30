@@ -234,6 +234,24 @@ define <4 x float> @test_simplify_3_5(<4 x float> %x) {
   ret <4 x float> %1
 }
 
+; (float)pow((double)(float)x, 0.5)
+; FIXME: One call to `sqrtf` would suffice (PR47613).
+define float @shrink_pow_libcall_half(float %x) {
+; SQRT-LABEL: @shrink_pow_libcall_half(
+; SQRT-NEXT:    [[SQRTF:%.*]] = call fast float @sqrtf(float [[X:%.*]])
+; SQRT-NEXT:    [[SQRTF1:%.*]] = call fast float @sqrtf(float [[X]])
+; SQRT-NEXT:    ret float [[SQRTF1]]
+;
+; NOSQRT-LABEL: @shrink_pow_libcall_half(
+; NOSQRT-NEXT:    [[SQRTF:%.*]] = call fast float @sqrtf(float [[X:%.*]])
+; NOSQRT-NEXT:    ret float [[SQRTF]]
+;
+  %dx = fpext float %x to double
+  %call = call fast double @pow(double %dx, double 0.5)
+  %fr = fptrunc double %call to float
+  ret float %fr
+}
+
 ; Make sure that -0.0 exponent is always simplified.
 
 define double @PR43233(double %x) {

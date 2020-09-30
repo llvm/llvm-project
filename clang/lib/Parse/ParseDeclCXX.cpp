@@ -2186,17 +2186,20 @@ void Parser::HandleMemberFunctionDeclDelays(Declarator& DeclaratorInfo,
     auto LateMethod = new LateParsedMethodDeclaration(this, ThisDecl);
     getCurrentClass().LateParsedDeclarations.push_back(LateMethod);
 
-    // Stash the exception-specification tokens in the late-pased method.
-    LateMethod->ExceptionSpecTokens = FTI.ExceptionSpecTokens;
-    FTI.ExceptionSpecTokens = nullptr;
-
-    // Push tokens for each parameter.  Those that do not have
-    // defaults will be NULL.
+    // Push tokens for each parameter. Those that do not have defaults will be
+    // NULL. We need to track all the parameters so that we can push them into
+    // scope for later parameters and perhaps for the exception specification.
     LateMethod->DefaultArgs.reserve(FTI.NumParams);
     for (unsigned ParamIdx = 0; ParamIdx < FTI.NumParams; ++ParamIdx)
       LateMethod->DefaultArgs.push_back(LateParsedDefaultArgument(
           FTI.Params[ParamIdx].Param,
           std::move(FTI.Params[ParamIdx].DefaultArgTokens)));
+
+    // Stash the exception-specification tokens in the late-pased method.
+    if (FTI.getExceptionSpecType() == EST_Unparsed) {
+      LateMethod->ExceptionSpecTokens = FTI.ExceptionSpecTokens;
+      FTI.ExceptionSpecTokens = nullptr;
+    }
   }
 }
 
@@ -2302,10 +2305,15 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     Declarator &DeclaratorInfo, VirtSpecifiers &VS, ExprResult &BitfieldSize,
     LateParsedAttrList &LateParsedAttrs) {
   // member-declarator:
-  //   declarator pure-specifier[opt]
+  //   declarator virt-specifier-seq[opt] pure-specifier[opt]
   //   declarator requires-clause
   //   declarator brace-or-equal-initializer[opt]
-  //   identifier[opt] ':' constant-expression
+  //   identifier attribute-specifier-seq[opt] ':' constant-expression
+  //       brace-or-equal-initializer[opt]
+  //   ':' constant-expression
+  //
+  // NOTE: the latter two productions are a proposed bugfix rather than the
+  // current grammar rules as of C++20.
   if (Tok.isNot(tok::colon))
     ParseDeclarator(DeclaratorInfo);
   else
@@ -2339,7 +2347,11 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
   }
 
   // If attributes exist after the declarator, but before an '{', parse them.
+  // However, this does not apply for [[]] attributes (which could show up
+  // before or after the __attribute__ attributes).
+  DiagnoseAndSkipCXX11Attributes();
   MaybeParseGNUAttributes(DeclaratorInfo, &LateParsedAttrs);
+  DiagnoseAndSkipCXX11Attributes();
 
   // For compatibility with code written to older Clang, also accept a
   // virt-specifier *after* the GNU attributes.
@@ -2781,7 +2793,12 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     InClassInitStyle HasInClassInit = ICIS_NoInit;
     bool HasStaticInitializer = false;
     if (Tok.isOneOf(tok::equal, tok::l_brace) && PureSpecLoc.isInvalid()) {
-      if (DeclaratorInfo.isDeclarationOfFunction()) {
+      // DRXXXX: Anonymous bit-fields cannot have a brace-or-equal-initializer.
+      if (BitfieldSize.isUsable() && !DeclaratorInfo.hasName()) {
+        // Diagnose the error and pretend there is no in-class initializer.
+        Diag(Tok, diag::err_anon_bitfield_member_init);
+        SkipUntil(tok::comma, StopAtSemi | StopBeforeMatch);
+      } else if (DeclaratorInfo.isDeclarationOfFunction()) {
         // It's a pure-specifier.
         if (!TryConsumePureSpecifier(/*AllowFunctionDefinition*/ false))
           // Parse it as an expression so that Sema can diagnose it.
@@ -2930,7 +2947,11 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     DeclaratorInfo.setCommaLoc(CommaLoc);
 
     // GNU attributes are allowed before the second and subsequent declarator.
+    // However, this does not apply for [[]] attributes (which could show up
+    // before or after the __attribute__ attributes).
+    DiagnoseAndSkipCXX11Attributes();
     MaybeParseGNUAttributes(DeclaratorInfo);
+    DiagnoseAndSkipCXX11Attributes();
 
     if (ParseCXXMemberDeclaratorBeforeInitializer(
             DeclaratorInfo, VS, BitfieldSize, LateParsedAttrs))

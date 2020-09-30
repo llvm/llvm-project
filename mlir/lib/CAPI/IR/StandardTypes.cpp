@@ -13,6 +13,7 @@
 #include "mlir/CAPI/IR.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/Types.h"
 
 using namespace mlir;
 
@@ -296,4 +297,42 @@ intptr_t mlirTupleTypeGetNumTypes(MlirType type) {
 
 MlirType mlirTupleTypeGetType(MlirType type, intptr_t pos) {
   return wrap(unwrap(type).cast<TupleType>().getType(static_cast<size_t>(pos)));
+}
+
+/*============================================================================*/
+/* Function type.                                                             */
+/*============================================================================*/
+
+int mlirTypeIsAFunction(MlirType type) {
+  return unwrap(type).isa<FunctionType>();
+}
+
+MlirType mlirFunctionTypeGet(MlirContext ctx, intptr_t numInputs,
+                             MlirType *inputs, intptr_t numResults,
+                             MlirType *results) {
+  SmallVector<Type, 4> inputsList;
+  SmallVector<Type, 4> resultsList;
+  (void)unwrapList(numInputs, inputs, inputsList);
+  (void)unwrapList(numResults, results, resultsList);
+  return wrap(FunctionType::get(inputsList, resultsList, unwrap(ctx)));
+}
+
+intptr_t mlirFunctionTypeGetNumInputs(MlirType type) {
+  return unwrap(type).cast<FunctionType>().getNumInputs();
+}
+
+intptr_t mlirFunctionTypeGetNumResults(MlirType type) {
+  return unwrap(type).cast<FunctionType>().getNumResults();
+}
+
+MlirType mlirFunctionTypeGetInput(MlirType type, intptr_t pos) {
+  assert(pos >= 0 && "pos in array must be positive");
+  return wrap(
+      unwrap(type).cast<FunctionType>().getInput(static_cast<unsigned>(pos)));
+}
+
+MlirType mlirFunctionTypeGetResult(MlirType type, intptr_t pos) {
+  assert(pos >= 0 && "pos in array must be positive");
+  return wrap(
+      unwrap(type).cast<FunctionType>().getResult(static_cast<unsigned>(pos)));
 }

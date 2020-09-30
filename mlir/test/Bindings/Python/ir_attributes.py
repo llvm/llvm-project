@@ -1,16 +1,21 @@
 # RUN: %PYTHON %s | FileCheck %s
 
+import gc
 import mlir
 
 def run(f):
   print("\nTEST:", f.__name__)
   f()
+  gc.collect()
+  assert mlir.ir.Context._get_live_count() == 0
 
 
 # CHECK-LABEL: TEST: testParsePrint
 def testParsePrint():
   ctx = mlir.ir.Context()
   t = ctx.parse_attr('"hello"')
+  ctx = None
+  gc.collect()
   # CHECK: "hello"
   print(str(t))
   # CHECK: Attribute("hello")

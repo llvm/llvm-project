@@ -35,7 +35,10 @@ static cl::opt<TargetTransformInfo::TargetCostKind> CostKind(
                clEnumValN(TargetTransformInfo::TCK_Latency,
                           "latency", "Instruction latency"),
                clEnumValN(TargetTransformInfo::TCK_CodeSize,
-                          "code-size", "Code size")));
+                          "code-size", "Code size"),
+               clEnumValN(TargetTransformInfo::TCK_SizeAndLatency,
+                          "size-latency", "Code size and latency")));
+
 
 #define CM_NAME "cost-model"
 #define DEBUG_TYPE CM_NAME

@@ -1842,7 +1842,7 @@ def note_nontrivial_no_copy : Note<
 def note_nontrivial_user_provided : Note<
   "because %select{base class of |field of |}0type %1 has a user-provided "
   "%sub{select_special_member_kind}2">;
-def note_nontrivial_in_class_init : Note<
+def note_nontrivial_default_member_init : Note<
   "because field %0 has an initializer">;
 def note_nontrivial_param_type : Note<
   "because its parameter is %diff{of type $, not $|of the wrong type}2,3">;
@@ -5619,8 +5619,6 @@ def err_bitfield_width_exceeds_type_width : Error<
 def err_anon_bitfield_width_exceeds_type_width : Error<
   "width of anonymous bit-field (%0 bits) exceeds %select{width|size}1 "
   "of its type (%2 bit%s2)">;
-def err_anon_bitfield_init : Error<
-  "anonymous bit-field cannot have a default member initializer">;
 def err_incorrect_number_of_vector_initializers : Error<
   "number of elements must be either one or match the size of the vector">;
 
@@ -8521,12 +8519,12 @@ def err_in_class_initializer_literal_type : Error<
   "'constexpr' specifier">;
 def err_in_class_initializer_non_constant : Error<
   "in-class initializer for static data member is not a constant expression">;
-def err_in_class_initializer_not_yet_parsed : Error<
+def err_default_member_initializer_not_yet_parsed : Error<
   "default member initializer for %1 needed within definition of enclosing "
   "class %0 outside of member functions">;
-def note_in_class_initializer_not_yet_parsed : Note<
+def note_default_member_initializer_not_yet_parsed : Note<
   "default member initializer declared here">;
-def err_in_class_initializer_cycle
+def err_default_member_initializer_cycle
     : Error<"default member initializer for %0 uses itself">;
 
 def ext_in_class_initializer_non_constant : Extension<
@@ -8921,7 +8919,7 @@ def note_array_declared_here : Note<
   "array %0 declared here">;
 
 def warn_printf_insufficient_data_args : Warning<
-  "more '%%' conversions than data arguments">, InGroup<Format>;
+  "more '%%' conversions than data arguments">, InGroup<FormatInsufficientArgs>;
 def warn_printf_data_arg_not_used : Warning<
   "data argument not used by format string">, InGroup<FormatExtraArgs>;
 def warn_format_invalid_conversion : Warning<

@@ -35,8 +35,6 @@ namespace lldb_private {
 /// this information.
 class Trace : public PluginInterface {
 public:
-  ~Trace() override = default;
-
   /// Dump the trace data that this plug-in has access to.
   ///
   /// This function will dump all of the trace data for all threads in a user
@@ -111,7 +109,7 @@ public:
   /// \return
   ///   An error object containing the reason if there is a failure.
   llvm::Error ParseSettings(Debugger &debugger,
-                            const llvm::json::Object &settings,
+                            const llvm::json::Value &settings,
                             llvm::StringRef settings_dir);
 
   /// Get the JSON schema of the settings for the trace plug-in.

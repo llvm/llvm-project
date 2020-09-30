@@ -18,6 +18,8 @@ Ideas for things to do:
 - add dead code stripping
 - move run_tablegen.py from build to tablegen folder
 - figure out why -Iclang/Support gets added so often
+  => https://groups.google.com/a/chromium.org/forum/?oldui=1#!msg/gn-dev/0S7KRGIXcDI/E4ahA1jQFQAJ
+  - ...figure out some approach for this
 - plugin() template with working rpath, exports thingers
   - then port clang_build_examples and enable by default so that clang
     plugin tests run by default

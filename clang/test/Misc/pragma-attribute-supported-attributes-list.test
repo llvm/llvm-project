@@ -151,6 +151,7 @@
 // CHECK-NEXT: SwiftError (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: SwiftErrorResult (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: SwiftIndirectResult (SubjectMatchRule_variable_is_parameter)
+// CHECK-NEXT: SwiftNewType (SubjectMatchRule_type_alias)
 // CHECK-NEXT: SwiftObjCMembers (SubjectMatchRule_objc_interface)
 // CHECK-NEXT: TLSModel (SubjectMatchRule_variable_is_thread_local)
 // CHECK-NEXT: Target (SubjectMatchRule_function)

@@ -250,7 +250,7 @@ void Lint::visitCallBase(CallBase &I) {
 
         // Check that an sret argument points to valid memory.
         if (Formal->hasStructRetAttr() && Actual->getType()->isPointerTy()) {
-          Type *Ty = cast<PointerType>(Formal->getType())->getElementType();
+          Type *Ty = Formal->getParamStructRetType();
           visitMemoryReference(I, Actual, DL->getTypeStoreSize(Ty),
                                DL->getABITypeAlign(Ty), Ty,
                                MemRef::Read | MemRef::Write);

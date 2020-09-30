@@ -2636,7 +2636,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_TruncateHelper(SDNode *N) {
     EVT::getFloatingPointVT(InElementSize/2) :
     EVT::getIntegerVT(*DAG.getContext(), InElementSize/2);
   EVT HalfVT = EVT::getVectorVT(*DAG.getContext(), HalfElementVT,
-                                NumElements/2);
+                                NumElements.divideCoefficientBy(2));
 
   SDValue HalfLo;
   SDValue HalfHi;
@@ -4794,20 +4794,18 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
   case ISD::VECREDUCE_FMUL:
     NeutralElem = DAG.getConstantFP(1.0, dl, ElemVT);
     break;
-  case ISD::VECREDUCE_FMAX:
-    // This has maxnum semantics, so NaN represents missing data. We must clear
-    // 'nnan' if it was set because the NaN would be a poison value.
-    NeutralElem = DAG.getConstantFP(
-        std::numeric_limits<double>::quiet_NaN(), dl, ElemVT);
-    Flags.setNoNaNs(false);
-    break;
   case ISD::VECREDUCE_FMIN:
-    // This has minnum semantics, so NaN represents missing data. We must clear
-    // 'nnan' if it was set because the NaN would be a poison value.
-    NeutralElem = DAG.getConstantFP(
-        std::numeric_limits<double>::quiet_NaN(), dl, ElemVT);
-    Flags.setNoNaNs(false);
-    break;
+  case ISD::VECREDUCE_FMAX: {
+    // Neutral element for fminnum is NaN, Inf or FLT_MAX, depending on FMF.
+    const fltSemantics &Semantics = DAG.EVTToAPFloatSemantics(ElemVT);
+    APFloat NeutralAF = !Flags.hasNoNaNs() ? APFloat::getQNaN(Semantics) :
+                        !Flags.hasNoInfs() ? APFloat::getInf(Semantics) :
+                        APFloat::getLargest(Semantics);
+    if (N->getOpcode() == ISD::VECREDUCE_FMAX)
+      NeutralAF.changeSign();
+
+    NeutralElem = DAG.getConstantFP(NeutralAF, dl, ElemVT);
+  }
   }
 
   // Pad the vector with the neutral element.
@@ -5062,11 +5060,12 @@ SDValue DAGTypeLegalizer::GenWidenVectorLoads(SmallVectorImpl<SDValue> &LdChain,
     EVT NewLdTy = LdOps[i].getValueType();
     if (NewLdTy != LdTy) {
       // Create a larger vector.
+      TypeSize LdTySize = LdTy.getSizeInBits();
+      TypeSize NewLdTySize = NewLdTy.getSizeInBits();
+      assert(NewLdTySize.isScalable() == LdTySize.isScalable() &&
+             NewLdTySize.isKnownMultipleOf(LdTySize.getKnownMinSize()));
       unsigned NumOps =
-          (NewLdTy.getSizeInBits() / LdTy.getSizeInBits()).getKnownMinSize();
-      assert(
-          (NewLdTy.getSizeInBits() % LdTy.getSizeInBits()).getKnownMinSize() ==
-          0);
+          NewLdTySize.getKnownMinSize() / LdTySize.getKnownMinSize();
       SmallVector<SDValue, 16> WidenOps(NumOps);
       unsigned j = 0;
       for (; j != End-Idx; ++j)
@@ -5087,7 +5086,8 @@ SDValue DAGTypeLegalizer::GenWidenVectorLoads(SmallVectorImpl<SDValue> &LdChain,
                        makeArrayRef(&ConcatOps[Idx], End - Idx));
 
   // We need to fill the rest with undefs to build the vector.
-  unsigned NumOps = (WidenWidth / LdTy.getSizeInBits()).getKnownMinSize();
+  unsigned NumOps =
+      WidenWidth.getKnownMinSize() / LdTy.getSizeInBits().getKnownMinSize();
   SmallVector<SDValue, 16> WidenOps(NumOps);
   SDValue UndefVal = DAG.getUNDEF(LdTy);
   {

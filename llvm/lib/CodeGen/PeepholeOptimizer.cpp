@@ -1413,10 +1413,8 @@ bool PeepholeOptimizer::foldRedundantCopy(
 
   MachineInstr *PrevCopy = CopyMIs.find(SrcPair)->second;
 
-#ifndef NDEBUG
-  unsigned PrevSrcSubReg = PrevCopy->getOperand(1).getSubReg();
-#endif
-  assert(SrcSubReg == PrevSrcSubReg && "Unexpected mismatching subreg!");
+  assert(SrcSubReg == PrevCopy->getOperand(1).getSubReg() &&
+         "Unexpected mismatching subreg!");
 
   Register PrevDstReg = PrevCopy->getOperand(0).getReg();
 

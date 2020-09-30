@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Scalar/ConstraintElimination.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstraintSystem.h"
@@ -37,7 +38,7 @@ DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
 
 static int64_t MaxConstraintValue = std::numeric_limits<int64_t>::max();
 
-Optional<std::pair<int64_t, Value *>> decompose(Value *V) {
+static Optional<std::pair<int64_t, Value *>> decompose(Value *V) {
   if (auto *CI = dyn_cast<ConstantInt>(V)) {
     if (CI->isNegative() || CI->uge(MaxConstraintValue))
       return {};
@@ -116,6 +117,7 @@ getConstraint(CmpInst *Cmp, DenseMap<Value *, unsigned> &Value2Index,
                        Cmp->getOperand(1), Value2Index, ShouldAdd);
 }
 
+namespace {
 /// Represents either a condition that holds on entry to a block or a basic
 /// block, with their respective Dominator DFS in and out numbers.
 struct ConstraintOrBlock {
@@ -145,6 +147,7 @@ struct StackEntry {
   StackEntry(unsigned NumIn, unsigned NumOut, CmpInst *Condition, bool IsNot)
       : NumIn(NumIn), NumOut(NumOut), Condition(Condition), IsNot(IsNot) {}
 };
+} // namespace
 
 static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   bool Changed = false;
@@ -192,8 +195,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       LLVM_DEBUG(dbgs() << "Top of stack : " << E.NumIn << " " << E.NumOut
                         << "\n");
       LLVM_DEBUG(dbgs() << "CB: " << CB.NumIn << " " << CB.NumOut << "\n");
-      bool IsDom = CB.NumIn >= E.NumIn && CB.NumOut <= E.NumOut;
-      if (IsDom)
+      assert(E.NumIn <= CB.NumIn);
+      if (CB.NumOut <= E.NumOut)
         break;
       LLVM_DEBUG(dbgs() << "Removing " << *E.Condition << " " << E.IsNot
                         << "\n");
@@ -269,6 +272,19 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   }
 
   return Changed;
+}
+
+PreservedAnalyses ConstraintEliminationPass::run(Function &F,
+                                                 FunctionAnalysisManager &AM) {
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  if (!eliminateConstraints(F, DT))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<GlobalsAA>();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 namespace {

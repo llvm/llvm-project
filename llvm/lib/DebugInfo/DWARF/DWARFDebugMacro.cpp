@@ -102,7 +102,7 @@ void DWARFDebugMacro::dump(raw_ostream &OS) const {
 }
 
 Error DWARFDebugMacro::parseImpl(
-    Optional<DWARFUnitVector::iterator_range> Units,
+    Optional<DWARFUnitVector::compile_unit_range> Units,
     Optional<DataExtractor> StringExtractor, DWARFDataExtractor Data,
     bool IsMacro) {
   uint64_t Offset = 0;

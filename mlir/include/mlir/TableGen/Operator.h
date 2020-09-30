@@ -242,17 +242,6 @@ public:
   // debugging purposes.
   void print(llvm::raw_ostream &os) const;
 
-  // A helper RAII class to emit nested namespaces for this op.
-  class NamespaceEmitter {
-  public:
-    NamespaceEmitter(raw_ostream &os, Operator &op);
-    ~NamespaceEmitter();
-
-  private:
-    raw_ostream &os;
-    SmallVector<StringRef, 2> namespaces;
-  };
-
   // Return whether all the result types are known.
   bool allResultTypesKnown() const { return allResultsHaveKnownTypes; };
 

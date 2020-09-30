@@ -1,8 +1,10 @@
 set(LLVM_LINK_COMPONENTS
   Core
   ExecutionEngine
+  IPO
   IRReader
   OrcJIT
+  ScalarOpts
   Support
   nativecodegen
   )

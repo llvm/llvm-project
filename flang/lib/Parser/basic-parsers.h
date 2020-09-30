@@ -787,7 +787,8 @@ public:
   constexpr NonemptySeparated(const NonemptySeparated &) = default;
   constexpr NonemptySeparated(PA p, PB sep) : parser_{p}, separator_{sep} {}
   std::optional<resultType> Parse(ParseState &state) const {
-    return applyFunction(prepend<paType>, parser_, many(separator_ >> parser_))
+    return applyFunction<std::list<paType>>(
+        prepend<paType>, parser_, many(separator_ >> parser_))
         .Parse(state);
   }
 

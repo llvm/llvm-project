@@ -353,12 +353,126 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOp> {
 };
 } // namespace
 
+namespace {
+/// Pattern to fold pair of reshape ops where the intermediate has unit-dims for
+/// example:
+///
+///  %0 = linalg.tensor_reshape %arg0
+///    [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>]
+///    : tensor<2048xf32> into tensor<1x4x1x512xf32>
+///  %1 = linalg.tensor_reshape %0
+///    [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>,
+///     affine_map<(d0, d1, d2, d3) -> (d3)>]
+///    : tensor<1x4x1x512xf32> into tensor<4x512xf32>
+///
+/// can be replaced with
+///
+///  %0 = linalg.tensor_reshape %arg0 [affine_map<(d0, d1) -> (d0, d1)>]
+///    : tensor<2048xf32> into tensor<4x512xf32>
+///
+/// Similarly,
+///
+///  %0 = linalg.tensor_reshape %arg0
+///    [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>,
+///     affine_map<(d0, d1, d2, d3) -> (d3)>]
+///    : tensor<4x512xf32> into tensor<1x4x1x512xf32>
+///  %1 = linalg.tensor_reshape %0
+///   [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>]
+///    : tensor<1x4x1x512xf32> into tensor<2048xf32>
+///
+/// can be replaced with
+///
+///  %0 = linalg.tensor_reshape %arg0 [affine_map<(d0, d1) -> (d0, d1)>]
+///    : tensor<4x512xf32> into tensor<2048xf32>
+struct FoldReshapeOpWithUnitExtent : OpRewritePattern<TensorReshapeOp> {
+  using OpRewritePattern<TensorReshapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TensorReshapeOp reshapeOp,
+                                PatternRewriter &rewriter) const override {
+    // Check that the source operand is created from a reshape as well.
+    TensorReshapeOp parentReshapeOp =
+        reshapeOp.src().getDefiningOp<TensorReshapeOp>();
+    if (!parentReshapeOp)
+      return failure();
+
+    RankedTensorType srcType = reshapeOp.getSrcType(),
+                     dstType = reshapeOp.getResultType(),
+                     parentSrcType = parentReshapeOp.getSrcType();
+    if (!srcType.hasStaticShape() || !dstType.hasStaticShape() ||
+        !parentSrcType.hasStaticShape() ||
+        srcType.getRank() < dstType.getRank() ||
+        parentSrcType.getRank() == dstType.getRank())
+      return failure();
+    // Check if the result tensor_reshape after folding the reshapeOp and
+    // parentReshapeOp are combined.
+    // If the final tensor_reshape is folding, the parentReshapeOp is
+    // introducing unit-dims, and the reshapeOp does an actual reshape.
+    // If the final tensor_reshape op is expanding, the reshapeOp is introducing
+    // unit-dims, and the parentReshapeOp does an actual reshape.
+    bool isFoldingPattern = parentSrcType.getRank() > dstType.getRank();
+    auto reassociationMaps = isFoldingPattern
+                                 ? reshapeOp.getReassociationMaps()
+                                 : parentReshapeOp.getReassociationMaps();
+    DenseSet<unsigned> conservedDimensions;
+    for (auto &map : reassociationMaps) {
+      if (map.getNumResults() == 1) {
+        conservedDimensions.insert(
+            map.getResult(0).cast<AffineDimExpr>().getPosition());
+      }
+    }
+
+    // Find positions at which the unit-dims exist.
+    int64_t nonUnitDimPos = 0;
+    DenseMap<unsigned, unsigned> nonUnitSrcDims;
+    ArrayRef<int64_t> nonUnitShape =
+        isFoldingPattern ? parentSrcType.getShape() : dstType.getShape();
+    for (auto shape : enumerate(srcType.getShape())) {
+      // Case 1 : It is a conserved dimension.
+      if (conservedDimensions.count(shape.index())) {
+        nonUnitSrcDims[shape.index()] = nonUnitDimPos++;
+        continue;
+      }
+      // Case 2 : Dimensions dont match but the intermediate tensor is unit-dim.
+      if (shape.value() == 1)
+        continue;
+      // Case 3 : Dimensions match, treat it as a non-unit src dim.
+      if (nonUnitDimPos < static_cast<int64_t>(nonUnitShape.size()) &&
+          nonUnitShape[nonUnitDimPos] == shape.value()) {
+        nonUnitSrcDims[shape.index()] = nonUnitDimPos++;
+        continue;
+      }
+      return failure();
+    }
+
+    // Compute reassociation maps for the final operation. Use the reassociation
+    // maps that is actually doing a reshape (and not just introducing
+    // unit-dims). From these maps, prune the unit-extent dimensions.
+    for (AffineMap &map : reassociationMaps) {
+      SmallVector<AffineExpr, 4> exprs;
+      exprs.reserve(nonUnitSrcDims.size());
+      for (auto result : map.getResults()) {
+        unsigned dim = result.cast<AffineDimExpr>().getPosition();
+        if (nonUnitSrcDims.count(dim))
+          exprs.push_back(rewriter.getAffineDimExpr(nonUnitSrcDims[dim]));
+      }
+      map = AffineMap::get(nonUnitSrcDims.size(), 0, exprs,
+                           rewriter.getContext());
+    }
+    rewriter.replaceOpWithNewOp<TensorReshapeOp>(
+        reshapeOp, dstType, parentReshapeOp.src(),
+        rewriter.getAffineMapArrayAttr(reassociationMaps));
+    return success();
+  }
+};
+} // namespace
+
 /// Patterns that are used to canonicalize the use of unit-extent dims for
 /// broadcasting.
 void mlir::populateLinalgFoldUnitExtentDimsPatterns(
     MLIRContext *context, OwningRewritePatternList &patterns) {
   patterns.insert<FoldUnitDimLoops, ReplaceUnitExtentTensors>(context);
   TensorReshapeOp::getCanonicalizationPatterns(patterns, context);
+  patterns.insert<FoldReshapeOpWithUnitExtent>(context);
 }
 
 namespace {

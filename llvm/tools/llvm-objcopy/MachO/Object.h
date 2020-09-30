@@ -94,6 +94,9 @@ struct LoadCommand {
 
   // Returns the segment name if the load command is a segment command.
   Optional<StringRef> getSegmentName() const;
+
+  // Returns the segment vm address if the load command is a segment command.
+  Optional<uint64_t> getSegmentVMAddr() const;
 };
 
 // A symbol information. Fields which starts with "n_" are same as them in the
@@ -340,6 +343,8 @@ struct Object {
     return Header.Magic == MachO::MH_MAGIC_64 ||
            Header.Magic == MachO::MH_CIGAM_64;
   }
+
+  uint64_t nextAvailableSegmentAddress() const;
 };
 
 } // end namespace macho

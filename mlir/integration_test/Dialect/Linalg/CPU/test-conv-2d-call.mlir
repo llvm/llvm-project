@@ -9,13 +9,13 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-// RUN: mlir-opt %s -test-conv-vectorization -convert-linalg-to-llvm | \
+// RUN: mlir-opt %s -test-conv-vectorization="tile-sizes=1,1,3,3"  -convert-linalg-to-llvm | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
 // RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=2,2" \
-// RUN:   -test-conv-vectorization -convert-linalg-to-llvm | \
+// RUN:   -test-conv-vectorization="tile-sizes=1,1,3,3"  -convert-linalg-to-llvm | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s

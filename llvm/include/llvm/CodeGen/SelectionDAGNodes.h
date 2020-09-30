@@ -180,8 +180,8 @@ public:
     return getValueType().getSizeInBits();
   }
 
-  TypeSize getScalarValueSizeInBits() const {
-    return getValueType().getScalarType().getSizeInBits();
+  uint64_t getScalarValueSizeInBits() const {
+    return getValueType().getScalarType().getSizeInBits().getFixedSize();
   }
 
   // Forwarding methods - These forward to the corresponding methods in SDNode.

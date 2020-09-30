@@ -13,46 +13,27 @@
 define float @test_v2f32(<2 x float> %a0) {
 ; SSE2-LABEL: test_v2f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps %xmm0, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm0[1,1]
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
-; SSE2-NEXT:    cmpunordss %xmm0, %xmm1
-; SSE2-NEXT:    movaps %xmm1, %xmm3
-; SSE2-NEXT:    andps %xmm2, %xmm3
-; SSE2-NEXT:    maxss %xmm0, %xmm2
-; SSE2-NEXT:    andnps %xmm2, %xmm1
-; SSE2-NEXT:    orps %xmm3, %xmm1
-; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
+; SSE2-NEXT:    maxss %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_v2f32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; SSE41-NEXT:    movaps %xmm0, %xmm1
-; SSE41-NEXT:    cmpunordss %xmm0, %xmm1
-; SSE41-NEXT:    movaps %xmm1, %xmm3
-; SSE41-NEXT:    andps %xmm2, %xmm3
-; SSE41-NEXT:    maxss %xmm0, %xmm2
-; SSE41-NEXT:    andnps %xmm2, %xmm1
-; SSE41-NEXT:    orps %xmm3, %xmm1
-; SSE41-NEXT:    movaps %xmm1, %xmm0
+; SSE41-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSE41-NEXT:    maxss %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX-NEXT:    vmaxss %xmm0, %xmm1, %xmm2
-; AVX-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v2f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX512-NEXT:    vmaxss %xmm0, %xmm2, %xmm1
-; AVX512-NEXT:    vcmpunordss %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm2, %xmm1, %xmm1 {%k1}
-; AVX512-NEXT:    vmovaps %xmm1, %xmm0
+; AVX512-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = call nnan float @llvm.experimental.vector.reduce.fmax.v2f32(<2 x float> %a0)
   ret float %1
@@ -302,65 +283,37 @@ define double @test_v3f64(<3 x double> %a0) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE2-NEXT:    shufpd {{.*#+}} xmm2 = xmm2[0],mem[1]
-; SSE2-NEXT:    movapd %xmm2, %xmm1
-; SSE2-NEXT:    maxpd %xmm0, %xmm1
-; SSE2-NEXT:    cmpunordpd %xmm0, %xmm0
-; SSE2-NEXT:    andpd %xmm0, %xmm2
-; SSE2-NEXT:    andnpd %xmm1, %xmm0
-; SSE2-NEXT:    orpd %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; SSE2-NEXT:    maxpd %xmm2, %xmm0
 ; SSE2-NEXT:    movapd %xmm0, %xmm1
-; SSE2-NEXT:    cmpunordsd %xmm0, %xmm1
-; SSE2-NEXT:    movapd %xmm1, %xmm3
-; SSE2-NEXT:    andpd %xmm2, %xmm3
-; SSE2-NEXT:    maxsd %xmm0, %xmm2
-; SSE2-NEXT:    andnpd %xmm2, %xmm1
-; SSE2-NEXT:    orpd %xmm3, %xmm1
-; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE2-NEXT:    maxsd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_v3f64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE41-NEXT:    blendpd {{.*#+}} xmm2 = xmm2[0],mem[1]
-; SSE41-NEXT:    movapd %xmm2, %xmm1
-; SSE41-NEXT:    maxpd %xmm0, %xmm1
-; SSE41-NEXT:    cmpunordpd %xmm0, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
-; SSE41-NEXT:    movapd %xmm1, %xmm2
-; SSE41-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
-; SSE41-NEXT:    movapd %xmm1, %xmm0
-; SSE41-NEXT:    cmpunordsd %xmm1, %xmm0
-; SSE41-NEXT:    movapd %xmm0, %xmm3
-; SSE41-NEXT:    andpd %xmm2, %xmm3
-; SSE41-NEXT:    maxsd %xmm1, %xmm2
-; SSE41-NEXT:    andnpd %xmm2, %xmm0
-; SSE41-NEXT:    orpd %xmm3, %xmm0
+; SSE41-NEXT:    maxpd %xmm2, %xmm0
+; SSE41-NEXT:    movapd %xmm0, %xmm1
+; SSE41-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE41-NEXT:    maxsd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_v3f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-NEXT:    vmaxsd %xmm0, %xmm1, %xmm2
-; AVX-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm3
-; AVX-NEXT:    vblendvpd %xmm3, %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vcmpunordsd %xmm1, %xmm1, %xmm2
-; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX-NEXT:    vmaxsd %xmm1, %xmm0, %xmm1
-; AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX-NEXT:    vmaxsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v3f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX512-NEXT:    vmaxsd %xmm0, %xmm1, %xmm2
-; AVX512-NEXT:    vcmpunordsd %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512-NEXT:    vcmpunordsd %xmm2, %xmm2, %k1
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vmaxsd %xmm2, %xmm1, %xmm0
-; AVX512-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 {%k1}
+; AVX512-NEXT:    vmaxsd %xmm1, %xmm0, %xmm1
+; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX512-NEXT:    vmaxsd %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %1 = call nnan double @llvm.experimental.vector.reduce.fmax.v3f64(<3 x double> %a0)

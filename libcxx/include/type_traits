@@ -2883,8 +2883,7 @@ namespace __is_construct
 struct __nat {};
 }
 
-#if !defined(_LIBCPP_CXX03_LANG) && (!__has_feature(is_constructible) || \
-    defined(_LIBCPP_TESTING_FALLBACK_IS_CONSTRUCTIBLE))
+#if !defined(_LIBCPP_CXX03_LANG) && !__has_feature(is_constructible) && !defined(_LIBCPP_COMPILER_GCC)
 
 template <class _Tp, class... _Args>
 struct __libcpp_is_constructible;
@@ -2999,7 +2998,7 @@ struct __libcpp_is_constructible<_Tp&&, _A0>
 
 #endif
 
-#if __has_feature(is_constructible)
+#if __has_feature(is_constructible) || defined(_LIBCPP_COMPILER_GCC)
 template <class _Tp, class ..._Args>
 struct _LIBCPP_TEMPLATE_VIS is_constructible
     : public integral_constant<bool, __is_constructible(_Tp, _Args...)>

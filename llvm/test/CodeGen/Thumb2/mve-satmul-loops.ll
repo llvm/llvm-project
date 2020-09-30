@@ -1145,8 +1145,7 @@ define arm_aapcs_vfpcc void @ssatmul_4_q15(i16* nocapture readonly %pSrcA, i16* 
 ; CHECK-NEXT:    ldrsh r0, [r12], #2
 ; CHECK-NEXT:    ldrsh r1, [r6], #2
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    asrs r0, r0, #15
-; CHECK-NEXT:    ssat r0, #16, r0
+; CHECK-NEXT:    ssat r0, #16, r0, asr #15
 ; CHECK-NEXT:    strh r0, [r4], #2
 ; CHECK-NEXT:    le lr, .LBB5_7
 ; CHECK-NEXT:  .LBB5_8: @ %for.cond.cleanup
@@ -1279,8 +1278,7 @@ define arm_aapcs_vfpcc void @ssatmul_8_q15(i16* nocapture readonly %pSrcA, i16* 
 ; CHECK-NEXT:    ldrsh r0, [r12], #2
 ; CHECK-NEXT:    ldrsh r1, [r6], #2
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    asrs r0, r0, #15
-; CHECK-NEXT:    ssat r0, #16, r0
+; CHECK-NEXT:    ssat r0, #16, r0, asr #15
 ; CHECK-NEXT:    strh r0, [r4], #2
 ; CHECK-NEXT:    le lr, .LBB6_7
 ; CHECK-NEXT:  .LBB6_8: @ %for.cond.cleanup
@@ -1410,8 +1408,7 @@ define arm_aapcs_vfpcc void @ssatmul_8i_q15(i16* nocapture readonly %pSrcA, i16*
 ; CHECK-NEXT:    ldrsh r0, [r12], #2
 ; CHECK-NEXT:    ldrsh r1, [r6], #2
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    asrs r0, r0, #15
-; CHECK-NEXT:    ssat r0, #16, r0
+; CHECK-NEXT:    ssat r0, #16, r0, asr #15
 ; CHECK-NEXT:    strh r0, [r4], #2
 ; CHECK-NEXT:    le lr, .LBB7_7
 ; CHECK-NEXT:  .LBB7_8: @ %for.cond.cleanup
@@ -2218,8 +2215,7 @@ define arm_aapcs_vfpcc void @ssatmul_4_q7(i8* nocapture readonly %pSrcA, i8* noc
 ; CHECK-NEXT:    ldrsb r0, [r12], #1
 ; CHECK-NEXT:    ldrsb r1, [r6], #1
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    asrs r0, r0, #7
-; CHECK-NEXT:    ssat r0, #8, r0
+; CHECK-NEXT:    ssat r0, #8, r0, asr #7
 ; CHECK-NEXT:    strb r0, [r4], #1
 ; CHECK-NEXT:    le lr, .LBB13_7
 ; CHECK-NEXT:  .LBB13_8: @ %for.cond.cleanup
@@ -2346,8 +2342,7 @@ define arm_aapcs_vfpcc void @ssatmul_8_q7(i8* nocapture readonly %pSrcA, i8* noc
 ; CHECK-NEXT:    ldrsb r0, [r12], #1
 ; CHECK-NEXT:    ldrsb r1, [r6], #1
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    asrs r0, r0, #7
-; CHECK-NEXT:    ssat r0, #8, r0
+; CHECK-NEXT:    ssat r0, #8, r0, asr #7
 ; CHECK-NEXT:    strb r0, [r4], #1
 ; CHECK-NEXT:    le lr, .LBB14_7
 ; CHECK-NEXT:  .LBB14_8: @ %for.cond.cleanup
@@ -2480,8 +2475,7 @@ define arm_aapcs_vfpcc void @ssatmul_16_q7(i8* nocapture readonly %pSrcA, i8* no
 ; CHECK-NEXT:    ldrsb r0, [r12], #1
 ; CHECK-NEXT:    ldrsb r1, [r6], #1
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    asrs r0, r0, #7
-; CHECK-NEXT:    ssat r0, #8, r0
+; CHECK-NEXT:    ssat r0, #8, r0, asr #7
 ; CHECK-NEXT:    strb r0, [r4], #1
 ; CHECK-NEXT:    le lr, .LBB15_7
 ; CHECK-NEXT:  .LBB15_8: @ %for.cond.cleanup
@@ -2611,8 +2605,7 @@ define arm_aapcs_vfpcc void @ssatmul_16i_q7(i8* nocapture readonly %pSrcA, i8* n
 ; CHECK-NEXT:    ldrsb r0, [r12], #1
 ; CHECK-NEXT:    ldrsb r1, [r6], #1
 ; CHECK-NEXT:    muls r0, r1, r0
-; CHECK-NEXT:    asrs r0, r0, #7
-; CHECK-NEXT:    ssat r0, #8, r0
+; CHECK-NEXT:    ssat r0, #8, r0, asr #7
 ; CHECK-NEXT:    strb r0, [r4], #1
 ; CHECK-NEXT:    le lr, .LBB16_7
 ; CHECK-NEXT:  .LBB16_8: @ %for.cond.cleanup

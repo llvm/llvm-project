@@ -1428,6 +1428,11 @@ TEST(LocateSymbol, NearbyIdentifier) {
 
 
       // h^i
+
+
+
+
+      int x = hi;
     )cpp",
       R"cpp(
       // prefer nearest occurrence even if several matched tokens
@@ -1587,6 +1592,13 @@ TEST(FindReferences, WithinAST) {
           int [[w^aldo]] = 42;
           auto lambda = [x = [[waldo]]](){};
         }
+      )cpp",
+      R"cpp(// Renaming alias
+        template <typename> class Vector {};
+        using [[^X]] = Vector<int>;
+        [[X]] x1;
+        Vector<int> x2;
+        Vector<double> y;
       )cpp",
   };
   for (const char *Test : Tests) {

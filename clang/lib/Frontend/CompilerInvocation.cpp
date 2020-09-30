@@ -884,6 +884,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DebugRangesBaseAddress = Args.hasArg(OPT_fdebug_ranges_base_address);
 
   setPGOInstrumentor(Opts, Args, Diags);
+  Opts.AtomicProfileUpdate = Args.hasArg(OPT_fprofile_update_EQ);
   Opts.InstrProfileOutput =
       std::string(Args.getLastArgValue(OPT_fprofile_instrument_path_EQ));
   Opts.ProfileInstrumentUsePath =
@@ -1130,6 +1131,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       getLastArgIntValue(Args, OPT_fxray_instruction_threshold_EQ, 200, Diags);
   Opts.XRayIgnoreLoops = Args.hasArg(OPT_fxray_ignore_loops);
   Opts.XRayOmitFunctionIndex = Args.hasArg(OPT_fno_xray_function_index);
+  Opts.XRayTotalFunctionGroups =
+      getLastArgIntValue(Args, OPT_fxray_function_groups, 1, Diags);
+  Opts.XRaySelectedFunctionGroup =
+      getLastArgIntValue(Args, OPT_fxray_selected_function_group, 0, Diags);
 
   auto XRayInstrBundles =
       Args.getAllArgValues(OPT_fxray_instrumentation_bundle);
@@ -2878,7 +2883,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.Coroutines = Opts.CPlusPlus20 || Args.hasArg(OPT_fcoroutines_ts);
 
   Opts.ConvergentFunctions = Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) ||
-    Args.hasArg(OPT_fconvergent_functions);
+                             Opts.SYCLIsDevice ||
+                             Args.hasArg(OPT_fconvergent_functions);
 
   Opts.DoubleSquareBracketAttributes =
       Args.hasFlag(OPT_fdouble_square_bracket_attributes,

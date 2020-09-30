@@ -117,7 +117,7 @@ When to drop an instruction location
 A transformation should drop debug locations if the rules for
 :ref:`preserving<WhenToPreserveLocation>` and
 :ref:`merging<WhenToMergeLocation>` debug locations do not apply. The API to
-use is ``Instruction::setDebugLoc()``.
+use is ``Instruction::dropLocation()``.
 
 The purpose of this rule is to prevent erratic or misleading single-stepping
 behavior in situations in which an instruction has no clear, unambiguous

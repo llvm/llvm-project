@@ -239,6 +239,7 @@ def ExtraSemi : DiagGroup<"extra-semi", [CXX98CompatExtraSemi,
 def GNUFlexibleArrayInitializer : DiagGroup<"gnu-flexible-array-initializer">;
 def GNUFlexibleArrayUnionMember : DiagGroup<"gnu-flexible-array-union-member">;
 def GNUFoldingConstant : DiagGroup<"gnu-folding-constant">;
+def FormatInsufficientArgs : DiagGroup<"format-insufficient-args">;
 def FormatExtraArgs : DiagGroup<"format-extra-args">;
 def FormatZeroLength : DiagGroup<"format-zero-length">;
 
@@ -849,7 +850,8 @@ def FormatPedantic : DiagGroup<"format-pedantic">;
 def FormatTypeConfusion : DiagGroup<"format-type-confusion">;
 def Format : DiagGroup<"format",
                        [FormatExtraArgs, FormatZeroLength, NonNull,
-                        FormatSecurity, FormatY2K, FormatInvalidSpecifier]>,
+                        FormatSecurity, FormatY2K, FormatInvalidSpecifier,
+                        FormatInsufficientArgs]>,
              DiagCategory<"Format String Issue">;
 def FormatNonLiteral : DiagGroup<"format-nonliteral">;
 def Format2 : DiagGroup<"format=2",

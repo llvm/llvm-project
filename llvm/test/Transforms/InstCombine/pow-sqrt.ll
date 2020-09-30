@@ -3,19 +3,18 @@
 
 ; Check the libcall and the intrinsic for each case with differing FMF.
 
-; The transform to sqrt is allowed as long as we deal with -0.0 and -INF.
+; The transform to sqrt is not allowed if we risk setting errno due to -INF.
 
 define double @pow_libcall_half_no_FMF(double %x) {
 ; CHECK-LABEL: @pow_libcall_half_no_FMF(
-; CHECK-NEXT:    [[SQRT:%.*]] = call double @sqrt(double [[X:%.*]])
-; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ISINF]], double 0x7FF0000000000000, double [[ABS]]
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    [[POW:%.*]] = call double @pow(double [[X:%.*]], double 5.000000e-01)
+; CHECK-NEXT:    ret double [[POW]]
 ;
   %pow = call double @pow(double %x, double 5.0e-01)
   ret double %pow
 }
+
+; The transform to (non-errno setting) sqrt is allowed as long as we deal with -0.0 and -INF.
 
 define double @pow_intrinsic_half_no_FMF(double %x) {
 ; CHECK-LABEL: @pow_intrinsic_half_no_FMF(
@@ -29,19 +28,24 @@ define double @pow_intrinsic_half_no_FMF(double %x) {
   ret double %pow
 }
 
-; This makes no difference, but FMF are propagated.
+; `afn` makes no difference, but FMF are propagated/retained.
+
+; (As above) the transform to sqrt may generate EDOM due to -INF. Generally, EDOM implies
+; formation of a NaN (which then propagates). `afn` may justify returning NaN (along with
+; setting EDOM); however, the conservatively correct approach is to avoid both the NaN and
+; the EDOM.
 
 define double @pow_libcall_half_approx(double %x) {
 ; CHECK-LABEL: @pow_libcall_half_approx(
-; CHECK-NEXT:    [[SQRT:%.*]] = call afn double @sqrt(double [[X:%.*]])
-; CHECK-NEXT:    [[ABS:%.*]] = call afn double @llvm.fabs.f64(double [[SQRT]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp afn oeq double [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[TMP1:%.*]] = select afn i1 [[ISINF]], double 0x7FF0000000000000, double [[ABS]]
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    [[POW:%.*]] = call afn double @pow(double [[X:%.*]], double 5.000000e-01)
+; CHECK-NEXT:    ret double [[POW]]
 ;
   %pow = call afn double @pow(double %x, double 5.0e-01)
   ret double %pow
 }
+
+; (As above) the transform to (non-errno setting) sqrt is allowed as long as we deal with -0.0
+; and -INF.
 
 define <2 x double> @pow_intrinsic_half_approx(<2 x double> %x) {
 ; CHECK-LABEL: @pow_intrinsic_half_approx(
@@ -66,6 +70,18 @@ define float @powf_intrinsic_half_fast(float %x) {
 
 ; If we can disregard INFs, no need for a select.
 
+define double @pow_libcall_half_no_FMF_base_ninf(i32 %x) {
+; CHECK-LABEL: @pow_libcall_half_no_FMF_base_ninf(
+; CHECK-NEXT:    [[CONV:%.*]] = uitofp i32 [[X:%.*]] to double
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @sqrt(double [[CONV]])
+; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
+; CHECK-NEXT:    ret double [[ABS]]
+;
+  %conv = uitofp i32 %x to double
+  %pow = call double @pow(double %conv, double 5.0e-01)
+  ret double %pow
+}
+
 define double @pow_libcall_half_ninf(double %x) {
 ; CHECK-LABEL: @pow_libcall_half_ninf(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call ninf double @sqrt(double [[X:%.*]])
@@ -86,14 +102,12 @@ define <2 x double> @pow_intrinsic_half_ninf(<2 x double> %x) {
   ret <2 x double> %pow
 }
 
-; If we can disregard -0.0, no need for fabs.
+; If we can disregard -0.0, no need for fabs, but still (because of -INF) cannot use library sqrt.
 
 define double @pow_libcall_half_nsz(double %x) {
 ; CHECK-LABEL: @pow_libcall_half_nsz(
-; CHECK-NEXT:    [[SQRT:%.*]] = call nsz double @sqrt(double [[X:%.*]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp nsz oeq double [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[TMP1:%.*]] = select nsz i1 [[ISINF]], double 0x7FF0000000000000, double [[SQRT]]
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    [[POW:%.*]] = call nsz double @pow(double [[X:%.*]], double 5.000000e-01)
+; CHECK-NEXT:    ret double [[POW]]
 ;
   %pow = call nsz double @pow(double %x, double 5.0e-01)
   ret double %pow
@@ -162,35 +176,27 @@ define float @pow_libcall_neghalf_no_FMF(float %x) {
   ret float %pow
 }
 
+; If we can disregard INFs, a call to a library sqrt is okay.
 ; Transform to sqrt+fdiv because 'reassoc' allows an extra rounding step.
 ; Use 'fabs' to handle -0.0 correctly.
-; Use 'select' to handle -INF correctly.
 
-define float @pow_libcall_neghalf_reassoc(float %x) {
-; CHECK-LABEL: @pow_libcall_neghalf_reassoc(
-; CHECK-NEXT:    [[SQRTF:%.*]] = call reassoc float @sqrtf(float [[X:%.*]])
-; CHECK-NEXT:    [[ABS:%.*]] = call reassoc float @llvm.fabs.f32(float [[SQRTF]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp reassoc oeq float [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[ABS_OP:%.*]] = fdiv reassoc float 1.000000e+00, [[ABS]]
-; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select i1 [[ISINF]], float 0.000000e+00, float [[ABS_OP]]
+define float @pow_libcall_neghalf_reassoc_ninf(float %x) {
+; CHECK-LABEL: @pow_libcall_neghalf_reassoc_ninf(
+; CHECK-NEXT:    [[SQRTF:%.*]] = call reassoc ninf float @sqrtf(float [[X:%.*]])
+; CHECK-NEXT:    [[ABS:%.*]] = call reassoc ninf float @llvm.fabs.f32(float [[SQRTF]])
+; CHECK-NEXT:    [[RECIPROCAL:%.*]] = fdiv reassoc ninf float 1.000000e+00, [[ABS]]
 ; CHECK-NEXT:    ret float [[RECIPROCAL]]
 ;
-  %pow = call reassoc float @powf(float %x, float -5.0e-01)
+  %pow = call reassoc ninf float @powf(float %x, float -5.0e-01)
   ret float %pow
 }
 
-; Transform to sqrt+fdiv because 'afn' allows an extra rounding step.
-; Use 'fabs' to handle -0.0 correctly.
-; Use 'select' to handle -INF correctly.
+; If we cannot disregard INFs, a call to a library sqrt is not okay.
 
 define float @pow_libcall_neghalf_afn(float %x) {
 ; CHECK-LABEL: @pow_libcall_neghalf_afn(
-; CHECK-NEXT:    [[SQRTF:%.*]] = call afn float @sqrtf(float [[X:%.*]])
-; CHECK-NEXT:    [[ABS:%.*]] = call afn float @llvm.fabs.f32(float [[SQRTF]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp afn oeq float [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[ABS_OP:%.*]] = fdiv afn float 1.000000e+00, [[ABS]]
-; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select i1 [[ISINF]], float 0.000000e+00, float [[ABS_OP]]
-; CHECK-NEXT:    ret float [[RECIPROCAL]]
+; CHECK-NEXT:    [[POW:%.*]] = call afn float @powf(float [[X:%.*]], float -5.000000e-01)
+; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call afn float @powf(float %x, float -5.0e-01)
   ret float %pow
@@ -265,15 +271,12 @@ define <2 x double> @pow_intrinsic_neghalf_ninf(<2 x double> %x) {
   ret <2 x double> %pow
 }
 
-; If we can disregard -0.0, no need for fabs.
+; If we can disregard -0.0, no need for fabs, but still (because of -INF) cannot use library sqrt.
 
 define double @pow_libcall_neghalf_nsz(double %x) {
 ; CHECK-LABEL: @pow_libcall_neghalf_nsz(
-; CHECK-NEXT:    [[SQRT:%.*]] = call nsz afn double @sqrt(double [[X:%.*]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp nsz afn oeq double [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[SQRT_OP:%.*]] = fdiv nsz afn double 1.000000e+00, [[SQRT]]
-; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select i1 [[ISINF]], double 0.000000e+00, double [[SQRT_OP]]
-; CHECK-NEXT:    ret double [[RECIPROCAL]]
+; CHECK-NEXT:    [[POW:%.*]] = call nsz afn double @pow(double [[X:%.*]], double -5.000000e-01)
+; CHECK-NEXT:    ret double [[POW]]
 ;
   %pow = call afn nsz double @pow(double %x, double -5.0e-01)
   ret double %pow

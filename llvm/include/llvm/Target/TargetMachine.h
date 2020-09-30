@@ -111,6 +111,7 @@ public:
   const Triple &getTargetTriple() const { return TargetTriple; }
   StringRef getTargetCPU() const { return TargetCPU; }
   StringRef getTargetFeatureString() const { return TargetFS; }
+  void setTargetFeatureString(StringRef FS) { TargetFS = std::string(FS); }
 
   /// Virtual method implemented by subclasses that returns a reference to that
   /// target's TargetSubtargetInfo-derived member variable.

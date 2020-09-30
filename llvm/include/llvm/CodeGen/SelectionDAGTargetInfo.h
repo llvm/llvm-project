@@ -85,7 +85,7 @@ public:
     return SDValue();
   }
 
-  /// Emit target-specific code that performs a memcmp, in cases where that is
+  /// Emit target-specific code that performs a memcmp/bcmp, in cases where that is
   /// faster than a libcall. The first returned SDValue is the result of the
   /// memcmp and the second is the chain. Both SDValues can be null if a normal
   /// libcall should be used.

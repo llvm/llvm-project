@@ -145,6 +145,7 @@ def gen_header_code(features_json, cpp_class, filename):
     return """#ifndef %s
 #define %s
 #include <cstdint>
+#include "llvm/Support/Compiler.h"
 
 %s
 class %s {
@@ -160,6 +161,9 @@ private:
   friend float Evaluate(const %s&);
 };
 
+// The function may have large number of lines of code. MSAN
+// build times out in such case.
+LLVM_NO_SANITIZE("memory")
 float Evaluate(const %s&);
 %s
 #endif // %s

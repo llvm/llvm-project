@@ -492,6 +492,20 @@ public:
   /// merged DebugLoc.
   void applyMergedLocation(const DILocation *LocA, const DILocation *LocB);
 
+  /// Updates the debug location given that the instruction has been hoisted
+  /// from a block to a predecessor of that block.
+  /// Note: it is undefined behavior to call this on an instruction not
+  /// currently inserted into a function.
+  void updateLocationAfterHoist();
+
+  /// Drop the instruction's debug location. This does not guarantee removal
+  /// of the !dbg source location attachment, as it must set a line 0 location
+  /// with scope information attached on call instructions. To guarantee
+  /// removal of the !dbg attachment, use the \ref setDebugLoc() API.
+  /// Note: it is undefined behavior to call this on an instruction not
+  /// currently inserted into a function.
+  void dropLocation();
+
 private:
   /// Return true if we have an entry in the on-the-side metadata hash.
   bool hasMetadataHashEntry() const {

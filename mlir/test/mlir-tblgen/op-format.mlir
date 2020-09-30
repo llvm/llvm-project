@@ -213,6 +213,12 @@ test.format_custom_directive_operands_and_types %i64, %i64 -> (%i64) : i64, i64 
 // CHECK: test.format_custom_directive_operands_and_types %[[I64]] -> (%[[I64]]) : i64 -> (i64)
 test.format_custom_directive_operands_and_types %i64 -> (%i64) : i64 -> (i64)
 
+// CHECK: test.format_custom_directive_attributes 54 : i64
+test.format_custom_directive_attributes 54 : i64
+
+// CHECK: test.format_custom_directive_attributes 54 : i64, 46 : i64
+test.format_custom_directive_attributes 54 : i64, 46 : i64
+
 // CHECK: test.format_custom_directive_regions {
 // CHECK-NEXT: test.return
 // CHECK-NEXT: }

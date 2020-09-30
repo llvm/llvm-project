@@ -7245,12 +7245,12 @@ void SelectionDAGBuilder::processIntegerCallValue(const Instruction &I,
   setValue(&I, Value);
 }
 
-/// See if we can lower a memcmp call into an optimized form. If so, return
+/// See if we can lower a memcmp/bcmp call into an optimized form. If so, return
 /// true and lower it. Otherwise return false, and it will be lowered like a
 /// normal call.
 /// The caller already checked that \p I calls the appropriate LibFunc with a
 /// correct prototype.
-bool SelectionDAGBuilder::visitMemCmpCall(const CallInst &I) {
+bool SelectionDAGBuilder::visitMemCmpBCmpCall(const CallInst &I) {
   const Value *LHS = I.getArgOperand(0), *RHS = I.getArgOperand(1);
   const Value *Size = I.getArgOperand(2);
   const ConstantInt *CSize = dyn_cast<ConstantInt>(Size);
@@ -7561,6 +7561,10 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         LibInfo->hasOptimizedCodeGen(Func)) {
       switch (Func) {
       default: break;
+      case LibFunc_bcmp:
+        if (visitMemCmpBCmpCall(I))
+          return;
+        break;
       case LibFunc_copysign:
       case LibFunc_copysignf:
       case LibFunc_copysignl:
@@ -7662,7 +7666,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
           return;
         break;
       case LibFunc_memcmp:
-        if (visitMemCmpCall(I))
+        if (visitMemCmpBCmpCall(I))
           return;
         break;
       case LibFunc_mempcpy:

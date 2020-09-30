@@ -397,11 +397,10 @@ class AMDGPUAtomicIncIntrin : Intrinsic<[llvm_anyint_ty],
 def int_amdgcn_atomic_inc : AMDGPUAtomicIncIntrin;
 def int_amdgcn_atomic_dec : AMDGPUAtomicIncIntrin;
 
-class AMDGPULDSF32Intrin<string clang_builtin> :
-  GCCBuiltin<clang_builtin>,
-  Intrinsic<[llvm_float_ty],
-    [LLVMQualPointerType<llvm_float_ty, 3>,
-    llvm_float_ty,
+class AMDGPULDSIntrin :
+  Intrinsic<[llvm_any_ty],
+    [LLVMQualPointerType<LLVMMatchType<0>, 3>,
+    LLVMMatchType<0>,
     llvm_i32_ty, // ordering
     llvm_i32_ty, // scope
     llvm_i1_ty], // isVolatile
@@ -446,9 +445,9 @@ def int_amdgcn_ds_ordered_swap : AMDGPUDSOrderedIntrinsic;
 def int_amdgcn_ds_append : AMDGPUDSAppendConsumedIntrinsic;
 def int_amdgcn_ds_consume : AMDGPUDSAppendConsumedIntrinsic;
 
-def int_amdgcn_ds_fadd : AMDGPULDSF32Intrin<"__builtin_amdgcn_ds_faddf">;
-def int_amdgcn_ds_fmin : AMDGPULDSF32Intrin<"__builtin_amdgcn_ds_fminf">;
-def int_amdgcn_ds_fmax : AMDGPULDSF32Intrin<"__builtin_amdgcn_ds_fmaxf">;
+def int_amdgcn_ds_fadd : AMDGPULDSIntrin;
+def int_amdgcn_ds_fmin : AMDGPULDSIntrin;
+def int_amdgcn_ds_fmax : AMDGPULDSIntrin;
 
 } // TargetPrefix = "amdgcn"
 

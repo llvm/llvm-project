@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t %t.o
+# RUN: %lld -lSystem -o %t %t.o
 # RUN: llvm-objdump --section-headers --syms -d %t | FileCheck %s
 
 # CHECK-LABEL: Sections:

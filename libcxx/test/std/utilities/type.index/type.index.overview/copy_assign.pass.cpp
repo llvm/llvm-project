@@ -12,7 +12,7 @@
 
 // type_index& operator=(const type_index& ti);
 
-// UNSUPPORTED: -fno-rtti
+// UNSUPPORTED: no-rtti
 
 #include <typeindex>
 #include <cassert>

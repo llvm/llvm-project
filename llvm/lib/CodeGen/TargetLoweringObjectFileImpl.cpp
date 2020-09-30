@@ -21,6 +21,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -107,6 +108,7 @@ static void GetObjCImageInfo(Module &M, unsigned &Version, unsigned &Flags,
 void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
                                              const TargetMachine &TgtM) {
   TargetLoweringObjectFile::Initialize(Ctx, TgtM);
+  TM = &TgtM;
 
   CodeModel::Model CM = TgtM.getCodeModel();
   InitializeELF(TgtM.Options.UseInitArray);
@@ -323,7 +325,46 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
     Streamer.AddBlankLine();
   }
 
-  emitCGProfile(Streamer, M);
+  SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
+  M.getModuleFlagsMetadata(ModuleFlags);
+
+  MDNode *CFGProfile = nullptr;
+
+  for (const auto &MFE : ModuleFlags) {
+    StringRef Key = MFE.Key->getString();
+    if (Key == "CG Profile") {
+      CFGProfile = cast<MDNode>(MFE.Val);
+      break;
+    }
+  }
+
+  if (!CFGProfile)
+    return;
+
+  auto GetSym = [this](const MDOperand &MDO) -> MCSymbol * {
+    if (!MDO)
+      return nullptr;
+    auto V = cast<ValueAsMetadata>(MDO);
+    const Function *F = cast<Function>(V->getValue());
+    return TM->getSymbol(F);
+  };
+
+  for (const auto &Edge : CFGProfile->operands()) {
+    MDNode *E = cast<MDNode>(Edge);
+    const MCSymbol *From = GetSym(E->getOperand(0));
+    const MCSymbol *To = GetSym(E->getOperand(1));
+    // Skip null functions. This can happen if functions are dead stripped after
+    // the CGProfile pass has been run.
+    if (!From || !To)
+      continue;
+    uint64_t Count = cast<ConstantAsMetadata>(E->getOperand(2))
+                         ->getValue()
+                         ->getUniqueInteger()
+                         .getZExtValue();
+    Streamer.emitCGProfileEntry(
+        MCSymbolRefExpr::create(From, MCSymbolRefExpr::VK_None, C),
+        MCSymbolRefExpr::create(To, MCSymbolRefExpr::VK_None, C), Count);
+  }
 }
 
 MCSymbol *TargetLoweringObjectFileELF::getCFIPersonalitySymbol(
@@ -833,7 +874,7 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
   // name, or a unique ID for the section.
   SmallString<128> Name;
   if (MBB.getSectionID() == MBBSectionID::ColdSectionID) {
-    Name += ".text.unlikely.";
+    Name += BBSectionsColdTextPrefix;
     Name += MBB.getParent()->getName();
   } else if (MBB.getSectionID() == MBBSectionID::ExceptionSectionID) {
     Name += ".text.eh.";
@@ -1571,7 +1612,49 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
     Streamer.AddBlankLine();
   }
 
-  emitCGProfile(Streamer, M);
+  auto &C = getContext();
+  SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
+  M.getModuleFlagsMetadata(ModuleFlags);
+
+  MDNode *CFGProfile = nullptr;
+
+  for (const auto &MFE : ModuleFlags) {
+    StringRef Key = MFE.Key->getString();
+    if (Key == "CG Profile") {
+      CFGProfile = cast<MDNode>(MFE.Val);
+      break;
+    }
+  }
+
+  if (!CFGProfile)
+    return;
+
+  auto GetSym = [this](const MDOperand &MDO) -> MCSymbol * {
+    if (!MDO)
+      return nullptr;
+    auto V = cast<ValueAsMetadata>(MDO);
+    const Function *F = cast<Function>(V->getValue());
+    if (F->hasDLLImportStorageClass())
+      return nullptr;
+    return TM->getSymbol(F);
+  };
+
+  for (const auto &Edge : CFGProfile->operands()) {
+    MDNode *E = cast<MDNode>(Edge);
+    const MCSymbol *From = GetSym(E->getOperand(0));
+    const MCSymbol *To = GetSym(E->getOperand(1));
+    // Skip null functions. This can happen if functions are dead stripped after
+    // the CGProfile pass has been run.
+    if (!From || !To)
+      continue;
+    uint64_t Count = cast<ConstantAsMetadata>(E->getOperand(2))
+                         ->getValue()
+                         ->getUniqueInteger()
+                         .getZExtValue();
+    Streamer.emitCGProfileEntry(
+        MCSymbolRefExpr::create(From, MCSymbolRefExpr::VK_None, C),
+        MCSymbolRefExpr::create(To, MCSymbolRefExpr::VK_None, C), Count);
+  }
 }
 
 void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
@@ -1636,6 +1719,7 @@ void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
 void TargetLoweringObjectFileCOFF::Initialize(MCContext &Ctx,
                                               const TargetMachine &TM) {
   TargetLoweringObjectFile::Initialize(Ctx, TM);
+  this->TM = &TM;
   const Triple &T = TM.getTargetTriple();
   if (T.isWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment()) {
     StaticCtorSection =

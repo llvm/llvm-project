@@ -124,7 +124,7 @@ def Shape_ConstSizeOp : Shape_Op<"const_size", [
   let results = (outs Shape_SizeType:$result);
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, int64_t value">
+    OpBuilder<"int64_t value">
   ];
 
   let assemblyFormat = "$value attr-dict";
@@ -231,7 +231,7 @@ def Shape_GetExtentOp : Shape_Op<"get_extent", [NoSideEffect]> {
 
   let builders = [
     // Builder that allows passing a constant dimension as a simple integer.
-    OpBuilder<"OpBuilder &builder, OperationState &result, Value shape, "
+    OpBuilder<"Value shape, "
               "int64_t dim">
   ];
 
@@ -332,7 +332,7 @@ def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
   let results = (outs Shape_SizeOrIndexType:$result);
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, Value shape">,
+    OpBuilder<"Value shape">,
   ];
 
   let assemblyFormat = "$shape `:` type($shape) `->` type($result) attr-dict";
@@ -383,8 +383,7 @@ def Shape_ReduceOp : Shape_Op<"reduce",
   let regions = (region SizedRegion<1>:$region);
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, "
-              "Value shape, ValueRange initVals">,
+    OpBuilder<"Value shape, ValueRange initVals">,
   ];
 
   let verifier = [{ return ::verify(*this); }];
@@ -406,7 +405,7 @@ def Shape_ShapeOfOp : Shape_Op<"shape_of", [NoSideEffect]> {
   let assemblyFormat = "$arg `:` type($arg) `->` type($result) attr-dict";
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, Value arg">
+    OpBuilder<"Value arg">
   ];
 
   let verifier = [{ return ::verifyShapeOrExtentTensorOp(*this); }];

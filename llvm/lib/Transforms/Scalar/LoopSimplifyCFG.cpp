@@ -452,7 +452,7 @@ private:
       if (LI.isLoopHeader(BB)) {
         assert(LI.getLoopFor(BB) != &L && "Attempt to remove current loop!");
         Loop *DL = LI.getLoopFor(BB);
-        if (DL->getParentLoop()) {
+        if (!DL->isOutermost()) {
           for (auto *PL = DL->getParentLoop(); PL; PL = PL->getParentLoop())
             for (auto *BB : DL->getBlocks())
               PL->removeBlockFromLoop(BB);

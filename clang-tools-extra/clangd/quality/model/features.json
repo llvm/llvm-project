@@ -1,8 +1,84 @@
 [
     {
+        "name": "FilterLength",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "IsDeprecated",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "IsReservedName",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "IsImplementationDetail",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "NumReferences",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "IsNameInContext",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "IsForbidden",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "IsInBaseClass",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "FileProximityDistance",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "SemaFileProximityScore",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "SymbolScopeDistance",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "SemaSaysInScope",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "IsInstanceMember",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "HadContextType",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "HadSymbolType",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "TypeMatchesPreferred",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "SymbolCategory",
+        "kind": "ENUM",
+        "type": "clang::clangd::SymbolQualitySignals::SymbolCategory",
+        "header": "Quality.h"
+    },
+    {
         "name": "ContextKind",
         "kind": "ENUM",
         "type": "clang::CodeCompletionContext::Kind",
         "header": "clang/Sema/CodeCompleteConsumer.h"
+    },
+    {
+        "name": "Scope",
+        "kind": "ENUM",
+        "type": "clang::clangd::SymbolRelevanceSignals::AccessibleScope",
+        "header": "Quality.h"
     }
 ]

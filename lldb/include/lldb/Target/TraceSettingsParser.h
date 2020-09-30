@@ -23,6 +23,38 @@ namespace lldb_private {
 /// overriden and implement the plug-in specific parsing logic.
 class TraceSettingsParser {
 public:
+  struct JSONAddress {
+    lldb::addr_t value;
+  };
+
+  struct JSONModule {
+    std::string system_path;
+    llvm::Optional<std::string> file;
+    JSONAddress load_address;
+    llvm::Optional<std::string> uuid;
+  };
+
+  struct JSONThread {
+    int64_t tid;
+    std::string trace_file;
+  };
+
+  struct JSONProcess {
+    int64_t pid;
+    std::string triple;
+    std::vector<JSONThread> threads;
+    std::vector<JSONModule> modules;
+  };
+
+  struct JSONTracePluginSettings {
+    std::string type;
+  };
+
+  struct JSONTraceSettings {
+    std::vector<JSONProcess> processes;
+    JSONTracePluginSettings trace;
+  };
+
   TraceSettingsParser(Trace &trace) : m_trace(trace) {}
 
   virtual ~TraceSettingsParser() = default;
@@ -46,7 +78,7 @@ public:
   /// \return
   ///   An error object containing the reason if there is a failure.
   llvm::Error ParseSettings(Debugger &debugger,
-                            const llvm::json::Object &settings,
+                            const llvm::json::Value &settings,
                             llvm::StringRef settings_dir);
 
 protected:
@@ -57,33 +89,44 @@ protected:
 
   /// Method that should be overriden to parse the plug-in specific settings.
   ///
+  /// \param[in] plugin_settings
+  ///   The settings to parse specific to the plugin.
+  ///
   /// \return
   ///   An error object containing the reason if there is a failure.
-  virtual llvm::Error ParsePluginSettings() = 0;
+  virtual llvm::Error
+  ParsePluginSettings(const llvm::json::Value &plugin_settings) = 0;
+
+  /// Create a user-friendly error message upon a JSON-parsing failure using the
+  /// \a json::ObjectMapper functionality.
+  ///
+  /// \param[in] root
+  ///   The \a llvm::json::Path::Root used to parse the JSON \a value.
+  ///
+  /// \param[in] value
+  ///   The json value that failed to parse.
+  ///
+  /// \return
+  ///   An \a llvm::Error containing the user-friendly error message.
+  llvm::Error CreateJSONError(llvm::json::Path::Root &root,
+                              const llvm::json::Value &value);
 
 private:
-  /// Resolve non-absolute paths relativejto the settings folder
+  /// Resolve non-absolute paths relativeto the settings folder
   void NormalizePath(lldb_private::FileSpec &file_spec);
+
   llvm::Error ParseProcess(lldb_private::Debugger &debugger,
-                           const llvm::json::Object &process);
-  llvm::Error ParseProcesses(lldb_private::Debugger &debugger);
-  llvm::Error ParseThread(lldb::ProcessSP &process_sp,
-                          const llvm::json::Object &thread);
-  llvm::Error ParseThreads(lldb::ProcessSP &process_sp,
-                           const llvm::json::Object &process);
-  llvm::Error ParseModule(lldb::TargetSP &target_sp,
-                          const llvm::json::Object &module);
-  llvm::Error ParseModules(lldb::TargetSP &target_sp,
-                           const llvm::json::Object &process);
-  llvm::Error ParseSettingsImpl(lldb_private::Debugger &debugger);
+                           const JSONProcess &process);
+  void ParseThread(lldb::ProcessSP &process_sp, const JSONThread &thread);
+  llvm::Error ParseModule(lldb::TargetSP &target_sp, const JSONModule &module);
+  llvm::Error ParseSettingsImpl(lldb_private::Debugger &debugger,
+                                const llvm::json::Value &settings);
 
   Trace &m_trace;
 
 protected:
   /// Objects created as product of the parsing
   /// \{
-  /// JSON object that holds all settings for this trace session.
-  llvm::json::Object m_settings;
   /// The directory that contains the settings file.
   std::string m_settings_dir;
 
@@ -95,42 +138,63 @@ protected:
 
 } // namespace lldb_private
 
-namespace json_helpers {
-/// JSON parsing helpers based on \a llvm::Expected.
-/// \{
-llvm::Error CreateWrongTypeError(const llvm::json::Value &value,
-                                 llvm::StringRef type);
+namespace llvm {
+namespace json {
 
-llvm::Expected<int64_t> ToIntegerOrError(const llvm::json::Value &value);
+inline bool fromJSON(const llvm::json::Value &value,
+                     lldb_private::TraceSettingsParser::JSONAddress &address,
+                     llvm::json::Path path) {
+  llvm::Optional<llvm::StringRef> s = value.getAsString();
+  if (s.hasValue() && !s->getAsInteger(0, address.value))
+    return true;
 
-llvm::Expected<llvm::StringRef> ToStringOrError(const llvm::json::Value &value);
+  path.report("expected numeric string");
+  return false;
+}
 
-llvm::Expected<const llvm::json::Array &>
-ToArrayOrError(const llvm::json::Value &value);
+inline bool fromJSON(const llvm::json::Value &value,
+                     lldb_private::TraceSettingsParser::JSONModule &module,
+                     llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  return o && o.map("systemPath", module.system_path) &&
+         o.map("file", module.file) &&
+         o.map("loadAddress", module.load_address) &&
+         o.map("uuid", module.uuid);
+}
 
-llvm::Expected<const llvm::json::Object &>
-ToObjectOrError(const llvm::json::Value &value);
+inline bool fromJSON(const llvm::json::Value &value,
+                     lldb_private::TraceSettingsParser::JSONThread &thread,
+                     llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  return o && o.map("tid", thread.tid) && o.map("traceFile", thread.trace_file);
+}
 
-llvm::Error CreateMissingKeyError(llvm::json::Object obj, llvm::StringRef key);
+inline bool fromJSON(const llvm::json::Value &value,
+                     lldb_private::TraceSettingsParser::JSONProcess &process,
+                     llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  return o && o.map("pid", process.pid) && o.map("triple", process.triple) &&
+         o.map("threads", process.threads) && o.map("modules", process.modules);
+}
 
-llvm::Expected<const llvm::json::Value &>
-GetValueOrError(const llvm::json::Object &obj, llvm::StringRef key);
+inline bool fromJSON(
+    const llvm::json::Value &value,
+    lldb_private::TraceSettingsParser::JSONTracePluginSettings &plugin_settings,
+    llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  return o && o.map("type", plugin_settings.type);
+}
 
-llvm::Expected<int64_t> GetIntegerOrError(const llvm::json::Object &obj,
-                                          llvm::StringRef key);
+inline bool
+fromJSON(const llvm::json::Value &value,
+         lldb_private::TraceSettingsParser::JSONTraceSettings &settings,
+         llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  return o && o.map("trace", settings.trace) &&
+         o.map("processes", settings.processes);
+}
 
-llvm::Expected<llvm::StringRef> GetStringOrError(const llvm::json::Object &obj,
-                                                 llvm::StringRef key);
-
-llvm::Expected<const llvm::json::Array &>
-GetArrayOrError(const llvm::json::Object &obj, llvm::StringRef key);
-
-llvm::Expected<const llvm::json::Object &>
-GetObjectOrError(const llvm::json::Object &obj, llvm::StringRef key);
-
-llvm::Expected<llvm::Optional<llvm::StringRef>>
-GetOptionalStringOrError(const llvm::json::Object &obj, llvm::StringRef key);
-/// \}
-} // namespace json_helpers
+} // namespace json
+} // namespace llvm
 
 #endif // LLDB_TARGET_TRACE_SETTINGS_PARSER_H

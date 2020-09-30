@@ -1423,7 +1423,8 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), m_use_dummy(false), m_force(false) {}
+    CommandOptions() : Options(), m_use_dummy(false), m_force(false),
+      m_delete_disabled(false) {}
 
     ~CommandOptions() override = default;
 
@@ -1440,6 +1441,10 @@ public:
       case 'D':
         m_use_dummy = true;
         break;
+        
+      case 'd':
+        m_delete_disabled = true;
+        break;
 
       default:
         llvm_unreachable("Unimplemented option");
@@ -1451,6 +1456,7 @@ public:
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_use_dummy = false;
       m_force = false;
+      m_delete_disabled = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -1460,16 +1466,18 @@ public:
     // Instance variables to hold the values for command options.
     bool m_use_dummy;
     bool m_force;
+    bool m_delete_disabled;
   };
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetSelectedOrDummyTarget(m_options.m_use_dummy);
-
+    result.Clear();
+    
     std::unique_lock<std::recursive_mutex> lock;
     target.GetBreakpointList().GetListMutex(lock);
 
-    const BreakpointList &breakpoints = target.GetBreakpointList();
+    BreakpointList &breakpoints = target.GetBreakpointList();
 
     size_t num_breakpoints = breakpoints.GetSize();
 
@@ -1479,7 +1487,7 @@ protected:
       return false;
     }
 
-    if (command.empty()) {
+    if (command.empty() && !m_options.m_delete_disabled) {
       if (!m_options.m_force &&
           !m_interpreter.Confirm(
               "About to delete all breakpoints, do you want to do that?",
@@ -1495,10 +1503,34 @@ protected:
     } else {
       // Particular breakpoint selected; disable that breakpoint.
       BreakpointIDList valid_bp_ids;
-      CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          command, &target, result, &valid_bp_ids,
-          BreakpointName::Permissions::PermissionKinds::deletePerm);
+      
+      if (m_options.m_delete_disabled) {
+        BreakpointIDList excluded_bp_ids;
 
+        if (!command.empty()) {
+          CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
+              command, &target, result, &excluded_bp_ids,
+              BreakpointName::Permissions::PermissionKinds::deletePerm);
+        }
+        for (auto breakpoint_sp : breakpoints.Breakpoints()) {
+          if (!breakpoint_sp->IsEnabled() && breakpoint_sp->AllowDelete()) {
+            BreakpointID bp_id(breakpoint_sp->GetID());
+            size_t pos = 0;
+            if (!excluded_bp_ids.FindBreakpointID(bp_id, &pos))
+              valid_bp_ids.AddBreakpointID(breakpoint_sp->GetID());
+          }
+        }
+        if (valid_bp_ids.GetSize() == 0) {
+          result.AppendError("No disabled breakpoints.");
+          result.SetStatus(eReturnStatusFailed);
+          return false;
+        }
+      } else {
+        CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
+            command, &target, result, &valid_bp_ids,
+            BreakpointName::Permissions::PermissionKinds::deletePerm);
+      }
+      
       if (result.Succeeded()) {
         int delete_count = 0;
         int disable_count = 0;

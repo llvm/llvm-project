@@ -445,8 +445,8 @@ locateSymbolTextually(const SpelledWord &Word, ParsedAST &AST,
   if ((Word.ExpandedToken && !isDependentName(NodeKind)) ||
       !Word.LikelyIdentifier || !Index)
     return {};
-  // We don't want to handle words in string literals. It'd be nice to include
-  // comments, but they're not retained in TokenBuffer.
+  // We don't want to handle words in string literals. (It'd be nice to list
+  // *allowed* token kinds explicitly, but comment Tokens aren't retained).
   if (Word.PartOfSpelledToken &&
       isStringLiteral(Word.PartOfSpelledToken->kind()))
     return {};
@@ -514,8 +514,8 @@ locateSymbolTextually(const SpelledWord &Word, ParsedAST &AST,
     Relevance.Name = Sym.Name;
     Relevance.Query = SymbolRelevanceSignals::Generic;
     Relevance.merge(Sym);
-    auto Score =
-        evaluateSymbolAndRelevance(Quality.evaluate(), Relevance.evaluate());
+    auto Score = evaluateSymbolAndRelevance(Quality.evaluateHeuristics(),
+                                            Relevance.evaluateHeuristics());
     dlog("locateSymbolNamedTextuallyAt: {0}{1} = {2}\n{3}{4}\n", Sym.Scope,
          Sym.Name, Score, Quality, Relevance);
 
@@ -548,8 +548,8 @@ const syntax::Token *findNearbyIdentifier(const SpelledWord &Word,
   // Unlikely identifiers are OK if they were used as identifiers nearby.
   if (Word.ExpandedToken)
     return nullptr;
-  // We don't want to handle words in string literals. It'd be nice to include
-  // comments, but they're not retained in TokenBuffer.
+  // We don't want to handle words in string literals. (It'd be nice to list
+  // *allowed* token kinds explicitly, but comment Tokens aren't retained).
   if (Word.PartOfSpelledToken &&
       isStringLiteral(Word.PartOfSpelledToken->kind()))
     return {};
@@ -562,19 +562,34 @@ const syntax::Token *findNearbyIdentifier(const SpelledWord &Word,
   auto Cost = [&](SourceLocation Loc) -> unsigned {
     assert(SM.getFileID(Loc) == File && "spelled token in wrong file?");
     unsigned Line = SM.getSpellingLineNumber(Loc);
-    if (Line > WordLine)
-      return 1 + llvm::Log2_64(Line - WordLine);
-    if (Line < WordLine)
-      return 2 + llvm::Log2_64(WordLine - Line);
-    return 0;
+    return Line >= WordLine ? Line - WordLine : 2 * (WordLine - Line);
   };
   const syntax::Token *BestTok = nullptr;
-  // Search bounds are based on word length: 2^N lines forward.
-  unsigned BestCost = Word.Text.size() + 1;
+  unsigned BestCost = -1;
+  // Search bounds are based on word length:
+  // - forward: 2^N lines
+  // - backward: 2^(N-1) lines.
+  unsigned MaxDistance =
+      1U << std::min<unsigned>(Word.Text.size(),
+                               std::numeric_limits<unsigned>::digits - 1);
+  // Line number for SM.translateLineCol() should be one-based, also
+  // SM.translateLineCol() can handle line number greater than
+  // number of lines in the file.
+  // - LineMin = max(1, WordLine + 1 - 2^(N-1))
+  // - LineMax = WordLine + 1 + 2^N
+  unsigned LineMin =
+      WordLine + 1 <= MaxDistance / 2 ? 1 : WordLine + 1 - MaxDistance / 2;
+  unsigned LineMax = WordLine + 1 + MaxDistance;
+  SourceLocation LocMin = SM.translateLineCol(File, LineMin, 1);
+  assert(LocMin.isValid());
+  SourceLocation LocMax = SM.translateLineCol(File, LineMax, 1);
+  assert(LocMax.isValid());
 
   // Updates BestTok and BestCost if Tok is a good candidate.
   // May return true if the cost is too high for this token.
   auto Consider = [&](const syntax::Token &Tok) {
+    if (Tok.location() < LocMin || Tok.location() > LocMax)
+      return true; // we are too far from the word, break the outer loop.
     if (!(Tok.kind() == tok::identifier && Tok.text(SM) == Word.Text))
       return false;
     // No point guessing the same location we started with.
@@ -1140,11 +1155,21 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
   } else {
     // Handle references to Decls.
 
-    // We also show references to the targets of using-decls, so we include
-    // DeclRelation::Underlying.
-    DeclRelationSet Relations = DeclRelation::TemplatePattern |
-                                DeclRelation::Alias | DeclRelation::Underlying;
-    auto Decls = getDeclAtPosition(AST, *CurLoc, Relations);
+    DeclRelationSet Relations =
+        DeclRelation::TemplatePattern | DeclRelation::Alias;
+    std::vector<const NamedDecl *> Decls =
+        getDeclAtPosition(AST, *CurLoc, Relations);
+    std::vector<const NamedDecl *> NonrenamingAliasUnderlyingDecls;
+    // If the results include a *non-renaming* alias, get its
+    // underlying decls as well. (See similar logic in locateASTReferent()).
+    for (const NamedDecl *D : Decls) {
+      if (llvm::isa<UsingDecl>(D) || llvm::isa<UnresolvedUsingValueDecl>(D)) {
+        for (const NamedDecl *AD :
+             getDeclAtPosition(AST, *CurLoc, DeclRelation::Underlying))
+          NonrenamingAliasUnderlyingDecls.push_back(AD);
+      }
+    }
+    llvm::copy(NonrenamingAliasUnderlyingDecls, std::back_inserter(Decls));
 
     // We traverse the AST to find references in the main file.
     auto MainFileRefs = findRefs(Decls, AST);
