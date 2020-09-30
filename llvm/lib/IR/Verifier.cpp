@@ -5371,7 +5371,7 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
 }
 
 void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
-  auto *MD = cast<MetadataAsValue>(DII.getArgOperand(0))->getMetadata();
+  auto *MD = DII.getRawLocation();
   AssertDI(isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
                (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands()),
            "invalid llvm.dbg." + Kind + " intrinsic address/value", &DII, MD);

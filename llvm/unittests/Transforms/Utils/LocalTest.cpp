@@ -524,7 +524,9 @@ struct SalvageDebugInfoTest : ::testing::Test {
   }
 
   bool doesDebugValueDescribeX(const DbgValueInst &DI) {
-    const auto &CI = *cast<ConstantInt>(DI.getValue());
+    if (DI.getNumVariableLocationOps() != 1)
+      return false;
+    const auto &CI = *cast<ConstantInt>(DI.getValue(0));
     if (CI.isZero())
       return DI.getExpression()->getElements().equals(
           {dwarf::DW_OP_plus_uconst, 1, dwarf::DW_OP_stack_value});
@@ -534,7 +536,9 @@ struct SalvageDebugInfoTest : ::testing::Test {
   }
 
   bool doesDebugValueDescribeY(const DbgValueInst &DI) {
-    const auto &CI = *cast<ConstantInt>(DI.getValue());
+    if (DI.getNumVariableLocationOps() != 1)
+      return false;
+    const auto &CI = *cast<ConstantInt>(DI.getVariableLocationOp(0));
     if (CI.isZero())
       return DI.getExpression()->getElements().equals(
           {dwarf::DW_OP_plus_uconst, 1, dwarf::DW_OP_plus_uconst, 2,
@@ -758,13 +762,15 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   EXPECT_TRUE(replaceAllDbgUsesWith(A, F_, F_, DT));
 
   auto *ADbgVal = cast<DbgValueInst>(A.getNextNode());
-  EXPECT_EQ(ConstantInt::get(A.getType(), 0), ADbgVal->getVariableLocation());
+  EXPECT_EQ(ADbgVal->getNumVariableLocationOps(), 1);
+  EXPECT_EQ(ConstantInt::get(A.getType(), 0), ADbgVal->getVariableLocationOp(0));
 
   // Introduce a use-before-def. Check that the dbg.values for %f become undef.
   EXPECT_TRUE(replaceAllDbgUsesWith(F_, G, G, DT));
 
   auto *FDbgVal = cast<DbgValueInst>(F_.getNextNode());
-  EXPECT_TRUE(isa<UndefValue>(FDbgVal->getVariableLocation()));
+  EXPECT_EQ(FDbgVal->getNumVariableLocationOps(), 1);
+  EXPECT_TRUE(FDbgVal->isUndef());
 
   SmallVector<DbgValueInst *, 1> FDbgVals;
   findDbgValues(FDbgVals, &F_);

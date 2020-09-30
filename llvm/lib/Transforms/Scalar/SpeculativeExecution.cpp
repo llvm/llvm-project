@@ -267,7 +267,7 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
     // Debug variable has special operand to check it's not hoisted.
     if (const auto *DVI = dyn_cast<DbgVariableIntrinsic>(U)) {
       if (const auto *I =
-              dyn_cast_or_null<Instruction>(DVI->getVariableLocation()))
+              dyn_cast_or_null<Instruction>(DVI->getVariableLocationOp(0)))
         if (NotHoisted.count(I) == 0)
           return true;
       return false;

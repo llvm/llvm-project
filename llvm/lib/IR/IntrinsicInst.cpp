@@ -38,18 +38,65 @@ using namespace llvm;
 /// intrinsics for variables.
 ///
 
-Value *DbgVariableIntrinsic::getVariableLocation(bool AllowNullOp) const {
-  Value *Op = getArgOperand(0);
-  if (AllowNullOp && !Op)
+iterator_range<DbgVariableIntrinsic::location_op_iterator>
+DbgVariableIntrinsic::location_ops() const {
+  auto *MD = getRawLocation();
+  assert(MD && "First operand of DbgVariableIntrinsic should be non-null.");
+
+  // If operand is ValueAsMetadata, return a range over just that operand.
+  if (auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
+    return {location_op_iterator(VAM), location_op_iterator(VAM + 1)};
+  }
+  // If operand is DIArgList, return a range over its args.
+  if (auto *AL = dyn_cast<DIArgList>(MD))
+    return {location_op_iterator(AL->args_begin()),
+            location_op_iterator(AL->args_end())};
+  // Operand must be an empty metadata tuple, so return empty iterator.
+  return {location_op_iterator(static_cast<ValueAsMetadata *>(nullptr)),
+          location_op_iterator(static_cast<ValueAsMetadata *>(nullptr))};
+}
+
+Value *DbgVariableIntrinsic::getVariableLocationOp(unsigned OpIdx) const {
+  auto *MD = getRawLocation();
+  assert(MD && "First operand of DbgVariableIntrinsic should be non-null.");
+  if (auto *AL = dyn_cast<DIArgList>(MD))
+    return AL->getArgs()[OpIdx]->getValue();
+  if (isa<MDNode>(MD))
     return nullptr;
+  assert(
+      isa<ValueAsMetadata>(MD) &&
+      "Attempted to get location operand from DbgVariableIntrinsic with none.");
+  auto *V = cast<ValueAsMetadata>(MD);
+  assert(OpIdx == 0 && "Operand Index must be 0 for a debug intrinsic with a "
+                       "single location operand.");
+  return V->getValue();
+}
 
-  auto *MD = cast<MetadataAsValue>(Op)->getMetadata();
-  if (auto *V = dyn_cast<ValueAsMetadata>(MD))
-    return V->getValue();
+static ValueAsMetadata *getAsMetadata(Value *V) {
+  return isa<MetadataAsValue>(V) ? dyn_cast<ValueAsMetadata>(
+                                       cast<MetadataAsValue>(V)->getMetadata())
+                                 : ValueAsMetadata::get(V);
+}
 
-  // When the value goes to null, it gets replaced by an empty MDNode.
-  assert(!cast<MDNode>(MD)->getNumOperands() && "Expected an empty MDNode");
-  return nullptr;
+void DbgVariableIntrinsic::replaceVariableLocationOp(Value *OldValue,
+                                                     Value *NewValue) {
+  assert(NewValue && "Values must be non-null");
+  auto Locations = location_ops();
+  auto OldIt = find(Locations, OldValue);
+  assert(OldIt != Locations.end() && "OldValue must be a current location");
+  if (!hasArgList()) {
+    Value *NewOperand = isa<MetadataAsValue>(NewValue)
+                            ? NewValue
+                            : MetadataAsValue::get(
+                                  getContext(), ValueAsMetadata::get(NewValue));
+    return setArgOperand(0, NewOperand);
+  }
+  SmallVector<ValueAsMetadata *, 4> MDs;
+  ValueAsMetadata *NewOperand = getAsMetadata(NewValue);
+  for (auto *VMD : Locations)
+    MDs.push_back(VMD == *OldIt ? NewOperand : getAsMetadata(VMD));
+  setArgOperand(
+      0, MetadataAsValue::get(getContext(), DIArgList::get(getContext(), MDs)));
 }
 
 Optional<uint64_t> DbgVariableIntrinsic::getFragmentSizeInBits() const {
