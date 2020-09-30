@@ -1374,8 +1374,6 @@ static unsigned getSpillIndex(const TargetRegisterClass *RC) {
     OpcodeIndex = SOK_VectorFloat8Spill;
   } else if (PPC::VSSRCRegClass.hasSubClassEq(RC)) {
     OpcodeIndex = SOK_VectorFloat4Spill;
-  } else if (PPC::VRSAVERCRegClass.hasSubClassEq(RC)) {
-    OpcodeIndex = SOK_VRSaveSpill;
   } else if (PPC::SPILLTOVSRRCRegClass.hasSubClassEq(RC)) {
     OpcodeIndex = SOK_SpillToVSR;
   } else {
@@ -1413,9 +1411,6 @@ void PPCInstrInfo::StoreRegToStackSlot(
   if (PPC::CRRCRegClass.hasSubClassEq(RC) ||
       PPC::CRBITRCRegClass.hasSubClassEq(RC))
     FuncInfo->setSpillsCR();
-
-  if (PPC::VRSAVERCRegClass.hasSubClassEq(RC))
-    FuncInfo->setSpillsVRSAVE();
 
   if (isXFormMemOp(Opcode))
     FuncInfo->setHasNonRISpills();
@@ -1471,9 +1466,6 @@ void PPCInstrInfo::LoadRegFromStackSlot(MachineFunction &MF, const DebugLoc &DL,
   if (PPC::CRRCRegClass.hasSubClassEq(RC) ||
       PPC::CRBITRCRegClass.hasSubClassEq(RC))
     FuncInfo->setSpillsCR();
-
-  if (PPC::VRSAVERCRegClass.hasSubClassEq(RC))
-    FuncInfo->setSpillsVRSAVE();
 
   if (isXFormMemOp(Opcode))
     FuncInfo->setHasNonRISpills();
