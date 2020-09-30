@@ -69,4 +69,4 @@ except KeyError as e:
     lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
 
 # Let the main config do the real work.
-lit_config.load_config(config, "@LLDB_SOURCE_DIR@/test/API/lit.cfg.py")
+lit_config.load_config(config, os.path.join(config.lldb_src_root, "test", "API", "lit.cfg.py"))
