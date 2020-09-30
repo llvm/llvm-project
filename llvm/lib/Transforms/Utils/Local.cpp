@@ -3027,6 +3027,9 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   if (!Res)
     return false;
   auto &BitProvenance = Res->Provenance;
+  assert(all_of(BitProvenance,
+                [](int8_t I) { return I == BitPart::Unset || 0 <= I; }) &&
+         "Illegal bit provenance index");
 
   // Now, is the bit permutation correct for a bswap or a bitreverse? We can
   // only byteswap values with an even number of bytes.
