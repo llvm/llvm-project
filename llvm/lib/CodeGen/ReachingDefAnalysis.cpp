@@ -635,6 +635,9 @@ void ReachingDefAnalysis::collectKilledOperands(MachineInstr *MI,
                                                 InstSet &Dead) const {
   Dead.insert(MI);
   auto IsDead = [this, &Dead](MachineInstr *Def, int PhysReg) {
+    if (mayHaveSideEffects(*Def))
+      return false;
+
     unsigned LiveDefs = 0;
     for (auto &MO : Def->operands()) {
       if (!isValidRegDef(MO))
