@@ -14,7 +14,6 @@
 #ifndef LINALG_STRUCTURED_OPS
 #define LINALG_STRUCTURED_OPS
 
-include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
 include "mlir/Dialect/Linalg/IR/LinalgStructuredOpsInterface.td"
 include "mlir/Interfaces/CopyOpInterface.td"
