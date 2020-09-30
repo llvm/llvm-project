@@ -3989,7 +3989,7 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
 
   if (Args.hasFlag(options::OPT_fdebug_types_section,
                    options::OPT_fno_debug_types_section, false)) {
-    if (!T.isOSBinFormatELF()) {
+    if (!(T.isOSBinFormatELF() || T.isOSBinFormatWasm())) {
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << Args.getLastArg(options::OPT_fdebug_types_section)
                  ->getAsString(Args)
