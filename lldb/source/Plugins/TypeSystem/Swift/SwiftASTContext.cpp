@@ -8080,12 +8080,13 @@ void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
       }
     } break;
     }
-
-    if (buf.size() > 0) {
-      s->Write(buf.data(), buf.size());
-    }
   }
-  s->Printf("<could not resolve type>");
+
+  if (buf.size() > 0) {
+    s->Write(buf.data(), buf.size());
+  } else {
+    s->Printf("<could not resolve type>");
+  }
 }
 
 TypeSP SwiftASTContext::GetCachedType(ConstString mangled) {
