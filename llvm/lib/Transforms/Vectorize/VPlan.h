@@ -678,6 +678,18 @@ public:
   iplist<VPRecipeBase>::iterator eraseFromParent();
 };
 
+inline bool VPUser::classof(const VPRecipeBase *Recipe) {
+  return Recipe->getVPRecipeID() == VPRecipeBase::VPWidenSC ||
+         Recipe->getVPRecipeID() == VPRecipeBase::VPWidenCallSC ||
+         Recipe->getVPRecipeID() == VPRecipeBase::VPWidenSelectSC ||
+         Recipe->getVPRecipeID() == VPRecipeBase::VPWidenGEPSC ||
+         Recipe->getVPRecipeID() == VPRecipeBase::VPBlendSC ||
+         Recipe->getVPRecipeID() == VPRecipeBase::VPInterleaveSC ||
+         Recipe->getVPRecipeID() == VPRecipeBase::VPReplicateSC ||
+         Recipe->getVPRecipeID() == VPRecipeBase::VPBranchOnMaskSC ||
+         Recipe->getVPRecipeID() == VPRecipeBase::VPWidenMemoryInstructionSC;
+}
+
 /// This is a concrete Recipe that models a single VPlan-level instruction.
 /// While as any Recipe it may generate a sequence of IR instructions when
 /// executed, these instructions would always form a single-def expression as
@@ -780,17 +792,14 @@ public:
 /// VPWidenRecipe is a recipe for producing a copy of vector type its
 /// ingredient. This recipe covers most of the traditional vectorization cases
 /// where each ingredient transforms into a vectorized version of itself.
-class VPWidenRecipe : public VPRecipeBase {
+class VPWidenRecipe : public VPRecipeBase, public VPUser {
   /// Hold the instruction to be widened.
   Instruction &Ingredient;
-
-  /// Hold VPValues for the operands of the ingredient.
-  VPUser User;
 
 public:
   template <typename IterT>
   VPWidenRecipe(Instruction &I, iterator_range<IterT> Operands)
-      : VPRecipeBase(VPWidenSC), Ingredient(I), User(Operands) {}
+      : VPRecipeBase(VPWidenSC), VPUser(Operands), Ingredient(I) {}
 
   ~VPWidenRecipe() override = default;
 
@@ -808,17 +817,14 @@ public:
 };
 
 /// A recipe for widening Call instructions.
-class VPWidenCallRecipe : public VPRecipeBase {
+class VPWidenCallRecipe : public VPRecipeBase, public VPUser {
   /// Hold the call to be widened.
   CallInst &Ingredient;
-
-  /// Hold VPValues for the arguments of the call.
-  VPUser User;
 
 public:
   template <typename IterT>
   VPWidenCallRecipe(CallInst &I, iterator_range<IterT> CallArguments)
-      : VPRecipeBase(VPWidenCallSC), Ingredient(I), User(CallArguments) {}
+      : VPRecipeBase(VPWidenCallSC), VPUser(CallArguments), Ingredient(I) {}
 
   ~VPWidenCallRecipe() override = default;
 
@@ -836,13 +842,10 @@ public:
 };
 
 /// A recipe for widening select instructions.
-class VPWidenSelectRecipe : public VPRecipeBase {
+class VPWidenSelectRecipe : public VPRecipeBase, public VPUser {
 private:
   /// Hold the select to be widened.
   SelectInst &Ingredient;
-
-  /// Hold VPValues for the operands of the select.
-  VPUser User;
 
   /// Is the condition of the select loop invariant?
   bool InvariantCond;
@@ -851,7 +854,7 @@ public:
   template <typename IterT>
   VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands,
                       bool InvariantCond)
-      : VPRecipeBase(VPWidenSelectSC), Ingredient(I), User(Operands),
+      : VPRecipeBase(VPWidenSelectSC), VPUser(Operands), Ingredient(I),
         InvariantCond(InvariantCond) {}
 
   ~VPWidenSelectRecipe() override = default;
@@ -870,20 +873,22 @@ public:
 };
 
 /// A recipe for handling GEP instructions.
-class VPWidenGEPRecipe : public VPRecipeBase {
+class VPWidenGEPRecipe : public VPRecipeBase, public VPUser {
   GetElementPtrInst *GEP;
-
-  /// Hold VPValues for the base and indices of the GEP.
-  VPUser User;
 
   bool IsPtrLoopInvariant;
   SmallBitVector IsIndexLoopInvariant;
 
 public:
   template <typename IterT>
+  VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands)
+      : VPRecipeBase(VPWidenGEPSC), VPUser(Operands), GEP(GEP),
+        IsIndexLoopInvariant(GEP->getNumIndices(), false) {}
+
+  template <typename IterT>
   VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands,
                    Loop *OrigLoop)
-      : VPRecipeBase(VPWidenGEPSC), GEP(GEP), User(Operands),
+      : VPRecipeBase(VPWidenGEPSC), VPUser(Operands), GEP(GEP),
         IsIndexLoopInvariant(GEP->getNumIndices(), false) {
     IsPtrLoopInvariant = OrigLoop->isLoopInvariant(GEP->getPointerOperand());
     for (auto Index : enumerate(GEP->indices()))
@@ -953,17 +958,15 @@ public:
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
 /// instructions.
-class VPBlendRecipe : public VPRecipeBase {
+class VPBlendRecipe : public VPRecipeBase, public VPUser {
   PHINode *Phi;
 
+public:
   /// The blend operation is a User of the incoming values and of their
   /// respective masks, ordered [I0, M0, I1, M1, ...]. Note that a single value
   /// might be incoming with a full mask for which there is no VPValue.
-  VPUser User;
-
-public:
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
-      : VPRecipeBase(VPBlendSC), Phi(Phi), User(Operands) {
+      : VPRecipeBase(VPBlendSC), VPUser(Operands), Phi(Phi) {
     assert(Operands.size() > 0 &&
            ((Operands.size() == 1) || (Operands.size() % 2 == 0)) &&
            "Expected either a single incoming value or a positive even number "
@@ -977,17 +980,13 @@ public:
 
   /// Return the number of incoming values, taking into account that a single
   /// incoming value has no mask.
-  unsigned getNumIncomingValues() const {
-    return (User.getNumOperands() + 1) / 2;
-  }
+  unsigned getNumIncomingValues() const { return (getNumOperands() + 1) / 2; }
 
   /// Return incoming value number \p Idx.
-  VPValue *getIncomingValue(unsigned Idx) const {
-    return User.getOperand(Idx * 2);
-  }
+  VPValue *getIncomingValue(unsigned Idx) const { return getOperand(Idx * 2); }
 
   /// Return mask number \p Idx.
-  VPValue *getMask(unsigned Idx) const { return User.getOperand(Idx * 2 + 1); }
+  VPValue *getMask(unsigned Idx) const { return getOperand(Idx * 2 + 1); }
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
@@ -999,16 +998,15 @@ public:
 
 /// VPInterleaveRecipe is a recipe for transforming an interleave group of load
 /// or stores into one wide load/store and shuffles.
-class VPInterleaveRecipe : public VPRecipeBase {
+class VPInterleaveRecipe : public VPRecipeBase, public VPUser {
   const InterleaveGroup<Instruction> *IG;
-  VPUser User;
 
 public:
   VPInterleaveRecipe(const InterleaveGroup<Instruction> *IG, VPValue *Addr,
                      VPValue *Mask)
-      : VPRecipeBase(VPInterleaveSC), IG(IG), User({Addr}) {
+      : VPRecipeBase(VPInterleaveSC), VPUser({Addr}), IG(IG) {
     if (Mask)
-      User.addOperand(Mask);
+      addOperand(Mask);
   }
   ~VPInterleaveRecipe() override = default;
 
@@ -1019,14 +1017,14 @@ public:
 
   /// Return the address accessed by this recipe.
   VPValue *getAddr() const {
-    return User.getOperand(0); // Address is the 1st, mandatory operand.
+    return getOperand(0); // Address is the 1st, mandatory operand.
   }
 
   /// Return the mask used by this recipe. Note that a full mask is represented
   /// by a nullptr.
   VPValue *getMask() const {
     // Mask is optional and therefore the last, currently 2nd operand.
-    return User.getNumOperands() == 2 ? User.getOperand(1) : nullptr;
+    return getNumOperands() == 2 ? getOperand(1) : nullptr;
   }
 
   /// Generate the wide load or store, and shuffles.
@@ -1080,12 +1078,9 @@ public:
 /// copies of the original scalar type, one per lane, instead of producing a
 /// single copy of widened type for all lanes. If the instruction is known to be
 /// uniform only one copy, per lane zero, will be generated.
-class VPReplicateRecipe : public VPRecipeBase {
+class VPReplicateRecipe : public VPRecipeBase, public VPUser {
   /// The instruction being replicated.
   Instruction *Ingredient;
-
-  /// Hold VPValues for the operands of the ingredient.
-  VPUser User;
 
   /// Indicator if only a single replica per lane is needed.
   bool IsUniform;
@@ -1100,7 +1095,7 @@ public:
   template <typename IterT>
   VPReplicateRecipe(Instruction *I, iterator_range<IterT> Operands,
                     bool IsUniform, bool IsPredicated = false)
-      : VPRecipeBase(VPReplicateSC), Ingredient(I), User(Operands),
+      : VPRecipeBase(VPReplicateSC), VPUser(Operands), Ingredient(I),
         IsUniform(IsUniform), IsPredicated(IsPredicated) {
     // Retain the previous behavior of predicateInstructions(), where an
     // insert-element of a predicated instruction got hoisted into the
@@ -1130,13 +1125,11 @@ public:
 };
 
 /// A recipe for generating conditional branches on the bits of a mask.
-class VPBranchOnMaskRecipe : public VPRecipeBase {
-  VPUser User;
-
+class VPBranchOnMaskRecipe : public VPRecipeBase, public VPUser {
 public:
   VPBranchOnMaskRecipe(VPValue *BlockInMask) : VPRecipeBase(VPBranchOnMaskSC) {
     if (BlockInMask) // nullptr means all-one mask.
-      User.addOperand(BlockInMask);
+      addOperand(BlockInMask);
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
@@ -1162,9 +1155,9 @@ public:
   /// Return the mask used by this recipe. Note that a full mask is represented
   /// by a nullptr.
   VPValue *getMask() const {
-    assert(User.getNumOperands() <= 1 && "should have either 0 or 1 operands");
+    assert(getNumOperands() <= 1 && "should have either 0 or 1 operands");
     // Mask is optional.
-    return User.getNumOperands() == 1 ? User.getOperand(0) : nullptr;
+    return getNumOperands() == 1 ? getOperand(0) : nullptr;
   }
 };
 
@@ -1202,31 +1195,30 @@ public:
 /// - For store: Address, stored value, optional mask
 /// TODO: We currently execute only per-part unless a specific instance is
 /// provided.
-class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
+class VPWidenMemoryInstructionRecipe : public VPRecipeBase, public VPUser {
   Instruction &Instr;
-  VPUser User;
 
   void setMask(VPValue *Mask) {
     if (!Mask)
       return;
-    User.addOperand(Mask);
+    addOperand(Mask);
   }
 
   bool isMasked() const {
-    return (isa<LoadInst>(Instr) && User.getNumOperands() == 2) ||
-           (isa<StoreInst>(Instr) && User.getNumOperands() == 3);
+    return (isa<LoadInst>(Instr) && getNumOperands() == 2) ||
+           (isa<StoreInst>(Instr) && getNumOperands() == 3);
   }
 
 public:
   VPWidenMemoryInstructionRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask)
-      : VPRecipeBase(VPWidenMemoryInstructionSC), Instr(Load), User({Addr}) {
+      : VPRecipeBase(VPWidenMemoryInstructionSC), VPUser({Addr}), Instr(Load) {
     setMask(Mask);
   }
 
   VPWidenMemoryInstructionRecipe(StoreInst &Store, VPValue *Addr,
                                  VPValue *StoredValue, VPValue *Mask)
-      : VPRecipeBase(VPWidenMemoryInstructionSC), Instr(Store),
-        User({Addr, StoredValue}) {
+      : VPRecipeBase(VPWidenMemoryInstructionSC), VPUser({Addr, StoredValue}),
+        Instr(Store) {
     setMask(Mask);
   }
 
@@ -1237,21 +1229,21 @@ public:
 
   /// Return the address accessed by this recipe.
   VPValue *getAddr() const {
-    return User.getOperand(0); // Address is the 1st, mandatory operand.
+    return getOperand(0); // Address is the 1st, mandatory operand.
   }
 
   /// Return the mask used by this recipe. Note that a full mask is represented
   /// by a nullptr.
   VPValue *getMask() const {
     // Mask is optional and therefore the last operand.
-    return isMasked() ? User.getOperand(User.getNumOperands() - 1) : nullptr;
+    return isMasked() ? getOperand(getNumOperands() - 1) : nullptr;
   }
 
   /// Return the address accessed by this recipe.
   VPValue *getStoredValue() const {
     assert(isa<StoreInst>(Instr) &&
            "Stored value only available for store instructions");
-    return User.getOperand(1); // Stored value is the 2nd, mandatory operand.
+    return getOperand(1); // Stored value is the 2nd, mandatory operand.
   }
 
   /// Generate the wide load/store.

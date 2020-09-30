@@ -7946,19 +7946,19 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
-  State.ILV->widenCallInstruction(Ingredient, User, State);
+  State.ILV->widenCallInstruction(Ingredient, *this, State);
 }
 
 void VPWidenSelectRecipe::execute(VPTransformState &State) {
-  State.ILV->widenSelectInstruction(Ingredient, User, InvariantCond, State);
+  State.ILV->widenSelectInstruction(Ingredient, *this, InvariantCond, State);
 }
 
 void VPWidenRecipe::execute(VPTransformState &State) {
-  State.ILV->widenInstruction(Ingredient, User, State);
+  State.ILV->widenInstruction(Ingredient, *this, State);
 }
 
 void VPWidenGEPRecipe::execute(VPTransformState &State) {
-  State.ILV->widenGEP(GEP, User, State.UF, State.VF, IsPtrLoopInvariant,
+  State.ILV->widenGEP(GEP, *this, State.UF, State.VF, IsPtrLoopInvariant,
                       IsIndexLoopInvariant, State);
 }
 
@@ -8039,7 +8039,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
 
 void VPReplicateRecipe::execute(VPTransformState &State) {
   if (State.Instance) { // Generate a single instance.
-    State.ILV->scalarizeInstruction(Ingredient, User, *State.Instance,
+    State.ILV->scalarizeInstruction(Ingredient, *this, *State.Instance,
                                     IsPredicated, State);
     // Insert scalar instance packing it into a vector.
     if (AlsoPack && State.VF.isVector()) {
@@ -8061,7 +8061,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   unsigned EndLane = IsUniform ? 1 : State.VF.getKnownMinValue();
   for (unsigned Part = 0; Part < State.UF; ++Part)
     for (unsigned Lane = 0; Lane < EndLane; ++Lane)
-      State.ILV->scalarizeInstruction(Ingredient, User, {Part, Lane},
+      State.ILV->scalarizeInstruction(Ingredient, *this, {Part, Lane},
                                       IsPredicated, State);
 }
 
