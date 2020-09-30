@@ -318,7 +318,13 @@ class GdbRemoteTestCaseBase(TestBase):
             raise _ConnectionRefused()  # Got EOF, connection dropped.
 
     def create_socket(self):
-        sock = socket.socket()
+        try:
+            sock = socket.socket(family=socket.AF_INET)
+        except OSError as e:
+            if e.errno != errno.EAFNOSUPPORT:
+                raise
+            sock = socket.socket(family=socket.AF_INET6)
+
         logger = self.logger
 
         triple = self.dbg.GetSelectedPlatform().GetTriple()
@@ -379,7 +385,7 @@ class GdbRemoteTestCaseBase(TestBase):
                 ["*:{}".format(self.port)]
         else:
             commandline_args = self.debug_monitor_extra_args + \
-                ["127.0.0.1:{}".format(self.port)]
+                ["localhost:{}".format(self.port)]
 
         if attach_pid:
             commandline_args += ["--attach=%d" % attach_pid]
