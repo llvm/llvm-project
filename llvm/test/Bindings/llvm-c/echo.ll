@@ -156,6 +156,24 @@ define void @memops(i8* %ptr) {
   ret void
 }
 
+define i32 @vectorops(i32, i32) {
+  %a = insertelement <4 x i32> undef, i32 %0, i32 0
+  %b = insertelement <4 x i32> %a, i32 %1, i32 2
+  %c = shufflevector <4 x i32> %b, <4 x i32> undef, <4 x i32> zeroinitializer
+  %d = shufflevector <4 x i32> %c, <4 x i32> %b, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  %e = add <4 x i32> %d, %a
+  %f = mul <4 x i32> %e, %b
+  %g = xor <4 x i32> %f, %d
+  %h = or <4 x i32> %f, %e
+  %i = lshr <4 x i32> %h, <i32 2, i32 2, i32 2, i32 2>
+  %j = shl <4 x i32> %i, <i32 2, i32 3, i32 4, i32 5>
+  %k = shufflevector <4 x i32> %j, <4 x i32> %i, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %m = shufflevector <4 x i32> %k, <4 x i32> undef, <1 x i32> <i32 1>
+  %n = shufflevector <4 x i32> %j, <4 x i32> undef, <8 x i32> <i32 0, i32 0, i32 1, i32 2, i32 undef, i32 3, i32 undef, i32 undef>
+  %p = extractelement <8 x i32> %n, i32 5
+  ret i32 %p
+}
+
 declare void @personalityFn()
 
 define void @exn() personality void ()* @personalityFn {

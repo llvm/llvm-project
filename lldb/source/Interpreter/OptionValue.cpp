@@ -471,6 +471,8 @@ const char *OptionValue::GetBuiltinTypeAsCString(Type t) {
     return "dictionary";
   case eTypeEnum:
     return "enum";
+  case eTypeFileLineColumn:
+    return "file:line:column specifier";
   case eTypeFileSpec:
     return "file";
   case eTypeFileSpecList:
