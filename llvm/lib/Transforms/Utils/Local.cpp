@@ -3038,18 +3038,20 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   // Now, is the bit permutation correct for a bswap or a bitreverse? We can
   // only byteswap values with an even number of bytes.
   unsigned DemandedBW = DemandedTy->getBitWidth();
-  bool OKForBSwap = DemandedBW % 16 == 0, OKForBitReverse = true;
-  for (unsigned i = 0; i < DemandedBW; ++i) {
-    OKForBSwap &=
-        bitTransformIsCorrectForBSwap(BitProvenance[i], i, DemandedBW);
-    OKForBitReverse &=
-        bitTransformIsCorrectForBitReverse(BitProvenance[i], i, DemandedBW);
+  bool OKForBSwap = MatchBSwaps && (DemandedBW % 16) == 0;
+  bool OKForBitReverse = MatchBitReversals;
+  for (unsigned BitIdx = 0;
+       (BitIdx < DemandedBW) && (OKForBSwap || OKForBitReverse); ++BitIdx) {
+    OKForBSwap &= bitTransformIsCorrectForBSwap(BitProvenance[BitIdx], BitIdx,
+                                                DemandedBW);
+    OKForBitReverse &= bitTransformIsCorrectForBitReverse(BitProvenance[BitIdx],
+                                                          BitIdx, DemandedBW);
   }
 
   Intrinsic::ID Intrin;
-  if (OKForBSwap && MatchBSwaps)
+  if (OKForBSwap)
     Intrin = Intrinsic::bswap;
-  else if (OKForBitReverse && MatchBitReversals)
+  else if (OKForBitReverse)
     Intrin = Intrinsic::bitreverse;
   else
     return false;
