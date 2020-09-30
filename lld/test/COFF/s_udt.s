@@ -2,6 +2,8 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-windows-msvc < %s > %t.obj
 # RUN: lld-link /DEBUG:FULL /nodefaultlib /entry:main %t.obj /PDB:%t.pdb /OUT:%t.exe
 # RUN: llvm-pdbutil dump -types -globals -symbols -modi=0 %t.pdb | FileCheck %s
+# RUN: lld-link /DEBUG:FULL /debug:ghash /nodefaultlib /entry:main %t.obj /PDB:%t.pdb /OUT:%t.exe
+# RUN: llvm-pdbutil dump -types -globals -symbols -modi=0 %t.pdb | FileCheck %s
 
 # CHECK:                               Types (TPI Stream)
 # CHECK-NEXT: ============================================================
