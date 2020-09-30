@@ -172,6 +172,7 @@ class RAGreedy : public MachineFunctionPass,
   std::unique_ptr<Spiller> SpillerInstance;
   PQueue Queue;
   unsigned NextCascade;
+  std::unique_ptr<VirtRegAuxInfo> VRAI;
 
   // Live ranges pass through a number of stages as we try to allocate them.
   // Some of the stages may also create new live ranges:
@@ -1507,10 +1508,9 @@ bool RAGreedy::splitCanCauseEvictionChain(unsigned Evictee,
   // Now, check to see if the local interval we will create is going to be
   // expensive enough to evict somebody If so, this may cause a bad eviction
   // chain.
-  VirtRegAuxInfo VRAI(*MF, *LIS, VRM, getAnalysis<MachineLoopInfo>(), *MBFI);
   float splitArtifactWeight =
-      VRAI.futureWeight(LIS->getInterval(Evictee),
-                        Cand.Intf.first().getPrevIndex(), Cand.Intf.last());
+      VRAI->futureWeight(LIS->getInterval(Evictee),
+                         Cand.Intf.first().getPrevIndex(), Cand.Intf.last());
   if (splitArtifactWeight >= 0 && splitArtifactWeight < MaxWeight)
     return false;
 
@@ -1550,10 +1550,9 @@ bool RAGreedy::splitCanCauseLocalSpill(unsigned VirtRegToSplit,
 
   // Have we found an interval that can be evicted?
   if (FutureEvictedPhysReg) {
-    VirtRegAuxInfo VRAI(*MF, *LIS, VRM, getAnalysis<MachineLoopInfo>(), *MBFI);
     float splitArtifactWeight =
-        VRAI.futureWeight(LIS->getInterval(VirtRegToSplit),
-                          Cand.Intf.first().getPrevIndex(), Cand.Intf.last());
+        VRAI->futureWeight(LIS->getInterval(VirtRegToSplit),
+                           Cand.Intf.first().getPrevIndex(), Cand.Intf.last());
     // Will the weight of the local interval be higher than the cheapest evictee
     // weight? If so it will evict it and will not cause a spill.
     if (splitArtifactWeight >= 0 && splitArtifactWeight > CheapestEvictWeight)
@@ -3228,7 +3227,9 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
 
   initializeCSRCost();
 
-  calculateSpillWeightsAndHints(*LIS, mf, VRM, *Loops, *MBFI);
+  VRAI = std::make_unique<VirtRegAuxInfo>(*MF, *LIS, VRM, *Loops, *MBFI);
+
+  VRAI->calculateSpillWeightsAndHints();
 
   LLVM_DEBUG(LIS->dump());
 
