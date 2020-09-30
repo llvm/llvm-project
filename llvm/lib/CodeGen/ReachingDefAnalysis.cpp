@@ -540,7 +540,7 @@ static bool mayHaveSideEffects(MachineInstr &MI) {
 template<typename Iterator>
 bool ReachingDefAnalysis::isSafeToMove(MachineInstr *From,
                                        MachineInstr *To) const {
-  if (From->getParent() != To->getParent())
+  if (From->getParent() != To->getParent() || From == To)
     return false;
 
   SmallSet<int, 2> Defs;
@@ -569,12 +569,22 @@ bool ReachingDefAnalysis::isSafeToMove(MachineInstr *From,
 
 bool ReachingDefAnalysis::isSafeToMoveForwards(MachineInstr *From,
                                                MachineInstr *To) const {
-  return isSafeToMove<MachineBasicBlock::reverse_iterator>(From, To);
+  using Iterator = MachineBasicBlock::iterator;
+  // Walk forwards until we find the instruction.
+  for (auto I = Iterator(From), E = From->getParent()->end(); I != E; ++I)
+    if (&*I == To)
+      return isSafeToMove<Iterator>(From, To);
+  return false;
 }
 
 bool ReachingDefAnalysis::isSafeToMoveBackwards(MachineInstr *From,
                                                 MachineInstr *To) const {
-  return isSafeToMove<MachineBasicBlock::iterator>(From, To);
+  using Iterator = MachineBasicBlock::reverse_iterator;
+  // Walk backwards until we find the instruction.
+  for (auto I = Iterator(From), E = From->getParent()->rend(); I != E; ++I)
+    if (&*I == To)
+      return isSafeToMove<Iterator>(From, To);
+  return false;
 }
 
 bool ReachingDefAnalysis::isSafeToRemove(MachineInstr *MI,
