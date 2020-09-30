@@ -971,6 +971,8 @@ def HasCmpxchg8b : Predicate<"Subtarget->hasCmpxchg8b()">;
 def HasCmpxchg16b: Predicate<"Subtarget->hasCmpxchg16b()">;
 def HasPCONFIG   : Predicate<"Subtarget->hasPCONFIG()">;
 def HasENQCMD    : Predicate<"Subtarget->hasENQCMD()">;
+def HasKL        : Predicate<"Subtarget->hasKL()">;
+def HasWIDEKL    : Predicate<"Subtarget->hasWIDEKL()">;
 def HasSERIALIZE : Predicate<"Subtarget->hasSERIALIZE()">;
 def HasTSXLDTRK  : Predicate<"Subtarget->hasTSXLDTRK()">;
 def HasAMXTILE   : Predicate<"Subtarget->hasAMXTILE()">;
@@ -3093,6 +3095,9 @@ include "X86InstrTSX.td"
 include "X86InstrSGX.td"
 
 include "X86InstrTDX.td"
+
+// Key Locker instructions
+include "X86InstrKL.td"
 
 // AMX instructions
 include "X86InstrAMX.td"

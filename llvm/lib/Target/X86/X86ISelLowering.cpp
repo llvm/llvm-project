@@ -25966,6 +25966,185 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
                                    Op->getOperand(3), Op->getOperand(4)});
       return Chain;
     }
+    case Intrinsic::x86_encodekey128:
+    case Intrinsic::x86_encodekey256: {
+      SDLoc DL(Op);
+      SDVTList VTs = DAG.getVTList(MVT::i32, MVT::Other, MVT::Glue);
+      SDValue Chain = Op.getOperand(0);
+      bool IsEK256 = false;
+      Chain = DAG.getCopyToReg(Chain, DL, X86::XMM0, Op->getOperand(3),
+                               SDValue());
+
+      unsigned Opcode;
+
+      switch (IntNo) {
+      default: llvm_unreachable("Impossible intrinsic");
+      case Intrinsic::x86_encodekey128:
+        Opcode = X86::ENCODEKEY128;
+        break;
+      case Intrinsic::x86_encodekey256:
+        Opcode = X86::ENCODEKEY256;
+        Chain = DAG.getCopyToReg(Chain, DL, X86::XMM1, Op->getOperand(4),
+                                 Chain.getValue(1));
+        IsEK256 = true;
+        break;
+      }
+
+      SDNode *Res = DAG.getMachineNode(Opcode, DL, VTs,
+                                       {Op.getOperand(2), Chain,
+                                        Chain.getValue(1)});
+
+      Chain = SDValue(Res, 1);
+
+      SDValue XMM0 = DAG.getCopyFromReg(Chain, DL, X86::XMM0, MVT::v16i8,
+                                        SDValue(Res, 2));
+      SDValue XMM1 = DAG.getCopyFromReg(XMM0.getValue(1), DL, X86::XMM1,
+                                        MVT::v16i8, XMM0.getValue(2));
+      SDValue XMM2 = DAG.getCopyFromReg(XMM1.getValue(1), DL, X86::XMM2,
+                                        MVT::v16i8, XMM1.getValue(2));
+      SDValue XMM3, XMM4;
+      if (IsEK256) {
+        XMM3 = DAG.getCopyFromReg(XMM2.getValue(1), DL, X86::XMM3,
+                                  MVT::v16i8, XMM2.getValue(2));
+        XMM4 = DAG.getCopyFromReg(XMM3.getValue(1), DL, X86::XMM4,
+                                  MVT::v16i8, XMM3.getValue(2));
+      } else {
+        XMM4 = DAG.getCopyFromReg(XMM2.getValue(1), DL, X86::XMM4,
+                                  MVT::v16i8, XMM2.getValue(2));
+      }
+      SDValue XMM5 = DAG.getCopyFromReg(XMM4.getValue(1), DL, X86::XMM5,
+                                        MVT::v16i8, XMM4.getValue(2));
+      SDValue XMM6 = DAG.getCopyFromReg(XMM5.getValue(1), DL, X86::XMM6,
+                                        MVT::v16i8, XMM5.getValue(2));
+
+      if (IsEK256) {
+        return DAG.getNode(ISD::MERGE_VALUES, DL, Op->getVTList(),
+                           {SDValue(Res, 0),
+                            XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, Chain});
+      } else {
+        return DAG.getNode(ISD::MERGE_VALUES, DL, Op->getVTList(),
+                           {SDValue(Res, 0),
+                            XMM0, XMM1, XMM2, XMM4, XMM5, XMM6, Chain});
+      }
+    }
+    case Intrinsic::x86_aesenc128kl:
+    case Intrinsic::x86_aesdec128kl:
+    case Intrinsic::x86_aesenc256kl:
+    case Intrinsic::x86_aesdec256kl: {
+      SDLoc DL(Op);
+      SDVTList VTs = DAG.getVTList(MVT::v16i8, MVT::Other, MVT::Glue);
+      SDValue Chain = Op.getOperand(0);
+      unsigned Opcode;
+
+      switch (IntNo) {
+      default: llvm_unreachable("Impossible intrinsic");
+      case Intrinsic::x86_aesenc128kl:
+        Opcode = X86::AESENC128KL;
+        break;
+      case Intrinsic::x86_aesdec128kl:
+        Opcode = X86::AESDEC128KL;
+        break;
+      case Intrinsic::x86_aesenc256kl:
+        Opcode = X86::AESENC256KL;
+        break;
+      case Intrinsic::x86_aesdec256kl:
+        Opcode = X86::AESDEC256KL;
+        break;
+      }
+
+      SDValue XMM = Op.getOperand(2);
+      SDValue Base = Op.getOperand(3);
+      SDValue Index = DAG.getRegister(0, MVT::i32);
+      SDValue Scale = DAG.getTargetConstant(1, DL, MVT::i8);
+      SDValue Disp = DAG.getTargetConstant(0, DL, MVT::i32);
+      SDValue Segment = DAG.getRegister(0, MVT::i32);
+
+      SDNode *Res = DAG.getMachineNode(Opcode, DL, VTs, {XMM, Base, Scale, Index,
+                                                         Disp, Segment, Chain});
+      Chain = SDValue(Res, 1);
+      SDValue EFLAGS = DAG.getCopyFromReg(Chain, DL, X86::EFLAGS, MVT::i32,
+                                          SDValue(Res, 2));
+      SDValue ZF = getSETCC(X86::COND_E, EFLAGS.getValue(0), DL, DAG);
+
+      return DAG.getNode(ISD::MERGE_VALUES, DL, Op->getVTList(),
+                         {ZF, SDValue(Res, 0), EFLAGS.getValue(1)});
+    }
+    case Intrinsic::x86_aesencwide128kl:
+    case Intrinsic::x86_aesdecwide128kl:
+    case Intrinsic::x86_aesencwide256kl:
+    case Intrinsic::x86_aesdecwide256kl: {
+      SDLoc DL(Op);
+      SDVTList VTs = DAG.getVTList(MVT::Other, MVT::Glue);
+      SDValue Chain = Op.getOperand(0);
+      unsigned Opcode;
+
+      switch (IntNo) {
+      default: llvm_unreachable("Impossible intrinsic");
+      case Intrinsic::x86_aesencwide128kl:
+        Opcode = X86::AESENCWIDE128KL;
+        break;
+      case Intrinsic::x86_aesdecwide128kl:
+        Opcode = X86::AESDECWIDE128KL;
+        break;
+      case Intrinsic::x86_aesencwide256kl:
+        Opcode = X86::AESENCWIDE256KL;
+        break;
+      case Intrinsic::x86_aesdecwide256kl:
+        Opcode = X86::AESDECWIDE256KL;
+        break;
+      }
+
+      SDValue Base = Op.getOperand(2);
+      SDValue Index = DAG.getRegister(0, MVT::i32);
+      SDValue Scale = DAG.getTargetConstant(1, DL, MVT::i8);
+      SDValue Disp = DAG.getTargetConstant(0, DL, MVT::i32);
+      SDValue Segment = DAG.getRegister(0, MVT::i32);
+
+      Chain = DAG.getCopyToReg(Chain, DL, X86::XMM0, Op->getOperand(3),
+                               SDValue());
+      Chain = DAG.getCopyToReg(Chain.getValue(0), DL, X86::XMM1,
+                               Op->getOperand(4), Chain.getValue(1));
+      Chain = DAG.getCopyToReg(Chain.getValue(0), DL, X86::XMM2,
+                               Op->getOperand(5), Chain.getValue(1));
+      Chain = DAG.getCopyToReg(Chain.getValue(0), DL, X86::XMM3,
+                               Op->getOperand(6), Chain.getValue(1));
+      Chain = DAG.getCopyToReg(Chain.getValue(0), DL, X86::XMM4,
+                               Op->getOperand(7), Chain.getValue(1));
+      Chain = DAG.getCopyToReg(Chain.getValue(0), DL, X86::XMM5,
+                               Op->getOperand(8), Chain.getValue(1));
+      Chain = DAG.getCopyToReg(Chain.getValue(0), DL, X86::XMM6,
+                               Op->getOperand(9), Chain.getValue(1));
+      Chain = DAG.getCopyToReg(Chain.getValue(0), DL, X86::XMM7,
+                               Op->getOperand(10),Chain.getValue(1));
+
+      SDNode *Res = DAG.getMachineNode(Opcode, DL, VTs, {Base, Scale, Index,
+                                                         Disp, Segment, Chain,
+                                                         Chain.getValue(1)});
+
+      Chain = SDValue(Res, 0);
+      SDValue EFLAGS = DAG.getCopyFromReg(Chain, DL, X86::EFLAGS, MVT::i32,
+                                          SDValue(Res, 1));
+      SDValue ZF = getSETCC(X86::COND_E, EFLAGS.getValue(0), DL, DAG);
+      SDValue XMM0 = DAG.getCopyFromReg(EFLAGS.getValue(1), DL, X86::XMM0,
+                                        MVT::v16i8, EFLAGS.getValue(2));
+      SDValue XMM1 = DAG.getCopyFromReg(XMM0.getValue(1), DL, X86::XMM1,
+                                        MVT::v16i8, XMM0.getValue(2));
+      SDValue XMM2 = DAG.getCopyFromReg(XMM1.getValue(1), DL, X86::XMM2,
+                                        MVT::v16i8, XMM1.getValue(2));
+      SDValue XMM3 = DAG.getCopyFromReg(XMM2.getValue(1), DL, X86::XMM3,
+                                        MVT::v16i8, XMM2.getValue(2));
+      SDValue XMM4 = DAG.getCopyFromReg(XMM3.getValue(1), DL, X86::XMM4,
+                                        MVT::v16i8, XMM3.getValue(2));
+      SDValue XMM5 = DAG.getCopyFromReg(XMM4.getValue(1), DL, X86::XMM5,
+                                        MVT::v16i8, XMM4.getValue(2));
+      SDValue XMM6 = DAG.getCopyFromReg(XMM5.getValue(1), DL, X86::XMM6,
+                                        MVT::v16i8, XMM5.getValue(2));
+      SDValue XMM7 = DAG.getCopyFromReg(XMM6.getValue(1), DL, X86::XMM7,
+                                        MVT::v16i8, XMM6.getValue(2));
+      return DAG.getNode(ISD::MERGE_VALUES, DL, Op->getVTList(),
+                         {ZF, XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
+                          XMM7.getValue(1)});
+    }
     }
     return SDValue();
   }

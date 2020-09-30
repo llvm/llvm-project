@@ -14037,6 +14037,93 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_psubusb128:
   case X86::BI__builtin_ia32_psubusw128:
     return EmitX86BinaryIntrinsic(*this, Ops, Intrinsic::usub_sat);
+  case X86::BI__builtin_ia32_encodekey128:
+  case X86::BI__builtin_ia32_encodekey256:
+  case X86::BI__builtin_ia32_aesenc128kl:
+  case X86::BI__builtin_ia32_aesdec128kl:
+  case X86::BI__builtin_ia32_aesenc256kl:
+  case X86::BI__builtin_ia32_aesdec256kl:
+  case X86::BI__builtin_ia32_aesencwide128kl:
+  case X86::BI__builtin_ia32_aesdecwide128kl:
+  case X86::BI__builtin_ia32_aesencwide256kl:
+  case X86::BI__builtin_ia32_aesdecwide256kl: {
+    int FirstReturnOp;
+    int ResultCount;
+    SmallVector<Value*, 9> InOps;
+    unsigned ID;
+
+    switch (BuiltinID) {
+    default: llvm_unreachable("Unsupported intrinsic!");
+    case X86::BI__builtin_ia32_encodekey128:
+      ID = Intrinsic::x86_encodekey128;
+      InOps = {Ops[0], Ops[1]};
+      FirstReturnOp = 2;
+      ResultCount = 6;
+      break;
+    case X86::BI__builtin_ia32_encodekey256:
+      ID = Intrinsic::x86_encodekey256;
+      InOps = {Ops[0], Ops[1], Ops[2]};
+      FirstReturnOp = 3;
+      ResultCount = 7;
+      break;
+    case X86::BI__builtin_ia32_aesenc128kl:
+    case X86::BI__builtin_ia32_aesdec128kl:
+    case X86::BI__builtin_ia32_aesenc256kl:
+    case X86::BI__builtin_ia32_aesdec256kl: {
+      InOps = {Ops[1], Ops[2]};
+      FirstReturnOp = 0;
+      ResultCount = 1;
+      switch (BuiltinID) {
+      case X86::BI__builtin_ia32_aesenc128kl:
+        ID = Intrinsic::x86_aesenc128kl;
+        break;
+      case X86::BI__builtin_ia32_aesdec128kl:
+        ID = Intrinsic::x86_aesdec128kl;
+        break;
+      case X86::BI__builtin_ia32_aesenc256kl:
+        ID = Intrinsic::x86_aesenc256kl;
+        break;
+      case X86::BI__builtin_ia32_aesdec256kl:
+        ID = Intrinsic::x86_aesdec256kl;
+        break;
+      }
+      break;
+    }
+    case X86::BI__builtin_ia32_aesencwide128kl:
+    case X86::BI__builtin_ia32_aesdecwide128kl:
+    case X86::BI__builtin_ia32_aesencwide256kl:
+    case X86::BI__builtin_ia32_aesdecwide256kl: {
+      InOps = {Ops[0], Ops[9], Ops[10], Ops[11], Ops[12], Ops[13],
+               Ops[14], Ops[15], Ops[16]};
+      FirstReturnOp = 1;
+      ResultCount = 8;
+      switch (BuiltinID) {
+      case X86::BI__builtin_ia32_aesencwide128kl:
+        ID = Intrinsic::x86_aesencwide128kl;
+        break;
+      case X86::BI__builtin_ia32_aesdecwide128kl:
+        ID = Intrinsic::x86_aesdecwide128kl;
+        break;
+      case X86::BI__builtin_ia32_aesencwide256kl:
+        ID = Intrinsic::x86_aesencwide256kl;
+        break;
+      case X86::BI__builtin_ia32_aesdecwide256kl:
+        ID = Intrinsic::x86_aesdecwide256kl;
+        break;
+      }
+      break;
+    }
+    }
+
+    Value *Call = Builder.CreateCall(CGM.getIntrinsic(ID), InOps);
+
+    for (int i = 0; i < ResultCount; ++i) {
+      Builder.CreateDefaultAlignedStore(Builder.CreateExtractValue(Call, i + 1),
+                                        Ops[FirstReturnOp + i]);
+    }
+
+    return Builder.CreateExtractValue(Call, 0);
+  }
   }
 }
 
