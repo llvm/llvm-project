@@ -390,6 +390,26 @@ Value *Mapper::mapValue(const Value *V) {
                  : MetadataAsValue::get(V->getContext(),
                                         MDTuple::get(V->getContext(), None));
     }
+    if (auto *AL = dyn_cast<DIArgList>(MD)) {
+      SmallVector<ValueAsMetadata *, 4> MappedArgs;
+      for (auto *VAM : AL->getArgs()) {
+        // Map both Local and Constant VAMs here; they will both ultimately
+        // be mapped via mapValue (apart from constants when we have no
+        // module level changes, which have an identity mapping).
+        if ((Flags & RF_NoModuleLevelChanges) && isa<ConstantAsMetadata>(VAM)) {
+          MappedArgs.push_back(VAM);
+        } else if (Value *LV = mapValue(VAM->getValue())) {
+          MappedArgs.push_back(
+              LV == VAM->getValue() ? VAM : ValueAsMetadata::get(LV));
+        } else {
+          // If we cannot map the value, set the argument as undef.
+          MappedArgs.push_back(ValueAsMetadata::get(
+              UndefValue::get(VAM->getValue()->getType())));
+        }
+      }
+      return MetadataAsValue::get(V->getContext(),
+                                  DIArgList::get(V->getContext(), MappedArgs));
+    }
 
     // If this is a module-level metadata and we know that nothing at the module
     // level is changing, then use an identity mapping.

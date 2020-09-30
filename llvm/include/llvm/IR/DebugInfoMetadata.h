@@ -3510,6 +3510,52 @@ public:
   }
 };
 
+/// List of ValueAsMetadata, to be used as an argument to a dbg.value
+/// intrinsic.
+class DIArgList : public MDNode {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+  using iterator = SmallVectorImpl<ValueAsMetadata *>::iterator;
+
+  SmallVector<ValueAsMetadata *, 4> Args;
+
+  DIArgList(LLVMContext &C, StorageType Storage,
+            ArrayRef<ValueAsMetadata *> Args)
+      : MDNode(C, DIArgListKind, Storage, None),
+        Args(Args.begin(), Args.end()) {
+    track();
+  }
+  ~DIArgList() { untrack(); }
+
+  static DIArgList *getImpl(LLVMContext &Context,
+                            ArrayRef<ValueAsMetadata *> Args,
+                            StorageType Storage, bool ShouldCreate = true);
+
+  TempDIArgList cloneImpl() const {
+    return getTemporary(getContext(), getArgs());
+  }
+
+  void track();
+  void untrack();
+  void dropAllReferences();
+
+public:
+  DEFINE_MDNODE_GET(DIArgList, (ArrayRef<ValueAsMetadata *> Args), (Args))
+
+  TempDIArgList clone() const { return cloneImpl(); }
+
+  ArrayRef<ValueAsMetadata *> getArgs() const { return Args; }
+
+  iterator args_begin() { return Args.begin(); }
+  iterator args_end() { return Args.end(); }
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DIArgListKind;
+  }
+
+  void handleChangedOperand(void *Ref, Metadata *New);
+};
+
 /// Identifies a unique instance of a variable.
 ///
 /// Storage for identifying a potentially inlined instance of a variable,
