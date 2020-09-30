@@ -172,6 +172,11 @@ private:
   emitIntegerCompare(MachineOperand &LHS, MachineOperand &RHS,
                      MachineOperand &Predicate,
                      MachineIRBuilder &MIRBuilder) const;
+
+  /// Emit a floating point comparison between \p LHS and \p RHS.
+  MachineInstr *emitFPCompare(Register LHS, Register RHS,
+                              MachineIRBuilder &MIRBuilder) const;
+
   MachineInstr *emitInstr(unsigned Opcode,
                           std::initializer_list<llvm::DstOp> DstOps,
                           std::initializer_list<llvm::SrcOp> SrcOps,
@@ -238,8 +243,15 @@ private:
   MachineInstr *emitFMovForFConstant(MachineInstr &MI,
                                      MachineRegisterInfo &MRI) const;
 
-  /// Emit a CSet for a compare.
+  /// Emit a CSet for an integer compare.
+  ///
+  /// \p DefReg is expected to be a 32-bit scalar register.
   MachineInstr *emitCSetForICMP(Register DefReg, unsigned Pred,
+                                MachineIRBuilder &MIRBuilder) const;
+  /// Emit a CSet for a FP compare.
+  ///
+  /// \p Dst is expected to be a 32-bit scalar register.
+  MachineInstr *emitCSetForFCmp(Register Dst, CmpInst::Predicate Pred,
                                 MachineIRBuilder &MIRBuilder) const;
 
   /// Emit a TB(N)Z instruction which tests \p Bit in \p TestReg.
@@ -996,20 +1008,6 @@ static unsigned selectSelectOpc(MachineInstr &I, MachineRegisterInfo &MRI,
   else if (Ty == LLT::scalar(64) || Ty == LLT::pointer(0, 64))
     return IsFP ? AArch64::FCSELDrrr : AArch64::CSELXr;
   return 0;
-}
-
-/// Helper function to select the opcode for a G_FCMP.
-static unsigned selectFCMPOpc(MachineInstr &I, MachineRegisterInfo &MRI) {
-  // If this is a compare against +0.0, then we don't have to explicitly
-  // materialize a constant.
-  const ConstantFP *FPImm = getConstantFPVRegVal(I.getOperand(3).getReg(), MRI);
-  bool ShouldUseImm = FPImm && (FPImm->isZero() && !FPImm->isNegative());
-  unsigned OpSize = MRI.getType(I.getOperand(2).getReg()).getSizeInBits();
-  if (OpSize != 32 && OpSize != 64)
-    return 0;
-  unsigned CmpOpcTbl[2][2] = {{AArch64::FCMPSrr, AArch64::FCMPDrr},
-                              {AArch64::FCMPSri, AArch64::FCMPDri}};
-  return CmpOpcTbl[ShouldUseImm][OpSize == 64];
 }
 
 /// Returns true if \p P is an unsigned integer comparison predicate.
@@ -2882,64 +2880,13 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   }
 
   case TargetOpcode::G_FCMP: {
-    if (Ty != LLT::scalar(32)) {
-      LLVM_DEBUG(dbgs() << "G_FCMP result has type: " << Ty
-                        << ", expected: " << LLT::scalar(32) << '\n');
+    MachineIRBuilder MIRBuilder(I);
+    CmpInst::Predicate Pred =
+        static_cast<CmpInst::Predicate>(I.getOperand(1).getPredicate());
+    if (!emitFPCompare(I.getOperand(2).getReg(), I.getOperand(3).getReg(),
+                       MIRBuilder) ||
+        !emitCSetForFCmp(I.getOperand(0).getReg(), Pred, MIRBuilder))
       return false;
-    }
-
-    unsigned CmpOpc = selectFCMPOpc(I, MRI);
-    if (!CmpOpc)
-      return false;
-
-    // FIXME: regbank
-
-    AArch64CC::CondCode CC1, CC2;
-    changeFCMPPredToAArch64CC(
-        (CmpInst::Predicate)I.getOperand(1).getPredicate(), CC1, CC2);
-
-    // Partially build the compare. Decide if we need to add a use for the
-    // third operand based off whether or not we're comparing against 0.0.
-    auto CmpMI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(CmpOpc))
-                     .addUse(I.getOperand(2).getReg());
-
-    // If we don't have an immediate compare, then we need to add a use of the
-    // register which wasn't used for the immediate.
-    // Note that the immediate will always be the last operand.
-    if (CmpOpc != AArch64::FCMPSri && CmpOpc != AArch64::FCMPDri)
-      CmpMI = CmpMI.addUse(I.getOperand(3).getReg());
-
-    const Register DefReg = I.getOperand(0).getReg();
-    Register Def1Reg = DefReg;
-    if (CC2 != AArch64CC::AL)
-      Def1Reg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
-
-    MachineInstr &CSetMI =
-        *BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::CSINCWr))
-             .addDef(Def1Reg)
-             .addUse(AArch64::WZR)
-             .addUse(AArch64::WZR)
-             .addImm(getInvertedCondCode(CC1));
-
-    if (CC2 != AArch64CC::AL) {
-      Register Def2Reg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
-      MachineInstr &CSet2MI =
-          *BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::CSINCWr))
-               .addDef(Def2Reg)
-               .addUse(AArch64::WZR)
-               .addUse(AArch64::WZR)
-               .addImm(getInvertedCondCode(CC2));
-      MachineInstr &OrMI =
-          *BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::ORRWrr))
-               .addDef(DefReg)
-               .addUse(Def1Reg)
-               .addUse(Def2Reg);
-      constrainSelectedInstRegOperands(OrMI, TII, TRI, RBI);
-      constrainSelectedInstRegOperands(CSet2MI, TII, TRI, RBI);
-    }
-    constrainSelectedInstRegOperands(*CmpMI, TII, TRI, RBI);
-    constrainSelectedInstRegOperands(CSetMI, TII, TRI, RBI);
-
     I.eraseFromParent();
     return true;
   }
@@ -3984,6 +3931,66 @@ AArch64InstructionSelector::emitIntegerCompare(
   return {&*CmpMI, P};
 }
 
+MachineInstr *AArch64InstructionSelector::emitCSetForFCmp(
+    Register Dst, CmpInst::Predicate Pred, MachineIRBuilder &MIRBuilder) const {
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+#ifndef NDEBUG
+  LLT Ty = MRI.getType(Dst);
+  assert(!Ty.isVector() && Ty.getSizeInBits() == 32 &&
+         "Expected a 32-bit scalar register?");
+#endif
+  const Register ZeroReg = AArch64::WZR;
+  auto EmitCSet = [&](Register CsetDst, AArch64CC::CondCode CC) {
+    auto CSet =
+        MIRBuilder.buildInstr(AArch64::CSINCWr, {CsetDst}, {ZeroReg, ZeroReg})
+            .addImm(getInvertedCondCode(CC));
+    constrainSelectedInstRegOperands(*CSet, TII, TRI, RBI);
+    return &*CSet;
+  };
+
+  AArch64CC::CondCode CC1, CC2;
+  changeFCMPPredToAArch64CC(Pred, CC1, CC2);
+  if (CC2 == AArch64CC::AL)
+    return EmitCSet(Dst, CC1);
+
+  const TargetRegisterClass *RC = &AArch64::GPR32RegClass;
+  Register Def1Reg = MRI.createVirtualRegister(RC);
+  Register Def2Reg = MRI.createVirtualRegister(RC);
+  EmitCSet(Def1Reg, CC1);
+  EmitCSet(Def2Reg, CC2);
+  auto OrMI = MIRBuilder.buildInstr(AArch64::ORRWrr, {Dst}, {Def1Reg, Def2Reg});
+  constrainSelectedInstRegOperands(*OrMI, TII, TRI, RBI);
+  return &*OrMI;
+}
+
+MachineInstr *
+AArch64InstructionSelector::emitFPCompare(Register LHS, Register RHS,
+                                          MachineIRBuilder &MIRBuilder) const {
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  LLT Ty = MRI.getType(LHS);
+  if (Ty.isVector())
+    return nullptr;
+  unsigned OpSize = Ty.getSizeInBits();
+  if (OpSize != 32 && OpSize != 64)
+    return nullptr;
+
+  // If this is a compare against +0.0, then we don't have
+  // to explicitly materialize a constant.
+  const ConstantFP *FPImm = getConstantFPVRegVal(RHS, MRI);
+  bool ShouldUseImm = FPImm && (FPImm->isZero() && !FPImm->isNegative());
+  unsigned CmpOpcTbl[2][2] = {{AArch64::FCMPSrr, AArch64::FCMPDrr},
+                              {AArch64::FCMPSri, AArch64::FCMPDri}};
+  unsigned CmpOpc = CmpOpcTbl[ShouldUseImm][OpSize == 64];
+
+  // Partially build the compare. Decide if we need to add a use for the
+  // third operand based off whether or not we're comparing against 0.0.
+  auto CmpMI = MIRBuilder.buildInstr(CmpOpc).addUse(LHS);
+  if (!ShouldUseImm)
+    CmpMI.addUse(RHS);
+  constrainSelectedInstRegOperands(*CmpMI, TII, TRI, RBI);
+  return &*CmpMI;
+}
+
 MachineInstr *AArch64InstructionSelector::emitVectorConcat(
     Optional<Register> Dst, Register Op1, Register Op2,
     MachineIRBuilder &MIRBuilder) const {
@@ -4169,10 +4176,10 @@ bool AArch64InstructionSelector::tryOptSelect(MachineInstr &I) const {
     CondCode = changeICMPPredToAArch64CC(Pred);
   } else {
     // Get the condition code for the select.
+    CmpInst::Predicate Pred =
+        static_cast<CmpInst::Predicate>(CondDef->getOperand(1).getPredicate());
     AArch64CC::CondCode CondCode2;
-    changeFCMPPredToAArch64CC(
-        (CmpInst::Predicate)CondDef->getOperand(1).getPredicate(), CondCode,
-        CondCode2);
+    changeFCMPPredToAArch64CC(Pred, CondCode, CondCode2);
 
     // changeFCMPPredToAArch64CC sets CondCode2 to AL when we require two
     // instructions to emit the comparison.
@@ -4181,16 +4188,11 @@ bool AArch64InstructionSelector::tryOptSelect(MachineInstr &I) const {
     if (CondCode2 != AArch64CC::AL)
       return false;
 
-    // Make sure we'll be able to select the compare.
-    unsigned CmpOpc = selectFCMPOpc(*CondDef, MRI);
-    if (!CmpOpc)
+    if (!emitFPCompare(CondDef->getOperand(2).getReg(),
+                       CondDef->getOperand(3).getReg(), MIB)) {
+      LLVM_DEBUG(dbgs() << "Couldn't emit compare for select!\n");
       return false;
-
-    // Emit a new compare.
-    auto Cmp = MIB.buildInstr(CmpOpc, {}, {CondDef->getOperand(2).getReg()});
-    if (CmpOpc != AArch64::FCMPSri && CmpOpc != AArch64::FCMPDri)
-      Cmp.addUse(CondDef->getOperand(3).getReg());
-    constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI);
+    }
   }
 
   // Emit the select.
