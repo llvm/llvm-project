@@ -9,6 +9,7 @@
 #include "llvm/DebugInfo/CodeView/RecordName.h"
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CVSymbolVisitor.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecordMapping.h"
@@ -77,9 +78,10 @@ Error TypeNameComputer::visitKnownRecord(CVType &CVR, ArgListRecord &Args) {
   uint32_t Size = Indices.size();
   Name = "(";
   for (uint32_t I = 0; I < Size; ++I) {
-    assert(Indices[I] < CurrentTypeIndex);
-
-    Name.append(Types.getTypeName(Indices[I]));
+    if (Indices[I] < CurrentTypeIndex)
+      Name.append(Types.getTypeName(Indices[I]));
+    else
+      Name.append("<unknown 0x" + utohexstr(Indices[I].getIndex()) + ">");
     if (I + 1 != Size)
       Name.append(", ");
   }
