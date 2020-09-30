@@ -153,13 +153,6 @@ template <class T> T check(Expected<T> e) {
   return std::move(*e);
 }
 
-// Don't move from Expected wrappers around references.
-template <class T> T &check(Expected<T &> e) {
-  if (!e)
-    fatal(llvm::toString(e.takeError()));
-  return *e;
-}
-
 template <class T>
 T check2(ErrorOr<T> e, llvm::function_ref<std::string()> prefix) {
   if (auto ec = e.getError())
