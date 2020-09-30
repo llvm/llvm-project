@@ -1,8 +1,8 @@
-// RUN: mlir-opt -split-input-file -allow-unregistered-dialect %s | FileCheck %s
+// RUN: mlir-opt -split-input-file %s | FileCheck %s
 // Verify the printed output can be parsed.
-// RUN: mlir-opt -split-input-file -allow-unregistered-dialect %s | mlir-opt -allow-unregistered-dialect  | FileCheck %s
+// RUN: mlir-opt -split-input-file %s | mlir-opt -allow-unregistered-dialect  | FileCheck %s
 // Verify the generic form can be parsed.
-// RUN: mlir-opt -split-input-file -allow-unregistered-dialect -mlir-print-op-generic %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt -split-input-file -mlir-print-op-generic %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
 
 func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf32>) -> memref<10x10xf32> {
   %c0 = constant 0 : index
@@ -203,59 +203,59 @@ func @testloopop() -> () {
   %idxValue = constant 8 : index
 
   acc.loop gang worker vector {
-    "some.op"() : () -> ()
+    "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
   acc.loop gang(num=%i64Value: i64) {
-    "some.op"() : () -> ()
+    "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
   acc.loop gang(static=%i64Value: i64) {
-    "some.op"() : () -> ()
+    "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
   acc.loop worker(%i64Value: i64) {
-    "some.op"() : () -> ()
+    "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
   acc.loop worker(%i32Value: i32) {
-    "some.op"() : () -> ()
+    "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
   acc.loop worker(%idxValue: index) {
-    "some.op"() : () -> ()
+    "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
   acc.loop vector(%i64Value: i64) {
-    "some.op"() : () -> ()
+    "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
   acc.loop vector(%i32Value: i32) {
-    "some.op"() : () -> ()
+    "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
   acc.loop vector(%idxValue: index) {
-    "some.op"() : () -> ()
+    "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
   acc.loop gang(num=%i64Value: i64) worker vector {
-    "some.op"() : () -> ()
+    "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
   acc.loop gang(num=%i64Value: i64, static=%i64Value: i64) worker(%i64Value: i64) vector(%i64Value: i64) {
-    "some.op"() : () -> ()
+    "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
   acc.loop gang(num=%i32Value: i32, static=%idxValue: index) {
-    "some.op"() : () -> ()
+    "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
   acc.loop tile(%i64Value: i64, %i64Value: i64) {
-    "some.op"() : () -> ()
+    "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
   acc.loop tile(%i32Value: i32, %i32Value: i32) {
-    "some.op"() : () -> ()
+    "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
   return
@@ -265,59 +265,59 @@ func @testloopop() -> () {
 // CHECK-NEXT: [[I32VALUE:%.*]] = constant 128 : i32
 // CHECK-NEXT: [[IDXVALUE:%.*]] = constant 8 : index
 // CHECK:      acc.loop gang worker vector {
-// CHECK-NEXT:   "some.op"() : () -> ()
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 // CHECK:      acc.loop gang(num=[[I64VALUE]]: i64) {
-// CHECK-NEXT:   "some.op"() : () -> ()
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 // CHECK:      acc.loop gang(static=[[I64VALUE]]: i64) {
-// CHECK-NEXT:   "some.op"() : () -> ()
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 // CHECK:      acc.loop worker([[I64VALUE]]: i64) {
-// CHECK-NEXT:   "some.op"() : () -> ()
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 // CHECK:      acc.loop worker([[I32VALUE]]: i32) {
-// CHECK-NEXT:   "some.op"() : () -> ()
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 // CHECK:      acc.loop worker([[IDXVALUE]]: index) {
-// CHECK-NEXT:   "some.op"() : () -> ()
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 // CHECK:      acc.loop vector([[I64VALUE]]: i64) {
-// CHECK-NEXT:   "some.op"() : () -> ()
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 // CHECK:      acc.loop vector([[I32VALUE]]: i32) {
-// CHECK-NEXT:   "some.op"() : () -> ()
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 // CHECK:      acc.loop vector([[IDXVALUE]]: index) {
-// CHECK-NEXT:   "some.op"() : () -> ()
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 // CHECK:      acc.loop gang(num=[[I64VALUE]]: i64) worker vector {
-// CHECK-NEXT:   "some.op"() : () -> ()
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 // CHECK:      acc.loop gang(num=[[I64VALUE]]: i64, static=[[I64VALUE]]: i64) worker([[I64VALUE]]: i64) vector([[I64VALUE]]: i64) {
-// CHECK-NEXT:   "some.op"() : () -> ()
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 // CHECK:      acc.loop gang(num=[[I32VALUE]]: i32, static=[[IDXVALUE]]: index) {
-// CHECK-NEXT:   "some.op"() : () -> ()
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 // CHECK:      acc.loop tile([[I64VALUE]]: i64, [[I64VALUE]]: i64) {
-// CHECK-NEXT:   "some.op"() : () -> ()
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 // CHECK:      acc.loop tile([[I32VALUE]]: i32, [[I32VALUE]]: i32) {
-// CHECK-NEXT:   "some.op"() : () -> ()
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 
