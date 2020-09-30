@@ -740,6 +740,8 @@ llvm::json::Value toJSON(const CodeAction &CA) {
     CodeAction["kind"] = *CA.kind;
   if (CA.diagnostics)
     CodeAction["diagnostics"] = llvm::json::Array(*CA.diagnostics);
+  if (CA.isPreferred)
+    CodeAction["isPreferred"] = true;
   if (CA.edit)
     CodeAction["edit"] = *CA.edit;
   if (CA.command)

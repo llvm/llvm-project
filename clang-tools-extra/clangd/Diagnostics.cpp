@@ -411,6 +411,8 @@ void toLSPDiags(
     Main.codeActions.emplace();
     for (const auto &Fix : D.Fixes)
       Main.codeActions->push_back(toCodeAction(Fix, File));
+    if (Main.codeActions->size() == 1)
+      Main.codeActions->front().isPreferred = true;
   }
   if (Opts.SendDiagnosticCategory && !D.Category.empty())
     Main.category = D.Category;

@@ -347,7 +347,7 @@ class PrinterContext {
                                      off_t IndexTableOffset) const;
 
   void PrintIndexTable(unsigned SectionIndex, const Elf_Shdr *IT) const;
-  void PrintExceptionTable(const Elf_Shdr *IT, const Elf_Shdr *EHT,
+  void PrintExceptionTable(const Elf_Shdr &EHT,
                            uint64_t TableEntryOffset) const;
   void PrintOpcodes(const uint8_t *Entry, size_t Length, off_t Offset) const;
 
@@ -434,11 +434,20 @@ PrinterContext<ET>::FindExceptionTable(unsigned IndexSectionIndex,
 }
 
 template <typename ET>
-void PrinterContext<ET>::PrintExceptionTable(const Elf_Shdr *IT,
-                                             const Elf_Shdr *EHT,
+static const typename ET::Shdr *
+findSectionContainingAddress(const object::ELFFile<ET> &Obj, StringRef FileName,
+                             uint64_t Address) {
+  for (const typename ET::Shdr &Sec : unwrapOrError(FileName, Obj.sections()))
+    if (Address >= Sec.sh_addr && Address < Sec.sh_addr + Sec.sh_size)
+      return &Sec;
+  return nullptr;
+}
+
+template <typename ET>
+void PrinterContext<ET>::PrintExceptionTable(const Elf_Shdr &EHT,
                                              uint64_t TableEntryOffset) const {
   // TODO: handle failure.
-  Expected<ArrayRef<uint8_t>> Contents = ELF.getSectionContents(*EHT);
+  Expected<ArrayRef<uint8_t>> Contents = ELF.getSectionContents(EHT);
   if (!Contents)
     return;
 
@@ -487,11 +496,14 @@ void PrinterContext<ET>::PrintExceptionTable(const Elf_Shdr *IT,
     }
   } else {
     SW.printString("Model", StringRef("Generic"));
-
-    uint64_t Address = PREL31(Word, EHT->sh_addr);
+    const bool IsRelocatable = ELF.getHeader().e_type == ELF::ET_REL;
+    uint64_t Address = IsRelocatable
+                           ? PREL31(Word, EHT.sh_addr)
+                           : PREL31(Word, EHT.sh_addr + TableEntryOffset);
     SW.printHex("PersonalityRoutineAddress", Address);
-    if (ErrorOr<StringRef> Name =
-            FunctionAtAddress(Address, (unsigned)EHT->sh_link))
+    Optional<unsigned> SecIndex =
+        IsRelocatable ? Optional<unsigned>(EHT.sh_link) : None;
+    if (ErrorOr<StringRef> Name = FunctionAtAddress(Address, SecIndex))
       SW.printString("PersonalityRoutineName", *Name);
   }
 }
@@ -580,19 +592,30 @@ void PrinterContext<ET>::PrintIndexTable(unsigned SectionIndex,
 
       PrintOpcodes(Contents->data() + Entry * IndexTableEntrySize + 4, 3, 1);
     } else {
-      const Elf_Shdr *EHT =
-        FindExceptionTable(SectionIndex, Entry * IndexTableEntrySize + 4);
+      const Elf_Shdr *EHT;
+      uint64_t TableEntryAddress;
+      if (IsRelocatable) {
+        TableEntryAddress = PREL31(Word1, IT->sh_addr);
+        EHT = FindExceptionTable(SectionIndex, Entry * IndexTableEntrySize + 4);
+      } else {
+        TableEntryAddress =
+            PREL31(Word1, IT->sh_addr + Entry * IndexTableEntrySize + 4);
+        EHT = findSectionContainingAddress(ELF, FileName, TableEntryAddress);
+      }
 
       if (EHT)
         // TODO: handle failure.
         if (Expected<StringRef> Name = ELF.getSectionName(*EHT))
           SW.printString("ExceptionHandlingTable", *Name);
 
-      uint64_t TableEntryOffset = PREL31(Word1, IT->sh_addr);
-      SW.printHex("TableEntryOffset", TableEntryOffset);
-
-      if (EHT)
-        PrintExceptionTable(IT, EHT, TableEntryOffset);
+      SW.printHex(IsRelocatable ? "TableEntryOffset" : "TableEntryAddress",
+                  TableEntryAddress);
+      if (EHT) {
+        if (IsRelocatable)
+          PrintExceptionTable(*EHT, TableEntryAddress);
+        else
+          PrintExceptionTable(*EHT, TableEntryAddress - EHT->sh_addr);
+      }
     }
   }
 }
