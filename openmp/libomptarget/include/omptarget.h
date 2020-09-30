@@ -21,7 +21,6 @@
 #define OFFLOAD_FAIL (~0)
 
 #define OFFLOAD_DEVICE_DEFAULT     -1
-#define HOST_DEVICE                -10
 
 /// Data attributes for each data reference used in an OpenMP target region.
 enum tgt_map_type {
