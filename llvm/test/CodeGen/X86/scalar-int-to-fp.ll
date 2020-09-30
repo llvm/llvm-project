@@ -32,12 +32,10 @@ define float @u32_to_f(i32 %a) nounwind {
 ; SSE2_32-LABEL: u32_to_f:
 ; SSE2_32:       # %bb.0:
 ; SSE2_32-NEXT:    pushl %eax
-; SSE2_32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2_32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE2_32-NEXT:    orpd %xmm0, %xmm1
-; SSE2_32-NEXT:    subsd %xmm0, %xmm1
-; SSE2_32-NEXT:    xorps %xmm0, %xmm0
-; SSE2_32-NEXT:    cvtsd2ss %xmm1, %xmm0
+; SSE2_32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2_32-NEXT:    orpd {{\.LCPI.*}}, %xmm0
+; SSE2_32-NEXT:    subsd {{\.LCPI.*}}, %xmm0
+; SSE2_32-NEXT:    cvtsd2ss %xmm0, %xmm0
 ; SSE2_32-NEXT:    movss %xmm0, (%esp)
 ; SSE2_32-NEXT:    flds (%esp)
 ; SSE2_32-NEXT:    popl %eax
@@ -148,11 +146,10 @@ define double @u32_to_d(i32 %a) nounwind {
 ; SSE2_32-NEXT:    movl %esp, %ebp
 ; SSE2_32-NEXT:    andl $-8, %esp
 ; SSE2_32-NEXT:    subl $8, %esp
-; SSE2_32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2_32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE2_32-NEXT:    orpd %xmm0, %xmm1
-; SSE2_32-NEXT:    subsd %xmm0, %xmm1
-; SSE2_32-NEXT:    movsd %xmm1, (%esp)
+; SSE2_32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2_32-NEXT:    orpd {{\.LCPI.*}}, %xmm0
+; SSE2_32-NEXT:    subsd {{\.LCPI.*}}, %xmm0
+; SSE2_32-NEXT:    movsd %xmm0, (%esp)
 ; SSE2_32-NEXT:    fldl (%esp)
 ; SSE2_32-NEXT:    movl %ebp, %esp
 ; SSE2_32-NEXT:    popl %ebp

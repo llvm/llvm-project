@@ -917,6 +917,13 @@ bool TargetLowering::SimplifyDemandedBits(
     return false;
   }
 
+  if (Op.getOpcode() == ISD::ConstantFP) {
+    // We know all of the bits for a floating point constant!
+    Known.One = cast<ConstantFPSDNode>(Op)->getValueAPF().bitcastToAPInt();
+    Known.Zero = ~Known.One;
+    return false;
+  }
+
   // Other users may use these bits.
   EVT VT = Op.getValueType();
   if (!Op.getNode()->hasOneUse() && !AssumeSingleUse) {
@@ -2254,9 +2261,13 @@ bool TargetLowering::SimplifyDemandedBits(
         if (C->isOpaque())
           return false;
     }
-    // TODO: Handle float bits as well.
     if (VT.isInteger())
       return TLO.CombineTo(Op, TLO.DAG.getConstant(Known.One, dl, VT));
+    if (VT.isFloatingPoint())
+      return TLO.CombineTo(
+          Op,
+          TLO.DAG.getConstantFP(
+              APFloat(TLO.DAG.EVTToAPFloatSemantics(VT), Known.One), dl, VT));
   }
 
   return false;
