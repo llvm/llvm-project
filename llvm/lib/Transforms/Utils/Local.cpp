@@ -3056,25 +3056,26 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   else
     return false;
 
-  if (ITy != DemandedTy) {
-    Function *F = Intrinsic::getDeclaration(I->getModule(), Intrin, DemandedTy);
-    Value *Provider = Res->Provider;
-    // We may need to truncate the provider.
-    if (DemandedTy != Provider->getType()) {
-      auto *Trunc = CastInst::Create(Instruction::Trunc, Provider, DemandedTy,
-                                     "trunc", I);
-      InsertedInsts.push_back(Trunc);
-      Provider = Trunc;
-    }
-    auto *CI = CallInst::Create(F, Provider, "rev", I);
-    InsertedInsts.push_back(CI);
-    auto *ExtInst = CastInst::Create(Instruction::ZExt, CI, ITy, "zext", I);
-    InsertedInsts.push_back(ExtInst);
-    return true;
+  Function *F = Intrinsic::getDeclaration(I->getModule(), Intrin, DemandedTy);
+  Value *Provider = Res->Provider;
+
+  // We may need to truncate the provider.
+  if (DemandedTy != Provider->getType()) {
+    auto *Trunc =
+        CastInst::Create(Instruction::Trunc, Provider, DemandedTy, "trunc", I);
+    InsertedInsts.push_back(Trunc);
+    Provider = Trunc;
   }
 
-  Function *F = Intrinsic::getDeclaration(I->getModule(), Intrin, ITy);
-  InsertedInsts.push_back(CallInst::Create(F, Res->Provider, "rev", I));
+  auto *CI = CallInst::Create(F, Provider, "rev", I);
+  InsertedInsts.push_back(CI);
+
+  // We may need to zeroextend back to the result type.
+  if (ITy != CI->getType()) {
+    auto *ExtInst = CastInst::Create(Instruction::ZExt, CI, ITy, "zext", I);
+    InsertedInsts.push_back(ExtInst);
+  }
+
   return true;
 }
 
