@@ -2855,16 +2855,16 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
         return Result;
 
       Result = BitPart(A->Provider, BitWidth);
-      for (unsigned i = 0; i < A->Provenance.size(); ++i) {
-        if (A->Provenance[i] != BitPart::Unset &&
-            B->Provenance[i] != BitPart::Unset &&
-            A->Provenance[i] != B->Provenance[i])
+      for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx) {
+        if (A->Provenance[BitIdx] != BitPart::Unset &&
+            B->Provenance[BitIdx] != BitPart::Unset &&
+            A->Provenance[BitIdx] != B->Provenance[BitIdx])
           return Result = None;
 
-        if (A->Provenance[i] == BitPart::Unset)
-          Result->Provenance[i] = B->Provenance[i];
+        if (A->Provenance[BitIdx] == BitPart::Unset)
+          Result->Provenance[BitIdx] = B->Provenance[BitIdx];
         else
-          Result->Provenance[i] = A->Provenance[i];
+          Result->Provenance[BitIdx] = A->Provenance[BitIdx];
       }
 
       return Result;
@@ -2901,13 +2901,12 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
     // unset the appropriate bits.
     if (I->getOpcode() == Instruction::And &&
         isa<ConstantInt>(I->getOperand(1))) {
-      APInt Bit(I->getType()->getPrimitiveSizeInBits(), 1);
       const APInt &AndMask = cast<ConstantInt>(I->getOperand(1))->getValue();
 
       // Check that the mask allows a multiple of 8 bits for a bswap, for an
       // early exit.
       unsigned NumMaskedBits = AndMask.countPopulation();
-      if (!MatchBitReversals && NumMaskedBits % 8 != 0)
+      if (!MatchBitReversals && (NumMaskedBits % 8) != 0)
         return Result;
 
       const auto &Res = collectBitParts(I->getOperand(0), MatchBSwaps,
@@ -2916,10 +2915,10 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
         return Result;
       Result = Res;
 
-      for (unsigned i = 0; i < BitWidth; ++i, Bit <<= 1)
+      for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx)
         // If the AndMask is zero for this bit, clear the bit.
-        if ((AndMask & Bit) == 0)
-          Result->Provenance[i] = BitPart::Unset;
+        if (AndMask[BitIdx] == 0)
+          Result->Provenance[BitIdx] = BitPart::Unset;
       return Result;
     }
 
@@ -2933,10 +2932,10 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       Result = BitPart(Res->Provider, BitWidth);
       auto NarrowBitWidth =
           cast<IntegerType>(cast<ZExtInst>(I)->getSrcTy())->getBitWidth();
-      for (unsigned i = 0; i < NarrowBitWidth; ++i)
-        Result->Provenance[i] = Res->Provenance[i];
-      for (unsigned i = NarrowBitWidth; i < BitWidth; ++i)
-        Result->Provenance[i] = BitPart::Unset;
+      for (unsigned BitIdx = 0; BitIdx < NarrowBitWidth; ++BitIdx)
+        Result->Provenance[BitIdx] = Res->Provenance[BitIdx];
+      for (unsigned BitIdx = NarrowBitWidth; BitIdx < BitWidth; ++BitIdx)
+        Result->Provenance[BitIdx] = BitPart::Unset;
       return Result;
     }
 
@@ -2966,11 +2965,12 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
         if (!LHS || !RHS || !LHS->Provider || LHS->Provider != RHS->Provider)
           return Result;
 
+        unsigned StartBitRHS = BitWidth - ModAmt;
         Result = BitPart(LHS->Provider, BitWidth);
-        for (unsigned I = 0; I < (BitWidth - ModAmt); ++I)
-          Result->Provenance[I + ModAmt] = LHS->Provenance[I];
-        for (unsigned I = 0; I < ModAmt; ++I)
-          Result->Provenance[I] = RHS->Provenance[I + BitWidth - ModAmt];
+        for (unsigned BitIdx = 0; BitIdx < StartBitRHS; ++BitIdx)
+          Result->Provenance[BitIdx + ModAmt] = LHS->Provenance[BitIdx];
+        for (unsigned BitIdx = 0; BitIdx < ModAmt; ++BitIdx)
+          Result->Provenance[BitIdx] = RHS->Provenance[BitIdx + StartBitRHS];
         return Result;
       }
     }
@@ -2979,8 +2979,8 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
   // Okay, we got to something that isn't a shift, 'or' or 'and'.  This must be
   // the input value to the bswap/bitreverse.
   Result = BitPart(V, BitWidth);
-  for (unsigned i = 0; i < BitWidth; ++i)
-    Result->Provenance[i] = i;
+  for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx)
+    Result->Provenance[BitIdx] = BitIdx;
   return Result;
 }
 
