@@ -180,13 +180,13 @@ declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
 define void @umul_with_overflow(i32 %lhs, i32 %rhs, i32* %pmul, i1* %pcarry_flag) {
 ; MIPS32-LABEL: umul_with_overflow:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    mul $1, $4, $5
 ; MIPS32-NEXT:    multu $4, $5
-; MIPS32-NEXT:    mfhi $2
-; MIPS32-NEXT:    sltu $2, $zero, $2
-; MIPS32-NEXT:    andi $2, $2, 1
-; MIPS32-NEXT:    sb $2, 0($7)
-; MIPS32-NEXT:    sw $1, 0($6)
+; MIPS32-NEXT:    mfhi $1
+; MIPS32-NEXT:    mul $2, $4, $5
+; MIPS32-NEXT:    sltu $1, $zero, $1
+; MIPS32-NEXT:    andi $1, $1, 1
+; MIPS32-NEXT:    sb $1, 0($7)
+; MIPS32-NEXT:    sw $2, 0($6)
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
   %res = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %lhs, i32 %rhs)
