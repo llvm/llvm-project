@@ -2728,15 +2728,47 @@ void mlir::SubViewOp::build(OpBuilder &b, OperationState &result, Value source,
         staticStridesVector, offsets, sizes, strides, attrs);
 }
 
+/// Build a SubViewOp as above but with custom result type.
+void mlir::SubViewOp::build(OpBuilder &b, OperationState &result,
+                            MemRefType resultType, Value source,
+                            ArrayRef<int64_t> staticOffsets,
+                            ArrayRef<int64_t> staticSizes,
+                            ArrayRef<int64_t> staticStrides, ValueRange offsets,
+                            ValueRange sizes, ValueRange strides,
+                            ArrayRef<NamedAttribute> attrs) {
+  build(b, result, resultType, source, offsets, sizes, strides,
+        b.getI64ArrayAttr(staticOffsets), b.getI64ArrayAttr(staticSizes),
+        b.getI64ArrayAttr(staticStrides));
+  result.addAttributes(attrs);
+}
+
+/// Build a SubViewOp as above but with custom result type.
+void mlir::SubViewOp::build(OpBuilder &b, OperationState &result,
+                            MemRefType resultType, Value source,
+                            ValueRange offsets, ValueRange sizes,
+                            ValueRange strides,
+                            ArrayRef<NamedAttribute> attrs) {
+  auto sourceMemRefType = source.getType().cast<MemRefType>();
+  unsigned rank = sourceMemRefType.getRank();
+  SmallVector<int64_t, 4> staticOffsetsVector;
+  staticOffsetsVector.assign(rank, ShapedType::kDynamicStrideOrOffset);
+  SmallVector<int64_t, 4> staticSizesVector;
+  staticSizesVector.assign(rank, ShapedType::kDynamicSize);
+  SmallVector<int64_t, 4> staticStridesVector;
+  staticStridesVector.assign(rank, ShapedType::kDynamicStrideOrOffset);
+  build(b, result, resultType, source, staticOffsetsVector, staticSizesVector,
+        staticStridesVector, offsets, sizes, strides, attrs);
+}
+
 /// Verify that a particular offset/size/stride static attribute is well-formed.
 static LogicalResult
 verifySubViewOpPart(SubViewOp op, StringRef name, StringRef attrName,
                     ArrayAttr attr, llvm::function_ref<bool(int64_t)> isDynamic,
                     ValueRange values) {
   /// Check static and dynamic offsets/sizes/strides breakdown.
-  if (attr.size() != op.getRank())
-    return op.emitError("expected ")
-           << op.getRank() << " " << name << " values";
+  size_t inputRank = op.source().getType().cast<MemRefType>().getRank();
+  if (attr.size() != inputRank)
+    return op.emitError("expected ") << inputRank << " " << name << " values";
   unsigned expectedNumDynamicEntries =
       llvm::count_if(attr.getValue(), [&](Attribute attr) {
         return isDynamic(attr.cast<IntegerAttr>().getInt());
@@ -2753,6 +2785,62 @@ static SmallVector<int64_t, 4> extractFromI64ArrayAttr(Attribute attr) {
       llvm::map_range(attr.cast<ArrayAttr>(), [](Attribute a) -> int64_t {
         return a.cast<IntegerAttr>().getInt();
       }));
+}
+
+/// Checks if `original` MemRef type can be rank reduced to `reduced` type.
+/// This function is slight variant of `is subsequence` algorithm where
+/// not matching dimension must be 1.
+static bool isRankReducedType(Type originalType, Type reducedType) {
+  if (originalType == reducedType)
+    return true;
+
+  MemRefType original = originalType.cast<MemRefType>();
+  MemRefType reduced = reducedType.cast<MemRefType>();
+  ArrayRef<int64_t> originalShape = original.getShape();
+  ArrayRef<int64_t> reducedShape = reduced.getShape();
+  unsigned originalRank = originalShape.size(),
+           reducedRank = reducedShape.size();
+  if (reducedRank > originalRank)
+    return false;
+
+  unsigned reducedIdx = 0;
+  SmallVector<bool, 4> keepMask(originalRank);
+  for (unsigned originalIdx = 0; originalIdx < originalRank; ++originalIdx) {
+    // -2 is never used as a dim size so it will never match.
+    int reducedVal = reducedIdx < reducedRank ? reducedShape[reducedIdx] : -2;
+    // Skip matching dims greedily.
+    if ((keepMask[originalIdx] = originalShape[originalIdx] == reducedVal))
+      reducedIdx++;
+    // 1 is the only non-matching allowed.
+    else if (originalShape[originalIdx] != 1)
+      return false;
+  }
+  // Must match the reduced rank.
+  if (reducedIdx != reducedRank)
+    return false;
+
+  MLIRContext *c = original.getContext();
+  int64_t originalOffset, symCounter = 0, dimCounter = 0;
+  SmallVector<int64_t, 4> originalStrides;
+  getStridesAndOffset(original, originalStrides, originalOffset);
+  auto getSymbolOrConstant = [&](int64_t offset) {
+    return offset == ShapedType::kDynamicStrideOrOffset
+               ? getAffineSymbolExpr(symCounter++, c)
+               : getAffineConstantExpr(offset, c);
+  };
+
+  AffineExpr expr = getSymbolOrConstant(originalOffset);
+  for (unsigned i = 0, e = originalStrides.size(); i < e; i++) {
+    if (keepMask[i])
+      expr = expr + getSymbolOrConstant(originalStrides[i]) *
+                        getAffineDimExpr(dimCounter++, c);
+  }
+
+  auto reducedMap = AffineMap::get(dimCounter, symCounter, expr, c);
+  return original.getElementType() == reduced.getElementType() &&
+         original.getMemorySpace() == reduced.getMemorySpace() &&
+         (reduced.getAffineMaps().empty() ||
+          reducedMap == reduced.getAffineMaps().front());
 }
 
 /// Verifier for SubViewOp.
@@ -2790,8 +2878,9 @@ static LogicalResult verify(SubViewOp op) {
       op.getBaseMemRefType(), extractFromI64ArrayAttr(op.static_offsets()),
       extractFromI64ArrayAttr(op.static_sizes()),
       extractFromI64ArrayAttr(op.static_strides()));
-  if (op.getType() != expectedType)
-    return op.emitError("expected result type to be ") << expectedType;
+  if (!isRankReducedType(expectedType, subViewType))
+    return op.emitError("expected result type to be ")
+           << expectedType << " or a rank-reduced version.";
 
   return success();
 }

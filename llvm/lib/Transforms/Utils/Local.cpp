@@ -3010,26 +3010,34 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   IntegerType *ITy = dyn_cast<IntegerType>(I->getType());
   if (!ITy || ITy->getBitWidth() > 128)
     return false;   // Can't do vectors or integers > 128 bits.
-  unsigned BW = ITy->getBitWidth();
 
-  unsigned DemandedBW = BW;
   IntegerType *DemandedTy = ITy;
-  if (I->hasOneUse()) {
-    if (TruncInst *Trunc = dyn_cast<TruncInst>(I->user_back())) {
+  if (I->hasOneUse())
+    if (auto *Trunc = dyn_cast<TruncInst>(I->user_back()))
       DemandedTy = cast<IntegerType>(Trunc->getType());
-      DemandedBW = DemandedTy->getBitWidth();
-    }
-  }
 
   // Try to find all the pieces corresponding to the bswap.
   std::map<Value *, Optional<BitPart>> BPS;
   auto Res = collectBitParts(I, MatchBSwaps, MatchBitReversals, BPS, 0);
   if (!Res)
     return false;
-  auto &BitProvenance = Res->Provenance;
+  ArrayRef<int8_t> BitProvenance = Res->Provenance;
+  assert(all_of(BitProvenance,
+                [](int8_t I) { return I == BitPart::Unset || 0 <= I; }) &&
+         "Illegal bit provenance index");
+
+  // If the upper bits are zero, then attempt to perform as a truncated op.
+  if (BitProvenance[BitProvenance.size() - 1] == BitPart::Unset) {
+    while (!BitProvenance.empty() && BitProvenance.back() == BitPart::Unset)
+      BitProvenance = BitProvenance.drop_back();
+    if (BitProvenance.empty())
+      return false; // TODO - handle null value?
+    DemandedTy = IntegerType::get(I->getContext(), BitProvenance.size());
+  }
 
   // Now, is the bit permutation correct for a bswap or a bitreverse? We can
   // only byteswap values with an even number of bytes.
+  unsigned DemandedBW = DemandedTy->getBitWidth();
   bool OKForBSwap = DemandedBW % 16 == 0, OKForBitReverse = true;
   for (unsigned i = 0; i < DemandedBW; ++i) {
     OKForBSwap &=
