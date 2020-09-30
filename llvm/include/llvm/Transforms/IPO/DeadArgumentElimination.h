@@ -128,6 +128,7 @@ private:
   Liveness SurveyUses(const Value *V, UseVector &MaybeLiveUses);
 
   void SurveyFunction(const Function &F);
+  bool IsLive(const RetOrArg &RA);
   void MarkValue(const RetOrArg &RA, Liveness L,
                  const UseVector &MaybeLiveUses);
   void MarkLive(const RetOrArg &RA);
