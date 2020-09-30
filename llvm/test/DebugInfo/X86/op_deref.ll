@@ -7,7 +7,8 @@
 
 ; DWARF4: DW_AT_location [DW_FORM_sec_offset]                      (0x00000000
 ; DWARF4-NEXT:  {{.*}}: DW_OP_breg6 RBP-40, DW_OP_deref, DW_OP_deref
-; DWARF4-NEXT:  {{.*}}: DW_OP_breg0 RAX+0, DW_OP_deref)
+; DWARF4-NEXT:  {{.*}}: DW_OP_breg0 RAX+0, DW_OP_deref
+; DWARF4-NEXT:  {{.*}}: DW_OP_breg6 RBP-40, DW_OP_deref, DW_OP_deref)
 
 ; DWARF3: DW_AT_location [DW_FORM_data4]                      (0x00000000
 ; DWARF3-NEXT:  {{.*}}: DW_OP_breg6 RBP-40, DW_OP_deref, DW_OP_deref

@@ -255,7 +255,7 @@ namespace {
 
     int getStackSpaceFor(Register VirtReg);
     void spill(MachineBasicBlock::iterator Before, Register VirtReg,
-               MCPhysReg AssignedReg, bool Kill);
+               MCPhysReg AssignedReg, bool Kill, bool LiveOut);
     void reload(MachineBasicBlock::iterator Before, Register VirtReg,
                 MCPhysReg PhysReg);
 
@@ -384,7 +384,7 @@ bool RegAllocFast::mayLiveIn(Register VirtReg) {
 /// Insert spill instruction for \p AssignedReg before \p Before. Update
 /// DBG_VALUEs with \p VirtReg operands with the stack slot.
 void RegAllocFast::spill(MachineBasicBlock::iterator Before, Register VirtReg,
-                         MCPhysReg AssignedReg, bool Kill) {
+                         MCPhysReg AssignedReg, bool Kill, bool LiveOut) {
   LLVM_DEBUG(dbgs() << "Spilling " << printReg(VirtReg, TRI)
                     << " in " << printReg(AssignedReg, TRI));
   int FI = getStackSpaceFor(VirtReg);
@@ -393,6 +393,8 @@ void RegAllocFast::spill(MachineBasicBlock::iterator Before, Register VirtReg,
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   TII->storeRegToStackSlot(*MBB, Before, AssignedReg, Kill, FI, &RC, TRI);
   ++NumStores;
+
+  MachineBasicBlock::iterator FirstTerm = MBB->getFirstTerminator();
 
   // When we spill a virtual register, we will have spill instructions behind
   // every definition of it, meaning we can switch all the DBG_VALUEs over
@@ -403,6 +405,17 @@ void RegAllocFast::spill(MachineBasicBlock::iterator Before, Register VirtReg,
     assert(NewDV->getParent() == MBB && "dangling parent pointer");
     (void)NewDV;
     LLVM_DEBUG(dbgs() << "Inserting debug info due to spill:\n" << *NewDV);
+
+    if (LiveOut) {
+      // We need to insert a DBG_VALUE at the end of the block if the spill slot
+      // is live out, but there is another use of the value after the
+      // spill. This will allow LiveDebugValues to see the correct live out
+      // value to propagate to the successors.
+      MachineInstr *ClonedDV = MBB->getParent()->CloneMachineInstr(NewDV);
+      MBB->insert(FirstTerm, ClonedDV);
+      LLVM_DEBUG(dbgs() << "Cloning debug info due to live out spill\n");
+    }
+
     // Rewrite unassigned dbg_values to use the stack slot.
     MachineOperand &MO = DBG->getOperand(0);
     if (MO.isReg() && MO.getReg() == 0)
@@ -868,7 +881,7 @@ void RegAllocFast::defineVirtReg(MachineInstr &MI, unsigned OpNum,
       LLVM_DEBUG(dbgs() << "Spill Reason: LO: " << LRI->LiveOut << " RL: "
                         << LRI->Reloaded << '\n');
       bool Kill = LRI->LastUse == nullptr;
-      spill(SpillBefore, VirtReg, PhysReg, Kill);
+      spill(SpillBefore, VirtReg, PhysReg, Kill, LRI->LiveOut);
       LRI->LastUse = nullptr;
     }
     LRI->LiveOut = false;

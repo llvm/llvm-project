@@ -11,9 +11,6 @@
 define i16 @f(i16 signext %zzz) nounwind !dbg !1 {
 entry:
   call void @llvm.dbg.value(metadata i16 %zzz, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
-  br label %exit
-
-exit:
   %conv = sext i16 %zzz to i32, !dbg !7
   %conv1 = trunc i32 %conv to i16
   ret i16 %conv1
