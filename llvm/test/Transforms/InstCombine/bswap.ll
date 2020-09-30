@@ -187,8 +187,8 @@ define i32 @bswap32_shl_first_extra_use(i32 %x) {
 
 define i16 @test8(i16 %a) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[REV:%.*]] = call i16 @llvm.bswap.i16(i16 [[A:%.*]])
-; CHECK-NEXT:    ret i16 [[REV]]
+; CHECK-NEXT:    [[OR:%.*]] = call i16 @llvm.bswap.i16(i16 [[A:%.*]])
+; CHECK-NEXT:    ret i16 [[OR]]
 ;
   %conv = zext i16 %a to i32
   %shr = lshr i16 %a, 8
@@ -201,8 +201,8 @@ define i16 @test8(i16 %a) {
 
 define i16 @test9(i16 %a) {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    [[REV:%.*]] = call i16 @llvm.bswap.i16(i16 [[A:%.*]])
-; CHECK-NEXT:    ret i16 [[REV]]
+; CHECK-NEXT:    [[OR:%.*]] = call i16 @llvm.bswap.i16(i16 [[A:%.*]])
+; CHECK-NEXT:    ret i16 [[OR]]
 ;
   %conv = zext i16 %a to i32
   %shr = lshr i32 %conv, 8
@@ -229,18 +229,10 @@ define i16 @test10(i32 %a) {
 
 define i64 @PR39793_bswap_u64_as_u32(i64 %0) {
 ; CHECK-LABEL: @PR39793_bswap_u64_as_u32(
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 24
-; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 255
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP0]], 8
-; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 65280
-; CHECK-NEXT:    [[TMP6:%.*]] = or i64 [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP0]], 8
-; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP7]], 16711680
-; CHECK-NEXT:    [[TMP9:%.*]] = or i64 [[TMP6]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = shl i64 [[TMP0]], 24
-; CHECK-NEXT:    [[TMP11:%.*]] = and i64 [[TMP10]], 4278190080
-; CHECK-NEXT:    [[TMP12:%.*]] = or i64 [[TMP9]], [[TMP11]]
-; CHECK-NEXT:    ret i64 [[TMP12]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[TMP0:%.*]] to i32
+; CHECK-NEXT:    [[REV:%.*]] = call i32 @llvm.bswap.i32(i32 [[TRUNC]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[REV]] to i64
+; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   %2 = lshr i64 %0, 24
   %3 = and i64 %2, 255
@@ -258,13 +250,10 @@ define i64 @PR39793_bswap_u64_as_u32(i64 %0) {
 
 define i16 @PR39793_bswap_u64_as_u32_trunc(i64 %0) {
 ; CHECK-LABEL: @PR39793_bswap_u64_as_u32_trunc(
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 24
-; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 255
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP0]], 8
-; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 65280
-; CHECK-NEXT:    [[TMP6:%.*]] = or i64 [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i16
-; CHECK-NEXT:    ret i16 [[TMP7]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[TMP0:%.*]] to i32
+; CHECK-NEXT:    [[REV:%.*]] = call i32 @llvm.bswap.i32(i32 [[TRUNC]])
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[REV]] to i16
+; CHECK-NEXT:    ret i16 [[TMP2]]
 ;
   %2 = lshr i64 %0, 24
   %3 = and i64 %2, 255
@@ -283,12 +272,10 @@ define i16 @PR39793_bswap_u64_as_u32_trunc(i64 %0) {
 
 define i64 @PR39793_bswap_u64_as_u16(i64 %0) {
 ; CHECK-LABEL: @PR39793_bswap_u64_as_u16(
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 255
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP0]], 8
-; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 65280
-; CHECK-NEXT:    [[TMP6:%.*]] = or i64 [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[TMP0:%.*]] to i16
+; CHECK-NEXT:    [[REV:%.*]] = call i16 @llvm.bswap.i16(i16 [[TRUNC]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[REV]] to i64
+; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   %2 = lshr i64 %0, 8
   %3 = and i64 %2, 255
@@ -300,9 +287,9 @@ define i64 @PR39793_bswap_u64_as_u16(i64 %0) {
 
 define i8 @PR39793_bswap_u64_as_u16_trunc(i64 %0) {
 ; CHECK-LABEL: @PR39793_bswap_u64_as_u16_trunc(
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i8
-; CHECK-NEXT:    ret i8 [[TMP3]]
+; CHECK-NEXT:    [[REV1:%.*]] = lshr i64 [[TMP0:%.*]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[REV1]] to i8
+; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %2 = lshr i64 %0, 8
   %3 = and i64 %2, 255
@@ -313,14 +300,27 @@ define i8 @PR39793_bswap_u64_as_u16_trunc(i64 %0) {
   ret i8 %7
 }
 
+define i50 @PR39793_bswap_u50_as_u16(i50 %0) {
+; CHECK-LABEL: @PR39793_bswap_u50_as_u16(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i50 [[TMP0:%.*]] to i16
+; CHECK-NEXT:    [[REV:%.*]] = call i16 @llvm.bswap.i16(i16 [[TRUNC]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[REV]] to i50
+; CHECK-NEXT:    ret i50 [[TMP2]]
+;
+  %2 = lshr i50 %0, 8
+  %3 = and i50 %2, 255
+  %4 = shl i50 %0, 8
+  %5 = and i50 %4, 65280
+  %6 = or i50 %3, %5
+  ret i50 %6
+}
+
 define i32 @PR39793_bswap_u32_as_u16(i32 %0) {
 ; CHECK-LABEL: @PR39793_bswap_u32_as_u16(
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0:%.*]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 255
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP0]], 8
-; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 65280
-; CHECK-NEXT:    [[TMP6:%.*]] = or i32 [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    ret i32 [[TMP6]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[TMP0:%.*]] to i16
+; CHECK-NEXT:    [[REV:%.*]] = call i16 @llvm.bswap.i16(i16 [[TRUNC]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[REV]] to i32
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %2 = lshr i32 %0, 8
   %3 = and i32 %2, 255
@@ -332,9 +332,9 @@ define i32 @PR39793_bswap_u32_as_u16(i32 %0) {
 
 define i8 @PR39793_bswap_u32_as_u16_trunc(i32 %0) {
 ; CHECK-LABEL: @PR39793_bswap_u32_as_u16_trunc(
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0:%.*]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
-; CHECK-NEXT:    ret i8 [[TMP3]]
+; CHECK-NEXT:    [[REV1:%.*]] = lshr i32 [[TMP0:%.*]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[REV1]] to i8
+; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %2 = lshr i32 %0, 8
   %3 = and i32 %2, 255
