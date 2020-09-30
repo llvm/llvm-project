@@ -39,7 +39,9 @@ define i16 @test7(i32 %A) {
 
 define <2 x i16> @test7_vector(<2 x i32> %A) {
 ; CHECK-LABEL: @test7_vector(
-; CHECK-NEXT:    ret <2 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[D:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i16>
+; CHECK-NEXT:    ret <2 x i16> [[D]]
 ;
   %B = tail call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %A) nounwind
   %C = trunc <2 x i32> %B to <2 x i16>
@@ -61,7 +63,9 @@ define i16 @test8(i64 %A) {
 
 define <2 x i16> @test8_vector(<2 x i64> %A) {
 ; CHECK-LABEL: @test8_vector(
-; CHECK-NEXT:    ret <2 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 48, i64 48>
+; CHECK-NEXT:    [[D:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i16>
+; CHECK-NEXT:    ret <2 x i16> [[D]]
 ;
   %B = tail call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %A) nounwind
   %C = trunc <2 x i64> %B to <2 x i16>
