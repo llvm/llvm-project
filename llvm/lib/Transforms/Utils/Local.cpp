@@ -3059,9 +3059,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   if (ITy != DemandedTy) {
     Function *F = Intrinsic::getDeclaration(I->getModule(), Intrin, DemandedTy);
     Value *Provider = Res->Provider;
-    IntegerType *ProviderTy = cast<IntegerType>(Provider->getType());
     // We may need to truncate the provider.
-    if (DemandedTy != ProviderTy) {
+    if (DemandedTy != Provider->getType()) {
       auto *Trunc = CastInst::Create(Instruction::Trunc, Provider, DemandedTy,
                                      "trunc", I);
       InsertedInsts.push_back(Trunc);
