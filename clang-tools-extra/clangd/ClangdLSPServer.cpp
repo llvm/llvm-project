@@ -1007,6 +1007,20 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
         for (const auto &T : *Tweaks)
           Actions.push_back(toCodeAction(T, File, Selection));
 
+        // If there's exactly one quick-fix, call it "preferred".
+        // We never consider refactorings etc as preferred.
+        CodeAction *OnlyFix = nullptr;
+        for (auto &Action : Actions) {
+          if (Action.kind && *Action.kind == CodeAction::QUICKFIX_KIND) {
+            if (OnlyFix) {
+              OnlyFix->isPreferred = false;
+              break;
+            }
+            Action.isPreferred = true;
+            OnlyFix = &Action;
+          }
+        }
+
         if (SupportsCodeAction)
           return Reply(llvm::json::Array(Actions));
         std::vector<Command> Commands;

@@ -952,6 +952,13 @@ struct CodeAction {
   /// The diagnostics that this code action resolves.
   llvm::Optional<std::vector<Diagnostic>> diagnostics;
 
+  /// Marks this as a preferred action. Preferred actions are used by the
+  /// `auto fix` command and can be targeted by keybindings.
+  /// A quick fix should be marked preferred if it properly addresses the
+  /// underlying error. A refactoring should be marked preferred if it is the
+  /// most reasonable choice of actions to take.
+  bool isPreferred = false;
+
   /// The workspace edit this code action performs.
   llvm::Optional<WorkspaceEdit> edit;
 
