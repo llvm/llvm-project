@@ -207,7 +207,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         // left, unless the metadata doesn't match the switch.
         if (NCases > 1 && MD && MD->getNumOperands() == 2 + NCases) {
           // Collect branch weights into a vector.
-          SmallVector<uint32_t, 8> Weights;
+          SmallVector<uint64_t, 8> Weights;
           for (unsigned MD_i = 1, MD_e = MD->getNumOperands(); MD_i < MD_e;
                ++MD_i) {
             auto *CI = mdconst::extract<ConstantInt>(MD->getOperand(MD_i));
@@ -2091,11 +2091,8 @@ CallInst *llvm::createCallMatchingInvoke(InvokeInst *II) {
   // If the invoke had profile metadata, try converting them for CallInst.
   uint64_t TotalWeight;
   if (NewCall->extractProfTotalWeight(TotalWeight)) {
-    // Set the total weight if it fits into i32, otherwise reset.
     MDBuilder MDB(NewCall->getContext());
-    auto NewWeights = uint32_t(TotalWeight) != TotalWeight
-                          ? nullptr
-                          : MDB.createBranchWeights({uint32_t(TotalWeight)});
+    auto NewWeights = MDB.createBranchWeights({TotalWeight});
     NewCall->setMetadata(LLVMContext::MD_prof, NewWeights);
   }
 

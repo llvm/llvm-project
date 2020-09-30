@@ -11,4 +11,4 @@ int main(int argc, const char *argv[]) {
   bar();
   return 0;
 }
-// CHECK: ![[PD1]] = !{!"branch_weights", i32 1, i32 2}
+// CHECK: ![[PD1]] = !{!"branch_weights", i64 1, i64 2}

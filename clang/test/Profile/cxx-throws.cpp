@@ -76,13 +76,13 @@ void unreachable(int i) {
   if (i) {}
 }
 
-// PGOUSE-DAG: ![[TH1]] = !{!"branch_weights", i32 101, i32 2}
-// PGOUSE-DAG: ![[TH2]] = !{!"branch_weights", i32 67, i32 35}
-// PGOUSE-DAG: ![[TH3]] = !{!"branch_weights", i32 34, i32 34}
-// PGOUSE-DAG: ![[TH4]] = !{!"branch_weights", i32 18, i32 18}
-// PGOUSE-EXC: ![[TH5]] = !{!"branch_weights", i32 34, i32 18}
-// PGOUSE-DAG: ![[TH6]] = !{!"branch_weights", i32 101, i32 1}
-// PGOUSE-DAG: ![[UN1]] = !{!"branch_weights", i32 2, i32 1}
+// PGOUSE-DAG: ![[TH1]] = !{!"branch_weights", i64 101, i64 2}
+// PGOUSE-DAG: ![[TH2]] = !{!"branch_weights", i64 67, i64 35}
+// PGOUSE-DAG: ![[TH3]] = !{!"branch_weights", i64 34, i64 34}
+// PGOUSE-DAG: ![[TH4]] = !{!"branch_weights", i64 18, i64 18}
+// PGOUSE-EXC: ![[TH5]] = !{!"branch_weights", i64 34, i64 18}
+// PGOUSE-DAG: ![[TH6]] = !{!"branch_weights", i64 101, i64 1}
+// PGOUSE-DAG: ![[UN1]] = !{!"branch_weights", i64 2, i64 1}
 
 int main(int argc, const char *argv[]) {
   throws();
