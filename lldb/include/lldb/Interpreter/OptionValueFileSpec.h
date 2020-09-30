@@ -41,12 +41,11 @@ public:
   SetValueFromString(const char *,
                      VarSetOperationType = eVarSetOperationAssign) = delete;
 
-  bool Clear() override {
+  void Clear() override {
     m_current_value = m_default_value;
     m_value_was_set = false;
     m_data_sp.reset();
     m_data_mod_time = llvm::sys::TimePoint<>();
-    return true;
   }
 
   lldb::OptionValueSP DeepCopy() const override;
