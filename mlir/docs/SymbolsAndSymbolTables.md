@@ -37,10 +37,10 @@ link, or use, to the symbol. An example of a `Symbol` operation is
 
 ### Defining a Symbol
 
-A `Symbol` operation may use the `OpTrait::Symbol` trait to provide the
-necessary verification and accessors, but this is not required as some
-operations, such as `module`, conditionally define a symbol. `Symbol`s must have
-the following properties:
+A `Symbol` operation should use the `SymbolOpInterface` interface to provide the
+necessary verification and accessors; it also supports
+operations, such as `module`, that conditionally define a symbol. `Symbol`s must
+have the following properties:
 
 *   A `StringAttr` attribute named
     'SymbolTable::getSymbolAttrName()'(`sym_name`).
