@@ -36,17 +36,24 @@ class SymbolIndex;
 /// The server also supports $/cancelRequest (MessageHandler provides this).
 class ClangdLSPServer : private ClangdServer::Callbacks {
 public:
-  /// If \p CompileCommandsDir has a value, compile_commands.json will be
-  /// loaded only from \p CompileCommandsDir. Otherwise, clangd will look
-  /// for compile_commands.json in all parent directories of each file.
-  /// If UseDirBasedCDB is false, compile commands are not read from disk.
-  // FIXME: Clean up signature around CDBs.
+  struct Options : ClangdServer::Options {
+    /// Look for compilation databases, rather than using compile commands
+    /// set via LSP (extensions) only.
+    bool UseDirBasedCDB = true;
+    /// A fixed directory to search for a compilation database in.
+    /// If not set, we search upward from the source file.
+    llvm::Optional<Path> CompileCommandsDir;
+    /// The offset-encoding to use, or None to negotiate it over LSP.
+    llvm::Optional<OffsetEncoding> OffsetEncoding;
+
+    /// Per-feature options. Generally ClangdServer lets these vary
+    /// per-request, but LSP allows limited/no customizations.
+    clangd::CodeCompleteOptions CodeComplete;
+    clangd::RenameOptions Rename;
+  };
+
   ClangdLSPServer(Transport &Transp, const ThreadsafeFS &TFS,
-                  const clangd::CodeCompleteOptions &CCOpts,
-                  const clangd::RenameOptions &RenameOpts,
-                  llvm::Optional<Path> CompileCommandsDir, bool UseDirBasedCDB,
-                  llvm::Optional<OffsetEncoding> ForcedOffsetEncoding,
-                  const ClangdServer::Options &Opts);
+                  const ClangdLSPServer::Options &Opts);
   /// The destructor blocks on any outstanding background tasks.
   ~ClangdLSPServer();
 
@@ -227,10 +234,6 @@ private:
   }
 
   const ThreadsafeFS &TFS;
-  /// Options used for code completion
-  clangd::CodeCompleteOptions CCOpts;
-  /// Options used for rename.
-  clangd::RenameOptions RenameOpts;
   /// Options used for diagnostics.
   ClangdDiagnosticOptions DiagOpts;
   /// The supported kinds of the client.
@@ -268,14 +271,11 @@ private:
   // Store of the current versions of the open documents.
   DraftStore DraftMgr;
 
+  Options Opts;
   // The CDB is created by the "initialize" LSP method.
-  bool UseDirBasedCDB;                     // FIXME: make this a capability.
-  llvm::Optional<Path> CompileCommandsDir; // FIXME: merge with capability?
   std::unique_ptr<GlobalCompilationDatabase> BaseCDB;
   // CDB is BaseCDB plus any commands overridden via LSP extensions.
   llvm::Optional<OverlayCDB> CDB;
-  ClangdServer::Options ClangdServerOpts;
-  llvm::Optional<OffsetEncoding> NegotiatedOffsetEncoding;
   // The ClangdServer is created by the "initialize" LSP method.
   llvm::Optional<ClangdServer> Server;
 };
