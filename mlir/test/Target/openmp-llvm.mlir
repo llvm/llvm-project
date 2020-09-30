@@ -24,10 +24,18 @@ llvm.func @test_flush_construct(%arg0: !llvm.i32) {
   omp.flush
 
   // CHECK: call void @__kmpc_flush(%struct.ident_t* @{{[0-9]+}}
-  omp.flush %arg0 : !llvm.i32
+  omp.flush (%arg0 : !llvm.i32)
 
   // CHECK: call void @__kmpc_flush(%struct.ident_t* @{{[0-9]+}}
-  omp.flush %arg0, %arg0 : !llvm.i32, !llvm.i32
+  omp.flush (%arg0, %arg0 : !llvm.i32, !llvm.i32)
+
+  %0 = llvm.mlir.constant(1 : i64) : !llvm.i64
+  //  CHECK: alloca {{.*}} align 4
+  %1 = llvm.alloca %0 x !llvm.i32 {in_type = i32, name = "a"} : (!llvm.i64) -> !llvm.ptr<i32>
+  // CHECK: call void @__kmpc_flush(%struct.ident_t* @{{[0-9]+}}
+  omp.flush
+  //  CHECK: load i32, i32*
+  %2 = llvm.load %1 : !llvm.ptr<i32>
 
   // CHECK-NEXT:    ret void
   llvm.return

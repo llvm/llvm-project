@@ -20,16 +20,18 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
+#include "llvm/Analysis/StackLifetime.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/circular_raw_ostream.h"
 #include "llvm/Support/OptimizedStructLayout.h"
+#include "llvm/Support/circular_raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
@@ -40,6 +42,13 @@ using namespace llvm;
 // The "coro-suspend-crossing" flag is very noisy. There is another debug type,
 // "coro-frame", which results in leaner debug spew.
 #define DEBUG_TYPE "coro-suspend-crossing"
+
+static cl::opt<bool> EnableReuseStorageInFrame(
+    "reuse-storage-in-coroutine-frame", cl::Hidden,
+    cl::desc(
+        "Enable the optimization which would reuse the storage in the coroutine \
+         frame for allocas whose liferanges are not overlapped, for testing purposes"),
+    llvm::cl::init(false));
 
 enum { SmallVectorThreshold = 32 };
 
@@ -342,10 +351,14 @@ namespace {
 // differs from the natural alignment of the alloca type we will need to insert
 // padding.
 class FrameTypeBuilder {
+public:
+  using ForSpillType = SmallVector<Spill *, 8>;
+
+private:
   struct Field {
     uint64_t Size;
     uint64_t Offset;
-    Spill *ForSpill;
+    ForSpillType ForSpill;
     Type *Ty;
     unsigned FieldIndex;
     Align Alignment;
@@ -363,7 +376,7 @@ class FrameTypeBuilder {
 
 public:
   FrameTypeBuilder(LLVMContext &Context, DataLayout const &DL)
-    : DL(DL), Context(Context) {}
+      : DL(DL), Context(Context) {}
 
   class FieldId {
     size_t Value;
@@ -374,7 +387,7 @@ public:
 
   /// Add a field to this structure for the storage of an `alloca`
   /// instruction.
-  FieldId addFieldForAlloca(AllocaInst *AI, Spill *ForSpill = nullptr,
+  FieldId addFieldForAlloca(AllocaInst *AI, ForSpillType ForSpill = {},
                             bool IsHeader = false) {
     Type *Ty = AI->getAllocatedType();
 
@@ -389,10 +402,39 @@ public:
     return addField(Ty, AI->getAlign(), ForSpill, IsHeader);
   }
 
+  /// We want to put the allocas whose lifetime-ranges are not overlapped
+  /// into one slot of coroutine frame.
+  /// Consider the example at:https://bugs.llvm.org/show_bug.cgi?id=45566
+  ///
+  ///     cppcoro::task<void> alternative_paths(bool cond) {
+  ///         if (cond) {
+  ///             big_structure a;
+  ///             process(a);
+  ///             co_await something();
+  ///         } else {
+  ///             big_structure b;
+  ///             process2(b);
+  ///             co_await something();
+  ///         }
+  ///     }
+  ///
+  /// We want to put variable a and variable b in the same slot to
+  /// reduce the size of coroutine frame.
+  ///
+  /// This function use StackLifetime algorithm to partition the AllocaInsts in
+  /// Spills to non-overlapped sets in order to put Alloca in the same
+  /// non-overlapped set into the same slot in the Coroutine Frame. Then add
+  /// field for the allocas in the same non-overlapped set by using the largest
+  /// type as the field type.
+  ///
+  /// Side Effects: Because We sort the allocas, the order of allocas in the
+  /// frame may be different with the order in the source code.
+  void addFieldForAllocas(const Function &F, SpillInfo &Spills,
+                          coro::Shape &Shape);
+
   /// Add a field to this structure.
   FieldId addField(Type *Ty, MaybeAlign FieldAlignment,
-                   Spill *ForSpill = nullptr,
-                   bool IsHeader = false) {
+                   ForSpillType ForSpill = {}, bool IsHeader = false) {
     assert(!IsFinished && "adding fields to a finished builder");
     assert(Ty && "must provide a type for a field");
 
@@ -439,6 +481,130 @@ public:
   }
 };
 } // namespace
+
+void FrameTypeBuilder::addFieldForAllocas(const Function &F, SpillInfo &Spills,
+                                          coro::Shape &Shape) {
+  DenseMap<AllocaInst *, unsigned int> AllocaIndex;
+  SmallVector<AllocaInst *, 8> Allocas;
+  DenseMap<AllocaInst *, Spill *> SpillOfAllocas;
+  using AllocaSetType = SmallVector<AllocaInst *, 4>;
+  SmallVector<AllocaSetType, 4> NonOverlapedAllocas;
+
+  // We need to add field for allocas at the end of this function. However, this
+  // function has multiple exits, so we use this helper to avoid redundant code.
+  struct RTTIHelper {
+    std::function<void()> func;
+    RTTIHelper(std::function<void()> &&func) : func(func) {}
+    ~RTTIHelper() { func(); }
+  } Helper([&]() {
+    for (auto AllocaSet : NonOverlapedAllocas) {
+      ForSpillType ForSpills;
+      for (auto Alloca : AllocaSet)
+        ForSpills.push_back(SpillOfAllocas[Alloca]);
+      auto *LargestAI = *AllocaSet.begin();
+      addFieldForAlloca(LargestAI, ForSpills);
+    }
+  });
+
+  for (auto &Spill : Spills)
+    if (AllocaInst *AI = dyn_cast<AllocaInst>(Spill.def()))
+      if (find(Allocas, AI) == Allocas.end()) {
+        SpillOfAllocas[AI] = &Spill;
+        Allocas.emplace_back(AI);
+      }
+
+  if (!Shape.ReuseFrameSlot && !EnableReuseStorageInFrame) {
+    for (auto Alloca : Allocas) {
+      AllocaIndex[Alloca] = NonOverlapedAllocas.size();
+      NonOverlapedAllocas.emplace_back(AllocaSetType(1, Alloca));
+    }
+    return;
+  }
+
+  // Because there are pathes from the lifetime.start to coro.end
+  // for each alloca, the liferanges for every alloca is overlaped
+  // in the blocks who contain coro.end and the successor blocks.
+  // So we choose to skip there blocks when we calculates the liferange
+  // for each alloca. It should be reasonable since there shouldn't be uses
+  // in these blocks and the coroutine frame shouldn't be used outside the
+  // coroutine body.
+  //
+  // Note that the user of coro.suspend may not be SwitchInst. However, this
+  // case seems too complex to handle. And it is harmless to skip these
+  // patterns since it just prevend putting the allocas to live in the same
+  // slot.
+  DenseMap<SwitchInst *, BasicBlock *> DefaultSuspendDest;
+  for (auto CoroSuspendInst : Shape.CoroSuspends) {
+    for (auto U : CoroSuspendInst->users()) {
+      if (auto *ConstSWI = dyn_cast<SwitchInst>(U)) {
+        auto *SWI = const_cast<SwitchInst *>(ConstSWI);
+        DefaultSuspendDest[SWI] = SWI->getDefaultDest();
+        SWI->setDefaultDest(SWI->getSuccessor(1));
+      }
+    }
+  }
+
+  StackLifetime StackLifetimeAnalyzer(F, Allocas,
+                                      StackLifetime::LivenessType::May);
+  StackLifetimeAnalyzer.run();
+  auto IsAllocaInferenre = [&](const AllocaInst *AI1, const AllocaInst *AI2) {
+    return StackLifetimeAnalyzer.getLiveRange(AI1).overlaps(
+        StackLifetimeAnalyzer.getLiveRange(AI2));
+  };
+  auto GetAllocaSize = [&](const AllocaInst *AI) {
+    Optional<uint64_t> RetSize = AI->getAllocationSizeInBits(DL);
+    assert(RetSize && "We can't handle scalable type now.\n");
+    return RetSize.getValue();
+  };
+  // Put larger allocas in the front. So the larger allocas have higher
+  // priority to merge, which can save more space potentially. Also each
+  // AllocaSet would be ordered. So we can get the largest Alloca in one
+  // AllocaSet easily.
+  sort(Allocas, [&](auto Iter1, auto Iter2) {
+    return GetAllocaSize(Iter1) > GetAllocaSize(Iter2);
+  });
+  for (auto Alloca : Allocas) {
+    bool Merged = false;
+    // Try to find if the Alloca is not inferenced with any existing
+    // NonOverlappedAllocaSet. If it is true, insert the alloca to that
+    // NonOverlappedAllocaSet.
+    for (auto &AllocaSet : NonOverlapedAllocas) {
+      assert(!AllocaSet.empty() && "Processing Alloca Set is not empty.\n");
+      bool CouldMerge = none_of(AllocaSet, [&](auto Iter) {
+        return IsAllocaInferenre(Alloca, Iter);
+      });
+      if (!CouldMerge)
+        continue;
+      AllocaIndex[Alloca] = AllocaIndex[*AllocaSet.begin()];
+      AllocaSet.push_back(Alloca);
+      Merged = true;
+      break;
+    }
+    if (!Merged) {
+      AllocaIndex[Alloca] = NonOverlapedAllocas.size();
+      NonOverlapedAllocas.emplace_back(AllocaSetType(1, Alloca));
+    }
+  }
+  // Recover the default target destination for each Switch statement
+  // reserved.
+  for (auto SwitchAndDefaultDest : DefaultSuspendDest) {
+    SwitchInst *SWI = SwitchAndDefaultDest.first;
+    BasicBlock *DestBB = SwitchAndDefaultDest.second;
+    SWI->setDefaultDest(DestBB);
+  }
+  // This Debug Info could tell us which allocas are merged into one slot.
+  LLVM_DEBUG(for (auto &AllocaSet
+                  : NonOverlapedAllocas) {
+    if (AllocaSet.size() > 1) {
+      dbgs() << "In Function:" << F.getName() << "\n";
+      dbgs() << "Find Union Set "
+             << "\n";
+      dbgs() << "\tAllocas are \n";
+      for (auto Alloca : AllocaSet)
+        dbgs() << "\t\t" << *Alloca << "\n";
+    }
+  });
+}
 
 void FrameTypeBuilder::finish(StructType *Ty) {
   assert(!IsFinished && "already finished!");
@@ -495,8 +661,8 @@ void FrameTypeBuilder::finish(StructType *Ty) {
     // original Spill, if there is one.
     F.Offset = Offset;
     F.FieldIndex = FieldTypes.size();
-    if (F.ForSpill) {
-      F.ForSpill->setFieldIndex(F.FieldIndex);
+    for (auto Spill : F.ForSpill) {
+      Spill->setFieldIndex(F.FieldIndex);
     }
 
     FieldTypes.push_back(F.Ty);
@@ -549,13 +715,12 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
 
     // Add header fields for the resume and destroy functions.
     // We can rely on these being perfectly packed.
-    B.addField(FnPtrTy, None, nullptr, /*header*/ true);
-    B.addField(FnPtrTy, None, nullptr, /*header*/ true);
+    B.addField(FnPtrTy, None, {}, /*header*/ true);
+    B.addField(FnPtrTy, None, {}, /*header*/ true);
 
     // Add a header field for the promise if there is one.
     if (PromiseAlloca) {
-      PromiseFieldId =
-        B.addFieldForAlloca(PromiseAlloca, nullptr, /*header*/ true);
+      PromiseFieldId = B.addFieldForAlloca(PromiseAlloca, {}, /*header*/ true);
     }
 
     // Add a field to store the suspend index.  This doesn't need to
@@ -568,9 +733,11 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
     assert(PromiseAlloca == nullptr && "lowering doesn't support promises");
   }
 
+  // Because multiple allocas may own the same field slot,
+  // we add allocas to field here.
+  B.addFieldForAllocas(F, Spills, Shape);
   Value *CurrentDef = nullptr;
-
-  // Create an entry for every spilled value.
+  // Create an entry for every spilled value which is not an AllocaInst.
   for (auto &S : Spills) {
     // We can have multiple entries in Spills for a single value, but
     // they should form a contiguous run.  Ignore all but the first.
@@ -582,11 +749,9 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
     assert(CurrentDef != PromiseAlloca &&
            "recorded spill use of promise alloca?");
 
-    if (auto *AI = dyn_cast<AllocaInst>(CurrentDef)) {
-      B.addFieldForAlloca(AI, &S);
-    } else {
+    if (!isa<AllocaInst>(CurrentDef)) {
       Type *Ty = CurrentDef->getType();
-      B.addField(Ty, None, &S);
+      B.addField(Ty, None, {&S});
     }
   }
 
@@ -820,7 +985,17 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
       }
     }
 
-    return Builder.CreateInBoundsGEP(FrameTy, FramePtr, Indices);
+    auto GEP = cast<GetElementPtrInst>(
+        Builder.CreateInBoundsGEP(FrameTy, FramePtr, Indices));
+    if (isa<AllocaInst>(Orig)) {
+      // If the type of GEP is not equal to the type of AllocaInst, it implies
+      // that the AllocaInst may be reused in the Frame slot of other
+      // AllocaInst. So we cast the GEP to the type of AllocaInst.
+      if (GEP->getResultElementType() != Orig->getType())
+        return Builder.CreateBitCast(GEP, Orig->getType(),
+                                     Orig->getName() + Twine(".cast"));
+    }
+    return GEP;
   };
 
   // Create a load instruction to reload the spilled value from the coroutine
@@ -1052,15 +1227,14 @@ static void setUnwindEdgeTo(Instruction *TI, BasicBlock *Succ) {
 // Replaces all uses of OldPred with the NewPred block in all PHINodes in a
 // block.
 static void updatePhiNodes(BasicBlock *DestBB, BasicBlock *OldPred,
-                           BasicBlock *NewPred,
-                           PHINode *LandingPadReplacement) {
+                           BasicBlock *NewPred, PHINode *Until = nullptr) {
   unsigned BBIdx = 0;
   for (BasicBlock::iterator I = DestBB->begin(); isa<PHINode>(I); ++I) {
     PHINode *PN = cast<PHINode>(I);
 
     // We manually update the LandingPadReplacement PHINode and it is the last
     // PHI Node. So, if we find it, we are done.
-    if (LandingPadReplacement == PN)
+    if (Until == PN)
       break;
 
     // Reuse the previous value of BBIdx if it lines up.  In cases where we
@@ -1109,6 +1283,102 @@ static BasicBlock *ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
   return NewBB;
 }
 
+// Moves the values in the PHIs in SuccBB that correspong to PredBB into a new
+// PHI in InsertedBB.
+static void movePHIValuesToInsertedBlock(BasicBlock *SuccBB,
+                                         BasicBlock *InsertedBB,
+                                         BasicBlock *PredBB,
+                                         PHINode *UntilPHI = nullptr) {
+  auto *PN = cast<PHINode>(&SuccBB->front());
+  do {
+    int Index = PN->getBasicBlockIndex(InsertedBB);
+    Value *V = PN->getIncomingValue(Index);
+    PHINode *InputV = PHINode::Create(
+        V->getType(), 1, V->getName() + Twine(".") + SuccBB->getName(),
+        &InsertedBB->front());
+    InputV->addIncoming(V, PredBB);
+    PN->setIncomingValue(Index, InputV);
+    PN = dyn_cast<PHINode>(PN->getNextNode());
+  } while (PN != UntilPHI);
+}
+
+// Rewrites the PHI Nodes in a cleanuppad.
+static void rewritePHIsForCleanupPad(BasicBlock *CleanupPadBB,
+                                     CleanupPadInst *CleanupPad) {
+  // For every incoming edge to a CleanupPad we will create a new block holding
+  // all incoming values in single-value PHI nodes. We will then create another
+  // block to act as a dispather (as all unwind edges for related EH blocks
+  // must be the same).
+  //
+  // cleanuppad:
+  //    %2 = phi i32[%0, %catchswitch], [%1, %catch.1]
+  //    %3 = cleanuppad within none []
+  //
+  // It will create:
+  //
+  // cleanuppad.corodispatch
+  //    %2 = phi i8[0, %catchswitch], [1, %catch.1]
+  //    %3 = cleanuppad within none []
+  //    switch i8 % 2, label %unreachable
+  //            [i8 0, label %cleanuppad.from.catchswitch
+  //             i8 1, label %cleanuppad.from.catch.1]
+  // cleanuppad.from.catchswitch:
+  //    %4 = phi i32 [%0, %catchswitch]
+  //    br %label cleanuppad
+  // cleanuppad.from.catch.1:
+  //    %6 = phi i32 [%1, %catch.1]
+  //    br %label cleanuppad
+  // cleanuppad:
+  //    %8 = phi i32 [%4, %cleanuppad.from.catchswitch],
+  //                 [%6, %cleanuppad.from.catch.1]
+
+  // Unreachable BB, in case switching on an invalid value in the dispatcher.
+  auto *UnreachBB = BasicBlock::Create(
+      CleanupPadBB->getContext(), "unreachable", CleanupPadBB->getParent());
+  IRBuilder<> Builder(UnreachBB);
+  Builder.CreateUnreachable();
+
+  // Create a new cleanuppad which will be the dispatcher.
+  auto *NewCleanupPadBB =
+      BasicBlock::Create(CleanupPadBB->getContext(),
+                         CleanupPadBB->getName() + Twine(".corodispatch"),
+                         CleanupPadBB->getParent(), CleanupPadBB);
+  Builder.SetInsertPoint(NewCleanupPadBB);
+  auto *SwitchType = Builder.getInt8Ty();
+  auto *SetDispatchValuePN =
+      Builder.CreatePHI(SwitchType, pred_size(CleanupPadBB));
+  CleanupPad->removeFromParent();
+  CleanupPad->insertAfter(SetDispatchValuePN);
+  auto *SwitchOnDispatch = Builder.CreateSwitch(SetDispatchValuePN, UnreachBB,
+                                                pred_size(CleanupPadBB));
+
+  int SwitchIndex = 0;
+  SmallVector<BasicBlock *, 8> Preds(pred_begin(CleanupPadBB),
+                                     pred_end(CleanupPadBB));
+  for (BasicBlock *Pred : Preds) {
+    // Create a new cleanuppad and move the PHI values to there.
+    auto *CaseBB = BasicBlock::Create(CleanupPadBB->getContext(),
+                                      CleanupPadBB->getName() +
+                                          Twine(".from.") + Pred->getName(),
+                                      CleanupPadBB->getParent(), CleanupPadBB);
+    updatePhiNodes(CleanupPadBB, Pred, CaseBB);
+    CaseBB->setName(CleanupPadBB->getName() + Twine(".from.") +
+                    Pred->getName());
+    Builder.SetInsertPoint(CaseBB);
+    Builder.CreateBr(CleanupPadBB);
+    movePHIValuesToInsertedBlock(CleanupPadBB, CaseBB, NewCleanupPadBB);
+
+    // Update this Pred to the new unwind point.
+    setUnwindEdgeTo(Pred->getTerminator(), NewCleanupPadBB);
+
+    // Setup the switch in the dispatcher.
+    auto *SwitchConstant = ConstantInt::get(SwitchType, SwitchIndex);
+    SetDispatchValuePN->addIncoming(SwitchConstant, Pred);
+    SwitchOnDispatch->addCase(SwitchConstant, CaseBB);
+    SwitchIndex++;
+  }
+}
+
 static void rewritePHIs(BasicBlock &BB) {
   // For every incoming edge we will create a block holding all
   // incoming values in a single PHI nodes.
@@ -1131,6 +1401,23 @@ static void rewritePHIs(BasicBlock &BB) {
   // TODO: Simplify PHINodes in the basic block to remove duplicate
   // predecessors.
 
+  // Special case for CleanupPad: all EH blocks must have the same unwind edge
+  // so we need to create an additional "dispatcher" block.
+  if (auto *CleanupPad =
+          dyn_cast_or_null<CleanupPadInst>(BB.getFirstNonPHI())) {
+    SmallVector<BasicBlock *, 8> Preds(pred_begin(&BB), pred_end(&BB));
+    for (BasicBlock *Pred : Preds) {
+      if (CatchSwitchInst *CS =
+              dyn_cast<CatchSwitchInst>(Pred->getTerminator())) {
+        // CleanupPad with a CatchSwitch predecessor: therefore this is an
+        // unwind destination that needs to be handle specially.
+        assert(CS->getUnwindDest() == &BB);
+        rewritePHIsForCleanupPad(&BB, CleanupPad);
+        return;
+      }
+    }
+  }
+
   LandingPadInst *LandingPad = nullptr;
   PHINode *ReplPHI = nullptr;
   if ((LandingPad = dyn_cast_or_null<LandingPadInst>(BB.getFirstNonPHI()))) {
@@ -1148,18 +1435,10 @@ static void rewritePHIs(BasicBlock &BB) {
   for (BasicBlock *Pred : Preds) {
     auto *IncomingBB = ehAwareSplitEdge(Pred, &BB, LandingPad, ReplPHI);
     IncomingBB->setName(BB.getName() + Twine(".from.") + Pred->getName());
-    auto *PN = cast<PHINode>(&BB.front());
-    do {
-      int Index = PN->getBasicBlockIndex(IncomingBB);
-      Value *V = PN->getIncomingValue(Index);
-      PHINode *InputV = PHINode::Create(
-          V->getType(), 1, V->getName() + Twine(".") + BB.getName(),
-          &IncomingBB->front());
-      InputV->addIncoming(V, Pred);
-      PN->setIncomingValue(Index, InputV);
-      PN = dyn_cast<PHINode>(PN->getNextNode());
-    } while (PN != ReplPHI); // ReplPHI is either null or the PHI that replaced
-                             // the landing pad.
+
+    // Stop the moving of values at ReplPHI, as this is either null or the PHI
+    // that replaced the landing pad.
+    movePHIValuesToInsertedBlock(&BB, IncomingBB, Pred, ReplPHI);
   }
 
   if (LandingPad) {

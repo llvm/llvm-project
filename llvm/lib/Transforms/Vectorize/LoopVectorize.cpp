@@ -189,7 +189,7 @@ namespace PreferPredicateTy {
     PredicateElseScalarEpilogue,
     PredicateOrDontVectorize
   };
-}
+} // namespace PreferPredicateTy
 
 static cl::opt<PreferPredicateTy::Option> PreferPredicateOverEpilogue(
     "prefer-predicate-over-epilogue",
@@ -1664,7 +1664,7 @@ public:
 // representation for pragma 'omp simd' is introduced.
 static bool isExplicitVecOuterLoop(Loop *OuterLp,
                                    OptimizationRemarkEmitter *ORE) {
-  assert(!OuterLp->empty() && "This is not an outer loop");
+  assert(!OuterLp->isInnermost() && "This is not an outer loop");
   LoopVectorizeHints Hints(OuterLp, true /*DisableInterleaving*/, *ORE);
 
   // Only outer loops with an explicit vectorization hint are supported.
@@ -1697,7 +1697,7 @@ static void collectSupportedLoops(Loop &L, LoopInfo *LI,
   // now, only collect outer loops that have explicit vectorization hints. If we
   // are stress testing the VPlan H-CFG construction, we collect the outermost
   // loop of every loop nest.
-  if (L.empty() || VPlanBuildStressTest ||
+  if (L.isInnermost() || VPlanBuildStressTest ||
       (EnableVPlanNativePath && isExplicitVecOuterLoop(&L, ORE))) {
     LoopBlocksRPO RPOT(&L);
     RPOT.perform(LI);
@@ -6931,7 +6931,7 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
   // transformations before even evaluating whether vectorization is profitable.
   // Since we cannot modify the incoming IR, we need to build VPlan upfront in
   // the vectorization pipeline.
-  if (!OrigLoop->empty()) {
+  if (!OrigLoop->isInnermost()) {
     // If the user doesn't provide a vectorization factor, determine a
     // reasonable one.
     if (UserVF.isZero()) {
@@ -6969,7 +6969,7 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
 Optional<VectorizationFactor>
 LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   assert(!UserVF.isScalable() && "scalable vectorization not yet handled");
-  assert(OrigLoop->empty() && "Inner loop expected.");
+  assert(OrigLoop->isInnermost() && "Inner loop expected.");
   Optional<unsigned> MaybeMaxVF =
       CM.computeMaxVF(UserVF.getKnownMinValue(), UserIC);
   if (!MaybeMaxVF) // Cases that should not to be vectorized nor interleaved.
@@ -7587,7 +7587,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(unsigned MinVF,
                                                         unsigned MaxVF) {
-  assert(OrigLoop->empty() && "Inner loop expected.");
+  assert(OrigLoop->isInnermost() && "Inner loop expected.");
 
   // Collect conditions feeding internal conditional branches; they need to be
   // represented in VPlan for it to model masking.
@@ -7837,7 +7837,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   // transformations before even evaluating whether vectorization is profitable.
   // Since we cannot modify the incoming IR, we need to build VPlan upfront in
   // the vectorization pipeline.
-  assert(!OrigLoop->empty());
+  assert(!OrigLoop->isInnermost());
   assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
 
   // Create new empty VPlan
@@ -7946,19 +7946,19 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
-  State.ILV->widenCallInstruction(Ingredient, User, State);
+  State.ILV->widenCallInstruction(Ingredient, *this, State);
 }
 
 void VPWidenSelectRecipe::execute(VPTransformState &State) {
-  State.ILV->widenSelectInstruction(Ingredient, User, InvariantCond, State);
+  State.ILV->widenSelectInstruction(Ingredient, *this, InvariantCond, State);
 }
 
 void VPWidenRecipe::execute(VPTransformState &State) {
-  State.ILV->widenInstruction(Ingredient, User, State);
+  State.ILV->widenInstruction(Ingredient, *this, State);
 }
 
 void VPWidenGEPRecipe::execute(VPTransformState &State) {
-  State.ILV->widenGEP(GEP, User, State.UF, State.VF, IsPtrLoopInvariant,
+  State.ILV->widenGEP(GEP, *this, State.UF, State.VF, IsPtrLoopInvariant,
                       IsIndexLoopInvariant, State);
 }
 
@@ -8039,7 +8039,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
 
 void VPReplicateRecipe::execute(VPTransformState &State) {
   if (State.Instance) { // Generate a single instance.
-    State.ILV->scalarizeInstruction(Ingredient, User, *State.Instance,
+    State.ILV->scalarizeInstruction(Ingredient, *this, *State.Instance,
                                     IsPredicated, State);
     // Insert scalar instance packing it into a vector.
     if (AlsoPack && State.VF.isVector()) {
@@ -8061,7 +8061,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   unsigned EndLane = IsUniform ? 1 : State.VF.getKnownMinValue();
   for (unsigned Part = 0; Part < State.UF; ++Part)
     for (unsigned Lane = 0; Lane < EndLane; ++Lane)
-      State.ILV->scalarizeInstruction(Ingredient, User, {Part, Lane},
+      State.ILV->scalarizeInstruction(Ingredient, *this, {Part, Lane},
                                       IsPredicated, State);
 }
 
@@ -8236,7 +8236,7 @@ LoopVectorizePass::LoopVectorizePass(LoopVectorizeOptions Opts)
                               !EnableLoopVectorization) {}
 
 bool LoopVectorizePass::processLoop(Loop *L) {
-  assert((EnableVPlanNativePath || L->empty()) &&
+  assert((EnableVPlanNativePath || L->isInnermost()) &&
          "VPlan-native path is not enabled. Only process inner loops.");
 
 #ifndef NDEBUG
@@ -8298,11 +8298,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // even evaluating whether vectorization is profitable. Since we cannot modify
   // the incoming IR, we need to build VPlan upfront in the vectorization
   // pipeline.
-  if (!L->empty())
+  if (!L->isInnermost())
     return processLoopInVPlanNativePath(L, PSE, LI, DT, &LVL, TTI, TLI, DB, AC,
                                         ORE, BFI, PSI, Hints);
 
-  assert(L->empty() && "Inner loop expected.");
+  assert(L->isInnermost() && "Inner loop expected.");
 
   // Check the loop for a trip count threshold: vectorize loops with a tiny trip
   // count by optimizing for size, to minimize overheads.

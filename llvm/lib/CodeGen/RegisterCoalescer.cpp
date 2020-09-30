@@ -1213,7 +1213,10 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
       }
       ++I;
     }
-    LIS->extendToIndices(SR, EndPoints);
+    SmallVector<SlotIndex, 8> Undefs;
+    IntB.computeSubRangeUndefs(Undefs, SR.LaneMask, *MRI,
+                               *LIS->getSlotIndexes());
+    LIS->extendToIndices(SR, EndPoints, Undefs);
   }
   // If any dead defs were extended, truncate them.
   shrinkToUses(&IntB);
@@ -2686,14 +2689,8 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
     return CR_Replace;
 
   // Check for simple erasable conflicts.
-  if (DefMI->isImplicitDef()) {
-    // We need the def for the subregister if there is nothing else live at the
-    // subrange at this point.
-    if (TrackSubRegLiveness
-        && (V.WriteLanes & (OtherV.ValidLanes | OtherV.WriteLanes)).none())
-      return CR_Replace;
+  if (DefMI->isImplicitDef())
     return CR_Erase;
-  }
 
   // Include the non-conflict where DefMI is a coalescable copy that kills
   // OtherVNI. We still want the copy erased and value numbers merged.

@@ -79,6 +79,15 @@ using llvm::StringMap;
 using llvm::StringRef;
 using namespace llvm;
 
+// Placing the cold clusters in a separate section mitigates against poor
+// profiles and allows optimizations such as hugepage mapping to be applied at a
+// section granularity. Where necessary, users should set this to ".text.split."
+// which is recognized by lld via the `-z keep-text-section-prefix` flag.
+cl::opt<std::string> llvm::BBSectionsColdTextPrefix(
+    "bbsections-cold-text-prefix",
+    cl::desc("The text prefix to use for cold basic block clusters"),
+    cl::init(".text.unlikely."), cl::Hidden);
+
 namespace {
 
 // This struct represents the cluster information for a machine basic block.

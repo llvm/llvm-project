@@ -11,5 +11,6 @@ static_library("TableGen") {
     "TGLexer.cpp",
     "TGParser.cpp",
     "TableGenBackend.cpp",
+    "TableGenBackendSkeleton.cpp",
   ]
 }

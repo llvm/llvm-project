@@ -30,18 +30,22 @@ static std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
   return M;
 }
 
-void getVectors(Module &M, std::vector<IRInstructionData *> &InstrList,
+void getVectors(Module &M, IRInstructionMapper &Mapper,
+                std::vector<IRInstructionData *> &InstrList,
                 std::vector<unsigned> &UnsignedVec) {
-  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
-  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
-  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
-
   for (Function &F : M)
     for (BasicBlock &BB : F)
       Mapper.convertToUnsignedVec(BB, InstrList, UnsignedVec);
 }
 
-// Checks that different opcodes are mapped to different values.
+void getSimilarities(
+    Module &M,
+    std::vector<std::vector<IRSimilarityCandidate>> &SimilarityCandidates) {
+  IRSimilarityIdentifier Identifier;
+  SimilarityCandidates = Identifier.findSimilarity(M);
+}
+
+// Checks that different opcodes are mapped to different values
 TEST(IRInstructionMapper, OpcodeDifferentiation) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
@@ -56,7 +60,10 @@ TEST(IRInstructionMapper, OpcodeDifferentiation) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   // Check that the size of the unsigned vector and the instruction list are the
   // same as a safety check.
@@ -84,7 +91,10 @@ TEST(IRInstructionMapper, OpcodeTypeSimilarity) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -109,7 +119,10 @@ TEST(IRInstructionMapper, TypeDifferentiation) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -131,7 +144,10 @@ TEST(IRInstructionMapper, PredicateDifferentiation) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -154,7 +170,10 @@ TEST(IRInstructionMapper, PredicateIsomorphism) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -176,7 +195,10 @@ TEST(IRInstructionMapper, PredicateSimilarity) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -199,7 +221,10 @@ TEST(IRInstructionMapper, FPPredicateSimilarity) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -222,7 +247,10 @@ TEST(IRInstructionMapper, FPPredicatDifference) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -245,7 +273,10 @@ TEST(IRInstructionMapper, ZextTypeSimilarity) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -268,7 +299,10 @@ TEST(IRInstructionMapper, SextTypeSimilarity) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -291,7 +325,10 @@ TEST(IRInstructionMapper, ZextTypeDifference) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -314,7 +351,10 @@ TEST(IRInstructionMapper, SextTypeDifference) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -337,7 +377,10 @@ TEST(IRInstructionMapper, LoadSimilarType) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -360,7 +403,10 @@ TEST(IRInstructionMapper, LoadDifferentType) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -383,7 +429,10 @@ TEST(IRInstructionMapper, LoadDifferentAlign) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -406,7 +455,10 @@ TEST(IRInstructionMapper, LoadDifferentVolatile) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -429,7 +481,10 @@ TEST(IRInstructionMapper, LoadSameVolatile) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -452,7 +507,10 @@ TEST(IRInstructionMapper, LoadDifferentAtomic) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -475,7 +533,10 @@ TEST(IRInstructionMapper, LoadSameAtomic) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -498,7 +559,10 @@ TEST(IRInstructionMapper, StoreSimilarType) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -521,7 +585,10 @@ TEST(IRInstructionMapper, StoreDifferentType) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -544,7 +611,10 @@ TEST(IRInstructionMapper, StoreDifferentAlign) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -567,7 +637,10 @@ TEST(IRInstructionMapper, StoreDifferentVolatile) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -590,7 +663,10 @@ TEST(IRInstructionMapper, StoreSameVolatile) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -613,7 +689,10 @@ TEST(IRInstructionMapper, StoreSameAtomic) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -636,7 +715,10 @@ TEST(IRInstructionMapper, StoreDifferentAtomic) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
@@ -673,7 +755,10 @@ TEST(IRInstructionMapper, BranchIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
@@ -697,7 +782,10 @@ TEST(IRInstructionMapper, PhiIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
@@ -717,7 +805,10 @@ TEST(IRInstructionMapper, AllocaIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
@@ -741,7 +832,10 @@ TEST(IRInstructionMapper, GetElementPtrIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
@@ -763,7 +857,10 @@ TEST(IRInstructionMapper, CallIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
@@ -793,7 +890,10 @@ TEST(IRInstructionMapper, InvokeIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
@@ -823,7 +923,10 @@ TEST(IRInstructionMapper, CallBrInstIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
@@ -849,7 +952,10 @@ TEST(IRInstructionMapper, DebugInfoInvisible) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
@@ -875,7 +981,10 @@ TEST(IRInstructionMapper, ExceptionHandlingTypeIdIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
@@ -904,7 +1013,10 @@ TEST(IRInstructionMapper, ExceptionHandlingExceptionCodeIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
@@ -926,7 +1038,10 @@ TEST(IRInstructionMapper, ExceptionHandlingUnwindIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
@@ -948,7 +1063,10 @@ TEST(IRInstructionMapper, ExceptionHandlingExceptionPointerIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
@@ -976,7 +1094,10 @@ TEST(IRInstructionMapper, CatchpadIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
@@ -1004,7 +1125,10 @@ TEST(IRInstructionMapper, CleanuppadIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
@@ -1035,7 +1159,10 @@ TEST(IRInstructionMapper, MemSetIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(6));
@@ -1063,7 +1190,10 @@ TEST(IRInstructionMapper, MemCpyIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(6));
@@ -1091,7 +1221,10 @@ TEST(IRInstructionMapper, MemMoveIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(6));
@@ -1136,7 +1269,10 @@ TEST(IRInstructionMapper, VarArgsIllegal) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(16));
@@ -1166,7 +1302,10 @@ TEST(IRInstructionMapper, RepeatedIllegalLength) {
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> UnsignedVec;
 
-  getVectors(*M, InstrList, UnsignedVec);
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   // Check that the size of the unsigned vector and the instruction list are the
   // same as a safety check.
@@ -1174,4 +1313,512 @@ TEST(IRInstructionMapper, RepeatedIllegalLength) {
 
   // Make sure that the unsigned vector is the expected size.
   ASSERT_TRUE(UnsignedVec.size() == 6);
+}
+
+// A helper function that accepts an instruction list from a module made up of
+// two blocks of two legal instructions and terminator, and checks them for
+// instruction similarity.
+static bool longSimCandCompare(std::vector<IRInstructionData *> &InstrList,
+                               bool Structure = false) {
+  std::vector<IRInstructionData *>::iterator Start, End;
+
+  Start = InstrList.begin();
+  End = InstrList.begin();
+
+  std::advance(End, 1);
+  IRSimilarityCandidate Cand1(0, 2, *Start, *End);
+
+  Start = InstrList.begin();
+  End = InstrList.begin();
+
+  std::advance(Start, 3);
+  std::advance(End, 4);
+  IRSimilarityCandidate Cand2(3, 2, *Start, *End);
+  if (Structure)
+    return IRSimilarityCandidate::compareStructure(Cand1, Cand2);
+  return IRSimilarityCandidate::isSimilar(Cand1, Cand2);
+}
+
+// Checks that two adds with commuted operands are considered to be the same
+// instructions.
+TEST(IRSimilarityCandidate, CheckIdenticalInstructions) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %b, %a
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(3));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  std::vector<IRInstructionData *>::iterator Start, End;
+  Start = InstrList.begin();
+  End = InstrList.begin();
+  std::advance(End, 1);
+  IRSimilarityCandidate Cand1(0, 2, *Start, *End);
+  IRSimilarityCandidate Cand2(0, 2, *Start, *End);
+
+  ASSERT_TRUE(IRSimilarityCandidate::isSimilar(Cand1, Cand2));
+}
+
+// Checks that IRSimilarityCandidates wrapping these two regions of instructions
+// are able to differentiate between instructions that have different opcodes.
+TEST(IRSimilarityCandidate, CheckRegionsDifferentInstruction) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %b, %a
+                             ret i32 0
+                          bb1:
+                             %2 = sub i32 %a, %b
+                             %3 = add i32 %b, %a
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(6));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_FALSE(longSimCandCompare(InstrList));
+}
+
+// Checks that IRSimilarityCandidates wrapping these two regions of instructions
+// are able to differentiate between instructions that have different types.
+TEST(IRSimilarityCandidate, CheckRegionsDifferentTypes) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b, i64 %c, i64 %d) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %b, %a
+                             ret i32 0
+                          bb1:
+                             %2 = add i64 %c, %d
+                             %3 = add i64 %d, %c
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(6));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_FALSE(longSimCandCompare(InstrList));
+}
+
+// Check that debug instructions do not impact similarity. They are marked as
+// invisible.
+TEST(IRSimilarityCandidate, IdenticalWithDebug) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             call void @llvm.dbg.value(metadata !0)
+                             %1 = add i32 %b, %a
+                             ret i32 0
+                          bb1:
+                             %2 = add i32 %a, %b
+                             call void @llvm.dbg.value(metadata !1)
+                             %3 = add i32 %b, %a
+                             ret i32 0
+                          bb2:
+                             %4 = add i32 %a, %b
+                             %5 = add i32 %b, %a
+                             ret i32 0       
+                          }
+
+                          declare void @llvm.dbg.value(metadata)
+                          !0 = distinct !{!"test\00", i32 10}
+                          !1 = distinct !{!"test\00", i32 11})";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(9));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_TRUE(longSimCandCompare(InstrList));
+}
+
+// Checks that IRSimilarityCandidates that include illegal instructions, are not
+// considered to be the same set of instructions.  In these sets of instructions
+// the allocas are illegal.
+TEST(IRSimilarityCandidate, IllegalInCandidate) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %a, %b
+                             %2 = alloca i32
+                             ret i32 0
+                          bb1:
+                             %3 = add i32 %a, %b
+                             %4 = add i32 %a, %b
+                             %5 = alloca i32
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(6));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  std::vector<IRInstructionData *>::iterator Start, End;
+
+  Start = InstrList.begin();
+  End = InstrList.begin();
+
+  std::advance(End, 2);
+  IRSimilarityCandidate Cand1(0, 3, *Start, *End);
+
+  Start = InstrList.begin();
+  End = InstrList.begin();
+
+  std::advance(Start, 3);
+  std::advance(End, 5);
+  IRSimilarityCandidate Cand2(3, 3, *Start, *End);
+  ASSERT_FALSE(IRSimilarityCandidate::isSimilar(Cand1, Cand2));
+}
+
+// Checks that different structure, in this case, where we introduce a new
+// needed input in one region, is recognized as different.
+TEST(IRSimilarityCandidate, DifferentStructure) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %b, %a
+                             ret i32 0
+                          bb1:
+                             %2 = add i32 %a, %b
+                             %3 = add i32 %b, %0
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(6));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_FALSE(longSimCandCompare(InstrList, true));
+}
+
+// Checks that the same structure is recognized between two candidates. The
+// items %a and %b are used in the same way in both sets of instructions.
+TEST(IRSimilarityCandidate, SameStructure) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = sub i32 %b, %a
+                             ret i32 0
+                          bb1:
+                             %2 = add i32 %a, %b
+                             %3 = sub i32 %b, %a
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(6));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_TRUE(longSimCandCompare(InstrList, true));
+}
+
+// Checks that the same structure is recognized between two candidates. While
+// the input names are reversed, they still perform the same overall operation.
+TEST(IRSimilarityCandidate, DifferentNameSameStructure) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %b, %a
+                             ret i32 0
+                          bb1:
+                             %2 = add i32 %b, %a
+                             %3 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(6));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_TRUE(longSimCandCompare(InstrList, true));
+}
+
+// Checks that two sets of identical instructions are found to be the same.
+// Both sequences of adds have the same operand ordering, and the same
+// instructions, making them strcturally equivalent.
+TEST(IRSimilarityIdentifier, IdentitySimilarity) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = sub i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %a, %b
+                             %3 = sub i32 %b, %a
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 1);
+  for (std::vector<IRSimilarityCandidate> &Cands : SimilarityCandidates) {
+    ASSERT_TRUE(Cands.size() == 2);
+    unsigned InstIdx = 0;
+    for (IRSimilarityCandidate &Cand : Cands) {
+      ASSERT_TRUE(Cand.getStartIdx() == InstIdx);
+      InstIdx += 3;
+    }
+  }
+}
+
+// Checks that incorrect sequences are not found as similar.  In this case,
+// we have different sequences of instructions.
+TEST(IRSimilarityIdentifier, InstructionDifference) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b, i32 %c, i32 %d) {
+                          bb0:
+                             %0 = sub i32 %a, %b
+                             %1 = add i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %c, %d
+                             %3 = sub i32 %d, %c
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.empty());
+}
+
+// This test checks to see whether we can detect similarity for commutativen
+// instructions where the operands have been reversed.  Right now, we cannot.
+TEST(IRSimilarityIdentifier, CommutativeSimilarity) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %a, %b
+                             %3 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.empty());
+}
+
+// Check that we are not finding commutative similarity in non commutative
+// instructions.  That is, while the instruction and operands used are the same
+// in the two subtraction sequences, they cannot be counted as the same since
+// a subtraction is not commutative.
+TEST(IRSimilarityIdentifier, NonCommutativeDifference) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = sub i32 %a, %b
+                             %1 = sub i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = sub i32 %a, %b
+                             %3 = sub i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.empty());
+}
+
+// Check that we find similarity despite changing the register names.
+TEST(IRSimilarityIdentifier, MappingSimilarity) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b, i32 %c, i32 %d) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = sub i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %c, %d
+                             %3 = sub i32 %d, %c
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 1);
+  for (std::vector<IRSimilarityCandidate> &Cands : SimilarityCandidates) {
+    ASSERT_TRUE(Cands.size() == 2);
+    unsigned InstIdx = 0;
+    for (IRSimilarityCandidate &Cand : Cands) {
+      ASSERT_TRUE(Cand.getStartIdx() == InstIdx);
+      InstIdx += 3;
+    }
+  }
+}
+
+// Checks that constants are detected as the same operand in each use in the
+// sequences of instructions.  Also checks that we can find structural
+// equivalence using constants.  In this case the 1 has the same use pattern as
+// %a.
+TEST(IRSimilarityIdentifier, ConstantMappingSimilarity) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 1, %b
+                             %1 = icmp sgt i32 %b, 1
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %a, %b
+                             %3 = icmp sgt i32 %b, %a
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 1);
+  for (std::vector<IRSimilarityCandidate> &Cands : SimilarityCandidates) {
+    ASSERT_TRUE(Cands.size() == 2);
+    unsigned InstIdx = 0;
+    for (IRSimilarityCandidate &Cand : Cands) {
+      ASSERT_TRUE(Cand.getStartIdx() == InstIdx);
+      InstIdx += 3;
+    }
+  }
+}
+
+// Check that constants are uniquely identified. i.e. two different constants
+// are not considered the same.  This means that this should not find any
+// structural similarity.
+TEST(IRSimilarityIdentifier, ConstantMappingDifference) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 1, %b
+                             %1 = icmp sgt i32 %b, 2
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %a, %b
+                             %3 = icmp slt i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.empty());
 }

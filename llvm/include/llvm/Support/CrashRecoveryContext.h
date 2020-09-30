@@ -44,11 +44,11 @@ class CrashRecoveryContextCleanup;
 /// executed in any case, whether crash occurs or not. These actions may be used
 /// to reclaim resources in the case of crash.
 class CrashRecoveryContext {
-  void *Impl;
-  CrashRecoveryContextCleanup *head;
+  void *Impl = nullptr;
+  CrashRecoveryContextCleanup *head = nullptr;
 
 public:
-  CrashRecoveryContext() : Impl(nullptr), head(nullptr) {}
+  CrashRecoveryContext();
   ~CrashRecoveryContext();
 
   /// Register cleanup handler, which is used when the recovery context is

@@ -10,10 +10,11 @@
 /* RUN: mlir-capi-ir-test 2>&1 | FileCheck %s
  */
 
-#include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/AffineMap.h"
 #include "mlir-c/Registration.h"
 #include "mlir-c/StandardAttributes.h"
+#include "mlir-c/StandardDialect.h"
 #include "mlir-c/StandardTypes.h"
 
 #include <assert.h>
@@ -245,6 +246,68 @@ static void printFirstOfEach(MlirOperation operation) {
   fprintf(stderr, "\n");
 }
 
+/// Creates an operation with a region containing multiple blocks with
+/// operations and dumps it. The blocks and operations are inserted using
+/// block/operation-relative API and their final order is checked.
+static void buildWithInsertionsAndPrint(MlirContext ctx) {
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+
+  MlirRegion owningRegion = mlirRegionCreate();
+  MlirBlock nullBlock = mlirRegionGetFirstBlock(owningRegion);
+  MlirOperationState state = mlirOperationStateGet("insertion.order.test", loc);
+  mlirOperationStateAddOwnedRegions(&state, 1, &owningRegion);
+  MlirOperation op = mlirOperationCreate(&state);
+  MlirRegion region = mlirOperationGetRegion(op, 0);
+
+  // Use integer types of different bitwidth as block arguments in order to
+  // differentiate blocks.
+  MlirType i1 = mlirIntegerTypeGet(ctx, 1);
+  MlirType i2 = mlirIntegerTypeGet(ctx, 2);
+  MlirType i3 = mlirIntegerTypeGet(ctx, 3);
+  MlirType i4 = mlirIntegerTypeGet(ctx, 4);
+  MlirBlock block1 = mlirBlockCreate(1, &i1);
+  MlirBlock block2 = mlirBlockCreate(1, &i2);
+  MlirBlock block3 = mlirBlockCreate(1, &i3);
+  MlirBlock block4 = mlirBlockCreate(1, &i4);
+  // Insert blocks so as to obtain the 1-2-3-4 order,
+  mlirRegionInsertOwnedBlockBefore(region, nullBlock, block3);
+  mlirRegionInsertOwnedBlockBefore(region, block3, block2);
+  mlirRegionInsertOwnedBlockAfter(region, nullBlock, block1);
+  mlirRegionInsertOwnedBlockAfter(region, block3, block4);
+
+  MlirOperationState op1State = mlirOperationStateGet("dummy.op1", loc);
+  MlirOperationState op2State = mlirOperationStateGet("dummy.op2", loc);
+  MlirOperationState op3State = mlirOperationStateGet("dummy.op3", loc);
+  MlirOperationState op4State = mlirOperationStateGet("dummy.op4", loc);
+  MlirOperationState op5State = mlirOperationStateGet("dummy.op5", loc);
+  MlirOperationState op6State = mlirOperationStateGet("dummy.op6", loc);
+  MlirOperationState op7State = mlirOperationStateGet("dummy.op7", loc);
+  MlirOperation op1 = mlirOperationCreate(&op1State);
+  MlirOperation op2 = mlirOperationCreate(&op2State);
+  MlirOperation op3 = mlirOperationCreate(&op3State);
+  MlirOperation op4 = mlirOperationCreate(&op4State);
+  MlirOperation op5 = mlirOperationCreate(&op5State);
+  MlirOperation op6 = mlirOperationCreate(&op6State);
+  MlirOperation op7 = mlirOperationCreate(&op7State);
+
+  // Insert operations in the first block so as to obtain the 1-2-3-4 order.
+  MlirOperation nullOperation = mlirBlockGetFirstOperation(block1);
+  assert(mlirOperationIsNull(nullOperation));
+  mlirBlockInsertOwnedOperationBefore(block1, nullOperation, op3);
+  mlirBlockInsertOwnedOperationBefore(block1, op3, op2);
+  mlirBlockInsertOwnedOperationAfter(block1, nullOperation, op1);
+  mlirBlockInsertOwnedOperationAfter(block1, op3, op4);
+
+  // Append operations to the rest of blocks to make them non-empty and thus
+  // printable.
+  mlirBlockAppendOwnedOperation(block2, op5);
+  mlirBlockAppendOwnedOperation(block3, op6);
+  mlirBlockAppendOwnedOperation(block4, op7);
+
+  mlirOperationDump(op);
+  mlirOperationDestroy(op);
+}
+
 /// Dumps instances of all standard types to check that C API works correctly.
 /// Additionally, performs simple identity checks that a standard type
 /// constructed with C API can be inspected and has the expected type. The
@@ -379,6 +442,26 @@ static int printStandardTypes(MlirContext ctx) {
       !mlirTypeEqual(mlirTupleTypeGetType(tuple, 1), f32))
     return 20;
   mlirTypeDump(tuple);
+  fprintf(stderr, "\n");
+
+  // Function type.
+  MlirType funcInputs[2] = {mlirIndexTypeGet(ctx), mlirIntegerTypeGet(ctx, 1)};
+  MlirType funcResults[3] = {mlirIntegerTypeGet(ctx, 16),
+                             mlirIntegerTypeGet(ctx, 32),
+                             mlirIntegerTypeGet(ctx, 64)};
+  MlirType funcType = mlirFunctionTypeGet(ctx, 2, funcInputs, 3, funcResults);
+  if (mlirFunctionTypeGetNumInputs(funcType) != 2)
+    return 21;
+  if (mlirFunctionTypeGetNumResults(funcType) != 3)
+    return 22;
+  if (!mlirTypeEqual(funcInputs[0], mlirFunctionTypeGetInput(funcType, 0)) ||
+      !mlirTypeEqual(funcInputs[1], mlirFunctionTypeGetInput(funcType, 1)))
+    return 23;
+  if (!mlirTypeEqual(funcResults[0], mlirFunctionTypeGetResult(funcType, 0)) ||
+      !mlirTypeEqual(funcResults[1], mlirFunctionTypeGetResult(funcType, 1)) ||
+      !mlirTypeEqual(funcResults[2], mlirFunctionTypeGetResult(funcType, 2)))
+    return 24;
+  mlirTypeDump(funcType);
   fprintf(stderr, "\n");
 
   return 0;
@@ -629,8 +712,7 @@ int printAffineMap(MlirContext ctx) {
     return 2;
 
   if (!mlirAffineMapIsEmpty(emptyAffineMap) ||
-      mlirAffineMapIsEmpty(affineMap) ||
-      mlirAffineMapIsEmpty(constAffineMap) ||
+      mlirAffineMapIsEmpty(affineMap) || mlirAffineMapIsEmpty(constAffineMap) ||
       mlirAffineMapIsEmpty(multiDimIdentityAffineMap) ||
       mlirAffineMapIsEmpty(minorIdentityAffineMap) ||
       mlirAffineMapIsEmpty(permutationAffineMap))
@@ -709,6 +791,42 @@ int printAffineMap(MlirContext ctx) {
   return 0;
 }
 
+int registerOnlyStd() {
+  MlirContext ctx = mlirContextCreate();
+  // The built-in dialect is always loaded.
+  if (mlirContextGetNumLoadedDialects(ctx) != 1)
+    return 1;
+
+  MlirDialect std =
+      mlirContextGetOrLoadDialect(ctx, mlirStandardDialectGetNamespace());
+  if (!mlirDialectIsNull(std))
+    return 2;
+
+  mlirContextRegisterStandardDialect(ctx);
+  if (mlirContextGetNumRegisteredDialects(ctx) != 1)
+    return 3;
+  if (mlirContextGetNumLoadedDialects(ctx) != 1)
+    return 4;
+
+  std = mlirContextGetOrLoadDialect(ctx, mlirStandardDialectGetNamespace());
+  if (mlirDialectIsNull(std))
+    return 5;
+  if (mlirContextGetNumLoadedDialects(ctx) != 2)
+    return 6;
+
+  MlirDialect alsoStd = mlirContextLoadStandardDialect(ctx);
+  if (!mlirDialectEqual(std, alsoStd))
+    return 7;
+
+  MlirStringRef stdNs = mlirDialectGetNamespace(std);
+  MlirStringRef alsoStdNs = mlirStandardDialectGetNamespace();
+  if (stdNs.length != alsoStdNs.length ||
+      strncmp(stdNs.data, alsoStdNs.data, stdNs.length))
+    return 8;
+
+  return 0;
+}
+
 int main() {
   MlirContext ctx = mlirContextCreate();
   mlirRegisterAllDialects(ctx);
@@ -763,6 +881,22 @@ int main() {
 
   mlirModuleDestroy(moduleOp);
 
+  buildWithInsertionsAndPrint(ctx);
+  // clang-format off
+  // CHECK-LABEL:  "insertion.order.test"
+  // CHECK:      ^{{.*}}(%{{.*}}: i1
+  // CHECK:        "dummy.op1"
+  // CHECK-NEXT:   "dummy.op2"
+  // CHECK-NEXT:   "dummy.op3"
+  // CHECK-NEXT:   "dummy.op4"
+  // CHECK:      ^{{.*}}(%{{.*}}: i2
+  // CHECK:        "dummy.op5"
+  // CHECK:      ^{{.*}}(%{{.*}}: i3
+  // CHECK:        "dummy.op6"
+  // CHECK:      ^{{.*}}(%{{.*}}: i4
+  // CHECK:        "dummy.op7"
+  // clang-format on
+
   // clang-format off
   // CHECK-LABEL: @types
   // CHECK: i32
@@ -781,6 +915,7 @@ int main() {
   // CHECK: memref<2x3xf32, 2>
   // CHECK: memref<*xf32, 4>
   // CHECK: tuple<memref<*xf32, 4>, f32>
+  // CHECK: (index, i1) -> (i16, i32, i64)
   // CHECK: 0
   // clang-format on
   fprintf(stderr, "@types\n");
@@ -836,6 +971,14 @@ int main() {
   fprintf(stderr, "@affineMap\n");
   errcode = printAffineMap(ctx);
   fprintf(stderr, "%d\n", errcode);
+
+  fprintf(stderr, "@registration\n");
+  errcode = registerOnlyStd();
+  fprintf(stderr, "%d\n", errcode);
+  // clang-format off
+  // CHECK-LABEL: @registration
+  // CHECK: 0
+  // clang-format on
 
   mlirContextDestroy(ctx);
 

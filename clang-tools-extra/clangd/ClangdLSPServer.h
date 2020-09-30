@@ -36,17 +36,24 @@ class SymbolIndex;
 /// The server also supports $/cancelRequest (MessageHandler provides this).
 class ClangdLSPServer : private ClangdServer::Callbacks {
 public:
-  /// If \p CompileCommandsDir has a value, compile_commands.json will be
-  /// loaded only from \p CompileCommandsDir. Otherwise, clangd will look
-  /// for compile_commands.json in all parent directories of each file.
-  /// If UseDirBasedCDB is false, compile commands are not read from disk.
-  // FIXME: Clean up signature around CDBs.
+  struct Options : ClangdServer::Options {
+    /// Look for compilation databases, rather than using compile commands
+    /// set via LSP (extensions) only.
+    bool UseDirBasedCDB = true;
+    /// A fixed directory to search for a compilation database in.
+    /// If not set, we search upward from the source file.
+    llvm::Optional<Path> CompileCommandsDir;
+    /// The offset-encoding to use, or None to negotiate it over LSP.
+    llvm::Optional<OffsetEncoding> Encoding;
+
+    /// Per-feature options. Generally ClangdServer lets these vary
+    /// per-request, but LSP allows limited/no customizations.
+    clangd::CodeCompleteOptions CodeComplete;
+    clangd::RenameOptions Rename;
+  };
+
   ClangdLSPServer(Transport &Transp, const ThreadsafeFS &TFS,
-                  const clangd::CodeCompleteOptions &CCOpts,
-                  const clangd::RenameOptions &RenameOpts,
-                  llvm::Optional<Path> CompileCommandsDir, bool UseDirBasedCDB,
-                  llvm::Optional<OffsetEncoding> ForcedOffsetEncoding,
-                  const ClangdServer::Options &Opts);
+                  const ClangdLSPServer::Options &Opts);
   /// The destructor blocks on any outstanding background tasks.
   ~ClangdLSPServer();
 
@@ -180,22 +187,39 @@ private:
   std::unique_ptr<MessageHandler> MsgHandler;
   std::mutex TranspWriter;
 
+  template <typename T>
+  static Expected<T> parse(const llvm::json::Value &Raw,
+                           llvm::StringRef PayloadName,
+                           llvm::StringRef PayloadKind) {
+    T Result;
+    llvm::json::Path::Root Root;
+    if (!fromJSON(Raw, Result, Root)) {
+      elog("Failed to decode {0} {1}: {2}", PayloadName, PayloadKind,
+           Root.getError());
+      // Dump the relevant parts of the broken message.
+      std::string Context;
+      llvm::raw_string_ostream OS(Context);
+      Root.printErrorContext(Raw, OS);
+      vlog("{0}", OS.str());
+      // Report the error (e.g. to the client).
+      return llvm::make_error<LSPError>(
+          llvm::formatv("failed to decode {0} {1}: {2}", PayloadName,
+                        PayloadKind, fmt_consume(Root.getError())),
+          ErrorCode::InvalidParams);
+    }
+    return std::move(Result);
+  }
+
   template <typename Response>
   void call(StringRef Method, llvm::json::Value Params, Callback<Response> CB) {
     // Wrap the callback with LSP conversion and error-handling.
     auto HandleReply =
-        [CB = std::move(CB), Ctx = Context::current().clone()](
+        [CB = std::move(CB), Ctx = Context::current().clone(),
+         Method = Method.str()](
             llvm::Expected<llvm::json::Value> RawResponse) mutable {
-          Response Rsp;
-          if (!RawResponse) {
-            CB(RawResponse.takeError());
-          } else if (fromJSON(*RawResponse, Rsp)) {
-            CB(std::move(Rsp));
-          } else {
-            elog("Failed to decode {0} response", *RawResponse);
-            CB(llvm::make_error<LSPError>("failed to decode response",
-                                          ErrorCode::InvalidParams));
-          }
+          if (!RawResponse)
+            return CB(RawResponse.takeError());
+          CB(parse<Response>(*RawResponse, Method, "response"));
         };
     callRaw(Method, std::move(Params), std::move(HandleReply));
   }
@@ -210,10 +234,6 @@ private:
   }
 
   const ThreadsafeFS &TFS;
-  /// Options used for code completion
-  clangd::CodeCompleteOptions CCOpts;
-  /// Options used for rename.
-  clangd::RenameOptions RenameOpts;
   /// Options used for diagnostics.
   ClangdDiagnosticOptions DiagOpts;
   /// The supported kinds of the client.
@@ -251,14 +271,11 @@ private:
   // Store of the current versions of the open documents.
   DraftStore DraftMgr;
 
+  Options Opts;
   // The CDB is created by the "initialize" LSP method.
-  bool UseDirBasedCDB;                     // FIXME: make this a capability.
-  llvm::Optional<Path> CompileCommandsDir; // FIXME: merge with capability?
   std::unique_ptr<GlobalCompilationDatabase> BaseCDB;
   // CDB is BaseCDB plus any commands overridden via LSP extensions.
   llvm::Optional<OverlayCDB> CDB;
-  ClangdServer::Options ClangdServerOpts;
-  llvm::Optional<OffsetEncoding> NegotiatedOffsetEncoding;
   // The ClangdServer is created by the "initialize" LSP method.
   llvm::Optional<ClangdServer> Server;
 };

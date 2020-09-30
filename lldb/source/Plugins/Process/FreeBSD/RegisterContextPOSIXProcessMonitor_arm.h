@@ -70,6 +70,10 @@ protected:
   uint32_t NumSupportedHardwareWatchpoints();
 
 private:
+  RegisterInfoPOSIX_arm::GPR m_gpr_arm;
+
+  RegisterInfoPOSIX_arm::FPU m_fpr;
+
   ProcessMonitor &GetMonitor();
 };
 

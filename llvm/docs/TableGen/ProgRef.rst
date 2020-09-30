@@ -26,9 +26,12 @@ you are looking for a simple overview, check out :doc:`TableGen Overview <./inde
 
 An example of a backend is ``RegisterInfo``, which generates the register
 file information for a particular target machine, for use by the LLVM
-target-independent code generator. See :doc:`TableGen Backends <./BackEnds>` for
-a description of the LLVM TableGen backends. Here are a few of the things
-backends can do.
+target-independent code generator. See :doc:`TableGen Backends <./BackEnds>`
+for a description of the LLVM TableGen backends, and :doc:`TableGen
+Backend Developer's Guide <./BackGuide>` for a guide to writing a new
+backend.
+
+Here are a few of the things backends can do.
 
 * Generate the register file information for a particular target machine.
 

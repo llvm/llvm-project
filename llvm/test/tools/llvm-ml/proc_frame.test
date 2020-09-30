@@ -13,11 +13,6 @@ t1 PROC FRAME
   ret
 t1 ENDP
 
-; CHECK: .def t1
-; CHECK-NEXT: .scl 2
-; CHECK-NEXT: .type 32
-; CHECK-NEXT: .endef
-
 ; CHECK: .seh_proc t1
 
 ; CHECK: t1:

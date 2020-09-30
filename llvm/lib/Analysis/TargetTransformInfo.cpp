@@ -71,6 +71,7 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id,
   if (const auto *FPMO = dyn_cast<FPMathOperator>(&CI))
     FMF = FPMO->getFastMathFlags();
 
+  Arguments.insert(Arguments.begin(), CI.arg_begin(), CI.arg_end());
   FunctionType *FTy =
     CI.getCalledFunction()->getFunctionType();
   ParamTys.insert(ParamTys.begin(), FTy->param_begin(), FTy->param_end());
@@ -1306,6 +1307,18 @@ TTI::ReductionKind TTI::matchVectorSplittingReduction(
   Opcode = RD->Opcode;
   Ty = VecTy;
   return RD->Kind;
+}
+
+TTI::ReductionKind
+TTI::matchVectorReduction(const ExtractElementInst *Root, unsigned &Opcode,
+                          VectorType *&Ty, bool &IsPairwise) {
+  TTI::ReductionKind RdxKind = matchVectorSplittingReduction(Root, Opcode, Ty);
+  if (RdxKind != TTI::ReductionKind::RK_None) {
+    IsPairwise = false;
+    return RdxKind;
+  }
+  IsPairwise = true;
+  return matchPairwiseReduction(Root, Opcode, Ty);
 }
 
 int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {

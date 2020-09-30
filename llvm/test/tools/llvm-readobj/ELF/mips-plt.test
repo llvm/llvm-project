@@ -162,6 +162,12 @@ DynamicSymbols: []
 # SEC-SYMS-LLVM-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff2 (SHN_COMMON)
 # SEC-SYMS-LLVM-NEXT:       Name: <?> (0)
 # SEC-SYMS-LLVM-NEXT:     }
+# SEC-SYMS-LLVM-NEXT:     Entry {
+# SEC-SYMS-LLVM:            Type: Section (0x3)
+# SEC-SYMS-LLVM-NEXT: warning: '[[FILE]]': extended symbol index (4) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# SEC-SYMS-LLVM-NEXT:       Section: Reserved (0xFFFF)
+# SEC-SYMS-LLVM-NEXT:       Name: <?> (0)
+# SEC-SYMS-LLVM-NEXT:     }
 # SEC-SYMS-LLVM-NEXT:   ]
 # SEC-SYMS-LLVM-NEXT: }
 
@@ -173,6 +179,8 @@ DynamicSymbols: []
 # SEC-SYMS-GNU-NEXT:   0000000000002018 {{.*}}   2 .got.plt
 # SEC-SYMS-GNU-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff2 (SHN_COMMON)
 # SEC-SYMS-GNU-NEXT:   0000000000002020 {{.*}} COM <?>
+# SEC-SYMS-GNU-NEXT: warning: '[[FILE]]': extended symbol index (4) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# SEC-SYMS-GNU-NEXT:   0000000000002028 {{.*}} RSV[0xffff] <?>
 
 --- !ELF
 FileHeader:
@@ -196,11 +204,14 @@ Sections:
       - Offset: 0x2
         Symbol: 3
         Type:   R_MIPS_JUMP_SLOT
+      - Offset: 0x3
+        Symbol: 4
+        Type:   R_MIPS_JUMP_SLOT
   - Name:    .got.plt
     Type:    SHT_PROGBITS
     Flags:   [ SHF_WRITE, SHF_ALLOC ]
     Address: 0x2000
-    Size:    40 ## (dynamic symbols number + 2) * 8
+    Size:    48 ## (dynamic symbols number + 2) * 8
   - Name: .dynamic
     Type: SHT_DYNAMIC
     Entries:
@@ -215,3 +226,5 @@ DynamicSymbols:
     Section: .got.plt
   - Type:    STT_SECTION
     Index:   SHN_COMMON
+  - Type:    STT_SECTION
+    Index:   SHN_XINDEX

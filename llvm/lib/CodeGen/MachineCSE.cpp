@@ -640,7 +640,7 @@ bool MachineCSE::ProcessBlockCSE(MachineBasicBlock *MBB) {
 
     // Actually perform the elimination.
     if (DoCSE) {
-      for (std::pair<unsigned, unsigned> &CSEPair : CSEPairs) {
+      for (const std::pair<unsigned, unsigned> &CSEPair : CSEPairs) {
         unsigned OldReg = CSEPair.first;
         unsigned NewReg = CSEPair.second;
         // OldReg may have been unused but is used now, clear the Dead flag
@@ -656,7 +656,7 @@ bool MachineCSE::ProcessBlockCSE(MachineBasicBlock *MBB) {
       // we should make sure it is not dead at CSMI.
       for (unsigned ImplicitDefToUpdate : ImplicitDefsToUpdate)
         CSMI->getOperand(ImplicitDefToUpdate).setIsDead(false);
-      for (auto PhysDef : PhysDefs)
+      for (const auto &PhysDef : PhysDefs)
         if (!MI->getOperand(PhysDef.first).isDead())
           CSMI->getOperand(PhysDef.first).setIsDead(false);
 

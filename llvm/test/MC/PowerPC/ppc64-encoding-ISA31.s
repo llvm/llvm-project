@@ -23,6 +23,15 @@
 # CHECK-LE: pstxv 33, -8589934592(31), 0    # encoding: [0x00,0x00,0x02,0x04
 # CHECK-LE-SAME:                                         0x00,0x00,0x3f,0xdc]
             pstxv 33, -8589934592(31), 0
+# CHECK-BE: xxmfacc 2                          # encoding: [0x7d,0x00,0x01,0x62]
+# CHECK-LE: xxmfacc 2                          # encoding: [0x62,0x01,0x00,0x7d]
+            xxmfacc 2
+# CHECK-BE: xxmtacc 2                          # encoding: [0x7d,0x01,0x01,0x62]
+# CHECK-LE: xxmtacc 2                          # encoding: [0x62,0x01,0x01,0x7d]
+            xxmtacc 2
+# CHECK-BE: xxsetaccz 1                        # encoding: [0x7c,0x83,0x01,0x62]
+# CHECK-LE: xxsetaccz 1                        # encoding: [0x62,0x01,0x83,0x7c]
+            xxsetaccz 1
 # CHECK-BE: lxvp 2, 32(4)                      # encoding: [0x18,0x44,0x00,0x20]
 # CHECK-LE: lxvp 2, 32(4)                      # encoding: [0x20,0x00,0x44,0x18]
             lxvp 2, 32(4)

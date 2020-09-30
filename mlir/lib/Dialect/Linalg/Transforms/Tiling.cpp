@@ -386,8 +386,8 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
   if (!options.interchangeVector.empty())
     applyPermutationToVector(iteratorTypes, options.interchangeVector);
   GenerateLoopNest<LoopTy>::doit(
-      loopRanges, iteratorTypes,
-      [&](ValueRange localIvs) {
+      loopRanges, /*iterArgInitValues*/ {}, iteratorTypes,
+      [&](ValueRange localIvs, ValueRange iterArgs) -> scf::ValueVector {
         auto &b = ScopedContext::getBuilderRef();
         auto loc = ScopedContext::getLocation();
         ivs.assign(localIvs.begin(), localIvs.end());
@@ -405,7 +405,8 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(
                                     tileSizes, allViewSizes);
         auto operands = getAssumedNonViewOperands(op);
         views.append(operands.begin(), operands.end());
-        res = op.clone(b, loc, views);
+        res = op.clone(b, loc, /*resultTypes*/ {}, views);
+        return scf::ValueVector{};
       },
       options.distribution);
 

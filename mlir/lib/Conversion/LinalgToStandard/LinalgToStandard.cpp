@@ -123,7 +123,7 @@ public:
       return failure();
 
     rewriter.replaceOpWithNewOp<mlir::CallOp>(
-        op, libraryCallName.getValue(), ArrayRef<Type>{},
+        op, libraryCallName.getValue(), TypeRange(),
         createTypeCanonicalizedMemRefOperands(rewriter, op.getLoc(),
                                               op.getOperands()));
     return success();
@@ -151,7 +151,7 @@ public:
       return failure();
 
     rewriter.replaceOpWithNewOp<mlir::CallOp>(
-        op, libraryCallName.getValue(), ArrayRef<Type>{},
+        op, libraryCallName.getValue(), TypeRange(),
         createTypeCanonicalizedMemRefOperands(rewriter, op.getLoc(),
                                               op.getOperands()));
     return success();
@@ -185,7 +185,7 @@ public:
     for (auto operand : op.getOperands())
       operands.push_back(operand);
     rewriter.replaceOpWithNewOp<mlir::CallOp>(
-        op, libraryCallName.getValue(), ArrayRef<Type>{},
+        op, libraryCallName.getValue(), TypeRange(),
         createTypeCanonicalizedMemRefOperands(rewriter, op.getLoc(), operands));
     return success();
   }

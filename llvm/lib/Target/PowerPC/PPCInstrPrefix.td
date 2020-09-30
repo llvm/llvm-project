@@ -5,12 +5,35 @@
 def SDT_PPCSplat32 : SDTypeProfile<1, 3, [ SDTCisVT<0, v2i64>,
   SDTCisVec<1>, SDTCisInt<2>, SDTCisInt<3>
 ]>;
+def SDT_PPCAccBuild : SDTypeProfile<1, 4, [
+  SDTCisVT<0, v512i1>, SDTCisVT<1, v4i32>, SDTCisVT<2, v4i32>,
+                       SDTCisVT<3, v4i32>, SDTCisVT<4, v4i32>
+]>;
+def SDT_PPCPairBuild : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v256i1>, SDTCisVT<1, v4i32>, SDTCisVT<2, v4i32>
+]>;
+def SDT_PPCAccExtractVsx : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v4i32>, SDTCisVT<1, v512i1>, SDTCisInt<2>
+]>;
+def SDT_PPCPairExtractVsx : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v4i32>, SDTCisVT<1, v256i1>, SDTCisInt<2>
+]>;
+def SDT_PPCxxmfacc : SDTypeProfile<1, 1, [
+  SDTCisVT<0, v512i1>, SDTCisVT<1, v512i1>
+]>;
 
 //===----------------------------------------------------------------------===//
 // ISA 3.1 specific PPCISD nodes.
 //
 
 def PPCxxsplti32dx : SDNode<"PPCISD::XXSPLTI32DX", SDT_PPCSplat32, []>;
+def PPCAccBuild : SDNode<"PPCISD::ACC_BUILD", SDT_PPCAccBuild, []>;
+def PPCPairBuild : SDNode<"PPCISD::PAIR_BUILD", SDT_PPCPairBuild, []>;
+def PPCAccExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCAccExtractVsx,
+                       []>;
+def PPCPairExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCPairExtractVsx,
+                        []>;
+def PPCxxmfacc : SDNode<"PPCISD::XXMFACC", SDT_PPCxxmfacc, []>;
 
 //===----------------------------------------------------------------------===//
 
@@ -525,6 +548,16 @@ def vsrprc : RegisterOperand<VSRpRC> {
   let ParserMatchClass = PPCRegVSRpRCAsmOperand;
 }
 
+def PPCRegVSRpEvenRCAsmOperand : AsmOperandClass {
+  let Name = "RegVSRpEvenRC"; let PredicateMethod = "isVSRpEvenRegNumber";
+}
+
+def vsrpevenrc : RegisterOperand<VSRpRC> {
+  let ParserMatchClass = PPCRegVSRpEvenRCAsmOperand;
+  let EncoderMethod = "getVSRpEvenEncoding";
+  let DecoderMethod = "decodeVSRpEvenOperands";
+}
+
 class DQForm_XTp5_RA17_MEM<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
                            string asmstr, InstrItinClass itin, list<dag> pattern>
   : I<opcode, OOL, IOL, asmstr, itin> {
@@ -584,6 +617,34 @@ multiclass 8LS_DForm_R_XTp5_SI34_MEM_p<bits<6> pref, bits<6> opcode, dag OOL,
   def pc : 8LS_DForm_R_XTp5_SI34_MEM<opcode, OOL, PCRel_IOL,
                                      !strconcat(asmstr, ", 1"), itin, []>,
                                      isPCRel;
+}
+
+def PPCRegACCRCAsmOperand : AsmOperandClass {
+  let Name = "RegACCRC"; let PredicateMethod = "isACCRegNumber";
+}
+
+def acc : RegisterOperand<ACCRC> {
+  let ParserMatchClass = PPCRegACCRCAsmOperand;
+}
+
+def uacc : RegisterOperand<UACCRC> {
+  let ParserMatchClass = PPCRegACCRCAsmOperand;
+}
+
+// [PO AS XO2 XO]
+class XForm_AT3<bits<6> opcode, bits<5> xo2, bits<10> xo, dag OOL, dag IOL,
+                    string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<3> AT;
+
+  let Pattern = pattern;
+
+  let Inst{6-8}  = AT;
+  let Inst{9-10}  = 0;
+  let Inst{11-15} = xo2;
+  let Inst{16-20} = 0;
+  let Inst{21-30} = xo;
+  let Inst{31} = 0;
 }
 
 def PrefixInstrs : Predicate<"Subtarget->hasPrefixInstrs()">;
@@ -739,6 +800,75 @@ let Predicates = [PrefixInstrs] in {
                               (ins g8rc:$RS, memri34_pcrel:$D_RA),
                               "pstd $RS, $D_RA", IIC_LdStLFD>;
   }
+}
+
+let Predicates = [MMA] in {
+  def XXMFACC :
+    XForm_AT3<31, 0, 177, (outs acc:$ASo), (ins acc:$AS), "xxmfacc $AS",
+              IIC_VecGeneral, []>, RegConstraint<"$ASo = $AS">,
+              NoEncode<"$ASo">;
+  def XXMTACC :
+    XForm_AT3<31, 1, 177, (outs acc:$AT), (ins acc:$ATi), "xxmtacc $AT",
+              IIC_VecGeneral, []>, RegConstraint<"$ATi = $AT">,
+              NoEncode<"$ATi">;
+  def KILL_PAIR : PPCPostRAExpPseudo<(outs vsrprc:$XTp), (ins vsrprc:$XSp),
+                                      "#KILL_PAIR", []>,
+                                      RegConstraint<"$XTp = $XSp">;
+  def BUILD_UACC : PPCPostRAExpPseudo<(outs acc:$AT), (ins uacc:$AS),
+                                      "#BUILD_UACC $AT, $AS", []>;
+  // We define XXSETACCZ as rematerializable to undo CSE of that intrinsic in
+  // the backend. We avoid CSE here because it generates a copy of the acc
+  // register and this copy is more expensive than calling the intrinsic again.
+  let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
+    def XXSETACCZ :
+      XForm_AT3<31, 3, 177, (outs acc:$AT), (ins), "xxsetaccz $AT",
+                IIC_VecGeneral, []>;
+  }
+}
+
+def Concats {
+  dag VecsToVecPair0 =
+    (v256i1 (INSERT_SUBREG
+      (INSERT_SUBREG (IMPLICIT_DEF), $vs0, sub_vsx1),
+      $vs1, sub_vsx0));
+  dag VecsToVecPair1 =
+    (v256i1 (INSERT_SUBREG
+      (INSERT_SUBREG (IMPLICIT_DEF), $vs2, sub_vsx1),
+      $vs3, sub_vsx0));
+  dag VecsToVecQuad =
+    (BUILD_UACC (INSERT_SUBREG
+                  (INSERT_SUBREG (v512i1 (IMPLICIT_DEF)),
+                                 (KILL_PAIR VecsToVecPair0), sub_pair0),
+                  (KILL_PAIR VecsToVecPair1), sub_pair1));
+}
+
+def Extracts {
+  dag Pair0 = (v256i1 (EXTRACT_SUBREG $v, sub_pair0));
+  dag Pair1 = (v256i1 (EXTRACT_SUBREG $v, sub_pair1));
+  dag Vec0 = (v4i32 (EXTRACT_SUBREG Pair0, sub_vsx0));
+  dag Vec1 = (v4i32 (EXTRACT_SUBREG Pair0, sub_vsx1));
+  dag Vec2 = (v4i32 (EXTRACT_SUBREG Pair1, sub_vsx0));
+  dag Vec3 = (v4i32 (EXTRACT_SUBREG Pair1, sub_vsx1));
+}
+
+let Predicates = [MMA] in {
+  def : Pat<(v512i1 (PPCAccBuild v4i32:$vs1, v4i32:$vs0, v4i32:$vs3, v4i32:$vs2)),
+            (XXMTACC Concats.VecsToVecQuad)>;
+  def : Pat<(v256i1 (PPCPairBuild v4i32:$vs1, v4i32:$vs0)),
+            Concats.VecsToVecPair0>;
+  def : Pat<(v512i1 (PPCxxmfacc v512i1:$AS)), (XXMFACC acc:$AS)>;
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 0))),
+            Extracts.Vec0>;
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 1))),
+            Extracts.Vec1>;
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 2))),
+            Extracts.Vec2>;
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 3))),
+            Extracts.Vec3>;
+  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, (i64 0))),
+            (v4i32 (EXTRACT_SUBREG $v, sub_vsx0))>;
+  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, (i64 1))),
+            (v4i32 (EXTRACT_SUBREG $v, sub_vsx1))>;
 }
 
 let mayLoad = 1, mayStore = 0, Predicates = [PairedVectorMemops] in {
@@ -1142,7 +1272,7 @@ let Predicates = [IsISA3_1] in {
   def VEXPANDBM : VXForm_RD5_XO5_RS5<1602, 0, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpandbm $vD, $vB", IIC_VecGeneral,
                                      [(set v16i8:$vD, (int_ppc_altivec_vexpandbm
-					   v16i8:$vB))]>;
+                                           v16i8:$vB))]>;
   def VEXPANDHM : VXForm_RD5_XO5_RS5<1602, 1, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpandhm $vD, $vB", IIC_VecGeneral,
                                      [(set v8i16:$vD, (int_ppc_altivec_vexpandhm
@@ -1449,11 +1579,14 @@ let Predicates = [IsISA3_1] in {
   def VCMPGTSQ_rec : VCMPo <903, "vcmpgtsq. $vD, $vA, $vB" , v1i128>;
   def VCMPGTUQ_rec : VCMPo <647, "vcmpgtuq. $vD, $vA, $vB" , v1i128>;
   def VMODSQ : VXForm_1<1803, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vmodsq $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vmodsq $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v1i128:$vD, (srem v1i128:$vA, v1i128:$vB))]>;
   def VMODUQ : VXForm_1<1547, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vmoduq $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vmoduq $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v1i128:$vD, (urem v1i128:$vA, v1i128:$vB))]>;
   def VEXTSD2Q : VXForm_RD5_XO5_RS5<1538, 27, (outs vrrc:$vD), (ins vrrc:$vB),
-                                    "vextsd2q $vD, $vB", IIC_VecGeneral, []>;
+                               "vextsd2q $vD, $vB", IIC_VecGeneral,
+                               [(set v1i128:$vD, (int_ppc_altivec_vextsd2q v2i64:$vB))]>;
   def VCMPUQ : VXForm_BF3_VAB5<257, (outs crrc:$BF), (ins vrrc:$vA, vrrc:$vB),
                                "vcmpuq $BF, $vA, $vB", IIC_VecGeneral, []>;
   def VCMPSQ : VXForm_BF3_VAB5<321, (outs crrc:$BF), (ins vrrc:$vA, vrrc:$vB),

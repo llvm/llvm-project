@@ -3577,6 +3577,18 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   return false;
 }
 
+FPOptions Expr::getFPFeaturesInEffect(const LangOptions &LO) const {
+  if (auto Call = dyn_cast<CallExpr>(this))
+    return Call->getFPFeaturesInEffect(LO);
+  if (auto UO = dyn_cast<UnaryOperator>(this))
+    return UO->getFPFeaturesInEffect(LO);
+  if (auto BO = dyn_cast<BinaryOperator>(this))
+    return BO->getFPFeaturesInEffect(LO);
+  if (auto Cast = dyn_cast<CastExpr>(this))
+    return Cast->getFPFeaturesInEffect(LO);
+  return FPOptions::defaultWithoutTrailingStorage(LO);
+}
+
 namespace {
   /// Look for a call to a non-trivial function within an expression.
   class NonTrivialCallFinder : public ConstEvaluatedExprVisitor<NonTrivialCallFinder>

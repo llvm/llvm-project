@@ -570,7 +570,7 @@ static Optional<GCOVOptions> getGCOVOptions(const CodeGenOptions &CodeGenOpts,
   Options.NoRedZone = CodeGenOpts.DisableRedZone;
   Options.Filter = CodeGenOpts.ProfileFilterFiles;
   Options.Exclude = CodeGenOpts.ProfileExcludeFiles;
-  Options.Atomic = LangOpts.Sanitize.has(SanitizerKind::Thread);
+  Options.Atomic = CodeGenOpts.AtomicProfileUpdate;
   return Options;
 }
 
@@ -582,10 +582,7 @@ getInstrProfOptions(const CodeGenOptions &CodeGenOpts,
   InstrProfOptions Options;
   Options.NoRedZone = CodeGenOpts.DisableRedZone;
   Options.InstrProfileOutput = CodeGenOpts.InstrProfileOutput;
-
-  // TODO: Surface the option to emit atomic profile counter increments at
-  // the driver level.
-  Options.Atomic = LangOpts.Sanitize.has(SanitizerKind::Thread);
+  Options.Atomic = CodeGenOpts.AtomicProfileUpdate;
   return Options;
 }
 
@@ -1490,29 +1487,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     DwoOS->keep();
 }
 
-Expected<BitcodeModule> clang::FindThinLTOModule(MemoryBufferRef MBRef) {
-  Expected<std::vector<BitcodeModule>> BMsOrErr = getBitcodeModuleList(MBRef);
-  if (!BMsOrErr)
-    return BMsOrErr.takeError();
-
-  // The bitcode file may contain multiple modules, we want the one that is
-  // marked as being the ThinLTO module.
-  if (const BitcodeModule *Bm = FindThinLTOModule(*BMsOrErr))
-    return *Bm;
-
-  return make_error<StringError>("Could not find module summary",
-                                 inconvertibleErrorCode());
-}
-
-BitcodeModule *clang::FindThinLTOModule(MutableArrayRef<BitcodeModule> BMs) {
-  for (BitcodeModule &BM : BMs) {
-    Expected<BitcodeLTOInfo> LTOInfo = BM.getLTOInfo();
-    if (LTOInfo && LTOInfo->IsThinLTO)
-      return &BM;
-  }
-  return nullptr;
-}
-
 static void runThinLTOBackend(
     DiagnosticsEngine &Diags, ModuleSummaryIndex *CombinedIndex, Module *M,
     const HeaderSearchOptions &HeaderOpts, const CodeGenOptions &CGOpts,
@@ -1529,46 +1503,12 @@ static void runThinLTOBackend(
   // we should only invoke this using the individual indexes written out
   // via a WriteIndexesThinBackend.
   FunctionImporter::ImportMapTy ImportList;
-  for (auto &GlobalList : *CombinedIndex) {
-    // Ignore entries for undefined references.
-    if (GlobalList.second.SummaryList.empty())
-      continue;
-
-    auto GUID = GlobalList.first;
-    for (auto &Summary : GlobalList.second.SummaryList) {
-      // Skip the summaries for the importing module. These are included to
-      // e.g. record required linkage changes.
-      if (Summary->modulePath() == M->getModuleIdentifier())
-        continue;
-      // Add an entry to provoke importing by thinBackend.
-      ImportList[Summary->modulePath()].insert(GUID);
-    }
-  }
-
   std::vector<std::unique_ptr<llvm::MemoryBuffer>> OwnedImports;
   MapVector<llvm::StringRef, llvm::BitcodeModule> ModuleMap;
+  if (!lto::loadReferencedModules(*M, *CombinedIndex, ImportList, ModuleMap,
+                                  OwnedImports))
+    return;
 
-  for (auto &I : ImportList) {
-    ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MBOrErr =
-        llvm::MemoryBuffer::getFile(I.first());
-    if (!MBOrErr) {
-      errs() << "Error loading imported file '" << I.first()
-             << "': " << MBOrErr.getError().message() << "\n";
-      return;
-    }
-
-    Expected<BitcodeModule> BMOrErr = FindThinLTOModule(**MBOrErr);
-    if (!BMOrErr) {
-      handleAllErrors(BMOrErr.takeError(), [&](ErrorInfoBase &EIB) {
-        errs() << "Error loading imported file '" << I.first()
-               << "': " << EIB.message() << '\n';
-      });
-      return;
-    }
-    ModuleMap.insert({I.first(), *BMOrErr});
-
-    OwnedImports.push_back(std::move(*MBOrErr));
-  }
   auto AddStream = [&](size_t Task) {
     return std::make_unique<lto::NativeObjectStream>(std::move(OS));
   };

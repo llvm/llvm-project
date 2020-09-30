@@ -2516,7 +2516,7 @@ void CXXNameMangler::mangleRefQualifier(RefQualifierKind RefQualifier) {
 }
 
 void CXXNameMangler::mangleObjCMethodName(const ObjCMethodDecl *MD) {
-  Context.mangleObjCMethodName(MD, Out);
+  Context.mangleObjCMethodNameAsSourceName(MD, Out);
 }
 
 static bool isTypeSubstitutable(Qualifiers Quals, const Type *Ty,

@@ -2032,6 +2032,14 @@ RecordVal::RecordVal(Init *N, RecTy *T, bool P)
   assert(Value && "Cannot create unset value for current type!");
 }
 
+// This constructor accepts the same arguments as the above, but also
+// a source location.
+RecordVal::RecordVal(Init *N, SMLoc Loc, RecTy *T, bool P)
+    : Name(N), Loc(Loc), TyAndPrefix(T, P) {
+  setValue(UnsetInit::get());
+  assert(Value && "Cannot create unset value for current type!");
+}
+
 StringRef RecordVal::getName() const {
   return cast<StringInit>(getNameInit())->getValue();
 }
@@ -2046,8 +2054,8 @@ bool RecordVal::setValue(Init *V) {
         if (!isa<BitsInit>(Value)) {
           SmallVector<Init *, 64> Bits;
           Bits.reserve(BTy->getNumBits());
-          for (unsigned i = 0, e = BTy->getNumBits(); i < e; ++i)
-            Bits.push_back(Value->getBit(i));
+          for (unsigned I = 0, E = BTy->getNumBits(); I < E; ++I)
+            Bits.push_back(Value->getBit(I));
           Value = BitsInit::get(Bits);
         }
       }
@@ -2058,6 +2066,32 @@ bool RecordVal::setValue(Init *V) {
   return false;
 }
 
+// This version of setValue takes an source location and resets the
+// location in the RecordVal.
+bool RecordVal::setValue(Init *V, SMLoc NewLoc) {
+  Loc = NewLoc;
+  if (V) {
+    Value = V->getCastTo(getType());
+    if (Value) {
+      assert(!isa<TypedInit>(Value) ||
+             cast<TypedInit>(Value)->getType()->typeIsA(getType()));
+      if (BitsRecTy *BTy = dyn_cast<BitsRecTy>(getType())) {
+        if (!isa<BitsInit>(Value)) {
+          SmallVector<Init *, 64> Bits;
+          Bits.reserve(BTy->getNumBits());
+          for (unsigned I = 0, E = BTy->getNumBits(); I < E; ++I)
+            Bits.push_back(Value->getBit(I));
+          Value = BitsInit::get(Bits);
+        }
+      }
+    }
+    return Value == nullptr;
+  }
+  Value = nullptr;
+  return false;
+}
+
+#include "llvm/TableGen/Record.h"
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RecordVal::dump() const { errs() << *this; }
 #endif
@@ -2207,18 +2241,43 @@ Init *Record::getValueInit(StringRef FieldName) const {
 }
 
 StringRef Record::getValueAsString(StringRef FieldName) const {
-  const RecordVal *R = getValue(FieldName);
-  if (!R || !R->getValue())
+  llvm::Optional<StringRef> S = getValueAsOptionalString(FieldName);
+  if (!S.hasValue())
     PrintFatalError(getLoc(), "Record `" + getName() +
       "' does not have a field named `" + FieldName + "'!\n");
+  return S.getValue();
+}
+llvm::Optional<StringRef>
+Record::getValueAsOptionalString(StringRef FieldName) const {
+  const RecordVal *R = getValue(FieldName);
+  if (!R || !R->getValue())
+    return llvm::Optional<StringRef>();
+  if (isa<UnsetInit>(R->getValue()))
+    return llvm::Optional<StringRef>();
 
   if (StringInit *SI = dyn_cast<StringInit>(R->getValue()))
     return SI->getValue();
   if (CodeInit *CI = dyn_cast<CodeInit>(R->getValue()))
     return CI->getValue();
 
-  PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
-    FieldName + "' does not have a string initializer!");
+  PrintFatalError(getLoc(),
+                  "Record `" + getName() + "', ` field `" + FieldName +
+                      "' exists but does not have a string initializer!");
+}
+llvm::Optional<StringRef>
+Record::getValueAsOptionalCode(StringRef FieldName) const {
+  const RecordVal *R = getValue(FieldName);
+  if (!R || !R->getValue())
+    return llvm::Optional<StringRef>();
+  if (isa<UnsetInit>(R->getValue()))
+    return llvm::Optional<StringRef>();
+
+  if (CodeInit *CI = dyn_cast<CodeInit>(R->getValue()))
+    return CI->getValue();
+
+  PrintFatalError(getLoc(),
+                  "Record `" + getName() + "', field `" + FieldName +
+                      "' exists but does not have a code initializer!");
 }
 
 BitsInit *Record::getValueAsBitsInit(StringRef FieldName) const {
@@ -2229,8 +2288,8 @@ BitsInit *Record::getValueAsBitsInit(StringRef FieldName) const {
 
   if (BitsInit *BI = dyn_cast<BitsInit>(R->getValue()))
     return BI;
-  PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
-    FieldName + "' does not have a BitsInit initializer!");
+  PrintFatalError(getLoc(), "Record `" + getName() + "', field `" + FieldName + 
+                                "' exists but does not have a bits value");
 }
 
 ListInit *Record::getValueAsListInit(StringRef FieldName) const {
@@ -2241,8 +2300,8 @@ ListInit *Record::getValueAsListInit(StringRef FieldName) const {
 
   if (ListInit *LI = dyn_cast<ListInit>(R->getValue()))
     return LI;
-  PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
-    FieldName + "' does not have a list initializer!");
+  PrintFatalError(getLoc(), "Record `" + getName() + "', field `" + FieldName + 
+                                "' exists but does not have a list value");
 }
 
 std::vector<Record*>
@@ -2269,7 +2328,7 @@ int64_t Record::getValueAsInt(StringRef FieldName) const {
     return II->getValue();
   PrintFatalError(getLoc(), Twine("Record `") + getName() + "', field `" +
                                 FieldName +
-                                "' does not have an int initializer: " +
+                                "' exists but does not have an int value: " +
                                 R->getValue()->getAsString());
 }
 
@@ -2283,7 +2342,7 @@ Record::getValueAsListOfInts(StringRef FieldName) const {
     else
       PrintFatalError(getLoc(),
                       Twine("Record `") + getName() + "', field `" + FieldName +
-                          "' does not have a list of ints initializer: " +
+                          "' exists but does not have a list of ints value: " +
                           I->getAsString());
   }
   return Ints;
@@ -2301,7 +2360,7 @@ Record::getValueAsListOfStrings(StringRef FieldName) const {
     else
       PrintFatalError(getLoc(),
                       Twine("Record `") + getName() + "', field `" + FieldName +
-                          "' does not have a list of strings initializer: " +
+                          "' exists but does not have a list of strings value: " +
                           I->getAsString());
   }
   return Strings;

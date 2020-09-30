@@ -434,14 +434,16 @@ class LazyValueInfoImpl {
   void solve();
 
 public:
-  /// This is the query interface to determine the lattice
-  /// value for the specified Value* at the end of the specified block.
+  /// This is the query interface to determine the lattice value for the
+  /// specified Value* at the context instruction (if specified) or at the
+  /// start of the block.
   ValueLatticeElement getValueInBlock(Value *V, BasicBlock *BB,
                                       Instruction *CxtI = nullptr);
 
-  /// This is the query interface to determine the lattice
-  /// value for the specified Value* at the specified instruction (generally
-  /// from an assume intrinsic).
+  /// This is the query interface to determine the lattice value for the
+  /// specified Value* at the specified instruction using only information
+  /// from assumes/guards and range metadata. Unlike getValueInBlock(), no
+  /// recursive query is performed.
   ValueLatticeElement getValueAt(Value *V, Instruction *CxtI);
 
   /// This is the query interface to determine the lattice
@@ -1586,12 +1588,12 @@ static bool isKnownNonConstant(Value *V) {
   return false;
 }
 
-Constant *LazyValueInfo::getConstant(Value *V, BasicBlock *BB,
-                                     Instruction *CxtI) {
+Constant *LazyValueInfo::getConstant(Value *V, Instruction *CxtI) {
   // Bail out early if V is known not to be a Constant.
   if (isKnownNonConstant(V))
     return nullptr;
 
+  BasicBlock *BB = CxtI->getParent();
   ValueLatticeElement Result =
       getImpl(PImpl, AC, BB->getModule()).getValueInBlock(V, BB, CxtI);
 
@@ -1605,11 +1607,11 @@ Constant *LazyValueInfo::getConstant(Value *V, BasicBlock *BB,
   return nullptr;
 }
 
-ConstantRange LazyValueInfo::getConstantRange(Value *V, BasicBlock *BB,
-                                              Instruction *CxtI,
+ConstantRange LazyValueInfo::getConstantRange(Value *V, Instruction *CxtI,
                                               bool UndefAllowed) {
   assert(V->getType()->isIntegerTy());
   unsigned Width = V->getType()->getIntegerBitWidth();
+  BasicBlock *BB = CxtI->getParent();
   ValueLatticeElement Result =
       getImpl(PImpl, AC, BB->getModule()).getValueInBlock(V, BB, CxtI);
   if (Result.isUnknown())
@@ -1742,7 +1744,7 @@ LazyValueInfo::getPredicateOnEdge(unsigned Pred, Value *V, Constant *C,
 
 LazyValueInfo::Tristate
 LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
-                              Instruction *CxtI) {
+                              Instruction *CxtI, bool UseBlockValue) {
   // Is or is not NonNull are common predicates being queried. If
   // isKnownNonZero can tell us the result of the predicate, we can
   // return it quickly. But this is only a fastpath, and falling
@@ -1756,7 +1758,10 @@ LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
     else if (Pred == ICmpInst::ICMP_NE)
       return LazyValueInfo::True;
   }
-  ValueLatticeElement Result = getImpl(PImpl, AC, M).getValueAt(V, CxtI);
+
+  ValueLatticeElement Result = UseBlockValue
+      ? getImpl(PImpl, AC, M).getValueInBlock(V, CxtI->getParent(), CxtI)
+      : getImpl(PImpl, AC, M).getValueAt(V, CxtI);
   Tristate Ret = getPredicateResult(Pred, C, Result, DL, TLI);
   if (Ret != Unknown)
     return Ret;

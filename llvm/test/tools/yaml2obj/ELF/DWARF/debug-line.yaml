@@ -616,3 +616,55 @@ DWARF:
       LineRange:             14
       OpcodeBase:            4
       StandardOpcodeLengths: [ 0, 1, 1 ]
+
+## l) Test that we can specify or omit the ExtLen field of extended opcodes.
+
+# RUN: yaml2obj --docnum=12 %s -o %t12.o
+# RUN: llvm-readelf --hex-dump=.debug_line %t12.o | \
+# RUN:   FileCheck %s --check-prefix=EXTLEN --strict-whitespace
+
+#      EXTLEN: Hex dump of section '.debug_line':
+# EXTLEN-NEXT: 0x00000000 20000000 04000800 00000101 01fb0e01
+##                        ^---------------------------------- line number program header
+# EXTLEN-NEXT: 0x00000010 0000000c 03616263 6400b424 b424b424
+##                        ----
+##                            ^-                              DW_LNS_extended_op
+##                              ^-                            extended opcode length (ULEB128) 12
+##                                 ^-                         DW_LNE_define_file
+##                                   ^----------              "abcd\0"
+##                                              ^---          directory index (ULEB128) 0x1234
+##                                                   ^---     modification time (ULEB128) 0x1234
+##                                                       ^--- file length (ULEB128) 0x1234
+# EXTLEN-NEXT: 0x00000020 00b42401{{  }}
+##                        ^-                                  DW_LNS_extended_op
+##                          ^---                              extended opcode length (ULEB128) 0x1234
+##                              ^-                            DW_LNE_end_sequence
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_line:
+    - Version:               4
+      MinInstLength:         1
+      MaxOpsPerInst:         1
+      DefaultIsStmt:         1
+      LineBase:              251
+      LineRange:             14
+      OpcodeBase:            1
+      StandardOpcodeLengths: []
+      Opcodes:
+        - Opcode:    DW_LNS_extended_op
+          ## Omit the ExtLen field.
+          SubOpcode: DW_LNE_define_file
+          FileEntry:
+            Name:    abcd
+            DirIdx:  0x1234
+            ModTime: 0x1234
+            Length:  0x1234
+        - Opcode:    DW_LNS_extended_op
+          ## Specify the ExtLen field.
+          ExtLen:    0x1234
+          SubOpcode: DW_LNE_end_sequence

@@ -2177,8 +2177,7 @@ bool CombinerHelper::applyCombineTruncOfShl(
   Register ShiftAmt = MatchInfo.second;
   Builder.setInstrAndDebugLoc(MI);
   auto TruncShiftSrc = Builder.buildTrunc(DstTy, ShiftSrc);
-  auto TruncShiftAmt = Builder.buildTrunc(DstTy, ShiftAmt);
-  Builder.buildShl(DstReg, TruncShiftSrc, TruncShiftAmt, SrcMI->getFlags());
+  Builder.buildShl(DstReg, TruncShiftSrc, ShiftAmt, SrcMI->getFlags());
   MI.eraseFromParent();
   return true;
 }
@@ -2718,6 +2717,52 @@ bool CombinerHelper::applyNotCmp(MachineInstr &MI,
 
   replaceRegWith(MRI, MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
   MI.eraseFromParent();
+  return true;
+}
+
+bool CombinerHelper::matchXorOfAndWithSameReg(
+    MachineInstr &MI, std::pair<Register, Register> &MatchInfo) {
+  // Match (xor (and x, y), y) (or any of its commuted cases)
+  assert(MI.getOpcode() == TargetOpcode::G_XOR);
+  Register &X = MatchInfo.first;
+  Register &Y = MatchInfo.second;
+  Register AndReg = MI.getOperand(1).getReg();
+  Register SharedReg = MI.getOperand(2).getReg();
+
+  // Find a G_AND on either side of the G_XOR.
+  // Look for one of
+  //
+  // (xor (and x, y), SharedReg)
+  // (xor SharedReg, (and x, y))
+  if (!mi_match(AndReg, MRI, m_GAnd(m_Reg(X), m_Reg(Y)))) {
+    std::swap(AndReg, SharedReg);
+    if (!mi_match(AndReg, MRI, m_GAnd(m_Reg(X), m_Reg(Y))))
+      return false;
+  }
+
+  // Only do this if we'll eliminate the G_AND.
+  if (!MRI.hasOneNonDBGUse(AndReg))
+    return false;
+
+  // We can combine if SharedReg is the same as either the LHS or RHS of the
+  // G_AND.
+  if (Y != SharedReg)
+    std::swap(X, Y);
+  return Y == SharedReg;
+}
+
+bool CombinerHelper::applyXorOfAndWithSameReg(
+    MachineInstr &MI, std::pair<Register, Register> &MatchInfo) {
+  // Fold (xor (and x, y), y) -> (and (not x), y)
+  Builder.setInstrAndDebugLoc(MI);
+  Register X, Y;
+  std::tie(X, Y) = MatchInfo;
+  auto Not = Builder.buildNot(MRI.getType(X), X);
+  Observer.changingInstr(MI);
+  MI.setDesc(Builder.getTII().get(TargetOpcode::G_AND));
+  MI.getOperand(1).setReg(Not->getOperand(0).getReg());
+  MI.getOperand(2).setReg(Y);
+  Observer.changedInstr(MI);
   return true;
 }
 

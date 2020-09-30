@@ -8,8 +8,8 @@
 ; RUN: llvm-mc -triple x86_64-windows-msvc -filetype=obj %S/Inputs/loadconfig-cfg-x64.s -o %t.ldcfg.obj
 
 ; RUN: llvm-as %s -o %t.bc
-; RUN: lld-link -entry:main -guard:cf -dll %t.bc %t.lib %t.ldcfg.obj -out:%t.dll
-; RUN: llvm-readobj --coff-load-config %t.dll | FileCheck %s
+; RUN: lld-link -entry:main -guard:cf -dll %t.bc %t.lib %t.ldcfg.obj -out:%t2.dll
+; RUN: llvm-readobj --coff-load-config %t2.dll | FileCheck %s
 
 ; There must be *two* entries in the table: DLL entry point, and my_handler.
 

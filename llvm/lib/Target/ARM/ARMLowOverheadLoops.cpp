@@ -73,6 +73,11 @@ using namespace llvm;
 #define DEBUG_TYPE "arm-low-overhead-loops"
 #define ARM_LOW_OVERHEAD_LOOPS_NAME "ARM Low Overhead Loops pass"
 
+static cl::opt<bool>
+DisableTailPredication("arm-loloops-disable-tailpred", cl::Hidden,
+    cl::desc("Disable tail-predication in the ARM LowOverheadLoop pass"),
+    cl::init(false));
+
 static bool isVectorPredicated(MachineInstr *MI) {
   int PIdx = llvm::findFirstVPTPredOperandIdx(*MI);
   return PIdx != -1 && MI->getOperand(PIdx + 1).getReg() == ARM::VPR;
@@ -182,7 +187,8 @@ namespace {
       std::unique_ptr<PredicatedMI>> PredicatedInsts;
 
     static void CreateVPTBlock(MachineInstr *MI) {
-      assert(CurrentPredicates.size() && "Can't begin VPT without predicate");
+      assert((CurrentPredicates.size() || MI->getParent()->isLiveIn(ARM::VPR))
+             && "Can't begin VPT without predicate");
       Blocks.emplace_back(MI);
       // The execution of MI is predicated upon the current set of instructions
       // that are AND'ed together to form the VPR predicate value. In the case
@@ -251,12 +257,54 @@ namespace {
       return isPredicatedOnVCTP(Insts.front(), Exclusive);
     }
 
-    static bool isValid() {
+    // If this block begins with a VPT, we can check whether it's using
+    // at least one predicated input(s), as well as possible loop invariant
+    // which would result in it being implicitly predicated.
+    static bool hasImplicitlyValidVPT(VPTState &Block,
+                                      ReachingDefAnalysis &RDA) {
+      SmallVectorImpl<MachineInstr *> &Insts = Block.getInsts();
+      MachineInstr *VPT = Insts.front();
+      assert(isVPTOpcode(VPT->getOpcode()) &&
+             "Expected VPT block to begin with VPT/VPST");
+
+      if (VPT->getOpcode() == ARM::MVE_VPST)
+        return false;
+
+      auto IsOperandPredicated = [&](MachineInstr *MI, unsigned Idx) {
+        MachineInstr *Op = RDA.getMIOperand(MI, MI->getOperand(Idx));
+        return Op && PredicatedInsts.count(Op) && isPredicatedOnVCTP(Op);
+      };
+
+      auto IsOperandInvariant = [&](MachineInstr *MI, unsigned Idx) {
+        MachineOperand &MO = MI->getOperand(Idx);
+        if (!MO.isReg() || !MO.getReg())
+          return true;
+
+        SmallPtrSet<MachineInstr *, 2> Defs;
+        RDA.getGlobalReachingDefs(MI, MO.getReg(), Defs);
+        if (Defs.empty())
+          return true;
+
+        for (auto *Def : Defs)
+          if (Def->getParent() == VPT->getParent())
+            return false;
+        return true;
+      };
+
+      // Check that at least one of the operands is directly predicated on a
+      // vctp and allow an invariant value too.
+      return (IsOperandPredicated(VPT, 1) || IsOperandPredicated(VPT, 2)) &&
+             (IsOperandPredicated(VPT, 1) || IsOperandInvariant(VPT, 1)) &&
+             (IsOperandPredicated(VPT, 2) || IsOperandInvariant(VPT, 2));
+    }
+
+    static bool isValid(ReachingDefAnalysis &RDA) {
       // All predication within the loop should be based on vctp. If the block
       // isn't predicated on entry, check whether the vctp is within the block
       // and that all other instructions are then predicated on it.
       for (auto &Block : Blocks) {
-        if (isEntryPredicatedOnVCTP(Block))
+        if (isEntryPredicatedOnVCTP(Block, false) ||
+            hasImplicitlyValidVPT(Block, RDA))
           continue;
 
         SmallVectorImpl<MachineInstr *> &Insts = Block.getInsts();
@@ -367,7 +415,7 @@ namespace {
 
     // Check the branch targets are within range and we satisfy our
     // restrictions.
-    void CheckLegality(ARMBasicBlockUtils *BBUtils);
+    void Validate(ARMBasicBlockUtils *BBUtils);
 
     bool FoundAllComponents() const {
       return Start && Dec && End;
@@ -471,43 +519,93 @@ std::map<MachineInstr *,
 INITIALIZE_PASS(ARMLowOverheadLoops, DEBUG_TYPE, ARM_LOW_OVERHEAD_LOOPS_NAME,
                 false, false)
 
-MachineInstr *LowOverheadLoop::isSafeToDefineLR() {
-  // We can define LR because LR already contains the same value.
-  if (Start->getOperand(0).getReg() == ARM::LR)
-    return Start;
+static bool TryRemove(MachineInstr *MI, ReachingDefAnalysis &RDA,
+                      InstSet &ToRemove, InstSet &Ignore) {
 
-  unsigned CountReg = Start->getOperand(0).getReg();
-  auto IsMoveLR = [&CountReg](MachineInstr *MI) {
-    return MI->getOpcode() == ARM::tMOVr &&
-           MI->getOperand(0).getReg() == ARM::LR &&
-           MI->getOperand(1).getReg() == CountReg &&
-           MI->getOperand(2).getImm() == ARMCC::AL;
-   };
+  // Check that we can remove all of Killed without having to modify any IT
+  // blocks.
+  auto WontCorruptITs = [](InstSet &Killed, ReachingDefAnalysis &RDA) {
+    // Collect the dead code and the MBBs in which they reside.
+    SmallPtrSet<MachineBasicBlock*, 2> BasicBlocks;
+    for (auto *Dead : Killed)
+      BasicBlocks.insert(Dead->getParent());
 
-  MachineBasicBlock *MBB = Start->getParent();
+    // Collect IT blocks in all affected basic blocks.
+    std::map<MachineInstr *, SmallPtrSet<MachineInstr *, 2>> ITBlocks;
+    for (auto *MBB : BasicBlocks) {
+      for (auto &IT : *MBB) {
+        if (IT.getOpcode() != ARM::t2IT)
+          continue;
+        RDA.getReachingLocalUses(&IT, ARM::ITSTATE, ITBlocks[&IT]);
+      }
+    }
 
-  // Find an insertion point:
-  // - Is there a (mov lr, Count) before Start? If so, and nothing else writes
-  //   to Count before Start, we can insert at that mov.
-  if (auto *LRDef = RDA.getUniqueReachingMIDef(Start, ARM::LR))
-    if (IsMoveLR(LRDef) && RDA.hasSameReachingDef(Start, LRDef, CountReg))
-      return LRDef;
+    // If we're removing all of the instructions within an IT block, then
+    // also remove the IT instruction.
+    SmallPtrSet<MachineInstr *, 2> ModifiedITs;
+    SmallPtrSet<MachineInstr *, 2> RemoveITs;
+    for (auto *Dead : Killed) {
+      if (MachineOperand *MO = Dead->findRegisterUseOperand(ARM::ITSTATE)) {
+        MachineInstr *IT = RDA.getMIOperand(Dead, *MO);
+        RemoveITs.insert(IT);
+        auto &CurrentBlock = ITBlocks[IT];
+        CurrentBlock.erase(Dead);
+        if (CurrentBlock.empty())
+          ModifiedITs.erase(IT);
+        else
+          ModifiedITs.insert(IT);
+      }
+    }
+    if (!ModifiedITs.empty())
+      return false;
+    Killed.insert(RemoveITs.begin(), RemoveITs.end());
+    return true;
+  };
 
-  // - Is there a (mov lr, Count) after Start? If so, and nothing else writes
-  //   to Count after Start, we can insert at that mov.
-  if (auto *LRDef = RDA.getLocalLiveOutMIDef(MBB, ARM::LR))
-    if (IsMoveLR(LRDef) && RDA.hasSameReachingDef(Start, LRDef, CountReg))
-      return LRDef;
+  SmallPtrSet<MachineInstr *, 2> Uses;
+  if (!RDA.isSafeToRemove(MI, Uses, Ignore))
+    return false;
 
-  // We've found no suitable LR def and Start doesn't use LR directly. Can we
-  // just define LR anyway?
-  return RDA.isSafeToDefRegAt(Start, ARM::LR) ? Start : nullptr;
+  if (WontCorruptITs(Uses, RDA)) {
+    ToRemove.insert(Uses.begin(), Uses.end());
+    LLVM_DEBUG(dbgs() << "ARM Loops: Able to remove: " << *MI
+               << " - can also remove:\n";
+               for (auto *Use : Uses)
+                 dbgs() << "   - " << *Use);
+
+    SmallPtrSet<MachineInstr*, 4> Killed;
+    RDA.collectKilledOperands(MI, Killed);
+    if (WontCorruptITs(Killed, RDA)) {
+      ToRemove.insert(Killed.begin(), Killed.end());
+      LLVM_DEBUG(for (auto *Dead : Killed)
+                   dbgs() << "   - " << *Dead);
+    }
+    return true;
+  }
+  return false;
 }
 
 bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
-  assert(!VCTPs.empty() && "VCTP instruction expected but is not set");
+  if (!StartInsertPt)
+    return false;
 
-  if (!VPTState::isValid())
+  if (!IsTailPredicationLegal()) {
+    LLVM_DEBUG(if (VCTPs.empty())
+                 dbgs() << "ARM Loops: Didn't find a VCTP instruction.\n";
+               dbgs() << "ARM Loops: Tail-predication is not valid.\n");
+    return false;
+  }
+
+  assert(!VCTPs.empty() && "VCTP instruction expected but is not set");
+  assert(ML.getBlocks().size() == 1 &&
+         "Shouldn't be processing a loop with more than one block");
+
+  if (DisableTailPredication) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: tail-predication is disabled\n");
+    return false;
+  }
+
+  if (!VPTState::isValid(RDA))
     return false;
 
   if (!ValidateLiveOuts()) {
@@ -568,6 +666,26 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
     }
   }
 
+  // Could inserting the [W|D]LSTP cause some unintended affects? In a perfect
+  // world the [w|d]lstp instruction would be last instruction in the preheader
+  // and so it would only affect instructions within the loop body. But due to
+  // scheduling, and/or the logic in this pass (above), the insertion point can
+  // be moved earlier. So if the Loop Start isn't the last instruction in the
+  // preheader, and if the initial element count is smaller than the vector
+  // width, the Loop Start instruction will immediately generate one or more
+  // false lane mask which can, incorrectly, affect the proceeding MVE
+  // instructions in the preheader.
+  auto CannotInsertWDLSTPBetween = [](MachineBasicBlock::iterator I,
+                                      MachineBasicBlock::iterator E) {
+    for (; I != E; ++I)
+      if (shouldInspect(*I))
+        return true;
+    return false;
+  };
+
+  if (CannotInsertWDLSTPBetween(StartInsertPt, InsertBB->end()))
+    return false;
+
   // Especially in the case of while loops, InsertBB may not be the
   // preheader, so we need to check that the register isn't redefined
   // before entering the loop.
@@ -584,15 +702,9 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
     return false;
   };
 
-  // First, find the block that looks like the preheader.
+  // Search backwards for a def, until we get to InsertBB.
   MachineBasicBlock *MBB = Preheader;
-  if (!MBB) {
-    LLVM_DEBUG(dbgs() << "ARM Loops: Didn't find preheader.\n");
-    return false;
-  }
-
-  // Then search backwards for a def, until we get to InsertBB.
-  while (MBB != InsertBB) {
+  while (MBB && MBB != InsertBB) {
     if (CannotProvideElements(MBB, NumElements)) {
       LLVM_DEBUG(dbgs() << "ARM Loops: Unable to provide element count.\n");
       return false;
@@ -621,7 +733,7 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
 
     Ignore.insert(VCTPs.begin(), VCTPs.end());
 
-    if (RDA.isSafeToRemove(Def, ElementChain, Ignore)) {
+    if (TryRemove(Def, RDA, ElementChain, Ignore)) {
       bool FoundSub = false;
 
       for (auto *MI : ElementChain) {
@@ -635,10 +747,6 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
         } else
           return false;
       }
-
-      LLVM_DEBUG(dbgs() << "ARM Loops: Will remove element count chain:\n";
-                 for (auto *MI : ElementChain)
-                   dbgs() << " - " << *MI);
       ToRemove.insert(ElementChain.begin(), ElementChain.end());
     }
   }
@@ -870,59 +978,89 @@ bool LowOverheadLoop::ValidateLiveOuts() {
   return true;
 }
 
-void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils) {
+void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
   if (Revert)
     return;
 
-  if (!End->getOperand(1).isMBB())
-    report_fatal_error("Expected LoopEnd to target basic block");
+  // Check branch target ranges: WLS[TP] can only branch forwards and LE[TP]
+  // can only jump back.
+  auto ValidateRanges = [](MachineInstr *Start, MachineInstr *End,
+                           ARMBasicBlockUtils *BBUtils, MachineLoop &ML) {
+    if (!End->getOperand(1).isMBB())
+      report_fatal_error("Expected LoopEnd to target basic block");
 
-  // TODO Maybe there's cases where the target doesn't have to be the header,
-  // but for now be safe and revert.
-  if (End->getOperand(1).getMBB() != ML.getHeader()) {
-    LLVM_DEBUG(dbgs() << "ARM Loops: LoopEnd is not targetting header.\n");
-    Revert = true;
-    return;
-  }
+    // TODO Maybe there's cases where the target doesn't have to be the header,
+    // but for now be safe and revert.
+    if (End->getOperand(1).getMBB() != ML.getHeader()) {
+      LLVM_DEBUG(dbgs() << "ARM Loops: LoopEnd is not targeting header.\n");
+      return false;
+    }
 
-  // The WLS and LE instructions have 12-bits for the label offset. WLS
-  // requires a positive offset, while LE uses negative.
-  if (BBUtils->getOffsetOf(End) < BBUtils->getOffsetOf(ML.getHeader()) ||
-      !BBUtils->isBBInRange(End, ML.getHeader(), 4094)) {
-    LLVM_DEBUG(dbgs() << "ARM Loops: LE offset is out-of-range\n");
-    Revert = true;
-    return;
-  }
+    // The WLS and LE instructions have 12-bits for the label offset. WLS
+    // requires a positive offset, while LE uses negative.
+    if (BBUtils->getOffsetOf(End) < BBUtils->getOffsetOf(ML.getHeader()) ||
+        !BBUtils->isBBInRange(End, ML.getHeader(), 4094)) {
+      LLVM_DEBUG(dbgs() << "ARM Loops: LE offset is out-of-range\n");
+      return false;
+    }
 
-  if (Start->getOpcode() == ARM::t2WhileLoopStart &&
-      (BBUtils->getOffsetOf(Start) >
-       BBUtils->getOffsetOf(Start->getOperand(1).getMBB()) ||
-       !BBUtils->isBBInRange(Start, Start->getOperand(1).getMBB(), 4094))) {
-    LLVM_DEBUG(dbgs() << "ARM Loops: WLS offset is out-of-range!\n");
-    Revert = true;
-    return;
-  }
+    if (Start->getOpcode() == ARM::t2WhileLoopStart &&
+        (BBUtils->getOffsetOf(Start) >
+         BBUtils->getOffsetOf(Start->getOperand(1).getMBB()) ||
+         !BBUtils->isBBInRange(Start, Start->getOperand(1).getMBB(), 4094))) {
+      LLVM_DEBUG(dbgs() << "ARM Loops: WLS offset is out-of-range!\n");
+      return false;
+    }
+    return true;
+  };
 
-  InsertPt = Revert ? nullptr : isSafeToDefineLR();
-  if (!InsertPt) {
-    LLVM_DEBUG(dbgs() << "ARM Loops: Unable to find safe insertion point.\n");
-    Revert = true;
-    return;
-  } else
-    LLVM_DEBUG(dbgs() << "ARM Loops: Start insertion point: " << *InsertPt);
+  // Find a suitable position to insert the loop start instruction. It needs to
+  // be able to safely define LR.
+  auto FindStartInsertionPoint = [](MachineInstr *Start,
+                                    ReachingDefAnalysis &RDA) -> MachineInstr* {
+    // We can define LR because LR already contains the same value.
+    if (Start->getOperand(0).getReg() == ARM::LR)
+      return Start;
 
-  if (!IsTailPredicationLegal()) {
-    LLVM_DEBUG(if (VCTPs.empty())
-                 dbgs() << "ARM Loops: Didn't find a VCTP instruction.\n";
-               dbgs() << "ARM Loops: Tail-predication is not valid.\n");
-    return;
-  }
+    unsigned CountReg = Start->getOperand(0).getReg();
+    auto IsMoveLR = [&CountReg](MachineInstr *MI) {
+      return MI->getOpcode() == ARM::tMOVr &&
+             MI->getOperand(0).getReg() == ARM::LR &&
+             MI->getOperand(1).getReg() == CountReg &&
+             MI->getOperand(2).getImm() == ARMCC::AL;
+    };
 
-  assert(ML.getBlocks().size() == 1 &&
-         "Shouldn't be processing a loop with more than one block");
+    MachineBasicBlock *MBB = Start->getParent();
+
+    // Find an insertion point:
+    // - Is there a (mov lr, Count) before Start? If so, and nothing else
+    //   writes to Count before Start, we can insert at that mov.
+    if (auto *LRDef = RDA.getUniqueReachingMIDef(Start, ARM::LR))
+      if (IsMoveLR(LRDef) && RDA.hasSameReachingDef(Start, LRDef, CountReg))
+        return LRDef;
+
+    // - Is there a (mov lr, Count) after Start? If so, and nothing else writes
+    //   to Count after Start, we can insert at that mov.
+    if (auto *LRDef = RDA.getLocalLiveOutMIDef(MBB, ARM::LR))
+      if (IsMoveLR(LRDef) && RDA.hasSameReachingDef(Start, LRDef, CountReg))
+        return LRDef;
+
+    // We've found no suitable LR def and Start doesn't use LR directly. Can we
+    // just define LR anyway?
+    return RDA.isSafeToDefRegAt(Start, ARM::LR) ? Start : nullptr;
+  };
+
+  InsertPt = FindStartInsertionPoint(Start, RDA);
+  Revert = !ValidateRanges(Start, End, BBUtils, ML) || !InsertPt;
   CannotTailPredicate = !ValidateTailPredicate(InsertPt);
-  LLVM_DEBUG(if (CannotTailPredicate)
-             dbgs() << "ARM Loops: Couldn't validate tail predicate.\n");
+
+  LLVM_DEBUG(if (!InsertPt)
+               dbgs() << "ARM Loops: Unable to find safe insertion point.\n";
+             else
+                dbgs() << "ARM Loops: Start insertion point: " << *InsertPt;
+             if (CannotTailPredicate)
+                dbgs() << "ARM Loops: Couldn't validate tail predicate.\n"
+            );
 }
 
 bool LowOverheadLoop::AddVCTP(MachineInstr *MI) {
@@ -1043,7 +1181,7 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
 
   bool Changed = false;
   for (auto ML : *MLI) {
-    if (!ML->getParentLoop())
+    if (ML->isOutermost())
       Changed |= ProcessLoop(ML);
   }
   Changed |= RevertNonLoops();
@@ -1132,7 +1270,7 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Unable to remove LoopDec.\n");
     LoLoop.Revert = true;
   }
-  LoLoop.CheckLegality(BBUtils.get());
+  LoLoop.Validate(BBUtils.get());
   Expand(LoLoop);
   return true;
 }
@@ -1261,55 +1399,8 @@ void ARMLowOverheadLoops::IterationCountDCE(LowOverheadLoop &LoLoop) {
   // Collect and remove the users of iteration count.
   SmallPtrSet<MachineInstr*, 4> Killed  = { LoLoop.Start, LoLoop.Dec,
                                             LoLoop.End, LoLoop.InsertPt };
-  SmallPtrSet<MachineInstr*, 2> Remove;
-  if (RDA->isSafeToRemove(Def, Remove, Killed))
-    LoLoop.ToRemove.insert(Remove.begin(), Remove.end());
-  else {
+  if (!TryRemove(Def, *RDA, LoLoop.ToRemove, Killed))
     LLVM_DEBUG(dbgs() << "ARM Loops: Unsafe to remove loop iteration count.\n");
-    return;
-  }
-
-  // Collect the dead code and the MBBs in which they reside.
-  RDA->collectKilledOperands(Def, Killed);
-  SmallPtrSet<MachineBasicBlock*, 2> BasicBlocks;
-  for (auto *MI : Killed)
-    BasicBlocks.insert(MI->getParent());
-
-  // Collect IT blocks in all affected basic blocks.
-  std::map<MachineInstr *, SmallPtrSet<MachineInstr *, 2>> ITBlocks;
-  for (auto *MBB : BasicBlocks) {
-    for (auto &MI : *MBB) {
-      if (MI.getOpcode() != ARM::t2IT)
-        continue;
-      RDA->getReachingLocalUses(&MI, ARM::ITSTATE, ITBlocks[&MI]);
-    }
-  }
-
-  // If we're removing all of the instructions within an IT block, then
-  // also remove the IT instruction.
-  SmallPtrSet<MachineInstr*, 2> ModifiedITs;
-  for (auto *MI : Killed) {
-    if (MachineOperand *MO = MI->findRegisterUseOperand(ARM::ITSTATE)) {
-      MachineInstr *IT = RDA->getMIOperand(MI, *MO);
-      auto &CurrentBlock = ITBlocks[IT];
-      CurrentBlock.erase(MI);
-      if (CurrentBlock.empty())
-        ModifiedITs.erase(IT);
-      else
-        ModifiedITs.insert(IT);
-    }
-  }
-
-  // Delete the killed instructions only if we don't have any IT blocks that
-  // need to be modified because we need to fixup the mask.
-  // TODO: Handle cases where IT blocks are modified.
-  if (ModifiedITs.empty()) {
-    LLVM_DEBUG(dbgs() << "ARM Loops: Will remove iteration count:\n";
-               for (auto *MI : Killed)
-                 dbgs() << " - " << *MI);
-    LoLoop.ToRemove.insert(Killed.begin(), Killed.end());
-  } else
-    LLVM_DEBUG(dbgs() << "ARM Loops: Would need to modify IT block(s).\n");
 }
 
 MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
@@ -1387,22 +1478,12 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
           ? Divergent
           : nullptr;
 
-        unsigned Size = 0;
-        auto E = MachineBasicBlock::reverse_iterator(Divergent);
-        auto I = MachineBasicBlock::reverse_iterator(Insts.back());
-        MachineInstr *InsertAt = nullptr;
-        while (I != E) {
-          InsertAt = &*I;
-          ++Size;
-          ++I;
-        }
-
         MachineInstrBuilder MIB;
         if (VCMP) {
           // Combine the VPST and VCMP into a VPT
-          MIB =
-              BuildMI(*InsertAt->getParent(), InsertAt, InsertAt->getDebugLoc(),
-                      TII->get(VCMPOpcodeToVPT(VCMP->getOpcode())));
+          MIB = BuildMI(*Divergent->getParent(), Divergent,
+                        Divergent->getDebugLoc(),
+                        TII->get(VCMPOpcodeToVPT(VCMP->getOpcode())));
           MIB.addImm(ARMVCC::Then);
           // Register one
           MIB.add(VCMP->getOperand(1));
@@ -1416,8 +1497,8 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
         } else {
           // Create a VPST (with a null mask for now, we'll recompute it later)
           // or a VPT in case there was a VCMP right before it
-          MIB = BuildMI(*InsertAt->getParent(), InsertAt,
-                        InsertAt->getDebugLoc(), TII->get(ARM::MVE_VPST));
+          MIB = BuildMI(*Divergent->getParent(), Divergent,
+                        Divergent->getDebugLoc(), TII->get(ARM::MVE_VPST));
           MIB.addImm(0);
           LLVM_DEBUG(dbgs() << "ARM Loops: Created VPST: " << *MIB);
         }

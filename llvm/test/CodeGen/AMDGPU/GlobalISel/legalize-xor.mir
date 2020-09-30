@@ -330,8 +330,8 @@ body: |
     ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s32>) = G_XOR [[BUILD_VECTOR]], [[BUILD_VECTOR2]]
     ; CHECK: [[XOR1:%[0-9]+]]:_(<2 x s32>) = G_XOR [[BUILD_VECTOR1]], [[BUILD_VECTOR3]]
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s32>) = G_CONCAT_VECTORS [[XOR]](<2 x s32>), [[XOR1]](<2 x s32>), [[DEF1]](<2 x s32>)
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s32>) = G_EXTRACT [[CONCAT_VECTORS]](<6 x s32>), 0
-    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[EXTRACT]](<3 x s32>)
+    ; CHECK: [[UV6:%[0-9]+]]:_(<3 x s32>), [[UV7:%[0-9]+]]:_(<3 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s32>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[UV6]](<3 x s32>)
     %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     %1:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
     %2:_(<3 x s32>) = G_XOR %0, %1
@@ -381,9 +381,9 @@ body: |
     ; CHECK: [[XOR1:%[0-9]+]]:_(<2 x s32>) = G_XOR [[BUILD_VECTOR1]], [[BUILD_VECTOR4]]
     ; CHECK: [[XOR2:%[0-9]+]]:_(<2 x s32>) = G_XOR [[BUILD_VECTOR2]], [[BUILD_VECTOR5]]
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<10 x s32>) = G_CONCAT_VECTORS [[XOR]](<2 x s32>), [[XOR1]](<2 x s32>), [[XOR2]](<2 x s32>), [[DEF3]](<2 x s32>), [[DEF3]](<2 x s32>)
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<5 x s32>) = G_EXTRACT [[CONCAT_VECTORS]](<10 x s32>), 0
+    ; CHECK: [[UV10:%[0-9]+]]:_(<5 x s32>), [[UV11:%[0-9]+]]:_(<5 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<10 x s32>)
     ; CHECK: [[DEF4:%[0-9]+]]:_(<8 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT:%[0-9]+]]:_(<8 x s32>) = G_INSERT [[DEF4]], [[EXTRACT]](<5 x s32>), 0
+    ; CHECK: [[INSERT:%[0-9]+]]:_(<8 x s32>) = G_INSERT [[DEF4]], [[UV10]](<5 x s32>), 0
     ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[INSERT]](<8 x s32>)
     %0:_(<5 x s32>) = G_IMPLICIT_DEF
     %1:_(<5 x s32>) = G_IMPLICIT_DEF

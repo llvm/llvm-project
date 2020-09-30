@@ -419,7 +419,7 @@ void dumpDebugLines(DWARFContext &DCtx, DWARFYAML::Data &Y) {
           case dwarf::DW_LNE_end_sequence:
             break;
           default:
-            while (Offset < StartExt + NewOp.ExtLen)
+            while (Offset < StartExt + *NewOp.ExtLen)
               NewOp.UnknownOpcodeData.push_back(LineData.getU8(&Offset));
           }
         } else if (NewOp.Opcode < DebugLines.OpcodeBase) {

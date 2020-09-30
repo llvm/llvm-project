@@ -1747,7 +1747,7 @@ static SDValue ReorganizeVector(SelectionDAG &DAG, SDValue VectorEntry,
   for (unsigned i = 0; i < 4; i++) {
     RemapSwizzle[i] = i;
     if (NewBldVec[i].getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-      unsigned Idx = dyn_cast<ConstantSDNode>(NewBldVec[i].getOperand(1))
+      unsigned Idx = cast<ConstantSDNode>(NewBldVec[i].getOperand(1))
           ->getZExtValue();
       if (i == Idx)
         isUnmovable[Idx] = true;
@@ -1756,7 +1756,7 @@ static SDValue ReorganizeVector(SelectionDAG &DAG, SDValue VectorEntry,
 
   for (unsigned i = 0; i < 4; i++) {
     if (NewBldVec[i].getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-      unsigned Idx = dyn_cast<ConstantSDNode>(NewBldVec[i].getOperand(1))
+      unsigned Idx = cast<ConstantSDNode>(NewBldVec[i].getOperand(1))
           ->getZExtValue();
       if (isUnmovable[Idx])
         continue;
@@ -2160,7 +2160,7 @@ bool R600TargetLowering::FoldOperand(SDNode *ParentNode, unsigned SrcIdx,
     uint64_t ImmValue = 0;
 
     if (Src.getMachineOpcode() == R600::MOV_IMM_F32) {
-      ConstantFPSDNode *FPC = dyn_cast<ConstantFPSDNode>(Src.getOperand(0));
+      ConstantFPSDNode *FPC = cast<ConstantFPSDNode>(Src.getOperand(0));
       float FloatValue = FPC->getValueAPF().convertToFloat();
       if (FloatValue == 0.0) {
         ImmReg = R600::ZERO;
@@ -2172,7 +2172,7 @@ bool R600TargetLowering::FoldOperand(SDNode *ParentNode, unsigned SrcIdx,
         ImmValue = FPC->getValueAPF().bitcastToAPInt().getZExtValue();
       }
     } else {
-      ConstantSDNode *C = dyn_cast<ConstantSDNode>(Src.getOperand(0));
+      ConstantSDNode *C = cast<ConstantSDNode>(Src.getOperand(0));
       uint64_t Value = C->getZExtValue();
       if (Value == 0) {
         ImmReg = R600::ZERO;
@@ -2189,8 +2189,7 @@ bool R600TargetLowering::FoldOperand(SDNode *ParentNode, unsigned SrcIdx,
     if (ImmReg == R600::ALU_LITERAL_X) {
       if (!Imm.getNode())
         return false;
-      ConstantSDNode *C = dyn_cast<ConstantSDNode>(Imm);
-      assert(C);
+      ConstantSDNode *C = cast<ConstantSDNode>(Imm);
       if (C->getZExtValue())
         return false;
       Imm = DAG.getTargetConstant(ImmValue, SDLoc(ParentNode), MVT::i32);

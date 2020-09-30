@@ -1,4 +1,5 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -S | FileCheck %s
+; RUN: opt < %s -wasm-lower-em-ehsjlj -S | FileCheck %s --check-prefixes=CHECK,NO-TLS
+; RUN: opt < %s -wasm-lower-em-ehsjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s --check-prefixes=CHECK,TLS
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -6,8 +7,10 @@ target triple = "wasm32-unknown-unknown"
 %struct.__jmp_buf_tag = type { [6 x i32], i32, [32 x i32] }
 
 @global_var = global i32 0, align 4
-; CHECK-DAG: __THREW__ = external global i32
-; CHECK-DAG: __threwValue = external global i32
+; NO-TLS-DAG: __THREW__ = external global i32
+; NO-TLS-DAG: __threwValue = external global i32
+; TLS-DAG: __THREW__ = external thread_local(localexec) global i32
+; TLS-DAG: __threwValue = external thread_local(localexec) global i32
 
 ; Test a simple setjmp - longjmp sequence
 define void @setjmp_longjmp() {

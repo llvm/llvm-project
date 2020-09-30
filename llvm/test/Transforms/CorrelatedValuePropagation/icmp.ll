@@ -95,8 +95,6 @@ define i1 @test3(i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[CONT2:%.*]], label [[OUT]]
 ; CHECK:       cont2:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    br label [[CONT3:%.*]]
-; CHECK:       cont3:
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
 ; CHECK-NEXT:    ret i1 true
@@ -111,14 +109,11 @@ cont1:
 
 cont2:
   %add = add i32 %x, %y
-  br label %cont3
-
-cont3:
   %cmp3 = icmp ult i32 %add, 25
   br label %out
 
 out:
-  %ret = phi i1 [ true, %entry], [ true, %cont1 ], [ %cmp3, %cont3 ]
+  %ret = phi i1 [ true, %entry], [ true, %cont1 ], [ %cmp3, %cont2 ]
   ret i1 %ret
 }
 
@@ -134,12 +129,10 @@ define i1 @test4(i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[CONT2:%.*]], label [[OUT]]
 ; CHECK:       cont2:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    br label [[CONT3:%.*]]
-; CHECK:       cont3:
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[ADD]], 15
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
-; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[CONT1]] ], [ [[CMP3]], [[CONT3]] ]
+; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[CONT1]] ], [ [[CMP3]], [[CONT2]] ]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
@@ -152,14 +145,11 @@ cont1:
 
 cont2:
   %add = add i32 %x, %y
-  br label %cont3
-
-cont3:
   %cmp3 = icmp ult i32 %add, 15
   br label %out
 
 out:
-  %ret = phi i1 [ true, %entry], [ true, %cont1 ], [ %cmp3, %cont3 ]
+  %ret = phi i1 [ true, %entry], [ true, %cont1 ], [ %cmp3, %cont2 ]
   ret i1 %ret
 }
 
@@ -175,8 +165,6 @@ define i1 @test5(i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[CONT2:%.*]], label [[OUT]]
 ; CHECK:       cont2:
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = shl nuw nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    br label [[CONT3:%.*]]
-; CHECK:       cont3:
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
 ; CHECK-NEXT:    ret i1 true
@@ -191,14 +179,11 @@ cont1:
 
 cont2:
   %shifted = shl i32 %x, %y
-  br label %cont3
-
-cont3:
   %cmp3 = icmp ult i32 %shifted, 65536
   br label %out
 
 out:
-  %ret = phi i1 [ true, %entry], [ true, %cont1 ], [ %cmp3, %cont3 ]
+  %ret = phi i1 [ true, %entry], [ true, %cont1 ], [ %cmp3, %cont2 ]
   ret i1 %ret
 }
 
@@ -214,12 +199,10 @@ define i1 @test6(i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[CONT2:%.*]], label [[OUT]]
 ; CHECK:       cont2:
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = shl nuw nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    br label [[CONT3:%.*]]
-; CHECK:       cont3:
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[SHIFTED]], 65536
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
-; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[CONT1]] ], [ [[CMP3]], [[CONT3]] ]
+; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[CONT1]] ], [ [[CMP3]], [[CONT2]] ]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
@@ -232,14 +215,11 @@ cont1:
 
 cont2:
   %shifted = shl i32 %x, %y
-  br label %cont3
-
-cont3:
   %cmp3 = icmp ult i32 %shifted, 65536
   br label %out
 
 out:
-  %ret = phi i1 [ true, %entry], [ true, %cont1 ], [ %cmp3, %cont3 ]
+  %ret = phi i1 [ true, %entry], [ true, %cont1 ], [ %cmp3, %cont2 ]
   ret i1 %ret
 }
 
@@ -252,12 +232,10 @@ define i1 @test7(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[BR]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A]], [[B]]
-; CHECK-NEXT:    br label [[CONT:%.*]]
-; CHECK:       cont:
 ; CHECK-NEXT:    [[RES:%.*]] = icmp sge i32 [[ADD]], 0
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ true, [[BEGIN:%.*]] ], [ [[RES]], [[CONT]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ true, [[BEGIN:%.*]] ], [ [[RES]], [[BB]] ]
 ; CHECK-NEXT:    ret i1 [[IV]]
 ;
 begin:
@@ -268,14 +246,11 @@ begin:
 
 bb:
   %add = add i32 %a, %b
-  br label %cont
-
-cont:
   %res = icmp sge i32 %add, 0
   br label %exit
 
 exit:
-  %iv = phi i1 [ true, %begin ], [ %res, %cont ]
+  %iv = phi i1 [ true, %begin ], [ %res, %bb ]
   ret i1 %iv
 }
 
@@ -288,8 +263,6 @@ define i1 @test8(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[BR]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[A]], [[B]]
-; CHECK-NEXT:    br label [[CONT:%.*]]
-; CHECK:       cont:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
@@ -302,14 +275,11 @@ begin:
 
 bb:
   %add = add nsw i32 %a, %b
-  br label %cont
-
-cont:
   %res = icmp sge i32 %add, 0
   br label %exit
 
 exit:
-  %iv = phi i1 [ true, %begin ], [ %res, %cont ]
+  %iv = phi i1 [ true, %begin ], [ %res, %bb ]
   ret i1 %iv
 }
 
@@ -320,12 +290,10 @@ define i1 @test10(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], [[B:%.*]]
-; CHECK-NEXT:    br label [[CONT:%.*]]
-; CHECK:       cont:
 ; CHECK-NEXT:    [[RES:%.*]] = icmp uge i32 [[ADD]], -256
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ true, [[BEGIN:%.*]] ], [ [[RES]], [[CONT]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ true, [[BEGIN:%.*]] ], [ [[RES]], [[BB]] ]
 ; CHECK-NEXT:    ret i1 [[IV]]
 ;
 begin:
@@ -334,14 +302,11 @@ begin:
 
 bb:
   %add = add i32 %a, %b
-  br label %cont
-
-cont:
   %res = icmp uge i32 %add, 4294967040
   br label %exit
 
 exit:
-  %iv = phi i1 [ true, %begin ], [ %res, %cont ]
+  %iv = phi i1 [ true, %begin ], [ %res, %bb ]
   ret i1 %iv
 }
 
@@ -352,8 +317,6 @@ define i1 @test11(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A]], [[B:%.*]]
-; CHECK-NEXT:    br label [[CONT:%.*]]
-; CHECK:       cont:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
@@ -364,14 +327,11 @@ begin:
 
 bb:
   %add = add nuw i32 %a, %b
-  br label %cont
-
-cont:
   %res = icmp uge i32 %add, 4294967040
   br label %exit
 
 exit:
-  %iv = phi i1 [ true, %begin ], [ %res, %cont ]
+  %iv = phi i1 [ true, %begin ], [ %res, %bb ]
   ret i1 %iv
 }
 
@@ -381,8 +341,7 @@ define i1 @test12(i32 %x) {
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[ZEXT]], 7
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[MUL]], 32
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[SHR]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TRUNC]], 7
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %zext = zext i32 %x to i64
   %mul = mul nuw i64 %zext, 7
@@ -396,9 +355,8 @@ define i1 @test13(i8 %x, i64* %p) {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[ZEXT]], 128
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[ADD]], 384
 ; CHECK-NEXT:    store i64 [[ADD]], i64* [[P:%.*]], align 8
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %zext = zext i8 %x to i64
   %add = add nuw nsw i64 %zext, 128
@@ -417,12 +375,10 @@ define i1 @test14(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[BR]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[A]], [[B]]
-; CHECK-NEXT:    br label [[CONT:%.*]]
-; CHECK:       cont:
 ; CHECK-NEXT:    [[RES:%.*]] = icmp sge i32 [[SUB]], 0
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ true, [[BEGIN:%.*]] ], [ [[RES]], [[CONT]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ true, [[BEGIN:%.*]] ], [ [[RES]], [[BB]] ]
 ; CHECK-NEXT:    ret i1 [[IV]]
 ;
 begin:
@@ -433,14 +389,11 @@ begin:
 
 bb:
   %sub = sub i32 %a, %b
-  br label %cont
-
-cont:
   %res = icmp sge i32 %sub, 0
   br label %exit
 
 exit:
-  %iv = phi i1 [ true, %begin ], [ %res, %cont ]
+  %iv = phi i1 [ true, %begin ], [ %res, %bb ]
   ret i1 %iv
 }
 
@@ -453,12 +406,10 @@ define i1 @test15(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[BR]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[A]], [[B]]
-; CHECK-NEXT:    br label [[CONT:%.*]]
-; CHECK:       cont:
 ; CHECK-NEXT:    [[RES:%.*]] = icmp sge i32 [[SUB]], 0
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ true, [[BEGIN:%.*]] ], [ [[RES]], [[CONT]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ true, [[BEGIN:%.*]] ], [ [[RES]], [[BB]] ]
 ; CHECK-NEXT:    ret i1 [[IV]]
 ;
 begin:
@@ -469,14 +420,11 @@ begin:
 
 bb:
   %sub = sub nsw i32 %a, %b
-  br label %cont
-
-cont:
   %res = icmp sge i32 %sub, 0
   br label %exit
 
 exit:
-  %iv = phi i1 [ true, %begin ], [ %res, %cont ]
+  %iv = phi i1 [ true, %begin ], [ %res, %bb ]
   ret i1 %iv
 }
 
@@ -489,8 +437,6 @@ define i1 @test16(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[BR]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[A]], [[B]]
-; CHECK-NEXT:    br label [[CONT:%.*]]
-; CHECK:       cont:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
@@ -503,14 +449,11 @@ begin:
 
 bb:
   %sub = sub nuw i32 %a, %b
-  br label %cont
-
-cont:
   %res = icmp sge i32 %sub, 0
   br label %exit
 
 exit:
-  %iv = phi i1 [ true, %begin ], [ %res, %cont ]
+  %iv = phi i1 [ true, %begin ], [ %res, %bb ]
   ret i1 %iv
 }
 
@@ -523,12 +466,10 @@ define i1 @test17(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[BR]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[A]], [[B]]
-; CHECK-NEXT:    br label [[CONT:%.*]]
-; CHECK:       cont:
 ; CHECK-NEXT:    [[RES:%.*]] = icmp sle i32 [[SUB]], 0
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ true, [[BEGIN:%.*]] ], [ [[RES]], [[CONT]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ true, [[BEGIN:%.*]] ], [ [[RES]], [[BB]] ]
 ; CHECK-NEXT:    ret i1 [[IV]]
 ;
 begin:
@@ -539,14 +480,11 @@ begin:
 
 bb:
   %sub = sub i32 %a, %b
-  br label %cont
-
-cont:
   %res = icmp sle i32 %sub, 0
   br label %exit
 
 exit:
-  %iv = phi i1 [ true, %begin ], [ %res, %cont ]
+  %iv = phi i1 [ true, %begin ], [ %res, %bb ]
   ret i1 %iv
 }
 
@@ -559,12 +497,10 @@ define i1 @test18(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[BR]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i32 [[A]], [[B]]
-; CHECK-NEXT:    br label [[CONT:%.*]]
-; CHECK:       cont:
 ; CHECK-NEXT:    [[RES:%.*]] = icmp sle i32 [[SUB]], 0
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ true, [[BEGIN:%.*]] ], [ [[RES]], [[CONT]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ true, [[BEGIN:%.*]] ], [ [[RES]], [[BB]] ]
 ; CHECK-NEXT:    ret i1 [[IV]]
 ;
 begin:
@@ -575,14 +511,11 @@ begin:
 
 bb:
   %sub = sub nuw i32 %a, %b
-  br label %cont
-
-cont:
   %res = icmp sle i32 %sub, 0
   br label %exit
 
 exit:
-  %iv = phi i1 [ true, %begin ], [ %res, %cont ]
+  %iv = phi i1 [ true, %begin ], [ %res, %bb ]
   ret i1 %iv
 }
 
@@ -595,8 +528,6 @@ define i1 @test19(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[BR]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[A]], [[B]]
-; CHECK-NEXT:    br label [[CONT:%.*]]
-; CHECK:       cont:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
@@ -609,14 +540,11 @@ begin:
 
 bb:
   %sub = sub nsw i32 %a, %b
-  br label %cont
-
-cont:
   %res = icmp sle i32 %sub, 0
   br label %exit
 
 exit:
-  %iv = phi i1 [ true, %begin ], [ %res, %cont ]
+  %iv = phi i1 [ true, %begin ], [ %res, %bb ]
   ret i1 %iv
 }
 
@@ -627,8 +555,7 @@ define i1 @test_br_cmp_with_offset(i64 %idx) {
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
 ; CHECK-NEXT:    [[IDX_OFF2:%.*]] = add nsw i64 [[IDX]], -1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[IDX_OFF2]], 10
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.false:
 ; CHECK-NEXT:    ret i1 undef
 ;

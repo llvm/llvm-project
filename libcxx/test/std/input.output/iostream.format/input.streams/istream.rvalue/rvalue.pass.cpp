@@ -10,9 +10,8 @@
 
 // <istream>
 
-// template <class charT, class traits, class T>
-//   basic_istream<charT, traits>&
-//   operator>>(basic_istream<charT, traits>&& is, T&& x);
+// template <class Stream, class T>
+// Stream&& operator>>(Stream&& is, T&& x);
 
 #include <istream>
 #include <sstream>
@@ -44,32 +43,44 @@ public:
     CharT* egptr() const {return base::egptr();}
 };
 
+struct Int {
+    int value;
+    template <class CharT>
+    friend void operator>>(std::basic_istream<CharT>& is, Int& self) {
+        is >> self.value;
+    }
+};
 
-struct A{};
+struct A { };
 bool called = false;
-void operator>>(std::istream&, A&&){ called = true; }
+void operator>>(std::istream&, A&&) { called = true; }
 
 int main(int, char**)
 {
     {
         testbuf<char> sb("   123");
-        int i = 0;
-        std::istream(&sb) >> i;
-        assert(i == 123);
+        Int i = {0};
+        std::istream is(&sb);
+        std::istream&& result = (std::move(is) >> i);
+        assert(&result == &is);
+        assert(i.value == 123);
     }
     {
         testbuf<wchar_t> sb(L"   123");
-        int i = 0;
-        std::wistream(&sb) >> i;
-        assert(i == 123);
+        Int i = {0};
+        std::wistream is(&sb);
+        std::wistream&& result = (std::move(is) >> i);
+        assert(&result == &is);
+        assert(i.value == 123);
     }
-    { // test perfect forwarding
+    {
+        // test perfect forwarding
         assert(called == false);
         std::istringstream ss;
-        auto&& out = (std::move(ss) >> A{});
-        assert(&out == &ss);
+        std::istringstream&& result = (std::move(ss) >> A{});
+        assert(&result == &ss);
         assert(called);
     }
 
-  return 0;
+    return 0;
 }

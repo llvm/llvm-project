@@ -44,10 +44,6 @@ public:
   ElementCount operator*(unsigned RHS) {
     return { Min * RHS, Scalable };
   }
-  ElementCount operator/(unsigned RHS) {
-    assert(Min % RHS == 0 && "Min is not a multiple of RHS.");
-    return { Min / RHS, Scalable };
-  }
 
   friend ElementCount operator-(const ElementCount &LHS,
                                 const ElementCount &RHS) {
@@ -70,15 +66,24 @@ public:
     return *this;
   }
 
-  ElementCount &operator/=(unsigned RHS) {
-    Min /= RHS;
-    return *this;
+  /// We do not provide the '/' operator here because division for polynomial
+  /// types does not work in the same way as for normal integer types. We can
+  /// only divide the minimum value (or coefficient) by RHS, which is not the
+  /// same as
+  ///   (Min * Vscale) / RHS
+  /// The caller is recommended to use this function in combination with
+  /// isKnownMultipleOf(RHS), which lets the caller know if it's possible to
+  /// perform a lossless divide by RHS.
+  ElementCount divideCoefficientBy(unsigned RHS) const {
+    return ElementCount(Min / RHS, Scalable);
   }
 
   ElementCount NextPowerOf2() const {
     return {(unsigned)llvm::NextPowerOf2(Min), Scalable};
   }
 
+  /// This function tells the caller whether the element count is known at
+  /// compile time to be a multiple of the scalar value RHS.
   bool isKnownMultipleOf(unsigned RHS) const {
     return Min % RHS == 0;
   }
@@ -157,23 +162,54 @@ public:
   // Scalable vector types with the same minimum size as a fixed size type are
   // not guaranteed to be the same size at runtime, so they are never
   // considered to be equal.
-  friend bool operator==(const TypeSize &LHS, const TypeSize &RHS) {
-    return LHS.MinSize == RHS.MinSize && LHS.IsScalable == RHS.IsScalable;
+  bool operator==(const TypeSize &RHS) const {
+    return MinSize == RHS.MinSize && IsScalable == RHS.IsScalable;
   }
 
-  friend bool operator!=(const TypeSize &LHS, const TypeSize &RHS) {
-    return !(LHS == RHS);
-  }
+  bool operator!=(const TypeSize &RHS) const { return !(*this == RHS); }
 
-  // For many cases, size ordering between scalable and fixed size types cannot
+  // For some cases, size ordering between scalable and fixed size types cannot
   // be determined at compile time, so such comparisons aren't allowed.
   //
   // e.g. <vscale x 2 x i16> could be bigger than <4 x i32> with a runtime
   // vscale >= 5, equal sized with a vscale of 4, and smaller with
   // a vscale <= 3.
   //
-  // If the scalable flags match, just perform the requested comparison
-  // between the minimum sizes.
+  // All the functions below make use of the fact vscale is always >= 1, which
+  // means that <vscale x 4 x i32> is guaranteed to be >= <4 x i32>, etc.
+
+  static bool isKnownLT(const TypeSize &LHS, const TypeSize &RHS) {
+    if (!LHS.IsScalable || RHS.IsScalable)
+      return LHS.MinSize < RHS.MinSize;
+
+    // LHS.IsScalable = true, RHS.IsScalable = false
+    return false;
+  }
+
+  static bool isKnownGT(const TypeSize &LHS, const TypeSize &RHS) {
+    if (LHS.IsScalable || !RHS.IsScalable)
+      return LHS.MinSize > RHS.MinSize;
+
+    // LHS.IsScalable = false, RHS.IsScalable = true
+    return false;
+  }
+
+  static bool isKnownLE(const TypeSize &LHS, const TypeSize &RHS) {
+    if (!LHS.IsScalable || RHS.IsScalable)
+      return LHS.MinSize <= RHS.MinSize;
+
+    // LHS.IsScalable = true, RHS.IsScalable = false
+    return false;
+  }
+
+  static bool isKnownGE(const TypeSize &LHS, const TypeSize &RHS) {
+    if (LHS.IsScalable || !RHS.IsScalable)
+      return LHS.MinSize >= RHS.MinSize;
+
+    // LHS.IsScalable = false, RHS.IsScalable = true
+    return false;
+  }
+
   friend bool operator<(const TypeSize &LHS, const TypeSize &RHS) {
     assert(LHS.IsScalable == RHS.IsScalable &&
            "Ordering comparison of scalable and fixed types");
@@ -203,8 +239,16 @@ public:
     return { LHS * RHS.MinSize, RHS.IsScalable };
   }
 
-  TypeSize operator/(unsigned RHS) const {
-    return { MinSize / RHS, IsScalable };
+  /// We do not provide the '/' operator here because division for polynomial
+  /// types does not work in the same way as for normal integer types. We can
+  /// only divide the minimum value (or coefficient) by RHS, which is not the
+  /// same as
+  ///   (MinSize * Vscale) / RHS
+  /// The caller is recommended to use this function in combination with
+  /// isKnownMultipleOf(RHS), which lets the caller know if it's possible to
+  /// perform a lossless divide by RHS.
+  TypeSize divideCoefficientBy(uint64_t RHS) const {
+    return {MinSize / RHS, IsScalable};
   }
 
   TypeSize &operator-=(TypeSize RHS) {
@@ -225,18 +269,6 @@ public:
     assert(LHS.IsScalable == RHS.IsScalable &&
            "Arithmetic using mixed scalable and fixed types");
     return {LHS.MinSize - RHS.MinSize, LHS.IsScalable};
-  }
-
-  friend TypeSize operator/(const TypeSize &LHS, const TypeSize &RHS) {
-    assert(LHS.IsScalable == RHS.IsScalable &&
-           "Arithmetic using mixed scalable and fixed types");
-    return {LHS.MinSize / RHS.MinSize, LHS.IsScalable};
-  }
-
-  friend TypeSize operator%(const TypeSize &LHS, const TypeSize &RHS) {
-    assert(LHS.IsScalable == RHS.IsScalable &&
-           "Arithmetic using mixed scalable and fixed types");
-    return {LHS.MinSize % RHS.MinSize, LHS.IsScalable};
   }
 
   // Return the minimum size with the assumption that the size is exact.
@@ -269,6 +301,10 @@ public:
 
   // Returns true if the type size is zero.
   bool isZero() const { return MinSize == 0; }
+
+  /// This function tells the caller whether the type size is known at
+  /// compile time to be a multiple of the scalar value RHS.
+  bool isKnownMultipleOf(uint64_t RHS) const { return MinSize % RHS == 0; }
 
   // Casts to a uint64_t if this is a fixed-width size.
   //
@@ -324,18 +360,6 @@ public:
 
   friend TypeSize operator*(const int64_t LHS, const TypeSize &RHS) {
     return { LHS * RHS.MinSize, RHS.IsScalable };
-  }
-
-  TypeSize operator/(uint64_t RHS) const {
-    return { MinSize / RHS, IsScalable };
-  }
-
-  TypeSize operator/(int RHS) const {
-    return { MinSize / RHS, IsScalable };
-  }
-
-  TypeSize operator/(int64_t RHS) const {
-    return { MinSize / RHS, IsScalable };
   }
 
   TypeSize NextPowerOf2() const {

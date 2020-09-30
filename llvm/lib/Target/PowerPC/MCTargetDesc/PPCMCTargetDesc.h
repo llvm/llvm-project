@@ -124,6 +124,11 @@ static inline bool isRunOfOnes64(uint64_t Val, unsigned &MB, unsigned &ME) {
 #define GET_SUBTARGETINFO_ENUM
 #include "PPCGenSubtargetInfo.inc"
 
+#define PPC_REGS0_7(X)                                                         \
+  {                                                                            \
+    X##0, X##1, X##2, X##3, X##4, X##5, X##6, X##7                             \
+  }
+
 #define PPC_REGS0_31(X)                                                        \
   {                                                                            \
     X##0, X##1, X##2, X##3, X##4, X##5, X##6, X##7, X##8, X##9, X##10, X##11,  \
@@ -179,8 +184,6 @@ using llvm::MCPhysReg;
     PPC::CR5LT, PPC::CR5GT, PPC::CR5EQ, PPC::CR5UN, \
     PPC::CR6LT, PPC::CR6GT, PPC::CR6EQ, PPC::CR6UN, \
     PPC::CR7LT, PPC::CR7GT, PPC::CR7EQ, PPC::CR7UN}; \
-  static const MCPhysReg CRRegs[8] = { \
-    PPC::CR0, PPC::CR1, PPC::CR2, PPC::CR3, \
-    PPC::CR4, PPC::CR5, PPC::CR6, PPC::CR7}
-
+  static const MCPhysReg CRRegs[8] = PPC_REGS0_7(PPC::CR); \
+  static const MCPhysReg ACCRegs[8] = PPC_REGS0_7(PPC::ACC)
 #endif // LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCMCTARGETDESC_H

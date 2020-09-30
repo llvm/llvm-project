@@ -21,7 +21,6 @@ add_subdirectory(Optimizer)
 add_subdirectory(Decimal)
 add_subdirectory(Evaluate)
 add_subdirectory(Runtime)
-add_subdirectory(Lower)
 
 if (FLANG_BUILD_NEW_DRIVER)
   add_subdirectory(Frontend)

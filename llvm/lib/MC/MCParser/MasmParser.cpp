@@ -634,6 +634,7 @@ private:
     DK_DW,
     DK_REAL4,
     DK_REAL8,
+    DK_REAL10,
     DK_ALIGN,
     DK_ORG,
     DK_ENDR,
@@ -732,6 +733,7 @@ private:
     DK_SAVEREG,
     DK_SAVEXMM128,
     DK_SETFRAME,
+    DK_RADIX,
   };
 
   /// Maps directive name --> DirectiveKind enum, for directives parsed by this
@@ -770,7 +772,7 @@ private:
   bool parseDirectiveNamedValue(StringRef TypeName, unsigned Size,
                                 StringRef Name, SMLoc NameLoc);
 
-  // "real4", "real8"
+  // "real4", "real8", "real10"
   bool emitRealValues(const fltSemantics &Semantics, unsigned *Count = nullptr);
   bool addRealField(StringRef Name, const fltSemantics &Semantics, size_t Size);
   bool parseDirectiveRealValue(StringRef IDVal, const fltSemantics &Semantics,
@@ -963,6 +965,9 @@ private:
                                 bool CaseInsensitive);
   // ".erre" or ".errnz", depending on ExpectZero.
   bool parseDirectiveErrorIfe(SMLoc DirectiveLoc, bool ExpectZero);
+
+  // ".radix"
+  bool parseDirectiveRadix(SMLoc DirectiveLoc);
 
   // "echo"
   bool parseDirectiveEcho();
@@ -2143,6 +2148,8 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveRealValue(IDVal, APFloat::IEEEsingle(), 4);
     case DK_REAL8:
       return parseDirectiveRealValue(IDVal, APFloat::IEEEdouble(), 8);
+    case DK_REAL10:
+      return parseDirectiveRealValue(IDVal, APFloat::x87DoubleExtended(), 10);
     case DK_STRUCT:
     case DK_UNION:
       return parseDirectiveNestedStruct(IDVal, DirKind);
@@ -2284,6 +2291,8 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveErrorIfe(IDLoc, true);
     case DK_ERRNZ:
       return parseDirectiveErrorIfe(IDLoc, false);
+    case DK_RADIX:
+      return parseDirectiveRadix(IDLoc);
     case DK_ECHO:
       return parseDirectiveEcho();
     }
@@ -2376,6 +2385,10 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     Lex();
     return parseDirectiveNamedRealValue(nextVal, APFloat::IEEEdouble(), 8,
                                         IDVal, IDLoc);
+  case DK_REAL10:
+    Lex();
+    return parseDirectiveNamedRealValue(nextVal, APFloat::x87DoubleExtended(),
+                                        10, IDVal, IDLoc);
   case DK_STRUCT:
   case DK_UNION:
     Lex();
@@ -3419,10 +3432,13 @@ bool MasmParser::parseRealValue(const fltSemantics &Semantics, APInt &Res) {
   // We don't truly support arithmetic on floating point expressions, so we
   // have to manually parse unary prefixes.
   bool IsNeg = false;
+  SMLoc SignLoc;
   if (getLexer().is(AsmToken::Minus)) {
+    SignLoc = getLexer().getLoc();
     Lexer.Lex();
     IsNeg = true;
   } else if (getLexer().is(AsmToken::Plus)) {
+    SignLoc = getLexer().getLoc();
     Lexer.Lex();
   }
 
@@ -3444,6 +3460,20 @@ bool MasmParser::parseRealValue(const fltSemantics &Semantics, APInt &Res) {
       Value = APFloat::getZero(Semantics);
     else
       return TokError("invalid floating point literal");
+  } else if (IDVal.consume_back("r") || IDVal.consume_back("R")) {
+    // MASM hexadecimal floating-point literal; no APFloat conversion needed.
+    // To match ML64.exe, ignore the initial sign.
+    unsigned SizeInBits = Value.getSizeInBits(Semantics);
+    if (SizeInBits != (IDVal.size() << 2))
+      return TokError("invalid floating point literal");
+
+    // Consume the numeric token.
+    Lex();
+
+    Res = APInt(SizeInBits, IDVal, 16);
+    if (SignLoc.isValid())
+      return Warning(SignLoc, "MASM-style hex floats ignore explicit sign");
+    return false;
   } else if (errorToBool(
                  Value.convertFromString(IDVal, APFloat::rmNearestTiesToEven)
                      .takeError())) {
@@ -3517,8 +3547,7 @@ bool MasmParser::emitRealValues(const fltSemantics &Semantics,
     return true;
 
   for (const APInt &AsInt : ValuesAsInt) {
-    getStreamer().emitIntValue(AsInt.getLimitedValue(),
-                               AsInt.getBitWidth() / 8);
+    getStreamer().emitIntValue(AsInt);
   }
   if (Count)
     *Count = ValuesAsInt.size();
@@ -3548,7 +3577,7 @@ bool MasmParser::addRealField(StringRef Name, const fltSemantics &Semantics,
 }
 
 /// parseDirectiveRealValue
-///  ::= (real4 | real8) [ expression (, expression)* ]
+///  ::= (real4 | real8 | real10) [ expression (, expression)* ]
 bool MasmParser::parseDirectiveRealValue(StringRef IDVal,
                                          const fltSemantics &Semantics,
                                          size_t Size) {
@@ -3563,7 +3592,7 @@ bool MasmParser::parseDirectiveRealValue(StringRef IDVal,
 }
 
 /// parseDirectiveNamedRealValue
-///  ::= name (real4 | real8) [ expression (, expression)* ]
+///  ::= name (real4 | real8 | real10) [ expression (, expression)* ]
 bool MasmParser::parseDirectiveNamedRealValue(StringRef TypeName,
                                               const fltSemantics &Semantics,
                                               unsigned Size, StringRef Name,
@@ -3657,8 +3686,20 @@ bool MasmParser::parseFieldInitializer(const FieldInfo &Field,
 bool MasmParser::parseFieldInitializer(const FieldInfo &Field,
                                        const RealFieldInfo &Contents,
                                        FieldInitializer &Initializer) {
-  const fltSemantics &Semantics =
-      (Field.Type == 4) ? APFloat::IEEEsingle() : APFloat::IEEEdouble();
+  const fltSemantics *Semantics;
+  switch (Field.Type) {
+  case 4:
+    Semantics = &APFloat::IEEEsingle();
+    break;
+  case 8:
+    Semantics = &APFloat::IEEEdouble();
+    break;
+  case 10:
+    Semantics = &APFloat::x87DoubleExtended();
+    break;
+  default:
+    llvm_unreachable("unknown real field type");
+  }
 
   SMLoc Loc = getTok().getLoc();
 
@@ -3666,20 +3707,20 @@ bool MasmParser::parseFieldInitializer(const FieldInfo &Field,
   if (parseOptionalToken(AsmToken::LCurly)) {
     if (Field.LengthOf == 1)
       return Error(Loc, "Cannot initialize scalar field with array value");
-    if (parseRealInstList(Semantics, AsIntValues, AsmToken::RCurly) ||
+    if (parseRealInstList(*Semantics, AsIntValues, AsmToken::RCurly) ||
         parseToken(AsmToken::RCurly))
       return true;
   } else if (parseOptionalAngleBracketOpen()) {
     if (Field.LengthOf == 1)
       return Error(Loc, "Cannot initialize scalar field with array value");
-    if (parseRealInstList(Semantics, AsIntValues, AsmToken::Greater) ||
+    if (parseRealInstList(*Semantics, AsIntValues, AsmToken::Greater) ||
         parseAngleBracketClose())
       return true;
   } else if (Field.LengthOf > 1) {
     return Error(Loc, "Cannot initialize array field with scalar value");
   } else {
     AsIntValues.emplace_back();
-    if (parseRealValue(Semantics, AsIntValues.back()))
+    if (parseRealValue(*Semantics, AsIntValues.back()))
       return true;
   }
 
@@ -6255,6 +6296,7 @@ void MasmParser::initializeDirectiveKindMap() {
   DirectiveKindMap["sqword"] = DK_SQWORD;
   DirectiveKindMap["real4"] = DK_REAL4;
   DirectiveKindMap["real8"] = DK_REAL8;
+  DirectiveKindMap["real10"] = DK_REAL10;
   DirectiveKindMap["align"] = DK_ALIGN;
   // DirectiveKindMap[".org"] = DK_ORG;
   DirectiveKindMap["extern"] = DK_EXTERN;
@@ -6343,6 +6385,7 @@ void MasmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".savereg"] = DK_SAVEREG;
   DirectiveKindMap[".savexmm128"] = DK_SAVEXMM128;
   DirectiveKindMap[".setframe"] = DK_SETFRAME;
+  DirectiveKindMap[".radix"] = DK_RADIX;
   // DirectiveKindMap[".altmacro"] = DK_ALTMACRO;
   // DirectiveKindMap[".noaltmacro"] = DK_NOALTMACRO;
   DirectiveKindMap["db"] = DK_DB;
@@ -6584,6 +6627,22 @@ bool MasmParser::parseDirectiveMSAlign(SMLoc IDLoc, ParseStatementInfo &Info) {
   return false;
 }
 
+bool MasmParser::parseDirectiveRadix(SMLoc DirectiveLoc) {
+  const SMLoc Loc = getLexer().getLoc();
+  StringRef RadixString = parseStringToEndOfStatement().trim();
+  unsigned Radix;
+  if (RadixString.getAsInteger(10, Radix)) {
+    return Error(Loc,
+                 "radix must be a decimal number in the range 2 to 16; was " +
+                     RadixString);
+  }
+  if (Radix < 2 || Radix > 16)
+    return Error(Loc, "radix must be in the range 2 to 16; was " +
+                          std::to_string(Radix));
+  getLexer().setMasmDefaultRadix(Radix);
+  return false;
+}
+
 bool MasmParser::parseDirectiveEcho() {
   StringRef Message = parseStringToEndOfStatement();
   Lex();  // eat end of statement
@@ -6669,6 +6728,8 @@ bool MasmParser::lookUpField(const StructInfo &Structure, StringRef Member,
     Info.Type.Length = Field.LengthOf;
     if (Field.Contents.FT == FT_STRUCT)
       Info.Type.Name = Field.Contents.StructInfo.Structure.Name;
+    else
+      Info.Type.Name = "";
     return false;
   }
 
@@ -6692,6 +6753,7 @@ bool MasmParser::lookUpType(StringRef Name, AsmTypeInfo &Info) const {
                       .CasesLower("qword", "dq", "sqword", 8)
                       .CaseLower("real4", 4)
                       .CaseLower("real8", 8)
+                      .CaseLower("real10", 10)
                       .Default(0);
   if (Size) {
     Info.Name = Name;

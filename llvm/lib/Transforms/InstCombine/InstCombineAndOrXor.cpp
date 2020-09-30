@@ -2087,8 +2087,6 @@ static Instruction *matchRotate(Instruction &Or) {
   // TODO: Can we reduce the code duplication between this and the related
   // rotate matching code under visitSelect and visitTrunc?
   unsigned Width = Or.getType()->getScalarSizeInBits();
-  if (!isPowerOf2_32(Width))
-    return nullptr;
 
   // First, find an or'd pair of opposite shifts with the same shifted operand:
   // or (lshr ShVal, ShAmt0), (shl ShVal, ShAmt1)
@@ -2110,6 +2108,18 @@ static Instruction *matchRotate(Instruction &Or) {
   // Match the shift amount operands for a rotate pattern. This always matches
   // a subtraction on the R operand.
   auto matchShiftAmount = [](Value *L, Value *R, unsigned Width) -> Value * {
+    // Check for constant shift amounts that sum to the bitwidth.
+    // TODO: Support non-uniform shift amounts.
+    const APInt *LC, *RC;
+    if (match(L, m_APIntAllowUndef(LC)) && match(R, m_APIntAllowUndef(RC)))
+      if (LC->ult(Width) && RC->ult(Width) && (*LC + *RC) == Width)
+        return ConstantInt::get(L->getType(), *LC);
+
+    // For non-constant cases we don't support non-pow2 shift masks.
+    // TODO: Is it worth matching urem as well?
+    if (!isPowerOf2_32(Width))
+      return nullptr;
+
     // The shift amount may be masked with negation:
     // (shl ShVal, (X & (Width - 1))) | (lshr ShVal, ((-X) & (Width - 1)))
     Value *X;

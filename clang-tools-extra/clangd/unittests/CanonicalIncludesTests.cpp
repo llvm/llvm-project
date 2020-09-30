@@ -21,6 +21,10 @@ TEST(CanonicalIncludesTest, CStandardLibrary) {
   CI.addSystemHeadersMapping(Language);
   // Usual standard library symbols are mapped correctly.
   EXPECT_EQ("<stdio.h>", CI.mapHeader("path/stdio.h", "printf"));
+  // Suffix mapping isn't available for C, instead of mapping to `<cstdio> we
+  // just leave the header as-is.
+  EXPECT_EQ("include/stdio.h",
+            CI.mapHeader("include/stdio.h", "unknown_symbol"));
 }
 
 TEST(CanonicalIncludesTest, CXXStandardLibrary) {

@@ -38,7 +38,7 @@ def test {
   // assignment whose LHS demands an instance of Base, so we expect a
   // static (parse-time) type-checking error.
 
-  // ERROR1: error: Value 'noCast' of type 'Base' is incompatible with initializer '!getop(orig)' of type '{}'
+  // ERROR1: error: Field 'noCast' of type 'Base' is incompatible with value '!getop(orig)' of type '{}'
   Base noCast = !getop(orig);
 #endif
 

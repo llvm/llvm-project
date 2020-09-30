@@ -17,7 +17,6 @@
 #include "LanaiISelLowering.h"
 #include "LanaiInstrInfo.h"
 #include "LanaiSelectionDAGInfo.h"
-#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"

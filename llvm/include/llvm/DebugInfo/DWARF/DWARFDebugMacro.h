@@ -110,7 +110,7 @@ public:
   /// Print the macro list found within the debug_macinfo/debug_macro section.
   void dump(raw_ostream &OS) const;
 
-  Error parseMacro(DWARFUnitVector::iterator_range Units,
+  Error parseMacro(DWARFUnitVector::compile_unit_range Units,
                    DataExtractor StringExtractor,
                    DWARFDataExtractor MacroData) {
     return parseImpl(Units, StringExtractor, MacroData, /*IsMacro=*/true);
@@ -126,7 +126,7 @@ public:
 private:
   /// Parse the debug_macinfo/debug_macro section accessible via the 'MacroData'
   /// parameter.
-  Error parseImpl(Optional<DWARFUnitVector::iterator_range> Units,
+  Error parseImpl(Optional<DWARFUnitVector::compile_unit_range> Units,
                   Optional<DataExtractor> StringExtractor,
                   DWARFDataExtractor Data, bool IsMacro);
 };

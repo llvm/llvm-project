@@ -816,16 +816,22 @@ private:
 
 CGCXXABI::RecordArgABI
 MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
+  // Use the default C calling convention rules for things that can be passed in
+  // registers, i.e. non-trivially copyable records or records marked with
+  // [[trivial_abi]].
+  if (RD->canPassInRegisters())
+    return RAA_Default;
+
   switch (CGM.getTarget().getTriple().getArch()) {
   default:
     // FIXME: Implement for other architectures.
-    return RAA_Default;
+    return RAA_Indirect;
 
   case llvm::Triple::thumb:
-    // Use the simple Itanium rules for now.
+    // Pass things indirectly for now because it is simple.
     // FIXME: This is incompatible with MSVC for arguments with a dtor and no
     // copy ctor.
-    return !RD->canPassInRegisters() ? RAA_Indirect : RAA_Default;
+    return RAA_Indirect;
 
   case llvm::Triple::x86: {
     // If the argument has *required* alignment greater than four bytes, pass
@@ -838,17 +844,12 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
 
     // If C++ prohibits us from making a copy, construct the arguments directly
     // into argument memory.
-    if (!RD->canPassInRegisters())
-      return RAA_DirectInMemory;
-
-    // Otherwise, construct the argument into a temporary and copy the bytes
-    // into the outgoing argument memory.
-    return RAA_Default;
+    return RAA_DirectInMemory;
   }
 
   case llvm::Triple::x86_64:
   case llvm::Triple::aarch64:
-    return !RD->canPassInRegisters() ? RAA_Indirect : RAA_Default;
+    return RAA_Indirect;
   }
 
   llvm_unreachable("invalid enum");

@@ -85,6 +85,8 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   lld::stdoutOS = &stdoutOS;
   lld::stderrOS = &stderrOS;
 
+  errorHandler().cleanupCallback = []() { freeArena(); };
+
   errorHandler().logName = args::getFilenameWithoutExe(args[0]);
   errorHandler().errorLimitExceededMsg =
       "too many errors emitted, stopping now (use "
@@ -103,7 +105,6 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   if (canExitEarly)
     exitLld(errorCount() ? 1 : 0);
 
-  freeArena();
   return !errorCount();
 }
 
@@ -776,6 +777,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   v.push_back("wasm-ld (LLVM option parsing)");
   for (auto *arg : args.filtered(OPT_mllvm))
     v.push_back(arg->getValue());
+  cl::ResetAllOptionOccurrences();
   cl::ParseCommandLineOptions(v.size(), v.data());
 
   errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);

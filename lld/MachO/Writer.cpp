@@ -27,6 +27,8 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 
+#include <algorithm>
+
 using namespace llvm;
 using namespace llvm::MachO;
 using namespace lld;
@@ -58,17 +60,19 @@ public:
   MachHeaderSection *header = nullptr;
   StringTableSection *stringTableSection = nullptr;
   SymtabSection *symtabSection = nullptr;
+  IndirectSymtabSection *indirectSymtabSection = nullptr;
   UnwindInfoSection *unwindInfoSection = nullptr;
 };
 
 // LC_DYLD_INFO_ONLY stores the offsets of symbol import/export information.
 class LCDyldInfo : public LoadCommand {
 public:
-  LCDyldInfo(BindingSection *bindingSection,
+  LCDyldInfo(RebaseSection *rebaseSection, BindingSection *bindingSection,
              WeakBindingSection *weakBindingSection,
              LazyBindingSection *lazyBindingSection,
              ExportSection *exportSection)
-      : bindingSection(bindingSection), weakBindingSection(weakBindingSection),
+      : rebaseSection(rebaseSection), bindingSection(bindingSection),
+        weakBindingSection(weakBindingSection),
         lazyBindingSection(lazyBindingSection), exportSection(exportSection) {}
 
   uint32_t getSize() const override { return sizeof(dyld_info_command); }
@@ -77,6 +81,10 @@ public:
     auto *c = reinterpret_cast<dyld_info_command *>(buf);
     c->cmd = LC_DYLD_INFO_ONLY;
     c->cmdsize = getSize();
+    if (rebaseSection->isNeeded()) {
+      c->rebase_off = rebaseSection->fileOff;
+      c->rebase_size = rebaseSection->getFileSize();
+    }
     if (bindingSection->isNeeded()) {
       c->bind_off = bindingSection->fileOff;
       c->bind_size = bindingSection->getFileSize();
@@ -95,6 +103,7 @@ public:
     }
   }
 
+  RebaseSection *rebaseSection;
   BindingSection *bindingSection;
   WeakBindingSection *weakBindingSection;
   LazyBindingSection *lazyBindingSection;
@@ -103,13 +112,20 @@ public:
 
 class LCDysymtab : public LoadCommand {
 public:
+  LCDysymtab(IndirectSymtabSection *indirectSymtabSection)
+      : indirectSymtabSection(indirectSymtabSection) {}
+
   uint32_t getSize() const override { return sizeof(dysymtab_command); }
 
   void writeTo(uint8_t *buf) const override {
     auto *c = reinterpret_cast<dysymtab_command *>(buf);
     c->cmd = LC_DYSYMTAB;
     c->cmdsize = getSize();
+    c->indirectsymoff = indirectSymtabSection->fileOff;
+    c->nindirectsyms = indirectSymtabSection->getNumSymbols();
   }
+
+  IndirectSymtabSection *indirectSymtabSection = nullptr;
 };
 
 class LCSegment : public LoadCommand {
@@ -161,6 +177,8 @@ public:
       sectHdr->align = Log2_32(osec->align);
       sectHdr->flags = osec->flags;
       sectHdr->size = osec->getSize();
+      sectHdr->reserved1 = osec->reserved1;
+      sectHdr->reserved2 = osec->reserved2;
     }
   }
 
@@ -176,7 +194,13 @@ class LCMain : public LoadCommand {
     auto *c = reinterpret_cast<entry_point_command *>(buf);
     c->cmd = LC_MAIN;
     c->cmdsize = getSize();
-    c->entryoff = config->entry->getFileOffset();
+
+    if (config->entry->isInStubs())
+      c->entryoff =
+          in.stubs->fileOff + config->entry->stubsIndex * target->stubSize;
+    else
+      c->entryoff = config->entry->getFileOffset();
+
     c->stacksize = 0;
   }
 };
@@ -208,7 +232,9 @@ public:
 //   * LC_REEXPORT_DYLIB
 class LCDylib : public LoadCommand {
 public:
-  LCDylib(LoadCommandType type, StringRef path) : type(type), path(path) {}
+  LCDylib(LoadCommandType type, StringRef path) : type(type), path(path) {
+    instanceCount++;
+  }
 
   uint32_t getSize() const override {
     return alignTo(sizeof(dylib_command) + path.size() + 1, 8);
@@ -226,10 +252,15 @@ public:
     buf[path.size()] = '\0';
   }
 
+  static uint32_t getInstanceCount() { return instanceCount; }
+
 private:
   LoadCommandType type;
   StringRef path;
+  static uint32_t instanceCount;
 };
+
+uint32_t LCDylib::instanceCount = 0;
 
 class LCLoadDylinker : public LoadCommand {
 public:
@@ -314,23 +345,33 @@ public:
 
 void Writer::scanRelocations() {
   for (InputSection *isec : inputSections) {
+    // We do not wish to add rebase opcodes for __LD,__compact_unwind, because
+    // it doesn't actually end up in the final binary. TODO: filtering it out
+    // before Writer runs might be cleaner...
+    if (isec->segname == segment_names::ld)
+      continue;
+
     for (Reloc &r : isec->relocs) {
-      if (auto *s = r.target.dyn_cast<lld::macho::Symbol *>()) {
+      if (auto *s = r.referent.dyn_cast<lld::macho::Symbol *>()) {
         if (isa<Undefined>(s))
           error("undefined symbol " + s->getName() + ", referenced from " +
                 sys::path::filename(isec->file->getName()));
         else
           target->prepareSymbolRelocation(s, isec, r);
+      } else {
+        assert(r.referent.is<InputSection *>());
+        if (!r.pcrel)
+          in.rebase->addEntry(isec, r.offset);
       }
     }
   }
 }
 
 void Writer::createLoadCommands() {
-  in.header->addLoadCommand(
-      make<LCDyldInfo>(in.binding, in.weakBinding, in.lazyBinding, in.exports));
+  in.header->addLoadCommand(make<LCDyldInfo>(
+      in.rebase, in.binding, in.weakBinding, in.lazyBinding, in.exports));
   in.header->addLoadCommand(make<LCSymtab>(symtabSection, stringTableSection));
-  in.header->addLoadCommand(make<LCDysymtab>());
+  in.header->addLoadCommand(make<LCDysymtab>(indirectSymtabSection));
   for (StringRef path : config->runtimePaths)
     in.header->addLoadCommand(make<LCRPath>(path));
 
@@ -341,6 +382,8 @@ void Writer::createLoadCommands() {
     break;
   case MH_DYLIB:
     in.header->addLoadCommand(make<LCDylib>(LC_ID_DYLIB, config->installName));
+    break;
+  case MH_BUNDLE:
     break;
   default:
     llvm_unreachable("unhandled output file type");
@@ -357,8 +400,11 @@ void Writer::createLoadCommands() {
   uint64_t dylibOrdinal = 1;
   for (InputFile *file : inputFiles) {
     if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
-      in.header->addLoadCommand(
-          make<LCDylib>(LC_LOAD_DYLIB, dylibFile->dylibName));
+      // TODO: dylibs that are only referenced by weak refs should also be
+      // loaded via LC_LOAD_WEAK_DYLIB.
+      LoadCommandType lcType =
+          dylibFile->forceWeakImport ? LC_LOAD_WEAK_DYLIB : LC_LOAD_DYLIB;
+      in.header->addLoadCommand(make<LCDylib>(lcType, dylibFile->dylibName));
       dylibFile->ordinal = dylibOrdinal++;
 
       if (dylibFile->reexport)
@@ -366,6 +412,12 @@ void Writer::createLoadCommands() {
             make<LCDylib>(LC_REEXPORT_DYLIB, dylibFile->dylibName));
     }
   }
+
+  const uint32_t MACOS_MAXPATHLEN = 1024;
+  config->headerPad = std::max(
+      config->headerPad, (config->headerPadMaxInstallNames
+                              ? LCDylib::getInstanceCount() * MACOS_MAXPATHLEN
+                              : 0));
 }
 
 static size_t getSymbolPriority(const SymbolPriorityEntry &entry,
@@ -423,11 +475,13 @@ static int sectionOrder(OutputSection *osec) {
         .Default(0);
   } else if (segname == segment_names::linkEdit) {
     return StringSwitch<int>(osec->name)
-        .Case(section_names::binding, -6)
-        .Case(section_names::weakBinding, -5)
-        .Case(section_names::lazyBinding, -4)
-        .Case(section_names::export_, -3)
-        .Case(section_names::symbolTable, -2)
+        .Case(section_names::rebase, -8)
+        .Case(section_names::binding, -7)
+        .Case(section_names::weakBinding, -6)
+        .Case(section_names::lazyBinding, -5)
+        .Case(section_names::export_, -4)
+        .Case(section_names::symbolTable, -3)
+        .Case(section_names::indirectSymbolTable, -2)
         .Case(section_names::stringTable, -1)
         .Default(0);
   }
@@ -479,12 +533,14 @@ void Writer::createOutputSections() {
   stringTableSection = make<StringTableSection>();
   unwindInfoSection = make<UnwindInfoSection>(); // TODO(gkm): only when no -r
   symtabSection = make<SymtabSection>(*stringTableSection);
+  indirectSymtabSection = make<IndirectSymtabSection>();
 
   switch (config->outputType) {
   case MH_EXECUTE:
     make<PageZeroSection>();
     break;
   case MH_DYLIB:
+  case MH_BUNDLE:
     break;
   default:
     llvm_unreachable("unhandled output file type");
@@ -567,6 +623,7 @@ void Writer::run() {
   OutputSegment *linkEditSegment =
       getOrCreateOutputSegment(segment_names::linkEdit);
 
+  prepareBranchTarget(config->entry);
   scanRelocations();
   if (in.stubHelper->isNeeded())
     in.stubHelper->setup();
@@ -594,11 +651,13 @@ void Writer::run() {
       assignAddresses(seg);
 
   // Fill __LINKEDIT contents.
+  in.rebase->finalizeContents();
   in.binding->finalizeContents();
   in.weakBinding->finalizeContents();
   in.lazyBinding->finalizeContents();
   in.exports->finalizeContents();
   symtabSection->finalizeContents();
+  indirectSymtabSection->finalizeContents();
 
   // Now that __LINKEDIT is filled out, do a proper calculation of its
   // addresses and offsets.
@@ -618,6 +677,7 @@ void macho::writeResult() { Writer().run(); }
 
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
+  in.rebase = make<RebaseSection>();
   in.binding = make<BindingSection>();
   in.weakBinding = make<WeakBindingSection>();
   in.lazyBinding = make<LazyBindingSection>();

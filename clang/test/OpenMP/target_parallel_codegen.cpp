@@ -74,8 +74,11 @@
 #ifndef HEADER
 #define HEADER
 
-// CHECK-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
+// CHECK-DAG: [[IDENT_T:%.+]] = type { i32, i32, i32, i32, i8* }
 // CHECK-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
+// CHECK-DAG: [[ANON_T:%.+]] = type { i8 }
+// CHECK-DAG: [[KMP_TASK_T_WITH_PRIVATES:%.+]] = type { [[KMP_TASK_T:%.+]] }
+// CHECK-DAG: [[KMP_TASK_T]] = type { i8*, i32 (i32, i8*)*, i32, {{%[^,]+}}, {{%[^,]+}} }
 // CHECK-DAG: [[DEF_LOC:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 // CHECK-DAG: [[TT:%.+]] = type { i64, i8 }
@@ -134,13 +137,9 @@ int foo(int n) {
   double cn[5][n];
   TT<long long, char> d;
 
-  // CHECK:       [[RET:%.+]] = call i32 @__tgt_target_teams_nowait_mapper(i64 -1, i8* @{{[^,]+}}, i32 0, i8** null, i8** null, i64* null, i64* null, i8** null, i32 1, i32 0)
-  // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
-  // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
-  // CHECK:       [[FAIL]]
-  // CHECK:       call void [[HVT0:@.+]]()
-  // CHECK-NEXT:  br label %[[END]]
-  // CHECK:       [[END]]
+  // CHECK-32:    [[TASK:%.+]] = call i8* @__kmpc_omp_target_task_alloc([[IDENT_T]]* {{[^,]+}}, i32 %0, i32 1, i32 20, i32 1, i32 (i32, i8*)* bitcast (i32 (i32, [[KMP_TASK_T_WITH_PRIVATES:%.+]]*)* [[OMP_TASK_ENTRY:@.+]] to i32 (i32, i8*)*), i64 -1)
+  // CHECK-64:    [[TASK:%.+]] = call i8* @__kmpc_omp_target_task_alloc([[IDENT_T]]* {{[^,]+}}, i32 %0, i32 1, i64 40, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, [[KMP_TASK_T_WITH_PRIVATES:%.+]]*)* [[OMP_TASK_ENTRY:@.+]] to i32 (i32, i8*)*), i64 -1)
+  // CHECK:       call i32 @__kmpc_omp_task([[IDENT_T]]* {{[^,]+}}, i32 {{%[^,]+}}, i8* [[TASK]])
   #pragma omp target parallel nowait
   {
   }
@@ -346,7 +345,7 @@ int foo(int n) {
 // Check that the offloading functions are emitted and that the arguments are
 // correct and loaded correctly for the target regions in foo().
 
-// CHECK:       define internal void [[HVT0]]()
+// CHECK:       define internal void [[HVT0:@.+]]()
 // CHECK:       call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*))
 //
 //
@@ -354,6 +353,14 @@ int foo(int n) {
 // CHECK:       ret void
 // CHECK-NEXT:  }
 
+// CHECK:       define internal {{.*}}i32 [[OMP_TASK_ENTRY]](i32 {{.*}}%0, [[KMP_TASK_T_WITH_PRIVATES]]* noalias %1)
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams_nowait_mapper(i64 -1, i8* {{@[^,]+}}, i32 0, i8** null, i8** null, i64* null, i64* null, i8** null, i32 1, i32 0)
+// CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
+// CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
+// CHECK:       [[FAIL]]
+// CHECK:       call void [[HVT0]]()
+// CHECK-NEXT:  br label %[[END]]
+// CHECK:       [[END]]
 
 // CHECK:       define internal void [[HVT1]](i[[SZ]] %{{.+}})
 // Create stack storage and store argument in there.

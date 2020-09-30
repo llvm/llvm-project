@@ -260,6 +260,9 @@ template <class ELFT> class ELFState {
                            const ELFYAML::VerdefSection &Section,
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader,
+                           const ELFYAML::ARMIndexTableSection &Section,
+                           ContiguousBlobAccumulator &CBA);
+  void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::MipsABIFlags &Section,
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader,
@@ -695,6 +698,8 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     } else if (auto S = dyn_cast<ELFYAML::RelrSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::Group>(Sec)) {
+      writeSectionContent(SHeader, *S, CBA);
+    } else if (auto S = dyn_cast<ELFYAML::ARMIndexTableSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::MipsABIFlags>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
@@ -1512,6 +1517,25 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 
   SHeader.sh_size = Section.VerneedV->size() * sizeof(Elf_Verneed) +
                     AuxCnt * sizeof(Elf_Vernaux);
+}
+
+template <class ELFT>
+void ELFState<ELFT>::writeSectionContent(
+    Elf_Shdr &SHeader, const ELFYAML::ARMIndexTableSection &Section,
+    ContiguousBlobAccumulator &CBA) {
+  if (Section.Content || Section.Size) {
+    SHeader.sh_size = writeContent(CBA, Section.Content, Section.Size);
+    return;
+  }
+
+  if (!Section.Entries)
+    return;
+
+  for (const ELFYAML::ARMIndexTableEntry &E : *Section.Entries) {
+    CBA.write<uint32_t>(E.Offset, ELFT::TargetEndianness);
+    CBA.write<uint32_t>(E.Value, ELFT::TargetEndianness);
+  }
+  SHeader.sh_size = Section.Entries->size() * 8;
 }
 
 template <class ELFT>

@@ -332,48 +332,48 @@ define i32 @ipccp3() {
 define internal i32* @test_inalloca(i32* inalloca %a) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_inalloca
-; IS__TUNIT____-SAME: (i32* inalloca noalias nofree noundef returned writeonly align 536870912 "no-capture-maybe-returned" [[A:%.*]]) [[ATTR1]] {
+; IS__TUNIT____-SAME: (i32* inalloca noalias nofree nonnull returned writeonly dereferenceable(4) "no-capture-maybe-returned" [[A:%.*]]) [[ATTR1]] {
 ; IS__TUNIT____-NEXT:    ret i32* [[A]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_inalloca
-; IS__CGSCC____-SAME: (i32* inalloca noalias nofree noundef returned writeonly align 536870912 "no-capture-maybe-returned" [[A:%.*]]) [[ATTR1]] {
+; IS__CGSCC____-SAME: (i32* inalloca noalias nofree nonnull returned writeonly dereferenceable(4) "no-capture-maybe-returned" [[A:%.*]]) [[ATTR1]] {
 ; IS__CGSCC____-NEXT:    ret i32* [[A]]
 ;
   ret i32* %a
 }
-define i32* @complicated_args_inalloca() {
+define i32* @complicated_args_inalloca(i32* %arg) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@complicated_args_inalloca
-; IS__TUNIT____-SAME: () [[ATTR1]] {
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nocapture nofree noundef writeonly align 536870912 null) [[ATTR1]]
+; IS__TUNIT____-SAME: (i32* nofree readnone returned "no-capture-maybe-returned" [[ARG:%.*]]) [[ATTR1]] {
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree writeonly "no-capture-maybe-returned" [[ARG]]) [[ATTR1]]
 ; IS__TUNIT____-NEXT:    ret i32* [[CALL]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@complicated_args_inalloca
-; IS__CGSCC_OPM-SAME: () [[ATTR1:#.*]] {
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nocapture nofree noundef writeonly align 536870912 null) [[ATTR5:#.*]]
+; IS__CGSCC_OPM-SAME: (i32* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[ARG:%.*]]) [[ATTR1:#.*]] {
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree nonnull writeonly dereferenceable(4) "no-capture-maybe-returned" [[ARG]]) [[ATTR5:#.*]]
 ; IS__CGSCC_OPM-NEXT:    ret i32* [[CALL]]
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@complicated_args_inalloca
-; IS__CGSCC_NPM-SAME: () [[ATTR1:#.*]] {
-; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nocapture nofree noundef writeonly align 536870912 null) [[ATTR4:#.*]]
+; IS__CGSCC_NPM-SAME: (i32* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[ARG:%.*]]) [[ATTR1:#.*]] {
+; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree nonnull writeonly dereferenceable(4) "no-capture-maybe-returned" [[ARG]]) [[ATTR4:#.*]]
 ; IS__CGSCC_NPM-NEXT:    ret i32* [[CALL]]
 ;
-  %call = call i32* @test_inalloca(i32* null)
+  %call = call i32* @test_inalloca(i32* %arg)
   ret i32* %call
 }
 
 define internal i32* @test_preallocated(i32* preallocated(i32) %a) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_preallocated
-; IS__TUNIT____-SAME: (i32* noalias nofree noundef returned writeonly preallocated(i32) align 536870912 "no-capture-maybe-returned" [[A:%.*]]) [[ATTR1]] {
+; IS__TUNIT____-SAME: (i32* noalias nofree noundef nonnull returned writeonly preallocated(i32) align 536870912 dereferenceable(4) "no-capture-maybe-returned" [[A:%.*]]) [[ATTR1]] {
 ; IS__TUNIT____-NEXT:    ret i32* [[A]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_preallocated
-; IS__CGSCC____-SAME: (i32* noalias nofree noundef returned writeonly preallocated(i32) align 536870912 "no-capture-maybe-returned" [[A:%.*]]) [[ATTR1]] {
+; IS__CGSCC____-SAME: (i32* noalias nofree noundef nonnull returned writeonly preallocated(i32) align 536870912 dereferenceable(4) "no-capture-maybe-returned" [[A:%.*]]) [[ATTR1]] {
 ; IS__CGSCC____-NEXT:    ret i32* [[A]]
 ;
   ret i32* %a

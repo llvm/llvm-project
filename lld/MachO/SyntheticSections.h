@@ -26,12 +26,15 @@ namespace macho {
 namespace section_names {
 
 constexpr const char pageZero[] = "__pagezero";
+constexpr const char common[] = "__common";
 constexpr const char header[] = "__mach_header";
+constexpr const char rebase[] = "__rebase";
 constexpr const char binding[] = "__binding";
 constexpr const char weakBinding[] = "__weak_binding";
 constexpr const char lazyBinding[] = "__lazy_binding";
 constexpr const char export_[] = "__export";
 constexpr const char symbolTable[] = "__symbol_table";
+constexpr const char indirectSymbolTable[] = "__ind_sym_tab";
 constexpr const char stringTable[] = "__string_table";
 constexpr const char got[] = "__got";
 constexpr const char threadPtrs[] = "__thread_ptrs";
@@ -151,22 +154,42 @@ public:
 using SectionPointerUnion =
     llvm::PointerUnion<const InputSection *, const OutputSection *>;
 
-struct BindingTarget {
-  SectionPointerUnion section;
-  uint64_t offset;
-  int64_t addend;
+struct Location {
+  SectionPointerUnion section = nullptr;
+  uint64_t offset = 0;
 
-  BindingTarget(SectionPointerUnion section, uint64_t offset, int64_t addend)
-      : section(section), offset(offset), addend(addend) {}
-
+  Location(SectionPointerUnion section, uint64_t offset)
+      : section(section), offset(offset) {}
   uint64_t getVA() const;
+};
+
+// Stores rebase opcodes, which tell dyld where absolute addresses have been
+// encoded in the binary. If the binary is not loaded at its preferred address,
+// dyld has to rebase these addresses by adding an offset to them.
+class RebaseSection : public LinkEditSection {
+public:
+  RebaseSection();
+  void finalizeContents();
+  uint64_t getRawSize() const override { return contents.size(); }
+  bool isNeeded() const override { return !locations.empty(); }
+  void writeTo(uint8_t *buf) const override;
+
+  void addEntry(SectionPointerUnion section, uint64_t offset) {
+    if (config->isPic)
+      locations.push_back({section, offset});
+  }
+
+private:
+  std::vector<Location> locations;
+  SmallVector<char, 128> contents;
 };
 
 struct BindingEntry {
   const DylibSymbol *dysym;
-  BindingTarget target;
-  BindingEntry(const DylibSymbol *dysym, BindingTarget target)
-      : dysym(dysym), target(std::move(target)) {}
+  int64_t addend;
+  Location target;
+  BindingEntry(const DylibSymbol *dysym, int64_t addend, Location target)
+      : dysym(dysym), addend(addend), target(std::move(target)) {}
 };
 
 // Stores bind opcodes for telling dyld which symbols to load non-lazily.
@@ -180,7 +203,7 @@ public:
 
   void addEntry(const DylibSymbol *dysym, SectionPointerUnion section,
                 uint64_t offset, int64_t addend = 0) {
-    bindings.emplace_back(dysym, BindingTarget(section, offset, addend));
+    bindings.emplace_back(dysym, addend, Location(section, offset));
   }
 
 private:
@@ -190,9 +213,10 @@ private:
 
 struct WeakBindingEntry {
   const Symbol *symbol;
-  BindingTarget target;
-  WeakBindingEntry(const Symbol *symbol, BindingTarget target)
-      : symbol(symbol), target(std::move(target)) {}
+  int64_t addend;
+  Location target;
+  WeakBindingEntry(const Symbol *symbol, int64_t addend, Location target)
+      : symbol(symbol), addend(addend), target(std::move(target)) {}
 };
 
 // Stores bind opcodes for telling dyld which weak symbols need coalescing.
@@ -218,7 +242,7 @@ public:
 
   void addEntry(const Symbol *symbol, SectionPointerUnion section,
                 uint64_t offset, int64_t addend = 0) {
-    bindings.emplace_back(symbol, BindingTarget(section, offset, addend));
+    bindings.emplace_back(symbol, addend, Location(section, offset));
   }
 
   bool hasEntry() const { return !bindings.empty(); }
@@ -340,6 +364,10 @@ private:
   llvm::raw_svector_ostream os{contents};
 };
 
+// Adds stubs and bindings where necessary (e.g. if the symbol is a
+// DylibSymbol.)
+void prepareBranchTarget(Symbol *);
+
 // Stores a trie that describes the set of exported symbols.
 class ExportSection : public LinkEditSection {
 public:
@@ -390,8 +418,31 @@ private:
   std::vector<SymtabEntry> symbols;
 };
 
+// The indirect symbol table is a list of 32-bit integers that serve as indices
+// into the (actual) symbol table. The indirect symbol table is a
+// concatentation of several sub-arrays of indices, each sub-array belonging to
+// a separate section. The starting offset of each sub-array is stored in the
+// reserved1 header field of the respective section.
+//
+// These sub-arrays provide symbol information for sections that store
+// contiguous sequences of symbol references. These references can be pointers
+// (e.g. those in the GOT and TLVP sections) or assembly sequences (e.g.
+// function stubs).
+class IndirectSymtabSection : public LinkEditSection {
+public:
+  IndirectSymtabSection();
+  void finalizeContents();
+  uint32_t getNumSymbols() const;
+  uint64_t getRawSize() const override {
+    return getNumSymbols() * sizeof(uint32_t);
+  }
+  bool isNeeded() const override;
+  void writeTo(uint8_t *buf) const override;
+};
+
 struct InStruct {
   MachHeaderSection *header = nullptr;
+  RebaseSection *rebase = nullptr;
   BindingSection *binding = nullptr;
   WeakBindingSection *weakBinding = nullptr;
   LazyBindingSection *lazyBinding = nullptr;

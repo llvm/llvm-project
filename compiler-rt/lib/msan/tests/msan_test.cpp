@@ -587,20 +587,6 @@ LargeStruct LargeRetTest() {
   return res;
 }
 
-TEST(MemorySanitizer, strcmp) {
-  char s1[10];
-  char s2[10];
-  strncpy(s1, "foo", 10);
-  s2[0] = 'f';
-  s2[1] = 'n';
-  EXPECT_GT(strcmp(s1, s2), 0);
-  s2[1] = 'o';
-  int res;
-  EXPECT_UMR(res = strcmp(s1, s2));
-  EXPECT_NOT_POISONED(res);
-  EXPECT_EQ(strncmp(s1, s2, 1), 0);
-}
-
 TEST(MemorySanitizer, LargeRet) {
   LargeStruct a = LargeRetTest();
   EXPECT_POISONED(a.x[0]);
@@ -1114,6 +1100,7 @@ TEST_P(MemorySanitizerIpTest, recvmsg) {
   } while (0)
 
 TEST(MemorySanitizer, gethostent) {
+  sethostent(0);
   struct hostent *he = gethostent();
   ASSERT_NE((void *)NULL, he);
   EXPECT_HOSTENT_NOT_POISONED(he);
@@ -1177,6 +1164,7 @@ TEST(MemorySanitizer, gethostbyaddr) {
 
 #if !defined(__NetBSD__)
 TEST(MemorySanitizer, gethostent_r) {
+  sethostent(0);
   char buf[2000];
   struct hostent he;
   struct hostent *result;
@@ -3547,9 +3535,14 @@ TEST(MemorySanitizer, uname) {
 }
 
 TEST(MemorySanitizer, gethostname) {
-  char buf[100];
-  int res = gethostname(buf, 100);
-  ASSERT_EQ(0, res);
+  char buf[1000];
+  EXPECT_EQ(-1, gethostname(buf, 1));
+  EXPECT_EQ(ENAMETOOLONG, errno);
+  EXPECT_NOT_POISONED(buf[0]);
+  EXPECT_POISONED(buf[1]);
+
+  __msan_poison(buf, sizeof(buf));
+  EXPECT_EQ(0, gethostname(buf, sizeof(buf)));
   EXPECT_NOT_POISONED(strlen(buf));
 }
 

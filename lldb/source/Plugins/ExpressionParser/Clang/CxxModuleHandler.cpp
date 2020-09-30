@@ -181,21 +181,21 @@ llvm::Optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
   // If we don't have a template to instiantiate, then there is nothing to do.
   auto td = dyn_cast<ClassTemplateSpecializationDecl>(d);
   if (!td)
-    return {};
+    return llvm::None;
 
   // We only care about templates in the std namespace.
   if (!td->getDeclContext()->isStdNamespace())
-    return {};
+    return llvm::None;
 
   // We have a list of supported template names.
-  if (m_supported_templates.find(td->getName()) == m_supported_templates.end())
-    return {};
+  if (!m_supported_templates.contains(td->getName()))
+    return llvm::None;
 
   // Early check if we even support instantiating this template. We do this
   // before we import anything into the target AST.
   auto &foreign_args = td->getTemplateInstantiationArgs();
   if (!templateArgsAreSupported(foreign_args.asArray()))
-    return {};
+    return llvm::None;
 
   // Find the local DeclContext that corresponds to the DeclContext of our
   // decl we want to import.
@@ -206,7 +206,7 @@ llvm::Optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
                    "Got error while searching equal local DeclContext for decl "
                    "'{1}':\n{0}",
                    td->getName());
-    return {};
+    return llvm::None;
   }
 
   // Look up the template in our local context.
@@ -219,7 +219,7 @@ llvm::Optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
       break;
   }
   if (!new_class_template)
-    return {};
+    return llvm::None;
 
   // Import the foreign template arguments.
   llvm::SmallVector<TemplateArgument, 4> imported_args;
@@ -231,7 +231,7 @@ llvm::Optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
       llvm::Expected<QualType> type = m_importer->Import(arg.getAsType());
       if (!type) {
         LLDB_LOG_ERROR(log, type.takeError(), "Couldn't import type: {0}");
-        return {};
+        return llvm::None;
       }
       imported_args.push_back(TemplateArgument(*type));
       break;
@@ -242,7 +242,7 @@ llvm::Optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
           m_importer->Import(arg.getIntegralType());
       if (!type) {
         LLDB_LOG_ERROR(log, type.takeError(), "Couldn't import type: {0}");
-        return {};
+        return llvm::None;
       }
       imported_args.push_back(
           TemplateArgument(d->getASTContext(), integral, *type));

@@ -1,5 +1,6 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK64 %s
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK32 %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK,CHECK64 %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK,CHECK32 %s
 ; Source code:
 ;   struct s {
 ;     int a;
@@ -32,7 +33,9 @@
 ;     return ull >> __builtin_preserve_field_info(arg->b2, FIELD_RSHIFT_U64);
 ;   }
 ; Compilation flag:
-;   clang -target bpfel -O2 -g -S -emit-llvm test.c
+;   clang -target bpfel -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
+
+target triple = "bpfel"
 
 %struct.s = type { i32, i16 }
 

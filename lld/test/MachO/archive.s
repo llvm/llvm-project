@@ -7,7 +7,7 @@
 
 # RUN: rm -f %t/test.a
 # RUN: llvm-ar rcs %t/test.a %t/2.o %t/3.o %t/4.o
-# RUN: lld -flavor darwinnew %t/main.o %t/test.a -o %t/test.out
+# RUN: %lld %t/main.o %t/test.a -o %t/test.out
 
 ## TODO: Run llvm-nm -p to validate symbol order
 # RUN: llvm-nm %t/test.out | FileCheck %s
@@ -16,7 +16,7 @@
 # CHECK: T _main
 
 ## Linking with the archive first in the command line shouldn't change anything
-# RUN: lld -flavor darwinnew %t/test.a %t/main.o -o %t/test.out
+# RUN: %lld %t/test.a %t/main.o -o %t/test.out
 # RUN: llvm-nm %t/test.out | FileCheck %s --check-prefix ARCHIVE-FIRST
 # ARCHIVE-FIRST: T _bar
 # ARCHIVE-FIRST: T _boo
@@ -26,7 +26,7 @@
 # VISIBLE-NOT: T _undefined
 # VISIBLE-NOT: T _unused
 
-# RUN: lld -flavor darwinnew %t/test.a %t/main.o -o %t/all-load -all_load
+# RUN: %lld %t/test.a %t/main.o -o %t/all-load -all_load
 # RUN: llvm-nm %t/all-load | FileCheck %s --check-prefix ALL-LOAD
 # ALL-LOAD: T _bar
 # ALL-LOAD: T _boo

@@ -2,6 +2,8 @@
 ; RUN: opt -correlated-propagation -S < %s | FileCheck %s
 
 declare void @use()
+declare void @use_ptr(i8*)
+
 ; test requires a mix of context sensative refinement, and analysis
 ; of the originating IR pattern.  Neither part is enough in isolation.
 define void @test1(i1 %c, i1 %c2) {
@@ -136,6 +138,26 @@ define void @test4(i1 %c, i1 %c2) {
   br i1 %cmp, label %taken, label %untaken
 taken:
   call void @use() ["deopt" (i64 %add2)]
+  ret void
+untaken:
+  ret void
+}
+
+
+define void @test5(i64 %a, i8* nonnull %p) {
+; CHECK-LABEL: @test5(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[A:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[TAKEN:%.*]], label [[UNTAKEN:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    call void @use_ptr(i8* nonnull [[P:%.*]]) [ "deopt"(i64 0) ]
+; CHECK-NEXT:    ret void
+; CHECK:       untaken:
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp eq i64 %a, 0
+  br i1 %cmp, label %taken, label %untaken
+taken:
+  call void @use_ptr(i8* %p) ["deopt" (i64 %a)]
   ret void
 untaken:
   ret void
