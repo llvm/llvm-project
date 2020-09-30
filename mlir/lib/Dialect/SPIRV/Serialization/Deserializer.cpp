@@ -805,15 +805,9 @@ LogicalResult Deserializer::processFunction(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "duplicate function definition/declaration");
   }
 
-  auto functionControl = spirv::symbolizeFunctionControl(operands[2]);
-  if (!functionControl) {
+  auto fnControl = spirv::symbolizeFunctionControl(operands[2]);
+  if (!fnControl) {
     return emitError(unknownLoc, "unknown Function Control: ") << operands[2];
-  }
-  if (functionControl.getValue() != spirv::FunctionControl::None) {
-    /// TODO: Handle different function controls
-    return emitError(unknownLoc, "unhandled Function Control: '")
-           << spirv::stringifyFunctionControl(functionControl.getValue())
-           << "'";
   }
 
   Type fnType = getType(operands[3]);
@@ -831,8 +825,8 @@ LogicalResult Deserializer::processFunction(ArrayRef<uint32_t> operands) {
   }
 
   std::string fnName = getFunctionSymbol(operands[1]);
-  auto funcOp =
-      opBuilder.create<spirv::FuncOp>(unknownLoc, fnName, functionType);
+  auto funcOp = opBuilder.create<spirv::FuncOp>(
+      unknownLoc, fnName, functionType, fnControl.getValue());
   curFunction = funcMap[operands[1]] = funcOp;
   LLVM_DEBUG(llvm::dbgs() << "-- start function " << fnName << " (type = "
                           << fnType << ", id = " << operands[1] << ") --\n");
