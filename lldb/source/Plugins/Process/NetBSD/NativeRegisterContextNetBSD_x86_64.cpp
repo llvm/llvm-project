@@ -324,7 +324,7 @@ static constexpr int RegNumX86ToX86_64(int regnum) {
   case lldb_fstat_i386:
     return lldb_fstat_x86_64;
   case lldb_ftag_i386:
-    return lldb_fstat_x86_64;
+    return lldb_ftag_x86_64;
   case lldb_fop_i386:
     return lldb_fop_x86_64;
   case lldb_fiseg_i386:
@@ -651,7 +651,7 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     reg_value = (uint16_t)m_fpr.fxstate.fx_sw;
     break;
   case lldb_ftag_x86_64:
-    reg_value = (uint8_t)m_fpr.fxstate.fx_tw;
+    reg_value = (uint16_t)m_fpr.fxstate.fx_tw;
     break;
   case lldb_fop_x86_64:
     reg_value = (uint64_t)m_fpr.fxstate.fx_opcode;
@@ -939,7 +939,7 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     m_fpr.fxstate.fx_sw = reg_value.GetAsUInt16();
     break;
   case lldb_ftag_x86_64:
-    m_fpr.fxstate.fx_tw = reg_value.GetAsUInt8();
+    m_fpr.fxstate.fx_tw = reg_value.GetAsUInt16();
     break;
   case lldb_fop_x86_64:
     m_fpr.fxstate.fx_opcode = reg_value.GetAsUInt16();
