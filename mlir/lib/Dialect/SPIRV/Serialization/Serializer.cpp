@@ -775,8 +775,7 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
   operands.push_back(resTypeID);
   auto funcID = getOrCreateFunctionID(op.getName());
   operands.push_back(funcID);
-  // TODO: Support other function control options.
-  operands.push_back(static_cast<uint32_t>(spirv::FunctionControl::None));
+  operands.push_back(static_cast<uint32_t>(op.function_control()));
   operands.push_back(fnTypeID);
   encodeInstructionInto(functionHeader, spirv::Opcode::OpFunction, operands);
 
