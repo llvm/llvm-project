@@ -187,7 +187,8 @@ namespace {
       std::unique_ptr<PredicatedMI>> PredicatedInsts;
 
     static void CreateVPTBlock(MachineInstr *MI) {
-      assert(CurrentPredicates.size() && "Can't begin VPT without predicate");
+      assert((CurrentPredicates.size() || MI->getParent()->isLiveIn(ARM::VPR))
+             && "Can't begin VPT without predicate");
       Blocks.emplace_back(MI);
       // The execution of MI is predicated upon the current set of instructions
       // that are AND'ed together to form the VPR predicate value. In the case
