@@ -1836,7 +1836,8 @@ bool ASTContext::isAlignmentRequired(QualType T) const {
   return isAlignmentRequired(T.getTypePtr());
 }
 
-unsigned ASTContext::getTypeAlignIfKnown(QualType T) const {
+unsigned ASTContext::getTypeAlignIfKnown(QualType T,
+                                         bool NeedsPreferredAlignment) const {
   // An alignment on a typedef overrides anything else.
   if (const auto *TT = T->getAs<TypedefType>())
     if (unsigned Align = TT->getDecl()->getMaxAlignment())
@@ -1845,7 +1846,7 @@ unsigned ASTContext::getTypeAlignIfKnown(QualType T) const {
   // If we have an (array of) complete type, we're done.
   T = getBaseElementType(T);
   if (!T->isIncompleteType())
-    return getTypeAlign(T);
+    return NeedsPreferredAlignment ? getPreferredTypeAlign(T) : getTypeAlign(T);
 
   // If we had an array type, its element type might be a typedef
   // type with an alignment attribute.
@@ -2402,7 +2403,8 @@ CharUnits ASTContext::getTypeUnadjustedAlignInChars(const Type *T) const {
 /// getPreferredTypeAlign - Return the "preferred" alignment of the specified
 /// type for the current target in bits.  This can be different than the ABI
 /// alignment in cases where it is beneficial for performance or backwards
-/// compatibility preserving to overalign a data type.
+/// compatibility preserving to overalign a data type. (Note: despite the name,
+/// the preferred alignment is ABI-impacting, and not an optimization.)
 unsigned ASTContext::getPreferredTypeAlign(const Type *T) const {
   TypeInfo TI = getTypeInfo(T);
   unsigned ABIAlign = TI.Align;
@@ -2458,7 +2460,8 @@ unsigned ASTContext::getTargetDefaultAlignForAttributeAligned() const {
 /// to a global variable of the specified type.
 unsigned ASTContext::getAlignOfGlobalVar(QualType T) const {
   uint64_t TypeSize = getTypeSize(T.getTypePtr());
-  return std::max(getTypeAlign(T), getTargetInfo().getMinGlobalAlign(TypeSize));
+  return std::max(getPreferredTypeAlign(T),
+                  getTargetInfo().getMinGlobalAlign(TypeSize));
 }
 
 /// getAlignOfGlobalVarInChars - Return the alignment in characters that
