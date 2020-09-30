@@ -454,6 +454,71 @@ def Vector_ExtractSlicesOp :
   }];
 }
 
+def Vector_ExtractMapOp :
+  Vector_Op<"extract_map", [NoSideEffect]>,
+    Arguments<(ins AnyVector:$vector, Index:$id, I64Attr:$multiplicity)>,
+    Results<(outs AnyVector)> {
+  let summary = "vector extract map operation";
+  let description = [{
+    Takes an 1-D vector and extract a sub-part of the vector starting at id with
+    a size of `vector size / multiplicity`. This maps a given multiplicity of
+    the vector to a Value such as a loop induction variable or an SPMD id.
+
+    Similarly to vector.tuple_get, this operation is used for progressive
+    lowering and should be folded away before converting to LLVM.
+
+
+    For instance, the following code:
+    ```mlir
+    %a = vector.transfer_read %A[%c0]: memref<32xf32>, vector<32xf32>
+    %b = vector.transfer_read %B[%c0]: memref<32xf32>, vector<32xf32>
+    %c = addf %a, %b: vector<32xf32>
+    vector.transfer_write %c, %C[%c0]: memref<32xf32>, vector<32xf32>
+    ```
+    can be rewritten to:
+    ```mlir
+    %a = vector.transfer_read %A[%c0]: memref<32xf32>, vector<32xf32>
+    %b = vector.transfer_read %B[%c0]: memref<32xf32>, vector<32xf32>
+    %ea = vector.extract_map %a[%id : 32] : vector<32xf32> to vector<1xf32>
+    %eb = vector.extract_map %b[%id : 32] : vector<32xf32> to vector<1xf32>
+    %ec = addf %ea, %eb : vector<1xf32>
+    %c = vector.insert_map %ec, %id, 32 : vector<1xf32> to vector<32xf32>
+    vector.transfer_write %c, %C[%c0]: memref<32xf32>, vector<32xf32>
+    ```
+
+    Where %id can be an induction variable or an SPMD id going from 0 to 31.
+
+    And then be rewritten to:
+    ```mlir
+    %a = vector.transfer_read %A[%id]: memref<32xf32>, vector<1xf32>
+    %b = vector.transfer_read %B[%id]: memref<32xf32>, vector<1xf32>
+    %c = addf %a, %b: vector<1xf32>
+    vector.transfer_write %c, %C[%id]: memref<32xf32>, vector<1xf32>
+    ```
+
+    Example:
+
+    ```mlir
+    %ev = vector.extract_map %v[%id:32] : vector<32xf32> to vector<1xf32>
+    ```
+  }];
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result, " #
+    "Value vector, Value id, int64_t multiplicity">];
+  let extraClassDeclaration = [{
+    VectorType getSourceVectorType() {
+      return vector().getType().cast<VectorType>();
+    }
+    VectorType getResultType() {
+      return getResult().getType().cast<VectorType>();
+    }
+  }];
+  let assemblyFormat = [{
+    $vector `[` $id `:` $multiplicity `]` attr-dict `:` type($vector) `to`
+    type(results)
+  }];
+}
+
 def Vector_FMAOp :
   Op<Vector_Dialect, "fma", [NoSideEffect,
                              AllTypesMatch<["lhs", "rhs", "acc", "result"]>]>,
@@ -622,6 +687,46 @@ def Vector_InsertSlicesOp :
   }];
   let assemblyFormat = [{
     $vectors `,` $sizes `,` $strides attr-dict `:` type($vectors) `into`
+    type(results)
+  }];
+}
+
+def Vector_InsertMapOp :
+  Vector_Op<"insert_map", [NoSideEffect]>,
+    Arguments<(ins AnyVector:$vector, Index:$id, I64Attr:$multiplicity)>,
+    Results<(outs AnyVector)> {
+  let summary = "vector insert map operation";
+  let description = [{
+    insert an 1-D vector and within a larger vector starting at id. The new
+    vector created will have a size of `vector size * multiplicity`. This
+    represents how a sub-part of the vector is written for a given Value such as
+    a loop induction variable or an SPMD id.
+
+    Similarly to vector.tuple_get, this operation is used for progressive
+    lowering and should be folded away before converting to LLVM.
+
+    This operations is meant to be used in combination with vector.extract_map.
+    See example in extract.map description.
+
+    Example:
+
+    ```mlir
+    %v = vector.insert_map %ev, %id, 32 : vector<1xf32> to vector<32xf32>
+    ```
+  }];
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result, " #
+    "Value vector, Value id, int64_t multiplicity">];
+  let extraClassDeclaration = [{
+    VectorType getSourceVectorType() {
+      return vector().getType().cast<VectorType>();
+    }
+    VectorType getResultType() {
+      return getResult().getType().cast<VectorType>();
+    }
+  }];
+  let assemblyFormat = [{
+    $vector `,` $id `,` $multiplicity attr-dict `:` type($vector) `to`
     type(results)
   }];
 }
