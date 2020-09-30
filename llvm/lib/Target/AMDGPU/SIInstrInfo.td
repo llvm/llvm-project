@@ -28,7 +28,6 @@ def SIEncodingFamily {
   int GFX9 = 5;
   int GFX10 = 6;
   int SDWA10 = 7;
-  int GFX10_B = 8;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2500,8 +2499,7 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.GFX80)],
                    [!cast<string>(SIEncodingFamily.GFX9)],
                    [!cast<string>(SIEncodingFamily.GFX10)],
-                   [!cast<string>(SIEncodingFamily.SDWA10)],
-                   [!cast<string>(SIEncodingFamily.GFX10_B)]];
+                   [!cast<string>(SIEncodingFamily.SDWA10)]];
 }
 
 // Get equivalent SOPK instruction.
