@@ -345,6 +345,53 @@ define i8 @PR39793_bswap_u32_as_u16_trunc(i32 %0) {
   ret i8 %7
 }
 
+define i64 @bswap_and_mask_0(i64 %0) {
+; CHECK-LABEL: @bswap_and_mask_0(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 56
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 56
+; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    ret i64 [[TMP4]]
+;
+  %2 = lshr i64 %0, 56
+  %3 = shl i64 %0, 56
+  %4 = or i64 %2, %3
+  ret i64 %4
+}
+
+define i64 @bswap_and_mask_1(i64 %0) {
+; CHECK-LABEL: @bswap_and_mask_1(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 56
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 65280
+; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
+;
+  %2 = lshr i64 %0, 56
+  %3 = lshr i64 %0, 40
+  %4 = and i64 %3, 65280
+  %5 = or i64 %4, %2
+  ret i64 %5
+}
+
+define i64 @bswap_and_mask_2(i64 %0) {
+; CHECK-LABEL: @bswap_and_mask_2(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 56
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 56
+; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP0]], 40
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 71776119061217280
+; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    ret i64 [[TMP7]]
+;
+  %2 = lshr i64 %0, 56
+  %3 = shl i64 %0, 56
+  %4 = or i64 %2, %3
+  %5 = shl i64 %0, 40
+  %6 = and i64 %5, 71776119061217280
+  %7 = or i64 %4, %6
+  ret i64 %7
+}
+
 define i32 @shuf_4bytes(<4 x i8> %x) {
 ; CHECK-LABEL: @shuf_4bytes(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[X:%.*]] to i32
