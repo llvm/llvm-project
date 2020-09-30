@@ -4,9 +4,9 @@
 define void @sub_v16i8(<16 x i8>* %a, <16 x i8>* %b, <16 x i8>* %c) {
 ; P5600-LABEL: sub_v16i8:
 ; P5600:       # %bb.0: # %entry
-; P5600-NEXT:    ld.b $w0, 0($4)
-; P5600-NEXT:    ld.b $w1, 0($5)
-; P5600-NEXT:    subv.b $w0, $w1, $w0
+; P5600-NEXT:    ld.b $w1, 0($4)
+; P5600-NEXT:    ld.b $w0, 0($5)
+; P5600-NEXT:    subv.b $w0, $w0, $w1
 ; P5600-NEXT:    st.b $w0, 0($6)
 ; P5600-NEXT:    jr $ra
 ; P5600-NEXT:    nop
@@ -21,9 +21,9 @@ entry:
 define void @sub_v8i16(<8 x i16>* %a, <8 x i16>* %b, <8 x i16>* %c) {
 ; P5600-LABEL: sub_v8i16:
 ; P5600:       # %bb.0: # %entry
-; P5600-NEXT:    ld.h $w0, 0($4)
-; P5600-NEXT:    ld.h $w1, 0($5)
-; P5600-NEXT:    subv.h $w0, $w1, $w0
+; P5600-NEXT:    ld.h $w1, 0($4)
+; P5600-NEXT:    ld.h $w0, 0($5)
+; P5600-NEXT:    subv.h $w0, $w0, $w1
 ; P5600-NEXT:    st.h $w0, 0($6)
 ; P5600-NEXT:    jr $ra
 ; P5600-NEXT:    nop
@@ -38,9 +38,9 @@ entry:
 define void @sub_v4i32(<4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c) {
 ; P5600-LABEL: sub_v4i32:
 ; P5600:       # %bb.0: # %entry
-; P5600-NEXT:    ld.w $w0, 0($4)
-; P5600-NEXT:    ld.w $w1, 0($5)
-; P5600-NEXT:    subv.w $w0, $w1, $w0
+; P5600-NEXT:    ld.w $w1, 0($4)
+; P5600-NEXT:    ld.w $w0, 0($5)
+; P5600-NEXT:    subv.w $w0, $w0, $w1
 ; P5600-NEXT:    st.w $w0, 0($6)
 ; P5600-NEXT:    jr $ra
 ; P5600-NEXT:    nop
@@ -55,9 +55,9 @@ entry:
 define void @sub_v2i64(<2 x i64>* %a, <2 x i64>* %b, <2 x i64>* %c) {
 ; P5600-LABEL: sub_v2i64:
 ; P5600:       # %bb.0: # %entry
-; P5600-NEXT:    ld.d $w0, 0($4)
-; P5600-NEXT:    ld.d $w1, 0($5)
-; P5600-NEXT:    subv.d $w0, $w1, $w0
+; P5600-NEXT:    ld.d $w1, 0($4)
+; P5600-NEXT:    ld.d $w0, 0($5)
+; P5600-NEXT:    subv.d $w0, $w0, $w1
 ; P5600-NEXT:    st.d $w0, 0($6)
 ; P5600-NEXT:    jr $ra
 ; P5600-NEXT:    nop
