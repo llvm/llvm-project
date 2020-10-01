@@ -2872,10 +2872,10 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
 
     // If this is a logical shift by a constant, recurse then shift the result.
     if (I->isLogicalShift() && isa<ConstantInt>(I->getOperand(1))) {
-      unsigned BitShift =
-          cast<ConstantInt>(I->getOperand(1))->getLimitedValue(~0U);
+      const APInt &BitShift = cast<ConstantInt>(I->getOperand(1))->getValue();
+
       // Ensure the shift amount is defined.
-      if (BitShift > BitWidth)
+      if (BitShift.uge(BitWidth))
         return Result;
 
       const auto &Res = collectBitParts(I->getOperand(0), MatchBSwaps,
@@ -2887,11 +2887,11 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       // Perform the "shift" on BitProvenance.
       auto &P = Result->Provenance;
       if (I->getOpcode() == Instruction::Shl) {
-        P.erase(std::prev(P.end(), BitShift), P.end());
-        P.insert(P.begin(), BitShift, BitPart::Unset);
+        P.erase(std::prev(P.end(), BitShift.getZExtValue()), P.end());
+        P.insert(P.begin(), BitShift.getZExtValue(), BitPart::Unset);
       } else {
-        P.erase(P.begin(), std::next(P.begin(), BitShift));
-        P.insert(P.end(), BitShift, BitPart::Unset);
+        P.erase(P.begin(), std::next(P.begin(), BitShift.getZExtValue()));
+        P.insert(P.end(), BitShift.getZExtValue(), BitPart::Unset);
       }
 
       return Result;
