@@ -525,9 +525,6 @@ Error UsePrecompSource::mergeInPrecompHeaderObj() {
                          precompSrc->tpiMap.begin() +
                              precompDependency.getTypesCount());
 
-  if (config->debugGHashes)
-    funcIdToType = precompSrc->funcIdToType; // FIXME: Save copy
-
   return Error::success();
 }
 
@@ -612,7 +609,7 @@ void TpiSource::fillIsItemIndexFromDebugT() {
   });
 }
 
-void TpiSource::mergeTypeRecord(CVType ty) {
+void TpiSource::mergeTypeRecord(TypeIndex curIndex, CVType ty) {
   // Decide if the merged type goes into TPI or IPI.
   bool isItem = isIdRecord(ty.kind());
   MergedInfo &merged = isItem ? mergedIpi : mergedTpi;
@@ -637,6 +634,25 @@ void TpiSource::mergeTypeRecord(CVType ty) {
   uint32_t pdbHash = check(pdb::hashTypeRecord(CVType(newRec)));
   merged.recSizes.push_back(static_cast<uint16_t>(newSize));
   merged.recHashes.push_back(pdbHash);
+
+  // Retain a mapping from PDB function id to PDB function type. This mapping is
+  // used during symbol procesing to rewrite S_GPROC32_ID symbols to S_GPROC32
+  // symbols.
+  if (ty.kind() == LF_FUNC_ID || ty.kind() == LF_MFUNC_ID) {
+    bool success = ty.length() >= 12;
+    TypeIndex funcId = curIndex;
+    if (success)
+      success &= remapTypeIndex(funcId, TiRefKind::IndexRef);
+    TypeIndex funcType =
+        *reinterpret_cast<const TypeIndex *>(&newRec.data()[8]);
+    if (success) {
+      funcIdToType.push_back({funcId, funcType});
+    } else {
+      StringRef fname = file ? file->getName() : "<unknown PDB>";
+      warn("corrupt LF_[M]FUNC_ID record 0x" + utohexstr(curIndex.getIndex()) +
+           " in " + fname);
+    }
+  }
 }
 
 void TpiSource::mergeUniqueTypeRecords(ArrayRef<uint8_t> typeRecords,
@@ -655,26 +671,8 @@ void TpiSource::mergeUniqueTypeRecords(ArrayRef<uint8_t> typeRecords,
   forEachTypeChecked(typeRecords, [&](const CVType &ty) {
     if (nextUniqueIndex != uniqueTypes.end() &&
         *nextUniqueIndex == ghashIndex) {
-      mergeTypeRecord(ty);
+      mergeTypeRecord(beginIndex + ghashIndex, ty);
       ++nextUniqueIndex;
-    }
-    if (ty.kind() == LF_FUNC_ID || ty.kind() == LF_MFUNC_ID) {
-      bool success = ty.length() >= 12;
-      TypeIndex srcFuncIdIndex = beginIndex + ghashIndex;
-      TypeIndex funcId = srcFuncIdIndex;
-      TypeIndex funcType;
-      if (success) {
-        funcType = *reinterpret_cast<const TypeIndex *>(&ty.data()[8]);
-        success &= remapTypeIndex(funcId, TiRefKind::IndexRef);
-        success &= remapTypeIndex(funcType, TiRefKind::TypeRef);
-      }
-      if (success) {
-        funcIdToType.insert({funcId, funcType});
-      } else {
-        StringRef fname = file ? file->getName() : "<unknown PDB>";
-        warn("corrupt LF_[M]FUNC_ID record 0x" +
-             utohexstr(srcFuncIdIndex.getIndex()) + " in " + fname);
-      }
     }
     ++ghashIndex;
   });
@@ -758,7 +756,6 @@ void TypeServerSource::remapTpiWithGHashes(GHashState *g) {
     ipiSrc->tpiMap = tpiMap;
     ipiSrc->ipiMap = ipiMap;
     ipiSrc->mergeUniqueTypeRecords(typeArrayToBytes(ipi.typeArray()));
-    funcIdToType = ipiSrc->funcIdToType; // FIXME: Save copy
   }
 }
 
@@ -775,7 +772,6 @@ void UseTypeServerSource::remapTpiWithGHashes(GHashState *g) {
   TypeServerSource *tsSrc = *maybeTsSrc;
   tpiMap = tsSrc->tpiMap;
   ipiMap = tsSrc->ipiMap;
-  funcIdToType = tsSrc->funcIdToType; // FIXME: Save copy
 }
 
 void PrecompSource::loadGHashes() {
@@ -1101,6 +1097,13 @@ void TypeMerger::mergeTypesWithGHash() {
   parallelForEach(TpiSource::objectSources, [&](TpiSource *source) {
     source->remapTpiWithGHashes(&ghashState);
   });
+
+  // Build a global map of from function ID to function type.
+  for (TpiSource *source : TpiSource::instances) {
+    for (auto idToType : source->funcIdToType)
+      funcIdToType.insert(idToType);
+    source->funcIdToType.clear();
+  }
 
   TpiSource::clearGHashes();
 }
