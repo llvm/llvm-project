@@ -151,6 +151,16 @@ TEST_F(SortIncludesTest, NoReplacementsForValidIncludes) {
   EXPECT_TRUE(sortIncludes(FmtStyle, Code, GetCodeRange(Code), "a.cc").empty());
 }
 
+TEST_F(SortIncludesTest, NoMainFileHeader) {
+  std::string Code = "#include <string>\n"
+                     "\n"
+                     "#include \"a/extra_action.proto.h\"\n";
+  FmtStyle = getGoogleStyle(FormatStyle::LK_Cpp);
+  EXPECT_TRUE(
+      sortIncludes(FmtStyle, Code, GetCodeRange(Code), "a/extra_action.cc")
+          .empty());
+}
+
 TEST_F(SortIncludesTest, SortedIncludesInMultipleBlocksAreMerged) {
   Style.IncludeBlocks = tooling::IncludeStyle::IBS_Merge;
   EXPECT_EQ("#include \"a.h\"\n"
