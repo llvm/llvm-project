@@ -67,8 +67,6 @@ struct LoadConfigTables {
   uint32_t GuardFlags = 0;
   uint64_t GuardFidTableVA = 0;
   uint64_t GuardFidTableCount = 0;
-  uint64_t GuardIatTableVA = 0;
-  uint64_t GuardIatTableCount = 0;
   uint64_t GuardLJmpTableVA = 0;
   uint64_t GuardLJmpTableCount = 0;
 };
@@ -806,11 +804,6 @@ void COFFDumper::printCOFFLoadConfig() {
     }
   }
 
-  if (Tables.GuardIatTableVA) {
-    ListScope LS(W, "GuardIatTable");
-    printRVATable(Tables.GuardIatTableVA, Tables.GuardIatTableCount, 4);
-  }
-
   if (Tables.GuardLJmpTableVA) {
     ListScope LS(W, "GuardLJmpTable");
     printRVATable(Tables.GuardLJmpTableVA, Tables.GuardLJmpTableCount, 4);
@@ -894,9 +887,6 @@ void COFFDumper::printCOFFLoadConfig(const T *Conf, LoadConfigTables &Tables) {
   W.printHex("GuardRFVerifyStackPointerFunctionPointer",
              Conf->GuardRFVerifyStackPointerFunctionPointer);
   W.printHex("HotPatchTableOffset", Conf->HotPatchTableOffset);
-
-  Tables.GuardIatTableVA = Conf->GuardAddressTakenIatEntryTable;
-  Tables.GuardIatTableCount = Conf->GuardAddressTakenIatEntryCount;
 
   Tables.GuardLJmpTableVA = Conf->GuardLongJumpTargetTable;
   Tables.GuardLJmpTableCount = Conf->GuardLongJumpTargetCount;
