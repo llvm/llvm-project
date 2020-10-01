@@ -7,5 +7,5 @@ add_mlir_library(MLIRCAPIStandard
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
-  MLIRStandardOps
+  MLIRStandard
   )
