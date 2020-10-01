@@ -842,7 +842,7 @@ bool IEEEFloat::isSignificandAllOnes() const {
   // Test if the significand excluding the integral bit is all ones. This allows
   // us to test for binade boundaries.
   const integerPart *Parts = significandParts();
-  const unsigned PartCount = partCount();
+  const unsigned PartCount = partCountForBits(semantics->precision);
   for (unsigned i = 0; i < PartCount - 1; i++)
     if (~Parts[i])
       return false;
@@ -864,7 +864,7 @@ bool IEEEFloat::isSignificandAllZeros() const {
   // Test if the significand excluding the integral bit is all zeros. This
   // allows us to test for binade boundaries.
   const integerPart *Parts = significandParts();
-  const unsigned PartCount = partCount();
+  const unsigned PartCount = partCountForBits(semantics->precision);
 
   for (unsigned i = 0; i < PartCount - 1; i++)
     if (Parts[i])
