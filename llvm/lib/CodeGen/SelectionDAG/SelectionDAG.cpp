@@ -4613,8 +4613,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            Operand.getValueType().isFloatingPoint() && "Invalid FP cast!");
     if (Operand.getValueType() == VT) return Operand;  // noop conversion.
     assert((!VT.isVector() ||
-            VT.getVectorNumElements() ==
-            Operand.getValueType().getVectorNumElements()) &&
+            VT.getVectorElementCount() ==
+            Operand.getValueType().getVectorElementCount()) &&
            "Vector element count mismatch!");
     assert(Operand.getValueType().bitsLT(VT) &&
            "Invalid fpext node, dst < src!");
