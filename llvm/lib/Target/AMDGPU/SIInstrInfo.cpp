@@ -6916,13 +6916,10 @@ bool SIInstrInfo::isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
   if (ST.hasFlatSegmentOffsetBug() && AddrSpace == AMDGPUAS::FLAT_ADDRESS)
     return false;
 
-  if (ST.getGeneration() >= AMDGPUSubtarget::GFX10) {
-    return (Signed && isInt<12>(Offset)) ||
-           (!Signed && isUInt<11>(Offset));
-  }
+  if (ST.getGeneration() >= AMDGPUSubtarget::GFX10)
+    return Signed ? isInt<12>(Offset) : isUInt<11>(Offset);
 
-  return (Signed && isInt<13>(Offset)) ||
-         (!Signed && isUInt<12>(Offset));
+  return Signed ? isInt<13>(Offset) :isUInt<12>(Offset);
 }
 
 
