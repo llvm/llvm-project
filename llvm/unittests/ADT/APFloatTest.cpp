@@ -4696,4 +4696,15 @@ TEST(APFloatTest, PPCDoubleDoubleFrexp) {
   EXPECT_EQ(0x3fe8000000000000ull, Result.bitcastToAPInt().getRawData()[0]);
   EXPECT_EQ(0x3c98000000000000ull, Result.bitcastToAPInt().getRawData()[1]);
 }
+
+TEST(APFloatTest, x87Largest) {
+  APFloat MaxX87Val = APFloat::getLargest(APFloat::x87DoubleExtended());
+  EXPECT_TRUE(MaxX87Val.isLargest());
+}
+
+TEST(APFloatTest, x87Next) {
+  APFloat F(APFloat::x87DoubleExtended(), "-1.0");
+  F.next(false);
+  EXPECT_TRUE(ilogb(F) == -1);
+}
 }
