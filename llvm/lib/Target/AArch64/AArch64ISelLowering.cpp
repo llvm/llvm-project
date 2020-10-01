@@ -1226,12 +1226,18 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::AND, VT, Custom);
   setOperationAction(ISD::ANY_EXTEND, VT, Custom);
   setOperationAction(ISD::FADD, VT, Custom);
+  setOperationAction(ISD::FCEIL, VT, Custom);
   setOperationAction(ISD::FDIV, VT, Custom);
+  setOperationAction(ISD::FFLOOR, VT, Custom);
   setOperationAction(ISD::FMA, VT, Custom);
   setOperationAction(ISD::FMAXNUM, VT, Custom);
   setOperationAction(ISD::FMINNUM, VT, Custom);
   setOperationAction(ISD::FMUL, VT, Custom);
+  setOperationAction(ISD::FNEARBYINT, VT, Custom);
+  setOperationAction(ISD::FRINT, VT, Custom);
+  setOperationAction(ISD::FROUND, VT, Custom);
   setOperationAction(ISD::FSUB, VT, Custom);
+  setOperationAction(ISD::FTRUNC, VT, Custom);
   setOperationAction(ISD::LOAD, VT, Custom);
   setOperationAction(ISD::MUL, VT, Custom);
   setOperationAction(ISD::OR, VT, Custom);
