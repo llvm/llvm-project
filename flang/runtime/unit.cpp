@@ -349,6 +349,10 @@ void ExternalFileUnit::SetLeftTabLimit() {
 
 void ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
   RUNTIME_CHECK(handler, direction_ == Direction::Input);
+  if (beganReadingRecord_) {
+    return;
+  }
+  beganReadingRecord_ = true;
   if (access == Access::Sequential) {
     if (endfileRecordNumber && currentRecordNumber >= *endfileRecordNumber) {
       handler.SignalEnd();
@@ -367,28 +371,37 @@ void ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
   }
 }
 
+void ExternalFileUnit::FinishReadingRecord(IoErrorHandler &handler) {
+  RUNTIME_CHECK(handler, direction_ == Direction::Input && beganReadingRecord_);
+  beganReadingRecord_ = false;
+  if (access == Access::Sequential) {
+    RUNTIME_CHECK(handler, recordLength.has_value());
+    if (isFixedRecordLength) {
+      frameOffsetInFile_ += recordOffsetInFrame_ + *recordLength;
+      recordOffsetInFrame_ = 0;
+    } else if (isUnformatted) {
+      // Retain footer in frame for more efficient BACKSPACE
+      frameOffsetInFile_ += recordOffsetInFrame_ + *recordLength;
+      recordOffsetInFrame_ = sizeof(std::uint32_t);
+      recordLength.reset();
+    } else { // formatted
+      if (Frame()[recordOffsetInFrame_ + *recordLength] == '\r') {
+        ++recordOffsetInFrame_;
+      }
+      recordOffsetInFrame_ += *recordLength + 1;
+      RUNTIME_CHECK(handler, Frame()[recordOffsetInFrame_ - 1] == '\n');
+      recordLength.reset();
+    }
+  }
+  ++currentRecordNumber;
+  BeginRecord();
+}
+
 bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
   bool ok{true};
   if (direction_ == Direction::Input) {
-    if (access == Access::Sequential) {
-      RUNTIME_CHECK(handler, recordLength.has_value());
-      if (isFixedRecordLength) {
-        frameOffsetInFile_ += recordOffsetInFrame_ + *recordLength;
-        recordOffsetInFrame_ = 0;
-      } else if (isUnformatted) {
-        // Retain footer in frame for more efficient BACKSPACE
-        frameOffsetInFile_ += recordOffsetInFrame_ + *recordLength;
-        recordOffsetInFrame_ = sizeof(std::uint32_t);
-        recordLength.reset();
-      } else { // formatted
-        if (Frame()[recordOffsetInFrame_ + *recordLength] == '\r') {
-          ++recordOffsetInFrame_;
-        }
-        recordOffsetInFrame_ += *recordLength + 1;
-        RUNTIME_CHECK(handler, Frame()[recordOffsetInFrame_ - 1] == '\n');
-        recordLength.reset();
-      }
-    }
+    FinishReadingRecord(handler);
+    BeginReadingRecord(handler);
   } else { // Direction::Output
     if (!isUnformatted) {
       if (isFixedRecordLength && recordLength) {
@@ -406,9 +419,9 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
         recordOffsetInFrame_ + recordLength.value_or(furthestPositionInRecord);
     recordOffsetInFrame_ = 0;
     impliedEndfile_ = true;
+    ++currentRecordNumber;
+    BeginRecord();
   }
-  ++currentRecordNumber;
-  BeginRecord();
   return ok;
 }
 
