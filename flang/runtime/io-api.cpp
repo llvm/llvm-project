@@ -235,6 +235,7 @@ Cookie BeginUnformattedIO(
     if (unit.access == Access::Sequential && !unit.isFixedRecordLength) {
       // Create space for (sub)record header to be completed by
       // UnformattedIoStatementState<Direction::Output>::EndIoStatement()
+      unit.recordLength.reset(); // in case of prior BACKSPACE
       io.Emit("\0\0\0\0", 4); // placeholder for record length header
     }
   }
