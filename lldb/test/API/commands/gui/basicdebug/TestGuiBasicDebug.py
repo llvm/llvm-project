@@ -37,11 +37,11 @@ class TestGuiBasicDebugCommandTest(PExpectTest):
         self.child.send("d") # down
         self.child.expect_exact("return 1; // In function")
         self.child.send("f") # finish
-        self.child.expect("func\(\); // Break here[^\r\n]+<<< Thread 1: step out")
+        self.child.expect("<<< Thread 1: step out")
         self.child.send("s") # move onto the second one
-        self.child.expect("func\(\); // Second[^\r\n]+<<< Thread 1: step in")
+        self.child.expect("<<< Thread 1: step in")
         self.child.send("n") # step over
-        self.child.expect("return 0;[^\r\n]+<<< Thread 1: step over")
+        self.child.expect("<<< Thread 1: step over")
 
         # Press escape to quit the gui
         self.child.send(escape_key)
