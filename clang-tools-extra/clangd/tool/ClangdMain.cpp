@@ -47,11 +47,6 @@
 
 namespace clang {
 namespace clangd {
-
-// Implemented in Check.cpp.
-bool check(const llvm::StringRef File, const ThreadsafeFS &TFS,
-           const ClangdLSPServer::Options &Opts);
-
 namespace {
 
 using llvm::cl::cat;
@@ -62,7 +57,6 @@ using llvm::cl::init;
 using llvm::cl::list;
 using llvm::cl::opt;
 using llvm::cl::OptionCategory;
-using llvm::cl::ValueOptional;
 using llvm::cl::values;
 
 // All flags must be placed in a category, or they will be shown neither in
@@ -360,16 +354,6 @@ opt<bool> Test{
     Hidden,
 };
 
-opt<Path> CheckFile{
-    "check",
-    cat(Misc),
-    desc("Parse one file in isolation instead of acting as a language server. "
-         "Useful to investigate/reproduce crashes or configuration problems. "
-         "With --check=<filename>, attempts to parse a particular file."),
-    init(""),
-    ValueOptional,
-};
-
 enum PCHStorageFlag { Disk, Memory };
 opt<PCHStorageFlag> PCHStorage{
     "pch-storage",
@@ -557,8 +541,7 @@ const char TestScheme::TestDir[] = "/clangd-test";
 
 enum class ErrorResultCode : int {
   NoShutdownRequest = 1,
-  CantRunAsXPCService = 2,
-  CheckFailed = 3
+  CantRunAsXPCService = 2
 };
 
 int main(int argc, char *argv[]) {
@@ -663,8 +646,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   // If a user ran `clangd` in a terminal without redirecting anything,
   // it's somewhat likely they're confused about how to use clangd.
   // Show them the help overview, which explains.
-  if (llvm::outs().is_displayed() && llvm::errs().is_displayed() &&
-      !CheckFile.getNumOccurrences())
+  if (llvm::outs().is_displayed() && llvm::errs().is_displayed())
     llvm::errs() << Overview << "\n";
   // Use buffered stream to stderr (we still flush each log message). Unbuffered
   // stream can cause significant (non-deterministic) latency for the logger.
@@ -843,15 +825,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   // Shall we allow to customize the file limit?
   Opts.Rename.AllowCrossFile = CrossFileRename;
 
-  if (CheckFile.getNumOccurrences()) {
-    llvm::SmallString<256> Path;
-    llvm::sys::fs::real_path(CheckFile, Path, /*expand_tilde=*/true);
-    log("Entering check mode (no LSP server)");
-    return check(Path, TFS, Opts)
-               ? 0
-               : static_cast<int>(ErrorResultCode::CheckFailed);
-  }
-
   // Initialize and run ClangdLSPServer.
   // Change stdin to binary to not lose \r\n on windows.
   llvm::sys::ChangeStdinToBinary();
@@ -862,7 +835,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     TransportLayer = newXPCTransport();
 #else
     llvm::errs() << "This clangd binary wasn't built with XPC support.\n";
-    return static_cast<int>(ErrorResultCode::CantRunAsXPCService);
+    return (int)ErrorResultCode::CantRunAsXPCService;
 #endif
   } else {
     log("Starting LSP over stdin/stdout");
