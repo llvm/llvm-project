@@ -257,7 +257,8 @@ LLVMErrorRef LLVMOrcLLJITAddObjectFile(LLVMOrcLLJITRef J, LLVMOrcJITDylibRef JD,
 LLVMErrorRef LLVMOrcLLJITAddLLVMIRModule(LLVMOrcLLJITRef J,
                                          LLVMOrcJITDylibRef JD,
                                          LLVMOrcThreadSafeModuleRef TSM) {
-  return wrap(unwrap(J)->addIRModule(*unwrap(JD), std::move(*unwrap(TSM))));
+  std::unique_ptr<ThreadSafeModule> TmpTSM(unwrap(TSM));
+  return wrap(unwrap(J)->addIRModule(*unwrap(JD), std::move(*TmpTSM)));
 }
 
 LLVMErrorRef LLVMOrcLLJITLookup(LLVMOrcLLJITRef J,
