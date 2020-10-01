@@ -34,8 +34,8 @@ program parallel
 !FIRDialect-DAG: %[[OMP_VAR_B:.*]] = fir.load %[[VAR_B]]
 !FIRDialect:     %[[OMP_VAR_C:.*]] = addi %[[OMP_VAR_A]], %[[OMP_VAR_B]]
 !FIRDialect:     fir.store %[[OMP_VAR_C]] to %[[VAR_C]]
-!FIRDialect-DAG:     %[[CONSTANT:.*]] = constant 4 : i32
-!FIRDialect-DAG:     %[[COND_C:.*]] = fir.load %[[VAR_C]] : !fir.ref<i32>
+!FIRDialect-DAG: %[[CONSTANT:.*]] = constant 4 : i32
+!FIRDialect-DAG: %[[COND_C:.*]] = fir.load %[[VAR_C]] : !fir.ref<i32>
 !FIRDialect:     %[[COND_RES:.*]] = cmpi "sgt", %[[COND_C]], %[[CONSTANT]] : i32
 !FIRDialect: fir.if %[[COND_RES]] {
 !FIRDialect:       fir.call @_FortranAioBeginExternalListOutput
@@ -53,7 +53,7 @@ program parallel
 !LLVMIRDialect-LABEL:   omp.parallel num_threads(%{{.*}} : !llvm.i32) {
 !LLVMIRDialect-DAG: %[[OMP_VAR_A:.*]] = llvm.load %[[VAR_A:.*]]
 !LLVMIRDialect-DAG: %[[OMP_VAR_B:.*]] = llvm.load %[[VAR_B:.*]]
-!LLVMIRDialect:      %[[OMP_VAR_C:.*]] = llvm.add {{.*}}%[[OMP_VAR_A]]
+!LLVMIRDialect:     %[[OMP_VAR_C:.*]] = llvm.add {{.*}}%[[OMP_VAR_A]]
 !LLVMIRDialect:     llvm.store %[[OMP_VAR_C]], %[[VAR_C]]
 !LLVMIRDialect:     %[[COND_C:.*]] = llvm.load %[[VAR_C]] : !llvm.ptr<i32>
 !LLVMIRDialect:     %[[COND_RES:.*]] = llvm.icmp "sgt" %[[COND_C]], %{{.*}} : !llvm.i32
