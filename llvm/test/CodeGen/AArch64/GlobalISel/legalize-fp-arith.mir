@@ -73,3 +73,42 @@ body:             |
     $q0 = COPY %2(<4 x s32>)
 
 ...
+---
+name:            test_fmul_v4s64
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: test_fmul_v4s64
+    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
+    ; CHECK: [[FMUL:%[0-9]+]]:_(<2 x s64>) = G_FMUL [[DEF]], [[DEF]]
+    ; CHECK: [[FMUL1:%[0-9]+]]:_(<2 x s64>) = G_FMUL [[DEF]], [[DEF]]
+    ; CHECK: $q0 = COPY [[FMUL]](<2 x s64>)
+    ; CHECK: $q1 = COPY [[FMUL1]](<2 x s64>)
+    %0:_(<4 x s64>) = G_IMPLICIT_DEF
+    %1:_(<4 x s64>) = G_IMPLICIT_DEF
+    %2:_(<4 x s64>) = G_FMUL %0, %1
+    %uv1:_(<2 x s64>), %uv2:_(<2 x s64>) = G_UNMERGE_VALUES %2
+    $q0 = COPY %uv1(<2 x s64>)
+    $q1 = COPY %uv2(<2 x s64>)
+
+...
+---
+name:            test_fmul_v8s32
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: test_fmul_v8s32
+    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
+    ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
+    ; CHECK: [[BUILD_VECTOR2:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
+    ; CHECK: [[BUILD_VECTOR3:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
+    ; CHECK: [[FMUL:%[0-9]+]]:_(<4 x s32>) = G_FMUL [[BUILD_VECTOR]], [[BUILD_VECTOR2]]
+    ; CHECK: [[FMUL1:%[0-9]+]]:_(<4 x s32>) = G_FMUL [[BUILD_VECTOR1]], [[BUILD_VECTOR3]]
+    ; CHECK: $q0 = COPY [[FMUL]](<4 x s32>)
+    ; CHECK: $q1 = COPY [[FMUL1]](<4 x s32>)
+    %0:_(<8 x s32>) = G_IMPLICIT_DEF
+    %1:_(<8 x s32>) = G_IMPLICIT_DEF
+    %2:_(<8 x s32>) = G_FMUL %0, %1
+    %uv1:_(<4 x s32>), %uv2:_(<4 x s32>) = G_UNMERGE_VALUES %2
+    $q0 = COPY %uv1(<4 x s32>)
+    $q1 = COPY %uv2(<4 x s32>)
+...
