@@ -2,9 +2,13 @@ set(SWIFT_SOURCES
   TestSwiftASTContext.cpp
   TestTypeSystemSwiftTypeRef.cpp
 )
+set(SWIFT_LIBS
+  lldbPluginTypeSystemSwift
+)
 set(LLVM_OPTIONAL_SOURCES ${SWIFT_SOURCES})
 if (NOT LLDB_ENABLE_SWIFT_SUPPORT)
   unset(SWIFT_SOURCES)
+  unset(SWIFT_LIBS)
 endif()
 
 add_lldb_unittest(SymbolTests
@@ -27,7 +31,7 @@ add_lldb_unittest(SymbolTests
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFileSymtab
     lldbPluginTypeSystemClang
-    lldbPluginTypeSystemSwift
+    ${SWIFT_LIBS}
     LLVMTestingSupport
   )
 
