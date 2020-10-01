@@ -334,8 +334,8 @@ static void translateIdSymbols(MutableArrayRef<uint8_t> &recordData,
     // in both cases we just need the second type index.
     if (!ti->isSimple() && !ti->isNoneType()) {
       if (config->debugGHashes) {
-        auto idToType = source->funcIdToType.find(*ti);
-        if (idToType == source->funcIdToType.end()) {
+        auto idToType = tMerger.funcIdToType.find(*ti);
+        if (idToType == tMerger.funcIdToType.end()) {
           warn(formatv("S_[GL]PROC32_ID record in {0} refers to PDB item "
                        "index {1:X} which is not a LF_[M]FUNC_ID record",
                        source->file->getName(), ti->getIndex()));
