@@ -236,11 +236,13 @@ int NoUnitIoStatementState::EndIoStatement() {
 template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
   if constexpr (DIR == Direction::Input) {
     BeginReadingRecord(); // in case of READ with no data items
-  }
-  if (!unit().nonAdvancing && GetIoStat() != IostatEnd) {
-    unit().AdvanceRecord(*this);
-  }
-  if constexpr (DIR == Direction::Output) {
+    if (!unit().nonAdvancing) {
+      FinishReadingRecord();
+    }
+  } else {
+    if (!unit().nonAdvancing) {
+      unit().AdvanceRecord(*this);
+    }
     unit().FlushIfTerminal(*this);
   }
   return ExternalIoStatementBase::EndIoStatement();
@@ -315,10 +317,20 @@ void ExternalIoStatementState<DIR>::HandleRelativePosition(std::int64_t n) {
 template <Direction DIR>
 void ExternalIoStatementState<DIR>::BeginReadingRecord() {
   if constexpr (DIR == Direction::Input) {
-    if (!beganReading_) {
-      beganReading_ = true;
-      unit().BeginReadingRecord(*this);
-    }
+    unit().BeginReadingRecord(*this);
+  } else {
+    Crash("ExternalIoStatementState<Direction::Output>::BeginReadingRecord() "
+          "called");
+  }
+}
+
+template <Direction DIR>
+void ExternalIoStatementState<DIR>::FinishReadingRecord() {
+  if constexpr (DIR == Direction::Input) {
+    unit().FinishReadingRecord(*this);
+  } else {
+    Crash("ExternalIoStatementState<Direction::Output>::FinishReadingRecord() "
+          "called");
   }
 }
 
