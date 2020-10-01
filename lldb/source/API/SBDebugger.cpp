@@ -702,6 +702,12 @@ SBStructuredData SBDebugger::GetBuildConfiguration() {
       "A boolean value that indicates if lua support is enabled in LLDB");
   AddLLVMTargets(*config_up);
 
+#ifdef LLDB_ENABLE_SWIFT
+  AddBoolConfigEntry(
+      *config_up, "swift", true,
+      "A boolean value that indicates if Swift support is enabled in LLDB");
+#endif // LLDB_ENABLE_SWIFT
+
   SBStructuredData data;
   data.m_impl_up->SetObjectSP(std::move(config_up));
   return LLDB_RECORD_RESULT(data);

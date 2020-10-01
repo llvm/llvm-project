@@ -626,6 +626,9 @@ def skipUnlessTargetAndroid(func):
 def swiftTest(func):
     """Decorate the item as a Swift test (Darwin/Linux only, no i386)."""
     def is_not_swift_compatible(self):
+        swift_enabled_error = _get_bool_config_skip_if_decorator("swift")(func)
+        if swift_enabled_error:
+            return swift_enabled_error
         if self.getDebugInfo() == "gmodules":
             return "skipping (gmodules only makes sense for clang tests)"
 
