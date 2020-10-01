@@ -432,13 +432,12 @@ Instruction *InstCombinerImpl::foldFPSignBitOps(BinaryOperator &I) {
 
   // fabs(X) * fabs(X) -> X * X
   // fabs(X) / fabs(X) -> X / X
-  if (Op0 == Op1 && match(Op0, m_Intrinsic<Intrinsic::fabs>(m_Value(X))))
+  if (Op0 == Op1 && match(Op0, m_FAbs(m_Value(X))))
     return BinaryOperator::CreateWithCopiedFlags(Opcode, X, X, &I);
 
   // fabs(X) * fabs(Y) --> fabs(X * Y)
   // fabs(X) / fabs(Y) --> fabs(X / Y)
-  if (match(Op0, m_Intrinsic<Intrinsic::fabs>(m_Value(X))) &&
-      match(Op1, m_Intrinsic<Intrinsic::fabs>(m_Value(Y))) &&
+  if (match(Op0, m_FAbs(m_Value(X))) && match(Op1, m_FAbs(m_Value(Y))) &&
       (Op0->hasOneUse() || Op1->hasOneUse())) {
     IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
     Builder.setFastMathFlags(I.getFastMathFlags());
@@ -1393,10 +1392,8 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
   // X / fabs(X) -> copysign(1.0, X)
   // fabs(X) / X -> copysign(1.0, X)
   if (I.hasNoNaNs() && I.hasNoInfs() &&
-      (match(&I,
-             m_FDiv(m_Value(X), m_Intrinsic<Intrinsic::fabs>(m_Deferred(X)))) ||
-       match(&I, m_FDiv(m_Intrinsic<Intrinsic::fabs>(m_Value(X)),
-                        m_Deferred(X))))) {
+      (match(&I, m_FDiv(m_Value(X), m_FAbs(m_Deferred(X)))) ||
+       match(&I, m_FDiv(m_FAbs(m_Value(X)), m_Deferred(X))))) {
     Value *V = Builder.CreateBinaryIntrinsic(
         Intrinsic::copysign, ConstantFP::get(I.getType(), 1.0), X, &I);
     return replaceInstUsesWith(I, V);
