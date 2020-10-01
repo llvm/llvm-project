@@ -10,6 +10,8 @@
 set -ex
 
 BUILDER="${1}"
+MONOREPO_ROOT="$(git rev-parse --show-toplevel)"
+BUILD_DIR="${MONOREPO_ROOT}/build/${BUILDER}"
 
 args=()
 args+=("-DLLVM_ENABLE_PROJECTS=libcxx;libunwind;libcxxabi")
@@ -100,19 +102,29 @@ x86_64-ubuntu-singlethreaded)
     args+=("-DLIBCXXABI_ENABLE_THREADS=OFF")
     args+=("-DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF")
 ;;
+x86_64-apple-system)
+    export CC=clang
+    export CXX=clang++
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake")
+;;
+x86_64-apple-system-noexceptions)
+    export CC=clang
+    export CXX=clang++
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake")
+    args+=("-DLIBCXX_ENABLE_EXCEPTIONS=OFF")
+    args+=("-DLIBCXXABI_ENABLE_EXCEPTIONS=OFF")
+;;
 *)
     echo "${BUILDER} is not a known configuration"
     exit 1
 ;;
 esac
 
-UMBRELLA_ROOT="$(git rev-parse --show-toplevel)"
-LLVM_ROOT="${UMBRELLA_ROOT}/llvm"
-BUILD_DIR="${UMBRELLA_ROOT}/build/${BUILDER}"
-
 echo "--- Generating CMake"
 rm -rf "${BUILD_DIR}"
-cmake -S "${LLVM_ROOT}" -B "${BUILD_DIR}" -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo "${args[@]}"
+cmake -S "${MONOREPO_ROOT}/llvm" -B "${BUILD_DIR}" -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo "${args[@]}"
 
 echo "--- Building libc++ and libc++abi"
 ninja -C "${BUILD_DIR}" check-cxx-deps cxxabi
