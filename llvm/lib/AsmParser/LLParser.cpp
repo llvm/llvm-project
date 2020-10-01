@@ -5355,6 +5355,8 @@ bool LLParser::ConvertValIDToValue(Type *Ty, ValID &ID, Value *&V,
     // The lexer has no type info, so builds all half, bfloat, float, and double
     // FP constants as double.  Fix this here.  Long double does not need this.
     if (&ID.APFloatVal.getSemantics() == &APFloat::IEEEdouble()) {
+      // Check for signaling before potentially converting and losing that info.
+      bool IsSNAN = ID.APFloatVal.isSignaling();
       bool Ignored;
       if (Ty->isHalfTy())
         ID.APFloatVal.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven,
@@ -5365,6 +5367,14 @@ bool LLParser::ConvertValIDToValue(Type *Ty, ValID &ID, Value *&V,
       else if (Ty->isFloatTy())
         ID.APFloatVal.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven,
                               &Ignored);
+      if (IsSNAN) {
+        // The convert call above may quiet an SNaN, so manufacture another
+        // SNaN. The bitcast works because the payload (significand) parameter
+        // is truncated to fit.
+        APInt Payload = ID.APFloatVal.bitcastToAPInt();
+        ID.APFloatVal = APFloat::getSNaN(ID.APFloatVal.getSemantics(),
+                                         ID.APFloatVal.isNegative(), &Payload);
+      }
     }
     V = ConstantFP::get(Context, ID.APFloatVal);
 
