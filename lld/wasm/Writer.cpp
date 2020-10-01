@@ -453,7 +453,7 @@ void Writer::populateTargetFeatures() {
   if (!config->checkFeatures)
     return;
 
-  if (!config->relocatable && used.count("mutable-globals") == 0) {
+  if (!config->relocatable && allowed.count("mutable-globals") == 0) {
     for (const Symbol *sym : out.importSec->importedSymbols) {
       if (auto *global = dyn_cast<GlobalSymbol>(sym)) {
         if (global->getGlobalType()->Mutable) {
@@ -571,12 +571,13 @@ void Writer::calculateExports() {
       }
       export_ = {name, WASM_EXTERNAL_FUNCTION, f->getFunctionIndex()};
     } else if (auto *g = dyn_cast<DefinedGlobal>(sym)) {
-      // TODO(sbc): Remove this check once to mutable global proposal is
-      // implement in all major browsers.
-      // See: https://github.com/WebAssembly/mutable-global
-      if (g->getGlobalType()->Mutable) {
-        // Only __stack_pointer and __tls_base should ever be create as mutable.
-        assert(g == WasmSym::stackPointer || g == WasmSym::tlsBase);
+      if (g->getGlobalType()->Mutable && !g->getFile() && !g->forceExport) {
+        // Avoid exporting mutable globals are linker synthesized (e.g.
+        // __stack_pointer or __tls_base) unless they are explicitly exported
+        // from the command line.
+        // Without this check `--export-all` would cause any program using the
+        // stack pointer to export a mutable global even if none of the input
+        // files were built with the `mutable-globals` feature.
         continue;
       }
       export_ = {name, WASM_EXTERNAL_GLOBAL, g->getGlobalIndex()};
