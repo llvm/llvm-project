@@ -709,12 +709,12 @@ define dso_local void @arm_mat_mult_q15(i16* noalias nocapture readonly %A, i16*
 ; CHECK-NEXT:    @ in Loop: Header=BB10_8 Depth=2
 ; CHECK-NEXT:    ldr r0, [sp, #112]
 ; CHECK-NEXT:    sub.w lr, r11, r5
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    mla r3, r0, r5, r1
 ; CHECK-NEXT:    add r5, r9
 ; CHECK-NEXT:    ldr r0, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r5, r0, r5, lsl #1
 ; CHECK-NEXT:    add.w r3, r6, r3, lsl #1
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB10_14: @ %for.body8.us.us
 ; CHECK-NEXT:    @ Parent Loop BB10_5 Depth=1
 ; CHECK-NEXT:    @ Parent Loop BB10_8 Depth=2
