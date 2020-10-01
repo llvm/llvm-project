@@ -212,6 +212,15 @@ static DecodeStatus decodeImmZeroOperand(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeVSRpEvenOperands(MCInst &Inst, uint64_t RegNo,
+                                           uint64_t Address,
+                                           const void *Decoder) {
+  if (RegNo & 1)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createReg(VSRpRegs[RegNo >> 1]));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeMemRIOperands(MCInst &Inst, uint64_t Imm,
                                         int64_t Address, const void *Decoder) {
   // Decode the memri field (imm, reg), which has the low 16-bits as the
