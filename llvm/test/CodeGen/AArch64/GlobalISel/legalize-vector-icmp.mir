@@ -1920,3 +1920,79 @@ body:             |
     RET_ReallyLR implicit $d0
 
 ...
+---
+name:            icmp_8xs1
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$q0' }
+  - { reg: '$q1' }
+  - { reg: '$q2' }
+  - { reg: '$q3' }
+body:             |
+  bb.1:
+    liveins: $q0, $q1, $q2, $q3
+
+    ; CHECK-LABEL: name: icmp_8xs1
+    ; CHECK: liveins: $q0, $q1, $q2, $q3
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $q2
+    ; CHECK: [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $q3
+    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(eq), [[COPY]](<4 x s32>), [[COPY2]]
+    ; CHECK: [[ICMP1:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(eq), [[COPY1]](<4 x s32>), [[COPY3]]
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP1]](<4 x s32>)
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<4 x s16>), [[TRUNC1]](<4 x s16>)
+    ; CHECK: [[TRUNC2:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[CONCAT_VECTORS]](<8 x s16>)
+    ; CHECK: $d0 = COPY [[TRUNC2]](<8 x s8>)
+    ; CHECK: RET_ReallyLR implicit $d0
+    %2:_(<4 x s32>) = COPY $q0
+    %3:_(<4 x s32>) = COPY $q1
+    %0:_(<8 x s32>) = G_CONCAT_VECTORS %2(<4 x s32>), %3(<4 x s32>)
+    %4:_(<4 x s32>) = COPY $q2
+    %5:_(<4 x s32>) = COPY $q3
+    %1:_(<8 x s32>) = G_CONCAT_VECTORS %4(<4 x s32>), %5(<4 x s32>)
+    %6:_(<8 x s1>) = G_ICMP intpred(eq), %0(<8 x s32>), %1
+    %7:_(<8 x s8>) = G_ANYEXT %6(<8 x s1>)
+    $d0 = COPY %7(<8 x s8>)
+    RET_ReallyLR implicit $d0
+...
+---
+name:            icmp_8xs32
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$q0' }
+  - { reg: '$q1' }
+  - { reg: '$q2' }
+  - { reg: '$q3' }
+body:             |
+  bb.1:
+    liveins: $q0, $q1, $q2, $q3
+
+    ; CHECK-LABEL: name: icmp_8xs32
+    ; CHECK: liveins: $q0, $q1, $q2, $q3
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $q2
+    ; CHECK: [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $q3
+    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(eq), [[COPY]](<4 x s32>), [[COPY2]]
+    ; CHECK: [[ICMP1:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(eq), [[COPY1]](<4 x s32>), [[COPY3]]
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP1]](<4 x s32>)
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<4 x s16>), [[TRUNC1]](<4 x s16>)
+    ; CHECK: [[TRUNC2:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[CONCAT_VECTORS]](<8 x s16>)
+    ; CHECK: $d0 = COPY [[TRUNC2]](<8 x s8>)
+    ; CHECK: RET_ReallyLR implicit $d0
+    %2:_(<4 x s32>) = COPY $q0
+    %3:_(<4 x s32>) = COPY $q1
+    %0:_(<8 x s32>) = G_CONCAT_VECTORS %2(<4 x s32>), %3(<4 x s32>)
+    %4:_(<4 x s32>) = COPY $q2
+    %5:_(<4 x s32>) = COPY $q3
+    %1:_(<8 x s32>) = G_CONCAT_VECTORS %4(<4 x s32>), %5(<4 x s32>)
+    %6:_(<8 x s32>) = G_ICMP intpred(eq), %0(<8 x s32>), %1
+    %7:_(<8 x s8>) = G_TRUNC %6(<8 x s32>)
+    $d0 = COPY %7(<8 x s8>)
+    RET_ReallyLR implicit $d0
+...
