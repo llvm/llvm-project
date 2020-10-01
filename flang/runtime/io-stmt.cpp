@@ -820,7 +820,10 @@ bool InquireUnitState::Inquire(
     }
     break;
   case HashInquiryKeyword("DIRECT"):
-    str = unit().mayPosition() ? "YES" : "NO";
+    str = unit().access == Access::Direct ||
+            (unit().mayPosition() && unit().isFixedRecordLength)
+        ? "YES"
+        : "NO";
     break;
   case HashInquiryKeyword("ENCODING"):
     str = unit().isUnformatted ? "UNDEFINED"
@@ -831,7 +834,7 @@ bool InquireUnitState::Inquire(
     str = unit().isUnformatted ? "UNFORMATTED" : "FORMATTED";
     break;
   case HashInquiryKeyword("FORMATTED"):
-    str = "YES";
+    str = !unit().isUnformatted ? "YES" : "NO";
     break;
   case HashInquiryKeyword("NAME"):
     str = unit().path();
@@ -887,7 +890,9 @@ bool InquireUnitState::Inquire(
     }
     break;
   case HashInquiryKeyword("SEQUENTIAL"):
-    str = "YES";
+    // "NO" for Direct, since Sequential would not work if
+    // the unit were reopened without RECL=.
+    str = unit().access == Access::Sequential ? "YES" : "NO";
     break;
   case HashInquiryKeyword("SIGN"):
     str = unit().isUnformatted                 ? "UNDEFINED"
@@ -895,13 +900,13 @@ bool InquireUnitState::Inquire(
                                                : "SUPPRESS";
     break;
   case HashInquiryKeyword("STREAM"):
-    str = "YES";
+    str = unit().access == Access::Stream ? "YES" : "NO";
     break;
   case HashInquiryKeyword("WRITE"):
     str = unit().mayWrite() ? "YES" : "NO";
     break;
   case HashInquiryKeyword("UNFORMATTED"):
-    str = "YES";
+    str = unit().isUnformatted ? "YES" : "NO";
     break;
   }
   if (str) {
@@ -1090,6 +1095,10 @@ bool InquireUnconnectedFileState::Inquire(
     break;
   case HashInquiryKeyword("DIRECT"):
   case HashInquiryKeyword("ENCODING"):
+  case HashInquiryKeyword("FORMATTED"):
+  case HashInquiryKeyword("SEQUENTIAL"):
+  case HashInquiryKeyword("STREAM"):
+  case HashInquiryKeyword("UNFORMATTED"):
     str = "UNKNONN";
     break;
   case HashInquiryKeyword("READ"):
@@ -1100,12 +1109,6 @@ bool InquireUnconnectedFileState::Inquire(
     break;
   case HashInquiryKeyword("WRITE"):
     str = MayWrite(path_.get()) ? "YES" : "NO";
-    break;
-  case HashInquiryKeyword("FORMATTED"):
-  case HashInquiryKeyword("SEQUENTIAL"):
-  case HashInquiryKeyword("STREAM"):
-  case HashInquiryKeyword("UNFORMATTED"):
-    str = "YES";
     break;
   case HashInquiryKeyword("NAME"):
     str = path_.get();
