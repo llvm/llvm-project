@@ -1,16 +1,8 @@
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 
-// GCC 9 introduced codegen for mutexinoutset
-// UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8
-
-// clang 9 introduced codegen for mutexinoutset
-// UNSUPPORTED: clang-4, clang-5, clang-6, clang-7, clang-8
-
 #include "callback.h"
 #include <omp.h>
-#include <math.h>
-#include <unistd.h>
 
 int main() {
   int x = 0;
@@ -22,28 +14,13 @@ int main() {
       printf("%" PRIu64 ": address of x: %p\n", ompt_get_thread_data()->value,
              &x);
 #pragma omp task depend(out : x)
-      {
-        x++;
-        delay(100);
-      }
+      { x++; }
       print_fuzzy_address(1);
-      print_ids(0);
-
-#pragma omp task depend(mutexinoutset : x)
-      {
-        x++;
-        delay(100);
-      }
+#pragma omp task if (0) depend(in : x)
+      {}
       print_fuzzy_address(2);
-      print_ids(0);
-
-#pragma omp task depend(in : x)
-      { x = -1; }
-      print_ids(0);
     }
   }
-
-  x++;
 
   return 0;
 }
@@ -67,6 +44,7 @@ int main() {
 // CHECK-SAME: reenter_frame=[[NULL]]
 
 // CHECK: {{^}}[[MASTER_ID]]: address of x: [[ADDRX:0x[0-f]+]]
+
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create:
 // CHECK-SAME: parent_task_id={{[0-9]+}}, parent_task_frame.exit=[[EXIT]],
 // CHECK-SAME: parent_task_frame.reenter={{0x[0-f]+}},
@@ -79,42 +57,19 @@ int main() {
 // CHECK-SAME: ompt_dependence_type_inout)], ndeps=1
 
 // CHECK: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]
-// CHECK: {{^}}[[MASTER_ID]]: task level 0: parallel_id=[[PARALLEL_ID]],
-// CHECK-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[EXIT]],
-// CHECK-SAME: reenter_frame=[[NULL]]
 
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create:
 // CHECK-SAME: parent_task_id={{[0-9]+}}, parent_task_frame.exit=[[EXIT]],
 // CHECK-SAME: parent_task_frame.reenter={{0x[0-f]+}},
 // CHECK-SAME: new_task_id=[[SECOND_TASK:[0-f]+]],
 // CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]{{[0-f][0-f]}},
-// CHECK-SAME: task_type=ompt_task_explicit=4, has_dependences=yes
+// CHECK-SAME: task_type=ompt_task_explicit|ompt_task_undeferred|
+// CHECK-SAME: ompt_task_mergeable=1207959556, has_dependences=yes
 
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_dependences:
 // CHECK-SAME: task_id=[[SECOND_TASK]], deps=[([[ADDRX]],
-// CHECK-SAME: ompt_dependence_type_mutexinoutset)], ndeps=1
-
-// CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_dependence_pair:
-// CHECK-SAME: first_task_id=[[FIRST_TASK]], second_task_id=[[SECOND_TASK]]
-
-// CHECK: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]
-// CHECK: {{^}}[[MASTER_ID]]: task level 0: parallel_id=[[PARALLEL_ID]],
-// CHECK-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[EXIT]],
-// CHECK-SAME: reenter_frame=[[NULL]]
-
-// CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create:
-// CHECK-SAME: parent_task_id={{[0-9]+}}, parent_task_frame.exit=[[EXIT]],
-// CHECK-SAME: parent_task_frame.reenter={{0x[0-f]+}},
-// CHECK-SAME: new_task_id=[[THIRD_TASK:[0-f]+]], codeptr_ra={{0x[0-f]+}},
-// CHECK-SAME: task_type=ompt_task_explicit=4, has_dependences=yes
-
-// CHECK: {{^}}[[MASTER_ID]]: ompt_event_dependences:
-// CHECK-SAME: task_id=[[THIRD_TASK]], deps=[([[ADDRX]],
 // CHECK-SAME: ompt_dependence_type_in)], ndeps=1
 
-// CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_dependence_pair:
-// CHECK-SAME: first_task_id=[[SECOND_TASK]], second_task_id=[[THIRD_TASK]]
+// CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_end: task_id=[[SECOND_TASK]]
 
-// CHECK: {{^}}[[MASTER_ID]]: task level 0: parallel_id=[[PARALLEL_ID]],
-// CHECK-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[EXIT]],
-// CHECK-SAME: reenter_frame=[[NULL]]
+// CHECK: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]

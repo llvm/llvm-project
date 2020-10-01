@@ -1,9 +1,13 @@
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 
-// The GOMP wrapper does not handle `task if(0) depend()` and drops the
-// dependency. Once this is fixed, reevaluate the GCC status:
-// XFAIL: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8, gcc-9, gcc-10
+// taskwait with depend clause was introduced with gcc-9
+// UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8
+
+// clang does not yet support taskwait with depend clause
+// clang-12 introduced parsing, but no codegen
+// update expected result when codegen in clang was added
+// XFAIL: clang
 
 #include "callback.h"
 #include <omp.h>
@@ -20,9 +24,7 @@ int main() {
 #pragma omp task depend(out : x)
       { x++; }
       print_fuzzy_address(1);
-      //#pragma omp taskwait depend(in: x) <-- currently not supported in clang
-#pragma omp task if (0) depend(in : x)
-      {}
+      #pragma omp taskwait depend(in: x)
       print_fuzzy_address(2);
     }
   }

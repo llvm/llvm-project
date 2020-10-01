@@ -1891,6 +1891,9 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASKWAIT_DEPEND)(void **depend) {
   kmp_depend_info_t dep_list[ndeps];
   for (kmp_int32 i = 0; i < ndeps; i++)
     dep_list[i] = gomp_depends.get_kmp_depend(i);
+#if OMPT_SUPPORT
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
   __kmpc_omp_wait_deps(&loc, gtid, ndeps, dep_list, 0, NULL);
   KA_TRACE(20, ("GOMP_taskwait_depend exit: T#%d\n", gtid));
 }
