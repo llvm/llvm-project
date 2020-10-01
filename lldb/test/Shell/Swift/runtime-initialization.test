@@ -1,3 +1,4 @@
+# REQUIRES: swift
 # RUN: rm -rf %t && mkdir %t
 # RUN: %target-swiftc -g \
 # RUN:          -module-cache-path %t/cache %S/Inputs/RuntimeInit.swift \

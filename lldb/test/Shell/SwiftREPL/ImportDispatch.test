@@ -1,5 +1,6 @@
 // Test that importing Dispatch works.
 // REQUIRES: system-darwin
+// REQUIRES: swift
 
 // RUN: %lldb --repl < %s 2>&1 | FileCheck %s
 

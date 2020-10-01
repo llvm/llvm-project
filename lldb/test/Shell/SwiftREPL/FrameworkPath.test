@@ -1,5 +1,6 @@
 // Test target.swift-framework-search-paths works in the REPL.
 // REQUIRES: system-darwin
+// REQUIRES: swift
 
 // RUN: %lldb -O "settings set target.swift-framework-search-paths %S/Inputs/Frameworks" --repl < %s | FileCheck %s
 

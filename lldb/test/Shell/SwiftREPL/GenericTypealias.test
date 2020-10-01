@@ -1,4 +1,6 @@
 // Test that generic typealiases are reconstructed correctly.
+// REQUIRES: swift
+
 // RUN: %lldb --repl < %s | FileCheck %s
 
 class Tinky<T> {
