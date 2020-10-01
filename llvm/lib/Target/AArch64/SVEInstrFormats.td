@@ -318,6 +318,13 @@ class SVE_1_Op_Passthru_Pat<ValueType vtd, SDPatternOperator op, ValueType pg,
 : Pat<(vtd (op pg:$Op1, vts:$Op2, vtd:$Op3)),
       (inst $Op3, $Op1, $Op2)>;
 
+// Used to match FP_ROUND_MERGE_PASSTHRU, which has an additional flag for the
+// type of rounding. This is matched by timm0_1 in pattern below and ignored.
+class SVE_1_Op_Passthru_Round_Pat<ValueType vtd, SDPatternOperator op, ValueType pg,
+                                  ValueType vts, Instruction inst>
+: Pat<(vtd (op pg:$Op1, vts:$Op2, (i64 timm0_1), vtd:$Op3)),
+      (inst $Op3, $Op1, $Op2)>;
+
 class SVE_1_Op_Imm_OptLsl_Reverse_Pat<ValueType vt, SDPatternOperator op, ZPRRegOp zprty,
                                       ValueType it, ComplexPattern cpx, Instruction inst>
   : Pat<(vt (op (vt (AArch64dup (it (cpx i32:$imm, i32:$shift)))), (vt zprty:$Op1))),
@@ -2297,6 +2304,25 @@ multiclass sve_fp_2op_p_zd<bits<7> opc, string asm,
   def : SVE_3_Op_Pat<packedvt1, int_op, packedvt1, vt2, packedvt3, !cast<Instruction>(NAME)>;
 
   def : SVE_1_Op_Passthru_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME)>;
+}
+
+multiclass sve_fp_2op_p_zdr<bits<7> opc, string asm,
+                            RegisterOperand i_zprtype,
+                            RegisterOperand o_zprtype,
+                            SDPatternOperator int_op,
+                            SDPatternOperator ir_op, ValueType vt1,
+                            ValueType vt2, ValueType vt3, ElementSizeEnum Sz> {
+  def NAME : sve_fp_2op_p_zd<opc, asm, i_zprtype, o_zprtype, Sz>;
+
+  // convert vt1 to a packed type for the intrinsic patterns
+  defvar packedvt1 = !cond(!eq(!cast<string>(vt1), "nxv2f16"): nxv8f16,
+                           !eq(!cast<string>(vt1), "nxv4f16"): nxv8f16,
+                           !eq(!cast<string>(vt1), "nxv2f32"): nxv4f32,
+                           1 : vt1);
+
+  def : SVE_3_Op_Pat<packedvt1, int_op, packedvt1, vt2, vt3, !cast<Instruction>(NAME)>;
+
+  def : SVE_1_Op_Passthru_Round_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME)>;
 }
 
 multiclass sve_fp_2op_p_zd_HSD<bits<5> opc, string asm, SDPatternOperator op> {
