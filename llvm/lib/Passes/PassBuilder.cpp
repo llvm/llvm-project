@@ -150,6 +150,7 @@
 #include "llvm/Transforms/Scalar/LoopDataPrefetch.h"
 #include "llvm/Transforms/Scalar/LoopDeletion.h"
 #include "llvm/Transforms/Scalar/LoopDistribute.h"
+#include "llvm/Transforms/Scalar/LoopFlatten.h"
 #include "llvm/Transforms/Scalar/LoopFuse.h"
 #include "llvm/Transforms/Scalar/LoopIdiomRecognize.h"
 #include "llvm/Transforms/Scalar/LoopInstSimplify.h"
@@ -249,6 +250,10 @@ static cl::opt<bool> EnableGVNSink(
 static cl::opt<bool> EnableUnrollAndJam(
     "enable-npm-unroll-and-jam", cl::init(false), cl::Hidden,
     cl::desc("Enable the Unroll and Jam pass for the new PM (default = off)"));
+
+static cl::opt<bool> EnableLoopFlatten(
+    "enable-npm-loop-flatten", cl::init(false), cl::Hidden,
+    cl::desc("Enable the Loop flattening pass for the new PM (default = off)"));
 
 static cl::opt<bool> EnableSyntheticCounts(
     "enable-npm-synthetic-counts", cl::init(false), cl::Hidden, cl::ZeroOrMore,
@@ -510,6 +515,8 @@ FunctionPassManager PassBuilder::buildO1FunctionSimplificationPipeline(
     C(LPM2, Level);
 
   LPM2.addPass(LoopDeletionPass());
+  if (EnableLoopFlatten)
+    LPM2.addPass(LoopFlattenPass());
   // Do not enable unrolling in PreLinkThinLTO phase during sample PGO
   // because it changes IR to makes profile annotation in back compile
   // inaccurate. The normal unroller doesn't pay attention to forced full unroll
