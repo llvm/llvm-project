@@ -162,6 +162,7 @@ inline bool IsAssumedRankArray(const Symbol &symbol) {
 }
 bool IsAssumedLengthCharacter(const Symbol &);
 bool IsExternal(const Symbol &);
+bool IsModuleProcedure(const Symbol &);
 // Is the symbol modifiable in this scope
 std::optional<parser::MessageFixedText> WhyNotModifiable(
     const Symbol &, const Scope &);
@@ -282,6 +283,20 @@ template <typename T> bool IsZero(const T &expr) {
   auto value{GetIntValue(expr)};
   return value && *value == 0;
 }
+
+// 15.2.2
+enum class ProcedureDefinitionClass {
+  None,
+  Intrinsic,
+  External,
+  Internal,
+  Module,
+  Dummy,
+  Pointer,
+  StatementFunction
+};
+
+ProcedureDefinitionClass ClassifyProcedure(const Symbol &);
 
 // Derived type component iterator that provides a C++ LegacyForwardIterator
 // iterator over the Ordered, Direct, Ultimate or Potential components of a
