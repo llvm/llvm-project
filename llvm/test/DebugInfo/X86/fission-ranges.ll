@@ -10,11 +10,11 @@
 ; LiveDebugValues should produce DBG_VALUEs for variable "b" in successive
 ; blocks once we recognize that it is spilled.
 ; CHECK-MIR: ![[BDIVAR:[0-9]+]] = !DILocalVariable(name: "b"
-; CHECK-MIR: DBG_VALUE $rsp, 0, ![[BDIVAR]], !DIExpression(DW_OP_constu, 32, DW_OP_minus)
+; CHECK-MIR: DBG_VALUE $rsp, 0, ![[BDIVAR]], !DIExpression(DW_OP_constu, 24, DW_OP_minus)
 ; CHECK-MIR-LABEL: bb.6.for.inc13:
-; CHECK-MIR: DBG_VALUE $rsp, 0, ![[BDIVAR]], !DIExpression(DW_OP_constu, 32, DW_OP_minus)
+; CHECK-MIR: DBG_VALUE $rsp, 0, ![[BDIVAR]], !DIExpression(DW_OP_constu, 24, DW_OP_minus)
 ; CHECK-MIR-LABEL: bb.7.for.inc16:
-; CHECK-MIR: DBG_VALUE $rsp, 0, ![[BDIVAR]], !DIExpression(DW_OP_constu, 32, DW_OP_minus)
+; CHECK-MIR: DBG_VALUE $rsp, 0, ![[BDIVAR]], !DIExpression(DW_OP_constu, 24, DW_OP_minus)
 
 
 ; CHECK: .debug_info contents:
@@ -46,20 +46,20 @@
 
 ; CHECK:      [[A]]:
 ; CHECK-NEXT:   DW_LLE_startx_length (0x00000002, 0x0000000f): DW_OP_consts +0, DW_OP_stack_value
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000003, 0x0000000f): DW_OP_reg0 RAX
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000004, 0x00000012): DW_OP_breg7 RSP-8
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000003, 0x0000000b): DW_OP_reg0 RAX
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000004, 0x00000012): DW_OP_breg7 RSP-4
 ; CHECK-NEXT:   DW_LLE_end_of_list   ()
 ; CHECK:      [[E]]:
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000005, 0x00000009): DW_OP_reg0 RAX
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000006, 0x00000062): DW_OP_breg7 RSP-44
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000005, 0x0000000b): DW_OP_reg0 RAX
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000006, 0x0000005a): DW_OP_breg7 RSP-48
 ; CHECK-NEXT:   DW_LLE_end_of_list   ()
 ; CHECK:      [[B]]:
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000007, 0x0000000f): DW_OP_reg0 RAX
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000008, 0x00000042): DW_OP_breg7 RSP-32
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000007, 0x0000000b): DW_OP_reg0 RAX
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000008, 0x00000042): DW_OP_breg7 RSP-24
 ; CHECK-NEXT:   DW_LLE_end_of_list   ()
 ; CHECK:      [[D]]:
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000009, 0x0000000f): DW_OP_reg0 RAX
-; CHECK-NEXT:   DW_LLE_startx_length (0x0000000a, 0x0000002a): DW_OP_breg7 RSP-20
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000009, 0x0000000b): DW_OP_reg0 RAX
+; CHECK-NEXT:   DW_LLE_startx_length (0x0000000a, 0x0000002a): DW_OP_breg7 RSP-12
 ; CHECK-NEXT:   DW_LLE_end_of_list   ()
 
 ; Make sure we don't produce any relocations in any .dwo section (though in particular, debug_info.dwo)
@@ -81,7 +81,7 @@
 ; V5RNGLISTS-NOT:  DW_TAG
 ; V5RNGLISTS:      DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x0000000c)
 ; V5RNGLISTS:      .debug_rnglists contents:
-; V5RNGLISTS-NEXT: 0x00000000: range list header: length = 0x00000019, format = DWARF32, version = 0x0005,
+; V5RNGLISTS-NEXT: 0x00000000: range list header: length = 0x00000015, format = DWARF32, version = 0x0005,
 ; V5RNGLISTS-SAME: addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000001
 ; V5RNGLISTS-NEXT: offsets: [
 ; V5RNGLISTS-NEXT: => 0x00000010
@@ -96,7 +96,7 @@
 ; extern int c;
 ; static void foo (int p)
 ; {
-;   int a, b; 
+;   int a, b;
 ;   unsigned int d, e;
 
 ;   for (a = 0; a < 30; a++)
@@ -104,12 +104,12 @@
 ;       for (b = 0; b < 30; b++)
 ;         for (e = 0; e < 30; e++)
 ;           {
-;             int *w = &c; 
-;             *w &= p; 
+;             int *w = &c;
+;             *w &= p;
 ;           }
 ; }
 
-; void 
+; void
 ; bar ()
 ; {
 ;   foo (1);

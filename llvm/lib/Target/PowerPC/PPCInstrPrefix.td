@@ -647,6 +647,185 @@ class XForm_AT3<bits<6> opcode, bits<5> xo2, bits<10> xo, dag OOL, dag IOL,
   let Inst{31} = 0;
 }
 
+class XX3Form_AT3_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                           string asmstr, InstrItinClass itin,
+                           list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<3> AT;
+  bits<6> XA;
+  bits<6> XB;
+
+  let Pattern = pattern;
+
+  let Inst{6-8} = AT;
+  let Inst{9-10} = 0;
+  let Inst{11-15} = XA{4-0};
+  let Inst{16-20} = XB{4-0};
+  let Inst{21-28} = xo;
+  let Inst{29}    = XA{5};
+  let Inst{30}    = XB{5};
+  let Inst{31} = 0;
+}
+
+class MMIRR_XX3Form_XY4P2_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                               string asmstr, InstrItinClass itin,
+                               list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<3> AT;
+  bits<6> XA;
+  bits<6> XB;
+  bits<4> XMSK;
+  bits<4> YMSK;
+  bits<2> PMSK;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-7} = 3;
+  let Inst{8-11} = 9;
+  let Inst{12-15} = 0;
+  let Inst{16-17} = PMSK;
+  let Inst{18-23} = 0;
+  let Inst{24-27} = XMSK;
+  let Inst{28-31} = YMSK;
+
+  // The instruction.
+  let Inst{38-40} = AT;
+  let Inst{41-42} = 0;
+  let Inst{43-47} = XA{4-0};
+  let Inst{48-52} = XB{4-0};
+  let Inst{53-60} = xo;
+  let Inst{61} = XA{5};
+  let Inst{62} = XB{5};
+  let Inst{63} = 0;
+}
+
+class MMIRR_XX3Form_XY4_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                             string asmstr, InstrItinClass itin,
+                             list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<3> AT;
+  bits<6> XA;
+  bits<6> XB;
+  bits<4> XMSK;
+  bits<4> YMSK;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-7} = 3;
+  let Inst{8-11} = 9;
+  let Inst{12-23} = 0;
+  let Inst{24-27} = XMSK;
+  let Inst{28-31} = YMSK;
+
+  // The instruction.
+  let Inst{38-40} = AT;
+  let Inst{41-42} = 0;
+  let Inst{43-47} = XA{4-0};
+  let Inst{48-52} = XB{4-0};
+  let Inst{53-60} = xo;
+  let Inst{61} = XA{5};
+  let Inst{62} = XB{5};
+  let Inst{63} = 0;
+}
+
+class MMIRR_XX3Form_X4Y2_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                              string asmstr, InstrItinClass itin,
+                              list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<3> AT;
+  bits<6> XA;
+  bits<6> XB;
+  bits<4> XMSK;
+  bits<2> YMSK;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-7} = 3;
+  let Inst{8-11} = 9;
+  let Inst{12-23} = 0;
+  let Inst{24-27} = XMSK;
+  let Inst{28-29} = YMSK;
+  let Inst{30-31} = 0;
+
+  // The instruction.
+  let Inst{38-40} = AT;
+  let Inst{41-42} = 0;
+  let Inst{43-47} = XA{4-0};
+  let Inst{48-52} = XB{4-0};
+  let Inst{53-60} = xo;
+  let Inst{61} = XA{5};
+  let Inst{62} = XB{5};
+  let Inst{63} = 0;
+}
+
+class MMIRR_XX3Form_XY4P8_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                               string asmstr, InstrItinClass itin,
+                               list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<3> AT;
+  bits<6> XA;
+  bits<6> XB;
+  bits<4> XMSK;
+  bits<4> YMSK;
+  bits<8> PMSK;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-7} = 3;
+  let Inst{8-11} = 9;
+  let Inst{12-15} = 0;
+  let Inst{16-23} = PMSK;
+  let Inst{24-27} = XMSK;
+  let Inst{28-31} = YMSK;
+
+  // The instruction.
+  let Inst{38-40} = AT;
+  let Inst{41-42} = 0;
+  let Inst{43-47} = XA{4-0};
+  let Inst{48-52} = XB{4-0};
+  let Inst{53-60} = xo;
+  let Inst{61} = XA{5};
+  let Inst{62} = XB{5};
+  let Inst{63} = 0;
+}
+
+class MMIRR_XX3Form_XYP4_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                              string asmstr, InstrItinClass itin,
+                              list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<3> AT;
+  bits<6> XA;
+  bits<6> XB;
+  bits<4> XMSK;
+  bits<4> YMSK;
+  bits<4> PMSK;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-7} = 3;
+  let Inst{8-11} = 9;
+  let Inst{12-15} = 0;
+  let Inst{16-19} = PMSK;
+  let Inst{20-23} = 0;
+  let Inst{24-27} = XMSK;
+  let Inst{28-31} = YMSK;
+
+  // The instruction.
+  let Inst{38-40} = AT;
+  let Inst{41-42} = 0;
+  let Inst{43-47} = XA{4-0};
+  let Inst{48-52} = XB{4-0};
+  let Inst{53-60} = xo;
+  let Inst{61} = XA{5};
+  let Inst{62} = XB{5};
+  let Inst{63} = 0;
+}
+
 def PrefixInstrs : Predicate<"Subtarget->hasPrefixInstrs()">;
 def IsISA3_1 : Predicate<"Subtarget->isISA3_1()">;
 def PairedVectorMemops : Predicate<"Subtarget->pairedVectorMemops()">;
@@ -802,6 +981,286 @@ let Predicates = [PrefixInstrs] in {
   }
 }
 
+// Multiclass definitions for MMA accumulator instructions.
+// ----------------------------------------------------------------------------
+
+// Defines 2 unmasked instructions where the xo field for acc/non-acc version
+// is even/odd.
+multiclass ACC_UM_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
+                       string asmstr> {
+  let Predicates = [MMA] in {
+  def NAME :
+    XX3Form_AT3_XAB6<opcode, !or(xo, 0x01), (outs acc:$AT), IOL,
+                     !strconcat(asmbase#" ", asmstr), IIC_VecFP, []>,
+    RegConstraint<"@earlyclobber $AT">;
+  def PP :
+    XX3Form_AT3_XAB6<opcode, xo, (outs acc:$AT), !con((ins acc:$ATi), IOL),
+                     !strconcat(asmbase#"pp ", asmstr), IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// Defines 4 instructions, masked/unmasked with masks 8, 4, 4 bits.
+// The XO field for acc/non-acc version is even/odd.
+multiclass ACC_UM_M844_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
+                            string asmstr> {
+  defm NAME : ACC_UM_XOEO<opcode, xo, IOL, asmbase, asmstr>;
+  let Predicates = [MMA, PrefixInstrs] in {
+  def PM#NAME :
+    MMIRR_XX3Form_XY4P8_XAB6<
+      opcode, !or(xo, 0x01), (outs acc:$AT),
+      !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u8imm:$PMSK)),
+      !strconcat("pm"#asmbase#" ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"@earlyclobber $AT">;
+  def PM#NAME#PP :
+    MMIRR_XX3Form_XY4P8_XAB6<
+      opcode, xo, (outs acc:$AT),
+      !con((ins acc:$ATi),
+           !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u8imm:$PMSK))),
+      !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// Defines 4 instructions, masked/unmasked with masks 4, 4, 4 bits.
+// The XO field for acc/non-acc version is even/odd.
+multiclass ACC_UM_M444_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
+                            string asmstr> {
+  defm NAME : ACC_UM_XOEO<opcode, xo, IOL, asmbase, asmstr>;
+  let Predicates = [MMA, PrefixInstrs] in {
+  def PM#NAME :
+    MMIRR_XX3Form_XYP4_XAB6<
+      opcode, !or(xo, 0x01), (outs acc:$AT),
+      !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u4imm:$PMSK)),
+      !strconcat("pm"#asmbase#" ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"@earlyclobber $AT">;
+  def PM#NAME#PP :
+    MMIRR_XX3Form_XYP4_XAB6<
+      opcode, xo, (outs acc:$AT),
+      !con((ins acc:$ATi),
+           !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u4imm:$PMSK))),
+      !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// Defines 4 instructions, masked/unmasked with masks 2, 4, 4 bits.
+// The XO field for acc/non-acc version is even/odd.
+multiclass ACC_UM_M244_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
+                            string asmstr> {
+  defm NAME : ACC_UM_XOEO<opcode, xo, IOL, asmbase, asmstr>;
+  let Predicates = [MMA, PrefixInstrs] in {
+  def PM#NAME :
+    MMIRR_XX3Form_XY4P2_XAB6<
+      opcode, !or(xo, 0x01), (outs acc:$AT),
+      !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK)),
+      !strconcat("pm"#asmbase#" ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"@earlyclobber $AT">;
+  def PM#NAME#PP :
+    MMIRR_XX3Form_XY4P2_XAB6<
+      opcode, xo, (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
+      !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// Defines 4 instructions, masked/unmasked with masks 2, 4, 4 bits.
+// Upper nibble of XO field for acc/non-acc version is 0x4/0x6.
+multiclass ACC_UM_M244_XO46<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
+                            string asmstr> {
+  let Predicates = [MMA] in {
+  def NAME :
+    XX3Form_AT3_XAB6<opcode, xo, (outs acc:$AT), IOL,
+                     !strconcat(asmbase#" ", asmstr), IIC_VecFP, []>,
+    RegConstraint<"@earlyclobber $AT">;
+  def PP :
+    XX3Form_AT3_XAB6<
+      opcode, !or(xo, 0x20), (outs acc:$AT), !con((ins acc:$ATi), IOL),
+      !strconcat(asmbase#"pp ", asmstr), IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+  let Predicates = [MMA, PrefixInstrs] in {
+  def PM#NAME :
+    MMIRR_XX3Form_XY4P2_XAB6<
+      opcode, xo, (outs acc:$AT),
+      !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK)),
+      !strconcat("pm"#asmbase#" ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"@earlyclobber $AT">;
+  def PM#NAME#PP :
+    MMIRR_XX3Form_XY4P2_XAB6<
+      opcode, !or(xo, 0x20), (outs acc:$AT),
+      !con((ins acc:$ATi),
+           !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
+      !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// Defines 10 instructions, operand negating, unmasked, masked with 2, 4, 4
+// bits. Upper nibble are masked with 0x8, 0x4, 0xC for negating operands.
+multiclass ACC_NEG_UM_M244_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
+                                  string asmbase, string asmstr> {
+  defm NAME : ACC_UM_M244_XOEO<opcode, xo, IOL, asmbase, asmstr>;
+  let Predicates = [MMA] in {
+  def PN : XX3Form_AT3_XAB6<
+             opcode, !or(xo, 0x80), (outs acc:$AT), !con((ins acc:$ATi), IOL),
+             !strconcat(asmbase#"pn ", asmstr), IIC_VecFP, []>,
+           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def NP : XX3Form_AT3_XAB6<
+             opcode, !or(xo, 0x40), (outs acc:$AT), !con((ins acc:$ATi), IOL),
+             !strconcat(asmbase#"np ", asmstr), IIC_VecFP, []>,
+           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def NN : XX3Form_AT3_XAB6<
+             opcode, !or(xo, 0xC0), (outs acc:$AT), !con((ins acc:$ATi), IOL),
+             !strconcat(asmbase#"nn ", asmstr), IIC_VecFP, []>,
+           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+  let Predicates = [MMA, PrefixInstrs] in {
+  def PM#NAME#PN :
+    MMIRR_XX3Form_XY4P2_XAB6<
+      opcode, !or(xo, 0x80), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
+      !strconcat("pm"#asmbase#"pn ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PM#NAME#NP :
+    MMIRR_XX3Form_XY4P2_XAB6<
+      opcode, !or(xo, 0x40), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
+      !strconcat("pm"#asmbase#"np ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PM#NAME#NN :
+    MMIRR_XX3Form_XY4P2_XAB6<
+      opcode, !or(xo, 0xC0), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
+      !strconcat("pm"#asmbase#"nn ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// Defines 5 instructions, unmasked, operand negating.
+// Upper nibble are masked with 0x8, 0x4, 0xC for negating operands.
+multiclass ACC_NEG_UM_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
+                             string asmbase, string asmstr> {
+  defm NAME : ACC_UM_XOEO<opcode, xo, IOL, asmbase, asmstr>;
+  let Predicates = [MMA] in {
+  def PN : XX3Form_AT3_XAB6<opcode, !or(xo, 0x80), (outs acc:$AT),
+                            !con((ins acc:$ATi), IOL),
+                            !strconcat(asmbase#"pn ", asmstr), IIC_VecFP, []>,
+           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def NP : XX3Form_AT3_XAB6<opcode, !or(xo, 0x40), (outs acc:$AT),
+                            !con((ins acc:$ATi), IOL),
+                            !strconcat(asmbase#"np ", asmstr), IIC_VecFP, []>,
+           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def NN : XX3Form_AT3_XAB6<opcode, !or(xo, 0xC0), (outs acc:$AT),
+                            !con((ins acc:$ATi), IOL),
+                            !strconcat(asmbase#"nn ", asmstr), IIC_VecFP, []>,
+           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// Defines 10 instructions, operand negating, unmasked, masked with 4, 4 bits.
+// Upper nibble are masked with 0x8, 0x4, 0xC for negating operands.
+multiclass ACC_NEG_UM_M44_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
+                                 string asmbase, string asmstr> {
+  defm NAME : ACC_NEG_UM_XOM84C<opcode, xo, IOL, asmbase, asmstr>;
+  let Predicates = [MMA, PrefixInstrs] in {
+  def PM#NAME :
+    MMIRR_XX3Form_XY4_XAB6<
+      opcode, !or(xo, 0x01), (outs acc:$AT),
+      !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK)),
+      !strconcat("pm"#asmbase#" ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"@earlyclobber $AT">;
+  def PM#NAME#PP :
+    MMIRR_XX3Form_XY4_XAB6<
+      opcode, xo, (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK))),
+      !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PM#NAME#PN :
+    MMIRR_XX3Form_XY4_XAB6<
+      opcode, !or(xo, 0x80), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK))),
+      !strconcat("pm"#asmbase#"pn ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PM#NAME#NP :
+    MMIRR_XX3Form_XY4_XAB6<
+      opcode, !or(xo, 0x40), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK))),
+      !strconcat("pm"#asmbase#"np ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PM#NAME#NN :
+    MMIRR_XX3Form_XY4_XAB6<
+      opcode, !or(xo, 0xC0), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK))),
+      !strconcat("pm"#asmbase#"nn ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// Defines 10 instructions, operand negating, unmasked, masked with 4, 2 bits.
+// Upper nibble are masked with 0x8, 0x4, 0xC for negating operands.
+multiclass ACC_NEG_UM_M42_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
+                                 string asmbase, string asmstr> {
+  defm NAME : ACC_NEG_UM_XOM84C<opcode, xo, IOL, asmbase, asmstr>;
+  let Predicates = [MMA, PrefixInstrs] in {
+  def PM#NAME :
+    MMIRR_XX3Form_X4Y2_XAB6<
+      opcode, !or(xo, 0x01), (outs acc:$AT),
+      !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK)),
+      !strconcat("pm"#asmbase#" ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"@earlyclobber $AT">;
+  def PM#NAME#PP :
+    MMIRR_XX3Form_X4Y2_XAB6<
+      opcode, xo, (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK))),
+      !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PM#NAME#PN :
+    MMIRR_XX3Form_X4Y2_XAB6<
+      opcode, !or(xo, 0x80), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK))),
+      !strconcat("pm"#asmbase#"pn ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PM#NAME#NP :
+    MMIRR_XX3Form_X4Y2_XAB6<
+      opcode, !or(xo, 0x40), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK))),
+      !strconcat("pm"#asmbase#"np ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PM#NAME#NN :
+    MMIRR_XX3Form_X4Y2_XAB6<
+      opcode, !or(xo, 0xC0), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK))),
+      !strconcat("pm"#asmbase#"nn ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// End of class definitions.
+//-----------------------------------------------------------------------------
+
 let Predicates = [MMA] in {
   def XXMFACC :
     XForm_AT3<31, 0, 177, (outs acc:$ASo), (ins acc:$AS), "xxmfacc $AS",
@@ -824,7 +1283,61 @@ let Predicates = [MMA] in {
       XForm_AT3<31, 3, 177, (outs acc:$AT), (ins), "xxsetaccz $AT",
                 IIC_VecGeneral, []>;
   }
+  def XVI8GER4SPP :
+    XX3Form_AT3_XAB6<59, 99, (outs acc:$AT), (ins acc:$ATi, vsrc:$XA, vsrc:$XB),
+                     "xvi8ger4spp $AT, $XA, $XB", IIC_VecGeneral, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
 }
+
+let Predicates = [MMA, PrefixInstrs] in {
+  def PMXVI8GER4SPP :
+    MMIRR_XX3Form_XYP4_XAB6<59, 99, (outs acc:$AT),
+                            (ins acc:$ATi, vsrc:$XA,vsrc:$XB, u4imm:$XMSK,
+                             u4imm:$YMSK, u4imm:$PMSK),
+                            "pmxvi8ger4spp $AT, $XA, $XB, $XMSK, $YMSK, $PMSK",
+                            IIC_VecGeneral, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+}
+
+// MMA accumulating/non-accumulating instructions.
+//------------------------------------------------------------------------------
+
+// XVBF16GER2, XVBF16GER2PP, XVBF16GER2PN, XVBF16GER2NP, XVBF16GER2NN
+// PMXVBF16GER2, PMXVBF16GER2PP, PMXVBF16GER2PN, PMXVBF16GER2NP, PMXVBF16GER2NN
+defm XVBF16GER2 : ACC_NEG_UM_M244_XOM84C<59, 50, (ins vsrc:$XA, vsrc:$XB),
+                                         "xvbf16ger2", "$AT, $XA, $XB">;
+
+// XVI4GER8, XVI4GER8PP, PMXVI4GER8,  PMXVI4GER8PP
+defm XVI4GER8 : ACC_UM_M844_XOEO<59, 34, (ins vsrc:$XA, vsrc:$XB),
+                                 "xvi4ger8", "$AT, $XA, $XB">;
+
+// XVI8GER4, XVI8GER4PP, PMXVI8GER4, PMXVI8GER4PP
+defm XVI8GER4 : ACC_UM_M444_XOEO<59, 2, (ins vsrc:$XA, vsrc:$XB),
+                                 "xvi8ger4", "$AT, $XA, $XB">;
+
+// XVI16GER2, XVI16GER2PP, PMXVI16GER2, PMXVI16GER2PP
+defm XVI16GER2 : ACC_UM_M244_XO46<59, 75, (ins vsrc:$XA, vsrc:$XB),
+                                  "xvi16ger2", "$AT, $XA, $XB">;
+
+// XVI16GER2S, XVI16GER2SPP, PMXVI16GER2S, PMXVI16GER2SPP
+defm XVI16GER2S : ACC_UM_M244_XOEO<59, 42, (ins vsrc:$XA, vsrc:$XB),
+                                   "xvi16ger2s", "$AT, $XA, $XB">;
+
+// XVF16GER2, XVF16GER2PP, XVF16GER2PN, XVF16GER2NP, XVF16GER2NN
+// PMXVF16GER2, PMXVF16GER2PP, PMXVF16GER2PN, PMXVF16GER2NP, PMXVF16GER2NN
+defm XVF16GER2 : ACC_NEG_UM_M244_XOM84C<59, 18, (ins vsrc:$XA, vsrc:$XB),
+                                        "xvf16ger2", "$AT, $XA, $XB">;
+
+// XVF32GER, XVF32GERPP, XVF32GERPN, XVF32GERNP, XVF32GERPP
+// PMXVF32GER, PMXVF32GERPP, PMXVF32GERPN, PMXVF32GERNP, PMXVF32GERPP
+defm XVF32GER : ACC_NEG_UM_M44_XOM84C<59, 26, (ins vsrc:$XA, vsrc:$XB),
+                                      "xvf32ger", "$AT, $XA, $XB">;
+
+// XVF64GER, XVF64GERPP, XVF64GERPN, XVF64GERNP, XVF64GERNN
+// PMXVF64GER, PMXVF64GERPP, PMXVF64GERPN, PMXVF64GERNP, PMXVF64GERNN
+defm XVF64GER : ACC_NEG_UM_M42_XOM84C<59, 58, (ins vsrpevenrc:$XA, vsrc:$XB),
+                                      "xvf64ger", "$AT, $XA, $XB">;
+//------------------------------------------------------------------------------
 
 def Concats {
   dag VecsToVecPair0 =

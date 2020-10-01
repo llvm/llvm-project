@@ -29,7 +29,7 @@ module m01
     class(tbp), intent(in) :: this
   end subroutine
   subroutine subr02(this)
-    class(final), intent(in) :: this
+    type(final), intent(inout) :: this
   end subroutine
 
   subroutine poly(x)
@@ -113,7 +113,7 @@ module m01
 
   subroutine test05 ! 15.5.2.4(2)
     type(final) :: x
-    !ERROR: Actual argument associated with TYPE(*) dummy argument 'x=' may not have FINAL subroutine 'subr02'
+    !ERROR: Actual argument associated with TYPE(*) dummy argument 'x=' may not have derived type 'final' with FINAL subroutine 'subr02'
     call typestar(x)
   end subroutine
 

@@ -218,19 +218,6 @@ const semantics::DerivedTypeSpec *GetParentTypeSpec(
   }
 }
 
-static const semantics::Symbol *FindComponent(
-    const semantics::DerivedTypeSpec &derived, parser::CharBlock name) {
-  if (const auto *scope{derived.scope()}) {
-    auto iter{scope->find(name)};
-    if (iter != scope->end()) {
-      return &*iter->second;
-    } else if (const auto *parent{GetParentTypeSpec(derived)}) {
-      return FindComponent(*parent, name);
-    }
-  }
-  return nullptr;
-}
-
 // Compares two derived type representations to see whether they both
 // represent the "same type" in the sense of section 7.5.2.4.
 using SetOfDerivedTypePairs =
@@ -294,24 +281,9 @@ static bool AreSameComponent(const semantics::Symbol &x,
   if (x.attrs().test(semantics::Attr::PRIVATE)) {
     return false;
   }
-#if 0 // TODO
-  if (const auto *xObject{x.detailsIf<semantics::ObjectEntityDetails>()}) {
-    if (const auto *yObject{y.detailsIf<semantics::ObjectEntityDetails>()}) {
-#else
-  if (x.has<semantics::ObjectEntityDetails>()) {
-    if (y.has<semantics::ObjectEntityDetails>()) {
-#endif
-  // TODO: compare types, type parameters, bounds, &c.
-  return true;
-}
-else {
-  return false;
-}
-} // namespace Fortran::evaluate
-else {
-  // TODO: non-object components
-  return true;
-}
+  // TODO: compare types, parameters, bounds, &c.
+  return x.has<semantics::ObjectEntityDetails>() ==
+      y.has<semantics::ObjectEntityDetails>();
 }
 
 static bool AreCompatibleDerivedTypes(const semantics::DerivedTypeSpec *x,
@@ -334,45 +306,9 @@ bool IsKindTypeParameter(const semantics::Symbol &symbol) {
   return param && param->attr() == common::TypeParamAttr::Kind;
 }
 
-static bool IsKindTypeParameter(
-    const semantics::DerivedTypeSpec &derived, parser::CharBlock name) {
-  const semantics::Symbol *symbol{FindComponent(derived, name)};
-  return symbol && IsKindTypeParameter(*symbol);
-}
-
-bool DynamicType::IsTypeCompatibleWith(const DynamicType &that) const {
-  if (derived_) {
-    if (!AreCompatibleDerivedTypes(derived_, that.derived_, IsPolymorphic())) {
-      return false;
-    }
-    // The values of derived type KIND parameters must match.
-    for (const auto &[name, param] : derived_->parameters()) {
-      if (IsKindTypeParameter(*derived_, name)) {
-        bool ok{false};
-        if (auto myValue{ToInt64(param.GetExplicit())}) {
-          if (const auto *thatParam{that.derived_->FindParameter(name)}) {
-            if (auto thatValue{ToInt64(thatParam->GetExplicit())}) {
-              ok = *myValue == *thatValue;
-            }
-          }
-        }
-        if (!ok) {
-          return false;
-        }
-      }
-    }
-    return true;
-  } else if (category_ == that.category_ && kind_ == that.kind_) {
-    // CHARACTER length is not checked here
-    return true;
-  } else {
-    return IsUnlimitedPolymorphic();
-  }
-}
-
 // Do the kind type parameters of type1 have the same values as the
-// corresponding kind type parameters of the type2?
-static bool IsKindCompatible(const semantics::DerivedTypeSpec &type1,
+// corresponding kind type parameters of type2?
+static bool AreKindCompatible(const semantics::DerivedTypeSpec &type1,
     const semantics::DerivedTypeSpec &type2) {
   for (const auto &[name, param1] : type1.parameters()) {
     if (param1.isKind()) {
@@ -385,18 +321,20 @@ static bool IsKindCompatible(const semantics::DerivedTypeSpec &type1,
   return true;
 }
 
+// See 7.3.2.3 (5) & 15.5.2.4
 bool DynamicType::IsTkCompatibleWith(const DynamicType &that) const {
-  if (category_ != TypeCategory::Derived) {
-    return category_ == that.category_ && kind_ == that.kind_;
-  } else if (IsUnlimitedPolymorphic()) {
+  if (IsUnlimitedPolymorphic()) {
     return true;
   } else if (that.IsUnlimitedPolymorphic()) {
     return false;
-  } else if (!derived_ || !that.derived_ ||
-      !IsKindCompatible(*derived_, *that.derived_)) {
-    return false; // kind params don't match
+  } else if (category_ != that.category_) {
+    return false;
+  } else if (derived_) {
+    return that.derived_ &&
+        AreCompatibleDerivedTypes(derived_, that.derived_, IsPolymorphic()) &&
+        AreKindCompatible(*derived_, *that.derived_);
   } else {
-    return AreCompatibleDerivedTypes(derived_, that.derived_, IsPolymorphic());
+    return kind_ == that.kind_;
   }
 }
 

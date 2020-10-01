@@ -18,13 +18,13 @@ add_mlir_dialect_library(MLIRAffineTransforms
   MLIRLoopLikeInterfaceIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffineOps
+  MLIRAffine
   MLIRAffineUtils
   MLIREDSC
   MLIRIR
   MLIRPass
   MLIRSideEffectInterfaces
-  MLIRStandardOps
+  MLIRStandard
   MLIRTransformUtils
   MLIRVector
   MLIRVectorToLLVM

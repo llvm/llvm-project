@@ -134,6 +134,7 @@ void __sanitizer_symbolize_pc(uptr pc, const char *fmt, char *out_buf,
   }
   CHECK(out_buf <= out_end);
   *out_buf = 0;
+  frame->ClearAll();
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE

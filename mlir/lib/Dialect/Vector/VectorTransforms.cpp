@@ -2418,6 +2418,40 @@ LogicalResult mlir::vector::VectorTransferFullPartialRewriter::matchAndRewrite(
   return failure();
 }
 
+LogicalResult mlir::vector::PointwiseExtractPattern::matchAndRewrite(
+    ExtractMapOp extract, PatternRewriter &rewriter) const {
+  Operation *definedOp = extract.vector().getDefiningOp();
+  if (!definedOp || definedOp->getNumResults() != 1)
+    return failure();
+  // TODO: Create an interfaceOp for elementwise operations.
+  if (!isa<AddFOp>(definedOp))
+    return failure();
+  Location loc = extract.getLoc();
+  SmallVector<Value, 4> extractOperands;
+  for (OpOperand &operand : definedOp->getOpOperands())
+    extractOperands.push_back(rewriter.create<vector::ExtractMapOp>(
+        loc, operand.get(), extract.id(), extract.multiplicity()));
+  Operation *newOp = cloneOpWithOperandsAndTypes(
+      rewriter, loc, definedOp, extractOperands, extract.getResult().getType());
+  rewriter.replaceOp(extract, newOp->getResult(0));
+  return success();
+}
+
+Optional<mlir::vector::DistributeOps>
+mlir::vector::distributPointwiseVectorOp(OpBuilder &builder, Operation *op,
+                                         Value id, int64_t multiplicity) {
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointAfter(op);
+  Location loc = op->getLoc();
+  Value result = op->getResult(0);
+  DistributeOps ops;
+  ops.extract =
+      builder.create<vector::ExtractMapOp>(loc, result, id, multiplicity);
+  ops.insert =
+      builder.create<vector::InsertMapOp>(loc, ops.extract, id, multiplicity);
+  return ops;
+}
+
 // TODO: Add pattern to rewrite ExtractSlices(ConstantMaskOp).
 // TODO: Add this as DRR pattern.
 void mlir::vector::populateVectorToVectorTransformationPatterns(

@@ -36,4 +36,5 @@ int main(int argc, char *argv[]) {
 
 // CHECK-NOT: ThreadSanitizer: data race
 // CHECK-NOT: ThreadSanitizer: reported
+// CHECK-NOT: Warning: please export TSAN_OPTIONS
 // CHECK: DONE

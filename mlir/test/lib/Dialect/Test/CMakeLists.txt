@@ -38,7 +38,7 @@ add_mlir_library(MLIRTestDialect
   MLIRInferTypeOpInterface
   MLIRLinalgTransforms
   MLIRPass
-  MLIRStandardOps
+  MLIRStandard
   MLIRStandardOpsTransforms
   MLIRTransformUtils
   MLIRTransforms

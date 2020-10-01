@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
+#include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
@@ -154,9 +155,9 @@ static ViewDimension getViewDefiningLoopRange(LinalgOp op, unsigned loopDepth) {
   llvm_unreachable("Expect to be able to extract a view defining loop range");
 }
 
-static LinalgOp fuse(Value producedView, LinalgOp producer, LinalgOp consumer,
-                     unsigned consumerIdx, unsigned producerIdx,
-                     OperationFolder *folder) {
+static LinalgOp fuse(OpBuilder &b, LinalgOp producer, unsigned producerIdx,
+                     LinalgOp consumer, unsigned consumerIdx,
+                     OperationFolder *folder = nullptr) {
   assert(producer.hasBufferSemantics() &&
          "expected linalg op with buffer semantics");
   assert(consumer.hasBufferSemantics() &&
@@ -174,9 +175,7 @@ static LinalgOp fuse(Value producedView, LinalgOp producer, LinalgOp consumer,
   //   we can always identify a data dimension with a (at least one) loop
   //   dimension.
   AffineMap producerMap =
-      producer.indexing_maps()[producer.getNumInputs() + producerIdx]
-          .cast<AffineMapAttr>()
-          .getValue();
+      producer.indexing_maps()[producerIdx].cast<AffineMapAttr>().getValue();
   LLVM_DEBUG(dbgs() << "Producer Idx: " << producerIdx
                     << ", producer map: " << producerMap << "\n");
 
@@ -185,10 +184,9 @@ static LinalgOp fuse(Value producedView, LinalgOp producer, LinalgOp consumer,
   unsigned nWin = producer.getNumWindowLoops();
   SmallVector<SubViewOp::Range, 8> loopRanges(nPar + nRed + nWin);
 
-  OpBuilder b(consumer.getOperation());
-  auto loc = consumer.getLoc();
   // Iterate over dimensions identified by the producer map for `producerIdx`.
   // This defines a subset of the loop ranges that we need to complete later.
+  auto loc = consumer.getLoc();
   for (auto en : llvm::enumerate(producerMap.getResults())) {
     unsigned posInProducerLoop = en.value().cast<AffineDimExpr>().getPosition();
     loopRanges[posInProducerLoop] =
@@ -319,71 +317,380 @@ static bool isSameSubView(Value a, Value b) {
   return true;
 }
 
-static Optional<FusionInfo>
-fuseProducerOfDep(OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
-                  const LinalgDependenceGraph &graph, OperationFolder *folder,
-                  LinalgDependenceGraph::DependenceType depType) {
-  assert(consumer.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  LLVM_DEBUG(dbgs() << "\nStart examining consumer: "
-                    << *consumer.getOperation());
-  for (auto dependence : graph.getDependencesInto(consumer, depType)) {
-    LLVM_DEBUG(dbgs() << "\n***Consider producer:\t"
-                      << *dependence.dependentOpView.op << "\n");
-    auto producer = cast<LinalgOp>(dependence.dependentOpView.op);
-
-    // Check that the dependence is indeed on the input `consumerIdx` view.
-    auto consumedView = dependence.indexingView;
-    if (!isSameSubView(consumer.getBuffer(consumerIdx), consumedView))
-      continue;
-
-    // Consumer consumes this view, `isStructurallyFusableProducer` also checks
-    // whether it is a strict subview of the producer view.
-    auto producedView = dependence.dependentOpView.view;
-    auto producerIdx = producer.getIndexOfOutputBuffer(producedView).getValue();
-    // `consumerIdx` and `producerIdx` exist by construction.
-    LLVM_DEBUG(dbgs() << "\n"
-                      << LinalgDependenceGraph::getDependenceTypeStr(depType)
-                      << "producer: " << *producer.getOperation() << " view: "
-                      << producedView << " output index: " << producerIdx);
-
-    // Must be a subview or a slice to guarantee there are loops we can fuse
-    // into.
-    auto subView = consumedView.getDefiningOp<SubViewOp>();
-    auto slice = consumedView.getDefiningOp<SliceOp>();
-    if (!subView && !slice) {
-      LLVM_DEBUG(dbgs() << "\nNot fusable (not a subview or slice)");
-      continue;
-    }
-
-    // Simple fusability checks.
-    if (!isFusableInto(graph, consumer, consumedView, producer))
-      continue;
-
-    // Fuse `producer` just before `consumer`.
-    OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(consumer.getOperation());
-    ScopedContext scope(b, consumer.getLoc());
-    LLVM_DEBUG(dbgs() << "Fuse into consumer: " << *consumer << "\n");
-    auto fusedProducer = fuse(producedView, producer, consumer, consumerIdx,
-                              producerIdx, folder);
-
-    return FusionInfo{producer, fusedProducer};
-  }
-  return llvm::None;
-}
-
-// Only consider RAW and WAW atm.
-Optional<FusionInfo> mlir::linalg::fuseProducerOf(
-    OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
-    const LinalgDependenceGraph &graph, OperationFolder *folder) {
-  for (auto dep : {
+static Optional<LinalgDependenceGraph::LinalgDependenceGraphElem>
+findFusableProducer(LinalgOp consumer, unsigned consumerIdx,
+                    const LinalgDependenceGraph &dependenceGraph) {
+  // Only consider RAW and WAW atm.
+  for (auto depType : {
            LinalgDependenceGraph::DependenceType::RAW,
            LinalgDependenceGraph::DependenceType::WAW,
        }) {
-    if (auto res =
-            fuseProducerOfDep(b, consumer, consumerIdx, graph, folder, dep))
-      return res;
+    for (auto dependence :
+         dependenceGraph.getDependencesInto(consumer, depType)) {
+      auto producer = cast<LinalgOp>(dependence.dependentOpView.op);
+
+      // Check that the dependence is indeed on the input `consumerIdx` view.
+      auto consumedView = dependence.indexingView;
+      if (!isSameSubView(consumer.getBuffer(consumerIdx), consumedView))
+        continue;
+
+      // Consumer consumes this view, `isStructurallyFusableProducer` also
+      // checks whether it is a strict subview of the producer view.
+      auto producedView = dependence.dependentOpView.view;
+      auto producerIdx =
+          producer.getIndexOfOutputBuffer(producedView).getValue();
+      // `consumerIdx` and `producerIdx` exist by construction.
+      LLVM_DEBUG(dbgs() << "\n"
+                        << LinalgDependenceGraph::getDependenceTypeStr(depType)
+                        << "producer: " << *producer.getOperation() << " view: "
+                        << producedView << " output index: " << producerIdx);
+      (void)producerIdx;
+
+      // Simple fusability checks.
+      if (!isFusableInto(dependenceGraph, consumer, consumedView, producer))
+        continue;
+
+      return dependence;
+    }
+  }
+  return {};
+}
+
+Optional<FusionInfo> mlir::linalg::fuseProducerOf(
+    OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
+    const LinalgDependenceGraph &graph, OperationFolder *folder) {
+  Optional<LinalgDependenceGraph::LinalgDependenceGraphElem> fusableDependence =
+      findFusableProducer(consumer, consumerIdx, graph);
+  if (!fusableDependence)
+    return {};
+
+  LinalgOp producerOp = cast<LinalgOp>(fusableDependence->dependentOpView.op);
+  Value producerView = fusableDependence->dependentOpView.view;
+  Value consumerView = fusableDependence->indexingView;
+
+  // Must be a subview or a slice to guarantee there are loops we can fuse
+  // into.
+  auto subView = consumerView.getDefiningOp<SubViewOp>();
+  auto slice = consumerView.getDefiningOp<SliceOp>();
+  if (!subView && !slice) {
+    LLVM_DEBUG(dbgs() << "\nNot fusable (not a subview or slice)");
+    return {};
+  }
+
+  // Fuse `producer` just before `consumer`.
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPoint(consumer.getOperation());
+  ScopedContext scope(b, consumer.getLoc());
+  LLVM_DEBUG(dbgs() << "Fuse into consumer: " << *consumer << "\n");
+  Optional<unsigned> producerIdxOpt =
+      producerOp.getIndexOfInputAndOutputBuffer(producerView);
+  assert(producerIdxOpt.hasValue() && "incorrect operand index");
+  unsigned producerIdx = producerIdxOpt.getValue();
+
+  auto fusedProducer =
+      fuse(b, producerOp, producerIdx, consumer, consumerIdx, folder);
+  return FusionInfo{producerOp, fusedProducer};
+}
+
+/// Returns the positions of the loop in `op` that can be tiled based on the
+/// operations that are to be fused with it. For example, in a
+///
+///   linalg. matmul ins(%a, %b : ...) outs(%c : ...)
+///
+/// if the producer of %a needs to be fused with this op, only the `i` loop of
+/// the matmul can be tiled while fusing. If producer of %a, and %b are to be
+/// fused, then no loops can be tiled while fusing.
+static DenseSet<unsigned> collectTileAndFuseLoops(
+    LinalgOp op, ArrayRef<LinalgDependenceGraph::LinalgDependenceGraphElem>
+                     fusableDependences) {
+  // 1. Only parallel loops can be used for tile + fuse. Find the number of
+  // common outer parallel loops between the op and its producers being fused.
+  auto getNumOuterParallelLoops = [](LinalgOp linalgOp) {
+    return linalgOp.iterator_types()
+        .getValue()
+        .take_while([](Attribute attr) -> bool {
+          return attr.cast<StringAttr>().getValue() ==
+                 getParallelIteratorTypeName();
+        })
+        .size();
+  };
+
+  size_t numOuterParallelLoops = getNumOuterParallelLoops(op);
+  for (auto dependence : fusableDependences) {
+    numOuterParallelLoops =
+        std::min(numOuterParallelLoops, getNumOuterParallelLoops(cast<LinalgOp>(
+                                            dependence.dependentOpView.op)));
+  }
+
+  // Need to compute what tiled loops can be "fused". Given the precondition
+  // that all indexing map for the producer view is a projected permutation, we
+  // can assert that the producer iterates over the dimensions of the "fused
+  // view" only once. To be used a fused loop the producer should use this loop
+  // to access the fused view. For example, consider
+  //
+  // ```
+  //   linalg.add ins(%a, %b) outs(%c)
+  //   linalg.matmul ins(%d, %c) outs(%e)
+  // ```
+  //
+  // if `linalg.add` has the semantics of `c = a + b`, then the following
+  // tile+fuse code is correct.
+  //
+  // ```
+  // for j ... += TSj
+  //   %sa = subview %a[0, %j][...]
+  //   %sb = subview %b[0, %j][...]
+  //   %sc = subview %c[0, %j][...]
+  //   %sd = subview %d[0, 0][...]
+  //   %se = subview %e[0, %j][...]
+  //   linalg.add ins(%sa, %sb) outs(%sc)
+  //   linalg.matmul ins(%sd, %sc) outs(%se)
+  // ```
+  //
+  // On the other hand tiling along i would be incorrect
+  //
+  // ```
+  // for %i .. += TSi
+  //   %sa = subview %a[%i, 0][...]
+  //   %sb = subview %b[%i, 0][...]
+  //   %sc = subview %c[%i, 0][...]
+  //   %sc2 = subview %c[0, 0][...]
+  //   %sd = subview %d[%i, 0][...]
+  //   %se = subview %e[%i, 0][...]
+  //   linalg.add ins(%sa, %sb) outs(%sc)
+  //   linalg.matmul ins(%sd, %sc2) outs(%se)
+  // ```
+  //
+  // The write to the subview `%sc` in `linalg.add` is performed after the read
+  // from it using `%sc2` violating the RAW dependence of the original code. To
+  // find such loops indexing map of the fused view in the consumer op is
+  // used. For the above example, this indexing map is
+  //
+  //   affine_map<(d0, d1, d2) -> (d2, d1)>
+  //
+  // Since d0 is not in the result expressions of this map, it is not treated as
+  // tile + fuse loop, (but d1 is).
+  //
+  // TODO: The above is probably restrictive and there might be a generalization
+  // of these that might allow for more fusion opportunities. Explore based on
+  // needs.
+  SmallVector<DenseSet<unsigned>, 1> commonTilableLoops;
+  for (auto dependence : fusableDependences) {
+    unsigned consumerIdx =
+        op.getIndexOfInputAndOutputBuffer(dependence.indexingView).getValue();
+    AffineMap consumerAccess = op.getIndexingMap(consumerIdx);
+    // Previously asserted that the consumerAccess map is a projected
+    // permutation, so all results are known to be AffineDimExprs. To remove
+    // this restriction walk the expression to find which dimensions of the
+    // consumer loop appear in the `consumerAccess`.
+    DenseSet<unsigned> positions;
+    for (auto expr : consumerAccess.getResults())
+      positions.insert(expr.cast<AffineDimExpr>().getPosition());
+    commonTilableLoops.emplace_back(std::move(positions));
+  }
+
+  // 2. Of the outer parallel loops, only those loops can be tiled + fused as
+  // computed above for all the fused dependences can be used to tile and fuse.
+  DenseSet<unsigned> tilableParallelLoops;
+  for (auto index : llvm::seq<unsigned>(0, numOuterParallelLoops)) {
+    if (llvm::all_of(commonTilableLoops,
+                     [&](const DenseSet<unsigned> &tilableLoops) {
+                       return tilableLoops.count(index);
+                     }))
+      tilableParallelLoops.insert(index);
+  }
+  return tilableParallelLoops;
+}
+
+/// Find all dependences that are to be fusable.
+static Optional<
+    SmallVector<LinalgDependenceGraph::LinalgDependenceGraphElem, 1>>
+findAllFusableDependences(LinalgOp op,
+                          const LinalgDependenceGraph &dependenceGraph,
+                          const LinalgFusionOptions &fusionOptions) {
+  SmallVector<LinalgDependenceGraph::LinalgDependenceGraphElem, 1>
+      fusableDependences;
+  for (auto operand : llvm::enumerate(op.getInputsAndOutputBuffers())) {
+    if (fusionOptions.indicesToFuse &&
+        !fusionOptions.indicesToFuse->count(operand.index()))
+      continue;
+    Optional<LinalgDependenceGraph::LinalgDependenceGraphElem>
+        fusableDependence =
+            findFusableProducer(op, operand.index(), dependenceGraph);
+    if (!fusableDependence)
+      continue;
+    // Make sure that the indexing map of the view used for fusion in the
+    // producer is a projected permutation.
+    LinalgOp producerOp = cast<LinalgOp>(fusableDependence->dependentOpView.op);
+    Value producerView = fusableDependence->dependentOpView.view;
+    unsigned producerIdx =
+        producerOp.getIndexOfInputAndOutputBuffer(producerView).getValue();
+    AffineMap producerMap = producerOp.getIndexingMap(producerIdx);
+    if (!producerMap.isProjectedPermutation()) {
+      op.emitError("unhandled non permutation indexing map for fused view in "
+                   "producer for operand at index ")
+          << operand.index();
+      return llvm::None;
+    }
+    Value consumerView = fusableDependence->indexingView;
+    unsigned consumerIdx =
+        op.getIndexOfInputAndOutputBuffer(consumerView).getValue();
+    if (!op.getIndexingMap(consumerIdx).isProjectedPermutation()) {
+      op.emitError(
+          "unhandled case where indexing map for fused view in the consumer is "
+          "not a projected permuration while fusing at index ")
+          << operand.index();
+      return llvm::None;
+    }
+    fusableDependences.push_back(*fusableDependence);
+    if (!fusionOptions.indicesToFuse)
+      break;
+  }
+  return fusableDependences;
+}
+
+static bool isZero(Value v) {
+  if (auto cst = v.getDefiningOp<ConstantIndexOp>())
+    return cst.getValue() == 0;
+  return false;
+}
+
+template <typename LoopType>
+static Optional<TiledAndFusedLinalgOps>
+tileAndFuseLinalgOpsImpl(PatternRewriter &rewriter, LinalgOp op,
+                         const LinalgDependenceGraph &dependenceGraph,
+                         const LinalgTilingOptions &tilingOptions,
+                         const LinalgFusionOptions &fusionOptions) {
+  assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
+  // Some of the tiling options might not be supportable with tile and fuse.
+  // TODO: Support interchange with tile + fuse.
+  if (!tilingOptions.interchangeVector.empty()) {
+    op.emitError("unable to handle tile and fuse with interchange");
+    return llvm::None;
+  }
+
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(op);
+  ScopedContext scope(rewriter, op.getLoc());
+
+  // Find all the producers.
+  Optional<SmallVector<LinalgDependenceGraph::LinalgDependenceGraphElem, 1>>
+      fusableDependencesOpt =
+          findAllFusableDependences(op, dependenceGraph, fusionOptions);
+  if (!fusableDependencesOpt)
+    return llvm::None;
+  ArrayRef<LinalgDependenceGraph::LinalgDependenceGraphElem> fusableDependences(
+      *fusableDependencesOpt);
+
+  // Enforce the convention that "tiling by zero" skips tiling a particular
+  // dimension. This convention is significantly simpler to handle instead of
+  // adjusting affine maps to account for missing dimensions.
+  auto nLoops = op.getNumLoops();
+  SmallVector<Value, 4> tileSizeVector =
+      tilingOptions.tileSizeComputationFunction(rewriter, op);
+  if (tileSizeVector.size() < nLoops) {
+    auto zero = std_constant_index(0);
+    tileSizeVector.append(nLoops - tileSizeVector.size(), zero);
+  }
+
+  TiledAndFusedLinalgOps ret;
+
+  // Find the loops that can be tiled and fused.
+  DenseSet<unsigned> tileFuseLoops =
+      collectTileAndFuseLoops(op, fusableDependences);
+
+  // If there are no fusable dependences or there are no tile+fusable loops,
+  // just return.
+  if (fusableDependences.empty() || tileFuseLoops.empty()) {
+    return llvm::None;
+  }
+
+  // Get the tile sizes for the first and second tiling steps. For the first
+  // step the tile size are set to zero for the loops that arent
+  // fused. Similarly for the second step, the tile sizes are set to zero for
+  // the loops that are fused. For example, if for the following input
+  //
+  // ```
+  //   linalg.add ins(%a, %b) outs(%c)
+  //   linalg.matmul ins(%d, %c) outs(%e)
+  // ```
+  //
+  // if the tile sizes of the `{i, j, k}` loops where given as `{ti, tj, tk}`
+  // respectively, and since only `j` can be tiled and fused. The tile sizes
+  // would be `{0, t_j, 0}` for the first tiling that tiles just the fusable
+  // loops. The second tiling would be use tile sizes of `{t_i, 0, t_k}` to tile
+  // the tiled matmul generated by the first tiling step.
+  SmallVector<Value, 4> tileAndFuseSizes, tileSizes;
+  for (auto tileSize : enumerate(tileSizeVector)) {
+    auto zero = std_constant_index(0);
+    if (tileFuseLoops.count(tileSize.index())) {
+      tileAndFuseSizes.push_back(tileSize.value());
+      tileSizes.push_back(zero);
+    } else {
+      tileSizes.push_back(tileSize.value());
+      tileAndFuseSizes.push_back(zero);
+    }
+  }
+
+  // Tile for the loops that can be fused.
+  LinalgTilingOptions firstTilingOptions = tilingOptions;
+  firstTilingOptions.setTileSizes(tileAndFuseSizes);
+  Optional<TiledLinalgOp> firstTiledOp =
+      tileLinalgOp(rewriter, op, firstTilingOptions);
+  if (!firstTiledOp)
+    return llvm::None;
+  ret.op = firstTiledOp->op;
+  ret.fusedLoops.assign(firstTiledOp->loops.begin(), firstTiledOp->loops.end());
+
+  rewriter.setInsertionPoint(ret.op);
+  // Fuse the operands.
+  for (auto producer : enumerate(fusableDependences)) {
+    LinalgOp producerOp = cast<LinalgOp>(producer.value().dependentOpView.op);
+    unsigned producerIdx = producerOp
+                               .getIndexOfInputAndOutputBuffer(
+                                   producer.value().dependentOpView.view)
+                               .getValue();
+    unsigned consumerIdx =
+        op.getIndexOfInputAndOutputBuffer(producer.value().indexingView)
+            .getValue();
+    LinalgOp fusedOp =
+        fuse(rewriter, producerOp, producerIdx, ret.op, consumerIdx);
+    ret.fusedProducers.push_back(fusedOp);
+    ret.originalProducers.push_back(producerOp);
+  }
+
+  if (!llvm::all_of(tileSizes, isZero)) {
+    // Tile the remaining loops of the root operation.
+    LinalgTilingOptions secondTilingOptions = tilingOptions;
+    // The distribution is done only for the tile+fused loops.
+    secondTilingOptions.distribution = llvm::None;
+    secondTilingOptions.setTileSizes(tileSizes);
+    Optional<TiledLinalgOp> secondTiledOp =
+        tileLinalgOp(rewriter, ret.op, secondTilingOptions);
+    if (!secondTiledOp)
+      return llvm::None;
+    ret.unfusedLoops.assign(secondTiledOp->loops.begin(),
+                            secondTiledOp->loops.end());
+    rewriter.eraseOp(ret.op);
+    ret.op = secondTiledOp->op;
+  }
+
+  return ret;
+}
+
+Optional<TiledAndFusedLinalgOps>
+mlir::linalg::tileAndFuseLinalgOps(PatternRewriter &rewriter, LinalgOp op,
+                                   const LinalgDependenceGraph &dependenceGraph,
+                                   const LinalgTilingOptions &tilingOptions,
+                                   const LinalgFusionOptions &fusionOptions) {
+  switch (tilingOptions.loopType) {
+  case LinalgTilingLoopType::Loops:
+    return tileAndFuseLinalgOpsImpl<scf::ForOp>(rewriter, op, dependenceGraph,
+                                                tilingOptions, fusionOptions);
+  case LinalgTilingLoopType::ParallelLoops:
+    return tileAndFuseLinalgOpsImpl<scf::ParallelOp>(
+        rewriter, op, dependenceGraph, tilingOptions, fusionOptions);
+  default:;
   }
   return llvm::None;
 }

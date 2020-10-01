@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
+#include <initializer_list>
 
 #define DEBUG_TYPE "aarch64-legalinfo"
 
@@ -54,6 +55,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const LLT v2s64 = LLT::vector(2, 64);
   const LLT v2p0 = LLT::vector(2, p0);
 
+  std::initializer_list<LLT> PackedVectorAllTypeList = {/* Begin 128bit types */
+                                                        v16s8, v8s16, v4s32,
+                                                        v2s64, v2p0,
+                                                        /* End 128bit types */
+                                                        /* Begin 64bit types */
+                                                        v8s8, v4s16, v2s32};
+
   const TargetMachine &TM = ST.getTargetLowering()->getTargetMachine();
 
   // FIXME: support subtargets which have neon/fp-armv8 disabled.
@@ -63,7 +71,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   }
 
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
-      .legalFor({p0, s1, s8, s16, s32, s64, v2s32, v4s32, v2s64, v16s8, v8s16})
+      .legalFor({p0, s1, s8, s16, s32, s64})
+      .legalFor(PackedVectorAllTypeList)
       .clampScalar(0, s1, s64)
       .widenScalarToNextPow2(0, 8)
       .fewerElementsIf(
@@ -79,8 +88,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
             return std::make_pair(0, EltTy);
           });
 
-  getActionDefinitionsBuilder(G_PHI)
-      .legalFor({p0, s16, s32, s64, v2s32, v4s32, v2s64})
+  getActionDefinitionsBuilder(G_PHI).legalFor({p0, s16, s32, s64})
+      .legalFor(PackedVectorAllTypeList)
       .clampScalar(0, s16, s64)
       .widenScalarToNextPow2(0);
 
@@ -175,7 +184,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalar(0, s32);
 
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FNEG})
-      .legalFor({s32, s64, v2s64, v4s32, v2s32});
+      .legalFor({s32, s64, v2s64, v4s32, v2s32})
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64);
 
   getActionDefinitionsBuilder(G_FREM).libcallFor({s32, s64});
 

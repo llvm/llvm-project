@@ -111,7 +111,6 @@ bool shouldEscape(unsigned char C) {
 /// - Reserved characters always escaped with exceptions like '/'.
 /// - All other characters are escaped.
 void percentEncode(llvm::StringRef Content, std::string &Out) {
-  std::string Result;
   for (unsigned char C : Content)
     if (shouldEscape(C)) {
       Out.push_back('%');

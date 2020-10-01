@@ -355,28 +355,18 @@ private:
   /// The symbol being referenced.
   const MCSymbol *Symbol;
 
-  // Subclass data stores VariantKind in bits 0..15, UseParensForSymbolVariant
-  // in bit 16 and HasSubsectionsViaSymbols in bit 17.
+  // Subclass data stores VariantKind in bits 0..15 and HasSubsectionsViaSymbols
+  // in bit 16.
   static const unsigned VariantKindBits = 16;
   static const unsigned VariantKindMask = (1 << VariantKindBits) - 1;
 
-  /// Specifies how the variant kind should be printed.
-  static const unsigned UseParensForSymbolVariantBit = 1 << VariantKindBits;
-
   // FIXME: Remove this bit.
-  static const unsigned HasSubsectionsViaSymbolsBit =
-      1 << (VariantKindBits + 1);
+  static const unsigned HasSubsectionsViaSymbolsBit = 1 << VariantKindBits;
 
   static unsigned encodeSubclassData(VariantKind Kind,
-                              bool UseParensForSymbolVariant,
-                              bool HasSubsectionsViaSymbols) {
+                                     bool HasSubsectionsViaSymbols) {
     return (unsigned)Kind |
-           (UseParensForSymbolVariant ? UseParensForSymbolVariantBit : 0) |
            (HasSubsectionsViaSymbols ? HasSubsectionsViaSymbolsBit : 0);
-  }
-
-  bool useParensForSymbolVariant() const {
-    return (getSubclassData() & UseParensForSymbolVariantBit) != 0;
   }
 
   explicit MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
@@ -404,8 +394,6 @@ public:
   VariantKind getKind() const {
     return (VariantKind)(getSubclassData() & VariantKindMask);
   }
-
-  void printVariantKind(raw_ostream &OS) const;
 
   bool hasSubsectionsViaSymbols() const {
     return (getSubclassData() & HasSubsectionsViaSymbolsBit) != 0;

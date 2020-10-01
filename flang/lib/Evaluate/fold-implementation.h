@@ -1155,8 +1155,11 @@ Expr<TO> FoldOperation(
     return *array;
   }
   return std::visit(
-      [&](auto &kindExpr) -> Expr<TO> {
+      [&context, &convert](auto &kindExpr) -> Expr<TO> {
         using Operand = ResultType<decltype(kindExpr)>;
+        // This variable is a workaround for msvc which emits an error when
+        // using the FROMCAT template parameter below.
+        TypeCategory constexpr FromCat{FROMCAT};
         char buffer[64];
         if (auto value{GetScalarConstantValue<Operand>(kindExpr)}) {
           if constexpr (TO::category == TypeCategory::Integer) {
@@ -1213,7 +1216,7 @@ Expr<TO> FoldOperation(
             return Expr<TO>{value->IsTrue()};
           }
         } else if constexpr (std::is_same_v<Operand, TO> &&
-            FROMCAT != TypeCategory::Character) {
+            FromCat != TypeCategory::Character) {
           return std::move(kindExpr); // remove needless conversion
         }
         return Expr<TO>{std::move(convert)};

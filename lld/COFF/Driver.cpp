@@ -69,13 +69,13 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   lld::stderrOS = &stderrOS;
 
   errorHandler().cleanupCallback = []() {
+    TpiSource::clear();
     freeArena();
     ObjFile::instances.clear();
     PDBInputFile::instances.clear();
     ImportFile::instances.clear();
     BitcodeFile::instances.clear();
     memset(MergeChunk::instances, 0, sizeof(MergeChunk::instances));
-    TpiSource::clear();
     OutputSection::clear();
   };
 

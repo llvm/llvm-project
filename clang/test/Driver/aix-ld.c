@@ -20,6 +20,7 @@
 // CHECK-LD32:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-NOT: "-lc++"
 // CHECK-LD32:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-LD32-NOT: "-lm"
 // CHECK-LD32:     "-lc"
 
 // Check powerpc64-ibm-aix7.1.0.0, 64-bit.
@@ -41,6 +42,7 @@
 // CHECK-LD64:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD64-NOT: "-lc++"
 // CHECK-LD64:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc64.a"
+// CHECK-LD64-NOT: "-lm"
 // CHECK-LD64:     "-lc"
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. Enable POSIX thread support.
@@ -64,6 +66,7 @@
 // CHECK-LD32-PTHREAD-NOT: "-lc++"
 // CHECK-LD32-PTHREAD:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
 // CHECK-LD32-PTHREAD:     "-lpthreads"
+// CHECK-LD32-PTHREAD-NOT: "-lm"
 // CHECK-LD32-PTHREAD:     "-lc"
 
 // Check powerpc64-ibm-aix7.1.0.0, 64-bit. POSIX thread alias.
@@ -87,6 +90,7 @@
 // CHECK-LD64-PTHREAD-NOT: "-lc++"
 // CHECK-LD64-PTHREAD:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc64.a"
 // CHECK-LD64-PTHREAD:     "-lpthreads"
+// CHECK-LD64-PTHREAD-NOT: "-lm"
 // CHECK-LD64-PTHREAD:     "-lc"
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. Enable profiling.
@@ -109,6 +113,7 @@
 // CHECK-LD32-PROF:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-PROF-NOT: "-lc++"
 // CHECK-LD32-PROF:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-LD32-PROF-NOT: "-lm"
 // CHECK-LD32-PROF:     "-lc"
 
 // Check powerpc64-ibm-aix7.1.0.0, 64-bit. Enable g-profiling.
@@ -131,6 +136,7 @@
 // CHECK-LD64-GPROF:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD64-GPROF-NOT: "-lc++"
 // CHECK-LD64-GPROF:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc64.a"
+// CHECK-LD64-GPROF-NOT: "-lm"
 // CHECK-LD64-GPROF:     "-lc"
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. Static linking.
@@ -153,6 +159,7 @@
 // CHECK-LD32-STATIC:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-STATIC-NOT: "-lc++"
 // CHECK-LD32-STATIC:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-LD32-STATIC-NOT: "-lm"
 // CHECK-LD32-STATIC:     "-lc"
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. Library search path.
@@ -176,6 +183,7 @@
 // CHECK-LD32-LIBP:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-LIBP-NOT: "-lc++"
 // CHECK-LD32-LIBP:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-LD32-LIBP-NOT: "-lm"
 // CHECK-LD32-LIBP:     "-lc"
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. nostdlib.
@@ -200,6 +208,7 @@
 // CHECK-LD32-NO-STD-LIB-NOT: "-lc++"
 // CHECK-LD32-NO-STD-LIB-NOT: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
 // CHECK-LD32-NO-STD-LIB-NOT: "-lpthreads"
+// CHECK-LD32-NO-STD-LIB-NOT: "-lm"
 // CHECK-LD32-NO-STD-LIB-NOT: "-lc"
 
 // Check powerpc64-ibm-aix7.1.0.0, 64-bit. nodefaultlibs.
@@ -224,6 +233,7 @@
 // CHECK-LD64-NO-DEFAULT-LIBS-NOT: "-lc++"
 // CHECK-LD64-NO-DEFAULT-LIBS-NOT: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc64.a"
 // CHECK-LD64-NO-DEFAULT-LIBS-NOT: "-lpthreads"
+// CHECK-LD64-NO-DEFAULT-LIBS-NOT: "-lm"
 // CHECK-LD64-NO-DEFAULT-LIBS-NOT: "-lc"
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. 'bcdtors' and argument order.
@@ -247,6 +257,7 @@
 // CHECK-LD32-CXX-ARG-ORDER-NOT: "-bcdtors:all:0:s"
 // CHECK-LD32-CXX-ARG-ORDER:     "-lc++"
 // CHECK-LD32-CXX-ARG-ORDER:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-LD32-CXX-ARG-ORDER:     "-lm"
 // CHECK-LD32-CXX-ARG-ORDER:     "-lc"
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. lc++ and lc order.
@@ -266,6 +277,7 @@
 // CHECK-LD32-CXX-ARG-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-CXX-ARG-LCXX:     "-lc++"
 // CHECK-LD32-CXX-ARG-LCXX:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-LD32-CXX-ARG-LCXX:     "-lm"
 // CHECK-LD32-CXX-ARG-LCXX:     "-lc"
 
 // Check powerpc64-ibm-aix7.1.0.0, 64-bit. lc++ and lc order.
@@ -285,6 +297,7 @@
 // CHECK-LD64-CXX-ARG-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD64-CXX-ARG-LCXX:     "-lc++"
 // CHECK-LD64-CXX-ARG-LCXX:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc64.a"
+// CHECK-LD64-CXX-ARG-LCXX:     "-lm"
 // CHECK-LD64-CXX-ARG-LCXX:     "-lc"
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. -nodefaultlibs.
@@ -305,6 +318,7 @@
 // CHECK-LD32-NODEFLIB-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-NODEFLIB-LCXX-NOT: "-lc++"
 // CHECK-LD32-NODEFLIB-LCXX-NOT: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-LD32-NODEFLIB-LCXX-NOT: "-lm"
 // CHECK-LD32-NODEFLIB-LCXX-NOT: "-lc"
 
 // Check powerpc64-ibm-aix7.1.0.0, 64-bit. -nodefaultlibs.
@@ -325,6 +339,7 @@
 // CHECK-LD64-NODEFLIB-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD64-NODEFLIB-LCXX-NOT: "-lc++"
 // CHECK-LD64-NODEFLIB-LCXX-NOT: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc64.a"
+// CHECK-LD64-NODEFLIB-LCXX-NOT: "-lm"
 // CHECK-LD64-NODEFLIB-LCXX-NOT: "-lc"
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. -nostdlib.
@@ -345,6 +360,7 @@
 // CHECK-LD32-NOSTDLIB-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-NOSTDLIB-LCXX-NOT: "-lc++"
 // CHECK-LD32-NOSTDLIB-LCXX-NOT: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-LD32-NOSTDLIB-LCXX-NOT: "-lm"
 // CHECK-LD32-NOSTDLIB-LCXX-NOT: "-lc"
 
 // Check powerpc64-ibm-aix7.1.0.0, 64-bit. -nostdlib.
@@ -365,6 +381,7 @@
 // CHECK-LD64-NOSTDLIB-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD64-NOSTDLIB-LCXX-NOT: "-lc++"
 // CHECK-LD64-NOSTDLIB-LCXX-NOT: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc64.a"
+// CHECK-LD64-NOSTDLIB-LCXX-NOT: "-lm"
 // CHECK-LD64-NOSTDLIB-LCXX-NOT: "-lc"
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. -nostdlib++.
@@ -386,6 +403,7 @@
 // CHECK-LD32-NOSTDLIBXX-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-NOSTDLIBXX-LCXX-NOT: "-lc++"
 // CHECK-LD32-NOSTDLIBXX-LCXX:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-LD32-NOSTDLIBXX-LCXX:     "-lm"
 // CHECK-LD32-NOSTDLIBXX-LCXX:     "-lc"
 
 // Check powerpc64-ibm-aix7.1.0.0, 64-bit. -nostdlib++.
@@ -406,6 +424,7 @@
 // CHECK-LD64-NOSTDLIBXX-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD64-NOSTDLIBXX-LCXX-NOT: "-lc++"
 // CHECK-LD64-NOSTDLIBXX-LCXX:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc64.a"
+// CHECK-LD64-NOSTDLIBXX-LCXX:     "-lm"
 // CHECK-LD64-NOSTDLIBXX-LCXX:     "-lc"
 
 // Check powerpc64-ibm-aix7.1.0.0, 32-bit. -nostartfiles.
@@ -424,8 +443,9 @@
 // CHECK-LD32-NOSTARTFILES-LCXX-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
 // CHECK-LD32-NOSTARTFILES-LCXX-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
 // CHECK-LD32-NOSTARTFILES-LCXX:     "-L[[SYSROOT]]/usr/lib"
-// CHECK-LD32-NOSTARTFILES-LCXX      "-lc++"
+// CHECK-LD32-NOSTARTFILES-LCXX:     "-lc++"
 // CHECK-LD32-NOSTARTFILES-LCXX:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-LD32-NOSTARTFILES-LCXX:     "-lm"
 // CHECK-LD32-NOSTARTFILES-LCXX:     "-lc"
 
 // Check powerpc64-ibm-aix7.1.0.0, 64-bit. -nostartfiles.
@@ -446,6 +466,7 @@
 // CHECK-LD64-NOSTARTFILES-LCXX:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD64-NOSTARTFILES-LCXX:     "-lc++"
 // CHECK-LD64-NOSTARTFILES-LCXX:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc64.a"
+// CHECK-LD64-NOSTARTFILES-LCXX:     "-lm"
 // CHECK-LD64-NOSTARTFILES-LCXX:     "-lc"
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. -stdlib=libstdc++ invokes fatal error.
@@ -483,6 +504,7 @@
 // CHECK-LD32-SHARED:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD32-SHARED:     "-lc++"
 // CHECK-LD32-SHARED:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-LD32-SHARED:     "-lm"
 // CHECK-LD32-SHARED:     "-lc"
 
 // Check powerpc64-ibm-aix7.1.0.0, 64-bit. -shared.
@@ -505,4 +527,5 @@
 // CHECK-LD64-SHARED:     "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD64-SHARED:     "-lc++"
 // CHECK-LD64-SHARED:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc64.a"
+// CHECK-LD64-SHARED:     "-lm"
 // CHECK-LD64-SHARED:     "-lc"

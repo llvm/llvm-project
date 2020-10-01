@@ -1381,6 +1381,15 @@ def StringElementsAttr : ElementsAttrBase<
   let convertFromStorage = "$_self";
 }
 
+// Attributes containing affine maps.
+def AffineMapAttr : Attr<
+CPred<"$_self.isa<::mlir::AffineMapAttr>()">, "AffineMap attribute"> {
+  let storageType = [{::mlir::AffineMapAttr }];
+  let returnType = [{ ::mlir::AffineMap }];
+  let valueType = Index;
+  let constBuilderCall = "::mlir::AffineMapAttr::get($0)";
+}
+
 // Base class for array attributes.
 class ArrayAttrBase<Pred condition, string description> :
     Attr<condition, description> {
@@ -1408,6 +1417,11 @@ class TypedArrayAttrBase<Attr element, string description>: ArrayAttrBase<
   let constBuilderCall = "$_builder.getArrayAttr($0)";
 
   Attr elementAttr = element;
+}
+
+def AffineMapArrayAttr : TypedArrayAttrBase<AffineMapAttr,
+                                      "AffineMap array attribute"> {
+  let constBuilderCall = "$_builder.getAffineMapArrayAttr($0)";
 }
 
 def BoolArrayAttr : TypedArrayAttrBase<BoolAttr,
