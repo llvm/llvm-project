@@ -1112,9 +1112,8 @@ void Writer::calculateInitFunctions() {
     for (const WasmInitFunc &f : l.InitFunctions) {
       FunctionSymbol *sym = file->getFunctionSymbol(f.Symbol);
       // comdat exclusions can cause init functions be discarded.
-      if (sym->isDiscarded())
+      if (sym->isDiscarded() || !sym->isLive())
         continue;
-      assert(sym->isLive());
       if (sym->signature->Params.size() != 0)
         error("constructor functions cannot take arguments: " + toString(*sym));
       LLVM_DEBUG(dbgs() << "initFunctions: " << toString(*sym) << "\n");

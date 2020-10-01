@@ -132,6 +132,8 @@ bool Symbol::isLive() const {
 
 void Symbol::markLive() {
   assert(!isDiscarded());
+  if (file != NULL)
+    file->markLive();
   if (auto *g = dyn_cast<DefinedGlobal>(this))
     g->global->live = true;
   if (auto *e = dyn_cast<DefinedEvent>(this))
