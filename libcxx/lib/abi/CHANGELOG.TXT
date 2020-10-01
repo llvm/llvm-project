@@ -16,7 +16,7 @@ New entries should be added directly below the "Version" header.
 Version 12.0
 ------------
 
-* XXXXXXX - [libc++] Simplify how we re-export symbols from libc++abi
+* 4f13b9992971 - [libc++] Simplify how we re-export symbols from libc++abi
 
   We re-export some symbols that were exported from libc++abi but not from
   libc++. Exporting new symbols is not an ABI break.
