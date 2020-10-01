@@ -298,11 +298,6 @@ ${error} Set RUNTIMES_BUILD_ALLOW_DARWIN to allow a single darwin triple.")
       endif()
     endforeach()
 
-    # 64-bit XCOFF and big AR format is not yet supported in some of these tools.
-    if(NOT target MATCHES aix)
-      set(${target}_toolchain_tools lld llvm-ar llvm-lipo llvm-ranlib llvm-nm llvm-objcopy llvm-objdump llvm-strip)
-    endif()
-
     llvm_ExternalProject_Add(builtins-${target}
                              ${compiler_rt_path}/lib/builtins
                              DEPENDS ${ARG_DEPENDS}
@@ -316,7 +311,6 @@ ${error} Set RUNTIMES_BUILD_ALLOW_DARWIN to allow a single darwin triple.")
                                         -DCMAKE_ASM_COMPILER_WORKS=ON
                                         -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
                                         ${${target}_extra_args}
-                             TOOLCHAIN_TOOLS clang ${${target}_toolchain_tools}
                              USE_TOOLCHAIN
                              ${EXTRA_ARGS})
   endfunction()
@@ -524,11 +518,6 @@ ${error} Set RUNTIMES_BUILD_ALLOW_DARWIN to allow a single darwin triple.")
       list(APPEND EXTRA_ARGS STRIP_TOOL ${CMAKE_CURRENT_BINARY_DIR}/llvm-strip-link)
     endif()
 
-    # 64-bit XCOFF and big AR format is not yet supported in some of these tools.
-    if(NOT target MATCHES aix)
-      set(${name}_toolchain_tools lld llvm-ar llvm-lipo llvm-ranlib llvm-nm llvm-objcopy llvm-objdump llvm-strip)
-    endif()
-
     llvm_ExternalProject_Add(runtimes-${name}
                              ${CMAKE_CURRENT_SOURCE_DIR}
                              DEPENDS ${${name}_deps} ${CXX_HEADER_TARGET}
@@ -547,7 +536,6 @@ ${error} Set RUNTIMES_BUILD_ALLOW_DARWIN to allow a single darwin triple.")
                                         -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
                                         -DLLVM_RUNTIMES_TARGET=${name}
                                         ${${name}_extra_args}
-                             TOOLCHAIN_TOOLS clang ${${name}_toolchain_tools}
                              EXTRA_TARGETS ${${name}_extra_targets}
                                            ${${name}_test_targets}
                              USE_TOOLCHAIN
