@@ -16,64 +16,69 @@
 
 steps:
   - label: "C++03"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx03 | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh generic-cxx03 | libcxx/utils/ci/phabricator-report"
     agents:
       queue: "libcxx-builders"
 
   - label: "C++11"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx11 | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh generic-cxx11 | libcxx/utils/ci/phabricator-report"
     agents:
       queue: "libcxx-builders"
 
   - label: "C++14"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx14 | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh generic-cxx14 | libcxx/utils/ci/phabricator-report"
     agents:
       queue: "libcxx-builders"
 
   - label: "C++17"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx17 | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh generic-cxx17 | libcxx/utils/ci/phabricator-report"
     agents:
       queue: "libcxx-builders"
 
   - label: "C++20"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-cxx2a | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh generic-cxx2a | libcxx/utils/ci/phabricator-report"
     agents:
       queue: "libcxx-builders"
 
   - label: "-fno-exceptions"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-noexceptions | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh generic-noexceptions | libcxx/utils/ci/phabricator-report"
     agents:
       queue: "libcxx-builders"
 
   - label: "GCC/C++20"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-gcc | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh generic-gcc | libcxx/utils/ci/phabricator-report"
     agents:
       queue: "libcxx-builders"
 
   - label: "ASAN"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-asan | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh generic-asan | libcxx/utils/ci/phabricator-report"
     agents:
       queue: "libcxx-builders"
 
   - label: "TSAN"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-tsan | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh generic-tsan | libcxx/utils/ci/phabricator-report"
     agents:
       queue: "libcxx-builders"
 
   - label: "UBSAN"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-ubsan | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh generic-ubsan | libcxx/utils/ci/phabricator-report"
     agents:
       queue: "libcxx-builders"
 
   - label: "With LLVM's libunwind"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-with_llvm_unwinder | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh generic-with_llvm_unwinder | libcxx/utils/ci/phabricator-report"
     agents:
       queue: "libcxx-builders"
 
   - label: "Single-threaded"
-    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-singlethreaded | libcxx/utils/ci/phabricator-report"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh generic-singlethreaded | libcxx/utils/ci/phabricator-report"
     agents:
       queue: "libcxx-builders"
+
+  - label: "MacOS C++20"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh generic-cxx2a | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-macos-builders"
 
   # Build with the configuration we use to generate libc++.dylib on Apple platforms
   - label: "Apple system"

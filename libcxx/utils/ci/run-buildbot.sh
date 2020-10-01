@@ -18,83 +18,83 @@ args+=("-DLLVM_ENABLE_PROJECTS=libcxx;libunwind;libcxxabi")
 args+=("-DLIBCXX_CXX_ABI=libcxxabi")
 
 case "${BUILDER}" in
-x86_64-ubuntu-cxx03)
+generic-cxx03)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --param=std=c++03")
 ;;
-x86_64-ubuntu-cxx11)
+generic-cxx11)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --param=std=c++11")
 ;;
-x86_64-ubuntu-cxx14)
+generic-cxx14)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --param=std=c++14")
 ;;
-x86_64-ubuntu-cxx17)
+generic-cxx17)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --param=std=c++17")
 ;;
-x86_64-ubuntu-cxx2a)
+generic-cxx2a)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --param=std=c++2a")
 ;;
-x86_64-ubuntu-noexceptions)
+generic-noexceptions)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
     args+=("-DLIBCXX_ENABLE_EXCEPTIONS=OFF")
     args+=("-DLIBCXXABI_ENABLE_EXCEPTIONS=OFF")
 ;;
-x86_64-ubuntu-32bit)
+generic-32bit)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
     args+=("-DLLVM_BUILD_32_BITS=ON")
 ;;
-x86_64-ubuntu-gcc)
+generic-gcc)
     export CC=gcc
     export CXX=g++
     # FIXME: Re-enable experimental testing on GCC. GCC cares about the order
     #        in which we link -lc++experimental, which causes issues.
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --param enable_experimental=False")
 ;;
-x86_64-ubuntu-asan)
+generic-asan)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_USE_SANITIZER=Address")
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
 ;;
-x86_64-ubuntu-msan)
+generic-msan)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_USE_SANITIZER=MemoryWithOrigins")
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
 ;;
-x86_64-ubuntu-tsan)
+generic-tsan)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_USE_SANITIZER=Thread")
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
 ;;
-x86_64-ubuntu-ubsan)
+generic-ubsan)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_USE_SANITIZER=Undefined")
     args+=("-DLIBCXX_ABI_UNSTABLE=ON")
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
 ;;
-x86_64-ubuntu-with_llvm_unwinder)
+generic-with_llvm_unwinder)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
     args+=("-DLIBCXXABI_USE_LLVM_UNWINDER=ON")
 ;;
-x86_64-ubuntu-singlethreaded)
+generic-singlethreaded)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
