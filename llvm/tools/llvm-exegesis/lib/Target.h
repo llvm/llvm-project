@@ -142,11 +142,6 @@ public:
     return {&Instr};
   }
 
-  // Checks hardware and software support for current benchmark mode.
-  // Returns an error if the target host does not have support to run the
-  // benchmark.
-  virtual Error checkFeatureSupport() const { return Error::success(); }
-
   // Creates a snippet generator for the given mode.
   std::unique_ptr<SnippetGenerator>
   createSnippetGenerator(InstructionBenchmark::ModeE Mode,
