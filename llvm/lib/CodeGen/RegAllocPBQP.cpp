@@ -518,6 +518,20 @@ private:
   }
 };
 
+/// PBQP-specific implementation of weight normalization.
+class PBQPVirtRegAuxInfo final : public VirtRegAuxInfo {
+  float normalize(float UseDefFreq, unsigned Size, unsigned NumInstr) override {
+    // All intervals have a spill weight that is mostly proportional to the
+    // number of uses, with uses in loops having a bigger weight.
+    return NumInstr * VirtRegAuxInfo::normalize(UseDefFreq, Size, 1);
+  }
+
+public:
+  PBQPVirtRegAuxInfo(MachineFunction &MF, LiveIntervals &LIS, VirtRegMap *VRM,
+                     const MachineLoopInfo &Loops,
+                     const MachineBlockFrequencyInfo &MBFI)
+      : VirtRegAuxInfo(MF, LIS, VRM, Loops, MBFI) {}
+};
 } // end anonymous namespace
 
 // Out-of-line destructor/anchor for PBQPRAConstraint.
@@ -778,13 +792,6 @@ void RegAllocPBQP::postOptimization(Spiller &VRegSpiller, LiveIntervals &LIS) {
   DeadRemats.clear();
 }
 
-static inline float normalizePBQPSpillWeight(float UseDefFreq, unsigned Size,
-                                         unsigned NumInstr) {
-  // All intervals have a spill weight that is mostly proportional to the number
-  // of uses, with uses in loops having a bigger weight.
-  return NumInstr * normalizeSpillWeight(UseDefFreq, Size, 1);
-}
-
 bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   LiveIntervals &LIS = getAnalysis<LiveIntervals>();
   MachineBlockFrequencyInfo &MBFI =
@@ -792,8 +799,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
 
   VirtRegMap &VRM = getAnalysis<VirtRegMap>();
 
-  VirtRegAuxInfo VRAI(MF, LIS, &VRM, getAnalysis<MachineLoopInfo>(), MBFI,
-                      normalizePBQPSpillWeight);
+  PBQPVirtRegAuxInfo VRAI(MF, LIS, &VRM, getAnalysis<MachineLoopInfo>(), MBFI);
   VRAI.calculateSpillWeightsAndHints();
 
   std::unique_ptr<Spiller> VRegSpiller(createInlineSpiller(*this, MF, VRM));
