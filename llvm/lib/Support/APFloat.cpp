@@ -850,8 +850,8 @@ bool IEEEFloat::isSignificandAllOnes() const {
   // Set the unused high bits to all ones when we compare.
   const unsigned NumHighBits =
     PartCount*integerPartWidth - semantics->precision + 1;
-  assert(NumHighBits <= integerPartWidth && "Can not have more high bits to "
-         "fill than integerPartWidth");
+  assert(NumHighBits <= integerPartWidth && NumHighBits > 0 &&
+         "Can not have more high bits to fill than integerPartWidth");
   const integerPart HighBitFill =
     ~integerPart(0) << (integerPartWidth - NumHighBits);
   if (~(Parts[PartCount - 1] | HighBitFill))
@@ -870,9 +870,10 @@ bool IEEEFloat::isSignificandAllZeros() const {
     if (Parts[i])
       return false;
 
+  // Compute how many bits are used in the final word.
   const unsigned NumHighBits =
     PartCount*integerPartWidth - semantics->precision + 1;
-  assert(NumHighBits <= integerPartWidth && "Can not have more high bits to "
+  assert(NumHighBits < integerPartWidth && "Can not have more high bits to "
          "clear than integerPartWidth");
   const integerPart HighBitMask = ~integerPart(0) >> NumHighBits;
 
