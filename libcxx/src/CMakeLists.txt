@@ -212,18 +212,6 @@ if (LIBCXX_ENABLE_SHARED)
       "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi.v${LIBCXX_LIBCPPABI_VERSION}.exp"
       "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
       "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
-
-    if (LIBCXX_ENABLE_EXCEPTIONS)
-      if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
-        target_link_libraries(cxx_shared PRIVATE "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi-exceptions.sjlj.exp")
-      else()
-        target_link_libraries(cxx_shared PRIVATE "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi-exceptions.exp")
-      endif()
-    endif()
-
-    if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
-      target_link_libraries(cxx_shared PRIVATE "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi-new-delete.exp")
-    endif()
   endif()
 
   # Generate a linker script in place of a libc++.so symlink.
