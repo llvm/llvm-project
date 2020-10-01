@@ -1,5 +1,6 @@
 // Test that String works in the REPL.
 // REQUIRES: system-darwin
+// REQUIRES: swift
 
 // RUN: %lldb --repl < %s | FileCheck %s --check-prefix=STRING
 

@@ -174,6 +174,12 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_SHARED_LIBS
   LLDB_IS_64_BITS)
 
+# BEGIN SWIFT
+llvm_canonicalize_cmake_booleans(
+  LLDB_ENABLE_SWIFT_SUPPORT
+)
+# END SWIFT
+
 # Configure the individual test suites.
 add_subdirectory(API)
 add_subdirectory(Shell)

@@ -121,6 +121,9 @@ if config.lldb_enable_python:
 if config.lldb_enable_lua:
     config.available_features.add('lua')
 
+if config.lldb_enable_swift:
+    config.available_features.add('swift')
+
 if config.lldb_enable_lzma:
     config.available_features.add('lzma')
 
