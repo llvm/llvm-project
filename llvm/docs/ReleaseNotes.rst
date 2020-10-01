@@ -85,6 +85,22 @@ Changes to building LLVM
   Python 3 as Python 2 has been end-of-life'd by the Python Software
   Foundation.
 
+Changes to the JIT infrastructure
+---------------------------------
+
+* LLJIT now supports execution of static inits / deinits via the
+  LLJIT::initialize and LLJIT::deinitialize methods
+
+* Static libraries can now be added to a JITDylib using the
+  StaticLibraryDefinitionGenerator class
+
+* A C API has been added for OrcV2 (llvm-project/llvm/include/llvm-c/Orc.h)
+
+* Several OrcV2 example projects have been added to
+  llvm-project/llvm/examples/OrcV2Examples
+
+* Many bug fixes and API improvements
+
 Changes to the AArch64 Backend
 ------------------------------
 
