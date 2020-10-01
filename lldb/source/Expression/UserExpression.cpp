@@ -44,7 +44,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
+#ifdef LLDB_ENABLE_SWIFT
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#endif //LLDB_ENABLE_SWIFT
 
 using namespace lldb_private;
 

@@ -19,7 +19,9 @@
 #include "llvm/Support/TargetRegistry.h"
 #include <cctype>
 
+#ifdef LLDB_ENABLE_SWIFT
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#endif //LLDB_ENABLE_SWIFT
 
 using namespace lldb;
 using namespace lldb_private;

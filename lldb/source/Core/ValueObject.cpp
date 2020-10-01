@@ -51,9 +51,9 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-private-types.h"
 
-// BEGIN SWIFT
+#ifdef LLDB_ENABLE_SWIFT
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
-// END SWIFT
+#endif //LLDB_ENABLE_SWIFT
 
 #include "llvm/Support/Compiler.h"
 

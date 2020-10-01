@@ -18,7 +18,6 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
@@ -26,6 +25,10 @@
 #include "lldb/Utility/Stream.h"
 
 #include <memory>
+
+#ifdef LLDB_ENABLE_SWIFT
+#include "lldb/Target/SwiftLanguageRuntime.h"
+#endif //LLDB_ENABLE_SWIFT
 
 using namespace lldb;
 using namespace lldb_private;
