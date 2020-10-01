@@ -406,15 +406,32 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
     FinishReadingRecord(handler);
     BeginReadingRecord(handler);
   } else { // Direction::Output
-    if (!isUnformatted) {
-      if (isFixedRecordLength && recordLength) {
-        if (furthestPositionInRecord < *recordLength) {
-          WriteFrame(frameOffsetInFile_, *recordLength, handler);
-          std::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord,
-              ' ', *recordLength - furthestPositionInRecord);
-        }
+    if (isFixedRecordLength && recordLength) {
+      // Pad remainder of fixed length record
+      if (furthestPositionInRecord < *recordLength) {
+        WriteFrame(
+            frameOffsetInFile_, recordOffsetInFrame_ + *recordLength, handler);
+        std::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord,
+            isUnformatted ? 0 : ' ', *recordLength - furthestPositionInRecord);
+      }
+    } else {
+      positionInRecord = furthestPositionInRecord;
+      if (isUnformatted) {
+        // Append the length of a sequential unformatted variable-length record
+        // as its footer, then overwrite the reserved first four bytes of the
+        // record with its length as its header.  These four bytes were skipped
+        // over in BeginUnformattedIO<Output>().
+        // TODO: Break very large records up into subrecords with negative
+        // headers &/or footers
+        std::uint32_t length;
+        length = furthestPositionInRecord - sizeof length;
+        ok &= Emit(reinterpret_cast<const char *>(&length), sizeof length,
+            sizeof length, handler);
+        positionInRecord = 0;
+        ok &= Emit(reinterpret_cast<const char *>(&length), sizeof length,
+            sizeof length, handler);
       } else {
-        positionInRecord = furthestPositionInRecord;
+        // Terminate formatted variable length record
         ok &= Emit("\n", 1, 1, handler); // TODO: Windows CR+LF
       }
     }

@@ -698,32 +698,6 @@ bool UnformattedIoStatementState<DIR>::Emit(
   return ExternalIoStatementState<DIR>::Emit(data, bytes, elementBytes);
 }
 
-template <Direction DIR>
-int UnformattedIoStatementState<DIR>::EndIoStatement() {
-  ExternalFileUnit &unit{this->unit()};
-  if constexpr (DIR == Direction::Output) {
-    if (unit.access == Access::Sequential && !unit.isFixedRecordLength) {
-      // Append the length of a sequential unformatted variable-length record
-      // as its footer, then overwrite the reserved first four bytes of the
-      // record with its length as its header.  These four bytes were skipped
-      // over in BeginUnformattedOutput().
-      // TODO: Break very large records up into subrecords with negative
-      // headers &/or footers
-      union {
-        std::uint32_t u;
-        char c[sizeof u];
-      } u;
-      u.u = unit.furthestPositionInRecord - sizeof u;
-      // TODO: Convert record length to little-endian on big-endian host?
-      if (!(this->Emit(u.c, sizeof u) &&
-              (this->HandleAbsolutePosition(0), this->Emit(u.c, sizeof u)))) {
-        return false;
-      }
-    }
-  }
-  return ExternalIoStatementState<DIR>::EndIoStatement();
-}
-
 template class InternalIoStatementState<Direction::Output>;
 template class InternalIoStatementState<Direction::Input>;
 template class InternalFormattedIoStatementState<Direction::Output>;

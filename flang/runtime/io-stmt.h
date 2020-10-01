@@ -322,7 +322,6 @@ public:
   using ExternalIoStatementState<DIR>::ExternalIoStatementState;
   bool Receive(char *, std::size_t, std::size_t elementBytes = 0);
   bool Emit(const char *, std::size_t, std::size_t elementBytes = 0);
-  int EndIoStatement();
 };
 
 class OpenStatementState : public ExternalIoStatementBase {
