@@ -46,8 +46,13 @@ typedef struct LLVMOrcOpaqueExecutionSession *LLVMOrcExecutionSessionRef;
 /**
  * A reference to an orc::SymbolStringPool table entry.
  */
-typedef struct LLVMOrcQuaqueSymbolStringPoolEntryPtr
+typedef struct LLVMOrcOpaqueSymbolStringPoolEntry
     *LLVMOrcSymbolStringPoolEntryRef;
+
+/**
+ * Error reporter function.
+ */
+typedef void (*LLVMOrcErrorReporterFunction)(void *Ctx, LLVMErrorRef Err);
 
 /**
  * A reference to an orc::JITDylib instance.
@@ -91,6 +96,19 @@ typedef struct LLVMOrcOpaqueLLJITBuilder *LLVMOrcLLJITBuilderRef;
  * A reference to an orc::LLJIT instance.
  */
 typedef struct LLVMOrcOpaqueLLJIT *LLVMOrcLLJITRef;
+
+/**
+ * Attach a custom error reporter function to the ExecutionSession.
+ *
+ * The error reporter will be called to deliver failure notices that can not be
+ * directly reported to a caller. For example, failure to resolve symbols in
+ * the JIT linker is typically reported via the error reporter (callers
+ * requesting definitions from the JIT will typically be delivered a
+ * FailureToMaterialize error instead).
+ */
+void LLVMOrcExecutionSessionSetErrorReporter(
+    LLVMOrcExecutionSessionRef ES, LLVMOrcErrorReporterFunction ReportError,
+    void *Ctx);
 
 /**
  * Intern a string in the ExecutionSession's SymbolStringPool and return a
