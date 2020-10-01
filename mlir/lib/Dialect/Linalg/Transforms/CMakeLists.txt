@@ -17,18 +17,18 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRLinalgPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffineOps
+  MLIRAffine
   MLIRAnalysis
   MLIREDSC
   MLIRIR
   MLIRLinalgAnalysis
   MLIRLinalgEDSC
-  MLIRLinalgOps
+  MLIRLinalg
   MLIRLinalgUtils
   MLIRSCF
   MLIRSCFTransforms
   MLIRPass
-  MLIRStandardOps
+  MLIRStandard
   MLIRStandardToLLVM
   MLIRTransformUtils
   MLIRVector

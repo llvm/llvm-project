@@ -13,7 +13,7 @@ add_mlir_dialect_library(MLIRSCF
   MLIRIR
   MLIRLoopLikeInterface
   MLIRSideEffectInterfaces
-  MLIRStandardOps
+  MLIRStandard
   )
 
 add_subdirectory(Transforms)
