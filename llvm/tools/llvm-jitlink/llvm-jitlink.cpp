@@ -561,7 +561,7 @@ Error LLVMJITLinkObjectLinkingLayer::add(ResourceTrackerSP RT,
   return JD.define(std::move(MU), std::move(RT));
 }
 
-class PhonyExternalsGenerator : public JITDylib::DefinitionGenerator {
+class PhonyExternalsGenerator : public DefinitionGenerator {
 public:
   Error tryToGenerate(LookupKind K, JITDylib &JD,
                       JITDylibLookupFlags JDLookupFlags,

@@ -829,6 +829,23 @@ private:
   SymbolState RequiredState;
 };
 
+/// Definition generators can be attached to JITDylibs to generate new
+/// definitions for otherwise unresolved symbols during lookup.
+class DefinitionGenerator {
+public:
+  virtual ~DefinitionGenerator();
+
+  /// DefinitionGenerators should override this method to insert new
+  /// definitions into the parent JITDylib. K specifies the kind of this
+  /// lookup. JD specifies the target JITDylib being searched, and
+  /// JDLookupFlags specifies whether the search should match against
+  /// hidden symbols. Finally, Symbols describes the set of unresolved
+  /// symbols and their associated lookup flags.
+  virtual Error tryToGenerate(LookupKind K, JITDylib &JD,
+                              JITDylibLookupFlags JDLookupFlags,
+                              const SymbolLookupSet &LookupSet) = 0;
+};
+
 /// A symbol table that supports asynchoronous symbol queries.
 ///
 /// Represents a virtual shared object. Instances can not be copied or moved, so
@@ -841,22 +858,6 @@ class JITDylib : public ThreadSafeRefCountedBase<JITDylib> {
   friend class Platform;
   friend class MaterializationResponsibility;
 public:
-  /// Definition generators can be attached to JITDylibs to generate new
-  /// definitions for otherwise unresolved symbols during lookup.
-  class DefinitionGenerator {
-  public:
-    virtual ~DefinitionGenerator();
-
-    /// DefinitionGenerators should override this method to insert new
-    /// definitions into the parent JITDylib. K specifies the kind of this
-    /// lookup. JD specifies the target JITDylib being searched, and
-    /// JDLookupFlags specifies whether the search should match against
-    /// hidden symbols. Finally, Symbols describes the set of unresolved
-    /// symbols and their associated lookup flags.
-    virtual Error tryToGenerate(LookupKind K, JITDylib &JD,
-                                JITDylibLookupFlags JDLookupFlags,
-                                const SymbolLookupSet &LookupSet) = 0;
-  };
 
   using AsynchronousSymbolQuerySet =
     std::set<std::shared_ptr<AsynchronousSymbolQuery>>;
@@ -1534,7 +1535,7 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &MU,
 
 /// ReexportsGenerator can be used with JITDylib::addGenerator to automatically
 /// re-export a subset of the source JITDylib's symbols in the target.
-class ReexportsGenerator : public JITDylib::DefinitionGenerator {
+class ReexportsGenerator : public DefinitionGenerator {
 public:
   using SymbolPredicate = std::function<bool(SymbolStringPtr)>;
 

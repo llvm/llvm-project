@@ -20,7 +20,7 @@
 namespace llvm {
 namespace orc {
 
-class TPCDynamicLibrarySearchGenerator : public JITDylib::DefinitionGenerator {
+class TPCDynamicLibrarySearchGenerator : public DefinitionGenerator {
 public:
   using SymbolPredicate = unique_function<bool(const SymbolStringPtr &)>;
 

@@ -46,7 +46,7 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ExecutionSession, LLVMOrcExecutionSessionRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(OrcV2CAPIHelper::PoolEntry,
                                    LLVMOrcSymbolStringPoolEntryRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(JITDylib, LLVMOrcJITDylibRef)
-DEFINE_SIMPLE_CONVERSION_FUNCTIONS(JITDylib::DefinitionGenerator,
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DefinitionGenerator,
                                    LLVMOrcJITDylibDefinitionGeneratorRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeContext,
                                    LLVMOrcThreadSafeContextRef)
@@ -98,8 +98,7 @@ void LLVMOrcDisposeJITDylibDefinitionGenerator(
 
 void LLVMOrcJITDylibAddGenerator(LLVMOrcJITDylibRef JD,
                                  LLVMOrcJITDylibDefinitionGeneratorRef DG) {
-  unwrap(JD)->addGenerator(
-      std::unique_ptr<JITDylib::DefinitionGenerator>(unwrap(DG)));
+  unwrap(JD)->addGenerator(std::unique_ptr<DefinitionGenerator>(unwrap(DG)));
 }
 
 LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
