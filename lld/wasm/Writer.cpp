@@ -62,6 +62,8 @@ private:
   void createApplyRelocationsFunction();
   void createCallCtorsFunction();
   void createInitTLSFunction();
+  void createCommandExportWrappers();
+  void createCommandExportWrapper(uint32_t functionIndex, DefinedFunction *f);
 
   void assignIndexes();
   void populateSymtab();
@@ -94,6 +96,9 @@ private:
 
   std::vector<WasmInitEntry> initFunctions;
   llvm::StringMap<std::vector<InputSection *>> customSectionMapping;
+
+  // Stable storage for command export wrapper function name strings.
+  std::list<std::string> commandExportWrapperNames;
 
   // Elements that are used to construct the final output
   std::string header;
@@ -640,6 +645,53 @@ void Writer::calculateTypes() {
     out.typeSec->registerType(e->signature);
 }
 
+// In a command-style link, create a wrapper for each exported symbol
+// which calls the constructors and destructors.
+void Writer::createCommandExportWrappers() {
+  // This logic doesn't currently support Emscripten-style PIC mode.
+  assert(!config->isPic);
+
+  // If there are no ctors and there's no libc `__wasm_call_dtors` to
+  // call, don't wrap the exports.
+  if (initFunctions.empty() && WasmSym::callDtors == NULL)
+    return;
+
+  std::vector<DefinedFunction *> toWrap;
+
+  for (Symbol *sym : symtab->getSymbols())
+    if (sym->isExported())
+      if (auto *f = dyn_cast<DefinedFunction>(sym))
+        toWrap.push_back(f);
+
+  for (auto *f : toWrap) {
+    auto funcNameStr = (f->getName() + ".command_export").str();
+    commandExportWrapperNames.push_back(funcNameStr);
+    const std::string &funcName = commandExportWrapperNames.back();
+
+    auto func = make<SyntheticFunction>(*f->getSignature(), funcName);
+    if (f->function->getExportName().hasValue())
+      func->setExportName(f->function->getExportName()->str());
+    else
+      func->setExportName(f->getName().str());
+
+    DefinedFunction *def =
+        symtab->addSyntheticFunction(funcName, f->flags, func);
+    def->markLive();
+
+    def->flags |= WASM_SYMBOL_EXPORTED;
+    def->flags &= ~WASM_SYMBOL_VISIBILITY_HIDDEN;
+    def->forceExport = f->forceExport;
+
+    f->flags |= WASM_SYMBOL_VISIBILITY_HIDDEN;
+    f->flags &= ~WASM_SYMBOL_EXPORTED;
+    f->forceExport = false;
+
+    out.functionSec->addFunction(func);
+
+    createCommandExportWrapper(f->getFunctionIndex(), def);
+  }
+}
+
 static void scanRelocations() {
   for (ObjFile *file : symtab->objectFiles) {
     LLVM_DEBUG(dbgs() << "scanRelocations: " << file->getName() << "\n");
@@ -925,7 +977,10 @@ void Writer::createApplyRelocationsFunction() {
 // Create synthetic "__wasm_call_ctors" function based on ctor functions
 // in input object.
 void Writer::createCallCtorsFunction() {
-  if (!WasmSym::callCtors->isLive())
+  // If __wasm_call_ctors isn't referenced, there aren't any ctors, and we
+  // aren't calling `__wasm_apply_relocs` for Emscripten-style PIC, don't
+  // define the `__wasm_call_ctors` function.
+  if (!WasmSym::callCtors->isLive() && initFunctions.empty() && !config->isPic)
     return;
 
   // First write the body's contents to a string.
@@ -952,6 +1007,46 @@ void Writer::createCallCtorsFunction() {
   }
 
   createFunction(WasmSym::callCtors, bodyContent);
+}
+
+// Create a wrapper around a function export which calls the
+// static constructors and destructors.
+void Writer::createCommandExportWrapper(uint32_t functionIndex,
+                                        DefinedFunction *f) {
+  // First write the body's contents to a string.
+  std::string bodyContent;
+  {
+    raw_string_ostream os(bodyContent);
+    writeUleb128(os, 0, "num locals");
+
+    // If we have any ctors, or we're calling `__wasm_apply_relocs` for
+    // Emscripten-style PIC, call `__wasm_call_ctors` which performs those
+    // calls.
+    if (!initFunctions.empty() || config->isPic) {
+      writeU8(os, WASM_OPCODE_CALL, "CALL");
+      writeUleb128(os, WasmSym::callCtors->getFunctionIndex(),
+                   "function index");
+    }
+
+    // Call the user's code, leaving any return values on the operand stack.
+    for (size_t i = 0; i < f->signature->Params.size(); ++i) {
+      writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
+      writeUleb128(os, i, "local index");
+    }
+    writeU8(os, WASM_OPCODE_CALL, "CALL");
+    writeUleb128(os, functionIndex, "function index");
+
+    // Call the function that calls the destructors.
+    if (DefinedFunction *callDtors = WasmSym::callDtors) {
+      writeU8(os, WASM_OPCODE_CALL, "CALL");
+      writeUleb128(os, callDtors->getFunctionIndex(), "function index");
+    }
+
+    // End the function, returning the return values from the user's code.
+    writeU8(os, WASM_OPCODE_END, "END");
+  }
+
+  createFunction(f, bodyContent);
 }
 
 void Writer::createInitTLSFunction() {
@@ -1090,6 +1185,18 @@ void Writer::run() {
     if (config->isPic)
       createApplyRelocationsFunction();
     createCallCtorsFunction();
+
+    // Create export wrappers for commands if needed.
+    //
+    // If the input contains a call to `__wasm_call_ctors`, either in one of
+    // the input objects or an explicit export from the command-line, we
+    // assume ctors and dtors are taken care of already.
+    if (!config->relocatable && !config->isPic &&
+        !WasmSym::callCtors->isUsedInRegularObj &&
+        !WasmSym::callCtors->isExported()) {
+      log("-- createCommandExportWrappers");
+      createCommandExportWrappers();
+    }
   }
 
   if (!config->relocatable && config->sharedMemory && !config->shared)
