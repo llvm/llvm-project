@@ -57,6 +57,7 @@ public:
     CortexA76,
     CortexA77,
     CortexA78,
+    CortexR82,
     CortexX1,
     ExynosM3,
     Falkor,
@@ -83,6 +84,9 @@ protected:
   bool HasV8_4aOps = false;
   bool HasV8_5aOps = false;
   bool HasV8_6aOps = false;
+
+  bool HasV8_0rOps = false;
+  bool HasCONTEXTIDREL2 = false;
 
   bool HasFPARMv8 = false;
   bool HasNEON = false;
@@ -306,6 +310,7 @@ public:
   bool hasV8_3aOps() const { return HasV8_3aOps; }
   bool hasV8_4aOps() const { return HasV8_4aOps; }
   bool hasV8_5aOps() const { return HasV8_5aOps; }
+  bool hasV8_0rOps() const { return HasV8_0rOps; }
 
   bool hasZeroCycleRegMove() const { return HasZeroCycleRegMove; }
 
@@ -343,6 +348,7 @@ public:
   bool hasSHA3() const { return HasSHA3; }
   bool hasSHA2() const { return HasSHA2; }
   bool hasAES() const { return HasAES; }
+  bool hasCONTEXTIDREL2() const { return HasCONTEXTIDREL2; }
   bool balanceFPOps() const { return BalanceFPOps; }
   bool predictableSelectIsExpensive() const {
     return PredictableSelectIsExpensive;
