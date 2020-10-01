@@ -11,11 +11,11 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRSCFPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffineOps
+  MLIRAffine
   MLIRIR
   MLIRPass
   MLIRSCF
-  MLIRStandardOps
+  MLIRStandard
   MLIRSupport
   MLIRTransformUtils
 )
