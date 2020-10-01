@@ -148,15 +148,13 @@ macro(add_openmp_library libname archname dir)
 
   set(host_ar_filename "lib${libname}.a")
   set(bc_ar_filename "libbc-${libname}-${archname}.a")
-  string(REPLACE ";" " " _objfiles_with_spaces ${obj_files})
-  string(REPLACE ";" " " _bcfiles_with_spaces ${bc_files})
   add_custom_command(
       OUTPUT ${host_ar_filename}
-      COMMAND ${LLVM_INSTALL_PREFIX}/bin/llvm-ar rcs ${host_ar_filename} ${_objfiles_with_spaces}
+      COMMAND ${LLVM_INSTALL_PREFIX}/bin/llvm-ar rcs ${host_ar_filename} ${obj_files}
       DEPENDS ${obj_files} )
   add_custom_command(
       OUTPUT ${bc_ar_filename}
-      COMMAND ${LLVM_INSTALL_PREFIX}/bin/llvm-ar rcs ${bc_ar_filename} ${_bcfiles_with_spaces}
+      COMMAND ${LLVM_INSTALL_PREFIX}/bin/llvm-ar rcs ${bc_ar_filename} ${bc_files}
       DEPENDS ${bc_files} )
 
   add_custom_target(lib${name}-host-static-lib ALL DEPENDS ${host_ar_filename})
