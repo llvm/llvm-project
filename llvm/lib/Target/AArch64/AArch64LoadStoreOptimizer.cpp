@@ -1763,6 +1763,11 @@ bool AArch64LoadStoreOpt::isMatchingUpdateInsn(MachineInstr &MemMI,
   return false;
 }
 
+static bool needsWinCFI(const MachineFunction *MF) {
+  return MF->getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+         MF->getFunction().needsUnwindTableEntry();
+}
+
 MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
     MachineBasicBlock::iterator I, int UnscaledOffset, unsigned Limit) {
   MachineBasicBlock::iterator E = I->getParent()->end();
@@ -1803,14 +1808,11 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
   // the memory access (I) and the increment (MBBI) can access the memory
   // region defined by [SP, MBBI].
   const bool BaseRegSP = BaseReg == AArch64::SP;
-  if (BaseRegSP) {
+  if (BaseRegSP && needsWinCFI(I->getMF())) {
     // FIXME: For now, we always block the optimization over SP in windows
     // targets as it requires to adjust the unwind/debug info, messing up
     // the unwind info can actually cause a miscompile.
-    const MCAsmInfo *MAI = I->getMF()->getTarget().getMCAsmInfo();
-    if (MAI->usesWindowsCFI() &&
-        I->getMF()->getFunction().needsUnwindTableEntry())
-      return E;
+    return E;
   }
 
   for (unsigned Count = 0; MBBI != E && Count < Limit;
@@ -1864,6 +1866,14 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
       if (DestReg == BaseReg || TRI->isSubRegister(BaseReg, DestReg))
         return E;
     }
+  }
+
+  const bool BaseRegSP = BaseReg == AArch64::SP;
+  if (BaseRegSP && needsWinCFI(I->getMF())) {
+    // FIXME: For now, we always block the optimization over SP in windows
+    // targets as it requires to adjust the unwind/debug info, messing up
+    // the unwind info can actually cause a miscompile.
+    return E;
   }
 
   // Track which register units have been modified and used between the first
