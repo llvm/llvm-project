@@ -231,10 +231,12 @@ bool IONAME(SetSign)(Cookie, const char *, std::size_t);
 // and avoid the following items when they might crash.
 bool IONAME(OutputDescriptor)(Cookie, const Descriptor &);
 bool IONAME(InputDescriptor)(Cookie, const Descriptor &);
+// Contiguous transfers for unformatted I/O
 bool IONAME(OutputUnformattedBlock)(
     Cookie, const char *, std::size_t, std::size_t elementBytes);
 bool IONAME(InputUnformattedBlock)(
     Cookie, char *, std::size_t, std::size_t elementBytes);
+// Formatted (including list directed) I/O data items
 bool IONAME(OutputInteger64)(Cookie, std::int64_t);
 bool IONAME(InputInteger)(Cookie, std::int64_t &, int kind = 8);
 bool IONAME(OutputReal32)(Cookie, float);
@@ -245,7 +247,9 @@ bool IONAME(OutputComplex32)(Cookie, float, float);
 bool IONAME(InputComplex32)(Cookie, float[2]);
 bool IONAME(OutputComplex64)(Cookie, double, double);
 bool IONAME(InputComplex64)(Cookie, double[2]);
+bool IONAME(OutputCharacter)(Cookie, const char *, std::size_t, int kind = 1);
 bool IONAME(OutputAscii)(Cookie, const char *, std::size_t);
+bool IONAME(InputCharacter)(Cookie, char *, std::size_t, int kind = 1);
 bool IONAME(InputAscii)(Cookie, char *, std::size_t);
 bool IONAME(OutputLogical)(Cookie, bool);
 bool IONAME(InputLogical)(Cookie, bool &);

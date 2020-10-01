@@ -43,6 +43,13 @@ class ExternalFormattedIoStatementState;
 template <Direction> class ExternalListIoStatementState;
 template <Direction> class UnformattedIoStatementState;
 
+struct InputStatementState {};
+struct OutputStatementState {};
+template <Direction D>
+using IoDirectionState = std::conditional_t<D == Direction::Input,
+    InputStatementState, OutputStatementState>;
+struct FormattedIoStatementState {};
+
 // The Cookie type in the I/O API is a pointer (for C) to this class.
 class IoStatementState {
 public:
@@ -90,6 +97,15 @@ public:
   std::optional<char32_t> NextInField(std::optional<int> &remaining);
   std::optional<char32_t> GetNextNonBlank(); // can advance record
 
+  template <Direction D> void CheckFormattedStmtType(const char *name) {
+    if (!get_if<FormattedIoStatementState>() ||
+        !get_if<IoDirectionState<D>>()) {
+      GetIoErrorHandler().Crash(
+          "%s called for I/O statement that is not formatted %s", name,
+          D == Direction::Output ? "output" : "input");
+    }
+  }
+
 private:
   std::variant<std::reference_wrapper<OpenStatementState>,
       std::reference_wrapper<CloseStatementState>,
@@ -132,17 +148,11 @@ struct IoStatementBase : public DefaultFormatControlCallbacks {
   void BadInquiryKeywordHashCrash(InquiryKeywordHash);
 };
 
-struct InputStatementState {};
-struct OutputStatementState {};
-template <Direction D>
-using IoDirectionState = std::conditional_t<D == Direction::Input,
-    InputStatementState, OutputStatementState>;
-
-struct FormattedStatementState {};
-
 // Common state for list-directed internal & external I/O
-template <Direction> struct ListDirectedStatementState {};
-template <> struct ListDirectedStatementState<Direction::Output> {
+template <Direction> struct ListDirectedStatementState;
+template <>
+struct ListDirectedStatementState<Direction::Output>
+    : public FormattedIoStatementState {
   static std::size_t RemainingSpaceInRecord(const ConnectionState &);
   bool NeedAdvance(const ConnectionState &, std::size_t) const;
   bool EmitLeadingSpaceOrAdvance(
@@ -151,7 +161,9 @@ template <> struct ListDirectedStatementState<Direction::Output> {
       IoStatementState &, int maxRepeat = 1);
   bool lastWasUndelimitedCharacter{false};
 };
-template <> class ListDirectedStatementState<Direction::Input> {
+template <>
+class ListDirectedStatementState<Direction::Input>
+    : public FormattedIoStatementState {
 public:
   // Skips value separators, handles repetition and null values.
   // Vacant when '/' appears; present with descriptor == ListDirectedNullValue
@@ -199,7 +211,7 @@ protected:
 template <Direction DIR, typename CHAR>
 class InternalFormattedIoStatementState
     : public InternalIoStatementState<DIR, CHAR>,
-      public FormattedStatementState {
+      public FormattedIoStatementState {
 public:
   using CharType = CHAR;
   using typename InternalIoStatementState<DIR, CharType>::Buffer;
@@ -275,7 +287,7 @@ public:
 
 template <Direction DIR, typename CHAR>
 class ExternalFormattedIoStatementState : public ExternalIoStatementState<DIR>,
-                                          public FormattedStatementState {
+                                          public FormattedIoStatementState {
 public:
   using CharType = CHAR;
   ExternalFormattedIoStatementState(ExternalFileUnit &, const CharType *format,

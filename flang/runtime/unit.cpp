@@ -290,7 +290,7 @@ bool ExternalFileUnit::Receive(char *data, std::size_t bytes,
     furthestPositionInRecord = furthestAfter;
     return true;
   } else {
-    handler.SignalEnd();
+    // EOF or error: can be handled & has been signaled
     endfileRecordNumber = currentRecordNumber;
     return false;
   }
