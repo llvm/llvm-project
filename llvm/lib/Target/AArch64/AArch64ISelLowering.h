@@ -95,6 +95,7 @@ enum NodeType : unsigned {
 
   // Predicated instructions with the result of inactive lanes provided by the
   // last operand.
+  FABS_MERGE_PASSTHRU,
   FCEIL_MERGE_PASSTHRU,
   FFLOOR_MERGE_PASSTHRU,
   FNEARBYINT_MERGE_PASSTHRU,

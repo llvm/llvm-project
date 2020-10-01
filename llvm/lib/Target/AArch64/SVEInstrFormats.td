@@ -3802,24 +3802,17 @@ multiclass sve_int_un_pred_arit_1<bits<3> opc, string asm,
   def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
-// TODO: Remove int_op once its last use is converted to ir_op.
-multiclass sve_int_un_pred_arit_1_fp<bits<3> opc, string asm,
-                                     SDPatternOperator int_op,
-                                     SDPatternOperator ir_op> {
+multiclass sve_int_un_pred_arit_1_fp<bits<3> opc, string asm, SDPatternOperator op> {
   def _H : sve_int_un_pred_arit<0b01, { opc, 0b1 }, asm, ZPR16>;
   def _S : sve_int_un_pred_arit<0b10, { opc, 0b1 }, asm, ZPR32>;
   def _D : sve_int_un_pred_arit<0b11, { opc, 0b1 }, asm, ZPR64>;
 
-  def : SVE_3_Op_Pat<nxv8f16, int_op, nxv8f16, nxv8i1, nxv8f16, !cast<Instruction>(NAME # _H)>;
-  def : SVE_3_Op_Pat<nxv4f32, int_op, nxv4f32, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _S)>;
-  def : SVE_3_Op_Pat<nxv2f64, int_op, nxv2f64, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
-
-  def : SVE_1_Op_Passthru_Pat<nxv8f16, ir_op, nxv8i1, nxv8f16, !cast<Instruction>(NAME # _H)>;
-  def : SVE_1_Op_Passthru_Pat<nxv4f16, ir_op, nxv4i1, nxv4f16, !cast<Instruction>(NAME # _H)>;
-  def : SVE_1_Op_Passthru_Pat<nxv2f16, ir_op, nxv2i1, nxv2f16, !cast<Instruction>(NAME # _H)>;
-  def : SVE_1_Op_Passthru_Pat<nxv4f32, ir_op, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _S)>;
-  def : SVE_1_Op_Passthru_Pat<nxv2f32, ir_op, nxv2i1, nxv2f32, !cast<Instruction>(NAME # _S)>;
-  def : SVE_1_Op_Passthru_Pat<nxv2f64, ir_op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
+  def : SVE_1_Op_Passthru_Pat<nxv8f16, op, nxv8i1, nxv8f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_1_Op_Passthru_Pat<nxv4f16, op, nxv4i1, nxv4f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_1_Op_Passthru_Pat<nxv2f16, op, nxv2i1, nxv2f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_1_Op_Passthru_Pat<nxv4f32, op, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_1_Op_Passthru_Pat<nxv2f32, op, nxv2i1, nxv2f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_1_Op_Passthru_Pat<nxv2f64, op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
 //===----------------------------------------------------------------------===//
