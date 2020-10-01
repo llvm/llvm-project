@@ -85,6 +85,22 @@ Changes to building LLVM
   Python 3 as Python 2 has been end-of-life'd by the Python Software
   Foundation.
 
+Changes to the JIT infrastructure
+---------------------------------
+
+* LLJIT now supports execution of static inits / deinits via the
+  LLJIT::initialize and LLJIT::deinitialize methods
+
+* Static libraries can now be added to a JITDylib using the
+  StaticLibraryDefinitionGenerator class
+
+* A C API has been added for OrcV2 (llvm-project/llvm/include/llvm-c/Orc.h)
+
+* Several OrcV2 example projects have been added to
+  llvm-project/llvm/examples/OrcV2Examples
+
+* Many bug fixes and API improvements
+
 Changes to the AArch64 Backend
 ------------------------------
 
@@ -162,24 +178,33 @@ Optimization:
 Codegen:
 
 * POWER10 support
-* Added PC Relative addressing
-* Added __int128 vector bool support
+
+  * Added PC Relative addressing
+  * Added __int128 vector bool support
+
 * Security enhancement via probe-stack attribute support to protect against stack clash
 * Floating point support enhancements
-* Improved half precision and quad precision support, including GLIBC
-* constrained FP operation support for arithmetic/rounding/max/min
-* cleaning up fast math flags checks in DAGCombine, Legalizer, and Lowering
+
+  * Improved half precision and quad precision support, including GLIBC
+  * constrained FP operation support for arithmetic/rounding/max/min
+  * cleaning up fast math flags checks in DAGCombine, Legalizer, and Lowering
+
 * Performance improvements from instruction exploitation, especially for vector permute on LE
 * Scheduling enhancements
-* Added MacroFusion for POWER8
-* Added post-ra heuristics for POWER9
+
+  * Added MacroFusion for POWER8
+  * Added post-ra heuristics for POWER9
+
 * Target dependent passes tuning
-* Updated LoopStrengthReduce to use instruction number as first priority
-* Enhanced MachineCombiner to expose more ILP
+
+  * Updated LoopStrengthReduce to use instruction number as first priority
+  * Enhanced MachineCombiner to expose more ILP
+
 * Code quality and maintenance enhancements
-* Enabled more machine verification passes
-* Added ability to parse and emit additional extended mnemonics
-* Numerous bug fixes
+
+  * Enabled more machine verification passes
+  * Added ability to parse and emit additional extended mnemonics
+  * Numerous bug fixes
 
 AIX Support Improvements:
 
