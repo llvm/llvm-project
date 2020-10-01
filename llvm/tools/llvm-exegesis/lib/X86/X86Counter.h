@@ -33,8 +33,6 @@ public:
 
 class X86LbrCounter : public pfm::Counter {
 public:
-  static llvm::Error checkLbrSupport();
-
   explicit X86LbrCounter(pfm::PerfEvent &&Event);
 
   virtual ~X86LbrCounter();
@@ -45,9 +43,6 @@ public:
   readOrError(StringRef FunctionBytes) const override;
 
 private:
-  llvm::Expected<llvm::SmallVector<int64_t, 4>>
-  doReadCounter(const void *From, const void *To) const;
-
   void *MMappedBuffer = nullptr;
 };
 
