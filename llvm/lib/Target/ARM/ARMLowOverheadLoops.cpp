@@ -355,7 +355,8 @@ namespace {
     const TargetRegisterInfo &TRI;
     const ARMBaseInstrInfo &TII;
     MachineFunction *MF = nullptr;
-    MachineInstr *InsertPt = nullptr;
+    MachineBasicBlock::iterator StartInsertPt;
+    MachineBasicBlock *StartInsertBB = nullptr;
     MachineInstr *Start = nullptr;
     MachineInstr *Dec = nullptr;
     MachineInstr *End = nullptr;
@@ -402,7 +403,7 @@ namespace {
     // Check that the predication in the loop will be equivalent once we
     // perform the conversion. Also ensure that we can provide the number
     // of elements to the loop start instruction.
-    bool ValidateTailPredicate(MachineInstr *StartInsertPt);
+    bool ValidateTailPredicate();
 
     // Check that any values available outside of the loop will be the same
     // after tail predication conversion.
@@ -585,10 +586,7 @@ static bool TryRemove(MachineInstr *MI, ReachingDefAnalysis &RDA,
   return false;
 }
 
-bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
-  if (!StartInsertPt)
-    return false;
-
+bool LowOverheadLoop::ValidateTailPredicate() {
   if (!IsTailPredicationLegal()) {
     LLVM_DEBUG(if (VCTPs.empty())
                  dbgs() << "ARM Loops: Didn't find a VCTP instruction.\n";
@@ -632,19 +630,19 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   // The element count register maybe defined after InsertPt, in which case we
   // need to try to move either InsertPt or the def so that the [w|d]lstp can
   // use the value.
-  MachineBasicBlock *InsertBB = StartInsertPt->getParent();
 
-  if (!RDA.isReachingDefLiveOut(StartInsertPt, NumElements)) {
-    if (auto *ElemDef = RDA.getLocalLiveOutMIDef(InsertBB, NumElements)) {
-      if (RDA.isSafeToMoveForwards(ElemDef, StartInsertPt)) {
+  if (StartInsertPt != StartInsertBB->end() &&
+      !RDA.isReachingDefLiveOut(&*StartInsertPt, NumElements)) {
+    if (auto *ElemDef = RDA.getLocalLiveOutMIDef(StartInsertBB, NumElements)) {
+      if (RDA.isSafeToMoveForwards(ElemDef, &*StartInsertPt)) {
         ElemDef->removeFromParent();
-        InsertBB->insert(MachineBasicBlock::iterator(StartInsertPt), ElemDef);
+        StartInsertBB->insert(StartInsertPt, ElemDef);
         LLVM_DEBUG(dbgs() << "ARM Loops: Moved element count def: "
                    << *ElemDef);
-      } else if (RDA.isSafeToMoveBackwards(StartInsertPt, ElemDef)) {
+      } else if (RDA.isSafeToMoveBackwards(&*StartInsertPt, ElemDef)) {
         StartInsertPt->removeFromParent();
-        InsertBB->insertAfter(MachineBasicBlock::iterator(ElemDef),
-                              StartInsertPt);
+        StartInsertBB->insertAfter(MachineBasicBlock::iterator(ElemDef),
+                                   &*StartInsertPt);
         LLVM_DEBUG(dbgs() << "ARM Loops: Moved start past: " << *ElemDef);
       } else {
         // If we fail to move an instruction and the element count is provided
@@ -653,7 +651,7 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
         MachineOperand Operand = ElemDef->getOperand(1);
         if (isMovRegOpcode(ElemDef->getOpcode()) &&
             RDA.getUniqueReachingMIDef(ElemDef, Operand.getReg()) ==
-                RDA.getUniqueReachingMIDef(StartInsertPt, Operand.getReg())) {
+               RDA.getUniqueReachingMIDef(&*StartInsertPt, Operand.getReg())) {
           TPNumElements = Operand;
           NumElements = TPNumElements.getReg();
         } else {
@@ -683,7 +681,7 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
     return false;
   };
 
-  if (CannotInsertWDLSTPBetween(StartInsertPt, InsertBB->end()))
+  if (CannotInsertWDLSTPBetween(StartInsertPt, StartInsertBB->end()))
     return false;
 
   // Especially in the case of while loops, InsertBB may not be the
@@ -704,7 +702,7 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
 
   // Search backwards for a def, until we get to InsertBB.
   MachineBasicBlock *MBB = Preheader;
-  while (MBB && MBB != InsertBB) {
+  while (MBB && MBB != StartInsertBB) {
     if (CannotProvideElements(MBB, NumElements)) {
       LLVM_DEBUG(dbgs() << "ARM Loops: Unable to provide element count.\n");
       return false;
@@ -1017,10 +1015,15 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
   // Find a suitable position to insert the loop start instruction. It needs to
   // be able to safely define LR.
   auto FindStartInsertionPoint = [](MachineInstr *Start,
-                                    ReachingDefAnalysis &RDA) -> MachineInstr* {
+                                    MachineBasicBlock::iterator &InsertPt,
+                                    MachineBasicBlock *&InsertBB,
+                                    ReachingDefAnalysis &RDA) {
     // We can define LR because LR already contains the same value.
-    if (Start->getOperand(0).getReg() == ARM::LR)
-      return Start;
+    if (Start->getOperand(0).getReg() == ARM::LR) {
+      InsertPt = MachineBasicBlock::iterator(Start);
+      InsertBB = Start->getParent();
+      return true;
+    }
 
     unsigned CountReg = Start->getOperand(0).getReg();
     auto IsMoveLR = [&CountReg](MachineInstr *MI) {
@@ -1035,32 +1038,41 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
     // Find an insertion point:
     // - Is there a (mov lr, Count) before Start? If so, and nothing else
     //   writes to Count before Start, we can insert at that mov.
-    if (auto *LRDef = RDA.getUniqueReachingMIDef(Start, ARM::LR))
-      if (IsMoveLR(LRDef) && RDA.hasSameReachingDef(Start, LRDef, CountReg))
-        return LRDef;
+    if (auto *LRDef = RDA.getUniqueReachingMIDef(Start, ARM::LR)) {
+      if (IsMoveLR(LRDef) && RDA.hasSameReachingDef(Start, LRDef, CountReg)) {
+        InsertPt = MachineBasicBlock::iterator(LRDef);
+        InsertBB = LRDef->getParent();
+        return true;
+      }
+    }
 
     // - Is there a (mov lr, Count) after Start? If so, and nothing else writes
     //   to Count after Start, we can insert at that mov.
-    if (auto *LRDef = RDA.getLocalLiveOutMIDef(MBB, ARM::LR))
-      if (IsMoveLR(LRDef) && RDA.hasSameReachingDef(Start, LRDef, CountReg))
-        return LRDef;
+    if (auto *LRDef = RDA.getLocalLiveOutMIDef(MBB, ARM::LR)) {
+      if (IsMoveLR(LRDef) && RDA.hasSameReachingDef(Start, LRDef, CountReg)) {
+        InsertPt = MachineBasicBlock::iterator(LRDef);
+        InsertBB = LRDef->getParent();
+        return true;
+      }
+    }
 
     // We've found no suitable LR def and Start doesn't use LR directly. Can we
     // just define LR anyway?
-    return RDA.isSafeToDefRegAt(Start, ARM::LR) ? Start : nullptr;
+    if (!RDA.isSafeToDefRegAt(Start, ARM::LR))
+      return false;
+
+    InsertPt = MachineBasicBlock::iterator(Start);
+    InsertBB = Start->getParent();
+    return true;
   };
 
-  InsertPt = FindStartInsertionPoint(Start, RDA);
-  Revert = !ValidateRanges(Start, End, BBUtils, ML) || !InsertPt;
-  CannotTailPredicate = !ValidateTailPredicate(InsertPt);
-
-  LLVM_DEBUG(if (!InsertPt)
-               dbgs() << "ARM Loops: Unable to find safe insertion point.\n";
-             else
-                dbgs() << "ARM Loops: Start insertion point: " << *InsertPt;
-             if (CannotTailPredicate)
-                dbgs() << "ARM Loops: Couldn't validate tail predicate.\n"
-            );
+  if (!FindStartInsertionPoint(Start, StartInsertPt, StartInsertBB, RDA)) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: Unable to find safe insertion point.\n");
+    Revert = true;
+    return;
+  }
+  Revert = !ValidateRanges(Start, End, BBUtils, ML);
+  CannotTailPredicate = !ValidateTailPredicate();
 }
 
 bool LowOverheadLoop::AddVCTP(MachineInstr *MI) {
@@ -1398,7 +1410,10 @@ void ARMLowOverheadLoops::IterationCountDCE(LowOverheadLoop &LoLoop) {
 
   // Collect and remove the users of iteration count.
   SmallPtrSet<MachineInstr*, 4> Killed  = { LoLoop.Start, LoLoop.Dec,
-                                            LoLoop.End, LoLoop.InsertPt };
+                                            LoLoop.End };
+  if (LoLoop.StartInsertPt != LoLoop.StartInsertBB->end())
+    Killed.insert(&*LoLoop.StartInsertPt);
+
   if (!TryRemove(Def, *RDA, LoLoop.ToRemove, Killed))
     LLVM_DEBUG(dbgs() << "ARM Loops: Unsafe to remove loop iteration count.\n");
 }
@@ -1409,15 +1424,15 @@ MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
   // calculate the number of loop iterations.
   IterationCountDCE(LoLoop);
 
-  MachineInstr *InsertPt = LoLoop.InsertPt;
+  MachineBasicBlock::iterator InsertPt = LoLoop.StartInsertPt;
   MachineInstr *Start = LoLoop.Start;
-  MachineBasicBlock *MBB = InsertPt->getParent();
+  MachineBasicBlock *MBB = LoLoop.StartInsertBB;
   bool IsDo = Start->getOpcode() == ARM::t2DoLoopStart;
   unsigned Opc = LoLoop.getStartOpcode();
   MachineOperand &Count = LoLoop.getLoopStartOperand();
 
   MachineInstrBuilder MIB =
-    BuildMI(*MBB, InsertPt, InsertPt->getDebugLoc(), TII->get(Opc));
+    BuildMI(*MBB, InsertPt, Start->getDebugLoc(), TII->get(Opc));
 
   MIB.addDef(ARM::LR);
   MIB.add(Count);
@@ -1425,8 +1440,8 @@ MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
     MIB.add(Start->getOperand(1));
 
   // If we're inserting at a mov lr, then remove it as it's redundant.
-  if (InsertPt != Start)
-    LoLoop.ToRemove.insert(InsertPt);
+  if (InsertPt != MBB->end())
+    LoLoop.ToRemove.insert(&*InsertPt);
   LoLoop.ToRemove.insert(Start);
   LLVM_DEBUG(dbgs() << "ARM Loops: Inserted start: " << *MIB);
   return &*MIB;
