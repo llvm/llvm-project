@@ -98,9 +98,17 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
   include(CheckLibraryExists)
   include(CheckCCompilerFlag)
+  include(CMakePushCheckState)
 
-  # We don't have libc++ (yet).
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
+  cmake_push_check_state()
+
+  # We don't have libc++ (yet)...
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++ -nostdlib++")
+
+  # ...but we need access to libc++ headers for CMake checks to succeed.
+  if (LLVM_EXTERNAL_LIBCXX_SOURCE_DIR AND "libcxx" IN_LIST LLVM_ENABLE_RUNTIMES)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -isystem ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR}/include")
+  endif()
 
   # Avoid checking whether the compiler is working.
   set(LLVM_COMPILER_CHECKED ON)
@@ -110,8 +118,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   include(HandleLLVMOptions)
   include(FindPythonInterp)
 
-  # Remove the -nostdlib++ option we've added earlier.
-  string(REPLACE "-nostdlib++" "" CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+  cmake_pop_check_state()
 
   # Use libtool instead of ar if you are both on an Apple host, and targeting Apple.
   if(CMAKE_HOST_APPLE AND APPLE)
@@ -215,15 +222,6 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
 else() # if this is included from LLVM's CMake
   include(LLVMExternalProjectUtils)
-  if (LLVM_EXTERNAL_LIBCXX_SOURCE_DIR AND "libcxx" IN_LIST LLVM_ENABLE_RUNTIMES)
-    # This looks wrong, but libcxx's build actually wants the header dir to be
-    # the root build dir, not the include directory.
-    set(LIBCXX_BINARY_DIR ${LLVM_BINARY_DIR})
-    set(LIBCXX_SOURCE_DIR ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR})
-    set(LIBCXX_HEADER_DIR ${LLVM_BINARY_DIR})
-    set(CXX_HEADER_TARGET runtime-libcxx-headers)
-    add_subdirectory(${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR}/include ${CXX_HEADER_TARGET})
-  endif()
 
   if(NOT LLVM_BUILD_RUNTIMES)
     set(EXTRA_ARGS EXCLUDE_FROM_ALL)
@@ -414,7 +412,7 @@ ${error} Set RUNTIMES_BUILD_ALLOW_DARWIN to allow a single darwin triple.")
 
     llvm_ExternalProject_Add(runtimes
                              ${CMAKE_CURRENT_SOURCE_DIR}
-                             DEPENDS ${ARG_DEPENDS} ${CXX_HEADER_TARGET}
+                             DEPENDS ${ARG_DEPENDS}
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
@@ -520,7 +518,7 @@ ${error} Set RUNTIMES_BUILD_ALLOW_DARWIN to allow a single darwin triple.")
 
     llvm_ExternalProject_Add(runtimes-${name}
                              ${CMAKE_CURRENT_SOURCE_DIR}
-                             DEPENDS ${${name}_deps} ${CXX_HEADER_TARGET}
+                             DEPENDS ${${name}_deps}
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
