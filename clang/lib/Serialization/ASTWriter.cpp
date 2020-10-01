@@ -5155,22 +5155,103 @@ void ASTRecordWriter::AddAPValue(const APValue &Value) {
     return;
   }
   case APValue::ComplexFloat: {
+    assert(llvm::APFloatBase::SemanticsToEnum(
+               Value.getComplexFloatImag().getSemantics()) ==
+           llvm::APFloatBase::SemanticsToEnum(
+               Value.getComplexFloatReal().getSemantics()));
     push_back(static_cast<uint64_t>(llvm::APFloatBase::SemanticsToEnum(
         Value.getComplexFloatReal().getSemantics())));
     AddAPFloat(Value.getComplexFloatReal());
-    push_back(static_cast<uint64_t>(llvm::APFloatBase::SemanticsToEnum(
-        Value.getComplexFloatImag().getSemantics())));
     AddAPFloat(Value.getComplexFloatImag());
     return;
   }
-  case APValue::LValue:
   case APValue::Vector:
+    push_back(Value.getVectorLength());
+    for (unsigned Idx = 0; Idx < Value.getVectorLength(); Idx++)
+      AddAPValue(Value.getVectorElt(Idx));
+    return;
   case APValue::Array:
+    push_back(Value.getArrayInitializedElts());
+    push_back(Value.getArraySize());
+    for (unsigned Idx = 0; Idx < Value.getArrayInitializedElts(); Idx++)
+      AddAPValue(Value.getArrayInitializedElt(Idx));
+    return;
   case APValue::Struct:
+    push_back(Value.getStructNumBases());
+    push_back(Value.getStructNumFields());
+    for (unsigned Idx = 0; Idx < Value.getStructNumBases(); Idx++)
+      AddAPValue(Value.getStructBase(Idx));
+    for (unsigned Idx = 0; Idx < Value.getStructNumFields(); Idx++)
+      AddAPValue(Value.getStructField(Idx));
+    return;
   case APValue::Union:
-  case APValue::MemberPointer:
+    AddDeclRef(Value.getUnionField());
+    AddAPValue(Value.getUnionValue());
+    return;
   case APValue::AddrLabelDiff:
-    // TODO : Handle all these APValue::ValueKind.
+    AddStmt(const_cast<AddrLabelExpr *>(Value.getAddrLabelDiffLHS()));
+    AddStmt(const_cast<AddrLabelExpr *>(Value.getAddrLabelDiffRHS()));
+    return;
+  case APValue::MemberPointer: {
+    push_back(Value.isMemberPointerToDerivedMember());
+    AddDeclRef(Value.getMemberPointerDecl());
+    ArrayRef<const CXXRecordDecl *> RecordPath = Value.getMemberPointerPath();
+    push_back(RecordPath.size());
+    for (auto Elem : RecordPath)
+      AddDeclRef(Elem);
+    return;
+  }
+  case APValue::LValue: {
+    push_back(Value.hasLValuePath() | Value.isLValueOnePastTheEnd() << 1 |
+              Value.getLValueBase().is<const Expr *>() << 2 |
+              Value.getLValueBase().is<TypeInfoLValue>() << 3 |
+              Value.isNullPointer() << 4 |
+              static_cast<bool>(Value.getLValueBase()) << 5);
+    QualType ElemTy;
+    if (Value.getLValueBase()) {
+      assert(!Value.getLValueBase().is<DynamicAllocLValue>() &&
+             "in C++20 dynamic allocation are transient so they shouldn't "
+             "appear in the AST");
+      if (!Value.getLValueBase().is<TypeInfoLValue>()) {
+        push_back(Value.getLValueBase().getCallIndex());
+        push_back(Value.getLValueBase().getVersion());
+        if (const auto *E = Value.getLValueBase().dyn_cast<const Expr *>()) {
+          AddStmt(const_cast<Expr *>(E));
+          ElemTy = E->getType();
+        } else {
+          AddDeclRef(Value.getLValueBase().get<const ValueDecl *>());
+          ElemTy = Value.getLValueBase().get<const ValueDecl *>()->getType();
+        }
+      } else {
+        AddTypeRef(
+            QualType(Value.getLValueBase().get<TypeInfoLValue>().getType(), 0));
+        AddTypeRef(Value.getLValueBase().getTypeInfoType());
+        ElemTy = Value.getLValueBase().getTypeInfoType();
+      }
+    }
+    push_back(Value.getLValueOffset().getQuantity());
+    push_back(Value.getLValuePath().size());
+    if (Value.hasLValuePath()) {
+      ArrayRef<APValue::LValuePathEntry> Path = Value.getLValuePath();
+      for (auto Elem : Path) {
+        if (ElemTy->getAs<RecordType>()) {
+          push_back(Elem.getAsBaseOrMember().getInt());
+          const Decl *BaseOrMember = Elem.getAsBaseOrMember().getPointer();
+          if (const auto *RD = dyn_cast<CXXRecordDecl>(BaseOrMember)) {
+            AddDeclRef(RD);
+            ElemTy = Writer->Context->getRecordType(RD);
+          } else {
+            const auto *VD = cast<ValueDecl>(BaseOrMember);
+            AddDeclRef(VD);
+            ElemTy = VD->getType();
+          }
+        } else {
+          push_back(Elem.getAsArrayIndex());
+          ElemTy = Writer->Context->getAsArrayType(ElemTy)->getElementType();
+        }
+      }
+    }
+  }
     return;
   }
   llvm_unreachable("Invalid APValue::ValueKind");

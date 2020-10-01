@@ -8963,48 +8963,146 @@ ReadFixedPointSemantics(const SmallVectorImpl<uint64_t> &Record,
                                    HasUnsignedPadding);
 }
 
-static const llvm::fltSemantics &
-readAPFloatSemantics(ASTRecordReader &reader) {
-  return llvm::APFloatBase::EnumToSemantics(
-    static_cast<llvm::APFloatBase::Semantics>(reader.readInt()));
-}
-
 APValue ASTRecordReader::readAPValue() {
-  unsigned Kind = readInt();
-  switch ((APValue::ValueKind) Kind) {
+  auto Kind = static_cast<APValue::ValueKind>(asImpl().readUInt32());
+  switch (Kind) {
   case APValue::None:
     return APValue();
   case APValue::Indeterminate:
     return APValue::IndeterminateValue();
   case APValue::Int:
-    return APValue(readAPSInt());
+    return APValue(asImpl().readAPSInt());
   case APValue::Float: {
-    const llvm::fltSemantics &FloatSema = readAPFloatSemantics(*this);
-    return APValue(readAPFloat(FloatSema));
+    const llvm::fltSemantics &FloatSema = llvm::APFloatBase::EnumToSemantics(
+        static_cast<llvm::APFloatBase::Semantics>(asImpl().readUInt32()));
+    return APValue(asImpl().readAPFloat(FloatSema));
   }
   case APValue::FixedPoint: {
     llvm::FixedPointSemantics FPSema = ReadFixedPointSemantics(Record, Idx);
     return APValue(llvm::APFixedPoint(readAPInt(), FPSema));
   }
   case APValue::ComplexInt: {
-    llvm::APSInt First = readAPSInt();
-    return APValue(std::move(First), readAPSInt());
+    llvm::APSInt First = asImpl().readAPSInt();
+    return APValue(std::move(First), asImpl().readAPSInt());
   }
   case APValue::ComplexFloat: {
-    const llvm::fltSemantics &FloatSema1 = readAPFloatSemantics(*this);
-    llvm::APFloat First = readAPFloat(FloatSema1);
-    const llvm::fltSemantics &FloatSema2 = readAPFloatSemantics(*this);
-    return APValue(std::move(First), readAPFloat(FloatSema2));
+    const llvm::fltSemantics &FloatSema = llvm::APFloatBase::EnumToSemantics(
+        static_cast<llvm::APFloatBase::Semantics>(asImpl().readUInt32()));
+    llvm::APFloat First = readAPFloat(FloatSema);
+    return APValue(std::move(First), asImpl().readAPFloat(FloatSema));
   }
-  case APValue::LValue:
-  case APValue::Vector:
-  case APValue::Array:
-  case APValue::Struct:
-  case APValue::Union:
-  case APValue::MemberPointer:
-  case APValue::AddrLabelDiff:
-    // TODO : Handle all these APValue::ValueKind.
-    return APValue();
+  case APValue::Vector: {
+    APValue Result;
+    Result.MakeVector();
+    unsigned Length = asImpl().readUInt32();
+    (void)Result.setVectorUninit(Length);
+    for (unsigned LoopIdx = 0; LoopIdx < Length; LoopIdx++)
+      Result.getVectorElt(LoopIdx) = asImpl().readAPValue();
+    return Result;
+  }
+  case APValue::Array: {
+    APValue Result;
+    unsigned InitLength = asImpl().readUInt32();
+    unsigned TotalLength = asImpl().readUInt32();
+    Result.MakeArray(InitLength, TotalLength);
+    for (unsigned LoopIdx = 0; LoopIdx < InitLength; LoopIdx++)
+      Result.getArrayInitializedElt(LoopIdx) = asImpl().readAPValue();
+    return Result;
+  }
+  case APValue::Struct: {
+    APValue Result;
+    unsigned BasesLength = asImpl().readUInt32();
+    unsigned FieldsLength = asImpl().readUInt32();
+    Result.MakeStruct(BasesLength, FieldsLength);
+    for (unsigned LoopIdx = 0; LoopIdx < BasesLength; LoopIdx++)
+      Result.getStructBase(LoopIdx) = asImpl().readAPValue();
+    for (unsigned LoopIdx = 0; LoopIdx < FieldsLength; LoopIdx++)
+      Result.getStructField(LoopIdx) = asImpl().readAPValue();
+    return Result;
+  }
+  case APValue::Union: {
+    auto *FDecl = asImpl().readDeclAs<FieldDecl>();
+    APValue Value = asImpl().readAPValue();
+    return APValue(FDecl, std::move(Value));
+  }
+  case APValue::AddrLabelDiff: {
+    auto *LHS = cast<AddrLabelExpr>(asImpl().readExpr());
+    auto *RHS = cast<AddrLabelExpr>(asImpl().readExpr());
+    return APValue(LHS, RHS);
+  }
+  case APValue::MemberPointer: {
+    APValue Result;
+    bool IsDerived = asImpl().readUInt32();
+    auto *Member = asImpl().readDeclAs<ValueDecl>();
+    unsigned PathSize = asImpl().readUInt32();
+    const CXXRecordDecl **PathArray =
+        Result.setMemberPointerUninit(Member, IsDerived, PathSize).data();
+    for (unsigned LoopIdx = 0; LoopIdx < PathSize; LoopIdx++)
+      PathArray[LoopIdx] =
+          asImpl().readDeclAs<const CXXRecordDecl>()->getCanonicalDecl();
+    return Result;
+  }
+  case APValue::LValue: {
+    uint64_t Bits = asImpl().readUInt32();
+    bool HasLValuePath = Bits & 0x1;
+    bool IsLValueOnePastTheEnd = Bits & 0x2;
+    bool IsExpr = Bits & 0x4;
+    bool IsTypeInfo = Bits & 0x8;
+    bool IsNullPtr = Bits & 0x10;
+    bool HasBase = Bits & 0x20;
+    APValue::LValueBase Base;
+    QualType ElemTy;
+    assert((!IsExpr || !IsTypeInfo) && "LValueBase cannot be both");
+    if (HasBase) {
+      if (!IsTypeInfo) {
+        unsigned CallIndex = asImpl().readUInt32();
+        unsigned Version = asImpl().readUInt32();
+        if (IsExpr) {
+          Base = APValue::LValueBase(asImpl().readExpr(), CallIndex, Version);
+          ElemTy = Base.get<const Expr *>()->getType();
+        } else {
+          Base = APValue::LValueBase(asImpl().readDeclAs<const ValueDecl>(),
+                                     CallIndex, Version);
+          ElemTy = Base.get<const ValueDecl *>()->getType();
+        }
+      } else {
+        QualType TypeInfo = asImpl().readType();
+        QualType Type = asImpl().readType();
+        Base = APValue::LValueBase::getTypeInfo(
+            TypeInfoLValue(TypeInfo.getTypePtr()), Type);
+        Base.getTypeInfoType();
+      }
+    }
+    CharUnits Offset = CharUnits::fromQuantity(asImpl().readUInt32());
+    unsigned PathLength = asImpl().readUInt32();
+    APValue Result;
+    Result.MakeLValue();
+    if (HasLValuePath) {
+      APValue::LValuePathEntry *Path =
+          Result
+              .setLValueUninit(Base, Offset, PathLength, IsLValueOnePastTheEnd,
+                               IsNullPtr)
+              .data();
+      for (unsigned LoopIdx = 0; LoopIdx < PathLength; LoopIdx++) {
+        if (ElemTy->getAs<RecordType>()) {
+          unsigned Int = asImpl().readUInt32();
+          Decl *D = asImpl().readDeclAs<Decl>();
+          if (auto *RD = dyn_cast<CXXRecordDecl>(D))
+            ElemTy = getASTContext().getRecordType(RD);
+          else
+            ElemTy = cast<ValueDecl>(D)->getType();
+          Path[LoopIdx] =
+              APValue::LValuePathEntry(APValue::BaseOrMemberType(D, Int));
+        } else {
+          ElemTy = getASTContext().getAsArrayType(ElemTy)->getElementType();
+          Path[LoopIdx] =
+              APValue::LValuePathEntry::ArrayIndex(asImpl().readUInt32());
+        }
+      }
+    } else
+      Result.setLValue(Base, Offset, APValue::NoLValuePath{}, IsNullPtr);
+    return Result;
+  }
   }
   llvm_unreachable("Invalid APValue::ValueKind");
 }

@@ -289,9 +289,6 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// Mapping from GUIDs to the corresponding MSGuidDecl.
   mutable llvm::FoldingSet<MSGuidDecl> MSGuidDecls;
 
-  /// Used to cleanups APValues stored in the AST.
-  mutable llvm::SmallVector<APValue *, 0> APValueCleanups;
-
   /// A cache mapping a string value to a StringLiteral object with the same
   /// value.
   ///
