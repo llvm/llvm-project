@@ -1770,8 +1770,6 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   if (NeedsWinCFI && HasWinCFI)
     BuildMI(MBB, MBB.getFirstTerminator(), DL, TII->get(AArch64::SEH_EpilogEnd))
         .setMIFlag(MachineInstr::FrameDestroy);
-
-  MF.setHasWinCFI(HasWinCFI);
 }
 
 /// getFrameIndexReference - Provide a base+offset reference to an FI slot for
