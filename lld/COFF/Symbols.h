@@ -343,13 +343,6 @@ public:
   uint16_t getOrdinal() { return file->hdr->OrdinalHint; }
 
   ImportFile *file;
-
-  // This is a pointer to the synthetic symbol associated with the load thunk
-  // for this symbol that will be called if the DLL is delay-loaded. This is
-  // needed for Control Flow Guard because if this DefinedImportData symbol is a
-  // valid call target, the corresponding load thunk must also be marked as a
-  // valid call target.
-  DefinedSynthetic *loadThunkSym;
 };
 
 // This class represents a symbol for a jump table entry which jumps
