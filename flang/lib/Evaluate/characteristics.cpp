@@ -65,7 +65,14 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
   return std::visit(
       common::visitors{
           [&](const semantics::ObjectEntityDetails &object) {
-            return Characterize(object);
+            auto result{Characterize(object)};
+            if (result &&
+                result->type().category() == TypeCategory::Character) {
+              if (auto len{DataRef{symbol}.LEN()}) {
+                result->set_LEN(Fold(context, std::move(*len)));
+              }
+            }
+            return result;
           },
           [&](const semantics::ProcEntityDetails &proc) {
             const semantics::ProcInterface &interface{proc.interface()};
@@ -106,7 +113,15 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
     const semantics::AssocEntityDetails &assoc, FoldingContext &context) {
   if (auto type{DynamicType::From(assoc.type())}) {
     if (auto shape{GetShape(context, assoc.expr())}) {
-      return TypeAndShape{std::move(*type), std::move(*shape)};
+      TypeAndShape result{std::move(*type), std::move(*shape)};
+      if (type->category() == TypeCategory::Character) {
+        if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(assoc.expr())}) {
+          if (auto len{chExpr->LEN()}) {
+            result.set_LEN(Fold(context, std::move(*len)));
+          }
+        }
+      }
+      return std::move(result);
     }
   }
   return std::nullopt;
@@ -129,16 +144,30 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
 bool TypeAndShape::IsCompatibleWith(parser::ContextualMessages &messages,
     const TypeAndShape &that, const char *thisIs, const char *thatIs,
     bool isElemental) const {
-  const auto &len{that.LEN()};
   if (!type_.IsTkCompatibleWith(that.type_)) {
+    const auto &len{that.LEN()};
     messages.Say(
         "%1$s type '%2$s' is not compatible with %3$s type '%4$s'"_err_en_US,
         thatIs, that.type_.AsFortran(len ? len->AsFortran() : ""), thisIs,
-        type_.AsFortran());
+        type_.AsFortran(LEN_ ? LEN_->AsFortran() : ""));
     return false;
   }
   return isElemental ||
       CheckConformance(messages, shape_, that.shape_, thisIs, thatIs);
+}
+
+std::optional<Expr<SubscriptInteger>> TypeAndShape::MeasureSizeInBytes(
+    FoldingContext *foldingContext) const {
+  if (type_.category() == TypeCategory::Character && LEN_) {
+    Expr<SubscriptInteger> result{
+        common::Clone(*LEN_) * Expr<SubscriptInteger>{type_.kind()}};
+    if (foldingContext) {
+      result = Fold(*foldingContext, std::move(result));
+    }
+    return result;
+  } else {
+    return type_.MeasureSizeInBytes(foldingContext);
+  }
 }
 
 void TypeAndShape::AcquireShape(const semantics::ObjectEntityDetails &object) {
@@ -178,7 +207,7 @@ void TypeAndShape::AcquireLEN() {
   if (type_.category() == TypeCategory::Character) {
     if (const auto *param{type_.charLength()}) {
       if (const auto &intExpr{param->GetExplicit()}) {
-        LEN_ = *intExpr;
+        LEN_ = ConvertToType<SubscriptInteger>(common::Clone(*intExpr));
       }
     }
   }
@@ -445,8 +474,8 @@ bool FunctionResult::operator==(const FunctionResult &that) const {
 
 std::optional<FunctionResult> FunctionResult::Characterize(
     const Symbol &symbol, const IntrinsicProcTable &intrinsics) {
-  if (const auto *obj{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
-    if (auto type{TypeAndShape::Characterize(*obj)}) {
+  if (const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
+    if (auto type{TypeAndShape::Characterize(*object)}) {
       FunctionResult result{std::move(*type)};
       CopyAttrs<FunctionResult, FunctionResult::Attr>(symbol, result,
           {
