@@ -1273,7 +1273,7 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
   const auto &programStmt =
       std::get<std::optional<parser::Statement<parser::ProgramStmt>>>(func.t);
   if (programStmt.has_value()) {
-    beginStmt = programStmt.value();
+    beginStmt = FunctionStatement(programStmt.value());
     auto symbol = getSymbol(*beginStmt);
     entryPointList[0].first = symbol;
     processSymbolTable(*symbol->scope(), varList);
