@@ -21,6 +21,28 @@ uptr StackTrace::GetNextInstructionPc(uptr pc) {
   return pc + 8;
 #elif defined(__powerpc__) || defined(__arm__) || defined(__aarch64__)
   return pc + 4;
+#elif SANITIZER_RISCV64
+  // Current check order is 4 -> 2 -> 6 -> 8
+  u8 InsnByte = *(u8 *)(pc);
+  if (((InsnByte & 0x3) == 0x3) && ((InsnByte & 0x1c) != 0x1c)) {
+    // xxxxxxxxxxxbbb11 | 32 bit | bbb != 111
+    return pc + 4;
+  }
+  if ((InsnByte & 0x3) != 0x3) {
+    // xxxxxxxxxxxxxxaa | 16 bit | aa != 11
+    return pc + 2;
+  }
+  // RISC-V encoding allows instructions to be up to 8 bytes long
+  if ((InsnByte & 0x3f) == 0x1f) {
+    // xxxxxxxxxx011111 | 48 bit |
+    return pc + 6;
+  }
+  if ((InsnByte & 0x7f) == 0x3f) {
+    // xxxxxxxxx0111111 | 64 bit |
+    return pc + 8;
+  }
+  // bail-out if could not figure out the instruction size
+  return 0;
 #else
   return pc + 1;
 #endif
