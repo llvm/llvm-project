@@ -130,7 +130,7 @@ bool TypeAndShape::IsCompatibleWith(parser::ContextualMessages &messages,
     const TypeAndShape &that, const char *thisIs, const char *thatIs,
     bool isElemental) const {
   const auto &len{that.LEN()};
-  if (!type_.IsTypeCompatibleWith(that.type_)) {
+  if (!type_.IsTkCompatibleWith(that.type_)) {
     messages.Say(
         "%1$s type '%2$s' is not compatible with %3$s type '%4$s'"_err_en_US,
         thatIs, that.type_.AsFortran(len ? len->AsFortran() : ""), thisIs,

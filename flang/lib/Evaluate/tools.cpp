@@ -965,7 +965,6 @@ bool IsProcedure(const Symbol &symbol) {
           [](const GenericDetails &) { return true; },
           [](const ProcBindingDetails &) { return true; },
           [](const UseDetails &x) { return IsProcedure(x.symbol()); },
-          // TODO: FinalProcDetails?
           [](const auto &) { return false; },
       },
       symbol.details());
