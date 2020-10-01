@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
+#include <initializer_list>
 
 #define DEBUG_TYPE "aarch64-legalinfo"
 
@@ -54,11 +55,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const LLT v2s64 = LLT::vector(2, 64);
   const LLT v2p0 = LLT::vector(2, p0);
 
-  const auto PackedVectorAllTypeList = {/* Begin 128bit types */
-                                        v16s8, v8s16, v4s32, v2s64, v2p0,
-                                        /* End 128bit types */
-                                        /* Begin 64bit types */
-                                        v8s8, v4s16, v2s32};
+  std::initializer_list<LLT> PackedVectorAllTypeList = {/* Begin 128bit types */
+                                                        v16s8, v8s16, v4s32,
+                                                        v2s64, v2p0,
+                                                        /* End 128bit types */
+                                                        /* Begin 64bit types */
+                                                        v8s8, v4s16, v2s32};
 
   const TargetMachine &TM = ST.getTargetLowering()->getTargetMachine();
 
