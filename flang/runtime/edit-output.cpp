@@ -330,17 +330,17 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
 template <int binaryPrecision>
 DataEdit RealOutputEditing<binaryPrecision>::EditForGOutput(DataEdit edit) {
   edit.descriptor = 'E';
-  if (!edit.width.has_value() ||
-      (*edit.width > 0 && edit.digits.value_or(-1) == 0)) {
+  int significantDigits{
+      edit.digits.value_or(BinaryFloatingPoint::decimalPrecision)}; // 'd'
+  if (!edit.width.has_value() || (*edit.width > 0 && significantDigits == 0)) {
     return edit; // Gw.0 -> Ew.0 for w > 0
   }
-  decimal::ConversionToDecimalResult converted{Convert(1, edit)};
+  decimal::ConversionToDecimalResult converted{
+      Convert(significantDigits, edit)};
   if (IsInfOrNaN(converted)) {
     return edit;
   }
   int expo{IsZero() ? 1 : converted.decimalExponent}; // 's'
-  int significantDigits{
-      edit.digits.value_or(BinaryFloatingPoint::decimalPrecision)}; // 'd'
   if (expo < 0 || expo > significantDigits) {
     return edit; // Ew.d
   }
