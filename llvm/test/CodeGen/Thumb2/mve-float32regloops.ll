@@ -1435,8 +1435,8 @@ define arm_aapcs_vfpcc void @arm_biquad_cascade_stereo_df2T_f32(%struct.arm_biqu
 ; CHECK-NEXT:    vdup.32 q1, r6
 ; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vmov.f32 s6, s12
-; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:    vmov.f32 s10, s14
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:    vmov.f32 s7, s12
 ; CHECK-NEXT:    vmov.f32 s11, s14
 ; CHECK-NEXT:  .LBB17_3: @ Parent Loop BB17_2 Depth=1

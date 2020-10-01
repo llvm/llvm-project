@@ -175,8 +175,8 @@ body:             |
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   liveins: $q0, $r0, $r1, $r2, $r4
   ; CHECK:   $s4 = VMOVSR $r1, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = t2DLS killed $r4
   ; CHECK:   renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s3, killed renamable $s3, 14 /* CC::al */, $noreg, implicit killed $q0
+  ; CHECK:   $lr = t2DLS killed $r4
   ; CHECK:   renamable $s4 = VUITOS killed renamable $s4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $s0 = nnan ninf nsz arcp contract afn reassoc VDIVS killed renamable $s0, killed renamable $s4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r3 = VMOVRS killed renamable $s0, 14 /* CC::al */, $noreg
