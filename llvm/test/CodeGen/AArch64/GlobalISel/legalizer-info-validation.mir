@@ -269,6 +269,7 @@
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: G_LSHR (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
+# DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: G_ASHR (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
