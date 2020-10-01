@@ -339,23 +339,31 @@ private:
   }
 
   /// Mark I/O statement ERR, EOR, and END specifier branch targets.
+  /// Mark an I/O statement with an assigned format as unstructured.
   template <typename A>
   void analyzeIoBranches(lower::pft::Evaluation &eval, const A &stmt) {
-    auto processIfLabel{[&](const auto &specs) {
-      using LabelNodes =
-          std::tuple<parser::ErrLabel, parser::EorLabel, parser::EndLabel>;
-      for (const auto &spec : specs) {
-        const auto *label = std::visit(
-            [](const auto &label) -> const parser::Label * {
-              using B = std::decay_t<decltype(label)>;
-              if constexpr (common::HasMember<B, LabelNodes>)
-                return &label.v;
-              return nullptr;
-            },
+    auto analyzeFormatSpec = [&](const parser::Format &format) {
+      if (const auto *expr = std::get_if<parser::Expr>(&format.u)) {
+        if (semantics::ExprHasTypeCategory(*semantics::GetExpr(*expr),
+                                           common::TypeCategory::Integer))
+          eval.isUnstructured = true;
+      }
+    };
+    auto analyzeSpecs{[&](const auto &specList) {
+      for (const auto &spec : specList) {
+        std::visit(
+            Fortran::common::visitors{
+                [&](const Fortran::parser::Format &format) {
+                  analyzeFormatSpec(format);
+                },
+                [&](const auto &label) {
+                  using LabelNodes =
+                      std::tuple<parser::ErrLabel, parser::EorLabel,
+                                 parser::EndLabel>;
+                  if constexpr (common::HasMember<decltype(label), LabelNodes>)
+                    markBranchTarget(eval, label.v);
+                }},
             spec.u);
-
-        if (label)
-          markBranchTarget(eval, *label);
       }
     }};
 
@@ -366,13 +374,17 @@ private:
 
     if constexpr (std::is_same_v<A, parser::ReadStmt> ||
                   std::is_same_v<A, parser::WriteStmt>) {
-      processIfLabel(stmt.controls);
+      if (stmt.format)
+        analyzeFormatSpec(*stmt.format);
+      analyzeSpecs(stmt.controls);
+    } else if constexpr (std::is_same_v<A, parser::PrintStmt>) {
+      analyzeFormatSpec(std::get<parser::Format>(stmt.t));
     } else if constexpr (std::is_same_v<A, parser::InquireStmt>) {
-      if (const auto *specs =
+      if (const auto *specList =
               std::get_if<std::list<parser::InquireSpec>>(&stmt.u))
-        processIfLabel(*specs);
+        analyzeSpecs(*specList);
     } else if constexpr (common::HasMember<A, OtherIOStmts>) {
-      processIfLabel(stmt.v);
+      analyzeSpecs(stmt.v);
     } else {
       // Always crash if this is instantiated
       static_assert(!std::is_same_v<A, parser::ReadStmt>,
@@ -705,11 +717,11 @@ private:
           // Default - Common analysis for I/O statements; otherwise nop.
           [&](const auto &stmt) {
             using A = std::decay_t<decltype(stmt)>;
-            using IoStmts = std::tuple<parser::BackspaceStmt, parser::CloseStmt,
-                                       parser::EndfileStmt, parser::FlushStmt,
-                                       parser::InquireStmt, parser::OpenStmt,
-                                       parser::ReadStmt, parser::RewindStmt,
-                                       parser::WaitStmt, parser::WriteStmt>;
+            using IoStmts = std::tuple<
+                parser::BackspaceStmt, parser::CloseStmt, parser::EndfileStmt,
+                parser::FlushStmt, parser::InquireStmt, parser::OpenStmt,
+                parser::PrintStmt, parser::ReadStmt, parser::RewindStmt,
+                parser::WaitStmt, parser::WriteStmt>;
             if constexpr (common::HasMember<A, IoStmts>)
               analyzeIoBranches(eval, stmt);
           },
