@@ -326,9 +326,9 @@ struct LinalgTilingOptions {
   /// Set the `tileSizeComputationFunction` to return the values `ts`. The
   /// values must not fold away when tiling. Otherwise, use a more robust
   /// `tileSizeComputationFunction`.
-  LinalgTilingOptions &setTileSizes(ValueRange ts) {
-    tileSizeComputationFunction = [&](OpBuilder &, Operation *) {
-      return SmallVector<Value, 4>(ts.begin(), ts.end());
+  LinalgTilingOptions &setTileSizes(SmallVector<Value, 4> ts) {
+    tileSizeComputationFunction = [=](OpBuilder &, Operation *) {
+      return ts;
     };
     return *this;
   }
