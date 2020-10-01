@@ -53,13 +53,14 @@ set(LLDB_TEST_USER_ARGS
 # hash of filename and .text section, there *will* be conflicts inside
 # the build directory.
 set(LLDB_TEST_COMMON_ARGS
-  -s
-  ${CMAKE_BINARY_DIR}/lldb-test-traces
   -S nm
   -u CXXFLAGS
   -u CFLAGS
   ${SWIFT_TEST_ARGS}
   )
+
+# Configure the traces directory.
+set(LLDB_TEST_TRACE_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-traces" CACHE PATH "The test traces directory.")
 
 # Set the path to the default lldb test executable.
 set(LLDB_DEFAULT_TEST_EXECUTABLE "${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb${CMAKE_EXECUTABLE_SUFFIX}")
@@ -119,7 +120,7 @@ endif()
 
 if(CMAKE_HOST_APPLE)
   if(LLDB_BUILD_FRAMEWORK)
-    list(APPEND LLDB_TEST_COMMON_ARGS --framework ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework)
+    set(LLDB_FRAMEWORK_DIR ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework)
   endif()
 
   # Use the same identity for testing
@@ -140,12 +141,12 @@ if(CMAKE_HOST_APPLE)
   elseif(TARGET debugserver)
     set(debugserver_path ${LLVM_RUNTIME_OUTPUT_INTDIR}/debugserver)
     message(STATUS "LLDB Tests use just-built debugserver: ${debugserver_path}")
-    list(APPEND LLDB_TEST_COMMON_ARGS --server ${debugserver_path})
+    set(LLDB_TEST_SERVER ${debugserver_path})
     add_lldb_test_dependency(debugserver)
   elseif(TARGET lldb-server)
     set(lldb_server_path ${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb-server)
     message(STATUS "LLDB Tests use just-built lldb-server: ${lldb_server_path}")
-    list(APPEND LLDB_TEST_COMMON_ARGS --server ${lldb_server_path})
+    set(LLDB_TEST_SERVER ${lldb_server_path})
     add_lldb_test_dependency(lldb-server)
   else()
     message(WARNING "LLDB Tests enabled, but no server available")
@@ -160,12 +161,15 @@ if(LLDB_BUILT_STANDALONE)
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} config_runtime_output_dir ${LLVM_RUNTIME_OUTPUT_INTDIR})
   string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_DOTEST_ARGS "${LLDB_DOTEST_ARGS}")
   string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_SOURCE_DIR "${LLDB_SOURCE_DIR}")
+  string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_FRAMEWORK_DIR "${LLDB_FRAMEWORK_DIR}")
   string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_TEST_BUILD_DIRECTORY "${LLDB_TEST_BUILD_DIRECTORY}")
+  string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_TEST_TRACE_DIRECTORY "${LLDB_TEST_TRACE_DIRECTORY}")
   string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_TEST_EXECUTABLE "${LLDB_TEST_EXECUTABLE}")
   string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_TEST_COMPILER "${LLDB_TEST_COMPILER}")
   string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_TEST_DSYMUTIL "${LLDB_TEST_DSYMUTIL}")
   string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_TEST_FILECHECK "${LLDB_TEST_FILECHECK}")
   string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_TEST_YAML2OBJ "${LLDB_TEST_YAML2OBJ}")
+  string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_TEST_SERVER "${LLDB_TEST_SERVER}")
 
   # Remaining ones must be paths to the provided LLVM build-tree.
   if(LLVM_CONFIGURATION_TYPES)
@@ -189,11 +193,13 @@ endif()
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_DOTEST_ARGS "${LLDB_DOTEST_ARGS}")
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_SOURCE_DIR "${LLDB_SOURCE_DIR}")
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_BUILD_DIRECTORY "${LLDB_TEST_BUILD_DIRECTORY}")
+string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_TRACE_DIRECTORY "${LLDB_TEST_TRACE_DIRECTORY}")
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_EXECUTABLE "${LLDB_TEST_EXECUTABLE}")
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_COMPILER "${LLDB_TEST_COMPILER}")
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_DSYMUTIL "${LLDB_TEST_DSYMUTIL}")
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_FILECHECK "${LLDB_TEST_FILECHECK}")
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_YAML2OBJ "${LLDB_TEST_YAML2OBJ}")
+string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_SERVER "${LLDB_TEST_SERVER}")
 
 # Configure the API test suite.
 configure_lit_site_cfg(

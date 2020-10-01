@@ -85,7 +85,7 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign);
 
-  virtual bool Clear() = 0;
+  virtual void Clear() = 0;
 
   virtual lldb::OptionValueSP DeepCopy() const = 0;
 
