@@ -603,8 +603,10 @@ bool LowOverheadLoop::ValidateTailPredicate() {
     return false;
   }
 
-  if (!VPTState::isValid(RDA))
+  if (!VPTState::isValid(RDA)) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: Invalid VPT state.\n");
     return false;
+  }
 
   if (!ValidateLiveOuts()) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Invalid live outs.\n");
@@ -655,9 +657,13 @@ bool LowOverheadLoop::ValidateTailPredicate() {
   // instructions in the preheader.
   auto CannotInsertWDLSTPBetween = [](MachineBasicBlock::iterator I,
                                       MachineBasicBlock::iterator E) {
-    for (; I != E; ++I)
-      if (shouldInspect(*I))
+    for (; I != E; ++I) {
+      if (shouldInspect(*I)) {
+        LLVM_DEBUG(dbgs() << "ARM Loops: Instruction blocks [W|D]LSTP"
+                   << " insertion: " << *I);
         return true;
+      }
+    }
     return false;
   };
 
@@ -719,11 +725,17 @@ bool LowOverheadLoop::ValidateTailPredicate() {
           continue;
 
         if (isSubImmOpcode(MI->getOpcode())) {
-          if (FoundSub || !IsValidSub(MI, ExpectedVectorWidth))
+          if (FoundSub || !IsValidSub(MI, ExpectedVectorWidth)) {
+            LLVM_DEBUG(dbgs() << "ARM Loops: Unexpected instruction in element"
+                       " count: " << *MI);
             return false;
+          }
           FoundSub = true;
-        } else
+        } else {
+          LLVM_DEBUG(dbgs() << "ARM Loops: Unexpected instruction in element"
+                     " count: " << *MI);
           return false;
+        }
       }
       ToRemove.insert(ElementChain.begin(), ElementChain.end());
     }
@@ -1082,8 +1094,14 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
     Revert = true;
     return;
   }
-
   TryAdjustInsertionPoint(StartInsertPt, Start, RDA);
+  LLVM_DEBUG(if (StartInsertPt == StartInsertBB->end())
+               dbgs() << "ARM Loops: Will insert LoopStart at end of block\n";
+             else
+               dbgs() << "ARM Loops: Will insert LoopStart at "
+               << *StartInsertPt
+            );
+
   Revert = !ValidateRanges(Start, End, BBUtils, ML);
   CannotTailPredicate = !ValidateTailPredicate();
 }
