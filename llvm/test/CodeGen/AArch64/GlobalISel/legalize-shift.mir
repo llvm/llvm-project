@@ -431,3 +431,46 @@ body:             |
     $q0 = COPY %3(<4 x s32>)
     $q1 = COPY %4(<4 x s32>)
 ...
+---
+name: test_shl_v8s8
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_shl_v8s8
+    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
+    ; CHECK: [[SHL:%[0-9]+]]:_(<8 x s8>) = G_SHL [[COPY]], [[COPY1]](<8 x s8>)
+    ; CHECK: $d0 = COPY [[SHL]](<8 x s8>)
+    %0:_(<8 x s8>) = COPY $d0
+    %1:_(<8 x s8>) = COPY $d1
+    %2:_(<8 x s8>) = G_SHL %0, %1
+    $d0 = COPY %2
+...
+---
+name: test_ashr_v8s8
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_ashr_v8s8
+    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
+    ; CHECK: [[ASHR:%[0-9]+]]:_(<8 x s8>) = G_ASHR [[COPY]], [[COPY1]](<8 x s8>)
+    ; CHECK: $d0 = COPY [[ASHR]](<8 x s8>)
+    %0:_(<8 x s8>) = COPY $d0
+    %1:_(<8 x s8>) = COPY $d1
+    %2:_(<8 x s8>) = G_ASHR %0, %1
+    $d0 = COPY %2
+...
+
+---
+name: test_lshr_v8s8
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_lshr_v8s8
+    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
+    ; CHECK: [[LSHR:%[0-9]+]]:_(<8 x s8>) = G_LSHR [[COPY]], [[COPY1]](<8 x s8>)
+    ; CHECK: $d0 = COPY [[LSHR]](<8 x s8>)
+    %0:_(<8 x s8>) = COPY $d0
+    %1:_(<8 x s8>) = COPY $d1
+    %2:_(<8 x s8>) = G_LSHR %0, %1
+    $d0 = COPY %2
+...
