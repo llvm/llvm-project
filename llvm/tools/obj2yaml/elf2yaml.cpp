@@ -659,6 +659,8 @@ static unsigned getDefaultShEntSize(ELFYAML::ELF_SHT SecType,
     return sizeof(typename ELFT::Relr);
   case ELF::SHT_DYNAMIC:
     return sizeof(typename ELFT::Dyn);
+  case ELF::SHT_HASH:
+    return sizeof(typename ELFT::Word);
   default:
     if (SecName == ".debug_str")
       return 1;
