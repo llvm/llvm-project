@@ -74,3 +74,13 @@ steps:
     command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-ubuntu-singlethreaded | libcxx/utils/ci/phabricator-report"
     agents:
       queue: "libcxx-builders"
+
+  # Build with the configuration we use to generate libc++.dylib on Apple platforms
+  - label: "Apple system"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-apple-system | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-macos-builders"
+  - label: "Apple system -fno-exceptions"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh x86_64-apple-system-noexceptions | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-macos-builders"
