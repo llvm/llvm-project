@@ -6893,14 +6893,7 @@ bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {
   return RI.getRegClass(RCID)->hasSubClassEq(&AMDGPU::SGPR_128RegClass);
 }
 
-unsigned SIInstrInfo::getNumFlatOffsetBits(unsigned AddrSpace,
-                                           bool Signed) const {
-  if (!ST.hasFlatInstOffsets())
-    return 0;
-
-  if (ST.hasFlatSegmentOffsetBug() && AddrSpace == AMDGPUAS::FLAT_ADDRESS)
-    return 0;
-
+unsigned SIInstrInfo::getNumFlatOffsetBits(bool Signed) const {
   if (ST.getGeneration() >= AMDGPUSubtarget::GFX10)
     return Signed ? 12 : 11;
 
