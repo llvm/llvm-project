@@ -278,11 +278,8 @@ NativeRegisterContextNetBSD_x86_64::GetRegisterSet(uint32_t set_index) const {
   case llvm::Triple::x86_64:
     return &g_reg_sets_x86_64[set_index];
   default:
-    assert(false && "Unhandled target architecture.");
-    return nullptr;
+    llvm_unreachable("Unhandled target architecture.");
   }
-
-  return nullptr;
 }
 
 static constexpr int RegNumX86ToX86_64(int regnum) {
@@ -375,6 +372,15 @@ static constexpr int RegNumX86ToX86_64(int regnum) {
   case lldb_ymm6_i386:
   case lldb_ymm7_i386:
     return lldb_ymm0_x86_64 + regnum - lldb_ymm0_i386;
+  case lldb_bnd0_i386:
+  case lldb_bnd1_i386:
+  case lldb_bnd2_i386:
+  case lldb_bnd3_i386:
+    return lldb_bnd0_x86_64 + regnum - lldb_bnd0_i386;
+  case lldb_bndcfgu_i386:
+    return lldb_bndcfgu_x86_64;
+  case lldb_bndstatus_i386:
+    return lldb_bndstatus_x86_64;
   case lldb_dr0_i386:
   case lldb_dr1_i386:
   case lldb_dr2_i386:
@@ -385,8 +391,7 @@ static constexpr int RegNumX86ToX86_64(int regnum) {
   case lldb_dr7_i386:
     return lldb_dr0_x86_64 + regnum - lldb_dr0_i386;
   default:
-    assert(false && "Unhandled i386 register.");
-    return 0;
+    llvm_unreachable("Unhandled i386 register.");
   }
 }
 
@@ -394,35 +399,38 @@ int NativeRegisterContextNetBSD_x86_64::GetSetForNativeRegNum(
     int reg_num) const {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
-    if (reg_num <= k_last_gpr_i386)
+    if (reg_num >= k_first_gpr_i386 && reg_num <= k_last_gpr_i386)
       return GPRegSet;
-    else if (reg_num <= k_last_fpr_i386)
+    if (reg_num >= k_first_fpr_i386 && reg_num <= k_last_fpr_i386)
       return FPRegSet;
-    else if (reg_num <= k_last_avx_i386)
+    if (reg_num >= k_first_avx_i386 && reg_num <= k_last_avx_i386)
       return XStateRegSet; // AVX
-    else if (reg_num <= lldb_dr7_i386)
-      return DBRegSet; // DBR
-    else
-      return -1;
-  case llvm::Triple::x86_64:
-    if (reg_num <= k_last_gpr_x86_64)
-      return GPRegSet;
-    else if (reg_num <= k_last_fpr_x86_64)
-      return FPRegSet;
-    else if (reg_num <= k_last_avx_x86_64)
-      return XStateRegSet; // AVX
-    else if (reg_num <= k_last_mpxr_x86_64)
+    if (reg_num >= k_first_mpxr_i386 && reg_num <= k_last_mpxr_i386)
       return -1; // MPXR
-    else if (reg_num <= k_last_mpxc_x86_64)
+    if (reg_num >= k_first_mpxc_i386 && reg_num <= k_last_mpxc_i386)
       return -1; // MPXC
-    else if (reg_num <= lldb_dr7_x86_64)
+    if (reg_num >= k_first_dbr_i386 && reg_num <= k_last_dbr_i386)
       return DBRegSet; // DBR
-    else
-      return -1;
+    break;
+  case llvm::Triple::x86_64:
+    if (reg_num >= k_first_gpr_x86_64 && reg_num <= k_last_gpr_x86_64)
+      return GPRegSet;
+    if (reg_num >= k_first_fpr_x86_64 && reg_num <= k_last_fpr_x86_64)
+      return FPRegSet;
+    if (reg_num >= k_first_avx_x86_64 && reg_num <= k_last_avx_x86_64)
+      return XStateRegSet; // AVX
+    if (reg_num >= k_first_mpxr_x86_64 && reg_num <= k_last_mpxr_x86_64)
+      return -1; // MPXR
+    if (reg_num >= k_first_mpxc_x86_64 && reg_num <= k_last_mpxc_x86_64)
+      return -1; // MPXC
+    if (reg_num >= k_first_dbr_x86_64 && reg_num <= k_last_dbr_x86_64)
+      return DBRegSet; // DBR
+    break;
   default:
-    assert(false && "Unhandled target architecture.");
-    return -1;
+    llvm_unreachable("Unhandled target architecture.");
   }
+
+  llvm_unreachable("Register does not belong to any register set");
 }
 
 Status NativeRegisterContextNetBSD_x86_64::ReadRegisterSet(uint32_t set) {
@@ -511,9 +519,7 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     reg = RegNumX86ToX86_64(reg);
     break;
   default:
-    assert(false && "Unhandled target architecture.");
-    error.SetErrorString("Unhandled target architecture.");
-    return error;
+    llvm_unreachable("Unhandled target architecture.");
   }
 
   error = ReadRegisterSet(set);
@@ -758,6 +764,8 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
   case lldb_dr7_x86_64:
     reg_value = (uint64_t)m_dbr.dr[reg - lldb_dr0_x86_64];
     break;
+  default:
+    llvm_unreachable("Reading unknown/unsupported register");
   }
 
   return error;
@@ -799,9 +807,7 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     reg = RegNumX86ToX86_64(reg);
     break;
   default:
-    assert(false && "Unhandled target architecture.");
-    error.SetErrorString("Unhandled target architecture.");
-    return error;
+    llvm_unreachable("Unhandled target architecture.");
   }
 
   error = ReadRegisterSet(set);
@@ -1034,6 +1040,7 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     }
 #else
     error.SetErrorString("XState not supported by the kernel");
+    return error;
 #endif
     break;
   case lldb_dr0_x86_64:
@@ -1046,6 +1053,8 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
   case lldb_dr7_x86_64:
     m_dbr.dr[reg - lldb_dr0_x86_64] = reg_value.GetAsUInt64();
     break;
+  default:
+    llvm_unreachable("Reading unknown/unsupported register");
   }
 
   return WriteRegisterSet(set);
@@ -1112,7 +1121,7 @@ int NativeRegisterContextNetBSD_x86_64::GetDR(int num) const {
   case llvm::Triple::x86_64:
     return lldb_dr0_x86_64 + num;
   default:
-    return -1;
+    llvm_unreachable("Unhandled target architecture.");
   }
 }
 
