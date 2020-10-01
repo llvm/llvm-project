@@ -7,7 +7,7 @@ Test stop hook functionality
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-
+from lldbsuite.test.decorators import *
 
 class TestStopHooks(TestBase):
 
