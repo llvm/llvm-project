@@ -190,5 +190,5 @@ kernel void default_kernel() {
 // CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_NUM_SGPR_32_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2"
 // CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64_WAVES_PER_EU_2_4_NUM_SGPR_32_NUM_VGPR_64]] = {{.*}} "amdgpu-flat-work-group-size"="32,64" "amdgpu-implicitarg-num-bytes"="56" "amdgpu-num-sgpr"="32" "amdgpu-num-vgpr"="64" "amdgpu-waves-per-eu"="2,4"
 
-// CHECK-DAG: attributes [[A_FUNCTION]] = {{.*}} "correctly-rounded-divide-sqrt-fp-math"="false"
+// CHECK-DAG: attributes [[A_FUNCTION]] = {{.*}}
 // CHECK-DAG: attributes [[DEFAULT_KERNEL_ATTRS]] = {{.*}} "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56"
