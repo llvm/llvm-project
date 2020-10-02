@@ -1154,14 +1154,20 @@ Expr<TO> FoldOperation(
   if (auto array{ApplyElementwise(context, convert)}) {
     return *array;
   }
+  struct {
+    FoldingContext &context;
+    Convert<TO, FROMCAT> &convert;
+  } msvcWorkaround{context, convert};
   return std::visit(
-      [&context, &convert](auto &kindExpr) -> Expr<TO> {
+      [&msvcWorkaround](auto &kindExpr) -> Expr<TO> {
         using Operand = ResultType<decltype(kindExpr)>;
         // This variable is a workaround for msvc which emits an error when
         // using the FROMCAT template parameter below.
         TypeCategory constexpr FromCat{FROMCAT};
+        auto &convert{msvcWorkaround.convert};
         char buffer[64];
         if (auto value{GetScalarConstantValue<Operand>(kindExpr)}) {
+          FoldingContext &context{msvcWorkaround.context};
           if constexpr (TO::category == TypeCategory::Integer) {
             if constexpr (Operand::category == TypeCategory::Integer) {
               auto converted{Scalar<TO>::ConvertSigned(*value)};
