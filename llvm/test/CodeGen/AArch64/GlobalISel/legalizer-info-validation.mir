@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=aarch64-- -run-pass=legalizer %s \
-# RUN:     -mcpu=cortex-a75 -o - 2>&1 | FileCheck %s --check-prefixes=CHECK
+# R UN: llc -mtriple=aarch64-- -run-pass=legalizer %s \
+# R UN:     -mcpu=cortex-a75 -o - 2>&1 | FileCheck %s --check-prefixes=CHECK
 
 # RUN: llc -mtriple=aarch64-- -run-pass=legalizer %s -debug-only=legalizer-info \
 # RUN:     -mcpu=cortex-a75 -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,DEBUG
@@ -561,6 +561,56 @@
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: G_FNEARBYINT (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
+# DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: G_ADDRSPACE_CAST (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_BLOCK_ADDR (opcode {{[0-9]+}}): 1 type index, 0 imm indices
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
+# DEBUG-NEXT: G_JUMP_TABLE (opcode {{[0-9]+}}): 1 type index, 0 imm indices
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
+# DEBUG-NEXT: G_DYN_STACKALLOC (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: G_STRICT_FADD (opcode {{[0-9]+}}): 1 type index, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_STRICT_FSUB (opcode {{[0-9]+}}): 1 type index, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_STRICT_FMUL (opcode {{[0-9]+}}): 1 type index, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_STRICT_FDIV (opcode {{[0-9]+}}): 1 type index, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_STRICT_FREM (opcode {{[0-9]+}}): 1 type index, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_STRICT_FMA (opcode {{[0-9]+}}): 1 type index, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_STRICT_FSQRT (opcode {{[0-9]+}}): 1 type index, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_READ_REGISTER (opcode {{[0-9]+}}): 1 type index, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_WRITE_REGISTER (opcode {{[0-9]+}}): 1 type index, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_MEMCPY (opcode {{[0-9]+}}): 3 type indices, 1 imm index
+# DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: G_MEMMOVE (opcode {{[0-9]+}}): 3 type indices, 1 imm index
+# DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to 208
+# DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: G_MEMSET (opcode {{[0-9]+}}): 3 type indices, 1 imm index
+# DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to 208
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 
