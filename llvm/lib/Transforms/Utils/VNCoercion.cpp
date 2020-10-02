@@ -17,6 +17,7 @@ static bool isFirstClassAggregateOrScalableType(Type *Ty) {
 bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
                                      const DataLayout &DL) {
   Type *StoredTy = StoredVal->getType();
+
   if (StoredTy == LoadTy)
     return true;
 
@@ -46,6 +47,14 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
       return CI->isNullValue();
     return false;
   }
+
+
+  // The implementation below uses inttoptr for vectors of unequal size; we
+  // can't allow this for non integral pointers.  Wecould teach it to extract
+  // exact subvectors if desired. 
+  if (DL.isNonIntegralPointerType(StoredTy->getScalarType()) &&
+      StoreSize != DL.getTypeSizeInBits(LoadTy).getFixedSize())
+    return false;
   
   return true;
 }
@@ -223,14 +232,8 @@ int analyzeLoadFromClobberingStore(Type *LoadTy, Value *LoadPtr,
   if (isFirstClassAggregateOrScalableType(StoredVal->getType()))
     return -1;
 
-  // Don't coerce non-integral pointers to integers or vice versa.
-  if (DL.isNonIntegralPointerType(StoredVal->getType()->getScalarType()) !=
-      DL.isNonIntegralPointerType(LoadTy->getScalarType())) {
-    // Allow casts of zero values to null as a special case
-    auto *CI = dyn_cast<Constant>(StoredVal);
-    if (!CI || !CI->isNullValue())
-      return -1;
-  }
+  if (!canCoerceMustAliasedValueToLoad(StoredVal, LoadTy, DL))
+    return -1;
 
   Value *StorePtr = DepSI->getPointerOperand();
   uint64_t StoreSize =
@@ -333,9 +336,7 @@ int analyzeLoadFromClobberingLoad(Type *LoadTy, Value *LoadPtr, LoadInst *DepLI,
   if (DepLI->getType()->isStructTy() || DepLI->getType()->isArrayTy())
     return -1;
 
-  // Don't coerce non-integral pointers to integers or vice versa.
-  if (DL.isNonIntegralPointerType(DepLI->getType()->getScalarType()) !=
-      DL.isNonIntegralPointerType(LoadTy->getScalarType()))
+  if (!canCoerceMustAliasedValueToLoad(DepLI, LoadTy, DL))
     return -1;
 
   Value *DepPtr = DepLI->getPointerOperand();
