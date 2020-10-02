@@ -1322,15 +1322,31 @@ bool AArch64InstructionSelector::selectCompareBranch(
   MachineInstr *CCMI = MRI.getVRegDef(CondReg);
   if (CCMI->getOpcode() == TargetOpcode::G_TRUNC)
     CCMI = MRI.getVRegDef(CCMI->getOperand(1).getReg());
-  if (CCMI->getOpcode() != TargetOpcode::G_ICMP)
+
+  unsigned CCMIOpc = CCMI->getOpcode();
+  if (CCMIOpc != TargetOpcode::G_ICMP && CCMIOpc != TargetOpcode::G_FCMP)
     return false;
 
+  MachineIRBuilder MIB(I);
   Register LHS = CCMI->getOperand(2).getReg();
   Register RHS = CCMI->getOperand(3).getReg();
+  auto Pred =
+      static_cast<CmpInst::Predicate>(CCMI->getOperand(1).getPredicate());
+
+  if (CCMIOpc == TargetOpcode::G_FCMP) {
+    // Unfortunately, the mapping of LLVM FP CC's onto AArch64 CC's isn't
+    // totally clean.  Some of them require two branches to implement.
+    emitFPCompare(LHS, RHS, MIB);
+    AArch64CC::CondCode CC1, CC2;
+    changeFCMPPredToAArch64CC(Pred, CC1, CC2);
+    MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC1).addMBB(DestMBB);
+    if (CC2 != AArch64CC::AL)
+      MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC2).addMBB(DestMBB);
+    I.eraseFromParent();
+    return true;
+  }
+
   auto VRegAndVal = getConstantVRegValWithLookThrough(RHS, MRI);
-  MachineIRBuilder MIB(I);
-  CmpInst::Predicate Pred =
-      (CmpInst::Predicate)CCMI->getOperand(1).getPredicate();
   MachineInstr *LHSMI = getDefIgnoringCopies(LHS, MRI);
 
   // When we can emit a TB(N)Z, prefer that.
