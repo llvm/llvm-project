@@ -22,7 +22,9 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
 
+#ifdef LLDB_ENABLE_SWIFT
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#endif // LLDB_ENABLE_SWIFT
 
 #include <string.h>
 namespace lldb_private {

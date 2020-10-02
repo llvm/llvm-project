@@ -23,7 +23,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 
+#ifdef LLDB_ENABLE_SWIFT
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#endif //LLDB_ENABLE_SWIFT
 
 #include <memory>
 

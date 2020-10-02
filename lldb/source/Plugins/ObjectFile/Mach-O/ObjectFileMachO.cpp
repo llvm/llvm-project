@@ -27,7 +27,6 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
@@ -47,7 +46,10 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 #include "ObjectFileMachO.h"
+#ifdef LLDB_ENABLE_SWIFT
 #include "swift/ABI/ObjectFile.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
+#endif //LLDB_ENABLE_SWIFT
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -6474,6 +6476,10 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 
 llvm::StringRef ObjectFileMachO::GetReflectionSectionIdentifier(
     swift::ReflectionSectionKind section) {
+#ifdef LLDB_ENABLE_SWIFT
   swift::SwiftObjectFileFormatMachO file_format_mach_o;
   return file_format_mach_o.getSectionName(section);
+#else
+  llvm_unreachable("Swift support disabled");
+#endif //LLDB_ENABLE_SWIFT
 }

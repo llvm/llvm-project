@@ -25,7 +25,6 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/LanguageRuntime.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -34,6 +33,10 @@
 
 #include "lldb/../../source/Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "lldb/../../source/Plugins/ObjectFile/JIT/ObjectFileJIT.h"
+
+#ifdef LLDB_ENABLE_SWIFT
+#include "lldb/Target/SwiftLanguageRuntime.h"
+#endif //LLDB_ENABLE_SWIFT
 
 using namespace lldb_private;
 
