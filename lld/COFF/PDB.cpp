@@ -146,6 +146,8 @@ private:
   uint64_t globalSymbols = 0;
   uint64_t moduleSymbols = 0;
   uint64_t publicSymbols = 0;
+  uint64_t nbTypeRecords = 0;
+  uint64_t nbTypeRecordsBytes = 0;
 };
 
 class DebugSHandler {
@@ -970,6 +972,13 @@ void PDBLinker::addObjectsToPDB() {
     addTypeInfo(builder.getIpiBuilder(), tMerger.getIDTable());
   }
   t2.stop();
+
+  if (config->showSummary) {
+    for_each(TpiSource::instances, [&](TpiSource *source) {
+      nbTypeRecords += source->nbTypeRecords;
+      nbTypeRecordsBytes += source->nbTypeRecordsBytes;
+    });
+  }
 }
 
 void PDBLinker::addPublicsToPDB() {
@@ -1009,6 +1018,8 @@ void PDBLinker::printStats() {
         "Input OBJ files (expanded from all cmd-line inputs)");
   print(TpiSource::countTypeServerPDBs(), "PDB type server dependencies");
   print(TpiSource::countPrecompObjs(), "Precomp OBJ dependencies");
+  print(nbTypeRecords, "Input type records");
+  print(nbTypeRecordsBytes, "Input type records bytes");
   print(builder.getTpiBuilder().getRecordCount(), "Merged TPI records");
   print(builder.getIpiBuilder().getRecordCount(), "Merged IPI records");
   print(pdbStrTab.size(), "Output PDB strings");
