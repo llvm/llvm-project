@@ -517,6 +517,8 @@ def Vector_ExtractMapOp :
     $vector `[` $id `:` $multiplicity `]` attr-dict `:` type($vector) `to`
     type(results)
   }];
+
+  let hasFolder = 1;
 }
 
 def Vector_FMAOp :

@@ -923,6 +923,14 @@ static LogicalResult verify(ExtractMapOp op) {
   return success();
 }
 
+OpFoldResult ExtractMapOp::fold(ArrayRef<Attribute> operands) {
+  auto insert = vector().getDefiningOp<vector::InsertMapOp>();
+  if (insert == nullptr || multiplicity() != insert.multiplicity() ||
+      id() != insert.id())
+    return {};
+  return insert.vector();
+}
+
 //===----------------------------------------------------------------------===//
 // BroadcastOp
 //===----------------------------------------------------------------------===//
