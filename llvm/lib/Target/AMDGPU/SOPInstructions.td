@@ -54,9 +54,9 @@ class SOP1_Pseudo <string opName, dag outs, dag ins,
   bits<1> has_sdst = 1;
 }
 
-class SOP1_Real<bits<8> op, SOP1_Pseudo ps> :
+class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   InstSI <ps.OutOperandList, ps.InOperandList,
-          ps.Mnemonic # " " # ps.AsmOperands, []>,
+          real_name # " " # ps.AsmOperands, []>,
   Enc32 {
 
   let isPseudo = 0;
@@ -1621,7 +1621,7 @@ defm S_SETREG_B32       : SOPK_Real32_gfx6_gfx7_gfx10<0x013>;
 defm S_SETREG_IMM32_B32 : SOPK_Real64_gfx6_gfx7_gfx10<0x015>;
 
 //===----------------------------------------------------------------------===//
-// GFX8, GFX9 (VI).
+// GFX8 (VI), GFX9.
 //===----------------------------------------------------------------------===//
 
 class Select_vi<string opName> :
