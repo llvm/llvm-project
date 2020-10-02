@@ -15,7 +15,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InlineCost.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
@@ -40,7 +39,7 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
   auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
-  auto &PSI = MAM.getResult<ProfileSummaryAnalysis>(M);
+  InlineFunctionInfo IFI(/*cg=*/nullptr, GetAssumptionCache);
 
   SmallSetVector<CallBase *, 16> Calls;
   bool Changed = false;
@@ -67,11 +66,6 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
         assert(OIC);
         emitInlinedInto(ORE, CB->getDebugLoc(), CB->getParent(), F, *Caller,
                         *OIC, false, DEBUG_TYPE);
-
-        InlineFunctionInfo IFI(
-            /*cg=*/nullptr, GetAssumptionCache, &PSI,
-            &FAM.getResult<BlockFrequencyAnalysis>(*(CB->getCaller())),
-            &FAM.getResult<BlockFrequencyAnalysis>(F));
 
         InlineResult Res =
             InlineFunction(*CB, IFI, /*CalleeAAR=*/nullptr, InsertLifetime);
