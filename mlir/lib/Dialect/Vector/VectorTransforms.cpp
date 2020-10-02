@@ -12,6 +12,7 @@
 
 #include <type_traits>
 
+#include "mlir/Dialect/Affine/EDSC/Builders.h"
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
@@ -2452,6 +2453,55 @@ mlir::vector::distributPointwiseVectorOp(OpBuilder &builder, Operation *op,
   return ops;
 }
 
+struct TransferReadExtractPattern
+    : public OpRewritePattern<vector::TransferReadOp> {
+  TransferReadExtractPattern(MLIRContext *context)
+      : OpRewritePattern<vector::TransferReadOp>(context) {}
+  LogicalResult matchAndRewrite(vector::TransferReadOp read,
+                                PatternRewriter &rewriter) const override {
+    if (!read.getResult().hasOneUse())
+      return failure();
+    auto extract =
+        dyn_cast<vector::ExtractMapOp>(*read.getResult().getUsers().begin());
+    if (!extract)
+      return failure();
+    edsc::ScopedContext scope(rewriter, read.getLoc());
+    using mlir::edsc::op::operator+;
+    using namespace mlir::edsc::intrinsics;
+    SmallVector<Value, 4> indices(read.indices().begin(), read.indices().end());
+    indices.back() = indices.back() + extract.id();
+    Value newRead = vector_transfer_read(extract.getType(), read.memref(),
+                                         indices, read.permutation_map(),
+                                         read.padding(), ArrayAttr());
+    newRead = rewriter.create<vector::InsertMapOp>(
+        read.getLoc(), newRead, extract.id(), extract.multiplicity());
+    rewriter.replaceOp(read, newRead);
+    return success();
+  }
+};
+
+struct TransferWriteInsertPattern
+    : public OpRewritePattern<vector::TransferWriteOp> {
+  TransferWriteInsertPattern(MLIRContext *context)
+      : OpRewritePattern<vector::TransferWriteOp>(context) {}
+  LogicalResult matchAndRewrite(vector::TransferWriteOp write,
+                                PatternRewriter &rewriter) const override {
+    auto insert = write.vector().getDefiningOp<vector::InsertMapOp>();
+    if (!insert)
+      return failure();
+    edsc::ScopedContext scope(rewriter, write.getLoc());
+    using mlir::edsc::op::operator+;
+    using namespace mlir::edsc::intrinsics;
+    SmallVector<Value, 4> indices(write.indices().begin(),
+                                  write.indices().end());
+    indices.back() = indices.back() + insert.id();
+    vector_transfer_write(insert.vector(), write.memref(), indices,
+                          write.permutation_map(), ArrayAttr());
+    rewriter.eraseOp(write);
+    return success();
+  }
+};
+
 // TODO: Add pattern to rewrite ExtractSlices(ConstantMaskOp).
 // TODO: Add this as DRR pattern.
 void mlir::vector::populateVectorToVectorTransformationPatterns(
@@ -2461,7 +2511,9 @@ void mlir::vector::populateVectorToVectorTransformationPatterns(
                   ShapeCastOpFolder,
                   SplitTransferReadOp,
                   SplitTransferWriteOp,
-                  TupleGetFolderOp>(context);
+                  TupleGetFolderOp,
+                  TransferReadExtractPattern,
+                  TransferWriteInsertPattern>(context);
   // clang-format on
 }
 
