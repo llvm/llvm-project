@@ -2046,29 +2046,18 @@ Instruction *InstCombinerImpl::matchBSwap(BinaryOperator &Or) {
     Op1 = Ext->getOperand(0);
 
   // (A | B) | C  and  A | (B | C)                  -> bswap if possible.
-  bool OrOfOrs = match(Op0, m_Or(m_Value(), m_Value())) ||
-                 match(Op1, m_Or(m_Value(), m_Value()));
+  bool OrWithOrs = match(Op0, m_Or(m_Value(), m_Value())) ||
+                   match(Op1, m_Or(m_Value(), m_Value()));
 
-  // (A >> B) | (C << D)  and  (A << B) | (B >> C)  -> bswap if possible.
-  bool OrOfShifts = match(Op0, m_LogicalShift(m_Value(), m_Value())) &&
-                    match(Op1, m_LogicalShift(m_Value(), m_Value()));
+  // (A >> B) | C  and  (A << B) | C                -> bswap if possible.
+  bool OrWithShifts = match(Op0, m_LogicalShift(m_Value(), m_Value())) ||
+                      match(Op1, m_LogicalShift(m_Value(), m_Value()));
 
-  // (A & B) | (C & D)                              -> bswap if possible.
-  bool OrOfAnds = match(Op0, m_And(m_Value(), m_Value())) &&
-                  match(Op1, m_And(m_Value(), m_Value()));
+  // (A & B) | C  and  A | (B & C)                  -> bswap if possible.
+  bool OrWithAnds = match(Op0, m_And(m_Value(), m_Value())) ||
+                    match(Op1, m_And(m_Value(), m_Value()));
 
-  // (A << B) | (C & D)                              -> bswap if possible.
-  // The bigger pattern here is ((A & C1) << C2) | ((B >> C2) & C1), which is a
-  // part of the bswap idiom for specific values of C1, C2 (e.g. C1 = 16711935,
-  // C2 = 8 for i32).
-  // This pattern can occur when the operands of the 'or' are not canonicalized
-  // for some reason (not having only one use, for example).
-  bool OrOfAndAndSh = (match(Op0, m_LogicalShift(m_Value(), m_Value())) &&
-                       match(Op1, m_And(m_Value(), m_Value()))) ||
-                      (match(Op0, m_And(m_Value(), m_Value())) &&
-                       match(Op1, m_LogicalShift(m_Value(), m_Value())));
-
-  if (!OrOfOrs && !OrOfShifts && !OrOfAnds && !OrOfAndAndSh)
+  if (!OrWithOrs && !OrWithShifts && !OrWithAnds)
     return nullptr;
 
   SmallVector<Instruction*, 4> Insts;
