@@ -10236,13 +10236,31 @@ bool ScalarEvolution::isImpliedViaOperations(ICmpInst::Predicate Pred,
   // We want to avoid hurting the compile time with analysis of too big trees.
   if (Depth > MaxSCEVOperationsImplicationDepth)
     return false;
-  // We only want to work with ICMP_SGT comparison so far.
-  // TODO: Extend to ICMP_UGT?
-  if (Pred == ICmpInst::ICMP_SLT) {
-    Pred = ICmpInst::ICMP_SGT;
+
+  // We only want to work with GT comparison so far.
+  if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_SLT) {
+    Pred = CmpInst::getSwappedPredicate(Pred);
     std::swap(LHS, RHS);
     std::swap(FoundLHS, FoundRHS);
   }
+
+  // For unsigned, try to reduce it to corresponding signed comparison.
+  if (Pred == ICmpInst::ICMP_UGT)
+    // We can replace unsigned predicate with its signed counterpart if all
+    // involved values are non-negative.
+    // TODO: We could have better support for unsigned.
+    if (isKnownNonNegative(FoundLHS) && isKnownNonNegative(FoundRHS)) {
+      // Knowing that both FoundLHS and FoundRHS are non-negative, and knowing
+      // FoundLHS >u FoundRHS, we also know that FoundLHS >s FoundRHS. Let us
+      // use this fact to prove that LHS and RHS are non-negative.
+      const SCEV *MinusOne = getNegativeSCEV(getOne(LHS->getType()));
+      if (isImpliedCondOperands(ICmpInst::ICMP_SGT, LHS, MinusOne, FoundLHS,
+                                FoundRHS) &&
+          isImpliedCondOperands(ICmpInst::ICMP_SGT, RHS, MinusOne, FoundLHS,
+                                FoundRHS))
+        Pred = ICmpInst::ICMP_SGT;
+    }
+
   if (Pred != ICmpInst::ICMP_SGT)
     return false;
 
