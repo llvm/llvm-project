@@ -174,9 +174,10 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   liveins: $x0
-  ; CHECK:   %wide:gpr64 = COPY $x0
-  ; CHECK:   %trunc:gpr32 = COPY %wide.sub_32
-  ; CHECK:   TBNZW %trunc, 0, %bb.1
+  ; CHECK:   %wide:gpr64all = COPY $x0
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr32all = COPY %wide.sub_32
+  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
+  ; CHECK:   TBNZW [[COPY1]], 0, %bb.1
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
   ; CHECK:   RET_ReallyLR
