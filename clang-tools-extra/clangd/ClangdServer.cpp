@@ -521,7 +521,7 @@ void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
     };
     for (const auto &Sel : *Selections) {
       for (auto &T : prepareTweaks(*Sel, Filter)) {
-        Res.push_back({T->id(), T->title(), T->intent()});
+        Res.push_back({T->id(), T->title(), T->kind()});
         PreparedTweaks.insert(T->id());
         TweakAvailable.record(1, T->id());
       }
