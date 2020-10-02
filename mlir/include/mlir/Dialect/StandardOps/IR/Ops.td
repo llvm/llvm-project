@@ -3164,7 +3164,7 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<"subtensor"> {
                                 ArrayRef<int64_t> staticStrides);
   }];
 
-  // let hasCanonicalizer = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

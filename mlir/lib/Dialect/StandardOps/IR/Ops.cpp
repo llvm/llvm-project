@@ -2989,50 +2989,59 @@ void canonicalizeSubViewPart(SmallVectorImpl<Value> &values,
   }
 }
 
-/// Pattern to rewrite a subview op with constant arguments.
-class SubViewOpConstantArgumentFolder final
-    : public OpRewritePattern<SubViewOp> {
-public:
-  using OpRewritePattern<SubViewOp>::OpRewritePattern;
+static void replaceWithNewOp(PatternRewriter &rewriter, SubViewOp op,
+                             SubViewOp newOp) {
+  rewriter.replaceOpWithNewOp<MemRefCastOp>(op, newOp, op.getType());
+}
 
-  LogicalResult matchAndRewrite(SubViewOp subViewOp,
+static void replaceWithNewOp(PatternRewriter &rewriter, SubTensorOp op,
+                             SubTensorOp newOp) {
+  rewriter.replaceOpWithNewOp<TensorCastOp>(op, newOp, op.getType());
+}
+
+/// Pattern to rewrite a subview op with constant arguments.
+template <typename OpType>
+class OpWithOffsetSizesAndStridesConstantArgumentFolder final
+    : public OpRewritePattern<OpType> {
+public:
+  using OpRewritePattern<OpType>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpType op,
                                 PatternRewriter &rewriter) const override {
     // No constant operand, just return;
-    if (llvm::none_of(subViewOp.getOperands(), [](Value operand) {
+    if (llvm::none_of(op.getOperands(), [](Value operand) {
           return matchPattern(operand, m_ConstantIndex());
         }))
       return failure();
 
     // At least one of offsets/sizes/strides is a new constant.
     // Form the new list of operands and constant attributes from the existing.
-    SmallVector<Value, 8> newOffsets(subViewOp.offsets());
+    SmallVector<Value, 8> newOffsets(op.offsets());
     SmallVector<int64_t, 8> newStaticOffsets =
-        extractFromI64ArrayAttr(subViewOp.static_offsets());
-    assert(newStaticOffsets.size() == subViewOp.getSourceRank());
+        extractFromI64ArrayAttr(op.static_offsets());
+    assert(newStaticOffsets.size() == op.getSourceRank());
     canonicalizeSubViewPart(newOffsets, newStaticOffsets,
                             ShapedType::isDynamicStrideOrOffset);
 
-    SmallVector<Value, 8> newSizes(subViewOp.sizes());
+    SmallVector<Value, 8> newSizes(op.sizes());
     SmallVector<int64_t, 8> newStaticSizes =
-        extractFromI64ArrayAttr(subViewOp.static_sizes());
-    assert(newStaticOffsets.size() == subViewOp.getSourceRank());
+        extractFromI64ArrayAttr(op.static_sizes());
+    assert(newStaticOffsets.size() == op.getSourceRank());
     canonicalizeSubViewPart(newSizes, newStaticSizes, ShapedType::isDynamic);
 
-    SmallVector<Value, 8> newStrides(subViewOp.strides());
+    SmallVector<Value, 8> newStrides(op.strides());
     SmallVector<int64_t, 8> newStaticStrides =
-        extractFromI64ArrayAttr(subViewOp.static_strides());
-    assert(newStaticOffsets.size() == subViewOp.getSourceRank());
+        extractFromI64ArrayAttr(op.static_strides());
+    assert(newStaticOffsets.size() == op.getSourceRank());
     canonicalizeSubViewPart(newStrides, newStaticStrides,
                             ShapedType::isDynamicStrideOrOffset);
 
     // Create the new op in canonical form.
-    auto newSubViewOp = rewriter.create<SubViewOp>(
-        subViewOp.getLoc(), subViewOp.source(), newStaticOffsets,
-        newStaticSizes, newStaticStrides, newOffsets, newSizes, newStrides);
+    auto newOp = rewriter.create<OpType>(
+        op.getLoc(), op.source(), newStaticOffsets, newStaticSizes,
+        newStaticStrides, newOffsets, newSizes, newStrides);
 
-    // Insert a memref_cast for compatibility of the uses of the op.
-    rewriter.replaceOpWithNewOp<MemRefCastOp>(subViewOp, newSubViewOp,
-                                              subViewOp.getType());
+    replaceWithNewOp(rewriter, op, newOp);
 
     return success();
   }
@@ -3183,8 +3192,8 @@ public:
 
 void SubViewOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                             MLIRContext *context) {
-  results.insert<SubViewOpConstantArgumentFolder, SubViewOpMemRefCastFolder>(
-      context);
+  results.insert<OpWithOffsetSizesAndStridesConstantArgumentFolder<SubViewOp>,
+                 SubViewOpMemRefCastFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3273,6 +3282,13 @@ static LogicalResult verify(SubTensorOp op) {
            << expectedType << " or a rank-reduced version.";
 
   return success();
+}
+
+void SubTensorOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                              MLIRContext *context) {
+  results
+      .insert<OpWithOffsetSizesAndStridesConstantArgumentFolder<SubTensorOp>>(
+          context);
 }
 
 //===----------------------------------------------------------------------===//
