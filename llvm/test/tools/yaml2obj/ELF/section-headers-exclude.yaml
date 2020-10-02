@@ -406,7 +406,7 @@ SectionHeaderTable:
 # RUN: llvm-readelf %t8 --section-headers | FileCheck %s --check-prefix=LINK-HASH
 
 # LINK-HASH:      [Nr] Name      Type     Address          Off    Size   ES Flg Lk Inf Al
-# LINK-HASH:      [ 1] .hash     HASH     0000000000000000 000040 000000 00      0   0  0
+# LINK-HASH:      [ 1] .hash     HASH     0000000000000000 000040 000000 04      0   0  0
 # LINK-HASH-NEXT: [ 2] .gnu_hash GNU_HASH 0000000000000000 000040 000000 00      0   0  0
 
 --- !ELF
