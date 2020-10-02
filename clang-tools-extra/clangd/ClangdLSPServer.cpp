@@ -793,8 +793,13 @@ void ClangdLSPServer::onWorkspaceSymbol(
 
 void ClangdLSPServer::onPrepareRename(const TextDocumentPositionParams &Params,
                                       Callback<llvm::Optional<Range>> Reply) {
-  Server->prepareRename(Params.textDocument.uri.file(), Params.position,
-                        Opts.Rename, std::move(Reply));
+  Server->prepareRename(
+      Params.textDocument.uri.file(), Params.position, Opts.Rename,
+      [Reply = std::move(Reply)](llvm::Expected<RenameResult> Result) mutable {
+        if (!Result)
+          return Reply(Result.takeError());
+        return Reply(std::move(Result->Target));
+      });
 }
 
 void ClangdLSPServer::onRename(const RenameParams &Params,
@@ -806,14 +811,14 @@ void ClangdLSPServer::onRename(const RenameParams &Params,
   Server->rename(
       File, Params.position, Params.newName, Opts.Rename,
       [File, Params, Reply = std::move(Reply),
-       this](llvm::Expected<FileEdits> Edits) mutable {
-        if (!Edits)
-          return Reply(Edits.takeError());
-        if (auto Err = validateEdits(DraftMgr, *Edits))
+       this](llvm::Expected<RenameResult> R) mutable {
+        if (!R)
+          return Reply(R.takeError());
+        if (auto Err = validateEdits(DraftMgr, R->GlobalChanges))
           return Reply(std::move(Err));
         WorkspaceEdit Result;
         Result.changes.emplace();
-        for (const auto &Rep : *Edits) {
+        for (const auto &Rep : R->GlobalChanges) {
           (*Result.changes)[URI::createFile(Rep.first()).toString()] =
               Rep.second.asTextEdits();
         }

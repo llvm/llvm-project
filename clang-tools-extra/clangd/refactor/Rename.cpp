@@ -182,8 +182,6 @@ llvm::Optional<ReasonToReject> renameable(const NamedDecl &RenameDecl,
   }
 
   assert(CrossFile);
-  if (!Index)
-    return ReasonToReject::NoIndexProvided;
 
   // FIXME: Renaming virtual methods requires to rename all overridens in
   // subclasses, our index doesn't have this information.
@@ -427,7 +425,7 @@ void findNearMiss(
 
 } // namespace
 
-llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
+llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   trace::Span Tracer("Rename flow");
   const auto &Opts = RInputs.Opts;
   ParsedAST &AST = RInputs.AST;
@@ -456,9 +454,13 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
     return Loc.takeError();
   const syntax::Token *IdentifierToken =
       spelledIdentifierTouching(*Loc, AST.getTokens());
+
   // Renames should only triggered on identifiers.
   if (!IdentifierToken)
     return makeError(ReasonToReject::NoSymbolFound);
+  Range CurrentIdentifier = halfOpenToRange(
+      SM, CharSourceRange::getCharRange(IdentifierToken->location(),
+                                        IdentifierToken->endLocation()));
   // FIXME: Renaming macros is not supported yet, the macro-handling code should
   // be moved to rename tooling library.
   if (locateMacroAt(*IdentifierToken, AST.getPreprocessor()))
@@ -489,32 +491,40 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
   auto MainFileRenameEdit = renameWithinFile(AST, RenameDecl, RInputs.NewName);
   if (!MainFileRenameEdit)
     return MainFileRenameEdit.takeError();
+  RenameResult Result;
+  Result.Target = CurrentIdentifier;
+  Edit MainFileEdits = Edit(MainFileCode, std::move(*MainFileRenameEdit));
+  llvm::for_each(MainFileEdits.asTextEdits(), [&Result](const TextEdit &TE) {
+    Result.LocalChanges.push_back(TE.range);
+  });
 
   // return the main file edit if this is a within-file rename or the symbol
   // being renamed is function local.
   if (!Opts.AllowCrossFile || RenameDecl.getParentFunctionOrMethod()) {
-    return FileEdits(
-        {std::make_pair(RInputs.MainFilePath,
-                        Edit{MainFileCode, std::move(*MainFileRenameEdit)})});
+    Result.GlobalChanges = FileEdits(
+        {std::make_pair(RInputs.MainFilePath, std::move(MainFileEdits))});
+    return Result;
   }
 
-  FileEdits Results;
-  // Renameable safely guards us that at this point we are renaming a local
-  // symbol if we don't have index.
-  if (RInputs.Index) {
-    auto OtherFilesEdits = renameOutsideFile(
-        RenameDecl, RInputs.MainFilePath, RInputs.NewName, *RInputs.Index,
-        Opts.LimitFiles == 0 ? std::numeric_limits<size_t>::max()
-                             : Opts.LimitFiles,
-        GetFileContent);
-    if (!OtherFilesEdits)
-      return OtherFilesEdits.takeError();
-    Results = std::move(*OtherFilesEdits);
+  // If the index is nullptr, we don't know the completeness of the result, so
+  // we don't populate the field GlobalChanges.
+  if (!RInputs.Index) {
+    assert(Result.GlobalChanges.empty() && Opts.AllowCrossFile);
+    return Result;
   }
+
+  auto OtherFilesEdits = renameOutsideFile(
+      RenameDecl, RInputs.MainFilePath, RInputs.NewName, *RInputs.Index,
+      Opts.LimitFiles == 0 ? std::numeric_limits<size_t>::max()
+                           : Opts.LimitFiles,
+      GetFileContent);
+  if (!OtherFilesEdits)
+    return OtherFilesEdits.takeError();
+  Result.GlobalChanges = *OtherFilesEdits;
   // Attach the rename edits for the main file.
-  Results.try_emplace(RInputs.MainFilePath, MainFileCode,
-                      std::move(*MainFileRenameEdit));
-  return Results;
+  Result.GlobalChanges.try_emplace(RInputs.MainFilePath,
+                                   std::move(MainFileEdits));
+  return Result;
 }
 
 llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
