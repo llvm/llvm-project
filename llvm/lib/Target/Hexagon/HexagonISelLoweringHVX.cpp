@@ -91,6 +91,7 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::XOR,            T, Legal);
     setOperationAction(ISD::ADD,            T, Legal);
     setOperationAction(ISD::SUB,            T, Legal);
+    setOperationAction(ISD::MUL,            T, Legal);
     setOperationAction(ISD::CTPOP,          T, Legal);
     setOperationAction(ISD::CTLZ,           T, Legal);
     if (T != ByteV) {
@@ -103,7 +104,6 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::LOAD,               T, Custom);
     setOperationAction(ISD::MLOAD,              T, Custom);
     setOperationAction(ISD::MSTORE,             T, Custom);
-    setOperationAction(ISD::MUL,                T, Custom);
     setOperationAction(ISD::MULHS,              T, Custom);
     setOperationAction(ISD::MULHU,              T, Custom);
     setOperationAction(ISD::BUILD_VECTOR,       T, Custom);
@@ -1445,73 +1445,6 @@ HexagonTargetLowering::LowerHvxCttz(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue
-HexagonTargetLowering::LowerHvxMul(SDValue Op, SelectionDAG &DAG) const {
-  MVT ResTy = ty(Op);
-  assert(ResTy.isVector() && isHvxSingleTy(ResTy));
-  const SDLoc &dl(Op);
-  SmallVector<int,256> ShuffMask;
-
-  MVT ElemTy = ResTy.getVectorElementType();
-  unsigned VecLen = ResTy.getVectorNumElements();
-  SDValue Vs = Op.getOperand(0);
-  SDValue Vt = Op.getOperand(1);
-
-  switch (ElemTy.SimpleTy) {
-    case MVT::i8: {
-      // For i8 vectors Vs = (a0, a1, ...), Vt = (b0, b1, ...),
-      // V6_vmpybv Vs, Vt produces a pair of i16 vectors Hi:Lo,
-      // where Lo = (a0*b0, a2*b2, ...), Hi = (a1*b1, a3*b3, ...).
-      MVT ExtTy = typeExtElem(ResTy, 2);
-      unsigned MpyOpc = ElemTy == MVT::i8 ? Hexagon::V6_vmpybv
-                                          : Hexagon::V6_vmpyhv;
-      SDValue M = getInstr(MpyOpc, dl, ExtTy, {Vs, Vt}, DAG);
-
-      // Discard high halves of the resulting values, collect the low halves.
-      for (unsigned I = 0; I < VecLen; I += 2) {
-        ShuffMask.push_back(I);         // Pick even element.
-        ShuffMask.push_back(I+VecLen);  // Pick odd element.
-      }
-      VectorPair P = opSplit(opCastElem(M, ElemTy, DAG), dl, DAG);
-      SDValue BS = getByteShuffle(dl, P.first, P.second, ShuffMask, DAG);
-      return DAG.getBitcast(ResTy, BS);
-    }
-    case MVT::i16:
-      // For i16 there is V6_vmpyih, which acts exactly like the MUL opcode.
-      // (There is also V6_vmpyhv, which behaves in an analogous way to
-      // V6_vmpybv.)
-      return getInstr(Hexagon::V6_vmpyih, dl, ResTy, {Vs, Vt}, DAG);
-    case MVT::i32: {
-      auto MulL_V60 = [&](SDValue Vs, SDValue Vt) {
-        // Use the following sequence for signed word multiply:
-        // T0 = V6_vmpyiowh Vs, Vt
-        // T1 = V6_vaslw T0, 16
-        // T2 = V6_vmpyiewuh_acc T1, Vs, Vt
-        SDValue S16 = DAG.getConstant(16, dl, MVT::i32);
-        SDValue T0 = getInstr(Hexagon::V6_vmpyiowh, dl, ResTy, {Vs, Vt}, DAG);
-        SDValue T1 = getInstr(Hexagon::V6_vaslw, dl, ResTy, {T0, S16}, DAG);
-        SDValue T2 = getInstr(Hexagon::V6_vmpyiewuh_acc, dl, ResTy,
-                              {T1, Vs, Vt}, DAG);
-        return T2;
-      };
-      auto MulL_V62 = [&](SDValue Vs, SDValue Vt) {
-        MVT PairTy = typeJoin({ResTy, ResTy});
-        SDValue T0 = getInstr(Hexagon::V6_vmpyewuh_64, dl, PairTy,
-                              {Vs, Vt}, DAG);
-        SDValue T1 = getInstr(Hexagon::V6_vmpyowh_64_acc, dl, PairTy,
-                              {T0, Vs, Vt}, DAG);
-        return opSplit(T1, dl, DAG).first;
-      };
-      if (Subtarget.useHVXV62Ops())
-        return MulL_V62(Vs, Vt);
-      return MulL_V60(Vs, Vt);
-    }
-    default:
-      break;
-  }
-  return SDValue();
-}
-
-SDValue
 HexagonTargetLowering::LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const {
   MVT ResTy = ty(Op);
   assert(ResTy.isVector());
@@ -2100,7 +2033,6 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::SRA:
     case ISD::SHL:
     case ISD::SRL:                     return LowerHvxShift(Op, DAG);
-    case ISD::MUL:                     return LowerHvxMul(Op, DAG);
     case ISD::MULHS:
     case ISD::MULHU:                   return LowerHvxMulh(Op, DAG);
     case ISD::ANY_EXTEND_VECTOR_INREG: return LowerHvxExtend(Op, DAG);
