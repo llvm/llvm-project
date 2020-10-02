@@ -438,7 +438,9 @@ public:
   std::string title() const override {
     return "Extract subexpression to variable";
   }
-  Intent intent() const override { return Refactor; }
+  llvm::StringLiteral kind() const override {
+    return CodeAction::REFACTOR_KIND;
+  }
 
 private:
   // the expression to extract

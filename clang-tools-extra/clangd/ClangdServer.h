@@ -288,7 +288,7 @@ public:
   struct TweakRef {
     std::string ID;    /// ID to pass for applyTweak.
     std::string Title; /// A single-line message to show in the UI.
-    Tweak::Intent Intent;
+    llvm::StringLiteral Kind;
   };
   /// Enumerate the code tweaks available to the user at a specified point.
   void enumerateTweaks(PathRef File, Range Sel,

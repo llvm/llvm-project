@@ -68,14 +68,7 @@ CodeAction toCodeAction(const ClangdServer::TweakRef &T, const URIForFile &File,
                         Range Selection) {
   CodeAction CA;
   CA.title = T.Title;
-  switch (T.Intent) {
-  case Tweak::Refactor:
-    CA.kind = std::string(CodeAction::REFACTOR_KIND);
-    break;
-  case Tweak::Info:
-    CA.kind = std::string(CodeAction::INFO_KIND);
-    break;
-  }
+  CA.kind = T.Kind.str();
   // This tweak may have an expensive second stage, we only run it if the user
   // actually chooses it in the UI. We reply with a command that would run the
   // corresponding tweak.
