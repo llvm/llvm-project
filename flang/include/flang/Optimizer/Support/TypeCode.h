@@ -1,4 +1,4 @@
-//===-- Lower/Support/TypeCode.h --------------------------------*- C++ -*-===//
+//===-- Optimizer/Support/TypeCode.h ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LOWER_SUPPORT_TYPECODE_H
-#define LOWER_SUPPORT_TYPECODE_H
+#ifndef OPTIMIZER_SUPPORT_TYPECODE_H
+#define OPTIMIZER_SUPPORT_TYPECODE_H
 
 #include "flang/ISO_Fortran_binding.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -91,4 +91,4 @@ static constexpr int derivedToTypeCode() {
 
 } // namespace fir
 
-#endif // LOWER_SUPPORT_TYPECODE_H
+#endif // OPTIMIZER_SUPPORT_TYPECODE_H
