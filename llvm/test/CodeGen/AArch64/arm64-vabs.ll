@@ -982,8 +982,12 @@ define <4 x i16> @abspattern2(<4 x i16> %a) nounwind {
 
 define <8 x i8> @abspattern3(<8 x i8> %a) nounwind {
 ; CHECK-LABEL: abspattern3:
-; CHECK: abs.8b
-; CHECK-NEXT: ret
+; DAG: abs.8b
+; DAG-NEXT: ret
+
+; GISEL-DAG: neg.8b
+; GISEL-DAG: cmgt.8b
+; GISEL: bit.8b
         %tmp1neg = sub <8 x i8> zeroinitializer, %a
         %b = icmp slt <8 x i8> %a, zeroinitializer
         %abs = select <8 x i1> %b, <8 x i8> %tmp1neg, <8 x i8> %a
