@@ -43,6 +43,7 @@ public:
 } // end namespace llvm
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ExecutionSession, LLVMOrcExecutionSessionRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(SymbolStringPool, LLVMOrcSymbolStringPoolRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(OrcV2CAPIHelper::PoolEntry,
                                    LLVMOrcSymbolStringPoolEntryRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(JITDylib, LLVMOrcJITDylibRef)
@@ -63,6 +64,15 @@ void LLVMOrcExecutionSessionSetErrorReporter(
     void *Ctx) {
   unwrap(ES)->setErrorReporter(
       [=](Error Err) { ReportError(Ctx, wrap(std::move(Err))); });
+}
+
+LLVMOrcSymbolStringPoolRef
+LLVMOrcExecutionSessionGetSymbolStringPool(LLVMOrcExecutionSessionRef ES) {
+  return wrap(unwrap(ES)->getSymbolStringPool().get());
+}
+
+void LLVMOrcSymbolStringPoolClearDeadEntries(LLVMOrcSymbolStringPoolRef SSP) {
+  unwrap(SSP)->clearDeadEntries();
 }
 
 LLVMOrcSymbolStringPoolEntryRef
