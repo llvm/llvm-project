@@ -519,6 +519,28 @@ define i32 @partial_bswap(i32 %x) {
 }
 declare i32 @llvm.bswap.i32(i32)
 
+define <2 x i32> @partial_bswap_vector(<2 x i32> %x) {
+; CHECK-LABEL: @partial_bswap_vector(
+; CHECK-NEXT:    [[X3:%.*]] = shl <2 x i32> [[X:%.*]], <i32 24, i32 24>
+; CHECK-NEXT:    [[A2:%.*]] = shl <2 x i32> [[X]], <i32 8, i32 8>
+; CHECK-NEXT:    [[X2:%.*]] = and <2 x i32> [[A2]], <i32 16711680, i32 16711680>
+; CHECK-NEXT:    [[X32:%.*]] = or <2 x i32> [[X3]], [[X2]]
+; CHECK-NEXT:    [[T1:%.*]] = and <2 x i32> [[X]], <i32 -65536, i32 -65536>
+; CHECK-NEXT:    [[T2:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[T1]])
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i32> [[X32]], [[T2]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %x3 = shl <2 x i32> %x, <i32 24, i32 24>
+  %a2 = shl <2 x i32> %x, <i32 8, i32 8>
+  %x2 = and <2 x i32> %a2, <i32 16711680, i32 16711680>
+  %x32 = or <2 x i32> %x3, %x2
+  %t1 = and <2 x i32> %x, <i32 -65536, i32 -65536>
+  %t2 = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %t1)
+  %r = or <2 x i32> %x32, %t2
+  ret <2 x i32> %r
+}
+declare <2 x i32> @llvm.bswap.v2i32(<2 x i32>)
+
 define i64 @bswap_and_mask_0(i64 %0) {
 ; CHECK-LABEL: @bswap_and_mask_0(
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 56
