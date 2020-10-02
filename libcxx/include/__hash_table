@@ -295,7 +295,9 @@ public:
     typedef typename _NodeTypes::__node_value_type_pointer pointer;
 
     _LIBCPP_INLINE_VISIBILITY __hash_iterator() _NOEXCEPT : __node_(nullptr) {
-        _LIBCPP_DEBUG_MODE(__get_db()->__insert_i(this));
+#if _LIBCPP_DEBUG_LEVEL == 2
+        __get_db()->__insert_i(this);
+#endif
     }
 
 #if _LIBCPP_DEBUG_LEVEL == 2
@@ -405,14 +407,18 @@ public:
 
 
     _LIBCPP_INLINE_VISIBILITY __hash_const_iterator() _NOEXCEPT : __node_(nullptr) {
-        _LIBCPP_DEBUG_MODE(__get_db()->__insert_i(this));
+#if _LIBCPP_DEBUG_LEVEL == 2
+        __get_db()->__insert_i(this);
+#endif
     }
 
     _LIBCPP_INLINE_VISIBILITY
     __hash_const_iterator(const __non_const_iterator& __x) _NOEXCEPT
         : __node_(__x.__node_)
     {
-        _LIBCPP_DEBUG_MODE(__get_db()->__iterator_copy(this, &__x));
+#if _LIBCPP_DEBUG_LEVEL == 2
+        __get_db()->__iterator_copy(this, &__x);
+#endif
     }
 
 #if _LIBCPP_DEBUG_LEVEL == 2
@@ -518,7 +524,9 @@ public:
     typedef typename _NodeTypes::__node_value_type_pointer      pointer;
 
     _LIBCPP_INLINE_VISIBILITY __hash_local_iterator() _NOEXCEPT : __node_(nullptr) {
-        _LIBCPP_DEBUG_MODE(__get_db()->__insert_i(this));
+#if _LIBCPP_DEBUG_LEVEL == 2
+        __get_db()->__insert_i(this);
+#endif
     }
 
 #if _LIBCPP_DEBUG_LEVEL == 2
@@ -650,7 +658,9 @@ public:
 
 
     _LIBCPP_INLINE_VISIBILITY __hash_const_local_iterator() _NOEXCEPT : __node_(nullptr) {
-        _LIBCPP_DEBUG_MODE(__get_db()->__insert_i(this));
+#if _LIBCPP_DEBUG_LEVEL == 2
+        __get_db()->__insert_i(this);
+#endif
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -659,7 +669,9 @@ public:
           __bucket_(__x.__bucket_),
           __bucket_count_(__x.__bucket_count_)
     {
-        _LIBCPP_DEBUG_MODE(__get_db()->__iterator_copy(this, &__x));
+#if _LIBCPP_DEBUG_LEVEL == 2
+        __get_db()->__iterator_copy(this, &__x);
+#endif
     }
 
 #if _LIBCPP_DEBUG_LEVEL == 2

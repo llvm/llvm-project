@@ -29,15 +29,12 @@
 
 #if _LIBCPP_DEBUG_LEVEL == 0
 #   define _LIBCPP_DEBUG_ASSERT(x, m) ((void)0)
-#   define _LIBCPP_DEBUG_MODE(...) ((void)0)
 #   define _LIBCPP_ASSERT_IMPL(x, m) ((void)0)
 #elif _LIBCPP_DEBUG_LEVEL == 1
 #   define _LIBCPP_DEBUG_ASSERT(x, m) ((void)0)
-#   define _LIBCPP_DEBUG_MODE(...) ((void)0)
 #   define _LIBCPP_ASSERT_IMPL(x, m) ((x) ? (void)0 : _VSTD::__libcpp_debug_function(_VSTD::__libcpp_debug_info(__FILE__, __LINE__, #x, m)))
 #elif _LIBCPP_DEBUG_LEVEL == 2
 #   define _LIBCPP_DEBUG_ASSERT(x, m) _LIBCPP_ASSERT(x, m)
-#   define _LIBCPP_DEBUG_MODE(...) __VA_ARGS__
 #   define _LIBCPP_ASSERT_IMPL(x, m) ((x) ? (void)0 : _VSTD::__libcpp_debug_function(_VSTD::__libcpp_debug_info(__FILE__, __LINE__, #x, m)))
 #else
 #   error _LIBCPP_DEBUG_LEVEL must be one of 0, 1, 2
