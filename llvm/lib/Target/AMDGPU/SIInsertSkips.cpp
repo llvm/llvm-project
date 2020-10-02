@@ -191,6 +191,21 @@ void SIInsertSkips::createEarlyExitBlock(MachineBasicBlock &MBB) {
   generatePsEndPgm(*EarlyExitBlock, EarlyExitBlock->end(), DL, TII);
 }
 
+static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
+                       MachineDominatorTree *MDT) {
+  MachineBasicBlock *SplitBB = MBB.splitAt(MI, /*UpdateLiveIns*/ true);
+
+  // Update dominator tree
+  using DomTreeT = DomTreeBase<MachineBasicBlock>;
+  SmallVector<DomTreeT::UpdateType, 16> DTUpdates;
+  for (MachineBasicBlock *Succ : SplitBB->successors()) {
+    DTUpdates.push_back({DomTreeT::Insert, SplitBB, Succ});
+    DTUpdates.push_back({DomTreeT::Delete, &MBB, Succ});
+  }
+  DTUpdates.push_back({DomTreeT::Insert, &MBB, SplitBB});
+  MDT->getBase().applyUpdates(DTUpdates);
+}
+
 /// Insert an "if exec=0 { null export; s_endpgm }" sequence before the given
 /// iterator. Only applies to pixel shaders.
 void SIInsertSkips::skipIfDead(MachineBasicBlock &MBB,
@@ -223,33 +238,14 @@ void SIInsertSkips::skipIfDead(MachineBasicBlock &MBB,
       NextBBI = std::next(MBB.getIterator());
     }
 
-    auto BranchMI = BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CBRANCH_EXECZ))
-                        .addMBB(EarlyExitBlock);
+    MachineInstr *BranchMI =
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CBRANCH_EXECZ))
+            .addMBB(EarlyExitBlock);
 
     // Split the block if the branch will not come at the end.
     auto Next = std::next(BranchMI->getIterator());
-    if (Next != MBB.end() && !Next->isTerminator()) {
-      MachineBasicBlock *SplitBB =
-          MF->CreateMachineBasicBlock(MBB.getBasicBlock());
-      MF->insert(NextBBI, SplitBB);
-      SplitBB->splice(SplitBB->begin(), &MBB, I, MBB.end());
-      SplitBB->transferSuccessorsAndUpdatePHIs(&MBB);
-      // FIXME: the expectation is that this will be used near the beginning
-      //        of a block so just assume all registers are still live.
-      for (auto LiveIn : MBB.liveins())
-        SplitBB->addLiveIn(LiveIn);
-      MBB.addSuccessor(SplitBB);
-
-      // Update dominator tree
-      using DomTreeT = DomTreeBase<MachineBasicBlock>;
-      SmallVector<DomTreeT::UpdateType, 16> DTUpdates;
-      for (MachineBasicBlock *Succ : SplitBB->successors()) {
-        DTUpdates.push_back({DomTreeT::Insert, SplitBB, Succ});
-        DTUpdates.push_back({DomTreeT::Delete, &MBB, Succ});
-      }
-      DTUpdates.push_back({DomTreeT::Insert, &MBB, SplitBB});
-      MDT->getBase().applyUpdates(DTUpdates);
-    }
+    if (Next != MBB.end() && !Next->isTerminator())
+      splitBlock(MBB, *BranchMI, MDT);
 
     MBB.addSuccessor(EarlyExitBlock);
     MDT->getBase().insertEdge(&MBB, EarlyExitBlock);
