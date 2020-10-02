@@ -2617,6 +2617,11 @@ static void handleVisibilityAttr(Sema &S, Decl *D, const ParsedAttr &AL,
     D->addAttr(newAttr);
 }
 
+static void handleObjCNonRuntimeProtocolAttr(Sema &S, Decl *D,
+                                             const ParsedAttr &AL) {
+  handleSimpleAttribute<ObjCNonRuntimeProtocolAttr>(S, D, AL);
+}
+
 static void handleObjCDirectAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // objc_direct cannot be set on methods declared in the context of a protocol
   if (isa<ObjCProtocolDecl>(D->getDeclContext())) {
@@ -7664,6 +7669,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case ParsedAttr::AT_ObjCDirect:
     handleObjCDirectAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_ObjCNonRuntimeProtocol:
+    handleObjCNonRuntimeProtocolAttr(S, D, AL);
     break;
   case ParsedAttr::AT_ObjCDirectMembers:
     handleObjCDirectMembersAttr(S, D, AL);
