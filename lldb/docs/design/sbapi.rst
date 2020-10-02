@@ -1,5 +1,5 @@
-The SB API Coding Rules
-=======================
+Scripting Bridge API
+====================
 
 The SB APIs constitute the stable C++ API that lldb presents to external
 clients, and which get processed by SWIG to produce the Python bindings to
