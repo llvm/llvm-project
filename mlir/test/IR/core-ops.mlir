@@ -901,7 +901,6 @@ func @assume_alignment(%0: memref<4x4xf16>) {
   return
 }
 
-
 // CHECK-LABEL: func @subtensor({{.*}}) {
 func @subtensor(%t: tensor<8x16x4xf32>, %idx : index) {
   %c0 = constant 0 : index
@@ -921,6 +920,24 @@ func @subtensor(%t: tensor<8x16x4xf32>, %idx : index) {
   // CHECK-SAME: tensor<8x16x4xf32> to tensor<4x4xf32>
   %3 = subtensor %t[0, 2, 0][4, 1, 4][1, 1, 1]
     : tensor<8x16x4xf32> to tensor<4x4xf32>
+
+  return
+}
+
+// CHECK-LABEL: func @subtensor_insert({{.*}}) {
+func @subtensor_insert(%t: tensor<8x16x4xf32>, %t2: tensor<16x32x8xf32>, %idx : index) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+
+  // CHECK: subtensor_insert
+  // CHECK-SAME: tensor<8x16x4xf32> into tensor<16x32x8xf32>
+  %1 = subtensor_insert %t into %t2[%c0, %c0, %c0][%idx, %idx, %idx][%c1, %c1, %c1]
+    : tensor<8x16x4xf32> into tensor<16x32x8xf32>
+
+  // CHECK: subtensor_insert
+  // CHECK-SAME: tensor<8x16x4xf32> into tensor<16x32x8xf32>
+  %2 = subtensor_insert %t into %t2[%c0, %idx, %c0][%idx, 4, %idx][%c1, 1, %c1]
+    : tensor<8x16x4xf32> into tensor<16x32x8xf32>
 
   return
 }
