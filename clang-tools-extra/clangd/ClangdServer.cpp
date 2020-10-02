@@ -400,46 +400,35 @@ void ClangdServer::formatOnType(PathRef File, llvm::StringRef Code,
 
 void ClangdServer::prepareRename(PathRef File, Position Pos,
                                  const RenameOptions &RenameOpts,
-                                 Callback<llvm::Optional<Range>> CB) {
+                                 Callback<RenameResult> CB) {
   auto Action = [Pos, File = File.str(), CB = std::move(CB), RenameOpts,
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    auto &AST = InpAST->AST;
-    const auto &SM = AST.getSourceManager();
-    auto Loc = sourceLocationInMainFile(SM, Pos);
-    if (!Loc)
-      return CB(Loc.takeError());
-    const auto *TouchingIdentifier =
-        spelledIdentifierTouching(*Loc, AST.getTokens());
-    if (!TouchingIdentifier)
-      return CB(llvm::None); // no rename on non-identifiers.
-
-    auto Range = halfOpenToRange(
-        SM, CharSourceRange::getCharRange(TouchingIdentifier->location(),
-                                          TouchingIdentifier->endLocation()));
-
-    if (RenameOpts.AllowCrossFile)
-      // FIXME: we now assume cross-file rename always succeeds, revisit this.
-      return CB(Range);
-
-    // Performing the local rename isn't substantially more expensive than
-    // doing an AST-based check, so we just rename and throw away the results.
-    auto Changes = clangd::rename({Pos, "dummy", AST, File, Index, RenameOpts,
-                                   /*GetDirtyBuffer=*/nullptr});
-    if (!Changes) {
+    // prepareRename is latency-sensitive:
+    //  - for single-file rename, performing rename isn't substantially more
+    //    expensive than doing an AST-based check (the index is used to see if
+    //    the rename is complete);
+    //  - for cross-file rename, we deliberately pass a nullptr index to save
+    //    the cost, thus the result may be incomplete as it only contains
+    //    main-file occurrences;
+    auto Results = clangd::rename({Pos, /*NewName*/ "", InpAST->AST, File,
+                                   RenameOpts.AllowCrossFile ? nullptr : Index,
+                                   RenameOpts});
+    if (!Results) {
       // LSP says to return null on failure, but that will result in a generic
       // failure message. If we send an LSP error response, clients can surface
       // the message to users (VSCode does).
-      return CB(Changes.takeError());
+      return CB(Results.takeError());
     }
-    return CB(Range);
+    return CB(*Results);
   };
   WorkScheduler.runWithAST("PrepareRename", File, std::move(Action));
 }
 
 void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
-                          const RenameOptions &Opts, Callback<FileEdits> CB) {
+                          const RenameOptions &Opts,
+                          Callback<RenameResult> CB) {
   // A snapshot of all file dirty buffers.
   llvm::StringMap<std::string> Snapshot = WorkScheduler.getAllFileContents();
   auto Action = [File = File.str(), NewName = NewName.str(), Pos, Opts,
@@ -457,24 +446,24 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
         return llvm::None;
       return It->second;
     };
-    auto Edits = clangd::rename(
+    auto R = clangd::rename(
         {Pos, NewName, InpAST->AST, File, Index, Opts, GetDirtyBuffer});
-    if (!Edits)
-      return CB(Edits.takeError());
+    if (!R)
+      return CB(R.takeError());
 
     if (Opts.WantFormat) {
       auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
                                          *InpAST->Inputs.TFS);
       llvm::Error Err = llvm::Error::success();
-      for (auto &E : *Edits)
+      for (auto &E : R->GlobalChanges)
         Err =
             llvm::joinErrors(reformatEdit(E.getValue(), Style), std::move(Err));
 
       if (Err)
         return CB(std::move(Err));
     }
-    RenameFiles.record(Edits->size());
-    return CB(std::move(*Edits));
+    RenameFiles.record(R->GlobalChanges.size());
+    return CB(*R);
   };
   WorkScheduler.runWithAST("Rename", File, std::move(Action));
 }
