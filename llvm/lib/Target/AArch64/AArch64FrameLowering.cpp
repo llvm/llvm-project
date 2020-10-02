@@ -176,6 +176,10 @@ static cl::opt<bool> StackTaggingMergeSetTag(
     cl::desc("merge settag instruction in function epilog"), cl::init(true),
     cl::Hidden);
 
+static cl::opt<bool> OrderFrameObjects("aarch64-order-frame-objects",
+                                       cl::desc("sort stack allocations"),
+                                       cl::init(true), cl::Hidden);
+
 STATISTIC(NumRedZoneFunctions, "Number of functions using red zone");
 
 /// Returns the argument pop size.
@@ -3296,4 +3300,163 @@ unsigned AArch64FrameLowering::getWinEHFuncletFrameSize(
   // This is the amount of stack a funclet needs to allocate.
   return alignTo(CSSize + MF.getFrameInfo().getMaxCallFrameSize(),
                  getStackAlign());
+}
+
+namespace {
+struct FrameObject {
+  bool IsValid = false;
+  // Index of the object in MFI.
+  int ObjectIndex = 0;
+  // Group ID this object belongs to.
+  int GroupIndex = -1;
+  // This object should be placed first (closest to SP).
+  bool ObjectFirst = false;
+  // This object's group (which always contains the object with
+  // ObjectFirst==true) should be placed first.
+  bool GroupFirst = false;
+};
+
+class GroupBuilder {
+  SmallVector<int, 8> CurrentMembers;
+  int NextGroupIndex = 0;
+  std::vector<FrameObject> &Objects;
+
+public:
+  GroupBuilder(std::vector<FrameObject> &Objects) : Objects(Objects) {}
+  void AddMember(int Index) { CurrentMembers.push_back(Index); }
+  void EndCurrentGroup() {
+    if (CurrentMembers.size() > 1) {
+      // Create a new group with the current member list. This might remove them
+      // from their pre-existing groups. That's OK, dealing with overlapping
+      // groups is too hard and unlikely to make a difference.
+      LLVM_DEBUG(dbgs() << "group:");
+      for (int Index : CurrentMembers) {
+        Objects[Index].GroupIndex = NextGroupIndex;
+        LLVM_DEBUG(dbgs() << " " << Index);
+      }
+      LLVM_DEBUG(dbgs() << "\n");
+      NextGroupIndex++;
+    }
+    CurrentMembers.clear();
+  }
+};
+
+bool FrameObjectCompare(const FrameObject &A, const FrameObject &B) {
+  // Objects at a lower index are closer to FP; objects at a higher index are
+  // closer to SP.
+  //
+  // For consistency in our comparison, all invalid objects are placed
+  // at the end. This also allows us to stop walking when we hit the
+  // first invalid item after it's all sorted.
+  //
+  // The "first" object goes first (closest to SP), followed by the members of
+  // the "first" group.
+  //
+  // The rest are sorted by the group index to keep the groups together.
+  // Higher numbered groups are more likely to be around longer (i.e. untagged
+  // in the function epilogue and not at some earlier point). Place them closer
+  // to SP.
+  //
+  // If all else equal, sort by the object index to keep the objects in the
+  // original order.
+  return std::make_tuple(!A.IsValid, A.ObjectFirst, A.GroupFirst, A.GroupIndex,
+                         A.ObjectIndex) <
+         std::make_tuple(!B.IsValid, B.ObjectFirst, B.GroupFirst, B.GroupIndex,
+                         B.ObjectIndex);
+}
+} // namespace
+
+void AArch64FrameLowering::orderFrameObjects(
+    const MachineFunction &MF, SmallVectorImpl<int> &ObjectsToAllocate) const {
+  if (!OrderFrameObjects || ObjectsToAllocate.empty())
+    return;
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  std::vector<FrameObject> FrameObjects(MFI.getObjectIndexEnd());
+  for (auto &Obj : ObjectsToAllocate) {
+    FrameObjects[Obj].IsValid = true;
+    FrameObjects[Obj].ObjectIndex = Obj;
+  }
+
+  // Identify stack slots that are tagged at the same time.
+  GroupBuilder GB(FrameObjects);
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      if (MI.isDebugInstr())
+        continue;
+      int OpIndex;
+      switch (MI.getOpcode()) {
+      case AArch64::STGloop:
+      case AArch64::STZGloop:
+        OpIndex = 3;
+        break;
+      case AArch64::STGOffset:
+      case AArch64::STZGOffset:
+      case AArch64::ST2GOffset:
+      case AArch64::STZ2GOffset:
+        OpIndex = 1;
+        break;
+      default:
+        OpIndex = -1;
+      }
+
+      int TaggedFI = -1;
+      if (OpIndex >= 0) {
+        const MachineOperand &MO = MI.getOperand(OpIndex);
+        if (MO.isFI()) {
+          int FI = MO.getIndex();
+          if (FI >= 0 && FI < MFI.getObjectIndexEnd() &&
+              FrameObjects[FI].IsValid)
+            TaggedFI = FI;
+        }
+      }
+
+      // If this is a stack tagging instruction for a slot that is not part of a
+      // group yet, either start a new group or add it to the current one.
+      if (TaggedFI >= 0)
+        GB.AddMember(TaggedFI);
+      else
+        GB.EndCurrentGroup();
+    }
+    // Groups should never span multiple basic blocks.
+    GB.EndCurrentGroup();
+  }
+
+  // If the function's tagged base pointer is pinned to a stack slot, we want to
+  // put that slot first when possible. This will likely place it at SP + 0,
+  // and save one instruction when generating the base pointer because IRG does
+  // not allow an immediate offset.
+  const AArch64FunctionInfo &AFI = *MF.getInfo<AArch64FunctionInfo>();
+  Optional<int> TBPI = AFI.getTaggedBasePointerIndex();
+  if (TBPI) {
+    FrameObjects[*TBPI].ObjectFirst = true;
+    FrameObjects[*TBPI].GroupFirst = true;
+    int FirstGroupIndex = FrameObjects[*TBPI].GroupIndex;
+    if (FirstGroupIndex >= 0)
+      for (FrameObject &Object : FrameObjects)
+        if (Object.GroupIndex == FirstGroupIndex)
+          Object.GroupFirst = true;
+  }
+
+  llvm::stable_sort(FrameObjects, FrameObjectCompare);
+
+  int i = 0;
+  for (auto &Obj : FrameObjects) {
+    // All invalid items are sorted at the end, so it's safe to stop.
+    if (!Obj.IsValid)
+      break;
+    ObjectsToAllocate[i++] = Obj.ObjectIndex;
+  }
+
+  LLVM_DEBUG(dbgs() << "Final frame order:\n"; for (auto &Obj
+                                                    : FrameObjects) {
+    if (!Obj.IsValid)
+      break;
+    dbgs() << "  " << Obj.ObjectIndex << ": group " << Obj.GroupIndex;
+    if (Obj.ObjectFirst)
+      dbgs() << ", first";
+    if (Obj.GroupFirst)
+      dbgs() << ", group-first";
+    dbgs() << "\n";
+  });
 }
