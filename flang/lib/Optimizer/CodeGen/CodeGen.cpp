@@ -13,7 +13,7 @@
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "DescriptorModel.h"
 #include "Target.h"
-#include "flang/Lower/Support/TypeCode.h"
+#include "flang/Lower/Todo.h" // remove when TODO's are done
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/KindMapping.h"
+#include "flang/Optimizer/Support/TypeCode.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -51,9 +52,6 @@
 /// some FIR operations will pass through to the Tilikum bridge.  This may be
 /// necessary to preserve the semantics of the Fortran program.
 //===----------------------------------------------------------------------===//
-
-#undef TODO
-#define TODO() llvm::report_fatal_error("tilikum: not yet implemented")
 
 using namespace llvm;
 
@@ -1157,7 +1155,7 @@ struct DispatchOpConversion : public FIROpConversion<fir::DispatchOp> {
     // get the table, lookup the method, fetch the func-ptr
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(dispatch, ty, operands,
                                                     None);
-    TODO();
+    TODO("");
     return success();
   }
 };
@@ -1170,7 +1168,7 @@ struct DispatchTableOpConversion
   mlir::LogicalResult
   matchAndRewrite(fir::DispatchTableOp dispTab, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    TODO();
+    TODO("");
     return success();
   }
 };
@@ -1182,7 +1180,7 @@ struct DTEntryOpConversion : public FIROpConversion<fir::DTEntryOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::DTEntryOp dtEnt, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    TODO();
+    TODO("");
     return success();
   }
 };
@@ -1340,7 +1338,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
       return getSizeAndTypeCode(loc, rewriter, seqTy.getEleTy());
     }
     if (boxEleTy.isa<fir::RecordType>()) {
-      TODO();
+      TODO("");
     }
     if (fir::isa_ref_type(boxEleTy)) {
       // FIXME: use the target pointer size rather than sizeof(void*)
@@ -1348,7 +1346,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
               this->genConstantOffset(loc, rewriter, CFI_type_cptr)};
     }
     // fail: unhandled case
-    TODO();
+    TODO("");
   }
 };
 
@@ -1646,7 +1644,7 @@ struct InsertOnRangeOpConversion
   mlir::LogicalResult
   doRewrite(fir::InsertOnRangeOp range, mlir::Type ty, OperandTy operands,
             mlir::ConversionPatternRewriter &rewriter) const override {
-    TODO();
+    TODO("");
     return success();
   }
 };
@@ -1783,7 +1781,7 @@ struct CoordinateOpConversion
       // If the base has dynamic shape, it has to be boxed as the dimension
       // information is saved in the box.
       if (FIRToLLVMTypeConverter::dynamicallySized(cpnTy)) {
-        TODO();
+        TODO("");
         return success();
       }
     } else {
@@ -1911,7 +1909,7 @@ struct CoordinateOpConversion
       return mlir::emitError(loc, "base element has deferred shapes");
 
     // Generate offset computation.
-    TODO();
+    TODO("");
 
     return failure();
   }
@@ -2117,7 +2115,7 @@ struct GlobalLenOpConversion : public FIROpConversion<fir::GlobalLenOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::GlobalLenOp globalLen, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    TODO();
+    TODO("");
     return success();
   }
 };
