@@ -1198,8 +1198,8 @@ public:
 
 /// An ExecutionSession represents a running JIT program.
 class ExecutionSession {
-  // FIXME: Remove this when we remove the old ORC layers.
   friend class JITDylib;
+  friend class MaterializationResponsibility;
   friend class ResourceTracker;
 
 public:
@@ -1389,6 +1389,27 @@ private:
   void transferResourceTracker(ResourceTracker &DstRT, ResourceTracker &SrcRT);
   void destroyResourceTracker(ResourceTracker &RT);
 
+
+  /// State machine functions for MaterializationResponsibility.
+  void OL_destroyMaterializationResponsibility(
+      MaterializationResponsibility &MR);
+  SymbolNameSet OL_getRequestedSymbols(const MaterializationResponsibility &MR);
+  Error OL_notifyResolved(MaterializationResponsibility &MR,
+                          const SymbolMap &Symbols);
+  Error OL_notifyEmitted(MaterializationResponsibility &MR);
+  Error OL_defineMaterializing(MaterializationResponsibility &MR,
+                               SymbolFlagsMap SymbolFlags);
+  void OL_notifyFailed(MaterializationResponsibility &MR);
+  Error OL_replace(MaterializationResponsibility &MR,
+                   std::unique_ptr<MaterializationUnit> MU);
+  Expected<std::unique_ptr<MaterializationResponsibility>>
+  OL_delegate(MaterializationResponsibility &MR, const SymbolNameSet &Symbols);
+  void OL_addDependencies(MaterializationResponsibility &MR,
+                          const SymbolStringPtr &Name,
+                          const SymbolDependenceMap &Dependencies);
+  void OL_addDependenciesForAll(MaterializationResponsibility &MR,
+                                const SymbolDependenceMap &Dependencies);
+
 #ifndef NDEBUG
   void dumpDispatchInfo(JITDylib &JD, MaterializationUnit &MU);
 #endif // NDEBUG
@@ -1533,6 +1554,57 @@ private:
   JITDylibLookupFlags SourceJDLookupFlags;
   SymbolPredicate Allow;
 };
+
+// --------------- IMPLEMENTATION --------------
+// Implementations for inline functions/methods.
+// ---------------------------------------------
+
+inline MaterializationResponsibility::~MaterializationResponsibility() {
+  JD->getExecutionSession().OL_destroyMaterializationResponsibility(*this);
+}
+
+inline SymbolNameSet MaterializationResponsibility::getRequestedSymbols() const {
+  return JD->getExecutionSession().OL_getRequestedSymbols(*this);
+}
+
+inline Error MaterializationResponsibility::notifyResolved(
+    const SymbolMap &Symbols) {
+  return JD->getExecutionSession().OL_notifyResolved(*this, Symbols);
+}
+
+inline Error MaterializationResponsibility::notifyEmitted() {
+  return JD->getExecutionSession().OL_notifyEmitted(*this);
+}
+
+inline Error MaterializationResponsibility::defineMaterializing(
+    SymbolFlagsMap SymbolFlags) {
+  return JD->getExecutionSession().OL_defineMaterializing(
+      *this, std::move(SymbolFlags));
+}
+
+inline void MaterializationResponsibility::failMaterialization() {
+  JD->getExecutionSession().OL_notifyFailed(*this);
+}
+
+inline Error MaterializationResponsibility::replace(
+    std::unique_ptr<MaterializationUnit> MU) {
+  return JD->getExecutionSession().OL_replace(*this, std::move(MU));
+}
+
+inline Expected<std::unique_ptr<MaterializationResponsibility>>
+MaterializationResponsibility::delegate(const SymbolNameSet &Symbols) {
+  return JD->getExecutionSession().OL_delegate(*this, Symbols);
+}
+
+inline void MaterializationResponsibility::addDependencies(
+    const SymbolStringPtr &Name, const SymbolDependenceMap &Dependencies) {
+  JD->getExecutionSession().OL_addDependencies(*this, Name, Dependencies);
+}
+
+inline void MaterializationResponsibility::addDependenciesForAll(
+    const SymbolDependenceMap &Dependencies) {
+  JD->getExecutionSession().OL_addDependenciesForAll(*this, Dependencies);
+}
 
 } // End namespace orc
 } // End namespace llvm

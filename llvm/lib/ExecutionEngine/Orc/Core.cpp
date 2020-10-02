@@ -220,163 +220,6 @@ void AsynchronousSymbolQuery::detach() {
   QueryRegistrations.clear();
 }
 
-MaterializationResponsibility::~MaterializationResponsibility() {
-  assert(SymbolFlags.empty() &&
-         "All symbols should have been explicitly materialized or failed");
-  JD->unlinkMaterializationResponsibility(*this);
-}
-
-SymbolNameSet MaterializationResponsibility::getRequestedSymbols() const {
-  return JD->getRequestedSymbols(SymbolFlags);
-}
-
-Error MaterializationResponsibility::notifyResolved(const SymbolMap &Symbols) {
-  LLVM_DEBUG({
-    dbgs() << "In " << JD->getName() << " resolving " << Symbols << "\n";
-  });
-#ifndef NDEBUG
-  for (auto &KV : Symbols) {
-    auto WeakFlags = JITSymbolFlags::Weak | JITSymbolFlags::Common;
-    auto I = SymbolFlags.find(KV.first);
-    assert(I != SymbolFlags.end() &&
-           "Resolving symbol outside this responsibility set");
-    assert(!I->second.hasMaterializationSideEffectsOnly() &&
-           "Can't resolve materialization-side-effects-only symbol");
-    assert((KV.second.getFlags() & ~WeakFlags) == (I->second & ~WeakFlags) &&
-           "Resolving symbol with incorrect flags");
-  }
-#endif
-
-  return JD->resolve(*this, Symbols);
-}
-
-Error MaterializationResponsibility::notifyEmitted() {
-
-  LLVM_DEBUG({
-    dbgs() << "In " << JD->getName() << " emitting " << SymbolFlags << "\n";
-  });
-
-  if (auto Err = JD->emit(*this, SymbolFlags))
-    return Err;
-
-  SymbolFlags.clear();
-  return Error::success();
-}
-
-Error MaterializationResponsibility::defineMaterializing(
-    SymbolFlagsMap NewSymbolFlags) {
-
-  LLVM_DEBUG({
-    dbgs() << "In " << JD->getName() << " defining materializing symbols "
-           << NewSymbolFlags << "\n";
-  });
-  if (auto AcceptedDefs = JD->defineMaterializing(std::move(NewSymbolFlags))) {
-    // Add all newly accepted symbols to this responsibility object.
-    for (auto &KV : *AcceptedDefs)
-      SymbolFlags.insert(KV);
-    return Error::success();
-  } else
-    return AcceptedDefs.takeError();
-}
-
-void MaterializationResponsibility::failMaterialization() {
-
-  LLVM_DEBUG({
-    dbgs() << "In " << JD->getName() << " failing materialization for "
-           << SymbolFlags << "\n";
-  });
-
-  JITDylib::FailedSymbolsWorklist Worklist;
-
-  for (auto &KV : SymbolFlags)
-    Worklist.push_back(std::make_pair(JD.get(), KV.first));
-  SymbolFlags.clear();
-
-  if (Worklist.empty())
-    return;
-
-  auto &ES = JD->getExecutionSession();
-  JITDylib::AsynchronousSymbolQuerySet FailedQueries;
-  std::shared_ptr<SymbolDependenceMap> FailedSymbols;
-
-  ES.runSessionLocked([&]() {
-    auto RTI = JD->MRTrackers.find(this);
-    assert(RTI != JD->MRTrackers.end() && "No tracker for this");
-    if (RTI->second->isDefunct())
-      return;
-
-    std::tie(FailedQueries, FailedSymbols) =
-        JITDylib::failSymbols(std::move(Worklist));
-  });
-
-  for (auto &Q : FailedQueries)
-    Q->handleFailed(make_error<FailedToMaterialize>(FailedSymbols));
-}
-
-Error MaterializationResponsibility::replace(
-    std::unique_ptr<MaterializationUnit> MU) {
-
-  for (auto &KV : MU->getSymbols()) {
-    assert(SymbolFlags.count(KV.first) &&
-           "Replacing definition outside this responsibility set");
-    SymbolFlags.erase(KV.first);
-  }
-
-  if (MU->getInitializerSymbol() == InitSymbol)
-    InitSymbol = nullptr;
-
-  LLVM_DEBUG(JD->getExecutionSession().runSessionLocked([&]() {
-    dbgs() << "In " << JD->getName() << " replacing symbols with " << *MU
-           << "\n";
-  }););
-
-  return JD->replace(*this, std::move(MU));
-}
-
-Expected<std::unique_ptr<MaterializationResponsibility>>
-MaterializationResponsibility::delegate(const SymbolNameSet &Symbols) {
-
-  SymbolStringPtr DelegatedInitSymbol;
-  SymbolFlagsMap DelegatedFlags;
-
-  for (auto &Name : Symbols) {
-    auto I = SymbolFlags.find(Name);
-    assert(I != SymbolFlags.end() &&
-           "Symbol is not tracked by this MaterializationResponsibility "
-           "instance");
-
-    DelegatedFlags[Name] = std::move(I->second);
-    if (Name == InitSymbol)
-      std::swap(InitSymbol, DelegatedInitSymbol);
-
-    SymbolFlags.erase(I);
-  }
-
-  return JD->delegate(*this, std::move(DelegatedFlags),
-                      std::move(DelegatedInitSymbol));
-}
-
-void MaterializationResponsibility::addDependencies(
-    const SymbolStringPtr &Name, const SymbolDependenceMap &Dependencies) {
-  LLVM_DEBUG({
-    dbgs() << "Adding dependencies for " << Name << ": " << Dependencies
-           << "\n";
-  });
-  assert(SymbolFlags.count(Name) &&
-         "Symbol not covered by this MaterializationResponsibility instance");
-  JD->addDependencies(Name, Dependencies);
-}
-
-void MaterializationResponsibility::addDependenciesForAll(
-    const SymbolDependenceMap &Dependencies) {
-  LLVM_DEBUG({
-    dbgs() << "Adding dependencies for all symbols in " << SymbolFlags << ": "
-           << Dependencies << "\n";
-  });
-  for (auto &KV : SymbolFlags)
-    JD->addDependencies(KV.first, Dependencies);
-}
-
 AbsoluteSymbolsMaterializationUnit::AbsoluteSymbolsMaterializationUnit(
     SymbolMap Symbols)
     : MaterializationUnit(extractFlags(Symbols), nullptr),
@@ -2346,6 +2189,167 @@ void ExecutionSession::destroyResourceTracker(ResourceTracker &RT) {
       transferResourceTracker(*RT.getJITDylib().getDefaultResourceTracker(),
                               RT);
   });
+}
+
+void ExecutionSession::OL_destroyMaterializationResponsibility(
+    MaterializationResponsibility &MR) {
+
+  assert(MR.SymbolFlags.empty() &&
+         "All symbols should have been explicitly materialized or failed");
+  MR.JD->unlinkMaterializationResponsibility(MR);
+}
+
+SymbolNameSet ExecutionSession::OL_getRequestedSymbols(
+    const MaterializationResponsibility &MR) {
+  return MR.JD->getRequestedSymbols(MR.SymbolFlags);
+}
+
+Error ExecutionSession::OL_notifyResolved(MaterializationResponsibility &MR,
+                                          const SymbolMap &Symbols) {
+  LLVM_DEBUG({
+    dbgs() << "In " << MR.JD->getName() << " resolving " << Symbols << "\n";
+  });
+#ifndef NDEBUG
+  for (auto &KV : Symbols) {
+    auto WeakFlags = JITSymbolFlags::Weak | JITSymbolFlags::Common;
+    auto I = MR.SymbolFlags.find(KV.first);
+    assert(I != MR.SymbolFlags.end() &&
+           "Resolving symbol outside this responsibility set");
+    assert(!I->second.hasMaterializationSideEffectsOnly() &&
+           "Can't resolve materialization-side-effects-only symbol");
+    assert((KV.second.getFlags() & ~WeakFlags) == (I->second & ~WeakFlags) &&
+           "Resolving symbol with incorrect flags");
+  }
+#endif
+
+  return MR.JD->resolve(MR, Symbols);
+}
+
+Error ExecutionSession::OL_notifyEmitted(MaterializationResponsibility &MR) {
+  LLVM_DEBUG({
+    dbgs() << "In " << MR.JD->getName() << " emitting " << MR.SymbolFlags << "\n";
+  });
+
+  if (auto Err = MR.JD->emit(MR, MR.SymbolFlags))
+    return Err;
+
+  MR.SymbolFlags.clear();
+  return Error::success();
+}
+
+Error ExecutionSession::OL_defineMaterializing(
+    MaterializationResponsibility &MR, SymbolFlagsMap NewSymbolFlags) {
+
+  LLVM_DEBUG({
+    dbgs() << "In " << MR.JD->getName() << " defining materializing symbols "
+           << NewSymbolFlags << "\n";
+  });
+  if (auto AcceptedDefs = MR.JD->defineMaterializing(std::move(NewSymbolFlags))) {
+    // Add all newly accepted symbols to this responsibility object.
+    for (auto &KV : *AcceptedDefs)
+      MR.SymbolFlags.insert(KV);
+    return Error::success();
+  } else
+    return AcceptedDefs.takeError();
+}
+
+void ExecutionSession::OL_notifyFailed(MaterializationResponsibility &MR) {
+
+  LLVM_DEBUG({
+    dbgs() << "In " << MR.JD->getName() << " failing materialization for "
+           << MR.SymbolFlags << "\n";
+  });
+
+  JITDylib::FailedSymbolsWorklist Worklist;
+
+  for (auto &KV : MR.SymbolFlags)
+    Worklist.push_back(std::make_pair(MR.JD.get(), KV.first));
+  MR.SymbolFlags.clear();
+
+  if (Worklist.empty())
+    return;
+
+  JITDylib::AsynchronousSymbolQuerySet FailedQueries;
+  std::shared_ptr<SymbolDependenceMap> FailedSymbols;
+
+  runSessionLocked([&]() {
+    auto RTI = MR.JD->MRTrackers.find(&MR);
+    assert(RTI != MR.JD->MRTrackers.end() && "No tracker for this");
+    if (RTI->second->isDefunct())
+      return;
+
+    std::tie(FailedQueries, FailedSymbols) =
+        JITDylib::failSymbols(std::move(Worklist));
+  });
+
+  for (auto &Q : FailedQueries)
+    Q->handleFailed(make_error<FailedToMaterialize>(FailedSymbols));
+}
+
+Error ExecutionSession::OL_replace(MaterializationResponsibility &MR,
+                                   std::unique_ptr<MaterializationUnit> MU) {
+  for (auto &KV : MU->getSymbols()) {
+    assert(MR.SymbolFlags.count(KV.first) &&
+           "Replacing definition outside this responsibility set");
+    MR.SymbolFlags.erase(KV.first);
+  }
+
+  if (MU->getInitializerSymbol() == MR.InitSymbol)
+    MR.InitSymbol = nullptr;
+
+  LLVM_DEBUG(MR.JD->getExecutionSession().runSessionLocked([&]() {
+    dbgs() << "In " << MR.JD->getName() << " replacing symbols with " << *MU
+           << "\n";
+  }););
+
+  return MR.JD->replace(MR, std::move(MU));
+}
+
+Expected<std::unique_ptr<MaterializationResponsibility>>
+ExecutionSession::OL_delegate(MaterializationResponsibility &MR,
+                              const SymbolNameSet &Symbols) {
+
+  SymbolStringPtr DelegatedInitSymbol;
+  SymbolFlagsMap DelegatedFlags;
+
+  for (auto &Name : Symbols) {
+    auto I = MR.SymbolFlags.find(Name);
+    assert(I != MR.SymbolFlags.end() &&
+           "Symbol is not tracked by this MaterializationResponsibility "
+           "instance");
+
+    DelegatedFlags[Name] = std::move(I->second);
+    if (Name == MR.InitSymbol)
+      std::swap(MR.InitSymbol, DelegatedInitSymbol);
+
+    MR.SymbolFlags.erase(I);
+  }
+
+  return MR.JD->delegate(MR, std::move(DelegatedFlags),
+                         std::move(DelegatedInitSymbol));
+}
+
+void ExecutionSession::OL_addDependencies(
+    MaterializationResponsibility &MR, const SymbolStringPtr &Name,
+    const SymbolDependenceMap &Dependencies) {
+  LLVM_DEBUG({
+    dbgs() << "Adding dependencies for " << Name << ": " << Dependencies
+           << "\n";
+  });
+  assert(MR.SymbolFlags.count(Name) &&
+         "Symbol not covered by this MaterializationResponsibility instance");
+  MR.JD->addDependencies(Name, Dependencies);
+}
+
+void ExecutionSession::OL_addDependenciesForAll(
+    MaterializationResponsibility &MR,
+    const SymbolDependenceMap &Dependencies) {
+  LLVM_DEBUG({
+    dbgs() << "Adding dependencies for all symbols in " << MR.SymbolFlags << ": "
+           << Dependencies << "\n";
+  });
+  for (auto &KV : MR.SymbolFlags)
+    MR.JD->addDependencies(KV.first, Dependencies);
 }
 
 #ifndef NDEBUG
