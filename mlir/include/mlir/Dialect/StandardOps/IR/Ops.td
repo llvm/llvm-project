@@ -2922,15 +2922,20 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
 
     The SubView operation supports the following arguments:
 
-    * Memref: the "base" memref on which to create a "view" memref.
-    * Offsets: memref-rank number of dynamic offsets or static integer
-               attributes into the "base" memref at which to create the "view"
-               memref.
-    * Sizes: memref-rank number of dynamic sizes or static integer attributes
-             which specify the sizes of the result "view" memref type.
-    * Strides: memref-rank number of dynamic strides or static integer
-               attributes that compose multiplicatively with  the base memref
-               strides in each dimension.
+    * semref: the "base" memref on which to create a "view" memref.
+    * offsets: memref-rank number of offsets into the "base" memref at which to
+               create the "view" memref.
+    * sizes: memref-rank number of sizes which specify the sizes of the result
+             "view" memref type.
+    * strides: memref-rank number of strides that compose multiplicatively with
+               the base memref strides in each dimension.
+
+    The representation based on offsets, sizes and strides support a
+    partially-static specification via attributes specified through the
+    `static_offsets`, `static_sizes` and `static_strides` arguments. A special
+    sentinel value ShapedType::kDynamicSize and
+    ShapedType::kDynamicStrideOrOffset encodes that the corresponding entry has
+    a static value.
 
     A subview operation may additionally reduce the rank of the resulting view
     by removing dimensions that are statically known to be of size 1.
@@ -3076,7 +3081,7 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     /// Returns the type of the base memref operand.
-    MemRefType getSourceMemRefType() {
+    MemRefType getSourceType() {
       return source().getType().cast<MemRefType>();
     }
 
@@ -3108,13 +3113,19 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<"subtensor"> {
     The subtensor operation supports the following arguments:
 
     * tensor: the "base" tensor from which to extract a subtensor.
-    * offsets: tensor-rank number of dynamic offsets or static integer
-               attributes into the "base" tensor from which to extract the
-               subtensor.
-    * sizes: tensor-rank number of dynamic sizes or static integer attributes
-             which specify the sizes of the result tensor type.
-    * strides: tensor-rank number of dynamic strides or static integer
-               attributes specifying susampling in each dimension.
+    * offsets: tensor-rank number of offsets into the "base" tensor from which
+               to extract the subtensor.
+    * sizes: tensor-rank number of sizes which specify the sizes of the result
+             tensor type.
+    * strides: tensor-rank number of strides specifying subsampling in each 
+               dimension.
+
+    The representation based on offsets, sizes and strides support a
+    partially-static specification via attributes specified through the
+    `static_offsets`, `static_sizes` and `static_strides` arguments. A special
+    sentinel value ShapedType::kDynamicSize and
+    ShapedType::kDynamicStrideOrOffset encodes that the corresponding entry has
+    a static value.
 
     After buffer-allocation, the "subtensor" op is expected to lower into a
     "subview" op.
@@ -3144,9 +3155,22 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<"subtensor"> {
   );
   let results = (outs AnyRankedTensor:$result);
 
+  let builders = [
+    // Build a SubViewOp with mixed static and dynamic entries.
+    OpBuilder<
+      "Value source, ArrayRef<int64_t> staticOffsets, "
+      "ArrayRef<int64_t> staticSizes, ArrayRef<int64_t> staticStrides, "
+      "ValueRange offsets, ValueRange sizes, ValueRange strides, "
+      "ArrayRef<NamedAttribute> attrs = {}">,
+    // Build a SubViewOp with all dynamic entries.
+    OpBuilder<
+      "Value source, ValueRange offsets, ValueRange sizes, ValueRange strides, "
+      "ArrayRef<NamedAttribute> attrs = {}">
+  ];
+
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     /// Returns the type of the base tensor operand.
-    RankedTensorType getSourceRankedTensorType() {
+    RankedTensorType getSourceType() {
       return source().getType().cast<RankedTensorType>();
     }
 
@@ -3165,6 +3189,80 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<"subtensor"> {
   }];
 
   let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// SubTensorInsertOp
+//===----------------------------------------------------------------------===//
+
+def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<"subtensor_insert"> {
+  let summary = "subtensor_insert operation";
+  let description = [{
+    The "subtensor_insert" operation insert a tensor `source` into another
+    tensor `dest` as specified by the operation's offsets, sizes and strides
+    arguments.
+
+    It returns a copy of `dest` with the proper subtensor updated with the value
+    of `source`.
+
+    The subtensor_insert operation has the encodes the following information:
+
+    * source: the tensor that is inserted.
+    * dest: the tensor into which the source tensor is inserted.
+    * offsets: tensor-rank number of offsets into the "base" tensor from which
+               to extract the subtensor.
+    * sizes: tensor-rank number of sizes which specify the sizes of the result
+             tensor type.
+    * strides: tensor-rank number of strides that specify subsampling in each
+               dimension.
+
+    The representation based on offsets, sizes and strides support a
+    partially-static specification via attributes specified through the
+    `static_offsets`, `static_sizes` and `static_strides` arguments. A special
+    sentinel value ShapedType::kDynamicSize and
+    ShapedType::kDynamicStrideOrOffset encodes that the corresponding entry has
+    a static value.
+
+    After buffer-allocation, the "subtensor_insert" op is expected to become
+    an in-place buffer update.
+  }];
+
+  let arguments = (ins
+    AnyRankedTensor:$source,
+    AnyRankedTensor:$dest,
+    Variadic<Index>:$offsets,
+    Variadic<Index>:$sizes,
+    Variadic<Index>:$strides,
+    I64ArrayAttr:$static_offsets,
+    I64ArrayAttr:$static_sizes,
+    I64ArrayAttr:$static_strides
+  );
+  let results = (outs AnyRankedTensor:$result);
+
+  let builders = [
+    // Build a SubViewOp with mixed static and dynamic entries.
+    OpBuilder<
+      "Value source, Value dest, ArrayRef<int64_t> staticOffsets, "
+      "ArrayRef<int64_t> staticSizes, ArrayRef<int64_t> staticStrides, "
+      "ValueRange offsets, ValueRange sizes, ValueRange strides, "
+      "ArrayRef<NamedAttribute> attrs = {}">,
+    // Build a SubViewOp with all dynamic entries.
+    OpBuilder<
+      "Value source, Value dest, ValueRange offsets, ValueRange sizes, "
+      "ValueRange strides, ArrayRef<NamedAttribute> attrs = {}">
+  ];
+
+  let extraClassDeclaration = extraBaseClassDeclaration # [{
+    /// Returns the type of the base tensor operand.
+    RankedTensorType getSourceType() {
+      return source().getType().cast<RankedTensorType>();
+    }
+
+    /// The result of a subtensor is always a tensor.
+    RankedTensorType getType() {
+      return getResult().getType().cast<RankedTensorType>();
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
