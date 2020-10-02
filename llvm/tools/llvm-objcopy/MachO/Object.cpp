@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Object.h"
-#include "../llvm-objcopy.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <unordered_set>
 
