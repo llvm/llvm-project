@@ -816,34 +816,40 @@ private:
 
 CGCXXABI::RecordArgABI
 MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
+  // Use the default C calling convention rules for things that can be passed in
+  // registers, i.e. non-trivially copyable records or records marked with
+  // [[trivial_abi]].
+  if (RD->canPassInRegisters())
+    return RAA_Default;
+
   switch (CGM.getTarget().getTriple().getArch()) {
   default:
     // FIXME: Implement for other architectures.
-    return RAA_Default;
+    return RAA_Indirect;
 
   case llvm::Triple::thumb:
-    // Use the simple Itanium rules for now.
+    // Pass things indirectly for now because it is simple.
     // FIXME: This is incompatible with MSVC for arguments with a dtor and no
     // copy ctor.
-    return !RD->canPassInRegisters() ? RAA_Indirect : RAA_Default;
+    return RAA_Indirect;
 
-  case llvm::Triple::x86:
-    // All record arguments are passed in memory on x86.  Decide whether to
-    // construct the object directly in argument memory, or to construct the
-    // argument elsewhere and copy the bytes during the call.
+  case llvm::Triple::x86: {
+    // If the argument has *required* alignment greater than four bytes, pass
+    // it indirectly. Prior to MSVC version 19.14, passing overaligned
+    // arguments was not supported and resulted in a compiler error. In 19.14
+    // and later versions, such arguments are now passed indirectly.
+    TypeInfo Info = getContext().getTypeInfo(RD->getTypeForDecl());
+    if (Info.AlignIsRequired && Info.Align > 4)
+      return RAA_Indirect;
 
     // If C++ prohibits us from making a copy, construct the arguments directly
     // into argument memory.
-    if (!RD->canPassInRegisters())
-      return RAA_DirectInMemory;
-
-    // Otherwise, construct the argument into a temporary and copy the bytes
-    // into the outgoing argument memory.
-    return RAA_Default;
+    return RAA_DirectInMemory;
+  }
 
   case llvm::Triple::x86_64:
   case llvm::Triple::aarch64:
-    return !RD->canPassInRegisters() ? RAA_Indirect : RAA_Default;
+    return RAA_Indirect;
   }
 
   llvm_unreachable("invalid enum");

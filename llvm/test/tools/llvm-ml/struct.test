@@ -140,7 +140,7 @@ mov al, [t2.FOOBAR.e.b]
 ; CHECK-NEXT: mov al, byte ptr [rip + t2+9]
 ; CHECK-NEXT: mov al, byte ptr [rip + t2+9]
 ; CHECK-NEXT: mov al, byte ptr [rip + t2+9]
-; CHECK-NEXT: mov al, byte ptr [rip + (t2+8)+1]
+; CHECK-NEXT: mov al, byte ptr [rip + t2+9]
 ; CHECK-NEXT: mov al, byte ptr [rip + t2+9]
 
 QUUX STRUCT

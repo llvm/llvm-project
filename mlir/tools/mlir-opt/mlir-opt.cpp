@@ -41,6 +41,7 @@ void registerSimpleParametricTilingPass();
 void registerSliceAnalysisTestPass();
 void registerSymbolTestPasses();
 void registerTestAffineDataCopyPass();
+void registerTestAffineLoopParametricTilingPass();
 void registerTestAffineLoopUnswitchingPass();
 void registerTestAllReduceLoweringPass();
 void registerTestBufferPlacementPreparationPass();
@@ -51,11 +52,13 @@ void registerTestConvertGPUKernelToCubinPass();
 void registerTestConvertGPUKernelToHsacoPass();
 void registerTestDominancePass();
 void registerTestDialect(DialectRegistry &);
+void registerTestDynamicPipelinePass();
 void registerTestExpandTanhPass();
 void registerTestFunc();
 void registerTestGpuMemoryPromotionPass();
 void registerTestGpuParallelLoopMappingPass();
 void registerTestInterfaces();
+void registerTestLinalgFusionTransforms();
 void registerTestLinalgHoisting();
 void registerTestLinalgTransforms();
 void registerTestLivenessPass();
@@ -104,12 +107,15 @@ void registerTestPasses() {
 #if MLIR_ROCM_CONVERSIONS_ENABLED
   registerTestConvertGPUKernelToHsacoPass();
 #endif
+  registerTestAffineLoopParametricTilingPass();
   registerTestBufferPlacementPreparationPass();
   registerTestDominancePass();
+  registerTestDynamicPipelinePass();
   registerTestFunc();
   registerTestExpandTanhPass();
   registerTestGpuMemoryPromotionPass();
   registerTestInterfaces();
+  registerTestLinalgFusionTransforms();
   registerTestLinalgHoisting();
   registerTestLinalgTransforms();
   registerTestLivenessPass();

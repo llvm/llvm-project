@@ -571,6 +571,10 @@ class VectorOfLengthAndType<list<int> allowedLengths,
 
 def AnyVector : VectorOf<[AnyType]>;
 
+// Shaped types.
+
+def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped">;
+
 // Tensor types.
 
 // Any tensor type whose element type is from the given `allowedTypes` list
@@ -1377,6 +1381,15 @@ def StringElementsAttr : ElementsAttrBase<
   let convertFromStorage = "$_self";
 }
 
+// Attributes containing affine maps.
+def AffineMapAttr : Attr<
+CPred<"$_self.isa<::mlir::AffineMapAttr>()">, "AffineMap attribute"> {
+  let storageType = [{::mlir::AffineMapAttr }];
+  let returnType = [{ ::mlir::AffineMap }];
+  let valueType = Index;
+  let constBuilderCall = "::mlir::AffineMapAttr::get($0)";
+}
+
 // Base class for array attributes.
 class ArrayAttrBase<Pred condition, string description> :
     Attr<condition, description> {
@@ -1406,6 +1419,11 @@ class TypedArrayAttrBase<Attr element, string description>: ArrayAttrBase<
   Attr elementAttr = element;
 }
 
+def AffineMapArrayAttr : TypedArrayAttrBase<AffineMapAttr,
+                                      "AffineMap array attribute"> {
+  let constBuilderCall = "$_builder.getAffineMapArrayAttr($0)";
+}
+
 def BoolArrayAttr : TypedArrayAttrBase<BoolAttr,
                                       "1-bit boolean array attribute"> {
   let constBuilderCall = "$_builder.getBoolArrayAttr($0)";
@@ -1428,7 +1446,7 @@ def StrArrayAttr : TypedArrayAttrBase<StrAttr, "string array attribute"> {
   let constBuilderCall = "$_builder.getStrArrayAttr($0)";
 }
 def TypeArrayAttr : TypedArrayAttrBase<TypeAttr, "type array attribute"> {
-  let constBuilderCall = ?;
+  let constBuilderCall = "$_builder.getTypeArrayAttr($0)";
 }
 
 // Attribute information for an Attribute field within a StructAttr.
@@ -2002,8 +2020,8 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   //
   // ```c++
   // static void build(OpBuilder &, OperationState &odsState,
-  //                   ArrayRef<Type> resultTypes,
-  //                   ArrayRef<Value> operands,
+  //                   TypeRange resultTypes,
+  //                   ValueRange operands,
   //                   ArrayRef<NamedAttribute> attributes);
   // ```
   list<OpBuilder> builders = ?;

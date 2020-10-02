@@ -596,9 +596,55 @@ bool MachineSinking::isProfitableToSinkTo(unsigned Reg, MachineInstr &MI,
           FindSuccToSinkTo(MI, SuccToSinkTo, BreakPHIEdge, AllSuccessors))
     return isProfitableToSinkTo(Reg, MI, SuccToSinkTo, MBB2, AllSuccessors);
 
-  // If SuccToSinkTo is final destination and it is a post dominator of current
-  // block then it is not profitable to sink MI into SuccToSinkTo block.
-  return false;
+  MachineLoop *ML = LI->getLoopFor(MBB);
+
+  // If the instruction is not inside a loop, it is not profitable to sink MI to
+  // a post dominate block SuccToSinkTo.
+  if (!ML)
+    return false;
+
+  // If this instruction is inside a loop and sinking this instruction can make
+  // more registers live range shorten, it is still prifitable.
+  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
+    // Ignore non-register operands.
+    if (!MO.isReg())
+      continue;
+    Register Reg = MO.getReg();
+    if (Reg == 0)
+      continue;
+
+    // Don't handle physical register.
+    if (Register::isPhysicalRegister(Reg))
+      return false;
+
+    // Users for the defs are all dominated by SuccToSinkTo.
+    if (MO.isDef()) {
+      // This def register's live range is shortened after sinking.
+      bool LocalUse = false;
+      if (!AllUsesDominatedByBlock(Reg, SuccToSinkTo, MBB, BreakPHIEdge,
+                                   LocalUse))
+        return false;
+    } else {
+      MachineInstr *DefMI = MRI->getVRegDef(Reg);
+      // DefMI is defined outside of loop. There should be no live range
+      // impact for this operand. Defination outside of loop means:
+      // 1: defination is outside of loop.
+      // 2: defination is in this loop, but it is a PHI in the loop header.
+      if (LI->getLoopFor(DefMI->getParent()) != ML ||
+          (DefMI->isPHI() && LI->isLoopHeader(DefMI->getParent())))
+        continue;
+      // DefMI is inside the loop. Mark it as not profitable as sinking MI will
+      // enlarge DefMI live range.
+      // FIXME: check the register pressure in block SuccToSinkTo, if it is
+      // smaller than the limit after sinking, it is still profitable to sink.
+      return false;
+    }
+  }
+
+  // If MI is in loop and all its operands are alive across the whole loop, it
+  // is profitable to sink MI.
+  return true;
 }
 
 /// Get the sorted sequence of successors for this MachineBasicBlock, possibly

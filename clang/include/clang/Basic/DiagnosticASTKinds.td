@@ -72,6 +72,8 @@ def note_constexpr_array_index : Note<"cannot refer to element %0 of "
   "in a constant expression">;
 def note_constexpr_float_arithmetic : Note<
   "floating point arithmetic produces %select{an infinity|a NaN}0">;
+def note_constexpr_dynamic_rounding : Note<
+  "cannot evaluate this expression if rounding mode is dynamic">;
 def note_constexpr_pointer_subtraction_not_same_array : Note<
   "subtracted pointers are not elements of the same array">;
 def note_constexpr_pointer_subtraction_zero_size : Note<

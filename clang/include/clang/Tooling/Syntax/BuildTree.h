@@ -39,12 +39,19 @@ syntax::Leaf *createLeaf(syntax::Arena &A, tok::TokenKind K);
 /// Returns it as a pointer to the base class `Tree`.
 syntax::Tree *
 createTree(syntax::Arena &A,
-           std::vector<std::pair<syntax::Node *, syntax::NodeRole>> Children,
+           ArrayRef<std::pair<syntax::Node *, syntax::NodeRole>> Children,
            syntax::NodeKind K);
 
 // Synthesis of Syntax Nodes
 syntax::EmptyStatement *createEmptyStatement(syntax::Arena &A);
 
+/// Creates a completely independent copy of `N` with its macros expanded.
+///
+/// The copy is:
+/// * Detached, i.e. `Parent == NextSibling == nullptr` and
+/// `Role == Detached`.
+/// * Synthesized, i.e. `Original == false`.
+syntax::Node *deepCopyExpandingMacros(syntax::Arena &A, const syntax::Node *N);
 } // namespace syntax
 } // namespace clang
 #endif

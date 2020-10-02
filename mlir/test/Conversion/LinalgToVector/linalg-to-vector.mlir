@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-conv-vectorization --cse | FileCheck %s
+// RUN: mlir-opt %s -test-conv-vectorization="tile-sizes=1,3" --cse | FileCheck %s
 
 // CHECK-DAG:  #[[$map0:.*]] = affine_map<(d0)[s0] -> (1, -d0 + s0)>
 // CHECK-DAG:  #[[$map1:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
@@ -8,7 +8,8 @@
 // CHECK-DAG:  #[[$map5:.*]] = affine_map<(d0) -> (d0)>
 
 func @conv_1d(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>) {
-  linalg.conv_1d %arg0, %arg1, %arg2 : (memref<?xf32>, memref<?xf32>, memref<?xf32>)
+  linalg.conv_1d ins(%arg0, %arg1 : memref<?xf32>, memref<?xf32>)
+                outs(%arg2 : memref<?xf32>)
   return
 }
 

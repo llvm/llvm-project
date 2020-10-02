@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify %s
 
 typedef __fp16 half4 __attribute__ ((vector_size (8)));
 typedef float float4 __attribute__ ((vector_size (16)));
@@ -28,6 +28,8 @@ void testFP16Vec(int c) {
   sv0 = hv0 >= hv1;
   sv0 = hv0 || hv1; // expected-error{{logical expression with vector types 'half4' (vector of 4 '__fp16' values) and 'half4' is only supported in C++}}
   sv0 = hv0 && hv1; // expected-error{{logical expression with vector types 'half4' (vector of 4 '__fp16' values) and 'half4' is only supported in C++}}
+  hv0, 1;
+  1, hv0;
 
   // Implicit conversion between half vectors and float vectors are not allowed.
   hv0 = fv0; // expected-error{{assigning to}}

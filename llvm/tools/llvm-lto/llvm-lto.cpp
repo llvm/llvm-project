@@ -337,7 +337,7 @@ getLocalLTOModule(StringRef Path, std::unique_ptr<MemoryBuffer> &Buffer,
 }
 
 /// Print some statistics on the index for each input files.
-void printIndexStats() {
+static void printIndexStats() {
   for (auto &Filename : InputFilenames) {
     ExitOnError ExitOnErr("llvm-lto: error loading file '" + Filename + "': ");
     std::unique_ptr<ModuleSummaryIndex> Index =

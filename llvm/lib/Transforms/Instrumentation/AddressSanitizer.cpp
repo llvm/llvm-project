@@ -556,6 +556,22 @@ static uint64_t GetCtorAndDtorPriority(Triple &TargetTriple) {
   }
 }
 
+// For a ret instruction followed by a musttail call, we cannot insert anything
+// in between. Instead we use the musttail call instruction as the insertion
+// point.
+static Instruction *adjustForMusttailCall(Instruction *I) {
+  ReturnInst *RI = dyn_cast<ReturnInst>(I);
+  if (!RI)
+    return I;
+  Instruction *Prev = RI->getPrevNode();
+  if (BitCastInst *BCI = dyn_cast_or_null<BitCastInst>(Prev))
+    Prev = BCI->getPrevNode();
+  if (CallInst *CI = dyn_cast_or_null<CallInst>(Prev))
+    if (CI->isMustTailCall())
+      return CI;
+  return RI;
+}
+
 namespace {
 
 /// Module analysis for getting various metadata about the module.
@@ -999,10 +1015,11 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
 
   // Unpoison dynamic allocas redzones.
   void unpoisonDynamicAllocas() {
-    for (auto &Ret : RetVec)
-      unpoisonDynamicAllocasBeforeInst(Ret, DynamicAllocaLayout);
+    for (Instruction *Ret : RetVec)
+      unpoisonDynamicAllocasBeforeInst(adjustForMusttailCall(Ret),
+                                       DynamicAllocaLayout);
 
-    for (auto &StackRestoreInst : StackRestoreVec)
+    for (Instruction *StackRestoreInst : StackRestoreVec)
       unpoisonDynamicAllocasBeforeInst(StackRestoreInst,
                                        StackRestoreInst->getOperand(0));
   }
@@ -2332,12 +2349,9 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
         NewGlobal->setSection("__TEXT,__asan_cstring,regular");
     }
 
-    // Transfer the debug info.  The payload starts at offset zero so we can
-    // copy the debug info over as is.
-    SmallVector<DIGlobalVariableExpression *, 1> GVs;
-    G->getDebugInfo(GVs);
-    for (auto *GV : GVs)
-      NewGlobal->addDebugInfo(GV);
+    // Transfer the debug info and type metadata.  The payload starts at offset
+    // zero so we can copy the metadata over as is.
+    NewGlobal->copyMetadata(G, 0);
 
     Value *Indices2[2];
     Indices2[0] = IRB.getInt32(0);
@@ -3303,8 +3317,9 @@ void FunctionStackPoisoner::processStaticAllocas() {
   SmallVector<uint8_t, 64> ShadowAfterReturn;
 
   // (Un)poison the stack before all ret instructions.
-  for (auto Ret : RetVec) {
-    IRBuilder<> IRBRet(Ret);
+  for (Instruction *Ret : RetVec) {
+    Instruction *Adjusted = adjustForMusttailCall(Ret);
+    IRBuilder<> IRBRet(Adjusted);
     // Mark the current frame as retired.
     IRBRet.CreateStore(ConstantInt::get(IntptrTy, kRetiredStackFrameMagic),
                        BasePlus0);
@@ -3323,7 +3338,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
       Value *Cmp =
           IRBRet.CreateICmpNE(FakeStack, Constant::getNullValue(IntptrTy));
       Instruction *ThenTerm, *ElseTerm;
-      SplitBlockAndInsertIfThenElse(Cmp, Ret, &ThenTerm, &ElseTerm);
+      SplitBlockAndInsertIfThenElse(Cmp, Adjusted, &ThenTerm, &ElseTerm);
 
       IRBuilder<> IRBPoison(ThenTerm);
       if (StackMallocIdx <= 4) {

@@ -377,7 +377,8 @@ writeIndex(MCStreamer &Out, MCSection *Section,
                   &DWARFUnitIndex::Entry::SectionContribution::Length);
 }
 
-std::string buildDWODescription(StringRef Name, StringRef DWPName, StringRef DWOName) {
+static std::string buildDWODescription(StringRef Name, StringRef DWPName,
+                                       StringRef DWOName) {
   std::string Text = "\'";
   Text += Name;
   Text += '\'';

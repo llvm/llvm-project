@@ -1132,7 +1132,7 @@ getMacroExpansionInfo(const MacroParamMap &PrevParamMap,
   std::string MacroName = PP.getSpelling(TheTok);
 
   const auto *II = PP.getIdentifierInfo(MacroName);
-  assert(II && "Failed to acquire the IndetifierInfo for the macro!");
+  assert(II && "Failed to acquire the IdentifierInfo for the macro!");
 
   const MacroInfo *MI = getMacroInfoForLocation(PP, SM, II, ExpanLoc);
   // assert(MI && "The macro must've been defined at it's expansion location!");
@@ -1180,9 +1180,16 @@ getMacroExpansionInfo(const MacroParamMap &PrevParamMap,
   //   * > 1, then tok::comma is a part of the current arg.
   int ParenthesesDepth = 1;
 
-  // If we encounter __VA_ARGS__, we will lex until the closing tok::r_paren,
-  // even if we lex a tok::comma and ParanthesesDepth == 1.
-  const IdentifierInfo *__VA_ARGS__II = PP.getIdentifierInfo("__VA_ARGS__");
+  // If we encounter the variadic arg, we will lex until the closing
+  // tok::r_paren, even if we lex a tok::comma and ParanthesesDepth == 1.
+  const IdentifierInfo *VariadicParamII = PP.getIdentifierInfo("__VA_ARGS__");
+  if (MI->isGNUVarargs()) {
+    // If macro uses GNU-style variadic args, the param name is user-supplied,
+    // an not "__VA_ARGS__".  E.g.:
+    //   #define FOO(a, b, myvargs...)
+    // In this case, just use the last parameter:
+    VariadicParamII = *(MacroParams.rbegin());
+  }
 
   for (const IdentifierInfo *CurrParamII : MacroParams) {
     MacroParamMap::mapped_type ArgTokens;
@@ -1201,9 +1208,8 @@ getMacroExpansionInfo(const MacroParamMap &PrevParamMap,
       // Lex the first token of the next macro parameter.
       TStream.next(TheTok);
 
-      while (
-          !(ParenthesesDepth == 1 &&
-            (CurrParamII == __VA_ARGS__II ? false : TheTok.is(tok::comma)))) {
+      while (CurrParamII == VariadicParamII || ParenthesesDepth != 1 ||
+             !TheTok.is(tok::comma)) {
         assert(TheTok.isNot(tok::eof) &&
                "EOF encountered while looking for expanded macro args!");
 
@@ -1226,7 +1232,7 @@ getMacroExpansionInfo(const MacroParamMap &PrevParamMap,
           //     PARAMS_RESOLVE_TO_VA_ARGS(__VA_ARGS__);
           //                            // ^~~~~~~~~~~ Variadic parameter here
           //
-          //   void mulitpleParamsResolveToVA_ARGS(void) {
+          //   void multipleParamsResolveToVA_ARGS(void) {
           //     int x = 1;
           //     DISPATCH(x, "LF1M healer"); // Multiple arguments are mapped to
           //                                 // a single __VA_ARGS__ parameter.
@@ -1237,8 +1243,8 @@ getMacroExpansionInfo(const MacroParamMap &PrevParamMap,
           // PARAMS_RESOLVE_TO_VA_ARGS. By this point, we already noted during
           // the processing of DISPATCH what __VA_ARGS__ maps to, so we'll
           // retrieve the next series of tokens from that.
-          if (TheTok.getIdentifierInfo() == __VA_ARGS__II) {
-            TStream.injectRange(PrevParamMap.at(__VA_ARGS__II));
+          if (TheTok.getIdentifierInfo() == VariadicParamII) {
+            TStream.injectRange(PrevParamMap.at(VariadicParamII));
             TStream.next(TheTok);
             continue;
           }
@@ -1248,9 +1254,9 @@ getMacroExpansionInfo(const MacroParamMap &PrevParamMap,
         TStream.next(TheTok);
       }
     } else {
-      assert(CurrParamII == __VA_ARGS__II &&
+      assert(CurrParamII == VariadicParamII &&
              "No more macro arguments are found, but the current parameter "
-             "isn't __VA_ARGS__!");
+             "isn't the variadic arg!");
     }
 
     ParamMap.emplace(CurrParamII, std::move(ArgTokens));

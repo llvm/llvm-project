@@ -1775,12 +1775,9 @@ Stream::~Stream() = default;
 
 bool Stream::failed() { return scanner->failed(); }
 
-void Stream::printError(Node *N, const Twine &Msg) {
+void Stream::printError(Node *N, const Twine &Msg, SourceMgr::DiagKind Kind) {
   SMRange Range = N ? N->getSourceRange() : SMRange();
-  scanner->printError( Range.Start
-                     , SourceMgr::DK_Error
-                     , Msg
-                     , Range);
+  scanner->printError(Range.Start, Kind, Msg, Range);
 }
 
 document_iterator Stream::begin() {

@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // Ensure that leaf function can be unwund.
+// REQUIRES: x86_64-linux
 
 #include <assert.h>
 #include <dlfcn.h>

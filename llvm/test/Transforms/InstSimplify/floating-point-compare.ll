@@ -1138,3 +1138,95 @@ define <2 x i1> @is_finite_commute(<2 x i8> %x) {
   %r = fcmp one <2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, %cast
   ret <2 x i1> %r
 }
+
+; largest unsigned i15 = 2^15 - 1 = 32767
+; largest half (max exponent = 15 -> 2^15 * (1 + 1023/1024) = 65504
+
+define i1 @isKnownNeverInfinity_uitofp(i15 %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_uitofp(
+; CHECK-NEXT:    ret i1 true
+;
+  %f = uitofp i15 %x to half
+  %r = fcmp une half %f, 0xH7c00
+  ret i1 %r
+}
+
+; negative test
+
+define i1 @isNotKnownNeverInfinity_uitofp(i16 %x) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_uitofp(
+; CHECK-NEXT:    [[F:%.*]] = uitofp i16 [[X:%.*]] to half
+; CHECK-NEXT:    [[R:%.*]] = fcmp une half [[F]], 0xH7C00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = uitofp i16 %x to half
+  %r = fcmp une half %f, 0xH7c00
+  ret i1 %r
+}
+
+define i1 @isKnownNeverNegativeInfinity_uitofp(i15 %x) {
+; CHECK-LABEL: @isKnownNeverNegativeInfinity_uitofp(
+; CHECK-NEXT:    ret i1 false
+;
+  %f = uitofp i15 %x to half
+  %r = fcmp oeq half %f, 0xHfc00
+  ret i1 %r
+}
+
+; uitofp can't be negative, so this still works.
+
+define i1 @isNotKnownNeverNegativeInfinity_uitofp(i16 %x) {
+; CHECK-LABEL: @isNotKnownNeverNegativeInfinity_uitofp(
+; CHECK-NEXT:    ret i1 false
+;
+  %f = uitofp i16 %x to half
+  %r = fcmp oeq half %f, 0xHfc00
+  ret i1 %r
+}
+
+; largest magnitude signed i16 = 2^15 - 1 = 32767 --> -32768
+; largest half (max exponent = 15 -> 2^15 * (1 + 1023/1024) = 65504
+
+define i1 @isKnownNeverInfinity_sitofp(i16 %x) {
+; CHECK-LABEL: @isKnownNeverInfinity_sitofp(
+; CHECK-NEXT:    ret i1 true
+;
+  %f = sitofp i16 %x to half
+  %r = fcmp une half %f, 0xH7c00
+  ret i1 %r
+}
+
+; negative test
+
+define i1 @isNotKnownNeverInfinity_sitofp(i17 %x) {
+; CHECK-LABEL: @isNotKnownNeverInfinity_sitofp(
+; CHECK-NEXT:    [[F:%.*]] = sitofp i17 [[X:%.*]] to half
+; CHECK-NEXT:    [[R:%.*]] = fcmp une half [[F]], 0xH7C00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = sitofp i17 %x to half
+  %r = fcmp une half %f, 0xH7c00
+  ret i1 %r
+}
+
+define i1 @isKnownNeverNegativeInfinity_sitofp(i16 %x) {
+; CHECK-LABEL: @isKnownNeverNegativeInfinity_sitofp(
+; CHECK-NEXT:    ret i1 false
+;
+  %f = sitofp i16 %x to half
+  %r = fcmp oeq half %f, 0xHfc00
+  ret i1 %r
+}
+
+; negative test
+
+define i1 @isNotKnownNeverNegativeInfinity_sitofp(i17 %x) {
+; CHECK-LABEL: @isNotKnownNeverNegativeInfinity_sitofp(
+; CHECK-NEXT:    [[F:%.*]] = sitofp i17 [[X:%.*]] to half
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq half [[F]], 0xHFC00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = sitofp i17 %x to half
+  %r = fcmp oeq half %f, 0xHfc00
+  ret i1 %r
+}

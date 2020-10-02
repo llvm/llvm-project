@@ -426,15 +426,6 @@ uptr internal_sched_yield() {
   return internal_syscall(SYSCALL(sched_yield));
 }
 
-void internal__exit(int exitcode) {
-#if SANITIZER_FREEBSD || SANITIZER_OPENBSD
-  internal_syscall(SYSCALL(exit), exitcode);
-#else
-  internal_syscall(SYSCALL(exit_group), exitcode);
-#endif
-  Die();  // Unreachable.
-}
-
 unsigned int internal_sleep(unsigned int seconds) {
   struct timespec ts;
   ts.tv_sec = seconds;
@@ -450,6 +441,17 @@ uptr internal_execve(const char *filename, char *const argv[],
                           (uptr)envp);
 }
 #endif  // !SANITIZER_SOLARIS && !SANITIZER_NETBSD
+
+#if !SANITIZER_NETBSD
+void internal__exit(int exitcode) {
+#if SANITIZER_FREEBSD || SANITIZER_OPENBSD || SANITIZER_SOLARIS
+  internal_syscall(SYSCALL(exit), exitcode);
+#else
+  internal_syscall(SYSCALL(exit_group), exitcode);
+#endif
+  Die();  // Unreachable.
+}
+#endif  // !SANITIZER_NETBSD
 
 // ----------------- sanitizer_common.h
 bool FileExists(const char *filename) {
@@ -1359,6 +1361,55 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                          "i"(__NR_clone),
                          "i"(__NR_exit)
                        : "memory", "$29" );
+  return res;
+}
+#elif SANITIZER_RISCV64
+uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
+                    int *parent_tidptr, void *newtls, int *child_tidptr) {
+  long long res;
+  if (!fn || !child_stack)
+    return -EINVAL;
+  CHECK_EQ(0, (uptr)child_stack % 16);
+  child_stack = (char *)child_stack - 2 * sizeof(unsigned long long);
+  ((unsigned long long *)child_stack)[0] = (uptr)fn;
+  ((unsigned long long *)child_stack)[1] = (uptr)arg;
+
+  register int (*__fn)(void *) __asm__("a0") = fn;
+  register void *__stack __asm__("a1") = child_stack;
+  register int __flags __asm__("a2") = flags;
+  register void *__arg __asm__("a3") = arg;
+  register int *__ptid __asm__("a4") = parent_tidptr;
+  register void *__tls __asm__("a5") = newtls;
+  register int *__ctid __asm__("a6") = child_tidptr;
+
+  __asm__ __volatile__(
+      "mv a0,a2\n"          /* flags  */
+      "mv a2,a4\n"          /* ptid  */
+      "mv a3,a5\n"          /* tls  */
+      "mv a4,a6\n"          /* ctid  */
+      "addi a7, zero, %9\n" /* clone  */
+
+      "ecall\n"
+
+      /* if (%r0 != 0)
+       *   return %r0;
+       */
+      "bnez a0, 1f\n"
+
+      /* In the child, now. Call "fn(arg)". */
+      "ld  a0,  8(sp)\n"
+      "ld  a1, 16(sp)\n"
+      "jalr a1\n"
+
+      /* Call _exit(%r0).  */
+      "addi  a7, zero, %10\n"
+      "ecall\n"
+      "1:\n"
+
+      : "=r"(res)
+      : "i"(-EINVAL), "r"(__fn), "r"(__stack), "r"(__flags), "r"(__arg),
+        "r"(__ptid), "r"(__tls), "r"(__ctid), "i"(__NR_clone), "i"(__NR_exit)
+      : "ra", "memory");
   return res;
 }
 #elif defined(__aarch64__)

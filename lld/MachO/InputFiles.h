@@ -65,6 +65,8 @@ protected:
   void parseSymbols(ArrayRef<lld::structs::nlist_64> nList, const char *strtab,
                     bool subsectionsViaSymbols);
 
+  Symbol *parseNonSectionSymbol(const structs::nlist_64 &sym, StringRef name);
+
   void parseRelocations(const llvm::MachO::section_64 &, SubsectionMap &);
 
 private:
@@ -107,6 +109,7 @@ public:
   StringRef dylibName;
   uint64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
   bool reexport = false;
+  bool forceWeakImport = false;
   std::vector<DylibFile *> reexported;
 };
 

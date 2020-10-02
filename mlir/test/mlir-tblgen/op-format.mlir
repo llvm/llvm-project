@@ -213,6 +213,12 @@ test.format_custom_directive_operands_and_types %i64, %i64 -> (%i64) : i64, i64 
 // CHECK: test.format_custom_directive_operands_and_types %[[I64]] -> (%[[I64]]) : i64 -> (i64)
 test.format_custom_directive_operands_and_types %i64 -> (%i64) : i64 -> (i64)
 
+// CHECK: test.format_custom_directive_attributes 54 : i64
+test.format_custom_directive_attributes 54 : i64
+
+// CHECK: test.format_custom_directive_attributes 54 : i64, 46 : i64
+test.format_custom_directive_attributes 54 : i64, 46 : i64
+
 // CHECK: test.format_custom_directive_regions {
 // CHECK-NEXT: test.return
 // CHECK-NEXT: }
@@ -236,6 +242,12 @@ test.format_custom_directive_results : i64, i64 -> (i64)
 
 // CHECK: test.format_custom_directive_results : i64 -> (i64)
 test.format_custom_directive_results : i64 -> (i64)
+
+// CHECK: test.format_custom_directive_results_with_type_refs : i64, i64 -> (i64) type_refs_capture : i64, i64 -> (i64)
+test.format_custom_directive_results_with_type_refs : i64, i64 -> (i64) type_refs_capture : i64, i64 -> (i64)
+
+// CHECK: test.format_custom_directive_results_with_type_refs : i64 -> (i64) type_refs_capture : i64 -> (i64)
+test.format_custom_directive_results_with_type_refs : i64 -> (i64) type_refs_capture : i64 -> (i64)
 
 func @foo() {
   // CHECK: test.format_custom_directive_successors ^bb1, ^bb2

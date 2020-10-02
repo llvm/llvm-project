@@ -593,8 +593,8 @@ let RecomputePerFunction = 1 in {
   // Avoid generating STRQro if it is slow, unless we're optimizing for code size.
   def UseSTRQro : Predicate<"!Subtarget->isSTRQroSlow() || shouldOptForSize(MF)">;
 
-  def UseBTI : Predicate<[{ MF->getFunction().hasFnAttribute("branch-target-enforcement") }]>;
-  def NotUseBTI : Predicate<[{ !MF->getFunction().hasFnAttribute("branch-target-enforcement") }]>;
+  def UseBTI : Predicate<[{ MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() }]>;
+  def NotUseBTI : Predicate<[{ !MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() }]>;
 
   def SLSBLRMitigation : Predicate<[{ MF->getSubtarget<AArch64Subtarget>().hardenSlsBlr() }]>;
   def NoSLSBLRMitigation : Predicate<[{ !MF->getSubtarget<AArch64Subtarget>().hardenSlsBlr() }]>;
@@ -692,7 +692,8 @@ def : Pat<(AArch64LOADgot tconstpool:$addr),
 // 32-bit jump table destination is actually only 2 instructions since we can
 // use the table itself as a PC-relative base. But optimization occurs after
 // branch relaxation so be pessimistic.
-let Size = 12, Constraints = "@earlyclobber $dst,@earlyclobber $scratch" in {
+let Size = 12, Constraints = "@earlyclobber $dst,@earlyclobber $scratch",
+    isNotDuplicable = 1 in {
 def JumpTableDest32 : Pseudo<(outs GPR64:$dst, GPR64sp:$scratch),
                              (ins GPR64:$table, GPR64:$entry, i32imm:$jti), []>,
                       Sched<[]>;

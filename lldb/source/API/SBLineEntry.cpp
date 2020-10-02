@@ -56,7 +56,7 @@ SBAddress SBLineEntry::GetStartAddress() const {
 
   SBAddress sb_address;
   if (m_opaque_up)
-    sb_address.SetAddress(&m_opaque_up->range.GetBaseAddress());
+    sb_address.SetAddress(m_opaque_up->range.GetBaseAddress());
 
   return LLDB_RECORD_RESULT(sb_address);
 }
@@ -66,7 +66,7 @@ SBAddress SBLineEntry::GetEndAddress() const {
 
   SBAddress sb_address;
   if (m_opaque_up) {
-    sb_address.SetAddress(&m_opaque_up->range.GetBaseAddress());
+    sb_address.SetAddress(m_opaque_up->range.GetBaseAddress());
     sb_address.OffsetAddress(m_opaque_up->range.GetByteSize());
   }
   return LLDB_RECORD_RESULT(sb_address);

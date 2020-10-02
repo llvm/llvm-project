@@ -38,8 +38,11 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 ;  return random + a;
 ;}
 define dso_local double @heavyComputation1() {
-; CHECK-LABEL: define {{[^@]+}}@heavyComputation1()
+; CHECK-LABEL: define {{[^@]+}}@heavyComputation1() {
 ; CHECK-NEXT:  entry:
+
+; CHECK-NEXT:    %handle = alloca %struct.__tgt_async_info, align 8
+
 ; CHECK-NEXT:    %a = alloca double, align 8
 ; CHECK-NEXT:    %.offload_baseptrs = alloca [1 x i8*], align 8
 ; CHECK-NEXT:    %.offload_ptrs = alloca [1 x i8*], align 8
@@ -58,11 +61,11 @@ define dso_local double @heavyComputation1() {
 ; CHECK-NEXT:    %4 = bitcast [1 x i8*]* %.offload_ptrs to double**
 ; CHECK-NEXT:    store double* %a, double** %4, align 8
 
-; CHECK-NEXT:    %handle = call %struct.__tgt_async_info @__tgt_target_data_begin_mapper_issue(i64 -1, i32 1, i8** %1, i8** %3, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_sizes.1, i64 0, i64 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_maptypes, i64 0, i64 0), i8** null)
+; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper_issue(i64 -1, i32 1, i8** %1, i8** %3, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_sizes.1, i64 0, i64 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_maptypes, i64 0, i64 0), i8** null, %struct.__tgt_async_info* %handle)
 
 ; CHECK-NEXT:    %5 = bitcast double* %a to i64*
 
-; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper_wait(i64 -1, %struct.__tgt_async_info %handle)
+; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper_wait(i64 -1, %struct.__tgt_async_info* %handle)
 
 ; CHECK-NEXT:    %6 = load i64, i64* %5, align 8
 ; CHECK-NEXT:    %7 = getelementptr inbounds [1 x i8*], [1 x i8*]* %.offload_baseptrs4, i64 0, i64 0
@@ -157,7 +160,7 @@ entry:
 ;  return random;
 ;}
 define dso_local i32 @heavyComputation2(double* %a, i32 %size) {
-; CHECK-LABEL: define {{[^@]+}}@heavyComputation2(double* %a, i32 %size)
+; CHECK-LABEL: define {{[^@]+}}@heavyComputation2(double* %a, i32 %size) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    %size.addr = alloca i32, align 4
 ; CHECK-NEXT:    %.offload_baseptrs = alloca [2 x i8*], align 8
@@ -297,7 +300,7 @@ entry:
 ;  return random;
 ;}
 define dso_local i32 @heavyComputation3(double* noalias %a, i32 %size) {
-; CHECK-LABEL: define {{[^@]+}}@heavyComputation3(double* noalias %a, i32 %size)
+; CHECK-LABEL: define {{[^@]+}}@heavyComputation3(double* noalias %a, i32 %size) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    %size.addr = alloca i32, align 4
 ; CHECK-NEXT:    %.offload_baseptrs = alloca [2 x i8*], align 8
@@ -435,8 +438,11 @@ entry:
 ;  return random;
 ;}
 define dso_local i32 @dataTransferOnly1(double* noalias %a, i32 %size) {
-; CHECK-LABEL: define {{[^@]+}}@dataTransferOnly1(double* noalias %a, i32 %size)
+; CHECK-LABEL: define {{[^@]+}}@dataTransferOnly1(double* noalias %a, i32 %size) {
 ; CHECK-NEXT:  entry:
+
+; CHECK-NEXT:    %handle = alloca %struct.__tgt_async_info, align 8
+
 ; CHECK-NEXT:    %.offload_baseptrs = alloca [1 x i8*], align 8
 ; CHECK-NEXT:    %.offload_ptrs = alloca [1 x i8*], align 8
 ; CHECK-NEXT:    %.offload_sizes = alloca [1 x i64], align 8
@@ -452,11 +458,11 @@ define dso_local i32 @dataTransferOnly1(double* noalias %a, i32 %size) {
 ; CHECK-NEXT:    %5 = getelementptr inbounds [1 x i64], [1 x i64]* %.offload_sizes, i64 0, i64 0
 ; CHECK-NEXT:    store i64 %0, i64* %5, align 8
 
-; CHECK-NEXT:    %handle = call %struct.__tgt_async_info @__tgt_target_data_begin_mapper_issue(i64 -1, i32 1, i8** %1, i8** %3, i64* %5, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_maptypes.5, i64 0, i64 0), i8** null)
+; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper_issue(i64 -1, i32 1, i8** %1, i8** %3, i64* %5, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_maptypes.5, i64 0, i64 0), i8** null, %struct.__tgt_async_info* %handle)
 
 ; CHECK-NEXT:    %rem = urem i32 %call, %size
 
-; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper_wait(i64 -1, %struct.__tgt_async_info %handle)
+; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper_wait(i64 -1, %struct.__tgt_async_info* %handle)
 
 ; CHECK-NEXT:    call void @__tgt_target_data_end_mapper(i64 -1, i32 1, i8** nonnull %1, i8** nonnull %3, i64* nonnull %5, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_maptypes.5, i64 0, i64 0), i8** null)
 ; CHECK-NEXT:    ret i32 %rem
@@ -493,5 +499,5 @@ declare void @__tgt_target_data_end_mapper(i64, i32, i8**, i8**, i64*, i64*, i8*
 
 declare dso_local i32 @rand(...)
 
-; CHECK: declare %struct.__tgt_async_info @__tgt_target_data_begin_mapper_issue(i64, i32, i8**, i8**, i64*, i64*, i8**)
-; CHECK: declare void @__tgt_target_data_begin_mapper_wait(i64, %struct.__tgt_async_info)
+; CHECK: declare void @__tgt_target_data_begin_mapper_issue(i64, i32, i8**, i8**, i64*, i64*, i8**, %struct.__tgt_async_info*)
+; CHECK: declare void @__tgt_target_data_begin_mapper_wait(i64, %struct.__tgt_async_info*)

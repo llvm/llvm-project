@@ -1636,6 +1636,14 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
   if (ExpoF->isNegative() && (!Pow->hasApproxFunc() && !Pow->hasAllowReassoc()))
     return nullptr;
 
+  // If we have a pow() library call (accesses memory) and we can't guarantee
+  // that the base is not an infinity, give up:
+  // pow(-Inf, 0.5) is optionally required to have a result of +Inf (not setting
+  // errno), but sqrt(-Inf) is required by various standards to set errno.
+  if (!Pow->doesNotAccessMemory() && !Pow->hasNoInfs() &&
+      !isKnownNeverInfinity(Base, TLI))
+    return nullptr;
+
   Sqrt = getSqrtCall(Base, Attrs, Pow->doesNotAccessMemory(), Mod, B, TLI);
   if (!Sqrt)
     return nullptr;
@@ -1722,7 +1730,8 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
 
   // pow(x, n) -> x * x * x * ...
   const APFloat *ExpoF;
-  if (AllowApprox && match(Expo, m_APFloat(ExpoF))) {
+  if (AllowApprox && match(Expo, m_APFloat(ExpoF)) &&
+      !ExpoF->isExactlyValue(0.5) && !ExpoF->isExactlyValue(-0.5)) {
     // We limit to a max of 7 multiplications, thus the maximum exponent is 32.
     // If the exponent is an integer+0.5 we generate a call to sqrt and an
     // additional fmul.

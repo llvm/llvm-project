@@ -2172,6 +2172,17 @@ programs using the same instrumentation method as ``-fprofile-generate``.
   profile file, it reads from that file. If ``pathname`` is a directory name,
   it reads from ``pathname/default.profdata``.
 
+.. option:: -fprofile-update[=<method>]
+
+  Unless ``-fsanitize=thread`` is specified, the default is ``single``, which
+  uses non-atomic increments. The counters can be inaccurate under thread
+  contention. ``atomic`` uses atomic increments which is accurate but has
+  overhead. ``prefer-atomic`` will be transformed to ``atomic`` when supported
+  by the target, or ``single`` otherwise.
+
+  This option currently works with ``-fprofile-arcs`` and ``-fprofile-instr-generate``,
+  but not with ``-fprofile-generate``.
+
 Disabling Instrumentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 

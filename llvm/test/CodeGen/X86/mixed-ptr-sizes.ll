@@ -69,8 +69,8 @@ define dso_local void @test_zero_ext(%struct.Foo* %f, i32 addrspace(271)* %i) {
 ; CHECK-O0-LABEL: test_zero_ext:
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    movl %edx, %eax
-; CHECK-O0-NEXT:    movl %eax, %r8d
-; CHECK-O0-NEXT:    movq %r8, 8(%rcx)
+; CHECK-O0-NEXT:    # kill: def $rax killed $eax
+; CHECK-O0-NEXT:    movq %rax, 8(%rcx)
 ; CHECK-O0-NEXT:    jmp use_foo # TAILCALL
 entry:
   %0 = addrspacecast i32 addrspace(271)* %i to i32*
@@ -88,8 +88,8 @@ define dso_local void @test_trunc(%struct.Foo* %f, i32* %i) {
 ;
 ; CHECK-O0-LABEL: test_trunc:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    # kill: def $edx killed $edx killed $rdx
-; CHECK-O0-NEXT:    movl %edx, (%rcx)
+; CHECK-O0-NEXT:    movl %edx, %eax
+; CHECK-O0-NEXT:    movl %eax, (%rcx)
 ; CHECK-O0-NEXT:    jmp use_foo # TAILCALL
 entry:
   %0 = addrspacecast i32* %i to i32 addrspace(270)*
@@ -135,8 +135,6 @@ define dso_local void @test_null_arg(%struct.Foo* %f) {
 ; ALL-NEXT:    nop
 ; ALL-NEXT:    addq $40, %rsp
 ; ALL-NEXT:    retq
-; ALL-NEXT:    .seh_handlerdata
-; ALL-NEXT:    .text
 ; ALL-NEXT:    .seh_endproc
 entry:
   call void @test_noop1(%struct.Foo* %f, i32 addrspace(270)* null)
@@ -152,8 +150,8 @@ define void @test_unrecognized(%struct.Foo* %f, i32 addrspace(14)* %i) {
 ;
 ; CHECK-O0-LABEL: test_unrecognized:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    # kill: def $edx killed $edx killed $rdx
-; CHECK-O0-NEXT:    movl %edx, (%rcx)
+; CHECK-O0-NEXT:    movl %edx, %eax
+; CHECK-O0-NEXT:    movl %eax, (%rcx)
 ; CHECK-O0-NEXT:    jmp use_foo # TAILCALL
 entry:
   %0 = addrspacecast i32 addrspace(14)* %i to i32 addrspace(270)*
@@ -173,8 +171,8 @@ define void @test_unrecognized2(%struct.Foo* %f, i32 addrspace(271)* %i) {
 ; CHECK-O0-LABEL: test_unrecognized2:
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    movl %edx, %eax
-; CHECK-O0-NEXT:    movl %eax, %r8d
-; CHECK-O0-NEXT:    movq %r8, 16(%rcx)
+; CHECK-O0-NEXT:    # kill: def $rax killed $eax
+; CHECK-O0-NEXT:    movq %rax, 16(%rcx)
 ; CHECK-O0-NEXT:    jmp use_foo # TAILCALL
 entry:
   %0 = addrspacecast i32 addrspace(271)* %i to i32 addrspace(9)*
@@ -205,8 +203,8 @@ define i32 @test_load_uptr32(i32 addrspace(271)* %i) {
 ; CHECK-O0-LABEL: test_load_uptr32:
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    movl %ecx, %eax
-; CHECK-O0-NEXT:    movl %eax, %edx
-; CHECK-O0-NEXT:    movl (%rdx), %eax
+; CHECK-O0-NEXT:    # kill: def $rax killed $eax
+; CHECK-O0-NEXT:    movl (%rax), %eax
 ; CHECK-O0-NEXT:    retq
 entry:
   %0 = load i32, i32 addrspace(271)* %i, align 4
@@ -244,8 +242,8 @@ define void @test_store_uptr32(i32 addrspace(271)* %s, i32 %i) {
 ; CHECK-O0-LABEL: test_store_uptr32:
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    movl %ecx, %eax
-; CHECK-O0-NEXT:    movl %eax, %r8d
-; CHECK-O0-NEXT:    movl %edx, (%r8)
+; CHECK-O0-NEXT:    # kill: def $rax killed $eax
+; CHECK-O0-NEXT:    movl %edx, (%rax)
 ; CHECK-O0-NEXT:    retq
 entry:
   store i32 %i, i32 addrspace(271)* %s, align 4

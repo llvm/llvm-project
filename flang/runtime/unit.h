@@ -78,6 +78,7 @@ public:
   std::optional<char32_t> GetCurrentChar(IoErrorHandler &);
   void SetLeftTabLimit();
   void BeginReadingRecord(IoErrorHandler &);
+  void FinishReadingRecord(IoErrorHandler &);
   bool AdvanceRecord(IoErrorHandler &);
   void BackspaceRecord(IoErrorHandler &);
   void FlushIfTerminal(IoErrorHandler &);
@@ -105,6 +106,7 @@ private:
   int unitNumber_{-1};
   Direction direction_{Direction::Output};
   bool impliedEndfile_{false}; // seq. output has taken place
+  bool beganReadingRecord_{false};
 
   Lock lock_;
 

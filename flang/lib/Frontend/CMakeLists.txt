@@ -3,6 +3,9 @@ add_flang_library(flangFrontend
   CompilerInvocation.cpp
   FrontendOptions.cpp
 
+  DEPENDS
+  clangBasic
+
   LINK_LIBS
   clangBasic
   clangDriver

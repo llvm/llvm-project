@@ -132,16 +132,17 @@ void ExternalFileUnit::OpenUnit(OpenStatus status, std::optional<Action> action,
           static_cast<std::intmax_t>(*totalBytes));
     }
   }
+  endfileRecordNumber.reset();
+  currentRecordNumber = 1;
+  if (totalBytes && recordLength && *recordLength) {
+    endfileRecordNumber = 1 + (*totalBytes / *recordLength);
+  }
   if (position == Position::Append) {
-    if (totalBytes && recordLength && *recordLength) {
-      endfileRecordNumber = 1 + (*totalBytes / *recordLength);
-    } else {
+    if (!endfileRecordNumber) {
       // Fake it so that we can backspace relative from the end
-      endfileRecordNumber = std::numeric_limits<std::int64_t>::max() - 1;
+      endfileRecordNumber = std::numeric_limits<std::int64_t>::max() - 2;
     }
     currentRecordNumber = *endfileRecordNumber;
-  } else {
-    currentRecordNumber = 1;
   }
 }
 
@@ -290,7 +291,7 @@ bool ExternalFileUnit::Receive(char *data, std::size_t bytes,
     furthestPositionInRecord = furthestAfter;
     return true;
   } else {
-    handler.SignalEnd();
+    // EOF or error: can be handled & has been signaled
     endfileRecordNumber = currentRecordNumber;
     return false;
   }
@@ -349,6 +350,10 @@ void ExternalFileUnit::SetLeftTabLimit() {
 
 void ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
   RUNTIME_CHECK(handler, direction_ == Direction::Input);
+  if (beganReadingRecord_) {
+    return;
+  }
+  beganReadingRecord_ = true;
   if (access == Access::Sequential) {
     if (endfileRecordNumber && currentRecordNumber >= *endfileRecordNumber) {
       handler.SignalEnd();
@@ -367,28 +372,39 @@ void ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
   }
 }
 
+void ExternalFileUnit::FinishReadingRecord(IoErrorHandler &handler) {
+  RUNTIME_CHECK(handler, direction_ == Direction::Input && beganReadingRecord_);
+  beganReadingRecord_ = false;
+  if (handler.GetIoStat() != IostatOk) {
+    // avoid bogus crashes in END/ERR circumstances
+  } else if (access == Access::Sequential) {
+    RUNTIME_CHECK(handler, recordLength.has_value());
+    if (isFixedRecordLength) {
+      frameOffsetInFile_ += recordOffsetInFrame_ + *recordLength;
+      recordOffsetInFrame_ = 0;
+    } else if (isUnformatted) {
+      // Retain footer in frame for more efficient BACKSPACE
+      frameOffsetInFile_ += recordOffsetInFrame_ + *recordLength;
+      recordOffsetInFrame_ = sizeof(std::uint32_t);
+      recordLength.reset();
+    } else { // formatted
+      if (Frame()[recordOffsetInFrame_ + *recordLength] == '\r') {
+        ++recordOffsetInFrame_;
+      }
+      recordOffsetInFrame_ += *recordLength + 1;
+      RUNTIME_CHECK(handler, Frame()[recordOffsetInFrame_ - 1] == '\n');
+      recordLength.reset();
+    }
+  }
+  ++currentRecordNumber;
+  BeginRecord();
+}
+
 bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
   bool ok{true};
   if (direction_ == Direction::Input) {
-    if (access == Access::Sequential) {
-      RUNTIME_CHECK(handler, recordLength.has_value());
-      if (isFixedRecordLength) {
-        frameOffsetInFile_ += recordOffsetInFrame_ + *recordLength;
-        recordOffsetInFrame_ = 0;
-      } else if (isUnformatted) {
-        // Retain footer in frame for more efficient BACKSPACE
-        frameOffsetInFile_ += recordOffsetInFrame_ + *recordLength;
-        recordOffsetInFrame_ = sizeof(std::uint32_t);
-        recordLength.reset();
-      } else { // formatted
-        if (Frame()[recordOffsetInFrame_ + *recordLength] == '\r') {
-          ++recordOffsetInFrame_;
-        }
-        recordOffsetInFrame_ += *recordLength + 1;
-        RUNTIME_CHECK(handler, Frame()[recordOffsetInFrame_ - 1] == '\n');
-        recordLength.reset();
-      }
-    }
+    FinishReadingRecord(handler);
+    BeginReadingRecord(handler);
   } else { // Direction::Output
     if (!isUnformatted) {
       if (isFixedRecordLength && recordLength) {
@@ -406,9 +422,9 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
         recordOffsetInFrame_ + recordLength.value_or(furthestPositionInRecord);
     recordOffsetInFrame_ = 0;
     impliedEndfile_ = true;
+    ++currentRecordNumber;
+    BeginRecord();
   }
-  ++currentRecordNumber;
-  BeginRecord();
   return ok;
 }
 
@@ -417,16 +433,22 @@ void ExternalFileUnit::BackspaceRecord(IoErrorHandler &handler) {
     handler.SignalError(IostatBackspaceNonSequential,
         "BACKSPACE(UNIT=%d) on non-sequential file", unitNumber());
   } else {
-    DoImpliedEndfile(handler);
-    --currentRecordNumber;
-    BeginRecord();
-    if (isFixedRecordLength) {
-      BackspaceFixedRecord(handler);
-    } else if (isUnformatted) {
-      BackspaceVariableUnformattedRecord(handler);
+    if (endfileRecordNumber && currentRecordNumber > *endfileRecordNumber) {
+      // BACKSPACE after ENDFILE
     } else {
-      BackspaceVariableFormattedRecord(handler);
+      DoImpliedEndfile(handler);
+      if (frameOffsetInFile_ + recordOffsetInFrame_ > 0) {
+        --currentRecordNumber;
+        if (isFixedRecordLength) {
+          BackspaceFixedRecord(handler);
+        } else if (isUnformatted) {
+          BackspaceVariableUnformattedRecord(handler);
+        } else {
+          BackspaceVariableFormattedRecord(handler);
+        }
+      }
     }
+    BeginRecord();
   }
 }
 
@@ -443,8 +465,12 @@ void ExternalFileUnit::Endfile(IoErrorHandler &handler) {
   } else if (!mayWrite()) {
     handler.SignalError(IostatEndfileUnwritable,
         "ENDFILE(UNIT=%d) on read-only file", unitNumber());
+  } else if (endfileRecordNumber &&
+      currentRecordNumber > *endfileRecordNumber) {
+    // ENDFILE after ENDFILE
   } else {
     DoEndfile(handler);
+    ++currentRecordNumber;
   }
 }
 
@@ -456,7 +482,6 @@ void ExternalFileUnit::Rewind(IoErrorHandler &handler) {
     DoImpliedEndfile(handler);
     SetPosition(0);
     currentRecordNumber = 1;
-    // TODO: reset endfileRecordNumber?
   }
 }
 

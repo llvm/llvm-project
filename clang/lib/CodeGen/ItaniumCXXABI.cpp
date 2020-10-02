@@ -2111,7 +2111,7 @@ CharUnits ItaniumCXXABI::getArrayCookieSizeImpl(QualType elementType) {
   // The array cookie is a size_t; pad that up to the element alignment.
   // The cookie is actually right-justified in that space.
   return std::max(CharUnits::fromQuantity(CGM.SizeSizeInBytes),
-                  CGM.getContext().getTypeAlignInChars(elementType));
+                  CGM.getContext().getPreferredTypeAlignInChars(elementType));
 }
 
 Address ItaniumCXXABI::InitializeArrayCookie(CodeGenFunction &CGF,
@@ -2128,7 +2128,7 @@ Address ItaniumCXXABI::InitializeArrayCookie(CodeGenFunction &CGF,
 
   // The size of the cookie.
   CharUnits CookieSize =
-    std::max(SizeSize, Ctx.getTypeAlignInChars(ElementType));
+      std::max(SizeSize, Ctx.getPreferredTypeAlignInChars(ElementType));
   assert(CookieSize == getArrayCookieSizeImpl(ElementType));
 
   // Compute an offset to the cookie.

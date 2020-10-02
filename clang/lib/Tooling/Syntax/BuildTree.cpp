@@ -155,10 +155,10 @@ private:
 } // namespace
 
 static CallExpr::arg_range dropDefaultArgs(CallExpr::arg_range Args) {
-  auto firstDefaultArg = std::find_if(Args.begin(), Args.end(), [](auto it) {
-    return isa<CXXDefaultArgExpr>(it);
+  auto FirstDefaultArg = std::find_if(Args.begin(), Args.end(), [](auto It) {
+    return isa<CXXDefaultArgExpr>(It);
   });
-  return llvm::make_range(Args.begin(), firstDefaultArg);
+  return llvm::make_range(Args.begin(), FirstDefaultArg);
 }
 
 static syntax::NodeKind getOperatorNodeKind(const CXXOperatorCallExpr &E) {
@@ -397,6 +397,17 @@ public:
       Mapping.add(From, New);
   }
 
+  /// Populate children for \p New list, assuming it covers tokens from a
+  /// subrange of \p SuperRange.
+  void foldList(ArrayRef<syntax::Token> SuperRange, syntax::List *New,
+                ASTPtr From) {
+    assert(New);
+    auto ListRange = Pending.shrinkToFitList(SuperRange);
+    Pending.foldChildren(Arena, ListRange, New);
+    if (From)
+      Mapping.add(From, New);
+  }
+
   /// Notifies that we should not consume trailing semicolon when computing
   /// token range of \p D.
   void noticeDeclWithoutSemicolon(Decl *D);
@@ -577,6 +588,35 @@ private:
       assert(It->second->getRole() == NodeRole::Detached &&
              "re-assigning role for a child");
       It->second->setRole(Role);
+    }
+
+    /// Shrink \p Range to a subrange that only contains tokens of a list.
+    /// List elements and delimiters should already have correct roles.
+    ArrayRef<syntax::Token> shrinkToFitList(ArrayRef<syntax::Token> Range) {
+      auto BeginChildren = Trees.lower_bound(Range.begin());
+      assert((BeginChildren == Trees.end() ||
+              BeginChildren->first == Range.begin()) &&
+             "Range crosses boundaries of existing subtrees");
+
+      auto EndChildren = Trees.lower_bound(Range.end());
+      assert(
+          (EndChildren == Trees.end() || EndChildren->first == Range.end()) &&
+          "Range crosses boundaries of existing subtrees");
+
+      auto BelongsToList = [](decltype(Trees)::value_type KV) {
+        auto Role = KV.second->getRole();
+        return Role == syntax::NodeRole::ListElement ||
+               Role == syntax::NodeRole::ListDelimiter;
+      };
+
+      auto BeginListChildren =
+          std::find_if(BeginChildren, EndChildren, BelongsToList);
+
+      auto EndListChildren =
+          std::find_if_not(BeginListChildren, EndChildren, BelongsToList);
+
+      return ArrayRef<syntax::Token>(BeginListChildren->first,
+                                     EndListChildren->first);
     }
 
     /// Add \p Node to the forest and attach child nodes based on \p Tokens.
@@ -954,12 +994,12 @@ public:
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc QualifierLoc) {
     if (!QualifierLoc)
       return true;
-    for (auto it = QualifierLoc; it; it = it.getPrefix()) {
-      auto *NS = buildNameSpecifier(it);
+    for (auto It = QualifierLoc; It; It = It.getPrefix()) {
+      auto *NS = buildNameSpecifier(It);
       if (!NS)
         return false;
       Builder.markChild(NS, syntax::NodeRole::ListElement);
-      Builder.markChildToken(it.getEndLoc(), syntax::NodeRole::ListDelimiter);
+      Builder.markChildToken(It.getEndLoc(), syntax::NodeRole::ListDelimiter);
     }
     Builder.foldNode(Builder.getRange(QualifierLoc.getSourceRange()),
                      new (allocator()) syntax::NestedNameSpecifier,
@@ -1513,14 +1553,31 @@ private:
 
     // There doesn't have to be a declarator (e.g. `void foo(int)` only has
     // declaration, but no declarator).
-    if (Range.getBegin().isValid()) {
-      auto *N = new (allocator()) syntax::SimpleDeclarator;
-      Builder.foldNode(Builder.getRange(Range), N, nullptr);
-      Builder.markChild(N, syntax::NodeRole::Declarator);
+    if (!Range.getBegin().isValid()) {
+      Builder.markChild(new (allocator()) syntax::DeclaratorList,
+                        syntax::NodeRole::Declarators);
+      Builder.foldNode(Builder.getDeclarationRange(D),
+                       new (allocator()) syntax::SimpleDeclaration, D);
+      return true;
     }
 
-    if (Builder.isResponsibleForCreatingDeclaration(D)) {
-      Builder.foldNode(Builder.getDeclarationRange(D),
+    auto *N = new (allocator()) syntax::SimpleDeclarator;
+    Builder.foldNode(Builder.getRange(Range), N, nullptr);
+    Builder.markChild(N, syntax::NodeRole::ListElement);
+
+    if (!Builder.isResponsibleForCreatingDeclaration(D)) {
+      // If this is not the last declarator in the declaration we expect a
+      // delimiter after it.
+      const auto *DelimiterToken = std::next(Builder.findToken(Range.getEnd()));
+      if (DelimiterToken->kind() == clang::tok::TokenKind::comma)
+        Builder.markChildToken(DelimiterToken, syntax::NodeRole::ListDelimiter);
+    } else {
+      auto *DL = new (allocator()) syntax::DeclaratorList;
+      auto DeclarationRange = Builder.getDeclarationRange(D);
+      Builder.foldList(DeclarationRange, DL, nullptr);
+
+      Builder.markChild(DL, syntax::NodeRole::Declarators);
+      Builder.foldNode(DeclarationRange,
                        new (allocator()) syntax::SimpleDeclaration, D);
     }
     return true;

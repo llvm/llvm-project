@@ -2289,6 +2289,10 @@ bool VarDecl::mightBeUsableInConstantExpressions(ASTContext &C) const {
   if (isa<ParmVarDecl>(this))
     return false;
 
+  // The values of weak variables are never usable in constant expressions.
+  if (isWeak())
+    return false;
+
   // In C++11, any variable of reference type can be used in a constant
   // expression if it is initialized by a constant expression.
   if (Lang.CPlusPlus11 && getType()->isReferenceType())
@@ -2416,10 +2420,6 @@ bool VarDecl::isInitICE() const {
 }
 
 bool VarDecl::checkInitIsICE() const {
-  // Initializers of weak variables are never ICEs.
-  if (isWeak())
-    return false;
-
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
   if (Eval->CheckedICE)
     // We have already checked whether this subexpression is an
@@ -4688,11 +4688,9 @@ char *Buffer = new (getASTContext(), 1) char[Name.size() + 1];
 void ValueDecl::anchor() {}
 
 bool ValueDecl::isWeak() const {
-  for (const auto *I : getMostRecentDecl()->attrs())
-    if (isa<WeakAttr>(I) || isa<WeakRefAttr>(I))
-      return true;
-
-  return isWeakImported();
+  auto *MostRecent = getMostRecentDecl();
+  return MostRecent->hasAttr<WeakAttr>() ||
+         MostRecent->hasAttr<WeakRefAttr>() || isWeakImported();
 }
 
 void ImplicitParamDecl::anchor() {}

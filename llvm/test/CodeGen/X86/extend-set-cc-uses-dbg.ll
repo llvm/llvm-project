@@ -7,8 +7,9 @@ define void @foo(i32* %p) !dbg !4 {
 bb:
   %tmp = load i32, i32* %p, align 4, !dbg !7
   ; CHECK: $eax = MOV32rm killed {{.*}} $rdi, {{.*}} debug-location !7 :: (load 4 from %ir.p)
-  ; CHECK-NEXT: $ecx = MOV32rr killed $eax, implicit-def $rcx, debug-location !7
-  ; CHECK-NEXT: $rdx = MOV64rr $rcx, debug-location !7
+  ; CHECK-NEXT: $rax = KILL killed renamable $eax, debug-location !7
+  ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -8, $noreg, $rax :: (store 8 into %stack.0)
+  ; CHECK-NEXT: SUB64ri8 renamable $rax, 3, implicit-def $eflags, debug-location !7
 
   switch i32 %tmp, label %bb7 [
     i32 0, label %bb1

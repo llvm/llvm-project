@@ -192,6 +192,7 @@ fun:strcmp=custom
 fun:strlen=custom
 fun:strncasecmp=custom
 fun:strncmp=custom
+fun:strpbrk=custom
 fun:strrchr=custom
 fun:strstr=custom
 

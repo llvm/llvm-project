@@ -278,10 +278,6 @@ void HIPToolChain::addClangTargetOptions(
                          options::OPT_fno_gpu_allow_device_init, false))
     CC1Args.push_back("-fgpu-allow-device-init");
 
-  if (DriverArgs.hasFlag(options::OPT_fgpu_defer_diag,
-                         options::OPT_fno_gpu_defer_diag, false))
-    CC1Args.push_back("-fgpu-defer-diag");
-
   CC1Args.push_back("-fcuda-allow-variadic-functions");
 
   // Default to "hidden" visibility, as object level linking will not be
@@ -355,7 +351,8 @@ HIPToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   const OptTable &Opts = getDriver().getOpts();
 
   for (Arg *A : Args) {
-    DAL->append(A);
+    if (!shouldSkipArgument(A))
+      DAL->append(A);
   }
 
   if (!BoundArch.empty()) {

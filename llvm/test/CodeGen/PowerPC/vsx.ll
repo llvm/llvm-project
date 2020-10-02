@@ -164,8 +164,7 @@ define <8 x i16> @test6(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; CHECK-FISL-LABEL: test6:
 ; CHECK-FISL:       # %bb.0: # %entry
-; CHECK-FISL-NEXT:    xxlxor vs0, v2, v3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    xxlxor v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test6:
@@ -193,8 +192,7 @@ define <16 x i8> @test7(<16 x i8> %a, <16 x i8> %b) {
 ;
 ; CHECK-FISL-LABEL: test7:
 ; CHECK-FISL:       # %bb.0: # %entry
-; CHECK-FISL-NEXT:    xxlxor vs0, v2, v3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    xxlxor v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test7:
@@ -250,8 +248,7 @@ define <8 x i16> @test9(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; CHECK-FISL-LABEL: test9:
 ; CHECK-FISL:       # %bb.0: # %entry
-; CHECK-FISL-NEXT:    xxlor vs0, v2, v3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    xxlor v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test9:
@@ -279,8 +276,7 @@ define <16 x i8> @test10(<16 x i8> %a, <16 x i8> %b) {
 ;
 ; CHECK-FISL-LABEL: test10:
 ; CHECK-FISL:       # %bb.0: # %entry
-; CHECK-FISL-NEXT:    xxlor vs0, v2, v3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    xxlor v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test10:
@@ -336,8 +332,7 @@ define <8 x i16> @test12(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; CHECK-FISL-LABEL: test12:
 ; CHECK-FISL:       # %bb.0: # %entry
-; CHECK-FISL-NEXT:    xxland vs0, v2, v3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    xxland v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test12:
@@ -365,8 +360,7 @@ define <16 x i8> @test13(<16 x i8> %a, <16 x i8> %b) {
 ;
 ; CHECK-FISL-LABEL: test13:
 ; CHECK-FISL:       # %bb.0: # %entry
-; CHECK-FISL-NEXT:    xxland vs0, v2, v3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    xxland v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test13:
@@ -424,10 +418,8 @@ define <8 x i16> @test15(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; CHECK-FISL-LABEL: test15:
 ; CHECK-FISL:       # %bb.0: # %entry
-; CHECK-FISL-NEXT:    xxlor vs0, v2, v3
-; CHECK-FISL-NEXT:    xxlor v4, vs0, vs0
-; CHECK-FISL-NEXT:    xxlnor vs0, v2, v3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    xxlor v4, v2, v3
+; CHECK-FISL-NEXT:    xxlnor v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test15:
@@ -456,10 +448,8 @@ define <16 x i8> @test16(<16 x i8> %a, <16 x i8> %b) {
 ;
 ; CHECK-FISL-LABEL: test16:
 ; CHECK-FISL:       # %bb.0: # %entry
-; CHECK-FISL-NEXT:    xxlor vs0, v2, v3
-; CHECK-FISL-NEXT:    xxlor v4, vs0, vs0
-; CHECK-FISL-NEXT:    xxlnor vs0, v2, v3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    xxlor v4, v2, v3
+; CHECK-FISL-NEXT:    xxlnor v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test16:
@@ -518,10 +508,8 @@ define <8 x i16> @test18(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; CHECK-FISL-LABEL: test18:
 ; CHECK-FISL:       # %bb.0: # %entry
-; CHECK-FISL-NEXT:    xxlnor vs0, v3, v3
-; CHECK-FISL-NEXT:    xxlor v4, vs0, vs0
-; CHECK-FISL-NEXT:    xxlandc vs0, v2, v3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    xxlnor v4, v3, v3
+; CHECK-FISL-NEXT:    xxlandc v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test18:
@@ -550,10 +538,8 @@ define <16 x i8> @test19(<16 x i8> %a, <16 x i8> %b) {
 ;
 ; CHECK-FISL-LABEL: test19:
 ; CHECK-FISL:       # %bb.0: # %entry
-; CHECK-FISL-NEXT:    xxlnor vs0, v3, v3
-; CHECK-FISL-NEXT:    xxlor v4, vs0, vs0
-; CHECK-FISL-NEXT:    xxlandc vs0, v2, v3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    xxlnor v4, v3, v3
+; CHECK-FISL-NEXT:    xxlandc v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test19:
@@ -664,10 +650,10 @@ define <4 x float> @test22(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x 
 ; CHECK-FISL:       # %bb.0: # %entry
 ; CHECK-FISL-NEXT:    xvcmpeqsp vs0, v4, v5
 ; CHECK-FISL-NEXT:    xvcmpeqsp vs1, v5, v5
+; CHECK-FISL-NEXT:    xxlnor vs2, vs1, vs1
+; CHECK-FISL-NEXT:    xvcmpeqsp vs1, v4, v4
 ; CHECK-FISL-NEXT:    xxlnor vs1, vs1, vs1
-; CHECK-FISL-NEXT:    xvcmpeqsp vs2, v4, v4
-; CHECK-FISL-NEXT:    xxlnor vs2, vs2, vs2
-; CHECK-FISL-NEXT:    xxlor vs1, vs2, vs1
+; CHECK-FISL-NEXT:    xxlor vs1, vs1, vs2
 ; CHECK-FISL-NEXT:    xxlor vs0, vs0, vs1
 ; CHECK-FISL-NEXT:    xxsel v2, v3, v2, vs0
 ; CHECK-FISL-NEXT:    blr
@@ -708,8 +694,8 @@ define <8 x i16> @test23(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d)
 ; CHECK-FISL-LABEL: test23:
 ; CHECK-FISL:       # %bb.0: # %entry
 ; CHECK-FISL-NEXT:    vcmpequh v4, v4, v5
-; CHECK-FISL-NEXT:    xxsel vs0, v3, v2, v4
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    xxlor vs0, v4, v4
+; CHECK-FISL-NEXT:    xxsel v2, v3, v2, vs0
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test23:
@@ -742,8 +728,8 @@ define <16 x i8> @test24(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d)
 ; CHECK-FISL-LABEL: test24:
 ; CHECK-FISL:       # %bb.0: # %entry
 ; CHECK-FISL-NEXT:    vcmpequb v4, v4, v5
-; CHECK-FISL-NEXT:    xxsel vs0, v3, v2, v4
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    xxlor vs0, v4, v4
+; CHECK-FISL-NEXT:    xxsel v2, v3, v2, vs0
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test24:
@@ -835,17 +821,16 @@ define <2 x i64> @test26(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-FISL-NEXT:    stxvd2x v3, 0, r3
 ; CHECK-FISL-NEXT:    addi r3, r1, -48
 ; CHECK-FISL-NEXT:    stxvd2x v2, 0, r3
-; CHECK-FISL-NEXT:    ld r3, -24(r1)
-; CHECK-FISL-NEXT:    ld r4, -40(r1)
-; CHECK-FISL-NEXT:    add r3, r4, r3
+; CHECK-FISL-NEXT:    ld r4, -24(r1)
+; CHECK-FISL-NEXT:    ld r3, -40(r1)
+; CHECK-FISL-NEXT:    add r3, r3, r4
 ; CHECK-FISL-NEXT:    std r3, -8(r1)
-; CHECK-FISL-NEXT:    ld r3, -32(r1)
-; CHECK-FISL-NEXT:    ld r4, -48(r1)
-; CHECK-FISL-NEXT:    add r3, r4, r3
+; CHECK-FISL-NEXT:    ld r4, -32(r1)
+; CHECK-FISL-NEXT:    ld r3, -48(r1)
+; CHECK-FISL-NEXT:    add r3, r3, r4
 ; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
-; CHECK-FISL-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    lxvd2x v2, 0, r3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test26:
@@ -875,8 +860,7 @@ define <2 x i64> @test27(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; CHECK-FISL-LABEL: test27:
 ; CHECK-FISL:       # %bb.0:
-; CHECK-FISL-NEXT:    xxland vs0, v2, v3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    xxland v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test27:
@@ -1010,8 +994,7 @@ define <2 x i64> @test30(<2 x i64>* %a) {
 ;
 ; CHECK-FISL-LABEL: test30:
 ; CHECK-FISL:       # %bb.0:
-; CHECK-FISL-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    lxvd2x v2, 0, r3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test30:
@@ -1129,10 +1112,10 @@ define <4 x float> @test32u(<4 x float>* %a) {
 ; CHECK-FISL-LABEL: test32u:
 ; CHECK-FISL:       # %bb.0:
 ; CHECK-FISL-NEXT:    li r4, 15
-; CHECK-FISL-NEXT:    lvx v2, r3, r4
-; CHECK-FISL-NEXT:    lvsl v3, 0, r3
-; CHECK-FISL-NEXT:    lvx v4, 0, r3
-; CHECK-FISL-NEXT:    vperm v2, v4, v2, v3
+; CHECK-FISL-NEXT:    lvx v3, r3, r4
+; CHECK-FISL-NEXT:    lvsl v4, 0, r3
+; CHECK-FISL-NEXT:    lvx v2, 0, r3
+; CHECK-FISL-NEXT:    vperm v2, v2, v3, v4
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test32u:
@@ -1390,10 +1373,10 @@ define <2 x float> @test44(<2 x i64> %a) {
 ; CHECK-FISL-NEXT:    fcfidus f0, f0
 ; CHECK-FISL-NEXT:    stfs f0, -64(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -48
-; CHECK-FISL-NEXT:    lxvw4x v2, 0, r3
-; CHECK-FISL-NEXT:    addi r3, r1, -64
 ; CHECK-FISL-NEXT:    lxvw4x v3, 0, r3
-; CHECK-FISL-NEXT:    vmrghw v2, v3, v2
+; CHECK-FISL-NEXT:    addi r3, r1, -64
+; CHECK-FISL-NEXT:    lxvw4x v2, 0, r3
+; CHECK-FISL-NEXT:    vmrghw v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test44:
@@ -1472,10 +1455,10 @@ define <2 x float> @test45(<2 x i64> %a) {
 ; CHECK-FISL-NEXT:    fcfids f0, f0
 ; CHECK-FISL-NEXT:    stfs f0, -64(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -48
-; CHECK-FISL-NEXT:    lxvw4x v2, 0, r3
-; CHECK-FISL-NEXT:    addi r3, r1, -64
 ; CHECK-FISL-NEXT:    lxvw4x v3, 0, r3
-; CHECK-FISL-NEXT:    vmrghw v2, v3, v2
+; CHECK-FISL-NEXT:    addi r3, r1, -64
+; CHECK-FISL-NEXT:    lxvw4x v2, 0, r3
+; CHECK-FISL-NEXT:    vmrghw v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test45:
@@ -1548,8 +1531,7 @@ define <2 x i64> @test46(<2 x float> %a) {
 ; CHECK-FISL-NEXT:    ld r3, -24(r1)
 ; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
-; CHECK-FISL-NEXT:    lxvd2x vs1, 0, r3
-; CHECK-FISL-NEXT:    xxlor v2, vs1, vs1
+; CHECK-FISL-NEXT:    lxvd2x v2, 0, r3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test46:
@@ -1616,8 +1598,7 @@ define <2 x i64> @test47(<2 x float> %a) {
 ; CHECK-FISL-NEXT:    ld r3, -24(r1)
 ; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
-; CHECK-FISL-NEXT:    lxvd2x vs1, 0, r3
-; CHECK-FISL-NEXT:    xxlor v2, vs1, vs1
+; CHECK-FISL-NEXT:    lxvd2x v2, 0, r3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test47:
@@ -1868,8 +1849,7 @@ define <2 x i64> @test60(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-FISL-NEXT:    sld r3, r3, r4
 ; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
-; CHECK-FISL-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    lxvd2x v2, 0, r3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test60:
@@ -1934,8 +1914,7 @@ define <2 x i64> @test61(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-FISL-NEXT:    srd r3, r3, r4
 ; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
-; CHECK-FISL-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    lxvd2x v2, 0, r3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test61:
@@ -2000,8 +1979,7 @@ define <2 x i64> @test62(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-FISL-NEXT:    srad r3, r3, r4
 ; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
-; CHECK-FISL-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    lxvd2x v2, 0, r3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test62:
@@ -2027,7 +2005,6 @@ define double @test63(<2 x double> %a) {
 ;
 ; CHECK-FISL-LABEL: test63:
 ; CHECK-FISL:       # %bb.0:
-; CHECK-FISL-NEXT:    # kill: def $vf2 killed $vf2 killed $v2
 ; CHECK-FISL-NEXT:    xxlor f1, v2, v2
 ; CHECK-FISL-NEXT:    blr
 ;
@@ -2059,7 +2036,6 @@ define double @test64(<2 x double> %a) {
 ; CHECK-FISL-LABEL: test64:
 ; CHECK-FISL:       # %bb.0:
 ; CHECK-FISL-NEXT:    xxswapd vs0, v2
-; CHECK-FISL-NEXT:    # kill: def $f0 killed $f0 killed $vsl0
 ; CHECK-FISL-NEXT:    fmr f1, f0
 ; CHECK-FISL-NEXT:    blr
 ;
@@ -2117,8 +2093,7 @@ define <2 x i1> @test66(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-FISL-LABEL: test66:
 ; CHECK-FISL:       # %bb.0:
 ; CHECK-FISL-NEXT:    vcmpequw v2, v2, v3
-; CHECK-FISL-NEXT:    xxlnor vs0, v2, v2
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    xxlnor v2, v2, v2
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test66:
@@ -2184,21 +2159,20 @@ define <2 x i1> @test67(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-FISL-NEXT:    stxvd2x v3, 0, r3
 ; CHECK-FISL-NEXT:    addi r3, r1, -48
 ; CHECK-FISL-NEXT:    stxvd2x v2, 0, r3
-; CHECK-FISL-NEXT:    ld r3, -24(r1)
-; CHECK-FISL-NEXT:    ld r4, -40(r1)
-; CHECK-FISL-NEXT:    cmpld r4, r3
-; CHECK-FISL-NEXT:    li r3, 0
-; CHECK-FISL-NEXT:    li r4, -1
-; CHECK-FISL-NEXT:    isellt r5, r4, r3
+; CHECK-FISL-NEXT:    ld r4, -24(r1)
+; CHECK-FISL-NEXT:    ld r3, -40(r1)
+; CHECK-FISL-NEXT:    cmpld r3, r4
+; CHECK-FISL-NEXT:    li r4, 0
+; CHECK-FISL-NEXT:    li r3, -1
+; CHECK-FISL-NEXT:    isellt r5, r3, r4
 ; CHECK-FISL-NEXT:    std r5, -8(r1)
-; CHECK-FISL-NEXT:    ld r5, -32(r1)
-; CHECK-FISL-NEXT:    ld r6, -48(r1)
-; CHECK-FISL-NEXT:    cmpld r6, r5
-; CHECK-FISL-NEXT:    isellt r3, r4, r3
+; CHECK-FISL-NEXT:    ld r6, -32(r1)
+; CHECK-FISL-NEXT:    ld r5, -48(r1)
+; CHECK-FISL-NEXT:    cmpld r5, r6
+; CHECK-FISL-NEXT:    isellt r3, r3, r4
 ; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
-; CHECK-FISL-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    lxvd2x v2, 0, r3
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test67:
@@ -2284,15 +2258,15 @@ define <2 x double> @test69(<2 x i16> %a) {
 ; CHECK-FISL-NEXT:    addi r3, r3, .LCPI63_0@toc@l
 ; CHECK-FISL-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-FISL-NEXT:    vperm v2, v2, v2, v3
+; CHECK-FISL-NEXT:    xxlor vs0, v2, v2
 ; CHECK-FISL-NEXT:    addi r3, r1, -32
-; CHECK-FISL-NEXT:    stxvd2x v2, 0, r3
+; CHECK-FISL-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-FISL-NEXT:    lha r3, -18(r1)
 ; CHECK-FISL-NEXT:    std r3, -8(r1)
 ; CHECK-FISL-NEXT:    lha r3, -26(r1)
 ; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
-; CHECK-FISL-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    lxvd2x v2, 0, r3
 ; CHECK-FISL-NEXT:    xvcvsxddp v2, v2
 ; CHECK-FISL-NEXT:    blr
 ;
@@ -2362,8 +2336,9 @@ define <2 x double> @test70(<2 x i8> %a) {
 ; CHECK-FISL-NEXT:    addi r3, r3, .LCPI64_0@toc@l
 ; CHECK-FISL-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-FISL-NEXT:    vperm v2, v2, v2, v3
+; CHECK-FISL-NEXT:    xxlor vs0, v2, v2
 ; CHECK-FISL-NEXT:    addi r3, r1, -32
-; CHECK-FISL-NEXT:    stxvd2x v2, 0, r3
+; CHECK-FISL-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-FISL-NEXT:    ld r3, -24(r1)
 ; CHECK-FISL-NEXT:    extsb r3, r3
 ; CHECK-FISL-NEXT:    std r3, -8(r1)
@@ -2371,8 +2346,7 @@ define <2 x double> @test70(<2 x i8> %a) {
 ; CHECK-FISL-NEXT:    extsb r3, r3
 ; CHECK-FISL-NEXT:    std r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
-; CHECK-FISL-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-FISL-NEXT:    xxlor v2, vs0, vs0
+; CHECK-FISL-NEXT:    lxvd2x v2, 0, r3
 ; CHECK-FISL-NEXT:    xvcvsxddp v2, v2
 ; CHECK-FISL-NEXT:    blr
 ;
@@ -2426,12 +2400,12 @@ define <2 x i32> @test80(i32 %v) {
 ; CHECK-FISL:       # %bb.0:
 ; CHECK-FISL-NEXT:    # kill: def $r3 killed $r3 killed $x3
 ; CHECK-FISL-NEXT:    stw r3, -16(r1)
-; CHECK-FISL-NEXT:    addi r4, r1, -16
-; CHECK-FISL-NEXT:    lxvw4x vs0, 0, r4
+; CHECK-FISL-NEXT:    addi r3, r1, -16
+; CHECK-FISL-NEXT:    lxvw4x vs0, 0, r3
 ; CHECK-FISL-NEXT:    xxspltw v2, vs0, 0
-; CHECK-FISL-NEXT:    addis r4, r2, .LCPI65_0@toc@ha
-; CHECK-FISL-NEXT:    addi r4, r4, .LCPI65_0@toc@l
-; CHECK-FISL-NEXT:    lxvw4x v3, 0, r4
+; CHECK-FISL-NEXT:    addis r3, r2, .LCPI65_0@toc@ha
+; CHECK-FISL-NEXT:    addi r3, r3, .LCPI65_0@toc@l
+; CHECK-FISL-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-FISL-NEXT:    vadduwm v2, v2, v3
 ; CHECK-FISL-NEXT:    blr
 ;
@@ -2494,16 +2468,16 @@ define double @test82(double %a, double %b, double %c, double %d) {
 ;
 ; CHECK-FISL-LABEL: test82:
 ; CHECK-FISL:       # %bb.0: # %entry
+; CHECK-FISL-NEXT:    stfd f2, -16(r1) # 8-byte Folded Spill
+; CHECK-FISL-NEXT:    fmr f2, f1
 ; CHECK-FISL-NEXT:    xscmpudp cr0, f3, f4
 ; CHECK-FISL-NEXT:    stfd f2, -8(r1) # 8-byte Folded Spill
-; CHECK-FISL-NEXT:    stfd f1, -16(r1) # 8-byte Folded Spill
 ; CHECK-FISL-NEXT:    beq cr0, .LBB67_2
 ; CHECK-FISL-NEXT:  # %bb.1: # %entry
-; CHECK-FISL-NEXT:    lfd f0, -8(r1) # 8-byte Folded Reload
-; CHECK-FISL-NEXT:    stfd f0, -16(r1) # 8-byte Folded Spill
-; CHECK-FISL-NEXT:  .LBB67_2: # %entry
 ; CHECK-FISL-NEXT:    lfd f0, -16(r1) # 8-byte Folded Reload
-; CHECK-FISL-NEXT:    fmr f1, f0
+; CHECK-FISL-NEXT:    stfd f0, -8(r1) # 8-byte Folded Spill
+; CHECK-FISL-NEXT:  .LBB67_2: # %entry
+; CHECK-FISL-NEXT:    lfd f1, -8(r1) # 8-byte Folded Reload
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test82:

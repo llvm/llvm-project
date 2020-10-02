@@ -16,9 +16,9 @@ define i32 @quux() nounwind {
 ; CHECK-NEXT:    movl $1082126238, (%eax) ## imm = 0x407FEF9E
 ; CHECK-NEXT:    calll _lrintf
 ; CHECK-NEXT:    cmpl $1, %eax
-; CHECK-NEXT:    setl %cl
-; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    movzbl %cl, %eax
+; CHECK-NEXT:    setl %al
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
@@ -42,9 +42,9 @@ define i32 @foo() nounwind {
 ; CHECK-NEXT:    movl $-1236950581, (%eax) ## imm = 0xB645A1CB
 ; CHECK-NEXT:    calll _lrint
 ; CHECK-NEXT:    cmpl $1, %eax
-; CHECK-NEXT:    setl %cl
-; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    movzbl %cl, %eax
+; CHECK-NEXT:    setl %al
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
@@ -67,9 +67,9 @@ define i32 @bar() nounwind {
 ; CHECK-NEXT:    movl $1082126238, (%eax) ## imm = 0x407FEF9E
 ; CHECK-NEXT:    calll _lrintf
 ; CHECK-NEXT:    cmpl $1, %eax
-; CHECK-NEXT:    setl %cl
-; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    movzbl %cl, %eax
+; CHECK-NEXT:    setl %al
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
@@ -90,9 +90,9 @@ define i32 @baz() nounwind {
 ; CHECK-NEXT:    movl $1082126238, (%eax) ## imm = 0x407FEF9E
 ; CHECK-NEXT:    calll _lrintf
 ; CHECK-NEXT:    cmpl $1, %eax
-; CHECK-NEXT:    setl %cl
-; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    movzbl %cl, %eax
+; CHECK-NEXT:    setl %al
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
@@ -110,28 +110,25 @@ define i32 @main() nounwind {
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    subl $48, %esp
+; CHECK-NEXT:    subl $32, %esp
 ; CHECK-NEXT:    calll _baz
-; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
+; CHECK-NEXT:    movl %eax, %edi
 ; CHECK-NEXT:    calll _bar
-; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
+; CHECK-NEXT:    movl %eax, %esi
 ; CHECK-NEXT:    calll _foo
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
 ; CHECK-NEXT:    calll _quux
-; CHECK-NEXT:    movl %esp, %ecx
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx ## 4-byte Reload
-; CHECK-NEXT:    movl %edx, 16(%ecx)
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi ## 4-byte Reload
-; CHECK-NEXT:    movl %esi, 12(%ecx)
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi ## 4-byte Reload
-; CHECK-NEXT:    movl %edi, 8(%ecx)
-; CHECK-NEXT:    movl %eax, 4(%ecx)
-; CHECK-NEXT:    movl $_.str, (%ecx)
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    movl %edi, 16(%eax)
+; CHECK-NEXT:    movl %esi, 12(%eax)
+; CHECK-NEXT:    movl %edx, 8(%eax)
+; CHECK-NEXT:    movl %ecx, 4(%eax)
+; CHECK-NEXT:    movl $_.str, (%eax)
 ; CHECK-NEXT:    calll _printf
-; CHECK-NEXT:    ## implicit-def: $ecx
-; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    addl $48, %esp
+; CHECK-NEXT:    ## implicit-def: $eax
+; CHECK-NEXT:    addl $32, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    popl %ebp

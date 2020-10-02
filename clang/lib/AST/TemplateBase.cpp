@@ -448,8 +448,8 @@ SourceRange TemplateArgumentLoc::getSourceRange() const {
   llvm_unreachable("Invalid TemplateArgument Kind!");
 }
 
-template <typename T>
-static const T &DiagTemplateArg(const T &DB, const TemplateArgument &Arg) {
+const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
+                                           const TemplateArgument &Arg) {
   switch (Arg.getKind()) {
   case TemplateArgument::Null:
     // This is bad, but not as bad as crashing because of argument
@@ -502,9 +502,15 @@ static const T &DiagTemplateArg(const T &DB, const TemplateArgument &Arg) {
   llvm_unreachable("Invalid TemplateArgument Kind!");
 }
 
-const StreamableDiagnosticBase &clang::
-operator<<(const StreamableDiagnosticBase &DB, const TemplateArgument &Arg) {
-  return DiagTemplateArg(DB, Arg);
+clang::TemplateArgumentLocInfo::TemplateArgumentLocInfo(
+    ASTContext &Ctx, NestedNameSpecifierLoc QualifierLoc,
+    SourceLocation TemplateNameLoc, SourceLocation EllipsisLoc) {
+  TemplateTemplateArgLocInfo *Template = new (Ctx) TemplateTemplateArgLocInfo;
+  Template->Qualifier = QualifierLoc.getNestedNameSpecifier();
+  Template->QualifierLocData = QualifierLoc.getOpaqueData();
+  Template->TemplateNameLoc = TemplateNameLoc.getRawEncoding();
+  Template->EllipsisLoc = EllipsisLoc.getRawEncoding();
+  Pointer = Template;
 }
 
 const ASTTemplateArgumentListInfo *

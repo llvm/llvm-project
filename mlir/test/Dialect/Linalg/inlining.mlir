@@ -9,8 +9,6 @@
 ]
 
 #trait = {
-  args_in = 1,
-  args_out = 1,
   indexing_maps = #accesses,
   iterator_types = ["parallel"]
 }
@@ -23,9 +21,11 @@ func @inline_into(%arg0: memref<?xf32>) {
 
 func @inlined_fn(%arg0: memref<?xf32>) {
   // CHECK: linalg.generic
-  linalg.generic #trait %arg0, %arg0 {
+  linalg.generic #trait
+     ins(%arg0 : memref<?xf32>)
+    outs(%arg0 : memref<?xf32>) {
     ^bb(%0 : f32, %1 : f32) :
       linalg.yield %0 : f32
-  } : memref<?xf32>, memref<?xf32>
+  }
   return
 }

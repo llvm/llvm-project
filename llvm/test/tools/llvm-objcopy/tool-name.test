@@ -31,3 +31,13 @@
 # RUN: %t/install_name_tool.exe --help | FileCheck --check-prefix=INSTALL %s
 
 # INSTALL: OVERVIEW: llvm-install-name-tool tool
+
+## This driver emulates bitcode_strip on macOS.
+# RUN: ln -s llvm-bitcode-strip %t/llvm-bitcode-strip-10
+# RUN: ln -s llvm-bitcode-strip %t/bitcode_strip.exe
+
+# RUN: llvm-bitcode-strip --help | FileCheck --check-prefix=BITCODE-STRIP %s
+# RUN: %t/llvm-bitcode-strip-10 --help | FileCheck --check-prefix=BITCODE-STRIP %s
+# RUN: %t/bitcode_strip.exe --help | FileCheck --check-prefix=BITCODE-STRIP %s
+
+# BITCODE-STRIP: OVERVIEW: llvm-bitcode-strip tool

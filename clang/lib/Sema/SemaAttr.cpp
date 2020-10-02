@@ -380,8 +380,8 @@ void Sema::DiagnoseUnterminatedPragmaPack() {
     // The user might have already reset the alignment, so suggest replacing
     // the reset with a pop.
     if (IsInnermost && PackStack.CurrentValue == PackStack.DefaultValue) {
-      auto DB = Diag(PackStack.CurrentPragmaLocation,
-                     diag::note_pragma_pack_pop_instead_reset);
+      DiagnosticBuilder DB = Diag(PackStack.CurrentPragmaLocation,
+                                  diag::note_pragma_pack_pop_instead_reset);
       SourceLocation FixItLoc = Lexer::findLocationAfterToken(
           PackStack.CurrentPragmaLocation, tok::l_paren, SourceMgr, LangOpts,
           /*SkipTrailing=*/false);
@@ -981,7 +981,9 @@ void Sema::ActOnPragmaFPReassociate(SourceLocation Loc, bool IsEnabled) {
 void Sema::setRoundingMode(SourceLocation Loc, llvm::RoundingMode FPR) {
   // C2x: 7.6.2p3  If the FE_DYNAMIC mode is specified and FENV_ACCESS is "off",
   // the translator may assume that the default rounding mode is in effect.
-  if (FPR == llvm::RoundingMode::Dynamic && !CurFPFeatures.getAllowFEnvAccess())
+  if (FPR == llvm::RoundingMode::Dynamic &&
+      !CurFPFeatures.getAllowFEnvAccess() &&
+      CurFPFeatures.getFPExceptionMode() == LangOptions::FPE_Ignore)
     FPR = llvm::RoundingMode::NearestTiesToEven;
 
   FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();

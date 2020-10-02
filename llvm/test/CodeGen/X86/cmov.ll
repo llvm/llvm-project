@@ -235,3 +235,27 @@ define i32 @pr47049_2(i32 %0) {
   %3 = select i1 %2, i32 %0, i32 -1
   ret i32 %3
 }
+
+define i32 @pr47049_3(i32 %0) {
+; CHECK-LABEL: pr47049_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    cmovgl %edi, %eax
+; CHECK-NEXT:    retq
+  %2 = icmp sgt i32 %0, 1
+  %3 = select i1 %2, i32 %0, i32 1
+  ret i32 %3
+}
+
+define i32 @pr47049_4(i32 %0) {
+; CHECK-LABEL: pr47049_4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    cmovnel %edi, %eax
+; CHECK-NEXT:    retq
+  %2 = icmp ugt i32 %0, 1
+  %3 = select i1 %2, i32 %0, i32 1
+  ret i32 %3
+}

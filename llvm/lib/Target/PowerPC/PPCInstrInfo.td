@@ -222,6 +222,7 @@ def PPCaddiTlsldLAddr : SDNode<"PPCISD::ADDI_TLSLD_L_ADDR",
                                  SDTCisSameAs<0, 3>, SDTCisInt<0> ]>>;
 def PPCaddisDtprelHA : SDNode<"PPCISD::ADDIS_DTPREL_HA", SDTIntBinOp>;
 def PPCaddiDtprelL   : SDNode<"PPCISD::ADDI_DTPREL_L", SDTIntBinOp>;
+def PPCpaddiDtprel   : SDNode<"PPCISD::PADDI_DTPREL", SDTIntBinOp>;
 
 def PPCvperm     : SDNode<"PPCISD::VPERM", SDT_PPCvperm, []>;
 def PPCxxsplt    : SDNode<"PPCISD::XXSPLT", SDT_PPCVecSplat, []>;
@@ -1438,10 +1439,7 @@ def ADJCALLSTACKUP   : PPCEmitTimePseudo<(outs), (ins u16imm:$amt1, u16imm:$amt2
                               "#ADJCALLSTACKUP $amt1 $amt2",
                               [(callseq_end timm:$amt1, timm:$amt2)]>;
 }
-
-def UPDATE_VRSAVE    : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$rS),
-                              "UPDATE_VRSAVE $rD, $rS", []>;
-}
+} // hasCtrlDep
 
 let Defs = [R1], Uses = [R1] in
 def DYNALLOC : PPCEmitTimePseudo<(outs gprc:$result), (ins gprc:$negsize, memri:$fpsi), "#DYNALLOC",
@@ -2743,6 +2741,7 @@ defm FCPSGND : XForm_28r<63, 8, (outs f8rc:$frD), (ins f8rc:$frA, f8rc:$frB),
                         [(set f64:$frD, (fcopysign f64:$frB, f64:$frA))]>;
 
 // Reciprocal estimates.
+let mayRaiseFPException = 1 in {
 defm FRE      : XForm_26r<63, 24, (outs f8rc:$frD), (ins f8rc:$frB),
                           "fre", "$frD, $frB", IIC_FPGeneral,
                           [(set f64:$frD, (PPCfre f64:$frB))]>;
@@ -2755,6 +2754,7 @@ defm FRSQRTE  : XForm_26r<63, 26, (outs f8rc:$frD), (ins f8rc:$frB),
 defm FRSQRTES : XForm_26r<59, 26, (outs f4rc:$frD), (ins f4rc:$frB),
                           "frsqrtes", "$frD, $frB", IIC_FPGeneral,
                           [(set f32:$frD, (PPCfrsqrte f32:$frB))]>;
+}
 }
 
 // XL-Form instructions.  condition register logical ops.
@@ -2915,18 +2915,6 @@ let isCodeGenOnly = 1 in {
 // Aliases for mtvrsave/mfvrsave to mfspr/mtspr.
 def : InstAlias<"mtvrsave $rS", (MTVRSAVE gprc:$rS)>;
 def : InstAlias<"mfvrsave $rS", (MFVRSAVE gprc:$rS)>;
-
-// SPILL_VRSAVE - Indicate that we're dumping the VRSAVE register,
-// so we'll need to scavenge a register for it.
-let mayStore = 1 in
-def SPILL_VRSAVE : PPCEmitTimePseudo<(outs), (ins VRSAVERC:$vrsave, memri:$F),
-                     "#SPILL_VRSAVE", []>;
-
-// RESTORE_VRSAVE - Indicate that we're restoring the VRSAVE register (previously
-// spilled), so we'll need to scavenge a register for it.
-let mayLoad = 1 in
-def RESTORE_VRSAVE : PPCEmitTimePseudo<(outs VRSAVERC:$vrsave), (ins memri:$F),
-                     "#RESTORE_VRSAVE", []>;
 
 let hasSideEffects = 0 in {
 // mtocrf's input needs to be prepared by shifting by an amount dependent
@@ -3123,7 +3111,7 @@ def : InstAlias<"subc. $rA, $rB, $rC", (SUBFC_rec gprc:$rA, gprc:$rC, gprc:$rB)>
 // this type.
 //
 let PPC970_Unit = 3, hasSideEffects = 0, Predicates = [HasFPU] in {  // FPU Operations.
-let Uses = [RM] in {
+let mayRaiseFPException = 1, Uses = [RM] in {
 let isCommutable = 1 in {
   defm FMADD : AForm_1r<63, 29,
                       (outs f8rc:$FRT), (ins f8rc:$FRA, f8rc:$FRC, f8rc:$FRB),

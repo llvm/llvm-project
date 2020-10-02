@@ -2596,6 +2596,22 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
   return false;
 }
 
+bool Type::isStructuralType() const {
+  // C++20 [temp.param]p6:
+  //   A structural type is one of the following:
+  //   -- a scalar type; or
+  //   -- a vector type [Clang extension]; or
+  if (isScalarType() || isVectorType())
+    return true;
+  //   -- an lvalue reference type; or
+  if (isLValueReferenceType())
+    return true;
+  //  -- a literal class type [...under some conditions]
+  if (const CXXRecordDecl *RD = getAsCXXRecordDecl())
+    return RD->isStructural();
+  return false;
+}
+
 bool Type::isStandardLayoutType() const {
   if (isDependentType())
     return false;

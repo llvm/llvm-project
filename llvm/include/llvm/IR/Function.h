@@ -472,6 +472,12 @@ public:
     return Ty ? Ty : (arg_begin() + ArgNo)->getType()->getPointerElementType();
   }
 
+  /// Extract the sret type for a parameter.
+  Type *getParamStructRetType(unsigned ArgNo) const {
+    // FIXME: Add type to attribute like byval
+    return (arg_begin() + ArgNo)->getType()->getPointerElementType();
+  }
+
   /// Extract the byref type for a parameter.
   Type *getParamByRefType(unsigned ArgNo) const {
     return AttributeSets.getParamByRefType(ArgNo);
@@ -657,6 +663,10 @@ public:
   bool hasOptSize() const {
     return hasFnAttribute(Attribute::OptimizeForSize) || hasMinSize();
   }
+
+  /// Returns the denormal handling type for the default rounding mode of the
+  /// function.
+  DenormalMode getDenormalMode(const fltSemantics &FPType) const;
 
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a Function) from the Function Src to this one.

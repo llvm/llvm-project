@@ -495,13 +495,13 @@ static void dumpObject(const ObjectFile &Obj, ScopedPrinter &Writer,
   if (opts::Symbols || opts::DynamicSymbols)
     Dumper->printSymbols(opts::Symbols, opts::DynamicSymbols);
   if (!opts::StringDump.empty())
-    Dumper->printSectionsAsString(&Obj, opts::StringDump);
+    Dumper->printSectionsAsString(Obj, opts::StringDump);
   if (!opts::HexDump.empty())
-    Dumper->printSectionsAsHex(&Obj, opts::HexDump);
+    Dumper->printSectionsAsHex(Obj, opts::HexDump);
   if (opts::HashTable)
     Dumper->printHashTable();
   if (opts::GnuHashTable)
-    Dumper->printGnuHashTable(&Obj);
+    Dumper->printGnuHashTable();
   if (opts::VersionInfo)
     Dumper->printVersionInfo();
   if (Obj.isELF()) {

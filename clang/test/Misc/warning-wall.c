@@ -15,6 +15,7 @@ CHECK-NEXT:      -Wnonnull
 CHECK-NEXT:      -Wformat-security
 CHECK-NEXT:      -Wformat-y2k
 CHECK-NEXT:      -Wformat-invalid-specifier
+CHECK-NEXT:      -Wformat-insufficient-args
 CHECK-NEXT:    -Wfor-loop-analysis
 CHECK-NEXT:    -Wframe-address
 CHECK-NEXT:    -Wimplicit

@@ -4,7 +4,7 @@
 # Bug 41973. Make sure %12 is detected as live out of %bb.0, even
 # though the use is allocated before the def block %bb.3. Previously
 # mayLiveOut only recorded on defs, and would not find the virtual
-# register use if it had already been replace with a physical
+# register use if it had already been replaced with a physical
 # register.
 
 ---
@@ -21,17 +21,17 @@ body:             |
   ; CHECK:   successors:
   ; CHECK: bb.2:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   $rax = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load 8 from %stack.1)
-  ; CHECK:   renamable $ecx = MOV32r0 implicit-def $eflags
-  ; CHECK:   renamable $rdx = SUBREG_TO_REG 0, killed renamable $ecx, %subreg.sub_32bit
-  ; CHECK:   MOV64mi32 killed renamable $rax, 1, $noreg, 0, $noreg, 0 :: (volatile store 8)
-  ; CHECK:   MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed $rdx :: (store 8 into %stack.0)
+  ; CHECK:   $rcx = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load 8 from %stack.1)
+  ; CHECK:   renamable $eax = MOV32r0 implicit-def dead $eflags
+  ; CHECK:   renamable $rax = SUBREG_TO_REG 0, killed renamable $eax, %subreg.sub_32bit
+  ; CHECK:   MOV64mi32 killed renamable $rcx, 1, $noreg, 0, $noreg, 0 :: (volatile store 8)
+  ; CHECK:   MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed $rax :: (store 8 into %stack.0)
   ; CHECK: bb.3:
   ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK:   $rax = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
   ; CHECK:   renamable $ecx = MOV32r0 implicit-def dead $eflags
-  ; CHECK:   renamable $rdx = SUBREG_TO_REG 0, killed renamable $ecx, %subreg.sub_32bit
-  ; CHECK:   MOV64mr %stack.1, 1, $noreg, 0, $noreg, killed $rdx :: (store 8 into %stack.1)
+  ; CHECK:   renamable $rcx = SUBREG_TO_REG 0, killed renamable $ecx, %subreg.sub_32bit
+  ; CHECK:   MOV64mr %stack.1, 1, $noreg, 0, $noreg, killed $rcx :: (store 8 into %stack.1)
   ; CHECK:   JMP64r killed renamable $rax
   bb.0:
     liveins: $edi, $rsi
@@ -45,7 +45,6 @@ body:             |
 
   bb.1:
     successors:
-
 
   bb.2:
     %0:gr64 = COPY %12

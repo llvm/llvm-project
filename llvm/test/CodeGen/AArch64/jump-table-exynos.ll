@@ -11,7 +11,17 @@ define i32 @test_jumptable(i32 %in)  {
     i32 4, label %lbl4
   ]
 ; CHECK-LABEL: test_jumptable:
-; CHECK-NOT: ldrb
+; CHECK:     adrp [[JTPAGE:x[0-9]+]], .LJTI0_0
+; CHECK:     add x[[JT:[0-9]+]], [[JTPAGE]], {{#?}}:lo12:.LJTI0_0
+; CHECK:  [[PCREL_LBL:.Ltmp.*]]:
+; CHECK-NEXT: adr [[PCBASE:x[0-9]+]], [[PCREL_LBL]]
+; CHECK:     ldrsw x[[OFFSET:[0-9]+]], [x[[JT]], {{x[0-9]+}}, lsl #2]
+; CHECK:     add [[DEST:x[0-9]+]], [[PCBASE]], x[[OFFSET]]
+; CHECK:     br [[DEST]]
+
+
+; CHECK: .LJTI0_0:
+; CHECK-NEXT:     .word .LBB{{.*}}-[[PCREL_LBL]]
 
 def:
   ret i32 0

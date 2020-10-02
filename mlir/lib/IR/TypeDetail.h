@@ -207,13 +207,21 @@ struct UnrankedTensorTypeStorage : public ShapedTypeStorage {
   }
 };
 
-struct MemRefTypeStorage : public ShapedTypeStorage {
+struct BaseMemRefTypeStorage : public ShapedTypeStorage {
+  BaseMemRefTypeStorage(Type elementType, unsigned memorySpace)
+      : ShapedTypeStorage(elementType), memorySpace(memorySpace) {}
+
+  /// Memory space in which data referenced by memref resides.
+  const unsigned memorySpace;
+};
+
+struct MemRefTypeStorage : public BaseMemRefTypeStorage {
   MemRefTypeStorage(unsigned shapeSize, Type elementType,
                     const int64_t *shapeElements, const unsigned numAffineMaps,
                     AffineMap const *affineMapList, const unsigned memorySpace)
-      : ShapedTypeStorage(elementType), shapeElements(shapeElements),
-        shapeSize(shapeSize), numAffineMaps(numAffineMaps),
-        affineMapList(affineMapList), memorySpace(memorySpace) {}
+      : BaseMemRefTypeStorage(elementType, memorySpace),
+        shapeElements(shapeElements), shapeSize(shapeSize),
+        numAffineMaps(numAffineMaps), affineMapList(affineMapList) {}
 
   /// The hash key used for uniquing.
   // MemRefs are uniqued based on their shape, element type, affine map
@@ -257,16 +265,14 @@ struct MemRefTypeStorage : public ShapedTypeStorage {
   const unsigned numAffineMaps;
   /// List of affine maps in the memref's layout/index map composition.
   AffineMap const *affineMapList;
-  /// Memory space in which data referenced by memref resides.
-  const unsigned memorySpace;
 };
 
 /// Unranked MemRef is a MemRef with unknown rank.
 /// Only element type and memory space are known
-struct UnrankedMemRefTypeStorage : public ShapedTypeStorage {
+struct UnrankedMemRefTypeStorage : public BaseMemRefTypeStorage {
 
   UnrankedMemRefTypeStorage(Type elementTy, const unsigned memorySpace)
-      : ShapedTypeStorage(elementTy), memorySpace(memorySpace) {}
+      : BaseMemRefTypeStorage(elementTy, memorySpace) {}
 
   /// The hash key used for uniquing.
   using KeyTy = std::tuple<Type, unsigned>;
@@ -282,8 +288,6 @@ struct UnrankedMemRefTypeStorage : public ShapedTypeStorage {
     return new (allocator.allocate<UnrankedMemRefTypeStorage>())
         UnrankedMemRefTypeStorage(std::get<0>(key), std::get<1>(key));
   }
-  /// Memory space in which data referenced by memref resides.
-  const unsigned memorySpace;
 };
 
 /// Complex Type Storage.

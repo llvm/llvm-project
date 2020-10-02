@@ -177,6 +177,9 @@ if is_configured('test_arch'):
 if is_configured('lldb_build_directory'):
   dotest_cmd += ['--build-dir', config.lldb_build_directory]
 
+if is_configured('lldb_trace_directory'):
+  dotest_cmd += ['-s', config.lldb_trace_directory]
+
 if is_configured('lldb_module_cache'):
   delete_module_cache(config.lldb_module_cache)
   dotest_cmd += ['--lldb-module-cache-dir', config.lldb_module_cache]
@@ -199,6 +202,9 @@ if is_configured('filecheck'):
 
 if is_configured('yaml2obj'):
   dotest_cmd += ['--yaml2obj', config.yaml2obj]
+
+if is_configured('server'):
+  dotest_cmd += ['--server', config.server]
 
 if is_configured('lldb_libs_dir'):
   dotest_cmd += ['--lldb-libs-dir', config.lldb_libs_dir]

@@ -2075,9 +2075,8 @@ static Instruction *narrowVectorSelect(ShuffleVectorInst &Shuf,
 
   // shuf (sel (shuf NarrowCond, undef, WideMask), X, Y), undef, NarrowMask) -->
   // sel NarrowCond, (shuf X, undef, NarrowMask), (shuf Y, undef, NarrowMask)
-  Value *Undef = UndefValue::get(X->getType());
-  Value *NarrowX = Builder.CreateShuffleVector(X, Undef, Shuf.getShuffleMask());
-  Value *NarrowY = Builder.CreateShuffleVector(Y, Undef, Shuf.getShuffleMask());
+  Value *NarrowX = Builder.CreateShuffleVector(X, Shuf.getShuffleMask());
+  Value *NarrowY = Builder.CreateShuffleVector(Y, Shuf.getShuffleMask());
   return SelectInst::Create(NarrowCond, NarrowX, NarrowY);
 }
 
@@ -2444,8 +2443,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
         SmallVector<int, 16> ShuffleMask(SrcNumElems, -1);
         for (unsigned I = 0, E = MaskElems, Idx = BegIdx; I != E; ++Idx, ++I)
           ShuffleMask[I] = Idx;
-        V = Builder.CreateShuffleVector(V, UndefValue::get(V->getType()),
-                                        ShuffleMask,
+        V = Builder.CreateShuffleVector(V, ShuffleMask,
                                         SVI.getName() + ".extract");
         BegIdx = 0;
       }
@@ -2637,17 +2635,9 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   // If the result mask is equal to one of the original shuffle masks,
   // or is a splat, do the replacement.
   if (isSplat || newMask == LHSMask || newMask == RHSMask || newMask == Mask) {
-    SmallVector<Constant*, 16> Elts;
-    for (unsigned i = 0, e = newMask.size(); i != e; ++i) {
-      if (newMask[i] < 0) {
-        Elts.push_back(UndefValue::get(Int32Ty));
-      } else {
-        Elts.push_back(ConstantInt::get(Int32Ty, newMask[i]));
-      }
-    }
     if (!newRHS)
       newRHS = UndefValue::get(newLHS->getType());
-    return new ShuffleVectorInst(newLHS, newRHS, ConstantVector::get(Elts));
+    return new ShuffleVectorInst(newLHS, newRHS, newMask);
   }
 
   return MadeChange ? &SVI : nullptr;

@@ -1262,54 +1262,53 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
   return EliminateDuplicatePHINodesSetBasedImpl(BB);
 }
 
-/// enforceKnownAlignment - If the specified pointer points to an object that
-/// we control, modify the object's alignment to PrefAlign. This isn't
-/// often possible though. If alignment is important, a more reliable approach
-/// is to simply align all global variables and allocation instructions to
-/// their preferred alignment from the beginning.
-static Align enforceKnownAlignment(Value *V, Align Alignment, Align PrefAlign,
-                                   const DataLayout &DL) {
-  assert(PrefAlign > Alignment);
-
+/// If the specified pointer points to an object that we control, try to modify
+/// the object's alignment to PrefAlign. Returns a minimum known alignment of
+/// the value after the operation, which may be lower than PrefAlign.
+///
+/// Increating value alignment isn't often possible though. If alignment is
+/// important, a more reliable approach is to simply align all global variables
+/// and allocation instructions to their preferred alignment from the beginning.
+static Align tryEnforceAlignment(Value *V, Align PrefAlign,
+                                 const DataLayout &DL) {
   V = V->stripPointerCasts();
 
   if (AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
-    // TODO: ideally, computeKnownBits ought to have used
-    // AllocaInst::getAlignment() in its computation already, making
-    // the below max redundant. But, as it turns out,
-    // stripPointerCasts recurses through infinite layers of bitcasts,
-    // while computeKnownBits is not allowed to traverse more than 6
-    // levels.
-    Alignment = std::max(AI->getAlign(), Alignment);
-    if (PrefAlign <= Alignment)
-      return Alignment;
+    // TODO: Ideally, this function would not be called if PrefAlign is smaller
+    // than the current alignment, as the known bits calculation should have
+    // already taken it into account. However, this is not always the case,
+    // as computeKnownBits() has a depth limit, while stripPointerCasts()
+    // doesn't.
+    Align CurrentAlign = AI->getAlign();
+    if (PrefAlign <= CurrentAlign)
+      return CurrentAlign;
 
     // If the preferred alignment is greater than the natural stack alignment
     // then don't round up. This avoids dynamic stack realignment.
     if (DL.exceedsNaturalStackAlignment(PrefAlign))
-      return Alignment;
+      return CurrentAlign;
     AI->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
   if (auto *GO = dyn_cast<GlobalObject>(V)) {
     // TODO: as above, this shouldn't be necessary.
-    Alignment = max(GO->getAlign(), Alignment);
-    if (PrefAlign <= Alignment)
-      return Alignment;
+    Align CurrentAlign = GO->getPointerAlignment(DL);
+    if (PrefAlign <= CurrentAlign)
+      return CurrentAlign;
 
     // If there is a large requested alignment and we can, bump up the alignment
     // of the global.  If the memory we set aside for the global may not be the
     // memory used by the final program then it is impossible for us to reliably
     // enforce the preferred alignment.
     if (!GO->canIncreaseAlignment())
-      return Alignment;
+      return CurrentAlign;
 
     GO->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
-  return Alignment;
+  return Align(1);
 }
 
 Align llvm::getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
@@ -1331,7 +1330,7 @@ Align llvm::getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
   Align Alignment = Align(1ull << std::min(Known.getBitWidth() - 1, TrailZ));
 
   if (PrefAlign && *PrefAlign > Alignment)
-    Alignment = enforceKnownAlignment(V, Alignment, *PrefAlign, DL);
+    Alignment = std::max(Alignment, tryEnforceAlignment(V, *PrefAlign, DL));
 
   // We don't need to make any adjustment.
   return Alignment;
@@ -2833,7 +2832,7 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
     return I->second;
 
   auto &Result = BPS[V] = None;
-  auto BitWidth = cast<IntegerType>(V->getType())->getBitWidth();
+  auto BitWidth = V->getType()->getScalarSizeInBits();
 
   // Prevent stack overflow by limiting the recursion depth
   if (Depth == BitPartRecursionMaxDepth) {
@@ -2841,13 +2840,16 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
     return Result;
   }
 
-  if (Instruction *I = dyn_cast<Instruction>(V)) {
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    Value *X, *Y;
+    const APInt *C;
+
     // If this is an or instruction, it may be an inner node of the bswap.
-    if (I->getOpcode() == Instruction::Or) {
-      const auto &A = collectBitParts(I->getOperand(0), MatchBSwaps,
-                                      MatchBitReversals, BPS, Depth + 1);
-      const auto &B = collectBitParts(I->getOperand(1), MatchBSwaps,
-                                      MatchBitReversals, BPS, Depth + 1);
+    if (match(V, m_Or(m_Value(X), m_Value(Y)))) {
+      const auto &A =
+          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      const auto &B =
+          collectBitParts(Y, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
       if (!A || !B)
         return Result;
 
@@ -2856,31 +2858,31 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
         return Result;
 
       Result = BitPart(A->Provider, BitWidth);
-      for (unsigned i = 0; i < A->Provenance.size(); ++i) {
-        if (A->Provenance[i] != BitPart::Unset &&
-            B->Provenance[i] != BitPart::Unset &&
-            A->Provenance[i] != B->Provenance[i])
+      for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx) {
+        if (A->Provenance[BitIdx] != BitPart::Unset &&
+            B->Provenance[BitIdx] != BitPart::Unset &&
+            A->Provenance[BitIdx] != B->Provenance[BitIdx])
           return Result = None;
 
-        if (A->Provenance[i] == BitPart::Unset)
-          Result->Provenance[i] = B->Provenance[i];
+        if (A->Provenance[BitIdx] == BitPart::Unset)
+          Result->Provenance[BitIdx] = B->Provenance[BitIdx];
         else
-          Result->Provenance[i] = A->Provenance[i];
+          Result->Provenance[BitIdx] = A->Provenance[BitIdx];
       }
 
       return Result;
     }
 
     // If this is a logical shift by a constant, recurse then shift the result.
-    if (I->isLogicalShift() && isa<ConstantInt>(I->getOperand(1))) {
-      unsigned BitShift =
-          cast<ConstantInt>(I->getOperand(1))->getLimitedValue(~0U);
+    if (match(V, m_LogicalShift(m_Value(X), m_APInt(C)))) {
+      const APInt &BitShift = *C;
+
       // Ensure the shift amount is defined.
-      if (BitShift > BitWidth)
+      if (BitShift.uge(BitWidth))
         return Result;
 
-      const auto &Res = collectBitParts(I->getOperand(0), MatchBSwaps,
-                                        MatchBitReversals, BPS, Depth + 1);
+      const auto &Res =
+          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
       if (!Res)
         return Result;
       Result = Res;
@@ -2888,11 +2890,11 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       // Perform the "shift" on BitProvenance.
       auto &P = Result->Provenance;
       if (I->getOpcode() == Instruction::Shl) {
-        P.erase(std::prev(P.end(), BitShift), P.end());
-        P.insert(P.begin(), BitShift, BitPart::Unset);
+        P.erase(std::prev(P.end(), BitShift.getZExtValue()), P.end());
+        P.insert(P.begin(), BitShift.getZExtValue(), BitPart::Unset);
       } else {
-        P.erase(P.begin(), std::next(P.begin(), BitShift));
-        P.insert(P.end(), BitShift, BitPart::Unset);
+        P.erase(P.begin(), std::next(P.begin(), BitShift.getZExtValue()));
+        P.insert(P.end(), BitShift.getZExtValue(), BitPart::Unset);
       }
 
       return Result;
@@ -2900,44 +2902,70 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
 
     // If this is a logical 'and' with a mask that clears bits, recurse then
     // unset the appropriate bits.
-    if (I->getOpcode() == Instruction::And &&
-        isa<ConstantInt>(I->getOperand(1))) {
-      APInt Bit(I->getType()->getPrimitiveSizeInBits(), 1);
-      const APInt &AndMask = cast<ConstantInt>(I->getOperand(1))->getValue();
+    if (match(V, m_And(m_Value(X), m_APInt(C)))) {
+      const APInt &AndMask = *C;
 
       // Check that the mask allows a multiple of 8 bits for a bswap, for an
       // early exit.
       unsigned NumMaskedBits = AndMask.countPopulation();
-      if (!MatchBitReversals && NumMaskedBits % 8 != 0)
+      if (!MatchBitReversals && (NumMaskedBits % 8) != 0)
         return Result;
 
-      const auto &Res = collectBitParts(I->getOperand(0), MatchBSwaps,
-                                        MatchBitReversals, BPS, Depth + 1);
+      const auto &Res =
+          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
       if (!Res)
         return Result;
       Result = Res;
 
-      for (unsigned i = 0; i < BitWidth; ++i, Bit <<= 1)
+      for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx)
         // If the AndMask is zero for this bit, clear the bit.
-        if ((AndMask & Bit) == 0)
-          Result->Provenance[i] = BitPart::Unset;
+        if (AndMask[BitIdx] == 0)
+          Result->Provenance[BitIdx] = BitPart::Unset;
       return Result;
     }
 
     // If this is a zext instruction zero extend the result.
-    if (I->getOpcode() == Instruction::ZExt) {
-      const auto &Res = collectBitParts(I->getOperand(0), MatchBSwaps,
-                                        MatchBitReversals, BPS, Depth + 1);
+    if (match(V, m_ZExt(m_Value(X)))) {
+      const auto &Res =
+          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
       if (!Res)
         return Result;
 
       Result = BitPart(Res->Provider, BitWidth);
-      auto NarrowBitWidth =
-          cast<IntegerType>(cast<ZExtInst>(I)->getSrcTy())->getBitWidth();
-      for (unsigned i = 0; i < NarrowBitWidth; ++i)
-        Result->Provenance[i] = Res->Provenance[i];
-      for (unsigned i = NarrowBitWidth; i < BitWidth; ++i)
-        Result->Provenance[i] = BitPart::Unset;
+      auto NarrowBitWidth = X->getType()->getScalarSizeInBits();
+      for (unsigned BitIdx = 0; BitIdx < NarrowBitWidth; ++BitIdx)
+        Result->Provenance[BitIdx] = Res->Provenance[BitIdx];
+      for (unsigned BitIdx = NarrowBitWidth; BitIdx < BitWidth; ++BitIdx)
+        Result->Provenance[BitIdx] = BitPart::Unset;
+      return Result;
+    }
+
+    // Funnel 'double' shifts take 3 operands, 2 inputs and the shift
+    // amount (modulo).
+    // fshl(X,Y,Z): (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+    // fshr(X,Y,Z): (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+    if (match(V, m_FShl(m_Value(X), m_Value(Y), m_APInt(C))) ||
+        match(V, m_FShr(m_Value(X), m_Value(Y), m_APInt(C)))) {
+      // We can treat fshr as a fshl by flipping the modulo amount.
+      unsigned ModAmt = C->urem(BitWidth);
+      if (cast<IntrinsicInst>(I)->getIntrinsicID() == Intrinsic::fshr)
+        ModAmt = BitWidth - ModAmt;
+
+      const auto &LHS =
+          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      const auto &RHS =
+          collectBitParts(Y, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+
+      // Check we have both sources and they are from the same provider.
+      if (!LHS || !RHS || !LHS->Provider || LHS->Provider != RHS->Provider)
+        return Result;
+
+      unsigned StartBitRHS = BitWidth - ModAmt;
+      Result = BitPart(LHS->Provider, BitWidth);
+      for (unsigned BitIdx = 0; BitIdx < StartBitRHS; ++BitIdx)
+        Result->Provenance[BitIdx + ModAmt] = LHS->Provenance[BitIdx];
+      for (unsigned BitIdx = 0; BitIdx < ModAmt; ++BitIdx)
+        Result->Provenance[BitIdx] = RHS->Provenance[BitIdx + StartBitRHS];
       return Result;
     }
   }
@@ -2945,8 +2973,8 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
   // Okay, we got to something that isn't a shift, 'or' or 'and'.  This must be
   // the input value to the bswap/bitreverse.
   Result = BitPart(V, BitWidth);
-  for (unsigned i = 0; i < BitWidth; ++i)
-    Result->Provenance[i] = i;
+  for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx)
+    Result->Provenance[BitIdx] = BitIdx;
   return Result;
 }
 
@@ -2976,62 +3004,72 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   IntegerType *ITy = dyn_cast<IntegerType>(I->getType());
   if (!ITy || ITy->getBitWidth() > 128)
     return false;   // Can't do vectors or integers > 128 bits.
-  unsigned BW = ITy->getBitWidth();
 
-  unsigned DemandedBW = BW;
   IntegerType *DemandedTy = ITy;
-  if (I->hasOneUse()) {
-    if (TruncInst *Trunc = dyn_cast<TruncInst>(I->user_back())) {
+  if (I->hasOneUse())
+    if (auto *Trunc = dyn_cast<TruncInst>(I->user_back()))
       DemandedTy = cast<IntegerType>(Trunc->getType());
-      DemandedBW = DemandedTy->getBitWidth();
-    }
-  }
 
   // Try to find all the pieces corresponding to the bswap.
   std::map<Value *, Optional<BitPart>> BPS;
   auto Res = collectBitParts(I, MatchBSwaps, MatchBitReversals, BPS, 0);
   if (!Res)
     return false;
-  auto &BitProvenance = Res->Provenance;
+  ArrayRef<int8_t> BitProvenance = Res->Provenance;
+  assert(all_of(BitProvenance,
+                [](int8_t I) { return I == BitPart::Unset || 0 <= I; }) &&
+         "Illegal bit provenance index");
+
+  // If the upper bits are zero, then attempt to perform as a truncated op.
+  if (BitProvenance.back() == BitPart::Unset) {
+    while (!BitProvenance.empty() && BitProvenance.back() == BitPart::Unset)
+      BitProvenance = BitProvenance.drop_back();
+    if (BitProvenance.empty())
+      return false; // TODO - handle null value?
+    DemandedTy = IntegerType::get(I->getContext(), BitProvenance.size());
+  }
 
   // Now, is the bit permutation correct for a bswap or a bitreverse? We can
   // only byteswap values with an even number of bytes.
-  bool OKForBSwap = DemandedBW % 16 == 0, OKForBitReverse = true;
-  for (unsigned i = 0; i < DemandedBW; ++i) {
-    OKForBSwap &=
-        bitTransformIsCorrectForBSwap(BitProvenance[i], i, DemandedBW);
-    OKForBitReverse &=
-        bitTransformIsCorrectForBitReverse(BitProvenance[i], i, DemandedBW);
+  unsigned DemandedBW = DemandedTy->getBitWidth();
+  bool OKForBSwap = MatchBSwaps && (DemandedBW % 16) == 0;
+  bool OKForBitReverse = MatchBitReversals;
+  for (unsigned BitIdx = 0;
+       (BitIdx < DemandedBW) && (OKForBSwap || OKForBitReverse); ++BitIdx) {
+    OKForBSwap &= bitTransformIsCorrectForBSwap(BitProvenance[BitIdx], BitIdx,
+                                                DemandedBW);
+    OKForBitReverse &= bitTransformIsCorrectForBitReverse(BitProvenance[BitIdx],
+                                                          BitIdx, DemandedBW);
   }
 
   Intrinsic::ID Intrin;
-  if (OKForBSwap && MatchBSwaps)
+  if (OKForBSwap)
     Intrin = Intrinsic::bswap;
-  else if (OKForBitReverse && MatchBitReversals)
+  else if (OKForBitReverse)
     Intrin = Intrinsic::bitreverse;
   else
     return false;
 
-  if (ITy != DemandedTy) {
-    Function *F = Intrinsic::getDeclaration(I->getModule(), Intrin, DemandedTy);
-    Value *Provider = Res->Provider;
-    IntegerType *ProviderTy = cast<IntegerType>(Provider->getType());
-    // We may need to truncate the provider.
-    if (DemandedTy != ProviderTy) {
-      auto *Trunc = CastInst::Create(Instruction::Trunc, Provider, DemandedTy,
-                                     "trunc", I);
-      InsertedInsts.push_back(Trunc);
-      Provider = Trunc;
-    }
-    auto *CI = CallInst::Create(F, Provider, "rev", I);
-    InsertedInsts.push_back(CI);
-    auto *ExtInst = CastInst::Create(Instruction::ZExt, CI, ITy, "zext", I);
-    InsertedInsts.push_back(ExtInst);
-    return true;
+  Function *F = Intrinsic::getDeclaration(I->getModule(), Intrin, DemandedTy);
+  Value *Provider = Res->Provider;
+
+  // We may need to truncate the provider.
+  if (DemandedTy != Provider->getType()) {
+    auto *Trunc =
+        CastInst::Create(Instruction::Trunc, Provider, DemandedTy, "trunc", I);
+    InsertedInsts.push_back(Trunc);
+    Provider = Trunc;
   }
 
-  Function *F = Intrinsic::getDeclaration(I->getModule(), Intrin, ITy);
-  InsertedInsts.push_back(CallInst::Create(F, Res->Provider, "rev", I));
+  auto *CI = CallInst::Create(F, Provider, "rev", I);
+  InsertedInsts.push_back(CI);
+
+  // We may need to zeroextend back to the result type.
+  if (ITy != CI->getType()) {
+    auto *ExtInst = CastInst::Create(Instruction::ZExt, CI, ITy, "zext", I);
+    InsertedInsts.push_back(ExtInst);
+  }
+
   return true;
 }
 

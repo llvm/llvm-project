@@ -338,6 +338,10 @@ class SystemZDAGToDAGISel : public SelectionDAGISel {
   // to X.
   bool storeLoadCanUseBlockBinary(SDNode *N, unsigned I) const;
 
+  // Return true if N (a load or a store) fullfills the alignment
+  // requirements for a PC-relative access.
+  bool storeLoadIsAligned(SDNode *N) const;
+
   // Try to expand a boolean SELECT_CCMASK using an IPM sequence.
   SDValue expandSelectBoolean(SDNode *Node);
 
@@ -1458,6 +1462,46 @@ bool SystemZDAGToDAGISel::storeLoadCanUseBlockBinary(SDNode *N,
   auto *LoadB = cast<LoadSDNode>(StoreA->getValue().getOperand(I));
   return !LoadA->isVolatile() && LoadA->getMemoryVT() == LoadB->getMemoryVT() &&
          canUseBlockOperation(StoreA, LoadB);
+}
+
+bool SystemZDAGToDAGISel::storeLoadIsAligned(SDNode *N) const {
+
+  auto *MemAccess = cast<LSBaseSDNode>(N);
+  TypeSize StoreSize = MemAccess->getMemoryVT().getStoreSize();
+  SDValue BasePtr = MemAccess->getBasePtr();
+  MachineMemOperand *MMO = MemAccess->getMemOperand();
+  assert(MMO && "Expected a memory operand.");
+
+  // The memory access must have a proper alignment and no index register.
+  if (MemAccess->getAlignment() < StoreSize ||
+      !MemAccess->getOffset().isUndef())
+    return false;
+
+  // The MMO must not have an unaligned offset.
+  if (MMO->getOffset() % StoreSize != 0)
+    return false;
+
+  // An access to GOT or the Constant Pool is aligned.
+  if (const PseudoSourceValue *PSV = MMO->getPseudoValue())
+    if ((PSV->isGOT() || PSV->isConstantPool()))
+      return true;
+
+  // Check the alignment of a Global Address.
+  if (BasePtr.getNumOperands())
+    if (GlobalAddressSDNode *GA =
+        dyn_cast<GlobalAddressSDNode>(BasePtr.getOperand(0))) {
+      // The immediate offset must be aligned.
+      if (GA->getOffset() % StoreSize != 0)
+        return false;
+
+      // The alignment of the symbol itself must be at least the store size.
+      const GlobalValue *GV = GA->getGlobal();
+      const DataLayout &DL = GV->getParent()->getDataLayout();
+      if (GV->getPointerAlignment(DL).value() < StoreSize)
+        return false;
+    }
+
+  return true;
 }
 
 void SystemZDAGToDAGISel::Select(SDNode *Node) {

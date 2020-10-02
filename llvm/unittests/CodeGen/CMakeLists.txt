@@ -15,6 +15,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(CodeGenTests
   AArch64SelectionDAGTest.cpp
+  AllocationOrderTest.cpp
   AsmPrinterDwarfTest.cpp
   DIEHashTest.cpp
   DIETest.cpp

@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_LINALG_UTILS_H_
 
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/EDSC/Builders.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
@@ -149,7 +150,7 @@ enum class DistributionMethod {
   /// scf.parallel(%iv)= (%lb + %procId * %step) to (%ub) step (%step * %nprocs)
   Cyclic = 0,
 
-  /// Cyclic distribtuion where the number of processors can be assumed to be
+  /// Cyclic distribution where the number of processors can be assumed to be
   /// more than or equal to the number of iterations of the distributed loop. In
   /// such cases, a simple in-bounds check is enough (instead of materializing a
   /// loop). Distributes the following loop
@@ -165,7 +166,7 @@ enum class DistributionMethod {
   /// }
   CyclicNumProcsGeNumIters = 1,
 
-  /// Cyclic distribtuion where the number of processors can be assumed to be
+  /// Cyclic distribution where the number of processors can be assumed to be
   ///  equal to the number of iterations of the distributed loop. In such cases,
   ///  no bounds check is needed. Distributes the following loop
   ///
@@ -214,10 +215,11 @@ struct GenerateLoopNest {
       typename std::conditional<std::is_same<LoopTy, AffineForOp>::value,
                                 AffineIndexedValue, StdIndexedValue>::type;
 
-  static void doit(ArrayRef<SubViewOp::Range> loopRanges,
-                   ArrayRef<Attribute> iteratorTypes,
-                   function_ref<void(ValueRange)> bodyBuilderFn,
-                   Optional<LinalgLoopDistributionOptions> = None);
+  static void
+  doit(ArrayRef<SubViewOp::Range> loopRanges, ValueRange iterArgInitValues,
+       ArrayRef<Attribute> iteratorTypes,
+       function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
+       Optional<LinalgLoopDistributionOptions> = None);
 };
 
 } // namespace linalg

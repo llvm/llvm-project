@@ -26,15 +26,14 @@ using common::LanguageFeature;
 static constexpr int maxPrescannerNesting{100};
 
 Prescanner::Prescanner(Messages &messages, CookedSource &cooked,
-    AllSources &allSources, Preprocessor &preprocessor,
-    common::LanguageFeatureControl lfc)
-    : messages_{messages}, cooked_{cooked}, allSources_{allSources},
-      preprocessor_{preprocessor}, features_{lfc},
+    Preprocessor &preprocessor, common::LanguageFeatureControl lfc)
+    : messages_{messages}, cooked_{cooked}, preprocessor_{preprocessor},
+      allSources_{preprocessor_.allSources()}, features_{lfc},
       encoding_{allSources_.encoding()} {}
 
 Prescanner::Prescanner(const Prescanner &that)
     : messages_{that.messages_}, cooked_{that.cooked_},
-      allSources_{that.allSources_}, preprocessor_{that.preprocessor_},
+      preprocessor_{that.preprocessor_}, allSources_{that.allSources_},
       features_{that.features_}, inFixedForm_{that.inFixedForm_},
       fixedFormColumnLimit_{that.fixedFormColumnLimit_},
       encoding_{that.encoding_}, prescannerNesting_{that.prescannerNesting_ +
@@ -489,7 +488,7 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       // Handles FORMAT(3I9HHOLLERITH) by skipping over the first I so that
       // we don't misrecognize I9HOLLERITH as an identifier in the next case.
       EmitCharAndAdvance(tokens, *at_);
-    } else if (at_[0] == '_' && (at_[1] == '\'' || at_[1] == '"')) {
+    } else if (at_[0] == '_' && (at_[1] == '\'' || at_[1] == '"')) { // 4_"..."
       EmitCharAndAdvance(tokens, *at_);
       QuotedCharacterLiteral(tokens, start);
     }
@@ -507,7 +506,8 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
   } else if (IsLegalInIdentifier(*at_)) {
     do {
     } while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_)));
-    if (*at_ == '\'' || *at_ == '"') {
+    if ((*at_ == '\'' || *at_ == '"') &&
+        tokens.CharAt(tokens.SizeInChars() - 1) == '_') { // kind_"..."
       QuotedCharacterLiteral(tokens, start);
     }
     preventHollerith_ = false;

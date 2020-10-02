@@ -151,32 +151,6 @@ static cl::opt<unsigned> SwitchPeelThreshold(
 // store [4096 x i8] %data, [4096 x i8]* %buffer
 static const unsigned MaxParallelChains = 64;
 
-// Return the calling convention if the Value passed requires ABI mangling as it
-// is a parameter to a function or a return value from a function which is not
-// an intrinsic.
-static Optional<CallingConv::ID> getABIRegCopyCC(const Value *V) {
-  if (auto *R = dyn_cast<ReturnInst>(V))
-    return R->getParent()->getParent()->getCallingConv();
-
-  if (auto *CI = dyn_cast<CallInst>(V)) {
-    const bool IsInlineAsm = CI->isInlineAsm();
-    const bool IsIndirectFunctionCall =
-        !IsInlineAsm && !CI->getCalledFunction();
-
-    // It is possible that the call instruction is an inline asm statement or an
-    // indirect function call in which case the return value of
-    // getCalledFunction() would be nullptr.
-    const bool IsInstrinsicCall =
-        !IsInlineAsm && !IsIndirectFunctionCall &&
-        CI->getCalledFunction()->getIntrinsicID() != Intrinsic::not_intrinsic;
-
-    if (!IsInlineAsm && !IsInstrinsicCall)
-      return CI->getCallingConv();
-  }
-
-  return None;
-}
-
 static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                       const SDValue *Parts, unsigned NumParts,
                                       MVT PartVT, EVT ValueVT, const Value *V,
@@ -1587,7 +1561,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
     unsigned InReg = FuncInfo.InitializeRegForValue(Inst);
 
     RegsForValue RFV(*DAG.getContext(), TLI, DAG.getDataLayout(), InReg,
-                     Inst->getType(), getABIRegCopyCC(V));
+                     Inst->getType(), None);
     SDValue Chain = DAG.getEntryNode();
     return RFV.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(), Chain, nullptr, V);
   }
@@ -5520,7 +5494,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     if (VMI != FuncInfo.ValueMap.end()) {
       const auto &TLI = DAG.getTargetLoweringInfo();
       RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), VMI->second,
-                       V->getType(), getABIRegCopyCC(V));
+                       V->getType(), None);
       if (RFV.occupiesMultipleRegs()) {
         splitMultiRegDbgValue(RFV.getRegsAndSizes());
         return true;
@@ -7271,12 +7245,12 @@ void SelectionDAGBuilder::processIntegerCallValue(const Instruction &I,
   setValue(&I, Value);
 }
 
-/// See if we can lower a memcmp call into an optimized form. If so, return
+/// See if we can lower a memcmp/bcmp call into an optimized form. If so, return
 /// true and lower it. Otherwise return false, and it will be lowered like a
 /// normal call.
 /// The caller already checked that \p I calls the appropriate LibFunc with a
 /// correct prototype.
-bool SelectionDAGBuilder::visitMemCmpCall(const CallInst &I) {
+bool SelectionDAGBuilder::visitMemCmpBCmpCall(const CallInst &I) {
   const Value *LHS = I.getArgOperand(0), *RHS = I.getArgOperand(1);
   const Value *Size = I.getArgOperand(2);
   const ConstantInt *CSize = dyn_cast<ConstantInt>(Size);
@@ -7587,6 +7561,10 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         LibInfo->hasOptimizedCodeGen(Func)) {
       switch (Func) {
       default: break;
+      case LibFunc_bcmp:
+        if (visitMemCmpBCmpCall(I))
+          return;
+        break;
       case LibFunc_copysign:
       case LibFunc_copysignf:
       case LibFunc_copysignl:
@@ -7688,7 +7666,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
           return;
         break;
       case LibFunc_memcmp:
-        if (visitMemCmpCall(I))
+        if (visitMemCmpBCmpCall(I))
           return;
         break;
       case LibFunc_mempcpy:

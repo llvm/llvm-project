@@ -85,8 +85,13 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
     } else
       Sym.print(OS, MAI);
 
-    if (SRE.getKind() != MCSymbolRefExpr::VK_None)
-      SRE.printVariantKind(OS);
+    const MCSymbolRefExpr::VariantKind Kind = SRE.getKind();
+    if (Kind != MCSymbolRefExpr::VK_None) {
+      if (MAI && MAI->useParensForSymbolVariant()) // ARM
+        OS << '(' << MCSymbolRefExpr::getVariantKindName(Kind) << ')';
+      else
+        OS << '@' << MCSymbolRefExpr::getVariantKindName(Kind);
+    }
 
     return;
   }
@@ -197,8 +202,7 @@ const MCConstantExpr *MCConstantExpr::create(int64_t Value, MCContext &Ctx,
 MCSymbolRefExpr::MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
                                  const MCAsmInfo *MAI, SMLoc Loc)
     : MCExpr(MCExpr::SymbolRef, Loc,
-             encodeSubclassData(Kind, MAI->useParensForSymbolVariant(),
-                                MAI->hasSubsectionsViaSymbols())),
+             encodeSubclassData(Kind, MAI->hasSubsectionsViaSymbols())),
       Symbol(Symbol) {
   assert(Symbol);
 }
@@ -324,6 +328,8 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
     return "got@pcrel";
   case VK_PPC_GOT_TLSGD_PCREL:
     return "got@tlsgd@pcrel";
+  case VK_PPC_GOT_TLSLD_PCREL:
+    return "got@tlsld@pcrel";
   case VK_PPC_GOT_TPREL_PCREL:
     return "got@tprel@pcrel";
   case VK_PPC_TLS_PCREL:
@@ -461,6 +467,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("got@tlsld@ha", VK_PPC_GOT_TLSLD_HA)
     .Case("got@pcrel", VK_PPC_GOT_PCREL)
     .Case("got@tlsgd@pcrel", VK_PPC_GOT_TLSGD_PCREL)
+    .Case("got@tlsld@pcrel", VK_PPC_GOT_TLSLD_PCREL)
     .Case("got@tprel@pcrel", VK_PPC_GOT_TPREL_PCREL)
     .Case("tls@pcrel", VK_PPC_TLS_PCREL)
     .Case("notoc", VK_PPC_NOTOC)
@@ -505,13 +512,6 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("tpoff_hi", VK_VE_TPOFF_HI32)
     .Case("tpoff_lo", VK_VE_TPOFF_LO32)
     .Default(VK_Invalid);
-}
-
-void MCSymbolRefExpr::printVariantKind(raw_ostream &OS) const {
-  if (useParensForSymbolVariant())
-    OS << '(' << MCSymbolRefExpr::getVariantKindName(getKind()) << ')';
-  else
-    OS << '@' << MCSymbolRefExpr::getVariantKindName(getKind());
 }
 
 /* *** */

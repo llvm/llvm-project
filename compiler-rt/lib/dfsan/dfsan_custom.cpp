@@ -95,6 +95,24 @@ SANITIZER_INTERFACE_ATTRIBUTE char *__dfsw_strchr(const char *s, int c,
   }
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE char *__dfsw_strpbrk(const char *s,
+                                                   const char *accept,
+                                                   dfsan_label s_label,
+                                                   dfsan_label accept_label,
+                                                   dfsan_label *ret_label) {
+  const char *ret = strpbrk(s, accept);
+  if (flags().strict_data_dependencies) {
+    *ret_label = ret ? s_label : 0;
+  } else {
+    size_t s_bytes_read = (ret ? ret - s : strlen(s)) + 1;
+    *ret_label =
+        dfsan_union(dfsan_read_label(s, s_bytes_read),
+                    dfsan_union(dfsan_read_label(accept, strlen(accept) + 1),
+                                dfsan_union(s_label, accept_label)));
+  }
+  return const_cast<char *>(ret);
+}
+
 static int dfsan_memcmp_bcmp(const void *s1, const void *s2, size_t n,
                              dfsan_label s1_label, dfsan_label s2_label,
                              dfsan_label n_label, dfsan_label *ret_label) {

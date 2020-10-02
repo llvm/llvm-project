@@ -45,6 +45,7 @@ struct FrameInfo {
   const MCSymbol *PrologEnd = nullptr;
   const MCSymbol *Symbol = nullptr;
   MCSection *TextSection = nullptr;
+  uint32_t PackedInfo = 0;
 
   bool HandlesUnwind = false;
   bool HandlesExceptions = false;

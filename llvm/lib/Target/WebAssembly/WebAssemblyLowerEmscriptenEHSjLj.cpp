@@ -208,7 +208,9 @@
 ///===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
+#include "WebAssemblyTargetMachine.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -314,13 +316,23 @@ static bool canThrow(const Value *V) {
 // Get a global variable with the given name.  If it doesn't exist declare it,
 // which will generate an import and asssumes that it will exist at link time.
 static GlobalVariable *getGlobalVariableI32(Module &M, IRBuilder<> &IRB,
+                                            WebAssemblyTargetMachine &TM,
                                             const char *Name) {
-
-  auto *GV =
-      dyn_cast<GlobalVariable>(M.getOrInsertGlobal(Name, IRB.getInt32Ty()));
+  auto Int32Ty = IRB.getInt32Ty();
+  auto *GV = dyn_cast<GlobalVariable>(M.getOrInsertGlobal(Name, Int32Ty));
   if (!GV)
     report_fatal_error(Twine("unable to create global: ") + Name);
 
+  // If the target supports TLS, make this variable thread-local. We can't just
+  // unconditionally make it thread-local and depend on
+  // CoalesceFeaturesAndStripAtomics to downgrade it, because stripping TLS has
+  // the side effect of disallowing the object from being linked into a
+  // shared-memory module, which we don't want to be responsible for.
+  auto *Subtarget = TM.getSubtargetImpl();
+  auto TLS = Subtarget->hasAtomics() && Subtarget->hasBulkMemory()
+                 ? GlobalValue::LocalExecTLSModel
+                 : GlobalValue::NotThreadLocal;
+  GV->setThreadLocalMode(TLS);
   return GV;
 }
 
@@ -642,11 +654,15 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   bool LongjmpUsed = LongjmpF && !LongjmpF->use_empty();
   bool DoSjLj = EnableSjLj && (SetjmpUsed || LongjmpUsed);
 
+  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
+  assert(TPC && "Expected a TargetPassConfig");
+  auto &TM = TPC->getTM<WebAssemblyTargetMachine>();
+
   // Declare (or get) global variables __THREW__, __threwValue, and
   // getTempRet0/setTempRet0 function which are used in common for both
   // exception handling and setjmp/longjmp handling
-  ThrewGV = getGlobalVariableI32(M, IRB, "__THREW__");
-  ThrewValueGV = getGlobalVariableI32(M, IRB, "__threwValue");
+  ThrewGV = getGlobalVariableI32(M, IRB, TM, "__THREW__");
+  ThrewValueGV = getGlobalVariableI32(M, IRB, TM, "__threwValue");
   GetTempRet0Func = getEmscriptenFunction(
       FunctionType::get(IRB.getInt32Ty(), false), "getTempRet0", &M);
   SetTempRet0Func = getEmscriptenFunction(

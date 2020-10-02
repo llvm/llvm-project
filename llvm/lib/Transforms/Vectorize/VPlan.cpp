@@ -63,6 +63,20 @@ void VPValue::print(raw_ostream &OS, VPSlotTracker &SlotTracker) const {
     printAsOperand(OS, SlotTracker);
 }
 
+void VPValue::dump() const {
+  const VPInstruction *Instr = dyn_cast<VPInstruction>(this);
+  VPSlotTracker SlotTracker(
+      (Instr && Instr->getParent()) ? Instr->getParent()->getPlan() : nullptr);
+  print(dbgs(), SlotTracker);
+  dbgs() << "\n";
+}
+
+void VPRecipeBase::dump() const {
+  VPSlotTracker SlotTracker(nullptr);
+  print(dbgs(), "", SlotTracker);
+  dbgs() << "\n";
+}
+
 // Get the top-most entry block of \p Start. This is the entry block of the
 // containing VPlan. This function is templated to support both const and non-const blocks
 template <typename T> static T *getPlanEntry(T *Start) {

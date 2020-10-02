@@ -10,6 +10,11 @@
 // RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf=split -c -### %s 2> %t
 // RUN: FileCheck -check-prefix=CHECK-ACTIONS < %t %s
 
+// RUN: %clang -target wasm32-unknown-unknown -gsplit-dwarf -c -### %s 2> %t
+// RUN: FileCheck -check-prefix=CHECK-ACTIONS < %t %s
+// RUN: %clang -target wasm32-unknown-unknown -gsplit-dwarf=split -c -### %s 2> %t
+// RUN: FileCheck -check-prefix=CHECK-ACTIONS < %t %s
+
 // RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf=single -c -### %s 2> %t
 // RUN: FileCheck -check-prefix=CHECK-ACTIONS-SINGLE-SPLIT < %t %s
 //

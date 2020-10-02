@@ -32,3 +32,40 @@ body:             |
     RET_ReallyLR implicit $q0
 
 ...
+---
+name:            g_constant_operands_on_gpr
+alignment:       4
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    ; Check that we assign GPR to the operands even though they're < 32b in size.
+    ; They're all constant, so we can select it via a constant-pool load if needed
+    ; and this form is more amenable to selection by patterns (without x-bank copies).
+    ; CHECK-LABEL: name: g_constant_operands_on_gpr
+    ; CHECK: [[C:%[0-9]+]]:gpr(s8) = G_CONSTANT i8 4
+    ; CHECK: [[C1:%[0-9]+]]:gpr(s8) = G_CONSTANT i8 10
+    ; CHECK: [[C2:%[0-9]+]]:gpr(s8) = G_CONSTANT i8 3
+    ; CHECK: [[C3:%[0-9]+]]:gpr(s8) = G_CONSTANT i8 11
+    ; CHECK: [[C4:%[0-9]+]]:gpr(s8) = G_CONSTANT i8 15
+    ; CHECK: [[C5:%[0-9]+]]:gpr(s8) = G_CONSTANT i8 44
+    ; CHECK: [[C6:%[0-9]+]]:gpr(s8) = G_CONSTANT i8 22
+    ; CHECK: [[C7:%[0-9]+]]:gpr(s8) = G_CONSTANT i8 19
+    ; CHECK: [[C8:%[0-9]+]]:gpr(s8) = G_CONSTANT i8 55
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:fpr(<16 x s8>) = G_BUILD_VECTOR [[C]](s8), [[C1]](s8), [[C2]](s8), [[C3]](s8), [[C4]](s8), [[C]](s8), [[C1]](s8), [[C5]](s8), [[C6]](s8), [[C4]](s8), [[C]](s8), [[C7]](s8), [[C2]](s8), [[C3]](s8), [[C4]](s8), [[C8]](s8)
+    ; CHECK: $q0 = COPY [[BUILD_VECTOR]](<16 x s8>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %1:_(s8) = G_CONSTANT i8 4
+    %2:_(s8) = G_CONSTANT i8 10
+    %3:_(s8) = G_CONSTANT i8 3
+    %4:_(s8) = G_CONSTANT i8 11
+    %5:_(s8) = G_CONSTANT i8 15
+    %6:_(s8) = G_CONSTANT i8 44
+    %7:_(s8) = G_CONSTANT i8 22
+    %8:_(s8) = G_CONSTANT i8 19
+    %9:_(s8) = G_CONSTANT i8 55
+    %0:_(<16 x s8>) = G_BUILD_VECTOR %1(s8), %2(s8), %3(s8), %4(s8), %5(s8), %1(s8), %2(s8), %6(s8), %7(s8), %5(s8), %1(s8), %8(s8), %3(s8), %4(s8), %5(s8), %9(s8)
+    $q0 = COPY %0(<16 x s8>)
+    RET_ReallyLR implicit $q0
+
+...

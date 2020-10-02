@@ -19,6 +19,7 @@
 ; in the cases below where pow is transformed into another function call.
 
 declare float @powf(float, float) nounwind readonly
+declare float @llvm.pow.f32(float, float)
 declare double @pow(double, double) nounwind readonly
 declare double @llvm.pow.f64(double, double)
 declare <2 x float> @llvm.pow.v2f32(<2 x float>, <2 x float>) nounwind readonly
@@ -247,43 +248,34 @@ define <2 x double> @test_simplify6v(<2 x double> %x) {
 
 ; Check pow(x, 0.5) -> fabs(sqrt(x)), where x != -infinity.
 
-define float @powf_libcall_to_select_sqrt(float %x) {
-; CHECK-LABEL: @powf_libcall_to_select_sqrt(
-; ANY-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]])
-; ANY-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SQRTF]])
-; ANY-NEXT:    [[ISINF:%.*]] = fcmp oeq float [[X]], 0xFFF0000000000000
-; ANY-NEXT:    [[TMP1:%.*]] = select i1 [[ISINF]], float 0x7FF0000000000000, float [[ABS]]
-; ANY-NEXT:    ret float [[TMP1]]
-; VC32-NEXT:   [[POW:%.*]] = call float @powf(float [[X:%.*]], float 5.000000e-01)
+define float @powf_libcall_half_ninf(float %x) {
+; CHECK-LABEL: @powf_libcall_half_ninf(
+; ANY-NEXT:    [[SQRTF:%.*]] = call ninf float @sqrtf(float [[X:%.*]])
+; ANY-NEXT:    [[ABS:%.*]] = call ninf float @llvm.fabs.f32(float [[SQRTF]])
+; ANY-NEXT:    ret float [[ABS]]
+; VC32-NEXT:   [[POW:%.*]] = call ninf float @powf(float [[X:%.*]], float 5.000000e-01)
 ; VC32-NEXT:   ret float [[POW]]
-; VC51-NEXT:   [[POW:%.*]] = call float @powf(float [[X:%.*]], float 5.000000e-01)
+; VC51-NEXT:   [[POW:%.*]] = call ninf float @powf(float [[X:%.*]], float 5.000000e-01)
 ; VC51-NEXT:   ret float [[POW]]
-; VC64-NEXT:   [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]])
-; VC64-NEXT:   [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SQRTF]])
-; VC64-NEXT:   [[ISINF:%.*]] = fcmp oeq float [[X]], 0xFFF0000000000000
-; VC64-NEXT:   [[TMP1:%.*]] = select i1 [[ISINF]], float 0x7FF0000000000000, float [[ABS]]
-; VC64-NEXT:   ret float [[TMP1]]
-; VC83-NEXT:   [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]])
-; VC83-NEXT:   [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SQRTF]])
-; VC83-NEXT:   [[ISINF:%.*]] = fcmp oeq float [[X]], 0xFFF0000000000000
-; VC83-NEXT:   [[TMP1:%.*]] = select i1 [[ISINF]], float 0x7FF0000000000000, float [[ABS]]
-; VC83-NEXT:   ret float [[TMP1]]
-; NOLIB-NEXT:    [[POW:%.*]] = call float @powf(float [[X:%.*]], float 5.000000e-01)
+; VC64-NEXT:   [[SQRTF:%.*]] = call ninf float @sqrtf(float [[X:%.*]])
+; VC64-NEXT:   [[ABS:%.*]] = call ninf float @llvm.fabs.f32(float [[SQRTF]])
+; VC64-NEXT:   ret float [[ABS]]
+; VC83-NEXT:   [[SQRTF:%.*]] = call ninf float @sqrtf(float [[X:%.*]])
+; VC83-NEXT:   [[ABS:%.*]] = call ninf float @llvm.fabs.f32(float [[SQRTF]])
+; VC83-NEXT:   ret float [[ABS]]
+; NOLIB-NEXT:    [[POW:%.*]] = call ninf float @powf(float [[X:%.*]], float 5.000000e-01)
 ; NOLIB-NEXT:    ret float [[POW]]
 ;
-  %retval = call float @powf(float %x, float 0.5)
+  %retval = call ninf float @powf(float %x, float 0.5)
   ret float %retval
 }
 
-define double @pow_libcall_to_select_sqrt(double %x) {
-; CHECK-LABEL: @pow_libcall_to_select_sqrt(
-; LIB-NEXT:    [[SQRT:%.*]] = call double @sqrt(double [[X:%.*]])
-; LIB-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
-; LIB-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[X]], 0xFFF0000000000000
-; LIB-NEXT:    [[TMP1:%.*]] = select i1 [[ISINF]], double 0x7FF0000000000000, double [[ABS]]
-; LIB-NEXT:    ret double [[TMP1]]
-; NOLIB-NEXT:    [[POW:%.*]] = call double @pow(double [[X:%.*]], double 5.000000e-01)
-; NOLIB-NEXT:    ret double [[POW]]
+; Check pow(x, 0.5) where x may be -infinity does not call a library sqrt function.
+
+define double @pow_libcall_half_no_FMF(double %x) {
+; CHECK-LABEL: @pow_libcall_half_no_FMF(
+; CHECK-NEXT:    [[POW:%.*]] = call double @pow(double [[X:%.*]], double 5.000000e-01)
+; CHECK-NEXT:    ret double [[POW]]
 ;
   %retval = call double @pow(double %x, double 0.5)
   ret double %retval
@@ -293,27 +285,17 @@ define double @pow_libcall_to_select_sqrt(double %x) {
 
 define float @test_simplify9(float %x) {
 ; CHECK-LABEL: @test_simplify9(
-; ANY-NEXT:    ret float 0x7FF0000000000000
-; VC32-NEXT:   [[POW:%.*]] = call float @powf(float 0xFFF0000000000000, float 5.000000e-01)
-; VC32-NEXT:   ret float [[POW]]
-; VC51-NEXT:   [[POW:%.*]] = call float @powf(float 0xFFF0000000000000, float 5.000000e-01)
-; VC51-NEXT:   ret float [[POW]]
-; VC64-NEXT:   ret float 0x7FF0000000000000
-; VC83-NEXT:   ret float 0x7FF0000000000000
-; NOLIB-NEXT:    [[POW:%.*]] = call float @powf(float 0xFFF0000000000000, float 5.000000e-01)
-; NOLIB-NEXT:    ret float [[POW]]
+; CHECK-NEXT:    ret float 0x7FF0000000000000
 ;
-  %retval = call float @powf(float 0xFFF0000000000000, float 0.5)
+  %retval = call float @llvm.pow.f32(float 0xFFF0000000000000, float 0.5)
   ret float %retval
 }
 
 define double @test_simplify10(double %x) {
 ; CHECK-LABEL: @test_simplify10(
-; LIB-NEXT:    ret double 0x7FF0000000000000
-; NOLIB-NEXT:    [[POW:%.*]] = call double @pow(double 0xFFF0000000000000, double 5.000000e-01)
-; NOLIB-NEXT:    ret double [[POW]]
+; CHECK-NEXT:    ret double 0x7FF0000000000000
 ;
-  %retval = call double @pow(double 0xFFF0000000000000, double 0.5)
+  %retval = call double @llvm.pow.f64(double 0xFFF0000000000000, double 0.5)
   ret double %retval
 }
 
@@ -482,8 +464,8 @@ define <2 x double> @pow_neg1_double_fastv(<2 x double> %x) {
   ret <2 x double> %r
 }
 
-define double @test_simplify17(double %x) {
-; CHECK-LABEL: @test_simplify17(
+define double @pow_intrinsic_half_no_FMF(double %x) {
+; CHECK-LABEL: @pow_intrinsic_half_no_FMF(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
 ; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[X]], 0xFFF0000000000000

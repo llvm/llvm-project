@@ -94,19 +94,29 @@ define void @test18_atomic(i8* %P, i8* %Q, i8* %R) nounwind ssp {
 }
 
 define void @test_memset_memcpy_inline(i8* noalias %P, i8* noalias %Q) {
+; CHECK-LABEL: @test_memset_memcpy_inline(
+; CHECK-NEXT:    tail call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    ret void
+;
   tail call void @llvm.memset.p0i8.i64(i8* %P, i8 42, i64 8, i1 false)
   tail call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i1 false)
- ret void
+  ret void
 }
 
 define void @test_store_memcpy_inline(i8* noalias %P, i8* noalias %Q) {
+; CHECK-LABEL: @test_store_memcpy_inline(
+; CHECK-NEXT:    [[P_4:%.*]] = getelementptr i8, i8* [[P:%.*]], i64 4
+; CHECK-NEXT:    store i8 4, i8* [[P_4]], align 1
+; CHECK-NEXT:    tail call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[Q:%.*]], i64 4, i1 false)
+; CHECK-NEXT:    ret void
+;
   store i8 0, i8* %P
   %P.1 = getelementptr i8, i8* %P, i64 1
   store i8 1, i8* %P.1
   %P.4 = getelementptr i8, i8* %P, i64 4
   store i8 4, i8* %P.4
   tail call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 4, i1 false)
- ret void
+  ret void
 }
 
 declare void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64 immarg, i1 immarg)

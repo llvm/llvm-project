@@ -102,10 +102,6 @@ static cl::opt<bool> UseDivergentRegisterIndexing(
   cl::desc("Use indirect register addressing for divergent indexes"),
   cl::init(false));
 
-static cl::opt<bool> EnableLowerSGPRToVGPRCopy(
-    "lower-sgpr-to-vgpr-copy", cl::Hidden,
-    cl::desc("Enable lowering copy from SGPR to VGPR"), cl::init(true));
-
 static bool hasFP32Denormals(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   return Info->getMode().allFP32Denormals();
@@ -1437,9 +1433,11 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
       AddrSpace == AMDGPUAS::REGION_ADDRESS) {
     // Check if alignment requirements for ds_read/write instructions are
     // disabled.
-    if (Subtarget->hasUnalignedDSAccessEnabled()) {
+    if (Subtarget->hasUnalignedDSAccess() &&
+        Subtarget->hasUnalignedAccessMode() &&
+        !Subtarget->hasLDSMisalignedBug()) {
       if (IsFast)
-        *IsFast = true;
+        *IsFast = Alignment != Align(2);
       return true;
     }
 
@@ -1455,10 +1453,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
     }
     if (Size == 96) {
       // ds_read/write_b96 require 16-byte alignment on gfx8 and older.
-      bool Aligned = Alignment >= Align((Subtarget->hasUnalignedDSAccess() &&
-                                         !Subtarget->hasLDSMisalignedBug())
-                                            ? 4
-                                            : 16);
+      bool Aligned = Alignment >= Align(16);
       if (IsFast)
         *IsFast = Aligned;
 
@@ -1468,10 +1463,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
       // ds_read/write_b128 require 16-byte alignment on gfx8 and older, but we
       // can do a 8 byte aligned, 16 byte access in a single operation using
       // ds_read2/write2_b64.
-      bool Aligned = Alignment >= Align((Subtarget->hasUnalignedDSAccess() &&
-                                         !Subtarget->hasLDSMisalignedBug())
-                                            ? 4
-                                            : 8);
+      bool Aligned = Alignment >= Align(8);
       if (IsFast)
         *IsFast = Aligned;
 
@@ -1492,7 +1484,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
     return AlignedBy4;
   }
 
-  if (Subtarget->hasUnalignedBufferAccessEnabled() &&
+  if (Subtarget->hasUnalignedBufferAccess() &&
       !(AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
         AddrSpace == AMDGPUAS::REGION_ADDRESS)) {
     // If we have an uniform constant load, it still requires using a slow
@@ -3343,29 +3335,11 @@ Register SITargetLowering::getRegisterByName(const char* RegName, LLT VT,
 
 // If kill is not the last instruction, split the block so kill is always a
 // proper terminator.
-MachineBasicBlock *SITargetLowering::splitKillBlock(MachineInstr &MI,
-                                                    MachineBasicBlock *BB) const {
+MachineBasicBlock *
+SITargetLowering::splitKillBlock(MachineInstr &MI,
+                                 MachineBasicBlock *BB) const {
+  MachineBasicBlock *SplitBB = BB->splitAt(MI, false /*UpdateLiveIns*/);
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
-
-  MachineBasicBlock::iterator SplitPoint(&MI);
-  ++SplitPoint;
-
-  if (SplitPoint == BB->end()) {
-    // Don't bother with a new block.
-    MI.setDesc(TII->getKillTerminatorFromPseudo(MI.getOpcode()));
-    return BB;
-  }
-
-  MachineFunction *MF = BB->getParent();
-  MachineBasicBlock *SplitBB
-    = MF->CreateMachineBasicBlock(BB->getBasicBlock());
-
-  MF->insert(++MachineFunction::iterator(BB), SplitBB);
-  SplitBB->splice(SplitBB->begin(), BB, SplitPoint, BB->end());
-
-  SplitBB->transferSuccessorsAndUpdatePHIs(BB);
-  BB->addSuccessor(SplitBB);
-
   MI.setDesc(TII->getKillTerminatorFromPseudo(MI.getOpcode()));
   return SplitBB;
 }
@@ -4206,13 +4180,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   case AMDGPU::ADJCALLSTACKDOWN: {
     const SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
     MachineInstrBuilder MIB(*MF, &MI);
-
-    // Add an implicit use of the frame offset reg to prevent the restore copy
-    // inserted after the call from being reorderd after stack operations in the
-    // the caller's frame.
     MIB.addReg(Info->getStackPtrOffsetReg(), RegState::ImplicitDefine)
-        .addReg(Info->getStackPtrOffsetReg(), RegState::Implicit)
-        .addReg(Info->getFrameOffsetReg(), RegState::Implicit);
+       .addReg(Info->getStackPtrOffsetReg(), RegState::Implicit);
     return BB;
   }
   case AMDGPU::SI_CALL_ISEL: {
@@ -5909,7 +5878,8 @@ static SDValue constructRetValue(SelectionDAG &DAG,
     Data = DAG.getNode(ISD::TRUNCATE, DL, ReqRetVT.changeTypeToInteger(), Data);
   } else {
     // We need to widen the return vector to a legal type
-    if ((ReqRetVT.getVectorNumElements() % 2) == 1) {
+    if ((ReqRetVT.getVectorNumElements() % 2) == 1 &&
+        ReqRetVT.getVectorElementType().getSizeInBits() == 16) {
       LegalReqRetVT =
           EVT::getVectorVT(*DAG.getContext(), ReqRetVT.getVectorElementType(),
                            ReqRetVT.getVectorNumElements() + 1);
@@ -11489,60 +11459,6 @@ bool SITargetLowering::checkAsmConstraintValA(SDValue Op,
   return false;
 }
 
-// Lower COPY from SGPR to VGPR to real one as they are real transfer instead
-// of COPY.
-static void lowerSGPRToVGPRCopy(MachineFunction &MF, MachineRegisterInfo &MRI,
-                                const SIRegisterInfo &TRI,
-                                const SIInstrInfo &TII) {
-  for (MachineBasicBlock &MBB : MF) {
-    for (auto BI = MBB.begin(), BE = MBB.end(); BI != BE; /*EMPTY*/) {
-      MachineInstr &MI = *BI++;
-
-      auto IsSGPRToVGPRCopy = [&MRI, &TRI](const MachineInstr &MI) {
-        if (!MI.isCopy())
-          return false;
-
-        auto DstReg = MI.getOperand(0).getReg();
-        auto SrcReg = MI.getOperand(1).getReg();
-        const auto *DstRC = DstReg.isVirtual() ? MRI.getRegClass(DstReg)
-                                               : TRI.getPhysRegClass(DstReg);
-        const auto *SrcRC = SrcReg.isVirtual() ? MRI.getRegClass(SrcReg)
-                                               : TRI.getPhysRegClass(SrcReg);
-        return (DstRC == &AMDGPU::VGPR_32RegClass ||
-                DstRC == &AMDGPU::VReg_64RegClass) &&
-               (SrcRC == &AMDGPU::SGPR_32RegClass ||
-                SrcRC == &AMDGPU::SGPR_64RegClass);
-      };
-
-      // Skip if it's not a copy from SGPR to VGPR.
-      if (!IsSGPRToVGPRCopy(MI))
-        continue;
-
-      const MachineOperand &Src = MI.getOperand(1);
-      // FIXME: Need subreg support.
-      if (Src.getSubReg() != AMDGPU::NoSubRegister)
-        continue;
-      // FIXME: Need undef support.
-      if (Src.getReg().isVirtual()) {
-        auto *DefMI = MRI.getVRegDef(Src.getReg());
-        if (!DefMI || DefMI->isImplicitDef())
-          continue;
-      }
-
-      LLVM_DEBUG(dbgs() << "Lower COPY: " << MI);
-      unsigned Opcode = (TRI.getRegSizeInBits(Src.getReg(), MRI) == 64)
-                            ? AMDGPU::V_MOV_B64_PSEUDO
-                            : AMDGPU::V_MOV_B32_e32;
-      auto DstReg = MI.getOperand(0).getReg();
-      auto MIB = BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(Opcode), DstReg)
-                     .add(MI.getOperand(1));
-      (void)MIB;
-      LLVM_DEBUG(dbgs() << "        to: " << *MIB.getInstr());
-      MI.eraseFromParent();
-    }
-  }
-}
-
 // Figure out which registers should be reserved for stack access. Only after
 // the function is legalized do we know all of the non-spill stack objects or if
 // calls are present.
@@ -11551,10 +11467,6 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
-  const SIInstrInfo *TII = Subtarget->getInstrInfo();
-
-  if (EnableLowerSGPRToVGPRCopy)
-    lowerSGPRToVGPRCopy(MF, MRI, *TRI, *TII);
 
   if (Info->isEntryFunction()) {
     // Callable functions have fixed registers used for stack access.
@@ -11764,46 +11676,40 @@ static bool isCopyFromRegOfInlineAsm(const SDNode *N) {
   return false;
 }
 
-bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode * N,
-  FunctionLoweringInfo * FLI, LegacyDivergenceAnalysis * KDA) const
-{
+bool SITargetLowering::isSDNodeSourceOfDivergence(
+    const SDNode *N, FunctionLoweringInfo *FLI,
+    LegacyDivergenceAnalysis *KDA) const {
   switch (N->getOpcode()) {
-    case ISD::CopyFromReg:
-    {
-      const RegisterSDNode *R = cast<RegisterSDNode>(N->getOperand(1));
-      const MachineRegisterInfo &MRI = FLI->MF->getRegInfo();
-      const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
-      Register Reg = R->getReg();
+  case ISD::CopyFromReg: {
+    const RegisterSDNode *R = cast<RegisterSDNode>(N->getOperand(1));
+    const MachineRegisterInfo &MRI = FLI->MF->getRegInfo();
+    const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+    Register Reg = R->getReg();
 
-      // FIXME: Why does this need to consider isLiveIn?
-      if (Reg.isPhysical() || MRI.isLiveIn(Reg))
-        return !TRI->isSGPRReg(MRI, Reg);
-
-      if (const Value *V = FLI->getValueFromVirtualReg(R->getReg()))
-        return KDA->isDivergent(V);
-
-      assert(Reg == FLI->DemoteRegister || isCopyFromRegOfInlineAsm(N));
+    // FIXME: Why does this need to consider isLiveIn?
+    if (Reg.isPhysical() || MRI.isLiveIn(Reg))
       return !TRI->isSGPRReg(MRI, Reg);
-    }
-    break;
-    case ISD::LOAD: {
-      const LoadSDNode *L = cast<LoadSDNode>(N);
-      unsigned AS = L->getAddressSpace();
-      // A flat load may access private memory.
-      return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS;
-    } break;
-    case ISD::CALLSEQ_END:
-    return true;
-    break;
-    case ISD::INTRINSIC_WO_CHAIN:
-    {
 
-    }
-      return AMDGPU::isIntrinsicSourceOfDivergence(
-      cast<ConstantSDNode>(N->getOperand(0))->getZExtValue());
-    case ISD::INTRINSIC_W_CHAIN:
-      return AMDGPU::isIntrinsicSourceOfDivergence(
-      cast<ConstantSDNode>(N->getOperand(1))->getZExtValue());
+    if (const Value *V = FLI->getValueFromVirtualReg(R->getReg()))
+      return KDA->isDivergent(V);
+
+    assert(Reg == FLI->DemoteRegister || isCopyFromRegOfInlineAsm(N));
+    return !TRI->isSGPRReg(MRI, Reg);
+  }
+  case ISD::LOAD: {
+    const LoadSDNode *L = cast<LoadSDNode>(N);
+    unsigned AS = L->getAddressSpace();
+    // A flat load may access private memory.
+    return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS;
+  }
+  case ISD::CALLSEQ_END:
+    return true;
+  case ISD::INTRINSIC_WO_CHAIN:
+    return AMDGPU::isIntrinsicSourceOfDivergence(
+        cast<ConstantSDNode>(N->getOperand(0))->getZExtValue());
+  case ISD::INTRINSIC_W_CHAIN:
+    return AMDGPU::isIntrinsicSourceOfDivergence(
+        cast<ConstantSDNode>(N->getOperand(1))->getZExtValue());
   }
   return false;
 }
@@ -11838,6 +11744,16 @@ bool SITargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
                                                             SNaN, Depth);
 }
 
+// Global FP atomic instructions have a hardcoded FP mode and do not support
+// FP32 denormals, and only support v2f16 denormals.
+static bool fpModeMatchesGlobalFPAtomicMode(const AtomicRMWInst *RMW) {
+  const fltSemantics &Flt = RMW->getType()->getScalarType()->getFltSemantics();
+  auto DenormMode = RMW->getParent()->getParent()->getDenormalMode(Flt);
+  if (&Flt == &APFloat::IEEEsingle())
+    return DenormMode == DenormalMode::getPreserveSign();
+  return DenormMode == DenormalMode::getIEEE();
+}
+
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   switch (RMW->getOperation()) {
@@ -11856,10 +11772,15 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     unsigned AS = RMW->getPointerAddressSpace();
 
     if (AS == AMDGPUAS::GLOBAL_ADDRESS && Subtarget->hasAtomicFaddInsts()) {
+      if (!fpModeMatchesGlobalFPAtomicMode(RMW))
+        return AtomicExpansionKind::CmpXChg;
+
       return RMW->use_empty() ? AtomicExpansionKind::None :
                                 AtomicExpansionKind::CmpXChg;
     }
 
+    // DS FP atomics do repect the denormal mode, but the rounding mode is fixed
+    // to round-to-nearest-even.
     return (AS == AMDGPUAS::LOCAL_ADDRESS && Subtarget->hasLDSFPAtomics()) ?
       AtomicExpansionKind::None : AtomicExpansionKind::CmpXChg;
   }

@@ -43,7 +43,7 @@ namespace {
 const char *getDiagnosticCode(unsigned ID) {
   switch (ID) {
 #define DIAG(ENUM, CLASS, DEFAULT_MAPPING, DESC, GROPU, SFINAE, NOWERROR,      \
-             SHOWINSYSHEADER, DEFERRABLE, CATEGORY)                            \
+             SHOWINSYSHEADER, CATEGORY)                                        \
   case clang::diag::ENUM:                                                      \
     return #ENUM;
 #include "clang/Basic/DiagnosticASTKinds.inc"
@@ -411,6 +411,8 @@ void toLSPDiags(
     Main.codeActions.emplace();
     for (const auto &Fix : D.Fixes)
       Main.codeActions->push_back(toCodeAction(Fix, File));
+    if (Main.codeActions->size() == 1)
+      Main.codeActions->front().isPreferred = true;
   }
   if (Opts.SendDiagnosticCategory && !D.Category.empty())
     Main.category = D.Category;

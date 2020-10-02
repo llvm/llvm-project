@@ -39,20 +39,26 @@ define float @overflow_sitofp() {
   ret float %i
 }
 
-; https://llvm.org/PR43907
+; https://llvm.org/PR43907 - make sure that NaN doesn't morph into Inf.
+; SNaN becomes QNaN.
 
 define float @nan_f64_trunc() {
 ; CHECK-LABEL: @nan_f64_trunc(
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %f = fptrunc double 0x7FF0000000000001 to float
   ret float %f
 }
 
-define <2 x half> @nan_v2f32_trunc() {
-; CHECK-LABEL: @nan_v2f32_trunc(
-; CHECK-NEXT:    ret <2 x half> <half 0xH7C00, half 0xH7C37>
+; Verify again with a vector and different destination type.
+; SNaN becomes SNaN (first two elements).
+; QNaN remains QNaN (third element).
+; Lower 42 bits of NaN source payload are lost.
+
+define <3 x half> @nan_v3f64_trunc() {
+; CHECK-LABEL: @nan_v3f64_trunc(
+; CHECK-NEXT:    ret <3 x half> <half 0xH7E00, half 0xH7E00, half 0xH7E00>
 ;
-  %f = fptrunc <2 x float> <float 0x7FF0000100000000, float 0x7FF0DEAD00000000> to <2 x half>
-  ret <2 x half> %f
+  %f = fptrunc <3 x double> <double 0x7FF0020000000000, double 0x7FF003FFFFFFFFFF, double 0x7FF8000000000001> to <3 x half>
+  ret <3 x half> %f
 }

@@ -566,21 +566,6 @@ void Operator::print(llvm::raw_ostream &os) const {
   }
 }
 
-Operator::NamespaceEmitter::NamespaceEmitter(raw_ostream &os, Operator &op)
-    : os(os) {
-  auto dialect = op.getDialect();
-  if (!dialect)
-    return;
-  llvm::SplitString(dialect.getCppNamespace(), namespaces, "::");
-  for (StringRef ns : namespaces)
-    os << "namespace " << ns << " {\n";
-}
-
-Operator::NamespaceEmitter::~NamespaceEmitter() {
-  for (StringRef ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
-}
-
 auto Operator::VariableDecoratorIterator::unwrap(llvm::Init *init)
     -> VariableDecorator {
   return VariableDecorator(cast<llvm::DefInit>(init)->getDef());

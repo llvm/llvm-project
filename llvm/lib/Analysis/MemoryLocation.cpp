@@ -158,6 +158,7 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       break;
     case Intrinsic::memset:
     case Intrinsic::memcpy:
+    case Intrinsic::memcpy_inline:
     case Intrinsic::memmove:
       assert((ArgIdx == 0 || ArgIdx == 1) &&
              "Invalid argument index for memory intrinsic");
@@ -237,9 +238,10 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
         return MemoryLocation(Arg, LocationSize::precise(LenCI->getZExtValue()),
                               AATags);
       break;
+    case LibFunc_bcmp:
     case LibFunc_memcmp:
       assert((ArgIdx == 0 || ArgIdx == 1) &&
-             "Invalid argument index for memcmp");
+             "Invalid argument index for memcmp/bcmp");
       if (const ConstantInt *LenCI =
               dyn_cast<ConstantInt>(Call->getArgOperand(2)))
         return MemoryLocation(Arg, LocationSize::precise(LenCI->getZExtValue()),

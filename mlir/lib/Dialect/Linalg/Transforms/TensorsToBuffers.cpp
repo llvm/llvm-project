@@ -36,32 +36,45 @@ public:
   LogicalResult
   matchAndRewrite(linalg::GenericOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
+    linalg::GenericOpAdaptor adaptor(operands,
+                                     op.getOperation()->getAttrDictionary());
+
+    // TODO: support ops with reduction.
+    if (!op.init_tensors().empty())
+      return failure();
+
+    // All inputs need to be turned into buffers first. Until then, bail out.
+    if (llvm::any_of(adaptor.inputs(),
+                     [](Value in) { return !in.getType().isa<MemRefType>(); }))
+      return failure();
+
     Location loc = op.getLoc();
-    ResultRange results = op.getOperation()->getResults();
-    SmallVector<Value, 2> newArgs, newResults;
-    newArgs.reserve(operands.size() + results.size());
-    newArgs.append(operands.begin(), operands.end());
-    newResults.reserve(results.size());
+    SmallVector<Value, 2> outputBuffers, newOutputBuffers;
+    outputBuffers.assign(adaptor.output_buffers().begin(),
+                         adaptor.output_buffers().end());
+    newOutputBuffers.reserve(op.getNumOutputs());
+    newOutputBuffers.append(adaptor.output_buffers().begin(),
+                            adaptor.output_buffers().end());
 
     // Update all types to memref types.
-    for (auto result : results) {
-      auto type = result.getType().cast<ShapedType>();
-      assert(type && "tensor to buffer conversion expects ranked results");
+    for (Type t : op.getResultTypes()) {
+      auto type = t.cast<ShapedType>();
       if (!type.hasStaticShape())
         return rewriter.notifyMatchFailure(
             op, "dynamic shapes not currently supported");
       auto memrefType = MemRefType::get(type.getShape(), type.getElementType());
       auto alloc = rewriter.create<AllocOp>(loc, memrefType);
-      newArgs.push_back(alloc);
-      newResults.push_back(alloc);
+      newOutputBuffers.push_back(alloc);
     }
 
     // Generate a new linalg operation that works on buffers.
     auto linalgOp = rewriter.create<linalg::GenericOp>(
-        loc, llvm::None, newArgs, rewriter.getI64IntegerAttr(operands.size()),
-        rewriter.getI64IntegerAttr(results.size()), op.indexing_maps(),
-        op.iterator_types(), op.docAttr(), op.library_callAttr(),
-        op.symbol_sourceAttr());
+        loc,
+        /*resultTensorTypes=*/ArrayRef<Type>{},
+        /*inputs=*/adaptor.inputs(),
+        /*outputBuffers=*/newOutputBuffers,
+        /*initTensors=*/ValueRange{}, op.indexing_maps(), op.iterator_types(),
+        op.docAttr(), op.library_callAttr(), op.symbol_sourceAttr());
 
     // Create a new block in the region of the new Generic Op.
     Block &oldBlock = op.getRegion().front();
@@ -70,23 +83,23 @@ public:
                                            oldBlock.getArgumentTypes());
 
     // Add the result arguments to the new block.
-    for (auto result : newResults)
-      newBlock->addArgument(
-          result.getType().cast<ShapedType>().getElementType());
+    for (Value v : newOutputBuffers)
+      newBlock->addArgument(v.getType().cast<MemRefType>().getElementType());
 
     // Clone the body of the old block to the new block.
     BlockAndValueMapping mapping;
     for (unsigned i = 0; i < oldBlock.getNumArguments(); i++)
       mapping.map(oldBlock.getArgument(i), newBlock->getArgument(i));
+
+    OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToEnd(newBlock);
     for (auto &op : oldBlock.getOperations()) {
       Operation *clonedOp = rewriter.clone(op, mapping);
       mapping.map(op.getResults(), clonedOp->getResults());
     }
 
-    // Replace the results of the old Generic Op with the results of the new
-    // one.
-    rewriter.replaceOp(op, newResults);
+    // Replace the results of the old op with the new output buffers.
+    rewriter.replaceOp(op, newOutputBuffers);
     return success();
   }
 };

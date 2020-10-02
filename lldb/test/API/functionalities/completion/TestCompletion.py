@@ -131,6 +131,7 @@ class CommandLineCompletionTestCase(TestBase):
 
 
     @skipIfRemote
+    @skipIfReproducer
     def test_common_completion_process_pid_and_name(self):
         # The LLDB process itself and the process already attached to are both
         # ignored by the process discovery mechanism, thus we need a process known

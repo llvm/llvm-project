@@ -4,7 +4,7 @@
 # Check we report this.
 
 # RUN: yaml2obj %s -o %t.o
-# RUN: llvm-ar rcs %t.a %t.o
+# RUN: llvm-ar rcS %t.a %t.o
 
 # RUN: not ld.lld --whole-archive %t.a -o /dev/null 2>&1 | FileCheck %s
 # CHECK: {{.*}}.a({{.*}}.o): corrupted ELF file: invalid data encoding

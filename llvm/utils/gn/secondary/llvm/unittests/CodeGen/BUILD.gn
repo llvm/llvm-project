@@ -17,6 +17,7 @@ unittest("CodeGenTests") {
   ]
   sources = [
     "AArch64SelectionDAGTest.cpp",
+    "AllocationOrderTest.cpp",
     "AsmPrinterDwarfTest.cpp",
     "DIEHashTest.cpp",
     "DIETest.cpp",

@@ -97,8 +97,7 @@ public:
 
   template <typename A>
   ConstantBase(const A &x, Result res = Result{}) : result_{res}, values_{x} {}
-  template <typename A, typename = common::NoLvalue<A>>
-  ConstantBase(A &&x, Result res = Result{})
+  ConstantBase(ELEMENT &&x, Result res = Result{})
       : result_{res}, values_{std::move(x)} {}
   ConstantBase(
       std::vector<Element> &&, ConstantSubscripts &&, Result = Result{});

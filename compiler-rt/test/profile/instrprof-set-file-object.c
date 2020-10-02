@@ -24,7 +24,7 @@ int main(int argc, const char *argv[]) {
 // CHECK:   12|      1|int main(int argc, const char *argv[]) {
 // CHECK:   13|      1|  if (argc < 2)
 // CHECK:   14|      0|    return 1;
-// CHECK:   15|      1|
+// CHECK:   15|       |
 // CHECK:   16|      1|  FILE *F = fopen(argv[1], "w+b");
 // CHECK:   17|      1|  __llvm_profile_set_file_object(F, 0);
 // CHECK:   18|      1|  return 0;

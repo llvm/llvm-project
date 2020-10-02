@@ -2575,7 +2575,6 @@ def t2USADA8  : T2FourReg_mac<0, 0b111, 0b0000, (outs rGPR:$Rd),
           Requires<[IsThumb2, HasDSP]>;
 
 // Signed/Unsigned saturate.
-let hasSideEffects = 1 in
 class T2SatI<dag iops, string opc, string asm>
   : T2I<(outs rGPR:$Rd), iops, NoItinerary, opc, asm, []> {
   bits<4> Rd;
@@ -2624,9 +2623,9 @@ def t2USAT16: T2SatI<(ins imm0_15:$sat_imm, rGPR:$Rn),
   let Inst{4} = 0;
 }
 
-def : T2Pat<(ARMssatnoshift GPRnopc:$Rn, imm0_31:$imm),
+def : T2Pat<(ARMssat GPRnopc:$Rn, imm0_31:$imm),
              (t2SSAT imm0_31:$imm, GPRnopc:$Rn, 0)>;
-def : T2Pat<(ARMusatnoshift GPRnopc:$Rn, imm0_31:$imm),
+def : T2Pat<(ARMusat GPRnopc:$Rn, imm0_31:$imm),
              (t2USAT imm0_31:$imm, GPRnopc:$Rn, 0)>;
 def : T2Pat<(int_arm_ssat GPR:$a, imm1_32:$pos),
             (t2SSAT imm1_32:$pos, GPR:$a, 0)>;
@@ -2644,6 +2643,14 @@ def : T2Pat<(int_arm_usat (shl GPRnopc:$a, imm0_31:$shft), imm0_31:$pos),
             (t2USAT imm0_31:$pos, GPRnopc:$a, imm0_31:$shft)>;
 def : T2Pat<(int_arm_usat (sra GPRnopc:$a, asr_imm:$shft), imm0_31:$pos),
             (t2USAT imm0_31:$pos, GPRnopc:$a, asr_imm:$shft)>;
+def : T2Pat<(ARMssat (shl GPRnopc:$a, imm0_31:$shft), imm0_31:$pos),
+            (t2SSAT imm0_31:$pos, GPRnopc:$a, imm0_31:$shft)>;
+def : T2Pat<(ARMssat (sra GPRnopc:$Rn, asr_imm:$shft), imm0_31:$pos),
+            (t2SSAT imm0_31:$pos, GPRnopc:$Rn, asr_imm:$shft)>;
+def : T2Pat<(ARMusat (shl GPRnopc:$a, imm0_31:$shft), imm0_31:$pos),
+            (t2USAT imm0_31:$pos, GPRnopc:$a, imm0_31:$shft)>;
+def : T2Pat<(ARMusat (sra GPRnopc:$Rn, asr_imm:$shft), imm0_31:$pos),
+            (t2USAT imm0_31:$pos, GPRnopc:$Rn, asr_imm:$shft)>;
 
 
 //===----------------------------------------------------------------------===//

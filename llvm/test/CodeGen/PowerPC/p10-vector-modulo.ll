@@ -10,6 +10,28 @@
 ; The vector modulo instructions operate on signed and unsigned words
 ; and doublewords.
 
+; The vector modulo instructions operate on signed and unsigned words,
+; doublewords and 128-bit values.
+
+
+define <1 x i128> @test_vmodsq(<1 x i128> %x, <1 x i128> %y) nounwind readnone {
+; CHECK-LABEL: test_vmodsq:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmodsq v2, v2, v3
+; CHECK-NEXT:    blr
+  %tmp = srem <1 x i128> %x, %y
+  ret <1 x i128> %tmp
+}
+
+define <1 x i128> @test_vmoduq(<1 x i128> %x, <1 x i128> %y) nounwind readnone {
+; CHECK-LABEL: test_vmoduq:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmoduq v2, v2, v3
+; CHECK-NEXT:    blr
+  %tmp = urem <1 x i128> %x, %y
+  ret <1 x i128> %tmp
+}
+
 define <2 x i64> @test_vmodud(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vmodud:
 ; CHECK:       # %bb.0: # %entry

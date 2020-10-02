@@ -1668,4 +1668,8 @@ def UncountedCallArgsChecker : Checker<"UncountedCallArgsChecker">,
   HelpText<"Check uncounted call arguments.">,
   Documentation<HasDocumentation>;
 
+def UncountedLocalVarsChecker : Checker<"UncountedLocalVarsChecker">,
+  HelpText<"Check uncounted local variables.">,
+  Documentation<HasDocumentation>;
+
 } // end alpha.webkit

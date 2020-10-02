@@ -218,12 +218,16 @@ public:
   /// and delimiters are represented as null pointers.
   ///
   /// For example, in a separated list:
-  /// "a, b, c" <=> [("a", ","), ("b", ","), ("c", null)]
-  /// "a, , c" <=> [("a", ","), (null, ","), ("c", ",)]
-  /// "a, b," <=> [("a", ","), ("b", ","), (null, null)]
+  /// "a, b, c"  <=> [("a" , ","), ("b" , "," ), ("c" , null)]
+  /// "a,  , c"  <=> [("a" , ","), (null, "," ), ("c" , null)]
+  /// "a, b  c"  <=> [("a" , ","), ("b" , null), ("c" , null)]
+  /// "a, b,"    <=> [("a" , ","), ("b" , "," ), (null, null)]
   ///
   /// In a terminated or maybe-terminated list:
-  /// "a, b," <=> [("a", ","), ("b", ",")]
+  /// "a; b; c;" <=> [("a" , ";"), ("b" , ";" ), ("c" , ";" )]
+  /// "a;  ; c;" <=> [("a" , ";"), (null, ";" ), ("c" , ";" )]
+  /// "a; b  c;" <=> [("a" , ";"), ("b" , null), ("c" , ";" )]
+  /// "a; b; c"  <=> [("a" , ";"), ("b" , ";" ), ("c" , null)]
   std::vector<ElementAndDelimiter<Node>> getElementsAsNodesAndDelimiters();
 
   /// Returns the elements of the list. Missing elements are represented

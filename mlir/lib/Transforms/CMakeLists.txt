@@ -30,10 +30,10 @@ add_mlir_library(MLIRTransforms
   MLIRTransformsPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffineOps
+  MLIRAffine
   MLIRAnalysis
   MLIRCopyOpInterface
-  MLIRLinalgOps
+  MLIRLinalg
   MLIRLoopLikeInterface
   MLIRSCF
   MLIRPass

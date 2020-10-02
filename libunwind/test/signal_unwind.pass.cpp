@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // Ensure that the unwinder can cope with the signal handler.
+// REQUIRES: x86_64-linux
 
 #include <assert.h>
 #include <dlfcn.h>

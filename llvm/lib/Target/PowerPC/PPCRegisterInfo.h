@@ -119,10 +119,6 @@ public:
                           unsigned FrameIndex) const;
   void lowerCRBitRestore(MachineBasicBlock::iterator II,
                          unsigned FrameIndex) const;
-  void lowerVRSAVESpilling(MachineBasicBlock::iterator II,
-                           unsigned FrameIndex) const;
-  void lowerVRSAVERestore(MachineBasicBlock::iterator II,
-                          unsigned FrameIndex) const;
 
   bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
                             int &FrameIdx) const override;
@@ -151,11 +147,18 @@ public:
   /// register name so that only the number is left.  Used by for linux asm.
   static const char *stripRegisterPrefix(const char *RegName) {
     switch (RegName[0]) {
+      case 'a':
+        if (RegName[1] == 'c' && RegName[2] == 'c')
+          return RegName + 3;
+      break;
       case 'r':
       case 'f':
       case 'v':
-        if (RegName[1] == 's')
+        if (RegName[1] == 's') {
+          if (RegName[2] == 'p')
+            return RegName + 3;
           return RegName + 2;
+        }
         return RegName + 1;
       case 'c': if (RegName[1] == 'r') return RegName + 2;
     }

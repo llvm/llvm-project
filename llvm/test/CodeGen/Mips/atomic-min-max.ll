@@ -829,38 +829,38 @@ define i16 @test_max_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
 ; MIPS-NEXT:    .cfi_def_cfa_offset 8
-; MIPS-NEXT:    move $1, $5
+; MIPS-NEXT:    # kill: def $at killed $a1
 ; MIPS-NEXT:    sync
-; MIPS-NEXT:    addiu $2, $zero, -4
-; MIPS-NEXT:    and $2, $4, $2
-; MIPS-NEXT:    andi $3, $4, 3
-; MIPS-NEXT:    xori $3, $3, 2
-; MIPS-NEXT:    sll $3, $3, 3
-; MIPS-NEXT:    ori $4, $zero, 65535
-; MIPS-NEXT:    sllv $4, $4, $3
-; MIPS-NEXT:    nor $6, $zero, $4
-; MIPS-NEXT:    sllv $5, $5, $3
+; MIPS-NEXT:    addiu $1, $zero, -4
+; MIPS-NEXT:    and $6, $4, $1
+; MIPS-NEXT:    andi $1, $4, 3
+; MIPS-NEXT:    xori $1, $1, 2
+; MIPS-NEXT:    sll $10, $1, 3
+; MIPS-NEXT:    ori $1, $zero, 65535
+; MIPS-NEXT:    sllv $8, $1, $10
+; MIPS-NEXT:    nor $9, $zero, $8
+; MIPS-NEXT:    sllv $7, $5, $10
 ; MIPS-NEXT:  $BB4_1: # %entry
 ; MIPS-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS-NEXT:    ll $8, 0($2)
-; MIPS-NEXT:    slt $11, $8, $5
-; MIPS-NEXT:    move $9, $8
-; MIPS-NEXT:    movn $9, $5, $11
-; MIPS-NEXT:    and $9, $9, $4
-; MIPS-NEXT:    and $10, $8, $6
-; MIPS-NEXT:    or $10, $10, $9
-; MIPS-NEXT:    sc $10, 0($2)
-; MIPS-NEXT:    beqz $10, $BB4_1
+; MIPS-NEXT:    ll $2, 0($6)
+; MIPS-NEXT:    slt $5, $2, $7
+; MIPS-NEXT:    move $3, $2
+; MIPS-NEXT:    movn $3, $7, $5
+; MIPS-NEXT:    and $3, $3, $8
+; MIPS-NEXT:    and $4, $2, $9
+; MIPS-NEXT:    or $4, $4, $3
+; MIPS-NEXT:    sc $4, 0($6)
+; MIPS-NEXT:    beqz $4, $BB4_1
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  # %bb.2: # %entry
-; MIPS-NEXT:    and $7, $8, $4
-; MIPS-NEXT:    srlv $7, $7, $3
-; MIPS-NEXT:    seh $7, $7
+; MIPS-NEXT:    and $1, $2, $8
+; MIPS-NEXT:    srlv $1, $1, $10
+; MIPS-NEXT:    seh $1, $1
 ; MIPS-NEXT:  # %bb.3: # %entry
-; MIPS-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPS-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS-NEXT:  # %bb.4: # %entry
-; MIPS-NEXT:    sync
 ; MIPS-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS-NEXT:    sync
 ; MIPS-NEXT:    addiu $sp, $sp, 8
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
@@ -869,38 +869,38 @@ define i16 @test_max_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSR6-NEXT:    move $1, $5
+; MIPSR6-NEXT:    # kill: def $at killed $a1
 ; MIPSR6-NEXT:    sync
-; MIPSR6-NEXT:    addiu $2, $zero, -4
-; MIPSR6-NEXT:    and $2, $4, $2
-; MIPSR6-NEXT:    andi $3, $4, 3
-; MIPSR6-NEXT:    xori $3, $3, 2
-; MIPSR6-NEXT:    sll $3, $3, 3
-; MIPSR6-NEXT:    ori $4, $zero, 65535
-; MIPSR6-NEXT:    sllv $4, $4, $3
-; MIPSR6-NEXT:    nor $6, $zero, $4
-; MIPSR6-NEXT:    sllv $5, $5, $3
+; MIPSR6-NEXT:    addiu $1, $zero, -4
+; MIPSR6-NEXT:    and $6, $4, $1
+; MIPSR6-NEXT:    andi $1, $4, 3
+; MIPSR6-NEXT:    xori $1, $1, 2
+; MIPSR6-NEXT:    sll $10, $1, 3
+; MIPSR6-NEXT:    ori $1, $zero, 65535
+; MIPSR6-NEXT:    sllv $8, $1, $10
+; MIPSR6-NEXT:    nor $9, $zero, $8
+; MIPSR6-NEXT:    sllv $7, $5, $10
 ; MIPSR6-NEXT:  $BB4_1: # %entry
 ; MIPSR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSR6-NEXT:    ll $8, 0($2)
-; MIPSR6-NEXT:    slt $11, $8, $5
-; MIPSR6-NEXT:    seleqz $9, $8, $11
-; MIPSR6-NEXT:    selnez $11, $5, $11
-; MIPSR6-NEXT:    or $9, $9, $11
-; MIPSR6-NEXT:    and $9, $9, $4
-; MIPSR6-NEXT:    and $10, $8, $6
-; MIPSR6-NEXT:    or $10, $10, $9
-; MIPSR6-NEXT:    sc $10, 0($2)
-; MIPSR6-NEXT:    beqzc $10, $BB4_1
+; MIPSR6-NEXT:    ll $2, 0($6)
+; MIPSR6-NEXT:    slt $5, $2, $7
+; MIPSR6-NEXT:    seleqz $3, $2, $5
+; MIPSR6-NEXT:    selnez $5, $7, $5
+; MIPSR6-NEXT:    or $3, $3, $5
+; MIPSR6-NEXT:    and $3, $3, $8
+; MIPSR6-NEXT:    and $4, $2, $9
+; MIPSR6-NEXT:    or $4, $4, $3
+; MIPSR6-NEXT:    sc $4, 0($6)
+; MIPSR6-NEXT:    beqzc $4, $BB4_1
 ; MIPSR6-NEXT:  # %bb.2: # %entry
-; MIPSR6-NEXT:    and $7, $8, $4
-; MIPSR6-NEXT:    srlv $7, $7, $3
-; MIPSR6-NEXT:    seh $7, $7
+; MIPSR6-NEXT:    and $1, $2, $8
+; MIPSR6-NEXT:    srlv $1, $1, $10
+; MIPSR6-NEXT:    seh $1, $1
 ; MIPSR6-NEXT:  # %bb.3: # %entry
-; MIPSR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSR6-NEXT:  # %bb.4: # %entry
-; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    addiu $sp, $sp, 8
 ; MIPSR6-NEXT:    jrc $ra
 ;
@@ -908,37 +908,37 @@ define i16 @test_max_16(i16* nocapture %ptr, i16 signext %val) {
 ; MM:       # %bb.0: # %entry
 ; MM-NEXT:    addiu $sp, $sp, -8
 ; MM-NEXT:    .cfi_def_cfa_offset 8
-; MM-NEXT:    move $1, $5
+; MM-NEXT:    # kill: def $at killed $a1
 ; MM-NEXT:    sync
-; MM-NEXT:    addiu $2, $zero, -4
-; MM-NEXT:    and $2, $4, $2
-; MM-NEXT:    andi $3, $4, 3
-; MM-NEXT:    xori $3, $3, 2
-; MM-NEXT:    sll $3, $3, 3
-; MM-NEXT:    ori $4, $zero, 65535
-; MM-NEXT:    sllv $4, $4, $3
-; MM-NEXT:    nor $6, $zero, $4
-; MM-NEXT:    sllv $5, $5, $3
+; MM-NEXT:    addiu $1, $zero, -4
+; MM-NEXT:    and $6, $4, $1
+; MM-NEXT:    andi $1, $4, 3
+; MM-NEXT:    xori $1, $1, 2
+; MM-NEXT:    sll $10, $1, 3
+; MM-NEXT:    ori $1, $zero, 65535
+; MM-NEXT:    sllv $8, $1, $10
+; MM-NEXT:    nor $9, $zero, $8
+; MM-NEXT:    sllv $7, $5, $10
 ; MM-NEXT:  $BB4_1: # %entry
 ; MM-NEXT:    # =>This Inner Loop Header: Depth=1
-; MM-NEXT:    ll $8, 0($2)
-; MM-NEXT:    slt $11, $8, $5
-; MM-NEXT:    or $9, $8, $zero
-; MM-NEXT:    movn $9, $5, $11
-; MM-NEXT:    and $9, $9, $4
-; MM-NEXT:    and $10, $8, $6
-; MM-NEXT:    or $10, $10, $9
-; MM-NEXT:    sc $10, 0($2)
-; MM-NEXT:    beqzc $10, $BB4_1
+; MM-NEXT:    ll $2, 0($6)
+; MM-NEXT:    slt $5, $2, $7
+; MM-NEXT:    or $3, $2, $zero
+; MM-NEXT:    movn $3, $7, $5
+; MM-NEXT:    and $3, $3, $8
+; MM-NEXT:    and $4, $2, $9
+; MM-NEXT:    or $4, $4, $3
+; MM-NEXT:    sc $4, 0($6)
+; MM-NEXT:    beqzc $4, $BB4_1
 ; MM-NEXT:  # %bb.2: # %entry
-; MM-NEXT:    and $7, $8, $4
-; MM-NEXT:    srlv $7, $7, $3
-; MM-NEXT:    seh $7, $7
+; MM-NEXT:    and $1, $2, $8
+; MM-NEXT:    srlv $1, $1, $10
+; MM-NEXT:    seh $1, $1
 ; MM-NEXT:  # %bb.3: # %entry
-; MM-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MM-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MM-NEXT:  # %bb.4: # %entry
-; MM-NEXT:    sync
 ; MM-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MM-NEXT:    sync
 ; MM-NEXT:    addiusp 8
 ; MM-NEXT:    jrc $ra
 ;
@@ -946,38 +946,38 @@ define i16 @test_max_16(i16* nocapture %ptr, i16 signext %val) {
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    addiu $sp, $sp, -8
 ; MMR6-NEXT:    .cfi_def_cfa_offset 8
-; MMR6-NEXT:    move $1, $5
+; MMR6-NEXT:    # kill: def $at killed $a1
 ; MMR6-NEXT:    sync
-; MMR6-NEXT:    addiu $2, $zero, -4
-; MMR6-NEXT:    and $2, $4, $2
-; MMR6-NEXT:    andi $3, $4, 3
-; MMR6-NEXT:    xori $3, $3, 2
-; MMR6-NEXT:    sll $3, $3, 3
-; MMR6-NEXT:    ori $4, $zero, 65535
-; MMR6-NEXT:    sllv $4, $4, $3
-; MMR6-NEXT:    nor $6, $zero, $4
-; MMR6-NEXT:    sllv $5, $5, $3
+; MMR6-NEXT:    addiu $1, $zero, -4
+; MMR6-NEXT:    and $6, $4, $1
+; MMR6-NEXT:    andi $1, $4, 3
+; MMR6-NEXT:    xori $1, $1, 2
+; MMR6-NEXT:    sll $10, $1, 3
+; MMR6-NEXT:    ori $1, $zero, 65535
+; MMR6-NEXT:    sllv $8, $1, $10
+; MMR6-NEXT:    nor $9, $zero, $8
+; MMR6-NEXT:    sllv $7, $5, $10
 ; MMR6-NEXT:  $BB4_1: # %entry
 ; MMR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMR6-NEXT:    ll $8, 0($2)
-; MMR6-NEXT:    slt $11, $8, $5
-; MMR6-NEXT:    seleqz $9, $8, $11
-; MMR6-NEXT:    selnez $11, $5, $11
-; MMR6-NEXT:    or $9, $9, $11
-; MMR6-NEXT:    and $9, $9, $4
-; MMR6-NEXT:    and $10, $8, $6
-; MMR6-NEXT:    or $10, $10, $9
-; MMR6-NEXT:    sc $10, 0($2)
-; MMR6-NEXT:    beqc $10, $zero, $BB4_1
+; MMR6-NEXT:    ll $2, 0($6)
+; MMR6-NEXT:    slt $5, $2, $7
+; MMR6-NEXT:    seleqz $3, $2, $5
+; MMR6-NEXT:    selnez $5, $7, $5
+; MMR6-NEXT:    or $3, $3, $5
+; MMR6-NEXT:    and $3, $3, $8
+; MMR6-NEXT:    and $4, $2, $9
+; MMR6-NEXT:    or $4, $4, $3
+; MMR6-NEXT:    sc $4, 0($6)
+; MMR6-NEXT:    beqc $4, $zero, $BB4_1
 ; MMR6-NEXT:  # %bb.2: # %entry
-; MMR6-NEXT:    and $7, $8, $4
-; MMR6-NEXT:    srlv $7, $7, $3
-; MMR6-NEXT:    seh $7, $7
+; MMR6-NEXT:    and $1, $2, $8
+; MMR6-NEXT:    srlv $1, $1, $10
+; MMR6-NEXT:    seh $1, $1
 ; MMR6-NEXT:  # %bb.3: # %entry
-; MMR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:  # %bb.4: # %entry
-; MMR6-NEXT:    sync
 ; MMR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMR6-NEXT:    sync
 ; MMR6-NEXT:    addiu $sp, $sp, 8
 ; MMR6-NEXT:    jrc $ra
 ;
@@ -985,39 +985,39 @@ define i16 @test_max_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
 ; MIPSEL-NEXT:    .cfi_def_cfa_offset 8
-; MIPSEL-NEXT:    move $1, $5
+; MIPSEL-NEXT:    # kill: def $at killed $a1
 ; MIPSEL-NEXT:    sync
-; MIPSEL-NEXT:    addiu $2, $zero, -4
-; MIPSEL-NEXT:    and $2, $4, $2
-; MIPSEL-NEXT:    andi $3, $4, 3
-; MIPSEL-NEXT:    sll $3, $3, 3
-; MIPSEL-NEXT:    ori $4, $zero, 65535
-; MIPSEL-NEXT:    sllv $4, $4, $3
-; MIPSEL-NEXT:    nor $6, $zero, $4
-; MIPSEL-NEXT:    sllv $5, $5, $3
+; MIPSEL-NEXT:    addiu $1, $zero, -4
+; MIPSEL-NEXT:    and $6, $4, $1
+; MIPSEL-NEXT:    andi $1, $4, 3
+; MIPSEL-NEXT:    sll $10, $1, 3
+; MIPSEL-NEXT:    ori $1, $zero, 65535
+; MIPSEL-NEXT:    sllv $8, $1, $10
+; MIPSEL-NEXT:    nor $9, $zero, $8
+; MIPSEL-NEXT:    sllv $7, $5, $10
 ; MIPSEL-NEXT:  $BB4_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSEL-NEXT:    ll $8, 0($2)
-; MIPSEL-NEXT:    and $8, $8, $4
-; MIPSEL-NEXT:    and $5, $5, $4
-; MIPSEL-NEXT:    slt $11, $8, $5
-; MIPSEL-NEXT:    move $9, $8
-; MIPSEL-NEXT:    movn $9, $5, $11
-; MIPSEL-NEXT:    and $9, $9, $4
-; MIPSEL-NEXT:    and $10, $8, $6
-; MIPSEL-NEXT:    or $10, $10, $9
-; MIPSEL-NEXT:    sc $10, 0($2)
-; MIPSEL-NEXT:    beqz $10, $BB4_1
+; MIPSEL-NEXT:    ll $2, 0($6)
+; MIPSEL-NEXT:    and $2, $2, $8
+; MIPSEL-NEXT:    and $7, $7, $8
+; MIPSEL-NEXT:    slt $5, $2, $7
+; MIPSEL-NEXT:    move $3, $2
+; MIPSEL-NEXT:    movn $3, $7, $5
+; MIPSEL-NEXT:    and $3, $3, $8
+; MIPSEL-NEXT:    and $4, $2, $9
+; MIPSEL-NEXT:    or $4, $4, $3
+; MIPSEL-NEXT:    sc $4, 0($6)
+; MIPSEL-NEXT:    beqz $4, $BB4_1
 ; MIPSEL-NEXT:    nop
 ; MIPSEL-NEXT:  # %bb.2: # %entry
-; MIPSEL-NEXT:    and $7, $8, $4
-; MIPSEL-NEXT:    srlv $7, $7, $3
-; MIPSEL-NEXT:    seh $7, $7
+; MIPSEL-NEXT:    and $1, $2, $8
+; MIPSEL-NEXT:    srlv $1, $1, $10
+; MIPSEL-NEXT:    seh $1, $1
 ; MIPSEL-NEXT:  # %bb.3: # %entry
-; MIPSEL-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:  # %bb.4: # %entry
-; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    addiu $sp, $sp, 8
 ; MIPSEL-NEXT:    jr $ra
 ; MIPSEL-NEXT:    nop
@@ -1026,39 +1026,39 @@ define i16 @test_max_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPSELR6:       # %bb.0: # %entry
 ; MIPSELR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSELR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSELR6-NEXT:    move $1, $5
+; MIPSELR6-NEXT:    # kill: def $at killed $a1
 ; MIPSELR6-NEXT:    sync
-; MIPSELR6-NEXT:    addiu $2, $zero, -4
-; MIPSELR6-NEXT:    and $2, $4, $2
-; MIPSELR6-NEXT:    andi $3, $4, 3
-; MIPSELR6-NEXT:    sll $3, $3, 3
-; MIPSELR6-NEXT:    ori $4, $zero, 65535
-; MIPSELR6-NEXT:    sllv $4, $4, $3
-; MIPSELR6-NEXT:    nor $6, $zero, $4
-; MIPSELR6-NEXT:    sllv $5, $5, $3
+; MIPSELR6-NEXT:    addiu $1, $zero, -4
+; MIPSELR6-NEXT:    and $6, $4, $1
+; MIPSELR6-NEXT:    andi $1, $4, 3
+; MIPSELR6-NEXT:    sll $10, $1, 3
+; MIPSELR6-NEXT:    ori $1, $zero, 65535
+; MIPSELR6-NEXT:    sllv $8, $1, $10
+; MIPSELR6-NEXT:    nor $9, $zero, $8
+; MIPSELR6-NEXT:    sllv $7, $5, $10
 ; MIPSELR6-NEXT:  $BB4_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSELR6-NEXT:    ll $8, 0($2)
-; MIPSELR6-NEXT:    and $8, $8, $4
-; MIPSELR6-NEXT:    and $5, $5, $4
-; MIPSELR6-NEXT:    slt $11, $8, $5
-; MIPSELR6-NEXT:    seleqz $9, $8, $11
-; MIPSELR6-NEXT:    selnez $11, $5, $11
-; MIPSELR6-NEXT:    or $9, $9, $11
-; MIPSELR6-NEXT:    and $9, $9, $4
-; MIPSELR6-NEXT:    and $10, $8, $6
-; MIPSELR6-NEXT:    or $10, $10, $9
-; MIPSELR6-NEXT:    sc $10, 0($2)
-; MIPSELR6-NEXT:    beqzc $10, $BB4_1
+; MIPSELR6-NEXT:    ll $2, 0($6)
+; MIPSELR6-NEXT:    and $2, $2, $8
+; MIPSELR6-NEXT:    and $7, $7, $8
+; MIPSELR6-NEXT:    slt $5, $2, $7
+; MIPSELR6-NEXT:    seleqz $3, $2, $5
+; MIPSELR6-NEXT:    selnez $5, $7, $5
+; MIPSELR6-NEXT:    or $3, $3, $5
+; MIPSELR6-NEXT:    and $3, $3, $8
+; MIPSELR6-NEXT:    and $4, $2, $9
+; MIPSELR6-NEXT:    or $4, $4, $3
+; MIPSELR6-NEXT:    sc $4, 0($6)
+; MIPSELR6-NEXT:    beqzc $4, $BB4_1
 ; MIPSELR6-NEXT:  # %bb.2: # %entry
-; MIPSELR6-NEXT:    and $7, $8, $4
-; MIPSELR6-NEXT:    srlv $7, $7, $3
-; MIPSELR6-NEXT:    seh $7, $7
+; MIPSELR6-NEXT:    and $1, $2, $8
+; MIPSELR6-NEXT:    srlv $1, $1, $10
+; MIPSELR6-NEXT:    seh $1, $1
 ; MIPSELR6-NEXT:  # %bb.3: # %entry
-; MIPSELR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSELR6-NEXT:  # %bb.4: # %entry
-; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    addiu $sp, $sp, 8
 ; MIPSELR6-NEXT:    jrc $ra
 ;
@@ -1066,38 +1066,38 @@ define i16 @test_max_16(i16* nocapture %ptr, i16 signext %val) {
 ; MMEL:       # %bb.0: # %entry
 ; MMEL-NEXT:    addiu $sp, $sp, -8
 ; MMEL-NEXT:    .cfi_def_cfa_offset 8
-; MMEL-NEXT:    move $1, $5
+; MMEL-NEXT:    # kill: def $at killed $a1
 ; MMEL-NEXT:    sync
-; MMEL-NEXT:    addiu $2, $zero, -4
-; MMEL-NEXT:    and $2, $4, $2
-; MMEL-NEXT:    andi $3, $4, 3
-; MMEL-NEXT:    sll $3, $3, 3
-; MMEL-NEXT:    ori $4, $zero, 65535
-; MMEL-NEXT:    sllv $4, $4, $3
-; MMEL-NEXT:    nor $6, $zero, $4
-; MMEL-NEXT:    sllv $5, $5, $3
+; MMEL-NEXT:    addiu $1, $zero, -4
+; MMEL-NEXT:    and $6, $4, $1
+; MMEL-NEXT:    andi $1, $4, 3
+; MMEL-NEXT:    sll $10, $1, 3
+; MMEL-NEXT:    ori $1, $zero, 65535
+; MMEL-NEXT:    sllv $8, $1, $10
+; MMEL-NEXT:    nor $9, $zero, $8
+; MMEL-NEXT:    sllv $7, $5, $10
 ; MMEL-NEXT:  $BB4_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMEL-NEXT:    ll $8, 0($2)
-; MMEL-NEXT:    and $8, $8, $4
-; MMEL-NEXT:    and $5, $5, $4
-; MMEL-NEXT:    slt $11, $8, $5
-; MMEL-NEXT:    or $9, $8, $zero
-; MMEL-NEXT:    movn $9, $5, $11
-; MMEL-NEXT:    and $9, $9, $4
-; MMEL-NEXT:    and $10, $8, $6
-; MMEL-NEXT:    or $10, $10, $9
-; MMEL-NEXT:    sc $10, 0($2)
-; MMEL-NEXT:    beqzc $10, $BB4_1
+; MMEL-NEXT:    ll $2, 0($6)
+; MMEL-NEXT:    and $2, $2, $8
+; MMEL-NEXT:    and $7, $7, $8
+; MMEL-NEXT:    slt $5, $2, $7
+; MMEL-NEXT:    or $3, $2, $zero
+; MMEL-NEXT:    movn $3, $7, $5
+; MMEL-NEXT:    and $3, $3, $8
+; MMEL-NEXT:    and $4, $2, $9
+; MMEL-NEXT:    or $4, $4, $3
+; MMEL-NEXT:    sc $4, 0($6)
+; MMEL-NEXT:    beqzc $4, $BB4_1
 ; MMEL-NEXT:  # %bb.2: # %entry
-; MMEL-NEXT:    and $7, $8, $4
-; MMEL-NEXT:    srlv $7, $7, $3
-; MMEL-NEXT:    seh $7, $7
+; MMEL-NEXT:    and $1, $2, $8
+; MMEL-NEXT:    srlv $1, $1, $10
+; MMEL-NEXT:    seh $1, $1
 ; MMEL-NEXT:  # %bb.3: # %entry
-; MMEL-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMEL-NEXT:  # %bb.4: # %entry
-; MMEL-NEXT:    sync
 ; MMEL-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMEL-NEXT:    sync
 ; MMEL-NEXT:    addiusp 8
 ; MMEL-NEXT:    jrc $ra
 ;
@@ -1105,39 +1105,39 @@ define i16 @test_max_16(i16* nocapture %ptr, i16 signext %val) {
 ; MMELR6:       # %bb.0: # %entry
 ; MMELR6-NEXT:    addiu $sp, $sp, -8
 ; MMELR6-NEXT:    .cfi_def_cfa_offset 8
-; MMELR6-NEXT:    move $1, $5
+; MMELR6-NEXT:    # kill: def $at killed $a1
 ; MMELR6-NEXT:    sync
-; MMELR6-NEXT:    addiu $2, $zero, -4
-; MMELR6-NEXT:    and $2, $4, $2
-; MMELR6-NEXT:    andi $3, $4, 3
-; MMELR6-NEXT:    sll $3, $3, 3
-; MMELR6-NEXT:    ori $4, $zero, 65535
-; MMELR6-NEXT:    sllv $4, $4, $3
-; MMELR6-NEXT:    nor $6, $zero, $4
-; MMELR6-NEXT:    sllv $5, $5, $3
+; MMELR6-NEXT:    addiu $1, $zero, -4
+; MMELR6-NEXT:    and $6, $4, $1
+; MMELR6-NEXT:    andi $1, $4, 3
+; MMELR6-NEXT:    sll $10, $1, 3
+; MMELR6-NEXT:    ori $1, $zero, 65535
+; MMELR6-NEXT:    sllv $8, $1, $10
+; MMELR6-NEXT:    nor $9, $zero, $8
+; MMELR6-NEXT:    sllv $7, $5, $10
 ; MMELR6-NEXT:  $BB4_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMELR6-NEXT:    ll $8, 0($2)
-; MMELR6-NEXT:    and $8, $8, $4
-; MMELR6-NEXT:    and $5, $5, $4
-; MMELR6-NEXT:    slt $11, $8, $5
-; MMELR6-NEXT:    seleqz $9, $8, $11
-; MMELR6-NEXT:    selnez $11, $5, $11
-; MMELR6-NEXT:    or $9, $9, $11
-; MMELR6-NEXT:    and $9, $9, $4
-; MMELR6-NEXT:    and $10, $8, $6
-; MMELR6-NEXT:    or $10, $10, $9
-; MMELR6-NEXT:    sc $10, 0($2)
-; MMELR6-NEXT:    beqc $10, $zero, $BB4_1
+; MMELR6-NEXT:    ll $2, 0($6)
+; MMELR6-NEXT:    and $2, $2, $8
+; MMELR6-NEXT:    and $7, $7, $8
+; MMELR6-NEXT:    slt $5, $2, $7
+; MMELR6-NEXT:    seleqz $3, $2, $5
+; MMELR6-NEXT:    selnez $5, $7, $5
+; MMELR6-NEXT:    or $3, $3, $5
+; MMELR6-NEXT:    and $3, $3, $8
+; MMELR6-NEXT:    and $4, $2, $9
+; MMELR6-NEXT:    or $4, $4, $3
+; MMELR6-NEXT:    sc $4, 0($6)
+; MMELR6-NEXT:    beqc $4, $zero, $BB4_1
 ; MMELR6-NEXT:  # %bb.2: # %entry
-; MMELR6-NEXT:    and $7, $8, $4
-; MMELR6-NEXT:    srlv $7, $7, $3
-; MMELR6-NEXT:    seh $7, $7
+; MMELR6-NEXT:    and $1, $2, $8
+; MMELR6-NEXT:    srlv $1, $1, $10
+; MMELR6-NEXT:    seh $1, $1
 ; MMELR6-NEXT:  # %bb.3: # %entry
-; MMELR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMELR6-NEXT:  # %bb.4: # %entry
-; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    addiu $sp, $sp, 8
 ; MMELR6-NEXT:    jrc $ra
 ;
@@ -1145,38 +1145,38 @@ define i16 @test_max_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64-NEXT:    move $1, $5
 ; MIPS64-NEXT:    sync
-; MIPS64-NEXT:    daddiu $1, $zero, -4
-; MIPS64-NEXT:    and $1, $4, $1
+; MIPS64-NEXT:    daddiu $2, $zero, -4
+; MIPS64-NEXT:    and $6, $4, $2
 ; MIPS64-NEXT:    andi $2, $4, 3
 ; MIPS64-NEXT:    xori $2, $2, 2
-; MIPS64-NEXT:    sll $2, $2, 3
-; MIPS64-NEXT:    ori $3, $zero, 65535
-; MIPS64-NEXT:    sllv $3, $3, $2
-; MIPS64-NEXT:    nor $6, $zero, $3
-; MIPS64-NEXT:    sllv $5, $5, $2
+; MIPS64-NEXT:    sll $10, $2, 3
+; MIPS64-NEXT:    ori $2, $zero, 65535
+; MIPS64-NEXT:    sllv $8, $2, $10
+; MIPS64-NEXT:    nor $9, $zero, $8
+; MIPS64-NEXT:    sllv $7, $1, $10
 ; MIPS64-NEXT:  .LBB4_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $8, 0($1)
-; MIPS64-NEXT:    slt $11, $8, $5
-; MIPS64-NEXT:    move $9, $8
-; MIPS64-NEXT:    movn $9, $5, $11
-; MIPS64-NEXT:    and $9, $9, $3
-; MIPS64-NEXT:    and $10, $8, $6
-; MIPS64-NEXT:    or $10, $10, $9
-; MIPS64-NEXT:    sc $10, 0($1)
-; MIPS64-NEXT:    beqz $10, .LBB4_1
+; MIPS64-NEXT:    ll $2, 0($6)
+; MIPS64-NEXT:    slt $5, $2, $7
+; MIPS64-NEXT:    move $3, $2
+; MIPS64-NEXT:    movn $3, $7, $5
+; MIPS64-NEXT:    and $3, $3, $8
+; MIPS64-NEXT:    and $4, $2, $9
+; MIPS64-NEXT:    or $4, $4, $3
+; MIPS64-NEXT:    sc $4, 0($6)
+; MIPS64-NEXT:    beqz $4, .LBB4_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $7, $8, $3
-; MIPS64-NEXT:    srlv $7, $7, $2
-; MIPS64-NEXT:    seh $7, $7
+; MIPS64-NEXT:    and $1, $2, $8
+; MIPS64-NEXT:    srlv $1, $1, $10
+; MIPS64-NEXT:    seh $1, $1
 ; MIPS64-NEXT:  # %bb.3: # %entry
-; MIPS64-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64-NEXT:  # %bb.4: # %entry
-; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    nop
@@ -1185,38 +1185,38 @@ define i16 @test_max_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64R6:       # %bb.0: # %entry
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64R6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64R6-NEXT:    move $1, $5
 ; MIPS64R6-NEXT:    sync
-; MIPS64R6-NEXT:    daddiu $1, $zero, -4
-; MIPS64R6-NEXT:    and $1, $4, $1
+; MIPS64R6-NEXT:    daddiu $2, $zero, -4
+; MIPS64R6-NEXT:    and $6, $4, $2
 ; MIPS64R6-NEXT:    andi $2, $4, 3
 ; MIPS64R6-NEXT:    xori $2, $2, 2
-; MIPS64R6-NEXT:    sll $2, $2, 3
-; MIPS64R6-NEXT:    ori $3, $zero, 65535
-; MIPS64R6-NEXT:    sllv $3, $3, $2
-; MIPS64R6-NEXT:    nor $6, $zero, $3
-; MIPS64R6-NEXT:    sllv $5, $5, $2
+; MIPS64R6-NEXT:    sll $10, $2, 3
+; MIPS64R6-NEXT:    ori $2, $zero, 65535
+; MIPS64R6-NEXT:    sllv $8, $2, $10
+; MIPS64R6-NEXT:    nor $9, $zero, $8
+; MIPS64R6-NEXT:    sllv $7, $1, $10
 ; MIPS64R6-NEXT:  .LBB4_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6-NEXT:    ll $8, 0($1)
-; MIPS64R6-NEXT:    slt $11, $8, $5
-; MIPS64R6-NEXT:    seleqz $9, $8, $11
-; MIPS64R6-NEXT:    selnez $11, $5, $11
-; MIPS64R6-NEXT:    or $9, $9, $11
-; MIPS64R6-NEXT:    and $9, $9, $3
-; MIPS64R6-NEXT:    and $10, $8, $6
-; MIPS64R6-NEXT:    or $10, $10, $9
-; MIPS64R6-NEXT:    sc $10, 0($1)
-; MIPS64R6-NEXT:    beqzc $10, .LBB4_1
+; MIPS64R6-NEXT:    ll $2, 0($6)
+; MIPS64R6-NEXT:    slt $5, $2, $7
+; MIPS64R6-NEXT:    seleqz $3, $2, $5
+; MIPS64R6-NEXT:    selnez $5, $7, $5
+; MIPS64R6-NEXT:    or $3, $3, $5
+; MIPS64R6-NEXT:    and $3, $3, $8
+; MIPS64R6-NEXT:    and $4, $2, $9
+; MIPS64R6-NEXT:    or $4, $4, $3
+; MIPS64R6-NEXT:    sc $4, 0($6)
+; MIPS64R6-NEXT:    beqzc $4, .LBB4_1
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $7, $8, $3
-; MIPS64R6-NEXT:    srlv $7, $7, $2
-; MIPS64R6-NEXT:    seh $7, $7
+; MIPS64R6-NEXT:    and $1, $2, $8
+; MIPS64R6-NEXT:    srlv $1, $1, $10
+; MIPS64R6-NEXT:    seh $1, $1
 ; MIPS64R6-NEXT:  # %bb.3: # %entry
-; MIPS64R6-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64R6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6-NEXT:  # %bb.4: # %entry
-; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64R6-NEXT:    jrc $ra
 ;
@@ -1224,39 +1224,39 @@ define i16 @test_max_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64EL:       # %bb.0: # %entry
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64EL-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64EL-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64EL-NEXT:    move $1, $5
 ; MIPS64EL-NEXT:    sync
-; MIPS64EL-NEXT:    daddiu $1, $zero, -4
-; MIPS64EL-NEXT:    and $1, $4, $1
+; MIPS64EL-NEXT:    daddiu $2, $zero, -4
+; MIPS64EL-NEXT:    and $6, $4, $2
 ; MIPS64EL-NEXT:    andi $2, $4, 3
-; MIPS64EL-NEXT:    sll $2, $2, 3
-; MIPS64EL-NEXT:    ori $3, $zero, 65535
-; MIPS64EL-NEXT:    sllv $3, $3, $2
-; MIPS64EL-NEXT:    nor $6, $zero, $3
-; MIPS64EL-NEXT:    sllv $5, $5, $2
+; MIPS64EL-NEXT:    sll $10, $2, 3
+; MIPS64EL-NEXT:    ori $2, $zero, 65535
+; MIPS64EL-NEXT:    sllv $8, $2, $10
+; MIPS64EL-NEXT:    nor $9, $zero, $8
+; MIPS64EL-NEXT:    sllv $7, $1, $10
 ; MIPS64EL-NEXT:  .LBB4_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64EL-NEXT:    ll $8, 0($1)
-; MIPS64EL-NEXT:    and $8, $8, $3
-; MIPS64EL-NEXT:    and $5, $5, $3
-; MIPS64EL-NEXT:    slt $11, $8, $5
-; MIPS64EL-NEXT:    move $9, $8
-; MIPS64EL-NEXT:    movn $9, $5, $11
-; MIPS64EL-NEXT:    and $9, $9, $3
-; MIPS64EL-NEXT:    and $10, $8, $6
-; MIPS64EL-NEXT:    or $10, $10, $9
-; MIPS64EL-NEXT:    sc $10, 0($1)
-; MIPS64EL-NEXT:    beqz $10, .LBB4_1
+; MIPS64EL-NEXT:    ll $2, 0($6)
+; MIPS64EL-NEXT:    and $2, $2, $8
+; MIPS64EL-NEXT:    and $7, $7, $8
+; MIPS64EL-NEXT:    slt $5, $2, $7
+; MIPS64EL-NEXT:    move $3, $2
+; MIPS64EL-NEXT:    movn $3, $7, $5
+; MIPS64EL-NEXT:    and $3, $3, $8
+; MIPS64EL-NEXT:    and $4, $2, $9
+; MIPS64EL-NEXT:    or $4, $4, $3
+; MIPS64EL-NEXT:    sc $4, 0($6)
+; MIPS64EL-NEXT:    beqz $4, .LBB4_1
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:  # %bb.2: # %entry
-; MIPS64EL-NEXT:    and $7, $8, $3
-; MIPS64EL-NEXT:    srlv $7, $7, $2
-; MIPS64EL-NEXT:    seh $7, $7
+; MIPS64EL-NEXT:    and $1, $2, $8
+; MIPS64EL-NEXT:    srlv $1, $1, $10
+; MIPS64EL-NEXT:    seh $1, $1
 ; MIPS64EL-NEXT:  # %bb.3: # %entry
-; MIPS64EL-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64EL-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64EL-NEXT:  # %bb.4: # %entry
-; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64EL-NEXT:    jr $ra
 ; MIPS64EL-NEXT:    nop
@@ -1265,39 +1265,39 @@ define i16 @test_max_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6:       # %bb.0: # %entry
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64ELR6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64ELR6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64ELR6-NEXT:    move $1, $5
 ; MIPS64ELR6-NEXT:    sync
-; MIPS64ELR6-NEXT:    daddiu $1, $zero, -4
-; MIPS64ELR6-NEXT:    and $1, $4, $1
+; MIPS64ELR6-NEXT:    daddiu $2, $zero, -4
+; MIPS64ELR6-NEXT:    and $6, $4, $2
 ; MIPS64ELR6-NEXT:    andi $2, $4, 3
-; MIPS64ELR6-NEXT:    sll $2, $2, 3
-; MIPS64ELR6-NEXT:    ori $3, $zero, 65535
-; MIPS64ELR6-NEXT:    sllv $3, $3, $2
-; MIPS64ELR6-NEXT:    nor $6, $zero, $3
-; MIPS64ELR6-NEXT:    sllv $5, $5, $2
+; MIPS64ELR6-NEXT:    sll $10, $2, 3
+; MIPS64ELR6-NEXT:    ori $2, $zero, 65535
+; MIPS64ELR6-NEXT:    sllv $8, $2, $10
+; MIPS64ELR6-NEXT:    nor $9, $zero, $8
+; MIPS64ELR6-NEXT:    sllv $7, $1, $10
 ; MIPS64ELR6-NEXT:  .LBB4_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64ELR6-NEXT:    ll $8, 0($1)
-; MIPS64ELR6-NEXT:    and $8, $8, $3
-; MIPS64ELR6-NEXT:    and $5, $5, $3
-; MIPS64ELR6-NEXT:    slt $11, $8, $5
-; MIPS64ELR6-NEXT:    seleqz $9, $8, $11
-; MIPS64ELR6-NEXT:    selnez $11, $5, $11
-; MIPS64ELR6-NEXT:    or $9, $9, $11
-; MIPS64ELR6-NEXT:    and $9, $9, $3
-; MIPS64ELR6-NEXT:    and $10, $8, $6
-; MIPS64ELR6-NEXT:    or $10, $10, $9
-; MIPS64ELR6-NEXT:    sc $10, 0($1)
-; MIPS64ELR6-NEXT:    beqzc $10, .LBB4_1
+; MIPS64ELR6-NEXT:    ll $2, 0($6)
+; MIPS64ELR6-NEXT:    and $2, $2, $8
+; MIPS64ELR6-NEXT:    and $7, $7, $8
+; MIPS64ELR6-NEXT:    slt $5, $2, $7
+; MIPS64ELR6-NEXT:    seleqz $3, $2, $5
+; MIPS64ELR6-NEXT:    selnez $5, $7, $5
+; MIPS64ELR6-NEXT:    or $3, $3, $5
+; MIPS64ELR6-NEXT:    and $3, $3, $8
+; MIPS64ELR6-NEXT:    and $4, $2, $9
+; MIPS64ELR6-NEXT:    or $4, $4, $3
+; MIPS64ELR6-NEXT:    sc $4, 0($6)
+; MIPS64ELR6-NEXT:    beqzc $4, .LBB4_1
 ; MIPS64ELR6-NEXT:  # %bb.2: # %entry
-; MIPS64ELR6-NEXT:    and $7, $8, $3
-; MIPS64ELR6-NEXT:    srlv $7, $7, $2
-; MIPS64ELR6-NEXT:    seh $7, $7
+; MIPS64ELR6-NEXT:    and $1, $2, $8
+; MIPS64ELR6-NEXT:    srlv $1, $1, $10
+; MIPS64ELR6-NEXT:    seh $1, $1
 ; MIPS64ELR6-NEXT:  # %bb.3: # %entry
-; MIPS64ELR6-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64ELR6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64ELR6-NEXT:  # %bb.4: # %entry
-; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
@@ -1310,38 +1310,38 @@ define i16 @test_min_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
 ; MIPS-NEXT:    .cfi_def_cfa_offset 8
-; MIPS-NEXT:    move $1, $5
+; MIPS-NEXT:    # kill: def $at killed $a1
 ; MIPS-NEXT:    sync
-; MIPS-NEXT:    addiu $2, $zero, -4
-; MIPS-NEXT:    and $2, $4, $2
-; MIPS-NEXT:    andi $3, $4, 3
-; MIPS-NEXT:    xori $3, $3, 2
-; MIPS-NEXT:    sll $3, $3, 3
-; MIPS-NEXT:    ori $4, $zero, 65535
-; MIPS-NEXT:    sllv $4, $4, $3
-; MIPS-NEXT:    nor $6, $zero, $4
-; MIPS-NEXT:    sllv $5, $5, $3
+; MIPS-NEXT:    addiu $1, $zero, -4
+; MIPS-NEXT:    and $6, $4, $1
+; MIPS-NEXT:    andi $1, $4, 3
+; MIPS-NEXT:    xori $1, $1, 2
+; MIPS-NEXT:    sll $10, $1, 3
+; MIPS-NEXT:    ori $1, $zero, 65535
+; MIPS-NEXT:    sllv $8, $1, $10
+; MIPS-NEXT:    nor $9, $zero, $8
+; MIPS-NEXT:    sllv $7, $5, $10
 ; MIPS-NEXT:  $BB5_1: # %entry
 ; MIPS-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS-NEXT:    ll $8, 0($2)
-; MIPS-NEXT:    slt $11, $8, $5
-; MIPS-NEXT:    move $9, $8
-; MIPS-NEXT:    movz $9, $5, $11
-; MIPS-NEXT:    and $9, $9, $4
-; MIPS-NEXT:    and $10, $8, $6
-; MIPS-NEXT:    or $10, $10, $9
-; MIPS-NEXT:    sc $10, 0($2)
-; MIPS-NEXT:    beqz $10, $BB5_1
+; MIPS-NEXT:    ll $2, 0($6)
+; MIPS-NEXT:    slt $5, $2, $7
+; MIPS-NEXT:    move $3, $2
+; MIPS-NEXT:    movz $3, $7, $5
+; MIPS-NEXT:    and $3, $3, $8
+; MIPS-NEXT:    and $4, $2, $9
+; MIPS-NEXT:    or $4, $4, $3
+; MIPS-NEXT:    sc $4, 0($6)
+; MIPS-NEXT:    beqz $4, $BB5_1
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  # %bb.2: # %entry
-; MIPS-NEXT:    and $7, $8, $4
-; MIPS-NEXT:    srlv $7, $7, $3
-; MIPS-NEXT:    seh $7, $7
+; MIPS-NEXT:    and $1, $2, $8
+; MIPS-NEXT:    srlv $1, $1, $10
+; MIPS-NEXT:    seh $1, $1
 ; MIPS-NEXT:  # %bb.3: # %entry
-; MIPS-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPS-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS-NEXT:  # %bb.4: # %entry
-; MIPS-NEXT:    sync
 ; MIPS-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS-NEXT:    sync
 ; MIPS-NEXT:    addiu $sp, $sp, 8
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
@@ -1350,38 +1350,38 @@ define i16 @test_min_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSR6-NEXT:    move $1, $5
+; MIPSR6-NEXT:    # kill: def $at killed $a1
 ; MIPSR6-NEXT:    sync
-; MIPSR6-NEXT:    addiu $2, $zero, -4
-; MIPSR6-NEXT:    and $2, $4, $2
-; MIPSR6-NEXT:    andi $3, $4, 3
-; MIPSR6-NEXT:    xori $3, $3, 2
-; MIPSR6-NEXT:    sll $3, $3, 3
-; MIPSR6-NEXT:    ori $4, $zero, 65535
-; MIPSR6-NEXT:    sllv $4, $4, $3
-; MIPSR6-NEXT:    nor $6, $zero, $4
-; MIPSR6-NEXT:    sllv $5, $5, $3
+; MIPSR6-NEXT:    addiu $1, $zero, -4
+; MIPSR6-NEXT:    and $6, $4, $1
+; MIPSR6-NEXT:    andi $1, $4, 3
+; MIPSR6-NEXT:    xori $1, $1, 2
+; MIPSR6-NEXT:    sll $10, $1, 3
+; MIPSR6-NEXT:    ori $1, $zero, 65535
+; MIPSR6-NEXT:    sllv $8, $1, $10
+; MIPSR6-NEXT:    nor $9, $zero, $8
+; MIPSR6-NEXT:    sllv $7, $5, $10
 ; MIPSR6-NEXT:  $BB5_1: # %entry
 ; MIPSR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSR6-NEXT:    ll $8, 0($2)
-; MIPSR6-NEXT:    slt $11, $8, $5
-; MIPSR6-NEXT:    selnez $9, $8, $11
-; MIPSR6-NEXT:    seleqz $11, $5, $11
-; MIPSR6-NEXT:    or $9, $9, $11
-; MIPSR6-NEXT:    and $9, $9, $4
-; MIPSR6-NEXT:    and $10, $8, $6
-; MIPSR6-NEXT:    or $10, $10, $9
-; MIPSR6-NEXT:    sc $10, 0($2)
-; MIPSR6-NEXT:    beqzc $10, $BB5_1
+; MIPSR6-NEXT:    ll $2, 0($6)
+; MIPSR6-NEXT:    slt $5, $2, $7
+; MIPSR6-NEXT:    selnez $3, $2, $5
+; MIPSR6-NEXT:    seleqz $5, $7, $5
+; MIPSR6-NEXT:    or $3, $3, $5
+; MIPSR6-NEXT:    and $3, $3, $8
+; MIPSR6-NEXT:    and $4, $2, $9
+; MIPSR6-NEXT:    or $4, $4, $3
+; MIPSR6-NEXT:    sc $4, 0($6)
+; MIPSR6-NEXT:    beqzc $4, $BB5_1
 ; MIPSR6-NEXT:  # %bb.2: # %entry
-; MIPSR6-NEXT:    and $7, $8, $4
-; MIPSR6-NEXT:    srlv $7, $7, $3
-; MIPSR6-NEXT:    seh $7, $7
+; MIPSR6-NEXT:    and $1, $2, $8
+; MIPSR6-NEXT:    srlv $1, $1, $10
+; MIPSR6-NEXT:    seh $1, $1
 ; MIPSR6-NEXT:  # %bb.3: # %entry
-; MIPSR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSR6-NEXT:  # %bb.4: # %entry
-; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    addiu $sp, $sp, 8
 ; MIPSR6-NEXT:    jrc $ra
 ;
@@ -1389,37 +1389,37 @@ define i16 @test_min_16(i16* nocapture %ptr, i16 signext %val) {
 ; MM:       # %bb.0: # %entry
 ; MM-NEXT:    addiu $sp, $sp, -8
 ; MM-NEXT:    .cfi_def_cfa_offset 8
-; MM-NEXT:    move $1, $5
+; MM-NEXT:    # kill: def $at killed $a1
 ; MM-NEXT:    sync
-; MM-NEXT:    addiu $2, $zero, -4
-; MM-NEXT:    and $2, $4, $2
-; MM-NEXT:    andi $3, $4, 3
-; MM-NEXT:    xori $3, $3, 2
-; MM-NEXT:    sll $3, $3, 3
-; MM-NEXT:    ori $4, $zero, 65535
-; MM-NEXT:    sllv $4, $4, $3
-; MM-NEXT:    nor $6, $zero, $4
-; MM-NEXT:    sllv $5, $5, $3
+; MM-NEXT:    addiu $1, $zero, -4
+; MM-NEXT:    and $6, $4, $1
+; MM-NEXT:    andi $1, $4, 3
+; MM-NEXT:    xori $1, $1, 2
+; MM-NEXT:    sll $10, $1, 3
+; MM-NEXT:    ori $1, $zero, 65535
+; MM-NEXT:    sllv $8, $1, $10
+; MM-NEXT:    nor $9, $zero, $8
+; MM-NEXT:    sllv $7, $5, $10
 ; MM-NEXT:  $BB5_1: # %entry
 ; MM-NEXT:    # =>This Inner Loop Header: Depth=1
-; MM-NEXT:    ll $8, 0($2)
-; MM-NEXT:    slt $11, $8, $5
-; MM-NEXT:    or $9, $8, $zero
-; MM-NEXT:    movz $9, $5, $11
-; MM-NEXT:    and $9, $9, $4
-; MM-NEXT:    and $10, $8, $6
-; MM-NEXT:    or $10, $10, $9
-; MM-NEXT:    sc $10, 0($2)
-; MM-NEXT:    beqzc $10, $BB5_1
+; MM-NEXT:    ll $2, 0($6)
+; MM-NEXT:    slt $5, $2, $7
+; MM-NEXT:    or $3, $2, $zero
+; MM-NEXT:    movz $3, $7, $5
+; MM-NEXT:    and $3, $3, $8
+; MM-NEXT:    and $4, $2, $9
+; MM-NEXT:    or $4, $4, $3
+; MM-NEXT:    sc $4, 0($6)
+; MM-NEXT:    beqzc $4, $BB5_1
 ; MM-NEXT:  # %bb.2: # %entry
-; MM-NEXT:    and $7, $8, $4
-; MM-NEXT:    srlv $7, $7, $3
-; MM-NEXT:    seh $7, $7
+; MM-NEXT:    and $1, $2, $8
+; MM-NEXT:    srlv $1, $1, $10
+; MM-NEXT:    seh $1, $1
 ; MM-NEXT:  # %bb.3: # %entry
-; MM-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MM-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MM-NEXT:  # %bb.4: # %entry
-; MM-NEXT:    sync
 ; MM-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MM-NEXT:    sync
 ; MM-NEXT:    addiusp 8
 ; MM-NEXT:    jrc $ra
 ;
@@ -1427,38 +1427,38 @@ define i16 @test_min_16(i16* nocapture %ptr, i16 signext %val) {
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    addiu $sp, $sp, -8
 ; MMR6-NEXT:    .cfi_def_cfa_offset 8
-; MMR6-NEXT:    move $1, $5
+; MMR6-NEXT:    # kill: def $at killed $a1
 ; MMR6-NEXT:    sync
-; MMR6-NEXT:    addiu $2, $zero, -4
-; MMR6-NEXT:    and $2, $4, $2
-; MMR6-NEXT:    andi $3, $4, 3
-; MMR6-NEXT:    xori $3, $3, 2
-; MMR6-NEXT:    sll $3, $3, 3
-; MMR6-NEXT:    ori $4, $zero, 65535
-; MMR6-NEXT:    sllv $4, $4, $3
-; MMR6-NEXT:    nor $6, $zero, $4
-; MMR6-NEXT:    sllv $5, $5, $3
+; MMR6-NEXT:    addiu $1, $zero, -4
+; MMR6-NEXT:    and $6, $4, $1
+; MMR6-NEXT:    andi $1, $4, 3
+; MMR6-NEXT:    xori $1, $1, 2
+; MMR6-NEXT:    sll $10, $1, 3
+; MMR6-NEXT:    ori $1, $zero, 65535
+; MMR6-NEXT:    sllv $8, $1, $10
+; MMR6-NEXT:    nor $9, $zero, $8
+; MMR6-NEXT:    sllv $7, $5, $10
 ; MMR6-NEXT:  $BB5_1: # %entry
 ; MMR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMR6-NEXT:    ll $8, 0($2)
-; MMR6-NEXT:    slt $11, $8, $5
-; MMR6-NEXT:    selnez $9, $8, $11
-; MMR6-NEXT:    seleqz $11, $5, $11
-; MMR6-NEXT:    or $9, $9, $11
-; MMR6-NEXT:    and $9, $9, $4
-; MMR6-NEXT:    and $10, $8, $6
-; MMR6-NEXT:    or $10, $10, $9
-; MMR6-NEXT:    sc $10, 0($2)
-; MMR6-NEXT:    beqc $10, $zero, $BB5_1
+; MMR6-NEXT:    ll $2, 0($6)
+; MMR6-NEXT:    slt $5, $2, $7
+; MMR6-NEXT:    selnez $3, $2, $5
+; MMR6-NEXT:    seleqz $5, $7, $5
+; MMR6-NEXT:    or $3, $3, $5
+; MMR6-NEXT:    and $3, $3, $8
+; MMR6-NEXT:    and $4, $2, $9
+; MMR6-NEXT:    or $4, $4, $3
+; MMR6-NEXT:    sc $4, 0($6)
+; MMR6-NEXT:    beqc $4, $zero, $BB5_1
 ; MMR6-NEXT:  # %bb.2: # %entry
-; MMR6-NEXT:    and $7, $8, $4
-; MMR6-NEXT:    srlv $7, $7, $3
-; MMR6-NEXT:    seh $7, $7
+; MMR6-NEXT:    and $1, $2, $8
+; MMR6-NEXT:    srlv $1, $1, $10
+; MMR6-NEXT:    seh $1, $1
 ; MMR6-NEXT:  # %bb.3: # %entry
-; MMR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:  # %bb.4: # %entry
-; MMR6-NEXT:    sync
 ; MMR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMR6-NEXT:    sync
 ; MMR6-NEXT:    addiu $sp, $sp, 8
 ; MMR6-NEXT:    jrc $ra
 ;
@@ -1466,39 +1466,39 @@ define i16 @test_min_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
 ; MIPSEL-NEXT:    .cfi_def_cfa_offset 8
-; MIPSEL-NEXT:    move $1, $5
+; MIPSEL-NEXT:    # kill: def $at killed $a1
 ; MIPSEL-NEXT:    sync
-; MIPSEL-NEXT:    addiu $2, $zero, -4
-; MIPSEL-NEXT:    and $2, $4, $2
-; MIPSEL-NEXT:    andi $3, $4, 3
-; MIPSEL-NEXT:    sll $3, $3, 3
-; MIPSEL-NEXT:    ori $4, $zero, 65535
-; MIPSEL-NEXT:    sllv $4, $4, $3
-; MIPSEL-NEXT:    nor $6, $zero, $4
-; MIPSEL-NEXT:    sllv $5, $5, $3
+; MIPSEL-NEXT:    addiu $1, $zero, -4
+; MIPSEL-NEXT:    and $6, $4, $1
+; MIPSEL-NEXT:    andi $1, $4, 3
+; MIPSEL-NEXT:    sll $10, $1, 3
+; MIPSEL-NEXT:    ori $1, $zero, 65535
+; MIPSEL-NEXT:    sllv $8, $1, $10
+; MIPSEL-NEXT:    nor $9, $zero, $8
+; MIPSEL-NEXT:    sllv $7, $5, $10
 ; MIPSEL-NEXT:  $BB5_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSEL-NEXT:    ll $8, 0($2)
-; MIPSEL-NEXT:    and $8, $8, $4
-; MIPSEL-NEXT:    and $5, $5, $4
-; MIPSEL-NEXT:    slt $11, $8, $5
-; MIPSEL-NEXT:    move $9, $8
-; MIPSEL-NEXT:    movz $9, $5, $11
-; MIPSEL-NEXT:    and $9, $9, $4
-; MIPSEL-NEXT:    and $10, $8, $6
-; MIPSEL-NEXT:    or $10, $10, $9
-; MIPSEL-NEXT:    sc $10, 0($2)
-; MIPSEL-NEXT:    beqz $10, $BB5_1
+; MIPSEL-NEXT:    ll $2, 0($6)
+; MIPSEL-NEXT:    and $2, $2, $8
+; MIPSEL-NEXT:    and $7, $7, $8
+; MIPSEL-NEXT:    slt $5, $2, $7
+; MIPSEL-NEXT:    move $3, $2
+; MIPSEL-NEXT:    movz $3, $7, $5
+; MIPSEL-NEXT:    and $3, $3, $8
+; MIPSEL-NEXT:    and $4, $2, $9
+; MIPSEL-NEXT:    or $4, $4, $3
+; MIPSEL-NEXT:    sc $4, 0($6)
+; MIPSEL-NEXT:    beqz $4, $BB5_1
 ; MIPSEL-NEXT:    nop
 ; MIPSEL-NEXT:  # %bb.2: # %entry
-; MIPSEL-NEXT:    and $7, $8, $4
-; MIPSEL-NEXT:    srlv $7, $7, $3
-; MIPSEL-NEXT:    seh $7, $7
+; MIPSEL-NEXT:    and $1, $2, $8
+; MIPSEL-NEXT:    srlv $1, $1, $10
+; MIPSEL-NEXT:    seh $1, $1
 ; MIPSEL-NEXT:  # %bb.3: # %entry
-; MIPSEL-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:  # %bb.4: # %entry
-; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    addiu $sp, $sp, 8
 ; MIPSEL-NEXT:    jr $ra
 ; MIPSEL-NEXT:    nop
@@ -1507,39 +1507,39 @@ define i16 @test_min_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPSELR6:       # %bb.0: # %entry
 ; MIPSELR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSELR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSELR6-NEXT:    move $1, $5
+; MIPSELR6-NEXT:    # kill: def $at killed $a1
 ; MIPSELR6-NEXT:    sync
-; MIPSELR6-NEXT:    addiu $2, $zero, -4
-; MIPSELR6-NEXT:    and $2, $4, $2
-; MIPSELR6-NEXT:    andi $3, $4, 3
-; MIPSELR6-NEXT:    sll $3, $3, 3
-; MIPSELR6-NEXT:    ori $4, $zero, 65535
-; MIPSELR6-NEXT:    sllv $4, $4, $3
-; MIPSELR6-NEXT:    nor $6, $zero, $4
-; MIPSELR6-NEXT:    sllv $5, $5, $3
+; MIPSELR6-NEXT:    addiu $1, $zero, -4
+; MIPSELR6-NEXT:    and $6, $4, $1
+; MIPSELR6-NEXT:    andi $1, $4, 3
+; MIPSELR6-NEXT:    sll $10, $1, 3
+; MIPSELR6-NEXT:    ori $1, $zero, 65535
+; MIPSELR6-NEXT:    sllv $8, $1, $10
+; MIPSELR6-NEXT:    nor $9, $zero, $8
+; MIPSELR6-NEXT:    sllv $7, $5, $10
 ; MIPSELR6-NEXT:  $BB5_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSELR6-NEXT:    ll $8, 0($2)
-; MIPSELR6-NEXT:    and $8, $8, $4
-; MIPSELR6-NEXT:    and $5, $5, $4
-; MIPSELR6-NEXT:    slt $11, $8, $5
-; MIPSELR6-NEXT:    selnez $9, $8, $11
-; MIPSELR6-NEXT:    seleqz $11, $5, $11
-; MIPSELR6-NEXT:    or $9, $9, $11
-; MIPSELR6-NEXT:    and $9, $9, $4
-; MIPSELR6-NEXT:    and $10, $8, $6
-; MIPSELR6-NEXT:    or $10, $10, $9
-; MIPSELR6-NEXT:    sc $10, 0($2)
-; MIPSELR6-NEXT:    beqzc $10, $BB5_1
+; MIPSELR6-NEXT:    ll $2, 0($6)
+; MIPSELR6-NEXT:    and $2, $2, $8
+; MIPSELR6-NEXT:    and $7, $7, $8
+; MIPSELR6-NEXT:    slt $5, $2, $7
+; MIPSELR6-NEXT:    selnez $3, $2, $5
+; MIPSELR6-NEXT:    seleqz $5, $7, $5
+; MIPSELR6-NEXT:    or $3, $3, $5
+; MIPSELR6-NEXT:    and $3, $3, $8
+; MIPSELR6-NEXT:    and $4, $2, $9
+; MIPSELR6-NEXT:    or $4, $4, $3
+; MIPSELR6-NEXT:    sc $4, 0($6)
+; MIPSELR6-NEXT:    beqzc $4, $BB5_1
 ; MIPSELR6-NEXT:  # %bb.2: # %entry
-; MIPSELR6-NEXT:    and $7, $8, $4
-; MIPSELR6-NEXT:    srlv $7, $7, $3
-; MIPSELR6-NEXT:    seh $7, $7
+; MIPSELR6-NEXT:    and $1, $2, $8
+; MIPSELR6-NEXT:    srlv $1, $1, $10
+; MIPSELR6-NEXT:    seh $1, $1
 ; MIPSELR6-NEXT:  # %bb.3: # %entry
-; MIPSELR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSELR6-NEXT:  # %bb.4: # %entry
-; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    addiu $sp, $sp, 8
 ; MIPSELR6-NEXT:    jrc $ra
 ;
@@ -1547,38 +1547,38 @@ define i16 @test_min_16(i16* nocapture %ptr, i16 signext %val) {
 ; MMEL:       # %bb.0: # %entry
 ; MMEL-NEXT:    addiu $sp, $sp, -8
 ; MMEL-NEXT:    .cfi_def_cfa_offset 8
-; MMEL-NEXT:    move $1, $5
+; MMEL-NEXT:    # kill: def $at killed $a1
 ; MMEL-NEXT:    sync
-; MMEL-NEXT:    addiu $2, $zero, -4
-; MMEL-NEXT:    and $2, $4, $2
-; MMEL-NEXT:    andi $3, $4, 3
-; MMEL-NEXT:    sll $3, $3, 3
-; MMEL-NEXT:    ori $4, $zero, 65535
-; MMEL-NEXT:    sllv $4, $4, $3
-; MMEL-NEXT:    nor $6, $zero, $4
-; MMEL-NEXT:    sllv $5, $5, $3
+; MMEL-NEXT:    addiu $1, $zero, -4
+; MMEL-NEXT:    and $6, $4, $1
+; MMEL-NEXT:    andi $1, $4, 3
+; MMEL-NEXT:    sll $10, $1, 3
+; MMEL-NEXT:    ori $1, $zero, 65535
+; MMEL-NEXT:    sllv $8, $1, $10
+; MMEL-NEXT:    nor $9, $zero, $8
+; MMEL-NEXT:    sllv $7, $5, $10
 ; MMEL-NEXT:  $BB5_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMEL-NEXT:    ll $8, 0($2)
-; MMEL-NEXT:    and $8, $8, $4
-; MMEL-NEXT:    and $5, $5, $4
-; MMEL-NEXT:    slt $11, $8, $5
-; MMEL-NEXT:    or $9, $8, $zero
-; MMEL-NEXT:    movz $9, $5, $11
-; MMEL-NEXT:    and $9, $9, $4
-; MMEL-NEXT:    and $10, $8, $6
-; MMEL-NEXT:    or $10, $10, $9
-; MMEL-NEXT:    sc $10, 0($2)
-; MMEL-NEXT:    beqzc $10, $BB5_1
+; MMEL-NEXT:    ll $2, 0($6)
+; MMEL-NEXT:    and $2, $2, $8
+; MMEL-NEXT:    and $7, $7, $8
+; MMEL-NEXT:    slt $5, $2, $7
+; MMEL-NEXT:    or $3, $2, $zero
+; MMEL-NEXT:    movz $3, $7, $5
+; MMEL-NEXT:    and $3, $3, $8
+; MMEL-NEXT:    and $4, $2, $9
+; MMEL-NEXT:    or $4, $4, $3
+; MMEL-NEXT:    sc $4, 0($6)
+; MMEL-NEXT:    beqzc $4, $BB5_1
 ; MMEL-NEXT:  # %bb.2: # %entry
-; MMEL-NEXT:    and $7, $8, $4
-; MMEL-NEXT:    srlv $7, $7, $3
-; MMEL-NEXT:    seh $7, $7
+; MMEL-NEXT:    and $1, $2, $8
+; MMEL-NEXT:    srlv $1, $1, $10
+; MMEL-NEXT:    seh $1, $1
 ; MMEL-NEXT:  # %bb.3: # %entry
-; MMEL-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMEL-NEXT:  # %bb.4: # %entry
-; MMEL-NEXT:    sync
 ; MMEL-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMEL-NEXT:    sync
 ; MMEL-NEXT:    addiusp 8
 ; MMEL-NEXT:    jrc $ra
 ;
@@ -1586,39 +1586,39 @@ define i16 @test_min_16(i16* nocapture %ptr, i16 signext %val) {
 ; MMELR6:       # %bb.0: # %entry
 ; MMELR6-NEXT:    addiu $sp, $sp, -8
 ; MMELR6-NEXT:    .cfi_def_cfa_offset 8
-; MMELR6-NEXT:    move $1, $5
+; MMELR6-NEXT:    # kill: def $at killed $a1
 ; MMELR6-NEXT:    sync
-; MMELR6-NEXT:    addiu $2, $zero, -4
-; MMELR6-NEXT:    and $2, $4, $2
-; MMELR6-NEXT:    andi $3, $4, 3
-; MMELR6-NEXT:    sll $3, $3, 3
-; MMELR6-NEXT:    ori $4, $zero, 65535
-; MMELR6-NEXT:    sllv $4, $4, $3
-; MMELR6-NEXT:    nor $6, $zero, $4
-; MMELR6-NEXT:    sllv $5, $5, $3
+; MMELR6-NEXT:    addiu $1, $zero, -4
+; MMELR6-NEXT:    and $6, $4, $1
+; MMELR6-NEXT:    andi $1, $4, 3
+; MMELR6-NEXT:    sll $10, $1, 3
+; MMELR6-NEXT:    ori $1, $zero, 65535
+; MMELR6-NEXT:    sllv $8, $1, $10
+; MMELR6-NEXT:    nor $9, $zero, $8
+; MMELR6-NEXT:    sllv $7, $5, $10
 ; MMELR6-NEXT:  $BB5_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMELR6-NEXT:    ll $8, 0($2)
-; MMELR6-NEXT:    and $8, $8, $4
-; MMELR6-NEXT:    and $5, $5, $4
-; MMELR6-NEXT:    slt $11, $8, $5
-; MMELR6-NEXT:    selnez $9, $8, $11
-; MMELR6-NEXT:    seleqz $11, $5, $11
-; MMELR6-NEXT:    or $9, $9, $11
-; MMELR6-NEXT:    and $9, $9, $4
-; MMELR6-NEXT:    and $10, $8, $6
-; MMELR6-NEXT:    or $10, $10, $9
-; MMELR6-NEXT:    sc $10, 0($2)
-; MMELR6-NEXT:    beqc $10, $zero, $BB5_1
+; MMELR6-NEXT:    ll $2, 0($6)
+; MMELR6-NEXT:    and $2, $2, $8
+; MMELR6-NEXT:    and $7, $7, $8
+; MMELR6-NEXT:    slt $5, $2, $7
+; MMELR6-NEXT:    selnez $3, $2, $5
+; MMELR6-NEXT:    seleqz $5, $7, $5
+; MMELR6-NEXT:    or $3, $3, $5
+; MMELR6-NEXT:    and $3, $3, $8
+; MMELR6-NEXT:    and $4, $2, $9
+; MMELR6-NEXT:    or $4, $4, $3
+; MMELR6-NEXT:    sc $4, 0($6)
+; MMELR6-NEXT:    beqc $4, $zero, $BB5_1
 ; MMELR6-NEXT:  # %bb.2: # %entry
-; MMELR6-NEXT:    and $7, $8, $4
-; MMELR6-NEXT:    srlv $7, $7, $3
-; MMELR6-NEXT:    seh $7, $7
+; MMELR6-NEXT:    and $1, $2, $8
+; MMELR6-NEXT:    srlv $1, $1, $10
+; MMELR6-NEXT:    seh $1, $1
 ; MMELR6-NEXT:  # %bb.3: # %entry
-; MMELR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMELR6-NEXT:  # %bb.4: # %entry
-; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    addiu $sp, $sp, 8
 ; MMELR6-NEXT:    jrc $ra
 ;
@@ -1626,38 +1626,38 @@ define i16 @test_min_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64-NEXT:    move $1, $5
 ; MIPS64-NEXT:    sync
-; MIPS64-NEXT:    daddiu $1, $zero, -4
-; MIPS64-NEXT:    and $1, $4, $1
+; MIPS64-NEXT:    daddiu $2, $zero, -4
+; MIPS64-NEXT:    and $6, $4, $2
 ; MIPS64-NEXT:    andi $2, $4, 3
 ; MIPS64-NEXT:    xori $2, $2, 2
-; MIPS64-NEXT:    sll $2, $2, 3
-; MIPS64-NEXT:    ori $3, $zero, 65535
-; MIPS64-NEXT:    sllv $3, $3, $2
-; MIPS64-NEXT:    nor $6, $zero, $3
-; MIPS64-NEXT:    sllv $5, $5, $2
+; MIPS64-NEXT:    sll $10, $2, 3
+; MIPS64-NEXT:    ori $2, $zero, 65535
+; MIPS64-NEXT:    sllv $8, $2, $10
+; MIPS64-NEXT:    nor $9, $zero, $8
+; MIPS64-NEXT:    sllv $7, $1, $10
 ; MIPS64-NEXT:  .LBB5_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $8, 0($1)
-; MIPS64-NEXT:    slt $11, $8, $5
-; MIPS64-NEXT:    move $9, $8
-; MIPS64-NEXT:    movz $9, $5, $11
-; MIPS64-NEXT:    and $9, $9, $3
-; MIPS64-NEXT:    and $10, $8, $6
-; MIPS64-NEXT:    or $10, $10, $9
-; MIPS64-NEXT:    sc $10, 0($1)
-; MIPS64-NEXT:    beqz $10, .LBB5_1
+; MIPS64-NEXT:    ll $2, 0($6)
+; MIPS64-NEXT:    slt $5, $2, $7
+; MIPS64-NEXT:    move $3, $2
+; MIPS64-NEXT:    movz $3, $7, $5
+; MIPS64-NEXT:    and $3, $3, $8
+; MIPS64-NEXT:    and $4, $2, $9
+; MIPS64-NEXT:    or $4, $4, $3
+; MIPS64-NEXT:    sc $4, 0($6)
+; MIPS64-NEXT:    beqz $4, .LBB5_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $7, $8, $3
-; MIPS64-NEXT:    srlv $7, $7, $2
-; MIPS64-NEXT:    seh $7, $7
+; MIPS64-NEXT:    and $1, $2, $8
+; MIPS64-NEXT:    srlv $1, $1, $10
+; MIPS64-NEXT:    seh $1, $1
 ; MIPS64-NEXT:  # %bb.3: # %entry
-; MIPS64-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64-NEXT:  # %bb.4: # %entry
-; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    nop
@@ -1666,38 +1666,38 @@ define i16 @test_min_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64R6:       # %bb.0: # %entry
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64R6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64R6-NEXT:    move $1, $5
 ; MIPS64R6-NEXT:    sync
-; MIPS64R6-NEXT:    daddiu $1, $zero, -4
-; MIPS64R6-NEXT:    and $1, $4, $1
+; MIPS64R6-NEXT:    daddiu $2, $zero, -4
+; MIPS64R6-NEXT:    and $6, $4, $2
 ; MIPS64R6-NEXT:    andi $2, $4, 3
 ; MIPS64R6-NEXT:    xori $2, $2, 2
-; MIPS64R6-NEXT:    sll $2, $2, 3
-; MIPS64R6-NEXT:    ori $3, $zero, 65535
-; MIPS64R6-NEXT:    sllv $3, $3, $2
-; MIPS64R6-NEXT:    nor $6, $zero, $3
-; MIPS64R6-NEXT:    sllv $5, $5, $2
+; MIPS64R6-NEXT:    sll $10, $2, 3
+; MIPS64R6-NEXT:    ori $2, $zero, 65535
+; MIPS64R6-NEXT:    sllv $8, $2, $10
+; MIPS64R6-NEXT:    nor $9, $zero, $8
+; MIPS64R6-NEXT:    sllv $7, $1, $10
 ; MIPS64R6-NEXT:  .LBB5_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6-NEXT:    ll $8, 0($1)
-; MIPS64R6-NEXT:    slt $11, $8, $5
-; MIPS64R6-NEXT:    selnez $9, $8, $11
-; MIPS64R6-NEXT:    seleqz $11, $5, $11
-; MIPS64R6-NEXT:    or $9, $9, $11
-; MIPS64R6-NEXT:    and $9, $9, $3
-; MIPS64R6-NEXT:    and $10, $8, $6
-; MIPS64R6-NEXT:    or $10, $10, $9
-; MIPS64R6-NEXT:    sc $10, 0($1)
-; MIPS64R6-NEXT:    beqzc $10, .LBB5_1
+; MIPS64R6-NEXT:    ll $2, 0($6)
+; MIPS64R6-NEXT:    slt $5, $2, $7
+; MIPS64R6-NEXT:    selnez $3, $2, $5
+; MIPS64R6-NEXT:    seleqz $5, $7, $5
+; MIPS64R6-NEXT:    or $3, $3, $5
+; MIPS64R6-NEXT:    and $3, $3, $8
+; MIPS64R6-NEXT:    and $4, $2, $9
+; MIPS64R6-NEXT:    or $4, $4, $3
+; MIPS64R6-NEXT:    sc $4, 0($6)
+; MIPS64R6-NEXT:    beqzc $4, .LBB5_1
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $7, $8, $3
-; MIPS64R6-NEXT:    srlv $7, $7, $2
-; MIPS64R6-NEXT:    seh $7, $7
+; MIPS64R6-NEXT:    and $1, $2, $8
+; MIPS64R6-NEXT:    srlv $1, $1, $10
+; MIPS64R6-NEXT:    seh $1, $1
 ; MIPS64R6-NEXT:  # %bb.3: # %entry
-; MIPS64R6-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64R6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6-NEXT:  # %bb.4: # %entry
-; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64R6-NEXT:    jrc $ra
 ;
@@ -1705,39 +1705,39 @@ define i16 @test_min_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64EL:       # %bb.0: # %entry
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64EL-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64EL-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64EL-NEXT:    move $1, $5
 ; MIPS64EL-NEXT:    sync
-; MIPS64EL-NEXT:    daddiu $1, $zero, -4
-; MIPS64EL-NEXT:    and $1, $4, $1
+; MIPS64EL-NEXT:    daddiu $2, $zero, -4
+; MIPS64EL-NEXT:    and $6, $4, $2
 ; MIPS64EL-NEXT:    andi $2, $4, 3
-; MIPS64EL-NEXT:    sll $2, $2, 3
-; MIPS64EL-NEXT:    ori $3, $zero, 65535
-; MIPS64EL-NEXT:    sllv $3, $3, $2
-; MIPS64EL-NEXT:    nor $6, $zero, $3
-; MIPS64EL-NEXT:    sllv $5, $5, $2
+; MIPS64EL-NEXT:    sll $10, $2, 3
+; MIPS64EL-NEXT:    ori $2, $zero, 65535
+; MIPS64EL-NEXT:    sllv $8, $2, $10
+; MIPS64EL-NEXT:    nor $9, $zero, $8
+; MIPS64EL-NEXT:    sllv $7, $1, $10
 ; MIPS64EL-NEXT:  .LBB5_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64EL-NEXT:    ll $8, 0($1)
-; MIPS64EL-NEXT:    and $8, $8, $3
-; MIPS64EL-NEXT:    and $5, $5, $3
-; MIPS64EL-NEXT:    slt $11, $8, $5
-; MIPS64EL-NEXT:    move $9, $8
-; MIPS64EL-NEXT:    movz $9, $5, $11
-; MIPS64EL-NEXT:    and $9, $9, $3
-; MIPS64EL-NEXT:    and $10, $8, $6
-; MIPS64EL-NEXT:    or $10, $10, $9
-; MIPS64EL-NEXT:    sc $10, 0($1)
-; MIPS64EL-NEXT:    beqz $10, .LBB5_1
+; MIPS64EL-NEXT:    ll $2, 0($6)
+; MIPS64EL-NEXT:    and $2, $2, $8
+; MIPS64EL-NEXT:    and $7, $7, $8
+; MIPS64EL-NEXT:    slt $5, $2, $7
+; MIPS64EL-NEXT:    move $3, $2
+; MIPS64EL-NEXT:    movz $3, $7, $5
+; MIPS64EL-NEXT:    and $3, $3, $8
+; MIPS64EL-NEXT:    and $4, $2, $9
+; MIPS64EL-NEXT:    or $4, $4, $3
+; MIPS64EL-NEXT:    sc $4, 0($6)
+; MIPS64EL-NEXT:    beqz $4, .LBB5_1
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:  # %bb.2: # %entry
-; MIPS64EL-NEXT:    and $7, $8, $3
-; MIPS64EL-NEXT:    srlv $7, $7, $2
-; MIPS64EL-NEXT:    seh $7, $7
+; MIPS64EL-NEXT:    and $1, $2, $8
+; MIPS64EL-NEXT:    srlv $1, $1, $10
+; MIPS64EL-NEXT:    seh $1, $1
 ; MIPS64EL-NEXT:  # %bb.3: # %entry
-; MIPS64EL-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64EL-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64EL-NEXT:  # %bb.4: # %entry
-; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64EL-NEXT:    jr $ra
 ; MIPS64EL-NEXT:    nop
@@ -1746,39 +1746,39 @@ define i16 @test_min_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6:       # %bb.0: # %entry
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64ELR6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64ELR6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64ELR6-NEXT:    move $1, $5
 ; MIPS64ELR6-NEXT:    sync
-; MIPS64ELR6-NEXT:    daddiu $1, $zero, -4
-; MIPS64ELR6-NEXT:    and $1, $4, $1
+; MIPS64ELR6-NEXT:    daddiu $2, $zero, -4
+; MIPS64ELR6-NEXT:    and $6, $4, $2
 ; MIPS64ELR6-NEXT:    andi $2, $4, 3
-; MIPS64ELR6-NEXT:    sll $2, $2, 3
-; MIPS64ELR6-NEXT:    ori $3, $zero, 65535
-; MIPS64ELR6-NEXT:    sllv $3, $3, $2
-; MIPS64ELR6-NEXT:    nor $6, $zero, $3
-; MIPS64ELR6-NEXT:    sllv $5, $5, $2
+; MIPS64ELR6-NEXT:    sll $10, $2, 3
+; MIPS64ELR6-NEXT:    ori $2, $zero, 65535
+; MIPS64ELR6-NEXT:    sllv $8, $2, $10
+; MIPS64ELR6-NEXT:    nor $9, $zero, $8
+; MIPS64ELR6-NEXT:    sllv $7, $1, $10
 ; MIPS64ELR6-NEXT:  .LBB5_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64ELR6-NEXT:    ll $8, 0($1)
-; MIPS64ELR6-NEXT:    and $8, $8, $3
-; MIPS64ELR6-NEXT:    and $5, $5, $3
-; MIPS64ELR6-NEXT:    slt $11, $8, $5
-; MIPS64ELR6-NEXT:    selnez $9, $8, $11
-; MIPS64ELR6-NEXT:    seleqz $11, $5, $11
-; MIPS64ELR6-NEXT:    or $9, $9, $11
-; MIPS64ELR6-NEXT:    and $9, $9, $3
-; MIPS64ELR6-NEXT:    and $10, $8, $6
-; MIPS64ELR6-NEXT:    or $10, $10, $9
-; MIPS64ELR6-NEXT:    sc $10, 0($1)
-; MIPS64ELR6-NEXT:    beqzc $10, .LBB5_1
+; MIPS64ELR6-NEXT:    ll $2, 0($6)
+; MIPS64ELR6-NEXT:    and $2, $2, $8
+; MIPS64ELR6-NEXT:    and $7, $7, $8
+; MIPS64ELR6-NEXT:    slt $5, $2, $7
+; MIPS64ELR6-NEXT:    selnez $3, $2, $5
+; MIPS64ELR6-NEXT:    seleqz $5, $7, $5
+; MIPS64ELR6-NEXT:    or $3, $3, $5
+; MIPS64ELR6-NEXT:    and $3, $3, $8
+; MIPS64ELR6-NEXT:    and $4, $2, $9
+; MIPS64ELR6-NEXT:    or $4, $4, $3
+; MIPS64ELR6-NEXT:    sc $4, 0($6)
+; MIPS64ELR6-NEXT:    beqzc $4, .LBB5_1
 ; MIPS64ELR6-NEXT:  # %bb.2: # %entry
-; MIPS64ELR6-NEXT:    and $7, $8, $3
-; MIPS64ELR6-NEXT:    srlv $7, $7, $2
-; MIPS64ELR6-NEXT:    seh $7, $7
+; MIPS64ELR6-NEXT:    and $1, $2, $8
+; MIPS64ELR6-NEXT:    srlv $1, $1, $10
+; MIPS64ELR6-NEXT:    seh $1, $1
 ; MIPS64ELR6-NEXT:  # %bb.3: # %entry
-; MIPS64ELR6-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64ELR6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64ELR6-NEXT:  # %bb.4: # %entry
-; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
@@ -1791,38 +1791,38 @@ define i16 @test_umax_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
 ; MIPS-NEXT:    .cfi_def_cfa_offset 8
-; MIPS-NEXT:    move $1, $5
+; MIPS-NEXT:    # kill: def $at killed $a1
 ; MIPS-NEXT:    sync
-; MIPS-NEXT:    addiu $2, $zero, -4
-; MIPS-NEXT:    and $2, $4, $2
-; MIPS-NEXT:    andi $3, $4, 3
-; MIPS-NEXT:    xori $3, $3, 2
-; MIPS-NEXT:    sll $3, $3, 3
-; MIPS-NEXT:    ori $4, $zero, 65535
-; MIPS-NEXT:    sllv $4, $4, $3
-; MIPS-NEXT:    nor $6, $zero, $4
-; MIPS-NEXT:    sllv $5, $5, $3
+; MIPS-NEXT:    addiu $1, $zero, -4
+; MIPS-NEXT:    and $6, $4, $1
+; MIPS-NEXT:    andi $1, $4, 3
+; MIPS-NEXT:    xori $1, $1, 2
+; MIPS-NEXT:    sll $10, $1, 3
+; MIPS-NEXT:    ori $1, $zero, 65535
+; MIPS-NEXT:    sllv $8, $1, $10
+; MIPS-NEXT:    nor $9, $zero, $8
+; MIPS-NEXT:    sllv $7, $5, $10
 ; MIPS-NEXT:  $BB6_1: # %entry
 ; MIPS-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS-NEXT:    ll $8, 0($2)
-; MIPS-NEXT:    sltu $11, $8, $5
-; MIPS-NEXT:    move $9, $8
-; MIPS-NEXT:    movn $9, $5, $11
-; MIPS-NEXT:    and $9, $9, $4
-; MIPS-NEXT:    and $10, $8, $6
-; MIPS-NEXT:    or $10, $10, $9
-; MIPS-NEXT:    sc $10, 0($2)
-; MIPS-NEXT:    beqz $10, $BB6_1
+; MIPS-NEXT:    ll $2, 0($6)
+; MIPS-NEXT:    sltu $5, $2, $7
+; MIPS-NEXT:    move $3, $2
+; MIPS-NEXT:    movn $3, $7, $5
+; MIPS-NEXT:    and $3, $3, $8
+; MIPS-NEXT:    and $4, $2, $9
+; MIPS-NEXT:    or $4, $4, $3
+; MIPS-NEXT:    sc $4, 0($6)
+; MIPS-NEXT:    beqz $4, $BB6_1
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  # %bb.2: # %entry
-; MIPS-NEXT:    and $7, $8, $4
-; MIPS-NEXT:    srlv $7, $7, $3
-; MIPS-NEXT:    seh $7, $7
+; MIPS-NEXT:    and $1, $2, $8
+; MIPS-NEXT:    srlv $1, $1, $10
+; MIPS-NEXT:    seh $1, $1
 ; MIPS-NEXT:  # %bb.3: # %entry
-; MIPS-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPS-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS-NEXT:  # %bb.4: # %entry
-; MIPS-NEXT:    sync
 ; MIPS-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS-NEXT:    sync
 ; MIPS-NEXT:    addiu $sp, $sp, 8
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
@@ -1831,38 +1831,38 @@ define i16 @test_umax_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSR6-NEXT:    move $1, $5
+; MIPSR6-NEXT:    # kill: def $at killed $a1
 ; MIPSR6-NEXT:    sync
-; MIPSR6-NEXT:    addiu $2, $zero, -4
-; MIPSR6-NEXT:    and $2, $4, $2
-; MIPSR6-NEXT:    andi $3, $4, 3
-; MIPSR6-NEXT:    xori $3, $3, 2
-; MIPSR6-NEXT:    sll $3, $3, 3
-; MIPSR6-NEXT:    ori $4, $zero, 65535
-; MIPSR6-NEXT:    sllv $4, $4, $3
-; MIPSR6-NEXT:    nor $6, $zero, $4
-; MIPSR6-NEXT:    sllv $5, $5, $3
+; MIPSR6-NEXT:    addiu $1, $zero, -4
+; MIPSR6-NEXT:    and $6, $4, $1
+; MIPSR6-NEXT:    andi $1, $4, 3
+; MIPSR6-NEXT:    xori $1, $1, 2
+; MIPSR6-NEXT:    sll $10, $1, 3
+; MIPSR6-NEXT:    ori $1, $zero, 65535
+; MIPSR6-NEXT:    sllv $8, $1, $10
+; MIPSR6-NEXT:    nor $9, $zero, $8
+; MIPSR6-NEXT:    sllv $7, $5, $10
 ; MIPSR6-NEXT:  $BB6_1: # %entry
 ; MIPSR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSR6-NEXT:    ll $8, 0($2)
-; MIPSR6-NEXT:    sltu $11, $8, $5
-; MIPSR6-NEXT:    seleqz $9, $8, $11
-; MIPSR6-NEXT:    selnez $11, $5, $11
-; MIPSR6-NEXT:    or $9, $9, $11
-; MIPSR6-NEXT:    and $9, $9, $4
-; MIPSR6-NEXT:    and $10, $8, $6
-; MIPSR6-NEXT:    or $10, $10, $9
-; MIPSR6-NEXT:    sc $10, 0($2)
-; MIPSR6-NEXT:    beqzc $10, $BB6_1
+; MIPSR6-NEXT:    ll $2, 0($6)
+; MIPSR6-NEXT:    sltu $5, $2, $7
+; MIPSR6-NEXT:    seleqz $3, $2, $5
+; MIPSR6-NEXT:    selnez $5, $7, $5
+; MIPSR6-NEXT:    or $3, $3, $5
+; MIPSR6-NEXT:    and $3, $3, $8
+; MIPSR6-NEXT:    and $4, $2, $9
+; MIPSR6-NEXT:    or $4, $4, $3
+; MIPSR6-NEXT:    sc $4, 0($6)
+; MIPSR6-NEXT:    beqzc $4, $BB6_1
 ; MIPSR6-NEXT:  # %bb.2: # %entry
-; MIPSR6-NEXT:    and $7, $8, $4
-; MIPSR6-NEXT:    srlv $7, $7, $3
-; MIPSR6-NEXT:    seh $7, $7
+; MIPSR6-NEXT:    and $1, $2, $8
+; MIPSR6-NEXT:    srlv $1, $1, $10
+; MIPSR6-NEXT:    seh $1, $1
 ; MIPSR6-NEXT:  # %bb.3: # %entry
-; MIPSR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSR6-NEXT:  # %bb.4: # %entry
-; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    addiu $sp, $sp, 8
 ; MIPSR6-NEXT:    jrc $ra
 ;
@@ -1870,37 +1870,37 @@ define i16 @test_umax_16(i16* nocapture %ptr, i16 signext %val) {
 ; MM:       # %bb.0: # %entry
 ; MM-NEXT:    addiu $sp, $sp, -8
 ; MM-NEXT:    .cfi_def_cfa_offset 8
-; MM-NEXT:    move $1, $5
+; MM-NEXT:    # kill: def $at killed $a1
 ; MM-NEXT:    sync
-; MM-NEXT:    addiu $2, $zero, -4
-; MM-NEXT:    and $2, $4, $2
-; MM-NEXT:    andi $3, $4, 3
-; MM-NEXT:    xori $3, $3, 2
-; MM-NEXT:    sll $3, $3, 3
-; MM-NEXT:    ori $4, $zero, 65535
-; MM-NEXT:    sllv $4, $4, $3
-; MM-NEXT:    nor $6, $zero, $4
-; MM-NEXT:    sllv $5, $5, $3
+; MM-NEXT:    addiu $1, $zero, -4
+; MM-NEXT:    and $6, $4, $1
+; MM-NEXT:    andi $1, $4, 3
+; MM-NEXT:    xori $1, $1, 2
+; MM-NEXT:    sll $10, $1, 3
+; MM-NEXT:    ori $1, $zero, 65535
+; MM-NEXT:    sllv $8, $1, $10
+; MM-NEXT:    nor $9, $zero, $8
+; MM-NEXT:    sllv $7, $5, $10
 ; MM-NEXT:  $BB6_1: # %entry
 ; MM-NEXT:    # =>This Inner Loop Header: Depth=1
-; MM-NEXT:    ll $8, 0($2)
-; MM-NEXT:    sltu $11, $8, $5
-; MM-NEXT:    or $9, $8, $zero
-; MM-NEXT:    movn $9, $5, $11
-; MM-NEXT:    and $9, $9, $4
-; MM-NEXT:    and $10, $8, $6
-; MM-NEXT:    or $10, $10, $9
-; MM-NEXT:    sc $10, 0($2)
-; MM-NEXT:    beqzc $10, $BB6_1
+; MM-NEXT:    ll $2, 0($6)
+; MM-NEXT:    sltu $5, $2, $7
+; MM-NEXT:    or $3, $2, $zero
+; MM-NEXT:    movn $3, $7, $5
+; MM-NEXT:    and $3, $3, $8
+; MM-NEXT:    and $4, $2, $9
+; MM-NEXT:    or $4, $4, $3
+; MM-NEXT:    sc $4, 0($6)
+; MM-NEXT:    beqzc $4, $BB6_1
 ; MM-NEXT:  # %bb.2: # %entry
-; MM-NEXT:    and $7, $8, $4
-; MM-NEXT:    srlv $7, $7, $3
-; MM-NEXT:    seh $7, $7
+; MM-NEXT:    and $1, $2, $8
+; MM-NEXT:    srlv $1, $1, $10
+; MM-NEXT:    seh $1, $1
 ; MM-NEXT:  # %bb.3: # %entry
-; MM-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MM-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MM-NEXT:  # %bb.4: # %entry
-; MM-NEXT:    sync
 ; MM-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MM-NEXT:    sync
 ; MM-NEXT:    addiusp 8
 ; MM-NEXT:    jrc $ra
 ;
@@ -1908,38 +1908,38 @@ define i16 @test_umax_16(i16* nocapture %ptr, i16 signext %val) {
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    addiu $sp, $sp, -8
 ; MMR6-NEXT:    .cfi_def_cfa_offset 8
-; MMR6-NEXT:    move $1, $5
+; MMR6-NEXT:    # kill: def $at killed $a1
 ; MMR6-NEXT:    sync
-; MMR6-NEXT:    addiu $2, $zero, -4
-; MMR6-NEXT:    and $2, $4, $2
-; MMR6-NEXT:    andi $3, $4, 3
-; MMR6-NEXT:    xori $3, $3, 2
-; MMR6-NEXT:    sll $3, $3, 3
-; MMR6-NEXT:    ori $4, $zero, 65535
-; MMR6-NEXT:    sllv $4, $4, $3
-; MMR6-NEXT:    nor $6, $zero, $4
-; MMR6-NEXT:    sllv $5, $5, $3
+; MMR6-NEXT:    addiu $1, $zero, -4
+; MMR6-NEXT:    and $6, $4, $1
+; MMR6-NEXT:    andi $1, $4, 3
+; MMR6-NEXT:    xori $1, $1, 2
+; MMR6-NEXT:    sll $10, $1, 3
+; MMR6-NEXT:    ori $1, $zero, 65535
+; MMR6-NEXT:    sllv $8, $1, $10
+; MMR6-NEXT:    nor $9, $zero, $8
+; MMR6-NEXT:    sllv $7, $5, $10
 ; MMR6-NEXT:  $BB6_1: # %entry
 ; MMR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMR6-NEXT:    ll $8, 0($2)
-; MMR6-NEXT:    sltu $11, $8, $5
-; MMR6-NEXT:    seleqz $9, $8, $11
-; MMR6-NEXT:    selnez $11, $5, $11
-; MMR6-NEXT:    or $9, $9, $11
-; MMR6-NEXT:    and $9, $9, $4
-; MMR6-NEXT:    and $10, $8, $6
-; MMR6-NEXT:    or $10, $10, $9
-; MMR6-NEXT:    sc $10, 0($2)
-; MMR6-NEXT:    beqc $10, $zero, $BB6_1
+; MMR6-NEXT:    ll $2, 0($6)
+; MMR6-NEXT:    sltu $5, $2, $7
+; MMR6-NEXT:    seleqz $3, $2, $5
+; MMR6-NEXT:    selnez $5, $7, $5
+; MMR6-NEXT:    or $3, $3, $5
+; MMR6-NEXT:    and $3, $3, $8
+; MMR6-NEXT:    and $4, $2, $9
+; MMR6-NEXT:    or $4, $4, $3
+; MMR6-NEXT:    sc $4, 0($6)
+; MMR6-NEXT:    beqc $4, $zero, $BB6_1
 ; MMR6-NEXT:  # %bb.2: # %entry
-; MMR6-NEXT:    and $7, $8, $4
-; MMR6-NEXT:    srlv $7, $7, $3
-; MMR6-NEXT:    seh $7, $7
+; MMR6-NEXT:    and $1, $2, $8
+; MMR6-NEXT:    srlv $1, $1, $10
+; MMR6-NEXT:    seh $1, $1
 ; MMR6-NEXT:  # %bb.3: # %entry
-; MMR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:  # %bb.4: # %entry
-; MMR6-NEXT:    sync
 ; MMR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMR6-NEXT:    sync
 ; MMR6-NEXT:    addiu $sp, $sp, 8
 ; MMR6-NEXT:    jrc $ra
 ;
@@ -1947,39 +1947,39 @@ define i16 @test_umax_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
 ; MIPSEL-NEXT:    .cfi_def_cfa_offset 8
-; MIPSEL-NEXT:    move $1, $5
+; MIPSEL-NEXT:    # kill: def $at killed $a1
 ; MIPSEL-NEXT:    sync
-; MIPSEL-NEXT:    addiu $2, $zero, -4
-; MIPSEL-NEXT:    and $2, $4, $2
-; MIPSEL-NEXT:    andi $3, $4, 3
-; MIPSEL-NEXT:    sll $3, $3, 3
-; MIPSEL-NEXT:    ori $4, $zero, 65535
-; MIPSEL-NEXT:    sllv $4, $4, $3
-; MIPSEL-NEXT:    nor $6, $zero, $4
-; MIPSEL-NEXT:    sllv $5, $5, $3
+; MIPSEL-NEXT:    addiu $1, $zero, -4
+; MIPSEL-NEXT:    and $6, $4, $1
+; MIPSEL-NEXT:    andi $1, $4, 3
+; MIPSEL-NEXT:    sll $10, $1, 3
+; MIPSEL-NEXT:    ori $1, $zero, 65535
+; MIPSEL-NEXT:    sllv $8, $1, $10
+; MIPSEL-NEXT:    nor $9, $zero, $8
+; MIPSEL-NEXT:    sllv $7, $5, $10
 ; MIPSEL-NEXT:  $BB6_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSEL-NEXT:    ll $8, 0($2)
-; MIPSEL-NEXT:    and $8, $8, $4
-; MIPSEL-NEXT:    and $5, $5, $4
-; MIPSEL-NEXT:    sltu $11, $8, $5
-; MIPSEL-NEXT:    move $9, $8
-; MIPSEL-NEXT:    movn $9, $5, $11
-; MIPSEL-NEXT:    and $9, $9, $4
-; MIPSEL-NEXT:    and $10, $8, $6
-; MIPSEL-NEXT:    or $10, $10, $9
-; MIPSEL-NEXT:    sc $10, 0($2)
-; MIPSEL-NEXT:    beqz $10, $BB6_1
+; MIPSEL-NEXT:    ll $2, 0($6)
+; MIPSEL-NEXT:    and $2, $2, $8
+; MIPSEL-NEXT:    and $7, $7, $8
+; MIPSEL-NEXT:    sltu $5, $2, $7
+; MIPSEL-NEXT:    move $3, $2
+; MIPSEL-NEXT:    movn $3, $7, $5
+; MIPSEL-NEXT:    and $3, $3, $8
+; MIPSEL-NEXT:    and $4, $2, $9
+; MIPSEL-NEXT:    or $4, $4, $3
+; MIPSEL-NEXT:    sc $4, 0($6)
+; MIPSEL-NEXT:    beqz $4, $BB6_1
 ; MIPSEL-NEXT:    nop
 ; MIPSEL-NEXT:  # %bb.2: # %entry
-; MIPSEL-NEXT:    and $7, $8, $4
-; MIPSEL-NEXT:    srlv $7, $7, $3
-; MIPSEL-NEXT:    seh $7, $7
+; MIPSEL-NEXT:    and $1, $2, $8
+; MIPSEL-NEXT:    srlv $1, $1, $10
+; MIPSEL-NEXT:    seh $1, $1
 ; MIPSEL-NEXT:  # %bb.3: # %entry
-; MIPSEL-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:  # %bb.4: # %entry
-; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    addiu $sp, $sp, 8
 ; MIPSEL-NEXT:    jr $ra
 ; MIPSEL-NEXT:    nop
@@ -1988,39 +1988,39 @@ define i16 @test_umax_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPSELR6:       # %bb.0: # %entry
 ; MIPSELR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSELR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSELR6-NEXT:    move $1, $5
+; MIPSELR6-NEXT:    # kill: def $at killed $a1
 ; MIPSELR6-NEXT:    sync
-; MIPSELR6-NEXT:    addiu $2, $zero, -4
-; MIPSELR6-NEXT:    and $2, $4, $2
-; MIPSELR6-NEXT:    andi $3, $4, 3
-; MIPSELR6-NEXT:    sll $3, $3, 3
-; MIPSELR6-NEXT:    ori $4, $zero, 65535
-; MIPSELR6-NEXT:    sllv $4, $4, $3
-; MIPSELR6-NEXT:    nor $6, $zero, $4
-; MIPSELR6-NEXT:    sllv $5, $5, $3
+; MIPSELR6-NEXT:    addiu $1, $zero, -4
+; MIPSELR6-NEXT:    and $6, $4, $1
+; MIPSELR6-NEXT:    andi $1, $4, 3
+; MIPSELR6-NEXT:    sll $10, $1, 3
+; MIPSELR6-NEXT:    ori $1, $zero, 65535
+; MIPSELR6-NEXT:    sllv $8, $1, $10
+; MIPSELR6-NEXT:    nor $9, $zero, $8
+; MIPSELR6-NEXT:    sllv $7, $5, $10
 ; MIPSELR6-NEXT:  $BB6_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSELR6-NEXT:    ll $8, 0($2)
-; MIPSELR6-NEXT:    and $8, $8, $4
-; MIPSELR6-NEXT:    and $5, $5, $4
-; MIPSELR6-NEXT:    sltu $11, $8, $5
-; MIPSELR6-NEXT:    seleqz $9, $8, $11
-; MIPSELR6-NEXT:    selnez $11, $5, $11
-; MIPSELR6-NEXT:    or $9, $9, $11
-; MIPSELR6-NEXT:    and $9, $9, $4
-; MIPSELR6-NEXT:    and $10, $8, $6
-; MIPSELR6-NEXT:    or $10, $10, $9
-; MIPSELR6-NEXT:    sc $10, 0($2)
-; MIPSELR6-NEXT:    beqzc $10, $BB6_1
+; MIPSELR6-NEXT:    ll $2, 0($6)
+; MIPSELR6-NEXT:    and $2, $2, $8
+; MIPSELR6-NEXT:    and $7, $7, $8
+; MIPSELR6-NEXT:    sltu $5, $2, $7
+; MIPSELR6-NEXT:    seleqz $3, $2, $5
+; MIPSELR6-NEXT:    selnez $5, $7, $5
+; MIPSELR6-NEXT:    or $3, $3, $5
+; MIPSELR6-NEXT:    and $3, $3, $8
+; MIPSELR6-NEXT:    and $4, $2, $9
+; MIPSELR6-NEXT:    or $4, $4, $3
+; MIPSELR6-NEXT:    sc $4, 0($6)
+; MIPSELR6-NEXT:    beqzc $4, $BB6_1
 ; MIPSELR6-NEXT:  # %bb.2: # %entry
-; MIPSELR6-NEXT:    and $7, $8, $4
-; MIPSELR6-NEXT:    srlv $7, $7, $3
-; MIPSELR6-NEXT:    seh $7, $7
+; MIPSELR6-NEXT:    and $1, $2, $8
+; MIPSELR6-NEXT:    srlv $1, $1, $10
+; MIPSELR6-NEXT:    seh $1, $1
 ; MIPSELR6-NEXT:  # %bb.3: # %entry
-; MIPSELR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSELR6-NEXT:  # %bb.4: # %entry
-; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    addiu $sp, $sp, 8
 ; MIPSELR6-NEXT:    jrc $ra
 ;
@@ -2028,38 +2028,38 @@ define i16 @test_umax_16(i16* nocapture %ptr, i16 signext %val) {
 ; MMEL:       # %bb.0: # %entry
 ; MMEL-NEXT:    addiu $sp, $sp, -8
 ; MMEL-NEXT:    .cfi_def_cfa_offset 8
-; MMEL-NEXT:    move $1, $5
+; MMEL-NEXT:    # kill: def $at killed $a1
 ; MMEL-NEXT:    sync
-; MMEL-NEXT:    addiu $2, $zero, -4
-; MMEL-NEXT:    and $2, $4, $2
-; MMEL-NEXT:    andi $3, $4, 3
-; MMEL-NEXT:    sll $3, $3, 3
-; MMEL-NEXT:    ori $4, $zero, 65535
-; MMEL-NEXT:    sllv $4, $4, $3
-; MMEL-NEXT:    nor $6, $zero, $4
-; MMEL-NEXT:    sllv $5, $5, $3
+; MMEL-NEXT:    addiu $1, $zero, -4
+; MMEL-NEXT:    and $6, $4, $1
+; MMEL-NEXT:    andi $1, $4, 3
+; MMEL-NEXT:    sll $10, $1, 3
+; MMEL-NEXT:    ori $1, $zero, 65535
+; MMEL-NEXT:    sllv $8, $1, $10
+; MMEL-NEXT:    nor $9, $zero, $8
+; MMEL-NEXT:    sllv $7, $5, $10
 ; MMEL-NEXT:  $BB6_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMEL-NEXT:    ll $8, 0($2)
-; MMEL-NEXT:    and $8, $8, $4
-; MMEL-NEXT:    and $5, $5, $4
-; MMEL-NEXT:    sltu $11, $8, $5
-; MMEL-NEXT:    or $9, $8, $zero
-; MMEL-NEXT:    movn $9, $5, $11
-; MMEL-NEXT:    and $9, $9, $4
-; MMEL-NEXT:    and $10, $8, $6
-; MMEL-NEXT:    or $10, $10, $9
-; MMEL-NEXT:    sc $10, 0($2)
-; MMEL-NEXT:    beqzc $10, $BB6_1
+; MMEL-NEXT:    ll $2, 0($6)
+; MMEL-NEXT:    and $2, $2, $8
+; MMEL-NEXT:    and $7, $7, $8
+; MMEL-NEXT:    sltu $5, $2, $7
+; MMEL-NEXT:    or $3, $2, $zero
+; MMEL-NEXT:    movn $3, $7, $5
+; MMEL-NEXT:    and $3, $3, $8
+; MMEL-NEXT:    and $4, $2, $9
+; MMEL-NEXT:    or $4, $4, $3
+; MMEL-NEXT:    sc $4, 0($6)
+; MMEL-NEXT:    beqzc $4, $BB6_1
 ; MMEL-NEXT:  # %bb.2: # %entry
-; MMEL-NEXT:    and $7, $8, $4
-; MMEL-NEXT:    srlv $7, $7, $3
-; MMEL-NEXT:    seh $7, $7
+; MMEL-NEXT:    and $1, $2, $8
+; MMEL-NEXT:    srlv $1, $1, $10
+; MMEL-NEXT:    seh $1, $1
 ; MMEL-NEXT:  # %bb.3: # %entry
-; MMEL-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMEL-NEXT:  # %bb.4: # %entry
-; MMEL-NEXT:    sync
 ; MMEL-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMEL-NEXT:    sync
 ; MMEL-NEXT:    addiusp 8
 ; MMEL-NEXT:    jrc $ra
 ;
@@ -2067,39 +2067,39 @@ define i16 @test_umax_16(i16* nocapture %ptr, i16 signext %val) {
 ; MMELR6:       # %bb.0: # %entry
 ; MMELR6-NEXT:    addiu $sp, $sp, -8
 ; MMELR6-NEXT:    .cfi_def_cfa_offset 8
-; MMELR6-NEXT:    move $1, $5
+; MMELR6-NEXT:    # kill: def $at killed $a1
 ; MMELR6-NEXT:    sync
-; MMELR6-NEXT:    addiu $2, $zero, -4
-; MMELR6-NEXT:    and $2, $4, $2
-; MMELR6-NEXT:    andi $3, $4, 3
-; MMELR6-NEXT:    sll $3, $3, 3
-; MMELR6-NEXT:    ori $4, $zero, 65535
-; MMELR6-NEXT:    sllv $4, $4, $3
-; MMELR6-NEXT:    nor $6, $zero, $4
-; MMELR6-NEXT:    sllv $5, $5, $3
+; MMELR6-NEXT:    addiu $1, $zero, -4
+; MMELR6-NEXT:    and $6, $4, $1
+; MMELR6-NEXT:    andi $1, $4, 3
+; MMELR6-NEXT:    sll $10, $1, 3
+; MMELR6-NEXT:    ori $1, $zero, 65535
+; MMELR6-NEXT:    sllv $8, $1, $10
+; MMELR6-NEXT:    nor $9, $zero, $8
+; MMELR6-NEXT:    sllv $7, $5, $10
 ; MMELR6-NEXT:  $BB6_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMELR6-NEXT:    ll $8, 0($2)
-; MMELR6-NEXT:    and $8, $8, $4
-; MMELR6-NEXT:    and $5, $5, $4
-; MMELR6-NEXT:    sltu $11, $8, $5
-; MMELR6-NEXT:    seleqz $9, $8, $11
-; MMELR6-NEXT:    selnez $11, $5, $11
-; MMELR6-NEXT:    or $9, $9, $11
-; MMELR6-NEXT:    and $9, $9, $4
-; MMELR6-NEXT:    and $10, $8, $6
-; MMELR6-NEXT:    or $10, $10, $9
-; MMELR6-NEXT:    sc $10, 0($2)
-; MMELR6-NEXT:    beqc $10, $zero, $BB6_1
+; MMELR6-NEXT:    ll $2, 0($6)
+; MMELR6-NEXT:    and $2, $2, $8
+; MMELR6-NEXT:    and $7, $7, $8
+; MMELR6-NEXT:    sltu $5, $2, $7
+; MMELR6-NEXT:    seleqz $3, $2, $5
+; MMELR6-NEXT:    selnez $5, $7, $5
+; MMELR6-NEXT:    or $3, $3, $5
+; MMELR6-NEXT:    and $3, $3, $8
+; MMELR6-NEXT:    and $4, $2, $9
+; MMELR6-NEXT:    or $4, $4, $3
+; MMELR6-NEXT:    sc $4, 0($6)
+; MMELR6-NEXT:    beqc $4, $zero, $BB6_1
 ; MMELR6-NEXT:  # %bb.2: # %entry
-; MMELR6-NEXT:    and $7, $8, $4
-; MMELR6-NEXT:    srlv $7, $7, $3
-; MMELR6-NEXT:    seh $7, $7
+; MMELR6-NEXT:    and $1, $2, $8
+; MMELR6-NEXT:    srlv $1, $1, $10
+; MMELR6-NEXT:    seh $1, $1
 ; MMELR6-NEXT:  # %bb.3: # %entry
-; MMELR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMELR6-NEXT:  # %bb.4: # %entry
-; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    addiu $sp, $sp, 8
 ; MMELR6-NEXT:    jrc $ra
 ;
@@ -2107,38 +2107,38 @@ define i16 @test_umax_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64-NEXT:    move $1, $5
 ; MIPS64-NEXT:    sync
-; MIPS64-NEXT:    daddiu $1, $zero, -4
-; MIPS64-NEXT:    and $1, $4, $1
+; MIPS64-NEXT:    daddiu $2, $zero, -4
+; MIPS64-NEXT:    and $6, $4, $2
 ; MIPS64-NEXT:    andi $2, $4, 3
 ; MIPS64-NEXT:    xori $2, $2, 2
-; MIPS64-NEXT:    sll $2, $2, 3
-; MIPS64-NEXT:    ori $3, $zero, 65535
-; MIPS64-NEXT:    sllv $3, $3, $2
-; MIPS64-NEXT:    nor $6, $zero, $3
-; MIPS64-NEXT:    sllv $5, $5, $2
+; MIPS64-NEXT:    sll $10, $2, 3
+; MIPS64-NEXT:    ori $2, $zero, 65535
+; MIPS64-NEXT:    sllv $8, $2, $10
+; MIPS64-NEXT:    nor $9, $zero, $8
+; MIPS64-NEXT:    sllv $7, $1, $10
 ; MIPS64-NEXT:  .LBB6_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $8, 0($1)
-; MIPS64-NEXT:    sltu $11, $8, $5
-; MIPS64-NEXT:    move $9, $8
-; MIPS64-NEXT:    movn $9, $5, $11
-; MIPS64-NEXT:    and $9, $9, $3
-; MIPS64-NEXT:    and $10, $8, $6
-; MIPS64-NEXT:    or $10, $10, $9
-; MIPS64-NEXT:    sc $10, 0($1)
-; MIPS64-NEXT:    beqz $10, .LBB6_1
+; MIPS64-NEXT:    ll $2, 0($6)
+; MIPS64-NEXT:    sltu $5, $2, $7
+; MIPS64-NEXT:    move $3, $2
+; MIPS64-NEXT:    movn $3, $7, $5
+; MIPS64-NEXT:    and $3, $3, $8
+; MIPS64-NEXT:    and $4, $2, $9
+; MIPS64-NEXT:    or $4, $4, $3
+; MIPS64-NEXT:    sc $4, 0($6)
+; MIPS64-NEXT:    beqz $4, .LBB6_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $7, $8, $3
-; MIPS64-NEXT:    srlv $7, $7, $2
-; MIPS64-NEXT:    seh $7, $7
+; MIPS64-NEXT:    and $1, $2, $8
+; MIPS64-NEXT:    srlv $1, $1, $10
+; MIPS64-NEXT:    seh $1, $1
 ; MIPS64-NEXT:  # %bb.3: # %entry
-; MIPS64-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64-NEXT:  # %bb.4: # %entry
-; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    nop
@@ -2147,38 +2147,38 @@ define i16 @test_umax_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64R6:       # %bb.0: # %entry
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64R6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64R6-NEXT:    move $1, $5
 ; MIPS64R6-NEXT:    sync
-; MIPS64R6-NEXT:    daddiu $1, $zero, -4
-; MIPS64R6-NEXT:    and $1, $4, $1
+; MIPS64R6-NEXT:    daddiu $2, $zero, -4
+; MIPS64R6-NEXT:    and $6, $4, $2
 ; MIPS64R6-NEXT:    andi $2, $4, 3
 ; MIPS64R6-NEXT:    xori $2, $2, 2
-; MIPS64R6-NEXT:    sll $2, $2, 3
-; MIPS64R6-NEXT:    ori $3, $zero, 65535
-; MIPS64R6-NEXT:    sllv $3, $3, $2
-; MIPS64R6-NEXT:    nor $6, $zero, $3
-; MIPS64R6-NEXT:    sllv $5, $5, $2
+; MIPS64R6-NEXT:    sll $10, $2, 3
+; MIPS64R6-NEXT:    ori $2, $zero, 65535
+; MIPS64R6-NEXT:    sllv $8, $2, $10
+; MIPS64R6-NEXT:    nor $9, $zero, $8
+; MIPS64R6-NEXT:    sllv $7, $1, $10
 ; MIPS64R6-NEXT:  .LBB6_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6-NEXT:    ll $8, 0($1)
-; MIPS64R6-NEXT:    sltu $11, $8, $5
-; MIPS64R6-NEXT:    seleqz $9, $8, $11
-; MIPS64R6-NEXT:    selnez $11, $5, $11
-; MIPS64R6-NEXT:    or $9, $9, $11
-; MIPS64R6-NEXT:    and $9, $9, $3
-; MIPS64R6-NEXT:    and $10, $8, $6
-; MIPS64R6-NEXT:    or $10, $10, $9
-; MIPS64R6-NEXT:    sc $10, 0($1)
-; MIPS64R6-NEXT:    beqzc $10, .LBB6_1
+; MIPS64R6-NEXT:    ll $2, 0($6)
+; MIPS64R6-NEXT:    sltu $5, $2, $7
+; MIPS64R6-NEXT:    seleqz $3, $2, $5
+; MIPS64R6-NEXT:    selnez $5, $7, $5
+; MIPS64R6-NEXT:    or $3, $3, $5
+; MIPS64R6-NEXT:    and $3, $3, $8
+; MIPS64R6-NEXT:    and $4, $2, $9
+; MIPS64R6-NEXT:    or $4, $4, $3
+; MIPS64R6-NEXT:    sc $4, 0($6)
+; MIPS64R6-NEXT:    beqzc $4, .LBB6_1
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $7, $8, $3
-; MIPS64R6-NEXT:    srlv $7, $7, $2
-; MIPS64R6-NEXT:    seh $7, $7
+; MIPS64R6-NEXT:    and $1, $2, $8
+; MIPS64R6-NEXT:    srlv $1, $1, $10
+; MIPS64R6-NEXT:    seh $1, $1
 ; MIPS64R6-NEXT:  # %bb.3: # %entry
-; MIPS64R6-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64R6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6-NEXT:  # %bb.4: # %entry
-; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64R6-NEXT:    jrc $ra
 ;
@@ -2186,39 +2186,39 @@ define i16 @test_umax_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64EL:       # %bb.0: # %entry
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64EL-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64EL-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64EL-NEXT:    move $1, $5
 ; MIPS64EL-NEXT:    sync
-; MIPS64EL-NEXT:    daddiu $1, $zero, -4
-; MIPS64EL-NEXT:    and $1, $4, $1
+; MIPS64EL-NEXT:    daddiu $2, $zero, -4
+; MIPS64EL-NEXT:    and $6, $4, $2
 ; MIPS64EL-NEXT:    andi $2, $4, 3
-; MIPS64EL-NEXT:    sll $2, $2, 3
-; MIPS64EL-NEXT:    ori $3, $zero, 65535
-; MIPS64EL-NEXT:    sllv $3, $3, $2
-; MIPS64EL-NEXT:    nor $6, $zero, $3
-; MIPS64EL-NEXT:    sllv $5, $5, $2
+; MIPS64EL-NEXT:    sll $10, $2, 3
+; MIPS64EL-NEXT:    ori $2, $zero, 65535
+; MIPS64EL-NEXT:    sllv $8, $2, $10
+; MIPS64EL-NEXT:    nor $9, $zero, $8
+; MIPS64EL-NEXT:    sllv $7, $1, $10
 ; MIPS64EL-NEXT:  .LBB6_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64EL-NEXT:    ll $8, 0($1)
-; MIPS64EL-NEXT:    and $8, $8, $3
-; MIPS64EL-NEXT:    and $5, $5, $3
-; MIPS64EL-NEXT:    sltu $11, $8, $5
-; MIPS64EL-NEXT:    move $9, $8
-; MIPS64EL-NEXT:    movn $9, $5, $11
-; MIPS64EL-NEXT:    and $9, $9, $3
-; MIPS64EL-NEXT:    and $10, $8, $6
-; MIPS64EL-NEXT:    or $10, $10, $9
-; MIPS64EL-NEXT:    sc $10, 0($1)
-; MIPS64EL-NEXT:    beqz $10, .LBB6_1
+; MIPS64EL-NEXT:    ll $2, 0($6)
+; MIPS64EL-NEXT:    and $2, $2, $8
+; MIPS64EL-NEXT:    and $7, $7, $8
+; MIPS64EL-NEXT:    sltu $5, $2, $7
+; MIPS64EL-NEXT:    move $3, $2
+; MIPS64EL-NEXT:    movn $3, $7, $5
+; MIPS64EL-NEXT:    and $3, $3, $8
+; MIPS64EL-NEXT:    and $4, $2, $9
+; MIPS64EL-NEXT:    or $4, $4, $3
+; MIPS64EL-NEXT:    sc $4, 0($6)
+; MIPS64EL-NEXT:    beqz $4, .LBB6_1
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:  # %bb.2: # %entry
-; MIPS64EL-NEXT:    and $7, $8, $3
-; MIPS64EL-NEXT:    srlv $7, $7, $2
-; MIPS64EL-NEXT:    seh $7, $7
+; MIPS64EL-NEXT:    and $1, $2, $8
+; MIPS64EL-NEXT:    srlv $1, $1, $10
+; MIPS64EL-NEXT:    seh $1, $1
 ; MIPS64EL-NEXT:  # %bb.3: # %entry
-; MIPS64EL-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64EL-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64EL-NEXT:  # %bb.4: # %entry
-; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64EL-NEXT:    jr $ra
 ; MIPS64EL-NEXT:    nop
@@ -2227,39 +2227,39 @@ define i16 @test_umax_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6:       # %bb.0: # %entry
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64ELR6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64ELR6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64ELR6-NEXT:    move $1, $5
 ; MIPS64ELR6-NEXT:    sync
-; MIPS64ELR6-NEXT:    daddiu $1, $zero, -4
-; MIPS64ELR6-NEXT:    and $1, $4, $1
+; MIPS64ELR6-NEXT:    daddiu $2, $zero, -4
+; MIPS64ELR6-NEXT:    and $6, $4, $2
 ; MIPS64ELR6-NEXT:    andi $2, $4, 3
-; MIPS64ELR6-NEXT:    sll $2, $2, 3
-; MIPS64ELR6-NEXT:    ori $3, $zero, 65535
-; MIPS64ELR6-NEXT:    sllv $3, $3, $2
-; MIPS64ELR6-NEXT:    nor $6, $zero, $3
-; MIPS64ELR6-NEXT:    sllv $5, $5, $2
+; MIPS64ELR6-NEXT:    sll $10, $2, 3
+; MIPS64ELR6-NEXT:    ori $2, $zero, 65535
+; MIPS64ELR6-NEXT:    sllv $8, $2, $10
+; MIPS64ELR6-NEXT:    nor $9, $zero, $8
+; MIPS64ELR6-NEXT:    sllv $7, $1, $10
 ; MIPS64ELR6-NEXT:  .LBB6_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64ELR6-NEXT:    ll $8, 0($1)
-; MIPS64ELR6-NEXT:    and $8, $8, $3
-; MIPS64ELR6-NEXT:    and $5, $5, $3
-; MIPS64ELR6-NEXT:    sltu $11, $8, $5
-; MIPS64ELR6-NEXT:    seleqz $9, $8, $11
-; MIPS64ELR6-NEXT:    selnez $11, $5, $11
-; MIPS64ELR6-NEXT:    or $9, $9, $11
-; MIPS64ELR6-NEXT:    and $9, $9, $3
-; MIPS64ELR6-NEXT:    and $10, $8, $6
-; MIPS64ELR6-NEXT:    or $10, $10, $9
-; MIPS64ELR6-NEXT:    sc $10, 0($1)
-; MIPS64ELR6-NEXT:    beqzc $10, .LBB6_1
+; MIPS64ELR6-NEXT:    ll $2, 0($6)
+; MIPS64ELR6-NEXT:    and $2, $2, $8
+; MIPS64ELR6-NEXT:    and $7, $7, $8
+; MIPS64ELR6-NEXT:    sltu $5, $2, $7
+; MIPS64ELR6-NEXT:    seleqz $3, $2, $5
+; MIPS64ELR6-NEXT:    selnez $5, $7, $5
+; MIPS64ELR6-NEXT:    or $3, $3, $5
+; MIPS64ELR6-NEXT:    and $3, $3, $8
+; MIPS64ELR6-NEXT:    and $4, $2, $9
+; MIPS64ELR6-NEXT:    or $4, $4, $3
+; MIPS64ELR6-NEXT:    sc $4, 0($6)
+; MIPS64ELR6-NEXT:    beqzc $4, .LBB6_1
 ; MIPS64ELR6-NEXT:  # %bb.2: # %entry
-; MIPS64ELR6-NEXT:    and $7, $8, $3
-; MIPS64ELR6-NEXT:    srlv $7, $7, $2
-; MIPS64ELR6-NEXT:    seh $7, $7
+; MIPS64ELR6-NEXT:    and $1, $2, $8
+; MIPS64ELR6-NEXT:    srlv $1, $1, $10
+; MIPS64ELR6-NEXT:    seh $1, $1
 ; MIPS64ELR6-NEXT:  # %bb.3: # %entry
-; MIPS64ELR6-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64ELR6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64ELR6-NEXT:  # %bb.4: # %entry
-; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
@@ -2272,38 +2272,38 @@ define i16 @test_umin_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
 ; MIPS-NEXT:    .cfi_def_cfa_offset 8
-; MIPS-NEXT:    move $1, $5
+; MIPS-NEXT:    # kill: def $at killed $a1
 ; MIPS-NEXT:    sync
-; MIPS-NEXT:    addiu $2, $zero, -4
-; MIPS-NEXT:    and $2, $4, $2
-; MIPS-NEXT:    andi $3, $4, 3
-; MIPS-NEXT:    xori $3, $3, 2
-; MIPS-NEXT:    sll $3, $3, 3
-; MIPS-NEXT:    ori $4, $zero, 65535
-; MIPS-NEXT:    sllv $4, $4, $3
-; MIPS-NEXT:    nor $6, $zero, $4
-; MIPS-NEXT:    sllv $5, $5, $3
+; MIPS-NEXT:    addiu $1, $zero, -4
+; MIPS-NEXT:    and $6, $4, $1
+; MIPS-NEXT:    andi $1, $4, 3
+; MIPS-NEXT:    xori $1, $1, 2
+; MIPS-NEXT:    sll $10, $1, 3
+; MIPS-NEXT:    ori $1, $zero, 65535
+; MIPS-NEXT:    sllv $8, $1, $10
+; MIPS-NEXT:    nor $9, $zero, $8
+; MIPS-NEXT:    sllv $7, $5, $10
 ; MIPS-NEXT:  $BB7_1: # %entry
 ; MIPS-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS-NEXT:    ll $8, 0($2)
-; MIPS-NEXT:    sltu $11, $8, $5
-; MIPS-NEXT:    move $9, $8
-; MIPS-NEXT:    movz $9, $5, $11
-; MIPS-NEXT:    and $9, $9, $4
-; MIPS-NEXT:    and $10, $8, $6
-; MIPS-NEXT:    or $10, $10, $9
-; MIPS-NEXT:    sc $10, 0($2)
-; MIPS-NEXT:    beqz $10, $BB7_1
+; MIPS-NEXT:    ll $2, 0($6)
+; MIPS-NEXT:    sltu $5, $2, $7
+; MIPS-NEXT:    move $3, $2
+; MIPS-NEXT:    movz $3, $7, $5
+; MIPS-NEXT:    and $3, $3, $8
+; MIPS-NEXT:    and $4, $2, $9
+; MIPS-NEXT:    or $4, $4, $3
+; MIPS-NEXT:    sc $4, 0($6)
+; MIPS-NEXT:    beqz $4, $BB7_1
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  # %bb.2: # %entry
-; MIPS-NEXT:    and $7, $8, $4
-; MIPS-NEXT:    srlv $7, $7, $3
-; MIPS-NEXT:    seh $7, $7
+; MIPS-NEXT:    and $1, $2, $8
+; MIPS-NEXT:    srlv $1, $1, $10
+; MIPS-NEXT:    seh $1, $1
 ; MIPS-NEXT:  # %bb.3: # %entry
-; MIPS-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPS-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS-NEXT:  # %bb.4: # %entry
-; MIPS-NEXT:    sync
 ; MIPS-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS-NEXT:    sync
 ; MIPS-NEXT:    addiu $sp, $sp, 8
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
@@ -2312,38 +2312,38 @@ define i16 @test_umin_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSR6-NEXT:    move $1, $5
+; MIPSR6-NEXT:    # kill: def $at killed $a1
 ; MIPSR6-NEXT:    sync
-; MIPSR6-NEXT:    addiu $2, $zero, -4
-; MIPSR6-NEXT:    and $2, $4, $2
-; MIPSR6-NEXT:    andi $3, $4, 3
-; MIPSR6-NEXT:    xori $3, $3, 2
-; MIPSR6-NEXT:    sll $3, $3, 3
-; MIPSR6-NEXT:    ori $4, $zero, 65535
-; MIPSR6-NEXT:    sllv $4, $4, $3
-; MIPSR6-NEXT:    nor $6, $zero, $4
-; MIPSR6-NEXT:    sllv $5, $5, $3
+; MIPSR6-NEXT:    addiu $1, $zero, -4
+; MIPSR6-NEXT:    and $6, $4, $1
+; MIPSR6-NEXT:    andi $1, $4, 3
+; MIPSR6-NEXT:    xori $1, $1, 2
+; MIPSR6-NEXT:    sll $10, $1, 3
+; MIPSR6-NEXT:    ori $1, $zero, 65535
+; MIPSR6-NEXT:    sllv $8, $1, $10
+; MIPSR6-NEXT:    nor $9, $zero, $8
+; MIPSR6-NEXT:    sllv $7, $5, $10
 ; MIPSR6-NEXT:  $BB7_1: # %entry
 ; MIPSR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSR6-NEXT:    ll $8, 0($2)
-; MIPSR6-NEXT:    sltu $11, $8, $5
-; MIPSR6-NEXT:    selnez $9, $8, $11
-; MIPSR6-NEXT:    seleqz $11, $5, $11
-; MIPSR6-NEXT:    or $9, $9, $11
-; MIPSR6-NEXT:    and $9, $9, $4
-; MIPSR6-NEXT:    and $10, $8, $6
-; MIPSR6-NEXT:    or $10, $10, $9
-; MIPSR6-NEXT:    sc $10, 0($2)
-; MIPSR6-NEXT:    beqzc $10, $BB7_1
+; MIPSR6-NEXT:    ll $2, 0($6)
+; MIPSR6-NEXT:    sltu $5, $2, $7
+; MIPSR6-NEXT:    selnez $3, $2, $5
+; MIPSR6-NEXT:    seleqz $5, $7, $5
+; MIPSR6-NEXT:    or $3, $3, $5
+; MIPSR6-NEXT:    and $3, $3, $8
+; MIPSR6-NEXT:    and $4, $2, $9
+; MIPSR6-NEXT:    or $4, $4, $3
+; MIPSR6-NEXT:    sc $4, 0($6)
+; MIPSR6-NEXT:    beqzc $4, $BB7_1
 ; MIPSR6-NEXT:  # %bb.2: # %entry
-; MIPSR6-NEXT:    and $7, $8, $4
-; MIPSR6-NEXT:    srlv $7, $7, $3
-; MIPSR6-NEXT:    seh $7, $7
+; MIPSR6-NEXT:    and $1, $2, $8
+; MIPSR6-NEXT:    srlv $1, $1, $10
+; MIPSR6-NEXT:    seh $1, $1
 ; MIPSR6-NEXT:  # %bb.3: # %entry
-; MIPSR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSR6-NEXT:  # %bb.4: # %entry
-; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    addiu $sp, $sp, 8
 ; MIPSR6-NEXT:    jrc $ra
 ;
@@ -2351,37 +2351,37 @@ define i16 @test_umin_16(i16* nocapture %ptr, i16 signext %val) {
 ; MM:       # %bb.0: # %entry
 ; MM-NEXT:    addiu $sp, $sp, -8
 ; MM-NEXT:    .cfi_def_cfa_offset 8
-; MM-NEXT:    move $1, $5
+; MM-NEXT:    # kill: def $at killed $a1
 ; MM-NEXT:    sync
-; MM-NEXT:    addiu $2, $zero, -4
-; MM-NEXT:    and $2, $4, $2
-; MM-NEXT:    andi $3, $4, 3
-; MM-NEXT:    xori $3, $3, 2
-; MM-NEXT:    sll $3, $3, 3
-; MM-NEXT:    ori $4, $zero, 65535
-; MM-NEXT:    sllv $4, $4, $3
-; MM-NEXT:    nor $6, $zero, $4
-; MM-NEXT:    sllv $5, $5, $3
+; MM-NEXT:    addiu $1, $zero, -4
+; MM-NEXT:    and $6, $4, $1
+; MM-NEXT:    andi $1, $4, 3
+; MM-NEXT:    xori $1, $1, 2
+; MM-NEXT:    sll $10, $1, 3
+; MM-NEXT:    ori $1, $zero, 65535
+; MM-NEXT:    sllv $8, $1, $10
+; MM-NEXT:    nor $9, $zero, $8
+; MM-NEXT:    sllv $7, $5, $10
 ; MM-NEXT:  $BB7_1: # %entry
 ; MM-NEXT:    # =>This Inner Loop Header: Depth=1
-; MM-NEXT:    ll $8, 0($2)
-; MM-NEXT:    sltu $11, $8, $5
-; MM-NEXT:    or $9, $8, $zero
-; MM-NEXT:    movz $9, $5, $11
-; MM-NEXT:    and $9, $9, $4
-; MM-NEXT:    and $10, $8, $6
-; MM-NEXT:    or $10, $10, $9
-; MM-NEXT:    sc $10, 0($2)
-; MM-NEXT:    beqzc $10, $BB7_1
+; MM-NEXT:    ll $2, 0($6)
+; MM-NEXT:    sltu $5, $2, $7
+; MM-NEXT:    or $3, $2, $zero
+; MM-NEXT:    movz $3, $7, $5
+; MM-NEXT:    and $3, $3, $8
+; MM-NEXT:    and $4, $2, $9
+; MM-NEXT:    or $4, $4, $3
+; MM-NEXT:    sc $4, 0($6)
+; MM-NEXT:    beqzc $4, $BB7_1
 ; MM-NEXT:  # %bb.2: # %entry
-; MM-NEXT:    and $7, $8, $4
-; MM-NEXT:    srlv $7, $7, $3
-; MM-NEXT:    seh $7, $7
+; MM-NEXT:    and $1, $2, $8
+; MM-NEXT:    srlv $1, $1, $10
+; MM-NEXT:    seh $1, $1
 ; MM-NEXT:  # %bb.3: # %entry
-; MM-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MM-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MM-NEXT:  # %bb.4: # %entry
-; MM-NEXT:    sync
 ; MM-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MM-NEXT:    sync
 ; MM-NEXT:    addiusp 8
 ; MM-NEXT:    jrc $ra
 ;
@@ -2389,38 +2389,38 @@ define i16 @test_umin_16(i16* nocapture %ptr, i16 signext %val) {
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    addiu $sp, $sp, -8
 ; MMR6-NEXT:    .cfi_def_cfa_offset 8
-; MMR6-NEXT:    move $1, $5
+; MMR6-NEXT:    # kill: def $at killed $a1
 ; MMR6-NEXT:    sync
-; MMR6-NEXT:    addiu $2, $zero, -4
-; MMR6-NEXT:    and $2, $4, $2
-; MMR6-NEXT:    andi $3, $4, 3
-; MMR6-NEXT:    xori $3, $3, 2
-; MMR6-NEXT:    sll $3, $3, 3
-; MMR6-NEXT:    ori $4, $zero, 65535
-; MMR6-NEXT:    sllv $4, $4, $3
-; MMR6-NEXT:    nor $6, $zero, $4
-; MMR6-NEXT:    sllv $5, $5, $3
+; MMR6-NEXT:    addiu $1, $zero, -4
+; MMR6-NEXT:    and $6, $4, $1
+; MMR6-NEXT:    andi $1, $4, 3
+; MMR6-NEXT:    xori $1, $1, 2
+; MMR6-NEXT:    sll $10, $1, 3
+; MMR6-NEXT:    ori $1, $zero, 65535
+; MMR6-NEXT:    sllv $8, $1, $10
+; MMR6-NEXT:    nor $9, $zero, $8
+; MMR6-NEXT:    sllv $7, $5, $10
 ; MMR6-NEXT:  $BB7_1: # %entry
 ; MMR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMR6-NEXT:    ll $8, 0($2)
-; MMR6-NEXT:    sltu $11, $8, $5
-; MMR6-NEXT:    selnez $9, $8, $11
-; MMR6-NEXT:    seleqz $11, $5, $11
-; MMR6-NEXT:    or $9, $9, $11
-; MMR6-NEXT:    and $9, $9, $4
-; MMR6-NEXT:    and $10, $8, $6
-; MMR6-NEXT:    or $10, $10, $9
-; MMR6-NEXT:    sc $10, 0($2)
-; MMR6-NEXT:    beqc $10, $zero, $BB7_1
+; MMR6-NEXT:    ll $2, 0($6)
+; MMR6-NEXT:    sltu $5, $2, $7
+; MMR6-NEXT:    selnez $3, $2, $5
+; MMR6-NEXT:    seleqz $5, $7, $5
+; MMR6-NEXT:    or $3, $3, $5
+; MMR6-NEXT:    and $3, $3, $8
+; MMR6-NEXT:    and $4, $2, $9
+; MMR6-NEXT:    or $4, $4, $3
+; MMR6-NEXT:    sc $4, 0($6)
+; MMR6-NEXT:    beqc $4, $zero, $BB7_1
 ; MMR6-NEXT:  # %bb.2: # %entry
-; MMR6-NEXT:    and $7, $8, $4
-; MMR6-NEXT:    srlv $7, $7, $3
-; MMR6-NEXT:    seh $7, $7
+; MMR6-NEXT:    and $1, $2, $8
+; MMR6-NEXT:    srlv $1, $1, $10
+; MMR6-NEXT:    seh $1, $1
 ; MMR6-NEXT:  # %bb.3: # %entry
-; MMR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:  # %bb.4: # %entry
-; MMR6-NEXT:    sync
 ; MMR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMR6-NEXT:    sync
 ; MMR6-NEXT:    addiu $sp, $sp, 8
 ; MMR6-NEXT:    jrc $ra
 ;
@@ -2428,39 +2428,39 @@ define i16 @test_umin_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
 ; MIPSEL-NEXT:    .cfi_def_cfa_offset 8
-; MIPSEL-NEXT:    move $1, $5
+; MIPSEL-NEXT:    # kill: def $at killed $a1
 ; MIPSEL-NEXT:    sync
-; MIPSEL-NEXT:    addiu $2, $zero, -4
-; MIPSEL-NEXT:    and $2, $4, $2
-; MIPSEL-NEXT:    andi $3, $4, 3
-; MIPSEL-NEXT:    sll $3, $3, 3
-; MIPSEL-NEXT:    ori $4, $zero, 65535
-; MIPSEL-NEXT:    sllv $4, $4, $3
-; MIPSEL-NEXT:    nor $6, $zero, $4
-; MIPSEL-NEXT:    sllv $5, $5, $3
+; MIPSEL-NEXT:    addiu $1, $zero, -4
+; MIPSEL-NEXT:    and $6, $4, $1
+; MIPSEL-NEXT:    andi $1, $4, 3
+; MIPSEL-NEXT:    sll $10, $1, 3
+; MIPSEL-NEXT:    ori $1, $zero, 65535
+; MIPSEL-NEXT:    sllv $8, $1, $10
+; MIPSEL-NEXT:    nor $9, $zero, $8
+; MIPSEL-NEXT:    sllv $7, $5, $10
 ; MIPSEL-NEXT:  $BB7_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSEL-NEXT:    ll $8, 0($2)
-; MIPSEL-NEXT:    and $8, $8, $4
-; MIPSEL-NEXT:    and $5, $5, $4
-; MIPSEL-NEXT:    sltu $11, $8, $5
-; MIPSEL-NEXT:    move $9, $8
-; MIPSEL-NEXT:    movz $9, $5, $11
-; MIPSEL-NEXT:    and $9, $9, $4
-; MIPSEL-NEXT:    and $10, $8, $6
-; MIPSEL-NEXT:    or $10, $10, $9
-; MIPSEL-NEXT:    sc $10, 0($2)
-; MIPSEL-NEXT:    beqz $10, $BB7_1
+; MIPSEL-NEXT:    ll $2, 0($6)
+; MIPSEL-NEXT:    and $2, $2, $8
+; MIPSEL-NEXT:    and $7, $7, $8
+; MIPSEL-NEXT:    sltu $5, $2, $7
+; MIPSEL-NEXT:    move $3, $2
+; MIPSEL-NEXT:    movz $3, $7, $5
+; MIPSEL-NEXT:    and $3, $3, $8
+; MIPSEL-NEXT:    and $4, $2, $9
+; MIPSEL-NEXT:    or $4, $4, $3
+; MIPSEL-NEXT:    sc $4, 0($6)
+; MIPSEL-NEXT:    beqz $4, $BB7_1
 ; MIPSEL-NEXT:    nop
 ; MIPSEL-NEXT:  # %bb.2: # %entry
-; MIPSEL-NEXT:    and $7, $8, $4
-; MIPSEL-NEXT:    srlv $7, $7, $3
-; MIPSEL-NEXT:    seh $7, $7
+; MIPSEL-NEXT:    and $1, $2, $8
+; MIPSEL-NEXT:    srlv $1, $1, $10
+; MIPSEL-NEXT:    seh $1, $1
 ; MIPSEL-NEXT:  # %bb.3: # %entry
-; MIPSEL-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:  # %bb.4: # %entry
-; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    addiu $sp, $sp, 8
 ; MIPSEL-NEXT:    jr $ra
 ; MIPSEL-NEXT:    nop
@@ -2469,39 +2469,39 @@ define i16 @test_umin_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPSELR6:       # %bb.0: # %entry
 ; MIPSELR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSELR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSELR6-NEXT:    move $1, $5
+; MIPSELR6-NEXT:    # kill: def $at killed $a1
 ; MIPSELR6-NEXT:    sync
-; MIPSELR6-NEXT:    addiu $2, $zero, -4
-; MIPSELR6-NEXT:    and $2, $4, $2
-; MIPSELR6-NEXT:    andi $3, $4, 3
-; MIPSELR6-NEXT:    sll $3, $3, 3
-; MIPSELR6-NEXT:    ori $4, $zero, 65535
-; MIPSELR6-NEXT:    sllv $4, $4, $3
-; MIPSELR6-NEXT:    nor $6, $zero, $4
-; MIPSELR6-NEXT:    sllv $5, $5, $3
+; MIPSELR6-NEXT:    addiu $1, $zero, -4
+; MIPSELR6-NEXT:    and $6, $4, $1
+; MIPSELR6-NEXT:    andi $1, $4, 3
+; MIPSELR6-NEXT:    sll $10, $1, 3
+; MIPSELR6-NEXT:    ori $1, $zero, 65535
+; MIPSELR6-NEXT:    sllv $8, $1, $10
+; MIPSELR6-NEXT:    nor $9, $zero, $8
+; MIPSELR6-NEXT:    sllv $7, $5, $10
 ; MIPSELR6-NEXT:  $BB7_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSELR6-NEXT:    ll $8, 0($2)
-; MIPSELR6-NEXT:    and $8, $8, $4
-; MIPSELR6-NEXT:    and $5, $5, $4
-; MIPSELR6-NEXT:    sltu $11, $8, $5
-; MIPSELR6-NEXT:    selnez $9, $8, $11
-; MIPSELR6-NEXT:    seleqz $11, $5, $11
-; MIPSELR6-NEXT:    or $9, $9, $11
-; MIPSELR6-NEXT:    and $9, $9, $4
-; MIPSELR6-NEXT:    and $10, $8, $6
-; MIPSELR6-NEXT:    or $10, $10, $9
-; MIPSELR6-NEXT:    sc $10, 0($2)
-; MIPSELR6-NEXT:    beqzc $10, $BB7_1
+; MIPSELR6-NEXT:    ll $2, 0($6)
+; MIPSELR6-NEXT:    and $2, $2, $8
+; MIPSELR6-NEXT:    and $7, $7, $8
+; MIPSELR6-NEXT:    sltu $5, $2, $7
+; MIPSELR6-NEXT:    selnez $3, $2, $5
+; MIPSELR6-NEXT:    seleqz $5, $7, $5
+; MIPSELR6-NEXT:    or $3, $3, $5
+; MIPSELR6-NEXT:    and $3, $3, $8
+; MIPSELR6-NEXT:    and $4, $2, $9
+; MIPSELR6-NEXT:    or $4, $4, $3
+; MIPSELR6-NEXT:    sc $4, 0($6)
+; MIPSELR6-NEXT:    beqzc $4, $BB7_1
 ; MIPSELR6-NEXT:  # %bb.2: # %entry
-; MIPSELR6-NEXT:    and $7, $8, $4
-; MIPSELR6-NEXT:    srlv $7, $7, $3
-; MIPSELR6-NEXT:    seh $7, $7
+; MIPSELR6-NEXT:    and $1, $2, $8
+; MIPSELR6-NEXT:    srlv $1, $1, $10
+; MIPSELR6-NEXT:    seh $1, $1
 ; MIPSELR6-NEXT:  # %bb.3: # %entry
-; MIPSELR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSELR6-NEXT:  # %bb.4: # %entry
-; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    addiu $sp, $sp, 8
 ; MIPSELR6-NEXT:    jrc $ra
 ;
@@ -2509,38 +2509,38 @@ define i16 @test_umin_16(i16* nocapture %ptr, i16 signext %val) {
 ; MMEL:       # %bb.0: # %entry
 ; MMEL-NEXT:    addiu $sp, $sp, -8
 ; MMEL-NEXT:    .cfi_def_cfa_offset 8
-; MMEL-NEXT:    move $1, $5
+; MMEL-NEXT:    # kill: def $at killed $a1
 ; MMEL-NEXT:    sync
-; MMEL-NEXT:    addiu $2, $zero, -4
-; MMEL-NEXT:    and $2, $4, $2
-; MMEL-NEXT:    andi $3, $4, 3
-; MMEL-NEXT:    sll $3, $3, 3
-; MMEL-NEXT:    ori $4, $zero, 65535
-; MMEL-NEXT:    sllv $4, $4, $3
-; MMEL-NEXT:    nor $6, $zero, $4
-; MMEL-NEXT:    sllv $5, $5, $3
+; MMEL-NEXT:    addiu $1, $zero, -4
+; MMEL-NEXT:    and $6, $4, $1
+; MMEL-NEXT:    andi $1, $4, 3
+; MMEL-NEXT:    sll $10, $1, 3
+; MMEL-NEXT:    ori $1, $zero, 65535
+; MMEL-NEXT:    sllv $8, $1, $10
+; MMEL-NEXT:    nor $9, $zero, $8
+; MMEL-NEXT:    sllv $7, $5, $10
 ; MMEL-NEXT:  $BB7_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMEL-NEXT:    ll $8, 0($2)
-; MMEL-NEXT:    and $8, $8, $4
-; MMEL-NEXT:    and $5, $5, $4
-; MMEL-NEXT:    sltu $11, $8, $5
-; MMEL-NEXT:    or $9, $8, $zero
-; MMEL-NEXT:    movz $9, $5, $11
-; MMEL-NEXT:    and $9, $9, $4
-; MMEL-NEXT:    and $10, $8, $6
-; MMEL-NEXT:    or $10, $10, $9
-; MMEL-NEXT:    sc $10, 0($2)
-; MMEL-NEXT:    beqzc $10, $BB7_1
+; MMEL-NEXT:    ll $2, 0($6)
+; MMEL-NEXT:    and $2, $2, $8
+; MMEL-NEXT:    and $7, $7, $8
+; MMEL-NEXT:    sltu $5, $2, $7
+; MMEL-NEXT:    or $3, $2, $zero
+; MMEL-NEXT:    movz $3, $7, $5
+; MMEL-NEXT:    and $3, $3, $8
+; MMEL-NEXT:    and $4, $2, $9
+; MMEL-NEXT:    or $4, $4, $3
+; MMEL-NEXT:    sc $4, 0($6)
+; MMEL-NEXT:    beqzc $4, $BB7_1
 ; MMEL-NEXT:  # %bb.2: # %entry
-; MMEL-NEXT:    and $7, $8, $4
-; MMEL-NEXT:    srlv $7, $7, $3
-; MMEL-NEXT:    seh $7, $7
+; MMEL-NEXT:    and $1, $2, $8
+; MMEL-NEXT:    srlv $1, $1, $10
+; MMEL-NEXT:    seh $1, $1
 ; MMEL-NEXT:  # %bb.3: # %entry
-; MMEL-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMEL-NEXT:  # %bb.4: # %entry
-; MMEL-NEXT:    sync
 ; MMEL-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMEL-NEXT:    sync
 ; MMEL-NEXT:    addiusp 8
 ; MMEL-NEXT:    jrc $ra
 ;
@@ -2548,39 +2548,39 @@ define i16 @test_umin_16(i16* nocapture %ptr, i16 signext %val) {
 ; MMELR6:       # %bb.0: # %entry
 ; MMELR6-NEXT:    addiu $sp, $sp, -8
 ; MMELR6-NEXT:    .cfi_def_cfa_offset 8
-; MMELR6-NEXT:    move $1, $5
+; MMELR6-NEXT:    # kill: def $at killed $a1
 ; MMELR6-NEXT:    sync
-; MMELR6-NEXT:    addiu $2, $zero, -4
-; MMELR6-NEXT:    and $2, $4, $2
-; MMELR6-NEXT:    andi $3, $4, 3
-; MMELR6-NEXT:    sll $3, $3, 3
-; MMELR6-NEXT:    ori $4, $zero, 65535
-; MMELR6-NEXT:    sllv $4, $4, $3
-; MMELR6-NEXT:    nor $6, $zero, $4
-; MMELR6-NEXT:    sllv $5, $5, $3
+; MMELR6-NEXT:    addiu $1, $zero, -4
+; MMELR6-NEXT:    and $6, $4, $1
+; MMELR6-NEXT:    andi $1, $4, 3
+; MMELR6-NEXT:    sll $10, $1, 3
+; MMELR6-NEXT:    ori $1, $zero, 65535
+; MMELR6-NEXT:    sllv $8, $1, $10
+; MMELR6-NEXT:    nor $9, $zero, $8
+; MMELR6-NEXT:    sllv $7, $5, $10
 ; MMELR6-NEXT:  $BB7_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMELR6-NEXT:    ll $8, 0($2)
-; MMELR6-NEXT:    and $8, $8, $4
-; MMELR6-NEXT:    and $5, $5, $4
-; MMELR6-NEXT:    sltu $11, $8, $5
-; MMELR6-NEXT:    selnez $9, $8, $11
-; MMELR6-NEXT:    seleqz $11, $5, $11
-; MMELR6-NEXT:    or $9, $9, $11
-; MMELR6-NEXT:    and $9, $9, $4
-; MMELR6-NEXT:    and $10, $8, $6
-; MMELR6-NEXT:    or $10, $10, $9
-; MMELR6-NEXT:    sc $10, 0($2)
-; MMELR6-NEXT:    beqc $10, $zero, $BB7_1
+; MMELR6-NEXT:    ll $2, 0($6)
+; MMELR6-NEXT:    and $2, $2, $8
+; MMELR6-NEXT:    and $7, $7, $8
+; MMELR6-NEXT:    sltu $5, $2, $7
+; MMELR6-NEXT:    selnez $3, $2, $5
+; MMELR6-NEXT:    seleqz $5, $7, $5
+; MMELR6-NEXT:    or $3, $3, $5
+; MMELR6-NEXT:    and $3, $3, $8
+; MMELR6-NEXT:    and $4, $2, $9
+; MMELR6-NEXT:    or $4, $4, $3
+; MMELR6-NEXT:    sc $4, 0($6)
+; MMELR6-NEXT:    beqc $4, $zero, $BB7_1
 ; MMELR6-NEXT:  # %bb.2: # %entry
-; MMELR6-NEXT:    and $7, $8, $4
-; MMELR6-NEXT:    srlv $7, $7, $3
-; MMELR6-NEXT:    seh $7, $7
+; MMELR6-NEXT:    and $1, $2, $8
+; MMELR6-NEXT:    srlv $1, $1, $10
+; MMELR6-NEXT:    seh $1, $1
 ; MMELR6-NEXT:  # %bb.3: # %entry
-; MMELR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMELR6-NEXT:  # %bb.4: # %entry
-; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    addiu $sp, $sp, 8
 ; MMELR6-NEXT:    jrc $ra
 ;
@@ -2588,38 +2588,38 @@ define i16 @test_umin_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64-NEXT:    move $1, $5
 ; MIPS64-NEXT:    sync
-; MIPS64-NEXT:    daddiu $1, $zero, -4
-; MIPS64-NEXT:    and $1, $4, $1
+; MIPS64-NEXT:    daddiu $2, $zero, -4
+; MIPS64-NEXT:    and $6, $4, $2
 ; MIPS64-NEXT:    andi $2, $4, 3
 ; MIPS64-NEXT:    xori $2, $2, 2
-; MIPS64-NEXT:    sll $2, $2, 3
-; MIPS64-NEXT:    ori $3, $zero, 65535
-; MIPS64-NEXT:    sllv $3, $3, $2
-; MIPS64-NEXT:    nor $6, $zero, $3
-; MIPS64-NEXT:    sllv $5, $5, $2
+; MIPS64-NEXT:    sll $10, $2, 3
+; MIPS64-NEXT:    ori $2, $zero, 65535
+; MIPS64-NEXT:    sllv $8, $2, $10
+; MIPS64-NEXT:    nor $9, $zero, $8
+; MIPS64-NEXT:    sllv $7, $1, $10
 ; MIPS64-NEXT:  .LBB7_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $8, 0($1)
-; MIPS64-NEXT:    sltu $11, $8, $5
-; MIPS64-NEXT:    move $9, $8
-; MIPS64-NEXT:    movz $9, $5, $11
-; MIPS64-NEXT:    and $9, $9, $3
-; MIPS64-NEXT:    and $10, $8, $6
-; MIPS64-NEXT:    or $10, $10, $9
-; MIPS64-NEXT:    sc $10, 0($1)
-; MIPS64-NEXT:    beqz $10, .LBB7_1
+; MIPS64-NEXT:    ll $2, 0($6)
+; MIPS64-NEXT:    sltu $5, $2, $7
+; MIPS64-NEXT:    move $3, $2
+; MIPS64-NEXT:    movz $3, $7, $5
+; MIPS64-NEXT:    and $3, $3, $8
+; MIPS64-NEXT:    and $4, $2, $9
+; MIPS64-NEXT:    or $4, $4, $3
+; MIPS64-NEXT:    sc $4, 0($6)
+; MIPS64-NEXT:    beqz $4, .LBB7_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $7, $8, $3
-; MIPS64-NEXT:    srlv $7, $7, $2
-; MIPS64-NEXT:    seh $7, $7
+; MIPS64-NEXT:    and $1, $2, $8
+; MIPS64-NEXT:    srlv $1, $1, $10
+; MIPS64-NEXT:    seh $1, $1
 ; MIPS64-NEXT:  # %bb.3: # %entry
-; MIPS64-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64-NEXT:  # %bb.4: # %entry
-; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    nop
@@ -2628,38 +2628,38 @@ define i16 @test_umin_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64R6:       # %bb.0: # %entry
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64R6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64R6-NEXT:    move $1, $5
 ; MIPS64R6-NEXT:    sync
-; MIPS64R6-NEXT:    daddiu $1, $zero, -4
-; MIPS64R6-NEXT:    and $1, $4, $1
+; MIPS64R6-NEXT:    daddiu $2, $zero, -4
+; MIPS64R6-NEXT:    and $6, $4, $2
 ; MIPS64R6-NEXT:    andi $2, $4, 3
 ; MIPS64R6-NEXT:    xori $2, $2, 2
-; MIPS64R6-NEXT:    sll $2, $2, 3
-; MIPS64R6-NEXT:    ori $3, $zero, 65535
-; MIPS64R6-NEXT:    sllv $3, $3, $2
-; MIPS64R6-NEXT:    nor $6, $zero, $3
-; MIPS64R6-NEXT:    sllv $5, $5, $2
+; MIPS64R6-NEXT:    sll $10, $2, 3
+; MIPS64R6-NEXT:    ori $2, $zero, 65535
+; MIPS64R6-NEXT:    sllv $8, $2, $10
+; MIPS64R6-NEXT:    nor $9, $zero, $8
+; MIPS64R6-NEXT:    sllv $7, $1, $10
 ; MIPS64R6-NEXT:  .LBB7_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6-NEXT:    ll $8, 0($1)
-; MIPS64R6-NEXT:    sltu $11, $8, $5
-; MIPS64R6-NEXT:    selnez $9, $8, $11
-; MIPS64R6-NEXT:    seleqz $11, $5, $11
-; MIPS64R6-NEXT:    or $9, $9, $11
-; MIPS64R6-NEXT:    and $9, $9, $3
-; MIPS64R6-NEXT:    and $10, $8, $6
-; MIPS64R6-NEXT:    or $10, $10, $9
-; MIPS64R6-NEXT:    sc $10, 0($1)
-; MIPS64R6-NEXT:    beqzc $10, .LBB7_1
+; MIPS64R6-NEXT:    ll $2, 0($6)
+; MIPS64R6-NEXT:    sltu $5, $2, $7
+; MIPS64R6-NEXT:    selnez $3, $2, $5
+; MIPS64R6-NEXT:    seleqz $5, $7, $5
+; MIPS64R6-NEXT:    or $3, $3, $5
+; MIPS64R6-NEXT:    and $3, $3, $8
+; MIPS64R6-NEXT:    and $4, $2, $9
+; MIPS64R6-NEXT:    or $4, $4, $3
+; MIPS64R6-NEXT:    sc $4, 0($6)
+; MIPS64R6-NEXT:    beqzc $4, .LBB7_1
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $7, $8, $3
-; MIPS64R6-NEXT:    srlv $7, $7, $2
-; MIPS64R6-NEXT:    seh $7, $7
+; MIPS64R6-NEXT:    and $1, $2, $8
+; MIPS64R6-NEXT:    srlv $1, $1, $10
+; MIPS64R6-NEXT:    seh $1, $1
 ; MIPS64R6-NEXT:  # %bb.3: # %entry
-; MIPS64R6-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64R6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6-NEXT:  # %bb.4: # %entry
-; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64R6-NEXT:    jrc $ra
 ;
@@ -2667,39 +2667,39 @@ define i16 @test_umin_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64EL:       # %bb.0: # %entry
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64EL-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64EL-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64EL-NEXT:    move $1, $5
 ; MIPS64EL-NEXT:    sync
-; MIPS64EL-NEXT:    daddiu $1, $zero, -4
-; MIPS64EL-NEXT:    and $1, $4, $1
+; MIPS64EL-NEXT:    daddiu $2, $zero, -4
+; MIPS64EL-NEXT:    and $6, $4, $2
 ; MIPS64EL-NEXT:    andi $2, $4, 3
-; MIPS64EL-NEXT:    sll $2, $2, 3
-; MIPS64EL-NEXT:    ori $3, $zero, 65535
-; MIPS64EL-NEXT:    sllv $3, $3, $2
-; MIPS64EL-NEXT:    nor $6, $zero, $3
-; MIPS64EL-NEXT:    sllv $5, $5, $2
+; MIPS64EL-NEXT:    sll $10, $2, 3
+; MIPS64EL-NEXT:    ori $2, $zero, 65535
+; MIPS64EL-NEXT:    sllv $8, $2, $10
+; MIPS64EL-NEXT:    nor $9, $zero, $8
+; MIPS64EL-NEXT:    sllv $7, $1, $10
 ; MIPS64EL-NEXT:  .LBB7_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64EL-NEXT:    ll $8, 0($1)
-; MIPS64EL-NEXT:    and $8, $8, $3
-; MIPS64EL-NEXT:    and $5, $5, $3
-; MIPS64EL-NEXT:    sltu $11, $8, $5
-; MIPS64EL-NEXT:    move $9, $8
-; MIPS64EL-NEXT:    movz $9, $5, $11
-; MIPS64EL-NEXT:    and $9, $9, $3
-; MIPS64EL-NEXT:    and $10, $8, $6
-; MIPS64EL-NEXT:    or $10, $10, $9
-; MIPS64EL-NEXT:    sc $10, 0($1)
-; MIPS64EL-NEXT:    beqz $10, .LBB7_1
+; MIPS64EL-NEXT:    ll $2, 0($6)
+; MIPS64EL-NEXT:    and $2, $2, $8
+; MIPS64EL-NEXT:    and $7, $7, $8
+; MIPS64EL-NEXT:    sltu $5, $2, $7
+; MIPS64EL-NEXT:    move $3, $2
+; MIPS64EL-NEXT:    movz $3, $7, $5
+; MIPS64EL-NEXT:    and $3, $3, $8
+; MIPS64EL-NEXT:    and $4, $2, $9
+; MIPS64EL-NEXT:    or $4, $4, $3
+; MIPS64EL-NEXT:    sc $4, 0($6)
+; MIPS64EL-NEXT:    beqz $4, .LBB7_1
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:  # %bb.2: # %entry
-; MIPS64EL-NEXT:    and $7, $8, $3
-; MIPS64EL-NEXT:    srlv $7, $7, $2
-; MIPS64EL-NEXT:    seh $7, $7
+; MIPS64EL-NEXT:    and $1, $2, $8
+; MIPS64EL-NEXT:    srlv $1, $1, $10
+; MIPS64EL-NEXT:    seh $1, $1
 ; MIPS64EL-NEXT:  # %bb.3: # %entry
-; MIPS64EL-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64EL-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64EL-NEXT:  # %bb.4: # %entry
-; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64EL-NEXT:    jr $ra
 ; MIPS64EL-NEXT:    nop
@@ -2708,39 +2708,39 @@ define i16 @test_umin_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6:       # %bb.0: # %entry
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64ELR6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64ELR6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64ELR6-NEXT:    move $1, $5
 ; MIPS64ELR6-NEXT:    sync
-; MIPS64ELR6-NEXT:    daddiu $1, $zero, -4
-; MIPS64ELR6-NEXT:    and $1, $4, $1
+; MIPS64ELR6-NEXT:    daddiu $2, $zero, -4
+; MIPS64ELR6-NEXT:    and $6, $4, $2
 ; MIPS64ELR6-NEXT:    andi $2, $4, 3
-; MIPS64ELR6-NEXT:    sll $2, $2, 3
-; MIPS64ELR6-NEXT:    ori $3, $zero, 65535
-; MIPS64ELR6-NEXT:    sllv $3, $3, $2
-; MIPS64ELR6-NEXT:    nor $6, $zero, $3
-; MIPS64ELR6-NEXT:    sllv $5, $5, $2
+; MIPS64ELR6-NEXT:    sll $10, $2, 3
+; MIPS64ELR6-NEXT:    ori $2, $zero, 65535
+; MIPS64ELR6-NEXT:    sllv $8, $2, $10
+; MIPS64ELR6-NEXT:    nor $9, $zero, $8
+; MIPS64ELR6-NEXT:    sllv $7, $1, $10
 ; MIPS64ELR6-NEXT:  .LBB7_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64ELR6-NEXT:    ll $8, 0($1)
-; MIPS64ELR6-NEXT:    and $8, $8, $3
-; MIPS64ELR6-NEXT:    and $5, $5, $3
-; MIPS64ELR6-NEXT:    sltu $11, $8, $5
-; MIPS64ELR6-NEXT:    selnez $9, $8, $11
-; MIPS64ELR6-NEXT:    seleqz $11, $5, $11
-; MIPS64ELR6-NEXT:    or $9, $9, $11
-; MIPS64ELR6-NEXT:    and $9, $9, $3
-; MIPS64ELR6-NEXT:    and $10, $8, $6
-; MIPS64ELR6-NEXT:    or $10, $10, $9
-; MIPS64ELR6-NEXT:    sc $10, 0($1)
-; MIPS64ELR6-NEXT:    beqzc $10, .LBB7_1
+; MIPS64ELR6-NEXT:    ll $2, 0($6)
+; MIPS64ELR6-NEXT:    and $2, $2, $8
+; MIPS64ELR6-NEXT:    and $7, $7, $8
+; MIPS64ELR6-NEXT:    sltu $5, $2, $7
+; MIPS64ELR6-NEXT:    selnez $3, $2, $5
+; MIPS64ELR6-NEXT:    seleqz $5, $7, $5
+; MIPS64ELR6-NEXT:    or $3, $3, $5
+; MIPS64ELR6-NEXT:    and $3, $3, $8
+; MIPS64ELR6-NEXT:    and $4, $2, $9
+; MIPS64ELR6-NEXT:    or $4, $4, $3
+; MIPS64ELR6-NEXT:    sc $4, 0($6)
+; MIPS64ELR6-NEXT:    beqzc $4, .LBB7_1
 ; MIPS64ELR6-NEXT:  # %bb.2: # %entry
-; MIPS64ELR6-NEXT:    and $7, $8, $3
-; MIPS64ELR6-NEXT:    srlv $7, $7, $2
-; MIPS64ELR6-NEXT:    seh $7, $7
+; MIPS64ELR6-NEXT:    and $1, $2, $8
+; MIPS64ELR6-NEXT:    srlv $1, $1, $10
+; MIPS64ELR6-NEXT:    seh $1, $1
 ; MIPS64ELR6-NEXT:  # %bb.3: # %entry
-; MIPS64ELR6-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64ELR6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64ELR6-NEXT:  # %bb.4: # %entry
-; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
@@ -2754,38 +2754,38 @@ define i8 @test_max_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
 ; MIPS-NEXT:    .cfi_def_cfa_offset 8
-; MIPS-NEXT:    move $1, $5
+; MIPS-NEXT:    # kill: def $at killed $a1
 ; MIPS-NEXT:    sync
-; MIPS-NEXT:    addiu $2, $zero, -4
-; MIPS-NEXT:    and $2, $4, $2
-; MIPS-NEXT:    andi $3, $4, 3
-; MIPS-NEXT:    xori $3, $3, 3
-; MIPS-NEXT:    sll $3, $3, 3
-; MIPS-NEXT:    ori $4, $zero, 255
-; MIPS-NEXT:    sllv $4, $4, $3
-; MIPS-NEXT:    nor $6, $zero, $4
-; MIPS-NEXT:    sllv $5, $5, $3
+; MIPS-NEXT:    addiu $1, $zero, -4
+; MIPS-NEXT:    and $6, $4, $1
+; MIPS-NEXT:    andi $1, $4, 3
+; MIPS-NEXT:    xori $1, $1, 3
+; MIPS-NEXT:    sll $10, $1, 3
+; MIPS-NEXT:    ori $1, $zero, 255
+; MIPS-NEXT:    sllv $8, $1, $10
+; MIPS-NEXT:    nor $9, $zero, $8
+; MIPS-NEXT:    sllv $7, $5, $10
 ; MIPS-NEXT:  $BB8_1: # %entry
 ; MIPS-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS-NEXT:    ll $8, 0($2)
-; MIPS-NEXT:    slt $11, $8, $5
-; MIPS-NEXT:    move $9, $8
-; MIPS-NEXT:    movn $9, $5, $11
-; MIPS-NEXT:    and $9, $9, $4
-; MIPS-NEXT:    and $10, $8, $6
-; MIPS-NEXT:    or $10, $10, $9
-; MIPS-NEXT:    sc $10, 0($2)
-; MIPS-NEXT:    beqz $10, $BB8_1
+; MIPS-NEXT:    ll $2, 0($6)
+; MIPS-NEXT:    slt $5, $2, $7
+; MIPS-NEXT:    move $3, $2
+; MIPS-NEXT:    movn $3, $7, $5
+; MIPS-NEXT:    and $3, $3, $8
+; MIPS-NEXT:    and $4, $2, $9
+; MIPS-NEXT:    or $4, $4, $3
+; MIPS-NEXT:    sc $4, 0($6)
+; MIPS-NEXT:    beqz $4, $BB8_1
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  # %bb.2: # %entry
-; MIPS-NEXT:    and $7, $8, $4
-; MIPS-NEXT:    srlv $7, $7, $3
-; MIPS-NEXT:    seh $7, $7
+; MIPS-NEXT:    and $1, $2, $8
+; MIPS-NEXT:    srlv $1, $1, $10
+; MIPS-NEXT:    seh $1, $1
 ; MIPS-NEXT:  # %bb.3: # %entry
-; MIPS-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPS-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS-NEXT:  # %bb.4: # %entry
-; MIPS-NEXT:    sync
 ; MIPS-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS-NEXT:    sync
 ; MIPS-NEXT:    addiu $sp, $sp, 8
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
@@ -2794,38 +2794,38 @@ define i8 @test_max_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSR6-NEXT:    move $1, $5
+; MIPSR6-NEXT:    # kill: def $at killed $a1
 ; MIPSR6-NEXT:    sync
-; MIPSR6-NEXT:    addiu $2, $zero, -4
-; MIPSR6-NEXT:    and $2, $4, $2
-; MIPSR6-NEXT:    andi $3, $4, 3
-; MIPSR6-NEXT:    xori $3, $3, 3
-; MIPSR6-NEXT:    sll $3, $3, 3
-; MIPSR6-NEXT:    ori $4, $zero, 255
-; MIPSR6-NEXT:    sllv $4, $4, $3
-; MIPSR6-NEXT:    nor $6, $zero, $4
-; MIPSR6-NEXT:    sllv $5, $5, $3
+; MIPSR6-NEXT:    addiu $1, $zero, -4
+; MIPSR6-NEXT:    and $6, $4, $1
+; MIPSR6-NEXT:    andi $1, $4, 3
+; MIPSR6-NEXT:    xori $1, $1, 3
+; MIPSR6-NEXT:    sll $10, $1, 3
+; MIPSR6-NEXT:    ori $1, $zero, 255
+; MIPSR6-NEXT:    sllv $8, $1, $10
+; MIPSR6-NEXT:    nor $9, $zero, $8
+; MIPSR6-NEXT:    sllv $7, $5, $10
 ; MIPSR6-NEXT:  $BB8_1: # %entry
 ; MIPSR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSR6-NEXT:    ll $8, 0($2)
-; MIPSR6-NEXT:    slt $11, $8, $5
-; MIPSR6-NEXT:    seleqz $9, $8, $11
-; MIPSR6-NEXT:    selnez $11, $5, $11
-; MIPSR6-NEXT:    or $9, $9, $11
-; MIPSR6-NEXT:    and $9, $9, $4
-; MIPSR6-NEXT:    and $10, $8, $6
-; MIPSR6-NEXT:    or $10, $10, $9
-; MIPSR6-NEXT:    sc $10, 0($2)
-; MIPSR6-NEXT:    beqzc $10, $BB8_1
+; MIPSR6-NEXT:    ll $2, 0($6)
+; MIPSR6-NEXT:    slt $5, $2, $7
+; MIPSR6-NEXT:    seleqz $3, $2, $5
+; MIPSR6-NEXT:    selnez $5, $7, $5
+; MIPSR6-NEXT:    or $3, $3, $5
+; MIPSR6-NEXT:    and $3, $3, $8
+; MIPSR6-NEXT:    and $4, $2, $9
+; MIPSR6-NEXT:    or $4, $4, $3
+; MIPSR6-NEXT:    sc $4, 0($6)
+; MIPSR6-NEXT:    beqzc $4, $BB8_1
 ; MIPSR6-NEXT:  # %bb.2: # %entry
-; MIPSR6-NEXT:    and $7, $8, $4
-; MIPSR6-NEXT:    srlv $7, $7, $3
-; MIPSR6-NEXT:    seh $7, $7
+; MIPSR6-NEXT:    and $1, $2, $8
+; MIPSR6-NEXT:    srlv $1, $1, $10
+; MIPSR6-NEXT:    seh $1, $1
 ; MIPSR6-NEXT:  # %bb.3: # %entry
-; MIPSR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSR6-NEXT:  # %bb.4: # %entry
-; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    addiu $sp, $sp, 8
 ; MIPSR6-NEXT:    jrc $ra
 ;
@@ -2833,37 +2833,37 @@ define i8 @test_max_8(i8* nocapture %ptr, i8 signext %val) {
 ; MM:       # %bb.0: # %entry
 ; MM-NEXT:    addiu $sp, $sp, -8
 ; MM-NEXT:    .cfi_def_cfa_offset 8
-; MM-NEXT:    move $1, $5
+; MM-NEXT:    # kill: def $at killed $a1
 ; MM-NEXT:    sync
-; MM-NEXT:    addiu $2, $zero, -4
-; MM-NEXT:    and $2, $4, $2
-; MM-NEXT:    andi $3, $4, 3
-; MM-NEXT:    xori $3, $3, 3
-; MM-NEXT:    sll $3, $3, 3
-; MM-NEXT:    ori $4, $zero, 255
-; MM-NEXT:    sllv $4, $4, $3
-; MM-NEXT:    nor $6, $zero, $4
-; MM-NEXT:    sllv $5, $5, $3
+; MM-NEXT:    addiu $1, $zero, -4
+; MM-NEXT:    and $6, $4, $1
+; MM-NEXT:    andi $1, $4, 3
+; MM-NEXT:    xori $1, $1, 3
+; MM-NEXT:    sll $10, $1, 3
+; MM-NEXT:    ori $1, $zero, 255
+; MM-NEXT:    sllv $8, $1, $10
+; MM-NEXT:    nor $9, $zero, $8
+; MM-NEXT:    sllv $7, $5, $10
 ; MM-NEXT:  $BB8_1: # %entry
 ; MM-NEXT:    # =>This Inner Loop Header: Depth=1
-; MM-NEXT:    ll $8, 0($2)
-; MM-NEXT:    slt $11, $8, $5
-; MM-NEXT:    or $9, $8, $zero
-; MM-NEXT:    movn $9, $5, $11
-; MM-NEXT:    and $9, $9, $4
-; MM-NEXT:    and $10, $8, $6
-; MM-NEXT:    or $10, $10, $9
-; MM-NEXT:    sc $10, 0($2)
-; MM-NEXT:    beqzc $10, $BB8_1
+; MM-NEXT:    ll $2, 0($6)
+; MM-NEXT:    slt $5, $2, $7
+; MM-NEXT:    or $3, $2, $zero
+; MM-NEXT:    movn $3, $7, $5
+; MM-NEXT:    and $3, $3, $8
+; MM-NEXT:    and $4, $2, $9
+; MM-NEXT:    or $4, $4, $3
+; MM-NEXT:    sc $4, 0($6)
+; MM-NEXT:    beqzc $4, $BB8_1
 ; MM-NEXT:  # %bb.2: # %entry
-; MM-NEXT:    and $7, $8, $4
-; MM-NEXT:    srlv $7, $7, $3
-; MM-NEXT:    seh $7, $7
+; MM-NEXT:    and $1, $2, $8
+; MM-NEXT:    srlv $1, $1, $10
+; MM-NEXT:    seh $1, $1
 ; MM-NEXT:  # %bb.3: # %entry
-; MM-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MM-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MM-NEXT:  # %bb.4: # %entry
-; MM-NEXT:    sync
 ; MM-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MM-NEXT:    sync
 ; MM-NEXT:    addiusp 8
 ; MM-NEXT:    jrc $ra
 ;
@@ -2871,38 +2871,38 @@ define i8 @test_max_8(i8* nocapture %ptr, i8 signext %val) {
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    addiu $sp, $sp, -8
 ; MMR6-NEXT:    .cfi_def_cfa_offset 8
-; MMR6-NEXT:    move $1, $5
+; MMR6-NEXT:    # kill: def $at killed $a1
 ; MMR6-NEXT:    sync
-; MMR6-NEXT:    addiu $2, $zero, -4
-; MMR6-NEXT:    and $2, $4, $2
-; MMR6-NEXT:    andi $3, $4, 3
-; MMR6-NEXT:    xori $3, $3, 3
-; MMR6-NEXT:    sll $3, $3, 3
-; MMR6-NEXT:    ori $4, $zero, 255
-; MMR6-NEXT:    sllv $4, $4, $3
-; MMR6-NEXT:    nor $6, $zero, $4
-; MMR6-NEXT:    sllv $5, $5, $3
+; MMR6-NEXT:    addiu $1, $zero, -4
+; MMR6-NEXT:    and $6, $4, $1
+; MMR6-NEXT:    andi $1, $4, 3
+; MMR6-NEXT:    xori $1, $1, 3
+; MMR6-NEXT:    sll $10, $1, 3
+; MMR6-NEXT:    ori $1, $zero, 255
+; MMR6-NEXT:    sllv $8, $1, $10
+; MMR6-NEXT:    nor $9, $zero, $8
+; MMR6-NEXT:    sllv $7, $5, $10
 ; MMR6-NEXT:  $BB8_1: # %entry
 ; MMR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMR6-NEXT:    ll $8, 0($2)
-; MMR6-NEXT:    slt $11, $8, $5
-; MMR6-NEXT:    seleqz $9, $8, $11
-; MMR6-NEXT:    selnez $11, $5, $11
-; MMR6-NEXT:    or $9, $9, $11
-; MMR6-NEXT:    and $9, $9, $4
-; MMR6-NEXT:    and $10, $8, $6
-; MMR6-NEXT:    or $10, $10, $9
-; MMR6-NEXT:    sc $10, 0($2)
-; MMR6-NEXT:    beqc $10, $zero, $BB8_1
+; MMR6-NEXT:    ll $2, 0($6)
+; MMR6-NEXT:    slt $5, $2, $7
+; MMR6-NEXT:    seleqz $3, $2, $5
+; MMR6-NEXT:    selnez $5, $7, $5
+; MMR6-NEXT:    or $3, $3, $5
+; MMR6-NEXT:    and $3, $3, $8
+; MMR6-NEXT:    and $4, $2, $9
+; MMR6-NEXT:    or $4, $4, $3
+; MMR6-NEXT:    sc $4, 0($6)
+; MMR6-NEXT:    beqc $4, $zero, $BB8_1
 ; MMR6-NEXT:  # %bb.2: # %entry
-; MMR6-NEXT:    and $7, $8, $4
-; MMR6-NEXT:    srlv $7, $7, $3
-; MMR6-NEXT:    seh $7, $7
+; MMR6-NEXT:    and $1, $2, $8
+; MMR6-NEXT:    srlv $1, $1, $10
+; MMR6-NEXT:    seh $1, $1
 ; MMR6-NEXT:  # %bb.3: # %entry
-; MMR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:  # %bb.4: # %entry
-; MMR6-NEXT:    sync
 ; MMR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMR6-NEXT:    sync
 ; MMR6-NEXT:    addiu $sp, $sp, 8
 ; MMR6-NEXT:    jrc $ra
 ;
@@ -2910,39 +2910,39 @@ define i8 @test_max_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
 ; MIPSEL-NEXT:    .cfi_def_cfa_offset 8
-; MIPSEL-NEXT:    move $1, $5
+; MIPSEL-NEXT:    # kill: def $at killed $a1
 ; MIPSEL-NEXT:    sync
-; MIPSEL-NEXT:    addiu $2, $zero, -4
-; MIPSEL-NEXT:    and $2, $4, $2
-; MIPSEL-NEXT:    andi $3, $4, 3
-; MIPSEL-NEXT:    sll $3, $3, 3
-; MIPSEL-NEXT:    ori $4, $zero, 255
-; MIPSEL-NEXT:    sllv $4, $4, $3
-; MIPSEL-NEXT:    nor $6, $zero, $4
-; MIPSEL-NEXT:    sllv $5, $5, $3
+; MIPSEL-NEXT:    addiu $1, $zero, -4
+; MIPSEL-NEXT:    and $6, $4, $1
+; MIPSEL-NEXT:    andi $1, $4, 3
+; MIPSEL-NEXT:    sll $10, $1, 3
+; MIPSEL-NEXT:    ori $1, $zero, 255
+; MIPSEL-NEXT:    sllv $8, $1, $10
+; MIPSEL-NEXT:    nor $9, $zero, $8
+; MIPSEL-NEXT:    sllv $7, $5, $10
 ; MIPSEL-NEXT:  $BB8_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSEL-NEXT:    ll $8, 0($2)
-; MIPSEL-NEXT:    and $8, $8, $4
-; MIPSEL-NEXT:    and $5, $5, $4
-; MIPSEL-NEXT:    slt $11, $8, $5
-; MIPSEL-NEXT:    move $9, $8
-; MIPSEL-NEXT:    movn $9, $5, $11
-; MIPSEL-NEXT:    and $9, $9, $4
-; MIPSEL-NEXT:    and $10, $8, $6
-; MIPSEL-NEXT:    or $10, $10, $9
-; MIPSEL-NEXT:    sc $10, 0($2)
-; MIPSEL-NEXT:    beqz $10, $BB8_1
+; MIPSEL-NEXT:    ll $2, 0($6)
+; MIPSEL-NEXT:    and $2, $2, $8
+; MIPSEL-NEXT:    and $7, $7, $8
+; MIPSEL-NEXT:    slt $5, $2, $7
+; MIPSEL-NEXT:    move $3, $2
+; MIPSEL-NEXT:    movn $3, $7, $5
+; MIPSEL-NEXT:    and $3, $3, $8
+; MIPSEL-NEXT:    and $4, $2, $9
+; MIPSEL-NEXT:    or $4, $4, $3
+; MIPSEL-NEXT:    sc $4, 0($6)
+; MIPSEL-NEXT:    beqz $4, $BB8_1
 ; MIPSEL-NEXT:    nop
 ; MIPSEL-NEXT:  # %bb.2: # %entry
-; MIPSEL-NEXT:    and $7, $8, $4
-; MIPSEL-NEXT:    srlv $7, $7, $3
-; MIPSEL-NEXT:    seh $7, $7
+; MIPSEL-NEXT:    and $1, $2, $8
+; MIPSEL-NEXT:    srlv $1, $1, $10
+; MIPSEL-NEXT:    seh $1, $1
 ; MIPSEL-NEXT:  # %bb.3: # %entry
-; MIPSEL-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:  # %bb.4: # %entry
-; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    addiu $sp, $sp, 8
 ; MIPSEL-NEXT:    jr $ra
 ; MIPSEL-NEXT:    nop
@@ -2951,39 +2951,39 @@ define i8 @test_max_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPSELR6:       # %bb.0: # %entry
 ; MIPSELR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSELR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSELR6-NEXT:    move $1, $5
+; MIPSELR6-NEXT:    # kill: def $at killed $a1
 ; MIPSELR6-NEXT:    sync
-; MIPSELR6-NEXT:    addiu $2, $zero, -4
-; MIPSELR6-NEXT:    and $2, $4, $2
-; MIPSELR6-NEXT:    andi $3, $4, 3
-; MIPSELR6-NEXT:    sll $3, $3, 3
-; MIPSELR6-NEXT:    ori $4, $zero, 255
-; MIPSELR6-NEXT:    sllv $4, $4, $3
-; MIPSELR6-NEXT:    nor $6, $zero, $4
-; MIPSELR6-NEXT:    sllv $5, $5, $3
+; MIPSELR6-NEXT:    addiu $1, $zero, -4
+; MIPSELR6-NEXT:    and $6, $4, $1
+; MIPSELR6-NEXT:    andi $1, $4, 3
+; MIPSELR6-NEXT:    sll $10, $1, 3
+; MIPSELR6-NEXT:    ori $1, $zero, 255
+; MIPSELR6-NEXT:    sllv $8, $1, $10
+; MIPSELR6-NEXT:    nor $9, $zero, $8
+; MIPSELR6-NEXT:    sllv $7, $5, $10
 ; MIPSELR6-NEXT:  $BB8_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSELR6-NEXT:    ll $8, 0($2)
-; MIPSELR6-NEXT:    and $8, $8, $4
-; MIPSELR6-NEXT:    and $5, $5, $4
-; MIPSELR6-NEXT:    slt $11, $8, $5
-; MIPSELR6-NEXT:    seleqz $9, $8, $11
-; MIPSELR6-NEXT:    selnez $11, $5, $11
-; MIPSELR6-NEXT:    or $9, $9, $11
-; MIPSELR6-NEXT:    and $9, $9, $4
-; MIPSELR6-NEXT:    and $10, $8, $6
-; MIPSELR6-NEXT:    or $10, $10, $9
-; MIPSELR6-NEXT:    sc $10, 0($2)
-; MIPSELR6-NEXT:    beqzc $10, $BB8_1
+; MIPSELR6-NEXT:    ll $2, 0($6)
+; MIPSELR6-NEXT:    and $2, $2, $8
+; MIPSELR6-NEXT:    and $7, $7, $8
+; MIPSELR6-NEXT:    slt $5, $2, $7
+; MIPSELR6-NEXT:    seleqz $3, $2, $5
+; MIPSELR6-NEXT:    selnez $5, $7, $5
+; MIPSELR6-NEXT:    or $3, $3, $5
+; MIPSELR6-NEXT:    and $3, $3, $8
+; MIPSELR6-NEXT:    and $4, $2, $9
+; MIPSELR6-NEXT:    or $4, $4, $3
+; MIPSELR6-NEXT:    sc $4, 0($6)
+; MIPSELR6-NEXT:    beqzc $4, $BB8_1
 ; MIPSELR6-NEXT:  # %bb.2: # %entry
-; MIPSELR6-NEXT:    and $7, $8, $4
-; MIPSELR6-NEXT:    srlv $7, $7, $3
-; MIPSELR6-NEXT:    seh $7, $7
+; MIPSELR6-NEXT:    and $1, $2, $8
+; MIPSELR6-NEXT:    srlv $1, $1, $10
+; MIPSELR6-NEXT:    seh $1, $1
 ; MIPSELR6-NEXT:  # %bb.3: # %entry
-; MIPSELR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSELR6-NEXT:  # %bb.4: # %entry
-; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    addiu $sp, $sp, 8
 ; MIPSELR6-NEXT:    jrc $ra
 ;
@@ -2991,38 +2991,38 @@ define i8 @test_max_8(i8* nocapture %ptr, i8 signext %val) {
 ; MMEL:       # %bb.0: # %entry
 ; MMEL-NEXT:    addiu $sp, $sp, -8
 ; MMEL-NEXT:    .cfi_def_cfa_offset 8
-; MMEL-NEXT:    move $1, $5
+; MMEL-NEXT:    # kill: def $at killed $a1
 ; MMEL-NEXT:    sync
-; MMEL-NEXT:    addiu $2, $zero, -4
-; MMEL-NEXT:    and $2, $4, $2
-; MMEL-NEXT:    andi $3, $4, 3
-; MMEL-NEXT:    sll $3, $3, 3
-; MMEL-NEXT:    ori $4, $zero, 255
-; MMEL-NEXT:    sllv $4, $4, $3
-; MMEL-NEXT:    nor $6, $zero, $4
-; MMEL-NEXT:    sllv $5, $5, $3
+; MMEL-NEXT:    addiu $1, $zero, -4
+; MMEL-NEXT:    and $6, $4, $1
+; MMEL-NEXT:    andi $1, $4, 3
+; MMEL-NEXT:    sll $10, $1, 3
+; MMEL-NEXT:    ori $1, $zero, 255
+; MMEL-NEXT:    sllv $8, $1, $10
+; MMEL-NEXT:    nor $9, $zero, $8
+; MMEL-NEXT:    sllv $7, $5, $10
 ; MMEL-NEXT:  $BB8_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMEL-NEXT:    ll $8, 0($2)
-; MMEL-NEXT:    and $8, $8, $4
-; MMEL-NEXT:    and $5, $5, $4
-; MMEL-NEXT:    slt $11, $8, $5
-; MMEL-NEXT:    or $9, $8, $zero
-; MMEL-NEXT:    movn $9, $5, $11
-; MMEL-NEXT:    and $9, $9, $4
-; MMEL-NEXT:    and $10, $8, $6
-; MMEL-NEXT:    or $10, $10, $9
-; MMEL-NEXT:    sc $10, 0($2)
-; MMEL-NEXT:    beqzc $10, $BB8_1
+; MMEL-NEXT:    ll $2, 0($6)
+; MMEL-NEXT:    and $2, $2, $8
+; MMEL-NEXT:    and $7, $7, $8
+; MMEL-NEXT:    slt $5, $2, $7
+; MMEL-NEXT:    or $3, $2, $zero
+; MMEL-NEXT:    movn $3, $7, $5
+; MMEL-NEXT:    and $3, $3, $8
+; MMEL-NEXT:    and $4, $2, $9
+; MMEL-NEXT:    or $4, $4, $3
+; MMEL-NEXT:    sc $4, 0($6)
+; MMEL-NEXT:    beqzc $4, $BB8_1
 ; MMEL-NEXT:  # %bb.2: # %entry
-; MMEL-NEXT:    and $7, $8, $4
-; MMEL-NEXT:    srlv $7, $7, $3
-; MMEL-NEXT:    seh $7, $7
+; MMEL-NEXT:    and $1, $2, $8
+; MMEL-NEXT:    srlv $1, $1, $10
+; MMEL-NEXT:    seh $1, $1
 ; MMEL-NEXT:  # %bb.3: # %entry
-; MMEL-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMEL-NEXT:  # %bb.4: # %entry
-; MMEL-NEXT:    sync
 ; MMEL-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMEL-NEXT:    sync
 ; MMEL-NEXT:    addiusp 8
 ; MMEL-NEXT:    jrc $ra
 ;
@@ -3030,39 +3030,39 @@ define i8 @test_max_8(i8* nocapture %ptr, i8 signext %val) {
 ; MMELR6:       # %bb.0: # %entry
 ; MMELR6-NEXT:    addiu $sp, $sp, -8
 ; MMELR6-NEXT:    .cfi_def_cfa_offset 8
-; MMELR6-NEXT:    move $1, $5
+; MMELR6-NEXT:    # kill: def $at killed $a1
 ; MMELR6-NEXT:    sync
-; MMELR6-NEXT:    addiu $2, $zero, -4
-; MMELR6-NEXT:    and $2, $4, $2
-; MMELR6-NEXT:    andi $3, $4, 3
-; MMELR6-NEXT:    sll $3, $3, 3
-; MMELR6-NEXT:    ori $4, $zero, 255
-; MMELR6-NEXT:    sllv $4, $4, $3
-; MMELR6-NEXT:    nor $6, $zero, $4
-; MMELR6-NEXT:    sllv $5, $5, $3
+; MMELR6-NEXT:    addiu $1, $zero, -4
+; MMELR6-NEXT:    and $6, $4, $1
+; MMELR6-NEXT:    andi $1, $4, 3
+; MMELR6-NEXT:    sll $10, $1, 3
+; MMELR6-NEXT:    ori $1, $zero, 255
+; MMELR6-NEXT:    sllv $8, $1, $10
+; MMELR6-NEXT:    nor $9, $zero, $8
+; MMELR6-NEXT:    sllv $7, $5, $10
 ; MMELR6-NEXT:  $BB8_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMELR6-NEXT:    ll $8, 0($2)
-; MMELR6-NEXT:    and $8, $8, $4
-; MMELR6-NEXT:    and $5, $5, $4
-; MMELR6-NEXT:    slt $11, $8, $5
-; MMELR6-NEXT:    seleqz $9, $8, $11
-; MMELR6-NEXT:    selnez $11, $5, $11
-; MMELR6-NEXT:    or $9, $9, $11
-; MMELR6-NEXT:    and $9, $9, $4
-; MMELR6-NEXT:    and $10, $8, $6
-; MMELR6-NEXT:    or $10, $10, $9
-; MMELR6-NEXT:    sc $10, 0($2)
-; MMELR6-NEXT:    beqc $10, $zero, $BB8_1
+; MMELR6-NEXT:    ll $2, 0($6)
+; MMELR6-NEXT:    and $2, $2, $8
+; MMELR6-NEXT:    and $7, $7, $8
+; MMELR6-NEXT:    slt $5, $2, $7
+; MMELR6-NEXT:    seleqz $3, $2, $5
+; MMELR6-NEXT:    selnez $5, $7, $5
+; MMELR6-NEXT:    or $3, $3, $5
+; MMELR6-NEXT:    and $3, $3, $8
+; MMELR6-NEXT:    and $4, $2, $9
+; MMELR6-NEXT:    or $4, $4, $3
+; MMELR6-NEXT:    sc $4, 0($6)
+; MMELR6-NEXT:    beqc $4, $zero, $BB8_1
 ; MMELR6-NEXT:  # %bb.2: # %entry
-; MMELR6-NEXT:    and $7, $8, $4
-; MMELR6-NEXT:    srlv $7, $7, $3
-; MMELR6-NEXT:    seh $7, $7
+; MMELR6-NEXT:    and $1, $2, $8
+; MMELR6-NEXT:    srlv $1, $1, $10
+; MMELR6-NEXT:    seh $1, $1
 ; MMELR6-NEXT:  # %bb.3: # %entry
-; MMELR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMELR6-NEXT:  # %bb.4: # %entry
-; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    addiu $sp, $sp, 8
 ; MMELR6-NEXT:    jrc $ra
 ;
@@ -3070,38 +3070,38 @@ define i8 @test_max_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64-NEXT:    move $1, $5
 ; MIPS64-NEXT:    sync
-; MIPS64-NEXT:    daddiu $1, $zero, -4
-; MIPS64-NEXT:    and $1, $4, $1
+; MIPS64-NEXT:    daddiu $2, $zero, -4
+; MIPS64-NEXT:    and $6, $4, $2
 ; MIPS64-NEXT:    andi $2, $4, 3
 ; MIPS64-NEXT:    xori $2, $2, 3
-; MIPS64-NEXT:    sll $2, $2, 3
-; MIPS64-NEXT:    ori $3, $zero, 255
-; MIPS64-NEXT:    sllv $3, $3, $2
-; MIPS64-NEXT:    nor $6, $zero, $3
-; MIPS64-NEXT:    sllv $5, $5, $2
+; MIPS64-NEXT:    sll $10, $2, 3
+; MIPS64-NEXT:    ori $2, $zero, 255
+; MIPS64-NEXT:    sllv $8, $2, $10
+; MIPS64-NEXT:    nor $9, $zero, $8
+; MIPS64-NEXT:    sllv $7, $1, $10
 ; MIPS64-NEXT:  .LBB8_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $8, 0($1)
-; MIPS64-NEXT:    slt $11, $8, $5
-; MIPS64-NEXT:    move $9, $8
-; MIPS64-NEXT:    movn $9, $5, $11
-; MIPS64-NEXT:    and $9, $9, $3
-; MIPS64-NEXT:    and $10, $8, $6
-; MIPS64-NEXT:    or $10, $10, $9
-; MIPS64-NEXT:    sc $10, 0($1)
-; MIPS64-NEXT:    beqz $10, .LBB8_1
+; MIPS64-NEXT:    ll $2, 0($6)
+; MIPS64-NEXT:    slt $5, $2, $7
+; MIPS64-NEXT:    move $3, $2
+; MIPS64-NEXT:    movn $3, $7, $5
+; MIPS64-NEXT:    and $3, $3, $8
+; MIPS64-NEXT:    and $4, $2, $9
+; MIPS64-NEXT:    or $4, $4, $3
+; MIPS64-NEXT:    sc $4, 0($6)
+; MIPS64-NEXT:    beqz $4, .LBB8_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $7, $8, $3
-; MIPS64-NEXT:    srlv $7, $7, $2
-; MIPS64-NEXT:    seh $7, $7
+; MIPS64-NEXT:    and $1, $2, $8
+; MIPS64-NEXT:    srlv $1, $1, $10
+; MIPS64-NEXT:    seh $1, $1
 ; MIPS64-NEXT:  # %bb.3: # %entry
-; MIPS64-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64-NEXT:  # %bb.4: # %entry
-; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    nop
@@ -3110,38 +3110,38 @@ define i8 @test_max_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64R6:       # %bb.0: # %entry
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64R6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64R6-NEXT:    move $1, $5
 ; MIPS64R6-NEXT:    sync
-; MIPS64R6-NEXT:    daddiu $1, $zero, -4
-; MIPS64R6-NEXT:    and $1, $4, $1
+; MIPS64R6-NEXT:    daddiu $2, $zero, -4
+; MIPS64R6-NEXT:    and $6, $4, $2
 ; MIPS64R6-NEXT:    andi $2, $4, 3
 ; MIPS64R6-NEXT:    xori $2, $2, 3
-; MIPS64R6-NEXT:    sll $2, $2, 3
-; MIPS64R6-NEXT:    ori $3, $zero, 255
-; MIPS64R6-NEXT:    sllv $3, $3, $2
-; MIPS64R6-NEXT:    nor $6, $zero, $3
-; MIPS64R6-NEXT:    sllv $5, $5, $2
+; MIPS64R6-NEXT:    sll $10, $2, 3
+; MIPS64R6-NEXT:    ori $2, $zero, 255
+; MIPS64R6-NEXT:    sllv $8, $2, $10
+; MIPS64R6-NEXT:    nor $9, $zero, $8
+; MIPS64R6-NEXT:    sllv $7, $1, $10
 ; MIPS64R6-NEXT:  .LBB8_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6-NEXT:    ll $8, 0($1)
-; MIPS64R6-NEXT:    slt $11, $8, $5
-; MIPS64R6-NEXT:    seleqz $9, $8, $11
-; MIPS64R6-NEXT:    selnez $11, $5, $11
-; MIPS64R6-NEXT:    or $9, $9, $11
-; MIPS64R6-NEXT:    and $9, $9, $3
-; MIPS64R6-NEXT:    and $10, $8, $6
-; MIPS64R6-NEXT:    or $10, $10, $9
-; MIPS64R6-NEXT:    sc $10, 0($1)
-; MIPS64R6-NEXT:    beqzc $10, .LBB8_1
+; MIPS64R6-NEXT:    ll $2, 0($6)
+; MIPS64R6-NEXT:    slt $5, $2, $7
+; MIPS64R6-NEXT:    seleqz $3, $2, $5
+; MIPS64R6-NEXT:    selnez $5, $7, $5
+; MIPS64R6-NEXT:    or $3, $3, $5
+; MIPS64R6-NEXT:    and $3, $3, $8
+; MIPS64R6-NEXT:    and $4, $2, $9
+; MIPS64R6-NEXT:    or $4, $4, $3
+; MIPS64R6-NEXT:    sc $4, 0($6)
+; MIPS64R6-NEXT:    beqzc $4, .LBB8_1
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $7, $8, $3
-; MIPS64R6-NEXT:    srlv $7, $7, $2
-; MIPS64R6-NEXT:    seh $7, $7
+; MIPS64R6-NEXT:    and $1, $2, $8
+; MIPS64R6-NEXT:    srlv $1, $1, $10
+; MIPS64R6-NEXT:    seh $1, $1
 ; MIPS64R6-NEXT:  # %bb.3: # %entry
-; MIPS64R6-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64R6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6-NEXT:  # %bb.4: # %entry
-; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64R6-NEXT:    jrc $ra
 ;
@@ -3149,39 +3149,39 @@ define i8 @test_max_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64EL:       # %bb.0: # %entry
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64EL-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64EL-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64EL-NEXT:    move $1, $5
 ; MIPS64EL-NEXT:    sync
-; MIPS64EL-NEXT:    daddiu $1, $zero, -4
-; MIPS64EL-NEXT:    and $1, $4, $1
+; MIPS64EL-NEXT:    daddiu $2, $zero, -4
+; MIPS64EL-NEXT:    and $6, $4, $2
 ; MIPS64EL-NEXT:    andi $2, $4, 3
-; MIPS64EL-NEXT:    sll $2, $2, 3
-; MIPS64EL-NEXT:    ori $3, $zero, 255
-; MIPS64EL-NEXT:    sllv $3, $3, $2
-; MIPS64EL-NEXT:    nor $6, $zero, $3
-; MIPS64EL-NEXT:    sllv $5, $5, $2
+; MIPS64EL-NEXT:    sll $10, $2, 3
+; MIPS64EL-NEXT:    ori $2, $zero, 255
+; MIPS64EL-NEXT:    sllv $8, $2, $10
+; MIPS64EL-NEXT:    nor $9, $zero, $8
+; MIPS64EL-NEXT:    sllv $7, $1, $10
 ; MIPS64EL-NEXT:  .LBB8_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64EL-NEXT:    ll $8, 0($1)
-; MIPS64EL-NEXT:    and $8, $8, $3
-; MIPS64EL-NEXT:    and $5, $5, $3
-; MIPS64EL-NEXT:    slt $11, $8, $5
-; MIPS64EL-NEXT:    move $9, $8
-; MIPS64EL-NEXT:    movn $9, $5, $11
-; MIPS64EL-NEXT:    and $9, $9, $3
-; MIPS64EL-NEXT:    and $10, $8, $6
-; MIPS64EL-NEXT:    or $10, $10, $9
-; MIPS64EL-NEXT:    sc $10, 0($1)
-; MIPS64EL-NEXT:    beqz $10, .LBB8_1
+; MIPS64EL-NEXT:    ll $2, 0($6)
+; MIPS64EL-NEXT:    and $2, $2, $8
+; MIPS64EL-NEXT:    and $7, $7, $8
+; MIPS64EL-NEXT:    slt $5, $2, $7
+; MIPS64EL-NEXT:    move $3, $2
+; MIPS64EL-NEXT:    movn $3, $7, $5
+; MIPS64EL-NEXT:    and $3, $3, $8
+; MIPS64EL-NEXT:    and $4, $2, $9
+; MIPS64EL-NEXT:    or $4, $4, $3
+; MIPS64EL-NEXT:    sc $4, 0($6)
+; MIPS64EL-NEXT:    beqz $4, .LBB8_1
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:  # %bb.2: # %entry
-; MIPS64EL-NEXT:    and $7, $8, $3
-; MIPS64EL-NEXT:    srlv $7, $7, $2
-; MIPS64EL-NEXT:    seh $7, $7
+; MIPS64EL-NEXT:    and $1, $2, $8
+; MIPS64EL-NEXT:    srlv $1, $1, $10
+; MIPS64EL-NEXT:    seh $1, $1
 ; MIPS64EL-NEXT:  # %bb.3: # %entry
-; MIPS64EL-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64EL-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64EL-NEXT:  # %bb.4: # %entry
-; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64EL-NEXT:    jr $ra
 ; MIPS64EL-NEXT:    nop
@@ -3190,39 +3190,39 @@ define i8 @test_max_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6:       # %bb.0: # %entry
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64ELR6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64ELR6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64ELR6-NEXT:    move $1, $5
 ; MIPS64ELR6-NEXT:    sync
-; MIPS64ELR6-NEXT:    daddiu $1, $zero, -4
-; MIPS64ELR6-NEXT:    and $1, $4, $1
+; MIPS64ELR6-NEXT:    daddiu $2, $zero, -4
+; MIPS64ELR6-NEXT:    and $6, $4, $2
 ; MIPS64ELR6-NEXT:    andi $2, $4, 3
-; MIPS64ELR6-NEXT:    sll $2, $2, 3
-; MIPS64ELR6-NEXT:    ori $3, $zero, 255
-; MIPS64ELR6-NEXT:    sllv $3, $3, $2
-; MIPS64ELR6-NEXT:    nor $6, $zero, $3
-; MIPS64ELR6-NEXT:    sllv $5, $5, $2
+; MIPS64ELR6-NEXT:    sll $10, $2, 3
+; MIPS64ELR6-NEXT:    ori $2, $zero, 255
+; MIPS64ELR6-NEXT:    sllv $8, $2, $10
+; MIPS64ELR6-NEXT:    nor $9, $zero, $8
+; MIPS64ELR6-NEXT:    sllv $7, $1, $10
 ; MIPS64ELR6-NEXT:  .LBB8_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64ELR6-NEXT:    ll $8, 0($1)
-; MIPS64ELR6-NEXT:    and $8, $8, $3
-; MIPS64ELR6-NEXT:    and $5, $5, $3
-; MIPS64ELR6-NEXT:    slt $11, $8, $5
-; MIPS64ELR6-NEXT:    seleqz $9, $8, $11
-; MIPS64ELR6-NEXT:    selnez $11, $5, $11
-; MIPS64ELR6-NEXT:    or $9, $9, $11
-; MIPS64ELR6-NEXT:    and $9, $9, $3
-; MIPS64ELR6-NEXT:    and $10, $8, $6
-; MIPS64ELR6-NEXT:    or $10, $10, $9
-; MIPS64ELR6-NEXT:    sc $10, 0($1)
-; MIPS64ELR6-NEXT:    beqzc $10, .LBB8_1
+; MIPS64ELR6-NEXT:    ll $2, 0($6)
+; MIPS64ELR6-NEXT:    and $2, $2, $8
+; MIPS64ELR6-NEXT:    and $7, $7, $8
+; MIPS64ELR6-NEXT:    slt $5, $2, $7
+; MIPS64ELR6-NEXT:    seleqz $3, $2, $5
+; MIPS64ELR6-NEXT:    selnez $5, $7, $5
+; MIPS64ELR6-NEXT:    or $3, $3, $5
+; MIPS64ELR6-NEXT:    and $3, $3, $8
+; MIPS64ELR6-NEXT:    and $4, $2, $9
+; MIPS64ELR6-NEXT:    or $4, $4, $3
+; MIPS64ELR6-NEXT:    sc $4, 0($6)
+; MIPS64ELR6-NEXT:    beqzc $4, .LBB8_1
 ; MIPS64ELR6-NEXT:  # %bb.2: # %entry
-; MIPS64ELR6-NEXT:    and $7, $8, $3
-; MIPS64ELR6-NEXT:    srlv $7, $7, $2
-; MIPS64ELR6-NEXT:    seh $7, $7
+; MIPS64ELR6-NEXT:    and $1, $2, $8
+; MIPS64ELR6-NEXT:    srlv $1, $1, $10
+; MIPS64ELR6-NEXT:    seh $1, $1
 ; MIPS64ELR6-NEXT:  # %bb.3: # %entry
-; MIPS64ELR6-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64ELR6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64ELR6-NEXT:  # %bb.4: # %entry
-; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
@@ -3235,38 +3235,38 @@ define i8 @test_min_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
 ; MIPS-NEXT:    .cfi_def_cfa_offset 8
-; MIPS-NEXT:    move $1, $5
+; MIPS-NEXT:    # kill: def $at killed $a1
 ; MIPS-NEXT:    sync
-; MIPS-NEXT:    addiu $2, $zero, -4
-; MIPS-NEXT:    and $2, $4, $2
-; MIPS-NEXT:    andi $3, $4, 3
-; MIPS-NEXT:    xori $3, $3, 3
-; MIPS-NEXT:    sll $3, $3, 3
-; MIPS-NEXT:    ori $4, $zero, 255
-; MIPS-NEXT:    sllv $4, $4, $3
-; MIPS-NEXT:    nor $6, $zero, $4
-; MIPS-NEXT:    sllv $5, $5, $3
+; MIPS-NEXT:    addiu $1, $zero, -4
+; MIPS-NEXT:    and $6, $4, $1
+; MIPS-NEXT:    andi $1, $4, 3
+; MIPS-NEXT:    xori $1, $1, 3
+; MIPS-NEXT:    sll $10, $1, 3
+; MIPS-NEXT:    ori $1, $zero, 255
+; MIPS-NEXT:    sllv $8, $1, $10
+; MIPS-NEXT:    nor $9, $zero, $8
+; MIPS-NEXT:    sllv $7, $5, $10
 ; MIPS-NEXT:  $BB9_1: # %entry
 ; MIPS-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS-NEXT:    ll $8, 0($2)
-; MIPS-NEXT:    slt $11, $8, $5
-; MIPS-NEXT:    move $9, $8
-; MIPS-NEXT:    movz $9, $5, $11
-; MIPS-NEXT:    and $9, $9, $4
-; MIPS-NEXT:    and $10, $8, $6
-; MIPS-NEXT:    or $10, $10, $9
-; MIPS-NEXT:    sc $10, 0($2)
-; MIPS-NEXT:    beqz $10, $BB9_1
+; MIPS-NEXT:    ll $2, 0($6)
+; MIPS-NEXT:    slt $5, $2, $7
+; MIPS-NEXT:    move $3, $2
+; MIPS-NEXT:    movz $3, $7, $5
+; MIPS-NEXT:    and $3, $3, $8
+; MIPS-NEXT:    and $4, $2, $9
+; MIPS-NEXT:    or $4, $4, $3
+; MIPS-NEXT:    sc $4, 0($6)
+; MIPS-NEXT:    beqz $4, $BB9_1
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  # %bb.2: # %entry
-; MIPS-NEXT:    and $7, $8, $4
-; MIPS-NEXT:    srlv $7, $7, $3
-; MIPS-NEXT:    seh $7, $7
+; MIPS-NEXT:    and $1, $2, $8
+; MIPS-NEXT:    srlv $1, $1, $10
+; MIPS-NEXT:    seh $1, $1
 ; MIPS-NEXT:  # %bb.3: # %entry
-; MIPS-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPS-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS-NEXT:  # %bb.4: # %entry
-; MIPS-NEXT:    sync
 ; MIPS-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS-NEXT:    sync
 ; MIPS-NEXT:    addiu $sp, $sp, 8
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
@@ -3275,38 +3275,38 @@ define i8 @test_min_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSR6-NEXT:    move $1, $5
+; MIPSR6-NEXT:    # kill: def $at killed $a1
 ; MIPSR6-NEXT:    sync
-; MIPSR6-NEXT:    addiu $2, $zero, -4
-; MIPSR6-NEXT:    and $2, $4, $2
-; MIPSR6-NEXT:    andi $3, $4, 3
-; MIPSR6-NEXT:    xori $3, $3, 3
-; MIPSR6-NEXT:    sll $3, $3, 3
-; MIPSR6-NEXT:    ori $4, $zero, 255
-; MIPSR6-NEXT:    sllv $4, $4, $3
-; MIPSR6-NEXT:    nor $6, $zero, $4
-; MIPSR6-NEXT:    sllv $5, $5, $3
+; MIPSR6-NEXT:    addiu $1, $zero, -4
+; MIPSR6-NEXT:    and $6, $4, $1
+; MIPSR6-NEXT:    andi $1, $4, 3
+; MIPSR6-NEXT:    xori $1, $1, 3
+; MIPSR6-NEXT:    sll $10, $1, 3
+; MIPSR6-NEXT:    ori $1, $zero, 255
+; MIPSR6-NEXT:    sllv $8, $1, $10
+; MIPSR6-NEXT:    nor $9, $zero, $8
+; MIPSR6-NEXT:    sllv $7, $5, $10
 ; MIPSR6-NEXT:  $BB9_1: # %entry
 ; MIPSR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSR6-NEXT:    ll $8, 0($2)
-; MIPSR6-NEXT:    slt $11, $8, $5
-; MIPSR6-NEXT:    selnez $9, $8, $11
-; MIPSR6-NEXT:    seleqz $11, $5, $11
-; MIPSR6-NEXT:    or $9, $9, $11
-; MIPSR6-NEXT:    and $9, $9, $4
-; MIPSR6-NEXT:    and $10, $8, $6
-; MIPSR6-NEXT:    or $10, $10, $9
-; MIPSR6-NEXT:    sc $10, 0($2)
-; MIPSR6-NEXT:    beqzc $10, $BB9_1
+; MIPSR6-NEXT:    ll $2, 0($6)
+; MIPSR6-NEXT:    slt $5, $2, $7
+; MIPSR6-NEXT:    selnez $3, $2, $5
+; MIPSR6-NEXT:    seleqz $5, $7, $5
+; MIPSR6-NEXT:    or $3, $3, $5
+; MIPSR6-NEXT:    and $3, $3, $8
+; MIPSR6-NEXT:    and $4, $2, $9
+; MIPSR6-NEXT:    or $4, $4, $3
+; MIPSR6-NEXT:    sc $4, 0($6)
+; MIPSR6-NEXT:    beqzc $4, $BB9_1
 ; MIPSR6-NEXT:  # %bb.2: # %entry
-; MIPSR6-NEXT:    and $7, $8, $4
-; MIPSR6-NEXT:    srlv $7, $7, $3
-; MIPSR6-NEXT:    seh $7, $7
+; MIPSR6-NEXT:    and $1, $2, $8
+; MIPSR6-NEXT:    srlv $1, $1, $10
+; MIPSR6-NEXT:    seh $1, $1
 ; MIPSR6-NEXT:  # %bb.3: # %entry
-; MIPSR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSR6-NEXT:  # %bb.4: # %entry
-; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    addiu $sp, $sp, 8
 ; MIPSR6-NEXT:    jrc $ra
 ;
@@ -3314,37 +3314,37 @@ define i8 @test_min_8(i8* nocapture %ptr, i8 signext %val) {
 ; MM:       # %bb.0: # %entry
 ; MM-NEXT:    addiu $sp, $sp, -8
 ; MM-NEXT:    .cfi_def_cfa_offset 8
-; MM-NEXT:    move $1, $5
+; MM-NEXT:    # kill: def $at killed $a1
 ; MM-NEXT:    sync
-; MM-NEXT:    addiu $2, $zero, -4
-; MM-NEXT:    and $2, $4, $2
-; MM-NEXT:    andi $3, $4, 3
-; MM-NEXT:    xori $3, $3, 3
-; MM-NEXT:    sll $3, $3, 3
-; MM-NEXT:    ori $4, $zero, 255
-; MM-NEXT:    sllv $4, $4, $3
-; MM-NEXT:    nor $6, $zero, $4
-; MM-NEXT:    sllv $5, $5, $3
+; MM-NEXT:    addiu $1, $zero, -4
+; MM-NEXT:    and $6, $4, $1
+; MM-NEXT:    andi $1, $4, 3
+; MM-NEXT:    xori $1, $1, 3
+; MM-NEXT:    sll $10, $1, 3
+; MM-NEXT:    ori $1, $zero, 255
+; MM-NEXT:    sllv $8, $1, $10
+; MM-NEXT:    nor $9, $zero, $8
+; MM-NEXT:    sllv $7, $5, $10
 ; MM-NEXT:  $BB9_1: # %entry
 ; MM-NEXT:    # =>This Inner Loop Header: Depth=1
-; MM-NEXT:    ll $8, 0($2)
-; MM-NEXT:    slt $11, $8, $5
-; MM-NEXT:    or $9, $8, $zero
-; MM-NEXT:    movz $9, $5, $11
-; MM-NEXT:    and $9, $9, $4
-; MM-NEXT:    and $10, $8, $6
-; MM-NEXT:    or $10, $10, $9
-; MM-NEXT:    sc $10, 0($2)
-; MM-NEXT:    beqzc $10, $BB9_1
+; MM-NEXT:    ll $2, 0($6)
+; MM-NEXT:    slt $5, $2, $7
+; MM-NEXT:    or $3, $2, $zero
+; MM-NEXT:    movz $3, $7, $5
+; MM-NEXT:    and $3, $3, $8
+; MM-NEXT:    and $4, $2, $9
+; MM-NEXT:    or $4, $4, $3
+; MM-NEXT:    sc $4, 0($6)
+; MM-NEXT:    beqzc $4, $BB9_1
 ; MM-NEXT:  # %bb.2: # %entry
-; MM-NEXT:    and $7, $8, $4
-; MM-NEXT:    srlv $7, $7, $3
-; MM-NEXT:    seh $7, $7
+; MM-NEXT:    and $1, $2, $8
+; MM-NEXT:    srlv $1, $1, $10
+; MM-NEXT:    seh $1, $1
 ; MM-NEXT:  # %bb.3: # %entry
-; MM-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MM-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MM-NEXT:  # %bb.4: # %entry
-; MM-NEXT:    sync
 ; MM-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MM-NEXT:    sync
 ; MM-NEXT:    addiusp 8
 ; MM-NEXT:    jrc $ra
 ;
@@ -3352,38 +3352,38 @@ define i8 @test_min_8(i8* nocapture %ptr, i8 signext %val) {
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    addiu $sp, $sp, -8
 ; MMR6-NEXT:    .cfi_def_cfa_offset 8
-; MMR6-NEXT:    move $1, $5
+; MMR6-NEXT:    # kill: def $at killed $a1
 ; MMR6-NEXT:    sync
-; MMR6-NEXT:    addiu $2, $zero, -4
-; MMR6-NEXT:    and $2, $4, $2
-; MMR6-NEXT:    andi $3, $4, 3
-; MMR6-NEXT:    xori $3, $3, 3
-; MMR6-NEXT:    sll $3, $3, 3
-; MMR6-NEXT:    ori $4, $zero, 255
-; MMR6-NEXT:    sllv $4, $4, $3
-; MMR6-NEXT:    nor $6, $zero, $4
-; MMR6-NEXT:    sllv $5, $5, $3
+; MMR6-NEXT:    addiu $1, $zero, -4
+; MMR6-NEXT:    and $6, $4, $1
+; MMR6-NEXT:    andi $1, $4, 3
+; MMR6-NEXT:    xori $1, $1, 3
+; MMR6-NEXT:    sll $10, $1, 3
+; MMR6-NEXT:    ori $1, $zero, 255
+; MMR6-NEXT:    sllv $8, $1, $10
+; MMR6-NEXT:    nor $9, $zero, $8
+; MMR6-NEXT:    sllv $7, $5, $10
 ; MMR6-NEXT:  $BB9_1: # %entry
 ; MMR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMR6-NEXT:    ll $8, 0($2)
-; MMR6-NEXT:    slt $11, $8, $5
-; MMR6-NEXT:    selnez $9, $8, $11
-; MMR6-NEXT:    seleqz $11, $5, $11
-; MMR6-NEXT:    or $9, $9, $11
-; MMR6-NEXT:    and $9, $9, $4
-; MMR6-NEXT:    and $10, $8, $6
-; MMR6-NEXT:    or $10, $10, $9
-; MMR6-NEXT:    sc $10, 0($2)
-; MMR6-NEXT:    beqc $10, $zero, $BB9_1
+; MMR6-NEXT:    ll $2, 0($6)
+; MMR6-NEXT:    slt $5, $2, $7
+; MMR6-NEXT:    selnez $3, $2, $5
+; MMR6-NEXT:    seleqz $5, $7, $5
+; MMR6-NEXT:    or $3, $3, $5
+; MMR6-NEXT:    and $3, $3, $8
+; MMR6-NEXT:    and $4, $2, $9
+; MMR6-NEXT:    or $4, $4, $3
+; MMR6-NEXT:    sc $4, 0($6)
+; MMR6-NEXT:    beqc $4, $zero, $BB9_1
 ; MMR6-NEXT:  # %bb.2: # %entry
-; MMR6-NEXT:    and $7, $8, $4
-; MMR6-NEXT:    srlv $7, $7, $3
-; MMR6-NEXT:    seh $7, $7
+; MMR6-NEXT:    and $1, $2, $8
+; MMR6-NEXT:    srlv $1, $1, $10
+; MMR6-NEXT:    seh $1, $1
 ; MMR6-NEXT:  # %bb.3: # %entry
-; MMR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:  # %bb.4: # %entry
-; MMR6-NEXT:    sync
 ; MMR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMR6-NEXT:    sync
 ; MMR6-NEXT:    addiu $sp, $sp, 8
 ; MMR6-NEXT:    jrc $ra
 ;
@@ -3391,39 +3391,39 @@ define i8 @test_min_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
 ; MIPSEL-NEXT:    .cfi_def_cfa_offset 8
-; MIPSEL-NEXT:    move $1, $5
+; MIPSEL-NEXT:    # kill: def $at killed $a1
 ; MIPSEL-NEXT:    sync
-; MIPSEL-NEXT:    addiu $2, $zero, -4
-; MIPSEL-NEXT:    and $2, $4, $2
-; MIPSEL-NEXT:    andi $3, $4, 3
-; MIPSEL-NEXT:    sll $3, $3, 3
-; MIPSEL-NEXT:    ori $4, $zero, 255
-; MIPSEL-NEXT:    sllv $4, $4, $3
-; MIPSEL-NEXT:    nor $6, $zero, $4
-; MIPSEL-NEXT:    sllv $5, $5, $3
+; MIPSEL-NEXT:    addiu $1, $zero, -4
+; MIPSEL-NEXT:    and $6, $4, $1
+; MIPSEL-NEXT:    andi $1, $4, 3
+; MIPSEL-NEXT:    sll $10, $1, 3
+; MIPSEL-NEXT:    ori $1, $zero, 255
+; MIPSEL-NEXT:    sllv $8, $1, $10
+; MIPSEL-NEXT:    nor $9, $zero, $8
+; MIPSEL-NEXT:    sllv $7, $5, $10
 ; MIPSEL-NEXT:  $BB9_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSEL-NEXT:    ll $8, 0($2)
-; MIPSEL-NEXT:    and $8, $8, $4
-; MIPSEL-NEXT:    and $5, $5, $4
-; MIPSEL-NEXT:    slt $11, $8, $5
-; MIPSEL-NEXT:    move $9, $8
-; MIPSEL-NEXT:    movz $9, $5, $11
-; MIPSEL-NEXT:    and $9, $9, $4
-; MIPSEL-NEXT:    and $10, $8, $6
-; MIPSEL-NEXT:    or $10, $10, $9
-; MIPSEL-NEXT:    sc $10, 0($2)
-; MIPSEL-NEXT:    beqz $10, $BB9_1
+; MIPSEL-NEXT:    ll $2, 0($6)
+; MIPSEL-NEXT:    and $2, $2, $8
+; MIPSEL-NEXT:    and $7, $7, $8
+; MIPSEL-NEXT:    slt $5, $2, $7
+; MIPSEL-NEXT:    move $3, $2
+; MIPSEL-NEXT:    movz $3, $7, $5
+; MIPSEL-NEXT:    and $3, $3, $8
+; MIPSEL-NEXT:    and $4, $2, $9
+; MIPSEL-NEXT:    or $4, $4, $3
+; MIPSEL-NEXT:    sc $4, 0($6)
+; MIPSEL-NEXT:    beqz $4, $BB9_1
 ; MIPSEL-NEXT:    nop
 ; MIPSEL-NEXT:  # %bb.2: # %entry
-; MIPSEL-NEXT:    and $7, $8, $4
-; MIPSEL-NEXT:    srlv $7, $7, $3
-; MIPSEL-NEXT:    seh $7, $7
+; MIPSEL-NEXT:    and $1, $2, $8
+; MIPSEL-NEXT:    srlv $1, $1, $10
+; MIPSEL-NEXT:    seh $1, $1
 ; MIPSEL-NEXT:  # %bb.3: # %entry
-; MIPSEL-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:  # %bb.4: # %entry
-; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    addiu $sp, $sp, 8
 ; MIPSEL-NEXT:    jr $ra
 ; MIPSEL-NEXT:    nop
@@ -3432,39 +3432,39 @@ define i8 @test_min_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPSELR6:       # %bb.0: # %entry
 ; MIPSELR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSELR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSELR6-NEXT:    move $1, $5
+; MIPSELR6-NEXT:    # kill: def $at killed $a1
 ; MIPSELR6-NEXT:    sync
-; MIPSELR6-NEXT:    addiu $2, $zero, -4
-; MIPSELR6-NEXT:    and $2, $4, $2
-; MIPSELR6-NEXT:    andi $3, $4, 3
-; MIPSELR6-NEXT:    sll $3, $3, 3
-; MIPSELR6-NEXT:    ori $4, $zero, 255
-; MIPSELR6-NEXT:    sllv $4, $4, $3
-; MIPSELR6-NEXT:    nor $6, $zero, $4
-; MIPSELR6-NEXT:    sllv $5, $5, $3
+; MIPSELR6-NEXT:    addiu $1, $zero, -4
+; MIPSELR6-NEXT:    and $6, $4, $1
+; MIPSELR6-NEXT:    andi $1, $4, 3
+; MIPSELR6-NEXT:    sll $10, $1, 3
+; MIPSELR6-NEXT:    ori $1, $zero, 255
+; MIPSELR6-NEXT:    sllv $8, $1, $10
+; MIPSELR6-NEXT:    nor $9, $zero, $8
+; MIPSELR6-NEXT:    sllv $7, $5, $10
 ; MIPSELR6-NEXT:  $BB9_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSELR6-NEXT:    ll $8, 0($2)
-; MIPSELR6-NEXT:    and $8, $8, $4
-; MIPSELR6-NEXT:    and $5, $5, $4
-; MIPSELR6-NEXT:    slt $11, $8, $5
-; MIPSELR6-NEXT:    selnez $9, $8, $11
-; MIPSELR6-NEXT:    seleqz $11, $5, $11
-; MIPSELR6-NEXT:    or $9, $9, $11
-; MIPSELR6-NEXT:    and $9, $9, $4
-; MIPSELR6-NEXT:    and $10, $8, $6
-; MIPSELR6-NEXT:    or $10, $10, $9
-; MIPSELR6-NEXT:    sc $10, 0($2)
-; MIPSELR6-NEXT:    beqzc $10, $BB9_1
+; MIPSELR6-NEXT:    ll $2, 0($6)
+; MIPSELR6-NEXT:    and $2, $2, $8
+; MIPSELR6-NEXT:    and $7, $7, $8
+; MIPSELR6-NEXT:    slt $5, $2, $7
+; MIPSELR6-NEXT:    selnez $3, $2, $5
+; MIPSELR6-NEXT:    seleqz $5, $7, $5
+; MIPSELR6-NEXT:    or $3, $3, $5
+; MIPSELR6-NEXT:    and $3, $3, $8
+; MIPSELR6-NEXT:    and $4, $2, $9
+; MIPSELR6-NEXT:    or $4, $4, $3
+; MIPSELR6-NEXT:    sc $4, 0($6)
+; MIPSELR6-NEXT:    beqzc $4, $BB9_1
 ; MIPSELR6-NEXT:  # %bb.2: # %entry
-; MIPSELR6-NEXT:    and $7, $8, $4
-; MIPSELR6-NEXT:    srlv $7, $7, $3
-; MIPSELR6-NEXT:    seh $7, $7
+; MIPSELR6-NEXT:    and $1, $2, $8
+; MIPSELR6-NEXT:    srlv $1, $1, $10
+; MIPSELR6-NEXT:    seh $1, $1
 ; MIPSELR6-NEXT:  # %bb.3: # %entry
-; MIPSELR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSELR6-NEXT:  # %bb.4: # %entry
-; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    addiu $sp, $sp, 8
 ; MIPSELR6-NEXT:    jrc $ra
 ;
@@ -3472,38 +3472,38 @@ define i8 @test_min_8(i8* nocapture %ptr, i8 signext %val) {
 ; MMEL:       # %bb.0: # %entry
 ; MMEL-NEXT:    addiu $sp, $sp, -8
 ; MMEL-NEXT:    .cfi_def_cfa_offset 8
-; MMEL-NEXT:    move $1, $5
+; MMEL-NEXT:    # kill: def $at killed $a1
 ; MMEL-NEXT:    sync
-; MMEL-NEXT:    addiu $2, $zero, -4
-; MMEL-NEXT:    and $2, $4, $2
-; MMEL-NEXT:    andi $3, $4, 3
-; MMEL-NEXT:    sll $3, $3, 3
-; MMEL-NEXT:    ori $4, $zero, 255
-; MMEL-NEXT:    sllv $4, $4, $3
-; MMEL-NEXT:    nor $6, $zero, $4
-; MMEL-NEXT:    sllv $5, $5, $3
+; MMEL-NEXT:    addiu $1, $zero, -4
+; MMEL-NEXT:    and $6, $4, $1
+; MMEL-NEXT:    andi $1, $4, 3
+; MMEL-NEXT:    sll $10, $1, 3
+; MMEL-NEXT:    ori $1, $zero, 255
+; MMEL-NEXT:    sllv $8, $1, $10
+; MMEL-NEXT:    nor $9, $zero, $8
+; MMEL-NEXT:    sllv $7, $5, $10
 ; MMEL-NEXT:  $BB9_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMEL-NEXT:    ll $8, 0($2)
-; MMEL-NEXT:    and $8, $8, $4
-; MMEL-NEXT:    and $5, $5, $4
-; MMEL-NEXT:    slt $11, $8, $5
-; MMEL-NEXT:    or $9, $8, $zero
-; MMEL-NEXT:    movz $9, $5, $11
-; MMEL-NEXT:    and $9, $9, $4
-; MMEL-NEXT:    and $10, $8, $6
-; MMEL-NEXT:    or $10, $10, $9
-; MMEL-NEXT:    sc $10, 0($2)
-; MMEL-NEXT:    beqzc $10, $BB9_1
+; MMEL-NEXT:    ll $2, 0($6)
+; MMEL-NEXT:    and $2, $2, $8
+; MMEL-NEXT:    and $7, $7, $8
+; MMEL-NEXT:    slt $5, $2, $7
+; MMEL-NEXT:    or $3, $2, $zero
+; MMEL-NEXT:    movz $3, $7, $5
+; MMEL-NEXT:    and $3, $3, $8
+; MMEL-NEXT:    and $4, $2, $9
+; MMEL-NEXT:    or $4, $4, $3
+; MMEL-NEXT:    sc $4, 0($6)
+; MMEL-NEXT:    beqzc $4, $BB9_1
 ; MMEL-NEXT:  # %bb.2: # %entry
-; MMEL-NEXT:    and $7, $8, $4
-; MMEL-NEXT:    srlv $7, $7, $3
-; MMEL-NEXT:    seh $7, $7
+; MMEL-NEXT:    and $1, $2, $8
+; MMEL-NEXT:    srlv $1, $1, $10
+; MMEL-NEXT:    seh $1, $1
 ; MMEL-NEXT:  # %bb.3: # %entry
-; MMEL-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMEL-NEXT:  # %bb.4: # %entry
-; MMEL-NEXT:    sync
 ; MMEL-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMEL-NEXT:    sync
 ; MMEL-NEXT:    addiusp 8
 ; MMEL-NEXT:    jrc $ra
 ;
@@ -3511,39 +3511,39 @@ define i8 @test_min_8(i8* nocapture %ptr, i8 signext %val) {
 ; MMELR6:       # %bb.0: # %entry
 ; MMELR6-NEXT:    addiu $sp, $sp, -8
 ; MMELR6-NEXT:    .cfi_def_cfa_offset 8
-; MMELR6-NEXT:    move $1, $5
+; MMELR6-NEXT:    # kill: def $at killed $a1
 ; MMELR6-NEXT:    sync
-; MMELR6-NEXT:    addiu $2, $zero, -4
-; MMELR6-NEXT:    and $2, $4, $2
-; MMELR6-NEXT:    andi $3, $4, 3
-; MMELR6-NEXT:    sll $3, $3, 3
-; MMELR6-NEXT:    ori $4, $zero, 255
-; MMELR6-NEXT:    sllv $4, $4, $3
-; MMELR6-NEXT:    nor $6, $zero, $4
-; MMELR6-NEXT:    sllv $5, $5, $3
+; MMELR6-NEXT:    addiu $1, $zero, -4
+; MMELR6-NEXT:    and $6, $4, $1
+; MMELR6-NEXT:    andi $1, $4, 3
+; MMELR6-NEXT:    sll $10, $1, 3
+; MMELR6-NEXT:    ori $1, $zero, 255
+; MMELR6-NEXT:    sllv $8, $1, $10
+; MMELR6-NEXT:    nor $9, $zero, $8
+; MMELR6-NEXT:    sllv $7, $5, $10
 ; MMELR6-NEXT:  $BB9_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMELR6-NEXT:    ll $8, 0($2)
-; MMELR6-NEXT:    and $8, $8, $4
-; MMELR6-NEXT:    and $5, $5, $4
-; MMELR6-NEXT:    slt $11, $8, $5
-; MMELR6-NEXT:    selnez $9, $8, $11
-; MMELR6-NEXT:    seleqz $11, $5, $11
-; MMELR6-NEXT:    or $9, $9, $11
-; MMELR6-NEXT:    and $9, $9, $4
-; MMELR6-NEXT:    and $10, $8, $6
-; MMELR6-NEXT:    or $10, $10, $9
-; MMELR6-NEXT:    sc $10, 0($2)
-; MMELR6-NEXT:    beqc $10, $zero, $BB9_1
+; MMELR6-NEXT:    ll $2, 0($6)
+; MMELR6-NEXT:    and $2, $2, $8
+; MMELR6-NEXT:    and $7, $7, $8
+; MMELR6-NEXT:    slt $5, $2, $7
+; MMELR6-NEXT:    selnez $3, $2, $5
+; MMELR6-NEXT:    seleqz $5, $7, $5
+; MMELR6-NEXT:    or $3, $3, $5
+; MMELR6-NEXT:    and $3, $3, $8
+; MMELR6-NEXT:    and $4, $2, $9
+; MMELR6-NEXT:    or $4, $4, $3
+; MMELR6-NEXT:    sc $4, 0($6)
+; MMELR6-NEXT:    beqc $4, $zero, $BB9_1
 ; MMELR6-NEXT:  # %bb.2: # %entry
-; MMELR6-NEXT:    and $7, $8, $4
-; MMELR6-NEXT:    srlv $7, $7, $3
-; MMELR6-NEXT:    seh $7, $7
+; MMELR6-NEXT:    and $1, $2, $8
+; MMELR6-NEXT:    srlv $1, $1, $10
+; MMELR6-NEXT:    seh $1, $1
 ; MMELR6-NEXT:  # %bb.3: # %entry
-; MMELR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMELR6-NEXT:  # %bb.4: # %entry
-; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    addiu $sp, $sp, 8
 ; MMELR6-NEXT:    jrc $ra
 ;
@@ -3551,38 +3551,38 @@ define i8 @test_min_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64-NEXT:    move $1, $5
 ; MIPS64-NEXT:    sync
-; MIPS64-NEXT:    daddiu $1, $zero, -4
-; MIPS64-NEXT:    and $1, $4, $1
+; MIPS64-NEXT:    daddiu $2, $zero, -4
+; MIPS64-NEXT:    and $6, $4, $2
 ; MIPS64-NEXT:    andi $2, $4, 3
 ; MIPS64-NEXT:    xori $2, $2, 3
-; MIPS64-NEXT:    sll $2, $2, 3
-; MIPS64-NEXT:    ori $3, $zero, 255
-; MIPS64-NEXT:    sllv $3, $3, $2
-; MIPS64-NEXT:    nor $6, $zero, $3
-; MIPS64-NEXT:    sllv $5, $5, $2
+; MIPS64-NEXT:    sll $10, $2, 3
+; MIPS64-NEXT:    ori $2, $zero, 255
+; MIPS64-NEXT:    sllv $8, $2, $10
+; MIPS64-NEXT:    nor $9, $zero, $8
+; MIPS64-NEXT:    sllv $7, $1, $10
 ; MIPS64-NEXT:  .LBB9_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $8, 0($1)
-; MIPS64-NEXT:    slt $11, $8, $5
-; MIPS64-NEXT:    move $9, $8
-; MIPS64-NEXT:    movz $9, $5, $11
-; MIPS64-NEXT:    and $9, $9, $3
-; MIPS64-NEXT:    and $10, $8, $6
-; MIPS64-NEXT:    or $10, $10, $9
-; MIPS64-NEXT:    sc $10, 0($1)
-; MIPS64-NEXT:    beqz $10, .LBB9_1
+; MIPS64-NEXT:    ll $2, 0($6)
+; MIPS64-NEXT:    slt $5, $2, $7
+; MIPS64-NEXT:    move $3, $2
+; MIPS64-NEXT:    movz $3, $7, $5
+; MIPS64-NEXT:    and $3, $3, $8
+; MIPS64-NEXT:    and $4, $2, $9
+; MIPS64-NEXT:    or $4, $4, $3
+; MIPS64-NEXT:    sc $4, 0($6)
+; MIPS64-NEXT:    beqz $4, .LBB9_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $7, $8, $3
-; MIPS64-NEXT:    srlv $7, $7, $2
-; MIPS64-NEXT:    seh $7, $7
+; MIPS64-NEXT:    and $1, $2, $8
+; MIPS64-NEXT:    srlv $1, $1, $10
+; MIPS64-NEXT:    seh $1, $1
 ; MIPS64-NEXT:  # %bb.3: # %entry
-; MIPS64-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64-NEXT:  # %bb.4: # %entry
-; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    nop
@@ -3591,38 +3591,38 @@ define i8 @test_min_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64R6:       # %bb.0: # %entry
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64R6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64R6-NEXT:    move $1, $5
 ; MIPS64R6-NEXT:    sync
-; MIPS64R6-NEXT:    daddiu $1, $zero, -4
-; MIPS64R6-NEXT:    and $1, $4, $1
+; MIPS64R6-NEXT:    daddiu $2, $zero, -4
+; MIPS64R6-NEXT:    and $6, $4, $2
 ; MIPS64R6-NEXT:    andi $2, $4, 3
 ; MIPS64R6-NEXT:    xori $2, $2, 3
-; MIPS64R6-NEXT:    sll $2, $2, 3
-; MIPS64R6-NEXT:    ori $3, $zero, 255
-; MIPS64R6-NEXT:    sllv $3, $3, $2
-; MIPS64R6-NEXT:    nor $6, $zero, $3
-; MIPS64R6-NEXT:    sllv $5, $5, $2
+; MIPS64R6-NEXT:    sll $10, $2, 3
+; MIPS64R6-NEXT:    ori $2, $zero, 255
+; MIPS64R6-NEXT:    sllv $8, $2, $10
+; MIPS64R6-NEXT:    nor $9, $zero, $8
+; MIPS64R6-NEXT:    sllv $7, $1, $10
 ; MIPS64R6-NEXT:  .LBB9_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6-NEXT:    ll $8, 0($1)
-; MIPS64R6-NEXT:    slt $11, $8, $5
-; MIPS64R6-NEXT:    selnez $9, $8, $11
-; MIPS64R6-NEXT:    seleqz $11, $5, $11
-; MIPS64R6-NEXT:    or $9, $9, $11
-; MIPS64R6-NEXT:    and $9, $9, $3
-; MIPS64R6-NEXT:    and $10, $8, $6
-; MIPS64R6-NEXT:    or $10, $10, $9
-; MIPS64R6-NEXT:    sc $10, 0($1)
-; MIPS64R6-NEXT:    beqzc $10, .LBB9_1
+; MIPS64R6-NEXT:    ll $2, 0($6)
+; MIPS64R6-NEXT:    slt $5, $2, $7
+; MIPS64R6-NEXT:    selnez $3, $2, $5
+; MIPS64R6-NEXT:    seleqz $5, $7, $5
+; MIPS64R6-NEXT:    or $3, $3, $5
+; MIPS64R6-NEXT:    and $3, $3, $8
+; MIPS64R6-NEXT:    and $4, $2, $9
+; MIPS64R6-NEXT:    or $4, $4, $3
+; MIPS64R6-NEXT:    sc $4, 0($6)
+; MIPS64R6-NEXT:    beqzc $4, .LBB9_1
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $7, $8, $3
-; MIPS64R6-NEXT:    srlv $7, $7, $2
-; MIPS64R6-NEXT:    seh $7, $7
+; MIPS64R6-NEXT:    and $1, $2, $8
+; MIPS64R6-NEXT:    srlv $1, $1, $10
+; MIPS64R6-NEXT:    seh $1, $1
 ; MIPS64R6-NEXT:  # %bb.3: # %entry
-; MIPS64R6-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64R6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6-NEXT:  # %bb.4: # %entry
-; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64R6-NEXT:    jrc $ra
 ;
@@ -3630,39 +3630,39 @@ define i8 @test_min_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64EL:       # %bb.0: # %entry
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64EL-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64EL-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64EL-NEXT:    move $1, $5
 ; MIPS64EL-NEXT:    sync
-; MIPS64EL-NEXT:    daddiu $1, $zero, -4
-; MIPS64EL-NEXT:    and $1, $4, $1
+; MIPS64EL-NEXT:    daddiu $2, $zero, -4
+; MIPS64EL-NEXT:    and $6, $4, $2
 ; MIPS64EL-NEXT:    andi $2, $4, 3
-; MIPS64EL-NEXT:    sll $2, $2, 3
-; MIPS64EL-NEXT:    ori $3, $zero, 255
-; MIPS64EL-NEXT:    sllv $3, $3, $2
-; MIPS64EL-NEXT:    nor $6, $zero, $3
-; MIPS64EL-NEXT:    sllv $5, $5, $2
+; MIPS64EL-NEXT:    sll $10, $2, 3
+; MIPS64EL-NEXT:    ori $2, $zero, 255
+; MIPS64EL-NEXT:    sllv $8, $2, $10
+; MIPS64EL-NEXT:    nor $9, $zero, $8
+; MIPS64EL-NEXT:    sllv $7, $1, $10
 ; MIPS64EL-NEXT:  .LBB9_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64EL-NEXT:    ll $8, 0($1)
-; MIPS64EL-NEXT:    and $8, $8, $3
-; MIPS64EL-NEXT:    and $5, $5, $3
-; MIPS64EL-NEXT:    slt $11, $8, $5
-; MIPS64EL-NEXT:    move $9, $8
-; MIPS64EL-NEXT:    movz $9, $5, $11
-; MIPS64EL-NEXT:    and $9, $9, $3
-; MIPS64EL-NEXT:    and $10, $8, $6
-; MIPS64EL-NEXT:    or $10, $10, $9
-; MIPS64EL-NEXT:    sc $10, 0($1)
-; MIPS64EL-NEXT:    beqz $10, .LBB9_1
+; MIPS64EL-NEXT:    ll $2, 0($6)
+; MIPS64EL-NEXT:    and $2, $2, $8
+; MIPS64EL-NEXT:    and $7, $7, $8
+; MIPS64EL-NEXT:    slt $5, $2, $7
+; MIPS64EL-NEXT:    move $3, $2
+; MIPS64EL-NEXT:    movz $3, $7, $5
+; MIPS64EL-NEXT:    and $3, $3, $8
+; MIPS64EL-NEXT:    and $4, $2, $9
+; MIPS64EL-NEXT:    or $4, $4, $3
+; MIPS64EL-NEXT:    sc $4, 0($6)
+; MIPS64EL-NEXT:    beqz $4, .LBB9_1
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:  # %bb.2: # %entry
-; MIPS64EL-NEXT:    and $7, $8, $3
-; MIPS64EL-NEXT:    srlv $7, $7, $2
-; MIPS64EL-NEXT:    seh $7, $7
+; MIPS64EL-NEXT:    and $1, $2, $8
+; MIPS64EL-NEXT:    srlv $1, $1, $10
+; MIPS64EL-NEXT:    seh $1, $1
 ; MIPS64EL-NEXT:  # %bb.3: # %entry
-; MIPS64EL-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64EL-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64EL-NEXT:  # %bb.4: # %entry
-; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64EL-NEXT:    jr $ra
 ; MIPS64EL-NEXT:    nop
@@ -3671,39 +3671,39 @@ define i8 @test_min_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6:       # %bb.0: # %entry
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64ELR6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64ELR6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64ELR6-NEXT:    move $1, $5
 ; MIPS64ELR6-NEXT:    sync
-; MIPS64ELR6-NEXT:    daddiu $1, $zero, -4
-; MIPS64ELR6-NEXT:    and $1, $4, $1
+; MIPS64ELR6-NEXT:    daddiu $2, $zero, -4
+; MIPS64ELR6-NEXT:    and $6, $4, $2
 ; MIPS64ELR6-NEXT:    andi $2, $4, 3
-; MIPS64ELR6-NEXT:    sll $2, $2, 3
-; MIPS64ELR6-NEXT:    ori $3, $zero, 255
-; MIPS64ELR6-NEXT:    sllv $3, $3, $2
-; MIPS64ELR6-NEXT:    nor $6, $zero, $3
-; MIPS64ELR6-NEXT:    sllv $5, $5, $2
+; MIPS64ELR6-NEXT:    sll $10, $2, 3
+; MIPS64ELR6-NEXT:    ori $2, $zero, 255
+; MIPS64ELR6-NEXT:    sllv $8, $2, $10
+; MIPS64ELR6-NEXT:    nor $9, $zero, $8
+; MIPS64ELR6-NEXT:    sllv $7, $1, $10
 ; MIPS64ELR6-NEXT:  .LBB9_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64ELR6-NEXT:    ll $8, 0($1)
-; MIPS64ELR6-NEXT:    and $8, $8, $3
-; MIPS64ELR6-NEXT:    and $5, $5, $3
-; MIPS64ELR6-NEXT:    slt $11, $8, $5
-; MIPS64ELR6-NEXT:    selnez $9, $8, $11
-; MIPS64ELR6-NEXT:    seleqz $11, $5, $11
-; MIPS64ELR6-NEXT:    or $9, $9, $11
-; MIPS64ELR6-NEXT:    and $9, $9, $3
-; MIPS64ELR6-NEXT:    and $10, $8, $6
-; MIPS64ELR6-NEXT:    or $10, $10, $9
-; MIPS64ELR6-NEXT:    sc $10, 0($1)
-; MIPS64ELR6-NEXT:    beqzc $10, .LBB9_1
+; MIPS64ELR6-NEXT:    ll $2, 0($6)
+; MIPS64ELR6-NEXT:    and $2, $2, $8
+; MIPS64ELR6-NEXT:    and $7, $7, $8
+; MIPS64ELR6-NEXT:    slt $5, $2, $7
+; MIPS64ELR6-NEXT:    selnez $3, $2, $5
+; MIPS64ELR6-NEXT:    seleqz $5, $7, $5
+; MIPS64ELR6-NEXT:    or $3, $3, $5
+; MIPS64ELR6-NEXT:    and $3, $3, $8
+; MIPS64ELR6-NEXT:    and $4, $2, $9
+; MIPS64ELR6-NEXT:    or $4, $4, $3
+; MIPS64ELR6-NEXT:    sc $4, 0($6)
+; MIPS64ELR6-NEXT:    beqzc $4, .LBB9_1
 ; MIPS64ELR6-NEXT:  # %bb.2: # %entry
-; MIPS64ELR6-NEXT:    and $7, $8, $3
-; MIPS64ELR6-NEXT:    srlv $7, $7, $2
-; MIPS64ELR6-NEXT:    seh $7, $7
+; MIPS64ELR6-NEXT:    and $1, $2, $8
+; MIPS64ELR6-NEXT:    srlv $1, $1, $10
+; MIPS64ELR6-NEXT:    seh $1, $1
 ; MIPS64ELR6-NEXT:  # %bb.3: # %entry
-; MIPS64ELR6-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64ELR6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64ELR6-NEXT:  # %bb.4: # %entry
-; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
@@ -3716,38 +3716,38 @@ define i8 @test_umax_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
 ; MIPS-NEXT:    .cfi_def_cfa_offset 8
-; MIPS-NEXT:    move $1, $5
+; MIPS-NEXT:    # kill: def $at killed $a1
 ; MIPS-NEXT:    sync
-; MIPS-NEXT:    addiu $2, $zero, -4
-; MIPS-NEXT:    and $2, $4, $2
-; MIPS-NEXT:    andi $3, $4, 3
-; MIPS-NEXT:    xori $3, $3, 3
-; MIPS-NEXT:    sll $3, $3, 3
-; MIPS-NEXT:    ori $4, $zero, 255
-; MIPS-NEXT:    sllv $4, $4, $3
-; MIPS-NEXT:    nor $6, $zero, $4
-; MIPS-NEXT:    sllv $5, $5, $3
+; MIPS-NEXT:    addiu $1, $zero, -4
+; MIPS-NEXT:    and $6, $4, $1
+; MIPS-NEXT:    andi $1, $4, 3
+; MIPS-NEXT:    xori $1, $1, 3
+; MIPS-NEXT:    sll $10, $1, 3
+; MIPS-NEXT:    ori $1, $zero, 255
+; MIPS-NEXT:    sllv $8, $1, $10
+; MIPS-NEXT:    nor $9, $zero, $8
+; MIPS-NEXT:    sllv $7, $5, $10
 ; MIPS-NEXT:  $BB10_1: # %entry
 ; MIPS-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS-NEXT:    ll $8, 0($2)
-; MIPS-NEXT:    sltu $11, $8, $5
-; MIPS-NEXT:    move $9, $8
-; MIPS-NEXT:    movn $9, $5, $11
-; MIPS-NEXT:    and $9, $9, $4
-; MIPS-NEXT:    and $10, $8, $6
-; MIPS-NEXT:    or $10, $10, $9
-; MIPS-NEXT:    sc $10, 0($2)
-; MIPS-NEXT:    beqz $10, $BB10_1
+; MIPS-NEXT:    ll $2, 0($6)
+; MIPS-NEXT:    sltu $5, $2, $7
+; MIPS-NEXT:    move $3, $2
+; MIPS-NEXT:    movn $3, $7, $5
+; MIPS-NEXT:    and $3, $3, $8
+; MIPS-NEXT:    and $4, $2, $9
+; MIPS-NEXT:    or $4, $4, $3
+; MIPS-NEXT:    sc $4, 0($6)
+; MIPS-NEXT:    beqz $4, $BB10_1
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  # %bb.2: # %entry
-; MIPS-NEXT:    and $7, $8, $4
-; MIPS-NEXT:    srlv $7, $7, $3
-; MIPS-NEXT:    seh $7, $7
+; MIPS-NEXT:    and $1, $2, $8
+; MIPS-NEXT:    srlv $1, $1, $10
+; MIPS-NEXT:    seh $1, $1
 ; MIPS-NEXT:  # %bb.3: # %entry
-; MIPS-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPS-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS-NEXT:  # %bb.4: # %entry
-; MIPS-NEXT:    sync
 ; MIPS-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS-NEXT:    sync
 ; MIPS-NEXT:    addiu $sp, $sp, 8
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
@@ -3756,38 +3756,38 @@ define i8 @test_umax_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSR6-NEXT:    move $1, $5
+; MIPSR6-NEXT:    # kill: def $at killed $a1
 ; MIPSR6-NEXT:    sync
-; MIPSR6-NEXT:    addiu $2, $zero, -4
-; MIPSR6-NEXT:    and $2, $4, $2
-; MIPSR6-NEXT:    andi $3, $4, 3
-; MIPSR6-NEXT:    xori $3, $3, 3
-; MIPSR6-NEXT:    sll $3, $3, 3
-; MIPSR6-NEXT:    ori $4, $zero, 255
-; MIPSR6-NEXT:    sllv $4, $4, $3
-; MIPSR6-NEXT:    nor $6, $zero, $4
-; MIPSR6-NEXT:    sllv $5, $5, $3
+; MIPSR6-NEXT:    addiu $1, $zero, -4
+; MIPSR6-NEXT:    and $6, $4, $1
+; MIPSR6-NEXT:    andi $1, $4, 3
+; MIPSR6-NEXT:    xori $1, $1, 3
+; MIPSR6-NEXT:    sll $10, $1, 3
+; MIPSR6-NEXT:    ori $1, $zero, 255
+; MIPSR6-NEXT:    sllv $8, $1, $10
+; MIPSR6-NEXT:    nor $9, $zero, $8
+; MIPSR6-NEXT:    sllv $7, $5, $10
 ; MIPSR6-NEXT:  $BB10_1: # %entry
 ; MIPSR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSR6-NEXT:    ll $8, 0($2)
-; MIPSR6-NEXT:    sltu $11, $8, $5
-; MIPSR6-NEXT:    seleqz $9, $8, $11
-; MIPSR6-NEXT:    selnez $11, $5, $11
-; MIPSR6-NEXT:    or $9, $9, $11
-; MIPSR6-NEXT:    and $9, $9, $4
-; MIPSR6-NEXT:    and $10, $8, $6
-; MIPSR6-NEXT:    or $10, $10, $9
-; MIPSR6-NEXT:    sc $10, 0($2)
-; MIPSR6-NEXT:    beqzc $10, $BB10_1
+; MIPSR6-NEXT:    ll $2, 0($6)
+; MIPSR6-NEXT:    sltu $5, $2, $7
+; MIPSR6-NEXT:    seleqz $3, $2, $5
+; MIPSR6-NEXT:    selnez $5, $7, $5
+; MIPSR6-NEXT:    or $3, $3, $5
+; MIPSR6-NEXT:    and $3, $3, $8
+; MIPSR6-NEXT:    and $4, $2, $9
+; MIPSR6-NEXT:    or $4, $4, $3
+; MIPSR6-NEXT:    sc $4, 0($6)
+; MIPSR6-NEXT:    beqzc $4, $BB10_1
 ; MIPSR6-NEXT:  # %bb.2: # %entry
-; MIPSR6-NEXT:    and $7, $8, $4
-; MIPSR6-NEXT:    srlv $7, $7, $3
-; MIPSR6-NEXT:    seh $7, $7
+; MIPSR6-NEXT:    and $1, $2, $8
+; MIPSR6-NEXT:    srlv $1, $1, $10
+; MIPSR6-NEXT:    seh $1, $1
 ; MIPSR6-NEXT:  # %bb.3: # %entry
-; MIPSR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSR6-NEXT:  # %bb.4: # %entry
-; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    addiu $sp, $sp, 8
 ; MIPSR6-NEXT:    jrc $ra
 ;
@@ -3795,37 +3795,37 @@ define i8 @test_umax_8(i8* nocapture %ptr, i8 signext %val) {
 ; MM:       # %bb.0: # %entry
 ; MM-NEXT:    addiu $sp, $sp, -8
 ; MM-NEXT:    .cfi_def_cfa_offset 8
-; MM-NEXT:    move $1, $5
+; MM-NEXT:    # kill: def $at killed $a1
 ; MM-NEXT:    sync
-; MM-NEXT:    addiu $2, $zero, -4
-; MM-NEXT:    and $2, $4, $2
-; MM-NEXT:    andi $3, $4, 3
-; MM-NEXT:    xori $3, $3, 3
-; MM-NEXT:    sll $3, $3, 3
-; MM-NEXT:    ori $4, $zero, 255
-; MM-NEXT:    sllv $4, $4, $3
-; MM-NEXT:    nor $6, $zero, $4
-; MM-NEXT:    sllv $5, $5, $3
+; MM-NEXT:    addiu $1, $zero, -4
+; MM-NEXT:    and $6, $4, $1
+; MM-NEXT:    andi $1, $4, 3
+; MM-NEXT:    xori $1, $1, 3
+; MM-NEXT:    sll $10, $1, 3
+; MM-NEXT:    ori $1, $zero, 255
+; MM-NEXT:    sllv $8, $1, $10
+; MM-NEXT:    nor $9, $zero, $8
+; MM-NEXT:    sllv $7, $5, $10
 ; MM-NEXT:  $BB10_1: # %entry
 ; MM-NEXT:    # =>This Inner Loop Header: Depth=1
-; MM-NEXT:    ll $8, 0($2)
-; MM-NEXT:    sltu $11, $8, $5
-; MM-NEXT:    or $9, $8, $zero
-; MM-NEXT:    movn $9, $5, $11
-; MM-NEXT:    and $9, $9, $4
-; MM-NEXT:    and $10, $8, $6
-; MM-NEXT:    or $10, $10, $9
-; MM-NEXT:    sc $10, 0($2)
-; MM-NEXT:    beqzc $10, $BB10_1
+; MM-NEXT:    ll $2, 0($6)
+; MM-NEXT:    sltu $5, $2, $7
+; MM-NEXT:    or $3, $2, $zero
+; MM-NEXT:    movn $3, $7, $5
+; MM-NEXT:    and $3, $3, $8
+; MM-NEXT:    and $4, $2, $9
+; MM-NEXT:    or $4, $4, $3
+; MM-NEXT:    sc $4, 0($6)
+; MM-NEXT:    beqzc $4, $BB10_1
 ; MM-NEXT:  # %bb.2: # %entry
-; MM-NEXT:    and $7, $8, $4
-; MM-NEXT:    srlv $7, $7, $3
-; MM-NEXT:    seh $7, $7
+; MM-NEXT:    and $1, $2, $8
+; MM-NEXT:    srlv $1, $1, $10
+; MM-NEXT:    seh $1, $1
 ; MM-NEXT:  # %bb.3: # %entry
-; MM-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MM-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MM-NEXT:  # %bb.4: # %entry
-; MM-NEXT:    sync
 ; MM-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MM-NEXT:    sync
 ; MM-NEXT:    addiusp 8
 ; MM-NEXT:    jrc $ra
 ;
@@ -3833,38 +3833,38 @@ define i8 @test_umax_8(i8* nocapture %ptr, i8 signext %val) {
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    addiu $sp, $sp, -8
 ; MMR6-NEXT:    .cfi_def_cfa_offset 8
-; MMR6-NEXT:    move $1, $5
+; MMR6-NEXT:    # kill: def $at killed $a1
 ; MMR6-NEXT:    sync
-; MMR6-NEXT:    addiu $2, $zero, -4
-; MMR6-NEXT:    and $2, $4, $2
-; MMR6-NEXT:    andi $3, $4, 3
-; MMR6-NEXT:    xori $3, $3, 3
-; MMR6-NEXT:    sll $3, $3, 3
-; MMR6-NEXT:    ori $4, $zero, 255
-; MMR6-NEXT:    sllv $4, $4, $3
-; MMR6-NEXT:    nor $6, $zero, $4
-; MMR6-NEXT:    sllv $5, $5, $3
+; MMR6-NEXT:    addiu $1, $zero, -4
+; MMR6-NEXT:    and $6, $4, $1
+; MMR6-NEXT:    andi $1, $4, 3
+; MMR6-NEXT:    xori $1, $1, 3
+; MMR6-NEXT:    sll $10, $1, 3
+; MMR6-NEXT:    ori $1, $zero, 255
+; MMR6-NEXT:    sllv $8, $1, $10
+; MMR6-NEXT:    nor $9, $zero, $8
+; MMR6-NEXT:    sllv $7, $5, $10
 ; MMR6-NEXT:  $BB10_1: # %entry
 ; MMR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMR6-NEXT:    ll $8, 0($2)
-; MMR6-NEXT:    sltu $11, $8, $5
-; MMR6-NEXT:    seleqz $9, $8, $11
-; MMR6-NEXT:    selnez $11, $5, $11
-; MMR6-NEXT:    or $9, $9, $11
-; MMR6-NEXT:    and $9, $9, $4
-; MMR6-NEXT:    and $10, $8, $6
-; MMR6-NEXT:    or $10, $10, $9
-; MMR6-NEXT:    sc $10, 0($2)
-; MMR6-NEXT:    beqc $10, $zero, $BB10_1
+; MMR6-NEXT:    ll $2, 0($6)
+; MMR6-NEXT:    sltu $5, $2, $7
+; MMR6-NEXT:    seleqz $3, $2, $5
+; MMR6-NEXT:    selnez $5, $7, $5
+; MMR6-NEXT:    or $3, $3, $5
+; MMR6-NEXT:    and $3, $3, $8
+; MMR6-NEXT:    and $4, $2, $9
+; MMR6-NEXT:    or $4, $4, $3
+; MMR6-NEXT:    sc $4, 0($6)
+; MMR6-NEXT:    beqc $4, $zero, $BB10_1
 ; MMR6-NEXT:  # %bb.2: # %entry
-; MMR6-NEXT:    and $7, $8, $4
-; MMR6-NEXT:    srlv $7, $7, $3
-; MMR6-NEXT:    seh $7, $7
+; MMR6-NEXT:    and $1, $2, $8
+; MMR6-NEXT:    srlv $1, $1, $10
+; MMR6-NEXT:    seh $1, $1
 ; MMR6-NEXT:  # %bb.3: # %entry
-; MMR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:  # %bb.4: # %entry
-; MMR6-NEXT:    sync
 ; MMR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMR6-NEXT:    sync
 ; MMR6-NEXT:    addiu $sp, $sp, 8
 ; MMR6-NEXT:    jrc $ra
 ;
@@ -3872,39 +3872,39 @@ define i8 @test_umax_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
 ; MIPSEL-NEXT:    .cfi_def_cfa_offset 8
-; MIPSEL-NEXT:    move $1, $5
+; MIPSEL-NEXT:    # kill: def $at killed $a1
 ; MIPSEL-NEXT:    sync
-; MIPSEL-NEXT:    addiu $2, $zero, -4
-; MIPSEL-NEXT:    and $2, $4, $2
-; MIPSEL-NEXT:    andi $3, $4, 3
-; MIPSEL-NEXT:    sll $3, $3, 3
-; MIPSEL-NEXT:    ori $4, $zero, 255
-; MIPSEL-NEXT:    sllv $4, $4, $3
-; MIPSEL-NEXT:    nor $6, $zero, $4
-; MIPSEL-NEXT:    sllv $5, $5, $3
+; MIPSEL-NEXT:    addiu $1, $zero, -4
+; MIPSEL-NEXT:    and $6, $4, $1
+; MIPSEL-NEXT:    andi $1, $4, 3
+; MIPSEL-NEXT:    sll $10, $1, 3
+; MIPSEL-NEXT:    ori $1, $zero, 255
+; MIPSEL-NEXT:    sllv $8, $1, $10
+; MIPSEL-NEXT:    nor $9, $zero, $8
+; MIPSEL-NEXT:    sllv $7, $5, $10
 ; MIPSEL-NEXT:  $BB10_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSEL-NEXT:    ll $8, 0($2)
-; MIPSEL-NEXT:    and $8, $8, $4
-; MIPSEL-NEXT:    and $5, $5, $4
-; MIPSEL-NEXT:    sltu $11, $8, $5
-; MIPSEL-NEXT:    move $9, $8
-; MIPSEL-NEXT:    movn $9, $5, $11
-; MIPSEL-NEXT:    and $9, $9, $4
-; MIPSEL-NEXT:    and $10, $8, $6
-; MIPSEL-NEXT:    or $10, $10, $9
-; MIPSEL-NEXT:    sc $10, 0($2)
-; MIPSEL-NEXT:    beqz $10, $BB10_1
+; MIPSEL-NEXT:    ll $2, 0($6)
+; MIPSEL-NEXT:    and $2, $2, $8
+; MIPSEL-NEXT:    and $7, $7, $8
+; MIPSEL-NEXT:    sltu $5, $2, $7
+; MIPSEL-NEXT:    move $3, $2
+; MIPSEL-NEXT:    movn $3, $7, $5
+; MIPSEL-NEXT:    and $3, $3, $8
+; MIPSEL-NEXT:    and $4, $2, $9
+; MIPSEL-NEXT:    or $4, $4, $3
+; MIPSEL-NEXT:    sc $4, 0($6)
+; MIPSEL-NEXT:    beqz $4, $BB10_1
 ; MIPSEL-NEXT:    nop
 ; MIPSEL-NEXT:  # %bb.2: # %entry
-; MIPSEL-NEXT:    and $7, $8, $4
-; MIPSEL-NEXT:    srlv $7, $7, $3
-; MIPSEL-NEXT:    seh $7, $7
+; MIPSEL-NEXT:    and $1, $2, $8
+; MIPSEL-NEXT:    srlv $1, $1, $10
+; MIPSEL-NEXT:    seh $1, $1
 ; MIPSEL-NEXT:  # %bb.3: # %entry
-; MIPSEL-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:  # %bb.4: # %entry
-; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    addiu $sp, $sp, 8
 ; MIPSEL-NEXT:    jr $ra
 ; MIPSEL-NEXT:    nop
@@ -3913,39 +3913,39 @@ define i8 @test_umax_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPSELR6:       # %bb.0: # %entry
 ; MIPSELR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSELR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSELR6-NEXT:    move $1, $5
+; MIPSELR6-NEXT:    # kill: def $at killed $a1
 ; MIPSELR6-NEXT:    sync
-; MIPSELR6-NEXT:    addiu $2, $zero, -4
-; MIPSELR6-NEXT:    and $2, $4, $2
-; MIPSELR6-NEXT:    andi $3, $4, 3
-; MIPSELR6-NEXT:    sll $3, $3, 3
-; MIPSELR6-NEXT:    ori $4, $zero, 255
-; MIPSELR6-NEXT:    sllv $4, $4, $3
-; MIPSELR6-NEXT:    nor $6, $zero, $4
-; MIPSELR6-NEXT:    sllv $5, $5, $3
+; MIPSELR6-NEXT:    addiu $1, $zero, -4
+; MIPSELR6-NEXT:    and $6, $4, $1
+; MIPSELR6-NEXT:    andi $1, $4, 3
+; MIPSELR6-NEXT:    sll $10, $1, 3
+; MIPSELR6-NEXT:    ori $1, $zero, 255
+; MIPSELR6-NEXT:    sllv $8, $1, $10
+; MIPSELR6-NEXT:    nor $9, $zero, $8
+; MIPSELR6-NEXT:    sllv $7, $5, $10
 ; MIPSELR6-NEXT:  $BB10_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSELR6-NEXT:    ll $8, 0($2)
-; MIPSELR6-NEXT:    and $8, $8, $4
-; MIPSELR6-NEXT:    and $5, $5, $4
-; MIPSELR6-NEXT:    sltu $11, $8, $5
-; MIPSELR6-NEXT:    seleqz $9, $8, $11
-; MIPSELR6-NEXT:    selnez $11, $5, $11
-; MIPSELR6-NEXT:    or $9, $9, $11
-; MIPSELR6-NEXT:    and $9, $9, $4
-; MIPSELR6-NEXT:    and $10, $8, $6
-; MIPSELR6-NEXT:    or $10, $10, $9
-; MIPSELR6-NEXT:    sc $10, 0($2)
-; MIPSELR6-NEXT:    beqzc $10, $BB10_1
+; MIPSELR6-NEXT:    ll $2, 0($6)
+; MIPSELR6-NEXT:    and $2, $2, $8
+; MIPSELR6-NEXT:    and $7, $7, $8
+; MIPSELR6-NEXT:    sltu $5, $2, $7
+; MIPSELR6-NEXT:    seleqz $3, $2, $5
+; MIPSELR6-NEXT:    selnez $5, $7, $5
+; MIPSELR6-NEXT:    or $3, $3, $5
+; MIPSELR6-NEXT:    and $3, $3, $8
+; MIPSELR6-NEXT:    and $4, $2, $9
+; MIPSELR6-NEXT:    or $4, $4, $3
+; MIPSELR6-NEXT:    sc $4, 0($6)
+; MIPSELR6-NEXT:    beqzc $4, $BB10_1
 ; MIPSELR6-NEXT:  # %bb.2: # %entry
-; MIPSELR6-NEXT:    and $7, $8, $4
-; MIPSELR6-NEXT:    srlv $7, $7, $3
-; MIPSELR6-NEXT:    seh $7, $7
+; MIPSELR6-NEXT:    and $1, $2, $8
+; MIPSELR6-NEXT:    srlv $1, $1, $10
+; MIPSELR6-NEXT:    seh $1, $1
 ; MIPSELR6-NEXT:  # %bb.3: # %entry
-; MIPSELR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSELR6-NEXT:  # %bb.4: # %entry
-; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    addiu $sp, $sp, 8
 ; MIPSELR6-NEXT:    jrc $ra
 ;
@@ -3953,38 +3953,38 @@ define i8 @test_umax_8(i8* nocapture %ptr, i8 signext %val) {
 ; MMEL:       # %bb.0: # %entry
 ; MMEL-NEXT:    addiu $sp, $sp, -8
 ; MMEL-NEXT:    .cfi_def_cfa_offset 8
-; MMEL-NEXT:    move $1, $5
+; MMEL-NEXT:    # kill: def $at killed $a1
 ; MMEL-NEXT:    sync
-; MMEL-NEXT:    addiu $2, $zero, -4
-; MMEL-NEXT:    and $2, $4, $2
-; MMEL-NEXT:    andi $3, $4, 3
-; MMEL-NEXT:    sll $3, $3, 3
-; MMEL-NEXT:    ori $4, $zero, 255
-; MMEL-NEXT:    sllv $4, $4, $3
-; MMEL-NEXT:    nor $6, $zero, $4
-; MMEL-NEXT:    sllv $5, $5, $3
+; MMEL-NEXT:    addiu $1, $zero, -4
+; MMEL-NEXT:    and $6, $4, $1
+; MMEL-NEXT:    andi $1, $4, 3
+; MMEL-NEXT:    sll $10, $1, 3
+; MMEL-NEXT:    ori $1, $zero, 255
+; MMEL-NEXT:    sllv $8, $1, $10
+; MMEL-NEXT:    nor $9, $zero, $8
+; MMEL-NEXT:    sllv $7, $5, $10
 ; MMEL-NEXT:  $BB10_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMEL-NEXT:    ll $8, 0($2)
-; MMEL-NEXT:    and $8, $8, $4
-; MMEL-NEXT:    and $5, $5, $4
-; MMEL-NEXT:    sltu $11, $8, $5
-; MMEL-NEXT:    or $9, $8, $zero
-; MMEL-NEXT:    movn $9, $5, $11
-; MMEL-NEXT:    and $9, $9, $4
-; MMEL-NEXT:    and $10, $8, $6
-; MMEL-NEXT:    or $10, $10, $9
-; MMEL-NEXT:    sc $10, 0($2)
-; MMEL-NEXT:    beqzc $10, $BB10_1
+; MMEL-NEXT:    ll $2, 0($6)
+; MMEL-NEXT:    and $2, $2, $8
+; MMEL-NEXT:    and $7, $7, $8
+; MMEL-NEXT:    sltu $5, $2, $7
+; MMEL-NEXT:    or $3, $2, $zero
+; MMEL-NEXT:    movn $3, $7, $5
+; MMEL-NEXT:    and $3, $3, $8
+; MMEL-NEXT:    and $4, $2, $9
+; MMEL-NEXT:    or $4, $4, $3
+; MMEL-NEXT:    sc $4, 0($6)
+; MMEL-NEXT:    beqzc $4, $BB10_1
 ; MMEL-NEXT:  # %bb.2: # %entry
-; MMEL-NEXT:    and $7, $8, $4
-; MMEL-NEXT:    srlv $7, $7, $3
-; MMEL-NEXT:    seh $7, $7
+; MMEL-NEXT:    and $1, $2, $8
+; MMEL-NEXT:    srlv $1, $1, $10
+; MMEL-NEXT:    seh $1, $1
 ; MMEL-NEXT:  # %bb.3: # %entry
-; MMEL-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMEL-NEXT:  # %bb.4: # %entry
-; MMEL-NEXT:    sync
 ; MMEL-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMEL-NEXT:    sync
 ; MMEL-NEXT:    addiusp 8
 ; MMEL-NEXT:    jrc $ra
 ;
@@ -3992,39 +3992,39 @@ define i8 @test_umax_8(i8* nocapture %ptr, i8 signext %val) {
 ; MMELR6:       # %bb.0: # %entry
 ; MMELR6-NEXT:    addiu $sp, $sp, -8
 ; MMELR6-NEXT:    .cfi_def_cfa_offset 8
-; MMELR6-NEXT:    move $1, $5
+; MMELR6-NEXT:    # kill: def $at killed $a1
 ; MMELR6-NEXT:    sync
-; MMELR6-NEXT:    addiu $2, $zero, -4
-; MMELR6-NEXT:    and $2, $4, $2
-; MMELR6-NEXT:    andi $3, $4, 3
-; MMELR6-NEXT:    sll $3, $3, 3
-; MMELR6-NEXT:    ori $4, $zero, 255
-; MMELR6-NEXT:    sllv $4, $4, $3
-; MMELR6-NEXT:    nor $6, $zero, $4
-; MMELR6-NEXT:    sllv $5, $5, $3
+; MMELR6-NEXT:    addiu $1, $zero, -4
+; MMELR6-NEXT:    and $6, $4, $1
+; MMELR6-NEXT:    andi $1, $4, 3
+; MMELR6-NEXT:    sll $10, $1, 3
+; MMELR6-NEXT:    ori $1, $zero, 255
+; MMELR6-NEXT:    sllv $8, $1, $10
+; MMELR6-NEXT:    nor $9, $zero, $8
+; MMELR6-NEXT:    sllv $7, $5, $10
 ; MMELR6-NEXT:  $BB10_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMELR6-NEXT:    ll $8, 0($2)
-; MMELR6-NEXT:    and $8, $8, $4
-; MMELR6-NEXT:    and $5, $5, $4
-; MMELR6-NEXT:    sltu $11, $8, $5
-; MMELR6-NEXT:    seleqz $9, $8, $11
-; MMELR6-NEXT:    selnez $11, $5, $11
-; MMELR6-NEXT:    or $9, $9, $11
-; MMELR6-NEXT:    and $9, $9, $4
-; MMELR6-NEXT:    and $10, $8, $6
-; MMELR6-NEXT:    or $10, $10, $9
-; MMELR6-NEXT:    sc $10, 0($2)
-; MMELR6-NEXT:    beqc $10, $zero, $BB10_1
+; MMELR6-NEXT:    ll $2, 0($6)
+; MMELR6-NEXT:    and $2, $2, $8
+; MMELR6-NEXT:    and $7, $7, $8
+; MMELR6-NEXT:    sltu $5, $2, $7
+; MMELR6-NEXT:    seleqz $3, $2, $5
+; MMELR6-NEXT:    selnez $5, $7, $5
+; MMELR6-NEXT:    or $3, $3, $5
+; MMELR6-NEXT:    and $3, $3, $8
+; MMELR6-NEXT:    and $4, $2, $9
+; MMELR6-NEXT:    or $4, $4, $3
+; MMELR6-NEXT:    sc $4, 0($6)
+; MMELR6-NEXT:    beqc $4, $zero, $BB10_1
 ; MMELR6-NEXT:  # %bb.2: # %entry
-; MMELR6-NEXT:    and $7, $8, $4
-; MMELR6-NEXT:    srlv $7, $7, $3
-; MMELR6-NEXT:    seh $7, $7
+; MMELR6-NEXT:    and $1, $2, $8
+; MMELR6-NEXT:    srlv $1, $1, $10
+; MMELR6-NEXT:    seh $1, $1
 ; MMELR6-NEXT:  # %bb.3: # %entry
-; MMELR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMELR6-NEXT:  # %bb.4: # %entry
-; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    addiu $sp, $sp, 8
 ; MMELR6-NEXT:    jrc $ra
 ;
@@ -4032,38 +4032,38 @@ define i8 @test_umax_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64-NEXT:    move $1, $5
 ; MIPS64-NEXT:    sync
-; MIPS64-NEXT:    daddiu $1, $zero, -4
-; MIPS64-NEXT:    and $1, $4, $1
+; MIPS64-NEXT:    daddiu $2, $zero, -4
+; MIPS64-NEXT:    and $6, $4, $2
 ; MIPS64-NEXT:    andi $2, $4, 3
 ; MIPS64-NEXT:    xori $2, $2, 3
-; MIPS64-NEXT:    sll $2, $2, 3
-; MIPS64-NEXT:    ori $3, $zero, 255
-; MIPS64-NEXT:    sllv $3, $3, $2
-; MIPS64-NEXT:    nor $6, $zero, $3
-; MIPS64-NEXT:    sllv $5, $5, $2
+; MIPS64-NEXT:    sll $10, $2, 3
+; MIPS64-NEXT:    ori $2, $zero, 255
+; MIPS64-NEXT:    sllv $8, $2, $10
+; MIPS64-NEXT:    nor $9, $zero, $8
+; MIPS64-NEXT:    sllv $7, $1, $10
 ; MIPS64-NEXT:  .LBB10_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $8, 0($1)
-; MIPS64-NEXT:    sltu $11, $8, $5
-; MIPS64-NEXT:    move $9, $8
-; MIPS64-NEXT:    movn $9, $5, $11
-; MIPS64-NEXT:    and $9, $9, $3
-; MIPS64-NEXT:    and $10, $8, $6
-; MIPS64-NEXT:    or $10, $10, $9
-; MIPS64-NEXT:    sc $10, 0($1)
-; MIPS64-NEXT:    beqz $10, .LBB10_1
+; MIPS64-NEXT:    ll $2, 0($6)
+; MIPS64-NEXT:    sltu $5, $2, $7
+; MIPS64-NEXT:    move $3, $2
+; MIPS64-NEXT:    movn $3, $7, $5
+; MIPS64-NEXT:    and $3, $3, $8
+; MIPS64-NEXT:    and $4, $2, $9
+; MIPS64-NEXT:    or $4, $4, $3
+; MIPS64-NEXT:    sc $4, 0($6)
+; MIPS64-NEXT:    beqz $4, .LBB10_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $7, $8, $3
-; MIPS64-NEXT:    srlv $7, $7, $2
-; MIPS64-NEXT:    seh $7, $7
+; MIPS64-NEXT:    and $1, $2, $8
+; MIPS64-NEXT:    srlv $1, $1, $10
+; MIPS64-NEXT:    seh $1, $1
 ; MIPS64-NEXT:  # %bb.3: # %entry
-; MIPS64-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64-NEXT:  # %bb.4: # %entry
-; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    nop
@@ -4072,38 +4072,38 @@ define i8 @test_umax_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64R6:       # %bb.0: # %entry
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64R6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64R6-NEXT:    move $1, $5
 ; MIPS64R6-NEXT:    sync
-; MIPS64R6-NEXT:    daddiu $1, $zero, -4
-; MIPS64R6-NEXT:    and $1, $4, $1
+; MIPS64R6-NEXT:    daddiu $2, $zero, -4
+; MIPS64R6-NEXT:    and $6, $4, $2
 ; MIPS64R6-NEXT:    andi $2, $4, 3
 ; MIPS64R6-NEXT:    xori $2, $2, 3
-; MIPS64R6-NEXT:    sll $2, $2, 3
-; MIPS64R6-NEXT:    ori $3, $zero, 255
-; MIPS64R6-NEXT:    sllv $3, $3, $2
-; MIPS64R6-NEXT:    nor $6, $zero, $3
-; MIPS64R6-NEXT:    sllv $5, $5, $2
+; MIPS64R6-NEXT:    sll $10, $2, 3
+; MIPS64R6-NEXT:    ori $2, $zero, 255
+; MIPS64R6-NEXT:    sllv $8, $2, $10
+; MIPS64R6-NEXT:    nor $9, $zero, $8
+; MIPS64R6-NEXT:    sllv $7, $1, $10
 ; MIPS64R6-NEXT:  .LBB10_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6-NEXT:    ll $8, 0($1)
-; MIPS64R6-NEXT:    sltu $11, $8, $5
-; MIPS64R6-NEXT:    seleqz $9, $8, $11
-; MIPS64R6-NEXT:    selnez $11, $5, $11
-; MIPS64R6-NEXT:    or $9, $9, $11
-; MIPS64R6-NEXT:    and $9, $9, $3
-; MIPS64R6-NEXT:    and $10, $8, $6
-; MIPS64R6-NEXT:    or $10, $10, $9
-; MIPS64R6-NEXT:    sc $10, 0($1)
-; MIPS64R6-NEXT:    beqzc $10, .LBB10_1
+; MIPS64R6-NEXT:    ll $2, 0($6)
+; MIPS64R6-NEXT:    sltu $5, $2, $7
+; MIPS64R6-NEXT:    seleqz $3, $2, $5
+; MIPS64R6-NEXT:    selnez $5, $7, $5
+; MIPS64R6-NEXT:    or $3, $3, $5
+; MIPS64R6-NEXT:    and $3, $3, $8
+; MIPS64R6-NEXT:    and $4, $2, $9
+; MIPS64R6-NEXT:    or $4, $4, $3
+; MIPS64R6-NEXT:    sc $4, 0($6)
+; MIPS64R6-NEXT:    beqzc $4, .LBB10_1
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $7, $8, $3
-; MIPS64R6-NEXT:    srlv $7, $7, $2
-; MIPS64R6-NEXT:    seh $7, $7
+; MIPS64R6-NEXT:    and $1, $2, $8
+; MIPS64R6-NEXT:    srlv $1, $1, $10
+; MIPS64R6-NEXT:    seh $1, $1
 ; MIPS64R6-NEXT:  # %bb.3: # %entry
-; MIPS64R6-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64R6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6-NEXT:  # %bb.4: # %entry
-; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64R6-NEXT:    jrc $ra
 ;
@@ -4111,39 +4111,39 @@ define i8 @test_umax_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64EL:       # %bb.0: # %entry
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64EL-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64EL-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64EL-NEXT:    move $1, $5
 ; MIPS64EL-NEXT:    sync
-; MIPS64EL-NEXT:    daddiu $1, $zero, -4
-; MIPS64EL-NEXT:    and $1, $4, $1
+; MIPS64EL-NEXT:    daddiu $2, $zero, -4
+; MIPS64EL-NEXT:    and $6, $4, $2
 ; MIPS64EL-NEXT:    andi $2, $4, 3
-; MIPS64EL-NEXT:    sll $2, $2, 3
-; MIPS64EL-NEXT:    ori $3, $zero, 255
-; MIPS64EL-NEXT:    sllv $3, $3, $2
-; MIPS64EL-NEXT:    nor $6, $zero, $3
-; MIPS64EL-NEXT:    sllv $5, $5, $2
+; MIPS64EL-NEXT:    sll $10, $2, 3
+; MIPS64EL-NEXT:    ori $2, $zero, 255
+; MIPS64EL-NEXT:    sllv $8, $2, $10
+; MIPS64EL-NEXT:    nor $9, $zero, $8
+; MIPS64EL-NEXT:    sllv $7, $1, $10
 ; MIPS64EL-NEXT:  .LBB10_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64EL-NEXT:    ll $8, 0($1)
-; MIPS64EL-NEXT:    and $8, $8, $3
-; MIPS64EL-NEXT:    and $5, $5, $3
-; MIPS64EL-NEXT:    sltu $11, $8, $5
-; MIPS64EL-NEXT:    move $9, $8
-; MIPS64EL-NEXT:    movn $9, $5, $11
-; MIPS64EL-NEXT:    and $9, $9, $3
-; MIPS64EL-NEXT:    and $10, $8, $6
-; MIPS64EL-NEXT:    or $10, $10, $9
-; MIPS64EL-NEXT:    sc $10, 0($1)
-; MIPS64EL-NEXT:    beqz $10, .LBB10_1
+; MIPS64EL-NEXT:    ll $2, 0($6)
+; MIPS64EL-NEXT:    and $2, $2, $8
+; MIPS64EL-NEXT:    and $7, $7, $8
+; MIPS64EL-NEXT:    sltu $5, $2, $7
+; MIPS64EL-NEXT:    move $3, $2
+; MIPS64EL-NEXT:    movn $3, $7, $5
+; MIPS64EL-NEXT:    and $3, $3, $8
+; MIPS64EL-NEXT:    and $4, $2, $9
+; MIPS64EL-NEXT:    or $4, $4, $3
+; MIPS64EL-NEXT:    sc $4, 0($6)
+; MIPS64EL-NEXT:    beqz $4, .LBB10_1
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:  # %bb.2: # %entry
-; MIPS64EL-NEXT:    and $7, $8, $3
-; MIPS64EL-NEXT:    srlv $7, $7, $2
-; MIPS64EL-NEXT:    seh $7, $7
+; MIPS64EL-NEXT:    and $1, $2, $8
+; MIPS64EL-NEXT:    srlv $1, $1, $10
+; MIPS64EL-NEXT:    seh $1, $1
 ; MIPS64EL-NEXT:  # %bb.3: # %entry
-; MIPS64EL-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64EL-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64EL-NEXT:  # %bb.4: # %entry
-; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64EL-NEXT:    jr $ra
 ; MIPS64EL-NEXT:    nop
@@ -4152,39 +4152,39 @@ define i8 @test_umax_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6:       # %bb.0: # %entry
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64ELR6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64ELR6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64ELR6-NEXT:    move $1, $5
 ; MIPS64ELR6-NEXT:    sync
-; MIPS64ELR6-NEXT:    daddiu $1, $zero, -4
-; MIPS64ELR6-NEXT:    and $1, $4, $1
+; MIPS64ELR6-NEXT:    daddiu $2, $zero, -4
+; MIPS64ELR6-NEXT:    and $6, $4, $2
 ; MIPS64ELR6-NEXT:    andi $2, $4, 3
-; MIPS64ELR6-NEXT:    sll $2, $2, 3
-; MIPS64ELR6-NEXT:    ori $3, $zero, 255
-; MIPS64ELR6-NEXT:    sllv $3, $3, $2
-; MIPS64ELR6-NEXT:    nor $6, $zero, $3
-; MIPS64ELR6-NEXT:    sllv $5, $5, $2
+; MIPS64ELR6-NEXT:    sll $10, $2, 3
+; MIPS64ELR6-NEXT:    ori $2, $zero, 255
+; MIPS64ELR6-NEXT:    sllv $8, $2, $10
+; MIPS64ELR6-NEXT:    nor $9, $zero, $8
+; MIPS64ELR6-NEXT:    sllv $7, $1, $10
 ; MIPS64ELR6-NEXT:  .LBB10_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64ELR6-NEXT:    ll $8, 0($1)
-; MIPS64ELR6-NEXT:    and $8, $8, $3
-; MIPS64ELR6-NEXT:    and $5, $5, $3
-; MIPS64ELR6-NEXT:    sltu $11, $8, $5
-; MIPS64ELR6-NEXT:    seleqz $9, $8, $11
-; MIPS64ELR6-NEXT:    selnez $11, $5, $11
-; MIPS64ELR6-NEXT:    or $9, $9, $11
-; MIPS64ELR6-NEXT:    and $9, $9, $3
-; MIPS64ELR6-NEXT:    and $10, $8, $6
-; MIPS64ELR6-NEXT:    or $10, $10, $9
-; MIPS64ELR6-NEXT:    sc $10, 0($1)
-; MIPS64ELR6-NEXT:    beqzc $10, .LBB10_1
+; MIPS64ELR6-NEXT:    ll $2, 0($6)
+; MIPS64ELR6-NEXT:    and $2, $2, $8
+; MIPS64ELR6-NEXT:    and $7, $7, $8
+; MIPS64ELR6-NEXT:    sltu $5, $2, $7
+; MIPS64ELR6-NEXT:    seleqz $3, $2, $5
+; MIPS64ELR6-NEXT:    selnez $5, $7, $5
+; MIPS64ELR6-NEXT:    or $3, $3, $5
+; MIPS64ELR6-NEXT:    and $3, $3, $8
+; MIPS64ELR6-NEXT:    and $4, $2, $9
+; MIPS64ELR6-NEXT:    or $4, $4, $3
+; MIPS64ELR6-NEXT:    sc $4, 0($6)
+; MIPS64ELR6-NEXT:    beqzc $4, .LBB10_1
 ; MIPS64ELR6-NEXT:  # %bb.2: # %entry
-; MIPS64ELR6-NEXT:    and $7, $8, $3
-; MIPS64ELR6-NEXT:    srlv $7, $7, $2
-; MIPS64ELR6-NEXT:    seh $7, $7
+; MIPS64ELR6-NEXT:    and $1, $2, $8
+; MIPS64ELR6-NEXT:    srlv $1, $1, $10
+; MIPS64ELR6-NEXT:    seh $1, $1
 ; MIPS64ELR6-NEXT:  # %bb.3: # %entry
-; MIPS64ELR6-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64ELR6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64ELR6-NEXT:  # %bb.4: # %entry
-; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
@@ -4197,38 +4197,38 @@ define i8 @test_umin_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
 ; MIPS-NEXT:    .cfi_def_cfa_offset 8
-; MIPS-NEXT:    move $1, $5
+; MIPS-NEXT:    # kill: def $at killed $a1
 ; MIPS-NEXT:    sync
-; MIPS-NEXT:    addiu $2, $zero, -4
-; MIPS-NEXT:    and $2, $4, $2
-; MIPS-NEXT:    andi $3, $4, 3
-; MIPS-NEXT:    xori $3, $3, 3
-; MIPS-NEXT:    sll $3, $3, 3
-; MIPS-NEXT:    ori $4, $zero, 255
-; MIPS-NEXT:    sllv $4, $4, $3
-; MIPS-NEXT:    nor $6, $zero, $4
-; MIPS-NEXT:    sllv $5, $5, $3
+; MIPS-NEXT:    addiu $1, $zero, -4
+; MIPS-NEXT:    and $6, $4, $1
+; MIPS-NEXT:    andi $1, $4, 3
+; MIPS-NEXT:    xori $1, $1, 3
+; MIPS-NEXT:    sll $10, $1, 3
+; MIPS-NEXT:    ori $1, $zero, 255
+; MIPS-NEXT:    sllv $8, $1, $10
+; MIPS-NEXT:    nor $9, $zero, $8
+; MIPS-NEXT:    sllv $7, $5, $10
 ; MIPS-NEXT:  $BB11_1: # %entry
 ; MIPS-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS-NEXT:    ll $8, 0($2)
-; MIPS-NEXT:    sltu $11, $8, $5
-; MIPS-NEXT:    move $9, $8
-; MIPS-NEXT:    movz $9, $5, $11
-; MIPS-NEXT:    and $9, $9, $4
-; MIPS-NEXT:    and $10, $8, $6
-; MIPS-NEXT:    or $10, $10, $9
-; MIPS-NEXT:    sc $10, 0($2)
-; MIPS-NEXT:    beqz $10, $BB11_1
+; MIPS-NEXT:    ll $2, 0($6)
+; MIPS-NEXT:    sltu $5, $2, $7
+; MIPS-NEXT:    move $3, $2
+; MIPS-NEXT:    movz $3, $7, $5
+; MIPS-NEXT:    and $3, $3, $8
+; MIPS-NEXT:    and $4, $2, $9
+; MIPS-NEXT:    or $4, $4, $3
+; MIPS-NEXT:    sc $4, 0($6)
+; MIPS-NEXT:    beqz $4, $BB11_1
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  # %bb.2: # %entry
-; MIPS-NEXT:    and $7, $8, $4
-; MIPS-NEXT:    srlv $7, $7, $3
-; MIPS-NEXT:    seh $7, $7
+; MIPS-NEXT:    and $1, $2, $8
+; MIPS-NEXT:    srlv $1, $1, $10
+; MIPS-NEXT:    seh $1, $1
 ; MIPS-NEXT:  # %bb.3: # %entry
-; MIPS-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPS-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS-NEXT:  # %bb.4: # %entry
-; MIPS-NEXT:    sync
 ; MIPS-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS-NEXT:    sync
 ; MIPS-NEXT:    addiu $sp, $sp, 8
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
@@ -4237,38 +4237,38 @@ define i8 @test_umin_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSR6-NEXT:    move $1, $5
+; MIPSR6-NEXT:    # kill: def $at killed $a1
 ; MIPSR6-NEXT:    sync
-; MIPSR6-NEXT:    addiu $2, $zero, -4
-; MIPSR6-NEXT:    and $2, $4, $2
-; MIPSR6-NEXT:    andi $3, $4, 3
-; MIPSR6-NEXT:    xori $3, $3, 3
-; MIPSR6-NEXT:    sll $3, $3, 3
-; MIPSR6-NEXT:    ori $4, $zero, 255
-; MIPSR6-NEXT:    sllv $4, $4, $3
-; MIPSR6-NEXT:    nor $6, $zero, $4
-; MIPSR6-NEXT:    sllv $5, $5, $3
+; MIPSR6-NEXT:    addiu $1, $zero, -4
+; MIPSR6-NEXT:    and $6, $4, $1
+; MIPSR6-NEXT:    andi $1, $4, 3
+; MIPSR6-NEXT:    xori $1, $1, 3
+; MIPSR6-NEXT:    sll $10, $1, 3
+; MIPSR6-NEXT:    ori $1, $zero, 255
+; MIPSR6-NEXT:    sllv $8, $1, $10
+; MIPSR6-NEXT:    nor $9, $zero, $8
+; MIPSR6-NEXT:    sllv $7, $5, $10
 ; MIPSR6-NEXT:  $BB11_1: # %entry
 ; MIPSR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSR6-NEXT:    ll $8, 0($2)
-; MIPSR6-NEXT:    sltu $11, $8, $5
-; MIPSR6-NEXT:    selnez $9, $8, $11
-; MIPSR6-NEXT:    seleqz $11, $5, $11
-; MIPSR6-NEXT:    or $9, $9, $11
-; MIPSR6-NEXT:    and $9, $9, $4
-; MIPSR6-NEXT:    and $10, $8, $6
-; MIPSR6-NEXT:    or $10, $10, $9
-; MIPSR6-NEXT:    sc $10, 0($2)
-; MIPSR6-NEXT:    beqzc $10, $BB11_1
+; MIPSR6-NEXT:    ll $2, 0($6)
+; MIPSR6-NEXT:    sltu $5, $2, $7
+; MIPSR6-NEXT:    selnez $3, $2, $5
+; MIPSR6-NEXT:    seleqz $5, $7, $5
+; MIPSR6-NEXT:    or $3, $3, $5
+; MIPSR6-NEXT:    and $3, $3, $8
+; MIPSR6-NEXT:    and $4, $2, $9
+; MIPSR6-NEXT:    or $4, $4, $3
+; MIPSR6-NEXT:    sc $4, 0($6)
+; MIPSR6-NEXT:    beqzc $4, $BB11_1
 ; MIPSR6-NEXT:  # %bb.2: # %entry
-; MIPSR6-NEXT:    and $7, $8, $4
-; MIPSR6-NEXT:    srlv $7, $7, $3
-; MIPSR6-NEXT:    seh $7, $7
+; MIPSR6-NEXT:    and $1, $2, $8
+; MIPSR6-NEXT:    srlv $1, $1, $10
+; MIPSR6-NEXT:    seh $1, $1
 ; MIPSR6-NEXT:  # %bb.3: # %entry
-; MIPSR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSR6-NEXT:  # %bb.4: # %entry
-; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    addiu $sp, $sp, 8
 ; MIPSR6-NEXT:    jrc $ra
 ;
@@ -4276,37 +4276,37 @@ define i8 @test_umin_8(i8* nocapture %ptr, i8 signext %val) {
 ; MM:       # %bb.0: # %entry
 ; MM-NEXT:    addiu $sp, $sp, -8
 ; MM-NEXT:    .cfi_def_cfa_offset 8
-; MM-NEXT:    move $1, $5
+; MM-NEXT:    # kill: def $at killed $a1
 ; MM-NEXT:    sync
-; MM-NEXT:    addiu $2, $zero, -4
-; MM-NEXT:    and $2, $4, $2
-; MM-NEXT:    andi $3, $4, 3
-; MM-NEXT:    xori $3, $3, 3
-; MM-NEXT:    sll $3, $3, 3
-; MM-NEXT:    ori $4, $zero, 255
-; MM-NEXT:    sllv $4, $4, $3
-; MM-NEXT:    nor $6, $zero, $4
-; MM-NEXT:    sllv $5, $5, $3
+; MM-NEXT:    addiu $1, $zero, -4
+; MM-NEXT:    and $6, $4, $1
+; MM-NEXT:    andi $1, $4, 3
+; MM-NEXT:    xori $1, $1, 3
+; MM-NEXT:    sll $10, $1, 3
+; MM-NEXT:    ori $1, $zero, 255
+; MM-NEXT:    sllv $8, $1, $10
+; MM-NEXT:    nor $9, $zero, $8
+; MM-NEXT:    sllv $7, $5, $10
 ; MM-NEXT:  $BB11_1: # %entry
 ; MM-NEXT:    # =>This Inner Loop Header: Depth=1
-; MM-NEXT:    ll $8, 0($2)
-; MM-NEXT:    sltu $11, $8, $5
-; MM-NEXT:    or $9, $8, $zero
-; MM-NEXT:    movz $9, $5, $11
-; MM-NEXT:    and $9, $9, $4
-; MM-NEXT:    and $10, $8, $6
-; MM-NEXT:    or $10, $10, $9
-; MM-NEXT:    sc $10, 0($2)
-; MM-NEXT:    beqzc $10, $BB11_1
+; MM-NEXT:    ll $2, 0($6)
+; MM-NEXT:    sltu $5, $2, $7
+; MM-NEXT:    or $3, $2, $zero
+; MM-NEXT:    movz $3, $7, $5
+; MM-NEXT:    and $3, $3, $8
+; MM-NEXT:    and $4, $2, $9
+; MM-NEXT:    or $4, $4, $3
+; MM-NEXT:    sc $4, 0($6)
+; MM-NEXT:    beqzc $4, $BB11_1
 ; MM-NEXT:  # %bb.2: # %entry
-; MM-NEXT:    and $7, $8, $4
-; MM-NEXT:    srlv $7, $7, $3
-; MM-NEXT:    seh $7, $7
+; MM-NEXT:    and $1, $2, $8
+; MM-NEXT:    srlv $1, $1, $10
+; MM-NEXT:    seh $1, $1
 ; MM-NEXT:  # %bb.3: # %entry
-; MM-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MM-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MM-NEXT:  # %bb.4: # %entry
-; MM-NEXT:    sync
 ; MM-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MM-NEXT:    sync
 ; MM-NEXT:    addiusp 8
 ; MM-NEXT:    jrc $ra
 ;
@@ -4314,38 +4314,38 @@ define i8 @test_umin_8(i8* nocapture %ptr, i8 signext %val) {
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    addiu $sp, $sp, -8
 ; MMR6-NEXT:    .cfi_def_cfa_offset 8
-; MMR6-NEXT:    move $1, $5
+; MMR6-NEXT:    # kill: def $at killed $a1
 ; MMR6-NEXT:    sync
-; MMR6-NEXT:    addiu $2, $zero, -4
-; MMR6-NEXT:    and $2, $4, $2
-; MMR6-NEXT:    andi $3, $4, 3
-; MMR6-NEXT:    xori $3, $3, 3
-; MMR6-NEXT:    sll $3, $3, 3
-; MMR6-NEXT:    ori $4, $zero, 255
-; MMR6-NEXT:    sllv $4, $4, $3
-; MMR6-NEXT:    nor $6, $zero, $4
-; MMR6-NEXT:    sllv $5, $5, $3
+; MMR6-NEXT:    addiu $1, $zero, -4
+; MMR6-NEXT:    and $6, $4, $1
+; MMR6-NEXT:    andi $1, $4, 3
+; MMR6-NEXT:    xori $1, $1, 3
+; MMR6-NEXT:    sll $10, $1, 3
+; MMR6-NEXT:    ori $1, $zero, 255
+; MMR6-NEXT:    sllv $8, $1, $10
+; MMR6-NEXT:    nor $9, $zero, $8
+; MMR6-NEXT:    sllv $7, $5, $10
 ; MMR6-NEXT:  $BB11_1: # %entry
 ; MMR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMR6-NEXT:    ll $8, 0($2)
-; MMR6-NEXT:    sltu $11, $8, $5
-; MMR6-NEXT:    selnez $9, $8, $11
-; MMR6-NEXT:    seleqz $11, $5, $11
-; MMR6-NEXT:    or $9, $9, $11
-; MMR6-NEXT:    and $9, $9, $4
-; MMR6-NEXT:    and $10, $8, $6
-; MMR6-NEXT:    or $10, $10, $9
-; MMR6-NEXT:    sc $10, 0($2)
-; MMR6-NEXT:    beqc $10, $zero, $BB11_1
+; MMR6-NEXT:    ll $2, 0($6)
+; MMR6-NEXT:    sltu $5, $2, $7
+; MMR6-NEXT:    selnez $3, $2, $5
+; MMR6-NEXT:    seleqz $5, $7, $5
+; MMR6-NEXT:    or $3, $3, $5
+; MMR6-NEXT:    and $3, $3, $8
+; MMR6-NEXT:    and $4, $2, $9
+; MMR6-NEXT:    or $4, $4, $3
+; MMR6-NEXT:    sc $4, 0($6)
+; MMR6-NEXT:    beqc $4, $zero, $BB11_1
 ; MMR6-NEXT:  # %bb.2: # %entry
-; MMR6-NEXT:    and $7, $8, $4
-; MMR6-NEXT:    srlv $7, $7, $3
-; MMR6-NEXT:    seh $7, $7
+; MMR6-NEXT:    and $1, $2, $8
+; MMR6-NEXT:    srlv $1, $1, $10
+; MMR6-NEXT:    seh $1, $1
 ; MMR6-NEXT:  # %bb.3: # %entry
-; MMR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:  # %bb.4: # %entry
-; MMR6-NEXT:    sync
 ; MMR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMR6-NEXT:    sync
 ; MMR6-NEXT:    addiu $sp, $sp, 8
 ; MMR6-NEXT:    jrc $ra
 ;
@@ -4353,39 +4353,39 @@ define i8 @test_umin_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
 ; MIPSEL-NEXT:    .cfi_def_cfa_offset 8
-; MIPSEL-NEXT:    move $1, $5
+; MIPSEL-NEXT:    # kill: def $at killed $a1
 ; MIPSEL-NEXT:    sync
-; MIPSEL-NEXT:    addiu $2, $zero, -4
-; MIPSEL-NEXT:    and $2, $4, $2
-; MIPSEL-NEXT:    andi $3, $4, 3
-; MIPSEL-NEXT:    sll $3, $3, 3
-; MIPSEL-NEXT:    ori $4, $zero, 255
-; MIPSEL-NEXT:    sllv $4, $4, $3
-; MIPSEL-NEXT:    nor $6, $zero, $4
-; MIPSEL-NEXT:    sllv $5, $5, $3
+; MIPSEL-NEXT:    addiu $1, $zero, -4
+; MIPSEL-NEXT:    and $6, $4, $1
+; MIPSEL-NEXT:    andi $1, $4, 3
+; MIPSEL-NEXT:    sll $10, $1, 3
+; MIPSEL-NEXT:    ori $1, $zero, 255
+; MIPSEL-NEXT:    sllv $8, $1, $10
+; MIPSEL-NEXT:    nor $9, $zero, $8
+; MIPSEL-NEXT:    sllv $7, $5, $10
 ; MIPSEL-NEXT:  $BB11_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSEL-NEXT:    ll $8, 0($2)
-; MIPSEL-NEXT:    and $8, $8, $4
-; MIPSEL-NEXT:    and $5, $5, $4
-; MIPSEL-NEXT:    sltu $11, $8, $5
-; MIPSEL-NEXT:    move $9, $8
-; MIPSEL-NEXT:    movz $9, $5, $11
-; MIPSEL-NEXT:    and $9, $9, $4
-; MIPSEL-NEXT:    and $10, $8, $6
-; MIPSEL-NEXT:    or $10, $10, $9
-; MIPSEL-NEXT:    sc $10, 0($2)
-; MIPSEL-NEXT:    beqz $10, $BB11_1
+; MIPSEL-NEXT:    ll $2, 0($6)
+; MIPSEL-NEXT:    and $2, $2, $8
+; MIPSEL-NEXT:    and $7, $7, $8
+; MIPSEL-NEXT:    sltu $5, $2, $7
+; MIPSEL-NEXT:    move $3, $2
+; MIPSEL-NEXT:    movz $3, $7, $5
+; MIPSEL-NEXT:    and $3, $3, $8
+; MIPSEL-NEXT:    and $4, $2, $9
+; MIPSEL-NEXT:    or $4, $4, $3
+; MIPSEL-NEXT:    sc $4, 0($6)
+; MIPSEL-NEXT:    beqz $4, $BB11_1
 ; MIPSEL-NEXT:    nop
 ; MIPSEL-NEXT:  # %bb.2: # %entry
-; MIPSEL-NEXT:    and $7, $8, $4
-; MIPSEL-NEXT:    srlv $7, $7, $3
-; MIPSEL-NEXT:    seh $7, $7
+; MIPSEL-NEXT:    and $1, $2, $8
+; MIPSEL-NEXT:    srlv $1, $1, $10
+; MIPSEL-NEXT:    seh $1, $1
 ; MIPSEL-NEXT:  # %bb.3: # %entry
-; MIPSEL-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:  # %bb.4: # %entry
-; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSEL-NEXT:    sync
 ; MIPSEL-NEXT:    addiu $sp, $sp, 8
 ; MIPSEL-NEXT:    jr $ra
 ; MIPSEL-NEXT:    nop
@@ -4394,39 +4394,39 @@ define i8 @test_umin_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPSELR6:       # %bb.0: # %entry
 ; MIPSELR6-NEXT:    addiu $sp, $sp, -8
 ; MIPSELR6-NEXT:    .cfi_def_cfa_offset 8
-; MIPSELR6-NEXT:    move $1, $5
+; MIPSELR6-NEXT:    # kill: def $at killed $a1
 ; MIPSELR6-NEXT:    sync
-; MIPSELR6-NEXT:    addiu $2, $zero, -4
-; MIPSELR6-NEXT:    and $2, $4, $2
-; MIPSELR6-NEXT:    andi $3, $4, 3
-; MIPSELR6-NEXT:    sll $3, $3, 3
-; MIPSELR6-NEXT:    ori $4, $zero, 255
-; MIPSELR6-NEXT:    sllv $4, $4, $3
-; MIPSELR6-NEXT:    nor $6, $zero, $4
-; MIPSELR6-NEXT:    sllv $5, $5, $3
+; MIPSELR6-NEXT:    addiu $1, $zero, -4
+; MIPSELR6-NEXT:    and $6, $4, $1
+; MIPSELR6-NEXT:    andi $1, $4, 3
+; MIPSELR6-NEXT:    sll $10, $1, 3
+; MIPSELR6-NEXT:    ori $1, $zero, 255
+; MIPSELR6-NEXT:    sllv $8, $1, $10
+; MIPSELR6-NEXT:    nor $9, $zero, $8
+; MIPSELR6-NEXT:    sllv $7, $5, $10
 ; MIPSELR6-NEXT:  $BB11_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPSELR6-NEXT:    ll $8, 0($2)
-; MIPSELR6-NEXT:    and $8, $8, $4
-; MIPSELR6-NEXT:    and $5, $5, $4
-; MIPSELR6-NEXT:    sltu $11, $8, $5
-; MIPSELR6-NEXT:    selnez $9, $8, $11
-; MIPSELR6-NEXT:    seleqz $11, $5, $11
-; MIPSELR6-NEXT:    or $9, $9, $11
-; MIPSELR6-NEXT:    and $9, $9, $4
-; MIPSELR6-NEXT:    and $10, $8, $6
-; MIPSELR6-NEXT:    or $10, $10, $9
-; MIPSELR6-NEXT:    sc $10, 0($2)
-; MIPSELR6-NEXT:    beqzc $10, $BB11_1
+; MIPSELR6-NEXT:    ll $2, 0($6)
+; MIPSELR6-NEXT:    and $2, $2, $8
+; MIPSELR6-NEXT:    and $7, $7, $8
+; MIPSELR6-NEXT:    sltu $5, $2, $7
+; MIPSELR6-NEXT:    selnez $3, $2, $5
+; MIPSELR6-NEXT:    seleqz $5, $7, $5
+; MIPSELR6-NEXT:    or $3, $3, $5
+; MIPSELR6-NEXT:    and $3, $3, $8
+; MIPSELR6-NEXT:    and $4, $2, $9
+; MIPSELR6-NEXT:    or $4, $4, $3
+; MIPSELR6-NEXT:    sc $4, 0($6)
+; MIPSELR6-NEXT:    beqzc $4, $BB11_1
 ; MIPSELR6-NEXT:  # %bb.2: # %entry
-; MIPSELR6-NEXT:    and $7, $8, $4
-; MIPSELR6-NEXT:    srlv $7, $7, $3
-; MIPSELR6-NEXT:    seh $7, $7
+; MIPSELR6-NEXT:    and $1, $2, $8
+; MIPSELR6-NEXT:    srlv $1, $1, $10
+; MIPSELR6-NEXT:    seh $1, $1
 ; MIPSELR6-NEXT:  # %bb.3: # %entry
-; MIPSELR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MIPSELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSELR6-NEXT:  # %bb.4: # %entry
-; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPSELR6-NEXT:    sync
 ; MIPSELR6-NEXT:    addiu $sp, $sp, 8
 ; MIPSELR6-NEXT:    jrc $ra
 ;
@@ -4434,38 +4434,38 @@ define i8 @test_umin_8(i8* nocapture %ptr, i8 signext %val) {
 ; MMEL:       # %bb.0: # %entry
 ; MMEL-NEXT:    addiu $sp, $sp, -8
 ; MMEL-NEXT:    .cfi_def_cfa_offset 8
-; MMEL-NEXT:    move $1, $5
+; MMEL-NEXT:    # kill: def $at killed $a1
 ; MMEL-NEXT:    sync
-; MMEL-NEXT:    addiu $2, $zero, -4
-; MMEL-NEXT:    and $2, $4, $2
-; MMEL-NEXT:    andi $3, $4, 3
-; MMEL-NEXT:    sll $3, $3, 3
-; MMEL-NEXT:    ori $4, $zero, 255
-; MMEL-NEXT:    sllv $4, $4, $3
-; MMEL-NEXT:    nor $6, $zero, $4
-; MMEL-NEXT:    sllv $5, $5, $3
+; MMEL-NEXT:    addiu $1, $zero, -4
+; MMEL-NEXT:    and $6, $4, $1
+; MMEL-NEXT:    andi $1, $4, 3
+; MMEL-NEXT:    sll $10, $1, 3
+; MMEL-NEXT:    ori $1, $zero, 255
+; MMEL-NEXT:    sllv $8, $1, $10
+; MMEL-NEXT:    nor $9, $zero, $8
+; MMEL-NEXT:    sllv $7, $5, $10
 ; MMEL-NEXT:  $BB11_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMEL-NEXT:    ll $8, 0($2)
-; MMEL-NEXT:    and $8, $8, $4
-; MMEL-NEXT:    and $5, $5, $4
-; MMEL-NEXT:    sltu $11, $8, $5
-; MMEL-NEXT:    or $9, $8, $zero
-; MMEL-NEXT:    movz $9, $5, $11
-; MMEL-NEXT:    and $9, $9, $4
-; MMEL-NEXT:    and $10, $8, $6
-; MMEL-NEXT:    or $10, $10, $9
-; MMEL-NEXT:    sc $10, 0($2)
-; MMEL-NEXT:    beqzc $10, $BB11_1
+; MMEL-NEXT:    ll $2, 0($6)
+; MMEL-NEXT:    and $2, $2, $8
+; MMEL-NEXT:    and $7, $7, $8
+; MMEL-NEXT:    sltu $5, $2, $7
+; MMEL-NEXT:    or $3, $2, $zero
+; MMEL-NEXT:    movz $3, $7, $5
+; MMEL-NEXT:    and $3, $3, $8
+; MMEL-NEXT:    and $4, $2, $9
+; MMEL-NEXT:    or $4, $4, $3
+; MMEL-NEXT:    sc $4, 0($6)
+; MMEL-NEXT:    beqzc $4, $BB11_1
 ; MMEL-NEXT:  # %bb.2: # %entry
-; MMEL-NEXT:    and $7, $8, $4
-; MMEL-NEXT:    srlv $7, $7, $3
-; MMEL-NEXT:    seh $7, $7
+; MMEL-NEXT:    and $1, $2, $8
+; MMEL-NEXT:    srlv $1, $1, $10
+; MMEL-NEXT:    seh $1, $1
 ; MMEL-NEXT:  # %bb.3: # %entry
-; MMEL-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMEL-NEXT:  # %bb.4: # %entry
-; MMEL-NEXT:    sync
 ; MMEL-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMEL-NEXT:    sync
 ; MMEL-NEXT:    addiusp 8
 ; MMEL-NEXT:    jrc $ra
 ;
@@ -4473,39 +4473,39 @@ define i8 @test_umin_8(i8* nocapture %ptr, i8 signext %val) {
 ; MMELR6:       # %bb.0: # %entry
 ; MMELR6-NEXT:    addiu $sp, $sp, -8
 ; MMELR6-NEXT:    .cfi_def_cfa_offset 8
-; MMELR6-NEXT:    move $1, $5
+; MMELR6-NEXT:    # kill: def $at killed $a1
 ; MMELR6-NEXT:    sync
-; MMELR6-NEXT:    addiu $2, $zero, -4
-; MMELR6-NEXT:    and $2, $4, $2
-; MMELR6-NEXT:    andi $3, $4, 3
-; MMELR6-NEXT:    sll $3, $3, 3
-; MMELR6-NEXT:    ori $4, $zero, 255
-; MMELR6-NEXT:    sllv $4, $4, $3
-; MMELR6-NEXT:    nor $6, $zero, $4
-; MMELR6-NEXT:    sllv $5, $5, $3
+; MMELR6-NEXT:    addiu $1, $zero, -4
+; MMELR6-NEXT:    and $6, $4, $1
+; MMELR6-NEXT:    andi $1, $4, 3
+; MMELR6-NEXT:    sll $10, $1, 3
+; MMELR6-NEXT:    ori $1, $zero, 255
+; MMELR6-NEXT:    sllv $8, $1, $10
+; MMELR6-NEXT:    nor $9, $zero, $8
+; MMELR6-NEXT:    sllv $7, $5, $10
 ; MMELR6-NEXT:  $BB11_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MMELR6-NEXT:    ll $8, 0($2)
-; MMELR6-NEXT:    and $8, $8, $4
-; MMELR6-NEXT:    and $5, $5, $4
-; MMELR6-NEXT:    sltu $11, $8, $5
-; MMELR6-NEXT:    selnez $9, $8, $11
-; MMELR6-NEXT:    seleqz $11, $5, $11
-; MMELR6-NEXT:    or $9, $9, $11
-; MMELR6-NEXT:    and $9, $9, $4
-; MMELR6-NEXT:    and $10, $8, $6
-; MMELR6-NEXT:    or $10, $10, $9
-; MMELR6-NEXT:    sc $10, 0($2)
-; MMELR6-NEXT:    beqc $10, $zero, $BB11_1
+; MMELR6-NEXT:    ll $2, 0($6)
+; MMELR6-NEXT:    and $2, $2, $8
+; MMELR6-NEXT:    and $7, $7, $8
+; MMELR6-NEXT:    sltu $5, $2, $7
+; MMELR6-NEXT:    selnez $3, $2, $5
+; MMELR6-NEXT:    seleqz $5, $7, $5
+; MMELR6-NEXT:    or $3, $3, $5
+; MMELR6-NEXT:    and $3, $3, $8
+; MMELR6-NEXT:    and $4, $2, $9
+; MMELR6-NEXT:    or $4, $4, $3
+; MMELR6-NEXT:    sc $4, 0($6)
+; MMELR6-NEXT:    beqc $4, $zero, $BB11_1
 ; MMELR6-NEXT:  # %bb.2: # %entry
-; MMELR6-NEXT:    and $7, $8, $4
-; MMELR6-NEXT:    srlv $7, $7, $3
-; MMELR6-NEXT:    seh $7, $7
+; MMELR6-NEXT:    and $1, $2, $8
+; MMELR6-NEXT:    srlv $1, $1, $10
+; MMELR6-NEXT:    seh $1, $1
 ; MMELR6-NEXT:  # %bb.3: # %entry
-; MMELR6-NEXT:    sw $7, 4($sp) # 4-byte Folded Spill
+; MMELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMELR6-NEXT:  # %bb.4: # %entry
-; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MMELR6-NEXT:    sync
 ; MMELR6-NEXT:    addiu $sp, $sp, 8
 ; MMELR6-NEXT:    jrc $ra
 ;
@@ -4513,38 +4513,38 @@ define i8 @test_umin_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64:       # %bb.0: # %entry
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64-NEXT:    move $1, $5
 ; MIPS64-NEXT:    sync
-; MIPS64-NEXT:    daddiu $1, $zero, -4
-; MIPS64-NEXT:    and $1, $4, $1
+; MIPS64-NEXT:    daddiu $2, $zero, -4
+; MIPS64-NEXT:    and $6, $4, $2
 ; MIPS64-NEXT:    andi $2, $4, 3
 ; MIPS64-NEXT:    xori $2, $2, 3
-; MIPS64-NEXT:    sll $2, $2, 3
-; MIPS64-NEXT:    ori $3, $zero, 255
-; MIPS64-NEXT:    sllv $3, $3, $2
-; MIPS64-NEXT:    nor $6, $zero, $3
-; MIPS64-NEXT:    sllv $5, $5, $2
+; MIPS64-NEXT:    sll $10, $2, 3
+; MIPS64-NEXT:    ori $2, $zero, 255
+; MIPS64-NEXT:    sllv $8, $2, $10
+; MIPS64-NEXT:    nor $9, $zero, $8
+; MIPS64-NEXT:    sllv $7, $1, $10
 ; MIPS64-NEXT:  .LBB11_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $8, 0($1)
-; MIPS64-NEXT:    sltu $11, $8, $5
-; MIPS64-NEXT:    move $9, $8
-; MIPS64-NEXT:    movz $9, $5, $11
-; MIPS64-NEXT:    and $9, $9, $3
-; MIPS64-NEXT:    and $10, $8, $6
-; MIPS64-NEXT:    or $10, $10, $9
-; MIPS64-NEXT:    sc $10, 0($1)
-; MIPS64-NEXT:    beqz $10, .LBB11_1
+; MIPS64-NEXT:    ll $2, 0($6)
+; MIPS64-NEXT:    sltu $5, $2, $7
+; MIPS64-NEXT:    move $3, $2
+; MIPS64-NEXT:    movz $3, $7, $5
+; MIPS64-NEXT:    and $3, $3, $8
+; MIPS64-NEXT:    and $4, $2, $9
+; MIPS64-NEXT:    or $4, $4, $3
+; MIPS64-NEXT:    sc $4, 0($6)
+; MIPS64-NEXT:    beqz $4, .LBB11_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $7, $8, $3
-; MIPS64-NEXT:    srlv $7, $7, $2
-; MIPS64-NEXT:    seh $7, $7
+; MIPS64-NEXT:    and $1, $2, $8
+; MIPS64-NEXT:    srlv $1, $1, $10
+; MIPS64-NEXT:    seh $1, $1
 ; MIPS64-NEXT:  # %bb.3: # %entry
-; MIPS64-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64-NEXT:  # %bb.4: # %entry
-; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    nop
@@ -4553,38 +4553,38 @@ define i8 @test_umin_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64R6:       # %bb.0: # %entry
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64R6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64R6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64R6-NEXT:    move $1, $5
 ; MIPS64R6-NEXT:    sync
-; MIPS64R6-NEXT:    daddiu $1, $zero, -4
-; MIPS64R6-NEXT:    and $1, $4, $1
+; MIPS64R6-NEXT:    daddiu $2, $zero, -4
+; MIPS64R6-NEXT:    and $6, $4, $2
 ; MIPS64R6-NEXT:    andi $2, $4, 3
 ; MIPS64R6-NEXT:    xori $2, $2, 3
-; MIPS64R6-NEXT:    sll $2, $2, 3
-; MIPS64R6-NEXT:    ori $3, $zero, 255
-; MIPS64R6-NEXT:    sllv $3, $3, $2
-; MIPS64R6-NEXT:    nor $6, $zero, $3
-; MIPS64R6-NEXT:    sllv $5, $5, $2
+; MIPS64R6-NEXT:    sll $10, $2, 3
+; MIPS64R6-NEXT:    ori $2, $zero, 255
+; MIPS64R6-NEXT:    sllv $8, $2, $10
+; MIPS64R6-NEXT:    nor $9, $zero, $8
+; MIPS64R6-NEXT:    sllv $7, $1, $10
 ; MIPS64R6-NEXT:  .LBB11_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6-NEXT:    ll $8, 0($1)
-; MIPS64R6-NEXT:    sltu $11, $8, $5
-; MIPS64R6-NEXT:    selnez $9, $8, $11
-; MIPS64R6-NEXT:    seleqz $11, $5, $11
-; MIPS64R6-NEXT:    or $9, $9, $11
-; MIPS64R6-NEXT:    and $9, $9, $3
-; MIPS64R6-NEXT:    and $10, $8, $6
-; MIPS64R6-NEXT:    or $10, $10, $9
-; MIPS64R6-NEXT:    sc $10, 0($1)
-; MIPS64R6-NEXT:    beqzc $10, .LBB11_1
+; MIPS64R6-NEXT:    ll $2, 0($6)
+; MIPS64R6-NEXT:    sltu $5, $2, $7
+; MIPS64R6-NEXT:    selnez $3, $2, $5
+; MIPS64R6-NEXT:    seleqz $5, $7, $5
+; MIPS64R6-NEXT:    or $3, $3, $5
+; MIPS64R6-NEXT:    and $3, $3, $8
+; MIPS64R6-NEXT:    and $4, $2, $9
+; MIPS64R6-NEXT:    or $4, $4, $3
+; MIPS64R6-NEXT:    sc $4, 0($6)
+; MIPS64R6-NEXT:    beqzc $4, .LBB11_1
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $7, $8, $3
-; MIPS64R6-NEXT:    srlv $7, $7, $2
-; MIPS64R6-NEXT:    seh $7, $7
+; MIPS64R6-NEXT:    and $1, $2, $8
+; MIPS64R6-NEXT:    srlv $1, $1, $10
+; MIPS64R6-NEXT:    seh $1, $1
 ; MIPS64R6-NEXT:  # %bb.3: # %entry
-; MIPS64R6-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64R6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6-NEXT:  # %bb.4: # %entry
-; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64R6-NEXT:    jrc $ra
 ;
@@ -4592,39 +4592,39 @@ define i8 @test_umin_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64EL:       # %bb.0: # %entry
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64EL-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64EL-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64EL-NEXT:    move $1, $5
 ; MIPS64EL-NEXT:    sync
-; MIPS64EL-NEXT:    daddiu $1, $zero, -4
-; MIPS64EL-NEXT:    and $1, $4, $1
+; MIPS64EL-NEXT:    daddiu $2, $zero, -4
+; MIPS64EL-NEXT:    and $6, $4, $2
 ; MIPS64EL-NEXT:    andi $2, $4, 3
-; MIPS64EL-NEXT:    sll $2, $2, 3
-; MIPS64EL-NEXT:    ori $3, $zero, 255
-; MIPS64EL-NEXT:    sllv $3, $3, $2
-; MIPS64EL-NEXT:    nor $6, $zero, $3
-; MIPS64EL-NEXT:    sllv $5, $5, $2
+; MIPS64EL-NEXT:    sll $10, $2, 3
+; MIPS64EL-NEXT:    ori $2, $zero, 255
+; MIPS64EL-NEXT:    sllv $8, $2, $10
+; MIPS64EL-NEXT:    nor $9, $zero, $8
+; MIPS64EL-NEXT:    sllv $7, $1, $10
 ; MIPS64EL-NEXT:  .LBB11_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64EL-NEXT:    ll $8, 0($1)
-; MIPS64EL-NEXT:    and $8, $8, $3
-; MIPS64EL-NEXT:    and $5, $5, $3
-; MIPS64EL-NEXT:    sltu $11, $8, $5
-; MIPS64EL-NEXT:    move $9, $8
-; MIPS64EL-NEXT:    movz $9, $5, $11
-; MIPS64EL-NEXT:    and $9, $9, $3
-; MIPS64EL-NEXT:    and $10, $8, $6
-; MIPS64EL-NEXT:    or $10, $10, $9
-; MIPS64EL-NEXT:    sc $10, 0($1)
-; MIPS64EL-NEXT:    beqz $10, .LBB11_1
+; MIPS64EL-NEXT:    ll $2, 0($6)
+; MIPS64EL-NEXT:    and $2, $2, $8
+; MIPS64EL-NEXT:    and $7, $7, $8
+; MIPS64EL-NEXT:    sltu $5, $2, $7
+; MIPS64EL-NEXT:    move $3, $2
+; MIPS64EL-NEXT:    movz $3, $7, $5
+; MIPS64EL-NEXT:    and $3, $3, $8
+; MIPS64EL-NEXT:    and $4, $2, $9
+; MIPS64EL-NEXT:    or $4, $4, $3
+; MIPS64EL-NEXT:    sc $4, 0($6)
+; MIPS64EL-NEXT:    beqz $4, .LBB11_1
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:  # %bb.2: # %entry
-; MIPS64EL-NEXT:    and $7, $8, $3
-; MIPS64EL-NEXT:    srlv $7, $7, $2
-; MIPS64EL-NEXT:    seh $7, $7
+; MIPS64EL-NEXT:    and $1, $2, $8
+; MIPS64EL-NEXT:    srlv $1, $1, $10
+; MIPS64EL-NEXT:    seh $1, $1
 ; MIPS64EL-NEXT:  # %bb.3: # %entry
-; MIPS64EL-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64EL-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64EL-NEXT:  # %bb.4: # %entry
-; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64EL-NEXT:    jr $ra
 ; MIPS64EL-NEXT:    nop
@@ -4633,39 +4633,39 @@ define i8 @test_umin_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6:       # %bb.0: # %entry
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64ELR6-NEXT:    .cfi_def_cfa_offset 16
-; MIPS64ELR6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64ELR6-NEXT:    move $1, $5
 ; MIPS64ELR6-NEXT:    sync
-; MIPS64ELR6-NEXT:    daddiu $1, $zero, -4
-; MIPS64ELR6-NEXT:    and $1, $4, $1
+; MIPS64ELR6-NEXT:    daddiu $2, $zero, -4
+; MIPS64ELR6-NEXT:    and $6, $4, $2
 ; MIPS64ELR6-NEXT:    andi $2, $4, 3
-; MIPS64ELR6-NEXT:    sll $2, $2, 3
-; MIPS64ELR6-NEXT:    ori $3, $zero, 255
-; MIPS64ELR6-NEXT:    sllv $3, $3, $2
-; MIPS64ELR6-NEXT:    nor $6, $zero, $3
-; MIPS64ELR6-NEXT:    sllv $5, $5, $2
+; MIPS64ELR6-NEXT:    sll $10, $2, 3
+; MIPS64ELR6-NEXT:    ori $2, $zero, 255
+; MIPS64ELR6-NEXT:    sllv $8, $2, $10
+; MIPS64ELR6-NEXT:    nor $9, $zero, $8
+; MIPS64ELR6-NEXT:    sllv $7, $1, $10
 ; MIPS64ELR6-NEXT:  .LBB11_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64ELR6-NEXT:    ll $8, 0($1)
-; MIPS64ELR6-NEXT:    and $8, $8, $3
-; MIPS64ELR6-NEXT:    and $5, $5, $3
-; MIPS64ELR6-NEXT:    sltu $11, $8, $5
-; MIPS64ELR6-NEXT:    selnez $9, $8, $11
-; MIPS64ELR6-NEXT:    seleqz $11, $5, $11
-; MIPS64ELR6-NEXT:    or $9, $9, $11
-; MIPS64ELR6-NEXT:    and $9, $9, $3
-; MIPS64ELR6-NEXT:    and $10, $8, $6
-; MIPS64ELR6-NEXT:    or $10, $10, $9
-; MIPS64ELR6-NEXT:    sc $10, 0($1)
-; MIPS64ELR6-NEXT:    beqzc $10, .LBB11_1
+; MIPS64ELR6-NEXT:    ll $2, 0($6)
+; MIPS64ELR6-NEXT:    and $2, $2, $8
+; MIPS64ELR6-NEXT:    and $7, $7, $8
+; MIPS64ELR6-NEXT:    sltu $5, $2, $7
+; MIPS64ELR6-NEXT:    selnez $3, $2, $5
+; MIPS64ELR6-NEXT:    seleqz $5, $7, $5
+; MIPS64ELR6-NEXT:    or $3, $3, $5
+; MIPS64ELR6-NEXT:    and $3, $3, $8
+; MIPS64ELR6-NEXT:    and $4, $2, $9
+; MIPS64ELR6-NEXT:    or $4, $4, $3
+; MIPS64ELR6-NEXT:    sc $4, 0($6)
+; MIPS64ELR6-NEXT:    beqzc $4, .LBB11_1
 ; MIPS64ELR6-NEXT:  # %bb.2: # %entry
-; MIPS64ELR6-NEXT:    and $7, $8, $3
-; MIPS64ELR6-NEXT:    srlv $7, $7, $2
-; MIPS64ELR6-NEXT:    seh $7, $7
+; MIPS64ELR6-NEXT:    and $1, $2, $8
+; MIPS64ELR6-NEXT:    srlv $1, $1, $10
+; MIPS64ELR6-NEXT:    seh $1, $1
 ; MIPS64ELR6-NEXT:  # %bb.3: # %entry
-; MIPS64ELR6-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
+; MIPS64ELR6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64ELR6-NEXT:  # %bb.4: # %entry
-; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
+; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:

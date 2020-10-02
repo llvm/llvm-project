@@ -7095,15 +7095,15 @@ ASTRecordReader::readTemplateArgumentLocInfo(TemplateArgument::ArgKind Kind) {
     NestedNameSpecifierLoc QualifierLoc =
       readNestedNameSpecifierLoc();
     SourceLocation TemplateNameLoc = readSourceLocation();
-    return TemplateArgumentLocInfo(QualifierLoc, TemplateNameLoc,
-                                   SourceLocation());
+    return TemplateArgumentLocInfo(getASTContext(), QualifierLoc,
+                                   TemplateNameLoc, SourceLocation());
   }
   case TemplateArgument::TemplateExpansion: {
     NestedNameSpecifierLoc QualifierLoc = readNestedNameSpecifierLoc();
     SourceLocation TemplateNameLoc = readSourceLocation();
     SourceLocation EllipsisLoc = readSourceLocation();
-    return TemplateArgumentLocInfo(QualifierLoc, TemplateNameLoc,
-                                   EllipsisLoc);
+    return TemplateArgumentLocInfo(getASTContext(), QualifierLoc,
+                                   TemplateNameLoc, EllipsisLoc);
   }
   case TemplateArgument::Null:
   case TemplateArgument::Integral:

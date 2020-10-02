@@ -85,6 +85,31 @@ TEST(is_separator, Works) {
 #endif
 }
 
+TEST(is_absolute_gnu, Works) {
+  // Test tuple <Path, ExpectedPosixValue, ExpectedWindowsValue>.
+  const std::tuple<StringRef, bool, bool> Paths[] = {
+      std::make_tuple("", false, false),
+      std::make_tuple("/", true, true),
+      std::make_tuple("/foo", true, true),
+      std::make_tuple("\\", false, true),
+      std::make_tuple("\\foo", false, true),
+      std::make_tuple("foo", false, false),
+      std::make_tuple("c", false, false),
+      std::make_tuple("c:", false, true),
+      std::make_tuple("c:\\", false, true),
+      std::make_tuple("!:", false, true),
+      std::make_tuple("xx:", false, false),
+      std::make_tuple("c:abc\\", false, true),
+      std::make_tuple(":", false, false)};
+
+  for (const auto &Path : Paths) {
+    EXPECT_EQ(path::is_absolute_gnu(std::get<0>(Path), path::Style::posix),
+              std::get<1>(Path));
+    EXPECT_EQ(path::is_absolute_gnu(std::get<0>(Path), path::Style::windows),
+              std::get<2>(Path));
+  }
+}
+
 TEST(Support, Path) {
   SmallVector<StringRef, 40> paths;
   paths.push_back("");
@@ -171,6 +196,7 @@ TEST(Support, Path) {
     (void)path::has_extension(*i);
     (void)path::extension(*i);
     (void)path::is_absolute(*i);
+    (void)path::is_absolute_gnu(*i);
     (void)path::is_relative(*i);
 
     SmallString<128> temp_store;

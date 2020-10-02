@@ -529,3 +529,17 @@ void stringifyVA_ARGSEmpty(void) {
 // FIXME: Stringify and escape __VA_ARGS__ correctly.
 // CHECK: <key>name</key><string>STRINGIFIED_VA_ARGS</string>
 // CHECK-NEXT: <key>expansion</key><string>variadicCFunction(x, &quot;Additional supply depots required.&quot;, &quot;)&quot;;x = 0;</string>
+
+// bz44493: Support GNU-style named variadic arguments in plister
+#define BZ44493_GNUVA(i, args...)  --(i);
+
+int bz44493(void) {
+  int a = 2;
+  BZ44493_GNUVA(a);
+  BZ44493_GNUVA(a, "arg2");
+  (void)(10 / a); // expected-warning{{Division by zero}}
+  return 0;
+}
+
+// CHECK: <key>name</key><string>BZ44493_GNUVA</string>
+// CHECK-NEXT: <key>expansion</key><string>--(a);</string>

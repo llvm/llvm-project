@@ -28,10 +28,12 @@ public:
   }
 };
 
+// FIXME: `createLeaf` is based on `syntax::tokenize` internally, as such it
+// doesn't support digraphs or line continuations.
 syntax::Leaf *clang::syntax::createLeaf(syntax::Arena &A, tok::TokenKind K,
                                         StringRef Spelling) {
   auto Tokens =
-      FactoryImpl::lexBuffer(A, llvm::MemoryBuffer::getMemBuffer(Spelling))
+      FactoryImpl::lexBuffer(A, llvm::MemoryBuffer::getMemBufferCopy(Spelling))
           .second;
   assert(Tokens.size() == 1);
   assert(Tokens.front().kind() == K &&
@@ -58,6 +60,7 @@ syntax::Tree *allocateTree(syntax::Arena &A, syntax::NodeKind Kind) {
   switch (Kind) {
   case syntax::NodeKind::Leaf:
     assert(false);
+    break;
   case syntax::NodeKind::TranslationUnit:
     return new (A.getAllocator()) syntax::TranslationUnit;
   case syntax::NodeKind::UnknownExpression:
@@ -180,6 +183,8 @@ syntax::Tree *allocateTree(syntax::Arena &A, syntax::NodeKind Kind) {
     return new (A.getAllocator()) syntax::CallArguments;
   case syntax::NodeKind::ParameterDeclarationList:
     return new (A.getAllocator()) syntax::ParameterDeclarationList;
+  case syntax::NodeKind::DeclaratorList:
+    return new (A.getAllocator()) syntax::DeclaratorList;
   }
   llvm_unreachable("unknown node kind");
 }
@@ -187,16 +192,32 @@ syntax::Tree *allocateTree(syntax::Arena &A, syntax::NodeKind Kind) {
 
 syntax::Tree *clang::syntax::createTree(
     syntax::Arena &A,
-    std::vector<std::pair<syntax::Node *, syntax::NodeRole>> Children,
+    ArrayRef<std::pair<syntax::Node *, syntax::NodeRole>> Children,
     syntax::NodeKind K) {
   auto *T = allocateTree(A, K);
   FactoryImpl::setCanModify(T);
-  for (auto ChildIt = Children.rbegin(); ChildIt != Children.rend();
-       std::advance(ChildIt, 1))
+  for (auto ChildIt = Children.rbegin(); ChildIt != Children.rend(); ++ChildIt)
     FactoryImpl::prependChildLowLevel(T, ChildIt->first, ChildIt->second);
 
   T->assertInvariants();
   return T;
+}
+
+syntax::Node *clang::syntax::deepCopyExpandingMacros(syntax::Arena &A,
+                                                     const syntax::Node *N) {
+  if (const auto *L = dyn_cast<syntax::Leaf>(N))
+    // `L->getToken()` gives us the expanded token, thus we implicitly expand
+    // any macros here.
+    return createLeaf(A, L->getToken()->kind(),
+                      L->getToken()->text(A.getSourceManager()));
+
+  const auto *T = cast<syntax::Tree>(N);
+  std::vector<std::pair<syntax::Node *, syntax::NodeRole>> Children;
+  for (const auto *Child = T->getFirstChild(); Child;
+       Child = Child->getNextSibling())
+    Children.push_back({deepCopyExpandingMacros(A, Child), Child->getRole()});
+
+  return createTree(A, Children, N->getKind());
 }
 
 syntax::EmptyStatement *clang::syntax::createEmptyStatement(syntax::Arena &A) {

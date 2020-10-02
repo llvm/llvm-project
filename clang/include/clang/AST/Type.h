@@ -1927,6 +1927,9 @@ public:
   /// (C++11 [basic.types]p10)
   bool isLiteralType(const ASTContext &Ctx) const;
 
+  /// Determine if this type is a structural type, per C++20 [temp.param]p7.
+  bool isStructuralType() const;
+
   /// Test if this type is a standard-layout type.
   /// (C++0x [basic.type]p9)
   bool isStandardLayoutType() const;
@@ -7068,28 +7071,55 @@ inline const Type *Type::getPointeeOrArrayElementType() const {
     return type->getBaseElementTypeUnsafe();
   return type;
 }
+/// Insertion operator for diagnostics. This allows sending address spaces into
+/// a diagnostic with <<.
+inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
+                                           LangAS AS) {
+  DB.AddTaggedVal(static_cast<std::underlying_type_t<LangAS>>(AS),
+                  DiagnosticsEngine::ArgumentKind::ak_addrspace);
+  return DB;
+}
+
 /// Insertion operator for partial diagnostics. This allows sending adress
 /// spaces into a diagnostic with <<.
-inline const StreamableDiagnosticBase &
-operator<<(const StreamableDiagnosticBase &PD, LangAS AS) {
+inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
+                                           LangAS AS) {
   PD.AddTaggedVal(static_cast<std::underlying_type_t<LangAS>>(AS),
                   DiagnosticsEngine::ArgumentKind::ak_addrspace);
   return PD;
 }
 
+/// Insertion operator for diagnostics. This allows sending Qualifiers into a
+/// diagnostic with <<.
+inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
+                                           Qualifiers Q) {
+  DB.AddTaggedVal(Q.getAsOpaqueValue(),
+                  DiagnosticsEngine::ArgumentKind::ak_qual);
+  return DB;
+}
+
 /// Insertion operator for partial diagnostics. This allows sending Qualifiers
 /// into a diagnostic with <<.
-inline const StreamableDiagnosticBase &
-operator<<(const StreamableDiagnosticBase &PD, Qualifiers Q) {
+inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
+                                           Qualifiers Q) {
   PD.AddTaggedVal(Q.getAsOpaqueValue(),
                   DiagnosticsEngine::ArgumentKind::ak_qual);
   return PD;
 }
 
+/// Insertion operator for diagnostics.  This allows sending QualType's into a
+/// diagnostic with <<.
+inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
+                                           QualType T) {
+  DB.AddTaggedVal(reinterpret_cast<intptr_t>(T.getAsOpaquePtr()),
+                  DiagnosticsEngine::ak_qualtype);
+  return DB;
+}
+
 /// Insertion operator for partial diagnostics.  This allows sending QualType's
 /// into a diagnostic with <<.
-inline const StreamableDiagnosticBase &
-operator<<(const StreamableDiagnosticBase &PD, QualType T) {
+inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
+                                           QualType T) {
   PD.AddTaggedVal(reinterpret_cast<intptr_t>(T.getAsOpaquePtr()),
                   DiagnosticsEngine::ak_qualtype);
   return PD;

@@ -23,6 +23,9 @@ struct [[]] S1 {
   int l[[]][10];
   [[]] int m, n;
   int o [[]] : 12;
+  int [[]] : 0; // OK, attribute applies to the type.
+  int p, [[]] : 0; // expected-error {{an attribute list cannot appear here}}
+  int q, [[]] r; // expected-error {{an attribute list cannot appear here}}
 };
 
 [[]] struct S2 { int a; }; // expected-error {{misplaced attributes}}

@@ -81,9 +81,9 @@ Slice::Slice(const MachOObjectFile &O, uint32_t Align)
       ArchName(std::string(O.getArchTriple().getArchName())),
       P2Alignment(Align) {}
 
-Slice::Slice(const IRObjectFile *IRO, uint32_t CPUType, uint32_t CPUSubType,
+Slice::Slice(const IRObjectFile &IRO, uint32_t CPUType, uint32_t CPUSubType,
              std::string ArchName, uint32_t Align)
-    : B(IRO), CPUType(CPUType), CPUSubType(CPUSubType),
+    : B(&IRO), CPUType(CPUType), CPUSubType(CPUSubType),
       ArchName(std::move(ArchName)), P2Alignment(Align) {}
 
 Slice::Slice(const MachOObjectFile &O) : Slice(O, calculateAlignment(O)) {}
@@ -105,14 +105,14 @@ static Expected<MachoCPUTy> getMachoCPUFromTriple(StringRef TT) {
   return getMachoCPUFromTriple(Triple{TT});
 }
 
-Expected<Slice> Slice::create(const Archive *A, LLVMContext *LLVMCtx) {
+Expected<Slice> Slice::create(const Archive &A, LLVMContext *LLVMCtx) {
   Error Err = Error::success();
   std::unique_ptr<MachOObjectFile> MFO = nullptr;
   std::unique_ptr<IRObjectFile> IRFO = nullptr;
-  for (const Archive::Child &Child : A->children(Err)) {
+  for (const Archive::Child &Child : A.children(Err)) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary(LLVMCtx);
     if (!ChildOrErr)
-      return createFileError(A->getFileName(), ChildOrErr.takeError());
+      return createFileError(A.getFileName(), ChildOrErr.takeError());
     Binary *Bin = ChildOrErr.get().get();
     if (Bin->isMachOUniversalBinary())
       return createStringError(std::errc::invalid_argument,
@@ -191,32 +191,32 @@ Expected<Slice> Slice::create(const Archive *A, LLVMContext *LLVMCtx) {
                                    .c_str());
   }
   if (Err)
-    return createFileError(A->getFileName(), std::move(Err));
+    return createFileError(A.getFileName(), std::move(Err));
   if (!MFO && !IRFO)
     return createStringError(
         std::errc::invalid_argument,
         ("empty archive with no architecture specification: " +
-         A->getFileName() + " (can't determine architecture for it)")
+         A.getFileName() + " (can't determine architecture for it)")
             .str()
             .c_str());
 
   if (MFO) {
     Slice ArchiveSlice(*(MFO.get()), MFO->is64Bit() ? 3 : 2);
-    ArchiveSlice.B = A;
+    ArchiveSlice.B = &A;
     return ArchiveSlice;
   }
 
   // For IR objects
-  Expected<Slice> ArchiveSliceOrErr = Slice::create(IRFO.get(), 0);
+  Expected<Slice> ArchiveSliceOrErr = Slice::create(*IRFO, 0);
   if (!ArchiveSliceOrErr)
-    return createFileError(A->getFileName(), ArchiveSliceOrErr.takeError());
+    return createFileError(A.getFileName(), ArchiveSliceOrErr.takeError());
   auto &ArchiveSlice = ArchiveSliceOrErr.get();
-  ArchiveSlice.B = A;
-  return Slice{std::move(ArchiveSlice)};
+  ArchiveSlice.B = &A;
+  return std::move(ArchiveSlice);
 }
 
-Expected<Slice> Slice::create(const IRObjectFile *IRO, uint32_t Align) {
-  Expected<MachoCPUTy> CPUOrErr = getMachoCPUFromTriple(IRO->getTargetTriple());
+Expected<Slice> Slice::create(const IRObjectFile &IRO, uint32_t Align) {
+  Expected<MachoCPUTy> CPUOrErr = getMachoCPUFromTriple(IRO.getTargetTriple());
   if (!CPUOrErr)
     return CPUOrErr.takeError();
   unsigned CPUType, CPUSubType;

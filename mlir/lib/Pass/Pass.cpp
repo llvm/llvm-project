@@ -52,13 +52,13 @@ void Pass::copyOptionValuesFrom(const Pass *other) {
 
 /// Prints out the pass in the textual representation of pipelines. If this is
 /// an adaptor pass, print with the op_name(sub_pass,...) format.
-void Pass::printAsTextualPipeline(raw_ostream &os) {
+void Pass::printAsTextualPipeline(raw_ostream &os, bool filterVerifier) {
   // Special case for adaptors to use the 'op_name(sub_passes)' format.
   if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(this)) {
     llvm::interleaveComma(adaptor->getPassManagers(), os,
                           [&](OpPassManager &pm) {
                             os << pm.getOpName() << "(";
-                            pm.printAsTextualPipeline(os);
+                            pm.printAsTextualPipeline(os, filterVerifier);
                             os << ")";
                           });
     return;
@@ -73,7 +73,6 @@ void Pass::printAsTextualPipeline(raw_ostream &os) {
     os << "unknown<" << getName() << ">";
   passOptions.print(os);
 }
-
 
 //===----------------------------------------------------------------------===//
 // Verifier Passes
@@ -227,10 +226,14 @@ void OpPassManagerImpl::splitAdaptorPasses() {
   std::swap(passes, oldPasses);
 
   for (std::unique_ptr<Pass> &pass : oldPasses) {
+    // Ignore verifier passes, they are added back in the "addPass()" calls.
+    if (isa<VerifierPass>(pass.get()))
+      continue;
+
     // If this pass isn't an adaptor, move it directly to the new pass list.
     auto *currentAdaptor = dyn_cast<OpToOpPassAdaptor>(pass.get());
     if (!currentAdaptor) {
-      passes.push_back(std::move(pass));
+      addPass(std::move(pass));
       continue;
     }
 
@@ -311,22 +314,31 @@ Identifier OpPassManager::getOpName(MLIRContext &context) const {
 
 /// Prints out the given passes as the textual representation of a pipeline.
 static void printAsTextualPipeline(ArrayRef<std::unique_ptr<Pass>> passes,
-                                   raw_ostream &os) {
+                                   raw_ostream &os,
+                                   bool filterVerifier = true) {
   // Filter out passes that are not part of the public pipeline.
   auto filteredPasses =
-      llvm::make_filter_range(passes, [](const std::unique_ptr<Pass> &pass) {
-        return !isa<VerifierPass>(pass);
+      llvm::make_filter_range(passes, [&](const std::unique_ptr<Pass> &pass) {
+        return !filterVerifier || !isa<VerifierPass>(pass);
       });
   llvm::interleaveComma(filteredPasses, os,
                         [&](const std::unique_ptr<Pass> &pass) {
-                          pass->printAsTextualPipeline(os);
+                          pass->printAsTextualPipeline(os, filterVerifier);
                         });
 }
 
 /// Prints out the passes of the pass manager as the textual representation
 /// of pipelines.
-void OpPassManager::printAsTextualPipeline(raw_ostream &os) {
-  ::printAsTextualPipeline(impl->passes, os);
+void OpPassManager::printAsTextualPipeline(raw_ostream &os,
+                                           bool filterVerifier) {
+  ::printAsTextualPipeline(impl->passes, os, filterVerifier);
+}
+
+void OpPassManager::dump() {
+  llvm::errs() << "Pass Manager with " << impl->passes.size() << " passes: ";
+  ::printAsTextualPipeline(impl->passes, llvm::errs(),
+                           /*filterVerifier=*/false);
+  llvm::errs() << "\n";
 }
 
 static void registerDialectsForPipeline(const OpPassManager &pm,
@@ -353,8 +365,22 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
     return op->emitOpError() << "trying to schedule a pass on an operation not "
                                 "marked as 'IsolatedFromAbove'";
 
-  pass->passState.emplace(op, am);
-
+  // Initialize the pass state with a callback for the pass to dynamically
+  // execute a pipeline on the currently visited operation.
+  auto dynamic_pipeline_callback =
+      [op, &am](OpPassManager &pipeline, Operation *root) {
+        if (!op->isAncestor(root)) {
+          root->emitOpError()
+              << "Trying to schedule a dynamic pipeline on an "
+                 "operation that isn't "
+                 "nested under the current operation the pass is processing";
+          return failure();
+        }
+        AnalysisManager nestedAm = am.nest(root);
+        return OpToOpPassAdaptor::runPipeline(pipeline.getPasses(), root,
+                                              nestedAm);
+      };
+  pass->passState.emplace(op, am, dynamic_pipeline_callback);
   // Instrument before the pass has run.
   PassInstrumentor *pi = am.getPassInstrumentor();
   if (pi)
@@ -835,8 +861,6 @@ PassInstrumentor *AnalysisManager::getPassInstrumentor() const {
 
 /// Get an analysis manager for the given child operation.
 AnalysisManager AnalysisManager::nest(Operation *op) {
-  assert(op->getParentOp() == impl->getOperation() &&
-         "'op' has a different parent operation");
   auto it = impl->childAnalyses.find(op);
   if (it == impl->childAnalyses.end())
     it = impl->childAnalyses

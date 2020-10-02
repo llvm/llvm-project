@@ -1,5 +1,5 @@
 ; RUN: opt -S -enable-loop-simplifycfg-term-folding=true -loop-simplifycfg %s | FileCheck %s
-; RUN: opt -S -enable-loop-simplifycfg-term-folding=true -passes='require<domtree>,loop(simplify-cfg)' %s | FileCheck %s
+; RUN: opt -S -enable-loop-simplifycfg-term-folding=true -passes='require<domtree>,loop(loop-simplifycfg)' %s | FileCheck %s
 
 declare i32* @fake_personality_function()
 declare void @foo()

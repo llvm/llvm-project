@@ -65,6 +65,8 @@
 // HIP headers.
 #include "hip/hip_version.h"
 
+#include <mutex>
+
 using namespace mlir;
 using namespace llvm;
 
@@ -146,6 +148,7 @@ static LogicalResult assembleIsa(const std::string isa, StringRef name,
   return success();
 }
 
+static std::mutex mutex;
 static LogicalResult createHsaco(const Blob &isaBlob, StringRef name,
                                  Blob &hsacoBlob) {
   // Save the ISA binary to a temp file.
@@ -175,6 +178,7 @@ static LogicalResult createHsaco(const Blob &isaBlob, StringRef name,
   }
   FileRemover cleanupHsaco(tempHsacoFilename);
 
+  const std::lock_guard<std::mutex> lock(mutex);
   // Invoke lld. Expect a true return value from lld.
   bool ret = lld::elf::link({"ld.lld", "-shared", tempIsaBinaryFilename.c_str(),
                              "-o", tempHsacoFilename.c_str()},

@@ -79,6 +79,15 @@ using llvm::StringMap;
 using llvm::StringRef;
 using namespace llvm;
 
+// Placing the cold clusters in a separate section mitigates against poor
+// profiles and allows optimizations such as hugepage mapping to be applied at a
+// section granularity. Where necessary, users should set this to ".text.split."
+// which is recognized by lld via the `-z keep-text-section-prefix` flag.
+cl::opt<std::string> llvm::BBSectionsColdTextPrefix(
+    "bbsections-cold-text-prefix",
+    cl::desc("The text prefix to use for cold basic block clusters"),
+    cl::init(".text.unlikely."), cl::Hidden);
+
 namespace {
 
 // This struct represents the cluster information for a machine basic block.
@@ -284,6 +293,26 @@ void llvm::sortBasicBlocksAndUpdateBranches(
   updateBranches(MF, PreLayoutFallThroughs);
 }
 
+// If the exception section begins with a landing pad, that landing pad will
+// assume a zero offset (relative to @LPStart) in the LSDA. However, a value of
+// zero implies "no landing pad." This function inserts a NOP just before the EH
+// pad label to ensure a nonzero offset. Returns true if padding is not needed.
+static bool avoidZeroOffsetLandingPad(MachineFunction &MF) {
+  for (auto &MBB : MF) {
+    if (MBB.isBeginSection() && MBB.isEHPad()) {
+      MachineBasicBlock::iterator MI = MBB.begin();
+      while (!MI->isEHLabel())
+        ++MI;
+      MCInst Noop;
+      MF.getSubtarget().getInstrInfo()->getNoop(Noop);
+      BuildMI(MBB, MI, DebugLoc(),
+              MF.getSubtarget().getInstrInfo()->get(Noop.getOpcode()));
+      return false;
+    }
+  }
+  return true;
+}
+
 bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   auto BBSectionsType = MF.getTarget().getBBSectionsType();
   assert(BBSectionsType != BasicBlockSection::None &&
@@ -345,6 +374,7 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   };
 
   sortBasicBlocksAndUpdateBranches(MF, Comparator);
+  avoidZeroOffsetLandingPad(MF);
   return true;
 }
 

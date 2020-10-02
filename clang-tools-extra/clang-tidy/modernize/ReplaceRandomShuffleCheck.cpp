@@ -94,7 +94,7 @@ void ReplaceRandomShuffleCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << IncludeInserter.createIncludeInsertion(
       Result.Context->getSourceManager().getFileID(
           MatchedCallExpr->getBeginLoc()),
-      "random", /*IsAngled=*/true);
+      "<random>");
 }
 
 } // namespace modernize

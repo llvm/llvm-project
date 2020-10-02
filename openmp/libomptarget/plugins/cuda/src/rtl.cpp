@@ -26,26 +26,25 @@
 #define TARGET_NAME CUDA
 #endif
 
+#define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
+
 #ifdef OMPTARGET_DEBUG
 static int DebugLevel = 0;
-
-#define GETNAME2(name) #name
-#define GETNAME(name) GETNAME2(name)
-#define DP(...) \
-  do { \
-    if (DebugLevel > 0) { \
-      DEBUGP("Target " GETNAME(TARGET_NAME) " RTL", __VA_ARGS__); \
-    } \
-  } while (false)
-
-// Utility for retrieving and printing CUDA error string.
-#define CUDA_ERR_STRING(err) \
-  do { \
-    if (DebugLevel > 0) { \
-      const char *errStr; \
-      cuGetErrorString(err, &errStr); \
-      DEBUGP("Target " GETNAME(TARGET_NAME) " RTL", "CUDA error is: %s\n", errStr); \
-    } \
+#define CUDA_ERR_STRING(err)                                                   \
+  do {                                                                         \
+    if (getDebugLevel() > 0) {                                                 \
+      const char *errStr = nullptr;                                            \
+      CUresult errStr_status = cuGetErrorString(err, &errStr);                 \
+      if (errStr_status == CUDA_ERROR_INVALID_VALUE)                           \
+        DP("Unrecognized CUDA error code: %d\n", err);                         \
+      else if (errStr_status == CUDA_SUCCESS)                                  \
+        DP("CUDA error is: %s\n", errStr);                                     \
+      else {                                                                   \
+        DP("Unresolved CUDA error code: %d\n", err);                           \
+        DP("Unsuccessful cuGetErrorString return status: %d\n",                \
+           errStr_status);                                                     \
+      }                                                                        \
+    }                                                                          \
   } while (false)
 #else // OMPTARGET_DEBUG
 #define DP(...) {}

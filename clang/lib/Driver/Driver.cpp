@@ -2119,7 +2119,7 @@ bool Driver::DiagnoseInputExistence(const DerivedArgList &Args, StringRef Value,
 
   if (IsCLMode()) {
     if (!llvm::sys::path::is_absolute(Twine(Value)) &&
-        llvm::sys::Process::FindInEnvPath("LIB", Value))
+        llvm::sys::Process::FindInEnvPath("LIB", Value, ';'))
       return true;
 
     if (Args.hasArg(options::OPT__SLASH_link) && Ty == types::TY_Object) {
@@ -2825,6 +2825,7 @@ class OffloadingActionBuilder final {
           parseTargetID(getHIPOffloadTargetTriple(), IdStr, &Features);
       if (!ArchStr) {
         C.getDriver().Diag(clang::diag::err_drv_bad_target_id) << IdStr;
+        C.setContainsError();
         return StringRef();
       }
       auto CanId = getCanonicalTargetID(ArchStr.getValue(), Features);

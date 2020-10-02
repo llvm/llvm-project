@@ -49,7 +49,10 @@ protected: // Can only create subclasses.
   bool SkipSpace = true;
   bool AllowAtInIdentifier;
   bool IsAtStartOfStatement = true;
+  bool LexMasmHexFloats = false;
   bool LexMasmIntegers = false;
+  bool UseMasmDefaultRadix = false;
+  unsigned DefaultRadix = 10;
   AsmCommentConsumer *CommentConsumer = nullptr;
 
   MCAsmLexer();
@@ -147,9 +150,19 @@ public:
     this->CommentConsumer = CommentConsumer;
   }
 
-  /// Set whether to lex masm-style binary and hex literals. They look like
-  /// 0b1101 and 0ABCh respectively.
+  /// Set whether to lex masm-style binary (e.g., 0b1101) and radix-specified
+  /// literals (e.g., 0ABCh [hex], 576t [decimal], 77o [octal], 1101y [binary]).
   void setLexMasmIntegers(bool V) { LexMasmIntegers = V; }
+
+  /// Set whether to use masm-style default-radix integer literals. If disabled,
+  /// assume decimal unless prefixed (e.g., 0x2c [hex], 077 [octal]).
+  void useMasmDefaultRadix(bool V) { UseMasmDefaultRadix = V; }
+
+  unsigned getMasmDefaultRadix() const { return DefaultRadix; }
+  void setMasmDefaultRadix(unsigned Radix) { DefaultRadix = Radix; }
+
+  /// Set whether to lex masm-style hex float literals, such as 3f800000r.
+  void setLexMasmHexFloats(bool V) { LexMasmHexFloats = V; }
 };
 
 } // end namespace llvm

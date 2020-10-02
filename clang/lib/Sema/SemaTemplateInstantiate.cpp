@@ -237,7 +237,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
   // error have occurred. Any diagnostics we might have raised will not be
   // visible, and we do not need to construct a correct AST.
   if (SemaRef.Diags.hasFatalErrorOccurred() &&
-      SemaRef.hasUncompilableErrorOccurred()) {
+      SemaRef.Diags.hasUncompilableErrorOccurred()) {
     Invalid = true;
     return;
   }
@@ -2972,9 +2972,10 @@ bool Sema::InstantiateInClassInitializer(
     RecordDecl *PatternRD = Pattern->getParent();
     RecordDecl *OutermostClass = PatternRD->getOuterLexicalRecordContext();
     Diag(PointOfInstantiation,
-         diag::err_in_class_initializer_not_yet_parsed)
+         diag::err_default_member_initializer_not_yet_parsed)
         << OutermostClass << Pattern;
-    Diag(Pattern->getEndLoc(), diag::note_in_class_initializer_not_yet_parsed);
+    Diag(Pattern->getEndLoc(),
+         diag::note_default_member_initializer_not_yet_parsed);
     Instantiation->setInvalidDecl();
     return true;
   }
@@ -2984,7 +2985,7 @@ bool Sema::InstantiateInClassInitializer(
     return true;
   if (Inst.isAlreadyInstantiating()) {
     // Error out if we hit an instantiation cycle for this initializer.
-    Diag(PointOfInstantiation, diag::err_in_class_initializer_cycle)
+    Diag(PointOfInstantiation, diag::err_default_member_initializer_cycle)
       << Instantiation;
     return true;
   }

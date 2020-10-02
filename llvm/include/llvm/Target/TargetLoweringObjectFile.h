@@ -203,12 +203,6 @@ public:
     return nullptr;
   }
 
-  virtual void emitLinkerFlagsForGlobal(raw_ostream &OS,
-                                        const GlobalValue *GV) const {}
-
-  virtual void emitLinkerFlagsForUsed(raw_ostream &OS,
-                                      const GlobalValue *GV) const {}
-
   /// If supported, return the section to use for the llvm.commandline
   /// metadata. Otherwise, return nullptr.
   virtual MCSection *getSectionForCommandLines() const {

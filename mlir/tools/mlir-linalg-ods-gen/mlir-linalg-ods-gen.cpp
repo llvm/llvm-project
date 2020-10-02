@@ -980,7 +980,7 @@ public:
 
   /// Print the ODS class that defines a new `cppOpName` for a `linalgOpName`.
   void printODS(llvm::raw_ostream &os, StringRef cppOpName,
-                StringRef linalgOpName);
+                StringRef linalgOpName, ComprehensionParsingState &state);
 
   /// Print the C++ StructuredOpsInterface impl of `iterator_types`.
   void printReferenceIterators(llvm::raw_ostream &os, StringRef cppOpName,
@@ -1419,7 +1419,8 @@ LogicalResult TCParser::parseAndEmitODSDef(llvm::raw_ostream &os) {
     return failure();
   }
   if (genODSDecl) {
-    printODS(os, cppOpName, tcName);
+    auto &state = perComprehensionStates.back();
+    printODS(os, cppOpName, tcName, state);
     os << "\n";
   }
   if (genODSImpl) {
@@ -1442,31 +1443,81 @@ LogicalResult TCParser::parseAndEmitODSDef(llvm::raw_ostream &os) {
 
 /// Print the ODS class that defines a new `cppOpName` for a `linalgOpName`.
 void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
-                        StringRef linalgOpName) {
-  const char *header = R"FMT(  def {0} : LinalgNamedStructured_Op<"{1}", [
-    NInputs<{2}>,
-    NOutputs<{3}>,
+                        StringRef linalgOpName,
+                        ComprehensionParsingState &state) {
+  const char *header = R"FMT(  def {0} : LinalgStructuredBase_Op<"{1}", [
+    NamedStructuredOpTrait,
+    AttrSizedOperandSegments,
     SingleBlockImplicitTerminator<"YieldOp">]> {
-      let arguments = (ins Variadic<LinalgOperand>:$views);
-      let results = (outs Variadic<AnyRankedTensor>:$output_tensors);
-      let regions = (region SizedRegion<1>:$region);
-      let builders = [OpBuilder<
-        "OpBuilder &b, OperationState &result, TypeRange outputTypes, "
-        # "ValueRange views",
+      let arguments = (ins Variadic<AnyShaped>:$inputs,
+                           Variadic<AnyMemRef>:$output_buffers,
+                           Variadic<AnyRankedTensor>:$init_tensors);
+      let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
+      let regions = (region AnyRegion:$region);
+
+      let skipDefaultBuilders = 1;
+      let builders = [ OpBuilder<
+        "OpBuilder &b, OperationState &result, "
+        "ValueRange inputs, ValueRange outputBuffers",
         [{{
-          result.addOperands(views);
-          result.addTypes(outputTypes);
+          result.addOperands(inputs);
+          result.addOperands(outputBuffers);
+          result.addAttribute(
+            "operand_segment_sizes",
+            b.getI32VectorAttr({{static_cast<int32_t>(inputs.size()),
+                                static_cast<int32_t>(outputBuffers.size()),
+                                static_cast<int32_t>(0)}));
           buildNamedStructuredOpRegionAndAttributes<{0}>(
-            b, result, TypeRange(views), outputTypes);
+            b,
+            result,
+            TypeRange(inputs),
+            TypeRange(outputBuffers),
+            TypeRange(),
+            TypeRange());
+        }]>, OpBuilder<
+        "OpBuilder &b, OperationState &result, TypeRange resultTensorTypes,"
+        "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors",
+        [{{
+          result.addOperands(inputs);
+          result.addOperands(outputBuffers);
+          result.addOperands(initTensors);
+          result.addTypes(resultTensorTypes);
+          result.addAttribute(
+            "operand_segment_sizes",
+            b.getI32VectorAttr({{static_cast<int32_t>(inputs.size()),
+                                static_cast<int32_t>(outputBuffers.size()),
+                                static_cast<int32_t>(initTensors.size())}));
+          buildNamedStructuredOpRegionAndAttributes<{0}>(
+            b,
+            result,
+            TypeRange(inputs),
+            TypeRange(outputBuffers),
+            TypeRange(initTensors),
+            resultTensorTypes);
+        }]>, OpBuilder<
+        "OpBuilder &b, OperationState &result, TypeRange resultTensorTypes,"
+        "ValueRange operands, ArrayRef<NamedAttribute> attributes = {{}",
+        [{{
+          result.addOperands(operands);
+          result.addAttributes(attributes);
+          result.addTypes(resultTensorTypes);
+          (void)result.addRegion();
         }]>
       ];
-      let parser = [{
-        return ::parseNamedStructuredOp<{0}>(parser, result);
-      }];
+      let printer = [{{ return ::printNamedStructuredOp(p, *this); }];
+      let parser = [{{ return ::parseNamedStructuredOp<{0}>(parser, result); }];
+      let verifier = [{{ return ::verifyNamedStructuredOp(*this); }];
+      let hasFolder = 1;
+      let hasCanonicalizer = 1;
+
       let extraClassDeclaration = [{{
+        // Auto-generated.
         ArrayAttr iterator_types();
         ArrayAttr indexing_maps();
         static void regionBuilder(Block &block);
+
+        // Generic methods.
+        static unsigned getNumRegionArgs() {{ return {4}; }
         std::string getLibraryCallName() {{
           return generateLibraryCallName(getOperation());
         }
@@ -1481,7 +1532,8 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
       nInputs++;
   }
 
-  os << llvm::formatv(header, cppOpName, linalgOpName, nInputs, nOutputs);
+  os << llvm::formatv(header, cppOpName, linalgOpName, nInputs, nOutputs,
+                      state.orderedTensorArgs.size());
 }
 
 /// Print the C++ StructuredOpsInterface impl of `iterator_types`.
@@ -1680,7 +1732,7 @@ int main(int argc, char **argv) {
   }
 
   // Include the proper Linalg header for end-to-end tblgen testing without
-  // resorting to non-portable shgell manipulations.
+  // resorting to non-portable shell manipulations.
   if (testEmitIncludeTdHeader)
     output->os() << "include \"mlir/Dialect/Linalg/IR/LinalgStructuredOps.td\"";
 

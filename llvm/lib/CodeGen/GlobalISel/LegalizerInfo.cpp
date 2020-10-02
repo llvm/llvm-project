@@ -148,7 +148,8 @@ static bool mutationIsSane(const LegalizeRule &Rule,
         if (NewTy.getNumElements() <= OldElts)
           return false;
       }
-    }
+    } else if (Rule.getAction() == MoreElements)
+      return false;
 
     // Make sure the element type didn't change.
     return NewTy.getScalarType() == OldTy.getScalarType();

@@ -30,7 +30,7 @@ template<typename T>
 struct CAPIDenseMap {};
 
 // The default DenseMapInfo require to know about pointer alignment.
-// Because the C API uses opaques pointer types, their alignment is unknown.
+// Because the C API uses opaque pointer types, their alignment is unknown.
 // As a result, we need to roll out our own implementation.
 template<typename T>
 struct CAPIDenseMap<T*> {
@@ -306,7 +306,7 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
     return LLVMConstArray(LLVMGetElementType(Ty), Elts.data(), EltCount);
   }
 
-  // Try contant data array
+  // Try constant data array
   if (LLVMIsAConstantDataArray(Cst)) {
     check_value_kind(Cst, LLVMConstantDataArrayValueKind);
     LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
@@ -357,9 +357,32 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
     report_fatal_error("ConstantFP is not supported");
   }
 
-  // This kind of constant is not supported
+  // Try ConstantVector
+  if (LLVMIsAConstantVector(Cst)) {
+    check_value_kind(Cst, LLVMConstantVectorValueKind);
+    LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
+    unsigned EltCount = LLVMGetVectorSize(Ty);
+    SmallVector<LLVMValueRef, 8> Elts;
+    for (unsigned i = 0; i < EltCount; i++)
+      Elts.push_back(clone_constant(LLVMGetOperand(Cst, i), M));
+    return LLVMConstVector(Elts.data(), EltCount);
+  }
+
+  // Try ConstantDataVector
+  if (LLVMIsAConstantDataVector(Cst)) {
+    check_value_kind(Cst, LLVMConstantDataVectorValueKind);
+    LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
+    unsigned EltCount = LLVMGetVectorSize(Ty);
+    SmallVector<LLVMValueRef, 8> Elts;
+    for (unsigned i = 0; i < EltCount; i++)
+      Elts.push_back(clone_constant(LLVMGetElementAsConstant(Cst, i), M));
+    return LLVMConstVector(Elts.data(), EltCount);
+  }
+
+  // At this point, if it's not a constant expression, it's a kind of constant
+  // which is not supported
   if (!LLVMIsAConstantExpr(Cst))
-    report_fatal_error("Expected a constant expression");
+    report_fatal_error("Unsupported constant kind");
 
   // At this point, it must be a constant expression
   check_value_kind(Cst, LLVMConstantExprValueKind);
@@ -370,7 +393,8 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
       return LLVMConstBitCast(clone_constant(LLVMGetOperand(Cst, 0), M),
                               TypeCloner(M).Clone(Cst));
     default:
-      fprintf(stderr, "%d is not a supported opcode\n", Op);
+      fprintf(stderr, "%d is not a supported opcode for constant expressions\n",
+              Op);
       exit(-1);
   }
 }
@@ -443,7 +467,7 @@ struct FunCloner {
       auto i = VMap.find(Src);
       if (i != VMap.end()) {
         // If we have a hit, it means we already generated the instruction
-        // as a dependancy to somethign else. We need to make sure
+        // as a dependency to something else. We need to make sure
         // it is ordered properly.
         auto I = i->second;
         LLVMInstructionRemoveFromParent(I);
@@ -746,8 +770,10 @@ struct FunCloner {
       }
       case LLVMExtractValue: {
         LLVMValueRef Agg = CloneValue(LLVMGetOperand(Src, 0));
-        if (LLVMGetNumIndices(Src) != 1)
-          report_fatal_error("Expected only one indice");
+        if (LLVMGetNumIndices(Src) > 1)
+          report_fatal_error("ExtractValue: Expected only one index");
+        else if (LLVMGetNumIndices(Src) < 1)
+          report_fatal_error("ExtractValue: Expected an index");
         auto I = LLVMGetIndices(Src)[0];
         Dst = LLVMBuildExtractValue(Builder, Agg, I, Name);
         break;
@@ -755,10 +781,42 @@ struct FunCloner {
       case LLVMInsertValue: {
         LLVMValueRef Agg = CloneValue(LLVMGetOperand(Src, 0));
         LLVMValueRef V = CloneValue(LLVMGetOperand(Src, 1));
-        if (LLVMGetNumIndices(Src) != 1)
-          report_fatal_error("Expected only one indice");
+        if (LLVMGetNumIndices(Src) > 1)
+          report_fatal_error("InsertValue: Expected only one index");
+        else if (LLVMGetNumIndices(Src) < 1)
+          report_fatal_error("InsertValue: Expected an index");
         auto I = LLVMGetIndices(Src)[0];
         Dst = LLVMBuildInsertValue(Builder, Agg, V, I, Name);
+        break;
+      }
+      case LLVMExtractElement: {
+        LLVMValueRef Agg = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef Index = CloneValue(LLVMGetOperand(Src, 1));
+        Dst = LLVMBuildExtractElement(Builder, Agg, Index, Name);
+        break;
+      }
+      case LLVMInsertElement: {
+        LLVMValueRef Agg = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef V = CloneValue(LLVMGetOperand(Src, 1));
+        LLVMValueRef Index = CloneValue(LLVMGetOperand(Src, 2));
+        Dst = LLVMBuildInsertElement(Builder, Agg, V, Index, Name);
+        break;
+      }
+      case LLVMShuffleVector: {
+        LLVMValueRef Agg0 = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef Agg1 = CloneValue(LLVMGetOperand(Src, 1));
+        SmallVector<LLVMValueRef, 8> MaskElts;
+        unsigned NumMaskElts = LLVMGetNumMaskElements(Src);
+        for (unsigned i = 0; i < NumMaskElts; i++) {
+          int Val = LLVMGetMaskValue(Src, i);
+          if (Val == LLVMGetUndefMaskElem()) {
+            MaskElts.push_back(LLVMGetUndef(LLVMInt64Type()));
+          } else {
+            MaskElts.push_back(LLVMConstInt(LLVMInt64Type(), Val, true));
+          }
+        }
+        LLVMValueRef Mask = LLVMConstVector(MaskElts.data(), NumMaskElts);
+        Dst = LLVMBuildShuffleVector(Builder, Agg0, Agg1, Mask, Name);
         break;
       }
       case LLVMFreeze: {
@@ -1102,7 +1160,7 @@ static void clone_symbols(LLVMModuleRef Src, LLVMModuleRef M) {
       LLVMGlobalSetMetadata(G, Kind, MD);
     }
     LLVMDisposeValueMetadataEntries(AllMetadata);
-    
+
     LLVMSetGlobalConstant(G, LLVMIsGlobalConstant(Cur));
     LLVMSetThreadLocal(G, LLVMIsThreadLocal(Cur));
     LLVMSetExternallyInitialized(G, LLVMIsExternallyInitialized(Cur));

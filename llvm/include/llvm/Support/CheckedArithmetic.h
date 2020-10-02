@@ -28,8 +28,8 @@ template <typename T, typename F>
 std::enable_if_t<std::is_integral<T>::value && sizeof(T) * 8 <= 64,
                  llvm::Optional<T>>
 checkedOp(T LHS, T RHS, F Op, bool Signed = true) {
-  llvm::APInt ALHS(/*BitSize=*/sizeof(T) * 8, LHS, Signed);
-  llvm::APInt ARHS(/*BitSize=*/sizeof(T) * 8, RHS, Signed);
+  llvm::APInt ALHS(sizeof(T) * 8, LHS, Signed);
+  llvm::APInt ARHS(sizeof(T) * 8, RHS, Signed);
   bool Overflow;
   llvm::APInt Out = (ALHS.*Op)(ARHS, Overflow);
   if (Overflow)

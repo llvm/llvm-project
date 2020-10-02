@@ -3,7 +3,8 @@
 # RUN: | FileCheck %s
 
 # CHECK: Verifying .debug_info Unit Header Chain...
-# CHECK-NEXT: error: Invalid address range [0x0000000000000007, 0x0000000000000006)
+# CHECK: warning: DW_TAG_compile_unit has DW_CHILDREN_yes but DIE has no children:
+# CHECK: error: Invalid address range [0x0000000000000007, 0x0000000000000006)
 
 	.section	__TEXT,__text,regular,pure_instructions
 	.macosx_version_min 10, 12

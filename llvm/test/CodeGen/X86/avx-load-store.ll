@@ -34,27 +34,27 @@ define void @test_256_load(double* nocapture %d, float* nocapture %f, <4 x i64>*
 ;
 ; CHECK_O0-LABEL: test_256_load:
 ; CHECK_O0:       # %bb.0: # %entry
-; CHECK_O0-NEXT:    subq $152, %rsp
-; CHECK_O0-NEXT:    vmovapd (%rdi), %ymm0
-; CHECK_O0-NEXT:    vmovaps (%rsi), %ymm1
-; CHECK_O0-NEXT:    vmovdqa (%rdx), %ymm2
-; CHECK_O0-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; CHECK_O0-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; CHECK_O0-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; CHECK_O0-NEXT:    subq $184, %rsp
 ; CHECK_O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK_O0-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK_O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK_O0-NEXT:    vmovapd (%rdi), %ymm0
+; CHECK_O0-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
+; CHECK_O0-NEXT:    vmovaps (%rsi), %ymm1
+; CHECK_O0-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; CHECK_O0-NEXT:    vmovdqa (%rdx), %ymm2
+; CHECK_O0-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK_O0-NEXT:    callq dummy
-; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; CHECK_O0-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK_O0-NEXT:    vmovapd %ymm0, (%rax)
-; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; CHECK_O0-NEXT:    vmovups (%rsp), %ymm2 # 32-byte Reload
+; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
 ; CHECK_O0-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
-; CHECK_O0-NEXT:    vmovaps %ymm1, (%rcx)
+; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; CHECK_O0-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; CHECK_O0-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm2 # 32-byte Reload
-; CHECK_O0-NEXT:    vmovdqa %ymm2, (%rdx)
-; CHECK_O0-NEXT:    addq $152, %rsp
+; CHECK_O0-NEXT:    vmovapd %ymm2, (%rdi)
+; CHECK_O0-NEXT:    vmovaps %ymm1, (%rsi)
+; CHECK_O0-NEXT:    vmovdqa %ymm0, (%rdx)
+; CHECK_O0-NEXT:    addq $184, %rsp
 ; CHECK_O0-NEXT:    vzeroupper
 ; CHECK_O0-NEXT:    retq
 entry:
@@ -173,10 +173,11 @@ define void @double_save(<4 x i32> %A, <4 x i32> %B, <8 x i32>* %P) nounwind ssp
 ;
 ; CHECK_O0-LABEL: double_save:
 ; CHECK_O0:       # %bb.0:
-; CHECK_O0-NEXT:    # implicit-def: $ymm2
 ; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm2
-; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm2
-; CHECK_O0-NEXT:    vmovdqu %ymm2, (%rdi)
+; CHECK_O0-NEXT:    # implicit-def: $ymm0
+; CHECK_O0-NEXT:    vmovaps %xmm2, %xmm0
+; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; CHECK_O0-NEXT:    vmovdqu %ymm0, (%rdi)
 ; CHECK_O0-NEXT:    vzeroupper
 ; CHECK_O0-NEXT:    retq
   %Z = shufflevector <4 x i32>%A, <4 x i32>%B, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -195,10 +196,11 @@ define void @double_save_volatile(<4 x i32> %A, <4 x i32> %B, <8 x i32>* %P) nou
 ;
 ; CHECK_O0-LABEL: double_save_volatile:
 ; CHECK_O0:       # %bb.0:
-; CHECK_O0-NEXT:    # implicit-def: $ymm2
 ; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm2
-; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm2
-; CHECK_O0-NEXT:    vmovdqu %ymm2, (%rdi)
+; CHECK_O0-NEXT:    # implicit-def: $ymm0
+; CHECK_O0-NEXT:    vmovaps %xmm2, %xmm0
+; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; CHECK_O0-NEXT:    vmovdqu %ymm0, (%rdi)
 ; CHECK_O0-NEXT:    vzeroupper
 ; CHECK_O0-NEXT:    retq
   %Z = shufflevector <4 x i32>%A, <4 x i32>%B, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -239,10 +241,10 @@ define void @f_f() nounwind {
 ; CHECK_O0-NEXT:  .LBB9_3: # %cif_mixed_test_all
 ; CHECK_O0-NEXT:    vmovdqa {{.*#+}} xmm0 = [4294967295,0,0,0]
 ; CHECK_O0-NEXT:    vmovdqa %xmm0, %xmm0
-; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm1
+; CHECK_O0-NEXT:    # kill: def $ymm0 killed $xmm0
 ; CHECK_O0-NEXT:    # implicit-def: $rax
-; CHECK_O0-NEXT:    # implicit-def: $ymm2
-; CHECK_O0-NEXT:    vmaskmovps %ymm2, %ymm1, (%rax)
+; CHECK_O0-NEXT:    # implicit-def: $ymm1
+; CHECK_O0-NEXT:    vmaskmovps %ymm1, %ymm0, (%rax)
 ; CHECK_O0-NEXT:  .LBB9_4: # %cif_mixed_test_any_check
 allocas:
   br i1 undef, label %cif_mask_all, label %cif_mask_mixed
@@ -272,12 +274,12 @@ define void @add8i32(<8 x i32>* %ret, <8 x i32>* %bp) nounwind {
 ;
 ; CHECK_O0-LABEL: add8i32:
 ; CHECK_O0:       # %bb.0:
-; CHECK_O0-NEXT:    vmovdqu (%rsi), %xmm0
+; CHECK_O0-NEXT:    vmovdqu (%rsi), %xmm2
 ; CHECK_O0-NEXT:    vmovdqu 16(%rsi), %xmm1
-; CHECK_O0-NEXT:    # implicit-def: $ymm2
-; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm2
-; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm2
-; CHECK_O0-NEXT:    vmovdqu %ymm2, (%rdi)
+; CHECK_O0-NEXT:    # implicit-def: $ymm0
+; CHECK_O0-NEXT:    vmovaps %xmm2, %xmm0
+; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; CHECK_O0-NEXT:    vmovdqu %ymm0, (%rdi)
 ; CHECK_O0-NEXT:    vzeroupper
 ; CHECK_O0-NEXT:    retq
   %b = load <8 x i32>, <8 x i32>* %bp, align 1
@@ -317,12 +319,12 @@ define void @add4i64a16(<4 x i64>* %ret, <4 x i64>* %bp) nounwind {
 ;
 ; CHECK_O0-LABEL: add4i64a16:
 ; CHECK_O0:       # %bb.0:
-; CHECK_O0-NEXT:    vmovdqa (%rsi), %xmm0
+; CHECK_O0-NEXT:    vmovdqa (%rsi), %xmm2
 ; CHECK_O0-NEXT:    vmovdqa 16(%rsi), %xmm1
-; CHECK_O0-NEXT:    # implicit-def: $ymm2
-; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm2
-; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm2
-; CHECK_O0-NEXT:    vmovdqu %ymm2, (%rdi)
+; CHECK_O0-NEXT:    # implicit-def: $ymm0
+; CHECK_O0-NEXT:    vmovaps %xmm2, %xmm0
+; CHECK_O0-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; CHECK_O0-NEXT:    vmovdqu %ymm0, (%rdi)
 ; CHECK_O0-NEXT:    vzeroupper
 ; CHECK_O0-NEXT:    retq
   %b = load <4 x i64>, <4 x i64>* %bp, align 16

@@ -45,21 +45,28 @@ struct SkippedRange {
 /// Stores additional source code information like skipped ranges which
 /// is required by the coverage mapping generator and is obtained from
 /// the preprocessor.
-class CoverageSourceInfo : public PPCallbacks, public CommentHandler {
+class CoverageSourceInfo : public PPCallbacks,
+                           public CommentHandler,
+                           public EmptylineHandler {
   // A vector of skipped source ranges and PrevTokLoc with NextTokLoc.
   std::vector<SkippedRange> SkippedRanges;
-  bool AfterComment = false;
+
+  SourceManager &SourceMgr;
 
 public:
   // Location of the token parsed before HandleComment is called. This is
   // updated every time Preprocessor::Lex lexes a new token.
   SourceLocation PrevTokLoc;
-  // The location of token before comment.
-  SourceLocation BeforeCommentLoc;
+
+  CoverageSourceInfo(SourceManager &SourceMgr) : SourceMgr(SourceMgr) {}
 
   std::vector<SkippedRange> &getSkippedRanges() { return SkippedRanges; }
 
+  void AddSkippedRange(SourceRange Range);
+
   void SourceRangeSkipped(SourceRange Range, SourceLocation EndifLoc) override;
+
+  void HandleEmptyline(SourceRange Range) override;
 
   bool HandleComment(Preprocessor &PP, SourceRange Range) override;
 

@@ -792,8 +792,9 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
 
   VirtRegMap &VRM = getAnalysis<VirtRegMap>();
 
-  calculateSpillWeightsAndHints(LIS, MF, &VRM, getAnalysis<MachineLoopInfo>(),
-                                MBFI, normalizePBQPSpillWeight);
+  VirtRegAuxInfo VRAI(MF, LIS, &VRM, getAnalysis<MachineLoopInfo>(), MBFI,
+                      normalizePBQPSpillWeight);
+  VRAI.calculateSpillWeightsAndHints();
 
   std::unique_ptr<Spiller> VRegSpiller(createInlineSpiller(*this, MF, VRM));
 

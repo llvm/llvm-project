@@ -1,4 +1,5 @@
 ; RUN: opt -S -basic-aa -objc-arc-aa -gvn < %s | FileCheck %s
+; RUN: opt -S -aa-pipeline=basic-aa,objc-arc-aa -passes=gvn < %s | FileCheck %s
 
 @x = common global i8* null, align 8
 

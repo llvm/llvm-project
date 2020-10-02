@@ -337,9 +337,8 @@ def PDLInterp_CreateAttributeOp
   let assemblyFormat = "$value attr-dict";
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, "
-              "Attribute value", [{
-    build(builder, state, builder.getType<pdl::AttributeType>(), value);
+    OpBuilder<"Attribute value", [{
+    build($_builder, $_state, $_builder.getType<pdl::AttributeType>(), value);
   }]>];
 }
 
@@ -402,10 +401,9 @@ def PDLInterp_CreateOperationOp
   let results = (outs PDL_Operation:$operation);
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, StringRef name, "
-              "ValueRange types, ValueRange operands, ValueRange attributes, "
-              "ArrayAttr attributeNames", [{
-    build(builder, state, builder.getType<pdl::OperationType>(), name,
+    OpBuilder<"StringRef name, ValueRange types, ValueRange operands, "
+              "ValueRange attributes, ArrayAttr attributeNames", [{
+    build($_builder, $_state, $_builder.getType<pdl::OperationType>(), name,
           operands, attributes, attributeNames, types);
   }]>];
   let parser = [{ return ::parseCreateOperationOp(parser, result); }];
@@ -434,8 +432,8 @@ def PDLInterp_CreateTypeOp : PDLInterp_Op<"create_type", [NoSideEffect]> {
   let assemblyFormat = "$value attr-dict";
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, TypeAttr type", [{
-      build(builder, state, builder.getType<pdl::TypeType>(), type);
+    OpBuilder<"TypeAttr type", [{
+      build($_builder, $_state, $_builder.getType<pdl::TypeType>(), type);
     }]>
   ];
 }
@@ -529,8 +527,8 @@ def PDLInterp_GetAttributeTypeOp
   let assemblyFormat = "`of` $value attr-dict";
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, Value value", [{
-      build(builder, state, builder.getType<pdl::TypeType>(), value);
+    OpBuilder<"Value value", [{
+      build($_builder, $_state, $_builder.getType<pdl::TypeType>(), value);
     }]>
   ];
 }
@@ -630,8 +628,8 @@ def PDLInterp_GetValueTypeOp : PDLInterp_Op<"get_value_type", [NoSideEffect]> {
   let assemblyFormat = "`of` $value attr-dict";
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, Value value", [{
-      build(builder, state, builder.getType<pdl::TypeType>(), value);
+    OpBuilder<"Value value", [{
+      build($_builder, $_state, $_builder.getType<pdl::TypeType>(), value);
     }]>
   ];
 }
@@ -657,8 +655,8 @@ def PDLInterp_InferredTypeOp : PDLInterp_Op<"inferred_type"> {
   let assemblyFormat = "attr-dict";
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state", [{
-      build(builder, state, builder.getType<pdl::TypeType>());
+    OpBuilder<"", [{
+      build($_builder, $_state, $_builder.getType<pdl::TypeType>());
     }]>,
   ];
 }
@@ -772,10 +770,9 @@ def PDLInterp_SwitchAttributeOp
   }];
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, Value attribute,"
-              "ArrayRef<Attribute> caseValues,"
-              "Block *defaultDest, ArrayRef<Block *> dests", [{
-    build(builder, state, attribute, builder.getArrayAttr(caseValues),
+    OpBuilder<"Value attribute, ArrayRef<Attribute> caseValues,"
+              "Block *defaultDest, BlockRange dests", [{
+    build($_builder, $_state, attribute, $_builder.getArrayAttr(caseValues),
           defaultDest, dests);
   }]>];
 }
@@ -806,10 +803,9 @@ def PDLInterp_SwitchOperandCountOp
   }];
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, Value operation, "
-              "ArrayRef<int32_t> counts, Block *defaultDest, "
-              "ArrayRef<Block *> dests", [{
-    build(builder, state, operation, builder.getI32VectorAttr(counts),
+    OpBuilder<"Value operation, ArrayRef<int32_t> counts, "
+              "Block *defaultDest, BlockRange dests", [{
+    build($_builder, $_state, operation, $_builder.getI32VectorAttr(counts),
           defaultDest, dests);
   }]>];
 }
@@ -841,12 +837,11 @@ def PDLInterp_SwitchOperationNameOp
   }];
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, Value operation, "
-              "ArrayRef<OperationName> names, "
-              "Block *defaultDest, ArrayRef<Block *> dests", [{
+    OpBuilder<"Value operation, ArrayRef<OperationName> names, "
+              "Block *defaultDest, BlockRange dests", [{
       auto stringNames = llvm::to_vector<8>(llvm::map_range(names,
           [](OperationName name) { return name.getStringRef(); }));
-      build(builder, state, operation, builder.getStrArrayAttr(stringNames),
+      build($_builder, $_state, operation, $_builder.getStrArrayAttr(stringNames),
             defaultDest, dests);
     }]>,
   ];
@@ -878,10 +873,9 @@ def PDLInterp_SwitchResultCountOp
   }];
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, Value operation, "
-              "ArrayRef<int32_t> counts, Block *defaultDest, "
-              "ArrayRef<Block *> dests", [{
-    build(builder, state, operation, builder.getI32VectorAttr(counts),
+    OpBuilder<"Value operation, ArrayRef<int32_t> counts, Block *defaultDest, "
+              "BlockRange dests", [{
+    build($_builder, $_state, operation, $_builder.getI32VectorAttr(counts),
           defaultDest, dests);
   }]>];
 }
@@ -911,10 +905,10 @@ def PDLInterp_SwitchTypeOp : PDLInterp_SwitchOp<"switch_type", [NoSideEffect]> {
   }];
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, Value edge, "
-              "TypeRange types, Block *defaultDest, ArrayRef<Block *> dests", [{
-      build(builder, state, edge, builder.getTypeArrayAttr(types), defaultDest,
-            dests);
+    OpBuilder<"Value edge, TypeRange types, Block *defaultDest, "
+              "BlockRange dests", [{
+      build($_builder, $_state, edge, $_builder.getTypeArrayAttr(types),
+            defaultDest, dests);
     }]>,
   ];
 

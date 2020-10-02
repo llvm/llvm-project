@@ -143,6 +143,7 @@ public:
 
 class TargetLoweringObjectFileCOFF : public TargetLoweringObjectFile {
   mutable unsigned NextUniqueID = 0;
+  const TargetMachine *TM = nullptr;
 
 public:
   ~TargetLoweringObjectFileCOFF() override = default;
@@ -168,12 +169,6 @@ public:
   MCSection *getStaticDtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
 
-  void emitLinkerFlagsForGlobal(raw_ostream &OS,
-                                const GlobalValue *GV) const override;
-
-  void emitLinkerFlagsForUsed(raw_ostream &OS,
-                              const GlobalValue *GV) const override;
-
   const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
                                        const GlobalValue *RHS,
                                        const TargetMachine &TM) const override;
@@ -183,6 +178,9 @@ public:
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
                                    const Constant *C,
                                    Align &Alignment) const override;
+
+private:
+  void emitLinkerDirectives(MCStreamer &Streamer, Module &M) const;
 };
 
 class TargetLoweringObjectFileWasm : public TargetLoweringObjectFile {

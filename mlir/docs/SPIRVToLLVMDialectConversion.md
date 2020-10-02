@@ -51,7 +51,7 @@ SPIR-V Dialect                                | LLVM Dialect
 
 SPIR-V distinguishes between array type and run-time array type, the length of
 which is not known at compile time. In LLVM, it is possible to index beyond the
-end of the array. Therfore, runtime array can be implemented as a zero length
+end of the array. Therefore, runtime array can be implemented as a zero length
 array type.
 
 Moreover, SPIR-V supports the notion of array stride. Currently only natural
@@ -617,7 +617,7 @@ As well as:
 ### Branch ops
 
 `spv.Branch` and `spv.BranchConditional` are mapped to `llvm.br` and
-`llvm.cond_br`. Branch weigths for `spv.BranchConditional` are mapped to
+`llvm.cond_br`. Branch weights for `spv.BranchConditional` are mapped to
 corresponding `branch_weights` attribute of `llvm.cond_br`. When translated to
 proper LLVM, `branch_weights` are converted into LLVM metadata associated with
 the conditional branch.

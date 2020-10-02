@@ -147,8 +147,7 @@ void ReplaceAutoPtrCheck::check(const MatchFinder::MatchResult &Result) {
     auto Diag = diag(Range.getBegin(), "use std::move to transfer ownership")
                 << FixItHint::CreateInsertion(Range.getBegin(), "std::move(")
                 << FixItHint::CreateInsertion(Range.getEnd(), ")")
-                << Inserter.createMainFileIncludeInsertion("utility",
-                                                           /*IsAngled=*/true);
+                << Inserter.createMainFileIncludeInsertion("<utility>");
 
     return;
   }

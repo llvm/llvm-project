@@ -1,4 +1,4 @@
-; RUN: opt -passes='loop-unroll-full' -disable-verify --mtriple x86_64-pc-linux-gnu -S -o - %s | FileCheck %s
+; RUN: opt -passes='loop-unroll-full' -disable-verify -disable-loop-unrolling=true --mtriple x86_64-pc-linux-gnu -S -o - %s | FileCheck %s
 
 ; This checks that the loop full unroller will fire in the new pass manager
 ; when forced via #pragma in the source (or annotation in the code).
@@ -39,7 +39,7 @@ bb24:                                             ; preds = %bb3.loopexit
   ret void
 }
 
-attributes #0 = { noinline nounwind optnone uwtable }
+attributes #0 = { nounwind uwtable }
 
 !llvm.module.flags = !{!0}
 

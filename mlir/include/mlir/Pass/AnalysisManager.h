@@ -268,7 +268,7 @@ public:
     return nest(op).template getAnalysis<AnalysisT>();
   }
 
-  /// Query for an analysis of a child operation of a specifc derived operation
+  /// Query for an analysis of a child operation of a specific derived operation
   /// type, constructing it if necessary.
   template <typename AnalysisT, typename OpT>
   AnalysisT &getChildAnalysis(OpT child) {

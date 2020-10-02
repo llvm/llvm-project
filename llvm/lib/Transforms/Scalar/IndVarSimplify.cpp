@@ -2329,11 +2329,44 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   return MadeAnyChanges;
 }
 
+// Returns true if the condition of \p BI being checked is invariant and can be
+// proved to be trivially true.
+static bool isTrivialCond(const Loop *L, BranchInst *BI, ScalarEvolution *SE,
+                          bool ProvingLoopExit) {
+  ICmpInst::Predicate Pred;
+  Value *LHS, *RHS;
+  using namespace PatternMatch;
+  BasicBlock *TrueSucc, *FalseSucc;
+  if (!match(BI, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
+                      m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc))))
+    return false;
+
+  assert((L->contains(TrueSucc) != L->contains(FalseSucc)) &&
+         "Not a loop exit!");
+
+  // 'LHS pred RHS' should now mean that we stay in loop.
+  if (L->contains(FalseSucc))
+    Pred = CmpInst::getInversePredicate(Pred);
+
+  // If we are proving loop exit, invert the predicate.
+  if (ProvingLoopExit)
+    Pred = CmpInst::getInversePredicate(Pred);
+
+  const SCEV *LHSS = SE->getSCEVAtScope(LHS, L);
+  const SCEV *RHSS = SE->getSCEVAtScope(RHS, L);
+  // Can we prove it to be trivially true?
+  if (SE->isKnownPredicate(Pred, LHSS, RHSS))
+    return true;
+
+  return false;
+}
+
 bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
   SmallVector<BasicBlock*, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
-  // Remove all exits which aren't both rewriteable and analyzeable.
+  // Remove all exits which aren't both rewriteable and execute on every
+  // iteration.
   auto NewEnd = llvm::remove_if(ExitingBlocks, [&](BasicBlock *ExitingBB) {
     // If our exitting block exits multiple loops, we can only rewrite the
     // innermost one.  Otherwise, we're changing how many times the innermost
@@ -2350,9 +2383,10 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     if (isa<Constant>(BI->getCondition()))
       return true;
 
-    const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
-    if (isa<SCEVCouldNotCompute>(ExitCount))
+    // Likewise, the loop latch must be dominated by the exiting BB.
+    if (!DT->dominates(ExitingBB, L->getLoopLatch()))
       return true;
+
     return false;
   });
   ExitingBlocks.erase(NewEnd, ExitingBlocks.end());
@@ -2365,19 +2399,21 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
   if (isa<SCEVCouldNotCompute>(MaxExitCount))
     return false;
 
-  // Visit our exit blocks in order of dominance.  We know from the fact that
-  // all exits (left) are analyzeable that the must be a total dominance order
-  // between them as each must dominate the latch.  The visit order only
-  // matters for the provably equal case.
-  llvm::sort(ExitingBlocks,
-             [&](BasicBlock *A, BasicBlock *B) {
+  // Visit our exit blocks in order of dominance. We know from the fact that
+  // all exits must dominate the latch, so there is a total dominance order
+  // between them.
+  llvm::sort(ExitingBlocks, [&](BasicBlock *A, BasicBlock *B) {
                // std::sort sorts in ascending order, so we want the inverse of
                // the normal dominance relation.
                if (A == B) return false;
-               if (DT->properlyDominates(A, B)) return true;
-               if (DT->properlyDominates(B, A)) return false;
-               llvm_unreachable("expected total dominance order!");
-             });
+               if (DT->properlyDominates(A, B))
+                 return true;
+               else {
+                 assert(DT->properlyDominates(B, A) &&
+                        "expected total dominance order!");
+                 return false;
+               }
+  });
 #ifdef ASSERT
   for (unsigned i = 1; i < ExitingBlocks.size(); i++) {
     assert(DT->dominates(ExitingBlocks[i-1], ExitingBlocks[i]));
@@ -2399,7 +2435,20 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
   SmallSet<const SCEV*, 8> DominatingExitCounts;
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
-    assert(!isa<SCEVCouldNotCompute>(ExitCount) && "checked above");
+    if (isa<SCEVCouldNotCompute>(ExitCount)) {
+      // Okay, we do not know the exit count here. Can we at least prove that it
+      // will remain the same within iteration space?
+      auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
+      if (isTrivialCond(L, BI, SE, false)) {
+        FoldExit(ExitingBB, false);
+        Changed = true;
+      }
+      if (isTrivialCond(L, BI, SE, true)) {
+        FoldExit(ExitingBB, true);
+        Changed = true;
+      }
+      continue;
+    }
 
     // If we know we'd exit on the first iteration, rewrite the exit to
     // reflect this.  This does not imply the loop must exit through this

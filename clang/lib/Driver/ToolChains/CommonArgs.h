@@ -83,7 +83,7 @@ bool GetSDLFromOffloadArchive(Compilation &C, const Driver &D, const Tool &T,
                               StringRef GpuArch, bool isBitCodeSDL,
                               bool postClangLink);
 
-const char *SplitDebugName(const llvm::opt::ArgList &Args,
+const char *SplitDebugName(const JobAction &JA, const llvm::opt::ArgList &Args,
                            const InputInfo &Input, const InputInfo &Output);
 
 void SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,

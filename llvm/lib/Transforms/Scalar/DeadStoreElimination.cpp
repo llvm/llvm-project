@@ -1824,9 +1824,10 @@ struct DSEState {
            isFreeCall(I, &TLI);
   }
 
-  /// Returns true if \p MaybeTerm is a memory terminator for the same
-  /// underlying object as \p DefLoc.
-  bool isMemTerminator(MemoryLocation DefLoc, Instruction *MaybeTerm) {
+  /// Returns true if \p MaybeTerm is a memory terminator for \p Loc from
+  /// instruction \p AccessI.
+  bool isMemTerminator(MemoryLocation Loc, Instruction *AccessI,
+                       Instruction *MaybeTerm) {
     Optional<std::pair<MemoryLocation, bool>> MaybeTermLoc =
         getLocForTerminator(MaybeTerm);
 
@@ -1835,9 +1836,15 @@ struct DSEState {
 
     // If the terminator is a free-like call, all accesses to the underlying
     // object can be considered terminated.
-    if (MaybeTermLoc->second)
-      DefLoc = MemoryLocation(getUnderlyingObject(DefLoc.Ptr));
-    return BatchAA.isMustAlias(MaybeTermLoc->first, DefLoc);
+    if (getUnderlyingObject(Loc.Ptr) !=
+        getUnderlyingObject(MaybeTermLoc->first.Ptr))
+      return false;
+
+    int64_t InstWriteOffset, DepWriteOffset;
+    return MaybeTermLoc->second ||
+           isOverwrite(MaybeTerm, AccessI, MaybeTermLoc->first, Loc, DL, TLI,
+                       DepWriteOffset, InstWriteOffset, BatchAA,
+                       &F) == OW_Complete;
   }
 
   // Returns true if \p Use may read from \p DefLoc.
@@ -2011,8 +2018,7 @@ struct DSEState {
         // If the killing def is a memory terminator (e.g. lifetime.end), check
         // the next candidate if the current Current does not write the same
         // underlying object as the terminator.
-        const Value *NIUnd = getUnderlyingObject(CurrentLoc->Ptr);
-        if (DefUO != NIUnd) {
+        if (!isMemTerminator(*CurrentLoc, CurrentI, KillingI)) {
           StepAgain = true;
           Current = CurrentDef->getDefiningAccess();
         }
@@ -2134,7 +2140,7 @@ struct DSEState {
 
       // A memory terminator kills all preceeding MemoryDefs and all succeeding
       // MemoryAccesses. We do not have to check it's users.
-      if (isMemTerminator(DefLoc, UseInst))
+      if (isMemTerminator(DefLoc, KillingI, UseInst))
         continue;
 
       if (UseInst->mayThrow() && !isInvisibleToCallerBeforeRet(DefUO)) {
@@ -2398,10 +2404,44 @@ struct DSEState {
 
     if (auto *LoadI = dyn_cast<LoadInst>(Store->getOperand(0))) {
       if (LoadI->getPointerOperand() == Store->getOperand(1)) {
+        // Get the defining access for the load.
         auto *LoadAccess = MSSA.getMemoryAccess(LoadI)->getDefiningAccess();
-        // If both accesses share the same defining access, no instructions
-        // between them can modify the memory location.
-        return LoadAccess == Def->getDefiningAccess();
+        // Fast path: the defining accesses are the same.
+        if (LoadAccess == Def->getDefiningAccess())
+          return true;
+
+        // Look through phi accesses. Recursively scan all phi accesses by
+        // adding them to a worklist. Bail when we run into a memory def that
+        // does not match LoadAccess.
+        SetVector<MemoryAccess *> ToCheck;
+        MemoryAccess *Current = Def->getDefiningAccess();
+        // We don't want to bail when we run into the store memory def. But,
+        // the phi access may point to it. So, pretend like we've already
+        // checked it.
+        ToCheck.insert(Def);
+        ToCheck.insert(Current);
+        // Start at current (1) to simulate already having checked Def.
+        for (unsigned I = 1; I < ToCheck.size(); ++I) {
+          Current = ToCheck[I];
+          if (auto PhiAccess = dyn_cast<MemoryPhi>(Current)) {
+            // Check all the operands.
+            for (auto &Use : PhiAccess->incoming_values())
+              ToCheck.insert(cast<MemoryAccess>(&Use));
+            continue;
+          }
+
+          // If we found a memory def, bail. This happens when we have an
+          // unrelated write in between an otherwise noop store.
+          assert(isa<MemoryDef>(Current) &&
+                 "Only MemoryDefs should reach here.");
+          // TODO: Skip no alias MemoryDefs that have no aliasing reads.
+          // We are searching for the definition of the store's destination.
+          // So, if that is the same definition as the load, then this is a
+          // noop. Otherwise, fail.
+          if (LoadAccess != Current)
+            return false;
+        }
+        return true;
       }
     }
 

@@ -550,7 +550,7 @@ void TargetPassConfig::addPass(Pass *P, bool verifyAfter) {
       addMachinePostPasses(Banner, /*AllowVerify*/ verifyAfter);
 
     // Add the passes after the pass P if there is any.
-    for (auto IP : Impl->InsertedPasses) {
+    for (const auto &IP : Impl->InsertedPasses) {
       if (IP.TargetPassID == PassID)
         addPass(IP.getInsertedPass(), IP.VerifyAfter);
     }

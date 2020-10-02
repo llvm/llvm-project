@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AST.h"
+#include "Config.h"
 #include "FindTarget.h"
 #include "refactor/Tweak.h"
 #include "support/Logger.h"
@@ -190,6 +191,19 @@ findInsertionPoint(const Tweak::Selection &Inputs,
   return Out;
 }
 
+bool isNamespaceForbidden(const Tweak::Selection &Inputs,
+                          const NestedNameSpecifier &Namespace) {
+  std::string NamespaceStr = printNamespaceScope(*Namespace.getAsNamespace());
+
+  for (StringRef Banned : Config::current().Style.FullyQualifiedNamespaces) {
+    StringRef PrefixMatch = NamespaceStr;
+    if (PrefixMatch.consume_front(Banned) && PrefixMatch.consume_front("::"))
+      return true;
+  }
+
+  return false;
+}
+
 bool AddUsing::prepare(const Selection &Inputs) {
   auto &SM = Inputs.AST->getSourceManager();
 
@@ -247,6 +261,9 @@ bool AddUsing::prepare(const Selection &Inputs) {
       Name.empty()) {
     return false;
   }
+
+  if (isNamespaceForbidden(Inputs, *QualifierToRemove.getNestedNameSpecifier()))
+    return false;
 
   // Macros are difficult. We only want to offer code action when what's spelled
   // under the cursor is a namespace qualifier. If it's a macro that expands to

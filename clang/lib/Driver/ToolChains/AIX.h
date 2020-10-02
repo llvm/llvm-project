@@ -72,6 +72,8 @@ public:
 
   CXXStdlibType GetDefaultCXXStdlibType() const override;
 
+  RuntimeLibType GetDefaultRuntimeLibType() const override;
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;
