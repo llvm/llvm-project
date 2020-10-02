@@ -249,6 +249,8 @@ private:
   /// `operands`.
   LogicalResult processConstantComposite(ArrayRef<uint32_t> operands);
 
+  LogicalResult processSpecConstantComposite(ArrayRef<uint32_t> operands);
+
   /// Processes a SPIR-V OpConstantNull instruction with the given `operands`.
   LogicalResult processConstantNull(ArrayRef<uint32_t> operands);
 
@@ -1546,6 +1548,39 @@ Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+LogicalResult
+Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
+  if (operands.size() < 2) {
+    return emitError(unknownLoc,
+                     "OpConstantComposite must have type <id> and result <id>");
+  }
+  if (operands.size() < 3) {
+    return emitError(unknownLoc,
+                     "OpConstantComposite must have at least 1 parameter");
+  }
+
+  Type resultType = getType(operands[0]);
+  if (!resultType) {
+    return emitError(unknownLoc, "undefined result type from <id> ")
+           << operands[0];
+  }
+
+  auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(operands[1]));
+
+  SmallVector<Attribute, 4> elements;
+  elements.reserve(operands.size() - 2);
+  for (unsigned i = 2, e = operands.size(); i < e; ++i) {
+    auto elementInfo = getSpecConstant(operands[i]);
+    elements.push_back(opBuilder.getSymbolRefAttr(elementInfo));
+  }
+
+  opBuilder.create<spirv::SpecConstantCompositeOp>(
+      unknownLoc, TypeAttr::get(resultType), symName,
+      opBuilder.getArrayAttr(elements));
+
+  return success();
+}
+
 LogicalResult Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   if (operands.size() != 2) {
     return emitError(unknownLoc,
@@ -2276,6 +2311,8 @@ LogicalResult Deserializer::processInstruction(spirv::Opcode opcode,
     return processConstant(operands, /*isSpec=*/true);
   case spirv::Opcode::OpConstantComposite:
     return processConstantComposite(operands);
+  case spirv::Opcode::OpSpecConstantComposite:
+    return processSpecConstantComposite(operands);
   case spirv::Opcode::OpConstantTrue:
     return processConstantBool(/*isTrue=*/true, operands, /*isSpec=*/false);
   case spirv::Opcode::OpSpecConstantTrue:
