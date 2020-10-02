@@ -352,8 +352,15 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
       // If this is a store, see if we can merge it in.
       if (!NextStore->isSimple()) break;
 
+      Value *StoredVal = NextStore->getValueOperand();
+
+      // Don't convert stores of non-integral pointer types to memsets (which
+      // stores integers).
+      if (DL.isNonIntegralPointerType(StoredVal->getType()->getScalarType()))
+        break;
+
       // Check to see if this stored value is of the same byte-splattable value.
-      Value *StoredByte = isBytewiseValue(NextStore->getOperand(0), DL);
+      Value *StoredByte = isBytewiseValue(StoredVal, DL);
       if (isa<UndefValue>(ByteVal) && StoredByte)
         ByteVal = StoredByte;
       if (ByteVal != StoredByte)
@@ -556,8 +563,15 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
 
   const DataLayout &DL = SI->getModule()->getDataLayout();
 
+  Value *StoredVal = SI->getValueOperand();
+
+  // Not all the transforms below are correct for non-integral pointers, bail
+  // until we've audited the individual pieces.
+  if (DL.isNonIntegralPointerType(StoredVal->getType()->getScalarType()))
+    return false;
+
   // Load to store forwarding can be interpreted as memcpy.
-  if (LoadInst *LI = dyn_cast<LoadInst>(SI->getOperand(0))) {
+  if (LoadInst *LI = dyn_cast<LoadInst>(StoredVal)) {
     if (LI->isSimple() && LI->hasOneUse() &&
         LI->getParent() == SI->getParent()) {
 
