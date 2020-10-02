@@ -273,9 +273,12 @@ public:
                     StringRef TriggerText, Callback<std::vector<TextEdit>> CB);
 
   /// Test the validity of a rename operation.
+  ///
+  /// The returned result describes edits in the main-file only (all
+  /// occurrences of the renamed symbol are simply deleted.
   void prepareRename(PathRef File, Position Pos,
                      const RenameOptions &RenameOpts,
-                     Callback<llvm::Optional<Range>> CB);
+                     Callback<RenameResult> CB);
 
   /// Rename all occurrences of the symbol at the \p Pos in \p File to
   /// \p NewName.
@@ -283,7 +286,7 @@ public:
   /// embedders could use this method to get all occurrences of the symbol (e.g.
   /// highlighting them in prepare stage).
   void rename(PathRef File, Position Pos, llvm::StringRef NewName,
-              const RenameOptions &Opts, Callback<FileEdits> CB);
+              const RenameOptions &Opts, Callback<RenameResult> CB);
 
   struct TweakRef {
     std::string ID;    /// ID to pass for applyTweak.

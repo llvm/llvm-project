@@ -1123,7 +1123,10 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
     RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
                      DAG.getDataLayout(), InReg, Relocate.getType(),
                      None); // This is not an ABI copy.
-    SDValue Chain = DAG.getEntryNode();
+    // We generate copy to/from regs even for local uses, hence we must
+    // chain with current root to ensure proper ordering of copies w.r.t.
+    // statepoint.
+    SDValue Chain = DAG.getRoot();
     SDValue Relocation = RFV.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(),
                                              Chain, nullptr, nullptr);
     setValue(&Relocate, Relocation);
