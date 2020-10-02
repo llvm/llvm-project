@@ -345,6 +345,28 @@ define i8 @PR39793_bswap_u32_as_u16_trunc(i32 %0) {
   ret i8 %7
 }
 
+define i32 @partial_bswap(i32 %x) {
+; CHECK-LABEL: @partial_bswap(
+; CHECK-NEXT:    [[X3:%.*]] = shl i32 [[X:%.*]], 24
+; CHECK-NEXT:    [[A2:%.*]] = shl i32 [[X]], 8
+; CHECK-NEXT:    [[X2:%.*]] = and i32 [[A2]], 16711680
+; CHECK-NEXT:    [[X32:%.*]] = or i32 [[X3]], [[X2]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X]], -65536
+; CHECK-NEXT:    [[T2:%.*]] = call i32 @llvm.bswap.i32(i32 [[T1]])
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[X32]], [[T2]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x3 = shl i32 %x, 24
+  %a2 = shl i32 %x, 8
+  %x2 = and i32 %a2, 16711680
+  %x32 = or i32 %x3, %x2
+  %t1 = and i32 %x, -65536
+  %t2 = call i32 @llvm.bswap.i32(i32 %t1)
+  %r = or i32 %x32, %t2
+  ret i32 %r
+}
+declare i32 @llvm.bswap.i32(i32)
+
 define i64 @bswap_and_mask_0(i64 %0) {
 ; CHECK-LABEL: @bswap_and_mask_0(
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 56
