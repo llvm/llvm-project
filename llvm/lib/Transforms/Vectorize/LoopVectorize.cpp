@@ -7889,11 +7889,11 @@ void LoopVectorizationPlanner::adjustRecipesForInLoopReductions(
       unsigned FirstOpId;
       if (Kind == RecurrenceDescriptor::RK_IntegerMinMax ||
           Kind == RecurrenceDescriptor::RK_FloatMinMax) {
-        assert(WidenRecipe->getVPRecipeID() == VPRecipeBase::VPWidenSelectSC &&
+        assert(isa<VPWidenSelectRecipe>(WidenRecipe) &&
                "Expected to replace a VPWidenSelectSC");
         FirstOpId = 1;
       } else {
-        assert(WidenRecipe->getVPRecipeID() == VPRecipeBase::VPWidenSC &&
+        assert(isa<VPWidenRecipe>(WidenRecipe) &&
                "Expected to replace a VPWidenSC");
         FirstOpId = 0;
       }
@@ -7910,7 +7910,7 @@ void LoopVectorizationPlanner::adjustRecipesForInLoopReductions(
           Kind == RecurrenceDescriptor::RK_FloatMinMax) {
         VPRecipeBase *CompareRecipe =
             RecipeBuilder.getRecipe(cast<Instruction>(R->getOperand(0)));
-        assert(CompareRecipe->getVPRecipeID() == VPRecipeBase::VPWidenSC &&
+        assert(isa<VPWidenRecipe>(CompareRecipe) &&
                "Expected to replace a VPWidenSC");
         CompareRecipe->eraseFromParent();
       }
