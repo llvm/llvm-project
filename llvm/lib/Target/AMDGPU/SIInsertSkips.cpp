@@ -211,6 +211,7 @@ static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
 void SIInsertSkips::skipIfDead(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I, DebugLoc DL) {
   MachineFunction *MF = MBB.getParent();
+  (void)MF;
   assert(MF->getFunction().getCallingConv() == CallingConv::AMDGPU_PS);
 
   // It is possible for an SI_KILL_*_TERMINATOR to sit at the bottom of a
