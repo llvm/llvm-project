@@ -7915,8 +7915,7 @@ void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
                                           bool print_help_if_available,
                                           bool print_extensions_if_available,
                                           lldb::DescriptionLevel level) {
-  llvm::SmallVector<char, 1024> buf;
-  llvm::raw_svector_ostream llvm_ostrm(buf);
+  const auto initial_written_bytes = s->GetWrittenBytes();
 
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
@@ -8082,11 +8081,8 @@ void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
     }
   }
 
-  if (buf.size() > 0) {
-    s->Write(buf.data(), buf.size());
-  } else {
+  if (s->GetWrittenBytes() == initial_written_bytes)
     s->Printf("<could not resolve type>");
-  }
 }
 
 TypeSP SwiftASTContext::GetCachedType(ConstString mangled) {
