@@ -12,6 +12,7 @@ add_clang_library(clangTidyReadabilityModule
   DeleteNullPointerCheck.cpp
   DeletedDefaultCheck.cpp
   ElseAfterReturnCheck.cpp
+  FunctionCognitiveComplexityCheck.cpp
   FunctionSizeCheck.cpp
   IdentifierNamingCheck.cpp
   ImplicitBoolConversionCheck.cpp
