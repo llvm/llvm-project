@@ -8,7 +8,6 @@
 
 #include "edit-output.h"
 #include "flang/Common/uint128.h"
-#include "flang/Common/unsigned-const-division.h"
 #include <algorithm>
 
 namespace Fortran::runtime::io {
@@ -32,7 +31,7 @@ bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit, INT n) {
       signChars = 1; // '-' or '+'
     }
     while (un > 0) {
-      auto quotient{common::DivideUnsignedBy<UINT, 10>(un)};
+      auto quotient{un / 10u};
       *--p = '0' + static_cast<int>(un - UINT{10} * quotient);
       un = quotient;
     }
@@ -99,7 +98,7 @@ const char *RealOutputEditingBase::FormatExponent(
   char *eEnd{&exponent_[sizeof exponent_]};
   char *exponent{eEnd};
   for (unsigned e{static_cast<unsigned>(std::abs(expo))}; e > 0;) {
-    unsigned quotient{common::DivideUnsignedBy<unsigned, 10>(e)};
+    unsigned quotient{e / 10u};
     *--exponent = '0' + e - 10 * quotient;
     e = quotient;
   }

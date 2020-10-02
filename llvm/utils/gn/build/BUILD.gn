@@ -256,6 +256,27 @@ config("compiler_defaults") {
     cflags += [ "-fsanitize=thread" ]
     ldflags += [ "-fsanitize=thread" ]
   }
+
+  if (use_thinlto) {
+    assert(is_clang, "ThinLTO only supported on Clang")
+
+    lto_opt_level = 2
+
+    cflags += [ "-flto=thin" ]
+
+    if (host_os == "win") {
+      ldflags += [
+        "/opt:lldlto=" + lto_opt_level,
+        "/opt:lldltojobs=" + max_jobs_per_lto_link,
+      ]
+    } else {
+      ldflags += [
+        "-flto=thin",
+        "-Wl,--thinlto-jobs=" + max_jobs_per_lto_link,
+        "-Wl,--lto-O" + lto_opt_level,
+      ]
+    }
+  }
 }
 
 config("no_exceptions") {

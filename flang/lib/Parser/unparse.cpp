@@ -1903,8 +1903,8 @@ public:
     EndOpenACC();
     Walk(std::get<std::optional<DoConstruct>>(x.t));
     BeginOpenACC();
-    Walk("!$ACC END ", std::get<std::optional<DoConstruct>>(x.t));
-    Put("\n");
+    Walk("!$ACC END ", std::get<std::optional<AccEndCombinedDirective>>(x.t),
+        "\n");
     EndOpenACC();
   }
   void Unparse(const OpenACCRoutineConstruct &x) {

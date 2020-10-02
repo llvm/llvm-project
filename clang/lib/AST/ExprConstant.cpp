@@ -2439,7 +2439,8 @@ static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
     return false;
   }
 
-  if (St & APFloat::opStatus::opInvalidOp) {
+  if ((St & APFloat::opStatus::opInvalidOp) &&
+      FPO.getFPExceptionMode() != LangOptions::FPE_Ignore) {
     // There is no usefully definable result.
     Info.FFDiag(E);
     return false;

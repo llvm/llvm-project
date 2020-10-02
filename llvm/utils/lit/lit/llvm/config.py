@@ -133,7 +133,8 @@ class LLVMConfig(object):
         hives = [winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER]
         for mask, hive in itertools.product(masks, hives):
             try:
-                with winreg.OpenKey(hive, r"SOFTWARE\GitForWindows", access=winreg.KEY_READ | mask) as key:
+                with winreg.OpenKey(hive, r"SOFTWARE\GitForWindows", 0,
+                                    winreg.KEY_READ | mask) as key:
                     install_root, _ = winreg.QueryValueEx(key, 'InstallPath')
 
                     if not install_root:
@@ -143,7 +144,7 @@ class LLVMConfig(object):
                         continue
 
                     # We found it, stop enumerating.
-                    return candidate_path
+                    return lit.util.to_string(candidate_path)
             except:
                 continue
 
@@ -168,7 +169,7 @@ class LLVMConfig(object):
                 paths = []
 
             # If we are passed a list [a b c], then iterating this list forwards
-            # and adding each to the beginning would result in b c a.  So we
+            # and adding each to the beginning would result in c b a.  So we
             # need to iterate in reverse to end up with the original ordering.
             for p in reversed(paths_to_add):
                 # Move it to the front if it already exists, otherwise insert it at the

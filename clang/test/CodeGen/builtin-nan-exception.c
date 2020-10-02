@@ -17,8 +17,12 @@ float f[] = {
 
 
 // Doubles are created and converted to floats.
+// Converting (truncating) to float quiets the NaN (sets the MSB
+// of the significand) and raises the APFloat invalidOp exception
+// but that should not cause a compilation error in the default
+// (ignore FP exceptions) mode.
 
-// CHECK: float 0x7FF8000000000000, float 0x7FF4000000000000
+// CHECK: float 0x7FF8000000000000, float 0x7FFC000000000000
 
 float converted_to_float[] = {
   __builtin_nan(""),

@@ -698,32 +698,6 @@ bool UnformattedIoStatementState<DIR>::Emit(
   return ExternalIoStatementState<DIR>::Emit(data, bytes, elementBytes);
 }
 
-template <Direction DIR>
-int UnformattedIoStatementState<DIR>::EndIoStatement() {
-  ExternalFileUnit &unit{this->unit()};
-  if constexpr (DIR == Direction::Output) {
-    if (unit.access == Access::Sequential && !unit.isFixedRecordLength) {
-      // Append the length of a sequential unformatted variable-length record
-      // as its footer, then overwrite the reserved first four bytes of the
-      // record with its length as its header.  These four bytes were skipped
-      // over in BeginUnformattedOutput().
-      // TODO: Break very large records up into subrecords with negative
-      // headers &/or footers
-      union {
-        std::uint32_t u;
-        char c[sizeof u];
-      } u;
-      u.u = unit.furthestPositionInRecord - sizeof u;
-      // TODO: Convert record length to little-endian on big-endian host?
-      if (!(this->Emit(u.c, sizeof u) &&
-              (this->HandleAbsolutePosition(0), this->Emit(u.c, sizeof u)))) {
-        return false;
-      }
-    }
-  }
-  return ExternalIoStatementState<DIR>::EndIoStatement();
-}
-
 template class InternalIoStatementState<Direction::Output>;
 template class InternalIoStatementState<Direction::Input>;
 template class InternalFormattedIoStatementState<Direction::Output>;
@@ -820,7 +794,10 @@ bool InquireUnitState::Inquire(
     }
     break;
   case HashInquiryKeyword("DIRECT"):
-    str = unit().mayPosition() ? "YES" : "NO";
+    str = unit().access == Access::Direct ||
+            (unit().mayPosition() && unit().isFixedRecordLength)
+        ? "YES"
+        : "NO";
     break;
   case HashInquiryKeyword("ENCODING"):
     str = unit().isUnformatted ? "UNDEFINED"
@@ -831,7 +808,7 @@ bool InquireUnitState::Inquire(
     str = unit().isUnformatted ? "UNFORMATTED" : "FORMATTED";
     break;
   case HashInquiryKeyword("FORMATTED"):
-    str = "YES";
+    str = !unit().isUnformatted ? "YES" : "NO";
     break;
   case HashInquiryKeyword("NAME"):
     str = unit().path();
@@ -887,7 +864,9 @@ bool InquireUnitState::Inquire(
     }
     break;
   case HashInquiryKeyword("SEQUENTIAL"):
-    str = "YES";
+    // "NO" for Direct, since Sequential would not work if
+    // the unit were reopened without RECL=.
+    str = unit().access == Access::Sequential ? "YES" : "NO";
     break;
   case HashInquiryKeyword("SIGN"):
     str = unit().isUnformatted                 ? "UNDEFINED"
@@ -895,13 +874,13 @@ bool InquireUnitState::Inquire(
                                                : "SUPPRESS";
     break;
   case HashInquiryKeyword("STREAM"):
-    str = "YES";
+    str = unit().access == Access::Stream ? "YES" : "NO";
     break;
   case HashInquiryKeyword("WRITE"):
     str = unit().mayWrite() ? "YES" : "NO";
     break;
   case HashInquiryKeyword("UNFORMATTED"):
-    str = "YES";
+    str = unit().isUnformatted ? "YES" : "NO";
     break;
   }
   if (str) {
@@ -1090,6 +1069,10 @@ bool InquireUnconnectedFileState::Inquire(
     break;
   case HashInquiryKeyword("DIRECT"):
   case HashInquiryKeyword("ENCODING"):
+  case HashInquiryKeyword("FORMATTED"):
+  case HashInquiryKeyword("SEQUENTIAL"):
+  case HashInquiryKeyword("STREAM"):
+  case HashInquiryKeyword("UNFORMATTED"):
     str = "UNKNONN";
     break;
   case HashInquiryKeyword("READ"):
@@ -1100,12 +1083,6 @@ bool InquireUnconnectedFileState::Inquire(
     break;
   case HashInquiryKeyword("WRITE"):
     str = MayWrite(path_.get()) ? "YES" : "NO";
-    break;
-  case HashInquiryKeyword("FORMATTED"):
-  case HashInquiryKeyword("SEQUENTIAL"):
-  case HashInquiryKeyword("STREAM"):
-  case HashInquiryKeyword("UNFORMATTED"):
-    str = "YES";
     break;
   case HashInquiryKeyword("NAME"):
     str = path_.get();

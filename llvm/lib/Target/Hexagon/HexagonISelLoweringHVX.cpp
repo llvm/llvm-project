@@ -228,7 +228,7 @@ HexagonTargetLowering::initializeHVXLowering() {
   for (MVT ElemTy : Subtarget.getHVXElementTypes()) {
     if (ElemTy == MVT::i1)
       continue;
-    int ElemWidth = ElemTy.getSizeInBits().getFixedSize();
+    int ElemWidth = ElemTy.getFixedSizeInBits();
     int MaxElems = (8*HwLen) / ElemWidth;
     for (int N = 2; N < MaxElems; N *= 2) {
       MVT VecTy = MVT::getVectorVT(ElemTy, N);

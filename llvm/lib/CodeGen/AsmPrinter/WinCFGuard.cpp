@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains support for writing the metadata for Windows Control Flow
-// Guard, including address-taken functions and valid longjmp targets.
+// Guard, including address-taken functions, and valid longjmp targets.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,8 +17,8 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCStreamer.h"
@@ -78,49 +78,20 @@ static bool isPossibleIndirectCallTarget(const Function *F) {
   return false;
 }
 
-/// Returns true if this function should be added to the Guard Address Taken IAT
-/// Entry Table (GIATs) instead of the Guard Function ID Table (GFIDs).
-static bool isIATAddressTaken(const Function *F) {
-  if (F->hasDLLImportStorageClass()) {
-    return true;
-  }
-  return false;
-}
-
 void WinCFGuard::endModule() {
   const Module *M = Asm->MMI->getModule();
-  std::vector<const Function *> GFIDsEntries;
-  std::vector<const Function *> GIATsEntries;
-  for (const Function &F : *M) {
-    if (isPossibleIndirectCallTarget(&F)) {
-      if (isIATAddressTaken(&F)) {
-        // If the possible call target is reached via the IAT, add it to the
-        // GIATs table instead of the GFIDs table.
-        GIATsEntries.push_back(&F);
-      } else {
-        // Otherwise add it to the GFIDs table.
-        GFIDsEntries.push_back(&F);
-      }
-    }
-  }
-
-  if (GFIDsEntries.empty() && GIATsEntries.empty() && LongjmpTargets.empty())
+  std::vector<const Function *> Functions;
+  for (const Function &F : *M)
+    if (isPossibleIndirectCallTarget(&F))
+      Functions.push_back(&F);
+  if (Functions.empty() && LongjmpTargets.empty())
     return;
-
-  // Emit the symbol index of each GFIDs entry to form the GFIDs table.
   auto &OS = *Asm->OutStreamer;
   OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGFIDsSection());
-  for (const Function *F : GFIDsEntries)
+  for (const Function *F : Functions)
     OS.EmitCOFFSymbolIndex(Asm->getSymbol(F));
 
-  // Emit the symbol index of each GIATs entry to form the GIATs table.
-  OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGIATsSection());
-  for (const Function *F : GIATsEntries) {
-    OS.EmitCOFFSymbolIndex(Asm->OutContext.getOrCreateSymbol(
-        Twine("__imp_") + Asm->getSymbol(F)->getName()));
-  }
-
-  // Emit the symbol index of each longjmp target to form the GLJMP table.
+  // Emit the symbol index of each longjmp target.
   OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGLJMPSection());
   for (const MCSymbol *S : LongjmpTargets) {
     OS.EmitCOFFSymbolIndex(S);

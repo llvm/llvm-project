@@ -1212,13 +1212,8 @@ struct NoRegionArguments : public TraitBase<ConcrentType, NoRegionArguments> {
   }
 };
 
-/// This trait is used to flag operations that can accommodate MemRefs with
-/// non-identity memory-layout specifications. This trait indicates that the
-/// normalization of memory layout can be performed for such operations.
-/// MemRefs normalization consists of replacing an original memory reference
-/// with layout specifications to an equivalent memory reference where the
-/// specified memory layout is applied by rewritting accesses and types
-/// associated with that memory reference.
+// This trait is used to flag operations that consume or produce
+// values of `MemRef` type where those references can be 'normalized'.
 // TODO: Right now, the operands of an operation are either all normalizable,
 // or not. In the future, we may want to allow some of the operands to be
 // normalizable.

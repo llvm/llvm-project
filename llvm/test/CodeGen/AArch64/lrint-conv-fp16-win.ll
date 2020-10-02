@@ -3,8 +3,6 @@
 ; CHECK-LABEL: testmhhs:
 ; CHECK:       frintx  h0, h0
 ; CHECK-NEXT:  fcvtzs  w0, h0
-; CHECK-NEXT:  .seh_startepilogue
-; CHECK-NEXT:  .seh_endepilogue
 ; CHECK-NEXT:  ret
 define i16 @testmhhs(half %x) {
 entry:
@@ -16,8 +14,6 @@ entry:
 ; CHECK-LABEL: testmhws:
 ; CHECK:       frintx  h0, h0
 ; CHECK-NEXT:  fcvtzs  w0, h0
-; CHECK-NEXT:  .seh_startepilogue
-; CHECK-NEXT:  .seh_endepilogue
 ; CHECK-NEXT:  ret
 define i32 @testmhws(half %x) {
 entry:
@@ -29,8 +25,6 @@ entry:
 ; CHECK:       frintx  h0, h0
 ; CHECK-NEXT:  fcvtzs  w8, h0
 ; CHECK-NEXT:  sxtw    x0, w8
-; CHECK-NEXT:  .seh_startepilogue
-; CHECK-NEXT:  .seh_endepilogue
 ; CHECK-NEXT:  ret
 define i64 @testmhxs(half %x) {
 entry:

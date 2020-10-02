@@ -72,7 +72,7 @@ protected:
   void remapRecord(MutableArrayRef<uint8_t> rec,
                    ArrayRef<llvm::codeview::TiReference> typeRefs);
 
-  void mergeTypeRecord(llvm::codeview::CVType ty);
+  void mergeTypeRecord(TypeIndex curIndex, llvm::codeview::CVType ty);
 
   // Merge the type records listed in uniqueTypes. beginIndex is the TypeIndex
   // of the first record in this source, typically 0x1000. When PCHs are
@@ -164,7 +164,7 @@ public:
 
   /// When ghashing is used, record the mapping from LF_[M]FUNC_ID to function
   /// type index here. Both indices are PDB indices, not object type indexes.
-  llvm::DenseMap<TypeIndex, TypeIndex> funcIdToType;
+  std::vector<std::pair<TypeIndex, TypeIndex>> funcIdToType;
 
   /// Indicates if a type record is an item index or a type index.
   llvm::BitVector isItemIndex;

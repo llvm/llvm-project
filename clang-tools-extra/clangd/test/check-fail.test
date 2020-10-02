@@ -1,4 +1,5 @@
-// RUN: not clangd -check=%s 2>&1 | FileCheck -strict-whitespace %s
+// RUN: cp %s %t.cpp
+// RUN: not clangd -check=%t.cpp 2>&1 | FileCheck -strict-whitespace %s
 
 // CHECK: Testing on source file {{.*}}check-fail.test
 // CHECK: internal (cc1) args are: -cc1

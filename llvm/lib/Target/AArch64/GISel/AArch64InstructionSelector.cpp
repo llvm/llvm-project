@@ -1322,15 +1322,31 @@ bool AArch64InstructionSelector::selectCompareBranch(
   MachineInstr *CCMI = MRI.getVRegDef(CondReg);
   if (CCMI->getOpcode() == TargetOpcode::G_TRUNC)
     CCMI = MRI.getVRegDef(CCMI->getOperand(1).getReg());
-  if (CCMI->getOpcode() != TargetOpcode::G_ICMP)
+
+  unsigned CCMIOpc = CCMI->getOpcode();
+  if (CCMIOpc != TargetOpcode::G_ICMP && CCMIOpc != TargetOpcode::G_FCMP)
     return false;
 
+  MachineIRBuilder MIB(I);
   Register LHS = CCMI->getOperand(2).getReg();
   Register RHS = CCMI->getOperand(3).getReg();
+  auto Pred =
+      static_cast<CmpInst::Predicate>(CCMI->getOperand(1).getPredicate());
+
+  if (CCMIOpc == TargetOpcode::G_FCMP) {
+    // Unfortunately, the mapping of LLVM FP CC's onto AArch64 CC's isn't
+    // totally clean.  Some of them require two branches to implement.
+    emitFPCompare(LHS, RHS, MIB);
+    AArch64CC::CondCode CC1, CC2;
+    changeFCMPPredToAArch64CC(Pred, CC1, CC2);
+    MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC1).addMBB(DestMBB);
+    if (CC2 != AArch64CC::AL)
+      MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC2).addMBB(DestMBB);
+    I.eraseFromParent();
+    return true;
+  }
+
   auto VRegAndVal = getConstantVRegValWithLookThrough(RHS, MRI);
-  MachineIRBuilder MIB(I);
-  CmpInst::Predicate Pred =
-      (CmpInst::Predicate)CCMI->getOperand(1).getPredicate();
   MachineInstr *LHSMI = getDefIgnoringCopies(LHS, MRI);
 
   // When we can emit a TB(N)Z, prefer that.
@@ -1498,6 +1514,8 @@ bool AArch64InstructionSelector::selectVectorSHL(
     Opc = ImmVal ? AArch64::SHLv8i16_shift : AArch64::USHLv8i16;
   } else if (Ty == LLT::vector(16, 8)) {
     Opc = ImmVal ? AArch64::SHLv16i8_shift : AArch64::USHLv16i8;
+  } else if (Ty == LLT::vector(8, 8)) {
+    Opc = ImmVal ? AArch64::SHLv8i8_shift : AArch64::USHLv8i8;
   } else {
     LLVM_DEBUG(dbgs() << "Unhandled G_SHL type");
     return false;
@@ -1557,6 +1575,9 @@ bool AArch64InstructionSelector::selectVectorAshrLshr(
   } else if (Ty == LLT::vector(16, 8)) {
     Opc = IsASHR ? AArch64::SSHLv16i8 : AArch64::USHLv16i8;
     NegOpc = AArch64::NEGv8i16;
+  } else if (Ty == LLT::vector(8, 8)) {
+    Opc = IsASHR ? AArch64::SSHLv8i8 : AArch64::USHLv8i8;
+    NegOpc = AArch64::NEGv8i8;
   } else {
     LLVM_DEBUG(dbgs() << "Unhandled G_ASHR type");
     return false;
@@ -1954,15 +1975,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
   switch (Opcode) {
   case TargetOpcode::G_BRCOND: {
-    if (Ty.getSizeInBits() > 32) {
-      // We shouldn't need this on AArch64, but it would be implemented as an
-      // EXTRACT_SUBREG followed by a TBNZW because TBNZX has no encoding if the
-      // bit being tested is < 32.
-      LLVM_DEBUG(dbgs() << "G_BRCOND has type: " << Ty
-                        << ", expected at most 32-bits");
-      return false;
-    }
-
     Register CondReg = I.getOperand(0).getReg();
     MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
 
@@ -1973,25 +1985,10 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       return true;
 
     if (ProduceNonFlagSettingCondBr) {
-      unsigned BOpc = AArch64::TBNZW;
-      // Try to fold a not, i.e. a xor, cond, 1.
-      Register XorSrc;
-      int64_t Cst;
-      if (mi_match(CondReg, MRI,
-                   m_GTrunc(m_GXor(m_Reg(XorSrc), m_ICst(Cst)))) &&
-          Cst == 1) {
-        CondReg = XorSrc;
-        BOpc = AArch64::TBZW;
-        if (MRI.getType(XorSrc).getSizeInBits() > 32)
-          BOpc = AArch64::TBZX;
-      }
-      auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(BOpc))
-                     .addUse(CondReg)
-                     .addImm(/*bit offset=*/0)
-                     .addMBB(DestMBB);
-
+      auto TestBit = emitTestBit(CondReg, /*Bit = */ 0, /*IsNegative = */ true,
+                                 DestMBB, MIB);
       I.eraseFromParent();
-      return constrainSelectedInstRegOperands(*MIB.getInstr(), TII, TRI, RBI);
+      return constrainSelectedInstRegOperands(*TestBit, TII, TRI, RBI);
     } else {
       auto CMP = BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::ANDSWri))
                      .addDef(AArch64::WZR)
