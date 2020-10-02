@@ -2181,9 +2181,10 @@ SwiftLanguageRuntimeImpl::GetByteStride(CompilerType type) {
 }
 
 llvm::Optional<size_t>
-SwiftLanguageRuntimeImpl::GetBitAlignment(CompilerType type) {
-  if (auto *type_info = GetTypeInfo(type, nullptr))
-    return type_info->getAlignment();
+SwiftLanguageRuntimeImpl::GetBitAlignment(CompilerType type,
+                                          ExecutionContextScope *exe_scope) {
+  if (auto *type_info = GetTypeInfo(type, exe_scope))
+    return type_info->getAlignment() * 8;
   return {};
 }
 
