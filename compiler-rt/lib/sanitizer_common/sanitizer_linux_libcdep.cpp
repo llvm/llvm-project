@@ -28,6 +28,10 @@
 #include "sanitizer_placement_new.h"
 #include "sanitizer_procmaps.h"
 
+#if SANITIZER_NETBSD
+#define _RTLD_SOURCE  // for __lwp_gettcb_fast() / __lwp_getprivate_fast()
+#endif
+
 #include <dlfcn.h>  // for dlsym()
 #include <link.h>
 #include <pthread.h>
@@ -412,7 +416,13 @@ uptr ThreadSelf() {
 
 #if SANITIZER_NETBSD
 static struct tls_tcb * ThreadSelfTlsTcb() {
-  return (struct tls_tcb *)_lwp_getprivate();
+  struct tls_tcb *tcb = nullptr;
+#ifdef __HAVE___LWP_GETTCB_FAST
+  tcb = (struct tls_tcb *)__lwp_gettcb_fast();
+#elif defined(__HAVE___LWP_GETPRIVATE_FAST)
+  tcb = (struct tls_tcb *)__lwp_getprivate_fast();
+#endif
+  return tcb;
 }
 
 uptr ThreadSelf() {
