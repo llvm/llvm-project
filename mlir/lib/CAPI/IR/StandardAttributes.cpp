@@ -102,6 +102,11 @@ MlirAttribute mlirFloatAttrDoubleGet(MlirContext ctx, MlirType type,
   return wrap(FloatAttr::get(unwrap(type), value));
 }
 
+MlirAttribute mlirFloatAttrDoubleGetChecked(MlirType type, double value,
+                                            MlirLocation loc) {
+  return wrap(FloatAttr::getChecked(unwrap(type), value, unwrap(loc)));
+}
+
 double mlirFloatAttrGetValueDouble(MlirAttribute attr) {
   return unwrap(attr).cast<FloatAttr>().getValueAsDouble();
 }
