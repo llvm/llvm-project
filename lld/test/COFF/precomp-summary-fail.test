@@ -14,6 +14,8 @@ SUMMARY-NEXT: ------------------------------------------------------------------
 SUMMARY-NEXT:               2 Input OBJ files (expanded from all cmd-line inputs)
 SUMMARY-NEXT:               0 PDB type server dependencies
 SUMMARY-NEXT:               1 Precomp OBJ dependencies
+SUMMARY-NEXT:               8 Input type records
+SUMMARY-NEXT:             232 Input type records bytes
 SUMMARY-NEXT:               3 Merged TPI records
 SUMMARY-NEXT:               2 Merged IPI records
 SUMMARY-NEXT:               1 Output PDB strings

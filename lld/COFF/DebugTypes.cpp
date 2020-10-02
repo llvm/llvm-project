@@ -332,6 +332,8 @@ Error TpiSource::mergeDebugT(TypeMerger *m) {
   ipiMap = indexMapStorage;
 
   if (config->showSummary) {
+    nbTypeRecords = indexMapStorage.size() - nbHeadIndices;
+    nbTypeRecordsBytes = reader.getLength();
     // Count how many times we saw each type record in our input. This
     // calculation requires a second pass over the type records to classify each
     // record as a type or index. This is slow, but this code executes when
@@ -386,6 +388,12 @@ Error TypeServerSource::mergeDebugT(TypeMerger *m) {
   }
 
   if (config->showSummary) {
+    nbTypeRecords = tpiMap.size() + ipiMap.size();
+    nbTypeRecordsBytes =
+        expectedTpi->typeArray().getUnderlyingStream().getLength() +
+        (maybeIpi ? maybeIpi->typeArray().getUnderlyingStream().getLength()
+                  : 0);
+
     // Count how many times we saw each type record in our input. If a
     // destination type index is present in the source to destination type index
     // map, that means we saw it once in the input. Add it to our histogram.
@@ -693,6 +701,11 @@ void TpiSource::remapTpiWithGHashes(GHashState *g) {
   ipiMap = indexMapStorage;
   mergeUniqueTypeRecords(file->debugTypes);
   // TODO: Free all unneeded ghash resources now that we have a full index map.
+
+  if (config->showSummary) {
+    nbTypeRecords = ghashes.size();
+    nbTypeRecordsBytes = file->debugTypes.size();
+  }
 }
 
 // PDBs do not actually store global hashes, so when merging a type server
@@ -759,6 +772,16 @@ void TypeServerSource::remapTpiWithGHashes(GHashState *g) {
     ipiSrc->tpiMap = tpiMap;
     ipiSrc->ipiMap = ipiMap;
     ipiSrc->mergeUniqueTypeRecords(typeArrayToBytes(ipi.typeArray()));
+
+    if (config->showSummary) {
+      nbTypeRecords = ipiSrc->ghashes.size();
+      nbTypeRecordsBytes = ipi.typeArray().getUnderlyingStream().getLength();
+    }
+  }
+
+  if (config->showSummary) {
+    nbTypeRecords += ghashes.size();
+    nbTypeRecordsBytes += tpi.typeArray().getUnderlyingStream().getLength();
   }
 }
 
@@ -834,6 +857,10 @@ void UsePrecompSource::remapTpiWithGHashes(GHashState *g) {
   mergeUniqueTypeRecords(file->debugTypes,
                          TypeIndex(precompDependency.getStartTypeIndex() +
                                    precompDependency.getTypesCount()));
+  if (config->showSummary) {
+    nbTypeRecords = ghashes.size();
+    nbTypeRecordsBytes = file->debugTypes.size();
+  }
 }
 
 namespace {
