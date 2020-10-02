@@ -77,6 +77,30 @@ void VPRecipeBase::dump() const {
   dbgs() << "\n";
 }
 
+VPUser *VPRecipeBase::toVPUser() {
+  if (auto *U = dyn_cast<VPInstruction>(this))
+    return U;
+  if (auto *U = dyn_cast<VPWidenRecipe>(this))
+    return U;
+  if (auto *U = dyn_cast<VPWidenCallRecipe>(this))
+    return U;
+  if (auto *U = dyn_cast<VPWidenSelectRecipe>(this))
+    return U;
+  if (auto *U = dyn_cast<VPWidenGEPRecipe>(this))
+    return U;
+  if (auto *U = dyn_cast<VPBlendRecipe>(this))
+    return U;
+  if (auto *U = dyn_cast<VPInterleaveRecipe>(this))
+    return U;
+  if (auto *U = dyn_cast<VPReplicateRecipe>(this))
+    return U;
+  if (auto *U = dyn_cast<VPBranchOnMaskRecipe>(this))
+    return U;
+  if (auto *U = dyn_cast<VPWidenMemoryInstructionRecipe>(this))
+    return U;
+  return nullptr;
+}
+
 // Get the top-most entry block of \p Start. This is the entry block of the
 // containing VPlan. This function is templated to support both const and non-const blocks
 template <typename T> static T *getPlanEntry(T *Start) {
