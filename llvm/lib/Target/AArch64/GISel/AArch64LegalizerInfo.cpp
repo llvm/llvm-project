@@ -326,8 +326,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({s32, s64})
       .clampScalar(0, s32, s64);
 
-  
-  getActionDefinitionsBuilder(G_ICMP)
+
+  getActionDefinitionsBuilder({G_ICMP, G_FCMP})
       .legalFor({{s32, s32},
                  {s32, s64},
                  {s32, p0},
@@ -357,12 +357,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           s64)
       .widenScalarOrEltToNextPow2(1)
       .clampNumElements(0, v2s32, v4s32);
-
-  getActionDefinitionsBuilder(G_FCMP)
-      .legalFor({{s32, s32}, {s32, s64}})
-      .clampScalar(0, s32, s32)
-      .clampScalar(1, s32, s64)
-      .widenScalarToNextPow2(1);
 
   // Extensions
   auto ExtLegalFunc = [=](const LegalityQuery &Query) {
