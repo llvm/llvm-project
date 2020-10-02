@@ -436,14 +436,10 @@ void LLVMTypeConverter::promoteBarePtrsToDescriptors(
     SmallVectorImpl<Value> &values) {
   assert(stdTypes.size() == values.size() &&
          "The number of types and values doesn't match");
-  for (unsigned i = 0, end = values.size(); i < end; ++i) {
-    Type stdTy = stdTypes[i];
-    if (auto memrefTy = stdTy.dyn_cast<MemRefType>())
+  for (unsigned i = 0, end = values.size(); i < end; ++i)
+    if (auto memrefTy = stdTypes[i].dyn_cast<MemRefType>())
       values[i] = MemRefDescriptor::fromStaticShape(rewriter, loc, *this,
                                                     memrefTy, values[i]);
-    else
-      llvm_unreachable("Unranked memrefs are not supported");
-  }
 }
 
 ConvertToLLVMPattern::ConvertToLLVMPattern(StringRef rootOpName,
