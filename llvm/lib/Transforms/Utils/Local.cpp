@@ -2672,10 +2672,13 @@ bool llvm::callsGCLeafFunction(const CallBase *Call,
     if (F->hasFnAttribute("gc-leaf-function"))
       return true;
 
-    if (auto IID = F->getIntrinsicID())
+    if (auto IID = F->getIntrinsicID()) {
       // Most LLVM intrinsics do not take safepoints.
       return IID != Intrinsic::experimental_gc_statepoint &&
-             IID != Intrinsic::experimental_deoptimize;
+             IID != Intrinsic::experimental_deoptimize &&
+             IID != Intrinsic::memcpy_element_unordered_atomic &&
+             IID != Intrinsic::memmove_element_unordered_atomic;
+    }
   }
 
   // Lib calls can be materialized by some passes, and won't be
