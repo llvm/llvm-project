@@ -33,6 +33,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <queue>
 #include <utility>
 
 using namespace clang;
@@ -1903,6 +1904,27 @@ ObjCProtocolDecl *ObjCProtocolDecl::CreateDeserialized(ASTContext &C,
                                    SourceLocation(), nullptr);
   Result->Data.setInt(!C.getLangOpts().Modules);
   return Result;
+}
+
+bool ObjCProtocolDecl::isNonRuntimeProtocol() const {
+  return hasAttr<ObjCNonRuntimeProtocolAttr>();
+}
+
+void ObjCProtocolDecl::getImpliedProtocols(
+    llvm::DenseSet<const ObjCProtocolDecl *> &IPs) const {
+  std::queue<const ObjCProtocolDecl *> WorkQueue;
+  WorkQueue.push(this);
+
+  while (!WorkQueue.empty()) {
+    const auto *PD = WorkQueue.front();
+    WorkQueue.pop();
+    for (const auto *Parent : PD->protocols()) {
+      const auto *Can = Parent->getCanonicalDecl();
+      auto Result = IPs.insert(Can);
+      if (Result.second)
+        WorkQueue.push(Parent);
+    }
+  }
 }
 
 ObjCProtocolDecl *ObjCProtocolDecl::lookupProtocolNamed(IdentifierInfo *Name) {

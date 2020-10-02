@@ -16,6 +16,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetParser.h"
@@ -33,6 +34,7 @@ using namespace llvm::opt;
 #endif
 
 namespace {
+const unsigned HIPCodeObjectAlign = 4096;
 
 static void addBCLib(const Driver &D, const ArgList &Args,
                      ArgStringList &CmdArgs, ArgStringList LibraryPaths,
@@ -108,6 +110,8 @@ void AMDGCN::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
   // for different GPU archs.
   ArgStringList BundlerArgs;
   BundlerArgs.push_back(Args.MakeArgString("-type=o"));
+  BundlerArgs.push_back(
+      Args.MakeArgString("-bundle-align=" + Twine(HIPCodeObjectAlign)));
 
   // ToDo: Remove the dummy host binary entry which is required by
   // clang-offload-bundler.
@@ -175,7 +179,8 @@ void AMDGCN::Linker::constructGenerateObjFileFromHIPFatBinary(
   ObjStream << "  .section .hip_fatbin,\"aMS\",@progbits,1\n";
   ObjStream << "  .data\n";
   ObjStream << "  .globl __hip_fatbin\n";
-  ObjStream << "  .p2align 3\n";
+  ObjStream << "  .p2align " << llvm::Log2(llvm::Align(HIPCodeObjectAlign))
+            << "\n";
   ObjStream << "__hip_fatbin:\n";
   ObjStream << "  .incbin \"" << BundleFile << "\"\n";
   ObjStream.flush();

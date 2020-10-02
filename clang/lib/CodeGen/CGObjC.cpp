@@ -445,6 +445,75 @@ CodeGen::RValue CGObjCRuntime::GeneratePossiblySpecializedMessageSend(
                              Method);
 }
 
+static void AppendFirstImpliedRuntimeProtocols(
+    const ObjCProtocolDecl *PD,
+    llvm::UniqueVector<const ObjCProtocolDecl *> &PDs) {
+  if (!PD->isNonRuntimeProtocol()) {
+    const auto *Can = PD->getCanonicalDecl();
+    PDs.insert(Can);
+    return;
+  }
+
+  for (const auto *ParentPD : PD->protocols())
+    AppendFirstImpliedRuntimeProtocols(ParentPD, PDs);
+}
+
+std::vector<const ObjCProtocolDecl *>
+CGObjCRuntime::GetRuntimeProtocolList(ObjCProtocolDecl::protocol_iterator begin,
+                                      ObjCProtocolDecl::protocol_iterator end) {
+  std::vector<const ObjCProtocolDecl *> RuntimePds;
+  llvm::DenseSet<const ObjCProtocolDecl *> NonRuntimePDs;
+
+  for (; begin != end; ++begin) {
+    const auto *It = *begin;
+    const auto *Can = It->getCanonicalDecl();
+    if (Can->isNonRuntimeProtocol())
+      NonRuntimePDs.insert(Can);
+    else
+      RuntimePds.push_back(Can);
+  }
+
+  // If there are no non-runtime protocols then we can just stop now.
+  if (NonRuntimePDs.empty())
+    return RuntimePds;
+
+  // Else we have to search through the non-runtime protocol's inheritancy
+  // hierarchy DAG stopping whenever a branch either finds a runtime protocol or
+  // a non-runtime protocol without any parents. These are the "first-implied"
+  // protocols from a non-runtime protocol.
+  llvm::UniqueVector<const ObjCProtocolDecl *> FirstImpliedProtos;
+  for (const auto *PD : NonRuntimePDs)
+    AppendFirstImpliedRuntimeProtocols(PD, FirstImpliedProtos);
+
+  // Walk the Runtime list to get all protocols implied via the inclusion of
+  // this protocol, e.g. all protocols it inherits from including itself.
+  llvm::DenseSet<const ObjCProtocolDecl *> AllImpliedProtocols;
+  for (const auto *PD : RuntimePds) {
+    const auto *Can = PD->getCanonicalDecl();
+    AllImpliedProtocols.insert(Can);
+    Can->getImpliedProtocols(AllImpliedProtocols);
+  }
+
+  // Similar to above, walk the list of first-implied protocols to find the set
+  // all the protocols implied excluding the listed protocols themselves since
+  // they are not yet a part of the `RuntimePds` list.
+  for (const auto *PD : FirstImpliedProtos) {
+    PD->getImpliedProtocols(AllImpliedProtocols);
+  }
+
+  // From the first-implied list we have to finish building the final protocol
+  // list. If a protocol in the first-implied list was already implied via some
+  // inheritance path through some other protocols then it would be redundant to
+  // add it here and so we skip over it.
+  for (const auto *PD : FirstImpliedProtos) {
+    if (!AllImpliedProtocols.contains(PD)) {
+      RuntimePds.push_back(PD);
+    }
+  }
+
+  return RuntimePds;
+}
+
 /// Instead of '[[MyClass alloc] init]', try to generate
 /// 'objc_alloc_init(MyClass)'. This provides a code size improvement on the
 /// caller side, as well as the optimized objc_alloc.
