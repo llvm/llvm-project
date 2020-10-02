@@ -43,6 +43,7 @@ class MemCpyOptPass : public PassInfoMixin<MemCpyOptPass> {
   AliasAnalysis *AA = nullptr;
   AssumptionCache *AC = nullptr;
   DominatorTree *DT = nullptr;
+  MemorySSA *MSSA = nullptr;
   MemorySSAUpdater *MSSAU = nullptr;
 
 public:
