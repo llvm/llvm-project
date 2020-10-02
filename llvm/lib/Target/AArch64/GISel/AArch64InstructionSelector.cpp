@@ -1959,15 +1959,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
   switch (Opcode) {
   case TargetOpcode::G_BRCOND: {
-    if (Ty.getSizeInBits() > 32) {
-      // We shouldn't need this on AArch64, but it would be implemented as an
-      // EXTRACT_SUBREG followed by a TBNZW because TBNZX has no encoding if the
-      // bit being tested is < 32.
-      LLVM_DEBUG(dbgs() << "G_BRCOND has type: " << Ty
-                        << ", expected at most 32-bits");
-      return false;
-    }
-
     Register CondReg = I.getOperand(0).getReg();
     MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
 
@@ -1978,25 +1969,10 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       return true;
 
     if (ProduceNonFlagSettingCondBr) {
-      unsigned BOpc = AArch64::TBNZW;
-      // Try to fold a not, i.e. a xor, cond, 1.
-      Register XorSrc;
-      int64_t Cst;
-      if (mi_match(CondReg, MRI,
-                   m_GTrunc(m_GXor(m_Reg(XorSrc), m_ICst(Cst)))) &&
-          Cst == 1) {
-        CondReg = XorSrc;
-        BOpc = AArch64::TBZW;
-        if (MRI.getType(XorSrc).getSizeInBits() > 32)
-          BOpc = AArch64::TBZX;
-      }
-      auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(BOpc))
-                     .addUse(CondReg)
-                     .addImm(/*bit offset=*/0)
-                     .addMBB(DestMBB);
-
+      auto TestBit = emitTestBit(CondReg, /*Bit = */ 0, /*IsNegative = */ true,
+                                 DestMBB, MIB);
       I.eraseFromParent();
-      return constrainSelectedInstRegOperands(*MIB.getInstr(), TII, TRI, RBI);
+      return constrainSelectedInstRegOperands(*TestBit, TII, TRI, RBI);
     } else {
       auto CMP = BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::ANDSWri))
                      .addDef(AArch64::WZR)
