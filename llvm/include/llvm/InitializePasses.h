@@ -416,7 +416,7 @@ void initializeStripDebugDeclarePass(PassRegistry&);
 void initializeStripDebugMachineModulePass(PassRegistry &);
 void initializeStripGCRelocatesPass(PassRegistry&);
 void initializeStripNonDebugSymbolsPass(PassRegistry&);
-void initializeStripNonLineTableDebugInfoPass(PassRegistry&);
+void initializeStripNonLineTableDebugLegacyPassPass(PassRegistry &);
 void initializeStripSymbolsPass(PassRegistry&);
 void initializeStructurizeCFGPass(PassRegistry&);
 void initializeTailCallElimPass(PassRegistry&);
