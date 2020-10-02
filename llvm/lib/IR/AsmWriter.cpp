@@ -2703,7 +2703,7 @@ void AssemblyWriter::printModule(const Module *M) {
   if (!M->getSourceFileName().empty()) {
     Out << "source_filename = \"";
     printEscapedString(M->getSourceFileName(), Out);
-    Out << "\"\n";
+    Out << "\"\n=============pushpraj added this line=============\n";
   }
 
   const std::string &DL = M->getDataLayoutStr();
