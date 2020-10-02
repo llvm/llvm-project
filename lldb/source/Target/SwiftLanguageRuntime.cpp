@@ -270,7 +270,8 @@ public:
     return {};
   }
 
-  llvm::Optional<size_t> GetBitAlignment(CompilerType type) {
+  llvm::Optional<size_t> GetBitAlignment(CompilerType type,
+                                         ExecutionContextScope *exe_scope) {
     STUB_LOG();
     return {};
   }
@@ -2131,8 +2132,9 @@ SwiftLanguageRuntime::GetByteStride(CompilerType type) {
 }
 
 llvm::Optional<size_t>
-SwiftLanguageRuntime::GetBitAlignment(CompilerType type) {
-  FORWARD(GetBitAlignment, type);
+SwiftLanguageRuntime::GetBitAlignment(CompilerType type,
+                                      ExecutionContextScope *exe_scope) {
+  FORWARD(GetBitAlignment, type, exe_scope);
 }
 
 bool SwiftLanguageRuntime::IsValidErrorValue(ValueObject &in_value) {

@@ -278,6 +278,9 @@ private:
   /// Cast \p opaque_type as a mangled name.
   const char *AsMangledName(lldb::opaque_compiler_type_t type);
 
+  /// Lookup a type in the debug info.
+  lldb::TypeSP LookupTypeInModule(lldb::opaque_compiler_type_t type);
+
   /// Demangle the mangled name of the canonical type of \p type and
   /// drill into the Global(TypeMangling(Type())).
   ///
