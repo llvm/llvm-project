@@ -1105,6 +1105,20 @@ public:
 
   void ClearAllLoadedSections();
 
+  /// Set the \a Trace object containing processor trace information of this
+  /// target.
+  ///
+  /// \param[in] trace_sp
+  ///   The trace object.
+  void SetTrace(const lldb::TraceSP &trace_sp);
+
+  /// Get the \a Trace object containing processor trace information of this
+  /// target.
+  ///
+  /// \return
+  ///   The trace object. It might be undefined.
+  const lldb::TraceSP &GetTrace();
+
   // Since expressions results can persist beyond the lifetime of a process,
   // and the const expression results are available after a process is gone, we
   // provide a way for expressions to be evaluated from the Target itself. If
@@ -1402,6 +1416,9 @@ protected:
   bool m_suppress_stop_hooks;
   bool m_is_dummy_target;
   unsigned m_next_persistent_variable_index = 0;
+  /// An optional \a lldb_private::Trace object containing processor trace
+  /// information of this target.
+  lldb::TraceSP m_trace_sp;
   /// Stores the frame recognizers of this target.
   lldb::StackFrameRecognizerManagerUP m_frame_recognizer_manager_up;
 

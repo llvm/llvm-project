@@ -2997,6 +2997,10 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   return error;
 }
 
+void Target::SetTrace(const TraceSP &trace_sp) { m_trace_sp = trace_sp; }
+
+const TraceSP &Target::GetTrace() { return m_trace_sp; }
+
 Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
   auto state = eStateInvalid;
   auto process_sp = GetProcessSP();
