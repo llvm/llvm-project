@@ -2703,6 +2703,7 @@ void AssemblyWriter::printModule(const Module *M) {
   if (!M->getSourceFileName().empty()) {
     Out << "source_filename = \"";
     printEscapedString(M->getSourceFileName(), Out);
+    Out << "\n EXTRA:: I am not in danger, Skylar. I am the danger.\n";
     Out << "\"\n";
   }
 
