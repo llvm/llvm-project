@@ -758,7 +758,9 @@ static LogicalResult verify(CallOp op) {
 
   for (unsigned i = 0, e = fnType.getNumInputs(); i != e; ++i)
     if (op.getOperand(i).getType() != fnType.getInput(i))
-      return op.emitOpError("operand type mismatch");
+      return op.emitOpError("operand type mismatch: expected operand type ")
+             << fnType.getInput(i) << ", but provided "
+             << op.getOperand(i).getType() << " for operand number " << i;
 
   if (fnType.getNumResults() != op.getNumResults())
     return op.emitOpError("incorrect number of results for callee");

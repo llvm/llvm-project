@@ -30,7 +30,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
@@ -1566,7 +1565,6 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     };
   } else if (NumConstantLanes >= NumSplatLanes &&
              Subtarget->hasUnimplementedSIMD128()) {
-    // If we support v128.const, emit it directly
     SmallVector<SDValue, 16> ConstLanes;
     for (const SDValue &Lane : Op->op_values()) {
       if (IsConstant(Lane)) {
@@ -1578,67 +1576,11 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       }
     }
     Result = DAG.getBuildVector(VecT, DL, ConstLanes);
-    IsLaneConstructed = [&IsConstant](size_t _, const SDValue &Lane) {
+    IsLaneConstructed = [&](size_t _, const SDValue &Lane) {
       return IsConstant(Lane);
     };
-  } else if (NumConstantLanes >= NumSplatLanes && VecT.isInteger()) {
-    // Otherwise, if this is an integer vector, pack the lane values together so
-    // we can construct the 128-bit constant from a pair of i64s using a splat
-    // followed by at most one i64x2.replace_lane. Also keep track of the lanes
-    // that actually matter so we can avoid the replace_lane in more cases.
-    std::array<uint64_t, 2> I64s({0, 0});
-    std::array<uint64_t, 2> ConstLaneMasks({0, 0});
-    uint8_t *I64Bytes = reinterpret_cast<uint8_t *>(I64s.data());
-    uint8_t *MaskBytes = reinterpret_cast<uint8_t *>(ConstLaneMasks.data());
-    unsigned I = 0;
-    size_t ByteStep = VecT.getScalarSizeInBits() / 8;
-    for (const SDValue &Lane : Op->op_values()) {
-      if (IsConstant(Lane)) {
-        using llvm::support::little;
-        using llvm::support::endian::byte_swap;
-        // The endianness of the compiler matters here. We want to enforce
-        // little endianness so that the bytes of a smaller integer type will
-        // occur first in the uint64_t.
-        auto *Const = cast<ConstantSDNode>(Lane.getNode());
-        uint64_t Val = byte_swap(Const->getLimitedValue(), little);
-        uint8_t *ValPtr = reinterpret_cast<uint8_t *>(&Val);
-        std::copy(ValPtr, ValPtr + ByteStep, I64Bytes + I * ByteStep);
-        uint64_t Mask = uint64_t(-1LL);
-        uint8_t *MaskPtr = reinterpret_cast<uint8_t *>(&Mask);
-        std::copy(MaskPtr, MaskPtr + ByteStep, MaskBytes + I * ByteStep);
-      }
-      ++I;
-    }
-    // Check whether all constant lanes in the second half of the vector are
-    // equivalent in the first half or vice versa to determine whether splatting
-    // either side will be sufficient to materialize the constant. As a special
-    // case, if the first and second halves have no constant lanes in common, we
-    // can just combine them.
-    bool FirstHalfSufficient = (I64s[0] & ConstLaneMasks[1]) == I64s[1];
-    bool SecondHalfSufficient = (I64s[1] & ConstLaneMasks[0]) == I64s[0];
-    bool CombinedSufficient = (ConstLaneMasks[0] & ConstLaneMasks[1]) == 0;
-
-    uint64_t Splatted;
-    if (SecondHalfSufficient) {
-      Splatted = I64s[1];
-    } else if (CombinedSufficient) {
-      Splatted = I64s[0] | I64s[1];
-    } else {
-      Splatted = I64s[0];
-    }
-
-    Result = DAG.getSplatBuildVector(MVT::v2i64, DL,
-                                     DAG.getConstant(Splatted, DL, MVT::i64));
-    if (!FirstHalfSufficient && !SecondHalfSufficient && !CombinedSufficient) {
-      Result = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v2i64, Result,
-                           DAG.getConstant(I64s[1], DL, MVT::i64),
-                           DAG.getConstant(1, DL, MVT::i32));
-    }
-    Result = DAG.getBitcast(VecT, Result);
-    IsLaneConstructed = [&IsConstant](size_t _, const SDValue &Lane) {
-      return IsConstant(Lane);
-    };
-  } else {
+  }
+  if (!Result) {
     // Use a splat, but possibly a load_splat
     LoadSDNode *SplattedLoad;
     if ((SplattedLoad = dyn_cast<LoadSDNode>(SplatValue)) &&
@@ -1651,13 +1593,10 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     } else {
       Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
     }
-    IsLaneConstructed = [&SplatValue](size_t _, const SDValue &Lane) {
+    IsLaneConstructed = [&](size_t _, const SDValue &Lane) {
       return Lane == SplatValue;
     };
   }
-
-  assert(Result);
-  assert(IsLaneConstructed);
 
   // Add replace_lane instructions for any unhandled values
   for (size_t I = 0; I < Lanes; ++I) {

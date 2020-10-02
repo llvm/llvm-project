@@ -1,5 +1,5 @@
-Architecture
-============
+Overview
+========
 
 LLDB is a large and complex codebase. This section will help you become more
 familiar with the pieces that make up LLDB and give a general overview of the

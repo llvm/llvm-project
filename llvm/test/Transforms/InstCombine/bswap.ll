@@ -379,6 +379,24 @@ define i16 @test10(i32 %a) {
   ret i16 %conv
 }
 
+define <2 x i16> @test10_vector(<2 x i32> %a) {
+; CHECK-LABEL: @test10_vector(
+; CHECK-NEXT:    [[SHR1:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 8, i32 8>
+; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[SHR1]], <i32 255, i32 255>
+; CHECK-NEXT:    [[AND2:%.*]] = shl <2 x i32> [[A]], <i32 8, i32 8>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[CONV:%.*]] = trunc <2 x i32> [[OR]] to <2 x i16>
+; CHECK-NEXT:    ret <2 x i16> [[CONV]]
+;
+  %shr1 = lshr <2 x i32> %a, <i32 8, i32 8>
+  %and1 = and <2 x i32> %shr1, <i32 255, i32 255>
+  %and2 = shl <2 x i32> %a, <i32 8, i32 8>
+  %shl1 = and <2 x i32> %and2, <i32 65280, i32 65280>
+  %or = or <2 x i32> %and1, %shl1
+  %conv = trunc <2 x i32> %or to <2 x i16>
+  ret <2 x i16> %conv
+}
+
 define i64 @PR39793_bswap_u64_as_u32(i64 %0) {
 ; CHECK-LABEL: @PR39793_bswap_u64_as_u32(
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[TMP0:%.*]] to i32
@@ -435,6 +453,23 @@ define i64 @PR39793_bswap_u64_as_u16(i64 %0) {
   %5 = and i64 %4, 65280
   %6 = or i64 %3, %5
   ret i64 %6
+}
+
+define <2 x i64> @PR39793_bswap_u64_as_u16_vector(<2 x i64> %0) {
+; CHECK-LABEL: @PR39793_bswap_u64_as_u16_vector(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[TMP0:%.*]], <i64 8, i64 8>
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], <i64 255, i64 255>
+; CHECK-NEXT:    [[TMP4:%.*]] = shl <2 x i64> [[TMP0]], <i64 8, i64 8>
+; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i64> [[TMP4]], <i64 65280, i64 65280>
+; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i64> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    ret <2 x i64> [[TMP6]]
+;
+  %2 = lshr <2 x i64> %0, <i64 8, i64 8>
+  %3 = and <2 x i64> %2, <i64 255, i64 255>
+  %4 = shl <2 x i64> %0, <i64 8, i64 8>
+  %5 = and <2 x i64> %4, <i64 65280, i64 65280>
+  %6 = or <2 x i64> %3, %5
+  ret <2 x i64> %6
 }
 
 define i8 @PR39793_bswap_u64_as_u16_trunc(i64 %0) {

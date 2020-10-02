@@ -9,9 +9,9 @@ define void @foo(i8* %p) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[A:%.*]] = bitcast i8* [[P:%.*]] to <vscale x 16 x i8>*
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* [[A]], i64 0
-; CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8>* [[TMP0]]
+; CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8>* [[TMP0]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* [[A]], i64 1
-; CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8>* [[TMP1]]
+; CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8>* [[TMP1]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %a = bitcast i8* %p to <vscale x 16 x i8>*

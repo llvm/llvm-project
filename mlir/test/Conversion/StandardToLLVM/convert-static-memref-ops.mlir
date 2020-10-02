@@ -416,3 +416,33 @@ func @check_memref_func_call(%in : memref<10xi8>) -> memref<20xi8> {
   // BAREPTR-NEXT:    llvm.return %[[res]] : !llvm.ptr<i8>
   return %res : memref<20xi8>
 }
+
+// -----
+
+// BAREPTR: llvm.func @goo(!llvm.float) -> !llvm.float
+func @goo(f32) -> f32
+
+// BAREPTR-LABEL: func @check_scalar_func_call
+// BAREPTR-SAME:    %[[in:.*]]: !llvm.float)
+func @check_scalar_func_call(%in : f32) {
+  // BAREPTR-NEXT:    %[[call:.*]] = llvm.call @goo(%[[in]]) : (!llvm.float) -> !llvm.float
+  %res = call @goo(%in) : (f32) -> (f32)
+  return
+}
+
+// -----
+
+// Unranked memrefs are currently not supported in the bare-ptr calling
+// convention. Check that the conversion to the LLVM-IR dialect doesn't happen
+// in the presence of unranked memrefs when using such a calling convention.
+
+// BAREPTR: func @hoo(memref<*xi8>) -> memref<*xi8>
+func @hoo(memref<*xi8>) -> memref<*xi8>
+
+// BAREPTR-LABEL: func @check_unranked_memref_func_call(%{{.*}}: memref<*xi8>) -> memref<*xi8>
+func @check_unranked_memref_func_call(%in: memref<*xi8>) -> memref<*xi8> {
+  // BAREPTR-NEXT: call @hoo(%{{.*}}) : (memref<*xi8>) -> memref<*xi8>
+  %res = call @hoo(%in) : (memref<*xi8>) -> memref<*xi8>
+  // BAREPTR-NEXT: return %{{.*}} : memref<*xi8>
+  return %res : memref<*xi8>
+}

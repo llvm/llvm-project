@@ -70,6 +70,7 @@ private:
   Instruction *tryMergingIntoMemset(Instruction *I, Value *StartPtr,
                                     Value *ByteVal);
 
+  void eraseInstruction(Instruction *I);
   bool iterateOnFunction(Function &F);
 };
 
