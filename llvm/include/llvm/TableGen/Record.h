@@ -1518,7 +1518,10 @@ public:
     return SuperClasses;
   }
 
-  /// Append the direct super classes of this record to Classes.
+  /// Determine whether this record has the specified direct superclass.
+  bool hasDirectSuperClass(const Record *SuperClass) const;
+
+  /// Append the direct superclasses of this record to Classes.
   void getDirectSuperClasses(SmallVectorImpl<Record *> &Classes) const;
 
   bool isTemplateArg(Init *Name) const {
@@ -1710,18 +1713,26 @@ class RecordKeeper {
   friend class RecordRecTy;
 
   using RecordMap = std::map<std::string, std::unique_ptr<Record>, std::less<>>;
+  using GlobalMap = std::map<std::string, Init *, std::less<>>;
 
+  std::string InputFilename;
   RecordMap Classes, Defs;
   FoldingSet<RecordRecTy> RecordTypePool;
   std::map<std::string, Init *, std::less<>> ExtraGlobals;
   unsigned AnonCounter = 0;
 
 public:
+  /// Get the main TableGen input file's name.
+  const std::string getInputFilename() const { return InputFilename; }
+
   /// Get the map of classes.
   const RecordMap &getClasses() const { return Classes; }
 
   /// Get the map of records (defs).
   const RecordMap &getDefs() const { return Defs; }
+
+  /// Get the map of global variables.
+  const GlobalMap &getGlobals() const { return ExtraGlobals; }
 
   /// Get the class with the specified name.
   Record *getClass(StringRef Name) const {
@@ -1741,6 +1752,10 @@ public:
       return R->getDefInit();
     auto It = ExtraGlobals.find(Name);
     return It == ExtraGlobals.end() ? nullptr : It->second;
+  }
+
+  void saveInputFilename(std::string Filename) {
+    InputFilename = Filename;
   }
 
   void addClass(std::unique_ptr<Record> R) {
@@ -2017,6 +2032,7 @@ public:
   Init *resolve(Init *VarName) override;
 };
 
+void EmitDetailedRecords(RecordKeeper &RK, raw_ostream &OS);
 void EmitJSON(RecordKeeper &RK, raw_ostream &OS);
 
 } // end namespace llvm
