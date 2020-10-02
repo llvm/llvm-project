@@ -41,6 +41,7 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   llvm::AMDGPU::GPUKind GPUKind;
   unsigned GPUFeatures;
+  unsigned WavefrontSize;
 
   /// Target ID is device name followed by optional feature name postfixed
   /// by plus or minus sign delimitted by colon, e.g. gfx908:xnack+:sram-ecc-.
@@ -407,6 +408,8 @@ public:
         getAllPossibleTargetIDFeatures(getTriple(), getArchNameAMDGCN(GPUKind));
     llvm::for_each(Features, [&](const auto &F) {
       assert(F.front() == '+' || F.front() == '-');
+      if (F == "+wavefrontsize64")
+        WavefrontSize = 64;
       bool IsOn = F.front() == '+';
       StringRef Name = StringRef(F).drop_front();
       if (llvm::find(TargetIDFeatures, Name) == TargetIDFeatures.end())
