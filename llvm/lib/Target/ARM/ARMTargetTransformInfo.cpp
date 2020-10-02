@@ -362,8 +362,12 @@ int ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   // Ensures negative constant of min(max()) or max(min()) patterns that
   // match to SSAT instructions don't get hoisted
   if (Inst && ((ST->hasV6Ops() && !ST->isThumb()) || ST->isThumb2()) &&
-      Ty->getIntegerBitWidth() <= 32 && isSSATMinMaxPattern(Inst, Imm))
-    return 0;
+      Ty->getIntegerBitWidth() <= 32) {
+    if (isSSATMinMaxPattern(Inst, Imm) ||
+        (isa<ICmpInst>(Inst) && Inst->hasOneUse() &&
+         isSSATMinMaxPattern(cast<Instruction>(*Inst->user_begin()), Imm)))
+      return 0;
+  }
 
   return getIntImmCost(Imm, Ty, CostKind);
 }
