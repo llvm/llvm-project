@@ -885,21 +885,23 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)
 #endif  // _LIBCPP_HAS_NO_STRONG_ENUMS
 
-#ifdef _LIBCPP_DEBUG
-#  if _LIBCPP_DEBUG == 0
-#    define _LIBCPP_DEBUG_LEVEL 1
-#  elif _LIBCPP_DEBUG == 1
-#    define _LIBCPP_DEBUG_LEVEL 2
-#  else
-#    error Supported values for _LIBCPP_DEBUG are 0 and 1
-#  endif
-#  if !defined(_LIBCPP_BUILDING_LIBRARY)
-#    define _LIBCPP_EXTERN_TEMPLATE(...)
-#  endif
+// _LIBCPP_DEBUG potential values:
+//  - undefined: No assertions. This is the default.
+//  - 0:         Basic assertions
+//  - 1:         Basic assertions + iterator validity checks.
+#if !defined(_LIBCPP_DEBUG)
+# define _LIBCPP_DEBUG_LEVEL 0
+#elif _LIBCPP_DEBUG == 0
+# define _LIBCPP_DEBUG_LEVEL 1
+#elif _LIBCPP_DEBUG == 1
+# define _LIBCPP_DEBUG_LEVEL 2
+#else
+# error Supported values for _LIBCPP_DEBUG are 0 and 1
 #endif
 
-#ifndef _LIBCPP_DEBUG_LEVEL
-# define _LIBCPP_DEBUG_LEVEL 0
+// _LIBCPP_DEBUG_LEVEL is always defined to one of [0, 1, 2] at this point
+#if _LIBCPP_DEBUG_LEVEL >= 1
+# define _LIBCPP_DISABLE_EXTERN_TEMPLATE
 #endif
 
 #ifdef _LIBCPP_DISABLE_EXTERN_TEMPLATE
