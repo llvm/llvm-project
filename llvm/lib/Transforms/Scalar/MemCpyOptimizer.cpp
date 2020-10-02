@@ -302,6 +302,13 @@ INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
 INITIALIZE_PASS_END(MemCpyOptLegacyPass, "memcpyopt", "MemCpy Optimization",
                     false, false)
 
+void MemCpyOptPass::eraseInstruction(Instruction *I) {
+  if (MSSAU)
+    MSSAU->removeMemoryAccess(I);
+  MD->removeInstruction(I);
+  I->eraseFromParent();
+}
+
 /// When scanning forward over instructions, we look for some other patterns to
 /// fold away. In particular, this looks for stores to neighboring locations of
 /// memory. If it sees enough consecutive ones, it attempts to merge them
@@ -442,12 +449,8 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
     }
 
     // Zap all the stores.
-    for (Instruction *SI : Range.TheStores) {
-      if (MSSAU)
-        MSSAU->removeMemoryAccess(SI);
-      MD->removeInstruction(SI);
-      SI->eraseFromParent();
-    }
+    for (Instruction *SI : Range.TheStores)
+      eraseInstruction(SI);
 
     ++NumMemSetInfer;
   }
@@ -633,14 +636,10 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
             auto *NewAccess =
                 MSSAU->createMemoryAccessAfter(M, LastDef, LastDef);
             MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
-            MSSAU->removeMemoryAccess(SI);
-            MSSAU->removeMemoryAccess(LI);
           }
 
-          MD->removeInstruction(SI);
-          SI->eraseFromParent();
-          MD->removeInstruction(LI);
-          LI->eraseFromParent();
+          eraseInstruction(SI);
+          eraseInstruction(LI);
           ++NumMemCpyInstr;
 
           // Make sure we do not invalidate the iterator.
@@ -685,15 +684,8 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
             DL.getTypeStoreSize(SI->getOperand(0)->getType()),
             commonAlignment(SI->getAlign(), LI->getAlign()), C);
         if (changed) {
-          if (MSSAU) {
-            MSSAU->removeMemoryAccess(SI);
-            MSSAU->removeMemoryAccess(LI);
-          }
-
-          MD->removeInstruction(SI);
-          SI->eraseFromParent();
-          MD->removeInstruction(LI);
-          LI->eraseFromParent();
+          eraseInstruction(SI);
+          eraseInstruction(LI);
           ++NumMemCpyInstr;
           return true;
         }
@@ -733,11 +725,9 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
             cast<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(SI));
         auto *NewAccess = MSSAU->createMemoryAccessAfter(M, LastDef, LastDef);
         MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
-        MSSAU->removeMemoryAccess(SI);
       }
 
-      MD->removeInstruction(SI);
-      SI->eraseFromParent();
+      eraseInstruction(SI);
       NumMemSetInfer++;
 
       // Make sure we do not invalidate the iterator.
@@ -1028,12 +1018,10 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     auto *LastDef = cast<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(M));
     auto *NewAccess = MSSAU->createMemoryAccessAfter(NewM, LastDef, LastDef);
     MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
-    MSSAU->removeMemoryAccess(M);
   }
 
   // Remove the instruction we're replacing.
-  MD->removeInstruction(M);
-  M->eraseFromParent();
+  eraseInstruction(M);
   ++NumMemCpyInstr;
   return true;
 }
@@ -1111,11 +1099,9 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
     auto *NewAccess = MSSAU->createMemoryAccessBefore(
         NewMemSet, LastDef->getDefiningAccess(), LastDef);
     MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
-    MSSAU->removeMemoryAccess(MemSet);
   }
 
-  MD->removeInstruction(MemSet);
-  MemSet->eraseFromParent();
+  eraseInstruction(MemSet);
   return true;
 }
 
@@ -1203,11 +1189,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   // If the source and destination of the memcpy are the same, then zap it.
   if (M->getSource() == M->getDest()) {
     ++BBI;
-    if (MSSAU)
-      MSSAU->removeMemoryAccess(M);
-
-    MD->removeInstruction(M);
-    M->eraseFromParent();
+    eraseInstruction(M);
     return true;
   }
 
@@ -1226,11 +1208,9 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
           auto *NewAccess =
               MSSAU->createMemoryAccessAfter(NewM, LastDef, LastDef);
           MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
-          MSSAU->removeMemoryAccess(M);
         }
 
-        MD->removeInstruction(M);
-        M->eraseFromParent();
+        eraseInstruction(M);
         ++NumCpyToSet;
         return true;
       }
@@ -1263,11 +1243,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
                                  M->getSourceAlign().valueOrOne());
       if (performCallSlotOptzn(M, M->getDest(), M->getSource(),
                                CopySize->getZExtValue(), Alignment, C)) {
-        if (MSSAU)
-          MSSAU->removeMemoryAccess(M);
-
-        MD->removeInstruction(M);
-        M->eraseFromParent();
+        eraseInstruction(M);
         ++NumMemCpyInstr;
         return true;
       }
@@ -1283,11 +1259,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       return processMemCpyMemCpyDependence(M, MDep);
   } else if (SrcDepInfo.isDef()) {
     if (hasUndefContents(SrcDepInfo.getInst(), CopySize)) {
-      if (MSSAU)
-        MSSAU->removeMemoryAccess(M);
-
-      MD->removeInstruction(M);
-      M->eraseFromParent();
+      eraseInstruction(M);
       ++NumMemCpyInstr;
       return true;
     }
@@ -1296,10 +1268,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   if (SrcDepInfo.isClobber())
     if (MemSetInst *MDep = dyn_cast<MemSetInst>(SrcDepInfo.getInst()))
       if (performMemCpyToMemSetOptzn(M, MDep)) {
-        if (MSSAU)
-          MSSAU->removeMemoryAccess(M);
-        MD->removeInstruction(M);
-        M->eraseFromParent();
+        eraseInstruction(M);
         ++NumCpyToSet;
         return true;
       }
