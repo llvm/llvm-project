@@ -2940,24 +2940,6 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       return Result;
     }
 
-    // BSWAP - most likely due to us previous matching a partial bswap.
-    if (match(V, m_BSwap(m_Value(X)))) {
-      const auto &Res =
-          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
-      if (!Res)
-        return Result;
-
-      unsigned ByteWidth = BitWidth / 8;
-      Result = BitPart(Res->Provider, BitWidth);
-      for (unsigned ByteIdx = 0; ByteIdx < ByteWidth; ++ByteIdx) {
-        unsigned ByteBitOfs = ByteIdx * 8;
-        for (unsigned BitIdx = 0; BitIdx < 8; ++BitIdx)
-          Result->Provenance[(BitWidth - 8 - ByteBitOfs) + BitIdx] =
-              Res->Provenance[ByteBitOfs + BitIdx];
-      }
-      return Result;
-    }
-
     // Funnel 'double' shifts take 3 operands, 2 inputs and the shift
     // amount (modulo).
     // fshl(X,Y,Z): (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
@@ -3050,15 +3032,10 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   // Now, is the bit permutation correct for a bswap or a bitreverse? We can
   // only byteswap values with an even number of bytes.
   unsigned DemandedBW = DemandedTy->getBitWidth();
-  APInt DemandedMask = APInt::getAllOnesValue(DemandedBW);
   bool OKForBSwap = MatchBSwaps && (DemandedBW % 16) == 0;
   bool OKForBitReverse = MatchBitReversals;
   for (unsigned BitIdx = 0;
        (BitIdx < DemandedBW) && (OKForBSwap || OKForBitReverse); ++BitIdx) {
-    if (BitProvenance[BitIdx] == BitPart::Unset) {
-      DemandedMask.clearBit(BitIdx);
-      continue;
-    }
     OKForBSwap &= bitTransformIsCorrectForBSwap(BitProvenance[BitIdx], BitIdx,
                                                 DemandedBW);
     OKForBitReverse &= bitTransformIsCorrectForBitReverse(BitProvenance[BitIdx],
@@ -3073,6 +3050,7 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   else
     return false;
 
+  Function *F = Intrinsic::getDeclaration(I->getModule(), Intrin, DemandedTy);
   Value *Provider = Res->Provider;
 
   // We may need to truncate the provider.
@@ -3083,19 +3061,12 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
     Provider = Trunc;
   }
 
-  Function *F = Intrinsic::getDeclaration(I->getModule(), Intrin, DemandedTy);
-  Instruction *Result = CallInst::Create(F, Provider, "rev", I);
-  InsertedInsts.push_back(Result);
-
-  if (!DemandedMask.isAllOnesValue()) {
-    auto *Mask = ConstantInt::get(DemandedTy, DemandedMask);
-    Result = BinaryOperator::Create(Instruction::And, Result, Mask, "mask", I);
-    InsertedInsts.push_back(Result);
-  }
+  auto *CI = CallInst::Create(F, Provider, "rev", I);
+  InsertedInsts.push_back(CI);
 
   // We may need to zeroextend back to the result type.
-  if (ITy != Result->getType()) {
-    auto *ExtInst = CastInst::Create(Instruction::ZExt, Result, ITy, "zext", I);
+  if (ITy != CI->getType()) {
+    auto *ExtInst = CastInst::Create(Instruction::ZExt, CI, ITy, "zext", I);
     InsertedInsts.push_back(ExtInst);
   }
 
