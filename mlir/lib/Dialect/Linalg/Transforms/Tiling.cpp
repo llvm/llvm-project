@@ -54,7 +54,7 @@ using LoopIndexToRangeIndexMap = DenseMap<int, int>;
 // are tiled and for which new loops will be created. Also the function returns
 // a map from loop indices of the LinalgOp to the corresponding non-empty range
 // indices of newly created loops.
-static std::tuple<SmallVector<SubViewOp::Range, 4>, LoopIndexToRangeIndexMap>
+static std::tuple<SmallVector<Range, 4>, LoopIndexToRangeIndexMap>
 makeTiledLoopRanges(OpBuilder &b, Location loc, AffineMap map,
                     ArrayRef<Value> allViewSizes,
                     ArrayRef<Value> allTileSizes) {
@@ -76,10 +76,9 @@ makeTiledLoopRanges(OpBuilder &b, Location loc, AffineMap map,
   }
 
   // Create a new range with the applied tile sizes.
-  SmallVector<SubViewOp::Range, 4> res;
+  SmallVector<Range, 4> res;
   for (unsigned idx = 0, e = tileSizes.size(); idx < e; ++idx)
-    res.push_back(SubViewOp::Range{std_constant_index(0), viewSizes[idx],
-                                   tileSizes[idx]});
+    res.push_back(Range{std_constant_index(0), viewSizes[idx], tileSizes[idx]});
   return std::make_tuple(res, loopIndexToRangeIndex);
 }
 
@@ -346,7 +345,7 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
   if (!viewSizesToLoopsMap)
     return llvm::None;
 
-  SmallVector<SubViewOp::Range, 4> loopRanges;
+  SmallVector<Range, 4> loopRanges;
   LoopIndexToRangeIndexMap loopIndexToRangeIndex;
   std::tie(loopRanges, loopIndexToRangeIndex) = makeTiledLoopRanges(
       b, op.getLoc(), viewSizesToLoopsMap, allViewSizes, tileSizes);
