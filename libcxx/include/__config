@@ -904,15 +904,10 @@ typedef unsigned int   char32_t;
 
 #ifdef _LIBCPP_DISABLE_EXTERN_TEMPLATE
 #define _LIBCPP_EXTERN_TEMPLATE(...)
-#define _LIBCPP_EXTERN_TEMPLATE2(...)
 #endif
 
 #ifndef _LIBCPP_EXTERN_TEMPLATE
 #define _LIBCPP_EXTERN_TEMPLATE(...) extern template __VA_ARGS__;
-#endif
-
-#ifndef _LIBCPP_EXTERN_TEMPLATE2
-#define _LIBCPP_EXTERN_TEMPLATE2(...) extern template __VA_ARGS__;
 #endif
 
 #ifndef _LIBCPP_EXTERN_TEMPLATE_DEFINE
