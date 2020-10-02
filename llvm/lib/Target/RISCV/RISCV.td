@@ -237,8 +237,8 @@ def : ProcessorModel<"sifive-e31", RocketModel, [FeatureStdExtM,
 
 def : ProcessorModel<"sifive-u54", RocketModel, [Feature64Bit,
                                                  FeatureStdExtM,
-                                                 FeatureStdExtF,
                                                  FeatureStdExtA,
+                                                 FeatureStdExtF,
                                                  FeatureStdExtD,
                                                  FeatureStdExtC]>;
 
