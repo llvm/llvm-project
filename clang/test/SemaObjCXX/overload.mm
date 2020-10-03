@@ -201,3 +201,17 @@ void test(NSDictionary *d1, NSDictionary<A *, A *> *d2, NSMutableDictionary<A *,
 }
 
 }
+
+namespace StringLiterals {
+void f(const char(&&)[5]);
+void f(const wchar_t(&&)[5]);
+void f(const char16_t(&&)[5]);
+void f(const char32_t(&&)[5]);
+void g() {
+  f({"abc"});
+  f({(((@encode(int))))});
+  f({L"abc"});
+  f({uR"(abc)"});
+  f({(UR"(abc)")});
+}
+} // namespace StringLiterals
