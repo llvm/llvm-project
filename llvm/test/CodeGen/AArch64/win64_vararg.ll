@@ -213,8 +213,7 @@ declare void @llvm.stackrestore(i8*)
 ; CHECK-LABEL: snprintf
 ; CHECK-DAG: sub     sp,  sp, #96
 ; CHECK-DAG: stp     x19, x20, [sp, #16]
-; CHECK-DAG: str     x21, [sp, #32]
-; CHECK-DAG: str     x30, [sp, #40]
+; CHECK-DAG: stp     x21, x30, [sp, #32]
 ; CHECK-DAG: add     x8, sp, #56
 ; CHECK-DAG: mov     x19, x2
 ; CHECK-DAG: mov     x20, x1
@@ -232,8 +231,7 @@ declare void @llvm.stackrestore(i8*)
 ; CHECK-DAG: mov     x3, x19
 ; CHECK-DAG: mov     x4, xzr
 ; CHECK-DAG: bl      __stdio_common_vsprintf
-; CHECK-DAG: ldr     x30, [sp, #40]
-; CHECK-DAG: ldr     x21, [sp, #32]
+; CHECK-DAG: ldp     x21, x30, [sp, #32]
 ; CHECK-DAG: ldp     x19, x20, [sp, #16]
 ; CHECK-DAG: cmp     w0, #0
 ; CHECK-DAG: csinv   w0, w0, wzr, ge
