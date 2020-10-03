@@ -70,6 +70,7 @@ public:
         if (VisitUnqualName(
                 TL.getAs<TypedefTypeLoc>().getTypePtr()->getDecl()->getName()))
           return false;
+        break;
       default:
         break;
       }
