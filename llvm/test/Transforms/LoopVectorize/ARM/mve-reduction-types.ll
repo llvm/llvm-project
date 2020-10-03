@@ -41,7 +41,7 @@ define i32 @mla_i32(i8* noalias nocapture readonly %A, i8* noalias nocapture rea
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP11]])
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
@@ -129,7 +129,7 @@ define i32 @mla_i8(i8* noalias nocapture readonly %A, i8* noalias nocapture read
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP4:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP11]])
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
@@ -210,7 +210,7 @@ define i32 @add_i32(i32* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP6:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
@@ -281,7 +281,7 @@ define i32 @mul_i32(i32* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP8:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.vector.reduce.mul.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
@@ -352,7 +352,7 @@ define i32 @and_i32(i32* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP10:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.vector.reduce.and.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
@@ -423,7 +423,7 @@ define i32 @or_i32(i32* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP12:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.vector.reduce.or.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
@@ -494,7 +494,7 @@ define i32 @xor_i32(i32* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP14:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.vector.reduce.xor.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
@@ -565,7 +565,7 @@ define float @fadd_f32(float* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP16:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
@@ -636,7 +636,7 @@ define float @fmul_f32(float* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP18:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fmul.f32.v4f32(float 1.000000e+00, <4 x float> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[TMP5]])
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
@@ -703,7 +703,7 @@ define i32 @smin_i32(i32* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP20:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.vector.reduce.smin.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -773,7 +773,7 @@ define i32 @smax_i32(i32* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP22:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.vector.reduce.smax.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -843,7 +843,7 @@ define i32 @umin_i32(i32* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP24:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.vector.reduce.umin.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -913,7 +913,7 @@ define i32 @umax_i32(i32* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP26:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.vector.reduce.umax.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

@@ -17,7 +17,7 @@ define i32 @foo(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a4
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[A5:%.*]], i32 6
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 [[A6:%.*]], i32 7
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i32> [[SHUFFLE]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.vector.reduce.umin.v8i32(<8 x i32> [[TMP10]])
+; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.umin.v8i32(<8 x i32> [[TMP10]])
 ; CHECK-NEXT:    ret i32 [[TMP11]]
 ;
 entry:
@@ -67,7 +67,7 @@ define i32 @foo1(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[A7:%.*]], i32 6
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 [[A3:%.*]], i32 7
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i32> [[SHUFFLE]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.vector.reduce.umin.v8i32(<8 x i32> [[TMP10]])
+; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.umin.v8i32(<8 x i32> [[TMP10]])
 ; CHECK-NEXT:    ret i32 [[TMP11]]
 ;
 entry:
@@ -121,7 +121,7 @@ define i32 @foo2(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[A1:%.*]], i32 6
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 [[A3:%.*]], i32 7
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i32> [[SHUFFLE]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.vector.reduce.umin.v8i32(<8 x i32> [[TMP10]])
+; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.umin.v8i32(<8 x i32> [[TMP10]])
 ; CHECK-NEXT:    ret i32 [[TMP11]]
 ;
 entry:

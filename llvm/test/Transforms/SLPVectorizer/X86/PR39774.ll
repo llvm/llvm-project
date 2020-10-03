@@ -11,7 +11,7 @@ define void @Test(i32) {
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> undef, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i32> [[SHUFFLE]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[SHUFFLE]], <i32 0, i32 55, i32 285, i32 1240, i32 1496, i32 8555, i32 12529, i32 13685>
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.experimental.vector.reduce.and.v8i32(<8 x i32> [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP3]])
 ; CHECK-NEXT:    [[OP_EXTRA:%.*]] = and i32 [[TMP4]], [[TMP0:%.*]]
 ; CHECK-NEXT:    [[OP_EXTRA1:%.*]] = and i32 [[OP_EXTRA]], [[TMP0]]
 ; CHECK-NEXT:    [[OP_EXTRA2:%.*]] = and i32 [[OP_EXTRA1]], [[TMP0]]
@@ -62,7 +62,7 @@ define void @Test(i32) {
 ; FORCE_REDUCTION-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[SHUFFLE]], <i32 0, i32 55, i32 285, i32 1240>
 ; FORCE_REDUCTION-NEXT:    [[VAL_20:%.*]] = add i32 [[TMP2]], 1496
 ; FORCE_REDUCTION-NEXT:    [[VAL_34:%.*]] = add i32 [[TMP2]], 8555
-; FORCE_REDUCTION-NEXT:    [[TMP4:%.*]] = call i32 @llvm.experimental.vector.reduce.and.v4i32(<4 x i32> [[TMP3]])
+; FORCE_REDUCTION-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP3]])
 ; FORCE_REDUCTION-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], [[VAL_20]]
 ; FORCE_REDUCTION-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], [[VAL_34]]
 ; FORCE_REDUCTION-NEXT:    [[OP_EXTRA:%.*]] = and i32 [[TMP6]], [[TMP0:%.*]]

@@ -325,61 +325,53 @@ static CallInst *getReductionIntrinsic(IRBuilderBase *Builder, Intrinsic::ID ID,
 CallInst *IRBuilderBase::CreateFAddReduce(Value *Acc, Value *Src) {
   Module *M = GetInsertBlock()->getParent()->getParent();
   Value *Ops[] = {Acc, Src};
-  Type *Tys[] = {Acc->getType(), Src->getType()};
-  auto Decl = Intrinsic::getDeclaration(
-      M, Intrinsic::experimental_vector_reduce_v2_fadd, Tys);
+  auto Decl = Intrinsic::getDeclaration(M, Intrinsic::vector_reduce_fadd,
+                                        {Src->getType()});
   return createCallHelper(Decl, Ops, this);
 }
 
 CallInst *IRBuilderBase::CreateFMulReduce(Value *Acc, Value *Src) {
   Module *M = GetInsertBlock()->getParent()->getParent();
   Value *Ops[] = {Acc, Src};
-  Type *Tys[] = {Acc->getType(), Src->getType()};
-  auto Decl = Intrinsic::getDeclaration(
-      M, Intrinsic::experimental_vector_reduce_v2_fmul, Tys);
+  auto Decl = Intrinsic::getDeclaration(M, Intrinsic::vector_reduce_fmul,
+                                        {Src->getType()});
   return createCallHelper(Decl, Ops, this);
 }
 
 CallInst *IRBuilderBase::CreateAddReduce(Value *Src) {
-  return getReductionIntrinsic(this, Intrinsic::experimental_vector_reduce_add,
-                               Src);
+  return getReductionIntrinsic(this, Intrinsic::vector_reduce_add, Src);
 }
 
 CallInst *IRBuilderBase::CreateMulReduce(Value *Src) {
-  return getReductionIntrinsic(this, Intrinsic::experimental_vector_reduce_mul,
-                               Src);
+  return getReductionIntrinsic(this, Intrinsic::vector_reduce_mul, Src);
 }
 
 CallInst *IRBuilderBase::CreateAndReduce(Value *Src) {
-  return getReductionIntrinsic(this, Intrinsic::experimental_vector_reduce_and,
-                               Src);
+  return getReductionIntrinsic(this, Intrinsic::vector_reduce_and, Src);
 }
 
 CallInst *IRBuilderBase::CreateOrReduce(Value *Src) {
-  return getReductionIntrinsic(this, Intrinsic::experimental_vector_reduce_or,
-                               Src);
+  return getReductionIntrinsic(this, Intrinsic::vector_reduce_or, Src);
 }
 
 CallInst *IRBuilderBase::CreateXorReduce(Value *Src) {
-  return getReductionIntrinsic(this, Intrinsic::experimental_vector_reduce_xor,
-                               Src);
+  return getReductionIntrinsic(this, Intrinsic::vector_reduce_xor, Src);
 }
 
 CallInst *IRBuilderBase::CreateIntMaxReduce(Value *Src, bool IsSigned) {
-  auto ID = IsSigned ? Intrinsic::experimental_vector_reduce_smax
-                     : Intrinsic::experimental_vector_reduce_umax;
+  auto ID =
+      IsSigned ? Intrinsic::vector_reduce_smax : Intrinsic::vector_reduce_umax;
   return getReductionIntrinsic(this, ID, Src);
 }
 
 CallInst *IRBuilderBase::CreateIntMinReduce(Value *Src, bool IsSigned) {
-  auto ID = IsSigned ? Intrinsic::experimental_vector_reduce_smin
-                     : Intrinsic::experimental_vector_reduce_umin;
+  auto ID =
+      IsSigned ? Intrinsic::vector_reduce_smin : Intrinsic::vector_reduce_umin;
   return getReductionIntrinsic(this, ID, Src);
 }
 
 CallInst *IRBuilderBase::CreateFPMaxReduce(Value *Src, bool NoNaN) {
-  auto Rdx = getReductionIntrinsic(
-      this, Intrinsic::experimental_vector_reduce_fmax, Src);
+  auto Rdx = getReductionIntrinsic(this, Intrinsic::vector_reduce_fmax, Src);
   if (NoNaN) {
     FastMathFlags FMF;
     FMF.setNoNaNs();
@@ -389,8 +381,7 @@ CallInst *IRBuilderBase::CreateFPMaxReduce(Value *Src, bool NoNaN) {
 }
 
 CallInst *IRBuilderBase::CreateFPMinReduce(Value *Src, bool NoNaN) {
-  auto Rdx = getReductionIntrinsic(
-      this, Intrinsic::experimental_vector_reduce_fmin, Src);
+  auto Rdx = getReductionIntrinsic(this, Intrinsic::vector_reduce_fmin, Src);
   if (NoNaN) {
     FastMathFlags FMF;
     FMF.setNoNaNs();

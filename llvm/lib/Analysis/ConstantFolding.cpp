@@ -1457,15 +1457,15 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::smul_fix_sat:
   case Intrinsic::bitreverse:
   case Intrinsic::is_constant:
-  case Intrinsic::experimental_vector_reduce_add:
-  case Intrinsic::experimental_vector_reduce_mul:
-  case Intrinsic::experimental_vector_reduce_and:
-  case Intrinsic::experimental_vector_reduce_or:
-  case Intrinsic::experimental_vector_reduce_xor:
-  case Intrinsic::experimental_vector_reduce_smin:
-  case Intrinsic::experimental_vector_reduce_smax:
-  case Intrinsic::experimental_vector_reduce_umin:
-  case Intrinsic::experimental_vector_reduce_umax:
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_mul:
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_xor:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_umax:
   // Target intrinsics
   case Intrinsic::arm_mve_vctp8:
   case Intrinsic::arm_mve_vctp16:
@@ -1711,31 +1711,31 @@ Constant *ConstantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
       return nullptr;
     const APInt &X = CI->getValue();
     switch (IID) {
-    case Intrinsic::experimental_vector_reduce_add:
+    case Intrinsic::vector_reduce_add:
       Acc = Acc + X;
       break;
-    case Intrinsic::experimental_vector_reduce_mul:
+    case Intrinsic::vector_reduce_mul:
       Acc = Acc * X;
       break;
-    case Intrinsic::experimental_vector_reduce_and:
+    case Intrinsic::vector_reduce_and:
       Acc = Acc & X;
       break;
-    case Intrinsic::experimental_vector_reduce_or:
+    case Intrinsic::vector_reduce_or:
       Acc = Acc | X;
       break;
-    case Intrinsic::experimental_vector_reduce_xor:
+    case Intrinsic::vector_reduce_xor:
       Acc = Acc ^ X;
       break;
-    case Intrinsic::experimental_vector_reduce_smin:
+    case Intrinsic::vector_reduce_smin:
       Acc = APIntOps::smin(Acc, X);
       break;
-    case Intrinsic::experimental_vector_reduce_smax:
+    case Intrinsic::vector_reduce_smax:
       Acc = APIntOps::smax(Acc, X);
       break;
-    case Intrinsic::experimental_vector_reduce_umin:
+    case Intrinsic::vector_reduce_umin:
       Acc = APIntOps::umin(Acc, X);
       break;
-    case Intrinsic::experimental_vector_reduce_umax:
+    case Intrinsic::vector_reduce_umax:
       Acc = APIntOps::umax(Acc, X);
       break;
     }
@@ -2240,15 +2240,15 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
   if (isa<ConstantAggregateZero>(Operands[0])) {
     switch (IntrinsicID) {
     default: break;
-    case Intrinsic::experimental_vector_reduce_add:
-    case Intrinsic::experimental_vector_reduce_mul:
-    case Intrinsic::experimental_vector_reduce_and:
-    case Intrinsic::experimental_vector_reduce_or:
-    case Intrinsic::experimental_vector_reduce_xor:
-    case Intrinsic::experimental_vector_reduce_smin:
-    case Intrinsic::experimental_vector_reduce_smax:
-    case Intrinsic::experimental_vector_reduce_umin:
-    case Intrinsic::experimental_vector_reduce_umax:
+    case Intrinsic::vector_reduce_add:
+    case Intrinsic::vector_reduce_mul:
+    case Intrinsic::vector_reduce_and:
+    case Intrinsic::vector_reduce_or:
+    case Intrinsic::vector_reduce_xor:
+    case Intrinsic::vector_reduce_smin:
+    case Intrinsic::vector_reduce_smax:
+    case Intrinsic::vector_reduce_umin:
+    case Intrinsic::vector_reduce_umax:
       return ConstantInt::get(Ty, 0);
     }
   }
@@ -2259,15 +2259,15 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     auto *Op = cast<Constant>(Operands[0]);
     switch (IntrinsicID) {
     default: break;
-    case Intrinsic::experimental_vector_reduce_add:
-    case Intrinsic::experimental_vector_reduce_mul:
-    case Intrinsic::experimental_vector_reduce_and:
-    case Intrinsic::experimental_vector_reduce_or:
-    case Intrinsic::experimental_vector_reduce_xor:
-    case Intrinsic::experimental_vector_reduce_smin:
-    case Intrinsic::experimental_vector_reduce_smax:
-    case Intrinsic::experimental_vector_reduce_umin:
-    case Intrinsic::experimental_vector_reduce_umax:
+    case Intrinsic::vector_reduce_add:
+    case Intrinsic::vector_reduce_mul:
+    case Intrinsic::vector_reduce_and:
+    case Intrinsic::vector_reduce_or:
+    case Intrinsic::vector_reduce_xor:
+    case Intrinsic::vector_reduce_smin:
+    case Intrinsic::vector_reduce_smax:
+    case Intrinsic::vector_reduce_umin:
+    case Intrinsic::vector_reduce_umax:
       if (Constant *C = ConstantFoldVectorReduce(IntrinsicID, Op))
         return C;
       break;

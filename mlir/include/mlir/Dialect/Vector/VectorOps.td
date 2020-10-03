@@ -207,7 +207,7 @@ def Vector_ReductionOp :
     Note that these operations are restricted to 1-D vectors to remain
     close to the corresponding LLVM intrinsics:
 
-    http://llvm.org/docs/LangRef.html#experimental-vector-reduction-intrinsics
+    http://llvm.org/docs/LangRef.html#vector-reduction-intrinsics
 
     Example:
 
