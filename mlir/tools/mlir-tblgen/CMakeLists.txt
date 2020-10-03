@@ -25,6 +25,7 @@ add_tablegen(mlir-tblgen MLIR
 set_target_properties(mlir-tblgen PROPERTIES FOLDER "Tablegenning")
 target_link_libraries(mlir-tblgen
   PRIVATE
+  MLIRSupportIdentedOstream
   MLIRTableGen)
 
 mlir_check_all_link_libraries(mlir-tblgen)
