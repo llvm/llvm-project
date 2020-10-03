@@ -710,6 +710,9 @@ namespace llvm {
     // For avx512-vp2intersect
     VP2INTERSECT,
 
+    // Mwaitx builtin is lowered to this if the base pointer needs saving.
+    MWAITX_DAG,
+
     /// X86 strict FP compare instructions.
     STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
     STRICT_FCMPS,
@@ -749,8 +752,8 @@ namespace llvm {
     STRICT_CVTPS2PH,
     STRICT_CVTPH2PS,
 
-    // Mwaitx builtin is lowered to this if the base pointer needs saving.
-    MWAITX_DAG,
+    // WARNING: Only add nodes here if they are stric FP nodes. Non-memory and
+    // non-strict FP nodes should be above FIRST_TARGET_STRICTFP_OPCODE.
 
     // Compare and swap.
     LCMPXCHG_DAG = ISD::FIRST_TARGET_MEMORY_OPCODE,
