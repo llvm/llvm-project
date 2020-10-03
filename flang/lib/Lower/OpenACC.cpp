@@ -99,7 +99,6 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
   if (loopDirective.v == llvm::acc::ACCD_loop) {
     auto &firOpBuilder = converter.getFirOpBuilder();
     auto currentLocation = converter.getCurrentLocation();
-    llvm::ArrayRef<mlir::Type> argTy;
 
     // Add attribute extracted from clauses.
     const auto &accClauseList =
