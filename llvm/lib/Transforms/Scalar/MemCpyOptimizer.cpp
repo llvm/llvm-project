@@ -462,11 +462,10 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
 // It will lift the store and its argument + that anything that
 // may alias with these.
 // The method returns true if it was successful.
-static bool moveUp(AliasAnalysis &AA, StoreInst *SI, Instruction *P,
-                   const LoadInst *LI) {
+bool MemCpyOptPass::moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI) {
   // If the store alias this position, early bail out.
   MemoryLocation StoreLoc = MemoryLocation::get(SI);
-  if (isModOrRefSet(AA.getModRefInfo(P, StoreLoc)))
+  if (isModOrRefSet(AA->getModRefInfo(P, StoreLoc)))
     return false;
 
   // Keep track of the arguments of all instruction we plan to lift
@@ -490,19 +489,19 @@ static bool moveUp(AliasAnalysis &AA, StoreInst *SI, Instruction *P,
   for (auto I = --SI->getIterator(), E = P->getIterator(); I != E; --I) {
     auto *C = &*I;
 
-    bool MayAlias = isModOrRefSet(AA.getModRefInfo(C, None));
+    bool MayAlias = isModOrRefSet(AA->getModRefInfo(C, None));
 
     bool NeedLift = false;
     if (Args.erase(C))
       NeedLift = true;
     else if (MayAlias) {
-      NeedLift = llvm::any_of(MemLocs, [C, &AA](const MemoryLocation &ML) {
-        return isModOrRefSet(AA.getModRefInfo(C, ML));
+      NeedLift = llvm::any_of(MemLocs, [C, this](const MemoryLocation &ML) {
+        return isModOrRefSet(AA->getModRefInfo(C, ML));
       });
 
       if (!NeedLift)
-        NeedLift = llvm::any_of(Calls, [C, &AA](const CallBase *Call) {
-          return isModOrRefSet(AA.getModRefInfo(C, Call));
+        NeedLift = llvm::any_of(Calls, [C, this](const CallBase *Call) {
+          return isModOrRefSet(AA->getModRefInfo(C, Call));
         });
     }
 
@@ -512,18 +511,18 @@ static bool moveUp(AliasAnalysis &AA, StoreInst *SI, Instruction *P,
     if (MayAlias) {
       // Since LI is implicitly moved downwards past the lifted instructions,
       // none of them may modify its source.
-      if (isModSet(AA.getModRefInfo(C, LoadLoc)))
+      if (isModSet(AA->getModRefInfo(C, LoadLoc)))
         return false;
       else if (const auto *Call = dyn_cast<CallBase>(C)) {
         // If we can't lift this before P, it's game over.
-        if (isModOrRefSet(AA.getModRefInfo(P, Call)))
+        if (isModOrRefSet(AA->getModRefInfo(P, Call)))
           return false;
 
         Calls.push_back(Call);
       } else if (isa<LoadInst>(C) || isa<StoreInst>(C) || isa<VAArgInst>(C)) {
         // If we can't lift this before P, it's game over.
         auto ML = MemoryLocation::get(C);
-        if (isModOrRefSet(AA.getModRefInfo(P, ML)))
+        if (isModOrRefSet(AA->getModRefInfo(P, ML)))
           return false;
 
         MemLocs.push_back(ML);
@@ -599,7 +598,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
         // position if nothing alias the store memory after this and the store
         // destination is not in the range.
         if (P && P != SI) {
-          if (!moveUp(*AA, SI, P, LI))
+          if (!moveUp(SI, P, LI))
             P = nullptr;
         }
 
