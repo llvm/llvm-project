@@ -22,15 +22,7 @@ define i32 @test1(i32 %i) {
 
 define <2 x i32> @test1_vector(<2 x i32> %i) {
 ; CHECK-LABEL: @test1_vector(
-; CHECK-NEXT:    [[T1:%.*]] = lshr <2 x i32> [[I:%.*]], <i32 24, i32 24>
-; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i32> [[I]], <i32 8, i32 8>
-; CHECK-NEXT:    [[T4:%.*]] = and <2 x i32> [[T3]], <i32 65280, i32 65280>
-; CHECK-NEXT:    [[T5:%.*]] = or <2 x i32> [[T1]], [[T4]]
-; CHECK-NEXT:    [[T7:%.*]] = shl <2 x i32> [[I]], <i32 8, i32 8>
-; CHECK-NEXT:    [[T8:%.*]] = and <2 x i32> [[T7]], <i32 16711680, i32 16711680>
-; CHECK-NEXT:    [[T9:%.*]] = or <2 x i32> [[T5]], [[T8]]
-; CHECK-NEXT:    [[T11:%.*]] = shl <2 x i32> [[I]], <i32 24, i32 24>
-; CHECK-NEXT:    [[T12:%.*]] = or <2 x i32> [[T9]], [[T11]]
+; CHECK-NEXT:    [[T12:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[I:%.*]])
 ; CHECK-NEXT:    ret <2 x i32> [[T12]]
 ;
   %t1 = lshr <2 x i32> %i, <i32 24, i32 24>
@@ -64,15 +56,7 @@ define i32 @test2(i32 %arg) {
 
 define <2 x i32> @test2_vector(<2 x i32> %arg) {
 ; CHECK-LABEL: @test2_vector(
-; CHECK-NEXT:    [[T2:%.*]] = shl <2 x i32> [[ARG:%.*]], <i32 24, i32 24>
-; CHECK-NEXT:    [[T4:%.*]] = shl <2 x i32> [[ARG]], <i32 8, i32 8>
-; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[T4]], <i32 16711680, i32 16711680>
-; CHECK-NEXT:    [[T6:%.*]] = or <2 x i32> [[T2]], [[T5]]
-; CHECK-NEXT:    [[T8:%.*]] = lshr <2 x i32> [[ARG]], <i32 8, i32 8>
-; CHECK-NEXT:    [[T9:%.*]] = and <2 x i32> [[T8]], <i32 65280, i32 65280>
-; CHECK-NEXT:    [[T10:%.*]] = or <2 x i32> [[T6]], [[T9]]
-; CHECK-NEXT:    [[T12:%.*]] = lshr <2 x i32> [[ARG]], <i32 24, i32 24>
-; CHECK-NEXT:    [[T14:%.*]] = or <2 x i32> [[T10]], [[T12]]
+; CHECK-NEXT:    [[T14:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[ARG:%.*]])
 ; CHECK-NEXT:    ret <2 x i32> [[T14]]
 ;
   %t2 = shl <2 x i32> %arg, <i32 24, i32 24>
@@ -225,15 +209,7 @@ define i32 @test6(i32 %x) nounwind readnone {
 
 define <2 x i32> @test6_vector(<2 x i32> %x) nounwind readnone {
 ; CHECK-LABEL: @test6_vector(
-; CHECK-NEXT:    [[T:%.*]] = shl <2 x i32> [[X:%.*]], <i32 16, i32 16>
-; CHECK-NEXT:    [[X_MASK:%.*]] = and <2 x i32> [[X]], <i32 65280, i32 65280>
-; CHECK-NEXT:    [[T1:%.*]] = lshr <2 x i32> [[X]], <i32 16, i32 16>
-; CHECK-NEXT:    [[T2:%.*]] = and <2 x i32> [[T1]], <i32 255, i32 255>
-; CHECK-NEXT:    [[T3:%.*]] = or <2 x i32> [[X_MASK]], [[T]]
-; CHECK-NEXT:    [[T4:%.*]] = or <2 x i32> [[T3]], [[T2]]
-; CHECK-NEXT:    [[T5:%.*]] = shl <2 x i32> [[T4]], <i32 8, i32 8>
-; CHECK-NEXT:    [[T6:%.*]] = lshr <2 x i32> [[X]], <i32 24, i32 24>
-; CHECK-NEXT:    [[T7:%.*]] = or <2 x i32> [[T5]], [[T6]]
+; CHECK-NEXT:    [[T7:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x i32> [[T7]]
 ;
   %t = shl <2 x i32> %x, <i32 16, i32 16>
@@ -381,12 +357,9 @@ define i16 @test10(i32 %a) {
 
 define <2 x i16> @test10_vector(<2 x i32> %a) {
 ; CHECK-LABEL: @test10_vector(
-; CHECK-NEXT:    [[SHR1:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 8, i32 8>
-; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[SHR1]], <i32 255, i32 255>
-; CHECK-NEXT:    [[AND2:%.*]] = shl <2 x i32> [[A]], <i32 8, i32 8>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[AND1]], [[AND2]]
-; CHECK-NEXT:    [[CONV:%.*]] = trunc <2 x i32> [[OR]] to <2 x i16>
-; CHECK-NEXT:    ret <2 x i16> [[CONV]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i32> [[A:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[REV:%.*]] = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> [[TRUNC]])
+; CHECK-NEXT:    ret <2 x i16> [[REV]]
 ;
   %shr1 = lshr <2 x i32> %a, <i32 8, i32 8>
   %and1 = and <2 x i32> %shr1, <i32 255, i32 255>
@@ -457,12 +430,10 @@ define i64 @PR39793_bswap_u64_as_u16(i64 %0) {
 
 define <2 x i64> @PR39793_bswap_u64_as_u16_vector(<2 x i64> %0) {
 ; CHECK-LABEL: @PR39793_bswap_u64_as_u16_vector(
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[TMP0:%.*]], <i64 8, i64 8>
-; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], <i64 255, i64 255>
-; CHECK-NEXT:    [[TMP4:%.*]] = shl <2 x i64> [[TMP0]], <i64 8, i64 8>
-; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i64> [[TMP4]], <i64 65280, i64 65280>
-; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i64> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    ret <2 x i64> [[TMP6]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i64> [[TMP0:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[REV:%.*]] = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> [[TRUNC]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i16> [[REV]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;
   %2 = lshr <2 x i64> %0, <i64 8, i64 8>
   %3 = and <2 x i64> %2, <i64 255, i64 255>
@@ -550,14 +521,8 @@ declare i32 @llvm.bswap.i32(i32)
 
 define <2 x i32> @partial_bswap_vector(<2 x i32> %x) {
 ; CHECK-LABEL: @partial_bswap_vector(
-; CHECK-NEXT:    [[X3:%.*]] = shl <2 x i32> [[X:%.*]], <i32 24, i32 24>
-; CHECK-NEXT:    [[A2:%.*]] = shl <2 x i32> [[X]], <i32 8, i32 8>
-; CHECK-NEXT:    [[X2:%.*]] = and <2 x i32> [[A2]], <i32 16711680, i32 16711680>
-; CHECK-NEXT:    [[X32:%.*]] = or <2 x i32> [[X3]], [[X2]]
-; CHECK-NEXT:    [[T1:%.*]] = and <2 x i32> [[X]], <i32 -65536, i32 -65536>
-; CHECK-NEXT:    [[T2:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[T1]])
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i32> [[X32]], [[T2]]
-; CHECK-NEXT:    ret <2 x i32> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
 ;
   %x3 = shl <2 x i32> %x, <i32 24, i32 24>
   %a2 = shl <2 x i32> %x, <i32 8, i32 8>
