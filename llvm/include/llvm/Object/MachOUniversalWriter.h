@@ -86,6 +86,9 @@ public:
 
 Error writeUniversalBinary(ArrayRef<Slice> Slices, StringRef OutputFileName);
 
+Expected<std::unique_ptr<MemoryBuffer>>
+writeUniversalBinaryToBuffer(ArrayRef<Slice> Slices);
+
 } // end namespace object
 
 } // end namespace llvm
