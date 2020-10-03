@@ -110,6 +110,15 @@ public:
     return MCRegister(Reg);
   }
 
+  /// Utility to check-convert this value to a MCRegister. The caller is
+  /// expected to have already validated that this Register is, indeed,
+  /// physical.
+  MCRegister asMCReg() const {
+    assert(Reg == MCRegister::NoRegister ||
+           MCRegister::isPhysicalRegister(Reg));
+    return MCRegister(Reg);
+  }
+
   bool isValid() const { return Reg != MCRegister::NoRegister; }
 
   /// Comparisons between register objects
