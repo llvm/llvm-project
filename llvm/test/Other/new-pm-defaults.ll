@@ -89,10 +89,8 @@
 ; RUN:     --check-prefix=CHECK-EP-OPTIMIZER-LAST --check-prefix=CHECK-O23SZ
 
 ; CHECK-O: Starting llvm::Module pass manager run.
-; CHECK-O-NEXT: Starting llvm::Module pass manager run.
 ; CHECK-O-NEXT: Running pass: ForceFunctionAttrsPass
 ; CHECK-EP-PIPELINE-START-NEXT: Running pass: NoOpModulePass
-; CHECK-O-NEXT: Starting llvm::Module pass manager run.
 ; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
@@ -220,8 +218,6 @@
 ; CHECK-EP-CGSCC-LATE-NEXT: Running pass: NoOpCGSCCPass
 ; CHECK-O-NEXT: Finished CGSCC pass manager run.
 ; CHECK-O-NEXT: Finished llvm::Module pass manager run.
-; CHECK-O-NEXT: Finished llvm::Module pass manager run.
-; CHECK-O-NEXT: Starting llvm::Module pass manager run.
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O2-LTO-NOT: Running pass: EliminateAvailableExternallyPass
@@ -271,8 +267,6 @@
 ; CHECK-O-NEXT: Running pass: CGProfilePass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: ConstantMergePass
-; CHECK-O-NEXT: Finished llvm::Module pass manager run.
-; CHECK-O-NEXT: Finished llvm::Module pass manager run.
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 ;
 ; Make sure we get the IR back out without changes when we print the module.

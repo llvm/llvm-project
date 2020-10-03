@@ -28,10 +28,8 @@
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-DIS,CHECK-O,CHECK-O2,CHECK-O23SZ,CHECK-O123 --dump-input=fail
 ;
 ; CHECK-O: Starting {{.*}}Module pass manager run.
-; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: ForceFunctionAttrsPass
 ; CHECK-EP-PIPELINE-START-NEXT: Running pass: NoOpModulePass
-; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
@@ -215,27 +213,9 @@
 ; CHECK-O-NEXT: Finished {{.*}}Function pass manager run.
 ; CHECK-O-NEXT: Finished CGSCC pass manager run.
 ; CHECK-O-NEXT: Finished {{.*}}Module pass manager run.
-; CHECK-O-NEXT: Finished {{.*}}Module pass manager run.
-; CHECK-O23SZ-NEXT: Clearing all analysis results for: <possibly invalidated loop>
-; CHECK-O23SZ-NEXT: Invalidating analysis: DominatorTreeAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: MemorySSAAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: LoopAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: PostDominatorTreeAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: BranchProbabilityAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: BlockFrequencyAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: InnerAnalysisManagerProxy
-; CHECK-O23SZ-NEXT: Invalidating analysis: PhiValuesAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: MemoryDependenceAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: DemandedBitsAnalysis
-; CHECK-O3-NEXT: Invalidating analysis: DominanceFrontierAnalysis
-; CHECK-O3-NEXT: Invalidating analysis: RegionInfoAnalysis
-; CHECK-O23SZ-NEXT: Clearing all analysis results for: foo
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis on bar
 ; CHECK-EXT: Running pass: {{.*}}::Bye
-; CHECK-O-NEXT: Finished {{.*}}Module pass manager run.
-; CHECK-O23SZ-NEXT: Clearing all analysis results for: foo
 ; CHECK-O-NEXT: Running pass: NameAnonGlobalPass
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 
