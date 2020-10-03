@@ -106,7 +106,7 @@ enum {
   lldb_bnd1_i386,
   lldb_bnd2_i386,
   lldb_bnd3_i386,
-  k_last_mpxr = lldb_bnd3_i386,
+  k_last_mpxr_i386 = lldb_bnd3_i386,
 
   k_first_mpxc_i386,
   lldb_bndcfgu_i386 = k_first_mpxc_i386,
