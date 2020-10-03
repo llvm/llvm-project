@@ -37,7 +37,8 @@
 #elif defined(__i386__) && \
     (SANITIZER_LINUX && !SANITIZER_ANDROID || SANITIZER_MAC)
 #define CAN_SANITIZE_LEAKS 1
-#elif defined(__arm__) && SANITIZER_LINUX && !SANITIZER_ANDROID
+#elif defined(__arm__) && \
+    SANITIZER_LINUX && !SANITIZER_ANDROID
 #define CAN_SANITIZE_LEAKS 1
 #elif SANITIZER_NETBSD || SANITIZER_FUCHSIA
 #define CAN_SANITIZE_LEAKS 1
@@ -49,49 +50,9 @@ namespace __sanitizer {
 class FlagParser;
 class ThreadRegistry;
 struct DTLS;
-}  // namespace __sanitizer
+}
 
 namespace __lsan {
-
-// The platform-specific allocator parameters are shared by both
-// asan_allocator.h and lsan_allocator.h.
-#if SANITIZER_CAN_USE_ALLOCATOR64
-#if SANITIZER_FUCHSIA
-constexpr uptr kAllocatorSpace = ~(uptr)0;
-constexpr uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
-using AllocatorSizeClassMap = DefaultSizeClassMap;
-#elif defined(__powerpc64__)
-constexpr uptr kAllocatorSpace = ~(uptr)0;
-constexpr uptr kAllocatorSize = 0x20000000000ULL;  // 2T.
-using AllocatorSizeClassMap = DefaultSizeClassMap;
-#elif defined(__aarch64__) && SANITIZER_ANDROID
-// Android needs to support 39, 42 and 48 bit VMA.
-constexpr uptr kAllocatorSpace = ~(uptr)0;
-constexpr uptr kAllocatorSize = 0x2000000000ULL;  // 128G.
-using AllocatorSizeClassMap = VeryCompactSizeClassMap;
-#elif defined(__aarch64__)
-// AArch64/SANITIZER_CAN_USE_ALLOCATOR64 is only for 42-bit VMA
-// so no need to different values for different VMA.
-constexpr uptr kAllocatorSpace = 0x10000000000ULL;
-constexpr uptr kAllocatorSize = 0x10000000000ULL;  // 3T.
-using AllocatorSizeClassMap = DefaultSizeClassMap;
-#elif defined(__sparc__)
-constexpr uptr kAllocatorSpace = ~(uptr)0;
-constexpr uptr kAllocatorSize = 0x20000000000ULL;  // 2T.
-using AllocatorSizeClassMap = DefaultSizeClassMap;
-#elif SANITIZER_WINDOWS
-// On Windows 64-bit there is no easy way to find a large enough fixed address
-// space that is always available. Thus, a dynamically allocated address space
-// is used instead (i.e. ~(uptr)0).
-constexpr uptr kAllocatorSpace = ~(uptr)0;
-constexpr uptr kAllocatorSize = 0x8000000000ULL;  // 500G
-using AllocatorSizeClassMap = DefaultSizeClassMap;
-#else
-constexpr uptr kAllocatorSpace = 0x600000000000ULL;
-constexpr uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
-using AllocatorSizeClassMap = DefaultSizeClassMap;
-#endif
-#endif  // SANITIZER_CAN_USE_ALLOCATOR64
 
 // Chunk tags.
 enum ChunkTag {
@@ -101,7 +62,7 @@ enum ChunkTag {
   kIgnored = 3
 };
 
-const u32 kInvalidTid = (u32)-1;
+const u32 kInvalidTid = (u32) -1;
 
 struct Flags {
 #define LSAN_FLAG(Type, Name, DefaultValue, Description) Type Name;
@@ -109,7 +70,9 @@ struct Flags {
 #undef LSAN_FLAG
 
   void SetDefaults();
-  uptr pointer_alignment() const { return use_unaligned ? 1 : sizeof(uptr); }
+  uptr pointer_alignment() const {
+    return use_unaligned ? 1 : sizeof(uptr);
+  }
 };
 
 extern Flags lsan_flags;
@@ -176,13 +139,14 @@ struct CheckForLeaksParam {
 InternalMmapVector<RootRegion> const *GetRootRegions();
 void ScanRootRegion(Frontier *frontier, RootRegion const &region,
                     uptr region_begin, uptr region_end, bool is_readable);
-void ForEachExtraStackRangeCb(uptr begin, uptr end, void *arg);
+void ForEachExtraStackRangeCb(uptr begin, uptr end, void* arg);
 // Run stoptheworld while holding any platform-specific locks, as well as the
 // allocator and thread registry locks.
 void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
-                              CheckForLeaksParam *argument);
+                              CheckForLeaksParam* argument);
 
-void ScanRangeForPointers(uptr begin, uptr end, Frontier *frontier,
+void ScanRangeForPointers(uptr begin, uptr end,
+                          Frontier *frontier,
                           const char *region_type, ChunkTag tag);
 void ScanGlobalRange(uptr begin, uptr end, Frontier *frontier);
 
@@ -296,7 +260,6 @@ class LsanMetadata {
   void set_tag(ChunkTag value);
   uptr requested_size() const;
   u32 stack_trace_id() const;
-
  private:
   void *metadata_;
 };
@@ -304,14 +267,14 @@ class LsanMetadata {
 }  // namespace __lsan
 
 extern "C" {
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE const char *
-__lsan_default_options();
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+const char *__lsan_default_options();
 
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE int
-__lsan_is_turned_off();
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+int __lsan_is_turned_off();
 
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE const char *
-__lsan_default_suppressions();
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+const char *__lsan_default_suppressions();
 }  // extern "C"
 
 #endif  // LSAN_COMMON_H
