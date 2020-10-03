@@ -181,6 +181,15 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
                       /* bitcode SDL?*/ true,
                       /* PostClang Link? */ false);
 
+  // Get the environment variable ROCM_SELECT_ARGS and add to select-link.
+  Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_SELECT_ARGS");
+  if (OptEnv.hasValue()) {
+    SmallVector<StringRef, 8> Envs;
+    SplitString(OptEnv.getValue(), Envs);
+    for (StringRef Env : Envs)
+      CmdArgs.push_back(Args.MakeArgString(Env.trim()));
+  }
+
   CmdArgs.push_back("-o");
   CmdArgs.push_back(OutputFileName);
   C.addCommand(std::make_unique<Command>(
@@ -219,6 +228,15 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
                         /* bitcode SDL?*/ true,
                         /* PostClang Link? */ false);
 
+  // Get the environment variable ROCM_LINK_ARGS and add to llvm-link.
+  Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LINK_ARGS");
+  if (OptEnv.hasValue()) {
+    SmallVector<StringRef, 8> Envs;
+    SplitString(OptEnv.getValue(), Envs);
+    for (StringRef Env : Envs)
+      CmdArgs.push_back(Args.MakeArgString(Env.trim()));
+  }
+
   // Add an intermediate output file.
   CmdArgs.push_back("-o");
   auto OutputFileName = getOutputFileName(C, OutputFilePrefix, "-linked", "bc");
@@ -244,7 +262,7 @@ const char *AMDGCN::OpenMPLinker::constructOptCommand(
   OptArgs.push_back("-mtriple=amdgcn-amd-amdhsa");
   OptArgs.push_back(Args.MakeArgString("-mcpu=" + SubArchName));
 
-  // Get the environment variable ROCM_OPT_ARGS and add opt to llc.
+  // Get the environment variable ROCM_OPT_ARGS and add to opt.
   Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_OPT_ARGS");
   if (OptEnv.hasValue()) {
     SmallVector<StringRef, 8> Envs;
@@ -285,7 +303,7 @@ const char *AMDGCN::OpenMPLinker::constructLlcCommand(
   LlcArgs.push_back(
       Args.MakeArgString(Twine("-filetype=") + (OutputIsAsm ? "asm" : "obj")));
 
-  // Get the environment variable ROCM_LLC_ARGS and add opt to llc.
+  // Get the environment variable ROCM_LLC_ARGS and add to llc.
   Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LLC_ARGS");
   if (OptEnv.hasValue()) {
     SmallVector<StringRef, 8> Envs;
@@ -335,6 +353,16 @@ void AMDGCN::OpenMPLinker::constructLldCommand(Compilation &C, const JobAction &
   ArgStringList LldArgs{"-flavor",    "gnu", "--no-undefined",
                         "-shared",    "-o",  Output.getFilename(),
                         InputFileName};
+
+  // Get the environment variable ROCM_LLD_ARGS and add to lld.
+  Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LLD_ARGS");
+  if (OptEnv.hasValue()) {
+    SmallVector<StringRef, 8> Envs;
+    SplitString(OptEnv.getValue(), Envs);
+    for (StringRef Env : Envs)
+      LldArgs.push_back(Args.MakeArgString(Env.trim()));
+  }
+
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::AtFileCurCP(), Lld, LldArgs, Inputs,
