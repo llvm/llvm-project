@@ -351,7 +351,7 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
     break;
 
   case MachineOperand::MO_Immediate:
-    O << (int)MO.getImm();
+    O << MO.getImm();
     break;
   case MachineOperand::MO_MachineBasicBlock:
     MO.getMBB()->getSymbol()->print(O, MAI);
