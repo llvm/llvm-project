@@ -28,7 +28,7 @@
 // MCPU-ABI-SIFIVE-U54: "-target-feature" "+c" "-target-feature" "+64bit"
 // MCPU-ABI-SIFIVE-U54: "-target-abi" "lp64"
 
-// march overwirte mcpu's default march
+// march overwrite mcpu's default march
 // RUN: %clang -target riscv32 -### -c %s 2>&1 -mcpu=sifive-e31 -march=rv32imc | FileCheck -check-prefix=MCPU-MARCH %s
 // MCPU-MARCH: "-nostdsysteminc" "-target-cpu" "sifive-e31" "-target-feature" "+m" "-target-feature" "+c"
 // MCPU-MARCH: "-target-abi" "ilp32"
