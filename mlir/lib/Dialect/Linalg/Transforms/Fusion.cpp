@@ -60,7 +60,7 @@ using llvm::dbgs;
 // This is achieved by applying the `loopToOperandRangesMaps` permutation maps
 // to the `loopRanges` in order to obtain view ranges.
 static LinalgOp cloneWithLoopRanges(OpBuilder &b, Location loc, LinalgOp op,
-                                    ArrayRef<SubViewOp::Range> loopRanges) {
+                                    ArrayRef<Range> loopRanges) {
   assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
   auto maps = op.indexing_maps();
   SmallVector<Value, 8> clonedViews;
@@ -73,7 +73,7 @@ static LinalgOp cloneWithLoopRanges(OpBuilder &b, Location loc, LinalgOp op,
     auto map = maps[idx].cast<AffineMapAttr>().getValue();
     LLVM_DEBUG(dbgs() << "map: " << map << "\n");
     Value view = en.value();
-    SmallVector<SubViewOp::Range, 4> viewRanges(map.getNumResults());
+    SmallVector<Range, 4> viewRanges(map.getNumResults());
     for (auto en2 : llvm::enumerate(map.getResults())) {
       unsigned d = en2.index();
       // loopToOperandRangesMaps are permutations-only.
@@ -182,7 +182,7 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer, unsigned producerIdx,
   unsigned nPar = producer.getNumParallelLoops();
   unsigned nRed = producer.getNumReductionLoops();
   unsigned nWin = producer.getNumWindowLoops();
-  SmallVector<SubViewOp::Range, 8> loopRanges(nPar + nRed + nWin);
+  SmallVector<Range, 8> loopRanges(nPar + nRed + nWin);
 
   // Iterate over dimensions identified by the producer map for `producerIdx`.
   // This defines a subset of the loop ranges that we need to complete later.
@@ -202,9 +202,9 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer, unsigned producerIdx,
                  << "existing LoopRange: " << loopRanges[i] << "\n");
     else {
       auto viewDim = getViewDefiningLoopRange(producer, i);
-      loopRanges[i] = SubViewOp::Range{folded_std_constant_index(folder, 0),
-                                       std_dim(viewDim.view, viewDim.dimension),
-                                       folded_std_constant_index(folder, 1)};
+      loopRanges[i] = Range{folded_std_constant_index(folder, 0),
+                            std_dim(viewDim.view, viewDim.dimension),
+                            folded_std_constant_index(folder, 1)};
       LLVM_DEBUG(llvm::dbgs() << "new LoopRange: " << loopRanges[i] << "\n");
     }
   }
@@ -299,8 +299,6 @@ static bool isSameSubView(Value a, Value b) {
   if (!isSameSubView(sva.getViewSource(), svb.getViewSource()))
     return false;
   if (sva.getType() != svb.getType())
-    return false;
-  if (sva.getRank() != svb.getRank())
     return false;
   if (sva.getNumOperands() != svb.getNumOperands())
     return false;

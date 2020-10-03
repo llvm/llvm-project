@@ -129,6 +129,7 @@ struct TestVectorDistributePatterns
     : public PassWrapper<TestVectorDistributePatterns, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<VectorDialect>();
+    registry.insert<AffineDialect>();
   }
   void runOnFunction() override {
     MLIRContext *ctx = &getContext();
@@ -143,6 +144,7 @@ struct TestVectorDistributePatterns
       op.getResult().replaceAllUsesExcept(ops->insert.getResult(), extractOp);
     });
     patterns.insert<PointwiseExtractPattern>(ctx);
+    populateVectorToVectorTransformationPatterns(patterns, ctx);
     applyPatternsAndFoldGreedily(getFunction(), patterns);
   }
 };

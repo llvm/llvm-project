@@ -33,6 +33,17 @@ class Builder;
 class FuncOp;
 class OpBuilder;
 
+/// Auxiliary range data structure to unpack the offset, size and stride
+/// operands of the SubViewOp / SubTensorOp into a list of triples.
+/// Such a list of triple is sometimes more convenient to manipulate.
+struct Range {
+  Value offset;
+  Value size;
+  Value stride;
+};
+
+raw_ostream &operator<<(raw_ostream &os, Range &range);
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/StandardOps/IR/Ops.h.inc"
 
@@ -299,8 +310,6 @@ void printDimAndSymbolList(Operation::operand_iterator begin,
 ParseResult parseDimAndSymbolList(OpAsmParser &parser,
                                   SmallVectorImpl<Value> &operands,
                                   unsigned &numDims);
-
-raw_ostream &operator<<(raw_ostream &os, SubViewOp::Range &range);
 
 /// Determines whether MemRefCastOp casts to a more dynamic version of the
 /// source memref. This is useful to to fold a memref_cast into a consuming op

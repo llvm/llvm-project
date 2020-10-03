@@ -185,7 +185,7 @@ struct ProcInfo {
   Value nprocs;
 };
 using ProcInfoCallBackFn = std::function<SmallVector<ProcInfo, 2>(
-    OpBuilder &b, Location loc, ArrayRef<SubViewOp::Range> parallelLoopRanges)>;
+    OpBuilder &b, Location loc, ArrayRef<Range> parallelLoopRanges)>;
 
 /// Options that allow distribution of loops generated in Linalg transforms to
 /// processors while generating the loops.
@@ -216,7 +216,7 @@ struct GenerateLoopNest {
                                 AffineIndexedValue, StdIndexedValue>::type;
 
   static void
-  doit(ArrayRef<SubViewOp::Range> loopRanges, ValueRange iterArgInitValues,
+  doit(ArrayRef<Range> loopRanges, ValueRange iterArgInitValues,
        ArrayRef<Attribute> iteratorTypes,
        function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
        Optional<LinalgLoopDistributionOptions> = None);

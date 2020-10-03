@@ -518,7 +518,7 @@ bool IONAME(SetRec)(Cookie cookie, std::int64_t rec) {
   }
   connection.currentRecordNumber = rec;
   if (auto *unit{io.GetExternalFileUnit()}) {
-    unit->SetPosition(rec * *connection.recordLength);
+    unit->SetPosition((rec - 1) * *connection.recordLength);
   }
   return true;
 }

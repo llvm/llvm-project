@@ -149,10 +149,11 @@ struct IoStatementBase : public DefaultFormatControlCallbacks {
 };
 
 // Common state for list-directed internal & external I/O
-template <Direction> struct ListDirectedStatementState;
+template <Direction> class ListDirectedStatementState;
 template <>
-struct ListDirectedStatementState<Direction::Output>
+class ListDirectedStatementState<Direction::Output>
     : public FormattedIoStatementState {
+public:
   static std::size_t RemainingSpaceInRecord(const ConnectionState &);
   bool NeedAdvance(const ConnectionState &, std::size_t) const;
   bool EmitLeadingSpaceOrAdvance(
@@ -322,7 +323,6 @@ public:
   using ExternalIoStatementState<DIR>::ExternalIoStatementState;
   bool Receive(char *, std::size_t, std::size_t elementBytes = 0);
   bool Emit(const char *, std::size_t, std::size_t elementBytes = 0);
-  int EndIoStatement();
 };
 
 class OpenStatementState : public ExternalIoStatementBase {

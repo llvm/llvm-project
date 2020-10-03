@@ -233,7 +233,6 @@ body:             |
   ; GCN:   $exec = S_OR_B64_term $exec, [[COPY3]], implicit-def $scc
   ; GCN: bb.3:
   ; GCN:   successors: %bb.2(0x80000000)
-  ; GCN:   liveins: $vgpr3
   ; GCN:   $vgpr3 = V_MOV_B32_e32 0, implicit $exec
   ; GCN:   $sgpr4_sgpr5 = S_MOV_B64 32
   ; GCN: bb.2:

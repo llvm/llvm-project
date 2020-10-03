@@ -182,6 +182,9 @@ public:
 
   MergedInfo mergedTpi;
   MergedInfo mergedIpi;
+
+  uint64_t nbTypeRecords = 0;
+  uint64_t nbTypeRecordsBytes = 0;
 };
 
 TpiSource *makeTpiSource(ObjFile *file);

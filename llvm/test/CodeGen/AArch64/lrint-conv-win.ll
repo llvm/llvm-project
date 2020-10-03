@@ -4,8 +4,6 @@
 ; CHECK:       frintx  [[SREG:s[0-9]+]], s0
 ; CHECK-NEXT:  fcvtzs  [[WREG:w[0-9]+]], [[SREG]]
 ; CHECK-NEXT:  sxtw    x0, [[WREG]]
-; CHECK-NEXT:  .seh_startepilogue
-; CHECK-NEXT:  .seh_endepilogue
 ; CHECK-NEXT:  ret
 define i64 @testmsxs(float %x) {
 entry:
@@ -17,8 +15,6 @@ entry:
 ; CHECK-LABEL: testmsws:
 ; CHECK:       frintx  [[SREG:s[0-9]+]], s0
 ; CHECK-NEXT:  fcvtzs  [[WREG:w[0-9]+]], [[SREG]]
-; CHECK-NEXT:  .seh_startepilogue
-; CHECK-NEXT:  .seh_endepilogue
 ; CHECK-NEXT:  ret
 define i32 @testmsws(float %x) {
 entry:
@@ -30,8 +26,6 @@ entry:
 ; CHECK:       frintx  [[DREG:d[0-9]+]], d0
 ; CHECK-NEXT:  fcvtzs  [[WREG:w[0-9]+]], [[DREG]]
 ; CHECK-NEXT:  sxtw    x0, [[WREG]]
-; CHECK-NEXT:  .seh_startepilogue
-; CHECK-NEXT:  .seh_endepilogue
 ; CHECK-NEXT:  ret
 define i64 @testmsxd(double %x) {
 entry:
@@ -43,8 +37,6 @@ entry:
 ; CHECK-LABEL: testmswd:
 ; CHECK:       frintx  [[DREG:d[0-9]+]], d0
 ; CHECK-NEXT:  fcvtzs  [[WREG:w[0-9]+]], [[DREG]]
-; CHECK-NEXT:  .seh_startepilogue
-; CHECK-NEXT:  .seh_endepilogue
 ; CHECK-NEXT:  ret
 define i32 @testmswd(double %x) {
 entry:
