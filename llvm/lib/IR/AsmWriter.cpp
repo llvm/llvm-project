@@ -2690,7 +2690,7 @@ void AssemblyWriter::writeOperandBundles(const CallBase *Call) {
 
 void AssemblyWriter::printModule(const Module *M) {
   Machine.initializeIfNeeded();
-
+Out << "hello pradeep !!! HOW ARE YOU...extra info added successfully"<< "'\n";
   if (ShouldPreserveUseListOrder)
     UseListOrders = predictUseListOrder(M);
 
