@@ -1883,6 +1883,14 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
       return false;
     }
 
+    // Do not instrument user-defined sections (with names resembling
+    // valid C identifiers)
+    if (TargetTriple.isOSBinFormatELF()) {
+      if (std::all_of(Section.begin(), Section.end(),
+                      [](char c) { return llvm::isAlnum(c) || c == '_'; }))
+        return false;
+    }
+
     // On COFF, if the section name contains '$', it is highly likely that the
     // user is using section sorting to create an array of globals similar to
     // the way initialization callbacks are registered in .init_array and
