@@ -36,16 +36,24 @@ let SchedRW = [WriteSystem], Predicates = [HasKL] in {
   let Constraints = "$src1 = $dst",
       Defs = [EFLAGS] in {
    def AESENC128KL : I<0xDC, MRMSrcMem, (outs VR128:$dst), (ins VR128:$src1, opaquemem:$src2),
-                        "aesenc128kl\t{$src2, $src1|$src1, $src2}", []>, T8XS;
+                       "aesenc128kl\t{$src2, $src1|$src1, $src2}",
+                       [(set VR128:$dst, EFLAGS,
+                         (X86aesenc128kl VR128:$src1, addr:$src2))]>, T8XS;
 
    def AESDEC128KL : I<0xDD, MRMSrcMem, (outs VR128:$dst), (ins VR128:$src1, opaquemem:$src2),
-                        "aesdec128kl\t{$src2, $src1|$src1, $src2}", []>, T8XS;
+                       "aesdec128kl\t{$src2, $src1|$src1, $src2}",
+                       [(set VR128:$dst, EFLAGS,
+                         (X86aesdec128kl VR128:$src1, addr:$src2))]>, T8XS;
 
    def AESENC256KL : I<0xDE, MRMSrcMem, (outs VR128:$dst), (ins VR128:$src1, opaquemem:$src2),
-                        "aesenc256kl\t{$src2, $src1|$src1, $src2}", []>, T8XS;
+                       "aesenc256kl\t{$src2, $src1|$src1, $src2}",
+                       [(set VR128:$dst, EFLAGS,
+                         (X86aesenc256kl VR128:$src1, addr:$src2))]>, T8XS;
 
    def AESDEC256KL : I<0xDF, MRMSrcMem, (outs VR128:$dst), (ins VR128:$src1, opaquemem:$src2),
-                        "aesdec256kl\t{$src2, $src1|$src1, $src2}", []>, T8XS;
+                       "aesdec256kl\t{$src2, $src1|$src1, $src2}",
+                       [(set VR128:$dst, EFLAGS,
+                         (X86aesdec256kl VR128:$src1, addr:$src2))]>, T8XS;
   }
 
 } // SchedRW, Predicates
