@@ -167,7 +167,13 @@ TEST(VPInstructionTest, replaceAllUsesWith) {
   EXPECT_EQ(0u, VPV2->getNumUsers());
   EXPECT_EQ(0u, VPV3->getNumUsers());
 
+  VPInstruction *I2 = new VPInstruction(0, {VPV1, VPV2});
+  EXPECT_EQ(3u, VPV1->getNumUsers());
+  VPV1->replaceAllUsesWith(VPV3);
+  EXPECT_EQ(3u, VPV3->getNumUsers());
+
   delete I1;
+  delete I2;
   delete VPV1;
   delete VPV2;
   delete VPV3;
