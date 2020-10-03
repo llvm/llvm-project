@@ -11,7 +11,8 @@ find_library(LIBIPT_LIBRARY ipt PATHS ${LIBIPT_LIBRARY_PATH} REQUIRED)
 
 add_lldb_library(lldbPluginTraceIntelPT PLUGIN
   TraceIntelPT.cpp
-  TraceIntelPTSettingsParser.cpp
+  TraceIntelPTSessionFileParser.cpp
+  ThreadIntelPT.cpp
 
   LINK_LIBS
     lldbCore
