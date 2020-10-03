@@ -56,6 +56,12 @@ class TestSwiftTypeLookup(TestBase):
                 'func bar()',
                 'var b'])
 
+        # Regression test. Ensure "<could not resolve type>" is not output.
+        self.expect(
+            "type lookup String",
+            matching=False,
+            substrs=["<could not resolve type>"])
+
         # check that specifiers are honored
         # self.expect('type lookup class Cla1', substrs=['class Cla1 {'])
         # self.expect('type lookup struct Cla1', substrs=['class Cla1 {'], matching=False, error=True)
