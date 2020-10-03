@@ -14,10 +14,10 @@
 #ifndef LSAN_ALLOCATOR_H
 #define LSAN_ALLOCATOR_H
 
-#include "lsan_common.h"
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
+#include "lsan_common.h"
 
 namespace __lsan {
 
@@ -28,7 +28,7 @@ void *Reallocate(const StackTrace &stack, void *p, uptr new_size,
                  uptr alignment);
 uptr GetMallocUsableSize(const void *p);
 
-template <typename Callable>
+template<typename Callable>
 void ForEachChunk(const Callable &callback);
 
 void GetAllocatorCacheRange(uptr *begin, uptr *end);
@@ -49,21 +49,8 @@ struct ChunkMetadata {
   u32 stack_trace_id;
 };
 
-#if SANITIZER_CAN_USE_ALLOCATOR64
-template <typename AddressSpaceViewTy>
-struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
-  static const uptr kSpaceBeg = kAllocatorSpace;
-  static const uptr kSpaceSize = kAllocatorSize;
-  static const uptr kMetadataSize = sizeof(ChunkMetadata);
-  typedef AllocatorSizeClassMap SizeClassMap;
-  typedef NoOpMapUnmapCallback MapUnmapCallback;
-  static const uptr kFlags = 0;
-  using AddressSpaceView = AddressSpaceViewTy;
-};
-template <typename AddressSpaceView>
-using PrimaryAllocatorASVT = SizeClassAllocator64<AP64<AddressSpaceView>>;
-using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
-#else  // !SANITIZER_CAN_USE_ALLOCATOR64
+#if defined(__mips64) || defined(__aarch64__) || defined(__i386__) || \
+    defined(__arm__)
 template <typename AddressSpaceViewTy>
 struct AP32 {
   static const uptr kSpaceBeg = 0;
@@ -78,7 +65,35 @@ struct AP32 {
 template <typename AddressSpaceView>
 using PrimaryAllocatorASVT = SizeClassAllocator32<AP32<AddressSpaceView>>;
 using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
-#endif  // SANITIZER_CAN_USE_ALLOCATOR64
+#elif defined(__x86_64__) || defined(__powerpc64__) || defined(__s390x__)
+# if SANITIZER_FUCHSIA
+const uptr kAllocatorSpace = ~(uptr)0;
+const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
+# elif defined(__powerpc64__)
+const uptr kAllocatorSpace = 0xa0000000000ULL;
+const uptr kAllocatorSize  = 0x20000000000ULL;  // 2T.
+#elif defined(__s390x__)
+const uptr kAllocatorSpace = 0x40000000000ULL;
+const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
+# else
+const uptr kAllocatorSpace = 0x600000000000ULL;
+const uptr kAllocatorSize  = 0x40000000000ULL;  // 4T.
+# endif
+template <typename AddressSpaceViewTy>
+struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
+  static const uptr kSpaceBeg = kAllocatorSpace;
+  static const uptr kSpaceSize = kAllocatorSize;
+  static const uptr kMetadataSize = sizeof(ChunkMetadata);
+  typedef DefaultSizeClassMap SizeClassMap;
+  typedef NoOpMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+  using AddressSpaceView = AddressSpaceViewTy;
+};
+
+template <typename AddressSpaceView>
+using PrimaryAllocatorASVT = SizeClassAllocator64<AP64<AddressSpaceView>>;
+using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
+#endif
 
 template <typename AddressSpaceView>
 using AllocatorASVT = CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>>;
