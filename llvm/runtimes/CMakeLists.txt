@@ -98,9 +98,6 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
   include(CheckLibraryExists)
   include(CheckCCompilerFlag)
-  include(CMakePushCheckState)
-
-  cmake_push_check_state()
 
   # We don't have libc++ (yet)...
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++ -nostdlib++")
@@ -118,7 +115,8 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   include(HandleLLVMOptions)
   include(FindPythonInterp)
 
-  cmake_pop_check_state()
+  # Remove the -nostdlib++ option we've added earlier.
+  string(REPLACE "-nostdlib++" "" CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
 
   # Use libtool instead of ar if you are both on an Apple host, and targeting Apple.
   if(CMAKE_HOST_APPLE AND APPLE)
