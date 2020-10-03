@@ -3083,7 +3083,7 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   // We may need to truncate the provider.
   if (DemandedTy != Provider->getType()) {
     auto *Trunc =
-        CastInst::Create(Instruction::Trunc, Provider, DemandedTy, "trunc", I);
+        CastInst::CreateIntegerCast(Provider, DemandedTy, false, "trunc", I);
     InsertedInsts.push_back(Trunc);
     Provider = Trunc;
   }
@@ -3099,7 +3099,7 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
 
   // We may need to zeroextend back to the result type.
   if (ITy != Result->getType()) {
-    auto *ExtInst = CastInst::Create(Instruction::ZExt, Result, ITy, "zext", I);
+    auto *ExtInst = CastInst::CreateIntegerCast(Result, ITy, false, "zext", I);
     InsertedInsts.push_back(ExtInst);
   }
 
