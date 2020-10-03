@@ -657,13 +657,13 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     reg_value = (uint64_t)m_fpr.fxstate.fx_opcode;
     break;
   case lldb_fiseg_x86_64:
-    reg_value = (uint64_t)m_fpr.fxstate.fx_ip.fa_64;
+    reg_value = (uint32_t)m_fpr.fxstate.fx_ip.fa_32.fa_seg;
     break;
   case lldb_fioff_x86_64:
     reg_value = (uint32_t)m_fpr.fxstate.fx_ip.fa_32.fa_off;
     break;
   case lldb_foseg_x86_64:
-    reg_value = (uint64_t)m_fpr.fxstate.fx_dp.fa_64;
+    reg_value = (uint32_t)m_fpr.fxstate.fx_dp.fa_32.fa_seg;
     break;
   case lldb_fooff_x86_64:
     reg_value = (uint32_t)m_fpr.fxstate.fx_dp.fa_32.fa_off;
@@ -945,13 +945,13 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     m_fpr.fxstate.fx_opcode = reg_value.GetAsUInt16();
     break;
   case lldb_fiseg_x86_64:
-    m_fpr.fxstate.fx_ip.fa_64 = reg_value.GetAsUInt64();
+    m_fpr.fxstate.fx_ip.fa_32.fa_seg = reg_value.GetAsUInt32();
     break;
   case lldb_fioff_x86_64:
     m_fpr.fxstate.fx_ip.fa_32.fa_off = reg_value.GetAsUInt32();
     break;
   case lldb_foseg_x86_64:
-    m_fpr.fxstate.fx_dp.fa_64 = reg_value.GetAsUInt64();
+    m_fpr.fxstate.fx_dp.fa_32.fa_seg = reg_value.GetAsUInt32();
     break;
   case lldb_fooff_x86_64:
     m_fpr.fxstate.fx_dp.fa_32.fa_off = reg_value.GetAsUInt32();
