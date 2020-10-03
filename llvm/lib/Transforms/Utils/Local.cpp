@@ -2803,7 +2803,7 @@ struct BitPart {
 
 /// Analyze the specified subexpression and see if it is capable of providing
 /// pieces of a bswap or bitreverse. The subexpression provides a potential
-/// piece of a bswap or bitreverse if it can be proven that each non-zero bit in
+/// piece of a bswap or bitreverse if it can be proved that each non-zero bit in
 /// the output of the expression came from a corresponding bit in some other
 /// value. This function is recursive, and the end result is a mapping of
 /// bitnumber to bitnumber. It is the caller's responsibility to validate that
@@ -2814,6 +2814,10 @@ struct BitPart {
 /// result and that all other bits are zero. This expression is accepted and a
 /// BitPart is returned with Provider set to %X and Provenance[24-31] set to
 /// [0-7].
+///
+/// For vector types, all analysis is performed at the per-element level. No
+/// cross-element analysis is supported (shuffle/insertion/reduction), and all
+/// constant masks must be splatted across all elements.
 ///
 /// To avoid revisiting values, the BitPart results are memoized into the
 /// provided map. To avoid unnecessary copying of BitParts, BitParts are
@@ -3019,14 +3023,14 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
     return false;
   if (!MatchBSwaps && !MatchBitReversals)
     return false;
-  IntegerType *ITy = dyn_cast<IntegerType>(I->getType());
-  if (!ITy || ITy->getBitWidth() > 128)
-    return false;   // Can't do vectors or integers > 128 bits.
+  Type *ITy = I->getType();
+  if (!ITy->isIntOrIntVectorTy() || ITy->getScalarSizeInBits() > 128)
+    return false;  // Can't do integer/elements > 128 bits.
 
-  IntegerType *DemandedTy = ITy;
+  Type *DemandedTy = ITy;
   if (I->hasOneUse())
     if (auto *Trunc = dyn_cast<TruncInst>(I->user_back()))
-      DemandedTy = cast<IntegerType>(Trunc->getType());
+      DemandedTy = Trunc->getType();
 
   // Try to find all the pieces corresponding to the bswap.
   std::map<Value *, Optional<BitPart>> BPS;
@@ -3044,12 +3048,14 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
       BitProvenance = BitProvenance.drop_back();
     if (BitProvenance.empty())
       return false; // TODO - handle null value?
-    DemandedTy = IntegerType::get(I->getContext(), BitProvenance.size());
+    DemandedTy = Type::getIntNTy(I->getContext(), BitProvenance.size());
+    if (auto *IVecTy = dyn_cast<VectorType>(ITy))
+      DemandedTy = VectorType::get(DemandedTy, IVecTy);
   }
 
   // Check BitProvenance hasn't found a source larger than the result type.
-  unsigned DemandedBW = DemandedTy->getBitWidth();
-  if (DemandedBW > ITy->getBitWidth())
+  unsigned DemandedBW = DemandedTy->getScalarSizeInBits();
+  if (DemandedBW > ITy->getScalarSizeInBits())
     return false;
 
   // Now, is the bit permutation correct for a bswap or a bitreverse? We can
