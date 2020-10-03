@@ -148,6 +148,21 @@ entry:
   ret void
 }
 
+define void @test8(%t* noalias %src, %t* %dst) {
+; CHECK-LABEL: @test8(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast %t* [[SRC:%.*]] to i8*
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast %t* [[DST:%.*]] to i8*
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast %t* [[SRC]] to i8*
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[TMP2]], i8* align 1 [[TMP3]], i64 8224, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP1]], i8 0, i64 8224, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %1 = load %t, %t* %src
+  store %t zeroinitializer, %t* %src
+  store %t %1, %t* %dst
+  ret void
+}
+
 declare void @clobber()
 
 ; Function Attrs: argmemonly nounwind willreturn
