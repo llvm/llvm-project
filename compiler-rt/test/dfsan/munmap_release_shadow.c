@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
   assert(after_mmap >= before + mmap_cost_kb);
   // OS does not release memory to the same level as the start of the program.
   // The assert checks the memory after munmap up to a delta.
-  const size_t delta = 5000;
-  assert(after_munmap + mmap_cost_kb <= after_mmap + delta);
+  const size_t delta = 50000;
+  assert(after_munmap + delta <= after_mmap);
   return 0;
 }
