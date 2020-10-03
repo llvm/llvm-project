@@ -264,7 +264,6 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
                          const Instruction *UseInst, AliasAnalysisType &AA) {
   Instruction *DefInst = MD->getMemoryInst();
   assert(DefInst && "Defining instruction not actually an instruction");
-  const auto *UseCall = dyn_cast<CallBase>(UseInst);
   Optional<AliasResult> AR;
 
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DefInst)) {
@@ -276,11 +275,6 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
     // clobbers where they don't really exist at all. Please see D43269 for
     // context.
     switch (II->getIntrinsicID()) {
-    case Intrinsic::lifetime_start:
-      if (UseCall)
-        return {false, NoAlias};
-      AR = AA.alias(MemoryLocation(II->getArgOperand(1)), UseLoc);
-      return {AR != NoAlias, AR};
     case Intrinsic::lifetime_end:
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
@@ -296,14 +290,14 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
     }
   }
 
-  if (UseCall) {
-    ModRefInfo I = AA.getModRefInfo(DefInst, UseCall);
+  if (auto *CB = dyn_cast_or_null<CallBase>(UseInst)) {
+    ModRefInfo I = AA.getModRefInfo(DefInst, CB);
     AR = isMustSet(I) ? MustAlias : MayAlias;
     return {isModOrRefSet(I), AR};
   }
 
   if (auto *DefLoad = dyn_cast<LoadInst>(DefInst))
-    if (auto *UseLoad = dyn_cast<LoadInst>(UseInst))
+    if (auto *UseLoad = dyn_cast_or_null<LoadInst>(UseInst))
       return {!areLoadsReorderable(UseLoad, DefLoad), MayAlias};
 
   ModRefInfo I = AA.getModRefInfo(DefInst, UseLoc);
@@ -2361,7 +2355,7 @@ MemorySSA::ClobberWalkerBase<AliasAnalysisType>::getClobberingMemoryAccessBase(
   UpwardsMemoryQuery Q;
   Q.OriginalAccess = StartingUseOrDef;
   Q.StartingLoc = Loc;
-  Q.Inst = I;
+  Q.Inst = nullptr;
   Q.IsCall = false;
 
   // Unlike the other function, do not walk to the def of a def, because we are
