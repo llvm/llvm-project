@@ -179,6 +179,24 @@ TEST(VPInstructionTest, replaceAllUsesWith) {
   delete VPV3;
 }
 
+TEST(VPInstructionTest, releaseOperandsAtDeletion) {
+  VPValue *VPV1 = new VPValue();
+  VPValue *VPV2 = new VPValue();
+  VPInstruction *I1 = new VPInstruction(0, {VPV1, VPV2});
+
+  EXPECT_EQ(1u, VPV1->getNumUsers());
+  EXPECT_EQ(I1, *VPV1->user_begin());
+  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_EQ(I1, *VPV2->user_begin());
+
+  delete I1;
+
+  EXPECT_EQ(0u, VPV1->getNumUsers());
+  EXPECT_EQ(0u, VPV2->getNumUsers());
+
+  delete VPV1;
+  delete VPV2;
+}
 TEST(VPBasicBlockTest, getPlan) {
   {
     VPBasicBlock *VPBB1 = new VPBasicBlock();
