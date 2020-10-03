@@ -17,3 +17,9 @@ CHECK1: MinorImageVersion: 0
 
 CHECK2: MajorImageVersion: 11
 CHECK2: MinorImageVersion: 22
+
+# RUN: lld-link /out:%t.exe /entry:main %t.obj /version:8.09
+# RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=CHECK3 %s
+
+CHECK3: MajorImageVersion: 8
+CHECK3: MinorImageVersion: 9
