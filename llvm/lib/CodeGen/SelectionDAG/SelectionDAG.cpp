@@ -7475,6 +7475,11 @@ SDValue SelectionDAG::simplifyFPBinop(unsigned Opcode, SDValue X, SDValue Y,
     if (YC->getValueAPF().isExactlyValue(1.0))
       return X;
 
+  // X * 0.0 --> 0.0
+  if (Opcode == ISD::FMUL && Flags.hasNoNaNs() && Flags.hasNoSignedZeros())
+    if (YC->getValueAPF().isZero())
+      return getConstantFP(0.0, SDLoc(Y), Y.getValueType());
+
   return SDValue();
 }
 
