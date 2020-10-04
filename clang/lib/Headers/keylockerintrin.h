@@ -132,15 +132,7 @@ _mm_loadiwkey (unsigned int __ctl, __m128i __intkey,
 /// \endoperation
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
 _mm_encodekey128_u32(unsigned int __htype, __m128i __key, void *__h) {
-  __m128i *__results = (__m128i*)__h;
-
-  return __builtin_ia32_encodekey128(__htype, __key,
-                                     __results,
-                                     __results + 1,
-                                     __results + 2,
-                                     __results + 3,
-                                     __results + 4,
-                                     __results + 5);
+  return __builtin_ia32_encodekey128_u32(__htype, (__v2di)__key, __h);
 }
 
 /// Wrap a 256-bit AES key from __key_hi:__key_lo into a key handle, then
@@ -181,16 +173,8 @@ _mm_encodekey128_u32(unsigned int __htype, __m128i __key, void *__h) {
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
 _mm_encodekey256_u32(unsigned int __htype, __m128i __key_lo, __m128i __key_hi,
                      void *__h) {
-  __m128i *__results = (__m128i*)__h;
-
-  return __builtin_ia32_encodekey256(__htype, __key_lo, __key_hi,
-                                     __results,
-                                     __results + 1,
-                                     __results + 2,
-                                     __results + 3,
-                                     __results + 4,
-                                     __results + 5,
-                                     __results + 6);
+  return __builtin_ia32_encodekey256_u32(__htype, (__v2di)__key_lo,
+                                         (__v2di)__key_hi, __h);
 }
 
 /// The AESENC128KL performs 10 rounds of AES to encrypt the __idata using
