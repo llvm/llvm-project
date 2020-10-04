@@ -15,6 +15,7 @@
 
 #include "sanitizer_glibc_version.h"
 #include "sanitizer_internal_defs.h"
+#include "sanitizer_platform.h"
 
 #if SANITIZER_POSIX
 # define SI_POSIX 1
@@ -278,10 +279,10 @@
 #define SANITIZER_INTERCEPT_SYSINFO SI_LINUX
 #define SANITIZER_INTERCEPT_READDIR SI_POSIX
 #define SANITIZER_INTERCEPT_READDIR64 SI_LINUX_NOT_ANDROID || SI_SOLARIS32
-#if SI_LINUX_NOT_ANDROID && \
-  (defined(__i386) || defined(__x86_64) || defined(__mips64) || \
-    defined(__powerpc64__) || defined(__aarch64__) || defined(__arm__) || \
-    defined(__s390__))
+#if SI_LINUX_NOT_ANDROID &&                                                \
+    (defined(__i386) || defined(__x86_64) || defined(__mips64) ||          \
+     defined(__powerpc64__) || defined(__aarch64__) || defined(__arm__) || \
+     defined(__s390__) || SANITIZER_RISCV64)
 #define SANITIZER_INTERCEPT_PTRACE 1
 #else
 #define SANITIZER_INTERCEPT_PTRACE 0

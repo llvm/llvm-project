@@ -13,10 +13,10 @@
 
 #include "sanitizer_platform.h"
 
-#if SANITIZER_LINUX && (defined(__x86_64__) || defined(__mips__) || \
-                        defined(__aarch64__) || defined(__powerpc64__) || \
-                        defined(__s390__) || defined(__i386__) || \
-                        defined(__arm__))
+#if SANITIZER_LINUX &&                                                   \
+    (defined(__x86_64__) || defined(__mips__) || defined(__aarch64__) || \
+     defined(__powerpc64__) || defined(__s390__) || defined(__i386__) || \
+     defined(__arm__) || SANITIZER_RISCV64)
 
 #include "sanitizer_stoptheworld.h"
 
@@ -31,7 +31,7 @@
 #include <sys/types.h> // for pid_t
 #include <sys/uio.h> // for iovec
 #include <elf.h> // for NT_PRSTATUS
-#if defined(__aarch64__) && !SANITIZER_ANDROID
+#if (defined(__aarch64__) || SANITIZER_RISCV64) && !SANITIZER_ANDROID
 // GLIBC 2.20+ sys/user does not include asm/ptrace.h
 # include <asm/ptrace.h>
 #endif
@@ -503,6 +503,12 @@ typedef struct user regs_struct;
 
 #elif defined(__aarch64__)
 typedef struct user_pt_regs regs_struct;
+#define REG_SP sp
+static constexpr uptr kExtraRegs[] = {0};
+#define ARCH_IOVEC_FOR_GETREGSET
+
+#elif SANITIZER_RISCV64
+typedef struct user_regs_struct regs_struct;
 #define REG_SP sp
 static constexpr uptr kExtraRegs[] = {0};
 #define ARCH_IOVEC_FOR_GETREGSET
