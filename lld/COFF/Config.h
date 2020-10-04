@@ -221,6 +221,8 @@ struct Configuration {
   uint64_t heapCommit = 4096;
   uint32_t majorImageVersion = 0;
   uint32_t minorImageVersion = 0;
+  // If changing the default os/subsys version here, update the default in
+  // the MinGW driver accordingly.
   uint32_t majorOSVersion = 6;
   uint32_t minorOSVersion = 0;
   uint32_t majorSubsystemVersion = 6;
