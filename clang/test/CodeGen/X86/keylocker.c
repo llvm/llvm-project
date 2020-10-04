@@ -78,47 +78,215 @@ unsigned int test_encodekey256_u32(unsigned int htype, __m128i key_lo, __m128i k
 unsigned char test_mm_aesenc256kl_u8(__m128i *odata, __m128i idata, const void *h) {
   //CHECK-LABEL: @test_mm_aesenc256kl_u8
   //CHECK: call { i8, <2 x i64> } @llvm.x86.aesenc256kl(<2 x i64> %{{.*}}, i8* %{{.*}})
+  //CHECK: extractvalue { i8, <2 x i64> } %{{.*}}, 1
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64> } %{{.*}}, 0
   return _mm_aesenc256kl_u8(odata, idata, h);
 }
 
 unsigned char test_mm_aesdec256kl_u8(__m128i *odata, __m128i idata, const void *h) {
   //CHECK-LABEL: @test_mm_aesdec256kl_u8
   //CHECK: call { i8, <2 x i64> } @llvm.x86.aesdec256kl(<2 x i64> %{{.*}}, i8* %{{.*}})
+  //CHECK: extractvalue { i8, <2 x i64> } %{{.*}}, 1
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64> } %{{.*}}, 0
   return _mm_aesdec256kl_u8(odata, idata, h);
 }
 
 unsigned char test_mm_aesenc128kl_u8(__m128i *odata, __m128i idata, const void *h) {
   //CHECK-LABEL: @test_mm_aesenc128kl_u8
   //CHECK: call { i8, <2 x i64> } @llvm.x86.aesenc128kl(<2 x i64> %{{.*}}, i8* %{{.*}})
+  //CHECK: extractvalue { i8, <2 x i64> } %{{.*}}, 1
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64> } %{{.*}}, 0
   return _mm_aesenc128kl_u8(odata, idata, h);
 }
 
 unsigned char test_mm_aesdec128kl_u8(__m128i *odata, __m128i idata, const void *h) {
   //CHECK-LABEL: @test_mm_aesdec128kl_u8
   //CHECK: call { i8, <2 x i64> } @llvm.x86.aesdec128kl(<2 x i64> %{{.*}}, i8* %{{.*}})
+  //CHECK: extractvalue { i8, <2 x i64> } %{{.*}}, 1
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64> } %{{.*}}, 0
   return _mm_aesdec128kl_u8(odata, idata, h);
 }
 
 unsigned char test__mm_aesencwide128kl_u8(__m128i odata[8], const __m128i idata[8], const void* h) {
   //CHECK-LABEL: @test__mm_aesencwide128kl
-  //CHECK: call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide128kl(i8* %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}},      <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 1
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 2
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 3
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 4
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 5
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 6
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 7
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide128kl(i8* %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 1
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 2
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 1
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 3
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 2
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 4
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 3
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 5
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 4
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 6
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 5
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 7
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 6
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 8
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 7
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 0
   return _mm_aesencwide128kl_u8(odata, idata, h);
 }
 
 unsigned char test__mm_aesdecwide128kl_u8(__m128i odata[8], const __m128i idata[8], const void* h) {
   //CHECK-LABEL: @test__mm_aesdecwide128kl
-  //CHECK: call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide128kl(i8* %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}},      <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 1
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 2
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 3
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 4
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 5
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 6
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 7
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide128kl(i8* %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 1
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 2
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 1
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 3
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 2
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 4
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 3
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 5
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 4
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 6
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 5
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 7
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 6
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 8
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 7
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 0
   return _mm_aesdecwide128kl_u8(odata, idata, h);
 }
 
 unsigned char test__mm_aesencwide256kl_u8(__m128i odata[8], const __m128i idata[8], const void* h) {
   //CHECK-LABEL: @test__mm_aesencwide256kl
-  //CHECK: call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide256kl(i8* %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}},      <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 1
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 2
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 3
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 4
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 5
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 6
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 7
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide256kl(i8* %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 1
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 2
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 1
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 3
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 2
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 4
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 3
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 5
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 4
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 6
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 5
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 7
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 6
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 8
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 7
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 0
   return _mm_aesencwide256kl_u8(odata, idata, h);
 }
 
 unsigned char test__mm_aesdecwide256kl_u8(__m128i odata[8], const __m128i idata[8], const void* h) {
   //CHECK-LABEL: @test__mm_aesdecwide256kl
-  //CHECK: call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide256kl(i8* %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}},      <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 1
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 2
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 3
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 4
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 5
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 6
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 7
+  //CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 16
+  //CHECK: call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide256kl(i8* %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 1
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 2
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 1
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 3
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 2
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 4
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 3
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 5
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 4
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 6
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 5
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 7
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 6
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 8
+  //CHECK: getelementptr <2 x i64>, <2 x i64>* %{{.*}}, i32 7
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 16
+  //CHECK: extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 0
   return _mm_aesdecwide256kl_u8(odata, idata, h);
 }

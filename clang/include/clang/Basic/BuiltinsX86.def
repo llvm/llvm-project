@@ -1902,22 +1902,16 @@ TARGET_BUILTIN(__builtin_ia32_enqcmds, "Ucv*vC*", "n", "enqcmd")
 
 // KEY LOCKER
 TARGET_BUILTIN(__builtin_ia32_loadiwkey, "vV2OiV2OiV2OiUi", "nV:128:", "kl")
-TARGET_BUILTIN(__builtin_ia32_encodekey128_u32,
-               "UiUiV2Oiv*", "nV:128:", "kl")
-TARGET_BUILTIN(__builtin_ia32_encodekey256_u32,
-               "UiUiV2OiV2Oiv*", "nV:128:", "kl")
-TARGET_BUILTIN(__builtin_ia32_aesenc128kl, "UcV2Oi*V2OivC*", "nV:128:", "kl")
-TARGET_BUILTIN(__builtin_ia32_aesenc256kl, "UcV2Oi*V2OivC*", "nV:128:", "kl")
-TARGET_BUILTIN(__builtin_ia32_aesdec128kl, "UcV2Oi*V2OivC*", "nV:128:", "kl")
-TARGET_BUILTIN(__builtin_ia32_aesdec256kl, "UcV2Oi*V2OivC*", "nV:128:", "kl")
-TARGET_BUILTIN(__builtin_ia32_aesencwide128kl,
-               "UcvC*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2OiV2OiV2OiV2OiV2OiV2OiV2OiV2Oi", "nV:128:", "kl,widekl")
-TARGET_BUILTIN(__builtin_ia32_aesencwide256kl,
-               "UcvC*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2OiV2OiV2OiV2OiV2OiV2OiV2OiV2Oi", "nV:128:", "kl,widekl")
-TARGET_BUILTIN(__builtin_ia32_aesdecwide128kl,
-               "UcvC*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2OiV2OiV2OiV2OiV2OiV2OiV2OiV2Oi", "nV:128:", "kl,widekl")
-TARGET_BUILTIN(__builtin_ia32_aesdecwide256kl,
-               "UcvC*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2OiV2OiV2OiV2OiV2OiV2OiV2OiV2Oi", "nV:128:", "kl,widekl")
+TARGET_BUILTIN(__builtin_ia32_encodekey128_u32, "UiUiV2Oiv*", "nV:128:", "kl")
+TARGET_BUILTIN(__builtin_ia32_encodekey256_u32, "UiUiV2OiV2Oiv*", "nV:128:", "kl")
+TARGET_BUILTIN(__builtin_ia32_aesenc128kl_u8, "UcV2Oi*V2OivC*", "nV:128:", "kl")
+TARGET_BUILTIN(__builtin_ia32_aesenc256kl_u8, "UcV2Oi*V2OivC*", "nV:128:", "kl")
+TARGET_BUILTIN(__builtin_ia32_aesdec128kl_u8, "UcV2Oi*V2OivC*", "nV:128:", "kl")
+TARGET_BUILTIN(__builtin_ia32_aesdec256kl_u8, "UcV2Oi*V2OivC*", "nV:128:", "kl")
+TARGET_BUILTIN(__builtin_ia32_aesencwide128kl_u8, "UcV2Oi*V2OiC*vC*", "nV:128:", "kl,widekl")
+TARGET_BUILTIN(__builtin_ia32_aesencwide256kl_u8, "UcV2Oi*V2OiC*vC*", "nV:128:", "kl,widekl")
+TARGET_BUILTIN(__builtin_ia32_aesdecwide128kl_u8, "UcV2Oi*V2OiC*vC*", "nV:128:", "kl,widekl")
+TARGET_BUILTIN(__builtin_ia32_aesdecwide256kl_u8, "UcV2Oi*V2OiC*vC*", "nV:128:", "kl,widekl")
 
 // SERIALIZE
 TARGET_BUILTIN(__builtin_ia32_serialize, "v", "n", "serialize")
