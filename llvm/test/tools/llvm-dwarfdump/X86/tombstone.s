@@ -64,12 +64,11 @@
 # CHECK-DAG: .debug_line contents:
 # CHECK:      Address Line
 # CHECK-NEXT: --------------
-# FIXME: Dump the address with a size-appropriate encoding
-# CHECK-NEXT: DW_LNE_set_address (0x00000000ffffffff)
+# CHECK-NEXT: DW_LNE_set_address (0xffffffff)
 # CHECK-NEXT: DW_LNS_copy
 # CHECK-NEXT: DW_LNS_advance_pc (1)
 # CHECK-NEXT: DW_LNE_end_sequence
-# CHECK-NEXT: DW_LNE_set_address (0x0000000000000042)
+# CHECK-NEXT: DW_LNE_set_address (0x00000042)
 # CHECK-NEXT: DW_LNS_copy
 # CHECK-NEXT:   0x0000000000000042 1
 # CHECK-NEXT: DW_LNS_advance_pc (1)
