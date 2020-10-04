@@ -1,4 +1,5 @@
 # XFAIL: system-windows
+# XFAIL: system-darwin
 # REQUIRES: native && (target-x86 || target-x86_64)
 # RUN: %clangxx_host -g %p/Inputs/x86-fp-read.cpp -o %t
 # RUN: %lldb -b -s %s %t | FileCheck %s
