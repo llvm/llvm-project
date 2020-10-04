@@ -14,12 +14,64 @@ void test_loadiwkey(unsigned int ctl, __m128i intkey, __m128i enkey_lo, __m128i 
 unsigned int test_encodekey128_u32(unsigned int htype, __m128i key, void *h) {
   //CHECK-LABEL: @test_encodekey128_u32
   //CHECK: call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey128(i32 %{{.*}}, <2 x i64> %{{.*}})
+  //CHECK: extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 1
+  //CHECK: itcast i8* %{{.*}} to <2 x i64>*
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  //CHECK: extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 2
+  //CHECK: getelementptr i8, i8* %{{.*}}, i32 16
+  //CHECK: bitcast i8* %{{.*}} to <2 x i64>*
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  //CHECK: extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 3
+  //CHECK: getelementptr i8, i8* %{{.*}}, i32 32
+  //CHECK: bitcast i8* %{{.*}} to <2 x i64>*
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  //CHECK: extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 4
+  //CHECK: getelementptr i8, i8* %{{.*}}, i32 48
+  //CHECK: bitcast i8* %{{.*}} to <2 x i64>*
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  //CHECK: extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 5
+  //CHECK: getelementptr i8, i8* %{{.*}}, i32 64
+  //CHECK: bitcast i8* %{{.*}} to <2 x i64>*
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  //CHECK: extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 6
+  //CHECK: getelementptr i8, i8* %{{.*}}, i32 80
+  //CHECK: bitcast i8* %{{.*}} to <2 x i64>*
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  //CHECK: extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 0
   return _mm_encodekey128_u32(htype, key, h);
 }
 
 unsigned int test_encodekey256_u32(unsigned int htype, __m128i key_lo, __m128i key_hi, void *h) {
   //CHECK-LABEL: @test_encodekey256_u32
   //CHECK: call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey256(i32 %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  //CHECK: extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 1
+  //CHECK: itcast i8* %{{.*}} to <2 x i64>*
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  //CHECK: extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 2
+  //CHECK: getelementptr i8, i8* %{{.*}}, i32 16
+  //CHECK: bitcast i8* %{{.*}} to <2 x i64>*
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  //CHECK: extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 3
+  //CHECK: getelementptr i8, i8* %{{.*}}, i32 32
+  //CHECK: bitcast i8* %{{.*}} to <2 x i64>*
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  //CHECK: extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 4
+  //CHECK: getelementptr i8, i8* %{{.*}}, i32 48
+  //CHECK: bitcast i8* %{{.*}} to <2 x i64>*
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  //CHECK: extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 5
+  //CHECK: getelementptr i8, i8* %{{.*}}, i32 64
+  //CHECK: bitcast i8* %{{.*}} to <2 x i64>*
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  //CHECK: extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 6
+  //CHECK: getelementptr i8, i8* %{{.*}}, i32 80
+  //CHECK: bitcast i8* %{{.*}} to <2 x i64>*
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  //CHECK: extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 7
+  //CHECK: getelementptr i8, i8* %{{.*}}, i32 96
+  //CHECK: bitcast i8* %{{.*}} to <2 x i64>*
+  //CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  //CHECK: extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %{{.*}}, 0
   return _mm_encodekey256_u32(htype, key_lo, key_hi, h);
 }
 
