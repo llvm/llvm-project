@@ -1901,7 +1901,7 @@ TARGET_BUILTIN(__builtin_ia32_enqcmd, "Ucv*vC*", "n", "enqcmd")
 TARGET_BUILTIN(__builtin_ia32_enqcmds, "Ucv*vC*", "n", "enqcmd")
 
 // KEY LOCKER
-TARGET_BUILTIN(__builtin_ia32_loadiwkey, "vUiV2OiV2OiV2Oi", "nV:128:", "kl")
+TARGET_BUILTIN(__builtin_ia32_loadiwkey, "vV2OiV2OiV2OiUi", "nV:128:", "kl")
 TARGET_BUILTIN(__builtin_ia32_encodekey128,
                "UiUiV2OiV2Oi*V2Oi*V2Oi*V2Oi*V2Oi*V2Oi*", "nV:128:", "kl")
 TARGET_BUILTIN(__builtin_ia32_encodekey256,

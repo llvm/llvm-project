@@ -4,7 +4,7 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unkown-unknown -mattr=+widekl | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -verify-machineinstrs -mtriple=i386-unkown-unknown -mattr=+widekl -mattr=+avx2 | FileCheck %s --check-prefix=X32
 
-declare void @llvm.x86.loadiwkey(i32, <2 x i64>, <2 x i64>, <2 x i64>)
+declare void @llvm.x86.loadiwkey(<2 x i64>, <2 x i64>, <2 x i64>, i32)
 declare { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey128(i32, <2 x i64>)
 declare { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey256(i32, <2 x i64>, <2 x i64>)
 declare { i8, <2 x i64> } @llvm.x86.aesenc128kl(<2 x i64>, i8*)
@@ -29,7 +29,7 @@ define void @test_loadiwkey(i32 %ctl, <2 x i64> %intkey, <2 x i64> %enkey_lo, <2
 ; X32-NEXT:    loadiwkey %xmm2, %xmm1
 ; X32-NEXT:    retl
 entry:
-  tail call void @llvm.x86.loadiwkey(i32 %ctl, <2 x i64> %intkey, <2 x i64> %enkey_lo, <2 x i64> %enkey_hi)
+  tail call void @llvm.x86.loadiwkey(<2 x i64> %intkey, <2 x i64> %enkey_lo, <2 x i64> %enkey_hi, i32 %ctl)
   ret void
 }
 
