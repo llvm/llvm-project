@@ -284,7 +284,7 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
       // Print the actual address rather than the offset.
       uint64_t LowPC, HighPC, Index;
       if (Die.getLowAndHighPC(LowPC, HighPC, Index))
-        OS << format("0x%016" PRIx64, HighPC);
+        DWARFFormValue::dumpAddress(OS, U->getAddressByteSize(), HighPC);
       else
         FormValue.dump(OS, DumpOpts);
     }

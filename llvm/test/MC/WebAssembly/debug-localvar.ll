@@ -78,8 +78,8 @@ attributes #2 = { nounwind }
 
 ; CHECK-LABEL: DW_TAG_compile_unit
 ; CHECK-LABEL:     DW_TAG_subprogram
-; CHECK-NEXT:                DW_AT_low_pc	(0x0000000000000002)
-; CHECK-NEXT:                DW_AT_high_pc	(0x0000000000000039)
+; CHECK-NEXT:                DW_AT_low_pc	(0x00000002)
+; CHECK-NEXT:                DW_AT_high_pc	(0x00000039)
 ; CHECK-NEXT:                DW_AT_frame_base	(DW_OP_WASM_location 0x0 0x1, DW_OP_stack_value)
 ; CHECK-NEXT:                DW_AT_name	("foo")
 ; CHECK-NEXT:                DW_AT_decl_file	("/s/llvm-upstream{{(/|\\)}}debugtest.c")
@@ -102,8 +102,8 @@ attributes #2 = { nounwind }
 ; CHECK-NEXT:                  DW_AT_type	(0x00000073 "int")
 
 ; CHECK-LABEL:     DW_TAG_lexical_block
-; CHECK-NEXT:                  DW_AT_low_pc	(0x000000000000001c)
-; CHECK-NEXT:                  DW_AT_high_pc	(0x000000000000002d)
+; CHECK-NEXT:                  DW_AT_low_pc	(0x0000001c)
+; CHECK-NEXT:                  DW_AT_high_pc	(0x0000002d)
 
 ; CHECK-LABEL:       DW_TAG_variable
 ; CHECK-NEXT:                    DW_AT_location	(DW_OP_fbreg +4)
