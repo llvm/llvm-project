@@ -60,7 +60,8 @@ let SchedRW = [WriteSystem], Predicates = [HasKL] in {
 
 let SchedRW = [WriteSystem], Predicates = [HasWIDEKL] in {
   let Uses = [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7],
-      Defs = [EFLAGS, XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7] in {
+      Defs = [EFLAGS, XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7],
+      mayLoad = 1 in {
     def AESENCWIDE128KL : I<0xD8, MRM0m, (outs), (ins opaquemem:$src),
                             "aesencwide128kl\t$src", []>, T8XS;
     def AESDECWIDE128KL : I<0xD8, MRM1m, (outs), (ins opaquemem:$src),
