@@ -44,7 +44,7 @@ class DriverBatchModeTest(PExpectTest):
         child.expect_exact('(char *) touch_me_not')
         # Then we should have a live prompt:
         self.expect_prompt()
-        self.expect("frame variable touch_me_not", substrs='(char *) touch_me_not')
+        self.expect("frame variable touch_me_not", substrs=['(char *) touch_me_not'])
 
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     def test_batch_mode_run_exit(self):
