@@ -1,4 +1,5 @@
 # RUN: %cmake %mlir_src_root/examples/standalone -DCMAKE_CXX_COMPILER=%host_cxx -DCMAKE_C_COMPILER=%host_cc -DMLIR_DIR=%llvm_lib_dir/cmake/mlir ; %cmake --build . --target check-standalone | tee %t | FileCheck %s
+# RUN: %cmake --build . --target mlir-doc
 
 # CHECK: Passed: 3
 # UNSUPPORTED: windows, android
