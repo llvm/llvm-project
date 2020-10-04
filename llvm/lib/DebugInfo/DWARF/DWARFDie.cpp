@@ -268,8 +268,18 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
     WithColor(OS, Color) << Name;
   else if (Attr == DW_AT_decl_line || Attr == DW_AT_call_line)
     OS << *FormValue.getAsUnsignedConstant();
-  else if (Attr == DW_AT_high_pc && !DumpOpts.ShowForm && !DumpOpts.Verbose &&
-           FormValue.getAsUnsignedConstant()) {
+  else if (Attr == DW_AT_low_pc &&
+           (FormValue.getAsAddress() ==
+            dwarf::computeTombstoneAddress(U->getAddressByteSize()))) {
+    if (DumpOpts.Verbose) {
+      FormValue.dump(OS, DumpOpts);
+      OS << " (";
+    }
+    OS << "dead code";
+    if (DumpOpts.Verbose)
+      OS << ')';
+  } else if (Attr == DW_AT_high_pc && !DumpOpts.ShowForm && !DumpOpts.Verbose &&
+             FormValue.getAsUnsignedConstant()) {
     if (DumpOpts.ShowAddresses) {
       // Print the actual address rather than the offset.
       uint64_t LowPC, HighPC, Index;
@@ -415,6 +425,9 @@ Optional<uint64_t> DWARFDie::getLocBaseAttribute() const {
 }
 
 Optional<uint64_t> DWARFDie::getHighPC(uint64_t LowPC) const {
+  uint64_t Tombstone = dwarf::computeTombstoneAddress(U->getAddressByteSize());
+  if (LowPC == Tombstone)
+    return None;
   if (auto FormValue = find(DW_AT_high_pc)) {
     if (auto Address = FormValue->getAsAddress()) {
       // High PC is an address.
