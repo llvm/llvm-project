@@ -25952,67 +25952,6 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(), SetCC,
                          Operation.getValue(1));
     }
-    case Intrinsic::x86_encodekey128:
-    case Intrinsic::x86_encodekey256: {
-      SDLoc DL(Op);
-      SDVTList VTs = DAG.getVTList(MVT::i32, MVT::Other, MVT::Glue);
-      SDValue Chain = Op.getOperand(0);
-      bool IsEK256 = false;
-      Chain = DAG.getCopyToReg(Chain, DL, X86::XMM0, Op->getOperand(3),
-                               SDValue());
-
-      unsigned Opcode;
-
-      switch (IntNo) {
-      default: llvm_unreachable("Impossible intrinsic");
-      case Intrinsic::x86_encodekey128:
-        Opcode = X86::ENCODEKEY128;
-        break;
-      case Intrinsic::x86_encodekey256:
-        Opcode = X86::ENCODEKEY256;
-        Chain = DAG.getCopyToReg(Chain, DL, X86::XMM1, Op->getOperand(4),
-                                 Chain.getValue(1));
-        IsEK256 = true;
-        break;
-      }
-
-      SDNode *Res = DAG.getMachineNode(Opcode, DL, VTs,
-                                       {Op.getOperand(2), Chain,
-                                        Chain.getValue(1)});
-
-      Chain = SDValue(Res, 1);
-
-      SDValue XMM0 = DAG.getCopyFromReg(Chain, DL, X86::XMM0, MVT::v16i8,
-                                        SDValue(Res, 2));
-      SDValue XMM1 = DAG.getCopyFromReg(XMM0.getValue(1), DL, X86::XMM1,
-                                        MVT::v16i8, XMM0.getValue(2));
-      SDValue XMM2 = DAG.getCopyFromReg(XMM1.getValue(1), DL, X86::XMM2,
-                                        MVT::v16i8, XMM1.getValue(2));
-      SDValue XMM3, XMM4;
-      if (IsEK256) {
-        XMM3 = DAG.getCopyFromReg(XMM2.getValue(1), DL, X86::XMM3,
-                                  MVT::v16i8, XMM2.getValue(2));
-        XMM4 = DAG.getCopyFromReg(XMM3.getValue(1), DL, X86::XMM4,
-                                  MVT::v16i8, XMM3.getValue(2));
-      } else {
-        XMM4 = DAG.getCopyFromReg(XMM2.getValue(1), DL, X86::XMM4,
-                                  MVT::v16i8, XMM2.getValue(2));
-      }
-      SDValue XMM5 = DAG.getCopyFromReg(XMM4.getValue(1), DL, X86::XMM5,
-                                        MVT::v16i8, XMM4.getValue(2));
-      SDValue XMM6 = DAG.getCopyFromReg(XMM5.getValue(1), DL, X86::XMM6,
-                                        MVT::v16i8, XMM5.getValue(2));
-
-      if (IsEK256) {
-        return DAG.getNode(ISD::MERGE_VALUES, DL, Op->getVTList(),
-                           {SDValue(Res, 0),
-                            XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, Chain});
-      } else {
-        return DAG.getNode(ISD::MERGE_VALUES, DL, Op->getVTList(),
-                           {SDValue(Res, 0),
-                            XMM0, XMM1, XMM2, XMM4, XMM5, XMM6, Chain});
-      }
-    }
     case Intrinsic::x86_aesenc128kl:
     case Intrinsic::x86_aesdec128kl:
     case Intrinsic::x86_aesenc256kl:
