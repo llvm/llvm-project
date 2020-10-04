@@ -20,7 +20,7 @@ let SchedRW = [WriteSystem], Predicates = [HasKL] in {
   let Uses = [XMM0, EAX], Defs = [EFLAGS] in {
     def LOADIWKEY : I<0xDC, MRMSrcReg, (outs), (ins VR128:$src1, VR128:$src2),
                       "loadiwkey\t{$src2, $src1|$src1, $src2}",
-                      [(int_x86_loadiwkey EAX, XMM0, VR128:$src1, VR128:$src2)]>, T8XS;
+                      [(int_x86_loadiwkey XMM0, VR128:$src1, VR128:$src2, EAX)]>, T8XS;
   }
 
   let Uses = [XMM0], Defs = [XMM0, XMM1, XMM2, XMM4, XMM5, XMM6, EFLAGS] in {
