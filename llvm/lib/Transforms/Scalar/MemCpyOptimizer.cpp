@@ -21,6 +21,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/MemorySSA.h"
@@ -788,40 +789,9 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   // Check that accessing the first srcSize bytes of dest will not cause a
   // trap.  Otherwise the transform is invalid since it might cause a trap
   // to occur earlier than it otherwise would.
-  // TODO: Use isDereferenceablePointer() API instead.
-  if (AllocaInst *A = dyn_cast<AllocaInst>(cpyDest)) {
-    // The destination is an alloca.  Check it is larger than srcSize.
-    ConstantInt *destArraySize = dyn_cast<ConstantInt>(A->getArraySize());
-    if (!destArraySize)
-      return false;
-
-    uint64_t destSize = DL.getTypeAllocSize(A->getAllocatedType()) *
-                        destArraySize->getZExtValue();
-
-    if (destSize < srcSize)
-      return false;
-  } else if (Argument *A = dyn_cast<Argument>(cpyDest)) {
-    if (A->getDereferenceableBytes() < srcSize) {
-      // If the destination is an sret parameter then only accesses that are
-      // outside of the returned struct type can trap.
-      if (!A->hasStructRetAttr())
-        return false;
-
-      Type *StructTy = A->getParamStructRetType();
-      if (!StructTy->isSized()) {
-        // The call may never return and hence the copy-instruction may never
-        // be executed, and therefore it's not safe to say "the destination
-        // has at least <cpyLen> bytes, as implied by the copy-instruction",
-        return false;
-      }
-
-      uint64_t destSize = DL.getTypeAllocSize(StructTy);
-      if (destSize < srcSize)
-        return false;
-    }
-  } else {
+  if (!isDereferenceableAndAlignedPointer(cpyDest, Align(1), APInt(64, cpyLen),
+                                          DL, C, DT))
     return false;
-  }
 
   // Make sure that nothing can observe cpyDest being written early. There are
   // a number of cases to consider:
@@ -837,6 +807,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   //     guaranteed to be executed if C is. As it is a non-atomic access, it
   //     renders accesses from other threads undefined.
   //     TODO: This is currently not checked.
+  // TODO: Check underlying object, so we can look through GEPs.
   if (!isa<AllocaInst>(cpyDest)) {
     assert(C->getParent() == cpyStore->getParent() &&
            "call and copy must be in the same block");
@@ -893,6 +864,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
   // Since we're changing the parameter to the callsite, we need to make sure
   // that what would be the new parameter dominates the callsite.
+  // TODO: Support moving instructions like GEPs upwards.
   if (Instruction *cpyDestInst = dyn_cast<Instruction>(cpyDest))
     if (!DT->dominates(cpyDestInst, C))
       return false;
