@@ -270,7 +270,7 @@ void InitTlsSize() { }
 
 #if (defined(__x86_64__) || defined(__i386__) || defined(__mips__) ||       \
      defined(__aarch64__) || defined(__powerpc64__) || defined(__s390__) || \
-     defined(__arm__)) &&                                                   \
+     defined(__arm__) || SANITIZER_RISCV64) &&                              \
     SANITIZER_LINUX && !SANITIZER_ANDROID
 // sizeof(struct pthread) from glibc.
 static atomic_uintptr_t thread_descriptor_size;
@@ -310,6 +310,21 @@ uptr ThreadDescriptorSize() {
 #elif defined(__mips__)
   // TODO(sagarthakur): add more values as per different glibc versions.
   val = FIRST_32_SECOND_64(1152, 1776);
+#elif SANITIZER_RISCV64
+  int major;
+  int minor;
+  int patch;
+  if (GetLibcVersion(&major, &minor, &patch) && major == 2) {
+    // TODO: consider adding an optional runtime check for an unknown (untested)
+    // glibc version
+    if (minor <= 28)  // WARNING: the highest tested version is 2.29
+      val = 1772;     // no guarantees for this one
+    else if (minor <= 31)
+      val = 1772;  // tested against glibc 2.29, 2.31
+    else
+      val = 1936;  // tested against glibc 2.32
+  }
+
 #elif defined(__aarch64__)
   // The sizeof (struct pthread) is the same from GLIBC 2.17 to 2.22.
   val = 1776;
@@ -452,7 +467,7 @@ static void GetTls(uptr *addr, uptr *size) {
   *addr -= *size;
   *addr += ThreadDescriptorSize();
 #elif defined(__mips__) || defined(__aarch64__) || defined(__powerpc64__) || \
-    defined(__arm__)
+    defined(__arm__) || SANITIZER_RISCV64
   *addr = ThreadSelf();
   *size = GetTlsSize();
 #else
@@ -509,7 +524,7 @@ uptr GetTlsSize() {
   uptr addr, size;
   GetTls(&addr, &size);
   return size;
-#elif defined(__mips__) || defined(__powerpc64__)
+#elif defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64
   return RoundUpTo(g_tls_size + TlsPreTcbSize(), 16);
 #else
   return g_tls_size;
