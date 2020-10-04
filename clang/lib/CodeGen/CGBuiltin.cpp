@@ -14039,8 +14039,37 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_psubusb128:
   case X86::BI__builtin_ia32_psubusw128:
     return EmitX86BinaryIntrinsic(*this, Ops, Intrinsic::usub_sat);
-  case X86::BI__builtin_ia32_encodekey128:
-  case X86::BI__builtin_ia32_encodekey256:
+  case X86::BI__builtin_ia32_encodekey128_u32: {
+    Intrinsic::ID IID = Intrinsic::x86_encodekey128;
+
+    Value *Call = Builder.CreateCall(CGM.getIntrinsic(IID), {Ops[0], Ops[1]});
+
+    for (int i = 0; i < 6; ++i) {
+      Value *Extract = Builder.CreateExtractValue(Call, i + 1);
+      Value *Ptr = Builder.CreateConstGEP1_32(Ops[2], i * 16);
+      Ptr = Builder.CreateBitCast(
+          Ptr, llvm::PointerType::getUnqual(Extract->getType()));
+      Builder.CreateAlignedStore(Extract, Ptr, Align(1));
+    }
+
+    return Builder.CreateExtractValue(Call, 0);
+  }
+  case X86::BI__builtin_ia32_encodekey256_u32: {
+    Intrinsic::ID IID = Intrinsic::x86_encodekey256;
+
+    Value *Call =
+        Builder.CreateCall(CGM.getIntrinsic(IID), {Ops[0], Ops[1], Ops[2]});
+
+    for (int i = 0; i < 7; ++i) {
+      Value *Extract = Builder.CreateExtractValue(Call, i + 1);
+      Value *Ptr = Builder.CreateConstGEP1_32(Ops[3], i * 16);
+      Ptr = Builder.CreateBitCast(
+          Ptr, llvm::PointerType::getUnqual(Extract->getType()));
+      Builder.CreateAlignedStore(Extract, Ptr, Align(1));
+    }
+
+    return Builder.CreateExtractValue(Call, 0);
+  }
   case X86::BI__builtin_ia32_aesenc128kl:
   case X86::BI__builtin_ia32_aesdec128kl:
   case X86::BI__builtin_ia32_aesenc256kl:
@@ -14056,18 +14085,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
 
     switch (BuiltinID) {
     default: llvm_unreachable("Unsupported intrinsic!");
-    case X86::BI__builtin_ia32_encodekey128:
-      ID = Intrinsic::x86_encodekey128;
-      InOps = {Ops[0], Ops[1]};
-      FirstReturnOp = 2;
-      ResultCount = 6;
-      break;
-    case X86::BI__builtin_ia32_encodekey256:
-      ID = Intrinsic::x86_encodekey256;
-      InOps = {Ops[0], Ops[1], Ops[2]};
-      FirstReturnOp = 3;
-      ResultCount = 7;
-      break;
     case X86::BI__builtin_ia32_aesenc128kl:
     case X86::BI__builtin_ia32_aesdec128kl:
     case X86::BI__builtin_ia32_aesenc256kl:
