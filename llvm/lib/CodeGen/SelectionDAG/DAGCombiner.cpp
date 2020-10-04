@@ -13040,13 +13040,6 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 
-  if ((Options.NoNaNsFPMath && Options.NoSignedZerosFPMath) ||
-      (Flags.hasNoNaNs() && Flags.hasNoSignedZeros())) {
-    // fold (fmul A, 0) -> 0
-    if (N1CFP && N1CFP->isZero())
-      return N1;
-  }
-
   if (Options.UnsafeFPMath || Flags.hasAllowReassociation()) {
     // fmul (fmul X, C1), C2 -> fmul X, C1 * C2
     if (isConstantFPBuildVectorOrConstantFP(N1) &&
