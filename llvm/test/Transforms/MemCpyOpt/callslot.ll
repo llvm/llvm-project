@@ -87,7 +87,6 @@ define void @write_src_between_call_and_memcpy() {
   ret void
 }
 
-; TODO: This is a miscompile.
 define void @throw_between_call_and_mempy(i8* dereferenceable(16) %dest.i8) {
 ; CHECK-LABEL: @throw_between_call_and_mempy(
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [16 x i8], align 1
@@ -106,6 +105,64 @@ define void @throw_between_call_and_mempy(i8* dereferenceable(16) %dest.i8) {
   ret void
 }
 
+define void @dest_is_gep_nounwind_call() {
+; CHECK-LABEL: @dest_is_gep_nounwind_call(
+; CHECK-NEXT:    [[DEST:%.*]] = alloca [16 x i8], align 1
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [8 x i8], align 1
+; CHECK-NEXT:    [[SRC_I8:%.*]] = bitcast [8 x i8]* [[SRC]] to i8*
+; CHECK-NEXT:    [[DEST_I8:%.*]] = getelementptr [16 x i8], [16 x i8]* [[DEST]], i64 0, i64 8
+; CHECK-NEXT:    call void @accept_ptr(i8* [[SRC_I8]]) [[ATTR3:#.*]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DEST_I8]], i8* [[SRC_I8]], i64 8, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %dest = alloca [16 x i8]
+  %src = alloca [8 x i8]
+  %src.i8 = bitcast [8 x i8]* %src to i8*
+  %dest.i8 = getelementptr [16 x i8], [16 x i8]* %dest, i64 0, i64 8
+  call void @accept_ptr(i8* %src.i8) nounwind
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dest.i8, i8* %src.i8, i64 8, i1 false)
+  ret void
+}
+
+define void @dest_is_gep_may_throw_call() {
+; CHECK-LABEL: @dest_is_gep_may_throw_call(
+; CHECK-NEXT:    [[DEST:%.*]] = alloca [16 x i8], align 1
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [8 x i8], align 1
+; CHECK-NEXT:    [[SRC_I8:%.*]] = bitcast [8 x i8]* [[SRC]] to i8*
+; CHECK-NEXT:    [[DEST_I8:%.*]] = getelementptr [16 x i8], [16 x i8]* [[DEST]], i64 0, i64 8
+; CHECK-NEXT:    call void @accept_ptr(i8* [[SRC_I8]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DEST_I8]], i8* [[SRC_I8]], i64 8, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %dest = alloca [16 x i8]
+  %src = alloca [8 x i8]
+  %src.i8 = bitcast [8 x i8]* %src to i8*
+  %dest.i8 = getelementptr [16 x i8], [16 x i8]* %dest, i64 0, i64 8
+  call void @accept_ptr(i8* %src.i8)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dest.i8, i8* %src.i8, i64 8, i1 false)
+  ret void
+}
+
+define void @dest_is_gep_requires_movement() {
+; CHECK-LABEL: @dest_is_gep_requires_movement(
+; CHECK-NEXT:    [[DEST:%.*]] = alloca [16 x i8], align 1
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [8 x i8], align 1
+; CHECK-NEXT:    [[SRC_I8:%.*]] = bitcast [8 x i8]* [[SRC]] to i8*
+; CHECK-NEXT:    call void @accept_ptr(i8* [[SRC_I8]]) [[ATTR3]]
+; CHECK-NEXT:    [[DEST_I8:%.*]] = getelementptr [16 x i8], [16 x i8]* [[DEST]], i64 0, i64 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DEST_I8]], i8* [[SRC_I8]], i64 8, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %dest = alloca [16 x i8]
+  %src = alloca [8 x i8]
+  %src.i8 = bitcast [8 x i8]* %src to i8*
+  call void @accept_ptr(i8* %src.i8) nounwind
+  %dest.i8 = getelementptr [16 x i8], [16 x i8]* %dest, i64 0, i64 8
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dest.i8, i8* %src.i8, i64 8, i1 false)
+  ret void
+}
+
 declare void @may_throw()
+declare void @accept_ptr(i8*)
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1)
 declare void @llvm.memset.p0i8.i64(i8*, i8, i64, i1)
