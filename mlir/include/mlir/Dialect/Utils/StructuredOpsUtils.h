@@ -58,14 +58,6 @@ constexpr StringRef getIndexingMapsAttrName() { return "indexing_maps"; }
 /// op's iterators.
 constexpr StringRef getIteratorTypesAttrName() { return "iterator_types"; }
 
-/// Attribute name for the IntegerAttr which encodes the number of input buffer
-/// arguments.
-constexpr StringRef getArgsInAttrName() { return "args_in"; }
-
-/// Attribute name for the IntegerAttr which encodes the number of input buffer
-/// arguments.
-constexpr StringRef getArgsOutAttrName() { return "args_out"; }
-
 /// Attribute name for the StringAttr which encodes an optional documentation
 /// string of the structured op.
 constexpr StringRef getDocAttrName() { return "doc"; }

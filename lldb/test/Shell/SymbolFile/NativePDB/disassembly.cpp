@@ -28,11 +28,9 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: disassembly.cpp.tmp.exe[{{.*}}] <+17>: mov    dword ptr [rsp + 0x24], ecx
 // CHECK:      ** 15     foo();
 // CHECK:      disassembly.cpp.tmp.exe[{{.*}}] <+21>: call   {{.*}}               ; foo at disassembly.cpp:12
-// CHECK-NEXT: disassembly.cpp.tmp.exe[{{.*}}] <+26>: xor    ecx, ecx
-// CHECK-NEXT: disassembly.cpp.tmp.exe[{{.*}}] <+28>: mov    dword ptr [rsp + 0x20], eax
+// CHECK-NEXT: disassembly.cpp.tmp.exe[{{.*}}] <+26>: xor    eax, eax
 // CHECK:      ** 16     return 0;
 // CHECK-NEXT:    17   }
 // CHECK-NEXT:    18
-// CHECK:      disassembly.cpp.tmp.exe[{{.*}}] <+32>: mov    eax, ecx
-// CHECK-NEXT: disassembly.cpp.tmp.exe[{{.*}}] <+34>: add    rsp, 0x38
-// CHECK-NEXT: disassembly.cpp.tmp.exe[{{.*}}] <+38>: ret
+// CHECK:      disassembly.cpp.tmp.exe[{{.*}}] <+28>: add    rsp, 0x38
+// CHECK-NEXT: disassembly.cpp.tmp.exe[{{.*}}] <+32>: ret

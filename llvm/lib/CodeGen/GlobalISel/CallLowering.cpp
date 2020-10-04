@@ -285,7 +285,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
           }
           Args[i].Regs.push_back(Reg);
           Args[i].Flags.push_back(Flags);
-          if (Handler.assignArg(i + Part, NewVT, NewVT, CCValAssign::Full,
+          if (Handler.assignArg(i, NewVT, NewVT, CCValAssign::Full,
                                 Args[i], Args[i].Flags[Part], CCInfo)) {
             // Still couldn't assign this smaller part type for some reason.
             return false;
@@ -318,7 +318,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
         }
         Args[i].Regs.push_back(Unmerge.getReg(PartIdx));
         Args[i].Flags.push_back(Flags);
-        if (Handler.assignArg(i + PartIdx, NewVT, NewVT, CCValAssign::Full,
+        if (Handler.assignArg(i, NewVT, NewVT, CCValAssign::Full,
                               Args[i], Args[i].Flags[PartIdx], CCInfo))
           return false;
       }

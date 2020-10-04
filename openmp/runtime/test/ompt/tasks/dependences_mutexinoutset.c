@@ -1,10 +1,10 @@
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 
-// GCC does not pass in mutexinoutset
-// clang 9 introduced codegen for mutexinoutset
+// GCC 9 introduced codegen for mutexinoutset
+// UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8
 
-// UNSUPPORTED: gcc
+// clang 9 introduced codegen for mutexinoutset
 // UNSUPPORTED: clang-4, clang-5, clang-6, clang-7, clang-8
 
 #include "callback.h"

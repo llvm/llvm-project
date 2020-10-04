@@ -10,8 +10,8 @@
 #define LLVM_DEBUGINFO_CODEVIEW_TYPEINDEXDISCOVERY_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

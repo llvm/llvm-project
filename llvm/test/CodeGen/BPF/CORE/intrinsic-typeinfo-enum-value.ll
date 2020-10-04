@@ -1,5 +1,6 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck %s
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck %s
 ;
 ; Source:
 ;   enum AA { VAL1 = -100, VAL2 = 0xffff8000 };
@@ -10,7 +11,9 @@
 ;            __builtin_preserve_enum_value(*(__BB *)VAL10, 1);
 ;   }
 ; Compiler flag to generate IR:
-;   clang -target bpf -S -O2 -g -emit-llvm t1.c
+;   clang -target bpf -S -O2 -g -emit-llvm -Xclang -disable-llvm-passes t1.c
+
+target triple = "bpf"
 
 @0 = private unnamed_addr constant [10 x i8] c"VAL1:-100\00", align 1
 @1 = private unnamed_addr constant [16 x i8] c"VAL2:4294934528\00", align 1

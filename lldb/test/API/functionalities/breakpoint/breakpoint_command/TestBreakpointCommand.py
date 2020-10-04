@@ -287,3 +287,33 @@ class BreakpointCommandTestCase(TestBase):
         self.assertEqual(com_list.GetStringAtIndex(0), "bt", "First bt")
         self.assertEqual(com_list.GetStringAtIndex(1), "thread list", "Next thread list")
         self.assertEqual(com_list.GetStringAtIndex(2), "continue", "Last continue")
+
+    def test_breakpoint_delete_disabled(self):
+        """Test 'break delete --disabled' works"""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target.IsValid(), "Created an invalid target.")
+
+        bp_1 = target.BreakpointCreateByName("main")
+        bp_2 = target.BreakpointCreateByName("not_here")
+        bp_3 = target.BreakpointCreateByName("main")
+        bp_3.AddName("DeleteMeNot")
+
+        bp_1.SetEnabled(False)
+        bp_3.SetEnabled(False)
+
+        bp_id_1 = bp_1.GetID()
+        bp_id_2 = bp_2.GetID()
+        bp_id_3 = bp_3.GetID()
+        
+        self.runCmd("breakpoint delete --disabled DeleteMeNot")
+
+        bp_1 = target.FindBreakpointByID(bp_id_1)
+        self.assertFalse(bp_1.IsValid(), "Didn't delete disabled breakpoint 1")
+
+        bp_2 = target.FindBreakpointByID(bp_id_2)
+        self.assertTrue(bp_2.IsValid(), "Deleted enabled breakpoint 2")
+
+        bp_3 = target.FindBreakpointByID(bp_id_3)
+        self.assertTrue(bp_3.IsValid(), "DeleteMeNot didn't protect disabled breakpoint 3")

@@ -7,44 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir-c/IR.h"
+#include "mlir-c/Support.h"
 
 #include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/Support.h"
+#include "mlir/CAPI/Utils.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Parser.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
-
-/* ========================================================================== */
-/* Printing helper.                                                           */
-/* ========================================================================== */
-
-namespace {
-/// A simple raw ostream subclass that forwards write_impl calls to the
-/// user-supplied callback together with opaque user-supplied data.
-class CallbackOstream : public llvm::raw_ostream {
-public:
-  CallbackOstream(std::function<void(const char *, intptr_t, void *)> callback,
-                  void *opaqueData)
-      : callback(callback), opaqueData(opaqueData), pos(0u) {}
-
-  void write_impl(const char *ptr, size_t size) override {
-    callback(ptr, size, opaqueData);
-    pos += size;
-  }
-
-  uint64_t current_pos() const override { return pos; }
-
-private:
-  std::function<void(const char *, intptr_t, void *)> callback;
-  void *opaqueData;
-  uint64_t pos;
-};
-} // end namespace
 
 /* ========================================================================== */
 /* Context API.                                                               */
@@ -61,6 +36,48 @@ int mlirContextEqual(MlirContext ctx1, MlirContext ctx2) {
 
 void mlirContextDestroy(MlirContext context) { delete unwrap(context); }
 
+void mlirContextSetAllowUnregisteredDialects(MlirContext context, int allow) {
+  unwrap(context)->allowUnregisteredDialects(allow);
+}
+
+int mlirContextGetAllowUnregisteredDialects(MlirContext context) {
+  return unwrap(context)->allowsUnregisteredDialects();
+}
+intptr_t mlirContextGetNumRegisteredDialects(MlirContext context) {
+  return static_cast<intptr_t>(unwrap(context)->getAvailableDialects().size());
+}
+
+// TODO: expose a cheaper way than constructing + sorting a vector only to take
+// its size.
+intptr_t mlirContextGetNumLoadedDialects(MlirContext context) {
+  return static_cast<intptr_t>(unwrap(context)->getLoadedDialects().size());
+}
+
+MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
+                                        MlirStringRef name) {
+  return wrap(unwrap(context)->getOrLoadDialect(unwrap(name)));
+}
+
+/* ========================================================================== */
+/* Dialect API.                                                               */
+/* ========================================================================== */
+
+MlirContext mlirDialectGetContext(MlirDialect dialect) {
+  return wrap(unwrap(dialect)->getContext());
+}
+
+int mlirDialectIsNull(MlirDialect dialect) {
+  return unwrap(dialect) == nullptr;
+}
+
+int mlirDialectEqual(MlirDialect dialect1, MlirDialect dialect2) {
+  return unwrap(dialect1) == unwrap(dialect2);
+}
+
+MlirStringRef mlirDialectGetNamespace(MlirDialect dialect) {
+  return wrap(unwrap(dialect)->getNamespace());
+}
+
 /* ========================================================================== */
 /* Location API.                                                              */
 /* ========================================================================== */
@@ -75,9 +92,13 @@ MlirLocation mlirLocationUnknownGet(MlirContext context) {
   return wrap(UnknownLoc::get(unwrap(context)));
 }
 
+MlirContext mlirLocationGetContext(MlirLocation location) {
+  return wrap(unwrap(location).getContext());
+}
+
 void mlirLocationPrint(MlirLocation location, MlirStringCallback callback,
                        void *userData) {
-  CallbackOstream stream(callback, userData);
+  detail::CallbackOstream stream(callback, userData);
   unwrap(location).print(stream);
   stream.flush();
 }
@@ -95,6 +116,10 @@ MlirModule mlirModuleCreateParse(MlirContext context, const char *module) {
   if (!owning)
     return MlirModule{nullptr};
   return MlirModule{owning.release().getOperation()};
+}
+
+MlirContext mlirModuleGetContext(MlirModule module) {
+  return wrap(unwrap(module).getContext());
 }
 
 void mlirModuleDestroy(MlirModule module) {
@@ -244,7 +269,7 @@ MlirAttribute mlirOperationGetAttributeByName(MlirOperation op,
 
 void mlirOperationPrint(MlirOperation op, MlirStringCallback callback,
                         void *userData) {
-  CallbackOstream stream(callback, userData);
+  detail::CallbackOstream stream(callback, userData);
   unwrap(op)->print(stream);
   stream.flush();
 }
@@ -272,6 +297,31 @@ void mlirRegionInsertOwnedBlock(MlirRegion region, intptr_t pos,
                                 MlirBlock block) {
   auto &blockList = unwrap(region)->getBlocks();
   blockList.insert(std::next(blockList.begin(), pos), unwrap(block));
+}
+
+void mlirRegionInsertOwnedBlockAfter(MlirRegion region, MlirBlock reference,
+                                     MlirBlock block) {
+  Region *cppRegion = unwrap(region);
+  if (mlirBlockIsNull(reference)) {
+    cppRegion->getBlocks().insert(cppRegion->begin(), unwrap(block));
+    return;
+  }
+
+  assert(unwrap(reference)->getParent() == unwrap(region) &&
+         "expected reference block to belong to the region");
+  cppRegion->getBlocks().insertAfter(Region::iterator(unwrap(reference)),
+                                     unwrap(block));
+}
+
+void mlirRegionInsertOwnedBlockBefore(MlirRegion region, MlirBlock reference,
+                                      MlirBlock block) {
+  if (mlirBlockIsNull(reference))
+    return mlirRegionAppendOwnedBlock(region, block);
+
+  assert(unwrap(reference)->getParent() == unwrap(region) &&
+         "expected reference block to belong to the region");
+  unwrap(region)->getBlocks().insert(Region::iterator(unwrap(reference)),
+                                     unwrap(block));
 }
 
 void mlirRegionDestroy(MlirRegion region) {
@@ -312,6 +362,33 @@ void mlirBlockInsertOwnedOperation(MlirBlock block, intptr_t pos,
   opList.insert(std::next(opList.begin(), pos), unwrap(operation));
 }
 
+void mlirBlockInsertOwnedOperationAfter(MlirBlock block,
+                                        MlirOperation reference,
+                                        MlirOperation operation) {
+  Block *cppBlock = unwrap(block);
+  if (mlirOperationIsNull(reference)) {
+    cppBlock->getOperations().insert(cppBlock->begin(), unwrap(operation));
+    return;
+  }
+
+  assert(unwrap(reference)->getBlock() == unwrap(block) &&
+         "expected reference operation to belong to the block");
+  cppBlock->getOperations().insertAfter(Block::iterator(unwrap(reference)),
+                                        unwrap(operation));
+}
+
+void mlirBlockInsertOwnedOperationBefore(MlirBlock block,
+                                         MlirOperation reference,
+                                         MlirOperation operation) {
+  if (mlirOperationIsNull(reference))
+    return mlirBlockAppendOwnedOperation(block, operation);
+
+  assert(unwrap(reference)->getBlock() == unwrap(block) &&
+         "expected reference operation to belong to the block");
+  unwrap(block)->getOperations().insert(Block::iterator(unwrap(reference)),
+                                        unwrap(operation));
+}
+
 void mlirBlockDestroy(MlirBlock block) { delete unwrap(block); }
 
 int mlirBlockIsNull(MlirBlock block) { return unwrap(block) == nullptr; }
@@ -326,7 +403,7 @@ MlirValue mlirBlockGetArgument(MlirBlock block, intptr_t pos) {
 
 void mlirBlockPrint(MlirBlock block, MlirStringCallback callback,
                     void *userData) {
-  CallbackOstream stream(callback, userData);
+  detail::CallbackOstream stream(callback, userData);
   unwrap(block)->print(stream);
   stream.flush();
 }
@@ -341,7 +418,7 @@ MlirType mlirValueGetType(MlirValue value) {
 
 void mlirValuePrint(MlirValue value, MlirStringCallback callback,
                     void *userData) {
-  CallbackOstream stream(callback, userData);
+  detail::CallbackOstream stream(callback, userData);
   unwrap(value).print(stream);
   stream.flush();
 }
@@ -361,7 +438,7 @@ MlirContext mlirTypeGetContext(MlirType type) {
 int mlirTypeEqual(MlirType t1, MlirType t2) { return unwrap(t1) == unwrap(t2); }
 
 void mlirTypePrint(MlirType type, MlirStringCallback callback, void *userData) {
-  CallbackOstream stream(callback, userData);
+  detail::CallbackOstream stream(callback, userData);
   unwrap(type).print(stream);
   stream.flush();
 }
@@ -376,13 +453,17 @@ MlirAttribute mlirAttributeParseGet(MlirContext context, const char *attr) {
   return wrap(mlir::parseAttribute(attr, unwrap(context)));
 }
 
+MlirContext mlirAttributeGetContext(MlirAttribute attribute) {
+  return wrap(unwrap(attribute).getContext());
+}
+
 int mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2) {
   return unwrap(a1) == unwrap(a2);
 }
 
 void mlirAttributePrint(MlirAttribute attr, MlirStringCallback callback,
                         void *userData) {
-  CallbackOstream stream(callback, userData);
+  detail::CallbackOstream stream(callback, userData);
   unwrap(attr).print(stream);
   stream.flush();
 }

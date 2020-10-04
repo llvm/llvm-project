@@ -478,7 +478,6 @@ DWARF:
         - 0
         - 0
         - 1
-      IncludeDirs:     
       Files:           
         - Name:            hello_world.c
           DirIdx:          0

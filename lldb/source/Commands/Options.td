@@ -227,6 +227,9 @@ let Command = "breakpoint delete" in {
   def breakpoint_delete_dummy_breakpoints : Option<"dummy-breakpoints", "D">,
     Group<1>, Desc<"Delete Dummy breakpoints - i.e. breakpoints set before a "
     "file is provided, which prime new targets.">;
+  def breakpoint_delete_disabled : Option<"disabled", "d">, Group<1>,
+    Desc<"Delete all breakpoints which are currently disabled.  When using the disabled option "
+    "any breakpoints listed on the command line are EXCLUDED from deletion.">;
 }
 
 let Command = "breakpoint name" in {
@@ -717,6 +720,12 @@ let Command = "script add" in {
     "LLDB event system.">;
 }
 
+let Command = "script" in {
+  def script_language : Option<"language", "l">,
+    EnumArg<"ScriptLang", "ScriptOptionEnum()">, Desc<"Specify the scripting "
+    " language. If none is specific the default scripting language is used.">;
+}
+
 let Command = "source info" in {
   def source_info_count : Option<"count", "c">, Arg<"Count">,
     Desc<"The number of line entries to display.">;
@@ -870,7 +879,7 @@ let Command = "target modules lookup" in {
 }
 
 let Command = "target stop hook add" in {
-  def target_stop_hook_add_one_liner : Option<"one-liner", "o">,
+  def target_stop_hook_add_one_liner : Option<"one-liner", "o">, GroupRange<1,3>,
     Arg<"OneLiner">, Desc<"Add a command for the stop hook.  Can be specified "
     "more than once, and commands will be run in the order they appear.">;
   def target_stop_hook_add_shlib : Option<"shlib", "s">, Arg<"ShlibName">,
@@ -888,19 +897,19 @@ let Command = "target stop hook add" in {
   def target_stop_hook_add_queue_name : Option<"queue-name", "q">,
     Arg<"QueueName">, Desc<"The stop hook is run only for threads in the queue "
     "whose name is given by this argument.">;
-  def target_stop_hook_add_file : Option<"file", "f">, Group<1>,
+  def target_stop_hook_add_file : Option<"file", "f">, Groups<[1,4]>,
     Arg<"Filename">, Desc<"Specify the source file within which the stop-hook "
     "is to be run.">, Completion<"SourceFile">;
-  def target_stop_hook_add_start_line : Option<"start-line", "l">, Group<1>,
+  def target_stop_hook_add_start_line : Option<"start-line", "l">, Groups<[1,4]>,
     Arg<"LineNum">, Desc<"Set the start of the line range for which the "
     "stop-hook is to be run.">;
-  def target_stop_hook_add_end_line : Option<"end-line", "e">, Group<1>,
+  def target_stop_hook_add_end_line : Option<"end-line", "e">, Groups<[1,4]>,
     Arg<"LineNum">, Desc<"Set the end of the line range for which the stop-hook"
     " is to be run.">;
-  def target_stop_hook_add_classname : Option<"classname", "c">, Group<2>,
+  def target_stop_hook_add_classname : Option<"classname", "c">, Groups<[2,5]>,
     Arg<"ClassName">,
     Desc<"Specify the class within which the stop-hook is to be run.">;
-  def target_stop_hook_add_name : Option<"name", "n">, Group<3>,
+  def target_stop_hook_add_name : Option<"name", "n">, Groups<[3,6]>,
     Arg<"FunctionName">, Desc<"Set the function name within which the stop hook"
     " will be run.">, Completion<"Symbol">;
   def target_stop_hook_add_auto_continue : Option<"auto-continue", "G">,
@@ -1168,4 +1177,20 @@ let Command = "watchpoint command add" in {
 let Command = "watchpoint delete" in {
   def watchpoint_delete_force : Option<"force", "f">, Group<1>,
     Desc<"Delete all watchpoints without querying for confirmation.">;
+}
+
+let Command = "trace load" in {
+  def trace_load_verbose : Option<"verbose", "v">, Group<1>,
+    Desc<"Show verbose trace load logging for debugging the plug-in "
+    "implementation.">;
+}
+
+let Command = "trace dump" in {
+  def trace_dump_verbose : Option<"verbose", "v">, Group<1>,
+    Desc<"Show verbose trace information.">;
+}
+
+let Command = "trace schema" in {
+  def trace_schema_verbose : Option<"verbose", "v">, Group<1>,
+    Desc<"Show verbose trace schema logging for debugging the plug-in.">;
 }

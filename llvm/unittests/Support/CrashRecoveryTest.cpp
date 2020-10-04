@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Triple.h"
+#include "llvm/Config/config.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
@@ -19,6 +22,12 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOGDI
 #include <windows.h>
+#endif
+
+#ifdef LLVM_ON_UNIX
+#ifdef HAVE_SIGNAL_H
+#include <signal.h>
+#endif
 #endif
 
 using namespace llvm;
@@ -123,4 +132,51 @@ TEST(CrashRecoveryTest, CallOutputDebugString) {
   EXPECT_TRUE(CrashRecoveryContext().RunSafely(outputString));
 }
 
+TEST(CrashRecoveryTest, Abort) {
+  llvm::CrashRecoveryContext::Enable();
+  auto A = []() { abort(); };
+  EXPECT_FALSE(CrashRecoveryContext().RunSafely(A));
+  // Test a second time to ensure we reinstall the abort signal handler.
+  EXPECT_FALSE(CrashRecoveryContext().RunSafely(A));
+}
+#endif
+
+// Specifically ensure that programs that signal() or abort() through the
+// CrashRecoveryContext can re-throw again their signal, so that `not --crash`
+// succeeds.
+#ifdef LLVM_ON_UNIX
+// See llvm/utils/unittest/UnitTestMain/TestMain.cpp
+extern const char *TestMainArgv0;
+
+// Just a reachable symbol to ease resolving of the executable's path.
+static cl::opt<std::string> CrashTestStringArg1("crash-test-string-arg1");
+
+TEST(CrashRecoveryTest, UnixCRCReturnCode) {
+  using namespace llvm::sys;
+  if (getenv("LLVM_CRC_UNIXCRCRETURNCODE")) {
+    llvm::CrashRecoveryContext::Enable();
+    CrashRecoveryContext CRC;
+    EXPECT_FALSE(CRC.RunSafely(abort));
+    EXPECT_EQ(CRC.RetCode, 128 + SIGABRT);
+    // re-throw signal
+    llvm::sys::unregisterHandlers();
+    raise(CRC.RetCode - 128);
+    llvm_unreachable("Should have exited already!");
+  }
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &CrashTestStringArg1);
+  StringRef argv[] = {
+      Executable, "--gtest_filter=CrashRecoveryTest.UnixCRCReturnCode"};
+
+  // Add LLVM_CRC_UNIXCRCRETURNCODE to the environment of the child process.
+  int Res = setenv("LLVM_CRC_UNIXCRCRETURNCODE", "1", 0);
+  ASSERT_EQ(Res, 0);
+
+  std::string Error;
+  bool ExecutionFailed;
+  int RetCode = ExecuteAndWait(Executable, argv, {}, {}, 0, 0, &Error,
+                               &ExecutionFailed);
+  ASSERT_EQ(-2, RetCode);
+}
 #endif

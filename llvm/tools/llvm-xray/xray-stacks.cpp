@@ -252,13 +252,15 @@ private:
 /// maintain an index of unique functions, and provide a means of iterating
 /// through all the instrumented call stacks which we know about.
 
+namespace {
 struct StackDuration {
   llvm::SmallVector<int64_t, 4> TerminalDurations;
   llvm::SmallVector<int64_t, 4> IntermediateDurations;
 };
+} // namespace
 
-StackDuration mergeStackDuration(const StackDuration &Left,
-                                 const StackDuration &Right) {
+static StackDuration mergeStackDuration(const StackDuration &Left,
+                                        const StackDuration &Right) {
   StackDuration Data{};
   Data.TerminalDurations.reserve(Left.TerminalDurations.size() +
                                  Right.TerminalDurations.size());
@@ -280,7 +282,7 @@ StackDuration mergeStackDuration(const StackDuration &Left,
 using StackTrieNode = TrieNode<StackDuration>;
 
 template <AggregationType AggType>
-std::size_t GetValueForStack(const StackTrieNode *Node);
+static std::size_t GetValueForStack(const StackTrieNode *Node);
 
 // When computing total time spent in a stack, we're adding the timings from
 // its callees and the timings from when it was a leaf.
@@ -669,9 +671,9 @@ public:
   }
 };
 
-std::string CreateErrorMessage(StackTrie::AccountRecordStatus Error,
-                               const XRayRecord &Record,
-                               const FuncIdConversionHelper &Converter) {
+static std::string CreateErrorMessage(StackTrie::AccountRecordStatus Error,
+                                      const XRayRecord &Record,
+                                      const FuncIdConversionHelper &Converter) {
   switch (Error) {
   case StackTrie::AccountRecordStatus::ENTRY_NOT_FOUND:
     return std::string(

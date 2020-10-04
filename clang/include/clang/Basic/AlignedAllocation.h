@@ -33,6 +33,8 @@ inline llvm::VersionTuple alignedAllocMinVersion(llvm::Triple::OSType OS) {
     return llvm::VersionTuple(11U);
   case llvm::Triple::WatchOS: // Earliest supporting version is 4.0.0.
     return llvm::VersionTuple(4U);
+  case llvm::Triple::ZOS:
+    return llvm::VersionTuple(); // All z/OS versions have no support.
   }
 
   llvm_unreachable("Unexpected OS");

@@ -20,6 +20,8 @@
 
 #include <stdint.h>
 
+#include "mlir-c/Support.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -33,7 +35,7 @@ extern "C" {
  * instead of typedefs enables some type safety as structs are not implicitly
  * convertible to each other.
  *
- * Instaces of these types may or may not own the underlying object (most often
+ * Instances of these types may or may not own the underlying object (most often
  * only point to an IR fragment without owning it). The ownership semantics is
  * defined by how an instance of the type was obtained.
  */
@@ -46,6 +48,7 @@ extern "C" {
   typedef struct name name
 
 DEFINE_C_API_STRUCT(MlirContext, void);
+DEFINE_C_API_STRUCT(MlirDialect, void);
 DEFINE_C_API_STRUCT(MlirOperation, void);
 DEFINE_C_API_STRUCT(MlirBlock, void);
 DEFINE_C_API_STRUCT(MlirRegion, void);
@@ -67,7 +70,7 @@ struct MlirNamedAttribute {
 };
 typedef struct MlirNamedAttribute MlirNamedAttribute;
 
-/** A callback for returning string referenes.
+/** A callback for returning string references.
  *
  * This function is called back by the functions that need to return a reference
  * to the portion of the string with the following arguments:
@@ -88,8 +91,50 @@ MlirContext mlirContextCreate();
 /** Checks if two contexts are equal. */
 int mlirContextEqual(MlirContext ctx1, MlirContext ctx2);
 
+/** Checks whether a context is null. */
+inline int mlirContextIsNull(MlirContext context) { return !context.ptr; }
+
 /** Takes an MLIR context owned by the caller and destroys it. */
 void mlirContextDestroy(MlirContext context);
+
+/** Sets whether unregistered dialects are allowed in this context. */
+void mlirContextSetAllowUnregisteredDialects(MlirContext context, int allow);
+
+/** Returns whether the context allows unregistered dialects. */
+int mlirContextGetAllowUnregisteredDialects(MlirContext context);
+
+/** Returns the number of dialects registered with the given context. A
+ * registered dialect will be loaded if needed by the parser. */
+intptr_t mlirContextGetNumRegisteredDialects(MlirContext context);
+
+/** Returns the number of dialects loaded by the context.
+ */
+intptr_t mlirContextGetNumLoadedDialects(MlirContext context);
+
+/** Gets the dialect instance owned by the given context using the dialect
+ * namespace to identify it, loads (i.e., constructs the instance of) the
+ * dialect if necessary. If the dialect is not registered with the context,
+ * returns null. Use mlirContextLoad<Name>Dialect to load an unregistered
+ * dialect. */
+MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
+                                        MlirStringRef name);
+
+/*============================================================================*/
+/* Dialect API.                                                               */
+/*============================================================================*/
+
+/** Returns the context that owns the dialect. */
+MlirContext mlirDialectGetContext(MlirDialect dialect);
+
+/** Checks if the dialect is null. */
+int mlirDialectIsNull(MlirDialect dialect);
+
+/** Checks if two dialects that belong to the same context are equal. Dialects
+ * from different contexts will not compare equal. */
+int mlirDialectEqual(MlirDialect dialect1, MlirDialect dialect2);
+
+/** Returns the namespace of the given dialect. */
+MlirStringRef mlirDialectGetNamespace(MlirDialect dialect);
 
 /*============================================================================*/
 /* Location API.                                                              */
@@ -102,6 +147,9 @@ MlirLocation mlirLocationFileLineColGet(MlirContext context,
 
 /** Creates a location with unknown position owned by the given context. */
 MlirLocation mlirLocationUnknownGet(MlirContext context);
+
+/** Gets the context that a location was created with. */
+MlirContext mlirLocationGetContext(MlirLocation location);
 
 /** Prints a location by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
@@ -118,6 +166,9 @@ MlirModule mlirModuleCreateEmpty(MlirLocation location);
 
 /** Parses a module from the string and transfers ownership to the caller. */
 MlirModule mlirModuleCreateParse(MlirContext context, const char *module);
+
+/** Gets the context that a module was created with. */
+MlirContext mlirModuleGetContext(MlirModule module);
 
 /** Checks whether a module is null. */
 inline int mlirModuleIsNull(MlirModule module) { return !module.ptr; }
@@ -220,7 +271,7 @@ intptr_t mlirOperationGetNumAttributes(MlirOperation op);
 /** Return `pos`-th attribute of the operation. */
 MlirNamedAttribute mlirOperationGetAttribute(MlirOperation op, intptr_t pos);
 
-/** Returns an attrbute attached to the operation given its name. */
+/** Returns an attribute attached to the operation given its name. */
 MlirAttribute mlirOperationGetAttributeByName(MlirOperation op,
                                               const char *name);
 
@@ -253,9 +304,22 @@ MlirBlock mlirRegionGetFirstBlock(MlirRegion region);
 void mlirRegionAppendOwnedBlock(MlirRegion region, MlirBlock block);
 
 /** Takes a block owned by the caller and inserts it at `pos` to the given
- * region. */
+ * region. This is an expensive operation that linearly scans the region, prefer
+ * insertAfter/Before instead. */
 void mlirRegionInsertOwnedBlock(MlirRegion region, intptr_t pos,
                                 MlirBlock block);
+
+/** Takes a block owned by the caller and inserts it after the (non-owned)
+ * reference block in the given region. The reference block must belong to the
+ * region. If the reference block is null, prepends the block to the region. */
+void mlirRegionInsertOwnedBlockAfter(MlirRegion region, MlirBlock reference,
+                                     MlirBlock block);
+
+/** Takes a block owned by the caller and inserts it before the (non-owned)
+ * reference block in the given region. The reference block must belong to the
+ * region. If the reference block is null, appends the block to the region. */
+void mlirRegionInsertOwnedBlockBefore(MlirRegion region, MlirBlock reference,
+                                      MlirBlock block);
 
 /*============================================================================*/
 /* Block API.                                                                 */
@@ -282,9 +346,24 @@ MlirOperation mlirBlockGetFirstOperation(MlirBlock block);
 void mlirBlockAppendOwnedOperation(MlirBlock block, MlirOperation operation);
 
 /** Takes an operation owned by the caller and inserts it as `pos` to the block.
- */
+   This is an expensive operation that scans the block linearly, prefer
+   insertBefore/After instead. */
 void mlirBlockInsertOwnedOperation(MlirBlock block, intptr_t pos,
                                    MlirOperation operation);
+
+/** Takes an operation owned by the caller and inserts it after the (non-owned)
+ * reference operation in the given block. If the reference is null, prepends
+ * the operation. Otherwise, the reference must belong to the block. */
+void mlirBlockInsertOwnedOperationAfter(MlirBlock block,
+                                        MlirOperation reference,
+                                        MlirOperation operation);
+
+/** Takes an operation owned by the caller and inserts it before the (non-owned)
+ * reference operation in the given block. If the reference is null, appends the
+ * operation. Otherwise, the reference must belong to the block. */
+void mlirBlockInsertOwnedOperationBefore(MlirBlock block,
+                                         MlirOperation reference,
+                                         MlirOperation operation);
 
 /** Returns the number of arguments of the block. */
 intptr_t mlirBlockGetNumArguments(MlirBlock block);
@@ -342,6 +421,9 @@ void mlirTypeDump(MlirType type);
 /** Parses an attribute. The attribute is owned by the context. */
 MlirAttribute mlirAttributeParseGet(MlirContext context, const char *attr);
 
+/** Gets the context that an attribute was created with. */
+MlirContext mlirAttributeGetContext(MlirAttribute attribute);
+
 /** Checks whether an attribute is null. */
 inline int mlirAttributeIsNull(MlirAttribute attr) { return !attr.ptr; }
 
@@ -354,7 +436,7 @@ int mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2);
 void mlirAttributePrint(MlirAttribute attr, MlirStringCallback callback,
                         void *userData);
 
-/** Prints the attrbute to the standard error stream. */
+/** Prints the attribute to the standard error stream. */
 void mlirAttributeDump(MlirAttribute attr);
 
 /** Associates an attribute with the name. Takes ownership of neither. */

@@ -6,11 +6,11 @@ RUN: mkdir %t-corpus
 RUN: echo -n "@SELECT" > %t-corpus/A
 RUN: echo -n "@FROM WHERE" > %t-corpus/B
 
-RUN: not %run %t-CrossOverUniformDistTest -keep_seed=1 -cross_over_uniform_dist=1 -seed=1 -runs=2000000 %t-corpus 2>&1 | FileCheck %s
+RUN: not %run %t-CrossOverUniformDistTest -keep_seed=1 -cross_over_uniform_dist=1 -seed=1 -runs=5000000 %t-corpus 2>&1 | FileCheck %s
 CHECK: BINGO
 
 RUN: rm -rf %t-corpus
 RUN: mkdir %t-corpus
 RUN: echo -n "@SELECT" > %t-corpus/A
 RUN: echo -n "@FROM WHERE" > %t-corpus/B
-RUN: %run %t-CrossOverUniformDistTest -keep_seed=1 -seed=1 -runs=2000000 %t-corpus 2>&1
+RUN: %run %t-CrossOverUniformDistTest -keep_seed=1 -seed=1 -runs=5000000 %t-corpus 2>&1

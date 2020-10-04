@@ -65,22 +65,21 @@ static SmallVector<Value, 4> permuteIvs(ArrayRef<Value> ivs,
 /// DimExpr or (DimExpr + DimExpr - SymbolExpr floordiv ConstExpr).
 /// It expects a non-inverted, concatenated map and last values in
 /// allViewSizes will be applied to the symbols in the map if it contains any.
-static SmallVector<SubViewOp::Range, 4> emitLoopRanges(OpBuilder &b,
-                                                       Location loc,
-                                                       AffineMap map,
-                                                       ValueRange viewSizes) {
+static SmallVector<Range, 4> emitLoopRanges(OpBuilder &b, Location loc,
+                                            AffineMap map,
+                                            ValueRange viewSizes) {
   unsigned numDims = map.getNumDims(), numRes = map.getNumResults();
   unsigned numSym = map.getNumSymbols();
   assert(viewSizes.size() == numRes + numSym &&
          "viewSizes must contain sizes of all views and values for symbols");
-  SmallVector<SubViewOp::Range, 4> res(numDims);
+  SmallVector<Range, 4> res(numDims);
   for (unsigned idx = 0; idx < numRes; ++idx) {
     auto result = map.getResult(idx);
     if (auto d = result.dyn_cast<AffineDimExpr>()) {
       if (res[d.getPosition()].offset)
         continue;
-      res[d.getPosition()] = SubViewOp::Range{
-          std_constant_index(0), viewSizes[idx], std_constant_index(1)};
+      res[d.getPosition()] =
+          Range{std_constant_index(0), viewSizes[idx], std_constant_index(1)};
     }
 
     // If the access pattern is of form (m, n)[s] -> (m + n - s floordiv 2),
@@ -124,7 +123,7 @@ static SmallVector<SubViewOp::Range, 4> emitLoopRanges(OpBuilder &b,
       // Construction of the lower bound (s floordiv 2).
       Value from = applyMapToValues(b, loc, fromMap, values).front();
       Value to = applyMapToValues(b, loc, toMap, values).front();
-      res[mPos] = SubViewOp::Range{from, to, std_constant_index(1)};
+      res[mPos] = Range{from, to, std_constant_index(1)};
     }
   }
   return res;
@@ -515,9 +514,12 @@ Optional<LinalgLoops> linalgOpToLoopsImpl(Operation *op, OpBuilder &builder) {
                                    map, getViewSizes(builder, linalgOp));
   SmallVector<Value, 4> allIvs;
   GenerateLoopNest<LoopTy>::doit(
-      loopRanges, linalgOp.iterator_types().getValue(), [&](ValueRange ivs) {
+      loopRanges, /*iterInitArgs*/ {}, linalgOp.iterator_types().getValue(),
+      [&](ValueRange ivs, ValueRange iterArgs) -> scf::ValueVector {
+        assert(iterArgs.empty() && "unexpected iterArgs");
         allIvs.append(ivs.begin(), ivs.end());
         emitScalarImplementation<IndexedValueTy>(allIvs, linalgOp);
+        return scf::ValueVector{};
       });
   // Number of loop ops might be different from the number of ivs since some
   // loops like affine.parallel and scf.parallel have multiple ivs.

@@ -40,10 +40,6 @@ public:
   /// frame index in a variable that normally holds a register. isStackSlot()
   /// returns true if Reg is in the range used for stack slots.
   ///
-  /// Note that isVirtualRegister() and isPhysicalRegister() cannot handle stack
-  /// slots, so if a variable may contains a stack slot, always check
-  /// isStackSlot() first.
-  ///
   static bool isStackSlot(unsigned Reg) {
     return MCRegister::isStackSlot(Reg);
   }
@@ -69,8 +65,7 @@ public:
   /// Return true if the specified register number is in
   /// the virtual register namespace.
   static bool isVirtualRegister(unsigned Reg) {
-    assert(!isStackSlot(Reg) && "Not a register! Check isStackSlot() first.");
-    return Reg & MCRegister::VirtualRegFlag;
+    return Reg & MCRegister::VirtualRegFlag && !isStackSlot(Reg);
   }
 
   /// Convert a virtual register number to a 0-based index.
@@ -112,6 +107,15 @@ public:
   unsigned id() const { return Reg; }
 
   operator MCRegister() const {
+    return MCRegister(Reg);
+  }
+
+  /// Utility to check-convert this value to a MCRegister. The caller is
+  /// expected to have already validated that this Register is, indeed,
+  /// physical.
+  MCRegister asMCReg() const {
+    assert(Reg == MCRegister::NoRegister ||
+           MCRegister::isPhysicalRegister(Reg));
     return MCRegister(Reg);
   }
 

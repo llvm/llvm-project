@@ -19,11 +19,13 @@ func @test_index_cast_tensor_reverse(%arg0 : tensor<i64>) -> tensor<index> {
   return %0 : tensor<index>
 }
 
+// CHECK-LABEL: @assert
 func @assert(%arg : i1) {
   assert %arg, "Some message in case this assertion fails."
   return
 }
 
+// CHECK-LABEL: @dynamic_tensor_from_elements
 func @dynamic_tensor_from_elements(%m : index, %n : index)
     -> tensor<?x3x?xf32> {
   %tnsr = dynamic_tensor_from_elements %m, %n {
@@ -34,3 +36,14 @@ func @dynamic_tensor_from_elements(%m : index, %n : index)
   return %tnsr : tensor<?x3x?xf32>
 }
 
+// CHECK-LABEL: @atan
+func @atan(%arg : f32) -> f32 {
+  %result = atan %arg : f32
+  return %result : f32
+}
+
+// CHECK-LABEL: @atan2
+func @atan2(%arg0 : f32, %arg1 : f32) -> f32 {
+  %result = atan2 %arg0, %arg1 : f32
+  return %result : f32
+}

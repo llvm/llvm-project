@@ -306,6 +306,14 @@ Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
     return makeLoc(getRegionManager().getStringRegion(SL));
   }
 
+  case Stmt::PredefinedExprClass: {
+    const auto *PE = cast<PredefinedExpr>(E);
+    assert(PE->getFunctionName() &&
+           "Since we analyze only instantiated functions, PredefinedExpr "
+           "should have a function name.");
+    return makeLoc(getRegionManager().getStringRegion(PE->getFunctionName()));
+  }
+
   // Fast-path some expressions to avoid the overhead of going through the AST's
   // constant evaluator
   case Stmt::CharacterLiteralClass: {

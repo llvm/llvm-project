@@ -27,8 +27,11 @@ struct LogicalResult;
 class Operation;
 class Region;
 
+} // namespace mlir
+
 #include "mlir/Dialect/GPU/ParallelLoopMapperAttr.h.inc"
 
+namespace mlir {
 namespace scf {
 class ParallelOp;
 }

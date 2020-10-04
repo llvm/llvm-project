@@ -77,13 +77,16 @@ void UseNoexceptCheck::check(const MatchFinder::MatchResult &Result) {
                   .getExceptionSpecRange();
   }
 
+  assert(FnTy && "FunctionProtoType is null.");
+  if (isUnresolvedExceptionSpec(FnTy->getExceptionSpecType()))
+    return;
+
   assert(Range.isValid() && "Exception Source Range is invalid.");
 
   CharSourceRange CRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(Range), *Result.SourceManager,
       Result.Context->getLangOpts());
 
-  assert(FnTy && "FunctionProtoType is null.");
   bool IsNoThrow = FnTy->isNothrow();
   StringRef ReplacementStr =
       IsNoThrow

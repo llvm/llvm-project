@@ -105,14 +105,18 @@ static bool setOnlyReadsMemory(Function &F, unsigned ArgNo) {
   return true;
 }
 
-static bool setRetAndArgsNoUndef(Function &F) {
-  bool Changed = false;
+static bool setRetNoUndef(Function &F) {
   if (!F.getReturnType()->isVoidTy() &&
       !F.hasAttribute(AttributeList::ReturnIndex, Attribute::NoUndef)) {
     F.addAttribute(AttributeList::ReturnIndex, Attribute::NoUndef);
     ++NumNoUndef;
-    Changed = true;
+    return true;
   }
+  return false;
+}
+
+static bool setArgsNoUndef(Function &F) {
+  bool Changed = false;
   for (unsigned ArgNo = 0; ArgNo < F.arg_size(); ++ArgNo) {
     if (!F.hasParamAttribute(ArgNo, Attribute::NoUndef)) {
       F.addParamAttr(ArgNo, Attribute::NoUndef);
@@ -121,6 +125,10 @@ static bool setRetAndArgsNoUndef(Function &F) {
     }
   }
   return Changed;
+}
+
+static bool setRetAndArgsNoUndef(Function &F) {
+  return setRetNoUndef(F) | setArgsNoUndef(F);
 }
 
 static bool setRetNonNull(Function &F) {
@@ -203,9 +211,6 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     return Changed;
   case LibFunc_strcpy:
   case LibFunc_strncpy:
-    Changed |= setDoesNotAlias(F, 0);
-    Changed |= setDoesNotAlias(F, 1);
-    LLVM_FALLTHROUGH;
   case LibFunc_strcat:
   case LibFunc_strncat:
     Changed |= setReturnedArg(F, 0);
@@ -215,6 +220,8 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
+    Changed |= setDoesNotAlias(F, 0);
+    Changed |= setDoesNotAlias(F, 1);
     return Changed;
   case LibFunc_strxfrm:
     Changed |= setDoesNotThrow(F);
@@ -319,6 +326,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F, 0);
     return Changed;
   case LibFunc_malloc:
+    Changed |= setRetNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
     return Changed;
@@ -384,9 +392,13 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
   case LibFunc_realloc:
+    Changed |= setRetNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
     Changed |= setDoesNotCapture(F, 0);
+    return Changed;
+  case LibFunc_reallocf:
+    Changed |= setRetNoUndef(F);
     return Changed;
   case LibFunc_read:
     // May throw; "read" is a valid pthread cancellation point.
@@ -428,6 +440,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
   case LibFunc_aligned_alloc:
+    Changed |= setRetNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
     return Changed;
@@ -449,6 +462,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
   case LibFunc_calloc:
+    Changed |= setRetNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
     return Changed;
@@ -502,6 +516,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
   case LibFunc_free:
+    Changed |= setArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
@@ -724,6 +739,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
   case LibFunc_valloc:
+    Changed |= setRetNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
     return Changed;
@@ -892,6 +908,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_msvc_new_array_int: // new[](unsigned int)
   case LibFunc_msvc_new_array_longlong: // new[](unsigned long long)
     // Operator new always returns a nonnull noalias pointer
+    Changed |= setRetNoUndef(F);
     Changed |= setRetNonNull(F);
     Changed |= setRetDoesNotAlias(F);
     return Changed;

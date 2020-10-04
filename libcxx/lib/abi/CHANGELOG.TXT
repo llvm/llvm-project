@@ -13,6 +13,20 @@ Afterwards the ABI list should be updated to include the new changes.
 New entries should be added directly below the "Version" header.
 
 ------------
+Version 12.0
+------------
+
+* 4f13b9992971 - [libc++] Simplify how we re-export symbols from libc++abi
+
+  We re-export some symbols that were exported from libc++abi but not from
+  libc++. Exporting new symbols is not an ABI break.
+
+  x86_64-apple-apple-darwin
+  -------------------------
+  Symbol added: ___cxa_allocate_dependent_exception
+  Symbol added: ___cxa_free_dependent_exception
+
+------------
 Version 10.0
 ------------
 

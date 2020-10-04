@@ -99,6 +99,7 @@ private:
   unsigned MovTermOpc;
   unsigned Andn2TermOpc;
   unsigned XorTermrOpc;
+  unsigned OrTermrOpc;
   unsigned OrSaveExecOpc;
   unsigned Exec;
 
@@ -106,7 +107,8 @@ private:
   void emitElse(MachineInstr &MI);
   void emitIfBreak(MachineInstr &MI);
   void emitLoop(MachineInstr &MI);
-  void emitEndCf(MachineInstr &MI);
+
+  MachineBasicBlock *emitEndCf(MachineInstr &MI);
 
   void findMaskOperands(MachineInstr &MI, unsigned OpNo,
                         SmallVectorImpl<MachineOperand> &Src) const;
@@ -115,7 +117,7 @@ private:
 
   bool removeMBBifRedundant(MachineBasicBlock &MBB);
 
-  void process(MachineInstr &MI);
+  MachineBasicBlock *process(MachineInstr &MI);
 
   // Skip to the next instruction, ignoring debug instructions, and trivial
   // block boundaries (blocks that have one (typically fallthrough) successor,
@@ -489,19 +491,37 @@ SILowerControlFlow::skipIgnoreExecInstsTrivialSucc(
   } while (true);
 }
 
-void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
+MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
-  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  Register CFMask = MI.getOperand(0).getReg();
-  MachineInstr *Def = MRI.getUniqueVRegDef(CFMask);
   const DebugLoc &DL = MI.getDebugLoc();
 
-  MachineBasicBlock::iterator InsPt =
-      Def && Def->getParent() == &MBB ? std::next(MachineBasicBlock::iterator(Def))
-                               : MBB.begin();
-  MachineInstr *NewMI = BuildMI(MBB, InsPt, DL, TII->get(OrOpc), Exec)
-                            .addReg(Exec)
-                            .add(MI.getOperand(0));
+  MachineBasicBlock::iterator InsPt = MBB.begin();
+
+  // If we have instructions that aren't prolog instructions, split the block
+  // and emit a terminator instruction. This ensures correct spill placement.
+  // FIXME: We should unconditionally split the block here.
+  bool NeedBlockSplit = false;
+  Register DataReg = MI.getOperand(0).getReg();
+  for (MachineBasicBlock::iterator I = InsPt, E = MI.getIterator();
+       I != E; ++I) {
+    if (I->modifiesRegister(DataReg, TRI)) {
+      NeedBlockSplit = true;
+      break;
+    }
+  }
+
+  unsigned Opcode = OrOpc;
+  MachineBasicBlock *SplitBB = &MBB;
+  if (NeedBlockSplit) {
+    SplitBB = MBB.splitAt(MI, /*UpdateLiveIns*/true, LIS);
+    Opcode = OrTermrOpc;
+    InsPt = MI;
+  }
+
+  MachineInstr *NewMI =
+    BuildMI(MBB, InsPt, DL, TII->get(Opcode), Exec)
+    .addReg(Exec)
+    .add(MI.getOperand(0));
 
   LoweredEndCf.insert(NewMI);
 
@@ -522,6 +542,7 @@ void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
 
   if (LIS)
     LIS->handleMove(*NewMI);
+  return SplitBB;
 }
 
 // Returns replace operands for a logical operation, either single result
@@ -608,10 +629,12 @@ void SILowerControlFlow::optimizeEndCf() {
   }
 }
 
-void SILowerControlFlow::process(MachineInstr &MI) {
+MachineBasicBlock *SILowerControlFlow::process(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineBasicBlock::iterator I(MI);
   MachineInstr *Prev = (I != MBB.begin()) ? &*(std::prev(I)) : nullptr;
+
+  MachineBasicBlock *SplitBB = &MBB;
 
   switch (MI.getOpcode()) {
   case AMDGPU::SI_IF:
@@ -631,7 +654,7 @@ void SILowerControlFlow::process(MachineInstr &MI) {
     break;
 
   case AMDGPU::SI_END_CF:
-    emitEndCf(MI);
+    SplitBB = emitEndCf(MI);
     break;
 
   default:
@@ -656,6 +679,8 @@ void SILowerControlFlow::process(MachineInstr &MI) {
       break;
     }
   }
+
+  return SplitBB;
 }
 
 bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
@@ -718,6 +743,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
     MovTermOpc = AMDGPU::S_MOV_B32_term;
     Andn2TermOpc = AMDGPU::S_ANDN2_B32_term;
     XorTermrOpc = AMDGPU::S_XOR_B32_term;
+    OrTermrOpc = AMDGPU::S_OR_B32_term;
     OrSaveExecOpc = AMDGPU::S_OR_SAVEEXEC_B32;
     Exec = AMDGPU::EXEC_LO;
   } else {
@@ -727,6 +753,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
     MovTermOpc = AMDGPU::S_MOV_B64_term;
     Andn2TermOpc = AMDGPU::S_ANDN2_B64_term;
     XorTermrOpc = AMDGPU::S_XOR_B64_term;
+    OrTermrOpc = AMDGPU::S_OR_B64_term;
     OrSaveExecOpc = AMDGPU::S_OR_SAVEEXEC_B64;
     Exec = AMDGPU::EXEC;
   }
@@ -734,19 +761,21 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   SmallVector<MachineInstr *, 32> Worklist;
 
   MachineFunction::iterator NextBB;
-  for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
-       BI != BE; BI = NextBB) {
+  for (MachineFunction::iterator BI = MF.begin();
+       BI != MF.end(); BI = NextBB) {
     NextBB = std::next(BI);
-    MachineBasicBlock &MBB = *BI;
+    MachineBasicBlock *MBB = &*BI;
 
-    MachineBasicBlock::iterator I, Next;
-    for (I = MBB.begin(); I != MBB.end(); I = Next) {
+    MachineBasicBlock::iterator I, E, Next;
+    E = MBB->end();
+    for (I = MBB->begin(); I != E; I = Next) {
       Next = std::next(I);
       MachineInstr &MI = *I;
+      MachineBasicBlock *SplitMBB = MBB;
 
       switch (MI.getOpcode()) {
       case AMDGPU::SI_IF:
-        process(MI);
+        SplitMBB = process(MI);
         break;
 
       case AMDGPU::SI_ELSE:
@@ -757,11 +786,16 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
         if (InsertKillCleanups)
           Worklist.push_back(&MI);
         else
-          process(MI);
+          SplitMBB = process(MI);
         break;
 
       default:
         break;
+      }
+
+      if (SplitMBB != MBB) {
+        MBB = Next->getParent();
+        E = MBB->end();
       }
     }
   }

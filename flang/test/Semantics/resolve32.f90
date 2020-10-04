@@ -57,7 +57,7 @@ module m
   contains
     procedure, nopass :: b => s
     final :: f
-    !ERROR: Type parameter, component, or procedure binding 'i' already defined in this type
+    !ERROR: FINAL subroutine 'i' of derived type 't2' must be a module procedure
     final :: i
   end type
   type t3

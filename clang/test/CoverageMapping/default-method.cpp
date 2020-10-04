@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++17 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name default-method.cpp -w %s | FileCheck %s -implicit-check-not="->"
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -triple %itanium_abi_triple -std=c++17 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name default-method.cpp -w %s | FileCheck %s -implicit-check-not="->"
 
 namespace PR39822 {
   struct unique_ptr {

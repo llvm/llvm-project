@@ -27,9 +27,5 @@ void LLVM::LLVMAVX512Dialect::initialize() {
       >();
 }
 
-namespace mlir {
-namespace LLVM {
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMAVX512.cpp.inc"
-} // namespace LLVM
-} // namespace mlir

@@ -28,7 +28,7 @@ class DwarfStringPool {
 
   StringMap<EntryTy, BumpPtrAllocator &> Pool;
   StringRef Prefix;
-  unsigned NumBytes = 0;
+  uint64_t NumBytes = 0;
   unsigned NumIndexedStrings = 0;
   bool ShouldCreateSymbols;
 

@@ -16,15 +16,9 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 
-namespace mlir {
-namespace LLVM {
-
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMAVX512.h.inc"
 
 #include "mlir/Dialect/LLVMIR/LLVMAVX512Dialect.h.inc"
-
-} // namespace LLVM
-} // namespace mlir
 
 #endif // MLIR_DIALECT_LLVMIR_LLVMAVX512DIALECT_H_

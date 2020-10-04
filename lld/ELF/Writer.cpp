@@ -131,9 +131,14 @@ StringRef elf::getOutputSectionName(const InputSectionBase *s) {
   // SampleFDO is used, if a function doesn't have sample, it could be very
   // cold or it could be a new function never being sampled. Those functions
   // will be kept in the ".text.unknown" section.
+  // ".text.split." holds symbols which are split out from functions in other
+  // input sections. For example, with -fsplit-machine-functions, placing the
+  // cold parts in .text.split instead of .text.unlikely mitigates against poor
+  // profile inaccuracy. Techniques such as hugepage remapping can make
+  // conservative decisions at the section granularity.
   if (config->zKeepTextSectionPrefix)
     for (StringRef v : {".text.hot.", ".text.unknown.", ".text.unlikely.",
-                        ".text.startup.", ".text.exit."})
+                        ".text.startup.", ".text.exit.", ".text.split."})
       if (isSectionPrefix(v, s->name))
         return v.drop_back();
 
@@ -1701,8 +1706,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     bool changed = target->needsThunks && tc.createThunks(outputSections);
 
     // With Thunk Size much smaller than branch range we expect to
-    // converge quickly; if we get to 10 something has gone wrong.
-    if (changed && tc.pass >= 10) {
+    // converge quickly; if we get to 15 something has gone wrong.
+    if (changed && tc.pass >= 15) {
       error("thunk creation not converged");
       break;
     }

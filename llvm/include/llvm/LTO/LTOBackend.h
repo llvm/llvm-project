@@ -44,10 +44,27 @@ Error thinBackend(const Config &C, unsigned Task, AddStreamFn AddStream,
                   Module &M, const ModuleSummaryIndex &CombinedIndex,
                   const FunctionImporter::ImportMapTy &ImportList,
                   const GVSummaryMapTy &DefinedGlobals,
-                  MapVector<StringRef, BitcodeModule> &ModuleMap);
+                  MapVector<StringRef, BitcodeModule> &ModuleMap,
+                  const std::vector<uint8_t> *CmdArgs = nullptr);
 
 Error finalizeOptimizationRemarks(
     std::unique_ptr<ToolOutputFile> DiagOutputFile);
+
+/// Returns the BitcodeModule that is ThinLTO.
+BitcodeModule *findThinLTOModule(MutableArrayRef<BitcodeModule> BMs);
+
+/// Variant of the above.
+Expected<BitcodeModule> findThinLTOModule(MemoryBufferRef MBRef);
+
+/// Distributed ThinLTO: load the referenced modules, keeping their buffers
+/// alive in the provided OwnedImportLifetimeManager. Returns false if the
+/// operation failed.
+bool loadReferencedModules(
+    const Module &M, const ModuleSummaryIndex &CombinedIndex,
+    FunctionImporter::ImportMapTy &ImportList,
+    MapVector<llvm::StringRef, llvm::BitcodeModule> &ModuleMap,
+    std::vector<std::unique_ptr<llvm::MemoryBuffer>>
+        &OwnedImportsLifetimeManager);
 }
 }
 

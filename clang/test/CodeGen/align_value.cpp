@@ -29,10 +29,7 @@ struct ad_struct {
 // CHECK-NEXT:    [[TMP0:%.*]] = load %struct.ad_struct*, %struct.ad_struct** [[X_ADDR]], align 8
 // CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_AD_STRUCT:%.*]], %struct.ad_struct* [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load double*, double** [[A]], align 8
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint double* [[TMP1]] to i64
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 63
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(double* [[TMP1]], i64 64) ]
 // CHECK-NEXT:    ret double* [[TMP1]]
 //
 double *foo(ad_struct& x) {
@@ -48,10 +45,7 @@ double *foo(ad_struct& x) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load %struct.ad_struct*, %struct.ad_struct** [[X_ADDR]], align 8
 // CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_AD_STRUCT:%.*]], %struct.ad_struct* [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load double*, double** [[A]], align 8
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint double* [[TMP1]] to i64
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 63
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(double* [[TMP1]], i64 64) ]
 // CHECK-NEXT:    ret double* [[TMP1]]
 //
 double *goo(ad_struct *x) {
@@ -66,10 +60,7 @@ double *goo(ad_struct *x) {
 // CHECK-NEXT:    store double** [[X]], double*** [[X_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load double**, double*** [[X_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load double*, double** [[TMP0]], align 8
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint double* [[TMP1]] to i64
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 63
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(double* [[TMP1]], i64 64) ]
 // CHECK-NEXT:    ret double* [[TMP1]]
 //
 double *bar(aligned_double *x) {
@@ -84,10 +75,7 @@ double *bar(aligned_double *x) {
 // CHECK-NEXT:    store double** [[X]], double*** [[X_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load double**, double*** [[X_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load double*, double** [[TMP0]], align 8
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint double* [[TMP1]] to i64
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 63
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(double* [[TMP1]], i64 64) ]
 // CHECK-NEXT:    ret double* [[TMP1]]
 //
 double *car(aligned_double &x) {
@@ -103,10 +91,7 @@ double *car(aligned_double &x) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load double**, double*** [[X_ADDR]], align 8
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double*, double** [[TMP0]], i64 5
 // CHECK-NEXT:    [[TMP1:%.*]] = load double*, double** [[ARRAYIDX]], align 8
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint double* [[TMP1]] to i64
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 63
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(double* [[TMP1]], i64 64) ]
 // CHECK-NEXT:    ret double* [[TMP1]]
 //
 double *dar(aligned_double *x) {
@@ -118,10 +103,7 @@ aligned_double eep();
 // CHECK-LABEL: define {{[^@]+}}@_Z3retv() #0
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CALL:%.*]] = call double* @_Z3eepv()
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint double* [[CALL]] to i64
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 63
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(double* [[CALL]], i64 64) ]
 // CHECK-NEXT:    ret double* [[CALL]]
 //
 double *ret() {

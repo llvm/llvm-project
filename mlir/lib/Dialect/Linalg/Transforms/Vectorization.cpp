@@ -371,7 +371,6 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
 template <class ConvOp, int N>
 LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
     ConvOp op, PatternRewriter &rewriter) const {
-  unsigned dimSize = 3;
   Location loc = op.getLoc();
   MLIRContext *context = op.getContext();
   edsc::ScopedContext scope(rewriter, loc);
@@ -386,16 +385,19 @@ LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
     return failure();
 
   SmallVector<AffineExpr, 4> mapping;
-  // Fail to apply when the size of not vectorized dimension is not 1 or
-  // when the size of vectorized dimension is not dimSize.
+  SmallVector<int64_t, 4> vectorDims;
+  // Fail to apply when the size of not vectorized dimension is not 1.
   for (unsigned i = 0; i < N; i++) {
     if (!mask[i] && (inShape[i] != 1 || kShape[i] != 1))
       return failure();
-    if (mask[i] && (inShape[i] != dimSize || kShape[i] != dimSize))
+
+    if (mask[i] && inShape[i] != kShape[i])
       return failure();
 
-    if (mask[i])
+    if (mask[i]) {
       mapping.push_back(getAffineDimExpr(i, context));
+      vectorDims.push_back(inShape[i]);
+    }
   }
 
   Value input = op.getInput(0);
@@ -408,8 +410,7 @@ LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
 
   auto map = AffineMap::get(rank, 0, mapping, context);
   SmallVector<Value, 4> zeros(rank, std_constant_index(0));
-  auto vecType =
-      VectorType::get(SmallVector<int64_t, 4>(numDims, dimSize), elemType);
+  auto vecType = VectorType::get(vectorDims, elemType);
 
   auto inputVec = vector_transfer_read(vecType, input, zeros, map);
   auto kernelVec = vector_transfer_read(vecType, kernel, zeros, map);
@@ -433,32 +434,71 @@ LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
   return success();
 }
 
+using ConvOpConst = ConvOpVectorization<ConvWOp, 1>;
+
+/// Inserts tiling, promotion and vectorization pattern for ConvOp
+/// conversion into corresponding pattern lists.
+template <typename ConvOp, unsigned N>
+static void
+populateVectorizationPatterns(OwningRewritePatternList &tilingPatterns,
+                              OwningRewritePatternList &promotionPatterns,
+                              OwningRewritePatternList &vectorizationPatterns,
+                              ArrayRef<int64_t> tileSizes,
+                              MLIRContext *context) {
+  if (tileSizes.size() < N)
+    return;
+
+  constexpr static StringRef kTiledMarker = "TILED";
+  constexpr static StringRef kPromotedMarker = "PROMOTED";
+  tilingPatterns.insert<LinalgTilingPattern<ConvOp>>(
+      context, LinalgTilingOptions().setTileSizes(tileSizes),
+      LinalgMarker({}, Identifier::get(kTiledMarker, context)));
+
+  promotionPatterns.insert<LinalgPromotionPattern<ConvOp>>(
+      context, LinalgPromotionOptions().setUseFullTileBuffersByDefault(true),
+      LinalgMarker(Identifier::get(kTiledMarker, context),
+                   Identifier::get(kPromotedMarker, context)));
+
+  SmallVector<bool, 4> mask(N);
+  int offset = tileSizes.size() - N;
+  std::transform(tileSizes.begin() + offset, tileSizes.end(), mask.begin(),
+                 [](int64_t i) -> bool { return i > 1; });
+
+  vectorizationPatterns.insert<ConvOpVectorization<ConvOp, N>>(context, mask);
+}
+
 void mlir::linalg::populateConvVectorizationPatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns) {
-  patterns.insert<ConvOpVectorization<linalg::ConvWOp, 1>>(
-      context, SmallVector<bool, 4>{true});
+    MLIRContext *context, SmallVectorImpl<OwningRewritePatternList> &patterns,
+    ArrayRef<int64_t> tileSizes) {
+  OwningRewritePatternList tiling, promotion, vectorization;
+  populateVectorizationPatterns<ConvWOp, 1>(tiling, promotion, vectorization,
+                                            tileSizes, context);
 
-  patterns.insert<ConvOpVectorization<linalg::ConvNWCOp, 3>>(
-      context, SmallVector<bool, 4>{false, true, true});
+  populateVectorizationPatterns<ConvNWCOp, 3>(tiling, promotion, vectorization,
+                                              tileSizes, context);
 
-  patterns.insert<ConvOpVectorization<linalg::ConvNCWOp, 3>>(
-      context, SmallVector<bool, 4>{false, true, true});
+  populateVectorizationPatterns<ConvNCWOp, 3>(tiling, promotion, vectorization,
+                                              tileSizes, context);
 
-  patterns.insert<ConvOpVectorization<linalg::ConvHWOp, 2>>(
-      context, SmallVector<bool, 4>{true, true});
+  populateVectorizationPatterns<ConvHWOp, 2>(tiling, promotion, vectorization,
+                                             tileSizes, context);
 
-  patterns.insert<ConvOpVectorization<linalg::ConvNHWCOp, 4>>(
-      context, SmallVector<bool, 4>{false, true, true, true});
+  populateVectorizationPatterns<ConvNHWCOp, 4>(tiling, promotion, vectorization,
+                                               tileSizes, context);
 
-  patterns.insert<ConvOpVectorization<linalg::ConvNCHWOp, 4>>(
-      context, SmallVector<bool, 4>{false, true, true, true});
+  populateVectorizationPatterns<ConvNCHWOp, 4>(tiling, promotion, vectorization,
+                                               tileSizes, context);
 
-  patterns.insert<ConvOpVectorization<linalg::ConvDHWOp, 3>>(
-      context, SmallVector<bool, 4>{true, true, true});
+  populateVectorizationPatterns<ConvDHWOp, 3>(tiling, promotion, vectorization,
+                                              tileSizes, context);
 
-  patterns.insert<ConvOpVectorization<linalg::ConvNDHWCOp, 5>>(
-      context, SmallVector<bool, 4>{false, true, true, true, true});
+  populateVectorizationPatterns<ConvNDHWCOp, 5>(
+      tiling, promotion, vectorization, tileSizes, context);
 
-  patterns.insert<ConvOpVectorization<linalg::ConvNCDHWOp, 5>>(
-      context, SmallVector<bool, 4>{false, true, true, true, true});
+  populateVectorizationPatterns<ConvNCDHWOp, 5>(
+      tiling, promotion, vectorization, tileSizes, context);
+
+  patterns.push_back(std::move(tiling));
+  patterns.push_back(std::move(promotion));
+  patterns.push_back(std::move(vectorization));
 }

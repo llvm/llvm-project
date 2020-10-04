@@ -451,10 +451,8 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   }
   // Check Basic Block Section Flags.
   if (MF.getTarget().getBBSectionsType() == BasicBlockSection::Labels) {
-    MF.createBBLabels();
     MF.setBBSectionsType(BasicBlockSection::Labels);
   } else if (MF.hasBBSections()) {
-    MF.createBBLabels();
     MF.assignBeginEndSections();
   }
   PFS.SM = &SM;

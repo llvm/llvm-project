@@ -8,12 +8,12 @@
 ; have the instruction available.
 ; FIXME: Should also really make sure the v2f16 version fails.
 
-; FAIL: LLVM ERROR: Cannot select: {{.+}}: ch = BUFFER_ATOMIC_FADD
+; FAIL: LLVM ERROR: Cannot select: {{.+}}: f32,ch = BUFFER_ATOMIC_FADD
 define amdgpu_cs void @atomic_fadd(<4 x i32> inreg %arg0) {
-  call void @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %arg0, i32 0, i32 112, i1 false)
+  %ret = call float @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %arg0, i32 0, i32 112, i1 false)
   ret void
 }
 
-declare void @llvm.amdgcn.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i1 immarg) #0
+declare float @llvm.amdgcn.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i1 immarg) #0
 
 attributes #0 = { nounwind }

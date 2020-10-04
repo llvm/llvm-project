@@ -78,7 +78,7 @@ newDriver(DiagnosticsEngine *Diagnostics, const char *BinaryName,
           IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   driver::Driver *CompilerDriver =
       new driver::Driver(BinaryName, llvm::sys::getDefaultTargetTriple(),
-                         *Diagnostics, std::move(VFS));
+                         *Diagnostics, "clang LLVM compiler", std::move(VFS));
   CompilerDriver->setTitle("clang_based_tool");
   return CompilerDriver;
 }

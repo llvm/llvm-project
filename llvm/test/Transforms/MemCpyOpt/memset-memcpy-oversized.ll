@@ -130,7 +130,7 @@ define void @test_write_between(i8* %result) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
 ; CHECK-NEXT:    [[B:%.*]] = bitcast %T* [[A]] to i8*
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[B]], i8 0, i64 12, i1 false)
-; CHECK-NEXT:    store i8 -1, i8* [[B]]
+; CHECK-NEXT:    store i8 -1, i8* [[B]], align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[RESULT:%.*]], i8* align 8 [[B]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -148,7 +148,7 @@ define void @test_write_before_memset_in_memset_region(i8* %result) {
 ; CHECK-LABEL: @test_write_before_memset_in_memset_region(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
 ; CHECK-NEXT:    [[B:%.*]] = bitcast %T* [[A]] to i8*
-; CHECK-NEXT:    store i8 -1, i8* [[B]]
+; CHECK-NEXT:    store i8 -1, i8* [[B]], align 1
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[B]], i8 0, i64 8, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[RESULT:%.*]], i8* align 8 [[B]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
@@ -168,7 +168,7 @@ define void @test_write_before_memset_in_memcpy_region(i8* %result) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
 ; CHECK-NEXT:    [[B:%.*]] = bitcast %T* [[A]] to i8*
 ; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[T]], %T* [[A]], i64 0, i32 2
-; CHECK-NEXT:    store i32 -1, i32* [[C]]
+; CHECK-NEXT:    store i32 -1, i32* [[C]], align 4
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[B]], i8 0, i64 8, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[RESULT:%.*]], i8* align 8 [[B]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
@@ -189,7 +189,7 @@ define void @test_write_before_memset_in_both_regions(i8* %result) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
 ; CHECK-NEXT:    [[B:%.*]] = bitcast %T* [[A]] to i8*
 ; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[T]], %T* [[A]], i64 0, i32 1
-; CHECK-NEXT:    store i32 -1, i32* [[C]]
+; CHECK-NEXT:    store i32 -1, i32* [[C]], align 4
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[B]], i8 0, i64 10, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[RESULT:%.*]], i8* align 8 [[B]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void

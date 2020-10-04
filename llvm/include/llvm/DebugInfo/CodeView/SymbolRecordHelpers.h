@@ -9,7 +9,8 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_SYMBOLRECORDHELPERS_H
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLRECORDHELPERS_H
 
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 
 namespace llvm {
 namespace codeview {

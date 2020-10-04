@@ -899,9 +899,5 @@ static void print(OpAsmPrinter &p, scf::YieldOp op) {
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
-namespace mlir {
-namespace scf {
 #define GET_OP_CLASSES
 #include "mlir/Dialect/SCF/SCFOps.cpp.inc"
-} // namespace scf
-} // namespace mlir

@@ -174,6 +174,12 @@ endif()
 option(LLD_BUILD_TOOLS
   "Build the lld tools. If OFF, just generate build targets." ON)
 
+option(LLD_DEFAULT_LD_LLD_IS_MINGW
+    "Use MinGW as the default backend for ld.lld. If OFF, ELF will be used." OFF)
+if (LLD_DEFAULT_LD_LLD_IS_MINGW)
+  add_definitions("-DLLD_DEFAULT_LD_LLD_IS_MINGW=1")
+endif()
+
 if (MSVC)
   add_definitions(-wd4530) # Suppress 'warning C4530: C++ exception handler used, but unwind semantics are not enabled.'
   add_definitions(-wd4062) # Suppress 'warning C4062: enumerator X in switch of enum Y is not handled' from system header.

@@ -38,7 +38,7 @@ if(MLIR_ROCM_RUNNER_ENABLED)
   add_definitions(-D__ROCM_PATH__="${ROCM_PATH}")
 
   # Locate HIP runtime library.
-  find_library(ROCM_RUNTIME_LIBRARY hip_hcc
+  find_library(ROCM_RUNTIME_LIBRARY amdhip64
                PATHS "${HIP_PATH}/lib")
   if (NOT ROCM_RUNTIME_LIBRARY)
     message(SEND_ERROR "Could not locate ROCm HIP runtime library")
@@ -104,7 +104,7 @@ if(MLIR_ROCM_RUNNER_ENABLED)
     LIST(APPEND targets_to_link "LLVM${t}")
   ENDFOREACH(t)
 
-  add_llvm_tool(mlir-rocm-runner
+  add_mlir_tool(mlir-rocm-runner
     mlir-rocm-runner.cpp
 
     DEPENDS

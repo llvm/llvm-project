@@ -141,8 +141,8 @@ entry:
 ; HSA-ELT4-DAG: buffer_store_dword {{v[0-9]+}}, off, s[0:3], 0 offset:24{{$}}
 ; HSA-ELT4-DAG: buffer_store_dword {{v[0-9]+}}, off, s[0:3], 0 offset:28{{$}}
 
-; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen{{$}}
 ; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen offset:4{{$}}
+; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen{{$}}
 define amdgpu_kernel void @private_elt_size_i64(i64 addrspace(1)* %out, i32 addrspace(1)* %index.array) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -177,8 +177,8 @@ entry:
 ; HSA-ELT4-DAG: buffer_store_dword {{v[0-9]+}}, off, s[0:3], 0 offset:24{{$}}
 ; HSA-ELT4-DAG: buffer_store_dword {{v[0-9]+}}, off, s[0:3], 0 offset:28{{$}}
 
-; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen{{$}}
 ; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen offset:4{{$}}
+; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen{{$}}
 define amdgpu_kernel void @private_elt_size_f64(double addrspace(1)* %out, i32 addrspace(1)* %index.array) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -224,10 +224,10 @@ entry:
 ; HSA-ELT4-DAG: buffer_store_dword {{v[0-9]+}}, off, s[0:3], 0 offset:40{{$}}
 ; HSA-ELT4-DAG: buffer_store_dword {{v[0-9]+}}, off, s[0:3], 0 offset:44{{$}}
 
-; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen{{$}}
-; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen offset:4{{$}}
-; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen offset:8{{$}}
 ; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen offset:12{{$}}
+; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen offset:8{{$}}
+; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen offset:4{{$}}
+; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen{{$}}
 define amdgpu_kernel void @private_elt_size_v2i64(<2 x i64> addrspace(1)* %out, i32 addrspace(1)* %index.array) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

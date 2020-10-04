@@ -17,6 +17,7 @@ if (POLICY CMP0077)
 endif()
 
 option(LINK_WITH_FIR "Link driver with FIR and LLVM" ON)
+option(FLANG_BUILD_NEW_DRIVER "Build the flang compiler driver" OFF)
 
 # Flang requires C++17.
 set(CMAKE_CXX_STANDARD 17)
@@ -61,11 +62,16 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   get_filename_component(LLVM_DIR_ABSOLUTE ${LLVM_DIR} REALPATH)
   list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR_ABSOLUTE})
 
+  if(FLANG_BUILD_NEW_DRIVER)
+    # TODO: Remove when libclangDriver is lifted out of Clang
+    list(APPEND CMAKE_MODULE_PATH ${CLANG_DIR})
+    find_package(Clang REQUIRED HINTS "${CLANG_DIR}")
+  endif()
+
   # If LLVM links to zlib we need the imported targets so we can too.
   if(LLVM_ENABLE_ZLIB)
     find_package(ZLIB REQUIRED)
   endif()
-  option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
   option(LLVM_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
   if(CMAKE_COMPILER_IS_GNUCXX)
     set(USE_NO_MAYBE_UNINITIALIZED 1)
@@ -198,6 +204,21 @@ else()
     include_directories(SYSTEM ${MLIR_INCLUDE_DIR})
     include_directories(SYSTEM ${MLIR_TABLEGEN_OUTPUT_DIR})
   endif()
+endif()
+
+if(FLANG_BUILD_NEW_DRIVER)
+    # TODO: Remove when libclangDriver is lifted out of Clang
+    if(FLANG_STANDALONE_BUILD)
+      set(CLANG_INCLUDE_DIR ${CLANG_INCLUDE_DIRS} )
+      # No need to specify TableGen output dir as that's embedded in CLANG_DIR
+    else()
+      set(CLANG_INCLUDE_DIR ${LLVM_MAIN_SRC_DIR}/../clang/include )
+      # Specify TableGen output dir for things like DiagnosticCommonKinds.inc,
+      # DiagnosticDriverKinds.inc (required for reporting diagnostics)
+      set(CLANG_TABLEGEN_OUTPUT_DIR ${CMAKE_BINARY_DIR}/tools/clang/include)
+      include_directories(SYSTEM ${CLANG_TABLEGEN_OUTPUT_DIR})
+    endif()
+    include_directories(SYSTEM ${CLANG_INCLUDE_DIR})
 endif()
 
 if(LINK_WITH_FIR)

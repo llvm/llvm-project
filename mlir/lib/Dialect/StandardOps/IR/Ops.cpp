@@ -11,6 +11,7 @@
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Matchers.h"
@@ -22,6 +23,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -215,6 +217,26 @@ static LogicalResult foldMemRefCast(Operation *op) {
     }
   }
   return success(folded);
+}
+
+//===----------------------------------------------------------------------===//
+// Common cast compatibility check for vector types.
+//===----------------------------------------------------------------------===//
+
+/// This method checks for cast compatibility of vector types.
+/// If 'a' and 'b' are vector types, and they are cast compatible,
+/// it calls the 'areElementsCastCompatible' function to check for
+/// element cast compatibility.
+/// Returns 'true' if the vector types are cast compatible,  and 'false'
+/// otherwise.
+static bool areVectorCastSimpleCompatible(
+    Type a, Type b, function_ref<bool(Type, Type)> areElementsCastCompatible) {
+  if (auto va = a.dyn_cast<VectorType>())
+    if (auto vb = b.dyn_cast<VectorType>())
+      return va.getShape().equals(vb.getShape()) &&
+             areElementsCastCompatible(va.getElementType(),
+                                       vb.getElementType());
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -736,7 +758,9 @@ static LogicalResult verify(CallOp op) {
 
   for (unsigned i = 0, e = fnType.getNumInputs(); i != e; ++i)
     if (op.getOperand(i).getType() != fnType.getInput(i))
-      return op.emitOpError("operand type mismatch");
+      return op.emitOpError("operand type mismatch: expected operand type ")
+             << fnType.getInput(i) << ", but provided "
+             << op.getOperand(i).getType() << " for operand number " << i;
 
   if (fnType.getNumResults() != op.getNumResults())
     return op.emitOpError("incorrect number of results for callee");
@@ -1710,6 +1734,101 @@ void DynamicTensorFromElementsOp::build(
   bodyBuilder(b, result.location, bodyBlock->getArguments());
 }
 
+namespace {
+
+/// Canonicalizes dynamic_tensor_from_elements operations with a constant
+/// operand into the equivalent operation with the operand expressed in the
+/// result type, instead. We also insert a type cast to make sure that the
+/// resulting IR is still well-typed.
+struct StaticDynamicTensorFromElements
+    : public OpRewritePattern<DynamicTensorFromElementsOp> {
+  using OpRewritePattern<DynamicTensorFromElementsOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DynamicTensorFromElementsOp tensorFromElements,
+                                PatternRewriter &rewriter) const final {
+    auto resultType =
+        tensorFromElements.getResult().getType().cast<RankedTensorType>();
+
+    if (resultType.hasStaticShape())
+      return failure();
+
+    SmallVector<Value, 4> newOperands;
+    SmallVector<int64_t, 4> newShape;
+    auto operandsIt = tensorFromElements.dynamicExtents().begin();
+
+    for (int64_t dim : resultType.getShape()) {
+      if (dim != RankedTensorType::kDynamicSize) {
+        newShape.push_back(dim);
+        continue;
+      }
+      APInt index;
+      if (!matchPattern(*operandsIt, m_ConstantInt(&index))) {
+        newShape.push_back(RankedTensorType::kDynamicSize);
+        newOperands.push_back(*operandsIt++);
+        continue;
+      }
+      newShape.push_back(index.getSExtValue());
+      operandsIt++;
+    }
+
+    if (newOperands.size() == tensorFromElements.dynamicExtents().size())
+      return failure();
+
+    auto loc = tensorFromElements.getLoc();
+    auto newOp = rewriter.create<DynamicTensorFromElementsOp>(
+        loc, RankedTensorType::get(newShape, resultType.getElementType()),
+        newOperands);
+    rewriter.inlineRegionBefore(tensorFromElements.body(), newOp.body(),
+                                newOp.body().begin());
+    rewriter.replaceOpWithNewOp<TensorCastOp>(tensorFromElements, resultType,
+                                              newOp);
+    return success();
+  }
+};
+
+/// Canonicalizes the pattern of the form
+///
+/// %tensor = dynamic_tensor_from_elements %x {
+///   ^bb0(%arg0: index):  // no predecessors
+///   <computation>
+///   yield %1 : index
+/// } : tensor<?xindex>
+/// %extracted_element = extract_element %tensor[%c0] : tensor<?xi32>
+///
+/// to just <computation> with %arg0 replaced by %c0. We only do this if the
+/// dynamic_tensor_from_elements operation has no side-effects.
+struct ExtractElementFromDynamicTensorFromElements
+    : public OpRewritePattern<ExtractElementOp> {
+  using OpRewritePattern<ExtractElementOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractElementOp extract,
+                                PatternRewriter &rewriter) const final {
+    auto tensorFromElements =
+        extract.aggregate().getDefiningOp<DynamicTensorFromElementsOp>();
+    if (!tensorFromElements || !wouldOpBeTriviallyDead(tensorFromElements))
+      return failure();
+
+    BlockAndValueMapping mapping;
+    Block *body = tensorFromElements.getBody();
+    mapping.map(body->getArguments(), extract.indices());
+    for (auto &op : body->without_terminator())
+      rewriter.clone(op, mapping);
+
+    auto yield = cast<YieldOp>(body->getTerminator());
+
+    rewriter.replaceOp(extract, mapping.lookupOrDefault(yield.value()));
+    return success();
+  }
+};
+
+} // namespace
+
+void DynamicTensorFromElementsOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
+  results.insert<ExtractElementFromDynamicTensorFromElements,
+                 StaticDynamicTensorFromElements>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // ExtractElementOp
 //===----------------------------------------------------------------------===//
@@ -1757,11 +1876,17 @@ OpFoldResult ExtractElementOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 void TensorFromElementsOp::build(OpBuilder &builder, OperationState &result,
+                                 Type elementType, ValueRange elements) {
+  Type resultTy = RankedTensorType::get({static_cast<int64_t>(elements.size())},
+                                        elementType);
+  result.addOperands(elements);
+  result.addTypes(resultTy);
+}
+
+void TensorFromElementsOp::build(OpBuilder &builder, OperationState &result,
                                  ValueRange elements) {
   assert(!elements.empty() && "expected at least one element");
-  Type resultTy = RankedTensorType::get({static_cast<int64_t>(elements.size())},
-                                        elements.front().getType());
-  build(builder, result, resultTy, elements);
+  build(builder, result, elements.front().getType(), elements);
 }
 
 namespace {
@@ -1781,16 +1906,16 @@ struct ExtractElementFromTensorFromElements
     if (extract.indices().size() != 1)
       return failure();
 
-    auto tensor_from_elements = dyn_cast_or_null<TensorFromElementsOp>(
+    auto tensorFromElements = dyn_cast_or_null<TensorFromElementsOp>(
         extract.aggregate().getDefiningOp());
-    if (tensor_from_elements == nullptr)
+    if (tensorFromElements == nullptr)
       return failure();
 
     APInt index;
     if (!matchPattern(*extract.indices().begin(), m_ConstantInt(&index)))
       return failure();
     rewriter.replaceOp(extract,
-                       tensor_from_elements.getOperand(index.getZExtValue()));
+                       tensorFromElements.getOperand(index.getZExtValue()));
     return success();
   }
 };
@@ -1810,11 +1935,7 @@ bool FPExtOp::areCastCompatible(Type a, Type b) {
   if (auto fa = a.dyn_cast<FloatType>())
     if (auto fb = b.dyn_cast<FloatType>())
       return fa.getWidth() < fb.getWidth();
-  if (auto va = a.dyn_cast<VectorType>())
-    if (auto vb = b.dyn_cast<VectorType>())
-      return va.getShape().equals(vb.getShape()) &&
-             areCastCompatible(va.getElementType(), vb.getElementType());
-  return false;
+  return areVectorCastSimpleCompatible(a, b, areCastCompatible);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1822,7 +1943,9 @@ bool FPExtOp::areCastCompatible(Type a, Type b) {
 //===----------------------------------------------------------------------===//
 
 bool FPToSIOp::areCastCompatible(Type a, Type b) {
-  return a.isa<FloatType>() && b.isSignlessInteger();
+  if (a.isa<FloatType>() && b.isSignlessInteger())
+    return true;
+  return areVectorCastSimpleCompatible(a, b, areCastCompatible);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1830,7 +1953,9 @@ bool FPToSIOp::areCastCompatible(Type a, Type b) {
 //===----------------------------------------------------------------------===//
 
 bool FPToUIOp::areCastCompatible(Type a, Type b) {
-  return a.isa<FloatType>() && b.isSignlessInteger();
+  if (a.isa<FloatType>() && b.isSignlessInteger())
+    return true;
+  return areVectorCastSimpleCompatible(a, b, areCastCompatible);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1841,11 +1966,7 @@ bool FPTruncOp::areCastCompatible(Type a, Type b) {
   if (auto fa = a.dyn_cast<FloatType>())
     if (auto fb = b.dyn_cast<FloatType>())
       return fa.getWidth() > fb.getWidth();
-  if (auto va = a.dyn_cast<VectorType>())
-    if (auto vb = b.dyn_cast<VectorType>())
-      return va.getShape().equals(vb.getShape()) &&
-             areCastCompatible(va.getElementType(), vb.getElementType());
-  return false;
+  return areVectorCastSimpleCompatible(a, b, areCastCompatible);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2285,7 +2406,9 @@ OpFoldResult SignedRemIOp::fold(ArrayRef<Attribute> operands) {
 
 // sitofp is applicable from integer types to float types.
 bool SIToFPOp::areCastCompatible(Type a, Type b) {
-  return a.isSignlessInteger() && b.isa<FloatType>();
+  if (a.isSignlessInteger() && b.isa<FloatType>())
+    return true;
+  return areVectorCastSimpleCompatible(a, b, areCastCompatible);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2365,7 +2488,9 @@ OpFoldResult SubIOp::fold(ArrayRef<Attribute> operands) {
 
 // uitofp is applicable from integer types to float types.
 bool UIToFPOp::areCastCompatible(Type a, Type b) {
-  return a.isSignlessInteger() && b.isa<FloatType>();
+  if (a.isSignlessInteger() && b.isa<FloatType>())
+    return true;
+  return areVectorCastSimpleCompatible(a, b, areCastCompatible);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2465,10 +2590,10 @@ Wrapper operator*(Wrapper a, int64_t b) {
 /// A subview result type can be fully inferred from the source type and the
 /// static representation of offsets, sizes and strides. Special sentinels
 /// encode the dynamic case.
-Type SubViewOp::inferSubViewResultType(MemRefType sourceMemRefType,
-                                       ArrayRef<int64_t> staticOffsets,
-                                       ArrayRef<int64_t> staticSizes,
-                                       ArrayRef<int64_t> staticStrides) {
+Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
+                                ArrayRef<int64_t> staticOffsets,
+                                ArrayRef<int64_t> staticSizes,
+                                ArrayRef<int64_t> staticStrides) {
   unsigned rank = sourceMemRefType.getRank();
   (void)rank;
   assert(staticOffsets.size() == rank &&
@@ -2516,10 +2641,16 @@ Type SubViewOp::inferSubViewResultType(MemRefType sourceMemRefType,
 ///   subview ssa-name `[` offset-list `]` `[` size-list `]` `[` stride-list `]`
 ///     `:` strided-memref-type `to` strided-memref-type
 /// ```
-static void print(OpAsmPrinter &p, SubViewOp op) {
+template <typename OpType>
+static void printOpWithOffsetsSizesAndStrides(
+    OpAsmPrinter &p, OpType op,
+    llvm::function_ref<void(OpAsmPrinter &p, OpType op)> printExtraOperands =
+        [](OpAsmPrinter &p, OpType op) {},
+    StringRef resultTypeKeyword = "to") {
   int stdDotLen = StandardOpsDialect::getDialectNamespace().size() + 1;
   p << op.getOperation()->getName().getStringRef().drop_front(stdDotLen) << ' ';
-  p << op.getOperand(0);
+  p << op.source();
+  printExtraOperands(p, op);
   printSubViewListOfOperandsOrIntegers(p, op.offsets(), op.static_offsets(),
                                        ShapedType::isDynamicStrideOrOffset);
   printSubViewListOfOperandsOrIntegers(p, op.sizes(), op.static_sizes(),
@@ -2527,49 +2658,73 @@ static void print(OpAsmPrinter &p, SubViewOp op) {
   printSubViewListOfOperandsOrIntegers(p, op.strides(), op.static_strides(),
                                        ShapedType::isDynamicStrideOrOffset);
   p.printOptionalAttrDict(op.getAttrs(),
-                          /*elidedAttrs=*/{SubViewOp::getSpecialAttrNames()});
-  p << " : " << op.getOperand(0).getType() << " to " << op.getType();
+                          /*elidedAttrs=*/{OpType::getSpecialAttrNames()});
+  p << " : " << op.getSourceType() << " " << resultTypeKeyword << " "
+    << op.getType();
 }
 
-/// Parse SubViewOp of the form:
+static void print(OpAsmPrinter &p, SubViewOp op) {
+  return printOpWithOffsetsSizesAndStrides<SubViewOp>(p, op);
+}
+
+/// Parse of the form:
 /// ```
-///   subview ssa-name `[` offset-list `]` `[` size-list `]` `[` stride-list `]`
-///     `:` strided-memref-type `to` strided-memref-type
+///   `name` ssa-name (extra-operands)?
+///       `[` offset-list `]` `[` size-list `]` `[` stride-list `]`
+///     `:` strided-memref-type `resultTypeKeyword strided-memref-type
 /// ```
-static ParseResult parseSubViewOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType srcInfo;
+template <typename OpType>
+static ParseResult parseOpWithOffsetsSizesAndStrides(
+    OpAsmParser &parser, OperationState &result,
+    std::function<ParseResult(OpAsmParser &p,
+                              OpAsmParser::OperandType &dstInfo)>
+        parseExtraOperand = nullptr,
+    StringRef resultTypeKeyword = "to") {
+  OpAsmParser::OperandType srcInfo, dstInfo;
   SmallVector<OpAsmParser::OperandType, 4> offsetsInfo, sizesInfo, stridesInfo;
   auto indexType = parser.getBuilder().getIndexType();
   Type srcType, dstType;
   if (parser.parseOperand(srcInfo))
     return failure();
+  if (parseExtraOperand && parseExtraOperand(parser, dstInfo))
+    return failure();
   if (parseListOfOperandsOrIntegers(
-          parser, result, SubViewOp::getStaticOffsetsAttrName(),
+          parser, result, OpType::getStaticOffsetsAttrName(),
           ShapedType::kDynamicStrideOrOffset, offsetsInfo) ||
       parseListOfOperandsOrIntegers(parser, result,
-                                    SubViewOp::getStaticSizesAttrName(),
+                                    OpType::getStaticSizesAttrName(),
                                     ShapedType::kDynamicSize, sizesInfo) ||
       parseListOfOperandsOrIntegers(
-          parser, result, SubViewOp::getStaticStridesAttrName(),
+          parser, result, OpType::getStaticStridesAttrName(),
           ShapedType::kDynamicStrideOrOffset, stridesInfo))
     return failure();
 
+  // Handle segment sizes.
   auto b = parser.getBuilder();
-  SmallVector<int, 4> segmentSizes{1, static_cast<int>(offsetsInfo.size()),
-                                   static_cast<int>(sizesInfo.size()),
-                                   static_cast<int>(stridesInfo.size())};
-  result.addAttribute(SubViewOp::getOperandSegmentSizeAttr(),
+  SmallVector<int, 4> segmentSizes = {1, static_cast<int>(offsetsInfo.size()),
+                                      static_cast<int>(sizesInfo.size()),
+                                      static_cast<int>(stridesInfo.size())};
+  // If we parse an extra operand it needs to appear in the segmentSizes
+  if (parseExtraOperand)
+    segmentSizes.insert(segmentSizes.begin(), 1);
+  result.addAttribute(OpType::getOperandSegmentSizeAttr(),
                       b.getI32VectorAttr(segmentSizes));
 
   return failure(
       parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonType(srcType) ||
+      parser.parseKeywordType(resultTypeKeyword.str().c_str(), dstType) ||
       parser.resolveOperand(srcInfo, srcType, result.operands) ||
+      (parseExtraOperand &&
+       parser.resolveOperand(dstInfo, dstType, result.operands)) ||
       parser.resolveOperands(offsetsInfo, indexType, result.operands) ||
       parser.resolveOperands(sizesInfo, indexType, result.operands) ||
       parser.resolveOperands(stridesInfo, indexType, result.operands) ||
-      parser.parseKeywordType("to", dstType) ||
       parser.addTypeToList(dstType, result.types));
+}
+
+static ParseResult parseSubViewOp(OpAsmParser &parser, OperationState &result) {
+  return parseOpWithOffsetsSizesAndStrides<SubViewOp>(parser, result);
 }
 
 void mlir::SubViewOp::build(OpBuilder &b, OperationState &result, Value source,
@@ -2579,8 +2734,8 @@ void mlir::SubViewOp::build(OpBuilder &b, OperationState &result, Value source,
                             ValueRange sizes, ValueRange strides,
                             ArrayRef<NamedAttribute> attrs) {
   auto sourceMemRefType = source.getType().cast<MemRefType>();
-  auto resultType = inferSubViewResultType(sourceMemRefType, staticOffsets,
-                                           staticSizes, staticStrides);
+  auto resultType = inferResultType(sourceMemRefType, staticOffsets,
+                                    staticSizes, staticStrides);
   build(b, result, resultType, source, offsets, sizes, strides,
         b.getI64ArrayAttr(staticOffsets), b.getI64ArrayAttr(staticSizes),
         b.getI64ArrayAttr(staticStrides));
@@ -2606,15 +2761,50 @@ void mlir::SubViewOp::build(OpBuilder &b, OperationState &result, Value source,
         staticStridesVector, offsets, sizes, strides, attrs);
 }
 
+/// Build a SubViewOp as above but with custom result type.
+void mlir::SubViewOp::build(OpBuilder &b, OperationState &result,
+                            MemRefType resultType, Value source,
+                            ArrayRef<int64_t> staticOffsets,
+                            ArrayRef<int64_t> staticSizes,
+                            ArrayRef<int64_t> staticStrides, ValueRange offsets,
+                            ValueRange sizes, ValueRange strides,
+                            ArrayRef<NamedAttribute> attrs) {
+  build(b, result, resultType, source, offsets, sizes, strides,
+        b.getI64ArrayAttr(staticOffsets), b.getI64ArrayAttr(staticSizes),
+        b.getI64ArrayAttr(staticStrides));
+  result.addAttributes(attrs);
+}
+
+/// Build a SubViewOp as above but with custom result type.
+void mlir::SubViewOp::build(OpBuilder &b, OperationState &result,
+                            MemRefType resultType, Value source,
+                            ValueRange offsets, ValueRange sizes,
+                            ValueRange strides,
+                            ArrayRef<NamedAttribute> attrs) {
+  auto sourceMemRefType = source.getType().cast<MemRefType>();
+  unsigned rank = sourceMemRefType.getRank();
+  SmallVector<int64_t, 4> staticOffsetsVector;
+  staticOffsetsVector.assign(rank, ShapedType::kDynamicStrideOrOffset);
+  SmallVector<int64_t, 4> staticSizesVector;
+  staticSizesVector.assign(rank, ShapedType::kDynamicSize);
+  SmallVector<int64_t, 4> staticStridesVector;
+  staticStridesVector.assign(rank, ShapedType::kDynamicStrideOrOffset);
+  build(b, result, resultType, source, staticOffsetsVector, staticSizesVector,
+        staticStridesVector, offsets, sizes, strides, attrs);
+}
+
+/// For ViewLikeOpInterface.
+Value SubViewOp::getViewSource() { return source(); }
+
 /// Verify that a particular offset/size/stride static attribute is well-formed.
-static LogicalResult
-verifySubViewOpPart(SubViewOp op, StringRef name, StringRef attrName,
-                    ArrayAttr attr, llvm::function_ref<bool(int64_t)> isDynamic,
-                    ValueRange values) {
+template <typename OpType>
+static LogicalResult verifyOpWithOffsetSizesAndStridesPart(
+    OpType op, StringRef name, StringRef attrName, ArrayAttr attr,
+    llvm::function_ref<bool(int64_t)> isDynamic, ValueRange values) {
   /// Check static and dynamic offsets/sizes/strides breakdown.
-  if (attr.size() != op.getRank())
+  if (attr.size() != op.getSourceRank())
     return op.emitError("expected ")
-           << op.getRank() << " " << name << " values";
+           << op.getSourceRank() << " " << name << " values";
   unsigned expectedNumDynamicEntries =
       llvm::count_if(attr.getValue(), [&](Attribute attr) {
         return isDynamic(attr.cast<IntegerAttr>().getInt());
@@ -2633,10 +2823,101 @@ static SmallVector<int64_t, 4> extractFromI64ArrayAttr(Attribute attr) {
       }));
 }
 
+/// Checks if `original` Type type can be rank reduced to `reduced` type.
+/// This function is slight variant of `is subsequence` algorithm where
+/// not matching dimension must be 1.
+static bool isRankReducedType(Type originalType, Type reducedType) {
+  if (originalType == reducedType)
+    return true;
+  if (!originalType.isa<RankedTensorType>() && !originalType.isa<MemRefType>())
+    return true;
+  if (originalType.isa<RankedTensorType>() &&
+      !reducedType.isa<RankedTensorType>())
+    return true;
+  if (originalType.isa<MemRefType>() && !reducedType.isa<MemRefType>())
+    return true;
+
+  ShapedType originalShapedType = originalType.cast<ShapedType>();
+  ShapedType reducedShapedType = reducedType.cast<ShapedType>();
+
+  // Rank and size logic is valid for all ShapedTypes.
+  ArrayRef<int64_t> originalShape = originalShapedType.getShape();
+  ArrayRef<int64_t> reducedShape = reducedShapedType.getShape();
+  unsigned originalRank = originalShape.size(),
+           reducedRank = reducedShape.size();
+  if (reducedRank > originalRank)
+    return false;
+
+  unsigned reducedIdx = 0;
+  SmallVector<bool, 4> keepMask(originalRank);
+  for (unsigned originalIdx = 0; originalIdx < originalRank; ++originalIdx) {
+    // -2 is never used as a dim size so it will never match.
+    int reducedVal = reducedIdx < reducedRank ? reducedShape[reducedIdx] : -2;
+    // Skip matching dims greedily.
+    if ((keepMask[originalIdx] = originalShape[originalIdx] == reducedVal))
+      reducedIdx++;
+    // 1 is the only non-matching allowed.
+    else if (originalShape[originalIdx] != 1)
+      return false;
+  }
+  // Must match the reduced rank.
+  if (reducedIdx != reducedRank)
+    return false;
+
+  // We are done for the tensor case.
+  if (originalType.isa<RankedTensorType>())
+    return true;
+
+  // Strided layout logic is relevant for MemRefType only.
+  MemRefType original = originalType.cast<MemRefType>();
+  MemRefType reduced = reducedType.cast<MemRefType>();
+  MLIRContext *c = original.getContext();
+  int64_t originalOffset, symCounter = 0, dimCounter = 0;
+  SmallVector<int64_t, 4> originalStrides;
+  getStridesAndOffset(original, originalStrides, originalOffset);
+  auto getSymbolOrConstant = [&](int64_t offset) {
+    return offset == ShapedType::kDynamicStrideOrOffset
+               ? getAffineSymbolExpr(symCounter++, c)
+               : getAffineConstantExpr(offset, c);
+  };
+
+  AffineExpr expr = getSymbolOrConstant(originalOffset);
+  for (unsigned i = 0, e = originalStrides.size(); i < e; i++) {
+    if (keepMask[i])
+      expr = expr + getSymbolOrConstant(originalStrides[i]) *
+                        getAffineDimExpr(dimCounter++, c);
+  }
+
+  auto reducedMap = AffineMap::get(dimCounter, symCounter, expr, c);
+  return original.getElementType() == reduced.getElementType() &&
+         original.getMemorySpace() == reduced.getMemorySpace() &&
+         (reduced.getAffineMaps().empty() ||
+          reducedMap == reduced.getAffineMaps().front());
+}
+
+template <typename OpType>
+static LogicalResult verifyOpWithOffsetSizesAndStrides(OpType op) {
+  // Verify static attributes offsets/sizes/strides.
+  if (failed(verifyOpWithOffsetSizesAndStridesPart(
+          op, "offset", op.getStaticOffsetsAttrName(), op.static_offsets(),
+          ShapedType::isDynamicStrideOrOffset, op.offsets())))
+    return failure();
+
+  if (failed(verifyOpWithOffsetSizesAndStridesPart(
+          op, "size", op.getStaticSizesAttrName(), op.static_sizes(),
+          ShapedType::isDynamic, op.sizes())))
+    return failure();
+  if (failed(verifyOpWithOffsetSizesAndStridesPart(
+          op, "stride", op.getStaticStridesAttrName(), op.static_strides(),
+          ShapedType::isDynamicStrideOrOffset, op.strides())))
+    return failure();
+  return success();
+}
+
 /// Verifier for SubViewOp.
 static LogicalResult verify(SubViewOp op) {
-  auto baseType = op.getBaseMemRefType().cast<MemRefType>();
-  auto subViewType = op.getType();
+  MemRefType baseType = op.getSourceType();
+  MemRefType subViewType = op.getType();
 
   // The base memref and the view memref should be in the same memory space.
   if (baseType.getMemorySpace() != subViewType.getMemorySpace())
@@ -2648,148 +2929,55 @@ static LogicalResult verify(SubViewOp op) {
   if (!isStrided(baseType))
     return op.emitError("base type ") << baseType << " is not strided";
 
-  // Verify static attributes offsets/sizes/strides.
-  if (failed(verifySubViewOpPart(
-          op, "offset", op.getStaticOffsetsAttrName(), op.static_offsets(),
-          ShapedType::isDynamicStrideOrOffset, op.offsets())))
-    return failure();
-
-  if (failed(verifySubViewOpPart(op, "size", op.getStaticSizesAttrName(),
-                                 op.static_sizes(), ShapedType::isDynamic,
-                                 op.sizes())))
-    return failure();
-  if (failed(verifySubViewOpPart(
-          op, "stride", op.getStaticStridesAttrName(), op.static_strides(),
-          ShapedType::isDynamicStrideOrOffset, op.strides())))
+  if (failed(verifyOpWithOffsetSizesAndStrides(op)))
     return failure();
 
   // Verify result type against inferred type.
-  auto expectedType = SubViewOp::inferSubViewResultType(
-      op.getBaseMemRefType(), extractFromI64ArrayAttr(op.static_offsets()),
+  auto expectedType = SubViewOp::inferResultType(
+      baseType, extractFromI64ArrayAttr(op.static_offsets()),
       extractFromI64ArrayAttr(op.static_sizes()),
       extractFromI64ArrayAttr(op.static_strides()));
-  if (op.getType() != expectedType)
-    return op.emitError("expected result type to be ") << expectedType;
+  if (!isRankReducedType(expectedType, subViewType))
+    return op.emitError("expected result type to be ")
+           << expectedType << " or a rank-reduced version.";
 
   return success();
 }
 
-raw_ostream &mlir::operator<<(raw_ostream &os, SubViewOp::Range &range) {
+raw_ostream &mlir::operator<<(raw_ostream &os, Range &range) {
   return os << "range " << range.offset << ":" << range.size << ":"
             << range.stride;
 }
 
-static unsigned getNumDynamicEntriesUpToIdx(
-    ArrayAttr attr, llvm::function_ref<bool(int64_t)> isDynamic, unsigned idx) {
-  return std::count_if(attr.getValue().begin(), attr.getValue().begin() + idx,
-                       [&](Attribute attr) {
-                         return isDynamic(attr.cast<IntegerAttr>().getInt());
-                       });
-}
-
-bool SubViewOp::isDynamicOffset(unsigned idx) {
-  return ShapedType::isDynamicStrideOrOffset(
-      extractFromI64ArrayAttr(static_offsets())[idx]);
-}
-bool SubViewOp::isDynamicSize(unsigned idx) {
-  return ShapedType::isDynamic(extractFromI64ArrayAttr(static_sizes())[idx]);
-}
-bool SubViewOp::isDynamicStride(unsigned idx) {
-  return ShapedType::isDynamicStrideOrOffset(
-      extractFromI64ArrayAttr(static_strides())[idx]);
-}
-
-unsigned SubViewOp::getIndexOfDynamicOffset(unsigned idx) {
-  assert(isDynamicOffset(idx) && "expected static offset");
-  auto numDynamic =
-      getNumDynamicEntriesUpToIdx(static_offsets().cast<ArrayAttr>(),
-                                  ShapedType::isDynamicStrideOrOffset, idx);
-  return 1 + numDynamic;
-}
-unsigned SubViewOp::getIndexOfDynamicSize(unsigned idx) {
-  assert(isDynamicSize(idx) && "expected static size");
-  auto numDynamic = getNumDynamicEntriesUpToIdx(
-      static_sizes().cast<ArrayAttr>(), ShapedType::isDynamic, idx);
-  return 1 + offsets().size() + numDynamic;
-}
-unsigned SubViewOp::getIndexOfDynamicStride(unsigned idx) {
-  assert(isDynamicStride(idx) && "expected static stride");
-  auto numDynamic =
-      getNumDynamicEntriesUpToIdx(static_strides().cast<ArrayAttr>(),
-                                  ShapedType::isDynamicStrideOrOffset, idx);
-  return 1 + offsets().size() + sizes().size() + numDynamic;
-}
-
-/// Return the list of SubViewOp::Range (i.e. offset, size, stride). Each Range
+/// Return the list of Range (i.e. offset, size, stride). Each Range
 /// entry contains either the dynamic value or a ConstantIndexOp constructed
 /// with `b` at location `loc`.
-SmallVector<SubViewOp::Range, 8> SubViewOp::getOrCreateRanges(OpBuilder &b,
-                                                              Location loc) {
+template <typename OpType>
+static SmallVector<Range, 8> getOrCreateRangesImpl(OpType op, OpBuilder &b,
+                                                   Location loc) {
   SmallVector<Range, 8> res;
-  unsigned rank = getType().getRank();
+  unsigned rank = op.getSourceRank();
   res.reserve(rank);
   for (unsigned idx = 0; idx < rank; ++idx) {
-    auto offset = isDynamicOffset(idx)
-                      ? getDynamicOffset(idx)
-                      : b.create<ConstantIndexOp>(loc, getStaticOffset(idx));
-    auto size = isDynamicSize(idx)
-                    ? getDynamicSize(idx)
-                    : b.create<ConstantIndexOp>(loc, getStaticSize(idx));
-    auto stride = isDynamicStride(idx)
-                      ? getDynamicStride(idx)
-                      : b.create<ConstantIndexOp>(loc, getStaticStride(idx));
+    Value offset =
+        op.isDynamicOffset(idx)
+            ? op.getDynamicOffset(idx)
+            : b.create<ConstantIndexOp>(loc, op.getStaticOffset(idx));
+    Value size = op.isDynamicSize(idx)
+                     ? op.getDynamicSize(idx)
+                     : b.create<ConstantIndexOp>(loc, op.getStaticSize(idx));
+    Value stride =
+        op.isDynamicStride(idx)
+            ? op.getDynamicStride(idx)
+            : b.create<ConstantIndexOp>(loc, op.getStaticStride(idx));
     res.emplace_back(Range{offset, size, stride});
   }
   return res;
 }
 
-SmallVector<Value, 4> SubViewOp::getOrCreateOffsets(OpBuilder &b,
-                                                    Location loc) {
-  unsigned dynamicIdx = 1;
-  return llvm::to_vector<4>(llvm::map_range(
-      static_offsets().cast<ArrayAttr>(), [&](Attribute a) -> Value {
-        int64_t staticOffset = a.cast<IntegerAttr>().getInt();
-        if (ShapedType::isDynamicStrideOrOffset(staticOffset))
-          return getOperand(dynamicIdx++);
-        else
-          return b.create<ConstantIndexOp>(loc, staticOffset);
-      }));
+SmallVector<Range, 8> SubViewOp::getOrCreateRanges(OpBuilder &b, Location loc) {
+  return ::getOrCreateRangesImpl(*this, b, loc);
 }
-
-SmallVector<Value, 4> SubViewOp::getOrCreateSizes(OpBuilder &b, Location loc) {
-  unsigned dynamicIdx = 1 + offsets().size();
-  return llvm::to_vector<4>(llvm::map_range(
-      static_sizes().cast<ArrayAttr>(), [&](Attribute a) -> Value {
-        int64_t staticSize = a.cast<IntegerAttr>().getInt();
-        if (ShapedType::isDynamic(staticSize))
-          return getOperand(dynamicIdx++);
-        else
-          return b.create<ConstantIndexOp>(loc, staticSize);
-      }));
-}
-
-SmallVector<Value, 4> SubViewOp::getOrCreateStrides(OpBuilder &b,
-                                                    Location loc) {
-  unsigned dynamicIdx = 1 + offsets().size() + sizes().size();
-  return llvm::to_vector<4>(llvm::map_range(
-      static_strides().cast<ArrayAttr>(), [&](Attribute a) -> Value {
-        int64_t staticStride = a.cast<IntegerAttr>().getInt();
-        if (ShapedType::isDynamicStrideOrOffset(staticStride))
-          return getOperand(dynamicIdx++);
-        else
-          return b.create<ConstantIndexOp>(loc, staticStride);
-      }));
-}
-
-LogicalResult
-SubViewOp::getStaticStrides(SmallVectorImpl<int64_t> &staticStrides) {
-  if (!strides().empty())
-    return failure();
-  staticStrides = extractFromI64ArrayAttr(static_strides());
-  return success();
-}
-
-Value SubViewOp::getViewSource() { return source(); }
 
 namespace {
 
@@ -2823,50 +3011,59 @@ void canonicalizeSubViewPart(SmallVectorImpl<Value> &values,
   }
 }
 
-/// Pattern to rewrite a subview op with constant arguments.
-class SubViewOpConstantArgumentFolder final
-    : public OpRewritePattern<SubViewOp> {
-public:
-  using OpRewritePattern<SubViewOp>::OpRewritePattern;
+static void replaceWithNewOp(PatternRewriter &rewriter, SubViewOp op,
+                             SubViewOp newOp) {
+  rewriter.replaceOpWithNewOp<MemRefCastOp>(op, newOp, op.getType());
+}
 
-  LogicalResult matchAndRewrite(SubViewOp subViewOp,
+static void replaceWithNewOp(PatternRewriter &rewriter, SubTensorOp op,
+                             SubTensorOp newOp) {
+  rewriter.replaceOpWithNewOp<TensorCastOp>(op, newOp, op.getType());
+}
+
+/// Pattern to rewrite a subview op with constant arguments.
+template <typename OpType>
+class OpWithOffsetSizesAndStridesConstantArgumentFolder final
+    : public OpRewritePattern<OpType> {
+public:
+  using OpRewritePattern<OpType>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpType op,
                                 PatternRewriter &rewriter) const override {
     // No constant operand, just return;
-    if (llvm::none_of(subViewOp.getOperands(), [](Value operand) {
+    if (llvm::none_of(op.getOperands(), [](Value operand) {
           return matchPattern(operand, m_ConstantIndex());
         }))
       return failure();
 
     // At least one of offsets/sizes/strides is a new constant.
     // Form the new list of operands and constant attributes from the existing.
-    SmallVector<Value, 8> newOffsets(subViewOp.offsets());
+    SmallVector<Value, 8> newOffsets(op.offsets());
     SmallVector<int64_t, 8> newStaticOffsets =
-        extractFromI64ArrayAttr(subViewOp.static_offsets());
-    assert(newStaticOffsets.size() == subViewOp.getRank());
+        extractFromI64ArrayAttr(op.static_offsets());
+    assert(newStaticOffsets.size() == op.getSourceRank());
     canonicalizeSubViewPart(newOffsets, newStaticOffsets,
                             ShapedType::isDynamicStrideOrOffset);
 
-    SmallVector<Value, 8> newSizes(subViewOp.sizes());
+    SmallVector<Value, 8> newSizes(op.sizes());
     SmallVector<int64_t, 8> newStaticSizes =
-        extractFromI64ArrayAttr(subViewOp.static_sizes());
-    assert(newStaticOffsets.size() == subViewOp.getRank());
+        extractFromI64ArrayAttr(op.static_sizes());
+    assert(newStaticOffsets.size() == op.getSourceRank());
     canonicalizeSubViewPart(newSizes, newStaticSizes, ShapedType::isDynamic);
 
-    SmallVector<Value, 8> newStrides(subViewOp.strides());
+    SmallVector<Value, 8> newStrides(op.strides());
     SmallVector<int64_t, 8> newStaticStrides =
-        extractFromI64ArrayAttr(subViewOp.static_strides());
-    assert(newStaticOffsets.size() == subViewOp.getRank());
+        extractFromI64ArrayAttr(op.static_strides());
+    assert(newStaticOffsets.size() == op.getSourceRank());
     canonicalizeSubViewPart(newStrides, newStaticStrides,
                             ShapedType::isDynamicStrideOrOffset);
 
     // Create the new op in canonical form.
-    auto newSubViewOp = rewriter.create<SubViewOp>(
-        subViewOp.getLoc(), subViewOp.source(), newStaticOffsets,
-        newStaticSizes, newStaticStrides, newOffsets, newSizes, newStrides);
+    auto newOp = rewriter.create<OpType>(
+        op.getLoc(), op.source(), newStaticOffsets, newStaticSizes,
+        newStaticStrides, newOffsets, newSizes, newStrides);
 
-    // Insert a memref_cast for compatibility of the uses of the op.
-    rewriter.replaceOpWithNewOp<MemRefCastOp>(subViewOp, newSubViewOp,
-                                              subViewOp.getType());
+    replaceWithNewOp(rewriter, op, newOp);
 
     return success();
   }
@@ -2999,7 +3196,7 @@ public:
     /// Deduce the resultType of the SubViewOp using `inferSubViewResultType` on
     /// the cast source operand type and the SubViewOp static information. This
     /// is the resulting type if the MemRefCastOp were folded.
-    Type resultType = SubViewOp::inferSubViewResultType(
+    Type resultType = SubViewOp::inferResultType(
         castOp.source().getType().cast<MemRefType>(),
         extractFromI64ArrayAttr(subViewOp.static_offsets()),
         extractFromI64ArrayAttr(subViewOp.static_sizes()),
@@ -3017,8 +3214,168 @@ public:
 
 void SubViewOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                             MLIRContext *context) {
-  results.insert<SubViewOpConstantArgumentFolder, SubViewOpMemRefCastFolder>(
-      context);
+  results.insert<OpWithOffsetSizesAndStridesConstantArgumentFolder<SubViewOp>,
+                 SubViewOpMemRefCastFolder>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// SubTensorOp
+//===----------------------------------------------------------------------===//
+
+static void print(OpAsmPrinter &p, SubTensorOp op) {
+  return printOpWithOffsetsSizesAndStrides<SubTensorOp>(p, op);
+}
+
+static ParseResult parseSubTensorOp(OpAsmParser &parser,
+                                    OperationState &result) {
+  return parseOpWithOffsetsSizesAndStrides<SubTensorOp>(parser, result);
+}
+
+/// A subtensor result type can be fully inferred from the source type and the
+/// static representation of offsets, sizes and strides. Special sentinels
+/// encode the dynamic case.
+Type SubTensorOp::inferResultType(RankedTensorType sourceRankedTensorType,
+                                  ArrayRef<int64_t> staticOffsets,
+                                  ArrayRef<int64_t> staticSizes,
+                                  ArrayRef<int64_t> staticStrides) {
+  unsigned rank = sourceRankedTensorType.getRank();
+  (void)rank;
+  assert(staticOffsets.size() == rank &&
+         "unexpected staticOffsets size mismatch");
+  assert(staticSizes.size() == rank && "unexpected staticSizes size mismatch");
+  assert(staticStrides.size() == rank &&
+         "unexpected staticStrides size mismatch");
+  return RankedTensorType::get(staticSizes,
+                               sourceRankedTensorType.getElementType());
+}
+
+void mlir::SubTensorOp::build(OpBuilder &b, OperationState &result,
+                              Value source, ArrayRef<int64_t> staticOffsets,
+                              ArrayRef<int64_t> staticSizes,
+                              ArrayRef<int64_t> staticStrides,
+                              ValueRange offsets, ValueRange sizes,
+                              ValueRange strides,
+                              ArrayRef<NamedAttribute> attrs) {
+  auto sourceRankedTensorType = source.getType().cast<RankedTensorType>();
+  auto resultType = inferResultType(sourceRankedTensorType, staticOffsets,
+                                    staticSizes, staticStrides);
+  build(b, result, resultType, source, offsets, sizes, strides,
+        b.getI64ArrayAttr(staticOffsets), b.getI64ArrayAttr(staticSizes),
+        b.getI64ArrayAttr(staticStrides));
+  result.addAttributes(attrs);
+}
+
+/// Build a SubTensorOp with all dynamic entries: `staticOffsets`, `staticSizes`
+/// and `staticStrides` are automatically filled with sentinel values that
+/// encode dynamic entries.
+void mlir::SubTensorOp::build(OpBuilder &b, OperationState &result,
+                              Value source, ValueRange offsets,
+                              ValueRange sizes, ValueRange strides,
+                              ArrayRef<NamedAttribute> attrs) {
+  auto sourceRankedTensorType = source.getType().cast<RankedTensorType>();
+  unsigned rank = sourceRankedTensorType.getRank();
+  SmallVector<int64_t, 4> staticOffsetsVector(
+      rank, ShapedType::kDynamicStrideOrOffset);
+  SmallVector<int64_t, 4> staticSizesVector(rank, ShapedType::kDynamicSize);
+  SmallVector<int64_t, 4> staticStridesVector(
+      rank, ShapedType::kDynamicStrideOrOffset);
+  build(b, result, source, staticOffsetsVector, staticSizesVector,
+        staticStridesVector, offsets, sizes, strides, attrs);
+}
+
+SmallVector<Range, 8> SubTensorOp::getOrCreateRanges(OpBuilder &b,
+                                                     Location loc) {
+  return ::getOrCreateRangesImpl(*this, b, loc);
+}
+
+/// Verifier for SubTensorOp.
+static LogicalResult verify(SubTensorOp op) {
+  if (failed(verifyOpWithOffsetSizesAndStrides(op)))
+    return failure();
+
+  // Verify result type against inferred type.
+  auto expectedType = SubTensorOp::inferResultType(
+      op.getSourceType(), extractFromI64ArrayAttr(op.static_offsets()),
+      extractFromI64ArrayAttr(op.static_sizes()),
+      extractFromI64ArrayAttr(op.static_strides()));
+  if (!isRankReducedType(expectedType, op.getType()))
+    return op.emitError("expected result type to be ")
+           << expectedType << " or a rank-reduced version.";
+
+  return success();
+}
+
+void SubTensorOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                              MLIRContext *context) {
+  results
+      .insert<OpWithOffsetSizesAndStridesConstantArgumentFolder<SubTensorOp>>(
+          context);
+}
+
+//===----------------------------------------------------------------------===//
+// SubTensorInsertOp
+//===----------------------------------------------------------------------===//
+
+static void print(OpAsmPrinter &p, SubTensorInsertOp op) {
+  return printOpWithOffsetsSizesAndStrides<SubTensorInsertOp>(
+      p, op,
+      [](OpAsmPrinter &p, SubTensorInsertOp op) { p << " into " << op.dest(); },
+      /*resultTypeKeyword=*/"into");
+}
+
+static ParseResult parseSubTensorInsertOp(OpAsmParser &parser,
+                                          OperationState &result) {
+  return parseOpWithOffsetsSizesAndStrides<SubTensorInsertOp>(
+      parser, result,
+      [](OpAsmParser &parser, OpAsmParser::OperandType &dstInfo) {
+        return failure(parser.parseKeyword("into") ||
+                       parser.parseOperand(dstInfo));
+      },
+      "into");
+}
+
+void mlir::SubTensorInsertOp::build(
+    OpBuilder &b, OperationState &result, Value source, Value dest,
+    ArrayRef<int64_t> staticOffsets, ArrayRef<int64_t> staticSizes,
+    ArrayRef<int64_t> staticStrides, ValueRange offsets, ValueRange sizes,
+    ValueRange strides, ArrayRef<NamedAttribute> attrs) {
+  build(b, result, dest.getType(), source, dest, offsets, sizes, strides,
+        b.getI64ArrayAttr(staticOffsets), b.getI64ArrayAttr(staticSizes),
+        b.getI64ArrayAttr(staticStrides));
+  result.addAttributes(attrs);
+}
+
+/// Build a SubViewOp with all dynamic entries: `staticOffsets`, `staticSizes`
+/// and `staticStrides` are  automatically filled with source-memref-rank
+/// sentinel values that encode dynamic entries.
+void mlir::SubTensorInsertOp::build(OpBuilder &b, OperationState &result,
+                                    Value source, Value dest,
+                                    ValueRange offsets, ValueRange sizes,
+                                    ValueRange strides,
+                                    ArrayRef<NamedAttribute> attrs) {
+  auto sourceRankedTensorType = source.getType().cast<RankedTensorType>();
+  unsigned rank = sourceRankedTensorType.getRank();
+  SmallVector<int64_t, 4> staticOffsetsVector(
+      rank, ShapedType::kDynamicStrideOrOffset);
+  SmallVector<int64_t, 4> staticSizesVector(rank, ShapedType::kDynamicSize);
+  SmallVector<int64_t, 4> staticStridesVector(
+      rank, ShapedType::kDynamicStrideOrOffset);
+  build(b, result, source, dest, staticOffsetsVector, staticSizesVector,
+        staticStridesVector, offsets, sizes, strides, attrs);
+}
+
+SmallVector<Range, 8> SubTensorInsertOp::getOrCreateRanges(OpBuilder &b,
+                                                           Location loc) {
+  return ::getOrCreateRangesImpl(*this, b, loc);
+}
+
+/// Verifier for SubViewOp.
+static LogicalResult verify(SubTensorInsertOp op) {
+  if (failed(verifyOpWithOffsetSizesAndStrides(op)))
+    return failure();
+  if (op.getType() != op.dest().getType())
+    return op.emitError("expected result type to be ") << op.dest().getType();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -3039,6 +3396,87 @@ bool TensorCastOp::areCastCompatible(Type a, Type b) {
 
 OpFoldResult TensorCastOp::fold(ArrayRef<Attribute> operands) {
   return impl::foldCastOp(*this);
+}
+
+/// Compute a TensorType that has the joined shape knowledge of the two
+/// given TensorTypes. The element types need to match.
+static TensorType joinShapes(TensorType one, TensorType two) {
+  assert(one.getElementType() == two.getElementType());
+
+  if (!one.hasRank())
+    return two;
+  if (!two.hasRank())
+    return one;
+
+  int64_t rank = one.getRank();
+  if (rank != two.getRank())
+    return {};
+
+  SmallVector<int64_t, 4> join;
+  join.reserve(rank);
+  for (int64_t i = 0; i < rank; ++i) {
+    if (one.isDynamicDim(i)) {
+      join.push_back(two.getDimSize(i));
+      continue;
+    }
+    if (two.isDynamicDim(i)) {
+      join.push_back(one.getDimSize(i));
+      continue;
+    }
+    if (one.getDimSize(i) != two.getDimSize(i))
+      return {};
+    join.push_back(one.getDimSize(i));
+  }
+  return RankedTensorType::get(join, one.getElementType());
+}
+
+namespace {
+
+/// Replaces chains of two tensor_cast operations by a single tensor_cast
+/// operation if doing so does not remove runtime constraints.
+struct ChainedTensorCast : public OpRewritePattern<TensorCastOp> {
+  using OpRewritePattern<TensorCastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TensorCastOp tensorCast,
+                                PatternRewriter &rewriter) const final {
+    auto tensorCastOperand =
+        tensorCast.getOperand().getDefiningOp<TensorCastOp>();
+
+    if (!tensorCastOperand)
+      return failure();
+
+    auto sourceType =
+        tensorCastOperand.getOperand().getType().cast<TensorType>();
+    auto intermediateType = tensorCastOperand.getType().cast<TensorType>();
+    auto resultType = tensorCast.getType().cast<TensorType>();
+
+    // We can remove the intermediate cast if joining all three produces the
+    // same result as just joining the source and result shapes.
+    auto firstJoin =
+        joinShapes(joinShapes(sourceType, intermediateType), resultType);
+
+    // The join might not exist if the cast sequence would fail at runtime.
+    if (!firstJoin)
+      return failure();
+
+    // The newJoin always exists if the above join exists, it might just contain
+    // less information. If so, we cannot drop the intermediate cast, as doing
+    // so would remove runtime checks.
+    auto newJoin = joinShapes(sourceType, resultType);
+    if (firstJoin != newJoin)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<TensorCastOp>(tensorCast, resultType,
+                                              tensorCastOperand.getOperand());
+    return success();
+  }
+};
+
+} // namespace
+
+void TensorCastOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
+  results.insert<ChainedTensorCast>(context);
 }
 
 //===----------------------------------------------------------------------===//

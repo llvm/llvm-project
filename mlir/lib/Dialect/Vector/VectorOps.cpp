@@ -132,11 +132,10 @@ static LogicalResult verify(ReductionOp op) {
   auto kind = op.kind();
   Type eltType = op.dest().getType();
   if (kind == "add" || kind == "mul" || kind == "min" || kind == "max") {
-    if (!eltType.isF32() && !eltType.isF64() &&
-        !eltType.isSignlessInteger(32) && !eltType.isSignlessInteger(64))
+    if (!eltType.isIntOrIndexOrFloat())
       return op.emitOpError("unsupported reduction type");
   } else if (kind == "and" || kind == "or" || kind == "xor") {
-    if (!eltType.isSignlessInteger(32) && !eltType.isSignlessInteger(64))
+    if (!eltType.isIntOrIndex())
       return op.emitOpError("unsupported reduction type");
   } else {
     return op.emitOpError("unknown reduction kind: ") << kind;
@@ -146,7 +145,7 @@ static LogicalResult verify(ReductionOp op) {
   if (!op.acc().empty()) {
     if (kind != "add" && kind != "mul")
       return op.emitOpError("no accumulator for reduction kind: ") << kind;
-    if (!eltType.isF32() && !eltType.isF64())
+    if (!eltType.isa<FloatType>())
       return op.emitOpError("no accumulator for type: ") << eltType;
   }
 
@@ -902,6 +901,37 @@ void ExtractSlicesOp::getStrides(SmallVectorImpl<int64_t> &results) {
 }
 
 //===----------------------------------------------------------------------===//
+// ExtractMapOp
+//===----------------------------------------------------------------------===//
+
+void ExtractMapOp::build(OpBuilder &builder, OperationState &result,
+                         Value vector, Value id, int64_t multiplicity) {
+  VectorType type = vector.getType().cast<VectorType>();
+  VectorType resultType = VectorType::get(type.getNumElements() / multiplicity,
+                                          type.getElementType());
+  ExtractMapOp::build(builder, result, resultType, vector, id, multiplicity);
+}
+
+static LogicalResult verify(ExtractMapOp op) {
+  if (op.getSourceVectorType().getShape().size() != 1 ||
+      op.getResultType().getShape().size() != 1)
+    return op.emitOpError("expects source and destination vectors of rank 1");
+  if (op.getResultType().getNumElements() * (int64_t)op.multiplicity() !=
+      op.getSourceVectorType().getNumElements())
+    return op.emitOpError("vector sizes mismatch. Source size must be equal "
+                          "to destination size * multiplicity");
+  return success();
+}
+
+OpFoldResult ExtractMapOp::fold(ArrayRef<Attribute> operands) {
+  auto insert = vector().getDefiningOp<vector::InsertMapOp>();
+  if (insert == nullptr || multiplicity() != insert.multiplicity() ||
+      id() != insert.id())
+    return {};
+  return insert.vector();
+}
+
+//===----------------------------------------------------------------------===//
 // BroadcastOp
 //===----------------------------------------------------------------------===//
 
@@ -927,6 +957,17 @@ static LogicalResult verify(BroadcastOp op) {
     }
   }
   return success();
+}
+
+OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
+  if (!operands[0])
+    return {};
+  auto vectorType = getVectorType();
+  if (operands[0].getType().isIntOrIndexOrFloat())
+    return DenseElementsAttr::get(vectorType, operands[0]);
+  if (auto attr = operands[0].dyn_cast<SplatElementsAttr>())
+    return DenseElementsAttr::get(vectorType, attr.getSplatValue());
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -1110,6 +1151,30 @@ void InsertSlicesOp::getSizes(SmallVectorImpl<int64_t> &results) {
 
 void InsertSlicesOp::getStrides(SmallVectorImpl<int64_t> &results) {
   populateFromInt64AttrArray(strides(), results);
+}
+
+//===----------------------------------------------------------------------===//
+// InsertMapOp
+//===----------------------------------------------------------------------===//
+
+void InsertMapOp::build(OpBuilder &builder, OperationState &result,
+                        Value vector, Value id, int64_t multiplicity) {
+  VectorType type = vector.getType().cast<VectorType>();
+  VectorType resultType = VectorType::get(type.getNumElements() * multiplicity,
+                                          type.getElementType());
+  InsertMapOp::build(builder, result, resultType, vector, id, multiplicity);
+}
+
+static LogicalResult verify(InsertMapOp op) {
+  if (op.getSourceVectorType().getShape().size() != 1 ||
+      op.getResultType().getShape().size() != 1)
+    return op.emitOpError("expected source and destination vectors of rank 1");
+  if ((int64_t)op.multiplicity() * op.getSourceVectorType().getNumElements() !=
+      op.getResultType().getNumElements())
+    return op.emitOpError(
+        "vector sizes mismatch. Destination size must be equal "
+        "to source size * multiplicity");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2688,11 +2753,5 @@ void mlir::vector::populateVectorToVectorCanonicalizationPatterns(
                   TransposeFolder>(context);
 }
 
-namespace mlir {
-namespace vector {
-
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Vector/VectorOps.cpp.inc"
-
-} // namespace vector
-} // namespace mlir

@@ -15,7 +15,7 @@ if 1 then def aYes;
 // CHECK: def bNotThree2
 // CHECK: def bNotThree4
 // CHECK: def bThree3
-foreach i = 1-4 in {
+foreach i = 1...4 in {
   if !eq(i, 3) then {
     def "bThree" # i;
   } else {
@@ -61,8 +61,8 @@ defm c3: Multi<3>;
 // CHECK-NOT: def dThenElse1
 // CHECK-NOT: def dThenElse11
 // CHECK: def dThenThen01
-foreach i = 0-1 in
-  foreach j = 0-1 in
+foreach i = 0...1 in
+  foreach j = 0...1 in
     if !eq(i,0) then
       if !eq(j,1) then
         def "dThenThen"#i#j;

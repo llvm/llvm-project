@@ -16,7 +16,7 @@ table-driven manner.
 ## Adding operation
 
 An operation in MLIR is specified using a definition in
-[TableGen](https://llvm.org/docs/TableGen/LangIntro.html) file. TableGen is a
+[TableGen](https://llvm.org/docs/TableGen/index.html) file. TableGen is a
 modeling tool to specify the ops and the C++ code to interact with these
 operations are generated from. To define an operation one needs to specify:
 

@@ -78,11 +78,26 @@ IncludeInserter::createIncludeInsertion(FileID FileID, StringRef Header,
 }
 
 llvm::Optional<FixItHint>
+IncludeInserter::createIncludeInsertion(FileID FileID, llvm::StringRef Header) {
+  bool IsAngled = Header.consume_front("<");
+  if (IsAngled != Header.consume_back(">"))
+    return llvm::None;
+  return createIncludeInsertion(FileID, Header, IsAngled);
+}
+
+llvm::Optional<FixItHint>
 IncludeInserter::createMainFileIncludeInsertion(StringRef Header,
                                                 bool IsAngled) {
   assert(SourceMgr && "SourceMgr shouldn't be null; did you remember to call "
                       "registerPreprocessor()?");
   return createIncludeInsertion(SourceMgr->getMainFileID(), Header, IsAngled);
+}
+
+llvm::Optional<FixItHint>
+IncludeInserter::createMainFileIncludeInsertion(StringRef Header) {
+  assert(SourceMgr && "SourceMgr shouldn't be null; did you remember to call "
+                      "registerPreprocessor()?");
+  return createIncludeInsertion(SourceMgr->getMainFileID(), Header);
 }
 
 void IncludeInserter::addInclude(StringRef FileName, bool IsAngled,

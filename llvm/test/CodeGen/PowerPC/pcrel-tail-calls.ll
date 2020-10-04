@@ -185,8 +185,8 @@ define dso_local signext i32 @TailCallAbs() local_unnamed_addr {
 ; CHECK:         .localentry TailCallAbs, 1
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    li r3, 400
-; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    li r12, 400
+; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    bctr
 ; CHECK-NEXT:    #TC_RETURNr8 ctr 0
 entry:
@@ -207,8 +207,8 @@ define dso_local signext i32 @NoTailCallAbs(i32 signext %a) local_unnamed_addr {
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    mr r30, r3
 ; CHECK-NEXT:    li r3, 400
-; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    li r12, 400
+; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    bctrl
 ; CHECK-NEXT:    add r3, r3, r30
 ; CHECK-NEXT:    extsw r3, r3

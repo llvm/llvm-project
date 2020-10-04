@@ -48,9 +48,8 @@ return:    ; preds = %entry
 ; MSVC-X86-O0: xorl %esp, %[[REG1]]
 ; MSVC-X86-O0: movl %[[REG1]], [[SLOT:[0-9]*]](%esp)
 ; MSVC-X86-O0: calll _strcpy
-; MSVC-X86-O0: movl [[SLOT]](%esp), %[[REG1:[^ ]*]]
-; MSVC-X86-O0: xorl %esp, %[[REG1]]
-; MSVC-X86-O0: movl %[[REG1]], %ecx
+; MSVC-X86-O0: movl [[SLOT]](%esp), %ecx
+; MSVC-X86-O0: xorl %esp, %ecx
 ; MSVC-X86-O0: calll @__security_check_cookie@4
 ; MSVC-X86-O0: retl
 
@@ -59,9 +58,8 @@ return:    ; preds = %entry
 ; MSVC-X64-O0: xorq %rsp, %[[REG1]]
 ; MSVC-X64-O0: movq %[[REG1]], [[SLOT:[0-9]*]](%rsp)
 ; MSVC-X64-O0: callq strcpy
-; MSVC-X64-O0: movq [[SLOT]](%rsp), %[[REG1:[^ ]*]]
-; MSVC-X64-O0: xorq %rsp, %[[REG1]]
-; MSVC-X64-O0: movq %[[REG1]], %rcx
+; MSVC-X64-O0: movq [[SLOT]](%rsp), %rcx
+; MSVC-X64-O0: xorq %rsp, %rcx
 ; MSVC-X64-O0: callq __security_check_cookie
 ; MSVC-X64-O0: retq
 

@@ -476,6 +476,12 @@ struct OpenMPOpt {
       : M(*(*SCC.begin())->getParent()), SCC(SCC), CGUpdater(CGUpdater),
         OREGetter(OREGetter), OMPInfoCache(OMPInfoCache), A(A) {}
 
+  /// Check if any remarks are enabled for openmp-opt
+  bool remarksEnabled() {
+    auto &Ctx = M.getContext();
+    return Ctx.getDiagHandlerPtr()->isAnyRemarkEnabled(DEBUG_TYPE);
+  }
+
   /// Run all OpenMP optimizations on the underlying SCC/ModuleSlice.
   bool run() {
     if (SCC.empty())
@@ -503,6 +509,8 @@ struct OpenMPOpt {
     Changed |= deleteParallelRegions();
     if (HideMemoryTransferLatency)
       Changed |= hideMemTransfersLatency();
+    if (remarksEnabled())
+      analysisGlobalization();
 
     return Changed;
   }
@@ -510,7 +518,8 @@ struct OpenMPOpt {
   /// Print initial ICV values for testing.
   /// FIXME: This should be done from the Attributor once it is added.
   void printICVs() const {
-    InternalControlVar ICVs[] = {ICV_nthreads, ICV_active_levels, ICV_cancel};
+    InternalControlVar ICVs[] = {ICV_nthreads, ICV_active_levels, ICV_cancel,
+                                 ICV_proc_bind};
 
     for (Function *F : OMPInfoCache.ModuleSlice) {
       for (auto ICV : ICVs) {
@@ -695,6 +704,33 @@ private:
     return Changed;
   }
 
+  void analysisGlobalization() {
+    RuntimeFunction GlobalizationRuntimeIDs[] = {
+        OMPRTL___kmpc_data_sharing_coalesced_push_stack,
+        OMPRTL___kmpc_data_sharing_push_stack};
+
+    for (const auto GlobalizationCallID : GlobalizationRuntimeIDs) {
+      auto &RFI = OMPInfoCache.RFIs[GlobalizationCallID];
+
+      auto CheckGlobalization = [&](Use &U, Function &Decl) {
+        if (CallInst *CI = getCallIfRegularCall(U, &RFI)) {
+          auto Remark = [&](OptimizationRemarkAnalysis ORA) {
+            return ORA
+                   << "Found thread data sharing on the GPU. "
+                   << "Expect degraded performance due to data globalization.";
+          };
+          emitRemark<OptimizationRemarkAnalysis>(CI, "OpenMPGlobalization",
+                                                 Remark);
+        }
+
+        return false;
+      };
+
+      RFI.foreachUse(SCC, CheckGlobalization);
+    }
+    return;
+  }
+
   /// Maps the values stored in the offload arrays passed as arguments to
   /// \p RuntimeCall into the offload arrays in \p OAs.
   bool getValuesInOffloadArrays(CallInst &RuntimeCall,
@@ -812,7 +848,15 @@ private:
   /// Splits \p RuntimeCall into its "issue" and "wait" counterparts.
   bool splitTargetDataBeginRTC(CallInst &RuntimeCall,
                                Instruction &WaitMovementPoint) {
+    // Create stack allocated handle (__tgt_async_info) at the beginning of the
+    // function. Used for storing information of the async transfer, allowing to
+    // wait on it later.
     auto &IRBuilder = OMPInfoCache.OMPBuilder;
+    auto *F = RuntimeCall.getCaller();
+    Instruction *FirstInst = &(F->getEntryBlock().front());
+    AllocaInst *Handle = new AllocaInst(
+        IRBuilder.AsyncInfo, F->getAddressSpace(), "handle", FirstInst);
+
     // Add "issue" runtime call declaration:
     // declare %struct.tgt_async_info @__tgt_target_data_begin_issue(i64, i32,
     //   i8**, i8**, i64*, i64*)
@@ -823,9 +867,10 @@ private:
     SmallVector<Value *, 8> Args;
     for (auto &Arg : RuntimeCall.args())
       Args.push_back(Arg.get());
+    Args.push_back(Handle);
 
     CallInst *IssueCallsite =
-        CallInst::Create(IssueDecl, Args, "handle", &RuntimeCall);
+        CallInst::Create(IssueDecl, Args, /*NameStr=*/"", &RuntimeCall);
     RuntimeCall.eraseFromParent();
 
     // Add "wait" runtime call declaration:
@@ -834,9 +879,10 @@ private:
         M, OMPRTL___tgt_target_data_begin_mapper_wait);
 
     // Add call site to WaitDecl.
+    const unsigned DeviceIDArgNum = 0;
     Value *WaitParams[2] = {
-        IssueCallsite->getArgOperand(0), // device_id.
-        IssueCallsite // returned handle.
+        IssueCallsite->getArgOperand(DeviceIDArgNum), // device_id.
+        Handle                                        // handle to wait on.
     };
     CallInst::Create(WaitDecl, WaitParams, /*NameStr=*/"", &WaitMovementPoint);
 

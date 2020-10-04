@@ -141,12 +141,16 @@ Example Python one-line breakpoint command:
 
 (lldb) breakpoint command add -s python 1
 Enter your Python command(s). Type 'DONE' to end.
-> print "Hit this breakpoint!"
-> DONE
+def function (frame, bp_loc, internal_dict):
+    """frame: the lldb.SBFrame for the location at which you stopped
+       bp_loc: an lldb.SBBreakpointLocation for the breakpoint location information
+       internal_dict: an LLDB support object not to be used"""
+    print("Hit this breakpoint!")
+    DONE
 
 As a convenience, this also works for a short Python one-liner:
 
-(lldb) breakpoint command add -s python 1 -o 'import time; print time.asctime()'
+(lldb) breakpoint command add -s python 1 -o 'import time; print(time.asctime())'
 (lldb) run
 Launching '.../a.out'  (x86_64)
 (lldb) Fri Sep 10 12:17:45 2010
@@ -164,21 +168,14 @@ Example multiple line Python breakpoint command:
 
 (lldb) breakpoint command add -s p 1
 Enter your Python command(s). Type 'DONE' to end.
-> global bp_count
-> bp_count = bp_count + 1
-> print "Hit this breakpoint " + repr(bp_count) + " times!"
-> DONE
-
-Example multiple line Python breakpoint command, using function definition:
-
-(lldb) breakpoint command add -s python 1
-Enter your Python command(s). Type 'DONE' to end.
-> def breakpoint_output (bp_no):
->     out_string = "Hit breakpoint number " + repr (bp_no)
->     print out_string
->     return True
-> breakpoint_output (1)
-> DONE
+def function (frame, bp_loc, internal_dict):
+    """frame: the lldb.SBFrame for the location at which you stopped
+       bp_loc: an lldb.SBBreakpointLocation for the breakpoint location information
+       internal_dict: an LLDB support object not to be used"""
+    global bp_count
+    bp_count = bp_count + 1
+    print("Hit this breakpoint " + repr(bp_count) + " times!")
+    DONE
 
 )"
         "In this case, since there is a reference to a global variable, \

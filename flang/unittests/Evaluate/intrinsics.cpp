@@ -26,10 +26,10 @@ public:
   }
   void Marshal() { cooked_.Marshal(allSources_); }
   parser::CharBlock operator()(const std::string &s) {
-    return {cooked_.data().data() + offsets_[s], s.size()};
+    return {cooked_.AsCharBlock().begin() + offsets_[s], s.size()};
   }
   parser::ContextualMessages Messages(parser::Messages &buffer) {
-    return parser::ContextualMessages{cooked_.data(), &buffer};
+    return parser::ContextualMessages{cooked_.AsCharBlock(), &buffer};
   }
   void Emit(llvm::raw_ostream &o, const parser::Messages &messages) {
     messages.Emit(o, allCookedSources_);

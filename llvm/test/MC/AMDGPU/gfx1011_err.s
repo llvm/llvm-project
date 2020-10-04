@@ -23,16 +23,16 @@ v_fma_legacy_f32 v0, v1, v2, v3
 // GFX10: error: instruction not supported on this GPU
 
 image_bvh_intersect_ray v[4:7], v[9:24], s[4:7]
-// GFX10: error: invalid instruction
+// GFX10: error: instruction not supported on this GPU
 
 image_bvh_intersect_ray v[4:7], v[9:16], s[4:7] a16
-// GFX10: error: invalid instruction
+// GFX10: error: invalid operand
 
 image_bvh64_intersect_ray v[4:7], v[9:24], s[4:7]
-// GFX10: error: invalid instruction
+// GFX10: error: instruction not supported on this GPU
 
 image_bvh64_intersect_ray v[4:7], v[9:24], s[4:7] a16
-// GFX10: error: invalid instruction
+// GFX10: error: invalid operand
 
 image_msaa_load v[1:4], v5, s[8:15] dmask:0xf dim:SQ_RSRC_IMG_1D
 // GFX10: error: not a valid operand.

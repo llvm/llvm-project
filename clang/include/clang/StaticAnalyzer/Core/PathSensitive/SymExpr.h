@@ -126,6 +126,9 @@ protected:
 public:
   ~SymbolData() override = default;
 
+  /// Get a string representation of the kind of the region.
+  virtual StringRef getKindStr() const = 0;
+
   SymbolID getSymbolID() const { return Sym; }
 
   unsigned computeComplexity() const override {

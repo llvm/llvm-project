@@ -19,8 +19,9 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
-#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -421,6 +422,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   };
 
   const LLT S1 = LLT::scalar(1);
+  const LLT S8 = LLT::scalar(8);
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
@@ -429,6 +431,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const LLT S512 = LLT::scalar(512);
   const LLT MaxScalar = LLT::scalar(MaxRegisterSize);
 
+  const LLT V2S8 = LLT::vector(2, 8);
   const LLT V2S16 = LLT::vector(2, 16);
   const LLT V4S16 = LLT::vector(4, 16);
 
@@ -586,10 +589,19 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .widenScalarToNextPow2(0, 32)
     .scalarize(0);
 
-  getActionDefinitionsBuilder({G_UMULH, G_SMULH})
-    .legalFor({S32})
-    .clampScalar(0, S32, S32)
-    .scalarize(0);
+  auto &Mulh = getActionDefinitionsBuilder({G_UMULH, G_SMULH})
+                   .legalFor({S32})
+                   .maxScalarOrElt(0, S32);
+
+  if (ST.hasVOP3PInsts()) {
+    Mulh
+      .clampMaxNumElements(0, S8, 2)
+      .lowerFor({V2S8});
+  }
+
+  Mulh
+    .scalarize(0)
+    .lower();
 
   // Report legal for any types we can handle anywhere. For the cases only legal
   // on the SALU, RegBankSelect will be able to re-legalize.
@@ -1056,9 +1068,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     return false;
   };
 
-  unsigned GlobalAlign32 = ST.hasUnalignedBufferAccessEnabled() ? 0 : 32;
-  unsigned GlobalAlign16 = ST.hasUnalignedBufferAccessEnabled() ? 0 : 16;
-  unsigned GlobalAlign8 = ST.hasUnalignedBufferAccessEnabled() ? 0 : 8;
+  unsigned GlobalAlign32 = ST.hasUnalignedBufferAccess() ? 0 : 32;
+  unsigned GlobalAlign16 = ST.hasUnalignedBufferAccess() ? 0 : 16;
+  unsigned GlobalAlign8 = ST.hasUnalignedBufferAccess() ? 0 : 8;
 
   // TODO: Refine based on subtargets which support unaligned access or 128-bit
   // LDS
@@ -4476,6 +4488,78 @@ bool AMDGPULegalizerInfo::legalizeDebugTrapIntrinsic(
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
+                                               MachineIRBuilder &B) const {
+  MachineRegisterInfo &MRI = *B.getMRI();
+  const LLT S16 = LLT::scalar(16);
+  const LLT S32 = LLT::scalar(32);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register NodePtr = MI.getOperand(2).getReg();
+  Register RayExtent = MI.getOperand(3).getReg();
+  Register RayOrigin = MI.getOperand(4).getReg();
+  Register RayDir = MI.getOperand(5).getReg();
+  Register RayInvDir = MI.getOperand(6).getReg();
+  Register TDescr = MI.getOperand(7).getReg();
+
+  bool IsA16 = MRI.getType(RayDir).getElementType().getSizeInBits() == 16;
+  bool Is64 =  MRI.getType(NodePtr).getSizeInBits() == 64;
+  unsigned Opcode = IsA16 ? Is64 ? AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16_nsa
+                                 : AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16_nsa
+                          : Is64 ? AMDGPU::IMAGE_BVH64_INTERSECT_RAY_nsa
+                                 : AMDGPU::IMAGE_BVH_INTERSECT_RAY_nsa;
+
+  SmallVector<Register, 12> Ops;
+  if (Is64) {
+    auto Unmerge = B.buildUnmerge({S32, S32}, NodePtr);
+    Ops.push_back(Unmerge.getReg(0));
+    Ops.push_back(Unmerge.getReg(1));
+  } else {
+    Ops.push_back(NodePtr);
+  }
+  Ops.push_back(RayExtent);
+
+  auto packLanes = [&Ops, &S32, &B] (Register Src) {
+    auto Unmerge = B.buildUnmerge({S32, S32, S32, S32}, Src);
+    Ops.push_back(Unmerge.getReg(0));
+    Ops.push_back(Unmerge.getReg(1));
+    Ops.push_back(Unmerge.getReg(2));
+  };
+
+  packLanes(RayOrigin);
+  if (IsA16) {
+    auto UnmergeRayDir = B.buildUnmerge({S16, S16, S16, S16}, RayDir);
+    auto UnmergeRayInvDir = B.buildUnmerge({S16, S16, S16, S16}, RayInvDir);
+    Register R1 = MRI.createGenericVirtualRegister(S32);
+    Register R2 = MRI.createGenericVirtualRegister(S32);
+    Register R3 = MRI.createGenericVirtualRegister(S32);
+    B.buildMerge(R1, {UnmergeRayDir.getReg(0), UnmergeRayDir.getReg(1)});
+    B.buildMerge(R2, {UnmergeRayDir.getReg(2), UnmergeRayInvDir.getReg(0)});
+    B.buildMerge(R3, {UnmergeRayInvDir.getReg(1), UnmergeRayInvDir.getReg(2)});
+    Ops.push_back(R1);
+    Ops.push_back(R2);
+    Ops.push_back(R3);
+  } else {
+    packLanes(RayDir);
+    packLanes(RayInvDir);
+  }
+
+  auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY)
+    .addDef(DstReg)
+    .addImm(Opcode);
+
+  for (Register R : Ops) {
+    MIB.addUse(R);
+  }
+
+  MIB.addUse(TDescr)
+     .addImm(IsA16 ? 1 : 0)
+     .cloneMemRefs(MI);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                             MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
@@ -4683,6 +4767,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_fmax:
     return legalizeDSAtomicFPIntrinsic(Helper, MI, IntrID);
+  case Intrinsic::amdgcn_image_bvh_intersect_ray:
+    return legalizeBVHIntrinsic(MI, B);
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))

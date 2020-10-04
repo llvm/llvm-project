@@ -37,12 +37,23 @@ const Symbol *Object::findSymbol(size_t UniqueId) const {
   return It->second;
 }
 
-void Object::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
-  Symbols.erase(
-      std::remove_if(std::begin(Symbols), std::end(Symbols),
-                     [ToRemove](const Symbol &Sym) { return ToRemove(Sym); }),
-      std::end(Symbols));
+Error Object::removeSymbols(
+    function_ref<Expected<bool>(const Symbol &)> ToRemove) {
+  Error Errs = Error::success();
+  Symbols.erase(std::remove_if(std::begin(Symbols), std::end(Symbols),
+                               [ToRemove, &Errs](const Symbol &Sym) {
+                                 Expected<bool> ShouldRemove = ToRemove(Sym);
+                                 if (!ShouldRemove) {
+                                   Errs = joinErrors(std::move(Errs),
+                                                     ShouldRemove.takeError());
+                                   return false;
+                                 }
+                                 return *ShouldRemove;
+                               }),
+                std::end(Symbols));
+
   updateSymbols();
+  return Errs;
 }
 
 Error Object::markSymbols() {

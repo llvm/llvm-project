@@ -14,6 +14,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
@@ -33,6 +34,12 @@ using namespace clang;
 using namespace ento;
 
 void SymExpr::anchor() {}
+
+StringRef SymbolConjured::getKindStr() const { return "conj_$"; }
+StringRef SymbolDerived::getKindStr() const { return "derived_$"; }
+StringRef SymbolExtent::getKindStr() const { return "extent_$"; }
+StringRef SymbolMetadata::getKindStr() const { return "meta_$"; }
+StringRef SymbolRegionValue::getKindStr() const { return "reg_$"; }
 
 LLVM_DUMP_METHOD void SymExpr::dump() const { dumpToStream(llvm::errs()); }
 
@@ -64,7 +71,7 @@ void SymbolCast::dumpToStream(raw_ostream &os) const {
 }
 
 void SymbolConjured::dumpToStream(raw_ostream &os) const {
-  os << "conj_$" << getSymbolID() << '{' << T.getAsString() << ", LC"
+  os << getKindStr() << getSymbolID() << '{' << T.getAsString() << ", LC"
      << LCtx->getID();
   if (S)
     os << ", S" << S->getID(LCtx->getDecl()->getASTContext());
@@ -74,24 +81,24 @@ void SymbolConjured::dumpToStream(raw_ostream &os) const {
 }
 
 void SymbolDerived::dumpToStream(raw_ostream &os) const {
-  os << "derived_$" << getSymbolID() << '{'
-     << getParentSymbol() << ',' << getRegion() << '}';
+  os << getKindStr() << getSymbolID() << '{' << getParentSymbol() << ','
+     << getRegion() << '}';
 }
 
 void SymbolExtent::dumpToStream(raw_ostream &os) const {
-  os << "extent_$" << getSymbolID() << '{' << getRegion() << '}';
+  os << getKindStr() << getSymbolID() << '{' << getRegion() << '}';
 }
 
 void SymbolMetadata::dumpToStream(raw_ostream &os) const {
-  os << "meta_$" << getSymbolID() << '{'
-     << getRegion() << ',' << T.getAsString() << '}';
+  os << getKindStr() << getSymbolID() << '{' << getRegion() << ','
+     << T.getAsString() << '}';
 }
 
 void SymbolData::anchor() {}
 
 void SymbolRegionValue::dumpToStream(raw_ostream &os) const {
-  os << "reg_$" << getSymbolID()
-     << '<' << getType().getAsString() << ' ' << R << '>';
+  os << getKindStr() << getSymbolID() << '<' << getType().getAsString() << ' '
+     << R << '>';
 }
 
 bool SymExpr::symbol_iterator::operator==(const symbol_iterator &X) const {
@@ -482,7 +489,7 @@ bool SymbolReaper::isLive(SymbolRef sym) {
 }
 
 bool
-SymbolReaper::isLive(const Stmt *ExprVal, const LocationContext *ELCtx) const {
+SymbolReaper::isLive(const Expr *ExprVal, const LocationContext *ELCtx) const {
   if (LCtx == nullptr)
     return false;
 
@@ -494,7 +501,8 @@ SymbolReaper::isLive(const Stmt *ExprVal, const LocationContext *ELCtx) const {
     return true;
   }
 
-  // If no statement is provided, everything is this and parent contexts is live.
+  // If no statement is provided, everything in this and parent contexts is
+  // live.
   if (!Loc)
     return true;
 

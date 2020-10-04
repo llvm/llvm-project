@@ -66,8 +66,8 @@ using namespace llvm;
 #define DESC "Transform predicated vector loops to use MVE tail predication"
 
 cl::opt<TailPredication::Mode> EnableTailPredication(
-   "tail-predication", cl::desc("MVE tail-predication options"),
-   cl::init(TailPredication::Disabled),
+   "tail-predication", cl::desc("MVE tail-predication pass options"),
+   cl::init(TailPredication::Enabled),
    cl::values(clEnumValN(TailPredication::Disabled, "disabled",
                          "Don't tail-predicate loops"),
               clEnumValN(TailPredication::EnabledNoReductions,
@@ -119,10 +119,10 @@ private:
   /// load/stores.
   bool IsPredicatedVectorLoop();
 
-  /// Perform checks on the arguments of @llvm.get.active.lane.mask
-  /// intrinsic: check if the first is a loop induction variable, and for the
-  /// the second check that no overflow can occur in the expression that use
-  /// this backedge-taken count.
+  /// Perform several checks on the arguments of @llvm.get.active.lane.mask
+  /// intrinsic. E.g., check that the loop induction variable and the element
+  /// count are of the form we expect, and also perform overflow checks for
+  /// the new expressions that are created.
   bool IsSafeActiveMask(IntrinsicInst *ActiveLaneMask, Value *TripCount,
                         FixedVectorType *VecTy);
 
@@ -373,83 +373,101 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
     EnableTailPredication == TailPredication::ForceEnabledNoReductions ||
     EnableTailPredication == TailPredication::ForceEnabled;
 
-  // 1) TODO: Check that the TripCount (TC) belongs to this loop (originally).
-  // The scalar tripcount corresponds the number of elements processed by the
-  // loop, so we will refer to that from this point on.
-  auto *ElemCountVal = ActiveLaneMask->getOperand(1);
-
-  // 2) Prove that the sub expression is non-negative, i.e. it doesn't overflow:
-  //
-  //      (((ElementCount + (VectorWidth - 1)) / VectorWidth) - TripCount
-  //
-  // 2.1) First prove overflow can't happen in:
-  //
-  //      ElementCount + (VectorWidth - 1)
-  //
-  // Because of a lack of context, it is difficult to get a useful bounds on
-  // this expression. But since ElementCount uses the same variables as the
-  // TripCount (TC), for which we can find meaningful value ranges, we use that
-  // instead and assert that:
-  //
-  //     upperbound(TC) <= UINT_MAX - VectorWidth
-  //
+  Value *ElemCount = ActiveLaneMask->getOperand(1);
+  auto *EC= SE->getSCEV(ElemCount);
   auto *TC = SE->getSCEV(TripCount);
-  unsigned SizeInBits = TripCount->getType()->getScalarSizeInBits();
   int VectorWidth = VecTy->getNumElements();
-  auto Diff = APInt(SizeInBits, ~0) - APInt(SizeInBits, VectorWidth);
-  uint64_t MaxMinusVW = Diff.getZExtValue();
-  // FIXME: since ranges can be negative we work with signed ranges here, but
-  // we shouldn't extract the zext'ed values for them.
-  uint64_t UpperboundTC = SE->getSignedRange(TC).getUpper().getZExtValue();
+  ConstantInt *ConstElemCount = nullptr;
 
-  if (UpperboundTC > MaxMinusVW && !ForceTailPredication) {
-    LLVM_DEBUG(dbgs() << "ARM TP: Overflow possible in tripcount rounding:\n";
-               dbgs() << "upperbound(TC) <= UINT_MAX - VectorWidth\n";
-               dbgs() << UpperboundTC << " <= " << MaxMinusVW << " == false\n";);
+  // 1) Smoke tests that the original scalar loop TripCount (TC) belongs to
+  // this loop.  The scalar tripcount corresponds the number of elements
+  // processed by the loop, so we will refer to that from this point on.
+  if (!SE->isLoopInvariant(EC, L)) {
+    LLVM_DEBUG(dbgs() << "ARM TP: element count must be loop invariant.\n");
     return false;
   }
 
-  // 2.2) Make sure overflow doesn't happen in final expression:
-  //  (((ElementCount + (VectorWidth - 1)) / VectorWidth) - TripCount,
-  // To do this, compare the full ranges of these subexpressions:
-  //
-  //     Range(Ceil) <= Range(TC)
-  //
-  // where Ceil = ElementCount + (VW-1) / VW. If Ceil and TC are runtime
-  // values (and not constants), we have to compensate for the lowerbound value
-  // range to be off by 1. The reason is that the TC lives in the preheader in
-  // this form:
-  //
-  //     %trip.count.minus = add nsw nuw i32 %N, -1
-  //
-  // For the loop to be executed, %N has to be >= 1 and as a result the value
-  // range of %trip.count.minus has a lower bound of 0. Value %TC has this form:
-  //
-  //     %5 = add nuw nsw i32 %4, 1
-  //     call void @llvm.set.loop.iterations.i32(i32 %5)
-  //
-  // where %5 is some expression using %N, which needs to have a lower bound of
-  // 1. Thus, if the ranges of Ceil and TC are not a single constant but a set,
-  // we first add 0 to TC such that we can do the <= comparison on both sets.
-  //
-  auto *ElementCount = SE->getSCEV(ElemCountVal);
-  // Tmp = ElementCount + (VW-1)
-  auto *ECPlusVWMinus1 = SE->getAddExpr(ElementCount,
-      SE->getSCEV(ConstantInt::get(TripCount->getType(), VectorWidth - 1)));
-  // Ceil = ElementCount + (VW-1) / VW
-  auto *Ceil = SE->getUDivExpr(ECPlusVWMinus1,
-      SE->getSCEV(ConstantInt::get(TripCount->getType(), VectorWidth)));
+  if ((ConstElemCount = dyn_cast<ConstantInt>(ElemCount))) {
+    ConstantInt *TC = dyn_cast<ConstantInt>(TripCount);
+    if (!TC) {
+      LLVM_DEBUG(dbgs() << "ARM TP: Constant tripcount expected in "
+                           "set.loop.iterations\n");
+      return false;
+    }
 
-  ConstantRange RangeCeil = SE->getSignedRange(Ceil) ;
-  ConstantRange RangeTC = SE->getSignedRange(TC) ;
-  if (!RangeTC.isSingleElement()) {
-    auto ZeroRange =
-        ConstantRange(APInt(TripCount->getType()->getScalarSizeInBits(), 0));
-    RangeTC = RangeTC.unionWith(ZeroRange);
-  }
-  if (!RangeTC.contains(RangeCeil) && !ForceTailPredication) {
-    LLVM_DEBUG(dbgs() << "ARM TP: Overflow possible in sub\n");
-    return false;
+    // Calculate 2 tripcount values and check that they are consistent with
+    // each other:
+    // i) The number of loop iterations extracted from the set.loop.iterations
+    //    intrinsic, multipled by the vector width:
+    uint64_t TC1 = TC->getZExtValue() * VectorWidth;
+
+    // ii) TC1 has to be equal to TC + 1, with the + 1 to compensate for start
+    //     counting from 0.
+    uint64_t TC2 = ConstElemCount->getZExtValue() + 1;
+
+    // If the tripcount values are inconsistent, we don't want to insert the
+    // VCTP and trigger tail-predication; it's better to keep intrinsic
+    // get.active.lane.mask and legalize this.
+    if (TC1 != TC2) {
+      LLVM_DEBUG(dbgs() << "ARM TP: inconsistent constant tripcount values: "
+                 << TC1 << " from set.loop.iterations, and "
+                 << TC2 << " from get.active.lane.mask\n");
+      return false;
+    }
+  } else if (!ForceTailPredication) {
+    // 2) We need to prove that the sub expression that we create in the
+    // tail-predicated loop body, which calculates the remaining elements to be
+    // processed, is non-negative, i.e. it doesn't overflow:
+    //
+    //   ((ElementCount + VectorWidth - 1) / VectorWidth) - TripCount >= 0
+    //
+    // This is true if:
+    //
+    //    TripCount == (ElementCount + VectorWidth - 1) / VectorWidth
+    //
+    // which what we will be using here.
+    //
+    auto *VW = SE->getSCEV(ConstantInt::get(TripCount->getType(), VectorWidth));
+    // ElementCount + (VW-1):
+    auto *ECPlusVWMinus1 = SE->getAddExpr(EC,
+        SE->getSCEV(ConstantInt::get(TripCount->getType(), VectorWidth - 1)));
+
+    // Ceil = ElementCount + (VW-1) / VW
+    auto *Ceil = SE->getUDivExpr(ECPlusVWMinus1, VW);
+
+    // Prevent unused variable warnings with TC
+    (void)TC;
+    LLVM_DEBUG(
+      dbgs() << "ARM TP: Analysing overflow behaviour for:\n";
+      dbgs() << "ARM TP: - TripCount = "; TC->dump();
+      dbgs() << "ARM TP: - ElemCount = "; EC->dump();
+      dbgs() << "ARM TP: - VecWidth =  " << VectorWidth << "\n";
+      dbgs() << "ARM TP: - (ElemCount+VW-1) / VW = "; Ceil->dump();
+    );
+
+    // As an example, almost all the tripcount expressions (produced by the
+    // vectoriser) look like this:
+    //
+    //   TC = ((-4 + (4 * ((3 + %N) /u 4))<nuw>) /u 4)
+    //
+    // and "ElementCount + (VW-1) / VW":
+    //
+    //   Ceil = ((3 + %N) /u 4)
+    //
+    // Check for equality of TC and Ceil by calculating SCEV expression
+    // TC - Ceil and test it for zero.
+    //
+    bool Zero = SE->getMinusSCEV(
+                      SE->getBackedgeTakenCount(L),
+                      SE->getUDivExpr(SE->getAddExpr(SE->getMulExpr(Ceil, VW),
+                                                     SE->getNegativeSCEV(VW)),
+                                      VW))
+                    ->isZero();
+
+    if (!Zero) {
+      LLVM_DEBUG(dbgs() << "ARM TP: possible overflow in sub expression.\n");
+      return false;
+    }
   }
 
   // 3) Find out if IV is an induction phi. Note that we can't use Loop
@@ -460,6 +478,7 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   auto *IV = ActiveLaneMask->getOperand(0);
   auto *IVExpr = SE->getSCEV(IV);
   auto *AddExpr = dyn_cast<SCEVAddRecExpr>(IVExpr);
+
   if (!AddExpr) {
     LLVM_DEBUG(dbgs() << "ARM TP: induction not an add expr: "; IVExpr->dump());
     return false;
@@ -467,6 +486,11 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   // Check that this AddRec is associated with this loop.
   if (AddExpr->getLoop() != L) {
     LLVM_DEBUG(dbgs() << "ARM TP: phi not part of this loop\n");
+    return false;
+  }
+  auto *Base = dyn_cast<SCEVConstant>(AddExpr->getOperand(0));
+  if (!Base || !Base->isZero()) {
+    LLVM_DEBUG(dbgs() << "ARM TP: induction base is not 0\n");
     return false;
   }
   auto *Step = dyn_cast<SCEVConstant>(AddExpr->getOperand(1));

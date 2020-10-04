@@ -127,9 +127,8 @@ body:             |
   ; CHECK:   liveins: $lr, $r0, $r1, $r3
   ; CHECK:   renamable $vpr = VLDR_P0_off $sp, 0, 14 /* CC::al */, $noreg :: (load 4 from %stack.0)
   ; CHECK:   MVE_VPST 8, implicit $vpr
-  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv24, align 4)
-  ; CHECK:   MVE_VPST 4, implicit $vpr
-  ; CHECK:   renamable $vpr = MVE_VCMPi32r renamable $q0, $zr, 1, 1, killed renamable $vpr
+  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, killed renamable $vpr :: (load 16 from %ir.lsr.iv24, align 4)
+  ; CHECK:   MVE_VPTv4i32r 8, renamable $q0, $zr, 1, implicit-def $vpr
   ; CHECK:   renamable $r3, renamable $q1 = MVE_VLDRWU32_post killed renamable $r3, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv1, align 4)
   ; CHECK:   renamable $q0 = nsw MVE_VMULi32 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
   ; CHECK:   MVE_VPST 8, implicit $vpr

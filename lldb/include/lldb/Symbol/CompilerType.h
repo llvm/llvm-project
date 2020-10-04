@@ -20,7 +20,7 @@ namespace lldb_private {
 
 class DataExtractor;
 
-/// Represents a generic type in a programming language.
+/// Generic representation of a type in a programming language.
 ///
 /// This class serves as an abstraction for a type inside one of the TypeSystems
 /// implemented by the language plugins. It does not have any actual logic in it

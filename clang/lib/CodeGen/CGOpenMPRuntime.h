@@ -253,9 +253,9 @@ public:
 
   public:
     UntiedTaskLocalDeclsRAII(
-        CodeGenModule &CGM,
-        const llvm::DenseMap<CanonicalDeclPtr<const VarDecl>, Address>
-            &LocalVars);
+        CodeGenFunction &CGF,
+        const llvm::DenseMap<CanonicalDeclPtr<const VarDecl>,
+                             std::pair<Address, Address>> &LocalVars);
     ~UntiedTaskLocalDeclsRAII();
   };
 
@@ -432,6 +432,8 @@ private:
                                 std::tuple<QualType, const FieldDecl *,
                                            const FieldDecl *, LValue>>>
       LastprivateConditionalToTypes;
+  /// Maps function to the position of the untied task locals stack.
+  llvm::DenseMap<llvm::Function *, unsigned> FunctionToUntiedTaskStackMap;
   /// Type kmp_critical_name, originally defined as typedef kmp_int32
   /// kmp_critical_name[8];
   llvm::ArrayType *KmpCriticalNameTy;
@@ -720,7 +722,8 @@ private:
   llvm::SmallVector<NontemporalDeclsSet, 4> NontemporalDeclsStack;
 
   using UntiedLocalVarsAddressesMap =
-      llvm::DenseMap<CanonicalDeclPtr<const VarDecl>, Address>;
+      llvm::DenseMap<CanonicalDeclPtr<const VarDecl>,
+                     std::pair<Address, Address>>;
   llvm::SmallVector<UntiedLocalVarsAddressesMap, 4> UntiedLocalVarsStack;
 
   /// Stack for list of addresses of declarations in current context marked as
@@ -1882,6 +1885,9 @@ public:
 
   /// Destroys user defined allocators specified in the uses_allocators clause.
   void emitUsesAllocatorsFini(CodeGenFunction &CGF, const Expr *Allocator);
+
+  /// Returns true if the variable is a local variable in untied task.
+  bool isLocalVarInUntiedTask(CodeGenFunction &CGF, const VarDecl *VD) const;
 };
 
 /// Class supports emissionof SIMD-only code.

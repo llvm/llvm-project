@@ -46,7 +46,7 @@ public:
   const ListEntries &getEntries() const { return Entries; }
   bool empty() const { return Entries.empty(); }
   void clear() { Entries.clear(); }
-  Error extract(DWARFDataExtractor Data, uint64_t HeaderOffset, uint64_t End,
+  Error extract(DWARFDataExtractor Data, uint64_t HeaderOffset,
                 uint64_t *OffsetPtr, StringRef SectionName,
                 StringRef ListStringName);
 };
@@ -197,18 +197,18 @@ Error DWARFListTableBase<DWARFListType>::extract(DWARFDataExtractor Data,
     return E;
 
   Data.setAddressSize(Header.getAddrSize());
-  uint64_t End = getHeaderOffset() + Header.length();
-  while (*OffsetPtr < End) {
+  Data = DWARFDataExtractor(Data, getHeaderOffset() + Header.length());
+  while (Data.isValidOffset(*OffsetPtr)) {
     DWARFListType CurrentList;
     uint64_t Off = *OffsetPtr;
-    if (Error E = CurrentList.extract(Data, getHeaderOffset(), End, OffsetPtr,
+    if (Error E = CurrentList.extract(Data, getHeaderOffset(), OffsetPtr,
                                       Header.getSectionName(),
                                       Header.getListTypeString()))
       return E;
     ListMap[Off] = CurrentList;
   }
 
-  assert(*OffsetPtr == End &&
+  assert(*OffsetPtr == Data.size() &&
          "mismatch between expected length of table and length "
          "of extracted data");
   return Error::success();
@@ -216,18 +216,18 @@ Error DWARFListTableBase<DWARFListType>::extract(DWARFDataExtractor Data,
 
 template <typename ListEntryType>
 Error DWARFListType<ListEntryType>::extract(DWARFDataExtractor Data,
-                                            uint64_t HeaderOffset, uint64_t End,
+                                            uint64_t HeaderOffset,
                                             uint64_t *OffsetPtr,
                                             StringRef SectionName,
                                             StringRef ListTypeString) {
-  if (*OffsetPtr < HeaderOffset || *OffsetPtr >= End)
+  if (*OffsetPtr < HeaderOffset || *OffsetPtr >= Data.size())
     return createStringError(errc::invalid_argument,
                        "invalid %s list offset 0x%" PRIx64,
                        ListTypeString.data(), *OffsetPtr);
   Entries.clear();
-  while (*OffsetPtr < End) {
+  while (Data.isValidOffset(*OffsetPtr)) {
     ListEntryType Entry;
-    if (Error E = Entry.extract(Data, End, OffsetPtr))
+    if (Error E = Entry.extract(Data, OffsetPtr))
       return E;
     Entries.push_back(Entry);
     if (Entry.isSentinel())
@@ -270,19 +270,13 @@ template <typename DWARFListType>
 Expected<DWARFListType>
 DWARFListTableBase<DWARFListType>::findList(DWARFDataExtractor Data,
                                             uint64_t Offset) {
-  auto Entry = ListMap.find(Offset);
-  if (Entry != ListMap.end())
-    return Entry->second;
-
   // Extract the list from the section and enter it into the list map.
   DWARFListType List;
-  uint64_t End = getHeaderOffset() + Header.length();
-  uint64_t StartingOffset = Offset;
+  Data = DWARFDataExtractor(Data, getHeaderOffset() + Header.length());
   if (Error E =
-          List.extract(Data, getHeaderOffset(), End, &Offset,
+          List.extract(Data, getHeaderOffset(), &Offset,
                        Header.getSectionName(), Header.getListTypeString()))
     return std::move(E);
-  ListMap[StartingOffset] = List;
   return List;
 }
 

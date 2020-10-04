@@ -935,6 +935,14 @@ static bool checkExtensionProperty(Parser &P, SourceLocation Loc,
   if (TIProperty.Kind == TraitProperty::invalid)
     return false;
 
+  if (TIProperty.Kind ==
+      TraitProperty::implementation_extension_disable_implicit_base)
+    return true;
+
+  if (TIProperty.Kind ==
+      TraitProperty::implementation_extension_allow_templates)
+    return true;
+
   auto IsMatchExtension = [](OMPTraitProperty &TP) {
     return (TP.Kind ==
                 llvm::omp::TraitProperty::implementation_extension_match_all ||
@@ -1385,8 +1393,10 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
     return;
   }
 
-  OMPTraitInfo &TI = Actions.getASTContext().getNewOMPTraitInfo();
-  if (parseOMPDeclareVariantMatchClause(Loc, TI))
+  OMPTraitInfo *ParentTI = Actions.getOMPTraitInfoForSurroundingScope();
+  ASTContext &ASTCtx = Actions.getASTContext();
+  OMPTraitInfo &TI = ASTCtx.getNewOMPTraitInfo();
+  if (parseOMPDeclareVariantMatchClause(Loc, TI, ParentTI))
     return;
 
   Optional<std::pair<FunctionDecl *, Expr *>> DeclVarData =
@@ -1407,7 +1417,8 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
 }
 
 bool Parser::parseOMPDeclareVariantMatchClause(SourceLocation Loc,
-                                               OMPTraitInfo &TI) {
+                                               OMPTraitInfo &TI,
+                                               OMPTraitInfo *ParentTI) {
   // Parse 'match'.
   OpenMPClauseKind CKind = Tok.isAnnotation()
                                ? OMPC_unknown
@@ -1438,6 +1449,66 @@ bool Parser::parseOMPDeclareVariantMatchClause(SourceLocation Loc,
 
   // Parse ')'
   (void)T.consumeClose();
+
+  if (!ParentTI)
+    return false;
+
+  // Merge the parent/outer trait info into the one we just parsed and diagnose
+  // problems.
+  // TODO: Keep some source location in the TI to provide better diagnostics.
+  // TODO: Perform some kind of equivalence check on the condition and score
+  //       expressions.
+  for (const OMPTraitSet &ParentSet : ParentTI->Sets) {
+    bool MergedSet = false;
+    for (OMPTraitSet &Set : TI.Sets) {
+      if (Set.Kind != ParentSet.Kind)
+        continue;
+      MergedSet = true;
+      for (const OMPTraitSelector &ParentSelector : ParentSet.Selectors) {
+        bool MergedSelector = false;
+        for (OMPTraitSelector &Selector : Set.Selectors) {
+          if (Selector.Kind != ParentSelector.Kind)
+            continue;
+          MergedSelector = true;
+          for (const OMPTraitProperty &ParentProperty :
+               ParentSelector.Properties) {
+            bool MergedProperty = false;
+            for (OMPTraitProperty &Property : Selector.Properties) {
+              // Ignore "equivalent" properties.
+              if (Property.Kind != ParentProperty.Kind)
+                continue;
+
+              // If the kind is the same but the raw string not, we don't want
+              // to skip out on the property.
+              MergedProperty |= Property.RawString == ParentProperty.RawString;
+
+              if (Property.RawString == ParentProperty.RawString &&
+                  Selector.ScoreOrCondition == ParentSelector.ScoreOrCondition)
+                continue;
+
+              if (Selector.Kind == llvm::omp::TraitSelector::user_condition) {
+                Diag(Loc, diag::err_omp_declare_variant_nested_user_condition);
+              } else if (Selector.ScoreOrCondition !=
+                         ParentSelector.ScoreOrCondition) {
+                Diag(Loc, diag::err_omp_declare_variant_duplicate_nested_trait)
+                    << getOpenMPContextTraitPropertyName(
+                           ParentProperty.Kind, ParentProperty.RawString)
+                    << getOpenMPContextTraitSelectorName(ParentSelector.Kind)
+                    << getOpenMPContextTraitSetName(ParentSet.Kind);
+              }
+            }
+            if (!MergedProperty)
+              Selector.Properties.push_back(ParentProperty);
+          }
+        }
+        if (!MergedSelector)
+          Set.Selectors.push_back(ParentSelector);
+      }
+    }
+    if (!MergedSet)
+      TI.Sets.push_back(ParentSet);
+  }
+
   return false;
 }
 
@@ -1811,8 +1882,10 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     // { #pragma omp end declare variant }
     //
     ConsumeToken();
-    OMPTraitInfo &TI = Actions.getASTContext().getNewOMPTraitInfo();
-    if (parseOMPDeclareVariantMatchClause(Loc, TI))
+    OMPTraitInfo *ParentTI = Actions.getOMPTraitInfoForSurroundingScope();
+    ASTContext &ASTCtx = Actions.getASTContext();
+    OMPTraitInfo &TI = ASTCtx.getNewOMPTraitInfo();
+    if (parseOMPDeclareVariantMatchClause(Loc, TI, ParentTI))
       break;
 
     // Skip last tokens.
@@ -1821,7 +1894,6 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
 
     VariantMatchInfo VMI;
-    ASTContext &ASTCtx = Actions.getASTContext();
     TI.getAsVariantMatchInfo(ASTCtx, VMI);
 
     std::function<void(StringRef)> DiagUnknownTrait = [this, Loc](

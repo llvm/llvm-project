@@ -31,8 +31,9 @@ std::shared_ptr<SymbolIndex> SwapIndex::snapshot() const {
   return Index;
 }
 
-bool fromJSON(const llvm::json::Value &Parameters, FuzzyFindRequest &Request) {
-  llvm::json::ObjectMapper O(Parameters);
+bool fromJSON(const llvm::json::Value &Parameters, FuzzyFindRequest &Request,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Parameters, P);
   int64_t Limit;
   bool OK =
       O && O.map("Query", Request.Query) && O.map("Scopes", Request.Scopes) &&

@@ -19,15 +19,13 @@ func @void_function_signature_conversion(%arg0: tensor<4x8xf32>) {
 func @complex_signature_conversion(%arg0: tensor<5xf32>, %arg1: memref<10xf32>, %arg2: i1, %arg3: f16) -> (i1, tensor<5xf32>, memref<10xf32>, memref<15xf32>, f16) {
   %0 = alloc() : memref<15xf32>
   %1 = linalg.generic {
-          args_in = 1 : i64,
-          args_out = 1 : i64,
           indexing_maps = [#map0, #map0],
-          iterator_types = ["parallel"]
-        } %arg0 {
+          iterator_types = ["parallel"]}
+          ins(%arg0 : tensor<5xf32>) {
         ^bb0(%gen1_arg0: f32):
           %tmp1 = exp %gen1_arg0 : f32
           linalg.yield %tmp1 : f32
-        }: tensor<5xf32> -> tensor<5xf32>
+        } -> tensor<5xf32>
   return %arg2, %1, %arg1, %0, %arg3 : i1, tensor<5xf32>, memref<10xf32>, memref<15xf32>, f16
 }
 //      CHECK: (%[[ARG0:.*]]: memref<5xf32>, %[[ARG1:.*]]: memref<10xf32>, %[[ARG2:.*]]: i1, %[[ARG3:.*]]: f16)

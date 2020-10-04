@@ -153,6 +153,7 @@ struct Chunk {
     StackSizes,
     SymtabShndxSection,
     Symver,
+    ARMIndexTable,
     MipsABIFlags,
     Addrsig,
     Fill,
@@ -493,6 +494,23 @@ struct SymtabShndxSection : Section {
   }
 };
 
+struct ARMIndexTableEntry {
+  llvm::yaml::Hex32 Offset;
+  llvm::yaml::Hex32 Value;
+};
+
+struct ARMIndexTableSection : Section {
+  Optional<std::vector<ARMIndexTableEntry>> Entries;
+  Optional<yaml::BinaryRef> Content;
+  Optional<llvm::yaml::Hex64> Size;
+
+  ARMIndexTableSection() : Section(ChunkKind::ARMIndexTable) {}
+
+  static bool classof(const Chunk *S) {
+    return S->Kind == ChunkKind::ARMIndexTable;
+  }
+};
+
 // Represents .MIPS.abiflags section
 struct MipsABIFlags : Section {
   llvm::yaml::Hex16 Version;
@@ -575,6 +593,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::VerneedEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::Relocation)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::SectionOrType)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::SectionName)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::ARMIndexTableEntry)
 
 namespace llvm {
 namespace yaml {
@@ -755,6 +774,10 @@ template <> struct MappingTraits<ELFYAML::CallGraphEntry> {
 
 template <> struct MappingTraits<ELFYAML::Relocation> {
   static void mapping(IO &IO, ELFYAML::Relocation &Rel);
+};
+
+template <> struct MappingTraits<ELFYAML::ARMIndexTableEntry> {
+  static void mapping(IO &IO, ELFYAML::ARMIndexTableEntry &E);
 };
 
 template <> struct MappingTraits<std::unique_ptr<ELFYAML::Chunk>> {

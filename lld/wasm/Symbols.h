@@ -284,9 +284,9 @@ public:
   uint64_t getSize() const { return size; }
 
   InputSegment *segment = nullptr;
+  uint32_t offset = 0;
 
 protected:
-  uint64_t offset = 0;
   uint64_t size = 0;
 };
 
@@ -470,6 +470,10 @@ struct WasmSym {
   // __wasm_call_ctors
   // Function that directly calls all ctors in priority order.
   static DefinedFunction *callCtors;
+
+  // __wasm_call_dtors
+  // Function that calls the libc/etc. cleanup function.
+  static DefinedFunction *callDtors;
 
   // __wasm_apply_relocs
   // Function that applies relocations to data segment post-instantiation.

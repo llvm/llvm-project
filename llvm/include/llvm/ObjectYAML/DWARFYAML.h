@@ -126,7 +126,7 @@ struct File {
 
 struct LineTableOpcode {
   dwarf::LineNumberOps Opcode;
-  uint64_t ExtLen;
+  Optional<uint64_t> ExtLen;
   dwarf::LineNumberExtendedOps SubOpcode;
   uint64_t Data;
   int64_t SData;

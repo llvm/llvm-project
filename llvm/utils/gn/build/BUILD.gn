@@ -235,6 +235,48 @@ config("compiler_defaults") {
       ]
     }
   }
+
+  if (use_ubsan) {
+    assert(is_clang && current_os == "linux",
+           "ubsan only supported on Linux/Clang")
+    cflags += [ "-fsanitize=undefined" ]
+    ldflags += [ "-fsanitize=undefined" ]
+  }
+
+  if (use_asan) {
+    assert(is_clang && current_os == "linux",
+           "asan only supported on Linux/Clang")
+    cflags += [ "-fsanitize=address" ]
+    ldflags += [ "-fsanitize=address" ]
+  }
+
+  if (use_tsan) {
+    assert(is_clang && current_os == "linux",
+           "tsan only supported on Linux/Clang")
+    cflags += [ "-fsanitize=thread" ]
+    ldflags += [ "-fsanitize=thread" ]
+  }
+
+  if (use_thinlto) {
+    assert(is_clang, "ThinLTO only supported on Clang")
+
+    lto_opt_level = 2
+
+    cflags += [ "-flto=thin" ]
+
+    if (host_os == "win") {
+      ldflags += [
+        "/opt:lldlto=" + lto_opt_level,
+        "/opt:lldltojobs=" + max_jobs_per_lto_link,
+      ]
+    } else {
+      ldflags += [
+        "-flto=thin",
+        "-Wl,--thinlto-jobs=" + max_jobs_per_lto_link,
+        "-Wl,--lto-O" + lto_opt_level,
+      ]
+    }
+  }
 }
 
 config("no_exceptions") {

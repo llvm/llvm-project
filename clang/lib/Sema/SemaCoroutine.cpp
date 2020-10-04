@@ -398,6 +398,10 @@ static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
            diag::warn_coroutine_handle_address_invalid_return_type)
         << JustAddress->getType();
 
+  // The coroutine handle used to obtain the address is no longer needed
+  // at this point, clean it up to avoid unnecessarily long lifetime which
+  // could lead to unnecessary spilling.
+  JustAddress = S.MaybeCreateExprWithCleanups(JustAddress);
   return buildBuiltinCall(S, Loc, Builtin::BI__builtin_coro_resume,
                           JustAddress);
 }

@@ -84,11 +84,16 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
     }
   }
 
-  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,
+  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t MemSize,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
+
+    // The reported memory location may be wider than the value.
+    const LLT RegTy = MRI.getType(ValVReg);
+    MemSize = std::min(static_cast<uint64_t>(RegTy.getSizeInBytes()), MemSize);
+
     auto MMO = MF.getMachineMemOperand(
-        MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, Size,
+        MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, MemSize,
         inferAlignFromPtrInfo(MF, MPO));
     MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
   }
@@ -789,7 +794,7 @@ static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
 
   // When BTI is enabled, we need to use TCRETURNriBTI to make sure that we use
   // x16 or x17.
-  if (CallerF.getFunction().hasFnAttribute("branch-target-enforcement"))
+  if (CallerF.getInfo<AArch64FunctionInfo>()->branchTargetEnforcement())
     return AArch64::TCRETURNriBTI;
 
   return AArch64::TCRETURNri;
@@ -809,7 +814,7 @@ bool AArch64CallLowering::lowerTailCall(
 
   // TODO: Right now, regbankselect doesn't know how to handle the rtcGPR64
   // register class. Until we can do that, we should fall back here.
-  if (F.hasFnAttribute("branch-target-enforcement")) {
+  if (MF.getInfo<AArch64FunctionInfo>()->branchTargetEnforcement()) {
     LLVM_DEBUG(
         dbgs() << "Cannot lower indirect tail calls with BTI enabled yet.\n");
     return false;

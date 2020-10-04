@@ -493,7 +493,7 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
 
   if (!dialect) {
     LLVM_DEBUG(llvm::dbgs()
-               << "Load new dialect in Context" << dialectNamespace);
+               << "Load new dialect in Context " << dialectNamespace << "\n");
 #ifndef NDEBUG
     if (impl.multiThreadedExecutionContext != 0)
       llvm::report_fatal_error(

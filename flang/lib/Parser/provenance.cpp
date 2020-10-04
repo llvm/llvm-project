@@ -301,6 +301,14 @@ const SourceFile *AllSources::GetSourceFile(
       origin.u);
 }
 
+const char *AllSources::GetSource(ProvenanceRange range) const {
+  Provenance start{range.start()};
+  const Origin &origin{MapToOrigin(start)};
+  return origin.covers.Contains(range)
+      ? &origin[origin.covers.MemberOffset(start)]
+      : nullptr;
+}
+
 std::optional<SourcePosition> AllSources::GetSourcePosition(
     Provenance prov) const {
   const Origin &origin{MapToOrigin(prov)};
@@ -402,7 +410,7 @@ const AllSources::Origin &AllSources::MapToOrigin(Provenance at) const {
 
 std::optional<ProvenanceRange> CookedSource::GetProvenanceRange(
     CharBlock cookedRange) const {
-  if (!Contains(cookedRange)) {
+  if (!AsCharBlock().Contains(cookedRange)) {
     return std::nullopt;
   }
   ProvenanceRange first{provenanceMap_.Map(cookedRange.begin() - &data_[0])};

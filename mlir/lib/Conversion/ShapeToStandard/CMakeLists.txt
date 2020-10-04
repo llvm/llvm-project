@@ -1,4 +1,5 @@
 add_mlir_conversion_library(MLIRShapeToStandard
+  ConvertShapeConstraints.cpp
   ShapeToStandard.cpp
 
   ADDITIONAL_HEADER_DIRS

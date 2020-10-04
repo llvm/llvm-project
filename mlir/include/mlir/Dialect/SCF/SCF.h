@@ -23,13 +23,17 @@
 
 namespace mlir {
 namespace scf {
-
 void buildTerminatedBody(OpBuilder &builder, Location loc);
+} // namespace scf
+} // namespace mlir
 
 #include "mlir/Dialect/SCF/SCFOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/SCF/SCFOps.h.inc"
+
+namespace mlir {
+namespace scf {
 
 // Insert `loop.yield` at the end of the only region's only block if it
 // does not have a terminator already.  If a new `loop.yield` is inserted,

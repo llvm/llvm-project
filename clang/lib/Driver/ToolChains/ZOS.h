@@ -27,6 +27,10 @@ public:
   bool isPICDefaultForced() const override { return false; }
 
   bool IsIntegratedAssemblerDefault() const override { return true; }
+
+  void addClangTargetOptions(
+      const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+      Action::OffloadKind DeviceOffloadingKind) const override;
 };
 
 } // end namespace toolchains

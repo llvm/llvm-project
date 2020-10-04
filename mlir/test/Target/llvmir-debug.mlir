@@ -9,10 +9,6 @@ llvm.func @func_no_debug() {
 // CHECK-LABEL: define void @func_with_debug()
 // CHECK-SAME: !dbg ![[FUNC_LOC:[0-9]+]]
 llvm.func @func_with_debug() {
-  // CHECK: call void @func_no_debug()
-  // CHECK-NOT: !dbg
-  llvm.call @func_no_debug() : () -> () loc(unknown)
-
   // CHECK: call void @func_no_debug(), !dbg ![[CALLSITE_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc(callsite("mysource.cc":3:4 at "mysource.cc":5:6))
 

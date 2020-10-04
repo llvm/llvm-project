@@ -7,6 +7,9 @@
 # RUN: llvm-install-name-tool --version | FileCheck %s
 # RUN: llvm-install-name-tool -V | FileCheck %s
 
+# RUN: llvm-bitcode-strip --version | FileCheck %s
+# RUN: llvm-bitcode-strip -V | FileCheck %s
+
 # OBJCOPY-DAG: {{ version }}
 # OBJCOPY-DAG: GNU objcopy
 

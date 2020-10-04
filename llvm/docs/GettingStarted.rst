@@ -528,6 +528,9 @@ that include merges, so the `git rebase` step above is required.
 
 Please ask for help if you're having trouble with your particular git workflow.
 
+
+.. _git_pre_push_hook:
+
 Git pre-push hook
 ^^^^^^^^^^^^^^^^^
 

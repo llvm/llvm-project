@@ -1380,19 +1380,6 @@ static Value *upgradeAbs(IRBuilder<> &Builder, CallInst &CI) {
   return Res;
 }
 
-static Value *upgradeIntMinMax(IRBuilder<> &Builder, CallInst &CI,
-                               ICmpInst::Predicate Pred) {
-  Value *Op0 = CI.getArgOperand(0);
-  Value *Op1 = CI.getArgOperand(1);
-  Value *Cmp = Builder.CreateICmp(Pred, Op0, Op1);
-  Value *Res = Builder.CreateSelect(Cmp, Op0, Op1);
-
-  if (CI.getNumArgOperands() == 4)
-    Res = EmitX86Select(Builder, CI.getArgOperand(3), Res, CI.getArgOperand(2));
-
-  return Res;
-}
-
 static Value *upgradePMULDQ(IRBuilder<> &Builder, CallInst &CI, bool IsSigned) {
   Type *Ty = CI.getType();
 
@@ -2136,25 +2123,25 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                          Name == "sse41.pmaxsd" ||
                          Name.startswith("avx2.pmaxs") ||
                          Name.startswith("avx512.mask.pmaxs"))) {
-      Rep = upgradeIntMinMax(Builder, *CI, ICmpInst::ICMP_SGT);
+      Rep = UpgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::smax);
     } else if (IsX86 && (Name == "sse2.pmaxu.b" ||
                          Name == "sse41.pmaxuw" ||
                          Name == "sse41.pmaxud" ||
                          Name.startswith("avx2.pmaxu") ||
                          Name.startswith("avx512.mask.pmaxu"))) {
-      Rep = upgradeIntMinMax(Builder, *CI, ICmpInst::ICMP_UGT);
+      Rep = UpgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::umax);
     } else if (IsX86 && (Name == "sse41.pminsb" ||
                          Name == "sse2.pmins.w" ||
                          Name == "sse41.pminsd" ||
                          Name.startswith("avx2.pmins") ||
                          Name.startswith("avx512.mask.pmins"))) {
-      Rep = upgradeIntMinMax(Builder, *CI, ICmpInst::ICMP_SLT);
+      Rep = UpgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::smin);
     } else if (IsX86 && (Name == "sse2.pminu.b" ||
                          Name == "sse41.pminuw" ||
                          Name == "sse41.pminud" ||
                          Name.startswith("avx2.pminu") ||
                          Name.startswith("avx512.mask.pminu"))) {
-      Rep = upgradeIntMinMax(Builder, *CI, ICmpInst::ICMP_ULT);
+      Rep = UpgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::umin);
     } else if (IsX86 && (Name == "sse2.pmulu.dq" ||
                          Name == "avx2.pmulu.dq" ||
                          Name == "avx512.pmulu.dq.512" ||

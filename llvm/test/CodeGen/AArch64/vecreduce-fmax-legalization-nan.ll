@@ -54,19 +54,7 @@ define fp128 @test_v1f128(<1 x fp128> %a) nounwind {
 define fp128 @test_v2f128(<2 x fp128> %a) nounwind {
 ; CHECK-LABEL: test_v2f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48 // =48
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
-; CHECK-NEXT:    bl __gttf2
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    cmp w0, #0 // =0
-; CHECK-NEXT:    b.le .LBB4_2
-; CHECK-NEXT:  // %bb.1:
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:  .LBB4_2:
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #48 // =48
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b fmaxl
   %b = call fp128 @llvm.experimental.vector.reduce.fmax.v2f128(<2 x fp128> %a)
   ret fp128 %b
 }
@@ -77,11 +65,7 @@ define float @test_v16f32(<16 x float> %a) nounwind {
 ; CHECK-NEXT:    fmaxnm v1.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    fmaxnm v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    fmaxnm v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    dup v1.2d, v0.d[1]
-; CHECK-NEXT:    fmaxnm v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    dup v1.4s, v0.s[1]
-; CHECK-NEXT:    fmaxnm v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    fmaxnmv s0, v0.4s
 ; CHECK-NEXT:    ret
   %b = call float @llvm.experimental.vector.reduce.fmax.v16f32(<16 x float> %a)
   ret float %b

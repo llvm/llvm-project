@@ -504,7 +504,8 @@ public:
     auto EltCnt = VTy->getElementCount();
     assert(EltCnt.isKnownEven() &&
            "Cannot halve vector with odd number of elements.");
-    return VectorType::get(VTy->getElementType(), EltCnt/2);
+    return VectorType::get(VTy->getElementType(),
+                           EltCnt.divideCoefficientBy(2));
   }
 
   /// This static method returns a VectorType with twice as many elements as the

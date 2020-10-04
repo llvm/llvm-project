@@ -76,8 +76,11 @@ public:
 
       if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl()) {
         // If we don't see the definition we just don't know.
-        if (MemberCXXRD->hasDefinition() && isRefCountable(MemberCXXRD))
-          reportBug(Member, MemberType, MemberCXXRD, RD);
+        if (MemberCXXRD->hasDefinition()) {
+          llvm::Optional<bool> isRCAble = isRefCountable(MemberCXXRD);
+          if (isRCAble && *isRCAble)
+            reportBug(Member, MemberType, MemberCXXRD, RD);
+        }
       }
     }
   }

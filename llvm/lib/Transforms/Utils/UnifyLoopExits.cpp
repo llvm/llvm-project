@@ -16,6 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
@@ -53,7 +54,7 @@ FunctionPass *llvm::createUnifyLoopExitsPass() { return new UnifyLoopExits(); }
 INITIALIZE_PASS_BEGIN(UnifyLoopExits, "unify-loop-exits",
                       "Fixup each natural loop to have a single exit block",
                       false /* Only looks at CFG */, false /* Analysis Pass */)
-INITIALIZE_PASS_DEPENDENCY(LowerSwitch)
+INITIALIZE_PASS_DEPENDENCY(LowerSwitchLegacyPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(UnifyLoopExits, "unify-loop-exits",
@@ -80,7 +81,7 @@ static void restoreSSA(const DominatorTree &DT, const Loop *L,
                        const SetVector<BasicBlock *> &Incoming,
                        BasicBlock *LoopExitBlock) {
   using InstVector = SmallVector<Instruction *, 8>;
-  using IIMap = DenseMap<Instruction *, InstVector>;
+  using IIMap = MapVector<Instruction *, InstVector>;
   IIMap ExternalUsers;
   for (auto BB : L->blocks()) {
     for (auto &I : *BB) {

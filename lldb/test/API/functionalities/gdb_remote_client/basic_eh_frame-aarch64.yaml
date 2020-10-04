@@ -1,0 +1,25 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_AARCH64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000401000
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEF
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000402000
+    AddressAlign:    0x0000000000000008
+    Content:         0c000000000000000100017C1E0000001c0000001400000000104000000000000100000000000000000C1d109e820000
+Symbols:
+  - Name:            foo
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x0000000000401000
+...

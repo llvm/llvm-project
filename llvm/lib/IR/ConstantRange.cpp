@@ -413,6 +413,21 @@ bool ConstantRange::contains(const ConstantRange &Other) const {
   return Other.getUpper().ule(Upper) && Lower.ule(Other.getLower());
 }
 
+unsigned ConstantRange::getActiveBits() const {
+  if (isEmptySet())
+    return 0;
+
+  return getUnsignedMax().getActiveBits();
+}
+
+unsigned ConstantRange::getMinSignedBits() const {
+  if (isEmptySet())
+    return 0;
+
+  return std::max(getSignedMin().getMinSignedBits(),
+                  getSignedMax().getMinSignedBits());
+}
+
 ConstantRange ConstantRange::subtract(const APInt &Val) const {
   assert(Val.getBitWidth() == getBitWidth() && "Wrong bit width");
   // If the set is empty or full, don't modify the endpoints.
@@ -1240,6 +1255,16 @@ ConstantRange ConstantRange::srem(const ConstantRange &RHS) const {
   return ConstantRange(std::move(Lower), std::move(Upper));
 }
 
+ConstantRange ConstantRange::binaryNot() const {
+  if (isEmptySet())
+    return getEmpty();
+
+  if (isWrappedSet())
+    return getFull();
+
+  return ConstantRange(APInt::getAllOnesValue(getBitWidth())).sub(*this);
+}
+
 ConstantRange
 ConstantRange::binaryAnd(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
@@ -1277,6 +1302,12 @@ ConstantRange ConstantRange::binaryXor(const ConstantRange &Other) const {
   // Use APInt's implementation of XOR for single element ranges.
   if (isSingleElement() && Other.isSingleElement())
     return {*getSingleElement() ^ *Other.getSingleElement()};
+
+  // Special-case binary complement, since we can give a precise answer.
+  if (Other.isSingleElement() && Other.getSingleElement()->isAllOnesValue())
+    return binaryNot();
+  if (isSingleElement() && getSingleElement()->isAllOnesValue())
+    return Other.binaryNot();
 
   // TODO: replace this with something less conservative
   return getFull();

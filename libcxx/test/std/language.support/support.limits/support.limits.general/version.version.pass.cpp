@@ -40,6 +40,7 @@
     __cpp_lib_clamp                                201603L [C++17]
     __cpp_lib_complex_udls                         201309L [C++14]
     __cpp_lib_concepts                             201806L [C++2a]
+    __cpp_lib_constexpr_dynamic_alloc              201907L [C++2a]
     __cpp_lib_constexpr_misc                       201811L [C++2a]
     __cpp_lib_constexpr_swap_algorithms            201806L [C++2a]
     __cpp_lib_constexpr_utility                    201811L [C++2a]
@@ -215,6 +216,10 @@
 
 # ifdef __cpp_lib_concepts
 #   error "__cpp_lib_concepts should not be defined before c++2a"
+# endif
+
+# ifdef __cpp_lib_constexpr_dynamic_alloc
+#   error "__cpp_lib_constexpr_dynamic_alloc should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_constexpr_misc
@@ -599,6 +604,10 @@
 
 # ifdef __cpp_lib_concepts
 #   error "__cpp_lib_concepts should not be defined before c++2a"
+# endif
+
+# ifdef __cpp_lib_constexpr_dynamic_alloc
+#   error "__cpp_lib_constexpr_dynamic_alloc should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_constexpr_misc
@@ -1097,6 +1106,10 @@
 
 # ifdef __cpp_lib_concepts
 #   error "__cpp_lib_concepts should not be defined before c++2a"
+# endif
+
+# ifdef __cpp_lib_constexpr_dynamic_alloc
+#   error "__cpp_lib_constexpr_dynamic_alloc should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_constexpr_misc
@@ -1862,6 +1875,13 @@
 #   ifdef __cpp_lib_concepts
 #     error "__cpp_lib_concepts should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_constexpr_dynamic_alloc
+#   error "__cpp_lib_constexpr_dynamic_alloc should be defined in c++2a"
+# endif
+# if __cpp_lib_constexpr_dynamic_alloc != 201907L
+#   error "__cpp_lib_constexpr_dynamic_alloc should have the value 201907L in c++2a"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

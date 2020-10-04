@@ -1062,6 +1062,7 @@ static Value *CheckAndCreateOffsetAdd(Value *X, Value *Y, Value *GEP,
     FixSummands(YElType, X);
     XElType = cast<FixedVectorType>(X->getType());
   }
+  assert(XElType && YElType && "Unknown vector types");
   // Check that the summands are of compatible types
   if (XElType != YElType) {
     LLVM_DEBUG(dbgs() << "masked gathers/scatters: incompatible gep offsets\n");

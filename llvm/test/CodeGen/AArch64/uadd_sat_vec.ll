@@ -159,8 +159,8 @@ define void @v2i8(<2 x i8>* %px, <2 x i8>* %py, <2 x i8>* %pz) nounwind {
 ; CHECK-NEXT:    ushr v0.2s, v0.2s, #24
 ; CHECK-NEXT:    mov w8, v0.s[1]
 ; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    strb w8, [x2, #1]
 ; CHECK-NEXT:    strb w9, [x2]
+; CHECK-NEXT:    strb w8, [x2, #1]
 ; CHECK-NEXT:    ret
   %x = load <2 x i8>, <2 x i8>* %px
   %y = load <2 x i8>, <2 x i8>* %py
@@ -201,8 +201,8 @@ define void @v2i16(<2 x i16>* %px, <2 x i16>* %py, <2 x i16>* %pz) nounwind {
 ; CHECK-NEXT:    ushr v0.2s, v0.2s, #16
 ; CHECK-NEXT:    mov w8, v0.s[1]
 ; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    strh w8, [x2, #2]
 ; CHECK-NEXT:    strh w9, [x2]
+; CHECK-NEXT:    strh w8, [x2, #2]
 ; CHECK-NEXT:    ret
   %x = load <2 x i16>, <2 x i16>* %px
   %y = load <2 x i16>, <2 x i16>* %py

@@ -87,6 +87,7 @@ void CodeSection::finalizeContents() {
   bodySize = codeSectionHeader.size();
 
   for (InputFunction *func : functions) {
+    func->outputSec = this;
     func->outputOffset = bodySize;
     func->calculateSize();
     bodySize += func->getSize();
@@ -166,9 +167,11 @@ void DataSection::finalizeContents() {
     log("Data segment: size=" + Twine(segment->size) + ", startVA=" +
         Twine::utohexstr(segment->startVA) + ", name=" + segment->name);
 
-    for (InputSegment *inputSeg : segment->inputSegments)
+    for (InputSegment *inputSeg : segment->inputSegments) {
+      inputSeg->outputSec = this;
       inputSeg->outputOffset = segment->sectionOffset + segment->header.size() +
                                inputSeg->outputSegmentOffset;
+    }
   }
 
   createHeader(bodySize);
@@ -227,8 +230,8 @@ void CustomSection::finalizeContents() {
   os.flush();
 
   for (InputSection *section : inputSections) {
-    section->outputOffset = payloadSize;
     section->outputSec = this;
+    section->outputOffset = payloadSize;
     payloadSize += section->getSize();
   }
 

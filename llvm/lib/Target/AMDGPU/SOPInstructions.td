@@ -54,9 +54,9 @@ class SOP1_Pseudo <string opName, dag outs, dag ins,
   bits<1> has_sdst = 1;
 }
 
-class SOP1_Real<bits<8> op, SOP1_Pseudo ps> :
+class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   InstSI <ps.OutOperandList, ps.InOperandList,
-          ps.Mnemonic # " " # ps.AsmOperands, []>,
+          real_name # " " # ps.AsmOperands, []>,
   Enc32 {
 
   let isPseudo = 0;
@@ -421,6 +421,18 @@ class UniformBinFrag<SDPatternOperator Op> : PatFrag <
   (ops node:$src0, node:$src1),
   (Op $src0, $src1),
   [{ return !N->isDivergent(); }]> {
+  // This check is unnecessary as it's captured by the result register
+  // bank constraint.
+  //
+  // FIXME: Should add a way for the emitter to recognize this is a
+  // trivially true predicate to eliminate the check.
+  let GISelPredicateCode = [{return true;}];
+}
+
+class DivergentBinFrag<SDPatternOperator Op> : PatFrag <
+  (ops node:$src0, node:$src1),
+  (Op $src0, $src1),
+  [{ return N->isDivergent(); }]> {
   // This check is unnecessary as it's captured by the result register
   // bank constraint.
   //
@@ -813,8 +825,6 @@ def S_CBRANCH_I_FORK : SOPK_Pseudo <
   "$sdst, $simm16"
 >;
 
-let hasSideEffects = 1 in {
-
 let mayLoad = 1 in {
 // s_getreg_b32 should use hasSideEffects = 1 for tablegen to allow
 // its use in the readcyclecounter selection.
@@ -825,40 +835,55 @@ def S_GETREG_B32 : SOPK_Pseudo <
   "$sdst, $simm16",
   [(set i32:$sdst, (int_amdgcn_s_getreg (i32 timm:$simm16)))]> {
   let SOPKZext = 1;
+  let hasSideEffects = 1;
 }
-}
+} // End mayLoad = 1
 
-let mayLoad = 0, mayStore =0 in {
+let mayLoad = 0, mayStore = 0, Defs = [MODE], Uses = [MODE] in {
 
 // FIXME: Need to truncate immediate to 16-bits.
-def S_SETREG_B32 : SOPK_Pseudo <
+class S_SETREG_B32_Pseudo <list<dag> pattern=[]> : SOPK_Pseudo <
   "s_setreg_b32",
   (outs), (ins SReg_32:$sdst, hwreg:$simm16),
   "$simm16, $sdst",
-  [(int_amdgcn_s_setreg (i32 timm:$simm16), i32:$sdst)]> {
+  pattern>;
 
+def S_SETREG_B32 : S_SETREG_B32_Pseudo <
+  [(int_amdgcn_s_setreg (i32 timm:$simm16), i32:$sdst)]> {
   // Use custom inserter to optimize some cases to
-  // S_DENORM_MODE/S_ROUND_MODE.
+  // S_DENORM_MODE/S_ROUND_MODE/S_SETREG_B32_mode.
   let usesCustomInserter = 1;
-  let Defs = [MODE];
-  let Uses = [MODE];
+  let hasSideEffects = 1;
+}
+
+// Variant of SETREG that is guaranteed to only touch FP bits in the MODE
+// register, so doesn't have unmodeled side effects.
+def S_SETREG_B32_mode : S_SETREG_B32_Pseudo {
+  let hasSideEffects = 0;
 }
 
 // FIXME: Not on SI?
 //def S_GETREG_REGRD_B32 : SOPK_32 <sopk<0x14, 0x13>, "s_getreg_regrd_b32">;
 
-def S_SETREG_IMM32_B32 : SOPK_Pseudo <
+class S_SETREG_IMM32_B32_Pseudo : SOPK_Pseudo <
   "s_setreg_imm32_b32",
   (outs), (ins i32imm:$imm, hwreg:$simm16),
   "$simm16, $imm"> {
   let Size = 8; // Unlike every other SOPK instruction.
   let has_sdst = 0;
-  let Defs = [MODE];
-  let Uses = [MODE];
 }
 
+def S_SETREG_IMM32_B32 : S_SETREG_IMM32_B32_Pseudo {
+  let hasSideEffects = 1;
 }
-} // End hasSideEffects = 1
+
+// Variant of SETREG_IMM32 that is guaranteed to only touch FP bits in the MODE
+// register, so doesn't have unmodeled side effects.
+def S_SETREG_IMM32_B32_mode : S_SETREG_IMM32_B32_Pseudo {
+  let hasSideEffects = 0;
+}
+
+} // End mayLoad = 0, mayStore = 0, Defs = [MODE], Uses = [MODE]
 
 class SOPK_WAITCNT<string opName, list<dag> pat=[]> :
     SOPK_Pseudo<
@@ -1596,7 +1621,7 @@ defm S_SETREG_B32       : SOPK_Real32_gfx6_gfx7_gfx10<0x013>;
 defm S_SETREG_IMM32_B32 : SOPK_Real64_gfx6_gfx7_gfx10<0x015>;
 
 //===----------------------------------------------------------------------===//
-// GFX8, GFX9 (VI).
+// GFX8 (VI), GFX9.
 //===----------------------------------------------------------------------===//
 
 class Select_vi<string opName> :

@@ -162,7 +162,7 @@ int access_p(T *p, char type) {
   case 'm':
     // CHECK-MEMBER: vptr.cpp:[[@LINE+6]]:15: runtime error: member access within address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
     // CHECK-MEMBER-NEXT: [[PTR]]: note: object is of type [[DYN_TYPE:'S'|'U']]
-    // CHECK-MEMBER-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  }}
+    // CHECK-MEMBER-NEXT: {{^  ?.. .. .. ..  ?.. .. .. ..  ?.. .. .. ..  ?}}
     // CHECK-MEMBER-NEXT: {{^              \^~~~~~~~~~~(~~~~~~~~~~~~)? *$}}
     // CHECK-MEMBER-NEXT: {{^              vptr for}} [[DYN_TYPE]]
     // CHECK-Linux-MEMBER: #0 {{.*}}access_p{{.*}}vptr.cpp:[[@LINE+1]]
@@ -178,7 +178,7 @@ int access_p(T *p, char type) {
   case 'f':
     // CHECK-MEMFUN: vptr.cpp:[[@LINE+6]]:15: runtime error: member call on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
     // CHECK-MEMFUN-NEXT: [[PTR]]: note: object is of type [[DYN_TYPE:'S'|'U']]
-    // CHECK-MEMFUN-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  }}
+    // CHECK-MEMFUN-NEXT: {{^  ?.. .. .. ..  ?.. .. .. ..  ?.. .. .. ..  ?}}
     // CHECK-MEMFUN-NEXT: {{^              \^~~~~~~~~~~(~~~~~~~~~~~~)? *$}}
     // CHECK-MEMFUN-NEXT: {{^              vptr for}} [[DYN_TYPE]]
     // TODO: Add check for stacktrace here.
@@ -196,7 +196,7 @@ int access_p(T *p, char type) {
   case 'c':
     // CHECK-DOWNCAST: vptr.cpp:[[@LINE+6]]:11: runtime error: downcast of address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
     // CHECK-DOWNCAST-NEXT: [[PTR]]: note: object is of type [[DYN_TYPE:'S'|'U']]
-    // CHECK-DOWNCAST-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  }}
+    // CHECK-DOWNCAST-NEXT: {{^  ?.. .. .. ..  ?.. .. .. ..  ?.. .. .. ..  ?}}
     // CHECK-DOWNCAST-NEXT: {{^              \^~~~~~~~~~~(~~~~~~~~~~~~)? *$}}
     // CHECK-DOWNCAST-NEXT: {{^              vptr for}} [[DYN_TYPE]]
     // CHECK-Linux-DOWNCAST: #0 {{.*}}access_p{{.*}}vptr.cpp:[[@LINE+1]]

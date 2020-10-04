@@ -67,6 +67,7 @@ void testp()
         std::atomic_init(&t, T(3*sizeof(X)));
         assert(std::atomic_fetch_sub_explicit(&t, 2,
                                   std::memory_order_seq_cst) == T(3*sizeof(X)));
+        std::atomic_fetch_sub_explicit<X>(&t, 0, std::memory_order_relaxed);
         assert(t == T(1*sizeof(X)));
     }
     {
@@ -76,6 +77,7 @@ void testp()
         std::atomic_init(&t, T(3*sizeof(X)));
         assert(std::atomic_fetch_sub_explicit(&t, 2,
                                   std::memory_order_seq_cst) == T(3*sizeof(X)));
+        std::atomic_fetch_sub_explicit<X>(&t, 0, std::memory_order_relaxed);  
         assert(t == T(1*sizeof(X)));
     }
 }

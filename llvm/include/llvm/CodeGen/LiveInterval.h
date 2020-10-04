@@ -25,6 +25,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/Allocator.h"
@@ -704,12 +705,16 @@ namespace llvm {
   private:
     SubRange *SubRanges = nullptr; ///< Single linked list of subregister live
                                    /// ranges.
+    const Register Reg; // the register or stack slot of this interval.
+    float Weight = 0.0; // weight of this interval
 
   public:
-    const unsigned reg;  // the register or stack slot of this interval.
-    float weight;        // weight of this interval
+    Register reg() const { return Reg; }
+    float weight() const { return Weight; }
+    void incrementWeight(float Inc) { Weight += Inc; }
+    void setWeight(float Value) { Weight = Value; }
 
-    LiveInterval(unsigned Reg, float Weight) : reg(Reg), weight(Weight) {}
+    LiveInterval(unsigned Reg, float Weight) : Reg(Reg), Weight(Weight) {}
 
     ~LiveInterval() {
       clearSubRanges();
@@ -806,14 +811,10 @@ namespace llvm {
     unsigned getSize() const;
 
     /// isSpillable - Can this interval be spilled?
-    bool isSpillable() const {
-      return weight != huge_valf;
-    }
+    bool isSpillable() const { return Weight != huge_valf; }
 
     /// markNotSpillable - Mark interval as not spillable
-    void markNotSpillable() {
-      weight = huge_valf;
-    }
+    void markNotSpillable() { Weight = huge_valf; }
 
     /// For a given lane mask @p LaneMask, compute indexes at which the
     /// lane is marked undefined by subregister <def,read-undef> definitions.
@@ -870,7 +871,7 @@ namespace llvm {
     bool operator<(const LiveInterval& other) const {
       const SlotIndex &thisIndex = beginIndex();
       const SlotIndex &otherIndex = other.beginIndex();
-      return std::tie(thisIndex, reg) < std::tie(otherIndex, other.reg);
+      return std::tie(thisIndex, Reg) < std::tie(otherIndex, other.Reg);
     }
 
     void print(raw_ostream &OS) const;

@@ -82,14 +82,14 @@ define amdgpu_ps i8 @s_shl_i8_7(i8 inreg %value) {
 ;
 ; GFX8-LABEL: s_shl_i8_7:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_and_b32 s0, s0, 0xff
-; GFX8-NEXT:    s_lshl_b32 s0, s0, 7
+; GFX8-NEXT:    s_bfe_u32 s1, 7, 0x100000
+; GFX8-NEXT:    s_lshl_b32 s0, s0, s1
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_shl_i8_7:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_and_b32 s0, s0, 0xff
-; GFX9-NEXT:    s_lshl_b32 s0, s0, 7
+; GFX9-NEXT:    s_bfe_u32 s1, 7, 0x100000
+; GFX9-NEXT:    s_lshl_b32 s0, s0, s1
 ; GFX9-NEXT:    ; return to shader part epilog
   %result = shl i8 %value, 7
   ret i8 %result
@@ -426,14 +426,14 @@ define amdgpu_ps i16 @s_shl_i16_15(i16 inreg %value) {
 ;
 ; GFX8-LABEL: s_shl_i16_15:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX8-NEXT:    s_lshl_b32 s0, s0, 15
+; GFX8-NEXT:    s_bfe_u32 s1, 15, 0x100000
+; GFX8-NEXT:    s_lshl_b32 s0, s0, s1
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_shl_i16_15:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX9-NEXT:    s_lshl_b32 s0, s0, 15
+; GFX9-NEXT:    s_bfe_u32 s1, 15, 0x100000
+; GFX9-NEXT:    s_lshl_b32 s0, s0, s1
 ; GFX9-NEXT:    ; return to shader part epilog
   %result = shl i16 %value, 15
   ret i16 %result

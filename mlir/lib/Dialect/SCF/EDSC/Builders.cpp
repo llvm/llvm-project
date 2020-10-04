@@ -61,6 +61,25 @@ mlir::scf::ValueVector mlir::edsc::loopNestBuilder(
       });
 }
 
+mlir::scf::ValueVector mlir::edsc::loopNestBuilder(
+    ValueRange lbs, ValueRange ubs, ValueRange steps,
+    ValueRange iterArgInitValues,
+    function_ref<scf::ValueVector(ValueRange, ValueRange)> fun) {
+  // Delegates actual construction to scf::buildLoopNest by wrapping `fun` into
+  // the expected function interface.
+  assert(ScopedContext::getContext() && "EDSC ScopedContext not set up");
+  return mlir::scf::buildLoopNest(
+      ScopedContext::getBuilderRef(), ScopedContext::getLocation(), lbs, ubs,
+      steps, iterArgInitValues,
+      [&](OpBuilder &builder, Location loc, ValueRange ivs, ValueRange args) {
+        ScopedContext context(builder, loc);
+        if (fun)
+          return fun(ivs, args);
+        return scf::ValueVector(iterArgInitValues.begin(),
+                                iterArgInitValues.end());
+      });
+}
+
 static std::function<void(OpBuilder &, Location)>
 wrapIfBody(function_ref<scf::ValueVector()> body, TypeRange expectedTypes) {
   (void)expectedTypes;

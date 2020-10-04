@@ -157,7 +157,7 @@ int mlirShapedTypeIsDynamicStrideOrOffset(int64_t val);
 /** Checks whether the given type is a Vector type. */
 int mlirTypeIsAVector(MlirType type);
 
-/** Creates a vector type of the shape identified by its rank and dimensios,
+/** Creates a vector type of the shape identified by its rank and dimensions,
  * with the given element type in the same context as the element type. The type
  * is owned by the context. */
 MlirType mlirVectorTypeGet(intptr_t rank, int64_t *shape, MlirType elementType);
@@ -269,6 +269,30 @@ intptr_t mlirTupleTypeGetNumTypes(MlirType type);
 
 /** Returns the pos-th type in the tuple type. */
 MlirType mlirTupleTypeGetType(MlirType type, intptr_t pos);
+
+/*============================================================================*/
+/* Function type.                                                             */
+/*============================================================================*/
+
+/** Checks whether the given type is a function type. */
+int mlirTypeIsAFunction(MlirType type);
+
+/** Creates a function type, mapping a list of input types to result types. */
+MlirType mlirFunctionTypeGet(MlirContext ctx, intptr_t numInputs,
+                             MlirType *inputs, intptr_t numResults,
+                             MlirType *results);
+
+/** Returns the number of input types. */
+intptr_t mlirFunctionTypeGetNumInputs(MlirType type);
+
+/** Returns the number of result types. */
+intptr_t mlirFunctionTypeGetNumResults(MlirType type);
+
+/** Returns the pos-th input type. */
+MlirType mlirFunctionTypeGetInput(MlirType type, intptr_t pos);
+
+/** Returns the pos-th result type. */
+MlirType mlirFunctionTypeGetResult(MlirType type, intptr_t pos);
 
 #ifdef __cplusplus
 }

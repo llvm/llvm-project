@@ -19,7 +19,6 @@
 #ifndef LLVM_TRANSFORMS_IPO_CALLEDVALUEPROPAGATION_H
 #define LLVM_TRANSFORMS_IPO_CALLEDVALUEPROPAGATION_H
 
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {

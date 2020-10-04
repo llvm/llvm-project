@@ -1491,6 +1491,23 @@ Warn about assigning non-{0,1} values to boolean variables.
 alpha.core
 ^^^^^^^^^^
 
+.. _alpha-core-C11Lock:
+
+alpha.core.C11Lock
+""""""""""""""""""
+Similarly to :ref:`alpha.unix.PthreadLock <alpha-unix-PthreadLock>`, checks for
+the locking/unlocking of ``mtx_t`` mutexes.
+
+.. code-block:: cpp
+
+ mtx_t mtx1;
+
+ void bad1(void)
+ {
+   mtx_lock(&mtx1);
+   mtx_lock(&mtx1); // warn: This lock has already been acquired
+ }
+
 .. _alpha-core-CallAndMessageUnInitRefArg:
 
 alpha.core.CallAndMessageUnInitRefArg (C,C++, ObjC)
@@ -1866,6 +1883,26 @@ Check for dereference of null smart pointers.
  void deref_smart_ptr() {
    std::unique_ptr<int> P;
    *P; // warn: dereference of a default constructed smart unique_ptr
+ }
+
+alpha.fuchsia
+^^^^^^^^^^^^^
+
+.. _alpha-fuchsia-lock:
+
+alpha.fuchsia.Lock
+""""""""""""""""""
+Similarly to :ref:`alpha.unix.PthreadLock <alpha-unix-PthreadLock>`, checks for
+the locking/unlocking of fuchsia mutexes.
+
+.. code-block:: cpp
+
+ spin_lock_t mtx1;
+
+ void bad1(void)
+ {
+   spin_lock(&mtx1);
+   spin_lock(&mtx1);	// warn: This lock has already been acquired
  }
 
 alpha.llvm
@@ -2501,6 +2538,54 @@ We also define a set of safe transformations which if passed a safe value as an 
 - casts
 - unary operators like ``&`` or ``*``
 
+alpha.webkit.UncountedLocalVarsChecker
+""""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that any uncounted local variable is backed by a ref-counted object with lifetime that is strictly larger than the scope of the uncounted local variable. To be on the safe side we require the scope of an uncounted variable to be embedded in the scope of ref-counted object that backs it.
+
+These are examples of cases that we consider safe:
+
+  .. code-block:: cpp
+
+    void foo1() {
+      RefPtr<RefCountable> counted;
+      // The scope of uncounted is EMBEDDED in the scope of counted.
+      {
+        RefCountable* uncounted = counted.get(); // ok
+      }
+    }
+
+    void foo2(RefPtr<RefCountable> counted_param) {
+      RefCountable* uncounted = counted_param.get(); // ok
+    }
+
+    void FooClass::foo_method() {
+      RefCountable* uncounted = this; // ok
+    }
+
+Here are some examples of situations that we warn about as they *might* be potentially unsafe. The logic is that either we're able to guarantee that an argument is safe or it's considered if not a bug then bug-prone.
+
+  .. code-block:: cpp
+
+    void foo1() {
+      RefCountable* uncounted = new RefCountable; // warn
+    }
+
+    RefCountable* global_uncounted;
+    void foo2() {
+      RefCountable* uncounted = global_uncounted; // warn
+    }
+
+    void foo3() {
+      RefPtr<RefCountable> counted;
+      // The scope of uncounted is not EMBEDDED in the scope of counted.
+      RefCountable* uncounted = counted.get(); // warn
+    }
+
+We don't warn about these cases - we don't consider them necessarily safe but since they are very common and usually safe we'd introduce a lot of false positives otherwise:
+- variable defined in condition part of an ```if``` statement
+- variable defined in init statement condition of a ```for``` statement
+
+For the time being we also don't warn about uninitialized uncounted local variables.
 
 Debug Checkers
 ---------------

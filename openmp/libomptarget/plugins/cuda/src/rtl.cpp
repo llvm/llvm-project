@@ -30,9 +30,17 @@
 #define CUDA_ERR_STRING(err)                                                   \
   do {                                                                         \
     if (getDebugLevel() > 0) {                                                 \
-      const char *errStr;                                                      \
-      cuGetErrorString(err, &errStr);                                          \
-      DP("CUDA error is: %s\n", errStr);                                       \
+      const char *errStr = nullptr;                                            \
+      CUresult errStr_status = cuGetErrorString(err, &errStr);                 \
+      if (errStr_status == CUDA_ERROR_INVALID_VALUE)                           \
+        DP("Unrecognized CUDA error code: %d\n", err);                         \
+      else if (errStr_status == CUDA_SUCCESS)                                  \
+        DP("CUDA error is: %s\n", errStr);                                     \
+      else {                                                                   \
+        DP("Unresolved CUDA error code: %d\n", err);                           \
+        DP("Unsuccessful cuGetErrorString return status: %d\n",                \
+           errStr_status);                                                     \
+      }                                                                        \
     }                                                                          \
   } while (false)
 #else // OMPTARGET_DEBUG

@@ -33,6 +33,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <queue>
 #include <utility>
 
 using namespace clang;
@@ -1165,6 +1166,14 @@ ObjCInterfaceDecl *ObjCMethodDecl::getClassInterface() {
   llvm_unreachable("unknown method context");
 }
 
+ObjCCategoryDecl *ObjCMethodDecl::getCategory() {
+  if (auto *CD = dyn_cast<ObjCCategoryDecl>(getDeclContext()))
+    return CD;
+  if (auto *IMD = dyn_cast<ObjCCategoryImplDecl>(getDeclContext()))
+    return IMD->getCategoryDecl();
+  return nullptr;
+}
+
 SourceRange ObjCMethodDecl::getReturnTypeSourceRange() const {
   const auto *TSI = getReturnTypeSourceInfo();
   if (TSI)
@@ -1895,6 +1904,27 @@ ObjCProtocolDecl *ObjCProtocolDecl::CreateDeserialized(ASTContext &C,
                                    SourceLocation(), nullptr);
   Result->Data.setInt(!C.getLangOpts().Modules);
   return Result;
+}
+
+bool ObjCProtocolDecl::isNonRuntimeProtocol() const {
+  return hasAttr<ObjCNonRuntimeProtocolAttr>();
+}
+
+void ObjCProtocolDecl::getImpliedProtocols(
+    llvm::DenseSet<const ObjCProtocolDecl *> &IPs) const {
+  std::queue<const ObjCProtocolDecl *> WorkQueue;
+  WorkQueue.push(this);
+
+  while (!WorkQueue.empty()) {
+    const auto *PD = WorkQueue.front();
+    WorkQueue.pop();
+    for (const auto *Parent : PD->protocols()) {
+      const auto *Can = Parent->getCanonicalDecl();
+      auto Result = IPs.insert(Can);
+      if (Result.second)
+        WorkQueue.push(Parent);
+    }
+  }
 }
 
 ObjCProtocolDecl *ObjCProtocolDecl::lookupProtocolNamed(IdentifierInfo *Name) {

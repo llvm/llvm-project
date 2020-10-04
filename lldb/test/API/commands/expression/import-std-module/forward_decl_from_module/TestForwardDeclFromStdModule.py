@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import os
 
+
 class TestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -23,10 +24,12 @@ class TestCase(TestBase):
         sysroot = os.path.join(os.getcwd(), "root")
 
         # Set the sysroot where our dummy libc++ exists.
-        self.runCmd("platform select --sysroot '" + sysroot + "' host", CURRENT_EXECUTABLE_SET)
+        self.runCmd("platform select --sysroot '" + sysroot + "' host",
+                    CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_to_source_breakpoint(self,
-            "// Set break point at this line.", lldb.SBFileSpec("main.cpp"))
+                                          "// Set break point at this line.",
+                                          lldb.SBFileSpec("main.cpp"))
 
         self.runCmd("settings set target.import-std-module true")
 

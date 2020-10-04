@@ -169,6 +169,7 @@ ProgramHeaders:
 # RUN:   FileCheck %s --check-prefix=NOERR2 -DFILE=%t5.3.o --implicit-check-not="warning:"
 
 # NOERR2:      warning: '[[FILE]]': hash table nchain (93) differs from symbol count derived from SHT_DYNSYM section header (1)
+# NOERR2:      warning: '[[FILE]]': the size (0x5d0) of the dynamic symbol table at 0x78, derived from the hash table, goes past the end of the file (0x1d4) and will be ignored
 # NOERR2:      HashTable {
 # NOERR2-NEXT:   Num Buckets: 1
 # NOERR2-NEXT:   Num Chains: 93
@@ -187,6 +188,7 @@ ProgramHeaders:
 # RUN:   FileCheck %s --check-prefix=ERR3 -DFILE=%t5.4.o --implicit-check-not="warning:"
 
 # ERR3:      warning: '[[FILE]]': hash table nchain (94) differs from symbol count derived from SHT_DYNSYM section header (1)
+# ERR3:      warning: '[[FILE]]': the size (0x5e0) of the dynamic symbol table at 0x78, derived from the hash table, goes past the end of the file (0x1d4) and will be ignored
 # ERR3:      HashTable {
 # ERR3-NEXT:  Num Buckets: 1
 # ERR3-NEXT:  Num Chains: 94

@@ -18,4 +18,4 @@
 type = BuildTool
 name = tblgen
 parent = BuildTools
-required_libraries = Support TableGen MC
+required_libraries = Support TableGen

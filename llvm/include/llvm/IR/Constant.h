@@ -82,8 +82,9 @@ public:
   /// elements.
   bool isFiniteNonZeroFP() const;
 
-  /// Return true if this is a normal (as opposed to denormal) floating-point
-  /// scalar constant or a vector constant with all normal elements.
+  /// Return true if this is a normal (as opposed to denormal, infinity, nan,
+  /// or zero) floating-point scalar constant or a vector constant with all
+  /// normal elements. See APFloat::isNormal.
   bool isNormalFP() const;
 
   /// Return true if this scalar has an exact multiplicative inverse or this

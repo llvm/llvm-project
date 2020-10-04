@@ -105,6 +105,77 @@ def SPV_GroupNonUniformBallotOp : SPV_Op<"GroupNonUniformBallot", []> {
 
 // -----
 
+def SPV_GroupNonUniformBroadcastOp : SPV_Op<"GroupNonUniformBroadcast",
+  [NoSideEffect, AllTypesMatch<["value", "result"]>]> {
+  let summary = [{
+    Return the Value of the invocation identified by the id Id to all active
+    invocations in the group.
+  }];
+
+  let description = [{
+    Result Type  must be a scalar or vector of floating-point type, integer
+    type, or Boolean type.
+
+    Execution must be Workgroup or Subgroup Scope.
+
+     The type of Value must be the same as Result Type.
+
+    Id  must be a scalar of integer type, whose Signedness operand is 0.
+
+    Before version 1.5, Id must come from a constant instruction. Starting
+    with version 1.5, Id must be dynamically uniform.
+
+    The resulting value is undefined if Id is an inactive invocation, or is
+    greater than or equal to the size of the group.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    scope ::= `"Workgroup"` | `"Subgroup"`
+    integer-float-scalar-vector-type ::= integer-type | float-type |
+                               `vector<` integer-literal `x` integer-type `>` |
+                               `vector<` integer-literal `x` float-type `>`
+    group-non-uniform-broadcast-op ::= ssa-id `=` 
+	            `spv.GroupNonUniformBroadcast` scope ssa_use,
+                ssa_use `:` integer-float-scalar-vector-type `,` integer-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %scalar_value = ... : f32
+    %vector_value = ... : vector<4xf32>
+    %id = ... : i32
+    %0 = spv.GroupNonUniformBroadcast "Subgroup" %scalar_value, %id : f32, i32
+    %1 = spv.GroupNonUniformBroadcast "Workgroup" %vector_value, %id :
+      vector<4xf32>, i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPV_V_1_3>,
+    MaxVersion<SPV_V_1_5>,
+    Extension<[]>,
+    Capability<[SPV_C_GroupNonUniformBallot]>
+  ];
+
+  let arguments = (ins
+    SPV_ScopeAttr:$execution_scope,
+    SPV_Type:$value,
+    SPV_Integer:$id
+  );
+
+  let results = (outs
+    SPV_Type:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope operands attr-dict `:` type($value) `,` type($id)
+  }];
+}
+
+// -----
+
 def SPV_GroupNonUniformElectOp : SPV_Op<"GroupNonUniformElect", []> {
   let summary = [{
     Result is true only in the active invocation with the lowest id in the
@@ -147,7 +218,7 @@ def SPV_GroupNonUniformElectOp : SPV_Op<"GroupNonUniformElect", []> {
   );
 
   let builders = [
-    OpBuilder<[{OpBuilder &builder, OperationState &state, spirv::Scope}]>
+    OpBuilder<[{spirv::Scope}]>
   ];
 
   let assemblyFormat = "$execution_scope attr-dict `:` type($result)";
@@ -368,8 +439,8 @@ def SPV_GroupNonUniformFMulOp :
 def SPV_GroupNonUniformIAddOp :
     SPV_GroupNonUniformArithmeticOp<"GroupNonUniformIAdd", SPV_Integer, []> {
   let summary = [{
-    An integer add group operation of all Value operands contributed active
-    by invocations in the group.
+    An integer add group operation of all Value operands contributed by
+    active invocations in the group.
   }];
 
   let description = [{

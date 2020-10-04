@@ -51,6 +51,9 @@ static MCOperand LowerOperand(const MachineInstr *MI, const MachineOperand &MO,
       break;
     return MCOperand::createReg(MO.getReg());
 
+  case MachineOperand::MO_BlockAddress:
+    return LowerSymbolOperand(
+        MI, MO, AP.GetBlockAddressSymbol(MO.getBlockAddress()), AP);
   case MachineOperand::MO_ConstantPoolIndex:
     return LowerSymbolOperand(MI, MO, AP.GetCPISymbol(MO.getIndex()), AP);
   case MachineOperand::MO_ExternalSymbol:

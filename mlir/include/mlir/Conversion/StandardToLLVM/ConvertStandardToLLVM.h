@@ -27,6 +27,7 @@ class Type;
 
 namespace mlir {
 
+class BaseMemRefType;
 class ComplexType;
 class LLVMTypeConverter;
 class UnrankedMemRefType;
@@ -74,14 +75,27 @@ public:
                                           SignatureConversion &result);
 
   /// Convert a non-empty list of types to be returned from a function into a
-  /// supported LLVM IR type.  In particular, if more than one values is
+  /// supported LLVM IR type.  In particular, if more than one value is
   /// returned, create an LLVM IR structure type with elements that correspond
   /// to each of the MLIR types converted with `convertType`.
   Type packFunctionResults(ArrayRef<Type> types);
 
+  /// Convert a type in the context of the default or bare pointer calling
+  /// convention. Calling convention sensitive types, such as MemRefType and
+  /// UnrankedMemRefType, are converted following the specific rules for the
+  /// calling convention. Calling convention independent types are converted
+  /// following the default LLVM type conversions.
+  Type convertCallingConventionType(Type type);
+
+  /// Promote the bare pointers in 'values' that resulted from memrefs to
+  /// descriptors. 'stdTypes' holds the types of 'values' before the conversion
+  /// to the LLVM-IR dialect (i.e., MemRefType, or any other Standard type).
+  void promoteBarePtrsToDescriptors(ConversionPatternRewriter &rewriter,
+                                    Location loc, ArrayRef<Type> stdTypes,
+                                    SmallVectorImpl<Value> &values);
+
   /// Returns the MLIR context.
   MLIRContext &getContext();
-
 
   /// Returns the LLVM dialect.
   LLVM::LLVMDialect *getDialect() { return llvmDialect; }
@@ -178,6 +192,9 @@ private:
   // Convert an unranked memref type to an LLVM type that captures the
   // runtime rank and a pointer to the static ranked memref desc
   Type convertUnrankedMemRefType(UnrankedMemRefType type);
+
+  /// Convert a memref type to a bare pointer to the memref element type.
+  Type convertMemRefToBarePtr(BaseMemRefType type);
 
   // Convert a 1D vector type into an LLVM vector type.
   Type convertVectorType(VectorType type);

@@ -131,21 +131,21 @@ bool ento::shouldRegisterLiveVariablesDumper(const CheckerManager &mgr) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-class LiveStatementsDumper : public Checker<check::ASTCodeBody> {
+class LiveExpressionsDumper : public Checker<check::ASTCodeBody> {
 public:
   void checkASTCodeBody(const Decl *D, AnalysisManager& Mgr,
                         BugReporter &BR) const {
     if (LiveVariables *L = Mgr.getAnalysis<RelaxedLiveVariables>(D))
-      L->dumpStmtLiveness(Mgr.getSourceManager());
+      L->dumpExprLiveness(Mgr.getSourceManager());
   }
 };
 }
 
-void ento::registerLiveStatementsDumper(CheckerManager &mgr) {
-  mgr.registerChecker<LiveStatementsDumper>();
+void ento::registerLiveExpressionsDumper(CheckerManager &mgr) {
+  mgr.registerChecker<LiveExpressionsDumper>();
 }
 
-bool ento::shouldRegisterLiveStatementsDumper(const CheckerManager &mgr) {
+bool ento::shouldRegisterLiveExpressionsDumper(const CheckerManager &mgr) {
   return true;
 }
 

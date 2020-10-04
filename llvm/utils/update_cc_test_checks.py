@@ -176,7 +176,8 @@ def config():
   return args, parser
 
 
-def get_function_body(args, filename, clang_args, extra_commands, prefixes, triple_in_cmd, func_dict):
+def get_function_body(args, filename, clang_args, extra_commands, prefixes,
+                      triple_in_cmd, func_dict, func_order):
   # TODO Clean up duplication of asm/common build_function_body_dictionary
   # Invoke external tool and extract function bodies.
   raw_tool_output = common.invoke_tool(args.clang, clang_args, filename)
@@ -196,7 +197,8 @@ def get_function_body(args, filename, clang_args, extra_commands, prefixes, trip
   if '-emit-llvm' in clang_args:
     common.build_function_body_dictionary(
             common.OPT_FUNCTION_RE, common.scrub_body, [],
-            raw_tool_output, prefixes, func_dict, args.verbose, args.function_signature, args.check_attributes)
+            raw_tool_output, prefixes, func_dict, func_order, args.verbose,
+            args.function_signature, args.check_attributes)
   else:
     print('The clang command line should include -emit-llvm as asm tests '
           'are discouraged in Clang testsuite.', file=sys.stderr)
@@ -247,15 +249,18 @@ def main():
 
     # Execute clang, generate LLVM IR, and extract functions.
     func_dict = {}
+    func_order = {}
     for p in run_list:
       prefixes = p[0]
       for prefix in prefixes:
         func_dict.update({prefix: dict()})
+        func_order.update({prefix: []})
     for prefixes, clang_args, extra_commands, triple_in_cmd in run_list:
       common.debug('Extracted clang cmd: clang {}'.format(clang_args))
       common.debug('Extracted FileCheck prefixes: {}'.format(prefixes))
 
-      get_function_body(ti.args, ti.path, clang_args, extra_commands, prefixes, triple_in_cmd, func_dict)
+      get_function_body(ti.args, ti.path, clang_args, extra_commands, prefixes,
+                        triple_in_cmd, func_dict, func_order)
 
       # Invoke clang -Xclang -ast-dump=json to get mapping from start lines to
       # mangled names. Forward all clang args for now.
@@ -265,41 +270,79 @@ def main():
     global_vars_seen_dict = {}
     prefix_set = set([prefix for p in run_list for prefix in p[0]])
     output_lines = []
-    for line_info in ti.iterlines(output_lines):
-      idx = line_info.line_number
-      line = line_info.line
-      args = line_info.args
-      include_line = True
-      m = common.CHECK_RE.match(line)
-      if m and m.group(1) in prefix_set:
-        continue  # Don't append the existing CHECK lines
-      if idx in line2spell_and_mangled_list:
-        added = set()
-        for spell, mangled in line2spell_and_mangled_list[idx]:
-          # One line may contain multiple function declarations.
-          # Skip if the mangled name has been added before.
-          # The line number may come from an included file,
-          # we simply require the spelling name to appear on the line
-          # to exclude functions from other files.
-          if mangled in added or spell not in line:
-            continue
-          if args.functions is None or any(re.search(regex, spell) for regex in args.functions):
-            last_line = output_lines[-1].strip()
-            while last_line == '//':
-              # Remove the comment line since we will generate a new  comment
-              # line as part of common.add_ir_checks()
-              output_lines.pop()
-              last_line = output_lines[-1].strip()
-            if added:
-              output_lines.append('//')
-            added.add(mangled)
-            common.add_ir_checks(output_lines, '//', run_list, func_dict, mangled,
-                                 False, args.function_signature, global_vars_seen_dict)
-            if line.rstrip('\n') == '//':
-              include_line = False
 
-      if include_line:
-        output_lines.append(line.rstrip('\n'))
+    include_generated_funcs = common.find_arg_in_test(ti,
+                                                      lambda args: ti.args.include_generated_funcs,
+                                                      '--include-generated-funcs',
+                                                      True)
+
+    if include_generated_funcs:
+      # Generate the appropriate checks for each function.  We need to emit
+      # these in the order according to the generated output so that CHECK-LABEL
+      # works properly.  func_order provides that.
+
+      # It turns out that when clang generates functions (for example, with
+      # -fopenmp), it can sometimes cause functions to be re-ordered in the
+      # output, even functions that exist in the source file.  Therefore we
+      # can't insert check lines before each source function and instead have to
+      # put them at the end.  So the first thing to do is dump out the source
+      # lines.
+      common.dump_input_lines(output_lines, ti, prefix_set, '//')
+
+      # Now generate all the checks.
+      def check_generator(my_output_lines, prefixes, func):
+        if '-emit-llvm' in clang_args:
+          common.add_ir_checks(my_output_lines, '//',
+                               prefixes,
+                               func_dict, func, False,
+                               ti.args.function_signature,
+                               global_vars_seen_dict)
+        else:
+          asm.add_asm_checks(my_output_lines, '//',
+                             prefixes,
+                             func_dict, func)
+
+      common.add_checks_at_end(output_lines, run_list, func_order, '//',
+                               lambda my_output_lines, prefixes, func:
+                               check_generator(my_output_lines,
+                                               prefixes, func))
+    else:
+      # Normal mode.  Put checks before each source function.
+      for line_info in ti.iterlines(output_lines):
+        idx = line_info.line_number
+        line = line_info.line
+        args = line_info.args
+        include_line = True
+        m = common.CHECK_RE.match(line)
+        if m and m.group(1) in prefix_set:
+          continue  # Don't append the existing CHECK lines
+        if idx in line2spell_and_mangled_list:
+          added = set()
+          for spell, mangled in line2spell_and_mangled_list[idx]:
+            # One line may contain multiple function declarations.
+            # Skip if the mangled name has been added before.
+            # The line number may come from an included file,
+            # we simply require the spelling name to appear on the line
+            # to exclude functions from other files.
+            if mangled in added or spell not in line:
+              continue
+            if args.functions is None or any(re.search(regex, spell) for regex in args.functions):
+              last_line = output_lines[-1].strip()
+              while last_line == '//':
+                # Remove the comment line since we will generate a new  comment
+                # line as part of common.add_ir_checks()
+                output_lines.pop()
+                last_line = output_lines[-1].strip()
+              if added:
+                output_lines.append('//')
+              added.add(mangled)
+              common.add_ir_checks(output_lines, '//', run_list, func_dict, mangled,
+                                   False, args.function_signature, global_vars_seen_dict)
+              if line.rstrip('\n') == '//':
+                include_line = False
+
+        if include_line:
+          output_lines.append(line.rstrip('\n'))
 
     common.debug('Writing %d lines to %s...' % (len(output_lines), ti.path))
     with open(ti.path, 'wb') as f:

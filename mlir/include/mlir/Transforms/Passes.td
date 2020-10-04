@@ -313,6 +313,116 @@ def MemRefDataFlowOpt : FunctionPass<"memref-dataflow-opt"> {
 
 def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
   let summary = "Normalize memrefs";
+   let description = [{
+    This pass transforms memref types with a non-trivial
+    [layout map](https://mlir.llvm.org/docs/LangRef/#layout-map) into
+    memref types with an identity layout map, e.g. (i, j) -> (i, j). This
+    pass is inter-procedural, in the sense that it can modify function
+    interfaces and call sites that pass memref types. In order to modify
+    memref types while preserving the original behavior, users of those
+    memref types are also modified to incorporate the resulting layout map.
+    For instance, an [AffineLoadOp]
+    (https://mlir.llvm.org/docs/Dialects/Affine/#affineload-affineloadop)
+    will be updated to compose the layout map with with the affine expression
+    contained in the op. Operations marked with the [MemRefsNormalizable]
+    (https://mlir.llvm.org/docs/Traits/#memrefsnormalizable) trait are
+    expected to be normalizable. Supported operations include affine
+    operations, std.alloc, std.dealloc, and std.return.
+
+    Given an appropriate layout map specified in the code, this transformation
+    can express tiled or linearized access to multi-dimensional data
+    structures, but will not modify memref types without an explicit layout
+    map.
+
+    Currently this pass is limited to only modify
+    functions where all memref types can be normalized. If a function
+    contains any operations that are not MemRefNormalizable, then the function
+    and any functions that call or call it will not be modified.
+
+    Input
+
+    ```mlir
+    #tile = affine_map<(i) -> (i floordiv 4, i mod 4)>
+    func @matmul(%A: memref<16xf64, #tile>,
+                 %B: index, %C: memref<16xf64>) -> (memref<16xf64, #tile>) {
+      affine.for %arg3 = 0 to 16 {
+            %a = affine.load %A[%arg3] : memref<16xf64, #tile>
+            %p = mulf %a, %a : f64
+            affine.store %p, %A[%arg3] : memref<16xf64, #tile>
+      }
+      %c = alloc() : memref<16xf64, #tile>
+      %d = affine.load %c[0] : memref<16xf64, #tile>
+      return %A: memref<16xf64, #tile>
+    }
+    ```
+
+    Output
+
+    ```mlir
+    func @matmul(%arg0: memref<4x4xf64>, %arg1: index, %arg2: memref<16xf64>)
+      -> memref<4x4xf64> {
+      affine.for %arg3 = 0 to 16 {
+        %3 = affine.load %arg0[%arg3 floordiv 4, %arg3 mod 4]: memref<4x4xf64>
+        %4 = mulf %3, %3 : f64
+        affine.store %4, %arg0[%arg3 floordiv 4, %arg3 mod 4]: memref<4x4xf64>
+      }
+      %0 = alloc() : memref<4x4xf64>
+      %1 = affine.apply #map1()
+      %2 = affine.load %0[0, 0] : memref<4x4xf64>
+      return %arg0 : memref<4x4xf64>
+    }
+    ```
+
+    Input
+
+    ```
+    #linear8 = affine_map<(i, j) -> (i * 8 + j)>
+    func @linearize(%arg0: memref<8x8xi32, #linear8>,
+                    %arg1: memref<8x8xi32, #linear8>,
+                    %arg2: memref<8x8xi32, #linear8>) {
+      %c8 = constant 8 : index
+      %c0 = constant 0 : index
+      %c1 = constant 1 : index
+      affine.for %arg3 = %c0 to %c8  {
+      affine.for %arg4 = %c0 to %c8  {
+        affine.for %arg5 = %c0 to %c8 {
+          %0 = affine.load %arg0[%arg3, %arg5] : memref<8x8xi32, #linear8>
+          %1 = affine.load %arg1[%arg5, %arg4] : memref<8x8xi32, #linear8>
+          %2 = affine.load %arg2[%arg3, %arg4] : memref<8x8xi32, #linear8>
+          %3 = muli %0, %1 : i32
+          %4 = addi %2, %3 : i32
+          affine.store %4, %arg2[%arg3, %arg4] : memref<8x8xi32, #linear8>
+        }
+      }
+      }
+      return
+    }
+    ```
+
+    Output
+
+    ```mlir
+    func @linearize(%arg0: memref<64xi32>,
+                    %arg1: memref<64xi32>,
+                    %arg2: memref<64xi32>) {
+    %c8 = constant 8 : index
+    %c0 = constant 0 : index
+    affine.for %arg3 = %c0 to %c8 {
+      affine.for %arg4 = %c0 to %c8 {
+        affine.for %arg5 = %c0 to %c8 {
+          %0 = affine.load %arg0[%arg3 * 8 + %arg5] : memref<64xi32>
+          %1 = affine.load %arg1[%arg5 * 8 + %arg4] : memref<64xi32>
+          %2 = affine.load %arg2[%arg3 * 8 + %arg4] : memref<64xi32>
+          %3 = muli %0, %1 : i32
+          %4 = addi %2, %3 : i32
+          affine.store %4, %arg2[%arg3 * 8 + %arg4] : memref<64xi32>
+        }
+      }
+    }
+    return
+  }
+  ```
+  }];
   let constructor = "mlir::createNormalizeMemRefsPass()";
 }
 

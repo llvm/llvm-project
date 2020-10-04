@@ -115,7 +115,7 @@ void use_pointers() {
 // ALL: @4 = private unnamed_addr constant [21 x i8] c"ext_constant_var_def\00"
 // * constant unnamed string with GPU binary
 // CUDA: @[[FATBIN:.*]] = private constant{{.*GPU binary would be here.*}}\00",
-// HIPEF: @[[FATBIN:.*]] = private constant{{.*GPU binary would be here.*}}\00",
+// HIPEF: @[[FATBIN:.*]] = private constant{{.*GPU binary would be here.*}}\00",{{.*}}align 4096
 // HIPNEF: @[[FATBIN:__hip_fatbin]] = external constant i8, section ".hip_fatbin"
 // CUDANORDC-SAME: section ".nv_fatbin", align 8
 // CUDARDC-SAME: section "__nv_relfatbin", align 8

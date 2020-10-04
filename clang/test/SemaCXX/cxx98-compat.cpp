@@ -122,7 +122,7 @@ void RangeFor() {
 }
 
 struct InClassInit {
-  int n = 0; // expected-warning {{in-class initialization of non-static data members is incompatible with C++98}}
+  int n = 0; // expected-warning {{default member initializer for non-static data members is incompatible with C++98}}
 };
 
 struct OverrideControlBase {

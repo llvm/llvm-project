@@ -41,10 +41,10 @@ template <ComputeChecksum F> void verifyChecksumFunctionBitFlip() {
   scudo::u8 IdenticalChecksums = 0;
   for (scudo::uptr I = 0; I < ArraySize; I++) {
     for (scudo::uptr J = 0; J < SCUDO_WORDSIZE; J++) {
-      Array[I] ^= 1U << J;
+      Array[I] ^= scudo::uptr{1} << J;
       if (F(Seed, Array, ArraySize) == Reference)
         IdenticalChecksums++;
-      Array[I] ^= 1U << J;
+      Array[I] ^= scudo::uptr{1} << J;
     }
   }
   // Allow for a couple of identical checksums over the whole set of flips.

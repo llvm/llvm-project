@@ -1,16 +1,21 @@
 # RUN: %PYTHON %s | FileCheck %s
 
+import gc
 import mlir
 
 def run(f):
   print("\nTEST:", f.__name__)
   f()
+  gc.collect()
+  assert mlir.ir.Context._get_live_count() == 0
 
 
 # CHECK-LABEL: TEST: testParsePrint
 def testParsePrint():
   ctx = mlir.ir.Context()
   t = ctx.parse_type("i32")
+  ctx = None
+  gc.collect()
   # CHECK: i32
   print(str(t))
   # CHECK: Type(i32)
@@ -387,3 +392,19 @@ def testTupleType():
   print("pos-th type in the tuple type:", tuple_type.get_type(1))
 
 run(testTupleType)
+
+
+# CHECK-LABEL: TEST: testFunctionType
+def testFunctionType():
+  ctx = mlir.ir.Context()
+  input_types = [mlir.ir.IntegerType.get_signless(ctx, 32),
+                 mlir.ir.IntegerType.get_signless(ctx, 16)]
+  result_types = [mlir.ir.IndexType(ctx)]
+  func = mlir.ir.FunctionType.get(ctx, input_types, result_types)
+  # CHECK: INPUTS: [Type(i32), Type(i16)]
+  print("INPUTS:", func.inputs)
+  # CHECK: RESULTS: [Type(index)]
+  print("RESULTS:", func.results)
+
+
+run(testFunctionType)

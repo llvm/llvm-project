@@ -516,6 +516,16 @@ Example matches X, Z, U, S, E
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('templateTemplateParmDecl0')"><a name="templateTemplateParmDecl0Anchor">templateTemplateParmDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateTemplateParmDecl.html">TemplateTemplateParmDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="templateTemplateParmDecl0"><pre>Matches template template parameter declarations.
+
+Given
+  template &lt;template &lt;typename&gt; class Z, int N&gt; struct C {};
+templateTypeParmDecl()
+  matches 'Z', but not 'N'.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('templateTypeParmDecl0')"><a name="templateTypeParmDecl0Anchor">templateTypeParmDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmDecl.html">TemplateTypeParmDecl</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="templateTypeParmDecl0"><pre>Matches template type parameter declarations.
 
@@ -646,6 +656,18 @@ Note: this does not match declarations of member variables, which are
 
 Example matches a
   int a;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecompositionDecl.html">DecompositionDecl</a>&gt;</td><td class="name" onclick="toggle('decompositionDecl0')"><a name="decompositionDecl0Anchor">decompositionDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecompositionDecl.html">DecompositionDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="decompositionDecl0"><pre>Matches decomposition-declarations.
+
+Examples matches the declaration node with foo and bar, but not
+number.
+(matcher = declStmt(has(decompositionDecl())))
+
+  int number = 42;
+  auto [foo, bar] = std::make_pair{42, 42};
 </pre></td></tr>
 
 
@@ -5322,6 +5344,33 @@ and parmVarDecl(...)
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;</td><td class="name" onclick="toggle('forEachArgumentWithParamType1')"><a name="forEachArgumentWithParamType1Anchor">forEachArgumentWithParamType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; ArgMatcher, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; ParamMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachArgumentWithParamType1"><pre>Matches all arguments and their respective types for a CallExpr or
+CXXConstructExpr. It is very similar to forEachArgumentWithParam but
+it works on calls through function pointers as well.
+
+The difference is, that function pointers do not provide access to a
+ParmVarDecl, but only the QualType for each argument.
+
+Given
+  void f(int i);
+  int y;
+  f(y);
+  void (*f_ptr)(int) = f;
+  f_ptr(y);
+callExpr(
+  forEachArgumentWithParamType(
+    declRefExpr(to(varDecl(hasName("y")))),
+    qualType(isInteger()).bind("type)
+))
+  matches f(y) and f_ptr(y)
+with declRefExpr(...)
+  matching int y
+and qualType(...)
+  matching int
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyArgument1')"><a name="hasAnyArgument1Anchor">hasAnyArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasAnyArgument1"><pre>Matches any argument of a call expression or a constructor call
 expression, or an ObjC-message-send expression.
@@ -5461,16 +5510,7 @@ memberExpr(hasObjectExpression(hasType(pointsTo(
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXForRangeStmt.html">CXXForRangeStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody3')"><a name="hasBody3Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody3"><pre>Matches a 'for', 'while', 'do while' statement or a function
-definition that has a given body.
-
-Given
-  for (;;) {}
-hasBody(compoundStmt())
-  matches 'for (;;) {}'
-with compoundStmt()
-  matching '{}'
-</pre></td></tr>
+<tr><td colspan="4" class="doc" id="hasBody3"><pre></pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXForRangeStmt.html">CXXForRangeStmt</a>&gt;</td><td class="name" onclick="toggle('hasInitStatement2')"><a name="hasInitStatement2Anchor">hasInitStatement</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
@@ -5850,6 +5890,33 @@ and parmVarDecl(...)
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;</td><td class="name" onclick="toggle('forEachArgumentWithParamType0')"><a name="forEachArgumentWithParamType0Anchor">forEachArgumentWithParamType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; ArgMatcher, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; ParamMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachArgumentWithParamType0"><pre>Matches all arguments and their respective types for a CallExpr or
+CXXConstructExpr. It is very similar to forEachArgumentWithParam but
+it works on calls through function pointers as well.
+
+The difference is, that function pointers do not provide access to a
+ParmVarDecl, but only the QualType for each argument.
+
+Given
+  void f(int i);
+  int y;
+  f(y);
+  void (*f_ptr)(int) = f;
+  f_ptr(y);
+callExpr(
+  forEachArgumentWithParamType(
+    declRefExpr(to(varDecl(hasName("y")))),
+    qualType(isInteger()).bind("type)
+))
+  matches f(y) and f_ptr(y)
+with declRefExpr(...)
+  matching int y
+and qualType(...)
+  matching int
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyArgument0')"><a name="hasAnyArgument0Anchor">hasAnyArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasAnyArgument0"><pre>Matches any argument of a call expression or a constructor call
 expression, or an ObjC-message-send expression.
@@ -6022,7 +6089,7 @@ with compoundStmt()
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecayedType.html">DecayedType</a>&gt;</td><td class="name" onclick="toggle('hasDecayedType0')"><a name="hasDecayedType0Anchor">hasDecayedType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; InnerType</td></tr>
-<tr><td colspan="4" class="doc" id="hasDecayedType0"><pre>Matches the decayed type, whos decayed type matches InnerMatcher
+<tr><td colspan="4" class="doc" id="hasDecayedType0"><pre>Matches the decayed type, whoes decayed type matches InnerMatcher
 </pre></td></tr>
 
 
@@ -6158,16 +6225,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DoStmt.html">DoStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody0')"><a name="hasBody0Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody0"><pre>Matches a 'for', 'while', 'do while' statement or a function
-definition that has a given body.
-
-Given
-  for (;;) {}
-hasBody(compoundStmt())
-  matches 'for (;;) {}'
-with compoundStmt()
-  matching '{}'
-</pre></td></tr>
+<tr><td colspan="4" class="doc" id="hasBody0"><pre></pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DoStmt.html">DoStmt</a>&gt;</td><td class="name" onclick="toggle('hasCondition3')"><a name="hasCondition3Anchor">hasCondition</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
@@ -6434,16 +6492,7 @@ fieldDecl(hasInClassInitializer(anything()))
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ForStmt.html">ForStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody1')"><a name="hasBody1Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody1"><pre>Matches a 'for', 'while', 'do while' statement or a function
-definition that has a given body.
-
-Given
-  for (;;) {}
-hasBody(compoundStmt())
-  matches 'for (;;) {}'
-with compoundStmt()
-  matching '{}'
-</pre></td></tr>
+<tr><td colspan="4" class="doc" id="hasBody1"><pre></pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ForStmt.html">ForStmt</a>&gt;</td><td class="name" onclick="toggle('hasCondition1')"><a name="hasCondition1Anchor">hasCondition</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
@@ -6517,6 +6566,24 @@ Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyBody0')"><a name="hasAnyBody0Anchor">hasAnyBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyBody0"><pre>Matches a function declaration that has a given body present in the AST.
+Note that this matcher matches all the declarations of a function whose
+body is present in the AST.
+
+Given
+  void f();
+  void f() {}
+  void g();
+hasAnyBody(functionDecl())
+  matches both 'void f();'
+  and 'void f() {}'
+with compoundStmt()
+  matching '{}'
+  but does not match 'void g();'
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyParameter0')"><a name="hasAnyParameter0Anchor">hasAnyParameter</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasAnyParameter0"><pre>Matches any parameter of a function or an ObjC method declaration or a
 block.
@@ -6569,16 +6636,7 @@ functionDecl(hasAnyTemplateArgument(refersToType(asString("int"))))
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasBody4')"><a name="hasBody4Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody4"><pre>Matches a 'for', 'while', 'do while' statement or a function
-definition that has a given body.
-
-Given
-  for (;;) {}
-hasBody(compoundStmt())
-  matches 'for (;;) {}'
-with compoundStmt()
-  matching '{}'
-</pre></td></tr>
+<tr><td colspan="4" class="doc" id="hasBody4"><pre></pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasExplicitSpecifier0')"><a name="hasExplicitSpecifier0Anchor">hasExplicitSpecifier</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
@@ -7562,7 +7620,7 @@ classTemplateSpecializationDecl(hasAnyTemplateArgument(
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt;</td><td class="name" onclick="toggle('refersToIntegralType0')"><a name="refersToIntegralType0Anchor">refersToIntegralType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="refersToIntegralType0"><pre>Matches a TemplateArgument that referes to an integral type.
+<tr><td colspan="4" class="doc" id="refersToIntegralType0"><pre>Matches a TemplateArgument that refers to an integral type.
 
 Given
   template&lt;int T&gt; struct C {};
@@ -7936,16 +7994,7 @@ variableArrayType(hasSizeExpr(ignoringImpCasts(declRefExpr(to(
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1WhileStmt.html">WhileStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody2')"><a name="hasBody2Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody2"><pre>Matches a 'for', 'while', 'do while' statement or a function
-definition that has a given body.
-
-Given
-  for (;;) {}
-hasBody(compoundStmt())
-  matches 'for (;;) {}'
-with compoundStmt()
-  matching '{}'
-</pre></td></tr>
+<tr><td colspan="4" class="doc" id="hasBody2"><pre></pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1WhileStmt.html">WhileStmt</a>&gt;</td><td class="name" onclick="toggle('hasCondition2')"><a name="hasCondition2Anchor">hasCondition</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>

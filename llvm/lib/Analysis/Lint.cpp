@@ -250,7 +250,7 @@ void Lint::visitCallBase(CallBase &I) {
 
         // Check that an sret argument points to valid memory.
         if (Formal->hasStructRetAttr() && Actual->getType()->isPointerTy()) {
-          Type *Ty = cast<PointerType>(Formal->getType())->getElementType();
+          Type *Ty = Formal->getParamStructRetType();
           visitMemoryReference(I, Actual, DL->getTypeStoreSize(Ty),
                                DL->getABITypeAlign(Ty), Ty,
                                MemRef::Read | MemRef::Write);
@@ -364,6 +364,11 @@ void Lint::visitCallBase(CallBase &I) {
       // at any time, so check it for both readability and writeability.
       visitMemoryReference(I, I.getArgOperand(0), MemoryLocation::UnknownSize,
                            None, nullptr, MemRef::Read | MemRef::Write);
+      break;
+    case Intrinsic::get_active_lane_mask:
+      if (auto *TripCount = dyn_cast<ConstantInt>(I.getArgOperand(1)))
+        Assert(!TripCount->isZero(), "get_active_lane_mask: operand #2 "
+               "must be greater than 0", &I);
       break;
     }
 }

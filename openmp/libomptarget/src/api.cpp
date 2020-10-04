@@ -29,8 +29,9 @@ EXTERN int omp_get_num_devices(void) {
 }
 
 EXTERN int omp_get_initial_device(void) {
-  DP("Call to omp_get_initial_device returning %d\n", HOST_DEVICE);
-  return HOST_DEVICE;
+  int hostDevice = omp_get_num_devices();
+  DP("Call to omp_get_initial_device returning %d\n", hostDevice);
+  return hostDevice;
 }
 
 EXTERN void *omp_target_alloc(size_t size, int device_num) {

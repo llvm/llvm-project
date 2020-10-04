@@ -431,6 +431,11 @@ public:
   using VariableDbgInfoMapTy = SmallVector<VariableDbgInfo, 4>;
   VariableDbgInfoMapTy VariableDbgInfos;
 
+  /// A count of how many instructions in the function have had numbers
+  /// assigned to them. Used for debug value tracking, to determine the
+  /// next instruction number.
+  unsigned DebugInstrNumberingCount = 0;
+
   MachineFunction(Function &F, const LLVMTargetMachine &Target,
                   const TargetSubtargetInfo &STI, unsigned FunctionNum,
                   MachineModuleInfo &MMI);
@@ -504,9 +509,6 @@ public:
   }
 
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
-
-  /// Creates basic block Labels for this function.
-  void createBBLabels();
 
   /// Assign IsBeginSection IsEndSection fields for basic blocks in this
   /// function.
@@ -770,7 +772,7 @@ public:
   /// CreateMachineInstr - Allocate a new MachineInstr. Use this instead
   /// of `new MachineInstr'.
   MachineInstr *CreateMachineInstr(const MCInstrDesc &MCID, const DebugLoc &DL,
-                                   bool NoImp = false);
+                                   bool NoImplicit = false);
 
   /// Create a new MachineInstr which is a copy of \p Orig, identical in all
   /// ways except the instruction has no parent, prev, or next. Bundling flags
@@ -1076,6 +1078,10 @@ public:
   /// the same callee.
   void moveCallSiteInfo(const MachineInstr *Old,
                         const MachineInstr *New);
+
+  unsigned getNewDebugInstrNum() {
+    return ++DebugInstrNumberingCount;
+  }
 };
 
 //===--------------------------------------------------------------------===//

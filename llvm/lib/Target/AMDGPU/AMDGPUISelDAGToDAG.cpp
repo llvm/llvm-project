@@ -1712,7 +1712,7 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDNode *N,
         SDLoc DL(N);
         uint64_t RemainderOffset = COffsetVal;
         uint64_t ImmField = 0;
-        const unsigned NumBits = TII->getNumFlatOffsetBits(AS, IsSigned);
+        const unsigned NumBits = TII->getNumFlatOffsetBits(IsSigned);
         if (IsSigned) {
           // Use signed division by a power of two to truncate towards 0.
           int64_t D = 1LL << (NumBits - 1);

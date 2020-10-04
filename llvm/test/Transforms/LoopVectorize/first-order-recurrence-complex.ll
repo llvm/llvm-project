@@ -267,3 +267,36 @@ bb13:                                             ; preds = %bb13, %bb
 bb74:                                             ; preds = %bb13
   ret void
 }
+
+; Users that are phi nodes cannot be sunk.
+define void @cannot_sink_phi(i32* %ptr) {
+; CHECK-LABEL: define void @cannot_sink_phi(
+; CHECK-NOT:   vector.body
+entry:
+  br label %loop.header
+
+loop.header:                                      ; preds = %if.end128, %for.cond108.preheader
+  %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop.latch ]
+  %for = phi i32 [ 0, %entry ], [ %for.next, %loop.latch ]
+  %c.1 = icmp ult i64 %iv, 500
+  br i1 %c.1, label %if.truebb, label %if.falsebb
+
+if.truebb:                  ; preds = %for.body114
+  br label %loop.latch
+
+if.falsebb:                                       ; preds = %for.body114
+  br label %loop.latch
+
+loop.latch:                                        ; preds = %if.then122, %for.body114.if.end128_crit_edge
+  %first_time.1 = phi i32 [ 20, %if.truebb ], [ %for, %if.falsebb ]
+  %c.2 = icmp ult i64 %iv, 800
+  %for.next = select i1 %c.2, i32 30, i32 %first_time.1
+  %ptr.idx = getelementptr i32, i32* %ptr, i64 %iv
+  store i32 %for.next, i32* %ptr.idx
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond.not, label %exit, label %loop.header
+
+exit:
+  ret void
+}

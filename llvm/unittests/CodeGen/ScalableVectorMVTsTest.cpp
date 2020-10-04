@@ -61,9 +61,10 @@ TEST(ScalableVectorMVTsTest, HelperFuncs) {
   EXPECT_EQ(Vnx2i32.widenIntegerVectorElementType(Ctx), Vnx2i64);
   EXPECT_EQ(Vnx4i32.getHalfNumVectorElementsVT(Ctx), Vnx2i32);
 
-  // Check that overloaded '*' and '/' operators work
+  // Check that operators work
   EXPECT_EQ(EVT::getVectorVT(Ctx, MVT::i64, EltCnt * 2), MVT::nxv4i64);
-  EXPECT_EQ(EVT::getVectorVT(Ctx, MVT::i64, EltCnt / 2), MVT::nxv1i64);
+  EXPECT_EQ(EVT::getVectorVT(Ctx, MVT::i64, EltCnt.divideCoefficientBy(2)),
+            MVT::nxv1i64);
 
   // Check that float->int conversion works
   EVT Vnx2f64 = EVT::getVectorVT(Ctx, MVT::f64, ElementCount::getScalable(2));
@@ -159,7 +160,7 @@ TEST(ScalableVectorMVTsTest, SizeQueries) {
 
   // Check that we can obtain a known-exact size from a non-scalable type.
   EXPECT_EQ(v4i32.getSizeInBits(), 128U);
-  EXPECT_EQ(v2i64.getSizeInBits().getFixedSize(), 128U);
+  EXPECT_EQ(v2i64.getFixedSizeInBits(), 128U);
 
   // Check that we can query the known minimum size for both scalable and
   // fixed length types.

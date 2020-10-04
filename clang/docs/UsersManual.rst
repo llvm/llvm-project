@@ -1700,9 +1700,12 @@ are listed below.
 
 **-fbasic-block-sections=[labels, all, list=<arg>, none]**
 
-  Controls whether Clang emits a label for each basic block.  Further, with
-  values "all" and "list=arg", each basic block or a subset of basic blocks
-  can be placed in its own unique section.
+  Controls how Clang emits text sections for basic blocks. With values ``all``
+  and ``list=<arg>``, each basic block or a subset of basic blocks can be placed
+  in its own unique section. With the "labels" value, normal text sections are
+  emitted, but a ``.bb_addr_map`` section is emitted which includes address
+  offsets for each basic block in the program, relative to the parent function
+  address.
 
   With the ``list=<arg>`` option, a file containing the subset of basic blocks
   that need to placed in unique sections can be specified.  The format of the
@@ -2168,6 +2171,17 @@ programs using the same instrumentation method as ``-fprofile-generate``.
   ``-fprofile-instr-use``. Otherwise, if ``pathname`` is the full path to a
   profile file, it reads from that file. If ``pathname`` is a directory name,
   it reads from ``pathname/default.profdata``.
+
+.. option:: -fprofile-update[=<method>]
+
+  Unless ``-fsanitize=thread`` is specified, the default is ``single``, which
+  uses non-atomic increments. The counters can be inaccurate under thread
+  contention. ``atomic`` uses atomic increments which is accurate but has
+  overhead. ``prefer-atomic`` will be transformed to ``atomic`` when supported
+  by the target, or ``single`` otherwise.
+
+  This option currently works with ``-fprofile-arcs`` and ``-fprofile-instr-generate``,
+  but not with ``-fprofile-generate``.
 
 Disabling Instrumentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^

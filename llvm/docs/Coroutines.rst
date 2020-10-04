@@ -257,10 +257,10 @@ Coroutine Transformation
 One of the steps of coroutine lowering is building the coroutine frame. The
 def-use chains are analyzed to determine which objects need be kept alive across
 suspend points. In the coroutine shown in the previous section, use of virtual register 
-`%n.val` is separated from the definition by a suspend point, therefore, it 
+`%inc` is separated from the definition by a suspend point, therefore, it 
 cannot reside on the stack frame since the latter goes away once the coroutine 
 is suspended and control is returned back to the caller. An i32 slot is 
-allocated in the coroutine frame and `%n.val` is spilled and reloaded from that
+allocated in the coroutine frame and `%inc` is spilled and reloaded from that
 slot as needed.
 
 We also store addresses of the resume and destroy functions so that the 

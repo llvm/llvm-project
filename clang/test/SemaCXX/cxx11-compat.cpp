@@ -31,7 +31,7 @@ struct S {
 s = { n }, // expected-warning {{non-constant-expression cannot be narrowed from type 'int' to 'char' in initializer list in C++11}} expected-note {{explicit cast}}
 t = { 1234 }; // expected-warning {{constant expression evaluates to 1234 which cannot be narrowed to type 'char' in C++11}} expected-warning {{changes value}} expected-note {{explicit cast}}
 
-#define PRIuS "uS"
+#define PRIuS "zu"
 int printf(const char *, ...);
 typedef __typeof(sizeof(int)) size_t;
 void h(size_t foo, size_t bar) {

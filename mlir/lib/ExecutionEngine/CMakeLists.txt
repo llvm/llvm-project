@@ -60,7 +60,7 @@ add_mlir_library(MLIRJitRunner
   MLIRExecutionEngine
   MLIRIR
   MLIRParser
-  MLIRStandardOps
+  MLIRStandard
   MLIRTargetLLVMIR
   MLIRTransforms
   MLIRStandardToLLVM

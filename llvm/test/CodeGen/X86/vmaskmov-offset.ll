@@ -52,3 +52,31 @@ bb:
   call void @llvm.masked.store.v8f64.p0v8f64(<8 x double> %masked_loaded_vec, <8 x double>* nonnull %stack_output_vec, i32 4, <8 x i1> %mask)
   ret void
 }
+
+define <2 x double> @mload_constmask_v2f64(<2 x double>* %addr, <2 x double> %dst) {
+  ; CHECK-LABEL: name: mload_constmask_v2f64
+  ; CHECK: bb.0 (%ir-block.0):
+  ; CHECK:   liveins: $rdi, $xmm0
+  ; CHECK:   [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+  ; CHECK:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
+  ; CHECK:   [[VMOVHPDrm:%[0-9]+]]:vr128 = VMOVHPDrm [[COPY]], [[COPY1]], 1, $noreg, 8, $noreg :: (load 8 from %ir.addr + 8, align 4)
+  ; CHECK:   $xmm0 = COPY [[VMOVHPDrm]]
+  ; CHECK:   RET 0, $xmm0
+  %res = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %addr, i32 4, <2 x i1> <i1 0, i1 1>, <2 x double> %dst)
+  ret <2 x double> %res
+}
+
+define void @one_mask_bit_set2(<4 x float>* %addr, <4 x float> %val) {
+  ; CHECK-LABEL: name: one_mask_bit_set2
+  ; CHECK: bb.0 (%ir-block.0):
+  ; CHECK:   liveins: $rdi, $xmm0
+  ; CHECK:   [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
+  ; CHECK:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
+  ; CHECK:   VEXTRACTPSmr [[COPY1]], 1, $noreg, 8, $noreg, [[COPY]], 2 :: (store 4 into %ir.addr + 8)
+  ; CHECK:   RET 0
+  call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %val, <4 x float>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>)
+  ret void
+}
+
+declare <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>*, i32, <2 x i1>, <2 x double>)
+declare void @llvm.masked.store.v4f32.p0v4f32(<4 x float>, <4 x float>*, i32, <4 x i1>)

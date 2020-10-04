@@ -37,6 +37,7 @@
 ; CHECK: DW_AT_location{{.*}}(DW_OP_fbreg +23)
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK: DW_AT_location{{.*}}(
+; CHECK-NEXT: {{.*}}: DW_OP_breg7 RSP+8, DW_OP_deref, DW_OP_deref
 ; CHECK-NEXT: {{.*}}: DW_OP_breg4 RSI+0, DW_OP_deref
 ; CHECK-NEXT: {{.*}}: DW_OP_breg7 RSP+8, DW_OP_deref, DW_OP_deref)
 ; CHECK-NOT: DW_TAG

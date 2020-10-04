@@ -47,16 +47,21 @@ CompileFlags:
   Add: |
     b
     az
+---
+Index:
+  Background: Skip
   )yaml";
   auto Results = Fragment::parseYAML(YAML, "config.yaml", Diags.callback());
   EXPECT_THAT(Diags.Diagnostics, IsEmpty());
-  ASSERT_EQ(Results.size(), 2u);
-  EXPECT_FALSE(Results.front().If.HasUnrecognizedCondition);
-  EXPECT_THAT(Results.front().If.PathMatch, ElementsAre(Val("abc")));
-  EXPECT_THAT(Results.front().CompileFlags.Add,
-              ElementsAre(Val("foo"), Val("bar")));
+  ASSERT_EQ(Results.size(), 3u);
+  EXPECT_FALSE(Results[0].If.HasUnrecognizedCondition);
+  EXPECT_THAT(Results[0].If.PathMatch, ElementsAre(Val("abc")));
+  EXPECT_THAT(Results[0].CompileFlags.Add, ElementsAre(Val("foo"), Val("bar")));
 
-  EXPECT_THAT(Results.back().CompileFlags.Add, ElementsAre(Val("b\naz\n")));
+  EXPECT_THAT(Results[1].CompileFlags.Add, ElementsAre(Val("b\naz\n")));
+
+  ASSERT_TRUE(Results[2].Index.Background);
+  EXPECT_EQ("Skip", *Results[2].Index.Background.getValue());
 }
 
 TEST(ParseYAML, Locations) {

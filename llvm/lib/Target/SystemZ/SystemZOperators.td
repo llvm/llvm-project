@@ -572,10 +572,8 @@ def anyextloadi32 : PatFrag<(ops node:$ptr), (anyextload node:$ptr), [{
 
 // Aligned loads.
 class AlignedLoad<SDPatternOperator load>
-  : PatFrag<(ops node:$addr), (load node:$addr), [{
-  auto *Load = cast<LoadSDNode>(N);
-  return Load->getAlignment() >= Load->getMemoryVT().getStoreSize();
-}]>;
+  : PatFrag<(ops node:$addr), (load node:$addr),
+  [{ return storeLoadIsAligned(N); }]>;
 def aligned_load         : AlignedLoad<load>;
 def aligned_asextloadi16 : AlignedLoad<asextloadi16>;
 def aligned_asextloadi32 : AlignedLoad<asextloadi32>;
@@ -584,10 +582,8 @@ def aligned_azextloadi32 : AlignedLoad<azextloadi32>;
 
 // Aligned stores.
 class AlignedStore<SDPatternOperator store>
-  : PatFrag<(ops node:$src, node:$addr), (store node:$src, node:$addr), [{
-  auto *Store = cast<StoreSDNode>(N);
-  return Store->getAlignment() >= Store->getMemoryVT().getStoreSize();
-}]>;
+  : PatFrag<(ops node:$src, node:$addr), (store node:$src, node:$addr),
+  [{ return storeLoadIsAligned(N); }]>;
 def aligned_store         : AlignedStore<store>;
 def aligned_truncstorei16 : AlignedStore<truncstorei16>;
 def aligned_truncstorei32 : AlignedStore<truncstorei32>;

@@ -1,5 +1,5 @@
 """
-Test that stop hooks trigger on "step-out"
+Test stop hook functionality
 """
 
 
@@ -18,10 +18,15 @@ class TestStopHooks(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
-    def test_stop_hooks_step_out(self):
-        """Test that stop hooks fire on step-out."""
+    def setUp(self):
+        TestBase.setUp(self)
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
+        full_path = os.path.join(self.getSourceDir(), "main.c")
+        self.main_start_line = line_number(full_path, "main()")
+        
+    def test_stop_hooks_step_out(self):
+        """Test that stop hooks fire on step-out."""
         self.step_out_test()
 
     def step_out_test(self):
@@ -36,5 +41,4 @@ class TestStopHooks(TestBase):
         var = target.FindFirstGlobalVariable("g_var")
         self.assertTrue(var.IsValid())
         self.assertEqual(var.GetValueAsUnsigned(), 1, "Updated g_var")
-
 

@@ -12,6 +12,7 @@
 
 #include <type_traits>
 
+#include "mlir/Dialect/Affine/EDSC/Builders.h"
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
@@ -2107,9 +2108,6 @@ LogicalResult mlir::vector::splitFullAndPartialTransferPrecondition(
   // TODO: expand support to these 2 cases.
   if (!xferOp.permutation_map().isMinorIdentity())
     return failure();
-  // TODO: relax this precondition. This will require rank-reducing subviews.
-  if (xferOp.getMemRefType().getRank() != xferOp.getTransferRank())
-    return failure();
   // Must have some masked dimension to be a candidate for splitting.
   if (!xferOp.hasMaskedDim())
     return failure();
@@ -2421,6 +2419,89 @@ LogicalResult mlir::vector::VectorTransferFullPartialRewriter::matchAndRewrite(
   return failure();
 }
 
+LogicalResult mlir::vector::PointwiseExtractPattern::matchAndRewrite(
+    ExtractMapOp extract, PatternRewriter &rewriter) const {
+  Operation *definedOp = extract.vector().getDefiningOp();
+  if (!definedOp || definedOp->getNumResults() != 1)
+    return failure();
+  // TODO: Create an interfaceOp for elementwise operations.
+  if (!isa<AddFOp>(definedOp))
+    return failure();
+  Location loc = extract.getLoc();
+  SmallVector<Value, 4> extractOperands;
+  for (OpOperand &operand : definedOp->getOpOperands())
+    extractOperands.push_back(rewriter.create<vector::ExtractMapOp>(
+        loc, operand.get(), extract.id(), extract.multiplicity()));
+  Operation *newOp = cloneOpWithOperandsAndTypes(
+      rewriter, loc, definedOp, extractOperands, extract.getResult().getType());
+  rewriter.replaceOp(extract, newOp->getResult(0));
+  return success();
+}
+
+Optional<mlir::vector::DistributeOps>
+mlir::vector::distributPointwiseVectorOp(OpBuilder &builder, Operation *op,
+                                         Value id, int64_t multiplicity) {
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointAfter(op);
+  Location loc = op->getLoc();
+  Value result = op->getResult(0);
+  DistributeOps ops;
+  ops.extract =
+      builder.create<vector::ExtractMapOp>(loc, result, id, multiplicity);
+  ops.insert =
+      builder.create<vector::InsertMapOp>(loc, ops.extract, id, multiplicity);
+  return ops;
+}
+
+struct TransferReadExtractPattern
+    : public OpRewritePattern<vector::TransferReadOp> {
+  TransferReadExtractPattern(MLIRContext *context)
+      : OpRewritePattern<vector::TransferReadOp>(context) {}
+  LogicalResult matchAndRewrite(vector::TransferReadOp read,
+                                PatternRewriter &rewriter) const override {
+    if (!read.getResult().hasOneUse())
+      return failure();
+    auto extract =
+        dyn_cast<vector::ExtractMapOp>(*read.getResult().getUsers().begin());
+    if (!extract)
+      return failure();
+    edsc::ScopedContext scope(rewriter, read.getLoc());
+    using mlir::edsc::op::operator+;
+    using namespace mlir::edsc::intrinsics;
+    SmallVector<Value, 4> indices(read.indices().begin(), read.indices().end());
+    indices.back() = indices.back() + extract.id();
+    Value newRead = vector_transfer_read(extract.getType(), read.memref(),
+                                         indices, read.permutation_map(),
+                                         read.padding(), ArrayAttr());
+    newRead = rewriter.create<vector::InsertMapOp>(
+        read.getLoc(), newRead, extract.id(), extract.multiplicity());
+    rewriter.replaceOp(read, newRead);
+    return success();
+  }
+};
+
+struct TransferWriteInsertPattern
+    : public OpRewritePattern<vector::TransferWriteOp> {
+  TransferWriteInsertPattern(MLIRContext *context)
+      : OpRewritePattern<vector::TransferWriteOp>(context) {}
+  LogicalResult matchAndRewrite(vector::TransferWriteOp write,
+                                PatternRewriter &rewriter) const override {
+    auto insert = write.vector().getDefiningOp<vector::InsertMapOp>();
+    if (!insert)
+      return failure();
+    edsc::ScopedContext scope(rewriter, write.getLoc());
+    using mlir::edsc::op::operator+;
+    using namespace mlir::edsc::intrinsics;
+    SmallVector<Value, 4> indices(write.indices().begin(),
+                                  write.indices().end());
+    indices.back() = indices.back() + insert.id();
+    vector_transfer_write(insert.vector(), write.memref(), indices,
+                          write.permutation_map(), ArrayAttr());
+    rewriter.eraseOp(write);
+    return success();
+  }
+};
+
 // TODO: Add pattern to rewrite ExtractSlices(ConstantMaskOp).
 // TODO: Add this as DRR pattern.
 void mlir::vector::populateVectorToVectorTransformationPatterns(
@@ -2430,7 +2511,9 @@ void mlir::vector::populateVectorToVectorTransformationPatterns(
                   ShapeCastOpFolder,
                   SplitTransferReadOp,
                   SplitTransferWriteOp,
-                  TupleGetFolderOp>(context);
+                  TupleGetFolderOp,
+                  TransferReadExtractPattern,
+                  TransferWriteInsertPattern>(context);
   // clang-format on
 }
 

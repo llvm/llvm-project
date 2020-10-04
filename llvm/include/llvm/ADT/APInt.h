@@ -1615,11 +1615,7 @@ public:
   /// returns the smallest bit width that will retain the negative value. For
   /// example, -1 can be written as 0b1 or 0xFFFFFFFFFF. 0b1 is shorter and so
   /// for -1, this function will always return 1.
-  unsigned getMinSignedBits() const {
-    if (isNegative())
-      return BitWidth - countLeadingOnes() + 1;
-    return getActiveBits() + 1;
-  }
+  unsigned getMinSignedBits() const { return BitWidth - getNumSignBits() + 1; }
 
   /// Get zero extended value
   ///

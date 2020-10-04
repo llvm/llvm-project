@@ -1,4 +1,5 @@
-; RUN: opt < %s -analyze -scalar-evolution | FileCheck %s
+; RUN: opt -analyze -scalar-evolution %s -enable-new-pm=0 | FileCheck %s
+; RUN: opt -passes='print<scalar-evolution>' -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL @test1
 ; CHECK       %add.lcssa.wide = phi i64 [ %indvars.iv.next, %do.body ]

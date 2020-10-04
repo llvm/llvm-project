@@ -5,15 +5,15 @@
   ; backedges and beyond.
 
   ; CHECK-LABEL: bb.0.entry:
-  ; CHECK:       DBG_VALUE $ebx, $noreg, !16, !DIExpression(), debug-location !17
+  ; CHECK:       DBG_VALUE $ebx, $noreg, !16, !DIExpression()
   ; CHECK-LABEL: bb.1.bb1:
-  ; CHECK:       DBG_VALUE $ebx, $noreg, !16, !DIExpression(), debug-location !17
+  ; CHECK:       DBG_VALUE $ebx, $noreg, !16, !DIExpression()
   ; CHECK-LABEL: bb.2.bb2:
-  ; CHECK:       DBG_VALUE $ebx, $noreg, !16, !DIExpression(), debug-location !17
+  ; CHECK:       DBG_VALUE $ebx, $noreg, !16, !DIExpression()
   ; CHECK-LABEL: bb.3.bb3:
-  ; CHECK:       DBG_VALUE $ebx, $noreg, !16, !DIExpression(), debug-location !17
+  ; CHECK:       DBG_VALUE $ebx, $noreg, !16, !DIExpression()
   ; CHECK-LABEL: bb.4.bb4:
-  ; CHECK:       DBG_VALUE $ebx, $noreg, !16, !DIExpression(), debug-location !17
+  ; CHECK:       DBG_VALUE $ebx, $noreg, !16, !DIExpression()
 
   define i32 @_Z8bb_to_bb() local_unnamed_addr !dbg !12 {
   entry:

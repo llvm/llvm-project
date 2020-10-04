@@ -57,8 +57,7 @@ including but not limited to:
 We use TableGen as the language for specifying operation information. TableGen
 itself just provides syntax for writing records; the syntax and constructs
 allowed in a TableGen file (typically with filename suffix `.td`) can be found
-[here][TableGenIntro]. The formal language specification can be found
-[here][TableGenRef]. _Roughly_ speaking,
+[here][TableGenProgRef].
 
 *   TableGen `class` is similar to C++ class; it can be templated and
     subclassed.
@@ -72,7 +71,7 @@ allowed in a TableGen file (typically with filename suffix `.td`) can be found
     be anything, including `dag` itself. We can have names attached to both the
     operator and the arguments like `(MyOp:$op_name MyArg:$arg_name)`.
 
-Please see the [language introduction][TableGenIntro] to learn about all the
+Please see the [language reference][TableGenProgRef] to learn about all the
 types and expressions supported by TableGen.
 
 ## Operation Definition
@@ -572,10 +571,13 @@ convenience build methods with `OpBuilder`.
 
 `OpBuilder` is a class that takes the parameter list and the optional `build()`
 method body. They are separated because we need to generate op declaration and
-definition into separate files. The parameter list should _include_ `Builder
-*builder, OperationState &state`. If the `body` is not provided, _only_ the
-builder declaration will be generated; this provides a way to define complicated
-builders entirely in C++ files.
+definition into separate files. The parameter list should not include `OpBuilder
+&builder, OperationState &state` as they will be inserted automatically and the
+placeholders `$_builder` and `$_state` used. For legacy/to be deprecated reason
+if the `OpBuilder` parameter starts with `OpBuilder` param, then the parameter
+is used. If the `body` is not provided, only the builder declaration will be
+generated; this provides a way to define complicated builders entirely in C++
+files.
 
 For example, for the following op:
 
@@ -595,8 +597,8 @@ def MyOp : ... {
   ...
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, float val = 0.5f", [{
-      state.addAttribute("attr", builder.getF32FloatAttr(val));
+    OpBuilder<"float val = 0.5f", [{
+      $_state.addAttribute("attr", $_builder.getF32FloatAttr(val));
     }]>
   ];
 }
@@ -699,6 +701,14 @@ The available directives are as follows:
     -   `input` must be either an operand or result [variable](#variables), the
         `operands` directive, or the `results` directive.
 
+*   `type_ref` ( input )
+
+    -   Represents a reference to the type of the given input that must have
+        already been resolved.
+    -   `input` must be either an operand or result [variable](#variables), the
+        `operands` directive, or the `results` directive.
+    -   Used to pass previously parsed types to custom directives.
+
 #### Literals
 
 A literal is either a keyword or punctuation surrounded by \`\`.
@@ -762,6 +772,10 @@ declarative parameter to `parse` method argument is detailed below:
     -   Single: `Type &`
     -   Optional: `Type &`
     -   Variadic: `SmallVectorImpl<Type> &`
+*   TypeRef Directives
+    -   Single: `Type`
+    -   Optional: `Type`
+    -   Variadic: `const SmallVectorImpl<Type> &`
 
 When a variable is optional, the value should only be specified if the variable
 is present. Otherwise, the value should remain `None` or null.
@@ -785,6 +799,10 @@ declarative parameter to `print` method argument is detailed below:
     -   Single: `Block *`
     -   Variadic: `SuccessorRange`
 *   Type Directives
+    -   Single: `Type`
+    -   Optional: `Type`
+    -   Variadic: `TypeRange`
+*   TypeRef Directives
     -   Single: `Type`
     -   Optional: `Type`
     -   Variadic: `TypeRange`
@@ -1489,8 +1507,7 @@ requirements that were desirable:
     TODO: document expectation if the dependent op's definition changes.
 
 [TableGen]: https://llvm.org/docs/TableGen/index.html
-[TableGenIntro]: https://llvm.org/docs/TableGen/LangIntro.html
-[TableGenRef]: https://llvm.org/docs/TableGen/LangRef.html
+[TableGenProgRef]: https://llvm.org/docs/TableGen/ProgRef.html
 [TableGenBackend]: https://llvm.org/docs/TableGen/BackEnds.html#introduction
 [OpBase]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/OpBase.td
 [OpDefinitionsGen]: https://github.com/llvm/llvm-project/blob/master/mlir/tools/mlir-tblgen/OpDefinitionsGen.cpp

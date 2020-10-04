@@ -193,7 +193,7 @@ bool LiveIntervals::computeVirtRegInterval(LiveInterval &LI) {
   assert(LICalc && "LICalc not initialized.");
   assert(LI.empty() && "Should only compute empty intervals.");
   LICalc->reset(MF, getSlotIndexes(), DomTree, &getVNInfoAllocator());
-  LICalc->calculate(LI, MRI->shouldTrackSubRegLiveness(LI.reg));
+  LICalc->calculate(LI, MRI->shouldTrackSubRegLiveness(LI.reg()));
   return computeDeadValues(LI, nullptr);
 }
 
@@ -453,13 +453,13 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
 bool LiveIntervals::shrinkToUses(LiveInterval *li,
                                  SmallVectorImpl<MachineInstr*> *dead) {
   LLVM_DEBUG(dbgs() << "Shrink: " << *li << '\n');
-  assert(Register::isVirtualRegister(li->reg) &&
+  assert(Register::isVirtualRegister(li->reg()) &&
          "Can only shrink virtual registers");
 
   // Shrink subregister live ranges.
   bool NeedsCleanup = false;
   for (LiveInterval::SubRange &S : li->subranges()) {
-    shrinkToUses(S, li->reg);
+    shrinkToUses(S, li->reg());
     if (S.empty())
       NeedsCleanup = true;
   }
@@ -469,8 +469,8 @@ bool LiveIntervals::shrinkToUses(LiveInterval *li,
   // Find all the values used, including PHI kills.
   ShrinkToUsesWorkList WorkList;
 
-  // Visit all instructions reading li->reg.
-  unsigned Reg = li->reg;
+  // Visit all instructions reading li->reg().
+  unsigned Reg = li->reg();
   for (MachineInstr &UseMI : MRI->reg_instructions(Reg)) {
     if (UseMI.isDebugValue() || !UseMI.readsVirtualRegister(Reg))
       continue;
@@ -523,7 +523,7 @@ bool LiveIntervals::computeDeadValues(LiveInterval &LI,
 
     // Is the register live before? Otherwise we may have to add a read-undef
     // flag for subregister defs.
-    unsigned VReg = LI.reg;
+    unsigned VReg = LI.reg();
     if (MRI->shouldTrackSubRegLiveness(VReg)) {
       if ((I == LI.begin() || std::prev(I)->end < Def) && !VNI->isPHIDef()) {
         MachineInstr *MI = getInstructionFromIndex(Def);
@@ -543,7 +543,7 @@ bool LiveIntervals::computeDeadValues(LiveInterval &LI,
       // This is a dead def. Make sure the instruction knows.
       MachineInstr *MI = getInstructionFromIndex(Def);
       assert(MI && "No instruction defining live value");
-      MI->addRegisterDead(LI.reg, TRI);
+      MI->addRegisterDead(LI.reg(), TRI);
       if (HaveDeadDef)
         MayHaveSplitComponents = true;
       HaveDeadDef = true;
@@ -1716,7 +1716,7 @@ void LiveIntervals::splitSeparateComponents(LiveInterval &LI,
   if (NumComp <= 1)
     return;
   LLVM_DEBUG(dbgs() << "  Split " << NumComp << " components: " << LI << '\n');
-  unsigned Reg = LI.reg;
+  unsigned Reg = LI.reg();
   const TargetRegisterClass *RegClass = MRI->getRegClass(Reg);
   for (unsigned I = 1; I < NumComp; ++I) {
     Register NewVReg = MRI->createVirtualRegister(RegClass);

@@ -47,14 +47,14 @@ bool ReportFile::SupportsColors() {
   return SupportsColoredOutput(fd);
 }
 
-static INLINE bool ReportSupportsColors() {
+static inline bool ReportSupportsColors() {
   return report_file.SupportsColors();
 }
 
 #else  // SANITIZER_FUCHSIA
 
 // Fuchsia's logs always go through post-processing that handles colorization.
-static INLINE bool ReportSupportsColors() { return true; }
+static inline bool ReportSupportsColors() { return true; }
 
 #endif  // !SANITIZER_FUCHSIA
 

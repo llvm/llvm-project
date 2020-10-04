@@ -18,12 +18,9 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-// Type constraint accepting standard integers, indices and wrapped LLVM integer
-// types.
-def IntLikeOrLLVMInt : TypeConstraint<
-  Or<[AnySignlessInteger.predicate, Index.predicate,
-      LLVM_AnyInteger.predicate]>,
-  "integer, index or LLVM dialect equivalent">;
+// Type constraint accepting standard integers, indices.
+def IntOrIndex : TypeConstraint<
+  Or<[AnySignlessInteger.predicate, Index.predicate]>, "integer or index">;
 
 //===----------------------------------------------------------------------===//
 // GPU Dialect operations.
@@ -204,9 +201,9 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, StringRef name, "
-              "FunctionType type, ArrayRef<Type> workgroupAttributions = {}, "
-              "ArrayRef<Type> privateAttributions = {}, "
+    OpBuilder<"StringRef name, "
+              "FunctionType type, TypeRange workgroupAttributions = {}, "
+              "TypeRange privateAttributions = {}, "
               "ArrayRef<NamedAttribute> attrs = {}">
   ];
 
@@ -299,9 +296,9 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
 }
 
 def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
-    Arguments<(ins IntLikeOrLLVMInt:$gridSizeX, IntLikeOrLLVMInt:$gridSizeY,
-               IntLikeOrLLVMInt:$gridSizeZ, IntLikeOrLLVMInt:$blockSizeX,
-               IntLikeOrLLVMInt:$blockSizeY, IntLikeOrLLVMInt:$blockSizeZ,
+    Arguments<(ins IntOrIndex:$gridSizeX, IntOrIndex:$gridSizeY,
+               IntOrIndex:$gridSizeZ, IntOrIndex:$blockSizeX,
+               IntOrIndex:$blockSizeY, IntOrIndex:$blockSizeZ,
                Variadic<AnyType>:$operands)>,
     Results<(outs)> {
   let summary = "Launches a function as a GPU kerneel";
@@ -333,7 +330,7 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
 
       // This module creates a separate compilation unit for the GPU compiler.
       gpu.module @kernels {
-        func @kernel_1(%arg0 : f32, %arg1 : !llvm<"float*">)
+        func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>)
             attributes { nvvm.kernel = true } {
 
           // Operations that produce block/thread IDs and dimensions are
@@ -365,7 +362,7 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
                         %arg0, %arg1)      // Arguments passed to the kernel.
             { kernel_module = @kernels,    // Module containing the kernel.
               kernel = "kernel_1" }        // Kernel function.
-            : (index, index, index, index, index, index, f32, !llvm<"float*">)
+            : (index, index, index, index, index, index, f32, memref<?xf32, 1>)
               -> ()
     }
     ```
@@ -374,11 +371,11 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, GPUFuncOp kernelFunc, "
+    OpBuilder<"GPUFuncOp kernelFunc, "
               "Value gridSizeX, Value gridSizeY, Value gridSizeZ, "
               "Value blockSizeX, Value blockSizeY, Value blockSizeZ, "
               "ValueRange kernelOperands">,
-    OpBuilder<"OpBuilder &builder, OperationState &result, GPUFuncOp kernelFunc, "
+    OpBuilder<"GPUFuncOp kernelFunc, "
               "KernelDim3 gridSize, KernelDim3 blockSize, "
               "ValueRange kernelOperands">
   ];
@@ -493,7 +490,7 @@ def GPU_LaunchOp : GPU_Op<"launch">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, Value gridSizeX,"
+    OpBuilder<"Value gridSizeX,"
               "Value gridSizeY, Value gridSizeZ, Value blockSizeX,"
               "Value blockSizeY, Value blockSizeZ">
   ];
@@ -719,8 +716,7 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
 
     ```
   }];
-  let builders = [OpBuilder<"OpBuilder &builder, OperationState &result, "
-                            "StringRef name">];
+  let builders = [OpBuilder<"StringRef name">];
   let parser = [{ return ::parseGPUModuleOp(parser, result); }];
   let printer = [{ return ::print(p, *this); }];
   let regions = (region SizedRegion<1>:$body);
@@ -746,8 +742,14 @@ def GPU_HostRegisterOp : GPU_Op<"host_register">,
     Arguments<(ins AnyUnrankedMemRef:$value)> {
   let summary = "Registers a memref for access from device.";
   let description = [{
-    This op registers the host memory pointed to by a memref to be accessed from
-    a device.
+    This op maps the provided host buffer into the device address space.
+
+    This operation may not be supported in every environment, there is not yet a
+    way to check at runtime whether this feature is supported.
+
+    Writes from the host are guaranteed to be visible to device kernels that are
+    launched afterwards. Writes from the device are guaranteed to be visible on
+    the host after synchronizing with the device kernel completion.
   }];
 
   let assemblyFormat = "$value attr-dict `:` type($value)";

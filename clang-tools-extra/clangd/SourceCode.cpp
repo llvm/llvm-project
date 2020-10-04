@@ -175,20 +175,17 @@ size_t lspLength(llvm::StringRef Code) {
 llvm::Expected<size_t> positionToOffset(llvm::StringRef Code, Position P,
                                         bool AllowColumnsBeyondLineLength) {
   if (P.line < 0)
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("Line value can't be negative ({0})", P.line),
-        llvm::errc::invalid_argument);
+    return error(llvm::errc::invalid_argument,
+                 "Line value can't be negative ({0})", P.line);
   if (P.character < 0)
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("Character value can't be negative ({0})", P.character),
-        llvm::errc::invalid_argument);
+    return error(llvm::errc::invalid_argument,
+                 "Character value can't be negative ({0})", P.character);
   size_t StartOfLine = 0;
   for (int I = 0; I != P.line; ++I) {
     size_t NextNL = Code.find('\n', StartOfLine);
     if (NextNL == llvm::StringRef::npos)
-      return llvm::make_error<llvm::StringError>(
-          llvm::formatv("Line value is out of range ({0})", P.line),
-          llvm::errc::invalid_argument);
+      return error(llvm::errc::invalid_argument,
+                   "Line value is out of range ({0})", P.line);
     StartOfLine = NextNL + 1;
   }
   StringRef Line =
@@ -198,10 +195,9 @@ llvm::Expected<size_t> positionToOffset(llvm::StringRef Code, Position P,
   bool Valid;
   size_t ByteInLine = measureUnits(Line, P.character, lspEncoding(), Valid);
   if (!Valid && !AllowColumnsBeyondLineLength)
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("{0} offset {1} is invalid for line {2}", lspEncoding(),
-                      P.character, P.line),
-        llvm::errc::invalid_argument);
+    return error(llvm::errc::invalid_argument,
+                 "{0} offset {1} is invalid for line {2}", lspEncoding(),
+                 P.character, P.line);
   return StartOfLine + ByteInLine;
 }
 

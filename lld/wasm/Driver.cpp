@@ -85,6 +85,8 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   lld::stdoutOS = &stdoutOS;
   lld::stderrOS = &stderrOS;
 
+  errorHandler().cleanupCallback = []() { freeArena(); };
+
   errorHandler().logName = args::getFilenameWithoutExe(args[0]);
   errorHandler().errorLimitExceededMsg =
       "too many errors emitted, stopping now (use "
@@ -103,7 +105,6 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   if (canExitEarly)
     exitLld(errorCount() ? 1 : 0);
 
-  freeArena();
   return !errorCount();
 }
 
@@ -344,6 +345,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->importTable = args.hasArg(OPT_import_table);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
+  config->mapFile = args.getLastArgValue(OPT_Map);
   config->optimize = args::getInteger(args, OPT_O, 0);
   config->outputFile = args.getLastArgValue(OPT_o);
   config->relocatable = args.hasArg(OPT_relocatable);
@@ -410,6 +412,9 @@ static void readConfigs(opt::InputArgList &args) {
     for (StringRef s : arg->getValues())
       config->features->push_back(std::string(s));
   }
+
+  if (args.hasArg(OPT_print_map))
+    config->mapFile = "-";
 }
 
 // Some Config members do not directly correspond to any particular
@@ -566,7 +571,6 @@ static void createSyntheticSymbols() {
         "__wasm_apply_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(nullSignature, "__wasm_apply_relocs"));
   }
-
 
   if (config->isPic) {
     WasmSym::stackPointer =
@@ -772,6 +776,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   v.push_back("wasm-ld (LLVM option parsing)");
   for (auto *arg : args.filtered(OPT_mllvm))
     v.push_back(arg->getValue());
+  cl::ResetAllOptionOccurrences();
   cl::ParseCommandLineOptions(v.size(), v.data());
 
   errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
@@ -795,7 +800,8 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // find that it failed because there was a mistake in their command-line.
   if (auto e = tryCreateFile(config->outputFile))
     error("cannot open output file " + config->outputFile + ": " + e.message());
-  // TODO(sbc): add check for map file too once we add support for that.
+  if (auto e = tryCreateFile(config->mapFile))
+    error("cannot open map file " + config->mapFile + ": " + e.message());
   if (errorCount())
     return;
 
@@ -832,6 +838,29 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     else
       error("entry symbol not defined (pass --no-entry to suppress): " +
             config->entry);
+  }
+
+  // If the user code defines a `__wasm_call_dtors` function, remember it so
+  // that we can call it from the command export wrappers. Unlike
+  // `__wasm_call_ctors` which we synthesize, `__wasm_call_dtors` is defined
+  // by libc/etc., because destructors are registered dynamically with
+  // `__cxa_atexit` and friends.
+  if (!config->relocatable && !config->shared &&
+      !WasmSym::callCtors->isUsedInRegularObj &&
+      WasmSym::callCtors->getName() != config->entry &&
+      !config->exportedSymbols.count(WasmSym::callCtors->getName())) {
+    if (Symbol *callDtors = handleUndefined("__wasm_call_dtors")) {
+      if (auto *callDtorsFunc = dyn_cast<DefinedFunction>(callDtors)) {
+        if (callDtorsFunc->signature &&
+            (!callDtorsFunc->signature->Params.empty() ||
+             !callDtorsFunc->signature->Returns.empty())) {
+          error("__wasm_call_dtors must have no argument or return values");
+        }
+        WasmSym::callDtors = callDtorsFunc;
+      } else {
+        error("__wasm_call_dtors must be a function");
+      }
+    }
   }
 
   createOptionalSymbols();

@@ -231,10 +231,10 @@ SDNode *HexagonDAGToDAGISel::StoreInstrForLoadIntrinsic(MachineSDNode *LoadN,
 
   if (Size >= 4)
     TS = CurDAG->getStore(SDValue(LoadN, 2), dl, SDValue(LoadN, 0), Loc, PI,
-                          Size);
+                          Align(Size));
   else
     TS = CurDAG->getTruncStore(SDValue(LoadN, 2), dl, SDValue(LoadN, 0), Loc,
-                               PI, MVT::getIntegerVT(Size * 8), Size);
+                               PI, MVT::getIntegerVT(Size * 8), Align(Size));
 
   SDNode *StoreN;
   {

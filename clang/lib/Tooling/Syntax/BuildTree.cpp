@@ -155,10 +155,10 @@ private:
 } // namespace
 
 static CallExpr::arg_range dropDefaultArgs(CallExpr::arg_range Args) {
-  auto firstDefaultArg = std::find_if(Args.begin(), Args.end(), [](auto it) {
-    return isa<CXXDefaultArgExpr>(it);
+  auto FirstDefaultArg = std::find_if(Args.begin(), Args.end(), [](auto It) {
+    return isa<CXXDefaultArgExpr>(It);
   });
-  return llvm::make_range(Args.begin(), firstDefaultArg);
+  return llvm::make_range(Args.begin(), FirstDefaultArg);
 }
 
 static syntax::NodeKind getOperatorNodeKind(const CXXOperatorCallExpr &E) {
@@ -366,12 +366,14 @@ private:
 class syntax::TreeBuilder {
 public:
   TreeBuilder(syntax::Arena &Arena) : Arena(Arena), Pending(Arena) {
-    for (const auto &T : Arena.tokenBuffer().expandedTokens())
+    for (const auto &T : Arena.getTokenBuffer().expandedTokens())
       LocationToToken.insert({T.location().getRawEncoding(), &T});
   }
 
-  llvm::BumpPtrAllocator &allocator() { return Arena.allocator(); }
-  const SourceManager &sourceManager() const { return Arena.sourceManager(); }
+  llvm::BumpPtrAllocator &allocator() { return Arena.getAllocator(); }
+  const SourceManager &sourceManager() const {
+    return Arena.getSourceManager();
+  }
 
   /// Populate children for \p New node, assuming it covers tokens from \p
   /// Range.
@@ -391,6 +393,17 @@ public:
                 NestedNameSpecifierLoc From) {
     assert(New);
     Pending.foldChildren(Arena, Range, New);
+    if (From)
+      Mapping.add(From, New);
+  }
+
+  /// Populate children for \p New list, assuming it covers tokens from a
+  /// subrange of \p SuperRange.
+  void foldList(ArrayRef<syntax::Token> SuperRange, syntax::List *New,
+                ASTPtr From) {
+    assert(New);
+    auto ListRange = Pending.shrinkToFitList(SuperRange);
+    Pending.foldChildren(Arena, ListRange, New);
     if (From)
       Mapping.add(From, New);
   }
@@ -421,13 +434,13 @@ public:
 
   /// Finish building the tree and consume the root node.
   syntax::TranslationUnit *finalize() && {
-    auto Tokens = Arena.tokenBuffer().expandedTokens();
+    auto Tokens = Arena.getTokenBuffer().expandedTokens();
     assert(!Tokens.empty());
     assert(Tokens.back().kind() == tok::eof);
 
     // Build the root of the tree, consuming all the children.
     Pending.foldChildren(Arena, Tokens.drop_back(),
-                         new (Arena.allocator()) syntax::TranslationUnit);
+                         new (Arena.getAllocator()) syntax::TranslationUnit);
 
     auto *TU = cast<syntax::TranslationUnit>(std::move(Pending).finalize());
     TU->assertInvariantsRecursive();
@@ -451,7 +464,7 @@ public:
     assert(First.isValid());
     assert(Last.isValid());
     assert(First == Last ||
-           Arena.sourceManager().isBeforeInTranslationUnit(First, Last));
+           Arena.getSourceManager().isBeforeInTranslationUnit(First, Last));
     return llvm::makeArrayRef(findToken(First), std::next(findToken(Last)));
   }
 
@@ -540,7 +553,7 @@ private:
   }
 
   void setRole(syntax::Node *N, NodeRole R) {
-    assert(N->role() == NodeRole::Detached);
+    assert(N->getRole() == NodeRole::Detached);
     N->setRole(R);
   }
 
@@ -552,14 +565,14 @@ private:
   /// Ensures that added nodes properly nest and cover the whole token stream.
   struct Forest {
     Forest(syntax::Arena &A) {
-      assert(!A.tokenBuffer().expandedTokens().empty());
-      assert(A.tokenBuffer().expandedTokens().back().kind() == tok::eof);
+      assert(!A.getTokenBuffer().expandedTokens().empty());
+      assert(A.getTokenBuffer().expandedTokens().back().kind() == tok::eof);
       // Create all leaf nodes.
       // Note that we do not have 'eof' in the tree.
-      for (auto &T : A.tokenBuffer().expandedTokens().drop_back()) {
-        auto *L = new (A.allocator()) syntax::Leaf(&T);
+      for (const auto &T : A.getTokenBuffer().expandedTokens().drop_back()) {
+        auto *L = new (A.getAllocator()) syntax::Leaf(&T);
         L->Original = true;
-        L->CanModify = A.tokenBuffer().spelledForExpanded(T).hasValue();
+        L->CanModify = A.getTokenBuffer().spelledForExpanded(T).hasValue();
         Trees.insert(Trees.end(), {&T, L});
       }
     }
@@ -572,16 +585,45 @@ private:
       assert((std::next(It) == Trees.end() ||
               std::next(It)->first == Range.end()) &&
              "no child with the specified range");
-      assert(It->second->role() == NodeRole::Detached &&
+      assert(It->second->getRole() == NodeRole::Detached &&
              "re-assigning role for a child");
       It->second->setRole(Role);
+    }
+
+    /// Shrink \p Range to a subrange that only contains tokens of a list.
+    /// List elements and delimiters should already have correct roles.
+    ArrayRef<syntax::Token> shrinkToFitList(ArrayRef<syntax::Token> Range) {
+      auto BeginChildren = Trees.lower_bound(Range.begin());
+      assert((BeginChildren == Trees.end() ||
+              BeginChildren->first == Range.begin()) &&
+             "Range crosses boundaries of existing subtrees");
+
+      auto EndChildren = Trees.lower_bound(Range.end());
+      assert(
+          (EndChildren == Trees.end() || EndChildren->first == Range.end()) &&
+          "Range crosses boundaries of existing subtrees");
+
+      auto BelongsToList = [](decltype(Trees)::value_type KV) {
+        auto Role = KV.second->getRole();
+        return Role == syntax::NodeRole::ListElement ||
+               Role == syntax::NodeRole::ListDelimiter;
+      };
+
+      auto BeginListChildren =
+          std::find_if(BeginChildren, EndChildren, BelongsToList);
+
+      auto EndListChildren =
+          std::find_if_not(BeginListChildren, EndChildren, BelongsToList);
+
+      return ArrayRef<syntax::Token>(BeginListChildren->first,
+                                     EndListChildren->first);
     }
 
     /// Add \p Node to the forest and attach child nodes based on \p Tokens.
     void foldChildren(const syntax::Arena &A, ArrayRef<syntax::Token> Tokens,
                       syntax::Tree *Node) {
       // Attach children to `Node`.
-      assert(Node->firstChild() == nullptr && "node already has children");
+      assert(Node->getFirstChild() == nullptr && "node already has children");
 
       auto *FirstToken = Tokens.begin();
       auto BeginChildren = Trees.lower_bound(FirstToken);
@@ -597,14 +639,15 @@ private:
       // We need to go in reverse order, because we can only prepend.
       for (auto It = EndChildren; It != BeginChildren; --It) {
         auto *C = std::prev(It)->second;
-        if (C->role() == NodeRole::Detached)
+        if (C->getRole() == NodeRole::Detached)
           C->setRole(NodeRole::Unknown);
         Node->prependChildLowLevel(C);
       }
 
       // Mark that this node came from the AST and is backed by the source code.
       Node->Original = true;
-      Node->CanModify = A.tokenBuffer().spelledForExpanded(Tokens).hasValue();
+      Node->CanModify =
+          A.getTokenBuffer().spelledForExpanded(Tokens).hasValue();
 
       Trees.erase(BeginChildren, EndChildren);
       Trees.insert({FirstToken, Node});
@@ -624,12 +667,12 @@ private:
         unsigned CoveredTokens =
             It != Trees.end()
                 ? (std::next(It)->first - It->first)
-                : A.tokenBuffer().expandedTokens().end() - It->first;
+                : A.getTokenBuffer().expandedTokens().end() - It->first;
 
         R += std::string(
-            formatv("- '{0}' covers '{1}'+{2} tokens\n", It->second->kind(),
-                    It->first->text(A.sourceManager()), CoveredTokens));
-        R += It->second->dump(A.sourceManager());
+            formatv("- '{0}' covers '{1}'+{2} tokens\n", It->second->getKind(),
+                    It->first->text(A.getSourceManager()), CoveredTokens));
+        R += It->second->dump(A.getSourceManager());
       }
       return R;
     }
@@ -951,12 +994,12 @@ public:
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc QualifierLoc) {
     if (!QualifierLoc)
       return true;
-    for (auto it = QualifierLoc; it; it = it.getPrefix()) {
-      auto *NS = buildNameSpecifier(it);
+    for (auto It = QualifierLoc; It; It = It.getPrefix()) {
+      auto *NS = buildNameSpecifier(It);
       if (!NS)
         return false;
       Builder.markChild(NS, syntax::NodeRole::ListElement);
-      Builder.markChildToken(it.getEndLoc(), syntax::NodeRole::ListDelimiter);
+      Builder.markChildToken(It.getEndLoc(), syntax::NodeRole::ListDelimiter);
     }
     Builder.foldNode(Builder.getRange(QualifierLoc.getSourceRange()),
                      new (allocator()) syntax::NestedNameSpecifier,
@@ -1123,7 +1166,7 @@ public:
   syntax::CallArguments *
   buildCallArguments(CallExpr::arg_range ArgsAndDefaultArgs) {
     auto Args = dropDefaultArgs(ArgsAndDefaultArgs);
-    for (const auto &Arg : Args) {
+    for (auto *Arg : Args) {
       Builder.markExprChild(Arg, syntax::NodeRole::ListElement);
       const auto *DelimiterToken =
           std::next(Builder.findToken(Arg->getEndLoc()));
@@ -1510,14 +1553,31 @@ private:
 
     // There doesn't have to be a declarator (e.g. `void foo(int)` only has
     // declaration, but no declarator).
-    if (Range.getBegin().isValid()) {
-      auto *N = new (allocator()) syntax::SimpleDeclarator;
-      Builder.foldNode(Builder.getRange(Range), N, nullptr);
-      Builder.markChild(N, syntax::NodeRole::Declarator);
+    if (!Range.getBegin().isValid()) {
+      Builder.markChild(new (allocator()) syntax::DeclaratorList,
+                        syntax::NodeRole::Declarators);
+      Builder.foldNode(Builder.getDeclarationRange(D),
+                       new (allocator()) syntax::SimpleDeclaration, D);
+      return true;
     }
 
-    if (Builder.isResponsibleForCreatingDeclaration(D)) {
-      Builder.foldNode(Builder.getDeclarationRange(D),
+    auto *N = new (allocator()) syntax::SimpleDeclarator;
+    Builder.foldNode(Builder.getRange(Range), N, nullptr);
+    Builder.markChild(N, syntax::NodeRole::ListElement);
+
+    if (!Builder.isResponsibleForCreatingDeclaration(D)) {
+      // If this is not the last declarator in the declaration we expect a
+      // delimiter after it.
+      const auto *DelimiterToken = std::next(Builder.findToken(Range.getEnd()));
+      if (DelimiterToken->kind() == clang::tok::TokenKind::comma)
+        Builder.markChildToken(DelimiterToken, syntax::NodeRole::ListDelimiter);
+    } else {
+      auto *DL = new (allocator()) syntax::DeclaratorList;
+      auto DeclarationRange = Builder.getDeclarationRange(D);
+      Builder.foldList(DeclarationRange, DL, nullptr);
+
+      Builder.markChild(DL, syntax::NodeRole::Declarators);
+      Builder.foldNode(DeclarationRange,
                        new (allocator()) syntax::SimpleDeclaration, D);
     }
     return true;

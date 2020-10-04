@@ -495,8 +495,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         << lastArgumentForMask(D, Args, Kinds & NeedsLTO) << "-flto";
   }
 
-  if ((Kinds & SanitizerKind::ShadowCallStack) && TC.getTriple().isAArch64() &&
-      !llvm::AArch64::isX18ReservedByDefault(TC.getTriple()) &&
+  if ((Kinds & SanitizerKind::ShadowCallStack) &&
+      ((TC.getTriple().isAArch64() &&
+        !llvm::AArch64::isX18ReservedByDefault(TC.getTriple())) ||
+       TC.getTriple().isRISCV()) &&
       !Args.hasArg(options::OPT_ffixed_x18)) {
     D.Diag(diag::err_drv_argument_only_allowed_with)
         << lastArgumentForMask(D, Args, Kinds & SanitizerKind::ShadowCallStack)
@@ -866,8 +868,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                 LinkCXXRuntimes) ||
                     D.CCCIsCXX();
 
-  NeedsHeapProfRt = Args.hasFlag(options::OPT_fmemory_profile,
-                                 options::OPT_fno_memory_profile, false);
+  NeedsMemProfRt = Args.hasFlag(options::OPT_fmemory_profile,
+                                options::OPT_fno_memory_profile, false);
 
   // Finally, initialize the set of available and recoverable sanitizers.
   Sanitizers.Mask |= Kinds;

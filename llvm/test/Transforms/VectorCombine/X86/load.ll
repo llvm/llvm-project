@@ -292,6 +292,66 @@ define <8 x i16> @gep10_load_i16_insert_v8i16(<8 x i16>* align 16 dereferenceabl
   ret <8 x i16> %r
 }
 
+; Negative test - disable under asan because widened load can cause spurious
+; use-after-poison issues when __asan_poison_memory_region is used.
+
+define <8 x i16> @gep10_load_i16_insert_v8i16_asan(<8 x i16>* align 16 dereferenceable(32) %p) sanitize_address {
+; CHECK-LABEL: @gep10_load_i16_insert_v8i16_asan(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[P:%.*]], i64 1, i64 0
+; CHECK-NEXT:    [[S:%.*]] = load i16, i16* [[GEP]], align 16
+; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x i16> undef, i16 [[S]], i64 0
+; CHECK-NEXT:    ret <8 x i16> [[R]]
+;
+  %gep = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i64 1, i64 0
+  %s = load i16, i16* %gep, align 16
+  %r = insertelement <8 x i16> undef, i16 %s, i64 0
+  ret <8 x i16> %r
+}
+
+; hwasan and memtag should be similarly suppressed.
+
+define <8 x i16> @gep10_load_i16_insert_v8i16_hwasan(<8 x i16>* align 16 dereferenceable(32) %p) sanitize_hwaddress {
+; CHECK-LABEL: @gep10_load_i16_insert_v8i16_hwasan(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[P:%.*]], i64 1, i64 0
+; CHECK-NEXT:    [[S:%.*]] = load i16, i16* [[GEP]], align 16
+; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x i16> undef, i16 [[S]], i64 0
+; CHECK-NEXT:    ret <8 x i16> [[R]]
+;
+  %gep = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i64 1, i64 0
+  %s = load i16, i16* %gep, align 16
+  %r = insertelement <8 x i16> undef, i16 %s, i64 0
+  ret <8 x i16> %r
+}
+
+define <8 x i16> @gep10_load_i16_insert_v8i16_memtag(<8 x i16>* align 16 dereferenceable(32) %p) sanitize_memtag {
+; CHECK-LABEL: @gep10_load_i16_insert_v8i16_memtag(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[P:%.*]], i64 1, i64 0
+; CHECK-NEXT:    [[S:%.*]] = load i16, i16* [[GEP]], align 16
+; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x i16> undef, i16 [[S]], i64 0
+; CHECK-NEXT:    ret <8 x i16> [[R]]
+;
+  %gep = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i64 1, i64 0
+  %s = load i16, i16* %gep, align 16
+  %r = insertelement <8 x i16> undef, i16 %s, i64 0
+  ret <8 x i16> %r
+}
+
+; Negative test - disable under tsan because widened load may overlap bytes
+; being concurrently modified. tsan does not know that some bytes are undef.
+
+define <8 x i16> @gep10_load_i16_insert_v8i16_tsan(<8 x i16>* align 16 dereferenceable(32) %p) sanitize_thread {
+; CHECK-LABEL: @gep10_load_i16_insert_v8i16_tsan(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[P:%.*]], i64 1, i64 0
+; CHECK-NEXT:    [[S:%.*]] = load i16, i16* [[GEP]], align 16
+; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x i16> undef, i16 [[S]], i64 0
+; CHECK-NEXT:    ret <8 x i16> [[R]]
+;
+  %gep = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i64 1, i64 0
+  %s = load i16, i16* %gep, align 16
+  %r = insertelement <8 x i16> undef, i16 %s, i64 0
+  ret <8 x i16> %r
+}
+
 ; Negative test - can't safely load the offset vector, but could load+shuffle.
 
 define <8 x i16> @gep10_load_i16_insert_v8i16_deref(<8 x i16>* align 16 dereferenceable(31) %p) {
@@ -392,4 +452,47 @@ define <2 x float> @load_f32_insert_v2f32(float* align 16 dereferenceable(16) %p
   %s = load float, float* %p, align 4
   %r = insertelement <2 x float> undef, float %s, i32 0
   ret <2 x float> %r
+}
+
+; Negative test - suppress load widening for asan/hwasan/memtag/tsan.
+
+define <2 x float> @load_f32_insert_v2f32_asan(float* align 16 dereferenceable(16) %p) sanitize_address {
+; CHECK-LABEL: @load_f32_insert_v2f32_asan(
+; CHECK-NEXT:    [[S:%.*]] = load float, float* [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x float> undef, float [[S]], i32 0
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %s = load float, float* %p, align 4
+  %r = insertelement <2 x float> undef, float %s, i32 0
+  ret <2 x float> %r
+}
+
+declare float* @getscaleptr()
+define void @PR47558_multiple_use_load(<2 x float>* nocapture nonnull %resultptr, <2 x float>* nocapture nonnull readonly %opptr) {
+; CHECK-LABEL: @PR47558_multiple_use_load(
+; CHECK-NEXT:    [[SCALEPTR:%.*]] = tail call nonnull align 16 dereferenceable(64) float* @getscaleptr()
+; CHECK-NEXT:    [[OP:%.*]] = load <2 x float>, <2 x float>* [[OPPTR:%.*]], align 4
+; CHECK-NEXT:    [[SCALE:%.*]] = load float, float* [[SCALEPTR]], align 16
+; CHECK-NEXT:    [[T1:%.*]] = insertelement <2 x float> undef, float [[SCALE]], i32 0
+; CHECK-NEXT:    [[T2:%.*]] = insertelement <2 x float> [[T1]], float [[SCALE]], i32 1
+; CHECK-NEXT:    [[T3:%.*]] = fmul <2 x float> [[OP]], [[T2]]
+; CHECK-NEXT:    [[T4:%.*]] = extractelement <2 x float> [[T3]], i32 0
+; CHECK-NEXT:    [[RESULT0:%.*]] = insertelement <2 x float> undef, float [[T4]], i32 0
+; CHECK-NEXT:    [[T5:%.*]] = extractelement <2 x float> [[T3]], i32 1
+; CHECK-NEXT:    [[RESULT1:%.*]] = insertelement <2 x float> [[RESULT0]], float [[T5]], i32 1
+; CHECK-NEXT:    store <2 x float> [[RESULT1]], <2 x float>* [[RESULTPTR:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+  %scaleptr = tail call nonnull align 16 dereferenceable(64) float* @getscaleptr()
+  %op = load <2 x float>, <2 x float>* %opptr, align 4
+  %scale = load float, float* %scaleptr, align 16
+  %t1 = insertelement <2 x float> undef, float %scale, i32 0
+  %t2 = insertelement <2 x float> %t1, float %scale, i32 1
+  %t3 = fmul <2 x float> %op, %t2
+  %t4 = extractelement <2 x float> %t3, i32 0
+  %result0 = insertelement <2 x float> undef, float %t4, i32 0
+  %t5 = extractelement <2 x float> %t3, i32 1
+  %result1 = insertelement <2 x float> %result0, float %t5, i32 1
+  store <2 x float> %result1, <2 x float>* %resultptr, align 8
+  ret void
 }

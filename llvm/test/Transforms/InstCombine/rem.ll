@@ -50,8 +50,7 @@ define i8 @big_divisor(i8 %x) {
 define i5 @biggest_divisor(i5 %x) {
 ; CHECK-LABEL: @biggest_divisor(
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i5 [[X:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[DOTNOT]] to i5
-; CHECK-NEXT:    [[REM:%.*]] = add i5 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[DOTNOT]], i5 0, i5 [[X]]
 ; CHECK-NEXT:    ret i5 [[REM]]
 ;
   %rem = urem i5 %x, -1

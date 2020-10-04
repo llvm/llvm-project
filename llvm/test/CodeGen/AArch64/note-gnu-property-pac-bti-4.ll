@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=aarch64-linux %s               -o - | \
 ; RUN:   FileCheck %s --check-prefix=ASM
-; RUN: llc -mtriple=aarch64-linux %s -filetype=obj -o - |  \
-; RUN:   llvm-readelf --notes - | FileCheck %s --check-prefix=OBJ
 
 define dso_local i32 @f() #0 {
 entry:
@@ -13,13 +11,16 @@ entry:
   ret i32 0
 }
 
-attributes #0 = { "branch-target-enforcement" "sign-return-address"="non-leaf" }
+attributes #0 = { "branch-target-enforcement"="true" "sign-return-address"="non-leaf" }
 
-attributes #1 = { "branch-target-enforcement" }
+attributes #1 = { "branch-target-enforcement"="true" }
 
-; Only the common atttribute (BTI)
-; ASM:	    .word	3221225472
-; ASM-NEXT:	.word	4
-; ASM-NEXT:	.word	1
+!llvm.module.flags = !{!0, !1, !2, !3}
 
-; OBJ: Properties: aarch64 feature: BTI
+!0 = !{i32 1, !"branch-target-enforcement", i32 0}
+!1 = !{i32 1, !"sign-return-address", i32 0}
+!2 = !{i32 1, !"sign-return-address-all", i32 0}
+!3 = !{i32 1, !"sign-return-address-with-bkey", i32 0}
+
+; Note is not emited if module has no properties
+; ASM-NOT: .note.gnu.property

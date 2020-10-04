@@ -47,6 +47,11 @@
 
 namespace clang {
 namespace clangd {
+
+// Implemented in Check.cpp.
+bool check(const llvm::StringRef File, const ThreadsafeFS &TFS,
+           const ClangdLSPServer::Options &Opts);
+
 namespace {
 
 using llvm::cl::cat;
@@ -57,6 +62,7 @@ using llvm::cl::init;
 using llvm::cl::list;
 using llvm::cl::opt;
 using llvm::cl::OptionCategory;
+using llvm::cl::ValueOptional;
 using llvm::cl::values;
 
 // All flags must be placed in a category, or they will be shown neither in
@@ -164,6 +170,26 @@ opt<CodeCompleteOptions::CodeCompletionParse> CodeCompletionParse{
            clEnumValN(CodeCompleteOptions::NeverParse, "never",
                       "Always used text-based completion")),
     init(CodeCompleteOptions().RunParser),
+    Hidden,
+};
+
+opt<CodeCompleteOptions::CodeCompletionRankingModel> RankingModel{
+    "ranking-model",
+    cat(Features),
+    desc("Model to use to rank code-completion items"),
+    values(clEnumValN(CodeCompleteOptions::Heuristics, "heuristics",
+                      "Use hueristics to rank code completion items"),
+           clEnumValN(CodeCompleteOptions::DecisionForest, "decision_forest",
+                      "Use Decision Forest model to rank completion items")),
+    init(CodeCompleteOptions().RankingModel),
+    Hidden,
+};
+
+opt<bool> DecisionForestBase{
+    "decision-forest-base",
+    cat(Features),
+    desc("Base for exponentiating the prediction from DecisionForest."),
+    init(CodeCompleteOptions().DecisionForestBase),
     Hidden,
 };
 
@@ -334,6 +360,16 @@ opt<bool> Test{
     Hidden,
 };
 
+opt<Path> CheckFile{
+    "check",
+    cat(Misc),
+    desc("Parse one file in isolation instead of acting as a language server. "
+         "Useful to investigate/reproduce crashes or configuration problems. "
+         "With --check=<filename>, attempts to parse a particular file."),
+    init(""),
+    ValueOptional,
+};
+
 enum PCHStorageFlag { Disk, Memory };
 opt<PCHStorageFlag> PCHStorage{
     "pch-storage",
@@ -484,9 +520,9 @@ public:
     // Still require "/" in body to mimic file scheme, as we want lengths of an
     // equivalent URI in both schemes to be the same.
     if (!Body.startswith("/"))
-      return llvm::make_error<llvm::StringError>(
-          "Expect URI body to be an absolute path starting with '/': " + Body,
-          llvm::inconvertibleErrorCode());
+      return error(
+          "Expect URI body to be an absolute path starting with '/': {0}",
+          Body);
     Body = Body.ltrim('/');
     llvm::SmallVector<char, 16> Path(Body.begin(), Body.end());
     path::native(Path);
@@ -497,11 +533,9 @@ public:
   llvm::Expected<URI>
   uriFromAbsolutePath(llvm::StringRef AbsolutePath) const override {
     llvm::StringRef Body = AbsolutePath;
-    if (!Body.consume_front(TestScheme::TestDir)) {
-      return llvm::make_error<llvm::StringError>(
-          "Path " + AbsolutePath + " doesn't start with root " + TestDir,
-          llvm::inconvertibleErrorCode());
-    }
+    if (!Body.consume_front(TestScheme::TestDir))
+      return error("Path {0} doesn't start with root {1}", AbsolutePath,
+                   TestDir);
 
     return URI("test", /*Authority=*/"",
                llvm::sys::path::convert_to_slash(Body));
@@ -523,7 +557,8 @@ const char TestScheme::TestDir[] = "/clangd-test";
 
 enum class ErrorResultCode : int {
   NoShutdownRequest = 1,
-  CantRunAsXPCService = 2
+  CantRunAsXPCService = 2,
+  CheckFailed = 3
 };
 
 int main(int argc, char *argv[]) {
@@ -628,7 +663,8 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   // If a user ran `clangd` in a terminal without redirecting anything,
   // it's somewhat likely they're confused about how to use clangd.
   // Show them the help overview, which explains.
-  if (llvm::outs().is_displayed() && llvm::errs().is_displayed())
+  if (llvm::outs().is_displayed() && llvm::errs().is_displayed() &&
+      !CheckFile.getNumOccurrences())
     llvm::errs() << Overview << "\n";
   // Use buffered stream to stderr (we still flush each log message). Unbuffered
   // stream can cause significant (non-deterministic) latency for the logger.
@@ -652,9 +688,11 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   if (auto EnvFlags = llvm::sys::Process::GetEnv(FlagsEnvVar))
     log("{0}: {1}", FlagsEnvVar, *EnvFlags);
 
+  ClangdLSPServer::Options Opts;
+  Opts.UseDirBasedCDB = (CompileArgsFrom == FilesystemCompileArgs);
+
   // If --compile-commands-dir arg was invoked, check value and override default
   // path.
-  llvm::Optional<Path> CompileCommandsDirPath;
   if (!CompileCommandsDir.empty()) {
     if (llvm::sys::fs::exists(CompileCommandsDir)) {
       // We support passing both relative and absolute paths to the
@@ -668,7 +706,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
              "will be ignored.",
              EC.message());
       } else {
-        CompileCommandsDirPath = std::string(Path.str());
+        Opts.CompileCommandsDir = std::string(Path.str());
       }
     } else {
       elog("Path specified by --compile-commands-dir does not exist. The "
@@ -676,7 +714,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     }
   }
 
-  ClangdServer::Options Opts;
   switch (PCHStorage) {
   case PCHStorageFlag::Memory:
     Opts.StorePreamblesInMemory = true;
@@ -726,21 +763,22 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.PreserveRecoveryASTType = RecoveryASTType;
   Opts.FoldingRanges = FoldingRanges;
 
-  clangd::CodeCompleteOptions CCOpts;
-  CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
-  CCOpts.Limit = LimitResults;
+  Opts.CodeComplete.IncludeIneligibleResults = IncludeIneligibleResults;
+  Opts.CodeComplete.Limit = LimitResults;
   if (CompletionStyle.getNumOccurrences())
-    CCOpts.BundleOverloads = CompletionStyle != Detailed;
-  CCOpts.ShowOrigins = ShowOrigins;
-  CCOpts.InsertIncludes = HeaderInsertion;
+    Opts.CodeComplete.BundleOverloads = CompletionStyle != Detailed;
+  Opts.CodeComplete.ShowOrigins = ShowOrigins;
+  Opts.CodeComplete.InsertIncludes = HeaderInsertion;
   if (!HeaderInsertionDecorators) {
-    CCOpts.IncludeIndicator.Insert.clear();
-    CCOpts.IncludeIndicator.NoInsert.clear();
+    Opts.CodeComplete.IncludeIndicator.Insert.clear();
+    Opts.CodeComplete.IncludeIndicator.NoInsert.clear();
   }
-  CCOpts.SpeculativeIndexRequest = Opts.StaticIndex;
-  CCOpts.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
-  CCOpts.AllScopes = AllScopesCompletion;
-  CCOpts.RunParser = CodeCompletionParse;
+  Opts.CodeComplete.SpeculativeIndexRequest = Opts.StaticIndex;
+  Opts.CodeComplete.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
+  Opts.CodeComplete.AllScopes = AllScopesCompletion;
+  Opts.CodeComplete.RunParser = CodeCompletionParse;
+  Opts.CodeComplete.RankingModel = RankingModel;
+  Opts.CodeComplete.DecisionForestBase = DecisionForestBase;
 
   RealThreadsafeFS TFS;
   std::vector<std::unique_ptr<config::Provider>> ProviderStack;
@@ -763,35 +801,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.ConfigProvider = Config.get();
   }
 
-  // Initialize and run ClangdLSPServer.
-  // Change stdin to binary to not lose \r\n on windows.
-  llvm::sys::ChangeStdinToBinary();
-
-  std::unique_ptr<Transport> TransportLayer;
-  if (getenv("CLANGD_AS_XPC_SERVICE")) {
-#if CLANGD_BUILD_XPC
-    log("Starting LSP over XPC service");
-    TransportLayer = newXPCTransport();
-#else
-    llvm::errs() << "This clangd binary wasn't built with XPC support.\n";
-    return (int)ErrorResultCode::CantRunAsXPCService;
-#endif
-  } else {
-    log("Starting LSP over stdin/stdout");
-    TransportLayer = newJSONTransport(
-        stdin, llvm::outs(),
-        InputMirrorStream ? InputMirrorStream.getPointer() : nullptr,
-        PrettyPrint, InputStyle);
-  }
-  if (!PathMappingsArg.empty()) {
-    auto Mappings = parsePathMappings(PathMappingsArg);
-    if (!Mappings) {
-      elog("Invalid -path-mappings: {0}", Mappings.takeError());
-      return 1;
-    }
-    TransportLayer = createPathMappingTransport(std::move(TransportLayer),
-                                                std::move(*Mappings));
-  }
   // Create an empty clang-tidy option.
   std::mutex ClangTidyOptMu;
   std::unique_ptr<tidy::ClangTidyOptionsProvider>
@@ -818,9 +827,9 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
       return Opts;
     };
   }
+  Opts.AsyncPreambleBuilds = AsyncPreamble;
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
   Opts.QueryDriverGlobs = std::move(QueryDriverGlobs);
-
   Opts.TweakFilter = [&](const Tweak &T) {
     if (T.hidden() && !HiddenFeatures)
       return false;
@@ -828,20 +837,51 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
       return llvm::is_contained(TweakList, T.id());
     return true;
   };
-  llvm::Optional<OffsetEncoding> OffsetEncodingFromFlag;
   if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)
-    OffsetEncodingFromFlag = ForceOffsetEncoding;
+    Opts.Encoding = ForceOffsetEncoding;
 
-  clangd::RenameOptions RenameOpts;
   // Shall we allow to customize the file limit?
-  RenameOpts.AllowCrossFile = CrossFileRename;
+  Opts.Rename.AllowCrossFile = CrossFileRename;
 
-  Opts.AsyncPreambleBuilds = AsyncPreamble;
+  if (CheckFile.getNumOccurrences()) {
+    llvm::SmallString<256> Path;
+    llvm::sys::fs::real_path(CheckFile, Path, /*expand_tilde=*/true);
+    log("Entering check mode (no LSP server)");
+    return check(Path, TFS, Opts)
+               ? 0
+               : static_cast<int>(ErrorResultCode::CheckFailed);
+  }
 
-  ClangdLSPServer LSPServer(
-      *TransportLayer, TFS, CCOpts, RenameOpts, CompileCommandsDirPath,
-      /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs,
-      OffsetEncodingFromFlag, Opts);
+  // Initialize and run ClangdLSPServer.
+  // Change stdin to binary to not lose \r\n on windows.
+  llvm::sys::ChangeStdinToBinary();
+  std::unique_ptr<Transport> TransportLayer;
+  if (getenv("CLANGD_AS_XPC_SERVICE")) {
+#if CLANGD_BUILD_XPC
+    log("Starting LSP over XPC service");
+    TransportLayer = newXPCTransport();
+#else
+    llvm::errs() << "This clangd binary wasn't built with XPC support.\n";
+    return static_cast<int>(ErrorResultCode::CantRunAsXPCService);
+#endif
+  } else {
+    log("Starting LSP over stdin/stdout");
+    TransportLayer = newJSONTransport(
+        stdin, llvm::outs(),
+        InputMirrorStream ? InputMirrorStream.getPointer() : nullptr,
+        PrettyPrint, InputStyle);
+  }
+  if (!PathMappingsArg.empty()) {
+    auto Mappings = parsePathMappings(PathMappingsArg);
+    if (!Mappings) {
+      elog("Invalid -path-mappings: {0}", Mappings.takeError());
+      return 1;
+    }
+    TransportLayer = createPathMappingTransport(std::move(TransportLayer),
+                                                std::move(*Mappings));
+  }
+
+  ClangdLSPServer LSPServer(*TransportLayer, TFS, Opts);
   llvm::set_thread_name("clangd.main");
   int ExitCode = LSPServer.run()
                      ? 0

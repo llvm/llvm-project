@@ -31,12 +31,10 @@ define void @remat_vctp(i32* %arg, i32* %arg1, i32* %arg2, i32* %arg3, i32* %arg
 ; CHECK-NEXT:    vqshl.s32 q5, q5, #1
 ; CHECK-NEXT:    vpt.s32 lt, q4, zr
 ; CHECK-NEXT:    vnegt.s32 q5, q5
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrwt.u32 q4, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q4, [r0], #16
 ; CHECK-NEXT:    vqrdmulh.s32 q4, q4, q5
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vstrwt.32 q4, [r2], #16
-; CHECK-NEXT:    vstrwt.32 q3, [r3], #16
+; CHECK-NEXT:    vstrw.32 q4, [r2], #16
+; CHECK-NEXT:    vstrw.32 q3, [r3], #16
 ; CHECK-NEXT:    letp lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %bb44
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}

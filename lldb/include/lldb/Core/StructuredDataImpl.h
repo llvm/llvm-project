@@ -68,14 +68,18 @@ public:
       return error;
     }
 
-    // Grab the plugin.
-    auto plugin_sp = lldb::StructuredDataPluginSP(m_plugin_wp);
+    // Grab the plugin
+    lldb::StructuredDataPluginSP plugin_sp = m_plugin_wp.lock();
+
+    // If there's no plugin, call underlying data's dump method:
     if (!plugin_sp) {
-      error.SetErrorString("Cannot pretty print structured data: "
-                           "plugin doesn't exist.");
+      if (!m_data_sp) {
+        error.SetErrorString("No data to describe.");
+        return error;
+      }
+      m_data_sp->Dump(stream, true);
       return error;
     }
-
     // Get the data's description.
     return plugin_sp->GetDescription(m_data_sp, stream);
   }

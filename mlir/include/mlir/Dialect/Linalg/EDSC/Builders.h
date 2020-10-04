@@ -30,8 +30,8 @@ class ParallelOp;
 namespace edsc {
 inline void defaultRegionBuilder(ValueRange args) {}
 
-/// Build a `linalg.generic` op with the specified `inputs`, `outputs` and
-/// `region`.
+/// Build a `linalg.generic` op with the specified `inputs`, `outputBuffers`,
+/// `initTensors`, `resultTensorsTypes` and `region`.
 ///
 /// `otherValues` and `otherAttributes` may be passed and will be appended as
 /// operands and attributes respectively.
@@ -41,14 +41,15 @@ inline void defaultRegionBuilder(ValueRange args) {}
 ///
 /// 1. `inputs` may contain StructuredIndexed that capture either buffer or
 /// tensor values.
-/// 2. `outputs` may contain StructuredIndexed that capture either buffer values
-/// or tensor types. If both buffer values and tensor types are present, then
-/// all buffer values must appear before any tensor type. Without this
-/// restriction output tensor results would need to be reordered, which would
-/// result in surprising behavior when combined with region definition.
+/// 2. `outputsBuffers` may contain StructuredIndexed that capture buffer
+/// values.
+/// 3. `initTensors` contain tensor values, without indexing maps.
+/// 4. `resultTensorTypes` may contain StructuredIndexed that capture return
+/// tensor types.
 Operation *makeGenericLinalgOp(
     ArrayRef<IteratorType> iteratorTypes, ArrayRef<StructuredIndexed> inputs,
-    ArrayRef<StructuredIndexed> outputs,
+    ArrayRef<StructuredIndexed> outputBuffers, ArrayRef<Value> initTensors,
+    ArrayRef<StructuredIndexed> resultTensorTypes,
     function_ref<void(ValueRange)> regionBuilder = defaultRegionBuilder,
     ArrayRef<Value> otherValues = {}, ArrayRef<Attribute> otherAttributes = {});
 
@@ -133,18 +134,6 @@ using MatmulRegionBuilder = function_ref<void(ValueRange args)>;
 Operation *
 linalg_generic_matmul(Value vA, Value vB, Value vC,
                       MatmulRegionBuilder regionBuilder = macRegionBuilder);
-
-/// Build a linalg.generic, under the current ScopedContext, at the current
-/// insert point, that computes:
-/// ```
-///    (m, n, k) = (par, par, seq)
-///    |
-///    |  C(m, n) = sum_k(A(m, k) * B(k, n))
-/// ```
-/// and returns the tensor `C`.
-Operation *
-linalg_generic_matmul(Value vA, Value vB, RankedTensorType tC,
-                      MatmulRegionBuilder regionBuilder = mulRegionBuilder);
 
 /// Build a linalg.generic, under the current ScopedContext, at the current
 /// insert point, that computes:

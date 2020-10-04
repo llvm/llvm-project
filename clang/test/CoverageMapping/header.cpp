@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name header.cpp %s > %tmapping
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name header.cpp %s > %tmapping
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-FUNC
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-STATIC-FUNC
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-STATIC-FUNC2
 //
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -mllvm -limited-coverage-experimental=true -dump-coverage-mapping -emit-llvm-only -main-file-name header.cpp %s > %tmapping.limited
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -mllvm -limited-coverage-experimental=true -dump-coverage-mapping -emit-llvm-only -main-file-name header.cpp %s > %tmapping.limited
 // RUN: FileCheck -input-file %tmapping.limited %s --check-prefix=CHECK-LIMITED
 
 #include "Inputs/header1.h"
