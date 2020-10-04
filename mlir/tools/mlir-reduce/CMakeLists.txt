@@ -43,7 +43,7 @@ set(LIBS
   MLIRTransformUtils
   )
 
-add_llvm_tool(mlir-reduce
+add_mlir_tool(mlir-reduce
   OptReductionPass.cpp
   Passes/OpReducer.cpp
   ReductionNode.cpp
