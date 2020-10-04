@@ -569,9 +569,9 @@ The ``RecordKeeper`` class provides four functions for getting the
   ``Record`` references for the concrete records that derive from the
   given class.
 
-* ``getAllDerivedDefinitionsTwo(``\ *classname1*\ ``,`` *classname2*\ ``)`` returns
+* ``getAllDerivedDefinitions(``\ *classnames*\ ``)`` returns
   a vector of ``Record`` references for the concrete records that derive from
-  *both* of the given classes. [function to come]
+  *all* of the given classes.
 
 This statement obtains all the records that derive from the ``Attribute``
 class and iterates over them.
