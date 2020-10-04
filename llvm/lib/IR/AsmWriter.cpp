@@ -1,4 +1,4 @@
-//===- AsmWriter.cpp - Printing LLVM as an assembly file ------------------===//
+//===- AsmWriter.cpp - Printing LLVM IR as an assembly file ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,6 +13,7 @@
 // Note that these routines must be extremely tolerant of various errors in the
 // LLVM code, because it can be used for debugging transformations.
 //
+// LLVM IR in Human Readable Format 
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/APFloat.h"
