@@ -211,7 +211,7 @@ _mm_encodekey256_u32(unsigned int __htype, __m128i __key_lo, __m128i __key_hi,
 /// \endoperation
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _mm_aesenc128kl_u8(__m128i* __odata, __m128i __idata, const void *__h) {
-  return __builtin_ia32_aesenc128kl(__odata, __idata, __h);
+  return __builtin_ia32_aesenc128kl_u8((__v2di *)__odata, (__v2di)__idata, __h);
 }
 
 /// The AESENC256KL performs 14 rounds of AES to encrypt the __idata using
@@ -248,7 +248,7 @@ _mm_aesenc128kl_u8(__m128i* __odata, __m128i __idata, const void *__h) {
 /// \endoperation
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _mm_aesenc256kl_u8(__m128i* __odata, __m128i __idata, const void *__h) {
-  return __builtin_ia32_aesenc256kl(__odata, __idata, __h);
+  return __builtin_ia32_aesenc256kl_u8((__v2di *)__odata, (__v2di)__idata, __h);
 }
 
 /// The AESDEC128KL performs 10 rounds of AES to decrypt the __idata using
@@ -285,7 +285,7 @@ _mm_aesenc256kl_u8(__m128i* __odata, __m128i __idata, const void *__h) {
 /// \endoperation
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _mm_aesdec128kl_u8(__m128i* __odata, __m128i __idata, const void *__h) {
-  return __builtin_ia32_aesdec128kl(__odata, __idata, __h);
+  return __builtin_ia32_aesdec128kl_u8((__v2di *)__odata, (__v2di)__idata, __h);
 }
 
 /// The AESDEC256KL performs 10 rounds of AES to decrypt the __idata using
@@ -322,7 +322,7 @@ _mm_aesdec128kl_u8(__m128i* __odata, __m128i __idata, const void *__h) {
 /// \endoperation
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _mm_aesdec256kl_u8(__m128i* __odata, __m128i __idata, const void *__h) {
-  return __builtin_ia32_aesdec256kl(__odata, __idata, __h);
+  return __builtin_ia32_aesdec256kl_u8((__v2di *)__odata, (__v2di)__idata, __h);
 }
 
 #undef __DEFAULT_FN_ATTRS
@@ -374,23 +374,8 @@ _mm_aesdec256kl_u8(__m128i* __odata, __m128i __idata, const void *__h) {
 /// \endoperation
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _mm_aesencwide128kl_u8(__m128i __odata[8], const __m128i __idata[8], const void* __h) {
-  return __builtin_ia32_aesencwide128kl(__h,
-                                        __odata,
-                                        __odata + 1,
-                                        __odata + 2,
-                                        __odata + 3,
-                                        __odata + 4,
-                                        __odata + 5,
-                                        __odata + 6,
-                                        __odata + 7,
-                                        __idata[0],
-                                        __idata[1],
-                                        __idata[2],
-                                        __idata[3],
-                                        __idata[4],
-                                        __idata[5],
-                                        __idata[6],
-                                        __idata[7]);
+  return __builtin_ia32_aesencwide128kl_u8((__v2di *)__odata,
+                                           (const __v2di *)__idata, __h);
 }
 
 /// Encrypt __idata[0] to __idata[7] using 256-bit AES key indicated by handle
@@ -429,23 +414,8 @@ _mm_aesencwide128kl_u8(__m128i __odata[8], const __m128i __idata[8], const void*
 /// \endoperation
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _mm_aesencwide256kl_u8(__m128i __odata[8], const __m128i __idata[8], const void* __h) {
-  return __builtin_ia32_aesencwide256kl(__h,
-                                        __odata,
-                                        __odata + 1,
-                                        __odata + 2,
-                                        __odata + 3,
-                                        __odata + 4,
-                                        __odata + 5,
-                                        __odata + 6,
-                                        __odata + 7,
-                                        __idata[0],
-                                        __idata[1],
-                                        __idata[2],
-                                        __idata[3],
-                                        __idata[4],
-                                        __idata[5],
-                                        __idata[6],
-                                        __idata[7]);
+  return __builtin_ia32_aesencwide256kl_u8((__v2di *)__odata,
+                                           (const __v2di *)__idata, __h);
 }
 
 /// Decrypt __idata[0] to __idata[7] using 128-bit AES key indicated by handle
@@ -484,23 +454,8 @@ _mm_aesencwide256kl_u8(__m128i __odata[8], const __m128i __idata[8], const void*
 /// \endoperation
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _mm_aesdecwide128kl_u8(__m128i __odata[8], const __m128i __idata[8], const void* __h) {
-  return __builtin_ia32_aesdecwide128kl(__h,
-                                        __odata,
-                                        __odata + 1,
-                                        __odata + 2,
-                                        __odata + 3,
-                                        __odata + 4,
-                                        __odata + 5,
-                                        __odata + 6,
-                                        __odata + 7,
-                                        __idata[0],
-                                        __idata[1],
-                                        __idata[2],
-                                        __idata[3],
-                                        __idata[4],
-                                        __idata[5],
-                                        __idata[6],
-                                        __idata[7]);
+  return __builtin_ia32_aesdecwide128kl_u8((__v2di *)__odata,
+                                           (const __v2di *)__idata, __h);
 }
 
 /// Decrypt __idata[0] to __idata[7] using 256-bit AES key indicated by handle
@@ -539,23 +494,8 @@ _mm_aesdecwide128kl_u8(__m128i __odata[8], const __m128i __idata[8], const void*
 /// \endoperation
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _mm_aesdecwide256kl_u8(__m128i __odata[8], const __m128i __idata[8], const void* __h) {
-  return __builtin_ia32_aesdecwide256kl(__h,
-                                        __odata,
-                                        __odata + 1,
-                                        __odata + 2,
-                                        __odata + 3,
-                                        __odata + 4,
-                                        __odata + 5,
-                                        __odata + 6,
-                                        __odata + 7,
-                                        __idata[0],
-                                        __idata[1],
-                                        __idata[2],
-                                        __idata[3],
-                                        __idata[4],
-                                        __idata[5],
-                                        __idata[6],
-                                        __idata[7]);
+  return __builtin_ia32_aesdecwide256kl_u8((__v2di *)__odata,
+                                           (const __v2di *)__idata, __h);
 }
 
 #undef __DEFAULT_FN_ATTRS

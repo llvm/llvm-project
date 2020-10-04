@@ -99,6 +99,346 @@ entry:
   ret i32 %21
 }
 
+define zeroext i8 @test_mm_aesenc256kl_u8(<2 x i64>* %odata, <2 x i64> %idata, i8* %h) {
+; CHECK-LABEL: test_mm_aesenc256kl_u8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    aesenc256kl (%rsi), %xmm0
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    movaps %xmm0, (%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %0 = tail call { i8, <2 x i64> } @llvm.x86.aesenc256kl(<2 x i64> %idata, i8* %h) #1
+  %1 = extractvalue { i8, <2 x i64> } %0, 1
+  store <2 x i64> %1, <2 x i64>* %odata, align 16
+  %2 = extractvalue { i8, <2 x i64> } %0, 0
+  ret i8 %2
+}
+
+define zeroext i8 @test_mm_aesdec256kl_u8(<2 x i64>* %odata, <2 x i64> %idata, i8* %h) {
+; CHECK-LABEL: test_mm_aesdec256kl_u8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    aesdec256kl (%rsi), %xmm0
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    movaps %xmm0, (%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %0 = tail call { i8, <2 x i64> } @llvm.x86.aesdec256kl(<2 x i64> %idata, i8* %h) #1
+  %1 = extractvalue { i8, <2 x i64> } %0, 1
+  store <2 x i64> %1, <2 x i64>* %odata, align 16
+  %2 = extractvalue { i8, <2 x i64> } %0, 0
+  ret i8 %2
+}
+
+define zeroext i8 @test_mm_aesenc128kl_u8(<2 x i64>* %odata, <2 x i64> %idata, i8* %h) {
+; CHECK-LABEL: test_mm_aesenc128kl_u8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    aesenc128kl (%rsi), %xmm0
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    movaps %xmm0, (%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %0 = tail call { i8, <2 x i64> } @llvm.x86.aesenc128kl(<2 x i64> %idata, i8* %h) #1
+  %1 = extractvalue { i8, <2 x i64> } %0, 1
+  store <2 x i64> %1, <2 x i64>* %odata, align 16
+  %2 = extractvalue { i8, <2 x i64> } %0, 0
+  ret i8 %2
+}
+
+define zeroext i8 @test_mm_aesdec128kl_u8(<2 x i64>* %odata, <2 x i64> %idata, i8* %h) {
+; CHECK-LABEL: test_mm_aesdec128kl_u8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    aesdec128kl (%rsi), %xmm0
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    movaps %xmm0, (%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %0 = tail call { i8, <2 x i64> } @llvm.x86.aesdec128kl(<2 x i64> %idata, i8* %h) #1
+  %1 = extractvalue { i8, <2 x i64> } %0, 1
+  store <2 x i64> %1, <2 x i64>* %odata, align 16
+  %2 = extractvalue { i8, <2 x i64> } %0, 0
+  ret i8 %2
+}
+
+define zeroext i8 @test__mm_aesencwide128kl_u8(<2 x i64>* %odata, <2 x i64>* %idata, i8* %h) {
+; CHECK-LABEL: test__mm_aesencwide128kl_u8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movaps (%rsi), %xmm0
+; CHECK-NEXT:    movaps 16(%rsi), %xmm1
+; CHECK-NEXT:    movaps 32(%rsi), %xmm2
+; CHECK-NEXT:    movaps 48(%rsi), %xmm3
+; CHECK-NEXT:    movaps 64(%rsi), %xmm4
+; CHECK-NEXT:    movaps 80(%rsi), %xmm5
+; CHECK-NEXT:    movaps 96(%rsi), %xmm6
+; CHECK-NEXT:    movaps 112(%rsi), %xmm7
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    aesencwide128kl (%rdx)
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    movaps %xmm0, (%rdi)
+; CHECK-NEXT:    movaps %xmm1, 16(%rdi)
+; CHECK-NEXT:    movaps %xmm2, 32(%rdi)
+; CHECK-NEXT:    movaps %xmm3, 48(%rdi)
+; CHECK-NEXT:    movaps %xmm4, 64(%rdi)
+; CHECK-NEXT:    movaps %xmm5, 80(%rdi)
+; CHECK-NEXT:    movaps %xmm6, 96(%rdi)
+; CHECK-NEXT:    movaps %xmm7, 112(%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %0 = load <2 x i64>, <2 x i64>* %idata, align 16
+  %1 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 1
+  %2 = load <2 x i64>, <2 x i64>* %1, align 16
+  %3 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 2
+  %4 = load <2 x i64>, <2 x i64>* %3, align 16
+  %5 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 3
+  %6 = load <2 x i64>, <2 x i64>* %5, align 16
+  %7 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 4
+  %8 = load <2 x i64>, <2 x i64>* %7, align 16
+  %9 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 5
+  %10 = load <2 x i64>, <2 x i64>* %9, align 16
+  %11 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 6
+  %12 = load <2 x i64>, <2 x i64>* %11, align 16
+  %13 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 7
+  %14 = load <2 x i64>, <2 x i64>* %13, align 16
+  %15 = tail call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide128kl(i8* %h, <2 x i64> %0, <2 x i64> %2, <2 x i64> %4, <2 x i64> %6, <2 x i64> %8, <2 x i64> %10, <2 x i64> %12, <2 x i64> %14) #1
+  %16 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 1
+  store <2 x i64> %16, <2 x i64>* %odata, align 16
+  %17 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 2
+  %18 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 1
+  store <2 x i64> %17, <2 x i64>* %18, align 16
+  %19 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 3
+  %20 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 2
+  store <2 x i64> %19, <2 x i64>* %20, align 16
+  %21 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 4
+  %22 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 3
+  store <2 x i64> %21, <2 x i64>* %22, align 16
+  %23 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 5
+  %24 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 4
+  store <2 x i64> %23, <2 x i64>* %24, align 16
+  %25 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 6
+  %26 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 5
+  store <2 x i64> %25, <2 x i64>* %26, align 16
+  %27 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 7
+  %28 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 6
+  store <2 x i64> %27, <2 x i64>* %28, align 16
+  %29 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 8
+  %30 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 7
+  store <2 x i64> %29, <2 x i64>* %30, align 16
+  %31 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 0
+  ret i8 %31
+}
+
+define zeroext i8 @test__mm_aesdecwide128kl_u8(<2 x i64>* %odata, <2 x i64>* %idata, i8* %h) {
+; CHECK-LABEL: test__mm_aesdecwide128kl_u8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movaps (%rsi), %xmm0
+; CHECK-NEXT:    movaps 16(%rsi), %xmm1
+; CHECK-NEXT:    movaps 32(%rsi), %xmm2
+; CHECK-NEXT:    movaps 48(%rsi), %xmm3
+; CHECK-NEXT:    movaps 64(%rsi), %xmm4
+; CHECK-NEXT:    movaps 80(%rsi), %xmm5
+; CHECK-NEXT:    movaps 96(%rsi), %xmm6
+; CHECK-NEXT:    movaps 112(%rsi), %xmm7
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    aesdecwide128kl (%rdx)
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    movaps %xmm0, (%rdi)
+; CHECK-NEXT:    movaps %xmm1, 16(%rdi)
+; CHECK-NEXT:    movaps %xmm2, 32(%rdi)
+; CHECK-NEXT:    movaps %xmm3, 48(%rdi)
+; CHECK-NEXT:    movaps %xmm4, 64(%rdi)
+; CHECK-NEXT:    movaps %xmm5, 80(%rdi)
+; CHECK-NEXT:    movaps %xmm6, 96(%rdi)
+; CHECK-NEXT:    movaps %xmm7, 112(%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %0 = load <2 x i64>, <2 x i64>* %idata, align 16
+  %1 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 1
+  %2 = load <2 x i64>, <2 x i64>* %1, align 16
+  %3 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 2
+  %4 = load <2 x i64>, <2 x i64>* %3, align 16
+  %5 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 3
+  %6 = load <2 x i64>, <2 x i64>* %5, align 16
+  %7 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 4
+  %8 = load <2 x i64>, <2 x i64>* %7, align 16
+  %9 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 5
+  %10 = load <2 x i64>, <2 x i64>* %9, align 16
+  %11 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 6
+  %12 = load <2 x i64>, <2 x i64>* %11, align 16
+  %13 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 7
+  %14 = load <2 x i64>, <2 x i64>* %13, align 16
+  %15 = tail call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide128kl(i8* %h, <2 x i64> %0, <2 x i64> %2, <2 x i64> %4, <2 x i64> %6, <2 x i64> %8, <2 x i64> %10, <2 x i64> %12, <2 x i64> %14) #1
+  %16 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 1
+  store <2 x i64> %16, <2 x i64>* %odata, align 16
+  %17 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 2
+  %18 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 1
+  store <2 x i64> %17, <2 x i64>* %18, align 16
+  %19 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 3
+  %20 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 2
+  store <2 x i64> %19, <2 x i64>* %20, align 16
+  %21 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 4
+  %22 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 3
+  store <2 x i64> %21, <2 x i64>* %22, align 16
+  %23 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 5
+  %24 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 4
+  store <2 x i64> %23, <2 x i64>* %24, align 16
+  %25 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 6
+  %26 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 5
+  store <2 x i64> %25, <2 x i64>* %26, align 16
+  %27 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 7
+  %28 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 6
+  store <2 x i64> %27, <2 x i64>* %28, align 16
+  %29 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 8
+  %30 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 7
+  store <2 x i64> %29, <2 x i64>* %30, align 16
+  %31 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 0
+  ret i8 %31
+}
+
+define zeroext i8 @test__mm_aesencwide256kl_u8(<2 x i64>* %odata, <2 x i64>* %idata, i8* %h) {
+; CHECK-LABEL: test__mm_aesencwide256kl_u8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movaps (%rsi), %xmm0
+; CHECK-NEXT:    movaps 16(%rsi), %xmm1
+; CHECK-NEXT:    movaps 32(%rsi), %xmm2
+; CHECK-NEXT:    movaps 48(%rsi), %xmm3
+; CHECK-NEXT:    movaps 64(%rsi), %xmm4
+; CHECK-NEXT:    movaps 80(%rsi), %xmm5
+; CHECK-NEXT:    movaps 96(%rsi), %xmm6
+; CHECK-NEXT:    movaps 112(%rsi), %xmm7
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    aesencwide256kl (%rdx)
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    movaps %xmm0, (%rdi)
+; CHECK-NEXT:    movaps %xmm1, 16(%rdi)
+; CHECK-NEXT:    movaps %xmm2, 32(%rdi)
+; CHECK-NEXT:    movaps %xmm3, 48(%rdi)
+; CHECK-NEXT:    movaps %xmm4, 64(%rdi)
+; CHECK-NEXT:    movaps %xmm5, 80(%rdi)
+; CHECK-NEXT:    movaps %xmm6, 96(%rdi)
+; CHECK-NEXT:    movaps %xmm7, 112(%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %0 = load <2 x i64>, <2 x i64>* %idata, align 16
+  %1 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 1
+  %2 = load <2 x i64>, <2 x i64>* %1, align 16
+  %3 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 2
+  %4 = load <2 x i64>, <2 x i64>* %3, align 16
+  %5 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 3
+  %6 = load <2 x i64>, <2 x i64>* %5, align 16
+  %7 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 4
+  %8 = load <2 x i64>, <2 x i64>* %7, align 16
+  %9 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 5
+  %10 = load <2 x i64>, <2 x i64>* %9, align 16
+  %11 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 6
+  %12 = load <2 x i64>, <2 x i64>* %11, align 16
+  %13 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 7
+  %14 = load <2 x i64>, <2 x i64>* %13, align 16
+  %15 = tail call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide256kl(i8* %h, <2 x i64> %0, <2 x i64> %2, <2 x i64> %4, <2 x i64> %6, <2 x i64> %8, <2 x i64> %10, <2 x i64> %12, <2 x i64> %14) #1
+  %16 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 1
+  store <2 x i64> %16, <2 x i64>* %odata, align 16
+  %17 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 2
+  %18 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 1
+  store <2 x i64> %17, <2 x i64>* %18, align 16
+  %19 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 3
+  %20 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 2
+  store <2 x i64> %19, <2 x i64>* %20, align 16
+  %21 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 4
+  %22 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 3
+  store <2 x i64> %21, <2 x i64>* %22, align 16
+  %23 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 5
+  %24 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 4
+  store <2 x i64> %23, <2 x i64>* %24, align 16
+  %25 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 6
+  %26 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 5
+  store <2 x i64> %25, <2 x i64>* %26, align 16
+  %27 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 7
+  %28 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 6
+  store <2 x i64> %27, <2 x i64>* %28, align 16
+  %29 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 8
+  %30 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 7
+  store <2 x i64> %29, <2 x i64>* %30, align 16
+  %31 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 0
+  ret i8 %31
+}
+
+define zeroext i8 @test__mm_aesdecwide256kl_u8(<2 x i64>* %odata, <2 x i64>* %idata, i8* %h) {
+; CHECK-LABEL: test__mm_aesdecwide256kl_u8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movaps (%rsi), %xmm0
+; CHECK-NEXT:    movaps 16(%rsi), %xmm1
+; CHECK-NEXT:    movaps 32(%rsi), %xmm2
+; CHECK-NEXT:    movaps 48(%rsi), %xmm3
+; CHECK-NEXT:    movaps 64(%rsi), %xmm4
+; CHECK-NEXT:    movaps 80(%rsi), %xmm5
+; CHECK-NEXT:    movaps 96(%rsi), %xmm6
+; CHECK-NEXT:    movaps 112(%rsi), %xmm7
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    aesdecwide256kl (%rdx)
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    movaps %xmm0, (%rdi)
+; CHECK-NEXT:    movaps %xmm1, 16(%rdi)
+; CHECK-NEXT:    movaps %xmm2, 32(%rdi)
+; CHECK-NEXT:    movaps %xmm3, 48(%rdi)
+; CHECK-NEXT:    movaps %xmm4, 64(%rdi)
+; CHECK-NEXT:    movaps %xmm5, 80(%rdi)
+; CHECK-NEXT:    movaps %xmm6, 96(%rdi)
+; CHECK-NEXT:    movaps %xmm7, 112(%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %0 = load <2 x i64>, <2 x i64>* %idata, align 16
+  %1 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 1
+  %2 = load <2 x i64>, <2 x i64>* %1, align 16
+  %3 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 2
+  %4 = load <2 x i64>, <2 x i64>* %3, align 16
+  %5 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 3
+  %6 = load <2 x i64>, <2 x i64>* %5, align 16
+  %7 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 4
+  %8 = load <2 x i64>, <2 x i64>* %7, align 16
+  %9 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 5
+  %10 = load <2 x i64>, <2 x i64>* %9, align 16
+  %11 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 6
+  %12 = load <2 x i64>, <2 x i64>* %11, align 16
+  %13 = getelementptr <2 x i64>, <2 x i64>* %idata, i64 7
+  %14 = load <2 x i64>, <2 x i64>* %13, align 16
+  %15 = tail call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide256kl(i8* %h, <2 x i64> %0, <2 x i64> %2, <2 x i64> %4, <2 x i64> %6, <2 x i64> %8, <2 x i64> %10, <2 x i64> %12, <2 x i64> %14) #1
+  %16 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 1
+  store <2 x i64> %16, <2 x i64>* %odata, align 16
+  %17 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 2
+  %18 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 1
+  store <2 x i64> %17, <2 x i64>* %18, align 16
+  %19 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 3
+  %20 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 2
+  store <2 x i64> %19, <2 x i64>* %20, align 16
+  %21 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 4
+  %22 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 3
+  store <2 x i64> %21, <2 x i64>* %22, align 16
+  %23 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 5
+  %24 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 4
+  store <2 x i64> %23, <2 x i64>* %24, align 16
+  %25 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 6
+  %26 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 5
+  store <2 x i64> %25, <2 x i64>* %26, align 16
+  %27 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 7
+  %28 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 6
+  store <2 x i64> %27, <2 x i64>* %28, align 16
+  %29 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 8
+  %30 = getelementptr <2 x i64>, <2 x i64>* %odata, i64 7
+  store <2 x i64> %29, <2 x i64>* %30, align 16
+  %31 = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %15, 0
+  ret i8 %31
+}
+
 declare void @llvm.x86.loadiwkey(<2 x i64>, <2 x i64>, <2 x i64>, i32)
 declare { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey128(i32, <2 x i64>)
 declare { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey256(i32, <2 x i64>, <2 x i64>)
+declare { i8, <2 x i64> } @llvm.x86.aesenc256kl(<2 x i64>, i8*)
+declare { i8, <2 x i64> } @llvm.x86.aesdec256kl(<2 x i64>, i8*)
+declare { i8, <2 x i64> } @llvm.x86.aesenc128kl(<2 x i64>, i8*)
+declare { i8, <2 x i64> } @llvm.x86.aesdec128kl(<2 x i64>, i8*)
+declare { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide128kl(i8*, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>)
+declare { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide128kl(i8*, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>)
+declare { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide256kl(i8*, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>)
+declare { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide256kl(i8*, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>)
