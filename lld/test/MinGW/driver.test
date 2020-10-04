@@ -78,6 +78,12 @@ RUN: ld.lld -### foo.o -m i386pep --major-subsystem-version 7 | FileCheck -check
 SUBSYSTEM_DEFAULT_MINOR: -subsystem:default,7.0
 
 RUN: ld.lld -### foo.o -m i386pep --subsystem windows --major-subsystem-version 7 --minor-subsystem-version 8 | FileCheck -check-prefix=SUBSYSTEM_WINDOWS %s
+RUN: ld.lld -### foo.o -m i386pep --major-subsystem-version 7 --minor-subsystem-version 8 --subsystem windows | FileCheck -check-prefix=SUBSYSTEM_WINDOWS %s
+RUN: ld.lld -### foo.o -m i386pep --subsystem windows:7.8 | FileCheck -check-prefix=SUBSYSTEM_WINDOWS %s
+RUN: ld.lld -### foo.o -m i386pep --subsystem windows:2.3 --major-subsystem-version 7 --minor-subsystem-version 8 | FileCheck -check-prefix=SUBSYSTEM_WINDOWS %s
+RUN: ld.lld -### foo.o -m i386pep --subsystem windows:7.8 | FileCheck -check-prefix=SUBSYSTEM_WINDOWS %s
+RUN: ld.lld -### foo.o -m i386pep --major-subsystem-version 2 --minor-subsystem-version 3 --subsystem windows:7.8 | FileCheck -check-prefix=SUBSYSTEM_WINDOWS %s
+RUN: ld.lld -### foo.o -m i386pep --major-subsystem-version 2 --minor-subsystem-version 8 --subsystem windows:7 | FileCheck -check-prefix=SUBSYSTEM_WINDOWS %s
 SUBSYSTEM_WINDOWS: -subsystem:windows,7.8
 
 RUN: ld.lld -### foo.o -m i386pep -stack 4194304,8192 | FileCheck -check-prefix=STACK %s
