@@ -3,7 +3,7 @@ set_target_properties(Toy PROPERTIES FOLDER Examples)
 
 macro(add_toy_chapter name)
   add_dependencies(Toy ${name})
-  add_mlir_example(${name} ${ARGN})
+  add_llvm_example(${name} ${ARGN})
 endmacro(add_toy_chapter name)
 
 add_subdirectory(Ch1)

@@ -6,7 +6,7 @@ set(LIBS
         MLIROptLib
         MLIRStandalone
         )
-add_standalone_tool(standalone-opt standalone-opt.cpp)
+add_llvm_executable(standalone-opt standalone-opt.cpp)
 
 llvm_update_compile_flags(standalone-opt)
 target_link_libraries(standalone-opt PRIVATE ${LIBS})
