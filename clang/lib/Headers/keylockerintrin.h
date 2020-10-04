@@ -95,7 +95,7 @@
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_loadiwkey (unsigned int __ctl, __m128i __intkey,
                __m128i __enkey_lo, __m128i __enkey_hi) {
-  __builtin_ia32_loadiwkey (__ctl, __intkey, __enkey_lo, __enkey_hi);
+  __builtin_ia32_loadiwkey (__intkey, __enkey_lo, __enkey_hi, __ctl);
 }
 
 /// Wrap a 128-bit AES key from __key into a key handle and output in
