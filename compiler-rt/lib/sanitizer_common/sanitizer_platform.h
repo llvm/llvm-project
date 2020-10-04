@@ -245,6 +245,8 @@
 // will still work but will consume more memory for TwoLevelByteMap.
 #if defined(__mips__)
 # define SANITIZER_MMAP_RANGE_SIZE FIRST_32_SECOND_64(1ULL << 32, 1ULL << 40)
+#elif SANITIZER_RISCV64
+#define SANITIZER_MMAP_RANGE_SIZE FIRST_32_SECOND_64(1ULL << 32, 1ULL << 38)
 #elif defined(__aarch64__)
 # if SANITIZER_MAC
 // Darwin iOS/ARM64 has a 36-bit VMA, 64GiB VM
