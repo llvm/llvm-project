@@ -710,9 +710,6 @@ namespace llvm {
     // For avx512-vp2intersect
     VP2INTERSECT,
 
-    // Mwaitx builtin is lowered to this if the base pointer needs saving.
-    MWAITX_DAG,
-
     // Key locker nodes that produce flags.
     AESENC128KL,
     AESDEC128KL,

@@ -77,9 +77,6 @@ def SDTX86caspairSaveRbx16 : SDTypeProfile<1, 3,
                                            [SDTCisVT<0, i64>, SDTCisPtrTy<1>,
                                            SDTCisVT<2, i64>, SDTCisVT<3, i64>]>;
 
-def SDTX86mwaitx : SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
-                                 SDTCisVT<2, i32>]>;
-
 def SDTLockBinaryArithWithFlags : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
                                                        SDTCisPtrTy<1>,
                                                        SDTCisInt<2>]>;
@@ -191,10 +188,6 @@ def X86cas16save_rbx : SDNode<"X86ISD::LCMPXCHG16_SAVE_RBX_DAG",
                                 SDTX86caspairSaveRbx16,
                                 [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
                                 SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
-
-def X86mwaitx : SDNode<"X86ISD::MWAITX_DAG", SDTX86mwaitx,
-                       [SDNPHasChain, SDNPInGlue, SDNPOutGlue, SDNPMayStore,
-                       SDNPMayLoad]>;
 
 def X86retflag : SDNode<"X86ISD::RET_FLAG", SDTX86Ret,
                         [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
@@ -2811,8 +2804,7 @@ let SchedRW = [ WriteSystem ] in {
 
   let Uses = [ ECX, EAX, EBX ] in {
     def MWAITXrrr : I<0x01, MRM_FB, (outs), (ins), "mwaitx",
-                    [(int_x86_mwaitx ECX, EAX, EBX)]>,
-                    TB, Requires<[ HasMWAITX ]>;
+                    []>, TB, Requires<[ HasMWAITX ]>;
   }
 } // SchedRW
 
