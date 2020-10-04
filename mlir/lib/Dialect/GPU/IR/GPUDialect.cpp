@@ -475,8 +475,8 @@ BlockArgument GPUFuncOp::addPrivateAttribution(Type type) {
 
 void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
                       StringRef name, FunctionType type,
-                      ArrayRef<Type> workgroupAttributions,
-                      ArrayRef<Type> privateAttributions,
+                      TypeRange workgroupAttributions,
+                      TypeRange privateAttributions,
                       ArrayRef<NamedAttribute> attrs) {
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
@@ -777,10 +777,5 @@ static void print(OpAsmPrinter &p, GPUModuleOp op) {
                 /*printBlockTerminators=*/false);
 }
 
-// Namespace avoids ambiguous ReturnOpAdaptor.
-namespace mlir {
-namespace gpu {
 #define GET_OP_CLASSES
 #include "mlir/Dialect/GPU/GPUOps.cpp.inc"
-} // namespace gpu
-} // namespace mlir

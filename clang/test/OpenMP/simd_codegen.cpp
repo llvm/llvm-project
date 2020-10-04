@@ -817,25 +817,9 @@ void parallel_simd(float *a) {
 // TERM_DEBUG: !{{[0-9]+}} = !DILocation(line: [[@LINE-11]],
 
 // CHECK-LABEL: S8
-// CHECK-DAG: ptrtoint [[SS_TY]]* %{{.+}} to i64
-// CHECK-DAG: ptrtoint [[SS_TY]]* %{{.+}} to i64
-// CHECK-DAG: ptrtoint [[SS_TY]]* %{{.+}} to i64
-// CHECK-DAG: ptrtoint [[SS_TY]]* %{{.+}} to i64
-
-// CHECK-DAG: and i64 %{{.+}}, 15
-// CHECK-DAG: icmp eq i64 %{{.+}}, 0
 // CHECK-DAG: call void @llvm.assume(i1
-
-// CHECK-DAG: and i64 %{{.+}}, 7
-// CHECK-DAG: icmp eq i64 %{{.+}}, 0
 // CHECK-DAG: call void @llvm.assume(i1
-
-// CHECK-DAG: and i64 %{{.+}}, 15
-// CHECK-DAG: icmp eq i64 %{{.+}}, 0
 // CHECK-DAG: call void @llvm.assume(i1
-
-// CHECK-DAG: and i64 %{{.+}}, 3
-// CHECK-DAG: icmp eq i64 %{{.+}}, 0
 // CHECK-DAG: call void @llvm.assume(i1
 struct SS {
   SS(): a(0) {}

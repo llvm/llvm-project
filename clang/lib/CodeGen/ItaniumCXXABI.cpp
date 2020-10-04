@@ -9,11 +9,11 @@
 // This provides C++ code generation targeting the Itanium C++ ABI.  The class
 // in this file generates structures that follow the Itanium C++ ABI, which is
 // documented at:
-//  http://www.codesourcery.com/public/cxx-abi/abi.html
-//  http://www.codesourcery.com/public/cxx-abi/abi-eh.html
+//  https://itanium-cxx-abi.github.io/cxx-abi/abi.html
+//  https://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html
 //
 // It also supports the closely-related ARM ABI, documented at:
-// http://infocenter.arm.com/help/topic/com.arm.doc.ihi0041c/IHI0041C_cppabi.pdf
+// https://developer.arm.com/documentation/ihi0041/g/
 //
 //===----------------------------------------------------------------------===//
 
@@ -2111,7 +2111,7 @@ CharUnits ItaniumCXXABI::getArrayCookieSizeImpl(QualType elementType) {
   // The array cookie is a size_t; pad that up to the element alignment.
   // The cookie is actually right-justified in that space.
   return std::max(CharUnits::fromQuantity(CGM.SizeSizeInBytes),
-                  CGM.getContext().getTypeAlignInChars(elementType));
+                  CGM.getContext().getPreferredTypeAlignInChars(elementType));
 }
 
 Address ItaniumCXXABI::InitializeArrayCookie(CodeGenFunction &CGF,
@@ -2128,7 +2128,7 @@ Address ItaniumCXXABI::InitializeArrayCookie(CodeGenFunction &CGF,
 
   // The size of the cookie.
   CharUnits CookieSize =
-    std::max(SizeSize, Ctx.getTypeAlignInChars(ElementType));
+      std::max(SizeSize, Ctx.getPreferredTypeAlignInChars(ElementType));
   assert(CookieSize == getArrayCookieSizeImpl(ElementType));
 
   // Compute an offset to the cookie.

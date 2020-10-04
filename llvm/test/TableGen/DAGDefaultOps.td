@@ -16,10 +16,10 @@ class TestEncoding : Instruction {
 }
 
 class TestReg<int index> : Register<"R"#index, []> {
-    let HWEncoding{15-4} = 0;
-    let HWEncoding{3-0} = !cast<bits<4>>(index);
+    let HWEncoding{15...4} = 0;
+    let HWEncoding{3...0} = !cast<bits<4>>(index);
 }
-foreach i = 0-15 in
+foreach i = 0...15 in
   def "R"#i : TestReg<i>;
 
 def Reg : RegisterClass<"TestTarget", [i32], 32, (sequence "R%d", 0, 15)>;
@@ -36,11 +36,11 @@ class RRI<string Mnemonic, bits<4> Opcode> : TestEncoding {
   field bits<4> src1;
   field bits<4> src2;
   field bits<16> imm;
-  let Inst{31-28} = Opcode;
-  let Inst{27-24} = dest;
-  let Inst{23-20} = src1;
-  let Inst{19-16} = src2;
-  let Inst{15-0} = imm;
+  let Inst{31...28} = Opcode;
+  let Inst{27...24} = dest;
+  let Inst{23...20} = src1;
+  let Inst{19...16} = src2;
+  let Inst{15...0} = imm;
 }
 
 def AddRRI : RRI<"add", 0b0001>;

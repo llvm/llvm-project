@@ -211,7 +211,7 @@ TEST(TBDv3, ReadMultipleDocuments) {
 
   // Check Second Document
   Exports.clear();
-  auto Document = File->documents().front();
+  TBDReexportFile Document = File->documents().front();
   EXPECT_EQ(FileType::TBD_V3, Document->getFileType());
   EXPECT_EQ(Archs, Document->getArchitectures());
   EXPECT_EQ(Uuids, Document->uuids());

@@ -19,6 +19,7 @@
 //     typedef basic_istream<charT,traits> istream_type;
 //     ...
 
+#include <cstddef>
 #include <iterator>
 #include <type_traits>
 
@@ -33,7 +34,11 @@ int main(int, char**)
 #else
     static_assert((std::is_same<I1::iterator_category, std::output_iterator_tag>::value), "");
     static_assert((std::is_same<I1::value_type, void>::value), "");
+#if TEST_STD_VER <= 17
     static_assert((std::is_same<I1::difference_type, void>::value), "");
+#else
+    static_assert((std::is_same<I1::difference_type, std::ptrdiff_t>::value), "");
+#endif
     static_assert((std::is_same<I1::pointer, void>::value), "");
     static_assert((std::is_same<I1::reference, void>::value), "");
 #endif
@@ -47,7 +52,11 @@ int main(int, char**)
 #else
     static_assert((std::is_same<I2::iterator_category, std::output_iterator_tag>::value), "");
     static_assert((std::is_same<I2::value_type, void>::value), "");
+#if TEST_STD_VER <= 17
     static_assert((std::is_same<I2::difference_type, void>::value), "");
+#else
+    static_assert((std::is_same<I2::difference_type, std::ptrdiff_t>::value), "");
+#endif
     static_assert((std::is_same<I2::pointer, void>::value), "");
     static_assert((std::is_same<I2::reference, void>::value), "");
 #endif

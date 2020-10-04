@@ -13,10 +13,14 @@ unittest("CodeGenTests") {
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/Testing/Support",
   ]
   sources = [
     "AArch64SelectionDAGTest.cpp",
+    "AllocationOrderTest.cpp",
+    "AsmPrinterDwarfTest.cpp",
     "DIEHashTest.cpp",
+    "DIETest.cpp",
     "LexicalScopesTest.cpp",
     "LowLevelTypeTest.cpp",
     "MachineInstrBundleIteratorTest.cpp",
@@ -25,6 +29,7 @@ unittest("CodeGenTests") {
     "PassManagerTest.cpp",
     "ScalableVectorMVTsTest.cpp",
     "TargetOptionsTest.cpp",
+    "TestAsmPrinter.cpp",
     "TypeTraitsTest.cpp",
   ]
   has_custom_main = true

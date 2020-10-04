@@ -251,7 +251,7 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
       driver.dumpSymbols || driver.dumpUnparseWithSymbols ||
       driver.getDefinition || driver.getSymbolsSources) {
     Fortran::semantics::Semantics semantics{semanticsContext, parseTree,
-        parsing.cooked(), driver.debugModuleWriter};
+        parsing.cooked().AsCharBlock(), driver.debugModuleWriter};
     semantics.Perform();
     semantics.EmitMessages(llvm::errs());
     if (driver.dumpSymbols) {

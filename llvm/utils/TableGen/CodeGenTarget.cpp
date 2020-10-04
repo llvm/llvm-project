@@ -86,6 +86,7 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v32i1:    return "MVT::v32i1";
   case MVT::v64i1:    return "MVT::v64i1";
   case MVT::v128i1:   return "MVT::v128i1";
+  case MVT::v256i1:   return "MVT::v256i1";
   case MVT::v512i1:   return "MVT::v512i1";
   case MVT::v1024i1:  return "MVT::v1024i1";
   case MVT::v1i8:     return "MVT::v1i8";
@@ -264,6 +265,11 @@ StringRef CodeGenTarget::getInstNamespace() const {
   }
 
   return "";
+}
+
+StringRef CodeGenTarget::getRegNamespace() const {
+  auto &RegClasses = RegBank->getRegClasses();
+  return RegClasses.size() > 0 ? RegClasses.front().Namespace : "";
 }
 
 Record *CodeGenTarget::getInstructionSet() const {

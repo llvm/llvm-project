@@ -59,10 +59,10 @@ def PDL_ApplyConstraintOp
   }];
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, StringRef name, "
+    OpBuilder<"StringRef name, "
               "ValueRange args = {}, ArrayRef<Attribute> params = {}", [{
-      build(builder, state, builder.getStringAttr(name), args,
-            params.empty() ? ArrayAttr() : builder.getArrayAttr(params));
+      build($_builder, $_state, $_builder.getStringAttr(name), args,
+            params.empty() ? ArrayAttr() : $_builder.getArrayAttr(params));
     }]>,
   ];
 }
@@ -103,13 +103,12 @@ def PDL_AttributeOp : PDL_Op<"attribute"> {
   let assemblyFormat = "attr-dict (`:` $type^)? ($value^)?";
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, "
-              "Value type = Value()", [{
-      build(builder, state, builder.getType<AttributeType>(), type,
+    OpBuilder<"Value type = Value()", [{
+      build($_builder, $_state, $_builder.getType<AttributeType>(), type,
             Attribute());
     }]>,
-    OpBuilder<"OpBuilder &builder, OperationState &state, Attribute attr", [{
-      build(builder, state, builder.getType<AttributeType>(), Value(), attr);
+    OpBuilder<"Attribute attr", [{
+      build($_builder, $_state, $_builder.getType<AttributeType>(), Value(), attr);
     }]>,
   ];
 }
@@ -200,8 +199,8 @@ def PDL_InputOp : PDL_Op<"input", [HasParent<"pdl::PatternOp">]> {
   let assemblyFormat = "(`:` $type^)? attr-dict";
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state", [{
-      build(builder, state, builder.getType<ValueType>(), Value());
+    OpBuilder<"", [{
+      build($_builder, $_state, $_builder.getType<ValueType>(), Value());
     }]>,
   ];
 }
@@ -231,7 +230,7 @@ def PDL_OperationOp
     omitted.
 
     When used within a rewriting context, i.e. when defined within a
-    `pdl.rewrite`, all of the result types must be "inferrable". This means that
+    `pdl.rewrite`, all of the result types must be "inferable". This means that
     the type must be attributable to either a constant type value or the result
     type of another entity, such as an attribute, the result of a
     `createNative`, or the result type of another operation. If the result type
@@ -254,17 +253,16 @@ def PDL_OperationOp
   let results = (outs PDL_Operation:$op,
                       Variadic<PDL_Value>:$results);
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, "
-              "Optional<StringRef> name  = llvm::None, "
+    OpBuilder<"Optional<StringRef> name  = llvm::None, "
               "ValueRange operandValues = llvm::None, "
               "ArrayRef<StringRef> attrNames = llvm::None, "
               "ValueRange attrValues  = llvm::None, "
               "ValueRange resultTypes = llvm::None", [{
-      auto nameAttr = name ? StringAttr() : builder.getStringAttr(*name);
-      build(builder, state, builder.getType<OperationType>(), {}, nameAttr,
-            operandValues, attrValues, builder.getStrArrayAttr(attrNames),
+      auto nameAttr = name ? StringAttr() : $_builder.getStringAttr(*name);
+      build($_builder, $_state, $_builder.getType<OperationType>(), {}, nameAttr,
+            operandValues, attrValues, $_builder.getStrArrayAttr(attrNames),
             resultTypes);
-      state.types.append(resultTypes.size(), builder.getType<ValueType>());
+      $_state.types.append(resultTypes.size(), $_builder.getType<ValueType>());
     }]>,
   ];
   let extraClassDeclaration = [{
@@ -313,8 +311,7 @@ def PDL_PatternOp : PDL_Op<"pattern", [IsolatedFromAbove, Symbol]> {
   }];
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, "
-              "Optional<StringRef> rootKind = llvm::None, "
+    OpBuilder<"Optional<StringRef> rootKind = llvm::None, "
               "Optional<uint16_t> benefit = 1, "
               "Optional<StringRef> name = llvm::None">,
   ];
@@ -455,8 +452,8 @@ def PDL_TypeOp : PDL_Op<"type"> {
   let assemblyFormat = "attr-dict (`:` $type^)?";
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, Type ty = Type()", [{
-      build(builder, state, builder.getType<AttributeType>(),
+    OpBuilder<"Type ty = Type()", [{
+      build($_builder, $_state, $_builder.getType<AttributeType>(),
             ty ? TypeAttr::get(ty) : TypeAttr());
     }]>,
   ];

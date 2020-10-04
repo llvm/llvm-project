@@ -17,12 +17,13 @@
 #include <pwd.h>
 #include <sched.h>
 #include <signal.h>
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/select.h>
+#include <strings.h>
 #include <sys/resource.h>
+#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -84,6 +85,24 @@ void test_memcmp() {
 #else
   ASSERT_LABEL(rv, i_j_label);
 #endif
+}
+
+void test_bcmp() {
+  char str1[] = "str1", str2[] = "str2";
+  dfsan_set_label(i_label, &str1[3], 1);
+  dfsan_set_label(j_label, &str2[3], 1);
+
+  int rv = bcmp(str1, str2, sizeof(str1));
+  assert(rv != 0);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, i_j_label);
+#endif
+
+  rv = bcmp(str1, str2, sizeof(str1) - 2);
+  assert(rv == 0);
+  ASSERT_ZERO_LABEL(rv);
 }
 
 void test_memcpy() {
@@ -739,6 +758,40 @@ void test_strstr() {
 #endif
 }
 
+void test_strpbrk() {
+  char s[] = "abcdefg";
+  char accept[] = "123fd";
+  dfsan_set_label(i_label, &s[5], 1);
+  dfsan_set_label(j_label, &accept[1], 1);
+
+  char *rv = strpbrk(s, accept);
+  assert(rv == &s[3]);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, j_label);
+#endif
+
+  char *ps = s;
+  dfsan_set_label(j_label, &ps, sizeof(ps));
+
+  rv = strpbrk(ps, "123gf");
+  assert(rv == &s[5]);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_LABEL(rv, j_label);
+#else
+  ASSERT_LABEL(rv, i_j_label);
+#endif
+
+  rv = strpbrk(ps, "123");
+  assert(rv == NULL);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, i_j_label);
+#endif
+}
+
 void test_memchr() {
   char str1[] = "str1";
   dfsan_set_label(i_label, &str1[3], 1);
@@ -967,6 +1020,7 @@ int main(void) {
   assert(i_j_label != j_label);
   assert(i_j_label != k_label);
 
+  test_bcmp();
   test_calloc();
   test_clock_gettime();
   test_ctime_r();
@@ -1010,6 +1064,7 @@ int main(void) {
   test_strncasecmp();
   test_strncmp();
   test_strncpy();
+  test_strpbrk();
   test_strrchr();
   test_strstr();
   test_strtod();

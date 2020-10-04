@@ -67,7 +67,14 @@ static bool isSGetReg(unsigned Opcode) {
 }
 
 static bool isSSetReg(unsigned Opcode) {
-  return Opcode == AMDGPU::S_SETREG_B32 || Opcode == AMDGPU::S_SETREG_IMM32_B32;
+  switch (Opcode) {
+  case AMDGPU::S_SETREG_B32:
+  case AMDGPU::S_SETREG_B32_mode:
+  case AMDGPU::S_SETREG_IMM32_B32:
+  case AMDGPU::S_SETREG_IMM32_B32_mode:
+    return true;
+  }
+  return false;
 }
 
 static bool isRWLane(unsigned Opcode) {

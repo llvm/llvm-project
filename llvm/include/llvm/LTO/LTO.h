@@ -91,6 +91,10 @@ setupLLVMOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
 Expected<std::unique_ptr<ToolOutputFile>>
 setupStatsFile(StringRef StatsFilename);
 
+/// Produces a container ordering for optimal multi-threaded processing. Returns
+/// ordered indices to elements in the input array.
+std::vector<int> generateModulesOrdering(ArrayRef<BitcodeModule *> R);
+
 class LTO;
 struct SymbolResolution;
 class ThinBackendProc;

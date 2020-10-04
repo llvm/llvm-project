@@ -23,7 +23,6 @@ namespace llvm {
 class MCAssembler;
 class MCContext;
 class MCFixup;
-class MCObjectWriter;
 class MCSymbol;
 class MCSymbolELF;
 class MCValue;

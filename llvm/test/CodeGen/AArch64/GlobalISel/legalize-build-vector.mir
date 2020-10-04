@@ -56,3 +56,35 @@ body: |
     $q0 = COPY %2(<2 x p0>)
     RET_ReallyLR
 ...
+---
+name:            legal_v16s8
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: legal_v16s8
+    ; CHECK: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK: [[DEF1:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8)
+    ; CHECK: $q0 = COPY [[BUILD_VECTOR]](<16 x s8>)
+    ; CHECK: RET_ReallyLR
+    %0:_(s8) = G_IMPLICIT_DEF
+    %1:_(s8) = G_IMPLICIT_DEF
+    %2:_(<16 x s8>) = G_BUILD_VECTOR %0(s8), %1(s8), %0(s8), %1(s8), %0(s8), %1(s8), %0(s8), %1(s8), %0(s8), %1(s8), %0(s8), %1(s8), %0(s8), %1(s8), %0(s8), %1(s8)
+    $q0 = COPY %2(<16 x s8>)
+    RET_ReallyLR
+...
+---
+name:            legal_v8s8
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: legal_v8s8
+    ; CHECK: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK: [[DEF1:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8)
+    ; CHECK: $d0 = COPY [[BUILD_VECTOR]](<8 x s8>)
+    ; CHECK: RET_ReallyLR
+    %0:_(s8) = G_IMPLICIT_DEF
+    %1:_(s8) = G_IMPLICIT_DEF
+    %2:_(<8 x s8>) = G_BUILD_VECTOR %0(s8), %1(s8), %0(s8), %1(s8), %0(s8), %1(s8), %0(s8), %1(s8)
+    $d0 = COPY %2(<8 x s8>)
+    RET_ReallyLR
+...

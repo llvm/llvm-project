@@ -3316,13 +3316,14 @@ define amdgpu_kernel void @udiv_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; GCN-NEXT:    v_and_b32_e32 v2, s3, v3
 ; GCN-NEXT:    v_addc_u32_e32 v0, vcc, 0, v5, vcc
 ; GCN-NEXT:    v_and_b32_e32 v3, s3, v4
-; GCN-NEXT:    v_lshl_b64 v[0:1], v[0:1], 30
 ; GCN-NEXT:    v_lshlrev_b32_e32 v3, 15, v3
+; GCN-NEXT:    v_lshl_b64 v[0:1], v[0:1], 30
 ; GCN-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GCN-NEXT:    v_or_b32_e32 v0, v2, v0
-; GCN-NEXT:    v_and_b32_e32 v1, 0x1fff, v1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
-; GCN-NEXT:    buffer_store_short v1, off, s[4:7], 0 offset:4
+; GCN-NEXT:    s_waitcnt expcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 0x1fff, v1
+; GCN-NEXT:    buffer_store_short v0, off, s[4:7], 0 offset:4
 ; GCN-NEXT:    s_endpgm
   %r = udiv <3 x i15> %x, %y
   store <3 x i15> %r, <3 x i15> addrspace(1)* %out
@@ -3460,9 +3461,10 @@ define amdgpu_kernel void @urem_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; GCN-NEXT:    v_lshlrev_b32_e32 v3, 15, v3
 ; GCN-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GCN-NEXT:    v_or_b32_e32 v0, v2, v0
-; GCN-NEXT:    v_and_b32_e32 v1, 0x1fff, v1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
-; GCN-NEXT:    buffer_store_short v1, off, s[4:7], 0 offset:4
+; GCN-NEXT:    s_waitcnt expcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 0x1fff, v1
+; GCN-NEXT:    buffer_store_short v0, off, s[4:7], 0 offset:4
 ; GCN-NEXT:    s_endpgm
   %r = urem <3 x i15> %x, %y
   store <3 x i15> %r, <3 x i15> addrspace(1)* %out
@@ -3612,9 +3614,10 @@ define amdgpu_kernel void @sdiv_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; GCN-NEXT:    v_lshlrev_b32_e32 v3, 15, v3
 ; GCN-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GCN-NEXT:    v_or_b32_e32 v0, v2, v0
-; GCN-NEXT:    v_and_b32_e32 v1, 0x1fff, v1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
-; GCN-NEXT:    buffer_store_short v1, off, s[4:7], 0 offset:4
+; GCN-NEXT:    s_waitcnt expcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 0x1fff, v1
+; GCN-NEXT:    buffer_store_short v0, off, s[4:7], 0 offset:4
 ; GCN-NEXT:    s_endpgm
   %r = sdiv <3 x i15> %x, %y
   store <3 x i15> %r, <3 x i15> addrspace(1)* %out
@@ -3780,13 +3783,14 @@ define amdgpu_kernel void @srem_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; GCN-NEXT:    v_sub_i32_e32 v3, vcc, s8, v3
 ; GCN-NEXT:    v_and_b32_e32 v3, s3, v3
 ; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, v1, v0
-; GCN-NEXT:    v_lshl_b64 v[0:1], v[0:1], 30
 ; GCN-NEXT:    v_lshlrev_b32_e32 v3, 15, v3
+; GCN-NEXT:    v_lshl_b64 v[0:1], v[0:1], 30
 ; GCN-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GCN-NEXT:    v_or_b32_e32 v0, v2, v0
-; GCN-NEXT:    v_and_b32_e32 v1, 0x1fff, v1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
-; GCN-NEXT:    buffer_store_short v1, off, s[4:7], 0 offset:4
+; GCN-NEXT:    s_waitcnt expcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 0x1fff, v1
+; GCN-NEXT:    buffer_store_short v0, off, s[4:7], 0 offset:4
 ; GCN-NEXT:    s_endpgm
   %r = srem <3 x i15> %x, %y
   store <3 x i15> %r, <3 x i15> addrspace(1)* %out

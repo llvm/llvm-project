@@ -2917,6 +2917,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   DL = &F.getParent()->getDataLayout();
   ORE = std::make_unique<OptimizationRemarkEmitter>(&F);
   const TargetMachine &TM = MF->getTarget();
+  TM.resetTargetOptions(F);
   EnableOpts = OptLevel != CodeGenOpt::None && !skipFunction(F);
   FuncInfo.MF = MF;
   if (EnableOpts)

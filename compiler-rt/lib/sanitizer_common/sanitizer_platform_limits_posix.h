@@ -99,7 +99,7 @@ const unsigned struct_kernel_stat64_sz = 144;
 const unsigned struct___old_kernel_stat_sz = 0;
 const unsigned struct_kernel_stat_sz = 64;
 const unsigned struct_kernel_stat64_sz = 104;
-#elif defined(__riscv) && __riscv_xlen == 64
+#elif SANITIZER_RISCV64
 const unsigned struct_kernel_stat_sz = 128;
 const unsigned struct_kernel_stat64_sz = 104;
 #endif

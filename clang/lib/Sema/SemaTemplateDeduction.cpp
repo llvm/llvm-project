@@ -2670,11 +2670,11 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
         Builder.MakeTrivial(Context, QTN->getQualifier(), Loc);
 
       if (Arg.getKind() == TemplateArgument::Template)
-        return TemplateArgumentLoc(Arg, Builder.getWithLocInContext(Context),
-                                   Loc);
+        return TemplateArgumentLoc(Context, Arg,
+                                   Builder.getWithLocInContext(Context), Loc);
 
-      return TemplateArgumentLoc(Arg, Builder.getWithLocInContext(Context),
-                                 Loc, Loc);
+      return TemplateArgumentLoc(
+          Context, Arg, Builder.getWithLocInContext(Context), Loc, Loc);
     }
 
   case TemplateArgument::Expression:

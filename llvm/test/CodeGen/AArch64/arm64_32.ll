@@ -253,7 +253,9 @@ define i8* @test_toplevel_returnaddr() {
 define i8* @test_deep_returnaddr() {
 ; CHECK-LABEL: test_deep_returnaddr:
 ; CHECK: ldr x[[FRAME_REC:[0-9]+]], [x29]
-; CHECK-OPT: ldr x0, [x[[FRAME_REC]], #8]
+; CHECK-OPT: ldr x30, [x[[FRAME_REC]], #8]
+; CHECK-OPT: hint #7
+; CHECK-OPT: mov x0, x30
 ; CHECK-FAST: ldr [[TMP:x[0-9]+]], [x[[FRAME_REC]], #8]
 ; CHECK-FAST: and x0, [[TMP]], #0xffffffff
   %val = call i8* @llvm.returnaddress(i32 1)

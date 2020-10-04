@@ -333,7 +333,7 @@ public:
   /// defining operation. This will cause subsequent insertions to go right
   /// after it. Otherwise, value is a BlockArgumen. Sets the insertion point to
   /// the start of its block.
-  void setInsertionPointAfter(Value val) {
+  void setInsertionPointAfterValue(Value val) {
     if (Operation *op = val.getDefiningOp()) {
       setInsertionPointAfter(op);
     } else {

@@ -1197,7 +1197,7 @@ void LoopInterchangeTransform::restructureLoops(
     removeChildLoop(NewInner, NewOuter);
     LI->changeTopLevelLoop(NewInner, NewOuter);
   }
-  while (!NewOuter->empty())
+  while (!NewOuter->isInnermost())
     NewInner->addChildLoop(NewOuter->removeChildLoop(NewOuter->begin()));
   NewOuter->addChildLoop(NewInner);
 

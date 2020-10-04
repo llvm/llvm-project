@@ -37,25 +37,32 @@
 
 #define WARPSIZE 32
 
-// The named barrier for active parallel threads of a team in an L1 parallel
-// region to synchronize with each other.
-#define L1_BARRIER (1)
-
 // Maximum number of preallocated arguments to an outlined parallel/simd function.
 // Anything more requires dynamic memory allocation.
 #define MAX_SHARED_ARGS 20
 
 // Maximum number of omp state objects per SM allocated statically in global
 // memory.
-#if __CUDA_ARCH__ >= 700
+#if __CUDA_ARCH__ >= 600
 #define OMP_STATE_COUNT 32
-#define MAX_SM 84
-#elif __CUDA_ARCH__ >= 600
-#define OMP_STATE_COUNT 32
-#define MAX_SM 56
 #else
 #define OMP_STATE_COUNT 16
+#endif
+
+#if !defined(MAX_SM)
+#if __CUDA_ARCH__ >= 900
+#error unsupported compute capability, define MAX_SM via LIBOMPTARGET_NVPTX_MAX_SM cmake option
+#elif __CUDA_ARCH__ >= 800
+// GA100 design has a maxinum of 128 SMs but A100 product only has 108 SMs
+// GA102 design has a maxinum of 84 SMs
+#define MAX_SM 108
+#elif __CUDA_ARCH__ >= 700
+#define MAX_SM 84
+#elif __CUDA_ARCH__ >= 600
+#define MAX_SM 56
+#else
 #define MAX_SM 16
+#endif
 #endif
 
 #define OMP_ACTIVE_PARALLEL_LEVEL 128
@@ -176,7 +183,10 @@ INLINE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t Mask) {
 #endif // CUDA_VERSION
 }
 
-INLINE void __kmpc_impl_named_sync(int barrier, uint32_t num_threads) {
+INLINE void __kmpc_impl_named_sync(uint32_t num_threads) {
+  // The named barrier for active parallel threads of a team in an L1 parallel
+  // region to synchronize with each other.
+  int barrier = 1;
   asm volatile("bar.sync %0, %1;"
                :
                : "r"(barrier), "r"(num_threads)

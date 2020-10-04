@@ -528,7 +528,6 @@ void GCCAsmStmt::setOutputsAndInputsAndClobbers(const ASTContext &C,
   this->NumInputs = NumInputs;
   this->NumClobbers = NumClobbers;
   this->NumLabels = NumLabels;
-  assert(!(NumOutputs && NumLabels) && "asm goto cannot have outputs");
 
   unsigned NumExprs = NumOutputs + NumInputs + NumLabels;
 

@@ -2,8 +2,8 @@
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/libfoo.s -o %t/libfoo.o
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -dylib %t/libfoo.o -o %t/libfoo.dylib
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk %t/test.o -L%t -lfoo -o %t/test -lSystem
+# RUN: %lld -dylib %t/libfoo.o -o %t/libfoo.dylib
+# RUN: %lld %t/test.o -L%t -lfoo -o %t/test -lSystem
 # RUN: llvm-objdump -d --no-show-raw-insn --bind --lazy-bind --weak-bind --full-contents %t/test | \
 # RUN:   FileCheck %s
 

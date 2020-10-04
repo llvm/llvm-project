@@ -68,7 +68,7 @@ if(MLIR_CUDA_RUNNER_ENABLED)
     LIST(APPEND targets_to_link "LLVM${t}")
   ENDFOREACH(t)
 
-  add_llvm_tool(mlir-cuda-runner
+  add_mlir_tool(mlir-cuda-runner
     mlir-cuda-runner.cpp
 
     DEPENDS

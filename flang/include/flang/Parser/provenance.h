@@ -167,6 +167,7 @@ public:
       const std::string &message, bool echoSourceLine = false) const;
   const SourceFile *GetSourceFile(
       Provenance, std::size_t *offset = nullptr) const;
+  const char *GetSource(ProvenanceRange) const;
   std::optional<SourcePosition> GetSourcePosition(Provenance) const;
   std::optional<ProvenanceRange> GetFirstFileProvenance() const;
   std::string GetPath(Provenance) const; // __FILE__
@@ -219,16 +220,7 @@ private:
 // single instances of CookedSource.
 class CookedSource {
 public:
-  const std::string &data() const { return data_; }
-
-  bool Contains(const char *p) const {
-    return p >= &data_.front() && p <= &data_.back() + 1;
-  }
-  bool Contains(CharBlock range) const {
-    return !range.empty() && Contains(range.begin()) &&
-        Contains(range.end() - 1);
-  }
-
+  CharBlock AsCharBlock() const { return CharBlock{data_}; }
   std::optional<ProvenanceRange> GetProvenanceRange(CharBlock) const;
   std::optional<CharBlock> GetCharBlock(ProvenanceRange) const;
 
@@ -253,7 +245,6 @@ public:
   std::size_t BufferedBytes() const;
   void Marshal(AllSources &); // marshals text into one contiguous block
   void CompileProvenanceRangeToOffsetMappings(AllSources &);
-  std::string AcquireData() { return std::move(data_); }
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
@@ -276,7 +267,7 @@ public:
   template <typename A> // const char * or CharBlock
   const CookedSource *Find(A x) const {
     for (const auto &c : cooked_) {
-      if (c.Contains(x)) {
+      if (c.AsCharBlock().Contains(x)) {
         return &c;
       }
     }

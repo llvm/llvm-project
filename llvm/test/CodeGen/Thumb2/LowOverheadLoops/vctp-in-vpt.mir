@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve -run-pass=arm-low-overhead-loops %s -verify-machineinstrs -o - | FileCheck %s
 --- |
   ; Function Attrs: nofree norecurse nounwind
-  define dso_local void @test(i32* noalias nocapture %arg, i32* noalias nocapture readonly %arg1, i32 %arg2, i16 zeroext %mask) local_unnamed_addr #0 {
+  define dso_local void @test_vldr_p0(i32* noalias nocapture %arg, i32* noalias nocapture readonly %arg1, i32 %arg2, i16 zeroext %mask) local_unnamed_addr #0 {
   bb:
     %tmp = icmp eq i32 %arg2, 0
     %tmp1 = add i32 %arg2, 3
@@ -42,6 +42,40 @@
   bb27:                                             ; preds = %bb9, %bb
     ret void
   }
+
+  define dso_local void @test_vstr_p0(i32* noalias nocapture %arg, i32* noalias nocapture readonly %arg1, i32 %arg2, i16 zeroext %mask) {
+  bb:
+      unreachable
+  bb3:                                              ; preds = %bb
+      unreachable
+  bb9:                                              ; preds = %bb9, %bb3
+      unreachable
+  bb27:                                             ; preds = %bb9, %bb
+    ret void
+  }
+
+  define dso_local void @test_vmsr_p0(i32* noalias nocapture %arg, i32* noalias nocapture readonly %arg1, i32 %arg2, i16 zeroext %mask) {
+  bb:
+      unreachable
+  bb3:                                              ; preds = %bb
+      unreachable
+  bb9:                                              ; preds = %bb9, %bb3
+      unreachable
+  bb27:                                             ; preds = %bb9, %bb
+    ret void
+  }
+
+  define dso_local void @test_vmrs_p0(i32* noalias nocapture %arg, i32* noalias nocapture readonly %arg1, i32 %arg2, i16 zeroext %mask) {
+  bb:
+      unreachable
+  bb3:                                              ; preds = %bb
+      unreachable
+  bb9:                                              ; preds = %bb9, %bb3
+      unreachable
+  bb27:                                             ; preds = %bb9, %bb
+    ret void
+  }
+
   declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>) #1
   declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>) #2
   declare void @llvm.set.loop.iterations.i32(i32) #3
@@ -51,7 +85,7 @@
 
 ...
 ---
-name:            test
+name:            test_vldr_p0
 alignment:       2
 exposesReturnsTwice: false
 legalized:       false
@@ -100,7 +134,7 @@ callSites:       []
 constants:       []
 machineFunctionInfo: {}
 body:             |
-  ; CHECK-LABEL: name: test
+  ; CHECK-LABEL: name: test_vldr_p0
   ; CHECK: bb.0.bb:
   ; CHECK:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3
@@ -174,6 +208,435 @@ body:             |
     renamable $q0 = nsw MVE_VMULi32 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
     MVE_VPST 8, implicit $vpr
     MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 1, killed renamable $vpr :: (store 16 into %ir.lsr.iv1, align 4)
+    renamable $lr = t2LoopDec killed renamable $lr, 1
+    $r0 = tMOVr $r3, 14, $noreg
+    t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
+    tB %bb.3, 14, $noreg
+
+  bb.3.bb27:
+    $sp = tADDspi $sp, 1, 14, $noreg
+    tPOP_RET 14, $noreg, def $r7, def $pc
+
+...
+---
+name:            test_vstr_p0
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+  - { reg: '$r3', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       12
+  offsetAdjustment: -4
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: false,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$r7', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  ; CHECK-LABEL: name: test_vstr_p0
+  ; CHECK: bb.0.bb:
+  ; CHECK:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
+  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3
+  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
+  ; CHECK:   dead $r7 = frame-setup tMOVr $sp, 14 /* CC::al */, $noreg
+  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_register $r7
+  ; CHECK:   $sp = frame-setup tSUBspi $sp, 1, 14 /* CC::al */, $noreg
+  ; CHECK:   tCBZ $r2, %bb.3
+  ; CHECK: bb.1.bb3:
+  ; CHECK:   successors: %bb.2(0x80000000)
+  ; CHECK:   liveins: $r0, $r1, $r2, $r3
+  ; CHECK:   renamable $r12 = t2ADDri renamable $r2, 3, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   renamable $lr = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   renamable $r12 = t2BICri killed renamable $r12, 3, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   $vpr = VMSR_P0 killed $r3, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $r12 = t2SUBri killed renamable $r12, 4, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   VSTR_P0_off killed renamable $vpr, $sp, 0, 14 /* CC::al */, $noreg :: (store 4 into %stack.0)
+  ; CHECK:   $r3 = tMOVr $r0, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $lr, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   $lr = t2DLS killed renamable $lr
+  ; CHECK: bb.2.bb9:
+  ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3
+  ; CHECK:   renamable $vpr = VLDR_P0_off $sp, 0, 14 /* CC::al */, $noreg :: (load 4 from %stack.0)
+  ; CHECK:   MVE_VPST 2, implicit $vpr
+  ; CHECK:   renamable $vpr = MVE_VCTP32 renamable $r2, 1, killed renamable $vpr
+  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr
+  ; CHECK:   renamable $r3, renamable $q1 = MVE_VLDRWU32_post killed renamable $r3, 16, 1, renamable $vpr
+  ; CHECK:   VSTR_P0_off renamable $vpr, $sp, 0, 14 /* CC::al */, $noreg :: (store 4 into %stack.0)
+  ; CHECK:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $q0 = nsw MVE_VMULi32 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
+  ; CHECK:   MVE_VPST 8, implicit $vpr
+  ; CHECK:   MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 1, killed renamable $vpr
+  ; CHECK:   $r0 = tMOVr $r3, 14 /* CC::al */, $noreg
+  ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
+  ; CHECK: bb.3.bb27:
+  ; CHECK:   $sp = tADDspi $sp, 1, 14 /* CC::al */, $noreg
+  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
+  bb.0.bb:
+    successors: %bb.3(0x30000000), %bb.1(0x50000000)
+    liveins: $r0, $r1, $r2, $r3, $lr
+
+    frame-setup tPUSH 14, $noreg, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r7, -8
+    $r7 = frame-setup tMOVr $sp, 14, $noreg
+    frame-setup CFI_INSTRUCTION def_cfa_register $r7
+    $sp = frame-setup tSUBspi $sp, 1, 14, $noreg
+    tCBZ $r2, %bb.3
+
+  bb.1.bb3:
+    successors: %bb.2(0x80000000)
+    liveins: $r0, $r1, $r2, $r3
+
+    renamable $r12 = t2ADDri renamable $r2, 3, 14, $noreg, $noreg
+    renamable $lr = t2MOVi 1, 14, $noreg, $noreg
+    renamable $r12 = t2BICri killed renamable $r12, 3, 14, $noreg, $noreg
+    $vpr = VMSR_P0 killed $r3, 14, $noreg
+    renamable $r12 = t2SUBri killed renamable $r12, 4, 14, $noreg, $noreg
+    VSTR_P0_off killed renamable $vpr, $sp, 0, 14, $noreg :: (store 4 into %stack.0)
+    $r3 = tMOVr $r0, 14, $noreg
+    renamable $lr = nuw nsw t2ADDrs killed renamable $lr, killed renamable $r12, 19, 14, $noreg, $noreg
+    t2DoLoopStart renamable $lr
+
+  bb.2.bb9:
+    successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+    liveins: $lr, $r0, $r1, $r2, $r3
+
+    renamable $vpr = VLDR_P0_off $sp, 0, 14, $noreg :: (load 4 from %stack.0)
+    MVE_VPST 2, implicit $vpr
+    renamable $vpr = MVE_VCTP32 renamable $r2, 1, killed renamable $vpr
+    renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr
+    renamable $r3, renamable $q1 = MVE_VLDRWU32_post killed renamable $r3, 16, 1, renamable $vpr
+    VSTR_P0_off renamable $vpr, $sp, 0, 14, $noreg :: (store 4 into %stack.0)
+    renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14, $noreg
+    renamable $q0 = nsw MVE_VMULi32 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
+    MVE_VPST 8, implicit $vpr
+    MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 1, killed renamable $vpr
+    renamable $lr = t2LoopDec killed renamable $lr, 1
+    $r0 = tMOVr $r3, 14, $noreg
+    t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
+    tB %bb.3, 14, $noreg
+
+  bb.3.bb27:
+    $sp = tADDspi $sp, 1, 14, $noreg
+    tPOP_RET 14, $noreg, def $r7, def $pc
+
+...
+---
+name:            test_vmsr_p0
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+  - { reg: '$r3', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       12
+  offsetAdjustment: -4
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: false,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$r7', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  ; CHECK-LABEL: name: test_vmsr_p0
+  ; CHECK: bb.0.bb:
+  ; CHECK:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
+  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3
+  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
+  ; CHECK:   dead $r7 = frame-setup tMOVr $sp, 14 /* CC::al */, $noreg
+  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_register $r7
+  ; CHECK:   $sp = frame-setup tSUBspi $sp, 1, 14 /* CC::al */, $noreg
+  ; CHECK:   tCBZ $r2, %bb.3
+  ; CHECK: bb.1.bb3:
+  ; CHECK:   successors: %bb.2(0x80000000)
+  ; CHECK:   liveins: $r0, $r1, $r2, $r3
+  ; CHECK:   renamable $r12 = t2ADDri renamable $r2, 3, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   renamable $lr = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   renamable $r12 = t2BICri killed renamable $r12, 3, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   $vpr = VMSR_P0 killed $r3, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $r12 = t2SUBri killed renamable $r12, 4, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   VSTR_P0_off killed renamable $vpr, $sp, 0, 14 /* CC::al */, $noreg :: (store 4 into %stack.0)
+  ; CHECK:   $r3 = tMOVr $r0, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $lr, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   $lr = t2DLS killed renamable $lr
+  ; CHECK: bb.2.bb9:
+  ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3
+  ; CHECK:   renamable $vpr = VLDR_P0_off $sp, 0, 14 /* CC::al */, $noreg :: (load 4 from %stack.0)
+  ; CHECK:   MVE_VPST 2, implicit $vpr
+  ; CHECK:   renamable $vpr = MVE_VCTP32 renamable $r2, 1, killed renamable $vpr
+  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr
+  ; CHECK:   renamable $r3, renamable $q1 = MVE_VLDRWU32_post killed renamable $r3, 16, 1, killed renamable $vpr
+  ; CHECK:   $vpr = VMSR_P0 $r3, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $q0 = nsw MVE_VMULi32 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
+  ; CHECK:   MVE_VPST 8, implicit $vpr
+  ; CHECK:   MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 1, killed renamable $vpr
+  ; CHECK:   $r0 = tMOVr $r3, 14 /* CC::al */, $noreg
+  ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
+  ; CHECK: bb.3.bb27:
+  ; CHECK:   $sp = tADDspi $sp, 1, 14 /* CC::al */, $noreg
+  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
+  bb.0.bb:
+    successors: %bb.3(0x30000000), %bb.1(0x50000000)
+    liveins: $r0, $r1, $r2, $r3, $lr
+
+    frame-setup tPUSH 14, $noreg, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r7, -8
+    $r7 = frame-setup tMOVr $sp, 14, $noreg
+    frame-setup CFI_INSTRUCTION def_cfa_register $r7
+    $sp = frame-setup tSUBspi $sp, 1, 14, $noreg
+    tCBZ $r2, %bb.3
+
+  bb.1.bb3:
+    successors: %bb.2(0x80000000)
+    liveins: $r0, $r1, $r2, $r3
+
+    renamable $r12 = t2ADDri renamable $r2, 3, 14, $noreg, $noreg
+    renamable $lr = t2MOVi 1, 14, $noreg, $noreg
+    renamable $r12 = t2BICri killed renamable $r12, 3, 14, $noreg, $noreg
+    $vpr = VMSR_P0 killed $r3, 14, $noreg
+    renamable $r12 = t2SUBri killed renamable $r12, 4, 14, $noreg, $noreg
+    VSTR_P0_off killed renamable $vpr, $sp, 0, 14, $noreg :: (store 4 into %stack.0)
+    $r3 = tMOVr $r0, 14, $noreg
+    renamable $lr = nuw nsw t2ADDrs killed renamable $lr, killed renamable $r12, 19, 14, $noreg, $noreg
+    t2DoLoopStart renamable $lr
+
+  bb.2.bb9:
+    successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+    liveins: $lr, $r0, $r1, $r2, $r3
+
+    renamable $vpr = VLDR_P0_off $sp, 0, 14, $noreg :: (load 4 from %stack.0)
+    MVE_VPST 2, implicit $vpr
+    renamable $vpr = MVE_VCTP32 renamable $r2, 1, killed renamable $vpr
+    renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr
+    renamable $r3, renamable $q1 = MVE_VLDRWU32_post killed renamable $r3, 16, 1, renamable $vpr
+    $vpr = VMSR_P0 $r3, 14, $noreg
+    renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14, $noreg
+    renamable $q0 = nsw MVE_VMULi32 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
+    MVE_VPST 8, implicit $vpr
+    MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 1, killed renamable $vpr
+    renamable $lr = t2LoopDec killed renamable $lr, 1
+    $r0 = tMOVr $r3, 14, $noreg
+    t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
+    tB %bb.3, 14, $noreg
+
+  bb.3.bb27:
+    $sp = tADDspi $sp, 1, 14, $noreg
+    tPOP_RET 14, $noreg, def $r7, def $pc
+
+...
+---
+name:            test_vmrs_p0
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+  - { reg: '$r3', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       12
+  offsetAdjustment: -4
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: false,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$r7', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  ; CHECK-LABEL: name: test_vmrs_p0
+  ; CHECK: bb.0.bb:
+  ; CHECK:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
+  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3
+  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
+  ; CHECK:   dead $r7 = frame-setup tMOVr $sp, 14 /* CC::al */, $noreg
+  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_register $r7
+  ; CHECK:   $sp = frame-setup tSUBspi $sp, 1, 14 /* CC::al */, $noreg
+  ; CHECK:   tCBZ $r2, %bb.3
+  ; CHECK: bb.1.bb3:
+  ; CHECK:   successors: %bb.2(0x80000000)
+  ; CHECK:   liveins: $r0, $r1, $r2, $r3
+  ; CHECK:   renamable $r12 = t2ADDri renamable $r2, 3, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   renamable $lr = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   renamable $r12 = t2BICri killed renamable $r12, 3, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   $vpr = VMSR_P0 killed $r3, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $r12 = t2SUBri killed renamable $r12, 4, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   VSTR_P0_off killed renamable $vpr, $sp, 0, 14 /* CC::al */, $noreg :: (store 4 into %stack.0)
+  ; CHECK:   $r3 = tMOVr $r0, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $lr, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   $lr = t2DLS killed renamable $lr
+  ; CHECK: bb.2.bb9:
+  ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3
+  ; CHECK:   renamable $vpr = VLDR_P0_off $sp, 0, 14 /* CC::al */, $noreg :: (load 4 from %stack.0)
+  ; CHECK:   MVE_VPST 2, implicit $vpr
+  ; CHECK:   renamable $vpr = MVE_VCTP32 renamable $r2, 1, killed renamable $vpr
+  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr
+  ; CHECK:   dead renamable $r3, renamable $q1 = MVE_VLDRWU32_post killed renamable $r3, 16, 1, renamable $vpr
+  ; CHECK:   $r3 = VMRS_P0 $vpr, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $q0 = nsw MVE_VMULi32 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
+  ; CHECK:   MVE_VPST 8, implicit $vpr
+  ; CHECK:   MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 1, killed renamable $vpr
+  ; CHECK:   $r0 = tMOVr $r3, 14 /* CC::al */, $noreg
+  ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
+  ; CHECK: bb.3.bb27:
+  ; CHECK:   $sp = tADDspi $sp, 1, 14 /* CC::al */, $noreg
+  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
+  bb.0.bb:
+    successors: %bb.3(0x30000000), %bb.1(0x50000000)
+    liveins: $r0, $r1, $r2, $r3, $lr
+
+    frame-setup tPUSH 14, $noreg, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r7, -8
+    $r7 = frame-setup tMOVr $sp, 14, $noreg
+    frame-setup CFI_INSTRUCTION def_cfa_register $r7
+    $sp = frame-setup tSUBspi $sp, 1, 14, $noreg
+    tCBZ $r2, %bb.3
+
+  bb.1.bb3:
+    successors: %bb.2(0x80000000)
+    liveins: $r0, $r1, $r2, $r3
+
+    renamable $r12 = t2ADDri renamable $r2, 3, 14, $noreg, $noreg
+    renamable $lr = t2MOVi 1, 14, $noreg, $noreg
+    renamable $r12 = t2BICri killed renamable $r12, 3, 14, $noreg, $noreg
+    $vpr = VMSR_P0 killed $r3, 14, $noreg
+    renamable $r12 = t2SUBri killed renamable $r12, 4, 14, $noreg, $noreg
+    VSTR_P0_off killed renamable $vpr, $sp, 0, 14, $noreg :: (store 4 into %stack.0)
+    $r3 = tMOVr $r0, 14, $noreg
+    renamable $lr = nuw nsw t2ADDrs killed renamable $lr, killed renamable $r12, 19, 14, $noreg, $noreg
+    t2DoLoopStart renamable $lr
+
+  bb.2.bb9:
+    successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+    liveins: $lr, $r0, $r1, $r2, $r3
+
+    renamable $vpr = VLDR_P0_off $sp, 0, 14, $noreg :: (load 4 from %stack.0)
+    MVE_VPST 2, implicit $vpr
+    renamable $vpr = MVE_VCTP32 renamable $r2, 1, killed renamable $vpr
+    renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr
+    renamable $r3, renamable $q1 = MVE_VLDRWU32_post killed renamable $r3, 16, 1, renamable $vpr
+    $r3 = VMRS_P0 $vpr, 14, $noreg
+    renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14, $noreg
+    renamable $q0 = nsw MVE_VMULi32 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
+    MVE_VPST 8, implicit $vpr
+    MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 1, killed renamable $vpr
     renamable $lr = t2LoopDec killed renamable $lr, 1
     $r0 = tMOVr $r3, 14, $noreg
     t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr

@@ -9,6 +9,7 @@ declare i32 @llvm.experimental.vector.reduce.umax.v1i32(<1 x i32> %a)
 declare i64 @llvm.experimental.vector.reduce.umax.v1i64(<1 x i64> %a)
 declare i128 @llvm.experimental.vector.reduce.umax.v1i128(<1 x i128> %a)
 
+declare i64 @llvm.experimental.vector.reduce.umax.v2i64(<2 x i64> %a)
 declare i8 @llvm.experimental.vector.reduce.umax.v3i8(<3 x i8> %a)
 declare i8 @llvm.experimental.vector.reduce.umax.v9i8(<9 x i8> %a)
 declare i32 @llvm.experimental.vector.reduce.umax.v3i32(<3 x i32> %a)
@@ -80,6 +81,19 @@ define i128 @test_v1i128(<1 x i128> %a) nounwind {
 ; CHECK-NEXT:    ret
   %b = call i128 @llvm.experimental.vector.reduce.umax.v1i128(<1 x i128> %a)
   ret i128 %b
+}
+
+; No i64 vector support for UMAX.
+define i64 @test_v2i64(<2 x i64> %a) nounwind {
+; CHECK-LABEL: test_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:   mov     x8, v0.d[1]
+; CHECK-NEXT:   fmov    x9, d0
+; CHECK-NEXT:   cmp     x9, x8
+; CHECK-NEXT:   csel    x0, x9, x8, hi
+; CHECK-NEXT:   ret
+  %b = call i64 @llvm.experimental.vector.reduce.umax.v2i64(<2 x i64> %a)
+  ret i64 %b
 }
 
 define i8 @test_v3i8(<3 x i8> %a) nounwind {

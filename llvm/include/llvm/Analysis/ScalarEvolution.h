@@ -677,6 +677,12 @@ public:
   bool isLoopEntryGuardedByCond(const Loop *L, ICmpInst::Predicate Pred,
                                 const SCEV *LHS, const SCEV *RHS);
 
+  /// Test whether entry to the basic block is protected by a conditional
+  /// between LHS and RHS.
+  bool isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
+                                      ICmpInst::Predicate Pred, const SCEV *LHS,
+                                      const SCEV *RHS);
+
   /// Test whether the backedge of the loop is protected by a conditional
   /// between LHS and RHS.  This is used to eliminate casts.
   bool isLoopBackedgeGuardedByCond(const Loop *L, ICmpInst::Predicate Pred,
@@ -696,7 +702,8 @@ public:
   /// before taking the branch. For loops with multiple exits, it may not be
   /// the number times that the loop header executes if the loop exits
   /// prematurely via another branch.
-  unsigned getSmallConstantTripCount(const Loop *L, BasicBlock *ExitingBlock);
+  unsigned getSmallConstantTripCount(const Loop *L,
+                                     const BasicBlock *ExitingBlock);
 
   /// Returns the upper bound of the loop trip count as a normal unsigned
   /// value.
@@ -718,8 +725,7 @@ public:
   /// for getSmallConstantTripCount, this assumes that control exits the loop
   /// via ExitingBlock.
   unsigned getSmallConstantTripMultiple(const Loop *L,
-                                        BasicBlock *ExitingBlock);
-
+                                        const BasicBlock *ExitingBlock);
 
   /// The terms "backedge taken count" and "exit count" are used
   /// interchangeably to refer to the number of times the backedge of a loop 
@@ -737,8 +743,8 @@ public:
   /// For a single exit loop, this value is equivelent to the result of
   /// getBackedgeTakenCount.  The loop is guaranteed to exit (via *some* exit)
   /// before the backedge is executed (ExitCount + 1) times.  Note that there
-  /// is no guarantee about *which* exit is taken on the exiting iteration.  
-  const SCEV *getExitCount(const Loop *L, BasicBlock *ExitingBlock,
+  /// is no guarantee about *which* exit is taken on the exiting iteration.
+  const SCEV *getExitCount(const Loop *L, const BasicBlock *ExitingBlock,
                            ExitCountKind Kind = Exact);
 
   /// If the specified loop has a predictable backedge-taken count, return it,
@@ -909,6 +915,11 @@ public:
   /// by Pred, LHS, and RHS.
   bool isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,
                         const SCEV *RHS);
+
+  /// Test if the given expression is known to satisfy the condition described
+  /// by Pred, LHS, and RHS in the given Context.
+  bool isKnownPredicateAt(ICmpInst::Predicate Pred, const SCEV *LHS,
+                        const SCEV *RHS, const Instruction *Context);
 
   /// Test if the condition described by Pred, LHS, RHS is known to be true on
   /// every iteration of the loop of the recurrency LHS.
@@ -1352,13 +1363,15 @@ private:
     /// edge, or SCEVCouldNotCompute. The loop is guaranteed not to exit via
     /// this block before this number of iterations, but may exit via another
     /// block.
-    const SCEV *getExact(BasicBlock *ExitingBlock, ScalarEvolution *SE) const;
+    const SCEV *getExact(const BasicBlock *ExitingBlock,
+                         ScalarEvolution *SE) const;
 
     /// Get the max backedge taken count for the loop.
     const SCEV *getMax(ScalarEvolution *SE) const;
 
     /// Get the max backedge taken count for the particular loop exit.
-    const SCEV *getMax(BasicBlock *ExitingBlock, ScalarEvolution *SE) const;
+    const SCEV *getMax(const BasicBlock *ExitingBlock,
+                       ScalarEvolution *SE) const;
 
     /// Return true if the number of times this backedge is taken is either the
     /// value returned by getMax or zero.
@@ -1664,23 +1677,30 @@ private:
   getPredecessorWithUniqueSuccessorForBB(const BasicBlock *BB) const;
 
   /// Test whether the condition described by Pred, LHS, and RHS is true
-  /// whenever the given FoundCondValue value evaluates to true.
+  /// whenever the given FoundCondValue value evaluates to true in given
+  /// Context. If Context is nullptr, then the found predicate is true
+  /// everywhere.
   bool isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS,
-                     const Value *FoundCondValue, bool Inverse);
+                     const Value *FoundCondValue, bool Inverse,
+                     const Instruction *Context = nullptr);
 
   /// Test whether the condition described by Pred, LHS, and RHS is true
   /// whenever the condition described by FoundPred, FoundLHS, FoundRHS is
-  /// true.
+  /// true in given Context. If Context is nullptr, then the found predicate is
+  /// true everywhere.
   bool isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS,
                      ICmpInst::Predicate FoundPred, const SCEV *FoundLHS,
-                     const SCEV *FoundRHS);
+                     const SCEV *FoundRHS,
+                     const Instruction *Context = nullptr);
 
   /// Test whether the condition described by Pred, LHS, and RHS is true
   /// whenever the condition described by Pred, FoundLHS, and FoundRHS is
-  /// true.
+  /// true in given Context. If Context is nullptr, then the found predicate is
+  /// true everywhere.
   bool isImpliedCondOperands(ICmpInst::Predicate Pred, const SCEV *LHS,
                              const SCEV *RHS, const SCEV *FoundLHS,
-                             const SCEV *FoundRHS);
+                             const SCEV *FoundRHS,
+                             const Instruction *Context = nullptr);
 
   /// Test whether the condition described by Pred, LHS, and RHS is true
   /// whenever the condition described by Pred, FoundLHS, and FoundRHS is
@@ -1726,6 +1746,18 @@ private:
                                           const SCEV *LHS, const SCEV *RHS,
                                           const SCEV *FoundLHS,
                                           const SCEV *FoundRHS);
+
+  /// Test whether the condition described by Pred, LHS, and RHS is true
+  /// whenever the condition described by Pred, FoundLHS, and FoundRHS is
+  /// true.
+  ///
+  /// This routine tries to weaken the known condition basing on fact that
+  /// FoundLHS is an AddRec.
+  bool isImpliedCondOperandsViaAddRecStart(ICmpInst::Predicate Pred,
+                                           const SCEV *LHS, const SCEV *RHS,
+                                           const SCEV *FoundLHS,
+                                           const SCEV *FoundRHS,
+                                           const Instruction *Context);
 
   /// Test whether the condition described by Pred, LHS, and RHS is true
   /// whenever the condition described by Pred, FoundLHS, and FoundRHS is
@@ -1897,6 +1929,9 @@ private:
   /// Try to match the pattern generated by getURemExpr(A, B). If successful,
   /// Assign A and B to LHS and RHS, respectively.
   bool matchURem(const SCEV *Expr, const SCEV *&LHS, const SCEV *&RHS);
+
+  /// Try to apply information from loop guards for \p L to \p Expr.
+  const SCEV *applyLoopGuards(const SCEV *Expr, const Loop *L);
 
   /// Look for a SCEV expression with type `SCEVType` and operands `Ops` in
   /// `UniqueSCEVs`.

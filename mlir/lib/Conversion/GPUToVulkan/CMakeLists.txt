@@ -12,7 +12,7 @@ add_mlir_conversion_library(MLIRGPUToVulkanTransforms
   MLIRPass
   MLIRSPIRV
   MLIRSPIRVSerialization
-  MLIRStandardOps
+  MLIRStandard
   MLIRSupport
   MLIRTransforms
   MLIRTranslation

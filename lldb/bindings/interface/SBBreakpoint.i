@@ -234,6 +234,8 @@ public:
     SBError
     AddLocation(SBAddress &address);
 
+    SBStructuredData SBBreakpoint::SerializeToStructuredData();
+
     static bool
     EventIsBreakpointEvent (const lldb::SBEvent &event);
 

@@ -11,12 +11,6 @@
 
 #include "mlir/IR/Dialect.h"
 
-namespace mlir {
-namespace standalone {
-
 #include "Standalone/StandaloneOpsDialect.h.inc"
-
-} // namespace standalone
-} // namespace mlir
 
 #endif // STANDALONE_STANDALONEDIALECT_H

@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
+#include "mlir/Dialect/SPIRV/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/FunctionImplementation.h"
@@ -52,6 +53,7 @@ static constexpr const char kTypeAttrName[] = "type";
 static constexpr const char kUnequalSemanticsAttrName[] = "unequal_semantics";
 static constexpr const char kValueAttrName[] = "value";
 static constexpr const char kValuesAttrName[] = "values";
+static constexpr const char kCompositeSpecConstituentsName[] = "constituents";
 
 //===----------------------------------------------------------------------===//
 // Common utility functions
@@ -305,7 +307,12 @@ static void printSourceMemoryAccessAttribute(
 }
 
 static LogicalResult verifyCastOp(Operation *op,
-                                  bool requireSameBitWidth = true) {
+                                  bool requireSameBitWidth = true,
+                                  bool skipBitWidthCheck = false) {
+  // Some CastOps have no limit on bit widths for result and operand type.
+  if (skipBitWidthCheck)
+    return success();
+
   Type operandType = op->getOperand(0).getType();
   Type resultType = op->getResult(0).getType();
 
@@ -2039,6 +2046,32 @@ static LogicalResult verify(spirv::GroupNonUniformBallotOp ballotOp) {
 }
 
 //===----------------------------------------------------------------------===//
+// spv.GroupNonUniformBroadcast
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(spirv::GroupNonUniformBroadcastOp broadcastOp) {
+  spirv::Scope scope = broadcastOp.execution_scope();
+  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
+    return broadcastOp.emitOpError(
+        "execution scope must be 'Workgroup' or 'Subgroup'");
+
+  // SPIR-V spec: "Before version 1.5, Id must come from a
+  // constant instruction.
+  auto targetEnv = spirv::getDefaultTargetEnv(broadcastOp.getContext());
+  if (auto spirvModule = broadcastOp.getParentOfType<spirv::ModuleOp>())
+    targetEnv = spirv::lookupTargetEnvOrDefault(spirvModule);
+
+  if (targetEnv.getVersion() < spirv::Version::V_1_5) {
+    auto *idOp = broadcastOp.id().getDefiningOp();
+    if (!idOp || !isa<spirv::ConstantOp,           // for normal constant
+                      spirv::ReferenceOfOp>(idOp)) // for spec constant
+      return broadcastOp.emitOpError("id must be the result of a constant op");
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // spv.SubgroupBlockReadINTEL
 //===----------------------------------------------------------------------===//
 
@@ -3255,17 +3288,110 @@ static LogicalResult verifyMatrixTimesMatrix(spirv::MatrixTimesMatrixOp op) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// spv.specConstantComposite
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseSpecConstantCompositeOp(OpAsmParser &parser,
+                                                OperationState &state) {
+
+  StringAttr compositeName;
+  if (parser.parseSymbolName(compositeName, SymbolTable::getSymbolAttrName(),
+                             state.attributes))
+    return failure();
+
+  if (parser.parseLParen())
+    return failure();
+
+  SmallVector<Attribute, 4> constituents;
+
+  do {
+    // The name of the constituent attribute isn't important
+    const char *attrName = "spec_const";
+    FlatSymbolRefAttr specConstRef;
+    NamedAttrList attrs;
+
+    if (parser.parseAttribute(specConstRef, Type(), attrName, attrs))
+      return failure();
+
+    constituents.push_back(specConstRef);
+  } while (!parser.parseOptionalComma());
+
+  if (parser.parseRParen())
+    return failure();
+
+  state.addAttribute(kCompositeSpecConstituentsName,
+                     parser.getBuilder().getArrayAttr(constituents));
+
+  Type type;
+  if (parser.parseColonType(type))
+    return failure();
+
+  state.addAttribute(kTypeAttrName, TypeAttr::get(type));
+
+  return success();
+}
+
+static void print(spirv::SpecConstantCompositeOp op, OpAsmPrinter &printer) {
+  printer << spirv::SpecConstantCompositeOp::getOperationName() << " ";
+  printer.printSymbolName(op.sym_name());
+  printer << " (";
+  auto constituents = op.constituents().getValue();
+
+  if (!constituents.empty())
+    llvm::interleaveComma(constituents, printer);
+
+  printer << ") : " << op.type();
+}
+
+static LogicalResult verify(spirv::SpecConstantCompositeOp constOp) {
+  auto cType = constOp.type().dyn_cast<spirv::CompositeType>();
+  auto constituents = constOp.constituents().getValue();
+
+  if (!cType)
+    return constOp.emitError(
+               "result type must be a composite type, but provided ")
+           << constOp.type();
+
+  if (cType.isa<spirv::CooperativeMatrixNVType>())
+    return constOp.emitError("unsupported composite type  ") << cType;
+  else if (constituents.size() != cType.getNumElements())
+    return constOp.emitError("has incorrect number of operands: expected ")
+           << cType.getNumElements() << ", but provided "
+           << constituents.size();
+
+  for (auto index : llvm::seq<uint32_t>(0, constituents.size())) {
+    auto constituent = constituents[index].dyn_cast<FlatSymbolRefAttr>();
+
+    auto constituentSpecConstOp =
+        dyn_cast<spirv::SpecConstantOp>(SymbolTable::lookupNearestSymbolFrom(
+            constOp.getParentOp(), constituent.getValue()));
+
+    if (constituentSpecConstOp.default_value().getType() !=
+        cType.getElementType(index))
+      return constOp.emitError("has incorrect types of operands: expected ")
+             << cType.getElementType(index) << ", but provided "
+             << constituentSpecConstOp.default_value().getType();
+  }
+
+  return success();
+}
+
 namespace mlir {
 namespace spirv {
 
 // TableGen'erated operation interfaces for querying versions, extensions, and
 // capabilities.
 #include "mlir/Dialect/SPIRV/SPIRVAvailability.cpp.inc"
+} // namespace spirv
+} // namespace mlir
 
 // TablenGen'erated operation definitions.
 #define GET_OP_CLASSES
 #include "mlir/Dialect/SPIRV/SPIRVOps.cpp.inc"
 
+namespace mlir {
+namespace spirv {
 // TableGen'erated operation availability interface implementations.
 #include "mlir/Dialect/SPIRV/SPIRVOpAvailabilityImpl.inc"
 

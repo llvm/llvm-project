@@ -99,15 +99,16 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   include(CheckLibraryExists)
   include(CheckCCompilerFlag)
 
-  # We don't have libc++ (yet).
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
+  # We don't have libc++ (yet)...
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++ -nostdlib++")
+
+  # ...but we need access to libc++ headers for CMake checks to succeed.
+  if (LLVM_EXTERNAL_LIBCXX_SOURCE_DIR AND "libcxx" IN_LIST LLVM_ENABLE_RUNTIMES)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -isystem ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR}/include")
+  endif()
 
   # Avoid checking whether the compiler is working.
   set(LLVM_COMPILER_CHECKED ON)
-
-  # Enable warnings, otherwise -w gets added to the cflags by HandleLLVMOptions
-  # resulting in unjustified successes by check_cxx_compiler_flag.
-  set(LLVM_ENABLE_WARNINGS ON)
 
   # Handle common options used by all runtimes.
   include(AddLLVM)
@@ -219,15 +220,6 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
 else() # if this is included from LLVM's CMake
   include(LLVMExternalProjectUtils)
-  if (LLVM_EXTERNAL_LIBCXX_SOURCE_DIR AND "libcxx" IN_LIST LLVM_ENABLE_RUNTIMES)
-    # This looks wrong, but libcxx's build actually wants the header dir to be
-    # the root build dir, not the include directory.
-    set(LIBCXX_BINARY_DIR ${LLVM_BINARY_DIR})
-    set(LIBCXX_SOURCE_DIR ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR})
-    set(LIBCXX_HEADER_DIR ${LLVM_BINARY_DIR})
-    set(CXX_HEADER_TARGET runtime-libcxx-headers)
-    add_subdirectory(${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR}/include ${CXX_HEADER_TARGET})
-  endif()
 
   if(NOT LLVM_BUILD_RUNTIMES)
     set(EXTRA_ARGS EXCLUDE_FROM_ALL)
@@ -264,13 +256,19 @@ ${error} Set RUNTIMES_BUILD_ALLOW_DARWIN to allow a single darwin triple.")
   function(builtin_default_target compiler_rt_path)
     cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
 
+    set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default ON)
+    # AIX should fold 32-bit & 64-bit arch libraries into a single archive.
+    if (TARGET_TRIPLE MATCHES "aix")
+      set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default OFF)
+    endif()
+
     llvm_ExternalProject_Add(builtins
                              ${compiler_rt_path}/lib/builtins
                              DEPENDS ${ARG_DEPENDS}
                              CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
                                         -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
                                         -DLLVM_DEFAULT_TARGET_TRIPLE=${TARGET_TRIPLE}
-                                        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
+                                        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default}
                                         -DCMAKE_C_COMPILER_TARGET=${TARGET_TRIPLE}
                                         -DCMAKE_ASM_COMPILER_TARGET=${TARGET_TRIPLE}
                                         -DCMAKE_C_COMPILER_WORKS=ON
@@ -404,15 +402,21 @@ ${error} Set RUNTIMES_BUILD_ALLOW_DARWIN to allow a single darwin triple.")
       list(APPEND test_targets runtimes-test-depends check-runtimes)
     endif()
 
+    set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default ON)
+    # AIX should fold 32-bit & 64-bit arch libraries into a single archive.
+    if (TARGET_TRIPLE MATCHES "aix")
+      set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default OFF)
+    endif()
+
     llvm_ExternalProject_Add(runtimes
                              ${CMAKE_CURRENT_SOURCE_DIR}
-                             DEPENDS ${ARG_DEPENDS} ${CXX_HEADER_TARGET}
+                             DEPENDS ${ARG_DEPENDS}
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
                                         -DLLVM_DEFAULT_TARGET_TRIPLE=${TARGET_TRIPLE}
                                         -DLLVM_ENABLE_PROJECTS_USED=${LLVM_ENABLE_PROJECTS_USED}
-                                        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
+                                        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default}
                                         -DCMAKE_C_COMPILER_TARGET=${TARGET_TRIPLE}
                                         -DCMAKE_CXX_COMPILER_TARGET=${TARGET_TRIPLE}
                                         -DCMAKE_ASM_COMPILER_TARGET=${TARGET_TRIPLE}
@@ -512,7 +516,7 @@ ${error} Set RUNTIMES_BUILD_ALLOW_DARWIN to allow a single darwin triple.")
 
     llvm_ExternalProject_Add(runtimes-${name}
                              ${CMAKE_CURRENT_SOURCE_DIR}
-                             DEPENDS ${${name}_deps} ${CXX_HEADER_TARGET}
+                             DEPENDS ${${name}_deps}
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}

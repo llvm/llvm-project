@@ -62,17 +62,18 @@ For example:
 
   clang -fxray-instrument ...
 
-By default, functions that have at least 200 instructions will get XRay
-instrumentation points. You can tweak that number through the
+By default, functions that have at least 200 instructions (or contain a loop) will
+get XRay instrumentation points. You can tweak that number through the
 ``-fxray-instruction-threshold=`` flag:
 
 ::
 
   clang -fxray-instrument -fxray-instruction-threshold=1 ...
 
-You can also specifically instrument functions in your binary to either always
-or never be instrumented using source-level attributes. You can do it using the
-GCC-style attributes or C++11-style attributes.
+The loop detection can be disabled with ``-fxray-ignore-loops`` to use only the
+instruction threshold. You can also specifically instrument functions in your
+binary to either always or never be instrumented using source-level attributes.
+You can do it using the GCC-style attributes or C++11-style attributes.
 
 .. code-block:: c++
 
@@ -308,6 +309,35 @@ libraries, distributed with the LLVM distribution. These are:
 - ``llvm/XRay/InstrumentationMap.h``: A convenient tool for analyzing the
   instrumentation map in XRay-instrumented object files and binaries. The
   ``extract`` and ``stack`` subcommands uses this particular library.
+
+
+Minimizing Binary Size
+----------------------
+
+XRay supports several different instrumentation points including ``function-entry``,
+``function-exit``, ``custom``, and ``typed`` points. These can be enabled individually
+using the ``-fxray-instrumentaton-bundle=`` flag. For example if you only wanted to
+instrument function entry and custom points you could specify:
+
+::
+
+  clang -fxray-instrument -fxray-instrumentation-bundle=function-entry,custom ...
+
+This will omit the other sled types entirely, reducing the binary size. You can also
+instrument just a sampled subset of functions using instrumentation groups.
+For example, to instrument only a quarter of available functions invoke:
+
+::
+
+  clang -fxray-instrument -fxray-function-groups=4
+
+A subset will be chosen arbitrarily based on a hash of the function name. To sample a
+different subset you can specify ``-fxray-selected-function-group=`` with a group number
+in the range of 0 to ``xray-function-groups`` - 1.  Together these options could be used
+to produce multiple binaries with different instrumented subsets. If all you need is
+runtime control over which functions are being traced at any given time it is better
+to selectively patch and unpatch the individual functions you need using the XRay
+Runtime Library's ``__xray_patch_function()`` method.
 
 Future Work
 ===========

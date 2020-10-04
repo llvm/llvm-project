@@ -23,11 +23,13 @@ add_llvm_unittest_with_input_files(AnalysisTests
   CaptureTrackingTest.cpp
   CFGTest.cpp
   CGSCCPassManagerTest.cpp
+  ConstraintSystemTest.cpp
   DDGTest.cpp
   DivergenceAnalysisTest.cpp
   DomTreeUpdaterTest.cpp
   GlobalsModRefTest.cpp
   FunctionPropertiesAnalysisTest.cpp
+  IRSimilarityIdentifierTest.cpp
   IVDescriptorsTest.cpp
   LazyCallGraphTest.cpp
   LoadsTest.cpp

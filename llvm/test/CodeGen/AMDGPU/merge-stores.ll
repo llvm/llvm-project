@@ -529,8 +529,8 @@ define amdgpu_kernel void @merge_local_store_4_constants_i32(i32 addrspace(3)* %
 ; GCN-LABEL: {{^}}merge_global_store_5_constants_i32:
 ; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 9{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[HI4:[0-9]+]], -12{{$}}
-; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], 11{{$}}
 ; GCN: buffer_store_dwordx4 v{{\[}}[[LO]]:[[HI4]]{{\]}}
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], 11{{$}}
 ; GCN: buffer_store_dword v[[HI]]
 define amdgpu_kernel void @merge_global_store_5_constants_i32(i32 addrspace(1)* %out) {
   store i32 9, i32 addrspace(1)* %out, align 4

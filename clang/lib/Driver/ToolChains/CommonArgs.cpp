@@ -214,6 +214,24 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
   }
 }
 
+void tools::addLinkerCompressDebugSectionsOption(
+    const ToolChain &TC, const llvm::opt::ArgList &Args,
+    llvm::opt::ArgStringList &CmdArgs) {
+  // GNU ld supports --compress-debug-sections=none|zlib|zlib-gnu|zlib-gabi
+  // whereas zlib is an alias to zlib-gabi. Therefore -gz=none|zlib|zlib-gnu
+  // are translated to --compress-debug-sections=none|zlib|zlib-gnu.
+  // -gz is not translated since ld --compress-debug-sections option requires an
+  // argument.
+  if (const Arg *A = Args.getLastArg(options::OPT_gz_EQ)) {
+    StringRef V = A->getValue();
+    if (V == "none" || V == "zlib" || V == "zlib-gnu")
+      CmdArgs.push_back(Args.MakeArgString("--compress-debug-sections=" + V));
+    else
+      TC.getDriver().Diag(diag::err_drv_unsupported_option_argument)
+          << A->getOption().getName() << V;
+  }
+}
+
 void tools::AddTargetFeature(const ArgList &Args,
                              std::vector<StringRef> &Features,
                              OptSpecifier OnOpt, OptSpecifier OffOpt,
@@ -688,10 +706,10 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
         HelperStaticRuntimes.push_back("asan-preinit");
     }
-    if (SanArgs.needsHeapProfRt() && SanArgs.linkRuntimes()) {
-      SharedRuntimes.push_back("heapprof");
+    if (SanArgs.needsMemProfRt() && SanArgs.linkRuntimes()) {
+      SharedRuntimes.push_back("memprof");
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
-        HelperStaticRuntimes.push_back("heapprof-preinit");
+        HelperStaticRuntimes.push_back("memprof-preinit");
     }
     if (SanArgs.needsUbsanRt() && SanArgs.linkRuntimes()) {
       if (SanArgs.requiresMinimalRuntime())
@@ -730,11 +748,11 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       StaticRuntimes.push_back("asan_cxx");
   }
 
-  if (!SanArgs.needsSharedRt() && SanArgs.needsHeapProfRt() &&
+  if (!SanArgs.needsSharedRt() && SanArgs.needsMemProfRt() &&
       SanArgs.linkRuntimes()) {
-    StaticRuntimes.push_back("heapprof");
+    StaticRuntimes.push_back("memprof");
     if (SanArgs.linkCXXRuntimes())
-      StaticRuntimes.push_back("heapprof_cxx");
+      StaticRuntimes.push_back("memprof_cxx");
   }
 
   if (!SanArgs.needsSharedRt() && SanArgs.needsHwasanRt() && SanArgs.linkRuntimes()) {
@@ -884,8 +902,14 @@ bool tools::areOptimizationsEnabled(const ArgList &Args) {
   return false;
 }
 
-const char *tools::SplitDebugName(const ArgList &Args, const InputInfo &Input,
+const char *tools::SplitDebugName(const JobAction &JA, const ArgList &Args,
+                                  const InputInfo &Input,
                                   const InputInfo &Output) {
+  auto AddPostfix = [JA](auto &F) {
+    if (JA.getOffloadingDeviceKind() == Action::OFK_HIP)
+      F += (Twine("_") + JA.getOffloadingArch()).str();
+    F += ".dwo";
+  };
   if (Arg *A = Args.getLastArg(options::OPT_gsplit_dwarf_EQ))
     if (StringRef(A->getValue()) == "single")
       return Args.MakeArgString(Output.getFilename());
@@ -893,14 +917,16 @@ const char *tools::SplitDebugName(const ArgList &Args, const InputInfo &Input,
   Arg *FinalOutput = Args.getLastArg(options::OPT_o);
   if (FinalOutput && Args.hasArg(options::OPT_c)) {
     SmallString<128> T(FinalOutput->getValue());
-    llvm::sys::path::replace_extension(T, "dwo");
+    llvm::sys::path::remove_filename(T);
+    llvm::sys::path::append(T, llvm::sys::path::stem(FinalOutput->getValue()));
+    AddPostfix(T);
     return Args.MakeArgString(T);
   } else {
     // Use the compilation dir.
     SmallString<128> T(
         Args.getLastArgValue(options::OPT_fdebug_compilation_dir));
     SmallString<128> F(llvm::sys::path::stem(Input.getBaseInput()));
-    llvm::sys::path::replace_extension(F, "dwo");
+    AddPostfix(F);
     T += F;
     return Args.MakeArgString(F);
   }
@@ -1031,8 +1057,6 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
       break;
 
     case llvm::Triple::ppc:
-    case llvm::Triple::sparc:
-    case llvm::Triple::sparcel:
     case llvm::Triple::sparcv9:
       IsPICLevelTwo = true; // "-fPIE"
       break;

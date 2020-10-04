@@ -138,6 +138,21 @@ void MCStreamer::emitIntValue(uint64_t Value, unsigned Size) {
   unsigned Index = IsLittleEndian ? 0 : 8 - Size;
   emitBytes(StringRef(reinterpret_cast<char *>(&Swapped) + Index, Size));
 }
+void MCStreamer::emitIntValue(APInt Value) {
+  if (Value.getNumWords() == 1) {
+    emitIntValue(Value.getLimitedValue(), Value.getBitWidth() / 8);
+    return;
+  }
+
+  const bool IsLittleEndianTarget = Context.getAsmInfo()->isLittleEndian();
+  const bool ShouldSwap = sys::IsLittleEndianHost != IsLittleEndianTarget;
+  const APInt Swapped = ShouldSwap ? Value.byteSwap() : Value;
+  const unsigned Size = Value.getBitWidth() / 8;
+  SmallString<10> Tmp;
+  Tmp.resize(Size);
+  StoreIntToMemory(Swapped, reinterpret_cast<uint8_t *>(Tmp.data()), Size);
+  emitBytes(Tmp.str());
+}
 
 /// EmitULEB128IntValue - Special case of EmitULEB128Value that avoids the
 /// client having to pass in a MCExpr for constant integers.

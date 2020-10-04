@@ -974,19 +974,19 @@ public:
   /// Parse and print the information for a TC def.
   /// When `gen-ods-decl` is used, this prints the ODS declaration for the TC.
   /// When `gen-impl` is used, this prints the C++ implementation for the extra
-  /// methods defined in ODS (referenceIterators, referenceIndexingMaps and
-  /// regionBuilder).
+  /// methods defined in ODS (`iterator_types`, `indexing_maps` and
+  /// `regionBuilder`).
   LogicalResult parseAndEmitODSDef(llvm::raw_ostream &os);
 
   /// Print the ODS class that defines a new `cppOpName` for a `linalgOpName`.
   void printODS(llvm::raw_ostream &os, StringRef cppOpName,
-                StringRef linalgOpName);
+                StringRef linalgOpName, ComprehensionParsingState &state);
 
-  /// Print the C++ StructuredOpsInterface impl of `referenceIterators`.
+  /// Print the C++ StructuredOpsInterface impl of `iterator_types`.
   void printReferenceIterators(llvm::raw_ostream &os, StringRef cppOpName,
                                ComprehensionParsingState &state);
 
-  /// Print the C++ StructuredOpsInterface impl of `referenceIndexingMaps`.
+  /// Print the C++ StructuredOpsInterface impl of `indexing_maps`.
   void printReferenceIndexingMaps(llvm::raw_ostream &os, StringRef cppOpName,
                                   ComprehensionParsingState &state);
 
@@ -1419,7 +1419,8 @@ LogicalResult TCParser::parseAndEmitODSDef(llvm::raw_ostream &os) {
     return failure();
   }
   if (genODSDecl) {
-    printODS(os, cppOpName, tcName);
+    auto &state = perComprehensionStates.back();
+    printODS(os, cppOpName, tcName, state);
     os << "\n";
   }
   if (genODSImpl) {
@@ -1442,39 +1443,81 @@ LogicalResult TCParser::parseAndEmitODSDef(llvm::raw_ostream &os) {
 
 /// Print the ODS class that defines a new `cppOpName` for a `linalgOpName`.
 void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
-                        StringRef linalgOpName) {
-  const char *header = R"FMT(  def {0} : LinalgNamedStructured_Op<"{1}", [
-    NInputs<{2}>,
-    NOutputs<{3}>,
-    NamedStructuredOpTraits,
+                        StringRef linalgOpName,
+                        ComprehensionParsingState &state) {
+  const char *header = R"FMT(  def {0} : LinalgStructuredBase_Op<"{1}", [
+    NamedStructuredOpTrait,
+    AttrSizedOperandSegments,
     SingleBlockImplicitTerminator<"YieldOp">]> {
-      let arguments = (ins Variadic<LinalgOperand>:$views);
-      let results = (outs Variadic<AnyRankedTensor>:$output_tensors);
-      let regions = (region SizedRegion<1>:$region);
-      let builders = [OpBuilder<
-        "OpBuilder &b, OperationState &result, TypeRange outputTypes, "
-        # "ValueRange views",
+      let arguments = (ins Variadic<AnyShaped>:$inputs,
+                           Variadic<AnyMemRef>:$output_buffers,
+                           Variadic<AnyRankedTensor>:$init_tensors);
+      let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
+      let regions = (region AnyRegion:$region);
+
+      let skipDefaultBuilders = 1;
+      let builders = [ OpBuilder<
+        "OpBuilder &b, OperationState &result, "
+        "ValueRange inputs, ValueRange outputBuffers",
         [{{
-          result.addOperands(views);
-          result.addTypes(outputTypes);
+          result.addOperands(inputs);
+          result.addOperands(outputBuffers);
+          result.addAttribute(
+            "operand_segment_sizes",
+            b.getI32VectorAttr({{static_cast<int32_t>(inputs.size()),
+                                static_cast<int32_t>(outputBuffers.size()),
+                                static_cast<int32_t>(0)}));
           buildNamedStructuredOpRegionAndAttributes<{0}>(
-            b, result, TypeRange(views), outputTypes);
+            b,
+            result,
+            TypeRange(inputs),
+            TypeRange(outputBuffers),
+            TypeRange(),
+            TypeRange());
+        }]>, OpBuilder<
+        "OpBuilder &b, OperationState &result, TypeRange resultTensorTypes,"
+        "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors",
+        [{{
+          result.addOperands(inputs);
+          result.addOperands(outputBuffers);
+          result.addOperands(initTensors);
+          result.addTypes(resultTensorTypes);
+          result.addAttribute(
+            "operand_segment_sizes",
+            b.getI32VectorAttr({{static_cast<int32_t>(inputs.size()),
+                                static_cast<int32_t>(outputBuffers.size()),
+                                static_cast<int32_t>(initTensors.size())}));
+          buildNamedStructuredOpRegionAndAttributes<{0}>(
+            b,
+            result,
+            TypeRange(inputs),
+            TypeRange(outputBuffers),
+            TypeRange(initTensors),
+            resultTensorTypes);
+        }]>, OpBuilder<
+        "OpBuilder &b, OperationState &result, TypeRange resultTensorTypes,"
+        "ValueRange operands, ArrayRef<NamedAttribute> attributes = {{}",
+        [{{
+          result.addOperands(operands);
+          result.addAttributes(attributes);
+          result.addTypes(resultTensorTypes);
+          (void)result.addRegion();
         }]>
       ];
-      let parser = [{
-        return ::parseNamedStructuredOp<{0}>(parser, result);
-      }];
+      let printer = [{{ return ::printNamedStructuredOp(p, *this); }];
+      let parser = [{{ return ::parseNamedStructuredOp<{0}>(parser, result); }];
+      let verifier = [{{ return ::verifyNamedStructuredOp(*this); }];
+      let hasFolder = 1;
+      let hasCanonicalizer = 1;
+
       let extraClassDeclaration = [{{
-        llvm::Optional<SmallVector<StringRef, 8>> referenceIterators();
-        static SmallVector<StringRef, 8> referenceIterators(
-          TypeRange inputTypes, TypeRange outputTypes);
-
-        llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps();
-        static SmallVector<AffineMap, 8> referenceIndexingMaps(
-          TypeRange inputTypes, TypeRange outputTypes);
-
+        // Auto-generated.
+        ArrayAttr iterator_types();
+        ArrayAttr indexing_maps();
         static void regionBuilder(Block &block);
 
+        // Generic methods.
+        static unsigned getNumRegionArgs() {{ return {4}; }
         std::string getLibraryCallName() {{
           return generateLibraryCallName(getOperation());
         }
@@ -1489,23 +1532,18 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
       nInputs++;
   }
 
-  os << llvm::formatv(header, cppOpName, linalgOpName, nInputs, nOutputs);
+  os << llvm::formatv(header, cppOpName, linalgOpName, nInputs, nOutputs,
+                      state.orderedTensorArgs.size());
 }
 
-/// Print the C++ StructuredOpsInterface impl of `referenceIterators`.
+/// Print the C++ StructuredOpsInterface impl of `iterator_types`.
 void TCParser::printReferenceIterators(llvm::raw_ostream &os,
                                        StringRef cppOpName,
                                        ComprehensionParsingState &state) {
   const char *referenceReferenceIteratorsFmt =
       R"FMT(
-    // This is temporary until we transition out of manually specified ops
-    // that should be auto-generated with linalg-ods-gen.
-    llvm::Optional<SmallVector<StringRef, 8>> {0}::referenceIterators() {{
-      llvm_unreachable("Unexpected missing `iterator_types` attribute.");
-    }
-    SmallVector<StringRef, 8> {0}::referenceIterators(
-      TypeRange inputTypes, TypeRange outputTypes) {
-      return SmallVector<StringRef, 8>{{ {1} };
+    ArrayAttr {0}::iterator_types() {
+      return Builder(getContext()).getStrArrayAttr(SmallVector<StringRef, 8>{{ {1} });
     })FMT";
 
   std::string iteratorsStr;
@@ -1542,16 +1580,11 @@ void TCParser::printReferenceIndexingMaps(llvm::raw_ostream &os,
       R"FMT(
   // This is temporary until we transition out of manually specified ops that
   // should be auto-generated with linalg-ods-gen.
-  llvm::Optional<SmallVector<AffineMap, 8>> {0}::referenceIndexingMaps() {{
-    llvm_unreachable("Unexpected missing `indexing_maps` attribute.");
-  }
-  SmallVector<AffineMap, 8> {0}::referenceIndexingMaps(
-    TypeRange inputTypes, TypeRange outputTypes) {
-    assert(!inputTypes.empty() && "At least one input expected");
-    MLIRContext *context = (*inputTypes.begin()).getContext();
+  ArrayAttr {0}::indexing_maps() {
+    MLIRContext *context = getContext();
     AffineExpr {1};
     bindDims(context, {1});
-    return SmallVector<AffineMap, 8>{{ {2} };
+    return Builder(context).getAffineMapArrayAttr({ {2} });
   })FMT";
 
   // 2. Print a comma-separated list of identifiers for the AffineExpr in
@@ -1699,7 +1732,7 @@ int main(int argc, char **argv) {
   }
 
   // Include the proper Linalg header for end-to-end tblgen testing without
-  // resorting to non-portable shgell manipulations.
+  // resorting to non-portable shell manipulations.
   if (testEmitIncludeTdHeader)
     output->os() << "include \"mlir/Dialect/Linalg/IR/LinalgStructuredOps.td\"";
 

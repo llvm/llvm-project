@@ -182,8 +182,6 @@ llvm::Optional<ReasonToReject> renameable(const NamedDecl &RenameDecl,
   }
 
   assert(CrossFile);
-  if (!Index)
-    return ReasonToReject::NoIndexProvided;
 
   // FIXME: Renaming virtual methods requires to rename all overridens in
   // subclasses, our index doesn't have this information.
@@ -213,9 +211,7 @@ llvm::Error makeError(ReasonToReject Reason) {
     }
     llvm_unreachable("unhandled reason kind");
   };
-  return llvm::make_error<llvm::StringError>(
-      llvm::formatv("Cannot rename symbol: {0}", Message(Reason)),
-      llvm::inconvertibleErrorCode());
+  return error("Cannot rename symbol: {0}", Message(Reason));
 }
 
 // Return all rename occurrences in the main file.
@@ -319,16 +315,11 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
   });
 
   if (AffectedFiles.size() >= MaxLimitFiles)
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("The number of affected files exceeds the max limit {0}",
-                      MaxLimitFiles),
-        llvm::inconvertibleErrorCode());
-  if (HasMore) {
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("The symbol {0} has too many occurrences",
-                      RenameDecl.getQualifiedNameAsString()),
-        llvm::inconvertibleErrorCode());
-  }
+    return error("The number of affected files exceeds the max limit {0}",
+                 MaxLimitFiles);
+  if (HasMore)
+    return error("The symbol {0} has too many occurrences",
+                 RenameDecl.getQualifiedNameAsString());
   // Sort and deduplicate the results, in case that index returns duplications.
   for (auto &FileAndOccurrences : AffectedFiles) {
     auto &Ranges = FileAndOccurrences.getValue();
@@ -379,20 +370,15 @@ llvm::Expected<FileEdits> renameOutsideFile(
       // Our heuristics fails to adjust rename ranges to the current state of
       // the file, it is most likely the index is stale, so we give up the
       // entire rename.
-      return llvm::make_error<llvm::StringError>(
-          llvm::formatv("Index results don't match the content of file {0} "
-                        "(the index may be stale)",
-                        FilePath),
-          llvm::inconvertibleErrorCode());
+      return error("Index results don't match the content of file {0} "
+                   "(the index may be stale)",
+                   FilePath);
     }
     auto RenameEdit =
         buildRenameEdit(FilePath, *AffectedFileCode, *RenameRanges, NewName);
-    if (!RenameEdit) {
-      return llvm::make_error<llvm::StringError>(
-          llvm::formatv("fail to build rename edit for file {0}: {1}", FilePath,
-                        llvm::toString(RenameEdit.takeError())),
-          llvm::inconvertibleErrorCode());
-    }
+    if (!RenameEdit)
+      return error("failed to rename in file {0}: {1}", FilePath,
+                   RenameEdit.takeError());
     if (!RenameEdit->Replacements.empty())
       Results.insert({FilePath, std::move(*RenameEdit)});
   }
@@ -439,7 +425,7 @@ void findNearMiss(
 
 } // namespace
 
-llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
+llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   trace::Span Tracer("Rename flow");
   const auto &Opts = RInputs.Opts;
   ParsedAST &AST = RInputs.AST;
@@ -455,14 +441,10 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
     auto Content =
         SM.getFileManager().getVirtualFileSystem().getBufferForFile(AbsPath);
     if (!Content)
-      return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          llvm::formatv("Fail to open file {0}: {1}", AbsPath,
-                        Content.getError().message()));
+      return error("Fail to open file {0}: {1}", AbsPath,
+                   Content.getError().message());
     if (!*Content)
-      return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          llvm::formatv("Got no buffer for file {0}", AbsPath));
+      return error("Got no buffer for file {0}", AbsPath);
 
     return (*Content)->getBuffer().str();
   };
@@ -472,9 +454,13 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
     return Loc.takeError();
   const syntax::Token *IdentifierToken =
       spelledIdentifierTouching(*Loc, AST.getTokens());
+
   // Renames should only triggered on identifiers.
   if (!IdentifierToken)
     return makeError(ReasonToReject::NoSymbolFound);
+  Range CurrentIdentifier = halfOpenToRange(
+      SM, CharSourceRange::getCharRange(IdentifierToken->location(),
+                                        IdentifierToken->endLocation()));
   // FIXME: Renaming macros is not supported yet, the macro-handling code should
   // be moved to rename tooling library.
   if (locateMacroAt(*IdentifierToken, AST.getPreprocessor()))
@@ -505,32 +491,40 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
   auto MainFileRenameEdit = renameWithinFile(AST, RenameDecl, RInputs.NewName);
   if (!MainFileRenameEdit)
     return MainFileRenameEdit.takeError();
+  RenameResult Result;
+  Result.Target = CurrentIdentifier;
+  Edit MainFileEdits = Edit(MainFileCode, std::move(*MainFileRenameEdit));
+  llvm::for_each(MainFileEdits.asTextEdits(), [&Result](const TextEdit &TE) {
+    Result.LocalChanges.push_back(TE.range);
+  });
 
   // return the main file edit if this is a within-file rename or the symbol
   // being renamed is function local.
   if (!Opts.AllowCrossFile || RenameDecl.getParentFunctionOrMethod()) {
-    return FileEdits(
-        {std::make_pair(RInputs.MainFilePath,
-                        Edit{MainFileCode, std::move(*MainFileRenameEdit)})});
+    Result.GlobalChanges = FileEdits(
+        {std::make_pair(RInputs.MainFilePath, std::move(MainFileEdits))});
+    return Result;
   }
 
-  FileEdits Results;
-  // Renameable safely guards us that at this point we are renaming a local
-  // symbol if we don't have index.
-  if (RInputs.Index) {
-    auto OtherFilesEdits = renameOutsideFile(
-        RenameDecl, RInputs.MainFilePath, RInputs.NewName, *RInputs.Index,
-        Opts.LimitFiles == 0 ? std::numeric_limits<size_t>::max()
-                             : Opts.LimitFiles,
-        GetFileContent);
-    if (!OtherFilesEdits)
-      return OtherFilesEdits.takeError();
-    Results = std::move(*OtherFilesEdits);
+  // If the index is nullptr, we don't know the completeness of the result, so
+  // we don't populate the field GlobalChanges.
+  if (!RInputs.Index) {
+    assert(Result.GlobalChanges.empty() && Opts.AllowCrossFile);
+    return Result;
   }
+
+  auto OtherFilesEdits = renameOutsideFile(
+      RenameDecl, RInputs.MainFilePath, RInputs.NewName, *RInputs.Index,
+      Opts.LimitFiles == 0 ? std::numeric_limits<size_t>::max()
+                           : Opts.LimitFiles,
+      GetFileContent);
+  if (!OtherFilesEdits)
+    return OtherFilesEdits.takeError();
+  Result.GlobalChanges = *OtherFilesEdits;
   // Attach the rename edits for the main file.
-  Results.try_emplace(RInputs.MainFilePath, MainFileCode,
-                      std::move(*MainFileRenameEdit));
-  return Results;
+  Result.GlobalChanges.try_emplace(RInputs.MainFilePath,
+                                   std::move(MainFileEdits));
+  return Result;
 }
 
 llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
@@ -559,10 +553,8 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
     auto ShiftedOffset =
         positionToOffset(InitialCode.substr(LastOffset), Shifted);
     if (!ShiftedOffset)
-      return llvm::make_error<llvm::StringError>(
-          llvm::formatv("fail to convert the position {0} to offset ({1})", P,
-                        llvm::toString(ShiftedOffset.takeError())),
-          llvm::inconvertibleErrorCode());
+      return error("fail to convert the position {0} to offset ({1})", P,
+                   ShiftedOffset.takeError());
     LastPos = P;
     LastOffset += *ShiftedOffset;
     return LastOffset;

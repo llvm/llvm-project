@@ -650,7 +650,7 @@ unsigned GCNRegBankReassign::computeStallCycles(Register SrcReg, Register Reg,
 
 unsigned GCNRegBankReassign::scavengeReg(LiveInterval &LI, unsigned Bank,
                                          unsigned SubReg) const {
-  const TargetRegisterClass *RC = MRI->getRegClass(LI.reg);
+  const TargetRegisterClass *RC = MRI->getRegClass(LI.reg());
   unsigned MaxNumRegs = (Bank < NUM_VGPR_BANKS) ? MaxNumVGPRs
                                                 : MaxNumSGPRs;
   unsigned MaxReg = MaxNumRegs + (Bank < NUM_VGPR_BANKS ? AMDGPU::VGPR0

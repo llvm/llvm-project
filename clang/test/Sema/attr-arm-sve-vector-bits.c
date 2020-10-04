@@ -1,11 +1,16 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fsyntax-only -verify -msve-vector-bits=128 -fallow-half-arguments-and-returns %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fsyntax-only -verify -msve-vector-bits=256 -fallow-half-arguments-and-returns %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fsyntax-only -verify -msve-vector-bits=512 -fallow-half-arguments-and-returns %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fsyntax-only -verify -msve-vector-bits=1024 -fallow-half-arguments-and-returns %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fsyntax-only -verify -msve-vector-bits=2048 -fallow-half-arguments-and-returns %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -msve-vector-bits=128 -fallow-half-arguments-and-returns %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -msve-vector-bits=256 -fallow-half-arguments-and-returns %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -msve-vector-bits=512 -fallow-half-arguments-and-returns %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -msve-vector-bits=1024 -fallow-half-arguments-and-returns %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -msve-vector-bits=2048 -fallow-half-arguments-and-returns %s
+
+#include <stdint.h>
 
 #define N __ARM_FEATURE_SVE_BITS
 
+typedef __fp16 float16_t;
+typedef float float32_t;
+typedef double float64_t;
 typedef __SVInt8_t svint8_t;
 typedef __SVInt16_t svint16_t;
 typedef __SVInt32_t svint32_t;
@@ -19,6 +24,7 @@ typedef __SVFloat32_t svfloat32_t;
 typedef __SVFloat64_t svfloat64_t;
 
 #if defined(__ARM_FEATURE_SVE_BF16)
+typedef __bf16 bfloat16_t;
 typedef __SVBFloat16_t svbfloat16_t;
 #endif
 
@@ -42,6 +48,23 @@ typedef svfloat64_t fixed_float64_t __attribute__((arm_sve_vector_bits(N)));
 typedef svbfloat16_t fixed_bfloat16_t __attribute__((arm_sve_vector_bits(N)));
 
 typedef svbool_t fixed_bool_t __attribute__((arm_sve_vector_bits(N)));
+
+// GNU vector types
+typedef int8_t gnu_int8_t __attribute__((vector_size(N / 8)));
+typedef int16_t gnu_int16_t __attribute__((vector_size(N / 8)));
+typedef int32_t gnu_int32_t __attribute__((vector_size(N / 8)));
+typedef int64_t gnu_int64_t __attribute__((vector_size(N / 8)));
+
+typedef uint8_t gnu_uint8_t __attribute__((vector_size(N / 8)));
+typedef uint16_t gnu_uint16_t __attribute__((vector_size(N / 8)));
+typedef uint32_t gnu_uint32_t __attribute__((vector_size(N / 8)));
+typedef uint64_t gnu_uint64_t __attribute__((vector_size(N / 8)));
+
+typedef float16_t gnu_float16_t __attribute__((vector_size(N / 8)));
+typedef float32_t gnu_float32_t __attribute__((vector_size(N / 8)));
+typedef float64_t gnu_float64_t __attribute__((vector_size(N / 8)));
+
+typedef bfloat16_t gnu_bfloat16_t __attribute__((vector_size(N / 8)));
 
 // Attribute must have a single argument
 typedef svint8_t no_argument __attribute__((arm_sve_vector_bits));         // expected-error {{'arm_sve_vector_bits' attribute takes one argument}}
@@ -176,37 +199,50 @@ union union_bool { fixed_bool_t x, y[5]; };
 // --------------------------------------------------------------------------//
 // Implicit casts
 
-#define TEST_CAST(TYPE)                                          \
-  sv##TYPE##_t to_sv##TYPE##_t(fixed_##TYPE##_t x) { return x; } \
-  fixed_##TYPE##_t from_sv##TYPE##_t(sv##TYPE##_t x) { return x; }
+#define TEST_CAST_COMMON(TYPE)                                              \
+  sv##TYPE##_t to_sv##TYPE##_t_from_fixed(fixed_##TYPE##_t x) { return x; } \
+  fixed_##TYPE##_t from_sv##TYPE##_t_to_fixed(sv##TYPE##_t x) { return x; }
 
-TEST_CAST(int8)
-TEST_CAST(int16)
-TEST_CAST(int32)
-TEST_CAST(int64)
-TEST_CAST(uint8)
-TEST_CAST(uint16)
-TEST_CAST(uint32)
-TEST_CAST(uint64)
-TEST_CAST(float16)
-TEST_CAST(float32)
-TEST_CAST(float64)
-TEST_CAST(bfloat16)
-TEST_CAST(bool)
+#define TEST_CAST_GNU(PREFIX, TYPE)                                                          \
+  gnu_##TYPE##_t to_gnu_##TYPE##_t_from_##PREFIX##TYPE##_t(PREFIX##TYPE##_t x) { return x; } \
+  PREFIX##TYPE##_t from_gnu_##TYPE##_t_to_##PREFIX##TYPE##_t(gnu_##TYPE##_t x) { return x; }
+
+#define TEST_CAST_VECTOR(TYPE) \
+  TEST_CAST_COMMON(TYPE)       \
+  TEST_CAST_GNU(sv, TYPE)      \
+  TEST_CAST_GNU(fixed_, TYPE)
+
+TEST_CAST_VECTOR(int8)
+TEST_CAST_VECTOR(int16)
+TEST_CAST_VECTOR(int32)
+TEST_CAST_VECTOR(int64)
+TEST_CAST_VECTOR(uint8)
+TEST_CAST_VECTOR(uint16)
+TEST_CAST_VECTOR(uint32)
+TEST_CAST_VECTOR(uint64)
+TEST_CAST_VECTOR(float16)
+TEST_CAST_VECTOR(float32)
+TEST_CAST_VECTOR(float64)
+TEST_CAST_VECTOR(bfloat16)
+TEST_CAST_COMMON(bool)
 
 // Test the implicit conversion only applies to valid types
 fixed_int8_t to_fixed_int8_t__from_svuint8_t(svuint8_t x) { return x; } // expected-error-re {{returning 'svuint8_t' (aka '__SVUint8_t') from a function with incompatible result type 'fixed_int8_t' (vector of {{[0-9]+}} 'signed char' values)}}
 fixed_bool_t to_fixed_bool_t__from_svint32_t(svint32_t x) { return x; } // expected-error-re {{returning 'svint32_t' (aka '__SVInt32_t') from a function with incompatible result type 'fixed_bool_t' (vector of {{[0-9]+}} 'unsigned char' values)}}
 
+svint64_t to_svint64_t__from_gnu_int32_t(gnu_int32_t x) { return x; } // expected-error-re {{returning 'gnu_int32_t' (vector of {{[0-9]+}} 'int32_t' values) from a function with incompatible result type 'svint64_t' (aka '__SVInt64_t')}}
+gnu_int32_t from_svint64_t__to_gnu_int32_t(svint64_t x) { return x; } // expected-error-re {{returning 'svint64_t' (aka '__SVInt64_t') from a function with incompatible result type 'gnu_int32_t' (vector of {{[0-9]+}} 'int32_t' values)}}
+
+// Test implicit conversion between SVE and GNU vector is invalid when
+// __ARM_FEATURE_SVE_BITS != N
+#if defined(__ARM_FEATURE_SVE_BITS) && __ARM_FEATURE_SVE_BITS == 512
+typedef int32_t int4 __attribute__((vector_size(16)));
+svint32_t badcast(int4 x) { return x; } // expected-error {{returning 'int4' (vector of 4 'int32_t' values) from a function with incompatible result type 'svint32_t' (aka '__SVInt32_t')}}
+#endif
+
 // Test conversion between predicate and uint8 is invalid, both have the same
 // memory representation.
 fixed_bool_t to_fixed_bool_t__from_svuint8_t(svuint8_t x) { return x; } // expected-error-re {{returning 'svuint8_t' (aka '__SVUint8_t') from a function with incompatible result type 'fixed_bool_t' (vector of {{[0-9]+}} 'unsigned char' values)}}
-
-// Test the implicit conversion only applies to fixed-length types
-typedef signed int vSInt32 __attribute__((__vector_size__(16)));
-svint32_t to_svint32_t_from_gnut(vSInt32 x) { return x; } // expected-error-re {{returning 'vSInt32' (vector of {{[0-9]+}} 'int' values) from a function with incompatible result type 'svint32_t' (aka '__SVInt32_t')}}
-
-vSInt32 to_gnut_from_svint32_t(svint32_t x) { return x; } // expected-error-re {{returning 'svint32_t' (aka '__SVInt32_t') from a function with incompatible result type 'vSInt32' (vector of {{[0-9]+}} 'int' values)}}
 
 // --------------------------------------------------------------------------//
 // Test the scalable and fixed-length types can be used interchangeably

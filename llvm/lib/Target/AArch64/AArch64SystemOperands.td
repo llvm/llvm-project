@@ -32,6 +32,11 @@ def HasPAN_RWV : Predicate<"Subtarget->hasPAN_RWV()">,
                  AssemblerPredicate<(all_of FeaturePAN_RWV),
                  "ARM v8.2 PAN AT S1E1R and AT S1E1W Variation">;
 
+def HasCONTEXTIDREL2
+               : Predicate<"Subtarget->hasCONTEXTIDREL2()">,
+                 AssemblerPredicate<(all_of FeatureCONTEXTIDREL2),
+                 "Target contains CONTEXTIDR_EL2 RW operand">;
+
 //===----------------------------------------------------------------------===//
 // AT (address translate) instruction options.
 //===----------------------------------------------------------------------===//
@@ -1220,7 +1225,6 @@ def : RWSysReg<"LORC_EL1",   0b11, 0b000, 0b1010, 0b0100, 0b011>;
 //                              Op0    Op1     CRn     CRm    Op2
 let Requires = [{ {AArch64::FeatureVH} }] in {
 def : RWSysReg<"TTBR1_EL2",       0b11, 0b100, 0b0010, 0b0000, 0b001>;
-def : RWSysReg<"CONTEXTIDR_EL2",  0b11, 0b100, 0b1101, 0b0000, 0b001>;
 def : RWSysReg<"CNTHV_TVAL_EL2",  0b11, 0b100, 0b1110, 0b0011, 0b000>;
 def : RWSysReg<"CNTHV_CVAL_EL2",  0b11, 0b100, 0b1110, 0b0011, 0b010>;
 def : RWSysReg<"CNTHV_CTL_EL2",   0b11, 0b100, 0b1110, 0b0011, 0b001>;
@@ -1246,6 +1250,9 @@ def : RWSysReg<"CNTV_CTL_EL02",   0b11, 0b101, 0b1110, 0b0011, 0b001>;
 def : RWSysReg<"CNTV_CVAL_EL02",  0b11, 0b101, 0b1110, 0b0011, 0b010>;
 def : RWSysReg<"SPSR_EL12",       0b11, 0b101, 0b0100, 0b0000, 0b000>;
 def : RWSysReg<"ELR_EL12",        0b11, 0b101, 0b0100, 0b0000, 0b001>;
+let Requires = [{ {AArch64::FeatureCONTEXTIDREL2} }] in {
+  def : RWSysReg<"CONTEXTIDR_EL2",  0b11, 0b100, 0b1101, 0b0000, 0b001>;
+}
 }
 // v8.2a registers
 //                  Op0    Op1     CRn     CRm    Op2

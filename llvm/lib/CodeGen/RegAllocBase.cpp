@@ -87,13 +87,13 @@ void RegAllocBase::allocatePhysRegs() {
 
   // Continue assigning vregs one at a time to available physical registers.
   while (LiveInterval *VirtReg = dequeue()) {
-    assert(!VRM->hasPhys(VirtReg->reg) && "Register already assigned");
+    assert(!VRM->hasPhys(VirtReg->reg()) && "Register already assigned");
 
     // Unused registers can appear when the spiller coalesces snippets.
-    if (MRI->reg_nodbg_empty(VirtReg->reg)) {
+    if (MRI->reg_nodbg_empty(VirtReg->reg())) {
       LLVM_DEBUG(dbgs() << "Dropping unused " << *VirtReg << '\n');
       aboutToRemoveInterval(*VirtReg);
-      LIS->removeInterval(VirtReg->reg);
+      LIS->removeInterval(VirtReg->reg());
       continue;
     }
 
@@ -104,8 +104,8 @@ void RegAllocBase::allocatePhysRegs() {
     // register if possible and populate a list of new live intervals that
     // result from splitting.
     LLVM_DEBUG(dbgs() << "\nselectOrSplit "
-                      << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg))
-                      << ':' << *VirtReg << " w=" << VirtReg->weight << '\n');
+                      << TRI->getRegClassName(MRI->getRegClass(VirtReg->reg()))
+                      << ':' << *VirtReg << " w=" << VirtReg->weight() << '\n');
 
     using VirtRegVec = SmallVector<Register, 4>;
 
@@ -117,8 +117,9 @@ void RegAllocBase::allocatePhysRegs() {
       // Probably caused by an inline asm.
       MachineInstr *MI = nullptr;
       for (MachineRegisterInfo::reg_instr_iterator
-           I = MRI->reg_instr_begin(VirtReg->reg), E = MRI->reg_instr_end();
-           I != E; ) {
+               I = MRI->reg_instr_begin(VirtReg->reg()),
+               E = MRI->reg_instr_end();
+           I != E;) {
         MI = &*(I++);
         if (MI->isInlineAsm())
           break;
@@ -133,8 +134,9 @@ void RegAllocBase::allocatePhysRegs() {
         report_fatal_error("ran out of registers during register allocation");
       }
       // Keep going after reporting the error.
-      VRM->assignVirt2Phys(VirtReg->reg,
-                 RegClassInfo.getOrder(MRI->getRegClass(VirtReg->reg)).front());
+      VRM->assignVirt2Phys(
+          VirtReg->reg(),
+          RegClassInfo.getOrder(MRI->getRegClass(VirtReg->reg())).front());
       continue;
     }
 
@@ -145,16 +147,16 @@ void RegAllocBase::allocatePhysRegs() {
       assert(LIS->hasInterval(Reg));
 
       LiveInterval *SplitVirtReg = &LIS->getInterval(Reg);
-      assert(!VRM->hasPhys(SplitVirtReg->reg) && "Register already assigned");
-      if (MRI->reg_nodbg_empty(SplitVirtReg->reg)) {
+      assert(!VRM->hasPhys(SplitVirtReg->reg()) && "Register already assigned");
+      if (MRI->reg_nodbg_empty(SplitVirtReg->reg())) {
         assert(SplitVirtReg->empty() && "Non-empty but used interval");
         LLVM_DEBUG(dbgs() << "not queueing unused  " << *SplitVirtReg << '\n');
         aboutToRemoveInterval(*SplitVirtReg);
-        LIS->removeInterval(SplitVirtReg->reg);
+        LIS->removeInterval(SplitVirtReg->reg());
         continue;
       }
       LLVM_DEBUG(dbgs() << "queuing new interval: " << *SplitVirtReg << "\n");
-      assert(Register::isVirtualRegister(SplitVirtReg->reg) &&
+      assert(Register::isVirtualRegister(SplitVirtReg->reg()) &&
              "expect split value in virtual register");
       enqueue(SplitVirtReg);
       ++NumNewQueued;

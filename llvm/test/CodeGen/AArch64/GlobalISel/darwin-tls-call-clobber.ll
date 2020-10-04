@@ -31,9 +31,8 @@ target triple = "arm64-apple-ios13.0.0"
 ; This test checks that we don't re-use the register for the variable descriptor
 ; for the second ldr.
 ; CHECK:        adrp	x[[PTR1:[0-9]+]], _t_val@TLVPPAGE
-; CHECK:	ldr	x[[PTR1]], [x[[PTR1]], _t_val@TLVPPAGEOFF]
-; CHECK:	ldr	x[[FPTR:[0-9]+]], [x[[PTR1]]]
-; CHECK:        mov	x0, x[[PTR1]]
+; CHECK:	ldr	x0, [x[[PTR1]], _t_val@TLVPPAGEOFF]
+; CHECK:	ldr	x[[FPTR:[0-9]+]], [x0]
 ; CHECK:        blr     x[[FPTR]]
 
 define void @_Z4funcPKc(i8* %id) {

@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: lld -flavor darwinnew -o %t %t.o
+# RUN: %lld -o %t %t.o
 # RUN: llvm-objdump --macho --all-headers %t | FileCheck %s
 
 # CHECK:                 cmd LC_DYLD_INFO_ONLY

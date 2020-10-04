@@ -249,6 +249,10 @@ private:
 
   DebugLoc debugLoc;                    // Source line information.
 
+  /// Unique instruction number. Used by DBG_INSTR_REFs to refer to the values
+  /// defined by this instruction.
+  unsigned DebugInstrNum;
+
   // Intrusive list support
   friend struct ilist_traits<MachineInstr>;
   friend struct ilist_callback_traits<MachineBasicBlock>;
@@ -443,6 +447,14 @@ public:
   /// Return the debug label referenced by
   /// this DBG_LABEL instruction.
   const DILabel *getDebugLabel() const;
+
+  /// Fetch the instruction number of this MachineInstr. If it does not have
+  /// one already, a new and unique number will be assigned.
+  unsigned getDebugInstrNum();
+
+  /// Examine the instruction number of this MachineInstr. May be zero if
+  /// it hasn't been assigned a number yet.
+  unsigned peekDebugInstrNum() const { return DebugInstrNum; }
 
   /// Emit an error referring to the source location of this instruction.
   /// This should only be used for inline assembly that is somehow
@@ -1145,7 +1157,10 @@ public:
 
   bool isDebugValue() const { return getOpcode() == TargetOpcode::DBG_VALUE; }
   bool isDebugLabel() const { return getOpcode() == TargetOpcode::DBG_LABEL; }
-  bool isDebugInstr() const { return isDebugValue() || isDebugLabel(); }
+  bool isDebugRef() const { return getOpcode() == TargetOpcode::DBG_INSTR_REF; }
+  bool isDebugInstr() const {
+    return isDebugValue() || isDebugLabel() || isDebugRef();
+  }
 
   bool isDebugOffsetImm() const { return getDebugOffset().isImm(); }
 
@@ -1238,6 +1253,7 @@ public:
     case TargetOpcode::EH_LABEL:
     case TargetOpcode::GC_LABEL:
     case TargetOpcode::DBG_VALUE:
+    case TargetOpcode::DBG_INSTR_REF:
     case TargetOpcode::DBG_LABEL:
     case TargetOpcode::LIFETIME_START:
     case TargetOpcode::LIFETIME_END:

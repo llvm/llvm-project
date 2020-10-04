@@ -450,7 +450,7 @@ class MVE_ScalarShift<string iname, dag oops, dag iops, string asm, string cstr,
   : MVE_MI_with_pred<oops, iops, NoItinerary, iname, asm, cstr, pattern> {
   let Inst{31-20} = 0b111010100101;
   let Inst{8} = 0b1;
-
+  let validForTailPredication=1;
 }
 
 class MVE_ScalarShiftSingleReg<string iname, dag iops, string asm, string cstr,
@@ -6453,6 +6453,7 @@ class MVE_VPT<string suffix, bits<2> size, dag iops, string asm, list<dag> patte
   let Inst{4} = 0b0;
 
   let Defs = [VPR];
+  let validForTailPredication=1;
 }
 
 class MVE_VPTt1<string suffix, bits<2> size, dag iops>
@@ -6565,6 +6566,7 @@ class MVE_VPTf<string suffix, bit size, dag iops, string asm, list<dag> pattern=
 
   let Defs = [VPR];
   let Predicates = [HasMVEFloat];
+  let validForTailPredication=1;
 }
 
 class MVE_VPTft1<string suffix, bit size>

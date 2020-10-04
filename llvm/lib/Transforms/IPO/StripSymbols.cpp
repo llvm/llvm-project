@@ -19,18 +19,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/IPO/StripSymbols.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Local.h"
+
 using namespace llvm;
 
 namespace {
@@ -249,9 +252,7 @@ bool StripNonDebugSymbols::runOnModule(Module &M) {
   return StripSymbolNames(M, true);
 }
 
-bool StripDebugDeclare::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
+static bool stripDebugDeclareImpl(Module &M) {
 
   Function *Declare = M.getFunction("llvm.dbg.declare");
   std::vector<Constant*> DeadConstants;
@@ -289,17 +290,13 @@ bool StripDebugDeclare::runOnModule(Module &M) {
   return true;
 }
 
-/// Remove any debug info for global variables/functions in the given module for
-/// which said global variable/function no longer exists (i.e. is null).
-///
-/// Debugging information is encoded in llvm IR using metadata. This is designed
-/// such a way that debug info for symbols preserved even if symbols are
-/// optimized away by the optimizer. This special pass removes debug info for
-/// such symbols.
-bool StripDeadDebugInfo::runOnModule(Module &M) {
+bool StripDebugDeclare::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
+  return stripDebugDeclareImpl(M);
+}
 
+static bool stripDeadDebugInfoImpl(Module &M) {
   bool Changed = false;
 
   LLVMContext &C = M.getContext();
@@ -379,4 +376,41 @@ bool StripDeadDebugInfo::runOnModule(Module &M) {
   }
 
   return Changed;
+}
+
+/// Remove any debug info for global variables/functions in the given module for
+/// which said global variable/function no longer exists (i.e. is null).
+///
+/// Debugging information is encoded in llvm IR using metadata. This is designed
+/// such a way that debug info for symbols preserved even if symbols are
+/// optimized away by the optimizer. This special pass removes debug info for
+/// such symbols.
+bool StripDeadDebugInfo::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+  return stripDeadDebugInfoImpl(M);
+}
+
+PreservedAnalyses StripSymbolsPass::run(Module &M, ModuleAnalysisManager &AM) {
+  StripDebugInfo(M);
+  StripSymbolNames(M, false);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses StripNonDebugSymbolsPass::run(Module &M,
+                                                ModuleAnalysisManager &AM) {
+  StripSymbolNames(M, true);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses StripDebugDeclarePass::run(Module &M,
+                                             ModuleAnalysisManager &AM) {
+  stripDebugDeclareImpl(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses StripDeadDebugInfoPass::run(Module &M,
+                                              ModuleAnalysisManager &AM) {
+  stripDeadDebugInfoImpl(M);
+  return PreservedAnalyses::all();
 }

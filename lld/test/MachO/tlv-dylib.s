@@ -2,14 +2,14 @@
 # RUN: split-file %s %t
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/libtlv.s -o %t/libtlv.o
-# RUN: lld -flavor darwinnew -dylib -install_name @executable_path/libtlv.dylib \
-# RUN:   -Z -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/libtlv.dylib %t/libtlv.o
+# RUN: %lld -dylib -install_name @executable_path/libtlv.dylib \
+# RUN:   -lSystem -o %t/libtlv.dylib %t/libtlv.o
 # RUN: llvm-objdump --exports-trie -d --no-show-raw-insn %t/libtlv.dylib | FileCheck %s --check-prefix=DYLIB
 # DYLIB-DAG: _foo [per-thread]
 # DYLIB-DAG: _bar [per-thread]
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
-# RUN: lld -flavor darwinnew -Z -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -L%t -ltlv %t/test.o -o %t/test
+# RUN: %lld -lSystem -L%t -ltlv %t/test.o -o %t/test
 # RUN: llvm-objdump --bind -d --no-show-raw-insn %t/test | FileCheck %s
 
 # CHECK:      movq [[#]](%rip), %rax # [[#%x, FOO:]]

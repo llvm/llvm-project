@@ -17,14 +17,14 @@ define float @fdiv_f32(float %a, float %b) #0 {
   ; GCN:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; GCN:   [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 1065353216
   ; GCN:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GCN:   S_SETREG_B32 killed [[S_MOV_B32_]], 2305, implicit-def $mode, implicit $mode
+  ; GCN:   S_SETREG_B32_mode killed [[S_MOV_B32_]], 2305, implicit-def $mode, implicit $mode
   ; GCN:   %14:vgpr_32 = nofpexcept V_FMA_F32 1, %8, 0, %10, 0, killed [[S_MOV_B32_1]], 0, 0, implicit $mode, implicit $exec
   ; GCN:   %15:vgpr_32 = nofpexcept V_FMA_F32 0, killed %14, 0, %10, 0, %10, 0, 0, implicit $mode, implicit $exec
   ; GCN:   %16:vgpr_32 = nofpexcept V_MUL_F32_e64 0, %6, 0, %15, 0, 0, implicit $mode, implicit $exec
   ; GCN:   %17:vgpr_32 = nofpexcept V_FMA_F32 1, %8, 0, %16, 0, %6, 0, 0, implicit $mode, implicit $exec
   ; GCN:   %18:vgpr_32 = nofpexcept V_FMA_F32 0, killed %17, 0, %15, 0, %16, 0, 0, implicit $mode, implicit $exec
   ; GCN:   %19:vgpr_32 = nofpexcept V_FMA_F32 1, %8, 0, %18, 0, %6, 0, 0, implicit $mode, implicit $exec
-  ; GCN:   S_SETREG_B32 killed [[S_MOV_B32_2]], 2305, implicit-def dead $mode, implicit $mode
+  ; GCN:   S_SETREG_B32_mode killed [[S_MOV_B32_2]], 2305, implicit-def dead $mode, implicit $mode
   ; GCN:   $vcc = COPY %7
   ; GCN:   %20:vgpr_32 = nofpexcept V_DIV_FMAS_F32 0, killed %19, 0, %15, 0, %18, 0, 0, implicit $mode, implicit $vcc, implicit $exec
   ; GCN:   %21:vgpr_32 = nofpexcept V_DIV_FIXUP_F32 0, killed %20, 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
@@ -50,14 +50,14 @@ define float @fdiv_nnan_f32(float %a, float %b) #0 {
   ; GCN:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; GCN:   [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 1065353216
   ; GCN:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GCN:   S_SETREG_B32 killed [[S_MOV_B32_]], 2305, implicit-def $mode, implicit $mode
+  ; GCN:   S_SETREG_B32_mode killed [[S_MOV_B32_]], 2305, implicit-def $mode, implicit $mode
   ; GCN:   %14:vgpr_32 = nnan nofpexcept V_FMA_F32 1, %8, 0, %10, 0, killed [[S_MOV_B32_1]], 0, 0, implicit $mode, implicit $exec
   ; GCN:   %15:vgpr_32 = nnan nofpexcept V_FMA_F32 0, killed %14, 0, %10, 0, %10, 0, 0, implicit $mode, implicit $exec
   ; GCN:   %16:vgpr_32 = nnan nofpexcept V_MUL_F32_e64 0, %6, 0, %15, 0, 0, implicit $mode, implicit $exec
   ; GCN:   %17:vgpr_32 = nnan nofpexcept V_FMA_F32 1, %8, 0, %16, 0, %6, 0, 0, implicit $mode, implicit $exec
   ; GCN:   %18:vgpr_32 = nnan nofpexcept V_FMA_F32 0, killed %17, 0, %15, 0, %16, 0, 0, implicit $mode, implicit $exec
   ; GCN:   %19:vgpr_32 = nnan nofpexcept V_FMA_F32 1, %8, 0, %18, 0, %6, 0, 0, implicit $mode, implicit $exec
-  ; GCN:   S_SETREG_B32 killed [[S_MOV_B32_2]], 2305, implicit-def dead $mode, implicit $mode
+  ; GCN:   S_SETREG_B32_mode killed [[S_MOV_B32_2]], 2305, implicit-def dead $mode, implicit $mode
   ; GCN:   $vcc = COPY %7
   ; GCN:   %20:vgpr_32 = nnan nofpexcept V_DIV_FMAS_F32 0, killed %19, 0, %15, 0, %18, 0, 0, implicit $mode, implicit $vcc, implicit $exec
   ; GCN:   %21:vgpr_32 = nnan nofpexcept V_DIV_FIXUP_F32 0, killed %20, 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec

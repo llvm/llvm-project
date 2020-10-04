@@ -31,12 +31,15 @@ Symbols:
 # RUN: llvm-readobj --all %t1.o | FileCheck %s --check-prefix LLVM
 # RUN: llvm-readelf --all %t1.o 2>&1 | FileCheck %s --implicit-check-not=warning --implicit-check-not=error
 
-## Check we report a warning when SHT_LLVM_ADDRSIG is broken (e.g. contains a malformed uleb128).
+## Check we report a warning when the content of the SHT_LLVM_ADDRSIG section
+## is broken (e.g. contains a malformed uleb128).
 
-# RUN: yaml2obj --docnum=2 %s -o %t2.o
-# RUN: llvm-readobj --addrsig %t2.o 2>&1 | FileCheck %s -DFILE=%t2.o --check-prefix=MALFORMED
+# RUN: yaml2obj --docnum=2 %s -o %t2.1.o
+# RUN: llvm-readobj --addrsig %t2.1.o 2>&1 | FileCheck %s -DFILE=%t2.1.o --check-prefix=MALFORMED
 
-# MALFORMED: warning: '[[FILE]]': malformed uleb128, extends past end
+# MALFORMED:      Addrsig [
+# MALFORMED-NEXT: warning: '[[FILE]]': unable to decode SHT_LLVM_ADDRSIG section with index 1: malformed uleb128, extends past end
+# MALFORMED-NEXT: ]
 
 --- !ELF
 FileHeader:
@@ -44,9 +47,19 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_DYN
 Sections:
-  - Name: .llvm_addrsig
-    Type: SHT_LLVM_ADDRSIG
-    Content: "FF"
+  - Name:     .llvm_addrsig
+    Type:     SHT_LLVM_ADDRSIG
+    Content:  "FF"
+    ShOffset: [[OFFSET=<none>]]
+
+## Check we report a warning when the content of the SHT_LLVM_ADDRSIG section can't be read.
+
+# RUN: yaml2obj --docnum=2 -DOFFSET=0xffffffff %s -o %t2.2.o
+# RUN: llvm-readobj --addrsig %t2.2.o 2>&1 | FileCheck %s -DFILE=%t2.2.o --check-prefix=BROKEN-SEC
+
+# BROKEN-SEC:      Addrsig [
+# BROKEN-SEC-NEXT: warning: '[[FILE]]': section [index 1] has a sh_offset (0xffffffff) + sh_size (0x1) that is greater than the file size (0x168)
+# BROKEN-SEC-NEXT: ]
 
 ## Check we report a warning when SHT_LLVM_ADDRSIG references a symbol that can't be
 ## dumped (e.g. the index value is larger than the number of symbols in .symtab).

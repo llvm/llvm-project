@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
@@ -153,6 +154,10 @@ static void emitDialectDecl(Dialect &dialect,
       dialectsOs << llvm::formatv(dialectRegistrationTemplate,
                                   dependentDialect);
   }
+
+  // Emit all nested namespaces.
+  NamespaceEmitter nsEmitter(os, dialect);
+
   // Emit the start of the decl.
   std::string cppName = dialect.getCppClassName();
   os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName(),

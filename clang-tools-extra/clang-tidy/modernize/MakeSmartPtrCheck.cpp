@@ -19,7 +19,6 @@ namespace modernize {
 
 namespace {
 
-constexpr char StdMemoryHeader[] = "memory";
 constexpr char ConstructorCall[] = "constructorCall";
 constexpr char ResetCall[] = "resetCall";
 constexpr char NewExpression[] = "newExpression";
@@ -47,7 +46,7 @@ MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
       Inserter(Options.getLocalOrGlobal("IncludeStyle",
                                         utils::IncludeSorter::IS_LLVM)),
       MakeSmartPtrFunctionHeader(
-          Options.get("MakeSmartPtrFunctionHeader", StdMemoryHeader)),
+          Options.get("MakeSmartPtrFunctionHeader", "<memory>")),
       MakeSmartPtrFunctionName(
           Options.get("MakeSmartPtrFunction", MakeSmartPtrFunctionName)),
       IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
@@ -430,9 +429,7 @@ void MakeSmartPtrCheck::insertHeader(DiagnosticBuilder &Diag, FileID FD) {
   if (MakeSmartPtrFunctionHeader.empty()) {
     return;
   }
-  Diag << Inserter.createIncludeInsertion(
-      FD, MakeSmartPtrFunctionHeader,
-      /*IsAngled=*/MakeSmartPtrFunctionHeader == StdMemoryHeader);
+  Diag << Inserter.createIncludeInsertion(FD, MakeSmartPtrFunctionHeader);
 }
 
 } // namespace modernize

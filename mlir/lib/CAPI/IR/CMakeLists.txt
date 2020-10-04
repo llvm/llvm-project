@@ -4,6 +4,7 @@ add_mlir_library(MLIRCAPIIR
   IR.cpp
   StandardAttributes.cpp
   StandardTypes.cpp
+  Support.cpp
 
   EXCLUDE_FROM_LIBMLIR
 

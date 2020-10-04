@@ -381,6 +381,10 @@ namespace llvm {
     /// sym\@got\@dtprel\@l.
     ADDI_DTPREL_L,
 
+    /// G8RC = PADDI_DTPREL %x3, Symbol - For the pc-rel based local-dynamic TLS
+    /// model, produces a PADDI8 instruction that adds X3 to sym\@dtprel.
+    PADDI_DTPREL,
+
     /// VRRC = VADD_SPLAT Elt, EltSize - Temporary node to be expanded
     /// during instruction selection to optimize a BUILD_VECTOR into
     /// operations on splats.  This is necessary to avoid losing these
@@ -440,6 +444,26 @@ namespace llvm {
     /// TLS global address when using dynamic access models. This can be done
     /// through an add like PADDI.
     TLS_DYNAMIC_MAT_PCREL_ADDR,
+
+    /// TLS_LOCAL_EXEC_MAT_ADDR = Materialize an address for TLS global address
+    /// when using local exec access models, and when prefixed instructions are
+    /// available. This is used with ADD_TLS to produce an add like PADDI.
+    TLS_LOCAL_EXEC_MAT_ADDR,
+
+    /// ACC_BUILD = Build an accumulator register from 4 VSX registers.
+    ACC_BUILD,
+
+    /// PAIR_BUILD = Build a vector pair register from 2 VSX registers.
+    PAIR_BUILD,
+
+    /// EXTRACT_VSX_REG = Extract one of the underlying vsx registers of
+    /// an accumulator or pair register. This node is needed because
+    /// EXTRACT_SUBVECTOR expects the input and output vectors to have the same
+    /// element type.
+    EXTRACT_VSX_REG,
+
+    /// XXMFACC = This corresponds to the xxmfacc instruction.
+    XXMFACC,
 
     // Constrained conversion from floating point to int
     STRICT_FCTIDZ = ISD::FIRST_TARGET_STRICTFP_OPCODE,

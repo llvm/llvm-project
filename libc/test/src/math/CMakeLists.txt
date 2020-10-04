@@ -591,3 +591,16 @@ add_fp_unittest(
     libc.src.math.remquol
     libc.utils.FPUtil.fputil
 )
+
+add_fp_unittest(
+  hypotf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    hypotf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.hypotf
+    libc.utils.FPUtil.fputil
+)

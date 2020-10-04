@@ -1,4 +1,5 @@
-; RUN: opt < %s -analyze -delinearize | FileCheck %s
+; RUN: opt < %s -analyze -enable-new-pm=0 -delinearize | FileCheck %s
+; RUN: opt < %s -passes='print<delinearization>' -disable-output 2>&1 | FileCheck %s
 ; void foo(int n, int m, int o, double A[n][m][o]) {
 ;
 ;   for (int i = 0; i < n; i++)

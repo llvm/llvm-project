@@ -1173,10 +1173,12 @@ LogicalResult AffineDmaWaitOp::fold(ArrayRef<Attribute> cstOperands,
 // AffineForOp
 //===----------------------------------------------------------------------===//
 
-void AffineForOp::build(
-    OpBuilder &builder, OperationState &result, ValueRange lbOperands,
-    AffineMap lbMap, ValueRange ubOperands, AffineMap ubMap, int64_t step,
-    function_ref<void(OpBuilder &, Location, Value)> bodyBuilder) {
+/// 'bodyBuilder' is used to build the body of affine.for. If iterArgs and
+/// bodyBuilder are empty/null, we include default terminator op.
+void AffineForOp::build(OpBuilder &builder, OperationState &result,
+                        ValueRange lbOperands, AffineMap lbMap,
+                        ValueRange ubOperands, AffineMap ubMap, int64_t step,
+                        ValueRange iterArgs, BodyBuilderFn bodyBuilder) {
   assert(((!lbMap && lbOperands.empty()) ||
           lbOperands.size() == lbMap.getNumInputs()) &&
          "lower bound operand count does not match the affine map");
@@ -1184,6 +1186,9 @@ void AffineForOp::build(
           ubOperands.size() == ubMap.getNumInputs()) &&
          "upper bound operand count does not match the affine map");
   assert(step > 0 && "step has to be a positive integer constant");
+
+  for (Value val : iterArgs)
+    result.addTypes(val.getType());
 
   // Add an attribute for the step.
   result.addAttribute(getStepAttrName(),
@@ -1197,56 +1202,75 @@ void AffineForOp::build(
   result.addAttribute(getUpperBoundAttrName(), AffineMapAttr::get(ubMap));
   result.addOperands(ubOperands);
 
+  result.addOperands(iterArgs);
   // Create a region and a block for the body.  The argument of the region is
   // the loop induction variable.
   Region *bodyRegion = result.addRegion();
-  Block *body = new Block;
-  Value inductionVar = body->addArgument(IndexType::get(builder.getContext()));
-  bodyRegion->push_back(body);
-  if (bodyBuilder) {
-    OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToStart(body);
-    bodyBuilder(builder, result.location, inductionVar);
-  } else {
+  bodyRegion->push_back(new Block);
+  Block &bodyBlock = bodyRegion->front();
+  Value inductionVar = bodyBlock.addArgument(builder.getIndexType());
+  for (Value val : iterArgs)
+    bodyBlock.addArgument(val.getType());
+
+  // Create the default terminator if the builder is not provided and if the
+  // iteration arguments are not provided. Otherwise, leave this to the caller
+  // because we don't know which values to return from the loop.
+  if (iterArgs.empty() && !bodyBuilder) {
     ensureTerminator(*bodyRegion, builder, result.location);
+  } else if (bodyBuilder) {
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(&bodyBlock);
+    bodyBuilder(builder, result.location, inductionVar,
+                bodyBlock.getArguments().drop_front());
   }
 }
 
-void AffineForOp::build(
-    OpBuilder &builder, OperationState &result, int64_t lb, int64_t ub,
-    int64_t step,
-    function_ref<void(OpBuilder &, Location, Value)> bodyBuilder) {
+void AffineForOp::build(OpBuilder &builder, OperationState &result, int64_t lb,
+                        int64_t ub, int64_t step, ValueRange iterArgs,
+                        BodyBuilderFn bodyBuilder) {
   auto lbMap = AffineMap::getConstantMap(lb, builder.getContext());
   auto ubMap = AffineMap::getConstantMap(ub, builder.getContext());
-  return build(builder, result, {}, lbMap, {}, ubMap, step, bodyBuilder);
+  return build(builder, result, {}, lbMap, {}, ubMap, step, iterArgs,
+               bodyBuilder);
 }
 
 static LogicalResult verify(AffineForOp op) {
   // Check that the body defines as single block argument for the induction
   // variable.
   auto *body = op.getBody();
-  if (body->getNumArguments() != 1 || !body->getArgument(0).getType().isIndex())
+  if (body->getNumArguments() == 0 || !body->getArgument(0).getType().isIndex())
     return op.emitOpError(
         "expected body to have a single index argument for the "
         "induction variable");
 
-  // Verify that there are enough operands for the bounds.
-  AffineMap lowerBoundMap = op.getLowerBoundMap(),
-            upperBoundMap = op.getUpperBoundMap();
-  if (op.getNumOperands() !=
-      (lowerBoundMap.getNumInputs() + upperBoundMap.getNumInputs()))
-    return op.emitOpError(
-        "operand count must match with affine map dimension and symbol count");
-
   // Verify that the bound operands are valid dimension/symbols.
   /// Lower bound.
-  if (failed(verifyDimAndSymbolIdentifiers(op, op.getLowerBoundOperands(),
-                                           op.getLowerBoundMap().getNumDims())))
-    return failure();
+  if (op.getLowerBoundMap().getNumInputs() > 0)
+    if (failed(
+            verifyDimAndSymbolIdentifiers(op, op.getLowerBoundOperands(),
+                                          op.getLowerBoundMap().getNumDims())))
+      return failure();
   /// Upper bound.
-  if (failed(verifyDimAndSymbolIdentifiers(op, op.getUpperBoundOperands(),
-                                           op.getUpperBoundMap().getNumDims())))
-    return failure();
+  if (op.getUpperBoundMap().getNumInputs() > 0)
+    if (failed(
+            verifyDimAndSymbolIdentifiers(op, op.getUpperBoundOperands(),
+                                          op.getUpperBoundMap().getNumDims())))
+      return failure();
+
+  unsigned opNumResults = op.getNumResults();
+  if (opNumResults == 0)
+    return success();
+
+  // If ForOp defines values, check that the number and types of the defined
+  // values match ForOp initial iter operands and backedge basic block
+  // arguments.
+  if (op.getNumIterOperands() != opNumResults)
+    return op.emitOpError(
+        "mismatch between the number of loop-carried values and results");
+  if (op.getNumRegionIterArgs() != opNumResults)
+    return op.emitOpError(
+        "mismatch between the number of basic block args and results");
+
   return success();
 }
 
@@ -1375,9 +1399,34 @@ static ParseResult parseAffineForOp(OpAsmParser &parser,
           "expected step to be representable as a positive signed integer");
   }
 
+  // Parse the optional initial iteration arguments.
+  SmallVector<OpAsmParser::OperandType, 4> regionArgs, operands;
+  SmallVector<Type, 4> argTypes;
+  regionArgs.push_back(inductionVariable);
+
+  if (succeeded(parser.parseOptionalKeyword("iter_args"))) {
+    // Parse assignment list and results type list.
+    if (parser.parseAssignmentList(regionArgs, operands) ||
+        parser.parseArrowTypeList(result.types))
+      return failure();
+    // Resolve input operands.
+    for (auto operandType : llvm::zip(operands, result.types))
+      if (parser.resolveOperand(std::get<0>(operandType),
+                                std::get<1>(operandType), result.operands))
+        return failure();
+  }
+  // Induction variable.
+  Type indexType = builder.getIndexType();
+  argTypes.push_back(indexType);
+  // Loop carried variables.
+  argTypes.append(result.types.begin(), result.types.end());
   // Parse the body region.
   Region *body = result.addRegion();
-  if (parser.parseRegion(*body, inductionVariable, builder.getIndexType()))
+  if (regionArgs.size() != argTypes.size())
+    return parser.emitError(
+        parser.getNameLoc(),
+        "mismatch between the number of loop-carried values and results");
+  if (parser.parseRegion(*body, regionArgs, argTypes))
     return failure();
 
   AffineForOp::ensureTerminator(*body, builder, result.location);
@@ -1427,6 +1476,13 @@ static void printBound(AffineMapAttr boundMap,
                         map.getNumDims(), p);
 }
 
+unsigned AffineForOp::getNumIterOperands() {
+  AffineMap lbMap = getLowerBoundMapAttr().getValue();
+  AffineMap ubMap = getUpperBoundMapAttr().getValue();
+
+  return getNumOperands() - lbMap.getNumInputs() - ubMap.getNumInputs();
+}
+
 static void print(OpAsmPrinter &p, AffineForOp op) {
   p << op.getOperationName() << ' ';
   p.printOperand(op.getBody()->getArgument(0));
@@ -1437,9 +1493,22 @@ static void print(OpAsmPrinter &p, AffineForOp op) {
 
   if (op.getStep() != 1)
     p << " step " << op.getStep();
+
+  bool printBlockTerminators = false;
+  if (op.getNumIterOperands() > 0) {
+    p << " iter_args(";
+    auto regionArgs = op.getRegionIterArgs();
+    auto operands = op.getIterOperands();
+
+    llvm::interleaveComma(llvm::zip(regionArgs, operands), p, [&](auto it) {
+      p << std::get<0>(it) << " = " << std::get<1>(it);
+    });
+    p << ") -> (" << op.getResultTypes() << ")";
+    printBlockTerminators = true;
+  }
+
   p.printRegion(op.region(),
-                /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/false);
+                /*printEntryBlockArgs=*/false, printBlockTerminators);
   p.printOptionalAttrDict(op.getAttrs(),
                           /*elidedAttrs=*/{op.getLowerBoundAttrName(),
                                            op.getUpperBoundAttrName(),
@@ -1555,8 +1624,8 @@ AffineBound AffineForOp::getLowerBound() {
 AffineBound AffineForOp::getUpperBound() {
   auto lbMap = getLowerBoundMap();
   auto ubMap = getUpperBoundMap();
-  return AffineBound(AffineForOp(*this), lbMap.getNumInputs(), getNumOperands(),
-                     ubMap);
+  return AffineBound(AffineForOp(*this), lbMap.getNumInputs(),
+                     lbMap.getNumInputs() + ubMap.getNumInputs(), ubMap);
 }
 
 void AffineForOp::setLowerBound(ValueRange lbOperands, AffineMap map) {
@@ -1567,6 +1636,8 @@ void AffineForOp::setLowerBound(ValueRange lbOperands, AffineMap map) {
 
   auto ubOperands = getUpperBoundOperands();
   newOperands.append(ubOperands.begin(), ubOperands.end());
+  auto iterOperands = getIterOperands();
+  newOperands.append(iterOperands.begin(), iterOperands.end());
   getOperation()->setOperands(newOperands);
 
   setAttr(getLowerBoundAttrName(), AffineMapAttr::get(map));
@@ -1578,6 +1649,8 @@ void AffineForOp::setUpperBound(ValueRange ubOperands, AffineMap map) {
 
   SmallVector<Value, 4> newOperands(getLowerBoundOperands());
   newOperands.append(ubOperands.begin(), ubOperands.end());
+  auto iterOperands = getIterOperands();
+  newOperands.append(iterOperands.begin(), iterOperands.end());
   getOperation()->setOperands(newOperands);
 
   setAttr(getUpperBoundAttrName(), AffineMapAttr::get(map));
@@ -1630,7 +1703,9 @@ AffineForOp::operand_range AffineForOp::getLowerBoundOperands() {
 }
 
 AffineForOp::operand_range AffineForOp::getUpperBoundOperands() {
-  return {operand_begin() + getLowerBoundMap().getNumInputs(), operand_end()};
+  return {operand_begin() + getLowerBoundMap().getNumInputs(),
+          operand_begin() + getLowerBoundMap().getNumInputs() +
+              getUpperBoundMap().getNumInputs()};
 }
 
 bool AffineForOp::matchingBoundOperandList() {
@@ -1710,8 +1785,8 @@ static void buildAffineLoopNestImpl(
   ivs.reserve(lbs.size());
   for (unsigned i = 0, e = lbs.size(); i < e; ++i) {
     // Callback for creating the loop body, always creates the terminator.
-    auto loopBody = [&](OpBuilder &nestedBuilder, Location nestedLoc,
-                        Value iv) {
+    auto loopBody = [&](OpBuilder &nestedBuilder, Location nestedLoc, Value iv,
+                        ValueRange iterArgs) {
       ivs.push_back(iv);
       // In the innermost loop, call the body builder.
       if (i == e - 1 && bodyBuilderFn) {
@@ -1729,16 +1804,19 @@ static void buildAffineLoopNestImpl(
 }
 
 /// Creates an affine loop from the bounds known to be constants.
-static AffineForOp buildAffineLoopFromConstants(
-    OpBuilder &builder, Location loc, int64_t lb, int64_t ub, int64_t step,
-    function_ref<void(OpBuilder &, Location, Value)> bodyBuilderFn) {
-  return builder.create<AffineForOp>(loc, lb, ub, step, bodyBuilderFn);
+static AffineForOp
+buildAffineLoopFromConstants(OpBuilder &builder, Location loc, int64_t lb,
+                             int64_t ub, int64_t step,
+                             AffineForOp::BodyBuilderFn bodyBuilderFn) {
+  return builder.create<AffineForOp>(loc, lb, ub, step, /*iterArgs=*/llvm::None,
+                                     bodyBuilderFn);
 }
 
 /// Creates an affine loop from the bounds that may or may not be constants.
-static AffineForOp buildAffineLoopFromValues(
-    OpBuilder &builder, Location loc, Value lb, Value ub, int64_t step,
-    function_ref<void(OpBuilder &, Location, Value)> bodyBuilderFn) {
+static AffineForOp
+buildAffineLoopFromValues(OpBuilder &builder, Location loc, Value lb, Value ub,
+                          int64_t step,
+                          AffineForOp::BodyBuilderFn bodyBuilderFn) {
   auto lbConst = lb.getDefiningOp<ConstantIndexOp>();
   auto ubConst = ub.getDefiningOp<ConstantIndexOp>();
   if (lbConst && ubConst)
@@ -1747,7 +1825,7 @@ static AffineForOp buildAffineLoopFromValues(
                                         bodyBuilderFn);
   return builder.create<AffineForOp>(loc, lb, builder.getDimIdentityMap(), ub,
                                      builder.getDimIdentityMap(), step,
-                                     bodyBuilderFn);
+                                     /*iterArgs=*/llvm::None, bodyBuilderFn);
 }
 
 void mlir::buildAffineLoopNest(
@@ -2382,7 +2460,7 @@ LogicalResult AffinePrefetchOp::fold(ArrayRef<Attribute> cstOperands,
 //===----------------------------------------------------------------------===//
 
 void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
-                             ArrayRef<Type> resultTypes,
+                             TypeRange resultTypes,
                              ArrayRef<AtomicRMWKind> reductions,
                              ArrayRef<int64_t> ranges) {
   SmallVector<AffineExpr, 8> lbExprs(ranges.size(),
@@ -2397,7 +2475,7 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
 }
 
 void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
-                             ArrayRef<Type> resultTypes,
+                             TypeRange resultTypes,
                              ArrayRef<AtomicRMWKind> reductions,
                              AffineMap lbMap, ValueRange lbArgs,
                              AffineMap ubMap, ValueRange ubArgs) {
@@ -2412,7 +2490,7 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
 }
 
 void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
-                             ArrayRef<Type> resultTypes,
+                             TypeRange resultTypes,
                              ArrayRef<AtomicRMWKind> reductions,
                              AffineMap lbMap, ValueRange lbArgs,
                              AffineMap ubMap, ValueRange ubArgs,

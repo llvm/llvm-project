@@ -129,3 +129,63 @@ entry:
   %add = add i16 %hc, 1
   ret i16 %add
 }
+
+define half @constcall() {
+; CHECK-VFPV4-SOFT-LABEL: constcall:
+; CHECK-VFPV4-SOFT:       @ %bb.0: @ %entry
+; CHECK-VFPV4-SOFT-NEXT:    mov.w r0, #18688
+; CHECK-VFPV4-SOFT-NEXT:    b ccc
+;
+; CHECK-FP16-SOFT-LABEL: constcall:
+; CHECK-FP16-SOFT:       @ %bb.0: @ %entry
+; CHECK-FP16-SOFT-NEXT:    mov.w r0, #18688
+; CHECK-FP16-SOFT-NEXT:    b ccc
+;
+; CHECK-VFPV4-HARD-LABEL: constcall:
+; CHECK-VFPV4-HARD:       @ %bb.0: @ %entry
+; CHECK-VFPV4-HARD-NEXT:    vldr s0, .LCPI4_0
+; CHECK-VFPV4-HARD-NEXT:    b ccc
+; CHECK-VFPV4-HARD-NEXT:    .p2align 2
+; CHECK-VFPV4-HARD-NEXT:  @ %bb.1:
+; CHECK-VFPV4-HARD-NEXT:  .LCPI4_0:
+; CHECK-VFPV4-HARD-NEXT:    .long 0x00004900 @ float 2.61874657E-41
+;
+; CHECK-FP16-HARD-LABEL: constcall:
+; CHECK-FP16-HARD:       @ %bb.0: @ %entry
+; CHECK-FP16-HARD-NEXT:    vmov.f16 s0, #1.000000e+01
+; CHECK-FP16-HARD-NEXT:    b ccc
+entry:
+  %call = tail call fast half @ccc(half 0xH4900)
+  ret half %call
+}
+
+define half @constret() {
+; CHECK-VFPV4-SOFT-LABEL: constret:
+; CHECK-VFPV4-SOFT:       @ %bb.0: @ %entry
+; CHECK-VFPV4-SOFT-NEXT:    mov.w r0, #18688
+; CHECK-VFPV4-SOFT-NEXT:    bx lr
+;
+; CHECK-FP16-SOFT-LABEL: constret:
+; CHECK-FP16-SOFT:       @ %bb.0: @ %entry
+; CHECK-FP16-SOFT-NEXT:    vmov.f16 s0, #1.000000e+01
+; CHECK-FP16-SOFT-NEXT:    vmov r0, s0
+; CHECK-FP16-SOFT-NEXT:    bx lr
+;
+; CHECK-VFPV4-HARD-LABEL: constret:
+; CHECK-VFPV4-HARD:       @ %bb.0: @ %entry
+; CHECK-VFPV4-HARD-NEXT:    vldr s0, .LCPI5_0
+; CHECK-VFPV4-HARD-NEXT:    bx lr
+; CHECK-VFPV4-HARD-NEXT:    .p2align 2
+; CHECK-VFPV4-HARD-NEXT:  @ %bb.1:
+; CHECK-VFPV4-HARD-NEXT:  .LCPI5_0:
+; CHECK-VFPV4-HARD-NEXT:    .long 0x00004900 @ float 2.61874657E-41
+;
+; CHECK-FP16-HARD-LABEL: constret:
+; CHECK-FP16-HARD:       @ %bb.0: @ %entry
+; CHECK-FP16-HARD-NEXT:    vmov.f16 s0, #1.000000e+01
+; CHECK-FP16-HARD-NEXT:    bx lr
+entry:
+  ret half 0xH4900
+}
+
+declare half @ccc(half)

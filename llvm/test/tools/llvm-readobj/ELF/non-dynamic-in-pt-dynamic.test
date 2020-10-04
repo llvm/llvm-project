@@ -10,7 +10,7 @@
 # RUN: llvm-readelf --dynamic-table %t1.o 2>&1 \
 # RUN:   | FileCheck %s --DFILE=%t1.o --check-prefixes=WARNING,GNU
 
-# WARNING: warning: '[[FILE]]': The SHT_DYNAMIC section '.dynamic' is not at the start of PT_DYNAMIC segment
+# WARNING: warning: '[[FILE]]': SHT_DYNAMIC section with index 2 is not at the start of PT_DYNAMIC segment
 # WARNING: warning: '[[FILE]]': invalid PT_DYNAMIC size (0x21){{$}}
 # WARNING: warning: '[[FILE]]': SHT_DYNAMIC section header and PT_DYNAMIC program header disagree about the location of the dynamic table
 # WARNING: warning: '[[FILE]]': PT_DYNAMIC dynamic table is invalid: SHT_DYNAMIC will be used

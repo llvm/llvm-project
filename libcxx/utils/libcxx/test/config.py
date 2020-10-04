@@ -245,15 +245,12 @@ class Configuration(object):
         # XFAIL markers for tests that are known to fail with versions of
         # libc++ as were shipped with a particular triple.
         if self.use_system_cxx_lib:
-            (arch, vendor, platform) = self.config.target_triple.split('-')
+            (arch, vendor, platform) = self.config.target_triple.split('-', 2)
             (sysname, version) = re.match(r'([^0-9]+)([0-9\.]*)', platform).groups()
 
             self.config.available_features.add('with_system_cxx_lib={}-{}-{}{}'.format(arch, vendor, sysname, version))
             self.config.available_features.add('with_system_cxx_lib={}{}'.format(sysname, version))
             self.config.available_features.add('with_system_cxx_lib={}'.format(sysname))
-
-            self.config.available_features.add('availability={}'.format(sysname))
-            self.config.available_features.add('availability={}{}'.format(sysname, version))
 
         if self.target_info.is_windows():
             if self.cxx_stdlib_under_test == 'libc++':

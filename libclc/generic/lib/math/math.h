@@ -40,6 +40,9 @@
 
 #if (defined __AMDGCN__ || defined __R600__) && !defined __HAS_FMAF__
 #define HAVE_HW_FMA32() (0)
+#elif defined CLC_SPIRV || defined CLC_SPIRV64
+bool __attribute__((noinline)) __clc_runtime_has_hw_fma32(void);
+#define HAVE_HW_FMA32() __clc_runtime_has_hw_fma32()
 #else
 #define HAVE_HW_FMA32() (1)
 #endif

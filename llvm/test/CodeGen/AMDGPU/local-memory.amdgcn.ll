@@ -45,7 +45,7 @@ entry:
 
 ; GCN: s_barrier
 
-; SI:     v_sub_i32_e32 [[SUB1:v[0-9]+]], vcc, 12, [[ADDRW]]
+; SI-DAG: v_sub_i32_e32 [[SUB1:v[0-9]+]], vcc, 12, [[ADDRW]]
 ; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[SUB0]]
 ; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[SUB1]]
 ; CI: ds_read2_b32 {{v\[[0-9]+:[0-9]+\]}}, [[SUB]] offset0:3 offset1:7

@@ -205,9 +205,11 @@ body:             |
   ; CHECK:   dead %7:vgpr_32 = GLOBAL_LOAD_DWORD undef %8:vreg_64, 0, 0, 0, 0, implicit $exec :: (volatile load 4, addrspace 1)
   ; CHECK:   [[COPY4:%[0-9]+]]:sreg_64_xexec = COPY [[COPY3]]
   ; CHECK: bb.2:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_64_xexec = COPY [[COPY4]]
-  ; CHECK:   $exec = S_OR_B64 $exec, killed [[COPY5]], implicit-def $scc
+  ; CHECK:   $exec = S_OR_B64_term $exec, killed [[COPY5]], implicit-def $scc
+  ; CHECK: bb.3:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   S_SLEEP 1
   ; CHECK:   [[COPY6:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; CHECK:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY6]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc

@@ -194,6 +194,22 @@ void test_notnull_symbolic2(FILE *fp, int *buf) {
     // bugpath-warning{{Function argument constraint is not satisfied}} \
     // bugpath-note{{Function argument constraint is not satisfied}}
 }
+typedef __WCHAR_TYPE__ wchar_t;
+// This is one test case for the ARR38-C SEI-CERT rule.
+void ARR38_C_F(FILE *file) {
+  enum { BUFFER_SIZE = 1024 };
+  wchar_t wbuf[BUFFER_SIZE]; // bugpath-note{{'wbuf' initialized here}}
+
+  const size_t size = sizeof(*wbuf);
+  const size_t nitems = sizeof(wbuf);
+
+  // The 3rd parameter should be the number of elements to read, not
+  // the size in bytes.
+  fread(wbuf, size, nitems, file); // \
+  // report-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{Function argument constraint is not satisfied}}
+}
 
 int __two_constrained_args(int, int);
 void test_constraints_on_multiple_args(int x, int y) {

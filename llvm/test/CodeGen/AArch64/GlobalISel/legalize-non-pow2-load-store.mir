@@ -28,12 +28,11 @@ body:             |
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
     ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load 1 from %ir.ptr + 2, align 4)
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C2]](s32)
+    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C2]](s64)
     ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[OR]](s32)
-    ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C3]](s64)
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C2]](s64)
     ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
     ; CHECK: G_STORE [[COPY2]](s32), [[COPY1]](p0) :: (store 2 into %ir.ptr2, align 4)
     ; CHECK: G_STORE [[LSHR]](s32), [[PTR_ADD1]](p0) :: (store 1 into %ir.ptr2 + 2, align 4)

@@ -4,7 +4,14 @@
 ; RUN:   llvm-readelf --notes - | FileCheck %s --check-prefix=OBJ
 @x = common dso_local global i32 0, align 4
 
-attributes #0 = { "branch-target-enforcement" }
+attributes #0 = { "branch-target-enforcement"="true" }
+
+!llvm.module.flags = !{!0, !1, !2, !3}
+
+!0 = !{i32 1, !"branch-target-enforcement", i32 1}
+!1 = !{i32 1, !"sign-return-address", i32 1}
+!2 = !{i32 1, !"sign-return-address-all", i32 0}
+!3 = !{i32 1, !"sign-return-address-with-bkey", i32 0}
 
 ; Both attributes present in a file with no functions.
 ; ASM:	    .word	3221225472

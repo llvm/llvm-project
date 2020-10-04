@@ -32,6 +32,11 @@ LBB0_2:                                 # %return
     .weak   _test_weak_alias
     _test_weak_alias=_main
 
+    .weak weakfunc
+    .globl weakfunc
+weakfunc:
+    ret
+
 // CHECK: Symbols [
 
 // CHECK:      Symbol {
@@ -47,7 +52,7 @@ LBB0_2:                                 # %return
 // CHECK:      Symbol {
 // CHECK:        Name:           _test_weak
 // CHECK-NEXT:   Value:          0
-// CHECK-NEXT:   Section:        IMAGE_SYM_UNDEFINED (0)
+// CHECK-NEXT:   Section:        IMAGE_SYM_UNDEFINED
 // CHECK-NEXT:   BaseType:       Null
 // CHECK-NEXT:   ComplexType:    Null
 // CHECK-NEXT:   StorageClass:   WeakExternal
@@ -61,7 +66,7 @@ LBB0_2:                                 # %return
 // CHECK:      Symbol {
 // CHECK:        Name:                .weak._test_weak.default._main
 // CHECK-NEXT:   Value:               0
-// CHECK-NEXT:   Section:             IMAGE_SYM_ABSOLUTE (-1)
+// CHECK-NEXT:   Section:             IMAGE_SYM_ABSOLUTE
 // CHECK-NEXT:   BaseType:            Null
 // CHECK-NEXT:   ComplexType:         Null
 // CHECK-NEXT:   StorageClass:        External
@@ -71,23 +76,37 @@ LBB0_2:                                 # %return
 // CHECK:      Symbol {
 // CHECK:        Name:           _test_weak_alias
 // CHECK-NEXT:   Value:          0
-// CHECK-NEXT:   Section:        IMAGE_SYM_UNDEFINED (0)
+// CHECK-NEXT:   Section:        IMAGE_SYM_UNDEFINED
 // CHECK-NEXT:   BaseType:       Null
 // CHECK-NEXT:   ComplexType:    Null
 // CHECK-NEXT:   StorageClass:   WeakExternal
 // CHECK-NEXT:   AuxSymbolCount: 1
 // CHECK-NEXT:   AuxWeakExternal {
-// CHECK-NEXT:     Linked: .weak._test_weak_alias.default
-// CHECK-NEXT:      Search: Alias
+// CHECK-NEXT:     Linked: _main
+// CHECK-NEXT:     Search: Alias
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 
 // CHECK:      Symbol {
-// CHECK:        Name: .weak._test_weak_alias.default._main
-// CHECK-NEXT:   Value: 0
-// CHECK-NEXT:   Section: .text
-// CHECK-NEXT:   BaseType: Null
-// CHECK-NEXT:   ComplexType: Null
-// CHECK-NEXT:   StorageClass: External
+// CHECK:        Name:           weakfunc
+// CHECK-NEXT:   Value:          0
+// CHECK-NEXT:   Section:        IMAGE_SYM_UNDEFINED
+// CHECK-NEXT:   BaseType:       Null
+// CHECK-NEXT:   ComplexType:    Null
+// CHECK-NEXT:   StorageClass:   WeakExternal
+// CHECK-NEXT:   AuxSymbolCount: 1
+// CHECK-NEXT:   AuxWeakExternal {
+// CHECK-NEXT:     Linked: .weak.weakfunc.default
+// CHECK-NEXT:     Search: Alias
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
+// CHECK:      Symbol {
+// CHECK:        Name:           .weak.weakfunc.default
+// CHECK-NOT:    Value:          0
+// CHECK-NOT:  Symbol {
+// CHECK:        Section:        .text
+// CHECK-NEXT:   BaseType:       Null
+// CHECK-NEXT:   ComplexType:    Null
+// CHECK-NEXT:   StorageClass:   External
 // CHECK-NEXT:   AuxSymbolCount: 0
 // CHECK-NEXT: }

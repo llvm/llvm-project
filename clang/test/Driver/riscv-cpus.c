@@ -1,11 +1,18 @@
 // Check target CPUs are correctly passed.
 
-// RUN: %clang -target riscv32 -### -c %s 2>&1 -mcpu=rocket-rv32 | FileCheck -check-prefix=MCPU-ROCKETCHIP32 %s
-// MCPU-ROCKETCHIP32: "-nostdsysteminc" "-target-cpu" "rocket-rv32"
+// RUN: %clang -target riscv32 -### -c %s 2>&1 -mcpu=rocket-rv32 | FileCheck -check-prefix=MCPU-ROCKET32 %s
+// MCPU-ROCKET32: "-nostdsysteminc" "-target-cpu" "rocket-rv32"
 
-// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rocket-rv64 | FileCheck -check-prefix=MCPU-ROCKETCHIP64 %s
-// MCPU-ROCKETCHIP64: "-nostdsysteminc" "-target-cpu" "rocket-rv64"
-// MCPU-ROCKETCHIP64: "-target-feature" "+64bit"
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rocket-rv64 | FileCheck -check-prefix=MCPU-ROCKET64 %s
+// MCPU-ROCKET64: "-nostdsysteminc" "-target-cpu" "rocket-rv64"
+// MCPU-ROCKET64: "-target-feature" "+64bit"
+
+// RUN: %clang -target riscv32 -### -c %s 2>&1 -mcpu=bullet-rv32 | FileCheck -check-prefix=MCPU-BULLET32 %s
+// MCPU-BULLET32: "-nostdsysteminc" "-target-cpu" "bullet-rv32"
+
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=bullet-rv64 | FileCheck -check-prefix=MCPU-BULLET64 %s
+// MCPU-BULLET64: "-nostdsysteminc" "-target-cpu" "bullet-rv64"
+// MCPU-BULLET64: "-target-feature" "+64bit"
 
 // mcpu with default march
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-u54 | FileCheck -check-prefix=MCPU-SIFIVE-U54 %s
@@ -21,7 +28,7 @@
 // MCPU-ABI-SIFIVE-U54: "-target-feature" "+c" "-target-feature" "+64bit"
 // MCPU-ABI-SIFIVE-U54: "-target-abi" "lp64"
 
-// march overwirte mcpu's default march
+// march overwrite mcpu's default march
 // RUN: %clang -target riscv32 -### -c %s 2>&1 -mcpu=sifive-e31 -march=rv32imc | FileCheck -check-prefix=MCPU-MARCH %s
 // MCPU-MARCH: "-nostdsysteminc" "-target-cpu" "sifive-e31" "-target-feature" "+m" "-target-feature" "+c"
 // MCPU-MARCH: "-target-abi" "ilp32"

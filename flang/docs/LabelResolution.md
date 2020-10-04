@@ -8,6 +8,11 @@
 
 # Semantics: Resolving Labels and Construct Names
 
+```eval_rst
+.. contents::
+   :local:
+```
+
 ## Overview
 
 After the Fortran input file(s) has been parsed into a syntax tree, the compiler must check that the program checks semantically.  Target labels must be checked and violations of legal semantics should be reported to the user.

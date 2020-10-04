@@ -1,4 +1,5 @@
 ; RUN: opt -basic-aa -print-alias-sets -S -o - < %s 2>&1 | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes=print-alias-sets -S -o - < %s 2>&1 | FileCheck %s
 declare void @llvm.experimental.guard(i1, ...)
 
 ; CHECK: Alias sets for function 'test0':

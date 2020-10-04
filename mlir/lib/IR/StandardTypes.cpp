@@ -360,6 +360,14 @@ UnrankedTensorType::verifyConstructionInvariants(Location loc,
 }
 
 //===----------------------------------------------------------------------===//
+// BaseMemRefType
+//===----------------------------------------------------------------------===//
+
+unsigned BaseMemRefType::getMemorySpace() const {
+  return static_cast<ImplType *>(impl)->memorySpace;
+}
+
+//===----------------------------------------------------------------------===//
 // MemRefType
 //===----------------------------------------------------------------------===//
 
@@ -449,8 +457,6 @@ ArrayRef<AffineMap> MemRefType::getAffineMaps() const {
   return getImpl()->getAffineMaps();
 }
 
-unsigned MemRefType::getMemorySpace() const { return getImpl()->memorySpace; }
-
 //===----------------------------------------------------------------------===//
 // UnrankedMemRefType
 //===----------------------------------------------------------------------===//
@@ -464,10 +470,6 @@ UnrankedMemRefType UnrankedMemRefType::getChecked(Type elementType,
                                                   unsigned memorySpace,
                                                   Location location) {
   return Base::getChecked(location, elementType, memorySpace);
-}
-
-unsigned UnrankedMemRefType::getMemorySpace() const {
-  return getImpl()->memorySpace;
 }
 
 LogicalResult

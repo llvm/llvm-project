@@ -11,9 +11,9 @@ define dso_local void @mve_gather_qi_wb(i32* noalias nocapture readonly %A, i32*
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    movw lr, #1250
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vadd.i32 q0, q0, r1
 ; CHECK-NEXT:    adds r1, r3, #4
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r3
@@ -236,7 +236,6 @@ define void @justoffsets(i8* noalias nocapture readonly %r, i8* noalias nocaptur
 ; CHECK-NEXT:    adr r6, .LCPI3_4
 ; CHECK-NEXT:    adr r5, .LCPI3_3
 ; CHECK-NEXT:    adr r4, .LCPI3_2
-; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #160] @ 16-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q0, [r7]
 ; CHECK-NEXT:    adr.w r8, .LCPI3_1
@@ -269,6 +268,7 @@ define void @justoffsets(i8* noalias nocapture readonly %r, i8* noalias nocaptur
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #16] @ 16-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
+; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB3_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [sp, #192] @ 16-byte Reload

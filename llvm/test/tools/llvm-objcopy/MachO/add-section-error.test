@@ -1,0 +1,14 @@
+## Test --add-section error messages.
+
+# RUN: yaml2obj %p/Inputs/x86_64.yaml -o %t
+# RUN: echo -n abcdefg > %t.data
+
+## Error case 1: Nonexistent input file is specified by --add-section.
+# RUN: not llvm-objcopy --add-section __TEXT,__text=%t.missing %t %t.nonexistent-file 2>&1 \
+# RUN:   | FileCheck %s -DINPUT=%t -DSECTION_DATA_FILE=%t.missing --check-prefix=NONEXSITENT-FILE
+# NONEXSITENT-FILE: error: '[[INPUT]]': '[[SECTION_DATA_FILE]]': {{[Nn]}}o such file or directory
+
+## Error case 2: Too long segment name.
+# RUN: not llvm-objcopy --add-section __TOOOOOOOOO_LONG,__text=%t.data %t %t.too-long-seg-name 2>&1 \
+# RUN:   | FileCheck %s -DINPUT=%t --check-prefix=TOO-LONG-SEG-NAME
+# TOO-LONG-SEG-NAME: error: '[[INPUT]]': too long segment name: '__TOOOOOOOOO_LONG'

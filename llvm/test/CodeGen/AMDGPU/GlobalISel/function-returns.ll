@@ -196,6 +196,89 @@ define half @f16_func_void() #0 {
   ret half %val
 }
 
+define i24 @i24_func_void() #0 {
+  ; CHECK-LABEL: name: i24_func_void
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $sgpr30_sgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s24) = G_LOAD [[DEF]](p1) :: (load 3 from `i24 addrspace(1)* undef`, align 4, addrspace 1)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s24)
+  ; CHECK:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
+  ; CHECK:   S_SETPC_B64_return [[COPY1]], implicit $vgpr0
+  %val = load i24, i24 addrspace(1)* undef
+  ret i24 %val
+}
+
+define zeroext i24 @i24_zeroext_func_void() #0 {
+  ; CHECK-LABEL: name: i24_zeroext_func_void
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $sgpr30_sgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s24) = G_LOAD [[DEF]](p1) :: (load 3 from `i24 addrspace(1)* undef`, align 4, addrspace 1)
+  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD]](s24)
+  ; CHECK:   $vgpr0 = COPY [[ZEXT]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
+  ; CHECK:   S_SETPC_B64_return [[COPY1]], implicit $vgpr0
+  %val = load i24, i24 addrspace(1)* undef
+  ret i24 %val
+}
+
+define signext i24 @i24_signext_func_void() #0 {
+  ; CHECK-LABEL: name: i24_signext_func_void
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $sgpr30_sgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s24) = G_LOAD [[DEF]](p1) :: (load 3 from `i24 addrspace(1)* undef`, align 4, addrspace 1)
+  ; CHECK:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[LOAD]](s24)
+  ; CHECK:   $vgpr0 = COPY [[SEXT]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
+  ; CHECK:   S_SETPC_B64_return [[COPY1]], implicit $vgpr0
+  %val = load i24, i24 addrspace(1)* undef
+  ret i24 %val
+}
+
+define <2 x i24> @v2i24_func_void() #0 {
+  ; CHECK-LABEL: name: v2i24_func_void
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $sgpr30_sgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s24>) = G_LOAD [[DEF]](p1) :: (load 6 from `<2 x i24> addrspace(1)* undef`, align 8, addrspace 1)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s24), [[UV1:%[0-9]+]]:_(s24) = G_UNMERGE_VALUES [[LOAD]](<2 x s24>)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s24)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s24)
+  ; CHECK:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; CHECK:   $vgpr1 = COPY [[ANYEXT1]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
+  ; CHECK:   S_SETPC_B64_return [[COPY1]], implicit $vgpr0, implicit $vgpr1
+  %val = load <2 x i24>, <2 x i24> addrspace(1)* undef
+  ret <2 x i24> %val
+}
+
+define <3 x i24> @v3i24_func_void() #0 {
+  ; CHECK-LABEL: name: v3i24_func_void
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $sgpr30_sgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<3 x s24>) = G_LOAD [[DEF]](p1) :: (load 9 from `<3 x i24> addrspace(1)* undef`, align 16, addrspace 1)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s24), [[UV1:%[0-9]+]]:_(s24), [[UV2:%[0-9]+]]:_(s24) = G_UNMERGE_VALUES [[LOAD]](<3 x s24>)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s24)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s24)
+  ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s24)
+  ; CHECK:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; CHECK:   $vgpr1 = COPY [[ANYEXT1]](s32)
+  ; CHECK:   $vgpr2 = COPY [[ANYEXT2]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
+  ; CHECK:   S_SETPC_B64_return [[COPY1]], implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
+  %val = load <3 x i24>, <3 x i24> addrspace(1)* undef
+  ret <3 x i24> %val
+}
+
 define i32 @i32_func_void() #0 {
   ; CHECK-LABEL: name: i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
@@ -975,6 +1058,44 @@ define <16 x i8> @v16i8_func_void() #0 {
   %ptr = load volatile <16 x i8> addrspace(1)*, <16 x i8> addrspace(1)* addrspace(4)* undef
   %val = load <16 x i8>, <16 x i8> addrspace(1)* %ptr
   ret <16 x i8> %val
+}
+
+define <2 x i8> @v2i8_func_void() #0 {
+  ; CHECK-LABEL: name: v2i8_func_void
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $sgpr30_sgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s8>) = G_LOAD [[DEF]](p1) :: (load 2 from `<2 x i8> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD]](<2 x s8>)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s8)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s8)
+  ; CHECK:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; CHECK:   $vgpr1 = COPY [[ANYEXT1]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
+  ; CHECK:   S_SETPC_B64_return [[COPY1]], implicit $vgpr0, implicit $vgpr1
+  %val = load <2 x i8>, <2 x i8> addrspace(1)* undef
+  ret <2 x i8> %val
+}
+
+define <3 x i8> @v3i8_func_void() #0 {
+  ; CHECK-LABEL: name: v3i8_func_void
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $sgpr30_sgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[DEF]](p1) :: (load 3 from `<3 x i8> addrspace(1)* undef`, align 4, addrspace 1)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD]](<3 x s8>)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s8)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s8)
+  ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
+  ; CHECK:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; CHECK:   $vgpr1 = COPY [[ANYEXT1]](s32)
+  ; CHECK:   $vgpr2 = COPY [[ANYEXT2]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
+  ; CHECK:   S_SETPC_B64_return [[COPY1]], implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
+  %val = load <3 x i8>, <3 x i8> addrspace(1)* undef
+  ret <3 x i8> %val
 }
 
 define <4  x i8> @v4i8_func_void() #0 {

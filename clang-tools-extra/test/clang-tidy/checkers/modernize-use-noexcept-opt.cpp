@@ -4,6 +4,7 @@
 // This test is not run in C++17 or later because dynamic exception
 // specifications were removed in C++17.
 
+using size_t = __SIZE_TYPE__;
 class A {};
 class B {};
 
@@ -18,6 +19,11 @@ void bar() throw(...);
 void k() throw(int(int));
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: dynamic exception specification 'throw(int(int))' is deprecated; consider removing it instead [modernize-use-noexcept]
 // CHECK-FIXES: void k() ;
+
+// Shouldn't crash due to llvm_unreachable in canThrow() on EST_Uninstantiated
+template <int> class c { void *operator new(size_t) throw (int);};
+void s() { c<1> doesnt_crash; }
+// CHECK-MESSAGES: :[[@LINE-2]]:53: warning: dynamic exception specification 'throw (int)' is deprecated; consider removing it instead [modernize-use-noexcept]
 
 void foobar() throw(A, B)
 {}

@@ -191,6 +191,7 @@ def MathAPI : PublicAPI<"math.h"> {
    "frexp",
    "frexpf",
    "frexpl",
+   "hypotf",
    "logb",
    "logbf",
    "logbl",

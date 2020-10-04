@@ -225,6 +225,29 @@ body:             |
 
 ...
 ---
+name:            DUPv8i16gpr_s16_src
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0
+    ; Checks that we can still select the gpr variant if the scalar is an s16.
+    ; CHECK-LABEL: name: DUPv8i16gpr_s16_src
+    ; CHECK: liveins: $w0
+    ; CHECK: %copy:gpr32 = COPY $w0
+    ; CHECK: %dup:fpr128 = DUPv8i16gpr %copy
+    ; CHECK: $q0 = COPY %dup
+    ; CHECK: RET_ReallyLR implicit $q0
+    %copy:gpr(s32) = COPY $w0
+    %trunc:gpr(s16) = G_TRUNC %copy
+    %dup:fpr(<8 x s16>) = G_DUP %trunc(s16)
+    $q0 = COPY %dup(<8 x s16>)
+    RET_ReallyLR implicit $q0
+
+...
+---
 name:            DUPv8i8gpr
 alignment:       4
 legalized:       true
@@ -264,3 +287,26 @@ body:             |
     %dup:fpr(<16 x s8>) = G_DUP %copy(s32)
     $q0 = COPY %dup(<16 x s8>)
     RET_ReallyLR implicit $q0
+...
+---
+name:            DUPv16i8gpr_s8_src
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0
+    ; Check we still select the gpr variant when scalar is an s8.
+    ; CHECK-LABEL: name: DUPv16i8gpr_s8_src
+    ; CHECK: liveins: $w0
+    ; CHECK: %copy:gpr32 = COPY $w0
+    ; CHECK: %dup:fpr128 = DUPv16i8gpr %copy
+    ; CHECK: $q0 = COPY %dup
+    ; CHECK: RET_ReallyLR implicit $q0
+    %copy:gpr(s32) = COPY $w0
+    %trunc:gpr(s8) = G_TRUNC %copy
+    %dup:fpr(<16 x s8>) = G_DUP %trunc(s8)
+    $q0 = COPY %dup(<16 x s8>)
+    RET_ReallyLR implicit $q0
+...

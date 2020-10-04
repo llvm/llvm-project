@@ -54,7 +54,7 @@ std::vector<OutputSegment *> macho::outputSegments;
 
 OutputSegment *macho::getOrCreateOutputSegment(StringRef name) {
   OutputSegment *&segRef = nameToOutputSegment[name];
-  if (segRef != nullptr)
+  if (segRef)
     return segRef;
 
   segRef = make<OutputSegment>();

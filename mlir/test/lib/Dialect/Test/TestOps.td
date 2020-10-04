@@ -9,7 +9,6 @@
 #ifndef TEST_OPS
 #define TEST_OPS
 
-include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/RegionKindInterface.td"
@@ -22,7 +21,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
-  let cppNamespace = "";
+  let cppNamespace = "::mlir";
   let hasOperationAttrVerify = 1;
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
@@ -52,8 +51,6 @@ def ComplexOp : TEST_Op<"complex_f64"> {
 def ComplexTensorOp : TEST_Op<"complex_f64_tensor"> {
   let results = (outs TensorOf<[ComplexF64]>);
 }
-
-def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped">;
 
 def TupleOp : TEST_Op<"tuple_32_bit"> {
   let results = (outs TupleOf<[I32, F32]>);
@@ -169,6 +166,9 @@ def PositiveIntAttrOp : TEST_Op<"positive_int_attr"> {
 
 def TypeArrayAttrOp : TEST_Op<"type_array_attr"> {
   let arguments = (ins TypeArrayAttr:$attr);
+}
+def TypeArrayAttrWithDefaultOp : TEST_Op<"type_array_attr_with_default"> {
+  let arguments = (ins DefaultValuedAttr<TypeArrayAttr, "{}">:$attr);
 }
 def TypeStringAttrWithTypeOp : TEST_Op<"string_attr_with_type"> {
   let arguments = (ins TypedStrAttr<AnyType>:$attr);
@@ -628,6 +628,16 @@ def OpNonNorm : TEST_Op<"op_nonnorm"> {
   let arguments = (ins AnyMemRef:$X, AnyMemRef:$Y);
 }
 
+// Test for memrefs normalization of an op with a reference to a function
+// symbol.
+def OpFuncRef : TEST_Op<"op_funcref"> {
+  let summary = "Test op with a reference to a function symbol";
+  let description = [{
+    The "test.op_funcref" is a test op with a reference to a function symbol.
+  }];
+  let builders = [OpBuilder<[{FuncOp function}]>];
+}
+
 // Pattern add the argument plus a increasing static number hidden in
 // OpMTest function. That value is set into the optional argument.
 // That way, we will know if operations is called once or twice.
@@ -1061,14 +1071,14 @@ def MixedVResultOp3 : TEST_Op<"mixed_variadic_out3",
   // result type. So need to provide a builder not requiring result types.
   let builders = [
     OpBuilder<
-      "OpBuilder &builder, OperationState &state, IntegerAttr count",
+      "IntegerAttr count",
       [{
-        auto i32Type = builder.getIntegerType(32);
-        state.addTypes(i32Type); // $output1
+        auto i32Type = $_builder.getIntegerType(32);
+        $_state.addTypes(i32Type); // $output1
         SmallVector<Type, 4> types(count.getInt(), i32Type);
-        state.addTypes(types); // $output2
-        state.addTypes(types); // $output3
-        state.addAttribute("count", count);
+        $_state.addTypes(types); // $output2
+        $_state.addTypes(types); // $output3
+        $_state.addAttribute("count", count);
       }]>
   ];
 }
@@ -1120,12 +1130,12 @@ def LegalOpB : TEST_Op<"legal_op_b">, Results<(outs I32)>;
 def IllegalOpTerminator : TEST_Op<"illegal_op_terminator", [Terminator]>;
 def IllegalOpWithRegion : TEST_Op<"illegal_op_with_region"> {
   let skipDefaultBuilders = 1;
-  let builders = [OpBuilder<"OpBuilder &builder, OperationState &state",
-                  [{ Region *bodyRegion = state.addRegion();
-                     OpBuilder::InsertionGuard g(builder);
-                     Block *body = builder.createBlock(bodyRegion);
-                     builder.setInsertionPointToEnd(body);
-                     builder.create<IllegalOpTerminator>(state.location);
+  let builders = [OpBuilder<"",
+                  [{ Region *bodyRegion = $_state.addRegion();
+                     OpBuilder::InsertionGuard g($_builder);
+                     Block *body = $_builder.createBlock(bodyRegion);
+                     $_builder.setInsertionPointToEnd(body);
+                     $_builder.create<IllegalOpTerminator>($_state.location);
                   }]>];
 }
 def IllegalOpWithRegionAnchor : TEST_Op<"illegal_op_with_region_anchor">;
@@ -1164,8 +1174,7 @@ def TestRegionBuilderOp : TEST_Op<"region_builder">;
 def TestReturnOp : TEST_Op<"return", [ReturnLike, Terminator]> {
   let arguments = (ins Variadic<AnyType>);
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state",
-              [{ build(builder, state, {}); }]>
+    OpBuilder<"", [{ build($_builder, $_state, {}); }]>
   ];
 }
 def TestCastOp : TEST_Op<"cast">,
@@ -1518,6 +1527,22 @@ def FormatCustomDirectiveResults
   }];
 }
 
+def FormatCustomDirectiveResultsWithTypeRefs
+    : TEST_Op<"format_custom_directive_results_with_type_refs",
+              [AttrSizedResultSegments]> {
+  let results = (outs AnyType:$result, Optional<AnyType>:$optResult,
+                      Variadic<AnyType>:$varResults);
+  let assemblyFormat = [{
+    custom<CustomDirectiveResults>(
+      type($result), type($optResult), type($varResults)
+    )
+    custom<CustomDirectiveWithTypeRefs>(
+      type_ref($result), type_ref($optResult), type_ref($varResults)
+    )
+    attr-dict
+  }];
+}
+
 def FormatCustomDirectiveSuccessors
     : TEST_Op<"format_custom_directive_successors", [Terminator]> {
   let successors = (successor AnySuccessor:$successor,
@@ -1525,6 +1550,17 @@ def FormatCustomDirectiveSuccessors
   let assemblyFormat = [{
     custom<CustomDirectiveSuccessors>(
       $successor, $successors
+    )
+    attr-dict
+  }];
+}
+
+def FormatCustomDirectiveAttributes
+    : TEST_Op<"format_custom_directive_attributes"> {
+  let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$optAttr);
+  let assemblyFormat = [{
+    custom<CustomDirectiveAttributes>(
+      $attr, $optAttr
     )
     attr-dict
   }];

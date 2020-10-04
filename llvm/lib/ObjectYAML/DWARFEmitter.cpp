@@ -110,7 +110,7 @@ StringRef DWARFYAML::Data::getAbbrevTableContentByIndex(uint64_t Index) const {
     encodeULEB128(AbbrevCode, OS);
     encodeULEB128(AbbrevDecl.Tag, OS);
     OS.write(AbbrevDecl.Children);
-    for (auto Attr : AbbrevDecl.Attributes) {
+    for (const auto &Attr : AbbrevDecl.Attributes) {
       encodeULEB128(Attr.Attribute, OS);
       encodeULEB128(Attr.Form, OS);
       if (Attr.Form == dwarf::DW_FORM_implicit_const)
@@ -140,7 +140,7 @@ Error DWARFYAML::emitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
 
 Error DWARFYAML::emitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
   assert(DI.DebugAranges && "unexpected emitDebugAranges() call");
-  for (auto Range : *DI.DebugAranges) {
+  for (const auto &Range : *DI.DebugAranges) {
     uint8_t AddrSize;
     if (Range.AddrSize)
       AddrSize = *Range.AddrSize;
@@ -172,7 +172,7 @@ Error DWARFYAML::emitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
     writeInteger((uint8_t)Range.SegSize, OS, DI.IsLittleEndian);
     ZeroFillBytes(OS, PaddedHeaderLength - HeaderLength);
 
-    for (auto Descriptor : Range.Descriptors) {
+    for (const auto &Descriptor : Range.Descriptors) {
       if (Error Err = writeVariableSizedInteger(Descriptor.Address, AddrSize,
                                                 OS, DI.IsLittleEndian))
         return createStringError(errc::not_supported,
@@ -190,7 +190,7 @@ Error DWARFYAML::emitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
 Error DWARFYAML::emitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
   const size_t RangesOffset = OS.tell();
   uint64_t EntryIndex = 0;
-  for (auto DebugRanges : *DI.DebugRanges) {
+  for (const auto &DebugRanges : *DI.DebugRanges) {
     const size_t CurrOffset = OS.tell() - RangesOffset;
     if (DebugRanges.Offset && (uint64_t)*DebugRanges.Offset < CurrOffset)
       return createStringError(errc::invalid_argument,
@@ -207,7 +207,7 @@ Error DWARFYAML::emitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
       AddrSize = *DebugRanges.AddrSize;
     else
       AddrSize = DI.Is64BitAddrSize ? 8 : 4;
-    for (auto Entry : DebugRanges.Entries) {
+    for (const auto &Entry : DebugRanges.Entries) {
       if (Error Err = writeVariableSizedInteger(Entry.LowOffset, AddrSize, OS,
                                                 DI.IsLittleEndian))
         return createStringError(
@@ -230,14 +230,13 @@ static Error emitPubSection(raw_ostream &OS, const DWARFYAML::PubSection &Sect,
   writeInteger((uint16_t)Sect.Version, OS, IsLittleEndian);
   writeInteger((uint32_t)Sect.UnitOffset, OS, IsLittleEndian);
   writeInteger((uint32_t)Sect.UnitSize, OS, IsLittleEndian);
-  for (auto Entry : Sect.Entries) {
+  for (const auto &Entry : Sect.Entries) {
     writeInteger((uint32_t)Entry.DieOffset, OS, IsLittleEndian);
     if (IsGNUPubSec)
       writeInteger((uint8_t)Entry.Descriptor, OS, IsLittleEndian);
     OS.write(Entry.Name.data(), Entry.Name.size());
     OS.write('\0');
   }
-
   return Error::success();
 }
 
@@ -481,30 +480,45 @@ static void emitFileEntry(raw_ostream &OS, const DWARFYAML::File &File) {
   encodeULEB128(File.Length, OS);
 }
 
+static void writeExtendedOpcode(const DWARFYAML::LineTableOpcode &Op,
+                                uint8_t AddrSize, bool IsLittleEndian,
+                                raw_ostream &OS) {
+  // The first byte of extended opcodes is a zero byte. The next bytes are an
+  // ULEB128 integer giving the number of bytes in the instruction itself (does
+  // not include the first zero byte or the size). We serialize the instruction
+  // itself into the OpBuffer and then write the size of the buffer and the
+  // buffer to the real output stream.
+  std::string OpBuffer;
+  raw_string_ostream OpBufferOS(OpBuffer);
+  writeInteger((uint8_t)Op.SubOpcode, OpBufferOS, IsLittleEndian);
+  switch (Op.SubOpcode) {
+  case dwarf::DW_LNE_set_address:
+    cantFail(writeVariableSizedInteger(Op.Data, AddrSize, OpBufferOS,
+                                       IsLittleEndian));
+    break;
+  case dwarf::DW_LNE_define_file:
+    emitFileEntry(OpBufferOS, Op.FileEntry);
+    break;
+  case dwarf::DW_LNE_set_discriminator:
+    encodeULEB128(Op.Data, OpBufferOS);
+    break;
+  case dwarf::DW_LNE_end_sequence:
+    break;
+  default:
+    for (auto OpByte : Op.UnknownOpcodeData)
+      writeInteger((uint8_t)OpByte, OpBufferOS, IsLittleEndian);
+  }
+  uint64_t ExtLen = Op.ExtLen.getValueOr(OpBuffer.size());
+  encodeULEB128(ExtLen, OS);
+  OS.write(OpBuffer.data(), OpBuffer.size());
+}
+
 static void writeLineTableOpcode(const DWARFYAML::LineTableOpcode &Op,
                                  uint8_t OpcodeBase, uint8_t AddrSize,
                                  raw_ostream &OS, bool IsLittleEndian) {
   writeInteger((uint8_t)Op.Opcode, OS, IsLittleEndian);
   if (Op.Opcode == 0) {
-    encodeULEB128(Op.ExtLen, OS);
-    writeInteger((uint8_t)Op.SubOpcode, OS, IsLittleEndian);
-    switch (Op.SubOpcode) {
-    case dwarf::DW_LNE_set_address:
-      cantFail(
-          writeVariableSizedInteger(Op.Data, AddrSize, OS, IsLittleEndian));
-      break;
-    case dwarf::DW_LNE_define_file:
-      emitFileEntry(OS, Op.FileEntry);
-      break;
-    case dwarf::DW_LNE_set_discriminator:
-      encodeULEB128(Op.Data, OS);
-      break;
-    case dwarf::DW_LNE_end_sequence:
-      break;
-    default:
-      for (auto OpByte : Op.UnknownOpcodeData)
-        writeInteger((uint8_t)OpByte, OS, IsLittleEndian);
-    }
+    writeExtendedOpcode(Op, AddrSize, IsLittleEndian, OS);
   } else if (Op.Opcode < OpcodeBase) {
     switch (Op.Opcode) {
     case dwarf::DW_LNS_copy:
@@ -1035,7 +1049,6 @@ DWARFYAML::emitDebugSections(StringRef YAMLString, bool IsLittleEndian,
 
   StringMap<std::unique_ptr<MemoryBuffer>> DebugSections;
   Error Err = Error::success();
-  cantFail(std::move(Err));
 
   for (StringRef SecName : DI.getNonEmptySectionNames())
     Err = joinErrors(std::move(Err),

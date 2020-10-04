@@ -80,12 +80,10 @@ llvm::Expected<std::unique_ptr<Tweak>> prepareTweak(StringRef ID,
       TweakRegistry::entries(),
       [ID](const TweakRegistry::entry &E) { return E.getName() == ID; });
   if (It == TweakRegistry::end())
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "id of the tweak is invalid");
+    return error("tweak ID {0} is invalid", ID);
   std::unique_ptr<Tweak> T = It->instantiate();
   if (!T->prepare(S))
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "failed to prepare() a check");
+    return error("failed to prepare() tweak {0}", ID);
   return std::move(T);
 }
 
@@ -95,10 +93,8 @@ Tweak::Effect::fileEdit(const SourceManager &SM, FileID FID,
   Edit Ed(SM.getBufferData(FID), std::move(Replacements));
   if (auto FilePath = getCanonicalPath(SM.getFileEntryForID(FID), SM))
     return std::make_pair(*FilePath, std::move(Ed));
-  return llvm::createStringError(
-      llvm::inconvertibleErrorCode(),
-      "Failed to get absolute path for edited file: " +
-          SM.getFileEntryForID(FID)->getName());
+  return error("Failed to get absolute path for edited file: {0}",
+               SM.getFileEntryForID(FID)->getName());
 }
 
 llvm::Expected<Tweak::Effect>

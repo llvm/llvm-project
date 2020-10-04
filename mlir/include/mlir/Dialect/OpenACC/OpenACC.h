@@ -16,15 +16,14 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 
+#include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.h.inc"
-
-namespace mlir {
-namespace acc {
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOps.h.inc"
 
-#include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
+namespace mlir {
+namespace acc {
 
 /// Enumeration used to encode the execution mapping on a loop construct.
 /// They refer directly to the OpenACC 3.0 standard:

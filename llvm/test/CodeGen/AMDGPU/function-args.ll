@@ -344,6 +344,16 @@ define void @void_func_v16i16(<16 x i16> %arg0) #0 {
   ret void
 }
 
+; GCN-LABEL: {{^}}void_func_v2i24:
+; GCN: v_add_{{i|u}}32_e32 v0, {{(vcc, )?}}v0, v1
+define void @void_func_v2i24(<2 x i24> %arg0) #0 {
+  %elt0 = extractelement <2 x i24> %arg0, i32 0
+  %elt1 = extractelement <2 x i24> %arg0, i32 1
+  %add = add i24 %elt0, %elt1
+  store i24 %add, i24 addrspace(1)* undef
+  ret void
+}
+
 ; GCN-LABEL: {{^}}void_func_v2f32:
 ; GCN-NOT: v[0:1]
 ; GCN-NOT: v0

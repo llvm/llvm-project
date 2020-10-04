@@ -126,7 +126,30 @@ protected:
 
   // Returns true if there is a .dSYM bundle next to the kernel
   static bool
-  KernelHasdSYMSibling(const lldb_private::FileSpec &kext_bundle_filepath);
+  KernelHasdSYMSibling(const lldb_private::FileSpec &kernel_filepath);
+
+  // Returns true if there is a .dSYM bundle with NO kernel binary next to it
+  static bool KerneldSYMHasNoSiblingBinary(
+      const lldb_private::FileSpec &kernel_dsym_filepath);
+
+  // Given a dsym_bundle argument ('.../foo.dSYM'), return a FileSpec
+  // with the binary inside it ('.../foo.dSYM/Contents/Resources/DWARF/foo').
+  // A dSYM bundle may have multiple DWARF binaries in them, so a vector
+  // of matches is returned.
+  static std::vector<lldb_private::FileSpec>
+  GetDWARFBinaryInDSYMBundle(lldb_private::FileSpec dsym_bundle);
+
+  lldb_private::Status
+  GetSharedModuleKext(const lldb_private::ModuleSpec &module_spec,
+                      lldb_private::Process *process, lldb::ModuleSP &module_sp,
+                      const lldb_private::FileSpecList *module_search_paths_ptr,
+                      lldb::ModuleSP *old_module_sp_ptr, bool *did_create_ptr);
+
+  lldb_private::Status GetSharedModuleKernel(
+      const lldb_private::ModuleSpec &module_spec,
+      lldb_private::Process *process, lldb::ModuleSP &module_sp,
+      const lldb_private::FileSpecList *module_search_paths_ptr,
+      lldb::ModuleSP *old_module_sp_ptr, bool *did_create_ptr);
 
   lldb_private::Status
   ExamineKextForMatchingUUID(const lldb_private::FileSpec &kext_bundle_path,
@@ -170,6 +193,13 @@ public:
                                                           // on local
                                                           // filesystem, with
                                                           // dSYMs next to them
+  KernelBinaryCollection m_kernel_dsyms_no_binaries;      // list of kernel
+                                                          // dsyms with no
+                                                          // binaries next to
+                                                          // them
+  KernelBinaryCollection m_kernel_dsyms_yaas;             // list of kernel
+                                                          // .dSYM.yaa files
+
   lldb_private::LazyBool m_ios_debug_session;
 
   PlatformDarwinKernel(const PlatformDarwinKernel &) = delete;

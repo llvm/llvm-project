@@ -401,7 +401,7 @@ bool FormatTokenLexer::tryTransformTryUsageForC() {
   if (!Try->is(tok::kw_try))
     return false;
   auto &Next = *(Tokens.end() - 1);
-  if (Next->isOneOf(tok::l_brace, tok::colon))
+  if (Next->isOneOf(tok::l_brace, tok::colon, tok::hash, tok::comment))
     return false;
 
   if (Tokens.size() > 2) {

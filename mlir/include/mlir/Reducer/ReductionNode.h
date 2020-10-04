@@ -26,7 +26,7 @@ namespace mlir {
 
 /// This class defines the ReductionNode which is used to wrap the module of
 /// a generated variant and keep track of the necessary metadata for the
-/// reduction pass. The nodes are linked together in a reduction tree stucture
+/// reduction pass. The nodes are linked together in a reduction tree structure
 /// which defines the relationship between all the different generated variants.
 class ReductionNode {
 public:
@@ -83,7 +83,7 @@ private:
   // has been evaluated.
   int size;
 
-  // This indicates if the module has been evalueated (measured and tested).
+  // This indicates if the module has been evaluated (measured and tested).
   bool evaluated;
 
   // Indicates the indices in the node that have been transformed in previous

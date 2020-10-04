@@ -239,6 +239,7 @@ def ExtraSemi : DiagGroup<"extra-semi", [CXX98CompatExtraSemi,
 def GNUFlexibleArrayInitializer : DiagGroup<"gnu-flexible-array-initializer">;
 def GNUFlexibleArrayUnionMember : DiagGroup<"gnu-flexible-array-union-member">;
 def GNUFoldingConstant : DiagGroup<"gnu-folding-constant">;
+def FormatInsufficientArgs : DiagGroup<"format-insufficient-args">;
 def FormatExtraArgs : DiagGroup<"format-extra-args">;
 def FormatZeroLength : DiagGroup<"format-zero-length">;
 
@@ -557,6 +558,7 @@ def StringCompare : DiagGroup<"string-compare">;
 def StringPlusInt : DiagGroup<"string-plus-int">;
 def StringPlusChar : DiagGroup<"string-plus-char">;
 def StrncatSize : DiagGroup<"strncat-size">;
+def SwiftNameAttribute : DiagGroup<"swift-name-attribute">;
 def IntInBoolContext : DiagGroup<"int-in-bool-context">;
 def TautologicalTypeLimitCompare : DiagGroup<"tautological-type-limit-compare">;
 def TautologicalUnsignedZeroCompare : DiagGroup<"tautological-unsigned-zero-compare">;
@@ -848,7 +850,8 @@ def FormatPedantic : DiagGroup<"format-pedantic">;
 def FormatTypeConfusion : DiagGroup<"format-type-confusion">;
 def Format : DiagGroup<"format",
                        [FormatExtraArgs, FormatZeroLength, NonNull,
-                        FormatSecurity, FormatY2K, FormatInvalidSpecifier]>,
+                        FormatSecurity, FormatY2K, FormatInvalidSpecifier,
+                        FormatInsufficientArgs]>,
              DiagCategory<"Format String Issue">;
 def FormatNonLiteral : DiagGroup<"format-nonliteral">;
 def Format2 : DiagGroup<"format=2",
@@ -869,6 +872,8 @@ def PointerToEnumCast : DiagGroup<"pointer-to-enum-cast",
 def PointerToIntCast : DiagGroup<"pointer-to-int-cast",
                                  [PointerToEnumCast, VoidPointerToIntCast]>;
 
+def FUseLdPath : DiagGroup<"fuse-ld-path">;
+
 def Move : DiagGroup<"move", [
     PessimizingMove,
     RedundantMove,
@@ -887,7 +892,8 @@ def Extra : DiagGroup<"extra", [
     UnusedParameter,
     NullPointerArithmetic,
     EmptyInitStatement,
-    StringConcatation
+    StringConcatation,
+    FUseLdPath,
   ]>;
 
 def Most : DiagGroup<"most", [
@@ -1235,3 +1241,5 @@ in addition with the pragmas or -fmax-tokens flag to get any warnings.
 }
 
 def WebAssemblyExceptionSpec : DiagGroup<"wasm-exception-spec">;
+
+def RTTI : DiagGroup<"rtti">;

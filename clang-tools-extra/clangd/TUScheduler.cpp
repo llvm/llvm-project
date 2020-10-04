@@ -717,8 +717,7 @@ void ASTWorker::runWithAST(
         [&AST, this]() { IdleASTs.put(this, std::move(*AST)); });
     // Run the user-provided action.
     if (!*AST)
-      return Action(llvm::make_error<llvm::StringError>(
-          "invalid AST", llvm::errc::invalid_argument));
+      return Action(error(llvm::errc::invalid_argument, "invalid AST"));
     vlog("ASTWorker running {0} on version {2} of {1}", Name, FileName,
          FileInputs.Version);
     Action(InputsAndAST{FileInputs, **AST});

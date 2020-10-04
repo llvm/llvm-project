@@ -33,6 +33,9 @@ public:
   /// Emit contents of constant pool for the current section.
   void emitCurrentConstantPool();
 
+  /// Callback used to implement the .note.gnu.property section.
+  void emitNoteSection(unsigned Flags);
+
   /// Callback used to implement the .inst directive.
   virtual void emitInst(uint32_t Inst);
 

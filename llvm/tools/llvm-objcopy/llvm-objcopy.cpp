@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm-objcopy.h"
 #include "Buffer.h"
 #include "COFF/COFFObjcopy.h"
 #include "CopyConfig.h"
@@ -56,36 +55,6 @@ namespace objcopy {
 
 // The name this program was invoked as.
 StringRef ToolName;
-
-LLVM_ATTRIBUTE_NORETURN void error(Twine Message) {
-  WithColor::error(errs(), ToolName) << Message << "\n";
-  exit(1);
-}
-
-LLVM_ATTRIBUTE_NORETURN void error(Error E) {
-  assert(E);
-  std::string Buf;
-  raw_string_ostream OS(Buf);
-  logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
-  WithColor::error(errs(), ToolName) << Buf;
-  exit(1);
-}
-
-LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, std::error_code EC) {
-  assert(EC);
-  error(createFileError(File, EC));
-}
-
-LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
-  assert(E);
-  std::string Buf;
-  raw_string_ostream OS(Buf);
-  logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
-  WithColor::error(errs(), ToolName) << "'" << File << "': " << Buf;
-  exit(1);
-}
 
 ErrorSuccess reportWarning(Error E) {
   assert(E);
@@ -320,7 +289,7 @@ static Error executeObjcopy(CopyConfig &Config) {
 
 namespace {
 
-enum class ToolType { Objcopy, Strip, InstallNameTool };
+enum class ToolType { Objcopy, Strip, InstallNameTool, BitcodeStrip };
 
 } // anonymous namespace
 
@@ -341,7 +310,9 @@ int main(int argc, char **argv) {
            (I + Tool.size() == Stem.size() || !isAlnum(Stem[I + Tool.size()]));
   };
   ToolType Tool = ToolType::Objcopy;
-  if (Is("strip"))
+  if (Is("bitcode-strip") || Is("bitcode_strip"))
+    Tool = ToolType::BitcodeStrip;
+  else if (Is("strip"))
     Tool = ToolType::Strip;
   else if (Is("install-name-tool") || Is("install_name_tool"))
     Tool = ToolType::InstallNameTool;
@@ -361,10 +332,13 @@ int main(int argc, char **argv) {
 
   auto Args = makeArrayRef(NewArgv).drop_front();
   Expected<DriverConfig> DriverConfig =
-      (Tool == ToolType::Strip) ? parseStripOptions(Args, reportWarning)
-                                : ((Tool == ToolType::InstallNameTool)
-                                       ? parseInstallNameToolOptions(Args)
-                                       : parseObjcopyOptions(Args, reportWarning));
+      (Tool == ToolType::Strip)
+          ? parseStripOptions(Args, reportWarning)
+          : ((Tool == ToolType::InstallNameTool)
+                 ? parseInstallNameToolOptions(Args)
+                 : ((Tool == ToolType::BitcodeStrip)
+                        ? parseBitcodeStripOptions(Args)
+                        : parseObjcopyOptions(Args, reportWarning)));
   if (!DriverConfig) {
     logAllUnhandledErrors(DriverConfig.takeError(),
                           WithColor::error(errs(), ToolName));

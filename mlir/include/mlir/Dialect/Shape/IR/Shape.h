@@ -67,12 +67,12 @@ public:
   using Base::Base;
 };
 
+} // namespace shape
+} // namespace mlir
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Shape/IR/ShapeOps.h.inc"
 
 #include "mlir/Dialect/Shape/IR/ShapeOpsDialect.h.inc"
-
-} // namespace shape
-} // namespace mlir
 
 #endif // MLIR_SHAPE_IR_SHAPE_H

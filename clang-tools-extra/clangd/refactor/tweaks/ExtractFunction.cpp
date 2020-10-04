@@ -625,9 +625,8 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
   CapturedZoneInfo CapturedInfo = captureZoneInfo(ExtZone);
   // Bail out if any break of continue exists
   if (CapturedInfo.BrokenControlFlow)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   +"Cannot extract break/continue without "
-                                    "corresponding loop/switch statement.");
+    return error("Cannot extract break/continue without corresponding "
+                 "loop/switch statement.");
   NewFunction ExtractedFunc(getSemicolonPolicy(ExtZone, SM, LangOpts));
   ExtractedFunc.BodyRange = ExtZone.ZoneRange;
   ExtractedFunc.InsertionPoint = ExtZone.getInsertionPoint();
@@ -637,8 +636,7 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
   if (!createParameters(ExtractedFunc, CapturedInfo) ||
       !generateReturnProperties(ExtractedFunc, *ExtZone.EnclosingFunction,
                                 CapturedInfo))
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   +"Too complex to extract.");
+    return error("Too complex to extract.");
   return ExtractedFunc;
 }
 
@@ -648,7 +646,9 @@ public:
   bool prepare(const Selection &Inputs) override;
   Expected<Effect> apply(const Selection &Inputs) override;
   std::string title() const override { return "Extract to function"; }
-  Intent intent() const override { return Refactor; }
+  llvm::StringLiteral kind() const override {
+    return CodeAction::REFACTOR_KIND;
+  }
 
 private:
   ExtractionZone ExtZone;

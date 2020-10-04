@@ -2,11 +2,11 @@
 # RUN: mkdir -p %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %p/Inputs/libhello.s \
 # RUN:   -o %t/libhello.o
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -dylib -install_name \
+# RUN: %lld -lSystem -dylib -install_name \
 # RUN:   @executable_path/libhello.dylib %t/libhello.o -o %t/libhello.dylib
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/test.o
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t/test %t/test.o -L%t -lhello
-# RUN: llvm-objdump --full-contents --bind %t/test | FileCheck %s --match-full-lines
+# RUN: %lld -lSystem -o %t/test %t/test.o -L%t -lhello
+# RUN: llvm-objdump --full-contents --rebase --bind %t/test | FileCheck %s --match-full-lines
 
 ## Check that the GOT references the cstrings. --full-contents displays the
 ## address offset and the contents at that address very similarly, so am using
@@ -20,10 +20,25 @@
 # CHECK-NEXT: [[#%X,ADDR:]]  1a040000 01000000 0c040000 01000000 {{.*}}
 # CHECK-NEXT: [[#ADDR + 16]] 00000000 00000000 {{.*}}
 
+## Check that the rebase table is empty.
+# CHECK:      Rebase table:
+# CHECK-NEXT: segment      section  address         type
+
 ## Check that a non-locally-defined symbol is still bound at the correct offset:
-# CHECK: Bind table:
+# CHECK-NEXT: Bind table:
 # CHECK-NEXT: segment      section  address         type     addend  dylib     symbol
 # CHECK-NEXT: __DATA_CONST __got    0x[[#ADDR+16]]  pointer  0       libhello  _hello_its_me
+
+# RUN: %lld -pie -lSystem -o %t/test %t/test.o -L%t -lhello
+# RUN: llvm-objdump --macho --rebase --bind %t/test | FileCheck %s --check-prefix=PIE --match-full-lines
+# PIE:      Rebase table:
+# PIE-NEXT: segment      section  address          type
+# PIE-NEXT: __DATA_CONST __got    0x[[#%X,ADDR:]]  pointer
+# PIE-NEXT: __DATA_CONST __got    0x[[#ADDR + 8]]  pointer
+
+# PIE-NEXT: Bind table:
+# PIE-NEXT: segment      section  address          type     addend  dylib     symbol
+# PIE-NEXT: __DATA_CONST __got    0x[[#ADDR+16]]   pointer  0       libhello  _hello_its_me
 
 .globl _main
 

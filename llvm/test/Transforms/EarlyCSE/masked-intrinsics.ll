@@ -5,8 +5,7 @@ define <128 x i8> @f0(<128 x i8>* %a0, <128 x i8> %a1, <128 x i8> %a2) {
 ; CHECK-LABEL: @f0(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq <128 x i8> [[A1:%.*]], [[A2:%.*]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0v128i8(<128 x i8> [[A1]], <128 x i8>* [[A0:%.*]], i32 4, <128 x i1> [[V0]])
-; CHECK-NEXT:    [[V1:%.*]] = call <128 x i8> @llvm.masked.load.v128i8.p0v128i8(<128 x i8>* [[A0]], i32 4, <128 x i1> [[V0]], <128 x i8> undef)
-; CHECK-NEXT:    ret <128 x i8> [[V1]]
+; CHECK-NEXT:    ret <128 x i8> [[A1]]
 ;
   %v0 = icmp eq <128 x i8> %a1, %a2
   call void @llvm.masked.store.v128i8.p0v128i8(<128 x i8> %a1, <128 x i8>* %a0, i32 4, <128 x i1> %v0)
@@ -18,7 +17,6 @@ define <128 x i8> @f1(<128 x i8>* %a0, <128 x i8> %a1, <128 x i8> %a2) {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq <128 x i8> [[A1:%.*]], [[A2:%.*]]
 ; CHECK-NEXT:    [[V1:%.*]] = call <128 x i8> @llvm.masked.load.v128i8.p0v128i8(<128 x i8>* [[A0:%.*]], i32 4, <128 x i1> [[V0]], <128 x i8> undef)
-; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0v128i8(<128 x i8> [[V1]], <128 x i8>* [[A0]], i32 4, <128 x i1> [[V0]])
 ; CHECK-NEXT:    ret <128 x i8> [[V1]]
 ;
   %v0 = icmp eq <128 x i8> %a1, %a2

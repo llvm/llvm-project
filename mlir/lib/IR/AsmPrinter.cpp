@@ -2359,16 +2359,18 @@ void Value::print(raw_ostream &os) {
   if (auto *op = getDefiningOp())
     return op->print(os);
   // TODO: Improve this.
-  assert(isa<BlockArgument>());
-  os << "<block argument>\n";
+  BlockArgument arg = this->cast<BlockArgument>();
+  os << "<block argument> of type '" << arg.getType()
+     << "' at index: " << arg.getArgNumber() << '\n';
 }
 void Value::print(raw_ostream &os, AsmState &state) {
   if (auto *op = getDefiningOp())
     return op->print(os, state);
 
   // TODO: Improve this.
-  assert(isa<BlockArgument>());
-  os << "<block argument>\n";
+  BlockArgument arg = this->cast<BlockArgument>();
+  os << "<block argument> of type '" << arg.getType()
+     << "' at index: " << arg.getArgNumber() << '\n';
 }
 
 void Value::dump() {

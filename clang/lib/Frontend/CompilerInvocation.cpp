@@ -884,6 +884,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DebugRangesBaseAddress = Args.hasArg(OPT_fdebug_ranges_base_address);
 
   setPGOInstrumentor(Opts, Args, Diags);
+  Opts.AtomicProfileUpdate = Args.hasArg(OPT_fprofile_update_EQ);
   Opts.InstrProfileOutput =
       std::string(Args.getLastArgValue(OPT_fprofile_instrument_path_EQ));
   Opts.ProfileInstrumentUsePath =
@@ -998,6 +999,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.UniqueInternalLinkageNames =
       Args.hasArg(OPT_funique_internal_linkage_names);
 
+  Opts.SplitMachineFunctions = Args.hasArg(OPT_fsplit_machine_functions);
+
   Opts.MergeFunctions = Args.hasArg(OPT_fmerge_functions);
 
   Opts.NoUseJumpTables = Args.hasArg(OPT_fno_jump_tables);
@@ -1033,7 +1036,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.ThinLinkBitcodeFile =
       std::string(Args.getLastArgValue(OPT_fthin_link_bitcode_EQ));
 
-  Opts.HeapProf = Args.hasArg(OPT_fmemory_profile);
+  Opts.MemProf = Args.hasArg(OPT_fmemory_profile);
 
   Opts.MSVolatile = Args.hasArg(OPT_fms_volatile);
 
@@ -1128,6 +1131,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       getLastArgIntValue(Args, OPT_fxray_instruction_threshold_EQ, 200, Diags);
   Opts.XRayIgnoreLoops = Args.hasArg(OPT_fxray_ignore_loops);
   Opts.XRayOmitFunctionIndex = Args.hasArg(OPT_fno_xray_function_index);
+  Opts.XRayTotalFunctionGroups =
+      getLastArgIntValue(Args, OPT_fxray_function_groups, 1, Diags);
+  Opts.XRaySelectedFunctionGroup =
+      getLastArgIntValue(Args, OPT_fxray_selected_function_group, 0, Diags);
 
   auto XRayInstrBundles =
       Args.getAllArgValues(OPT_fxray_instrumentation_bundle);
@@ -1453,6 +1460,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       std::string(Args.getLastArgValue(OPT_fsymbol_partition_EQ));
 
   Opts.ForceAAPCSBitfieldLoad = Args.hasArg(OPT_ForceAAPCSBitfieldLoad);
+
+  Opts.PassByValueIsNoAlias = Args.hasArg(OPT_fpass_by_value_is_noalias);
   return Success;
 }
 
@@ -2874,7 +2883,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.Coroutines = Opts.CPlusPlus20 || Args.hasArg(OPT_fcoroutines_ts);
 
   Opts.ConvergentFunctions = Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) ||
-    Args.hasArg(OPT_fconvergent_functions);
+                             Opts.SYCLIsDevice ||
+                             Args.hasArg(OPT_fconvergent_functions);
 
   Opts.DoubleSquareBracketAttributes =
       Args.hasFlag(OPT_fdouble_square_bracket_attributes,

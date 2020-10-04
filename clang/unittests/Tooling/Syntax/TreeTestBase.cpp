@@ -38,10 +38,10 @@ namespace {
 ArrayRef<syntax::Token> tokens(syntax::Node *N) {
   assert(N->isOriginal() && "tokens of modified nodes are not well-defined");
   if (auto *L = dyn_cast<syntax::Leaf>(N))
-    return llvm::makeArrayRef(L->token(), 1);
+    return llvm::makeArrayRef(L->getToken(), 1);
   auto *T = cast<syntax::Tree>(N);
-  return llvm::makeArrayRef(T->firstLeaf()->token(),
-                            T->lastLeaf()->token() + 1);
+  return llvm::makeArrayRef(T->findFirstLeaf()->getToken(),
+                            T->findLastLeaf()->getToken() + 1);
 }
 } // namespace
 
@@ -170,7 +170,7 @@ syntax::Node *SyntaxTreeTest::nodeByRange(llvm::Annotations::Range R,
   auto *T = dyn_cast<syntax::Tree>(Root);
   if (!T)
     return nullptr;
-  for (auto *C = T->firstChild(); C != nullptr; C = C->nextSibling()) {
+  for (auto *C = T->getFirstChild(); C != nullptr; C = C->getNextSibling()) {
     if (auto *Result = nodeByRange(R, C))
       return Result;
   }

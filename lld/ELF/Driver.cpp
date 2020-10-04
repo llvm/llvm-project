@@ -80,6 +80,27 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
   lld::stdoutOS = &stdoutOS;
   lld::stderrOS = &stderrOS;
 
+  errorHandler().cleanupCallback = []() {
+    freeArena();
+
+    inputSections.clear();
+    outputSections.clear();
+    archiveFiles.clear();
+    binaryFiles.clear();
+    bitcodeFiles.clear();
+    lazyObjFiles.clear();
+    objectFiles.clear();
+    sharedFiles.clear();
+    backwardReferences.clear();
+
+    tar = nullptr;
+    memset(&in, 0, sizeof(in));
+
+    partitions = {Partition()};
+
+    SharedFile::vernauxNum = 0;
+  };
+
   errorHandler().logName = args::getFilenameWithoutExe(args[0]);
   errorHandler().errorLimitExceededMsg =
       "too many errors emitted, stopping now (use "
@@ -87,27 +108,12 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
   errorHandler().exitEarly = canExitEarly;
   stderrOS.enable_colors(stderrOS.has_colors());
 
-  inputSections.clear();
-  outputSections.clear();
-  archiveFiles.clear();
-  binaryFiles.clear();
-  bitcodeFiles.clear();
-  lazyObjFiles.clear();
-  objectFiles.clear();
-  sharedFiles.clear();
-  backwardReferences.clear();
-
   config = make<Configuration>();
   driver = make<LinkerDriver>();
   script = make<LinkerScript>();
   symtab = make<SymbolTable>();
 
-  tar = nullptr;
-  memset(&in, 0, sizeof(in));
-
   partitions = {Partition()};
-
-  SharedFile::vernauxNum = 0;
 
   config->progName = args[0];
 
@@ -119,8 +125,10 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
   if (canExitEarly)
     exitLld(errorCount() ? 1 : 0);
 
-  freeArena();
-  return !errorCount();
+  bool ret = errorCount() == 0;
+  if (!canExitEarly)
+    errorHandler().reset();
+  return ret;
 }
 
 // Parses a linker -m option.
@@ -1096,6 +1104,8 @@ static void readConfigs(opt::InputArgList &args) {
       error(errPrefix + toString(pat.takeError()));
   }
 
+  cl::ResetAllOptionOccurrences();
+
   // Parse LTO options.
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
     parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
@@ -1719,7 +1729,7 @@ static void findKeepUniqueSections(opt::InputArgList &args) {
     ArrayRef<Symbol *> syms = obj->getSymbols();
     if (obj->addrsigSec) {
       ArrayRef<uint8_t> contents =
-          check(obj->getObj().getSectionContents(obj->addrsigSec));
+          check(obj->getObj().getSectionContents(*obj->addrsigSec));
       const uint8_t *cur = contents.begin();
       while (cur != contents.end()) {
         unsigned size;
@@ -1857,7 +1867,7 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
     if (!sym)
       continue;
 
-    Symbol *real = addUndefined(saver.save("__real_" + name));
+    Symbol *real = addUnusedUndefined(saver.save("__real_" + name));
     Symbol *wrap = addUnusedUndefined(saver.save("__wrap_" + name));
     v.push_back({sym, real, wrap});
 

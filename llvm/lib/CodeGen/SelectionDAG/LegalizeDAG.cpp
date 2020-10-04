@@ -173,6 +173,7 @@ private:
                           SDValue NewIntValue) const;
   SDValue ExpandFCOPYSIGN(SDNode *Node) const;
   SDValue ExpandFABS(SDNode *Node) const;
+  SDValue ExpandFNEG(SDNode *Node) const;
   SDValue ExpandLegalINT_TO_FP(SDNode *Node, SDValue &Chain);
   void PromoteLegalINT_TO_FP(SDNode *N, const SDLoc &dl,
                              SmallVectorImpl<SDValue> &Results);
@@ -181,6 +182,7 @@ private:
 
   SDValue ExpandBITREVERSE(SDValue Op, const SDLoc &dl);
   SDValue ExpandBSWAP(SDValue Op, const SDLoc &dl);
+  SDValue ExpandPARITY(SDValue Op, const SDLoc &dl);
 
   SDValue ExpandExtractFromVectorThroughStack(SDValue Op);
   SDValue ExpandInsertToVectorThroughStack(SDValue Op);
@@ -1572,6 +1574,22 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
   return modifySignAsInt(MagAsInt, DL, CopiedSign);
 }
 
+SDValue SelectionDAGLegalize::ExpandFNEG(SDNode *Node) const {
+  // Get the sign bit as an integer.
+  SDLoc DL(Node);
+  FloatSignAsInt SignAsInt;
+  getSignAsIntValue(SignAsInt, DL, Node->getOperand(0));
+  EVT IntVT = SignAsInt.IntValue.getValueType();
+
+  // Flip the sign.
+  SDValue SignMask = DAG.getConstant(SignAsInt.SignMask, DL, IntVT);
+  SDValue SignFlip =
+      DAG.getNode(ISD::XOR, DL, IntVT, SignAsInt.IntValue, SignMask);
+
+  // Convert back to float.
+  return modifySignAsInt(SignAsInt, DL, SignFlip);
+}
+
 SDValue SelectionDAGLegalize::ExpandFABS(SDNode *Node) const {
   SDLoc DL(Node);
   SDValue Value = Node->getOperand(0);
@@ -1771,9 +1789,9 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
                                                EVT DestVT, const SDLoc &dl,
                                                SDValue Chain) {
   // Create the stack frame object.
-  unsigned SrcAlign = DAG.getDataLayout().getPrefTypeAlignment(
+  Align SrcAlign = DAG.getDataLayout().getPrefTypeAlign(
       SrcOp.getValueType().getTypeForEVT(*DAG.getContext()));
-  SDValue FIPtr = DAG.CreateStackTemporary(SlotVT, SrcAlign);
+  SDValue FIPtr = DAG.CreateStackTemporary(SlotVT.getStoreSize(), SrcAlign);
 
   FrameIndexSDNode *StackPtrFI = cast<FrameIndexSDNode>(FIPtr);
   int SPFI = StackPtrFI->getIndex();
@@ -1784,7 +1802,7 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
   unsigned SlotSize = SlotVT.getSizeInBits();
   unsigned DestSize = DestVT.getSizeInBits();
   Type *DestType = DestVT.getTypeForEVT(*DAG.getContext());
-  unsigned DestAlign = DAG.getDataLayout().getPrefTypeAlignment(DestType);
+  Align DestAlign = DAG.getDataLayout().getPrefTypeAlign(DestType);
 
   // Emit a store to the stack slot.  Use a truncstore if the input value is
   // later than DestVT.
@@ -1802,7 +1820,7 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
   // Result is a load from the stack slot.
   if (SlotSize == DestSize)
     return DAG.getLoad(DestVT, dl, Store, FIPtr, PtrInfo, DestAlign);
-    
+
   assert(SlotSize < DestSize && "Unknown extension!");
   return DAG.getExtLoad(ISD::EXTLOAD, dl, DestVT, Store, FIPtr, PtrInfo, SlotVT,
                         DestAlign);
@@ -2785,6 +2803,28 @@ SDValue SelectionDAGLegalize::ExpandBSWAP(SDValue Op, const SDLoc &dl) {
   }
 }
 
+/// Open code the operations for PARITY of the specified operation.
+SDValue SelectionDAGLegalize::ExpandPARITY(SDValue Op, const SDLoc &dl) {
+  EVT VT = Op.getValueType();
+  EVT ShVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
+  unsigned Sz = VT.getScalarSizeInBits();
+
+  // If CTPOP is legal, use it. Otherwise use shifts and xor.
+  SDValue Result;
+  if (TLI.isOperationLegal(ISD::CTPOP, VT)) {
+    Result = DAG.getNode(ISD::CTPOP, dl, VT, Op);
+  } else {
+    Result = Op;
+    for (unsigned i = Log2_32_Ceil(Sz); i != 0;) {
+      SDValue Shift = DAG.getNode(ISD::SRL, dl, VT, Result,
+                                  DAG.getConstant(1ULL << (--i), dl, ShVT));
+      Result = DAG.getNode(ISD::XOR, dl, VT, Result, Shift);
+    }
+  }
+
+  return DAG.getNode(ISD::AND, dl, VT, Result, DAG.getConstant(1, dl, VT));
+}
+
 bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   LLVM_DEBUG(dbgs() << "Trying to expand node\n");
   SmallVector<SDValue, 8> Results;
@@ -2815,6 +2855,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   case ISD::BSWAP:
     Results.push_back(ExpandBSWAP(Node->getOperand(0), dl));
+    break;
+  case ISD::PARITY:
+    Results.push_back(ExpandPARITY(Node->getOperand(0), dl));
     break;
   case ISD::FRAMEADDR:
   case ISD::RETURNADDR:
@@ -3226,12 +3269,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(ExpandFCOPYSIGN(Node));
     break;
   case ISD::FNEG:
-    // Expand Y = FNEG(X) ->  Y = SUB -0.0, X
-    Tmp1 = DAG.getConstantFP(-0.0, dl, Node->getValueType(0));
-    // TODO: If FNEG has fast-math-flags, propagate them to the FSUB.
-    Tmp1 = DAG.getNode(ISD::FSUB, dl, Node->getValueType(0), Tmp1,
-                       Node->getOperand(0));
-    Results.push_back(Tmp1);
+    Results.push_back(ExpandFNEG(Node));
     break;
   case ISD::FABS:
     Results.push_back(ExpandFABS(Node));
@@ -3916,10 +3954,12 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
         return true;
       break;
     case ISD::STRICT_FSUB: {
-      if (TLI.getStrictFPOperationAction(Node->getOpcode(),
-                                         Node->getValueType(0))
-          == TargetLowering::Legal)
+      if (TLI.getStrictFPOperationAction(
+              ISD::STRICT_FSUB, Node->getValueType(0)) == TargetLowering::Legal)
         return true;
+      if (TLI.getStrictFPOperationAction(
+              ISD::STRICT_FADD, Node->getValueType(0)) != TargetLowering::Legal)
+        break;
 
       EVT VT = Node->getValueType(0);
       const SDNodeFlags Flags = Node->getFlags();

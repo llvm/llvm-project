@@ -1570,11 +1570,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (SemaBuiltinSetjmp(TheCall))
       return ExprError();
     break;
-  case Builtin::BI_setjmp:
-  case Builtin::BI_setjmpex:
-    if (checkArgCount(*this, TheCall, 1))
-      return true;
-    break;
   case Builtin::BI__builtin_classify_type:
     if (checkArgCount(*this, TheCall, 1)) return true;
     TheCall->setType(Context.IntTy);
@@ -2570,6 +2565,17 @@ static bool isValidBPFPreserveFieldInfoArg(Expr *Arg) {
           dyn_cast<ArraySubscriptExpr>(Arg->IgnoreParens()));
 }
 
+static bool isEltOfVectorTy(ASTContext &Context, CallExpr *Call, Sema &S,
+                            QualType VectorTy, QualType EltTy) {
+  QualType VectorEltTy = VectorTy->castAs<VectorType>()->getElementType();
+  if (!Context.hasSameType(VectorEltTy, EltTy)) {
+    S.Diag(Call->getBeginLoc(), diag::err_typecheck_call_different_arg_types)
+        << Call->getSourceRange() << VectorEltTy << EltTy;
+    return false;
+  }
+  return true;
+}
+
 static bool isValidBPFPreserveTypeInfoArg(Expr *Arg) {
   QualType ArgType = Arg->getType();
   if (ArgType->getAsPlaceholderType())
@@ -3222,6 +3228,14 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
     return SemaVSXCheck(TheCall);
   case PPC::BI__builtin_altivec_vgnb:
      return SemaBuiltinConstantArgRange(TheCall, 1, 2, 7);
+  case PPC::BI__builtin_altivec_vec_replace_elt:
+  case PPC::BI__builtin_altivec_vec_replace_unaligned: {
+    QualType VecTy = TheCall->getArg(0)->getType();
+    QualType EltTy = TheCall->getArg(1)->getType();
+    unsigned Width = Context.getIntWidth(EltTy);
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, Width == 32 ? 12 : 8) ||
+           !isEltOfVectorTy(Context, TheCall, *this, VecTy, EltTy);
+  }
   case PPC::BI__builtin_vsx_xxeval:
      return SemaBuiltinConstantArgRange(TheCall, 3, 0, 255);
   case PPC::BI__builtin_altivec_vsldbi:

@@ -8,6 +8,11 @@
 
 # Overview of Compiler Phases
 
+```eval_rst
+.. contents::
+   :local:
+```
+
 Each phase produces either correct output or fatal errors.
 
 ## Prescan and Preprocess

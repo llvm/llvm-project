@@ -63,7 +63,7 @@ def PDL_Dialect : Dialect {
   }];
 
   let name = "pdl";
-  let cppNamespace = "mlir::pdl";
+  let cppNamespace = "::mlir::pdl";
 }
 
 //===----------------------------------------------------------------------===//

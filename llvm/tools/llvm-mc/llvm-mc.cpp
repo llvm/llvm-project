@@ -169,6 +169,10 @@ static cl::opt<bool> LexMasmIntegers(
     "masm-integers",
     cl::desc("Enable binary and hex masm integers (0b110 and 0ABCh)"));
 
+static cl::opt<bool> LexMasmHexFloats(
+    "masm-hexfloats",
+    cl::desc("Enable MASM-style hex float initializers (3F800000r)"));
+
 static cl::opt<bool> NoExecStack("no-exec-stack",
                                  cl::desc("File doesn't need an exec stack"));
 
@@ -300,6 +304,7 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
   Parser->setShowParsedOperands(ShowInstOperands);
   Parser->setTargetParser(*TAP);
   Parser->getLexer().setLexMasmIntegers(LexMasmIntegers);
+  Parser->getLexer().setLexMasmHexFloats(LexMasmHexFloats);
 
   int Res = Parser->Run(NoInitialTextSection);
 

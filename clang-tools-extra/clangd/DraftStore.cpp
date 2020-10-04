@@ -64,9 +64,9 @@ llvm::Expected<DraftStore::Draft> DraftStore::updateDraft(
 
   auto EntryIt = Drafts.find(File);
   if (EntryIt == Drafts.end()) {
-    return llvm::make_error<llvm::StringError>(
-        "Trying to do incremental update on non-added document: " + File,
-        llvm::errc::invalid_argument);
+    return error(llvm::errc::invalid_argument,
+                 "Trying to do incremental update on non-added document: {0}",
+                 File);
   }
   Draft &D = EntryIt->second;
   std::string Contents = EntryIt->second.Contents;
@@ -89,11 +89,9 @@ llvm::Expected<DraftStore::Draft> DraftStore::updateDraft(
       return EndIndex.takeError();
 
     if (*EndIndex < *StartIndex)
-      return llvm::make_error<llvm::StringError>(
-          llvm::formatv(
-              "Range's end position ({0}) is before start position ({1})", End,
-              Start),
-          llvm::errc::invalid_argument);
+      return error(llvm::errc::invalid_argument,
+                   "Range's end position ({0}) is before start position ({1})",
+                   End, Start);
 
     // Since the range length between two LSP positions is dependent on the
     // contents of the buffer we compute the range length between the start and
@@ -106,11 +104,10 @@ llvm::Expected<DraftStore::Draft> DraftStore::updateDraft(
         lspLength(Contents.substr(*StartIndex, *EndIndex - *StartIndex));
 
     if (Change.rangeLength && ComputedRangeLength != *Change.rangeLength)
-      return llvm::make_error<llvm::StringError>(
-          llvm::formatv("Change's rangeLength ({0}) doesn't match the "
-                        "computed range length ({1}).",
-                        *Change.rangeLength, ComputedRangeLength),
-          llvm::errc::invalid_argument);
+      return error(llvm::errc::invalid_argument,
+                   "Change's rangeLength ({0}) doesn't match the "
+                   "computed range length ({1}).",
+                   *Change.rangeLength, ComputedRangeLength);
 
     std::string NewContents;
     NewContents.reserve(*StartIndex + Change.text.length() +

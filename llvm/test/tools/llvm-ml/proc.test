@@ -1,0 +1,13 @@
+# RUN: llvm-ml -m32 -filetype=asm %s | FileCheck %s
+# RUN: llvm-ml -m64 -filetype=asm %s | FileCheck %s
+
+.code
+
+t1 PROC
+  ret
+t1 ENDP
+
+; CHECK: t1:
+; CHECK: ret
+
+END

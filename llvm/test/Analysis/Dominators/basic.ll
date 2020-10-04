@@ -1,4 +1,4 @@
-; RUN: opt < %s -domtree -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-OLDPM
+; RUN: opt < %s -domtree -analyze -enable-new-pm=0 | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-OLDPM
 ; RUN: opt < %s -disable-output -passes='print<domtree>' 2>&1 | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-NEWPM
 
 define void @test1() {

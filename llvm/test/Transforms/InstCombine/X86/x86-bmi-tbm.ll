@@ -306,6 +306,27 @@ define i64 @test_x86_pext_64_allones_mask(i64 %x) nounwind readnone {
   ret i64 %1
 }
 
+define i32 @test_x86_pext_32_shifted_mask(i32 %x) nounwind readnone {
+; CHECK-LABEL: @test_x86_pext_32_shifted_mask(
+; CHECK-NEXT:    %1 = lshr i32 %x, 1
+; CHECK-NEXT:    %2 = and i32 %1, 3
+; CHECK-NEXT:    ret i32 %2
+;
+  %1 = tail call i32 @llvm.x86.bmi.pext.32(i32 %x, i32 6)
+  ret i32 %1
+}
+
+define i64 @test_x86_pext_64_shifted_mask(i64 %x) nounwind readnone {
+; CHECK-LABEL: @test_x86_pext_64_shifted_mask(
+; CHECK-NEXT:    %1 = lshr i64 %x, 1
+; CHECK-NEXT:    %2 = and i64 %1, 3
+; CHECK-NEXT:    ret i64 %2
+;
+  %1 = tail call i64 @llvm.x86.bmi.pext.64(i64 %x, i64 6)
+  ret i64 %1
+}
+
+
 define i32 @test_x86_pext_32_constant_fold() nounwind readnone {
 ; CHECK-LABEL: @test_x86_pext_32_constant_fold(
 ; CHECK-NEXT:    ret i32 30001
@@ -369,6 +390,27 @@ define i64 @test_x86_pdep_64_allones_mask(i64 %x) nounwind readnone {
   %1 = tail call i64 @llvm.x86.bmi.pdep.64(i64 %x, i64 -1)
   ret i64 %1
 }
+
+define i32 @test_x86_pdep_32_shifted_mask(i32 %x) nounwind readnone {
+; CHECK-LABEL: @test_x86_pdep_32_shifted_mask(
+; CHECK-NEXT:    %1 = shl i32 %x, 2
+; CHECK-NEXT:    %2 = and i32 %1, 12
+; CHECK-NEXT:    ret i32 %2
+;
+  %1 = tail call i32 @llvm.x86.bmi.pdep.32(i32 %x, i32 12)
+  ret i32 %1
+}
+
+define i64 @test_x86_pdep_64_shifted_mask(i64 %x) nounwind readnone {
+; CHECK-LABEL: @test_x86_pdep_64_shifted_mask(
+; CHECK-NEXT:    %1 = shl i64 %x, 2
+; CHECK-NEXT:    %2 = and i64 %1, 12
+; CHECK-NEXT:    ret i64 %2
+;
+  %1 = tail call i64 @llvm.x86.bmi.pdep.64(i64 %x, i64 12)
+  ret i64 %1
+}
+
 
 define i32 @test_x86_pdep_32_constant_fold() nounwind readnone {
 ; CHECK-LABEL: @test_x86_pdep_32_constant_fold(

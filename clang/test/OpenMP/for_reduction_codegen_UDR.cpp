@@ -876,6 +876,7 @@ int main() {
 // CHECK: getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* %{{.+}}, i64 4
 
 // CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]], [4 x [[S_FLOAT_TY]]]** %
+// CHECK: [[VAR3_VOID_PTR:%.+]] = bitcast [4 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]] to i8*
 // CHECK: call void @__kmpc_free(i32 [[GTID]], i8* [[VAR3_VOID_PTR]], i8* inttoptr (i64 6 to i8*))
 // CHECK: ret void
 

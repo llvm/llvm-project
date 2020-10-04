@@ -770,7 +770,7 @@ Session::findSymbolInfo(StringRef SymbolName, Twine ErrorMsgStem) {
 
 } // end namespace llvm
 
-Triple getFirstFileTriple() {
+static Triple getFirstFileTriple() {
   assert(!InputFiles.empty() && "InputFiles can not be empty");
   auto ObjBuffer =
       ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(InputFiles.front())));
@@ -779,7 +779,7 @@ Triple getFirstFileTriple() {
   return Obj->makeTriple();
 }
 
-Error sanitizeArguments(const Session &S) {
+static Error sanitizeArguments(const Session &S) {
   if (EntryPointName.empty()) {
     if (S.TPC->getTargetTriple().getObjectFormat() == Triple::MachO)
       EntryPointName = "_main";
@@ -801,7 +801,7 @@ Error sanitizeArguments(const Session &S) {
   return Error::success();
 }
 
-Error loadProcessSymbols(Session &S) {
+static Error loadProcessSymbols(Session &S) {
   auto InternedEntryPointName = S.ES.intern(EntryPointName);
   auto FilterMainEntryPoint = [InternedEntryPointName](SymbolStringPtr Name) {
     return Name != InternedEntryPointName;
@@ -813,7 +813,7 @@ Error loadProcessSymbols(Session &S) {
   return Error::success();
 }
 
-Error loadDylibs() {
+static Error loadDylibs() {
   // FIXME: This should all be handled inside DynamicLibrary.
   for (const auto &Dylib : Dylibs) {
     if (!sys::fs::is_regular_file(Dylib))
@@ -827,12 +827,11 @@ Error loadDylibs() {
   return Error::success();
 }
 
-void addPhonyExternalsGenerator(Session &S) {
+static void addPhonyExternalsGenerator(Session &S) {
   S.MainJD->addGenerator(std::make_unique<PhonyExternalsGenerator>());
 }
 
-Error loadObjects(Session &S) {
-
+static Error loadObjects(Session &S) {
   std::map<unsigned, JITDylib *> IdxToJLD;
 
   // First, set up JITDylibs.
@@ -941,7 +940,7 @@ Error loadObjects(Session &S) {
   return Error::success();
 }
 
-Error runChecks(Session &S) {
+static Error runChecks(Session &S) {
 
   auto TripleName = S.TPC->getTargetTriple().str();
   std::string ErrorStr;
@@ -1036,12 +1035,14 @@ static Expected<JITEvaluatedSymbol> getMainEntryPoint(Session &S) {
   return S.ES.lookup(S.JDSearchOrder, EntryPointName);
 }
 
+namespace {
 struct JITLinkTimers {
   TimerGroup JITLinkTG{"llvm-jitlink timers", "timers for llvm-jitlink phases"};
   Timer LoadObjectsTimer{"load", "time to load/add object files", JITLinkTG};
   Timer LinkTimer{"link", "time to link object files", JITLinkTG};
   Timer RunTimer{"run", "time to execute jitlink'd code", JITLinkTG};
 };
+} // namespace
 
 int main(int argc, char *argv[]) {
   InitLLVM X(argc, argv);

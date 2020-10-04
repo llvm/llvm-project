@@ -41,6 +41,14 @@ define <vscale x 4 x i32> @sub() {
   ret <vscale x 4 x i32> %r
 }
 
+define <vscale x 4 x i32> @sub_splat() {
+; CHECK-LABEL: @sub_splat(
+; CHECK-NEXT:    ret <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 -16, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer)
+;
+  %r = sub <vscale x 4 x i32> zeroinitializer, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 16, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer)
+  ret <vscale x 4 x i32> %r
+}
+
 define <vscale x 4 x float> @fsub() {
 ; CHECK-LABEL: @fsub(
 ; CHECK-NEXT:    ret <vscale x 4 x float> undef
@@ -70,6 +78,14 @@ define <vscale x 4 x i32> @udiv() {
 ; CHECK-NEXT:    ret <vscale x 4 x i32> undef
 ;
   %r = udiv <vscale x 4 x i32> undef, undef
+  ret <vscale x 4 x i32> %r
+}
+
+define <vscale x 4 x i32> @udiv_splat_zero() {
+; CHECK-LABEL: @udiv_splat_zero(
+; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+;
+  %r = udiv <vscale x 4 x i32> zeroinitializer, zeroinitializer
   ret <vscale x 4 x i32> %r
 }
 

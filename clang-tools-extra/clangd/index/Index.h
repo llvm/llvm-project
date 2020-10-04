@@ -57,7 +57,8 @@ struct FuzzyFindRequest {
   }
   bool operator!=(const FuzzyFindRequest &Req) const { return !(*this == Req); }
 };
-bool fromJSON(const llvm::json::Value &Value, FuzzyFindRequest &Request);
+bool fromJSON(const llvm::json::Value &Value, FuzzyFindRequest &Request,
+              llvm::json::Path);
 llvm::json::Value toJSON(const FuzzyFindRequest &Request);
 
 struct LookupRequest {

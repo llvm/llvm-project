@@ -34,7 +34,9 @@ tryToFindPtrOrigin(const Expr *E, bool StopAtFirstRefCountedObj) {
     }
     if (auto *call = dyn_cast<CallExpr>(E)) {
       if (auto *memberCall = dyn_cast<CXXMemberCallExpr>(call)) {
-        if (isGetterOfRefCounted(memberCall->getMethodDecl())) {
+        Optional<bool> IsGetterOfRefCt =
+            isGetterOfRefCounted(memberCall->getMethodDecl());
+        if (IsGetterOfRefCt && *IsGetterOfRefCt) {
           E = memberCall->getImplicitObjectArgument();
           if (StopAtFirstRefCountedObj) {
             return {E, true};

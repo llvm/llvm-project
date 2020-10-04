@@ -44,7 +44,7 @@ public:
 
   int i = 0;
 #if __cplusplus <= 199711L
-  // expected-warning@-2 {{in-class initialization of non-static data member is a C++11 extension}}
+  // expected-warning@-2 {{default member initializer for non-static data member is a C++11 extension}}
 #endif
   static int si = 0; // expected-error {{non-const static data member must be initialized out of line}}
   static const NestedC ci = 0; // expected-error {{static data member of type 'const C::NestedC' must be initialized out of line}}

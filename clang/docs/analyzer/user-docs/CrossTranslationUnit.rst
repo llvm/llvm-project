@@ -201,6 +201,8 @@ Example usage of scan-build-py:
   ^C
   $
 
+.. _ctu-on-demand:
+
 On-demand analysis
 __________________
 The analysis produces the necessary AST structure of external TUs during analysis. This requires the

@@ -87,6 +87,92 @@ TEST(VPInstructionTest, moveAfter) {
   EXPECT_EQ(I3->getParent(), I4->getParent());
 }
 
+TEST(VPInstructionTest, setOperand) {
+  VPValue *VPV1 = new VPValue();
+  VPValue *VPV2 = new VPValue();
+  VPInstruction *I1 = new VPInstruction(0, {VPV1, VPV2});
+  EXPECT_EQ(1u, VPV1->getNumUsers());
+  EXPECT_EQ(I1, *VPV1->user_begin());
+  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_EQ(I1, *VPV2->user_begin());
+
+  // Replace operand 0 (VPV1) with VPV3.
+  VPValue *VPV3 = new VPValue();
+  I1->setOperand(0, VPV3);
+  EXPECT_EQ(0u, VPV1->getNumUsers());
+  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_EQ(I1, *VPV2->user_begin());
+  EXPECT_EQ(1u, VPV3->getNumUsers());
+  EXPECT_EQ(I1, *VPV3->user_begin());
+
+  // Replace operand 1 (VPV2) with VPV3.
+  I1->setOperand(1, VPV3);
+  EXPECT_EQ(0u, VPV1->getNumUsers());
+  EXPECT_EQ(0u, VPV2->getNumUsers());
+  EXPECT_EQ(2u, VPV3->getNumUsers());
+  EXPECT_EQ(I1, *VPV3->user_begin());
+  EXPECT_EQ(I1, *std::next(VPV3->user_begin()));
+
+  // Replace operand 0 (VPV3) with VPV4.
+  VPValue *VPV4 = new VPValue();
+  I1->setOperand(0, VPV4);
+  EXPECT_EQ(1u, VPV3->getNumUsers());
+  EXPECT_EQ(I1, *VPV3->user_begin());
+  EXPECT_EQ(I1, *VPV4->user_begin());
+
+  // Replace operand 1 (VPV3) with VPV4.
+  I1->setOperand(1, VPV4);
+  EXPECT_EQ(0u, VPV3->getNumUsers());
+  EXPECT_EQ(I1, *VPV4->user_begin());
+  EXPECT_EQ(I1, *std::next(VPV4->user_begin()));
+
+  delete I1;
+  delete VPV1;
+  delete VPV2;
+  delete VPV3;
+  delete VPV4;
+}
+
+TEST(VPInstructionTest, replaceAllUsesWith) {
+  VPValue *VPV1 = new VPValue();
+  VPValue *VPV2 = new VPValue();
+  VPInstruction *I1 = new VPInstruction(0, {VPV1, VPV2});
+
+  // Replace all uses of VPV1 with VPV3.
+  VPValue *VPV3 = new VPValue();
+  VPV1->replaceAllUsesWith(VPV3);
+  EXPECT_EQ(VPV3, I1->getOperand(0));
+  EXPECT_EQ(VPV2, I1->getOperand(1));
+  EXPECT_EQ(0u, VPV1->getNumUsers());
+  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_EQ(I1, *VPV2->user_begin());
+  EXPECT_EQ(1u, VPV3->getNumUsers());
+  EXPECT_EQ(I1, *VPV3->user_begin());
+
+  // Replace all uses of VPV2 with VPV3.
+  VPV2->replaceAllUsesWith(VPV3);
+  EXPECT_EQ(VPV3, I1->getOperand(0));
+  EXPECT_EQ(VPV3, I1->getOperand(1));
+  EXPECT_EQ(0u, VPV1->getNumUsers());
+  EXPECT_EQ(0u, VPV2->getNumUsers());
+  EXPECT_EQ(2u, VPV3->getNumUsers());
+  EXPECT_EQ(I1, *VPV3->user_begin());
+
+  // Replace all uses of VPV3 with VPV1.
+  VPV3->replaceAllUsesWith(VPV1);
+  EXPECT_EQ(VPV1, I1->getOperand(0));
+  EXPECT_EQ(VPV1, I1->getOperand(1));
+  EXPECT_EQ(2u, VPV1->getNumUsers());
+  EXPECT_EQ(I1, *VPV1->user_begin());
+  EXPECT_EQ(0u, VPV2->getNumUsers());
+  EXPECT_EQ(0u, VPV3->getNumUsers());
+
+  delete I1;
+  delete VPV1;
+  delete VPV2;
+  delete VPV3;
+}
+
 TEST(VPBasicBlockTest, getPlan) {
   {
     VPBasicBlock *VPBB1 = new VPBasicBlock();
@@ -245,6 +331,153 @@ compound=true
     OS.flush();
     EXPECT_EQ("vp<%2> = mul vp<%1> vp<%0>", I4Dump);
   }
+}
+
+TEST(VPRecipeTest, CastVPWidenRecipeToVPUser) {
+  LLVMContext C;
+
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  auto *AI =
+      BinaryOperator::CreateAdd(UndefValue::get(Int32), UndefValue::get(Int32));
+  VPValue Op1;
+  VPValue Op2;
+  SmallVector<VPValue *, 2> Args;
+  Args.push_back(&Op1);
+  Args.push_back(&Op1);
+  VPWidenRecipe WidenR(*AI, make_range(Args.begin(), Args.end()));
+  EXPECT_TRUE(isa<VPUser>(&WidenR));
+  VPRecipeBase *WidenRBase = &WidenR;
+  EXPECT_TRUE(isa<VPUser>(WidenRBase));
+  delete AI;
+}
+
+TEST(VPRecipeTest, CastVPWidenCallRecipeToVPUser) {
+  LLVMContext C;
+
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  FunctionType *FTy = FunctionType::get(Int32, false);
+  auto *Call = CallInst::Create(FTy, UndefValue::get(FTy));
+  VPValue Op1;
+  VPValue Op2;
+  SmallVector<VPValue *, 2> Args;
+  Args.push_back(&Op1);
+  Args.push_back(&Op2);
+  VPWidenCallRecipe Recipe(*Call, make_range(Args.begin(), Args.end()));
+  EXPECT_TRUE(isa<VPUser>(&Recipe));
+  VPRecipeBase *BaseR = &Recipe;
+  EXPECT_TRUE(isa<VPUser>(BaseR));
+  delete Call;
+}
+
+TEST(VPRecipeTest, CastVPWidenSelectRecipeToVPUser) {
+  LLVMContext C;
+
+  IntegerType *Int1 = IntegerType::get(C, 1);
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  auto *SelectI = SelectInst::Create(
+      UndefValue::get(Int1), UndefValue::get(Int32), UndefValue::get(Int32));
+  VPValue Op1;
+  VPValue Op2;
+  VPValue Op3;
+  SmallVector<VPValue *, 4> Args;
+  Args.push_back(&Op1);
+  Args.push_back(&Op2);
+  Args.push_back(&Op3);
+  VPWidenSelectRecipe WidenSelectR(*SelectI,
+                                   make_range(Args.begin(), Args.end()), false);
+  EXPECT_TRUE(isa<VPUser>(&WidenSelectR));
+  VPRecipeBase *BaseR = &WidenSelectR;
+  EXPECT_TRUE(isa<VPUser>(BaseR));
+  delete SelectI;
+}
+
+TEST(VPRecipeTest, CastVPWidenGEPRecipeToVPUser) {
+  LLVMContext C;
+
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  PointerType *Int32Ptr = PointerType::get(Int32, 0);
+  auto *GEP = GetElementPtrInst::Create(Int32, UndefValue::get(Int32Ptr),
+                                        UndefValue::get(Int32));
+  VPValue Op1;
+  VPValue Op2;
+  SmallVector<VPValue *, 4> Args;
+  Args.push_back(&Op1);
+  Args.push_back(&Op2);
+  VPWidenGEPRecipe Recipe(GEP, make_range(Args.begin(), Args.end()));
+  EXPECT_TRUE(isa<VPUser>(&Recipe));
+  VPRecipeBase *BaseR = &Recipe;
+  EXPECT_TRUE(isa<VPUser>(BaseR));
+  delete GEP;
+}
+
+TEST(VPRecipeTest, CastVPBlendRecipeToVPUser) {
+  LLVMContext C;
+
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  auto *Phi = PHINode::Create(Int32, 1);
+  VPValue Op1;
+  VPValue Op2;
+  SmallVector<VPValue *, 4> Args;
+  Args.push_back(&Op1);
+  Args.push_back(&Op2);
+  VPBlendRecipe Recipe(Phi, Args);
+  EXPECT_TRUE(isa<VPUser>(&Recipe));
+  VPRecipeBase *BaseR = &Recipe;
+  EXPECT_TRUE(isa<VPUser>(BaseR));
+  delete Phi;
+}
+
+TEST(VPRecipeTest, CastVPInterleaveRecipeToVPUser) {
+  LLVMContext C;
+
+  VPValue Addr;
+  VPValue Mask;
+  VPInterleaveRecipe Recipe(nullptr, &Addr, &Mask);
+  EXPECT_TRUE(isa<VPUser>(&Recipe));
+  VPRecipeBase *BaseR = &Recipe;
+  EXPECT_TRUE(isa<VPUser>(BaseR));
+}
+
+TEST(VPRecipeTest, CastVPReplicateRecipeToVPUser) {
+  LLVMContext C;
+
+  VPValue Op1;
+  VPValue Op2;
+  SmallVector<VPValue *, 4> Args;
+  Args.push_back(&Op1);
+  Args.push_back(&Op2);
+
+  VPReplicateRecipe Recipe(nullptr, make_range(Args.begin(), Args.end()), true,
+                           false);
+  EXPECT_TRUE(isa<VPUser>(&Recipe));
+  VPRecipeBase *BaseR = &Recipe;
+  EXPECT_TRUE(isa<VPUser>(BaseR));
+}
+
+TEST(VPRecipeTest, CastVPBranchOnMaskRecipeToVPUser) {
+  LLVMContext C;
+
+  VPValue Mask;
+  VPBranchOnMaskRecipe Recipe(&Mask);
+  EXPECT_TRUE(isa<VPUser>(&Recipe));
+  VPRecipeBase *BaseR = &Recipe;
+  EXPECT_TRUE(isa<VPUser>(BaseR));
+}
+
+TEST(VPRecipeTest, CastVPWidenMemoryInstructionRecipeToVPUser) {
+  LLVMContext C;
+
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  PointerType *Int32Ptr = PointerType::get(Int32, 0);
+  auto *Load =
+      new LoadInst(Int32, UndefValue::get(Int32Ptr), "", false, Align(1));
+  VPValue Addr;
+  VPValue Mask;
+  VPWidenMemoryInstructionRecipe Recipe(*Load, &Addr, &Mask);
+  EXPECT_TRUE(isa<VPUser>(&Recipe));
+  VPRecipeBase *BaseR = &Recipe;
+  EXPECT_TRUE(isa<VPUser>(BaseR));
+  delete Load;
 }
 
 } // namespace

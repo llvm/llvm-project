@@ -38,9 +38,9 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeAlignmentFromAssumptionsPass(Registry);
   initializeCallSiteSplittingLegacyPassPass(Registry);
   initializeConstantHoistingLegacyPassPass(Registry);
+  initializeConstraintEliminationPass(Registry);
   initializeCorrelatedValuePropagationPass(Registry);
   initializeDCELegacyPassPass(Registry);
-  initializeDeadInstEliminationPass(Registry);
   initializeDivRemPairsLegacyPassPass(Registry);
   initializeScalarizerLegacyPassPass(Registry);
   initializeDSELegacyPassPass(Registry);
@@ -67,10 +67,11 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeLoopAccessLegacyAnalysisPass(Registry);
   initializeLoopInstSimplifyLegacyPassPass(Registry);
   initializeLoopInterchangePass(Registry);
+  initializeLoopFlattenLegacyPassPass(Registry);
   initializeLoopPredicationLegacyPassPass(Registry);
   initializeLoopRotateLegacyPassPass(Registry);
   initializeLoopStrengthReducePass(Registry);
-  initializeLoopRerollPass(Registry);
+  initializeLoopRerollLegacyPassPass(Registry);
   initializeLoopUnrollPass(Registry);
   initializeLoopUnrollAndJamPass(Registry);
   initializeLoopUnswitchPass(Registry);
@@ -184,6 +185,10 @@ void LLVMAddLICMPass(LLVMPassManagerRef PM) {
 
 void LLVMAddLoopDeletionPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createLoopDeletionPass());
+}
+
+void LLVMAddLoopFlattenPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createLoopFlattenPass());
 }
 
 void LLVMAddLoopIdiomPass(LLVMPassManagerRef PM) {

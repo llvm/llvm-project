@@ -28,13 +28,17 @@ This document describes the available MLIR passes and their contracts.
 
 [include "LLVMPasses.md"]
 
-## `loop` Dialect Passes
-
-[include "LoopPasses.md"]
-
 ## `quant` Dialect Passes
 
 [include "QuantPasses.md"]
+
+## Reducer Passes
+
+[include "ReducerPasses.md"]
+
+## `scf` Dialect Passes
+
+[include "SCFPasses.md"]
 
 ## `shape` Dialect Passes
 

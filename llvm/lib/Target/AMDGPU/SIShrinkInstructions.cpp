@@ -272,8 +272,8 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) {
   // enabled
   int TFEIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::tfe);
   int LWEIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::lwe);
-  unsigned TFEVal = MI.getOperand(TFEIdx).getImm();
-  unsigned LWEVal = MI.getOperand(LWEIdx).getImm();
+  unsigned TFEVal = (TFEIdx == -1) ? 0 : MI.getOperand(TFEIdx).getImm();
+  unsigned LWEVal = (LWEIdx == -1) ? 0 : MI.getOperand(LWEIdx).getImm();
   int ToUntie = -1;
   if (TFEVal || LWEVal) {
     // TFE/LWE is enabled so we need to deal with an implicit tied operand

@@ -2287,6 +2287,10 @@ bool VarDecl::mightBeUsableInConstantExpressions(ASTContext &C) const {
   if (isa<ParmVarDecl>(this))
     return false;
 
+  // The values of weak variables are never usable in constant expressions.
+  if (isWeak())
+    return false;
+
   // In C++11, any variable of reference type can be used in a constant
   // expression if it is initialized by a constant expression.
   if (Lang.CPlusPlus11 && getType()->isReferenceType())
@@ -2414,10 +2418,6 @@ bool VarDecl::isInitICE() const {
 }
 
 bool VarDecl::checkInitIsICE() const {
-  // Initializers of weak variables are never ICEs.
-  if (isWeak())
-    return false;
-
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
   if (Eval->CheckedICE)
     // We have already checked whether this subexpression is an
@@ -3163,37 +3163,16 @@ FunctionDecl *FunctionDecl::getCanonicalDecl() { return getFirstDecl(); }
 /// functions as their wrapped builtins. This shouldn't be done in general, but
 /// it's useful in Sema to diagnose calls to wrappers based on their semantics.
 unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
-  unsigned BuiltinID;
+  unsigned BuiltinID = 0;
 
   if (const auto *ABAA = getAttr<ArmBuiltinAliasAttr>()) {
     BuiltinID = ABAA->getBuiltinName()->getBuiltinID();
-  } else {
-    if (!getIdentifier())
-      return 0;
-
-    BuiltinID = getIdentifier()->getBuiltinID();
+  } else if (const auto *A = getAttr<BuiltinAttr>()) {
+    BuiltinID = A->getID();
   }
 
   if (!BuiltinID)
     return 0;
-
-  ASTContext &Context = getASTContext();
-  if (Context.getLangOpts().CPlusPlus) {
-    const auto *LinkageDecl =
-        dyn_cast<LinkageSpecDecl>(getFirstDecl()->getDeclContext());
-    // In C++, the first declaration of a builtin is always inside an implicit
-    // extern "C".
-    // FIXME: A recognised library function may not be directly in an extern "C"
-    // declaration, for instance "extern "C" { namespace std { decl } }".
-    if (!LinkageDecl) {
-      if (BuiltinID == Builtin::BI__GetExceptionInfo &&
-          Context.getTargetInfo().getCXXABI().isMicrosoft())
-        return Builtin::BI__GetExceptionInfo;
-      return 0;
-    }
-    if (LinkageDecl->getLanguage() != LinkageSpecDecl::lang_c)
-      return 0;
-  }
 
   // If the function is marked "overloadable", it has a different mangled name
   // and is not the C library function.
@@ -3201,6 +3180,7 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
       !hasAttr<ArmBuiltinAliasAttr>())
     return 0;
 
+  ASTContext &Context = getASTContext();
   if (!Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID))
     return BuiltinID;
 
@@ -4706,11 +4686,9 @@ char *Buffer = new (getASTContext(), 1) char[Name.size() + 1];
 void ValueDecl::anchor() {}
 
 bool ValueDecl::isWeak() const {
-  for (const auto *I : attrs())
-    if (isa<WeakAttr>(I) || isa<WeakRefAttr>(I))
-      return true;
-
-  return isWeakImported();
+  auto *MostRecent = getMostRecentDecl();
+  return MostRecent->hasAttr<WeakAttr>() ||
+         MostRecent->hasAttr<WeakRefAttr>() || isWeakImported();
 }
 
 void ImplicitParamDecl::anchor() {}

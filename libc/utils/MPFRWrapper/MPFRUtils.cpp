@@ -133,6 +133,12 @@ public:
     return result;
   }
 
+  MPFRNumber hypot(const MPFRNumber &b) {
+    MPFRNumber result;
+    mpfr_hypot(result.value, value, b.value, MPFR_RNDN);
+    return result;
+  }
+
   MPFRNumber remquo(const MPFRNumber &divisor, int &quotient) {
     MPFRNumber remainder;
     long q;
@@ -278,6 +284,18 @@ unaryOperationTwoOutputs(Operation op, InputType input, int &output) {
 
 template <typename InputType>
 cpp::EnableIfType<cpp::IsFloatingPointType<InputType>::Value, MPFRNumber>
+binaryOperationOneOutput(Operation op, InputType x, InputType y) {
+  MPFRNumber inputX(x), inputY(y);
+  switch (op) {
+  case Operation::Hypot:
+    return inputX.hypot(inputY);
+  default:
+    __builtin_unreachable();
+  }
+}
+
+template <typename InputType>
+cpp::EnableIfType<cpp::IsFloatingPointType<InputType>::Value, MPFRNumber>
 binaryOperationTwoOutputs(Operation op, InputType x, InputType y, int &output) {
   MPFRNumber inputX(x), inputY(y);
   switch (op) {
@@ -402,6 +420,41 @@ template void explainBinaryOperationTwoOutputsError<long double>(
     const BinaryOutput<long double> &, testutils::StreamWrapper &);
 
 template <typename T>
+void explainBinaryOperationOneOutputError(Operation op,
+                                          const BinaryInput<T> &input,
+                                          T libcResult,
+                                          testutils::StreamWrapper &OS) {
+  MPFRNumber mpfrX(input.x);
+  MPFRNumber mpfrY(input.y);
+  FPBits<T> xbits(input.x);
+  FPBits<T> ybits(input.y);
+  MPFRNumber mpfrResult = binaryOperationOneOutput(op, input.x, input.y);
+  MPFRNumber mpfrMatchValue(libcResult);
+
+  OS << "Input decimal: x: " << mpfrX.str() << " y: " << mpfrY.str() << '\n';
+  __llvm_libc::fputil::testing::describeValue("First input bits: ", input.x,
+                                              OS);
+  __llvm_libc::fputil::testing::describeValue("Second input bits: ", input.y,
+                                              OS);
+
+  OS << "Libc result: " << mpfrMatchValue.str() << '\n'
+     << "MPFR result: " << mpfrResult.str() << '\n';
+  __llvm_libc::fputil::testing::describeValue(
+      "Libc floating point result bits: ", libcResult, OS);
+  __llvm_libc::fputil::testing::describeValue(
+      "              MPFR rounded bits: ", mpfrResult.as<T>(), OS);
+  OS << "ULP error: " << std::to_string(mpfrResult.ulp(libcResult)) << '\n';
+}
+
+template void explainBinaryOperationOneOutputError<float>(
+    Operation, const BinaryInput<float> &, float, testutils::StreamWrapper &);
+template void explainBinaryOperationOneOutputError<double>(
+    Operation, const BinaryInput<double> &, double, testutils::StreamWrapper &);
+template void explainBinaryOperationOneOutputError<long double>(
+    Operation, const BinaryInput<long double> &, long double,
+    testutils::StreamWrapper &);
+
+template <typename T>
 bool compareUnaryOperationSingleOutput(Operation op, T input, T libcResult,
                                        double ulpError) {
   // If the ulp error is exactly 0.5 (i.e a tie), we would check that the result
@@ -479,6 +532,26 @@ compareBinaryOperationTwoOutputs<double>(Operation, const BinaryInput<double> &,
 template bool compareBinaryOperationTwoOutputs<long double>(
     Operation, const BinaryInput<long double> &,
     const BinaryOutput<long double> &, double);
+
+template <typename T>
+bool compareBinaryOperationOneOutput(Operation op, const BinaryInput<T> &input,
+                                     T libcResult, double ulpError) {
+  MPFRNumber mpfrResult = binaryOperationOneOutput(op, input.x, input.y);
+  double ulp = mpfrResult.ulp(libcResult);
+
+  bool bitsAreEven = ((FPBits<T>(libcResult).bitsAsUInt() & 1) == 0);
+  return (ulp < ulpError) ||
+         ((ulp == ulpError) && ((ulp != 0.5) || bitsAreEven));
+}
+
+template bool compareBinaryOperationOneOutput<float>(Operation,
+                                                     const BinaryInput<float> &,
+                                                     float, double);
+template bool
+compareBinaryOperationOneOutput<double>(Operation, const BinaryInput<double> &,
+                                        double, double);
+template bool compareBinaryOperationOneOutput<long double>(
+    Operation, const BinaryInput<long double> &, long double, double);
 
 } // namespace internal
 

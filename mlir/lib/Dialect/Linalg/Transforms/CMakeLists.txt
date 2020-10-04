@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRLinalgTransforms
   DropUnitDims.cpp
   Fusion.cpp
+  FusionOnTensors.cpp
   Hoisting.cpp
   Interchange.cpp
   Loops.cpp
@@ -17,18 +18,18 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRLinalgPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffineOps
+  MLIRAffine
   MLIRAnalysis
   MLIREDSC
   MLIRIR
   MLIRLinalgAnalysis
   MLIRLinalgEDSC
-  MLIRLinalgOps
+  MLIRLinalg
   MLIRLinalgUtils
   MLIRSCF
   MLIRSCFTransforms
   MLIRPass
-  MLIRStandardOps
+  MLIRStandard
   MLIRStandardToLLVM
   MLIRTransformUtils
   MLIRVector

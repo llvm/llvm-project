@@ -28,7 +28,9 @@ struct X {
 // CHECK-LOAD: cxx14-lambdas.cpp:8:7: ReturnStmt= Extent=[8:7 - 8:29]
 
 // RUN: env CINDEXTEST_INDEXLOCALSYMBOLS=1 c-index-test -index-file -std=c++14 %s | FileCheck -check-prefix=CHECK-INDEX %s
+// CHECK-INDEX: [indexEntityReference]: kind: variable | name: localA | USR: c:cxx14-lambdas.cpp@100@S@X@F@f#@localA | lang: C | cursor: DeclRefExpr=localA:6:9 | loc: 7:27
 // CHECK-INDEX: [indexEntityReference]: kind: variable | name: ptr | USR: c:cxx14-lambdas.cpp@139@S@X@F@f#@Sa@F@operator()#I#1@ptr | lang: C | cursor: VariableRef=ptr:7:20 | loc: 7:20
+// CHECK-INDEX: [indexEntityReference]: kind: variable | name: localB | USR: c:cxx14-lambdas.cpp@100@S@X@F@f#@localB | lang: C | cursor: DeclRefExpr=localB:6:17 | loc: 7:42
 // CHECK-INDEX: [indexEntityReference]: kind: variable | name: copy | USR: c:cxx14-lambdas.cpp@154@S@X@F@f#@Sa@F@operator()#I#1@copy | lang: C | cursor: VariableRef=copy:7:35 | loc: 7:35
 // CHECK-INDEX: [indexDeclaration]: kind: variable | name: x | USR: c:cxx14-lambdas.cpp@170@S@X@F@f#@Sa@F@operator()#I#1@x | lang: C | cursor: ParmDecl=x:7:59 (Definition) | loc: 7:59
 // CHECK-INDEX: [indexEntityReference]: kind: typedef | name: Integer | USR: c:cxx14-lambdas.cpp@T@Integer | lang: C | cursor: TypeRef=Integer:3:13 | loc: 7:51

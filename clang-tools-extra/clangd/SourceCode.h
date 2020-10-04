@@ -181,6 +181,8 @@ struct Edit {
   tooling::Replacements Replacements;
   std::string InitialCode;
 
+  Edit() = default;
+
   Edit(llvm::StringRef Code, tooling::Replacements Reps)
       : Replacements(std::move(Reps)), InitialCode(Code) {}
 

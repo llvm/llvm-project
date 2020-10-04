@@ -1570,7 +1570,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   llvm::Value *allocSize =
     EmitCXXNewAllocSize(*this, E, minElements, numElements,
                         allocSizeWithoutCookie);
-  CharUnits allocAlign = getContext().getTypeAlignInChars(allocType);
+  CharUnits allocAlign = getContext().getPreferredTypeAlignInChars(allocType);
 
   // Emit the allocation call.  If the allocator is a global placement
   // operator, just "inline" it directly.
@@ -1820,8 +1820,9 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
   // Pass the alignment if the delete function has an align_val_t parameter.
   if (Params.Alignment) {
     QualType AlignValType = *ParamTypeIt++;
-    CharUnits DeleteTypeAlign = getContext().toCharUnitsFromBits(
-        getContext().getTypeAlignIfKnown(DeleteTy));
+    CharUnits DeleteTypeAlign =
+        getContext().toCharUnitsFromBits(getContext().getTypeAlignIfKnown(
+            DeleteTy, true /* NeedsPreferredAlignment */));
     llvm::Value *Align = llvm::ConstantInt::get(ConvertType(AlignValType),
                                                 DeleteTypeAlign.getQuantity());
     DeleteArgs.add(RValue::get(Align), AlignValType);
@@ -2199,7 +2200,8 @@ llvm::Value *CodeGenFunction::EmitCXXTypeidExpr(const CXXTypeidExpr *E) {
   //   polymorphic class type, the result refers to a std::type_info object
   //   representing the type of the most derived object (that is, the dynamic
   //   type) to which the glvalue refers.
-  if (E->isPotentiallyEvaluated())
+  // If the operand is already most derived object, no need to look up vtable.
+  if (E->isPotentiallyEvaluated() && !E->isMostDerived(getContext()))
     return EmitTypeidFromVTable(*this, E->getExprOperand(),
                                 StdTypeInfoPtrTy);
 

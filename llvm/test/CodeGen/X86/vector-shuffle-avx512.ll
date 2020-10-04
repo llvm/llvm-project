@@ -596,6 +596,21 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(<2 x i32>* %src, <8 x i32>* %d
   ret void
 }
 
+define <32 x float> @PR47534(<8 x float> %tmp) {
+; CHECK-LABEL: PR47534:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = [7,25,26,27,7,29,30,31,7,25,26,27,7,29,30,31]
+; CHECK-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vpermi2ps %zmm2, %zmm0, %zmm1
+; CHECK-NEXT:    ret{{[l|q]}}
+  %tmp1 = shufflevector <8 x float> %tmp, <8 x float> undef, <32 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %tmp2 = shufflevector <32 x float> <float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <32 x float> undef, <32 x i32> <i32 39, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 29, i32 30, i32 31>
+  %tmp18 = shufflevector <32 x float> %tmp2, <32 x float> %tmp1, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 39, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 29, i32 30, i32 31>
+  ret <32 x float> %tmp18
+}
+
 %union1= type { <16 x float> }
 @src1 = external dso_local local_unnamed_addr global %union1, align 64
 

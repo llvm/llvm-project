@@ -133,4 +133,17 @@ TEST_F(GlobPatternTest, ExtSym) {
   EXPECT_TRUE((bool)Pat2);
   EXPECT_TRUE(Pat2->match("\xFF"));
 }
+
+TEST_F(GlobPatternTest, IsTrivialMatchAll) {
+  Expected<GlobPattern> Pat1 = GlobPattern::create("*");
+  EXPECT_TRUE((bool)Pat1);
+  EXPECT_TRUE(Pat1->isTrivialMatchAll());
+
+  const char *NegativeCases[] = {"a*", "*a", "?*", "*?", "**", "\\*"};
+  for (auto *P : NegativeCases) {
+    Expected<GlobPattern> Pat2 = GlobPattern::create(P);
+    EXPECT_TRUE((bool)Pat2);
+    EXPECT_FALSE(Pat2->isTrivialMatchAll());
+  }
+}
 }

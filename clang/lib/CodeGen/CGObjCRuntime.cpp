@@ -390,3 +390,13 @@ clang::CodeGen::emitObjCProtocolObject(CodeGenModule &CGM,
                                        const ObjCProtocolDecl *protocol) {
   return CGM.getObjCRuntime().GetOrEmitProtocol(protocol);
 }
+
+std::string CGObjCRuntime::getSymbolNameForMethod(const ObjCMethodDecl *OMD,
+                                                  bool includeCategoryName) {
+  std::string buffer;
+  llvm::raw_string_ostream out(buffer);
+  CGM.getCXXABI().getMangleContext().mangleObjCMethodName(OMD, out,
+                                       /*includePrefixByte=*/true,
+                                       includeCategoryName);
+  return buffer;
+}

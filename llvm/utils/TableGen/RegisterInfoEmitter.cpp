@@ -356,7 +356,7 @@ EmitRegUnitPressure(raw_ostream &OS, const CodeGenRegBank &RegBank,
 using DwarfRegNumsMapPair = std::pair<Record*, std::vector<int64_t>>;
 using DwarfRegNumsVecTy = std::vector<DwarfRegNumsMapPair>;
 
-void finalizeDwarfRegNumsKeys(DwarfRegNumsVecTy &DwarfRegNums) {
+static void finalizeDwarfRegNumsKeys(DwarfRegNumsVecTy &DwarfRegNums) {
   // Sort and unique to get a map-like vector. We want the last assignment to
   // match previous behaviour.
   std::stable_sort(DwarfRegNums.begin(), DwarfRegNums.end(),

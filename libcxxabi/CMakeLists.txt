@@ -352,6 +352,7 @@ if (NOT LIBCXXABI_ENABLE_THREADS)
                         " is also set to ON.")
   endif()
   add_definitions(-D_LIBCXXABI_HAS_NO_THREADS)
+  add_definitions(-D_LIBCPP_HAS_NO_THREADS)
 endif()
 
 if (LIBCXXABI_HAS_EXTERNAL_THREAD_API)

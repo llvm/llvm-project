@@ -94,7 +94,7 @@ public:
         start_ + (at - fileOffset_) + static_cast<std::int64_t>(bytes) >
             size_) {
       Flush(handler);
-      fileOffset_ = at;
+      Reset(at);
       Reallocate(bytes, handler);
     }
     dirty_ = true;

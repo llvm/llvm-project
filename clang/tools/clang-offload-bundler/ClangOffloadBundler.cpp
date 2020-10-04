@@ -94,6 +94,11 @@ static cl::opt<bool> PrintExternalCommands(
              "instead of actually executing them - for testing purposes.\n"),
     cl::init(false), cl::cat(ClangOffloadBundlerCategory));
 
+static cl::opt<unsigned>
+    BundleAlignment("bundle-align",
+                    cl::desc("Alignment of bundle for binary files"),
+                    cl::init(1), cl::cat(ClangOffloadBundlerCategory));
+
 /// Magic string that marks the existence of offloading data.
 #define OFFLOAD_BUNDLER_MAGIC_STR "__CLANG_OFFLOAD_BUNDLE__"
 
@@ -223,6 +228,9 @@ class BinaryFileHandler final : public FileHandler {
   StringMap<BundleInfo>::iterator CurBundleInfo;
   StringMap<BundleInfo>::iterator NextBundleInfo;
 
+  /// Current bundle target to be written.
+  std::string CurWriteBundleTarget;
+
 public:
   BinaryFileHandler() : FileHandler() {}
 
@@ -337,10 +345,12 @@ public:
     unsigned Idx = 0;
     for (auto &T : TargetNames) {
       MemoryBuffer &MB = *Inputs[Idx++];
+      HeaderSize = alignTo(HeaderSize, BundleAlignment);
       // Bundle offset.
       Write8byteIntegerToBuffer(OS, HeaderSize);
       // Size of the bundle (adds to the next bundle's offset)
       Write8byteIntegerToBuffer(OS, MB.getBufferSize());
+      BundlesInfo[T] = BundleInfo(MB.getBufferSize(), HeaderSize);
       HeaderSize += MB.getBufferSize();
       // Size of the triple
       Write8byteIntegerToBuffer(OS, T.size());
@@ -351,6 +361,7 @@ public:
   }
 
   Error WriteBundleStart(raw_fd_ostream &OS, StringRef TargetTriple) final {
+    CurWriteBundleTarget = TargetTriple.str();
     return Error::success();
   }
 
@@ -359,6 +370,8 @@ public:
   }
 
   Error WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
+    auto BI = BundlesInfo[CurWriteBundleTarget];
+    OS.seek(BI.Offset);
     OS.write(Input.getBufferStart(), Input.getBufferSize());
     return Error::success();
   }

@@ -2561,12 +2561,15 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
         }
       }
     }
-    // Check if all incoming values are non-zero constant.
-    bool AllNonZeroConstants = llvm::all_of(PN->operands(), [](Value *V) {
-      return isa<ConstantInt>(V) && !cast<ConstantInt>(V)->isZero();
+    // Check if all incoming values are non-zero using recursion.
+    Query RecQ = Q;
+    unsigned NewDepth = std::max(Depth, MaxAnalysisRecursionDepth - 1);
+    return llvm::all_of(PN->operands(), [&](const Use &U) {
+      if (U.get() == PN)
+        return true;
+      RecQ.CxtI = PN->getIncomingBlock(U)->getTerminator();
+      return isKnownNonZero(U.get(), DemandedElts, NewDepth, RecQ);
     });
-    if (AllNonZeroConstants)
-      return true;
   }
   // ExtractElement
   else if (const auto *EEI = dyn_cast<ExtractElementInst>(V)) {
@@ -2967,11 +2970,13 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
 
       // Take the minimum of all incoming values.  This can't infinitely loop
       // because of our depth threshold.
-      Tmp = ComputeNumSignBits(PN->getIncomingValue(0), Depth + 1, Q);
-      for (unsigned i = 1, e = NumIncomingValues; i != e; ++i) {
+      Query RecQ = Q;
+      Tmp = TyBits;
+      for (unsigned i = 0, e = NumIncomingValues; i != e; ++i) {
         if (Tmp == 1) return Tmp;
+        RecQ.CxtI = PN->getIncomingBlock(i)->getTerminator();
         Tmp = std::min(
-            Tmp, ComputeNumSignBits(PN->getIncomingValue(i), Depth + 1, Q));
+            Tmp, ComputeNumSignBits(PN->getIncomingValue(i), Depth + 1, RecQ));
       }
       return Tmp;
     }
@@ -3523,11 +3528,20 @@ bool llvm::isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
       return isKnownNeverInfinity(Inst->getOperand(1), TLI, Depth + 1) &&
              isKnownNeverInfinity(Inst->getOperand(2), TLI, Depth + 1);
     }
-    case Instruction::UIToFP:
-      // If the input type fits into the floating type the result is finite.
-      return ilogb(APFloat::getLargest(
-                 Inst->getType()->getScalarType()->getFltSemantics())) >=
-             (int)Inst->getOperand(0)->getType()->getScalarSizeInBits();
+    case Instruction::SIToFP:
+    case Instruction::UIToFP: {
+      // Get width of largest magnitude integer (remove a bit if signed).
+      // This still works for a signed minimum value because the largest FP
+      // value is scaled by some fraction close to 2.0 (1.0 + 0.xxxx).
+      int IntSize = Inst->getOperand(0)->getType()->getScalarSizeInBits();
+      if (Inst->getOpcode() == Instruction::SIToFP)
+        --IntSize;
+
+      // If the exponent of the largest finite FP value can hold the largest
+      // integer, the result of the cast must be finite.
+      Type *FPTy = Inst->getType()->getScalarType();
+      return ilogb(APFloat::getLargest(FPTy->getFltSemantics())) >= IntSize;
+    }
     default:
       break;
     }
@@ -4871,7 +4885,7 @@ bool llvm::canCreatePoison(const Operator *Op) {
   return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/true);
 }
 
-static bool programUndefinedIfUndefOrPoison(const Instruction *Inst,
+static bool programUndefinedIfUndefOrPoison(const Value *V,
                                             bool PoisonOnly);
 
 static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
@@ -4879,6 +4893,9 @@ static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
                                              const DominatorTree *DT,
                                              unsigned Depth, bool PoisonOnly) {
   if (Depth >= MaxAnalysisRecursionDepth)
+    return false;
+
+  if (isa<MetadataAsValue>(V))
     return false;
 
   if (const auto *A = dyn_cast<Argument>(V)) {
@@ -4927,14 +4944,25 @@ static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
         return true;
     }
 
-    if (!canCreateUndefOrPoison(Opr) && all_of(Opr->operands(), OpCheck))
+    if (const auto *PN = dyn_cast<PHINode>(V)) {
+      unsigned Num = PN->getNumIncomingValues();
+      bool IsWellDefined = true;
+      for (unsigned i = 0; i < Num; ++i) {
+        auto *TI = PN->getIncomingBlock(i)->getTerminator();
+        if (!isGuaranteedNotToBeUndefOrPoison(PN->getIncomingValue(i), TI, DT,
+                                              Depth + 1, PoisonOnly)) {
+          IsWellDefined = false;
+          break;
+        }
+      }
+      if (IsWellDefined)
+        return true;
+    } else if (!canCreateUndefOrPoison(Opr) && all_of(Opr->operands(), OpCheck))
       return true;
   }
 
-  if (auto *I = dyn_cast<Instruction>(V)) {
-    if (programUndefinedIfUndefOrPoison(I, PoisonOnly))
-      return true;
-  }
+  if (programUndefinedIfUndefOrPoison(V, PoisonOnly))
+    return true;
 
   // CxtI may be null or a cloned instruction.
   if (!CtxI || !CtxI->getParent() || !DT)
@@ -5161,7 +5189,7 @@ bool llvm::mustTriggerUB(const Instruction *I,
   return false;
 }
 
-static bool programUndefinedIfUndefOrPoison(const Instruction *Inst,
+static bool programUndefinedIfUndefOrPoison(const Value *V,
                                             bool PoisonOnly) {
   // We currently only look for uses of values within the same basic
   // block, as that makes it easier to guarantee that the uses will be
@@ -5170,9 +5198,20 @@ static bool programUndefinedIfUndefOrPoison(const Instruction *Inst,
   // FIXME: Expand this to consider uses beyond the same basic block. To do
   // this, look out for the distinction between post-dominance and strong
   // post-dominance.
-  const BasicBlock *BB = Inst->getParent();
+  const BasicBlock *BB = nullptr;
+  BasicBlock::const_iterator Begin;
+  if (const auto *Inst = dyn_cast<Instruction>(V)) {
+    BB = Inst->getParent();
+    Begin = Inst->getIterator();
+    Begin++;
+  } else if (const auto *Arg = dyn_cast<Argument>(V)) {
+    BB = &Arg->getParent()->getEntryBlock();
+    Begin = BB->begin();
+  } else {
+    return false;
+  }
 
-  BasicBlock::const_iterator Begin = Inst->getIterator(), End = BB->end();
+  BasicBlock::const_iterator End = BB->end();
 
   if (!PoisonOnly) {
     // Be conservative & just check whether a value is passed to a noundef
@@ -5185,7 +5224,7 @@ static bool programUndefinedIfUndefOrPoison(const Instruction *Inst,
       if (const auto *CB = dyn_cast<CallBase>(&I)) {
         for (unsigned i = 0; i < CB->arg_size(); ++i) {
           if (CB->paramHasAttr(i, Attribute::NoUndef) &&
-              CB->getArgOperand(i) == Inst)
+              CB->getArgOperand(i) == V)
             return true;
         }
       }
@@ -5199,27 +5238,26 @@ static bool programUndefinedIfUndefOrPoison(const Instruction *Inst,
   // does.
   SmallSet<const Value *, 16> YieldsPoison;
   SmallSet<const BasicBlock *, 4> Visited;
-  YieldsPoison.insert(Inst);
-  Visited.insert(Inst->getParent());
+
+  YieldsPoison.insert(V);
+  auto Propagate = [&](const User *User) {
+    if (propagatesPoison(cast<Operator>(User)))
+      YieldsPoison.insert(User);
+  };
+  for_each(V->users(), Propagate);
+  Visited.insert(BB);
 
   unsigned Iter = 0;
   while (Iter++ < MaxAnalysisRecursionDepth) {
     for (auto &I : make_range(Begin, End)) {
-      if (&I != Inst) {
-        if (mustTriggerUB(&I, YieldsPoison))
-          return true;
-        if (!isGuaranteedToTransferExecutionToSuccessor(&I))
-          return false;
-      }
+      if (mustTriggerUB(&I, YieldsPoison))
+        return true;
+      if (!isGuaranteedToTransferExecutionToSuccessor(&I))
+        return false;
 
       // Mark poison that propagates from I through uses of I.
-      if (YieldsPoison.count(&I)) {
-        for (const User *User : I.users()) {
-          const Instruction *UserI = cast<Instruction>(User);
-          if (propagatesPoison(cast<Operator>(UserI)))
-            YieldsPoison.insert(User);
-        }
-      }
+      if (YieldsPoison.count(&I))
+        for_each(I.users(), Propagate);
     }
 
     if (auto *NextBB = BB->getSingleSuccessor()) {

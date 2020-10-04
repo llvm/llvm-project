@@ -68,7 +68,6 @@ done:
 
 declare i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* nocapture, i32) #0
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
-declare void @llvm.amdgcn.global.atomic.fadd.p1f32.f32(float addrspace(1)* nocapture, float) #2
 
 attributes #0 = { argmemonly nounwind }
 attributes #1 = { nounwind readnone willreturn }

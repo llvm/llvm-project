@@ -11,6 +11,7 @@
 
 int main() {
   int msgq = msgget(IPC_PRIVATE, 0666);
+  if (msgq == -1) perror("msgget:");
   assert(msgq != -1);
 
   struct msg_s {
@@ -24,6 +25,7 @@ int main() {
   int res = msgsnd(msgq, &msg, MSG_BUFLEN, IPC_NOWAIT);
   if (res) {
     fprintf(stderr, "Error sending message! %s\n", strerror(errno));
+    msgctl(msgq, IPC_RMID, NULL);
     return -1;
   }
 
@@ -32,5 +34,6 @@ int main() {
   assert(len == MSG_BUFLEN);
   assert(msg.mtype == rcv_msg.mtype);
   assert(!memcmp(msg.string, rcv_msg.string, MSG_BUFLEN));
+  msgctl(msgq, IPC_RMID, NULL);
   return 0;
 }

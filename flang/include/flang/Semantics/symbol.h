@@ -248,6 +248,8 @@ public:
   const std::list<SourceName> &paramNames() const { return paramNames_; }
   const SymbolVector &paramDecls() const { return paramDecls_; }
   bool sequence() const { return sequence_; }
+  std::map<SourceName, SymbolRef> &finals() { return finals_; }
+  const std::map<SourceName, SymbolRef> &finals() const { return finals_; }
   bool isForwardReferenced() const { return isForwardReferenced_; }
   void add_paramName(const SourceName &name) { paramNames_.push_back(name); }
   void add_paramDecl(const Symbol &symbol) { paramDecls_.push_back(symbol); }
@@ -279,6 +281,7 @@ private:
   // These are the names of the derived type's components in component
   // order.  A parent component, if any, appears first in this list.
   std::list<SourceName> componentNames_;
+  std::map<SourceName, SymbolRef> finals_; // FINAL :: subr
   bool sequence_{false};
   bool isForwardReferenced_{false};
   friend llvm::raw_ostream &operator<<(
@@ -321,8 +324,6 @@ private:
   MaybeExpr bindName_;
   std::size_t alignment_{0}; // required alignment in bytes
 };
-
-class FinalProcDetails {}; // TODO
 
 class MiscDetails {
 public:
@@ -471,7 +472,7 @@ using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
     ObjectEntityDetails, ProcEntityDetails, AssocEntityDetails,
     DerivedTypeDetails, UseDetails, UseErrorDetails, HostAssocDetails,
     GenericDetails, ProcBindingDetails, NamelistDetails, CommonBlockDetails,
-    FinalProcDetails, TypeParamDetails, MiscDetails>;
+    TypeParamDetails, MiscDetails>;
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Details &);
 std::string DetailsToString(const Details &);
 

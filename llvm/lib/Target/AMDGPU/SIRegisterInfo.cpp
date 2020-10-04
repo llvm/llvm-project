@@ -503,8 +503,10 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
 #endif
   assert(FIOp && FIOp->isFI() && "frame index must be address operand");
   assert(TII->isMUBUF(MI));
-  assert(TII->getNamedOperand(MI, AMDGPU::OpName::soffset)->getReg() ==
-         MF->getInfo<SIMachineFunctionInfo>()->getStackPtrOffsetReg() &&
+
+  MachineOperand *SOffset = TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
+  assert(SOffset->getReg() ==
+             MF->getInfo<SIMachineFunctionInfo>()->getStackPtrOffsetReg() &&
          "should only be seeing stack pointer offset relative FrameIndex");
 
   MachineOperand *OffsetOp = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
@@ -513,6 +515,10 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
 
   FIOp->ChangeToRegister(BaseReg, false);
   OffsetOp->setImm(NewOffset);
+
+  // The move materializing the base address will be an absolute stack address,
+  // so clear the base offset.
+  SOffset->ChangeToImmediate(0);
 }
 
 bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,

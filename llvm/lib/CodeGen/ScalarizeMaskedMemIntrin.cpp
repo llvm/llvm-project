@@ -865,6 +865,12 @@ bool ScalarizeMaskedMemIntrin::optimizeCallInst(CallInst *CI,
                                                 bool &ModifiedDT) {
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
   if (II) {
+    // The scalarization code below does not work for scalable vectors.
+    if (isa<ScalableVectorType>(II->getType()) ||
+        any_of(II->arg_operands(),
+               [](Value *V) { return isa<ScalableVectorType>(V->getType()); }))
+      return false;
+
     switch (II->getIntrinsicID()) {
     default:
       break;

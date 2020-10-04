@@ -53,7 +53,8 @@ private:
   void WriteOne(const Scope &);
   void Write(const Symbol &);
   std::string GetAsString(const Symbol &);
-  void PutSymbols(const Scope &);
+  // Returns true if a derived type with bindings and "contains" was emitted
+  bool PutSymbols(const Scope &);
   void PutSymbol(llvm::raw_ostream &, const Symbol &);
   void PutDerivedType(const Symbol &);
   void PutSubprogram(const Symbol &);

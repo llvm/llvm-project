@@ -19,7 +19,7 @@ include "mlir/Dialect/OpenMP/OmpCommon.td"
 
 def OpenMP_Dialect : Dialect {
   let name = "omp";
-  let cppNamespace = "omp";
+  let cppNamespace = "::mlir::omp";
 }
 
 class OpenMP_Op<string mnemonic, list<OpTrait> traits = []> :
@@ -124,7 +124,7 @@ def FlushOp : OpenMP_Op<"flush"> {
 
   let arguments = (ins Variadic<AnyType>:$varList);
 
-  let assemblyFormat = "attr-dict ($varList^ `:` type($varList))?";
+  let assemblyFormat = [{ ( `(` $varList^ `:` type($varList) `)` )? attr-dict}];
 }
 
 //===----------------------------------------------------------------------===//
@@ -138,6 +138,8 @@ def MasterOp : OpenMP_Op<"master"> {
   }];
 
   let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = "$region attr-dict";
 }
 
 //===----------------------------------------------------------------------===//

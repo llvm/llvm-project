@@ -69,11 +69,13 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Input.getFilename());
 
   const auto& D = C.getDriver();
-  const char* Exec = Args.MakeArgString(D.GetProgramPath("flang", TC));
+  // TODO: Replace flang-new with flang once the new driver replaces the
+  // throwaway driver
+  const char *Exec = Args.MakeArgString(D.GetProgramPath("flang-new", TC));
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
 }
 
-Flang::Flang(const ToolChain &TC) : Tool("flang", "flang frontend", TC) {}
+Flang::Flang(const ToolChain &TC) : Tool("flang-new", "flang frontend", TC) {}
 
 Flang::~Flang() {}
