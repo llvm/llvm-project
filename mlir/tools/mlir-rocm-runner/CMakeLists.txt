@@ -104,7 +104,7 @@ if(MLIR_ROCM_RUNNER_ENABLED)
     LIST(APPEND targets_to_link "LLVM${t}")
   ENDFOREACH(t)
 
-  add_mlir_tool(mlir-rocm-runner
+  add_llvm_tool(mlir-rocm-runner
     mlir-rocm-runner.cpp
 
     DEPENDS

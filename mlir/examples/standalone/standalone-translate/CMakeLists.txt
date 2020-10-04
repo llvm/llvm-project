@@ -5,7 +5,7 @@ set(LLVM_LINK_COMPONENTS
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(translation_libs GLOBAL PROPERTY MLIR_TRANSLATION_LIBS)
 
-add_standalone_tool(standalone-translate
+add_llvm_executable(standalone-translate
   standalone-translate.cpp
   )
 llvm_update_compile_flags(standalone-translate)

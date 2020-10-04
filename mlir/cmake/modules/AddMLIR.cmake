@@ -24,12 +24,7 @@ function(add_mlir_interface interface)
 endfunction()
 
 
-# Generate Documentation using the mlir-doc rule
-#   doc_filename: the basename of a .td tablegen file
-#   command: the tablegen command to run, typically "-gen-op-doc",
-#            "-gen-pass-doc", or "-gen-dialect-doc"
-#   output_file: the basename of a .md markdown file to be output
-#   output_directory: the directory to place the output
+# Generate Documentation
 function(add_mlir_doc doc_filename command output_file output_directory)
   set(LLVM_TARGET_DEFINITIONS ${doc_filename}.td)
   tablegen(MLIR ${output_file}.md ${command} "-I${MLIR_MAIN_INCLUDE_DIR}" "-I${MLIR_INCLUDE_DIR}")
@@ -45,7 +40,7 @@ function(add_mlir_doc doc_filename command output_file output_directory)
 endfunction()
 
 # Declare an mlir library which can be compiled in libMLIR.so
-# In addition to everything that llvm_add_library accepts, this
+# In addition to everything that llvm_add_librar accepts, this
 # also has the following option:
 # EXCLUDE_FROM_LIBMLIR
 #   Don't include this library in libMLIR.so.  This option should be used
