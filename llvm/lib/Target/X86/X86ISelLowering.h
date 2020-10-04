@@ -713,6 +713,16 @@ namespace llvm {
     // Mwaitx builtin is lowered to this if the base pointer needs saving.
     MWAITX_DAG,
 
+    // Key locker nodes that produce flags.
+    AESENC128KL,
+    AESDEC128KL,
+    AESENC256KL,
+    AESDEC256KL,
+    AESENCWIDE128KL,
+    AESDECWIDE128KL,
+    AESENCWIDE256KL,
+    AESDECWIDE256KL,
+
     /// X86 strict FP compare instructions.
     STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
     STRICT_FCMPS,
