@@ -896,19 +896,9 @@ def LCMPXCHG16B_SAVE_RBX :
                                                     GR64:$rbx_save))]>;
 }
 
-// This pseudo must be used when the frame uses RBX as
+// This pseudo must be used when the frame uses RBX/EBX as
 // the base pointer.
-// cf comment for LCMPXCHG8B_SAVE_EBX.
-let Defs = [EBX], Uses = [ECX, EAX, EBX],
-    Predicates = [HasMWAITX], SchedRW = [WriteSystem],
-    isCodeGenOnly = 1, isPseudo = 1, Constraints = "$ebx_save = $dst" in {
-def MWAITX_SAVE_EBX :
-    I<0, Pseudo, (outs GR32:$dst),
-      (ins GR32:$ebx_input, GR32:$ebx_save),
-      "mwaitx",
-      []>;
-}
-// Same as MWAITX_SAVE_EBX but for the case where RBX is the base pointer.
+// cf comment for LCMPXCHG16B_SAVE_RBX.
 let Defs = [EBX], Uses = [ECX, EAX, EBX],
     Predicates = [HasMWAITX], SchedRW = [WriteSystem],
     isCodeGenOnly = 1, isPseudo = 1, Constraints = "$rbx_save = $dst" in {
