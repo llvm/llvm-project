@@ -339,6 +339,16 @@ compound=true
   }
 }
 
+TEST(VPRecipeTest, CastVPInstructionToVPUser) {
+  VPValue Op1;
+  VPValue Op2;
+  VPInstruction Recipe(Instruction::Add, {&Op1, &Op2});
+  EXPECT_TRUE(isa<VPUser>(&Recipe));
+  VPRecipeBase *BaseR = &Recipe;
+  EXPECT_TRUE(isa<VPUser>(BaseR));
+  EXPECT_EQ(&Recipe, BaseR->toVPUser());
+}
+
 TEST(VPRecipeTest, CastVPWidenRecipeToVPUser) {
   LLVMContext C;
 
@@ -354,6 +364,7 @@ TEST(VPRecipeTest, CastVPWidenRecipeToVPUser) {
   EXPECT_TRUE(isa<VPUser>(&WidenR));
   VPRecipeBase *WidenRBase = &WidenR;
   EXPECT_TRUE(isa<VPUser>(WidenRBase));
+  EXPECT_EQ(&WidenR, WidenRBase->toVPUser());
   delete AI;
 }
 
@@ -372,6 +383,7 @@ TEST(VPRecipeTest, CastVPWidenCallRecipeToVPUser) {
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
+  EXPECT_EQ(&Recipe, BaseR->toVPUser());
   delete Call;
 }
 
@@ -394,6 +406,7 @@ TEST(VPRecipeTest, CastVPWidenSelectRecipeToVPUser) {
   EXPECT_TRUE(isa<VPUser>(&WidenSelectR));
   VPRecipeBase *BaseR = &WidenSelectR;
   EXPECT_TRUE(isa<VPUser>(BaseR));
+  EXPECT_EQ(&WidenSelectR, BaseR->toVPUser());
   delete SelectI;
 }
 
@@ -413,6 +426,7 @@ TEST(VPRecipeTest, CastVPWidenGEPRecipeToVPUser) {
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
+  EXPECT_EQ(&Recipe, BaseR->toVPUser());
   delete GEP;
 }
 
@@ -442,6 +456,7 @@ TEST(VPRecipeTest, CastVPInterleaveRecipeToVPUser) {
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
+  EXPECT_EQ(&Recipe, BaseR->toVPUser());
 }
 
 TEST(VPRecipeTest, CastVPReplicateRecipeToVPUser) {
@@ -468,6 +483,7 @@ TEST(VPRecipeTest, CastVPBranchOnMaskRecipeToVPUser) {
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
+  EXPECT_EQ(&Recipe, BaseR->toVPUser());
 }
 
 TEST(VPRecipeTest, CastVPWidenMemoryInstructionRecipeToVPUser) {
@@ -483,6 +499,7 @@ TEST(VPRecipeTest, CastVPWidenMemoryInstructionRecipeToVPUser) {
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
+  EXPECT_EQ(&Recipe, BaseR->toVPUser());
   delete Load;
 }
 
