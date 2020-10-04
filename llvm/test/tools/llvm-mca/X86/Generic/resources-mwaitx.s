@@ -14,7 +14,7 @@ mwaitx
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      100   0.33                  U     monitorx
-# CHECK-NEXT:  1      100   0.33    *      *      U     mwaitx
+# CHECK-NEXT:  1      100   0.33                  U     mwaitx
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SBDivider
