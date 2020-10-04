@@ -85,7 +85,7 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
     LIST(APPEND targets_to_link "LLVM${t}")
   ENDFOREACH(t)
 
-  add_mlir_tool(mlir-vulkan-runner
+  add_llvm_tool(mlir-vulkan-runner
     mlir-vulkan-runner.cpp
   )
   add_dependencies(mlir-vulkan-runner vulkan-runtime-wrappers)

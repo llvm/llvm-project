@@ -31,16 +31,7 @@ list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(TableGen)
 include(AddLLVM)
 include(AddMLIR)
-
-# Get a bunch of LLVM-style default options.
-include(LLVMProjectOptions)
-add_llvm_project_options(standalone)
-
 include(HandleLLVMOptions)
-
-# Get a bunch of default targets
-include(LLVMProjectTargets)
-add_llvm_project_targets(standalone)
 
 include_directories(${LLVM_INCLUDE_DIRS})
 include_directories(${MLIR_INCLUDE_DIRS})

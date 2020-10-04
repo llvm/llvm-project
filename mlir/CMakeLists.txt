@@ -21,10 +21,6 @@ set_target_properties(mlir-headers PROPERTIES FOLDER "Misc")
 add_dependencies(mlir-headers mlir-generic-headers)
 add_custom_target(mlir-doc)
 
-# Get a bunch of LLVM-style default options.
-include(LLVMProjectOptions)
-add_llvm_project_options(mlir)
-
 # Build the CUDA conversions and run according tests if the NVPTX backend
 # is available
 if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
@@ -47,6 +43,13 @@ add_definitions(-DMLIR_ROCM_CONVERSIONS_ENABLED=${MLIR_ROCM_CONVERSIONS_ENABLED}
 set(MLIR_CUDA_RUNNER_ENABLED 0 CACHE BOOL "Enable building the mlir CUDA runner")
 set(MLIR_ROCM_RUNNER_ENABLED 0 CACHE BOOL "Enable building the mlir ROCm runner")
 set(MLIR_VULKAN_RUNNER_ENABLED 0 CACHE BOOL "Enable building the mlir Vulkan runner")
+
+option(MLIR_INCLUDE_TESTS
+       "Generate build targets for the MLIR unit tests."
+       ${LLVM_INCLUDE_TESTS})
+
+option(MLIR_INCLUDE_INTEGRATION_TESTS
+       "Generate build targets for the MLIR integration tests.")
 
 #-------------------------------------------------------------------------------
 # Python Bindings Configuration
@@ -80,46 +83,42 @@ if(MLIR_BINDINGS_PYTHON_ENABLED)
                  "extension = '${PYTHON_MODULE_EXTENSION}")
 endif()
 
-# Get a bunch of default targets
-include(LLVMProjectTargets)
-add_llvm_project_targets(mlir)
-
 include_directories( "include")
 include_directories( ${MLIR_INCLUDE_DIR})
 
 # Adding tools/mlir-tblgen here as calling add_tablegen sets some variables like
 # MLIR_TABLEGEN_EXE in PARENT_SCOPE which gets lost if that folder is included
 # from another directory like tools
-if (MLIR_INCLUDE_TOOLS)
-  add_subdirectory(tools/mlir-tblgen)
-endif()
+add_subdirectory(tools/mlir-tblgen)
 
 add_subdirectory(include/mlir)
 add_subdirectory(lib)
 # C API needs all dialects for registration, but should be built before tests.
 add_subdirectory(lib/CAPI)
 if (MLIR_INCLUDE_TESTS)
+  add_definitions(-DMLIR_INCLUDE_TESTS)
   add_subdirectory(unittests)
   add_subdirectory(test)
 endif()
 if (MLIR_INCLUDE_INTEGRATION_TESTS)
+  add_definitions(-DMLIR_INCLUDE_INTEGRATION_TESTS)
   add_subdirectory(integration_test)
 endif()
 # Tools needs to come late to ensure that MLIR_ALL_LIBS is populated.
 # Generally things after this point may depend on MLIR_ALL_LIBS or libMLIR.so.
-if (MLIR_INCLUDE_TOOLS)
-  add_subdirectory(tools)
-endif()
+add_subdirectory(tools)
 
-if (MLIR_INCLUDE_EXAMPLES)
+if( LLVM_INCLUDE_EXAMPLES )
   add_subdirectory(examples)
 endif()
 
+option(MLIR_INCLUDE_DOCS "Generate build targets for the MLIR docs."
+  ${LLVM_INCLUDE_DOCS})
 if (MLIR_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()
 
-if (NOT MLIR_INSTALL_TOOLCHAIN_ONLY)
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/mlir include/mlir-c
     DESTINATION include
     COMPONENT mlir-headers
