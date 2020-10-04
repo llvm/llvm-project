@@ -2448,14 +2448,6 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
       Parent->getOpcode() != X86ISD::TLSCALL && // Fixme
       Parent->getOpcode() != X86ISD::ENQCMD && // Fixme
       Parent->getOpcode() != X86ISD::ENQCMDS && // Fixme
-      Parent->getOpcode() != X86ISD::AESENC128KL && // Fixme
-      Parent->getOpcode() != X86ISD::AESDEC128KL && // Fixme
-      Parent->getOpcode() != X86ISD::AESENC256KL && // Fixme
-      Parent->getOpcode() != X86ISD::AESDEC256KL && // Fixme
-      Parent->getOpcode() != X86ISD::AESENCWIDE128KL && // Fixme
-      Parent->getOpcode() != X86ISD::AESDECWIDE128KL && // Fixme
-      Parent->getOpcode() != X86ISD::AESENCWIDE256KL && // Fixme
-      Parent->getOpcode() != X86ISD::AESDECWIDE256KL && // Fixme
       Parent->getOpcode() != X86ISD::EH_SJLJ_SETJMP && // setjmp
       Parent->getOpcode() != X86ISD::EH_SJLJ_LONGJMP) { // longjmp
     unsigned AddrSpace =
@@ -5814,9 +5806,10 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM7, Node->getOperand(9),
                                  Chain.getValue(1));
 
-    SDNode *Res = CurDAG->getMachineNode(
+    MachineSDNode *Res = CurDAG->getMachineNode(
         Opcode, dl, Node->getVTList(),
         {Base, Scale, Index, Disp, Segment, Chain, Chain.getValue(1)});
+    CurDAG->setNodeMemRefs(Res, cast<MemSDNode>(Node)->getMemOperand());
     ReplaceNode(Node, Res);
     return;
   }
