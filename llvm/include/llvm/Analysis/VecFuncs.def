@@ -309,14 +309,6 @@ TLI_DEFINE_VECFUNC("__sqrtf_finite", "__svml_sqrtf4", 4)
 TLI_DEFINE_VECFUNC("__sqrtf_finite", "__svml_sqrtf8", 8)
 TLI_DEFINE_VECFUNC("__sqrtf_finite", "__svml_sqrtf16", 16)
 
-TLI_DEFINE_VECFUNC("llvm.sqrt.f64", "__svml_sqrt2", 2)
-TLI_DEFINE_VECFUNC("llvm.sqrt.f64", "__svml_sqrt4", 4)
-TLI_DEFINE_VECFUNC("llvm.sqrt.f64", "__svml_sqrt8", 8)
-
-TLI_DEFINE_VECFUNC("llvm.sqrt.f32", "__svml_sqrtf4", 4)
-TLI_DEFINE_VECFUNC("llvm.sqrt.f32", "__svml_sqrtf8", 8)
-TLI_DEFINE_VECFUNC("llvm.sqrt.f32", "__svml_sqrtf16", 16)
-
 TLI_DEFINE_VECFUNC("exp2", "__svml_exp22", 2)
 TLI_DEFINE_VECFUNC("exp2", "__svml_exp24", 4)
 TLI_DEFINE_VECFUNC("exp2", "__svml_exp28", 8)
