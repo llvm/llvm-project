@@ -2725,6 +2725,19 @@ define i32 @select_replacement_loop2(i32 %arg, i32 %arg2) {
   ret i32 %sel
 }
 
+define i8* @select_replacement_gep_inbounds(i8* %base, i64 %offset) {
+; CHECK-LABEL: @select_replacement_gep_inbounds(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OFFSET:%.*]], 0
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[BASE:%.*]], i64 [[OFFSET]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8* [[BASE]], i8* [[GEP]]
+; CHECK-NEXT:    ret i8* [[SEL]]
+;
+  %cmp = icmp eq i64 %offset, 0
+  %gep = getelementptr inbounds i8, i8* %base, i64 %offset
+  %sel = select i1 %cmp, i8* %base, i8* %gep
+  ret i8* %sel
+}
+
 declare void @use(i1)
 declare void @use_i8(i8)
 declare i32 @llvm.cttz.i32(i32, i1 immarg)
