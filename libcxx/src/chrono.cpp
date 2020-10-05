@@ -13,11 +13,15 @@
 #include "include/apple_availability.h"
 
 #if __has_include(<unistd.h>)
-#include <unistd.h>
+# include <unistd.h>
+#endif
+
+#if __has_include(<sys/time.h>)
+# include <sys/time.h> // for gettimeofday and timeval
 #endif
 
 #if !defined(__APPLE__) && _POSIX_TIMERS > 0
-#define _LIBCPP_USE_CLOCK_GETTIME
+# define _LIBCPP_USE_CLOCK_GETTIME
 #endif
 
 #if defined(_LIBCPP_WIN32API)
@@ -27,10 +31,6 @@
 #  if _WIN32_WINNT >= _WIN32_WINNT_WIN8
 #    include <winapifamily.h>
 #  endif
-#else
-#  if !defined(CLOCK_REALTIME)
-#    include <sys/time.h>        // for gettimeofday and timeval
-#  endif // !defined(CLOCK_REALTIME)
 #endif // defined(_LIBCPP_WIN32API)
 
 #if defined(__ELF__) && defined(_LIBCPP_LINK_RT_LIB)
@@ -74,7 +74,7 @@ system_clock::now() _NOEXCEPT
                        static_cast<__int64>(ft.dwLowDateTime)};
   return time_point(duration_cast<duration>(d - nt_to_unix_epoch));
 #else
-#if defined(CLOCK_REALTIME)
+#if defined(CLOCK_REALTIME) && defined(_LIBCPP_USE_CLOCK_GETTIME)
   struct timespec tp;
   if (0 != clock_gettime(CLOCK_REALTIME, &tp))
     __throw_system_error(errno, "clock_gettime(CLOCK_REALTIME) failed");
@@ -83,7 +83,7 @@ system_clock::now() _NOEXCEPT
     timeval tv;
     gettimeofday(&tv, 0);
     return time_point(seconds(tv.tv_sec) + microseconds(tv.tv_usec));
-#endif // CLOCK_REALTIME
+#endif
 #endif
 }
 
