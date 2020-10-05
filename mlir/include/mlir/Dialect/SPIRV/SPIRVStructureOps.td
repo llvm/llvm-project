@@ -472,7 +472,7 @@ def SPV_ReferenceOfOp : SPV_Op<"_reference_of", [NoSideEffect]> {
   let summary = "Reference a specialization constant.";
 
   let description = [{
-    Specialization constant in module scope are defined using symbol names.
+    Specialization constants in module scope are defined using symbol names.
     This op generates an SSA value that can be used to refer to the symbol
     within function scope for use in ops that expect an SSA value.
     This operation has no corresponding SPIR-V instruction; it's merely used
