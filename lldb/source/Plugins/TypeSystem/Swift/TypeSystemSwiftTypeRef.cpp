@@ -1033,6 +1033,30 @@ DWARFASTParser *TypeSystemSwiftTypeRef::GetDWARFParser() {
   return m_swift_ast_context->GetDWARFParser();
 }
 
+TypeSP TypeSystemSwiftTypeRef::LookupTypeInModule(
+    lldb::opaque_compiler_type_t opaque_type) {
+  auto *M = GetModule();
+  if (!M)
+    return {};
+  swift::Demangle::Demangler dem;
+  auto *node = GetDemangledType(dem, AsMangledName(opaque_type));
+  auto module_type = GetNominal(dem, node);
+  if (!module_type)
+    return {};
+  // DW_AT_linkage_name is not part of the accelerator table, so
+  // we need to search by module+name.
+  ConstString module(module_type->first);
+  ConstString type(module_type->second);
+  llvm::SmallVector<CompilerContext, 2> decl_context;
+  decl_context.push_back({CompilerContextKind::Module, module});
+  decl_context.push_back({CompilerContextKind::AnyType, type});
+  llvm::DenseSet<SymbolFile *> searched_symbol_files;
+  TypeMap types;
+  M->FindTypes(decl_context, TypeSystemSwift::GetSupportedLanguagesForTypes(),
+               searched_symbol_files, types);
+  return types.Empty() ? TypeSP() : types.GetTypeAtIndex(0);
+}
+
 // Tests
 
 #ifndef NDEBUG
@@ -1681,27 +1705,8 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
     // If there is no process, we can still try to get the static size
     // information out of DWARF. Because it is stored in the Type
     // object we need to look that up by name again.
-    if (auto *M = GetModule()) {
-      swift::Demangle::Demangler dem;
-      auto node = GetDemangledType(dem, AsMangledName(type));
-      if (auto module_type = GetNominal(dem, node)) {
-        // DW_AT_linkage_name is not part of the accelerator table, so
-        // we need to search by module+name.
-        ConstString module(module_type->first);
-        ConstString type(module_type->second);
-        llvm::SmallVector<CompilerContext, 2> decl_context;
-        decl_context.push_back({CompilerContextKind::Module, module});
-        decl_context.push_back({CompilerContextKind::AnyType, type});
-        llvm::DenseSet<SymbolFile *> searched_symbol_files;
-        TypeMap types;
-        M->FindTypes(decl_context,
-                     TypeSystemSwift::GetSupportedLanguagesForTypes(),
-                     searched_symbol_files, types);
-        if (!types.Empty())
-          if (auto type = types.GetTypeAtIndex(0))
-            return type->GetByteSize(nullptr);
-      }
-    }
+    if (TypeSP type_sp = LookupTypeInModule(type))
+      return type_sp->GetByteSize(exe_scope);
     LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
               "Couldn't compute size of type %s without a process.",
               AsMangledName(type));
@@ -1956,7 +1961,41 @@ bool TypeSystemSwiftTypeRef::IsPointerOrReferenceType(
 llvm::Optional<size_t>
 TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
                                         ExecutionContextScope *exe_scope) {
-  return m_swift_ast_context->GetTypeBitAlign(ReconstructType(type), exe_scope);
+    auto impl = [&]() -> llvm::Optional<size_t> {
+    // Clang types can be resolved even without a process.
+    if (CompilerType clang_type = GetAsClangTypeOrNull(type)) {
+      // Swift doesn't know pointers: return the size alignment of the
+      // object pointer instead of the underlying object.
+      if (Flags(clang_type.GetTypeInfo()).AllSet(eTypeIsObjC | eTypeIsClass))
+        return GetPointerByteSize() * 8;
+      return clang_type.GetTypeBitAlign(exe_scope);
+    }
+    if (!exe_scope) {
+      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "Couldn't compute alignment of type %s without an execution "
+                "context.",
+                AsMangledName(type));
+      return {};
+    }
+    if (auto *runtime =
+            SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
+      return runtime->GetBitAlignment({this, type}, exe_scope);
+
+    // If there is no process, we can still try to get the static
+    // alignment information out of DWARF. Because it is stored in the
+    // Type object we need to look that up by name again.
+    if (TypeSP type_sp = LookupTypeInModule(type))
+      return type_sp->GetLayoutCompilerType().GetTypeBitAlign(exe_scope);
+    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+              "Couldn't compute alignment of type %s without a process.",
+              AsMangledName(type));
+    return {};
+  };
+  if (exe_scope && exe_scope->CalculateProcess())
+    VALIDATE_AND_RETURN(impl, GetTypeBitAlign, type,
+                        (ReconstructType(type), exe_scope));
+  else
+    return impl();
 }
 bool TypeSystemSwiftTypeRef::IsTypedefType(opaque_compiler_type_t type) {
   return m_swift_ast_context->IsTypedefType(ReconstructType(type));

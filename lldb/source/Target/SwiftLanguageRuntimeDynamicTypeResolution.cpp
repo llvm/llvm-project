@@ -1434,6 +1434,21 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
           return type;
         });
 
+    // Thicken generic metatypes. Once substituted, they should always
+    // be thick. TypeRef::subst() does the same transformation.
+    target_swift_type =
+        target_swift_type.transform([](swift::Type type) -> swift::Type {
+          using namespace swift;
+          const auto thin = MetatypeRepresentation::Thin;
+          const auto thick = MetatypeRepresentation::Thick;
+          if (auto *metatype = dyn_cast<AnyMetatypeType>(type.getPointer()))
+            if (metatype->hasRepresentation() &&
+                metatype->getRepresentation() == thin &&
+                metatype->getInstanceType()->hasTypeParameter())
+              return MetatypeType::get(metatype->getInstanceType(), thick);
+          return type;
+        });
+
     while (target_swift_type->hasOpaqueArchetype()) {
       auto old_type = target_swift_type;
       target_swift_type = target_swift_type.subst(
@@ -2166,9 +2181,10 @@ SwiftLanguageRuntimeImpl::GetByteStride(CompilerType type) {
 }
 
 llvm::Optional<size_t>
-SwiftLanguageRuntimeImpl::GetBitAlignment(CompilerType type) {
-  if (auto *type_info = GetTypeInfo(type, nullptr))
-    return type_info->getAlignment();
+SwiftLanguageRuntimeImpl::GetBitAlignment(CompilerType type,
+                                          ExecutionContextScope *exe_scope) {
+  if (auto *type_info = GetTypeInfo(type, exe_scope))
+    return type_info->getAlignment() * 8;
   return {};
 }
 

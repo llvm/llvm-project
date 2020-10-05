@@ -6062,6 +6062,8 @@ SwiftASTContext::GetTypeBitAlign(opaque_compiler_type_t type,
     exe_scope->CalculateExecutionContext(exe_ctx);
     auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
     CompilerType bound_type = BindGenericTypeParameters({this, type}, exe_scope);
+    if (bound_type.GetOpaqueQualType() == type)
+      return {};
     // Note thay the bound type may be in a different AST context.
     return bound_type.GetTypeBitAlign(exe_scope);
   }
@@ -6069,13 +6071,13 @@ SwiftASTContext::GetTypeBitAlign(opaque_compiler_type_t type,
   const swift::irgen::FixedTypeInfo *fixed_type_info =
       GetSwiftFixedTypeInfo(type);
   if (fixed_type_info)
-    return fixed_type_info->getFixedAlignment().getValue();
+    return fixed_type_info->getFixedAlignment().getValue() * 8;
 
   // Ask the dynamic type system.
   if (!exe_scope)
     return {};
   if (auto *runtime = SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
-    return runtime->GetBitAlignment({this, type});
+    return runtime->GetBitAlignment({this, type}, exe_scope);
   return {};
 }
 
