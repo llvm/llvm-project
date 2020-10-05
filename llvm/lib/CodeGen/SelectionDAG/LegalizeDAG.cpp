@@ -1754,15 +1754,15 @@ bool SelectionDAGLegalize::LegalizeSetCCCondCode(
     if (CCCode != ISD::SETO && CCCode != ISD::SETUO) {
       // If we aren't the ordered or unorder operation,
       // then the pattern is (LHS CC1 RHS) Opc (LHS CC2 RHS).
-      SetCC1 = DAG.getSetCC(dl, VT, LHS, RHS, CC1, SDNodeFlags(), Chain,
+      SetCC1 = DAG.getSetCC(dl, VT, LHS, RHS, CC1, Chain,
                             IsSignaling);
-      SetCC2 = DAG.getSetCC(dl, VT, LHS, RHS, CC2, SDNodeFlags(), Chain,
+      SetCC2 = DAG.getSetCC(dl, VT, LHS, RHS, CC2, Chain,
                             IsSignaling);
     } else {
       // Otherwise, the pattern is (LHS CC1 LHS) Opc (RHS CC2 RHS)
-      SetCC1 = DAG.getSetCC(dl, VT, LHS, LHS, CC1, SDNodeFlags(), Chain,
+      SetCC1 = DAG.getSetCC(dl, VT, LHS, LHS, CC1, Chain,
                             IsSignaling);
-      SetCC2 = DAG.getSetCC(dl, VT, RHS, RHS, CC2, SDNodeFlags(), Chain,
+      SetCC2 = DAG.getSetCC(dl, VT, RHS, RHS, CC2, Chain,
                             IsSignaling);
     }
     if (Chain)
