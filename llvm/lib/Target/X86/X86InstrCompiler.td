@@ -899,7 +899,7 @@ def LCMPXCHG16B_SAVE_RBX :
 // This pseudo must be used when the frame uses RBX/EBX as
 // the base pointer.
 // cf comment for LCMPXCHG16B_SAVE_RBX.
-let Defs = [EBX], Uses = [ECX, EAX, EBX],
+let Defs = [EBX], Uses = [ECX, EAX],
     Predicates = [HasMWAITX], SchedRW = [WriteSystem],
     isCodeGenOnly = 1, isPseudo = 1, Constraints = "$rbx_save = $dst" in {
 def MWAITX_SAVE_RBX :
