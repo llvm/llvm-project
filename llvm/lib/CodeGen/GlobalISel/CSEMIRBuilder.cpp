@@ -42,8 +42,14 @@ CSEMIRBuilder::getDominatingInstrForID(FoldingSetNodeID &ID,
   if (MI) {
     CSEInfo->countOpcodeHit(MI->getOpcode());
     auto CurrPos = getInsertPt();
-    if (!dominates(MI, CurrPos))
+    auto MII = MachineBasicBlock::iterator(MI);
+    if (MII == CurrPos) {
+      // Move the insert point ahead of the instruction so any future uses of
+      // this builder will have the def ready.
+      setInsertPt(*CurMBB, std::next(MII));
+    } else if (!dominates(MI, CurrPos)) {
       CurMBB->splice(CurrPos, CurMBB, MI);
+    }
     return MachineInstrBuilder(getMF(), MI);
   }
   return MachineInstrBuilder();
