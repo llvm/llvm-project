@@ -165,6 +165,9 @@ Changes to the ARM Backend
 
 * Added support for Cortex-M55, Cortex-A77, Cortex-A78 and Cortex-X1 cores.
 
+* The Machine Outliner is now supported for ARM and Thumb2, it is not
+  turned on by default and can be enabled with the ``-moutline`` clang flag.
+
 
 Changes to the PowerPC Target
 -----------------------------
