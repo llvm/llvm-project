@@ -214,25 +214,13 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   if (args.hasArg(OPT_major_os_version, OPT_minor_os_version,
                   OPT_major_subsystem_version, OPT_minor_subsystem_version)) {
-    auto *majOSVer = args.getLastArg(OPT_major_os_version);
-    auto *minOSVer = args.getLastArg(OPT_minor_os_version);
-    auto *majSubSysVer = args.getLastArg(OPT_major_subsystem_version);
-    auto *minSubSysVer = args.getLastArg(OPT_minor_subsystem_version);
-    if (majOSVer && majSubSysVer &&
-        StringRef(majOSVer->getValue()) != StringRef(majSubSysVer->getValue()))
-      warn("--major-os-version and --major-subsystem-version set to differing "
-           "versions, not supported");
-    if (minOSVer && minSubSysVer &&
-        StringRef(minOSVer->getValue()) != StringRef(minSubSysVer->getValue()))
-      warn("--minor-os-version and --minor-subsystem-version set to differing "
-           "versions, not supported");
+    StringRef majOSVer = args.getLastArgValue(OPT_major_os_version, "6");
+    StringRef minOSVer = args.getLastArgValue(OPT_minor_os_version, "0");
+    StringRef majSubSysVer = args.getLastArgValue(OPT_major_subsystem_version, "6");
+    StringRef minSubSysVer = args.getLastArgValue(OPT_minor_subsystem_version, "0");
     StringRef subSys = args.getLastArgValue(OPT_subs, "default");
-    StringRef major = majOSVer ? majOSVer->getValue()
-                               : majSubSysVer ? majSubSysVer->getValue() : "6";
-    StringRef minor = minOSVer ? minOSVer->getValue()
-                               : minSubSysVer ? minSubSysVer->getValue() : "";
-    StringRef sep = minor.empty() ? "" : ".";
-    add("-subsystem:" + subSys + "," + major + sep + minor);
+    add("-osversion:" + majOSVer + "." + minOSVer);
+    add("-subsystem:" + subSys + "," + majSubSysVer + "." + minSubSysVer);
   } else if (auto *a = args.getLastArg(OPT_subs)) {
     add("-subsystem:" + StringRef(a->getValue()));
   }
