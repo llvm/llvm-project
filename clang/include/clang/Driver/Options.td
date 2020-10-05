@@ -672,9 +672,6 @@ defm gpu_allow_device_init : OptInFFlag<"gpu-allow-device-init",
 def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
   Flags<[CC1Option]>,
   HelpText<"Default max threads per block for kernel launch bounds for HIP">;
-def gpu_instrument_lib_EQ : Joined<["--"], "gpu-instrument-lib=">,
-  HelpText<"Instrument device library for HIP, which is a LLVM bitcode containing "
-  "__cyg_profile_func_enter and __cyg_profile_func_exit">;
 def libomptarget_nvptx_path_EQ : Joined<["--"], "libomptarget-nvptx-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-nvptx libraries">;
 def dD : Flag<["-"], "dD">, Group<d_Group>, Flags<[CC1Option]>,
