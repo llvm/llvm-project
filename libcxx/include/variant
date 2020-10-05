@@ -723,12 +723,12 @@ protected:
 };
 
 template <class _Traits, _Trait = _Traits::__destructible_trait>
-class _LIBCPP_TEMPLATE_VIS __destructor;
+class _LIBCPP_TEMPLATE_VIS __dtor;
 
 #define _LIBCPP_VARIANT_DESTRUCTOR(destructible_trait, destructor, destroy)    \
   template <class... _Types>                                                   \
-  class _LIBCPP_TEMPLATE_VIS __destructor<__traits<_Types...>,                 \
-                                           destructible_trait>                 \
+  class _LIBCPP_TEMPLATE_VIS __dtor<__traits<_Types...>,                       \
+                                    destructible_trait>                        \
       : public __base<destructible_trait, _Types...> {                         \
     using __base_type = __base<destructible_trait, _Types...>;                 \
     using __index_t = typename __base_type::__index_t;                         \
@@ -737,11 +737,11 @@ class _LIBCPP_TEMPLATE_VIS __destructor;
     using __base_type::__base_type;                                            \
     using __base_type::operator=;                                              \
                                                                                \
-    __destructor(const __destructor&) = default;                               \
-    __destructor(__destructor&&) = default;                                    \
+    __dtor(const __dtor&) = default;                                           \
+    __dtor(__dtor&&) = default;                                                \
     destructor                                                                 \
-    __destructor& operator=(const __destructor&) = default;                    \
-    __destructor& operator=(__destructor&&) = default;                         \
+    __dtor& operator=(const __dtor&) = default;                                \
+    __dtor& operator=(__dtor&&) = default;                                     \
                                                                                \
   protected:                                                                   \
     inline _LIBCPP_INLINE_VISIBILITY                                           \
@@ -750,12 +750,12 @@ class _LIBCPP_TEMPLATE_VIS __destructor;
 
 _LIBCPP_VARIANT_DESTRUCTOR(
     _Trait::_TriviallyAvailable,
-    ~__destructor() = default;,
+    ~__dtor() = default;,
     void __destroy() noexcept { this->__index = __variant_npos<__index_t>; });
 
 _LIBCPP_VARIANT_DESTRUCTOR(
     _Trait::_Available,
-    ~__destructor() { __destroy(); },
+    ~__dtor() { __destroy(); },
     void __destroy() noexcept {
       if (!this->valueless_by_exception()) {
         __visitation::__base::__visit_alt(
@@ -770,14 +770,14 @@ _LIBCPP_VARIANT_DESTRUCTOR(
 
 _LIBCPP_VARIANT_DESTRUCTOR(
     _Trait::_Unavailable,
-    ~__destructor() = delete;,
+    ~__dtor() = delete;,
     void __destroy() noexcept = delete;);
 
 #undef _LIBCPP_VARIANT_DESTRUCTOR
 
 template <class _Traits>
-class _LIBCPP_TEMPLATE_VIS __constructor : public __destructor<_Traits> {
-  using __base_type = __destructor<_Traits>;
+class _LIBCPP_TEMPLATE_VIS __ctor : public __dtor<_Traits> {
+  using __base_type = __dtor<_Traits>;
 
 public:
   using __base_type::__base_type;
@@ -794,7 +794,7 @@ protected:
 
   template <class _Rhs>
   inline _LIBCPP_INLINE_VISIBILITY
-  static void __generic_construct(__constructor& __lhs, _Rhs&& __rhs) {
+  static void __generic_construct(__ctor& __lhs, _Rhs&& __rhs) {
     __lhs.__destroy();
     if (!__rhs.valueless_by_exception()) {
       __visitation::__base::__visit_alt_at(
@@ -816,10 +816,10 @@ class _LIBCPP_TEMPLATE_VIS __move_constructor;
 #define _LIBCPP_VARIANT_MOVE_CONSTRUCTOR(move_constructible_trait,             \
                                          move_constructor)                     \
   template <class... _Types>                                                   \
-  class _LIBCPP_TEMPLATE_VIS __move_constructor<__traits<_Types...>,          \
-                                                 move_constructible_trait>     \
-      : public __constructor<__traits<_Types...>> {                            \
-    using __base_type = __constructor<__traits<_Types...>>;                    \
+  class _LIBCPP_TEMPLATE_VIS __move_constructor<__traits<_Types...>,           \
+                                                move_constructible_trait>      \
+      : public __ctor<__traits<_Types...>> {                                   \
+    using __base_type = __ctor<__traits<_Types...>>;                           \
                                                                                \
   public:                                                                      \
     using __base_type::__base_type;                                            \
