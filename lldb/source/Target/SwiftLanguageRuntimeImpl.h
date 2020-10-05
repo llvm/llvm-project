@@ -92,7 +92,8 @@ public:
   llvm::Optional<uint64_t> GetByteStride(CompilerType type);
 
   /// Ask Remote mirrors for the alignment of a Swift type.
-  llvm::Optional<size_t> GetBitAlignment(CompilerType type);
+  llvm::Optional<size_t> GetBitAlignment(CompilerType type,
+                                         ExecutionContextScope *exe_scope);
 
   SwiftLanguageRuntime::MetadataPromiseSP
   GetMetadataPromise(lldb::addr_t addr, ValueObject &for_object);

@@ -76,5 +76,14 @@ class TestSwiftExpressionsInClassFunctions(TestBase):
             self.check_expression("i", str(i), False)
             if i == 6:
               self.check_expression("self", "a.H<Int>")
+              frame = threads[0].GetFrameAtIndex(0)
+              lldbutil.check_variable(self, frame.FindVariable("self"),
+                                      use_dynamic=True,
+                                      # FIXME: This should be '@thick a.H<Swift.Int>.Type'
+                                      # but valobj.GetDynamicValue(lldb.eDynamicCanRunTarget)
+                                      # doesn't seem to do its job.
+                                      # rdar://problem/69889462
+                                      typename='@thin a.H<τ_0_0>.Type')
+
             self.runCmd("continue")
 
