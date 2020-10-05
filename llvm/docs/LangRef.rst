@@ -20066,6 +20066,8 @@ not overflow at link time under the medium code model if ``x`` is an
 a constant initializer folded into a function body. This intrinsic can be
 used to avoid the possibility of overflows when loading from such a constant.
 
+.. _llvm_sideeffect:
+
 '``llvm.sideeffect``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
