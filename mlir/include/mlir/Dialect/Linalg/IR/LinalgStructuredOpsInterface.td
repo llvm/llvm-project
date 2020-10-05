@@ -413,7 +413,6 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        auto range = this->getOperation()->getOperands();
         return getNumInputsAndOutputBuffers() + $_op.getNumInitTensors();
       }]
     >,
