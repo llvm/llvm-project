@@ -71,8 +71,6 @@ class TestStopHooks(TestBase):
         """Test that the returning False from a stop hook works"""
         self.do_test_auto_continue(True)
 
-    # Test is flakey on Linux.
-    @skipIfLinux
     def do_test_auto_continue(self, return_true):
         """Test that auto-continue works."""
         # We set auto-continue to 1 but the stop hook only applies to step_out_of_me,
