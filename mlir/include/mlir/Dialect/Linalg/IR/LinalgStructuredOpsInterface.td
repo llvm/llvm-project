@@ -406,6 +406,19 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Return the number of inputs, output buffers and init tensors operands.
+      }],
+      /*retTy=*/"unsigned",
+      /*methodName=*/"getNumShapedOperands",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        auto range = this->getOperation()->getOperands();
+        return getNumInputsAndOutputBuffers() + $_op.getNumInitTensors();
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the range over inputs, output buffers and init tensors.
       }],
       /*retTy=*/"Operation::operand_range",
@@ -414,7 +427,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         auto range = this->getOperation()->getOperands();
-        return {range.begin(), range.begin() + getNumInputsAndOutputs()};
+        return {range.begin(), range.begin() + getNumShapedOperands()};
       }]
     >,
     InterfaceMethod<
@@ -621,6 +634,27 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       }]
     >
   ];
+
+  let extraClassDeclaration = [{
+    /// Returns all the operands past the inputs, output_buffers and
+    /// init_tensors operands. Asserts that these operands are value types to
+    /// allow transformations like tiling to just use the values when cloning
+    /// `linalgOp`.
+    SmallVector<Value, 4> getAssumedNonShapedOperands() {
+      unsigned numShapedOperands = getNumInputsAndOutputs();
+      unsigned nExtraOperands =
+        getOperation()->getNumOperands() - numShapedOperands;
+      SmallVector<Value, 4> res;
+      res.reserve(nExtraOperands);
+      for (unsigned i = 0; i < nExtraOperands; ++i) {
+        res.push_back(getOperation()->getOperand(numShapedOperands + i));
+        assert((res.back().getType().isSignlessIntOrIndexOrFloat() 
+                || res.back().getType().isa<VectorType>()) &&
+               "expected scalar or vector type");
+      }
+      return res;
+    }
+  }];
 }
 
 #endif // LINALG_IR_STRUCTURED_OPS_INTERFACE

@@ -96,7 +96,7 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
 // CHECK-SAME: memory_addr=[[NULL]], memory_size=0, result=0
 
 // CHECK: ompt_event_task_create: task_id=[[TASK_ID_0:[0-9]+]]
-// CHECK: ompt_event_task_create: task_id=[[TASK_ID_1:[0-9]+]]
+// CHECK-DAG: ompt_event_task_create: task_id=[[TASK_ID_1:[0-9]+]]
 
 // Expects non-zero address, size, and result
 // CHECK-DAG: ompt_event_task_schedule: task_id=[[TASK_ID_0]],

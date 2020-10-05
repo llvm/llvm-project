@@ -36,7 +36,6 @@ func @mixed_alloc(%arg0: index, %arg1: index) -> memref<?x42x?xf32> {
 //  CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 //  CHECK-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
 //  CHECK-NEXT:  %[[sz_bytes:.*]] = llvm.mul %[[sz]], %[[sizeof]] : !llvm.i64
-//  CHECK-NEXT:  %[[one_1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 //  CHECK-NEXT:  llvm.call @malloc(%[[sz_bytes]]) : (!llvm.i64) -> !llvm.ptr<i8>
 //  CHECK-NEXT:  llvm.bitcast %{{.*}} : !llvm.ptr<i8> to !llvm.ptr<float>
 //  CHECK-NEXT:  llvm.mlir.undef : !llvm.struct<(ptr<float>, ptr<float>, i64, array<3 x i64>, array<3 x i64>)>
@@ -77,7 +76,6 @@ func @dynamic_alloc(%arg0: index, %arg1: index) -> memref<?x?xf32> {
 //  CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 //  CHECK-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
 //  CHECK-NEXT:  %[[sz_bytes:.*]] = llvm.mul %[[sz]], %[[sizeof]] : !llvm.i64
-//  CHECK-NEXT:  %[[one_1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 //  CHECK-NEXT:  llvm.call @malloc(%[[sz_bytes]]) : (!llvm.i64) -> !llvm.ptr<i8>
 //  CHECK-NEXT:  llvm.bitcast %{{.*}} : !llvm.ptr<i8> to !llvm.ptr<float>
 //  CHECK-NEXT:  llvm.mlir.undef : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
@@ -107,7 +105,6 @@ func @dynamic_alloca(%arg0: index, %arg1: index) -> memref<?x?xf32> {
 //  CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 //  CHECK-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
 //  CHECK-NEXT:  %[[sz_bytes:.*]] = llvm.mul %[[num_elems]], %[[sizeof]] : !llvm.i64
-//  CHECK-NEXT:  %[[one_1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 //  CHECK-NEXT:  %[[allocated:.*]] = llvm.alloca %[[sz_bytes]] x !llvm.float : (!llvm.i64) -> !llvm.ptr<float>
 //  CHECK-NEXT:  llvm.mlir.undef : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  llvm.insertvalue %[[allocated]], %{{.*}}[0] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
@@ -153,8 +150,7 @@ func @stdlib_aligned_alloc(%N : index) -> memref<32x18xf32> {
 // ALIGNED-ALLOC-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 // ALIGNED-ALLOC-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
 // ALIGNED-ALLOC-NEXT:  %[[bytes:.*]] = llvm.mul %[[num_elems]], %[[sizeof]] : !llvm.i64
-// ALIGNED-ALLOC-NEXT:  %[[one_1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
-// ALIGNED-ALLOC-NEXT:  %[[alignment:.*]] = llvm.mlir.constant(32 : i64) : !llvm.i64
+// ALIGNED-ALLOC-NEXT:  %[[alignment:.*]] = llvm.mlir.constant(32 : index) : !llvm.i64
 // ALIGNED-ALLOC-NEXT:  %[[allocated:.*]] = llvm.call @aligned_alloc(%[[alignment]], %[[bytes]]) : (!llvm.i64, !llvm.i64) -> !llvm.ptr<i8>
 // ALIGNED-ALLOC-NEXT:  llvm.bitcast %[[allocated]] : !llvm.ptr<i8> to !llvm.ptr<float>
   %0 = alloc() {alignment = 32} : memref<32x18xf32>
@@ -164,26 +160,27 @@ func @stdlib_aligned_alloc(%N : index) -> memref<32x18xf32> {
   %1 = alloc() {alignment = 64} : memref<4096xf32>
 
   // Alignment is to element type boundaries (minimum 16 bytes).
-  // ALIGNED-ALLOC:  %[[c32:.*]] = llvm.mlir.constant(32 : i64) : !llvm.i64
+  // ALIGNED-ALLOC:  %[[c32:.*]] = llvm.mlir.constant(32 : index) : !llvm.i64
   // ALIGNED-ALLOC-NEXT:  llvm.call @aligned_alloc(%[[c32]]
   %2 = alloc() : memref<4096xvector<8xf32>>
   // The minimum alignment is 16 bytes unless explicitly specified.
-  // ALIGNED-ALLOC:  %[[c16:.*]] = llvm.mlir.constant(16 : i64) : !llvm.i64
+  // ALIGNED-ALLOC:  %[[c16:.*]] = llvm.mlir.constant(16 : index) : !llvm.i64
   // ALIGNED-ALLOC-NEXT:  llvm.call @aligned_alloc(%[[c16]],
   %3 = alloc() : memref<4096xvector<2xf32>>
-  // ALIGNED-ALLOC:  %[[c8:.*]] = llvm.mlir.constant(8 : i64) : !llvm.i64
+  // ALIGNED-ALLOC:  %[[c8:.*]] = llvm.mlir.constant(8 : index) : !llvm.i64
   // ALIGNED-ALLOC-NEXT:  llvm.call @aligned_alloc(%[[c8]],
   %4 = alloc() {alignment = 8} : memref<1024xvector<4xf32>>
   // Bump the memref allocation size if its size is not a multiple of alignment.
-  // ALIGNED-ALLOC:       %[[c32:.*]] = llvm.mlir.constant(32 : i64) : !llvm.i64
-  // ALIGNED-ALLOC-NEXT:  llvm.urem
+  // ALIGNED-ALLOC:       %[[c32:.*]] = llvm.mlir.constant(32 : index) : !llvm.i64
+  // ALIGNED-ALLOC-NEXT:  llvm.mlir.constant(1 : index) : !llvm.i64
   // ALIGNED-ALLOC-NEXT:  llvm.sub
+  // ALIGNED-ALLOC-NEXT:  llvm.add
   // ALIGNED-ALLOC-NEXT:  llvm.urem
-  // ALIGNED-ALLOC-NEXT:  %[[SIZE_ALIGNED:.*]] = llvm.add
+  // ALIGNED-ALLOC-NEXT:  %[[SIZE_ALIGNED:.*]] = llvm.sub
   // ALIGNED-ALLOC-NEXT:  llvm.call @aligned_alloc(%[[c32]], %[[SIZE_ALIGNED]])
   %5 = alloc() {alignment = 32} : memref<100xf32>
   // Bump alignment to the next power of two if it isn't.
-  // ALIGNED-ALLOC:  %[[c128:.*]] = llvm.mlir.constant(128 : i64) : !llvm.i64
+  // ALIGNED-ALLOC:  %[[c128:.*]] = llvm.mlir.constant(128 : index) : !llvm.i64
   // ALIGNED-ALLOC:  llvm.call @aligned_alloc(%[[c128]]
   %6 = alloc(%N) : memref<?xvector<18xf32>>
   return %0 : memref<32x18xf32>

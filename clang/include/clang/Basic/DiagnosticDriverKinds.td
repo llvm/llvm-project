@@ -253,6 +253,7 @@ def err_drv_optimization_remark_format : Error<
   "unknown remark serializer format: '%0'">;
 def err_drv_no_neon_modifier : Error<"[no]neon is not accepted as modifier, please use [no]simd instead">;
 def err_drv_invalid_omp_target : Error<"OpenMP target is invalid: '%0'">;
+def err_drv_incompatible_omp_arch : Error<"OpenMP target architecture '%0' pointer size is incompatible with host '%1'">;
 def err_drv_omp_host_ir_file_not_found : Error<
   "The provided host compiler IR file '%0' is required to generate code for OpenMP target regions but cannot be found.">;
 def err_drv_omp_host_target_not_supported : Error<

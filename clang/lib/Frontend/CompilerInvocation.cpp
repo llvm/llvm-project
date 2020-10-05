@@ -3206,6 +3206,14 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
             TT.getArch() == llvm::Triple::x86 ||
             TT.getArch() == llvm::Triple::x86_64))
         Diags.Report(diag::err_drv_invalid_omp_target) << A->getValue(i);
+      else if ((T.isArch64Bit() && TT.isArch32Bit()) ||
+               (T.isArch64Bit() && TT.isArch16Bit()) ||
+               (T.isArch32Bit() && TT.isArch64Bit()) ||
+               (T.isArch32Bit() && TT.isArch16Bit()) ||
+               (T.isArch16Bit() && TT.isArch32Bit()) ||
+               (T.isArch16Bit() && TT.isArch64Bit()))
+        Diags.Report(diag::err_drv_incompatible_omp_arch)
+            << A->getValue(i) << T.str();
       else
         Opts.OMPTargetTriples.push_back(TT);
     }
