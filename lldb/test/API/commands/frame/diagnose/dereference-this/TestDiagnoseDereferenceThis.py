@@ -25,4 +25,4 @@ class TestDiagnoseDereferenceThis(TestBase):
         self.expect(
             "frame diagnose",
             "Crash diagnosis was accurate",
-            "this->a")
+            substrs=["this->a"])

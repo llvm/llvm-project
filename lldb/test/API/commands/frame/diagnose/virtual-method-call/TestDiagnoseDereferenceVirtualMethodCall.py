@@ -22,4 +22,5 @@ class TestDiagnoseVirtualMethodCall(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
         self.expect("thread list", "Thread should be stopped",
                     substrs=['stopped'])
-        self.expect("frame diagnose", "Crash diagnosis was accurate", "foo")
+        self.expect("frame diagnose", "Crash diagnosis was accurate",
+                    substrs=["foo"])

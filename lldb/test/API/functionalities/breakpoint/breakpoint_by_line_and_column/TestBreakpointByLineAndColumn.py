@@ -21,7 +21,7 @@ class BreakpointByLineAndColumnTestCase(TestBase):
         main_c = lldb.SBFileSpec("main.c")
         _, _, _, breakpoint = lldbutil.run_to_line_breakpoint(self,
                                                               main_c, 11, 50)
-        self.expect("fr v did_call", substrs='1')
+        self.expect("fr v did_call", substrs=['1'])
         in_then = False
         for i in range(breakpoint.GetNumLocations()):
             b_loc = breakpoint.GetLocationAtIndex(i).GetAddress().GetLineEntry()
@@ -35,7 +35,7 @@ class BreakpointByLineAndColumnTestCase(TestBase):
         self.build()
         main_c = lldb.SBFileSpec("main.c")
         _, _, _, breakpoint = lldbutil.run_to_line_breakpoint(self, main_c, 11)
-        self.expect("fr v did_call", substrs='0')
+        self.expect("fr v did_call", substrs=['0'])
         in_condition = False
         for i in range(breakpoint.GetNumLocations()):
             b_loc = breakpoint.GetLocationAtIndex(i).GetAddress().GetLineEntry()
