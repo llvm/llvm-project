@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -201,7 +202,7 @@ void RangeListEntry::dump(
       CurrentBase = Value0;
     if (!DumpOpts.Verbose)
       return;
-    OS << format(" 0x%*.*" PRIx64, AddrSize * 2, AddrSize * 2, Value0);
+    DWARFFormValue::dumpAddress(OS << ' ', AddrSize, Value0);
     break;
   }
   case dwarf::DW_RLE_base_address:
@@ -209,7 +210,7 @@ void RangeListEntry::dump(
     CurrentBase = Value0;
     if (!DumpOpts.Verbose)
       return;
-    OS << format(" 0x%*.*" PRIx64, AddrSize * 2, AddrSize * 2, Value0);
+    DWARFFormValue::dumpAddress(OS << ' ', AddrSize, Value0);
     break;
   case dwarf::DW_RLE_start_length:
     PrintRawEntry(OS, *this, AddrSize, DumpOpts);
