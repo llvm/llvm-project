@@ -32,7 +32,7 @@
 # Checking that we have two compile units with two sets of high/lo_pc.
 # CHECK: .debug_info contents
 # CHECK: DW_TAG_compile_unit
-# CHECK: DW_AT_low_pc {{.*}} (0x0000000000000020 ".text")
+# CHECK: DW_AT_low_pc {{.*}} (0x00000020 ".text")
 # CHECK: DW_AT_high_pc
 #
 # CHECK: DW_TAG_subprogram
@@ -51,7 +51,7 @@
 # CHECK-NOT: DW_AT_location
 #
 # CHECK: DW_TAG_compile_unit
-# CHECK: DW_AT_low_pc {{.*}} (0x0000000000000000 ".text")
+# CHECK: DW_AT_low_pc {{.*}} (0x00000000 ".text")
 # CHECK: DW_AT_high_pc
 #
 # CHECK: DW_TAG_subprogram
