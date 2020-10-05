@@ -442,7 +442,6 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     MBB.erase(MBBI);
     return true;
   }
-  case X86::MWAITX_SAVE_EBX:
   case X86::MWAITX_SAVE_RBX: {
     // Perform the following transformation.
     // SaveRbx = pseudomwaitx InArg, SaveRbx
@@ -458,9 +457,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     BuildMI(MBB, MBBI, DL, TII->get(X86::MWAITXrrr));
     // Finally, restore the value of RBX.
     Register SaveRbx = MBBI->getOperand(2).getReg();
-    unsigned BasePointer = Opcode == X86::MWAITX_SAVE_EBX ? X86::EBX : X86::RBX;
-    TII->copyPhysReg(MBB, MBBI, DL, BasePointer, SaveRbx,
-                     /*SrcIsKill*/ true);
+    TII->copyPhysReg(MBB, MBBI, DL, X86::RBX, SaveRbx, /*SrcIsKill*/ true);
     // Delete the pseudo.
     MBBI->eraseFromParent();
     return true;
