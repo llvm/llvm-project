@@ -168,6 +168,10 @@ public:
 
   VPUser(const VPUser &) = delete;
   VPUser &operator=(const VPUser &) = delete;
+  virtual ~VPUser() {
+    for (VPValue *Op : operands())
+      Op->removeUser(*this);
+  }
 
   void addOperand(VPValue *Operand) {
     Operands.push_back(Operand);
