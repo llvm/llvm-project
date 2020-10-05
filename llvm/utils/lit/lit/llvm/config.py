@@ -456,8 +456,6 @@ class LLVMConfig(object):
                                           self.make_itanium_abi_triple(self.config.target_triple)))
         self.config.substitutions.append(('%ms_abi_triple',
                                           self.make_msabi_triple(self.config.target_triple)))
-        self.config.substitutions.append(('%omp_powerpc_triple',
-                                          'powerpc' + str(sys.hash_info.width) + 'le-ibm-linux-gnu'))
         self.config.substitutions.append(
             ('%resource_dir', builtin_include_dir))
 
