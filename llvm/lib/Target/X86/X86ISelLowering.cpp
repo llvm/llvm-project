@@ -33793,7 +33793,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     Register BasePtr = TRI->getBaseRegister();
     bool IsRBX = (BasePtr == X86::RBX || BasePtr == X86::EBX);
     // If no need to save the base pointer, we generate MWAITXrrr,
-    // else we generate pseudo MWAITX_SAVE_RBX/EBX.
+    // else we generate pseudo MWAITX_SAVE_RBX.
     if (!IsRBX || !TRI->hasBasePointer(*MF)) {
       BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), X86::ECX)
           .addReg(MI.getOperand(0).getReg());
@@ -33812,17 +33812,15 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
           .addReg(MI.getOperand(0).getReg());
       BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), X86::EAX)
           .addReg(MI.getOperand(1).getReg());
-      const TargetRegisterClass *RegClass =
-          BasePtr == X86::EBX ? &X86::GR32RegClass : &X86::GR64RegClass;
-      // Save RBX (or EBX) into a virtual register.
-      Register SaveRBX = MF->getRegInfo().createVirtualRegister(RegClass);
+      assert(Subtarget.is64Bit() && "Expected 64-bit mode!");
+      // Save RBX into a virtual register.
+      Register SaveRBX =
+          MF->getRegInfo().createVirtualRegister(&X86::GR64RegClass);
       BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), SaveRBX)
-          .addReg(BasePtr);
+          .addReg(X86::RBX);
       // Generate mwaitx pseudo.
-      unsigned Opcode =
-          BasePtr == X86::RBX ? X86::MWAITX_SAVE_RBX : X86::MWAITX_SAVE_EBX;
-      Register Dst = MF->getRegInfo().createVirtualRegister(RegClass);
-      BuildMI(*BB, MI, DL, TII->get(Opcode))
+      Register Dst = MF->getRegInfo().createVirtualRegister(&X86::GR64RegClass);
+      BuildMI(*BB, MI, DL, TII->get(X86::MWAITX_SAVE_RBX))
           .addDef(Dst) // Destination tied in with SaveRBX.
           .addReg(MI.getOperand(2).getReg()) // input value of EBX.
           .addUse(SaveRBX);                  // Save of base pointer.
