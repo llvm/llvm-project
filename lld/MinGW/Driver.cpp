@@ -216,13 +216,41 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
                   OPT_major_subsystem_version, OPT_minor_subsystem_version)) {
     StringRef majOSVer = args.getLastArgValue(OPT_major_os_version, "6");
     StringRef minOSVer = args.getLastArgValue(OPT_minor_os_version, "0");
-    StringRef majSubSysVer = args.getLastArgValue(OPT_major_subsystem_version, "6");
-    StringRef minSubSysVer = args.getLastArgValue(OPT_minor_subsystem_version, "0");
-    StringRef subSys = args.getLastArgValue(OPT_subs, "default");
+    StringRef majSubSysVer = "6";
+    StringRef minSubSysVer = "0";
+    StringRef subSysName = "default";
+    StringRef subSysVer;
+    // Iterate over --{major,minor}-subsystem-version and --subsystem, and pick
+    // the version number components from the last one of them that specifies
+    // a version.
+    for (auto *a : args.filtered(OPT_major_subsystem_version,
+                                 OPT_minor_subsystem_version, OPT_subs)) {
+      switch (a->getOption().getID()) {
+      case OPT_major_subsystem_version:
+        majSubSysVer = a->getValue();
+        break;
+      case OPT_minor_subsystem_version:
+        minSubSysVer = a->getValue();
+        break;
+      case OPT_subs:
+        std::tie(subSysName, subSysVer) = StringRef(a->getValue()).split(':');
+        if (!subSysVer.empty()) {
+          if (subSysVer.contains('.'))
+            std::tie(majSubSysVer, minSubSysVer) = subSysVer.split('.');
+          else
+            majSubSysVer = subSysVer;
+        }
+        break;
+      }
+    }
     add("-osversion:" + majOSVer + "." + minOSVer);
-    add("-subsystem:" + subSys + "," + majSubSysVer + "." + minSubSysVer);
-  } else if (auto *a = args.getLastArg(OPT_subs)) {
-    add("-subsystem:" + StringRef(a->getValue()));
+    add("-subsystem:" + subSysName + "," + majSubSysVer + "." + minSubSysVer);
+  } else if (args.hasArg(OPT_subs)) {
+    StringRef subSys = args.getLastArgValue(OPT_subs, "default");
+    StringRef subSysName, subSysVer;
+    std::tie(subSysName, subSysVer) = subSys.split(':');
+    StringRef sep = subSysVer.empty() ? "" : ",";
+    add("-subsystem:" + subSysName + sep + subSysVer);
   }
 
   if (auto *a = args.getLastArg(OPT_out_implib))
