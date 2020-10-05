@@ -33,7 +33,9 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 
+#ifdef LLDB_ENABLE_SWIFT
 #include "swift/ABI/ObjectFile.h"
+#endif //LLDB_ENABLE_SWIFT
 
 #define IMAGE_DOS_SIGNATURE 0x5A4D    // MZ
 #define IMAGE_NT_SIGNATURE 0x00004550 // PE00
@@ -1257,6 +1259,10 @@ uint32_t ObjectFilePECOFF::GetPluginVersion() { return 1; }
 
 llvm::StringRef ObjectFilePECOFF::GetReflectionSectionIdentifier(
     swift::ReflectionSectionKind section) {
+#ifdef LLDB_ENABLE_SWIFT
   swift::SwiftObjectFileFormatCOFF file_format_coff;
   return file_format_coff.getSectionName(section);
+#else
+  llvm_unreachable("Swift support disabled");
+#endif //LLDB_ENABLE_SWIFT
 }
