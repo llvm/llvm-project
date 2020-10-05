@@ -417,6 +417,7 @@ struct DivergencePropagator {
   }
 };
 
+#ifndef NDEBUG
 static void printBlockSet(ConstBlockSet &Blocks, raw_ostream &Out) {
   Out << "[";
   bool First = true;
@@ -428,6 +429,7 @@ static void printBlockSet(ConstBlockSet &Blocks, raw_ostream &Out) {
   }
   Out << "]";
 }
+#endif
 
 const ControlDivergenceDesc &
 SyncDependenceAnalysis::getJoinBlocks(const Instruction &Term) {

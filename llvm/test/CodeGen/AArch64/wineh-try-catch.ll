@@ -15,15 +15,15 @@
 ; We check this offset in the table later on.
 
 ; CHECK-LABEL: "?func@@YAHXZ":
-; CHECK:       stp     x29, x30, [sp, #-64]!
-; CHECK:       str     x28, [sp, #16]
-; CHECK:       str     x21, [sp, #24]
-; CHECK:       stp     x19, x20, [sp, #32]
-; CHECK:       mov     x29, sp
+; CHECK:       stp     x19, x20, [sp, #-64]!
+; CHECK:       str     x21, [sp, #16]
+; CHECK:       str     x28, [sp, #24]
+; CHECK:       stp     x29, x30, [sp, #32]
+; CHECK:       add     x29, sp, #32
 ; CHECK:       sub     sp, sp, #624
 ; CHECK:       mov     x19, sp
 ; CHECK:       mov     x0, #-2
-; CHECK:       stur    x0, [x29, #48]
+; CHECK:       stur    x0, [x29, #16]
 
 ; Now check that x is stored at fp - 20.  We check that this is the same
 ; location accessed from the funclet to retrieve x.
@@ -47,10 +47,10 @@
 ; CHECK-LABEL: "?catch$2@?0??func@@YAHXZ@4HA":
 
 ; Check that the stack space is allocated only for the callee saved registers.
-; CHECK:       stp     x29, x30, [sp, #-48]!
-; CHECK:       str     x28, [sp, #16]
-; CHECK:       str     x21, [sp, #24]
-; CHECK:       stp     x19, x20, [sp, #32]
+; CHECK:       stp     x19, x20, [sp, #-48]!
+; CHECK:       str     x21, [sp, #16]
+; CHECK:       str     x28, [sp, #24]
+; CHECK:       stp     x29, x30, [sp, #32]
 ; CHECK:       add     x20, x19, #12
 
 ; Check that there are no further stack updates.
@@ -87,18 +87,18 @@
 ; UNWIND: Prologue [
 ; UNWIND-NEXT: ; nop
 ; UNWIND-NEXT: ; sub sp, #624
-; UNWIND-NEXT: ; mov fp, sp
-; UNWIND-NEXT: ; stp x19, x20, [sp, #32]
-; UNWIND-NEXT: ; str x21, [sp, #24]
-; UNWIND-NEXT: ; str x28, [sp, #16]
-; UNWIND-NEXT: ; stp x29, x30, [sp, #-64]!
+; UNWIND-NEXT: ; add fp, sp, #32
+; UNWIND-NEXT: ; stp x29, x30, [sp, #32]
+; UNWIND-NEXT: ; str x28, [sp, #24]
+; UNWIND-NEXT: ; str x21, [sp, #16]
+; UNWIND-NEXT: ; stp x19, x20, [sp, #-64]!
 ; UNWIND-NEXT: ; end
 ; UNWIND: Function: ?catch$2@?0??func@@YAHXZ@4HA
 ; UNWIND: Prologue [
-; UNWIND-NEXT: ; stp x19, x20, [sp, #32]
-; UNWIND-NEXT: ; str x21, [sp, #24]
-; UNWIND-NEXT: ; str x28, [sp, #16]
-; UNWIND-NEXT: ; stp x29, x30, [sp, #-48]!
+; UNWIND-NEXT: ; stp x29, x30, [sp, #32]
+; UNWIND-NEXT: ; str x28, [sp, #24]
+; UNWIND-NEXT: ; str x21, [sp, #16]
+; UNWIND-NEXT: ; stp x19, x20, [sp, #-48]!
 ; UNWIND-NEXT: ; end
 
 target datalayout = "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128"

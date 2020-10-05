@@ -946,7 +946,7 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
   llvm::Expected<llvm::DWARFAddressRangesVector> llvm_ranges =
       range_list_or_error->getAbsoluteRanges(
           llvm::object::SectionedAddress{GetBaseAddress()},
-          [&](uint32_t index) {
+          GetAddressByteSize(), [&](uint32_t index) {
             uint32_t index_size = GetAddressByteSize();
             dw_offset_t addr_base = GetAddrBase();
             lldb::offset_t offset = addr_base + index * index_size;

@@ -63,7 +63,7 @@ static CompileUnit *getUnitForOffset(const UnitListTy &Units, uint64_t Offset) {
 /// Resolve the DIE attribute reference that has been extracted in \p RefValue.
 /// The resulting DIE might be in another CompileUnit which is stored into \p
 /// ReferencedCU. \returns null if resolving fails for any reason.
-DWARFDie DWARFLinker::resolveDIEReference(const DwarfFile &File,
+DWARFDie DWARFLinker::resolveDIEReference(const DWARFFile &File,
                                           const UnitListTy &Units,
                                           const DWARFFormValue &RefValue,
                                           const DWARFDie &DIE,
@@ -420,7 +420,7 @@ unsigned DWARFLinker::shouldKeepVariableDIE(AddressesMap &RelocMgr,
 /// \returns updated TraversalFlags.
 unsigned DWARFLinker::shouldKeepSubprogramDIE(
     AddressesMap &RelocMgr, RangesTy &Ranges, const DWARFDie &DIE,
-    const DwarfFile &File, CompileUnit &Unit, CompileUnit::DIEInfo &MyInfo,
+    const DWARFFile &File, CompileUnit &Unit, CompileUnit::DIEInfo &MyInfo,
     unsigned Flags) {
   const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
 
@@ -482,7 +482,7 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
 /// Check if a DIE should be kept.
 /// \returns updated TraversalFlags.
 unsigned DWARFLinker::shouldKeepDIE(AddressesMap &RelocMgr, RangesTy &Ranges,
-                                    const DWARFDie &DIE, const DwarfFile &File,
+                                    const DWARFDie &DIE, const DWARFFile &File,
                                     CompileUnit &Unit,
                                     CompileUnit::DIEInfo &MyInfo,
                                     unsigned Flags) {
@@ -590,7 +590,7 @@ void DWARFLinker::lookForChildDIEsToKeep(
 /// kept. All DIEs referenced though attributes should be kept.
 void DWARFLinker::lookForRefDIEsToKeep(
     const DWARFDie &Die, CompileUnit &CU, unsigned Flags,
-    const UnitListTy &Units, const DwarfFile &File,
+    const UnitListTy &Units, const DWARFFile &File,
     SmallVectorImpl<WorklistItem> &Worklist) {
   bool UseOdr = (Flags & DWARFLinker::TF_DependencyWalk)
                     ? (Flags & DWARFLinker::TF_ODR)
@@ -700,7 +700,7 @@ void DWARFLinker::lookForParentDIEsToKeep(
 /// The return value indicates whether the DIE is incomplete.
 void DWARFLinker::lookForDIEsToKeep(AddressesMap &AddressesMap,
                                     RangesTy &Ranges, const UnitListTy &Units,
-                                    const DWARFDie &Die, const DwarfFile &File,
+                                    const DWARFDie &Die, const DWARFFile &File,
                                     CompileUnit &Cu, unsigned Flags) {
   // LIFO work list.
   SmallVector<WorklistItem, 4> Worklist;
@@ -838,7 +838,7 @@ unsigned DWARFLinker::DIECloner::cloneStringAttribute(
 
 unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
     DIE &Die, const DWARFDie &InputDIE, AttributeSpec AttrSpec,
-    unsigned AttrSize, const DWARFFormValue &Val, const DwarfFile &File,
+    unsigned AttrSize, const DWARFFormValue &Val, const DWARFFile &File,
     CompileUnit &Unit) {
   const DWARFUnit &U = Unit.getOrigUnit();
   uint64_t Ref = *Val.getAsReference();
@@ -910,7 +910,7 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
 }
 
 void DWARFLinker::DIECloner::cloneExpression(
-    DataExtractor &Data, DWARFExpression Expression, const DwarfFile &File,
+    DataExtractor &Data, DWARFExpression Expression, const DWARFFile &File,
     CompileUnit &Unit, SmallVectorImpl<uint8_t> &OutputBuffer) {
   using Encoding = DWARFExpression::Operation::Encoding;
 
@@ -975,7 +975,7 @@ void DWARFLinker::DIECloner::cloneExpression(
 }
 
 unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
-    DIE &Die, const DwarfFile &File, CompileUnit &Unit, AttributeSpec AttrSpec,
+    DIE &Die, const DWARFFile &File, CompileUnit &Unit, AttributeSpec AttrSpec,
     const DWARFFormValue &Val, unsigned AttrSize, bool IsLittleEndian) {
   DIEValueList *Attr;
   DIEValue Value;
@@ -1087,7 +1087,7 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
 }
 
 unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
-    DIE &Die, const DWARFDie &InputDIE, const DwarfFile &File,
+    DIE &Die, const DWARFDie &InputDIE, const DWARFFile &File,
     CompileUnit &Unit, AttributeSpec AttrSpec, const DWARFFormValue &Val,
     unsigned AttrSize, AttributesInfo &Info) {
   uint64_t Value;
@@ -1155,7 +1155,7 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
 /// value \p Val, and add it to \p Die.
 /// \returns the size of the cloned attribute.
 unsigned DWARFLinker::DIECloner::cloneAttribute(
-    DIE &Die, const DWARFDie &InputDIE, const DwarfFile &File,
+    DIE &Die, const DWARFDie &InputDIE, const DWARFFile &File,
     CompileUnit &Unit, OffsetsStringPool &StringPool, const DWARFFormValue &Val,
     const AttributeSpec AttrSpec, unsigned AttrSize, AttributesInfo &Info,
     bool IsLittleEndian) {
@@ -1273,7 +1273,7 @@ shouldSkipAttribute(DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
 }
 
 DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
-                                      const DwarfFile &File, CompileUnit &Unit,
+                                      const DWARFFile &File, CompileUnit &Unit,
                                       OffsetsStringPool &StringPool,
                                       int64_t PCOffset, uint32_t OutOffset,
                                       unsigned Flags, bool IsLittleEndian,
@@ -1483,7 +1483,7 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
 /// to point at the new entries.
 void DWARFLinker::patchRangesForUnit(const CompileUnit &Unit,
                                      DWARFContext &OrigDwarf,
-                                     const DwarfFile &File) const {
+                                     const DWARFFile &File) const {
   DWARFDebugRangeList RangeList;
   const auto &FunctionRanges = Unit.getFunctionRanges();
   unsigned AddressSize = Unit.getOrigUnit().getAddressByteSize();
@@ -1590,7 +1590,7 @@ static void patchStmtList(DIE &Die, DIEInteger Offset) {
 /// are present in the binary.
 void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
                                         DWARFContext &OrigDwarf,
-                                        const DwarfFile &File) {
+                                        const DWARFFile &File) {
   DWARFDie CUDie = Unit.getOrigUnit().getUnitDIE();
   auto StmtList = dwarf::toSectionOffset(CUDie.find(dwarf::DW_AT_stmt_list));
   if (!StmtList)
@@ -1790,7 +1790,7 @@ void DWARFLinker::emitDwarfAcceleratorEntriesForUnit(CompileUnit &Unit) {
 /// This is actually pretty easy as the data of the CIEs and FDEs can
 /// be considered as black boxes and moved as is. The only thing to do
 /// is to patch the addresses in the headers.
-void DWARFLinker::patchFrameInfoForObject(const DwarfFile &File,
+void DWARFLinker::patchFrameInfoForObject(const DWARFFile &File,
                                           RangesTy &Ranges,
                                           DWARFContext &OrigDwarf,
                                           unsigned AddrSize) {
@@ -1887,7 +1887,7 @@ void DWARFLinker::DIECloner::copyAbbrev(
 
 uint32_t DWARFLinker::DIECloner::hashFullyQualifiedName(DWARFDie DIE,
                                                         CompileUnit &U,
-                                                        const DwarfFile &File,
+                                                        const DWARFFile &File,
                                                         int ChildRecurseDepth) {
   const char *Name = nullptr;
   DWARFUnit *OrigUnit = &U.getOrigUnit();
@@ -1952,7 +1952,7 @@ static std::string remapPath(StringRef Path,
 }
 
 bool DWARFLinker::registerModuleReference(
-    DWARFDie CUDie, const DWARFUnit &Unit, const DwarfFile &File,
+    DWARFDie CUDie, const DWARFUnit &Unit, const DWARFFile &File,
     OffsetsStringPool &StringPool, UniquingStringPool &UniquingStringPool,
     DeclContextTree &ODRContexts, uint64_t ModulesEndOffset, unsigned &UnitID,
     bool IsLittleEndian, unsigned Indent, bool Quiet) {
@@ -2011,7 +2011,7 @@ bool DWARFLinker::registerModuleReference(
 
 Error DWARFLinker::loadClangModule(
     DWARFDie CUDie, StringRef Filename, StringRef ModuleName, uint64_t DwoId,
-    const DwarfFile &File, OffsetsStringPool &StringPool,
+    const DWARFFile &File, OffsetsStringPool &StringPool,
     UniquingStringPool &UniquingStringPool, DeclContextTree &ODRContexts,
     uint64_t ModulesEndOffset, unsigned &UnitID, bool IsLittleEndian,
     unsigned Indent, bool Quiet) {
@@ -2096,7 +2096,7 @@ Error DWARFLinker::loadClangModule(
 }
 
 uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
-    DWARFContext &DwarfContext, const DwarfFile &File,
+    DWARFContext &DwarfContext, const DWARFFile &File,
     OffsetsStringPool &StringPool, bool IsLittleEndian) {
   uint64_t OutputDebugInfoSize =
       Linker.Options.NoOutput ? 0 : Emitter->getDebugInfoSectionSize();
@@ -2190,7 +2190,7 @@ void DWARFLinker::updateAccelKind(DWARFContext &Dwarf) {
   }
 }
 
-bool DWARFLinker::emitPaperTrailWarnings(const DwarfFile &File,
+bool DWARFLinker::emitPaperTrailWarnings(const DWARFFile &File,
                                          OffsetsStringPool &StringPool) {
 
   if (File.Warnings.empty())
@@ -2267,7 +2267,7 @@ void DWARFLinker::copyInvariantDebugSection(DWARFContext &Dwarf) {
                                        "debug_aranges");
 }
 
-void DWARFLinker::addObjectFile(DwarfFile &File) {
+void DWARFLinker::addObjectFile(DWARFFile &File) {
   ObjectContexts.emplace_back(LinkContext(File));
 
   if (ObjectContexts.back().File.Dwarf)

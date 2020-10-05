@@ -2178,8 +2178,8 @@ public:
     data().ReferencedProtocols.set(List, Num, Locs, C);
   }
 
-  /// This is true iff the protocol is tagged with the `objc_static_protocol`
-  /// attribute.
+  /// This is true iff the protocol is tagged with the
+  /// `objc_non_runtime_protocol` attribute.
   bool isNonRuntimeProtocol() const;
 
   /// Get the set of all protocols implied by this protocols inheritance

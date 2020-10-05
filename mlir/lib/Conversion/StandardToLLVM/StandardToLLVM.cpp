@@ -3011,6 +3011,57 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
   }
 };
 
+/// Conversion pattern that transforms a transpose op into:
+///   1. A function entry `alloca` operation to allocate a ViewDescriptor.
+///   2. A load of the ViewDescriptor from the pointer allocated in 1.
+///   3. Updates to the ViewDescriptor to introduce the data ptr, offset, size
+///      and stride. Size and stride are permutations of the original values.
+///   4. A store of the resulting ViewDescriptor to the alloca'ed pointer.
+/// The transpose op is replaced by the alloca'ed pointer.
+class TransposeOpLowering : public ConvertOpToLLVMPattern<TransposeOp> {
+public:
+  using ConvertOpToLLVMPattern<TransposeOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
+    TransposeOpAdaptor adaptor(operands);
+    MemRefDescriptor viewMemRef(adaptor.in());
+
+    auto transposeOp = cast<TransposeOp>(op);
+    // No permutation, early exit.
+    if (transposeOp.permutation().isIdentity())
+      return rewriter.replaceOp(op, {viewMemRef}), success();
+
+    auto targetMemRef = MemRefDescriptor::undef(
+        rewriter, loc, typeConverter.convertType(transposeOp.getShapedType()));
+
+    // Copy the base and aligned pointers from the old descriptor to the new
+    // one.
+    targetMemRef.setAllocatedPtr(rewriter, loc,
+                                 viewMemRef.allocatedPtr(rewriter, loc));
+    targetMemRef.setAlignedPtr(rewriter, loc,
+                               viewMemRef.alignedPtr(rewriter, loc));
+
+    // Copy the offset pointer from the old descriptor to the new one.
+    targetMemRef.setOffset(rewriter, loc, viewMemRef.offset(rewriter, loc));
+
+    // Iterate over the dimensions and apply size/stride permutation.
+    for (auto en : llvm::enumerate(transposeOp.permutation().getResults())) {
+      int sourcePos = en.index();
+      int targetPos = en.value().cast<AffineDimExpr>().getPosition();
+      targetMemRef.setSize(rewriter, loc, targetPos,
+                           viewMemRef.size(rewriter, loc, sourcePos));
+      targetMemRef.setStride(rewriter, loc, targetPos,
+                             viewMemRef.stride(rewriter, loc, sourcePos));
+    }
+
+    rewriter.replaceOp(op, {targetMemRef});
+    return success();
+  }
+};
+
 /// Conversion pattern that transforms an op into:
 ///   1. An `llvm.mlir.undef` operation to create a memref descriptor
 ///   2. Updates to the descriptor to introduce the data ptr, offset, size
@@ -3425,6 +3476,7 @@ void mlir::populateStdToLLVMMemoryConversionPatterns(
       RankOpLowering,
       StoreOpLowering,
       SubViewOpLowering,
+      TransposeOpLowering,
       ViewOpLowering,
       AllocOpLowering>(converter);
   // clang-format on

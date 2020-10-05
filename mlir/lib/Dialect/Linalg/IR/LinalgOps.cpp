@@ -974,86 +974,6 @@ static LogicalResult verify(SliceOp op) {
 Value SliceOp::getViewSource() { return view(); }
 
 //===----------------------------------------------------------------------===//
-// TransposeOp
-//===----------------------------------------------------------------------===//
-
-static MemRefType inferTransposeResultType(MemRefType memRefType,
-                                           AffineMap permutationMap) {
-  auto rank = memRefType.getRank();
-  auto originalSizes = memRefType.getShape();
-  // Compute permuted sizes.
-  SmallVector<int64_t, 4> sizes(rank, 0);
-  for (auto en : llvm::enumerate(permutationMap.getResults()))
-    sizes[en.index()] =
-        originalSizes[en.value().cast<AffineDimExpr>().getPosition()];
-
-  // Compute permuted strides.
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  auto res = getStridesAndOffset(memRefType, strides, offset);
-  assert(succeeded(res) && strides.size() == static_cast<unsigned>(rank));
-  (void)res;
-  auto map =
-      makeStridedLinearLayoutMap(strides, offset, memRefType.getContext());
-  map = permutationMap ? map.compose(permutationMap) : map;
-  return MemRefType::Builder(memRefType).setShape(sizes).setAffineMaps(map);
-}
-
-void mlir::linalg::TransposeOp::build(OpBuilder &b, OperationState &result,
-                                      Value view, AffineMapAttr permutation,
-                                      ArrayRef<NamedAttribute> attrs) {
-  auto permutationMap = permutation.getValue();
-  assert(permutationMap);
-
-  auto memRefType = view.getType().cast<MemRefType>();
-  // Compute result type.
-  MemRefType resultType = inferTransposeResultType(memRefType, permutationMap);
-
-  build(b, result, resultType, view, attrs);
-  result.addAttribute(TransposeOp::getPermutationAttrName(), permutation);
-}
-
-static void print(OpAsmPrinter &p, TransposeOp op) {
-  p << op.getOperationName() << " " << op.view() << " " << op.permutation();
-  p.printOptionalAttrDict(op.getAttrs(),
-                          {TransposeOp::getPermutationAttrName()});
-  p << " : " << op.view().getType() << " to " << op.getType();
-}
-
-static ParseResult parseTransposeOp(OpAsmParser &parser,
-                                    OperationState &result) {
-  OpAsmParser::OperandType view;
-  AffineMap permutation;
-  MemRefType srcType, dstType;
-  if (parser.parseOperand(view) || parser.parseAffineMap(permutation) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(srcType) ||
-      parser.resolveOperand(view, srcType, result.operands) ||
-      parser.parseKeywordType("to", dstType) ||
-      parser.addTypeToList(dstType, result.types))
-    return failure();
-
-  result.addAttribute(TransposeOp::getPermutationAttrName(),
-                      AffineMapAttr::get(permutation));
-  return success();
-}
-
-static LogicalResult verify(TransposeOp op) {
-  if (!op.permutation().isPermutation())
-    return op.emitOpError("expected a permutation map");
-  if (op.permutation().getNumDims() != op.getShapedType().getRank())
-    return op.emitOpError(
-        "expected a permutation map of same rank as the view");
-
-  auto srcType = op.view().getType().cast<MemRefType>();
-  auto dstType = op.getType().cast<MemRefType>();
-  if (dstType != inferTransposeResultType(srcType, op.permutation()))
-    return op.emitOpError("output type ")
-           << dstType << " does not match transposed input type " << srcType;
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // YieldOp
 //===----------------------------------------------------------------------===//
 
@@ -1358,11 +1278,6 @@ OpFoldResult SliceOp::fold(ArrayRef<Attribute>) {
 }
 OpFoldResult TensorReshapeOp::fold(ArrayRef<Attribute> operands) {
   return foldReshapeOp(*this, operands);
-}
-OpFoldResult TransposeOp::fold(ArrayRef<Attribute>) {
-  if (succeeded(foldMemRefCast(*this)))
-    return getResult();
-  return {};
 }
 
 //===----------------------------------------------------------------------===//

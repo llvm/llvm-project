@@ -32,8 +32,14 @@ int main(int argc, char **argv) {
   munmap(p, map_size);
   size_t after_munmap = get_rss_kb();
 
-  fprintf(stderr, "RSS at start: %td, after mmap: %td, after mumap: %td\n",
-          before, after_mmap, after_munmap);
+  p = mmap(NULL, map_size, PROT_READ | PROT_WRITE,
+                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  dfsan_set_label(label, &val, sizeof(val));
+  memset(p, val, map_size);
+  size_t after_mmap2 = get_rss_kb();
+
+  fprintf(stderr, "RSS at start: %td, after mmap: %td, after mumap: %td, after mmap2: %td\n",
+          before, after_mmap, after_munmap, after_mmap2);
 
   // The memory after mmap increases 3 times of map_size because the overhead of
   // shadow memory is 2x.
@@ -42,6 +48,7 @@ int main(int argc, char **argv) {
   // OS does not release memory to the same level as the start of the program.
   // The assert checks the memory after munmap up to a delta.
   const size_t delta = 50000;
-  assert(after_munmap + delta <= after_mmap);
+  assert(after_mmap2 <= after_mmap + delta);
+
   return 0;
 }

@@ -68,6 +68,12 @@ public:
     return Reg;
   }
 
+  /// Check the provided unsigned value is a valid MCRegister.
+  static MCRegister from(unsigned Val) {
+    assert(Val == NoRegister || isPhysicalRegister(Val));
+    return MCRegister(Val);
+  }
+
   unsigned id() const {
     return Reg;
   }

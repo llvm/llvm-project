@@ -9,7 +9,7 @@
 # The same test gets shrink wrapped on Linux ARM64.
 
 # WIN64-LABEL: bb.0.entry:
-# WIN64: early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -4
+# WIN64: early-clobber $sp = frame-setup STRXpre killed $x19, $sp, -32
 # WIN64-LABEL: bb.1:
 # WIN64-LABEL: bb.2.if.then:
 

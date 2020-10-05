@@ -143,7 +143,6 @@ copy("Headers") {
     "inttypes.h",
     "invpcidintrin.h",
     "iso646.h",
-    "keylocker_wide_intrin.h",
     "keylockerintrin.h",
     "limits.h",
     "lwpintrin.h",

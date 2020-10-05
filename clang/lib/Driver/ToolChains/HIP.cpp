@@ -268,10 +268,6 @@ void HIPToolChain::addClangTargetOptions(
     CC1Args.push_back(DriverArgs.MakeArgStringRef(ArgStr));
   }
 
-  if (DriverArgs.hasFlag(options::OPT_fgpu_allow_device_init,
-                         options::OPT_fno_gpu_allow_device_init, false))
-    CC1Args.push_back("-fgpu-allow-device-init");
-
   CC1Args.push_back("-fcuda-allow-variadic-functions");
 
   // Default to "hidden" visibility, as object level linking will not be
@@ -330,6 +326,17 @@ void HIPToolChain::addClangTargetOptions(
     RocmInstallation.addCommonBitcodeLibCC1Args(
       DriverArgs, CC1Args, LibDeviceFile, Wave64, DAZ, FiniteOnly,
       UnsafeMathOpt, FastRelaxedMath, CorrectSqrt);
+
+    // Add instrument lib.
+    auto InstLib =
+        DriverArgs.getLastArgValue(options::OPT_gpu_instrument_lib_EQ);
+    if (InstLib.empty())
+      return;
+    if (llvm::sys::fs::exists(InstLib)) {
+      CC1Args.push_back("-mlink-builtin-bitcode");
+      CC1Args.push_back(DriverArgs.MakeArgString(InstLib));
+    } else
+      getDriver().Diag(diag::err_drv_no_such_file) << InstLib;
   }
 }
 
