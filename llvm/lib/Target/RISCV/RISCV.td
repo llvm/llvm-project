@@ -228,14 +228,26 @@ def : ProcessorModel<"generic-rv64", NoSchedModel, [Feature64Bit]>;
 def : ProcessorModel<"rocket-rv32", RocketModel, []>;
 def : ProcessorModel<"rocket-rv64", RocketModel, [Feature64Bit]>;
 
-def : ProcessorModel<"bullet-rv32", BulletModel, []>;
-def : ProcessorModel<"bullet-rv64", BulletModel, [Feature64Bit]>;
+def : ProcessorModel<"sifive-7-rv32", BulletModel, []>;
+def : ProcessorModel<"sifive-7-rv64", BulletModel, [Feature64Bit]>;
 
 def : ProcessorModel<"sifive-e31", RocketModel, [FeatureStdExtM,
                                                  FeatureStdExtA,
                                                  FeatureStdExtC]>;
 
 def : ProcessorModel<"sifive-u54", RocketModel, [Feature64Bit,
+                                                 FeatureStdExtM,
+                                                 FeatureStdExtA,
+                                                 FeatureStdExtF,
+                                                 FeatureStdExtD,
+                                                 FeatureStdExtC]>;
+
+def : ProcessorModel<"sifive-e76", BulletModel, [FeatureStdExtM,
+                                                 FeatureStdExtA,
+                                                 FeatureStdExtF,
+                                                 FeatureStdExtC]>;
+
+def : ProcessorModel<"sifive-u74", BulletModel, [Feature64Bit,
                                                  FeatureStdExtM,
                                                  FeatureStdExtA,
                                                  FeatureStdExtF,
