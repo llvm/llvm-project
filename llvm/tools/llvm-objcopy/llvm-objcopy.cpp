@@ -25,6 +25,7 @@
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachO.h"
+#include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -144,6 +145,10 @@ static Error executeObjcopyOnBinary(CopyConfig &Config, object::Binary &In,
     return coff::executeObjcopyOnBinary(Config, *COFFBinary, Out);
   else if (auto *MachOBinary = dyn_cast<object::MachOObjectFile>(&In))
     return macho::executeObjcopyOnBinary(Config, *MachOBinary, Out);
+  else if (auto *MachOUniversalBinary =
+               dyn_cast<object::MachOUniversalBinary>(&In))
+    return macho::executeObjcopyOnMachOUniversalBinary(
+        Config, *MachOUniversalBinary, Out);
   else if (auto *WasmBinary = dyn_cast<object::WasmObjectFile>(&In))
     return objcopy::wasm::executeObjcopyOnBinary(Config, *WasmBinary, Out);
   else
@@ -151,7 +156,11 @@ static Error executeObjcopyOnBinary(CopyConfig &Config, object::Binary &In,
                              "unsupported object file format");
 }
 
-static Error executeObjcopyOnArchive(CopyConfig &Config, const Archive &Ar) {
+namespace llvm {
+namespace objcopy {
+
+Expected<std::vector<NewArchiveMember>>
+createNewArchiveMembers(CopyConfig &Config, const Archive &Ar) {
   std::vector<NewArchiveMember> NewArchiveMembers;
   Error Err = Error::success();
   for (const Archive::Child &Child : Ar.children(Err)) {
@@ -166,7 +175,7 @@ static Error executeObjcopyOnArchive(CopyConfig &Config, const Archive &Ar) {
 
     MemBuffer MB(ChildNameOrErr.get());
     if (Error E = executeObjcopyOnBinary(Config, *ChildOrErr->get(), MB))
-      return E;
+      return std::move(E);
 
     Expected<NewArchiveMember> Member =
         NewArchiveMember::getOldMember(Child, Config.DeterministicArchives);
@@ -178,8 +187,19 @@ static Error executeObjcopyOnArchive(CopyConfig &Config, const Archive &Ar) {
   }
   if (Err)
     return createFileError(Config.InputFilename, std::move(Err));
+  return NewArchiveMembers;
+}
 
-  return deepWriteArchive(Config.OutputFilename, NewArchiveMembers,
+} // end namespace objcopy
+} // end namespace llvm
+
+static Error executeObjcopyOnArchive(CopyConfig &Config,
+                                     const object::Archive &Ar) {
+  Expected<std::vector<NewArchiveMember>> NewArchiveMembersOrErr =
+      createNewArchiveMembers(Config, Ar);
+  if (!NewArchiveMembersOrErr)
+    return NewArchiveMembersOrErr.takeError();
+  return deepWriteArchive(Config.OutputFilename, *NewArchiveMembersOrErr,
                           Ar.hasSymbolTable(), Ar.kind(),
                           Config.DeterministicArchives, Ar.isThin());
 }
