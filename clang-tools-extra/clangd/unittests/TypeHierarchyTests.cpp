@@ -29,11 +29,8 @@ namespace {
 
 using ::testing::AllOf;
 using ::testing::ElementsAre;
-using ::testing::Eq;
 using ::testing::Field;
-using ::testing::IsEmpty;
 using ::testing::Matcher;
-using ::testing::Pointee;
 using ::testing::UnorderedElementsAre;
 
 // GMock helpers for matching TypeHierarchyItem.
