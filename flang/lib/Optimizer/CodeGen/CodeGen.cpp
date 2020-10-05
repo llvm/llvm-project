@@ -1261,10 +1261,9 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
   }
 
   // Get the element size and CFI type code of the boxed value.
-  std::tuple<mlir::Value, mlir::Value>
-  getSizeAndTypeCode(mlir::Location loc,
-                     mlir::ConversionPatternRewriter &rewriter,
-                     mlir::Type boxEleTy) const {
+  std::tuple<mlir::Value, mlir::Value> getSizeAndTypeCode(
+      mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
+      mlir::Type boxEleTy, mlir::ValueRange lenParams = {}) const {
     auto doInteger =
         [&](unsigned width) -> std::tuple<mlir::Value, mlir::Value> {
       int typeCode = fir::integerBitsToTypeCode(width);
@@ -1330,7 +1329,11 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
         // TODO: assumes the row is the length of the CHARACTER. This is true by
         // construction, but it may not hold after optimizations have run.
         auto rowSize = seqTy.getShape()[0];
-        assert(rowSize != fir::SequenceType::getUnknownExtent());
+        if (rowSize == fir::SequenceType::getUnknownExtent()) {
+          auto [_, tyCode] =
+              getSizeAndTypeCode(loc, rewriter, seqTy.getEleTy());
+          return {lenParams[0], tyCode};
+        }
         auto strTy = fir::CharacterType::get(rewriter.getContext(),
                                              charTy.getFKind(), rowSize);
         return getSizeAndTypeCode(loc, rewriter, strTy);
@@ -1388,7 +1391,8 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
 
     // Write each of the fields with the appropriate values
     storeField(0, operands[0], bitCast);
-    auto [eleSize, cfiTy] = getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy());
+    auto [eleSize, cfiTy] = getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy(),
+                                               operands.drop_front(1));
     storeField(1, eleSize, intCast);
     auto version = genConstantOffset(loc, rewriter, CFI_VERSION);
     storeField(2, version, intCast);
@@ -1438,7 +1442,9 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::XEmboxOp> {
 
     // Write each of the fields with the appropriate values
     storeField(0, operands[0], bitCast);
-    auto [eleSize, cfiTy] = getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy());
+    auto [eleSize, cfiTy] =
+        getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy(),
+                           operands.drop_front(xbox.lenParamOffset() + 1));
     storeField(1, eleSize, intCast);
     auto version = genConstantOffset(loc, rewriter, CFI_VERSION);
     storeField(2, version, intCast);
