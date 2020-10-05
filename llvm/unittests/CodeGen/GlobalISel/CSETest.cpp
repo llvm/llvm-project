@@ -8,6 +8,7 @@
 
 #include "GISelMITest.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
+#include "gtest/gtest.h"
 
 namespace {
 
@@ -136,4 +137,30 @@ TEST_F(AArch64GISelMITest, TestCSEConstantConfig) {
   auto Undef1 = CSEB.buildUndef(s16);
   EXPECT_EQ(&*Undef0, &*Undef1);
 }
+
+TEST_F(AArch64GISelMITest, TestCSEImmediateNextCSE) {
+  setUp();
+  if (!TM)
+    return;
+
+  LLT s32{LLT::scalar(32)};
+  // We want to check that when the CSE hit is on the next instruction, i.e. at
+  // the current insert pt, that the insertion point is moved ahead of the
+  // instruction.
+
+  GISelCSEInfo CSEInfo;
+  CSEInfo.setCSEConfig(std::make_unique<CSEConfigConstantOnly>());
+  CSEInfo.analyze(*MF);
+  B.setCSEInfo(&CSEInfo);
+  CSEMIRBuilder CSEB(B.getState());
+  CSEB.buildConstant(s32, 0);
+  auto MIBCst2 = CSEB.buildConstant(s32, 2);
+
+  // Move the insert point before the second constant.
+  CSEB.setInsertPt(CSEB.getMBB(), --CSEB.getInsertPt());
+  auto MIBCst3 = CSEB.buildConstant(s32, 2);
+  EXPECT_TRUE(&*MIBCst2 == &*MIBCst3);
+  EXPECT_TRUE(CSEB.getInsertPt() == CSEB.getMBB().end());
+}
+
 } // namespace
