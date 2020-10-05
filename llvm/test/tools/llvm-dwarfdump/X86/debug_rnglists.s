@@ -1,8 +1,8 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-pc-linux -o %t.o
-# RUN: not llvm-dwarfdump --debug-rnglists %t.o 2> %t.err | FileCheck %s --check-prefixes=TERSE,BOTH
-# RUN: FileCheck %s --input-file %t.err --check-prefix=ERR
-# RUN: not llvm-dwarfdump -v --debug-rnglists %t.o 2> %t.err | FileCheck %s --check-prefixes=VERBOSE,BOTH
-# RUN: FileCheck %s --input-file %t.err --check-prefix=ERR
+# RUN: llvm-dwarfdump --debug-rnglists %t.o 2> %t.err | FileCheck %s --check-prefixes=TERSE,BOTH
+# RUN: FileCheck %s --allow-empty --input-file %t.err --check-prefix=ERR
+# RUN: llvm-dwarfdump -v --debug-rnglists %t.o 2> %t.err | FileCheck %s --check-prefixes=VERBOSE,BOTH
+# RUN: FileCheck %s --allow-empty --input-file %t.err --check-prefix=ERR
 
 # BOTH:         .debug_rnglists contents:
 # TERSE-NEXT:     range list header: length = 0x00000037, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
@@ -75,6 +75,18 @@
 # VERBOSE-SAME: range list header: length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 
 # BOTH-NEXT:    ranges:
+# TERSE-NEXT:   [0x0000000000000000, 0x0000000000000000)
+# TERSE-NEXT:   <End of list>
+
+# VERBOSE-NEXT: 0x00000091: [DW_RLE_startx_endx]:  0x0000000000000001, 0x000000000000000a => [0x0000000000000000, 0x0000000000000000)
+# VERBOSE-NEXT: 0x00000094: [DW_RLE_end_of_list]
+
+# TERSE-NEXT:   range list header: length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+
+# VERBOSE-NEXT: 0x{{[0-9a-f]*}}:
+# VERBOSE-SAME: range list header: length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+
+# BOTH-NEXT:    ranges:
 # TERSE-NEXT:   [0x0000000000000000, 0x000000000000002a)
 # TERSE-NEXT:   <End of list>
 
@@ -110,8 +122,6 @@
 
 # BOTH-NOT:     range list header:
 
-# ERR-NOT:  error:
-# ERR: error: unsupported rnglists encoding DW_RLE_startx_endx at offset 0x91
 # ERR-NOT:  error:
 
 .section .debug_rnglists,"",@progbits
