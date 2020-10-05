@@ -25,6 +25,7 @@
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Support/LLVM.h"
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
@@ -1498,12 +1499,65 @@ struct EraseDeadLinalgOp : public RewritePattern {
     return failure();
   }
 };
+
+struct FoldTensorCastOp : public RewritePattern {
+  FoldTensorCastOp(PatternBenefit benefit = 1)
+      : RewritePattern(benefit, MatchAnyOpTypeTag()) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    auto linalgOp = dyn_cast<LinalgOp>(op);
+    if (!linalgOp)
+      return failure();
+
+    // If no operand comes from a TensorCastOp and can be folded then fail.
+    bool hasTensorCastOperand =
+        llvm::any_of(linalgOp.getShapedOperands(), [&](Value v) {
+          if (v.isa<BlockArgument>())
+            return false;
+          auto castOp = v.getDefiningOp<TensorCastOp>();
+          return castOp && canFoldIntoConsumerOp(castOp);
+        });
+    if (!hasTensorCastOperand)
+      return failure();
+
+    SmallVector<Type, 4> newResultTypes;
+    newResultTypes.reserve(op->getNumResults());
+    SmallVector<Value, 4> newOperands;
+    newOperands.reserve(op->getNumOperands());
+    // Inputs may fold.
+    for (Value v : linalgOp.getInputs()) {
+      auto tensorCastOp = v.getDefiningOp<TensorCastOp>();
+      newOperands.push_back(
+          canFoldIntoConsumerOp(tensorCastOp) ? tensorCastOp.source() : v);
+    }
+    // Output buffers are memrefs, they don't fold.
+    newOperands.append(linalgOp.getOutputBuffers().begin(),
+                       linalgOp.getOutputBuffers().end());
+    // Init tensors may fold, in which case the resultType must also change.
+    for (Value v : linalgOp.getInitTensors()) {
+      auto tensorCastOp = v.getDefiningOp<TensorCastOp>();
+      bool fold = canFoldIntoConsumerOp(tensorCastOp);
+      newOperands.push_back(fold ? tensorCastOp.getOperand() : v);
+      newResultTypes.push_back(newOperands.back().getType());
+    }
+    auto extraOperands = linalgOp.getAssumedNonShapedOperands();
+    newOperands.append(extraOperands.begin(), extraOperands.end());
+    // Clone op.
+    Operation *newOp =
+        linalgOp.clone(rewriter, op->getLoc(), newResultTypes, newOperands);
+    rewriter.replaceOp(op, newOp->getResults());
+
+    return success();
+  }
+};
 } // namespace
 
 #define CANONICALIZERS_AND_FOLDERS(XXX)                                        \
   void XXX::getCanonicalizationPatterns(OwningRewritePatternList &results,     \
                                         MLIRContext *context) {                \
     results.insert<EraseDeadLinalgOp>();                                       \
+    results.insert<FoldTensorCastOp>();                                        \
   }                                                                            \
                                                                                \
   LogicalResult XXX::fold(ArrayRef<Attribute>,                                 \

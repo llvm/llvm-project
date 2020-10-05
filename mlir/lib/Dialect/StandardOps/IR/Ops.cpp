@@ -3157,6 +3157,60 @@ bool mlir::canFoldIntoConsumerOp(MemRefCastOp castOp) {
   return true;
 }
 
+/// Counterpart of `canFoldIntoConsumerOp(MemRefCastOp castOp)` for tensors.
+/// Determines whether TensorCastOp casts to a more dynamic version of the
+/// source tensor. This is useful to fold a tensor_cast into a consuming op and
+/// implement canonicalization patterns for ops in different dialects that may
+/// consume the results of tensor_cast operations. Such foldable tensor_cast
+/// operations are typically inserted as `subtensor` ops and are canonicalized,
+/// to preserve the type compatibility of their uses.
+///
+/// Returns true when all conditions are met:
+/// 1. source and result are ranked tensors with same element type and rank.
+/// 2. the tensor type has more static information than the result
+///
+/// Example:
+/// ```mlir
+///   %1 = tensor_cast %0 : tensor<8x16xf32> to tensor<?x?xf32>
+///   %2 = consumer %1 ... : tensor<?x?xf32> ...
+/// ```
+///
+/// folds into:
+///
+/// ```mlir
+///   %2 = consumer %0 ... : tensor<8x16xf32> ...
+/// ```
+bool mlir::canFoldIntoConsumerOp(TensorCastOp castOp) {
+  if (!castOp)
+    return false;
+
+  RankedTensorType sourceType =
+      castOp.source().getType().dyn_cast<RankedTensorType>();
+  RankedTensorType resultType = castOp.getType().dyn_cast<RankedTensorType>();
+
+  // Requires RankedTensorType.
+  if (!sourceType || !resultType)
+    return false;
+
+  // Requires same elemental type.
+  if (sourceType.getElementType() != resultType.getElementType())
+    return false;
+
+  // Requires same rank.
+  if (sourceType.getRank() != resultType.getRank())
+    return false;
+
+  // If cast is towards more static sizes along any dimension, don't fold.
+  for (auto it : llvm::zip(sourceType.getShape(), resultType.getShape())) {
+    auto ss = std::get<0>(it), st = std::get<1>(it);
+    if (ss != st)
+      if (ShapedType::isDynamic(ss) && !ShapedType::isDynamic(st))
+        return false;
+  }
+
+  return true;
+}
+
 namespace {
 /// Pattern to rewrite a subview op with MemRefCast arguments.
 /// This essentially pushes memref_cast past its consuming subview when
