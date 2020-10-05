@@ -182,3 +182,58 @@ define <3 x i36> @fshl_v3i36_constant_nonsplat_undef0(<3 x i36> %x, <3 x i36> %y
   %r = or <3 x i36> %shl, %shr
   ret <3 x i36> %r
 }
+
+; Fold or(shl(x,a),lshr(y,bw-a)) -> fshl(x,y,a) iff a < bw
+
+define i64 @fshl_sub_mask(i64 %x, i64 %y, i64 %a) {
+; CHECK-LABEL: @fshl_sub_mask(
+; CHECK-NEXT:    [[MASK:%.*]] = and i64 [[A:%.*]], 63
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[X:%.*]], [[MASK]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i64 64, [[MASK]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[Y:%.*]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = or i64 [[SHL]], [[SHR]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %mask = and i64 %a, 63
+  %shl = shl i64 %x, %mask
+  %sub = sub nuw nsw i64 64, %mask
+  %shr = lshr i64 %y, %sub
+  %r = or i64 %shl, %shr
+  ret i64 %r
+}
+
+; Fold or(lshr(v,a),shl(v,bw-a)) -> fshr(y,x,a) iff a < bw
+
+define i64 @fshr_sub_mask(i64 %x, i64 %y, i64 %a) {
+; CHECK-LABEL: @fshr_sub_mask(
+; CHECK-NEXT:    [[MASK:%.*]] = and i64 [[A:%.*]], 63
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[X:%.*]], [[MASK]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i64 64, [[MASK]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[Y:%.*]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = or i64 [[SHL]], [[SHR]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %mask = and i64 %a, 63
+  %shr = lshr i64 %x, %mask
+  %sub = sub nuw nsw i64 64, %mask
+  %shl = shl i64 %y, %sub
+  %r = or i64 %shl, %shr
+  ret i64 %r
+}
+
+define <2 x i64> @fshr_sub_mask_vector(<2 x i64> %x, <2 x i64> %y, <2 x i64> %a) {
+; CHECK-LABEL: @fshr_sub_mask_vector(
+; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i64> [[A:%.*]], <i64 63, i64 63>
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i64> [[X:%.*]], [[MASK]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw <2 x i64> <i64 64, i64 64>, [[MASK]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i64> [[Y:%.*]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i64> [[SHL]], [[SHR]]
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %mask = and <2 x i64> %a, <i64 63, i64 63>
+  %shr = lshr <2 x i64> %x, %mask
+  %sub = sub nuw nsw <2 x i64> <i64 64, i64 64>, %mask
+  %shl = shl <2 x i64> %y, %sub
+  %r = or <2 x i64> %shl, %shr
+  ret <2 x i64> %r
+}
