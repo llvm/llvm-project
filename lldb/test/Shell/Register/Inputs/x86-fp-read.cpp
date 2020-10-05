@@ -14,7 +14,8 @@ int main() {
     {0x8000000000000000, 0x7fff},  // +inf
     {0x8000000000000000, 0xffff},  // -inf
     {0xc000000000000000, 0xffff},  // nan
-    // leave st7 empty to test tag word better
+    // st7 will be freed to test tag word better
+    {0x0000000000000000, 0x0000},  // +0
   };
 
   // unmask divide-by-zero exception
@@ -26,6 +27,7 @@ int main() {
     "finit\n\t"
     "fldcw %1\n\t"
     // load on stack in reverse order to make the result easier to read
+    "fldt 0x70(%0)\n\t"
     "fldt 0x60(%0)\n\t"
     "fldt 0x50(%0)\n\t"
     "fldt 0x40(%0)\n\t"
@@ -33,6 +35,8 @@ int main() {
     "fldt 0x20(%0)\n\t"
     "fldt 0x10(%0)\n\t"
     "fldt 0x00(%0)\n\t"
+    // free st7
+    "ffree %%st(7)\n\t"
     // this should trigger a divide-by-zero
     "fdivs (%2)\n\t"
     "int3\n\t"
