@@ -37,12 +37,9 @@ Error RangeListEntry::extract(DWARFDataExtractor Data, uint64_t *OffsetPtr) {
     break;
   }
   case dwarf::DW_RLE_startx_endx:
-    consumeError(C.takeError());
-    return createStringError(
-        errc::not_supported,
-        "unsupported rnglists encoding DW_RLE_startx_endx at "
-        "offset 0x%" PRIx64,
-        Offset);
+    Value0 = Data.getULEB128(C);
+    Value1 = Data.getULEB128(C);
+    break;
   case dwarf::DW_RLE_startx_length: {
     Value0 = Data.getULEB128(C);
     Value1 = Data.getULEB128(C);
@@ -150,6 +147,19 @@ DWARFAddressRangesVector DWARFDebugRnglist::getAbsoluteRanges(
       E.HighPC = E.LowPC + RLE.Value1;
       break;
     }
+    case dwarf::DW_RLE_startx_endx: {
+      auto Start = LookupPooledAddress(RLE.Value0);
+      if (!Start)
+        Start = {0, -1ULL};
+      auto End = LookupPooledAddress(RLE.Value1);
+      if (!End)
+        End = {0, -1ULL};
+      // FIXME: Some error handling if Start.SectionIndex != End.SectionIndex
+      E.SectionIndex = Start->SectionIndex;
+      E.LowPC = Start->Address;
+      E.HighPC = End->Address;
+      break;
+    }
     default:
       // Unsupported encodings should have been reported during extraction,
       // so we should not run into any here.
@@ -233,6 +243,17 @@ void RangeListEntry::dump(
     if (auto SA = LookupPooledAddress(Value0))
       Start = SA->Address;
     DWARFAddressRange(Start, Start + Value1).dump(OS, AddrSize, DumpOpts);
+    break;
+  }
+  case dwarf::DW_RLE_startx_endx: {
+    PrintRawEntry(OS, *this, AddrSize, DumpOpts);
+    uint64_t Start = 0;
+    if (auto SA = LookupPooledAddress(Value0))
+      Start = SA->Address;
+    uint64_t End = 0;
+    if (auto SA = LookupPooledAddress(Value1))
+      End = SA->Address;
+    DWARFAddressRange(Start, End).dump(OS, AddrSize, DumpOpts);
     break;
   }
   default:
