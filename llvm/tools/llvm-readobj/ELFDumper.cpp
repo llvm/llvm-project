@@ -4722,8 +4722,62 @@ template <class ELFT> void GNUStyle<ELFT>::printCGProfile() {
   OS << "GNUStyle::printCGProfile not implemented\n";
 }
 
+static Expected<std::vector<uint64_t>> toULEB128Array(ArrayRef<uint8_t> Data) {
+  std::vector<uint64_t> Ret;
+  const uint8_t *Cur = Data.begin();
+  const uint8_t *End = Data.end();
+  while (Cur != End) {
+    unsigned Size;
+    const char *Err;
+    Ret.push_back(decodeULEB128(Cur, &Size, End, &Err));
+    if (Err)
+      return createError(Err);
+    Cur += Size;
+  }
+  return Ret;
+}
+
+template <class ELFT>
+static Expected<std::vector<uint64_t>>
+decodeAddrsigSection(const ELFFile<ELFT> &Obj, const typename ELFT::Shdr &Sec) {
+  Expected<ArrayRef<uint8_t>> ContentsOrErr = Obj.getSectionContents(Sec);
+  if (!ContentsOrErr)
+    return ContentsOrErr.takeError();
+
+  if (Expected<std::vector<uint64_t>> SymsOrErr =
+          toULEB128Array(*ContentsOrErr))
+    return *SymsOrErr;
+  else
+    return createError("unable to decode " + describe(Obj, Sec) + ": " +
+                       toString(SymsOrErr.takeError()));
+}
+
 template <class ELFT> void GNUStyle<ELFT>::printAddrsig() {
-  reportError(createError("--addrsig: not implemented"), this->FileName);
+  const Elf_Shdr *Sec = this->dumper().getDotAddrsigSec();
+  if (!Sec)
+    return;
+
+  Expected<std::vector<uint64_t>> SymsOrErr =
+      decodeAddrsigSection(this->Obj, *Sec);
+  if (!SymsOrErr) {
+    this->reportUniqueWarning(SymsOrErr.takeError());
+    return;
+  }
+
+  StringRef Name = this->getPrintableSectionName(*Sec);
+  OS << "\nAddress-significant symbols section '" << Name << "'"
+     << " contains " << SymsOrErr->size() << " entries:\n";
+  OS << "   Num: Name\n";
+
+  Field Fields[2] = {0, 8};
+  size_t SymIndex = 0;
+  for (uint64_t Sym : *SymsOrErr) {
+    Fields[0].Str = to_string(format_decimal(++SymIndex, 6)) + ":";
+    Fields[1].Str = this->dumper().getStaticSymbolName(Sym);
+    for (const Field &Entry : Fields)
+      printField(Entry);
+    OS << "\n";
+  }
 }
 
 template <typename ELFT>
@@ -6417,39 +6471,16 @@ template <class ELFT> void LLVMStyle<ELFT>::printCGProfile() {
   }
 }
 
-static Expected<std::vector<uint64_t>> toULEB128Array(ArrayRef<uint8_t> Data) {
-  std::vector<uint64_t> Ret;
-  const uint8_t *Cur = Data.begin();
-  const uint8_t *End = Data.end();
-  while (Cur != End) {
-    unsigned Size;
-    const char *Err;
-    Ret.push_back(decodeULEB128(Cur, &Size, End, &Err));
-    if (Err)
-      return createError(Err);
-    Cur += Size;
-  }
-  return Ret;
-}
-
 template <class ELFT> void LLVMStyle<ELFT>::printAddrsig() {
   ListScope L(W, "Addrsig");
   const Elf_Shdr *Sec = this->dumper().getDotAddrsigSec();
   if (!Sec)
     return;
 
-  Expected<ArrayRef<uint8_t>> ContentsOrErr =
-      this->Obj.getSectionContents(*Sec);
-  if (!ContentsOrErr) {
-    this->reportUniqueWarning(ContentsOrErr.takeError());
-    return;
-  }
-
-  Expected<std::vector<uint64_t>> SymsOrErr = toULEB128Array(*ContentsOrErr);
+  Expected<std::vector<uint64_t>> SymsOrErr =
+      decodeAddrsigSection(this->Obj, *Sec);
   if (!SymsOrErr) {
-    this->reportUniqueWarning(createError("unable to decode " +
-                                          describe(this->Obj, *Sec) + ": " +
-                                          toString(SymsOrErr.takeError())));
+    this->reportUniqueWarning(SymsOrErr.takeError());
     return;
   }
 
