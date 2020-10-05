@@ -195,9 +195,7 @@ static bool isValueTypeInRegForCC(CallingConv::ID CC, MVT VT) {
     return true; // Assume -msse-regparm might be in effect.
   if (!VT.isInteger())
     return false;
-  if (CC == CallingConv::X86_VectorCall || CC == CallingConv::X86_FastCall)
-    return true;
-  return false;
+  return (CC == CallingConv::X86_VectorCall || CC == CallingConv::X86_FastCall);
 }
 
 void CCState::getRemainingRegParmsForType(SmallVectorImpl<MCPhysReg> &Regs,
@@ -213,8 +211,8 @@ void CCState::getRemainingRegParmsForType(SmallVectorImpl<MCPhysReg> &Regs,
 
   // Allocate something of this value type repeatedly until we get assigned a
   // location in memory.
-  bool HaveRegParm = true;
-  while (HaveRegParm) {
+  bool HaveRegParm;
+  do {
     if (Fn(0, VT, VT, CCValAssign::Full, Flags, *this)) {
 #ifndef NDEBUG
       dbgs() << "Call has unhandled type " << EVT(VT).getEVTString()
@@ -223,7 +221,7 @@ void CCState::getRemainingRegParmsForType(SmallVectorImpl<MCPhysReg> &Regs,
       llvm_unreachable(nullptr);
     }
     HaveRegParm = Locs.back().isRegLoc();
-  }
+  } while (HaveRegParm);
 
   // Copy all the registers from the value locations we added.
   assert(NumLocs < Locs.size() && "CC assignment failed to add location");
@@ -254,7 +252,7 @@ void CCState::analyzeMustTailForwardedRegisters(
     const TargetLowering *TL = MF.getSubtarget().getTargetLowering();
     const TargetRegisterClass *RC = TL->getRegClassFor(RegVT);
     for (MCPhysReg PReg : RemainingRegs) {
-      unsigned VReg = MF.addLiveIn(PReg, RC);
+      Register VReg = MF.addLiveIn(PReg, RC);
       Forwards.push_back(ForwardedRegister(VReg, PReg, RegVT));
     }
   }
