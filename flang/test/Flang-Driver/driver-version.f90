@@ -8,4 +8,4 @@
 ! CHECK-NEXT:Thread model:
 ! CHECK-NEXT:InstalledDir:
 
-! ERROR: error: unsupported option '--versions'; did you mean '--version'?
+! ERROR: flang-new: error: unsupported option '--versions'; did you mean '--version'?
