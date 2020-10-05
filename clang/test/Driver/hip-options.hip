@@ -9,6 +9,11 @@
 // CHECK: clang{{.*}}" "-cc1" {{.*}} "-fcuda-is-device"
 // CHECK-SAME: "--gpu-max-threads-per-block=1024"
 
+// RUN: %clang -### -nogpuinc -nogpulib -fgpu-allow-device-init \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=DEVINIT %s
+// DEVINIT: clang{{.*}}" "-cc1" {{.*}}"-fgpu-allow-device-init"
+// DEVINIT: clang{{.*}}" "-cc1" {{.*}}"-fgpu-allow-device-init"
+
 // RUN: %clang -### -x hip -target x86_64-pc-windows-msvc -fms-extensions \
 // RUN:   -mllvm -amdgpu-early-inline-all=true  %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=MLLVM %s
