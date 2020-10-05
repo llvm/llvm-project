@@ -730,7 +730,7 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
   if (Op0->hasOneUse()) {
     if (BinaryOperator *Op0BO = dyn_cast<BinaryOperator>(Op0)) {
       // Turn ((X >> C) + Y) << C  ->  (X + (Y << C)) & (~0 << C)
-      Value *V1, *V2;
+      Value *V1;
       ConstantInt *CC;
       switch (Op0BO->getOpcode()) {
       default: break;
@@ -795,21 +795,19 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
         // Turn (((X >> C)&CC) + Y) << C  ->  (X + (Y << C)) & (CC << C)
         if (isLeftShift && Op0BO->getOperand(0)->hasOneUse() &&
             match(Op0BO->getOperand(0),
-                  m_And(m_OneUse(m_Shr(m_Value(V1), m_Value(V2))),
-                        m_ConstantInt(CC))) && V2 == Op1) {
+                  m_And(m_OneUse(m_Shr(m_Value(V1), m_Specific(Op1))),
+                        m_ConstantInt(CC)))) {
           Value *YS = // (Y << C)
-            Builder.CreateShl(Op0BO->getOperand(1), Op1, Op0BO->getName());
+              Builder.CreateShl(Op0BO->getOperand(1), Op1, Op0BO->getName());
           // X & (CC << C)
           Value *XM = Builder.CreateAnd(V1, ConstantExpr::getShl(CC, Op1),
-                                        V1->getName()+".mask");
-
+                                        V1->getName() + ".mask");
           return BinaryOperator::Create(Op0BO->getOpcode(), XM, YS);
         }
 
         break;
       }
       }
-
 
       // If the operand is a bitwise operator with a constant RHS, and the
       // shift is the only use, we can pull it out of the shift.
