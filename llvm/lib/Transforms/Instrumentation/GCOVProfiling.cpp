@@ -884,8 +884,9 @@ bool GCOVProfiler::emitProfileNotes(
         return E->Removed || (!E->InMST && !E->Place);
       });
       const size_t Measured =
-          llvm::stable_partition(
-              MST.AllEdges, [](std::unique_ptr<Edge> &E) { return E->Place; }) -
+          std::stable_partition(
+              MST.AllEdges.begin(), MST.AllEdges.end(),
+              [](std::unique_ptr<Edge> &E) { return E->Place; }) -
           MST.AllEdges.begin();
       for (size_t I : llvm::seq<size_t>(0, Measured)) {
         Edge &E = *MST.AllEdges[I];
