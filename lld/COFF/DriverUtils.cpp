@@ -112,7 +112,7 @@ void parseGuard(StringRef fullArg) {
 
 // Parses a string in the form of "<subsystem>[,<integer>[.<integer>]]".
 void parseSubsystem(StringRef arg, WindowsSubsystem *sys, uint32_t *major,
-                    uint32_t *minor) {
+                    uint32_t *minor, bool *gotVersion) {
   StringRef sysStr, ver;
   std::tie(sysStr, ver) = arg.split(',');
   std::string sysStrLower = sysStr.lower();
@@ -132,6 +132,8 @@ void parseSubsystem(StringRef arg, WindowsSubsystem *sys, uint32_t *major,
     fatal("unknown subsystem: " + sysStr);
   if (!ver.empty())
     parseVersion(ver, major, minor);
+  if (gotVersion)
+    *gotVersion = !ver.empty();
 }
 
 // Parse a string of the form of "<from>=<to>".

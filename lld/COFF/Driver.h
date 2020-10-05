@@ -168,7 +168,7 @@ void parseVersion(StringRef arg, uint32_t *major, uint32_t *minor);
 
 // Parses a string in the form of "<subsystem>[,<integer>[.<integer>]]".
 void parseSubsystem(StringRef arg, WindowsSubsystem *sys, uint32_t *major,
-                    uint32_t *minor);
+                    uint32_t *minor, bool *gotVersion = nullptr);
 
 void parseAlternateName(StringRef);
 void parseMerge(StringRef);

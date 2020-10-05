@@ -9,6 +9,11 @@ class F<string name> : Flag<["/", "-", "/?", "-?"], name>;
 class P<string name, string help> :
       Joined<["/", "-", "/?", "-?"], name#":">, HelpText<help>;
 
+// Same as P<> above, but without help texts, for private undocumented
+// options.
+class P_priv<string name> :
+      Joined<["/", "-", "/?", "-?"], name#":">;
+
 // Boolean flag which can be suffixed by ":no". Using it unsuffixed turns the
 // flag on and using it suffixed by ":no" turns it off.
 multiclass B<string name, string help_on, string help_off> {
@@ -205,6 +210,7 @@ def include_optional : Joined<["/", "-", "/?", "-?"], "includeoptional:">,
 def kill_at : F<"kill-at">;
 def lldmingw : F<"lldmingw">;
 def noseh : F<"noseh">;
+def osversion : P_priv<"osversion">;
 def output_def : Joined<["/", "-", "/?", "-?"], "output-def:">;
 def pdb_source_path : P<"pdbsourcepath",
     "Base path used to make relative source file path absolute in PDB">;
