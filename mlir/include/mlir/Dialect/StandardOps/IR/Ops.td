@@ -3028,10 +3028,11 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
     // memref is "inbounds" w.r.t to base memref. It is upto the client
     // to ensure that the subview is accessed in a manner that is
     // in-bounds.
+    ```
 
     Example 5:
 
-    ```
+    ```mlir
     // Rank-reducing subview.
     %1 = subview %0[0, 0, 0][1, 16, 4][1, 1, 1] :
       memref<8x16x4xf32> to memref<16x4xf32>
