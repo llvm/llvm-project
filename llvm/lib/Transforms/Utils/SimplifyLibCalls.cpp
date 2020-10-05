@@ -3292,19 +3292,6 @@ Value *FortifiedLibCallSimplifier::optimizeMemSetChk(CallInst *CI,
   return nullptr;
 }
 
-Value *FortifiedLibCallSimplifier::optimizeMemPCpyChk(CallInst *CI,
-                                                      IRBuilderBase &B) {
-  const DataLayout &DL = CI->getModule()->getDataLayout();
-  if (isFortifiedCallFoldable(CI, 3, 2))
-    if (Value *Call = emitMemPCpy(CI->getArgOperand(0), CI->getArgOperand(1),
-                                  CI->getArgOperand(2), B, DL, TLI)) {
-      CallInst *NewCI = cast<CallInst>(Call);
-      NewCI->setAttributes(CI->getAttributes());
-      return NewCI;
-    }
-  return nullptr;
-}
-
 Value *FortifiedLibCallSimplifier::optimizeStrpCpyChk(CallInst *CI,
                                                       IRBuilderBase &B,
                                                       LibFunc Func) {
@@ -3494,8 +3481,6 @@ Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI,
   switch (Func) {
   case LibFunc_memcpy_chk:
     return optimizeMemCpyChk(CI, Builder);
-  case LibFunc_mempcpy_chk:
-    return optimizeMemPCpyChk(CI, Builder);
   case LibFunc_memmove_chk:
     return optimizeMemMoveChk(CI, Builder);
   case LibFunc_memset_chk:

@@ -31,28 +31,6 @@ define i8* @test_not_memccpy() {
   ret i8* %ret
 }
 
-define i8* @test_mempcpy() {
-; CHECK-LABEL: @test_mempcpy(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(15) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* nonnull align 1 dereferenceable(15) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i64 15, i1 false)
-; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 15)
-;
-  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
-  %src = getelementptr inbounds [60 x i8], [60 x i8]* @b, i32 0, i32 0
-  %ret = call i8* @__mempcpy_chk(i8* %dst, i8* %src, i64 15, i64 -1)
-  ret i8* %ret
-}
-
-define i8* @test_not_mempcpy() {
-; CHECK-LABEL: @test_not_mempcpy(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @__mempcpy_chk(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i64 60, i64 59)
-; CHECK-NEXT:    ret i8* [[RET]]
-;
-  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
-  %src = getelementptr inbounds [60 x i8], [60 x i8]* @b, i32 0, i32 0
-  %ret = call i8* @__mempcpy_chk(i8* %dst, i8* %src, i64 60, i64 59)
-  ret i8* %ret
-}
-
 define i32 @test_snprintf() {
 ; CHECK-LABEL: @test_snprintf(
 ; CHECK-NEXT:    [[SNPRINTF:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i64 60, i8* getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0))
@@ -241,7 +219,6 @@ define i32 @test_not_vsprintf() {
   ret i32 %ret
 }
 
-declare i8* @__mempcpy_chk(i8*, i8*, i64, i64)
 declare i8* @__memccpy_chk(i8*, i8*, i32, i64, i64)
 declare i32 @__snprintf_chk(i8*, i64, i32, i64, i8*, ...)
 declare i32 @__sprintf_chk(i8*, i32, i64, i8*, ...)
