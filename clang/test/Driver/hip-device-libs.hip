@@ -105,15 +105,6 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL
 
-// Test --gpu-instrument-lib
-// RUN: %clang -### -target x86_64-linux-gnu \
-// RUN:   --cuda-gpu-arch=gfx900 \
-// RUN:   --rocm-path=%S/Inputs/rocm \
-// RUN:   --gpu-instrument-lib=%S/Inputs/hip_multiple_inputs/instrument.bc \
-// RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,INST
-
-// ALL-NOT: error:
 // ALL: {{"[^"]*clang[^"]*"}}
 // ALL-SAME: "-mlink-builtin-bitcode" "{{.*}}hip.bc"
 // ALL-SAME: "-mlink-builtin-bitcode" "{{.*}}ocml.bc"
@@ -127,4 +118,3 @@
 // ALL-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_correctly_rounded_sqrt_on.bc"
 // ALL-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_wavefrontsize64_on.bc"
 // ALL-SAME: "-mlink-builtin-bitcode" "{{.*}}oclc_isa_version_{{[0-9]+}}.bc"
-// INST-SAME: "-mlink-builtin-bitcode" "{{.*}}instrument.bc"
