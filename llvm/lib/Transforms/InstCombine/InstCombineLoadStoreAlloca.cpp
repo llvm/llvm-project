@@ -237,37 +237,40 @@ namespace {
 class PointerReplacer {
 public:
   PointerReplacer(InstCombinerImpl &IC) : IC(IC) {}
+
+  bool collectUsers(Instruction &I);
   void replacePointer(Instruction &I, Value *V);
 
 private:
-  void findLoadAndReplace(Instruction &I);
   void replace(Instruction *I);
   Value *getReplacement(Value *I);
 
-  SmallVector<Instruction *, 4> Path;
+  SmallSetVector<Instruction *, 4> Worklist;
   MapVector<Value *, Value *> WorkMap;
   InstCombinerImpl &IC;
 };
 } // end anonymous namespace
 
-void PointerReplacer::findLoadAndReplace(Instruction &I) {
+bool PointerReplacer::collectUsers(Instruction &I) {
   for (auto U : I.users()) {
-    auto *Inst = dyn_cast<Instruction>(&*U);
-    if (!Inst)
-      return;
-    LLVM_DEBUG(dbgs() << "Found pointer user: " << *U << '\n');
-    if (isa<LoadInst>(Inst)) {
-      for (auto P : Path)
-        replace(P);
-      replace(Inst);
+    Instruction *Inst = cast<Instruction>(&*U);
+    if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
+      if (Load->isVolatile())
+        return false;
+      Worklist.insert(Load);
     } else if (isa<GetElementPtrInst>(Inst) || isa<BitCastInst>(Inst)) {
-      Path.push_back(Inst);
-      findLoadAndReplace(*Inst);
-      Path.pop_back();
+      Worklist.insert(Inst);
+      if (!collectUsers(*Inst))
+        return false;
+    } else if (isa<MemTransferInst>(Inst)) {
+      Worklist.insert(Inst);
     } else {
-      return;
+      LLVM_DEBUG(dbgs() << "Cannot handle pointer user: " << *U << '\n');
+      return false;
     }
   }
+
+  return true;
 }
 
 Value *PointerReplacer::getReplacement(Value *V) {
@@ -309,6 +312,28 @@ void PointerReplacer::replace(Instruction *I) {
     IC.InsertNewInstWith(NewI, *BC);
     NewI->takeName(BC);
     WorkMap[BC] = NewI;
+  } else if (auto *MemCpy = dyn_cast<MemTransferInst>(I)) {
+    auto *SrcV = getReplacement(MemCpy->getRawSource());
+    // The pointer may appear in the destination of a copy, but we don't want to
+    // replace it.
+    if (!SrcV) {
+      assert(getReplacement(MemCpy->getRawDest()) &&
+             "destination not in replace list");
+      return;
+    }
+
+    IC.Builder.SetInsertPoint(MemCpy);
+    auto *NewI = IC.Builder.CreateMemTransferInst(
+        MemCpy->getIntrinsicID(), MemCpy->getRawDest(), MemCpy->getDestAlign(),
+        SrcV, MemCpy->getSourceAlign(), MemCpy->getLength(),
+        MemCpy->isVolatile());
+    AAMDNodes AAMD;
+    MemCpy->getAAMetadata(AAMD);
+    if (AAMD)
+      NewI->setAAMetadata(AAMD);
+
+    IC.eraseInstFromFunction(*MemCpy);
+    WorkMap[MemCpy] = NewI;
   } else {
     llvm_unreachable("should never reach here");
   }
@@ -322,7 +347,9 @@ void PointerReplacer::replacePointer(Instruction &I, Value *V) {
          "Invalid usage");
 #endif
   WorkMap[&I] = V;
-  findLoadAndReplace(I);
+
+  for (Instruction *Workitem : Worklist)
+    replace(Workitem);
 }
 
 Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
@@ -376,23 +403,21 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
   // read.
   SmallVector<Instruction *, 4> ToDelete;
   if (MemTransferInst *Copy = isOnlyCopiedFromConstantMemory(AA, &AI, ToDelete)) {
+    Value *TheSrc = Copy->getSource();
     Align AllocaAlign = AI.getAlign();
     Align SourceAlign = getOrEnforceKnownAlignment(
-        Copy->getSource(), AllocaAlign, DL, &AI, &AC, &DT);
+      TheSrc, AllocaAlign, DL, &AI, &AC, &DT);
     if (AllocaAlign <= SourceAlign &&
-        isDereferenceableForAllocaSize(Copy->getSource(), &AI, DL)) {
+        isDereferenceableForAllocaSize(TheSrc, &AI, DL)) {
       LLVM_DEBUG(dbgs() << "Found alloca equal to global: " << AI << '\n');
       LLVM_DEBUG(dbgs() << "  memcpy = " << *Copy << '\n');
-      for (unsigned i = 0, e = ToDelete.size(); i != e; ++i)
-        eraseInstFromFunction(*ToDelete[i]);
-      Value *TheSrc = Copy->getSource();
-      auto *SrcTy = TheSrc->getType();
-      auto *DestTy = PointerType::get(AI.getType()->getPointerElementType(),
-                                      SrcTy->getPointerAddressSpace());
-      Value *Cast =
-        Builder.CreatePointerBitCastOrAddrSpaceCast(TheSrc, DestTy);
-      if (AI.getType()->getPointerAddressSpace() ==
-          SrcTy->getPointerAddressSpace()) {
+      unsigned SrcAddrSpace = TheSrc->getType()->getPointerAddressSpace();
+      auto *DestTy = PointerType::get(AI.getAllocatedType(), SrcAddrSpace);
+      if (AI.getType()->getAddressSpace() == SrcAddrSpace) {
+        for (Instruction *Delete : ToDelete)
+          eraseInstFromFunction(*Delete);
+
+        Value *Cast = Builder.CreateBitCast(TheSrc, DestTy);
         Instruction *NewI = replaceInstUsesWith(AI, Cast);
         eraseInstFromFunction(*Copy);
         ++NumGlobalCopies;
@@ -400,8 +425,14 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
       }
 
       PointerReplacer PtrReplacer(*this);
-      PtrReplacer.replacePointer(AI, Cast);
-      ++NumGlobalCopies;
+      if (PtrReplacer.collectUsers(AI)) {
+        for (Instruction *Delete : ToDelete)
+          eraseInstFromFunction(*Delete);
+
+        Value *Cast = Builder.CreateBitCast(TheSrc, DestTy);
+        PtrReplacer.replacePointer(AI, Cast);
+        ++NumGlobalCopies;
+      }
     }
   }
 
