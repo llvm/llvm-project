@@ -232,10 +232,9 @@ for.end:
 ; SI-ALLOCA: buffer_load_sshort v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0
 
 ; SI-PROMOTE-VECT: s_load_dword [[IDX:s[0-9]+]]
-; SI-PROMOTE-VECT: s_mov_b32 [[SREG:s[0-9]+]], 0x10000
 ; SI-PROMOTE-VECT: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 4
-; SI-PROMOTE-VECT: v_mov_b32_e32 [[VREG:v[0-9]+]], [[SCALED_IDX]]
-; SI-PROMOTE-VECT: v_bfe_u32 v{{[0-9]+}}, [[SREG]], [[VREG]], 16
+; SI-PROMOTE-VECT: s_lshr_b32 [[SREG:s[0-9]+]], 0x10000, [[SCALED_IDX]]
+; SI-PROMOTE-VECT: s_and_b32 s{{[0-9]+}}, [[SREG]], 0xffff
 define amdgpu_kernel void @short_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %0 = alloca [2 x i16], addrspace(5)
