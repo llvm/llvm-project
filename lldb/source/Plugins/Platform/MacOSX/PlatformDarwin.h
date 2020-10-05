@@ -11,6 +11,7 @@
 
 #include "Plugins/Platform/POSIX/PlatformPOSIX.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StructuredData.h"
@@ -67,6 +68,11 @@ public:
 
   int32_t GetResumeCountForLaunchInfo(
       lldb_private::ProcessLaunchInfo &launch_info) override;
+
+  lldb::ProcessSP DebugProcess(lldb_private::ProcessLaunchInfo &launch_info,
+                               lldb_private::Debugger &debugger,
+                               lldb_private::Target *target,
+                               lldb_private::Status &error) override;
 
   void CalculateTrapHandlerSymbolNames() override;
 
