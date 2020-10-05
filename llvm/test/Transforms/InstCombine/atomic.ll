@@ -325,11 +325,9 @@ declare void @clobber()
 
 define i32 @test18(float* %p) {
 ; CHECK-LABEL: @test18(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P:%.*]] to i32*
-; CHECK-NEXT:    [[X1:%.*]] = load atomic i32, i32* [[TMP1]] unordered, align 4
+; CHECK-NEXT:    [[X:%.*]] = load atomic float, float* [[P:%.*]] unordered, align 4
 ; CHECK-NEXT:    call void @clobber()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[P]] to i32*
-; CHECK-NEXT:    store atomic i32 [[X1]], i32* [[TMP2]] unordered, align 4
+; CHECK-NEXT:    store atomic float [[X]], float* [[P]] unordered, align 4
 ; CHECK-NEXT:    ret i32 0
 ;
   %x = load atomic float, float* %p unordered, align 4
@@ -376,10 +374,8 @@ define i32 @test21(i32** %p, i8* %v) {
 
 define void @pr27490a(i8** %p1, i8** %p2) {
 ; CHECK-LABEL: @pr27490a(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8** [[P1:%.*]] to i64*
-; CHECK-NEXT:    [[L1:%.*]] = load i64, i64* [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8** [[P2:%.*]] to i64*
-; CHECK-NEXT:    store volatile i64 [[L1]], i64* [[TMP2]], align 8
+; CHECK-NEXT:    [[L:%.*]] = load i8*, i8** [[P1:%.*]], align 8
+; CHECK-NEXT:    store volatile i8* [[L]], i8** [[P2:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %l = load i8*, i8** %p1
@@ -389,10 +385,8 @@ define void @pr27490a(i8** %p1, i8** %p2) {
 
 define void @pr27490b(i8** %p1, i8** %p2) {
 ; CHECK-LABEL: @pr27490b(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8** [[P1:%.*]] to i64*
-; CHECK-NEXT:    [[L1:%.*]] = load i64, i64* [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8** [[P2:%.*]] to i64*
-; CHECK-NEXT:    store atomic i64 [[L1]], i64* [[TMP2]] seq_cst, align 8
+; CHECK-NEXT:    [[L:%.*]] = load i8*, i8** [[P1:%.*]], align 8
+; CHECK-NEXT:    store atomic i8* [[L]], i8** [[P2:%.*]] seq_cst, align 8
 ; CHECK-NEXT:    ret void
 ;
   %l = load i8*, i8** %p1
