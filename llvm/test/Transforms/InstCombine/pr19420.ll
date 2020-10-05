@@ -33,8 +33,8 @@ define <16 x i8> @test_FoldShiftByConstant_CreateAnd(<16 x i8> %in0) {
   ret <16 x i8> %vshl_n
 }
 
-define i32 @bar(i32 %x, i32 %y) {
-; CHECK-LABEL: @bar(
+define i32 @lshr_add_shl(i32 %x, i32 %y) {
+; CHECK-LABEL: @lshr_add_shl(
 ; CHECK-NEXT:    [[B1:%.*]] = shl i32 [[Y:%.*]], 4
 ; CHECK-NEXT:    [[A2:%.*]] = add i32 [[B1]], [[X:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = and i32 [[A2]], -16
@@ -46,8 +46,8 @@ define i32 @bar(i32 %x, i32 %y) {
   ret i32 %c
 }
 
-define <2 x i32> @bar_v2i32(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @bar_v2i32(
+define <2 x i32> @lshr_add_shl_v2i32(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @lshr_add_shl_v2i32(
 ; CHECK-NEXT:    [[B1:%.*]] = shl <2 x i32> [[Y:%.*]], <i32 5, i32 5>
 ; CHECK-NEXT:    [[A2:%.*]] = add <2 x i32> [[B1]], [[X:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = and <2 x i32> [[A2]], <i32 -32, i32 -32>
@@ -59,8 +59,93 @@ define <2 x i32> @bar_v2i32(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %c
 }
 
-define i32 @foo(i32 %x, i32 %y) {
-; CHECK-LABEL: @foo(
+define <2 x i32> @lshr_add_shl_v2i32_undef(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @lshr_add_shl_v2i32_undef(
+; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 5, i32 undef>
+; CHECK-NEXT:    [[B:%.*]] = add <2 x i32> [[A]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = shl <2 x i32> [[B]], <i32 undef, i32 5>
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %a = lshr <2 x i32> %x, <i32 5, i32 undef>
+  %b = add <2 x i32> %a, %y
+  %c = shl <2 x i32> %b, <i32 undef, i32 5>
+  ret <2 x i32> %c
+}
+
+define <2 x i32> @lshr_add_shl_v2i32_nonuniform(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @lshr_add_shl_v2i32_nonuniform(
+; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 5, i32 6>
+; CHECK-NEXT:    [[B:%.*]] = add <2 x i32> [[A]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = shl <2 x i32> [[B]], <i32 5, i32 6>
+; CHECK-NEXT:    ret <2 x i32> [[C]]
+;
+  %a = lshr <2 x i32> %x, <i32 5, i32 6>
+  %b = add <2 x i32> %a, %y
+  %c = shl <2 x i32> %b, <i32 5, i32 6>
+  ret <2 x i32> %c
+}
+
+define i32 @lshr_add_and_shl(i32 %x, i32 %y)  {
+; CHECK-LABEL: @lshr_add_and_shl(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[Y:%.*]], 5
+; CHECK-NEXT:    [[X_MASK:%.*]] = and i32 [[X:%.*]], 4064
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[X_MASK]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %1 = lshr i32 %x, 5
+  %2 = and i32 %1, 127
+  %3 = add i32 %y, %2
+  %4 = shl i32 %3, 5
+  ret i32 %4
+}
+
+define <2 x i32> @lshr_add_and_shl_v2i32(<2 x i32> %x, <2 x i32> %y)  {
+; CHECK-LABEL: @lshr_add_and_shl_v2i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 5, i32 5>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 127, i32 127>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl <2 x i32> [[TMP3]], <i32 5, i32 5>
+; CHECK-NEXT:    ret <2 x i32> [[TMP4]]
+;
+  %1 = lshr <2 x i32> %x, <i32 5, i32 5>
+  %2 = and <2 x i32> %1, <i32 127, i32 127>
+  %3 = add <2 x i32> %y, %2
+  %4 = shl <2 x i32> %3, <i32 5, i32 5>
+  ret <2 x i32> %4
+}
+
+define <2 x i32> @lshr_add_and_shl_v2i32_undef(<2 x i32> %x, <2 x i32> %y)  {
+; CHECK-LABEL: @lshr_add_and_shl_v2i32_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 undef, i32 5>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 127, i32 127>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl <2 x i32> [[TMP3]], <i32 5, i32 undef>
+; CHECK-NEXT:    ret <2 x i32> [[TMP4]]
+;
+  %1 = lshr <2 x i32> %x, <i32 undef, i32 5>
+  %2 = and <2 x i32> %1, <i32 127, i32 127>
+  %3 = add <2 x i32> %y, %2
+  %4 = shl <2 x i32> %3, <i32 5, i32 undef>
+  ret <2 x i32> %4
+}
+
+define <2 x i32> @lshr_add_and_shl_v2i32_nonuniform(<2 x i32> %x, <2 x i32> %y)  {
+; CHECK-LABEL: @lshr_add_and_shl_v2i32_nonuniform(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 5, i32 6>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 127, i32 255>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl <2 x i32> [[TMP3]], <i32 5, i32 6>
+; CHECK-NEXT:    ret <2 x i32> [[TMP4]]
+;
+  %1 = lshr <2 x i32> %x, <i32 5, i32 6>
+  %2 = and <2 x i32> %1, <i32 127, i32 255>
+  %3 = add <2 x i32> %y, %2
+  %4 = shl <2 x i32> %3, <i32 5, i32 6>
+  ret <2 x i32> %4
+}
+
+define i32 @shl_add_and_lshr(i32 %x, i32 %y) {
+; CHECK-LABEL: @shl_add_and_lshr(
 ; CHECK-NEXT:    [[C1:%.*]] = shl i32 [[Y:%.*]], 4
 ; CHECK-NEXT:    [[X_MASK:%.*]] = and i32 [[X:%.*]], 128
 ; CHECK-NEXT:    [[D:%.*]] = add i32 [[X_MASK]], [[C1]]
@@ -73,8 +158,8 @@ define i32 @foo(i32 %x, i32 %y) {
   ret i32 %d
 }
 
-define <2 x i32> @foo_v2i32(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @foo_v2i32(
+define <2 x i32> @shl_add_and_lshr_v2i32(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @shl_add_and_lshr_v2i32(
 ; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 4, i32 4>
 ; CHECK-NEXT:    [[B:%.*]] = and <2 x i32> [[A]], <i32 8, i32 8>
 ; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[B]], [[Y:%.*]]
@@ -88,3 +173,32 @@ define <2 x i32> @foo_v2i32(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %d
 }
 
+define <2 x i32> @shl_add_and_lshr_v2i32_undef(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @shl_add_and_lshr_v2i32_undef(
+; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 4, i32 undef>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i32> [[A]], <i32 8, i32 undef>
+; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[B]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = shl <2 x i32> [[C]], <i32 4, i32 undef>
+; CHECK-NEXT:    ret <2 x i32> [[D]]
+;
+  %a = lshr <2 x i32> %x, <i32 4, i32 undef>
+  %b = and <2 x i32> %a, <i32 8, i32 undef>
+  %c = add <2 x i32> %b, %y
+  %d = shl <2 x i32> %c, <i32 4, i32 undef>
+  ret <2 x i32> %d
+}
+
+define <2 x i32> @shl_add_and_lshr_v2i32_nonuniform(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @shl_add_and_lshr_v2i32_nonuniform(
+; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 4, i32 5>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i32> [[A]], <i32 8, i32 9>
+; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[B]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = shl <2 x i32> [[C]], <i32 4, i32 5>
+; CHECK-NEXT:    ret <2 x i32> [[D]]
+;
+  %a = lshr <2 x i32> %x, <i32 4, i32 5>
+  %b = and <2 x i32> %a, <i32 8, i32 9>
+  %c = add <2 x i32> %b, %y
+  %d = shl <2 x i32> %c, <i32 4, i32 5>
+  ret <2 x i32> %d
+}
