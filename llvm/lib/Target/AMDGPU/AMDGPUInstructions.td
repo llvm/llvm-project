@@ -597,53 +597,6 @@ class DwordAddrPat<ValueType vt, RegisterClass rc> : AMDGPUPat <
   (vt rc:$addr)
 >;
 
-// Bitfield extract patterns
-
-def IMMZeroBasedBitfieldMask : ImmLeaf <i32, [{
-  return isMask_32(Imm);
-}]>;
-
-def IMMPopCount : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(countPopulation(N->getZExtValue()), SDLoc(N),
-                                   MVT::i32);
-}]>;
-
-multiclass BFEPattern <Instruction UBFE, Instruction SBFE, Instruction MOV> {
-  def : AMDGPUPat <
-    (i32 (and (i32 (srl i32:$src, i32:$rshift)), IMMZeroBasedBitfieldMask:$mask)),
-    (UBFE $src, $rshift, (MOV (i32 (IMMPopCount $mask))))
-  >;
-
-  // x & ((1 << y) - 1)
-  def : AMDGPUPat <
-    (and i32:$src, (add_oneuse (shl_oneuse 1, i32:$width), -1)),
-    (UBFE $src, (MOV (i32 0)), $width)
-  >;
-
-  // x & ~(-1 << y)
-  def : AMDGPUPat <
-    (and i32:$src, (xor_oneuse (shl_oneuse -1, i32:$width), -1)),
-    (UBFE $src, (MOV (i32 0)), $width)
-  >;
-
-  // x & (-1 >> (bitwidth - y))
-  def : AMDGPUPat <
-    (and i32:$src, (srl_oneuse -1, (sub 32, i32:$width))),
-    (UBFE $src, (MOV (i32 0)), $width)
-  >;
-
-  // x << (bitwidth - y) >> (bitwidth - y)
-  def : AMDGPUPat <
-    (srl (shl_oneuse i32:$src, (sub 32, i32:$width)), (sub 32, i32:$width)),
-    (UBFE $src, (MOV (i32 0)), $width)
-  >;
-
-  def : AMDGPUPat <
-    (sra (shl_oneuse i32:$src, (sub 32, i32:$width)), (sub 32, i32:$width)),
-    (SBFE $src, (MOV (i32 0)), $width)
-  >;
-}
-
 // fshr pattern
 class FSHRPattern <Instruction BIT_ALIGN> : AMDGPUPat <
   (fshr i32:$src0, i32:$src1, i32:$src2),

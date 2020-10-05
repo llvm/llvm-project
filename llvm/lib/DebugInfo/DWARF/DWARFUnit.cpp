@@ -503,27 +503,9 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
               DWARFListTableHeader::getHeaderSize(Header.getFormat()));
     } else
       setRangesSection(&Context.getDWARFObj().getRnglistsSection(),
-                       toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0));
-    if (RangeSection->Data.size()) {
-      // Parse the range list table header. Individual range lists are
-      // extracted lazily.
-      DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
-                                  isLittleEndian, 0);
-      auto TableOrError = parseListTableHeader<DWARFDebugRnglistTable>(
-          RangesDA, RangeSectionBase, Header.getFormat());
-      if (!TableOrError)
-        return createStringError(errc::invalid_argument,
-                                 "parsing a range list table: " +
-                                     toString(TableOrError.takeError()));
-
-      RngListTable = TableOrError.get();
-
-      // In a split dwarf unit, there is no DW_AT_rnglists_base attribute.
-      // Adjust RangeSectionBase to point past the table header.
-      if (IsDWO && RngListTable)
-        RangeSectionBase =
-            ContributionBaseOffset + RngListTable->getHeaderSize();
-    }
+                       toSectionOffset(UnitDie.find(DW_AT_rnglists_base),
+                                       DWARFListTableHeader::getHeaderSize(
+                                           Header.getFormat())));
 
     // In a split dwarf unit, there is no DW_AT_loclists_base attribute.
     // Setting LocSectionBase to point past the table header.
@@ -602,19 +584,8 @@ bool DWARFUnit::parseDWO() {
   if (AddrOffsetSectionBase)
     DWO->setAddrOffsetSection(AddrOffsetSection, *AddrOffsetSectionBase);
   if (getVersion() >= 5) {
-    DWO->setRangesSection(&Context.getDWARFObj().getRnglistsDWOSection(), 0);
-    DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
-                                isLittleEndian, 0);
-    if (auto TableOrError = parseListTableHeader<DWARFDebugRnglistTable>(
-            RangesDA, RangeSectionBase, Header.getFormat()))
-      DWO->RngListTable = TableOrError.get();
-    else
-      Context.getRecoverableErrorHandler()(createStringError(
-          errc::invalid_argument, "parsing a range list table: %s",
-          toString(TableOrError.takeError()).c_str()));
-
-    if (DWO->RngListTable)
-      DWO->RangeSectionBase = DWO->RngListTable->getHeaderSize();
+    DWO->setRangesSection(&Context.getDWARFObj().getRnglistsDWOSection(),
+                          DWARFListTableHeader::getHeaderSize(getFormat()));
   } else {
     auto DWORangesBase = UnitDie.getRangesBaseAttribute();
     DWO->setRangesSection(RangeSection, DWORangesBase ? *DWORangesBase : 0);
@@ -638,17 +609,13 @@ DWARFUnit::findRnglistFromOffset(uint64_t Offset) {
       return std::move(E);
     return RangeList.getAbsoluteRanges(getBaseAddress());
   }
-  if (RngListTable) {
-    DWARFDataExtractor RangesData(Context.getDWARFObj(), *RangeSection,
-                                  isLittleEndian, RngListTable->getAddrSize());
-    auto RangeListOrError = RngListTable->findList(RangesData, Offset);
-    if (RangeListOrError)
-      return RangeListOrError.get().getAbsoluteRanges(getBaseAddress(), *this);
-    return RangeListOrError.takeError();
-  }
-
-  return createStringError(errc::invalid_argument,
-                           "missing or invalid range list table");
+  DWARFDataExtractor RangesData(Context.getDWARFObj(), *RangeSection,
+                                isLittleEndian, Header.getAddressByteSize());
+  DWARFDebugRnglistTable RnglistTable;
+  auto RangeListOrError = RnglistTable.findList(RangesData, Offset);
+  if (RangeListOrError)
+    return RangeListOrError.get().getAbsoluteRanges(getBaseAddress(), *this);
+  return RangeListOrError.takeError();
 }
 
 Expected<DWARFAddressRangesVector>
@@ -656,12 +623,10 @@ DWARFUnit::findRnglistFromIndex(uint32_t Index) {
   if (auto Offset = getRnglistOffset(Index))
     return findRnglistFromOffset(*Offset);
 
-  if (RngListTable)
-    return createStringError(errc::invalid_argument,
-                             "invalid range list table index %d", Index);
-
   return createStringError(errc::invalid_argument,
-                           "missing or invalid range list table");
+                           "invalid range list table index %d (possibly "
+                           "missing the entire range list table)",
+                           Index);
 }
 
 Expected<DWARFAddressRangesVector> DWARFUnit::collectAddressRanges() {
@@ -1007,11 +972,12 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor & DA) {
 }
 
 Optional<uint64_t> DWARFUnit::getRnglistOffset(uint32_t Index) {
-  if (!RngListTable)
-    return None;
   DataExtractor RangesData(RangeSection->Data, isLittleEndian,
                            getAddressByteSize());
-  if (Optional<uint64_t> Off = RngListTable->getOffsetEntry(RangesData, Index))
+  DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
+                              isLittleEndian, 0);
+  if (Optional<uint64_t> Off = llvm::DWARFListTableHeader::getOffsetEntry(
+          RangesData, RangeSectionBase, getFormat(), Index))
     return *Off + RangeSectionBase;
   return None;
 }

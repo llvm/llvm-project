@@ -49,7 +49,8 @@ def fix_filename(file_name):
 
 def is_valid_arch(s):
   return s in ["i386", "x86_64", "x86_64h", "arm", "armv6", "armv7", "armv7s",
-               "armv7k", "arm64", "powerpc64", "powerpc64le", "s390x", "s390"]
+               "armv7k", "arm64", "powerpc64", "powerpc64le", "s390x", "s390",
+               "riscv64"]
 
 def guess_arch(addr):
   # Guess which arch we're running. 10 = len('0x') + 8 hex digits.

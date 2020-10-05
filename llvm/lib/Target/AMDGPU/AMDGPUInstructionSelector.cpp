@@ -1485,34 +1485,27 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   unsigned IntrOpcode = Intr->BaseOpcode;
   const bool IsGFX10 = STI.getGeneration() >= AMDGPUSubtarget::GFX10;
 
-  const int VAddrIdx = getImageVAddrIdxBegin(BaseOpcode,
-                                             MI.getNumExplicitDefs());
-  int NumVAddr, NumGradients;
-  std::tie(NumVAddr, NumGradients) = getImageNumVAddr(Intr, BaseOpcode);
+  const unsigned ArgOffset = MI.getNumExplicitDefs() + 1;
 
   Register VDataIn, VDataOut;
   LLT VDataTy;
   int NumVDataDwords = -1;
   bool IsD16 = false;
 
-  // XXX - Can we just get the second to last argument for ctrl?
-  unsigned CtrlIdx; // Index of texfailctrl argument
   bool Unorm;
-  if (!BaseOpcode->Sampler) {
+  if (!BaseOpcode->Sampler)
     Unorm = true;
-    CtrlIdx = VAddrIdx + NumVAddr + 1;
-  } else {
-    Unorm = MI.getOperand(VAddrIdx + NumVAddr + 2).getImm() != 0;
-    CtrlIdx = VAddrIdx + NumVAddr + 3;
-  }
+  else
+    Unorm = MI.getOperand(ArgOffset + Intr->UnormIndex).getImm() != 0;
 
   bool TFE;
   bool LWE;
   bool IsTexFail = false;
-  if (!parseTexFail(MI.getOperand(CtrlIdx).getImm(), TFE, LWE, IsTexFail))
+  if (!parseTexFail(MI.getOperand(ArgOffset + Intr->TexFailCtrlIndex).getImm(),
+                    TFE, LWE, IsTexFail))
     return false;
 
-  const int Flags = MI.getOperand(CtrlIdx + 2).getImm();
+  const int Flags = MI.getOperand(ArgOffset + Intr->NumArgs).getImm();
   const bool IsA16 = (Flags & 1) != 0;
   const bool IsG16 = (Flags & 2) != 0;
 
@@ -1543,9 +1536,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
       NumVDataDwords = Is64Bit ? 2 : 1;
     }
   } else {
-    const int DMaskIdx = 2; // Input/output + intrinsic ID.
-
-    DMask = MI.getOperand(DMaskIdx).getImm();
+    DMask = MI.getOperand(ArgOffset + Intr->DMaskIndex).getImm();
     DMaskLanes = BaseOpcode->Gather4 ? 4 : countPopulation(DMask);
 
     if (BaseOpcode->Store) {
@@ -1576,7 +1567,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   if (LZMappingInfo) {
     // The legalizer replaced the register with an immediate 0 if we need to
     // change the opcode.
-    const MachineOperand &Lod = MI.getOperand(VAddrIdx + NumVAddr - 1);
+    const MachineOperand &Lod = MI.getOperand(ArgOffset + Intr->LodIndex);
     if (Lod.isImm()) {
       assert(Lod.getImm() == 0);
       IntrOpcode = LZMappingInfo->LZ;  // set new opcode to _lz variant of _l
@@ -1585,7 +1576,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
 
   // Optimize _mip away, when 'lod' is zero
   if (MIPMappingInfo) {
-    const MachineOperand &Lod = MI.getOperand(VAddrIdx + NumVAddr - 1);
+    const MachineOperand &Lod = MI.getOperand(ArgOffset + Intr->MipIndex);
     if (Lod.isImm()) {
       assert(Lod.getImm() == 0);
       IntrOpcode = MIPMappingInfo->NONMIP;  // set new opcode to variant without _mip
@@ -1608,20 +1599,22 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   bool DLC = false;
   if (BaseOpcode->Atomic) {
     GLC = true; // TODO no-return optimization
-    if (!parseCachePolicy(MI.getOperand(CtrlIdx + 1).getImm(), nullptr, &SLC,
-                          IsGFX10 ? &DLC : nullptr))
+    if (!parseCachePolicy(
+            MI.getOperand(ArgOffset + Intr->CachePolicyIndex).getImm(), nullptr,
+            &SLC, IsGFX10 ? &DLC : nullptr))
       return false;
   } else {
-    if (!parseCachePolicy(MI.getOperand(CtrlIdx + 1).getImm(), &GLC, &SLC,
-                          IsGFX10 ? &DLC : nullptr))
+    if (!parseCachePolicy(
+            MI.getOperand(ArgOffset + Intr->CachePolicyIndex).getImm(), &GLC,
+            &SLC, IsGFX10 ? &DLC : nullptr))
       return false;
   }
 
   int NumVAddrRegs = 0;
   int NumVAddrDwords = 0;
-  for (int I = 0; I < NumVAddr; ++I) {
+  for (unsigned I = Intr->VAddrStart; I < Intr->VAddrEnd; I++) {
     // Skip the $noregs and 0s inserted during legalization.
-    MachineOperand &AddrOp = MI.getOperand(VAddrIdx + I);
+    MachineOperand &AddrOp = MI.getOperand(ArgOffset + I);
     if (!AddrOp.isReg())
       continue; // XXX - Break?
 
@@ -1684,17 +1677,17 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   if (VDataIn)
     MIB.addReg(VDataIn); // vdata input
 
-  for (int i = 0; i != NumVAddrRegs; ++i) {
-    MachineOperand &SrcOp = MI.getOperand(VAddrIdx + i);
+  for (int I = 0; I != NumVAddrRegs; ++I) {
+    MachineOperand &SrcOp = MI.getOperand(ArgOffset + Intr->VAddrStart + I);
     if (SrcOp.isReg()) {
       assert(SrcOp.getReg() != 0);
       MIB.addReg(SrcOp.getReg());
     }
   }
 
-  MIB.addReg(MI.getOperand(VAddrIdx + NumVAddr).getReg()); // rsrc
+  MIB.addReg(MI.getOperand(ArgOffset + Intr->RsrcIndex).getReg());
   if (BaseOpcode->Sampler)
-    MIB.addReg(MI.getOperand(VAddrIdx + NumVAddr + 1).getReg()); // sampler
+    MIB.addReg(MI.getOperand(ArgOffset + Intr->SampIndex).getReg());
 
   MIB.addImm(DMask); // dmask
 

@@ -3028,10 +3028,11 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
     // memref is "inbounds" w.r.t to base memref. It is upto the client
     // to ensure that the subview is accessed in a manner that is
     // in-bounds.
+    ```
 
     Example 5:
 
-    ```
+    ```mlir
     // Rank-reducing subview.
     %1 = subview %0[0, 0, 0][1, 16, 4][1, 1, 1] :
       memref<8x16x4xf32> to memref<16x4xf32>
@@ -3426,6 +3427,38 @@ def TensorStoreOp : Std_Op<"tensor_store",
   let verifier = ?;
 
   let assemblyFormat = "$tensor `,` $memref attr-dict `:` type($memref)";
+}
+
+//===----------------------------------------------------------------------===//
+// TransposeOp
+//===----------------------------------------------------------------------===//
+
+def TransposeOp : Std_Op<"transpose", [NoSideEffect]>,
+    Arguments<(ins AnyStridedMemRef:$in, AffineMapAttr:$permutation)>,
+    Results<(outs AnyStridedMemRef)> {
+  let summary = "`transpose` produces a new strided memref (metadata-only)";
+  let description = [{
+    The `transpose` op produces a strided memref whose sizes and strides
+    are a permutation of the original `in` memref. This is purely a metadata
+    transformation.
+
+    Example:
+
+    ```mlir
+    %1 = transpose %0 (i, j) -> (j, i) : memref<?x?xf32> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
+    ```
+  }];
+
+  let builders = [OpBuilder<
+    "OpBuilder &b, OperationState &result, Value in, "
+    "AffineMapAttr permutation, ArrayRef<NamedAttribute> attrs = {}">];
+
+  let extraClassDeclaration = [{
+    static StringRef getPermutationAttrName() { return "permutation"; }
+    ShapedType getShapedType() { return in().getType().cast<ShapedType>(); }
+  }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
