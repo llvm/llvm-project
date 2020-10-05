@@ -129,6 +129,9 @@ Changes to the MIPS Target
 
 During this release ...
 
+* The Machine Outliner is now supported for ARM and Thumb2, it is not
+  turned on by default and can be enabled with the ``-moutline`` clang flag.
+
 
 Changes to the PowerPC Target
 -----------------------------
