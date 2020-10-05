@@ -1,7 +1,5 @@
 # RUN: llvm-mc %s -filetype obj -triple i386-pc-linux -o %t.o
-# RUN: not llvm-dwarfdump -v -debug-info -debug-line -debug-addr -debug-rnglists -debug-ranges %t.o | FileCheck --implicit-check-not=DW_TAG --implicit-check-not=DW_AT %s
-
-# FIXME: Remove the 'not' once the rnglist are lazily/correctly parsed (see comment below)
+# RUN: llvm-dwarfdump -v -debug-info -debug-line -debug-addr -debug-rnglists -debug-ranges %t.o | FileCheck --implicit-check-not=DW_TAG --implicit-check-not=DW_AT %s
 
 # Test that llvm - dwarfdump strips addresses relating to dead code(using the
 # DWARFv6 - proposed tombstone constant & nearest equivalent for debug_ranges)
@@ -45,17 +43,14 @@
 # CHECK:     DW_TAG_compile_unit
 # CHECK:       DW_AT_addr_base
 
-# FIXME: Lazily parse rnglists rather than expecting to be able to parse an
-#        entire rnglists contribution (since there's no way to know where such a
-#        contribution starts) - rather than assuming one starts at 0.
 
 # CHECK:       DW_AT_ranges
-#     [0x0000000000000042, 0x0000000000000048)
-#     [0x0000000000000042, 0x0000000000000048)
-#     [0x0000000000000042, 0x0000000000000048)
-#     [0x0000000000000042, 0x0000000000000042)
-#     [0x0000000000000042, 0x0000000000000048)
-#     [0x0000000000000042, 0x0000000000000048))
+# CHECK-NEXT:    [0x0000000000000042, 0x0000000000000048)
+# CHECK-NEXT:    [0x0000000000000042, 0x0000000000000048)
+# CHECK-NEXT:    [0x0000000000000042, 0x0000000000000048)
+# CHECK-NEXT:    [0x0000000000000042, 0x0000000000000042)
+# CHECK-NEXT:    [0x0000000000000042, 0x0000000000000048)
+# CHECK-NEXT:    [0x0000000000000042, 0x0000000000000048))
 # CHECK:       DW_TAG_subprogram
 # CHECK:         DW_AT_low_pc [DW_FORM_addrx]     (indexed (00000000) address = 0xffffffffffffffff (dead code))
 # CHECK:         DW_AT_high_pc [DW_FORM_data4]   (0x00000006)
