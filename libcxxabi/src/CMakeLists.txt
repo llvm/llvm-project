@@ -214,8 +214,6 @@ if (LIBCXXABI_ENABLE_SHARED)
 
     export_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-base.exp")
 
-    target_link_libraries(cxxabi_shared PRIVATE "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
-
     if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
       export_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/new-delete.exp")
     endif()
