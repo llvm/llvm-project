@@ -897,8 +897,11 @@ Error DWARFDebugLine::LineTable::parse(
               TableData.setAddressSize(ExtractorAddressSize);
           }
 
-          if (Cursor && Verbose)
-            *OS << format(" (0x%16.16" PRIx64 ")", State.Row.Address.Address);
+          if (Cursor && Verbose) {
+            *OS << " (";
+            DWARFFormValue::dumpAddress(*OS, OpcodeAddressSize, State.Row.Address.Address);
+            *OS << ')';
+          }
         }
         break;
 
