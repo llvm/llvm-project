@@ -633,6 +633,12 @@ std::vector<Range> collectIdentifierRanges(llvm::StringRef Identifier,
   return Ranges;
 }
 
+bool isKeyword(llvm::StringRef NewName, const LangOptions &LangOpts) {
+  // Keywords are initialized in constructor.
+  clang::IdentifierTable KeywordsTable(LangOpts);
+  return KeywordsTable.find(NewName) != KeywordsTable.end();
+}
+
 namespace {
 struct NamespaceEvent {
   enum {

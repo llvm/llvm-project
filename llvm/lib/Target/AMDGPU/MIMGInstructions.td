@@ -896,9 +896,25 @@ class ImageDimIntrinsicInfo<AMDGPUImageDimIntrinsic I> {
   AMDGPUDimProps Dim = I.P.Dim;
   AMDGPUImageDimIntrinsicEval DimEval = AMDGPUImageDimIntrinsicEval<I.P>;
 
+  bits<8> NumGradients = DimEval.NumGradientArgs;
+  bits<8> NumDmask = DimEval.NumDmaskArgs;
+  bits<8> NumData = DimEval.NumDataArgs;
+  bits<8> NumVAddrs = DimEval.NumVAddrArgs;
+  bits<8> NumArgs = !add(DimEval.CachePolicyArgIndex, 1);
+
+  bits<8> DMaskIndex = DimEval.DmaskArgIndex;
+  bits<8> VAddrStart = DimEval.VAddrArgIndex;
   bits<8> GradientStart = DimEval.GradientArgIndex;
   bits<8> CoordStart = DimEval.CoordArgIndex;
+  bits<8> LodIndex = DimEval.LodArgIndex;
+  bits<8> MipIndex = DimEval.MipArgIndex;
   bits<8> VAddrEnd = !add(DimEval.VAddrArgIndex, DimEval.NumVAddrArgs);
+  bits<8> RsrcIndex = DimEval.RsrcArgIndex;
+  bits<8> SampIndex = DimEval.SampArgIndex;
+  bits<8> UnormIndex = DimEval.UnormArgIndex;
+  bits<8> TexFailCtrlIndex = DimEval.TexFailCtrlArgIndex;
+  bits<8> CachePolicyIndex = DimEval.CachePolicyArgIndex;
+
   bits<8> GradientTyArg = !add(I.P.NumRetAndDataAnyTypes,
     !foldl(0, I.P.ExtraAddrArgs, cnt, arg, !add(cnt, arg.Type.isAny)));
   bits<8> CoordTyArg = !add(GradientTyArg, !if(I.P.Gradients, 1, 0));
@@ -906,7 +922,10 @@ class ImageDimIntrinsicInfo<AMDGPUImageDimIntrinsic I> {
 
 def ImageDimIntrinsicTable : GenericTable {
   let FilterClass = "ImageDimIntrinsicInfo";
-  let Fields = ["Intr", "BaseOpcode", "Dim", "GradientStart", "CoordStart", "VAddrEnd", "GradientTyArg", "CoordTyArg"];
+  let Fields = ["Intr", "BaseOpcode", "Dim", "NumGradients", "NumDmask", "NumData", "NumVAddrs", "NumArgs",
+    "DMaskIndex", "VAddrStart", "GradientStart", "CoordStart", "LodIndex", "MipIndex", "VAddrEnd",
+    "RsrcIndex", "SampIndex", "UnormIndex", "TexFailCtrlIndex", "CachePolicyIndex",
+    "GradientTyArg", "CoordTyArg"];
   GenericEnum TypeOf_BaseOpcode = MIMGBaseOpcode;
   GenericEnum TypeOf_Dim = MIMGDim;
 
