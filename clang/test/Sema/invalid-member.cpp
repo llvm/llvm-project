@@ -19,3 +19,11 @@ class Z {
 };
 // Should be able to evaluate sizeof without crashing.
 static_assert(sizeof(Z) == 1, "No valid members");
+
+constexpr int N = undef; // expected-error {{use of undeclared identifier}}
+template<int a>
+class ABC {};
+class T {
+  ABC<N> abc;
+};
+static_assert(sizeof(T) == 1, "No valid members");
