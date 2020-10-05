@@ -2315,7 +2315,50 @@ multiclass BFMPatterns <ValueType vt, InstSI BFM, InstSI MOV> {
 defm : BFMPatterns <i32, S_BFM_B32, S_MOV_B32>;
 // FIXME: defm : BFMPatterns <i64, S_BFM_B64, S_MOV_B64>;
 
-defm : BFEPattern <V_BFE_U32, V_BFE_I32, S_MOV_B32>;
+// Bitfield extract patterns
+
+def IMMZeroBasedBitfieldMask : ImmLeaf <i32, [{
+  return isMask_32(Imm);
+}]>;
+
+def IMMPopCount : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(countPopulation(N->getZExtValue()), SDLoc(N),
+                                   MVT::i32);
+}]>;
+
+def : AMDGPUPat <
+  (and (i32 (srl i32:$src, i32:$rshift)), IMMZeroBasedBitfieldMask:$mask),
+  (V_BFE_U32 $src, $rshift, (i32 (IMMPopCount $mask)))
+>;
+
+// x & ((1 << y) - 1)
+def : AMDGPUPat <
+  (and i32:$src, (add_oneuse (shl_oneuse 1, i32:$width), -1)),
+  (V_BFE_U32 $src, (i32 0), $width)
+>;
+
+// x & ~(-1 << y)
+def : AMDGPUPat <
+  (and i32:$src, (xor_oneuse (shl_oneuse -1, i32:$width), -1)),
+  (V_BFE_U32 $src, (i32 0), $width)
+>;
+
+// x & (-1 >> (bitwidth - y))
+def : AMDGPUPat <
+  (and i32:$src, (srl_oneuse -1, (sub 32, i32:$width))),
+  (V_BFE_U32 $src, (i32 0), $width)
+>;
+
+// x << (bitwidth - y) >> (bitwidth - y)
+def : AMDGPUPat <
+  (srl (shl_oneuse i32:$src, (sub 32, i32:$width)), (sub 32, i32:$width)),
+  (V_BFE_U32 $src, (i32 0), $width)
+>;
+
+def : AMDGPUPat <
+  (sra (shl_oneuse i32:$src, (sub 32, i32:$width)), (sub 32, i32:$width)),
+  (V_BFE_I32 $src, (i32 0), $width)
+>;
 
 // SHA-256 Ma patterns
 
