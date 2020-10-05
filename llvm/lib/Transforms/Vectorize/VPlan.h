@@ -676,10 +676,15 @@ public:
   ///
   /// \returns an iterator pointing to the element after the erased one
   iplist<VPRecipeBase>::iterator eraseFromParent();
+
+  /// Returns a pointer to a VPUser, if the recipe inherits from VPUser or
+  /// nullptr otherwise.
+  VPUser *toVPUser();
 };
 
 inline bool VPUser::classof(const VPRecipeBase *Recipe) {
-  return Recipe->getVPRecipeID() == VPRecipeBase::VPWidenSC ||
+  return Recipe->getVPRecipeID() == VPRecipeBase::VPInstructionSC ||
+         Recipe->getVPRecipeID() == VPRecipeBase::VPWidenSC ||
          Recipe->getVPRecipeID() == VPRecipeBase::VPWidenCallSC ||
          Recipe->getVPRecipeID() == VPRecipeBase::VPWidenSelectSC ||
          Recipe->getVPRecipeID() == VPRecipeBase::VPWidenGEPSC ||

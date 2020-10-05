@@ -579,6 +579,12 @@ static bool windowsRequiresStackProbe(MachineFunction &MF,
          !F.hasFnAttribute("no-stack-arg-probe");
 }
 
+static bool needsWinCFI(const MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+         F.needsUnwindTableEntry();
+}
+
 bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
     MachineFunction &MF, uint64_t StackBumpBytes) const {
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
@@ -587,6 +593,18 @@ bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
 
   if (AFI->getLocalStackSize() == 0)
+    return false;
+
+  // For WinCFI, if optimizing for size, prefer to not combine the stack bump
+  // (to force a stp with predecrement) to match the packed unwind format,
+  // provided that there actually are any callee saved registers to merge the
+  // decrement with.
+  // This is potentially marginally slower, but allows using the packed
+  // unwind format for functions that both have a local area and callee saved
+  // registers. Using the packed unwind format notably reduces the size of
+  // the unwind info.
+  if (needsWinCFI(MF) && AFI->getCalleeSavedStackSize() > 0 &&
+      MF.getFunction().hasOptSize())
     return false;
 
   // 512 is the maximum immediate for stp/ldp that will be used for
@@ -980,12 +998,6 @@ static void adaptForLdStOpt(MachineBasicBlock &MBB,
   //
   // ldp      x26, x25, [sp], #64
   //
-}
-
-static bool needsWinCFI(const MachineFunction &MF) {
-  const Function &F = MF.getFunction();
-  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
-         F.needsUnwindTableEntry();
 }
 
 static bool isTargetWindows(const MachineFunction &MF) {
@@ -1988,20 +2000,27 @@ static bool produceCompactUnwindFrame(MachineFunction &MF) {
 }
 
 static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
-                                             bool NeedsWinCFI) {
+                                             bool NeedsWinCFI, bool IsFirst) {
   // If we are generating register pairs for a Windows function that requires
   // EH support, then pair consecutive registers only.  There are no unwind
   // opcodes for saves/restores of non-consectuve register pairs.
-  // The unwind opcodes are save_regp, save_regp_x, save_fregp, save_frepg_x.
+  // The unwind opcodes are save_regp, save_regp_x, save_fregp, save_frepg_x,
+  // save_lrpair.
   // https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
 
-  // TODO: LR can be paired with any register.  We don't support this yet in
-  // the MCLayer.  We need to add support for the save_lrpair unwind code.
   if (Reg2 == AArch64::FP)
     return true;
   if (!NeedsWinCFI)
     return false;
   if (Reg2 == Reg1 + 1)
+    return false;
+  // If pairing a GPR with LR, the pair can be described by the save_lrpair
+  // opcode. If this is the first register pair, it would end up with a
+  // predecrement, but there's no save_lrpair_x opcode, so we can only do this
+  // if LR is paired with something else than the first register.
+  // The save_lrpair opcode requires the first register to be an odd one.
+  if (Reg1 >= AArch64::X19 && Reg1 <= AArch64::X27 &&
+      (Reg1 - AArch64::X19) % 2 == 0 && Reg2 == AArch64::LR && !IsFirst)
     return false;
   return true;
 }
@@ -2011,9 +2030,10 @@ static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
 /// LR and FP need to be allocated together when the frame needs to save
 /// the frame-record. This means any other register pairing with LR is invalid.
 static bool invalidateRegisterPairing(unsigned Reg1, unsigned Reg2,
-                                      bool UsesWinAAPCS, bool NeedsWinCFI, bool NeedsFrameRecord) {
+                                      bool UsesWinAAPCS, bool NeedsWinCFI,
+                                      bool NeedsFrameRecord, bool IsFirst) {
   if (UsesWinAAPCS)
-    return invalidateWindowsRegisterPairing(Reg1, Reg2, NeedsWinCFI);
+    return invalidateWindowsRegisterPairing(Reg1, Reg2, NeedsWinCFI, IsFirst);
 
   // If we need to store the frame record, don't pair any register
   // with LR other than FP.
@@ -2077,14 +2097,22 @@ static void computeCalleeSaveRegisterPairs(
           (Count & 1) == 0) &&
          "Odd number of callee-saved regs to spill!");
   int ByteOffset = AFI->getCalleeSavedStackSize();
+  int StackFillDir = -1;
+  int RegInc = 1;
+  unsigned FirstReg = 0;
+  if (NeedsWinCFI) {
+    // For WinCFI, fill the stack from the bottom up.
+    ByteOffset = 0;
+    StackFillDir = 1;
+    // As the CSI array is reversed to match PrologEpilogInserter, iterate
+    // backwards, to pair up registers starting from lower numbered registers.
+    RegInc = -1;
+    FirstReg = Count - 1;
+  }
   int ScalableByteOffset = AFI->getSVECalleeSavedStackSize();
-  // On Linux, we will have either one or zero non-paired register.  On Windows
-  // with CFI, we can have multiple unpaired registers in order to utilize the
-  // available unwind codes.  This flag assures that the alignment fixup is done
-  // only once, as intened.
-  bool FixupDone = false;
 
-  for (unsigned i = 0; i < Count; ++i) {
+  // When iterating backwards, the loop condition relies on unsigned wraparound.
+  for (unsigned i = FirstReg; i < Count; i += RegInc) {
     RegPairInfo RPI;
     RPI.Reg1 = CSI[i].getReg();
 
@@ -2102,18 +2130,20 @@ static void computeCalleeSaveRegisterPairs(
       llvm_unreachable("Unsupported register class.");
 
     // Add the next reg to the pair if it is in the same register class.
-    if (i + 1 < Count) {
-      unsigned NextReg = CSI[i + 1].getReg();
+    if (unsigned(i + RegInc) < Count) {
+      unsigned NextReg = CSI[i + RegInc].getReg();
+      bool IsFirst = i == FirstReg;
       switch (RPI.Type) {
       case RegPairInfo::GPR:
         if (AArch64::GPR64RegClass.contains(NextReg) &&
-            !invalidateRegisterPairing(RPI.Reg1, NextReg, IsWindows, NeedsWinCFI,
-                                       NeedsFrameRecord))
+            !invalidateRegisterPairing(RPI.Reg1, NextReg, IsWindows,
+                                       NeedsWinCFI, NeedsFrameRecord, IsFirst))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR64:
         if (AArch64::FPR64RegClass.contains(NextReg) &&
-            !invalidateWindowsRegisterPairing(RPI.Reg1, NextReg, NeedsWinCFI))
+            !invalidateWindowsRegisterPairing(RPI.Reg1, NextReg, NeedsWinCFI,
+                                              IsFirst))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR128:
@@ -2142,7 +2172,7 @@ static void computeCalleeSaveRegisterPairs(
     // The order of the registers in the list is controlled by
     // getCalleeSavedRegs(), so they will always be in-order, as well.
     assert((!RPI.isPaired() ||
-            (CSI[i].getFrameIdx() + 1 == CSI[i + 1].getFrameIdx())) &&
+            (CSI[i].getFrameIdx() + RegInc == CSI[i + RegInc].getFrameIdx())) &&
            "Out of order callee saved regs!");
 
     assert((!RPI.isPaired() || !NeedsFrameRecord || RPI.Reg2 != AArch64::FP ||
@@ -2164,30 +2194,43 @@ static void computeCalleeSaveRegisterPairs(
            "Callee-save registers not saved as adjacent register pair!");
 
     RPI.FrameIdx = CSI[i].getFrameIdx();
+    if (NeedsWinCFI &&
+        RPI.isPaired()) // RPI.FrameIdx must be the lower index of the pair
+      RPI.FrameIdx = CSI[i + RegInc].getFrameIdx();
 
     int Scale = RPI.getScale();
+
+    int OffsetPre = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
+    assert(OffsetPre % Scale == 0);
+
     if (RPI.isScalable())
-      ScalableByteOffset -= Scale;
+      ScalableByteOffset += StackFillDir * Scale;
     else
-      ByteOffset -= RPI.isPaired() ? 2 * Scale : Scale;
+      ByteOffset += StackFillDir * (RPI.isPaired() ? 2 * Scale : Scale);
 
     assert(!(RPI.isScalable() && RPI.isPaired()) &&
            "Paired spill/fill instructions don't exist for SVE vectors");
 
     // Round up size of non-pair to pair size if we need to pad the
     // callee-save area to ensure 16-byte alignment.
-    if (AFI->hasCalleeSaveStackFreeSpace() && !FixupDone &&
+    if (AFI->hasCalleeSaveStackFreeSpace() && !NeedsWinCFI &&
         !RPI.isScalable() && RPI.Type != RegPairInfo::FPR128 &&
         !RPI.isPaired()) {
-      FixupDone = true;
-      ByteOffset -= 8;
+      ByteOffset += 8 * StackFillDir;
       assert(ByteOffset % 16 == 0);
       assert(MFI.getObjectAlign(RPI.FrameIdx) <= Align(16));
+      // A stack frame with a gap looks like this, bottom up:
+      // d9, d8. x21, gap, x20, x19.
+      // Set extra alignment on the x21 object (the only unpaired register)
+      // to create the gap above it.
       MFI.setObjectAlignment(RPI.FrameIdx, Align(16));
     }
 
-    int Offset = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
-    assert(Offset % Scale == 0);
+    int OffsetPost = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
+    assert(OffsetPost % Scale == 0);
+    // If filling top down (default), we want the offset after incrementing it.
+    // If fillibg bootom up (WinCFI) we need the original offset.
+    int Offset = NeedsWinCFI ? OffsetPre : OffsetPost;
     RPI.Offset = Offset / Scale;
 
     assert(((!RPI.isScalable() && RPI.Offset >= -64 && RPI.Offset <= 63) ||
@@ -2204,7 +2247,19 @@ static void computeCalleeSaveRegisterPairs(
 
     RegPairs.push_back(RPI);
     if (RPI.isPaired())
-      ++i;
+      i += RegInc;
+  }
+  if (NeedsWinCFI) {
+    // If we need an alignment gap in the stack, align the topmost stack
+    // object. A stack frame with a gap looks like this, bottom up:
+    // x19, d8. d9, gap.
+    // Set extra alignment on the topmost stack object (the first element in
+    // CSI, which goes top down), to create the gap above it.
+    if (AFI->hasCalleeSaveStackFreeSpace())
+      MFI.setObjectAlignment(CSI[0].getFrameIdx(), Align(16));
+    // We iterated bottom up over the registers; flip RegPairs back to top
+    // down order.
+    std::reverse(RegPairs.begin(), RegPairs.end());
   }
 }
 
@@ -2634,6 +2689,21 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   AFI->setCalleeSavedStackSize(AlignedCSStackSize);
   AFI->setCalleeSaveStackHasFreeSpace(AlignedCSStackSize != CSStackSize);
   AFI->setSVECalleeSavedStackSize(alignTo(SVECSStackSize, 16));
+}
+
+bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
+    MachineFunction &MF, const TargetRegisterInfo *TRI,
+    std::vector<CalleeSavedInfo> &CSI) const {
+  bool NeedsWinCFI = needsWinCFI(MF);
+  // To match the canonical windows frame layout, reverse the list of
+  // callee saved registers to get them laid out by PrologEpilogInserter
+  // in the right order. (PrologEpilogInserter allocates stack objects top
+  // down. Windows canonical prologs store higher numbered registers at
+  // the top, thus have the CSI array start from the highest registers.)
+  if (NeedsWinCFI)
+    std::reverse(CSI.begin(), CSI.end());
+  // Let the generic code do the rest of the setup.
+  return false;
 }
 
 bool AArch64FrameLowering::enableStackSlotScavenging(

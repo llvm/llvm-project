@@ -710,9 +710,6 @@ namespace llvm {
     // For avx512-vp2intersect
     VP2INTERSECT,
 
-    // Mwaitx builtin is lowered to this if the base pointer needs saving.
-    MWAITX_DAG,
-
     /// X86 strict FP compare instructions.
     STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
     STRICT_FCMPS,
@@ -828,6 +825,16 @@ namespace llvm {
     // X86 specific gather and scatter
     MGATHER,
     MSCATTER,
+
+    // Key locker nodes that produce flags.
+    AESENC128KL,
+    AESDEC128KL,
+    AESENC256KL,
+    AESDEC256KL,
+    AESENCWIDE128KL,
+    AESDECWIDE128KL,
+    AESENCWIDE256KL,
+    AESDECWIDE256KL,
 
     // WARNING: Do not add anything in the end unless you want the node to
     // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all

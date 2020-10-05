@@ -4984,18 +4984,19 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
                                      InOverloadResolution,
                                      AllowObjCWritebackConversion);
     }
-    // FIXME: Check the other conditions here: array of character type,
-    // initializer is a string literal.
-    if (ToType->isArrayType()) {
-      InitializedEntity Entity =
-        InitializedEntity::InitializeParameter(S.Context, ToType,
-                                               /*Consumed=*/false);
-      if (S.CanPerformCopyInitialization(Entity, From)) {
-        Result.setStandard();
-        Result.Standard.setAsIdentityConversion();
-        Result.Standard.setFromType(ToType);
-        Result.Standard.setAllToTypes(ToType);
-        return Result;
+
+    if (const auto *AT = S.Context.getAsArrayType(ToType)) {
+      if (S.IsStringInit(From->getInit(0), AT)) {
+        InitializedEntity Entity =
+          InitializedEntity::InitializeParameter(S.Context, ToType,
+                                                 /*Consumed=*/false);
+        if (S.CanPerformCopyInitialization(Entity, From)) {
+          Result.setStandard();
+          Result.Standard.setAsIdentityConversion();
+          Result.Standard.setFromType(ToType);
+          Result.Standard.setAllToTypes(ToType);
+          return Result;
+        }
       }
     }
   }

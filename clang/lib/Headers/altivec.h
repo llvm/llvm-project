@@ -3504,6 +3504,20 @@ vec_div(vector signed __int128 __a, vector signed __int128 __b) {
 }
 #endif __POWER10_VECTOR__
 
+/* vec_xvtdiv */
+
+#ifdef __VSX__
+static __inline__ int __ATTRS_o_ai vec_test_swdiv(vector double __a,
+                                                  vector double __b) {
+  return __builtin_vsx_xvtdivdp(__a, __b);
+}
+
+static __inline__ int __ATTRS_o_ai vec_test_swdivs(vector float __a,
+                                                   vector float __b) {
+  return __builtin_vsx_xvtdivsp(__a, __b);
+}
+#endif
+
 /* vec_dss */
 
 #define vec_dss __builtin_altivec_dss
@@ -8056,6 +8070,18 @@ static __inline__ __vector float __attribute__((__always_inline__))
 vec_vrsqrtefp(vector float __a) {
   return __builtin_altivec_vrsqrtefp(__a);
 }
+
+/* vec_xvtsqrt */
+
+#ifdef __VSX__
+static __inline__ int __ATTRS_o_ai vec_test_swsqrt(vector double __a) {
+  return __builtin_vsx_xvtsqrtdp(__a);
+}
+
+static __inline__ int __ATTRS_o_ai vec_test_swsqrts(vector float __a) {
+  return __builtin_vsx_xvtsqrtsp(__a);
+}
+#endif
 
 /* vec_sel */
 

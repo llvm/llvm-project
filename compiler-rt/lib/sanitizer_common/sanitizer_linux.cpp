@@ -154,6 +154,8 @@ namespace __sanitizer {
 
 #if SANITIZER_LINUX && defined(__x86_64__)
 #include "sanitizer_syscall_linux_x86_64.inc"
+#elif SANITIZER_LINUX && SANITIZER_RISCV64
+#include "sanitizer_syscall_linux_riscv64.inc"
 #elif SANITIZER_LINUX && defined(__aarch64__)
 #include "sanitizer_syscall_linux_aarch64.inc"
 #elif SANITIZER_LINUX && defined(__arm__)
@@ -712,7 +714,7 @@ struct linux_dirent {
 };
 #else
 struct linux_dirent {
-#if SANITIZER_X32 || defined(__aarch64__)
+#if SANITIZER_X32 || defined(__aarch64__) || SANITIZER_RISCV64
   u64 d_ino;
   u64 d_off;
 #else
@@ -720,7 +722,7 @@ struct linux_dirent {
   unsigned long      d_off;
 #endif
   unsigned short     d_reclen;
-#ifdef __aarch64__
+#if defined(__aarch64__) || SANITIZER_RISCV64
   unsigned char      d_type;
 #endif
   char               d_name[256];
@@ -1069,6 +1071,8 @@ uptr GetMaxVirtualAddress() {
   // This should (does) work for both PowerPC64 Endian modes.
   // Similarly, aarch64 has multiple address space layouts: 39, 42 and 47-bit.
   return (1ULL << (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1)) - 1;
+#elif SANITIZER_RISCV64
+  return (1ULL << 38) - 1;
 # elif defined(__mips64)
   return (1ULL << 40) - 1;  // 0x000000ffffffffffUL;
 # elif defined(__s390x__)

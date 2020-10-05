@@ -13,6 +13,7 @@
 #define SANITIZER_STACKTRACE_H
 
 #include "sanitizer_internal_defs.h"
+#include "sanitizer_platform.h"
 
 namespace __sanitizer {
 

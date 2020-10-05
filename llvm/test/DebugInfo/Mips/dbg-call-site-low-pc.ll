@@ -22,7 +22,7 @@
 ;; Test mips, mipsel, mips64, mips64el:
 ; CHECK:        DW_TAG_GNU_call_site
 ; CHECK-NEXT:     DW_AT_abstract_origin {{.*}} "f1"
-; CHECK-NEXT:     DW_AT_low_pc (0x0000000000000010)
+; CHECK-NEXT:     DW_AT_low_pc (0x{{(00000000)?}}00000010)
 
 ; ModuleID = 'm.c'
 source_filename = "m.c"

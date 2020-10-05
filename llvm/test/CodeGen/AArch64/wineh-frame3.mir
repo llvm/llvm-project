@@ -2,16 +2,16 @@
 # RUN:   -stop-after=prologepilog | FileCheck %s
 # Check save_reg_x, save_reg
 
-# CHECK:      early-clobber $sp = frame-setup STRXpre killed $x22, $sp, -16
-# CHECK-NEXT: frame-setup SEH_SaveReg_X 22, -16
-# CHECK-NEXT: frame-setup STRXui killed $x19, $sp, 1
-# CHECK-NEXT: frame-setup SEH_SaveReg 19, 8
+# CHECK:      early-clobber $sp = frame-setup STRXpre killed $x19, $sp, -16
+# CHECK-NEXT: frame-setup SEH_SaveReg_X 19, -16
+# CHECK-NEXT: frame-setup STRXui killed $x22, $sp, 1
+# CHECK-NEXT: frame-setup SEH_SaveReg 22, 8
 # CHECK-NEXT: frame-setup SEH_PrologEnd
 # CHECK:      frame-destroy SEH_EpilogStart
-# CHECK-NEXT: $x19 = frame-destroy LDRXui $sp, 1
-# CHECK-NEXT: frame-destroy SEH_SaveReg 19, 8
-# CHECK-NEXT: early-clobber $sp, $x22 = frame-destroy LDRXpost $sp, 16
-# CHECK-NEXT: frame-destroy SEH_SaveReg_X 22, -16
+# CHECK-NEXT: $x22 = frame-destroy LDRXui $sp, 1
+# CHECK-NEXT: frame-destroy SEH_SaveReg 22, 8
+# CHECK-NEXT: early-clobber $sp, $x19 = frame-destroy LDRXpost $sp, 16
+# CHECK-NEXT: frame-destroy SEH_SaveReg_X 19, -16
 # CHECK-NEXT: frame-destroy SEH_EpilogEnd
 # CHECK-NEXT: RET_ReallyLR implicit $x0
 ...

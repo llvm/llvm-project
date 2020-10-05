@@ -533,7 +533,7 @@ void FunctionCognitiveComplexityCheck::check(
     // Increase, on the other hand, can be 0.
 
     diag(Detail.Loc, Msgs[MsgId], DiagnosticIDs::Note)
-        << Increase << Detail.Nesting << 1 + Detail.Nesting;
+        << (unsigned)Increase << (unsigned)Detail.Nesting << 1 + Detail.Nesting;
   }
 }
 

@@ -5,13 +5,13 @@
 # CHECK-NEXT:   DW_AT_external  (true)
 # CHECK-NEXT:   DW_AT_name      ("fn4")
 # CHECK-NEXT:   DW_AT_linkage_name      ("test")
-# CHECK-NEXT:   DW_AT_low_pc    (0x0000000000000000)
-# CHECK-NEXT:   DW_AT_high_pc   (0x0000000000000000)
+# CHECK-NEXT:   DW_AT_low_pc    (0x00000000)
+# CHECK-NEXT:   DW_AT_high_pc   (0x00000000)
 # CHECK-NEXT:   DW_AT_frame_base        (DW_OP_call_frame_cfa)
 # CHECK-NEXT:   DW_AT_GNU_all_call_sites        (true)
 
 # CHECK:      DW_TAG_GNU_call_site
-# CHECK-NEXT:   DW_AT_low_pc  (0x0000000000000000)
+# CHECK-NEXT:   DW_AT_low_pc  (0x00000000)
 # CHECK-NEXT:   DW_AT_abstract_origin (0x00000021 "test")
 
 # CHECK:      DW_TAG_GNU_call_site_parameter

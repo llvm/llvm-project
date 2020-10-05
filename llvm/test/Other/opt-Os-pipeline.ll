@@ -120,6 +120,8 @@
 ; CHECK-NEXT:           Recognize loop idioms
 ; CHECK-NEXT:           Delete dead loops
 ; CHECK-NEXT:           Unroll loops
+; CHECK-NEXT:         SROA
+; CHECK-NEXT:         Function Alias Analysis Results
 ; CHECK-NEXT:         MergedLoadStoreMotion
 ; CHECK-NEXT:         Phi Values Analysis
 ; CHECK-NEXT:         Function Alias Analysis Results

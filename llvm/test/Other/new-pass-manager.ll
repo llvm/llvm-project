@@ -207,7 +207,6 @@
 ; CHECK-INVALIDATE-ALL: Starting llvm::Module pass manager run
 ; CHECK-INVALIDATE-ALL: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL: Running analysis: NoOpModuleAnalysis
-; CHECK-INVALIDATE-ALL: Starting llvm::Module pass manager run
 ; CHECK-INVALIDATE-ALL: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL-NOT: Running analysis: NoOpModuleAnalysis
 ; CHECK-INVALIDATE-ALL: Starting llvm::Function pass manager run
@@ -221,7 +220,6 @@
 ; CHECK-INVALIDATE-ALL: Invalidating analysis: NoOpModuleAnalysis
 ; CHECK-INVALIDATE-ALL: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL: Running analysis: NoOpModuleAnalysis
-; CHECK-INVALIDATE-ALL: Finished llvm::Module pass manager run
 ; CHECK-INVALIDATE-ALL-NOT: Invalidating analysis: NoOpModuleAnalysis
 ; CHECK-INVALIDATE-ALL: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL-NOT: Running analysis: NoOpModuleAnalysis
@@ -233,7 +231,6 @@
 ; CHECK-INVALIDATE-ALL-CG: Starting llvm::Module pass manager run
 ; CHECK-INVALIDATE-ALL-CG: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL-CG: Running analysis: NoOpModuleAnalysis
-; CHECK-INVALIDATE-ALL-CG: Starting llvm::Module pass manager run
 ; CHECK-INVALIDATE-ALL-CG: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL-CG-NOT: Running analysis: NoOpModuleAnalysis
 ; CHECK-INVALIDATE-ALL-CG: Starting CGSCC pass manager run
@@ -256,7 +253,6 @@
 ; CHECK-INVALIDATE-ALL-CG: Invalidating analysis: NoOpModuleAnalysis
 ; CHECK-INVALIDATE-ALL-CG: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL-CG: Running analysis: NoOpModuleAnalysis
-; CHECK-INVALIDATE-ALL-CG: Finished llvm::Module pass manager run
 ; CHECK-INVALIDATE-ALL-CG-NOT: Invalidating analysis: NoOpModuleAnalysis
 ; CHECK-INVALIDATE-ALL-CG: Running pass: RequireAnalysisPass
 ; CHECK-INVALIDATE-ALL-CG-NOT: Running analysis: NoOpModuleAnalysis
