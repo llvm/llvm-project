@@ -194,6 +194,9 @@ if is_configured('lldb_executable'):
 if is_configured('test_compiler'):
   dotest_cmd += ['--compiler', config.test_compiler]
 
+if is_configured('test_swift_compiler'):
+  dotest_cmd += ['--swift-compiler', config.test_swift_compiler]
+
 if is_configured('dsymutil'):
   dotest_cmd += ['--dsymutil', config.dsymutil]
 
