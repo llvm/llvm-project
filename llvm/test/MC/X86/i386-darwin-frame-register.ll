@@ -11,7 +11,7 @@
 ; CHECK: .debug_frame contents:
 ; CHECK: ffffffff CIE
 ; CHECK-NOT: {{CIE|FDE}}
-; CHECK:   DW_CFA_def_cfa: reg4 +4
+; CHECK:   DW_CFA_def_cfa: ESP +4
 
 ; ModuleID = 'foo.c'
 target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
