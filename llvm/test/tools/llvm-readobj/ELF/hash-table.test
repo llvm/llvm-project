@@ -45,9 +45,13 @@ ProgramHeaders:
 ## Check we can dump the SHT_HASH section even when an object
 ## does not have the section header table.
 
-# RUN: yaml2obj --docnum=2 %s -o %t.noshdr
-# RUN: llvm-readobj --hash-table %t.noshdr | FileCheck %s --check-prefix=NOSHDR
-# RUN: llvm-readelf --hash-table %t.noshdr | FileCheck %s --check-prefix=NOSHDR
+# RUN: yaml2obj --docnum=2 -DNOHEADERS=true %s -o %t.noshdr
+# RUN: llvm-readobj --hash-table %t.noshdr 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.noshdr --check-prefix=NOSHDR --implicit-check-not=warning:
+# RUN: llvm-readelf --hash-table %t.noshdr 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.noshdr --check-prefix=NOSHDR --implicit-check-not=warning:
+
+# NOSHDR: warning: '[[FILE]]': string table was not found
 
 # NOSHDR:      HashTable {
 # NOSHDR-NEXT:   Num Buckets: 1
@@ -58,36 +62,56 @@ ProgramHeaders:
 
 --- !ELF
 FileHeader:
-  Class:  ELFCLASS64
-  Data:   ELFDATA2LSB
-  Type:   ET_DYN
-## We simulate no section header table by
-## overriding the ELF header properties.
-  EShOff: 0x0
-  EShNum: 0x0
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:   .hash
     Type:   SHT_HASH
     Flags:  [ SHF_ALLOC ]
     Bucket: [ 0 ]
     Chain:  [ 1 ]
+    EntSize: [[ENTSIZE=4]]
   - Name:  .dynamic
     Type:  SHT_DYNAMIC
     Flags: [ SHF_ALLOC ]
     Entries:
-      - Tag:   DT_HASH
+      - Tag:   [[DYNTAG=DT_HASH]]
         Value: 0x0
       - Tag:   DT_NULL
         Value: 0x0
+SectionHeaderTable:
+  NoHeaders: [[NOHEADERS=false]]
 ProgramHeaders:
   - Type: PT_LOAD
     Sections:
       - Section: .hash
       - Section: .dynamic
   - Type: PT_DYNAMIC
-    VAddr: 0x1010
+    VAddr: 0x10
     Sections:
       - Section: .dynamic
+
+## Document we don't report a warning when the value of the sh_entsize field of the SHT_HASH section is not 4.
+
+# RUN: yaml2obj --docnum=2 -DENTSIZE=0xff %s -o %t.ent.size
+# RUN: llvm-readobj --hash-table %t.ent.size 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.ent.size --check-prefix=NOSHDR --implicit-check-not=warning:
+# RUN: llvm-readelf --hash-table %t.ent.size 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.ent.size --check-prefix=NOSHDR --implicit-check-not=warning:
+
+## Document we need the DT_HASH dynamic tag to locate the hash table.
+
+# RUN: yaml2obj --docnum=2 -DDYNTAG=DT_NULL %s -o %t.no.dyntag
+# RUN: llvm-readobj --hash-table %t.no.dyntag 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.no.dyntag --check-prefix=NODYNTAG --implicit-check-not=warning:
+# RUN: llvm-readelf --hash-table %t.no.dyntag 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.no.dyntag --check-prefix=NODYNTAG --implicit-check-not=warning:
+
+# NODYNTAG: warning: '[[FILE]]': string table was not found
+
+# NODYNTAG:      HashTable {
+# NODYNTAG-NEXT: }
 
 ## Each SHT_HASH section starts with two 32-bit fields: nbucket and nchain.
 ## Check we report an error when a DT_HASH value points to data that has size less than 8 bytes.
