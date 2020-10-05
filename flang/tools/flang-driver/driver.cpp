@@ -11,17 +11,20 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/Driver/Driver.h"
+#include "flang/Frontend/CompilerInvocation.h"
+#include "flang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/VirtualFileSystem.h"
+
+using llvm::StringRef;
 
 // main frontend method. Lives inside fc1_main.cpp
 extern int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0);
@@ -37,6 +40,17 @@ std::string GetExecutablePath(const char *argv0) {
 static clang::DiagnosticOptions *CreateAndPopulateDiagOpts(
     llvm::ArrayRef<const char *> argv) {
   auto *diagOpts = new clang::DiagnosticOptions;
+
+  // Ignore missingArgCount and the return value of ParseDiagnosticArgs.
+  // Any errors that would be diagnosed here will also be diagnosed later,
+  // when the DiagnosticsEngine actually exists.
+  unsigned missingArgIndex, missingArgCount;
+  llvm::opt::InputArgList args = clang::driver::getDriverOptTable().ParseArgs(
+      argv.slice(1), missingArgIndex, missingArgCount,
+      /*FlagsToInclude=*/clang::driver::options::FlangOption);
+
+  (void)Fortran::frontend::ParseDiagnosticArgs(*diagOpts, args);
+
   return diagOpts;
 }
 
@@ -83,8 +97,12 @@ int main(int argc_, const char **argv_) {
       CreateAndPopulateDiagOpts(argv);
   llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
       new clang::DiagnosticIDs());
-  clang::TextDiagnosticPrinter *diagClient =
-      new clang::TextDiagnosticPrinter(llvm::errs(), &*diagOpts);
+  Fortran::frontend::TextDiagnosticPrinter *diagClient =
+      new Fortran::frontend::TextDiagnosticPrinter(llvm::errs(), &*diagOpts);
+
+  diagClient->set_prefix(
+      std::string(llvm::sys::path::stem(GetExecutablePath(argv[0]))));
+
   clang::DiagnosticsEngine diags(diagID, &*diagOpts, diagClient);
 
   // Prepare the driver
