@@ -2568,17 +2568,27 @@ static LogicalResult verify(spirv::ModuleOp moduleOp) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(spirv::ReferenceOfOp referenceOfOp) {
-  auto specConstOp = dyn_cast_or_null<spirv::SpecConstantOp>(
-      SymbolTable::lookupNearestSymbolFrom(referenceOfOp.getParentOp(),
-                                           referenceOfOp.spec_const()));
-  if (!specConstOp) {
-    return referenceOfOp.emitOpError("expected spv.specConstant symbol");
-  }
-  if (referenceOfOp.reference().getType() !=
-      specConstOp.default_value().getType()) {
+  auto *specConstSym = SymbolTable::lookupNearestSymbolFrom(
+      referenceOfOp.getParentOp(), referenceOfOp.spec_const());
+  Type constType;
+
+  auto specConstOp = dyn_cast_or_null<spirv::SpecConstantOp>(specConstSym);
+  if (specConstOp)
+    constType = specConstOp.default_value().getType();
+
+  auto specConstCompositeOp =
+      dyn_cast_or_null<spirv::SpecConstantCompositeOp>(specConstSym);
+  if (specConstCompositeOp)
+    constType = specConstCompositeOp.type();
+
+  if (!specConstOp && !specConstCompositeOp)
+    return referenceOfOp.emitOpError(
+        "expected spv.specConstant or spv.SpecConstantComposite symbol");
+
+  if (referenceOfOp.reference().getType() != constType)
     return referenceOfOp.emitOpError("result type mismatch with the referenced "
                                      "specialization constant's type");
-  }
+
   return success();
 }
 
