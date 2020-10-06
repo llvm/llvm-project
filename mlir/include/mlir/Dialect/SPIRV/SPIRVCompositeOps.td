@@ -161,6 +161,11 @@ def SPV_CompositeInsertOp : SPV_Op<"CompositeInsert", [NoSideEffect]> {
   let results = (outs
     SPV_Composite:$result
   );
+
+  let builders = [
+    OpBuilder<[{OpBuilder &builder, OperationState &state, Value object,
+                Value composite, ArrayRef<int32_t> indices}]>
+  ];
 }
 
 #endif // SPIRV_COMPOSITE_OPS

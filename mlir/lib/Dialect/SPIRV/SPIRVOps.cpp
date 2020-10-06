@@ -1410,6 +1410,13 @@ static LogicalResult verify(spirv::CompositeExtractOp compExOp) {
 // spv.CompositeInsert
 //===----------------------------------------------------------------------===//
 
+void spirv::CompositeInsertOp::build(OpBuilder &builder, OperationState &state,
+                                     Value object, Value composite,
+                                     ArrayRef<int32_t> indices) {
+  auto indexAttr = builder.getI32ArrayAttr(indices);
+  build(builder, state, composite.getType(), object, composite, indexAttr);
+}
+
 static ParseResult parseCompositeInsertOp(OpAsmParser &parser,
                                           OperationState &state) {
   SmallVector<OpAsmParser::OperandType, 2> operands;
