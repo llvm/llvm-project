@@ -484,7 +484,8 @@ public:
 
   Error accept(SectionVisitor &Visitor) const override;
   Error accept(MutableSectionVisitor &Visitor) override;
-  Error removeSectionReferences(bool AllowBrokenLinks,
+  Error removeSectionReferences(
+      bool AllowBrokenLinks,
       function_ref<bool(const SectionBase *)> ToRemove) override;
   Error initialize(SectionTableRef SecTable) override;
   void finalize() override;
@@ -647,13 +648,13 @@ public:
   virtual ~SectionIndexSection() {}
   void addIndex(uint32_t Index) {
     assert(Size > 0);
-    Indexes.push_back(Index);    
+    Indexes.push_back(Index);
   }
 
   void reserve(size_t NumSymbols) {
     Indexes.reserve(NumSymbols);
     Size = NumSymbols * 4;
-  }  
+  }
   void setSymTab(SymbolTableSection *SymTab) { Symbols = SymTab; }
   Error initialize(SectionTableRef SecTable) override;
   void finalize() override;
@@ -700,7 +701,8 @@ public:
   Expected<Symbol *> getSymbolByIndex(uint32_t Index);
   void updateSymbols(function_ref<void(Symbol &)> Callable);
 
-  Error removeSectionReferences(bool AllowBrokenLinks,
+  Error removeSectionReferences(
+      bool AllowBrokenLinks,
       function_ref<bool(const SectionBase *)> ToRemove) override;
   Error initialize(SectionTableRef SecTable) override;
   void finalize() override;
@@ -770,7 +772,8 @@ public:
   void addRelocation(Relocation Rel) { Relocations.push_back(Rel); }
   Error accept(SectionVisitor &Visitor) const override;
   Error accept(MutableSectionVisitor &Visitor) override;
-  Error removeSectionReferences(bool AllowBrokenLinks,
+  Error removeSectionReferences(
+      bool AllowBrokenLinks,
       function_ref<bool(const SectionBase *)> ToRemove) override;
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;
   void markSymbols() override;

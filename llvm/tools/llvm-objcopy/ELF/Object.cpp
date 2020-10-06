@@ -51,12 +51,11 @@ template <class ELFT> void ELFWriter<ELFT>::writePhdr(const Segment &Seg) {
 }
 
 Error SectionBase::removeSectionReferences(
-    bool AllowBrokenLinks,
-    function_ref<bool(const SectionBase *)> ToRemove) {
+    bool, function_ref<bool(const SectionBase *)>) {
   return Error::success();
 }
 
-Error SectionBase::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
+Error SectionBase::removeSymbols(function_ref<bool(const Symbol &)>) {
   return Error::success();
 }
 
@@ -751,8 +750,7 @@ void SymbolTableSection::addSymbol(Twine Name, uint8_t Bind, uint8_t Type,
 }
 
 Error SymbolTableSection::removeSectionReferences(
-    bool AllowBrokenLinks,
-    function_ref<bool(const SectionBase *)> ToRemove) {
+    bool AllowBrokenLinks, function_ref<bool(const SectionBase *)> ToRemove) {
   if (ToRemove(SectionIndexTable))
     SectionIndexTable = nullptr;
   if (ToRemove(SymbolNames)) {
@@ -896,8 +894,7 @@ Error SymbolTableSection::accept(MutableSectionVisitor &Visitor) {
 }
 
 Error RelocationSection::removeSectionReferences(
-    bool AllowBrokenLinks,
-    function_ref<bool(const SectionBase *)> ToRemove) {
+    bool AllowBrokenLinks, function_ref<bool(const SectionBase *)> ToRemove) {
   if (ToRemove(Symbols)) {
     if (!AllowBrokenLinks)
       return createStringError(
@@ -962,7 +959,7 @@ void RelocSectionWithSymtabBase<SymTabType>::finalize() {
 }
 
 template <class ELFT>
-static void setAddend(Elf_Rel_Impl<ELFT, false> &Rel, uint64_t Addend) {}
+static void setAddend(Elf_Rel_Impl<ELFT, false> &, uint64_t) {}
 
 template <class ELFT>
 static void setAddend(Elf_Rel_Impl<ELFT, true> &Rela, uint64_t Addend) {
@@ -1607,7 +1604,7 @@ Error ELFBuilder<ELFT>::initSymbolTable(SymbolTableSection *SymTab) {
 }
 
 template <class ELFT>
-static void getAddend(uint64_t &ToSet, const Elf_Rel_Impl<ELFT, false> &Rel) {}
+static void getAddend(uint64_t &, const Elf_Rel_Impl<ELFT, false> &) {}
 
 template <class ELFT>
 static void getAddend(uint64_t &ToSet, const Elf_Rel_Impl<ELFT, true> &Rela) {
@@ -2099,8 +2096,8 @@ ELFWriter<ELFT>::ELFWriter(Object &Obj, Buffer &Buf, bool WSH,
     : Writer(Obj, Buf), WriteSectionHeaders(WSH && Obj.HadShdrs),
       OnlyKeepDebug(OnlyKeepDebug) {}
 
-Error Object::removeSections(bool AllowBrokenLinks,
-    std::function<bool(const SectionBase &)> ToRemove) {
+Error Object::removeSections(
+    bool AllowBrokenLinks, std::function<bool(const SectionBase &)> ToRemove) {
 
   auto Iter = std::stable_partition(
       std::begin(Sections), std::end(Sections), [=](const SecPtr &Sec) {
@@ -2136,8 +2133,8 @@ Error Object::removeSections(bool AllowBrokenLinks,
   // a live section critically depends on a section being removed somehow
   // (e.g. the removed section is referenced by a relocation).
   for (auto &KeepSec : make_range(std::begin(Sections), Iter)) {
-    if (Error E = KeepSec->removeSectionReferences(AllowBrokenLinks,
-            [&RemoveSections](const SectionBase *Sec) {
+    if (Error E = KeepSec->removeSectionReferences(
+            AllowBrokenLinks, [&RemoveSections](const SectionBase *Sec) {
               return RemoveSections.find(Sec) != RemoveSections.end();
             }))
       return E;
@@ -2623,8 +2620,8 @@ Error IHexWriter::checkSection(const SectionBase &Sec) {
   if (addressOverflows32bit(Addr) || addressOverflows32bit(Addr + Sec.Size - 1))
     return createStringError(
         errc::invalid_argument,
-        "Section '%s' address range [0x%llx, 0x%llx] is not 32 bit", Sec.Name.c_str(),
-        Addr, Addr + Sec.Size - 1);
+        "Section '%s' address range [0x%llx, 0x%llx] is not 32 bit",
+        Sec.Name.c_str(), Addr, Addr + Sec.Size - 1);
   return Error::success();
 }
 
