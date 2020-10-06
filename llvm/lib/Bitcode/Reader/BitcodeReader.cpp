@@ -579,9 +579,7 @@ public:
   /// \returns true if an error occurred.
   Error parseBitcodeInto(
       Module *M, bool ShouldLazyLoadMetadata = false, bool IsImporting = false,
-      DataLayoutCallbackTy DataLayoutCallback = [](std::string) {
-        return None;
-      });
+      DataLayoutCallbackTy DataLayoutCallback = [](StringRef) { return None; });
 
   static uint64_t decodeSignRotatedValue(uint64_t V);
 
