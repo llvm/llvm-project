@@ -16,7 +16,7 @@
 #ifndef LLVM_SUPPORT_EXITCODES_H
 #define LLVM_SUPPORT_EXITCODES_H
 
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 
 #if HAVE_SYSEXITS_H
 #include <sysexits.h>
