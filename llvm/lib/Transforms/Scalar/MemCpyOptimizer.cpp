@@ -659,18 +659,10 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
       if (C) {
         // Check that nothing touches the dest of the "copy" between
         // the call and the store.
-        Value *CpyDest = SI->getPointerOperand()->stripPointerCasts();
-        bool CpyDestIsLocal = isa<AllocaInst>(CpyDest);
         MemoryLocation StoreLoc = MemoryLocation::get(SI);
         for (BasicBlock::iterator I = --SI->getIterator(), E = C->getIterator();
              I != E; --I) {
           if (isModOrRefSet(AA->getModRefInfo(&*I, StoreLoc))) {
-            C = nullptr;
-            break;
-          }
-          // The store to dest may never happen if an exception can be thrown
-          // between the load and the store.
-          if (I->mayThrow() && !CpyDestIsLocal) {
             C = nullptr;
             break;
           }
@@ -679,7 +671,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
 
       if (C) {
         bool changed = performCallSlotOptzn(
-            LI, SI->getPointerOperand()->stripPointerCasts(),
+            LI, SI, SI->getPointerOperand()->stripPointerCasts(),
             LI->getPointerOperand()->stripPointerCasts(),
             DL.getTypeStoreSize(SI->getOperand(0)->getType()),
             commonAlignment(SI->getAlign(), LI->getAlign()), C);
@@ -754,7 +746,8 @@ bool MemCpyOptPass::processMemSet(MemSetInst *MSI, BasicBlock::iterator &BBI) {
 /// Takes a memcpy and a call that it depends on,
 /// and checks for the possibility of a call slot optimization by having
 /// the call write its result directly into the destination of the memcpy.
-bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
+bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
+                                         Instruction *cpyStore, Value *cpyDest,
                                          Value *cpySrc, uint64_t cpyLen,
                                          Align cpyAlign, CallInst *C) {
   // The general transformation to keep in mind is
@@ -785,7 +778,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
   if (!srcArraySize)
     return false;
 
-  const DataLayout &DL = cpy->getModule()->getDataLayout();
+  const DataLayout &DL = cpyLoad->getModule()->getDataLayout();
   uint64_t srcSize = DL.getTypeAllocSize(srcAlloca->getAllocatedType()) *
                      srcArraySize->getZExtValue();
 
@@ -795,6 +788,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
   // Check that accessing the first srcSize bytes of dest will not cause a
   // trap.  Otherwise the transform is invalid since it might cause a trap
   // to occur earlier than it otherwise would.
+  // TODO: Use isDereferenceablePointer() API instead.
   if (AllocaInst *A = dyn_cast<AllocaInst>(cpyDest)) {
     // The destination is an alloca.  Check it is larger than srcSize.
     ConstantInt *destArraySize = dyn_cast<ConstantInt>(A->getArraySize());
@@ -807,10 +801,6 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
     if (destSize < srcSize)
       return false;
   } else if (Argument *A = dyn_cast<Argument>(cpyDest)) {
-    // The store to dest may never happen if the call can throw.
-    if (C->mayThrow())
-      return false;
-
     if (A->getDereferenceableBytes() < srcSize) {
       // If the destination is an sret parameter then only accesses that are
       // outside of the returned struct type can trap.
@@ -831,6 +821,30 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
     }
   } else {
     return false;
+  }
+
+  // Make sure that nothing can observe cpyDest being written early. There are
+  // a number of cases to consider:
+  //  1. cpyDest cannot be accessed between C and cpyStore as a precondition of
+  //     the transform.
+  //  2. C itself may not access cpyDest (prior to the transform). This is
+  //     checked further below.
+  //  3. If cpyDest is accessible to the caller of this function (potentially
+  //     captured and not based on an alloca), we need to ensure that we cannot
+  //     unwind between C and cpyStore. This is checked here.
+  //  4. If cpyDest is potentially captured, there may be accesses to it from
+  //     another thread. In this case, we need to check that cpyStore is
+  //     guaranteed to be executed if C is. As it is a non-atomic access, it
+  //     renders accesses from other threads undefined.
+  //     TODO: This is currently not checked.
+  if (!isa<AllocaInst>(cpyDest)) {
+    assert(C->getParent() == cpyStore->getParent() &&
+           "call and copy must be in the same block");
+    for (const Instruction &I : make_range(C->getIterator(),
+                                           cpyStore->getIterator())) {
+      if (I.mayThrow())
+        return false;
+    }
   }
 
   // Check that dest points to memory that is at least as aligned as src.
@@ -867,7 +881,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
       if (IT->isLifetimeStartOrEnd())
         continue;
 
-    if (U != C && U != cpy)
+    if (U != C && U != cpyLoad)
       return false;
   }
 
@@ -941,7 +955,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
                          LLVMContext::MD_noalias,
                          LLVMContext::MD_invariant_group,
                          LLVMContext::MD_access_group};
-  combineMetadata(C, cpy, KnownIDs, true);
+  combineMetadata(C, cpyLoad, KnownIDs, true);
 
   ++NumCallSlot;
   return true;
@@ -1242,7 +1256,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       // of conservatively taking the minimum?
       Align Alignment = std::min(M->getDestAlign().valueOrOne(),
                                  M->getSourceAlign().valueOrOne());
-      if (performCallSlotOptzn(M, M->getDest(), M->getSource(),
+      if (performCallSlotOptzn(M, M, M->getDest(), M->getSource(),
                                CopySize->getZExtValue(), Alignment, C)) {
         eraseInstruction(M);
         ++NumMemCpyInstr;

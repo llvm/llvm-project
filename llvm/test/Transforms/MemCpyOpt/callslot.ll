@@ -91,10 +91,9 @@ define void @throw_between_call_and_mempy(i8* dereferenceable(16) %dest.i8) {
 ; CHECK-LABEL: @throw_between_call_and_mempy(
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [16 x i8], align 1
 ; CHECK-NEXT:    [[SRC_I8:%.*]] = bitcast [16 x i8]* [[SRC]] to i8*
-; CHECK-NEXT:    [[DEST_I81:%.*]] = bitcast i8* [[DEST_I8:%.*]] to [16 x i8]*
-; CHECK-NEXT:    [[DEST_I812:%.*]] = bitcast [16 x i8]* [[DEST_I81]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[DEST_I812]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[SRC_I8]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    call void @may_throw() [[ATTR2:#.*]]
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[DEST_I8:%.*]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %src = alloca [16 x i8]
