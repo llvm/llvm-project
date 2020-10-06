@@ -409,6 +409,7 @@ void StackMaps::parseStatepointOpers(const MachineInstr &MI,
 
     SmallVector<std::pair<unsigned, unsigned>, 8> GCPairs;
     unsigned NumGCPairs = SO.getGCPointerMap(GCPairs);
+    (void)NumGCPairs;
     LLVM_DEBUG(dbgs() << "NumGCPairs = " << NumGCPairs << "\n");
 
     auto MOB = MI.operands_begin();
