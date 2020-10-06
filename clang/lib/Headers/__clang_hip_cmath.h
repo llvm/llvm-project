@@ -370,7 +370,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 #endif
 
 // Pull the new overloads we defined above into namespace std.
-// using ::abs;
+// using ::abs; - This may be considered for C++.
 using ::acos;
 using ::acosh;
 using ::asin;
@@ -419,8 +419,8 @@ using ::logb;
 using ::lrint;
 using ::lround;
 using ::modf;
-// using ::nan;
-// using ::nanf;
+// using ::nan; - This may be considered for C++.
+// using ::nanf; - This may be considered for C++.
 // using ::nanl; - This is not yet defined.
 using ::nearbyint;
 using ::nextafter;
