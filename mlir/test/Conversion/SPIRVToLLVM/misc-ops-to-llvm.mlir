@@ -1,6 +1,44 @@
 // RUN: mlir-opt -convert-spirv-to-llvm %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
+// spv.CompositeExtract
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @composite_extract_array
+spv.func @composite_extract_array(%arg: !spv.array<4x!spv.array<4xf32>>) "None" {
+  // CHECK: llvm.extractvalue %{{.*}}[1 : i32, 3 : i32] : !llvm.array<4 x array<4 x float>>
+  %0 = spv.CompositeExtract %arg[1 : i32, 3 : i32] : !spv.array<4x!spv.array<4xf32>>
+  spv.Return
+}
+
+// CHECK-LABEL: @composite_extract_vector
+spv.func @composite_extract_vector(%arg: vector<3xf32>) "None" {
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+  // CHECK: llvm.extractelement %{{.*}}[%[[ZERO]] : !llvm.i32] : !llvm.vec<3 x float>
+  %0 = spv.CompositeExtract %arg[0 : i32] : vector<3xf32>
+  spv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spv.CompositeInsert
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @composite_insert_struct
+spv.func @composite_insert_struct(%arg0: i32, %arg1: !spv.struct<f32, !spv.array<4xi32>>) "None" {
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[1 : i32, 3 : i32] : !llvm.struct<packed (float, array<4 x i32>)>
+  %0 = spv.CompositeInsert %arg0, %arg1[1 : i32, 3 : i32] : i32 into !spv.struct<f32, !spv.array<4xi32>>
+  spv.Return
+}
+
+// CHECK-LABEL: @composite_insert_vector
+spv.func @composite_insert_vector(%arg0: vector<3xf32>, %arg1: f32) "None" {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : !llvm.i32
+  // CHECK: llvm.insertelement %{{.*}}, %{{.*}}[%[[ONE]] : !llvm.i32] : !llvm.vec<3 x float>
+  %0 = spv.CompositeInsert %arg1, %arg0[1 : i32] : f32 into vector<3xf32>
+  spv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spv.Select
 //===----------------------------------------------------------------------===//
 
