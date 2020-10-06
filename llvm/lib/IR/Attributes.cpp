@@ -1859,6 +1859,10 @@ AttrBuilder AttributeFuncs::typeIncompatible(Type *Ty) {
         .addByValAttr(Ty)
         .addByRefAttr(Ty);
 
+  // Some attributes can apply to all "values" but there are no `void` values.
+  if (Ty->isVoidTy())
+    Incompatible.addAttribute(Attribute::NoUndef);
+
   return Incompatible;
 }
 

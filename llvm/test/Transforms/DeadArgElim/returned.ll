@@ -45,7 +45,7 @@ define internal %Ty* @test5(%Ty* %this) {
 
 ; Drop all these attributes
 ; CHECK-LABEL: define internal void @test6
-define internal align 8 dereferenceable_or_null(2) noalias i8* @test6() {
+define internal align 8 dereferenceable_or_null(2) noundef noalias i8* @test6() {
   ret i8* null
 }
 
