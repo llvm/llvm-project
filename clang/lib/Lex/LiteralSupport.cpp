@@ -1373,9 +1373,9 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
     if (isWide())
       PP.Diag(Loc, diag::warn_extraneous_char_constant);
     else if (isAscii() && NumCharsSoFar == 4)
-      PP.Diag(Loc, diag::ext_four_char_character_literal);
+      PP.Diag(Loc, diag::warn_four_char_character_literal);
     else if (isAscii())
-      PP.Diag(Loc, diag::ext_multichar_character_literal);
+      PP.Diag(Loc, diag::warn_multichar_character_literal);
     else
       PP.Diag(Loc, diag::err_multichar_utf_character_literal);
     IsMultiChar = true;
