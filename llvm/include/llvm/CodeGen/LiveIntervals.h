@@ -423,7 +423,7 @@ class VirtRegMap;
     /// Reg. Subsequent uses should rely on on-demand recomputation.  \note This
     /// method can result in inconsistent liveness tracking if multiple phyical
     /// registers share a regunit, and should be used cautiously.
-    void removeAllRegUnitsForPhysReg(unsigned Reg) {
+    void removeAllRegUnitsForPhysReg(MCRegister Reg) {
       for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units)
         removeRegUnit(*Units);
     }
