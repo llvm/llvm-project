@@ -662,12 +662,15 @@ bool fromJSON(const llvm::json::Value &Params, ExecuteCommandParams &R,
 }
 
 llvm::json::Value toJSON(const SymbolInformation &P) {
-  return llvm::json::Object{
+  llvm::json::Object O{
       {"name", P.name},
       {"kind", static_cast<int>(P.kind)},
       {"location", P.location},
       {"containerName", P.containerName},
   };
+  if (P.score)
+    O["score"] = *P.score;
+  return std::move(O);
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &O,
