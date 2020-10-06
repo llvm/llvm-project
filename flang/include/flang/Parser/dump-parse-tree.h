@@ -445,9 +445,6 @@ public:
   NODE(parser, OmpAtomicCapture)
   NODE(OmpAtomicCapture, Stmt1)
   NODE(OmpAtomicCapture, Stmt2)
-  NODE(parser, OmpAtomicMemoryOrderClause)
-  NODE(parser, OmpAtomicMemoryOrderClauseList)
-  NODE(parser, OmpAtomicMemoryOrderClausePostList)
   NODE(parser, OmpAtomicRead)
   NODE(parser, OmpAtomicUpdate)
   NODE(parser, OmpAtomicWrite)
@@ -489,7 +486,6 @@ public:
   NODE(parser, OmpEndCriticalDirective)
   NODE(parser, OmpEndLoopDirective)
   NODE(parser, OmpEndSectionsDirective)
-  NODE(parser, OmpHintExpr)
   NODE(parser, OmpIfClause)
   NODE_ENUM(OmpIfClause, DirectiveNameModifier)
   NODE(parser, OmpLinearClause)
@@ -502,7 +498,6 @@ public:
   NODE(parser, OmpMapType)
   NODE(OmpMapType, Always)
   NODE_ENUM(OmpMapType, Type)
-  NODE(parser, OmpMemoryOrderClause)
   static std::string GetNodeName(const llvm::omp::Clause &x) {
     return llvm::Twine(
         "llvm::omp::Clause = ", llvm::omp::getOpenMPClauseName(x))

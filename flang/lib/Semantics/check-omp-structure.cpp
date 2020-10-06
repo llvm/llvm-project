@@ -187,6 +187,15 @@ void OmpStructureChecker::Leave(const parser::OpenMPCancelConstruct &) {
   dirContext_.pop_back();
 }
 
+void OmpStructureChecker::Enter(const parser::OpenMPCriticalConstruct &x) {
+  const auto &dir{std::get<parser::OmpCriticalDirective>(x.t)};
+  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_critical);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPCriticalConstruct &) {
+  dirContext_.pop_back();
+}
+
 void OmpStructureChecker::Enter(
     const parser::OpenMPCancellationPointConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
