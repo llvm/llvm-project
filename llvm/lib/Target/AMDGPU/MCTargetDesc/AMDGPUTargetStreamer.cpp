@@ -656,9 +656,10 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
     KernelCodeSymbol->setVisibility(ELF::STV_PROTECTED);
 
   Streamer.emitLabel(KernelDescriptorSymbol);
-  Streamer.emitBytes(StringRef(
-      (const char*)&(KernelDescriptor),
-      offsetof(amdhsa::kernel_descriptor_t, kernel_code_entry_byte_offset)));
+  Streamer.emitInt32(KernelDescriptor.group_segment_fixed_size);
+  Streamer.emitInt32(KernelDescriptor.private_segment_fixed_size);
+  for (uint8_t Res : KernelDescriptor.reserved0)
+    Streamer.emitInt8(Res);
   // FIXME: Remove the use of VK_AMDGPU_REL64 in the expression below. The
   // expression being created is:
   //   (start of kernel code) - (start of kernel descriptor)
@@ -670,11 +671,12 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
           KernelDescriptorSymbol, MCSymbolRefExpr::VK_None, Context),
       Context),
       sizeof(KernelDescriptor.kernel_code_entry_byte_offset));
-  Streamer.emitBytes(StringRef(
-      (const char*)&(KernelDescriptor) +
-          offsetof(amdhsa::kernel_descriptor_t, kernel_code_entry_byte_offset) +
-          sizeof(KernelDescriptor.kernel_code_entry_byte_offset),
-      sizeof(KernelDescriptor) -
-          offsetof(amdhsa::kernel_descriptor_t, kernel_code_entry_byte_offset) -
-          sizeof(KernelDescriptor.kernel_code_entry_byte_offset)));
+  for (uint8_t Res : KernelDescriptor.reserved1)
+    Streamer.emitInt8(Res);
+  Streamer.emitInt32(KernelDescriptor.compute_pgm_rsrc3);
+  Streamer.emitInt32(KernelDescriptor.compute_pgm_rsrc1);
+  Streamer.emitInt32(KernelDescriptor.compute_pgm_rsrc2);
+  Streamer.emitInt16(KernelDescriptor.kernel_code_properties);
+  for (uint8_t Res : KernelDescriptor.reserved2)
+    Streamer.emitInt8(Res);
 }
