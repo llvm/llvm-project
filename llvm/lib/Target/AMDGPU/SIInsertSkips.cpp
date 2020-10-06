@@ -58,12 +58,13 @@ private:
   MachineDominatorTree *MDT = nullptr;
 
   MachineBasicBlock *EarlyExitBlock = nullptr;
+  bool EarlyExitClearsExec = false;
 
   bool shouldSkip(const MachineBasicBlock &From,
                   const MachineBasicBlock &To) const;
 
   bool dominatesAllReachable(MachineBasicBlock &MBB);
-  void createEarlyExitBlock(MachineBasicBlock &MBB);
+  void ensureEarlyExitBlock(MachineBasicBlock &MBB, bool ClearExec);
   void skipIfDead(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                   DebugLoc DL);
 
@@ -180,15 +181,27 @@ static void generatePsEndPgm(MachineBasicBlock &MBB,
   BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ENDPGM)).addImm(0);
 }
 
-void SIInsertSkips::createEarlyExitBlock(MachineBasicBlock &MBB) {
+void SIInsertSkips::ensureEarlyExitBlock(MachineBasicBlock &MBB,
+                                         bool ClearExec) {
   MachineFunction *MF = MBB.getParent();
   DebugLoc DL;
 
-  assert(!EarlyExitBlock);
-  EarlyExitBlock = MF->CreateMachineBasicBlock();
-  MF->insert(MF->end(), EarlyExitBlock);
+  if (!EarlyExitBlock) {
+    EarlyExitBlock = MF->CreateMachineBasicBlock();
+    MF->insert(MF->end(), EarlyExitBlock);
+    generatePsEndPgm(*EarlyExitBlock, EarlyExitBlock->end(), DL, TII);
+    EarlyExitClearsExec = false;
+  }
 
-  generatePsEndPgm(*EarlyExitBlock, EarlyExitBlock->end(), DL, TII);
+  if (ClearExec && !EarlyExitClearsExec) {
+    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+    unsigned Mov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+    Register Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+    auto ExitI = EarlyExitBlock->getFirstNonPHI();
+    assert(ExitI->getOpcode() == AMDGPU::EXP_DONE);
+    BuildMI(*EarlyExitBlock, ExitI, DL, TII->get(Mov), Exec).addImm(0);
+    EarlyExitClearsExec = true;
+  }
 }
 
 static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
@@ -233,11 +246,7 @@ void SIInsertSkips::skipIfDead(MachineBasicBlock &MBB,
   if (NoSuccessor) {
     generatePsEndPgm(MBB, I, DL, TII);
   } else {
-    if (!EarlyExitBlock) {
-      createEarlyExitBlock(MBB);
-      // Update next block pointer to reflect any new blocks
-      NextBBI = std::next(MBB.getIterator());
-    }
+    ensureEarlyExitBlock(MBB, false);
 
     MachineInstr *BranchMI =
         BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CBRANCH_EXECZ))
