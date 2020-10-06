@@ -187,7 +187,7 @@ createNewArchiveMembers(CopyConfig &Config, const Archive &Ar) {
   }
   if (Err)
     return createFileError(Config.InputFilename, std::move(Err));
-  return std::move(NewArchiveMembers);
+  return NewArchiveMembers;
 }
 
 } // end namespace objcopy
