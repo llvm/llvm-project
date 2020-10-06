@@ -306,12 +306,12 @@ s_cbranch_join s4
 s_cbranch_join 1
 // NOSICI: error: invalid operand for instruction
 // NOGFX89: error: invalid operand for instruction
-// GFX10-ERR: error: invalid operand for instruction
+// GFX10-ERR: error: instruction not supported on this GPU
 
 s_cbranch_join 100
 // NOSICI: error: invalid operand for instruction
 // NOGFX89: error: invalid operand for instruction
-// GFX10-ERR: error: invalid operand for instruction
+// GFX10-ERR: error: instruction not supported on this GPU
 
 s_abs_i32 s1, s2
 // SICI: s_abs_i32 s1, s2 ; encoding: [0x02,0x34,0x81,0xbe]
