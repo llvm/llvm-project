@@ -30,7 +30,7 @@ add_flang_library(FortranLower
   MLIRAffineToStandard
   MLIRLLVMIR
   MLIRSCFToStandard
-  MLIRStandardOps
+  MLIRStandard
 
   LINK_COMPONENTS
   Support

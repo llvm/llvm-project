@@ -961,9 +961,10 @@ MachineBasicBlock *MachineBasicBlock::splitAt(MachineInstr &MI,
   if (UpdateLiveIns) {
     // Make sure we add any physregs we define in the block as liveins to the
     // new block.
+    MachineBasicBlock::iterator Prev(&MI);
     LiveRegs.init(*MF->getSubtarget().getRegisterInfo());
     LiveRegs.addLiveOuts(*this);
-    for (auto I = rbegin(), E = SplitPoint.getReverse(); I != E; ++I)
+    for (auto I = rbegin(), E = Prev.getReverse(); I != E; ++I)
       LiveRegs.stepBackward(*I);
   }
 

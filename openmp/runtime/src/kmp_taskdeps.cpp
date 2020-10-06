@@ -520,7 +520,6 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
 
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled) {
-    OMPT_STORE_RETURN_ADDRESS(gtid);
     if (!current_task->ompt_task_info.frame.enter_frame.ptr)
       current_task->ompt_task_info.frame.enter_frame.ptr =
           OMPT_GET_FRAME_ADDRESS(0);
@@ -531,7 +530,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
           current_task ? &(current_task->ompt_task_info.frame) : NULL,
           &(new_taskdata->ompt_task_info.task_data),
           ompt_task_explicit | TASK_TYPE_DETAILS_FORMAT(new_taskdata), 1,
-          OMPT_LOAD_RETURN_ADDRESS(gtid));
+          OMPT_LOAD_OR_GET_RETURN_ADDRESS(gtid));
     }
 
     new_taskdata->ompt_task_info.frame.enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
@@ -700,7 +699,7 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
           current_task ? &(current_task->ompt_task_info.frame) : NULL,
           taskwait_task_data,
           ompt_task_explicit | ompt_task_undeferred | ompt_task_mergeable, 1,
-          OMPT_GET_RETURN_ADDRESS(0));
+          OMPT_LOAD_OR_GET_RETURN_ADDRESS(gtid));
     }
   }
 

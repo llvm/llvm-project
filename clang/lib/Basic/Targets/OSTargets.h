@@ -154,7 +154,8 @@ public:
       MinVersion = llvm::VersionTuple(5U);
       break;
     default:
-      llvm_unreachable("Unexpected OS");
+      // Conservatively return 8 bytes if OS is unknown.
+      return 64;
     }
 
     unsigned Major, Minor, Micro;

@@ -191,8 +191,8 @@
 
 // RUN: not %clang_cc1 -triple riscv32 -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix RISCV32
 // RISCV32: error: unknown target CPU 'not-a-cpu'
-// RISCV32: note: valid target CPU values are: generic-rv32, rocket-rv32, bullet-rv32, sifive-e31
+// RISCV32: note: valid target CPU values are: generic-rv32, rocket-rv32, sifive-7-rv32, sifive-e31, sifive-e76
 
 // RUN: not %clang_cc1 -triple riscv64 -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix RISCV64
 // RISCV64: error: unknown target CPU 'not-a-cpu'
-// RISCV64: note: valid target CPU values are: generic-rv64, rocket-rv64, bullet-rv64, sifive-u54
+// RISCV64: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-7-rv64, sifive-u54, sifive-u74

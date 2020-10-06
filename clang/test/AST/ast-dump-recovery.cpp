@@ -126,6 +126,12 @@ void test(int x) {
 // CHECK-NEXT:|   `-UnresolvedLookupExpr {{.*}} 'invalid'
 struct alignas(invalid()) Aligned {};
 
+auto f();
+int f(double);
+// CHECK:      VarDecl {{.*}} unknown_type_call 'int'
+// CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>'
+int unknown_type_call = f(0, 0);
+
 void InvalidInitalizer(int x) {
   struct Bar { Bar(); };
   // CHECK:     `-VarDecl {{.*}} a1 'Bar'

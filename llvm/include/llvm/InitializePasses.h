@@ -242,6 +242,7 @@ void initializeLoopIdiomRecognizeLegacyPassPass(PassRegistry&);
 void initializeLoopInfoWrapperPassPass(PassRegistry&);
 void initializeLoopInstSimplifyLegacyPassPass(PassRegistry&);
 void initializeLoopInterchangePass(PassRegistry&);
+void initializeLoopFlattenLegacyPassPass(PassRegistry&);
 void initializeLoopLoadEliminationPass(PassRegistry&);
 void initializeLoopPassPass(PassRegistry&);
 void initializeLoopPredicationLegacyPassPass(PassRegistry&);

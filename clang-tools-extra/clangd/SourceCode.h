@@ -181,6 +181,8 @@ struct Edit {
   tooling::Replacements Replacements;
   std::string InitialCode;
 
+  Edit() = default;
+
   Edit(llvm::StringRef Code, tooling::Replacements Reps)
       : Replacements(std::move(Reps)), InitialCode(Code) {}
 
@@ -245,6 +247,10 @@ struct SpelledWord {
                                               const syntax::TokenBuffer &TB,
                                               const LangOptions &LangOpts);
 };
+
+/// Return true if the \p TokenName is in the list of reversed keywords of the
+/// language.
+bool isKeyword(llvm::StringRef TokenName, const LangOptions &LangOpts);
 
 /// Heuristically determine namespaces visible at a point, without parsing Code.
 /// This considers using-directives and enclosing namespace-declarations that

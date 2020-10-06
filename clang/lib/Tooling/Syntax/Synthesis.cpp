@@ -183,6 +183,8 @@ syntax::Tree *allocateTree(syntax::Arena &A, syntax::NodeKind Kind) {
     return new (A.getAllocator()) syntax::CallArguments;
   case syntax::NodeKind::ParameterDeclarationList:
     return new (A.getAllocator()) syntax::ParameterDeclarationList;
+  case syntax::NodeKind::DeclaratorList:
+    return new (A.getAllocator()) syntax::DeclaratorList;
   }
   llvm_unreachable("unknown node kind");
 }

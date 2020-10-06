@@ -26,12 +26,10 @@
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-DIS,CHECK-O,CHECK-O2,CHECK-O23SZ,CHECK-O123 --dump-input=fail
 ;
 ; CHECK-O: Starting {{.*}}Module pass manager run.
-; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: ForceFunctionAttrsPass
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: AddDiscriminatorsPass
 ; CHECK-EP-PIPELINE-START-NEXT: Running pass: NoOpModulePass
-; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-O-NEXT: Starting {{.*}}Function pass manager run.
@@ -171,9 +169,7 @@
 ; CHECK-O-NEXT: Finished {{.*}}Function pass manager run.
 ; CHECK-O-NEXT: Finished CGSCC pass manager run.
 ; CHECK-O-NEXT: Finished {{.*}}Module pass manager run.
-; CHECK-O-NEXT: Finished {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
-; CHECK-O-NEXT: Finished {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: NameAnonGlobalPass
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 

@@ -160,11 +160,11 @@ body:             |
   ; CHECK:   renamable $r3, dead $cpsr = tSUBrr renamable $r1, killed renamable $r3, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
   ; CHECK:   renamable $r3, dead $cpsr = tADDi8 killed renamable $r3, 3, 14 /* CC::al */, $noreg
-  ; CHECK:   dead renamable $lr = nuw nsw t2ADDrs killed renamable $r12, killed renamable $r3, 19, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $r12, killed renamable $r3, 19, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r3 = tMOVr $r1, 14 /* CC::al */, $noreg
   ; CHECK:   $r12 = tMOVr $r0, 14 /* CC::al */, $noreg
+  ; CHECK:   $r4 = tMOVr killed $lr, 14 /* CC::al */, $noreg
   ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r3
-  ; CHECK:   $r4 = tMOVr $lr, 14 /* CC::al */, $noreg
   ; CHECK: bb.1.do.body.i:
   ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1, $r2, $r4, $r12
@@ -175,8 +175,8 @@ body:             |
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   liveins: $q0, $r0, $r1, $r2, $r4
   ; CHECK:   $s4 = VMOVSR $r1, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = t2DLS killed $r4
   ; CHECK:   renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s3, killed renamable $s3, 14 /* CC::al */, $noreg, implicit killed $q0
+  ; CHECK:   $lr = t2DLS killed $r4
   ; CHECK:   renamable $s4 = VUITOS killed renamable $s4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $s0 = nnan ninf nsz arcp contract afn reassoc VDIVS killed renamable $s0, killed renamable $s4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r3 = VMOVRS killed renamable $s0, 14 /* CC::al */, $noreg

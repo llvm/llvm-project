@@ -46,9 +46,6 @@ public:
   /// register. StackSlot values do not exist in the MC layer, see
   /// Register::isStackSlot() for the more information on them.
   ///
-  /// Note that isVirtualRegister() and isPhysicalRegister() cannot handle stack
-  /// slots, so if a variable may contains a stack slot, always check
-  /// isStackSlot() first.
   static bool isStackSlot(unsigned Reg) {
     return !(Reg & VirtualRegFlag) &&
            uint32_t(Reg & ~VirtualRegFlag) >= FirstStackSlot;
@@ -57,8 +54,8 @@ public:
   /// Return true if the specified register number is in
   /// the physical register namespace.
   static bool isPhysicalRegister(unsigned Reg) {
-    assert(!isStackSlot(Reg) && "Not a register! Check isStackSlot() first.");
-    return Reg >= FirstPhysicalReg && !(Reg & VirtualRegFlag);
+    return Reg >= FirstPhysicalReg && !(Reg & VirtualRegFlag) &&
+           !isStackSlot(Reg);
   }
 
   /// Return true if the specified register number is in the physical register
@@ -69,6 +66,12 @@ public:
 
   constexpr operator unsigned() const {
     return Reg;
+  }
+
+  /// Check the provided unsigned value is a valid MCRegister.
+  static MCRegister from(unsigned Val) {
+    assert(Val == NoRegister || isPhysicalRegister(Val));
+    return MCRegister(Val);
   }
 
   unsigned id() const {

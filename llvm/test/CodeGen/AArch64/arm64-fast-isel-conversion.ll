@@ -1,4 +1,4 @@
-; RUN: llc -O0 -fast-isel -fast-isel-abort=1 -verify-machineinstrs -mtriple=arm64-apple-darwin -mcpu=cyclone < %s | FileCheck %s
+; RUN: llc -O0 -fast-isel -fast-isel-abort=1 -verify-machineinstrs -mtriple=arm64-apple-darwin -mcpu=cyclone < %s | FileCheck -enable-var-scope %s
 
 ;; Test various conversions.
 define zeroext i32 @trunc_(i8 zeroext %a, i16 zeroext %b, i32 %c, i64 %d) nounwind ssp {
@@ -49,13 +49,12 @@ entry:
 ; CHECK: strh w1, [sp, #12]
 ; CHECK: str w2, [sp, #8]
 ; CHECK: str x3, [sp]
-; CHECK: ldrb w8, [sp, #15]
-; CHECK: strh w8, [sp, #12]
-; CHECK: ldrh w8, [sp, #12]
-; CHECK: str w8, [sp, #8]
-; CHECK: ldr w8, [sp, #8]
-; CHECK: ; kill: def $x8 killed $w8
-; CHECK: str x8, [sp]
+; CHECK: ldrb [[REG0:w[0-9]+]], [sp, #15]
+; CHECK: strh [[REG0]], [sp, #12]
+; CHECK: ldrh [[REG1:w[0-9]+]], [sp, #12]
+; CHECK: str [[REG1]], [sp, #8]
+; CHECK: ldr w[[REG2:[0-9]+]], [sp, #8]
+; CHECK: str x[[REG2]], [sp]
 ; CHECK: ldr x0, [sp]
 ; CHECK: ret
   %a.addr = alloca i8, align 1
@@ -105,12 +104,12 @@ entry:
 ; CHECK: strh w1, [sp, #12]
 ; CHECK: str w2, [sp, #8]
 ; CHECK: str x3, [sp]
-; CHECK: ldrsb w8, [sp, #15]
-; CHECK: strh w8, [sp, #12]
-; CHECK: ldrsh w8, [sp, #12]
-; CHECK: str w8, [sp, #8]
-; CHECK: ldrsw x8, [sp, #8]
-; CHECK: str x8, [sp]
+; CHECK: ldrsb [[REG0:w[0-9]+]], [sp, #15]
+; CHECK: strh [[REG0]], [sp, #12]
+; CHECK: ldrsh [[REG1:w[0-9]+]], [sp, #12]
+; CHECK: str [[REG1]], [sp, #8]
+; CHECK: ldrsw [[REG2:x[0-9]+]], [sp, #8]
+; CHECK: str [[REG2]], [sp]
 ; CHECK: ldr x0, [sp]
 ; CHECK: ret
   %a.addr = alloca i8, align 1
@@ -166,8 +165,8 @@ entry:
 define signext i16 @sext_i1_i16(i1 %a) nounwind ssp {
 entry:
 ; CHECK-LABEL: sext_i1_i16
-; CHECK: sbfx w8, w0, #0, #1
-; CHECK-NEXT: sxth	w0, w8
+; CHECK: sbfx [[REG:w[0-9]+]], w0, #0, #1
+; CHECK: sxth w0, [[REG]]
   %conv = sext i1 %a to i16
   ret i16 %conv
 }
@@ -176,8 +175,8 @@ entry:
 define signext i8 @sext_i1_i8(i1 %a) nounwind ssp {
 entry:
 ; CHECK-LABEL: sext_i1_i8
-; CHECK: sbfx w8, w0, #0, #1
-; CHECK-NEXT: sxtb w0, w8
+; CHECK: sbfx [[REG:w[0-9]+]], w0, #0, #1
+; CHECK: sxtb w0, [[REG]]
   %conv = sext i1 %a to i8
   ret i8 %conv
 }
@@ -240,8 +239,8 @@ entry:
 define float @sitofp_sw_i1(i1 %a) nounwind ssp {
 entry:
 ; CHECK-LABEL: sitofp_sw_i1
-; CHECK: sbfx w8, w0, #0, #1
-; CHECK: scvtf s0, w8
+; CHECK: sbfx [[REG:w[0-9]+]], w0, #0, #1
+; CHECK: scvtf s0, [[REG]]
   %conv = sitofp i1 %a to float
   ret float %conv
 }
@@ -250,8 +249,8 @@ entry:
 define float @sitofp_sw_i8(i8 %a) nounwind ssp {
 entry:
 ; CHECK-LABEL: sitofp_sw_i8
-; CHECK: sxtb w8, w0
-; CHECK: scvtf s0, w8
+; CHECK: sxtb [[REG:w[0-9]+]], w0
+; CHECK: scvtf s0, [[REG]]
   %conv = sitofp i8 %a to float
   ret float %conv
 }
@@ -304,8 +303,8 @@ entry:
 define float @uitofp_sw_i1(i1 %a) nounwind ssp {
 entry:
 ; CHECK-LABEL: uitofp_sw_i1
-; CHECK: and w8, w0, #0x1
-; CHECK: ucvtf s0, w8
+; CHECK: and [[REG:w[0-9]+]], w0, #0x1
+; CHECK: ucvtf s0, [[REG]]
   %conv = uitofp i1 %a to float
   ret float %conv
 }
@@ -374,7 +373,8 @@ entry:
 define zeroext i16 @i64_trunc_i16(i64 %a) nounwind ssp {
 entry:
 ; CHECK-LABEL: i64_trunc_i16
-; CHECK: and [[REG2:w[0-9]+]], w0, #0xffff
+; CHECK: mov x[[TMP:[0-9]+]], x0
+; CHECK: and [[REG2:w[0-9]+]], w[[TMP]], #0xffff{{$}}
 ; CHECK: uxth w0, [[REG2]]
   %conv = trunc i64 %a to i16
   ret i16 %conv
@@ -383,7 +383,8 @@ entry:
 define zeroext i8 @i64_trunc_i8(i64 %a) nounwind ssp {
 entry:
 ; CHECK-LABEL: i64_trunc_i8
-; CHECK: and [[REG2:w[0-9]+]], w0, #0xff
+; CHECK: mov x[[TMP:[0-9]+]], x0
+; CHECK: and [[REG2:w[0-9]+]], w[[TMP]], #0xff{{$}}
 ; CHECK: uxtb w0, [[REG2]]
   %conv = trunc i64 %a to i8
   ret i8 %conv
@@ -392,7 +393,8 @@ entry:
 define zeroext i1 @i64_trunc_i1(i64 %a) nounwind ssp {
 entry:
 ; CHECK-LABEL: i64_trunc_i1
-; CHECK: and [[REG2:w[0-9]+]], w0, #0x1
+; CHECK: mov x[[TMP:[0-9]+]], x0
+; CHECK: and [[REG2:w[0-9]+]], w[[TMP]], #0x1{{$}}
 ; CHECK: and w0, [[REG2]], #0x1
   %conv = trunc i64 %a to i1
   ret i1 %conv

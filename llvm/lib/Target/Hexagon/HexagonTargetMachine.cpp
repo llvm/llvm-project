@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
@@ -270,6 +271,18 @@ void HexagonTargetMachine::adjustPassManager(PassManagerBuilder &PMB) {
       PassManagerBuilder::EP_LoopOptimizerEnd,
       [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
         PM.add(createHexagonVectorLoopCarriedReuseLegacyPass());
+      });
+}
+
+void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
+                                                        bool DebugPassManager) {
+  PB.registerOptimizerLastEPCallback(
+      [=](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+        LoopPassManager LPM(DebugPassManager);
+        FunctionPassManager FPM(DebugPassManager);
+        LPM.addPass(HexagonVectorLoopCarriedReusePass());
+        FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
+        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
 }
 

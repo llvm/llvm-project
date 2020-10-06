@@ -14,21 +14,21 @@ for.body.lr.ph:                                   ; preds = %entry
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
 ; SOURCE-SCHED: ldr
 ; SOURCE-SCHED: ldr
-; SOURCE-SCHED: add
+; SOURCE-SCHED: ldr
+; SOURCE-SCHED: ldr
 ; SOURCE-SCHED: ldr
 ; SOURCE-SCHED: add
-; SOURCE-SCHED: ldr
+; SOURCE-SCHED: add
+; SOURCE-SCHED: add
 ; SOURCE-SCHED: add
 ; SOURCE-SCHED: ldr
-; SOURCE-SCHED: add
 ; SOURCE-SCHED: str
 ; SOURCE-SCHED: str
 ; SOURCE-SCHED: str
 ; SOURCE-SCHED: str
-; SOURCE-SCHED: ldr
 ; SOURCE-SCHED: bl
-; SOURCE-SCHED: add
 ; SOURCE-SCHED: ldr
+; SOURCE-SCHED: add
 ; SOURCE-SCHED: cmp
 ; SOURCE-SCHED: bne
   %i.031 = phi i32 [ 0, %for.body.lr.ph ], [ %0, %for.body ]

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeCompletionStrings.h"
+#include "TestTU.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -54,6 +55,14 @@ TEST_F(CompletionStringTest, DocumentationWithAnnotation) {
   Builder.AddAnnotation("Ano");
   EXPECT_EQ(formatDocumentation(*Builder.TakeString(), "Is this brief?"),
             "Annotation: Ano\n\nIs this brief?");
+}
+
+TEST_F(CompletionStringTest, GetDeclCommentBadUTF8) {
+  // <ff> is not a valid byte here, should be replaced by encoded <U+FFFD>.
+  auto TU = TestTU::withCode("/*x\xffy*/ struct X;");
+  auto AST = TU.build();
+  EXPECT_EQ("x\xef\xbf\xbdy",
+            getDeclComment(AST.getASTContext(), findDecl(AST, "X")));
 }
 
 TEST_F(CompletionStringTest, MultipleAnnotations) {

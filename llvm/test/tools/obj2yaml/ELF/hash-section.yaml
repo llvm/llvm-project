@@ -74,3 +74,40 @@ Sections:
   - Name:    .oversized
     Type:    SHT_HASH
     Content: '0100000002000000030000000400000000'
+
+## Check how we dump the "EntSize" field. When the sh_entsize is 4,
+## we don't print it, because it is the default value for the SHT_HASH section.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: obj2yaml %t3 | FileCheck %s --check-prefix=ENT-SIZE
+
+# ENT-SIZE:      - Name:    .hash.entsize.0
+# ENT-SIZE-NEXT:   Type:    SHT_HASH
+# ENT-SIZE-NEXT:   EntSize: 0x0000000000000000
+# ENT-SIZE-NEXT:   Content: ''
+# ENT-SIZE-NEXT: - Name:    .hash.entsize.4.default
+# ENT-SIZE-NEXT:   Type:    SHT_HASH
+# ENT-SIZE-NEXT:   Content: ''
+# ENT-SIZE-NEXT: - Name:    .hash.entsize.255
+# ENT-SIZE-NEXT:   Type:    SHT_HASH
+# ENT-SIZE-NEXT:   EntSize: 0x00000000000000FF
+# ENT-SIZE-NEXT:   Content: ''
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .hash.entsize.0
+    Type:    SHT_HASH
+    EntSize: 0
+    Size:    0
+  - Name:    .hash.entsize.4.default
+    Type:    SHT_HASH
+    EntSize: 4
+    Size:    0
+  - Name:    .hash.entsize.255
+    Type:    SHT_HASH
+    EntSize: 255
+    Size:    0

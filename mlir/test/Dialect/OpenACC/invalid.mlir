@@ -1,8 +1,8 @@
-// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -verify-diagnostics %s
+// RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
 acc.loop gang {
-  "some.op"() : () -> ()
+  "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq}
 
@@ -10,7 +10,7 @@ acc.loop gang {
 
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
 acc.loop worker {
-  "some.op"() : () -> ()
+  "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq}
 
@@ -18,7 +18,7 @@ acc.loop worker {
 
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
 acc.loop vector {
-  "some.op"() : () -> ()
+  "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq}
 
@@ -26,7 +26,7 @@ acc.loop vector {
 
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
 acc.loop gang worker {
-  "some.op"() : () -> ()
+  "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq}
 
@@ -34,7 +34,7 @@ acc.loop gang worker {
 
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
 acc.loop gang vector {
-  "some.op"() : () -> ()
+  "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq}
 
@@ -42,7 +42,7 @@ acc.loop gang vector {
 
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
 acc.loop worker vector {
-  "some.op"() : () -> ()
+  "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq}
 
@@ -50,7 +50,7 @@ acc.loop worker vector {
 
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
 acc.loop gang worker vector {
-  "some.op"() : () -> ()
+  "test.openacc_dummy_op"() : () -> ()
   acc.yield
 } attributes {seq}
 
@@ -147,7 +147,7 @@ acc.loop {
 // -----
 
 acc.loop {
-  "some.op"() ({
+  "test.openacc_dummy_op"() ({
     // expected-error@+1 {{'acc.shutdown' op cannot be nested in a compute operation}}
     acc.shutdown
   }) : () -> ()

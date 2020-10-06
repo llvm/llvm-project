@@ -10,8 +10,8 @@
 ; CHECK-NEXT:              DW_AT_stmt_list	(0x00000000)
 ; CHECK-NEXT:              DW_AT_comp_dir	("/usr/local/google/home/sbc/dev/wasm/simple")
 ; CHECK-NEXT:              DW_AT_GNU_pubnames	(true)
-; CHECK-NEXT:              DW_AT_low_pc		(0x0000000000000002)
-; CHECK-NEXT:              DW_AT_high_pc		(0x0000000000000004)
+; CHECK-NEXT:              DW_AT_low_pc		(0x00000002)
+; CHECK-NEXT:              DW_AT_high_pc	(0x00000004)
 
 ; CHECK: 0x00000026:   DW_TAG_variable
 ; CHECK-NEXT:                DW_AT_name	("foo")
@@ -44,8 +44,8 @@
 ; CHECK-NEXT:                DW_AT_prototyped	(true)
 
 ; CHECK: 0x0000005a:   DW_TAG_subprogram
-; CHECK-NEXT:                DW_AT_low_pc	(0x0000000000000002)
-; CHECK-NEXT:                DW_AT_high_pc	(0x0000000000000004)
+; CHECK-NEXT:                DW_AT_low_pc	(0x00000002)
+; CHECK-NEXT:                DW_AT_high_pc	(0x00000004)
 ; CHECK-NEXT:                DW_AT_frame_base	(DW_OP_WASM_location 0x3 0x0, DW_OP_stack_value)
 ; CHECK-NEXT:                DW_AT_name	("f2")
 ; CHECK-NEXT:                DW_AT_decl_file	("/usr/local/google/home/sbc/dev/wasm/simple{{[/\\]}}test.c")

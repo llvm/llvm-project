@@ -10,10 +10,10 @@ define i32 @_Z3foov() {
 ; CHECK-NEXT:    movw $-15498, {{[0-9]+}}(%esp) # imm = 0xC376
 ; CHECK-NEXT:    movw $19417, {{[0-9]+}}(%esp) # imm = 0x4BD9
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    cmpw $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movb $1, %cl
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; CHECK-NEXT:    cmpw $0, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %lor.rhs
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -21,11 +21,11 @@ define i32 @_Z3foov() {
 ; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:  .LBB0_2: # %lor.end
-; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
-; CHECK-NEXT:    andb $1, %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; CHECK-NEXT:    cmpl %eax, %ecx
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %cl # 1-byte Reload
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    movzbl %cl, %ecx
+; CHECK-NEXT:    cmpl %ecx, %eax
 ; CHECK-NEXT:    setl %al
 ; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    movzbl %al, %eax

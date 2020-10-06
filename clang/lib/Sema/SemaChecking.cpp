@@ -1570,11 +1570,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (SemaBuiltinSetjmp(TheCall))
       return ExprError();
     break;
-  case Builtin::BI_setjmp:
-  case Builtin::BI_setjmpex:
-    if (checkArgCount(*this, TheCall, 1))
-      return true;
-    break;
   case Builtin::BI__builtin_classify_type:
     if (checkArgCount(*this, TheCall, 1)) return true;
     TheCall->setType(Context.IntTy);

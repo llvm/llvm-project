@@ -16,8 +16,8 @@ define i8 @load_i8(i8* %ptr) {
 define void @store_i8(i8* %ptr, i8 %v) {
 ; CHECK-O0-LABEL: store_i8:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    # kill: def $sil killed $sil killed $esi
-; CHECK-O0-NEXT:    movb %sil, (%rdi)
+; CHECK-O0-NEXT:    movb %sil, %al
+; CHECK-O0-NEXT:    movb %al, (%rdi)
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: store_i8:
@@ -46,8 +46,8 @@ define i16 @load_i16(i16* %ptr) {
 define void @store_i16(i16* %ptr, i16 %v) {
 ; CHECK-O0-LABEL: store_i16:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    # kill: def $si killed $si killed $esi
-; CHECK-O0-NEXT:    movw %si, (%rdi)
+; CHECK-O0-NEXT:    movw %si, %ax
+; CHECK-O0-NEXT:    movw %ax, (%rdi)
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: store_i16:
@@ -231,11 +231,10 @@ define i128 @load_i128(i128* %ptr) {
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-O0-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-O0-NEXT:    xorl %eax, %eax
-; CHECK-O0-NEXT:    # kill: def $rax killed $eax
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; CHECK-O0-NEXT:    movl %eax, %ebx
+; CHECK-O0-NEXT:    movq %rbx, %rax
+; CHECK-O0-NEXT:    movq %rbx, %rdx
+; CHECK-O0-NEXT:    movq %rbx, %rcx
 ; CHECK-O0-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-O0-NEXT:    popq %rbx
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
@@ -264,24 +263,24 @@ define void @store_i128(i128* %ptr, i128 %v) {
 ; CHECK-O0-NEXT:    pushq %rbx
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-O0-NEXT:    .cfi_offset %rbx, -16
-; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    movq 8(%rdi), %rcx
 ; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-O0-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    movq 8(%rdi), %rdx
 ; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-O0-NEXT:    jmp .LBB16_1
 ; CHECK-O0-NEXT:  .LBB16_1: # %atomicrmw.start
 ; CHECK-O0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; CHECK-O0-NEXT:    lock cmpxchg16b (%rsi)
-; CHECK-O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-O0-NEXT:    jne .LBB16_1
 ; CHECK-O0-NEXT:    jmp .LBB16_2
 ; CHECK-O0-NEXT:  .LBB16_2: # %atomicrmw.end
@@ -317,24 +316,22 @@ define i256 @load_i256(i256* %ptr) {
 ; CHECK-O0-NEXT:    subq $56, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-O0-NEXT:    movq %rdi, %rax
-; CHECK-O0-NEXT:    movl $32, %ecx
-; CHECK-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; CHECK-O0-NEXT:    xorl %r8d, %r8d
-; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-O0-NEXT:    movq %rcx, %rdi
-; CHECK-O0-NEXT:    movl %r8d, %ecx
 ; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movl $32, %edi
+; CHECK-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; CHECK-O0-NEXT:    xorl %ecx, %ecx
 ; CHECK-O0-NEXT:    callq __atomic_load
-; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
-; CHECK-O0-NEXT:    movq %rsi, 24(%rdi)
-; CHECK-O0-NEXT:    movq %rdx, 16(%rdi)
-; CHECK-O0-NEXT:    movq %rcx, 8(%rdi)
-; CHECK-O0-NEXT:    movq %rax, (%rdi)
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %r8
+; CHECK-O0-NEXT:    movq %r8, 24(%rdi)
+; CHECK-O0-NEXT:    movq %rsi, 16(%rdi)
+; CHECK-O0-NEXT:    movq %rdx, 8(%rdi)
+; CHECK-O0-NEXT:    movq %rcx, (%rdi)
 ; CHECK-O0-NEXT:    addq $56, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
@@ -369,18 +366,18 @@ define void @store_i256(i256* %ptr, i256 %v) {
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    subq $40, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-O0-NEXT:    xorl %eax, %eax
-; CHECK-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %r9
-; CHECK-O0-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; CHECK-O0-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
-; CHECK-O0-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; CHECK-O0-NEXT:    movq %rcx, %rax
+; CHECK-O0-NEXT:    movq %rdx, (%rsp) # 8-byte Spill
+; CHECK-O0-NEXT:    movq %rsi, %r9
+; CHECK-O0-NEXT:    movq %rdi, %rsi
+; CHECK-O0-NEXT:    movq (%rsp), %rdi # 8-byte Reload
+; CHECK-O0-NEXT:    xorl %ecx, %ecx
+; CHECK-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; CHECK-O0-NEXT:    movq %r9, {{[0-9]+}}(%rsp)
+; CHECK-O0-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
+; CHECK-O0-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
-; CHECK-O0-NEXT:    movl $32, %ecx
-; CHECK-O0-NEXT:    movq %rdi, (%rsp) # 8-byte Spill
-; CHECK-O0-NEXT:    movq %rcx, %rdi
-; CHECK-O0-NEXT:    movq (%rsp), %rsi # 8-byte Reload
-; CHECK-O0-NEXT:    movq %r9, %rdx
-; CHECK-O0-NEXT:    movl %eax, %ecx
+; CHECK-O0-NEXT:    movl $32, %edi
 ; CHECK-O0-NEXT:    callq __atomic_store
 ; CHECK-O0-NEXT:    addq $40, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
@@ -411,10 +408,10 @@ define void @store_i256(i256* %ptr, i256 %v) {
 define void @vec_store(i32* %p0, <2 x i32> %vec) {
 ; CHECK-O0-CUR-LABEL: vec_store:
 ; CHECK-O0-CUR:       # %bb.0:
-; CHECK-O0-CUR-NEXT:    vmovd %xmm0, %eax
-; CHECK-O0-CUR-NEXT:    vpextrd $1, %xmm0, %ecx
-; CHECK-O0-CUR-NEXT:    movl %eax, (%rdi)
-; CHECK-O0-CUR-NEXT:    movl %ecx, 4(%rdi)
+; CHECK-O0-CUR-NEXT:    vmovd %xmm0, %ecx
+; CHECK-O0-CUR-NEXT:    vpextrd $1, %xmm0, %eax
+; CHECK-O0-CUR-NEXT:    movl %ecx, (%rdi)
+; CHECK-O0-CUR-NEXT:    movl %eax, 4(%rdi)
 ; CHECK-O0-CUR-NEXT:    retq
 ;
 ; CHECK-O3-CUR-LABEL: vec_store:
@@ -448,10 +445,10 @@ define void @vec_store(i32* %p0, <2 x i32> %vec) {
 define void @vec_store_unaligned(i32* %p0, <2 x i32> %vec) {
 ; CHECK-O0-CUR-LABEL: vec_store_unaligned:
 ; CHECK-O0-CUR:       # %bb.0:
-; CHECK-O0-CUR-NEXT:    vmovd %xmm0, %eax
-; CHECK-O0-CUR-NEXT:    vpextrd $1, %xmm0, %ecx
-; CHECK-O0-CUR-NEXT:    movl %eax, (%rdi)
-; CHECK-O0-CUR-NEXT:    movl %ecx, 4(%rdi)
+; CHECK-O0-CUR-NEXT:    vmovd %xmm0, %ecx
+; CHECK-O0-CUR-NEXT:    vpextrd $1, %xmm0, %eax
+; CHECK-O0-CUR-NEXT:    movl %ecx, (%rdi)
+; CHECK-O0-CUR-NEXT:    movl %eax, 4(%rdi)
 ; CHECK-O0-CUR-NEXT:    retq
 ;
 ; CHECK-O3-CUR-LABEL: vec_store_unaligned:
@@ -594,17 +591,11 @@ define i64 @load_fold_add1(i64* %p) {
 }
 
 define i64 @load_fold_add2(i64* %p, i64 %v2) {
-; CHECK-O0-LABEL: load_fold_add2:
-; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    addq (%rdi), %rsi
-; CHECK-O0-NEXT:    movq %rsi, %rax
-; CHECK-O0-NEXT:    retq
-;
-; CHECK-O3-LABEL: load_fold_add2:
-; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    movq %rsi, %rax
-; CHECK-O3-NEXT:    addq (%rdi), %rax
-; CHECK-O3-NEXT:    retq
+; CHECK-LABEL: load_fold_add2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    addq (%rdi), %rax
+; CHECK-NEXT:    retq
   %v = load atomic i64, i64* %p unordered, align 8
   %ret = add i64 %v, %v2
   ret i64 %ret
@@ -694,17 +685,11 @@ define i64 @load_fold_mul1(i64* %p) {
 }
 
 define i64 @load_fold_mul2(i64* %p, i64 %v2) {
-; CHECK-O0-LABEL: load_fold_mul2:
-; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    imulq (%rdi), %rsi
-; CHECK-O0-NEXT:    movq %rsi, %rax
-; CHECK-O0-NEXT:    retq
-;
-; CHECK-O3-LABEL: load_fold_mul2:
-; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    movq %rsi, %rax
-; CHECK-O3-NEXT:    imulq (%rdi), %rax
-; CHECK-O3-NEXT:    retq
+; CHECK-LABEL: load_fold_mul2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    imulq (%rdi), %rax
+; CHECK-NEXT:    retq
   %v = load atomic i64, i64* %p unordered, align 8
   %ret = mul i64 %v, %v2
   ret i64 %ret
@@ -1129,8 +1114,8 @@ define i64 @load_fold_shl1(i64* %p) {
 define i64 @load_fold_shl2(i64* %p, i64 %v2) {
 ; CHECK-O0-LABEL: load_fold_shl2:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    movq %rsi, %rcx
+; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    # kill: def $cl killed $rcx
 ; CHECK-O0-NEXT:    shlq %cl, %rax
 ; CHECK-O0-NEXT:    retq
@@ -1179,8 +1164,8 @@ define i64 @load_fold_lshr1(i64* %p) {
 define i64 @load_fold_lshr2(i64* %p, i64 %v2) {
 ; CHECK-O0-LABEL: load_fold_lshr2:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    movq %rsi, %rcx
+; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    # kill: def $cl killed $rcx
 ; CHECK-O0-NEXT:    shrq %cl, %rax
 ; CHECK-O0-NEXT:    retq
@@ -1229,8 +1214,8 @@ define i64 @load_fold_ashr1(i64* %p) {
 define i64 @load_fold_ashr2(i64* %p, i64 %v2) {
 ; CHECK-O0-LABEL: load_fold_ashr2:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    movq %rsi, %rcx
+; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    # kill: def $cl killed $rcx
 ; CHECK-O0-NEXT:    sarq %cl, %rax
 ; CHECK-O0-NEXT:    retq
@@ -1283,17 +1268,11 @@ define i64 @load_fold_and1(i64* %p) {
 }
 
 define i64 @load_fold_and2(i64* %p, i64 %v2) {
-; CHECK-O0-LABEL: load_fold_and2:
-; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    andq (%rdi), %rsi
-; CHECK-O0-NEXT:    movq %rsi, %rax
-; CHECK-O0-NEXT:    retq
-;
-; CHECK-O3-LABEL: load_fold_and2:
-; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    movq %rsi, %rax
-; CHECK-O3-NEXT:    andq (%rdi), %rax
-; CHECK-O3-NEXT:    retq
+; CHECK-LABEL: load_fold_and2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    andq (%rdi), %rax
+; CHECK-NEXT:    retq
   %v = load atomic i64, i64* %p unordered, align 8
   %ret = and i64 %v, %v2
   ret i64 %ret
@@ -1336,17 +1315,11 @@ define i64 @load_fold_or1(i64* %p) {
 }
 
 define i64 @load_fold_or2(i64* %p, i64 %v2) {
-; CHECK-O0-LABEL: load_fold_or2:
-; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    orq (%rdi), %rsi
-; CHECK-O0-NEXT:    movq %rsi, %rax
-; CHECK-O0-NEXT:    retq
-;
-; CHECK-O3-LABEL: load_fold_or2:
-; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    movq %rsi, %rax
-; CHECK-O3-NEXT:    orq (%rdi), %rax
-; CHECK-O3-NEXT:    retq
+; CHECK-LABEL: load_fold_or2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    orq (%rdi), %rax
+; CHECK-NEXT:    retq
   %v = load atomic i64, i64* %p unordered, align 8
   %ret = or i64 %v, %v2
   ret i64 %ret
@@ -1389,17 +1362,11 @@ define i64 @load_fold_xor1(i64* %p) {
 }
 
 define i64 @load_fold_xor2(i64* %p, i64 %v2) {
-; CHECK-O0-LABEL: load_fold_xor2:
-; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    xorq (%rdi), %rsi
-; CHECK-O0-NEXT:    movq %rsi, %rax
-; CHECK-O0-NEXT:    retq
-;
-; CHECK-O3-LABEL: load_fold_xor2:
-; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    movq %rsi, %rax
-; CHECK-O3-NEXT:    xorq (%rdi), %rax
-; CHECK-O3-NEXT:    retq
+; CHECK-LABEL: load_fold_xor2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    xorq (%rdi), %rax
+; CHECK-NEXT:    retq
   %v = load atomic i64, i64* %p unordered, align 8
   %ret = xor i64 %v, %v2
   ret i64 %ret
@@ -1434,9 +1401,7 @@ define i1 @load_fold_icmp1(i64* %p) {
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    subq $15, %rax
-; CHECK-O0-NEXT:    sete %cl
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-O0-NEXT:    movb %cl, %al
+; CHECK-O0-NEXT:    sete %al
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_icmp1:
@@ -1454,9 +1419,7 @@ define i1 @load_fold_icmp2(i64* %p, i64 %v2) {
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    subq %rsi, %rax
-; CHECK-O0-NEXT:    sete %cl
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-O0-NEXT:    movb %cl, %al
+; CHECK-O0-NEXT:    sete %al
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_icmp2:
@@ -1475,9 +1438,7 @@ define i1 @load_fold_icmp3(i64* %p1, i64* %p2) {
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    movq (%rsi), %rcx
 ; CHECK-O0-NEXT:    subq %rcx, %rax
-; CHECK-O0-NEXT:    sete %cl
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-O0-NEXT:    movb %cl, %al
+; CHECK-O0-NEXT:    sete %al
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-CUR-LABEL: load_fold_icmp3:
@@ -1620,17 +1581,17 @@ define void @rmw_fold_mul2(i64* %p, i64 %v) {
 define void @rmw_fold_sdiv1(i64* %p, i64 %v) {
 ; CHECK-O0-LABEL: rmw_fold_sdiv1:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    movabsq $-8608480567731124087, %rcx # imm = 0x8888888888888889
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-O0-NEXT:    imulq %rcx
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; CHECK-O0-NEXT:    addq %rax, %rdx
-; CHECK-O0-NEXT:    movq %rdx, %rcx
+; CHECK-O0-NEXT:    movq (%rdi), %rcx
+; CHECK-O0-NEXT:    movabsq $-8608480567731124087, %rdx # imm = 0x8888888888888889
+; CHECK-O0-NEXT:    movq %rcx, %rax
+; CHECK-O0-NEXT:    imulq %rdx
+; CHECK-O0-NEXT:    movq %rdx, %rax
+; CHECK-O0-NEXT:    addq %rcx, %rax
+; CHECK-O0-NEXT:    movq %rax, %rcx
 ; CHECK-O0-NEXT:    shrq $63, %rcx
-; CHECK-O0-NEXT:    sarq $3, %rdx
-; CHECK-O0-NEXT:    addq %rcx, %rdx
-; CHECK-O0-NEXT:    movq %rdx, (%rdi)
+; CHECK-O0-NEXT:    sarq $3, %rax
+; CHECK-O0-NEXT:    addq %rcx, %rax
+; CHECK-O0-NEXT:    movq %rax, (%rdi)
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: rmw_fold_sdiv1:
@@ -1761,16 +1722,17 @@ define void @rmw_fold_srem1(i64* %p, i64 %v) {
 ; CHECK-O0-LABEL: rmw_fold_srem1:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    movabsq $-8608480567731124087, %rcx # imm = 0x8888888888888889
 ; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movabsq $-8608480567731124087, %rcx # imm = 0x8888888888888889
 ; CHECK-O0-NEXT:    imulq %rcx
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; CHECK-O0-NEXT:    addq %rax, %rdx
 ; CHECK-O0-NEXT:    movq %rdx, %rcx
-; CHECK-O0-NEXT:    shrq $63, %rcx
-; CHECK-O0-NEXT:    sarq $3, %rdx
-; CHECK-O0-NEXT:    addq %rcx, %rdx
-; CHECK-O0-NEXT:    leaq (%rdx,%rdx,4), %rcx
+; CHECK-O0-NEXT:    addq %rax, %rcx
+; CHECK-O0-NEXT:    movq %rcx, %rdx
+; CHECK-O0-NEXT:    shrq $63, %rdx
+; CHECK-O0-NEXT:    sarq $3, %rcx
+; CHECK-O0-NEXT:    addq %rdx, %rcx
+; CHECK-O0-NEXT:    leaq (%rcx,%rcx,4), %rcx
 ; CHECK-O0-NEXT:    leaq (%rcx,%rcx,2), %rcx
 ; CHECK-O0-NEXT:    subq %rcx, %rax
 ; CHECK-O0-NEXT:    movq %rax, (%rdi)
@@ -1932,9 +1894,9 @@ define void @rmw_fold_shl2(i64* %p, i64 %v) {
 ; CHECK-O0-LABEL: rmw_fold_shl2:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    # kill: def $sil killed $sil killed $rsi
+; CHECK-O0-NEXT:    movb %sil, %dl
 ; CHECK-O0-NEXT:    # implicit-def: $rcx
-; CHECK-O0-NEXT:    movb %sil, %cl
+; CHECK-O0-NEXT:    movb %dl, %cl
 ; CHECK-O0-NEXT:    shlxq %rcx, %rax, %rax
 ; CHECK-O0-NEXT:    movq %rax, (%rdi)
 ; CHECK-O0-NEXT:    retq
@@ -1988,9 +1950,9 @@ define void @rmw_fold_lshr2(i64* %p, i64 %v) {
 ; CHECK-O0-LABEL: rmw_fold_lshr2:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    # kill: def $sil killed $sil killed $rsi
+; CHECK-O0-NEXT:    movb %sil, %dl
 ; CHECK-O0-NEXT:    # implicit-def: $rcx
-; CHECK-O0-NEXT:    movb %sil, %cl
+; CHECK-O0-NEXT:    movb %dl, %cl
 ; CHECK-O0-NEXT:    shrxq %rcx, %rax, %rax
 ; CHECK-O0-NEXT:    movq %rax, (%rdi)
 ; CHECK-O0-NEXT:    retq
@@ -2044,9 +2006,9 @@ define void @rmw_fold_ashr2(i64* %p, i64 %v) {
 ; CHECK-O0-LABEL: rmw_fold_ashr2:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    # kill: def $sil killed $sil killed $rsi
+; CHECK-O0-NEXT:    movb %sil, %dl
 ; CHECK-O0-NEXT:    # implicit-def: $rcx
-; CHECK-O0-NEXT:    movb %sil, %cl
+; CHECK-O0-NEXT:    movb %dl, %cl
 ; CHECK-O0-NEXT:    sarxq %rcx, %rax, %rax
 ; CHECK-O0-NEXT:    movq %rax, (%rdi)
 ; CHECK-O0-NEXT:    retq
@@ -2268,12 +2230,12 @@ define i32 @fold_trunc_or(i64* %p, i32 %v2) {
 define i32 @split_load(i64* %p) {
 ; CHECK-O0-LABEL: split_load:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    movb %al, %cl
-; CHECK-O0-NEXT:    shrq $32, %rax
-; CHECK-O0-NEXT:    # kill: def $al killed $al killed $rax
-; CHECK-O0-NEXT:    orb %al, %cl
-; CHECK-O0-NEXT:    movzbl %cl, %eax
+; CHECK-O0-NEXT:    movq (%rdi), %rcx
+; CHECK-O0-NEXT:    movb %cl, %al
+; CHECK-O0-NEXT:    shrq $32, %rcx
+; CHECK-O0-NEXT:    # kill: def $cl killed $cl killed $rcx
+; CHECK-O0-NEXT:    orb %cl, %al
+; CHECK-O0-NEXT:    movzbl %al, %eax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: split_load:
@@ -2411,8 +2373,8 @@ define i64 @nofold_stfence(i64* %p) {
 define i64 @fold_constant(i64 %arg) {
 ; CHECK-O0-LABEL: fold_constant:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    addq Constant, %rdi
 ; CHECK-O0-NEXT:    movq %rdi, %rax
+; CHECK-O0-NEXT:    addq Constant, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: fold_constant:
@@ -2602,10 +2564,9 @@ define i32 @load_i8_anyext_i32(i8* %ptr) {
 define i32 @load_i16_anyext_i32(i16* %ptr) {
 ; CHECK-O0-CUR-LABEL: load_i16_anyext_i32:
 ; CHECK-O0-CUR:       # %bb.0:
-; CHECK-O0-CUR-NEXT:    movw (%rdi), %ax
-; CHECK-O0-CUR-NEXT:    # implicit-def: $ecx
-; CHECK-O0-CUR-NEXT:    movw %ax, %cx
-; CHECK-O0-CUR-NEXT:    movl %ecx, %eax
+; CHECK-O0-CUR-NEXT:    movw (%rdi), %cx
+; CHECK-O0-CUR-NEXT:    # implicit-def: $eax
+; CHECK-O0-CUR-NEXT:    movw %cx, %ax
 ; CHECK-O0-CUR-NEXT:    retq
 ;
 ; CHECK-O3-CUR-LABEL: load_i16_anyext_i32:
@@ -2633,10 +2594,10 @@ define i32 @load_i16_anyext_i32(i16* %ptr) {
 define i64 @load_i16_anyext_i64(i16* %ptr) {
 ; CHECK-O0-CUR-LABEL: load_i16_anyext_i64:
 ; CHECK-O0-CUR:       # %bb.0:
-; CHECK-O0-CUR-NEXT:    movw (%rdi), %ax
-; CHECK-O0-CUR-NEXT:    # implicit-def: $ecx
-; CHECK-O0-CUR-NEXT:    movw %ax, %cx
-; CHECK-O0-CUR-NEXT:    vmovd %ecx, %xmm0
+; CHECK-O0-CUR-NEXT:    movw (%rdi), %cx
+; CHECK-O0-CUR-NEXT:    # implicit-def: $eax
+; CHECK-O0-CUR-NEXT:    movw %cx, %ax
+; CHECK-O0-CUR-NEXT:    vmovd %eax, %xmm0
 ; CHECK-O0-CUR-NEXT:    vmovq %xmm0, %rax
 ; CHECK-O0-CUR-NEXT:    retq
 ;

@@ -1396,6 +1396,11 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
       SN2I.lookup(".dynsym", Link))
     SHeader.sh_link = Link;
 
+  if (Section.EntSize)
+    SHeader.sh_entsize = *Section.EntSize;
+  else
+    SHeader.sh_entsize = sizeof(typename ELFT::Word);
+
   if (Section.Content || Section.Size) {
     SHeader.sh_size = writeContent(CBA, Section.Content, Section.Size);
     return;

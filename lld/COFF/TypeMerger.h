@@ -10,44 +10,50 @@
 #define LLD_COFF_TYPEMERGER_H
 
 #include "Config.h"
-#include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
+#include "llvm/DebugInfo/CodeView/TypeHashing.h"
 #include "llvm/Support/Allocator.h"
+#include <atomic>
 
 namespace lld {
 namespace coff {
 
+using llvm::codeview::GloballyHashedType;
+using llvm::codeview::TypeIndex;
+
+struct GHashState;
+
 class TypeMerger {
 public:
-  TypeMerger(llvm::BumpPtrAllocator &alloc)
-      : typeTable(alloc), idTable(alloc), globalTypeTable(alloc),
-        globalIDTable(alloc) {}
+  TypeMerger(llvm::BumpPtrAllocator &alloc);
+
+  ~TypeMerger();
 
   /// Get the type table or the global type table if /DEBUG:GHASH is enabled.
   inline llvm::codeview::TypeCollection &getTypeTable() {
-    if (config->debugGHashes)
-      return globalTypeTable;
+    assert(!config->debugGHashes);
     return typeTable;
   }
 
   /// Get the ID table or the global ID table if /DEBUG:GHASH is enabled.
   inline llvm::codeview::TypeCollection &getIDTable() {
-    if (config->debugGHashes)
-      return globalIDTable;
+    assert(!config->debugGHashes);
     return idTable;
   }
+
+  /// Use global hashes to eliminate duplicate types and identify unique type
+  /// indices in each TpiSource.
+  void mergeTypesWithGHash();
+
+  /// Map from PDB function id type indexes to PDB function type indexes.
+  /// Populated after mergeTypesWithGHash.
+  llvm::DenseMap<TypeIndex, TypeIndex> funcIdToType;
 
   /// Type records that will go into the PDB TPI stream.
   llvm::codeview::MergingTypeTableBuilder typeTable;
 
   /// Item records that will go into the PDB IPI stream.
   llvm::codeview::MergingTypeTableBuilder idTable;
-
-  /// Type records that will go into the PDB TPI stream (for /DEBUG:GHASH)
-  llvm::codeview::GlobalTypeTableBuilder globalTypeTable;
-
-  /// Item records that will go into the PDB IPI stream (for /DEBUG:GHASH)
-  llvm::codeview::GlobalTypeTableBuilder globalIDTable;
 
   // When showSummary is enabled, these are histograms of TPI and IPI records
   // keyed by type index.

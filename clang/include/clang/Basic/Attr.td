@@ -2024,6 +2024,13 @@ def ObjCDirectMembers : Attr {
   let Documentation = [ObjCDirectMembersDocs];
 }
 
+def ObjCNonRuntimeProtocol : Attr {
+  let Spellings = [Clang<"objc_non_runtime_protocol">];
+  let Subjects = SubjectList<[ObjCProtocol], ErrorDiag>;
+  let LangOpts = [ObjC];
+  let Documentation = [ObjCNonRuntimeProtocolDocs];
+}
+
 def ObjCRuntimeName : Attr {
   let Spellings = [Clang<"objc_runtime_name">];
   let Subjects = SubjectList<[ObjCInterface, ObjCProtocol], ErrorDiag>;

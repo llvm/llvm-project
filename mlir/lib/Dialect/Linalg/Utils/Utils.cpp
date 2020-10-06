@@ -133,11 +133,10 @@ template struct mlir::linalg::GenerateLoopNest<AffineForOp>;
 
 /// Given a list of subview ranges, extract individual values for lower, upper
 /// bounds and steps and put them into the corresponding vectors.
-static void unpackRanges(ArrayRef<SubViewOp::Range> ranges,
-                         SmallVectorImpl<Value> &lbs,
+static void unpackRanges(ArrayRef<Range> ranges, SmallVectorImpl<Value> &lbs,
                          SmallVectorImpl<Value> &ubs,
                          SmallVectorImpl<Value> &steps) {
-  for (SubViewOp::Range range : ranges) {
+  for (Range range : ranges) {
     lbs.emplace_back(range.offset);
     ubs.emplace_back(range.size);
     steps.emplace_back(range.stride);
@@ -194,7 +193,7 @@ getLoopRanges(OpBuilder &builder, LinalgOp linalgOp, OperationFolder *folder) {
 /// Specialization to build an scf "for" nest.
 template <>
 void GenerateLoopNest<scf::ForOp>::doit(
-    ArrayRef<SubViewOp::Range> loopRanges, ValueRange iterArgInitValues,
+    ArrayRef<Range> loopRanges, ValueRange iterArgInitValues,
     ArrayRef<Attribute> iteratorTypes,
     function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
     Optional<LinalgLoopDistributionOptions>) {
@@ -206,7 +205,7 @@ void GenerateLoopNest<scf::ForOp>::doit(
 /// Specialization to build affine "for" nest.
 template <>
 void GenerateLoopNest<AffineForOp>::doit(
-    ArrayRef<SubViewOp::Range> loopRanges, ValueRange iterArgInitValues,
+    ArrayRef<Range> loopRanges, ValueRange iterArgInitValues,
     ArrayRef<Attribute> iteratorTypes,
     function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
     Optional<LinalgLoopDistributionOptions>) {
@@ -364,7 +363,7 @@ generateParallelLoopNest(ValueRange lbs, ValueRange ubs, ValueRange steps,
 /// Specialization for generating a mix of parallel and sequential scf loops.
 template <>
 void GenerateLoopNest<scf::ParallelOp>::doit(
-    ArrayRef<SubViewOp::Range> loopRanges, ValueRange iterArgInitValues,
+    ArrayRef<Range> loopRanges, ValueRange iterArgInitValues,
     ArrayRef<Attribute> iteratorTypes,
     function_ref<scf::ValueVector(ValueRange, ValueRange)> bodyBuilderFn,
     Optional<LinalgLoopDistributionOptions> distributionOptions) {
@@ -391,7 +390,7 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
     Location loc = edsc::ScopedContext::getLocation();
     distributionMethod.assign(distributionOptions->distributionMethod.begin(),
                               distributionOptions->distributionMethod.end());
-    SmallVector<SubViewOp::Range, 2> parallelLoopRanges;
+    SmallVector<Range, 2> parallelLoopRanges;
     for (auto iteratorType : enumerate(iteratorTypes)) {
       if (isParallelIteratorType(iteratorType.value()))
         parallelLoopRanges.push_back(loopRanges[iteratorType.index()]);

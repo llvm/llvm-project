@@ -233,7 +233,12 @@ int IncludeCategoryManager::getSortIncludePriority(StringRef IncludeName,
 bool IncludeCategoryManager::isMainHeader(StringRef IncludeName) const {
   if (!IncludeName.startswith("\""))
     return false;
-  StringRef HeaderStem = matchingStem(IncludeName.drop_front(1).drop_back(1));
+
+  // Not matchingStem: implementation files may have compound extensions but
+  // headers may not.
+  StringRef HeaderStem =
+      llvm::sys::path::stem(IncludeName.drop_front(1).drop_back(
+          1) /* remove the surrounding "" or <> */);
   if (FileStem.startswith(HeaderStem) ||
       FileStem.startswith_lower(HeaderStem)) {
     llvm::Regex MainIncludeRegex(HeaderStem.str() + Style.IncludeIsMainRegex,

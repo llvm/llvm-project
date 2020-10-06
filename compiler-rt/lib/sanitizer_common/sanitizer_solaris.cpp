@@ -160,10 +160,6 @@ DECLARE__REAL_AND_INTERNAL(uptr, sched_yield, void) {
   return sched_yield();
 }
 
-DECLARE__REAL_AND_INTERNAL(void, _exit, int exitcode) {
-  _exit(exitcode);
-}
-
 DECLARE__REAL_AND_INTERNAL(uptr, execve, const char *filename,
                            char *const argv[], char *const envp[]) {
   return _REAL(execve)(filename, argv, envp);

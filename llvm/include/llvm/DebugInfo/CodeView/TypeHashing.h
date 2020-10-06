@@ -86,6 +86,16 @@ struct GloballyHashedType {
 
   bool empty() const { return *(const uint64_t*)Hash.data() == 0; }
 
+  friend inline bool operator==(const GloballyHashedType &L,
+                                const GloballyHashedType &R) {
+    return L.Hash == R.Hash;
+  }
+
+  friend inline bool operator!=(const GloballyHashedType &L,
+                                const GloballyHashedType &R) {
+    return !(L.Hash == R.Hash);
+  }
+
   /// Given a sequence of bytes representing a record, compute a global hash for
   /// this record.  Due to the nature of global hashes incorporating the hashes
   /// of referenced records, this function requires a list of types and ids
@@ -206,7 +216,7 @@ template <> struct DenseMapInfo<codeview::GloballyHashedType> {
 
   static bool isEqual(codeview::GloballyHashedType LHS,
                       codeview::GloballyHashedType RHS) {
-    return LHS.Hash == RHS.Hash;
+    return LHS == RHS;
   }
 };
 

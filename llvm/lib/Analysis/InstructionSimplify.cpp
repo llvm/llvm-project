@@ -3963,10 +3963,8 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
 
     // Test for a bogus zero-shift-guard-op around funnel-shift or rotate.
     Value *ShAmt;
-    auto isFsh = m_CombineOr(m_Intrinsic<Intrinsic::fshl>(m_Value(X), m_Value(),
-                                                          m_Value(ShAmt)),
-                             m_Intrinsic<Intrinsic::fshr>(m_Value(), m_Value(X),
-                                                          m_Value(ShAmt)));
+    auto isFsh = m_CombineOr(m_FShl(m_Value(X), m_Value(), m_Value(ShAmt)),
+                             m_FShr(m_Value(), m_Value(X), m_Value(ShAmt)));
     // (ShAmt == 0) ? fshl(X, *, ShAmt) : X --> X
     // (ShAmt == 0) ? fshr(*, X, ShAmt) : X --> X
     if (match(TrueVal, isFsh) && FalseVal == X && CmpLHS == ShAmt)
@@ -3977,12 +3975,9 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
     // intrinsics do not have that problem.
     // We do not allow this transform for the general funnel shift case because
     // that would not preserve the poison safety of the original code.
-    auto isRotate = m_CombineOr(m_Intrinsic<Intrinsic::fshl>(m_Value(X),
-                                                             m_Deferred(X),
-                                                             m_Value(ShAmt)),
-                                m_Intrinsic<Intrinsic::fshr>(m_Value(X),
-                                                             m_Deferred(X),
-                                                             m_Value(ShAmt)));
+    auto isRotate =
+        m_CombineOr(m_FShl(m_Value(X), m_Deferred(X), m_Value(ShAmt)),
+                    m_FShr(m_Value(X), m_Deferred(X), m_Value(ShAmt)));
     // (ShAmt == 0) ? X : fshl(X, X, ShAmt) --> fshl(X, X, ShAmt)
     // (ShAmt == 0) ? X : fshr(X, X, ShAmt) --> fshr(X, X, ShAmt)
     if (match(FalseVal, isRotate) && TrueVal == X && CmpLHS == ShAmt &&

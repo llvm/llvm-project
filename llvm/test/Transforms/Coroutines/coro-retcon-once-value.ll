@@ -1,4 +1,6 @@
 ; RUN: opt < %s -enable-coroutines -O2 -S | FileCheck %s
+; RUN: opt < %s -enable-coroutines -passes='default<O2>' -S | FileCheck %s
+
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
 
@@ -45,7 +47,7 @@ cleanup:
 ; CHECK-NEXT:    ret { i8*, i32 } [[T1]]
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal void @f.resume.0(i8* noalias nonnull align 8 dereferenceable(8) %0, i1 zeroext %1)
+; CHECK-LABEL: define internal void @f.resume.0(i8* {{.*}} %0, i1 zeroext %1)
 ; CHECK-NEXT:  :
 ; CHECK-NEXT:    br i1 %1,
 ; CHECK:       :
@@ -57,7 +59,7 @@ cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal void @f.resume.1(i8* noalias nonnull align 8 dereferenceable(8) %0, i1 zeroext %1)
+; CHECK-LABEL: define internal void @f.resume.1(i8* {{.*}} %0, i1 zeroext %1)
 ; CHECK-NEXT:  :
 ; CHECK-NEXT:    br i1 %1,
 ; CHECK:       :

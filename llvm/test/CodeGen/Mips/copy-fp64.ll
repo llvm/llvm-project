@@ -11,8 +11,8 @@ define  double @foo(double %self) {
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $d12_64, $t9, $v0
   ; CHECK:   renamable $at = ADDu killed $v0, killed $t9
+  ; CHECK:   renamable $d6_64 = COPY killed $d12_64
   ; CHECK:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
-  ; CHECK:   $d6_64 = COPY killed renamable $d12_64
   ; CHECK:   renamable $t9 = LW killed renamable $at, target-flags(mips-got) @bar
   ; CHECK:   dead $ra = JALR killed $t9, csr_o32_fp64, target-flags(mips-jalr) <mcsymbol bar>, implicit-def dead $ra, implicit killed $d6_64, implicit-def $d0_64
   ; CHECK:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp

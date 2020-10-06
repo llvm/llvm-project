@@ -320,10 +320,10 @@ define i8 @ashr_i8(i8 %a) {
 ; MIPS32-LABEL: ashr_i8:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    ori $1, $zero, 2
-; MIPS32-NEXT:    andi $1, $1, 255
-; MIPS32-NEXT:    sll $2, $4, 24
-; MIPS32-NEXT:    sra $2, $2, 24
-; MIPS32-NEXT:    srav $2, $2, $1
+; MIPS32-NEXT:    andi $2, $1, 255
+; MIPS32-NEXT:    sll $1, $4, 24
+; MIPS32-NEXT:    sra $1, $1, 24
+; MIPS32-NEXT:    srav $2, $1, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -335,9 +335,9 @@ define i16 @lshr_i16(i16 %a) {
 ; MIPS32-LABEL: lshr_i16:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    ori $1, $zero, 2
-; MIPS32-NEXT:    andi $1, $1, 65535
-; MIPS32-NEXT:    andi $2, $4, 65535
-; MIPS32-NEXT:    srlv $2, $2, $1
+; MIPS32-NEXT:    andi $2, $1, 65535
+; MIPS32-NEXT:    andi $1, $4, 65535
+; MIPS32-NEXT:    srlv $2, $1, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -348,29 +348,25 @@ entry:
 define i64 @shl_i64(i64 %a, i64 %b) {
 ; MIPS32-LABEL: shl_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    addiu $sp, $sp, -8
-; MIPS32-NEXT:    .cfi_def_cfa_offset 8
+; MIPS32-NEXT:    move $3, $4
+; MIPS32-NEXT:    move $9, $6
 ; MIPS32-NEXT:    ori $1, $zero, 32
-; MIPS32-NEXT:    subu $2, $6, $1
-; MIPS32-NEXT:    subu $3, $1, $6
-; MIPS32-NEXT:    ori $8, $zero, 0
-; MIPS32-NEXT:    sltu $1, $6, $1
-; MIPS32-NEXT:    sltiu $9, $6, 1
-; MIPS32-NEXT:    sllv $10, $4, $6
-; MIPS32-NEXT:    srlv $3, $4, $3
-; MIPS32-NEXT:    sllv $6, $5, $6
-; MIPS32-NEXT:    or $3, $3, $6
-; MIPS32-NEXT:    sllv $2, $4, $2
-; MIPS32-NEXT:    andi $4, $1, 1
-; MIPS32-NEXT:    movn $8, $10, $4
+; MIPS32-NEXT:    subu $8, $9, $1
+; MIPS32-NEXT:    subu $4, $1, $9
+; MIPS32-NEXT:    ori $2, $zero, 0
+; MIPS32-NEXT:    sltu $6, $9, $1
+; MIPS32-NEXT:    sltiu $1, $9, 1
+; MIPS32-NEXT:    sllv $7, $3, $9
+; MIPS32-NEXT:    srlv $4, $3, $4
+; MIPS32-NEXT:    sllv $9, $5, $9
+; MIPS32-NEXT:    or $4, $4, $9
+; MIPS32-NEXT:    sllv $3, $3, $8
+; MIPS32-NEXT:    andi $8, $6, 1
+; MIPS32-NEXT:    movn $2, $7, $8
+; MIPS32-NEXT:    andi $6, $6, 1
+; MIPS32-NEXT:    movn $3, $4, $6
 ; MIPS32-NEXT:    andi $1, $1, 1
-; MIPS32-NEXT:    movn $2, $3, $1
-; MIPS32-NEXT:    andi $1, $9, 1
-; MIPS32-NEXT:    movn $2, $5, $1
-; MIPS32-NEXT:    sw $2, 4($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    move $2, $8
-; MIPS32-NEXT:    lw $3, 4($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    addiu $sp, $sp, 8
+; MIPS32-NEXT:    movn $3, $5, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -381,24 +377,30 @@ entry:
 define i64 @ashl_i64(i64 %a, i64 %b) {
 ; MIPS32-LABEL: ashl_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    ori $1, $zero, 32
-; MIPS32-NEXT:    subu $2, $6, $1
-; MIPS32-NEXT:    subu $3, $1, $6
-; MIPS32-NEXT:    sltu $1, $6, $1
-; MIPS32-NEXT:    sltiu $8, $6, 1
-; MIPS32-NEXT:    srav $9, $5, $6
-; MIPS32-NEXT:    srlv $6, $4, $6
-; MIPS32-NEXT:    sllv $3, $5, $3
-; MIPS32-NEXT:    or $3, $6, $3
-; MIPS32-NEXT:    sra $6, $5, 31
-; MIPS32-NEXT:    srav $2, $5, $2
-; MIPS32-NEXT:    andi $5, $1, 1
-; MIPS32-NEXT:    movn $2, $3, $5
-; MIPS32-NEXT:    andi $3, $8, 1
-; MIPS32-NEXT:    movn $2, $4, $3
-; MIPS32-NEXT:    andi $1, $1, 1
-; MIPS32-NEXT:    movn $6, $9, $1
+; MIPS32-NEXT:    addiu $sp, $sp, -8
+; MIPS32-NEXT:    .cfi_def_cfa_offset 8
+; MIPS32-NEXT:    sw $4, 4($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    move $2, $5
+; MIPS32-NEXT:    lw $5, 4($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    move $3, $6
+; MIPS32-NEXT:    ori $1, $zero, 32
+; MIPS32-NEXT:    subu $8, $3, $1
+; MIPS32-NEXT:    subu $7, $1, $3
+; MIPS32-NEXT:    sltu $4, $3, $1
+; MIPS32-NEXT:    sltiu $6, $3, 1
+; MIPS32-NEXT:    srav $1, $2, $3
+; MIPS32-NEXT:    srlv $3, $5, $3
+; MIPS32-NEXT:    sllv $7, $2, $7
+; MIPS32-NEXT:    or $7, $3, $7
+; MIPS32-NEXT:    sra $3, $2, 31
+; MIPS32-NEXT:    srav $2, $2, $8
+; MIPS32-NEXT:    andi $8, $4, 1
+; MIPS32-NEXT:    movn $2, $7, $8
+; MIPS32-NEXT:    andi $6, $6, 1
+; MIPS32-NEXT:    movn $2, $5, $6
+; MIPS32-NEXT:    andi $4, $4, 1
+; MIPS32-NEXT:    movn $3, $1, $4
+; MIPS32-NEXT:    addiu $sp, $sp, 8
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -409,24 +411,30 @@ entry:
 define i64 @lshr_i64(i64 %a, i64 %b) {
 ; MIPS32-LABEL: lshr_i64:
 ; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    addiu $sp, $sp, -8
+; MIPS32-NEXT:    .cfi_def_cfa_offset 8
+; MIPS32-NEXT:    sw $4, 4($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    move $2, $5
+; MIPS32-NEXT:    lw $5, 4($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    move $7, $6
 ; MIPS32-NEXT:    ori $1, $zero, 32
-; MIPS32-NEXT:    subu $2, $6, $1
-; MIPS32-NEXT:    subu $3, $1, $6
-; MIPS32-NEXT:    ori $8, $zero, 0
-; MIPS32-NEXT:    sltu $1, $6, $1
-; MIPS32-NEXT:    sltiu $9, $6, 1
-; MIPS32-NEXT:    srlv $10, $5, $6
-; MIPS32-NEXT:    srlv $6, $4, $6
-; MIPS32-NEXT:    sllv $3, $5, $3
-; MIPS32-NEXT:    or $3, $6, $3
-; MIPS32-NEXT:    srlv $2, $5, $2
-; MIPS32-NEXT:    andi $5, $1, 1
-; MIPS32-NEXT:    movn $2, $3, $5
-; MIPS32-NEXT:    andi $3, $9, 1
-; MIPS32-NEXT:    movn $2, $4, $3
-; MIPS32-NEXT:    andi $1, $1, 1
-; MIPS32-NEXT:    movn $8, $10, $1
-; MIPS32-NEXT:    move $3, $8
+; MIPS32-NEXT:    subu $8, $7, $1
+; MIPS32-NEXT:    subu $9, $1, $7
+; MIPS32-NEXT:    ori $3, $zero, 0
+; MIPS32-NEXT:    sltu $4, $7, $1
+; MIPS32-NEXT:    sltiu $6, $7, 1
+; MIPS32-NEXT:    srlv $1, $2, $7
+; MIPS32-NEXT:    srlv $7, $5, $7
+; MIPS32-NEXT:    sllv $9, $2, $9
+; MIPS32-NEXT:    or $7, $7, $9
+; MIPS32-NEXT:    srlv $2, $2, $8
+; MIPS32-NEXT:    andi $8, $4, 1
+; MIPS32-NEXT:    movn $2, $7, $8
+; MIPS32-NEXT:    andi $6, $6, 1
+; MIPS32-NEXT:    movn $2, $5, $6
+; MIPS32-NEXT:    andi $4, $4, 1
+; MIPS32-NEXT:    movn $3, $1, $4
+; MIPS32-NEXT:    addiu $sp, $sp, 8
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:

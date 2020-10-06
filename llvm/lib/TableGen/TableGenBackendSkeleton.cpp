@@ -41,9 +41,9 @@ public:
   SkeletonEmitter(RecordKeeper &RK) : Records(RK) {}
 
   void run(raw_ostream &OS);
-}; // End emitter class.
+}; // emitter class
 
-} // End anonymous namespace.
+} // anonymous namespace
 
 void SkeletonEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("Skeleton data structures", OS);
@@ -61,4 +61,4 @@ void EmitSkeleton(RecordKeeper &RK, raw_ostream &OS) {
   SkeletonEmitter(RK).run(OS);
 }
 
-} // End llvm namespace.
+} // namespace llvm

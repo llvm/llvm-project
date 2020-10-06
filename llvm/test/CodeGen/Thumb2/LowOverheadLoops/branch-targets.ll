@@ -404,7 +404,7 @@ for.cond.cleanup:
 }
 
 ; CHECK-MID: check_negated_xor_wls
-; CHECK-MID: t2WhileLoopStart killed renamable $r2, %bb.3
+; CHECK-MID: t2WhileLoopStart renamable $r2, %bb.3
 ; CHECK-MID: tB %bb.1
 ; CHECK-MID: bb.1.while.body.preheader:
 ; CHECK-MID:   $lr = t2LoopDec killed renamable $lr, 1
@@ -437,7 +437,7 @@ while.end:
 }
 
 ; CHECK-MID: check_negated_cmp_wls
-; CHECK-MID: t2WhileLoopStart killed renamable $r2, %bb.3
+; CHECK-MID: t2WhileLoopStart renamable $r2, %bb.3
 ; CHECK-MID: tB %bb.1
 ; CHECK-MID: bb.1.while.body.preheader:
 ; CHECK-MID:   $lr = t2LoopDec killed renamable $lr, 1

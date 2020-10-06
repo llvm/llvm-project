@@ -30,6 +30,15 @@ class EGOrCaymanPat<dag pattern, dag result> : AMDGPUPat<pattern, result> {
   let SubtargetPredicate = isEGorCayman;
 }
 
+def IMMZeroBasedBitfieldMask : ImmLeaf <i32, [{
+  return isMask_32(Imm);
+}]>;
+
+def IMMPopCount : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(countPopulation(N->getZExtValue()), SDLoc(N),
+                                   MVT::i32);
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Evergreen / Cayman store instructions
 //===----------------------------------------------------------------------===//
@@ -394,7 +403,41 @@ def BFE_INT_eg : R600_3OP <0x5, "BFE_INT",
   VecALU
 >;
 
-defm : BFEPattern <BFE_UINT_eg, BFE_INT_eg, MOV_IMM_I32>;
+// Bitfield extract patterns
+
+def : AMDGPUPat <
+  (and (i32 (srl i32:$src, i32:$rshift)), IMMZeroBasedBitfieldMask:$mask),
+  (BFE_UINT_eg $src, $rshift, (MOV_IMM_I32 (i32 (IMMPopCount $mask))))
+>;
+
+// x & ((1 << y) - 1)
+def : AMDGPUPat <
+  (and i32:$src, (add_oneuse (shl_oneuse 1, i32:$width), -1)),
+  (BFE_UINT_eg $src, (MOV_IMM_I32 (i32 0)), $width)
+>;
+
+// x & ~(-1 << y)
+def : AMDGPUPat <
+  (and i32:$src, (xor_oneuse (shl_oneuse -1, i32:$width), -1)),
+  (BFE_UINT_eg $src, (MOV_IMM_I32 (i32 0)), $width)
+>;
+
+// x & (-1 >> (bitwidth - y))
+def : AMDGPUPat <
+  (and i32:$src, (srl_oneuse -1, (sub 32, i32:$width))),
+  (BFE_UINT_eg $src, (MOV_IMM_I32 (i32 0)), $width)
+>;
+
+// x << (bitwidth - y) >> (bitwidth - y)
+def : AMDGPUPat <
+  (srl (shl_oneuse i32:$src, (sub 32, i32:$width)), (sub 32, i32:$width)),
+  (BFE_UINT_eg $src, (MOV_IMM_I32 (i32 0)), $width)
+>;
+
+def : AMDGPUPat <
+  (sra (shl_oneuse i32:$src, (sub 32, i32:$width)), (sub 32, i32:$width)),
+  (BFE_INT_eg $src, (MOV_IMM_I32 (i32 0)), $width)
+>;
 
 def BFI_INT_eg : R600_3OP <0x06, "BFI_INT",
   [(set i32:$dst, (AMDGPUbfi i32:$src0, i32:$src1, i32:$src2))],

@@ -517,12 +517,8 @@ DynamicLoaderDarwinKernel::DynamicLoaderDarwinKernel(Process *process,
   Status error;
   PlatformSP platform_sp(
       Platform::Create(PlatformDarwinKernel::GetPluginNameStatic(), error));
-  // Only select the darwin-kernel Platform if we've been asked to load kexts.
-  // It can take some time to scan over all of the kext info.plists and that
-  // shouldn't be done if kext loading is explicitly disabled.
-  if (platform_sp.get() && GetGlobalProperties()->GetLoadKexts()) {
+  if (platform_sp.get())
     process->GetTarget().SetPlatform(platform_sp);
-  }
 }
 
 // Destructor

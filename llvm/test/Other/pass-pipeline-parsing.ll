@@ -10,10 +10,8 @@
 ; RUN:     -passes='module(no-op-module,no-op-module)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-NESTED-TWO-NOOP-MP
 ; CHECK-NESTED-TWO-NOOP-MP: Starting llvm::Module pass manager run
-; CHECK-NESTED-TWO-NOOP-MP: Starting llvm::Module pass manager run
 ; CHECK-NESTED-TWO-NOOP-MP: Running pass: NoOpModulePass
 ; CHECK-NESTED-TWO-NOOP-MP: Running pass: NoOpModulePass
-; CHECK-NESTED-TWO-NOOP-MP: Finished llvm::Module pass manager run
 ; CHECK-NESTED-TWO-NOOP-MP: Finished llvm::Module pass manager run
 
 ; RUN: opt -disable-output -debug-pass-manager \
@@ -112,7 +110,6 @@
 ; RUN:     -passes='module(function(no-op-function),cgscc(no-op-cgscc,function(no-op-function),no-op-cgscc),function(no-op-function))' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-NESTED-MP-CG-FP
 ; CHECK-NESTED-MP-CG-FP: Starting llvm::Module pass manager run
-; CHECK-NESTED-MP-CG-FP: Starting llvm::Module pass manager run
 ; CHECK-NESTED-MP-CG-FP: Starting llvm::Function pass manager run
 ; CHECK-NESTED-MP-CG-FP: Running pass: NoOpFunctionPass
 ; CHECK-NESTED-MP-CG-FP: Finished llvm::Function pass manager run
@@ -126,7 +123,6 @@
 ; CHECK-NESTED-MP-CG-FP: Starting llvm::Function pass manager run
 ; CHECK-NESTED-MP-CG-FP: Running pass: NoOpFunctionPass
 ; CHECK-NESTED-MP-CG-FP: Finished llvm::Function pass manager run
-; CHECK-NESTED-MP-CG-FP: Finished llvm::Module pass manager run
 ; CHECK-NESTED-MP-CG-FP: Finished llvm::Module pass manager run
 
 ; RUN: opt -disable-output -debug-pass-manager \
@@ -165,7 +161,6 @@
 ; RUN:     -passes='module(no-op-function,no-op-loop,no-op-cgscc,cgscc(no-op-function,no-op-loop),function(no-op-loop))' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-ADAPTORS
 ; CHECK-ADAPTORS: Starting llvm::Module pass manager run
-; CHECK-ADAPTORS: Starting llvm::Module pass manager run
 ; CHECK-ADAPTORS: Running pass: ModuleToFunctionPassAdaptor<{{.*}}NoOpFunctionPass>
 ; CHECK-ADAPTORS: Running pass: NoOpFunctionPass
 ; CHECK-ADAPTORS: Running pass: ModuleToFunctionPassAdaptor<{{.*}}FunctionToLoopPassAdaptor<{{.*}}NoOpLoopPass>{{.*}}>
@@ -186,7 +181,6 @@
 ; CHECK-ADAPTORS: Running pass: FunctionToLoopPassAdaptor<{{.*}}NoOpLoopPass>
 ; CHECK-ADAPTORS: Running pass: NoOpLoopPass on Loop at depth 1 containing: %loop
 ; CHECK-ADAPTORS: Finished llvm::Function pass manager run
-; CHECK-ADAPTORS: Finished llvm::Module pass manager run
 ; CHECK-ADAPTORS: Finished llvm::Module pass manager run
 
 ; RUN: opt -disable-output -debug-pass-manager \

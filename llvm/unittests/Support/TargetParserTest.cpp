@@ -882,6 +882,14 @@ TEST(TargetParserTest, testAArch64CPU) {
       AArch64::AEK_RCPC | AArch64::AEK_SSBS,
       "8.2-A"));
   EXPECT_TRUE(testAArch64CPU(
+     "cortex-r82", "armv8-r", "crypto-neon-fp-armv8",
+      AArch64::AEK_CRC     | AArch64::AEK_RDM  | AArch64::AEK_SSBS    |
+      AArch64::AEK_CRYPTO  | AArch64::AEK_SM4  | AArch64::AEK_SHA3    |
+      AArch64::AEK_SHA2    | AArch64::AEK_AES  | AArch64::AEK_DOTPROD |
+      AArch64::AEK_FP      | AArch64::AEK_SIMD | AArch64::AEK_FP16    |
+      AArch64::AEK_FP16FML | AArch64::AEK_RAS  | AArch64::AEK_RCPC    |
+      AArch64::AEK_SB, "8-R"));
+  EXPECT_TRUE(testAArch64CPU(
       "cortex-x1", "armv8.2-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
       AArch64::AEK_RDM | AArch64::AEK_SIMD | AArch64::AEK_RAS |
@@ -1026,7 +1034,7 @@ TEST(TargetParserTest, testAArch64CPU) {
       "8.2-A"));
 }
 
-static constexpr unsigned NumAArch64CPUArchs = 42;
+static constexpr unsigned NumAArch64CPUArchs = 43;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;

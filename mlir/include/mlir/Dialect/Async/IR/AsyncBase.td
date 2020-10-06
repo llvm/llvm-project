@@ -39,4 +39,24 @@ def Async_TokenType : DialectType<AsyncDialect,
   }];
 }
 
+class Async_ValueType<Type type>
+    : DialectType<AsyncDialect,
+        And<[
+          CPred<"$_self.isa<::mlir::async::ValueType>()">,
+          SubstLeaves<"$_self",
+                      "$_self.cast<::mlir::async::ValueType>().getValueType()",
+                      type.predicate>
+       ]>, "async value type with " # type.description # " underlying type"> {
+  let typeDescription = [{
+    `async.value` represents a value returned by asynchronous operations,
+    which may or may not be available currently, but will be available at some
+    point in the future.
+  }];
+
+  Type valueType = type;
+}
+
+def Async_AnyValueType : Type<CPred<"$_self.isa<::mlir::async::ValueType>()">,
+                                    "async value type">;
+
 #endif // ASYNC_BASE_TD

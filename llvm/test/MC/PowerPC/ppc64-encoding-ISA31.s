@@ -32,6 +32,238 @@
 # CHECK-BE: xxsetaccz 1                        # encoding: [0x7c,0x83,0x01,0x62]
 # CHECK-LE: xxsetaccz 1                        # encoding: [0x62,0x01,0x83,0x7c]
             xxsetaccz 1
+# CHECK-BE: pmxvf16ger2 0, 1, 2, 4, 4, 2          # encoding: [0x07,0x90,0x80,0x44,
+# CHECK-BE-SAME:                                               0xec,0x01,0x10,0x98]
+# CHECK-LE: pmxvf16ger2 0, 1, 2, 4, 4, 2          # encoding: [0x44,0x80,0x90,0x07,
+# CHECK-LE-SAME:                                               0x98,0x10,0x01,0xec]
+            pmxvf16ger2 0, 1, 2, 4, 4, 2
+# CHECK-BE: pmxvf16ger2pp 0, 1, 2, 4, 4, 2        # encoding: [0x07,0x90,0x80,0x44,
+# CHECK-BE-SAME:                                               0xec,0x01,0x10,0x90]
+# CHECK-LE: pmxvf16ger2pp 0, 1, 2, 4, 4, 2        # encoding: [0x44,0x80,0x90,0x07,
+# CHECK-LE-SAME:                                               0x90,0x10,0x01,0xec
+            pmxvf16ger2pp 0, 1, 2, 4, 4, 2
+# CHECK-BE: pmxvf16ger2pn 0, 1, 2, 4, 4, 2        # encoding: [0x07,0x90,0x80,0x44,
+# CHECK-BE-SAME:                                               0xec,0x01,0x14,0x90]
+# CHECK-LE: pmxvf16ger2pn 0, 1, 2, 4, 4, 2        # encoding: [0x44,0x80,0x90,0x07,
+# CHECK-LE-SAME:                                               0x90,0x14,0x01,0xec]
+            pmxvf16ger2pn 0, 1, 2, 4, 4, 2
+# CHECK-BE: pmxvf16ger2np 0, 1, 2, 4, 4, 2        # encoding: [0x07,0x90,0x80,0x44,
+# CHECK-BE-SAME:                                               0xec,0x01,0x12,0x90]
+# CHECK-LE: pmxvf16ger2np 0, 1, 2, 4, 4, 2        # encoding: [0x44,0x80,0x90,0x07,
+# CHECK-LE-SAME:                                               0x90,0x12,0x01,0xec]
+            pmxvf16ger2np 0, 1, 2, 4, 4, 2
+# CHECK-BE: pmxvf16ger2nn 0, 1, 2, 4, 4, 2        # encoding: [0x07,0x90,0x80,0x44,
+# CHECK-BE-SAME:                                               0xec,0x01,0x16,0x90]
+# CHECK-LE: pmxvf16ger2nn 0, 1, 2, 4, 4, 2        # encoding: [0x44,0x80,0x90,0x07,
+# CHECK-LE-SAME:                                               0x90,0x16,0x01,0xec]
+            pmxvf16ger2nn 0, 1, 2, 4, 4, 2
+# CHECK-BE: pmxvf32ger 0, 1, 2, 4, 4              # encoding: [0x07,0x90,0x00,0x44,
+# CHECK-BE-SAME:                                               0xec,0x01,0x10,0xd8]
+# CHECK-LE: pmxvf32ger 0, 1, 2, 4, 4              # encoding: [0x44,0x00,0x90,0x07,
+# CHECK-LE-SAME:                                               0xd8,0x10,0x01,0xec]
+            pmxvf32ger 0, 1, 2, 4, 4
+# CHECK-BE: pmxvf32gerpp 0, 1, 2, 4, 4            # encoding: [0x07,0x90,0x00,0x44,
+# CHECK-BE-SAME:                                               0xec,0x01,0x10,0xd0]
+# CHECK-LE: pmxvf32gerpp 0, 1, 2, 4, 4            # encoding: [0x44,0x00,0x90,0x07,
+# CHECK-LE-SAME:                                               0xd0,0x10,0x01,0xec]
+            pmxvf32gerpp 0, 1, 2, 4, 4
+# CHECK-BE: pmxvf32gerpn 0, 1, 2, 4, 4            # encoding: [0x07,0x90,0x00,0x44,
+# CHECK-BE-SAME:                                               0xec,0x01,0x14,0xd0]
+# CHECK-LE: pmxvf32gerpn 0, 1, 2, 4, 4            # encoding: [0x44,0x00,0x90,0x07,
+# CHECK-LE-SAME:                                               0xd0,0x14,0x01,0xec]
+            pmxvf32gerpn 0, 1, 2, 4, 4
+# CHECK-BE: pmxvf32gernp 0, 1, 2, 4, 4            # encoding: [0x07,0x90,0x00,0x44,
+# CHECK-BE-SAME:                                               0xec,0x01,0x12,0xd0]
+# CHECK-LE: pmxvf32gernp 0, 1, 2, 4, 4            # encoding: [0x44,0x00,0x90,0x07,
+# CHECK-LE-SAME:                                               0xd0,0x12,0x01,0xec]
+            pmxvf32gernp 0, 1, 2, 4, 4
+# CHECK-BE: pmxvf32gernn 0, 1, 2, 4, 4            # encoding: [0x07,0x90,0x00,0x44,
+# CHECK-BE-SAME:                                               0xec,0x01,0x16,0xd0]
+# CHECK-LE: pmxvf32gernn 0, 1, 2, 4, 4            # encoding: [0x44,0x00,0x90,0x07,
+# CHECK-LE-SAME:                                               0xd0,0x16,0x01,0xec]
+            pmxvf32gernn 0, 1, 2, 4, 4
+# CHECK-BE: pmxvf64ger 0, 0, 2, 4, 3              # encoding: [0x07,0x90,0x00,0x4c,
+# CHECK-BE-SAME:                                               0xec,0x00,0x11,0xd8]
+# CHECK-LE: pmxvf64ger 0, 0, 2, 4, 3              # encoding: [0x4c,0x00,0x90,0x07,
+# CHECK-LE-SAME:                                               0xd8,0x11,0x00,0xec]
+            pmxvf64ger 0, 0, 2, 4, 3
+# CHECK-BE: pmxvf64gerpp 0, 2, 2, 4, 3            # encoding: [0x07,0x90,0x00,0x4c,
+# CHECK-BE-SAME:                                               0xec,0x02,0x11,0xd0]
+# CHECK-LE: pmxvf64gerpp 0, 2, 2, 4, 3            # encoding: [0x4c,0x00,0x90,0x07,
+# CHECK-LE-SAME:                                               0xd0,0x11,0x02,0xec]
+            pmxvf64gerpp 0, 2, 2, 4, 3
+# CHECK-BE: pmxvf64gerpn 0, 4, 2, 4, 3            # encoding: [0x07,0x90,0x00,0x4c,
+# CHECK-BE-SAME:                                               0xec,0x04,0x15,0xd0]
+# CHECK-LE: pmxvf64gerpn 0, 4, 2, 4, 3            # encoding: [0x4c,0x00,0x90,0x07,
+# CHECK-LE-SAME:                                               0xd0,0x15,0x04,0xec]
+            pmxvf64gerpn 0, 4, 2, 4, 3
+# CHECK-BE: pmxvf64gernp 0, 32, 2, 4, 3           # encoding: [0x07,0x90,0x00,0x4c,
+# CHECK-BE-SAME:                                               0xec,0x00,0x13,0xd4]
+# CHECK-LE: pmxvf64gernp 0, 32, 2, 4, 3           # encoding: [0x4c,0x00,0x90,0x07,
+# CHECK-LE-SAME:                                               0xd4,0x13,0x00,0xec]
+            pmxvf64gernp 0, 32, 2, 4, 3
+# CHECK-BE: pmxvf64gernn 0, 62, 2, 4, 3           # encoding: [0x07,0x90,0x00,0x4c,
+# CHECK-BE-SAME:                                               0xec,0x1e,0x17,0xd4]
+# CHECK-LE: pmxvf64gernn 0, 62, 2, 4, 3           # encoding: [0x4c,0x00,0x90,0x07,
+# CHECK-LE-SAME:                                               0xd4,0x17,0x1e,0xec]
+            pmxvf64gernn 0, 62, 2, 4, 3
+# CHECK-BE: pmxvi4ger8 0, 1, 2, 4, 4, 4           # encoding: [0x07,0x90,0x04,0x44,
+# CHECK-BE-SAME:                                               0xec,0x01,0x11,0x18]
+# CHECK-LE: pmxvi4ger8 0, 1, 2, 4, 4, 4           # encoding: [0x44,0x04,0x90,0x07
+# CHECK-LE-SAME:                                               0x18,0x11,0x01,0xec]
+            pmxvi4ger8 0, 1, 2, 4, 4, 4
+# CHECK-BE: pmxvi4ger8pp 0, 1, 2, 4, 4, 4         # encoding: [0x07,0x90,0x04,0x44,
+# CHECK-BE-SAME:                                               0xec,0x01,0x11,0x10]
+# CHECK-LE: pmxvi4ger8pp 0, 1, 2, 4, 4, 4         # encoding: [0x44,0x04,0x90,0x07
+# CHECK-LE-SAME:                                               0x10,0x11,0x01,0xec]
+            pmxvi4ger8pp 0, 1, 2, 4, 4, 4
+# CHECK-BE: pmxvi8ger4 0, 1, 2, 4, 4, 4           # encoding: [0x07,0x90,0x40,0x44,
+# CHECK-BE-SAME:                                               0xec,0x01,0x10,0x18]
+# CHECK-LE: pmxvi8ger4 0, 1, 2, 4, 4, 4           # encoding: [0x44,0x40,0x90,0x07,
+# CHECK-LE-SAME:                                               0x18,0x10,0x01,0xec]
+            pmxvi8ger4 0, 1, 2, 4, 4, 4
+# CHECK-BE: pmxvi8ger4pp 0, 1, 2, 4, 4, 4         # encoding: [0x07,0x90,0x40,0x44,
+# CHECK-BE-SAME:                                               0xec,0x01,0x10,0x10]
+# CHECK-LE: pmxvi8ger4pp 0, 1, 2, 4, 4, 4         # encoding: [0x44,0x40,0x90,0x07,
+# CHECK-LE-SAME:                                               0x10,0x10,0x01,0xec]
+            pmxvi8ger4pp 0, 1, 2, 4, 4, 4
+# CHECK-BE: pmxvi16ger2s 0, 1, 2, 4, 4, 2         # encoding: [0x07,0x90,0x80,0x44,
+# CHECK-BE-SAME:                                               0xec,0x01,0x11,0x58]
+# CHECK-LE: pmxvi16ger2s 0, 1, 2, 4, 4, 2         # encoding: [0x44,0x80,0x90,0x07,
+# CHECK-LE-SAME:                                               0x58,0x11,0x01,0xec]
+            pmxvi16ger2s 0, 1, 2, 4, 4, 2
+# CHECK-BE: pmxvi16ger2spp 0, 1, 2, 4, 4, 2       # encoding: [0x07,0x90,0x80,0x44,
+# CHECK-BE-SAME:                                               0xec,0x01,0x11,0x50]
+# CHECK-LE: pmxvi16ger2spp 0, 1, 2, 4, 4, 2       # encoding: [0x44,0x80,0x90,0x07,
+# CHECK-LE-SAME:                                               0x50,0x11,0x01,0xec]
+            pmxvi16ger2spp 0, 1, 2, 4, 4, 2
+# CHECK-BE: xvf16ger2 0, 1, 2                     # encoding: [0xec,0x01,0x10,0x98]
+# CHECK-LE: xvf16ger2 0, 1, 2                     # encoding: [0x98,0x10,0x01,0xec]
+            xvf16ger2 0, 1, 2
+# CHECK-BE: xvf16ger2pp 0, 1, 2                   # encoding: [0xec,0x01,0x10,0x90]
+# CHECK-LE: xvf16ger2pp 0, 1, 2                   # encoding: [0x90,0x10,0x01,0xec]
+            xvf16ger2pp 0, 1, 2
+# CHECK-BE: xvf16ger2pn 0, 1, 2                   # encoding: [0xec,0x01,0x14,0x90]
+# CHECK-LE: xvf16ger2pn 0, 1, 2                   # encoding: [0x90,0x14,0x01,0xec]
+            xvf16ger2pn 0, 1, 2
+# CHECK-BE: xvf16ger2np 0, 1, 2                   # encoding: [0xec,0x01,0x12,0x90]
+# CHECK-LE: xvf16ger2np 0, 1, 2                   # encoding: [0x90,0x12,0x01,0xec]
+            xvf16ger2np 0, 1, 2
+# CHECK-BE: xvf16ger2nn 0, 1, 2                   # encoding: [0xec,0x01,0x16,0x90]
+# CHECK-LE: xvf16ger2nn 0, 1, 2                   # encoding: [0x90,0x16,0x01,0xec]
+            xvf16ger2nn 0, 1, 2
+# CHECK-BE: xvf32ger 0, 1, 2                      # encoding: [0xec,0x01,0x10,0xd8]
+# CHECK-LE: xvf32ger 0, 1, 2                      # encoding: [0xd8,0x10,0x01,0xec]
+            xvf32ger 0, 1, 2
+# CHECK-BE: xvf32gerpp 0, 1, 2                    # encoding: [0xec,0x01,0x10,0xd0]
+# CHECK-LE: xvf32gerpp 0, 1, 2                    # encoding: [0xd0,0x10,0x01,0xec]
+            xvf32gerpp 0, 1, 2
+# CHECK-BE: xvf32gerpn 0, 1, 2                    # encoding: [0xec,0x01,0x14,0xd0]
+# CHECK-LE: xvf32gerpn 0, 1, 2                    # encoding: [0xd0,0x14,0x01,0xec]
+            xvf32gerpn 0, 1, 2
+# CHECK-BE: xvf32gernp 0, 1, 2                    # encoding: [0xec,0x01,0x12,0xd0]
+# CHECK-LE: xvf32gernp 0, 1, 2                    # encoding: [0xd0,0x12,0x01,0xec]
+            xvf32gernp 0, 1, 2
+# CHECK-BE: xvf32gernn 0, 1, 2                    # encoding: [0xec,0x01,0x16,0xd0]
+# CHECK-LE: xvf32gernn 0, 1, 2                    # encoding: [0xd0,0x16,0x01,0xec]
+            xvf32gernn 0, 1, 2
+# CHECK-BE: xvf64ger 0, 2, 2                      # encoding: [0xec,0x02,0x11,0xd8]
+# CHECK-LE: xvf64ger 0, 2, 2                      # encoding: [0xd8,0x11,0x02,0xec]
+            xvf64ger 0, 2, 2
+# CHECK-BE: xvf64gerpp 0, 0, 2                    # encoding: [0xec,0x00,0x11,0xd0]
+# CHECK-LE: xvf64gerpp 0, 0, 2                    # encoding: [0xd0,0x11,0x00,0xec]
+            xvf64gerpp 0, 0, 2
+# CHECK-BE: xvf64gerpn 0, 4, 2                    # encoding: [0xec,0x04,0x15,0xd0]
+# CHECK-LE: xvf64gerpn 0, 4, 2                    # encoding: [0xd0,0x15,0x04,0xec]
+            xvf64gerpn 0, 4, 2
+# CHECK-BE: xvf64gernp 0, 62, 2                   # encoding: [0xec,0x1e,0x13,0xd4]
+# CHECK-LE: xvf64gernp 0, 62, 2                   # encoding: [0xd4,0x13,0x1e,0xec]
+            xvf64gernp 0, 62, 2
+# CHECK-BE: xvf64gernn 0, 0, 2                    # encoding: [0xec,0x00,0x17,0xd0]
+# CHECK-LE: xvf64gernn 0, 0, 2                    # encoding: [0xd0,0x17,0x00,0xec]
+            xvf64gernn 0, 0, 2
+# CHECK-BE: xvi4ger8 0, 1, 2                      # encoding: [0xec,0x01,0x11,0x18]
+# CHECK-LE: xvi4ger8 0, 1, 2                      # encoding: [0x18,0x11,0x01,0xec]
+            xvi4ger8 0, 1, 2
+# CHECK-BE: xvi4ger8pp 0, 1, 2                    # encoding: [0xec,0x01,0x11,0x10]
+# CHECK-LE: xvi4ger8pp 0, 1, 2                    # encoding: [0x10,0x11,0x01,0xec]
+            xvi4ger8pp 0, 1, 2
+# CHECK-BE: xvi8ger4 0, 1, 2                      # encoding: [0xec,0x01,0x10,0x18]
+# CHECK-LE: xvi8ger4 0, 1, 2                      # encoding: [0x18,0x10,0x01,0xec]
+            xvi8ger4 0, 1, 2
+# CHECK-BE: xvi8ger4pp 0, 1, 2                    # encoding: [0xec,0x01,0x10,0x10]
+# CHECK-LE: xvi8ger4pp 0, 1, 2                    # encoding: [0x10,0x10,0x01,0xec]
+            xvi8ger4pp 0, 1, 2
+# CHECK-BE: xvi16ger2s 0, 1, 2                    # encoding: [0xec,0x01,0x11,0x58]
+# CHECK-LE: xvi16ger2s 0, 1, 2                    # encoding: [0x58,0x11,0x01,0xec]
+            xvi16ger2s 0, 1, 2
+# CHECK-BE: xvi16ger2spp 0, 1, 2                  # encoding: [0xec,0x01,0x11,0x50]
+# CHECK-LE: xvi16ger2spp 0, 1, 2                  # encoding: [0x50,0x11,0x01,0xec]
+            xvi16ger2spp 0, 1, 2
+# CHECK-BE: xvbf16ger2 2, 33, 34                  # encoding: [0xed,0x01,0x11,0x9e]
+# CHECK-LE: xvbf16ger2 2, 33, 34                  # encoding: [0x9e,0x11,0x01,0xed]
+            xvbf16ger2 2, 33, 34
+# CHECK-BE: xvbf16ger2pp 1, 33, 34                # encoding: [0xec,0x81,0x11,0x96]
+# CHECK-LE: xvbf16ger2pp 1, 33, 34                # encoding: [0x96,0x11,0x81,0xec]
+            xvbf16ger2pp 1, 33, 34
+# CHECK-BE: xvbf16ger2pn 2, 33, 34                # encoding: [0xed,0x01,0x15,0x96]
+# CHECK-LE: xvbf16ger2pn 2, 33, 34                # encoding: [0x96,0x15,0x01,0xed]
+            xvbf16ger2pn 2, 33, 34
+# CHECK-BE: xvbf16ger2np 1, 33, 34                # encoding: [0xec,0x81,0x13,0x96]
+# CHECK-LE: xvbf16ger2np 1, 33, 34                # encoding: [0x96,0x13,0x81,0xec]
+            xvbf16ger2np 1, 33, 34
+# CHECK-BE: xvbf16ger2nn 2, 33, 34                # encoding: [0xed,0x01,0x17,0x96]
+# CHECK-LE: xvbf16ger2nn 2, 33, 34                # encoding: [0x96,0x17,0x01,0xed]
+            xvbf16ger2nn 2, 33, 34
+# CHECK-BE: pmxvbf16ger2 2, 33, 34, 4, 4, 2       # encoding: [0x07,0x90,0x80,0x44,
+# CHECK-BE-SAME:                                               0xed,0x01,0x11,0x9e]
+# CHECK-LE: pmxvbf16ger2 2, 33, 34, 4, 4, 2       # encoding: [0x44,0x80,0x90,0x07,
+# CHECK-LE-SAME:                                               0x9e,0x11,0x01,0xed]
+            pmxvbf16ger2 2, 33, 34, 4, 4, 2
+# CHECK-BE: pmxvbf16ger2pp 1, 33, 34, 4, 4, 2     # encoding: [0x07,0x90,0x80,0x44,
+# CHECK-BE-SAME:                                               0xec,0x81,0x11,0x96]
+# CHECK-LE: pmxvbf16ger2pp 1, 33, 34, 4, 4, 2     # encoding: [0x44,0x80,0x90,0x07,
+# CHECK-LE-SAME:                                               0x96,0x11,0x81,0xec]
+            pmxvbf16ger2pp 1, 33, 34, 4, 4, 2
+# CHECK-BE: pmxvbf16ger2pn 2, 33, 34, 4, 4, 2     # encoding: [0x07,0x90,0x80,0x44,
+# CHECK-BE-SAME:                                               0xed,0x01,0x15,0x96]
+# CHECK-LE: pmxvbf16ger2pn 2, 33, 34, 4, 4, 2     # encoding: [0x44,0x80,0x90,0x07,
+# CHECK-LE-SAME:                                               0x96,0x15,0x01,0xed]
+            pmxvbf16ger2pn 2, 33, 34, 4, 4, 2
+# CHECK-BE: pmxvbf16ger2np 1, 33, 34, 4, 4, 2     # encoding: [0x07,0x90,0x80,0x44,
+# CHECK-BE-SAME:                                               0xec,0x81,0x13,0x96]
+# CHECK-LE: pmxvbf16ger2np 1, 33, 34, 4, 4, 2     # encoding: [0x44,0x80,0x90,0x07,
+# CHECK-LE-SAME:                                               0x96,0x13,0x81,0xec]
+            pmxvbf16ger2np 1, 33, 34, 4, 4, 2
+# CHECK-BE: pmxvbf16ger2nn 2, 33, 34, 4, 4, 2     # encoding: [0x07,0x90,0x80,0x44,
+# CHECK-BE-SAME:                                               0xed,0x01,0x17,0x96]
+# CHECK-LE: pmxvbf16ger2nn 2, 33, 34, 4, 4, 2     # encoding: [0x44,0x80,0x90,0x07,
+# CHECK-LE-SAME:                                               0x96,0x17,0x01,0xed]
+            pmxvbf16ger2nn 2, 33, 34, 4, 4, 2
+# CHECK-BE: xvi8ger4spp 1, 33, 34                 # encoding: [0xec,0x81,0x13,0x1e]
+# CHECK-LE: xvi8ger4spp 1, 33, 34                 # encoding: [0x1e,0x13,0x81,0xec]
+            xvi8ger4spp 1, 33, 34
+# CHECK-BE: xvi16ger2 1, 33, 34                   # encoding: [0xec,0x81,0x12,0x5e]
+# CHECK-LE: xvi16ger2 1, 33, 34                   # encoding: [0x5e,0x12,0x81,0xec]
+            xvi16ger2 1, 33, 34
+# CHECK-BE: xvi16ger2pp 1, 33, 34                 # encoding: [0xec,0x81,0x13,0x5e]
+# CHECK-LE: xvi16ger2pp 1, 33, 34                 # encoding: [0x5e,0x13,0x81,0xec]
+            xvi16ger2pp 1, 33, 34
+# CHECK-BE: pmxvi8ger4spp 1, 33, 34, 4, 4, 8      # encoding: [0x07,0x90,0x80,0x44,
+# CHECK-BE-SAME:                                               0xec,0x81,0x13,0x1e]
+# CHECK-LE: pmxvi8ger4spp 1, 33, 34, 4, 4, 8      # encoding: [0x44,0x80,0x90,0x07,
+# CHECK-LE-SAME:                                               0x1e,0x13,0x81,0xec]
+            pmxvi8ger4spp 1, 33, 34, 4, 4, 8
+# CHECK-BE: pmxvi16ger2 1, 33, 34, 4, 4, 2        # encoding: [0x07,0x90,0x80,0x44,
+# CHECK-BE-SAME:                                               0xec,0x81,0x12,0x5e]
+# CHECK-LE: pmxvi16ger2 1, 33, 34, 4, 4, 2        # encoding: [0x44,0x80,0x90,0x07,
+# CHECK-LE-SAME:                                               0x5e,0x12,0x81,0xec]
+            pmxvi16ger2 1, 33, 34, 4, 4, 2
+# CHECK-BE: pmxvi16ger2pp 1, 33, 34, 4, 4, 2      # encoding: [0x07,0x90,0x80,0x44,
+# CHECK-BE-SAME:                                               0xec,0x81,0x13,0x5e]
+# CHECK-LE: pmxvi16ger2pp 1, 33, 34, 4, 4, 2      # encoding: [0x44,0x80,0x90,0x07,
+# CHECK-LE-SAME:                                               0x5e,0x13,0x81,0xec]
+            pmxvi16ger2pp 1, 33, 34, 4, 4, 2
 # CHECK-BE: lxvp 2, 32(4)                      # encoding: [0x18,0x44,0x00,0x20]
 # CHECK-LE: lxvp 2, 32(4)                      # encoding: [0x20,0x00,0x44,0x18]
             lxvp 2, 32(4)

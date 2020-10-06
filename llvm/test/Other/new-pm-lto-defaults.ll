@@ -24,7 +24,6 @@
 ; RUN:     --check-prefix=CHECK-O3 --check-prefix=CHECK-EP-Peephole
 
 ; CHECK-O: Starting llvm::Module pass manager run.
-; CHECK-O-NEXT: Starting llvm::Module pass manager run.
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: ForceFunctionAttrsPass
 ; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
@@ -102,7 +101,6 @@
 ; CHECK-O2-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O2-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O2-NEXT: Running pass: GlobalDCEPass
-; CHECK-O-NEXT: Finished llvm::Module pass manager run.
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 
 ; Make sure we get the IR back out without changes when we print the module.

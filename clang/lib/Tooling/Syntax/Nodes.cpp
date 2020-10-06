@@ -136,6 +136,8 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeKind K) {
     return OS << "CallArguments";
   case NodeKind::ParameterDeclarationList:
     return OS << "ParameterDeclarationList";
+  case NodeKind::DeclaratorList:
+    return OS << "DeclaratorList";
   }
   llvm_unreachable("unknown node kind");
 }
@@ -218,6 +220,8 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeRole R) {
     return OS << "Callee";
   case syntax::NodeRole::Arguments:
     return OS << "Arguments";
+  case syntax::NodeRole::Declarators:
+    return OS << "Declarators";
   }
   llvm_unreachable("invalid role");
 }
@@ -287,6 +291,29 @@ syntax::ParameterDeclarationList::getParametersAndCommas() {
     Children.push_back(
         {llvm::cast<syntax::SimpleDeclaration>(ParameterAsNodeAndComma.element),
          ParameterAsNodeAndComma.delimiter});
+  }
+  return Children;
+}
+
+std::vector<syntax::SimpleDeclarator *>
+syntax::DeclaratorList::getDeclarators() {
+  auto DeclaratorsAsNodes = getElementsAsNodes();
+  std::vector<syntax::SimpleDeclarator *> Children;
+  for (const auto &DeclaratorAsNode : DeclaratorsAsNodes) {
+    Children.push_back(llvm::cast<syntax::SimpleDeclarator>(DeclaratorAsNode));
+  }
+  return Children;
+}
+
+std::vector<syntax::List::ElementAndDelimiter<syntax::SimpleDeclarator>>
+syntax::DeclaratorList::getDeclaratorsAndCommas() {
+  auto DeclaratorsAsNodesAndCommas = getElementsAsNodesAndDelimiters();
+  std::vector<syntax::List::ElementAndDelimiter<syntax::SimpleDeclarator>>
+      Children;
+  for (const auto &DeclaratorAsNodeAndComma : DeclaratorsAsNodesAndCommas) {
+    Children.push_back(
+        {llvm::cast<syntax::SimpleDeclarator>(DeclaratorAsNodeAndComma.element),
+         DeclaratorAsNodeAndComma.delimiter});
   }
   return Children;
 }

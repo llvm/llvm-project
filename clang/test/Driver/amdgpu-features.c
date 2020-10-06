@@ -25,10 +25,16 @@
 // NO-SRAM-ECC: "-target-feature" "-sram-ecc"
 
 // RUN: %clang -### -target amdgcn-amdpal -mcpu=gfx1010 -mwavefrontsize64 %s 2>&1 | FileCheck --check-prefix=WAVE64 %s
-// WAVE64: "-target-feature" "-wavefrontsize16" "-target-feature" "-wavefrontsize32" "-target-feature" "+wavefrontsize64"
+// RUN: %clang -### -target amdgcn-amdpal -mcpu=gfx1010 -mno-wavefrontsize64 -mwavefrontsize64 %s 2>&1 | FileCheck --check-prefix=WAVE64 %s
+// WAVE64: "-target-feature" "+wavefrontsize64"
+// WAVE64-NOT: {{".*wavefrontsize16"}}
+// WAVE64-NOT: {{".*wavefrontsize32"}}
 
 // RUN: %clang -### -target amdgcn -mcpu=gfx1010 -mno-wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=NO-WAVE64 %s
-// NO-WAVE64: "-target-feature" "-wavefrontsize16" "-target-feature" "+wavefrontsize32" "-target-feature" "-wavefrontsize64"
+// RUN: %clang -### -target amdgcn -mcpu=gfx1010 -mwavefrontsize64 -mno-wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=NO-WAVE64 %s
+// NO-WAVE64-NOT: {{".*wavefrontsize16"}}
+// NO-WAVE64-NOT: {{".*wavefrontsize32"}}
+// NO-WAVE64-NOT: {{".*wavefrontsize64"}}
 
 // RUN: %clang -### -target amdgcn -mcpu=gfx1010 -mcumode %s 2>&1 | FileCheck --check-prefix=CUMODE %s
 // CUMODE: "-target-feature" "+cumode"

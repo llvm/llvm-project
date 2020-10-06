@@ -13,6 +13,7 @@
 #include "common.h"
 #include "list.h"
 #include "local_cache.h"
+#include "options.h"
 #include "release.h"
 #include "report.h"
 #include "stats.h"
@@ -206,7 +207,10 @@ public:
     return TotalReleasedBytes;
   }
 
-  bool useMemoryTagging() { return false; }
+  static bool useMemoryTagging(Options Options) {
+    (void)Options;
+    return false;
+  }
   void disableMemoryTagging() {}
 
   const char *getRegionInfoArrayAddress() const { return nullptr; }
@@ -217,6 +221,8 @@ public:
     (void)Ptr;
     return {};
   }
+
+  AtomicOptions Options;
 
 private:
   static const uptr NumClasses = SizeClassMap::NumClasses;

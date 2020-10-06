@@ -1,6 +1,6 @@
 ; Test we lose details of not inlined profile without '-sample-profile-merge-inlinee'
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=false -S | FileCheck -check-prefix=SCALE %s
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=true -S | FileCheck -check-prefix=SCALE %s
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=false -enable-new-pm=0 -S | FileCheck -check-prefix=SCALE %s
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=true -enable-new-pm=0 -S | FileCheck -check-prefix=SCALE %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=false -S | FileCheck -check-prefix=SCALE %s
 
 ; Test we properly merge not inlined profile with '-sample-profile-merge-inlinee'

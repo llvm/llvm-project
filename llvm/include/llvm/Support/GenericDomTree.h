@@ -463,8 +463,8 @@ protected:
     return this->Roots[0];
   }
 
-  /// findNearestCommonDominator - Find nearest common dominator basic block
-  /// for basic block A and B. If there is no such block then return nullptr.
+  /// Find nearest common dominator basic block for basic block A and B. A and B
+  /// must have tree nodes.
   NodeT *findNearestCommonDominator(NodeT *A, NodeT *B) const {
     assert(A && B && "Pointers are not valid");
     assert(A->getParent() == B->getParent() &&
@@ -480,18 +480,18 @@ protected:
 
     DomTreeNodeBase<NodeT> *NodeA = getNode(A);
     DomTreeNodeBase<NodeT> *NodeB = getNode(B);
-
-    if (!NodeA || !NodeB) return nullptr;
+    assert(NodeA && "A must be in the tree");
+    assert(NodeB && "B must be in the tree");
 
     // Use level information to go up the tree until the levels match. Then
     // continue going up til we arrive at the same node.
-    while (NodeA && NodeA != NodeB) {
+    while (NodeA != NodeB) {
       if (NodeA->getLevel() < NodeB->getLevel()) std::swap(NodeA, NodeB);
 
       NodeA = NodeA->IDom;
     }
 
-    return NodeA ? NodeA->getBlock() : nullptr;
+    return NodeA->getBlock();
   }
 
   const NodeT *findNearestCommonDominator(const NodeT *A,

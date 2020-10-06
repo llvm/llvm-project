@@ -39,26 +39,25 @@ static constexpr int BitsForBinaryPrecision(int binaryPrecision) {
   }
 }
 
-// Number of significant decimal digits in the fraction of the
-// exact conversion of the least nonzero (subnormal) value
-// in each type; i.e., a 128-bit quad value can be formatted
-// exactly with FORMAT(E0.22981).
+// Maximum number of significant decimal digits in the fraction of an
+// exact conversion in each type; computed by converting the value
+// with the minimum exponent (biased to 1) and all fractional bits set.
 static constexpr int MaxDecimalConversionDigits(int binaryPrecision) {
   switch (binaryPrecision) {
   case 8:
-    return 93;
+    return 96;
   case 11:
-    return 17;
+    return 21;
   case 24:
-    return 105;
+    return 112;
   case 53:
-    return 751;
+    return 767;
   case 64:
-    return 11495;
+    return 11514;
   case 106:
-    return 2 * 751;
+    return 2 * 767;
   case 113:
-    return 11530;
+    return 11563;
   default:
     return -1;
   }

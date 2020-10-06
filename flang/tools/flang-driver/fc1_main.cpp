@@ -14,9 +14,9 @@
 
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/CompilerInvocation.h"
+#include "flang/Frontend/TextDiagnosticBuffer.h"
 #include "flang/FrontendTool/Utils.h"
 #include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
@@ -34,18 +34,22 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
   if (!flang->HasDiagnostics())
     return 1;
 
+  // We will buffer diagnostics from argument parsing so that we can output
+  // them using a well formed diagnostic object.
+  TextDiagnosticBuffer *diagsBuffer = new TextDiagnosticBuffer;
+
   // Create CompilerInvocation - use a dedicated instance of DiagnosticsEngine
   // for parsing the arguments
   llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
       new clang::DiagnosticIDs());
   llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagOpts =
       new clang::DiagnosticOptions();
-  clang::TextDiagnosticBuffer *diagsBuffer = new clang::TextDiagnosticBuffer;
   clang::DiagnosticsEngine diags(diagID, &*diagOpts, diagsBuffer);
   bool success =
       CompilerInvocation::CreateFromArgs(flang->GetInvocation(), argv, diags);
 
   diagsBuffer->FlushDiagnostics(flang->getDiagnostics());
+
   if (!success)
     return 1;
 

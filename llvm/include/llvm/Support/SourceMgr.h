@@ -172,6 +172,11 @@ public:
   std::pair<unsigned, unsigned> getLineAndColumn(SMLoc Loc,
                                                  unsigned BufferID = 0) const;
 
+  /// Get a string with the \p SMLoc filename and line number
+  /// formatted in the standard style.
+  std::string getFormattedLocationNoOffset(SMLoc Loc,
+                                           bool IncludePath = false) const;
+
   /// Given a line and column number in a mapped buffer, turn it into an SMLoc.
   /// This will return a null SMLoc if the line/column location is invalid.
   SMLoc FindLocForLineAndColumn(unsigned BufferID, unsigned LineNo,

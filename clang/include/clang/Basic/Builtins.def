@@ -1028,6 +1028,7 @@ LIBBUILTIN(pthread_create, "",  "fC<2,3>", "pthread.h", ALL_GNU_LANGUAGES)
 
 // POSIX setjmp.h
 
+// FIXME: MinGW _setjmp has an additional void* parameter.
 LIBBUILTIN(_setjmp, "iJ",         "fjT",   "setjmp.h", ALL_LANGUAGES)
 LIBBUILTIN(__sigsetjmp, "iSJi",   "fjT",   "setjmp.h", ALL_LANGUAGES)
 LIBBUILTIN(sigsetjmp, "iSJi",     "fjT",   "setjmp.h", ALL_LANGUAGES)

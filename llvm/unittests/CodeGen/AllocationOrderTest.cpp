@@ -12,11 +12,14 @@
 using namespace llvm;
 
 namespace {
-std::vector<MCPhysReg> loadOrder(AllocationOrder &O, unsigned Limit = 0) {
+std::vector<MCPhysReg> loadOrder(const AllocationOrder &O, unsigned Limit = 0) {
   std::vector<MCPhysReg> Ret;
-  O.rewind();
-  while (auto R = O.next(Limit))
-    Ret.push_back(R);
+  if (Limit == 0)
+    for (auto R : O)
+      Ret.push_back(R);
+  else
+    for (auto I = O.begin(), E = O.getOrderLimitEnd(Limit); I != E; ++I)
+      Ret.push_back(*I);
   return Ret;
 }
 } // namespace
@@ -48,6 +51,7 @@ TEST(AllocationOrderTest, LimitsBasic) {
   AllocationOrder O(std::move(Hints), Order, false);
   EXPECT_EQ((std::vector<MCPhysReg>{1, 2, 3, 4, 5, 6, 7}), loadOrder(O, 0));
   EXPECT_EQ((std::vector<MCPhysReg>{1, 2, 3, 4}), loadOrder(O, 1));
+  EXPECT_EQ(O.end(), O.getOrderLimitEnd(0));
 }
 
 TEST(AllocationOrderTest, LimitsDuplicates) {
@@ -96,19 +100,19 @@ TEST(AllocationOrderTest, IsHintTest) {
   SmallVector<MCPhysReg, 16> Hints = {1, 2, 3};
   SmallVector<MCPhysReg, 16> Order = {4, 1, 5, 6};
   AllocationOrder O(std::move(Hints), Order, false);
-  O.rewind();
-  auto V = O.next();
-  EXPECT_TRUE(O.isHint());
+  auto I = O.begin();
+  auto V = *I;
+  EXPECT_TRUE(I.isHint());
   EXPECT_EQ(V, 1U);
-  O.next();
-  EXPECT_TRUE(O.isHint());
-  O.next();
-  EXPECT_TRUE(O.isHint());
-  V = O.next();
-  EXPECT_FALSE(O.isHint());
+  ++I;
+  EXPECT_TRUE(I.isHint());
+  ++I;
+  EXPECT_TRUE(I.isHint());
+  V = *(++I);
+  EXPECT_FALSE(I.isHint());
   EXPECT_EQ(V, 4U);
-  V = O.next();
+  V = *(++I);
   EXPECT_TRUE(O.isHint(1));
-  EXPECT_FALSE(O.isHint());
+  EXPECT_FALSE(I.isHint());
   EXPECT_EQ(V, 5U);
 }

@@ -842,7 +842,7 @@ bool IEEEFloat::isSignificandAllOnes() const {
   // Test if the significand excluding the integral bit is all ones. This allows
   // us to test for binade boundaries.
   const integerPart *Parts = significandParts();
-  const unsigned PartCount = partCount();
+  const unsigned PartCount = partCountForBits(semantics->precision);
   for (unsigned i = 0; i < PartCount - 1; i++)
     if (~Parts[i])
       return false;
@@ -850,8 +850,8 @@ bool IEEEFloat::isSignificandAllOnes() const {
   // Set the unused high bits to all ones when we compare.
   const unsigned NumHighBits =
     PartCount*integerPartWidth - semantics->precision + 1;
-  assert(NumHighBits <= integerPartWidth && "Can not have more high bits to "
-         "fill than integerPartWidth");
+  assert(NumHighBits <= integerPartWidth && NumHighBits > 0 &&
+         "Can not have more high bits to fill than integerPartWidth");
   const integerPart HighBitFill =
     ~integerPart(0) << (integerPartWidth - NumHighBits);
   if (~(Parts[PartCount - 1] | HighBitFill))
@@ -864,15 +864,16 @@ bool IEEEFloat::isSignificandAllZeros() const {
   // Test if the significand excluding the integral bit is all zeros. This
   // allows us to test for binade boundaries.
   const integerPart *Parts = significandParts();
-  const unsigned PartCount = partCount();
+  const unsigned PartCount = partCountForBits(semantics->precision);
 
   for (unsigned i = 0; i < PartCount - 1; i++)
     if (Parts[i])
       return false;
 
+  // Compute how many bits are used in the final word.
   const unsigned NumHighBits =
     PartCount*integerPartWidth - semantics->precision + 1;
-  assert(NumHighBits <= integerPartWidth && "Can not have more high bits to "
+  assert(NumHighBits < integerPartWidth && "Can not have more high bits to "
          "clear than integerPartWidth");
   const integerPart HighBitMask = ~integerPart(0) >> NumHighBits;
 
@@ -2242,26 +2243,15 @@ IEEEFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
     if (!X86SpecialNan && semantics == &semX87DoubleExtended)
       APInt::tcSetBit(significandParts(), semantics->precision - 1);
 
-    // If we are truncating NaN, it is possible that we shifted out all of the
-    // set bits in a signalling NaN payload. But NaN must remain NaN, so some
-    // bit in the significand must be set (otherwise it is Inf).
-    // This can only happen with sNaN. Set the 1st bit after the quiet bit,
-    // so that we still have an sNaN.
-    // FIXME: Set quiet and return opInvalidOp (on convert of any sNaN).
-    //        But this requires fixing LLVM to parse 32-bit hex FP or ignoring
-    //        conversions while parsing IR.
-    if (APInt::tcIsZero(significandParts(), newPartCount)) {
-      assert(shift < 0 && "Should not lose NaN payload on extend");
-      assert(semantics->precision >= 3 && "Unexpectedly narrow significand");
-      assert(*losesInfo && "Missing payload should have set lost info");
-      APInt::tcSetBit(significandParts(), semantics->precision - 3);
+    // Convert of sNaN creates qNaN and raises an exception (invalid op).
+    // This also guarantees that a sNaN does not become Inf on a truncation
+    // that loses all payload bits.
+    if (isSignaling()) {
+      makeQuiet();
+      fs = opInvalidOp;
+    } else {
+      fs = opOK;
     }
-
-    // gcc forces the Quiet bit on, which means (float)(double)(float_sNan)
-    // does not give you back the same bits.  This is dubious, and we
-    // don't currently do it.  You're really supposed to get
-    // an invalid operation signal at runtime, but nobody does that.
-    fs = opOK;
   } else {
     *losesInfo = false;
     fs = opOK;

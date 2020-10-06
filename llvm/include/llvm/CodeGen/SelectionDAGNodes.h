@@ -181,7 +181,7 @@ public:
   }
 
   uint64_t getScalarValueSizeInBits() const {
-    return getValueType().getScalarType().getSizeInBits().getFixedSize();
+    return getValueType().getScalarType().getFixedSizeInBits();
   }
 
   // Forwarding methods - These forward to the corresponding methods in SDNode.

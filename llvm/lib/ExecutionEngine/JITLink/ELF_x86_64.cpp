@@ -357,6 +357,9 @@ private:
         if (SecRef.sh_type == ELF::SHT_SYMTAB)
           // TODO: Dynamic?
           SymTab = SecRef;
+      } else {
+        auto &Section = G->createSection(*Name, Prot);
+        G->createZeroFillBlock(Section, Size, Address, Alignment, 0);
       }
     }
 
@@ -480,7 +483,8 @@ private:
         return Name.takeError();
       auto Section = G->findSectionByName(*Name);
       if (!Section)
-        return make_error<llvm::StringError>("Could not find a section",
+        return make_error<llvm::StringError>("Could not find a section " +
+                                             *Name,
                                              llvm::inconvertibleErrorCode());
       // we only have one for now
       auto blocks = Section->blocks();
@@ -527,7 +531,8 @@ private:
           auto JitSection = G->findSectionByName(*sectName);
           if (!JitSection)
             return make_error<llvm::StringError>(
-                "Could not find a section", llvm::inconvertibleErrorCode());
+                "Could not find the JitSection " + *sectName,
+                llvm::inconvertibleErrorCode());
           auto bs = JitSection->blocks();
           if (bs.empty())
             return make_error<llvm::StringError>(

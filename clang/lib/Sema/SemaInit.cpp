@@ -141,6 +141,10 @@ static StringInitFailureKind IsStringInit(Expr *init, QualType declType,
   return IsStringInit(init, arrayType, Context);
 }
 
+bool Sema::IsStringInit(Expr *Init, const ArrayType *AT) {
+  return ::IsStringInit(Init, AT, Context) == SIF_None;
+}
+
 /// Update the type of a string literal, including any surrounding parentheses,
 /// to match the type of the object which it is initializing.
 static void updateStringLiteralType(Expr *E, QualType Ty) {

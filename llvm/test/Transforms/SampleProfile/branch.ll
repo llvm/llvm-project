@@ -1,5 +1,5 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/branch.prof | opt -analyze -branch-prob | FileCheck %s
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/branch.prof | opt -analyze -branch-prob | FileCheck %s
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/branch.prof | opt -analyze -branch-prob -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/branch.prof | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
 ; Original C++ code for this test case:
 ;
@@ -30,7 +30,7 @@
 
 ; Function Attrs: uwtable
 define i32 @main(i32 %argc, i8** %argv) #0 !dbg !6 {
-; CHECK: Printing analysis 'Branch Probability Analysis' for function 'main':
+; CHECK: Printing analysis {{.*}} for function 'main':
 
 entry:
   %retval = alloca i32, align 4

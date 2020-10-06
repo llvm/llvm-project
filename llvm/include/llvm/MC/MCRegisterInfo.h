@@ -675,6 +675,7 @@ public:
 
   MCRegUnitIterator(MCRegister Reg, const MCRegisterInfo *MCRI) {
     assert(Reg && "Null register has no regunits");
+    assert(MCRegister::isPhysicalRegister(Reg.id()));
     // Decode the RegUnits MCRegisterDesc field.
     unsigned RU = MCRI->get(Reg).RegUnits;
     unsigned Scale = RU & 15;

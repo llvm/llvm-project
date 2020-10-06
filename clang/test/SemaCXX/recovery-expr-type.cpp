@@ -105,3 +105,9 @@ typedef int arr[];
 int v = arr(); // expected-error {{array types cannot be value-initialized}} \
                   expected-error {{cannot initialize a variable of type 'int' with an rvalue of type 'test8::arr'}}
 }
+
+namespace test9 {
+auto f(); // expected-note {{candidate function not viable}}
+// verify no crash on evaluating the size of undeduced auto type.
+static_assert(sizeof(f(1)), ""); // expected-error {{no matching function for call to 'f'}}
+}

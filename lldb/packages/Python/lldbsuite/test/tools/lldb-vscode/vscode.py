@@ -728,24 +728,26 @@ class DebugCommunication(object):
     def request_setBreakpoints(self, file_path, line_array, condition=None,
                                hitCondition=None):
         (dir, base) = os.path.split(file_path)
-        breakpoints = []
-        for line in line_array:
-            bp = {'line': line}
-            if condition is not None:
-                bp['condition'] = condition
-            if hitCondition is not None:
-                bp['hitCondition'] = hitCondition
-            breakpoints.append(bp)
         source_dict = {
             'name': base,
             'path': file_path
         }
         args_dict = {
             'source': source_dict,
-            'breakpoints': breakpoints,
-            'lines': '%s' % (line_array),
             'sourceModified': False,
         }
+        if line_array is not None:
+            args_dict['lines'] = '%s' % line_array
+            breakpoints = []
+            for line in line_array:
+                bp = {'line': line}
+                if condition is not None:
+                    bp['condition'] = condition
+                if hitCondition is not None:
+                    bp['hitCondition'] = hitCondition
+                breakpoints.append(bp)
+            args_dict['breakpoints'] = breakpoints
+
         command_dict = {
             'command': 'setBreakpoints',
             'type': 'request',

@@ -2431,3 +2431,7 @@
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__131__arrive_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseEh'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__134__construct_barrier_algorithm_baseERl'}
+{'type': 'U', 'is_defined': False, 'name': '___cxa_allocate_dependent_exception'}
+{'type': 'U', 'is_defined': False, 'name': '___cxa_free_dependent_exception'}
+{'type': 'I', 'is_defined': True, 'name': '___cxa_allocate_dependent_exception'}
+{'type': 'I', 'is_defined': True, 'name': '___cxa_free_dependent_exception'}

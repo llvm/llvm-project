@@ -44,6 +44,7 @@ private:
   void enqueue(Symbol *sym);
   void markSymbol(Symbol *sym);
   void mark();
+  bool isCallCtorsLive();
 
   // A list of chunks to visit.
   SmallVector<InputChunk *, 256> queue;
@@ -58,22 +59,6 @@ void MarkLive::enqueue(Symbol *sym) {
   sym->markLive();
   if (InputChunk *chunk = sym->getChunk())
     queue.push_back(chunk);
-
-  // The ctor functions are all referenced by the synthetic callCtors
-  // function.  However, this function does not contain relocations so we
-  // have to manually mark the ctors as live if callCtors itself is live.
-  if (sym == WasmSym::callCtors) {
-    if (config->isPic)
-      enqueue(WasmSym::applyRelocs);
-    for (const ObjFile *obj : symtab->objectFiles) {
-      const WasmLinkingData &l = obj->getWasmObj()->linkingData();
-      for (const WasmInitFunc &f : l.InitFunctions) {
-        auto* initSym = obj->getFunctionSymbol(f.Symbol);
-        if (!initSym->isDiscarded())
-          enqueue(initSym);
-      }
-    }
-  }
 }
 
 void MarkLive::run() {
@@ -86,16 +71,29 @@ void MarkLive::run() {
     if (sym->isNoStrip() || sym->isExported())
       enqueue(sym);
 
-  // For relocatable output, we need to preserve all the ctor functions
-  if (config->relocatable) {
-    for (const ObjFile *obj : symtab->objectFiles) {
-      const WasmLinkingData &l = obj->getWasmObj()->linkingData();
-      for (const WasmInitFunc &f : l.InitFunctions)
-        enqueue(obj->getFunctionSymbol(f.Symbol));
+  // If we'll be calling the user's `__wasm_call_dtors` function, mark it live.
+  if (Symbol *callDtors = WasmSym::callDtors)
+    enqueue(callDtors);
+
+  // The ctor functions are all referenced by the synthetic callCtors
+  // function.  However, this function does not contain relocations so we
+  // have to manually mark the ctors as live.
+  for (const ObjFile *obj : symtab->objectFiles) {
+    const WasmLinkingData &l = obj->getWasmObj()->linkingData();
+    for (const WasmInitFunc &f : l.InitFunctions) {
+      auto *initSym = obj->getFunctionSymbol(f.Symbol);
+      if (!initSym->isDiscarded())
+        enqueue(initSym);
     }
   }
 
+  // In Emscripten-style PIC, `__wasm_call_ctors` calls `__wasm_apply_relocs`.
   if (config->isPic)
+    enqueue(WasmSym::applyRelocs);
+
+  // If we have any non-discarded init functions, mark `__wasm_call_ctors` as
+  // live so that we assign it an index and call it.
+  if (isCallCtorsLive())
     enqueue(WasmSym::callCtors);
 
   if (config->sharedMemory && !config->shared)
@@ -167,6 +165,28 @@ void markLive() {
       if (!g->live)
         message("removing unused section " + toString(g));
   }
+}
+
+bool MarkLive::isCallCtorsLive() {
+  // In a reloctable link, we don't call `__wasm_call_ctors`.
+  if (config->relocatable)
+    return false;
+
+  // In Emscripten-style PIC, we call `__wasm_call_ctors` which calls
+  // `__wasm_apply_relocs`.
+  if (config->isPic)
+    return true;
+
+  // If there are any init functions, mark `__wasm_call_ctors` live so that
+  // it can call them.
+  for (const ObjFile *file : symtab->objectFiles) {
+    const WasmLinkingData &l = file->getWasmObj()->linkingData();
+    for (const WasmInitFunc &f : l.InitFunctions)
+      if (!file->getFunctionSymbol(f.Symbol)->isDiscarded())
+        return true;
+  }
+
+  return false;
 }
 
 } // namespace wasm

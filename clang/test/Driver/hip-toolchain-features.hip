@@ -37,8 +37,17 @@
 // RUN:   -mcumode -mcumode -mno-cumode -mwavefrontsize64 -mcumode \
 // RUN:   -mwavefrontsize64 -mno-wavefrontsize64 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=DUP
-// DUP: {{.*}}clang{{.*}} "-target-feature" "-wavefrontsize16"
-// DUP-SAME: "-target-feature" "+wavefrontsize32"
-// DUP-SAME: "-target-feature" "-wavefrontsize64"
-// DUP-SAME: "-target-feature" "+cumode"
-// DUP: {{.*}}lld{{.*}} "-plugin-opt=-mattr=-wavefrontsize16,+wavefrontsize32,-wavefrontsize64,+cumode"
+// DUP: {{.*}}clang{{.*}} "-target-feature" "+cumode"
+// DUP-NOT: "-target-feature" "{{.*}}wavefrontsize16"
+// DUP-NOT: "-target-feature" "{{.*}}wavefrontsize32"
+// DUP-NOT: "-target-feature" "{{.*}}wavefrontsize64"
+// DUP: {{.*}}lld{{.*}} "-plugin-opt=-mattr=+cumode"
+
+// RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx1010 %s \
+// RUN:   -mno-wavefrontsize64 -mwavefrontsize64 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=WAVE64
+// WAVE64: {{.*}}clang{{.*}} "-target-feature" "+wavefrontsize64"
+// WAVE64-NOT: "-target-feature" "{{.*}}wavefrontsize16"
+// WAVE64-NOT: "-target-feature" "{{.*}}wavefrontsize32"
+// WAVE64: {{.*}}lld{{.*}} "-plugin-opt=-mattr=+wavefrontsize64"

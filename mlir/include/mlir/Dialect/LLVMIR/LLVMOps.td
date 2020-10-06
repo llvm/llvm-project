@@ -417,11 +417,7 @@ def LLVM_CallOp : LLVM_Op<"call">,
       $_state.addAttributes(attributes);
       $_state.addOperands(operands);
     }]>];
-  let verifier = [{
-    if (getNumResults() > 1)
-      return emitOpError("must have 0 or 1 result");
-    return success();
-  }];
+  let verifier = [{ return ::verify(*this); }];
   let parser = [{ return parseCallOp(parser, result); }];
   let printer = [{ printCallOp(p, *this); }];
 }

@@ -6,12 +6,11 @@
 
 ; CHECK: 	#APP
 ; CHECK-NEXT:	#NO_APP
-; CHECK-NEXT:	movq	%rcx, %rax
-; CHECK-NEXT:	movq	%rax, -8(%rsp)
-; CHECK-NEXT:	movq	-8(%rsp), %rdx
+; CHECK-NEXT:	movq	%rcx, %rdx
 ; CHECK-NEXT:	#APP
 ; CHECK-NEXT:	#NO_APP
-; CHECK-NEXT:	movq	%rdx, %rax
+; CHECK-NEXT:	movq	%rcx, -8(%rsp)
+; CHECK-NEXT:	movq	-8(%rsp), %rax
 ; CHECK-NEXT:	ret
 
 define i64 @foo() {

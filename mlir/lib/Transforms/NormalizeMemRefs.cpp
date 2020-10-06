@@ -29,34 +29,6 @@ namespace {
 /// such functions as normalizable. Also, if a normalizable function is known
 /// to call a non-normalizable function, we treat that function as
 /// non-normalizable as well. We assume external functions to be normalizable.
-///
-/// Input :-
-/// #tile = affine_map<(i) -> (i floordiv 4, i mod 4)>
-/// func @matmul(%A: memref<16xf64, #tile>, %B: index, %C: memref<16xf64>) ->
-/// (memref<16xf64, #tile>) {
-///   affine.for %arg3 = 0 to 16 {
-///         %a = affine.load %A[%arg3] : memref<16xf64, #tile>
-///         %p = mulf %a, %a : f64
-///         affine.store %p, %A[%arg3] : memref<16xf64, #tile>
-///   }
-///   %c = alloc() : memref<16xf64, #tile>
-///   %d = affine.load %c[0] : memref<16xf64, #tile>
-///   return %A: memref<16xf64, #tile>
-/// }
-///
-/// Output :-
-///   func @matmul(%arg0: memref<4x4xf64>, %arg1: index, %arg2: memref<16xf64>)
-///   -> memref<4x4xf64> {
-///     affine.for %arg3 = 0 to 16 {
-///       %2 = affine.load %arg0[%arg3 floordiv 4, %arg3 mod 4] :
-///       memref<4x4xf64> %3 = mulf %2, %2 : f64 affine.store %3, %arg0[%arg3
-///       floordiv 4, %arg3 mod 4] : memref<4x4xf64>
-///     }
-///     %0 = alloc() : memref<16xf64, #map0>
-///     %1 = affine.load %0[0] : memref<16xf64, #map0>
-///     return %arg0 : memref<4x4xf64>
-///   }
-///
 struct NormalizeMemRefs : public NormalizeMemRefsBase<NormalizeMemRefs> {
   void runOnOperation() override;
   void normalizeFuncOpMemRefs(FuncOp funcOp, ModuleOp moduleOp);
@@ -73,6 +45,7 @@ std::unique_ptr<OperationPass<ModuleOp>> mlir::createNormalizeMemRefsPass() {
 }
 
 void NormalizeMemRefs::runOnOperation() {
+  LLVM_DEBUG(llvm::dbgs() << "Normalizing Memrefs...\n");
   ModuleOp moduleOp = getOperation();
   // We maintain all normalizable FuncOps in a DenseSet. It is initialized
   // with all the functions within a module and then functions which are not
@@ -92,6 +65,9 @@ void NormalizeMemRefs::runOnOperation() {
   moduleOp.walk([&](FuncOp funcOp) {
     if (normalizableFuncs.contains(funcOp)) {
       if (!areMemRefsNormalizable(funcOp)) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "@" << funcOp.getName()
+                   << " contains ops that cannot normalize MemRefs\n");
         // Since this function is not normalizable, we set all the caller
         // functions and the callees of this function as not normalizable.
         // TODO: Drop this conservative assumption in the future.
@@ -101,6 +77,8 @@ void NormalizeMemRefs::runOnOperation() {
     }
   });
 
+  LLVM_DEBUG(llvm::dbgs() << "Normalizing " << normalizableFuncs.size()
+                          << " functions\n");
   // Those functions which can be normalized are subjected to normalization.
   for (FuncOp &funcOp : normalizableFuncs)
     normalizeFuncOpMemRefs(funcOp, moduleOp);
@@ -127,6 +105,9 @@ void NormalizeMemRefs::setCalleesAndCallersNonNormalizable(
   if (!normalizableFuncs.contains(funcOp))
     return;
 
+  LLVM_DEBUG(
+      llvm::dbgs() << "@" << funcOp.getName()
+                   << " calls or is called by non-normalizable function\n");
   normalizableFuncs.erase(funcOp);
   // Caller of the function.
   Optional<SymbolTable::UseRange> symbolUses = funcOp.getSymbolUses(moduleOp);

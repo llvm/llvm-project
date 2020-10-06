@@ -14546,15 +14546,15 @@ static SDValue PerformSTORECombine(SDNode *N,
     SDValue BasePtr = St->getBasePtr();
     SDValue NewST1 = DAG.getStore(
         St->getChain(), DL, StVal.getNode()->getOperand(isBigEndian ? 1 : 0),
-        BasePtr, St->getPointerInfo(), St->getAlignment(),
+        BasePtr, St->getPointerInfo(), St->getOriginalAlign(),
         St->getMemOperand()->getFlags());
 
     SDValue OffsetPtr = DAG.getNode(ISD::ADD, DL, MVT::i32, BasePtr,
                                     DAG.getConstant(4, DL, MVT::i32));
     return DAG.getStore(NewST1.getValue(0), DL,
                         StVal.getNode()->getOperand(isBigEndian ? 0 : 1),
-                        OffsetPtr, St->getPointerInfo(),
-                        std::min(4U, St->getAlignment() / 2),
+                        OffsetPtr, St->getPointerInfo().getWithOffset(4),
+                        St->getOriginalAlign(),
                         St->getMemOperand()->getFlags());
   }
 

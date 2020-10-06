@@ -178,17 +178,8 @@ define void @f1() {
 ;
 ; 686-O0-LABEL: f1:
 ; 686-O0:       # %bb.0: # %entry
-; 686-O0-NEXT:    pushl %ebx
-; 686-O0-NEXT:    .cfi_def_cfa_offset 8
-; 686-O0-NEXT:    pushl %edi
-; 686-O0-NEXT:    .cfi_def_cfa_offset 12
-; 686-O0-NEXT:    pushl %esi
-; 686-O0-NEXT:    .cfi_def_cfa_offset 16
 ; 686-O0-NEXT:    subl $1, %esp
-; 686-O0-NEXT:    .cfi_def_cfa_offset 17
-; 686-O0-NEXT:    .cfi_offset %esi, -16
-; 686-O0-NEXT:    .cfi_offset %edi, -12
-; 686-O0-NEXT:    .cfi_offset %ebx, -8
+; 686-O0-NEXT:    .cfi_def_cfa_offset 5
 ; 686-O0-NEXT:    movl var_5, %eax
 ; 686-O0-NEXT:    movl %eax, %ecx
 ; 686-O0-NEXT:    sarl $31, %ecx
@@ -197,33 +188,27 @@ define void @f1() {
 ; 686-O0-NEXT:    orl %ecx, %eax
 ; 686-O0-NEXT:    setne (%esp)
 ; 686-O0-NEXT:    movl var_5, %ecx
+; 686-O0-NEXT:    movl %ecx, %eax
+; 686-O0-NEXT:    sarl $31, %eax
 ; 686-O0-NEXT:    movl %ecx, %edx
-; 686-O0-NEXT:    sarl $31, %edx
-; 686-O0-NEXT:    movl %ecx, %esi
-; 686-O0-NEXT:    subl $-1, %esi
-; 686-O0-NEXT:    sete %bl
-; 686-O0-NEXT:    movzbl %bl, %edi
+; 686-O0-NEXT:    subl $-1, %edx
+; 686-O0-NEXT:    sete %dl
+; 686-O0-NEXT:    movzbl %dl, %edx
 ; 686-O0-NEXT:    addl $7093, %ecx # imm = 0x1BB5
-; 686-O0-NEXT:    adcl $0, %edx
-; 686-O0-NEXT:    subl %edi, %ecx
-; 686-O0-NEXT:    sbbl $0, %edx
-; 686-O0-NEXT:    setl %bl
-; 686-O0-NEXT:    movzbl %bl, %edi
-; 686-O0-NEXT:    movl %edi, var_57
+; 686-O0-NEXT:    adcl $0, %eax
+; 686-O0-NEXT:    subl %edx, %ecx
+; 686-O0-NEXT:    sbbl $0, %eax
+; 686-O0-NEXT:    setl %al
+; 686-O0-NEXT:    movzbl %al, %eax
+; 686-O0-NEXT:    movl %eax, var_57
 ; 686-O0-NEXT:    movl $0, var_57+4
-; 686-O0-NEXT:    movl var_5, %edi
-; 686-O0-NEXT:    subl $-1, %edi
-; 686-O0-NEXT:    sete %bl
-; 686-O0-NEXT:    movzbl %bl, %ebx
-; 686-O0-NEXT:    movl %ebx, _ZN8struct_210member_2_0E
+; 686-O0-NEXT:    movl var_5, %eax
+; 686-O0-NEXT:    subl $-1, %eax
+; 686-O0-NEXT:    sete %al
+; 686-O0-NEXT:    movzbl %al, %eax
+; 686-O0-NEXT:    movl %eax, _ZN8struct_210member_2_0E
 ; 686-O0-NEXT:    movl $0, _ZN8struct_210member_2_0E+4
 ; 686-O0-NEXT:    addl $1, %esp
-; 686-O0-NEXT:    .cfi_def_cfa_offset 16
-; 686-O0-NEXT:    popl %esi
-; 686-O0-NEXT:    .cfi_def_cfa_offset 12
-; 686-O0-NEXT:    popl %edi
-; 686-O0-NEXT:    .cfi_def_cfa_offset 8
-; 686-O0-NEXT:    popl %ebx
 ; 686-O0-NEXT:    .cfi_def_cfa_offset 4
 ; 686-O0-NEXT:    retl
 ;
@@ -321,9 +306,9 @@ define void @f2() {
 ; X86-O0-NEXT:    sete %al
 ; X86-O0-NEXT:    andb $1, %al
 ; X86-O0-NEXT:    movzbl %al, %eax
-; X86-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; X86-O0-NEXT:    # implicit-def: $rcx
-; X86-O0-NEXT:    movw %ax, (%rcx)
+; X86-O0-NEXT:    movw %ax, %cx
+; X86-O0-NEXT:    # implicit-def: $rax
+; X86-O0-NEXT:    movw %cx, (%rax)
 ; X86-O0-NEXT:    retq
 ;
 ; X64-LABEL: f2:
@@ -368,9 +353,9 @@ define void @f2() {
 ; 686-O0-NEXT:    sete %al
 ; 686-O0-NEXT:    andb $1, %al
 ; 686-O0-NEXT:    movzbl %al, %eax
-; 686-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; 686-O0-NEXT:    # implicit-def: $ecx
-; 686-O0-NEXT:    movw %ax, (%ecx)
+; 686-O0-NEXT:    movw %ax, %cx
+; 686-O0-NEXT:    # implicit-def: $eax
+; 686-O0-NEXT:    movw %cx, (%eax)
 ; 686-O0-NEXT:    addl $2, %esp
 ; 686-O0-NEXT:    .cfi_def_cfa_offset 4
 ; 686-O0-NEXT:    retl
@@ -488,18 +473,18 @@ define void @f3() #0 {
 ; 686-O0-NEXT:    andl $-8, %esp
 ; 686-O0-NEXT:    subl $16, %esp
 ; 686-O0-NEXT:    .cfi_offset %esi, -12
-; 686-O0-NEXT:    movl var_13, %eax
-; 686-O0-NEXT:    movl %eax, %ecx
-; 686-O0-NEXT:    notl %ecx
-; 686-O0-NEXT:    testl %eax, %eax
-; 686-O0-NEXT:    sete %al
-; 686-O0-NEXT:    movzbl %al, %eax
-; 686-O0-NEXT:    movl var_16, %edx
-; 686-O0-NEXT:    movl %ecx, %esi
-; 686-O0-NEXT:    xorl %edx, %esi
-; 686-O0-NEXT:    andl %esi, %eax
-; 686-O0-NEXT:    orl %eax, %ecx
-; 686-O0-NEXT:    movl %ecx, (%esp)
+; 686-O0-NEXT:    movl var_13, %ecx
+; 686-O0-NEXT:    movl %ecx, %eax
+; 686-O0-NEXT:    notl %eax
+; 686-O0-NEXT:    testl %ecx, %ecx
+; 686-O0-NEXT:    sete %cl
+; 686-O0-NEXT:    movzbl %cl, %ecx
+; 686-O0-NEXT:    movl var_16, %esi
+; 686-O0-NEXT:    movl %eax, %edx
+; 686-O0-NEXT:    xorl %esi, %edx
+; 686-O0-NEXT:    andl %edx, %ecx
+; 686-O0-NEXT:    orl %ecx, %eax
+; 686-O0-NEXT:    movl %eax, (%esp)
 ; 686-O0-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; 686-O0-NEXT:    movl var_13, %eax
 ; 686-O0-NEXT:    notl %eax

@@ -558,6 +558,11 @@ BUILTIN(__builtin_vsx_xxeval, "V2ULLiV2ULLiV2ULLiV2ULLiIi", "")
 
 BUILTIN(__builtin_vsx_xvtlsbb, "iV16UcUi", "")
 
+BUILTIN(__builtin_vsx_xvtdivdp, "iV2dV2d", "")
+BUILTIN(__builtin_vsx_xvtdivsp, "iV4fV4f", "")
+BUILTIN(__builtin_vsx_xvtsqrtdp, "iV2d", "")
+BUILTIN(__builtin_vsx_xvtsqrtsp, "iV4f", "")
+
 // P10 Vector Permute Extended built-in.
 BUILTIN(__builtin_vsx_xxpermx, "V16UcV16UcV16UcV16UcIi", "")
 

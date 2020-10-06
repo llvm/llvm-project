@@ -39,15 +39,6 @@ EnablePEVectorSpills("ppc-enable-pe-vector-spills",
                      cl::desc("Enable spills in prologue to vector registers."),
                      cl::init(false), cl::Hidden);
 
-/// VRRegNo - Map from a numbered VR register to its enum value.
-///
-static const MCPhysReg VRRegNo[] = {
- PPC::V0 , PPC::V1 , PPC::V2 , PPC::V3 , PPC::V4 , PPC::V5 , PPC::V6 , PPC::V7 ,
- PPC::V8 , PPC::V9 , PPC::V10, PPC::V11, PPC::V12, PPC::V13, PPC::V14, PPC::V15,
- PPC::V16, PPC::V17, PPC::V18, PPC::V19, PPC::V20, PPC::V21, PPC::V22, PPC::V23,
- PPC::V24, PPC::V25, PPC::V26, PPC::V27, PPC::V28, PPC::V29, PPC::V30, PPC::V31
-};
-
 static unsigned computeReturnSaveOffset(const PPCSubtarget &STI) {
   if (STI.isAIXABI())
     return STI.isPPC64() ? 16 : 8;
@@ -262,151 +253,9 @@ const PPCFrameLowering::SpillSlot *PPCFrameLowering::getCalleeSavedSpillSlots(
   return AIXOffsets32;
 }
 
-/// RemoveVRSaveCode - We have found that this function does not need any code
-/// to manipulate the VRSAVE register, even though it uses vector registers.
-/// This can happen when the only registers used are known to be live in or out
-/// of the function.  Remove all of the VRSAVE related code from the function.
-/// FIXME: The removal of the code results in a compile failure at -O0 when the
-/// function contains a function call, as the GPR containing original VRSAVE
-/// contents is spilled and reloaded around the call.  Without the prolog code,
-/// the spill instruction refers to an undefined register.  This code needs
-/// to account for all uses of that GPR.
-static void RemoveVRSaveCode(MachineInstr &MI) {
-  MachineBasicBlock *Entry = MI.getParent();
-  MachineFunction *MF = Entry->getParent();
-
-  // We know that the MTVRSAVE instruction immediately follows MI.  Remove it.
-  MachineBasicBlock::iterator MBBI = MI;
-  ++MBBI;
-  assert(MBBI != Entry->end() && MBBI->getOpcode() == PPC::MTVRSAVE);
-  MBBI->eraseFromParent();
-
-  bool RemovedAllMTVRSAVEs = true;
-  // See if we can find and remove the MTVRSAVE instruction from all of the
-  // epilog blocks.
-  for (MachineFunction::iterator I = MF->begin(), E = MF->end(); I != E; ++I) {
-    // If last instruction is a return instruction, add an epilogue
-    if (I->isReturnBlock()) {
-      bool FoundIt = false;
-      for (MBBI = I->end(); MBBI != I->begin(); ) {
-        --MBBI;
-        if (MBBI->getOpcode() == PPC::MTVRSAVE) {
-          MBBI->eraseFromParent();  // remove it.
-          FoundIt = true;
-          break;
-        }
-      }
-      RemovedAllMTVRSAVEs &= FoundIt;
-    }
-  }
-
-  // If we found and removed all MTVRSAVE instructions, remove the read of
-  // VRSAVE as well.
-  if (RemovedAllMTVRSAVEs) {
-    MBBI = MI;
-    assert(MBBI != Entry->begin() && "UPDATE_VRSAVE is first instr in block?");
-    --MBBI;
-    assert(MBBI->getOpcode() == PPC::MFVRSAVE && "VRSAVE instrs wandered?");
-    MBBI->eraseFromParent();
-  }
-
-  // Finally, nuke the UPDATE_VRSAVE.
-  MI.eraseFromParent();
-}
-
-// HandleVRSaveUpdate - MI is the UPDATE_VRSAVE instruction introduced by the
-// instruction selector.  Based on the vector registers that have been used,
-// transform this into the appropriate ORI instruction.
-static void HandleVRSaveUpdate(MachineInstr &MI, const TargetInstrInfo &TII) {
-  MachineFunction *MF = MI.getParent()->getParent();
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-  DebugLoc dl = MI.getDebugLoc();
-
-  const MachineRegisterInfo &MRI = MF->getRegInfo();
-  unsigned UsedRegMask = 0;
-  for (unsigned i = 0; i != 32; ++i)
-    if (MRI.isPhysRegModified(VRRegNo[i]))
-      UsedRegMask |= 1 << (31-i);
-
-  // Live in and live out values already must be in the mask, so don't bother
-  // marking them.
-  for (std::pair<unsigned, unsigned> LI : MF->getRegInfo().liveins()) {
-    unsigned RegNo = TRI->getEncodingValue(LI.first);
-    if (VRRegNo[RegNo] == LI.first)        // If this really is a vector reg.
-      UsedRegMask &= ~(1 << (31-RegNo));   // Doesn't need to be marked.
-  }
-
-  // Live out registers appear as use operands on return instructions.
-  for (MachineFunction::const_iterator BI = MF->begin(), BE = MF->end();
-       UsedRegMask != 0 && BI != BE; ++BI) {
-    const MachineBasicBlock &MBB = *BI;
-    if (!MBB.isReturnBlock())
-      continue;
-    const MachineInstr &Ret = MBB.back();
-    for (unsigned I = 0, E = Ret.getNumOperands(); I != E; ++I) {
-      const MachineOperand &MO = Ret.getOperand(I);
-      if (!MO.isReg() || !PPC::VRRCRegClass.contains(MO.getReg()))
-        continue;
-      unsigned RegNo = TRI->getEncodingValue(MO.getReg());
-      UsedRegMask &= ~(1 << (31-RegNo));
-    }
-  }
-
-  // If no registers are used, turn this into a copy.
-  if (UsedRegMask == 0) {
-    // Remove all VRSAVE code.
-    RemoveVRSaveCode(MI);
-    return;
-  }
-
-  Register SrcReg = MI.getOperand(1).getReg();
-  Register DstReg = MI.getOperand(0).getReg();
-
-  if ((UsedRegMask & 0xFFFF) == UsedRegMask) {
-    if (DstReg != SrcReg)
-      BuildMI(*MI.getParent(), MI, dl, TII.get(PPC::ORI), DstReg)
-          .addReg(SrcReg)
-          .addImm(UsedRegMask);
-    else
-      BuildMI(*MI.getParent(), MI, dl, TII.get(PPC::ORI), DstReg)
-          .addReg(SrcReg, RegState::Kill)
-          .addImm(UsedRegMask);
-  } else if ((UsedRegMask & 0xFFFF0000) == UsedRegMask) {
-    if (DstReg != SrcReg)
-      BuildMI(*MI.getParent(), MI, dl, TII.get(PPC::ORIS), DstReg)
-          .addReg(SrcReg)
-          .addImm(UsedRegMask >> 16);
-    else
-      BuildMI(*MI.getParent(), MI, dl, TII.get(PPC::ORIS), DstReg)
-          .addReg(SrcReg, RegState::Kill)
-          .addImm(UsedRegMask >> 16);
-  } else {
-    if (DstReg != SrcReg)
-      BuildMI(*MI.getParent(), MI, dl, TII.get(PPC::ORIS), DstReg)
-          .addReg(SrcReg)
-          .addImm(UsedRegMask >> 16);
-    else
-      BuildMI(*MI.getParent(), MI, dl, TII.get(PPC::ORIS), DstReg)
-          .addReg(SrcReg, RegState::Kill)
-          .addImm(UsedRegMask >> 16);
-
-    BuildMI(*MI.getParent(), MI, dl, TII.get(PPC::ORI), DstReg)
-        .addReg(DstReg, RegState::Kill)
-        .addImm(UsedRegMask & 0xFFFF);
-  }
-
-  // Remove the old UPDATE_VRSAVE instruction.
-  MI.eraseFromParent();
-}
-
 static bool spillsCR(const MachineFunction &MF) {
   const PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
   return FuncInfo->isCRSpilled();
-}
-
-static bool spillsVRSAVE(const MachineFunction &MF) {
-  const PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
-  return FuncInfo->isVRSAVESpilled();
 }
 
 static bool hasSpills(const MachineFunction &MF) {
@@ -474,7 +323,7 @@ PPCFrameLowering::determineFrameLayout(const MachineFunction &MF,
                        !FI->mustSaveTOC() &&        // No need to save TOC.
                        !RegInfo->hasBasePointer(MF); // No special alignment.
 
-  // Note: for PPC32 SVR4ABI (Non-DarwinABI), we can still generate stackless
+  // Note: for PPC32 SVR4ABI, we can still generate stackless
   // code if all local vars are reg-allocated.
   bool FitsInRedZone = FrameSize <= Subtarget.getRedZoneSize();
 
@@ -771,24 +620,8 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   bool isPPC64 = Subtarget.isPPC64();
   // Get the ABI.
   bool isSVR4ABI = Subtarget.isSVR4ABI();
-  bool isAIXABI = Subtarget.isAIXABI();
   bool isELFv2ABI = Subtarget.isELFv2ABI();
-  assert((isSVR4ABI || isAIXABI) && "Unsupported PPC ABI.");
-
-  // Scan the prolog, looking for an UPDATE_VRSAVE instruction.  If we find it,
-  // process it.
-  if (!isSVR4ABI)
-    for (unsigned i = 0; MBBI != MBB.end(); ++i, ++MBBI) {
-      if (MBBI->getOpcode() == PPC::UPDATE_VRSAVE) {
-        if (isAIXABI)
-          report_fatal_error("UPDATE_VRSAVE is unexpected on AIX.");
-        HandleVRSaveUpdate(*MBBI, TII);
-        break;
-      }
-    }
-
-  // Move MBBI back to the beginning of the prologue block.
-  MBBI = MBB.begin();
+  assert((isSVR4ABI || Subtarget.isAIXABI()) && "Unsupported PPC ABI.");
 
   // Work out frame sizes.
   unsigned FrameSize = determineFrameLayoutAndUpdate(MF);
@@ -2035,7 +1868,6 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
   bool HasGPSaveArea = false;
   bool HasG8SaveArea = false;
   bool HasFPSaveArea = false;
-  bool HasVRSAVESaveArea = false;
   bool HasVRSaveArea = false;
 
   SmallVector<CalleeSavedInfo, 18> GPRegs;
@@ -2075,8 +1907,6 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
     } else if (PPC::CRBITRCRegClass.contains(Reg) ||
                PPC::CRRCRegClass.contains(Reg)) {
       ; // do nothing, as we already know whether CRs are spilled
-    } else if (PPC::VRSAVERCRegClass.contains(Reg)) {
-      HasVRSAVESaveArea = true;
     } else if (PPC::VRRCRegClass.contains(Reg) ||
                PPC::SPERCRegClass.contains(Reg)) {
       // Altivec and SPE are mutually exclusive, but have the same stack
@@ -2199,23 +2029,6 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
     LowerBound -= 4; // The CR save area is always 4 bytes long.
   }
 
-  if (HasVRSAVESaveArea) {
-    // FIXME SVR4: Is it actually possible to have multiple elements in CSI
-    //             which have the VRSAVE register class?
-    // Adjust the frame index of the VRSAVE spill slot.
-    for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
-      unsigned Reg = CSI[i].getReg();
-
-      if (PPC::VRSAVERCRegClass.contains(Reg)) {
-        int FI = CSI[i].getFrameIdx();
-
-        MFI.setObjectOffset(FI, LowerBound + MFI.getObjectOffset(FI));
-      }
-    }
-
-    LowerBound -= 4; // The VRSAVE save area is always 4 bytes long.
-  }
-
   // Both Altivec and SPE have the same alignment and padding requirements
   // within the stack frame.
   if (HasVRSaveArea) {
@@ -2255,8 +2068,8 @@ PPCFrameLowering::addScavengingSpillSlot(MachineFunction &MF,
   // needed alignment padding.
   unsigned StackSize = determineFrameLayout(MF, true);
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (MFI.hasVarSizedObjects() || spillsCR(MF) || spillsVRSAVE(MF) ||
-      hasNonRISpills(MF) || (hasSpills(MF) && !isInt<16>(StackSize))) {
+  if (MFI.hasVarSizedObjects() || spillsCR(MF) || hasNonRISpills(MF) ||
+      (hasSpills(MF) && !isInt<16>(StackSize))) {
     const TargetRegisterClass &GPRC = PPC::GPRCRegClass;
     const TargetRegisterClass &G8RC = PPC::G8RCRegClass;
     const TargetRegisterClass &RC = Subtarget.isPPC64() ? G8RC : GPRC;
@@ -2270,7 +2083,7 @@ PPCFrameLowering::addScavengingSpillSlot(MachineFunction &MF,
         MFI.hasVarSizedObjects() && MFI.getMaxAlign() > getStackAlign();
 
     // These kinds of spills might need two registers.
-    if (spillsCR(MF) || spillsVRSAVE(MF) || HasAlVars)
+    if (spillsCR(MF) || HasAlVars)
       RS->addScavengingFrameIndex(
           MFI.CreateStackObject(Size, Alignment, false));
   }
@@ -2347,9 +2160,6 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
 
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
     unsigned Reg = CSI[i].getReg();
-    // VRSAVE can appear here if, for example, @llvm.eh.unwind.init() is used.
-    if (Reg == PPC::VRSAVE)
-      continue;
 
     // CR2 through CR4 are the nonvolatile CR fields.
     bool IsCRField = PPC::CR2 <= Reg && Reg <= PPC::CR4;
@@ -2513,10 +2323,6 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
 
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
     unsigned Reg = CSI[i].getReg();
-
-    // VRSAVE can appear here if, for example, @llvm.eh.unwind.init() is used.
-    if (Reg == PPC::VRSAVE)
-      continue;
 
     if ((Reg == PPC::X2 || Reg == PPC::R2) && MustSaveTOC)
       continue;

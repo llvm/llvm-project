@@ -90,6 +90,20 @@ inline typename T::Type atomic_fetch_sub(volatile T *A, typename T::Type V,
 }
 
 template <typename T>
+inline typename T::Type atomic_fetch_and(volatile T *A, typename T::Type V,
+                                         memory_order MO) {
+  DCHECK(!(reinterpret_cast<uptr>(A) % sizeof(*A)));
+  return __atomic_fetch_and(&A->ValDoNotUse, V, MO);
+}
+
+template <typename T>
+inline typename T::Type atomic_fetch_or(volatile T *A, typename T::Type V,
+                                        memory_order MO) {
+  DCHECK(!(reinterpret_cast<uptr>(A) % sizeof(*A)));
+  return __atomic_fetch_or(&A->ValDoNotUse, V, MO);
+}
+
+template <typename T>
 inline typename T::Type atomic_exchange(volatile T *A, typename T::Type V,
                                         memory_order MO) {
   DCHECK(!(reinterpret_cast<uptr>(A) % sizeof(*A)));

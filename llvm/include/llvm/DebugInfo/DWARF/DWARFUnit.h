@@ -229,7 +229,6 @@ class DWARFUnit {
   Optional<StrOffsetsContributionDescriptor> StringOffsetsTableContribution;
 
   /// A table of range lists (DWARF v5 and later).
-  Optional<DWARFDebugRnglistTable> RngListTable;
   Optional<DWARFListTableHeader> LoclistTableHeader;
 
   mutable const DWARFAbbreviationDeclarationSet *Abbrevs;

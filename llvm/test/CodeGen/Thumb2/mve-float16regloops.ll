@@ -1156,8 +1156,8 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, half* noca
 ; CHECK-NEXT:  @ %bb.5: @ %for.body.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB16_4 Depth=1
 ; CHECK-NEXT:    ldr.w lr, [sp] @ 4-byte Reload
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    ldr r6, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB16_6: @ %for.body
 ; CHECK-NEXT:    @ Parent Loop BB16_4 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2

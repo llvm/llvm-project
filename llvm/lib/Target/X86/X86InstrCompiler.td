@@ -845,6 +845,12 @@ let Defs = [EAX, EDX, EFLAGS], Uses = [EAX, EBX, ECX, EDX],
 defm LCMPXCHG8B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg8b", X86cas8, i64mem>;
 }
 
+let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RBX, RCX, RDX],
+    Predicates = [HasCmpxchg16b,In64BitMode], SchedRW = [WriteCMPXCHGRMW] in {
+defm LCMPXCHG16B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg16b",
+                                 X86cas16, i128mem>, REX_W;
+}
+
 // This pseudo must be used when the frame uses RBX as
 // the base pointer. Indeed, in such situation RBX is a reserved
 // register and the register allocator will ignore any use/def of
@@ -852,38 +858,18 @@ defm LCMPXCHG8B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg8b", X86cas8, i64mem>;
 // RBX that will happen when setting the arguments for the instrucion.
 //
 // Unlike the actual related instruction, we mark that this one
-// defines EBX (instead of using EBX).
+// defines RBX (instead of using RBX).
 // The rationale is that we will define RBX during the expansion of
-// the pseudo. The argument feeding EBX is ebx_input.
+// the pseudo. The argument feeding RBX is rbx_input.
 //
-// The additional argument, $ebx_save, is a temporary register used to
+// The additional argument, $rbx_save, is a temporary register used to
 // save the value of RBX across the actual instruction.
 //
-// To make sure the register assigned to $ebx_save does not interfere with
+// To make sure the register assigned to $rbx_save does not interfere with
 // the definition of the actual instruction, we use a definition $dst which
 // is tied to $rbx_save. That way, the live-range of $rbx_save spans across
 // the instruction and we are sure we will have a valid register to restore
 // the value of RBX.
-let Defs = [EAX, EDX, EBX, EFLAGS], Uses = [EAX, ECX, EDX],
-    Predicates = [HasCmpxchg8b], SchedRW = [WriteCMPXCHGRMW],
-    isCodeGenOnly = 1, isPseudo = 1, Constraints = "$ebx_save = $dst",
-    usesCustomInserter = 1 in {
-def LCMPXCHG8B_SAVE_EBX :
-    I<0, Pseudo, (outs GR32:$dst),
-      (ins i64mem:$ptr, GR32:$ebx_input, GR32:$ebx_save),
-      !strconcat("cmpxchg8b", "\t$ptr"),
-      [(set GR32:$dst, (X86cas8save_ebx addr:$ptr, GR32:$ebx_input,
-                                        GR32:$ebx_save))]>;
-}
-
-
-let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RBX, RCX, RDX],
-    Predicates = [HasCmpxchg16b,In64BitMode], SchedRW = [WriteCMPXCHGRMW] in {
-defm LCMPXCHG16B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg16b",
-                                 X86cas16, i128mem>, REX_W;
-}
-
-// Same as LCMPXCHG8B_SAVE_RBX but for the 16 Bytes variant.
 let Defs = [RAX, RDX, RBX, EFLAGS], Uses = [RAX, RCX, RDX],
     Predicates = [HasCmpxchg16b,In64BitMode], SchedRW = [WriteCMPXCHGRMW],
     isCodeGenOnly = 1, isPseudo = 1, Constraints = "$rbx_save = $dst",
@@ -896,24 +882,12 @@ def LCMPXCHG16B_SAVE_RBX :
                                                     GR64:$rbx_save))]>;
 }
 
-// This pseudo must be used when the frame uses RBX as
+// This pseudo must be used when the frame uses RBX/EBX as
 // the base pointer.
-// cf comment for LCMPXCHG8B_SAVE_EBX.
-let Defs = [ECX, EAX, EBX, EFLAGS], Uses = [ECX, EAX, EBX],
+// cf comment for LCMPXCHG16B_SAVE_RBX.
+let Defs = [EBX], Uses = [ECX, EAX],
     Predicates = [HasMWAITX], SchedRW = [WriteSystem],
-    isCodeGenOnly = 1, isPseudo = 1, Constraints = "$ebx_save = $dst",
-    usesCustomInserter = 1 in {
-def MWAITX_SAVE_EBX :
-    I<0, Pseudo, (outs GR32:$dst),
-      (ins GR32:$ebx_input, GR32:$ebx_save),
-      "mwaitx",
-      []>;
-}
-// Same as MWAITX_SAVE_EBX but for the case where RBX is the base pointer.
-let Defs = [ECX, EAX, EBX, EFLAGS], Uses = [ECX, EAX, EBX],
-    Predicates = [HasMWAITX], SchedRW = [WriteSystem],
-    isCodeGenOnly = 1, isPseudo = 1, Constraints = "$rbx_save = $dst",
-    usesCustomInserter = 1 in {
+    isCodeGenOnly = 1, isPseudo = 1, Constraints = "$rbx_save = $dst" in {
 def MWAITX_SAVE_RBX :
     I<0, Pseudo, (outs GR64:$dst),
       (ins GR32:$ebx_input, GR64:$rbx_save),
@@ -922,15 +896,13 @@ def MWAITX_SAVE_RBX :
 }
 
 // Pseudo mwaitx instruction to use for custom insertion.
-let Defs = [ECX, EAX, EBX, EFLAGS], Uses = [ECX, EAX, EBX],
-    Predicates = [HasMWAITX], SchedRW = [WriteSystem],
+let Predicates = [HasMWAITX], SchedRW = [WriteSystem],
     isCodeGenOnly = 1, isPseudo = 1,
     usesCustomInserter = 1 in {
 def MWAITX :
-    I<0, Pseudo, (outs),
-      (ins GR32:$ecx, GR32:$eax, GR32:$ebx),
+    I<0, Pseudo, (outs), (ins GR32:$ecx, GR32:$eax, GR32:$ebx),
       "mwaitx",
-      [(X86mwaitx GR32:$ecx, GR32:$eax, GR32:$ebx)]>;
+      [(int_x86_mwaitx GR32:$ecx, GR32:$eax, GR32:$ebx)]>;
 }
 
 

@@ -11,6 +11,8 @@
 // template <class T, class... Args>
 //   struct is_constructible;
 
+// UNSUPPORTED: gcc-5, gcc-6, gcc-7, gcc-8, gcc-9
+
 #include <type_traits>
 #include "test_macros.h"
 

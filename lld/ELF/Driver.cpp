@@ -1867,7 +1867,7 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
     if (!sym)
       continue;
 
-    Symbol *real = addUndefined(saver.save("__real_" + name));
+    Symbol *real = addUnusedUndefined(saver.save("__real_" + name));
     Symbol *wrap = addUnusedUndefined(saver.save("__wrap_" + name));
     v.push_back({sym, real, wrap});
 

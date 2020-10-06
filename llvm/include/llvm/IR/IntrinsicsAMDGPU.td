@@ -688,11 +688,15 @@ class AMDGPUImageDimIntrinsicEval<AMDGPUDimProfile P_> {
   int NumRSrcArgs = 1;
   int NumSampArgs = !if(P_.IsSample, 2, 0);
   int DmaskArgIndex = NumDataArgs;
-  int VAddrArgIndex = !add(NumDataArgs, NumDmaskArgs);
-  int GradientArgIndex = !add(NumDataArgs, NumDmaskArgs, NumExtraAddrArgs);
-  int CoordArgIndex = !add(NumDataArgs, NumDmaskArgs, NumExtraAddrArgs, NumGradientArgs);
-  int UnormArgIndex = !add(NumDataArgs, NumDmaskArgs, NumVAddrArgs, NumRSrcArgs, 1);
-  int TexFailCtrlArgIndex = !add(NumDataArgs, NumDmaskArgs, NumVAddrArgs, NumRSrcArgs, NumSampArgs);
+  int VAddrArgIndex = !add(DmaskArgIndex, NumDmaskArgs);
+  int GradientArgIndex = !add(VAddrArgIndex, NumExtraAddrArgs);
+  int CoordArgIndex = !add(GradientArgIndex, NumGradientArgs);
+  int LodArgIndex = !add(VAddrArgIndex, NumVAddrArgs, -1);
+  int MipArgIndex = LodArgIndex;
+  int RsrcArgIndex = !add(VAddrArgIndex, NumVAddrArgs);
+  int SampArgIndex = !add(RsrcArgIndex, NumRSrcArgs);
+  int UnormArgIndex = !add(SampArgIndex, 1);
+  int TexFailCtrlArgIndex = !add(SampArgIndex, NumSampArgs);
   int CachePolicyArgIndex = !add(TexFailCtrlArgIndex, 1);
 }
 

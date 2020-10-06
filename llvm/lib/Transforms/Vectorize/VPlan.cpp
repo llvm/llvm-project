@@ -77,6 +77,30 @@ void VPRecipeBase::dump() const {
   dbgs() << "\n";
 }
 
+VPUser *VPRecipeBase::toVPUser() {
+  if (auto *U = dyn_cast<VPInstruction>(this))
+    return U;
+  if (auto *U = dyn_cast<VPWidenRecipe>(this))
+    return U;
+  if (auto *U = dyn_cast<VPWidenCallRecipe>(this))
+    return U;
+  if (auto *U = dyn_cast<VPWidenSelectRecipe>(this))
+    return U;
+  if (auto *U = dyn_cast<VPWidenGEPRecipe>(this))
+    return U;
+  if (auto *U = dyn_cast<VPBlendRecipe>(this))
+    return U;
+  if (auto *U = dyn_cast<VPInterleaveRecipe>(this))
+    return U;
+  if (auto *U = dyn_cast<VPReplicateRecipe>(this))
+    return U;
+  if (auto *U = dyn_cast<VPBranchOnMaskRecipe>(this))
+    return U;
+  if (auto *U = dyn_cast<VPWidenMemoryInstructionRecipe>(this))
+    return U;
+  return nullptr;
+}
+
 // Get the top-most entry block of \p Start. This is the entry block of the
 // containing VPlan. This function is templated to support both const and non-const blocks
 template <typename T> static T *getPlanEntry(T *Start) {
@@ -157,8 +181,15 @@ VPBlockBase *VPBlockBase::getEnclosingBlockWithPredecessors() {
 
 void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
   SmallVector<VPBlockBase *, 8> Blocks;
-  for (VPBlockBase *Block : depth_first(Entry))
+
+  VPValue DummyValue;
+  for (VPBlockBase *Block : depth_first(Entry)) {
+    // Drop all references in VPBasicBlocks and replace all uses with
+    // DummyValue.
+    if (auto *VPBB = dyn_cast<VPBasicBlock>(Block))
+      VPBB->dropAllReferences(&DummyValue);
     Blocks.push_back(Block);
+  }
 
   for (VPBlockBase *Block : Blocks)
     delete Block;
@@ -281,6 +312,17 @@ void VPBasicBlock::execute(VPTransformState *State) {
   LLVM_DEBUG(dbgs() << "LV: filled BB:" << *NewBB);
 }
 
+void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
+  for (VPRecipeBase &R : Recipes) {
+    if (auto *VPV = R.toVPValue())
+      VPV->replaceAllUsesWith(NewValue);
+
+    if (auto *User = R.toVPUser())
+      for (unsigned I = 0, E = User->getNumOperands(); I != E; I++)
+        User->setOperand(I, NewValue);
+  }
+}
+
 void VPRegionBlock::execute(VPTransformState *State) {
   ReversePostOrderTraversal<VPBlockBase *> RPOT(Entry);
 
@@ -350,6 +392,12 @@ void VPRecipeBase::removeFromParent() {
   assert(getParent() && "Recipe not in any VPBasicBlock");
   getParent()->getRecipeList().remove(getIterator());
   Parent = nullptr;
+}
+
+VPValue *VPRecipeBase::toVPValue() {
+  if (auto *V = dyn_cast<VPInstruction>(this))
+    return V;
+  return nullptr;
 }
 
 iplist<VPRecipeBase>::iterator VPRecipeBase::eraseFromParent() {
@@ -884,10 +932,18 @@ void VPWidenCanonicalIVRecipe::print(raw_ostream &O, const Twine &Indent,
 template void DomTreeBuilder::Calculate<VPDominatorTree>(VPDominatorTree &DT);
 
 void VPValue::replaceAllUsesWith(VPValue *New) {
-  for (VPUser *User : users())
+  for (unsigned J = 0; J < getNumUsers();) {
+    VPUser *User = Users[J];
+    unsigned NumUsers = getNumUsers();
     for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I)
       if (User->getOperand(I) == this)
         User->setOperand(I, New);
+    // If a user got removed after updating the current user, the next user to
+    // update will be moved to the current position, so we only need to
+    // increment the index if the number of users did not change.
+    if (NumUsers == getNumUsers())
+      J++;
+  }
 }
 
 void VPValue::printAsOperand(raw_ostream &OS, VPSlotTracker &Tracker) const {

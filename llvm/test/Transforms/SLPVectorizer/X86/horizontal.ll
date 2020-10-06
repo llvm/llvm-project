@@ -1626,4 +1626,65 @@ normal:
   ret void
 }
 
+; Test case from PR47670. Reduction result is used as incoming value in phi.
+define i32 @reduction_result_used_in_phi(i32* nocapture readonly %data, i1 zeroext %b) {
+; CHECK-LABEL: @reduction_result_used_in_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[B:%.*]], label [[BB:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[L_0:%.*]] = load i32, i32* [[DATA:%.*]], align 4
+; CHECK-NEXT:    [[IDX_1:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 1
+; CHECK-NEXT:    [[L_1:%.*]] = load i32, i32* [[IDX_1]], align 4
+; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 [[L_1]], [[L_0]]
+; CHECK-NEXT:    [[IDX_2:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 2
+; CHECK-NEXT:    [[L_2:%.*]] = load i32, i32* [[IDX_2]], align 4
+; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[L_2]], [[ADD_1]]
+; CHECK-NEXT:    [[IDX_3:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 3
+; CHECK-NEXT:    [[L_3:%.*]] = load i32, i32* [[IDX_3]], align 4
+; CHECK-NEXT:    [[ADD_3:%.*]] = add i32 [[L_3]], [[ADD_2]]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[SUM_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD_3]], [[BB]] ]
+; CHECK-NEXT:    ret i32 [[SUM_1]]
+;
+; STORE-LABEL: @reduction_result_used_in_phi(
+; STORE-NEXT:  entry:
+; STORE-NEXT:    br i1 [[B:%.*]], label [[BB:%.*]], label [[EXIT:%.*]]
+; STORE:       bb:
+; STORE-NEXT:    [[L_0:%.*]] = load i32, i32* [[DATA:%.*]], align 4
+; STORE-NEXT:    [[IDX_1:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 1
+; STORE-NEXT:    [[L_1:%.*]] = load i32, i32* [[IDX_1]], align 4
+; STORE-NEXT:    [[ADD_1:%.*]] = add i32 [[L_1]], [[L_0]]
+; STORE-NEXT:    [[IDX_2:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 2
+; STORE-NEXT:    [[L_2:%.*]] = load i32, i32* [[IDX_2]], align 4
+; STORE-NEXT:    [[ADD_2:%.*]] = add i32 [[L_2]], [[ADD_1]]
+; STORE-NEXT:    [[IDX_3:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 3
+; STORE-NEXT:    [[L_3:%.*]] = load i32, i32* [[IDX_3]], align 4
+; STORE-NEXT:    [[ADD_3:%.*]] = add i32 [[L_3]], [[ADD_2]]
+; STORE-NEXT:    br label [[EXIT]]
+; STORE:       exit:
+; STORE-NEXT:    [[SUM_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD_3]], [[BB]] ]
+; STORE-NEXT:    ret i32 [[SUM_1]]
+;
+entry:
+  br i1 %b, label %bb, label %exit
+
+bb:
+  %l.0 = load i32, i32* %data, align 4
+  %idx.1 = getelementptr inbounds i32, i32* %data, i64 1
+  %l.1 = load i32, i32* %idx.1, align 4
+  %add.1 = add i32 %l.1, %l.0
+  %idx.2 = getelementptr inbounds i32, i32* %data, i64 2
+  %l.2 = load i32, i32* %idx.2, align 4
+  %add.2 = add i32 %l.2, %add.1
+  %idx.3 = getelementptr inbounds i32, i32* %data, i64 3
+  %l.3 = load i32, i32* %idx.3, align 4
+  %add.3 = add i32 %l.3, %add.2
+  br label %exit
+
+exit:
+  %sum.1 = phi i32 [ 0, %entry ], [ %add.3, %bb]
+  ret i32 %sum.1
+}
+
 declare i32 @__gxx_personality_v0(...)

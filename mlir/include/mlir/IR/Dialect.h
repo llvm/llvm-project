@@ -150,10 +150,11 @@ protected:
   /// This method is used by derived classes to add their operations to the set.
   ///
   template <typename... Args> void addOperations() {
-    (void)std::initializer_list<int>{
-        0, (addOperation(AbstractOperation::get<Args>(*this)), 0)...};
+    (void)std::initializer_list<int>{0, (addOperation<Args>(), 0)...};
   }
-
+  template <typename Arg> void addOperation() {
+    addOperation(AbstractOperation::get<Arg>(*this));
+  }
   void addOperation(AbstractOperation opInfo);
 
   /// Register a set of type classes with this dialect.

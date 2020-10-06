@@ -976,6 +976,39 @@ TEST_F(StructuralEquivalenceTemplateTest, DifferentTemplateArgKind) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+TEST_F(StructuralEquivalenceTemplateTest, BitFieldDecl) {
+  const char *Code = "class foo { int a : 2; };";
+  auto t = makeNamedDecls(Code, Code, Lang_CXX03);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceTemplateTest, BitFieldDeclDifferentWidth) {
+  auto t = makeNamedDecls("class foo { int a : 2; };",
+                          "class foo { int a : 4; };", Lang_CXX03);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceTemplateTest, DependentBitFieldDecl) {
+  const char *Code = "template <class T> class foo { int a : sizeof(T); };";
+  auto t = makeNamedDecls(Code, Code, Lang_CXX03);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceTemplateTest, DependentBitFieldDeclDifferentVal) {
+  auto t = makeNamedDecls(
+      "template <class A, class B> class foo { int a : sizeof(A); };",
+      "template <class A, class B> class foo { int a : sizeof(B); };",
+      Lang_CXX03);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceTemplateTest, DependentBitFieldDeclDifferentVal2) {
+  auto t = makeNamedDecls(
+      "template <class A> class foo { int a : sizeof(A); };",
+      "template <class A> class foo { int a : sizeof(A) + 1; };", Lang_CXX03);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
 TEST_F(StructuralEquivalenceTemplateTest, ExplicitBoolSame) {
   auto Decls = makeNamedDecls(
       "template <bool b> struct foo {explicit(b) foo(int);};",

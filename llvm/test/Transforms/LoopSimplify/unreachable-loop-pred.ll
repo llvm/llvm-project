@@ -22,7 +22,7 @@ foo:
 ; When loopsimplify generates dedicated exit block for blocks that are landing
 ; pads (i.e. innerLoopExit in this test), we should not get confused with the
 ; unreachable pred (unreachableB) to innerLoopExit.
-define align 8 void @baz(i32 %trip) personality i32* ()* @wobble {
+define void @baz(i32 %trip) personality i32* ()* @wobble {
 entry:
   br label %outerHeader
 

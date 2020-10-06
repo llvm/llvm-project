@@ -18,11 +18,13 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Module.h"
+#include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/TypeTranslation.h"
 #include "llvm/ADT/TypeSwitch.h"
 
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
@@ -360,25 +362,17 @@ connectPHINodes(T &func, const DenseMap<Value, llvm::Value *> &valueMapping,
   }
 }
 
-// TODO: implement an iterative version
-static void topologicalSortImpl(llvm::SetVector<Block *> &blocks, Block *b) {
-  blocks.insert(b);
-  for (Block *bb : b->getSuccessors()) {
-    if (blocks.count(bb) == 0)
-      topologicalSortImpl(blocks, bb);
-  }
-}
-
 /// Sort function blocks topologically.
 template <typename T>
 static llvm::SetVector<Block *> topologicalSort(T &f) {
-  // For each blocks that has not been visited yet (i.e. that has no
-  // predecessors), add it to the list and traverse its successors in DFS
-  // preorder.
+  // For each block that has not been visited yet (i.e. that has no
+  // predecessors), add it to the list as well as its successors.
   llvm::SetVector<Block *> blocks;
   for (Block &b : f) {
-    if (blocks.count(&b) == 0)
-      topologicalSortImpl(blocks, &b);
+    if (blocks.count(&b) == 0) {
+      llvm::ReversePostOrderTraversal<Block *> traversal(&b);
+      blocks.insert(traversal.begin(), traversal.end());
+    }
   }
   assert(blocks.size() == f.getBlocks().size() && "some blocks are not sorted");
 

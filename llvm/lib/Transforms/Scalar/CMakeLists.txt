@@ -32,6 +32,7 @@ add_llvm_component_library(LLVMScalarOpts
   LoopIdiomRecognize.cpp
   LoopInstSimplify.cpp
   LoopInterchange.cpp
+  LoopFlatten.cpp
   LoopLoadElimination.cpp
   LoopPassManager.cpp
   LoopPredication.cpp

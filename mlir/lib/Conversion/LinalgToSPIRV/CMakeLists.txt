@@ -11,7 +11,7 @@ add_mlir_conversion_library(MLIRLinalgToSPIRVTransforms
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRLinalgOps
+  MLIRLinalg
   MLIRLinalgUtils
   MLIRPass
   MLIRSPIRV

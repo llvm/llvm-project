@@ -789,6 +789,19 @@ TEST(SourceCodeTests, isHeaderFile) {
   EXPECT_TRUE(isHeaderFile("header.h", LangOpts));
 }
 
+TEST(SourceCodeTests, isKeywords) {
+  LangOptions LangOpts;
+  LangOpts.CPlusPlus20 = true;
+  EXPECT_TRUE(isKeyword("int", LangOpts));
+  EXPECT_TRUE(isKeyword("return", LangOpts));
+  EXPECT_TRUE(isKeyword("co_await", LangOpts));
+
+  // these are identifiers (not keywords!) with special meaning in some
+  // contexts.
+  EXPECT_FALSE(isKeyword("final", LangOpts));
+  EXPECT_FALSE(isKeyword("override", LangOpts));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

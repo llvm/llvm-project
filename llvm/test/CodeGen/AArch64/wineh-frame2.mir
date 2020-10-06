@@ -2,24 +2,24 @@
 # RUN:   -stop-after=prologepilog | FileCheck %s
 # Check save_freg_x, save_frep, save_reg
 
-# CHECK:       early-clobber $sp = frame-setup STRDpre killed $d12, $sp, -48
-# CHECK-NEXT:  frame-setup SEH_SaveFReg_X 12, -48
-# CHECK-NEXT:  frame-setup STPDi killed $d10, killed $d11, $sp, 1
-# CHECK-NEXT:  frame-setup SEH_SaveFRegP 10, 11, 8
-# CHECK-NEXT:  frame-setup STPDi killed $d8, killed $d9, $sp, 3
-# CHECK-NEXT:  frame-setup SEH_SaveFRegP 8, 9, 24
-# CHECK-NEXT:  frame-setup STRXui killed $x19, $sp, 5
-# CHECK-NEXT:  frame-setup SEH_SaveReg 19, 40
+# CHECK:       early-clobber $sp = frame-setup STRXpre killed $x19, $sp, -48
+# CHECK-NEXT:  frame-setup SEH_SaveReg_X 19, -48
+# CHECK-NEXT:  frame-setup STPDi killed $d8, killed $d9, $sp, 1
+# CHECK-NEXT:  frame-setup SEH_SaveFRegP 8, 9, 8
+# CHECK-NEXT:  frame-setup STPDi killed $d10, killed $d11, $sp, 3
+# CHECK-NEXT:  frame-setup SEH_SaveFRegP 10, 11, 24
+# CHECK-NEXT:  frame-setup STRDui killed $d12, $sp, 5
+# CHECK-NEXT:  frame-setup SEH_SaveFReg 12, 40
 # CHECK-NEXT:  frame-setup SEH_PrologEnd
 # CHECK:       frame-destroy SEH_EpilogStart
-# CHECK-NEXT:  $x19 = frame-destroy LDRXui $sp, 5
-# CHECK-NEXT:  frame-destroy SEH_SaveReg 19, 40
-# CHECK-NEXT:  $d8, $d9 = frame-destroy LDPDi $sp, 3
-# CHECK-NEXT:  frame-destroy SEH_SaveFRegP 8, 9, 24
-# CHECK-NEXT:  $d10, $d11 = frame-destroy LDPDi $sp, 1
-# CHECK-NEXT:  frame-destroy SEH_SaveFRegP 10, 11, 8
-# CHECK-NEXT:  early-clobber $sp, $d12 = frame-destroy LDRDpost $sp, 48
-# CHECK-NEXT:  frame-destroy SEH_SaveFReg_X 12, -48
+# CHECK-NEXT:  $d12 = frame-destroy LDRDui $sp, 5
+# CHECK-NEXT:  frame-destroy SEH_SaveFReg 12, 40
+# CHECK-NEXT:  $d10, $d11 = frame-destroy LDPDi $sp, 3
+# CHECK-NEXT:  frame-destroy SEH_SaveFRegP 10, 11, 24
+# CHECK-NEXT:  $d8, $d9 = frame-destroy LDPDi $sp, 1
+# CHECK-NEXT:  frame-destroy SEH_SaveFRegP 8, 9, 8
+# CHECK-NEXT:  early-clobber $sp, $x19 = frame-destroy LDRXpost $sp, 48
+# CHECK-NEXT:  frame-destroy SEH_SaveReg_X 19, -48
 # CHECK-NEXT:  frame-destroy SEH_EpilogEnd
 # CHECK-NEXT:  RET_ReallyLR implicit $x0
 ...

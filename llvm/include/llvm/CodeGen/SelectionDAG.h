@@ -339,11 +339,13 @@ public:
     FlagInserter *LastInserter;
 
   public:
-    FlagInserter(SelectionDAG &SDAG, SDNode *N)
-        : DAG(SDAG), Flags(N->getFlags()),
+    FlagInserter(SelectionDAG &SDAG, SDNodeFlags Flags)
+        : DAG(SDAG), Flags(Flags),
           LastInserter(SDAG.getFlagInserter()) {
       SDAG.setFlagInserter(this);
     }
+    FlagInserter(SelectionDAG &SDAG, SDNode *N)
+        : FlagInserter(SDAG, N->getFlags()) {}
 
     FlagInserter(const FlagInserter &) = delete;
     FlagInserter &operator=(const FlagInserter &) = delete;
@@ -1083,8 +1085,8 @@ public:
   /// Helper function to make it easier to build SetCC's if you just have an
   /// ISD::CondCode instead of an SDValue.
   SDValue getSetCC(const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS,
-                   ISD::CondCode Cond, SDNodeFlags Flags = SDNodeFlags(),
-                   SDValue Chain = SDValue(), bool IsSignaling = false) {
+                   ISD::CondCode Cond, SDValue Chain = SDValue(),
+                   bool IsSignaling = false) {
     assert(LHS.getValueType().isVector() == RHS.getValueType().isVector() &&
            "Cannot compare scalars to vectors");
     assert(LHS.getValueType().isVector() == VT.isVector() &&
@@ -1094,7 +1096,7 @@ public:
     if (Chain)
       return getNode(IsSignaling ? ISD::STRICT_FSETCCS : ISD::STRICT_FSETCC, DL,
                      {VT, MVT::Other}, {Chain, LHS, RHS, getCondCode(Cond)});
-    return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond), Flags);
+    return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond));
   }
 
   /// Helper function to make it easier to build Select's if you just have

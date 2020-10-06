@@ -13,7 +13,6 @@
 #ifndef AFFINE_OPS
 #define AFFINE_OPS
 
-include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/Dialect/StandardOps/IR/StandardOpsBase.td"
 include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"

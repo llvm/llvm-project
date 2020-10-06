@@ -554,9 +554,9 @@ are:
 
     * `std.view`,
     * `std.subview`,
+    * `std.transpose`.
     * `linalg.range`,
     * `linalg.slice`,
-    * `linalg.transpose`.
     * `linalg.reshape`,
 
 Future ops are added on a per-need basis but should include:

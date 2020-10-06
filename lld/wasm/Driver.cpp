@@ -572,7 +572,6 @@ static void createSyntheticSymbols() {
         make<SyntheticFunction>(nullSignature, "__wasm_apply_relocs"));
   }
 
-
   if (config->isPic) {
     WasmSym::stackPointer =
         createUndefinedGlobal("__stack_pointer", config->is64.getValueOr(false)
@@ -839,6 +838,29 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     else
       error("entry symbol not defined (pass --no-entry to suppress): " +
             config->entry);
+  }
+
+  // If the user code defines a `__wasm_call_dtors` function, remember it so
+  // that we can call it from the command export wrappers. Unlike
+  // `__wasm_call_ctors` which we synthesize, `__wasm_call_dtors` is defined
+  // by libc/etc., because destructors are registered dynamically with
+  // `__cxa_atexit` and friends.
+  if (!config->relocatable && !config->shared &&
+      !WasmSym::callCtors->isUsedInRegularObj &&
+      WasmSym::callCtors->getName() != config->entry &&
+      !config->exportedSymbols.count(WasmSym::callCtors->getName())) {
+    if (Symbol *callDtors = handleUndefined("__wasm_call_dtors")) {
+      if (auto *callDtorsFunc = dyn_cast<DefinedFunction>(callDtors)) {
+        if (callDtorsFunc->signature &&
+            (!callDtorsFunc->signature->Params.empty() ||
+             !callDtorsFunc->signature->Returns.empty())) {
+          error("__wasm_call_dtors must have no argument or return values");
+        }
+        WasmSym::callDtors = callDtorsFunc;
+      } else {
+        error("__wasm_call_dtors must be a function");
+      }
+    }
   }
 
   createOptionalSymbols();

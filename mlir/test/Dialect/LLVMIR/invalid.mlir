@@ -125,6 +125,75 @@ func @call_non_function_type(%callee : !llvm.func<i8 (i8)>, %arg : !llvm.i8) {
 
 // -----
 
+func @invalid_call() {
+  // expected-error@+1 {{'llvm.call' op must have either a `callee` attribute or at least an operand}}
+  "llvm.call"() : () -> ()
+}
+
+// -----
+
+func @call_non_function_type(%callee : !llvm.func<i8 (i8)>, %arg : !llvm.i8) {
+  // expected-error@+1 {{expected function type}}
+  llvm.call %callee(%arg) : !llvm.func<i8 (i8)>
+}
+
+// -----
+
+func @call_unknown_symbol() {
+  // expected-error@+1 {{'llvm.call' op 'missing_callee' does not reference a symbol in the current scope}}
+  llvm.call @missing_callee() : () -> ()
+}
+
+// -----
+
+func @standard_func_callee()
+
+func @call_non_llvm() {
+  // expected-error@+1 {{'llvm.call' op 'standard_func_callee' does not reference a valid LLVM function}}
+  llvm.call @standard_func_callee() : () -> ()
+}
+
+// -----
+
+func @call_non_llvm_indirect(%arg0 : i32) {
+  // expected-error@+1 {{'llvm.call' op operand #0 must be LLVM dialect type, but got 'i32'}}
+  "llvm.call"(%arg0) : (i32) -> ()
+}
+
+// -----
+
+llvm.func @callee_func(!llvm.i8) -> ()
+
+func @callee_arg_mismatch(%arg0 : !llvm.i32) {
+  // expected-error@+1 {{'llvm.call' op operand type mismatch for operand 0: '!llvm.i32' != '!llvm.i8'}}
+  llvm.call @callee_func(%arg0) : (!llvm.i32) -> ()
+}
+
+// -----
+
+func @indirect_callee_arg_mismatch(%arg0 : !llvm.i32, %callee : !llvm.ptr<func<void(i8)>>) {
+  // expected-error@+1 {{'llvm.call' op operand type mismatch for operand 0: '!llvm.i32' != '!llvm.i8'}}
+  "llvm.call"(%callee, %arg0) : (!llvm.ptr<func<void(i8)>>, !llvm.i32) -> ()
+}
+
+// -----
+
+llvm.func @callee_func() -> (!llvm.i8)
+
+func @callee_return_mismatch() {
+  // expected-error@+1 {{'llvm.call' op result type mismatch: '!llvm.i32' != '!llvm.i8'}}
+  %res = llvm.call @callee_func() : () -> (!llvm.i32)
+}
+
+// -----
+
+func @indirect_callee_return_mismatch(%callee : !llvm.ptr<func<i8()>>) {
+  // expected-error@+1 {{'llvm.call' op result type mismatch: '!llvm.i32' != '!llvm.i8'}}
+  "llvm.call"(%callee) : (!llvm.ptr<func<i8()>>) -> (!llvm.i32)
+}
+
+// -----
+
 func @call_too_many_results(%callee : () -> (i32,i32)) {
   // expected-error@+1 {{expected function with 0 or 1 result}}
   llvm.call %callee() : () -> (i32, i32)

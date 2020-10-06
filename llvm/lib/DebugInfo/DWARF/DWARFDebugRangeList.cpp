@@ -70,6 +70,9 @@ void DWARFDebugRangeList::dump(raw_ostream &OS) const {
 DWARFAddressRangesVector DWARFDebugRangeList::getAbsoluteRanges(
     llvm::Optional<object::SectionedAddress> BaseAddr) const {
   DWARFAddressRangesVector Res;
+  // debug_addr can't use the max integer tombstone because that's used for the
+  // base address specifier entry - so use max-1.
+  uint64_t Tombstone = dwarf::computeTombstoneAddress(AddressSize) - 1;
   for (const RangeListEntry &RLE : Entries) {
     if (RLE.isBaseAddressSelectionEntry(AddressSize)) {
       BaseAddr = {RLE.EndAddress, RLE.SectionIndex};
@@ -78,12 +81,16 @@ DWARFAddressRangesVector DWARFDebugRangeList::getAbsoluteRanges(
 
     DWARFAddressRange E;
     E.LowPC = RLE.StartAddress;
+    if (E.LowPC == Tombstone)
+      continue;
     E.HighPC = RLE.EndAddress;
     E.SectionIndex = RLE.SectionIndex;
     // Base address of a range list entry is determined by the closest preceding
     // base address selection entry in the same range list. It defaults to the
     // base address of the compilation unit if there is no such entry.
     if (BaseAddr) {
+      if (BaseAddr->Address == Tombstone)
+        continue;
       E.LowPC += BaseAddr->Address;
       E.HighPC += BaseAddr->Address;
       if (E.SectionIndex == -1ULL)

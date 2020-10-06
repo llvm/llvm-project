@@ -64,8 +64,8 @@ end module
 !  type::t2
 !    integer(4)::x
 !  contains
-!    final::c
 !    procedure,non_overridable,private::d
+!    final::c
 !  end type
 !  type,abstract::t2a
 !  contains

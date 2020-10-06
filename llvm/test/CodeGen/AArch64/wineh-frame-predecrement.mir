@@ -1,0 +1,70 @@
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prologepilog \
+# RUN:   -stop-after=prologepilog | FileCheck %s
+
+# Check that the callee-saved registers are saved starting with a STP
+# with predecrement, followed by a separate stack adjustment later,
+# if the optsize attribute is set.
+
+# CHECK:      early-clobber $sp = frame-setup STPXpre killed $x19, killed $x20, $sp, -2
+# CHECK-NEXT: frame-setup SEH_SaveRegP_X 19, 20, -16
+# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
+# CHECK-NEXT: frame-setup SEH_StackAlloc 16
+# CHECK-NEXT: frame-setup SEH_PrologEnd
+
+--- |
+
+  define dso_local i32 @func(i32 %a) optsize { ret i32 %a }
+
+...
+---
+name:            func
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  4
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -4, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x19, $x20
+
+    renamable $x8 = ADDXri %stack.0, 0, 0
+    $x19 = ADDXrr $x0, $x8
+    $x20 = ADDXrr $x19, $x0
+    $x0 = ADDXrr $x0, killed $x20
+
+    RET_ReallyLR
+
+...

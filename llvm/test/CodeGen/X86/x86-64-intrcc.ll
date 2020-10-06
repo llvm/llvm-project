@@ -43,9 +43,9 @@ define x86_intrcc void @test_isr_ecode(%struct.interrupt_frame* %frame, i64 %eco
   ; CHECK0: pushq %rax
   ; CHECK0: pushq %rax
   ; CHECK0: pushq %rcx
-  ; CHECK0: movq 24(%rsp), %rax
-  ; CHECK0: leaq 32(%rsp), %rcx
-  ; CHECK0: movq 16(%rcx), %rcx
+  ; CHECK0: movq 24(%rsp), %rcx
+  ; CHECK0: leaq 32(%rsp), %rax
+  ; CHECK0: movq 16(%rax), %rax
   ; CHECK0: popq %rcx
   ; CHECK0: popq %rax
   ; CHECK0: addq $16, %rsp

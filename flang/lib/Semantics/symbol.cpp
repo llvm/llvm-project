@@ -228,7 +228,6 @@ std::string DetailsToString(const Details &details) {
           [](const ProcBindingDetails &) { return "ProcBinding"; },
           [](const NamelistDetails &) { return "Namelist"; },
           [](const CommonBlockDetails &) { return "CommonBlockDetails"; },
-          [](const FinalProcDetails &) { return "FinalProc"; },
           [](const TypeParamDetails &) { return "TypeParam"; },
           [](const MiscDetails &) { return "Misc"; },
           [](const AssocEntityDetails &) { return "AssocEntity"; },
@@ -436,7 +435,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
               os << ' ' << object->name();
             }
           },
-          [&](const FinalProcDetails &) {},
           [&](const TypeParamDetails &x) {
             DumpOptional(os, "type", x.type());
             os << ' ' << common::EnumToString(x.attr());

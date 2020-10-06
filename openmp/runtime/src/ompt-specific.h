@@ -81,6 +81,11 @@ inline void *__ompt_load_return_address(int gtid) {
   __kmp_threads[gtid]->th.ompt_thread_info.return_address =                    \
       __builtin_return_address(0)
 #define OMPT_LOAD_RETURN_ADDRESS(gtid) __ompt_load_return_address(gtid)
+#define OMPT_LOAD_OR_GET_RETURN_ADDRESS(gtid)                                  \
+  ((ompt_enabled.enabled && gtid >= 0 && __kmp_threads[gtid] &&                \
+      __kmp_threads[gtid]->th.ompt_thread_info.return_address)?                \
+      __ompt_load_return_address(gtid):                                        \
+      __builtin_return_address(0))
 
 //******************************************************************************
 // inline functions

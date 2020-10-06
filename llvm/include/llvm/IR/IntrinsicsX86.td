@@ -4953,7 +4953,7 @@ let TargetPrefix = "x86" in {
 // Key Locker
 let TargetPrefix = "x86" in {
   def int_x86_loadiwkey : GCCBuiltin<"__builtin_ia32_loadiwkey">,
-      Intrinsic<[], [llvm_i32_ty, llvm_v2i64_ty, llvm_v2i64_ty, llvm_v2i64_ty],
+      Intrinsic<[], [llvm_v2i64_ty, llvm_v2i64_ty, llvm_v2i64_ty, llvm_i32_ty],
                 []>;
   def int_x86_encodekey128 :
       Intrinsic<[llvm_i32_ty, llvm_v2i64_ty, llvm_v2i64_ty,

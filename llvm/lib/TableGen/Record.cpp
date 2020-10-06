@@ -2144,12 +2144,27 @@ void Record::setName(Init *NewName) {
   // this.  See TGParser::ParseDef and TGParser::ParseDefm.
 }
 
+// NOTE for the next two functions:
+// Superclasses are in post-order, so the final one is a direct
+// superclass. All of its transitive superclases immediately precede it,
+// so we can step through the direct superclasses in reverse order.
+
+bool Record::hasDirectSuperClass(const Record *Superclass) const {
+  ArrayRef<std::pair<Record *, SMRange>> SCs = getSuperClasses();
+
+  for (int I = SCs.size() - 1; I >= 0; --I) {
+    const Record *SC = SCs[I].first;
+    if (SC == Superclass)
+      return true;
+    I -= SC->getSuperClasses().size();
+  }
+
+  return false;
+}
+
 void Record::getDirectSuperClasses(SmallVectorImpl<Record *> &Classes) const {
   ArrayRef<std::pair<Record *, SMRange>> SCs = getSuperClasses();
 
-  // Superclasses are in post-order, so the final one is a direct
-  // superclass. All of its transitive superclases immediately precede it,
-  // so we can step through the direct superclasses in reverse order.
   while (!SCs.empty()) {
     Record *SC = SCs.back().first;
     SCs = SCs.drop_back(1 + SC->getSuperClasses().size());

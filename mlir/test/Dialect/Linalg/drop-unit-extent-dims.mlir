@@ -240,3 +240,19 @@ func @fold_reshape(%arg0 : tensor<2048x1x2048xf32>) -> tensor<4x512x1x512x4xf32>
     : tensor<1x4x1x512x1x1x512x1x4xf32> into tensor<4x512x1x512x4xf32>
   return %1 : tensor<4x512x1x512x4xf32>
 }
+
+// -----
+
+//   CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1) -> (d0, d1)>
+//       CHECK: func @fold_reshape
+//       CHECK: linalg.tensor_reshape %{{.*}} [#[[MAP0]]
+//  CHECK-SAME:   tensor<2xf32> into tensor<2x1xf32>
+func @fold_reshape(%arg0: tensor<2xf32>) -> tensor<2x1xf32>
+{
+  %0 = linalg.tensor_reshape %arg0 [affine_map<(d0, d1, d2) -> (d0, d1, d2)>] : tensor<2xf32> into tensor<2x1x1xf32>
+  %1 = linalg.tensor_reshape %0
+  [affine_map<(d0, d1, d2) -> (d0)>,
+   affine_map<(d0, d1, d2) -> (d1, d2)>
+  ] : tensor<2x1x1xf32> into tensor<2x1xf32>
+  return %1 : tensor<2x1xf32>
+}

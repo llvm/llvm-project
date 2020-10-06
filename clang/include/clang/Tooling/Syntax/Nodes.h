@@ -99,10 +99,14 @@ enum class NodeKind : uint16_t {
   ParametersAndQualifiers,
   MemberPointer,
   UnqualifiedId,
+
+  // Lists
+  DeclaratorList,
   ParameterDeclarationList,
   CallArguments,
-  // Nested Name Specifiers.
   NestedNameSpecifier,
+
+  // Name Specifiers.
   GlobalNameSpecifier,
   DecltypeNameSpecifier,
   IdentifierNameSpecifier,
@@ -179,6 +183,7 @@ enum class NodeRole : uint8_t {
   Member,
   Callee,
   Arguments,
+  Declarators
 };
 /// For debugging purposes.
 raw_ostream &operator<<(raw_ostream &OS, NodeRole R);
@@ -821,6 +826,17 @@ public:
   static bool classof(const Node *N) {
     return N->getKind() == NodeKind::LinkageSpecificationDeclaration;
   }
+};
+
+class DeclaratorList final : public List {
+public:
+  DeclaratorList() : List(NodeKind::DeclaratorList) {}
+  static bool classof(const Node *N) {
+    return N->getKind() == NodeKind::DeclaratorList;
+  }
+  std::vector<SimpleDeclarator *> getDeclarators();
+  std::vector<List::ElementAndDelimiter<syntax::SimpleDeclarator>>
+  getDeclaratorsAndCommas();
 };
 
 /// Groups multiple declarators (e.g. variables, typedefs, etc.) together. All

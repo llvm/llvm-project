@@ -219,6 +219,12 @@
 // DBIN-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
 // DBIN-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
 // DBIN-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (device-[[T]], [[ARCH]])
+// DBIN-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, assembler, (device-[[T]], [[ARCH]])
+// DBIN-DAG: [[P4:[0-9]+]]: assembler, {[[P3]]}, object, (device-[[T]], [[ARCH]])
+// DBIN-DAG: [[P5:[0-9]+]]: linker, {[[P4]]}, image, (device-[[T]], [[ARCH]])
+// DBIN-DAG: [[P6:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P5]]}, image
+// DBIN-DAG: [[P7:[0-9]+]]: linker, {[[P6]]}, hip-fatbin, (device-hip, )
+// DBIN-DAG: [[P8:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:)" {[[P7]]}, hip-fatbin
 // DBIN-NOT: host
 //
 // Test single gpu architecture up to the assemble phase in device-only
@@ -230,6 +236,8 @@
 // DASM-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
 // DASM-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
 // DASM-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (device-[[T]], [[ARCH]])
+// DASM-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, assembler, (device-[[T]], [[ARCH]])
+// DASM-DAG: [[P4:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P3]]}, assembler
 // DASM-NOT: host
 
 //
@@ -242,9 +250,19 @@
 // DBIN2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
 // DBIN2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
 // DBIN2-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (device-[[T]], [[ARCH]])
-// DBIN2-DAG: [[P6:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T]], (device-[[T]], [[ARCH2:gfx900]])
-// DBIN2-DAG: [[P7:[0-9]+]]: preprocessor, {[[P6]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH2]])
-// DBIN2-DAG: [[P8:[0-9]+]]: compiler, {[[P7]]}, ir, (device-[[T]], [[ARCH2]])
+// DBIN2-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, assembler, (device-[[T]], [[ARCH]])
+// DBIN2-DAG: [[P4:[0-9]+]]: assembler, {[[P3]]}, object, (device-[[T]], [[ARCH]])
+// DBIN2-DAG: [[P5:[0-9]+]]: linker, {[[P4]]}, image, (device-[[T]], [[ARCH]])
+// DBIN2-DAG: [[P6:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P5]]}, image
+// DBIN2-DAG: [[P7:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T]], (device-[[T]], [[ARCH2:gfx900]])
+// DBIN2-DAG: [[P8:[0-9]+]]: preprocessor, {[[P7]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH2]])
+// DBIN2-DAG: [[P9:[0-9]+]]: compiler, {[[P8]]}, ir, (device-[[T]], [[ARCH2]])
+// DBIN2-DAG: [[P10:[0-9]+]]: backend, {[[P9]]}, assembler, (device-[[T]], [[ARCH2]])
+// DBIN2-DAG: [[P11:[0-9]+]]: assembler, {[[P10]]}, object, (device-[[T]], [[ARCH2]])
+// DBIN2-DAG: [[P12:[0-9]+]]: linker, {[[P11]]}, image, (device-[[T]], [[ARCH2]])
+// DBIN2-DAG: [[P13:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P12]]}, image
+// DBIN2-DAG: [[P14:[0-9]+]]: linker, {[[P6]], [[P13]]}, hip-fatbin, (device-hip, )
+// DBIN2-DAG: [[P15:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:)" {[[P14]]}, hip-fatbin
 // DBIN2-NOT: host
 //
 // Test two gpu architectures up to the assemble phase in device-only
@@ -257,9 +275,13 @@
 // DASM2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
 // DASM2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
 // DASM2-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (device-[[T]], [[ARCH]])
+// DASM2-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, assembler, (device-[[T]], [[ARCH]])
+// DASM2-DAG: [[P4:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P3]]}, assembler
 // DASM2-DAG: [[P5:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T]], (device-[[T]], [[ARCH2:gfx900]])
 // DASM2-DAG: [[P6:[0-9]+]]: preprocessor, {[[P5]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH2]])
 // DASM2-DAG: [[P7:[0-9]+]]: compiler, {[[P6]]}, ir, (device-[[T]], [[ARCH2]])
+// DASM2-DAG: [[P8:[0-9]+]]: backend, {[[P7]]}, assembler, (device-[[T]], [[ARCH2]])
+// DASM2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P8]]}, assembler
 // DASM2-NOT: host
 
 //

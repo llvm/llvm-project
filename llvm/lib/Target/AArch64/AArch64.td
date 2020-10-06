@@ -72,9 +72,11 @@ def FeatureLOR : SubtargetFeature<
     "lor", "HasLOR", "true",
     "Enables ARM v8.1 Limited Ordering Regions extension">;
 
-def FeatureVH : SubtargetFeature<
-    "vh", "HasVH", "true",
-    "Enables ARM v8.1 Virtual Host extension">;
+def FeatureCONTEXTIDREL2 : SubtargetFeature<"CONTEXTIDREL2", "HasCONTEXTIDREL2",
+    "true", "Enable RW operand CONTEXTIDR_EL2" >;
+
+def FeatureVH : SubtargetFeature<"vh", "HasVH", "true",
+    "Enables ARM v8.1 Virtual Host extension", [FeatureCONTEXTIDREL2] >;
 
 def FeaturePerfMon : SubtargetFeature<"perfmon", "HasPerfMon", "true",
   "Enable ARMv8 PMUv3 Performance Monitors extension">;
@@ -441,6 +443,22 @@ def HasV8_6aOps : SubtargetFeature<
   [HasV8_5aOps, FeatureAMVS, FeatureBF16, FeatureFineGrainedTraps,
    FeatureEnhancedCounterVirtualization, FeatureMatMulInt8]>;
 
+def HasV8_0rOps : SubtargetFeature<
+  "v8r", "HasV8_0rOps", "true", "Support ARM v8r instructions",
+  [//v8.1
+  FeatureCRC, FeaturePAN, FeatureRDM, FeatureLSE, FeatureCONTEXTIDREL2,
+  //v8.2
+  FeaturePerfMon, FeatureRAS, FeaturePsUAO, FeatureSM4,
+  FeatureSHA3, FeatureCCPP, FeatureFullFP16, FeaturePAN_RWV,
+  //v8.3
+  FeatureComplxNum, FeatureCCIDX, FeatureJS,
+  FeaturePA, FeatureRCPC,
+  //v8.4
+  FeatureDotProd, FeatureFP16FML, FeatureRASv8_4, FeatureTRACEV8_4,
+  FeatureTLB_RMI, FeatureFMI, FeatureDIT, FeatureSEL2, FeatureRCPC_IMMO,
+  //v8.5
+  FeatureSSBS, FeaturePredRes, FeatureSB, FeatureSpecRestrict]>;
+
 //===----------------------------------------------------------------------===//
 // Register File Description
 //===----------------------------------------------------------------------===//
@@ -506,6 +524,7 @@ def PAUnsupported : AArch64Unsupported {
 }
 
 include "AArch64SchedA53.td"
+include "AArch64SchedA55.td"
 include "AArch64SchedA57.td"
 include "AArch64SchedCyclone.td"
 include "AArch64SchedFalkor.td"
@@ -651,6 +670,13 @@ def ProcA78 : SubtargetFeature<"cortex-a78", "ARMProcFamily",
                                FeatureFullFP16,
                                FeatureSSBS,
                                FeatureDotProd]>;
+
+def ProcR82 : SubtargetFeature<"cortex-r82", "ARMProcFamily",
+                               "CortexR82",
+                               "Cortex-R82 ARM Processors", [
+                               // All features are implied by v8_0r ops:
+                               HasV8_0rOps,
+                               ]>;
 
 def ProcX1 : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
                                   "Cortex-X1 ARM processors", [
@@ -1013,6 +1039,7 @@ def : ProcessorModel<"cortex-a76", CortexA57Model, [ProcA76]>;
 def : ProcessorModel<"cortex-a76ae", CortexA57Model, [ProcA76]>;
 def : ProcessorModel<"cortex-a77", CortexA57Model, [ProcA77]>;
 def : ProcessorModel<"cortex-a78", CortexA57Model, [ProcA78]>;
+def : ProcessorModel<"cortex-r82", CortexA55Model, [ProcR82]>;
 def : ProcessorModel<"cortex-x1", CortexA57Model, [ProcX1]>;
 def : ProcessorModel<"neoverse-e1", CortexA53Model, [ProcNeoverseE1]>;
 def : ProcessorModel<"neoverse-n1", CortexA57Model, [ProcNeoverseN1]>;

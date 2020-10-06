@@ -69,7 +69,7 @@ define void @test(i16 %x, i64 %y, i32* %ptr) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
+; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ;
 entry:
   %conv19 = sext i16 %x to i64

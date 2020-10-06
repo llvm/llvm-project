@@ -2214,6 +2214,10 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
 /// SimplifyMultipleUseDemandedBits and not generate any new nodes.
 SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &DemandedBits) {
   EVT VT = V.getValueType();
+
+  if (VT.isScalableVector())
+    return SDValue();
+
   APInt DemandedElts = VT.isVector()
                            ? APInt::getAllOnesValue(VT.getVectorNumElements())
                            : APInt(1, 1);
@@ -4613,8 +4617,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            Operand.getValueType().isFloatingPoint() && "Invalid FP cast!");
     if (Operand.getValueType() == VT) return Operand;  // noop conversion.
     assert((!VT.isVector() ||
-            VT.getVectorNumElements() ==
-            Operand.getValueType().getVectorNumElements()) &&
+            VT.getVectorElementCount() ==
+            Operand.getValueType().getVectorElementCount()) &&
            "Vector element count mismatch!");
     assert(Operand.getValueType().bitsLT(VT) &&
            "Invalid fpext node, dst < src!");
@@ -7135,7 +7139,8 @@ SDValue SelectionDAG::getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
 
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MMOFlags, SVT.getStoreSize(), Alignment, AAInfo);
+      PtrInfo, MMOFlags, MemoryLocation::getSizeOrUnknown(SVT.getStoreSize()),
+      Alignment, AAInfo);
   return getTruncStore(Chain, dl, Val, Ptr, SVT, MMO);
 }
 
@@ -7156,7 +7161,7 @@ SDValue SelectionDAG::getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
   assert(VT.isVector() == SVT.isVector() &&
          "Cannot use trunc store to convert to or from a vector!");
   assert((!VT.isVector() ||
-          VT.getVectorNumElements() == SVT.getVectorNumElements()) &&
+          VT.getVectorElementCount() == SVT.getVectorElementCount()) &&
          "Cannot use trunc store to change the number of vector elements!");
 
   SDVTList VTs = getVTList(MVT::Other);
@@ -7474,6 +7479,11 @@ SDValue SelectionDAG::simplifyFPBinop(unsigned Opcode, SDValue X, SDValue Y,
   if (Opcode == ISD::FMUL || Opcode == ISD::FDIV)
     if (YC->getValueAPF().isExactlyValue(1.0))
       return X;
+
+  // X * 0.0 --> 0.0
+  if (Opcode == ISD::FMUL && Flags.hasNoNaNs() && Flags.hasNoSignedZeros())
+    if (YC->getValueAPF().isZero())
+      return getConstantFP(0.0, SDLoc(Y), Y.getValueType());
 
   return SDValue();
 }

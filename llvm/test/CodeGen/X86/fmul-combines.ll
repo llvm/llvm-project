@@ -261,3 +261,22 @@ define <4 x float> @fmul_fneg_fneg_v4f32(<4 x float> %x, <4 x float> %y) {
   %mul = fmul <4 x float> %x.neg, %y.neg
   ret <4 x float> %mul
 }
+
+; PR47517 - this could crash if we create 'fmul x, 0.0' nodes
+; that do not constant fold in a particular order.
+
+define float @getNegatedExpression_crash(float* %p) {
+; CHECK-LABEL: getNegatedExpression_crash:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $0, (%rdi)
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  store float 0.0, float* %p, align 1
+  %real = load float, float* %p, align 1
+  %r2 = fmul fast float %real, %real
+  %t1 = fmul fast float %real, 42.0
+  %t2 = fmul fast float %real, %t1
+  %mul_ac56 = fmul fast float %t2, %t1
+  %mul_ac72 = fmul fast float %r2, %mul_ac56
+  ret float %mul_ac72
+}

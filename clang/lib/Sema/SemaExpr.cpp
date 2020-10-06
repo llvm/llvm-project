@@ -24,6 +24,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
@@ -7408,7 +7409,7 @@ Sema::ActOnCastExpr(Scope *S, SourceLocation LParenLoc,
     }
     if (PE || PLE->getNumExprs() == 1) {
       Expr *E = (PE ? PE->getSubExpr() : PLE->getExpr(0));
-      if (!E->getType()->isVectorType())
+      if (!E->isTypeDependent() && !E->getType()->isVectorType())
         isVectorLiteral = true;
     }
     else
@@ -13683,7 +13684,7 @@ static std::pair<ExprResult, ExprResult>
 CorrectDelayedTyposInBinOp(Sema &S, BinaryOperatorKind Opc, Expr *LHSExpr,
                            Expr *RHSExpr) {
   ExprResult LHS = LHSExpr, RHS = RHSExpr;
-  if (!S.getLangOpts().CPlusPlus) {
+  if (!S.Context.isDependenceAllowed()) {
     // C cannot handle TypoExpr nodes on either side of a binop because it
     // doesn't handle dependent types properly, so make sure any TypoExprs have
     // been dealt with before checking the operands.
@@ -13940,9 +13941,10 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   // float vectors and truncating the result back to half vector. For now, we do
   // this only when HalfArgsAndReturn is set (that is, when the target is arm or
   // arm64).
-  assert(isVector(RHS.get()->getType(), Context.HalfTy) ==
-         isVector(LHS.get()->getType(), Context.HalfTy) &&
-         "both sides are half vectors or neither sides are");
+  assert(
+      (Opc == BO_Comma || isVector(RHS.get()->getType(), Context.HalfTy) ==
+                              isVector(LHS.get()->getType(), Context.HalfTy)) &&
+      "both sides are half vectors or neither sides are");
   ConvertHalfVec =
       needsConversionOfHalfVec(ConvertHalfVec, Context, LHS.get(), RHS.get());
 
@@ -14361,6 +14363,47 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
     if (LHSExpr->getType()->isOverloadableType() ||
         RHSExpr->getType()->isOverloadableType())
       return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
+  }
+
+  if (getLangOpts().RecoveryAST &&
+      (LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent())) {
+    assert(!getLangOpts().CPlusPlus);
+    assert((LHSExpr->containsErrors() || RHSExpr->containsErrors()) &&
+           "Should only occur in error-recovery path.");
+    if (BinaryOperator::isCompoundAssignmentOp(Opc))
+      // C [6.15.16] p3:
+      // An assignment expression has the value of the left operand after the
+      // assignment, but is not an lvalue.
+      return CompoundAssignOperator::Create(
+          Context, LHSExpr, RHSExpr, Opc,
+          LHSExpr->getType().getUnqualifiedType(), VK_RValue, OK_Ordinary,
+          OpLoc, CurFPFeatureOverrides());
+    QualType ResultType;
+    switch (Opc) {
+    case BO_Assign:
+      ResultType = LHSExpr->getType().getUnqualifiedType();
+      break;
+    case BO_LT:
+    case BO_GT:
+    case BO_LE:
+    case BO_GE:
+    case BO_EQ:
+    case BO_NE:
+    case BO_LAnd:
+    case BO_LOr:
+      // These operators have a fixed result type regardless of operands.
+      ResultType = Context.IntTy;
+      break;
+    case BO_Comma:
+      ResultType = RHSExpr->getType();
+      break;
+    default:
+      ResultType = Context.DependentTy;
+      break;
+    }
+    return BinaryOperator::Create(Context, LHSExpr, RHSExpr, Opc, ResultType,
+                                  VK_RValue, OK_Ordinary, OpLoc,
+                                  CurFPFeatureOverrides());
   }
 
   // Build a built-in binary operation.

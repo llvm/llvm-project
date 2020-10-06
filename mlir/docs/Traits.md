@@ -251,13 +251,15 @@ to have [passes](PassManagement.md) scheduled under them.
 
 * `OpTrait::MemRefsNormalizable` -- `MemRefsNormalizable`
 
-This trait is used to flag operations that can accommodate `MemRefs` with
-non-identity memory-layout specifications. This trait indicates that the
-normalization of memory layout can be performed for such operations.
-`MemRefs` normalization consists of replacing an original memory reference
-with layout specifications to an equivalent memory reference where
-the specified memory layout is applied by rewritting accesses and types
-associated with that memory reference.
+This trait is used to flag operations that consume or produce
+values of `MemRef` type where those references can be 'normalized'.
+In cases where an associated `MemRef` has a
+non-identity memory-layout specification, such normalizable operations can be
+modified so that the `MemRef` has an identity layout specification.
+This can be implemented by associating the operation with its own
+index expression that can express the equivalent of the memory-layout
+specification of the MemRef type. See [the -normalize-memrefs pass].
+(https://mlir.llvm.org/docs/Passes/#-normalize-memrefs-normalize-memrefs)
 
 ### Single Block with Implicit Terminator
 

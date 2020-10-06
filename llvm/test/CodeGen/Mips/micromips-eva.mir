@@ -196,19 +196,19 @@ body:             |
 
 ...
 
-# CHECK: 60 41 60 05  lbue  $2, 5($1)
-# CHECK: 60 41 68 05  lbe $2, 5($1)
-# CHECK: 60 41 a8 03  sbe $2, 3($1)
+# CHECK: 60 22 60 05  lbue  $1, 5($2)
+# CHECK: 60 22 68 05  lbe $1, 5($2)
+# CHECK: 60 22 a8 03  sbe $1, 3($2)
 
-# CHECK: 60 41 62 0a  lhue  $2, 10($1)
-# CHECK: 60 41 6a 0a  lhe $2, 10($1)
-# CHECK: 60 41 aa 06  she $2, 6($1)
+# CHECK: 60 22 62 0a  lhue  $1, 10($2)
+# CHECK: 60 22 6a 0a  lhe $1, 10($2)
+# CHECK: 60 22 aa 06  she $1, 6($2)
 
-# CHECK: 60 41 6e 14  lwe $2, 20($1)
-# CHECK: 60 41 ae 0c  swe $2, 12($1)
+# CHECK: 60 22 6e 14  lwe $1, 20($2)
+# CHECK: 60 22 ae 0c  swe $1, 12($2)
 
-# CHECK: 60 41 6c 00  lle $2, 0($1)
-# CHECK: 60 81 ac 00  sce $4, 0($1)
+# CHECK: 60 22 6c 00  lle $1, 0($2)
+# CHECK: 60 22 ac 00  sce $1, 0($2)
 
 # CHECK: 60 41 a6 05  cachee  2, 5($1)
 # CHECK: 60 41 a4 05  prefe 2, 5($1)

@@ -7660,6 +7660,10 @@ PPCTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
     SDValue Arg = OutVals[RealResIdx];
 
+    if (Subtarget.isAIXABI() &&
+        (VA.getLocVT().isVector() || VA.getValVT().isVector()))
+      report_fatal_error("Returning vector types not yet supported on AIX.");
+
     switch (VA.getLocInfo()) {
     default: llvm_unreachable("Unknown loc info!");
     case CCValAssign::Full: break;
@@ -8283,7 +8287,7 @@ SDValue PPCTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG,
           EVT DstSetCCVT =
               getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
           SDValue Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT,
-                                     SDNodeFlags(), Chain, true);
+                                     Chain, true);
           Chain = Sel.getValue(1);
 
           SDValue FltOfs = DAG.getSelect(
@@ -16318,10 +16322,10 @@ SDValue PPCTargetLowering::combineSHL(SDNode *N, DAGCombinerInfo &DCI) const {
 
   SDValue N0 = N->getOperand(0);
   ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (!Subtarget.isISA3_0() ||
+  if (!Subtarget.isISA3_0() || !Subtarget.isPPC64() ||
       N0.getOpcode() != ISD::SIGN_EXTEND ||
-      N0.getOperand(0).getValueType() != MVT::i32 ||
-      CN1 == nullptr || N->getValueType(0) != MVT::i64)
+      N0.getOperand(0).getValueType() != MVT::i32 || CN1 == nullptr ||
+      N->getValueType(0) != MVT::i64)
     return SDValue();
 
   // We can't save an operation here if the value is already extended, and

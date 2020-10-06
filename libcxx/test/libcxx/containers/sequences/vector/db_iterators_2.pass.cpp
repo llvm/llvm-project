@@ -10,8 +10,10 @@
 
 // Compare iterators from different containers with <.
 
-#if _LIBCPP_DEBUG >= 1
+// This test requires debug mode, which the library on macOS doesn't have.
+// UNSUPPORTED: with_system_cxx_lib=macosx
 
+#define _LIBCPP_DEBUG 1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <vector>
@@ -30,7 +32,7 @@ int main(int, char**)
     typedef std::vector<T> C;
     C c1;
     C c2;
-    bool b = c1.begin() < c2.begin();
+    bool b = c1.begin() < c2.begin(); (void)b;
     assert(false);
     }
 #if TEST_STD_VER >= 11
@@ -39,18 +41,8 @@ int main(int, char**)
     typedef std::vector<T, min_allocator<T>> C;
     C c1;
     C c2;
-    bool b = c1.begin() < c2.begin();
+    bool b = c1.begin() < c2.begin(); (void)b;
     assert(false);
     }
 #endif
 }
-
-#else
-
-int main(int, char**)
-{
-
-  return 0;
-}
-
-#endif

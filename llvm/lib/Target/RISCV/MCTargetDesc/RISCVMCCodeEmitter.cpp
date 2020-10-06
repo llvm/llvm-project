@@ -61,6 +61,10 @@ public:
                       SmallVectorImpl<MCFixup> &Fixups,
                       const MCSubtargetInfo &STI) const;
 
+  void expandVMSGE(const MCInst &MI, raw_ostream &OS,
+                   SmallVectorImpl<MCFixup> &Fixups,
+                   const MCSubtargetInfo &STI) const;
+
   /// TableGen'erated function for getting the binary encoding for an
   /// instruction.
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
@@ -188,6 +192,92 @@ void RISCVMCCodeEmitter::expandAddTPRel(const MCInst &MI, raw_ostream &OS,
   support::endian::write(OS, Binary, support::little);
 }
 
+void RISCVMCCodeEmitter::expandVMSGE(const MCInst &MI, raw_ostream &OS,
+                                     SmallVectorImpl<MCFixup> &Fixups,
+                                     const MCSubtargetInfo &STI) const {
+  MCInst TmpInst;
+  uint32_t Binary;
+  unsigned Opcode;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpacted opcode. It should be vmsgeu.vx or vmsge.vx.");
+  case RISCV::PseudoVMSGEU_VX:
+  case RISCV::PseudoVMSGEU_VX_M:
+  case RISCV::PseudoVMSGEU_VX_M_T:
+    Opcode = RISCV::VMSLTU_VX;
+    break;
+  case RISCV::PseudoVMSGE_VX:
+  case RISCV::PseudoVMSGE_VX_M:
+  case RISCV::PseudoVMSGE_VX_M_T:
+    Opcode = RISCV::VMSLT_VX;
+    break;
+  }
+  if (MI.getNumOperands() == 3) {
+    // unmasked va >= x
+    //
+    //  pseudoinstruction: vmsge{u}.vx vd, va, x
+    //  expansion: vmslt{u}.vx vd, va, x; vmnand.mm vd, vd, vd
+    TmpInst = MCInstBuilder(Opcode)
+                  .addOperand(MI.getOperand(0))
+                  .addOperand(MI.getOperand(1))
+                  .addOperand(MI.getOperand(2))
+                  .addReg(RISCV::NoRegister);
+    Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+    support::endian::write(OS, Binary, support::little);
+
+    TmpInst = MCInstBuilder(RISCV::VMNAND_MM)
+                  .addOperand(MI.getOperand(0))
+                  .addOperand(MI.getOperand(0))
+                  .addOperand(MI.getOperand(0));
+    Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+    support::endian::write(OS, Binary, support::little);
+  } else if (MI.getNumOperands() == 4) {
+    // masked va >= x, vd != v0
+    //
+    //  pseudoinstruction: vmsge{u}.vx vd, va, x, v0.t
+    //  expansion: vmslt{u}.vx vd, va, x, v0.t; vmxor.mm vd, vd, v0
+    assert(MI.getOperand(0).getReg() != RISCV::V0 &&
+           "The destination register should not be V0.");
+    TmpInst = MCInstBuilder(Opcode)
+                  .addOperand(MI.getOperand(0))
+                  .addOperand(MI.getOperand(1))
+                  .addOperand(MI.getOperand(2))
+                  .addOperand(MI.getOperand(3));
+    Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+    support::endian::write(OS, Binary, support::little);
+
+    TmpInst = MCInstBuilder(RISCV::VMXOR_MM)
+                  .addOperand(MI.getOperand(0))
+                  .addOperand(MI.getOperand(0))
+                  .addReg(RISCV::V0);
+    Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+    support::endian::write(OS, Binary, support::little);
+  } else if (MI.getNumOperands() == 5) {
+    // masked va >= x, vd == v0
+    //
+    //  pseudoinstruction: vmsge{u}.vx vd, va, x, v0.t, vt
+    //  expansion: vmslt{u}.vx vt, va, x;  vmandnot.mm vd, vd, vt
+    assert(MI.getOperand(0).getReg() == RISCV::V0 &&
+           "The destination register should be V0.");
+    assert(MI.getOperand(1).getReg() != RISCV::V0 &&
+           "The temporary vector register should not be V0.");
+    TmpInst = MCInstBuilder(Opcode)
+                  .addOperand(MI.getOperand(1))
+                  .addOperand(MI.getOperand(2))
+                  .addOperand(MI.getOperand(3))
+                  .addOperand(MI.getOperand(4));
+    Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+    support::endian::write(OS, Binary, support::little);
+
+    TmpInst = MCInstBuilder(RISCV::VMANDNOT_MM)
+                  .addOperand(MI.getOperand(0))
+                  .addOperand(MI.getOperand(0))
+                  .addOperand(MI.getOperand(1));
+    Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+    support::endian::write(OS, Binary, support::little);
+  }
+}
+
 void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
@@ -213,6 +303,16 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   if (MI.getOpcode() == RISCV::PseudoAddTPRel) {
     expandAddTPRel(MI, OS, Fixups, STI);
     MCNumEmitted += 1;
+    return;
+  }
+
+  if (MI.getOpcode() == RISCV::PseudoVMSGEU_VX ||
+      MI.getOpcode() == RISCV::PseudoVMSGE_VX ||
+      MI.getOpcode() == RISCV::PseudoVMSGEU_VX_M ||
+      MI.getOpcode() == RISCV::PseudoVMSGE_VX_M ||
+      MI.getOpcode() == RISCV::PseudoVMSGEU_VX_M_T ||
+      MI.getOpcode() == RISCV::PseudoVMSGE_VX_M_T) {
+    expandVMSGE(MI, OS, Fixups, STI);
     return;
   }
 

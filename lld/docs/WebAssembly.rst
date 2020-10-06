@@ -39,6 +39,10 @@ WebAssembly-specific options:
 
   Export all symbols (normally combined with --no-gc-sections)
 
+  Note that this will not export linker-generated mutable globals unless
+  the resulting binaryen already includes the 'mutable-globals' features
+  since that would otherwise create and invalid binaryen.
+
 .. option:: --export-dynamic
 
   When building an executable, export any non-hidden symbols.  By default only
