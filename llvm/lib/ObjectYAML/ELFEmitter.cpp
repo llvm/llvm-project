@@ -245,7 +245,8 @@ template <class ELFT> class ELFState {
   void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::RelrSection &Section,
                            ContiguousBlobAccumulator &CBA);
-  void writeSectionContent(Elf_Shdr &SHeader, const ELFYAML::Group &Group,
+  void writeSectionContent(Elf_Shdr &SHeader,
+                           const ELFYAML::GroupSection &Group,
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::SymtabShndxSection &Shndx,
@@ -697,7 +698,7 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::RelrSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
-    } else if (auto S = dyn_cast<ELFYAML::Group>(Sec)) {
+    } else if (auto S = dyn_cast<ELFYAML::GroupSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::ARMIndexTableSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
@@ -1237,7 +1238,7 @@ void ELFState<ELFT>::writeSectionContent(
 
 template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
-                                         const ELFYAML::Group &Section,
+                                         const ELFYAML::GroupSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
   assert(Section.Type == llvm::ELF::SHT_GROUP &&
          "Section type is not SHT_GROUP");
