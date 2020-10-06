@@ -8,9 +8,13 @@
 
 #include "MachOObjcopy.h"
 #include "../CopyConfig.h"
+#include "../llvm-objcopy.h"
 #include "MachOReader.h"
 #include "MachOWriter.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Object/ArchiveWriter.h"
+#include "llvm/Object/MachOUniversal.h"
+#include "llvm/Object/MachOUniversalWriter.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 
@@ -384,6 +388,75 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
   if (auto E = Writer.finalize())
     return E;
   return Writer.write();
+}
+
+Error executeObjcopyOnMachOUniversalBinary(CopyConfig &Config,
+                                           const MachOUniversalBinary &In,
+                                           Buffer &Out) {
+  SmallVector<OwningBinary<Binary>, 2> Binaries;
+  SmallVector<Slice, 2> Slices;
+  for (const auto &O : In.objects()) {
+    Expected<std::unique_ptr<Archive>> ArOrErr = O.getAsArchive();
+    if (ArOrErr) {
+      Expected<std::vector<NewArchiveMember>> NewArchiveMembersOrErr =
+          createNewArchiveMembers(Config, **ArOrErr);
+      if (!NewArchiveMembersOrErr)
+        return NewArchiveMembersOrErr.takeError();
+      Expected<std::unique_ptr<MemoryBuffer>> OutputBufferOrErr =
+          writeArchiveToBuffer(*NewArchiveMembersOrErr,
+                               (*ArOrErr)->hasSymbolTable(), (*ArOrErr)->kind(),
+                               Config.DeterministicArchives,
+                               (*ArOrErr)->isThin());
+      if (!OutputBufferOrErr)
+        return OutputBufferOrErr.takeError();
+      Expected<std::unique_ptr<Binary>> BinaryOrErr =
+          object::createBinary(**OutputBufferOrErr);
+      if (!BinaryOrErr)
+        return BinaryOrErr.takeError();
+      Binaries.emplace_back(std::move(*BinaryOrErr),
+                            std::move(*OutputBufferOrErr));
+      Slices.emplace_back(*cast<Archive>(Binaries.back().getBinary()),
+                          O.getCPUType(), O.getCPUSubType(),
+                          O.getArchFlagName(), O.getAlign());
+      continue;
+    }
+    // The methods getAsArchive, getAsObjectFile, getAsIRObject of the class
+    // ObjectForArch return an Error in case of the type mismatch. We need to
+    // check each in turn to see what kind of slice this is, so ignore errors
+    // produced along the way.
+    consumeError(ArOrErr.takeError());
+
+    Expected<std::unique_ptr<MachOObjectFile>> ObjOrErr = O.getAsObjectFile();
+    if (!ObjOrErr) {
+      consumeError(ObjOrErr.takeError());
+      return createStringError(std::errc::invalid_argument,
+                               "slice for '%s' of the universal Mach-O binary "
+                               "'%s' is not a Mach-O object or an archive",
+                               O.getArchFlagName().c_str(),
+                               Config.InputFilename.str().c_str());
+    }
+    std::string ArchFlagName = O.getArchFlagName();
+    MemBuffer MB(ArchFlagName);
+    if (Error E = executeObjcopyOnBinary(Config, **ObjOrErr, MB))
+      return E;
+    std::unique_ptr<WritableMemoryBuffer> OutputBuffer =
+        MB.releaseMemoryBuffer();
+    Expected<std::unique_ptr<Binary>> BinaryOrErr =
+        object::createBinary(*OutputBuffer);
+    if (!BinaryOrErr)
+      return BinaryOrErr.takeError();
+    Binaries.emplace_back(std::move(*BinaryOrErr), std::move(OutputBuffer));
+    Slices.emplace_back(*cast<MachOObjectFile>(Binaries.back().getBinary()),
+                        O.getAlign());
+  }
+  Expected<std::unique_ptr<MemoryBuffer>> B =
+      writeUniversalBinaryToBuffer(Slices);
+  if (!B)
+    return B.takeError();
+  if (Error E = Out.allocate((*B)->getBufferSize()))
+    return E;
+  memcpy(Out.getBufferStart(), (*B)->getBufferStart(), (*B)->getBufferSize());
+  return Out.commit();
 }
 
 } // end namespace macho
