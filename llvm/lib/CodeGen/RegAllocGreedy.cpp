@@ -361,7 +361,7 @@ class RAGreedy : public MachineFunctionPass,
     BitVector LiveBundles;
     SmallVector<unsigned, 8> ActiveBlocks;
 
-    void reset(InterferenceCache &Cache, unsigned Reg) {
+    void reset(InterferenceCache &Cache, MCRegister Reg) {
       PhysReg = Reg;
       IntvIdx = 0;
       Intf.setPhysReg(Cache, Reg);
@@ -1372,7 +1372,7 @@ bool RAGreedy::calcCompactRegion(GlobalSplitCandidate &Cand) {
     return false;
 
   // Compact regions don't correspond to any physreg.
-  Cand.reset(IntfCache, 0);
+  Cand.reset(IntfCache, MCRegister::NoRegister);
 
   LLVM_DEBUG(dbgs() << "Compact region bundles");
 
