@@ -80,7 +80,10 @@ def strip_all: F<"strip-all">,
     HelpText<"Omit all symbol information from the output binary">;
 def strip_debug: F<"strip-debug">,
     HelpText<"Omit all debug information, but keep symbol information">;
-defm reproduce: Eq<"reproduce", "Write a tar file containing input files and command line options to reproduce link">;
+defm reproduce: Eq<"reproduce",
+     "Write a tar file containing input files and command line options to reproduce link">;
+defm require_defined: Eq<"require-defined",
+     "Force symbol to be added to symbol table as an undefined one">;
 defm undefined: Eq<"undefined", "Include symbol in the link, if available">;
 defm whole_archive: B<"whole-archive",
     "Include all object files for following archives",
@@ -88,8 +91,6 @@ defm whole_archive: B<"whole-archive",
 def v: Flag<["-"], "v">, HelpText<"Display the version number">;
 def verbose: F<"verbose">, HelpText<"Verbose mode">;
 def version: F<"version">, HelpText<"Display the version number and exit">;
-defm require_defined: Eq<"require-defined",
-     "Force symbol to be added to symbol table as an undefined one">;
 
 // LLD specific options
 def _HASH_HASH_HASH : Flag<["-"], "###">,
