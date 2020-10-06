@@ -41,6 +41,7 @@ RelExpr DPU::getRelExpr(const RelType Type, const Symbol &S,
   switch (Type) {
   default:
     error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    return R_NONE;
   case R_DPU_NONE:
     return R_NONE;
   case R_DPU_8:
