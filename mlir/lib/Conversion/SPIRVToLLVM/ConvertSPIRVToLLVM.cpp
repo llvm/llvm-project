@@ -555,6 +555,66 @@ public:
   }
 };
 
+/// Converts `spv.CompositeExtract` to `llvm.extractvalue` if the container type
+/// is an aggregate type (struct or array). Otherwise, converts to
+/// `llvm.extractelement` that operates on vectors.
+class CompositeExtractPattern
+    : public SPIRVToLLVMConversion<spirv::CompositeExtractOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::CompositeExtractOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::CompositeExtractOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = this->typeConverter.convertType(op.getType());
+    if (!dstType)
+      return failure();
+
+    Type containerType = op.composite().getType();
+    if (containerType.isa<VectorType>()) {
+      Location loc = op.getLoc();
+      IntegerAttr value = op.indices()[0].cast<IntegerAttr>();
+      Value index = createI32ConstantOf(loc, rewriter, value.getInt());
+      rewriter.replaceOpWithNewOp<LLVM::ExtractElementOp>(
+          op, dstType, op.composite(), index);
+      return success();
+    }
+    rewriter.replaceOpWithNewOp<LLVM::ExtractValueOp>(
+        op, dstType, op.composite(), op.indices());
+    return success();
+  }
+};
+
+/// Converts `spv.CompositeInsert` to `llvm.insertvalue` if the container type
+/// is an aggregate type (struct or array). Otherwise, converts to
+/// `llvm.insertelement` that operates on vectors.
+class CompositeInsertPattern
+    : public SPIRVToLLVMConversion<spirv::CompositeInsertOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::CompositeInsertOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::CompositeInsertOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = this->typeConverter.convertType(op.getType());
+    if (!dstType)
+      return failure();
+
+    Type containerType = op.composite().getType();
+    if (containerType.isa<VectorType>()) {
+      Location loc = op.getLoc();
+      IntegerAttr value = op.indices()[0].cast<IntegerAttr>();
+      Value index = createI32ConstantOf(loc, rewriter, value.getInt());
+      rewriter.replaceOpWithNewOp<LLVM::InsertElementOp>(
+          op, dstType, op.composite(), op.object(), index);
+      return success();
+    }
+    rewriter.replaceOpWithNewOp<LLVM::InsertValueOp>(
+        op, dstType, op.composite(), op.object(), op.indices());
+    return success();
+  }
+};
+
 /// Converts SPIR-V operations that have straightforward LLVM equivalent
 /// into LLVM dialect operations.
 template <typename SPIRVOp, typename LLVMOp>
@@ -1360,6 +1420,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       VariablePattern,
 
       // Miscellaneous ops
+      CompositeExtractPattern, CompositeInsertPattern,
       DirectConversionPattern<spirv::SelectOp, LLVM::SelectOp>,
       DirectConversionPattern<spirv::UndefOp, LLVM::UndefOp>,
 
