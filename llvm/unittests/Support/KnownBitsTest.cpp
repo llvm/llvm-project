@@ -112,6 +112,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       KnownBits KnownUMin(KnownAnd);
       KnownBits KnownSMax(KnownAnd);
       KnownBits KnownSMin(KnownAnd);
+      KnownBits KnownMul(KnownAnd);
 
       ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
         ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
@@ -144,6 +145,10 @@ TEST(KnownBitsTest, BinaryExhaustive) {
           Res = APIntOps::smin(N1, N2);
           KnownSMin.One &= Res;
           KnownSMin.Zero &= ~Res;
+
+          Res = N1 * N2;
+          KnownMul.One &= Res;
+          KnownMul.Zero &= ~Res;
         });
       });
 
@@ -174,6 +179,12 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       KnownBits ComputedSMin = KnownBits::smin(Known1, Known2);
       EXPECT_EQ(KnownSMin.Zero, ComputedSMin.Zero);
       EXPECT_EQ(KnownSMin.One, ComputedSMin.One);
+
+      // ComputedMul is conservatively correct, but not guaranteed to be
+      // precise.
+      KnownBits ComputedMul = KnownBits::computeForMul(Known1, Known2);
+      EXPECT_TRUE(ComputedMul.Zero.isSubsetOf(KnownMul.Zero));
+      EXPECT_TRUE(ComputedMul.One.isSubsetOf(KnownMul.One));
     });
   });
 }
