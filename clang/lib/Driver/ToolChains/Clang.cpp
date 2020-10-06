@@ -7189,7 +7189,7 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::None(),
       TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
-      CmdArgs, None, Output));   
+      CmdArgs, Inputs, Output));
 }
 
 static bool isArchiveOfBundlesFileName(StringRef FilePath) {
@@ -7255,7 +7255,8 @@ static void createUnbundleArchiveCommand(Compilation &C,
       UBArgs.push_back(C.getArgs().MakeArgString(OffloadArg.c_str()));
       UBArgs.push_back(C.getArgs().MakeArgString(OutputArg.c_str()));
       C.addCommand(std::make_unique<Command>(
-          UA, T, ResponseFileSupport::AtFileCurCP(), UBProgram, UBArgs, Inputs));
+          UA, T, ResponseFileSupport::AtFileCurCP(), UBProgram, UBArgs, Inputs,
+          InputInfo(&UA, C.getArgs().MakeArgString(OutputLib))));
     }
   }
 }
@@ -7331,7 +7332,7 @@ void OffloadBundler::ConstructJobMultipleOutputs(
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::None(),
       TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
-      CmdArgs, None, Outputs));
+      CmdArgs, Inputs, Outputs));
 }
 
 void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,

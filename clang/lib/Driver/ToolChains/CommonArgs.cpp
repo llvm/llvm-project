@@ -1672,7 +1672,8 @@ bool tools::GetSDLFromOffloadArchive(Compilation &C, const Driver &D,
       UBArgs.push_back(C.getArgs().MakeArgString(OffloadArg.c_str()));
       UBArgs.push_back(C.getArgs().MakeArgString(OutputArg.c_str()));
       C.addCommand(std::make_unique<Command>(
-        JA, T, ResponseFileSupport::AtFileCurCP(), UBProgram, UBArgs, Inputs));
+          JA, T, ResponseFileSupport::AtFileCurCP(), UBProgram, UBArgs, Inputs,
+          InputInfo(&JA, C.getArgs().MakeArgString(OutputLib.c_str()))));
       if (postClangLink)
         CC1Args.push_back("-mlink-builtin-bitcode");
 

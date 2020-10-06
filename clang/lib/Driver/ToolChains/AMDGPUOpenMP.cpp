@@ -186,7 +186,7 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::AtFileCurCP(),
       Args.MakeArgString(C.getDriver().Dir + "/clang-build-select-link"),
-      CmdArgs, Inputs));
+      CmdArgs, Inputs, InputInfo(&JA, Args.MakeArgString(OutputFileName))));
 
   return OutputFileName;
 }
@@ -226,7 +226,8 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("llvm-link"));
   C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileCurCP(), Exec, CmdArgs, Inputs));
+      JA, *this, ResponseFileSupport::AtFileCurCP(), Exec, CmdArgs, Inputs,
+      InputInfo(&JA, Args.MakeArgString(OutputFileName))));
   return OutputFileName;
 }
 
@@ -263,7 +264,8 @@ const char *AMDGCN::OpenMPLinker::constructOptCommand(
   const char *OptExec =
       Args.MakeArgString(getToolChain().GetProgramPath("opt"));
   C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileCurCP(), OptExec, OptArgs, Inputs));
+      JA, *this, ResponseFileSupport::AtFileCurCP(), OptExec, OptArgs, Inputs,
+      InputInfo(&JA, Args.MakeArgString(OutputFileName))));
   return OutputFileName;
 }
 
@@ -318,7 +320,8 @@ const char *AMDGCN::OpenMPLinker::constructLlcCommand(
   LlcArgs.push_back(LlcOutputFile);
   const char *Llc = Args.MakeArgString(getToolChain().GetProgramPath("llc"));
   C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileCurCP(), Llc, LlcArgs, Inputs));
+      JA, *this, ResponseFileSupport::AtFileCurCP(), Llc, LlcArgs, Inputs,
+      InputInfo(&JA, Args.MakeArgString(LlcOutputFile))));
   return LlcOutputFile;
 }
 
@@ -334,7 +337,8 @@ void AMDGCN::OpenMPLinker::constructLldCommand(Compilation &C, const JobAction &
                         InputFileName};
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
   C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileCurCP(), Lld, LldArgs, Inputs));
+      JA, *this, ResponseFileSupport::AtFileCurCP(), Lld, LldArgs, Inputs,
+      InputInfo(&JA, Args.MakeArgString(Output.getFilename()))));
 }
 
 // For amdgcn the inputs of the linker job are device bitcode and output is

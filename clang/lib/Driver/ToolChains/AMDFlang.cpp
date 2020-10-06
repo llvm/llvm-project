@@ -916,8 +916,8 @@ if(Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() > 0) {
   }
 
   C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileCurCP(),
-      UpperExec, UpperCmdArgs, Inputs));
+      JA, *this, ResponseFileSupport::AtFileCurCP(), UpperExec, UpperCmdArgs,
+      Inputs, InputInfo(&JA, Args.MakeArgString(ILMFile))));
 
   // For -fsyntax-only or -E that is it
   if (Args.hasArg(options::OPT_fsyntax_only) ||
@@ -1070,8 +1070,8 @@ if(Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() > 0) {
   }
 
   C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileCurCP(),
-      LowerExec, LowerCmdArgs, Inputs));
+      JA, *this, ResponseFileSupport::AtFileCurCP(), LowerExec, LowerCmdArgs,
+      Inputs, InputInfo(&JA, Args.MakeArgString(OutFile))));
 }
 
 AMDFlang::AMDFlang(const ToolChain &TC) : Tool("flang", "flang frontend", TC) {}
