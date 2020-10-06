@@ -213,7 +213,6 @@ write_cmake_config("config") {
       "HAVE_SIGALTSTACK=",
       "HAVE_STRERROR_R=",
       "HAVE_SYSCONF=",
-      "HAVE_SYSEXITS_H=",
       "HAVE_SYS_IOCTL_H=",
       "HAVE_SYS_MMAN_H=",
       "HAVE_SYS_PARAM_H=",
@@ -250,7 +249,6 @@ write_cmake_config("config") {
       "HAVE_SIGALTSTACK=1",
       "HAVE_STRERROR_R=1",
       "HAVE_SYSCONF=1",
-      "HAVE_SYSEXITS_H=1",
       "HAVE_SYS_IOCTL_H=1",
       "HAVE_SYS_MMAN_H=1",
       "HAVE_SYS_PARAM_H=1",
@@ -339,9 +337,15 @@ write_cmake_config("llvm-config") {
   ]
 
   if (current_os == "win") {
-    values += [ "LLVM_ON_UNIX=" ]
+    values += [
+      "HAVE_SYSEXITS_H=",
+      "LLVM_ON_UNIX=",
+    ]
   } else {
-    values += [ "LLVM_ON_UNIX=1" ]
+    values += [
+      "HAVE_SYSEXITS_H=1",
+      "LLVM_ON_UNIX=1",
+    ]
   }
 
   if (llvm_enable_threads) {
