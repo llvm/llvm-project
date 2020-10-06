@@ -406,7 +406,7 @@ define void @ptr_uses(i8* %ptr) {
 
 define void @ptr_use_chain(i8* %ptr) {
 ; CHECK-LABEL: define {{[^@]+}}@ptr_use_chain
-; CHECK-SAME: (i8* [[PTR:%.*]])
+; CHECK-SAME: (i8* [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[BC0:%.*]] = bitcast i8* [[PTR]] to i32*
 ; CHECK-NEXT:    [[BC1:%.*]] = bitcast i32* [[BC0]] to i8*
 ; CHECK-NEXT:    [[BC2:%.*]] = bitcast i8* [[BC1]] to i32*

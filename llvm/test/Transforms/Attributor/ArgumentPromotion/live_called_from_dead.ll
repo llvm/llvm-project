@@ -56,7 +56,7 @@ define internal i32 @caller(i32* %B) {
 ; IS__CGSCC_NPM-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__CGSCC_NPM-NEXT:    store i32 1, i32* [[A]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) [[ATTR2:#.*]]
-; IS__CGSCC_NPM-NEXT:    unreachable
+; IS__CGSCC_NPM-NEXT:    ret i32 undef
 ;
   %A = alloca i32
   store i32 1, i32* %A
