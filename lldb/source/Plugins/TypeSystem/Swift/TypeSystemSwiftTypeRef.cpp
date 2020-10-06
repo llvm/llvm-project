@@ -1672,19 +1672,6 @@ TypeSystemSwiftTypeRef::GetPointeeType(opaque_compiler_type_t type) {
 CompilerType
 TypeSystemSwiftTypeRef::GetPointerType(opaque_compiler_type_t type) {
   auto impl = [&]() -> CompilerType {
-    /*
-      kind=Type
-        kind=BoundGenericStructure
-          kind=Type
-            kind=Structure
-              kind=Module, text="Swift"
-              kind=Identifier, text="UnsafePointer"
-          kind=TypeList
-            kind=Type
-              kind=Structure
-                kind=Module, text="Swift"
-                kind=Identifier, text="Int"
-     */
     using namespace swift::Demangle;
     Demangler dem;
 
