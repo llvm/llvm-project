@@ -234,12 +234,16 @@ class FLAT_Global_Store_AddTid_Pseudo <string opName, RegisterClass vdataClass,
 }
 
 class FLAT_Scratch_Load_Pseudo <string opName, RegisterClass regClass,
+  bit HasTiedOutput = 0,
   bit EnableSaddr = 0>: FLAT_Pseudo<
   opName,
   (outs regClass:$vdst),
-  !if(EnableSaddr,
-      (ins SReg_32_XEXEC_HI:$saddr, flat_offset:$offset, GLC_0:$glc, SLC_0:$slc, DLC_0:$dlc),
-      (ins VGPR_32:$vaddr, flat_offset:$offset, GLC_0:$glc, SLC_0:$slc, DLC_0:$dlc)),
+  !con(
+    !if(EnableSaddr,
+        (ins SReg_32_XEXEC_HI:$saddr, flat_offset:$offset),
+        (ins VGPR_32:$vaddr, flat_offset:$offset)),
+    !if(HasTiedOutput, (ins GLC:$glc, SLC:$slc, DLC:$dlc, regClass:$vdst_in),
+                       (ins GLC_0:$glc, SLC_0:$slc, DLC_0:$dlc))),
   " $vdst, "#!if(EnableSaddr, "off", "$vaddr")#!if(EnableSaddr, ", $saddr", ", off")#"$offset$glc$slc$dlc"> {
   let has_data = 0;
   let mayLoad = 1;
@@ -248,6 +252,9 @@ class FLAT_Scratch_Load_Pseudo <string opName, RegisterClass regClass,
   let has_vaddr = !if(EnableSaddr, 0, 1);
   let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
   let maybeAtomic = 1;
+
+  let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
+  let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
 }
 
 class FLAT_Scratch_Store_Pseudo <string opName, RegisterClass vdataClass, bit EnableSaddr = 0> : FLAT_Pseudo<
@@ -267,10 +274,10 @@ class FLAT_Scratch_Store_Pseudo <string opName, RegisterClass vdataClass, bit En
   let maybeAtomic = 1;
 }
 
-multiclass FLAT_Scratch_Load_Pseudo<string opName, RegisterClass regClass> {
+multiclass FLAT_Scratch_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedOutput = 0> {
   let is_flat_scratch = 1 in {
-    def "" : FLAT_Scratch_Load_Pseudo<opName, regClass>;
-    def _SADDR : FLAT_Scratch_Load_Pseudo<opName, regClass, 1>;
+    def "" : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput>;
+    def _SADDR : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput, 1>;
   }
 }
 
@@ -681,12 +688,12 @@ defm SCRATCH_LOAD_DWORDX2  : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx2", V
 defm SCRATCH_LOAD_DWORDX3  : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx3", VReg_96>;
 defm SCRATCH_LOAD_DWORDX4  : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx4", VReg_128>;
 
-defm SCRATCH_LOAD_UBYTE_D16    : FLAT_Scratch_Load_Pseudo <"scratch_load_ubyte_d16", VGPR_32>;
-defm SCRATCH_LOAD_UBYTE_D16_HI : FLAT_Scratch_Load_Pseudo <"scratch_load_ubyte_d16_hi", VGPR_32>;
-defm SCRATCH_LOAD_SBYTE_D16    : FLAT_Scratch_Load_Pseudo <"scratch_load_sbyte_d16", VGPR_32>;
-defm SCRATCH_LOAD_SBYTE_D16_HI : FLAT_Scratch_Load_Pseudo <"scratch_load_sbyte_d16_hi", VGPR_32>;
-defm SCRATCH_LOAD_SHORT_D16    : FLAT_Scratch_Load_Pseudo <"scratch_load_short_d16", VGPR_32>;
-defm SCRATCH_LOAD_SHORT_D16_HI : FLAT_Scratch_Load_Pseudo <"scratch_load_short_d16_hi", VGPR_32>;
+defm SCRATCH_LOAD_UBYTE_D16    : FLAT_Scratch_Load_Pseudo <"scratch_load_ubyte_d16", VGPR_32, 1>;
+defm SCRATCH_LOAD_UBYTE_D16_HI : FLAT_Scratch_Load_Pseudo <"scratch_load_ubyte_d16_hi", VGPR_32, 1>;
+defm SCRATCH_LOAD_SBYTE_D16    : FLAT_Scratch_Load_Pseudo <"scratch_load_sbyte_d16", VGPR_32, 1>;
+defm SCRATCH_LOAD_SBYTE_D16_HI : FLAT_Scratch_Load_Pseudo <"scratch_load_sbyte_d16_hi", VGPR_32, 1>;
+defm SCRATCH_LOAD_SHORT_D16    : FLAT_Scratch_Load_Pseudo <"scratch_load_short_d16", VGPR_32, 1>;
+defm SCRATCH_LOAD_SHORT_D16_HI : FLAT_Scratch_Load_Pseudo <"scratch_load_short_d16_hi", VGPR_32, 1>;
 
 defm SCRATCH_STORE_BYTE    : FLAT_Scratch_Store_Pseudo <"scratch_store_byte", VGPR_32>;
 defm SCRATCH_STORE_SHORT   : FLAT_Scratch_Store_Pseudo <"scratch_store_short", VGPR_32>;
