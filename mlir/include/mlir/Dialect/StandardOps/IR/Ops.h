@@ -315,7 +315,7 @@ ParseResult parseDimAndSymbolList(OpAsmParser &parser,
 /// source memref. This is useful to to fold a memref_cast into a consuming op
 /// and implement canonicalization patterns for ops in different dialects that
 /// may consume the results of memref_cast operations. Such foldable memref_cast
-/// operations are typically inserted as `view` and `subview` ops are
+/// operations are typically inserted as `view` and `subview` ops and are
 /// canonicalized, to preserve the type compatibility of their uses.
 ///
 /// Returns true when all conditions are met:
