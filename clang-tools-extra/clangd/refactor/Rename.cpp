@@ -120,6 +120,9 @@ enum class ReasonToReject {
   UsedOutsideFile, // for within-file rename only.
   UnsupportedSymbol,
   AmbiguousSymbol,
+
+  // name validation.
+  RenameToKeywords,
 };
 
 llvm::Optional<ReasonToReject> renameable(const NamedDecl &RenameDecl,
@@ -208,6 +211,8 @@ llvm::Error makeError(ReasonToReject Reason) {
       return "symbol is not a supported kind (e.g. namespace, macro)";
     case ReasonToReject::AmbiguousSymbol:
       return "there are multiple symbols at the given location";
+    case ReasonToReject::RenameToKeywords:
+      return "the chosen name is a keyword";
     }
     llvm_unreachable("unhandled reason kind");
   };
@@ -471,6 +476,8 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return makeError(ReasonToReject::NoSymbolFound);
   if (DeclsUnderCursor.size() > 1)
     return makeError(ReasonToReject::AmbiguousSymbol);
+  if (isKeyword(RInputs.NewName, AST.getLangOpts()))
+    return makeError(ReasonToReject::RenameToKeywords);
 
   const auto &RenameDecl =
       llvm::cast<NamedDecl>(*(*DeclsUnderCursor.begin())->getCanonicalDecl());
