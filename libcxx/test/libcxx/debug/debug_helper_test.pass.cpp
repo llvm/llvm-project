@@ -10,10 +10,8 @@
 // UNSUPPORTED: c++03
 // UNSUPPORTED: windows
 
-// Can't test the system lib because this test enables debug mode
-// UNSUPPORTED: with_system_cxx_lib=macosx
-
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
+// UNSUPPORTED: libcxx-no-debug-mode
 
 #include <__debug>
 #include "test_macros.h"
