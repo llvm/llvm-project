@@ -23,7 +23,7 @@
 namespace clang {
 class DiagnosticOptions;
 class DiagnosticsEngine;
-}; // namespace clang
+} // namespace clang
 
 using llvm::IntrusiveRefCntPtr;
 using llvm::raw_ostream;
