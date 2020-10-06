@@ -46,6 +46,17 @@ named_data:
         .long   42
         .size   named_data, 4
 
+# Test BSS / zero-fill section handling.
+# llvm-jitlink: *{4}bss_variable = 0
+
+	.type	bss_variable,@object
+	.bss
+	.globl	bss_variable
+	.p2align	2
+bss_variable:
+	.long	0
+	.size	bss_variable, 4
+
         .ident  "clang version 10.0.0-4ubuntu1 "
         .section        ".note.GNU-stack","",@progbits
         .addrsig
