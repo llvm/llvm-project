@@ -278,7 +278,9 @@ public:
 
     // [string.view.access], element access
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
-    const_reference operator[](size_type __pos) const _NOEXCEPT { return __data[__pos]; }
+    const_reference operator[](size_type __pos) const _NOEXCEPT {
+      return _LIBCPP_ASSERT(__pos < size(), "string_view[] index out of bounds"), __data[__pos];
+    }
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     const_reference at(size_type __pos) const
