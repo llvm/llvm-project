@@ -129,10 +129,10 @@ names from both the *Processor* and *Alternative Processor* can be used.
      **GCN GFX6 (Southern Islands (SI))** [AMD-GCN-GFX6]_
      -----------------------------------------------------------------------------------------------
      ``gfx600``  - ``tahiti``    ``amdgcn``   dGPU
-     ``gfx601``  - ``hainan``    ``amdgcn``   dGPU
-                 - ``oland``
-                 - ``pitcairn``
+     ``gfx601``  - ``pitcairn``  ``amdgcn``   dGPU
                  - ``verde``
+     ``gfx602``  - ``hainan``    ``amdgcn``   dGPU
+                 - ``oland``
      **GCN GFX7 (Sea Islands (CI))** [AMD-GCN-GFX7]_
      -----------------------------------------------------------------------------------------------
      ``gfx700``  - ``kaveri``    ``amdgcn``   APU                             - A6-7000
@@ -166,6 +166,7 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                               - Radeon HD 8770
                                                                               - R7 260
                                                                               - R7 260X
+     ``gfx705``                  ``amdgcn``   APU
      **GCN GFX8 (Volcanic Islands (VI))** [AMD-GCN-GFX8]_
      -----------------------------------------------------------------------------------------------
      ``gfx801``  - ``carrizo``   ``amdgcn``   APU   - xnack                   - A6-8500P
@@ -186,14 +187,9 @@ names from both the *Processor* and *Alternative Processor* can be used.
      \                           ``amdgcn``   APU   - xnack                   - E2-9010
                                                       [on]                    - A6-9210
                                                                               - A9-9410
-     ``gfx802``  - ``iceland``   ``amdgcn``   dGPU  - xnack           ROCm    - FirePro S7150
-                 - ``tonga``                          [off]                   - FirePro S7100
-                                                                              - FirePro W7100
-                                                                              - Radeon R285
-                                                                              - Radeon R9 380
+     ``gfx802``  - ``iceland``   ``amdgcn``   dGPU  - xnack           ROCm    - Radeon R285
+                 - ``tonga``                          [off]                   - Radeon R9 380
                                                                               - Radeon R9 385
-                                                                              - Mobile FirePro
-                                                                                M7170
      ``gfx803``  - ``fiji``      ``amdgcn``   dGPU  - xnack           ROCm    - Radeon R9 Nano
                                                       [off]                   - Radeon R9 Fury
                                                                               - Radeon R9 FuryX
@@ -205,6 +201,11 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                               - Radeon Instinct MI6
      \           - ``polaris11`` ``amdgcn``   dGPU  - xnack           ROCm    - Radeon RX 460
                                                       [off]
+     ``gfx805``  - ``tongapro``  ``amdgcn``   dGPU  - xnack           ROCm    - FirePro S7150
+                                                      [off]                   - FirePro S7100
+                                                                              - FirePro W7100
+                                                                              - Mobile FirePro
+                                                                                M7170
      ``gfx810``  - ``stoney``    ``amdgcn``   APU   - xnack
                                                       [on]
      **GCN GFX9** [AMD-GCN-GFX9]_
@@ -818,6 +819,11 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1012`` 0x035      ``gfx1012``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1030`` 0x036      ``gfx1030``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1031`` 0x037      ``gfx1031``
+     *reserved*                        0x038      Reserved.
+     *reserved*                        0x039      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX602``  0x03a      ``gfx602``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX705``  0x03b      ``gfx705``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX805``  0x03c      ``gfx805``
      ================================= ========== =============================
 
 Sections

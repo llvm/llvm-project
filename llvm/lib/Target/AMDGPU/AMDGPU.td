@@ -761,6 +761,12 @@ def FeatureISAVersion6_0_1 : FeatureSet<
    FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
+def FeatureISAVersion6_0_2 : FeatureSet<
+  [FeatureSouthernIslands,
+   FeatureLDSBankCount32,
+   FeatureDoesNotSupportXNACK,
+   FeatureCodeObjectV3]>;
+
 def FeatureISAVersion7_0_0 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount32,
@@ -794,6 +800,12 @@ def FeatureISAVersion7_0_4 : FeatureSet<
    FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
+def FeatureISAVersion7_0_5 : FeatureSet<
+  [FeatureSeaIslands,
+   FeatureLDSBankCount16,
+   FeatureDoesNotSupportXNACK,
+   FeatureCodeObjectV3]>;
+
 def FeatureISAVersion8_0_1 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureFastFMAF32,
@@ -814,6 +826,14 @@ def FeatureISAVersion8_0_2 : FeatureSet<
 def FeatureISAVersion8_0_3 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureLDSBankCount32,
+   FeatureUnpackedD16VMem,
+   FeatureDoesNotSupportXNACK,
+   FeatureCodeObjectV3]>;
+
+def FeatureISAVersion8_0_5 : FeatureSet<
+  [FeatureVolcanicIslands,
+   FeatureLDSBankCount32,
+   FeatureSGPRInitBug,
    FeatureUnpackedD16VMem,
    FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;

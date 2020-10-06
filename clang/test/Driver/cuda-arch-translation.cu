@@ -35,6 +35,8 @@
 // RUN: | FileCheck -check-prefixes=COMMON,GFX600 %s
 // RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=gfx601 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=COMMON,GFX601 %s
+// RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=gfx602 %s 2>&1 \
+// RUN: | FileCheck -check-prefixes=COMMON,GFX602 %s
 // RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=gfx700 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=COMMON,GFX700 %s
 // RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=gfx701 %s 2>&1 \
@@ -45,12 +47,16 @@
 // RUN: | FileCheck -check-prefixes=COMMON,GFX703 %s
 // RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=gfx704 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=COMMON,GFX704 %s
+// RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=gfx705 %s 2>&1 \
+// RUN: | FileCheck -check-prefixes=COMMON,GFX705 %s
 // RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=gfx801 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=COMMON,GFX801 %s
 // RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=gfx802 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=COMMON,GFX802 %s
 // RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=gfx803 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=COMMON,GFX803 %s
+// RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=gfx805 %s 2>&1 \
+// RUN: | FileCheck -check-prefixes=COMMON,GFX805 %s
 // RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=gfx810 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=COMMON,GFX810 %s
 // RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=gfx900 %s 2>&1 \
@@ -77,14 +83,17 @@
 // SM70:--image=profile=sm_70{{.*}}--image=profile=compute_70
 // GFX600:--image=profile=gfx600{{.*}}--image=profile=compute_amdgcn
 // GFX601:--image=profile=gfx601{{.*}}--image=profile=compute_amdgcn
+// GFX602:--image=profile=gfx602{{.*}}--image=profile=compute_amdgcn
 // GFX700:--image=profile=gfx700{{.*}}--image=profile=compute_amdgcn
 // GFX701:--image=profile=gfx701{{.*}}--image=profile=compute_amdgcn
 // GFX702:--image=profile=gfx702{{.*}}--image=profile=compute_amdgcn
 // GFX703:--image=profile=gfx703{{.*}}--image=profile=compute_amdgcn
 // GFX704:--image=profile=gfx704{{.*}}--image=profile=compute_amdgcn
+// GFX705:--image=profile=gfx705{{.*}}--image=profile=compute_amdgcn
 // GFX801:--image=profile=gfx801{{.*}}--image=profile=compute_amdgcn
 // GFX802:--image=profile=gfx802{{.*}}--image=profile=compute_amdgcn
 // GFX803:--image=profile=gfx803{{.*}}--image=profile=compute_amdgcn
+// GFX805:--image=profile=gfx805{{.*}}--image=profile=compute_amdgcn
 // GFX810:--image=profile=gfx810{{.*}}--image=profile=compute_amdgcn
 // GFX900:--image=profile=gfx900{{.*}}--image=profile=compute_amdgcn
 // GFX902:--image=profile=gfx902{{.*}}--image=profile=compute_amdgcn

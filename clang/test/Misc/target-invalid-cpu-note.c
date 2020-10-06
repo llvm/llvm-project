@@ -80,11 +80,11 @@
 
 // RUN: not %clang_cc1 -triple amdgcn--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix AMDGCN
 // AMDGCN: error: unknown target CPU 'not-a-cpu'
-// AMDGCN: note: valid target CPU values are: gfx600, tahiti, gfx601, hainan,
-// AMDGCN-SAME: oland, pitcairn, verde, gfx700, kaveri, gfx701, hawaii, gfx702,
-// AMDGCN-SAME: gfx703, kabini, mullins, gfx704, bonaire, gfx801, carrizo, 
+// AMDGCN: note: valid target CPU values are: gfx600, tahiti, gfx601, pitcairn, verde,
+// AMDGCN-SAME: gfx602, hainan, oland, gfx700, kaveri, gfx701, hawaii, gfx702,
+// AMDGCN-SAME: gfx703, kabini, mullins, gfx704, bonaire, gfx705, gfx801, carrizo, 
 // AMDGCN-SAME: gfx802, iceland, tonga, gfx803, fiji, polaris10, polaris11,
-// AMDGCN-SAME: gfx810, stoney, gfx900, gfx902
+// AMDGCN-SAME: gfx805, tongapro, gfx810, stoney, gfx900, gfx902
 
 // RUN: not %clang_cc1 -triple wasm64--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix WEBASM
 // WEBASM: error: unknown target CPU 'not-a-cpu'
