@@ -100,7 +100,7 @@ int bar(int n){
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}_l50(
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 0)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0)
 // CHECK: call void [[PARALLEL:@.+]](
 // CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 
@@ -128,7 +128,7 @@ int bar(int n){
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}(
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 0)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0)
 // CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 // CHECK: ret void
 
@@ -143,7 +143,7 @@ int bar(int n){
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}(
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 0)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0)
 // CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 // CHECK: ret void
 
@@ -159,7 +159,7 @@ int bar(int n){
 // Distribute with collapse(2)
 // CHECK: define {{.*}}void {{@__omp_offloading_.+}}({{.+}}, i{{32|64}} [[F_IN:%.+]])
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 0)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0)
 // CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 // CHECK: ret void
 
