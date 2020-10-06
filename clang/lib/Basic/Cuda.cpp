@@ -87,7 +87,7 @@ CudaArchToStringMap arch_names[] = {
     GFX(805), // tongapro
     GFX(810), // stoney
     GFX(900), // vega, instinct
-    GFX(902), GFX(904), GFX(906), GFX(908), GFX(909),
+    GFX(902), GFX(904), GFX(906), GFX(908), GFX(909), GFX(90c),
     GFX(1010), GFX(1011), GFX(1012), GFX(1030), GFX(1031)
     // clang-format on
 };

@@ -222,6 +222,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["dot1-insts"] = true;
       Features["dot2-insts"] = true;
       LLVM_FALLTHROUGH;
+    case GK_GFX90C:
     case GK_GFX909:
     case GK_GFX904:
     case GK_GFX902:
