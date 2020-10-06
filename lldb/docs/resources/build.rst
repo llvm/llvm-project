@@ -76,6 +76,12 @@ commands below.
   > pkgin install swig python27 cmake ninja-build
   > brew install swig cmake ninja
 
+Note that there's an `incompatibility
+<https://github.com/swig/swig/issues/1321>` between Python version 3.7 and later
+and swig versions older than 4.0.0 which makes builds of LLDB using debug
+versions of python unusable. This primarily affects Windows, as debug builds of
+LLDB must use debug python as well.
+
 Windows
 *******
 
@@ -83,10 +89,9 @@ Windows
 * The latest Windows SDK.
 * The Active Template Library (ATL).
 * `GnuWin32 <http://gnuwin32.sourceforge.net/>`_ for CoreUtils and Make.
-* `Python 3.6 or 3.8 <https://www.python.org/downloads/windows/>`_. Python 3.7
-  is known to be incompatible. Make sure to (1) get the x64 variant if that's
-  what you're targetting and (2) install the debug library if you want to build
-  a debug lldb.
+* `Python 3 <https://www.python.org/downloads/windows/>`_.  Make sure to (1) get
+  the x64 variant if that's what you're targetting and (2) install the debug
+  library if you want to build a debug lldb.
 * `Python Tools for Visual Studio
   <https://github.com/Microsoft/PTVS/releases>`_. If you plan to debug test
   failures or even write new tests at all, PTVS is an indispensable debugging
