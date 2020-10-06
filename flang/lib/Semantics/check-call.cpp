@@ -74,22 +74,24 @@ static void CheckImplicitInterfaceArg(
 // we extend them on the right with spaces and a warning.
 static void PadShortCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
     const characteristics::TypeAndShape &dummyType,
-    const characteristics::TypeAndShape &actualType,
-    parser::ContextualMessages &messages) {
+    characteristics::TypeAndShape &actualType,
+    evaluate::FoldingContext &context, parser::ContextualMessages &messages) {
   if (dummyType.type().category() == TypeCategory::Character &&
       actualType.type().category() == TypeCategory::Character &&
       dummyType.type().kind() == actualType.type().kind() &&
       GetRank(actualType.shape()) == 0) {
-    if (auto dummyLEN{ToInt64(dummyType.LEN())}) {
-      if (auto actualLEN{ToInt64(actualType.LEN())}) {
-        if (*actualLEN < *dummyLEN) {
-          messages.Say(
-              "Actual length '%jd' is less than expected length '%jd'"_en_US,
-              *actualLEN, *dummyLEN);
-          auto converted{ConvertToType(dummyType.type(), std::move(actual))};
-          CHECK(converted);
-          actual = std::move(*converted);
-        }
+    if (dummyType.LEN() && actualType.LEN()) {
+      auto dummyLength{ToInt64(Fold(context, common::Clone(*dummyType.LEN())))};
+      auto actualLength{
+          ToInt64(Fold(context, common::Clone(*actualType.LEN())))};
+      if (dummyLength && actualLength && *actualLength < *dummyLength) {
+        messages.Say(
+            "Actual length '%jd' is less than expected length '%jd'"_en_US,
+            *actualLength, *dummyLength);
+        auto converted{ConvertToType(dummyType.type(), std::move(actual))};
+        CHECK(converted);
+        actual = std::move(*converted);
+        actualType.set_LEN(SubscriptIntExpr{*dummyLength});
       }
     }
   }
@@ -142,7 +144,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 
   // Basic type & rank checking
   parser::ContextualMessages &messages{context.messages()};
-  PadShortCharacterActual(actual, dummy.type, actualType, messages);
+  PadShortCharacterActual(actual, dummy.type, actualType, context, messages);
   ConvertIntegerActual(actual, dummy.type, actualType, messages);
   bool typesCompatible{dummy.type.type().IsTkCompatibleWith(actualType.type())};
   if (typesCompatible) {
