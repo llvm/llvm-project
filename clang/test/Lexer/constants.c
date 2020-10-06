@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -pedantic -ftrigraphs %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wfour-char-constants -pedantic -ftrigraphs %s
 
 int x = 000000080;  // expected-error {{invalid digit}}
 
