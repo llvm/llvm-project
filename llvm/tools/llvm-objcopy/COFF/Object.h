@@ -26,7 +26,7 @@ namespace coff {
 
 struct Relocation {
   Relocation() = default;
-  Relocation(const object::coff_relocation& R) : Reloc(R) {}
+  Relocation(const object::coff_relocation &R) : Reloc(R) {}
 
   object::coff_relocation Reloc;
   size_t Target = 0;
