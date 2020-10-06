@@ -31,9 +31,9 @@
 // mcpu with default march
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-e76 | FileCheck -check-prefix=MCPU-SIFIVE-E76 %s
 // MCPU-SIFIVE-E76: "-nostdsysteminc" "-target-cpu" "sifive-e76"
-// MCPU-SIFIVE-E76: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
+// MCPU-SIFIVE-E76: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f"
 // MCPU-SIFIVE-E76: "-target-feature" "+c"
-// MCPU-SIFIVE-E76: "-target-abi" "lp64d"
+// MCPU-SIFIVE-E76: "-target-abi" "ilp32"
 
 // mcpu with mabi option
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-u74 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-U74 %s
