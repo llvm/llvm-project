@@ -65,7 +65,7 @@ define void @vector_fixed_length_nonzero(<16 x i8>* %p) {
 
 define void @vector_scalable_nonzero(<vscale x 4 x i32>* %p) {
 ; CHECK-LABEL: @vector_scalable_nonzero(
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* [[P:%.*]]
+; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* [[P:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   store <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32>* %p

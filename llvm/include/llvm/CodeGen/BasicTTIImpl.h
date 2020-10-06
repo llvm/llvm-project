@@ -1161,34 +1161,8 @@ public:
     FastMathFlags FMF = ICA.getFlags();
 
     switch (IID) {
-    default: {
-      // Assume that we need to scalarize this intrinsic.
-      SmallVector<Type *, 4> Types;
-      for (const Value *Op : Args) {
-        Type *OpTy = Op->getType();
-        assert(VF == 1 || !OpTy->isVectorTy());
-        Types.push_back(VF == 1 ? OpTy : FixedVectorType::get(OpTy, VF));
-      }
-
-      if (VF > 1 && !RetTy->isVoidTy())
-        RetTy = FixedVectorType::get(RetTy, VF);
-
-      // Compute the scalarization overhead based on Args for a vector
-      // intrinsic. A vectorizer will pass a scalar RetTy and VF > 1, while
-      // CostModel will pass a vector RetTy and VF is 1.
-      unsigned ScalarizationCost = std::numeric_limits<unsigned>::max();
-      if (RetVF > 1 || VF > 1) {
-        ScalarizationCost = 0;
-        if (!RetTy->isVoidTy())
-          ScalarizationCost +=
-              getScalarizationOverhead(cast<VectorType>(RetTy), true, false);
-        ScalarizationCost += getOperandsScalarizationOverhead(Args, VF);
-      }
-
-      IntrinsicCostAttributes Attrs(IID, RetTy, Types, FMF,
-                                    ScalarizationCost, I);
-      return thisT()->getIntrinsicInstrCost(Attrs, CostKind);
-    }
+    default:
+      break;
     case Intrinsic::masked_scatter: {
       assert(VF == 1 && "Can't vectorize types here.");
       const Value *Mask = Args[3];
@@ -1262,6 +1236,33 @@ public:
       return Cost;
     }
     }
+
+    // Assume that we need to scalarize this intrinsic.
+    SmallVector<Type *, 4> Types;
+    for (const Value *Op : Args) {
+      Type *OpTy = Op->getType();
+      assert(VF == 1 || !OpTy->isVectorTy());
+      Types.push_back(VF == 1 ? OpTy : FixedVectorType::get(OpTy, VF));
+    }
+
+    if (VF > 1 && !RetTy->isVoidTy())
+      RetTy = FixedVectorType::get(RetTy, VF);
+
+    // Compute the scalarization overhead based on Args for a vector
+    // intrinsic. A vectorizer will pass a scalar RetTy and VF > 1, while
+    // CostModel will pass a vector RetTy and VF is 1.
+    unsigned ScalarizationCost = std::numeric_limits<unsigned>::max();
+    if (RetVF > 1 || VF > 1) {
+      ScalarizationCost = 0;
+      if (!RetTy->isVoidTy())
+        ScalarizationCost +=
+            getScalarizationOverhead(cast<VectorType>(RetTy), true, false);
+      ScalarizationCost += getOperandsScalarizationOverhead(Args, VF);
+    }
+
+    IntrinsicCostAttributes Attrs(IID, RetTy, Types, FMF,
+                                  ScalarizationCost, I);
+    return thisT()->getIntrinsicInstrCost(Attrs, CostKind);
   }
 
   /// Get intrinsic cost based on argument types.

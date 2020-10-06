@@ -66,6 +66,10 @@ private:
   void CheckSubprogram(const Symbol &, const SubprogramDetails &);
   void CheckAssumedTypeEntity(const Symbol &, const ObjectEntityDetails &);
   void CheckDerivedType(const Symbol &, const DerivedTypeDetails &);
+  bool CheckFinal(
+      const Symbol &subroutine, SourceName, const Symbol &derivedType);
+  bool CheckDistinguishableFinals(const Symbol &f1, SourceName f1name,
+      const Symbol &f2, SourceName f2name, const Symbol &derivedType);
   void CheckGeneric(const Symbol &, const GenericDetails &);
   void CheckHostAssoc(const Symbol &, const HostAssocDetails &);
   bool CheckDefinedOperator(
@@ -781,24 +785,24 @@ void CheckHelper::CheckSubprogram(
 }
 
 void CheckHelper::CheckDerivedType(
-    const Symbol &symbol, const DerivedTypeDetails &details) {
-  const Scope *scope{symbol.scope()};
+    const Symbol &derivedType, const DerivedTypeDetails &details) {
+  const Scope *scope{derivedType.scope()};
   if (!scope) {
     CHECK(details.isForwardReferenced());
     return;
   }
-  CHECK(scope->symbol() == &symbol);
+  CHECK(scope->symbol() == &derivedType);
   CHECK(scope->IsDerivedType());
-  if (symbol.attrs().test(Attr::ABSTRACT) && // C734
-      (symbol.attrs().test(Attr::BIND_C) || details.sequence())) {
+  if (derivedType.attrs().test(Attr::ABSTRACT) && // C734
+      (derivedType.attrs().test(Attr::BIND_C) || details.sequence())) {
     messages_.Say("An ABSTRACT derived type must be extensible"_err_en_US);
   }
-  if (const DeclTypeSpec * parent{FindParentTypeSpec(symbol)}) {
+  if (const DeclTypeSpec * parent{FindParentTypeSpec(derivedType)}) {
     const DerivedTypeSpec *parentDerived{parent->AsDerived()};
     if (!IsExtensibleType(parentDerived)) { // C705
       messages_.Say("The parent type is not extensible"_err_en_US);
     }
-    if (!symbol.attrs().test(Attr::ABSTRACT) && parentDerived &&
+    if (!derivedType.attrs().test(Attr::ABSTRACT) && parentDerived &&
         parentDerived->typeSymbol().attrs().test(Attr::ABSTRACT)) {
       ScopeComponentIterator components{*parentDerived};
       for (const Symbol &component : components) {
@@ -811,7 +815,7 @@ void CheckHelper::CheckDerivedType(
         }
       }
     }
-    DerivedTypeSpec derived{symbol.name(), symbol};
+    DerivedTypeSpec derived{derivedType.name(), derivedType};
     derived.set_scope(*scope);
     if (FindCoarrayUltimateComponent(derived) && // C736
         !(parentDerived && FindCoarrayUltimateComponent(*parentDerived))) {
@@ -819,7 +823,7 @@ void CheckHelper::CheckDerivedType(
           "Type '%s' has a coarray ultimate component so the type at the base "
           "of its type extension chain ('%s') must be a type that has a "
           "coarray ultimate component"_err_en_US,
-          symbol.name(), scope->GetDerivedTypeBase().GetSymbol()->name());
+          derivedType.name(), scope->GetDerivedTypeBase().GetSymbol()->name());
     }
     if (FindEventOrLockPotentialComponent(derived) && // C737
         !(FindEventOrLockPotentialComponent(*parentDerived) ||
@@ -829,13 +833,154 @@ void CheckHelper::CheckDerivedType(
           "at the base of its type extension chain ('%s') must either have an "
           "EVENT_TYPE or LOCK_TYPE component, or be EVENT_TYPE or "
           "LOCK_TYPE"_err_en_US,
-          symbol.name(), scope->GetDerivedTypeBase().GetSymbol()->name());
+          derivedType.name(), scope->GetDerivedTypeBase().GetSymbol()->name());
     }
   }
-  if (HasIntrinsicTypeName(symbol)) { // C729
+  if (HasIntrinsicTypeName(derivedType)) { // C729
     messages_.Say("A derived type name cannot be the name of an intrinsic"
                   " type"_err_en_US);
   }
+  std::map<SourceName, SymbolRef> previous;
+  for (const auto &pair : details.finals()) {
+    SourceName source{pair.first};
+    const Symbol &ref{*pair.second};
+    if (CheckFinal(ref, source, derivedType) &&
+        std::all_of(previous.begin(), previous.end(),
+            [&](std::pair<SourceName, SymbolRef> prev) {
+              return CheckDistinguishableFinals(
+                  ref, source, *prev.second, prev.first, derivedType);
+            })) {
+      previous.emplace(source, ref);
+    }
+  }
+}
+
+// C786
+bool CheckHelper::CheckFinal(
+    const Symbol &subroutine, SourceName finalName, const Symbol &derivedType) {
+  if (!IsModuleProcedure(subroutine)) {
+    SayWithDeclaration(subroutine, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must be a module procedure"_err_en_US,
+        subroutine.name(), derivedType.name());
+    return false;
+  }
+  const Procedure *proc{Characterize(subroutine)};
+  if (!proc) {
+    return false; // error recovery
+  }
+  if (!proc->IsSubroutine()) {
+    SayWithDeclaration(subroutine, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must be a subroutine"_err_en_US,
+        subroutine.name(), derivedType.name());
+    return false;
+  }
+  if (proc->dummyArguments.size() != 1) {
+    SayWithDeclaration(subroutine, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must have a single dummy argument"_err_en_US,
+        subroutine.name(), derivedType.name());
+    return false;
+  }
+  const auto &arg{proc->dummyArguments[0]};
+  const Symbol *errSym{&subroutine};
+  if (const auto *details{subroutine.detailsIf<SubprogramDetails>()}) {
+    if (!details->dummyArgs().empty()) {
+      if (const Symbol * argSym{details->dummyArgs()[0]}) {
+        errSym = argSym;
+      }
+    }
+  }
+  const auto *ddo{std::get_if<DummyDataObject>(&arg.u)};
+  if (!ddo) {
+    SayWithDeclaration(subroutine, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must have a single dummy argument that is a data object"_err_en_US,
+        subroutine.name(), derivedType.name());
+    return false;
+  }
+  bool ok{true};
+  if (arg.IsOptional()) {
+    SayWithDeclaration(*errSym, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must not have an OPTIONAL dummy argument"_err_en_US,
+        subroutine.name(), derivedType.name());
+    ok = false;
+  }
+  if (ddo->attrs.test(DummyDataObject::Attr::Allocatable)) {
+    SayWithDeclaration(*errSym, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must not have an ALLOCATABLE dummy argument"_err_en_US,
+        subroutine.name(), derivedType.name());
+    ok = false;
+  }
+  if (ddo->attrs.test(DummyDataObject::Attr::Pointer)) {
+    SayWithDeclaration(*errSym, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must not have a POINTER dummy argument"_err_en_US,
+        subroutine.name(), derivedType.name());
+    ok = false;
+  }
+  if (ddo->intent == common::Intent::Out) {
+    SayWithDeclaration(*errSym, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must not have a dummy argument with INTENT(OUT)"_err_en_US,
+        subroutine.name(), derivedType.name());
+    ok = false;
+  }
+  if (ddo->attrs.test(DummyDataObject::Attr::Value)) {
+    SayWithDeclaration(*errSym, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must not have a dummy argument with the VALUE attribute"_err_en_US,
+        subroutine.name(), derivedType.name());
+    ok = false;
+  }
+  if (ddo->type.corank() > 0) {
+    SayWithDeclaration(*errSym, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must not have a coarray dummy argument"_err_en_US,
+        subroutine.name(), derivedType.name());
+    ok = false;
+  }
+  if (ddo->type.type().IsPolymorphic()) {
+    SayWithDeclaration(*errSym, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must not have a polymorphic dummy argument"_err_en_US,
+        subroutine.name(), derivedType.name());
+    ok = false;
+  } else if (ddo->type.type().category() != TypeCategory::Derived ||
+      &ddo->type.type().GetDerivedTypeSpec().typeSymbol() != &derivedType) {
+    SayWithDeclaration(*errSym, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must have a TYPE(%s) dummy argument"_err_en_US,
+        subroutine.name(), derivedType.name(), derivedType.name());
+    ok = false;
+  } else { // check that all LEN type parameters are assumed
+    for (auto ref : OrderParameterDeclarations(derivedType)) {
+      if (const auto *paramDetails{ref->detailsIf<TypeParamDetails>()}) {
+        if (paramDetails->attr() == common::TypeParamAttr::Len) {
+          const auto *value{
+              ddo->type.type().GetDerivedTypeSpec().FindParameter(ref->name())};
+          if (!value || !value->isAssumed()) {
+            SayWithDeclaration(*errSym, finalName,
+                "FINAL subroutine '%s' of derived type '%s' must have a dummy argument with an assumed LEN type parameter '%s=*'"_err_en_US,
+                subroutine.name(), derivedType.name(), ref->name());
+            ok = false;
+          }
+        }
+      }
+    }
+  }
+  return ok;
+}
+
+bool CheckHelper::CheckDistinguishableFinals(const Symbol &f1,
+    SourceName f1Name, const Symbol &f2, SourceName f2Name,
+    const Symbol &derivedType) {
+  const Procedure *p1{Characterize(f1)};
+  const Procedure *p2{Characterize(f2)};
+  if (p1 && p2) {
+    if (characteristics::Distinguishable(*p1, *p2)) {
+      return true;
+    }
+    if (auto *msg{messages_.Say(f1Name,
+            "FINAL subroutines '%s' and '%s' of derived type '%s' cannot be distinguished by rank or KIND type parameter value"_err_en_US,
+            f1Name, f2Name, derivedType.name())}) {
+      msg->Attach(f2Name, "FINAL declaration of '%s'"_en_US, f2.name())
+          .Attach(f1.name(), "Definition of '%s'"_en_US, f1Name)
+          .Attach(f2.name(), "Definition of '%s'"_en_US, f2Name);
+    }
+  }
+  return false;
 }
 
 void CheckHelper::CheckHostAssoc(

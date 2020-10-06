@@ -12,17 +12,17 @@ define i32 @une_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; CHECK-NEXT:    mfocrf r4, 1
 ; CHECK-NEXT:    rlwinm r4, r4, 31, 31, 31
 ; CHECK-NEXT:    xori r4, r4, 1
-; CHECK-NEXT:    and r3, r3, r4
+; CHECK-NEXT:    and r4, r3, r4
 ; CHECK-NEXT:    xscmpudp cr7, f1, f3
-; CHECK-NEXT:    mfocrf r4, 1
-; CHECK-NEXT:    rlwinm r4, r4, 31, 31, 31
-; CHECK-NEXT:    xori r4, r4, 1
+; CHECK-NEXT:    mfocrf r3, 1
+; CHECK-NEXT:    rlwinm r3, r3, 31, 31, 31
+; CHECK-NEXT:    xori r3, r3, 1
 ; CHECK-NEXT:    xscmpudp cr7, f1, f3
 ; CHECK-NEXT:    mfocrf r5, 1
 ; CHECK-NEXT:    rlwinm r5, r5, 31, 31, 31
 ; CHECK-NEXT:    xori r5, r5, 1
-; CHECK-NEXT:    and r4, r4, r5
-; CHECK-NEXT:    or r3, r4, r3
+; CHECK-NEXT:    and r3, r3, r5
+; CHECK-NEXT:    or r3, r3, r4
 ; CHECK-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
@@ -42,23 +42,21 @@ define i32 @ogt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; CHECK-NEXT:    xscmpudp cr7, f2, f4
 ; CHECK-NEXT:    mfocrf r4, 1
 ; CHECK-NEXT:    rlwinm r4, r4, 30, 31, 31
-; CHECK-NEXT:    and r3, r3, r4
-; CHECK-NEXT:    xscmpudp cr7, f1, f3
+; CHECK-NEXT:    and r4, r3, r4
 ; CHECK-NEXT:    xscmpudp cr0, f1, f3
-; CHECK-NEXT:    mfocrf r4, 1
-; CHECK-NEXT:    rotlwi r4, r4, 28
-; CHECK-NEXT:    stw r4, -4(r1)
-; CHECK-NEXT:    mcrf cr7, cr0
-; CHECK-NEXT:    mfocrf r4, 1
-; CHECK-NEXT:    rlwinm r4, r4, 30, 31, 31
+; CHECK-NEXT:    mfocrf r3, 128
+; CHECK-NEXT:    stw r3, -4(r1)
+; CHECK-NEXT:    xscmpudp cr7, f1, f3
+; CHECK-NEXT:    mfocrf r3, 1
 ; CHECK-NEXT:    lwz r5, -4(r1)
 ; CHECK-NEXT:    rotlwi r5, r5, 4
 ; CHECK-NEXT:    mtocrf 1, r5
-; CHECK-NEXT:    mfocrf r5, 1
-; CHECK-NEXT:    rlwinm r5, r5, 31, 31, 31
-; CHECK-NEXT:    xori r5, r5, 1
-; CHECK-NEXT:    and r4, r5, r4
-; CHECK-NEXT:    or r3, r4, r3
+; CHECK-NEXT:    rlwinm r5, r3, 30, 31, 31
+; CHECK-NEXT:    mfocrf r3, 1
+; CHECK-NEXT:    rlwinm r3, r3, 31, 31, 31
+; CHECK-NEXT:    xori r3, r3, 1
+; CHECK-NEXT:    and r3, r3, r5
+; CHECK-NEXT:    or r3, r3, r4
 ; CHECK-NEXT:    # kill: def $r4 killed $r3
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
@@ -74,9 +72,8 @@ define i1 @test_f128(fp128 %a, fp128 %b) #0 {
 ; CHECK-NEXT:    xscmpuqp cr7, v2, v3
 ; CHECK-NEXT:    mfocrf r3, 1
 ; CHECK-NEXT:    rlwinm r3, r3, 31, 31, 31
-; CHECK-NEXT:    xori r3, r3, 1
-; CHECK-NEXT:    # implicit-def: $x4
-; CHECK-NEXT:    mr r4, r3
+; CHECK-NEXT:    xori r4, r3, 1
+; CHECK-NEXT:    # implicit-def: $x3
 ; CHECK-NEXT:    mr r3, r4
 ; CHECK-NEXT:    blr
 entry:

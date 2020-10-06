@@ -673,7 +673,7 @@ static LogicalResult foldExtractOpFromExtractChain(ExtractOp extractOp) {
 
 /// Fold the result of an ExtractOp in place when it comes from a TransposeOp.
 static LogicalResult foldExtractOpFromTranspose(ExtractOp extractOp) {
-  auto transposeOp = extractOp.vector().getDefiningOp<TransposeOp>();
+  auto transposeOp = extractOp.vector().getDefiningOp<vector::TransposeOp>();
   if (!transposeOp)
     return failure();
 
@@ -901,6 +901,37 @@ void ExtractSlicesOp::getStrides(SmallVectorImpl<int64_t> &results) {
 }
 
 //===----------------------------------------------------------------------===//
+// ExtractMapOp
+//===----------------------------------------------------------------------===//
+
+void ExtractMapOp::build(OpBuilder &builder, OperationState &result,
+                         Value vector, Value id, int64_t multiplicity) {
+  VectorType type = vector.getType().cast<VectorType>();
+  VectorType resultType = VectorType::get(type.getNumElements() / multiplicity,
+                                          type.getElementType());
+  ExtractMapOp::build(builder, result, resultType, vector, id, multiplicity);
+}
+
+static LogicalResult verify(ExtractMapOp op) {
+  if (op.getSourceVectorType().getShape().size() != 1 ||
+      op.getResultType().getShape().size() != 1)
+    return op.emitOpError("expects source and destination vectors of rank 1");
+  if (op.getResultType().getNumElements() * (int64_t)op.multiplicity() !=
+      op.getSourceVectorType().getNumElements())
+    return op.emitOpError("vector sizes mismatch. Source size must be equal "
+                          "to destination size * multiplicity");
+  return success();
+}
+
+OpFoldResult ExtractMapOp::fold(ArrayRef<Attribute> operands) {
+  auto insert = vector().getDefiningOp<vector::InsertMapOp>();
+  if (insert == nullptr || multiplicity() != insert.multiplicity() ||
+      id() != insert.id())
+    return {};
+  return insert.vector();
+}
+
+//===----------------------------------------------------------------------===//
 // BroadcastOp
 //===----------------------------------------------------------------------===//
 
@@ -1120,6 +1151,30 @@ void InsertSlicesOp::getSizes(SmallVectorImpl<int64_t> &results) {
 
 void InsertSlicesOp::getStrides(SmallVectorImpl<int64_t> &results) {
   populateFromInt64AttrArray(strides(), results);
+}
+
+//===----------------------------------------------------------------------===//
+// InsertMapOp
+//===----------------------------------------------------------------------===//
+
+void InsertMapOp::build(OpBuilder &builder, OperationState &result,
+                        Value vector, Value id, int64_t multiplicity) {
+  VectorType type = vector.getType().cast<VectorType>();
+  VectorType resultType = VectorType::get(type.getNumElements() * multiplicity,
+                                          type.getElementType());
+  InsertMapOp::build(builder, result, resultType, vector, id, multiplicity);
+}
+
+static LogicalResult verify(InsertMapOp op) {
+  if (op.getSourceVectorType().getShape().size() != 1 ||
+      op.getResultType().getShape().size() != 1)
+    return op.emitOpError("expected source and destination vectors of rank 1");
+  if ((int64_t)op.multiplicity() * op.getSourceVectorType().getNumElements() !=
+      op.getResultType().getNumElements())
+    return op.emitOpError(
+        "vector sizes mismatch. Destination size must be equal "
+        "to source size * multiplicity");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2466,7 +2521,7 @@ void vector::TransposeOp::build(OpBuilder &builder, OperationState &result,
 // Eliminates transpose operations, which produce values identical to their
 // input values. This happens when the dimensions of the input vector remain in
 // their original order after the transpose operation.
-OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult vector::TransposeOp::fold(ArrayRef<Attribute> operands) {
   SmallVector<int64_t, 4> transp;
   getTransp(transp);
 
@@ -2480,7 +2535,7 @@ OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
   return vector();
 }
 
-static LogicalResult verify(TransposeOp op) {
+static LogicalResult verify(vector::TransposeOp op) {
   VectorType vectorType = op.getVectorType();
   VectorType resultType = op.getResultType();
   int64_t rank = resultType.getRank();
@@ -2508,14 +2563,14 @@ static LogicalResult verify(TransposeOp op) {
 namespace {
 
 // Rewrites two back-to-back TransposeOp operations into a single TransposeOp.
-class TransposeFolder final : public OpRewritePattern<TransposeOp> {
+class TransposeFolder final : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern<TransposeOp>::OpRewritePattern;
+  using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(TransposeOp transposeOp,
+  LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
-    // Wrapper around TransposeOp::getTransp() for cleaner code.
-    auto getPermutation = [](TransposeOp transpose) {
+    // Wrapper around vector::TransposeOp::getTransp() for cleaner code.
+    auto getPermutation = [](vector::TransposeOp transpose) {
       SmallVector<int64_t, 4> permutation;
       transpose.getTransp(permutation);
       return permutation;
@@ -2531,15 +2586,15 @@ public:
     };
 
     // Return if the input of 'transposeOp' is not defined by another transpose.
-    TransposeOp parentTransposeOp =
-        transposeOp.vector().getDefiningOp<TransposeOp>();
+    vector::TransposeOp parentTransposeOp =
+        transposeOp.vector().getDefiningOp<vector::TransposeOp>();
     if (!parentTransposeOp)
       return failure();
 
     SmallVector<int64_t, 4> permutation = composePermutations(
         getPermutation(parentTransposeOp), getPermutation(transposeOp));
     // Replace 'transposeOp' with a new transpose operation.
-    rewriter.replaceOpWithNewOp<TransposeOp>(
+    rewriter.replaceOpWithNewOp<vector::TransposeOp>(
         transposeOp, transposeOp.getResult().getType(),
         parentTransposeOp.vector(),
         vector::getVectorSubscriptAttr(rewriter, permutation));
@@ -2549,12 +2604,12 @@ public:
 
 } // end anonymous namespace
 
-void TransposeOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
-                                              MLIRContext *context) {
+void vector::TransposeOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
   results.insert<TransposeFolder>(context);
 }
 
-void TransposeOp::getTransp(SmallVectorImpl<int64_t> &results) {
+void vector::TransposeOp::getTransp(SmallVectorImpl<int64_t> &results) {
   populateFromInt64AttrArray(transp(), results);
 }
 

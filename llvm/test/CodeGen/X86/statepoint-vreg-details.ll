@@ -18,6 +18,7 @@ declare void @consume5(i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, 
 declare void @use1(i32 addrspace(1)*, i8 addrspace(1)*)
 declare i32* @fake_personality_function()
 declare i32 @foo(i32, i8 addrspace(1)*, i32, i32, i32)
+declare void @bar(i8 addrspace(1)*, i8 addrspace(1)*)
 
 ; test most simple relocate
 define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
@@ -378,6 +379,36 @@ exceptional_return:                         ; preds = %entry
   unreachable
 }
 
+; Test that CopyFromReg emitted during ISEL processing of gc.relocate are properly ordered w.r.t. statepoint.
+define i8 addrspace(1)* @test_isel_sched(i8 addrspace(1)* %0, i8 addrspace(1)* %1, i32 %2) gc "statepoint-example" {
+;CHECK-VREG-LABEL: name:            test_isel_sched
+;CHECK-VREG:  bb.0.entry:
+;CHECK-VREG:        %2:gr32 = COPY $edx
+;CHECK-VREG:        %1:gr64 = COPY $rsi
+;CHECK-VREG:        %0:gr64 = COPY $rdi
+;CHECK-VREG:        TEST32rr %2, %2, implicit-def $eflags
+;CHECK-VREG:        %5:gr64 = CMOV64rr %1, %0, 4, implicit $eflags
+;CHECK-VREG:        MOV64mr %stack.1, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.1)
+;CHECK-VREG:        MOV64mr %stack.0, 1, $noreg, 0, $noreg, %1 :: (store 8 into %stack.0)
+;CHECK-VREG:        %6:gr32 = MOV32r0 implicit-def dead $eflags
+;CHECK-VREG:        %7:gr64 = SUBREG_TO_REG 0, killed %6, %subreg.sub_32bit
+;CHECK-VREG:        $rdi = COPY %7
+;CHECK-VREG:        $rsi = COPY %5
+;CHECK-VREG:        %3:gr64, %4:gr64 = STATEPOINT 10, 0, 2, @bar, $rdi, $rsi, 2, 0, 2, 0, 2, 0, 1, 8, %stack.0, 0, %1(tied-def 0), 1, 8, %stack.1, 0, %0(tied-def 1), csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0), (volatile load store 8 on %stack.1)
+;CHECK-VREG:        TEST32rr %2, %2, implicit-def $eflags
+;CHECK-VREG:        %8:gr64 = CMOV64rr %3, %4, 4, implicit $eflags
+;CHECK-VREG:        $rax = COPY %8
+;CHECK-VREG:        RET 0, $rax
+entry:
+  %cmp = icmp eq i32 %2, 0
+  %ptr = select i1 %cmp, i8 addrspace(1)* %0, i8 addrspace(1)* %1
+  %token = call token (i64, i32, void (i8 addrspace(1)*, i8 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8p1i8f(i64 10, i32 0, void (i8 addrspace(1)*, i8 addrspace(1)*)* @bar, i32 2, i32 0, i8 addrspace(1)* null, i8 addrspace(1)* %ptr, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* %0, i8 addrspace(1)* %1) ]
+  %rel0 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token, i32 0, i32 0)
+  %rel1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token, i32 1, i32 1)
+  %res = select i1 %cmp, i8 addrspace(1)* %rel0, i8 addrspace(1)* %rel1
+  ret i8 addrspace(1)* %res
+}
+
 declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
 declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
@@ -387,4 +418,5 @@ declare i1 @llvm.experimental.gc.result.i1(token)
 declare void @__llvm_deoptimize(i32)
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 immarg, i32 immarg, void (i32)*, i32 immarg, i32 immarg, ...)
 declare token @llvm.experimental.gc.statepoint.p0f_i32i32p1i8i32i32i32f(i64 immarg, i32 immarg, i32 (i32, i8 addrspace(1)*, i32, i32, i32)*, i32 immarg, i32 immarg, ...)
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidp1i8p1i8f(i64 immarg, i32 immarg, void (i8 addrspace(1)*, i8 addrspace(1)*)*, i32 immarg, i32 immarg, ...)
 

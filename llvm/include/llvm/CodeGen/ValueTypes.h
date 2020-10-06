@@ -348,6 +348,12 @@ namespace llvm {
       return getExtendedSizeInBits();
     }
 
+    /// Return the size of the specified fixed width value type in bits. The
+    /// function will assert if the type is scalable.
+    uint64_t getFixedSizeInBits() const {
+      return getSizeInBits().getFixedSize();
+    }
+
     uint64_t getScalarSizeInBits() const {
       return getScalarType().getSizeInBits().getFixedSize();
     }

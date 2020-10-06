@@ -1,7 +1,6 @@
 ; RUN: llc < %s -stack-symbol-ordering=0 -mtriple=i386-apple-darwin9 -mcpu=generic -regalloc=fast -optimize-regalloc=0 -no-x86-call-frame-opt | FileCheck %s
 ; RUN: llc -O0 < %s -stack-symbol-ordering=0 -mtriple=i386-apple-darwin9 -mcpu=generic -regalloc=fast -no-x86-call-frame-opt | FileCheck %s
-; RUN: llc < %s -stack-symbol-ordering=0 -mtriple=i386-apple-darwin9 -mcpu=atom -regalloc=fast -optimize-regalloc=0 -no-x86-call-frame-opt | FileCheck -check-prefix=ATOM %s
-; CHECKed instructions should be the same with or without -O0 except on Intel Atom due to instruction scheduling.
+; RUN: llc < %s -stack-symbol-ordering=0 -mtriple=i386-apple-darwin9 -mcpu=atom -regalloc=fast -optimize-regalloc=0 -no-x86-call-frame-opt | FileCheck %s
 
 @.str = private constant [12 x i8] c"x + y = %i\0A\00", align 1 ; <[12 x i8]*> [#uses=1]
 
@@ -16,18 +15,6 @@ entry:
 ; CHECK: movl	%ebx, 40(%esp)
 ; CHECK-NOT: movl
 ; CHECK: addl %ebx, %eax
-
-; On Intel Atom the scheduler moves a movl instruction
-; used for the printf call to follow movl 24(%esp), %eax
-; ATOM: movl 24(%esp), %eax
-; ATOM-NOT: movl
-; ATOM: movl   %eax, 36(%esp)
-; ATOM: movl
-; ATOM: movl 28(%esp), %ebx
-; ATOM-NOT: movl
-; ATOM: movl   %ebx, 40(%esp)
-; ATOM-NOT: movl
-; ATOM: addl %ebx, %eax
 
   %retval = alloca i32                            ; <i32*> [#uses=2]
   %"%ebx" = alloca i32                            ; <i32*> [#uses=1]

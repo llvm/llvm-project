@@ -180,7 +180,7 @@ std::pair<unsigned, unsigned>
 SourceMgr::getLineAndColumn(SMLoc Loc, unsigned BufferID) const {
   if (!BufferID)
     BufferID = FindBufferContainingLoc(Loc);
-  assert(BufferID && "Invalid Location!");
+  assert(BufferID && "Invalid location!");
 
   auto &SB = getBufferInfo(BufferID);
   const char *Ptr = Loc.getPointer();
@@ -191,6 +191,30 @@ SourceMgr::getLineAndColumn(SMLoc Loc, unsigned BufferID) const {
   if (NewlineOffs == StringRef::npos)
     NewlineOffs = ~(size_t)0;
   return std::make_pair(LineNo, Ptr - BufStart - NewlineOffs);
+}
+
+// FIXME: Note that the formatting of source locations is spread between
+// multiple functions, some in SourceMgr and some in SMDiagnostic. A better
+// solution would be a general-purpose source location formatter
+// in one of those two classes, or possibly in SMLoc.
+
+/// Get a string with the source location formatted in the standard
+/// style, but without the line offset. If \p IncludePath is true, the path
+/// is included. If false, only the file name and extension are included.
+std::string SourceMgr::getFormattedLocationNoOffset(SMLoc Loc,
+                                                    bool IncludePath) const {
+  auto BufferID = FindBufferContainingLoc(Loc);
+  assert(BufferID && "Invalid location!");
+  auto FileSpec = getBufferInfo(BufferID).Buffer->getBufferIdentifier();
+
+  if (IncludePath) {
+    return FileSpec.str() + ":" + std::to_string(FindLineNumber(Loc, BufferID));
+  } else {
+    auto I = FileSpec.find_last_of("/\\");
+    I = (I == FileSpec.size()) ? 0 : (I + 1);
+    return FileSpec.substr(I).str() + ":" +
+           std::to_string(FindLineNumber(Loc, BufferID));
+  }
 }
 
 /// Given a line and column number in a mapped buffer, turn it into an SMLoc.

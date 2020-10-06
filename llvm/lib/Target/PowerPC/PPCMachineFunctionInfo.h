@@ -69,9 +69,6 @@ class PPCFunctionInfo : public MachineFunctionInfo {
   /// disabled.
   bool DisableNonVolatileCR = false;
 
-  /// Indicates whether VRSAVE is spilled in the current function.
-  bool SpillsVRSAVE = false;
-
   /// LRStoreRequired - The bool indicates whether there is some explicit use of
   /// the LR/LR8 stack slot that is not obvious from scanning the code.  This
   /// requires that the code generator produce a store of LR to the stack on
@@ -174,9 +171,6 @@ public:
 
   void setDisableNonVolatileCR() { DisableNonVolatileCR = true; }
   bool isNonVolatileCRDisabled() const { return DisableNonVolatileCR; }
-
-  void setSpillsVRSAVE()       { SpillsVRSAVE = true; }
-  bool isVRSAVESpilled() const { return SpillsVRSAVE; }
 
   void setLRStoreRequired() { LRStoreRequired = true; }
   bool isLRStoreRequired() const { return LRStoreRequired; }

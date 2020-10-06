@@ -205,18 +205,16 @@ define i8 @test15(i8 %x, i32 %y) {
 define void @test16(i8* %x, i8* %a, i8* %b, i8* %c) {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
-; CHECK-NEXT:    [[X11:%.*]] = load i32, i32* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[A:%.*]] to i32*
-; CHECK-NEXT:    store i32 [[X11]], i32* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[B:%.*]] to i32*
-; CHECK-NEXT:    store i32 [[X11]], i32* [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[X]] to i32*
-; CHECK-NEXT:    [[X22:%.*]] = load i32, i32* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[B]] to i32*
-; CHECK-NEXT:    store i32 [[X22]], i32* [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[C:%.*]] to i32*
-; CHECK-NEXT:    store i32 [[X22]], i32* [[TMP5]], align 4
+; CHECK-NEXT:    [[X_CAST:%.*]] = bitcast i8* [[X:%.*]] to float*
+; CHECK-NEXT:    [[A_CAST:%.*]] = bitcast i8* [[A:%.*]] to float*
+; CHECK-NEXT:    [[B_CAST:%.*]] = bitcast i8* [[B:%.*]] to float*
+; CHECK-NEXT:    [[X1:%.*]] = load float, float* [[X_CAST]], align 4
+; CHECK-NEXT:    store float [[X1]], float* [[A_CAST]], align 4
+; CHECK-NEXT:    store float [[X1]], float* [[B_CAST]], align 4
+; CHECK-NEXT:    [[X2:%.*]] = load float, float* [[X_CAST]], align 4
+; CHECK-NEXT:    store float [[X2]], float* [[B_CAST]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[C:%.*]] to float*
+; CHECK-NEXT:    store float [[X2]], float* [[TMP0]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -240,18 +238,16 @@ entry:
 define void @test16-vect(i8* %x, i8* %a, i8* %b, i8* %c) {
 ; CHECK-LABEL: @test16-vect(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
-; CHECK-NEXT:    [[X11:%.*]] = load i32, i32* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[A:%.*]] to i32*
-; CHECK-NEXT:    store i32 [[X11]], i32* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[B:%.*]] to i32*
-; CHECK-NEXT:    store i32 [[X11]], i32* [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[X]] to i32*
-; CHECK-NEXT:    [[X22:%.*]] = load i32, i32* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[B]] to i32*
-; CHECK-NEXT:    store i32 [[X22]], i32* [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[C:%.*]] to i32*
-; CHECK-NEXT:    store i32 [[X22]], i32* [[TMP5]], align 4
+; CHECK-NEXT:    [[X_CAST:%.*]] = bitcast i8* [[X:%.*]] to <4 x i8>*
+; CHECK-NEXT:    [[A_CAST:%.*]] = bitcast i8* [[A:%.*]] to <4 x i8>*
+; CHECK-NEXT:    [[B_CAST:%.*]] = bitcast i8* [[B:%.*]] to <4 x i8>*
+; CHECK-NEXT:    [[X1:%.*]] = load <4 x i8>, <4 x i8>* [[X_CAST]], align 4
+; CHECK-NEXT:    store <4 x i8> [[X1]], <4 x i8>* [[A_CAST]], align 4
+; CHECK-NEXT:    store <4 x i8> [[X1]], <4 x i8>* [[B_CAST]], align 4
+; CHECK-NEXT:    [[X2:%.*]] = load <4 x i8>, <4 x i8>* [[X_CAST]], align 4
+; CHECK-NEXT:    store <4 x i8> [[X2]], <4 x i8>* [[B_CAST]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[C:%.*]] to <4 x i8>*
+; CHECK-NEXT:    store <4 x i8> [[X2]], <4 x i8>* [[TMP0]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

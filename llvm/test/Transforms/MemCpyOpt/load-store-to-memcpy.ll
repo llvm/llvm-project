@@ -35,9 +35,9 @@ define void @test_memcpy(%T* noalias align 8 %a, %T* noalias align 16 %b) {
 define void @f(%T* %a, %T* %b, %T* %c, %T* %d) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:    [[VAL:%.*]] = load [[T:%.*]], %T* [[A:%.*]], align 4, !alias.scope !0
-; CHECK-NEXT:    store [[T]] { i8 23, i32 23 }, %T* [[B:%.*]], !alias.scope !3
-; CHECK-NEXT:    store [[T]] { i8 44, i32 44 }, %T* [[C:%.*]], !alias.scope !6, !noalias !3
-; CHECK-NEXT:    store [[T]] %val, %T* [[D:%.*]], !alias.scope !9, !noalias !12
+; CHECK-NEXT:    store [[T]] { i8 23, i32 23 }, %T* [[B:%.*]], align 4, !alias.scope !3
+; CHECK-NEXT:    store [[T]] { i8 44, i32 44 }, %T* [[C:%.*]], align 4, !alias.scope !6, !noalias !3
+; CHECK-NEXT:    store [[T]] [[VAL]], %T* [[D:%.*]], align 4, !alias.scope !9, !noalias !12
 ; CHECK-NEXT:    ret void
 ;
   %val = load %T, %T* %a, !alias.scope !{!10}

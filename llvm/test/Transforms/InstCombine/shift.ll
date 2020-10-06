@@ -1684,3 +1684,29 @@ define void @ashr_out_of_range(i177* %A) {
   ret void
 }
 
+; OSS Fuzz #26135
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=26135
+define void @ashr_out_of_range_1(i177* %A) {
+; CHECK-LABEL: @ashr_out_of_range_1(
+; CHECK-NEXT:    [[L:%.*]] = load i177, i177* [[A:%.*]], align 4
+; CHECK-NEXT:    [[G11:%.*]] = getelementptr i177, i177* [[A]], i64 -1
+; CHECK-NEXT:    [[B24_LOBIT:%.*]] = ashr i177 [[L]], 175
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i177 [[B24_LOBIT]] to i64
+; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, i177* [[G11]], i64 [[TMP1]]
+; CHECK-NEXT:    store i177 0, i177* [[G62]], align 4
+; CHECK-NEXT:    ret void
+;
+  %L = load i177, i177* %A, align 4
+  %B5 = udiv i177 %L, -1
+  %B4 = add i177 %B5, -1
+  %B = and i177 %B4, %L
+  %B2 = add i177 %B, -1
+  %G11 = getelementptr i177, i177* %A, i177 %B2
+  %B6 = mul i177 %B5, %B2
+  %B24 = ashr i177 %L, %B6
+  %C17 = icmp sgt i177 %B, %B24
+  %G62 = getelementptr i177, i177* %G11, i1 %C17
+  %B28 = urem i177 %B24, %B6
+  store i177 %B28, i177* %G62, align 4
+  ret void
+}

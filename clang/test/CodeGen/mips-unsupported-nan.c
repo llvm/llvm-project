@@ -39,7 +39,21 @@
 // CHECK-MIPS64: warning: ignoring '-mnan=2008' option because the 'mips64' architecture does not support it
 // CHECK-MIPS64R6: warning: ignoring '-mnan=legacy' option because the 'mips64r6' architecture does not support it
 
-// CHECK-NANLEGACY: float 0x7FF4000000000000
+// This call creates a QNAN double with an empty payload.
+// The quiet bit is inverted in legacy mode: it is clear to indicate QNAN,
+// so the next highest bit is set to maintain NAN (not infinity).
+// In regular (2008) mode, the quiet bit is set to indicate QNAN.
+
+// CHECK-NANLEGACY: double 0x7FF4000000000000
+// CHECK-NAN2008: double 0x7FF8000000000000
+
+double d =  __builtin_nan("");
+
+// This call creates a QNAN double with an empty payload and then truncates.
+// llvm::APFloat does not know about the inverted quiet bit, so it sets the
+// quiet bit on conversion independently of the setting in clang.
+
+// CHECK-NANLEGACY: float 0x7FFC000000000000
 // CHECK-NAN2008: float 0x7FF8000000000000
 
 float f =  __builtin_nan("");

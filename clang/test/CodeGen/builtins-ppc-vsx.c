@@ -52,6 +52,7 @@ vector unsigned long long res_vull;
 vector signed __int128 res_vslll;
 
 double res_d;
+int res_i;
 float res_af[4];
 double res_ad[2];
 signed char res_asc[16];
@@ -877,6 +878,23 @@ void test1() {
   res_vd = vec_rsqrte(vd);
 // CHECK: call <2 x double> @llvm.ppc.vsx.xvrsqrtedp(<2 x double> %{{[0-9]+}})
 // CHECK-LE: call <2 x double> @llvm.ppc.vsx.xvrsqrtedp(<2 x double> %{{[0-9]+}})
+
+  res_i = vec_test_swsqrt(vd);
+// CHECK: call i32 @llvm.ppc.vsx.xvtsqrtdp(<2 x double> %{{[0-9]+}})
+// CHECK-LE: call i32 @llvm.ppc.vsx.xvtsqrtdp(<2 x double> %{{[0-9]+}})
+
+  res_i = vec_test_swsqrts(vf);
+// CHECK: call i32 @llvm.ppc.vsx.xvtsqrtsp(<4 x float> %{{[0-9]+}})
+// CHECK-LE: call i32 @llvm.ppc.vsx.xvtsqrtsp(<4 x float> %{{[0-9]+}})
+
+  res_i = vec_test_swdiv(vd, vd);
+// CHECK: call i32 @llvm.ppc.vsx.xvtdivdp(<2 x double> %{{[0-9]+}}, <2 x double> %{{[0-9]+}})
+// CHECK-LE: call i32 @llvm.ppc.vsx.xvtdivdp(<2 x double> %{{[0-9]+}}, <2 x double> %{{[0-9]+}})
+
+  res_i = vec_test_swdivs(vf, vf);
+// CHECK: call i32 @llvm.ppc.vsx.xvtdivsp(<4 x float> %{{[0-9]+}}, <4 x float> %{{[0-9]+}})
+// CHECK-LE: call i32 @llvm.ppc.vsx.xvtdivsp(<4 x float> %{{[0-9]+}}, <4 x float> %{{[0-9]+}})
+
 
   dummy();
 // CHECK: call void @dummy()

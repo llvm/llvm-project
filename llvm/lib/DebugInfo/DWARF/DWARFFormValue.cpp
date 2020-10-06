@@ -358,10 +358,16 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
   return !errorToBool(std::move(Err));
 }
 
+void DWARFFormValue::dumpAddress(raw_ostream &OS, uint8_t AddressSize,
+                                 uint64_t Address) {
+  uint8_t HexDigits = AddressSize * 2;
+  OS << format("0x%*.*" PRIx64, HexDigits, HexDigits, Address);
+}
+
 void DWARFFormValue::dumpSectionedAddress(raw_ostream &OS,
                                           DIDumpOptions DumpOpts,
                                           object::SectionedAddress SA) const {
-  OS << format("0x%016" PRIx64, SA.Address);
+  dumpAddress(OS, U->getAddressByteSize(), SA.Address);
   dumpAddressSection(U->getContext().getDWARFObj(), OS, DumpOpts,
                      SA.SectionIndex);
 }

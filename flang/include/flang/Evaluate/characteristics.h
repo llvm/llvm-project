@@ -45,7 +45,7 @@ namespace Fortran::evaluate::characteristics {
 
 using common::CopyableIndirection;
 
-// Are these procedures distinguishable for a generic name?
+// Are these procedures distinguishable for a generic name or FINAL?
 bool Distinguishable(const Procedure &, const Procedure &);
 // Are these procedures distinguishable for a generic operator or assignment?
 bool DistinguishableOpOrAssign(const Procedure &, const Procedure &);

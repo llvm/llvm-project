@@ -9,9 +9,8 @@ define i1 @Test(double %a) {
 ; CHECK-NEXT:    mffprwz 3, 0
 ; CHECK-NEXT:    xori 3, 3, 65534
 ; CHECK-NEXT:    cntlzw 3, 3
-; CHECK-NEXT:    srwi 3, 3, 5
-; CHECK-NEXT:    # implicit-def: $x4
-; CHECK-NEXT:    mr 4, 3
+; CHECK-NEXT:    srwi 4, 3, 5
+; CHECK-NEXT:    # implicit-def: $x3
 ; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:

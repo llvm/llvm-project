@@ -1439,10 +1439,7 @@ def ADJCALLSTACKUP   : PPCEmitTimePseudo<(outs), (ins u16imm:$amt1, u16imm:$amt2
                               "#ADJCALLSTACKUP $amt1 $amt2",
                               [(callseq_end timm:$amt1, timm:$amt2)]>;
 }
-
-def UPDATE_VRSAVE    : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$rS),
-                              "UPDATE_VRSAVE $rD, $rS", []>;
-}
+} // hasCtrlDep
 
 let Defs = [R1], Uses = [R1] in
 def DYNALLOC : PPCEmitTimePseudo<(outs gprc:$result), (ins gprc:$negsize, memri:$fpsi), "#DYNALLOC",
@@ -2918,18 +2915,6 @@ let isCodeGenOnly = 1 in {
 // Aliases for mtvrsave/mfvrsave to mfspr/mtspr.
 def : InstAlias<"mtvrsave $rS", (MTVRSAVE gprc:$rS)>;
 def : InstAlias<"mfvrsave $rS", (MFVRSAVE gprc:$rS)>;
-
-// SPILL_VRSAVE - Indicate that we're dumping the VRSAVE register,
-// so we'll need to scavenge a register for it.
-let mayStore = 1 in
-def SPILL_VRSAVE : PPCEmitTimePseudo<(outs), (ins VRSAVERC:$vrsave, memri:$F),
-                     "#SPILL_VRSAVE", []>;
-
-// RESTORE_VRSAVE - Indicate that we're restoring the VRSAVE register (previously
-// spilled), so we'll need to scavenge a register for it.
-let mayLoad = 1 in
-def RESTORE_VRSAVE : PPCEmitTimePseudo<(outs VRSAVERC:$vrsave), (ins memri:$F),
-                     "#RESTORE_VRSAVE", []>;
 
 let hasSideEffects = 0 in {
 // mtocrf's input needs to be prepared by shifting by an amount dependent

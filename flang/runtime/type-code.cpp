@@ -78,13 +78,13 @@ TypeCode::TypeCode(TypeCategory f, int kind) {
       raw_ = CFI_type_Bool;
       break;
     case 2:
-      raw_ = CFI_type_int16_t;
+      raw_ = CFI_type_int_fast16_t;
       break;
     case 4:
-      raw_ = CFI_type_int32_t;
+      raw_ = CFI_type_int_fast32_t;
       break;
     case 8:
-      raw_ = CFI_type_int64_t;
+      raw_ = CFI_type_int_fast64_t;
       break;
     }
     break;

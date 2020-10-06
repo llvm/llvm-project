@@ -14,10 +14,10 @@ add_mlir_library(MLIRTransformUtils
   MLIRStandardOpsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffineOps
+  MLIRAffine
   MLIRAnalysis
   MLIRLoopAnalysis
   MLIRSCF
   MLIRPass
-  MLIRStandardOps
+  MLIRStandard
   )

@@ -8,6 +8,9 @@
 define i32 @_Z3fooi4SVal(i32 %i, %struct.SVal* noalias %location) #0 !dbg !4 {
 entry:
   %"alloca point" = bitcast i32 0 to i32
+  br label %realentry
+
+realentry:
   call void @llvm.dbg.value(metadata i32 %i, metadata !21, metadata !DIExpression()), !dbg !22
   call void @llvm.dbg.value(metadata %struct.SVal* %location, metadata !23, metadata !DIExpression()), !dbg !22
   %tmp = icmp ne i32 %i, 0, !dbg !25

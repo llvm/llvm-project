@@ -1764,6 +1764,55 @@ class DirectiveInsnSSF<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{35-32} = enc{35-32};
 }
 
+class DirectiveInsnVRI<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRIe<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRR<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRRc<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRS<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRSc<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRV<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRV<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRX<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRX<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVSI<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVSI<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+
 //===----------------------------------------------------------------------===//
 // Variants of instructions with condition mask
 //===----------------------------------------------------------------------===//

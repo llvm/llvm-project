@@ -159,12 +159,12 @@ inline bool FormattedCharacterIO(
           }
         }
       }
-      if (!descriptor.IncrementSubscripts(subscripts) && j + 1 < numElements) {
-        io.GetIoErrorHandler().Crash(
-            "FormattedCharacterIO: subscripts out of bounds");
-      }
     } else {
       return false;
+    }
+    if (!descriptor.IncrementSubscripts(subscripts) && j + 1 < numElements) {
+      io.GetIoErrorHandler().Crash(
+          "FormattedCharacterIO: subscripts out of bounds");
     }
   }
   return true;
@@ -198,12 +198,12 @@ inline bool FormattedLogicalIO(
           }
         }
       }
-      if (!descriptor.IncrementSubscripts(subscripts) && j + 1 < numElements) {
-        io.GetIoErrorHandler().Crash(
-            "FormattedLogicalIO: subscripts out of bounds");
-      }
     } else {
       return false;
+    }
+    if (!descriptor.IncrementSubscripts(subscripts) && j + 1 < numElements) {
+      io.GetIoErrorHandler().Crash(
+          "FormattedLogicalIO: subscripts out of bounds");
     }
   }
   return true;

@@ -1687,63 +1687,66 @@ public:
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     ProcessSP process_sp = m_exe_ctx.GetProcessSP();
-    if (process_sp) {
-      Status error;
-      lldb::addr_t load_addr = m_prev_end_addr;
-      m_prev_end_addr = LLDB_INVALID_ADDRESS;
-
-      const size_t argc = command.GetArgumentCount();
-      if (argc > 1 || (argc == 0 && load_addr == LLDB_INVALID_ADDRESS)) {
-        result.AppendErrorWithFormat("'%s' takes one argument:\nUsage: %s\n",
-                                     m_cmd_name.c_str(), m_cmd_syntax.c_str());
-        result.SetStatus(eReturnStatusFailed);
-      } else {
-        if (command.GetArgumentCount() == 1) {
-          auto load_addr_str = command[0].ref();
-          load_addr = OptionArgParser::ToAddress(&m_exe_ctx, load_addr_str,
-                                                 LLDB_INVALID_ADDRESS, &error);
-          if (error.Fail() || load_addr == LLDB_INVALID_ADDRESS) {
-            result.AppendErrorWithFormat(
-                "invalid address argument \"%s\": %s\n", command[0].c_str(),
-                error.AsCString());
-            result.SetStatus(eReturnStatusFailed);
-          }
-        }
-
-        lldb_private::MemoryRegionInfo range_info;
-        error = process_sp->GetMemoryRegionInfo(load_addr, range_info);
-        if (error.Success()) {
-          lldb_private::Address addr;
-          ConstString name = range_info.GetName();
-          ConstString section_name;
-          if (process_sp->GetTarget().ResolveLoadAddress(load_addr, addr)) {
-            SectionSP section_sp(addr.GetSection());
-            if (section_sp) {
-              // Got the top most section, not the deepest section
-              while (section_sp->GetParent())
-                section_sp = section_sp->GetParent();
-              section_name = section_sp->GetName();
-            }
-          }
-          result.AppendMessageWithFormatv(
-              "[{0:x16}-{1:x16}) {2:r}{3:w}{4:x}{5}{6}{7}{8}\n",
-              range_info.GetRange().GetRangeBase(),
-              range_info.GetRange().GetRangeEnd(), range_info.GetReadable(),
-              range_info.GetWritable(), range_info.GetExecutable(),
-              name ? " " : "", name, section_name ? " " : "", section_name);
-          m_prev_end_addr = range_info.GetRange().GetRangeEnd();
-          result.SetStatus(eReturnStatusSuccessFinishResult);
-        } else {
-          result.SetStatus(eReturnStatusFailed);
-          result.AppendErrorWithFormat("%s\n", error.AsCString());
-        }
-      }
-    } else {
+    if (!process_sp) {
       m_prev_end_addr = LLDB_INVALID_ADDRESS;
       result.AppendError("invalid process");
       result.SetStatus(eReturnStatusFailed);
+      return false;
     }
-    return result.Succeeded();
+
+    Status error;
+    lldb::addr_t load_addr = m_prev_end_addr;
+    m_prev_end_addr = LLDB_INVALID_ADDRESS;
+
+    const size_t argc = command.GetArgumentCount();
+    if (argc > 1 || (argc == 0 && load_addr == LLDB_INVALID_ADDRESS)) {
+      result.AppendErrorWithFormat("'%s' takes one argument:\nUsage: %s\n",
+                                   m_cmd_name.c_str(), m_cmd_syntax.c_str());
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    if (argc == 1) {
+      auto load_addr_str = command[0].ref();
+      load_addr = OptionArgParser::ToAddress(&m_exe_ctx, load_addr_str,
+                                             LLDB_INVALID_ADDRESS, &error);
+      if (error.Fail() || load_addr == LLDB_INVALID_ADDRESS) {
+        result.AppendErrorWithFormat("invalid address argument \"%s\": %s\n",
+                                     command[0].c_str(), error.AsCString());
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+    }
+
+    lldb_private::MemoryRegionInfo range_info;
+    error = process_sp->GetMemoryRegionInfo(load_addr, range_info);
+    if (error.Success()) {
+      lldb_private::Address addr;
+      ConstString name = range_info.GetName();
+      ConstString section_name;
+      if (process_sp->GetTarget().ResolveLoadAddress(load_addr, addr)) {
+        SectionSP section_sp(addr.GetSection());
+        if (section_sp) {
+          // Got the top most section, not the deepest section
+          while (section_sp->GetParent())
+            section_sp = section_sp->GetParent();
+          section_name = section_sp->GetName();
+        }
+      }
+      result.AppendMessageWithFormatv(
+          "[{0:x16}-{1:x16}) {2:r}{3:w}{4:x}{5}{6}{7}{8}\n",
+          range_info.GetRange().GetRangeBase(),
+          range_info.GetRange().GetRangeEnd(), range_info.GetReadable(),
+          range_info.GetWritable(), range_info.GetExecutable(), name ? " " : "",
+          name, section_name ? " " : "", section_name);
+      m_prev_end_addr = range_info.GetRange().GetRangeEnd();
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return true;
+    }
+
+    result.SetStatus(eReturnStatusFailed);
+    result.AppendErrorWithFormat("%s\n", error.AsCString());
+    return false;
   }
 
   const char *GetRepeatCommand(Args &current_command_args,

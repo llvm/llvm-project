@@ -11,8 +11,8 @@ define void @child_function() #0 {
 ; GCN:  v_writelane_b32 v255, s30, 0
 ; GCN:  v_writelane_b32 v255, s31, 1
 ; GCN:  s_swappc_b64 s[30:31], s[4:5]
-; GCN:  v_readlane_b32 s4, v255, 0
-; GCN:  v_readlane_b32 s5, v255, 1
+; GCN:  v_readlane_b32 s30, v255, 0
+; GCN:  v_readlane_b32 s31, v255, 1
 ; GCN:  v_readlane_b32 s33, v255, 2
 ; GCN: ; NumVgprs: 256
 
@@ -57,8 +57,8 @@ define void @reserve_vgpr_with_no_lower_vgpr_available() #0 {
 ; GCN:  v_writelane_b32 v254, s30, 0
 ; GCN:  v_writelane_b32 v254, s31, 1
 ; GCN:  s_swappc_b64 s[30:31], s[4:5]
-; GCN:  v_readlane_b32 s4, v254, 0
-; GCN:  v_readlane_b32 s5, v254, 1
+; GCN:  v_readlane_b32 s30, v254, 0
+; GCN:  v_readlane_b32 s31, v254, 1
 ; GCN:  v_readlane_b32 s33, v254, 2
 
 define void @reserve_lowest_available_vgpr() #0 {

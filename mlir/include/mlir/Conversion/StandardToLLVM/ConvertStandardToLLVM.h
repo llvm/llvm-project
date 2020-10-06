@@ -412,12 +412,17 @@ public:
                        LLVMTypeConverter &typeConverter,
                        PatternBenefit benefit = 1);
 
+protected:
   /// Returns the LLVM dialect.
   LLVM::LLVMDialect &getDialect() const;
 
   /// Gets the MLIR type wrapping the LLVM integer type whose bit width is
   /// defined by the used type converter.
   LLVM::LLVMType getIndexType() const;
+
+  /// Gets the MLIR type wrapping the LLVM integer type whose bit width
+  /// corresponds to that of a LLVM pointer type.
+  LLVM::LLVMType getIntPtrType(unsigned addressSpace = 0) const;
 
   /// Gets the MLIR type wrapping the LLVM void type.
   LLVM::LLVMType getVoidType() const;
@@ -469,6 +474,15 @@ public:
   Value getCumulativeSizeInBytes(Location loc, Type elementType,
                                  ArrayRef<Value> shape,
                                  ConversionPatternRewriter &rewriter) const;
+
+  /// Creates and populates the memref descriptor struct given all its fields.
+  /// 'strides' can be either dynamic (kDynamicStrideOrOffset) or static, but
+  /// not a mix of the two.
+  MemRefDescriptor
+  createMemRefDescriptor(Location loc, MemRefType memRefType,
+                         Value allocatedPtr, Value alignedPtr, uint64_t offset,
+                         ArrayRef<int64_t> strides, ArrayRef<Value> sizes,
+                         ConversionPatternRewriter &rewriter) const;
 
 protected:
   /// Reference to the type converter, with potential extensions.

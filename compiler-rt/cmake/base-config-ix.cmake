@@ -5,7 +5,6 @@
 
 include(CheckIncludeFile)
 include(CheckCXXSourceCompiles)
-include(TestBigEndian)
 
 check_include_file(unwind.h HAVE_UNWIND_H)
 
@@ -188,22 +187,13 @@ macro(test_targets)
           test_target_arch(x86_64 "" "")
         endif()
       endif()
+    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "powerpc64le")
+      test_target_arch(powerpc64le "" "-m64")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "powerpc")
-      # Strip out -nodefaultlibs when calling TEST_BIG_ENDIAN. Configuration
-      # will fail with this option when building with a sanitizer.
-      cmake_push_check_state()
-      string(REPLACE "-nodefaultlibs" "" CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
-      TEST_BIG_ENDIAN(HOST_IS_BIG_ENDIAN)
-      cmake_pop_check_state()
-
-      if(HOST_IS_BIG_ENDIAN)
-        if(CMAKE_SYSTEM_NAME MATCHES "AIX")
-          test_target_arch(powerpc "" "-m32")
-        endif()
-          test_target_arch(powerpc64 "" "-m64")
-      else()
-        test_target_arch(powerpc64le "" "-m64")
+      if(CMAKE_SYSTEM_NAME MATCHES "AIX")
+        test_target_arch(powerpc "" "-m32")
       endif()
+      test_target_arch(powerpc64 "" "-m64")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "s390x")
       test_target_arch(s390x "" "")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "sparc")

@@ -1,5 +1,5 @@
-;; RUN: llc -mtriple aarch64               -global-isel -O0 %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOP
-;; RUN: llc -mtriple aarch64 -mattr=+v8.3a -global-isel -O0 %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-V83
+;; RUN: llc -mtriple aarch64               -global-isel -O0 %s -o - | FileCheck -enable-var-scope %s --check-prefixes=CHECK,CHECK-NOP
+;; RUN: llc -mtriple aarch64 -mattr=+v8.3a -global-isel -O0 %s -o - | FileCheck -enable-var-scope %s --check-prefixes=CHECK,CHECK-V83
 declare void @g0() #1
 declare void @g1(i8*) #1
 declare void @g2(i32, i8*) #1
@@ -18,22 +18,22 @@ entry:
 ;; CHECK-LABEL:    f0:
 ;; CHECK-NOT:      {{(mov|ldr)}} x30
 ;; CHECK-NOP:      hint #7
-;; CHECK-V83:      xpaci x30
+;; CHECK-V83:      mov [[COPY_X30:x[0-9]+]], x30
+;; CHECK-V83:      xpaci [[COPY_X30]]
 ;; CHECK:          bl g1
 ;; CHECK:          ldr x[[T0:[0-9]+]], [x29]
 ;; CHECK-NOP-NEXT: ldr x30, [x[[T0]], #8]
 ;; CHECK-NOP-NEXT: hint #7
-;; CHECK-V83-NEXT: ldr x[[T0]], [x[[T0]], #8]
-;; CHECK-V83-NEXT: xpaci x[[T0]]
+;; CHECK-V83-NEXT: ldr x[[LD0:[0-9]+]], [x[[T0]], #8]
+;; CHECK-V83-NEXT: xpaci x[[LD0]]
 ;; CHECK:          bl g2
 ;; CHECK:          ldr x[[T1:[0-9]+]], [x29]
 ;; CHECK-NEXT:     ldr x[[T1]], [x[[T1]]]
 ;; CHECK-NOP-NEXT: ldr x30, [x[[T1]], #8]
 ;; CHECK-NOP-NEXT: hint #7
 ;; CHECK-NOP-NEXT: mov x0, x30
-;; CHECK-V83-NEXT: ldr x[[T1]], [x[[T1]], #8]
-;; CHECK-V83-NEXT: xpaci x[[T1]]
-;; CHECK-V83-NEXT: mov x0, x[[T1]]
+;; CHECK-V83-NEXT: ldr x0, [x[[T1]], #8]
+;; CHECK-V83-NEXT: xpaci x0
 
 define i8* @f1() #0 {
 entry:
@@ -49,23 +49,25 @@ entry:
 ;; CHECK-NOP-DAG:  str x30, [sp, #[[OFF:[0-9]+]]
 ;; CHECK-NOP:      ldr x30, [x[[T0]], #8]
 ;; CHECK-NOP-NEXT: hint #7
-;; CHECK-V83:      ldr x[[T0]], [x[[T0]], #8]
-;; CHECK-V83-NEXT: xpaci x[[T0]]
-;; CHECK-V83:      str x30, [sp, #[[OFF:[0-9]+]]
-;; CHECK:          bl g1
-;; CHECK:          ldr x[[T1:[0-9]+]], [x29]
-;; CHECK-NEXT:     ldr x[[T1]], [x[[T1]]]
-;; CHECK-NOP-NEXT: ldr x30, [x[[T1]], #8]
-;; CHECK-NOP-NEXT: hint #7
-;; CHECK-V83-NEXT: ldr x[[T1]], [x[[T1]], #8]
+;; CHECK-V83-DAG:  str x30, [sp, #[[OFF:[0-9]+]]
+;; CHECK-V83:      ldr x[[T1:[0-9]+]], [x[[T0]], #8]
 ;; CHECK-V83-NEXT: xpaci x[[T1]]
+
+;; CHECK:          bl g1
+;; CHECK:          ldr x[[T2:[0-9]+]], [x29]
+;; CHECK-NEXT:     ldr x[[T2]], [x[[T2]]]
+;; CHECK-NOP-NEXT: ldr x30, [x[[T2]], #8]
+;; CHECK-NOP-NEXT: hint #7
+;; CHECK-V83-NEXT: ldr x[[T3:[0-9]+]], [x[[T2]], #8]
+;; CHECK-V83-NEXT: xpaci x[[T3]]
 ;; CHECK:          bl g2
-;; CHECK:          ldr x[[T2:[0-9]+]], [sp, #[[OFF]]]
-;; CHECK-NOP-NEXT: mov x30, x[[T2]]
+
+;; CHECK-NOP:      ldr x30, [sp, #[[OFF]]]
 ;; CHECK-NOP-NEXT: hint #7
 ;; CHECK-NOP-NEXT: mov x0, x30
-;; CHECK-V83-NEXT: xpaci x[[T2]]
-;; CHECK-V83-NEXT: mov x0, x[[T2]]
+
+;; CHECK-V83:      ldr x0, [sp, #[[OFF]]]
+;; CHECK-V83-NEXT: xpaci x0
 ;; CHECK-NOT:      x0
 ;; CHECK:          ret
 
@@ -77,12 +79,12 @@ entry:
 }
 ;; CHECK-LABEL:    f2
 ;; CHECK:          bl g0
-;; CHECK:          ldr x[[T0:[0-9]+]], [sp,
-;; CHECK-NOP-NEXT: mov x30, x[[T2]]
+;; CHECK-NOP:      ldr x30, [sp,
 ;; CHECK-NOP-NEXT: hint #7
 ;; CHECK-NOP-NEXT: mov x0, x30
-;; CHECK-V83-NEXT: xpaci x[[T2]]
-;; CHECK-V83-NEXT: mov x0, x[[T2]]
+
+;; CHECK-V83:      ldr x0, [sp,
+;; CHECK-V83-NEXT: xpaci x0
 ;; CHECK-NOT:      x0
 ;; CHECK:          ret
 
@@ -92,10 +94,12 @@ entry:
   ret i8* %0
 }
 ;; CHECK-LABEL:    f3:
-;; CHECK:          str x30, [sp,
+;; CHECK-NOP:      str x30, [sp,
 ;; CHECK-NOP-NEXT: hint #7
-;; CHECK-V83-NEXT: xpaci x30
-;; CHECK-NEXT:     mov x0, x30
+;; CHECK-NOP-NEXT: mov x0, x30
+
+;; CHECK-V83:      mov x0, x30
+;; CHECK-V83-NEXT: xpaci x0
 ;; CHECK-NOT:      x0
 ;; CHECK:          ret
 attributes #0 = { nounwind }

@@ -394,7 +394,9 @@ class DefineInline : public Tweak {
 public:
   const char *id() const override final;
 
-  Intent intent() const override { return Intent::Refactor; }
+  llvm::StringLiteral kind() const override {
+    return CodeAction::REFACTOR_KIND;
+  }
   std::string title() const override {
     return "Move function body to declaration";
   }

@@ -461,15 +461,15 @@ class SettingsCommandTestCase(TestBase):
         # if they are provided
         self.runCmd("settings set thread-format    'abc def'   ")
         self.expect("settings show thread-format",
-                    'thread-format (format-string) = "abc def"')
+                    startstr='thread-format (format-string) = "abc def"')
         self.runCmd('settings set thread-format    "abc def"   ')
         self.expect("settings show thread-format",
-                    'thread-format (format-string) = "abc def"')
+                    startstr='thread-format (format-string) = "abc def"')
         # Make sure when no quotes are provided that we maintain any trailing
         # spaces
         self.runCmd('settings set thread-format abc def   ')
         self.expect("settings show thread-format",
-                    'thread-format (format-string) = "abc def   "')
+                    startstr='thread-format (format-string) = "abc def   "')
         self.runCmd('settings clear thread-format')
 
     def test_settings_with_trailing_whitespace(self):

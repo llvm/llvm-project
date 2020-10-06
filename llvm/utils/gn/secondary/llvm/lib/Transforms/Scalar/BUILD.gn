@@ -38,6 +38,7 @@ static_library("Scalar") {
     "LoopDataPrefetch.cpp",
     "LoopDeletion.cpp",
     "LoopDistribute.cpp",
+    "LoopFlatten.cpp",
     "LoopFuse.cpp",
     "LoopIdiomRecognize.cpp",
     "LoopInstSimplify.cpp",

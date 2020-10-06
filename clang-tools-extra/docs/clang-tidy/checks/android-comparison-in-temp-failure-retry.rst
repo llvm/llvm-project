@@ -34,3 +34,10 @@ If you encounter this, the fix is simple: lift the comparison out of the
   while (TEMP_FAILURE_RETRY(read(STDIN_FILENO, cs, sizeof(cs))) != 0) {
     // Do something with cs.
   }
+
+Options
+-------
+
+.. option:: RetryMacros
+
+   A comma-separated list of the names of retry macros to be checked.

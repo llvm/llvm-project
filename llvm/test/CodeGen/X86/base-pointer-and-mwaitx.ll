@@ -42,12 +42,12 @@ entry:
 ; USE_BASE_32: movl %ecx, %eax
 ; USE_BASE_32: movl %edx, %ecx
 ; Save base pointer.
-; USE_BASE_32: movl %ebx, [[SAVE_ebx:%e(di|si)]]
+; USE_BASE_32: movq %rbx, [[SAVE_rbx:%r(di|si)]]
 ; Set mwaitx ebx argument.
 ; USE_BASE_32: movl %r8d, %ebx
 ; USE_BASE_32-NEXT: mwaitx
 ; Restore base pointer.
-; USE_BASE_32-NEXT: movl [[SAVE_ebx]], %ebx
+; USE_BASE_32-NEXT: movq [[SAVE_rbx]], %rbx
 
 ; Pass mwaitx 3 arguments in eax, ecx, ebx
 ; NO_BASE_64: movl %r8d, %ebx
@@ -111,12 +111,12 @@ if.end:
 ; USE_BASE_32: movl %esi, %eax
 ; USE_BASE_32: movl %edi, %ecx
 ; Save base pointer.
-; USE_BASE_32: movl %ebx, [[SAVE_ebx:%e(di|si)]]
+; USE_BASE_32: movq %rbx, [[SAVE_rbx:%r(di|si)]]
 ; Set mwaitx ebx argument.
 ; USE_BASE_32: movl %edx, %ebx
 ; USE_BASE_32-NEXT: mwaitx
 ; Restore base pointer.
-; USE_BASE_32-NEXT: movl [[SAVE_ebx]], %ebx
+; USE_BASE_32-NEXT: movq [[SAVE_rbx]], %rbx
 
 ; Pass mwaitx 3 arguments in eax, ecx, ebx
 ; NO_BASE_64: movl %edx, %ebx
@@ -179,12 +179,12 @@ if.end:
 ; USE_BASE_32: movl %esi, %eax
 ; USE_BASE_32: movl %edi, %ecx
 ; Save base pointer.
-; USE_BASE_32: movl %ebx, [[SAVE_ebx:%e(di|si)]]
+; USE_BASE_32: movq %rbx, [[SAVE_rbx:%r(di|si)]]
 ; Set mwaitx ebx argument.
 ; USE_BASE_32: movl %edx, %ebx
 ; USE_BASE_32-NEXT: mwaitx
 ; Restore base pointer.
-; USE_BASE_32-NEXT: movl [[SAVE_ebx]], %ebx
+; USE_BASE_32-NEXT: movq [[SAVE_rbx]], %rbx
 
 ; Pass mwaitx 3 arguments in eax, ecx, ebx
 ; NO_BASE_64: movl %edx, %ebx

@@ -20,6 +20,8 @@ union DebugInfo;
 }
 
 namespace lld {
+class Timer;
+
 namespace coff {
 class OutputSection;
 class SectionChunk;
@@ -32,6 +34,10 @@ void createPDB(SymbolTable *symtab,
 
 llvm::Optional<std::pair<llvm::StringRef, uint32_t>>
 getFileLineCodeView(const SectionChunk *c, uint32_t addr);
+
+extern Timer loadGHashTimer;
+extern Timer mergeGHashTimer;
+
 } // namespace coff
 } // namespace lld
 

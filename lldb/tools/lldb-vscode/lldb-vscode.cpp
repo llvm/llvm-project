@@ -1936,27 +1936,32 @@ void request_setBreakpoints(const llvm::json::Object &request) {
 
   // Decode the source breakpoint infos for this "setBreakpoints" request
   SourceBreakpointMap request_bps;
-  for (const auto &bp : *breakpoints) {
-    auto bp_obj = bp.getAsObject();
-    if (bp_obj) {
-      SourceBreakpoint src_bp(*bp_obj);
-      request_bps[src_bp.line] = src_bp;
+  // "breakpoints" may be unset, in which case we treat it the same as being set
+  // to an empty array.
+  if (breakpoints) {
+    for (const auto &bp : *breakpoints) {
+      auto bp_obj = bp.getAsObject();
+      if (bp_obj) {
+        SourceBreakpoint src_bp(*bp_obj);
+        request_bps[src_bp.line] = src_bp;
 
-      // We check if this breakpoint already exists to update it
-      auto existing_source_bps = g_vsc.source_breakpoints.find(path);
-      if (existing_source_bps != g_vsc.source_breakpoints.end()) {
-        const auto &existing_bp = existing_source_bps->second.find(src_bp.line);
-        if (existing_bp != existing_source_bps->second.end()) {
-          existing_bp->second.UpdateBreakpoint(src_bp);
-          AppendBreakpoint(existing_bp->second.bp, response_breakpoints, path,
-                           src_bp.line);
-          continue;
+        // We check if this breakpoint already exists to update it
+        auto existing_source_bps = g_vsc.source_breakpoints.find(path);
+        if (existing_source_bps != g_vsc.source_breakpoints.end()) {
+          const auto &existing_bp =
+              existing_source_bps->second.find(src_bp.line);
+          if (existing_bp != existing_source_bps->second.end()) {
+            existing_bp->second.UpdateBreakpoint(src_bp);
+            AppendBreakpoint(existing_bp->second.bp, response_breakpoints, path,
+                             src_bp.line);
+            continue;
+          }
         }
+        // At this point the breakpoint is new
+        src_bp.SetBreakpoint(path.data());
+        AppendBreakpoint(src_bp.bp, response_breakpoints, path, src_bp.line);
+        g_vsc.source_breakpoints[path][src_bp.line] = std::move(src_bp);
       }
-      // At this point the breakpoint is new
-      src_bp.SetBreakpoint(path.data());
-      AppendBreakpoint(src_bp.bp, response_breakpoints, path, src_bp.line);
-      g_vsc.source_breakpoints[path][src_bp.line] = std::move(src_bp);
     }
   }
 

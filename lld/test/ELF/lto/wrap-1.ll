@@ -17,11 +17,12 @@
 ; CHECK-NEXT: Binding: Global
 ; CHECK-NEXT: Type: Function
 
-; Make sure that the 'r' (linker redefined) bit is set for bar and __wrap_bar
-; in the resolutions file.
-; RESOLS: ,bar,xr
-; RESOLS: ,__wrap_bar,plx
-; RESOLS: ,__real_bar,plxr
+; Make sure that the 'r' (linker redefined) bit is set for bar and __real_bar
+; in the resolutions file. The calls to bar and __real_bar will be routed to
+; __wrap_bar and bar, respectively. So they cannot be inlined.
+; RESOLS: ,bar,xr{{$}}
+; RESOLS: ,__wrap_bar,plx{{$}}
+; RESOLS: ,__real_bar,plr{{$}}
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

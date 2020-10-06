@@ -187,6 +187,11 @@ private:
     return specConstMap.lookup(id);
   }
 
+  /// Gets the composite specialization constant with the given result <id>.
+  spirv::SpecConstantCompositeOp getSpecConstantComposite(uint32_t id) {
+    return specConstCompositeMap.lookup(id);
+  }
+
   /// Creates a spirv::SpecConstantOp.
   spirv::SpecConstantOp createSpecConstant(Location loc, uint32_t resultID,
                                            Attribute defaultValue);
@@ -248,6 +253,8 @@ private:
   /// Processes a SPIR-V OpConstantComposite instruction with the given
   /// `operands`.
   LogicalResult processConstantComposite(ArrayRef<uint32_t> operands);
+
+  LogicalResult processSpecConstantComposite(ArrayRef<uint32_t> operands);
 
   /// Processes a SPIR-V OpConstantNull instruction with the given `operands`.
   LogicalResult processConstantNull(ArrayRef<uint32_t> operands);
@@ -459,8 +466,11 @@ private:
   /// (and type) here. Later when it's used, we materialize the constant.
   DenseMap<uint32_t, std::pair<Attribute, Type>> constantMap;
 
-  // Result <id> to variable mapping.
+  // Result <id> to spec constant mapping.
   DenseMap<uint32_t, spirv::SpecConstantOp> specConstMap;
+
+  // Result <id> to composite spec constant mapping.
+  DenseMap<uint32_t, spirv::SpecConstantCompositeOp> specConstCompositeMap;
 
   // Result <id> to variable mapping.
   DenseMap<uint32_t, spirv::GlobalVariableOp> globalVariableMap;
@@ -1546,6 +1556,41 @@ Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+LogicalResult
+Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
+  if (operands.size() < 2) {
+    return emitError(unknownLoc,
+                     "OpConstantComposite must have type <id> and result <id>");
+  }
+  if (operands.size() < 3) {
+    return emitError(unknownLoc,
+                     "OpConstantComposite must have at least 1 parameter");
+  }
+
+  Type resultType = getType(operands[0]);
+  if (!resultType) {
+    return emitError(unknownLoc, "undefined result type from <id> ")
+           << operands[0];
+  }
+
+  auto resultID = operands[1];
+  auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(resultID));
+
+  SmallVector<Attribute, 4> elements;
+  elements.reserve(operands.size() - 2);
+  for (unsigned i = 2, e = operands.size(); i < e; ++i) {
+    auto elementInfo = getSpecConstant(operands[i]);
+    elements.push_back(opBuilder.getSymbolRefAttr(elementInfo));
+  }
+
+  auto op = opBuilder.create<spirv::SpecConstantCompositeOp>(
+      unknownLoc, TypeAttr::get(resultType), symName,
+      opBuilder.getArrayAttr(elements));
+  specConstCompositeMap[resultID] = op;
+
+  return success();
+}
+
 LogicalResult Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   if (operands.size() != 2) {
     return emitError(unknownLoc,
@@ -2173,6 +2218,12 @@ Value Deserializer::getValue(uint32_t id) {
         opBuilder.getSymbolRefAttr(constOp.getOperation()));
     return referenceOfOp.reference();
   }
+  if (auto constCompositeOp = getSpecConstantComposite(id)) {
+    auto referenceOfOp = opBuilder.create<spirv::ReferenceOfOp>(
+        unknownLoc, constCompositeOp.type(),
+        opBuilder.getSymbolRefAttr(constCompositeOp.getOperation()));
+    return referenceOfOp.reference();
+  }
   if (auto undef = getUndefType(id)) {
     return opBuilder.create<spirv::UndefOp>(unknownLoc, undef);
   }
@@ -2276,6 +2327,8 @@ LogicalResult Deserializer::processInstruction(spirv::Opcode opcode,
     return processConstant(operands, /*isSpec=*/true);
   case spirv::Opcode::OpConstantComposite:
     return processConstantComposite(operands);
+  case spirv::Opcode::OpSpecConstantComposite:
+    return processSpecConstantComposite(operands);
   case spirv::Opcode::OpConstantTrue:
     return processConstantBool(/*isTrue=*/true, operands, /*isSpec=*/false);
   case spirv::Opcode::OpSpecConstantTrue:

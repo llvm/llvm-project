@@ -12,7 +12,6 @@
 #include "Object.h"
 #include "Reader.h"
 #include "Writer.h"
-#include "llvm-objcopy.h"
 #include "llvm/Support/Errc.h"
 
 namespace llvm {

@@ -160,7 +160,7 @@ TEST(ScalableVectorMVTsTest, SizeQueries) {
 
   // Check that we can obtain a known-exact size from a non-scalable type.
   EXPECT_EQ(v4i32.getSizeInBits(), 128U);
-  EXPECT_EQ(v2i64.getSizeInBits().getFixedSize(), 128U);
+  EXPECT_EQ(v2i64.getFixedSizeInBits(), 128U);
 
   // Check that we can query the known minimum size for both scalable and
   // fixed length types.

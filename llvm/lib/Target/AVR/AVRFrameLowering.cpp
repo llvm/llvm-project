@@ -131,6 +131,26 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
       .setMIFlag(MachineInstr::FrameSetup);
 }
 
+static void restoreStatusRegister(MachineFunction &MF, MachineBasicBlock &MBB) {
+  const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+
+  MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
+
+  DebugLoc DL = MBBI->getDebugLoc();
+  const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
+  const AVRInstrInfo &TII = *STI.getInstrInfo();
+
+  // Emit special epilogue code to restore R1, R0 and SREG in interrupt/signal
+  // handlers at the very end of the function, just before reti.
+  if (AFI->isInterruptOrSignalHandler()) {
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), AVR::R0);
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::OUTARr))
+        .addImm(0x3f)
+        .addReg(AVR::R0, RegState::Kill);
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPWRd), AVR::R1R0);
+  }
+}
+
 void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
@@ -151,18 +171,9 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
   const AVRInstrInfo &TII = *STI.getInstrInfo();
 
-  // Emit special epilogue code to restore R1, R0 and SREG in interrupt/signal
-  // handlers at the very end of the function, just before reti.
-  if (AFI->isInterruptOrSignalHandler()) {
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), AVR::R0);
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::OUTARr))
-        .addImm(0x3f)
-        .addReg(AVR::R0, RegState::Kill);
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPWRd), AVR::R1R0);
-  }
-
   // Early exit if there is no need to restore the frame pointer.
   if (!FrameSize) {
+    restoreStatusRegister(MF, MBB);
     return;
   }
 
@@ -198,6 +209,8 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
   // Write back R29R28 to SP and temporarily disable interrupts.
   BuildMI(MBB, MBBI, DL, TII.get(AVR::SPWRITE), AVR::SP)
       .addReg(AVR::R29R28, RegState::Kill);
+
+  restoreStatusRegister(MF, MBB);
 }
 
 // Return true if the specified function should have a dedicated frame

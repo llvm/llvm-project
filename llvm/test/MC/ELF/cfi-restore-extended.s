@@ -6,7 +6,7 @@ f:
   nop
 // CHECK: DW_CFA_advance_loc: 1
   .cfi_restore %rbp
-// CHECK-NEXT: DW_CFA_restore: reg6
+// CHECK-NEXT: DW_CFA_restore: RBP
   nop
 // CHECK-NEXT: DW_CFA_advance_loc: 1
   .cfi_restore 89
@@ -14,4 +14,3 @@ f:
 // CHECK-NEXT: DW_CFA_nop:
   nop
   .cfi_endproc
-

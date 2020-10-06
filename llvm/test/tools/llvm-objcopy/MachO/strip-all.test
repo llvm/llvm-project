@@ -27,6 +27,11 @@
 # cmp %t4 %t.dwarf.stripped
 # cmp %t5 %t.dwarf.stripped
 
+# RUN: llvm-lipo %t.dwarf -create -output %t.dwarf.universal
+# RUN: llvm-strip %t.dwarf.universal -o %t.dwarf.universal.stripped
+# RUN: llvm-lipo %t.dwarf.universal.stripped -thin x86_64 -output %t6
+# RUN: cmp %t6 %t.dwarf.stripped
+
 ## Make sure that debug sections are removed.
 # DWARF:       Sections [
 # DWARF-NOT:     Name: __debug_str

@@ -116,9 +116,15 @@ public:
     if (Index > HeaderData.OffsetEntryCount)
       return None;
 
+    return getOffsetEntry(Data, getHeaderOffset() + getHeaderSize(Format), Format, Index);
+  }
+
+  static Optional<uint64_t> getOffsetEntry(DataExtractor Data,
+                                           uint64_t OffsetTableOffset,
+                                           dwarf::DwarfFormat Format,
+                                           uint32_t Index) {
     uint8_t OffsetByteSize = Format == dwarf::DWARF64 ? 8 : 4;
-    uint64_t Offset =
-        getHeaderOffset() + getHeaderSize(Format) + OffsetByteSize * Index;
+    uint64_t Offset = OffsetTableOffset + OffsetByteSize * Index;
     auto R = Data.getUnsigned(&Offset, OffsetByteSize);
     return R;
   }
@@ -272,9 +278,10 @@ DWARFListTableBase<DWARFListType>::findList(DWARFDataExtractor Data,
                                             uint64_t Offset) {
   // Extract the list from the section and enter it into the list map.
   DWARFListType List;
-  Data = DWARFDataExtractor(Data, getHeaderOffset() + Header.length());
+  if (Header.length())
+    Data = DWARFDataExtractor(Data, getHeaderOffset() + Header.length());
   if (Error E =
-          List.extract(Data, getHeaderOffset(), &Offset,
+          List.extract(Data, Header.length() ? getHeaderOffset() : 0, &Offset,
                        Header.getSectionName(), Header.getListTypeString()))
     return std::move(E);
   return List;

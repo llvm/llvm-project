@@ -22,10 +22,26 @@
 namespace mlir {
 namespace async {
 
+namespace detail {
+struct ValueTypeStorage;
+} // namespace detail
+
 /// The token type to represent asynchronous operation completion.
 class TokenType : public Type::TypeBase<TokenType, Type, TypeStorage> {
 public:
   using Base::Base;
+};
+
+/// The value type to represent values returned from asynchronous operations.
+class ValueType
+    : public Type::TypeBase<ValueType, Type, detail::ValueTypeStorage> {
+public:
+  using Base::Base;
+
+  /// Get or create an async ValueType with the provided value type.
+  static ValueType get(Type valueType);
+
+  Type getValueType();
 };
 
 } // namespace async

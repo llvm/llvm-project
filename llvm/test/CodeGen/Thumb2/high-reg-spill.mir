@@ -38,10 +38,8 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: constraint_h
     ; CHECK: renamable $r0 = tLDRspi %stack.0.i, 0, 14 /* CC::al */, $noreg :: (dereferenceable load 4 from %ir.i)
-    ; CHECK: renamable $r12 = COPY killed renamable $r0
-    ; CHECK: t2STRi12 killed $r12, %stack.1, 0, 14 /* CC::al */, $noreg :: (store 4 into %stack.1)
-    ; CHECK: $r8 = t2LDRi12 %stack.1, 0, 14 /* CC::al */, $noreg :: (load 4 from %stack.1)
-    ; CHECK: INLINEASM &"@ $0", 1 /* sideeffect attdialect */, 589833 /* reguse:GPRnopc */, renamable $r8, 12 /* clobber */, implicit-def early-clobber $r12
+    ; CHECK: renamable $r8 = COPY killed renamable $r0
+    ; CHECK: INLINEASM &"@ $0", 1 /* sideeffect attdialect */, 589833 /* reguse:GPRnopc */, killed renamable $r8, 12 /* clobber */, implicit-def dead early-clobber $r12
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg
     %1:tgpr = tLDRspi %stack.0.i, 0, 14, $noreg :: (dereferenceable load 4 from %ir.i)
     %0:hgpr = COPY %1

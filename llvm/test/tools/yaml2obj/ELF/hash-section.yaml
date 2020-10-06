@@ -1,9 +1,11 @@
 ## Check how yaml2obj produces SHT_HASH sections.
 
 ## Check we can describe a SHT_HASH section using the "Content" tag.
+## Check default values of section fields.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
-# RUN: llvm-readobj --sections --section-data %t1 | FileCheck %s --check-prefix=CONTENT
+# RUN: llvm-readobj --sections --section-data %t1 | \
+# RUN:   FileCheck %s -DENTSIZE=4 --check-prefix=CONTENT
 
 # CONTENT:      Name: .hash
 # CONTENT-NEXT: Type: SHT_HASH
@@ -15,7 +17,7 @@
 # CONTENT-NEXT: Link: 1
 # CONTENT-NEXT: Info: 0
 # CONTENT-NEXT: AddressAlignment: 0
-# CONTENT-NEXT: EntrySize: 0
+# CONTENT-NEXT: EntrySize: [[ENTSIZE]]{{$}}
 # CONTENT-NEXT: SectionData (
 # CONTENT-NEXT:   0000: 01000000 02000000 03000000 04000000
 # CONTENT-NEXT:   0010: 05000000
@@ -33,6 +35,13 @@ Sections:
   - Name:    .hash
     Type:    SHT_HASH
     Content: '0100000002000000030000000400000005000000'
+    EntSize: [[ENTSIZE=<none>]]
+
+## Check we can set an arbitrary entry size for the SHT_HASH section.
+
+# RUN: yaml2obj --docnum=1 -DENTSIZE=0xFF %s -o %t1.entsize
+# RUN: llvm-readobj --sections --section-data %t1.entsize | \
+# RUN:   FileCheck %s -DENTSIZE=255 --check-prefix=CONTENT
 
 ## Check we can describe a SHT_HASH section using "Bucket" and "Chain" tags.
 
@@ -280,7 +289,7 @@ Sections:
 # OVERRIDE-NEXT: Link: 0
 # OVERRIDE-NEXT: Info: 0
 # OVERRIDE-NEXT: AddressAlignment: 0
-# OVERRIDE-NEXT: EntrySize: 0
+# OVERRIDE-NEXT: EntrySize: 4
 # OVERRIDE-NEXT: SectionData (
 # OVERRIDE-NEXT:   0000: AA000000 BB000000 01000000 02000000
 # OVERRIDE-NEXT:   0010: 03000000 04000000 05000000

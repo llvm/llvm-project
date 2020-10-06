@@ -119,9 +119,8 @@ L:
   br i1 %uni.cond, label %D, label %G
 
 X:
-  %div.merge.x = phi i32 [ %a, %entry ], [ %uni.merge.h, %B ] ; temporal divergent phi
+  %uni.merge.x = phi i32 [ %a, %entry ], [ %uni.merge.h, %B ]
   br i1 %uni.cond, label %Y, label %exit
-; CHECK: DIVERGENT: %div.merge.x =
 
 Y:
   %div.merge.y = phi i32 [ 42, %X ], [ %b, %C ]

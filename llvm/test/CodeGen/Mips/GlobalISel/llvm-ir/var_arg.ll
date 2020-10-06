@@ -13,6 +13,7 @@ define void @testVaCopyArg(i8* %fmt, ...) {
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 40
 ; MIPS32-NEXT:    sw $ra, 36($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    .cfi_offset 31, -4
+; MIPS32-NEXT:    move $3, $4
 ; MIPS32-NEXT:    addiu $1, $sp, 44
 ; MIPS32-NEXT:    sw $5, 0($1)
 ; MIPS32-NEXT:    addiu $1, $sp, 48
@@ -20,24 +21,23 @@ define void @testVaCopyArg(i8* %fmt, ...) {
 ; MIPS32-NEXT:    addiu $1, $sp, 52
 ; MIPS32-NEXT:    sw $7, 0($1)
 ; MIPS32-NEXT:    lui $1, %hi($.str)
-; MIPS32-NEXT:    addiu $1, $1, %lo($.str)
-; MIPS32-NEXT:    addiu $2, $sp, 32
-; MIPS32-NEXT:    addiu $3, $sp, 28
+; MIPS32-NEXT:    addiu $4, $1, %lo($.str)
+; MIPS32-NEXT:    addiu $6, $sp, 32
+; MIPS32-NEXT:    addiu $2, $sp, 28
 ; MIPS32-NEXT:    addiu $5, $sp, 24
-; MIPS32-NEXT:    addiu $6, $sp, 20
-; MIPS32-NEXT:    sw $4, 0($2)
-; MIPS32-NEXT:    addiu $2, $sp, 44
-; MIPS32-NEXT:    sw $2, 0($3)
-; MIPS32-NEXT:    lw $2, 0($3)
+; MIPS32-NEXT:    addiu $1, $sp, 20
+; MIPS32-NEXT:    sw $3, 0($6)
+; MIPS32-NEXT:    addiu $3, $sp, 44
+; MIPS32-NEXT:    sw $3, 0($2)
+; MIPS32-NEXT:    lw $2, 0($2)
 ; MIPS32-NEXT:    sw $2, 0($5)
 ; MIPS32-NEXT:    lw $2, 0($5)
 ; MIPS32-NEXT:    ori $3, $zero, 4
 ; MIPS32-NEXT:    addu $3, $2, $3
 ; MIPS32-NEXT:    sw $3, 0($5)
 ; MIPS32-NEXT:    lw $2, 0($2)
-; MIPS32-NEXT:    sw $2, 0($6)
-; MIPS32-NEXT:    lw $5, 0($6)
-; MIPS32-NEXT:    move $4, $1
+; MIPS32-NEXT:    sw $2, 0($1)
+; MIPS32-NEXT:    lw $5, 0($1)
 ; MIPS32-NEXT:    jal printf
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:    lw $ra, 36($sp) # 4-byte Folded Reload

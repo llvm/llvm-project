@@ -45,7 +45,7 @@ void Timer::print() {
     if (child->total > 0)
       child->print(1, totalDuration);
 
-  message(std::string(49, '-'));
+  message(std::string(50, '-'));
 
   root().print(0, root().millis(), false);
 }
@@ -62,7 +62,7 @@ void Timer::print(int depth, double totalDuration, bool recurse) const {
   SmallString<32> str;
   llvm::raw_svector_ostream stream(str);
   std::string s = std::string(depth * 2, ' ') + name + std::string(":");
-  stream << format("%-30s%5d ms (%5.1f%%)", s.c_str(), (int)millis(), p);
+  stream << format("%-30s%7d ms (%5.1f%%)", s.c_str(), (int)millis(), p);
 
   message(str);
 

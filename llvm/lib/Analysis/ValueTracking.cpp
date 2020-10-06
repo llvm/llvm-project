@@ -4813,7 +4813,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly) {
 
       bool Safe = llvm::all_of(ShiftAmounts, [](Constant *C) {
         auto *CI = dyn_cast<ConstantInt>(C);
-        return CI && CI->getZExtValue() < C->getType()->getIntegerBitWidth();
+        return CI && CI->getValue().ult(C->getType()->getIntegerBitWidth());
       });
       return !Safe;
     }
@@ -4836,8 +4836,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly) {
     auto *VTy = cast<VectorType>(Op->getOperand(0)->getType());
     unsigned IdxOp = Op->getOpcode() == Instruction::InsertElement ? 2 : 1;
     auto *Idx = dyn_cast<ConstantInt>(Op->getOperand(IdxOp));
-    if (!Idx ||
-        Idx->getZExtValue() >= VTy->getElementCount().getKnownMinValue())
+    if (!Idx || Idx->getValue().uge(VTy->getElementCount().getKnownMinValue()))
       return true;
     return false;
   }

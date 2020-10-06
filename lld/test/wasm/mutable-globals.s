@@ -1,5 +1,6 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
 # RUN: not wasm-ld %t.o -o %t.wasm 2>&1 | FileCheck %s
+# RUN: wasm-ld --features=mutable-globals %t.o -o %t.wasm
 
 .globl _start
 _start:

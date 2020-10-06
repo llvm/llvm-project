@@ -183,6 +183,14 @@ bool VEDAGToDAGISel::selectADDRrri(SDValue Addr, SDValue &Base, SDValue &Index,
     return false;
   }
   if (matchADDRrr(Addr, LHS, RHS)) {
+    // If the input is a pair of a frame-index and a register, move a
+    // frame-index to LHS.  This generates MI with following operands.
+    //    %dest, #FI, %reg, offset
+    // In the eliminateFrameIndex, above MI is converted to the following.
+    //    %dest, %fp, %reg, fi_offset + offset
+    if (dyn_cast<FrameIndexSDNode>(RHS))
+      std::swap(LHS, RHS);
+
     if (matchADDRri(RHS, Index, Offset)) {
       Base = LHS;
       return true;

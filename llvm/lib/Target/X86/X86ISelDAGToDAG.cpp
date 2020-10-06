@@ -4480,6 +4480,38 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
   switch (Opcode) {
   default: break;
+  case ISD::INTRINSIC_W_CHAIN: {
+    unsigned IntNo = Node->getConstantOperandVal(1);
+    switch (IntNo) {
+    default: break;
+    case Intrinsic::x86_encodekey128:
+    case Intrinsic::x86_encodekey256: {
+      if (!Subtarget->hasKL())
+        break;
+
+      unsigned Opcode;
+      switch (IntNo) {
+      default: llvm_unreachable("Impossible intrinsic");
+      case Intrinsic::x86_encodekey128: Opcode = X86::ENCODEKEY128; break;
+      case Intrinsic::x86_encodekey256: Opcode = X86::ENCODEKEY256; break;
+      }
+
+      SDValue Chain = Node->getOperand(0);
+      Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM0, Node->getOperand(3),
+                                   SDValue());
+      if (Opcode == X86::ENCODEKEY256)
+        Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM1, Node->getOperand(4),
+                                     Chain.getValue(1));
+
+      MachineSDNode *Res = CurDAG->getMachineNode(
+          Opcode, dl, Node->getVTList(),
+          {Node->getOperand(2), Chain, Chain.getValue(1)});
+      ReplaceNode(Node, Res);
+      return;
+    }
+    }
+    break;
+  }
   case ISD::INTRINSIC_VOID: {
     unsigned IntNo = Node->getConstantOperandVal(1);
     switch (IntNo) {
@@ -5723,6 +5755,62 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     ReplaceUses(SDValue(Node, 0), SDValue(New, 0)); // Arg pointer
     ReplaceUses(SDValue(Node, 1), SDValue(New, 1)); // Chain
     CurDAG->RemoveDeadNode(Node);
+    return;
+  }
+  case X86ISD::AESENCWIDE128KL:
+  case X86ISD::AESDECWIDE128KL:
+  case X86ISD::AESENCWIDE256KL:
+  case X86ISD::AESDECWIDE256KL: {
+    if (!Subtarget->hasWIDEKL())
+      break;
+
+    unsigned Opcode;
+    switch (Node->getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected opcode!");
+    case X86ISD::AESENCWIDE128KL:
+      Opcode = X86::AESENCWIDE128KL;
+      break;
+    case X86ISD::AESDECWIDE128KL:
+      Opcode = X86::AESDECWIDE128KL;
+      break;
+    case X86ISD::AESENCWIDE256KL:
+      Opcode = X86::AESENCWIDE256KL;
+      break;
+    case X86ISD::AESDECWIDE256KL:
+      Opcode = X86::AESDECWIDE256KL;
+      break;
+    }
+
+    SDValue Chain = Node->getOperand(0);
+    SDValue Addr = Node->getOperand(1);
+
+    SDValue Base, Scale, Index, Disp, Segment;
+    if (!selectAddr(Node, Addr, Base, Scale, Index, Disp, Segment))
+      break;
+
+    Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM0, Node->getOperand(2),
+                                 SDValue());
+    Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM1, Node->getOperand(3),
+                                 Chain.getValue(1));
+    Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM2, Node->getOperand(4),
+                                 Chain.getValue(1));
+    Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM3, Node->getOperand(5),
+                                 Chain.getValue(1));
+    Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM4, Node->getOperand(6),
+                                 Chain.getValue(1));
+    Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM5, Node->getOperand(7),
+                                 Chain.getValue(1));
+    Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM6, Node->getOperand(8),
+                                 Chain.getValue(1));
+    Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM7, Node->getOperand(9),
+                                 Chain.getValue(1));
+
+    MachineSDNode *Res = CurDAG->getMachineNode(
+        Opcode, dl, Node->getVTList(),
+        {Base, Scale, Index, Disp, Segment, Chain, Chain.getValue(1)});
+    CurDAG->setNodeMemRefs(Res, cast<MemSDNode>(Node)->getMemOperand());
+    ReplaceNode(Node, Res);
     return;
   }
   }

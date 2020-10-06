@@ -317,6 +317,20 @@ let Predicates = [UseHVX] in {
 }
 
 let Predicates = [UseHVX] in {
+  // For i8 vectors Vs = (a0, a1, ...), Vt = (b0, b1, ...),
+  // V6_vmpybv Vs, Vt produces a pair of i16 vectors Hi:Lo,
+  // where Lo = (a0*b0, a2*b2, ...), Hi = (a1*b1, a3*b3, ...).
+  def: Pat<(mul HVI8:$Vs, HVI8:$Vt),
+           (V6_vshuffeb (HiVec (V6_vmpybv HvxVR:$Vs, HvxVR:$Vt)),
+                        (LoVec (V6_vmpybv HvxVR:$Vs, HvxVR:$Vt)))>;
+  def: Pat<(mul HVI16:$Vs, HVI16:$Vt),
+           (V6_vmpyih HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(mul HVI32:$Vs, HVI32:$Vt),
+           (V6_vmpyiewuh_acc (V6_vmpyieoh HvxVR:$Vs, HvxVR:$Vt),
+                             HvxVR:$Vs, HvxVR:$Vt)>;
+}
+
+let Predicates = [UseHVX] in {
   def: Pat<(VecPI16 (sext HVI8:$Vs)),  (VSxtb $Vs)>;
   def: Pat<(VecPI32 (sext HVI16:$Vs)), (VSxth $Vs)>;
   def: Pat<(VecPI16 (zext HVI8:$Vs)),  (VZxtb $Vs)>;

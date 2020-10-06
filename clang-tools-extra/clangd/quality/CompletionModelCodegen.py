@@ -1,7 +1,7 @@
 """Code generator for Code Completion Model Inference.
 
 Tool runs on the Decision Forest model defined in {model} directory.
-It generates two files: {output_dir}/{filename}.h and {output_dir}/{filename}.cpp 
+It generates two files: {output_dir}/{filename}.h and {output_dir}/{filename}.cpp
 The generated files defines the Example class named {cpp_class} having all the features as class members.
 The generated runtime provides an `Evaluate` function which can be used to score a code completion candidate.
 """
@@ -39,34 +39,32 @@ def header_guard(filename):
 
 
 def boost_node(n, label, next_label):
-    """Returns code snippet for a leaf/boost node.
-    Adds value of leaf to the score and jumps to the root of the next tree."""
-    return "%s: Score += %s; goto %s;" % (
-            label, n['score'], next_label)
+    """Returns code snippet for a leaf/boost node."""
+    return "%s: return %s;" % (label, n['score'])
 
 
 def if_greater_node(n, label, next_label):
     """Returns code snippet for a if_greater node.
-    Jumps to true_label if the Example feature (NUMBER) is greater than the threshold. 
-    Comparing integers is much faster than comparing floats. Assuming floating points 
+    Jumps to true_label if the Example feature (NUMBER) is greater than the threshold.
+    Comparing integers is much faster than comparing floats. Assuming floating points
     are represented as IEEE 754, it order-encodes the floats to integers before comparing them.
     Control falls through if condition is evaluated to false."""
     threshold = n["threshold"]
-    return "%s: if (E.%s >= %s /*%s*/) goto %s;" % (
-            label, n['feature'], order_encode(threshold), threshold, next_label)
+    return "%s: if (E.get%s() >= %s /*%s*/) goto %s;" % (
+        label, n['feature'], order_encode(threshold), threshold, next_label)
 
 
 def if_member_node(n, label, next_label):
     """Returns code snippet for a if_member node.
-    Jumps to true_label if the Example feature (ENUM) is present in the set of enum values 
+    Jumps to true_label if the Example feature (ENUM) is present in the set of enum values
     described in the node.
     Control falls through if condition is evaluated to false."""
     members = '|'.join([
         "BIT(%s_type::%s)" % (n['feature'], member)
         for member in n["set"]
     ])
-    return "%s: if (E.%s & (%s)) goto %s;" % (
-            label, n['feature'], members, next_label)
+    return "%s: if (E.get%s() & (%s)) goto %s;" % (
+        label, n['feature'], members, next_label)
 
 
 def node(n, label, next_label):
@@ -94,8 +92,6 @@ def tree(t, tree_num, node_num):
     """
     label = "t%d_n%d" % (tree_num, node_num)
     code = []
-    if node_num == 0:
-        code.append("t%d:" % tree_num)
 
     if t["operation"] == "boost":
         code.append(node(t, label=label, next_label="t%d" % (tree_num + 1)))
@@ -119,13 +115,15 @@ def gen_header_code(features_json, cpp_class, filename):
     """Returns code for header declaring the inference runtime.
 
     Declares the Example class named {cpp_class} inside relevant namespaces.
-    The Example class contains all the features as class members. This 
+    The Example class contains all the features as class members. This
     class can be used to represent a code completion candidate.
     Provides `float Evaluate()` function which can be used to score the Example.
     """
     setters = []
+    getters = []
     for f in features_json:
         feature = f["name"]
+
         if f["kind"] == "NUMBER":
             # Floats are order-encoded to integers for faster comparison.
             setters.append(
@@ -138,8 +136,15 @@ def gen_header_code(features_json, cpp_class, filename):
             raise ValueError("Unhandled feature type.", f["kind"])
 
     # Class members represent all the features of the Example.
-    class_members = ["uint32_t %s = 0;" % f['name'] for f in features_json]
-
+    class_members = [
+        "uint32_t %s = 0;" % f['name']
+        for f in features_json
+    ]
+    getters = [
+        "LLVM_ATTRIBUTE_ALWAYS_INLINE uint32_t get%s() const { return %s; }"
+        % (f['name'], f['name'])
+        for f in features_json
+    ]
     nline = "\n  "
     guard = header_guard(filename)
     return """#ifndef %s
@@ -150,6 +155,10 @@ def gen_header_code(features_json, cpp_class, filename):
 %s
 class %s {
 public:
+  // Setters.
+  %s
+
+  // Getters.
   %s
 
 private:
@@ -158,18 +167,16 @@ private:
   // Produces an integer that sorts in the same order as F.
   // That is: a < b <==> orderEncode(a) < orderEncode(b).
   static uint32_t OrderEncode(float F);
-  friend float Evaluate(const %s&);
 };
 
-// The function may have large number of lines of code. MSAN
-// build times out in such case.
-LLVM_NO_SANITIZE("memory")
 float Evaluate(const %s&);
 %s
 #endif // %s
-""" % (guard, guard, cpp_class.ns_begin(), cpp_class.name, nline.join(setters),
-        nline.join(class_members), cpp_class.name, cpp_class.name,
-        cpp_class.ns_end(), guard)
+""" % (guard, guard, cpp_class.ns_begin(), cpp_class.name,
+        nline.join(setters),
+        nline.join(getters),
+        nline.join(class_members),
+        cpp_class.name, cpp_class.ns_end(), guard)
 
 
 def order_encode(v):
@@ -182,21 +189,33 @@ def order_encode(v):
 
 
 def evaluate_func(forest_json, cpp_class):
-    """Generates code for `float Evaluate(const {Example}&)` function.
-    The generated function can be used to score an Example."""
-    code = "float Evaluate(const %s& E) {\n" % cpp_class.name
-    lines = []
-    lines.append("float Score = 0;")
+    """Generates evaluation functions for each tree and combines them in
+    `float Evaluate(const {Example}&)` function. This function can be 
+    used to score an Example."""
+
+    code = ""
+
+    # Generate evaluation function of each tree.
+    code += "namespace {\n"
     tree_num = 0
     for tree_json in forest_json:
-        lines.extend(tree(tree_json, tree_num=tree_num, node_num=0)[0])
-        lines.append("")
+        code += "LLVM_ATTRIBUTE_NOINLINE float EvaluateTree%d(const %s& E) {\n" % (tree_num, cpp_class.name)
+        code += "  " + \
+            "\n  ".join(
+                tree(tree_json, tree_num=tree_num, node_num=0)[0]) + "\n"
+        code += "}\n\n"
         tree_num += 1
+    code += "} // namespace\n\n"
 
-    lines.append("t%s: // No such tree." % len(forest_json))
-    lines.append("return Score;")
-    code += "  " + "\n  ".join(lines)
-    code += "\n}"
+    # Combine the scores of all trees in the final function.
+    # MSAN will timeout if these functions are inlined.
+    code += "float Evaluate(const %s& E) {\n" % cpp_class.name
+    code += "  float Score = 0;\n"
+    for tree_num in range(len(forest_json)):
+        code += "  Score += EvaluateTree%d(E);\n" % tree_num
+    code += "  return Score;\n"
+    code += "}\n"
+
     return code
 
 
@@ -218,9 +237,9 @@ def gen_cpp_code(forest_json, features_json, filename, cpp_class):
 
     # using-decl for ENUM features.
     using_decls = "\n".join("using %s_type = %s;" % (
-                                feature['name'], feature['type'])
-                            for feature in features_json
-                            if feature["kind"] == "ENUM")
+        feature['name'], feature['type'])
+        for feature in features_json
+        if feature["kind"] == "ENUM")
     nl = "\n"
     return """%s
 
@@ -287,7 +306,9 @@ def main():
 
     with open(header_file, 'w+t') as output_h:
         output_h.write(gen_header_code(
-            features_json=features_json, cpp_class=cpp_class, filename=filename))
+            features_json=features_json,
+            cpp_class=cpp_class,
+            filename=filename))
 
 
 if __name__ == '__main__':

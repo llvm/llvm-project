@@ -173,6 +173,8 @@ public:
   static bool classof(const Binary *v) {
     return v->isSymbolic();
   }
+
+  static bool isSymbolicFile(file_magic Type, const LLVMContext *Context);
 };
 
 inline BasicSymbolRef::BasicSymbolRef(DataRefImpl SymbolP,

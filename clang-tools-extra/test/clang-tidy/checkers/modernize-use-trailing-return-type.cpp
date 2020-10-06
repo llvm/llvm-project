@@ -9,10 +9,16 @@ namespace std {
 
     class string;
 
-    class ostream;
+    template <typename T>
+    class basic_ostream;
+
+    using ostream = basic_ostream<char>;
 
     template <typename T>
     auto declval() -> T;
+
+    template <typename... Ts>
+    class tuple;
 }
 
 //
@@ -527,6 +533,10 @@ std::array<int, Size> j6(unsigned Size);
 std::array<decltype(Size), (Size * 2) + 1> j8(unsigned Size);
 // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
 // CHECK-FIXES: {{^}}std::array<decltype(Size), (Size * 2) + 1> j8(unsigned Size);{{$}}
+using std::ostream;
+std::tuple<int, std::string, ostream>& operator<<(ostream& ostream, float i);
+// CHECK-MESSAGES: :[[@LINE-1]]:40: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
+// CHECK-FIXES: {{^}}std::tuple<int, std::string, ostream>& operator<<(ostream& ostream, float i);{{$}}
 
 class CC {
     int Object;
@@ -552,7 +562,6 @@ Object DD::g() {
 // bug 44206, no rewrite should happen due to collision with parameter name
 //
 
-using std::ostream;
 ostream& operator<<(ostream& ostream, int i);
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
 // CHECK-FIXES: {{^}}ostream& operator<<(ostream& ostream, int i);{{$}}

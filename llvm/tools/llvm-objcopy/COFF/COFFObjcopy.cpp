@@ -12,7 +12,6 @@
 #include "Object.h"
 #include "Reader.h"
 #include "Writer.h"
-#include "llvm-objcopy.h"
 
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"

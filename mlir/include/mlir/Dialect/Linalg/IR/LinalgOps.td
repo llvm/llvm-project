@@ -13,7 +13,6 @@
 #ifndef LINALG_OPS
 #define LINALG_OPS
 
-include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
@@ -283,36 +282,6 @@ def Linalg_SliceOp : Linalg_Op<"slice", [
           res.push_back(operand);
       return res;
     }
-  }];
-
-  let hasFolder = 1;
-}
-
-def Linalg_TransposeOp : Linalg_Op<"transpose", [NoSideEffect]>,
-    Arguments<(ins AnyStridedMemRef:$view, AffineMapAttr:$permutation)>,
-    Results<(outs AnyStridedMemRef)> {
-  let summary = "`transpose` produces a new strided memref (metadata-only)";
-  let description = [{
-    The `linalg.transpose` op produces a strided memref whose sizes and strides
-    are a permutation of the original `view`. This is a pure metadata
-    transformation.
-
-    Example:
-
-    ```mlir
-    %1 = linalg.transpose %0 (i, j) -> (j, i) : memref<?x?xf32> to memref<?x?xf32, stride_spec>
-    ```
-  }];
-
-  let builders = [OpBuilder<
-    "OpBuilder &b, OperationState &result, Value view, "
-    "AffineMapAttr permutation, ArrayRef<NamedAttribute> attrs = {}">];
-
-  let verifier = [{ return ::verify(*this); }];
-
-  let extraClassDeclaration = [{
-    static StringRef getPermutationAttrName() { return "permutation"; }
-    ShapedType getShapedType() { return view().getType().cast<ShapedType>(); }
   }];
 
   let hasFolder = 1;

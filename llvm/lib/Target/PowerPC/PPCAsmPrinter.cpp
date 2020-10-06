@@ -1809,11 +1809,16 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   MCSymbol *EmittedInitSym = GVSym;
   emitLinkage(GV, EmittedInitSym);
   emitAlignment(getGVAlignment(GV, DL), GV);
-  OutStreamer->emitLabel(EmittedInitSym);
+  // When -fdata-sections is enabled, every GlobalVariable will
+  // be put into its own csect; therefore, label is not necessary here.
+  if (!TM.getDataSections())
+    OutStreamer->emitLabel(EmittedInitSym);
+
   // Emit aliasing label for global variable.
   llvm::for_each(GOAliasMap[GV], [this](const GlobalAlias *Alias) {
     OutStreamer->emitLabel(getSymbol(Alias));
   });
+
   emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
 }
 

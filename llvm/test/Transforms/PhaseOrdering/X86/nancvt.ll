@@ -18,6 +18,9 @@ target triple = "i686-apple-darwin8"
 
 @var = external global i32
 
+; SNAN becomes QNAN on fptrunc:
+; 2147228864 = 0x7ffc1cc0 : QNAN
+
 define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
@@ -30,15 +33,15 @@ define i32 @main() {
 ; CHECK-NEXT:    store volatile i32 2147228864, i32* @var, align 4
 ; CHECK-NEXT:    store volatile i32 2147228864, i32* @var, align 4
 ; CHECK-NEXT:    store volatile i32 2147228864, i32* @var, align 4
-; CHECK-NEXT:    store volatile i32 2146502828, i32* @var, align 4
+; CHECK-NEXT:    store volatile i32 2147027116, i32* @var, align 4
 ; CHECK-NEXT:    store volatile i32 -1610612736, i32* @var, align 4
-; CHECK-NEXT:    store volatile i32 2146502828, i32* @var, align 4
+; CHECK-NEXT:    store volatile i32 2147027116, i32* @var, align 4
 ; CHECK-NEXT:    store volatile i32 -2147483648, i32* @var, align 4
-; CHECK-NEXT:    store volatile i32 2146502828, i32* @var, align 4
+; CHECK-NEXT:    store volatile i32 2147027116, i32* @var, align 4
 ; CHECK-NEXT:    store volatile i32 -1073741824, i32* @var, align 4
-; CHECK-NEXT:    store volatile i32 2143034560, i32* @var, align 4
-; CHECK-NEXT:    store volatile i32 2143034560, i32* @var, align 4
-; CHECK-NEXT:    store volatile i32 2143034560, i32* @var, align 4
+; CHECK-NEXT:    store volatile i32 2147228864, i32* @var, align 4
+; CHECK-NEXT:    store volatile i32 2147228864, i32* @var, align 4
+; CHECK-NEXT:    store volatile i32 2147228864, i32* @var, align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:

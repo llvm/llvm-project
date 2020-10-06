@@ -6,7 +6,7 @@
 ; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:     -mcpu=pwr8 < %s | FileCheck -check-prefix=PIC %s
 
-; Test correct code generation for static and pic for loading and storing a common symbol 
+; Test correct code generation for static and pic for loading and storing a common symbol
 
 @comm_glob = common global i32 0, align 4
 
@@ -14,11 +14,11 @@ define signext i32 @test_comm() nounwind {
 ; NOOPT-LABEL: test_comm:
 ; NOOPT:       # %bb.0: # %entry
 ; NOOPT-NEXT:    addis 3, 2, comm_glob@toc@ha
-; NOOPT-NEXT:    addi 3, 3, comm_glob@toc@l
-; NOOPT-NEXT:    lwz 4, 0(3)
-; NOOPT-NEXT:    addi 5, 4, 1
-; NOOPT-NEXT:    stw 5, 0(3)
-; NOOPT-NEXT:    extsw 3, 4
+; NOOPT-NEXT:    addi 5, 3, comm_glob@toc@l
+; NOOPT-NEXT:    lwz 3, 0(5)
+; NOOPT-NEXT:    addi 4, 3, 1
+; NOOPT-NEXT:    stw 4, 0(5)
+; NOOPT-NEXT:    extsw 3, 3
 ; NOOPT-NEXT:    blr
 ;
 ; STATIC-LABEL: test_comm:

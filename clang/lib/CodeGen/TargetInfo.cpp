@@ -4512,8 +4512,6 @@ ABIArgInfo AIXABIInfo::classifyReturnType(QualType RetTy) const {
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
 
-  // TODO:  Evaluate if AIX power alignment rule would have an impact on the
-  // alignment here.
   if (isAggregateTypeForABI(RetTy))
     return getNaturalAlignIndirect(RetTy);
 
@@ -4530,8 +4528,6 @@ ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
   if (Ty->isVectorType())
     llvm::report_fatal_error("vector type is not supported on AIX yet");
 
-  // TODO:  Evaluate if AIX power alignment rule would have an impact on the
-  // alignment here.
   if (isAggregateTypeForABI(Ty)) {
     // Records with non-trivial destructors/copy-constructors should not be
     // passed by value.

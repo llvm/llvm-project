@@ -17,8 +17,8 @@ define arm_aapcs_vfpcc void @arm_var_f32_mve(float* %pSrc, i32 %blockSize, float
 ; CHECK-NEXT:    add.w lr, r12, r3, lsr #2
 ; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r12, r0
-; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:    mov r4, lr
+; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB0_1: @ %do.body.i
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q1, [r12], #16
@@ -26,10 +26,10 @@ define arm_aapcs_vfpcc void @arm_var_f32_mve(float* %pSrc, i32 %blockSize, float
 ; CHECK-NEXT:    letp lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %arm_mean_f32_mve.exit
 ; CHECK-NEXT:    vmov s4, r1
-; CHECK-NEXT:    dls lr, r4
 ; CHECK-NEXT:    vadd.f32 s0, s3, s3
 ; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vcvt.f32.u32 s4, s4
+; CHECK-NEXT:    dls lr, r4
 ; CHECK-NEXT:    vdiv.f32 s0, s0, s4
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    vmov.i32 q0, #0x0

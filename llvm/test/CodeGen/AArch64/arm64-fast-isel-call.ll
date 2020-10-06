@@ -79,8 +79,7 @@ declare i32 @bar(i8 zeroext, i8 zeroext, i8 zeroext, i8 zeroext, i8 zeroext, i8 
 define i32 @t2() {
 entry:
 ; CHECK-LABEL: t2
-; CHECK:       mov [[REG1:x[0-9]+]], xzr
-; CHECK:       mov x0, [[REG1]]
+; CHECK:       mov x0, xzr
 ; CHECK:       mov w1, #-8
 ; CHECK:       mov [[REG2:w[0-9]+]], #1023
 ; CHECK:       uxth w2, [[REG2]]

@@ -299,8 +299,8 @@ define void @test23(i8* noalias sret %result) {
 ; CHECK-LABEL: test23:
 ; CHECK: movq %rdi, [[STACK:[0-9]+\(%rsp\)]]
 ; CHECK: call
-; CHECK: movq [[STACK]], %rcx
-; CHECK: movq %rcx, %rax
+; CHECK-NEXT: movq [[STACK]], %rax
+; CHECK-NEXT: addq $24, %rsp
 ; CHECK: ret
 }
 

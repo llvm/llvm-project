@@ -502,9 +502,10 @@ TEST(RenameTest, WithinFileRename) {
       auto RenameResult =
           rename({RenamePos, NewName, AST, testPath(TU.Filename)});
       ASSERT_TRUE(bool(RenameResult)) << RenameResult.takeError();
-      ASSERT_EQ(1u, RenameResult->size());
-      EXPECT_EQ(applyEdits(std::move(*RenameResult)).front().second,
-                expectedResult(Code, NewName));
+      ASSERT_EQ(1u, RenameResult->GlobalChanges.size());
+      EXPECT_EQ(
+          applyEdits(std::move(RenameResult->GlobalChanges)).front().second,
+          expectedResult(Code, NewName));
     }
   }
 }
@@ -653,8 +654,8 @@ TEST(RenameTest, Renameable) {
     } else {
       EXPECT_TRUE(bool(Results)) << "rename returned an error: "
                                  << llvm::toString(Results.takeError());
-      ASSERT_EQ(1u, Results->size());
-      EXPECT_EQ(applyEdits(std::move(*Results)).front().second,
+      ASSERT_EQ(1u, Results->GlobalChanges.size());
+      EXPECT_EQ(applyEdits(std::move(Results->GlobalChanges)).front().second,
                 expectedResult(T, NewName));
     }
   }
@@ -683,8 +684,8 @@ TEST(RenameTest, MainFileReferencesOnly) {
   auto RenameResult =
       rename({Code.point(), NewName, AST, testPath(TU.Filename)});
   ASSERT_TRUE(bool(RenameResult)) << RenameResult.takeError() << Code.point();
-  ASSERT_EQ(1u, RenameResult->size());
-  EXPECT_EQ(applyEdits(std::move(*RenameResult)).front().second,
+  ASSERT_EQ(1u, RenameResult->GlobalChanges.size());
+  EXPECT_EQ(applyEdits(std::move(RenameResult->GlobalChanges)).front().second,
             expectedResult(Code, NewName));
 }
 
@@ -701,6 +702,44 @@ TEST(RenameTest, ProtobufSymbolIsExcluded) {
   EXPECT_FALSE(Results);
   EXPECT_THAT(llvm::toString(Results.takeError()),
               testing::HasSubstr("not a supported kind"));
+}
+
+TEST(RenameTest, PrepareRename) {
+  Annotations FooH("void func();");
+  Annotations FooCC(R"cpp(
+    #include "foo.h"
+    void [[fu^nc]]() {}
+  )cpp");
+  std::string FooHPath = testPath("foo.h");
+  std::string FooCCPath = testPath("foo.cc");
+  MockFS FS;
+  FS.Files[FooHPath] = std::string(FooH.code());
+  FS.Files[FooCCPath] = std::string(FooCC.code());
+
+  auto ServerOpts = ClangdServer::optsForTest();
+  ServerOpts.BuildDynamicSymbolIndex = true;
+
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, FS, ServerOpts);
+  runAddDocument(Server, FooHPath, FooH.code());
+  runAddDocument(Server, FooCCPath, FooCC.code());
+
+  auto Results =
+      runPrepareRename(Server, FooCCPath, FooCC.point(), {/*CrossFile=*/true});
+  // verify that for multi-file rename, we only return main-file occurrences.
+  ASSERT_TRUE(bool(Results)) << Results.takeError();
+  // We don't know the result is complete in prepareRename (passing a nullptr
+  // index internally), so GlobalChanges should be empty.
+  EXPECT_TRUE(Results->GlobalChanges.empty());
+  EXPECT_THAT(FooCC.ranges(),
+              testing::UnorderedElementsAreArray(Results->LocalChanges));
+
+  // single-file rename on global symbols, we should report an error.
+  Results =
+      runPrepareRename(Server, FooCCPath, FooCC.point(), {/*CrossFile=*/false});
+  EXPECT_FALSE(Results);
+  EXPECT_THAT(llvm::toString(Results.takeError()),
+              testing::HasSubstr("is used outside"));
 }
 
 TEST(CrossFileRenameTests, DirtyBuffer) {
@@ -741,7 +780,7 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
                          GetDirtyBuffer});
   ASSERT_TRUE(bool(Results)) << Results.takeError();
   EXPECT_THAT(
-      applyEdits(std::move(*Results)),
+      applyEdits(std::move(Results->GlobalChanges)),
       UnorderedElementsAre(
           Pair(Eq(FooPath), Eq(expectedResult(FooDirtyBuffer, NewName))),
           Pair(Eq(MainFilePath), Eq(expectedResult(MainCode, NewName)))));
@@ -762,7 +801,7 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
                     GetDirtyBuffer});
   ASSERT_TRUE(bool(Results)) << Results.takeError();
   EXPECT_THAT(
-      applyEdits(std::move(*Results)),
+      applyEdits(std::move(Results->GlobalChanges)),
       UnorderedElementsAre(
           Pair(Eq(BarPath), Eq(expectedResult(BarCode, NewName))),
           Pair(Eq(MainFilePath), Eq(expectedResult(MainCode, NewName)))));
@@ -847,7 +886,7 @@ TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
                          {/*CrossFile=*/true}});
   ASSERT_TRUE(bool(Results)) << Results.takeError();
   EXPECT_THAT(
-      applyEdits(std::move(*Results)),
+      applyEdits(std::move(Results->GlobalChanges)),
       UnorderedElementsAre(
           Pair(Eq(BarPath), Eq(expectedResult(BarCode, NewName))),
           Pair(Eq(MainFilePath), Eq(expectedResult(MainCode, NewName)))));
@@ -1047,7 +1086,7 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
           Server, FooHPath, RenamePos, NewName, {/*CrossFile=*/true}));
       EXPECT_THAT(Tracer.takeMetric("rename_files"), ElementsAre(2));
       EXPECT_THAT(
-          applyEdits(std::move(FileEditsList)),
+          applyEdits(std::move(FileEditsList.GlobalChanges)),
           UnorderedElementsAre(
               Pair(Eq(FooHPath), Eq(expectedResult(T.FooH, NewName))),
               Pair(Eq(FooCCPath), Eq(expectedResult(T.FooCC, NewName)))));
@@ -1066,7 +1105,7 @@ TEST(CrossFileRenameTests, CrossFileOnLocalSymbol) {
   auto Results = rename({Code.point(), NewName, AST, Path});
   ASSERT_TRUE(bool(Results)) << Results.takeError();
   EXPECT_THAT(
-      applyEdits(std::move(*Results)),
+      applyEdits(std::move(Results->GlobalChanges)),
       UnorderedElementsAre(Pair(Eq(Path), Eq(expectedResult(Code, NewName)))));
 }
 

@@ -4,9 +4,9 @@
 define i8 @select_i8(i1 %test, i8 %a, i8 %b) {
 ; MIPS32-LABEL: select_i8:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    andi $1, $4, 1
-; MIPS32-NEXT:    movn $6, $5, $1
 ; MIPS32-NEXT:    move $2, $6
+; MIPS32-NEXT:    andi $1, $4, 1
+; MIPS32-NEXT:    movn $2, $5, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -17,9 +17,9 @@ entry:
 define i16 @select_i16(i1 %test, i16 %a, i16 %b) {
 ; MIPS32-LABEL: select_i16:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    andi $1, $4, 1
-; MIPS32-NEXT:    movn $6, $5, $1
 ; MIPS32-NEXT:    move $2, $6
+; MIPS32-NEXT:    andi $1, $4, 1
+; MIPS32-NEXT:    movn $2, $5, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -30,9 +30,9 @@ entry:
 define i32 @select_i32(i1 %test, i32 %a, i32 %b) {
 ; MIPS32-LABEL: select_i32:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    andi $1, $4, 1
-; MIPS32-NEXT:    movn $6, $5, $1
 ; MIPS32-NEXT:    move $2, $6
+; MIPS32-NEXT:    andi $1, $4, 1
+; MIPS32-NEXT:    movn $2, $5, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -43,9 +43,9 @@ entry:
 define i32* @select_ptr(i1 %test, i32* %a, i32* %b) {
 ; MIPS32-LABEL: select_ptr:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    andi $1, $4, 1
-; MIPS32-NEXT:    movn $6, $5, $1
 ; MIPS32-NEXT:    move $2, $6
+; MIPS32-NEXT:    andi $1, $4, 1
+; MIPS32-NEXT:    movn $2, $5, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -56,12 +56,12 @@ entry:
 define i32 @select_with_negation(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; MIPS32-LABEL: select_with_negation:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    slt $2, $4, $5
-; MIPS32-NEXT:    xor $1, $2, $1
-; MIPS32-NEXT:    andi $1, $1, 1
-; MIPS32-NEXT:    movn $7, $6, $1
 ; MIPS32-NEXT:    move $2, $7
+; MIPS32-NEXT:    ori $3, $zero, 1
+; MIPS32-NEXT:    slt $1, $4, $5
+; MIPS32-NEXT:    xor $1, $1, $3
+; MIPS32-NEXT:    andi $1, $1, 1
+; MIPS32-NEXT:    movn $2, $6, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -74,19 +74,13 @@ entry:
 define i64 @select_i64(i1 %test, i64 %a, i64 %b) {
 ; MIPS32-LABEL: select_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    addiu $sp, $sp, -8
-; MIPS32-NEXT:    .cfi_def_cfa_offset 8
-; MIPS32-NEXT:    addiu $1, $sp, 24
-; MIPS32-NEXT:    lw $1, 0($1)
-; MIPS32-NEXT:    addiu $2, $sp, 28
-; MIPS32-NEXT:    lw $2, 0($2)
-; MIPS32-NEXT:    andi $3, $4, 1
-; MIPS32-NEXT:    movn $1, $6, $3
-; MIPS32-NEXT:    movn $2, $7, $3
-; MIPS32-NEXT:    sw $2, 4($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    move $2, $1
-; MIPS32-NEXT:    lw $3, 4($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    addiu $sp, $sp, 8
+; MIPS32-NEXT:    addiu $1, $sp, 16
+; MIPS32-NEXT:    lw $2, 0($1)
+; MIPS32-NEXT:    addiu $1, $sp, 20
+; MIPS32-NEXT:    lw $3, 0($1)
+; MIPS32-NEXT:    andi $1, $4, 1
+; MIPS32-NEXT:    movn $2, $6, $1
+; MIPS32-NEXT:    movn $3, $7, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -97,11 +91,11 @@ entry:
 define void @select_ambiguous_i64_in_fpr(i1 %test, i64* %i64_ptr_a, i64* %i64_ptr_b, i64* %i64_ptr_c) {
 ; MIPS32-LABEL: select_ambiguous_i64_in_fpr:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    ldc1 $f0, 0($5)
-; MIPS32-NEXT:    ldc1 $f2, 0($6)
+; MIPS32-NEXT:    ldc1 $f2, 0($5)
+; MIPS32-NEXT:    ldc1 $f0, 0($6)
 ; MIPS32-NEXT:    andi $1, $4, 1
-; MIPS32-NEXT:    movn.d $f2, $f0, $1
-; MIPS32-NEXT:    sdc1 $f2, 0($7)
+; MIPS32-NEXT:    movn.d $f0, $f2, $1
+; MIPS32-NEXT:    sdc1 $f0, 0($7)
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -116,10 +110,9 @@ define float @select_float(i1 %test, float %a, float %b) {
 ; MIPS32-LABEL: select_float:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    andi $1, $4, 1
-; MIPS32-NEXT:    mtc1 $5, $f0
-; MIPS32-NEXT:    mtc1 $6, $f1
-; MIPS32-NEXT:    movn.s $f1, $f0, $1
-; MIPS32-NEXT:    mov.s $f0, $f1
+; MIPS32-NEXT:    mtc1 $5, $f1
+; MIPS32-NEXT:    mtc1 $6, $f0
+; MIPS32-NEXT:    movn.s $f0, $f1, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -130,11 +123,11 @@ entry:
 define void @select_ambiguous_float_in_gpr(i1 %test, float* %f32_ptr_a, float* %f32_ptr_b, float* %f32_ptr_c) {
 ; MIPS32-LABEL: select_ambiguous_float_in_gpr:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    lw $1, 0($5)
-; MIPS32-NEXT:    lw $2, 0($6)
+; MIPS32-NEXT:    lw $2, 0($5)
+; MIPS32-NEXT:    lw $1, 0($6)
 ; MIPS32-NEXT:    andi $3, $4, 1
-; MIPS32-NEXT:    movn $2, $1, $3
-; MIPS32-NEXT:    sw $2, 0($7)
+; MIPS32-NEXT:    movn $1, $2, $3
+; MIPS32-NEXT:    sw $1, 0($7)
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -148,11 +141,11 @@ entry:
 define double @select_double(double %a, double %b, i1 %test) {
 ; MIPS32-LABEL: select_double:
 ; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    mov.d $f0, $f14
 ; MIPS32-NEXT:    addiu $1, $sp, 16
 ; MIPS32-NEXT:    lw $1, 0($1)
 ; MIPS32-NEXT:    andi $1, $1, 1
-; MIPS32-NEXT:    movn.d $f14, $f12, $1
-; MIPS32-NEXT:    mov.d $f0, $f14
+; MIPS32-NEXT:    movn.d $f0, $f12, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:

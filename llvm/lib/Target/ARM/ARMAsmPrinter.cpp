@@ -903,7 +903,7 @@ void ARMAsmPrinter::emitMachineConstantPoolValue(
 
   MCSymbol *MCSym;
   if (ACPV->isLSDA()) {
-    MCSym = getCurExceptionSym();
+    MCSym = getMBBExceptionSym(MF->front());
   } else if (ACPV->isBlockAddress()) {
     const BlockAddress *BA =
       cast<ARMConstantPoolConstant>(ACPV)->getBlockAddress();

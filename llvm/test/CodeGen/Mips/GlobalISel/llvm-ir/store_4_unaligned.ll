@@ -15,10 +15,10 @@ define void @store_float_align1(float %a) {
 ; MIPS32-LABEL: store_float_align1:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lui $1, %hi(float_align1)
-; MIPS32-NEXT:    addiu $1, $1, %lo(float_align1)
-; MIPS32-NEXT:    mfc1 $2, $f12
-; MIPS32-NEXT:    swl $2, 3($1)
-; MIPS32-NEXT:    swr $2, 0($1)
+; MIPS32-NEXT:    addiu $2, $1, %lo(float_align1)
+; MIPS32-NEXT:    mfc1 $1, $f12
+; MIPS32-NEXT:    swl $1, 3($2)
+; MIPS32-NEXT:    swr $1, 0($2)
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 ;
@@ -37,10 +37,10 @@ define void @store_float_align2(float %a) {
 ; MIPS32-LABEL: store_float_align2:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lui $1, %hi(float_align2)
-; MIPS32-NEXT:    addiu $1, $1, %lo(float_align2)
-; MIPS32-NEXT:    mfc1 $2, $f12
-; MIPS32-NEXT:    swl $2, 3($1)
-; MIPS32-NEXT:    swr $2, 0($1)
+; MIPS32-NEXT:    addiu $2, $1, %lo(float_align2)
+; MIPS32-NEXT:    mfc1 $1, $f12
+; MIPS32-NEXT:    swl $1, 3($2)
+; MIPS32-NEXT:    swr $1, 0($2)
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 ;

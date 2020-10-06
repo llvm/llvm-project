@@ -40,24 +40,24 @@ def Async_ExecuteOp : Async_Op<"execute"> {
     state). All dependencies must be made explicit with async execute arguments
     (`async.token` or `async.value`).
 
-    Example:
-
     ```mlir
-    %0 = async.execute {
-      "compute0"(...)
-      async.yield
-    } : !async.token
+    %done, %values = async.execute {
+      %0 = "compute0"(...) : !some.type
+      async.yield %1 : f32
+    } : !async.token, !async.value<!some.type>
 
-    %1 = "compute1"(...)
+    %1 = "compute1"(...) : !some.type
     ```
   }];
 
   // TODO: Take async.tokens/async.values as arguments.
   let arguments = (ins );
-  let results = (outs Async_TokenType:$done);
+  let results = (outs Async_TokenType:$done,
+                      Variadic<Async_AnyValueType>:$values);
   let regions = (region SizedRegion<1>:$body);
 
-  let assemblyFormat = "$body attr-dict `:` type($done)";
+  let printer = [{ return ::mlir::async::print(p, *this); }];
+  let parser = [{ return ::mlir::async::parse$cppClass(parser, result); }];
 }
 
 def Async_YieldOp :
@@ -71,6 +71,8 @@ def Async_YieldOp :
   let arguments = (ins Variadic<AnyType>:$operands);
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+
+  let verifier = [{ return ::mlir::async::verify(*this); }];
 }
 
 #endif // ASYNC_OPS

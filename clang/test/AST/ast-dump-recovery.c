@@ -42,11 +42,33 @@ void test1() {
 
 void test2() {
   int* ptr;
-  // FIXME: the top-level expr should be a binary operator.
-  // CHECK:      ImplicitCastExpr {{.*}} contains-errors <LValueToRValue>
-  // CHECK-NEXT: `-RecoveryExpr {{.*}} contains-errors lvalue
-  // CHECK-NEXT:   |-DeclRefExpr {{.*}} 'ptr' 'int *'
-  // CHECK-NEXT:   `-RecoveryExpr {{.*}}
-  // CHECK-NEXT:     `-DeclRefExpr {{.*}} 'some_func'
+  // CHECK:     BinaryOperator {{.*}} 'int *' contains-errors '='
+  // CHECK-NEXT: |-DeclRefExpr {{.*}} 'ptr' 'int *'
+  // CHECK-NEXT: `-RecoveryExpr {{.*}}
+  // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'some_func'
   ptr = some_func(); // should not crash
+
+  int compoundOp;
+  // CHECK:     CompoundAssignOperator {{.*}} 'int' contains-errors '+='
+  // CHECK-NEXT: |-DeclRefExpr {{.*}} 'compoundOp'
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} contains-errors
+  // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'some_func'
+  compoundOp += some_func();
+
+  // CHECK:     BinaryOperator {{.*}} 'int' contains-errors '||'
+  // CHECK-NEXT: |-RecoveryExpr {{.*}}
+  // CHECK-NEXT: | `-DeclRefExpr {{.*}} 'some_func'
+  // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 1
+  some_func() || 1;
+
+  // CHECK:     BinaryOperator {{.*}} '<dependent type>' contains-errors ','
+  // CHECK-NEXT: |-IntegerLiteral {{.*}} 'int' 1
+  // CHECK-NEXT: `-RecoveryExpr {{.*}}
+  // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'some_func'
+  1, some_func();
+  // CHECK:     BinaryOperator {{.*}} 'int' contains-errors ','
+  // CHECK-NEXT: |-RecoveryExpr {{.*}} '<dependent type>'
+  // CHECK-NEXT: | `-DeclRefExpr {{.*}} 'some_func'
+  // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 1
+  some_func(), 1;
 }

@@ -92,6 +92,63 @@ def testStandardAttrCasts():
 run(testStandardAttrCasts)
 
 
+# CHECK-LABEL: TEST: testFloatAttr
+def testFloatAttr():
+  ctx = mlir.ir.Context()
+  fattr = mlir.ir.FloatAttr(ctx.parse_attr("42.0 : f32"))
+  # CHECK: fattr value: 42.0
+  print("fattr value:", fattr.value)
+
+  # Test factory methods.
+  loc = ctx.get_unknown_location()
+  # CHECK: default_get: 4.200000e+01 : f32
+  print("default_get:", mlir.ir.FloatAttr.get(
+      mlir.ir.F32Type(ctx), 42.0, loc))
+  # CHECK: f32_get: 4.200000e+01 : f32
+  print("f32_get:", mlir.ir.FloatAttr.get_f32(ctx, 42.0))
+  # CHECK: f64_get: 4.200000e+01 : f64
+  print("f64_get:", mlir.ir.FloatAttr.get_f64(ctx, 42.0))
+  try:
+    fattr_invalid = mlir.ir.FloatAttr.get(
+        mlir.ir.IntegerType.get_signless(ctx, 32), 42, loc)
+  except ValueError as e:
+    # CHECK: invalid 'Type(i32)' and expected floating point type.
+    print(e)
+  else:
+    print("Exception not produced")
+
+run(testFloatAttr)
+
+
+# CHECK-LABEL: TEST: testIntegerAttr
+def testIntegerAttr():
+  ctx = mlir.ir.Context()
+  iattr = mlir.ir.IntegerAttr(ctx.parse_attr("42"))
+  # CHECK: iattr value: 42
+  print("iattr value:", iattr.value)
+
+  # Test factory methods.
+  # CHECK: default_get: 42 : i32
+  print("default_get:", mlir.ir.IntegerAttr.get(
+      mlir.ir.IntegerType.get_signless(ctx, 32), 42))
+
+run(testIntegerAttr)
+
+
+# CHECK-LABEL: TEST: testBoolAttr
+def testBoolAttr():
+  ctx = mlir.ir.Context()
+  battr = mlir.ir.BoolAttr(ctx.parse_attr("true"))
+  # CHECK: iattr value: 1
+  print("iattr value:", battr.value)
+
+  # Test factory methods.
+  # CHECK: default_get: true
+  print("default_get:", mlir.ir.BoolAttr.get(ctx, True))
+
+run(testBoolAttr)
+
+
 # CHECK-LABEL: TEST: testStringAttr
 def testStringAttr():
   ctx = mlir.ir.Context()

@@ -66,6 +66,11 @@ public:
                                 ->getName()))
           return false;
         break;
+      case TypeLoc::Typedef:
+        if (VisitUnqualName(
+                TL.getAs<TypedefTypeLoc>().getTypePtr()->getDecl()->getName()))
+          return false;
+        break;
       default:
         break;
       }

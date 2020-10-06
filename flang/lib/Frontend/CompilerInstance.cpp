@@ -8,7 +8,7 @@
 
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "flang/Frontend/TextDiagnosticPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace Fortran::frontend;
@@ -36,7 +36,7 @@ CompilerInstance::CreateDiagnostics(clang::DiagnosticOptions *opts,
   if (client) {
     diags->setClient(client, shouldOwnClient);
   } else {
-    diags->setClient(new clang::TextDiagnosticPrinter(llvm::errs(), opts));
+    diags->setClient(new TextDiagnosticPrinter(llvm::errs(), opts));
   }
   return diags;
 }

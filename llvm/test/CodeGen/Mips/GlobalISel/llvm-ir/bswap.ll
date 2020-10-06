@@ -6,9 +6,9 @@ declare i32 @llvm.bswap.i32(i32)
 define i32 @bswap_i32(i32 %x) {
 ; MIPS32-LABEL: bswap_i32:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sll $1, $4, 24
-; MIPS32-NEXT:    srl $2, $4, 24
-; MIPS32-NEXT:    or $1, $2, $1
+; MIPS32-NEXT:    sll $2, $4, 24
+; MIPS32-NEXT:    srl $1, $4, 24
+; MIPS32-NEXT:    or $1, $1, $2
 ; MIPS32-NEXT:    andi $2, $4, 65280
 ; MIPS32-NEXT:    sll $2, $2, 8
 ; MIPS32-NEXT:    or $1, $1, $2
@@ -33,18 +33,18 @@ declare i64 @llvm.bswap.i64(i64)
 define i64 @bswap_i64(i64 %x) {
 ; MIPS32-LABEL: bswap_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sll $1, $5, 24
-; MIPS32-NEXT:    srl $2, $5, 24
-; MIPS32-NEXT:    or $1, $2, $1
+; MIPS32-NEXT:    sll $2, $5, 24
+; MIPS32-NEXT:    srl $1, $5, 24
+; MIPS32-NEXT:    or $1, $1, $2
 ; MIPS32-NEXT:    andi $2, $5, 65280
 ; MIPS32-NEXT:    sll $2, $2, 8
 ; MIPS32-NEXT:    or $1, $1, $2
 ; MIPS32-NEXT:    srl $2, $5, 8
 ; MIPS32-NEXT:    andi $2, $2, 65280
 ; MIPS32-NEXT:    or $2, $1, $2
-; MIPS32-NEXT:    sll $1, $4, 24
-; MIPS32-NEXT:    srl $3, $4, 24
-; MIPS32-NEXT:    or $1, $3, $1
+; MIPS32-NEXT:    sll $3, $4, 24
+; MIPS32-NEXT:    srl $1, $4, 24
+; MIPS32-NEXT:    or $1, $1, $3
 ; MIPS32-NEXT:    andi $3, $4, 65280
 ; MIPS32-NEXT:    sll $3, $3, 8
 ; MIPS32-NEXT:    or $1, $1, $3

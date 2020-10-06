@@ -675,6 +675,61 @@ define i9 @rotateleft_9_neg_mask_wide_amount_commute(i9 %v, i33 %shamt) {
   ret i9 %ret
 }
 
+; Fold or(shl(v,x),lshr(v,bw-x)) iff x < bw
+
+define i64 @rotl_sub_mask(i64 %0, i64 %1) {
+; CHECK-LABEL: @rotl_sub_mask(
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP1:%.*]], 63
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP0:%.*]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub nuw nsw i64 64, [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP0]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP7]]
+;
+  %3 = and i64 %1, 63
+  %4 = shl i64 %0, %3
+  %5 = sub nuw nsw i64 64, %3
+  %6 = lshr i64 %0, %5
+  %7 = or i64 %6, %4
+  ret i64 %7
+}
+
+; Fold or(lshr(v,x),shl(v,bw-x)) iff x < bw
+
+define i64 @rotr_sub_mask(i64 %0, i64 %1) {
+; CHECK-LABEL: @rotr_sub_mask(
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP1:%.*]], 63
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP0:%.*]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub nuw nsw i64 64, [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP0]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP7]]
+;
+  %3 = and i64 %1, 63
+  %4 = lshr i64 %0, %3
+  %5 = sub nuw nsw i64 64, %3
+  %6 = shl i64 %0, %5
+  %7 = or i64 %6, %4
+  ret i64 %7
+}
+
+define <2 x i64> @rotr_sub_mask_vector(<2 x i64> %0, <2 x i64> %1) {
+; CHECK-LABEL: @rotr_sub_mask_vector(
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP1:%.*]], <i64 63, i64 63>
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i64> [[TMP0:%.*]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub nuw nsw <2 x i64> <i64 64, i64 64>, [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl <2 x i64> [[TMP0]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or <2 x i64> [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    ret <2 x i64> [[TMP7]]
+;
+  %3 = and <2 x i64> %1, <i64 63, i64 63>
+  %4 = lshr <2 x i64> %0, %3
+  %5 = sub nuw nsw <2 x i64> <i64 64, i64 64>, %3
+  %6 = shl <2 x i64> %0, %5
+  %7 = or <2 x i64> %6, %4
+  ret <2 x i64> %7
+}
+
 ; Convert select pattern to masked shift that ends in 'or'.
 
 define i32 @rotr_select(i32 %x, i32 %shamt) {

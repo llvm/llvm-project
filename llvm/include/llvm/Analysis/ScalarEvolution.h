@@ -916,6 +916,11 @@ public:
   bool isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,
                         const SCEV *RHS);
 
+  /// Test if the given expression is known to satisfy the condition described
+  /// by Pred, LHS, and RHS in the given Context.
+  bool isKnownPredicateAt(ICmpInst::Predicate Pred, const SCEV *LHS,
+                        const SCEV *RHS, const Instruction *Context);
+
   /// Test if the condition described by Pred, LHS, RHS is known to be true on
   /// every iteration of the loop of the recurrency LHS.
   bool isKnownOnEveryIteration(ICmpInst::Predicate Pred,
