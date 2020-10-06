@@ -705,24 +705,16 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
       // other xforms later if dead.
       unsigned SrcSize = SrcTy->getScalarSizeInBits();
       unsigned DstSize = TI->getType()->getScalarSizeInBits();
-      APInt MaskV(APInt::getLowBitsSet(SrcSize, DstSize));
+      Constant *MaskV =
+          ConstantInt::get(SrcTy, APInt::getLowBitsSet(SrcSize, DstSize));
 
       // The mask we constructed says what the trunc would do if occurring
       // between the shifts.  We want to know the effect *after* the second
       // shift.  We know that it is a logical shift by a constant, so adjust the
       // mask as appropriate.
-      if (I.getOpcode() == Instruction::Shl)
-        MaskV <<= Op1C->getZExtValue();
-      else {
-        assert(I.getOpcode() == Instruction::LShr && "Unknown logical shift");
-        MaskV.lshrInPlace(Op1C->getZExtValue());
-      }
-
+      MaskV = ConstantExpr::get(I.getOpcode(), MaskV, ShAmt);
       // shift1 & 0x00FF
-      Value *And = Builder.CreateAnd(NSh,
-                                     ConstantInt::get(I.getContext(), MaskV),
-                                     TI->getName());
-
+      Value *And = Builder.CreateAnd(NSh, MaskV, TI->getName());
       // Return the value truncated to the interesting size.
       return new TruncInst(And, I.getType());
     }
