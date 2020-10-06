@@ -381,4 +381,15 @@ def ConvertVectorToROCDL : Pass<"convert-vector-to-rocdl", "ModuleOp"> {
   let dependentDialects = ["ROCDL::ROCDLDialect"];
 }
 
+//===----------------------------------------------------------------------===//
+// VectorToSPIRV
+//===----------------------------------------------------------------------===//
+
+def ConvertVectorToSPIRV : Pass<"convert-vector-to-spirv", "ModuleOp"> {
+  let summary = "Lower the operations from the vector dialect into the SPIR-V "
+                "dialect";
+  let constructor = "mlir::createConvertVectorToSPIRVPass()";
+  let dependentDialects = ["spirv::SPIRVDialect"];
+}
+
 #endif // MLIR_CONVERSION_PASSES
