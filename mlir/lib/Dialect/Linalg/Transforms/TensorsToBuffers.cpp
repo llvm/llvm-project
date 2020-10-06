@@ -39,32 +39,50 @@ public:
     linalg::GenericOpAdaptor adaptor(operands,
                                      op.getOperation()->getAttrDictionary());
 
-    // TODO: support ops with reduction.
-    if (!op.init_tensors().empty())
-      return failure();
-
     // All inputs need to be turned into buffers first. Until then, bail out.
     if (llvm::any_of(adaptor.inputs(),
                      [](Value in) { return !in.getType().isa<MemRefType>(); }))
       return failure();
 
+    // All init_tensors need to be turned into buffers first. Until then, bail
+    // out.
+    if (llvm::any_of(adaptor.init_tensors(),
+                     [](Value in) { return !in.getType().isa<MemRefType>(); }))
+      return failure();
+
     Location loc = op.getLoc();
-    SmallVector<Value, 2> outputBuffers, newOutputBuffers;
-    outputBuffers.assign(adaptor.output_buffers().begin(),
-                         adaptor.output_buffers().end());
+    SmallVector<Value, 2> newOutputBuffers;
     newOutputBuffers.reserve(op.getNumOutputs());
     newOutputBuffers.append(adaptor.output_buffers().begin(),
                             adaptor.output_buffers().end());
 
     // Update all types to memref types.
-    for (Type t : op.getResultTypes()) {
-      auto type = t.cast<ShapedType>();
+    // Assume the init tensors fold onto the first results.
+    // TODO: update this assumption because the reality is more complex under
+    // linalg on tensor based transformations.
+    for (auto en : llvm::enumerate(op.getResultTypes())) {
+      auto type = en.value().cast<ShapedType>();
       if (!type.hasStaticShape())
         return rewriter.notifyMatchFailure(
             op, "dynamic shapes not currently supported");
       auto memrefType = MemRefType::get(type.getShape(), type.getElementType());
-      auto alloc = rewriter.create<AllocOp>(loc, memrefType);
-      newOutputBuffers.push_back(alloc);
+      bool foldedInitTensor = en.index() < op.getNumInitTensors();
+      if (foldedInitTensor) {
+        // Dealing with an init tensor requires distinguishing between 1-use
+        // and many-use cases which would create aliasing and WAR hazards.
+        Value initTensor = op.getInitTensor(en.index());
+        Value initBuffer = adaptor.init_tensors()[en.index()];
+        if (initTensor.hasOneUse()) {
+          newOutputBuffers.push_back(initBuffer);
+          continue;
+        }
+        auto alloc = rewriter.create<AllocOp>(loc, memrefType);
+        rewriter.create<linalg::CopyOp>(loc, initBuffer, alloc);
+        newOutputBuffers.push_back(alloc);
+      } else {
+        auto alloc = rewriter.create<AllocOp>(loc, memrefType);
+        newOutputBuffers.push_back(alloc);
+      }
     }
 
     // Generate a new linalg operation that works on buffers.
@@ -82,8 +100,12 @@ public:
     Block *newBlock = rewriter.createBlock(&newRegion, newRegion.begin(),
                                            oldBlock.getArgumentTypes());
 
-    // Add the result arguments to the new block.
-    for (Value v : newOutputBuffers)
+    // Add the result arguments that do not come from init_tensors to the new
+    // block.
+    // TODO: update this assumption because the reality is more complex under
+    // linalg on tensor based transformations.
+    for (Value v :
+         ValueRange(newOutputBuffers).drop_front(adaptor.init_tensors().size()))
       newBlock->addArgument(v.getType().cast<MemRefType>().getElementType());
 
     // Clone the body of the old block to the new block.
