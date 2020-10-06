@@ -273,9 +273,6 @@ public:
                     StringRef TriggerText, Callback<std::vector<TextEdit>> CB);
 
   /// Test the validity of a rename operation.
-  ///
-  /// The returned result describes edits in the main-file only (all
-  /// occurrences of the renamed symbol are simply deleted.
   void prepareRename(PathRef File, Position Pos,
                      const RenameOptions &RenameOpts,
                      Callback<RenameResult> CB);
