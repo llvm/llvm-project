@@ -5,22 +5,21 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd %s
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 %s
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 %s
+
+// expected-note@* 0+{{declared here}}
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
 void foo() {
 }
 
-#if __cplusplus >= 201103L
-// expected-note@+2 4 {{declared here}}
-#endif
 bool foobool(int argc) {
   return argc;
 }
 
-struct S1; // expected-note {{declared here}}
+struct S1;
 
-template <class T, typename S, int N, int ST> // expected-note {{declared here}}
-T tmain(T argc, S **argv) {                   //expected-note 2 {{declared here}}
+template <class T, typename S, int N, int ST>
+T tmain(T argc, S **argv) {
 #pragma omp for ordered
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST];
@@ -30,9 +29,8 @@ T tmain(T argc, S **argv) {                   //expected-note 2 {{declared here}
 #pragma omp for ordered() // expected-error {{expected expression}}
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST];
-// expected-error@+3 {{expected ')'}} expected-note@+3 {{to match this '('}}
-// expected-error@+2 2 {{integral constant expression}}
-// expected-note@+1 2 {{read of non-const variable 'argc' is not allowed in a constant expression}}
+// expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
+// expected-error@+1 2 {{integral constant expression}} expected-note@+1 0+{{constant expression}}
 #pragma omp for ordered(argc
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST];
@@ -46,12 +44,9 @@ T tmain(T argc, S **argv) {                   //expected-note 2 {{declared here}
 #pragma omp for ordered((ST > 0) ? 1 + ST : 2) // expected-note 2 {{as specified in 'ordered' clause}}
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST]; // expected-error 2 {{expected 2 for loops after '#pragma omp for', but found only 1}}
-// expected-error@+6 2 {{directive '#pragma omp for' cannot contain more than one 'ordered' clause}}
-// expected-error@+5 {{argument to 'ordered' clause must be a strictly positive integer value}}
-// expected-error@+4 2 {{integral constant expression}}
-#if __cplusplus >= 201103L
-// expected-note@+2 2 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
-#endif
+// expected-error@+3 2 {{directive '#pragma omp for' cannot contain more than one 'ordered' clause}}
+// expected-error@+2 {{argument to 'ordered' clause must be a strictly positive integer value}}
+// expected-error@+1 2 {{integral constant expression}} expected-note@+1 0+{{constant expression}}
 #pragma omp for ordered(foobool(argc)), ordered(true), ordered(-5)
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST];
@@ -59,7 +54,7 @@ T tmain(T argc, S **argv) {                   //expected-note 2 {{declared here}
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST];
 #if __cplusplus <= 199711L
-// expected-error@+4 2 {{integral constant expression}}
+// expected-error@+4 2 {{integral constant expression}} expected-note@+4 0+{{constant expression}}
 #else
 // expected-error@+2 2 {{integral constant expression must have integral or unscoped enumeration type, not 'char *'}}
 #endif
@@ -101,17 +96,11 @@ int main(int argc, char **argv) {
 #pragma omp for ordered(2 + 2))              // expected-warning {{extra tokens at the end of '#pragma omp for' are ignored}}  expected-note {{as specified in 'ordered' clause}}
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i - 4];    // expected-error {{expected 4 for loops after '#pragma omp for', but found only 1}}
-// expected-error@+4 {{integral constant expression}}
-#if __cplusplus >= 201103L
-// expected-note@+2 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
-#endif
+// expected-error@+1 {{integral constant expression}} expected-note@+1 0+{{constant expression}}
 #pragma omp for ordered(foobool(1) > 0 ? 1 : 2)
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i - 4];
-// expected-error@+6 {{integral constant expression}}
-#if __cplusplus >= 201103L
-// expected-note@+4 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
-#endif
+// expected-error@+3 {{integral constant expression}} expected-note@+3 0+{{constant expression}}
 // expected-error@+2 2 {{directive '#pragma omp for' cannot contain more than one 'ordered' clause}}
 // expected-error@+1 {{argument to 'ordered' clause must be a strictly positive integer value}}
 #pragma omp for ordered(foobool(argc)), ordered(true), ordered(-5)
@@ -121,7 +110,7 @@ int main(int argc, char **argv) {
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i - 4];
 #if __cplusplus <= 199711L
-// expected-error@+4 {{integral constant expression}}
+// expected-error@+4 {{integral constant expression}} expected-note@+4 0+{{constant expression}}
 #else
 // expected-error@+2 {{integral constant expression must have integral or unscoped enumeration type, not 'char *'}}
 #endif

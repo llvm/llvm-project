@@ -6,20 +6,19 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 %s -Wuninitialized
 
+// expected-note@* 0+{{declared here}}
+
 void foo() {
 }
 
-#if __cplusplus >= 201103L
-// expected-note@+2 4 {{declared here}}
-#endif
 bool foobool(int argc) {
   return argc;
 }
 
-struct S1; // expected-note {{declared here}}
+struct S1;
 
-template <class T, typename S, int N, int ST> // expected-note {{declared here}}
-T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
+template <class T, typename S, int N, int ST>
+T tmain(T argc, S **argv) {
 
 #pragma omp target
 #pragma omp teams distribute simd safelen // expected-error {{expected '(' after 'safelen'}}
@@ -36,7 +35,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
 
 #pragma omp target
-#pragma omp teams distribute simd safelen (argc  // expected-note {{to match this '('}} expected-error 2 {{integral constant expression}} expected-note 2 {{read of non-const variable 'argc' is not allowed in a constant expression}} expected-error {{expected ')'}}
+#pragma omp teams distribute simd safelen (argc  // expected-note {{to match this '('}} expected-error 2 {{integral constant expression}} expected-note 2 {{read of non-const variable 'argc' is not allowed in a constant expression}} expected-note 0+{{constant expression}} expected-error {{expected ')'}}
   for (int i = ST; i < N; i++) 
     argv[0][i] = argv[0][i] - argv[0][i-ST];
   
@@ -55,13 +54,10 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
   for (int i = ST; i < N; i++) 
     argv[0][i] = argv[0][i] - argv[0][i-ST];
 
-#if __cplusplus >= 201103L
-  // expected-note@+6 2 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
-#endif
 #pragma omp target
 // expected-error@+3 2 {{directive '#pragma omp teams distribute simd' cannot contain more than one 'safelen' clause}}
 // expected-error@+2 {{argument to 'safelen' clause must be a strictly positive integer value}}
-// expected-error@+1 2 {{integral constant expression}}
+// expected-error@+1 2 {{integral constant expression}} expected-note@+1 0+{{constant expression}}
 #pragma omp teams distribute simd safelen (foobool(argc)), safelen (true), safelen (-5)
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i-ST];
@@ -72,7 +68,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
     argv[0][i] = argv[0][i] - argv[0][i-ST];
 
 #if __cplusplus <= 199711L
-  // expected-error@+5 2 {{integral constant expression}}
+  // expected-error@+5 2 {{integral constant expression}} expected-note@+5 0+{{constant expression}}
 #else
   // expected-error@+3 2 {{integral constant expression must have integral or unscoped enumeration type, not 'char *'}}
 #endif
@@ -120,21 +116,16 @@ int main(int argc, char **argv) {
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i-4];
   
-#if __cplusplus >= 201103L
-  // expected-note@+3 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
-#endif
+
 #pragma omp target
-#pragma omp teams distribute simd safelen (foobool(1) > 0 ? 1 : 2) // expected-error {{integral constant expression}}
+#pragma omp teams distribute simd safelen (foobool(1) > 0 ? 1 : 2) // expected-error {{integral constant expression}} expected-note 0+{{constant expression}}
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i-4];
 
-#if __cplusplus >= 201103L
-  // expected-note@+6 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
-#endif
 #pragma omp target
 // expected-error@+3 {{argument to 'safelen' clause must be a strictly positive integer value}}
 // expected-error@+2 2 {{directive '#pragma omp teams distribute simd' cannot contain more than one 'safelen' clause}}
-// expected-error@+1 {{integral constant expression}}
+// expected-error@+1 {{integral constant expression}} expected-note@+1 0+{{constant expression}}
 #pragma omp teams distribute simd safelen (foobool(argc)), safelen (true), safelen (-5)
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i-4];
@@ -145,7 +136,7 @@ int main(int argc, char **argv) {
     argv[0][i] = argv[0][i] - argv[0][i-4];
 
 #if __cplusplus <= 199711L
-  // expected-error@+5 {{integral constant expression}}
+  // expected-error@+5 {{integral constant expression}} expected-note@+5 0+{{constant expression}}
 #else
   // expected-error@+3 {{integral constant expression must have integral or unscoped enumeration type, not 'char *'}}
 #endif
