@@ -45,6 +45,14 @@ static cl::opt<int> StackMapVersion(
 
 const char *StackMaps::WSMP = "Stack Maps: ";
 
+static uint64_t getConstMetaVal(const MachineInstr &MI, unsigned Idx) {
+  assert(MI.getOperand(Idx).isImm() &&
+         MI.getOperand(Idx).getImm() == StackMaps::ConstantOp);
+  const auto &MO = MI.getOperand(Idx + 1);
+  assert(MO.isImm());
+  return MO.getImm();
+}
+
 StackMapOpers::StackMapOpers(const MachineInstr *MI)
   : MI(MI) {
   assert(getVarIdx() <= MI->getNumOperands() &&
@@ -83,12 +91,56 @@ unsigned PatchPointOpers::getNextScratchIdx(unsigned StartIdx) const {
   return ScratchIdx;
 }
 
+int StatepointOpers::getFirstGCPtrIdx() {
+  unsigned NumDeoptsIdx = getNumDeoptArgsIdx();
+  unsigned NumDeoptArgs = MI->getOperand(NumDeoptsIdx).getImm();
+
+  unsigned CurIdx = NumDeoptsIdx + 1;
+  while (NumDeoptArgs--) {
+    CurIdx = StackMaps::getNextMetaArgIdx(MI, CurIdx);
+  }
+  ++CurIdx; // <StackMaps::ConstantOp>
+  unsigned NumGCPtrs = MI->getOperand(CurIdx).getImm();
+  if (NumGCPtrs == 0)
+    return -1;
+  ++CurIdx; // <num gc ptrs>
+  assert(CurIdx < MI->getNumOperands() && "Index points past operand list");
+  return (int)CurIdx;
+}
+
+unsigned StatepointOpers::getGCPointerMap(
+    SmallVectorImpl<std::pair<unsigned, unsigned>> &GCMap) {
+  int FirstGCIdx = getFirstGCPtrIdx();
+  if (FirstGCIdx == -1)
+    return 0;
+  unsigned NumGCPtr = getConstMetaVal(*MI, (unsigned)FirstGCIdx - 2);
+  unsigned CurIdx = (unsigned)FirstGCIdx;
+  while (NumGCPtr--)
+    CurIdx = StackMaps::getNextMetaArgIdx(MI, CurIdx);
+
+  unsigned NumAllocas = getConstMetaVal(*MI, CurIdx);
+  CurIdx += 2;
+  while (NumAllocas--)
+    CurIdx = StackMaps::getNextMetaArgIdx(MI, CurIdx);
+
+  assert(CurIdx < MI->getNumOperands());
+  unsigned GCMapSize = getConstMetaVal(*MI, CurIdx);
+  CurIdx += 2;
+  for (unsigned N = 0; N < GCMapSize; ++N) {
+    unsigned B = MI->getOperand(CurIdx++).getImm();
+    unsigned D = MI->getOperand(CurIdx++).getImm();
+    GCMap.push_back(std::make_pair(B, D));
+  }
+
+  return GCMapSize;
+}
+
 StackMaps::StackMaps(AsmPrinter &AP) : AP(AP) {
   if (StackMapVersion != 3)
     llvm_unreachable("Unsupported stackmap version!");
 }
 
-unsigned StackMaps::getNextMetaArgIdx(MachineInstr *MI, unsigned CurIdx) {
+unsigned StackMaps::getNextMetaArgIdx(const MachineInstr *MI, unsigned CurIdx) {
   assert(CurIdx < MI->getNumOperands() && "Bad meta arg index");
   const auto &MO = MI->getOperand(CurIdx);
   if (MO.isImm()) {
@@ -317,6 +369,76 @@ StackMaps::parseRegisterLiveOutMask(const uint32_t *Mask) const {
   return LiveOuts;
 }
 
+// See statepoint MI format description in StatepointOpers' class comment
+// in include/llvm/CodeGen/StackMaps.h
+void StackMaps::parseStatepointOpers(const MachineInstr &MI,
+                                     MachineInstr::const_mop_iterator MOI,
+                                     MachineInstr::const_mop_iterator MOE,
+                                     LocationVec &Locations,
+                                     LiveOutVec &LiveOuts) {
+  LLVM_DEBUG(dbgs() << "record statepoint : " << MI << "\n");
+  StatepointOpers SO(&MI);
+  MOI = parseOperand(MOI, MOE, Locations, LiveOuts); // CC
+  MOI = parseOperand(MOI, MOE, Locations, LiveOuts); // Flags
+  MOI = parseOperand(MOI, MOE, Locations, LiveOuts); // Num Deopts
+
+  // Record Deopt Args.
+  unsigned NumDeoptArgs = Locations.back().Offset;
+  assert(Locations.back().Type = Location::Constant);
+  assert(NumDeoptArgs == SO.getNumDeoptArgs());
+
+  while (NumDeoptArgs--)
+    MOI = parseOperand(MOI, MOE, Locations, LiveOuts);
+
+  // Record gc base/derived pairs
+  assert(MOI->isImm() && MOI->getImm() == StackMaps::ConstantOp);
+  ++MOI;
+  assert(MOI->isImm());
+  unsigned NumGCPointers = MOI->getImm();
+  ++MOI;
+  if (NumGCPointers) {
+    // Map logical index of GC ptr to MI operand index.
+    SmallVector<unsigned, 8> GCPtrIndices;
+    unsigned GCPtrIdx = (unsigned)SO.getFirstGCPtrIdx();
+    assert((int)GCPtrIdx != -1);
+    assert(MOI - MI.operands_begin() == GCPtrIdx);
+    while (NumGCPointers--) {
+      GCPtrIndices.push_back(GCPtrIdx);
+      GCPtrIdx = StackMaps::getNextMetaArgIdx(&MI, GCPtrIdx);
+    }
+
+    SmallVector<std::pair<unsigned, unsigned>, 8> GCPairs;
+    unsigned NumGCPairs = SO.getGCPointerMap(GCPairs);
+    LLVM_DEBUG(dbgs() << "NumGCPairs = " << NumGCPairs << "\n");
+
+    auto MOB = MI.operands_begin();
+    for (auto &P : GCPairs) {
+      assert(P.first < GCPtrIndices.size() && "base pointer index not found");
+      assert(P.second < GCPtrIndices.size() &&
+             "derived pointer index not found");
+      unsigned BaseIdx = GCPtrIndices[P.first];
+      unsigned DerivedIdx = GCPtrIndices[P.second];
+      LLVM_DEBUG(dbgs() << "Base : " << BaseIdx << " Derived : " << DerivedIdx
+                        << "\n");
+      (void)parseOperand(MOB + BaseIdx, MOE, Locations, LiveOuts);
+      (void)parseOperand(MOB + DerivedIdx, MOE, Locations, LiveOuts);
+    }
+
+    MOI = MOB + GCPtrIdx;
+  }
+
+  // Record gc allocas
+  assert(MOI < MOE);
+  assert(MOI->isImm() && MOI->getImm() == StackMaps::ConstantOp);
+  ++MOI;
+  unsigned NumAllocas = MOI->getImm();
+  ++MOI;
+  while (NumAllocas--) {
+    MOI = parseOperand(MOI, MOE, Locations, LiveOuts);
+    assert(MOI < MOE);
+  }
+}
+
 void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
                                     const MachineInstr &MI, uint64_t ID,
                                     MachineInstr::const_mop_iterator MOI,
@@ -334,9 +456,11 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
   }
 
   // Parse operands.
-  while (MOI != MOE) {
-    MOI = parseOperand(MOI, MOE, Locations, LiveOuts);
-  }
+  if (MI.getOpcode() == TargetOpcode::STATEPOINT)
+    parseStatepointOpers(MI, MOI, MOE, Locations, LiveOuts);
+  else
+    while (MOI != MOE)
+      MOI = parseOperand(MOI, MOE, Locations, LiveOuts);
 
   // Move large constants into the constant pool.
   for (auto &Loc : Locations) {
@@ -417,8 +541,6 @@ void StackMaps::recordStatepoint(const MCSymbol &L, const MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::STATEPOINT && "expected statepoint");
 
   StatepointOpers opers(&MI);
-  // Record all the deopt and gc operands (they're contiguous and run from the
-  // initial index to the end of the operand list)
   const unsigned StartIdx = opers.getVarIdx();
   recordStackMapOpers(L, MI, opers.getID(), MI.operands_begin() + StartIdx,
                       MI.operands_end(), false);
