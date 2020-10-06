@@ -1078,6 +1078,10 @@ bool isGFX9(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX9];
 }
 
+bool isGFX9Plus(const MCSubtargetInfo &STI) {
+  return isGFX9(STI) || isGFX10(STI);
+}
+
 bool isGFX10(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX10];
 }
