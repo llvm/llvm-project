@@ -298,11 +298,11 @@ body:             |
     ; VR: SI_SPILL_S512_SAVE killed renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27, %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32 :: (store 64 into %stack.0, align 4, addrspace 5)
     ; VR: S_NOP 0, implicit-def $sgpr8, implicit-def $sgpr12, implicit-def $sgpr16, implicit-def $sgpr20, implicit-def $sgpr24, implicit-def $sgpr28, implicit-def $sgpr32, implicit-def $sgpr36, implicit-def $sgpr40, implicit-def $sgpr44, implicit-def $sgpr48, implicit-def $sgpr52, implicit-def $sgpr56, implicit-def $sgpr60, implicit-def $sgpr64, implicit-def $sgpr68, implicit-def $sgpr72, implicit-def $sgpr74, implicit-def $sgpr78, implicit-def $sgpr82, implicit-def $sgpr86, implicit-def $sgpr90, implicit-def $sgpr94, implicit-def $sgpr98
     ; VR: renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27 = SI_SPILL_S512_RESTORE %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32 :: (load 64 from %stack.0, align 4, addrspace 5)
-    ; VR: renamable $sgpr16 = COPY killed renamable $sgpr20
+    ; VR: renamable $sgpr12_sgpr13 = COPY killed renamable $sgpr16_sgpr17
     ; VR: renamable $sgpr15 = COPY killed renamable $sgpr19
     ; VR: renamable $sgpr18_sgpr19 = COPY killed renamable $sgpr22_sgpr23
+    ; VR: renamable $sgpr16 = COPY killed renamable $sgpr20
     ; VR: renamable $sgpr21 = COPY killed renamable $sgpr25
-    ; VR: renamable $sgpr12_sgpr13 = COPY renamable $sgpr16_sgpr17
     ; VR: renamable $sgpr22 = COPY killed renamable $sgpr26
     ; VR: renamable $sgpr4_sgpr5_sgpr6_sgpr7 = IMPLICIT_DEF
     ; VR: renamable $sgpr8 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr12, 0, 0 :: (dereferenceable invariant load 4)

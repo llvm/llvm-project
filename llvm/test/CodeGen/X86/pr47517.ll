@@ -26,3 +26,16 @@ entry:
   %fmul6 = fmul fast float %fmul3, %fadd4
   ret float %fmul6
 }
+
+; To ensure negated result will not be removed when NegX=NegY and
+; NegX is needed
+define float @test2(float %x, float %y) {
+  %add = fadd fast float %x, 750.0
+  %sub = fsub fast float %x, %add
+  %mul = fmul fast float %sub, %sub
+  %mul2 = fmul fast float %mul, %sub
+  %add2 = fadd fast float %mul2, 1.0
+  %add3 = fadd fast float %mul2, %add2
+  %mul3 = fmul fast float %y, %add3
+  ret float %mul3
+}

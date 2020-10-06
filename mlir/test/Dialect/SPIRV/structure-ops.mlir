@@ -496,11 +496,21 @@ spv.module Logical GLSL450 {
   spv.specConstant @sc2 = 42 : i64
   spv.specConstant @sc3 = 1.5 : f32
 
+  spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.struct<i1, i64, f32>
+
   // CHECK-LABEL: @reference
   spv.func @reference() -> i1 "None" {
     // CHECK: spv._reference_of @sc1 : i1
     %0 = spv._reference_of @sc1 : i1
     spv.ReturnValue %0 : i1
+  }
+
+  // CHECK-LABEL: @reference_composite
+  spv.func @reference_composite() -> i1 "None" {
+    // CHECK: spv._reference_of @scc : !spv.struct<i1, i64, f32>
+    %0 = spv._reference_of @scc : !spv.struct<i1, i64, f32>
+    %1 = spv.CompositeExtract %0[0 : i32] : !spv.struct<i1, i64, f32>
+    spv.ReturnValue %1 : i1
   }
 
   // CHECK-LABEL: @initialize
@@ -534,9 +544,21 @@ func @reference_of() {
 
 // -----
 
+spv.specConstant @sc = 5 : i32
+spv.specConstantComposite @scc (@sc) : !spv.array<1 x i32>
+
+func @reference_of_composite() {
+  // CHECK: spv._reference_of @scc : !spv.array<1 x i32>
+  %0 = spv._reference_of @scc : !spv.array<1 x i32>
+  %1 = spv.CompositeExtract %0[0 : i32] : !spv.array<1 x i32>
+  return
+}
+
+// -----
+
 spv.module Logical GLSL450 {
   spv.func @foo() -> () "None" {
-    // expected-error @+1 {{expected spv.specConstant symbol}}
+    // expected-error @+1 {{expected spv.specConstant or spv.SpecConstantComposite symbol}}
     %0 = spv._reference_of @sc : i32
     spv.Return
   }
@@ -549,6 +571,18 @@ spv.module Logical GLSL450 {
   spv.func @foo() -> () "None" {
     // expected-error @+1 {{result type mismatch with the referenced specialization constant's type}}
     %0 = spv._reference_of @sc : f32
+    spv.Return
+  }
+}
+
+// -----
+
+spv.module Logical GLSL450 {
+  spv.specConstant @sc = 42 : i32
+  spv.specConstantComposite @scc (@sc) : !spv.array<1 x i32>
+  spv.func @foo() -> () "None" {
+    // expected-error @+1 {{result type mismatch with the referenced specialization constant's type}}
+    %0 = spv._reference_of @scc : f32
     spv.Return
   }
 }

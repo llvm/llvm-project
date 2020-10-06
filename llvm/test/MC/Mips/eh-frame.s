@@ -66,7 +66,7 @@ func:
 // DWARF32_PIC-NEXT: Augmentation data: 1B
 //                                      ^^ fde pointer encoding: DW_EH_PE_pcrel | DW_EH_PE_sdata4
 // DWARF32-EMPTY:
-// DWARF32-NEXT:     DW_CFA_def_cfa_register: reg29
+// DWARF32-NEXT:     DW_CFA_def_cfa_register: SP_64
 //
 // DWARF32_ABS: 00000014 00000010 00000018 FDE cie=00000000 pc=00000000...00000000
 // DWARF32_PIC: 00000014 00000010 00000018 FDE cie=00000000 pc=0000001c...0000001c
@@ -90,7 +90,7 @@ func:
 // DWARF64_PIC:      Augmentation data: 1B
 //                                      ^^ fde pointer encoding: DW_EH_PE_pcrel | DW_EH_PE_sdata4
 // DWARF64-EMPTY:
-// DWARF64-NEXT:     DW_CFA_def_cfa_register: reg29
+// DWARF64-NEXT:     DW_CFA_def_cfa_register: SP_64
 // DWARF64_PIC-NEXT: DW_CFA_nop:
 //
 // DWARF64_ABS:      00000014 00000018 00000018 FDE cie=00000000 pc=00000000...00000000

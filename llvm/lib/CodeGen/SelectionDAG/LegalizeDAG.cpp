@@ -542,28 +542,29 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
   LLVM_DEBUG(dbgs() << "Legalizing truncating store operations\n");
   SDValue Value = ST->getValue();
   EVT StVT = ST->getMemoryVT();
-  unsigned StWidth = StVT.getSizeInBits();
+  TypeSize StWidth = StVT.getSizeInBits();
+  TypeSize StSize = StVT.getStoreSizeInBits();
   auto &DL = DAG.getDataLayout();
 
-  if (StWidth != StVT.getStoreSizeInBits()) {
+  if (StWidth != StSize) {
     // Promote to a byte-sized store with upper bits zero if not
     // storing an integral number of bytes.  For example, promote
     // TRUNCSTORE:i1 X -> TRUNCSTORE:i8 (and X, 1)
-    EVT NVT = EVT::getIntegerVT(*DAG.getContext(),
-                                StVT.getStoreSizeInBits());
+    EVT NVT = EVT::getIntegerVT(*DAG.getContext(), StSize.getFixedSize());
     Value = DAG.getZeroExtendInReg(Value, dl, StVT);
     SDValue Result =
         DAG.getTruncStore(Chain, dl, Value, Ptr, ST->getPointerInfo(), NVT,
                           ST->getOriginalAlign(), MMOFlags, AAInfo);
     ReplaceNode(SDValue(Node, 0), Result);
-  } else if (StWidth & (StWidth - 1)) {
+  } else if (!StVT.isVector() && !isPowerOf2_64(StWidth.getFixedSize())) {
     // If not storing a power-of-2 number of bits, expand as two stores.
     assert(!StVT.isVector() && "Unsupported truncstore!");
-    unsigned LogStWidth = Log2_32(StWidth);
+    unsigned StWidthBits = StWidth.getFixedSize();
+    unsigned LogStWidth = Log2_32(StWidthBits);
     assert(LogStWidth < 32);
     unsigned RoundWidth = 1 << LogStWidth;
-    assert(RoundWidth < StWidth);
-    unsigned ExtraWidth = StWidth - RoundWidth;
+    assert(RoundWidth < StWidthBits);
+    unsigned ExtraWidth = StWidthBits - RoundWidth;
     assert(ExtraWidth < RoundWidth);
     assert(!(RoundWidth % 8) && !(ExtraWidth % 8) &&
            "Store size not an integral number of bytes!");
@@ -1753,15 +1754,15 @@ bool SelectionDAGLegalize::LegalizeSetCCCondCode(
     if (CCCode != ISD::SETO && CCCode != ISD::SETUO) {
       // If we aren't the ordered or unorder operation,
       // then the pattern is (LHS CC1 RHS) Opc (LHS CC2 RHS).
-      SetCC1 = DAG.getSetCC(dl, VT, LHS, RHS, CC1, SDNodeFlags(), Chain,
+      SetCC1 = DAG.getSetCC(dl, VT, LHS, RHS, CC1, Chain,
                             IsSignaling);
-      SetCC2 = DAG.getSetCC(dl, VT, LHS, RHS, CC2, SDNodeFlags(), Chain,
+      SetCC2 = DAG.getSetCC(dl, VT, LHS, RHS, CC2, Chain,
                             IsSignaling);
     } else {
       // Otherwise, the pattern is (LHS CC1 LHS) Opc (RHS CC2 RHS)
-      SetCC1 = DAG.getSetCC(dl, VT, LHS, LHS, CC1, SDNodeFlags(), Chain,
+      SetCC1 = DAG.getSetCC(dl, VT, LHS, LHS, CC1, Chain,
                             IsSignaling);
-      SetCC2 = DAG.getSetCC(dl, VT, RHS, RHS, CC2, SDNodeFlags(), Chain,
+      SetCC2 = DAG.getSetCC(dl, VT, RHS, RHS, CC2, Chain,
                             IsSignaling);
     }
     if (Chain)

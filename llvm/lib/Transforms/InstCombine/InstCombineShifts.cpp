@@ -481,31 +481,6 @@ static bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I) return false;
 
-  // If this is the opposite shift, we can directly reuse the input of the shift
-  // if the needed bits are already zero in the input.  This allows us to reuse
-  // the value which means that we don't care if the shift has multiple uses.
-  //  TODO:  Handle opposite shift by exact value.
-  ConstantInt *CI = nullptr;
-  if ((IsLeftShift && match(I, m_LShr(m_Value(), m_ConstantInt(CI)))) ||
-      (!IsLeftShift && match(I, m_Shl(m_Value(), m_ConstantInt(CI))))) {
-    if (CI->getValue() == NumBits) {
-      // TODO: Check that the input bits are already zero with MaskedValueIsZero
-#if 0
-      // If this is a truncate of a logical shr, we can truncate it to a smaller
-      // lshr iff we know that the bits we would otherwise be shifting in are
-      // already zeros.
-      uint32_t OrigBitWidth = OrigTy->getScalarSizeInBits();
-      uint32_t BitWidth = Ty->getScalarSizeInBits();
-      if (MaskedValueIsZero(I->getOperand(0),
-            APInt::getHighBitsSet(OrigBitWidth, OrigBitWidth-BitWidth)) &&
-          CI->getLimitedValue(BitWidth) < BitWidth) {
-        return CanEvaluateTruncated(I->getOperand(0), Ty);
-      }
-#endif
-
-    }
-  }
-
   // We can't mutate something that has multiple uses: doing so would
   // require duplicating the instruction in general, which isn't profitable.
   if (!I->hasOneUse()) return false;
@@ -755,7 +730,7 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
   if (Op0->hasOneUse()) {
     if (BinaryOperator *Op0BO = dyn_cast<BinaryOperator>(Op0)) {
       // Turn ((X >> C) + Y) << C  ->  (X + (Y << C)) & (~0 << C)
-      Value *V1, *V2;
+      Value *V1;
       ConstantInt *CC;
       switch (Op0BO->getOpcode()) {
       default: break;
@@ -820,21 +795,19 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
         // Turn (((X >> C)&CC) + Y) << C  ->  (X + (Y << C)) & (CC << C)
         if (isLeftShift && Op0BO->getOperand(0)->hasOneUse() &&
             match(Op0BO->getOperand(0),
-                  m_And(m_OneUse(m_Shr(m_Value(V1), m_Value(V2))),
-                        m_ConstantInt(CC))) && V2 == Op1) {
+                  m_And(m_OneUse(m_Shr(m_Value(V1), m_Specific(Op1))),
+                        m_ConstantInt(CC)))) {
           Value *YS = // (Y << C)
-            Builder.CreateShl(Op0BO->getOperand(1), Op1, Op0BO->getName());
+              Builder.CreateShl(Op0BO->getOperand(1), Op1, Op0BO->getName());
           // X & (CC << C)
           Value *XM = Builder.CreateAnd(V1, ConstantExpr::getShl(CC, Op1),
-                                        V1->getName()+".mask");
-
+                                        V1->getName() + ".mask");
           return BinaryOperator::Create(Op0BO->getOpcode(), XM, YS);
         }
 
         break;
       }
       }
-
 
       // If the operand is a bitwise operator with a constant RHS, and the
       // shift is the only use, we can pull it out of the shift.

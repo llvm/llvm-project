@@ -88,10 +88,10 @@ void parseNumbers(StringRef arg, uint64_t *addr, uint64_t *size) {
 void parseVersion(StringRef arg, uint32_t *major, uint32_t *minor) {
   StringRef s1, s2;
   std::tie(s1, s2) = arg.split('.');
-  if (s1.getAsInteger(0, *major))
+  if (s1.getAsInteger(10, *major))
     fatal("invalid number: " + s1);
   *minor = 0;
-  if (!s2.empty() && s2.getAsInteger(0, *minor))
+  if (!s2.empty() && s2.getAsInteger(10, *minor))
     fatal("invalid number: " + s2);
 }
 
@@ -112,7 +112,7 @@ void parseGuard(StringRef fullArg) {
 
 // Parses a string in the form of "<subsystem>[,<integer>[.<integer>]]".
 void parseSubsystem(StringRef arg, WindowsSubsystem *sys, uint32_t *major,
-                    uint32_t *minor) {
+                    uint32_t *minor, bool *gotVersion) {
   StringRef sysStr, ver;
   std::tie(sysStr, ver) = arg.split(',');
   std::string sysStrLower = sysStr.lower();
@@ -132,6 +132,8 @@ void parseSubsystem(StringRef arg, WindowsSubsystem *sys, uint32_t *major,
     fatal("unknown subsystem: " + sysStr);
   if (!ver.empty())
     parseVersion(ver, major, minor);
+  if (gotVersion)
+    *gotVersion = !ver.empty();
 }
 
 // Parse a string of the form of "<from>=<to>".

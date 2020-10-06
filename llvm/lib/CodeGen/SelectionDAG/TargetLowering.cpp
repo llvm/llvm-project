@@ -5773,10 +5773,8 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
 
     // If we already have the use of the negated floating constant, it is free
     // to negate it even it has multiple uses.
-    if (!Op.hasOneUse() && CFP.use_empty()) {
-      RemoveDeadNode(CFP);
+    if (!Op.hasOneUse() && CFP.use_empty())
       break;
-    }
     Cost = NegatibleCost::Neutral;
     return CFP;
   }
@@ -6428,7 +6426,7 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
   SDValue Sel;
 
   if (Node->isStrictFPOpcode()) {
-    Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT, SDNodeFlags(),
+    Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT,
                        Node->getOperand(0), /*IsSignaling*/ true);
     Chain = Sel.getValue(1);
   } else {

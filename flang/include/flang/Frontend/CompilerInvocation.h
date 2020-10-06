@@ -11,8 +11,17 @@
 #include "flang/Frontend/FrontendOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "llvm/Option/ArgList.h"
 
 namespace Fortran::frontend {
+
+/// Fill out Opts based on the options given in Args.
+///
+/// When errors are encountered, return false and, if Diags is non-null,
+/// report the error(s).
+bool ParseDiagnosticArgs(clang::DiagnosticOptions &opts,
+    llvm::opt::ArgList &args, bool defaultDiagColor = true);
+
 class CompilerInvocationBase {
 public:
   /// Options controlling the diagnostic engine.$

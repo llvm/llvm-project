@@ -2030,6 +2030,9 @@ struct AlignedAllocOpLowering : public AllocLikeOpLowering {
   static constexpr uint64_t kMinAlignedAllocAlignment = 16UL;
 };
 
+// Out of line definition, required till C++17.
+constexpr uint64_t AlignedAllocOpLowering::kMinAlignedAllocAlignment;
+
 struct AllocaOpLowering : public AllocLikeOpLowering {
   AllocaOpLowering(LLVMTypeConverter &converter)
       : AllocLikeOpLowering(AllocaOp::getOperationName(), converter) {}

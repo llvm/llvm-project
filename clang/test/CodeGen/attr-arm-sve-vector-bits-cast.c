@@ -81,13 +81,11 @@ fixed_float64_t from_svfloat64_t(svfloat64_t type) {
 // CHECK-NEXT:    [[TYPE_ADDR:%.*]] = alloca <8 x i8>, align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i8>* [[TYPE]] to <vscale x 16 x i1>*
 // CHECK-NEXT:    store <vscale x 16 x i1> [[TYPE_COERCE:%.*]], <vscale x 16 x i1>* [[TMP0]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8>* [[TYPE]] to i64*
-// CHECK-NEXT:    [[TYPE12:%.*]] = load i64, i64* [[TMP1]], align 16, [[TBAA6]]
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8>* [[TYPE_ADDR]] to i64*
-// CHECK-NEXT:    store i64 [[TYPE12]], i64* [[TMP2]], align 16, [[TBAA6]]
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i8>* [[TYPE_ADDR]] to <vscale x 16 x i1>*
-// CHECK-NEXT:    [[TMP4:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[TMP3]], align 16, [[TBAA6]]
-// CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP4]]
+// CHECK-NEXT:    [[TYPE1:%.*]] = load <8 x i8>, <8 x i8>* [[TYPE]], align 16, [[TBAA6]]
+// CHECK-NEXT:    store <8 x i8> [[TYPE1]], <8 x i8>* [[TYPE_ADDR]], align 16, [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8>* [[TYPE_ADDR]] to <vscale x 16 x i1>*
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[TMP1]], align 16, [[TBAA6]]
+// CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
 //
 svbool_t to_svbool_t(fixed_bool_t type) {
   return type;
@@ -98,12 +96,12 @@ svbool_t to_svbool_t(fixed_bool_t type) {
 // CHECK-NEXT:    [[TYPE_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 16
 // CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 16 x i1>, align 16
 // CHECK-NEXT:    store <vscale x 16 x i1> [[TYPE:%.*]], <vscale x 16 x i1>* [[TYPE_ADDR]], align 16, [[TBAA13:!tbaa !.*]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1>* [[TYPE_ADDR]] to i64*
-// CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* [[TMP0]], align 16, [[TBAA6]]
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 16 x i1>* [[RETVAL_COERCE]] to i64*
-// CHECK-NEXT:    store i64 [[TMP1]], i64* [[TMP2]], align 16
-// CHECK-NEXT:    [[TMP3:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[RETVAL_COERCE]], align 16
-// CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP3]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1>* [[TYPE_ADDR]] to <8 x i8>*
+// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* [[TMP0]], align 16, [[TBAA6]]
+// CHECK-NEXT:    [[RETVAL_0__SROA_CAST:%.*]] = bitcast <vscale x 16 x i1>* [[RETVAL_COERCE]] to <8 x i8>*
+// CHECK-NEXT:    store <8 x i8> [[TMP1]], <8 x i8>* [[RETVAL_0__SROA_CAST]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[RETVAL_COERCE]], align 16
+// CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
 //
 fixed_bool_t from_svbool_t(svbool_t type) {
   return type;

@@ -10,8 +10,10 @@
 
 // Call erase(const_iterator position) with end()
 
-#if _LIBCPP_DEBUG >= 1
+// This test requires debug mode, which the library on macOS doesn't have.
+// UNSUPPORTED: with_system_cxx_lib=macosx
 
+#define _LIBCPP_DEBUG 1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <string>
@@ -40,13 +42,3 @@ int main(int, char**)
     }
 #endif
 }
-
-#else
-
-int main(int, char**)
-{
-
-  return 0;
-}
-
-#endif

@@ -17,6 +17,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace Fortran::frontend;
@@ -35,6 +36,48 @@ CompilerInvocationBase::~CompilerInvocationBase() = default;
 //===----------------------------------------------------------------------===//
 // Deserialization (from args)
 //===----------------------------------------------------------------------===//
+static bool parseShowColorsArgs(
+    const llvm::opt::ArgList &args, bool defaultColor) {
+  // Color diagnostics default to auto ("on" if terminal supports) in the driver
+  // but default to off in cc1, needing an explicit OPT_fdiagnostics_color.
+  // Support both clang's -f[no-]color-diagnostics and gcc's
+  // -f[no-]diagnostics-colors[=never|always|auto].
+  enum {
+    Colors_On,
+    Colors_Off,
+    Colors_Auto
+  } ShowColors = defaultColor ? Colors_Auto : Colors_Off;
+
+  for (auto *a : args) {
+    const llvm::opt::Option &O = a->getOption();
+    if (O.matches(clang::driver::options::OPT_fcolor_diagnostics) ||
+        O.matches(clang::driver::options::OPT_fdiagnostics_color)) {
+      ShowColors = Colors_On;
+    } else if (O.matches(clang::driver::options::OPT_fno_color_diagnostics) ||
+        O.matches(clang::driver::options::OPT_fno_diagnostics_color)) {
+      ShowColors = Colors_Off;
+    } else if (O.matches(clang::driver::options::OPT_fdiagnostics_color_EQ)) {
+      llvm::StringRef value(a->getValue());
+      if (value == "always")
+        ShowColors = Colors_On;
+      else if (value == "never")
+        ShowColors = Colors_Off;
+      else if (value == "auto")
+        ShowColors = Colors_Auto;
+    }
+  }
+
+  return ShowColors == Colors_On ||
+      (ShowColors == Colors_Auto && llvm::sys::Process::StandardErrHasColors());
+}
+
+bool Fortran::frontend::ParseDiagnosticArgs(clang::DiagnosticOptions &opts,
+    llvm::opt::ArgList &args, bool defaultDiagColor) {
+  opts.ShowColors = parseShowColorsArgs(args, defaultDiagColor);
+
+  return true;
+}
+
 static InputKind ParseFrontendArgs(FrontendOptions &opts,
     llvm::opt::ArgList &args, clang::DiagnosticsEngine &diags) {
   // Identify the action (i.e. opts.ProgramAction)

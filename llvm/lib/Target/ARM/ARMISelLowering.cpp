@@ -987,8 +987,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::SMAX);
     setTargetDAGCombine(ISD::UMAX);
     setTargetDAGCombine(ISD::FP_EXTEND);
-    setTargetDAGCombine(ISD::SELECT);
-    setTargetDAGCombine(ISD::SELECT_CC);
   }
 
   if (!Subtarget->hasFP64()) {
@@ -1742,10 +1740,6 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::VMLALVAu:      return "ARMISD::VMLALVAu";
   case ARMISD::VMLALVAps:     return "ARMISD::VMLALVAps";
   case ARMISD::VMLALVApu:     return "ARMISD::VMLALVApu";
-  case ARMISD::VMINVu:        return "ARMISD::VMINVu";
-  case ARMISD::VMINVs:        return "ARMISD::VMINVs";
-  case ARMISD::VMAXVu:        return "ARMISD::VMAXVu";
-  case ARMISD::VMAXVs:        return "ARMISD::VMAXVs";
   case ARMISD::UMAAL:         return "ARMISD::UMAAL";
   case ARMISD::UMLAL:         return "ARMISD::UMLAL";
   case ARMISD::SMLAL:         return "ARMISD::SMLAL";
@@ -12099,111 +12093,6 @@ static SDValue PerformAddeSubeCombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue PerformSELECTCombine(SDNode *N,
-                                    TargetLowering::DAGCombinerInfo &DCI,
-                                    const ARMSubtarget *Subtarget) {
-  if (!Subtarget->hasMVEIntegerOps())
-    return SDValue();
-
-  SDLoc dl(N);
-  SDValue SetCC;
-  SDValue LHS;
-  SDValue RHS;
-  ISD::CondCode CC;
-  SDValue TrueVal;
-  SDValue FalseVal;
-
-  if (N->getOpcode() == ISD::SELECT &&
-      N->getOperand(0)->getOpcode() == ISD::SETCC) {
-    SetCC = N->getOperand(0);
-    LHS = SetCC->getOperand(0);
-    RHS = SetCC->getOperand(1);
-    CC = cast<CondCodeSDNode>(SetCC->getOperand(2))->get();
-    TrueVal = N->getOperand(1);
-    FalseVal = N->getOperand(2);
-  } else if (N->getOpcode() == ISD::SELECT_CC) {
-    LHS = N->getOperand(0);
-    RHS = N->getOperand(1);
-    CC = cast<CondCodeSDNode>(N->getOperand(4))->get();
-    TrueVal = N->getOperand(2);
-    FalseVal = N->getOperand(3);
-  } else {
-    return SDValue();
-  }
-
-  unsigned int Opcode = 0;
-  if ((TrueVal->getOpcode() == ISD::VECREDUCE_UMIN ||
-       FalseVal->getOpcode() == ISD::VECREDUCE_UMIN) &&
-      (CC == ISD::SETULT || CC == ISD::SETUGT)) {
-    Opcode = ARMISD::VMINVu;
-    if (CC == ISD::SETUGT)
-      std::swap(TrueVal, FalseVal);
-  } else if ((TrueVal->getOpcode() == ISD::VECREDUCE_SMIN ||
-              FalseVal->getOpcode() == ISD::VECREDUCE_SMIN) &&
-             (CC == ISD::SETLT || CC == ISD::SETGT)) {
-    Opcode = ARMISD::VMINVs;
-    if (CC == ISD::SETGT)
-      std::swap(TrueVal, FalseVal);
-  } else if ((TrueVal->getOpcode() == ISD::VECREDUCE_UMAX ||
-              FalseVal->getOpcode() == ISD::VECREDUCE_UMAX) &&
-             (CC == ISD::SETUGT || CC == ISD::SETULT)) {
-    Opcode = ARMISD::VMAXVu;
-    if (CC == ISD::SETULT)
-      std::swap(TrueVal, FalseVal);
-  } else if ((TrueVal->getOpcode() == ISD::VECREDUCE_SMAX ||
-              FalseVal->getOpcode() == ISD::VECREDUCE_SMAX) &&
-             (CC == ISD::SETGT || CC == ISD::SETLT)) {
-    Opcode = ARMISD::VMAXVs;
-    if (CC == ISD::SETLT)
-      std::swap(TrueVal, FalseVal);
-  } else
-    return SDValue();
-
-  // Normalise to the right hand side being the vector reduction
-  switch (TrueVal->getOpcode()) {
-  case ISD::VECREDUCE_UMIN:
-  case ISD::VECREDUCE_SMIN:
-  case ISD::VECREDUCE_UMAX:
-  case ISD::VECREDUCE_SMAX:
-    std::swap(LHS, RHS);
-    std::swap(TrueVal, FalseVal);
-    break;
-  }
-
-  EVT VectorType = FalseVal->getOperand(0).getValueType();
-
-  if (VectorType != MVT::v16i8 && VectorType != MVT::v8i16 &&
-      VectorType != MVT::v4i32)
-    return SDValue();
-
-  EVT VectorScalarType = VectorType.getVectorElementType();
-
-  // The values being selected must also be the ones being compared
-  if (TrueVal != LHS || FalseVal != RHS)
-    return SDValue();
-
-  EVT LeftType = LHS->getValueType(0);
-  EVT RightType = RHS->getValueType(0);
-
-  // The types must match the reduced type too
-  if (LeftType != VectorScalarType || RightType != VectorScalarType)
-    return SDValue();
-
-  // Legalise the scalar to an i32
-  if (VectorScalarType != MVT::i32)
-    LHS = DCI.DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, LHS);
-
-  // Generate the reduction as an i32 for legalisation purposes
-  auto Reduction =
-      DCI.DAG.getNode(Opcode, dl, MVT::i32, LHS, RHS->getOperand(0));
-
-  // The result isn't actually an i32 so truncate it back to its original type
-  if (VectorScalarType != MVT::i32)
-    Reduction = DCI.DAG.getNode(ISD::TRUNCATE, dl, VectorScalarType, Reduction);
-
-  return Reduction;
-}
-
 static SDValue PerformVSELECTCombine(SDNode *N,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      const ARMSubtarget *Subtarget) {
@@ -16160,8 +16049,6 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   switch (N->getOpcode()) {
   default: break;
-  case ISD::SELECT_CC:
-  case ISD::SELECT:     return PerformSELECTCombine(N, DCI, Subtarget);
   case ISD::VSELECT:    return PerformVSELECTCombine(N, DCI, Subtarget);
   case ISD::ABS:        return PerformABSCombine(N, DCI, Subtarget);
   case ARMISD::ADDE:    return PerformADDECombine(N, DCI, Subtarget);

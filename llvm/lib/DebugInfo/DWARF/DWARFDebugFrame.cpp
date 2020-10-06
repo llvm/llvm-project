@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
@@ -29,6 +30,18 @@
 using namespace llvm;
 using namespace dwarf;
 
+static void printRegister(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
+                          unsigned RegNum) {
+  if (MRI) {
+    if (Optional<unsigned> LLVMRegNum = MRI->getLLVMRegNum(RegNum, IsEH)) {
+      if (const char *RegName = MRI->getName(*LLVMRegNum)) {
+        OS << RegName;
+        return;
+      }
+    }
+  }
+  OS << "reg" << RegNum;
+}
 
 // See DWARF standard v3, section 7.23
 const uint8_t DWARF_CFI_PRIMARY_OPCODE_MASK = 0xc0;
@@ -268,7 +281,8 @@ void CFIProgram::printOperand(raw_ostream &OS, const MCRegisterInfo *MRI,
       OS << format(" %" PRId64 "*data_alignment_factor" , Operand);
     break;
   case OT_Register:
-    OS << format(" reg%" PRId64, Operand);
+    OS << ' ';
+    printRegister(OS, MRI, IsEH, Operand);
     break;
   case OT_Expression:
     assert(Instr.Expression && "missing DWARFExpression object");

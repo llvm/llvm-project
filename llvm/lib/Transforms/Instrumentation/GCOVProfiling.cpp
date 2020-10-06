@@ -16,6 +16,7 @@
 #include "CFGMST.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/Statistic.h"
@@ -396,7 +397,7 @@ namespace {
     }
 
     GCOVBlock &getBlock(const BasicBlock *BB) {
-      return Blocks.find(BB)->second;
+      return Blocks.find(const_cast<BasicBlock *>(BB))->second;
     }
 
     GCOVBlock &getEntryBlock() { return EntryBlock; }
@@ -462,14 +463,8 @@ namespace {
           write(E.second);
         }
       }
-      std::vector<GCOVBlock *> Sorted;
-      Sorted.reserve(Blocks.size());
-      for (auto &It : Blocks)
-        Sorted.push_back(&It.second);
-      llvm::sort(Sorted, [](GCOVBlock *x, GCOVBlock *y) {
-        return x->Number < y->Number;
-      });
-      for (GCOVBlock &Block : make_pointee_range(Sorted)) {
+      for (auto &It : Blocks) {
+        const GCOVBlock &Block = It.second;
         if (Block.OutEdges.empty()) continue;
 
         write(GCOV_TAG_ARCS);
@@ -482,8 +477,8 @@ namespace {
       }
 
       // Emit lines for each block.
-      for (GCOVBlock &Block : make_pointee_range(Sorted))
-        Block.writeOut();
+      for (auto &It : Blocks)
+        It.second.writeOut();
     }
 
   public:
@@ -492,7 +487,7 @@ namespace {
     uint32_t Ident;
     uint32_t FuncChecksum;
     int Version;
-    DenseMap<BasicBlock *, GCOVBlock> Blocks;
+    MapVector<BasicBlock *, GCOVBlock> Blocks;
     GCOVBlock EntryBlock;
     GCOVBlock ReturnBlock;
   };
@@ -889,8 +884,9 @@ bool GCOVProfiler::emitProfileNotes(
         return E->Removed || (!E->InMST && !E->Place);
       });
       const size_t Measured =
-          llvm::partition(MST.AllEdges,
-                          [](std::unique_ptr<Edge> &E) { return E->Place; }) -
+          std::stable_partition(
+              MST.AllEdges.begin(), MST.AllEdges.end(),
+              [](std::unique_ptr<Edge> &E) { return E->Place; }) -
           MST.AllEdges.begin();
       for (size_t I : llvm::seq<size_t>(0, Measured)) {
         Edge &E = *MST.AllEdges[I];

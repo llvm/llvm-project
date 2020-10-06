@@ -1200,7 +1200,7 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
   // InstSimplify already performed this fold if it was possible subject to
   // current poison-generating flags. Try the transform again with
   // poison-generating flags temporarily dropped.
-  bool WasNUW = false, WasNSW = false, WasExact = false;
+  bool WasNUW = false, WasNSW = false, WasExact = false, WasInBounds = false;
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(FalseVal)) {
     WasNUW = OBO->hasNoUnsignedWrap();
     WasNSW = OBO->hasNoSignedWrap();
@@ -1210,6 +1210,10 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
   if (auto *PEO = dyn_cast<PossiblyExactOperator>(FalseVal)) {
     WasExact = PEO->isExact();
     FalseInst->setIsExact(false);
+  }
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(FalseVal)) {
+    WasInBounds = GEP->isInBounds();
+    GEP->setIsInBounds(false);
   }
 
   // Try each equivalence substitution possibility.
@@ -1230,6 +1234,8 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     FalseInst->setHasNoSignedWrap();
   if (WasExact)
     FalseInst->setIsExact();
+  if (WasInBounds)
+    cast<GetElementPtrInst>(FalseInst)->setIsInBounds();
 
   return nullptr;
 }
