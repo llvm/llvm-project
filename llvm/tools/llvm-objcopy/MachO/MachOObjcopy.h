@@ -24,10 +24,6 @@ class Buffer;
 namespace macho {
 Error executeObjcopyOnBinary(const CopyConfig &Config,
                              object::MachOObjectFile &In, Buffer &Out);
-
-Error executeObjcopyOnMachOUniversalBinary(
-    CopyConfig &Config, const object::MachOUniversalBinary &In, Buffer &Out);
-
 } // end namespace macho
 } // end namespace objcopy
 } // end namespace llvm
