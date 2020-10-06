@@ -17,28 +17,41 @@ conformance test suite.
 import argparse
 import os
 import posixpath
+import shlex
 import subprocess
 import sys
 import tarfile
 import tempfile
+
+def ssh(args, command):
+    cmd = ['ssh', '-oBatchMode=yes']
+    if args.extra_ssh_args is not None:
+        cmd.extend(shlex.split(args.extra_ssh_args))
+    return cmd + [args.host, command]
+
+
+def scp(args, src, dst):
+    cmd = ['scp', '-q', '-oBatchMode=yes']
+    if args.extra_scp_args is not None:
+        cmd.extend(shlex.split(args.extra_scp_args))
+    return cmd + [src, '{}:{}'.format(args.host, dst)]
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--host', type=str, required=True)
     parser.add_argument('--execdir', type=str, required=True)
+    parser.add_argument('--extra-ssh-args', type=str, required=False)
+    parser.add_argument('--extra-scp-args', type=str, required=False)
     parser.add_argument('--codesign_identity', type=str, required=False, default=None)
     parser.add_argument('--env', type=str, nargs='*', required=False, default=dict())
     parser.add_argument("command", nargs=argparse.ONE_OR_MORE)
     args = parser.parse_args()
     commandLine = args.command
 
-    ssh = lambda command: ['ssh', '-oBatchMode=yes', args.host, command]
-    scp = lambda src, dst: ['scp', '-q', '-oBatchMode=yes', src, '{}:{}'.format(args.host, dst)]
-
     # Create a temporary directory where the test will be run.
     # That is effectively the value of %T on the remote host.
-    tmp = subprocess.check_output(ssh('mktemp -d /tmp/libcxx.XXXXXXXXXX'), universal_newlines=True).strip()
+    tmp = subprocess.check_output(ssh(args, 'mktemp -d /tmp/libcxx.XXXXXXXXXX'), universal_newlines=True).strip()
 
     # HACK:
     # If an argument is a file that ends in `.tmp.exe`, assume it is the name
@@ -67,7 +80,7 @@ def main():
             # the temporary file while still open doesn't work on Windows.
             tmpTar.close()
             remoteTarball = pathOnRemote(tmpTar.name)
-            subprocess.check_call(scp(tmpTar.name, remoteTarball))
+            subprocess.check_call(scp(args, tmpTar.name, remoteTarball))
         finally:
             # Make sure we close the file in case an exception happens before
             # we've closed it above -- otherwise close() is idempotent.
@@ -97,12 +110,12 @@ def main():
         remoteCommands.append(subprocess.list2cmdline(commandLine))
 
         # Finally, SSH to the remote host and execute all the commands.
-        rc = subprocess.call(ssh(' && '.join(remoteCommands)))
+        rc = subprocess.call(ssh(args, ' && '.join(remoteCommands)))
         return rc
 
     finally:
         # Make sure the temporary directory is removed when we're done.
-        subprocess.check_call(ssh('rm -r {}'.format(tmp)))
+        subprocess.check_call(ssh(args, 'rm -r {}'.format(tmp)))
 
 
 if __name__ == '__main__':
