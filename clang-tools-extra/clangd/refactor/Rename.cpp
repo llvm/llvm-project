@@ -113,7 +113,7 @@ bool isExcluded(const NamedDecl &RenameDecl) {
   return StdSymbols->count(printQualifiedName(RenameDecl));
 }
 
-enum ReasonToReject {
+enum class ReasonToReject {
   NoSymbolFound,
   NoIndexProvided,
   NonIndexable,
@@ -206,7 +206,7 @@ llvm::Error makeError(ReasonToReject Reason) {
       return "symbol may be used in other files (not eligible for indexing)";
     case ReasonToReject::UnsupportedSymbol:
       return "symbol is not a supported kind (e.g. namespace, macro)";
-    case AmbiguousSymbol:
+    case ReasonToReject::AmbiguousSymbol:
       return "there are multiple symbols at the given location";
     }
     llvm_unreachable("unhandled reason kind");
