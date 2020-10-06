@@ -1674,38 +1674,35 @@ TypeSystemSwiftTypeRef::GetPointerType(opaque_compiler_type_t type) {
     using namespace swift::Demangle;
     Demangler dem;
 
+    // The type that will be wrapped in UnsafePointer.
     auto *pointee_type = GetDemangledType(dem, AsMangledName(type));
-
+    // The UnsafePointer type.
     auto *pointer_type = dem.createNode(Node::Kind::Type);
-    auto *BGS = dem.createNode(Node::Kind::BoundGenericStructure);
-    pointer_type->addChild(BGS, dem);
 
-    NodePointer parent;
-    NodePointer child;
+    auto *bgs = dem.createNode(Node::Kind::BoundGenericStructure);
+    pointer_type->addChild(bgs, dem);
 
-    // Construct the first (Type) branch of BoundGenericStructure.
-    parent = BGS;
-    child = dem.createNode(Node::Kind::Type);
-    parent->addChild(child, dem);
-    parent = child;
-    child = dem.createNode(Node::Kind::Structure);
-    parent->addChild(child, dem);
-    parent = child;
-    parent->addChild(
-        dem.createNodeWithAllocatedText(Node::Kind::Module, swift::STDLIB_NAME),
-        dem);
-    parent->addChild(dem.createNode(Node::Kind::Identifier, "UnsafePointer"),
-                     dem);
+    // Construct the first branch of BoundGenericStructure.
+    {
+      auto *type = dem.createNode(Node::Kind::Type);
+      bgs->addChild(type, dem);
+      auto *structure = dem.createNode(Node::Kind::Structure);
+      type->addChild(structure, dem);
+      structure->addChild(dem.createNodeWithAllocatedText(Node::Kind::Module,
+                                                          swift::STDLIB_NAME),
+                          dem);
+      structure->addChild(
+          dem.createNode(Node::Kind::Identifier, "UnsafePointer"), dem);
+    }
 
-    // Construct the second (TypeList) branch of BoundGenericStructure.
-    parent = BGS;
-    child = dem.createNode(Node::Kind::TypeList);
-    parent->addChild(child, dem);
-    parent = child;
-    child = dem.createNode(Node::Kind::Type);
-    parent->addChild(child, dem);
-    parent = child;
-    parent->addChild(pointee_type, dem);
+    // Construct the second branch of BoundGenericStructure.
+    {
+      auto *typelist = dem.createNode(Node::Kind::TypeList);
+      bgs->addChild(typelist, dem);
+      auto *type = dem.createNode(Node::Kind::Type);
+      typelist->addChild(type, dem);
+      type->addChild(pointee_type, dem);
+    }
 
     return RemangleAsType(dem, pointer_type);
   };
