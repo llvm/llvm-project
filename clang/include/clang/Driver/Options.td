@@ -1435,11 +1435,11 @@ def fno_pch_validate_input_files_content:
   Group<f_Group>, Flags<[DriverOption]>;
 def fpch_instantiate_templates:
   Flag <["-"], "fpch-instantiate-templates">,
-  Group<f_Group>, Flags<[CC1Option]>,
+  Group<f_Group>, Flags<[CC1Option, CoreOption]>,
   HelpText<"Instantiate templates already while building a PCH">;
 def fno_pch_instantiate_templates:
   Flag <["-"], "fno-pch-instantiate-templates">,
-  Group<f_Group>, Flags<[CC1Option]>;
+  Group<f_Group>, Flags<[CC1Option, CoreOption]>;
 defm pch_codegen: OptInFFlag<"pch-codegen", "Generate ", "Do not generate ",
   "code for uses of this PCH that assumes an explicit object file will be built for the PCH">;
 defm pch_debuginfo: OptInFFlag<"pch-debuginfo", "Generate ", "Do not generate ",
