@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_BPF_BPF_H
 
 #include "MCTargetDesc/BPFMCTargetDesc.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -28,13 +29,27 @@ FunctionPass *createBPFMIPreEmitCheckingPass();
 
 void initializeBPFCheckAndAdjustIRPass(PassRegistry&);
 
-void initializeBPFAbstractMemberAccessPass(PassRegistry&);
+void initializeBPFAbstractMemberAccessLegacyPassPass(PassRegistry &);
 void initializeBPFPreserveDITypePass(PassRegistry&);
 void initializeBPFMISimplifyPatchablePass(PassRegistry&);
 void initializeBPFMIPeepholePass(PassRegistry&);
 void initializeBPFMIPeepholeTruncElimPass(PassRegistry&);
 void initializeBPFMIPreEmitPeepholePass(PassRegistry&);
 void initializeBPFMIPreEmitCheckingPass(PassRegistry&);
-}
+
+class BPFAbstractMemberAccessPass
+    : public PassInfoMixin<BPFAbstractMemberAccessPass> {
+  BPFTargetMachine *TM;
+
+public:
+  BPFAbstractMemberAccessPass(BPFTargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+class BPFPreserveDITypePass : public PassInfoMixin<BPFPreserveDITypePass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+} // namespace llvm
 
 #endif
