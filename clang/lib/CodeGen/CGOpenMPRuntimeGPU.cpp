@@ -35,7 +35,7 @@ enum OpenMPRTLFunctionNVPTX {
   /// Call to void __kmpc_kernel_deinit(int16_t IsOMPRuntimeInitialized);
   OMPRTL_NVPTX__kmpc_kernel_deinit,
   /// Call to void __kmpc_spmd_kernel_init(kmp_int32 thread_limit,
-  /// int16_t RequiresOMPRuntime, int16_t RequiresDataSharing);
+  /// int16_t RequiresOMPRuntime);
   OMPRTL_NVPTX__kmpc_spmd_kernel_init,
   /// Call to void __kmpc_spmd_kernel_deinit_v2(int16_t RequiresOMPRuntime);
   OMPRTL_NVPTX__kmpc_spmd_kernel_deinit_v2,
@@ -1345,8 +1345,7 @@ void CGOpenMPRuntimeGPU::emitSPMDEntryHeader(
 
   llvm::Value *Args[] = {getThreadLimit(CGF, /*IsInSPMDExecutionMode=*/true),
                          /*RequiresOMPRuntime=*/
-                         Bld.getInt16(RequiresFullRuntime ? 1 : 0),
-                         /*RequiresDataSharing=*/Bld.getInt16(0)};
+                         Bld.getInt16(RequiresFullRuntime ? 1 : 0)};
   CGF.EmitRuntimeCall(
       createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_spmd_kernel_init), Args);
 
@@ -1561,7 +1560,7 @@ CGOpenMPRuntimeGPU::createNVPTXRuntimeFunction(unsigned Function) {
   case OMPRTL_NVPTX__kmpc_spmd_kernel_init: {
     // Build void __kmpc_spmd_kernel_init(kmp_int32 thread_limit,
     // int16_t RequiresOMPRuntime, int16_t RequiresDataSharing);
-    llvm::Type *TypeParams[] = {CGM.Int32Ty, CGM.Int16Ty, CGM.Int16Ty};
+    llvm::Type *TypeParams[] = {CGM.Int32Ty, CGM.Int16Ty};
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_spmd_kernel_init");
