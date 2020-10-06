@@ -42,19 +42,13 @@ define dso_local i32 @top() {
 !1 = !{!"clang version 7.0.0-6 (tags/RELEASE_700/final)"}
 
 ; Check we produce a protobuf that has inlining decisions and rewards.
-; CHECK:     feature_lists: {
+; CHECK-NOT: fake_extra_output
+; EXTRA-OUTPUTS:          key: "fake_extra_output" value: {
+; EXTRA-OUTPUTS-NEXT:       feature: { int64_list: { value: [1] } }
 ; CHECK:          key: "inlining_decision" value: {
 ; CHECK-NEXT:       feature: { int64_list: { value: [1] } }
-; CHECK-NEXT:     }
-; CHECK-NEXT:   }
-; CHECK-NEXT:   feature_list: {
-; CHECK-NEXT:     key: "delta_size" value: {
+; CHECK:          key: "delta_size" value: {
 ; CHECK-NEXT:       feature: { int64_list: { value: [0] } }
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   }
 ; NOREWARD-NOT: key: "delta_size" value: {
-; CHECK-NOT: fake_extra_output
-; EXTRA-OUTPUTS:          key: "fake_extra_output" value: {
-; EXTRA-OUTPUTS-NEXT:       feature: { int64_list: { value: [1] } }
-; EXTRA-OUTPUTS-NEXT:     }
-; EXTRA-OUTPUTS-NEXT:   }
