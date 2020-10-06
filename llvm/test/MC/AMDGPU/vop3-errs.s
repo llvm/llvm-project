@@ -58,29 +58,37 @@ v_cvt_f64_i32 v[5:6], s1 mul:3
 //
 
 v_interp_mov_f32_e64 v5, p10, attr0.x high
-// GCN: error: invalid operand for instruction
+// GFX67: error: e64 variant of this instruction is not supported
+// GFX89: error: invalid operand for instruction
 
 v_interp_mov_f32_e64 v5, p10, attr0.x v0
-// GCN: error: invalid operand for instruction
+// GFX67: error: e64 variant of this instruction is not supported
+// GFX89: error: invalid operand for instruction
 
 v_interp_p1_f32_e64 v5, v2, attr0.x high
-// GCN: error: invalid operand for instruction
+// GFX67: error: e64 variant of this instruction is not supported
+// GFX89: error: invalid operand for instruction
 
 v_interp_p1_f32_e64 v5, v2, attr0.x v0
-// GCN: error: invalid operand for instruction
+// GFX67: error: e64 variant of this instruction is not supported
+// GFX89: error: invalid operand for instruction
 
 v_interp_p2_f32_e64 v255, v2, attr0.x high
-// GCN: error: invalid operand for instruction
+// GFX67: error: e64 variant of this instruction is not supported
+// GFX89: error: invalid operand for instruction
 
 v_interp_p2_f32_e64 v255, v2, attr0.x v0
-// GCN: error: invalid operand for instruction
+// GFX67: error: e64 variant of this instruction is not supported
+// GFX89: error: invalid operand for instruction
 
 v_interp_p1ll_f16 v5, p0, attr31.x
-// GCN: error: invalid operand for instruction
+// GFX67: error: instruction not supported on this GPU
+// GFX89: error: invalid operand for instruction
 
 v_interp_p1ll_f16 v5, v2, attr31.x v0
-// GCN: error: invalid operand for instruction
+// GFX67: error: instruction not supported on this GPU
+// GFX89: error: invalid operand for instruction
 
 v_interp_p2_f16 v5, v2, attr1.x, v3 mul:2
-// GFX67: error: not a valid operand
+// GFX67: error: instruction not supported on this GPU
 // GFX89: error: invalid operand for instruction
