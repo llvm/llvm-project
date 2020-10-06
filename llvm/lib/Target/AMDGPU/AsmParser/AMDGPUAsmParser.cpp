@@ -1246,6 +1246,7 @@ public:
   bool isForcedDPP() const { return ForcedDPP; }
   bool isForcedSDWA() const { return ForcedSDWA; }
   ArrayRef<unsigned> getMatchedVariants() const;
+  StringRef getMatchedVariantName() const;
 
   std::unique_ptr<AMDGPUOperand> parseRegister(bool RestoreOnFailure = false);
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc,
@@ -1368,6 +1369,13 @@ private:
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
   unsigned findImplicitSGPRReadInVOP(const MCInst &Inst) const;
+
+  bool isSupportedMnemo(StringRef Mnemo,
+                        const FeatureBitset &FBS);
+  bool isSupportedMnemo(StringRef Mnemo,
+                        const FeatureBitset &FBS,
+                        ArrayRef<unsigned> Variants);
+  bool checkUnsupportedInstruction(StringRef Name, const SMLoc &IDLoc);
 
   bool isId(const StringRef Id) const;
   bool isId(const AsmToken &Token, const StringRef Id) const;
@@ -2837,6 +2845,15 @@ unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   return Match_Success;
 }
 
+static ArrayRef<unsigned> getAllVariants() {
+  static const unsigned Variants[] = {
+    AMDGPUAsmVariants::DEFAULT, AMDGPUAsmVariants::VOP3,
+    AMDGPUAsmVariants::SDWA, AMDGPUAsmVariants::SDWA9, AMDGPUAsmVariants::DPP
+  };
+
+  return makeArrayRef(Variants);
+}
+
 // What asm variants we should check
 ArrayRef<unsigned> AMDGPUAsmParser::getMatchedVariants() const {
   if (getForcedEncodingSize() == 32) {
@@ -2860,12 +2877,23 @@ ArrayRef<unsigned> AMDGPUAsmParser::getMatchedVariants() const {
     return makeArrayRef(Variants);
   }
 
-  static const unsigned Variants[] = {
-    AMDGPUAsmVariants::DEFAULT, AMDGPUAsmVariants::VOP3,
-    AMDGPUAsmVariants::SDWA, AMDGPUAsmVariants::SDWA9, AMDGPUAsmVariants::DPP
-  };
+  return getAllVariants();
+}
 
-  return makeArrayRef(Variants);
+StringRef AMDGPUAsmParser::getMatchedVariantName() const {
+  if (getForcedEncodingSize() == 32)
+    return "e32";
+
+  if (isForcedVOP3())
+    return "e64";
+
+  if (isForcedSDWA())
+    return "sdwa";
+
+  if (isForcedDPP())
+    return "dpp";
+
+  return "";
 }
 
 unsigned AMDGPUAsmParser::findImplicitSGPRReadInVOP(const MCInst &Inst) const {
@@ -3753,6 +3781,57 @@ static std::string AMDGPUMnemonicSpellCheck(StringRef S,
                                             const FeatureBitset &FBS,
                                             unsigned VariantID = 0);
 
+static bool AMDGPUCheckMnemonic(StringRef Mnemonic,
+                                const FeatureBitset &AvailableFeatures,
+                                unsigned VariantID);
+
+bool AMDGPUAsmParser::isSupportedMnemo(StringRef Mnemo,
+                                       const FeatureBitset &FBS) {
+  return isSupportedMnemo(Mnemo, FBS, getAllVariants());
+}
+
+bool AMDGPUAsmParser::isSupportedMnemo(StringRef Mnemo,
+                                       const FeatureBitset &FBS,
+                                       ArrayRef<unsigned> Variants) {
+  for (auto Variant : Variants) {
+    if (AMDGPUCheckMnemonic(Mnemo, FBS, Variant))
+      return true;
+  }
+
+  return false;
+}
+
+bool AMDGPUAsmParser::checkUnsupportedInstruction(StringRef Mnemo,
+                                                  const SMLoc &IDLoc) {
+  FeatureBitset FBS = ComputeAvailableFeatures(getSTI().getFeatureBits());
+
+  // Check if requested instruction variant is supported.
+  if (isSupportedMnemo(Mnemo, FBS, getMatchedVariants()))
+    return false;
+
+  // This instruction is not supported.
+  // Clear any other pending errors because they are no longer relevant.
+  getParser().clearPendingErrors();
+
+  // Requested instruction variant is not supported.
+  // Check if any other variants are supported.
+  StringRef VariantName = getMatchedVariantName();
+  if (!VariantName.empty() && isSupportedMnemo(Mnemo, FBS)) {
+    return Error(IDLoc,
+                 Twine(VariantName,
+                       " variant of this instruction is not supported"));
+  }
+
+  // Finally check if this instruction is supported on any other GPU.
+  if (isSupportedMnemo(Mnemo, FeatureBitset().set())) {
+    return Error(IDLoc, "instruction not supported on this GPU");
+  }
+
+  // Instruction not supported on any GPU. Probably a typo.
+  std::string Suggestion = AMDGPUMnemonicSpellCheck(Mnemo, FBS);
+  return Error(IDLoc, "invalid instruction" + Suggestion);
+}
+
 bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               OperandVector &Operands,
                                               MCStreamer &Out,
@@ -3782,26 +3861,25 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       break;
   }
 
-  switch (Result) {
-  default: break;
-  case Match_Success:
+  if (Result == Match_Success) {
     if (!validateInstruction(Inst, IDLoc, Operands)) {
       return true;
     }
     Inst.setLoc(IDLoc);
     Out.emitInstruction(Inst, getSTI());
     return false;
-
-  case Match_MissingFeature:
-    return Error(IDLoc, "instruction not supported on this GPU");
-
-  case Match_MnemonicFail: {
-    FeatureBitset FBS = ComputeAvailableFeatures(getSTI().getFeatureBits());
-    std::string Suggestion = AMDGPUMnemonicSpellCheck(
-        ((AMDGPUOperand &)*Operands[0]).getToken(), FBS);
-    return Error(IDLoc, "invalid instruction" + Suggestion,
-                 ((AMDGPUOperand &)*Operands[0]).getLocRange());
   }
+
+  StringRef Mnemo = ((AMDGPUOperand &)*Operands[0]).getToken();
+  if (checkUnsupportedInstruction(Mnemo, IDLoc)) {
+    return true;
+  }
+
+  switch (Result) {
+  default: break;
+  case Match_MissingFeature:
+    // FIXME: this case should be analyzed and error message corrected.
+    return Error(IDLoc, "instruction not supported on this GPU");
 
   case Match_InvalidOperand: {
     SMLoc ErrorLoc = IDLoc;
@@ -3819,6 +3897,8 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_PreferE32:
     return Error(IDLoc, "internal error: instruction without _e64 suffix "
                         "should be encoded as e32");
+  case Match_MnemonicFail:
+    llvm_unreachable("Invalid instructions should have been handled already");
   }
   llvm_unreachable("Implement any new match types added!");
 }
@@ -4771,6 +4851,7 @@ bool AMDGPUAsmParser::ParseInstruction(ParseInstructionInfo &Info,
       Parser.Lex();
 
     if (Res != MatchOperand_Success) {
+      checkUnsupportedInstruction(Name, NameLoc);
       if (!Parser.hasPendingError()) {
         // FIXME: use real operand location rather than the current location.
         StringRef Msg =
@@ -7469,6 +7550,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUAsmParser() {
 #define GET_REGISTER_MATCHER
 #define GET_MATCHER_IMPLEMENTATION
 #define GET_MNEMONIC_SPELL_CHECKER
+#define GET_MNEMONIC_CHECKER
 #include "AMDGPUGenAsmMatcher.inc"
 
 // This fuction should be defined after auto-generated include so that we have
