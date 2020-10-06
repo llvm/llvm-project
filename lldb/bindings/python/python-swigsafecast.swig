@@ -152,3 +152,10 @@ SBTypeToSWIGWrapper (lldb::SBSymbolContext* sym_ctx_sb)
 {
     return SWIG_NewPointerObj((void *) sym_ctx_sb, SWIGTYPE_p_lldb__SBSymbolContext, 0);
 }
+
+template <>
+PyObject*
+SBTypeToSWIGWrapper (lldb::SBStream* stream_sb)
+{
+    return SWIG_NewPointerObj((void *) stream_sb, SWIGTYPE_p_lldb__SBStream, 0);
+}
