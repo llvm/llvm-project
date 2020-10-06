@@ -1674,7 +1674,7 @@ TypeSystemSwiftTypeRef::GetPointerType(opaque_compiler_type_t type) {
     using namespace swift::Demangle;
     Demangler dem;
 
-    auto *pointee_type = GetType(dem.demangleSymbol(AsMangledName(type)));
+    auto *pointee_type = GetDemangledType(dem, AsMangledName(type));
 
     auto *pointer_type = dem.createNode(Node::Kind::Type);
     auto *BGS = dem.createNode(Node::Kind::BoundGenericStructure);
