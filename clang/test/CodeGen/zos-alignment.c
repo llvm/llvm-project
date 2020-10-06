@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -triple s390x-none-zos -fdump-record-layouts %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm-only -triple s390x-none-zos -fdump-record-layouts %s | FileCheck %s
 
 struct s0 {
   short a:3;
