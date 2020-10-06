@@ -98,48 +98,6 @@ static unsigned getRegisterSize(const TargetRegisterInfo &TRI, Register Reg) {
   return TRI.getSpillSize(*RC);
 }
 
-// Advance iterator to the next stack map entry
-static MachineInstr::const_mop_iterator
-advanceToNextStackMapElt(MachineInstr::const_mop_iterator MOI) {
-  if (MOI->isImm()) {
-    switch (MOI->getImm()) {
-    default:
-      llvm_unreachable("Unrecognized operand type.");
-    case StackMaps::DirectMemRefOp:
-      MOI += 2; // <Reg>, <Imm>
-      break;
-    case StackMaps::IndirectMemRefOp:
-      MOI += 3; // <Size>, <Reg>, <Imm>
-      break;
-    case StackMaps::ConstantOp:
-      MOI += 1;
-      break;
-    }
-  }
-  return ++MOI;
-}
-
-// Return statepoint GC args as a set
-static SmallSet<Register, 8> collectGCRegs(MachineInstr &MI) {
-  StatepointOpers SO(&MI);
-  unsigned NumDeoptIdx = SO.getNumDeoptArgsIdx();
-  unsigned NumDeoptArgs = MI.getOperand(NumDeoptIdx).getImm();
-  MachineInstr::const_mop_iterator MOI(MI.operands_begin() + NumDeoptIdx + 1),
-      MOE(MI.operands_end());
-
-  // Skip deopt args
-  while (NumDeoptArgs--)
-    MOI = advanceToNextStackMapElt(MOI);
-
-  SmallSet<Register, 8> Result;
-  while (MOI != MOE) {
-    if (MOI->isReg() && !MOI->isImplicit())
-      Result.insert(MOI->getReg());
-    MOI = advanceToNextStackMapElt(MOI);
-  }
-  return Result;
-}
-
 // Try to eliminate redundant copy to register which we're going to
 // spill, i.e. try to change:
 //    X = COPY Y
@@ -411,8 +369,13 @@ public:
   // Also cache the size of found registers.
   // Returns true if caller save registers found.
   bool findRegistersToSpill() {
+    SmallSet<Register, 8> GCRegs;
+    // All GC pointer operands assigned to registers produce new value.
+    // Since they're tied to their defs, it is enough to collect def registers.
+    for (const auto &Def : MI.defs())
+      GCRegs.insert(Def.getReg());
+
     SmallSet<Register, 8> VisitedRegs;
-    SmallSet<Register, 8> GCRegs = collectGCRegs(MI);
     for (unsigned Idx = StatepointOpers(&MI).getVarIdx(),
                   EndIdx = MI.getNumOperands();
          Idx < EndIdx; ++Idx) {
