@@ -553,6 +553,11 @@ ljmp	$0x7ace,$0x7ace
 data32 call a
 data32 callw a
 
+// CHECK:      ljmpl $1, $2
+// CHECK-NEXT: ljmpl $1, $2
+data32 ljmp $1, $2
+data32 ljmpw $1, $2
+
 // CHECK:	incb	%al # encoding: [0xfe,0xc0]
 	incb %al
 
@@ -972,10 +977,8 @@ lretl
 // CHECK: encoding: [0x66]
 data32
 
-// CHECK: data32
-// CHECK: encoding: [0x66]
-// CHECK: lgdtw 4(%eax)
-// CHECK:  encoding: [0x67,0x0f,0x01,0x50,0x04]
+// CHECK: lgdtl 4(%eax)
+// CHECK-SAME:  encoding: [0x67,0x66,0x0f,0x01,0x50,0x04]
 data32 lgdt 4(%eax)
 
 // CHECK: wbnoinvd
