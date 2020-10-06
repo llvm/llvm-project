@@ -693,8 +693,7 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
     if (TrOp && I.isLogicalShift() && TrOp->isShift() &&
         isa<ConstantInt>(TrOp->getOperand(1))) {
       // Okay, we'll do this xform.  Make the shift of shift.
-      Constant *ShAmt =
-          ConstantExpr::getZExt(cast<Constant>(Op1), TrOp->getType());
+      Constant *ShAmt = ConstantExpr::getZExt(Op1, TrOp->getType());
       // (shift2 (shift1 & 0x00FF), c2)
       Value *NSh = Builder.CreateBinOp(I.getOpcode(), TrOp, ShAmt, I.getName());
 
