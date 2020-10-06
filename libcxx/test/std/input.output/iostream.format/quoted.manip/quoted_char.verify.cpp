@@ -10,6 +10,8 @@
 
 // quoted
 
+// UNSUPPORTED: c++03, c++11
+
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -17,29 +19,15 @@
 
 #include "test_macros.h"
 
-#if TEST_STD_VER > 11
-
-//  Test that mismatches in the traits between the quoted object and the dest string are diagnosed.
-
-template <class charT>
-struct test_traits
-{
-    typedef charT     char_type;
-};
+//  Test that mismatches between strings and wide streams are diagnosed
 
 void round_trip ( const char *p ) {
-    std::stringstream ss;
-    ss << std::quoted(p);
-    std::basic_string<char, test_traits<char>> s;
-    ss >> std::quoted(s);
-    }
-
-
-
-int main(int, char**)
-{
-    round_trip ( "Hi Mom" );
+    std::wstringstream ss;
+    ss << std::quoted(p); // expected-error {{invalid operands to binary expression}}
+    std::string s;
+    ss >> std::quoted(s); // expected-error {{invalid operands to binary expression}}
 }
-#else
-#error
-#endif
+
+int main(int, char**) {
+    round_trip("Hi Mom");
+}
