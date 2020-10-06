@@ -373,26 +373,19 @@ lldb_private::FileSpec HostInfoMacOSX::GetXcodeDeveloperDirectory() {
 static std::string GetXcodeSDK(XcodeSDK sdk) {
   XcodeSDK::Info info = sdk.Parse();
   std::string sdk_name = XcodeSDK::GetCanonicalName(info);
-  auto find_sdk = [](std::string sdk_name) -> std::string {
-    std::string xcrun_cmd;
-    std::string developer_dir = GetEnvDeveloperDir();
-    if (developer_dir.empty())
-      if (FileSpec fspec = HostInfo::GetShlibDir())
-        if (FileSystem::Instance().Exists(fspec)) {
-          FileSpec path(
-              XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath()));
-          if (path.RemoveLastPathComponent())
-            developer_dir = path.GetPath();
-        }
+
+  auto xcrun = [](const std::string &sdk,
+                  llvm::StringRef developer_dir = "") -> std::string {
+    std::string xcrun_cmd = "xcrun --show-sdk-path --sdk " + sdk;
     if (!developer_dir.empty())
-      xcrun_cmd = "/usr/bin/env DEVELOPER_DIR=\"" + developer_dir + "\" ";
-    xcrun_cmd += "xcrun --show-sdk-path --sdk " + sdk_name;
+      xcrun_cmd = "/usr/bin/env DEVELOPER_DIR=\"" + developer_dir.str() +
+                  "\" " + xcrun_cmd;
 
     int status = 0;
     int signo = 0;
     std::string output_str;
     lldb_private::Status error =
-        Host::RunShellCommand(xcrun_cmd.c_str(), FileSpec(), &status, &signo,
+        Host::RunShellCommand(xcrun_cmd, FileSpec(), &status, &signo,
                               &output_str, std::chrono::seconds(15));
 
     // Check that xcrun return something useful.
@@ -412,6 +405,33 @@ static std::string GetXcodeSDK(XcodeSDK sdk) {
       output = output.substr(last_newline + 1);
 
     return output.str();
+  };
+
+  auto find_sdk = [&xcrun](const std::string &sdk_name) -> std::string {
+    // Invoke xcrun with the developer dir specified in the environment.
+    std::string developer_dir = GetEnvDeveloperDir();
+    if (!developer_dir.empty()) {
+      // Don't fallback if DEVELOPER_DIR was set.
+      return xcrun(sdk_name, developer_dir);
+    }
+
+    // Invoke xcrun with the shlib dir.
+    if (FileSpec fspec = HostInfo::GetShlibDir()) {
+      if (FileSystem::Instance().Exists(fspec)) {
+        std::string contents_dir =
+            XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath());
+        llvm::StringRef shlib_developer_dir =
+            llvm::sys::path::parent_path(contents_dir);
+        if (!shlib_developer_dir.empty()) {
+          std::string sdk = xcrun(sdk_name, std::move(shlib_developer_dir));
+          if (!sdk.empty())
+            return sdk;
+        }
+      }
+    }
+
+    // Invoke xcrun without a developer dir as a last resort.
+    return xcrun(sdk_name);
   };
 
   std::string path = find_sdk(sdk_name);
