@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -shape-tensor-to-memref <%s | FileCheck %s
+// RUN: mlir-opt -split-input-file -shape-tensor-to-memref <%s | FileCheck %s
 
 // -----
 // Check that shape.assuming returns a memref.
