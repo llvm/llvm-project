@@ -5861,9 +5861,7 @@ struct AAMemoryBehaviorFloating : AAMemoryBehaviorImpl {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AAMemoryBehaviorImpl::initialize(A);
-    // Initialize the use vector with all direct uses of the associated value.
-    for (const Use &U : getAssociatedValue().uses())
-      Uses.insert(&U);
+    addUsesOf(A, getAssociatedValue());
   }
 
   /// See AbstractAttribute::updateImpl(...).
@@ -5889,8 +5887,14 @@ private:
   void analyzeUseIn(Attributor &A, const Use *U, const Instruction *UserI);
 
 protected:
+  /// Add the uses of \p V to the `Uses` set we look at during the update step.
+  void addUsesOf(Attributor &A, const Value &V);
+
   /// Container for (transitive) uses of the associated argument.
-  SetVector<const Use *> Uses;
+  SmallVector<const Use *, 8> Uses;
+
+  /// Set to remember the uses we already traversed.
+  SmallPtrSet<const Use *, 8> Visited;
 };
 
 /// Memory behavior attribute for function argument.
@@ -5915,9 +5919,7 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
     if (!Arg || !A.isFunctionIPOAmendable(*(Arg->getParent()))) {
       indicatePessimisticFixpoint();
     } else {
-      // Initialize the use vector with all direct uses of the associated value.
-      for (const Use &U : Arg->uses())
-        Uses.insert(&U);
+      addUsesOf(A, *Arg);
     }
   }
 
@@ -6169,8 +6171,7 @@ ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
 
     // Check if the users of UserI should also be visited.
     if (followUsersOfUseIn(A, U, UserI))
-      for (const Use &UserIUse : UserI->uses())
-        Uses.insert(&UserIUse);
+      addUsesOf(A, *UserI);
 
     // If UserI might touch memory we analyze the use in detail.
     if (UserI->mayReadOrWriteMemory())
@@ -6179,6 +6180,28 @@ ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
 
   return (AssumedState != getAssumed()) ? ChangeStatus::CHANGED
                                         : ChangeStatus::UNCHANGED;
+}
+
+void AAMemoryBehaviorFloating::addUsesOf(Attributor &A, const Value &V) {
+  SmallVector<const Use *, 8> WL;
+  for (const Use &U : V.uses())
+    WL.push_back(&U);
+
+  while (!WL.empty()) {
+    const Use *U = WL.pop_back_val();
+    if (!Visited.insert(U).second)
+      continue;
+
+    const Instruction *UserI = cast<Instruction>(U->getUser());
+    if (UserI->mayReadOrWriteMemory()) {
+      Uses.push_back(U);
+      continue;
+    }
+    if (!followUsersOfUseIn(A, U, UserI))
+      continue;
+    for (const Use &UU : UserI->uses())
+      WL.push_back(&UU);
+  }
 }
 
 bool AAMemoryBehaviorFloating::followUsersOfUseIn(Attributor &A, const Use *U,
