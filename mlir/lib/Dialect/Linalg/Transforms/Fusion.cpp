@@ -97,7 +97,7 @@ static LinalgOp cloneWithLoopRanges(OpBuilder &b, Location loc, LinalgOp op,
     clonedViews.push_back(
         b.create<SubViewOp>(loc, view, offsets, sizes, strides));
   }
-  auto operands = getAssumedNonViewOperands(op);
+  auto operands = op.getAssumedNonShapedOperands();
   clonedViews.append(operands.begin(), operands.end());
 
   Operation *clonedOp = op.clone(b, loc, /*resultTypes*/ {}, clonedViews);

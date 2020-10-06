@@ -508,10 +508,10 @@ Optional<LinalgLoops> linalgOpToLoopsImpl(Operation *op, OpBuilder &builder) {
       linalgOp.indexing_maps().template getAsRange<AffineMapAttr>();
   auto maps = llvm::to_vector<8>(
       llvm::map_range(mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
-  SmallVector<Value, 8> sizes = getViewSizes(builder, linalgOp);
+  SmallVector<Value, 8> sizes = getShape(builder, linalgOp);
   AffineMap map = concatAffineMaps(maps);
   auto loopRanges = emitLoopRanges(scope.getBuilderRef(), scope.getLocation(),
-                                   map, getViewSizes(builder, linalgOp));
+                                   map, getShape(builder, linalgOp));
   SmallVector<Value, 4> allIvs;
   GenerateLoopNest<LoopTy>::doit(
       loopRanges, /*iterInitArgs*/ {}, linalgOp.iterator_types().getValue(),
