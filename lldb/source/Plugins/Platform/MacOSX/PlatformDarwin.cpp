@@ -1226,6 +1226,33 @@ PlatformDarwin::GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) {
     return 1;
 }
 
+lldb::ProcessSP
+PlatformDarwin::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
+                             Target *target, // Can be NULL, if NULL create
+                                             // a new target, else use existing
+                                             // one
+                             Status &error) {
+  ProcessSP process_sp;
+
+  if (IsHost()) {
+    // We are going to hand this process off to debugserver which will be in
+    // charge of setting the exit status.  However, we still need to reap it
+    // from lldb. So, make sure we use a exit callback which does not set exit
+    // status.
+    const bool monitor_signals = false;
+    launch_info.SetMonitorProcessCallback(
+        &ProcessLaunchInfo::NoOpMonitorCallback, monitor_signals);
+    process_sp = Platform::DebugProcess(launch_info, debugger, target, error);
+  } else {
+    if (m_remote_platform_sp)
+      process_sp = m_remote_platform_sp->DebugProcess(launch_info, debugger,
+                                                      target, error);
+    else
+      error.SetErrorString("the platform is not currently connected");
+  }
+  return process_sp;
+}
+
 void PlatformDarwin::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("_sigtramp"));
 }
