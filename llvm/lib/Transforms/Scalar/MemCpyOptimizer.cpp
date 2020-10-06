@@ -70,6 +70,7 @@ STATISTIC(NumMemCpyInstr, "Number of memcpy instructions deleted");
 STATISTIC(NumMemSetInfer, "Number of memsets inferred");
 STATISTIC(NumMoveToCpy,   "Number of memmoves converted to memcpy");
 STATISTIC(NumCpyToSet,    "Number of memcpys converted to memset");
+STATISTIC(NumCallSlot,    "Number of call slot optimizations performed");
 
 namespace {
 
@@ -942,6 +943,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
                          LLVMContext::MD_access_group};
   combineMetadata(C, cpy, KnownIDs, true);
 
+  ++NumCallSlot;
   return true;
 }
 
