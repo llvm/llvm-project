@@ -153,12 +153,12 @@ define void @test_argument() {
 ; CHECK-LABEL: test_invoke:
 ; CHECK:      i32.const   $push[[L1:[0-9]+]]=, call_func{{$}}
 ; CHECK-NEXT: i32.const   $push[[L0:[0-9]+]]=, has_i32_ret{{$}}
-; CHECK-NEXT: call        "__invoke_void_i32()*", $pop[[L1]], $pop[[L0]]{{$}}
+; CHECK-NEXT: call        invoke_vi, $pop[[L1]], $pop[[L0]]{{$}}
 ; CHECK:      i32.const   $push[[L3:[0-9]+]]=, call_func{{$}}
 ; CHECK-NEXT: i32.const   $push[[L2:[0-9]+]]=, has_i32_arg{{$}}
-; CHECK-NEXT: call        "__invoke_void_i32()*", $pop[[L3]], $pop[[L2]]{{$}}
+; CHECK-NEXT: call        invoke_vi, $pop[[L3]], $pop[[L2]]{{$}}
 ; CHECK:      i32.const   $push[[L4:[0-9]+]]=, .Lhas_i32_arg_bitcast.2{{$}}
-; CHECK-NEXT: call        __invoke_void, $pop[[L4]]{{$}}
+; CHECK-NEXT: call        invoke_v, $pop[[L4]]{{$}}
 declare i32 @personality(...)
 define void @test_invoke() personality i32 (...)* @personality {
 entry:
