@@ -36,8 +36,9 @@ entry:
 ; CHECK: entry.split:
 ; CHECK-NEXT: phi i32 [ 0, %entry ], [ %[[LONGJMP_RESULT:.*]], %if.end ]
 ; CHECK-NEXT: %[[ARRAYDECAY1:.*]] = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %[[BUF]], i32 0, i32 0
+; CHECK-NEXT: %[[JMPBUF:.*]] = ptrtoint %struct.__jmp_buf_tag* %[[ARRAYDECAY1]] to i32
 ; CHECK-NEXT: store i32 0, i32* @__THREW__
-; CHECK-NEXT: call cc{{.*}} void @"__invoke_void_%struct.__jmp_buf_tag*_i32"(void (%struct.__jmp_buf_tag*, i32)* @emscripten_longjmp_jmpbuf, %struct.__jmp_buf_tag* %[[ARRAYDECAY1]], i32 1)
+; CHECK-NEXT: call cc{{.*}} void @__invoke_void_i32_i32(void (i32, i32)* @emscripten_longjmp, i32 %[[JMPBUF]], i32 1)
 ; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i32, i32* @__THREW__
 ; CHECK-NEXT: store i32 0, i32* @__THREW__
 ; CHECK-NEXT: %[[CMP0:.*]] = icmp ne i32 %__THREW__.val, 0
@@ -187,8 +188,8 @@ entry:
   %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
   call void @longjmp(%struct.__jmp_buf_tag* %arraydecay, i32 5) #1
   unreachable
-; CHECK: %[[ARRAYDECAY:.*]] = getelementptr inbounds
-; CHECK-NEXT: call void @emscripten_longjmp_jmpbuf(%struct.__jmp_buf_tag* %[[ARRAYDECAY]], i32 5)
+; CHECK: %[[JMPBUF:.*]] = ptrtoint
+; CHECK-NEXT: call void @emscripten_longjmp(i32 %[[JMPBUF]], i32 5)
 }
 
 ; Test inline asm handling
@@ -224,7 +225,7 @@ entry:
 @buffer = global [1 x %struct.__jmp_buf_tag] zeroinitializer, align 16
 define void @longjmp_only() {
 entry:
-  ; CHECK: call void @emscripten_longjmp_jmpbuf
+  ; CHECK: call void @emscripten_longjmp
   call void @longjmp(%struct.__jmp_buf_tag* getelementptr inbounds ([1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* @buffer, i32 0, i32 0), i32 1) #1
   unreachable
 }
@@ -265,28 +266,24 @@ declare void @free(i8*)
 ; CHECK-DAG: declare void @setTempRet0(i32)
 ; CHECK-DAG: declare i32* @saveSetjmp(%struct.__jmp_buf_tag*, i32, i32*, i32)
 ; CHECK-DAG: declare i32 @testSetjmp(i32, i32*, i32)
-; CHECK-DAG: declare void @emscripten_longjmp_jmpbuf(%struct.__jmp_buf_tag*, i32)
 ; CHECK-DAG: declare void @emscripten_longjmp(i32, i32)
 ; CHECK-DAG: declare void @__invoke_void(void ()*)
-; CHECK-DAG: declare void @"__invoke_void_%struct.__jmp_buf_tag*_i32"(void (%struct.__jmp_buf_tag*, i32)*, %struct.__jmp_buf_tag*, i32)
 
 attributes #0 = { returns_twice }
 attributes #1 = { noreturn }
 attributes #2 = { nounwind }
 attributes #3 = { allocsize(0) }
-; CHECK: attributes #{{[0-9]+}} = { nounwind "wasm-import-module"="env" "wasm-import-name"="getTempRet0" }
-; CHECK: attributes #{{[0-9]+}} = { nounwind "wasm-import-module"="env" "wasm-import-name"="setTempRet0" }
-; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__resumeException" }
-; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="llvm_eh_typeid_for" }
-; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_void" }
-; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__cxa_find_matching_catch_3" }
-; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="emscripten_longjmp_jmpbuf" }
-; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="saveSetjmp" }
-; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="testSetjmp" }
-; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="emscripten_longjmp" }
-; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_i8*_i32_%struct.__jmp_buf_tag*" }
-; CHECK: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_void_%struct.__jmp_buf_tag*_i32" }
-; CHECK: attributes #[[ALLOCSIZE_ATTR]] = { allocsize(1) }
+; CHECK-DAG: attributes #{{[0-9]+}} = { nounwind "wasm-import-module"="env" "wasm-import-name"="getTempRet0" }
+; CHECK-DAG: attributes #{{[0-9]+}} = { nounwind "wasm-import-module"="env" "wasm-import-name"="setTempRet0" }
+; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__resumeException" }
+; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="llvm_eh_typeid_for" }
+; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_void" }
+; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__cxa_find_matching_catch_3" }
+; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="saveSetjmp" }
+; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="testSetjmp" }
+; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="emscripten_longjmp" }
+; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_i8*_i32_%struct.__jmp_buf_tag*" }
+; CHECK-DAG: attributes #[[ALLOCSIZE_ATTR]] = { allocsize(1) }
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!0}
