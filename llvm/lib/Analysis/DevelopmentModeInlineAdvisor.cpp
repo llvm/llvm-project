@@ -298,9 +298,9 @@ public:
   int64_t getFeature(int Index) const override;
   bool isValid() const { return !!Evaluator; }
 
-  const std::vector<std::string> outputNames() const { return OutputNames; }
+  const std::vector<std::string> &outputNames() const { return OutputNames; }
 
-  const std::vector<TensorSpec> outputSpecs() const { return OutputSpecs; }
+  const std::vector<TensorSpec> &outputSpecs() const { return OutputSpecs; }
 
   const Optional<TFModelEvaluator::EvaluationResult> &
   lastEvaluationResult() const {
