@@ -1,4 +1,4 @@
-# RUN: python %s | llvm-mc -filetype=obj -triple i686-pc-win32 - | llvm-readobj -h - | FileCheck %s
+# RUN: %python %s | llvm-mc -filetype=obj -triple i686-pc-win32 - | llvm-readobj -h - | FileCheck %s
 
 from __future__ import print_function
 

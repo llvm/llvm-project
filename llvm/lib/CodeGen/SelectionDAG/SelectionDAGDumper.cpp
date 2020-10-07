@@ -450,9 +450,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     case ISD::SETFALSE2:                return "setfalse2";
     }
   case ISD::VECREDUCE_FADD:             return "vecreduce_fadd";
-  case ISD::VECREDUCE_STRICT_FADD:      return "vecreduce_strict_fadd";
+  case ISD::VECREDUCE_SEQ_FADD:         return "vecreduce_seq_fadd";
   case ISD::VECREDUCE_FMUL:             return "vecreduce_fmul";
-  case ISD::VECREDUCE_STRICT_FMUL:      return "vecreduce_strict_fmul";
+  case ISD::VECREDUCE_SEQ_FMUL:         return "vecreduce_seq_fmul";
   case ISD::VECREDUCE_ADD:              return "vecreduce_add";
   case ISD::VECREDUCE_MUL:              return "vecreduce_mul";
   case ISD::VECREDUCE_AND:              return "vecreduce_and";
