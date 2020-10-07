@@ -11,7 +11,6 @@ set(LIBCXX_SOURCES
   chrono.cpp
   condition_variable.cpp
   condition_variable_destructor.cpp
-  debug.cpp
   exception.cpp
   functional.cpp
   future.cpp
@@ -55,6 +54,10 @@ set(LIBCXX_SOURCES
   variant.cpp
   vector.cpp
   )
+
+if (LIBCXX_ENABLE_DEBUG_MODE)
+  list(APPEND LIBCXX_SOURCES debug.cpp)
+endif()
 
 if(WIN32)
   list(APPEND LIBCXX_SOURCES

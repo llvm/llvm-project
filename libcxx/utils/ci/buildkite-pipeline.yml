@@ -75,6 +75,11 @@ steps:
     agents:
       queue: "libcxx-builders"
 
+  - label: "No debug mode"
+    command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh generic-nodebug | libcxx/utils/ci/phabricator-report"
+    agents:
+      queue: "libcxx-builders"
+
   - label: "MacOS C++20"
     command: "set -o pipefail && libcxx/utils/ci/run-buildbot.sh generic-cxx2a | libcxx/utils/ci/phabricator-report"
     agents:

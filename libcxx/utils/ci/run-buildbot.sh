@@ -102,6 +102,12 @@ generic-singlethreaded)
     args+=("-DLIBCXXABI_ENABLE_THREADS=OFF")
     args+=("-DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF")
 ;;
+generic-nodebug)
+    export CC=clang
+    export CXX=clang++
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLIBCXX_ENABLE_DEBUG_MODE=OFF")
+;;
 x86_64-apple-system)
     export CC=clang
     export CXX=clang++
