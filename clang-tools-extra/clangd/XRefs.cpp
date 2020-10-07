@@ -343,18 +343,6 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
       }
     }
 
-    // Give the underlying decl if navigation is triggered on a non-renaming
-    // alias.
-    if (llvm::isa<UsingDecl>(D) || llvm::isa<UnresolvedUsingValueDecl>(D)) {
-      // FIXME: address more complicated cases. TargetDecl(... Underlying) gives
-      // all overload candidates, we only want the targeted one if the cursor is
-      // on an using-alias usage, workround it with getDeclAtPosition.
-      llvm::for_each(
-          getDeclAtPosition(AST, CurLoc, DeclRelation::Underlying, NodeKind),
-          [&](const NamedDecl *UD) { AddResultDecl(UD); });
-      continue;
-    }
-
     // Special case: if the class name is selected, also map Objective-C
     // categories and category implementations back to their class interface.
     //
@@ -1159,17 +1147,6 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
         DeclRelation::TemplatePattern | DeclRelation::Alias;
     std::vector<const NamedDecl *> Decls =
         getDeclAtPosition(AST, *CurLoc, Relations);
-    std::vector<const NamedDecl *> NonrenamingAliasUnderlyingDecls;
-    // If the results include a *non-renaming* alias, get its
-    // underlying decls as well. (See similar logic in locateASTReferent()).
-    for (const NamedDecl *D : Decls) {
-      if (llvm::isa<UsingDecl>(D) || llvm::isa<UnresolvedUsingValueDecl>(D)) {
-        for (const NamedDecl *AD :
-             getDeclAtPosition(AST, *CurLoc, DeclRelation::Underlying))
-          NonrenamingAliasUnderlyingDecls.push_back(AD);
-      }
-    }
-    llvm::copy(NonrenamingAliasUnderlyingDecls, std::back_inserter(Decls));
 
     // We traverse the AST to find references in the main file.
     auto MainFileRefs = findRefs(Decls, AST);

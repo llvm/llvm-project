@@ -181,8 +181,7 @@ TEST_F(TargetDeclTest, UsingDecl) {
     int x = [[f]](42);
   )cpp";
   // f(char) is not referenced!
-  EXPECT_DECLS("DeclRefExpr", {"using foo::f", Rel::Alias},
-               {"int f(int)", Rel::Underlying});
+  EXPECT_DECLS("DeclRefExpr", {"using foo::f", Rel::Alias}, {"int f(int)"});
 
   Code = R"cpp(
     namespace foo {
@@ -192,9 +191,8 @@ TEST_F(TargetDeclTest, UsingDecl) {
     [[using foo::f]];
   )cpp";
   // All overloads are referenced.
-  EXPECT_DECLS("UsingDecl", {"using foo::f", Rel::Alias},
-               {"int f(int)", Rel::Underlying},
-               {"int f(char)", Rel::Underlying});
+  EXPECT_DECLS("UsingDecl", {"using foo::f", Rel::Alias}, {"int f(int)"},
+               {"int f(char)"});
 
   Code = R"cpp(
     struct X {
@@ -205,8 +203,7 @@ TEST_F(TargetDeclTest, UsingDecl) {
     };
     int x = Y().[[foo]]();
   )cpp";
-  EXPECT_DECLS("MemberExpr", {"using X::foo", Rel::Alias},
-               {"int foo()", Rel::Underlying});
+  EXPECT_DECLS("MemberExpr", {"using X::foo", Rel::Alias}, {"int foo()"});
 
   Code = R"cpp(
       template <typename T>
@@ -219,7 +216,7 @@ TEST_F(TargetDeclTest, UsingDecl) {
       };
     )cpp";
   EXPECT_DECLS("UnresolvedUsingValueDecl", {"using Base<T>::waldo", Rel::Alias},
-               {"void waldo()", Rel::Underlying});
+               {"void waldo()"});
 }
 
 TEST_F(TargetDeclTest, ConstructorInitList) {

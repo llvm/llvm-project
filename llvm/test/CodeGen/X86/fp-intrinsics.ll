@@ -2438,11 +2438,10 @@ define double @uifdi(i32 %x) #0 {
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    subl $12, %esp
 ; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    orpd %xmm0, %xmm1
-; X86-SSE-NEXT:    subsd %xmm0, %xmm1
-; X86-SSE-NEXT:    movsd %xmm1, (%esp)
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    orpd {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    subsd {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
 ; X86-SSE-NEXT:    fldl (%esp)
 ; X86-SSE-NEXT:    wait
 ; X86-SSE-NEXT:    addl $12, %esp
@@ -2644,12 +2643,10 @@ define float @uiffi(i32 %x) #0 {
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %eax
 ; X86-SSE-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    orpd %xmm0, %xmm1
-; X86-SSE-NEXT:    subsd %xmm0, %xmm1
-; X86-SSE-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE-NEXT:    cvtsd2ss %xmm1, %xmm0
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    orpd {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    subsd {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    cvtsd2ss %xmm0, %xmm0
 ; X86-SSE-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE-NEXT:    flds (%esp)
 ; X86-SSE-NEXT:    wait
