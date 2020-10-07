@@ -238,8 +238,8 @@ class FLAT_Scratch_Load_Pseudo <string opName, RegisterClass regClass,
   opName,
   (outs regClass:$vdst),
   !if(EnableSaddr,
-      (ins SReg_32_XEXEC_HI:$saddr, flat_offset:$offset, GLC:$glc, SLC:$slc, DLC:$dlc),
-      (ins VGPR_32:$vaddr, flat_offset:$offset, GLC:$glc, SLC:$slc, DLC:$dlc)),
+      (ins SReg_32_XEXEC_HI:$saddr, flat_offset:$offset, GLC_0:$glc, SLC_0:$slc, DLC_0:$dlc),
+      (ins VGPR_32:$vaddr, flat_offset:$offset, GLC_0:$glc, SLC_0:$slc, DLC_0:$dlc)),
   " $vdst, "#!if(EnableSaddr, "off", "$vaddr")#!if(EnableSaddr, ", $saddr", ", off")#"$offset$glc$slc$dlc"> {
   let has_data = 0;
   let mayLoad = 1;
@@ -254,8 +254,8 @@ class FLAT_Scratch_Store_Pseudo <string opName, RegisterClass vdataClass, bit En
   opName,
   (outs),
   !if(EnableSaddr,
-    (ins vdataClass:$vdata, SReg_32_XEXEC_HI:$saddr, flat_offset:$offset, GLC:$glc, SLC:$slc, DLC:$dlc),
-    (ins vdataClass:$vdata, VGPR_32:$vaddr, flat_offset:$offset, GLC:$glc, SLC:$slc, DLC:$dlc)),
+    (ins vdataClass:$vdata, SReg_32_XEXEC_HI:$saddr, flat_offset:$offset, GLC_0:$glc, SLC_0:$slc, DLC_0:$dlc),
+    (ins vdataClass:$vdata, VGPR_32:$vaddr, flat_offset:$offset, GLC_0:$glc, SLC_0:$slc, DLC_0:$dlc)),
   " "#!if(EnableSaddr, "off", "$vaddr")#", $vdata, "#!if(EnableSaddr, "$saddr", "off")#"$offset$glc$slc$dlc"> {
   let mayLoad  = 0;
   let mayStore = 1;
