@@ -66,19 +66,19 @@ const char *lldb_private::GetVersion() {
     auto const swift_version = swift::version::getSwiftFullVersion();
     g_version_str += "\n" + swift_version;
 #else
-   // getSwiftFullVersion() also prints clang and llvm versions, no
-   // need to print them again. We keep this code here to not diverge
-   // too much from upstream.
-   std::string clang_rev(clang::getClangRevision());
-   if (clang_rev.length() > 0) {
-     g_version_str += "\n  clang revision ";
-     g_version_str += clang_rev;
-   }
-   std::string llvm_rev(clang::getLLVMRevision());
-   if (llvm_rev.length() > 0) {
-     g_version_str += "\n  llvm revision ";
-     g_version_str += llvm_rev;
-   }
+    // getSwiftFullVersion() also prints clang and llvm versions, no
+    // need to print them again. We keep this code here to not diverge
+    // too much from upstream.
+    std::string clang_rev(clang::getClangRevision());
+    if (clang_rev.length() > 0) {
+      g_version_str += "\n  clang revision ";
+      g_version_str += clang_rev;
+    }
+    std::string llvm_rev(clang::getLLVMRevision());
+    if (llvm_rev.length() > 0) {
+      g_version_str += "\n  llvm revision ";
+      g_version_str += llvm_rev;
+    }
 #endif // LLDB_ENABLE_SWIFT
   }
   return g_version_str.c_str();
