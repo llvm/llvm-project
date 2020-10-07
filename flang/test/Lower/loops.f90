@@ -1,16 +1,16 @@
 ! RUN: bbc -emit-fir -o - %s | FileCheck %s
 
-  ! CHECK-DAG: fir.alloca !fir.array<5x5x5xi32> {name = "a"}
-  ! CHECK-DAG: fir.alloca i8 {name = "i"}
   ! CHECK-DAG: fir.alloca i16 {name = "i"}
-  ! CHECK-DAG: fir.alloca i32 {name = "i"}
-  ! CHECK-DAG: fir.alloca i32 {name = "i"}
-  ! CHECK-DAG: fir.alloca i8 {name = "j"}
-  ! CHECK-DAG: fir.alloca i32 {name = "j"}
-  ! CHECK-DAG: fir.alloca i32 {name = "j"}
   ! CHECK-DAG: fir.alloca i8 {name = "k"}
+  ! CHECK-DAG: fir.alloca i8 {name = "j"}
+  ! CHECK-DAG: fir.alloca i8 {name = "i"}
   ! CHECK-DAG: fir.alloca i32 {name = "k"}
-  ! CHECK-DAG: fir.alloca i32 {name = "k"}
+  ! CHECK-DAG: fir.alloca i32 {name = "j"}
+  ! CHECK-DAG: fir.alloca i32 {name = "i"}
+  ! CHECK-DAG: fir.alloca !fir.array<5x5x5xi32> {name = "{{.*}}Ea"}
+  ! CHECK-DAG: fir.alloca i32 {name = "{{.*}}Ei"}
+  ! CHECK-DAG: fir.alloca i32 {name = "{{.*}}Ej"}
+  ! CHECK-DAG: fir.alloca i32 {name = "{{.*}}Ek"}
   integer(4) :: a(5,5,5), i, j, k, asum, xsum
 
   i = 100

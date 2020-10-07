@@ -16,8 +16,8 @@ end
 
 ! CHECK-LABEL: func @_QPss(%arg0: !fir.ref<i32>)
 subroutine ss(n1)
-  ! CHECK: fir.alloca i32 {name = "nx"}
-  ! CHECK: fir.alloca i32 {name = "ny"}
+  ! CHECK: fir.alloca i32 {name = "{{.*}}Enx"}
+  ! CHECK: fir.alloca i32 {name = "{{.*}}Eny"}
   integer n17, n2
   nx = 100
   n1 = nx + 10
@@ -25,34 +25,34 @@ subroutine ss(n1)
 
 ! CHECK-LABEL: func @_QPe1(%arg0: !fir.ref<i32>, %arg1: !fir.ref<i32>)
 entry e1(n2, n17)
-  ! CHECK: fir.alloca i32 {name = "nx"}
-  ! CHECK: fir.alloca i32 {name = "ny"}
+  ! CHECK: fir.alloca i32 {name = "{{.*}}Enx"}
+  ! CHECK: fir.alloca i32 {name = "{{.*}}Eny"}
   ny = 200
   n2 = ny + 20
   return
 
 ! CHECK-LABEL: func @_QPe2(%arg0: !fir.ref<i32>, %arg1: !fir.ref<i32>)
 entry e2(n3, n1)
-  ! CHECK: fir.alloca i32 {name = "nx"}
-  ! CHECK: fir.alloca i32 {name = "ny"}
+  ! CHECK: fir.alloca i32 {name = "{{.*}}Enx"}
+  ! CHECK: fir.alloca i32 {name = "{{.*}}Eny"}
 
 ! CHECK-LABEL: func @_QPe3(%arg0: !fir.ref<i32>)
 entry e3(n1)
-  ! CHECK: fir.alloca i32 {name = "nx"}
-  ! CHECK: fir.alloca i32 {name = "ny"}
+  ! CHECK: fir.alloca i32 {name = "{{.*}}Enx"}
+  ! CHECK: fir.alloca i32 {name = "{{.*}}Eny"}
   n1 = 30
 end
 
 ! CHECK-LABEL: func @_QPjj(%arg0: !fir.ref<i32>) -> i32
 function jj(n1)
-  ! CHECK: fir.alloca i32 {name = "jj"}
+  ! CHECK: fir.alloca i32 {name = "{{.*}}Ejj"}
   jj = 100
   jj = jj + n1
   return
 
 ! CHECK-LABEL: func @_QPrr(%arg0: !fir.ref<i32>) -> f32
 entry rr(n2)
-  ! CHECK: fir.alloca i32 {name = "jj"}
+  ! CHECK: fir.alloca i32 {name = "{{.*}}Ejj"}
   rr = 200.0
   rr = rr + n2
 end

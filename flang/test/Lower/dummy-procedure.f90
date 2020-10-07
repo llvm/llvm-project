@@ -6,7 +6,7 @@
 ! CHECK-LABEL: func @_QPfoo(%arg0: () -> ()) -> f32
 real function foo(bar)
   real :: bar, x
-  ! CHECK: %[[x:.*]] = fir.alloca f32 {name = "x"}
+  ! CHECK: %[[x:.*]] = fir.alloca f32 {name = "{{.*}}Ex"}
   x = 42.
   ! CHECK: %[[funccast:.*]] = fir.convert %arg0 : (() -> ()) -> ((!fir.ref<f32>) -> f32)
   ! CHECK: fir.call %[[funccast]](%[[x]]) : (!fir.ref<f32>) -> f32
@@ -43,7 +43,7 @@ end function
 
 ! CHECK-LABEL: func @_QPfoo_sub(%arg0: () -> ())
 subroutine foo_sub(bar_sub)
-  ! CHECK: %[[x:.*]] = fir.alloca f32 {name = "x"}
+  ! CHECK: %[[x:.*]] = fir.alloca f32 {name = "{{.*}}Ex"}
   x = 42.
   ! CHECK: %[[funccast:.*]] = fir.convert %arg0 : (() -> ()) -> ((!fir.ref<f32>) -> ())
   ! CHECK: fir.call %[[funccast]](%[[x]]) : (!fir.ref<f32>)

@@ -14,9 +14,9 @@ program acc_parallel
   logical :: ifCondition = .TRUE.
   real, dimension(10, 10) :: a, b, c
 
-!CHECK: [[A:%.*]] = fir.alloca !fir.array<10x10xf32> {name = "a"}
-!CHECK: [[B:%.*]] = fir.alloca !fir.array<10x10xf32> {name = "b"}
-!CHECK: [[C:%.*]] = fir.alloca !fir.array<10x10xf32> {name = "c"}
+!CHECK: [[A:%.*]] = fir.alloca !fir.array<10x10xf32> {name = "{{.*}}Ea"}
+!CHECK: [[B:%.*]] = fir.alloca !fir.array<10x10xf32> {name = "{{.*}}Eb"}
+!CHECK: [[C:%.*]] = fir.alloca !fir.array<10x10xf32> {name = "{{.*}}Ec"}
 
   !$acc parallel
   !$acc end parallel
