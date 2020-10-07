@@ -3882,8 +3882,10 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   switch (Result) {
   default: break;
   case Match_MissingFeature:
-    // FIXME: this case should be analyzed and error message corrected.
-    return Error(IDLoc, "instruction not supported on this GPU");
+    // It has been verified that the specified instruction
+    // mnemonic is valid. A match was found but it requires
+    // features which are not supported on this GPU.
+    return Error(IDLoc, "operands are not valid for this GPU or mode");
 
   case Match_InvalidOperand: {
     SMLoc ErrorLoc = IDLoc;

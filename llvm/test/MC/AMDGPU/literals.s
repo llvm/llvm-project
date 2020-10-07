@@ -570,12 +570,14 @@ v_add_u16_sdwa v0, scc, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD sr
 // GFX9: v_add_u16_sdwa v0, v0, src_scc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0xfa,0x01,0x4c,0x00,0x06,0x06,0x86]
 v_add_u16_sdwa v0, v0, scc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 
-// NOSICIVI: error: instruction not supported on this GPU
 // GFX9: v_add_u32_e32 v0, src_execz, v0 ; encoding: [0xfc,0x00,0x00,0x68]
+// NOSICI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 v_add_u32 v0, execz, v0
 
-// NOSICIVI: error: instruction not supported on this GPU
 // GFX9: v_add_u32_e64 v0, src_scc, v0   ; encoding: [0x00,0x00,0x34,0xd1,0xfd,0x00,0x02,0x00]
+// NOSICI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 v_add_u32_e64 v0, scc, v0
 
 // SICI: v_cmp_eq_i64_e32 vcc, src_scc, v[0:1] ; encoding: [0xfd,0x00,0x44,0x7d]
@@ -797,8 +799,9 @@ v_ceil_f32_sdwa v5, |src_shared_base| dst_sel:DWORD src0_sel:DWORD
 // NOVI: error: register not available on this GPU
 v_add_u32 v0, private_base, s0
 
-// NOSICIVI: error: instruction not supported on this GPU
 // NOGFX9: error: invalid operand (violates constant bus restrictions)
+// NOSICI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 v_add_u32 v0, scc, s0
 
 // v_div_fmas implicitly reads VCC
