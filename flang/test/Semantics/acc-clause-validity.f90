@@ -25,10 +25,20 @@ program openacc_clause_validity
   real :: reduction_r
   logical :: reduction_l
   real(8), dimension(N, N) :: aa
+  logical :: ifCondition = .TRUE.
 
   !ERROR: At least one clause is required on the DECLARE directive
   !$acc declare
   real(8), dimension(N) :: a
+
+  !$acc init
+  !$acc init if(.TRUE.)
+  !$acc init if(ifCondition)
+  !$acc init device_num(1)
+  !$acc init device_num(i)
+  !$acc init device_type(i)
+  !$acc init device_type(2, i, j)
+  !$acc init device_num(i) device_type(i, j) if(ifCondition)
 
   !ERROR: At least one of ATTACH, COPYIN, CREATE clause must appear on the ENTER DATA directive
   !$acc enter data
