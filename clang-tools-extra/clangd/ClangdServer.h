@@ -273,7 +273,10 @@ public:
                     StringRef TriggerText, Callback<std::vector<TextEdit>> CB);
 
   /// Test the validity of a rename operation.
+  ///
+  /// If NewName is provided, it peforms a name validation.
   void prepareRename(PathRef File, Position Pos,
+                     llvm::Optional<std::string> NewName,
                      const RenameOptions &RenameOpts,
                      Callback<RenameResult> CB);
 
