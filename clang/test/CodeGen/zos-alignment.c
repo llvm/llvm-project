@@ -90,6 +90,17 @@ struct s10 {
 // CHECK-NEXT:         0 |   unsigned int a
 // CHECK-NEXT:           | [sizeof=16, align=16]
 
+struct s11 {
+  char a;
+  long :0;
+  char b;
+} S11;
+// CHECK:              0 | struct s11
+// CHECK-NEXT:         0 |   char a
+// CHECK-NEXT:       8:- |   long
+// CHECK-NEXT:         8 |   char b
+// CHECK-NEXT:           | [sizeof=16, align=8]
+
 union u0 {
   unsigned short     d1 __attribute__((packed));
   int                d2:10;
