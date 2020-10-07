@@ -36,6 +36,22 @@ VERS1.0 {
     omp_target_associate_ptr;
     omp_target_disassociate_ptr;
     __kmpc_push_target_tripcount;
+    printf_allocate;
+    printf_execute;
+    global_allocate;
+    global_free;
+    hostrpc_varfn_uint;
+    hostrpc_varfn_double;
+    hostrpc_varfn_uint_allocate;
+    hostrpc_varfn_uint_execute;
+    hostrpc_varfn_double_allocate;
+    hostrpc_varfn_double_execute;
+    hostrpc_fptr0;
+    hostrpc_varfn_uint64_allocate;
+    hostrpc_varfn_double_allocate;
+    hostrpc_varfn_uint64_execute;
+    hostrpc_varfn_uint64;
+    hostrpc_invoke;
   local:
     *;
 };
