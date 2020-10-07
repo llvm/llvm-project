@@ -495,10 +495,11 @@ template bool EditIntegerOutput<std::int64_t, std::uint64_t>(
 template bool EditIntegerOutput<common::uint128_t, common::uint128_t>(
     IoStatementState &, const DataEdit &, common::uint128_t);
 
+template class RealOutputEditing<2>;
+template class RealOutputEditing<3>;
+template class RealOutputEditing<4>;
 template class RealOutputEditing<8>;
-template class RealOutputEditing<11>;
-template class RealOutputEditing<24>;
-template class RealOutputEditing<53>;
-template class RealOutputEditing<64>;
-template class RealOutputEditing<113>;
+template class RealOutputEditing<10>;
+// TODO: double/double
+template class RealOutputEditing<16>;
 } // namespace Fortran::runtime::io
