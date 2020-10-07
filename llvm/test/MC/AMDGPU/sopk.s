@@ -360,7 +360,7 @@ s_endpgm_ordered_ps_done
 
 s_call_b64 null, 12609
 // GFX10: s_call_b64 null, 12609 ; encoding: [0x41,0x31,0x7d,0xbb]
-// NOSICIVI: error: 'null' operand is not supported on this GPU
+// NOSICIVI: error: instruction not supported on this GPU
 // NOGFX9: error: 'null' operand is not supported on this GPU
 
 s_call_b64 s[12:13], 12609

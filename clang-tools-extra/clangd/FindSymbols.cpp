@@ -96,12 +96,13 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
       return;
     }
 
-    SymbolKind SK = indexSymbolKindToSymbolKind(Sym.SymInfo.Kind);
-    std::string Scope = std::string(Sym.Scope);
-    llvm::StringRef ScopeRef = Scope;
-    ScopeRef.consume_back("::");
-    SymbolInformation Info = {(Sym.Name + Sym.TemplateSpecializationArgs).str(),
-                              SK, *Loc, std::string(ScopeRef)};
+    llvm::StringRef Scope = Sym.Scope;
+    Scope.consume_back("::");
+    SymbolInformation Info;
+    Info.name = (Sym.Name + Sym.TemplateSpecializationArgs).str();
+    Info.kind = indexSymbolKindToSymbolKind(Sym.SymInfo.Kind);
+    Info.location = *Loc;
+    Info.containerName = Scope.str();
 
     SymbolQualitySignals Quality;
     Quality.merge(Sym);
@@ -121,6 +122,8 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
     dlog("FindSymbols: {0}{1} = {2}\n{3}{4}\n", Sym.Scope, Sym.Name, Score,
          Quality, Relevance);
 
+    // Exposed score excludes fuzzy-match component, for client-side re-ranking.
+    Info.score = Score / Relevance.NameMatch;
     Top.push({Score, std::move(Info)});
   });
   for (auto &R : std::move(Top).items())

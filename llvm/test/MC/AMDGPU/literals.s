@@ -509,13 +509,19 @@ s_mov_b64 s[0:1], 0x1000000001
 // NOGCN: error: invalid operand for instruction
 s_mov_b64 s[0:1], 0x1000000fff
 
-// NOGCN: error: invalid operand for instruction
+// NOGFX89: error: invalid operand for instruction
+// NOSI: error: instruction not supported on this GPU
+// NOCIVI: error: invalid operand for instruction
 v_trunc_f64 v[0:1], 0x1fffffffff0
 
-// NOGCN: error: invalid operand for instruction
+// NOGFX89: error: invalid operand for instruction
+// NOSI: error: instruction not supported on this GPU
+// NOCIVI: error: invalid operand for instruction
 v_trunc_f64 v[0:1], 0x100000001
 
-// NOGCN: error: invalid operand for instruction
+// NOGFX89: error: invalid operand for instruction
+// NOSI: error: instruction not supported on this GPU
+// NOCIVI: error: invalid operand for instruction
 v_trunc_f64 v[0:1], 0x1fffffff000
 
 //---------------------------------------------------------------------------//
@@ -554,12 +560,12 @@ s_and_b64 s[0:1], s[0:1], src_scc
 // GFX89: v_add_u16_e32 v0, src_vccz, v0  ; encoding: [0xfb,0x00,0x00,0x4c]
 v_add_u16 v0, vccz, v0
 
-// NOSICI: error: not a valid operand
+// NOSICI: error: instruction not supported on this GPU
 // NOVI: error: invalid operand for instruction
 // GFX9: v_add_u16_sdwa v0, src_scc, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0x00,0x00,0x4c,0xfd,0x06,0x86,0x06]
 v_add_u16_sdwa v0, scc, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 
-// NOSICI: error: not a valid operand
+// NOSICI: error: instruction not supported on this GPU
 // NOVI: error: invalid operand for instruction
 // GFX9: v_add_u16_sdwa v0, v0, src_scc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0xfa,0x01,0x4c,0x00,0x06,0x06,0x86]
 v_add_u16_sdwa v0, v0, scc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
@@ -592,20 +598,20 @@ v_max_f64 v[0:1], scc, v[0:1]
 // GFX9: v_pk_add_f16 v0, src_execz, v0  ; encoding: [0x00,0x00,0x8f,0xd3,0xfc,0x00,0x02,0x18]
 v_pk_add_f16 v0, execz, v0
 
-// NOSICI: error: not a valid operand
+// NOSICI: error: instruction not supported on this GPU
 // GFX89: v_ceil_f16_e64 v0, -src_vccz    ; encoding: [0x00,0x00,0x85,0xd1,0xfb,0x00,0x00,0x20]
 v_ceil_f16 v0, neg(vccz)
 
-// NOSICI: error: not a valid operand
+// NOSICI: error: instruction not supported on this GPU
 // GFX89: v_ceil_f16_e64 v0, |src_scc|    ; encoding: [0x00,0x01,0x85,0xd1,0xfd,0x00,0x00,0x00]
 v_ceil_f16 v0, abs(scc)
 
-// NOSI: error: not a valid operand
+// NOSI: error: instruction not supported on this GPU
 // CI: v_ceil_f64_e64 v[5:6], |src_execz| ; encoding: [0x05,0x01,0x30,0xd3,0xfc,0x00,0x00,0x00]
 // GFX89: v_ceil_f64_e64 v[5:6], |src_execz| ; encoding: [0x05,0x01,0x58,0xd1,0xfc,0x00,0x00,0x00]
 v_ceil_f64 v[5:6], |execz|
 
-// NOSI: error: not a valid operand
+// NOSI: error: instruction not supported on this GPU
 // CI: v_ceil_f64_e64 v[5:6], -vcc     ; encoding: [0x05,0x00,0x30,0xd3,0x6a,0x00,0x00,0x20]
 // GFX89: v_ceil_f64_e64 v[5:6], -vcc     ; encoding: [0x05,0x00,0x58,0xd1,0x6a,0x00,0x00,0x20]
 v_ceil_f64 v[5:6], -vcc
@@ -618,22 +624,24 @@ v_ceil_f32 v0, -vccz
 // GFX89: v_ceil_f32_e64 v0, |src_execz|  ; encoding: [0x00,0x01,0x5d,0xd1,0xfc,0x00,0x00,0x00]
 v_ceil_f32 v0, |execz|
 
-// NOSICI: error: not a valid operand
+// NOSICI: error: instruction not supported on this GPU
 // NOVI: error: invalid operand for instruction
 // GFX9: v_ceil_f16_sdwa v5, |src_vccz| dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x8a,0x0a,0x7e,0xfb,0x16,0xa6,0x00]
 v_ceil_f16_sdwa v5, |vccz| dst_sel:DWORD dst_unused:UNUSED_PRESERVE
 
-// NOSICI: error: not a valid operand
+// NOSICI: error: instruction not supported on this GPU
 // NOVI: error: invalid operand for instruction
 // GFX9: v_ceil_f16_sdwa v5, -src_scc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x8a,0x0a,0x7e,0xfd,0x16,0x96,0x00]
 v_ceil_f16_sdwa v5, -scc dst_sel:DWORD dst_unused:UNUSED_PRESERVE
 
-// NOSICIVI: error: invalid operand for instruction
 // GFX9: v_ceil_f32_sdwa v5, src_vccz dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x3a,0x0a,0x7e,0xfb,0x16,0x86,0x00]
+// NOSICI: error: sdwa variant of this instruction is not supported
+// NOVI: error: invalid operand for instruction
 v_ceil_f32_sdwa v5, vccz dst_sel:DWORD src0_sel:DWORD
 
-// NOSICIVI: error: invalid operand for instruction
 // GFX9: v_ceil_f32_sdwa v5, |src_execz| dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x3a,0x0a,0x7e,0xfc,0x16,0xa6,0x00]
+// NOSICI: error: sdwa variant of this instruction is not supported
+// NOVI: error: invalid operand for instruction
 v_ceil_f32_sdwa v5, |execz| dst_sel:DWORD src0_sel:DWORD
 
 //---------------------------------------------------------------------------//
@@ -647,12 +655,6 @@ buffer_atomic_add v0, off, s[0:3], src_shared_base offset:4095
 // NOSICIVI: error: register not available on this GPU
 // GFX9: s_add_i32 s0, src_shared_base, s0 ; encoding: [0xeb,0x00,0x00,0x81]
 s_add_i32 s0, src_shared_base, s0
-
-
-
-
-
-
 
 // NOSICIVI: error: register not available on this GPU
 // GFX9: s_add_i32 s0, src_shared_limit, s0 ; encoding: [0xec,0x00,0x00,0x81]
@@ -690,32 +692,38 @@ s_and_b64 s[0:1], s[0:1], src_private_limit
 // GFX9: s_and_b64 s[0:1], s[0:1], src_pops_exiting_wave_id ; encoding: [0x00,0xef,0x80,0x86]
 s_and_b64 s[0:1], s[0:1], src_pops_exiting_wave_id
 
-// NOSICIVI: error: register not available on this GPU
 // GFX9: v_add_u16_e32 v0, src_shared_base, v0 ; encoding: [0xeb,0x00,0x00,0x4c]
+// NOSICI: error: instruction not supported on this GPU
+// NOVI: error: register not available on this GPU
 v_add_u16 v0, src_shared_base, v0
 
-// NOSICIVI: error: register not available on this GPU
 // GFX9: v_add_u16_sdwa v0, src_shared_base, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0x00,0x00,0x4c,0xeb,0x06,0x86,0x06]
+// NOSICI: error: instruction not supported on this GPU
+// NOVI: error: register not available on this GPU
 v_add_u16_sdwa v0, src_shared_base, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 
-// NOSICIVI: error: register not available on this GPU
 // GFX9: v_add_u16_sdwa v0, v0, src_shared_base dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0xd6,0x01,0x4c,0x00,0x06,0x06,0x86]
+// NOSICI: error: instruction not supported on this GPU
+// NOVI: error: register not available on this GPU
 v_add_u16_sdwa v0, v0, src_shared_base dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 
-// NOSICIVI: error: register not available on this GPU
 // GFX9: v_add_u32_e32 v0, src_shared_base, v0 ; encoding: [0xeb,0x00,0x00,0x68]
+// NOSICI: error: instruction not supported on this GPU
+// NOVI: error: register not available on this GPU
 v_add_u32 v0, src_shared_base, v0
 
-// NOSICIVI: error: register not available on this GPU
 // GFX9: v_add_u32_e64 v0, src_shared_base, v0 ; encoding: [0x00,0x00,0x34,0xd1,0xeb,0x00,0x02,0x00]
+// NOSICI: error: instruction not supported on this GPU
+// NOVI: error: register not available on this GPU
 v_add_u32_e64 v0, src_shared_base, v0
 
 // NOSICIVI: error: register not available on this GPU
 // GFX9: v_cmp_eq_i64_e32 vcc, src_shared_base, v[0:1] ; encoding: [0xeb,0x00,0xc4,0x7d]
 v_cmp_eq_i64 vcc, src_shared_base, v[0:1]
 
-// NOSICIVI: error: register not available on this GPU
 // GFX9: v_max_f16_e32 v0, src_shared_base, v0 ; encoding: [0xeb,0x00,0x00,0x5a]
+// NOSICI: error: instruction not supported on this GPU
+// NOVI: error: register not available on this GPU
 v_max_f16 v0, src_shared_base, v0
 
 // NOSICIVI: error: register not available on this GPU
@@ -726,28 +734,28 @@ v_max_f32 v0, src_shared_base, v0
 // GFX9: v_max_f64 v[0:1], src_shared_base, v[0:1] ; encoding: [0x00,0x00,0x83,0xd2,0xeb,0x00,0x02,0x00]
 v_max_f64 v[0:1], src_shared_base, v[0:1]
 
-// NOSICIVI: error: register not available on this GPU
+// NOSICIVI: error: instruction not supported on this GPU
 // GFX9: v_pk_add_f16 v0, src_shared_base, v0 ; encoding: [0x00,0x00,0x8f,0xd3,0xeb,0x00,0x02,0x18]
 v_pk_add_f16 v0, src_shared_base, v0
 
 // GFX9: v_ceil_f16_e64 v0, -src_shared_base ; encoding: [0x00,0x00,0x85,0xd1,0xeb,0x00,0x00,0x20]
-// NOSICI: error: not a valid operand.
+// NOSICI: error: instruction not supported on this GPU
 // NOVI: error: register not available on this GPU
 v_ceil_f16 v0, neg(src_shared_base)
 
 // GFX9: v_ceil_f16_e64 v0, |src_shared_base| ; encoding: [0x00,0x01,0x85,0xd1,0xeb,0x00,0x00,0x00]
-// NOSICI: error: not a valid operand.
+// NOSICI: error: instruction not supported on this GPU
 // NOVI: error: register not available on this GPU
 v_ceil_f16 v0, abs(src_shared_base)
 
 // GFX9: v_ceil_f64_e64 v[5:6], |src_shared_base| ; encoding: [0x05,0x01,0x58,0xd1,0xeb,0x00,0x00,0x00]
-// NOSI: error: not a valid operand.
+// NOSI: error: instruction not supported on this GPU
 // NOCIVI: error: register not available on this GPU
 // NOVI: error: register not available on this GPU
 v_ceil_f64 v[5:6], |src_shared_base|
 
 // GFX9: v_ceil_f64_e64 v[5:6], -src_shared_base ; encoding: [0x05,0x00,0x58,0xd1,0xeb,0x00,0x00,0x20]
-// NOSI: error: not a valid operand.
+// NOSI: error: instruction not supported on this GPU
 // NOCIVI: error: register not available on this GPU
 // NOVI: error: register not available on this GPU
 v_ceil_f64 v[5:6], -src_shared_base
@@ -761,29 +769,32 @@ v_ceil_f32 v0, -src_shared_base
 v_ceil_f32 v0, |src_shared_base|
 
 // GFX9: v_ceil_f16_sdwa v5, |src_shared_base| dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x8a,0x0a,0x7e,0xeb,0x16,0xa6,0x00]
-// NOSICI: error: not a valid operand.
+// NOSICI: error: instruction not supported on this GPU
 // NOVI: error: register not available on this GPU
 v_ceil_f16_sdwa v5, |src_shared_base| dst_sel:DWORD dst_unused:UNUSED_PRESERVE
 
 // GFX9: v_ceil_f16_sdwa v5, -src_shared_base dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x8a,0x0a,0x7e,0xeb,0x16,0x96,0x00]
-// NOSICI: error: not a valid operand.
+// NOSICI: error: instruction not supported on this GPU
 // NOVI: error: register not available on this GPU
 v_ceil_f16_sdwa v5, -src_shared_base dst_sel:DWORD dst_unused:UNUSED_PRESERVE
 
-// NOSICIVI: error: register not available on this GPU
 // GFX9: v_ceil_f32_sdwa v5, src_shared_base dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x3a,0x0a,0x7e,0xeb,0x16,0x86,0x00]
+// NOSICI: error: sdwa variant of this instruction is not supported
+// NOVI: error: register not available on this GPU
 v_ceil_f32_sdwa v5, src_shared_base dst_sel:DWORD src0_sel:DWORD
 
-// NOSICIVI: error: register not available on this GPU
 // GFX9: v_ceil_f32_sdwa v5, |src_shared_base| dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x3a,0x0a,0x7e,0xeb,0x16,0xa6,0x00]
+// NOSICI: error: sdwa variant of this instruction is not supported
+// NOVI: error: register not available on this GPU
 v_ceil_f32_sdwa v5, |src_shared_base| dst_sel:DWORD src0_sel:DWORD
 
 //---------------------------------------------------------------------------//
 // named inline values compete with other scalars for constant bus access
 //---------------------------------------------------------------------------//
 
-// NOSICIVI: error: register not available on this GPU
 // NOGFX9: error: invalid operand (violates constant bus restrictions)
+// NOSICI: error: instruction not supported on this GPU
+// NOVI: error: register not available on this GPU
 v_add_u32 v0, private_base, s0
 
 // NOSICIVI: error: instruction not supported on this GPU
@@ -818,7 +829,7 @@ v_div_fmas_f32 v0, v0, scc, v1
 v_div_fmas_f32 v0, v0, v1, vccz
 
 // v_addc_co_u32 implicitly reads VCC (VOP2)
-// NOSICIVI: error: register not available on this GPU
+// NOSICIVI: error: instruction not supported on this GPU
 // NOGFX9: error: invalid operand (violates constant bus restrictions)
 v_addc_co_u32 v0, vcc, shared_base, v0, vcc
 
@@ -840,7 +851,7 @@ v_cmp_eq_f32 s[0:1], private_base, s0
 // NOGCN: error: invalid operand (violates constant bus restrictions)
 v_cmp_eq_f32 s[0:1], execz, s0
 
-// NOSICIVI: error: register not available on this GPU
+// NOSICIVI: error: instruction not supported on this GPU
 // NOGFX9: error: invalid operand (violates constant bus restrictions)
 v_pk_add_f16 v255, private_base, private_limit
 

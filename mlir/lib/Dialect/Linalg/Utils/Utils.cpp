@@ -85,26 +85,6 @@ SmallVector<Value, 4> mlir::linalg::applyMapToValues(OpBuilder &b, Location loc,
   return res;
 }
 
-/// Returns all the operands of `linalgOp` that are not views.
-/// Asserts that these operands are value types to allow transformations like
-/// tiling to just use the values when cloning `linalgOp`.
-SmallVector<Value, 4>
-mlir::linalg::getAssumedNonViewOperands(LinalgOp linalgOp) {
-  auto *op = linalgOp.getOperation();
-  unsigned numViews = linalgOp.getNumInputsAndOutputs();
-  unsigned nOperands = op->getNumOperands() - numViews;
-  SmallVector<Value, 4> res;
-  res.reserve(nOperands);
-  for (unsigned i = 0; i < nOperands; ++i) {
-    res.push_back(op->getOperand(numViews + i));
-    auto t = res.back().getType();
-    (void)t;
-    assert((t.isSignlessIntOrIndexOrFloat() || t.isa<VectorType>()) &&
-           "expected scalar or vector type");
-  }
-  return res;
-}
-
 bool mlir::linalg::isParallelIteratorType(Attribute attr) {
   if (auto strAttr = attr.dyn_cast<StringAttr>()) {
     return strAttr.getValue() == getParallelIteratorTypeName();
@@ -147,12 +127,12 @@ namespace mlir {
 namespace linalg {
 
 /// Return the linearized list of all view dimensions in a linalgOp.
-SmallVector<Value, 8> getViewSizes(OpBuilder &builder, LinalgOp linalgOp) {
+SmallVector<Value, 8> getShape(OpBuilder &builder, LinalgOp linalgOp) {
   auto loc = linalgOp.getLoc();
   SmallVector<Value, 8> res;
   SmallVector<unsigned, 4> ranks;
-  for (auto v : linalgOp.getInputsAndOutputBuffers()) {
-    MemRefType t = v.getType().template cast<MemRefType>();
+  for (Value v : linalgOp.getShapedOperands()) {
+    ShapedType t = v.getType().template cast<ShapedType>();
     ranks.push_back(t.getRank());
     for (unsigned i = 0; i < t.getRank(); ++i)
       res.push_back(builder.create<DimOp>(loc, v, i));
@@ -181,7 +161,7 @@ SmallVector<Value, 8> getViewSizes(OpBuilder &builder, LinalgOp linalgOp) {
 
 Optional<SmallVector<Value, 4>>
 getLoopRanges(OpBuilder &builder, LinalgOp linalgOp, OperationFolder *folder) {
-  SmallVector<Value, 8> viewSizes = getViewSizes(builder, linalgOp);
+  SmallVector<Value, 8> viewSizes = getShape(builder, linalgOp);
   AffineMap invertedMap =
       inversePermutation(concatAffineMaps(linalgOp.getIndexingMaps()));
   if (!invertedMap)

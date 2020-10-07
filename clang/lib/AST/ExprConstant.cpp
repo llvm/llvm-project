@@ -8152,17 +8152,19 @@ bool LValueExprEvaluator::VisitCompoundAssignOperator(
   if (!Info.getLangOpts().CPlusPlus14 && !Info.keepEvaluatingAfterFailure())
     return Error(CAO);
 
+  bool Success = true;
+
   // C++17 onwards require that we evaluate the RHS first.
   APValue RHS;
-  if (!Evaluate(RHS, this->Info, CAO->getRHS()))
-    return false;
+  if (!Evaluate(RHS, this->Info, CAO->getRHS())) {
+    if (!Info.noteFailure())
+      return false;
+    Success = false;
+  }
 
   // The overall lvalue result is the result of evaluating the LHS.
-  if (!this->Visit(CAO->getLHS())) {
-    if (Info.noteFailure())
-      Evaluate(RHS, this->Info, CAO->getRHS());
+  if (!this->Visit(CAO->getLHS()) || !Success)
     return false;
-  }
 
   return handleCompoundAssignment(
       this->Info, CAO,
@@ -8174,16 +8176,18 @@ bool LValueExprEvaluator::VisitBinAssign(const BinaryOperator *E) {
   if (!Info.getLangOpts().CPlusPlus14 && !Info.keepEvaluatingAfterFailure())
     return Error(E);
 
+  bool Success = true;
+
   // C++17 onwards require that we evaluate the RHS first.
   APValue NewVal;
-  if (!Evaluate(NewVal, this->Info, E->getRHS()))
-    return false;
-
-  if (!this->Visit(E->getLHS())) {
-    if (Info.noteFailure())
-      Evaluate(NewVal, this->Info, E->getRHS());
-    return false;
+  if (!Evaluate(NewVal, this->Info, E->getRHS())) {
+    if (!Info.noteFailure())
+      return false;
+    Success = false;
   }
+
+  if (!this->Visit(E->getLHS()) || !Success)
+    return false;
 
   if (Info.getLangOpts().CPlusPlus20 &&
       !HandleUnionActiveMemberChange(Info, E->getLHS(), Result))

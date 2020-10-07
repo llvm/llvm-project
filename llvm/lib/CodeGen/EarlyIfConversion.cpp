@@ -265,7 +265,8 @@ bool SSAIfConv::InstrDependenciesAllowIfConv(MachineInstr *I) {
 
     // Remember clobbered regunits.
     if (MO.isDef() && Register::isPhysicalRegister(Reg))
-      for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units)
+      for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
+           ++Units)
         ClobberedRegUnits.set(*Units);
 
     if (!MO.readsReg() || !Register::isVirtualRegister(Reg))
@@ -364,7 +365,7 @@ bool SSAIfConv::findInsertionPoint() {
   // Keep track of live regunits before the current position.
   // Only track RegUnits that are also in ClobberedRegUnits.
   LiveRegUnits.clear();
-  SmallVector<unsigned, 8> Reads;
+  SmallVector<MCRegister, 8> Reads;
   MachineBasicBlock::iterator FirstTerm = Head->getFirstTerminator();
   MachineBasicBlock::iterator I = Head->end();
   MachineBasicBlock::iterator B = Head->begin();
@@ -386,11 +387,12 @@ bool SSAIfConv::findInsertionPoint() {
         continue;
       // I clobbers Reg, so it isn't live before I.
       if (MO.isDef())
-        for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units)
+        for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
+             ++Units)
           LiveRegUnits.erase(*Units);
       // Unless I reads Reg.
       if (MO.readsReg())
-        Reads.push_back(Reg);
+        Reads.push_back(Reg.asMCReg());
     }
     // Anything read by I is live before I.
     while (!Reads.empty())

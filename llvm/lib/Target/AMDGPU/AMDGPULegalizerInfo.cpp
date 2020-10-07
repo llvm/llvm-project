@@ -3942,8 +3942,10 @@ static void packImageA16AddressToDwords(
       // derivatives dx/dh and dx/dv are packed with undef.
       if (((I + 1) >= EndIdx) ||
           ((Intr->NumGradients / 2) % 2 == 1 &&
-           (I == Intr->GradientStart + (Intr->NumGradients / 2) - 1 ||
-            I == Intr->GradientStart + Intr->NumGradients - 1)) ||
+           (I == static_cast<unsigned>(Intr->GradientStart +
+                                       (Intr->NumGradients / 2) - 1) ||
+            I == static_cast<unsigned>(Intr->GradientStart +
+                                       Intr->NumGradients - 1))) ||
           // Check for _L to _LZ optimization
           !MI.getOperand(ArgOffset + I + 1).isReg()) {
         PackedAddrs.push_back(

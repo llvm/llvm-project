@@ -3,6 +3,7 @@
 
 set(LLVM_OPTIONAL_SOURCES
   CRunnerUtils.cpp
+  SparseUtils.cpp
   ExecutionEngine.cpp
   RunnerUtils.cpp
   OptUtils.cpp
@@ -70,6 +71,7 @@ add_mlir_library(MLIRJitRunner
 add_mlir_library(mlir_c_runner_utils
   SHARED
   CRunnerUtils.cpp
+  SparseUtils.cpp
 
   EXCLUDE_FROM_LIBMLIR
   )
@@ -77,6 +79,7 @@ set_property(TARGET mlir_c_runner_utils PROPERTY CXX_STANDARD 11)
 
 add_mlir_library(mlir_c_runner_utils_static
   CRunnerUtils.cpp
+  SparseUtils.cpp
 
   EXCLUDE_FROM_LIBMLIR
   )

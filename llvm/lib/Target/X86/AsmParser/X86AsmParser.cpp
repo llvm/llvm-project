@@ -78,6 +78,7 @@ static const char OpPrecedence[] = {
 class X86AsmParser : public MCTargetAsmParser {
   ParseInstructionInfo *InstInfo;
   bool Code16GCC;
+  unsigned ForcedDataPrefix = 0;
 
   enum VEXEncoding {
     VEXEncoding_Default,
@@ -3085,13 +3086,18 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
     if (getLexer().isNot(AsmToken::EndOfStatement)) {
       StringRef Next = Parser.getTok().getString();
-      // Parse data32 call as calll.
-      if (Next == "call" || Next == "callw") {
-        getLexer().Lex();
-        Name = "calll";
-        PatchedName = Name;
-        isPrefix = false;
-      }
+      getLexer().Lex();
+      // data32 effectively changes the instruction suffix.
+      // TODO Generalize.
+      if (Next == "callw")
+        Next = "calll";
+      if (Next == "ljmpw")
+        Next = "ljmpl";
+
+      Name = Next;
+      PatchedName = Name;
+      ForcedDataPrefix = X86::Mode32Bit;
+      isPrefix = false;
     }
   }
 
@@ -3779,11 +3785,19 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   if (Prefixes)
     Inst.setFlags(Prefixes);
 
+  // In 16-bit mode, if data32 is specified, temporarily switch to 32-bit mode
+  // when matching the instruction.
+  if (ForcedDataPrefix == X86::Mode32Bit)
+    SwitchMode(X86::Mode32Bit);
   // First, try a direct match.
   FeatureBitset MissingFeatures;
   unsigned OriginalError = MatchInstruction(Operands, Inst, ErrorInfo,
                                             MissingFeatures, MatchingInlineAsm,
                                             isParsingIntelSyntax());
+  if (ForcedDataPrefix == X86::Mode32Bit) {
+    SwitchMode(X86::Mode16Bit);
+    ForcedDataPrefix = 0;
+  }
   switch (OriginalError) {
   default: llvm_unreachable("Unexpected match result!");
   case Match_Success:

@@ -168,3 +168,12 @@ namespace EvalOrder {
   #undef A
   #undef B
 }
+
+namespace LambdaCallOp {
+  constexpr void get_lambda(void (*&p)()) { p = []{}; }
+  constexpr void call_lambda() {
+    void (*p)() = nullptr;
+    get_lambda(p);
+    p();
+  }
+}

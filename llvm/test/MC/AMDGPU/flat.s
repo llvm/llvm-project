@@ -21,12 +21,12 @@ flat_load_dword v1, v[3:4]
 // VI: flat_load_dword v1, v[3:4] ; encoding: [0x00,0x00,0x50,0xdc,0x03,0x00,0x00,0x01]
 
 flat_load_dword v1, v[3:4] glc
-// NOSI: error: invalid operand for instruction
+// NOSI: error: instruction not supported on this GPU
 // CI: flat_load_dword v1, v[3:4] glc ; encoding: [0x00,0x00,0x31,0xdc,0x03,0x00,0x00,0x01]
 // VI: flat_load_dword v1, v[3:4] glc ; encoding: [0x00,0x00,0x51,0xdc,0x03,0x00,0x00,0x01]
 
 flat_load_dword v1, v[3:4] glc slc
-// NOSI: error: invalid operand for instruction
+// NOSI: error: instruction not supported on this GPU
 // CI: flat_load_dword v1, v[3:4] glc slc ; encoding: [0x00,0x00,0x33,0xdc,0x03,0x00,0x00,0x01]
 // VI: flat_load_dword v1, v[3:4] glc slc ; encoding: [0x00,0x00,0x53,0xdc,0x03,0x00,0x00,0x01]
 
@@ -35,16 +35,16 @@ flat_store_dword v[3:4], v1
 // CIVI: flat_store_dword v[3:4], v1 ; encoding: [0x00,0x00,0x70,0xdc,0x03,0x01,0x00,0x00]
 
 flat_store_dword v[3:4], v1 glc
-// NOSI: error: invalid operand for instruction
+// NOSI: error: instruction not supported on this GPU
 // CIVI: flat_store_dword v[3:4], v1 glc ; encoding: [0x00,0x00,0x71,0xdc,0x03,0x01,0x00,0x00]
 
 flat_store_dword v[3:4], v1 glc slc
-// NOSI: error: invalid operand for instruction
+// NOSI: error: instruction not supported on this GPU
 // CIVI: flat_store_dword v[3:4], v1 glc slc ; encoding: [0x00,0x00,0x73,0xdc,0x03,0x01,0x00,0x00]
 
 
 flat_store_dword v[3:4], v1 slc
-// NOSI: error: invalid operand for instruction
+// NOSI: error: instruction not supported on this GPU
 // CIVI: flat_store_dword v[3:4], v1 slc ; encoding: [0x00,0x00,0x72,0xdc,0x03,0x01,0x00,0x00]
 
 // FIXME: For atomic instructions, glc must be placed immediately following
@@ -53,12 +53,12 @@ flat_store_dword v[3:4], v1 slc
 // flat_atomic_add v1, v[3:4], v5 slc glc
 
 flat_atomic_add v1, v[3:4], v5 offset:0 glc slc
-// NOSI: error: not a valid operand.
+// NOSI: error: instruction not supported on this GPU
 // CI: flat_atomic_add v1, v[3:4], v5 glc slc ; encoding: [0x00,0x00,0xcb,0xdc,0x03,0x05,0x00,0x01]
 // VI: flat_atomic_add v1, v[3:4], v5 glc slc ; encoding: [0x00,0x00,0x0b,0xdd,0x03,0x05,0x00,0x01]
 
 flat_atomic_add v[3:4], v5 slc
-// NOSI: error: invalid operand for instruction
+// NOSI: error: instruction not supported on this GPU
 // CI: flat_atomic_add v[3:4], v5 slc ; encoding: [0x00,0x00,0xca,0xdc,0x03,0x05,0x00,0x00]
 // VI: flat_atomic_add v[3:4], v5 slc ; encoding: [0x00,0x00,0x0a,0xdd,0x03,0x05,0x00,0x00]
 

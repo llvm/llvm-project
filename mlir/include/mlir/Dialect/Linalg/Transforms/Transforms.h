@@ -29,6 +29,7 @@ using LinalgLoops = SmallVector<Operation *, 4>;
 struct TiledLinalgOp {
   LinalgOp op;
   SmallVector<Operation *, 8> loops;
+  SmallVector<Value, 4> tensorResults;
 };
 
 struct TiledAndFusedLinalgOps {
@@ -371,8 +372,9 @@ struct LinalgBaseTilingPattern : public RewritePattern {
                           LinalgTilingOptions options,
                           LinalgMarker marker = LinalgMarker(),
                           PatternBenefit benefit = 1);
-  LogicalResult matchAndRewrite(Operation *op,
-                                PatternRewriter &rewriter) const override;
+  LogicalResult
+  matchAndRewriteBase(Operation *op, PatternRewriter &rewriter,
+                      SmallVectorImpl<Value> &tensorResults) const;
 
 private:
   /// LinalgTransformMarker handles special attribute manipulations.
@@ -390,9 +392,14 @@ struct LinalgTilingPattern : public LinalgBaseTilingPattern {
                                 marker, benefit) {}
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(LinalgBaseTilingPattern::matchAndRewrite(op, rewriter)))
+    SmallVector<Value, 4> tensorResults;
+    if (failed(LinalgBaseTilingPattern::matchAndRewriteBase(op, rewriter,
+                                                            tensorResults)))
       return failure();
-    rewriter.eraseOp(op);
+    if (tensorResults.empty())
+      rewriter.eraseOp(op);
+    else
+      rewriter.replaceOp(op, tensorResults);
     return success();
   }
 };

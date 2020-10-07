@@ -10,7 +10,7 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=NOSICIVI -check-prefix=NOVI -check-prefix=NOSICIVIGFX10 -check-prefix=NOSICIVIGFX1030 --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefix=NOGFX9 -check-prefix=NOGFX9GFX1012 --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1012 %s 2>&1 | FileCheck -check-prefix=NOSICIGFX10 -check-prefix=NOGFX9 -check-prefix=NOGFX9GFX1012 --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1030 %s 2>&1 | FileCheck -check-prefix=NOSICIGFX1030 -check-prefix=NOSICIVIGFX10 -check-prefix=NOSICIVIGFX1030 -check-prefix=NOSICIGFX10 -check-prefix=NOGFX9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1030 %s 2>&1 | FileCheck -check-prefix=NOSICIGFX1030 -check-prefix=NOSICIVIGFX10 -check-prefix=NOSICIVIGFX1030 -check-prefix=NOSICIGFX10 -check-prefix=NOGFX9 -check-prefix=NOGFX1030 --implicit-check-not=error: %s
 
 s_dcache_wb
 // GFX89: s_dcache_wb  ; encoding: [0x00,0x00,0x84,0xc0,0x00,0x00,0x00,0x00]
@@ -71,7 +71,7 @@ s_store_dword s1, s[2:3], 0xfc
 s_store_dword s1, s[2:3], 0xfc glc
 // GFX89: s_store_dword s1, s[2:3], 0xfc glc ; encoding: [0x41,0x00,0x43,0xc0,0xfc,0x00,0x00,0x00]
 // GFX1012: s_store_dword s1, s[2:3], 0xfc glc ; encoding: [0x41,0x00,0x41,0xf4,0xfc,0x00,0x00,0xfa]
-// NOSICIGFX1030: error: invalid operand for instruction
+// NOSICIGFX1030: error: instruction not supported on this GPU
 
 s_store_dword s1, s[2:3], s4
 // GFX89: s_store_dword s1, s[2:3], s4 ; encoding: [0x41,0x00,0x40,0xc0,0x04,0x00,0x00,0x00]
@@ -81,27 +81,31 @@ s_store_dword s1, s[2:3], s4
 s_store_dword s1, s[2:3], s4 glc
 // GFX89: s_store_dword s1, s[2:3], s4 glc ; encoding: [0x41,0x00,0x41,0xc0,0x04,0x00,0x00,0x00]
 // GFX1012: s_store_dword s1, s[2:3], s4 glc ; encoding: [0x41,0x00,0x41,0xf4,0x00,0x00,0x00,0x08]
-// NOSICIGFX1030: error: invalid operand for instruction
+// NOSICIGFX1030: error: instruction not supported on this GPU
 
 s_store_dword tba_lo, s[2:3], s4
 // VI: s_store_dword tba_lo, s[2:3], s4 ; encoding: [0x01,0x1b,0x40,0xc0,0x04,0x00,0x00,0x00]
 // NOSICI: error: instruction not supported on this GPU
-// NOGFX9: error: register not available on this GPU
+// NOGFX9GFX1012: error: register not available on this GPU
+// NOGFX1030: error: instruction not supported on this GPU
 
 s_store_dword tba_hi, s[2:3], s4
 // VI: s_store_dword tba_hi, s[2:3], s4 ; encoding: [0x41,0x1b,0x40,0xc0,0x04,0x00,0x00,0x00]
 // NOSICI: error: instruction not supported on this GPU
-// NOGFX9: error: register not available on this GPU
+// NOGFX9GFX1012: error: register not available on this GPU
+// NOGFX1030: error: instruction not supported on this GPU
 
 s_store_dword tma_lo, s[2:3], s4
 // VI: s_store_dword tma_lo, s[2:3], s4 ; encoding: [0x81,0x1b,0x40,0xc0,0x04,0x00,0x00,0x00]
 // NOSICI: error: instruction not supported on this GPU
-// NOGFX9: error: register not available on this GPU
+// NOGFX9GFX1012: error: register not available on this GPU
+// NOGFX1030: error: instruction not supported on this GPU
 
 s_store_dword tma_hi, s[2:3], s4
 // VI: s_store_dword tma_hi, s[2:3], s4 ; encoding: [0xc1,0x1b,0x40,0xc0,0x04,0x00,0x00,0x00]
 // NOSICI: error: instruction not supported on this GPU
-// NOGFX9: error: register not available on this GPU
+// NOGFX9GFX1012: error: register not available on this GPU
+// NOGFX1030: error: instruction not supported on this GPU
 
 // FIXME: Should error on SI instead of silently ignoring glc
 s_load_dword s1, s[2:3], 0xfc glc
@@ -112,6 +116,7 @@ s_load_dword s1, s[2:3], 0xfc glc
 s_load_dword s1, s[2:3], s4 glc
 // GFX89: s_load_dword s1, s[2:3], s4 glc ; encoding: [0x41,0x00,0x01,0xc0,0x04,0x00,0x00,0x00]
 // GFX10: s_load_dword s1, s[2:3], s4 glc ; encoding: [0x41,0x00,0x01,0xf4,0x00,0x00,0x00,0x08]
+// SICI: s_load_dword s1, s[2:3], s4 glc ; encoding: [0x04,0x82,0x00,0xc0]
 
 s_buffer_store_dword s10, s[92:95], m0
 // GFX89: s_buffer_store_dword s10, s[92:95], m0 ; encoding: [0xae,0x02,0x60,0xc0,0x7c,0x00,0x00,0x00]
@@ -121,22 +126,26 @@ s_buffer_store_dword s10, s[92:95], m0
 s_buffer_store_dword tba_lo, s[92:95], m0
 // VI: s_buffer_store_dword tba_lo, s[92:95], m0 ; encoding: [0x2e,0x1b,0x60,0xc0,0x7c,0x00,0x00,0x00]
 // NOSICI: error: instruction not supported on this GPU
-// NOGFX9: error: register not available on this GPU
+// NOGFX9GFX1012: error: register not available on this GPU
+// NOGFX1030: error: instruction not supported on this GPU
 
 s_buffer_store_dword tba_hi, s[92:95], m0
 // VI: s_buffer_store_dword tba_hi, s[92:95], m0 ; encoding: [0x6e,0x1b,0x60,0xc0,0x7c,0x00,0x00,0x00]
 // NOSICI: error: instruction not supported on this GPU
-// NOGFX9: error: register not available on this GPU
+// NOGFX9GFX1012: error: register not available on this GPU
+// NOGFX1030: error: instruction not supported on this GPU
 
 s_buffer_store_dword tma_lo, s[92:95], m0
 // VI: s_buffer_store_dword tma_lo, s[92:95], m0 ; encoding: [0xae,0x1b,0x60,0xc0,0x7c,0x00,0x00,0x00]
 // NOSICI: error: instruction not supported on this GPU
-// NOGFX9: error: register not available on this GPU
+// NOGFX9GFX1012: error: register not available on this GPU
+// NOGFX1030: error: instruction not supported on this GPU
 
 s_buffer_store_dword tma_hi, s[92:95], m0
 // VI: s_buffer_store_dword tma_hi, s[92:95], m0 ; encoding: [0xee,0x1b,0x60,0xc0,0x7c,0x00,0x00,0x00]
 // NOSICI: error: instruction not supported on this GPU
-// NOGFX9: error: register not available on this GPU
+// NOGFX9GFX1012: error: register not available on this GPU
+// NOGFX1030: error: instruction not supported on this GPU
 
 s_buffer_store_dword ttmp0, s[92:95], m0
 // VI:   s_buffer_store_dword ttmp0, s[92:95], m0 ; encoding: [0x2e,0x1c,0x60,0xc0,0x7c,0x00,0x00,0x00]
@@ -151,13 +160,14 @@ s_buffer_store_dwordx2 s[10:11], s[92:95], m0
 
 s_buffer_store_dwordx4 s[8:11], s[92:95], m0 glc
 // GFX89: s_buffer_store_dwordx4 s[8:11], s[92:95], m0 glc ; encoding: [0x2e,0x02,0x69,0xc0,0x7c,0x00,0x00,0x00]
-// NOSICIGFX1030: error: invalid operand for instruction
+// NOSICIGFX1030: error: instruction not supported on this GPU
 // GFX1012: s_buffer_store_dwordx4 s[8:11], s[92:95], m0 glc ; encoding: [0x2e,0x02,0x69,0xf4,0x00,0x00,0x00,0xf8]
 
 s_buffer_store_dwordx2 tba, s[92:95], m0 glc
 // VI: s_buffer_store_dwordx2 tba, s[92:95], m0 glc ; encoding: [0x2e,0x1b,0x65,0xc0,0x7c,0x00,0x00,0x00]
-// NOSICI: error: invalid operand for instruction
-// NOGFX9: error: register not available on this GPU
+// NOSICI: error: instruction not supported on this GPU
+// NOGFX9GFX1012: error: register not available on this GPU
+// NOGFX1030: error: instruction not supported on this GPU
 
 s_buffer_load_dword s10, s[92:95], m0
 // GFX89: s_buffer_load_dword s10, s[92:95], m0 ; encoding: [0xae,0x02,0x20,0xc0,0x7c,0x00,0x00,0x00]
@@ -215,6 +225,7 @@ s_buffer_load_dwordx2 ttmp[0:1], s[92:95], m0
 s_buffer_load_dwordx4 s[8:11], s[92:95], m0 glc
 // GFX89: s_buffer_load_dwordx4 s[8:11], s[92:95], m0 glc ; encoding: [0x2e,0x02,0x29,0xc0,0x7c,0x00,0x00,0x00]
 // GFX10: s_buffer_load_dwordx4 s[8:11], s[92:95], m0 glc ; encoding: [0x2e,0x02,0x29,0xf4,0x00,0x00,0x00,0xf8]
+// SICI: s_buffer_load_dwordx4 s[8:11], s[92:95], m0 glc ; encoding: [0x7c,0x5c,0x84,0xc2]
 
 //===----------------------------------------------------------------------===//
 // s_scratch instructions
@@ -228,7 +239,7 @@ s_scratch_load_dword s5, s[2:3], s101
 s_scratch_load_dword s5, s[2:3], s0 glc
 // GFX9: s_scratch_load_dword s5, s[2:3], s0 glc ; encoding: [0x41,0x01,0x15,0xc0,0x00,0x00,0x00,0x00]
 // GFX1012: s_scratch_load_dword s5, s[2:3], s0 glc ; encoding: [0x41,0x01,0x15,0xf4,0x00,0x00,0x00,0x00]
-// NOSICIVIGFX1030: error: invalid operand for instruction
+// NOSICIVIGFX1030: error: instruction not supported on this GPU
 
 s_scratch_load_dwordx2 s[100:101], s[2:3], s0
 // GFX9: s_scratch_load_dwordx2 s[100:101], s[2:3], s0 ; encoding: [0x01,0x19,0x18,0xc0,0x00,0x00,0x00,0x00]
@@ -238,7 +249,7 @@ s_scratch_load_dwordx2 s[100:101], s[2:3], s0
 s_scratch_load_dwordx2 s[10:11], s[2:3], 0x1 glc
 // GFX9: s_scratch_load_dwordx2 s[10:11], s[2:3], 0x1 glc ; encoding: [0x81,0x02,0x1b,0xc0,0x01,0x00,0x00,0x00]
 // GFX1012: s_scratch_load_dwordx2 s[10:11], s[2:3], 0x1 glc ; encoding: [0x81,0x02,0x19,0xf4,0x01,0x00,0x00,0xfa]
-// NOSICIVIGFX1030: error: invalid operand for instruction
+// NOSICIVIGFX1030: error: instruction not supported on this GPU
 
 s_scratch_load_dwordx4 s[20:23], s[4:5], s0
 // GFX9: s_scratch_load_dwordx4 s[20:23], s[4:5], s0 ; encoding: [0x02,0x05,0x1c,0xc0,0x00,0x00,0x00,0x00]
@@ -253,17 +264,17 @@ s_scratch_store_dword s101, s[4:5], s0
 s_scratch_store_dword s1, s[4:5], 0x123 glc
 // GFX9: s_scratch_store_dword s1, s[4:5], 0x123 glc ; encoding: [0x42,0x00,0x57,0xc0,0x23,0x01,0x00,0x00]
 // GFX1012: s_scratch_store_dword s1, s[4:5], 0x123 glc ; encoding: [0x42,0x00,0x55,0xf4,0x23,0x01,0x00,0xfa]
-// NOSICIVIGFX1030: error: invalid operand for instruction
+// NOSICIVIGFX1030: error: instruction not supported on this GPU
 
 s_scratch_store_dwordx2 s[2:3], s[4:5], s101 glc
 // GFX9: s_scratch_store_dwordx2 s[2:3], s[4:5], s101 glc ; encoding: [0x82,0x00,0x59,0xc0,0x65,0x00,0x00,0x00]
 // GFX1012: s_scratch_store_dwordx2 s[2:3], s[4:5], s101 glc ; encoding: [0x82,0x00,0x59,0xf4,0x00,0x00,0x00,0xca]
-// NOSICIVIGFX1030: error: invalid operand for instruction
+// NOSICIVIGFX1030: error: instruction not supported on this GPU
 
 s_scratch_store_dwordx4 s[4:7], s[4:5], s0 glc
 // GFX9: s_scratch_store_dwordx4 s[4:7], s[4:5], s0 glc ; encoding: [0x02,0x01,0x5d,0xc0,0x00,0x00,0x00,0x00]
 // GFX1012: s_scratch_store_dwordx4 s[4:7], s[4:5], s0 glc ; encoding: [0x02,0x01,0x5d,0xf4,0x00,0x00,0x00,0x00]
-// NOSICIVIGFX1030: error: invalid operand for instruction
+// NOSICIVIGFX1030: error: instruction not supported on this GPU
 
 //===----------------------------------------------------------------------===//
 // s_dcache_discard instructions

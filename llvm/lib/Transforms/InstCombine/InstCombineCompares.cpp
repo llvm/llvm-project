@@ -552,7 +552,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
         return false;
 
       if (isa<IntToPtrInst>(V) || isa<PtrToIntInst>(V)) {
-        auto *CI = dyn_cast<CastInst>(V);
+        auto *CI = cast<CastInst>(V);
         if (!CI->isNoopCast(DL))
           return false;
 

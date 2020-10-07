@@ -77,8 +77,7 @@ EXTERN void __kmpc_kernel_deinit(int16_t IsOMPRuntimeInitialized) {
   omptarget_nvptx_workFn = 0;
 }
 
-EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
-                                    int16_t RequiresDataSharing) {
+EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
   PRINT0(LD_IO, "call to __kmpc_spmd_kernel_init\n");
 
   setExecutionParameters(Spmd, RequiresOMPRuntime ? RuntimeInitialized
@@ -134,15 +133,6 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
         "thread will execute parallel region with id %d in a team of "
         "%d threads\n",
         (int)newTaskDescr->ThreadId(), (int)ThreadLimit);
-
-  if (RequiresDataSharing && GetLaneId() == 0) {
-    // Warp master initializes data sharing environment.
-    unsigned WID = threadId / WARPSIZE;
-    __kmpc_data_sharing_slot *RootS = currTeamDescr.RootS(
-        WID, WID == WARPSIZE - 1);
-    DataSharingState.SlotPtr[WID] = RootS;
-    DataSharingState.StackPtr[WID] = (void *)&RootS->Data[0];
-  }
 }
 
 EXTERN void __kmpc_spmd_kernel_deinit_v2(int16_t RequiresOMPRuntime) {
