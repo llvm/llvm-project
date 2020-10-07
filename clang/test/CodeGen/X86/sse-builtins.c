@@ -35,7 +35,7 @@ __m128 test_mm_andnot_ps(__m128 A, __m128 B) {
 }
 
 __m128 test_mm_cmpeq_ps(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpeq_ps
+  // CHECK-LABEL: test_mm_cmpeq_ps
   // CHECK:         [[CMP:%.*]] = fcmp oeq <4 x float>
   // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
@@ -44,13 +44,13 @@ __m128 test_mm_cmpeq_ps(__m128 __a, __m128 __b) {
 }
 
 __m128 test_mm_cmpeq_ss(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpeq_ss
+  // CHECK-LABEL: test_mm_cmpeq_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 0)
   return _mm_cmpeq_ss(__a, __b);
 }
 
 __m128 test_mm_cmpge_ps(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpge_ps
+  // CHECK-LABEL: test_mm_cmpge_ps
   // CHECK:         [[CMP:%.*]] = fcmp ole <4 x float>
   // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
@@ -59,14 +59,14 @@ __m128 test_mm_cmpge_ps(__m128 __a, __m128 __b) {
 }
 
 __m128 test_mm_cmpge_ss(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpge_ss
+  // CHECK-LABEL: test_mm_cmpge_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 2)
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
   return _mm_cmpge_ss(__a, __b);
 }
 
 __m128 test_mm_cmpgt_ps(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpgt_ps
+  // CHECK-LABEL: test_mm_cmpgt_ps
   // CHECK:         [[CMP:%.*]] = fcmp olt <4 x float>
   // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
@@ -75,14 +75,14 @@ __m128 test_mm_cmpgt_ps(__m128 __a, __m128 __b) {
 }
 
 __m128 test_mm_cmpgt_ss(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpgt_ss
+  // CHECK-LABEL: test_mm_cmpgt_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 1)
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
   return _mm_cmpgt_ss(__a, __b);
 }
 
 __m128 test_mm_cmple_ps(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmple_ps
+  // CHECK-LABEL: test_mm_cmple_ps
   // CHECK:         [[CMP:%.*]] = fcmp ole <4 x float>
   // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
@@ -91,13 +91,13 @@ __m128 test_mm_cmple_ps(__m128 __a, __m128 __b) {
 }
 
 __m128 test_mm_cmple_ss(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmple_ss
+  // CHECK-LABEL: test_mm_cmple_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 2)
   return _mm_cmple_ss(__a, __b);
 }
 
 __m128 test_mm_cmplt_ps(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmplt_ps
+  // CHECK-LABEL: test_mm_cmplt_ps
   // CHECK:         [[CMP:%.*]] = fcmp olt <4 x float>
   // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
@@ -106,13 +106,13 @@ __m128 test_mm_cmplt_ps(__m128 __a, __m128 __b) {
 }
 
 __m128 test_mm_cmplt_ss(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmplt_ss
+  // CHECK-LABEL: test_mm_cmplt_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 1)
   return _mm_cmplt_ss(__a, __b);
 }
 
 __m128 test_mm_cmpneq_ps(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpneq_ps
+  // CHECK-LABEL: test_mm_cmpneq_ps
   // CHECK:         [[CMP:%.*]] = fcmp une <4 x float>
   // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
@@ -121,13 +121,13 @@ __m128 test_mm_cmpneq_ps(__m128 __a, __m128 __b) {
 }
 
 __m128 test_mm_cmpneq_ss(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpneq_ss
+  // CHECK-LABEL: test_mm_cmpneq_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 4)
   return _mm_cmpneq_ss(__a, __b);
 }
 
 __m128 test_mm_cmpnge_ps(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpnge_ps
+  // CHECK-LABEL: test_mm_cmpnge_ps
   // CHECK:         [[CMP:%.*]] = fcmp ugt <4 x float>
   // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
@@ -136,14 +136,14 @@ __m128 test_mm_cmpnge_ps(__m128 __a, __m128 __b) {
 }
 
 __m128 test_mm_cmpnge_ss(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpnge_ss
+  // CHECK-LABEL: test_mm_cmpnge_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 6)
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
   return _mm_cmpnge_ss(__a, __b);
 }
 
 __m128 test_mm_cmpngt_ps(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpngt_ps
+  // CHECK-LABEL: test_mm_cmpngt_ps
   // CHECK:         [[CMP:%.*]] = fcmp uge <4 x float>
   // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
@@ -152,14 +152,14 @@ __m128 test_mm_cmpngt_ps(__m128 __a, __m128 __b) {
 }
 
 __m128 test_mm_cmpngt_ss(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpngt_ss
+  // CHECK-LABEL: test_mm_cmpngt_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 5)
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
   return _mm_cmpngt_ss(__a, __b);
 }
 
 __m128 test_mm_cmpnle_ps(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpnle_ps
+  // CHECK-LABEL: test_mm_cmpnle_ps
   // CHECK:         [[CMP:%.*]] = fcmp ugt <4 x float>
   // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
@@ -168,13 +168,13 @@ __m128 test_mm_cmpnle_ps(__m128 __a, __m128 __b) {
 }
 
 __m128 test_mm_cmpnle_ss(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpnle_ss
+  // CHECK-LABEL: test_mm_cmpnle_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 6)
   return _mm_cmpnle_ss(__a, __b);
 }
 
 __m128 test_mm_cmpnlt_ps(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpnlt_ps
+  // CHECK-LABEL: test_mm_cmpnlt_ps
   // CHECK:         [[CMP:%.*]] = fcmp uge <4 x float>
   // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
@@ -183,13 +183,13 @@ __m128 test_mm_cmpnlt_ps(__m128 __a, __m128 __b) {
 }
 
 __m128 test_mm_cmpnlt_ss(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpnlt_ss
+  // CHECK-LABEL: test_mm_cmpnlt_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 5)
   return _mm_cmpnlt_ss(__a, __b);
 }
 
 __m128 test_mm_cmpord_ps(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpord_ps
+  // CHECK-LABEL: test_mm_cmpord_ps
   // CHECK:         [[CMP:%.*]] = fcmp ord <4 x float>
   // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
@@ -198,13 +198,13 @@ __m128 test_mm_cmpord_ps(__m128 __a, __m128 __b) {
 }
 
 __m128 test_mm_cmpord_ss(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpord_ss
+  // CHECK-LABEL: test_mm_cmpord_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 7)
   return _mm_cmpord_ss(__a, __b);
 }
 
 __m128 test_mm_cmpunord_ps(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpunord_ps
+  // CHECK-LABEL: test_mm_cmpunord_ps
   // CHECK:         [[CMP:%.*]] = fcmp uno <4 x float>
   // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <4 x float>
@@ -213,7 +213,7 @@ __m128 test_mm_cmpunord_ps(__m128 __a, __m128 __b) {
 }
 
 __m128 test_mm_cmpunord_ss(__m128 __a, __m128 __b) {
-  // CHECK-LABEL: @test_mm_cmpunord_ss
+  // CHECK-LABEL: test_mm_cmpunord_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 3)
   return _mm_cmpunord_ss(__a, __b);
 }
@@ -651,8 +651,8 @@ __m128 test_mm_sqrt_ps(__m128 x) {
   return _mm_sqrt_ps(x);
 }
 
-__m128 test_sqrt_ss(__m128 x) {
-  // CHECK: define {{.*}} @test_sqrt_ss
+__m128 test_mm_sqrt_ss(__m128 x) {
+  // CHECK-LABEL: test_mm_sqrt_ss
   // CHECK: extractelement <4 x float> {{.*}}, i64 0
   // CHECK: call float @llvm.sqrt.f32(float {{.*}})
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i64 0
@@ -785,7 +785,7 @@ int test_mm_ucomineq_ss(__m128 A, __m128 B) {
 }
 
 __m128 test_mm_undefined_ps() {
-  // CHECK-LABEL: @test_mm_undefined_ps
+  // CHECK-LABEL: test_mm_undefined_ps
   // CHECK: ret <4 x float> zeroinitializer
   return _mm_undefined_ps();
 }
