@@ -106,7 +106,7 @@ def ACCC_Device : Clause<"device"> {
 
 // 2.14.1
 def ACCC_DeviceNum : Clause<"device_num">  {
-  let flangClassValue = "ScalarIntConstantExpr";
+  let flangClassValue = "ScalarIntExpr";
 }
 
 // 2.7.3
@@ -121,7 +121,7 @@ def ACCC_DeviceResident : Clause<"device_resident"> {
 
 // 2.4
 def ACCC_DeviceType : Clause<"device_type"> {
-  let flangClassValue = "Name";
+  let flangClassValue = "ScalarIntExpr";
   let defaultValue = "*";
   let isValueOptional = 1;
   let isValueList = 1;
