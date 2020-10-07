@@ -118,7 +118,7 @@ namespace format {
 
 /// Determines the semantic type of a syntactic token, e.g. whether "<" is a
 /// template opener or binary operator.
-enum TokenType {
+enum TokenType : uint8_t {
 #define TYPE(X) TT_##X,
   LIST_TOKEN_TYPES
 #undef TYPE
@@ -211,8 +211,8 @@ struct FormatToken {
         ClosesTemplateDeclaration(false), StartsBinaryExpression(false),
         EndsBinaryExpression(false), PartOfMultiVariableDeclStmt(false),
         ContinuesLineCommentSection(false), Finalized(false),
-        BlockKind(BK_Unknown), Type(TT_Unknown), Decision(FD_Unformatted),
-        PackingKind(PPK_Inconclusive) {}
+        BlockKind(BK_Unknown), Decision(FD_Unformatted),
+        PackingKind(PPK_Inconclusive), Type(TT_Unknown) {}
 
   /// The \c Token.
   Token Tok;
@@ -298,18 +298,6 @@ public:
   }
 
 private:
-  unsigned Type : 8;
-
-public:
-  /// Returns the token's type, e.g. whether "<" is a template opener or
-  /// binary operator.
-  TokenType getType() const { return static_cast<TokenType>(Type); }
-  void setType(TokenType T) {
-    Type = T;
-    assert(getType() == T && "TokenType overflow!");
-  }
-
-private:
   /// Stores the formatting decision for the token once it was made.
   unsigned Decision : 2;
 
@@ -334,6 +322,15 @@ public:
     PackingKind = K;
     assert(getPackingKind() == K && "ParameterPackingKind overflow!");
   }
+
+private:
+  TokenType Type;
+
+public:
+  /// Returns the token's type, e.g. whether "<" is a template opener or
+  /// binary operator.
+  TokenType getType() const { return Type; }
+  void setType(TokenType T) { Type = T; }
 
   /// The number of newlines immediately before the \c Token.
   ///
