@@ -326,16 +326,14 @@ define void @test_duplicate_ir_values() gc "statepoint-example" personality i32*
 ;CHECK-VREG:     %0:gr64 = STATEPOINT 1, 16, 5, %8, $edi, $rsi, $edx, $ecx, $r8d, 2, 0, 2, 0, 2, 0, 2, 1, killed %1(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
 ;CHECK-VREG:     JMP_1 %bb.1
 ;CHECK-VREG:   bb.1.normal_continue:
-;CHECK-VREG:     MOV64mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.0)
 ;CHECK-VREG:     %13:gr32 = MOV32ri 10
 ;CHECK-VREG:     $edi = COPY %13
-;CHECK-VREG:     STATEPOINT 2882400000, 0, 1, @__llvm_deoptimize, $edi, 2, 0, 2, 2, 2, 2, 1, 8, %stack.0, 0, 1, 8, %stack.0, 0, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
+;CHECK-VREG:     STATEPOINT 2882400000, 0, 1, @__llvm_deoptimize, $edi, 2, 0, 2, 2, 2, 2, %0, %0, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp
 ;CHECK-VREG:   bb.2.exceptional_return (landing-pad):
 ;CHECK-VREG:     EH_LABEL <mcsymbol >
-;CHECK-VREG:     MOV64mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.0)
 ;CHECK-VREG:     %12:gr32 = MOV32ri -271
 ;CHECK-VREG:     $edi = COPY %12
-;CHECK-VREG:     STATEPOINT 2882400000, 0, 1, @__llvm_deoptimize, $edi, 2, 0, 2, 0, 2, 1, 1, 8, %stack.0, 0, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
+;CHECK-VREG:     STATEPOINT 2882400000, 0, 1, @__llvm_deoptimize, $edi, 2, 0, 2, 0, 2, 1, %0, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp
 
 entry:
   %local.0 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* undef, align 8
