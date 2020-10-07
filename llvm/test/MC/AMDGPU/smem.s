@@ -1,4 +1,5 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=GCN -check-prefix=SICI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck -check-prefix=GCN -check-prefix=SICI -check-prefix=CI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=kaveri -show-encoding %s | FileCheck -check-prefix=GCN -check-prefix=SICI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefix=GCN -check-prefix=GFX89 -check-prefix=GFX9 %s
@@ -720,11 +721,11 @@ s_load_dword s1, s[2:3], -1
 // NOVI: error: expected a 20-bit unsigned offset
 // GFX9: s_load_dword s1, s[2:3], -0x1 ; encoding: [0x41,0x00,0x02,0xc0,0xff,0xff,0x1f,0x00]
 // GFX10: s_load_dword s1, s[2:3], -0x1 ; encoding: [0x41,0x00,0x00,0xf4,0xff,0xff,0x1f,0xfa]
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: error: operands are not valid for this GPU or mode
 
 s_buffer_load_dword s10, s[92:95], -1
 // NOVI: error: expected a 20-bit unsigned offset
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: error: operands are not valid for this GPU or mode
 // NOGFX9: error: expected a 20-bit unsigned offset
 
 s_atomic_swap s5, s[2:3], -1
@@ -761,13 +762,13 @@ s_buffer_store_dword s10, s[92:95], 0xFFFFFFFFFFF00000
 // NOVI: error: expected a 20-bit unsigned offset
 
 s_load_dword s1, s[2:3], 0xFFFFFFFFFFF00000
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: error: operands are not valid for this GPU or mode
 // GFX10: s_load_dword s1, s[2:3], -0x100000 ; encoding: [0x41,0x00,0x00,0xf4,0x00,0x00,0x10,0xfa]
 // GFX9: s_load_dword s1, s[2:3], -0x100000 ; encoding: [0x41,0x00,0x02,0xc0,0x00,0x00,0x10,0x00]
 // NOVI: error: expected a 20-bit unsigned offset
 
 s_buffer_load_dword s10, s[92:95], 0xFFFFFFFFFFF00000
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: error: operands are not valid for this GPU or mode
 // NOGFX9: error: expected a 20-bit unsigned offset
 // NOVI: error: expected a 20-bit unsigned offset
 

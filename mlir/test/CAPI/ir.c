@@ -10,8 +10,9 @@
 /* RUN: mlir-capi-ir-test 2>&1 | FileCheck %s
  */
 
-#include "mlir-c/IR.h"
 #include "mlir-c/AffineMap.h"
+#include "mlir-c/Diagnostics.h"
+#include "mlir-c/IR.h"
 #include "mlir-c/Registration.h"
 #include "mlir-c/StandardAttributes.h"
 #include "mlir-c/StandardDialect.h"
@@ -827,6 +828,28 @@ int registerOnlyStd() {
   return 0;
 }
 
+// Wraps a diagnostic into additional text we can match against.
+MlirLogicalResult errorHandler(MlirDiagnostic diagnostic) {
+  fprintf(stderr, "processing diagnostic <<\n");
+  mlirDiagnosticPrint(diagnostic, printToStderr, NULL);
+  fprintf(stderr, "\n");
+  MlirLocation loc = mlirDiagnosticGetLocation(diagnostic);
+  mlirLocationPrint(loc, printToStderr, NULL);
+  assert(mlirDiagnosticGetNumNotes(diagnostic) == 0);
+  fprintf(stderr, ">> end of diagnostic\n");
+  return mlirLogicalResultSuccess();
+}
+
+void testDiagnostics() {
+  MlirContext ctx = mlirContextCreate();
+  MlirDiagnosticHandlerID id =
+      mlirContextAttachDiagnosticHandler(ctx, errorHandler);
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+  mlirEmitError(loc, "test diagnostics");
+  mlirContextDetachDiagnosticHandler(ctx, id);
+  mlirEmitError(loc, "more test diagnostics");
+}
+
 int main() {
   MlirContext ctx = mlirContextCreate();
   mlirRegisterAllDialects(ctx);
@@ -981,6 +1004,17 @@ int main() {
   // clang-format on
 
   mlirContextDestroy(ctx);
+
+  fprintf(stderr, "@test_diagnostics\n");
+  testDiagnostics();
+  // clang-format off
+  // CHECK-LABEL: @test_diagnostics
+  // CHECK: processing diagnostic <<
+  // CHECK:   test diagnostics
+  // CHECK:   loc(unknown)
+  // CHECK: >> end of diagnostic
+  // CHECK-NOT: processing diagnostic
+  // CHECK:     more test diagnostics
 
   return 0;
 }

@@ -1,4 +1,7 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefix=GFX9 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefixes=GCN,SI,SICI,SICIVI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=hawaii -show-encoding %s | FileCheck -check-prefixes=GCN,CI,SICI,SICIVI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefixes=GCN,VI,SICIVI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefixes=GCN,GFX9 %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefixes=NOSI,NOSICI,NOGCN --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=hawaii %s 2>&1 | FileCheck -check-prefixes=NOCI,NOSICI,NOGCN --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefixes=NOVI,NOGCN --implicit-check-not=error: %s
@@ -235,33 +238,37 @@ v_sub_i16 v5, v1, v2 clamp
 v_fma_f16_e64 v5, v1, v2, v3
 // GFX9: v_fma_f16 v5, v1, v2, v3 ; encoding: [0x05,0x00,0x06,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_fma_f16 v5, v1, v2, v3 ; encoding: [0x05,0x00,0xee,0xd1,0x01,0x05,0x0e,0x04]
 
 v_fma_f16 v5, v1, -v2, v3
 // GFX9: v_fma_f16 v5, v1, -v2, v3 ; encoding: [0x05,0x00,0x06,0xd2,0x01,0x05,0x0e,0x44]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_fma_f16 v5, v1, -v2, v3 ; encoding: [0x05,0x00,0xee,0xd1,0x01,0x05,0x0e,0x44]
 
 v_fma_f16 v5, v1, v2, |v3|
 // GFX9: v_fma_f16 v5, v1, v2, |v3| ; encoding: [0x05,0x04,0x06,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_fma_f16 v5, v1, v2, |v3| ; encoding: [0x05,0x04,0xee,0xd1,0x01,0x05,0x0e,0x04]
 
 v_fma_f16 v5, v1, v2, v3 clamp
 // GFX9: v_fma_f16 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0x06,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_fma_f16 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0xee,0xd1,0x01,0x05,0x0e,0x04]
 
 v_fma_f16 v5, v1, v2, v3 op_sel:[1,0,0,0]
 // GFX9: v_fma_f16 v5, v1, v2, v3 op_sel:[1,0,0,0] ; encoding: [0x05,0x08,0x06,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_fma_f16 v5, v1, v2, v3 op_sel:[0,1,0,0]
 // GFX9: v_fma_f16 v5, v1, v2, v3 op_sel:[0,1,0,0] ; encoding: [0x05,0x10,0x06,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_fma_f16 v5, v1, v2, v3 op_sel:[1,1,1,1]
 // GFX9: v_fma_f16 v5, v1, v2, v3 op_sel:[1,1,1,1] ; encoding: [0x05,0x78,0x06,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_fma_legacy_f16_e64 v5, v1, v2, v3
 // GFX9: v_fma_legacy_f16 v5, v1, v2, v3 ; encoding:  [0x05,0x00,0xee,0xd1,0x01,0x05,0x0e,0x04]
@@ -282,41 +289,47 @@ v_fma_legacy_f16 v5, v1, v2, v3 clamp
 v_div_fixup_f16_e64 v5, 0.5, v2, v3
 // GFX9: v_div_fixup_f16 v5, 0.5, v2, v3 ; encoding: [0x05,0x00,0x07,0xd2,0xf0,0x04,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_div_fixup_f16 v5, 0.5, v2, v3 ; encoding: [0x05,0x00,0xef,0xd1,0xf0,0x04,0x0e,0x04]
 
 v_div_fixup_f16 v5, v1, 0.5, v3
 // GFX9: v_div_fixup_f16 v5, v1, 0.5, v3 ; encoding: [0x05,0x00,0x07,0xd2,0x01,0xe1,0x0d,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_div_fixup_f16 v5, v1, 0.5, v3 ; encoding: [0x05,0x00,0xef,0xd1,0x01,0xe1,0x0d,0x04]
 
 v_div_fixup_f16 v5, v1, v2, 0.5
 // GFX9: v_div_fixup_f16 v5, v1, v2, 0.5 ; encoding: [0x05,0x00,0x07,0xd2,0x01,0x05,0xc2,0x03]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_div_fixup_f16 v5, v1, v2, 0.5 ; encoding: [0x05,0x00,0xef,0xd1,0x01,0x05,0xc2,0x03]
 
 v_div_fixup_f16 v5, -v1, v2, v3
 // GFX9: v_div_fixup_f16 v5, -v1, v2, v3 ; encoding: [0x05,0x00,0x07,0xd2,0x01,0x05,0x0e,0x24]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_div_fixup_f16 v5, -v1, v2, v3 ; encoding: [0x05,0x00,0xef,0xd1,0x01,0x05,0x0e,0x24]
 
 v_div_fixup_f16 v5, |v1|, v2, v3
 // GFX9: v_div_fixup_f16 v5, |v1|, v2, v3 ; encoding: [0x05,0x01,0x07,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_div_fixup_f16 v5, |v1|, v2, v3 ; encoding: [0x05,0x01,0xef,0xd1,0x01,0x05,0x0e,0x04]
 
 v_div_fixup_f16 v5, v1, v2, v3 clamp
 // GFX9: v_div_fixup_f16 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0x07,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_div_fixup_f16 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0xef,0xd1,0x01,0x05,0x0e,0x04]
 
 v_div_fixup_f16 v5, v1, v2, v3 op_sel:[1,0,0,0]
 // GFX9: v_div_fixup_f16 v5, v1, v2, v3 op_sel:[1,0,0,0] ; encoding: [0x05,0x08,0x07,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_div_fixup_f16 v5, v1, v2, v3 op_sel:[0,0,1,0]
 // GFX9: v_div_fixup_f16 v5, v1, v2, v3 op_sel:[0,0,1,0] ; encoding: [0x05,0x20,0x07,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_div_fixup_f16 v5, v1, v2, v3 op_sel:[0,0,0,1]
 // GFX9: v_div_fixup_f16 v5, v1, v2, v3 op_sel:[0,0,0,1] ; encoding: [0x05,0x40,0x07,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_div_fixup_legacy_f16_e64 v5, 0.5, v2, v3
 // GFX9: v_div_fixup_legacy_f16 v5, 0.5, v2, v3 ; encoding: [0x05,0x00,0xef,0xd1,0xf0,0x04,0x0e,0x04]
@@ -345,64 +358,72 @@ v_div_fixup_legacy_f16 v5, v1, v2, v3 clamp
 v_mad_f16_e64 v5, 0.5, v2, v3
 // GFX9: v_mad_f16 v5, 0.5, v2, v3 ; encoding: [0x05,0x00,0x03,0xd2,0xf0,0x04,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_mad_f16 v5, 0.5, v2, v3 ; encoding: [0x05,0x00,0xea,0xd1,0xf0,0x04,0x0e,0x04]
 
 v_mad_f16 v5, v1, 0.5, v3
 // GFX9: v_mad_f16 v5, v1, 0.5, v3 ; encoding: [0x05,0x00,0x03,0xd2,0x01,0xe1,0x0d,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_mad_f16 v5, v1, 0.5, v3 ; encoding: [0x05,0x00,0xea,0xd1,0x01,0xe1,0x0d,0x04]
 
 v_mad_f16 v5, v1, v2, 0.5
 // GFX9: v_mad_f16 v5, v1, v2, 0.5 ; encoding: [0x05,0x00,0x03,0xd2,0x01,0x05,0xc2,0x03]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_mad_f16 v5, v1, v2, 0.5 ; encoding: [0x05,0x00,0xea,0xd1,0x01,0x05,0xc2,0x03]
 
 v_mad_f16 v5, v1, v2, -v3
 // GFX9: v_mad_f16 v5, v1, v2, -v3 ; encoding: [0x05,0x00,0x03,0xd2,0x01,0x05,0x0e,0x84]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_mad_f16 v5, v1, v2, -v3 ; encoding: [0x05,0x00,0xea,0xd1,0x01,0x05,0x0e,0x84]
 
 v_mad_f16 v5, v1, v2, |v3|
 // GFX9: v_mad_f16 v5, v1, v2, |v3| ; encoding: [0x05,0x04,0x03,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_mad_f16 v5, v1, v2, |v3| ; encoding: [0x05,0x04,0xea,0xd1,0x01,0x05,0x0e,0x04]
 
 v_mad_f16 v5, v1, v2, v3 op_sel:[0,0,0,0]
 // GFX9: v_mad_f16 v5, v1, v2, v3 ; encoding: [0x05,0x00,0x03,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_mad_f16 v5, v1, v2, v3 op_sel:[1,0,0,0]
 // GFX9: v_mad_f16 v5, v1, v2, v3 op_sel:[1,0,0,0] ; encoding: [0x05,0x08,0x03,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_mad_f16 v5, v1, v2, v3 op_sel:[0,1,0,0]
 // GFX9: v_mad_f16 v5, v1, v2, v3 op_sel:[0,1,0,0] ; encoding: [0x05,0x10,0x03,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_mad_f16 v5, v1, v2, v3 op_sel:[0,0,1,0]
 // GFX9: v_mad_f16 v5, v1, v2, v3 op_sel:[0,0,1,0] ; encoding: [0x05,0x20,0x03,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_mad_f16 v5, v1, v2, v3 op_sel:[0,0,0,1]
 // GFX9: v_mad_f16 v5, v1, v2, v3 op_sel:[0,0,0,1] ; encoding: [0x05,0x40,0x03,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_mad_f16 v5, v1, v2, v3 op_sel:[1,1,1,1]
 // GFX9: v_mad_f16 v5, v1, v2, v3 op_sel:[1,1,1,1] ; encoding: [0x05,0x78,0x03,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_mad_f16 v5, v1, v2, v3 clamp
 // GFX9: v_mad_f16 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0x03,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_mad_f16 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0xea,0xd1,0x01,0x05,0x0e,0x04]
 
 v_mad_i16_e64 v5, 0, v2, v3
 // GFX9: v_mad_i16 v5, 0, v2, v3 ; encoding: [0x05,0x00,0x05,0xd2,0x80,0x04,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_mad_i16 v5, 0, v2, v3 ; encoding: [0x05,0x00,0xec,0xd1,0x80,0x04,0x0e,0x04]
 
 v_mad_i16 v5, v1, -1, v3
 // GFX9: v_mad_i16 v5, v1, -1, v3 ; encoding: [0x05,0x00,0x05,0xd2,0x01,0x83,0x0d,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_mad_i16 v5, v1, -1, v3 ; encoding: [0x05,0x00,0xec,0xd1,0x01,0x83,0x0d,0x04]
 
 v_mad_i16 v5, v1, v2, -4.0
 // NOGFX9: error: invalid literal operand
@@ -412,16 +433,17 @@ v_mad_i16 v5, v1, v2, -4.0
 v_mad_i16 v5, v1, v2, v3 clamp
 // GFX9: v_mad_i16 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0x05,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_mad_i16 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0xec,0xd1,0x01,0x05,0x0e,0x04]
 
 v_mad_i16 v5, v1, v2, v3 op_sel:[0,0,0,1]
 // GFX9: v_mad_i16 v5, v1, v2, v3 op_sel:[0,0,0,1] ; encoding: [0x05,0x40,0x05,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_mad_i16 v5, v1, v2, v3 op_sel:[1,1,1,1]
 // GFX9: v_mad_i16 v5, v1, v2, v3 op_sel:[1,1,1,1] ; encoding: [0x05,0x78,0x05,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_mad_legacy_f16_e64 v5, 0.5, v2, v3
 // GFX9: v_mad_legacy_f16 v5, 0.5, v2, v3 ; encoding: [0x05,0x00,0xea,0xd1,0xf0,0x04,0x0e,0x04]
@@ -482,10 +504,12 @@ v_mad_legacy_u16 v5, v1, v2, -4.0 clamp
 v_mad_u16_e64 v5, 0, v2, v3
 // GFX9: v_mad_u16 v5, 0, v2, v3 ; encoding: [0x05,0x00,0x04,0xd2,0x80,0x04,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_mad_u16 v5, 0, v2, v3 ; encoding: [0x05,0x00,0xeb,0xd1,0x80,0x04,0x0e,0x04]
 
 v_mad_u16 v5, v1, -1, v3
 // GFX9: v_mad_u16 v5, v1, -1, v3 ; encoding: [0x05,0x00,0x04,0xd2,0x01,0x83,0x0d,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_mad_u16 v5, v1, -1, v3 ; encoding: [0x05,0x00,0xeb,0xd1,0x01,0x83,0x0d,0x04]
 
 v_mad_u16 v5, v1, v2, -4.0
 // NOGFX9: error: invalid literal operand
@@ -495,45 +519,52 @@ v_mad_u16 v5, v1, v2, -4.0
 v_mad_u16 v5, v1, v2, v3 clamp
 // GFX9: v_mad_u16 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0x04,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_mad_u16 v5, v1, v2, v3 clamp ; encoding: [0x05,0x80,0xeb,0xd1,0x01,0x05,0x0e,0x04]
 
 v_mad_u16 v5, v1, v2, v3 op_sel:[1,0,0,0]
 // GFX9: v_mad_u16 v5, v1, v2, v3 op_sel:[1,0,0,0] ; encoding: [0x05,0x08,0x04,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_mad_u16 v5, v1, v2, v3 op_sel:[0,0,0,1]
 // GFX9: v_mad_u16 v5, v1, v2, v3 op_sel:[0,0,0,1] ; encoding: [0x05,0x40,0x04,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_mad_u16 v5, v1, v2, v3 op_sel:[1,1,1,1]
 // GFX9: v_mad_u16 v5, v1, v2, v3 op_sel:[1,1,1,1] ; encoding: [0x05,0x78,0x04,0xd2,0x01,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 
 v_interp_p2_f16 v5, v2, attr0.x, v3
 // GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 ; encoding: [0x05,0x00,0x77,0xd2,0x00,0x04,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_interp_p2_f16 v5, v2, attr0.x, v3 ; encoding: [0x05,0x00,0x76,0xd2,0x00,0x04,0x0e,0x04]
 
 v_interp_p2_f16 v5, -v2, attr0.x, v3
 // GFX9: v_interp_p2_f16 v5, -v2, attr0.x, v3 ; encoding: [0x05,0x00,0x77,0xd2,0x00,0x04,0x0e,0x44]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_interp_p2_f16 v5, -v2, attr0.x, v3 ; encoding: [0x05,0x00,0x76,0xd2,0x00,0x04,0x0e,0x44]
 
 v_interp_p2_f16 v5, v2, attr0.x, |v3|
 // GFX9: v_interp_p2_f16 v5, v2, attr0.x, |v3| ; encoding: [0x05,0x04,0x77,0xd2,0x00,0x04,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_interp_p2_f16 v5, v2, attr0.x, |v3| ; encoding: [0x05,0x04,0x76,0xd2,0x00,0x04,0x0e,0x04]
 
 v_interp_p2_f16 v5, v2, attr0.w, v3
 // GFX9: v_interp_p2_f16 v5, v2, attr0.w, v3 ; encoding: [0x05,0x00,0x77,0xd2,0xc0,0x04,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_interp_p2_f16 v5, v2, attr0.w, v3 ; encoding: [0x05,0x00,0x76,0xd2,0xc0,0x04,0x0e,0x04]
 
 v_interp_p2_f16 v5, v2, attr0.x, v3 high
 // GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 high ; encoding: [0x05,0x00,0x77,0xd2,0x00,0x05,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_interp_p2_f16 v5, v2, attr0.x, v3 high ; encoding: [0x05,0x00,0x76,0xd2,0x00,0x05,0x0e,0x04]
 
 v_interp_p2_f16 v5, v2, attr0.x, v3 clamp
 // GFX9: v_interp_p2_f16 v5, v2, attr0.x, v3 clamp ; encoding: [0x05,0x80,0x77,0xd2,0x00,0x04,0x0e,0x04]
 // NOSICI: error: instruction not supported on this GPU
+// VI: v_interp_p2_f16 v5, v2, attr0.x, v3 clamp ; encoding: [0x05,0x80,0x76,0xd2,0x00,0x04,0x0e,0x04]
 
 v_interp_p2_legacy_f16 v5, v2, attr31.x, v3
 // GFX9: v_interp_p2_legacy_f16 v5, v2, attr31.x, v3 ; encoding: [0x05,0x00,0x76,0xd2,0x1f,0x04,0x0e,0x04]
@@ -648,18 +679,22 @@ v_subbrev_co_u32 v84, vcc, v13, v31, vcc
 v_add_co_u32 v84, vcc, v13, v31
 // GFX9: v_add_co_u32_e32 v84, vcc, v13, v31 ; encoding: [0x0d,0x3f,0xa8,0x32]
 // NOVI: error: instruction not supported on this GPU
+// SICI: v_add_i32_e64 v84, vcc, v13, v31 ; encoding: [0x54,0x6a,0x4a,0xd2,0x0d,0x3f,0x02,0x00]
 
 v_sub_co_u32 v84, vcc, v13, v31
 // GFX9: v_sub_co_u32_e32 v84, vcc, v13, v31 ; encoding: [0x0d,0x3f,0xa8,0x34]
 // NOVI: error: instruction not supported on this GPU
+// SICI: v_sub_i32_e64 v84, vcc, v13, v31 ; encoding: [0x54,0x6a,0x4c,0xd2,0x0d,0x3f,0x02,0x00]
 
 v_subrev_co_u32 v84, vcc, v13, v31
 // GFX9: v_subrev_co_u32_e32 v84, vcc, v13, v31 ; encoding: [0x0d,0x3f,0xa8,0x36]
 // NOVI: error: instruction not supported on this GPU
+// SICI: v_subrev_i32_e64 v84, vcc, v13, v31 ; encoding: [0x54,0x6a,0x4e,0xd2,0x0d,0x3f,0x02,0x00]
 
 v_add_i32 v1, v2, v3
 // GFX9: v_add_i32 v1, v2, v3 ; encoding: [0x01,0x00,0x9c,0xd2,0x02,0x07,0x02,0x00]
-// NOGCN: error: instruction not supported on this GPU
+// NOSICI: error: operands are not valid for this GPU or mode
+// NOVI: error: instruction not supported on this GPU
 
 v_add_i32 v1, v2, v3 clamp
 // GFX9: v_add_i32 v1, v2, v3 clamp ; encoding: [0x01,0x80,0x9c,0xd2,0x02,0x07,0x02,0x00]
@@ -668,7 +703,8 @@ v_add_i32 v1, v2, v3 clamp
 
 v_sub_i32 v1, v2, v3
 // GFX9: v_sub_i32 v1, v2, v3 ; encoding: [0x01,0x00,0x9d,0xd2,0x02,0x07,0x02,0x00]
-// NOGCN: error: instruction not supported on this GPU
+// NOSICI: error: operands are not valid for this GPU or mode
+// NOVI: error: instruction not supported on this GPU
 
 v_sub_i32 v1, v2, v3 clamp
 // GFX9: v_sub_i32 v1, v2, v3 clamp ; encoding: [0x01,0x80,0x9d,0xd2,0x02,0x07,0x02,0x00]
