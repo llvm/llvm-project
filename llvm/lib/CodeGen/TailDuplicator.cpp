@@ -627,6 +627,14 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
     if (PreRegAlloc && MI.isCall())
       return false;
 
+    // TailDuplicator::appendCopies will erroneously place COPYs after
+    // INLINEASM_BR instructions after 4b0aa5724fea, which demonstrates the same
+    // bug that was fixed in f7a53d82c090.
+    // FIXME: Use findPHICopyInsertPoint() to find the correct insertion point
+    //        for the COPY when replacing PHIs.
+    if (MI.getOpcode() == TargetOpcode::INLINEASM_BR)
+      return false;
+
     if (MI.isBundle())
       InstrCount += MI.getBundleSize();
     else if (!MI.isPHI() && !MI.isMetaInstruction())
