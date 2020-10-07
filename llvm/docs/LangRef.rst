@@ -5956,6 +5956,21 @@ vectorization:
    !0 = !{!"llvm.loop.vectorize.predicate.enable", i1 0}
    !1 = !{!"llvm.loop.vectorize.predicate.enable", i1 1}
 
+'``llvm.loop.vectorize.scalable.enable``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata selectively enables or disables scalable vectorization for the
+loop, and only has any effect if vectorization for the loop is already enabled.
+The first operand is the string ``llvm.loop.vectorize.scalable.enable``
+and the second operand is a bit. If the bit operand value is 1 scalable
+vectorization is enabled, whereas a value of 0 reverts to the default fixed
+width vectorization:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.vectorize.scalable.enable", i1 0}
+   !1 = !{!"llvm.loop.vectorize.scalable.enable", i1 1}
+
 '``llvm.loop.vectorize.width``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

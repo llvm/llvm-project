@@ -66,6 +66,7 @@ bool LoopVectorizeHints::Hint::validate(unsigned Val) {
     return (Val <= 1);
   case HK_ISVECTORIZED:
   case HK_PREDICATE:
+  case HK_SCALABLE:
     return (Val == 0 || Val == 1);
   }
   return false;
@@ -78,7 +79,8 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
       Interleave("interleave.count", InterleaveOnlyWhenForced, HK_UNROLL),
       Force("vectorize.enable", FK_Undefined, HK_FORCE),
       IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
-      Predicate("vectorize.predicate.enable", FK_Undefined, HK_PREDICATE), TheLoop(L),
+      Predicate("vectorize.predicate.enable", FK_Undefined, HK_PREDICATE),
+      Scalable("vectorize.scalable.enable", false, HK_SCALABLE), TheLoop(L),
       ORE(ORE) {
   // Populate values with existing loop metadata.
   getHintsFromMetadata();
@@ -91,7 +93,8 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
     // If the vectorization width and interleaving count are both 1 then
     // consider the loop to have been already vectorized because there's
     // nothing more that we can do.
-    IsVectorized.Value = Width.Value == 1 && Interleave.Value == 1;
+    IsVectorized.Value =
+        getWidth() == ElementCount::getFixed(1) && Interleave.Value == 1;
   LLVM_DEBUG(if (InterleaveOnlyWhenForced && Interleave.Value == 1) dbgs()
              << "LV: Interleaving disabled by the pass manager\n");
 }
@@ -164,7 +167,7 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
       if (Force.Value == LoopVectorizeHints::FK_Enabled) {
         R << " (Force=" << NV("Force", true);
         if (Width.Value != 0)
-          R << ", Vector Width=" << NV("VectorWidth", Width.Value);
+          R << ", Vector Width=" << NV("VectorWidth", getWidth());
         if (Interleave.Value != 0)
           R << ", Interleave Count=" << NV("InterleaveCount", Interleave.Value);
         R << ")";
@@ -175,11 +178,11 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
 }
 
 const char *LoopVectorizeHints::vectorizeAnalysisPassName() const {
-  if (getWidth() == 1)
+  if (getWidth() == ElementCount::getFixed(1))
     return LV_NAME;
   if (getForce() == LoopVectorizeHints::FK_Disabled)
     return LV_NAME;
-  if (getForce() == LoopVectorizeHints::FK_Undefined && getWidth() == 0)
+  if (getForce() == LoopVectorizeHints::FK_Undefined && getWidth().isZero())
     return LV_NAME;
   return OptimizationRemarkAnalysis::AlwaysPrint;
 }
@@ -230,7 +233,8 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
     return;
   unsigned Val = C->getZExtValue();
 
-  Hint *Hints[] = {&Width, &Interleave, &Force, &IsVectorized, &Predicate};
+  Hint *Hints[] = {&Width,        &Interleave, &Force,
+                   &IsVectorized, &Predicate,  &Scalable};
   for (auto H : Hints) {
     if (Name == H->Name) {
       if (H->validate(Val))
