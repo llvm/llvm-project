@@ -216,7 +216,7 @@ static void printToStderr(const char *str, intptr_t len, void *userData) {
   fwrite(str, 1, len, stderr);
 }
 
-static void printFirstOfEach(MlirOperation operation) {
+static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   // Assuming we are given a module, go to the first operation of the first
   // function.
   MlirRegion region = mlirOperationGetRegion(operation, 0);
@@ -227,24 +227,59 @@ static void printFirstOfEach(MlirOperation operation) {
   operation = mlirBlockGetFirstOperation(block);
 
   // In the module we created, the first operation of the first function is an
-  // "std.dim", which has an attribute an a single result that we can use to
+  // "std.dim", which has an attribute and a single result that we can use to
   // test the printing mechanism.
   mlirBlockPrint(block, printToStderr, NULL);
   fprintf(stderr, "\n");
+  fprintf(stderr, "First operation: ");
   mlirOperationPrint(operation, printToStderr, NULL);
   fprintf(stderr, "\n");
 
-  MlirNamedAttribute namedAttr = mlirOperationGetAttribute(operation, 0);
-  mlirAttributePrint(namedAttr.attribute, printToStderr, NULL);
+  // Get the attribute by index.
+  MlirNamedAttribute namedAttr0 = mlirOperationGetAttribute(operation, 0);
+  fprintf(stderr, "Get attr 0: ");
+  mlirAttributePrint(namedAttr0.attribute, printToStderr, NULL);
   fprintf(stderr, "\n");
 
+  // Now re-get the attribute by name.
+  MlirAttribute attr0ByName =
+      mlirOperationGetAttributeByName(operation, namedAttr0.name);
+  fprintf(stderr, "Get attr 0 by name: ");
+  mlirAttributePrint(attr0ByName, printToStderr, NULL);
+  fprintf(stderr, "\n");
+
+  // Get a non-existing attribute and assert that it is null (sanity).
+  fprintf(stderr, "does_not_exist is null: %d\n",
+          mlirAttributeIsNull(
+              mlirOperationGetAttributeByName(operation, "does_not_exist")));
+
+  // Get result 0 and its type.
   MlirValue value = mlirOperationGetResult(operation, 0);
+  fprintf(stderr, "Result 0: ");
   mlirValuePrint(value, printToStderr, NULL);
   fprintf(stderr, "\n");
+  fprintf(stderr, "Value is null: %d\n", mlirValueIsNull(value));
 
   MlirType type = mlirValueGetType(value);
+  fprintf(stderr, "Result 0 type: ");
   mlirTypePrint(type, printToStderr, NULL);
   fprintf(stderr, "\n");
+
+  // Set a custom attribute.
+  mlirOperationSetAttributeByName(operation, "custom_attr",
+                                  mlirBoolAttrGet(ctx, 1));
+  fprintf(stderr, "Op with set attr: ");
+  mlirOperationPrint(operation, printToStderr, NULL);
+  fprintf(stderr, "\n");
+
+  // Remove the attribute.
+  fprintf(stderr, "Remove attr: %d\n",
+          mlirOperationRemoveAttributeByName(operation, "custom_attr"));
+  fprintf(stderr, "Remove attr again: %d\n",
+          mlirOperationRemoveAttributeByName(operation, "custom_attr"));
+  fprintf(stderr, "Removed attr is null: %d\n",
+          mlirAttributeIsNull(
+              mlirOperationGetAttributeByName(operation, "custom_attr")));
 }
 
 /// Creates an operation with a region containing multiple blocks with
@@ -884,7 +919,7 @@ int main() {
   // CHECK: Number of values: 9
   // clang-format on
 
-  printFirstOfEach(module);
+  printFirstOfEach(ctx, module);
   // clang-format off
   // CHECK:   %[[C0:.*]] = constant 0 : index
   // CHECK:   %[[DIM:.*]] = dim %{{.*}}, %[[C0]] : memref<?xf32>
@@ -896,10 +931,17 @@ int main() {
   // CHECK:     store %[[SUM]], %{{.*}}[%[[I]]] : memref<?xf32>
   // CHECK:   }
   // CHECK: return
-  // CHECK: constant 0 : index
-  // CHECK: 0 : index
-  // CHECK: constant 0 : index
-  // CHECK: index
+  // CHECK: First operation: {{.*}} = constant 0 : index
+  // CHECK: Get attr 0: 0 : index
+  // CHECK: Get attr 0 by name: 0 : index
+  // CHECK: does_not_exist is null: 1
+  // CHECK: Result 0: {{.*}} = constant 0 : index
+  // CHECK: Value is null: 0
+  // CHECK: Result 0 type: index
+  // CHECK: Op with set attr: {{.*}} {custom_attr = true}
+  // CHECK: Remove attr: 1
+  // CHECK: Remove attr again: 0
+  // CHECK: Removed attr is null: 1
   // clang-format on
 
   mlirModuleDestroy(moduleOp);
