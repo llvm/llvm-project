@@ -11,7 +11,6 @@ set(LIBCXX_SOURCES
   chrono.cpp
   condition_variable.cpp
   condition_variable_destructor.cpp
-  debug.cpp
   exception.cpp
   functional.cpp
   future.cpp
@@ -55,6 +54,12 @@ set(LIBCXX_SOURCES
   variant.cpp
   vector.cpp
   )
+
+if (LIBCXX_ENABLE_DEBUG_MODE)
+  list(APPEND LIBCXX_SOURCES
+    debug.cpp
+    )
+endif()
 
 if(WIN32)
   list(APPEND LIBCXX_SOURCES
@@ -210,7 +215,8 @@ if (LIBCXX_ENABLE_SHARED)
     target_link_libraries(cxx_shared PRIVATE
       "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++unexp.exp"
       "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi.v${LIBCXX_LIBCPPABI_VERSION}.exp"
-      "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp")
+      "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
+      "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
 
     if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
       target_link_libraries(cxx_shared PRIVATE

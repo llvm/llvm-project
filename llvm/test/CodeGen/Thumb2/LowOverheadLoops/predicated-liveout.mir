@@ -36,7 +36,7 @@
     br i1 %cmp, label %for.body, label %middle.block
 
   middle.block:                                     ; preds = %for.body
-    %reduce = tail call i16 @llvm.experimental.vector.reduce.add.v8i16(<8 x i16> %acc.next)
+    %reduce = tail call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %acc.next)
     ret i16 %reduce
 
   for.cond.cleanup:                                 ; preds = %entry
@@ -47,7 +47,7 @@
   declare <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>*, i32 immarg, <8 x i1>, <8 x i8>) #2
   declare i1 @llvm.test.set.loop.iterations.i32(i32) #3
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #3
-  declare i16 @llvm.experimental.vector.reduce.add.v8i16(<8 x i16>) #4
+  declare i16 @llvm.vector.reduce.add.v8i16(<8 x i16>) #4
   declare <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16>, <8 x i16>, <8 x i1>, <8 x i16>) #1
 
 ...

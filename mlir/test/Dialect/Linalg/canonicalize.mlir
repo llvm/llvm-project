@@ -259,3 +259,23 @@ func @reshape_splat_constant_float64() -> tensor<2x4x2xf64>
 //       CHECK:   %[[CST:.*]] = constant dense<{{.*}}> : tensor<2x4x2xf64>
 //   CHECK-NOT:   linalg.tensor_reshape
 //       CHECK:   return %[[CST]]
+
+// -----
+
+// CHECK-LABEL: func @tensor_cast(
+func @tensor_cast(%a : tensor<3x4xf32>, %b : tensor<4x?xf32>, %c : tensor<3x?xf32>)
+  -> tensor<3x?xf32>
+{
+  %ta = tensor_cast %a : tensor<3x4xf32> to tensor<?x?xf32>
+  %tb = tensor_cast %b : tensor<4x?xf32> to tensor<?x?xf32>
+  %tc = tensor_cast %c : tensor<3x?xf32> to tensor<?x?xf32>
+
+  //      CHECK:  linalg.matmul ins({{.*}}tensor<3x4xf32>, tensor<4x?xf32>)
+  // CHECK-SAME:    init({{.*}}tensor<3x?xf32>) -> tensor<3x?xf32>
+  %0 = linalg.matmul ins(%ta, %tb: tensor<?x?xf32>, tensor<?x?xf32>)
+               init(%tc: tensor<?x?xf32>) -> tensor<?x?xf32>
+
+  %1 = tensor_cast %0 : tensor<?x?xf32> to tensor<3x?xf32>
+
+  return %1: tensor<3x?xf32>
+}

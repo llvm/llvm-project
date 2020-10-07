@@ -32,7 +32,7 @@ int test_amdgcn_target_tid_threads_simd() {
 
 // CHECK: [[NUM_THREADS:%.+]] = call i64 @__ockl_get_local_size(i32 0)
 // CHECK-NEXT: [[VAR:%.+]] = trunc i64 [[NUM_THREADS]] to i32
-// CHECK-NEXT: call void @__kmpc_spmd_kernel_init(i32 [[VAR]], i16 0, i16 0)
+// CHECK-NEXT: call void @__kmpc_spmd_kernel_init(i32 [[VAR]], i16 0)
 #pragma omp target simd
   for (int i = 0; i < N; i++) {
     arr[i] = 1;

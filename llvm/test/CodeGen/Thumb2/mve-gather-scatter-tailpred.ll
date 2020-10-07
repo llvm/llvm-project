@@ -62,7 +62,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   br i1 %8, label %middle.block, label %vector.body
 middle.block:                                     ; preds = %vector.body
   %9 = select <4 x i1> %active.lane.mask, <4 x i32> %7, <4 x i32> %vec.phi
-  %10 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %9)
+  %10 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %9)
   store i32 %10, i32* %arrayidx.us.us, align 4
   %inc21.us.us = add nuw i32 4, 1
   %exitcond81.not = icmp eq i32 %inc21.us.us, %n
@@ -139,7 +139,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   br i1 %8, label %middle.block, label %vector.body
 middle.block:                                     ; preds = %vector.body
   %9 = select <4 x i1> %active.lane.mask, <4 x i32> %7, <4 x i32> %vec.phi
-  %10 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %9)
+  %10 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %9)
   store i32 %10, i32* %arrayidx.us.us, align 4
   %inc21.us.us = add nuw i32 4, 1
   %exitcond81.not = icmp eq i32 %inc21.us.us, %n
@@ -210,7 +210,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   br i1 %8, label %middle.block, label %vector.body
 middle.block:                                     ; preds = %vector.body
   %9 = select <4 x i1> %active.lane.mask, <4 x i32> %7, <4 x i32> %vec.phi
-  %10 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %9)
+  %10 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %9)
   store i32 %10, i32* %arrayidx.us.us, align 4
   %inc21.us.us = add nuw i32 4, 1
   %exitcond81.not = icmp eq i32 %inc21.us.us, %n
@@ -440,7 +440,7 @@ for.cond.cleanup:                                 ; preds = %vector.body, %for.b
   ret void
 }
 
-declare i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 declare <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*>, i32, <4 x i1>, <4 x i32>)
 declare <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*>, i32, <4 x i1>, <4 x i8>)
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)

@@ -41,10 +41,8 @@ define void @f_3(i8 addrspace(3)** %ptr0, i8 addrspace(3)** %ptr1) {
 ; integers, since pointers in address space 3 are integral.
 ; CHECK-LABEL: @f_3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8 addrspace(3)** [[PTR0:%.*]] to i64*
-; CHECK-NEXT:    [[VAL1:%.*]] = load i64, i64* [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 addrspace(3)** [[PTR1:%.*]] to i64*
-; CHECK-NEXT:    store i64 [[VAL1]], i64* [[TMP1]], align 8
+; CHECK-NEXT:    [[VAL:%.*]] = load i8 addrspace(3)*, i8 addrspace(3)** [[PTR0:%.*]], align 8
+; CHECK-NEXT:    store i8 addrspace(3)* [[VAL]], i8 addrspace(3)** [[PTR1:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -79,13 +77,13 @@ define i64 @g(i8 addrspace(4)** %gp) {
 
 define i64 @g2(i8* addrspace(4)* %gp) {
 ; CHECK-LABEL: @g2(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* addrspace(4)* [[GP:%.*]] to i64 addrspace(4)*
-; CHECK-NEXT:    [[DOTPRE1:%.*]] = load i64, i64 addrspace(4)* [[TMP1]], align 8
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i8*, i8* addrspace(4)* [[GP:%.*]], align 8
 ; CHECK-NEXT:    [[V74:%.*]] = call i8 addrspace(4)* @alloc()
 ; CHECK-NEXT:    [[V77:%.*]] = getelementptr i8, i8 addrspace(4)* [[V74]], i64 -8
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 addrspace(4)* [[V77]] to i64 addrspace(4)*
-; CHECK-NEXT:    store i64 [[DOTPRE1]], i64 addrspace(4)* [[TMP2]], align 8
-; CHECK-NEXT:    ret i64 [[DOTPRE1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 addrspace(4)* [[V77]] to i8* addrspace(4)*
+; CHECK-NEXT:    store i8* [[DOTPRE]], i8* addrspace(4)* [[TMP1]], align 8
+; CHECK-NEXT:    [[V81_CAST:%.*]] = ptrtoint i8* [[DOTPRE]] to i64
+; CHECK-NEXT:    ret i64 [[V81_CAST]]
 ;
   %.pre = load i8*, i8* addrspace(4)* %gp, align 8
   %v74 = call i8 addrspace(4)* @alloc()

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/CompilerInstance.h"
+#include "flang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Frontend/TextDiagnosticPrinter.h"
 
 #include "gtest/gtest.h"
 
@@ -21,7 +21,7 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
   // 1. Set-up a basic DiagnosticConsumer
   std::string diagnosticOutput;
   llvm::raw_string_ostream diagnosticsOS(diagnosticOutput);
-  auto diagPrinter = std::make_unique<clang::TextDiagnosticPrinter>(
+  auto diagPrinter = std::make_unique<Fortran::frontend::TextDiagnosticPrinter>(
       diagnosticsOS, new clang::DiagnosticOptions());
 
   // 2. Create a CompilerInstance (to manage a DiagnosticEngine)

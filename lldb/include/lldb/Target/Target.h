@@ -1145,6 +1145,11 @@ public:
     virtual ~StopHook() = default;
 
     enum class StopHookKind  : uint32_t { CommandBased = 0, ScriptBased };
+    enum class StopHookResult : uint32_t {
+      KeepStopped = 0,
+      RequestContinue,
+      AlreadyContinued
+    };
 
     lldb::TargetSP &GetTarget() { return m_target_sp; }
 
@@ -1160,8 +1165,8 @@ public:
     // with a reason" thread.  It should add to the stream whatever text it
     // wants to show the user, and return False to indicate it wants the target
     // not to stop.
-    virtual bool HandleStop(ExecutionContext &exe_ctx,
-                            lldb::StreamSP output) = 0;
+    virtual StopHookResult HandleStop(ExecutionContext &exe_ctx,
+                                      lldb::StreamSP output) = 0;
 
     // Set the Thread Specifier.  The stop hook will own the thread specifier,
     // and is responsible for deleting it when we're done.
@@ -1201,8 +1206,8 @@ public:
     void SetActionFromString(const std::string &strings);
     void SetActionFromStrings(const std::vector<std::string> &strings);
 
-    bool HandleStop(ExecutionContext &exc_ctx,
-                    lldb::StreamSP output_sp) override;
+    StopHookResult HandleStop(ExecutionContext &exc_ctx,
+                              lldb::StreamSP output_sp) override;
     void GetSubclassDescription(Stream *s,
                                 lldb::DescriptionLevel level) const override;
 
@@ -1219,7 +1224,8 @@ public:
   class StopHookScripted : public StopHook {
   public:
     virtual ~StopHookScripted() = default;
-    bool HandleStop(ExecutionContext &exc_ctx, lldb::StreamSP output) override;
+    StopHookResult HandleStop(ExecutionContext &exc_ctx,
+                              lldb::StreamSP output) override;
 
     Status SetScriptCallback(std::string class_name,
                              StructuredData::ObjectSP extra_args_sp);
@@ -1254,7 +1260,9 @@ public:
   /// remove the stop hook, as it will also reset the stop hook counter.
   void UndoCreateStopHook(lldb::user_id_t uid);
 
-  void RunStopHooks();
+  // Runs the stop hooks that have been registered for this target.
+  // Returns true if the stop hooks cause the target to resume.
+  bool RunStopHooks();
 
   size_t GetStopHookSize();
 

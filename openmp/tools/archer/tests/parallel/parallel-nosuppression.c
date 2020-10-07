@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test is unstable; temporary xfail
-// XFAIL: *
 // RUN: %libarcher-compile-and-run-nosuppression | FileCheck %s
 // REQUIRES: tsan
 #include <omp.h>
@@ -35,7 +33,5 @@ int main(int argc, char *argv[]) {
   return error;
 }
 
-// CHECK-NOT: ThreadSanitizer: data race
-// CHECK-NOT: ThreadSanitizer: reported
 // CHECK: Warning: please export TSAN_OPTIONS
 // CHECK: DONE

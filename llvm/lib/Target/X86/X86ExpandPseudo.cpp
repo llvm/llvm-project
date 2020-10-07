@@ -334,7 +334,6 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     MBB.erase(MBBI);
     return true;
   }
-  case X86::LCMPXCHG8B_SAVE_EBX:
   case X86::LCMPXCHG16B_SAVE_RBX: {
     // Perform the following transformation.
     // SaveRbx = pseudocmpxchg Addr, <4 opds for the address>, InArg, SaveRbx
@@ -345,21 +344,16 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     const MachineOperand &InArg = MBBI->getOperand(6);
     Register SaveRbx = MBBI->getOperand(7).getReg();
 
-    unsigned ActualInArg =
-        Opcode == X86::LCMPXCHG8B_SAVE_EBX ? X86::EBX : X86::RBX;
     // Copy the input argument of the pseudo into the argument of the
     // actual instruction.
-    TII->copyPhysReg(MBB, MBBI, DL, ActualInArg, InArg.getReg(),
-                     InArg.isKill());
+    TII->copyPhysReg(MBB, MBBI, DL, X86::RBX, InArg.getReg(), InArg.isKill());
     // Create the actual instruction.
-    unsigned ActualOpc =
-        Opcode == X86::LCMPXCHG8B_SAVE_EBX ? X86::LCMPXCHG8B : X86::LCMPXCHG16B;
-    MachineInstr *NewInstr = BuildMI(MBB, MBBI, DL, TII->get(ActualOpc));
+    MachineInstr *NewInstr = BuildMI(MBB, MBBI, DL, TII->get(X86::LCMPXCHG16B));
     // Copy the operands related to the address.
     for (unsigned Idx = 1; Idx < 6; ++Idx)
       NewInstr->addOperand(MBBI->getOperand(Idx));
     // Finally, restore the value of RBX.
-    TII->copyPhysReg(MBB, MBBI, DL, ActualInArg, SaveRbx,
+    TII->copyPhysReg(MBB, MBBI, DL, X86::RBX, SaveRbx,
                      /*SrcIsKill*/ true);
 
     // Delete the pseudo.

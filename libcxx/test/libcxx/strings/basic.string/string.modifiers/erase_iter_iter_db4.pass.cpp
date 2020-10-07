@@ -10,8 +10,9 @@
 
 // Call erase(const_iterator first, const_iterator last); with a bad range
 
-#if _LIBCPP_DEBUG >= 1
+// UNSUPPORTED: libcxx-no-debug-mode
 
+#define _LIBCPP_DEBUG 1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <string>
@@ -38,13 +39,3 @@ int main(int, char**)
     }
 #endif
 }
-
-#else
-
-int main(int, char**)
-{
-
-  return 0;
-}
-
-#endif

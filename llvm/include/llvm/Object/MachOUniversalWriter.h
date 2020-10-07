@@ -43,6 +43,12 @@ public:
 
   Slice(const MachOObjectFile &O, uint32_t Align);
 
+  /// This constructor takes prespecified \param CPUType, \param CPUSubType,
+  /// \param ArchName, \param Align instead of inferring them from the archive
+  /// memebers.
+  Slice(const Archive &A, uint32_t CPUType, uint32_t CPUSubType,
+        std::string ArchName, uint32_t Align);
+
   static Expected<Slice> create(const Archive &A,
                                 LLVMContext *LLVMCtx = nullptr);
 

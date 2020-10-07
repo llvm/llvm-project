@@ -95,17 +95,17 @@ Operation *fuseTensorOps(PatternRewriter &rewriter, Operation *consumer,
                          unsigned consumerIdx,
                          OperationFolder *folder = nullptr);
 
-/// Returns the linearized list of all view dimensions in a `linalgOp`. Applying
-/// the inverse, concatenated loopToOperandRangeMaps to this list allows the
-/// derivation of loop ranges for any linalgOp.
-SmallVector<Value, 8> getViewSizes(OpBuilder &builder, LinalgOp linalgOp);
+/// Returns the linearized list of all shape dimensions in a `linalgOp`.
+/// Applying the inverse, concatenated loopToOperandRangeMaps to this list
+/// allows the derivation of loop ranges for any linalgOp.
+SmallVector<Value, 8> getShape(OpBuilder &builder, LinalgOp linalgOp);
 template <typename ConcreteOpTy>
-SmallVector<Value, 8> getViewSizes(OpBuilder &builder, ConcreteOpTy linalgOp) {
-  return getViewSizes(builder, cast<linalg::LinalgOp>(linalgOp.getOperation()));
+SmallVector<Value, 8> getShape(OpBuilder &builder, ConcreteOpTy linalgOp) {
+  return getShape(builder, cast<linalg::LinalgOp>(linalgOp.getOperation()));
 }
 
 /// Returns the loop ranges of the `linalgOp`. Applies the inverse of the
-/// concatenated indexing maps to the result of `getViewSizes`. Returns None if
+/// concatenated indexing maps to the result of `getShape`. Returns None if
 /// the bounds computation fails.
 Optional<SmallVector<Value, 4>>
 getLoopRanges(OpBuilder &builder, LinalgOp linalgOp,
@@ -118,11 +118,6 @@ getLoopRanges(OpBuilder &builder, LinalgOp linalgOp,
 SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
                                        AffineMap map, ValueRange values,
                                        OperationFolder *folder = nullptr);
-
-/// Returns all the operands of `linalgOp` that are not views.
-/// Asserts that these operands are value types to allow transformations like
-/// tiling to just use the values when cloning `linalgOp`.
-SmallVector<Value, 4> getAssumedNonViewOperands(LinalgOp linalgOp);
 
 /// Apply the permutation defined by `permutation` to `inVec`.
 /// Element `i` in `inVec` is mapped to location `j = permutation[i]`.

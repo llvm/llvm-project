@@ -277,8 +277,8 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
       return EmitPrefix(edit, converted.length, editWidth) &&
           io_.Emit(converted.str, converted.length) && EmitSuffix(edit);
     }
-    int scale{IsZero() ? -1 : edit.modes.scale};
-    int expo{converted.decimalExponent - scale};
+    int scale{IsZero() ? 1 : edit.modes.scale}; // kP
+    int expo{converted.decimalExponent + scale};
     if (expo > extraDigits && extraDigits >= 0) {
       extraDigits = expo;
       if (!edit.digits.has_value()) { // F0

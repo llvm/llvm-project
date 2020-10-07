@@ -255,22 +255,20 @@ svbool_t read_bool(struct struct_bool *s) {
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[X_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 16
 // CHECK-256-NEXT:    store <vscale x 16 x i1> [[X:%.*]], <vscale x 16 x i1>* [[X_ADDR]], align 16, [[TBAA15:!tbaa !.*]]
-// CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1>* [[X_ADDR]] to i32*
-// CHECK-256-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 16, [[TBAA6]]
-// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1
-// CHECK-256-NEXT:    [[TMP2:%.*]] = bitcast [3 x <4 x i8>]* [[Y]] to i32*
-// CHECK-256-NEXT:    store i32 [[TMP1]], i32* [[TMP2]], align 2, [[TBAA6]]
+// CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1>* [[X_ADDR]] to <4 x i8>*
+// CHECK-256-NEXT:    [[TMP1:%.*]] = load <4 x i8>, <4 x i8>* [[TMP0]], align 16, [[TBAA6]]
+// CHECK-256-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1, i64 0
+// CHECK-256-NEXT:    store <4 x i8> [[TMP1]], <4 x i8>* [[ARRAYIDX]], align 2, [[TBAA6]]
 // CHECK-256-NEXT:    ret void
 //
 // CHECK-512-LABEL: @write_bool(
 // CHECK-512-NEXT:  entry:
 // CHECK-512-NEXT:    [[X_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 16
 // CHECK-512-NEXT:    store <vscale x 16 x i1> [[X:%.*]], <vscale x 16 x i1>* [[X_ADDR]], align 16, [[TBAA15:!tbaa !.*]]
-// CHECK-512-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1>* [[X_ADDR]] to i64*
-// CHECK-512-NEXT:    [[TMP1:%.*]] = load i64, i64* [[TMP0]], align 16, [[TBAA6]]
-// CHECK-512-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1
-// CHECK-512-NEXT:    [[TMP2:%.*]] = bitcast [3 x <8 x i8>]* [[Y]] to i64*
-// CHECK-512-NEXT:    store i64 [[TMP1]], i64* [[TMP2]], align 2, [[TBAA6]]
+// CHECK-512-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1>* [[X_ADDR]] to <8 x i8>*
+// CHECK-512-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* [[TMP0]], align 16, [[TBAA6]]
+// CHECK-512-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1, i64 0
+// CHECK-512-NEXT:    store <8 x i8> [[TMP1]], <8 x i8>* [[ARRAYIDX]], align 2, [[TBAA6]]
 // CHECK-512-NEXT:    ret void
 //
 void write_bool(struct struct_bool *s, svbool_t x) {

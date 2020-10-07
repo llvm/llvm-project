@@ -1236,6 +1236,11 @@ bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   const MachineFrameInfo &MFI = MF->getFrameInfo();
 
+  // Execulde call instruction which may alter the memory but can not be handled
+  // by this function.
+  if (isCall() || Other.isCall())
+    return true;
+
   // If neither instruction stores to memory, they can't alias in any
   // meaningful way, even if they read from the same address.
   if (!mayStore() && !Other.mayStore())

@@ -185,7 +185,7 @@ opt<CodeCompleteOptions::CodeCompletionRankingModel> RankingModel{
     Hidden,
 };
 
-opt<bool> DecisionForestBase{
+opt<float> DecisionForestBase{
     "decision-forest-base",
     cat(Features),
     desc("Base for exponentiating the prediction from DecisionForest."),

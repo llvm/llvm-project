@@ -27,7 +27,7 @@ define zeroext i8 @sum() {
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <64 x i8> [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call i8 @llvm.experimental.vector.reduce.add.v64i8(<64 x i8> [[BIN_RDX]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i8 @llvm.vector.reduce.add.v64i8(<64 x i8> [[BIN_RDX]])
 ; CHECK-NEXT:    ret i8 [[TMP7]]
 ;
 entry:

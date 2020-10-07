@@ -5,7 +5,7 @@ define signext i8 @Foo(<32 x i8>* %__v) {
 ; CHECK-LABEL: @Foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <32 x i8>, <32 x i8>* [[__V:%.*]], align 32
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.experimental.vector.reduce.add.v32i8(<32 x i8> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.add.v32i8(<32 x i8> [[TMP0]])
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
 entry:

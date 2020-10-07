@@ -23,7 +23,7 @@ define internal i32 @gather_multiple_use(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw <4 x i32> [[TMP6]], <i32 65535, i32 65535, i32 65535, i32 65535>
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor <4 x i32> [[TMP8]], [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP9]])
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP9]])
 ; CHECK-NEXT:    ret i32 [[TMP10]]
 ;
   %tmp00 = lshr i32 %a, 15

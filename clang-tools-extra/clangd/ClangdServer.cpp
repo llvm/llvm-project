@@ -412,9 +412,9 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
     //  - for cross-file rename, we deliberately pass a nullptr index to save
     //    the cost, thus the result may be incomplete as it only contains
     //    main-file occurrences;
-    auto Results = clangd::rename({Pos, /*NewName*/ "", InpAST->AST, File,
-                                   RenameOpts.AllowCrossFile ? nullptr : Index,
-                                   RenameOpts});
+    auto Results = clangd::rename(
+        {Pos, /*NewName=*/"__clangd_rename_dummy", InpAST->AST, File,
+         RenameOpts.AllowCrossFile ? nullptr : Index, RenameOpts});
     if (!Results) {
       // LSP says to return null on failure, but that will result in a generic
       // failure message. If we send an LSP error response, clients can surface

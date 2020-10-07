@@ -82,19 +82,6 @@ static unsigned countOperands(SDNode *Node, unsigned NumExpUses,
   return N;
 }
 
-/// Return starting index of GC operand list.
-// FIXME: need a better place for this. Put it in StackMaps?
-static unsigned getStatepointGCArgStartIdx(MachineInstr *MI) {
-  assert(MI->getOpcode() == TargetOpcode::STATEPOINT &&
-         "STATEPOINT node expected");
-  unsigned OperIdx = StatepointOpers(MI).getNumDeoptArgsIdx();
-  unsigned NumDeopts = MI->getOperand(OperIdx).getImm();
-  ++OperIdx;
-  while (NumDeopts--)
-    OperIdx = StackMaps::getNextMetaArgIdx(MI, OperIdx);
-  return OperIdx;
-}
-
 /// EmitCopyFromReg - Generate machine code for an CopyFromReg node or an
 /// implicit physical register output.
 void InstrEmitter::
@@ -993,14 +980,13 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
     assert(!HasPhysRegOuts && "STATEPOINT mishandled");
     MachineInstr *MI = MIB;
     unsigned Def = 0;
-    unsigned Use = getStatepointGCArgStartIdx(MI);
-    Use = StackMaps::getNextMetaArgIdx(MI, Use); // first derived
-    assert(Use < MI->getNumOperands());
+    int First = StatepointOpers(MI).getFirstGCPtrIdx();
+    assert(First > 0 && "Statepoint has Defs but no GC ptr list");
+    unsigned Use = (unsigned)First;
     while (Def < NumDefs) {
       if (MI->getOperand(Use).isReg())
         MI->tieOperands(Def++, Use);
-      Use = StackMaps::getNextMetaArgIdx(MI, Use); // next base
-      Use = StackMaps::getNextMetaArgIdx(MI, Use); // next derived
+      Use = StackMaps::getNextMetaArgIdx(MI, Use);
     }
   }
 

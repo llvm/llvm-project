@@ -169,6 +169,9 @@ public:
   /// Rollback to a snapshot. This invalidates all later snapshots.
   void rollback(unsigned snapshot);
 
+  /// Add all the constraints from the given FlatAffineConstraints.
+  void intersectFlatAffineConstraints(const FlatAffineConstraints &fac);
+
   /// Compute the maximum or minimum value of the given row, depending on
   /// direction. The specified row is never pivoted.
   ///

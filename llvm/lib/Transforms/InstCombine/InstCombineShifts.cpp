@@ -481,31 +481,6 @@ static bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I) return false;
 
-  // If this is the opposite shift, we can directly reuse the input of the shift
-  // if the needed bits are already zero in the input.  This allows us to reuse
-  // the value which means that we don't care if the shift has multiple uses.
-  //  TODO:  Handle opposite shift by exact value.
-  ConstantInt *CI = nullptr;
-  if ((IsLeftShift && match(I, m_LShr(m_Value(), m_ConstantInt(CI)))) ||
-      (!IsLeftShift && match(I, m_Shl(m_Value(), m_ConstantInt(CI))))) {
-    if (CI->getValue() == NumBits) {
-      // TODO: Check that the input bits are already zero with MaskedValueIsZero
-#if 0
-      // If this is a truncate of a logical shr, we can truncate it to a smaller
-      // lshr iff we know that the bits we would otherwise be shifting in are
-      // already zeros.
-      uint32_t OrigBitWidth = OrigTy->getScalarSizeInBits();
-      uint32_t BitWidth = Ty->getScalarSizeInBits();
-      if (MaskedValueIsZero(I->getOperand(0),
-            APInt::getHighBitsSet(OrigBitWidth, OrigBitWidth-BitWidth)) &&
-          CI->getLimitedValue(BitWidth) < BitWidth) {
-        return CanEvaluateTruncated(I->getOperand(0), Ty);
-      }
-#endif
-
-    }
-  }
-
   // We can't mutate something that has multiple uses: doing so would
   // require duplicating the instruction in general, which isn't profitable.
   if (!I->hasOneUse()) return false;
@@ -708,18 +683,19 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
     return FoldedShift;
 
   // Fold shift2(trunc(shift1(x,c1)), c2) -> trunc(shift2(shift1(x,c1),c2))
-  if (TruncInst *TI = dyn_cast<TruncInst>(Op0)) {
-    Instruction *TrOp = dyn_cast<Instruction>(TI->getOperand(0));
+  if (auto *TI = dyn_cast<TruncInst>(Op0)) {
     // If 'shift2' is an ashr, we would have to get the sign bit into a funny
     // place.  Don't try to do this transformation in this case.  Also, we
     // require that the input operand is a shift-by-constant so that we have
     // confidence that the shifts will get folded together.  We could do this
     // xform in more cases, but it is unlikely to be profitable.
-    if (TrOp && I.isLogicalShift() && TrOp->isShift() &&
-        isa<ConstantInt>(TrOp->getOperand(1))) {
+    if (I.isLogicalShift() &&
+        match(TI->getOperand(0), m_Shift(m_Value(), m_ConstantInt()))) {
+      auto *TrOp = cast<Instruction>(TI->getOperand(0));
+      Type *SrcTy = TrOp->getType();
+
       // Okay, we'll do this xform.  Make the shift of shift.
-      Constant *ShAmt =
-          ConstantExpr::getZExt(cast<Constant>(Op1), TrOp->getType());
+      Constant *ShAmt = ConstantExpr::getZExt(Op1, SrcTy);
       // (shift2 (shift1 & 0x00FF), c2)
       Value *NSh = Builder.CreateBinOp(I.getOpcode(), TrOp, ShAmt, I.getName());
 
@@ -727,26 +703,18 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
       // part of the register be zeros.  Emulate this by inserting an AND to
       // clear the top bits as needed.  This 'and' will usually be zapped by
       // other xforms later if dead.
-      unsigned SrcSize = TrOp->getType()->getScalarSizeInBits();
+      unsigned SrcSize = SrcTy->getScalarSizeInBits();
       unsigned DstSize = TI->getType()->getScalarSizeInBits();
-      APInt MaskV(APInt::getLowBitsSet(SrcSize, DstSize));
+      Constant *MaskV =
+          ConstantInt::get(SrcTy, APInt::getLowBitsSet(SrcSize, DstSize));
 
       // The mask we constructed says what the trunc would do if occurring
       // between the shifts.  We want to know the effect *after* the second
       // shift.  We know that it is a logical shift by a constant, so adjust the
       // mask as appropriate.
-      if (I.getOpcode() == Instruction::Shl)
-        MaskV <<= Op1C->getZExtValue();
-      else {
-        assert(I.getOpcode() == Instruction::LShr && "Unknown logical shift");
-        MaskV.lshrInPlace(Op1C->getZExtValue());
-      }
-
+      MaskV = ConstantExpr::get(I.getOpcode(), MaskV, ShAmt);
       // shift1 & 0x00FF
-      Value *And = Builder.CreateAnd(NSh,
-                                     ConstantInt::get(I.getContext(), MaskV),
-                                     TI->getName());
-
+      Value *And = Builder.CreateAnd(NSh, MaskV, TI->getName());
       // Return the value truncated to the interesting size.
       return new TruncInst(And, I.getType());
     }
@@ -755,7 +723,7 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
   if (Op0->hasOneUse()) {
     if (BinaryOperator *Op0BO = dyn_cast<BinaryOperator>(Op0)) {
       // Turn ((X >> C) + Y) << C  ->  (X + (Y << C)) & (~0 << C)
-      Value *V1, *V2;
+      Value *V1;
       ConstantInt *CC;
       switch (Op0BO->getOpcode()) {
       default: break;
@@ -820,21 +788,19 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
         // Turn (((X >> C)&CC) + Y) << C  ->  (X + (Y << C)) & (CC << C)
         if (isLeftShift && Op0BO->getOperand(0)->hasOneUse() &&
             match(Op0BO->getOperand(0),
-                  m_And(m_OneUse(m_Shr(m_Value(V1), m_Value(V2))),
-                        m_ConstantInt(CC))) && V2 == Op1) {
+                  m_And(m_OneUse(m_Shr(m_Value(V1), m_Specific(Op1))),
+                        m_ConstantInt(CC)))) {
           Value *YS = // (Y << C)
-            Builder.CreateShl(Op0BO->getOperand(1), Op1, Op0BO->getName());
+              Builder.CreateShl(Op0BO->getOperand(1), Op1, Op0BO->getName());
           // X & (CC << C)
           Value *XM = Builder.CreateAnd(V1, ConstantExpr::getShl(CC, Op1),
-                                        V1->getName()+".mask");
-
+                                        V1->getName() + ".mask");
           return BinaryOperator::Create(Op0BO->getOpcode(), XM, YS);
         }
 
         break;
       }
       }
-
 
       // If the operand is a bitwise operator with a constant RHS, and the
       // shift is the only use, we can pull it out of the shift.

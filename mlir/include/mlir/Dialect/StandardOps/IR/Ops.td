@@ -3334,7 +3334,7 @@ def TensorCastOp : CastOp<"tensor_cast"> {
     ```
   }];
 
-  let arguments = (ins AnyTensor);
+  let arguments = (ins AnyTensor:$source);
   let results = (outs AnyTensor);
 
   let extraClassDeclaration = [{

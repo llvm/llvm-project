@@ -29,6 +29,10 @@
 // RUN:     -target-sdk-version=9.2 -fgpu-rdc -fcuda-include-gpubinary %t -o - \
 // RUN:   | FileCheck %s -allow-deprecated-dag-overlap \
 // RUN:       --check-prefixes=ALL,LNX,RDC,CUDA,CUDARDC,CUDA_NEW
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -std=c++17 \
+// RUN:     -target-sdk-version=9.2 -fgpu-rdc -fcuda-include-gpubinary %t -o - \
+// RUN:   | FileCheck %s -allow-deprecated-dag-overlap \
+// RUN:       --check-prefixes=ALL,LNX,RDC,CUDA,CUDARDC,CUDA_NEW,LNX_17
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -target-sdk-version=9.2 -o - \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=NOGPUBIN
@@ -91,9 +95,18 @@ __device__ int ext_device_var_def = 1;
 // WIN-DAG: @"?ext_constant_var_def@@3HA" = internal global i32 undef
 __constant__ int ext_constant_var_def = 2;
 
+#if __cplusplus > 201402L
+/// FIXME: Reject __device__ constexpr and inline variables in Sema.
+// LNX_17: @inline_var = internal global i32 undef, comdat, align 4{{$}}
+// LNX_17: @_ZN1C17member_inline_varE = internal constant i32 undef, comdat, align 4{{$}}
+__device__ inline int inline_var = 3;
+struct C {
+  __device__ static constexpr int member_inline_var = 4;
+};
+#endif
 
 void use_pointers() {
-  int *p;
+  const int *p;
   p = &device_var;
   p = &constant_var;
   p = &shared_var;
@@ -101,6 +114,10 @@ void use_pointers() {
   p = &ext_device_var;
   p = &ext_constant_var;
   p = &ext_host_var;
+#if __cplusplus > 201402L
+  p = &inline_var;
+  p = &C::member_inline_var;
+#endif
 }
 
 // Make sure that all parts of GPU code init/cleanup are there:
@@ -185,6 +202,7 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // ALL-DAG: call void {{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}constant_var{{[^,]*}}, {{[^@]*}}@2, {{.*}}i32 0, {{i32|i64}} 4, i32 1, i32 0
 // ALL-DAG: call void {{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}ext_device_var_def{{[^,]*}}, {{[^@]*}}@3, {{.*}}i32 0, {{i32|i64}} 4, i32 0, i32 0
 // ALL-DAG: call void {{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}ext_constant_var_def{{[^,]*}}, {{[^@]*}}@4, {{.*}}i32 0, {{i32|i64}} 4, i32 1, i32 0
+// LNX_17-NOT: [[PREFIX]]RegisterVar(i8** %0, {{.*}}inline_var
 // ALL: ret void
 
 // Test that we've built a constructor.

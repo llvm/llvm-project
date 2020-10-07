@@ -75,6 +75,11 @@ static uint32_t calculateAlignment(const MachOObjectFile &ObjectFile) {
   }
 }
 
+Slice::Slice(const Archive &A, uint32_t CPUType, uint32_t CPUSubType,
+             std::string ArchName, uint32_t Align)
+    : B(&A), CPUType(CPUType), CPUSubType(CPUSubType),
+      ArchName(std::move(ArchName)), P2Alignment(Align) {}
+
 Slice::Slice(const MachOObjectFile &O, uint32_t Align)
     : B(&O), CPUType(O.getHeader().cputype),
       CPUSubType(O.getHeader().cpusubtype),

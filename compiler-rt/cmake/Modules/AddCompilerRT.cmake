@@ -140,6 +140,7 @@ endmacro()
 #                         CFLAGS <compile flags>
 #                         LINK_FLAGS <linker flags>
 #                         DEFS <compile definitions>
+#                         DEPS <dependencies>
 #                         LINK_LIBS <linked libraries> (only for shared library)
 #                         OBJECT_LIBS <object libraries to use as sources>
 #                         PARENT_TARGET <convenience parent target>
@@ -152,7 +153,7 @@ function(add_compiler_rt_runtime name type)
   cmake_parse_arguments(LIB
     ""
     "PARENT_TARGET"
-    "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;LINK_LIBS;OBJECT_LIBS;ADDITIONAL_HEADERS"
+    "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;DEPS;LINK_LIBS;OBJECT_LIBS;ADDITIONAL_HEADERS"
     ${ARGN})
   set(libnames)
   # Until we support this some other way, build compiler-rt runtime without LTO
@@ -328,6 +329,9 @@ function(add_compiler_rt_runtime name type)
                 ${COMPONENT_OPTION}
         RUNTIME DESTINATION ${install_dir_${libname}}
                 ${COMPONENT_OPTION})
+    endif()
+    if(LIB_DEPS)
+      add_dependencies(${libname} ${LIB_DEPS})
     endif()
     set_target_properties(${libname} PROPERTIES
         OUTPUT_NAME ${output_name_${libname}})

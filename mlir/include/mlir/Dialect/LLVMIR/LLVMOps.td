@@ -885,20 +885,20 @@ def LLVM_MemcpyInlineOp : LLVM_ZeroResultIntrOp<"memcpy.inline", [0, 1, 2]>,
 // Vector Reductions.
 //
 
-def LLVM_experimental_vector_reduce_add : LLVM_VectorReduction<"add">;
-def LLVM_experimental_vector_reduce_and : LLVM_VectorReduction<"and">;
-def LLVM_experimental_vector_reduce_mul : LLVM_VectorReduction<"mul">;
-def LLVM_experimental_vector_reduce_fmax : LLVM_VectorReduction<"fmax">;
-def LLVM_experimental_vector_reduce_fmin : LLVM_VectorReduction<"fmin">;
-def LLVM_experimental_vector_reduce_or : LLVM_VectorReduction<"or">;
-def LLVM_experimental_vector_reduce_smax : LLVM_VectorReduction<"smax">;
-def LLVM_experimental_vector_reduce_smin : LLVM_VectorReduction<"smin">;
-def LLVM_experimental_vector_reduce_umax : LLVM_VectorReduction<"umax">;
-def LLVM_experimental_vector_reduce_umin : LLVM_VectorReduction<"umin">;
-def LLVM_experimental_vector_reduce_xor : LLVM_VectorReduction<"xor">;
+def LLVM_vector_reduce_add : LLVM_VectorReduction<"add">;
+def LLVM_vector_reduce_and : LLVM_VectorReduction<"and">;
+def LLVM_vector_reduce_mul : LLVM_VectorReduction<"mul">;
+def LLVM_vector_reduce_fmax : LLVM_VectorReduction<"fmax">;
+def LLVM_vector_reduce_fmin : LLVM_VectorReduction<"fmin">;
+def LLVM_vector_reduce_or : LLVM_VectorReduction<"or">;
+def LLVM_vector_reduce_smax : LLVM_VectorReduction<"smax">;
+def LLVM_vector_reduce_smin : LLVM_VectorReduction<"smin">;
+def LLVM_vector_reduce_umax : LLVM_VectorReduction<"umax">;
+def LLVM_vector_reduce_umin : LLVM_VectorReduction<"umin">;
+def LLVM_vector_reduce_xor : LLVM_VectorReduction<"xor">;
 
-def LLVM_experimental_vector_reduce_v2_fadd : LLVM_VectorReductionV2<"fadd">;
-def LLVM_experimental_vector_reduce_v2_fmul : LLVM_VectorReductionV2<"fmul">;
+def LLVM_vector_reduce_fadd : LLVM_VectorReductionAcc<"fadd">;
+def LLVM_vector_reduce_fmul : LLVM_VectorReductionAcc<"fmul">;
 
 //
 // LLVM Matrix operations.

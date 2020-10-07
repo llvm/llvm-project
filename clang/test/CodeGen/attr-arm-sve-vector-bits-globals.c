@@ -72,9 +72,9 @@ void write_global_bf16(svbfloat16_t v) { global_bf16 = v; }
 // CHECK-512-NEXT:  entry:
 // CHECK-512-NEXT:    [[V_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 16
 // CHECK-512-NEXT:    store <vscale x 16 x i1> [[V:%.*]], <vscale x 16 x i1>* [[V_ADDR]], align 16, [[TBAA13:!tbaa !.*]]
-// CHECK-512-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1>* [[V_ADDR]] to i64*
-// CHECK-512-NEXT:    [[TMP1:%.*]] = load i64, i64* [[TMP0]], align 16, [[TBAA10]]
-// CHECK-512-NEXT:    store i64 [[TMP1]], i64* bitcast (<8 x i8>* @global_bool to i64*), align 2, [[TBAA10]]
+// CHECK-512-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1>* [[V_ADDR]] to <8 x i8>*
+// CHECK-512-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* [[TMP0]], align 16, [[TBAA10]]
+// CHECK-512-NEXT:    store <8 x i8> [[TMP1]], <8 x i8>* @global_bool, align 2, [[TBAA10]]
 // CHECK-512-NEXT:    ret void
 //
 void write_global_bool(svbool_t v) { global_bool = v; }

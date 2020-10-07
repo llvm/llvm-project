@@ -142,3 +142,89 @@ TEST(TFUtilsTest, TensorSpecSizesAndTypes) {
   EXPECT_EQ(Spec3DLarge.getElementByteSize(), sizeof(float));
   EXPECT_EQ(Spec1D.getElementByteSize(), sizeof(int16_t));
 }
+
+TEST(TFUtilsTest, Logger) {
+  std::vector<Logger::LoggedFeatureSpec> Features;
+  Features.push_back(
+      {TensorSpec::createSpec<float>("the_float", {2, 3}), None});
+  Features.push_back({TensorSpec::createSpec<int64_t>("the_int", {2}),
+                      std::string("alternate_name")});
+
+  auto Rewards = TensorSpec::createSpec<float>("reward", {1});
+  Logger L(Features, Rewards, true);
+  float F00[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5};
+  int64_t F01[]{2, 3};
+
+  L.logTensorValue(0, F00, 6);
+  L.logTensorValue(1, F01, 2);
+  L.logReward<float>(3.4);
+  float F10[]{0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
+  int64_t F11[]{-2, -3};
+  L.logTensorValue(0, F10, 6);
+  L.logTensorValue(1, F11, 2);
+  L.logReward<float>(-3.0);
+  const auto *Expected = R"(feature_lists: {
+  feature_list: {
+    key: "the_float" value: {
+      feature: { float_list: { value: [0.000000e+00, 1.000000e-01, 2.000000e-01, 3.000000e-01, 4.000000e-01, 5.000000e-01] } }
+      feature: { float_list: { value: [0.000000e+00, 1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00] } }
+    }
+  }
+  feature_list: {
+    key: "alternate_name" value: {
+      feature: { int64_list: { value: [2, 3] } }
+      feature: { int64_list: { value: [-2, -3] } }
+    }
+  }
+  feature_list: {
+    key: "reward" value: {
+      feature: { float_list: { value: [3.400000e+00] } }
+      feature: { float_list: { value: [-3.000000e+00] } }
+    }
+  }
+}
+)";
+  std::string Result;
+  raw_string_ostream OS(Result);
+  L.print(OS);
+  EXPECT_EQ(Result, Expected);
+}
+
+TEST(TFUtilsTest, LoggerNoReward) {
+  std::vector<Logger::LoggedFeatureSpec> Features;
+  Features.push_back(
+      {TensorSpec::createSpec<float>("the_float", {2, 3}), None});
+  Features.push_back({TensorSpec::createSpec<int64_t>("the_int", {2}),
+                      std::string("alternate_name")});
+
+  auto Rewards = TensorSpec::createSpec<float>("reward", {1});
+  Logger L(Features, Rewards, false);
+  float F00[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5};
+  int64_t F01[]{2, 3};
+
+  L.logTensorValue(0, F00, 6);
+  L.logTensorValue(1, F01, 2);
+  float F10[]{0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
+  int64_t F11[]{-2, -3};
+  L.logTensorValue(0, F10, 6);
+  L.logTensorValue(1, F11, 2);
+  const auto *Expected = R"(feature_lists: {
+  feature_list: {
+    key: "the_float" value: {
+      feature: { float_list: { value: [0.000000e+00, 1.000000e-01, 2.000000e-01, 3.000000e-01, 4.000000e-01, 5.000000e-01] } }
+      feature: { float_list: { value: [0.000000e+00, 1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00] } }
+    }
+  }
+  feature_list: {
+    key: "alternate_name" value: {
+      feature: { int64_list: { value: [2, 3] } }
+      feature: { int64_list: { value: [-2, -3] } }
+    }
+  }
+}
+)";
+  std::string Result;
+  raw_string_ostream OS(Result);
+  L.print(OS);
+  EXPECT_EQ(Result, Expected);
+}

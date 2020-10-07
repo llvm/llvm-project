@@ -76,7 +76,6 @@ func @zero_d_alloc() -> memref<f32> {
 // CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 // CHECK-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
 // CHECK-NEXT:  llvm.mul %{{.*}}, %[[sizeof]] : !llvm.i64
-// CHECK-NEXT:  %[[one_1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 // CHECK-NEXT:  llvm.call @malloc(%{{.*}}) : (!llvm.i64) -> !llvm.ptr<i8>
 // CHECK-NEXT:  %[[ptr:.*]] = llvm.bitcast %{{.*}} : !llvm.ptr<i8> to !llvm.ptr<float>
 // CHECK-NEXT:  llvm.mlir.undef : !llvm.struct<(ptr<float>, ptr<float>, i64)>
@@ -91,7 +90,6 @@ func @zero_d_alloc() -> memref<f32> {
 // BAREPTR-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 // BAREPTR-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
 // BAREPTR-NEXT:  llvm.mul %{{.*}}, %[[sizeof]] : !llvm.i64
-// BAREPTR-NEXT:  %[[one_1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 // BAREPTR-NEXT:  llvm.call @malloc(%{{.*}}) : (!llvm.i64) -> !llvm.ptr<i8>
 // BAREPTR-NEXT:  %[[ptr:.*]] = llvm.bitcast %{{.*}} : !llvm.ptr<i8> to !llvm.ptr<float>
 // BAREPTR-NEXT:  llvm.mlir.undef : !llvm.struct<(ptr<float>, ptr<float>, i64)>
@@ -130,19 +128,19 @@ func @aligned_1d_alloc() -> memref<42xf32> {
 // CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 // CHECK-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
 // CHECK-NEXT:  llvm.mul %{{.*}}, %[[sizeof]] : !llvm.i64
-// CHECK-NEXT:  %[[one_1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 // CHECK-NEXT:  %[[alignment:.*]] = llvm.mlir.constant(8 : index) : !llvm.i64
 // CHECK-NEXT:  %[[allocsize:.*]] = llvm.add {{.*}}, %[[alignment]] : !llvm.i64
 // CHECK-NEXT:  %[[allocated:.*]] = llvm.call @malloc(%[[allocsize]]) : (!llvm.i64) -> !llvm.ptr<i8>
 // CHECK-NEXT:  %[[ptr:.*]] = llvm.bitcast %{{.*}} : !llvm.ptr<i8> to !llvm.ptr<float>
+// CHECK-NEXT:  %[[allocatedAsInt:.*]] = llvm.ptrtoint %[[ptr]] : !llvm.ptr<float> to !llvm.i64
+// CHECK-NEXT:  %[[one_1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+// CHECK-NEXT:  %[[bump:.*]] = llvm.sub %[[alignment]], %[[one_1]] : !llvm.i64
+// CHECK-NEXT:  %[[bumped:.*]] = llvm.add %[[allocatedAsInt]], %[[bump]] : !llvm.i64
+// CHECK-NEXT:  %[[mod:.*]] = llvm.urem %[[bumped]], %[[alignment]] : !llvm.i64
+// CHECK-NEXT:  %[[aligned:.*]] = llvm.sub %[[bumped]], %[[mod]] : !llvm.i64
+// CHECK-NEXT:  %[[alignedBitCast:.*]] = llvm.inttoptr %[[aligned]] : !llvm.i64 to !llvm.ptr<float>
 // CHECK-NEXT:  llvm.mlir.undef : !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>
 // CHECK-NEXT:  llvm.insertvalue %[[ptr]], %{{.*}}[0] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>
-// CHECK-NEXT:  %[[allocatedAsInt:.*]] = llvm.ptrtoint %[[allocated]] : !llvm.ptr<i8> to !llvm.i64
-// CHECK-NEXT:  %[[alignAdj1:.*]] = llvm.urem %[[allocatedAsInt]], %[[alignment]] : !llvm.i64
-// CHECK-NEXT:  %[[alignAdj2:.*]] = llvm.sub %[[alignment]], %[[alignAdj1]] : !llvm.i64
-// CHECK-NEXT:  %[[alignAdj3:.*]] = llvm.urem %[[alignAdj2]], %[[alignment]] : !llvm.i64
-// CHECK-NEXT:  %[[aligned:.*]] = llvm.getelementptr %[[allocated]][%[[alignAdj3]]] : (!llvm.ptr<i8>, !llvm.i64) -> !llvm.ptr<i8>
-// CHECK-NEXT:  %[[alignedBitCast:.*]] = llvm.bitcast %[[aligned]] : !llvm.ptr<i8> to !llvm.ptr<float>
 // CHECK-NEXT:  llvm.insertvalue %[[alignedBitCast]], %{{.*}}[1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>
 // CHECK-NEXT:  %[[c0:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 // CHECK-NEXT:  llvm.insertvalue %[[c0]], %{{.*}}[2] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>
@@ -153,19 +151,19 @@ func @aligned_1d_alloc() -> memref<42xf32> {
 // BAREPTR-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 // BAREPTR-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
 // BAREPTR-NEXT:  llvm.mul %{{.*}}, %[[sizeof]] : !llvm.i64
-// BAREPTR-NEXT:  %[[one_1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 // BAREPTR-NEXT:  %[[alignment:.*]] = llvm.mlir.constant(8 : index) : !llvm.i64
 // BAREPTR-NEXT:  %[[allocsize:.*]] = llvm.add {{.*}}, %[[alignment]] : !llvm.i64
 // BAREPTR-NEXT:  %[[allocated:.*]] = llvm.call @malloc(%[[allocsize]]) : (!llvm.i64) -> !llvm.ptr<i8>
 // BAREPTR-NEXT:  %[[ptr:.*]] = llvm.bitcast %{{.*}} : !llvm.ptr<i8> to !llvm.ptr<float>
+// BAREPTR-NEXT:  %[[allocatedAsInt:.*]] = llvm.ptrtoint %[[ptr]] : !llvm.ptr<float> to !llvm.i64
+// BAREPTR-NEXT:  %[[one_2:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+// BAREPTR-NEXT:  %[[bump:.*]] = llvm.sub %[[alignment]], %[[one_2]] : !llvm.i64
+// BAREPTR-NEXT:  %[[bumped:.*]] = llvm.add %[[allocatedAsInt]], %[[bump]] : !llvm.i64
+// BAREPTR-NEXT:  %[[mod:.*]] = llvm.urem %[[bumped]], %[[alignment]] : !llvm.i64
+// BAREPTR-NEXT:  %[[aligned:.*]] = llvm.sub %[[bumped]], %[[mod]] : !llvm.i64
+// BAREPTR-NEXT:  %[[alignedBitCast:.*]] = llvm.inttoptr %[[aligned]] : !llvm.i64 to !llvm.ptr<float>
 // BAREPTR-NEXT:  llvm.mlir.undef : !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>
 // BAREPTR-NEXT:  llvm.insertvalue %[[ptr]], %{{.*}}[0] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>
-// BAREPTR-NEXT:  %[[allocatedAsInt:.*]] = llvm.ptrtoint %[[allocated]] : !llvm.ptr<i8> to !llvm.i64
-// BAREPTR-NEXT:  %[[alignAdj1:.*]] = llvm.urem %[[allocatedAsInt]], %[[alignment]] : !llvm.i64
-// BAREPTR-NEXT:  %[[alignAdj2:.*]] = llvm.sub %[[alignment]], %[[alignAdj1]] : !llvm.i64
-// BAREPTR-NEXT:  %[[alignAdj3:.*]] = llvm.urem %[[alignAdj2]], %[[alignment]] : !llvm.i64
-// BAREPTR-NEXT:  %[[aligned:.*]] = llvm.getelementptr %[[allocated]][%[[alignAdj3]]] : (!llvm.ptr<i8>, !llvm.i64) -> !llvm.ptr<i8>
-// BAREPTR-NEXT:  %[[alignedBitCast:.*]] = llvm.bitcast %[[aligned]] : !llvm.ptr<i8> to !llvm.ptr<float>
 // BAREPTR-NEXT:  llvm.insertvalue %[[alignedBitCast]], %{{.*}}[1] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>
 // BAREPTR-NEXT:  %[[c0:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 // BAREPTR-NEXT:  llvm.insertvalue %[[c0]], %{{.*}}[2] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>
@@ -186,7 +184,6 @@ func @static_alloc() -> memref<32x18xf32> {
 // CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 // CHECK-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
 // CHECK-NEXT:  %[[bytes:.*]] = llvm.mul %[[num_elems]], %[[sizeof]] : !llvm.i64
-// CHECK-NEXT:  %[[one_1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 // CHECK-NEXT:  %[[allocated:.*]] = llvm.call @malloc(%[[bytes]]) : (!llvm.i64) -> !llvm.ptr<i8>
 // CHECK-NEXT:  llvm.bitcast %[[allocated]] : !llvm.ptr<i8> to !llvm.ptr<float>
 
@@ -198,7 +195,6 @@ func @static_alloc() -> memref<32x18xf32> {
 // BAREPTR-NEXT: %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 // BAREPTR-NEXT: %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
 // BAREPTR-NEXT: %[[bytes:.*]] = llvm.mul %[[num_elems]], %[[sizeof]] : !llvm.i64
-// BAREPTR-NEXT:  %[[one_1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 // BAREPTR-NEXT: %[[allocated:.*]] = llvm.call @malloc(%[[bytes]]) : (!llvm.i64) -> !llvm.ptr<i8>
 // BAREPTR-NEXT: llvm.bitcast %[[allocated]] : !llvm.ptr<i8> to !llvm.ptr<float>
  %0 = alloc() : memref<32x18xf32>
@@ -217,7 +213,6 @@ func @static_alloca() -> memref<32x18xf32> {
 // CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 // CHECK-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr<float> to !llvm.i64
 // CHECK-NEXT:  %[[bytes:.*]] = llvm.mul %[[num_elems]], %[[sizeof]] : !llvm.i64
-// CHECK-NEXT:  %[[one_1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 // CHECK-NEXT:  %[[allocated:.*]] = llvm.alloca %[[bytes]] x !llvm.float : (!llvm.i64) -> !llvm.ptr<float>
  %0 = alloca() : memref<32x18xf32>
 

@@ -788,3 +788,18 @@ define internal i8 @callee(i8 %a) {
   ret i8 %c
 }
 
+
+define i1 @icmp() {
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@icmp
+; IS__TUNIT____-SAME: () [[ATTR1]] {
+; IS__TUNIT____-NEXT:    ret i1 true
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@icmp
+; IS__CGSCC____-SAME: () [[ATTR1]] {
+; IS__CGSCC____-NEXT:    ret i1 true
+;
+  %c = icmp eq i8* null, null
+  ret i1 %c
+}

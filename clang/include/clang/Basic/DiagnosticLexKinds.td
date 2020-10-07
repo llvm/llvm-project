@@ -104,10 +104,10 @@ def warn_cxx98_compat_raw_string_literal : Warning<
   "raw string literals are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 
-def ext_multichar_character_literal : ExtWarn<
+def warn_multichar_character_literal : Warning<
   "multi-character character constant">, InGroup<MultiChar>;
-def ext_four_char_character_literal : Extension<
-  "multi-character character constant">, InGroup<FourByteMultiChar>;
+def warn_four_char_character_literal : Warning<
+  "multi-character character constant">, InGroup<FourByteMultiChar>, DefaultIgnore;
 
 
 // Unicode and UCNs

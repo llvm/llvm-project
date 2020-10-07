@@ -33,7 +33,7 @@ using namespace llvm;
 
 // TODO: remove once all required passes are marked as such.
 static cl::opt<bool>
-    EnableOptnone("enable-npm-optnone", cl::init(false),
+    EnableOptnone("enable-npm-optnone", cl::init(true),
                   cl::desc("Enable skipping optional passes optnone functions "
                            "under new pass manager"));
 

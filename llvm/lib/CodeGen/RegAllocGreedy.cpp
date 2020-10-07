@@ -757,12 +757,17 @@ Register RAGreedy::tryAssign(LiveInterval &VirtReg,
                              AllocationOrder &Order,
                              SmallVectorImpl<Register> &NewVRegs,
                              const SmallVirtRegSet &FixedRegisters) {
-  Order.rewind();
   Register PhysReg;
-  while ((PhysReg = Order.next()))
-    if (!Matrix->checkInterference(VirtReg, PhysReg))
-      break;
-  if (!PhysReg || Order.isHint())
+  for (auto I = Order.begin(), E = Order.end(); I != E && !PhysReg; ++I) {
+    assert(*I);
+    if (!Matrix->checkInterference(VirtReg, *I)) {
+      if (I.isHint())
+        return *I;
+      else
+        PhysReg = *I;
+    }
+  }
+  if (!PhysReg.isValid())
     return PhysReg;
 
   // PhysReg is available, but there may be a better choice.
@@ -803,12 +808,12 @@ Register RAGreedy::tryAssign(LiveInterval &VirtReg,
 Register RAGreedy::canReassign(LiveInterval &VirtReg, Register PrevReg) {
   auto Order =
       AllocationOrder::create(VirtReg.reg(), *VRM, RegClassInfo, Matrix);
-  Register PhysReg;
-  while ((PhysReg = Order.next())) {
-    if (PhysReg == PrevReg)
+  MCRegister PhysReg;
+  for (auto I = Order.begin(), E = Order.end(); I != E && !PhysReg; ++I) {
+    if ((*I).id() == PrevReg.id())
       continue;
 
-    MCRegUnitIterator Units(PhysReg, TRI);
+    MCRegUnitIterator Units(*I, TRI);
     for (; Units.isValid(); ++Units) {
       // Instantiate a "subquery", not to be confused with the Queries array.
       LiveIntervalUnion::Query subQ(VirtReg, Matrix->getLiveUnions()[*Units]);
@@ -817,7 +822,7 @@ Register RAGreedy::canReassign(LiveInterval &VirtReg, Register PrevReg) {
     }
     // If no units have interference, break out with the current PhysReg.
     if (!Units.isValid())
-      break;
+      PhysReg = *I;
   }
   if (PhysReg)
     LLVM_DEBUG(dbgs() << "can reassign: " << VirtReg << " from "
@@ -1134,8 +1139,10 @@ unsigned RAGreedy::tryEvict(LiveInterval &VirtReg,
     }
   }
 
-  Order.rewind();
-  while (MCRegister PhysReg = Order.next(OrderLimit)) {
+  for (auto I = Order.begin(), E = Order.getOrderLimitEnd(OrderLimit); I != E;
+       ++I) {
+    MCRegister PhysReg = *I;
+    assert(PhysReg);
     if (TRI->getCostPerUse(PhysReg) >= CostPerUseLimit)
       continue;
     // The first use of a callee-saved register in a function has cost 1.
@@ -1156,7 +1163,7 @@ unsigned RAGreedy::tryEvict(LiveInterval &VirtReg,
     BestPhys = PhysReg;
 
     // Stop if the hint can be used.
-    if (Order.isHint())
+    if (I.isHint())
       break;
   }
 
@@ -1849,8 +1856,8 @@ unsigned RAGreedy::calculateRegionSplitCost(LiveInterval &VirtReg,
                                             unsigned &NumCands, bool IgnoreCSR,
                                             bool *CanCauseEvictionChain) {
   unsigned BestCand = NoCand;
-  Order.rewind();
-  while (unsigned PhysReg = Order.next()) {
+  for (MCPhysReg PhysReg : Order) {
+    assert(PhysReg);
     if (IgnoreCSR && isUnusedCalleeSavedReg(PhysReg))
       continue;
 
@@ -2288,8 +2295,8 @@ unsigned RAGreedy::tryLocalSplit(LiveInterval &VirtReg, AllocationOrder &Order,
     (1.0f / MBFI->getEntryFreq());
   SmallVector<float, 8> GapWeight;
 
-  Order.rewind();
-  while (unsigned PhysReg = Order.next()) {
+  for (MCPhysReg PhysReg : Order) {
+    assert(PhysReg);
     // Keep track of the largest spill weight that would need to be evicted in
     // order to make use of PhysReg between UseSlots[I] and UseSlots[I + 1].
     calcGapWeights(PhysReg, GapWeight);
@@ -2606,8 +2613,8 @@ unsigned RAGreedy::tryLastChanceRecoloring(LiveInterval &VirtReg,
   FixedRegisters.insert(VirtReg.reg());
   SmallVector<Register, 4> CurrentNewVRegs;
 
-  Order.rewind();
-  while (Register PhysReg = Order.next()) {
+  for (MCRegister PhysReg : Order) {
+    assert(PhysReg.isValid());
     LLVM_DEBUG(dbgs() << "Try to assign: " << VirtReg << " to "
                       << printReg(PhysReg, TRI) << '\n');
     RecoloringCandidates.clear();

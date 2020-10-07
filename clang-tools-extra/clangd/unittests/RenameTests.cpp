@@ -516,6 +516,7 @@ TEST(RenameTest, Renameable) {
     const char* ErrorMessage; // null if no error
     bool IsHeaderFile;
     const SymbolIndex *Index;
+    llvm::StringRef NewName = "DummyName";
   };
   TestTU OtherFile = TestTU::withCode("Outside s; auto ss = &foo;");
   const char *CommonHeader = R"cpp(
@@ -541,6 +542,11 @@ TEST(RenameTest, Renameable) {
         void [[On^lyInThisFile]]();
       )cpp",
        nullptr, HeaderFile, Index},
+
+      {R"cpp(
+        void ^f();
+      )cpp",
+       "keyword", HeaderFile, Index, "return"},
 
       {R"cpp(// disallow -- symbol is indexable and has other refs in index.
         void f() {
@@ -639,7 +645,7 @@ TEST(RenameTest, Renameable) {
       TU.ExtraArgs.push_back("-xobjective-c++-header");
     }
     auto AST = TU.build();
-    llvm::StringRef NewName = "dummyNewName";
+    llvm::StringRef NewName = Case.NewName;
     auto Results =
         rename({T.point(), NewName, AST, testPath(TU.Filename), Case.Index});
     bool WantRename = true;

@@ -326,7 +326,7 @@ static bool isTensorReshapeOpFusible(TensorReshapeOp reshapeOp,
   if ((asProducer && returnType.getRank() < operandType.getRank()) ||
       (!asProducer && operandType.getRank() < returnType.getRank()))
     return false;
-  return useIndexMap.isIdentity();
+  return useIndexMap.isPermutation();
 }
 
 /// Based on the type of `op` create a linalg op of the same type, i.e. if `op`
@@ -381,10 +381,13 @@ struct FuseTensorReshapeOpAsProducer {
               return attr.cast<AffineMapAttr>().getValue();
             }));
 
+    // Accepted consumer maps are either identity or permutation.
+    auto invMap = inversePermutation(fusedIndexMaps[consumerIdx]);
+
     // Compute the indexing map to use for the operand of the producer.
-    AffineMap modifiedMap = linearizeCollapsedDims(
-        fusedIndexMaps[consumerIdx], producer.getResultType().getShape(),
-        producer.getReassociationMaps());
+    AffineMap modifiedMap =
+        linearizeCollapsedDims(invMap, producer.getResultType().getShape(),
+                               producer.getReassociationMaps());
     for (AffineExpr expr : modifiedMap.getResults()) {
       if (!expr.isPureAffine())
         return nullptr;
@@ -439,10 +442,13 @@ struct FuseTensorReshapeOpAsConsumer {
             producer.indexing_maps(), [](Attribute attr) -> AffineMap {
               return attr.cast<AffineMapAttr>().getValue();
             }));
+
+    auto invMap = inversePermutation(producer.getOutputIndexingMap(0));
+
     // Compute the indexing map to use for the operand of the producer.
-    AffineMap modifiedMap = linearizeCollapsedDims(
-        producer.getOutputIndexingMap(0), consumer.getSrcType().getShape(),
-        consumer.getReassociationMaps());
+    AffineMap modifiedMap =
+        linearizeCollapsedDims(invMap, consumer.getSrcType().getShape(),
+                               consumer.getReassociationMaps());
     for (AffineExpr expr : modifiedMap.getResults()) {
       if (!expr.isPureAffine())
         return nullptr;

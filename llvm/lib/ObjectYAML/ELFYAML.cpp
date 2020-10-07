@@ -1214,7 +1214,7 @@ static void sectionMapping(IO &IO, ELFYAML::RelrSection &Section) {
   IO.mapOptional("Content", Section.Content);
 }
 
-static void groupSectionMapping(IO &IO, ELFYAML::Group &Group) {
+static void groupSectionMapping(IO &IO, ELFYAML::GroupSection &Group) {
   commonSectionMapping(IO, Group);
   IO.mapOptional("Info", Group.Signature);
   IO.mapRequired("Members", Group.Members);
@@ -1353,8 +1353,8 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     break;
   case ELF::SHT_GROUP:
     if (!IO.outputting())
-      Section.reset(new ELFYAML::Group());
-    groupSectionMapping(IO, *cast<ELFYAML::Group>(Section.get()));
+      Section.reset(new ELFYAML::GroupSection());
+    groupSectionMapping(IO, *cast<ELFYAML::GroupSection>(Section.get()));
     break;
   case ELF::SHT_NOBITS:
     if (!IO.outputting())

@@ -10,8 +10,9 @@
 
 // Increment local_iterator past end.
 
-#if _LIBCPP_DEBUG >= 1
+// UNSUPPORTED: libcxx-no-debug-mode
 
+#define _LIBCPP_DEBUG 1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <unordered_map>
@@ -47,13 +48,3 @@ int main(int, char**)
 #endif
 
 }
-
-#else
-
-int main(int, char**)
-{
-
-  return 0;
-}
-
-#endif

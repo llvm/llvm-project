@@ -273,43 +273,43 @@ v_cmp_f_u64_e64 s[10:11], 0x3f717273, 0x3f717273
 
 v_cmpx_class_f32_e64 0xaf123456, v2
 // GFX10: v_cmpx_class_f32_e64 0xaf123456, v2 ; encoding: [0x00,0x00,0x98,0xd4,0xff,0x04,0x02,0x00,0x56,0x34,0x12,0xaf]
-// GFX9-ERR: error: instruction not supported on this GPU
+// GFX9-ERR: error: operands are not valid for this GPU or mode
 
 v_cmpx_class_f32_e64 v1, 0xaf123456
 // GFX10: v_cmpx_class_f32_e64 v1, 0xaf123456 ; encoding: [0x00,0x00,0x98,0xd4,0x01,0xff,0x01,0x00,0x56,0x34,0x12,0xaf]
-// GFX9-ERR: error: instruction not supported on this GPU
+// GFX9-ERR: error: operands are not valid for this GPU or mode
 
 v_cmpx_class_f32_e64 0xaf123456, 0xaf123456
 // GFX10: v_cmpx_class_f32_e64 0xaf123456, 0xaf123456 ; encoding: [0x00,0x00,0x98,0xd4,0xff,0xfe,0x01,0x00,0x56,0x34,0x12,0xaf]
-// GFX9-ERR: error: instruction not supported on this GPU
+// GFX9-ERR: error: operands are not valid for this GPU or mode
 
 v_cmpx_class_f32_e64 0xaf123456, 0xaf123455
 // GFX10-ERR: error: invalid literal operand
-// GFX9-ERR: error: instruction not supported on this GPU
+// GFX9-ERR: error: operands are not valid for this GPU or mode
 
 v_cmpx_lt_i16_e64 v1, 0x3456
 // GFX10: v_cmpx_lt_i16_e64 v1, 0x3456    ; encoding: [0x00,0x00,0x99,0xd4,0x01,0xff,0x01,0x00,0x56,0x34,0x00,0x00]
-// GFX9-ERR: error: instruction not supported on this GPU
+// GFX9-ERR: error: operands are not valid for this GPU or mode
 
 v_cmpx_lt_i16_e64 0x3456, v2
 // GFX10: v_cmpx_lt_i16_e64 0x3456, v2    ; encoding: [0x00,0x00,0x99,0xd4,0xff,0x04,0x02,0x00,0x56,0x34,0x00,0x00]
-// GFX9-ERR: error: instruction not supported on this GPU
+// GFX9-ERR: error: operands are not valid for this GPU or mode
 
 v_cmpx_lt_i16_e64 0x3456, 0x3456
 // GFX10: v_cmpx_lt_i16_e64 0x3456, 0x3456 ; encoding: [0x00,0x00,0x99,0xd4,0xff,0xfe,0x01,0x00,0x56,0x34,0x00,0x00]
-// GFX9-ERR: error: instruction not supported on this GPU
+// GFX9-ERR: error: operands are not valid for this GPU or mode
 
 v_cmpx_f_i64_e64 0xaf123456, v[2:3]
 // GFX10: v_cmpx_f_i64_e64 0xaf123456, v[2:3] ; encoding: [0x00,0x00,0xb0,0xd4,0xff,0x04,0x02,0x00,0x56,0x34,0x12,0xaf]
-// GFX9-ERR: error: instruction not supported on this GPU
+// GFX9-ERR: error: operands are not valid for this GPU or mode
 
 v_cmpx_f_i64_e64 v[1:2], 0x3f717273
 // GFX10: v_cmpx_f_i64_e64 v[1:2], 0x3f717273 ; encoding: [0x00,0x00,0xb0,0xd4,0x01,0xff,0x01,0x00,0x73,0x72,0x71,0x3f]
-// GFX9-ERR: error: instruction not supported on this GPU
+// GFX9-ERR: error: operands are not valid for this GPU or mode
 
 v_cmpx_f_i64_e64 0x3f717273, 0x3f717273
 // GFX10: v_cmpx_f_i64_e64 0x3f717273, 0x3f717273 ; encoding: [0x00,0x00,0xb0,0xd4,0xff,0xfe,0x01,0x00,0x73,0x72,0x71,0x3f]
-// GFX9-ERR: error: instruction not supported on this GPU
+// GFX9-ERR: error: operands are not valid for this GPU or mode
 
 v_lshlrev_b64 v[5:6], 0xaf123456, v[2:3]
 // GFX10: v_lshlrev_b64 v[5:6], 0xaf123456, v[2:3] ; encoding: [0x05,0x00,0xff,0xd6,0xff,0x04,0x02,0x00,0x56,0x34,0x12,0xaf]

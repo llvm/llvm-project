@@ -4,7 +4,7 @@
 # CHECK:      .eh_frame contents:
 # CHECK:          FDE
 # CHECK-NEXT:     Format:       DWARF32
-# CHECK-NEXT:     DW_CFA_LLVM_def_aspace_cfa: reg2 +0 as6
+# CHECK-NEXT:     DW_CFA_LLVM_def_aspace_cfa: EDX +0 as6
 # CHECK-NEXT:     DW_CFA_nop:
 
 .text

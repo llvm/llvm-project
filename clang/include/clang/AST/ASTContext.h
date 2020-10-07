@@ -665,6 +665,14 @@ public:
 
   const LangOptions& getLangOpts() const { return LangOpts; }
 
+  // If this condition is false, typo correction must be performed eagerly
+  // rather than delayed in many places, as it makes use of dependent types.
+  // the condition is false for clang's C-only codepath, as it doesn't support
+  // dependent types yet.
+  bool isDependenceAllowed() const {
+    return LangOpts.CPlusPlus || LangOpts.RecoveryAST;
+  }
+
   const SanitizerBlacklist &getSanitizerBlacklist() const {
     return *SanitizerBL;
   }

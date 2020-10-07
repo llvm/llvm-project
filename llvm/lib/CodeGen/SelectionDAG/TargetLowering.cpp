@@ -917,6 +917,13 @@ bool TargetLowering::SimplifyDemandedBits(
     return false;
   }
 
+  if (Op.getOpcode() == ISD::ConstantFP) {
+    // We know all of the bits for a floating point constant!
+    Known.One = cast<ConstantFPSDNode>(Op)->getValueAPF().bitcastToAPInt();
+    Known.Zero = ~Known.One;
+    return false;
+  }
+
   // Other users may use these bits.
   EVT VT = Op.getValueType();
   if (!Op.getNode()->hasOneUse() && !AssumeSingleUse) {
@@ -2254,9 +2261,13 @@ bool TargetLowering::SimplifyDemandedBits(
         if (C->isOpaque())
           return false;
     }
-    // TODO: Handle float bits as well.
     if (VT.isInteger())
       return TLO.CombineTo(Op, TLO.DAG.getConstant(Known.One, dl, VT));
+    if (VT.isFloatingPoint())
+      return TLO.CombineTo(
+          Op,
+          TLO.DAG.getConstantFP(
+              APFloat(TLO.DAG.EVTToAPFloatSemantics(VT), Known.One), dl, VT));
   }
 
   return false;
@@ -5773,10 +5784,8 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
 
     // If we already have the use of the negated floating constant, it is free
     // to negate it even it has multiple uses.
-    if (!Op.hasOneUse() && CFP.use_empty()) {
-      RemoveDeadNode(CFP);
+    if (!Op.hasOneUse() && CFP.use_empty())
       break;
-    }
     Cost = NegatibleCost::Neutral;
     return CFP;
   }
@@ -6428,7 +6437,7 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
   SDValue Sel;
 
   if (Node->isStrictFPOpcode()) {
-    Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT, SDNodeFlags(),
+    Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT,
                        Node->getOperand(0), /*IsSignaling*/ true);
     Chain = Sel.getValue(1);
   } else {

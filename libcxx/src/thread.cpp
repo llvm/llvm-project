@@ -14,17 +14,21 @@
 #include "vector"
 #include "future"
 #include "limits"
-#include <sys/types.h>
 
-#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+#if __has_include(<sys/types.h>)
+# include <sys/types.h>
+#endif
+
+#if __has_include(<sys/param.h>)
 # include <sys/param.h>
-# if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__APPLE__)
-#   include <sys/sysctl.h>
-# endif
-#endif // defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+#endif
+
+#if __has_include(<sys/sysctl.h>)
+# include <sys/sysctl.h>
+#endif
 
 #if __has_include(<unistd.h>)
-#include <unistd.h>
+# include <unistd.h>
 #endif
 
 #if defined(__NetBSD__)

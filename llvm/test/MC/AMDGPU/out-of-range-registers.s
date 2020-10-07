@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICIVI9-ERR,SIVICI-ERR,SI-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICIVI9-ERR,SIVICI-ERR,CIVI9-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICIVI9-ERR,SIVICI-ERR,CIVI9-ERR,VI-ERR --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX9-ERR,SICIVI9-ERR,CIVI9-ERR --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,GFX10-ERR --implicit-check-not=error: %s
 
@@ -20,10 +20,16 @@ s_add_i32 s105, s0, s1
 // GFX10: s_add_i32 s105, s0, s1 ; encoding:
 
 v_add_i32 v256, v0, v1
-// GCN-ERR: error: register index is out of range
+// GFX10-ERR: error: instruction not supported on this GPU
+// GFX9-ERR: error: register index is out of range
+// SI-ERR: error: register index is out of range
+// VI-ERR: error: instruction not supported on this GPU
 
 v_add_i32 v257, v0, v1
-// GCN-ERR: error: register index is out of range
+// GFX10-ERR: error: instruction not supported on this GPU
+// GFX9-ERR: error: register index is out of range
+// SI-ERR: error: register index is out of range
+// VI-ERR: error: instruction not supported on this GPU
 
 s_mov_b64 s[0:17], -1
 // GCN-ERR: error: invalid or unsupported register size

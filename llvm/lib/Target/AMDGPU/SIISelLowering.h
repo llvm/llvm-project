@@ -108,7 +108,8 @@ private:
                               ArrayRef<SDValue> Ops, EVT MemVT,
                               MachineMemOperand *MMO, SelectionDAG &DAG) const;
 
-  SDValue handleD16VData(SDValue VData, SelectionDAG &DAG) const;
+  SDValue handleD16VData(SDValue VData, SelectionDAG &DAG,
+                         bool ImageStore = false) const;
 
   /// Converts \p Op, which must be of floating point type, to the
   /// floating point type \p VT, by either extending or truncating it.

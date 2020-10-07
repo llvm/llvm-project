@@ -187,6 +187,11 @@ private:
     return specConstMap.lookup(id);
   }
 
+  /// Gets the composite specialization constant with the given result <id>.
+  spirv::SpecConstantCompositeOp getSpecConstantComposite(uint32_t id) {
+    return specConstCompositeMap.lookup(id);
+  }
+
   /// Creates a spirv::SpecConstantOp.
   spirv::SpecConstantOp createSpecConstant(Location loc, uint32_t resultID,
                                            Attribute defaultValue);
@@ -461,8 +466,11 @@ private:
   /// (and type) here. Later when it's used, we materialize the constant.
   DenseMap<uint32_t, std::pair<Attribute, Type>> constantMap;
 
-  // Result <id> to variable mapping.
+  // Result <id> to spec constant mapping.
   DenseMap<uint32_t, spirv::SpecConstantOp> specConstMap;
+
+  // Result <id> to composite spec constant mapping.
+  DenseMap<uint32_t, spirv::SpecConstantCompositeOp> specConstCompositeMap;
 
   // Result <id> to variable mapping.
   DenseMap<uint32_t, spirv::GlobalVariableOp> globalVariableMap;
@@ -1565,7 +1573,8 @@ Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
            << operands[0];
   }
 
-  auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(operands[1]));
+  auto resultID = operands[1];
+  auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(resultID));
 
   SmallVector<Attribute, 4> elements;
   elements.reserve(operands.size() - 2);
@@ -1574,9 +1583,10 @@ Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
     elements.push_back(opBuilder.getSymbolRefAttr(elementInfo));
   }
 
-  opBuilder.create<spirv::SpecConstantCompositeOp>(
+  auto op = opBuilder.create<spirv::SpecConstantCompositeOp>(
       unknownLoc, TypeAttr::get(resultType), symName,
       opBuilder.getArrayAttr(elements));
+  specConstCompositeMap[resultID] = op;
 
   return success();
 }
@@ -2206,6 +2216,12 @@ Value Deserializer::getValue(uint32_t id) {
     auto referenceOfOp = opBuilder.create<spirv::ReferenceOfOp>(
         unknownLoc, constOp.default_value().getType(),
         opBuilder.getSymbolRefAttr(constOp.getOperation()));
+    return referenceOfOp.reference();
+  }
+  if (auto constCompositeOp = getSpecConstantComposite(id)) {
+    auto referenceOfOp = opBuilder.create<spirv::ReferenceOfOp>(
+        unknownLoc, constCompositeOp.type(),
+        opBuilder.getSymbolRefAttr(constCompositeOp.getOperation()));
     return referenceOfOp.reference();
   }
   if (auto undef = getUndefType(id)) {
