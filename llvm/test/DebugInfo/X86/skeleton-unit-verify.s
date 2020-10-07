@@ -3,6 +3,8 @@
 
 # CHECK: Verifying .debug_abbrev...
 # CHECK-NEXT: Verifying .debug_info Unit Header Chain...
+# CHECK-NEXT: warning: DW_TAG_skeleton_unit has DW_CHILDREN_yes but DIE has no children
+# CHECK-NEXT: DW_TAG_skeleton_unit
 # CHECK-NEXT: error: Skeleton compilation unit has children.
 # CHECK-NEXT: Verifying .debug_info references...
 # CHECK-NEXT: Verifying .debug_types Unit Header Chain...
@@ -30,7 +32,7 @@
         .byte   8                       # Address Size (in bytes)
         .long   .debug_abbrev           # Offset Into Abbrev. Section
         .quad   -6573227469967412476
-        .byte   1                       # Abbrev [1] 
+        .byte   1                       # Abbrev [1]
         .byte   0
 .Lcu_end0:
         .long   .Lcu_end1-.Lcu_start1 # Length of Unit
