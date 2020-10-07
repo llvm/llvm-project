@@ -5886,10 +5886,11 @@ CompilerType SwiftASTContext::GetPointerType(opaque_compiler_type_t type) {
   VALID_OR_RETURN(CompilerType());
 
   if (type) {
-    swift::Type swift_type(GetSwiftType({this, type}));
-    const swift::TypeKind type_kind = swift_type->getKind();
-    if (type_kind == swift::TypeKind::BuiltinRawPointer)
-      return ToCompilerType({swift_type});
+    auto swift_type = GetSwiftType({this, type});
+    auto pointer_type =
+        swift_type->wrapInPointer(swift::PointerTypeKind::PTK_UnsafePointer);
+    if (pointer_type)
+      return ToCompilerType(pointer_type);
   }
   return {};
 }
