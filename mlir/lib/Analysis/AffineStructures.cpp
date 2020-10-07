@@ -1056,6 +1056,33 @@ FlatAffineConstraints::findIntegerSample() const {
   return Simplex(*this).findIntegerSample();
 }
 
+/// Helper to evaluate an affine expression at a point.
+/// The expression is a list of coefficients for the dimensions followed by the
+/// constant term.
+static int64_t valueAt(ArrayRef<int64_t> expr, ArrayRef<int64_t> point) {
+  assert(expr.size() == 1 + point.size() &&
+         "Dimensionalities of point and expresion don't match!");
+  int64_t value = expr.back();
+  for (unsigned i = 0; i < point.size(); ++i)
+    value += expr[i] * point[i];
+  return value;
+}
+
+/// A point satisfies an equality iff the value of the equality at the
+/// expression is zero, and it satisfies an inequality iff the value of the
+/// inequality at that point is non-negative.
+bool FlatAffineConstraints::containsPoint(ArrayRef<int64_t> point) const {
+  for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
+    if (valueAt(getEquality(i), point) != 0)
+      return false;
+  }
+  for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
+    if (valueAt(getInequality(i), point) < 0)
+      return false;
+  }
+  return true;
+}
+
 /// Tightens inequalities given that we are dealing with integer spaces. This is
 /// analogous to the GCD test but applied to inequalities. The constant term can
 /// be reduced to the preceding multiple of the GCD of the coefficients, i.e.,
