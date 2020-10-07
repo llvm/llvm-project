@@ -6605,6 +6605,7 @@ void AAMemoryLocationImpl::categorizePtrValue(
   auto VisitValueCB = [&](Value &V, const Instruction *,
                           AAMemoryLocation::StateType &T,
                           bool Stripped) -> bool {
+    // TODO: recognize the TBAA used for constant accesses.
     MemoryLocationsKind MLK = NO_LOCATIONS;
     assert(!isa<GEPOperator>(V) && "GEPs should have been stripped.");
     if (isa<UndefValue>(V))
@@ -6615,6 +6616,13 @@ void AAMemoryLocationImpl::categorizePtrValue(
       else
         MLK = NO_ARGUMENT_MEM;
     } else if (auto *GV = dyn_cast<GlobalValue>(&V)) {
+      // Reading constant memory is not treated as a read "effect" by the
+      // function attr pass so we won't neither. Constants defined by TBAA are
+      // similar. (We know we do not write it because it is constant.)
+      if (auto *GVar = dyn_cast<GlobalVariable>(GV))
+        if (GVar->isConstant())
+          return true;
+
       if (GV->hasLocalLinkage())
         MLK = NO_GLOBAL_INTERNAL_MEM;
       else
