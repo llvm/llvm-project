@@ -7,6 +7,7 @@ include(CheckLibraryExists)
 
 set(CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
 check_symbol_exists(ppoll poll.h HAVE_PPOLL)
+check_symbol_exists(ptsname_r stdlib.h HAVE_PTSNAME_R)
 set(CMAKE_REQUIRED_DEFINITIONS)
 check_symbol_exists(sigaction signal.h HAVE_SIGACTION)
 check_cxx_symbol_exists(accept4 "sys/socket.h" HAVE_ACCEPT4)

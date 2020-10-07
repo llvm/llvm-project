@@ -380,8 +380,7 @@ Status ProcessFreeBSD::DoLaunch(Module *module,
   FileSpec stdout_file_spec{};
   FileSpec stderr_file_spec{};
 
-  const FileSpec dbg_pts_file_spec{
-      launch_info.GetPTY().GetSecondaryName(NULL, 0)};
+  const FileSpec dbg_pts_file_spec{launch_info.GetPTY().GetSecondaryName()};
 
   file_action = launch_info.GetFileActionForFD(STDIN_FILENO);
   stdin_file_spec =

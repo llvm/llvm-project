@@ -407,25 +407,21 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
         const int master_fd = launch_info.GetPTY().GetPrimaryFileDescriptor();
         if (master_fd != PseudoTerminal::invalid_fd) {
           // Check in case our file action open wants to open the secondary
-          const char *secondary_path =
-              launch_info.GetPTY().GetSecondaryName(NULL, 0);
-          if (secondary_path) {
-            FileSpec secondary_spec(secondary_path);
-            if (file_spec == secondary_spec) {
-              int secondary_fd =
-                  launch_info.GetPTY().GetSecondaryFileDescriptor();
-              if (secondary_fd == PseudoTerminal::invalid_fd)
-                secondary_fd =
-                    launch_info.GetPTY().OpenSecondary(O_RDWR, nullptr, 0);
-              if (secondary_fd == PseudoTerminal::invalid_fd) {
-                error.SetErrorStringWithFormat(
-                    "unable to open secondary pty '%s'", secondary_path);
-                return error; // Failure
-              }
-              [options setValue:[NSNumber numberWithInteger:secondary_fd]
-                         forKey:key];
-              return error; // Success
+          FileSpec secondary_spec(launch_info.GetPTY().GetSecondaryName());
+          if (file_spec == secondary_spec) {
+            int secondary_fd =
+                launch_info.GetPTY().GetSecondaryFileDescriptor();
+            if (secondary_fd == PseudoTerminal::invalid_fd)
+              secondary_fd =
+                  launch_info.GetPTY().OpenSecondary(O_RDWR, nullptr, 0);
+            if (secondary_fd == PseudoTerminal::invalid_fd) {
+              error.SetErrorStringWithFormat(
+                  "unable to open secondary pty '%s'", secondary_path);
+              return error; // Failure
             }
+            [options setValue:[NSNumber numberWithInteger:secondary_fd]
+                       forKey:key];
+            return error; // Success
           }
         }
         Status posix_error;
