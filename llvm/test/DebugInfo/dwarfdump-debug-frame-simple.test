@@ -1,5 +1,6 @@
 ; RUN: llvm-dwarfdump %p/Inputs/dwarfdump-test-32bit.elf.o --debug-frame | FileCheck %s -check-prefix FRAMES
 ; Note: the input file was generated from Inputs/dwarfdump-test-32bit.elf.c
+; REQUIRES: x86-registered-target
 
 ; FRAMES: .debug_frame
 
