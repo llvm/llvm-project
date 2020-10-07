@@ -143,7 +143,7 @@ v_writelane_b32 v1, s2, 4
 v_writelane_b32 v2, 1, s4
 
 // SICI: v_writelane_b32 v255, 0xaf123456, 2 ; encoding: [0xff,0x04,0xff,0x05,0x56,0x34,0x12,0xaf]
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 v_writelane_b32 v255, 0xaf123456, 2
 
 // SICI: v_add_f32_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x06]
