@@ -97,7 +97,7 @@ define i32 @test_explicit_pred(i64 %len) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP37]], [[TMP36]]
 ; CHECK-NEXT:    [[BIN_RDX19:%.*]] = add <4 x i32> [[TMP38]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX20:%.*]] = add <4 x i32> [[TMP39]], [[BIN_RDX19]]
-; CHECK-NEXT:    [[TMP41:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX20]])
+; CHECK-NEXT:    [[TMP41:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX20]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -263,7 +263,7 @@ define i32 @test_explicit_pred_generic(i64 %len, i1* %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP81]], [[TMP80]]
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[TMP82]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[TMP83]], [[BIN_RDX10]]
-; CHECK-NEXT:    [[TMP85:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
+; CHECK-NEXT:    [[TMP85:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -450,7 +450,7 @@ define i32 @test_invariant_address(i64 %len, i1* %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP101]], [[TMP100]]
 ; CHECK-NEXT:    [[BIN_RDX7:%.*]] = add <4 x i32> [[TMP102]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX8:%.*]] = add <4 x i32> [[TMP103]], [[BIN_RDX7]]
-; CHECK-NEXT:    [[TMP105:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX8]])
+; CHECK-NEXT:    [[TMP105:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX8]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -776,7 +776,7 @@ define i32 @test_step_narrower_than_access(i64 %len, i1* %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP181]], [[TMP180]]
 ; CHECK-NEXT:    [[BIN_RDX37:%.*]] = add <4 x i32> [[TMP182]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX38:%.*]] = add <4 x i32> [[TMP183]], [[BIN_RDX37]]
-; CHECK-NEXT:    [[TMP185:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX38]])
+; CHECK-NEXT:    [[TMP185:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX38]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -953,7 +953,7 @@ define i32 @test_max_trip_count(i64 %len, i1* %test_base, i64 %n) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP82]], [[TMP81]]
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[TMP83]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[TMP84]], [[BIN_RDX10]]
-; CHECK-NEXT:    [[TMP86:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
+; CHECK-NEXT:    [[TMP86:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -1126,7 +1126,7 @@ define i32 @test_non_zero_start(i64 %len, i1* %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP81]], [[TMP80]]
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[TMP82]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[TMP83]], [[BIN_RDX10]]
-; CHECK-NEXT:    [[TMP85:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
+; CHECK-NEXT:    [[TMP85:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 3072, 3072
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -1477,7 +1477,7 @@ define i32 @test_non_unit_stride(i64 %len, i1* %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP149]], [[TMP148]]
 ; CHECK-NEXT:    [[BIN_RDX37:%.*]] = add <4 x i32> [[TMP150]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX38:%.*]] = add <4 x i32> [[TMP151]], [[BIN_RDX37]]
-; CHECK-NEXT:    [[TMP153:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX38]])
+; CHECK-NEXT:    [[TMP153:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX38]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 2048, 2048
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -1644,7 +1644,7 @@ define i32 @neg_off_by_many(i64 %len, i1* %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP81]], [[TMP80]]
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[TMP82]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[TMP83]], [[BIN_RDX10]]
-; CHECK-NEXT:    [[TMP85:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
+; CHECK-NEXT:    [[TMP85:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -1811,7 +1811,7 @@ define i32 @neg_off_by_one_iteration(i64 %len, i1* %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP81]], [[TMP80]]
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[TMP82]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[TMP83]], [[BIN_RDX10]]
-; CHECK-NEXT:    [[TMP85:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
+; CHECK-NEXT:    [[TMP85:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -1978,7 +1978,7 @@ define i32 @neg_off_by_one_byte(i64 %len, i1* %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP81]], [[TMP80]]
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[TMP82]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[TMP83]], [[BIN_RDX10]]
-; CHECK-NEXT:    [[TMP85:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
+; CHECK-NEXT:    [[TMP85:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

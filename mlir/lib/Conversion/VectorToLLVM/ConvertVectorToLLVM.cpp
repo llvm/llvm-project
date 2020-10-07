@@ -564,33 +564,33 @@ public:
     if (eltType.isIntOrIndex()) {
       // Integer reductions: add/mul/min/max/and/or/xor.
       if (kind == "add")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_add>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_add>(
             op, llvmType, operands[0]);
       else if (kind == "mul")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_mul>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_mul>(
             op, llvmType, operands[0]);
       else if (kind == "min" &&
                (eltType.isIndex() || eltType.isUnsignedInteger()))
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_umin>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_umin>(
             op, llvmType, operands[0]);
       else if (kind == "min")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_smin>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_smin>(
             op, llvmType, operands[0]);
       else if (kind == "max" &&
                (eltType.isIndex() || eltType.isUnsignedInteger()))
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_umax>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_umax>(
             op, llvmType, operands[0]);
       else if (kind == "max")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_smax>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_smax>(
             op, llvmType, operands[0]);
       else if (kind == "and")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_and>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_and>(
             op, llvmType, operands[0]);
       else if (kind == "or")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_or>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_or>(
             op, llvmType, operands[0]);
       else if (kind == "xor")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_xor>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_xor>(
             op, llvmType, operands[0]);
       else
         return failure();
@@ -604,7 +604,7 @@ public:
                                         : rewriter.create<LLVM::ConstantOp>(
                                               op->getLoc(), llvmType,
                                               rewriter.getZeroAttr(eltType));
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_v2_fadd>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fadd>(
             op, llvmType, acc, operands[0],
             rewriter.getBoolAttr(reassociateFPReductions));
       } else if (kind == "mul") {
@@ -614,14 +614,14 @@ public:
                         : rewriter.create<LLVM::ConstantOp>(
                               op->getLoc(), llvmType,
                               rewriter.getFloatAttr(eltType, 1.0));
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_v2_fmul>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fmul>(
             op, llvmType, acc, operands[0],
             rewriter.getBoolAttr(reassociateFPReductions));
       } else if (kind == "min")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_fmin>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fmin>(
             op, llvmType, operands[0]);
       else if (kind == "max")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_fmax>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fmax>(
             op, llvmType, operands[0]);
       else
         return failure();

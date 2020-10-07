@@ -291,14 +291,14 @@ class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
 
 // LLVM vector reduction over a single vector.
 class LLVM_VectorReduction<string mnem>
-    : LLVM_OneResultIntrOp<"experimental.vector.reduce." # mnem,
+    : LLVM_OneResultIntrOp<"vector.reduce." # mnem,
                            [], [0], [NoSideEffect]>,
       Arguments<(ins LLVM_Type)>;
 
 // LLVM vector reduction over a single vector, with an initial value,
 // and with permission to reassociate the reduction operations.
-class LLVM_VectorReductionV2<string mnem>
-    : LLVM_OpBase<LLVM_Dialect, "intr.experimental.vector.reduce.v2." # mnem,
+class LLVM_VectorReductionAcc<string mnem>
+    : LLVM_OpBase<LLVM_Dialect, "intr.vector.reduce." # mnem,
                   [NoSideEffect]>,
       Results<(outs LLVM_Type:$res)>,
       Arguments<(ins LLVM_Type, LLVM_Type,
@@ -307,7 +307,7 @@ class LLVM_VectorReductionV2<string mnem>
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::Function *fn = llvm::Intrinsic::getDeclaration(
         module,
-        llvm::Intrinsic::experimental_vector_reduce_v2_}] # mnem # [{,
+        llvm::Intrinsic::vector_reduce_}] # mnem # [{,
         { }] # StrJoin<!listconcat(
             ListIntSubst<LLVM_IntrPatterns.result, [0]>.lst,
             ListIntSubst<LLVM_IntrPatterns.operand, [1]>.lst)>.result # [{
