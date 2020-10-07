@@ -691,11 +691,14 @@ public:
   /// Return the destination type, as a convenience
   Type* getDestTy() const { return getType(); }
 
-  /// This method can be used to determine if a cast from S to DstTy using
+  /// This method can be used to determine if a cast from SrcTy to DstTy using
   /// Opcode op is valid or not.
   /// @returns true iff the proposed cast is valid.
   /// Determine if a cast is valid without creating one.
-  static bool castIsValid(Instruction::CastOps op, Value *S, Type *DstTy);
+  static bool castIsValid(Instruction::CastOps op, Type *SrcTy, Type *DstTy);
+  static bool castIsValid(Instruction::CastOps op, Value *S, Type *DstTy) {
+    return castIsValid(op, S->getType(), DstTy);
+  }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
