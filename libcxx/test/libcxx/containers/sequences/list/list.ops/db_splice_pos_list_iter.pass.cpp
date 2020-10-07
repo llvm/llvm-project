@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Can't test the system lib because this test enables debug mode
-// UNSUPPORTED: with_system_cxx_lib=macosx
-
 // <list>
 
 // void splice(const_iterator position, list<T,Allocator>& x, iterator i);
+
+// UNSUPPORTED: libcxx-no-debug-mode
 
 #define _LIBCPP_DEBUG 1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
