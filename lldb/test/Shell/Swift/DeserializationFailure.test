@@ -1,4 +1,5 @@
 # REQUIRES: system-darwin
+# REQUIRES: swift
 # Tests that error messages from deserializing Swift modules are
 # printed to the error stream. Architecturally it is not possible to
 # write this as a dotest.py test.

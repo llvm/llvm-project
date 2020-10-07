@@ -1,4 +1,5 @@
 // Basic sanity checking of the REPL.
+// REQUIRES: swift
 
 // RUN: %lldb --repl --repl-language swift | FileCheck %s --check-prefix=SWIFT
 // SWIFT: Welcome to {{.*}}Swift

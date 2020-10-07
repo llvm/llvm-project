@@ -1,6 +1,7 @@
 # Test that reproducers can deal with .swiftinterface files.
 
 # REQUIRES: system-darwin
+# REQUIRES: swift
 #
 # rdar://problem/55564275
 # XFAIL: *

@@ -1,5 +1,6 @@
 # Test that error messages from constructing ClangImporter
 # are surfaced to the user.
+# REQUIRES: swift
 
 # RUN: rm -rf %t && mkdir %t && cd %t
 # RUN: cp %p/../../API/lang/swift/deserialization_failure/Inputs/main.swift %t/main.swift
