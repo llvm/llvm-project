@@ -21,40 +21,44 @@ case "${BUILDER}" in
 generic-cxx03)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --param=std=c++03")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake")
 ;;
 generic-cxx11)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --param=std=c++11")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake")
 ;;
 generic-cxx14)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --param=std=c++14")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx14.cmake")
 ;;
 generic-cxx17)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --param=std=c++17")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx17.cmake")
 ;;
 generic-cxx2a)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --param=std=c++2a")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2a.cmake")
 ;;
 generic-noexceptions)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
-    args+=("-DLIBCXX_ENABLE_EXCEPTIONS=OFF")
-    args+=("-DLIBCXXABI_ENABLE_EXCEPTIONS=OFF")
+    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake")
 ;;
 generic-32bit)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
-    args+=("-DLLVM_BUILD_32_BITS=ON")
+    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-32bits.cmake")
 ;;
 generic-gcc)
     export CC=gcc
@@ -66,27 +70,26 @@ generic-gcc)
 generic-asan)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_USE_SANITIZER=Address")
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-asan.cmake")
 ;;
 generic-msan)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_USE_SANITIZER=MemoryWithOrigins")
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-msan.cmake")
 ;;
 generic-tsan)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_USE_SANITIZER=Thread")
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-tsan.cmake")
 ;;
 generic-ubsan)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_USE_SANITIZER=Undefined")
-    args+=("-DLIBCXX_ABI_UNSTABLE=ON")
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-ubsan.cmake")
 ;;
 generic-with_llvm_unwinder)
     export CC=clang
@@ -98,15 +101,13 @@ generic-singlethreaded)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
-    args+=("-DLIBCXX_ENABLE_THREADS=OFF")
-    args+=("-DLIBCXXABI_ENABLE_THREADS=OFF")
-    args+=("-DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF")
+    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-singlethreaded.cmake")
 ;;
 generic-nodebug)
     export CC=clang
     export CXX=clang++
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
-    args+=("-DLIBCXX_ENABLE_DEBUG_MODE=OFF")
+    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-nodebug.cmake")
 ;;
 x86_64-apple-system)
     export CC=clang
