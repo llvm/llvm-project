@@ -141,7 +141,7 @@ private:
   const DataLayout *DL = nullptr;
   Module *M = nullptr;
 
-  std::map<std::string, GlobalVariable *> GEPGlobals;
+  static std::map<std::string, GlobalVariable *> GEPGlobals;
   // A map to link preserve_*_access_index instrinsic calls.
   std::map<CallInst *, std::pair<CallInst *, CallInfo>> AIChain;
   // A map to hold all the base preserve_*_access_index instrinsic calls.
@@ -178,6 +178,8 @@ private:
   uint64_t getConstant(const Value *IndexValue);
   bool transformGEPChain(CallInst *Call, CallInfo &CInfo);
 };
+
+std::map<std::string, GlobalVariable *> BPFAbstractMemberAccess::GEPGlobals;
 
 class BPFAbstractMemberAccessLegacyPass final : public FunctionPass {
   BPFTargetMachine *TM;
