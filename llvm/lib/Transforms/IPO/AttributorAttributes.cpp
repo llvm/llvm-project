@@ -3848,9 +3848,23 @@ struct AAAlignFloating : AAAlignImpl {
                             AAAlign::StateType &T, bool Stripped) -> bool {
       const auto &AA = A.getAAFor<AAAlign>(*this, IRPosition::value(V));
       if (!Stripped && this == &AA) {
+        int64_t Offset;
+        unsigned Alignment = 1;
+        if (const Value *Base =
+                GetPointerBaseWithConstantOffset(&V, Offset, DL)) {
+          Align PA = Base->getPointerAlignment(DL);
+          // BasePointerAddr + Offset = Alignment * Q for some integer Q.
+          // So we can say that the maximum power of two which is a divisor of
+          // gcd(Offset, Alignment) is an alignment.
+
+          uint32_t gcd = greatestCommonDivisor(uint32_t(abs((int32_t)Offset)),
+                                               uint32_t(PA.value()));
+          Alignment = llvm::PowerOf2Floor(gcd);
+        } else {
+          Alignment = V.getPointerAlignment(DL).value();
+        }
         // Use only IR information if we did not strip anything.
-        Align PA = V.getPointerAlignment(DL);
-        T.takeKnownMaximum(PA.value());
+        T.takeKnownMaximum(Alignment);
         T.indicatePessimisticFixpoint();
       } else {
         // Use abstract attribute information.
