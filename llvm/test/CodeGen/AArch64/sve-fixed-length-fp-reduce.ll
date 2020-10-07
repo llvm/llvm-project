@@ -59,6 +59,15 @@ define half @fmaxv_v32f16(<32 x half>* %a) #0 {
 ; VBITS_GE_512-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: fmaxnmv h0, [[PG]], [[OP]].h
 ; VBITS_GE_512-NEXT: ret
+
+; Ensure sensible type legalisation.
+; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
+; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: ld1h { [[LO:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1h { [[HI:z[0-9]+]].h }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: fmaxnm [[MAX:z[0-9]+]].h, [[PG]]/m, [[LO]].h, [[HI]].h
+; VBITS_EQ_256-DAG: fmaxnmv h0, [[PG]], [[MAX]].h
+; VBITS_EQ_256-NEXT: ret
   %op = load <32 x half>, <32 x half>* %a
   %res = call half @llvm.vector.reduce.fmax.v32f16(<32 x half> %op)
   ret half %res
@@ -121,6 +130,15 @@ define float @fmaxv_v16f32(<16 x float>* %a) #0 {
 ; VBITS_GE_512-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: fmaxnmv s0, [[PG]], [[OP]].s
 ; VBITS_GE_512-NEXT: ret
+
+; Ensure sensible type legalisation.
+; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
+; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: ld1w { [[LO:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1w { [[HI:z[0-9]+]].s }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: fmaxnm [[MAX:z[0-9]+]].s, [[PG]]/m, [[LO]].s, [[HI]].s
+; VBITS_EQ_256-DAG: fmaxnmv s0, [[PG]], [[MAX]].s
+; VBITS_EQ_256-NEXT: ret
   %op = load <16 x float>, <16 x float>* %a
   %res = call float @llvm.vector.reduce.fmax.v16f32(<16 x float> %op)
   ret float %res
@@ -183,6 +201,15 @@ define double @fmaxv_v8f64(<8 x double>* %a) #0 {
 ; VBITS_GE_512-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: fmaxnmv d0, [[PG]], [[OP]].d
 ; VBITS_GE_512-NEXT: ret
+
+; Ensure sensible type legalisation.
+; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
+; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: ld1d { [[LO:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1d { [[HI:z[0-9]+]].d }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: fmaxnm [[MAX:z[0-9]+]].d, [[PG]]/m, [[LO]].d, [[HI]].d
+; VBITS_EQ_256-DAG: fmaxnmv d0, [[PG]], [[MAX]].d
+; VBITS_EQ_256-NEXT: ret
   %op = load <8 x double>, <8 x double>* %a
   %res = call double @llvm.vector.reduce.fmax.v8f64(<8 x double> %op)
   ret double %res
@@ -249,6 +276,15 @@ define half @fminv_v32f16(<32 x half>* %a) #0 {
 ; VBITS_GE_512-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: fminnmv h0, [[PG]], [[OP]].h
 ; VBITS_GE_512-NEXT: ret
+
+; Ensure sensible type legalisation.
+; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
+; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: ld1h { [[LO:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1h { [[HI:z[0-9]+]].h }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: fminnm [[MIN:z[0-9]+]].h, [[PG]]/m, [[LO]].h, [[HI]].h
+; VBITS_EQ_256-DAG: fminnmv h0, [[PG]], [[MIN]].h
+; VBITS_EQ_256-NEXT: ret
   %op = load <32 x half>, <32 x half>* %a
   %res = call half @llvm.vector.reduce.fmin.v32f16(<32 x half> %op)
   ret half %res
@@ -311,6 +347,15 @@ define float @fminv_v16f32(<16 x float>* %a) #0 {
 ; VBITS_GE_512-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: fminnmv s0, [[PG]], [[OP]].s
 ; VBITS_GE_512-NEXT: ret
+
+; Ensure sensible type legalisation.
+; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
+; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: ld1w { [[LO:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1w { [[HI:z[0-9]+]].s }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: fminnm [[MIN:z[0-9]+]].s, [[PG]]/m, [[LO]].s, [[HI]].s
+; VBITS_EQ_256-DAG: fminnmv s0, [[PG]], [[MIN]].s
+; VBITS_EQ_256-NEXT: ret
   %op = load <16 x float>, <16 x float>* %a
   %res = call float @llvm.vector.reduce.fmin.v16f32(<16 x float> %op)
   ret float %res
@@ -373,6 +418,15 @@ define double @fminv_v8f64(<8 x double>* %a) #0 {
 ; VBITS_GE_512-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: fminnmv d0, [[PG]], [[OP]].d
 ; VBITS_GE_512-NEXT: ret
+
+; Ensure sensible type legalisation.
+; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
+; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: ld1d { [[LO:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1d { [[HI:z[0-9]+]].d }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: fminnm [[MIN:z[0-9]+]].d, [[PG]]/m, [[LO]].d, [[HI]].d
+; VBITS_EQ_256-DAG: fminnmv d0, [[PG]], [[MIN]].d
+; VBITS_EQ_256-NEXT: ret
   %op = load <8 x double>, <8 x double>* %a
   %res = call double @llvm.vector.reduce.fmin.v8f64(<8 x double> %op)
   ret double %res
