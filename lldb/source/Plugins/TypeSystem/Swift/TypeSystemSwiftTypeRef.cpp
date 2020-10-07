@@ -1904,6 +1904,10 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
     }
     return RemangleAsType(dem, tuple);
   };
+
+  // The signature of VALIDATE_AND_RETURN doesn't support this function, below
+  // is an inlined function-specific variation.
+#ifndef NDEBUG
   {
     auto result = impl();
     if (!m_swift_ast_context)
@@ -1911,12 +1915,14 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
     bool equivalent =
         Equivalent(result, m_swift_ast_context->CreateTupleType(elements));
     if (!equivalent)
-      llvm::dbgs() << "failing tuple type \n";
+      llvm::dbgs() << "failing tuple type\n";
     assert(equivalent &&
            "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
     return result;
   }
-//  VALIDATE_AND_RETURN(impl, CreateTupleType, ..);
+#else
+  return impl();
+#endif
 }
 
 void TypeSystemSwiftTypeRef::DumpTypeDescription(
