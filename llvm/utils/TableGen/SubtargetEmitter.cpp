@@ -1700,7 +1700,8 @@ void SubtargetEmitter::ParseFeaturesFunction(raw_ostream &OS,
   OS << "Subtarget::ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, "
      << "StringRef FS) {\n"
      << "  LLVM_DEBUG(dbgs() << \"\\nFeatures:\" << FS);\n"
-     << "  LLVM_DEBUG(dbgs() << \"\\nCPU:\" << CPU << \"\\n\\n\");\n";
+     << "  LLVM_DEBUG(dbgs() << \"\\nCPU:\" << CPU);\n"
+     << "  LLVM_DEBUG(dbgs() << \"\\nTuneCPU:\" << TuneCPU << \"\\n\\n\");\n";
 
   if (Features.empty()) {
     OS << "}\n";
