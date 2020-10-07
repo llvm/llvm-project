@@ -730,8 +730,8 @@ TEST(RenameTest, PrepareRename) {
   runAddDocument(Server, FooHPath, FooH.code());
   runAddDocument(Server, FooCCPath, FooCC.code());
 
-  auto Results =
-      runPrepareRename(Server, FooCCPath, FooCC.point(), {/*CrossFile=*/true});
+  auto Results = runPrepareRename(Server, FooCCPath, FooCC.point(),
+                                  /*NewName=*/llvm::None, {/*CrossFile=*/true});
   // verify that for multi-file rename, we only return main-file occurrences.
   ASSERT_TRUE(bool(Results)) << Results.takeError();
   // We don't know the result is complete in prepareRename (passing a nullptr
@@ -740,9 +740,17 @@ TEST(RenameTest, PrepareRename) {
   EXPECT_THAT(FooCC.ranges(),
               testing::UnorderedElementsAreArray(Results->LocalChanges));
 
-  // single-file rename on global symbols, we should report an error.
+  // verify name validation.
   Results =
-      runPrepareRename(Server, FooCCPath, FooCC.point(), {/*CrossFile=*/false});
+      runPrepareRename(Server, FooCCPath, FooCC.point(),
+                       /*NewName=*/std::string("int"), {/*CrossFile=*/true});
+  EXPECT_FALSE(Results);
+  EXPECT_THAT(llvm::toString(Results.takeError()),
+              testing::HasSubstr("keyword"));
+
+  // single-file rename on global symbols, we should report an error.
+  Results = runPrepareRename(Server, FooCCPath, FooCC.point(),
+                             /*NewName=*/llvm::None, {/*CrossFile=*/false});
   EXPECT_FALSE(Results);
   EXPECT_THAT(llvm::toString(Results.takeError()),
               testing::HasSubstr("is used outside"));

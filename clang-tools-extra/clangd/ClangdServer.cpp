@@ -399,9 +399,11 @@ void ClangdServer::formatOnType(PathRef File, llvm::StringRef Code,
 }
 
 void ClangdServer::prepareRename(PathRef File, Position Pos,
+                                 llvm::Optional<std::string> NewName,
                                  const RenameOptions &RenameOpts,
                                  Callback<RenameResult> CB) {
-  auto Action = [Pos, File = File.str(), CB = std::move(CB), RenameOpts,
+  auto Action = [Pos, File = File.str(), CB = std::move(CB),
+                 NewName = std::move(NewName), RenameOpts,
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
@@ -413,7 +415,7 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
     //    the cost, thus the result may be incomplete as it only contains
     //    main-file occurrences;
     auto Results = clangd::rename(
-        {Pos, /*NewName=*/"__clangd_rename_dummy", InpAST->AST, File,
+        {Pos, NewName.getValueOr("__clangd_rename_dummy"), InpAST->AST, File,
          RenameOpts.AllowCrossFile ? nullptr : Index, RenameOpts});
     if (!Results) {
       // LSP says to return null on failure, but that will result in a generic
