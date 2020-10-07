@@ -92,7 +92,9 @@ MlirContext mlirContextCreate();
 int mlirContextEqual(MlirContext ctx1, MlirContext ctx2);
 
 /** Checks whether a context is null. */
-inline int mlirContextIsNull(MlirContext context) { return !context.ptr; }
+static inline int mlirContextIsNull(MlirContext context) {
+  return !context.ptr;
+}
 
 /** Takes an MLIR context owned by the caller and destroys it. */
 void mlirContextDestroy(MlirContext context);
@@ -127,7 +129,9 @@ MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
 MlirContext mlirDialectGetContext(MlirDialect dialect);
 
 /** Checks if the dialect is null. */
-int mlirDialectIsNull(MlirDialect dialect);
+static inline int mlirDialectIsNull(MlirDialect dialect) {
+  return !dialect.ptr;
+}
 
 /** Checks if two dialects that belong to the same context are equal. Dialects
  * from different contexts will not compare equal. */
@@ -171,7 +175,7 @@ MlirModule mlirModuleCreateParse(MlirContext context, const char *module);
 MlirContext mlirModuleGetContext(MlirModule module);
 
 /** Checks whether a module is null. */
-inline int mlirModuleIsNull(MlirModule module) { return !module.ptr; }
+static inline int mlirModuleIsNull(MlirModule module) { return !module.ptr; }
 
 /** Takes a module owned by the caller and deletes it. */
 void mlirModuleDestroy(MlirModule module);
@@ -235,7 +239,7 @@ MlirOperation mlirOperationCreate(const MlirOperationState *state);
 void mlirOperationDestroy(MlirOperation op);
 
 /** Checks whether the underlying operation is null. */
-int mlirOperationIsNull(MlirOperation op);
+static inline int mlirOperationIsNull(MlirOperation op) { return !op.ptr; }
 
 /** Returns the number of regions attached to the given operation. */
 intptr_t mlirOperationGetNumRegions(MlirOperation op);
@@ -275,6 +279,15 @@ MlirNamedAttribute mlirOperationGetAttribute(MlirOperation op, intptr_t pos);
 MlirAttribute mlirOperationGetAttributeByName(MlirOperation op,
                                               const char *name);
 
+/** Sets an attribute by name, replacing the existing if it exists or
+ * adding a new one otherwise. */
+void mlirOperationSetAttributeByName(MlirOperation op, const char *name,
+                                     MlirAttribute attr);
+
+/** Removes an attribute by name. Returns 0 if the attribute was not found
+ * and !0 if removed. */
+int mlirOperationRemoveAttributeByName(MlirOperation op, const char *name);
+
 /** Prints an operation by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
  * several times with consecutive chunks of the string. */
@@ -295,7 +308,7 @@ MlirRegion mlirRegionCreate();
 void mlirRegionDestroy(MlirRegion region);
 
 /** Checks whether a region is null. */
-int mlirRegionIsNull(MlirRegion region);
+static inline int mlirRegionIsNull(MlirRegion region) { return !region.ptr; }
 
 /** Gets the first block in the region. */
 MlirBlock mlirRegionGetFirstBlock(MlirRegion region);
@@ -333,7 +346,7 @@ MlirBlock mlirBlockCreate(intptr_t nArgs, MlirType *args);
 void mlirBlockDestroy(MlirBlock block);
 
 /** Checks whether a block is null. */
-int mlirBlockIsNull(MlirBlock block);
+static inline int mlirBlockIsNull(MlirBlock block) { return !block.ptr; }
 
 /** Returns the block immediately following the given block in its parent
  * region. */
@@ -381,6 +394,9 @@ void mlirBlockPrint(MlirBlock block, MlirStringCallback callback,
 /* Value API.                                                                 */
 /*============================================================================*/
 
+/** Returns whether the value is null. */
+static inline int mlirValueIsNull(MlirValue value) { return !value.ptr; }
+
 /** Returns the type of the value. */
 MlirType mlirValueGetType(MlirValue value);
 
@@ -401,7 +417,7 @@ MlirType mlirTypeParseGet(MlirContext context, const char *type);
 MlirContext mlirTypeGetContext(MlirType type);
 
 /** Checks whether a type is null. */
-inline int mlirTypeIsNull(MlirType type) { return !type.ptr; }
+static inline int mlirTypeIsNull(MlirType type) { return !type.ptr; }
 
 /** Checks if two types are equal. */
 int mlirTypeEqual(MlirType t1, MlirType t2);
@@ -425,7 +441,7 @@ MlirAttribute mlirAttributeParseGet(MlirContext context, const char *attr);
 MlirContext mlirAttributeGetContext(MlirAttribute attribute);
 
 /** Checks whether an attribute is null. */
-inline int mlirAttributeIsNull(MlirAttribute attr) { return !attr.ptr; }
+static inline int mlirAttributeIsNull(MlirAttribute attr) { return !attr.ptr; }
 
 /** Checks if two attributes are equal. */
 int mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2);

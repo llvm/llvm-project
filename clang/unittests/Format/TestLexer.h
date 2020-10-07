@@ -55,7 +55,9 @@ inline std::string text(llvm::ArrayRef<FormatToken *> Tokens) {
 
 class TestLexer {
 public:
-  TestLexer() : SourceMgr("test.cpp", "") {}
+  TestLexer(FormatStyle Style = getLLVMStyle())
+      : Style(Style), SourceMgr("test.cpp", ""),
+        IdentTable(getFormattingLangOpts(Style)) {}
 
   TokenList lex(llvm::StringRef Code) {
     Buffers.push_back(
@@ -74,7 +76,7 @@ public:
     return Result[0];
   }
 
-  FormatStyle Style = getLLVMStyle();
+  FormatStyle Style;
   encoding::Encoding Encoding = encoding::Encoding_UTF8;
   std::vector<std::unique_ptr<llvm::MemoryBuffer>> Buffers;
   clang::SourceManagerForFile SourceMgr;

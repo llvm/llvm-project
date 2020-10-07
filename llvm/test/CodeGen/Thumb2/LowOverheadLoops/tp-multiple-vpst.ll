@@ -74,14 +74,14 @@ vector.body:                                      ; preds = %vector.body, %entry
   br i1 %8, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
-  %9 = call i32 @llvm.experimental.vector.reduce.smax.v4i32(<4 x i32> %7)
-  %10 = call i32 @llvm.experimental.vector.reduce.smin.v4i32(<4 x i32> %5)
+  %9 = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> %7)
+  %10 = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> %5)
   store i32 %10, i32* %minp, align 4
   ret i32 %9
 }
 
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32) #1
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>) #2
-declare i32 @llvm.experimental.vector.reduce.smin.v4i32(<4 x i32>) #3
-declare i32 @llvm.experimental.vector.reduce.smax.v4i32(<4 x i32>) #3
+declare i32 @llvm.vector.reduce.smin.v4i32(<4 x i32>) #3
+declare i32 @llvm.vector.reduce.smax.v4i32(<4 x i32>) #3
 

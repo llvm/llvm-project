@@ -23,6 +23,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -717,18 +718,42 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   }
   case 'e': {
     SmallVector<StringRef, 2> Groups;
-    static const Regex R("^experimental.vector.reduce.([a-z]+)\\.[fi][0-9]+");
+    static const Regex R("^experimental.vector.reduce.([a-z]+)\\.[a-z][0-9]+");
     if (R.match(Name, &Groups)) {
-      Intrinsic::ID ID = Intrinsic::not_intrinsic;
-      if (Groups[1] == "fadd")
-        ID = Intrinsic::experimental_vector_reduce_v2_fadd;
-      if (Groups[1] == "fmul")
-        ID = Intrinsic::experimental_vector_reduce_v2_fmul;
-
+      Intrinsic::ID ID;
+      ID = StringSwitch<Intrinsic::ID>(Groups[1])
+               .Case("add", Intrinsic::vector_reduce_add)
+               .Case("mul", Intrinsic::vector_reduce_mul)
+               .Case("and", Intrinsic::vector_reduce_and)
+               .Case("or", Intrinsic::vector_reduce_or)
+               .Case("xor", Intrinsic::vector_reduce_xor)
+               .Case("smax", Intrinsic::vector_reduce_smax)
+               .Case("smin", Intrinsic::vector_reduce_smin)
+               .Case("umax", Intrinsic::vector_reduce_umax)
+               .Case("umin", Intrinsic::vector_reduce_umin)
+               .Case("fmax", Intrinsic::vector_reduce_fmax)
+               .Case("fmin", Intrinsic::vector_reduce_fmin)
+               .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic) {
         rename(F);
         auto Args = F->getFunctionType()->params();
-        Type *Tys[] = {F->getFunctionType()->getReturnType(), Args[1]};
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, {Args[0]});
+        return true;
+      }
+    }
+    static const Regex R2(
+        "^experimental.vector.reduce.v2.([a-z]+)\\.[fi][0-9]+");
+    Groups.clear();
+    if (R2.match(Name, &Groups)) {
+      Intrinsic::ID ID = Intrinsic::not_intrinsic;
+      if (Groups[1] == "fadd")
+        ID = Intrinsic::vector_reduce_fadd;
+      if (Groups[1] == "fmul")
+        ID = Intrinsic::vector_reduce_fmul;
+      if (ID != Intrinsic::not_intrinsic) {
+        rename(F);
+        auto Args = F->getFunctionType()->params();
+        Type *Tys[] = {Args[1]};
         NewFn = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
         return true;
       }
@@ -3619,28 +3644,6 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
   default: {
     DefaultCase();
     return;
-  }
-  case Intrinsic::experimental_vector_reduce_v2_fmul: {
-    SmallVector<Value *, 2> Args;
-    if (CI->isFast())
-      Args.push_back(ConstantFP::get(CI->getOperand(0)->getType(), 1.0));
-    else
-      Args.push_back(CI->getOperand(0));
-    Args.push_back(CI->getOperand(1));
-    NewCall = Builder.CreateCall(NewFn, Args);
-    cast<Instruction>(NewCall)->copyFastMathFlags(CI);
-    break;
-  }
-  case Intrinsic::experimental_vector_reduce_v2_fadd: {
-    SmallVector<Value *, 2> Args;
-    if (CI->isFast())
-      Args.push_back(Constant::getNullValue(CI->getOperand(0)->getType()));
-    else
-      Args.push_back(CI->getOperand(0));
-    Args.push_back(CI->getOperand(1));
-    NewCall = Builder.CreateCall(NewFn, Args);
-    cast<Instruction>(NewCall)->copyFastMathFlags(CI);
-    break;
   }
   case Intrinsic::arm_neon_vld1:
   case Intrinsic::arm_neon_vld2:

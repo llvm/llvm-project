@@ -90,6 +90,8 @@ void CanonicalIncludes::addSystemHeadersMapping(const LangOptions &Language) {
     static const auto *Symbols = new llvm::StringMap<llvm::StringRef>({
 #define SYMBOL(Name, NameSpace, Header) {#NameSpace #Name, #Header},
 #include "StdSymbolMap.inc"
+        // There are two std::move()s, this is by far the most common.
+        SYMBOL(move, std::, <utility>)
 #undef SYMBOL
     });
     StdSymbolMapping = Symbols;

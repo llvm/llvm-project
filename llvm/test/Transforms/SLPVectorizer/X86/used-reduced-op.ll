@@ -55,7 +55,7 @@ define void @n() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP38:%.*]] = icmp slt <4 x i32> [[TMP37]], zeroinitializer
 ; CHECK-NEXT:    [[TMP39:%.*]] = sub nsw <4 x i32> zeroinitializer, [[TMP37]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = select <4 x i1> [[TMP38]], <4 x i32> [[TMP39]], <4 x i32> [[TMP37]]
-; CHECK-NEXT:    [[TMP41:%.*]] = call i32 @llvm.experimental.vector.reduce.smin.v4i32(<4 x i32> [[TMP40]])
+; CHECK-NEXT:    [[TMP41:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[TMP40]])
 ; CHECK-NEXT:    [[TMP42:%.*]] = icmp slt i32 [[TMP41]], [[TMP32]]
 ; CHECK-NEXT:    [[TMP43:%.*]] = select i1 [[TMP42]], i32 [[TMP41]], i32 [[TMP32]]
 ; CHECK-NEXT:    [[TMP44:%.*]] = icmp slt i32 [[TMP43]], [[B_0]]

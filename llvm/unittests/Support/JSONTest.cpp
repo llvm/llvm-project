@@ -479,6 +479,7 @@ TEST(JSONTest, Stream) {
         J.arrayBegin();
         J.value(43);
         J.arrayEnd();
+        J.rawValue([](raw_ostream &OS) { OS << "'unverified\nraw value'"; });
       });
       J.comment("attribute");
       J.attributeBegin("bar");
@@ -492,7 +493,8 @@ TEST(JSONTest, Stream) {
   };
 
   const char *Plain =
-      R"(/*top* /level*/{"foo":[null,/*element*/42.5,[43]],/*attribute*/"bar":/*attribute value*/{},"baz":"xyz"})";
+      R"(/*top* /level*/{"foo":[null,/*element*/42.5,[43],'unverified
+raw value'],/*attribute*/"bar":/*attribute value*/{},"baz":"xyz"})";
   EXPECT_EQ(Plain, StreamStuff(0));
   const char *Pretty = R"(/* top* /level */
 {
@@ -502,7 +504,9 @@ TEST(JSONTest, Stream) {
     42.5,
     [
       43
-    ]
+    ],
+    'unverified
+raw value'
   ],
   /* attribute */
   "bar": /* attribute value */ {},
