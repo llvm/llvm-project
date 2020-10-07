@@ -557,11 +557,9 @@ void SymbolCollector::finish() {
   llvm::SmallString<256> QName;
   for (const auto &Entry : IncludeFiles)
     if (const Symbol *S = Symbols.find(Entry.first)) {
-      QName = S->Scope;
-      QName.append(S->Name);
-      if (auto Header = getIncludeHeader(QName, Entry.second)) {
+      if (auto Header = getIncludeHeader(*S, Entry.second)) {
         Symbol NewSym = *S;
-        NewSym.IncludeHeaders.push_back({*Header, 1});
+        NewSym.IncludeHeaders.push_back({std::move(*Header), 1});
         Symbols.insert(NewSym);
       }
     }
@@ -736,8 +734,8 @@ void SymbolCollector::addDefinition(const NamedDecl &ND,
 /// Gets a canonical include (URI of the header or <header> or "header") for
 /// header of \p FID (which should usually be the *expansion* file).
 /// Returns None if includes should not be inserted for this file.
-llvm::Optional<std::string>
-SymbolCollector::getIncludeHeader(llvm::StringRef QName, FileID FID) {
+llvm::Optional<std::string> SymbolCollector::getIncludeHeader(const Symbol &S,
+                                                              FileID FID) {
   const SourceManager &SM = ASTCtx->getSourceManager();
   const FileEntry *FE = SM.getFileEntryForID(FID);
   if (!FE || FE->getName().empty())
@@ -746,10 +744,18 @@ SymbolCollector::getIncludeHeader(llvm::StringRef QName, FileID FID) {
   // If a file is mapped by canonical headers, use that mapping, regardless
   // of whether it's an otherwise-good header (header guards etc).
   if (Opts.Includes) {
+    llvm::SmallString<256> QName = S.Scope;
+    QName.append(S.Name);
     llvm::StringRef Canonical = Opts.Includes->mapHeader(Filename, QName);
     // If we had a mapping, always use it.
-    if (Canonical.startswith("<") || Canonical.startswith("\""))
+    if (Canonical.startswith("<") || Canonical.startswith("\"")) {
+      // Hack: there are two std::move() overloads from different headers.
+      // CanonicalIncludes returns the common one-arg one from <utility>.
+      if (Canonical == "<utility>" && S.Name == "move" &&
+          S.Signature.contains(','))
+        Canonical = "<algorithm>";
       return Canonical.str();
+    }
     if (Canonical != Filename)
       return toURI(SM, Canonical, Opts);
   }
@@ -757,7 +763,7 @@ SymbolCollector::getIncludeHeader(llvm::StringRef QName, FileID FID) {
     // A .inc or .def file is often included into a real header to define
     // symbols (e.g. LLVM tablegen files).
     if (Filename.endswith(".inc") || Filename.endswith(".def"))
-      return getIncludeHeader(QName, SM.getFileID(SM.getIncludeLoc(FID)));
+      return getIncludeHeader(S, SM.getFileID(SM.getIncludeLoc(FID)));
     // Conservatively refuse to insert #includes to files without guards.
     return llvm::None;
   }
