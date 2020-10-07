@@ -182,6 +182,22 @@ TEST_F(MacroExpanderTest, SingleExpansion) {
   EXPECT_ATTRIBUTES(Result, Attributes);
 }
 
+TEST_F(MacroExpanderTest, UnderstandsCppTokens) {
+  auto Macros = create({"A(T,name)=T name = 0;"});
+  auto *A = Lex.id("A");
+  auto Args = lexArgs({"const int", "x"});
+  auto Result = uneof(Macros->expand(A, Args));
+  std::vector<MacroAttributes> Attributes = {
+      {tok::kw_const, MR_ExpandedArg, 1, 0, {A}},
+      {tok::kw_int, MR_ExpandedArg, 0, 0, {A}},
+      {tok::identifier, MR_ExpandedArg, 0, 0, {A}},
+      {tok::equal, MR_Hidden, 0, 0, {A}},
+      {tok::numeric_constant, MR_Hidden, 0, 0, {A}},
+      {tok::semi, MR_Hidden, 0, 1, {A}},
+  };
+  EXPECT_ATTRIBUTES(Result, Attributes);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
