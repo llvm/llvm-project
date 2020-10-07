@@ -965,9 +965,17 @@ void Writer::createApplyRelocationsFunction() {
   {
     raw_string_ostream os(bodyContent);
     writeUleb128(os, 0, "num locals");
+
+    // First apply relocations to any internalized GOT entries.  These
+    // are the result of relaxation when building with -Bsymbolic.
+    out.globalSec->generateRelocationCode(os);
+
+    // Next apply any realocation to the data section by reading GOT entry
+    // globals.
     for (const OutputSegment *seg : segments)
       for (const InputSegment *inSeg : seg->inputSegments)
         inSeg->generateRelocationCode(os);
+
     writeU8(os, WASM_OPCODE_END, "END");
   }
 
