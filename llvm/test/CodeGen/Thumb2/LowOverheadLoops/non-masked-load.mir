@@ -44,7 +44,7 @@
     %.lcssa = phi <16 x i8> [ %13, %vector.body ]
     %16 = call <16 x i1> @llvm.arm.mve.vctp8(i32 %7)
     %17 = select <16 x i1> %16, <16 x i8> %.lcssa, <16 x i8> %vec.phi.lcssa
-    %18 = call i8 @llvm.experimental.vector.reduce.add.v16i8(<16 x i8> %17)
+    %18 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %17)
     br label %for.cond.cleanup
 
   for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -53,7 +53,7 @@
   }
 
   declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32 immarg, <16 x i1>, <16 x i8>) #1
-  declare i8 @llvm.experimental.vector.reduce.add.v16i8(<16 x i8>) #2
+  declare i8 @llvm.vector.reduce.add.v16i8(<16 x i8>) #2
   declare void @llvm.set.loop.iterations.i32(i32) #3
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #3
   declare <16 x i1> @llvm.arm.mve.vctp8(i32) #4

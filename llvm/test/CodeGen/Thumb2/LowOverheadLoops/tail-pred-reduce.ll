@@ -258,7 +258,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
 
 middle.block:                                     ; preds = %vector.body
   %19 = select <4 x i1> %active.lane.mask, <4 x i32> %16, <4 x i32> %vec.phi
-  %20 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %19)
+  %20 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %19)
   br label %for.end
 
 for.end:                                          ; preds = %middle.block, %for.body
@@ -282,6 +282,6 @@ declare void @llvm.set.loop.iterations.i32(i32)
 declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
 declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32)
-declare i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 declare i32 @llvm.loop.decrement.reg.i32(i32, i32)
 declare <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>*, i32 immarg, <4 x i1>, <4 x i16>)

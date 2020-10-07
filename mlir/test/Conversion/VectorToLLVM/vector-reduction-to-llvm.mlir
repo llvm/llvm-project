@@ -5,14 +5,14 @@
 // CHECK-LABEL: llvm.func @reduce_add_f32(
 // CHECK-SAME: %[[A:.*]]: !llvm.vec<16 x float>)
 //      CHECK: %[[C:.*]] = llvm.mlir.constant(0.000000e+00 : f32) : !llvm.float
-//      CHECK: %[[V:.*]] = "llvm.intr.experimental.vector.reduce.v2.fadd"(%[[C]], %[[A]])
+//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.fadd"(%[[C]], %[[A]])
 // CHECK-SAME: {reassoc = false} : (!llvm.float, !llvm.vec<16 x float>) -> !llvm.float
 //      CHECK: llvm.return %[[V]] : !llvm.float
 //
 // REASSOC-LABEL: llvm.func @reduce_add_f32(
 // REASSOC-SAME: %[[A:.*]]: !llvm.vec<16 x float>)
 //      REASSOC: %[[C:.*]] = llvm.mlir.constant(0.000000e+00 : f32) : !llvm.float
-//      REASSOC: %[[V:.*]] = "llvm.intr.experimental.vector.reduce.v2.fadd"(%[[C]], %[[A]])
+//      REASSOC: %[[V:.*]] = "llvm.intr.vector.reduce.fadd"(%[[C]], %[[A]])
 // REASSOC-SAME: {reassoc = true} : (!llvm.float, !llvm.vec<16 x float>) -> !llvm.float
 //      REASSOC: llvm.return %[[V]] : !llvm.float
 //
@@ -25,14 +25,14 @@ func @reduce_add_f32(%arg0: vector<16xf32>) -> f32 {
 // CHECK-LABEL: llvm.func @reduce_mul_f32(
 // CHECK-SAME: %[[A:.*]]: !llvm.vec<16 x float>)
 //      CHECK: %[[C:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : !llvm.float
-//      CHECK: %[[V:.*]] = "llvm.intr.experimental.vector.reduce.v2.fmul"(%[[C]], %[[A]])
+//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.fmul"(%[[C]], %[[A]])
 // CHECK-SAME: {reassoc = false} : (!llvm.float, !llvm.vec<16 x float>) -> !llvm.float
 //      CHECK: llvm.return %[[V]] : !llvm.float
 //
 // REASSOC-LABEL: llvm.func @reduce_mul_f32(
 // REASSOC-SAME: %[[A:.*]]: !llvm.vec<16 x float>)
 //      REASSOC: %[[C:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : !llvm.float
-//      REASSOC: %[[V:.*]] = "llvm.intr.experimental.vector.reduce.v2.fmul"(%[[C]], %[[A]])
+//      REASSOC: %[[V:.*]] = "llvm.intr.vector.reduce.fmul"(%[[C]], %[[A]])
 // REASSOC-SAME: {reassoc = true} : (!llvm.float, !llvm.vec<16 x float>) -> !llvm.float
 //      REASSOC: llvm.return %[[V]] : !llvm.float
 //

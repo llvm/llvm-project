@@ -24,55 +24,55 @@ module {
     %12 = llvm.mlir.constant(3 : i64) : !llvm.i64
     %v = llvm.insertelement %3, %11[%12 : !llvm.i64] : !llvm.vec<4 x i64>
 
-    %add = "llvm.intr.experimental.vector.reduce.add"(%v)
+    %add = "llvm.intr.vector.reduce.add"(%v)
         : (!llvm.vec<4 x i64>) -> !llvm.i64
     llvm.call @printI64(%add) : (!llvm.i64) -> ()
     llvm.call @printNewline() : () -> ()
     // CHECK: 10
 
-    %and = "llvm.intr.experimental.vector.reduce.and"(%v)
+    %and = "llvm.intr.vector.reduce.and"(%v)
         : (!llvm.vec<4 x i64>) -> !llvm.i64
     llvm.call @printI64(%and) : (!llvm.i64) -> ()
     llvm.call @printNewline() : () -> ()
     // CHECK: 0
 
-    %mul = "llvm.intr.experimental.vector.reduce.mul"(%v)
+    %mul = "llvm.intr.vector.reduce.mul"(%v)
         : (!llvm.vec<4 x i64>) -> !llvm.i64
     llvm.call @printI64(%mul) : (!llvm.i64) -> ()
     llvm.call @printNewline() : () -> ()
     // CHECK: 24
 
-    %or = "llvm.intr.experimental.vector.reduce.or"(%v)
+    %or = "llvm.intr.vector.reduce.or"(%v)
         : (!llvm.vec<4 x i64>) -> !llvm.i64
     llvm.call @printI64(%or) : (!llvm.i64) -> ()
     llvm.call @printNewline() : () -> ()
     // CHECK: 7
 
-    %smax = "llvm.intr.experimental.vector.reduce.smax"(%v)
+    %smax = "llvm.intr.vector.reduce.smax"(%v)
         : (!llvm.vec<4 x i64>) -> !llvm.i64
     llvm.call @printI64(%smax) : (!llvm.i64) -> ()
     llvm.call @printNewline() : () -> ()
     // CHECK: 4
 
-    %smin = "llvm.intr.experimental.vector.reduce.smin"(%v)
+    %smin = "llvm.intr.vector.reduce.smin"(%v)
         : (!llvm.vec<4 x i64>) -> !llvm.i64
     llvm.call @printI64(%smin) : (!llvm.i64) -> ()
     llvm.call @printNewline() : () -> ()
     // CHECK: 1
 
-    %umax = "llvm.intr.experimental.vector.reduce.umax"(%v)
+    %umax = "llvm.intr.vector.reduce.umax"(%v)
         : (!llvm.vec<4 x i64>) -> !llvm.i64
     llvm.call @printI64(%umax) : (!llvm.i64) -> ()
     llvm.call @printNewline() : () -> ()
     // CHECK: 4
 
-    %umin = "llvm.intr.experimental.vector.reduce.umin"(%v)
+    %umin = "llvm.intr.vector.reduce.umin"(%v)
         : (!llvm.vec<4 x i64>) -> !llvm.i64
     llvm.call @printI64(%umin) : (!llvm.i64) -> ()
     llvm.call @printNewline() : () -> ()
     // CHECK: 1
 
-    %xor = "llvm.intr.experimental.vector.reduce.xor"(%v)
+    %xor = "llvm.intr.vector.reduce.xor"(%v)
         : (!llvm.vec<4 x i64>) -> !llvm.i64
     llvm.call @printI64(%xor) : (!llvm.i64) -> ()
     llvm.call @printNewline() : () -> ()

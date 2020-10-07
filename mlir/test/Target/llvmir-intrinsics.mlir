@@ -182,36 +182,36 @@ llvm.func @smin_test(%arg0: !llvm.i32, %arg1: !llvm.i32, %arg2: !llvm.vec<8 x i3
 
 // CHECK-LABEL: @vector_reductions
 llvm.func @vector_reductions(%arg0: !llvm.float, %arg1: !llvm.vec<8 x float>, %arg2: !llvm.vec<8 x i32>) {
-  // CHECK: call i32 @llvm.experimental.vector.reduce.add.v8i32
-  "llvm.intr.experimental.vector.reduce.add"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
-  // CHECK: call i32 @llvm.experimental.vector.reduce.and.v8i32
-  "llvm.intr.experimental.vector.reduce.and"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
-  // CHECK: call float @llvm.experimental.vector.reduce.fmax.v8f32
-  "llvm.intr.experimental.vector.reduce.fmax"(%arg1) : (!llvm.vec<8 x float>) -> !llvm.float
-  // CHECK: call float @llvm.experimental.vector.reduce.fmin.v8f32
-  "llvm.intr.experimental.vector.reduce.fmin"(%arg1) : (!llvm.vec<8 x float>) -> !llvm.float
-  // CHECK: call i32 @llvm.experimental.vector.reduce.mul.v8i32
-  "llvm.intr.experimental.vector.reduce.mul"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
-  // CHECK: call i32 @llvm.experimental.vector.reduce.or.v8i32
-  "llvm.intr.experimental.vector.reduce.or"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
-  // CHECK: call i32 @llvm.experimental.vector.reduce.smax.v8i32
-  "llvm.intr.experimental.vector.reduce.smax"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
-  // CHECK: call i32 @llvm.experimental.vector.reduce.smin.v8i32
-  "llvm.intr.experimental.vector.reduce.smin"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
-  // CHECK: call i32 @llvm.experimental.vector.reduce.umax.v8i32
-  "llvm.intr.experimental.vector.reduce.umax"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
-  // CHECK: call i32 @llvm.experimental.vector.reduce.umin.v8i32
-  "llvm.intr.experimental.vector.reduce.umin"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
-  // CHECK: call float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32
-  "llvm.intr.experimental.vector.reduce.v2.fadd"(%arg0, %arg1) : (!llvm.float, !llvm.vec<8 x float>) -> !llvm.float
-  // CHECK: call float @llvm.experimental.vector.reduce.v2.fmul.f32.v8f32
-  "llvm.intr.experimental.vector.reduce.v2.fmul"(%arg0, %arg1) : (!llvm.float, !llvm.vec<8 x float>) -> !llvm.float
-  // CHECK: call reassoc float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32
-  "llvm.intr.experimental.vector.reduce.v2.fadd"(%arg0, %arg1) {reassoc = true} : (!llvm.float, !llvm.vec<8 x float>) -> !llvm.float
-  // CHECK: call reassoc float @llvm.experimental.vector.reduce.v2.fmul.f32.v8f32
-  "llvm.intr.experimental.vector.reduce.v2.fmul"(%arg0, %arg1) {reassoc = true} : (!llvm.float, !llvm.vec<8 x float>) -> !llvm.float
-  // CHECK: call i32 @llvm.experimental.vector.reduce.xor.v8i32
-  "llvm.intr.experimental.vector.reduce.xor"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
+  // CHECK: call i32 @llvm.vector.reduce.add.v8i32
+  "llvm.intr.vector.reduce.add"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
+  // CHECK: call i32 @llvm.vector.reduce.and.v8i32
+  "llvm.intr.vector.reduce.and"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
+  // CHECK: call float @llvm.vector.reduce.fmax.v8f32
+  "llvm.intr.vector.reduce.fmax"(%arg1) : (!llvm.vec<8 x float>) -> !llvm.float
+  // CHECK: call float @llvm.vector.reduce.fmin.v8f32
+  "llvm.intr.vector.reduce.fmin"(%arg1) : (!llvm.vec<8 x float>) -> !llvm.float
+  // CHECK: call i32 @llvm.vector.reduce.mul.v8i32
+  "llvm.intr.vector.reduce.mul"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
+  // CHECK: call i32 @llvm.vector.reduce.or.v8i32
+  "llvm.intr.vector.reduce.or"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
+  // CHECK: call i32 @llvm.vector.reduce.smax.v8i32
+  "llvm.intr.vector.reduce.smax"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
+  // CHECK: call i32 @llvm.vector.reduce.smin.v8i32
+  "llvm.intr.vector.reduce.smin"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
+  // CHECK: call i32 @llvm.vector.reduce.umax.v8i32
+  "llvm.intr.vector.reduce.umax"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
+  // CHECK: call i32 @llvm.vector.reduce.umin.v8i32
+  "llvm.intr.vector.reduce.umin"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
+  // CHECK: call float @llvm.vector.reduce.fadd.f32.v8f32
+  "llvm.intr.vector.reduce.fadd"(%arg0, %arg1) : (!llvm.float, !llvm.vec<8 x float>) -> !llvm.float
+  // CHECK: call float @llvm.vector.reduce.fmul.f32.v8f32
+  "llvm.intr.vector.reduce.fmul"(%arg0, %arg1) : (!llvm.float, !llvm.vec<8 x float>) -> !llvm.float
+  // CHECK: call reassoc float @llvm.vector.reduce.fadd.f32.v8f32
+  "llvm.intr.vector.reduce.fadd"(%arg0, %arg1) {reassoc = true} : (!llvm.float, !llvm.vec<8 x float>) -> !llvm.float
+  // CHECK: call reassoc float @llvm.vector.reduce.fmul.f32.v8f32
+  "llvm.intr.vector.reduce.fmul"(%arg0, %arg1) {reassoc = true} : (!llvm.float, !llvm.vec<8 x float>) -> !llvm.float
+  // CHECK: call i32 @llvm.vector.reduce.xor.v8i32
+  "llvm.intr.vector.reduce.xor"(%arg2) : (!llvm.vec<8 x i32>) -> !llvm.i32
   llvm.return
 }
 
