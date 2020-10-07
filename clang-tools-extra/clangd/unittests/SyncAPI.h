@@ -46,6 +46,7 @@ llvm::Expected<RenameResult> runRename(ClangdServer &Server, PathRef File,
 
 llvm::Expected<RenameResult>
 runPrepareRename(ClangdServer &Server, PathRef File, Position Pos,
+                 llvm::Optional<std::string> NewName,
                  const clangd::RenameOptions &RenameOpts);
 
 llvm::Expected<tooling::Replacements>
