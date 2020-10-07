@@ -71,4 +71,14 @@ void test2() {
   // CHECK-NEXT: | `-DeclRefExpr {{.*}} 'some_func'
   // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 1
   some_func(), 1;
+
+  // conditional operator (comparison is invalid)
+  float f;
+  // CHECK:     ConditionalOperator {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT: |-RecoveryExpr {{.*}} '<dependent type>'
+  // CHECK-NEXT: | |-DeclRefExpr {{.*}} 'int *' lvalue
+  // CHECK-NEXT: | `-DeclRefExpr {{.*}} 'float' lvalue
+  // CHECK-NEXT: |-DeclRefExpr {{.*}} 'int *' lvalue
+  // CHECK-NEXT: `-DeclRefExpr {{.*}} 'float' lvalue
+  (ptr > f ? ptr : f);
 }
