@@ -685,7 +685,7 @@ void SideEffectOp::getEffects(
 
     // Get the specific memory effect.
     MemoryEffects::Effect *effect =
-        llvm::StringSwitch<MemoryEffects::Effect *>(
+        StringSwitch<MemoryEffects::Effect *>(
             effectElement.get("effect").cast<StringAttr>().getValue())
             .Case("allocate", MemoryEffects::Allocate::get())
             .Case("free", MemoryEffects::Free::get())

@@ -119,7 +119,7 @@ static PredCombinerKind getPredCombinerKind(const Pred &pred) {
     return PredCombinerKind::Leaf;
 
   const auto &combinedPred = static_cast<const CombinedPred &>(pred);
-  return llvm::StringSwitch<PredCombinerKind>(
+  return StringSwitch<PredCombinerKind>(
              combinedPred.getCombinerDef()->getName())
       .Case("PredCombinerAnd", PredCombinerKind::And)
       .Case("PredCombinerOr", PredCombinerKind::Or)
