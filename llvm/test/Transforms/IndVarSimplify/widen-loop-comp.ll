@@ -596,3 +596,53 @@ exit:
 failure:
   unreachable
 }
+
+define i32 @test12(i32 %start, i32* %p, i32* %q) {
+; CHECK-LABEL: @test12(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START:%.*]] to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[INDVARS_IV]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add i32 [[TMP1]], -1
+; CHECK-NEXT:    [[INDEX:%.*]] = zext i32 [[IV_NEXT]] to i64
+; CHECK-NEXT:    [[STORE_ADDR:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    store i32 1, i32* [[STORE_ADDR]], align 4
+; CHECK-NEXT:    [[LOAD_ADDR:%.*]] = getelementptr i32, i32* [[Q:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[STOP:%.*]] = load i32, i32* [[Q]], align 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i32 [[STOP]], 0
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[FAILURE:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       failure:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %backedge]
+  %cond = icmp eq i32 %iv, 0
+  br i1 %cond, label %exit, label %backedge
+
+backedge:
+  %iv.next = add i32 %iv, -1
+  %index = zext i32 %iv.next to i64
+  %store.addr = getelementptr i32, i32* %p, i64 %index
+  store i32 1, i32* %store.addr
+  %load.addr = getelementptr i32, i32* %q, i64 %index
+  %stop = load i32, i32* %q
+  %loop.cond = icmp eq i32 %stop, 0
+  br i1 %loop.cond, label %loop, label %failure
+
+exit:
+  ret i32 0
+
+failure:
+  unreachable
+}
