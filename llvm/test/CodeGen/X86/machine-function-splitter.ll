@@ -3,9 +3,9 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-psi-cutoff=950000 | FileCheck %s -check-prefix=MFS-OPTS2
 
 define void @foo1(i1 zeroext %0) nounwind !prof !14 !section_prefix !15 {
-;; Check that cold block is moved to .text.unlikely.
+;; Check that cold block is moved to .text.split.
 ; MFS-DEFAULTS-LABEL: foo1
-; MFS-DEFAULTS:       .section        .text.unlikely.foo1
+; MFS-DEFAULTS:       .section        .text.split.foo1
 ; MFS-DEFAULTS-NEXT:  foo1.cold:
 ; MFS-DEFAULTS-NOT:   callq   bar
 ; MFS-DEFAULTS-NEXT:  callq   baz
@@ -65,7 +65,7 @@ define void @foo3(i1 zeroext %0) nounwind !section_prefix !15 {
 define void @foo4(i1 zeroext %0, i1 zeroext %1) nounwind !prof !20 {
 ;; Check that count threshold works.
 ; MFS-OPTS1-LABEL: foo4
-; MFS-OPTS1:       .section        .text.unlikely.foo4
+; MFS-OPTS1:       .section        .text.split.foo4
 ; MFS-OPTS1-NEXT:  foo4.cold:
 ; MFS-OPTS1-NOT:   callq    bar
 ; MFS-OPTS1-NOT:   callq    baz
@@ -99,7 +99,7 @@ define void @foo4(i1 zeroext %0, i1 zeroext %1) nounwind !prof !20 {
 define void @foo5(i1 zeroext %0, i1 zeroext %1) nounwind !prof !20 {
 ;; Check that profile summary info cutoff works.
 ; MFS-OPTS2-LABEL: foo5
-; MFS-OPTS2:       .section        .text.unlikely.foo5
+; MFS-OPTS2:       .section        .text.split.foo5
 ; MFS-OPTS2-NEXT:       foo5.cold:
 ; MFS-OPTS2-NOT:   callq    bar
 ; MFS-OPTS2-NOT:   callq    baz
@@ -152,7 +152,7 @@ define void @foo6(i1 zeroext %0) nounwind section "nosplit" !prof !14 {
 define i32 @foo7(i1 zeroext %0) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !prof !14 {
 ;; Check that cold ehpads are not split out.
 ; MFS-DEFAULTS-LABEL: foo7
-; MFS-DEFAULTS:       .section        .text.unlikely.foo7,"ax",@progbits
+; MFS-DEFAULTS:       .section        .text.split.foo7,"ax",@progbits
 ; MFS-DEFAULTS-NEXT:  foo7.cold:
 ; MFS-DEFAULTS-NOT:   callq   _Unwind_Resume
 ; MFS-DEFAULTS:       callq   baz
