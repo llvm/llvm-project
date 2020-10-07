@@ -260,8 +260,9 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
   return got;
 }
 
-template <int binaryPrecision>
+template <int KIND>
 bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
+  constexpr int binaryPrecision{common::PrecisionOfRealKind(KIND)};
   static constexpr int maxDigits{
       common::MaxDecimalConversionDigits(binaryPrecision)};
   static constexpr int bufferSize{maxDigits + 18};
@@ -294,8 +295,9 @@ bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   return true;
 }
 
-template <int binaryPrecision>
+template <int KIND>
 bool EditRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
+  constexpr int binaryPrecision{common::PrecisionOfRealKind(KIND)};
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
   case DataEdit::ListDirectedRealPart:
@@ -304,7 +306,7 @@ bool EditRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   case 'E': // incl. EN, ES, & EX
   case 'D':
   case 'G':
-    return EditCommonRealInput<binaryPrecision>(io, edit, n);
+    return EditCommonRealInput<KIND>(io, edit, n);
   case 'B':
     return EditBOZInput(
         io, edit, n, 2, common::BitsForBinaryPrecision(binaryPrecision));
@@ -459,10 +461,11 @@ bool EditDefaultCharacterInput(
   return true;
 }
 
+template bool EditRealInput<2>(IoStatementState &, const DataEdit &, void *);
+template bool EditRealInput<3>(IoStatementState &, const DataEdit &, void *);
+template bool EditRealInput<4>(IoStatementState &, const DataEdit &, void *);
 template bool EditRealInput<8>(IoStatementState &, const DataEdit &, void *);
-template bool EditRealInput<11>(IoStatementState &, const DataEdit &, void *);
-template bool EditRealInput<24>(IoStatementState &, const DataEdit &, void *);
-template bool EditRealInput<53>(IoStatementState &, const DataEdit &, void *);
-template bool EditRealInput<64>(IoStatementState &, const DataEdit &, void *);
-template bool EditRealInput<113>(IoStatementState &, const DataEdit &, void *);
+template bool EditRealInput<10>(IoStatementState &, const DataEdit &, void *);
+// TODO: double/double
+template bool EditRealInput<16>(IoStatementState &, const DataEdit &, void *);
 } // namespace Fortran::runtime::io
