@@ -186,27 +186,16 @@ class function_ref<Ret(Params...)> {
         std::forward<Params>(params)...);
   }
 
-  template <typename Callable,
-            typename Result =
-                typename std::result_of<Callable(Params...)>::type>
-  static constexpr bool IsCompatible =
-      std::is_void<Ret>::value || std::is_convertible<Result, Ret>::value;
-
 public:
   function_ref() = default;
   function_ref(std::nullptr_t) {}
 
   template <typename Callable>
-  // Only allow this constructor if the object is actually callable
-  // and returns the correct type.
   function_ref(
       Callable &&callable,
       std::enable_if_t<
-          // This is not the copy-constructor.
           !std::is_same<std::remove_cv_t<std::remove_reference_t<Callable>>,
-                        function_ref>::value &&
-          // Must be callable and return a suitable type.
-          IsCompatible<Callable>> * = nullptr)
+                        function_ref>::value> * = nullptr)
       : callback(callback_fn<typename std::remove_reference<Callable>::type>),
         callable(reinterpret_cast<intptr_t>(&callable)) {}
 
