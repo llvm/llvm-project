@@ -6,12 +6,10 @@ define float @test1(i32 %x) nounwind readnone {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    orpd %xmm0, %xmm1
-; CHECK-NEXT:    subsd %xmm0, %xmm1
-; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    cvtsd2ss %xmm1, %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    orpd {{\.LCPI.*}}, %xmm0
+; CHECK-NEXT:    subsd {{\.LCPI.*}}, %xmm0
+; CHECK-NEXT:    cvtsd2ss %xmm0, %xmm0
 ; CHECK-NEXT:    movss %xmm0, (%esp)
 ; CHECK-NEXT:    flds (%esp)
 ; CHECK-NEXT:    popl %eax
@@ -28,9 +26,8 @@ define float @test2(<4 x i32> %x) nounwind readnone ssp {
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    orps %xmm0, %xmm1
-; CHECK-NEXT:    subsd %xmm0, %xmm1
+; CHECK-NEXT:    orps {{\.LCPI.*}}, %xmm1
+; CHECK-NEXT:    subsd {{\.LCPI.*}}, %xmm1
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    cvtsd2ss %xmm1, %xmm0
 ; CHECK-NEXT:    movss %xmm0, (%esp)
