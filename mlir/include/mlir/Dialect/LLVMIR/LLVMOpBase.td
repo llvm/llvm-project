@@ -308,9 +308,7 @@ class LLVM_VectorReductionAcc<string mnem>
     llvm::Function *fn = llvm::Intrinsic::getDeclaration(
         module,
         llvm::Intrinsic::vector_reduce_}] # mnem # [{,
-        { }] # StrJoin<!listconcat(
-            ListIntSubst<LLVM_IntrPatterns.result, [0]>.lst,
-            ListIntSubst<LLVM_IntrPatterns.operand, [1]>.lst)>.result # [{
+        { }] # StrJoin<ListIntSubst<LLVM_IntrPatterns.operand, [1]>.lst>.result # [{
         });
     auto operands = lookupValues(opInst.getOperands());
     llvm::FastMathFlags origFM = builder.getFastMathFlags();
