@@ -415,8 +415,9 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
               secondary_fd =
                   launch_info.GetPTY().OpenSecondary(O_RDWR, nullptr, 0);
             if (secondary_fd == PseudoTerminal::invalid_fd) {
+              std::string secondary_path = secondary_spec.GetPath();
               error.SetErrorStringWithFormat(
-                  "unable to open secondary pty '%s'", secondary_path);
+                  "unable to open secondary pty '%s'", secondary_path.c_str());
               return error; // Failure
             }
             [options setValue:[NSNumber numberWithInteger:secondary_fd]
