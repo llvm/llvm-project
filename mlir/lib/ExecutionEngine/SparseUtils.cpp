@@ -162,11 +162,11 @@ extern "C" void closeMatrix() {
   sparseFilename = nullptr;
 }
 
-// Helper method to read sparse matrix filenames from the environment, defined
-// with the naming convention ${SPARSE_MATRIX0}, ${SPARSE_MATRIX1}, etc.
-extern "C" char *getSparseMatrix(uint64_t id) {
+// Helper method to read matrix filenames from the environment, defined
+// with the naming convention ${MATRIX0}, ${MATRIX1}, etc.
+extern "C" char *getMatrix(uint64_t id) {
   char var[80];
-  sprintf(var, "SPARSE_MATRIX%lu", id);
+  sprintf(var, "MATRIX%" PRIu64, id);
   char *env = getenv(var);
   return env;
 }

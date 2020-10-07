@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s \
 // RUN:  -convert-scf-to-std -convert-vector-to-scf \
 // RUN:  -convert-linalg-to-llvm -convert-vector-to-llvm | \
-// RUN: SPARSE_MATRIX0="%mlir_integration_test_dir/data/test.mtx" \
+// RUN: MATRIX0="%mlir_integration_test_dir/data/test.mtx" \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
 // RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
@@ -11,7 +11,7 @@ module {
   func @openMatrix(!llvm.ptr<i8>, memref<index>, memref<index>, memref<index>) -> ()
   func @readMatrixItem(memref<index>, memref<index>, memref<f64>) -> ()
   func @closeMatrix() -> ()
-  func @getSparseMatrix(index) -> (!llvm.ptr<i8>)
+  func @getMatrix(index) -> (!llvm.ptr<i8>)
 
   func @entry() {
     %d0  = constant 0.0 : f64
@@ -29,7 +29,7 @@ module {
     // Read the header of a sparse matrix. This yields the
     // size (m x n) and number of nonzero elements (nnz).
     //
-    %file = call @getSparseMatrix(%c0) : (index) -> (!llvm.ptr<i8>)
+    %file = call @getMatrix(%c0) : (index) -> (!llvm.ptr<i8>)
     call @openMatrix(%file, %m, %n, %nnz)
         : (!llvm.ptr<i8>, memref<index>,
 	                  memref<index>, memref<index>) -> ()
