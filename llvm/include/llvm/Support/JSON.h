@@ -909,6 +909,17 @@ class OStream {
     Contents();
     objectEnd();
   }
+  /// Emit an externally-serialized value.
+  /// The caller must write exactly one valid JSON value to the provided stream.
+  /// No validation or formatting of this value occurs.
+  void rawValue(llvm::function_ref<void(raw_ostream &)> Contents) {
+    rawValueBegin();
+    Contents(OS);
+    rawValueEnd();
+  }
+  void rawValue(llvm::StringRef Contents) {
+    rawValue([&](raw_ostream &OS) { OS << Contents; });
+  }
   /// Emit a JavaScript comment associated with the next printed value.
   /// The string must be valid until the next attribute or value is emitted.
   /// Comments are not part of standard JSON, and many parsers reject them!
@@ -939,8 +950,10 @@ class OStream {
   void objectEnd();
   void attributeBegin(llvm::StringRef Key);
   void attributeEnd();
+  raw_ostream &rawValueBegin();
+  void rawValueEnd();
 
- private:
+private:
   void attributeImpl(llvm::StringRef Key, Block Contents) {
     attributeBegin(Key);
     Contents();
@@ -955,6 +968,7 @@ class OStream {
     Singleton, // Top level, or object attribute.
     Array,
     Object,
+    RawValue, // External code writing a value to OS directly.
   };
   struct State {
     Context Ctx = Singleton;
