@@ -26,7 +26,7 @@ define internal i32 @test(%T* %p) {
 ; IS__CGSCC____-NEXT:    [[A_GEP:%.*]] = getelementptr [[T:%.*]], %T* @G, i64 0, i32 3
 ; IS__CGSCC____-NEXT:    [[B_GEP:%.*]] = getelementptr [[T]], %T* @G, i64 0, i32 2
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = load i32, i32* [[A_GEP]], align 4
-; IS__CGSCC____-NEXT:    [[B:%.*]] = load i32, i32* [[B_GEP]], align 4
+; IS__CGSCC____-NEXT:    [[B:%.*]] = load i32, i32* [[B_GEP]], align 8
 ; IS__CGSCC____-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
 ; IS__CGSCC____-NEXT:    ret i32 [[V]]
 ;
