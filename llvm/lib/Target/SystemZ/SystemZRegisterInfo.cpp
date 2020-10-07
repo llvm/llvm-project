@@ -109,8 +109,9 @@ bool SystemZRegisterInfo::getRegAllocationHints(
 
         auto tryAddHint = [&](const MachineOperand *MO) -> void {
           Register Reg = MO->getReg();
-          Register PhysReg =
-            Register::isPhysicalRegister(Reg) ? Reg : VRM->getPhys(Reg);
+          Register PhysReg = Register::isPhysicalRegister(Reg)
+                                 ? Reg
+                                 : Register(VRM->getPhys(Reg));
           if (PhysReg) {
             if (MO->getSubReg())
               PhysReg = getSubReg(PhysReg, MO->getSubReg());
