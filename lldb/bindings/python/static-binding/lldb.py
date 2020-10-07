@@ -199,6 +199,8 @@ LLDB_INVALID_OFFSET = _lldb.LLDB_INVALID_OFFSET
 
 LLDB_INVALID_LINE_NUMBER = _lldb.LLDB_INVALID_LINE_NUMBER
 
+LLDB_INVALID_COLUMN_NUMBER = _lldb.LLDB_INVALID_COLUMN_NUMBER
+
 LLDB_INVALID_QUEUE_ID = _lldb.LLDB_INVALID_QUEUE_ID
 
 LLDB_ARCH_DEFAULT = _lldb.LLDB_ARCH_DEFAULT
@@ -234,6 +236,8 @@ LLDB_OPT_SET_9 = _lldb.LLDB_OPT_SET_9
 LLDB_OPT_SET_10 = _lldb.LLDB_OPT_SET_10
 
 LLDB_OPT_SET_11 = _lldb.LLDB_OPT_SET_11
+
+LLDB_OPT_SET_12 = _lldb.LLDB_OPT_SET_12
 
 eStateInvalid = _lldb.eStateInvalid
 
@@ -798,6 +802,8 @@ eArgTypeExpression = _lldb.eArgTypeExpression
 eArgTypeExpressionPath = _lldb.eArgTypeExpressionPath
 
 eArgTypeExprFormat = _lldb.eArgTypeExprFormat
+
+eArgTypeFileLineColumn = _lldb.eArgTypeFileLineColumn
 
 eArgTypeFilename = _lldb.eArgTypeFilename
 
@@ -11645,6 +11651,17 @@ class SBThreadPlan(object):
         r"""IsPlanStale(SBThreadPlan self) -> bool"""
         return _lldb.SBThreadPlan_IsPlanStale(self)
 
+    def GetStopOthers(self):
+        r"""
+        GetStopOthers(SBThreadPlan self) -> bool
+        Return whether this plan will ask to stop other threads when it runs.
+        """
+        return _lldb.SBThreadPlan_GetStopOthers(self)
+
+    def SetStopOthers(self, stop_others):
+        r"""SetStopOthers(SBThreadPlan self, bool stop_others)"""
+        return _lldb.SBThreadPlan_SetStopOthers(self, stop_others)
+
     def QueueThreadPlanForStepOverRange(self, start_address, range_size):
         r"""QueueThreadPlanForStepOverRange(SBThreadPlan self, SBAddress start_address, lldb::addr_t range_size) -> SBThreadPlan"""
         return _lldb.SBThreadPlan_QueueThreadPlanForStepOverRange(self, start_address, range_size)
@@ -12653,7 +12670,19 @@ class SBTypeEnumMember(object):
 _lldb.SBTypeEnumMember_swigregister(SBTypeEnumMember)
 
 class SBTypeEnumMemberList(object):
-    r"""Represents a list of SBTypeEnumMembers."""
+    r"""
+    Represents a list of SBTypeEnumMembers.
+    SBTypeEnumMemberList supports SBTypeEnumMember iteration.
+    It also supports [] access either by index, or by enum
+    element name by doing:
+
+      myType = target.FindFirstType('MyEnumWithElementA')
+      members = myType.GetEnumMembers()
+      first_elem = members[0]
+      elem_A = members['A']
+
+
+    """
 
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
@@ -12687,6 +12716,27 @@ class SBTypeEnumMemberList(object):
     def GetSize(self):
         r"""GetSize(SBTypeEnumMemberList self) -> uint32_t"""
         return _lldb.SBTypeEnumMemberList_GetSize(self)
+
+    def __iter__(self):
+        '''Iterate over all members in a lldb.SBTypeEnumMemberList object.'''
+        return lldb_iter(self, 'GetSize', 'GetTypeEnumMemberAtIndex')
+
+    def __len__(self):
+        '''Return the number of members in a lldb.SBTypeEnumMemberList object.'''
+        return self.GetSize()
+
+    def __getitem__(self, key):
+      num_elements = self.GetSize()
+      if type(key) is int:
+          if key < num_elements:
+              return self.GetTypeEnumMemberAtIndex(key)
+      elif type(key) is str:
+          for idx in range(num_elements):
+              item = self.GetTypeEnumMemberAtIndex(idx)
+              if item.name == key:
+                  return item
+      return None
+
 
 # Register SBTypeEnumMemberList in _lldb:
 _lldb.SBTypeEnumMemberList_swigregister(SBTypeEnumMemberList)
