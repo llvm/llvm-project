@@ -524,17 +524,17 @@ v_min_i16 v1, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_se
 v_ldexp_f16 v1, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error: instruction not supported on this GPU
-// NOGFX9: error: instruction not supported on this GPU
+// NOGFX9: error: operands are not valid for this GPU or mode
 // VI: v_add_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x32,0x02,0x06,0x05,0x02]
 v_add_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error: instruction not supported on this GPU
-// NOGFX9: error: instruction not supported on this GPU
+// NOGFX9: error: operands are not valid for this GPU or mode
 // VI: v_sub_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x34,0x02,0x06,0x05,0x02]
 v_sub_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error: instruction not supported on this GPU
-// NOGFX9: error: instruction not supported on this GPU
+// NOGFX9: error: operands are not valid for this GPU or mode
 // VI: v_subrev_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x36,0x02,0x06,0x05,0x02]
 v_subrev_u32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
@@ -685,22 +685,22 @@ v_cmpx_class_f32_sdwa vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
 
 // NOSICI: error: invalid operand for instruction
 // VI: v_mac_f32_sdwa v3, v4, v5 dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:DWORD ; encoding: [0xf9,0x0a,0x06,0x2c,0x04,0x16,0x05,0x06]
-// NOGFX9: error: instruction not supported on this GPU
+// NOGFX9: error: operands are not valid for this GPU or mode
 v_mac_f32 v3, v4, v5 dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
 
 // NOSICI: error: invalid operand for instruction
 // VI: v_mac_f32_sdwa v15, v99, v194 dst_sel:DWORD dst_unused:UNUSED_SEXT src0_sel:WORD_0 src1_sel:DWORD ; encoding: [0xf9,0x84,0x1f,0x2c,0x63,0x0e,0x04,0x06]
-// NOGFX9: error: instruction not supported on this GPU
+// NOGFX9: error: operands are not valid for this GPU or mode
 v_mac_f32 v15, v99, v194 dst_sel:DWORD dst_unused:UNUSED_SEXT src0_sel:WORD_0
 
 // NOSICI: error: invalid operand for instruction
 // NOVI: error: invalid operand for instruction
-// NOGFX9: error: instruction not supported on this GPU
+// NOGFX9: error: operands are not valid for this GPU or mode
 v_mac_f32 v194, v13, v1 dst_sel:BYTE_0 dst_unused:UNUSED_SEXT src0_sel:BYTE_3 src1_sel:BYTE_2
 
 // NOSICI: error: instruction not supported on this GPU
 // VI: v_mac_f16_sdwa v1, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x46,0x02,0x06,0x05,0x02]
-// NOGFX9: error: instruction not supported on this GPU
+// NOGFX9: error: operands are not valid for this GPU or mode
 v_mac_f16 v1, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
 //===----------------------------------------------------------------------===//
@@ -763,12 +763,12 @@ v_cmp_eq_f32_sdwa vcc, v1, s22 src0_sel:WORD_1 src1_sel:BYTE_2
 v_cmp_eq_f32_sdwa ttmp[12:13], v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error: sdwa variant of this instruction is not supported
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 // NOGFX9: error: register not available on this GPU
 v_cmp_eq_f32_sdwa tba, v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error: sdwa variant of this instruction is not supported
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 // NOGFX9: error: register not available on this GPU
 v_cmp_eq_f32_sdwa tma, v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
 
@@ -1042,12 +1042,12 @@ v_mov_b32_sdwa v5, -17 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD
 //===----------------------------------------------------------------------===//
 
 // NOSICI: error: sdwa variant of this instruction is not supported
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 // GFX9: v_cmp_eq_f32_sdwa s[2:3], v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x04,0x84,0x7c,0x01,0x82,0x05,0x02]
 v_cmp_eq_f32_sdwa s[2:3], v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error: sdwa variant of this instruction is not supported
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 // GFX9: v_cmp_eq_f32_sdwa exec, v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x04,0x84,0x7c,0x01,0xfe,0x05,0x02]
 v_cmp_eq_f32_sdwa exec, v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
 
@@ -1061,22 +1061,22 @@ v_cmp_eq_f32_sdwa exec, s2, v2 src0_sel:WORD_1 src1_sel:BYTE_2
 //===----------------------------------------------------------------------===//
 
 // NOSICI: error: invalid operand for instruction
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 // GFX9: v_trunc_f32_sdwa v1, v2 mul:2 dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x38,0x02,0x7e,0x02,0x50,0x06,0x00]
 v_trunc_f32 v1, v2 mul:2 dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 
 // NOSICI: error: invalid operand for instruction
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 // GFX9: v_trunc_f32_sdwa v1, v2 clamp div:2 dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x38,0x02,0x7e,0x02,0xf0,0x06,0x00]
 v_trunc_f32 v1, v2 clamp div:2 dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 
 // NOSICI: error: invalid operand for instruction
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 // GFX9: v_add_f32_sdwa v0, v0, v0 mul:2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x00,0x00,0x02,0x00,0x46,0x05,0x02]
 v_add_f32 v0, v0, v0 mul:2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error: invalid operand for instruction
-// NOVI: error: instruction not supported on this GPU
+// NOVI: error: operands are not valid for this GPU or mode
 // GFX9: v_add_f32_sdwa v0, v0, v0 clamp div:2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x00,0x00,0x02,0x00,0xe6,0x05,0x02]
 v_add_f32 v0, v0, v0 clamp div:2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
