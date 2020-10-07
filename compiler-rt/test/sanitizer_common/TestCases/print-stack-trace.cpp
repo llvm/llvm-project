@@ -2,6 +2,7 @@
 // RUN: %clangxx -O3 %s -o %t && %env_tool_opts=stack_trace_format=DEFAULT %run %t 2>&1 | FileCheck %s
 // RUN: %env_tool_opts=stack_trace_format=frame%n_lineno%l %run %t 2>&1 | FileCheck %s --check-prefix=CUSTOM
 // RUN: %env_tool_opts=symbolize_inline_frames=false:stack_trace_format=DEFAULT %run %t 2>&1 | FileCheck %s --check-prefix=NOINLINE
+// RUN: %env_tool_opts=stack_trace_format='"frame:%n address:%%p"' %run %t 2>&1 | FileCheck %s --check-prefix=NOSYMBOLIZE
 
 // UNSUPPORTED: darwin
 
@@ -27,3 +28,7 @@ int main() {
 
 // NOINLINE: #0 0x{{.*}} in __sanitizer_print_stack_trace
 // NOINLINE: #1 0x{{.*}} in main{{.*}}print-stack-trace.cpp:[[@LINE-15]]
+
+// NOSYMBOLIZE: frame:0 address:{{0x.*}}
+// NOSYMBOLIZE: frame:1 address:{{0x.*}}
+// NOSYMBOLIZE: frame:2 address:{{0x.*}}
