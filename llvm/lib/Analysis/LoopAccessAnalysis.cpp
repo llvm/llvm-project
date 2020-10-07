@@ -227,8 +227,9 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, bool WritePtr,
       ScEnd = SE->getUMaxExpr(AR->getStart(), ScEnd);
     }
     // Add the size of the pointed element to ScEnd.
+    auto &DL = Lp->getHeader()->getModule()->getDataLayout();
     unsigned EltSize =
-      Ptr->getType()->getPointerElementType()->getScalarSizeInBits() / 8;
+        DL.getTypeStoreSizeInBits(Ptr->getType()->getPointerElementType()) / 8;
     const SCEV *EltSizeSCEV = SE->getConstant(ScEnd->getType(), EltSize);
     ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
   }
