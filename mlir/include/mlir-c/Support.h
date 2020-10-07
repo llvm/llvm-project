@@ -50,6 +50,42 @@ inline MlirStringRef mlirStringRefCreate(const char *str, size_t length) {
  */
 MlirStringRef mlirStringRefCreateFromCString(const char *str);
 
+/*============================================================================*/
+/* MlirLogicalResult.                                                         */
+/*============================================================================*/
+
+/** A logical result value, essentially a boolean with named states. LLVM
+ * convention for using boolean values to designate success or failure of an
+ * operation is a moving target, so MLIR opted for an explicit class.
+ * Instances of MlirLogicalResult must only be inspected using the associated
+ * functions. */
+struct MlirLogicalResult {
+  int8_t value;
+};
+typedef struct MlirLogicalResult MlirLogicalResult;
+
+/** Checks if the given logical result represents a success. */
+inline int mlirLogicalResultIsSuccess(MlirLogicalResult res) {
+  return res.value != 0;
+}
+
+/** Checks if the given logical result represents a failure. */
+inline int mlirLogicalResultIsFailure(MlirLogicalResult res) {
+  return res.value == 0;
+}
+
+/** Creates a logical result representing a success. */
+inline static MlirLogicalResult mlirLogicalResultSuccess() {
+  MlirLogicalResult res = {1};
+  return res;
+}
+
+/** Creates a logical result representing a failure. */
+inline static MlirLogicalResult mlirLogicalResultFailure() {
+  MlirLogicalResult res = {0};
+  return res;
+}
+
 #ifdef __cplusplus
 }
 #endif
