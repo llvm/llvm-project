@@ -8,7 +8,7 @@
 ! RUN: bbc -fopenmp -emit-fir %s -o - | \
 ! RUN:   tco | FileCheck %s --check-prefix=LLVMIR
 
-!FIRDialect: %[[ALPHA:.*]] = fir.alloca i32 {name = "alpha"}
+!FIRDialect: %[[ALPHA:.*]] = fir.alloca i32 {name = "{{.*}}Ealpha"}
 !FIRDialect:  %[[CONSTANT_4:.*]] = constant 4 : i32
 !FIRDialect:  fir.store %[[CONSTANT_4]] to %[[ALPHA]] : !fir.ref<i32>
 !FIRDialect:  %[[CONSTANT_0:.*]] = constant 0 : i32
@@ -20,7 +20,7 @@
 
 !LLVMIRDialect:   %[[CONSTANT_4:.*]] = llvm.mlir.constant(4 : i32) : !llvm.i32
 !LLVMIRDialect:   %[[CONSTANT_0:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
-!LLVMIRDialect:   %[[ALPHA:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "alpha"} : (!llvm.i64) -> !llvm.ptr<i32>
+!LLVMIRDialect:   %[[ALPHA:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "{{.*}}Ealpha"} : (!llvm.i64) -> !llvm.ptr<i32>
 !LLVMIRDialect:   llvm.store %[[CONSTANT_4]], %[[ALPHA]] : !llvm.ptr<i32>
 !LLVMIRDialect:   %[[LD_ALPHA:.*]] = llvm.load %[[ALPHA]] : !llvm.ptr<i32>
 !LLVMIRDialect:   %[[COND:.*]] = llvm.icmp "sle" %[[LD_ALPHA]], %[[CONSTANT_0]] : !llvm.i32

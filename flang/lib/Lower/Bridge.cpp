@@ -1790,7 +1790,7 @@ private:
                              llvm::ArrayRef<mlir::Value> shape = {}) {
     if (preAlloc)
       return preAlloc;
-    auto nm = var.getSymbol().name().ToString();
+    auto nm = mangleName(var.getSymbol());
     auto ty = genType(var);
     if (shape.size())
       if (auto arrTy = ty.dyn_cast<fir::SequenceType>()) {

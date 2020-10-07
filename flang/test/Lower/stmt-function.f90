@@ -41,9 +41,9 @@ real function test_stmt_1(x, a)
   real :: res1, res2
   func1(arg1) = a + foo(arg1)
   func2(arg2) = func1(arg2) + b
-  ! CHECK-DAG: %[[bmem:.*]] = fir.alloca f32 {name = "b"}
-  ! CHECK-DAG: %[[res1:.*]] = fir.alloca f32 {name = "res1"}
-  ! CHECK-DAG: %[[res2:.*]] = fir.alloca f32 {name = "res2"}
+  ! CHECK-DAG: %[[bmem:.*]] = fir.alloca f32 {name = "{{.*}}Eb"}
+  ! CHECK-DAG: %[[res1:.*]] = fir.alloca f32 {name = "{{.*}}Eres1"}
+  ! CHECK-DAG: %[[res2:.*]] = fir.alloca f32 {name = "{{.*}}Eres2"}
 
   b = 5
 

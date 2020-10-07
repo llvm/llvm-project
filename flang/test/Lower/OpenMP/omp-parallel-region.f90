@@ -15,15 +15,15 @@ program parallel
 
         a = 1
         b = 2
-!FIRDialect:  %[[VAR_A:.*]] = fir.alloca i32 {name = "a"}
-!FIRDialect:  %[[VAR_B:.*]] = fir.alloca i32 {name = "b"}
-!FIRDialect:  %[[VAR_C:.*]] = fir.alloca i32 {name = "c"}
-!FIRDialect:  %[[VAR_NUM_THREADS:.*]] = fir.alloca i32 {name = "num_threads"}
+!FIRDialect:  %[[VAR_A:.*]] = fir.alloca i32 {name = "{{.*}}Ea"}
+!FIRDialect:  %[[VAR_B:.*]] = fir.alloca i32 {name = "{{.*}}Eb"}
+!FIRDialect:  %[[VAR_C:.*]] = fir.alloca i32 {name = "{{.*}}Ec"}
+!FIRDialect:  %[[VAR_NUM_THREADS:.*]] = fir.alloca i32 {name = "{{.*}}Enum_threads"}
 
-!LLVMIRDialect: %[[VAR_A:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "a"}
-!LLVMIRDialect: %[[VAR_B:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "b"}
-!LLVMIRDialect: %[[VAR_C:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "c"}
-!LLVMIRDialect: %[[VAR_NUM_THREADS:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "num_threads"}
+!LLVMIRDialect: %[[VAR_A:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "{{.*}}Ea"}
+!LLVMIRDialect: %[[VAR_B:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "{{.*}}Eb"}
+!LLVMIRDialect: %[[VAR_C:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "{{.*}}Ec"}
+!LLVMIRDialect: %[[VAR_NUM_THREADS:.*]] = llvm.alloca %{{.*}} x !llvm.i32 {in_type = i32, name = "{{.*}}Enum_threads"}
 
 !LLVMIR: %[[OMP_GLOBAL_THREAD_NUM:.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @{{.*}})
 !LLVMIR: call void @__kmpc_push_num_threads(%struct.ident_t* @{{.*}}, i32 %[[OMP_GLOBAL_THREAD_NUM]], i32 %{{.*}})

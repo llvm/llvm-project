@@ -2,11 +2,11 @@
 
 ! CHECK-LABEL: func @_QPs() {
 subroutine s
-  ! CHECK-DAG: fir.alloca !fir.heap<i32> {name = "ally"}
+  ! CHECK-DAG: fir.alloca !fir.heap<i32> {name = "{{.*}}Eally"}
   integer, allocatable :: ally
-  ! CHECK-DAG: fir.alloca !fir.ptr<i32> {name = "pointy"} 
+  ! CHECK-DAG: fir.alloca !fir.ptr<i32> {name = "{{.*}}Epointy"} 
   integer, pointer :: pointy
-  ! CHECK-DAG: fir.alloca i32 {name = "bullseye", target}
+  ! CHECK-DAG: fir.alloca i32 {name = "{{.*}}Ebullseye", target}
   integer, target :: bullseye
   ! CHECK: return
 end subroutine s
