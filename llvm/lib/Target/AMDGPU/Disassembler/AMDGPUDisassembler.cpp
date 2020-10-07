@@ -34,6 +34,7 @@
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -1223,6 +1224,350 @@ bool AMDGPUDisassembler::isGFX9() const {
 
 bool AMDGPUDisassembler::isGFX10() const {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX10];
+}
+
+//===----------------------------------------------------------------------===//
+// AMDGPU specific symbol handling
+//===----------------------------------------------------------------------===//
+#define PRINT_DIRECTIVE(DIRECTIVE, MASK)                                       \
+  do {                                                                         \
+    KdStream << Indent << DIRECTIVE " "                                        \
+             << ((FourByteBuffer & MASK) >> (MASK##_SHIFT)) << '\n';           \
+  } while (0)
+
+// NOLINTNEXTLINE(readability-identifier-naming)
+MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
+    uint32_t FourByteBuffer, raw_string_ostream &KdStream) const {
+  using namespace amdhsa;
+  StringRef Indent = "\t";
+
+  // We cannot accurately backward compute #VGPRs used from
+  // GRANULATED_WORKITEM_VGPR_COUNT. But we are concerned with getting the same
+  // value of GRANULATED_WORKITEM_VGPR_COUNT in the reassembled binary. So we
+  // simply calculate the inverse of what the assembler does.
+
+  uint32_t GranulatedWorkitemVGPRCount =
+      (FourByteBuffer & COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT) >>
+      COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT_SHIFT;
+
+  uint32_t NextFreeVGPR = (GranulatedWorkitemVGPRCount + 1) *
+                          AMDGPU::IsaInfo::getVGPREncodingGranule(&STI);
+
+  KdStream << Indent << ".amdhsa_next_free_vgpr " << NextFreeVGPR << '\n';
+
+  // We cannot backward compute values used to calculate
+  // GRANULATED_WAVEFRONT_SGPR_COUNT. Hence the original values for following
+  // directives can't be computed:
+  // .amdhsa_reserve_vcc
+  // .amdhsa_reserve_flat_scratch
+  // .amdhsa_reserve_xnack_mask
+  // They take their respective default values if not specified in the assembly.
+  //
+  // GRANULATED_WAVEFRONT_SGPR_COUNT
+  //    = f(NEXT_FREE_SGPR + VCC + FLAT_SCRATCH + XNACK_MASK)
+  //
+  // We compute the inverse as though all directives apart from NEXT_FREE_SGPR
+  // are set to 0. So while disassembling we consider that:
+  //
+  // GRANULATED_WAVEFRONT_SGPR_COUNT
+  //    = f(NEXT_FREE_SGPR + 0 + 0 + 0)
+  //
+  // The disassembler cannot recover the original values of those 3 directives.
+
+  uint32_t GranulatedWavefrontSGPRCount =
+      (FourByteBuffer & COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT) >>
+      COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT_SHIFT;
+
+  if (isGFX10() && GranulatedWavefrontSGPRCount)
+    return MCDisassembler::Fail;
+
+  uint32_t NextFreeSGPR = (GranulatedWavefrontSGPRCount + 1) *
+                          AMDGPU::IsaInfo::getSGPREncodingGranule(&STI);
+
+  KdStream << Indent << ".amdhsa_reserve_vcc " << 0 << '\n';
+  KdStream << Indent << ".amdhsa_reserve_flat_scratch " << 0 << '\n';
+  KdStream << Indent << ".amdhsa_reserve_xnack_mask " << 0 << '\n';
+  KdStream << Indent << ".amdhsa_next_free_sgpr " << NextFreeSGPR << "\n";
+
+  if (FourByteBuffer & COMPUTE_PGM_RSRC1_PRIORITY)
+    return MCDisassembler::Fail;
+
+  PRINT_DIRECTIVE(".amdhsa_float_round_mode_32",
+                  COMPUTE_PGM_RSRC1_FLOAT_ROUND_MODE_32);
+  PRINT_DIRECTIVE(".amdhsa_float_round_mode_16_64",
+                  COMPUTE_PGM_RSRC1_FLOAT_ROUND_MODE_16_64);
+  PRINT_DIRECTIVE(".amdhsa_float_denorm_mode_32",
+                  COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_32);
+  PRINT_DIRECTIVE(".amdhsa_float_denorm_mode_16_64",
+                  COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64);
+
+  if (FourByteBuffer & COMPUTE_PGM_RSRC1_PRIV)
+    return MCDisassembler::Fail;
+
+  PRINT_DIRECTIVE(".amdhsa_dx10_clamp", COMPUTE_PGM_RSRC1_ENABLE_DX10_CLAMP);
+
+  if (FourByteBuffer & COMPUTE_PGM_RSRC1_DEBUG_MODE)
+    return MCDisassembler::Fail;
+
+  PRINT_DIRECTIVE(".amdhsa_ieee_mode", COMPUTE_PGM_RSRC1_ENABLE_IEEE_MODE);
+
+  if (FourByteBuffer & COMPUTE_PGM_RSRC1_BULKY)
+    return MCDisassembler::Fail;
+
+  if (FourByteBuffer & COMPUTE_PGM_RSRC1_CDBG_USER)
+    return MCDisassembler::Fail;
+
+  PRINT_DIRECTIVE(".amdhsa_fp16_overflow", COMPUTE_PGM_RSRC1_FP16_OVFL);
+
+  if (FourByteBuffer & COMPUTE_PGM_RSRC1_RESERVED0)
+    return MCDisassembler::Fail;
+
+  if (isGFX10()) {
+    PRINT_DIRECTIVE(".amdhsa_workgroup_processor_mode",
+                    COMPUTE_PGM_RSRC1_WGP_MODE);
+    PRINT_DIRECTIVE(".amdhsa_memory_ordered", COMPUTE_PGM_RSRC1_MEM_ORDERED);
+    PRINT_DIRECTIVE(".amdhsa_forward_progress", COMPUTE_PGM_RSRC1_FWD_PROGRESS);
+  }
+  return MCDisassembler::Success;
+}
+
+// NOLINTNEXTLINE(readability-identifier-naming)
+MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC2(
+    uint32_t FourByteBuffer, raw_string_ostream &KdStream) const {
+  using namespace amdhsa;
+  StringRef Indent = "\t";
+  PRINT_DIRECTIVE(
+      ".amdhsa_system_sgpr_private_segment_wavefront_offset",
+      COMPUTE_PGM_RSRC2_ENABLE_SGPR_PRIVATE_SEGMENT_WAVEFRONT_OFFSET);
+  PRINT_DIRECTIVE(".amdhsa_system_sgpr_workgroup_id_x",
+                  COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X);
+  PRINT_DIRECTIVE(".amdhsa_system_sgpr_workgroup_id_y",
+                  COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_Y);
+  PRINT_DIRECTIVE(".amdhsa_system_sgpr_workgroup_id_z",
+                  COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_Z);
+  PRINT_DIRECTIVE(".amdhsa_system_sgpr_workgroup_info",
+                  COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_INFO);
+  PRINT_DIRECTIVE(".amdhsa_system_vgpr_workitem_id",
+                  COMPUTE_PGM_RSRC2_ENABLE_VGPR_WORKITEM_ID);
+
+  if (FourByteBuffer & COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_ADDRESS_WATCH)
+    return MCDisassembler::Fail;
+
+  if (FourByteBuffer & COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_MEMORY)
+    return MCDisassembler::Fail;
+
+  if (FourByteBuffer & COMPUTE_PGM_RSRC2_GRANULATED_LDS_SIZE)
+    return MCDisassembler::Fail;
+
+  PRINT_DIRECTIVE(
+      ".amdhsa_exception_fp_ieee_invalid_op",
+      COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION);
+  PRINT_DIRECTIVE(".amdhsa_exception_fp_denorm_src",
+                  COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_FP_DENORMAL_SOURCE);
+  PRINT_DIRECTIVE(
+      ".amdhsa_exception_fp_ieee_div_zero",
+      COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_DIVISION_BY_ZERO);
+  PRINT_DIRECTIVE(".amdhsa_exception_fp_ieee_overflow",
+                  COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_OVERFLOW);
+  PRINT_DIRECTIVE(".amdhsa_exception_fp_ieee_underflow",
+                  COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_UNDERFLOW);
+  PRINT_DIRECTIVE(".amdhsa_exception_fp_ieee_inexact",
+                  COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_INEXACT);
+  PRINT_DIRECTIVE(".amdhsa_exception_int_div_zero",
+                  COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO);
+
+  if (FourByteBuffer & COMPUTE_PGM_RSRC2_RESERVED0)
+    return MCDisassembler::Fail;
+
+  return MCDisassembler::Success;
+}
+
+#undef PRINT_DIRECTIVE
+
+MCDisassembler::DecodeStatus
+AMDGPUDisassembler::decodeKernelDescriptorDirective(
+    DataExtractor::Cursor &Cursor, ArrayRef<uint8_t> Bytes,
+    raw_string_ostream &KdStream) const {
+#define PRINT_DIRECTIVE(DIRECTIVE, MASK)                                       \
+  do {                                                                         \
+    KdStream << Indent << DIRECTIVE " "                                        \
+             << ((TwoByteBuffer & MASK) >> (MASK##_SHIFT)) << '\n';            \
+  } while (0)
+
+  uint16_t TwoByteBuffer = 0;
+  uint32_t FourByteBuffer = 0;
+  uint64_t EightByteBuffer = 0;
+
+  StringRef ReservedBytes;
+  StringRef Indent = "\t";
+
+  assert(Bytes.size() == 64);
+  DataExtractor DE(Bytes, /*IsLittleEndian=*/true, /*AddressSize=*/8);
+
+  switch (Cursor.tell()) {
+  case amdhsa::GROUP_SEGMENT_FIXED_SIZE_OFFSET:
+    FourByteBuffer = DE.getU32(Cursor);
+    KdStream << Indent << ".amdhsa_group_segment_fixed_size " << FourByteBuffer
+             << '\n';
+    return MCDisassembler::Success;
+
+  case amdhsa::PRIVATE_SEGMENT_FIXED_SIZE_OFFSET:
+    FourByteBuffer = DE.getU32(Cursor);
+    KdStream << Indent << ".amdhsa_private_segment_fixed_size "
+             << FourByteBuffer << '\n';
+    return MCDisassembler::Success;
+
+  case amdhsa::RESERVED0_OFFSET:
+    // 8 reserved bytes, must be 0.
+    EightByteBuffer = DE.getU64(Cursor);
+    if (EightByteBuffer) {
+      return MCDisassembler::Fail;
+    }
+    return MCDisassembler::Success;
+
+  case amdhsa::KERNEL_CODE_ENTRY_BYTE_OFFSET_OFFSET:
+    // KERNEL_CODE_ENTRY_BYTE_OFFSET
+    // So far no directive controls this for Code Object V3, so simply skip for
+    // disassembly.
+    DE.skip(Cursor, 8);
+    return MCDisassembler::Success;
+
+  case amdhsa::RESERVED1_OFFSET:
+    // 20 reserved bytes, must be 0.
+    ReservedBytes = DE.getBytes(Cursor, 20);
+    for (int I = 0; I < 20; ++I) {
+      if (ReservedBytes[I] != 0) {
+        return MCDisassembler::Fail;
+      }
+    }
+    return MCDisassembler::Success;
+
+  case amdhsa::COMPUTE_PGM_RSRC3_OFFSET:
+    // COMPUTE_PGM_RSRC3
+    //  - Only set for GFX10, GFX6-9 have this to be 0.
+    //  - Currently no directives directly control this.
+    FourByteBuffer = DE.getU32(Cursor);
+    if (!isGFX10() && FourByteBuffer) {
+      return MCDisassembler::Fail;
+    }
+    return MCDisassembler::Success;
+
+  case amdhsa::COMPUTE_PGM_RSRC1_OFFSET:
+    FourByteBuffer = DE.getU32(Cursor);
+    if (decodeCOMPUTE_PGM_RSRC1(FourByteBuffer, KdStream) ==
+        MCDisassembler::Fail) {
+      return MCDisassembler::Fail;
+    }
+    return MCDisassembler::Success;
+
+  case amdhsa::COMPUTE_PGM_RSRC2_OFFSET:
+    FourByteBuffer = DE.getU32(Cursor);
+    if (decodeCOMPUTE_PGM_RSRC2(FourByteBuffer, KdStream) ==
+        MCDisassembler::Fail) {
+      return MCDisassembler::Fail;
+    }
+    return MCDisassembler::Success;
+
+  case amdhsa::KERNEL_CODE_PROPERTIES_OFFSET:
+    using namespace amdhsa;
+    TwoByteBuffer = DE.getU16(Cursor);
+
+    PRINT_DIRECTIVE(".amdhsa_user_sgpr_private_segment_buffer",
+                    KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER);
+    PRINT_DIRECTIVE(".amdhsa_user_sgpr_dispatch_ptr",
+                    KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR);
+    PRINT_DIRECTIVE(".amdhsa_user_sgpr_queue_ptr",
+                    KERNEL_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR);
+    PRINT_DIRECTIVE(".amdhsa_user_sgpr_kernarg_segment_ptr",
+                    KERNEL_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR);
+    PRINT_DIRECTIVE(".amdhsa_user_sgpr_dispatch_id",
+                    KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID);
+    PRINT_DIRECTIVE(".amdhsa_user_sgpr_flat_scratch_init",
+                    KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT);
+    PRINT_DIRECTIVE(".amdhsa_user_sgpr_private_segment_size",
+                    KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE);
+
+    if (TwoByteBuffer & KERNEL_CODE_PROPERTY_RESERVED0)
+      return MCDisassembler::Fail;
+
+    // Reserved for GFX9
+    if (isGFX9() &&
+        (TwoByteBuffer & KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32)) {
+      return MCDisassembler::Fail;
+    } else if (isGFX10()) {
+      PRINT_DIRECTIVE(".amdhsa_wavefront_size32",
+                      KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
+    }
+
+    if (TwoByteBuffer & KERNEL_CODE_PROPERTY_RESERVED1)
+      return MCDisassembler::Fail;
+
+    return MCDisassembler::Success;
+
+  case amdhsa::RESERVED2_OFFSET:
+    // 6 bytes from here are reserved, must be 0.
+    ReservedBytes = DE.getBytes(Cursor, 6);
+    for (int I = 0; I < 6; ++I) {
+      if (ReservedBytes[I] != 0)
+        return MCDisassembler::Fail;
+    }
+    return MCDisassembler::Success;
+
+  default:
+    llvm_unreachable("Unhandled index. Case statements cover everything.");
+    return MCDisassembler::Fail;
+  }
+#undef PRINT_DIRECTIVE
+}
+
+MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeKernelDescriptor(
+    StringRef KdName, ArrayRef<uint8_t> Bytes, uint64_t KdAddress) const {
+  // CP microcode requires the kernel descriptor to be 64 aligned.
+  if (Bytes.size() != 64 || KdAddress % 64 != 0)
+    return MCDisassembler::Fail;
+
+  std::string Kd;
+  raw_string_ostream KdStream(Kd);
+  KdStream << ".amdhsa_kernel " << KdName << '\n';
+
+  DataExtractor::Cursor C(0);
+  while (C && C.tell() < Bytes.size()) {
+    MCDisassembler::DecodeStatus Status =
+        decodeKernelDescriptorDirective(C, Bytes, KdStream);
+
+    cantFail(C.takeError());
+
+    if (Status == MCDisassembler::Fail)
+      return MCDisassembler::Fail;
+  }
+  KdStream << ".end_amdhsa_kernel\n";
+  outs() << KdStream.str();
+  return MCDisassembler::Success;
+}
+
+Optional<MCDisassembler::DecodeStatus>
+AMDGPUDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
+                                  ArrayRef<uint8_t> Bytes, uint64_t Address,
+                                  raw_ostream &CStream) const {
+  // Right now only kernel descriptor needs to be handled.
+  // We ignore all other symbols for target specific handling.
+  // TODO:
+  // Fix the spurious symbol issue for AMDGPU kernels. Exists for both Code
+  // Object V2 and V3 when symbols are marked protected.
+
+  // amd_kernel_code_t for Code Object V2.
+  if (Symbol.Type == ELF::STT_AMDGPU_HSA_KERNEL) {
+    Size = 256;
+    return MCDisassembler::Fail;
+  }
+
+  // Code Object V3 kernel descriptors.
+  StringRef Name = Symbol.Name;
+  if (Symbol.Type == ELF::STT_OBJECT && Name.endswith(StringRef(".kd"))) {
+    Size = 64; // Size = 64 regardless of success or failure.
+    return decodeKernelDescriptor(Name.drop_back(3), Bytes, Address);
+  }
+  return None;
 }
 
 //===----------------------------------------------------------------------===//
