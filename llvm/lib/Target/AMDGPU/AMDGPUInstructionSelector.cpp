@@ -1539,6 +1539,16 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
     DMask = MI.getOperand(ArgOffset + Intr->DMaskIndex).getImm();
     DMaskLanes = BaseOpcode->Gather4 ? 4 : countPopulation(DMask);
 
+    // One memoperand is mandatory, except for getresinfo.
+    // FIXME: Check this in verifier.
+    if (!MI.memoperands_empty()) {
+      const MachineMemOperand *MMO = *MI.memoperands_begin();
+
+      // Infer d16 from the memory size, as the register type will be mangled by
+      // unpacked subtargets, or by TFE.
+      IsD16 = ((8 * MMO->getSize()) / DMaskLanes) < 32;
+    }
+
     if (BaseOpcode->Store) {
       VDataIn = MI.getOperand(1).getReg();
       VDataTy = MRI->getType(VDataIn);
@@ -1548,18 +1558,8 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
       VDataTy = MRI->getType(VDataOut);
       NumVDataDwords = DMaskLanes;
 
-      // One memoperand is mandatory, except for getresinfo.
-      // FIXME: Check this in verifier.
-      if (!MI.memoperands_empty()) {
-        const MachineMemOperand *MMO = *MI.memoperands_begin();
-
-        // Infer d16 from the memory size, as the register type will be mangled by
-        // unpacked subtargets, or by TFE.
-        IsD16 = ((8 * MMO->getSize()) / DMaskLanes) < 32;
-
-        if (IsD16 && !STI.hasUnpackedD16VMem())
-          NumVDataDwords = (DMaskLanes + 1) / 2;
-      }
+      if (IsD16 && !STI.hasUnpackedD16VMem())
+        NumVDataDwords = (DMaskLanes + 1) / 2;
     }
   }
 
