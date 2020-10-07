@@ -68,7 +68,7 @@ static bool BPFPreserveDITypeImpl(Function &F) {
     return false;
 
   std::string BaseName = "llvm.btf_type_id.";
-  int Count = 0;
+  static int Count = 0;
   for (auto Call : PreserveDITypeCalls) {
     const ConstantInt *Flag = dyn_cast<ConstantInt>(Call->getArgOperand(1));
     assert(Flag);
