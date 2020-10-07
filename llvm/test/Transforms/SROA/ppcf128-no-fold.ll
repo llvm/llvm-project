@@ -1,4 +1,4 @@
-; RUN: opt < %s -sroa -S | FileCheck %s 
+; RUN: opt < %s -sroa -S | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -27,8 +27,8 @@ entry:
 ; CHECK-LABEL: @foo
 ; CHECK-NOT: i128 4628293042053316608
 ; CHECK-NOT: i128 4653260752096854016
-; CHECK-DAG: i128 bitcast (ppc_fp128 0xM403B0000000000000000000000000000 to i128)
-; CHECK-DAG: i128 bitcast (ppc_fp128 0xM4093B400000000000000000000000000 to i128)
+; CHECK-DAG: bitcast ppc_fp128 0xM403B0000000000000000000000000000 to i128
+; CHECK-DAG: bitcast ppc_fp128 0xM4093B400000000000000000000000000 to i128
 ; CHECK: call void @bar(i8* %v, [2 x i128]
 ; CHECK: ret void
 

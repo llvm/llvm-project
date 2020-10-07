@@ -1128,9 +1128,9 @@ LLVM_DUMP_METHOD void AllocaSlices::dump() const { print(dbgs()); }
 
 /// Walk the range of a partitioning looking for a common type to cover this
 /// sequence of slices.
-static Type *findCommonType(AllocaSlices::const_iterator B,
-                            AllocaSlices::const_iterator E,
-                            uint64_t EndOffset) {
+static std::pair<Type *, IntegerType *>
+findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
+               uint64_t EndOffset) {
   Type *Ty = nullptr;
   bool TyIsCommon = true;
   IntegerType *ITy = nullptr;
@@ -1174,7 +1174,7 @@ static Type *findCommonType(AllocaSlices::const_iterator B,
       Ty = UserTy;
   }
 
-  return TyIsCommon ? Ty : ITy;
+  return {TyIsCommon ? Ty : nullptr, ITy};
 }
 
 /// PHI instructions that use an alloca and are subsequently loaded can be
@@ -4264,13 +4264,21 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // or an i8 array of an appropriate size.
   Type *SliceTy = nullptr;
   const DataLayout &DL = AI.getModule()->getDataLayout();
-  if (Type *CommonUseTy = findCommonType(P.begin(), P.end(), P.endOffset()))
-    if (DL.getTypeAllocSize(CommonUseTy).getFixedSize() >= P.size())
-      SliceTy = CommonUseTy;
+  std::pair<Type *, IntegerType *> CommonUseTy =
+      findCommonType(P.begin(), P.end(), P.endOffset());
+  // Do all uses operate on the same type?
+  if (CommonUseTy.first)
+    if (DL.getTypeAllocSize(CommonUseTy.first).getFixedSize() >= P.size())
+      SliceTy = CommonUseTy.first;
+  // If not, can we find an appropriate subtype in the original allocated type?
   if (!SliceTy)
     if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
                                                  P.beginOffset(), P.size()))
       SliceTy = TypePartitionTy;
+  // If still not, can we use the largest bitwidth integer type used?
+  if (!SliceTy && CommonUseTy.second)
+    if (DL.getTypeAllocSize(CommonUseTy.second).getFixedSize() >= P.size())
+      SliceTy = CommonUseTy.second;
   if ((!SliceTy || (SliceTy->isArrayTy() &&
                     SliceTy->getArrayElementType()->isIntegerTy())) &&
       DL.isLegalInteger(P.size() * 8))
