@@ -56,7 +56,9 @@ set(LIBCXX_SOURCES
   )
 
 if (LIBCXX_ENABLE_DEBUG_MODE)
-  list(APPEND LIBCXX_SOURCES debug.cpp)
+  list(APPEND LIBCXX_SOURCES
+    debug.cpp
+    )
 endif()
 
 if(WIN32)
