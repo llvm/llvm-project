@@ -62,15 +62,15 @@ class VirtRegMap;
     /// (re)compute li's spill weight and allocation hint.
     void calculateSpillWeightAndHint(LiveInterval &LI);
 
-    /// Compute future expected spill weight of a split artifact of li
+    /// Compute future expected spill weight of a split artifact of LI
     /// that will span between start and end slot indexes.
-    /// \param li     The live interval to be split.
-    /// \param start  The expected begining of the split artifact. Instructions
+    /// \param LI     The live interval to be split.
+    /// \param Start  The expected beginning of the split artifact. Instructions
     ///               before start will not affect the weight.
-    /// \param end    The expected end of the split artifact. Instructions
+    /// \param End    The expected end of the split artifact. Instructions
     ///               after end will not affect the weight.
     /// \return The expected spill weight of the split artifact. Returns
-    /// negative weight for unspillable li.
+    /// negative weight for unspillable LI.
     float futureWeight(LiveInterval &LI, SlotIndex Start, SlotIndex End);
 
     /// Compute spill weights and allocation hints for all virtual register
@@ -79,17 +79,17 @@ class VirtRegMap;
 
   protected:
     /// Helper function for weight calculations.
-    /// (Re)compute li's spill weight and allocation hint, or, for non null
+    /// (Re)compute LI's spill weight and allocation hint, or, for non null
     /// start and end - compute future expected spill weight of a split
-    /// artifact of li that will span between start and end slot indexes.
-    /// \param li     The live interval for which to compute the weight.
-    /// \param start  The expected begining of the split artifact. Instructions
+    /// artifact of LI that will span between start and end slot indexes.
+    /// \param LI     The live interval for which to compute the weight.
+    /// \param Start  The expected beginning of the split artifact. Instructions
     ///               before start will not affect the weight. Relevant for
     ///               weight calculation of future split artifact.
-    /// \param end    The expected end of the split artifact. Instructions
+    /// \param End    The expected end of the split artifact. Instructions
     ///               after end will not affect the weight. Relevant for
     ///               weight calculation of future split artifact.
-    /// \return The spill weight. Returns negative weight for unspillable li.
+    /// \return The spill weight. Returns negative weight for unspillable LI.
     float weightCalcHelper(LiveInterval &LI, SlotIndex *Start = nullptr,
                            SlotIndex *End = nullptr);
 
