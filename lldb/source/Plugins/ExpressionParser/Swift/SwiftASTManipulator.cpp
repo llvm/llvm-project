@@ -1331,21 +1331,15 @@ swift::ValueDecl *SwiftASTManipulator::MakeGlobalTypealias(
   if (!IsValid())
     return nullptr;
 
-  swift::SourceLoc source_loc;
-
-  if (m_extension_decl)
-    source_loc = m_extension_decl->getEndLoc();
-  else
-    source_loc = m_function_decl->getEndLoc();
-
   swift::ASTContext &ast_context = m_source_file.getASTContext();
 
   swift::TypeAliasDecl *type_alias_decl = new (ast_context)
-      swift::TypeAliasDecl(source_loc, swift::SourceLoc(), name, source_loc,
-                           nullptr, &m_source_file);
+      swift::TypeAliasDecl(swift::SourceLoc(), swift::SourceLoc(), name,
+                           swift::SourceLoc(), nullptr, &m_source_file);
   swift::Type underlying_type = GetSwiftType(type);
   type_alias_decl->setUnderlyingType(underlying_type);
   type_alias_decl->markAsDebuggerAlias(true);
+  type_alias_decl->setImplicit(true);
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
   if (log) {
