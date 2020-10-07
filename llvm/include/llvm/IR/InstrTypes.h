@@ -650,8 +650,8 @@ public:
   /// DataLayout argument is to determine the pointer size when examining casts
   /// involving Integer and Pointer types. They are no-op casts if the integer
   /// is the same size as the pointer. However, pointer size varies with
-  /// platform.
-  /// Determine if the described cast is a no-op cast.
+  /// platform.  Note that a precondition of this method is that the cast is
+  /// legal - i.e. the instruction formed with these operands would verify.
   static bool isNoopCast(
     Instruction::CastOps Opcode, ///< Opcode of cast
     Type *SrcTy,         ///< SrcTy of cast
