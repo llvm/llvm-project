@@ -319,7 +319,6 @@ public:
 
   // fir.array<c ... :any>  -->  llvm<"[...[c x any]]">
   mlir::LLVM::LLVMType convertSequenceType(fir::SequenceType seq) {
-    assert(seq.hasConstantInterior() && "cannot lower type to LLVM IR");
     auto baseTy = unwrap(convertType(seq.getEleTy()));
     auto shape = seq.getShape();
     auto constRows = seq.getConstantRows();
