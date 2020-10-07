@@ -3,6 +3,7 @@
 // Note: It intentionally does not check the only-interface or prefer-interface
 // modes as this also causes the Swift stdlib to be loaded via its module
 // interface file, which slows down this test considerably.
+// REQUIRES: swift
 
 // RUN: rm -rf %t && mkdir %t
 

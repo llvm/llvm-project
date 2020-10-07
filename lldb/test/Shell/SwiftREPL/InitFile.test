@@ -1,5 +1,7 @@
 // Test that the Swift REPL init file works.
 // REQUIRES: system-darwin
+// REQUIRES: swift
+
 // RUN: export HOME=%t
 // RUN: mkdir -p %t
 // RUN: echo 'br set -f main.c -l 123' > ~/.lldbinit

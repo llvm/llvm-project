@@ -1,3 +1,5 @@
+// REQUIRES: swift
+
 // RUN: %lldb --repl < %s | FileCheck %s
 
 let x = [Double.self]

@@ -1,4 +1,5 @@
 // Make sure we don't crash if we pass args to the repl.
+// REQUIRES: swift
 
 // RUN: %lldb --repl="-some-argument" | FileCheck %s --check-prefix=SWIFT
 // SWIFT: Welcome to {{.*}}Swift

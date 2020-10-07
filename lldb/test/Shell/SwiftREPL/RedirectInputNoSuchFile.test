@@ -1,4 +1,5 @@
 // Test that input can't be redirected from non-existent file A.swift
+// REQUIRES: swift
 
 // RUN: mkdir -p %t
 // RUN: cd %t
