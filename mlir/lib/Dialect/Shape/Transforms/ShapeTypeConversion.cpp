@@ -1,5 +1,4 @@
-//=====------- ShapeTypeConversion.cpp - Shape Type Conversions ----------*- C++
-//-*-=====//
+//====----- ShapeTypeConversion.cpp - Shape Type Conversions ----*- C++-*--===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -82,7 +81,7 @@ struct ShapeTensorToMemrefPass
 
 /// Populates `patterns` with the conversion patterns of tensor->memref.
 //
-// TODO(tpopp): Change this to work generally with any type conversions.
+// TODO: Change this to work generally with any type conversions.
 void mlir::populateShapeTypeConversionPatterns(
     MLIRContext *context, BufferAssignmentTypeConverter *converter,
     OwningRewritePatternList *patterns) {
