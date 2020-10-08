@@ -2146,7 +2146,7 @@ unsigned X86AsmParser::ParseIntelInlineAsmOperator(unsigned OpKind) {
   SMLoc Start = Tok.getLoc(), End;
   StringRef Identifier = Tok.getString();
   if (ParseIntelInlineAsmIdentifier(Val, Identifier, Info,
-                                    /*Unevaluated=*/true, End))
+                                    /*IsUnevaluatedOperand=*/true, End))
     return 0;
 
   if (!Info.isKind(InlineAsmIdentifierInfo::IK_Var)) {
