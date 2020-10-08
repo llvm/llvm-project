@@ -74,6 +74,7 @@ CGOPT(bool, UseCtors)
 CGOPT(bool, RelaxELFRelocations)
 CGOPT_EXP(bool, DataSections)
 CGOPT_EXP(bool, FunctionSections)
+CGOPT(bool, IgnoreXCOFFVisibility)
 CGOPT(std::string, BBSections)
 CGOPT(unsigned, TLSSize)
 CGOPT(bool, EmulatedTLS)
@@ -333,6 +334,13 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(FunctionSections);
 
+  static cl::opt<bool> IgnoreXCOFFVisibility(
+      "ignore-xcoff-visibility",
+      cl::desc("Not emit the visibility attribute for asm in AIX OS or give "
+               "all symbols 'unspecified' visibility in XCOFF object file"),
+      cl::init(false));
+  CGBINDOPT(IgnoreXCOFFVisibility);
+
   static cl::opt<std::string> BBSections(
       "basic-block-sections",
       cl::desc("Emit basic blocks into separate sections"),
@@ -479,6 +487,7 @@ TargetOptions codegen::InitTargetOptionsFromCodeGenFlags() {
   Options.RelaxELFRelocations = getRelaxELFRelocations();
   Options.DataSections = getDataSections();
   Options.FunctionSections = getFunctionSections();
+  Options.IgnoreXCOFFVisibility = getIgnoreXCOFFVisibility();
   Options.BBSections = getBBSectionsMode(Options);
   Options.UniqueSectionNames = getUniqueSectionNames();
   Options.UniqueBasicBlockSectionNames = getUniqueBasicBlockSectionNames();
