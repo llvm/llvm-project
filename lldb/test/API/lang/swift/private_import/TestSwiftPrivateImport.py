@@ -11,6 +11,7 @@ class TestSwiftPrivateImport(TestBase):
         TestBase.setUp(self)
 
     @skipUnlessDarwin
+    @swiftTest
     def test_private_import(self):
         """Test a library with a private import for which there is no debug info"""
         invisible_swift = self.getBuildArtifact("Invisible.swift")

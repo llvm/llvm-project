@@ -12,6 +12,7 @@ class SwiftCompletionTest(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipUnlessDarwin
+    @swiftTest
     def test_basic_completion(self):
 
         self.launch(extra_args=["--repl"], executable=None, dimensions=(100,500))
@@ -41,6 +42,7 @@ class SwiftCompletionTest(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIf(oslist=['windows'])
+    @swiftTest
     def test_lldb_command_completion(self):
 
         self.launch(extra_args=["--repl"], executable=None, dimensions=(100,500))

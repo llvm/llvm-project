@@ -41,6 +41,7 @@ class TestAvailability(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
 
+    @swiftTest
     @skipIf(oslist=['linux', 'windows'])
     def testAvailability(self):
         platform_name = lldbplatformutil.getPlatform()

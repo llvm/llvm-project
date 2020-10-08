@@ -37,6 +37,7 @@ class TestSwiftDeserializationFailure(TestBase):
         # FIXME: this is formatted incorrectly.
         self.expect("fr var t", substrs=["(T)"]) #, "world"])
 
+    @swiftTest
     @skipIf(oslist=['windows'])
     @skipIf(debug_info=no_match(["dwarf"]))
     @expectedFailureAll(archs=["arm64", "arm64e", 'arm64_32'], bugnumber="<rdar://problem/58096919>")
@@ -47,6 +48,7 @@ class TestSwiftDeserializationFailure(TestBase):
         target, process, _, _ = lldbutil.run_to_name_breakpoint(self, 'main')
         self.run_tests(target, process)
 
+    @swiftTest
     @skipIf(oslist=['windows'])
     @skipIf(debug_info=no_match(["dwarf"]))
     @expectedFailureAll(archs=["arm64", "arm64e", 'arm64_32'], bugnumber="<rdar://problem/58096919>")
