@@ -1231,13 +1231,15 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
       if (SrcVT == MVT::i1) {
         if (Outs[0].Flags.isSExt())
           return false;
-        SrcReg = fastEmitZExtFromI1(MVT::i8, SrcReg, /*TODO: Kill=*/false);
+        // TODO
+        SrcReg = fastEmitZExtFromI1(MVT::i8, SrcReg, /*Op0IsKill=*/false);
         SrcVT = MVT::i8;
       }
       unsigned Op = Outs[0].Flags.isZExt() ? ISD::ZERO_EXTEND :
                                              ISD::SIGN_EXTEND;
-      SrcReg = fastEmit_r(SrcVT.getSimpleVT(), DstVT.getSimpleVT(), Op,
-                          SrcReg, /*TODO: Kill=*/false);
+      // TODO
+      SrcReg = fastEmit_r(SrcVT.getSimpleVT(), DstVT.getSimpleVT(), Op, SrcReg,
+                          /*Op0IsKill=*/false);
     }
 
     // Make the copy.
@@ -1431,8 +1433,8 @@ bool X86FastISel::X86SelectCmp(const Instruction *I) {
     ResultReg = createResultReg(&X86::GR32RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::MOV32r0),
             ResultReg);
-    ResultReg = fastEmitInst_extractsubreg(MVT::i8, ResultReg, /*Kill=*/true,
-                                           X86::sub_8bit);
+    ResultReg = fastEmitInst_extractsubreg(MVT::i8, ResultReg,
+                                           /*Op0IsKill=*/true, X86::sub_8bit);
     if (!ResultReg)
       return false;
     break;
@@ -1555,11 +1557,11 @@ bool X86FastISel::X86SelectZExt(const Instruction *I) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::MOVZX32rr8),
             Result32).addReg(ResultReg);
 
-    ResultReg = fastEmitInst_extractsubreg(MVT::i16, Result32, /*Kill=*/true,
-                                           X86::sub_16bit);
+    ResultReg = fastEmitInst_extractsubreg(MVT::i16, Result32,
+                                           /*Op0IsKill=*/true, X86::sub_16bit);
   } else if (DstVT != MVT::i8) {
     ResultReg = fastEmit_r(MVT::i8, DstVT.getSimpleVT(), ISD::ZERO_EXTEND,
-                           ResultReg, /*Kill=*/true);
+                           ResultReg, /*Op0IsKill=*/true);
     if (ResultReg == 0)
       return false;
   }
@@ -1601,11 +1603,11 @@ bool X86FastISel::X86SelectSExt(const Instruction *I) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::MOVSX32rr8),
             Result32).addReg(ResultReg);
 
-    ResultReg = fastEmitInst_extractsubreg(MVT::i16, Result32, /*Kill=*/true,
-                                           X86::sub_16bit);
+    ResultReg = fastEmitInst_extractsubreg(MVT::i16, Result32,
+                                           /*Op0IsKill=*/true, X86::sub_16bit);
   } else if (DstVT != MVT::i8) {
     ResultReg = fastEmit_r(MVT::i8, DstVT.getSimpleVT(), ISD::SIGN_EXTEND,
-                           ResultReg, /*Kill=*/true);
+                           ResultReg, /*Op0IsKill=*/true);
     if (ResultReg == 0)
       return false;
   }
@@ -1757,7 +1759,7 @@ bool X86FastISel::X86SelectBranch(const Instruction *I) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(TargetOpcode::COPY), OpReg)
         .addReg(KOpReg);
-    OpReg = fastEmitInst_extractsubreg(MVT::i8, OpReg, /*Kill=*/true,
+    OpReg = fastEmitInst_extractsubreg(MVT::i8, OpReg, /*Op0IsKill=*/true,
                                        X86::sub_8bit);
   }
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::TEST8ri))
@@ -1989,7 +1991,7 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
 
     // Now reference the 8-bit subreg of the result.
     ResultReg = fastEmitInst_extractsubreg(MVT::i8, ResultSuperReg,
-                                           /*Kill=*/true, X86::sub_8bit);
+                                           /*Op0IsKill=*/true, X86::sub_8bit);
   }
   // Copy the result out of the physreg if we haven't already.
   if (!ResultReg) {
@@ -2103,7 +2105,7 @@ bool X86FastISel::X86FastEmitCMoveSelect(MVT RetVT, const Instruction *I) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
               TII.get(TargetOpcode::COPY), CondReg)
           .addReg(KCondReg, getKillRegState(CondIsKill));
-      CondReg = fastEmitInst_extractsubreg(MVT::i8, CondReg, /*Kill=*/true,
+      CondReg = fastEmitInst_extractsubreg(MVT::i8, CondReg, /*Op0IsKill=*/true,
                                            X86::sub_8bit);
     }
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::TEST8ri))
@@ -2257,12 +2259,12 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
     const TargetRegisterClass *VR128 = &X86::VR128RegClass;
     Register CmpReg = fastEmitInst_rri(Opc[0], RC, CmpLHSReg, CmpLHSIsKill,
                                        CmpRHSReg, CmpRHSIsKill, CC);
-    Register AndReg = fastEmitInst_rr(Opc[1], VR128, CmpReg, /*IsKill=*/false,
-                                      LHSReg, LHSIsKill);
-    Register AndNReg = fastEmitInst_rr(Opc[2], VR128, CmpReg, /*IsKill=*/true,
-                                       RHSReg, RHSIsKill);
-    Register OrReg = fastEmitInst_rr(Opc[3], VR128, AndNReg, /*IsKill=*/true,
-                                     AndReg, /*IsKill=*/true);
+    Register AndReg = fastEmitInst_rr(Opc[1], VR128, CmpReg,
+                                      /*Op0IsKill=*/false, LHSReg, LHSIsKill);
+    Register AndNReg = fastEmitInst_rr(Opc[2], VR128, CmpReg,
+                                       /*Op0IsKill=*/true, RHSReg, RHSIsKill);
+    Register OrReg = fastEmitInst_rr(Opc[3], VR128, AndNReg, /*Op0IsKill=*/true,
+                                     AndReg, /*Op1IsKill=*/true);
     ResultReg = createResultReg(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(TargetOpcode::COPY), ResultReg).addReg(OrReg);
@@ -2321,7 +2323,7 @@ bool X86FastISel::X86FastEmitPseudoSelect(MVT RetVT, const Instruction *I) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
               TII.get(TargetOpcode::COPY), CondReg)
           .addReg(KCondReg, getKillRegState(CondIsKill));
-      CondReg = fastEmitInst_extractsubreg(MVT::i8, CondReg, /*Kill=*/true,
+      CondReg = fastEmitInst_extractsubreg(MVT::i8, CondReg, /*Op0IsKill=*/true,
                                            X86::sub_8bit);
     }
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::TEST8ri))
@@ -2578,7 +2580,7 @@ bool X86FastISel::TryEmitSmallMemcpy(X86AddressMode DestAM,
 
     unsigned Reg;
     bool RV = X86FastEmitLoad(VT, SrcAM, nullptr, Reg);
-    RV &= X86FastEmitStore(VT, Reg, /*Kill=*/true, DestAM);
+    RV &= X86FastEmitStore(VT, Reg, /*ValIsKill=*/true, DestAM);
     assert(RV && "Failed to emit load or store??");
 
     unsigned Size = VT.getSizeInBits()/8;
@@ -2642,15 +2644,15 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
       assert(Op->getType()->isIntegerTy(16) && "Expected a 16-bit integer!");
       // Explicitly zero-extend the input to 32-bit.
       InputReg = fastEmit_r(MVT::i16, MVT::i32, ISD::ZERO_EXTEND, InputReg,
-                            /*Kill=*/false);
+                            /*Op0IsKill=*/false);
 
       // The following SCALAR_TO_VECTOR will be expanded into a VMOVDI2PDIrr.
       InputReg = fastEmit_r(MVT::i32, MVT::v4i32, ISD::SCALAR_TO_VECTOR,
-                            InputReg, /*Kill=*/true);
+                            InputReg, /*Op0IsKill=*/true);
 
       unsigned Opc = Subtarget->hasVLX() ? X86::VCVTPH2PSZ128rr
                                          : X86::VCVTPH2PSrr;
-      InputReg = fastEmitInst_r(Opc, RC, InputReg, /*Kill=*/true);
+      InputReg = fastEmitInst_r(Opc, RC, InputReg, /*Op0IsKill=*/true);
 
       // The result value is in the lower 32-bits of ResultReg.
       // Emit an explicit copy from register class VR128 to register class FR32.
@@ -3692,10 +3694,10 @@ unsigned X86FastISel::X86MaterializeInt(const ConstantInt *CI, MVT VT) {
     default: llvm_unreachable("Unexpected value type");
     case MVT::i1:
     case MVT::i8:
-      return fastEmitInst_extractsubreg(MVT::i8, SrcReg, /*Kill=*/true,
+      return fastEmitInst_extractsubreg(MVT::i8, SrcReg, /*Op0IsKill=*/true,
                                         X86::sub_8bit);
     case MVT::i16:
-      return fastEmitInst_extractsubreg(MVT::i16, SrcReg, /*Kill=*/true,
+      return fastEmitInst_extractsubreg(MVT::i16, SrcReg, /*Op0IsKill=*/true,
                                         X86::sub_16bit);
     case MVT::i32:
       return SrcReg;
