@@ -24,7 +24,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 class Async_Op<string mnemonic, list<OpTrait> traits = []> :
     Op<AsyncDialect, mnemonic, traits>;
 
-def Async_ExecuteOp : Async_Op<"execute"> {
+def Async_ExecuteOp : Async_Op<"execute", [AttrSizedOperandSegments]> {
   let summary = "Asynchronous execute operation";
   let description = [{
     The `body` region attached to the `async.execute` operation semantically
@@ -40,24 +40,43 @@ def Async_ExecuteOp : Async_Op<"execute"> {
     state). All dependencies must be made explicit with async execute arguments
     (`async.token` or `async.value`).
 
+   `async.execute` operation takes `async.token` dependencies and `async.value`
+    operands separatly, and starts execution of the attached body region only
+    when all tokens and values become ready.
+
+    Example:
+
     ```mlir
-    %done, %values = async.execute {
-      %0 = "compute0"(...) : !some.type
-      async.yield %1 : f32
-    } : !async.token, !async.value<!some.type>
+    %dependency = ... : !async.token
+    %value = ... : !async.value<f32>
+
+    %token, %results =
+      async.execute [%dependency](%value as %unwrapped: !async.value<f32>)
+                 -> !async.value<!some.type>
+      {
+        %0 = "compute0"(%unwrapped): (f32) -> !some.type
+        async.yield %0 : !some.type
+      }
 
     %1 = "compute1"(...) : !some.type
     ```
+
+    In the example above asynchronous execution starts only after dependency
+    token and value argument become ready. Unwrapped value passed to the
+    attached body region as an %unwrapped value of f32 type.
   }];
 
-  // TODO: Take async.tokens/async.values as arguments.
-  let arguments = (ins );
-  let results = (outs Async_TokenType:$done,
-                      Variadic<Async_AnyValueType>:$values);
+  let arguments = (ins Variadic<Async_TokenType>:$dependencies,
+                       Variadic<Async_AnyValueOrTokenType>:$operands);
+
+  let results = (outs Async_TokenType:$token,
+                      Variadic<Async_AnyValueType>:$results);
   let regions = (region SizedRegion<1>:$body);
 
-  let printer = [{ return ::mlir::async::print(p, *this); }];
-  let parser = [{ return ::mlir::async::parse$cppClass(parser, result); }];
+  let printer = [{ return ::print(p, *this); }];
+  let parser = [{ return ::parse$cppClass(parser, result); }];
+
+  let verifier = [{ return ::verify(*this); }];
 }
 
 def Async_YieldOp :
@@ -72,7 +91,7 @@ def Async_YieldOp :
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 
-  let verifier = [{ return ::mlir::async::verify(*this); }];
+  let verifier = [{ return ::verify(*this); }];
 }
 
 #endif // ASYNC_OPS

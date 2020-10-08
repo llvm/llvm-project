@@ -56,7 +56,11 @@ class Async_ValueType<Type type>
   Type valueType = type;
 }
 
-def Async_AnyValueType : Type<CPred<"$_self.isa<::mlir::async::ValueType>()">,
-                                    "async value type">;
+def Async_AnyValueType : DialectType<AsyncDialect,
+                           CPred<"$_self.isa<::mlir::async::ValueType>()">,
+                                 "async value type">;
+
+def Async_AnyValueOrTokenType : AnyTypeOf<[Async_AnyValueType,
+                                           Async_TokenType]>;
 
 #endif // ASYNC_BASE_TD
