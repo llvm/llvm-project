@@ -213,6 +213,14 @@ protected:
   raw_ostream &Out;
 };
 
+class VerifyInstrumentation {
+  bool DebugLogging;
+
+public:
+  VerifyInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+};
+
 /// This class provides an interface to register all the standard pass
 /// instrumentations and manages their state (if any).
 class StandardInstrumentations {
@@ -222,9 +230,13 @@ class StandardInstrumentations {
   OptNoneInstrumentation OptNone;
   PreservedCFGCheckerInstrumentation PreservedCFGChecker;
   IRChangePrinter PrintChangedIR;
+  VerifyInstrumentation Verify;
+
+  bool VerifyEach;
 
 public:
-  StandardInstrumentations(bool DebugLogging) : PrintPass(DebugLogging) {}
+  StandardInstrumentations(bool DebugLogging, bool VerifyEach = false)
+      : PrintPass(DebugLogging), Verify(DebugLogging), VerifyEach(VerifyEach) {}
 
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
