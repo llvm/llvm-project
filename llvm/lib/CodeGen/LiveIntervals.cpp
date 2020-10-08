@@ -1037,7 +1037,8 @@ public:
 
       // For physregs, only update the regunits that actually have a
       // precomputed live range.
-      for (MCRegUnitIterator Units(Reg, &TRI); Units.isValid(); ++Units)
+      for (MCRegUnitIterator Units(Reg.asMCReg(), &TRI); Units.isValid();
+           ++Units)
         if (LiveRange *LR = getRegUnitLI(*Units))
           updateRange(*LR, *Units, LaneBitmask::getNone());
     }
@@ -1683,7 +1684,7 @@ LiveIntervals::repairIntervalsInRange(MachineBasicBlock *MBB,
   }
 }
 
-void LiveIntervals::removePhysRegDefAt(unsigned Reg, SlotIndex Pos) {
+void LiveIntervals::removePhysRegDefAt(MCRegister Reg, SlotIndex Pos) {
   for (MCRegUnitIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {
     if (LiveRange *LR = getCachedRegUnit(*Unit))
       if (VNInfo *VNI = LR->getVNInfoAt(Pos))
