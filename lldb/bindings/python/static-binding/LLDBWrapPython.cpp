@@ -64135,6 +64135,66 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBThreadPlan_GetStopOthers(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBThreadPlan *arg1 = (lldb::SBThreadPlan *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  bool result;
+  
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBThreadPlan, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBThreadPlan_GetStopOthers" "', argument " "1"" of type '" "lldb::SBThreadPlan *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBThreadPlan * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)(arg1)->GetStopOthers();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBThreadPlan_SetStopOthers(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBThreadPlan *arg1 = (lldb::SBThreadPlan *) 0 ;
+  bool arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  PyObject *swig_obj[2] ;
+  
+  if (!SWIG_Python_UnpackTuple(args, "SBThreadPlan_SetStopOthers", 2, 2, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBThreadPlan, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBThreadPlan_SetStopOthers" "', argument " "1"" of type '" "lldb::SBThreadPlan *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBThreadPlan * >(argp1);
+  ecode2 = SWIG_AsVal_bool(swig_obj[1], &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SBThreadPlan_SetStopOthers" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    (arg1)->SetStopOthers(arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBThreadPlan_QueueThreadPlanForStepOverRange(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBThreadPlan *arg1 = (lldb::SBThreadPlan *) 0 ;
@@ -80183,6 +80243,127 @@ LLDBSwigPythonCallBreakpointResolver
     return ret_val;
 }
 
+SWIGEXPORT void *
+LLDBSwigPythonCreateScriptedStopHook
+(
+    lldb::TargetSP target_sp,
+    const char *python_class_name,
+    const char *session_dictionary_name,
+    lldb_private::StructuredDataImpl *args_impl,
+    Status &error
+)
+{
+    if (python_class_name == NULL || python_class_name[0] == '\0') {
+        error.SetErrorString("Empty class name.");
+        Py_RETURN_NONE;
+    }
+    if (!session_dictionary_name) {
+      error.SetErrorString("No session dictionary");
+      Py_RETURN_NONE;
+    }
+    
+    PyErr_Cleaner py_err_cleaner(true);
+
+    auto dict = 
+        PythonModule::MainModule().ResolveName<PythonDictionary>(
+            session_dictionary_name);
+    auto pfunc = 
+        PythonObject::ResolveNameWithDictionary<PythonCallable>(
+            python_class_name, dict);
+
+    if (!pfunc.IsAllocated()) {
+        error.SetErrorStringWithFormat("Could not find class: %s.", 
+                                       python_class_name);
+        return nullptr;
+    }
+
+    lldb::SBTarget *target_val 
+        = new lldb::SBTarget(target_sp);
+
+    PythonObject target_arg(PyRefType::Owned, SBTypeToSWIGWrapper(target_val));
+
+    lldb::SBStructuredData *args_value = new lldb::SBStructuredData(args_impl);
+    PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(args_value));
+
+    PythonObject result = pfunc(target_arg, args_arg, dict);
+
+    if (result.IsAllocated())
+    {
+        // Check that the handle_stop callback is defined:
+        auto callback_func = result.ResolveName<PythonCallable>("handle_stop");
+        if (callback_func.IsAllocated()) {
+          if (auto args_info = callback_func.GetArgInfo()) {
+            size_t num_args = (*args_info).max_positional_args; 
+            if (num_args != 2) {
+              error.SetErrorStringWithFormat("Wrong number of args for "
+              "handle_stop callback, should be 2 (excluding self), got: %d", 
+              num_args);
+              Py_RETURN_NONE;
+            } else
+              return result.release();
+          } else {
+            error.SetErrorString("Couldn't get num arguments for handle_stop "
+                                 "callback.");
+            Py_RETURN_NONE;
+          }
+          return result.release();
+        }
+        else {
+          error.SetErrorStringWithFormat("Class \"%s\" is missing the required "
+                                         "handle_stop callback.",
+                                         python_class_name);
+          result.release();
+        }
+    }
+    Py_RETURN_NONE;
+}
+
+SWIGEXPORT bool
+LLDBSwigPythonStopHookCallHandleStop
+(
+    void *implementor,
+    lldb::ExecutionContextRefSP exc_ctx_sp,
+    lldb::StreamSP stream
+)
+{
+    // handle_stop will return a bool with the meaning "should_stop"...
+    // If you return nothing we'll assume we are going to stop.
+    // Also any errors should return true, since we should stop on error.
+
+    PyErr_Cleaner py_err_cleaner(false);
+    PythonObject self(PyRefType::Borrowed, static_cast<PyObject*>(implementor));
+    auto pfunc = self.ResolveName<PythonCallable>("handle_stop");
+
+    if (!pfunc.IsAllocated())
+        return true;
+
+    PythonObject result;
+    lldb::SBExecutionContext sb_exc_ctx(exc_ctx_sp);
+    PythonObject exc_ctx_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_exc_ctx));
+    lldb::SBStream sb_stream;
+    PythonObject sb_stream_arg(PyRefType::Owned, 
+                               SBTypeToSWIGWrapper(sb_stream));
+    result = pfunc(exc_ctx_arg, sb_stream_arg);
+
+    if (PyErr_Occurred())
+    {
+        stream->PutCString("Python error occurred handling stop-hook.");
+        PyErr_Print();
+        PyErr_Clear();
+        return true;
+    }
+    
+    // Now add the result to the output stream.  SBStream only
+    // makes an internally help StreamString which I can't interpose, so I 
+    // have to copy it over here.
+    stream->PutCString(sb_stream.GetData());
+    
+    if (result.get() == Py_False)
+      return false;
+    else
+      return true;
+}
+
 // wrapper that calls an optional instance member of an object taking no arguments
 static PyObject*
 LLDBSwigPython_CallOptionalMember
@@ -83893,6 +84074,11 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBThreadPlan_SetPlanComplete", _wrap_SBThreadPlan_SetPlanComplete, METH_VARARGS, "SBThreadPlan_SetPlanComplete(SBThreadPlan self, bool success)"},
 	 { "SBThreadPlan_IsPlanComplete", _wrap_SBThreadPlan_IsPlanComplete, METH_O, "SBThreadPlan_IsPlanComplete(SBThreadPlan self) -> bool"},
 	 { "SBThreadPlan_IsPlanStale", _wrap_SBThreadPlan_IsPlanStale, METH_O, "SBThreadPlan_IsPlanStale(SBThreadPlan self) -> bool"},
+	 { "SBThreadPlan_GetStopOthers", _wrap_SBThreadPlan_GetStopOthers, METH_O, "\n"
+		"SBThreadPlan_GetStopOthers(SBThreadPlan self) -> bool\n"
+		"Return whether this plan will ask to stop other threads when it runs.\n"
+		""},
+	 { "SBThreadPlan_SetStopOthers", _wrap_SBThreadPlan_SetStopOthers, METH_VARARGS, "SBThreadPlan_SetStopOthers(SBThreadPlan self, bool stop_others)"},
 	 { "SBThreadPlan_QueueThreadPlanForStepOverRange", _wrap_SBThreadPlan_QueueThreadPlanForStepOverRange, METH_VARARGS, "SBThreadPlan_QueueThreadPlanForStepOverRange(SBThreadPlan self, SBAddress start_address, lldb::addr_t range_size) -> SBThreadPlan"},
 	 { "SBThreadPlan_QueueThreadPlanForStepInRange", _wrap_SBThreadPlan_QueueThreadPlanForStepInRange, METH_VARARGS, "SBThreadPlan_QueueThreadPlanForStepInRange(SBThreadPlan self, SBAddress start_address, lldb::addr_t range_size) -> SBThreadPlan"},
 	 { "SBThreadPlan_QueueThreadPlanForStepOut", _wrap_SBThreadPlan_QueueThreadPlanForStepOut, METH_VARARGS, "SBThreadPlan_QueueThreadPlanForStepOut(SBThreadPlan self, uint32_t frame_idx_to_step_to, bool first_insn=False) -> SBThreadPlan"},
@@ -86308,6 +86494,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "LLDB_INVALID_SIGNAL_NUMBER",SWIG_From_int(static_cast< int >(2147483647)));
   SWIG_Python_SetConstant(d, "LLDB_INVALID_OFFSET",SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(18446744073709551615ULL)));
   SWIG_Python_SetConstant(d, "LLDB_INVALID_LINE_NUMBER",SWIG_From_unsigned_SS_int(static_cast< unsigned int >(4294967295U)));
+  SWIG_Python_SetConstant(d, "LLDB_INVALID_COLUMN_NUMBER",SWIG_From_int(static_cast< int >(0)));
   SWIG_Python_SetConstant(d, "LLDB_INVALID_QUEUE_ID",SWIG_From_int(static_cast< int >(0)));
   SWIG_Python_SetConstant(d, "LLDB_ARCH_DEFAULT",SWIG_FromCharPtr("systemArch"));
   SWIG_Python_SetConstant(d, "LLDB_ARCH_DEFAULT_32BIT",SWIG_FromCharPtr("systemArch32"));
@@ -86326,6 +86513,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "LLDB_OPT_SET_9",SWIG_From_unsigned_SS_int(static_cast< unsigned int >((1U << 8))));
   SWIG_Python_SetConstant(d, "LLDB_OPT_SET_10",SWIG_From_unsigned_SS_int(static_cast< unsigned int >((1U << 9))));
   SWIG_Python_SetConstant(d, "LLDB_OPT_SET_11",SWIG_From_unsigned_SS_int(static_cast< unsigned int >((1U << 10))));
+  SWIG_Python_SetConstant(d, "LLDB_OPT_SET_12",SWIG_From_unsigned_SS_int(static_cast< unsigned int >((1U << 11))));
   SWIG_Python_SetConstant(d, "eStateInvalid",SWIG_From_int(static_cast< int >(lldb::eStateInvalid)));
   SWIG_Python_SetConstant(d, "eStateUnloaded",SWIG_From_int(static_cast< int >(lldb::eStateUnloaded)));
   SWIG_Python_SetConstant(d, "eStateConnected",SWIG_From_int(static_cast< int >(lldb::eStateConnected)));
@@ -86608,6 +86796,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eArgTypeExpression",SWIG_From_int(static_cast< int >(lldb::eArgTypeExpression)));
   SWIG_Python_SetConstant(d, "eArgTypeExpressionPath",SWIG_From_int(static_cast< int >(lldb::eArgTypeExpressionPath)));
   SWIG_Python_SetConstant(d, "eArgTypeExprFormat",SWIG_From_int(static_cast< int >(lldb::eArgTypeExprFormat)));
+  SWIG_Python_SetConstant(d, "eArgTypeFileLineColumn",SWIG_From_int(static_cast< int >(lldb::eArgTypeFileLineColumn)));
   SWIG_Python_SetConstant(d, "eArgTypeFilename",SWIG_From_int(static_cast< int >(lldb::eArgTypeFilename)));
   SWIG_Python_SetConstant(d, "eArgTypeFormat",SWIG_From_int(static_cast< int >(lldb::eArgTypeFormat)));
   SWIG_Python_SetConstant(d, "eArgTypeFrameIndex",SWIG_From_int(static_cast< int >(lldb::eArgTypeFrameIndex)));

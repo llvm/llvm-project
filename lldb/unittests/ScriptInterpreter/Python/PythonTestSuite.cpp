@@ -254,3 +254,17 @@ LLDBSWIGPython_GetDynamicSetting(void *module, const char *setting,
                                  const lldb::TargetSP &target_sp) {
   return nullptr;
 }
+
+extern "C" void *LLDBSwigPythonCreateScriptedStopHook(
+    lldb::TargetSP target_sp, const char *python_class_name,
+    const char *session_dictionary_name,
+    lldb_private::StructuredDataImpl *args_impl, Status &error) {
+  return nullptr;
+}
+
+extern "C" bool
+LLDBSwigPythonStopHookCallHandleStop(void *implementor,
+                                     lldb::ExecutionContextRefSP exc_ctx_sp,
+                                     lldb::StreamSP stream) {
+  return false;
+}
