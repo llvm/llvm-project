@@ -124,6 +124,9 @@ class Command {
   /// The list of program arguments which are inputs.
   llvm::opt::ArgStringList InputFilenames;
 
+  /// The list of program arguments which are outputs. May be empty.
+  std::vector<std::string> OutputFilenames;
+
   /// Response file name, if this command is set to use one, or nullptr
   /// otherwise
   const char *ResponseFile = nullptr;
@@ -160,8 +163,8 @@ public:
 
   Command(const Action &Source, const Tool &Creator,
           ResponseFileSupport ResponseSupport, const char *Executable,
-          const llvm::opt::ArgStringList &Arguments,
-          ArrayRef<InputInfo> Inputs);
+          const llvm::opt::ArgStringList &Arguments, ArrayRef<InputInfo> Inputs,
+          ArrayRef<InputInfo> Outputs = None);
   // FIXME: This really shouldn't be copyable, but is currently copied in some
   // error handling in Driver::generateCompilationDiagnostics.
   Command(const Command &) = default;
@@ -203,6 +206,14 @@ public:
 
   const llvm::opt::ArgStringList &getArguments() const { return Arguments; }
 
+  const llvm::opt::ArgStringList &getInputFilenames() const {
+    return InputFilenames;
+  }
+
+  const std::vector<std::string> &getOutputFilenames() const {
+    return OutputFilenames;
+  }
+
 protected:
   /// Optionally print the filenames to be compiled
   void PrintFileNames() const;
@@ -214,7 +225,7 @@ public:
   CC1Command(const Action &Source, const Tool &Creator,
              ResponseFileSupport ResponseSupport, const char *Executable,
              const llvm::opt::ArgStringList &Arguments,
-             ArrayRef<InputInfo> Inputs);
+             ArrayRef<InputInfo> Inputs, ArrayRef<InputInfo> Outputs = None);
 
   void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
              CrashReportInfo *CrashInfo = nullptr) const override;
@@ -232,7 +243,7 @@ public:
   FallbackCommand(const Action &Source_, const Tool &Creator_,
                   ResponseFileSupport ResponseSupport, const char *Executable_,
                   const llvm::opt::ArgStringList &Arguments_,
-                  ArrayRef<InputInfo> Inputs,
+                  ArrayRef<InputInfo> Inputs, ArrayRef<InputInfo> Outputs,
                   std::unique_ptr<Command> Fallback_);
 
   void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
@@ -252,7 +263,8 @@ public:
                       ResponseFileSupport ResponseSupport,
                       const char *Executable_,
                       const llvm::opt::ArgStringList &Arguments_,
-                      ArrayRef<InputInfo> Inputs);
+                      ArrayRef<InputInfo> Inputs,
+                      ArrayRef<InputInfo> Outputs = None);
 
   void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
              CrashReportInfo *CrashInfo = nullptr) const override;
