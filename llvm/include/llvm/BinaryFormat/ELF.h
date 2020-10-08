@@ -406,6 +406,12 @@ enum {
 #include "ELFRelocs/AArch64.def"
 };
 
+// Special values for the st_other field in the symbol table entry for AArch64.
+enum {
+  // Symbol may follow different calling convention than base PCS.
+  STO_AARCH64_VARIANT_PCS = 0x80
+};
+
 // ARM Specific e_flags
 enum : unsigned {
   EF_ARM_SOFT_FLOAT = 0x00000200U,     // Legacy pre EABI_VER5
