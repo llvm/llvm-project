@@ -2444,7 +2444,14 @@ mlir::vector::distributPointwiseVectorOp(OpBuilder &builder, Operation *op,
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointAfter(op);
   Location loc = op->getLoc();
+  if (op->getNumResults() != 1)
+    return {};
   Value result = op->getResult(0);
+  VectorType type = op->getResult(0).getType().dyn_cast<VectorType>();
+  // Currently only support distributing 1-D vectors of size multiple of the
+  // given multiplicty. To handle more sizes we would need to support masking.
+  if (!type || type.getRank() != 1 || type.getNumElements() % multiplicity != 0)
+    return {};
   DistributeOps ops;
   ops.extract =
       builder.create<vector::ExtractMapOp>(loc, result, id, multiplicity);
