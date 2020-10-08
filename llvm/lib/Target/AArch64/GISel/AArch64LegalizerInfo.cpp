@@ -671,6 +671,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_ABS).lowerIf(
       [=](const LegalityQuery &Query) { return Query.Types[0].isScalar(); });
 
+  getActionDefinitionsBuilder(G_VECREDUCE_FADD)
+      // We only have FADDP to do reduction-like operations. Lower the rest.
+      .legalFor({{s32, v2s32}, {s64, v2s64}})
+      .lower();
+
+  getActionDefinitionsBuilder(G_VECREDUCE_ADD)
+      .legalFor({{s8, v16s8}, {s16, v8s16}, {s32, v4s32}, {s64, v2s64}})
+      .lower();
+
   computeTables();
   verify(*ST.getInstrInfo());
 }
