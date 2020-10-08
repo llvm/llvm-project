@@ -2823,6 +2823,30 @@ static SmallVector<int64_t, 4> extractFromI64ArrayAttr(Attribute attr) {
       }));
 }
 
+llvm::Optional<SmallVector<bool, 4>>
+mlir::computeRankReductionMask(ArrayRef<int64_t> originalShape,
+                               ArrayRef<int64_t> reducedShape) {
+  size_t originalRank = originalShape.size(), reducedRank = reducedShape.size();
+  SmallVector<bool, 4> mask(originalRank);
+  unsigned reducedIdx = 0;
+  for (unsigned originalIdx = 0; originalIdx < originalRank; ++originalIdx) {
+    // Skip matching dims greedily.
+    mask[originalIdx] =
+        (reducedIdx < reducedRank) &&
+        (originalShape[originalIdx] == reducedShape[reducedIdx]);
+    if (mask[originalIdx])
+      reducedIdx++;
+    // 1 is the only non-matching allowed.
+    else if (originalShape[originalIdx] != 1)
+      return {};
+  }
+
+  if (reducedIdx != reducedRank)
+    return {};
+
+  return mask;
+}
+
 enum SubViewVerificationResult {
   Success,
   RankTooLarge,
@@ -2859,20 +2883,10 @@ static SubViewVerificationResult isRankReducedType(Type originalType,
   if (reducedRank > originalRank)
     return SubViewVerificationResult::RankTooLarge;
 
-  unsigned reducedIdx = 0;
-  SmallVector<bool, 4> keepMask(originalRank);
-  for (unsigned originalIdx = 0; originalIdx < originalRank; ++originalIdx) {
-    // -2 is never used as a dim size so it will never match.
-    int reducedVal = reducedIdx < reducedRank ? reducedShape[reducedIdx] : -2;
-    // Skip matching dims greedily.
-    if ((keepMask[originalIdx] = originalShape[originalIdx] == reducedVal))
-      reducedIdx++;
-    // 1 is the only non-matching allowed.
-    else if (originalShape[originalIdx] != 1)
-      return SubViewVerificationResult::SizeMismatch;
-  }
-  // Must match the reduced rank.
-  if (reducedIdx != reducedRank)
+  auto optionalMask = computeRankReductionMask(originalShape, reducedShape);
+
+  // Sizes cannot be matched in case empty vector is returned.
+  if (!optionalMask.hasValue())
     return SubViewVerificationResult::SizeMismatch;
 
   // We are done for the tensor case.
@@ -2885,12 +2899,13 @@ static SubViewVerificationResult isRankReducedType(Type originalType,
   MLIRContext *c = original.getContext();
   int64_t originalOffset, reducedOffset;
   SmallVector<int64_t, 4> originalStrides, reducedStrides, keepStrides;
+  SmallVector<bool, 4> keepMask = optionalMask.getValue();
   getStridesAndOffset(original, originalStrides, originalOffset);
   getStridesAndOffset(reduced, reducedStrides, reducedOffset);
 
   // Filter strides based on the mask and check that they are the same
   // as reduced ones.
-  reducedIdx = 0;
+  unsigned reducedIdx = 0;
   for (unsigned originalIdx = 0; originalIdx < originalRank; ++originalIdx) {
     if (keepMask[originalIdx]) {
       if (originalStrides[originalIdx] != reducedStrides[reducedIdx++])
