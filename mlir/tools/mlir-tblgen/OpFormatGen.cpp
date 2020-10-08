@@ -719,7 +719,7 @@ static void genLiteralParser(StringRef value, OpMethodBody &body) {
     body << "Keyword(\"" << value << "\")";
     return;
   }
-  body << (StringRef)llvm::StringSwitch<StringRef>(value)
+  body << (StringRef)StringSwitch<StringRef>(value)
               .Case("->", "Arrow()")
               .Case(":", "Colon()")
               .Case(",", "Comma()")
@@ -1936,7 +1936,7 @@ Token FormatLexer::lexIdentifier(const char *tokStart) {
   // Check to see if this identifier is a keyword.
   StringRef str(tokStart, curPtr - tokStart);
   Token::Kind kind =
-      llvm::StringSwitch<Token::Kind>(str)
+      StringSwitch<Token::Kind>(str)
           .Case("attr-dict", Token::kw_attr_dict)
           .Case("attr-dict-with-keyword", Token::kw_attr_dict_w_keyword)
           .Case("custom", Token::kw_custom)

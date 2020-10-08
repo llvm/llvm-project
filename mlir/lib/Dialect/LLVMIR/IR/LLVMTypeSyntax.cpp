@@ -440,7 +440,7 @@ static LLVMType parseTypeImpl(DialectAsmParser &parser,
   if (failed(parser.parseKeyword(&key)))
     return LLVMType();
 
-  return llvm::StringSwitch<function_ref<LLVMType()>>(key)
+  return StringSwitch<function_ref<LLVMType()>>(key)
       .Case("void", [&] { return LLVMVoidType::get(ctx); })
       .Case("half", [&] { return LLVMHalfType::get(ctx); })
       .Case("bfloat", [&] { return LLVMBFloatType::get(ctx); })
