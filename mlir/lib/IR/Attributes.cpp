@@ -522,7 +522,7 @@ uint64_t ElementsAttr::getFlattenedIndex(ArrayRef<uint64_t> index) const {
 }
 
 //===----------------------------------------------------------------------===//
-// DenseElementAttr Utilities
+// DenseElementsAttr Utilities
 //===----------------------------------------------------------------------===//
 
 /// Get the bitwidth of a dense element type within the buffer.
@@ -606,7 +606,7 @@ static bool hasSameElementsOrSplat(ShapedType type, const Values &values) {
 }
 
 //===----------------------------------------------------------------------===//
-// DenseElementAttr Iterators
+// DenseElementsAttr Iterators
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
