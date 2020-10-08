@@ -704,11 +704,11 @@ define i32 @trunc_shl_32_i32_i64(i64 %val) {
   ret i32 %trunc
 }
 
-; TODO: Should be able to handle vectors
+; Should be able to handle vectors
 define <2 x i32> @trunc_shl_16_v2i32_v2i64(<2 x i64> %val) {
 ; CHECK-LABEL: @trunc_shl_16_v2i32_v2i64(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i64> [[VAL:%.*]], <i64 16, i64 16>
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i64> [[SHL]] to <2 x i32>
+; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc <2 x i64> [[VAL:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl <2 x i32> [[VAL_TR]], <i32 16, i32 16>
 ; CHECK-NEXT:    ret <2 x i32> [[TRUNC]]
 ;
   %shl = shl <2 x i64> %val, <i64 16, i64 16>
@@ -718,8 +718,8 @@ define <2 x i32> @trunc_shl_16_v2i32_v2i64(<2 x i64> %val) {
 
 define <2 x i32> @trunc_shl_nosplat_v2i32_v2i64(<2 x i64> %val) {
 ; CHECK-LABEL: @trunc_shl_nosplat_v2i32_v2i64(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i64> [[VAL:%.*]], <i64 15, i64 16>
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i64> [[SHL]] to <2 x i32>
+; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc <2 x i64> [[VAL:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl <2 x i32> [[VAL_TR]], <i32 15, i32 16>
 ; CHECK-NEXT:    ret <2 x i32> [[TRUNC]]
 ;
   %shl = shl <2 x i64> %val, <i64 15, i64 16>
@@ -757,8 +757,8 @@ define i32 @trunc_shl_lshr_infloop(i64 %arg) {
 
 define <2 x i32> @trunc_shl_v2i32_v2i64_uniform(<2 x i64> %val) {
 ; CHECK-LABEL: @trunc_shl_v2i32_v2i64_uniform(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i64> [[VAL:%.*]], <i64 31, i64 31>
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i64> [[SHL]] to <2 x i32>
+; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc <2 x i64> [[VAL:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl <2 x i32> [[VAL_TR]], <i32 31, i32 31>
 ; CHECK-NEXT:    ret <2 x i32> [[TRUNC]]
 ;
   %shl = shl <2 x i64> %val, <i64 31, i64 31>
@@ -768,8 +768,8 @@ define <2 x i32> @trunc_shl_v2i32_v2i64_uniform(<2 x i64> %val) {
 
 define <2 x i32> @trunc_shl_v2i32_v2i64_undef(<2 x i64> %val) {
 ; CHECK-LABEL: @trunc_shl_v2i32_v2i64_undef(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i64> [[VAL:%.*]], <i64 31, i64 undef>
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i64> [[SHL]] to <2 x i32>
+; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc <2 x i64> [[VAL:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl <2 x i32> [[VAL_TR]], <i32 31, i32 undef>
 ; CHECK-NEXT:    ret <2 x i32> [[TRUNC]]
 ;
   %shl = shl <2 x i64> %val, <i64 31, i64 undef>
@@ -779,8 +779,8 @@ define <2 x i32> @trunc_shl_v2i32_v2i64_undef(<2 x i64> %val) {
 
 define <2 x i32> @trunc_shl_v2i32_v2i64_nonuniform(<2 x i64> %val) {
 ; CHECK-LABEL: @trunc_shl_v2i32_v2i64_nonuniform(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i64> [[VAL:%.*]], <i64 31, i64 12>
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i64> [[SHL]] to <2 x i32>
+; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc <2 x i64> [[VAL:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl <2 x i32> [[VAL_TR]], <i32 31, i32 12>
 ; CHECK-NEXT:    ret <2 x i32> [[TRUNC]]
 ;
   %shl = shl <2 x i64> %val, <i64 31, i64 12>
@@ -865,8 +865,8 @@ define i32 @trunc_shl_shl_var(i64 %arg, i64 %val) {
 
 define <8 x i16> @trunc_shl_v8i15_v8i32_15(<8 x i32> %a) {
 ; CHECK-LABEL: @trunc_shl_v8i15_v8i32_15(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <8 x i32> [[A:%.*]], <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
-; CHECK-NEXT:    [[CONV:%.*]] = trunc <8 x i32> [[SHL]] to <8 x i16>
+; CHECK-NEXT:    [[A_TR:%.*]] = trunc <8 x i32> [[A:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[CONV:%.*]] = shl <8 x i16> [[A_TR]], <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
 ; CHECK-NEXT:    ret <8 x i16> [[CONV]]
 ;
   %shl = shl <8 x i32> %a, <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
@@ -894,8 +894,8 @@ define <8 x i16> @trunc_shl_v8i16_v8i32_17(<8 x i32> %a) {
 
 define <8 x i16> @trunc_shl_v8i16_v8i32_4(<8 x i32> %a) {
 ; CHECK-LABEL: @trunc_shl_v8i16_v8i32_4(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <8 x i32> [[A:%.*]], <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
-; CHECK-NEXT:    [[CONV:%.*]] = trunc <8 x i32> [[SHL]] to <8 x i16>
+; CHECK-NEXT:    [[A_TR:%.*]] = trunc <8 x i32> [[A:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[CONV:%.*]] = shl <8 x i16> [[A_TR]], <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
 ; CHECK-NEXT:    ret <8 x i16> [[CONV]]
 ;
   %shl = shl <8 x i32> %a, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
