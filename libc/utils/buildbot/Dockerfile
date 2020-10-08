@@ -6,7 +6,7 @@ RUN apt-get update
 RUN apt-get install -y build-essential clang subversion git vim \
   zip libstdc++6:i386 file binutils-dev binutils-gold cmake python-pip \
   ninja-build
-RUN python -m pip install buildbot-slave==0.8.12
+RUN python -m pip install buildbot-worker==2.8.4
 
 # Temporary dependencies for AOR tests.
 RUN apt-get install -y libmpfr-dev libmpc-dev
