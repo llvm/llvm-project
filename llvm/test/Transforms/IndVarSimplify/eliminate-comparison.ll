@@ -942,4 +942,111 @@ leave:
   ret void
 }
 
+declare i1 @cond_func()
+
+define i32 @func_25(i32 %start) {
+; CHECK-LABEL: @func_25(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[IV]], 0
+; CHECK-NEXT:    br i1 [[C1]], label [[CHECKED_1:%.*]], label [[FAIL:%.*]]
+; CHECK:       checked.1:
+; CHECK-NEXT:    [[C2:%.*]] = icmp ne i32 [[IV]], 0
+; CHECK-NEXT:    br i1 [[C2]], label [[CHECKED_2:%.*]], label [[FAIL]]
+; CHECK:       checked.2:
+; CHECK-NEXT:    [[C3:%.*]] = icmp ne i32 [[IV]], 0
+; CHECK-NEXT:    br i1 [[C3]], label [[BACKEDGE]], label [[FAIL]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 758394
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @cond_func()
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       fail:
+; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA1:%.*]] = phi i32 [ [[IV]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA1]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %backedge]
+  %c1 = icmp ne i32 %iv, 0
+  br i1 %c1, label %checked.1, label %fail
+
+checked.1:
+  %c2 = icmp ne i32 %iv, 0
+  br i1 %c2, label %checked.2, label %fail
+
+checked.2:
+  %c3 = icmp ne i32 %iv, 0
+  br i1 %c3, label %backedge, label %fail
+
+backedge:
+  %iv.next = add i32 %iv, 758394
+  %loop.cond = call i1 @cond_func()
+  br i1 %loop.cond, label %loop, label %exit
+
+fail:
+  unreachable
+
+exit:
+  ret i32 %iv
+}
+
+define i32 @func_26(i32 %start) {
+; CHECK-LABEL: @func_26(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[IV]], 0
+; CHECK-NEXT:    br i1 [[C1]], label [[CHECKED_1:%.*]], label [[FAIL:%.*]]
+; CHECK:       checked.1:
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[C2]], label [[CHECKED_2:%.*]], label [[FAIL]]
+; CHECK:       checked.2:
+; CHECK-NEXT:    [[C3:%.*]] = icmp slt i32 [[IV]], 2
+; CHECK-NEXT:    br i1 [[C3]], label [[BACKEDGE]], label [[FAIL]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 758394
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @cond_func()
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       fail:
+; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA1:%.*]] = phi i32 [ [[IV]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA1]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %backedge]
+  %c1 = icmp slt i32 %iv, 0
+  br i1 %c1, label %checked.1, label %fail
+
+checked.1:
+  %c2 = icmp slt i32 %iv, 1
+  br i1 %c2, label %checked.2, label %fail
+
+checked.2:
+  %c3 = icmp slt i32 %iv, 2
+  br i1 %c3, label %backedge, label %fail
+
+backedge:
+  %iv.next = add i32 %iv, 758394
+  %loop.cond = call i1 @cond_func()
+  br i1 %loop.cond, label %loop, label %exit
+
+fail:
+  unreachable
+
+exit:
+  ret i32 %iv
+}
+
+
 !0 = !{i32 0, i32 2147483647}
