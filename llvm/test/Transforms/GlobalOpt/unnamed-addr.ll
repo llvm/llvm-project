@@ -5,12 +5,14 @@
 @c = internal global i32 0, align 4
 @d = internal constant [4 x i8] c"foo\00", align 1
 @e = linkonce_odr global i32 0
+@f = internal addrspace(3) global float undef, align 4
 
 ; CHECK: @a = internal global i32 0, align 4
 ; CHECK: @b = internal global i32 0, align 4
 ; CHECK: @c = internal unnamed_addr global i32 0, align 4
 ; CHECK: @d = internal unnamed_addr constant [4 x i8] c"foo\00", align 1
 ; CHECK: @e = linkonce_odr local_unnamed_addr global i32 0
+; CHECK: @f = internal unnamed_addr addrspace(3) global float undef, align 4
 
 ; CHECK: define internal fastcc void @used_internal() unnamed_addr {
 define internal void @used_internal() {
@@ -71,4 +73,16 @@ define i32 @zed() {
 entry:
   %tmp1 = load i32, i32* @c, align 4
   ret i32 %tmp1
+}
+
+define float @use_addrspace_cast_for_load() {
+  %p = addrspacecast float addrspace(3)* @f to float*
+  %v = load float, float* %p
+  ret float %v
+}
+
+define void @use_addrspace_cast_for_store(float %x) {
+  %p = addrspacecast float addrspace(3)* @f to float*
+  store float %x, float* %p
+  ret void
 }
