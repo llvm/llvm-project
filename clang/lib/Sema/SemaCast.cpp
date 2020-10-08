@@ -2707,6 +2707,17 @@ void CastOperation::CheckCStyleCast() {
     return;
   }
 
+  // If the type is dependent, we won't do any other semantic analysis now.
+  if (Self.getASTContext().isDependenceAllowed() &&
+      (DestType->isDependentType() || SrcExpr.get()->isTypeDependent() ||
+       SrcExpr.get()->isValueDependent())) {
+    assert((DestType->containsErrors() || SrcExpr.get()->containsErrors() ||
+            SrcExpr.get()->containsErrors()) &&
+           "should only occur in error-recovery path.");
+    assert(Kind == CK_Dependent);
+    return;
+  }
+
   // Overloads are allowed with C extensions, so we need to support them.
   if (SrcExpr.get()->getType() == Self.Context.OverloadTy) {
     DeclAccessPair DAP;
