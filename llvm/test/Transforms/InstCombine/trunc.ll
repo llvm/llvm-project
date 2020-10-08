@@ -755,6 +755,50 @@ define i32 @trunc_shl_lshr_infloop(i64 %arg) {
   ret i32 %C
 }
 
+define <2 x i32> @trunc_shl_v2i32_v2i64_uniform(<2 x i64> %val) {
+; CHECK-LABEL: @trunc_shl_v2i32_v2i64_uniform(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i64> [[VAL:%.*]], <i64 31, i64 31>
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i64> [[SHL]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[TRUNC]]
+;
+  %shl = shl <2 x i64> %val, <i64 31, i64 31>
+  %trunc = trunc <2 x i64> %shl to <2 x i32>
+  ret <2 x i32> %trunc
+}
+
+define <2 x i32> @trunc_shl_v2i32_v2i64_undef(<2 x i64> %val) {
+; CHECK-LABEL: @trunc_shl_v2i32_v2i64_undef(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i64> [[VAL:%.*]], <i64 31, i64 undef>
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i64> [[SHL]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[TRUNC]]
+;
+  %shl = shl <2 x i64> %val, <i64 31, i64 undef>
+  %trunc = trunc <2 x i64> %shl to <2 x i32>
+  ret <2 x i32> %trunc
+}
+
+define <2 x i32> @trunc_shl_v2i32_v2i64_nonuniform(<2 x i64> %val) {
+; CHECK-LABEL: @trunc_shl_v2i32_v2i64_nonuniform(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i64> [[VAL:%.*]], <i64 31, i64 12>
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i64> [[SHL]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[TRUNC]]
+;
+  %shl = shl <2 x i64> %val, <i64 31, i64 12>
+  %trunc = trunc <2 x i64> %shl to <2 x i32>
+  ret <2 x i32> %trunc
+}
+
+define <2 x i32> @trunc_shl_v2i32_v2i64_outofrange(<2 x i64> %val) {
+; CHECK-LABEL: @trunc_shl_v2i32_v2i64_outofrange(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i64> [[VAL:%.*]], <i64 31, i64 33>
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i64> [[SHL]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[TRUNC]]
+;
+  %shl = shl <2 x i64> %val, <i64 31, i64 33>
+  %trunc = trunc <2 x i64> %shl to <2 x i32>
+  ret <2 x i32> %trunc
+}
+
 define i32 @trunc_shl_ashr_infloop(i64 %arg) {
 ; CHECK-LABEL: @trunc_shl_ashr_infloop(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i64 [[ARG:%.*]], 3
