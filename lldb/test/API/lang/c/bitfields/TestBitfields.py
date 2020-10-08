@@ -147,6 +147,27 @@ class BitfieldsTestCase(TestBase):
         self.expect("v/x large_packed", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=["a = 0x0000000cbbbbaaaa", "b = 0x0000000dffffeee"])
 
+    # BitFields exhibit crashes in record layout on Windows
+    # (http://llvm.org/pr21800)
+    @skipIfWindows
+    def test_expression_bug(self):
+        # Ensure evaluating (emulating) an expression does not break bitfield
+        # values for already parsed variables. The expression is run twice
+        # because the very first expression can resume a target (to allocate
+        # memory, etc.) even if it is not being jitted.
+        self.build()
+        lldbutil.run_to_line_breakpoint(self, lldb.SBFileSpec("main.c"),
+                self.line)
+        self.expect("v/x large_packed", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=["a = 0x0000000cbbbbaaaa", "b = 0x0000000dffffeee"])
+        self.expect("expr --allow-jit false  -- more_bits.a", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=['uint32_t', '3'])
+        self.expect("v/x large_packed", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=["a = 0x0000000cbbbbaaaa", "b = 0x0000000dffffeee"])
+        self.expect("expr --allow-jit false  -- more_bits.a", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=['uint32_t', '3'])
+        self.expect("v/x large_packed", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=["a = 0x0000000cbbbbaaaa", "b = 0x0000000dffffeee"])
 
     @add_test_categories(['pyapi'])
     # BitFields exhibit crashes in record layout on Windows
