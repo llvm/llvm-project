@@ -423,8 +423,7 @@ define i32 @xor_sign_bit(i32 %x) {
 
 define <2 x i32> @xor_sign_bit_vec_splat(<2 x i32> %x) {
 ; CHECK-LABEL: @xor_sign_bit_vec_splat(
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[X:%.*]], <i32 -2147483648, i32 -2147483648>
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[XOR]], <i32 42, i32 42>
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[X:%.*]], <i32 -2147483606, i32 -2147483606>
 ; CHECK-NEXT:    ret <2 x i32> [[ADD]]
 ;
   %xor = xor <2 x i32> %x, <i32 2147483648, i32 2147483648>
