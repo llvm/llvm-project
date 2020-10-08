@@ -55,7 +55,7 @@ define i32 @xor_add_extra_use(i32 %x) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 31
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND]], 31
 ; CHECK-NEXT:    call void @use(i32 [[XOR]])
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[XOR]], 42
+; CHECK-NEXT:    [[ADD:%.*]] = sub nuw nsw i32 73, [[AND]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %and = and i32 %x, 31
