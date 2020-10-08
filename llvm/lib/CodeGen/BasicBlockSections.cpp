@@ -49,9 +49,9 @@
 // ==================
 //
 // With -fbasic-block-sections=labels, we emit the offsets of BB addresses of
-// every function into a .bb_addr_map section. Along with the function symbols,
-// this allows for mapping of virtual addresses in PMU profiles back to the
-// corresponding basic blocks. This logic is implemented in AsmPrinter. This
+// every function into the .llvm_bb_addr_map section. Along with the function
+// symbols, this allows for mapping of virtual addresses in PMU profiles back to
+// the corresponding basic blocks. This logic is implemented in AsmPrinter. This
 // pass only assigns the BBSectionType of every function to ``labels``.
 //
 //===----------------------------------------------------------------------===//
