@@ -378,10 +378,10 @@ void IndexUnitReaderImpl::constructFilePath(SmallVectorImpl<char> &PathBuf,
 }
 
 StringRef IndexUnitReaderImpl::getModuleName(int ModuleIndex) {
-  if (ModuleIndex < 0)
+  if (ModuleIndex < 0 || ModuleNamesBuffer.empty())
     return StringRef();
   auto &ModInfo = Modules[ModuleIndex];
-  return StringRef(ModuleNamesBuffer.data()+ModInfo.NameOffset, ModInfo.NameSize);
+  return ModuleNamesBuffer.substr(ModInfo.NameOffset, ModInfo.NameSize);
 }
 
 
