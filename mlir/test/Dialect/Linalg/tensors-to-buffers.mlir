@@ -123,3 +123,53 @@ func @dynamic_results(%arg0: tensor<?x?xf32>)
 // CHECK: linalg.copy(%[[OUT_BUF_2]], %[[OUT_2]]) : [[TYPE]], [[TYPE]]
 // CHECK: dealloc %[[OUT_BUF_2]] : [[TYPE]]
 // CHECK: return
+
+// -----
+
+func @foo() -> tensor<4xf32> {
+// CHECK-LABEL: func @foo(
+//  CHECK-SAME:   %[[A:[0-9a-z]*]]: memref<4xf32>) {
+
+  %0 = constant dense<[0.0, 1.0, 2.0, 3.0]> : tensor<4xf32>
+//  CHECK-NEXT:   %[[CST:.*]] = constant dense<[0.000000e+00, 1.000000e+00, 2.000000e+00, 3.000000e+00]> : vector<4xf32>
+//  CHECK-NEXT:   %[[ALLOC:.*]] = alloc() : memref<vector<4xf32>>
+//  CHECK-NEXT:   store %[[CST]], %[[ALLOC]][] : memref<vector<4xf32>>
+//  CHECK-NEXT:   %[[RES:.*]] = vector.type_cast %[[ALLOC]] : memref<vector<4xf32>> to memref<4xf32>
+
+  return %0 : tensor<4xf32>
+//  CHECK-NEXT:   linalg.copy(%[[RES]], %[[A]]) : memref<4xf32>, memref<4xf32>
+//  CHECK-NEXT:   dealloc %[[ALLOC]] : memref<vector<4xf32>>
+//  CHECK-NEXT:   return
+}
+
+func @bar() {
+// CHECK-LABEL: func @bar() {
+
+  %0 = call @foo() : () -> tensor<4xf32>
+//  CHECK-NEXT:   %[[ALLOC:.*]] = alloc() : memref<4xf32>
+//  CHECK-NEXT:   call @foo(%[[ALLOC]]) : (memref<4xf32>) -> ()
+
+  // Instead of relying on tensor_store which introduces aliasing, we rely on
+  // the conversion of print_memref_f32(tensor<*xf32>) to
+  // print_memref_f32(memref<*xf32>).
+  // Note that this is skipping a step and we would need at least some function
+  // attribute to declare that this conversion is valid (e.g. when we statically
+  // know that things will play nicely at the C ABI boundary).
+  %unranked = tensor_cast %0 : tensor<4xf32> to tensor<*xf32>
+//  CHECK-NEXT:   %[[UNRANKED:.*]] = memref_cast %[[ALLOC]] :
+//  CHECK-SAME:     memref<4xf32> to memref<*xf32>
+
+  call @print_memref_f32(%unranked) : (tensor<*xf32>) -> ()
+//  CHECK-NEXT:   call @print_memref_f32(%[[UNRANKED]]) : (memref<*xf32>) -> ()
+
+  return
+//  CHECK-NEXT:   dealloc %[[ALLOC]] : memref<4xf32>
+//  CHECK-NEXT:   return
+}
+
+// This gets converted to a function operating on memref<*xf32>.
+// Note that this is skipping a step and we would need at least some function
+// attribute to declare that this conversion is valid (e.g. when we statically
+// know that things will play nicely at the C ABI boundary).
+func @print_memref_f32(%ptr : tensor<*xf32>)
+// CHECK-LABEL: func @print_memref_f32(memref<*xf32>)
