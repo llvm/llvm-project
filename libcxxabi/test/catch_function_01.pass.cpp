@@ -23,7 +23,7 @@ bool can_convert(...) { return false; }
 
 void f() {}
 
-int main()
+int main(int, char**)
 {
     typedef void Function();
     assert(!can_convert<Function&>(&f));
@@ -48,4 +48,6 @@ int main()
     {
         assert(false);
     }
+
+    return 0;
 }

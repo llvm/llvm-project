@@ -25,7 +25,7 @@ static void catch_nullptr_test() {
   }
 }
 
-int main()
+int main(int, char**)
 {
   using nullptr_t = decltype(nullptr);
 
@@ -46,4 +46,6 @@ int main()
   catch_nullptr_test<int A::*, false>();
   catch_nullptr_test<int (A::*)(), false>();
 #endif
+
+  return 0;
 }

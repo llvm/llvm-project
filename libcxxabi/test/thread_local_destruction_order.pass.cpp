@@ -56,7 +56,7 @@ void thread_fn() {
   thread_local CreatesThreadLocalInDestructor<0> creates_tl0;
 }
 
-int main() {
+int main(int, char**) {
   static OrderChecker fn_static{6};
 
   std::thread{thread_fn}.join();

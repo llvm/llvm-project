@@ -31,7 +31,7 @@ constexpr bool toobig()
 	return 0 == std::ceil2(std::numeric_limits<T>::max());
 }
 
-int main()
+int main(int, char**)
 {
 //	Make sure we generate a compile-time error for UB
 	static_assert(toobig<unsigned char>(),      ""); // expected-error {{static_assert expression is not an integral constant expression}}
@@ -47,4 +47,6 @@ int main()
 	static_assert(toobig<size_t>(), ""); 	// expected-error {{static_assert expression is not an integral constant expression}}
 	static_assert(toobig<uintmax_t>(), "");	// expected-error {{static_assert expression is not an integral constant expression}}
 	static_assert(toobig<uintptr_t>(), "");	// expected-error {{static_assert expression is not an integral constant expression}}
+
+	return 0;
 }

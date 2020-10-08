@@ -258,5 +258,3 @@
 #ifndef UINTMAX_C
 #error UINTMAX_C not defined
 #endif
-
-int main() { }

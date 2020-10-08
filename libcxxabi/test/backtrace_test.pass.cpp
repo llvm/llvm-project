@@ -48,7 +48,7 @@ void call1(size_t* ntraced, bool do_throw) {
   call2(ntraced, do_throw);
 }
 
-int main() {
+int main(int, char**) {
   size_t throw_ntraced = 0;
   size_t nothrow_ntraced = 0;
 

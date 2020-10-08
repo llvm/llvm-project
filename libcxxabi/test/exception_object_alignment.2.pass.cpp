@@ -24,7 +24,7 @@ struct exception {
 
 struct foo : exception { };
 
-int main() {
+int main(int, char**) {
     try {
       throw foo();
     } catch (...) {
