@@ -15,6 +15,7 @@
 
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
 
 def Vector_Dialect : Dialect {
   let name = "vector";
@@ -1673,7 +1674,7 @@ def Vector_BitCastOp :
 }
 
 def Vector_TypeCastOp :
-  Vector_Op<"type_cast", [NoSideEffect]>,
+  Vector_Op<"type_cast", [NoSideEffect, ViewLikeOpInterface]>,
     Arguments<(ins StaticShapeMemRefOf<[AnyType]>:$memref)>,
     Results<(outs AnyMemRef:$result)> {
   let summary = "type_cast op converts a scalar memref to a vector memref";
@@ -1711,6 +1712,8 @@ def Vector_TypeCastOp :
     MemRefType getResultMemRefType() {
       return getResult().getType().cast<MemRefType>();
     }
+    // Implement ViewLikeOpInterface.
+    Value getViewSource() { return memref(); }
   }];
 
   let assemblyFormat = [{

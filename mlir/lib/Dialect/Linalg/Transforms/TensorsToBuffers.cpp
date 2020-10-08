@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
@@ -203,6 +204,64 @@ public:
   }
 };
 
+// Rewrite a tensor `constant` to a vector constant folloed by a vector store
+// and a vector.type_cast.
+class TensorConstantOpConverter
+    : public BufferAssignmentOpConversionPattern<ConstantOp> {
+public:
+  using BufferAssignmentOpConversionPattern<
+      ConstantOp>::BufferAssignmentOpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ConstantOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    if (!op.getType().isa<RankedTensorType>())
+      return failure();
+    auto attr = op.getValue().cast<DenseElementsAttr>();
+
+    Location loc = op.getLoc();
+    MemRefType memrefType =
+        converter->convertType(op.getType()).cast<MemRefType>();
+    VectorType vectorType =
+        VectorType::get(memrefType.getShape(), memrefType.getElementType());
+
+    // vector constant takes attributes that are compatible with tensor
+    // constant.
+    Value cstVec =
+        rewriter.create<ConstantOp>(loc, vectorType, attr.reshape(vectorType));
+
+    // Alloc a memref<vector<...>>, store the constant and typecast the vector
+    // away.
+    MemRefType memrefOfVectorType = MemRefType::get({}, vectorType);
+    Value alloc =
+        rewriter.create<AllocOp>(loc, memrefOfVectorType, ValueRange{});
+    rewriter.create<StoreOp>(loc, cstVec, alloc);
+    rewriter.replaceOpWithNewOp<vector::TypeCastOp>(op, memrefType, alloc);
+
+    return success();
+  }
+};
+
+// Rewrite a `tensor_cast` as a `memref_cast` with no layout, in the 0-memory
+// space.
+class TensorCastOpConverter
+    : public BufferAssignmentOpConversionPattern<TensorCastOp> {
+public:
+  using BufferAssignmentOpConversionPattern<
+      TensorCastOp>::BufferAssignmentOpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(TensorCastOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    if (op.getType().hasRank())
+      return failure();
+    Type t = UnrankedMemRefType::get(op.getType().getElementType(),
+                                     /*memorySpace=*/0);
+    rewriter.replaceOpWithNewOp<MemRefCastOp>(op, t, operands.front());
+    return success();
+  }
+};
+
 /// Converts Linalg operations that work on tensor-type operands or results to
 /// work on buffers.
 struct ConvertLinalgOnTensorsToBuffers
@@ -213,7 +272,7 @@ struct ConvertLinalgOnTensorsToBuffers
     BufferAssignmentTypeConverter converter;
 
     // Mark all Standard operations legal.
-    target.addLegalDialect<StandardOpsDialect>();
+    target.addLegalDialect<StandardOpsDialect, vector::VectorDialect>();
     target.addLegalOp<ModuleOp>();
     target.addLegalOp<ModuleTerminatorOp>();
 
@@ -225,12 +284,33 @@ struct ConvertLinalgOnTensorsToBuffers
         Optional<ConversionTarget::DynamicLegalityCallbackFn>(
             isLegalOperation));
 
-    // Mark Standard Return operations illegal as long as one operand is tensor.
-    target.addDynamicallyLegalOp<mlir::ReturnOp>([&](mlir::ReturnOp returnOp) {
-      return converter.isLegal(returnOp.getOperandTypes());
-    });
+    // Mark operations that consume or return tensors illegal.
+    auto isLegal = [&](Operation *op) {
+      if (llvm::any_of(op->getOperandTypes(),
+                       [&](Type t) { return !converter.isLegal(t); }))
+        return false;
+      if (llvm::any_of(op->getResultTypes(),
+                       [&](Type t) { return !converter.isLegal(t); }))
+        return false;
+      return true;
+    };
+    target.addDynamicallyLegalOp<
+        // clang-format off
+        CallOp,
+        ConstantOp,
+        ConstantIntOp,
+        ConstantIndexOp,
+        ConstantFloatOp,
+        ReturnOp,
+        TensorCastOp
+        // clang-format on
+        >(isLegal);
 
     // Mark the function operation illegal as long as an argument is tensor.
+    // TODO: if the FuncOp is a FuncOp that only has a declaration (e.g. to an
+    // externally defined symbol like an external library calls), only convert
+    // if some special attribute is set. This will allow more control of interop
+    // across ABI boundaries.
     target.addDynamicallyLegalOp<FuncOp>([&](FuncOp funcOp) {
       return converter.isSignatureLegal(funcOp.getType()) &&
              llvm::none_of(funcOp.getType().getResults(),
@@ -261,5 +341,11 @@ mlir::createConvertLinalgOnTensorsToBuffersPass() {
 void mlir::linalg::populateConvertLinalgOnTensorsToBuffersPatterns(
     MLIRContext *context, BufferAssignmentTypeConverter *converter,
     OwningRewritePatternList *patterns) {
-  patterns->insert<GenericOpConverter>(context, converter);
+  patterns->insert<
+      // clang-format off
+      GenericOpConverter,
+      TensorCastOpConverter,
+      TensorConstantOpConverter
+      // clang-format on
+      >(context, converter);
 }
