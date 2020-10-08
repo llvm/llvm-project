@@ -1360,6 +1360,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
+  if (T.isOSAIX() && (Args.hasArg(OPT_mignore_xcoff_visibility) ||
+                      !Args.hasArg(OPT_fvisibility)))
+    Opts.IgnoreXCOFFVisibility = 1;
+
   Opts.DependentLibraries = Args.getAllArgValues(OPT_dependent_lib);
   Opts.LinkerOptions = Args.getAllArgValues(OPT_linker_option);
   bool NeedLocTracking = false;

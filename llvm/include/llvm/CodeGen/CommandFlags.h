@@ -94,6 +94,8 @@ Optional<bool> getExplicitDataSections();
 bool getFunctionSections();
 Optional<bool> getExplicitFunctionSections();
 
+bool getIgnoreXCOFFVisibility();
+
 std::string getBBSections();
 
 unsigned getTLSSize();
