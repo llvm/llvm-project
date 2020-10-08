@@ -81,4 +81,9 @@ void test2() {
   // CHECK-NEXT: |-DeclRefExpr {{.*}} 'int *' lvalue
   // CHECK-NEXT: `-DeclRefExpr {{.*}} 'float' lvalue
   (ptr > f ? ptr : f);
+
+  // CHECK:     CStyleCastExpr {{.*}} 'float' contains-errors <Dependent>
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>'
+  // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'some_func'
+  (float)some_func();
 }
