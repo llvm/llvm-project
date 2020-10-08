@@ -166,6 +166,16 @@ public:
     return *this;
   }
 
+  /// Return known bits for a sign extension or truncation of the value we're
+  /// tracking.
+  KnownBits sextOrTrunc(unsigned BitWidth) const {
+    if (BitWidth > getBitWidth())
+      return sext(BitWidth);
+    if (BitWidth < getBitWidth())
+      return trunc(BitWidth);
+    return *this;
+  }
+
   /// Return a KnownBits with the extracted bits
   /// [bitPosition,bitPosition+numBits).
   KnownBits extractBits(unsigned NumBits, unsigned BitPosition) const {

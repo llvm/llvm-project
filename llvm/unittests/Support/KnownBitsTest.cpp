@@ -203,4 +203,33 @@ TEST(KnownBitsTest, GetMinMaxVal) {
   });
 }
 
+TEST(KnownBitsTest, SExtOrTrunc) {
+  const unsigned NarrowerSize = 4;
+  const unsigned BaseSize = 6;
+  const unsigned WiderSize = 8;
+  APInt NegativeFitsNarrower(BaseSize, -4, /*isSigned*/ true);
+  APInt NegativeDoesntFitNarrower(BaseSize, -28, /*isSigned*/ true);
+  APInt PositiveFitsNarrower(BaseSize, 14);
+  APInt PositiveDoesntFitNarrower(BaseSize, 36);
+  auto InitKnownBits = [&](KnownBits &Res, const APInt &Input) {
+    Res = KnownBits(Input.getBitWidth());
+    Res.One = Input;
+    Res.Zero = ~Input;
+  };
+
+  for (unsigned Size : {NarrowerSize, BaseSize, WiderSize}) {
+    for (const APInt &Input :
+         {NegativeFitsNarrower, NegativeDoesntFitNarrower, PositiveFitsNarrower,
+          PositiveDoesntFitNarrower}) {
+      KnownBits Test;
+      InitKnownBits(Test, Input);
+      KnownBits Baseline;
+      InitKnownBits(Baseline, Input.sextOrTrunc(Size));
+      Test = Test.sextOrTrunc(Size);
+      EXPECT_EQ(Test.One, Baseline.One);
+      EXPECT_EQ(Test.Zero, Baseline.Zero);
+    }
+  }
+}
+
 } // end anonymous namespace
