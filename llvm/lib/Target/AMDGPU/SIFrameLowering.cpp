@@ -715,8 +715,17 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
     buildCFI(MBB, MBBI, DL,
              MCCFIInstruction::createUndefined(nullptr, DwarfReg));
   };
-  for_each(TRI.getAllVGPR32(MF), ProcessReg);
-  for_each(TRI.getAllSGPR32(MF), ProcessReg);
+
+  // Emit CFI rules for caller saved Arch VGPRs which are clobbered
+  for_each(AMDGPU::VGPR_32RegClass.getRegisters(), ProcessReg);
+
+  // Emit CFI rules for caller saved Accum VGPRs which are clobbered
+  if (ST.hasMAIInsts()) {
+    for_each(AMDGPU::AGPR_32RegClass.getRegisters(), ProcessReg);
+  }
+
+  // Emit CFI rules for caller saved SGPRs which are clobbered
+  for_each(AMDGPU::SGPR_32RegClass.getRegisters(), ProcessReg);
 }
 
 // Activate all lanes, returns saved exec.
