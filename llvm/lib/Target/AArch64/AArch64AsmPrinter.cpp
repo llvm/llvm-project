@@ -89,6 +89,8 @@ public:
   void emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
                           const MachineBasicBlock *MBB, unsigned JTI);
 
+  void emitFunctionEntryLabel() override;
+
   void LowerJumpTableDestSmall(MCStreamer &OutStreamer, const MachineInstr &MI);
 
   void LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
@@ -820,6 +822,19 @@ void AArch64AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
   }
 
   OutStreamer->emitValue(Value, Size);
+}
+
+void AArch64AsmPrinter::emitFunctionEntryLabel() {
+  if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall ||
+      MF->getFunction().getCallingConv() ==
+          CallingConv::AArch64_SVE_VectorCall ||
+      STI->getRegisterInfo()->hasSVEArgsOrReturn(MF)) {
+    auto *TS =
+        static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
+    TS->emitDirectiveVariantPCS(CurrentFnSym);
+  }
+
+  return AsmPrinter::emitFunctionEntryLabel();
 }
 
 /// Small jump tables contain an unsigned byte or half, representing the offset
