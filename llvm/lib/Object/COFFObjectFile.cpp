@@ -649,6 +649,38 @@ Error COFFObjectFile::initDebugDirectoryPtr() {
   return Error::success();
 }
 
+Error COFFObjectFile::initTLSDirectoryPtr() {
+  // Get the RVA of the TLS directory. Do nothing if it does not exist.
+  const data_directory *DataEntry = getDataDirectory(COFF::TLS_TABLE);
+  if (!DataEntry)
+    return Error::success();
+
+  // Do nothing if the RVA is NULL.
+  if (DataEntry->RelativeVirtualAddress == 0)
+    return Error::success();
+
+  uint64_t DirSize =
+      is64() ? sizeof(coff_tls_directory64) : sizeof(coff_tls_directory32);
+
+  // Check that the size is correct.
+  if (DataEntry->Size != DirSize)
+    return createStringError(
+        object_error::parse_failed,
+        "TLS Directory size (%u) is not the expected size (%u).",
+        static_cast<uint32_t>(DataEntry->Size), DirSize);
+
+  uintptr_t IntPtr = 0;
+  if (Error E = getRvaPtr(DataEntry->RelativeVirtualAddress, IntPtr))
+    return E;
+
+  if (is64())
+    TLSDirectory64 = reinterpret_cast<const coff_tls_directory64 *>(IntPtr);
+  else
+    TLSDirectory32 = reinterpret_cast<const coff_tls_directory32 *>(IntPtr);
+
+  return Error::success();
+}
+
 Error COFFObjectFile::initLoadConfigPtr() {
   // Get the RVA of the debug directory. Do nothing if it does not exist.
   const data_directory *DataEntry = getDataDirectory(COFF::LOAD_CONFIG_TABLE);
@@ -682,7 +714,8 @@ COFFObjectFile::COFFObjectFile(MemoryBufferRef Object)
       ImportDirectory(nullptr), DelayImportDirectory(nullptr),
       NumberOfDelayImportDirectory(0), ExportDirectory(nullptr),
       BaseRelocHeader(nullptr), BaseRelocEnd(nullptr),
-      DebugDirectoryBegin(nullptr), DebugDirectoryEnd(nullptr) {}
+      DebugDirectoryBegin(nullptr), DebugDirectoryEnd(nullptr),
+      TLSDirectory32(nullptr), TLSDirectory64(nullptr) {}
 
 Error COFFObjectFile::initialize() {
   // Check that we at least have enough room for a header.
@@ -809,8 +842,12 @@ Error COFFObjectFile::initialize() {
   if (Error E = initBaseRelocPtr())
     return E;
 
-  // Initialize the pointer to the export table.
+  // Initialize the pointer to the debug directory.
   if (Error E = initDebugDirectoryPtr())
+    return E;
+
+  // Initialize the pointer to the TLS directory.
+  if (Error E = initTLSDirectoryPtr())
     return E;
 
   if (Error E = initLoadConfigPtr())

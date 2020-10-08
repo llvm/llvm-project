@@ -1,0 +1,162 @@
+## Tests for the --coff-tls-directory flag.
+
+## Test that the output of --coff-tls-directory works on x86.
+## The binary created from this yaml definition is such that .rdata contains
+## only the IMAGE_TLS_DIRECTORY structure and hence we should have that
+## TlsTable.RelativeVirtualAddress == .rdata section VirtualAddress.
+## Also note that the .rdata section VirtualSize == sizeof(coff_tls_directory32) == sizeof(IMAGE_TLS_DIRECTORY32) == 24
+
+# RUN: yaml2obj %s --docnum=1 -o %t.32.exe -DTLSRVA=10000 -DTLSSIZE=24
+# RUN: llvm-readobj --coff-tls-directory %t.32.exe | FileCheck %s --check-prefix I386
+
+#      I386: Arch: i386
+# I386-NEXT: AddressSize: 32bit
+# I386-NEXT: TLSDirectory {
+# I386-NEXT:   StartAddressOfRawData: 0x404000
+# I386-NEXT:   EndAddressOfRawData: 0x404008
+# I386-NEXT:   AddressOfIndex: 0x402000
+# I386-NEXT:   AddressOfCallBacks: 0x0
+# I386-NEXT:   SizeOfZeroFill: 0x0
+# I386-NEXT:   Characteristics [ (0x300000)
+# I386-NEXT:     IMAGE_SCN_ALIGN_4BYTES (0x300000)
+# I386-NEXT:   ]
+# I386-NEXT: }
+
+
+## Test that the output of --coff-tls-directory errors on malformed input.
+## On x86, the TLS directory should be 24 bytes.
+## This test has a truncated TLS directory.
+
+# RUN: yaml2obj %s --docnum=1 -o %t.wrong-size.32.exe -DTLSRVA=10000 -DTLSSIZE=10
+# RUN: not llvm-readobj --coff-tls-directory %t.wrong-size.32.exe 2>&1 | FileCheck %s --check-prefix I386-WRONG-SIZE-ERR
+
+# I386-WRONG-SIZE-ERR: error: '{{.*}}': TLS Directory size (10) is not the expected size (24).
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 0
+  ImageBase:       0
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 0
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 0
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: []
+  SizeOfStackReserve: 0
+  SizeOfStackCommit: 0
+  SizeOfHeapReserve: 0
+  SizeOfHeapCommit: 0
+  TlsTable:
+    RelativeVirtualAddress: [[TLSRVA]]
+    Size:            [[TLSSIZE]]
+header:
+  Machine:         IMAGE_FILE_MACHINE_I386
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_32BIT_MACHINE ]
+sections:
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    VirtualAddress:  10000
+    VirtualSize:     24
+    SectionData:     '004040000840400000204000000000000000000000003000'
+symbols:         []
+
+
+## Test that the output of --coff-tls-directory works on x86_64.
+## The binary created from this yaml definition is such that .rdata contains
+## only the IMAGE_TLS_DIRECTORY structure and hence we should have that
+## TlsTable.RelativeVirtualAddress == .rdata section VirtualAddress.
+## Also note that the .rdata section VirtualSize == sizeof(coff_tls_directory64) == sizeof(IMAGE_TLS_DIRECTORY64) == 40
+
+# RUN: yaml2obj %s --docnum=2 -o %t.64.exe -DTLSRVA=10000 -DTLSSIZE=40
+# RUN: llvm-readobj --coff-tls-directory %t.64.exe | FileCheck %s --check-prefix X86-64
+
+#      X86-64: Arch: x86_64
+# X86-64-NEXT: AddressSize: 64bit
+# X86-64-NEXT: TLSDirectory {
+# X86-64-NEXT:   StartAddressOfRawData: 0x140004000
+# X86-64-NEXT:   EndAddressOfRawData: 0x140004008
+# X86-64-NEXT:   AddressOfIndex: 0x140002000
+# X86-64-NEXT:   AddressOfCallBacks: 0x0
+# X86-64-NEXT:   SizeOfZeroFill: 0x0
+# X86-64-NEXT:   Characteristics [ (0x300000)
+# X86-64-NEXT:     IMAGE_SCN_ALIGN_4BYTES (0x300000)
+# X86-64-NEXT:   ]
+# X86-64-NEXT: }
+
+
+## Test that the output of --coff-tls-directory errors on malformed input.
+
+## On x86-64, the TLS directory should be 40 bytes.
+## This test has an erroneously lengthened TLS directory.
+
+# RUN: yaml2obj %s --docnum=2 -o %t.wrong-size.64.exe -DTLSRVA=10000 -DTLSSIZE=80
+# RUN: not llvm-readobj --coff-tls-directory %t.wrong-size.64.exe 2>&1 | FileCheck %s --check-prefix X86-64-WRONG-SIZE-ERR
+
+# X86-64-WRONG-SIZE-ERR: error: '{{.*}}': TLS Directory size (80) is not the expected size (40).
+
+
+## This test has a correct TLS Directory size but the RVA is invalid.
+
+# RUN: yaml2obj %s --docnum=2 -o %t.bad-tls-rva.exe -DTLSRVA=999999 -DTLSSIZE=40
+# RUN: not llvm-readobj --coff-tls-directory %t.bad-tls-rva.exe 2>&1 | FileCheck %s --check-prefix BAD-TLS-RVA-ERR
+
+# BAD-TLS-RVA-ERR: error: '{{.*}}': Invalid data was encountered while parsing the file
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 0
+  ImageBase:       0
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 0
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 0
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: []
+  SizeOfStackReserve: 0
+  SizeOfStackCommit: 0
+  SizeOfHeapReserve: 0
+  SizeOfHeapCommit: 0
+  TlsTable:
+    RelativeVirtualAddress: [[TLSRVA]]
+    Size:            [[TLSSIZE]]
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    VirtualAddress:  10000
+    VirtualSize:     40
+    SectionData:     '00400040010000000840004001000000002000400100000000000000000000000000000000003000'
+symbols:         []
+
+
+## Test that --coff-tls-directory doesn't output anything if there's no TLS directory.
+
+## Case 1: TlsTable.RelativeVirtualAddress/Size = 0.
+
+# RUN: yaml2obj %s --docnum=2 -o %t.no-tls1.exe -DTLSRVA=0 -DTLSSIZE=0
+# RUN: llvm-readobj --coff-tls-directory %t.no-tls1.exe | FileCheck %s --check-prefix NO-TLS
+
+## Case 2: There's no TlsTable listed in the COFF header.
+
+# RUN: yaml2obj %s --docnum=3 -o %t.no-tls2.exe
+# RUN: llvm-readobj --coff-tls-directory %t.no-tls2.exe | FileCheck %s --check-prefix NO-TLS
+
+#      NO-TLS: TLSDirectory {
+# NO-TLS-NEXT: }
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:        []
+symbols:         []
