@@ -94,7 +94,7 @@ void UnixSignals::Reset() {
   AddSignal(16,     "SIGURG",     false,    false,  false,  "urgent condition on IO channel");
   AddSignal(17,     "SIGSTOP",    true,     true,   true,   "sendable stop signal not from tty");
   AddSignal(18,     "SIGTSTP",    false,    true,   true,   "stop signal from tty");
-  AddSignal(19,     "SIGCONT",    false,    true,   true,   "continue a stopped process");
+  AddSignal(19,     "SIGCONT",    false,    false,  true,   "continue a stopped process");
   AddSignal(20,     "SIGCHLD",    false,    false,  false,  "to parent on child stop or exit");
   AddSignal(21,     "SIGTTIN",    false,    true,   true,   "to readers process group upon background tty read");
   AddSignal(22,     "SIGTTOU",    false,    true,   true,   "to readers process group upon background tty write");

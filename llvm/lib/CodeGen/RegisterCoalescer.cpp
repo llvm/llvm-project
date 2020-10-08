@@ -173,7 +173,7 @@ namespace {
     SmallVector<MachineInstr*, 8> DeadDefs;
 
     /// Virtual registers to be considered for register class inflation.
-    SmallVector<unsigned, 8> InflateRegs;
+    SmallVector<Register, 8> InflateRegs;
 
     /// The collection of live intervals which should have been updated
     /// immediately after rematerialiation but delayed until
@@ -285,7 +285,7 @@ namespace {
     /// number if it is not zero. If DstReg is a physical register and the
     /// existing subregister number of the def / use being updated is not zero,
     /// make sure to set it to the correct physical subregister.
-    void updateRegDefsUses(unsigned SrcReg, unsigned DstReg, unsigned SubIdx);
+    void updateRegDefsUses(Register SrcReg, Register DstReg, unsigned SubIdx);
 
     /// If the given machine operand reads only undefined lanes add an undef
     /// flag.
@@ -1246,9 +1246,9 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
                                                 MachineInstr *CopyMI,
                                                 bool &IsDefCopy) {
   IsDefCopy = false;
-  unsigned SrcReg = CP.isFlipped() ? CP.getDstReg() : CP.getSrcReg();
+  Register SrcReg = CP.isFlipped() ? CP.getDstReg() : CP.getSrcReg();
   unsigned SrcIdx = CP.isFlipped() ? CP.getDstIdx() : CP.getSrcIdx();
-  unsigned DstReg = CP.isFlipped() ? CP.getSrcReg() : CP.getDstReg();
+  Register DstReg = CP.isFlipped() ? CP.getSrcReg() : CP.getDstReg();
   unsigned DstIdx = CP.isFlipped() ? CP.getSrcIdx() : CP.getDstIdx();
   if (Register::isPhysicalRegister(SrcReg))
     return false;
@@ -1700,7 +1700,7 @@ void RegisterCoalescer::addUndefFlag(const LiveInterval &Int, SlotIndex UseIdx,
   }
 }
 
-void RegisterCoalescer::updateRegDefsUses(unsigned SrcReg, unsigned DstReg,
+void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
                                           unsigned SubIdx) {
   bool DstIsPhys = Register::isPhysicalRegister(DstReg);
   LiveInterval *DstInt = DstIsPhys ? nullptr : &LIS->getInterval(DstReg);
@@ -1942,7 +1942,7 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
       if (Changed) {
         deleteInstr(CopyMI);
         if (Shrink) {
-          unsigned DstReg = CP.isFlipped() ? CP.getSrcReg() : CP.getDstReg();
+          Register DstReg = CP.isFlipped() ? CP.getSrcReg() : CP.getDstReg();
           LiveInterval &DstLI = LIS->getInterval(DstReg);
           shrinkToUses(&DstLI);
           LLVM_DEBUG(dbgs() << "\t\tshrunk:   " << DstLI << '\n');
@@ -2034,8 +2034,8 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
 }
 
 bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
-  unsigned DstReg = CP.getDstReg();
-  unsigned SrcReg = CP.getSrcReg();
+  Register DstReg = CP.getDstReg();
+  Register SrcReg = CP.getSrcReg();
   assert(CP.isPhys() && "Must be a physreg copy");
   assert(MRI->isReserved(DstReg) && "Not a reserved register");
   LiveInterval &RHS = LIS->getInterval(SrcReg);
@@ -2132,7 +2132,7 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
     LLVM_DEBUG(dbgs() << "\t\tRemoving phys reg def of "
                       << printReg(DstReg, TRI) << " at " << CopyRegIdx << "\n");
 
-    LIS->removePhysRegDefAt(DstReg, CopyRegIdx);
+    LIS->removePhysRegDefAt(DstReg.asMCReg(), CopyRegIdx);
     // Create a new dead def at the new def location.
     for (MCRegUnitIterator UI(DstReg, TRI); UI.isValid(); ++UI) {
       LiveRange &LR = LIS->getRegUnit(*UI);
@@ -2393,14 +2393,15 @@ class JoinVals {
   bool isPrunedValue(unsigned ValNo, JoinVals &Other);
 
 public:
-  JoinVals(LiveRange &LR, unsigned Reg, unsigned SubIdx, LaneBitmask LaneMask,
-           SmallVectorImpl<VNInfo*> &newVNInfo, const CoalescerPair &cp,
+  JoinVals(LiveRange &LR, Register Reg, unsigned SubIdx, LaneBitmask LaneMask,
+           SmallVectorImpl<VNInfo *> &newVNInfo, const CoalescerPair &cp,
            LiveIntervals *lis, const TargetRegisterInfo *TRI, bool SubRangeJoin,
            bool TrackSubRegLiveness)
-    : LR(LR), Reg(Reg), SubIdx(SubIdx), LaneMask(LaneMask),
-      SubRangeJoin(SubRangeJoin), TrackSubRegLiveness(TrackSubRegLiveness),
-      NewVNInfo(newVNInfo), CP(cp), LIS(lis), Indexes(LIS->getSlotIndexes()),
-      TRI(TRI), Assignments(LR.getNumValNums(), -1), Vals(LR.getNumValNums()) {}
+      : LR(LR), Reg(Reg), SubIdx(SubIdx), LaneMask(LaneMask),
+        SubRangeJoin(SubRangeJoin), TrackSubRegLiveness(TrackSubRegLiveness),
+        NewVNInfo(newVNInfo), CP(cp), LIS(lis), Indexes(LIS->getSlotIndexes()),
+        TRI(TRI), Assignments(LR.getNumValNums(), -1),
+        Vals(LR.getNumValNums()) {}
 
   /// Analyze defs in LR and compute a value mapping in NewVNInfo.
   /// Returns false if any conflicts were impossible to resolve.
