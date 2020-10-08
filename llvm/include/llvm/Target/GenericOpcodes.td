@@ -1262,6 +1262,53 @@ def G_SHUFFLE_VECTOR: GenericInstruction {
 }
 
 //------------------------------------------------------------------------------
+// Vector reductions
+//------------------------------------------------------------------------------
+
+def G_VECREDUCE_SEQ_FADD : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$acc, type2:$v);
+  let hasSideEffects = 0;
+}
+
+def G_VECREDUCE_SEQ_FMUL : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$acc, type2:$v);
+  let hasSideEffects = 0;
+}
+
+def G_VECREDUCE_FADD : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$acc, type2:$v);
+  let hasSideEffects = 0;
+}
+
+def G_VECREDUCE_FMUL : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$acc, type2:$v);
+  let hasSideEffects = 0;
+}
+
+class VectorReduction : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$v);
+  let hasSideEffects = 0;
+}
+
+def G_VECREDUCE_FMAX : VectorReduction;
+def G_VECREDUCE_FMIN : VectorReduction;
+
+def G_VECREDUCE_ADD : VectorReduction;
+def G_VECREDUCE_MUL : VectorReduction;
+def G_VECREDUCE_AND : VectorReduction;
+def G_VECREDUCE_OR : VectorReduction;
+def G_VECREDUCE_XOR : VectorReduction;
+def G_VECREDUCE_SMAX : VectorReduction;
+def G_VECREDUCE_SMIN : VectorReduction;
+def G_VECREDUCE_UMAX : VectorReduction;
+def G_VECREDUCE_UMIN : VectorReduction;
+
+//------------------------------------------------------------------------------
 // Constrained floating point ops
 //------------------------------------------------------------------------------
 

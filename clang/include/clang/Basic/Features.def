@@ -256,5 +256,7 @@ EXTENSION(gnu_asm, LangOpts.GNUAsm)
 EXTENSION(gnu_asm_goto_with_outputs, LangOpts.GNUAsm)
 EXTENSION(matrix_types, LangOpts.MatrixTypes)
 
+FEATURE(cxx_abi_relative_vtable, LangOpts.CPlusPlus && LangOpts.RelativeCXXABIVTables)
+
 #undef EXTENSION
 #undef FEATURE

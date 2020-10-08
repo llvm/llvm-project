@@ -1,3 +1,4 @@
+// REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -triple powerpc-unknown-aix -o - -x c++ -S  %s  |\
 // RUN:   FileCheck --check-prefix=IGNOREVISIBILITY-ASM %s
 

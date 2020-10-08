@@ -165,10 +165,6 @@ bool ValueObjectChild::UpdateValue() {
           } else if (addr == 0) {
             m_error.SetErrorString("parent is NULL");
           } else {
-            // Set this object's scalar value to the address of its value by
-            // adding its byte offset to the parent address
-            m_value.GetScalar() += GetByteOffset();
-
             // If a bitfield doesn't fit into the child_byte_size'd
             // window at child_byte_offset, move the window forward
             // until it fits.  The problem here is that Value has no
@@ -187,11 +183,15 @@ bool ValueObjectChild::UpdateValue() {
                 if (bitfield_end > *type_bit_size) {
                   uint64_t overhang_bytes =
                       (bitfield_end - *type_bit_size + 7) / 8;
-                  m_value.GetScalar() += overhang_bytes;
+                  m_byte_offset += overhang_bytes;
                   m_bitfield_bit_offset -= overhang_bytes * 8;
                 }
               }
             }
+
+            // Set this object's scalar value to the address of its value by
+            // adding its byte offset to the parent address
+            m_value.GetScalar() += m_byte_offset;
           }
         } break;
 

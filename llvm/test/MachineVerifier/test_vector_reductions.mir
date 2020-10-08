@@ -1,0 +1,35 @@
+# RUN: not --crash llc -o - -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-unknown"
+
+  define i32 @vector_reductions() {
+    ret i32 0
+  }
+
+...
+---
+name:            vector_reductions
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+body:             |
+  bb.0:
+
+    %vec_v2s64:_(<2 x s64>) = IMPLICIT_DEF
+    %scalar_s64:_(s64) = IMPLICIT_DEF
+
+    %seq_fadd:_(<2 x s64>) = G_VECREDUCE_SEQ_FADD %scalar_s64, %vec_v2s64
+    ; CHECK: Bad machine code: Vector reduction requires a scalar destination type
+
+    %dst:_(s64) = G_VECREDUCE_SEQ_FADD %vec_v2s64, %vec_v2s64
+    ; CHECK: Bad machine code: FADD/FMUL vector reduction requires a scalar 1st operand
+
+    %dst:_(s64) = G_VECREDUCE_SEQ_FADD %scalar_s64, %scalar_s64
+    ; CHECK: Bad machine code: FADD/FMUL vector reduction must have a vector 2nd operand
+
+    %dst2:_(s64) = G_VECREDUCE_MUL %scalar_s64
+    ; CHECK: Bad machine code: Vector reduction requires vector source
+...

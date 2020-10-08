@@ -9,4 +9,8 @@ module m
   !dir$ integer
   implicit integer(a-z)
   !dir$ integer
+  !dir$ integer=64
+  !dir$ integer = 64
+  !dir$ optimize:1
+  !dir$ optimize : 1
 end
