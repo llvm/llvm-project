@@ -66,6 +66,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Utils/FixIrreducible.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/InitializePasses.h"
@@ -304,11 +305,9 @@ static bool makeReducible(LoopInfo &LI, DominatorTree &DT, Graph &&G) {
   return Changed;
 }
 
-bool FixIrreducible::runOnFunction(Function &F) {
+static bool FixIrreducibleImpl(Function &F, LoopInfo &LI, DominatorTree &DT) {
   LLVM_DEBUG(dbgs() << "===== Fix irreducible control-flow in function: "
                     << F.getName() << "\n");
-  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
   bool Changed = false;
   SmallVector<Loop *, 8> WorkList;
@@ -334,4 +333,22 @@ bool FixIrreducible::runOnFunction(Function &F) {
   }
 
   return Changed;
+}
+
+bool FixIrreducible::runOnFunction(Function &F) {
+  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  return FixIrreducibleImpl(F, LI, DT);
+}
+
+PreservedAnalyses FixIrreduciblePass::run(Function &F,
+                                          FunctionAnalysisManager &AM) {
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  if (!FixIrreducibleImpl(F, LI, DT))
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<LoopAnalysis>();
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
 }
