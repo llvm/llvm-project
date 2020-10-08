@@ -113,6 +113,10 @@ public:
   /// Hint that pairing the given load or store is unprofitable.
   static void suppressLdStPair(MachineInstr &MI);
 
+  Optional<ExtAddrMode>
+  getAddrModeFromMemoryOp(const MachineInstr &MemI,
+                          const TargetRegisterInfo *TRI) const override;
+
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
       int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
