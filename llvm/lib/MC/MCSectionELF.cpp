@@ -156,6 +156,8 @@ void MCSectionELF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << "llvm_dependent_libraries";
   else if (Type == ELF::SHT_LLVM_SYMPART)
     OS << "llvm_sympart";
+  else if (Type == ELF::SHT_LLVM_BB_ADDR_MAP)
+    OS << "llvm_bb_addr_map";
   else
     report_fatal_error("unsupported type 0x" + Twine::utohexstr(Type) +
                        " for section " + getName());
