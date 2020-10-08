@@ -708,9 +708,11 @@ class Y : $base[[public ns::X]] {};
 int main() {
   ns::X *x;
   x$access[[->]]f();
+  auto& $type[[[]]a] = *x;
 }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
+  TU.ExtraArgs.push_back("-std=c++17");
   auto Index = buildIndexWithSymbol(
       {SymbolWithHeader{"ns::X", "unittest:///x.h", "\"x.h\""}});
   TU.ExternalIndex = Index.get();
@@ -731,7 +733,13 @@ int main() {
                      "member access into incomplete type 'ns::X'"),
                 DiagName("incomplete_member_access"),
                 WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
-                            "Add include \"x.h\" for symbol ns::X")))));
+                            "Add include \"x.h\" for symbol ns::X"))),
+          AllOf(
+              Diag(Test.range("type"),
+                   "incomplete type 'ns::X' where a complete type is required"),
+              DiagName("incomplete_type"),
+              WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
+                          "Add include \"x.h\" for symbol ns::X")))));
 }
 
 TEST(IncludeFixerTest, NoSuggestIncludeWhenNoDefinitionInHeader) {
