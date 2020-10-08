@@ -418,7 +418,7 @@ void initializeStripGCRelocatesLegacyPass(PassRegistry &);
 void initializeStripNonDebugSymbolsPass(PassRegistry&);
 void initializeStripNonLineTableDebugLegacyPassPass(PassRegistry &);
 void initializeStripSymbolsPass(PassRegistry&);
-void initializeStructurizeCFGPass(PassRegistry&);
+void initializeStructurizeCFGLegacyPassPass(PassRegistry &);
 void initializeTailCallElimPass(PassRegistry&);
 void initializeTailDuplicatePass(PassRegistry&);
 void initializeTargetLibraryInfoWrapperPassPass(PassRegistry&);
