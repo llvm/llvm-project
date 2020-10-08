@@ -35,7 +35,8 @@ write_lit_cfg("lit_site_cfg") {
   input = "//lld/test/lit.site.cfg.py.in"
   output = lld_lit_site_cfg_file
 
-  extra_values = []
+  extra_values = [ "LLD_DEFAULT_LD_LLD_IS_MINGW=" ]
+
   if (llvm_enable_dia_sdk) {
     extra_values += [ "LLVM_ENABLE_DIA_SDK=1" ]
   } else {
