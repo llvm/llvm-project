@@ -24,5 +24,3 @@
 #       error M_PI not defined
 #   endif
 #endif
-
-int main() { }

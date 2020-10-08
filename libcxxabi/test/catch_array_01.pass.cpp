@@ -15,7 +15,7 @@
 
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     typedef char Array[4];
     Array a = {'H', 'i', '!', 0};
@@ -31,4 +31,6 @@ int main()
     catch (...)
     {
     }
+
+    return 0;
 }

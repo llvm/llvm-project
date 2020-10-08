@@ -10,6 +10,6 @@
 
 // Make sure the test DOES NOT pass if it succeeds at runtime.
 
-int main() {
+int main(int, char**) {
     return 0;
 }
