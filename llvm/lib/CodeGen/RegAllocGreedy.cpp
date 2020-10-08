@@ -2866,7 +2866,7 @@ void RAGreedy::collectHintInfo(unsigned Reg, HintsInfo &Out) {
     // Get the current assignment.
     Register OtherPhysReg = Register::isPhysicalRegister(OtherReg)
                                 ? OtherReg
-                                : VRM->getPhys(OtherReg);
+                                : Register(VRM->getPhys(OtherReg));
     // Push the collected information.
     Out.push_back(HintInfo(MBFI->getBlockFreq(Instr.getParent()), OtherReg,
                            OtherPhysReg));
