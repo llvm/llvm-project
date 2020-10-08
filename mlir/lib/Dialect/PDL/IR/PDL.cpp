@@ -34,7 +34,7 @@ Type PDLDialect::parseType(DialectAsmParser &parser) const {
     return Type();
 
   Builder &builder = parser.getBuilder();
-  Type result = llvm::StringSwitch<Type>(keyword)
+  Type result = StringSwitch<Type>(keyword)
                     .Case("attribute", builder.getType<AttributeType>())
                     .Case("operation", builder.getType<OperationType>())
                     .Case("type", builder.getType<TypeType>())

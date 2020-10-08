@@ -288,7 +288,7 @@ Token Lexer::lexIdentifier(const char *tokStart) {
 
   // Check to see if this identifier is a keyword.
   StringRef str(tokStart, curPtr - tokStart);
-  Token::Kind kind = llvm::StringSwitch<Token::Kind>(str)
+  Token::Kind kind = StringSwitch<Token::Kind>(str)
                          .Case("def", Token::Kind::kw_def)
                          .Case("ods_def", Token::Kind::kw_ods_def)
                          .Case("floordiv", Token::Kind::kw_floordiv)

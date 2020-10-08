@@ -166,7 +166,7 @@ SymbolTable::Visibility SymbolTable::getSymbolVisibility(Operation *symbol) {
     return Visibility::Public;
 
   // Otherwise, switch on the string value.
-  return llvm::StringSwitch<Visibility>(vis.getValue())
+  return StringSwitch<Visibility>(vis.getValue())
       .Case("private", Visibility::Private)
       .Case("nested", Visibility::Nested)
       .Case("public", Visibility::Public);
