@@ -110,3 +110,7 @@ if tar_executable:
     sout, _ = tar_version.communicate()
     if 'GNU tar' in sout.decode():
         config.available_features.add('gnutar')
+
+# ELF tests expect the default target for ld.lld to be ELF.
+if config.ld_lld_default_mingw:
+    config.excludes.append('ELF')
