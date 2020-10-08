@@ -2079,11 +2079,20 @@ static Instruction *matchFunnelShift(Instruction &Or) {
   // matches a subtraction on the R operand.
   auto matchShiftAmount = [&](Value *L, Value *R, unsigned Width) -> Value * {
     // Check for constant shift amounts that sum to the bitwidth.
-    // TODO: Support non-uniform shift amounts.
-    const APInt *LC, *RC;
-    if (match(L, m_APIntAllowUndef(LC)) && match(R, m_APIntAllowUndef(RC)))
-      if (LC->ult(Width) && RC->ult(Width) && (*LC + *RC) == Width)
-        return ConstantInt::get(L->getType(), *LC);
+    const APInt *LI, *RI;
+    if (match(L, m_APIntAllowUndef(LI)) && match(R, m_APIntAllowUndef(RI)))
+      if (LI->ult(Width) && RI->ult(Width) && (*LI + *RI) == Width)
+        return ConstantInt::get(L->getType(), *LI);
+
+    // TODO: Support undefs in non-uniform shift amounts.
+    Constant *LC, *RC;
+    if (match(L, m_Constant(LC)) && !LC->containsUndefElement() &&
+        match(R, m_Constant(RC)) && !RC->containsUndefElement() &&
+        match(L, m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, APInt(Width, Width))) &&
+        match(R, m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, APInt(Width, Width)))) {
+      if (match(ConstantExpr::getAdd(LC, RC), m_SpecificInt(Width)))
+        return L;
+    }
 
     // For non-constant cases, the following patterns currently only work for
     // rotation patterns.
