@@ -6889,6 +6889,8 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
   if (Opc == AMDGPU::V_MAC_F32_e64_gfx6_gfx7 ||
       Opc == AMDGPU::V_MAC_F32_e64_gfx10 ||
       Opc == AMDGPU::V_MAC_F32_e64_vi ||
+      Opc == AMDGPU::V_MAC_LEGACY_F32_e64_gfx6_gfx7 ||
+      Opc == AMDGPU::V_MAC_LEGACY_F32_e64_gfx10 ||
       Opc == AMDGPU::V_MAC_F16_e64_vi ||
       Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
       Opc == AMDGPU::V_FMAC_F32_e64_vi ||
