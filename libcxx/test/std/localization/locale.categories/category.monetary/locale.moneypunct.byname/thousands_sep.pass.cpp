@@ -127,9 +127,7 @@ int main(int, char**)
     const wchar_t wsep = glibc_version_less_than("2.27") ? L'\u00A0' : L'\u202F';
 #else
     const char sep = ' ';
-    // FIXME libc++ specifically works around \u00A0 by translating it into
-    // a regular space.
-    const wchar_t wsep = L'\u00A0';
+    const wchar_t wsep = L' ';
 #endif
     {
         Fnf f(LOCALE_ru_RU_UTF_8, 1);
