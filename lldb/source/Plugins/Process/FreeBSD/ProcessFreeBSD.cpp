@@ -79,12 +79,14 @@ ProcessFreeBSD::CreateInstance(lldb::TargetSP target_sp,
 }
 
 void ProcessFreeBSD::Initialize() {
-  static llvm::once_flag g_once_flag;
+  if (!getenv("FREEBSD_REMOTE_PLUGIN")) {
+    static llvm::once_flag g_once_flag;
 
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
-  });
+    llvm::call_once(g_once_flag, []() {
+      PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                    GetPluginDescriptionStatic(), CreateInstance);
+    });
+  }
 }
 
 lldb_private::ConstString ProcessFreeBSD::GetPluginNameStatic() {
