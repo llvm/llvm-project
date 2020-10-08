@@ -91,7 +91,7 @@ public:
   ///
   /// This method never runs the analysis.
   ///
-  /// \returns null if there is no cached result.
+  /// returns null if there is no cached result.
   using Base::getCachedResult;
 
   // FIXME: Add LoopAnalysisManager or CGSCCAnalysisManager if needed.
