@@ -28,6 +28,7 @@ class TestObjCIVarDiscovery(TestBase):
 
     @skipUnlessDarwin
     @skipIf(debug_info=no_match("dsym"))
+    @swiftTest
     def test_nodbg(self):
         self.build()
         shutil.rmtree(self.getBuildArtifact("aTestFramework.framework/Versions/A/aTestFramework.dSYM"))
@@ -35,6 +36,7 @@ class TestObjCIVarDiscovery(TestBase):
 
     @skipUnlessDarwin
     @skipIf(debug_info=no_match("dsym"))
+    @swiftTest
     def test_dbg(self):
         self.build()
         self.do_test(True)

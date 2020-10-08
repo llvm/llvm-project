@@ -81,6 +81,7 @@ class HelpCommandTestCase(TestBase):
                     substrs=['arm', 'i386', 'x86_64'])
 
     @no_debug_info_test
+    @swiftTest # Checks for the Swift version number in the output
     def test_help_version(self):
         """Test 'help version' and 'version' commands."""
         self.expect("help version",

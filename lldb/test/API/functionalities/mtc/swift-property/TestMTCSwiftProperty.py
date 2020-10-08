@@ -19,6 +19,7 @@ class MTCSwiftPropertyTestCase(TestBase):
     @expectedFailureAll(bugnumber="rdar://60396797",
                         setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
+    @swiftTest
     def test(self):
         self.mtc_dylib_path = findMainThreadCheckerDylib()
         self.assertTrue(self.mtc_dylib_path != "")

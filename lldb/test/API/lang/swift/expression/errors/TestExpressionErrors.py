@@ -24,6 +24,7 @@ class TestExpressionErrors(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @swiftTest
     def test_CanThrowError(self):
         """Tests that swift expressions resolve scoped variables correctly"""
         self.build()
