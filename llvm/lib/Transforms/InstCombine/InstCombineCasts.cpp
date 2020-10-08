@@ -714,7 +714,6 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   Type *DestTy = Trunc.getType(), *SrcTy = Src->getType();
   unsigned DestWidth = DestTy->getScalarSizeInBits();
   unsigned SrcWidth = SrcTy->getScalarSizeInBits();
-  ConstantInt *Cst;
 
   // Attempt to truncate the entire input expression tree to the destination
   // type.   Only do this if the dest type is a simple type, don't convert the
@@ -866,20 +865,19 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   if (Instruction *I = shrinkInsertElt(Trunc, Builder))
     return I;
 
-  if (Src->hasOneUse() && isa<IntegerType>(SrcTy) &&
-      shouldChangeType(SrcTy, DestTy)) {
+  if (Src->hasOneUse() &&
+      (isa<VectorType>(SrcTy) || shouldChangeType(SrcTy, DestTy))) {
     // Transform "trunc (shl X, cst)" -> "shl (trunc X), cst" so long as the
     // dest type is native and cst < dest size.
-    if (match(Src, m_Shl(m_Value(A), m_ConstantInt(Cst))) &&
+    if (match(Src, m_Shl(m_Value(A), m_Constant(C))) &&
         !match(A, m_Shr(m_Value(), m_Constant()))) {
       // Skip shifts of shift by constants. It undoes a combine in
       // FoldShiftByConstant and is the extend in reg pattern.
-      if (Cst->getValue().ult(DestWidth)) {
+      APInt Threshold = APInt(C->getType()->getScalarSizeInBits(), DestWidth);
+      if (match(C, m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, Threshold))) {
         Value *NewTrunc = Builder.CreateTrunc(A, DestTy, A->getName() + ".tr");
-
-        return BinaryOperator::Create(
-          Instruction::Shl, NewTrunc,
-          ConstantInt::get(DestTy, Cst->getValue().trunc(DestWidth)));
+        return BinaryOperator::Create(Instruction::Shl, NewTrunc,
+                                      ConstantExpr::getTrunc(C, DestTy));
       }
     }
   }
@@ -896,6 +894,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   //   --->
   //   extractelement <8 x i32> (bitcast <4 x i64> %X to <8 x i32>), i32 0
   Value *VecOp;
+  ConstantInt *Cst;
   if (match(Src, m_OneUse(m_ExtractElt(m_Value(VecOp), m_ConstantInt(Cst))))) {
     auto *VecOpTy = cast<FixedVectorType>(VecOp->getType());
     unsigned VecNumElts = VecOpTy->getNumElements();
