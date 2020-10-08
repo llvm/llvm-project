@@ -369,10 +369,6 @@ ImplicitNullChecks::SuitabilityResult
 ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
                                        unsigned PointerReg,
                                        ArrayRef<MachineInstr *> PrevInsts) {
-  int64_t Offset;
-  bool OffsetIsScalable;
-  const MachineOperand *BaseOp;
-
   // Implementation restriction for faulting_op insertion
   // TODO: This could be relaxed if we find a test case which warrants it.
   if (MI.getDesc().getNumDefs() > 1)
