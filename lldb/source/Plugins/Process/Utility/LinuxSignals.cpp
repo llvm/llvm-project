@@ -37,7 +37,7 @@ void LinuxSignals::Reset() {
   AddSignal(16, "SIGSTKFLT", false, true, true, "stack fault");
   AddSignal(17, "SIGCHLD", false, false, true, "child status has changed",
             "SIGCLD");
-  AddSignal(18, "SIGCONT", false, true, true, "process continue");
+  AddSignal(18, "SIGCONT", false, false, true, "process continue");
   AddSignal(19, "SIGSTOP", true, true, true, "process stop");
   AddSignal(20, "SIGTSTP", false, true, true, "tty stop");
   AddSignal(21, "SIGTTIN", false, true, true, "background tty read");

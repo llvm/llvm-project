@@ -45,7 +45,7 @@ void MipsLinuxSignals::Reset() {
             "SIGPOLL");
   AddSignal(23, "SIGSTOP", true, true, true, "process stop");
   AddSignal(24, "SIGTSTP", false, true, true, "tty stop");
-  AddSignal(25, "SIGCONT", false, true, true, "process continue");
+  AddSignal(25, "SIGCONT", false, false, true, "process continue");
   AddSignal(26, "SIGTTIN", false, true, true, "background tty read");
   AddSignal(27, "SIGTTOU", false, true, true, "background tty write");
   AddSignal(28, "SIGVTALRM", false, true, true, "virtual time alarm");
