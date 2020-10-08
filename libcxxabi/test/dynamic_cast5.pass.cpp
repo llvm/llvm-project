@@ -1305,7 +1305,7 @@ void test()
 }  // t9
 
 
-int main()
+int main(int, char**)
 {
     timer t;
     t1::test();
@@ -1317,4 +1317,6 @@ int main()
     t7::test();
     t8::test();
     t9::test();
+
+    return 0;
 }

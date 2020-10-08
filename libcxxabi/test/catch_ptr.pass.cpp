@@ -176,7 +176,7 @@ void f5()
     }
 }
 
-int main()
+int main(int, char**)
 {
     try
     {
@@ -186,4 +186,6 @@ int main()
     catch (...)
     {
     }
+
+    return 0;
 }

@@ -43,7 +43,7 @@ void f2()
     }
 }
 
-int main()
+int main(int, char**)
 {
     try
     {
@@ -56,4 +56,6 @@ int main()
         assert(a.id_ == 3);
     }
     assert(A::count == 0);
+
+    return 0;
 }

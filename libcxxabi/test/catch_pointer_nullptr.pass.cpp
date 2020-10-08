@@ -61,7 +61,7 @@ void catch_nullptr_test() {
 }
 
 
-int main()
+int main(int, char**)
 {
   // catch naked nullptrs
   test1();
@@ -72,4 +72,6 @@ int main()
   catch_nullptr_test<int A::*>();
   catch_nullptr_test<const int A::*>();
   catch_nullptr_test<int A::**>();
+
+  return 0;
 }

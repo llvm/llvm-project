@@ -59,7 +59,7 @@ void runtime_test()
 	assert(!std::ispow2(T(130)));
 }
 
-int main()
+int main(int, char**)
 {
 
     {
@@ -159,4 +159,5 @@ int main()
 	}
 #endif
 
+    return 0;
 }

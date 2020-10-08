@@ -21,6 +21,4 @@ struct HasDecl : std::false_type {};
 template <class SV>
 struct HasDecl<SV, decltype(static_cast<void>(std::declval<std::ostream&>() << std::declval<SV&>()))> : std::true_type {};
 
-int main() {
-  static_assert(HasDecl<std::string_view>::value, "streaming operator declaration not present");
-}
+static_assert(HasDecl<std::string_view>::value, "streaming operator declaration not present");
