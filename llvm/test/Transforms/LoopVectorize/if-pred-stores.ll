@@ -249,13 +249,9 @@ define void @bug18724(i1 %cond) {
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP5:%.*]] = add i32 [[VEC_PHI2]], 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[PREDPHI]] = select i1 undef, i32 [[VEC_PHI]], i32 [[TMP4]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[PREDPHI5]] = select i1 undef, i32 [[VEC_PHI2]], i32 [[TMP5]]
-; UNROLL-NOSIMPLIFY-NEXT:    [[OFFSET_IDX6:%.*]] = add i64 undef, [[INDEX]]
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP6:%.*]] = trunc i64 [[OFFSET_IDX6]] to i32
-; UNROLL-NOSIMPLIFY-NEXT:    [[INDUCTION7:%.*]] = add i32 [[TMP6]], 0
-; UNROLL-NOSIMPLIFY-NEXT:    [[INDUCTION8:%.*]] = add i32 [[TMP6]], 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP3:!llvm.loop !.*]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP3:!llvm.loop !.*]]
 ; UNROLL-NOSIMPLIFY:       middle.block:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[BIN_RDX:%.*]] = add i32 [[PREDPHI5]], [[PREDPHI]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1, 0
