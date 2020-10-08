@@ -1296,9 +1296,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
         return BinaryOperator::CreateAShr(NewShl, ShAmt);
       }
 
-      // If this is a xor that was canonicalized from a sub, turn it back into
-      // a sub and fuse this add with it.
-      if (LHS->hasOneUse() && (XorRHS->getValue()+1).isPowerOf2()) {
+      // If X has no high-bits above the xor mask set:
+      // add (xor X, LowMaskC), C --> sub (LowMaskC + C), X
+      if ((XorRHS->getValue() + 1).isPowerOf2()) {
         KnownBits LHSKnown = computeKnownBits(XorLHS, 0, &I);
         if ((XorRHS->getValue() | LHSKnown.Zero).isAllOnesValue())
           return BinaryOperator::CreateSub(ConstantExpr::getAdd(XorRHS, CI),
