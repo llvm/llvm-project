@@ -16,12 +16,13 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/Function.h"
+#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::gpu;
@@ -36,10 +37,32 @@ bool GPUDialect::isKernel(Operation *op) {
 }
 
 void GPUDialect::initialize() {
+  addTypes<AsyncTokenType>();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/GPU/GPUOps.cpp.inc"
       >();
+}
+
+Type GPUDialect::parseType(DialectAsmParser &parser) const {
+  // Parse the main keyword for the type.
+  StringRef keyword;
+  if (parser.parseKeyword(&keyword))
+    return Type();
+  MLIRContext *context = getContext();
+
+  // Handle 'async token' types.
+  if (keyword == "async.token")
+    return AsyncTokenType::get(context);
+
+  parser.emitError(parser.getNameLoc(), "unknown gpu type: " + keyword);
+  return Type();
+}
+
+void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
+  TypeSwitch<Type>(type)
+      .Case<AsyncTokenType>([&](Type) { os << "async.token"; })
+      .Default([](Type) { llvm_unreachable("unexpected 'gpu' type kind"); });
 }
 
 LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
@@ -193,6 +216,26 @@ static ParseResult parseShuffleOp(OpAsmParser &parser, OperationState &state) {
       parser.addTypesToList({valueType, int1Type}, state.types))
     return failure();
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AsyncOpInterface
+//===----------------------------------------------------------------------===//
+
+void gpu::addAsyncDependency(Operation *op, Value token) {
+  op->insertOperands(0, {token});
+  if (!op->template hasTrait<OpTrait::AttrSizedOperandSegments>())
+    return;
+  auto attrName =
+      OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr();
+  auto sizeAttr = op->template getAttrOfType<DenseIntElementsAttr>(attrName);
+  if (!sizeAttr)
+    return; // Async dependencies is the only variadic operand.
+  SmallVector<int32_t, 8> sizes;
+  for (auto size : sizeAttr.getIntValues())
+    sizes.push_back(size.getSExtValue());
+  ++sizes.front();
+  op->setAttr(attrName, Builder(op->getContext()).getI32VectorAttr(sizes));
 }
 
 //===----------------------------------------------------------------------===//
@@ -774,6 +817,8 @@ static void print(OpAsmPrinter &p, GPUModuleOp op) {
   p.printRegion(op.getOperation()->getRegion(0), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
 }
+
+#include "mlir/Dialect/GPU/GPUOpInterfaces.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/GPU/GPUOps.cpp.inc"
