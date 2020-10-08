@@ -488,7 +488,6 @@ public:
   /// preferred when a pipeline is largely of one type, but one or just a few
   /// passes are of different types(See PassBuilder.cpp for examples).
   Error parsePassPipeline(ModulePassManager &MPM, StringRef PipelineText,
-                          bool VerifyEachPass = true,
                           bool DebugLogging = false);
 
   /// {{@ Parse a textual pass pipeline description into a specific PassManager
@@ -499,13 +498,10 @@ public:
   ///
   ///   function(lpass)
   Error parsePassPipeline(CGSCCPassManager &CGPM, StringRef PipelineText,
-                          bool VerifyEachPass = true,
                           bool DebugLogging = false);
   Error parsePassPipeline(FunctionPassManager &FPM, StringRef PipelineText,
-                          bool VerifyEachPass = true,
                           bool DebugLogging = false);
   Error parsePassPipeline(LoopPassManager &LPM, StringRef PipelineText,
-                          bool VerifyEachPass = true,
                           bool DebugLogging = false);
   /// @}}
 
@@ -682,7 +678,7 @@ public:
   /// PassManagers and populate the passed ModulePassManager.
   void registerParseTopLevelPipelineCallback(
       const std::function<bool(ModulePassManager &, ArrayRef<PipelineElement>,
-                               bool VerifyEachPass, bool DebugLogging)> &C);
+                               bool DebugLogging)> &C);
 
   /// Enable or disable the hot/cold splitting optimization. By default, it is
   /// disabled.
@@ -710,27 +706,27 @@ private:
   parsePipelineText(StringRef Text);
 
   Error parseModulePass(ModulePassManager &MPM, const PipelineElement &E,
-                        bool VerifyEachPass, bool DebugLogging);
+                        bool DebugLogging);
   Error parseCGSCCPass(CGSCCPassManager &CGPM, const PipelineElement &E,
-                       bool VerifyEachPass, bool DebugLogging);
+                       bool DebugLogging);
   Error parseFunctionPass(FunctionPassManager &FPM, const PipelineElement &E,
-                          bool VerifyEachPass, bool DebugLogging);
+                          bool DebugLogging);
   Error parseLoopPass(LoopPassManager &LPM, const PipelineElement &E,
-                      bool VerifyEachPass, bool DebugLogging);
+                      bool DebugLogging);
   bool parseAAPassName(AAManager &AA, StringRef Name);
 
   Error parseLoopPassPipeline(LoopPassManager &LPM,
                               ArrayRef<PipelineElement> Pipeline,
-                              bool VerifyEachPass, bool DebugLogging);
+                              bool DebugLogging);
   Error parseFunctionPassPipeline(FunctionPassManager &FPM,
                                   ArrayRef<PipelineElement> Pipeline,
-                                  bool VerifyEachPass, bool DebugLogging);
+                                  bool DebugLogging);
   Error parseCGSCCPassPipeline(CGSCCPassManager &CGPM,
                                ArrayRef<PipelineElement> Pipeline,
-                               bool VerifyEachPass, bool DebugLogging);
+                               bool DebugLogging);
   Error parseModulePassPipeline(ModulePassManager &MPM,
                                 ArrayRef<PipelineElement> Pipeline,
-                                bool VerifyEachPass, bool DebugLogging);
+                                bool DebugLogging);
 
   void addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
                          OptimizationLevel Level, bool RunProfileGen, bool IsCS,
@@ -763,7 +759,7 @@ private:
               2>
       ModulePipelineParsingCallbacks;
   SmallVector<std::function<bool(ModulePassManager &, ArrayRef<PipelineElement>,
-                                 bool VerifyEachPass, bool DebugLogging)>,
+                                 bool DebugLogging)>,
               2>
       TopLevelPipelineParsingCallbacks;
   // CGSCC callbacks
