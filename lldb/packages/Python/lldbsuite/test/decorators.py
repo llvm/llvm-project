@@ -3,6 +3,8 @@ from __future__ import absolute_import
 # System modules
 from distutils.version import LooseVersion
 from functools import wraps
+import ctypes
+import locale
 import os
 import platform
 import re
@@ -591,6 +593,17 @@ def skipIfLinux(func):
 def skipIfWindows(func):
     """Decorate the item to skip tests that should be skipped on Windows."""
     return skipIfPlatform(["windows"])(func)
+
+def skipIfWindowsAndNonEnglish(func):
+    """Decorate the item to skip tests that should be skipped on non-English locales on Windows."""
+    def is_Windows_NonEnglish(self):
+        if lldbplatformutil.getPlatform() != "windows":
+            return None
+        kernel = ctypes.windll.kernel32
+        if locale.windows_locale[ kernel.GetUserDefaultUILanguage() ] == "en_US":
+            return None
+        return "skipping non-English Windows locale"
+    return skipTestIfFn(is_Windows_NonEnglish)(func)
 
 def skipUnlessWindows(func):
     """Decorate the item to skip tests that should be skipped on any non-Windows platform."""
