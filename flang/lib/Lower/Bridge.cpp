@@ -1900,7 +1900,8 @@ private:
       auto varTy = builder->getRefType(genType(*st.vars[0]));
       auto result = builder->createConvert(loc, varTy, addr);
       storeMap[off] = result;
-      addSymbol(*st.vars[0], result);
+      mapSymbolAttributes(Fortran::lower::pft::Variable{*st.vars[0]}, storeMap,
+                          result);
       return;
     }
     // Allocate an anonymous block of memory.
