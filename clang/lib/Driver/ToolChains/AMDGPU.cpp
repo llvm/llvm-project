@@ -356,9 +356,9 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-shared");
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
-  C.addCommand(
-      std::make_unique<Command>(JA, *this, ResponseFileSupport::AtFileCurCP(),
-                                Args.MakeArgString(Linker), CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), Args.MakeArgString(Linker),
+      CmdArgs, Inputs, Output));
 }
 
 void amdgpu::getAMDGPUTargetFeatures(const Driver &D,

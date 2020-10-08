@@ -951,12 +951,13 @@ void tools::SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,
   InputInfo II(types::TY_Object, Output.getFilename(), Output.getFilename());
 
   // First extract the dwo sections.
-  C.addCommand(std::make_unique<Command>(
-      JA, T, ResponseFileSupport::AtFileCurCP(), Exec, ExtractArgs, II));
+  C.addCommand(std::make_unique<Command>(JA, T,
+                                         ResponseFileSupport::AtFileCurCP(),
+                                         Exec, ExtractArgs, II, Output));
 
   // Then remove them from the original .o file.
   C.addCommand(std::make_unique<Command>(
-      JA, T, ResponseFileSupport::AtFileCurCP(), Exec, StripArgs, II));
+      JA, T, ResponseFileSupport::AtFileCurCP(), Exec, StripArgs, II, Output));
 }
 
 // Claim options we don't want to warn if they are unused. We do this for

@@ -154,7 +154,7 @@ void darwin::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Exec, CmdArgs, Inputs));
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 void darwin::MachOTool::anchor() {}
@@ -531,7 +531,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         Args.MakeArgString(getToolChain().GetProgramPath("touch"));
     CmdArgs.push_back(Output.getFilename());
     C.addCommand(std::make_unique<Command>(
-        JA, *this, ResponseFileSupport::None(), Exec, CmdArgs, None));
+        JA, *this, ResponseFileSupport::None(), Exec, CmdArgs, None, Output));
     return;
   }
 
@@ -704,7 +704,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *Exec = Args.MakeArgString(getToolChain().GetLinkerPath());
   std::unique_ptr<Command> Cmd = std::make_unique<Command>(
-      JA, *this, ResponseSupport, Exec, CmdArgs, Inputs);
+      JA, *this, ResponseSupport, Exec, CmdArgs, Inputs, Output);
   Cmd->setInputFileList(std::move(InputFileList));
   C.addCommand(std::move(Cmd));
 }
@@ -729,7 +729,7 @@ void darwin::Lipo::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("lipo"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Exec, CmdArgs, Inputs));
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 void darwin::Dsymutil::ConstructJob(Compilation &C, const JobAction &JA,
@@ -750,7 +750,7 @@ void darwin::Dsymutil::ConstructJob(Compilation &C, const JobAction &JA,
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("dsymutil"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Exec, CmdArgs, Inputs));
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 void darwin::VerifyDebug::ConstructJob(Compilation &C, const JobAction &JA,
@@ -774,7 +774,7 @@ void darwin::VerifyDebug::ConstructJob(Compilation &C, const JobAction &JA,
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("dwarfdump"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Exec, CmdArgs, Inputs));
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 MachO::MachO(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)

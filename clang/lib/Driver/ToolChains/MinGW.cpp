@@ -51,7 +51,7 @@ void tools::MinGW::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Exec, CmdArgs, Inputs));
+                                         Exec, CmdArgs, Inputs, Output));
 
   if (Args.hasArg(options::OPT_gsplit_dwarf))
     SplitDebugInfo(getToolChain(), C, *this, JA, Args, Output,
@@ -167,9 +167,10 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // that lacks an extension.
   // GCC used to do this only when the compiler itself runs on windows, but
   // since GCC 8 it does the same when cross compiling as well.
-  if (!llvm::sys::path::has_extension(OutputFile))
+  if (!llvm::sys::path::has_extension(OutputFile)) {
     CmdArgs.push_back(Args.MakeArgString(Twine(OutputFile) + ".exe"));
-  else
+    OutputFile = CmdArgs.back();
+  } else
     CmdArgs.push_back(OutputFile);
 
   Args.AddAllArgs(CmdArgs, options::OPT_e);
@@ -318,8 +319,9 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
   const char *Exec = Args.MakeArgString(TC.GetLinkerPath());
-  C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileUTF8(),
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 // Simplified from Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple.
