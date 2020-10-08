@@ -242,15 +242,6 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   bool IsUniqued = !isa<StructType>(Ty) || cast<StructType>(Ty)->isLiteral();
 
   if (!IsUniqued) {
-    StructType *STy = cast<StructType>(Ty);
-    // This is actually a type from the destination module, this can be reached
-    // when this type is loaded in another module, added to DstStructTypesSet,
-    // and then we reach the same type in another module where it has not been
-    // added to MappedTypes. (PR37684)
-    if (STy->getContext().isODRUniquingDebugTypes() && !STy->isOpaque() &&
-        DstStructTypesSet.hasType(STy))
-      return *Entry = STy;
-
 #ifndef NDEBUG
     for (auto &Pair : MappedTypes) {
       assert(!(Pair.first != Ty && Pair.second == Ty) &&
@@ -258,7 +249,7 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
     }
 #endif
 
-    if (!Visited.insert(STy).second) {
+    if (!Visited.insert(cast<StructType>(Ty)).second) {
       StructType *DTy = StructType::create(Ty->getContext());
       return *Entry = DTy;
     }
@@ -577,6 +568,13 @@ Value *LocalValueMaterializer::materialize(Value *SGV) {
 Value *IRLinker::materialize(Value *V, bool ForIndirectSymbol) {
   auto *SGV = dyn_cast<GlobalValue>(V);
   if (!SGV)
+    return nullptr;
+
+  // When linking a global from other modules than source & dest, skip
+  // materializing it because it would be mapped later when its containing
+  // module is linked. Linking it now would potentially pull in many types that
+  // may not be mapped properly.
+  if (SGV->getParent() != &DstM && SGV->getParent() != SrcM.get())
     return nullptr;
 
   Expected<Constant *> NewProto = linkGlobalValueProto(SGV, ForIndirectSymbol);
