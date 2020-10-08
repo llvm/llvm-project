@@ -2617,6 +2617,10 @@ Align doubles to two words in structs (x86 only)
 
 Link stack frames through backchain on System Z
 
+.. option:: -mignore-xcoff-visibility
+
+Do not emit any visibility attribute for asm on AIX or give all symbols 'unspecified' visibility in XCOFF object file (XCOFF only)
+
 .. option:: -mbranches-within-32B-boundaries
 
 Align selected branches (fused, jcc, jmp) within 32-byte boundary
