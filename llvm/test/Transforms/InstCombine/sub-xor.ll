@@ -68,8 +68,7 @@ define i32 @xor_add_extra_use(i32 %x) {
 define <2 x i8> @xor_add_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @xor_add_splat(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], <i8 24, i8 24>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[AND]], <i8 63, i8 63>
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i8> [[XOR]], <i8 42, i8 42>
+; CHECK-NEXT:    [[ADD:%.*]] = sub nuw nsw <2 x i8> <i8 105, i8 105>, [[AND]]
 ; CHECK-NEXT:    ret <2 x i8> [[ADD]]
 ;
   %and = and <2 x i8> %x, <i8 24, i8 24>

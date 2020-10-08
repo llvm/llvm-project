@@ -924,9 +924,19 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
       C2->isMinSignedValue() && C2->sext(Ty->getScalarSizeInBits()) == *C)
     return CastInst::Create(Instruction::SExt, X, Ty);
 
-  // (X ^ signmask) + C --> (X + (signmask ^ C))
-  if (match(Op0, m_Xor(m_Value(X), m_APInt(C2))) && C2->isSignMask())
-    return BinaryOperator::CreateAdd(X, ConstantInt::get(Ty, *C2 ^ *C));
+  if (match(Op0, m_Xor(m_Value(X), m_APInt(C2)))) {
+    // (X ^ signmask) + C --> (X + (signmask ^ C))
+    if (C2->isSignMask())
+      return BinaryOperator::CreateAdd(X, ConstantInt::get(Ty, *C2 ^ *C));
+
+    // If X has no high-bits set above an xor mask:
+    // add (xor X, LowMaskC), C --> sub (LowMaskC + C), X
+    if (C2->isMask()) {
+      KnownBits LHSKnown = computeKnownBits(X, 0, &Add);
+      if ((*C2 | LHSKnown.Zero).isAllOnesValue())
+        return BinaryOperator::CreateSub(ConstantInt::get(Ty, *C2 + *C), X);
+    }
+  }
 
   if (C->isOneValue() && Op0->hasOneUse()) {
     // add (sext i1 X), 1 --> zext (not X)
@@ -1294,15 +1304,6 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
         Constant *ShAmt = ConstantInt::get(Ty, ExtendAmt);
         Value *NewShl = Builder.CreateShl(XorLHS, ShAmt, "sext");
         return BinaryOperator::CreateAShr(NewShl, ShAmt);
-      }
-
-      // If X has no high-bits above the xor mask set:
-      // add (xor X, LowMaskC), C --> sub (LowMaskC + C), X
-      if ((XorRHS->getValue() + 1).isPowerOf2()) {
-        KnownBits LHSKnown = computeKnownBits(XorLHS, 0, &I);
-        if ((XorRHS->getValue() | LHSKnown.Zero).isAllOnesValue())
-          return BinaryOperator::CreateSub(ConstantExpr::getAdd(XorRHS, CI),
-                                           XorLHS);
       }
     }
   }

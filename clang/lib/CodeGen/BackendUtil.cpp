@@ -1070,6 +1070,16 @@ static void addSanitizersAtO0(ModulePassManager &MPM,
     ASanPass(SanitizerKind::KernelAddress, /*CompileKernel=*/true);
   }
 
+  if (LangOpts.Sanitize.has(SanitizerKind::HWAddress)) {
+    bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::HWAddress);
+    MPM.addPass(HWAddressSanitizerPass(
+        /*CompileKernel=*/false, Recover));
+  }
+  if (LangOpts.Sanitize.has(SanitizerKind::KernelHWAddress)) {
+    MPM.addPass(HWAddressSanitizerPass(
+        /*CompileKernel=*/true, /*Recover=*/true));
+  }
+
   if (LangOpts.Sanitize.has(SanitizerKind::Memory)) {
     bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::Memory);
     int TrackOrigins = CodeGenOpts.SanitizeMemoryTrackOrigins;
@@ -1348,6 +1358,28 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
                       /*CompileKernel=*/false, Recover, UseAfterScope)));
             });
       }
+
+      if (LangOpts.Sanitize.has(SanitizerKind::HWAddress)) {
+        bool Recover =
+            CodeGenOpts.SanitizeRecover.has(SanitizerKind::HWAddress);
+        PB.registerOptimizerLastEPCallback(
+            [Recover](ModulePassManager &MPM,
+                      PassBuilder::OptimizationLevel Level) {
+              MPM.addPass(HWAddressSanitizerPass(
+                  /*CompileKernel=*/false, Recover));
+            });
+      }
+      if (LangOpts.Sanitize.has(SanitizerKind::KernelHWAddress)) {
+        bool Recover =
+            CodeGenOpts.SanitizeRecover.has(SanitizerKind::KernelHWAddress);
+        PB.registerOptimizerLastEPCallback(
+            [Recover](ModulePassManager &MPM,
+                      PassBuilder::OptimizationLevel Level) {
+              MPM.addPass(HWAddressSanitizerPass(
+                  /*CompileKernel=*/true, Recover));
+            });
+      }
+
       if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts, LangOpts))
         PB.registerPipelineStartEPCallback([Options](ModulePassManager &MPM) {
           MPM.addPass(GCOVProfilerPass(*Options));
@@ -1382,16 +1414,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     if (CodeGenOpts.MemProf) {
       MPM.addPass(createModuleToFunctionPassAdaptor(MemProfilerPass()));
       MPM.addPass(ModuleMemProfilerPass());
-    }
-
-    if (LangOpts.Sanitize.has(SanitizerKind::HWAddress)) {
-      bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::HWAddress);
-      MPM.addPass(HWAddressSanitizerPass(
-          /*CompileKernel=*/false, Recover));
-    }
-    if (LangOpts.Sanitize.has(SanitizerKind::KernelHWAddress)) {
-      MPM.addPass(HWAddressSanitizerPass(
-          /*CompileKernel=*/true, /*Recover=*/true));
     }
 
     if (CodeGenOpts.OptimizationLevel == 0) {
