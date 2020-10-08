@@ -385,6 +385,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (Res && (MI.getOpcode() == AMDGPU::V_MAC_F32_e64_vi ||
               MI.getOpcode() == AMDGPU::V_MAC_F32_e64_gfx6_gfx7 ||
               MI.getOpcode() == AMDGPU::V_MAC_F32_e64_gfx10 ||
+              MI.getOpcode() == AMDGPU::V_MAC_LEGACY_F32_e64_gfx6_gfx7 ||
+              MI.getOpcode() == AMDGPU::V_MAC_LEGACY_F32_e64_gfx10 ||
               MI.getOpcode() == AMDGPU::V_MAC_F16_e64_vi ||
               MI.getOpcode() == AMDGPU::V_FMAC_F32_e64_vi ||
               MI.getOpcode() == AMDGPU::V_FMAC_F32_e64_gfx10 ||
