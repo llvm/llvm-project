@@ -274,7 +274,7 @@ public:
 
   /// Test the validity of a rename operation.
   ///
-  /// If NewName is provided, it peforms a name validation.
+  /// If NewName is provided, it performs a name validation.
   void prepareRename(PathRef File, Position Pos,
                      llvm::Optional<std::string> NewName,
                      const RenameOptions &RenameOpts,
