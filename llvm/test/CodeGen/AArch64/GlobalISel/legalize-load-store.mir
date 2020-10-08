@@ -609,48 +609,24 @@ body:             |
     ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD1]](s32), [[DEF]](s32)
     ; CHECK: [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
     ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
-    ; CHECK: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C3]], [[C4]]
-    ; CHECK: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[C4]], [[C3]]
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[C3]](s64), [[C4]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
-    ; CHECK: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[C3]](s64), [[C]]
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP1]](s32)
     ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[MV]], [[C3]](s64)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[MV]], [[SUB1]](s64)
     ; CHECK: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[DEF1]], [[C3]](s64)
-    ; CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR]], [[SHL1]]
-    ; CHECK: [[SHL2:%[0-9]+]]:_(s64) = G_SHL [[MV]], [[SUB]](s64)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[SHL]], [[C]]
-    ; CHECK: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[OR]], [[SHL2]]
-    ; CHECK: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC1]](s1), [[DEF1]], [[SELECT1]]
-    ; CHECK: [[OR1:%[0-9]+]]:_(s64) = G_OR [[SELECT]], [[ZEXTLOAD]]
-    ; CHECK: [[OR2:%[0-9]+]]:_(s64) = G_OR [[SELECT2]], [[C]]
-    ; CHECK: [[SUB2:%[0-9]+]]:_(s64) = G_SUB [[C4]], [[C4]]
-    ; CHECK: [[SUB3:%[0-9]+]]:_(s64) = G_SUB [[C4]], [[C4]]
-    ; CHECK: [[ICMP2:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[C4]](s64), [[C4]]
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP2]](s32)
-    ; CHECK: [[ICMP3:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[C4]](s64), [[C]]
-    ; CHECK: [[TRUNC3:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP3]](s32)
-    ; CHECK: [[SHL3:%[0-9]+]]:_(s64) = G_SHL [[OR1]], [[C4]](s64)
-    ; CHECK: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[OR1]], [[SUB3]](s64)
-    ; CHECK: [[SHL4:%[0-9]+]]:_(s64) = G_SHL [[OR2]], [[C4]](s64)
-    ; CHECK: [[OR3:%[0-9]+]]:_(s64) = G_OR [[LSHR1]], [[SHL4]]
-    ; CHECK: [[SHL5:%[0-9]+]]:_(s64) = G_SHL [[OR1]], [[SUB2]](s64)
-    ; CHECK: [[SELECT3:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC2]](s1), [[SHL3]], [[C]]
-    ; CHECK: [[SELECT4:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC2]](s1), [[OR3]], [[SHL5]]
-    ; CHECK: [[SELECT5:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC3]](s1), [[OR2]], [[SELECT4]]
-    ; CHECK: [[OR4:%[0-9]+]]:_(s64) = G_OR [[SELECT3]], [[LOAD]]
-    ; CHECK: [[OR5:%[0-9]+]]:_(s64) = G_OR [[SELECT5]], [[C]]
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY [[OR4]](s64)
-    ; CHECK: [[TRUNC4:%[0-9]+]]:_(s32) = G_TRUNC [[OR5]](s64)
+    ; CHECK: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[MV]], [[C4]](s64)
+    ; CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[SHL1]], [[LSHR]]
+    ; CHECK: [[OR1:%[0-9]+]]:_(s64) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; CHECK: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+    ; CHECK: [[OR2:%[0-9]+]]:_(s64) = G_OR [[C]], [[LOAD]]
+    ; CHECK: [[OR3:%[0-9]+]]:_(s64) = G_OR [[OR1]], [[C]]
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY [[OR2]](s64)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[OR3]](s64)
     ; CHECK: G_STORE [[COPY]](s64), %ptr(p0) :: (store (s64), align 16)
     ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C1]](s64)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[TRUNC4]](s32)
-    ; CHECK: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C3]](s64)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[TRUNC]](s32)
+    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C3]](s64)
     ; CHECK: [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C2]](s64)
     ; CHECK: G_STORE [[COPY1]](s32), [[PTR_ADD2]](p0) :: (store (s16) into unknown-address + 8, align 8)
-    ; CHECK: G_STORE [[LSHR2]](s32), [[PTR_ADD3]](p0) :: (store (s8) into unknown-address + 10, align 2)
+    ; CHECK: G_STORE [[LSHR1]](s32), [[PTR_ADD3]](p0) :: (store (s8) into unknown-address + 10, align 2)
     ; CHECK: RET_ReallyLR
     %ptr:_(p0) = COPY $x0
     %load:_(s88) = G_LOAD %ptr(p0) :: (load (s88))
