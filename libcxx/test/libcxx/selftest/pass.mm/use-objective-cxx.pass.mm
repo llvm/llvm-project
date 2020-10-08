@@ -13,6 +13,6 @@
 @interface Foo
 @end
 
-int main() {
+int main(int, char**) {
     return 0;
 }

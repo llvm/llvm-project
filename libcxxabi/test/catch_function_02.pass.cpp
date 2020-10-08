@@ -13,7 +13,7 @@
 
 void f() {}
 
-int main()
+int main(int, char**)
 {
     typedef void Function();
     try
@@ -28,4 +28,6 @@ int main()
     {
         assert(false);
     }
+
+    return 0;
 }

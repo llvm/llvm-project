@@ -38,7 +38,7 @@ void signal_handler(int signum) {
   _Exit(-1);
 }
 
-int main() {
+int main(int, char**) {
   signal(SIGUSR1, signal_handler);
   kill(getpid(), SIGUSR1);
   return -2;
