@@ -2144,6 +2144,24 @@ bool AArch64InstrInfo::getMemOperandsWithOffsetWidth(
   return true;
 }
 
+Optional<ExtAddrMode>
+AArch64InstrInfo::getAddrModeFromMemoryOp(const MachineInstr &MemI,
+                                          const TargetRegisterInfo *TRI) const {
+  const MachineOperand *Base; // Filled with the base operand of MI.
+  int64_t Offset;             // Filled with the offset of MI.
+  bool OffsetIsScalable;
+  if (!getMemOperandWithOffset(MemI, Base, Offset, OffsetIsScalable, TRI))
+    return None;
+
+  if (!Base->isReg())
+    return None;
+  ExtAddrMode AM;
+  AM.BaseReg = Base->getReg();
+  AM.Displacement = Offset;
+  AM.ScaledReg = 0;
+  return AM;
+}
+
 bool AArch64InstrInfo::getMemOperandWithOffsetWidth(
     const MachineInstr &LdSt, const MachineOperand *&BaseOp, int64_t &Offset,
     bool &OffsetIsScalable, unsigned &Width,

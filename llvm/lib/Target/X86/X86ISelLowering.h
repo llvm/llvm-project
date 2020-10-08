@@ -756,7 +756,6 @@ namespace llvm {
     LCMPXCHG_DAG = ISD::FIRST_TARGET_MEMORY_OPCODE,
     LCMPXCHG8_DAG,
     LCMPXCHG16_DAG,
-    LCMPXCHG8_SAVE_EBX_DAG,
     LCMPXCHG16_SAVE_RBX_DAG,
 
     /// LOCK-prefixed arithmetic read-modify-write instructions.

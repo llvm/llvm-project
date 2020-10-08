@@ -80,6 +80,15 @@ struct RegImmPair {
   RegImmPair(Register Reg, int64_t Imm) : Reg(Reg), Imm(Imm) {}
 };
 
+/// Used to describe addressing mode similar to ExtAddrMode in CodeGenPrepare.
+/// It holds the register values, the scale value and the displacement.
+struct ExtAddrMode {
+  Register BaseReg;
+  Register ScaledReg;
+  int64_t Scale;
+  int64_t Displacement;
+};
+
 //---------------------------------------------------------------------------
 ///
 /// TargetInstrInfo - Interface to description of machine instruction set
@@ -968,6 +977,15 @@ public:
     return None;
   }
 
+  /// Returns true if MI is an instruction that defines Reg to have a constant
+  /// value and the value is recorded in ImmVal. The ImmVal is a result that
+  /// should be interpreted as modulo size of Reg.
+  virtual bool getConstValDefinedInReg(const MachineInstr &MI,
+                                       const Register Reg,
+                                       int64_t &ImmVal) const {
+    return false;
+  }
+
   /// Store the specified register of the given register class to the specified
   /// stack frame index. The store instruction is to be added to the given
   /// machine basic block before the specified machine instruction. If isKill
@@ -1268,6 +1286,16 @@ public:
                                         unsigned &BasePos,
                                         unsigned &OffsetPos) const {
     return false;
+  }
+
+  /// Target dependent implementation to get the values constituting the address
+  /// MachineInstr that is accessing memory. These values are returned as a
+  /// struct ExtAddrMode which contains all relevant information to make up the
+  /// address.
+  virtual Optional<ExtAddrMode>
+  getAddrModeFromMemoryOp(const MachineInstr &MemI,
+                          const TargetRegisterInfo *TRI) const {
+    return None;
   }
 
   /// Returns true if MI's Def is NullValueReg, and the MI
