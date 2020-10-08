@@ -644,19 +644,29 @@ static void replaceLongjmpWithEmscriptenLongjmp(Function *LongjmpF,
   SmallVector<CallInst *, 8> ToErase;
   LLVMContext &C = LongjmpF->getParent()->getContext();
   IRBuilder<> IRB(C);
+
+  // For calls to longjmp, replace it with emscripten_longjmp and cast its first
+  // argument (jmp_buf*) to int
   for (User *U : LongjmpF->users()) {
     auto *CI = dyn_cast<CallInst>(U);
-    if (!CI)
-      report_fatal_error("Does not support indirect calls to longjmp");
-    IRB.SetInsertPoint(CI);
-    Value *Jmpbuf =
-        IRB.CreatePtrToInt(CI->getArgOperand(0), IRB.getInt32Ty(), "jmpbuf");
-    IRB.CreateCall(EmLongjmpF, {Jmpbuf, CI->getArgOperand(1)});
-    ToErase.push_back(CI);
+    if (CI && CI->getCalledFunction() == LongjmpF) {
+      IRB.SetInsertPoint(CI);
+      Value *Jmpbuf =
+          IRB.CreatePtrToInt(CI->getArgOperand(0), IRB.getInt32Ty(), "jmpbuf");
+      IRB.CreateCall(EmLongjmpF, {Jmpbuf, CI->getArgOperand(1)});
+      ToErase.push_back(CI);
+    }
   }
-
   for (auto *I : ToErase)
     I->eraseFromParent();
+
+  // If we have any remaining uses of longjmp's function pointer, replace it
+  // with (int(*)(jmp_buf*, int))emscripten_longjmp.
+  if (!LongjmpF->uses().empty()) {
+    Value *EmLongjmp =
+        IRB.CreateBitCast(EmLongjmpF, LongjmpF->getType(), "em_longjmp");
+    LongjmpF->replaceAllUsesWith(EmLongjmp);
+  }
 }
 
 bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
