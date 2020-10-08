@@ -96,8 +96,7 @@ define i32 @n5_is_not_not(i32 %x, i32 %y) {
 
 define <2 x i32> @n5_is_not_not_vec_splat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @n5_is_not_not_vec_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X:%.*]], <i32 -2147483648, i32 -2147483648>
-; CHECK-NEXT:    [[T0_NEG:%.*]] = add <2 x i32> [[TMP1]], <i32 1, i32 1>
+; CHECK-NEXT:    [[T0_NEG:%.*]] = add <2 x i32> [[X:%.*]], <i32 -2147483647, i32 -2147483647>
 ; CHECK-NEXT:    [[T1:%.*]] = add <2 x i32> [[T0_NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[T1]]
 ;

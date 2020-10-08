@@ -924,6 +924,10 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
       C2->isMinSignedValue() && C2->sext(Ty->getScalarSizeInBits()) == *C)
     return CastInst::Create(Instruction::SExt, X, Ty);
 
+  // (X ^ signmask) + C --> (X + (signmask ^ C))
+  if (match(Op0, m_Xor(m_Value(X), m_APInt(C2))) && C2->isSignMask())
+    return BinaryOperator::CreateAdd(X, ConstantInt::get(Ty, *C2 ^ *C));
+
   if (C->isOneValue() && Op0->hasOneUse()) {
     // add (sext i1 X), 1 --> zext (not X)
     // TODO: The smallest IR representation is (select X, 0, 1), and that would
@@ -1300,11 +1304,6 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
           return BinaryOperator::CreateSub(ConstantExpr::getAdd(XorRHS, CI),
                                            XorLHS);
       }
-      // (X + signmask) + C could have gotten canonicalized to (X^signmask) + C,
-      // transform them into (X + (signmask ^ C))
-      if (XorRHS->getValue().isSignMask())
-        return BinaryOperator::CreateAdd(XorLHS,
-                                         ConstantExpr::getXor(XorRHS, CI));
     }
   }
 
