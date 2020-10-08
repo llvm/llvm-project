@@ -338,9 +338,9 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     // Perform the following transformation.
     // SaveRbx = pseudocmpxchg Addr, <4 opds for the address>, InArg, SaveRbx
     // =>
-    // [E|R]BX = InArg
+    // RBX = InArg
     // actualcmpxchg Addr
-    // [E|R]BX = SaveRbx
+    // RBX = SaveRbx
     const MachineOperand &InArg = MBBI->getOperand(6);
     Register SaveRbx = MBBI->getOperand(7).getReg();
 
