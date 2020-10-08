@@ -4,7 +4,7 @@ import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 import os
 
-class TestSwiftDWARFImporterC(lldbtest.TestBase):
+class TestSwiftDWARFImporterFromDylib(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
