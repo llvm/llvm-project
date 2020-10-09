@@ -364,6 +364,46 @@ TEST_F(TestTypeSystemSwiftTypeRef, LanguageVersion) {
   }
 }
 
+TEST_F(TestTypeSystemSwiftTypeRef, Tuple) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+
+  auto makeElement = [&](NodePointer type,
+                         const char *name =
+                             nullptr) -> TypeSystemSwift::TupleElement {
+    auto *node = b.GlobalTypeMangling(type);
+    return {ConstString(name), GetCompilerType(b.Mangle(node))};
+  };
+
+  {
+    // Test unnamed tuple elements.
+    auto int_element = makeElement(b.IntType());
+    auto float_element = makeElement(b.FloatType());
+    auto int_float_tuple =
+        m_swift_ts.CreateTupleType({int_element, float_element});
+    ASSERT_EQ(int_float_tuple.GetMangledTypeName(),
+              "$ss0016BuiltinInt_gCJAcV_s0019BuiltinFPIEEE_CJEEdVtD");
+    auto float_int_tuple =
+        m_swift_ts.CreateTupleType({float_element, int_element});
+    ASSERT_EQ(float_int_tuple.GetMangledTypeName(),
+              "$ss0019BuiltinFPIEEE_CJEEdV_s0016BuiltinInt_gCJAcVtD");
+  }
+  {
+    // Test named tuple elements.
+    auto int_element = makeElement(b.IntType(), "i");
+    auto float_element = makeElement(b.FloatType(), "f");
+    auto int_float_tuple =
+        m_swift_ts.CreateTupleType({int_element, float_element});
+    ASSERT_EQ(int_float_tuple.GetMangledTypeName(),
+              "$ss0016BuiltinInt_gCJAcV1i_s0019BuiltinFPIEEE_CJEEdV1ftD");
+    auto float_int_tuple =
+        m_swift_ts.CreateTupleType({float_element, int_element});
+    ASSERT_EQ(float_int_tuple.GetMangledTypeName(),
+              "$ss0019BuiltinFPIEEE_CJEEdV1f_s0016BuiltinInt_gCJAcV1itD");
+  }
+}
+
 TEST_F(TestTypeSystemSwiftTypeRef, TypeClass) {
   using namespace swift::Demangle;
   Demangler dem;
