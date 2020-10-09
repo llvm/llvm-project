@@ -691,8 +691,9 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
     // require that the input operand is a shift-by-constant so that we have
     // confidence that the shifts will get folded together.  We could do this
     // xform in more cases, but it is unlikely to be profitable.
+    const APInt *TrShiftAmt;
     if (I.isLogicalShift() &&
-        match(TI->getOperand(0), m_Shift(m_Value(), m_ConstantInt()))) {
+        match(TI->getOperand(0), m_Shift(m_Value(), m_APInt(TrShiftAmt)))) {
       auto *TrOp = cast<Instruction>(TI->getOperand(0));
       Type *SrcTy = TrOp->getType();
 
