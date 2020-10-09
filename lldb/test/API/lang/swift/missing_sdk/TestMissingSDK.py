@@ -19,6 +19,7 @@ class TestMissingSDK(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
 
+    @swiftTest
     @skipIf(oslist=['windows'])
     @skipIfDarwinEmbedded # swift crash inspecting swift stdlib with little other swift loaded <rdar://problem/55079456> 
     def testMissingSDK(self):
