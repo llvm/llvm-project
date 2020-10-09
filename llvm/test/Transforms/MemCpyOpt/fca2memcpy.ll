@@ -147,12 +147,11 @@ define void @noaliasaddrproducer(%S* %src, %S* noalias %dst, i32* noalias %dstid
 
 define void @throwing_call(%S* noalias %src, %S* %dst) {
 ; CHECK-LABEL: @throwing_call(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast %S* [[SRC:%.*]] to i8*
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast %S* [[DST:%.*]] to i8*
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast %S* [[SRC]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP2]], i8* align 8 [[TMP3]], i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[TMP1]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = load [[S:%.*]], %S* [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast %S* [[SRC]] to i8*
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[TMP2]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    call void @call() [[ATTR2:#.*]]
+; CHECK-NEXT:    store [[S]] [[TMP1]], %S* [[DST:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %1 = load %S, %S* %src
