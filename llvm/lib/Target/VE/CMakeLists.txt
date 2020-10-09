@@ -1,3 +1,5 @@
+add_llvm_component_group(VE)
+
 set(LLVM_TARGET_DEFINITIONS VE.td)
 
 tablegen(LLVM VEGenRegisterInfo.inc -gen-register-info)
@@ -22,6 +24,21 @@ add_llvm_target(VECodeGen
   VERegisterInfo.cpp
   VESubtarget.cpp
   VETargetMachine.cpp
+
+  LINK_COMPONENTS
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  MC
+  SelectionDAG
+  VEDesc
+  VEInfo
+  Support
+  Target
+
+  ADD_TO_COMPONENT
+  VE
   )
 
 add_subdirectory(AsmParser)

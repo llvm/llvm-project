@@ -253,6 +253,10 @@ function(llvm_map_components_to_libnames out_libs)
   # Translate symbolic component names to real libraries:
   llvm_expand_pseudo_components(link_components ${link_components})
   foreach(c ${link_components})
+    get_property(c_rename GLOBAL PROPERTY LLVM_COMPONENT_NAME_${c})
+    if(c_rename)
+        set(c ${c_rename})
+    endif()
     if( c STREQUAL "native" )
       # already processed
     elseif( c STREQUAL "backend" )
