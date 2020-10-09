@@ -1,6 +1,7 @@
 include_directories(..)
 
 set(LSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+set(LSAN_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 append_rtti_flag(OFF LSAN_CFLAGS)
 
 set(LSAN_COMMON_SOURCES
@@ -33,6 +34,11 @@ set(LSAN_HEADERS
 
 set(LSAN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
+if(ANDROID)
+  list(APPEND LSAN_CFLAGS -fno-emulated-tls)
+  list(APPEND LSAN_LINK_FLAGS -fuse-ld=lld)
+endif()
+
 add_compiler_rt_object_libraries(RTLSanCommon
     OS ${SANITIZER_COMMON_SUPPORTED_OS}
     ARCHS ${LSAN_COMMON_SUPPORTED_ARCH}
@@ -61,7 +67,7 @@ if(COMPILER_RT_HAS_LSAN)
                   RTSanitizerCommonCoverage
                   RTSanitizerCommonSymbolizer
       CFLAGS ${LSAN_CFLAGS}
-      LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
+      LINK_FLAGS ${LSAN_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
       LINK_LIBS ${LSAN_LINK_LIBS}
       PARENT_TARGET lsan)
   else()
@@ -78,6 +84,7 @@ if(COMPILER_RT_HAS_LSAN)
                 $<TARGET_OBJECTS:RTLSanCommon.${arch}>
         ADDITIONAL_HEADERS ${LSAN_HEADERS}
         CFLAGS ${LSAN_CFLAGS}
+        LINK_FLAGS ${LSAN_LINK_FLAGS}
         PARENT_TARGET lsan)
     endforeach()
   endif()
