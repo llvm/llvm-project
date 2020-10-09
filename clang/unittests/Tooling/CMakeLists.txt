@@ -20,7 +20,11 @@ add_clang_unittest(ToolingTests
   QualTypeNamesTest.cpp
   RangeSelectorTest.cpp
   RecursiveASTVisitorTests/Attr.cpp
-  RecursiveASTVisitorTests/Callbacks.cpp
+  RecursiveASTVisitorTests/CallbacksLeaf.cpp
+  RecursiveASTVisitorTests/CallbacksUnaryOperator.cpp
+  RecursiveASTVisitorTests/CallbacksBinaryOperator.cpp
+  RecursiveASTVisitorTests/CallbacksCompoundAssignOperator.cpp
+  RecursiveASTVisitorTests/CallbacksCallExpr.cpp
   RecursiveASTVisitorTests/Class.cpp
   RecursiveASTVisitorTests/Concept.cpp
   RecursiveASTVisitorTests/ConstructExpr.cpp

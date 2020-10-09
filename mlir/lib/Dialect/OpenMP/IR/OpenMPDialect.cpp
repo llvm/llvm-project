@@ -227,38 +227,39 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
   }
 
   // Add if parameter
-  if (segments[ifClausePos]) {
-    parser.resolveOperand(ifCond.first, ifCond.second, result.operands);
-  }
+  if (segments[ifClausePos] &&
+      parser.resolveOperand(ifCond.first, ifCond.second, result.operands))
+    return failure();
 
   // Add num_threads parameter
-  if (segments[numThreadsClausePos]) {
-    parser.resolveOperand(numThreads.first, numThreads.second, result.operands);
-  }
+  if (segments[numThreadsClausePos] &&
+      parser.resolveOperand(numThreads.first, numThreads.second,
+                            result.operands))
+    return failure();
 
   // Add private parameters
-  if (segments[privateClausePos]) {
-    parser.resolveOperands(privates, privateTypes, privates[0].location,
-                           result.operands);
-  }
+  if (segments[privateClausePos] &&
+      parser.resolveOperands(privates, privateTypes, privates[0].location,
+                             result.operands))
+    return failure();
 
   // Add firstprivate parameters
-  if (segments[firstprivateClausePos]) {
-    parser.resolveOperands(firstprivates, firstprivateTypes,
-                           firstprivates[0].location, result.operands);
-  }
+  if (segments[firstprivateClausePos] &&
+      parser.resolveOperands(firstprivates, firstprivateTypes,
+                             firstprivates[0].location, result.operands))
+    return failure();
 
   // Add shared parameters
-  if (segments[sharedClausePos]) {
-    parser.resolveOperands(shareds, sharedTypes, shareds[0].location,
-                           result.operands);
-  }
+  if (segments[sharedClausePos] &&
+      parser.resolveOperands(shareds, sharedTypes, shareds[0].location,
+                             result.operands))
+    return failure();
 
   // Add copyin parameters
-  if (segments[copyinClausePos]) {
-    parser.resolveOperands(copyins, copyinTypes, copyins[0].location,
-                           result.operands);
-  }
+  if (segments[copyinClausePos] &&
+      parser.resolveOperands(copyins, copyinTypes, copyins[0].location,
+                             result.operands))
+    return failure();
 
   result.addAttribute("operand_segment_sizes",
                       parser.getBuilder().getI32VectorAttr(segments));
