@@ -1,9 +1,7 @@
-// RUN: %clang_cc1 -triple i686-win32             -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template -DMS %s
-// RUN: %clang_cc1 -triple x86_64-win32           -fsyntax-only -fms-extensions -verify -std=c++1y -Wunsupported-dll-base-class-template -DMS %s
-// RUN: %clang_cc1 -triple i686-mingw32           -fsyntax-only -fms-extensions -verify -std=c++1y -Wunsupported-dll-base-class-template %s
-// RUN: %clang_cc1 -triple x86_64-mingw32         -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template %s
-// RUN: %clang_cc1 -triple i686-windows-itanium   -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template -DWI %s
-// RUN: %clang_cc1 -triple x86_64-windows-itanium -fsyntax-only -fms-extensions -verify -std=c++1y -Wunsupported-dll-base-class-template -DWI %s
+// RUN: %clang_cc1 -triple i686-win32     -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template -DMS %s
+// RUN: %clang_cc1 -triple x86_64-win32   -fsyntax-only -fms-extensions -verify -std=c++1y -Wunsupported-dll-base-class-template -DMS %s
+// RUN: %clang_cc1 -triple i686-mingw32   -fsyntax-only -fms-extensions -verify -std=c++1y -Wunsupported-dll-base-class-template %s
+// RUN: %clang_cc1 -triple x86_64-mingw32 -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template %s
 
 // Helper structs to make templates more expressive.
 struct ImplicitInst_Exported {};
@@ -351,7 +349,7 @@ class __declspec(dllexport) ClassDecl;
 
 class __declspec(dllexport) ClassDef {};
 
-#if defined(MS) || defined (WI)
+#ifdef MS
 // expected-warning@+3{{'dllexport' attribute ignored}}
 #endif
 template <typename T> struct PartiallySpecializedClassTemplate {};
@@ -369,13 +367,13 @@ ImplicitlyInstantiatedExportedTemplate<IncompleteType> implicitlyInstantiatedExp
 
 // Don't instantiate class members of templates with explicit instantiation declarations, even if they are exported.
 struct IncompleteType2;
-#if defined(MS) || defined (WI)
+#ifdef MS
 // expected-note@+2{{attribute is here}}
 #endif
 template <typename T> struct __declspec(dllexport) ExportedTemplateWithExplicitInstantiationDecl {
   int f() { return sizeof(T); } // no-error
 };
-#if defined(MS) || defined (WI)
+#ifdef MS
 // expected-warning@+2{{explicit instantiation declaration should not be 'dllexport'}}
 #endif
 extern template struct ExportedTemplateWithExplicitInstantiationDecl<IncompleteType2>;
@@ -410,13 +408,13 @@ struct __declspec(dllexport) ExportedBaseClass2 : public ExportedBaseClassTempla
 
 // Warn about explicit instantiation declarations of dllexport classes.
 template <typename T> struct ExplicitInstantiationDeclTemplate {};
-#if defined(MS) || defined (WI)
+#ifdef MS
 // expected-warning@+2{{explicit instantiation declaration should not be 'dllexport'}} expected-note@+2{{attribute is here}}
 #endif
 extern template struct __declspec(dllexport) ExplicitInstantiationDeclTemplate<int>;
 
 template <typename T> struct __declspec(dllexport) ExplicitInstantiationDeclExportedTemplate {};
-#if defined(MS) || defined (WI)
+#ifdef MS
 // expected-note@-2{{attribute is here}}
 // expected-warning@+2{{explicit instantiation declaration should not be 'dllexport'}}
 #endif
@@ -455,7 +453,7 @@ template <typename T> struct ExplicitlyExportInstantiatedTemplate { void func() 
 template struct __declspec(dllexport) ExplicitlyExportInstantiatedTemplate<int>;
 template <typename T> struct ExplicitlyExportDeclaredInstantiatedTemplate { void func() {} };
 extern template struct ExplicitlyExportDeclaredInstantiatedTemplate<int>;
-#if not defined(MS) && not defined (WI)
+#ifndef MS
 // expected-warning@+2{{'dllexport' attribute ignored on explicit instantiation definition}}
 #endif
 template struct __declspec(dllexport) ExplicitlyExportDeclaredInstantiatedTemplate<int>;
@@ -1166,7 +1164,7 @@ template<typename T> template<typename U> __declspec(dllexport) constexpr int CT
 // Lambdas
 //===----------------------------------------------------------------------===//
 // The MS ABI doesn't provide a stable mangling for lambdas, so they can't be imported or exported.
-#if defined(MS) || defined (WI)
+#ifdef MS
 // expected-error@+2{{lambda cannot be declared 'dllexport'}}
 #endif
 auto Lambda = []() __declspec(dllexport) -> bool { return true; };
