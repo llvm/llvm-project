@@ -1489,20 +1489,20 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     break;
   }
   case TargetOpcode::G_VECREDUCE_SEQ_FADD:
-  case TargetOpcode::G_VECREDUCE_SEQ_FMUL:
-  case TargetOpcode::G_VECREDUCE_FADD:
-  case TargetOpcode::G_VECREDUCE_FMUL: {
+  case TargetOpcode::G_VECREDUCE_SEQ_FMUL: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT Src1Ty = MRI->getType(MI->getOperand(1).getReg());
     LLT Src2Ty = MRI->getType(MI->getOperand(2).getReg());
     if (!DstTy.isScalar())
       report("Vector reduction requires a scalar destination type", MI);
     if (!Src1Ty.isScalar())
-      report("FADD/FMUL vector reduction requires a scalar 1st operand", MI);
+      report("Sequential FADD/FMUL vector reduction requires a scalar 1st operand", MI);
     if (!Src2Ty.isVector())
-      report("FADD/FMUL vector reduction must have a vector 2nd operand", MI);
+      report("Sequential FADD/FMUL vector reduction must have a vector 2nd operand", MI);
     break;
   }
+  case TargetOpcode::G_VECREDUCE_FADD:
+  case TargetOpcode::G_VECREDUCE_FMUL:
   case TargetOpcode::G_VECREDUCE_FMAX:
   case TargetOpcode::G_VECREDUCE_FMIN:
   case TargetOpcode::G_VECREDUCE_ADD:
