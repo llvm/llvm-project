@@ -144,8 +144,6 @@ Specifies configuration file
 
 .. option:: --constant-cfstrings
 
-.. option:: -coverage, --coverage
-
 .. option:: --cuda-compile-host-device
 
 Compile CUDA code for both host and device (default).  Has no effect on non-CUDA compilations.
@@ -178,6 +176,10 @@ Filename to write DOT-formatted header dependencies to
 
 Filename (or -) to write dependency output to
 
+.. option:: -dsym-dir<dir>
+
+Directory to output dSYM's (if any) to
+
 .. option:: -dumpmachine
 
 .. option:: -dumpversion
@@ -199,6 +201,10 @@ Filename (or -) to write dependency output to
 .. option:: -emit-ast
 
 Emit Clang AST files for source inputs
+
+.. option:: --emit-static-lib
+
+Enable linker job to emit a static library.
 
 .. option:: -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang
 
@@ -262,6 +268,10 @@ Emit type record hashes in a .debug$H section
 
 .. option:: -ginline-line-tables, -gno-inline-line-tables
 
+.. option:: --gpu-instrument-lib=<arg>
+
+Instrument device library for HIP, which is a LLVM bitcode containing \_\_cyg\_profile\_func\_enter and \_\_cyg\_profile\_func\_exit
+
 .. option:: --gpu-max-threads-per-block=<arg>
 
 Default max threads per block for kernel launch bounds for HIP
@@ -279,6 +289,10 @@ Display help for hidden options
 .. option:: --hip-link
 
 Link clang-offload-bundler bundles for HIP
+
+.. option:: --hip-version=<arg>
+
+HIP version in the format of major.minor.patch
 
 .. option:: -ibuiltininc
 
@@ -309,6 +323,10 @@ Make the next included directory (-I or -F) an indexer header map
 .. option:: -mbranch-protection=<arg>
 
 Enforce targets of indirect branches and function returns
+
+.. option:: -mharden-sls=<arg>
+
+Select straight-line speculation hardening scope
 
 .. option:: --migrate
 
@@ -374,8 +392,6 @@ Do not link device library for CUDA/HIP device compilation
 
 .. option:: -noseglinkedit
 
-.. option:: -nostartfiles
-
 .. option:: -nostdinc, --no-standard-includes
 
 .. program:: clang1
@@ -384,11 +400,7 @@ Do not link device library for CUDA/HIP device compilation
 
 Disable standard #include directories for the C++ standard library
 
-.. option:: -nostdlib, --no-standard-libraries
-
-.. program:: clang1
 .. option:: -nostdlib++
-.. program:: clang
 
 .. option:: -nostdlibinc
 
@@ -464,7 +476,7 @@ Only modify files with a filename contained in the provided directory path
 
 .. option:: --offload-arch=<arg>, --cuda-gpu-arch=<arg>, --no-offload-arch=<arg>
 
-CUDA/HIP offloading device architecture (e.g. sm\_35, gfx906).  May be specified more than once.
+CUDA offloading device architecture (e.g. sm\_35), or HIP offloading target ID in the form of a device architecture followed by target ID features delimited by a colon. Each target ID feature is a pre-defined string followed by a plus or minus sign (e.g. gfx908:xnack+:sram-ecc-).  May be specified more than once.
 
 .. option:: -p, --profile
 
@@ -473,8 +485,6 @@ CUDA/HIP offloading device architecture (e.g. sm\_35, gfx906).  May be specified
 .. option:: -pg
 
 Enable mcount instrumentation
-
-.. option:: -pie
 
 .. option:: -pipe, --pipe
 
@@ -538,8 +548,6 @@ Support POSIX threads in generated code
 
 .. option:: -pthreads
 
-.. option:: -rdynamic
-
 .. option:: -read\_only\_relocs <arg>
 
 .. option:: -relocatable-pch, --relocatable-pch
@@ -602,8 +610,6 @@ Save intermediate compilation results.
 
 Serialize compiler diagnostics to a file
 
-.. option:: -shared, --shared
-
 .. option:: -shared-libgcc
 
 .. option:: -shared-libsan, -shared-libasan
@@ -611,10 +617,6 @@ Serialize compiler diagnostics to a file
 Dynamically link the sanitizer runtime
 
 .. option:: -single\_module
-
-.. option:: -specs=<arg>, --specs=<arg>
-
-.. option:: -static, --static
 
 .. option:: -static-libgcc
 
@@ -627,8 +629,6 @@ Statically link the sanitizer runtime
 .. option:: -static-openmp
 
 Use the static host OpenMP runtime while linking.
-
-.. option:: -static-pie
 
 .. option:: -std-default=<arg>
 
@@ -734,7 +734,7 @@ Only run preprocess, compile, and assemble steps
 
 .. option:: -emit-interface-stubs
 
-Generate Inteface Stub Files.
+Generate Interface Stub Files.
 
 .. option:: -emit-llvm
 
@@ -820,7 +820,7 @@ Enables an experimental new pass manager in LLVM.
 
 .. option:: -fexperimental-strict-floating-point
 
-Enables the use of non-default rounding modes and non-default exception handling on targets that are not currently ready.
+Enables experimental strict floating point in LLVM.
 
 .. option:: -ffine-grained-bitfield-accesses, -fno-fine-grained-bitfield-accesses
 
@@ -886,11 +886,11 @@ Enable control flow integrity (CFI) checks for cross-DSO calls.
 
 Generalize pointers in CFI indirect call type signature checks
 
-.. option:: -fsanitize-coverage-allowlist=<arg>
+.. option:: -fsanitize-coverage-allowlist=<arg>, -fsanitize-coverage-whitelist=<arg>
 
 Restrict sanitizer coverage instrumentation exclusively to modules and functions that match the provided special case list, except the blocked ones
 
-.. option:: -fsanitize-coverage-blocklist=<arg>
+.. option:: -fsanitize-coverage-blocklist=<arg>, -fsanitize-coverage-blacklist=<arg>
 
 Disable sanitizer coverage instrumentation for modules and functions that match the provided special case list, even the allowed ones
 
@@ -1529,6 +1529,10 @@ Use DWARF style exceptions
 
 .. option:: -feliminate-unused-debug-symbols, -fno-eliminate-unused-debug-symbols
 
+.. option:: -feliminate-unused-debug-types, -fno-eliminate-unused-debug-types
+
+Do not emit  debug info for defined but unused types
+
 .. option:: -fembed-bitcode=<option>, -fembed-bitcode (equivalent to -fembed-bitcode=all), -fembed-bitcode-marker (equivalent to -fembed-bitcode=marker)
 
 Embed LLVM bitcode (option: off, all, bitcode, marker)
@@ -1725,6 +1729,10 @@ Max total number of preprocessed tokens for -Wmax-tokens.
 
 Specify the maximum alignment to enforce on pointers lacking an explicit alignment
 
+.. option:: -fmemory-profile, -fno-memory-profile
+
+Enable heap memory profiling
+
 .. option:: -fmerge-all-constants, -fno-merge-all-constants
 
 Allow merging of constants
@@ -1833,10 +1841,6 @@ Directly create compilation output files. This may lead to incorrect incremental
 .. option:: -fno\_pch-validate-input-files-content
 .. program:: clang
 
-.. option:: -fnostack-clash-protection
-
-Disable stack clash protection
-
 .. option:: -fnoxray-link-deps
 
 .. option:: -fobjc-abi-version=<arg>
@@ -1933,6 +1937,18 @@ Generate M NOPs before function entry and N-M NOPs after function entry
 
 Override the default ABI to return all structs on the stack
 
+.. option:: -fpch-codegen, -fno-pch-codegen
+
+Generate code for uses of this PCH that assumes an explicit object file will be built for the PCH
+
+.. option:: -fpch-debuginfo, -fno-pch-debuginfo
+
+Generate debug info for types in an object file built from this PCH and do not generate them elsewhere
+
+.. option:: -fpch-instantiate-templates, -fno-pch-instantiate-templates
+
+Instantiate templates already while building a PCH
+
 .. option:: -fpch-preprocess
 
 .. option:: -fpch-validate-input-files-content
@@ -2009,6 +2025,10 @@ Specifies that the sample profile is accurate. If the sample
 .. program:: clang
 
 Enable sample-based profile guided optimizations
+
+.. option:: -fprofile-update=<method>
+
+Set update method of profile counters (atomic,prefer-atomic,single)
 
 .. program:: clang1
 .. option:: -fprofile-use=<pathname>
@@ -2128,15 +2148,19 @@ Provide minimal debug info in the object/executable to facilitate online symboli
 
 Enables splitting of the LTO unit
 
+.. option:: -fsplit-machine-functions, -fno-split-machine-functions
+
+Enable late function splitting using profile information (x86 ELF)
+
 .. option:: -fsplit-stack
 
-.. option:: -fstack-clash-protection
+.. option:: -fstack-clash-protection, -fno-stack-clash-protection
 
 Enable stack clash protection
 
 .. option:: -fstack-protector, -fno-stack-protector
 
-Enable stack protectors for some functions vulnerable to stack smashing. This uses a loose heuristic which considers functions vulnerable if they contain a char (or 8bit integer) array or constant sized calls to alloca , which are of greater size than ssp-buffer-size (default: 8 bytes). All variable sized calls to alloca are considered vulnerable. A function witha stack protector has a guard value added to the stack frame that is checked on function exit. The guard value must be positioned in the stack frame such that a buffer overflow from a vulnerable variable will overwrite the guard value before overwriting the function's return address. The reference stack guard value is stored in a global variable.
+Enable stack protectors for some functions vulnerable to stack smashing. This uses a loose heuristic which considers functions vulnerable if they contain a char (or 8bit integer) array or constant sized calls to alloca , which are of greater size than ssp-buffer-size (default: 8 bytes). All variable sized calls to alloca are considered vulnerable. A function with a stack protector has a guard value added to the stack frame that is checked on function exit. The guard value must be positioned in the stack frame such that a buffer overflow from a vulnerable variable will overwrite the guard value before overwriting the function's return address. The reference stack guard value is stored in a global variable.
 
 .. option:: -fstack-protector-all
 
@@ -2153,10 +2177,6 @@ Emit section containing metadata on function stack sizes
 .. option:: -fstandalone-debug, -fno-limit-debug-info, -fno-standalone-debug
 
 Emit full debug info for all types used by the program
-
-.. option:: -feliminate-unused-debug-types, -fno-eliminate-unused-debug-types
-
-Suppress (or emit) debug info for types that are unused but defined by the program.
 
 .. option:: -fstrict-aliasing, -fno-strict-aliasing
 
@@ -2307,6 +2327,10 @@ Give global C++ operator new and delete declarations hidden visibility
 
 Give inline C++ member functions hidden visibility by default
 
+.. option:: -fvisibility-inlines-hidden-static-local-var, -fno-visibility-inlines-hidden-static-local-var
+
+When -fvisibility-inlines-hidden is enabled, static variables in inline C++ member functions will also be given hidden visibility by default
+
 .. option:: -fvisibility-ms-compat
 
 Give global types 'default' visibility and global functions and variables 'hidden' visibility by default
@@ -2347,6 +2371,10 @@ DEPRECATED: Filename defining the whitelist for imbuing the 'always instrument' 
 
 Filename defining the list of functions/types for imbuing XRay attributes.
 
+.. option:: -fxray-function-groups=<arg>
+
+Only instrument 1 of N groups
+
 .. option:: -fxray-function-index, -fno-xray-function-index
 
 .. option:: -fxray-ignore-loops, -fno-xray-ignore-loops
@@ -2380,6 +2408,10 @@ List of modes to link in by default into XRay instrumented binaries.
 .. option:: -fxray-never-instrument=<arg>
 
 DEPRECATED: Filename defining the whitelist for imbuing the 'never instrument' XRay attribute.
+
+.. option:: -fxray-selected-function-group=<arg>
+
+When using -fxray-function-groups, select which group of functions to instrument. Valid range is 0 to fxray-function-groups - 1
 
 .. option:: -fzero-initialized-in-bss, -fno-zero-initialized-in-bss
 
@@ -2617,15 +2649,15 @@ Align doubles to two words in structs (x86 only)
 
 Link stack frames through backchain on System Z
 
-.. option:: -mignore-xcoff-visibility
-
-Do not emit any visibility attribute for asm on AIX or give all symbols 'unspecified' visibility in XCOFF object file (XCOFF only)
-
 .. option:: -mbranches-within-32B-boundaries
 
 Align selected branches (fused, jcc, jmp) within 32-byte boundary
 
 .. option:: -mcmodel=<arg>, -mcmodel=medany (equivalent to -mcmodel=medium), -mcmodel=medlow (equivalent to -mcmodel=small)
+
+.. option:: -mcode-object-v3, -mno-code-object-v3
+
+Enable code object v3 (AMDGPU only)
 
 .. option:: -mconsole<arg>
 
@@ -2678,6 +2710,10 @@ Enable merging of globals
 .. option:: -miamcu, -mno-iamcu
 
 Use Intel MCU ABI
+
+.. option:: -mignore-xcoff-visibility
+
+Not emit the visibility attribute for asm in AIX OS or give all symbols 'unspecified' visibility in XCOFF object file
 
 .. option:: -mimplicit-float, -mno-implicit-float
 
@@ -2757,6 +2793,10 @@ Generate a \_\_mcount\_loc section entry for each \_\_fentry\_\_ call.
 
 .. option:: -mregparm=<arg>
 
+.. option:: -mrelax, -mno-relax
+
+Enable linker relaxation
+
 .. option:: -mrelax-all, -mno-relax-all
 
 (integrated-as) Relax all machine instructions
@@ -2774,6 +2814,8 @@ Enable speculative execution side effect suppression (SESES). Includes LVI contr
 .. option:: -msign-return-address=<arg>
 
 Select return address signing scope
+
+.. option:: -msim
 
 .. option:: -msoft-float, -mno-soft-float
 
@@ -2821,7 +2863,7 @@ Specify bit size of immediate TLS offsets (AArch64 ELF only): 12 (for 4KB) \| 24
 .. option:: -mtune=<arg>
 .. program:: clang
 
-Accepted for compatibility with GCC. Currently has no effect.
+Only supported on X86. Otherwise accepted for compatibility with GCC.
 
 .. option:: -mtvos-version-min=<arg>, -mappletvos-version-min=<arg>
 
@@ -2887,12 +2929,16 @@ Workaround Cortex-A53 erratum 835769 (AArch64 only)
 
 Generate code which only uses the general purpose registers (AArch64 only)
 
+.. option:: -mmark-bti-property
+
+Add .note.gnu.property with BTI to assembly files (AArch64 only)
+
+.. option:: -msve-vector-bits=<arg>
+
+Specify the size in bits of an SVE vector register. Defaults to the vector length agnostic value of "scalable". (AArch64 only)
+
 AMDGPU
 ------
-.. option:: -mcode-object-v3, -mno-code-object-v3
-
-Enable code object v3 (AMDGPU only)
-
 .. option:: -mcumode, -mno-cumode
 
 CU wavefront execution mode is used (AMDGPU only)
@@ -3085,6 +3131,10 @@ PowerPC
 
 .. option:: -mmfocrf, -mmfcrf, -mno-mfocrf
 
+.. option:: -mmma, -mno-mma
+
+.. option:: -mpaired-vector-memops, -mno-paired-vector-memops
+
 .. option:: -mpcrel, -mno-pcrel
 
 .. option:: -mpopcntd, -mno-popcntd
@@ -3213,6 +3263,8 @@ X86
 
 .. option:: -minvpcid, -mno-invpcid
 
+.. option:: -mkl, -mno-kl
+
 .. option:: -mlwp, -mno-lwp
 
 .. option:: -mlzcnt, -mno-lzcnt
@@ -3291,6 +3343,8 @@ X86
 
 .. option:: -mwbnoinvd, -mno-wbnoinvd
 
+.. option:: -mwidekl, -mno-widekl
+
 .. option:: -mx87, -m80387, -mno-x87
 
 .. option:: -mxop, -mno-xop
@@ -3305,10 +3359,6 @@ X86
 
 RISCV
 -----
-.. option:: -mrelax, -mno-relax
-
-Enable linker relaxation
-
 .. option:: -msave-restore, -mno-save-restore
 
 Enable using library calls for save and restore
@@ -3639,13 +3689,11 @@ Pass <arg> to the linker
 .. option:: -Z
 .. program:: clang
 
+.. option:: -coverage, --coverage
+
 .. option:: -e<arg>, --entry
 
 .. option:: -filelist <arg>
-
-.. option:: --hip-device-lib-path=<arg>
-
-HIP device library path. Alternative to rocm-path.
 
 .. option:: --hip-device-lib=<arg>
 
@@ -3653,11 +3701,35 @@ HIP device library
 
 .. option:: -l<arg>
 
+.. option:: --ld-path=<arg>
+
+.. option:: -nostartfiles
+
+.. program:: clang1
+.. option:: -nostdlib, --no-standard-libraries
+.. program:: clang
+
+.. option:: -pie
+
 .. option:: -r
+
+.. option:: -rdynamic
+
+.. option:: --rocm-device-lib-path=<arg>, --hip-device-lib-path=<arg>
+
+ROCm device library path. Alternative to rocm-path.
 
 .. option:: -rpath <arg>
 
 .. option:: -s
+
+.. option:: -shared, --shared
+
+.. option:: -specs=<arg>, --specs=<arg>
+
+.. option:: -static, --static
+
+.. option:: -static-pie
 
 .. option:: -t
 
