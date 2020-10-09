@@ -1443,21 +1443,15 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
   auto &ModuleMap =
       ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
 
-  std::vector<BitcodeModule *> ModulesVec;
-  ModulesVec.reserve(ModuleMap.size());
-  for (auto &Mod : ModuleMap)
-    ModulesVec.push_back(&Mod.second);
-  std::vector<int> ModulesOrdering = generateModulesOrdering(ModulesVec);
-
   // Tasks 0 through ParallelCodeGenParallelismLevel-1 are reserved for combined
   // module and parallel code generation partitions.
-  for (auto IndexCount : ModulesOrdering) {
-    auto &Mod = *(ModuleMap.begin() + IndexCount);
-    if (Error E = BackendProc->start(
-            RegularLTO.ParallelCodeGenParallelismLevel + IndexCount, Mod.second,
-            ImportLists[Mod.first], ExportLists[Mod.first],
-            ResolvedODR[Mod.first], ThinLTO.ModuleMap))
+  unsigned Task = RegularLTO.ParallelCodeGenParallelismLevel;
+  for (auto &Mod : ModuleMap) {
+    if (Error E = BackendProc->start(Task, Mod.second, ImportLists[Mod.first],
+                                     ExportLists[Mod.first],
+                                     ResolvedODR[Mod.first], ThinLTO.ModuleMap))
       return E;
+    ++Task;
   }
 
   return BackendProc->wait();
@@ -1500,19 +1494,4 @@ lto::setupStatsFile(StringRef StatsFilename) {
 
   StatsFile->keep();
   return std::move(StatsFile);
-}
-
-// Compute the ordering we will process the inputs: the rough heuristic here
-// is to sort them per size so that the largest module get schedule as soon as
-// possible. This is purely a compile-time optimization.
-std::vector<int> lto::generateModulesOrdering(ArrayRef<BitcodeModule *> R) {
-  std::vector<int> ModulesOrdering;
-  ModulesOrdering.resize(R.size());
-  std::iota(ModulesOrdering.begin(), ModulesOrdering.end(), 0);
-  llvm::sort(ModulesOrdering, [&](int LeftIndex, int RightIndex) {
-    auto LSize = R[LeftIndex]->getBuffer().size();
-    auto RSize = R[RightIndex]->getBuffer().size();
-    return LSize > RSize;
-  });
-  return ModulesOrdering;
 }
