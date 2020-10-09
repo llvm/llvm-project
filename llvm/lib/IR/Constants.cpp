@@ -838,30 +838,12 @@ void ConstantInt::destroyConstantImpl() {
 //                                ConstantFP
 //===----------------------------------------------------------------------===//
 
-static const fltSemantics *TypeToFloatSemantics(Type *Ty) {
-  if (Ty->isHalfTy())
-    return &APFloat::IEEEhalf();
-  if (Ty->isBFloatTy())
-    return &APFloat::BFloat();
-  if (Ty->isFloatTy())
-    return &APFloat::IEEEsingle();
-  if (Ty->isDoubleTy())
-    return &APFloat::IEEEdouble();
-  if (Ty->isX86_FP80Ty())
-    return &APFloat::x87DoubleExtended();
-  else if (Ty->isFP128Ty())
-    return &APFloat::IEEEquad();
-
-  assert(Ty->isPPC_FP128Ty() && "Unknown FP format");
-  return &APFloat::PPCDoubleDouble();
-}
-
 Constant *ConstantFP::get(Type *Ty, double V) {
   LLVMContext &Context = Ty->getContext();
 
   APFloat FV(V);
   bool ignored;
-  FV.convert(*TypeToFloatSemantics(Ty->getScalarType()),
+  FV.convert(Ty->getScalarType()->getFltSemantics(),
              APFloat::rmNearestTiesToEven, &ignored);
   Constant *C = get(Context, FV);
 
@@ -887,7 +869,7 @@ Constant *ConstantFP::get(Type *Ty, const APFloat &V) {
 Constant *ConstantFP::get(Type *Ty, StringRef Str) {
   LLVMContext &Context = Ty->getContext();
 
-  APFloat FV(*TypeToFloatSemantics(Ty->getScalarType()), Str);
+  APFloat FV(Ty->getScalarType()->getFltSemantics(), Str);
   Constant *C = get(Context, FV);
 
   // For vectors, broadcast the value.
@@ -898,7 +880,7 @@ Constant *ConstantFP::get(Type *Ty, StringRef Str) {
 }
 
 Constant *ConstantFP::getNaN(Type *Ty, bool Negative, uint64_t Payload) {
-  const fltSemantics &Semantics = *TypeToFloatSemantics(Ty->getScalarType());
+  const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   APFloat NaN = APFloat::getNaN(Semantics, Negative, Payload);
   Constant *C = get(Ty->getContext(), NaN);
 
@@ -909,7 +891,7 @@ Constant *ConstantFP::getNaN(Type *Ty, bool Negative, uint64_t Payload) {
 }
 
 Constant *ConstantFP::getQNaN(Type *Ty, bool Negative, APInt *Payload) {
-  const fltSemantics &Semantics = *TypeToFloatSemantics(Ty->getScalarType());
+  const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   APFloat NaN = APFloat::getQNaN(Semantics, Negative, Payload);
   Constant *C = get(Ty->getContext(), NaN);
 
@@ -920,7 +902,7 @@ Constant *ConstantFP::getQNaN(Type *Ty, bool Negative, APInt *Payload) {
 }
 
 Constant *ConstantFP::getSNaN(Type *Ty, bool Negative, APInt *Payload) {
-  const fltSemantics &Semantics = *TypeToFloatSemantics(Ty->getScalarType());
+  const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   APFloat NaN = APFloat::getSNaN(Semantics, Negative, Payload);
   Constant *C = get(Ty->getContext(), NaN);
 
@@ -931,7 +913,7 @@ Constant *ConstantFP::getSNaN(Type *Ty, bool Negative, APInt *Payload) {
 }
 
 Constant *ConstantFP::getNegativeZero(Type *Ty) {
-  const fltSemantics &Semantics = *TypeToFloatSemantics(Ty->getScalarType());
+  const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   APFloat NegZero = APFloat::getZero(Semantics, /*Negative=*/true);
   Constant *C = get(Ty->getContext(), NegZero);
 
@@ -957,24 +939,7 @@ ConstantFP* ConstantFP::get(LLVMContext &Context, const APFloat& V) {
   std::unique_ptr<ConstantFP> &Slot = pImpl->FPConstants[V];
 
   if (!Slot) {
-    Type *Ty;
-    if (&V.getSemantics() == &APFloat::IEEEhalf())
-      Ty = Type::getHalfTy(Context);
-    else if (&V.getSemantics() == &APFloat::BFloat())
-      Ty = Type::getBFloatTy(Context);
-    else if (&V.getSemantics() == &APFloat::IEEEsingle())
-      Ty = Type::getFloatTy(Context);
-    else if (&V.getSemantics() == &APFloat::IEEEdouble())
-      Ty = Type::getDoubleTy(Context);
-    else if (&V.getSemantics() == &APFloat::x87DoubleExtended())
-      Ty = Type::getX86_FP80Ty(Context);
-    else if (&V.getSemantics() == &APFloat::IEEEquad())
-      Ty = Type::getFP128Ty(Context);
-    else {
-      assert(&V.getSemantics() == &APFloat::PPCDoubleDouble() &&
-             "Unknown FP format");
-      Ty = Type::getPPC_FP128Ty(Context);
-    }
+    Type *Ty = Type::getFloatingPointTy(Context, V.getSemantics());
     Slot.reset(new ConstantFP(Ty, V));
   }
 
@@ -982,7 +947,7 @@ ConstantFP* ConstantFP::get(LLVMContext &Context, const APFloat& V) {
 }
 
 Constant *ConstantFP::getInfinity(Type *Ty, bool Negative) {
-  const fltSemantics &Semantics = *TypeToFloatSemantics(Ty->getScalarType());
+  const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   Constant *C = get(Ty->getContext(), APFloat::getInf(Semantics, Negative));
 
   if (VectorType *VTy = dyn_cast<VectorType>(Ty))
@@ -993,7 +958,7 @@ Constant *ConstantFP::getInfinity(Type *Ty, bool Negative) {
 
 ConstantFP::ConstantFP(Type *Ty, const APFloat &V)
     : ConstantData(Ty, ConstantFPVal), Val(V) {
-  assert(&V.getSemantics() == TypeToFloatSemantics(Ty) &&
+  assert(&V.getSemantics() == &Ty->getFltSemantics() &&
          "FP type Mismatch");
 }
 
