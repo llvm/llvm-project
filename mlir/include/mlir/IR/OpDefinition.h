@@ -21,6 +21,7 @@
 
 #include "mlir/IR/Operation.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+
 #include <type_traits>
 
 namespace mlir {
@@ -277,7 +278,16 @@ public:
   /// AbstractOperation.
   static LogicalResult foldHook(Operation *op, ArrayRef<Attribute> operands,
                                 SmallVectorImpl<OpFoldResult> &results) {
-    return cast<ConcreteType>(op).fold(operands, results);
+    auto operationFoldResult = cast<ConcreteType>(op).fold(operands, results);
+    // Failure to fold or in place fold both mean we can continue folding.
+    if (failed(operationFoldResult) || results.empty()) {
+      auto traitFoldResult = ConcreteType::foldTraits(op, operands, results);
+      // Only return the trait fold result if it is a success since
+      // operationFoldResult might have been a success originally.
+      if (succeeded(traitFoldResult))
+        return traitFoldResult;
+    }
+    return operationFoldResult;
   }
 
   /// This hook implements a generalized folder for this operation.  Operations
@@ -326,6 +336,14 @@ public:
   static LogicalResult foldHook(Operation *op, ArrayRef<Attribute> operands,
                                 SmallVectorImpl<OpFoldResult> &results) {
     auto result = cast<ConcreteType>(op).fold(operands);
+    // Failure to fold or in place fold both mean we can continue folding.
+    if (!result || result.template dyn_cast<Value>() == op->getResult(0)) {
+      // Only consider the trait fold result if it is a success since
+      // the operation fold might have been a success originally.
+      if (auto traitFoldResult = ConcreteType::foldTraits(op, operands))
+        result = traitFoldResult;
+    }
+
     if (!result)
       return failure();
 
@@ -370,9 +388,11 @@ namespace OpTrait {
 // corresponding trait classes.  This avoids them being template
 // instantiated/duplicated.
 namespace impl {
+OpFoldResult foldInvolution(Operation *op);
 LogicalResult verifyZeroOperands(Operation *op);
 LogicalResult verifyOneOperand(Operation *op);
 LogicalResult verifyNOperands(Operation *op, unsigned numOperands);
+LogicalResult verifyIsInvolution(Operation *op);
 LogicalResult verifyAtLeastNOperands(Operation *op, unsigned numOperands);
 LogicalResult verifyOperandsAreFloatLike(Operation *op);
 LogicalResult verifyOperandsAreSignlessIntegerLike(Operation *op);
@@ -425,6 +445,23 @@ protected:
   static LogicalResult verifyTrait(Operation *op) { return success(); }
   static AbstractOperation::OperationProperties getTraitProperties() {
     return 0;
+  }
+
+  static OpFoldResult foldTrait(Operation *op, ArrayRef<Attribute> operands) {
+    SmallVector<OpFoldResult, 1> results;
+    if (failed(foldTrait(op, operands, results)))
+      return {};
+    if (results.empty())
+      return op->getResult(0);
+    assert(results.size() == 1 &&
+           "Single result op cannot return multiple fold results");
+
+    return results[0];
+  }
+
+  static LogicalResult foldTrait(Operation *op, ArrayRef<Attribute> operands,
+                                 SmallVectorImpl<OpFoldResult> &results) {
+    return failure();
   }
 };
 
@@ -974,6 +1011,26 @@ public:
   }
 };
 
+/// This class adds property that the operation is an involution.
+/// This means a unary to unary operation "f" that satisfies f(f(x)) = f(x)
+template <typename ConcreteType>
+class IsInvolution : public TraitBase<ConcreteType, IsInvolution> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    static_assert(ConcreteType::template hasTrait<OneResult>(),
+                  "expected operation to produce one result");
+    static_assert(ConcreteType::template hasTrait<OneOperand>(),
+                  "expected operation to take one operand");
+    static_assert(ConcreteType::template hasTrait<SameOperandsAndResultType>(),
+                  "expected operation to preserve type");
+    return impl::verifyIsInvolution(op);
+  }
+
+  static OpFoldResult foldTrait(Operation *op, ArrayRef<Attribute> operands) {
+    return impl::foldInvolution(op);
+  }
+};
+
 /// This class verifies that all operands of the specified op have a float type,
 /// a vector thereof, or a tensor thereof.
 template <typename ConcreteType>
@@ -1306,6 +1363,19 @@ public:
         failed(cast<ConcreteType>(op).verify()));
   }
 
+  /// This is the hook that tries to fold the given operation according to its
+  /// traits. It delegates to the Traits for their policy implementations, and
+  /// allows the user to specify their own fold() method.
+  static OpFoldResult foldTraits(Operation *op, ArrayRef<Attribute> operands) {
+    return BaseFolder<Traits<ConcreteType>...>::foldTraits(op, operands);
+  }
+
+  static LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
+                                  SmallVectorImpl<OpFoldResult> &results) {
+    return BaseFolder<Traits<ConcreteType>...>::foldTraits(op, operands,
+                                                           results);
+  }
+
   // Returns the properties of an operation by combining the properties of the
   // traits of the op.
   static AbstractOperation::OperationProperties getOperationProperties() {
@@ -1355,6 +1425,53 @@ private:
     static AbstractOperation::OperationProperties getTraitProperties() {
       return First::getTraitProperties() |
              BaseProperties<Rest...>::getTraitProperties();
+    }
+  };
+
+  template <typename... Types>
+  struct BaseFolder;
+
+  template <typename First, typename... Rest>
+  struct BaseFolder<First, Rest...> {
+    static OpFoldResult foldTraits(Operation *op,
+                                   ArrayRef<Attribute> operands) {
+      auto result = First::foldTrait(op, operands);
+      // Failure to fold or in place fold both mean we can continue folding.
+      if (!result || result.template dyn_cast<Value>() == op->getResult(0)) {
+        // Only consider the trait fold result if it is a success since
+        // the operation fold might have been a success originally.
+        auto resultRemaining = BaseFolder<Rest...>::foldTraits(op, operands);
+        if (resultRemaining)
+          result = resultRemaining;
+      }
+
+      return result;
+    }
+
+    static LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
+                                    SmallVectorImpl<OpFoldResult> &results) {
+      auto result = First::foldTrait(op, operands, results);
+      // Failure to fold or in place fold both mean we can continue folding.
+      if (failed(result) || results.empty()) {
+        auto resultRemaining =
+            BaseFolder<Rest...>::foldTraits(op, operands, results);
+        if (succeeded(resultRemaining))
+          result = resultRemaining;
+      }
+
+      return result;
+    }
+  };
+
+  template <typename...>
+  struct BaseFolder {
+    static OpFoldResult foldTraits(Operation *op,
+                                   ArrayRef<Attribute> operands) {
+      return {};
+    }
+    static LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
+                                    SmallVectorImpl<OpFoldResult> &results) {
+      return failure();
     }
   };
 
