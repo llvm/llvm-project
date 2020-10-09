@@ -29,25 +29,25 @@ template <typename U>
 A FooTpl<T>::sdm_tpl(sizeof(U) + sizeof(T));
 template A FooTpl<int>::sdm_tpl<int>;
 
-// CHECK-NOKEXT: !DISubprogram(name: "__cxx_global_var_init",{{.*}} line: 15,{{.*}} DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-NOKEXT: !DISubprogram(name: "__dtor_glob",{{.*}} line: 15,{{.*}} DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-NOKEXT: !DISubprogram(name: "__cxx_global_var_init.1",{{.*}} line: 16,{{.*}} DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-NOKEXT: !DISubprogram(name: "__cxx_global_array_dtor",{{.*}} line: 16,{{.*}} DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-NOKEXT: !DISubprogram(name: "__dtor_array",{{.*}} line: 16,{{.*}} DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-NOKEXT: !DISubprogram(name: "__dtor__ZZ3foovE4stat",{{.*}} line: 19,{{.*}} DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-NOKEXT: !DISubprogram(name: "__cxx_global_var_init",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-NOKEXT: !DISubprogram(name: "__dtor_glob",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-NOKEXT: !DISubprogram(name: "__cxx_global_var_init.1",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-NOKEXT: !DISubprogram(name: "__cxx_global_array_dtor",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-NOKEXT: !DISubprogram(name: "__dtor_array",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-NOKEXT: !DISubprogram(name: "__dtor__ZZ3foovE4stat",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
 // CHECK-NOKEXT: !DISubprogram({{.*}} DISPFlagLocalToUnit | DISPFlagDefinition
 
 // CHECK-KEXT: !DISubprogram({{.*}} DISPFlagLocalToUnit | DISPFlagDefinition
 
-// CHECK-MSVC: !DISubprogram(name: "`dynamic initializer for 'glob'",{{.*}} line: 15,{{.*}}: DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-MSVC: !DISubprogram(name: "`dynamic atexit destructor for 'glob'",{{.*}} line: 15,{{.*}}: DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-MSVC: !DISubprogram(name: "`dynamic initializer for 'array'",{{.*}} line: 16,{{.*}}: DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-MSVC: !DISubprogram(name: "__cxx_global_array_dtor",{{.*}} line: 16,{{.*}}: DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-MSVC: !DISubprogram(name: "`dynamic atexit destructor for 'array'",{{.*}} line: 16,{{.*}}: DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-MSVC: !DISubprogram(name: "`dynamic atexit destructor for 'stat'",{{.*}} line: 19,{{.*}}: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-MSVC: !DISubprogram(name: "`dynamic initializer for 'glob'",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-MSVC: !DISubprogram(name: "`dynamic atexit destructor for 'glob'",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-MSVC: !DISubprogram(name: "`dynamic initializer for 'array'",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-MSVC: !DISubprogram(name: "__cxx_global_array_dtor",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-MSVC: !DISubprogram(name: "`dynamic atexit destructor for 'array'",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-MSVC: !DISubprogram(name: "`dynamic atexit destructor for 'stat'",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
 
 // MSVC does weird stuff when templates are involved, so we don't match exactly,
 // but these names are reasonable.
 // FIXME: These should not be marked DISPFlagLocalToUnit.
-// CHECK-MSVC: !DISubprogram(name: "FooTpl<int>::`dynamic initializer for 'sdm_tpl<int>'",{{.*}} line: 29,{{.*}}: DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK-MSVC: !DISubprogram(name: "FooTpl<int>::`dynamic atexit destructor for 'sdm_tpl<int>'",{{.*}} line: 29,{{.*}}: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-MSVC: !DISubprogram(name: "FooTpl<int>::`dynamic initializer for 'sdm_tpl<int>'",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-MSVC: !DISubprogram(name: "FooTpl<int>::`dynamic atexit destructor for 'sdm_tpl<int>'",{{.*}} flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition
