@@ -4273,7 +4273,6 @@ _LIBCPP_INLINE_VAR constexpr bool negation_v
 #endif  // _LIBCPP_STD_VER > 14
 
 // These traits are used in __tree and __hash_table
-#ifndef _LIBCPP_CXX03_LANG
 struct __extract_key_fail_tag {};
 struct __extract_key_self_tag {};
 struct __extract_key_first_tag {};
@@ -4285,7 +4284,7 @@ struct __can_extract_key
                   __extract_key_fail_tag>::type {};
 
 template <class _Pair, class _Key, class _First, class _Second>
-struct __can_extract_key<_Pair, _Key, pair<_First, _Second>>
+struct __can_extract_key<_Pair, _Key, pair<_First, _Second> >
     : conditional<_IsSame<typename remove_const<_First>::type, _Key>::value,
                   __extract_key_first_tag, __extract_key_fail_tag>::type {};
 
@@ -4302,8 +4301,6 @@ struct __can_extract_map_key
 template <class _ValTy, class _Key, class _RawValTy>
 struct __can_extract_map_key<_ValTy, _Key, _Key, _RawValTy>
     : false_type {};
-
-#endif
 
 #ifndef _LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED
 #if _LIBCPP_STD_VER > 17
