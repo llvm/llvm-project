@@ -936,10 +936,10 @@ rescheduleKillAboveMI(MachineBasicBlock::iterator &mi,
   if (!KillMI->isSafeToMove(AA, SeenStore))
     return false;
 
-  SmallSet<unsigned, 2> Uses;
-  SmallSet<unsigned, 2> Kills;
-  SmallSet<unsigned, 2> Defs;
-  SmallSet<unsigned, 2> LiveDefs;
+  SmallVector<unsigned, 2> Uses;
+  SmallVector<unsigned, 2> Kills;
+  SmallVector<unsigned, 2> Defs;
+  SmallVector<unsigned, 2> LiveDefs;
   for (const MachineOperand &MO : KillMI->operands()) {
     if (!MO.isReg())
       continue;
@@ -952,13 +952,13 @@ rescheduleKillAboveMI(MachineBasicBlock::iterator &mi,
       bool isKill = MO.isKill() || (LIS && isPlainlyKilled(KillMI, MOReg, LIS));
       if (MOReg == Reg && !isKill)
         return false;
-      Uses.insert(MOReg);
+      Uses.push_back(MOReg);
       if (isKill && MOReg != Reg)
-        Kills.insert(MOReg);
+        Kills.push_back(MOReg);
     } else if (Register::isPhysicalRegister(MOReg)) {
-      Defs.insert(MOReg);
+      Defs.push_back(MOReg);
       if (!MO.isDead())
-        LiveDefs.insert(MOReg);
+        LiveDefs.push_back(MOReg);
     }
   }
 
@@ -984,11 +984,11 @@ rescheduleKillAboveMI(MachineBasicBlock::iterator &mi,
       if (!MOReg)
         continue;
       if (MO.isUse()) {
-        if (Defs.count(MOReg))
+        if (regOverlapsSet(Defs, MOReg, TRI))
           // Moving KillMI can clobber the physical register if the def has
           // not been seen.
           return false;
-        if (Kills.count(MOReg))
+        if (regOverlapsSet(Kills, MOReg, TRI))
           // Don't want to extend other live ranges and update kills.
           return false;
         if (&OtherMI != MI && MOReg == Reg &&
@@ -1002,12 +1002,13 @@ rescheduleKillAboveMI(MachineBasicBlock::iterator &mi,
 
     for (unsigned i = 0, e = OtherDefs.size(); i != e; ++i) {
       unsigned MOReg = OtherDefs[i];
-      if (Uses.count(MOReg))
+      if (regOverlapsSet(Uses, MOReg, TRI))
         return false;
-      if (Register::isPhysicalRegister(MOReg) && LiveDefs.count(MOReg))
+      if (Register::isPhysicalRegister(MOReg) &&
+          regOverlapsSet(LiveDefs, MOReg, TRI))
         return false;
       // Physical register def is seen.
-      Defs.erase(MOReg);
+      Defs.erase(std::remove(Defs.begin(), Defs.end(), MOReg), Defs.end());
     }
   }
 
