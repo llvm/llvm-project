@@ -103,10 +103,6 @@ protected:
                                             // exec's when talking to
                                             // debugservers that don't support
                                             // the "reason:exec" annotation.
-
-private:
-  DynamicLoaderMacOS(const DynamicLoaderMacOS &) = delete;
-  const DynamicLoaderMacOS &operator=(const DynamicLoaderMacOS &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERMACOS_H

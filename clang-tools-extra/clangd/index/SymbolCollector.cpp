@@ -552,9 +552,8 @@ void SymbolCollector::finish() {
   }
   // Fill in IncludeHeaders.
   // We delay this until end of TU so header guards are all resolved.
-  // Symbols in slabs aren' mutable, so insert() has to walk all the strings
+  // Symbols in slabs aren't mutable, so insert() has to walk all the strings
   // :-(
-  llvm::SmallString<256> QName;
   for (const auto &Entry : IncludeFiles)
     if (const Symbol *S = Symbols.find(Entry.first)) {
       if (auto Header = getIncludeHeader(*S, Entry.second)) {

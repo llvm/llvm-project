@@ -125,8 +125,6 @@ PlatformFreeBSD::PlatformFreeBSD(bool is_host)
     : PlatformPOSIX(is_host) // This is the local host platform
 {}
 
-PlatformFreeBSD::~PlatformFreeBSD() = default;
-
 bool PlatformFreeBSD::GetSupportedArchitectureAtIndex(uint32_t idx,
                                                       ArchSpec &arch) {
   if (IsHost()) {

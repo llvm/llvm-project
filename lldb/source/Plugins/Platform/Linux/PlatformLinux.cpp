@@ -124,8 +124,6 @@ PlatformLinux::PlatformLinux(bool is_host)
     : PlatformPOSIX(is_host) // This is the local host platform
 {}
 
-PlatformLinux::~PlatformLinux() = default;
-
 bool PlatformLinux::GetSupportedArchitectureAtIndex(uint32_t idx,
                                                     ArchSpec &arch) {
   if (IsHost()) {
