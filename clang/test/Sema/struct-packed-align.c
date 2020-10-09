@@ -59,7 +59,7 @@ extern int e2[__alignof(struct as1) == 8 ? 1 : -1];
 struct __attribute__((aligned)) as1_2 {
     char c;
 };
-#if ( defined(__s390x__) || ( defined (__ARM_32BIT_STATE) && ! defined(__ANDROID__) ) )
+#if ((defined(__s390x__) && !defined(__MVS__)) || (defined(__ARM_32BIT_STATE) && !defined(__ANDROID__)))
 extern int e1_2[sizeof(struct as1_2) == 8 ? 1 : -1];
 extern int e2_2[__alignof(struct as1_2) == 8 ? 1 : -1];
 #else
