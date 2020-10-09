@@ -1,6 +1,7 @@
 set(LLVM_OPTIONAL_SOURCES
   TestDialect.cpp
   TestPatterns.cpp
+  TestTraits.cpp
 )
 
 set(LLVM_TARGET_DEFINITIONS TestInterfaces.td)
@@ -23,6 +24,7 @@ add_public_tablegen_target(MLIRTestOpsIncGen)
 add_mlir_library(MLIRTestDialect
   TestDialect.cpp
   TestPatterns.cpp
+  TestTraits.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
