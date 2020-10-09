@@ -711,8 +711,6 @@ ExprDependence clang::computeDependence(LambdaExpr *E,
 ExprDependence clang::computeDependence(CXXUnresolvedConstructExpr *E) {
   auto D = ExprDependence::ValueInstantiation;
   D |= toExprDependence(E->getType()->getDependence());
-  if (E->getType()->getContainedDeducedType())
-    D |= ExprDependence::Type;
   for (auto *A : E->arguments())
     D |= A->getDependence() &
          (ExprDependence::UnexpandedPack | ExprDependence::Error);
