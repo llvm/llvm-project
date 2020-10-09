@@ -72,12 +72,6 @@ if(MLIR_ROCM_RUNNER_ENABLED)
     lldCommon
     lldDriver
     lldELF
-    LLVMCore
-    LLVMLTO
-    LLVMMC
-    LLVMMCParser
-    LLVMOption
-    LLVMSupport
     MLIRJitRunner
     MLIRAnalysis
     MLIREDSC
@@ -109,6 +103,15 @@ if(MLIR_ROCM_RUNNER_ENABLED)
 
     DEPENDS
     rocm-runtime-wrappers
+
+    LINK_COMPONENTS
+
+    Core
+    LTO
+    MC
+    MCParser
+    Option
+    Support
     )
   llvm_update_compile_flags(mlir-rocm-runner)
   target_include_directories(mlir-rocm-runner

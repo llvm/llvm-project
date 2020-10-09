@@ -34,6 +34,8 @@ add_mlir_library(MLIROptLib
 add_llvm_library(MLIRSupportIndentedOstream
   IndentedOstream.cpp
 
-  LINK_LIBS PUBLIC
-  LLVMSupport
+  DISABLE_LLVM_LINK_LLVM_DYLIB
+
+  LINK_COMPONENTS
+  Support
   )
