@@ -85,13 +85,13 @@ define void @f3() {
 define void @f4() {
 ; CHECK-NOFP-LABEL: f4:
 ; CHECK-NOFP: llilh %r1, 8
-; CHECK-NOFP: agr %r1, %r15
+; CHECK-NOFP: la %r1, 0(%r1,%r15)
 ; CHECK-NOFP: mvi 0(%r1), 42
 ; CHECK-NOFP: br %r14
 ;
 ; CHECK-FP-LABEL: f4:
 ; CHECK-FP: llilh %r1, 8
-; CHECK-FP: agr %r1, %r11
+; CHECK-FP: la %r1, 0(%r1,%r11)
 ; CHECK-FP: mvi 0(%r1), 42
 ; CHECK-FP: br %r14
   %region1 = alloca [524104 x i8], align 8
@@ -108,13 +108,13 @@ define void @f4() {
 define void @f5() {
 ; CHECK-NOFP-LABEL: f5:
 ; CHECK-NOFP: llilh %r1, 8
-; CHECK-NOFP: agr %r1, %r15
+; CHECK-NOFP: la %r1, 0(%r1,%r15)
 ; CHECK-NOFP: mvi 4095(%r1), 42
 ; CHECK-NOFP: br %r14
 ;
 ; CHECK-FP-LABEL: f5:
 ; CHECK-FP: llilh %r1, 8
-; CHECK-FP: agr %r1, %r11
+; CHECK-FP: la %r1, 0(%r1,%r11)
 ; CHECK-FP: mvi 4095(%r1), 42
 ; CHECK-FP: br %r14
   %region1 = alloca [524104 x i8], align 8
@@ -130,13 +130,13 @@ define void @f5() {
 define void @f6() {
 ; CHECK-NOFP-LABEL: f6:
 ; CHECK-NOFP: llilh %r1, 8
-; CHECK-NOFP: agr %r1, %r15
+; CHECK-NOFP: la %r1, 0(%r1,%r15)
 ; CHECK-NOFP: mviy 4096(%r1), 42
 ; CHECK-NOFP: br %r14
 ;
 ; CHECK-FP-LABEL: f6:
 ; CHECK-FP: llilh %r1, 8
-; CHECK-FP: agr %r1, %r11
+; CHECK-FP: la %r1, 0(%r1,%r11)
 ; CHECK-FP: mviy 4096(%r1), 42
 ; CHECK-FP: br %r14
   %region1 = alloca [524104 x i8], align 8
@@ -155,13 +155,13 @@ define void @f6() {
 define void @f7() {
 ; CHECK-NOFP-LABEL: f7:
 ; CHECK-NOFP: llilh %r1, 23
-; CHECK-NOFP: agr %r1, %r15
+; CHECK-NOFP: la %r1, 0(%r1,%r15)
 ; CHECK-NOFP: mviy 65535(%r1), 42
 ; CHECK-NOFP: br %r14
 ;
 ; CHECK-FP-LABEL: f7:
 ; CHECK-FP: llilh %r1, 23
-; CHECK-FP: agr %r1, %r11
+; CHECK-FP: la %r1, 0(%r1,%r11)
 ; CHECK-FP: mviy 65535(%r1), 42
 ; CHECK-FP: br %r14
   %region1 = alloca [1048400 x i8], align 8
@@ -178,13 +178,13 @@ define void @f7() {
 define void @f8() {
 ; CHECK-NOFP-LABEL: f8:
 ; CHECK-NOFP: llilh %r1, 24
-; CHECK-NOFP: agr %r1, %r15
+; CHECK-NOFP: la %r1, 0(%r1,%r15)
 ; CHECK-NOFP: mvi 7(%r1), 42
 ; CHECK-NOFP: br %r14
 ;
 ; CHECK-FP-LABEL: f8:
 ; CHECK-FP: llilh %r1, 24
-; CHECK-FP: agr %r1, %r11
+; CHECK-FP: la %r1, 0(%r1,%r11)
 ; CHECK-FP: mvi 7(%r1), 42
 ; CHECK-FP: br %r14
   %region1 = alloca [1048408 x i8], align 8
@@ -233,7 +233,7 @@ define void @f10(i32 *%vptr) {
 ; CHECK-NOFP-LABEL: f10:
 ; CHECK-NOFP: stg [[REGISTER:%r[1-9][0-4]?]], [[OFFSET:160|168]](%r15)
 ; CHECK-NOFP: llilh [[REGISTER]], 8
-; CHECK-NOFP: agr [[REGISTER]], %r15
+; CHECK-NOFP: la [[REGISTER]], 0([[REGISTER]],%r15)
 ; CHECK-NOFP: mvi 0([[REGISTER]]), 42
 ; CHECK-NOFP: lg [[REGISTER]], [[OFFSET]](%r15)
 ; CHECK-NOFP: br %r14
@@ -241,7 +241,7 @@ define void @f10(i32 *%vptr) {
 ; CHECK-FP-LABEL: f10:
 ; CHECK-FP: stg [[REGISTER:%r[1-9][0-4]?]], [[OFFSET:160|168]](%r11)
 ; CHECK-FP: llilh [[REGISTER]], 8
-; CHECK-FP: agr [[REGISTER]], %r11
+; CHECK-FP: la [[REGISTER]], 0([[REGISTER]],%r11)
 ; CHECK-FP: mvi 0([[REGISTER]]), 42
 ; CHECK-FP: lg [[REGISTER]], [[OFFSET]](%r11)
 ; CHECK-FP: br %r14
@@ -273,7 +273,7 @@ define void @f11(i32 *%vptr) {
 ; CHECK-NOFP: stmg %r6, %r15,
 ; CHECK-NOFP: stg [[REGISTER:%r[1-9][0-4]?]], [[OFFSET:160|168]](%r15)
 ; CHECK-NOFP: llilh [[REGISTER]], 8
-; CHECK-NOFP: agr [[REGISTER]], %r15
+; CHECK-NOFP: la [[REGISTER]], 0([[REGISTER]],%r15)
 ; CHECK-NOFP: mvi 0([[REGISTER]]), 42
 ; CHECK-NOFP: lg [[REGISTER]], [[OFFSET]](%r15)
 ; CHECK-NOFP: lmg %r6, %r15,

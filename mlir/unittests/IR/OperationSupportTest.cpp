@@ -16,11 +16,12 @@ using namespace mlir::detail;
 
 static Operation *createOp(MLIRContext *context,
                            ArrayRef<Value> operands = llvm::None,
-                           ArrayRef<Type> resultTypes = llvm::None) {
+                           ArrayRef<Type> resultTypes = llvm::None,
+                           unsigned int numRegions = 0) {
   context->allowUnregisteredDialects();
   return Operation::create(UnknownLoc::get(context),
                            OperationName("foo.bar", context), resultTypes,
-                           operands, llvm::None, llvm::None, 0);
+                           operands, llvm::None, llvm::None, numRegions);
 }
 
 namespace {
@@ -147,6 +148,38 @@ TEST(OperandStorageTest, MutableRange) {
   // Destroy the operations.
   user->destroy();
   useOp->destroy();
+}
+
+TEST(OperationOrderTest, OrderIsAlwaysValid) {
+  MLIRContext context(false);
+  Builder builder(&context);
+
+  Operation *containerOp =
+      createOp(&context, /*operands=*/llvm::None, /*resultTypes=*/llvm::None,
+               /*numRegions=*/1);
+  Region &region = containerOp->getRegion(0);
+  Block *block = new Block();
+  region.push_back(block);
+
+  // Insert two operations, then iteratively add more operations in the middle
+  // of them. Eventually we will insert more than kOrderStride operations and
+  // the block order will need to be recomputed.
+  Operation *frontOp = createOp(&context);
+  Operation *backOp = createOp(&context);
+  block->push_back(frontOp);
+  block->push_back(backOp);
+
+  // Chosen to be larger than Operation::kOrderStride.
+  int kNumOpsToInsert = 10;
+  for (int i = 0; i < kNumOpsToInsert; ++i) {
+    Operation *op = createOp(&context);
+    block->getOperations().insert(backOp->getIterator(), op);
+    ASSERT_TRUE(op->isBeforeInBlock(backOp));
+    // Note verifyOpOrder() returns false if the order is valid.
+    ASSERT_FALSE(block->verifyOpOrder());
+  }
+
+  containerOp->destroy();
 }
 
 } // end namespace
