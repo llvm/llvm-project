@@ -394,7 +394,7 @@ void Operation::updateOrderIfNecessary() {
   // Check to see if there is a valid order between the two.
   if (prevOrder + 1 == nextOrder)
     return block->recomputeOpOrder();
-  orderIndex = prevOrder + 1 + ((nextOrder - prevOrder) / 2);
+  orderIndex = prevOrder + ((nextOrder - prevOrder) / 2);
 }
 
 //===----------------------------------------------------------------------===//
