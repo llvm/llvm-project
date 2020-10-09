@@ -281,6 +281,8 @@ void log(const llvm::Twine &Message) {
   T->instant("Log", llvm::json::Object{{"Message", Message.str()}});
 }
 
+bool enabled() { return T != nullptr; }
+
 // The JSON object is event args (owned by context), if the tracer wants them.
 static std::pair<Context, llvm::json::Object *>
 makeSpanContext(llvm::Twine Name, const Metric &LatencyMetric) {
