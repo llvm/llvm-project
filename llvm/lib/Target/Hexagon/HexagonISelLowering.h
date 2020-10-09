@@ -96,6 +96,9 @@ enum NodeType : unsigned {
                // unspecified.
   VUNPACK,     // Unpacking into low elements with sign extension.
   VUNPACKU,    // Unpacking into low elements with zero extension.
+  ISEL,        // Marker for nodes that were created during ISel, and
+               // which need explicit selection (would have been left
+               // unselected otherwise).
   OP_END
 };
 
