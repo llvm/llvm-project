@@ -46,11 +46,15 @@ class BPFAbstractMemberAccessPass
 public:
   BPFAbstractMemberAccessPass(BPFTargetMachine *TM) : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 class BPFPreserveDITypePass : public PassInfoMixin<BPFPreserveDITypePass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 } // namespace llvm
 
