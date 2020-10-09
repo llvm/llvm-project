@@ -465,9 +465,8 @@ entry:
 define <2 x i32> @test29_uniform(<2 x i64> %d18) {
 ; CHECK-LABEL: @test29_uniform(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I916:%.*]] = lshr <2 x i64> [[D18:%.*]], <i64 32, i64 32>
-; CHECK-NEXT:    [[I917:%.*]] = trunc <2 x i64> [[I916]] to <2 x i32>
-; CHECK-NEXT:    [[I10:%.*]] = lshr <2 x i32> [[I917]], <i32 31, i32 31>
+; CHECK-NEXT:    [[I916:%.*]] = lshr <2 x i64> [[D18:%.*]], <i64 63, i64 63>
+; CHECK-NEXT:    [[I10:%.*]] = trunc <2 x i64> [[I916]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[I10]]
 ;
 entry:
