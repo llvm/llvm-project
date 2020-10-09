@@ -324,16 +324,6 @@ GetCanonicalNode(lldb_private::Module *M, swift::Demangle::Demangler &dem,
         return node_clangtype.first;
       return node;
     }
-    case Node::Kind::DynamicSelf: {
-      // Substitute the static type for dynamic self.
-      assert(node->getNumChildren() == 1);
-      if (node->getNumChildren() != 1)
-        return node;
-      NodePointer type = node->getChild(0);
-      if (type->getKind() != Node::Kind::Type || type->getNumChildren() != 1)
-        return node;
-      return type->getChild(0);
-    }
     default:
       break;
     }
