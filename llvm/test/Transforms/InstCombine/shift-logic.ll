@@ -16,9 +16,9 @@ define i8 @shl_and(i8 %x, i8 %y) {
 
 define <2 x i8> @shl_and_nonuniform(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @shl_and_nonuniform(
-; CHECK-NEXT:    [[SH0:%.*]] = shl <2 x i8> [[X:%.*]], <i8 3, i8 4>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[SH0]], [[Y:%.*]]
-; CHECK-NEXT:    [[SH1:%.*]] = shl <2 x i8> [[R]], <i8 2, i8 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i8> [[X:%.*]], <i8 5, i8 4>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i8> [[Y:%.*]], <i8 2, i8 0>
+; CHECK-NEXT:    [[SH1:%.*]] = and <2 x i8> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i8> [[SH1]]
 ;
   %sh0 = shl <2 x i8> %x, <i8 3, i8 4>
@@ -45,9 +45,9 @@ define i16 @shl_or(i16 %x, i16 %py) {
 define <2 x i16> @shl_or_undef(<2 x i16> %x, <2 x i16> %py) {
 ; CHECK-LABEL: @shl_or_undef(
 ; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i16> [[PY:%.*]], <i16 42, i16 42>
-; CHECK-NEXT:    [[SH0:%.*]] = shl <2 x i16> [[X:%.*]], <i16 5, i16 undef>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i16> [[Y]], [[SH0]]
-; CHECK-NEXT:    [[SH1:%.*]] = shl <2 x i16> [[R]], <i16 7, i16 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i16> [[X:%.*]], <i16 12, i16 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i16> [[Y]], <i16 7, i16 undef>
+; CHECK-NEXT:    [[SH1:%.*]] = or <2 x i16> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i16> [[SH1]]
 ;
   %y = srem <2 x i16> %py, <i16 42, i16 42> ; thwart complexity-based canonicalization
@@ -72,9 +72,9 @@ define i32 @shl_xor(i32 %x, i32 %y) {
 
 define <2 x i32> @shl_xor_nonuniform(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @shl_xor_nonuniform(
-; CHECK-NEXT:    [[SH0:%.*]] = shl <2 x i32> [[X:%.*]], <i32 5, i32 6>
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i32> [[SH0]], [[Y:%.*]]
-; CHECK-NEXT:    [[SH1:%.*]] = shl <2 x i32> [[R]], <i32 7, i32 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[X:%.*]], <i32 12, i32 14>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i32> [[Y:%.*]], <i32 7, i32 8>
+; CHECK-NEXT:    [[SH1:%.*]] = xor <2 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i32> [[SH1]]
 ;
   %sh0 = shl <2 x i32> %x, <i32 5, i32 6>
@@ -101,9 +101,9 @@ define i64 @lshr_and(i64 %x, i64 %py) {
 define <2 x i64> @lshr_and_undef(<2 x i64> %x, <2 x i64> %py) {
 ; CHECK-LABEL: @lshr_and_undef(
 ; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i64> [[PY:%.*]], <i64 42, i64 42>
-; CHECK-NEXT:    [[SH0:%.*]] = lshr <2 x i64> [[X:%.*]], <i64 5, i64 undef>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i64> [[Y]], [[SH0]]
-; CHECK-NEXT:    [[SH1:%.*]] = lshr <2 x i64> [[R]], <i64 7, i64 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[X:%.*]], <i64 12, i64 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[Y]], <i64 7, i64 undef>
+; CHECK-NEXT:    [[SH1:%.*]] = and <2 x i64> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i64> [[SH1]]
 ;
   %y = srem <2 x i64> %py, <i64 42, i64 42> ; thwart complexity-based canonicalization
