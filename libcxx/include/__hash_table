@@ -34,19 +34,17 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Key, class _Tp>
 struct __hash_value_type;
 
-#ifndef _LIBCPP_CXX03_LANG
 template <class _Tp>
 struct __is_hash_value_type_imp : false_type {};
 
 template <class _Key, class _Value>
-struct __is_hash_value_type_imp<__hash_value_type<_Key, _Value>> : true_type {};
+struct __is_hash_value_type_imp<__hash_value_type<_Key, _Value> > : true_type {};
 
 template <class ..._Args>
 struct __is_hash_value_type : false_type {};
 
 template <class _One>
 struct __is_hash_value_type<_One> : __is_hash_value_type_imp<typename __uncvref<_One>::type> {};
-#endif
 
 _LIBCPP_FUNC_VIS
 size_t __next_prime(size_t __n);
@@ -155,12 +153,10 @@ struct __hash_key_value_types {
   static __container_value_type* __get_ptr(__node_value_type& __n) {
     return _VSTD::addressof(__n);
   }
-#ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_INLINE_VISIBILITY
   static __container_value_type&& __move(__node_value_type& __v) {
     return _VSTD::move(__v);
   }
-#endif
 };
 
 template <class _Key, class _Tp>
@@ -197,13 +193,10 @@ struct __hash_key_value_types<__hash_value_type<_Key, _Tp> > {
   static __container_value_type* __get_ptr(__node_value_type& __n) {
     return _VSTD::addressof(__n.__get_value());
   }
-#ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_INLINE_VISIBILITY
   static pair<key_type&&, mapped_type&&> __move(__node_value_type& __v) {
     return __v.__move();
   }
-#endif
-
 };
 
 template <class _Tp, class _AllocPtr, class _KVTypes = __hash_key_value_types<_Tp>,
@@ -795,7 +788,6 @@ public:
         _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
         : __data_(__size, __a) {}
 
-#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     __bucket_list_deallocator(__bucket_list_deallocator&& __x)
         _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
@@ -803,7 +795,6 @@ public:
     {
         __x.size() = 0;
     }
-#endif
 
     _LIBCPP_INLINE_VISIBILITY
     size_type& size() _NOEXCEPT {return __data_.first();}
@@ -1019,7 +1010,6 @@ public:
     explicit __hash_table(const allocator_type& __a);
     __hash_table(const __hash_table& __u);
     __hash_table(const __hash_table& __u, const allocator_type& __a);
-#ifndef _LIBCPP_CXX03_LANG
     __hash_table(__hash_table&& __u)
         _NOEXCEPT_(
             is_nothrow_move_constructible<__bucket_list>::value &&
@@ -1028,11 +1018,9 @@ public:
             is_nothrow_move_constructible<hasher>::value &&
             is_nothrow_move_constructible<key_equal>::value);
     __hash_table(__hash_table&& __u, const allocator_type& __a);
-#endif  // _LIBCPP_CXX03_LANG
     ~__hash_table();
 
     __hash_table& operator=(const __hash_table& __u);
-#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     __hash_table& operator=(__hash_table&& __u)
         _NOEXCEPT_(
@@ -1040,7 +1028,6 @@ public:
             is_nothrow_move_assignable<__node_allocator>::value &&
             is_nothrow_move_assignable<hasher>::value &&
             is_nothrow_move_assignable<key_equal>::value);
-#endif
     template <class _InputIterator>
         void __assign_unique(_InputIterator __first, _InputIterator __last);
     template <class _InputIterator>
@@ -1078,7 +1065,6 @@ public:
     iterator             __node_insert_multi(const_iterator __p,
                                              __node_pointer __nd);
 
-#ifndef _LIBCPP_CXX03_LANG
     template <class _Key, class ..._Args>
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, bool> __emplace_unique_key_args(_Key const& __k, _Args&&... __args);
@@ -1162,15 +1148,6 @@ public:
     iterator __insert_multi(const_iterator __p, _Pp&& __x) {
         return __emplace_hint_multi(__p, _VSTD::forward<_Pp>(__x));
     }
-
-#else  // !defined(_LIBCPP_CXX03_LANG)
-    template <class _Key, class _Args>
-    _LIBCPP_INLINE_VISIBILITY
-    pair<iterator, bool> __emplace_unique_key_args(_Key const&, _Args& __args);
-
-    iterator __insert_multi(const __container_value_type& __x);
-    iterator __insert_multi(const_iterator __p, const __container_value_type& __x);
-#endif
 
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, bool> __insert_unique(const __container_value_type& __x) {
@@ -1365,16 +1342,11 @@ public:
 private:
     void __rehash(size_type __n);
 
-#ifndef _LIBCPP_CXX03_LANG
     template <class ..._Args>
     __node_holder __construct_node(_Args&& ...__args);
 
     template <class _First, class ..._Rest>
     __node_holder __construct_node_hash(size_t __hash, _First&& __f, _Rest&&... __rest);
-#else // _LIBCPP_CXX03_LANG
-    __node_holder __construct_node(const __container_value_type& __v);
-    __node_holder __construct_node_hash(size_t __hash, const __container_value_type& __v);
-#endif
 
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1385,7 +1357,6 @@ private:
     _LIBCPP_INLINE_VISIBILITY
         void __copy_assign_alloc(const __hash_table&, false_type) {}
 
-#ifndef _LIBCPP_CXX03_LANG
     void __move_assign(__hash_table& __u, false_type);
     void __move_assign(__hash_table& __u, true_type)
         _NOEXCEPT_(
@@ -1412,7 +1383,6 @@ private:
     }
     _LIBCPP_INLINE_VISIBILITY
         void __move_assign_alloc(__hash_table&, false_type) _NOEXCEPT {}
-#endif // _LIBCPP_CXX03_LANG
 
     void __deallocate_node(__next_pointer __np) _NOEXCEPT;
     __next_pointer __detach() _NOEXCEPT;
@@ -1489,8 +1459,6 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(const __hash_table& __u,
 {
 }
 
-#ifndef _LIBCPP_CXX03_LANG
-
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u)
         _NOEXCEPT_(
@@ -1537,8 +1505,6 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u,
         }
     }
 }
-
-#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::~__hash_table()
@@ -1629,8 +1595,6 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__detach() _NOEXCEPT
     __p1_.first().__next_ = nullptr;
     return __cache;
 }
-
-#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 void
@@ -1725,8 +1689,6 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(__hash_table&& __u)
                   __node_traits::propagate_on_container_move_assignment::value>());
     return *this;
 }
-
-#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <class _InputIterator>
@@ -2101,17 +2063,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(
 
 
 
-#ifndef _LIBCPP_CXX03_LANG
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <class _Key, class ..._Args>
 pair<typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator, bool>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& __k, _Args&&... __args)
-#else
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-template <class _Key, class _Args>
-pair<typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator, bool>
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& __k, _Args& __args)
-#endif
 {
 
     size_t __hash = hash_function()(__k);
@@ -2135,11 +2090,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& 
         }
     }
     {
-#ifndef _LIBCPP_CXX03_LANG
         __node_holder __h = __construct_node_hash(__hash, _VSTD::forward<_Args>(__args)...);
-#else
-        __node_holder __h = __construct_node_hash(__hash, __args);
-#endif
         if (size()+1 > __bc * max_load_factor() || __bc == 0)
         {
             rehash(_VSTD::max<size_type>(2 * __bc + !__is_hash_power2(__bc),
@@ -2177,8 +2128,6 @@ __done:
     return pair<iterator, bool>(iterator(__nd), __inserted);
 #endif
 }
-
-#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <class... _Args>
@@ -2219,36 +2168,6 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_hint_multi(
     __h.release();
     return __r;
 }
-
-#else // _LIBCPP_CXX03_LANG
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__insert_multi(const __container_value_type& __x)
-{
-    __node_holder __h = __construct_node(__x);
-    iterator __r = __node_insert_multi(__h.get());
-    __h.release();
-    return __r;
-}
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__insert_multi(const_iterator __p,
-                                                         const __container_value_type& __x)
-{
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
-        "unordered container::insert(const_iterator, lvalue) called with an iterator not"
-        " referring to this unordered container");
-#endif
-    __node_holder __h = __construct_node(__x);
-    iterator __r = __node_insert_multi(__p, __h.get());
-    __h.release();
-    return __r;
-}
-
-#endif  // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -2525,8 +2444,6 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) const
     return end();
 }
 
-#ifndef _LIBCPP_CXX03_LANG
-
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <class ..._Args>
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_holder
@@ -2561,37 +2478,6 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node_hash(
     __h->__next_ = nullptr;
     return __h;
 }
-
-#else  // _LIBCPP_CXX03_LANG
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_holder
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node(const __container_value_type& __v)
-{
-    __node_allocator& __na = __node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _NodeTypes::__get_ptr(__h->__value_), __v);
-    __h.get_deleter().__value_constructed = true;
-    __h->__hash_ = hash_function()(__h->__value_);
-    __h->__next_ = nullptr;
-    return __h;
-}
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_holder
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node_hash(size_t __hash,
-                                                                const __container_value_type& __v)
-{
-    __node_allocator& __na = __node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _NodeTypes::__get_ptr(__h->__value_), __v);
-    __h.get_deleter().__value_constructed = true;
-    __h->__hash_ = __hash;
-    __h->__next_ = nullptr;
-    return __h;
-}
-
-#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
