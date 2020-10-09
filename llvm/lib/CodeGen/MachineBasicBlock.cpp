@@ -583,7 +583,7 @@ void MachineBasicBlock::sortUniqueLiveIns() {
 Register
 MachineBasicBlock::addLiveIn(MCRegister PhysReg, const TargetRegisterClass *RC) {
   assert(getParent() && "MBB must be inserted in function");
-  assert(PhysReg.isPhysical() && "Expected physreg");
+  assert(Register::isPhysicalRegister(PhysReg) && "Expected physreg");
   assert(RC && "Register class is required");
   assert((isEHPad() || this == &getParent()->front()) &&
          "Only the entry block and landing pads can have physreg live ins");
