@@ -502,8 +502,9 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic, [
         getIteratorTypesAttrName(), getSymbolSourceAttrName()
       };
     }
-    StringRef getLibraryCallName() {
-      return library_call().hasValue() ? library_call().getValue() : "";
+    std::string getLibraryCallName() {
+      return library_call().hasValue() ?
+        library_call()->str() : "op_has_no_registered_library_name";
     }
     llvm::Optional<unsigned> getSymbolSource() {
       auto ss = symbol_source();

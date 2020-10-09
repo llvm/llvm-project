@@ -19,7 +19,10 @@ int main() {
   int res;
   res = pthread_key_create(&key, NULL);
   assert(res == 0);
+#if !defined(__ANDROID__) && !defined(__BIONIC__)
+  // Bionic doesn't have specific limit.
   assert(key < PTHREAD_KEY_2NDLEVEL_SIZE);
+#endif
   void *p = malloc(1337);
   res = pthread_setspecific(key, p);
   assert(res == 0);

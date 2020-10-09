@@ -61,6 +61,13 @@ if config.asan_shadow_scale != '':
 # BFD linker in 64-bit android toolchains fails to find libc++_shared.so, which
 # is a transitive shared library dependency (via asan runtime).
 if config.android:
+  # These are needed for tests to upload/download temp files, such as
+  # suppression-files, to device.
+  config.substitutions.append( ('%device_rundir', "/data/local/tmp/Output") )
+  # FIXME: May need to select specific device with `-s SERIAL`
+  config.substitutions.append( ('%push_to_device', "adb push ") )
+  config.substitutions.append( ('%pull_from_device', "adb pull ") )
+  config.substitutions.append( ('%adb_shell ', "adb shell ") )
   # Prepend the flag so that it can be overridden.
   config.target_cflags = "-pie -fuse-ld=gold " + config.target_cflags
   if config.android_ndk_version < 19:
@@ -69,7 +76,11 @@ if config.android:
     # just contains a handful of ABI functions", which makes most C++ code fail
     # to link. In r19 and later we just use the default which is libc++.
     config.cxx_mode_flags.append('-stdlib=libstdc++')
-
+else:
+  config.substitutions.append( ('%device_rundir', "") )
+  config.substitutions.append( ('%push_to_device', "echo ") )
+  config.substitutions.append( ('%pull_from_device', "echo ") )
+  config.substitutions.append( ('%adb_shell', "echo ") )
 config.environment = dict(os.environ)
 
 # Clear some environment variables that might affect Clang.
@@ -341,10 +352,15 @@ if config.android:
   if config.android_serial:
     env['ANDROID_SERIAL'] = config.android_serial
     config.environment['ANDROID_SERIAL'] = config.android_serial
-
+  # Must use lld because Bionic's TLS layout is not compatible with the Gold convention.
+  # The buildbot script will guarantee lld is built/included.
+  # The check for `has_lld` somehow missed that it exists and always marked tests as "unsupported".
+  config.use_lld = True
+  config.has_lld = True
   adb = os.environ.get('ADB', 'adb')
   try:
     android_api_level_str = subprocess.check_output([adb, "shell", "getprop", "ro.build.version.sdk"], env=env).rstrip()
+    android_api_codename = subprocess.check_output([adb, "shell", "getprop", "ro.build.version.codename"], env=env).rstrip().decode("utf-8")
   except (subprocess.CalledProcessError, OSError):
     lit_config.fatal("Failed to read ro.build.version.sdk (using '%s' as adb)" % adb)
   try:
@@ -355,6 +371,8 @@ if config.android:
     config.available_features.add('android-26')
   if android_api_level >= 28:
     config.available_features.add('android-28')
+  if android_api_level >= 31 or android_api_codename == 'S':
+    config.available_features.add('android-thread-properties-api')
 
   # Prepare the device.
   android_tmpdir = '/data/local/tmp/Output'
@@ -374,7 +392,7 @@ if config.host_os == 'Linux':
     from distutils.version import LooseVersion
     ver = LooseVersion(ver_line.split()[-1].decode())
     # 2.27 introduced some incompatibilities
-    if ver >= LooseVersion("2.27"):
+    if ver >= LooseVersion("2.27") and not config.android:
       config.available_features.add("glibc-2.27")
 
 sancovcc_path = os.path.join(config.llvm_tools_dir, "sancov")
