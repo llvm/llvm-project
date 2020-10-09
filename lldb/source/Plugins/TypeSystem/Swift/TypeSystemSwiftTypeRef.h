@@ -260,6 +260,7 @@ public:
   /// Recursively transform the demangle tree starting a \p node by
   /// doing a post-order traversal and replacing each node with
   /// fn(node).
+  /// The NodePointer passed to \p fn is guaranteed to be non-null.
   static swift::Demangle::NodePointer Transform(
       swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
       std::function<swift::Demangle::NodePointer(swift::Demangle::NodePointer)>
