@@ -1316,12 +1316,12 @@ ExprWithCleanups *ExprWithCleanups::Create(const ASTContext &C,
   return new (buffer) ExprWithCleanups(empty, numObjects);
 }
 
-CXXUnresolvedConstructExpr::CXXUnresolvedConstructExpr(TypeSourceInfo *TSI,
+CXXUnresolvedConstructExpr::CXXUnresolvedConstructExpr(QualType T,
+                                                       TypeSourceInfo *TSI,
                                                        SourceLocation LParenLoc,
                                                        ArrayRef<Expr *> Args,
                                                        SourceLocation RParenLoc)
-    : Expr(CXXUnresolvedConstructExprClass,
-           TSI->getType().getNonReferenceType(),
+    : Expr(CXXUnresolvedConstructExprClass, T,
            (TSI->getType()->isLValueReferenceType()
                 ? VK_LValue
                 : TSI->getType()->isRValueReferenceType() ? VK_XValue
@@ -1336,10 +1336,11 @@ CXXUnresolvedConstructExpr::CXXUnresolvedConstructExpr(TypeSourceInfo *TSI,
 }
 
 CXXUnresolvedConstructExpr *CXXUnresolvedConstructExpr::Create(
-    const ASTContext &Context, TypeSourceInfo *TSI, SourceLocation LParenLoc,
+    const ASTContext &Context, QualType T, TypeSourceInfo *TSI, SourceLocation LParenLoc,
     ArrayRef<Expr *> Args, SourceLocation RParenLoc) {
   void *Mem = Context.Allocate(totalSizeToAlloc<Expr *>(Args.size()));
-  return new (Mem) CXXUnresolvedConstructExpr(TSI, LParenLoc, Args, RParenLoc);
+  return new (Mem)
+      CXXUnresolvedConstructExpr(T, TSI, LParenLoc, Args, RParenLoc);
 }
 
 CXXUnresolvedConstructExpr *

@@ -3427,17 +3427,18 @@ class CXXUnresolvedConstructExpr final
   /// The location of the right parentheses (')').
   SourceLocation RParenLoc;
 
-  CXXUnresolvedConstructExpr(TypeSourceInfo *TSI, SourceLocation LParenLoc,
-                             ArrayRef<Expr *> Args, SourceLocation RParenLoc);
+  CXXUnresolvedConstructExpr(QualType T, TypeSourceInfo *TSI,
+                             SourceLocation LParenLoc, ArrayRef<Expr *> Args,
+                             SourceLocation RParenLoc);
 
   CXXUnresolvedConstructExpr(EmptyShell Empty, unsigned NumArgs)
-      : Expr(CXXUnresolvedConstructExprClass, Empty) {
+      : Expr(CXXUnresolvedConstructExprClass, Empty), TSI(nullptr) {
     CXXUnresolvedConstructExprBits.NumArgs = NumArgs;
   }
 
 public:
   static CXXUnresolvedConstructExpr *Create(const ASTContext &Context,
-                                            TypeSourceInfo *Type,
+                                            QualType T, TypeSourceInfo *TSI,
                                             SourceLocation LParenLoc,
                                             ArrayRef<Expr *> Args,
                                             SourceLocation RParenLoc);
