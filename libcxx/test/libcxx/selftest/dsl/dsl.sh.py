@@ -85,6 +85,18 @@ class SetupConfigs(unittest.TestCase):
         return found[0]
 
 
+def findIndex(list, pred):
+    """Finds the index of the first element satisfying 'pred' in a list, or
+       'len(list)' if there is no such element."""
+    index = 0
+    for x in list:
+        if pred(x):
+            break
+        else:
+            index += 1
+    return index
+
+
 class TestHasCompileFlag(SetupConfigs):
     """
     Tests for libcxx.test.dsl.hasCompileFlag
@@ -171,6 +183,29 @@ class TestProgramOutput(SetupConfigs):
         """
         args = ["first-argument", "second-argument"]
         self.assertEqual(dsl.programOutput(self.config, source, args=args), "")
+
+    def test_caching_is_not_too_aggressive(self):
+        # Run a program, then change the substitutions and run it again.
+        # Make sure the program is run the second time and the right result
+        # is given, to ensure we're not incorrectly caching the result of the
+        # first program run.
+        source = """
+        #include <cstdio>
+        int main(int, char**) {
+            std::printf("MACRO=%u\\n", MACRO);
+        }
+        """
+        compileFlagsIndex = findIndex(self.config.substitutions, lambda x: x[0] == '%{compile_flags}')
+        compileFlags = self.config.substitutions[compileFlagsIndex][1]
+
+        self.config.substitutions[compileFlagsIndex] = ('%{compile_flags}',  compileFlags + ' -DMACRO=1')
+        output1 = dsl.programOutput(self.config, source)
+        self.assertEqual(output1, "MACRO=1\n")
+
+        self.config.substitutions[compileFlagsIndex] = ('%{compile_flags}',  compileFlags + ' -DMACRO=2')
+        output2 = dsl.programOutput(self.config, source)
+        self.assertEqual(output2, "MACRO=2\n")
+
 
 class TestHasLocale(SetupConfigs):
     """
