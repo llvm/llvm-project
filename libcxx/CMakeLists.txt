@@ -94,7 +94,7 @@ option(LIBCXX_ENABLE_FILESYSTEM "Build filesystem as part of the main libc++ lib
     ${ENABLE_FILESYSTEM_DEFAULT})
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
 option(LIBCXX_ENABLE_PARALLEL_ALGORITHMS "Enable the parallel algorithms library. This requires the PSTL to be available." OFF)
-option(LIBCXX_ENABLE_DEBUG_MODE
+option(LIBCXX_ENABLE_DEBUG_MODE_SUPPORT
   "Whether to include support for libc++'s debugging mode in the library.
    By default, this is turned on. If you turn it off and try to enable the
    debug mode when compiling a program against libc++, it will fail to link
