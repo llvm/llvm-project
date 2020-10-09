@@ -462,6 +462,13 @@ u16x8 avgr_u_i16x8(u16x8 x, u16x8 y) {
   // WEBASSEMBLY-NEXT: ret
 }
 
+i16x8 q15mulr_saturate_s_i16x8(i16x8 x, i16x8 y) {
+  return __builtin_wasm_q15mulr_saturate_s_i8x16(x, y);
+  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.q15mulr.saturate.signed(
+  // WEBASSEMBLY-SAME: <8 x i16> %x, <8 x i16> %y)
+  // WEBASSEMBLY-NEXT: ret
+}
+
 i32x4 dot_i16x8_s(i16x8 x, i16x8 y) {
   return __builtin_wasm_dot_s_i32x4_i16x8(x, y);
   // WEBASSEMBLY: call <4 x i32> @llvm.wasm.dot(<8 x i16> %x, <8 x i16> %y)
