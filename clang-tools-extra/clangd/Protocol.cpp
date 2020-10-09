@@ -851,7 +851,7 @@ static llvm::StringRef toTextKind(MarkupKind Kind) {
 bool fromJSON(const llvm::json::Value &V, MarkupKind &K, llvm::json::Path P) {
   auto Str = V.getAsString();
   if (!Str) {
-    elog("Failed to parse markup kind: expected a string");
+    P.report("expected string");
     return false;
   }
   if (*Str == "plaintext")
@@ -859,7 +859,7 @@ bool fromJSON(const llvm::json::Value &V, MarkupKind &K, llvm::json::Path P) {
   else if (*Str == "markdown")
     K = MarkupKind::Markdown;
   else {
-    elog("Unknown markup kind: {0}", *Str);
+    P.report("unknown markup kind");
     return false;
   }
   return true;
