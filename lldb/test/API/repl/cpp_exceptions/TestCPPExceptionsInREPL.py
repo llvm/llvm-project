@@ -26,6 +26,7 @@ class TestREPLExceptions(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @decorators.skipUnlessDarwin
+    @decorators.swiftTest
     def test_set_repl_mode_exceptions(self):
         """ Test that SetREPLMode turns off trapping exceptions."""
         self.build()
@@ -33,6 +34,7 @@ class TestREPLExceptions(TestBase):
         self.do_repl_mode_test()
 
     @decorators.skipUnlessDarwin
+    @decorators.swiftTest
     def test_repl_exceptions(self):
         """ Test the lldb --repl turns off trapping exceptions."""
         self.build()

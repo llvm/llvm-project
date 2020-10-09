@@ -129,6 +129,7 @@ class PlaygroundREPLTest(TestBase):
         error = self.get_stream_data(result)
         print("Crash Error: {}".format(error))
 
+    @swiftTest
     def test_playgrounds(self):
         # Build
         self.build_all()
