@@ -1368,7 +1368,7 @@ int GCNHazardRecognizer::checkMAILdStHazards(MachineInstr *MI) {
     Register Reg = Op.getReg();
 
     const int AccVgprReadLdStWaitStates = 2;
-    const int VALUWriteAccVgprReadLdStDepVALUWaitStates = 1;
+    const int VALUWriteAccVgprRdWrLdStDepVALUWaitStates = 1;
     const int MaxWaitStates = 2;
 
     int WaitStatesNeededForUse = AccVgprReadLdStWaitStates -
@@ -1378,8 +1378,9 @@ int GCNHazardRecognizer::checkMAILdStHazards(MachineInstr *MI) {
     if (WaitStatesNeeded == MaxWaitStates)
       return WaitStatesNeeded; // Early exit.
 
-    auto IsVALUAccVgprReadCheckFn = [Reg, this] (MachineInstr *MI) {
-      if (MI->getOpcode() != AMDGPU::V_ACCVGPR_READ_B32)
+    auto IsVALUAccVgprRdWrCheckFn = [Reg, this](MachineInstr *MI) {
+      if (MI->getOpcode() != AMDGPU::V_ACCVGPR_READ_B32 &&
+          MI->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32)
         return false;
       auto IsVALUFn = [] (MachineInstr *MI) {
         return SIInstrInfo::isVALU(*MI) && !SIInstrInfo::isMAI(*MI);
@@ -1388,8 +1389,8 @@ int GCNHazardRecognizer::checkMAILdStHazards(MachineInstr *MI) {
              std::numeric_limits<int>::max();
     };
 
-    WaitStatesNeededForUse = VALUWriteAccVgprReadLdStDepVALUWaitStates -
-      getWaitStatesSince(IsVALUAccVgprReadCheckFn, MaxWaitStates);
+    WaitStatesNeededForUse = VALUWriteAccVgprRdWrLdStDepVALUWaitStates -
+      getWaitStatesSince(IsVALUAccVgprRdWrCheckFn, MaxWaitStates);
     WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
   }
 
