@@ -619,7 +619,7 @@ def GenericAtomicRMWOp : Std_Op<"generic_atomic_rmw", [
     ]> {
   let summary = "atomic read-modify-write operation with a region";
   let description = [{
-    The `atomic_rmw` operation provides a way to perform a read-modify-write
+    The `generic_atomic_rmw` operation provides a way to perform a read-modify-write
     sequence that is free from data races. The memref operand represents the
     buffer that the read and write will be performed against, as accessed by
     the specified indices. The arity of the indices is the rank of the memref.
