@@ -448,7 +448,6 @@ bb2:
   ret i8 %i2
 }
 
-
 define i32 @test29(i64 %d18) {
 ; CHECK-LABEL: @test29(
 ; CHECK-NEXT:  entry:
@@ -463,6 +462,50 @@ entry:
   ret i32 %i10
 }
 
+define <2 x i32> @test29_uniform(<2 x i64> %d18) {
+; CHECK-LABEL: @test29_uniform(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[I916:%.*]] = lshr <2 x i64> [[D18:%.*]], <i64 32, i64 32>
+; CHECK-NEXT:    [[I917:%.*]] = trunc <2 x i64> [[I916]] to <2 x i32>
+; CHECK-NEXT:    [[I10:%.*]] = lshr <2 x i32> [[I917]], <i32 31, i32 31>
+; CHECK-NEXT:    ret <2 x i32> [[I10]]
+;
+entry:
+  %i916 = lshr <2 x i64> %d18, <i64 32, i64 32>
+  %i917 = trunc <2 x i64> %i916 to <2 x i32>
+  %i10 = lshr <2 x i32> %i917, <i32 31, i32 31>
+  ret <2 x i32> %i10
+}
+
+define <2 x i32> @test29_nonuniform(<2 x i64> %d18) {
+; CHECK-LABEL: @test29_nonuniform(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[I916:%.*]] = lshr <2 x i64> [[D18:%.*]], <i64 32, i64 15>
+; CHECK-NEXT:    [[I917:%.*]] = trunc <2 x i64> [[I916]] to <2 x i32>
+; CHECK-NEXT:    [[I10:%.*]] = lshr <2 x i32> [[I917]], <i32 31, i32 22>
+; CHECK-NEXT:    ret <2 x i32> [[I10]]
+;
+entry:
+  %i916 = lshr <2 x i64> %d18, <i64 32, i64 15>
+  %i917 = trunc <2 x i64> %i916 to <2 x i32>
+  %i10 = lshr <2 x i32> %i917, <i32 31, i32 22>
+  ret <2 x i32> %i10
+}
+
+define <2 x i32> @test29_undef(<2 x i64> %d18) {
+; CHECK-LABEL: @test29_undef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[I916:%.*]] = lshr <2 x i64> [[D18:%.*]], <i64 32, i64 undef>
+; CHECK-NEXT:    [[I917:%.*]] = trunc <2 x i64> [[I916]] to <2 x i32>
+; CHECK-NEXT:    [[I10:%.*]] = lshr <2 x i32> [[I917]], <i32 31, i32 undef>
+; CHECK-NEXT:    ret <2 x i32> [[I10]]
+;
+entry:
+  %i916 = lshr <2 x i64> %d18, <i64 32, i64 undef>
+  %i917 = trunc <2 x i64> %i916 to <2 x i32>
+  %i10 = lshr <2 x i32> %i917, <i32 31, i32 undef>
+  ret <2 x i32> %i10
+}
 
 define i32 @test30(i32 %A, i32 %B, i32 %C) {
 ; CHECK-LABEL: @test30(
