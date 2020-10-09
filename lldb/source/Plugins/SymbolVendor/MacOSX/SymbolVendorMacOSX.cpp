@@ -33,9 +33,6 @@ LLDB_PLUGIN_DEFINE(SymbolVendorMacOSX)
 SymbolVendorMacOSX::SymbolVendorMacOSX(const lldb::ModuleSP &module_sp)
     : SymbolVendor(module_sp) {}
 
-// Destructor
-SymbolVendorMacOSX::~SymbolVendorMacOSX() {}
-
 static bool UUIDsMatch(Module *module, ObjectFile *ofile,
                        lldb_private::Stream *feedback_strm) {
   if (module && ofile) {

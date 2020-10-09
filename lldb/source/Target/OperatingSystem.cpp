@@ -44,8 +44,6 @@ OperatingSystem *OperatingSystem::FindPlugin(Process *process,
 
 OperatingSystem::OperatingSystem(Process *process) : m_process(process) {}
 
-OperatingSystem::~OperatingSystem() = default;
-
 bool OperatingSystem::IsOperatingSystemPluginThread(
     const lldb::ThreadSP &thread_sp) {
   if (thread_sp)

@@ -951,9 +951,6 @@ private:
                               Platform &remote_platform);
 
   FileSpec GetModuleCacheRoot();
-
-  Platform(const Platform &) = delete;
-  const Platform &operator=(const Platform &) = delete;
 };
 
 class PlatformList {

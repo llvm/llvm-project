@@ -40,8 +40,6 @@ public:
   LibCppStdFunctionCallableInfo
   FindLibCppStdFunctionCallableInfo(lldb::ValueObjectSP &valobj_sp);
 
-  ~CPPLanguageRuntime() override;
-
   static char ID;
 
   bool isA(const void *ClassID) const override {
@@ -89,9 +87,6 @@ private:
     llvm::StringMap<CPPLanguageRuntime::LibCppStdFunctionCallableInfo>;
 
   OperatorStringToCallableInfoMap CallableLookupCache;
-
-  CPPLanguageRuntime(const CPPLanguageRuntime &) = delete;
-  const CPPLanguageRuntime &operator=(const CPPLanguageRuntime &) = delete;
 };
 
 } // namespace lldb_private

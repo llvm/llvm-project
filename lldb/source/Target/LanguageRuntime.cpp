@@ -216,8 +216,6 @@ LanguageRuntime *LanguageRuntime::FindPlugin(Process *process,
 
 LanguageRuntime::LanguageRuntime(Process *process) : Runtime(process) {}
 
-LanguageRuntime::~LanguageRuntime() = default;
-
 BreakpointPreconditionSP
 LanguageRuntime::GetExceptionPrecondition(LanguageType language,
                                           bool throw_bp) {
