@@ -2368,6 +2368,8 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     Opts.OpenCLVersion = 120;
   else if (LangStd == LangStandard::lang_opencl20)
     Opts.OpenCLVersion = 200;
+  else if (LangStd == LangStandard::lang_opencl30)
+    Opts.OpenCLVersion = 300;
   else if (LangStd == LangStandard::lang_openclcpp)
     Opts.OpenCLCPlusPlusVersion = 100;
 
@@ -2574,6 +2576,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
         .Cases("cl1.1", "CL1.1", LangStandard::lang_opencl11)
         .Cases("cl1.2", "CL1.2", LangStandard::lang_opencl12)
         .Cases("cl2.0", "CL2.0", LangStandard::lang_opencl20)
+        .Cases("cl3.0", "CL3.0", LangStandard::lang_opencl30)
         .Cases("clc++", "CLC++", LangStandard::lang_openclcpp)
         .Default(LangStandard::lang_unspecified);
 
