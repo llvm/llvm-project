@@ -71,17 +71,17 @@ static const char kSuppressionLeak[] = "leak";
 static const char *kSuppressionTypes[] = { kSuppressionLeak };
 static const char kStdSuppressions[] =
 #if SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
-  // For more details refer to the SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
-  // definition.
-  "leak:*pthread_exit*\n"
+    // For more details refer to the SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
+    // definition.
+    "leak:*pthread_exit*\n"
 #endif  // SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
 #if SANITIZER_MAC
-  // For Darwin and os_log/os_trace: https://reviews.llvm.org/D35173
-  "leak:*_os_trace*\n"
+    // For Darwin and os_log/os_trace: https://reviews.llvm.org/D35173
+    "leak:*_os_trace*\n"
 #endif
-  // TLS leak in some glibc versions, described in
-  // https://sourceware.org/bugzilla/show_bug.cgi?id=12650.
-  "leak:*tls_get_addr*\n";
+    // TLS leak in some glibc versions, described in
+    // https://sourceware.org/bugzilla/show_bug.cgi?id=12650.
+    "leak:*tls_get_addr*\n";
 
 void InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
@@ -294,6 +294,22 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
                                  kReachable);
         }
       }
+#if SANITIZER_ANDROID
+      if (HAS_ANDROID_THREAD_PROPERTIES_API) {
+        auto *cb = +[](void *dtls_begin, void *dtls_end, uptr /*dso_idd*/,
+                       void *arg) -> void {
+          ScanRangeForPointers(reinterpret_cast<uptr>(dtls_begin),
+                               reinterpret_cast<uptr>(dtls_end),
+                               reinterpret_cast<Frontier *>(arg), "DTLS",
+                               kReachable);
+        };
+
+        // FIXME: There might be a race-condition here (and in Bionic) if the
+        // thread is suspended in the middle of updating its DTLS. IOWs, we
+        // could scan already freed memory. (probably fine for now)
+        __libc_iterate_dynamic_tls(os_id, cb, frontier);
+      }
+#else
       if (dtls && !DTLSInDestruction(dtls)) {
         for (uptr j = 0; j < dtls->dtv_size; ++j) {
           uptr dtls_beg = dtls->dtv[j].beg;
@@ -309,6 +325,7 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
         // this and continue.
         LOG_THREADS("Thread %d has DTLS under destruction.\n", os_id);
       }
+#endif
     }
   }
 }
@@ -575,8 +592,16 @@ static void CheckForLeaksCallback(const SuspendedThreadsList &suspended_threads,
 }
 
 static bool CheckForLeaks() {
+#if SANITIZER_ANDROID
+  // Presence of the ThreadProperties API implies the presence of
+  // TLS support, which is required for calling  __lsan_is_turned_off().
+  // Therefore, this check must preceed that.
+  if (!HAS_ANDROID_THREAD_PROPERTIES_API)
+    return false;
+#endif
+
   if (&__lsan_is_turned_off && __lsan_is_turned_off())
-      return false;
+    return false;
   EnsureMainThreadIDIsCorrect();
   CheckForLeaksParam param;
   LockStuffAndStopTheWorld(CheckForLeaksCallback, &param);
