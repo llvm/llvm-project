@@ -18,10 +18,14 @@
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Index/IndexingAction.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <tuple>
 
 #define DEBUG_TYPE "FindSymbols"
 
@@ -37,6 +41,21 @@ struct ScoredSymbolGreater {
     return L.second.name < R.second.name; // Earlier name is better.
   }
 };
+
+// Returns true if \p Query can be found as a sub-sequence inside \p Scope.
+bool approximateScopeMatch(llvm::StringRef Scope, llvm::StringRef Query) {
+  assert(Scope.empty() || Scope.endswith("::"));
+  assert(Query.empty() || Query.endswith("::"));
+  while (!Scope.empty() && !Query.empty()) {
+    auto Colons = Scope.find("::");
+    assert(Colons != llvm::StringRef::npos);
+
+    llvm::StringRef LeadingSpecifier = Scope.slice(0, Colons + 2);
+    Scope = Scope.slice(Colons + 2, llvm::StringRef::npos);
+    Query.consume_front(LeadingSpecifier);
+  }
+  return Query.empty();
+}
 
 } // namespace
 
@@ -71,44 +90,54 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
   if (Query.empty() || !Index)
     return Result;
 
+  // Lookup for qualified names are performed as:
+  // - Exact namespaces are boosted by the index.
+  // - Approximate matches are (sub-scope match) included via AnyScope logic.
+  // - Non-matching namespaces (no sub-scope match) are post-filtered.
   auto Names = splitQualifiedName(Query);
 
   FuzzyFindRequest Req;
   Req.Query = std::string(Names.second);
 
-  // FuzzyFind doesn't want leading :: qualifier
-  bool IsGlobalQuery = Names.first.consume_front("::");
-  // Restrict results to the scope in the query string if present (global or
-  // not).
-  if (IsGlobalQuery || !Names.first.empty())
+  // FuzzyFind doesn't want leading :: qualifier.
+  auto HasLeadingColons = Names.first.consume_front("::");
+  // Limit the query to specific namespace if it is fully-qualified.
+  Req.AnyScope = !HasLeadingColons;
+  // Boost symbols from desired namespace.
+  if (HasLeadingColons || !Names.first.empty())
     Req.Scopes = {std::string(Names.first)};
-  else
-    Req.AnyScope = true;
-  if (Limit)
+  if (Limit) {
     Req.Limit = Limit;
+    // If we are boosting a specific scope allow more results to be retrieved,
+    // since some symbols from preferred namespaces might not make the cut.
+    if (Req.AnyScope && !Req.Scopes.empty())
+      *Req.Limit *= 5;
+  }
   TopN<ScoredSymbolInfo, ScoredSymbolGreater> Top(
       Req.Limit ? *Req.Limit : std::numeric_limits<size_t>::max());
   FuzzyMatcher Filter(Req.Query);
-  Index->fuzzyFind(Req, [HintPath, &Top, &Filter](const Symbol &Sym) {
+
+  Index->fuzzyFind(Req, [HintPath, &Top, &Filter, AnyScope = Req.AnyScope,
+                         ReqScope = Names.first](const Symbol &Sym) {
+    llvm::StringRef Scope = Sym.Scope;
+    // Fuzzyfind might return symbols from irrelevant namespaces if query was
+    // not fully-qualified, drop those.
+    if (AnyScope && !approximateScopeMatch(Scope, ReqScope))
+      return;
+
     auto Loc = symbolToLocation(Sym, HintPath);
     if (!Loc) {
       log("Workspace symbols: {0}", Loc.takeError());
       return;
     }
 
-    llvm::StringRef Scope = Sym.Scope;
-    Scope.consume_back("::");
-    SymbolInformation Info;
-    Info.name = (Sym.Name + Sym.TemplateSpecializationArgs).str();
-    Info.kind = indexSymbolKindToSymbolKind(Sym.SymInfo.Kind);
-    Info.location = *Loc;
-    Info.containerName = Scope.str();
-
     SymbolQualitySignals Quality;
     Quality.merge(Sym);
     SymbolRelevanceSignals Relevance;
     Relevance.Name = Sym.Name;
     Relevance.Query = SymbolRelevanceSignals::Generic;
+    // If symbol and request scopes do not match exactly, apply a penalty.
+    Relevance.InBaseClass = AnyScope && Scope != ReqScope;
     if (auto NameMatch = Filter.match(Sym.Name))
       Relevance.NameMatch = *NameMatch;
     else {
@@ -121,6 +150,13 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
                                             Relevance.evaluateHeuristics());
     dlog("FindSymbols: {0}{1} = {2}\n{3}{4}\n", Sym.Scope, Sym.Name, Score,
          Quality, Relevance);
+
+    SymbolInformation Info;
+    Info.name = (Sym.Name + Sym.TemplateSpecializationArgs).str();
+    Info.kind = indexSymbolKindToSymbolKind(Sym.SymInfo.Kind);
+    Info.location = *Loc;
+    Scope.consume_back("::");
+    Info.containerName = Scope.str();
 
     // Exposed score excludes fuzzy-match component, for client-side re-ranking.
     Info.score = Score / Relevance.NameMatch;
