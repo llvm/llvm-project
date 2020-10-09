@@ -221,7 +221,8 @@ void PatternEmitter::emitOpMatch(DagNode tree, int depth) {
 
   int indent = 4 + 2 * depth;
   os.indent(indent) << formatv(
-      "auto castedOp{0} = dyn_cast_or_null<{1}>(op{0}); (void)castedOp{0};\n",
+      "auto castedOp{0} = ::llvm::dyn_cast_or_null<{1}>(op{0}); "
+      "(void)castedOp{0};\n",
       depth, op.getQualCppClassName());
   // Skip the operand matching at depth 0 as the pattern rewriter already does.
   if (depth != 0) {
@@ -535,7 +536,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
       os << "\n// Rewrite\n";
       emitRewriteLogic();
 
-      os << "return success();\n";
+      os << "return ::mlir::success();\n";
     }
     os << "};\n";
   }
@@ -1145,8 +1146,8 @@ static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
   }
 
   // Emit function to add the generated matchers to the pattern list.
-  os << "void LLVM_ATTRIBUTE_UNUSED populateWithGenerated(MLIRContext "
-        "*context, OwningRewritePatternList *patterns) {\n";
+  os << "void LLVM_ATTRIBUTE_UNUSED populateWithGenerated(::mlir::MLIRContext "
+        "*context, ::mlir::OwningRewritePatternList *patterns) {\n";
   for (const auto &name : rewriterNames) {
     os << "  patterns->insert<" << name << ">(context);\n";
   }
