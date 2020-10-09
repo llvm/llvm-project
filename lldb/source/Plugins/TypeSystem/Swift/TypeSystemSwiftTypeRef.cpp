@@ -180,149 +180,165 @@ ResolveTypeAlias(lldb_private::Module *M, swift::Demangle::Demangler &dem,
   return {n, {}};
 }
 
+swift::Demangle::NodePointer TypeSystemSwiftTypeRef::Transform(
+    swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
+    std::function<swift::Demangle::NodePointer(swift::Demangle::NodePointer)>
+        fn) {
+  if (!node)
+    return node;
+  using namespace swift::Demangle;
+  llvm::SmallVector<NodePointer, 2> children;
+  bool changed = false;
+  for (NodePointer child : *node) {
+    NodePointer transformed = Transform(dem, child, fn);
+    changed |= (child != transformed);
+    assert(transformed && "callback returned a nullptr");
+    if (transformed)
+      children.push_back(transformed);
+  }
+  if (changed) {
+    // Create a new node with the transformed children.
+    auto kind = node->getKind();
+    if (node->hasText())
+      node = dem.createNodeWithAllocatedText(kind, node->getText());
+    else if (node->hasIndex())
+      node = dem.createNode(kind, node->getIndex());
+    else
+      node = dem.createNode(kind);
+    for (NodePointer transformed_child : children)
+      node->addChild(transformed_child, dem);
+  }
+  return fn(node);
+}
+
 /// Iteratively resolve all type aliases in \p node by looking up their
 /// desugared types in the debug info of module \p M.
 static swift::Demangle::NodePointer
 GetCanonicalNode(lldb_private::Module *M, swift::Demangle::Demangler &dem,
                  swift::Demangle::NodePointer node) {
-  if (!node)
-    return node;
   using namespace swift::Demangle;
-  auto getCanonicalNode = [&](NodePointer node) -> NodePointer {
-    return GetCanonicalNode(M, dem, node);
-  };
+  return TypeSystemSwiftTypeRef::Transform(dem, node, [&](NodePointer node) {
+    NodePointer canonical = nullptr;
+    auto kind = node->getKind();
+    switch (kind) {
+    case Node::Kind::SugaredOptional:
+      // FIXME: Factor these three cases out.
+      assert(node->getNumChildren() == 1);
+      if (node->getNumChildren() != 1)
+        return node;
 
-  NodePointer canonical = nullptr;
-  auto kind = node->getKind();
-  switch (kind) {
-  case Node::Kind::SugaredOptional:
-    // FIXME: Factor these three cases out.
-    assert(node->getNumChildren() == 1);
-    if (node->getNumChildren() != 1)
-      return node;
-
-    canonical = dem.createNode(Node::Kind::BoundGenericEnum);
-    {
-      NodePointer type = dem.createNode(Node::Kind::Type);
-      NodePointer e = dem.createNode(Node::Kind::Enum);
-      NodePointer module = dem.createNodeWithAllocatedText(Node::Kind::Module,
-                                                           swift::STDLIB_NAME);
-      e->addChild(module, dem);
-      NodePointer optional =
-          dem.createNodeWithAllocatedText(Node::Kind::Identifier, "Optional");
-      e->addChild(optional, dem);
-      type->addChild(e, dem);
-      canonical->addChild(type, dem);
-    }
-    {
-      NodePointer typelist = dem.createNode(Node::Kind::TypeList);
-      NodePointer type = dem.createNode(Node::Kind::Type);
-      type->addChild(getCanonicalNode(node->getFirstChild()), dem);
-      typelist->addChild(type, dem);
-      canonical->addChild(typelist, dem);
-    }
-    return canonical;
-  case Node::Kind::SugaredArray: {
-    assert(node->getNumChildren() == 1);
-    if (node->getNumChildren() != 1)
-      return node;
-
-    canonical = dem.createNode(Node::Kind::BoundGenericStructure);
-    {
-      NodePointer type = dem.createNode(Node::Kind::Type);
-      NodePointer structure = dem.createNode(Node::Kind::Structure);
-      NodePointer module = dem.createNodeWithAllocatedText(Node::Kind::Module,
-                                                           swift::STDLIB_NAME);
-      structure->addChild(module, dem);
-      NodePointer array =
-          dem.createNodeWithAllocatedText(Node::Kind::Identifier, "Array");
-      structure->addChild(array, dem);
-      type->addChild(structure, dem);
-      canonical->addChild(type, dem);
-    }
-    {
-      NodePointer typelist = dem.createNode(Node::Kind::TypeList);
-      NodePointer type = dem.createNode(Node::Kind::Type);
-      type->addChild(getCanonicalNode(node->getFirstChild()), dem);
-      typelist->addChild(type, dem);
-      canonical->addChild(typelist, dem);
-    }
-    return canonical;
-  }
-  case Node::Kind::SugaredDictionary:
-    // FIXME: This isnt covered by any test.
-    assert(node->getNumChildren() == 2);
-    if (node->getNumChildren() != 2)
-      return node;
-
-    canonical = dem.createNode(Node::Kind::BoundGenericStructure);
-    {
-      NodePointer type = dem.createNode(Node::Kind::Type);
-      NodePointer structure = dem.createNode(Node::Kind::Structure);
-      NodePointer module = dem.createNodeWithAllocatedText(Node::Kind::Module,
-                                                           swift::STDLIB_NAME);
-      structure->addChild(module, dem);
-      NodePointer dict =
-          dem.createNodeWithAllocatedText(Node::Kind::Identifier, "Dictionary");
-      structure->addChild(dict, dem);
-      type->addChild(structure, dem);
-      canonical->addChild(type, dem);
-    }
-    {
-      NodePointer typelist = dem.createNode(Node::Kind::TypeList);
+      canonical = dem.createNode(Node::Kind::BoundGenericEnum);
       {
         NodePointer type = dem.createNode(Node::Kind::Type);
-        type->addChild(getCanonicalNode(node->getChild(0)), dem);
-        typelist->addChild(type, dem);
+        NodePointer e = dem.createNode(Node::Kind::Enum);
+        NodePointer module = dem.createNodeWithAllocatedText(
+            Node::Kind::Module, swift::STDLIB_NAME);
+        e->addChild(module, dem);
+        NodePointer optional =
+            dem.createNodeWithAllocatedText(Node::Kind::Identifier, "Optional");
+        e->addChild(optional, dem);
+        type->addChild(e, dem);
+        canonical->addChild(type, dem);
       }
       {
+        NodePointer typelist = dem.createNode(Node::Kind::TypeList);
         NodePointer type = dem.createNode(Node::Kind::Type);
-        type->addChild(getCanonicalNode(node->getChild(1)), dem);
+        type->addChild(node->getFirstChild(), dem);
         typelist->addChild(type, dem);
+        canonical->addChild(typelist, dem);
       }
-      canonical->addChild(typelist, dem);
-    }
-    return canonical;
-  case Node::Kind::SugaredParen:
-    assert(node->getNumChildren() == 1);
-    if (node->getNumChildren() != 1)
-      return node;
-    return getCanonicalNode(node->getFirstChild());
+      return canonical;
+    case Node::Kind::SugaredArray: {
+      assert(node->getNumChildren() == 1);
+      if (node->getNumChildren() != 1)
+        return node;
 
-  case Node::Kind::BoundGenericTypeAlias:
-  case Node::Kind::TypeAlias: {
-    auto node_clangtype = ResolveTypeAlias(M, dem, node);
-    if (CompilerType clang_type = node_clangtype.second)
-      return getCanonicalNode(GetClangTypeNode(clang_type, dem));
-    if (node_clangtype.first)
-      return getCanonicalNode(node_clangtype.first);
+      canonical = dem.createNode(Node::Kind::BoundGenericStructure);
+      {
+        NodePointer type = dem.createNode(Node::Kind::Type);
+        NodePointer structure = dem.createNode(Node::Kind::Structure);
+        NodePointer module = dem.createNodeWithAllocatedText(
+            Node::Kind::Module, swift::STDLIB_NAME);
+        structure->addChild(module, dem);
+        NodePointer array =
+            dem.createNodeWithAllocatedText(Node::Kind::Identifier, "Array");
+        structure->addChild(array, dem);
+        type->addChild(structure, dem);
+        canonical->addChild(type, dem);
+      }
+      {
+        NodePointer typelist = dem.createNode(Node::Kind::TypeList);
+        NodePointer type = dem.createNode(Node::Kind::Type);
+        type->addChild(node->getFirstChild(), dem);
+        typelist->addChild(type, dem);
+        canonical->addChild(typelist, dem);
+      }
+      return canonical;
+    }
+    case Node::Kind::SugaredDictionary:
+      // FIXME: This isnt covered by any test.
+      assert(node->getNumChildren() == 2);
+      if (node->getNumChildren() != 2)
+        return node;
+
+      canonical = dem.createNode(Node::Kind::BoundGenericStructure);
+      {
+        NodePointer type = dem.createNode(Node::Kind::Type);
+        NodePointer structure = dem.createNode(Node::Kind::Structure);
+        NodePointer module = dem.createNodeWithAllocatedText(
+            Node::Kind::Module, swift::STDLIB_NAME);
+        structure->addChild(module, dem);
+        NodePointer dict = dem.createNodeWithAllocatedText(
+            Node::Kind::Identifier, "Dictionary");
+        structure->addChild(dict, dem);
+        type->addChild(structure, dem);
+        canonical->addChild(type, dem);
+      }
+      {
+        NodePointer typelist = dem.createNode(Node::Kind::TypeList);
+        {
+          NodePointer type = dem.createNode(Node::Kind::Type);
+          type->addChild(node->getChild(0), dem);
+          typelist->addChild(type, dem);
+        }
+        {
+          NodePointer type = dem.createNode(Node::Kind::Type);
+          type->addChild(node->getChild(1), dem);
+          typelist->addChild(type, dem);
+        }
+        canonical->addChild(typelist, dem);
+      }
+      return canonical;
+    case Node::Kind::SugaredParen:
+      assert(node->getNumChildren() == 1);
+      if (node->getNumChildren() != 1)
+        return node;
+      return node->getFirstChild();
+
+    case Node::Kind::BoundGenericTypeAlias:
+    case Node::Kind::TypeAlias: {
+      auto node_clangtype = ResolveTypeAlias(M, dem, node);
+      if (CompilerType clang_type = node_clangtype.second)
+        return GetClangTypeNode(clang_type, dem);
+      if (node_clangtype.first)
+        return node_clangtype.first;
+      return node;
+    }
+    case Node::Kind::DynamicSelf: {
+      // Substitute the static type for dynamic self.
+      assert(node->getNumChildren() == 1);
+      if (node->getNumChildren() != 1)
+        return node;
+      NodePointer type = node->getChild(0);
+      if (type->getKind() != Node::Kind::Type || type->getNumChildren() != 1)
+        return node;
+      return type->getChild(0);
+    }
+    default:
+      break;
+    }
     return node;
-  }
-  case Node::Kind::DynamicSelf: {
-    // Substitute the static type for dynamic self.
-    assert(node->getNumChildren() == 1);
-    if (node->getNumChildren() != 1)
-      return node;
-    NodePointer type = node->getChild(0);
-    if (type->getKind() != Node::Kind::Type || type->getNumChildren() != 1)
-      return node;
-    return getCanonicalNode(type->getChild(0));
-  }
-  default:
-    break;
-  }
-
-  // Recurse through all children.
-  // FIXME: don't create new nodes if children don't change!
-  if (node->hasText())
-    canonical = dem.createNodeWithAllocatedText(kind, node->getText());
-  else if (node->hasIndex())
-    canonical = dem.createNode(kind, node->getIndex());
-  else
-    canonical = dem.createNode(kind);
-  for (unsigned i = 0; i < node->getNumChildren(); ++i)
-    canonical->addChild(getCanonicalNode(node->getChild(i)), dem);
-  return canonical;
+  });
 }
 
 /// Return the demangle tree representation of this type's canonical
@@ -552,128 +568,110 @@ TypeSystemSwiftTypeRef::GetSwiftified(swift::Demangle::Demangler &dem,
 swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetNodeForPrintingImpl(
     swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
     bool resolve_objc_module, bool desugar) {
-  if (!node)
-    return node;
   using namespace swift::Demangle;
-  auto getNodeForPrinting = [&](NodePointer node) -> NodePointer {
-    return GetNodeForPrintingImpl(dem, node, resolve_objc_module, desugar);
-  };
+  return Transform(dem, node, [&](NodePointer node) {
+    NodePointer canonical = node;
+    auto kind = node->getKind();
+    switch (kind) {
+    case Node::Kind::Class:
+    case Node::Kind::Structure:
+    case Node::Kind::TypeAlias:
+      return GetSwiftified(dem, node, resolve_objc_module);
 
-  NodePointer canonical = nullptr;
-  auto kind = node->getKind();
-  switch (kind) {
-  case Node::Kind::Class:
-  case Node::Kind::Structure:
-  case Node::Kind::TypeAlias:
-    return GetSwiftified(dem, node, resolve_objc_module);
+      //
+      // The remaining cases are all about bug-for-bug compatibility
+      // with the type dumper and we don't need to carry them forward
+      // necessarily.
+      //
 
-  //
-  // The remaining cases are all about bug-for-bug compatibility
-  // with the type dumper and we don't need to carry them forward
-  // necessarily.
-  //
-
-  // The type dumper doesn't print these.
+      // The type dumper doesn't print these.
 #define REF_STORAGE(Name, ...)                                                 \
   case Node::Kind::Name:                                                       \
-    return (node->getNumChildren() == 1)                                       \
-               ? getNodeForPrinting(node->getChild(0))                         \
-               : node;
+    return (node->getNumChildren() == 1) ? node->getChild(0) : node;
 #include "swift/AST/ReferenceStorage.def"
 
-  case Node::Kind::ImplFunctionType: {
-    // Rewrite ImplFunctionType nodes as FunctionType nodes.
-    NodePointer fnty = dem.createNode(Node::Kind::FunctionType);
-    NodePointer args = dem.createNode(Node::Kind::ArgumentTuple);
-    NodePointer rett = dem.createNode(Node::Kind::ReturnType);
-    NodePointer args_ty = dem.createNode(Node::Kind::Type);
-    NodePointer args_tuple = dem.createNode(Node::Kind::Tuple);
-    for (NodePointer child : *node) {
-      if (child->getKind() == Node::Kind::ImplParameter) {
-        for (NodePointer type : *node)
-          if (type->getKind() == Node::Kind::Type &&
-              type->getNumChildren() == 1)
-            rett->addChild(type->getChild(0), dem);
-      } else if (child->getKind() == Node::Kind::ImplResult) {
-        for (NodePointer type : *node)
-          if (type->getKind() == Node::Kind::Type)
-            rett->addChild(type, dem);
-      }
-    }
-    args_ty->addChild(args_tuple, dem);
-    args->addChild(args_ty, dem);
-    fnty->addChild(args, dem);
-    if (rett->getNumChildren() != 1)
-      rett->addChild(dem.createNode(Node::Kind::Tuple), dem);
-    fnty->addChild(rett, dem);
-    return fnty;
-  }
-
-  case Node::Kind::SugaredOptional:
-    // This is particularly silly. The outermost sugared Optional is desugared.
-    // See SwiftASTContext::GetTypeName() and remove it there, too!
-    if (desugar && node->getNumChildren() == 1) {
-      desugar = false;
-      return Desugar(dem, node, Node::Kind::BoundGenericEnum, Node::Kind::Enum,
-                     "Optional");
-    }
-    return node;
-  case Node::Kind::SugaredArray:
-    // See comment on SugaredOptional.
-    if (desugar && node->getNumChildren() == 1) {
-      desugar = false;
-      return Desugar(dem, node, Node::Kind::BoundGenericStructure,
-                     Node::Kind::Structure, "Array");
-    }
-    return node;
-  case Node::Kind::SugaredDictionary:
-    // See comment on SugaredOptional.
-    if (desugar && node->getNumChildren() == 1) {
-      desugar = false;
-      return Desugar(dem, node, Node::Kind::BoundGenericStructure,
-                     Node::Kind::Structure, "Dictionary");
-    }
-    return node;
-  case Node::Kind::DependentAssociatedTypeRef:
-    if (node->getNumChildren() == 2 &&
-        node->getChild(0)->getKind() == Node::Kind::Identifier)
-      return node->getChild(0);
-    break;    
-  default:
-    break;
-  }
-
-  // Recurse through all children.
-  // FIXME: don't create new nodes if children don't change!
-  if (node->hasText())
-    canonical = dem.createNodeWithAllocatedText(kind, node->getText());
-  else if (node->hasIndex())
-    canonical = dem.createNode(kind, node->getIndex());
-  else
-    canonical = dem.createNode(kind);
-
-  // Bug-for-bug compatibility. Remove this loop!
-  // Strip out LocalDeclNames.
-  for (unsigned i = 0; i < node->getNumChildren(); ++i) {
-    NodePointer child = node->getChild(i);
-    if (child->getKind() == Node::Kind::LocalDeclName)
-      for (NodePointer identifier : *child)
-        if (identifier->getKind() == Node::Kind::Identifier) {
-          NodePointer module = nullptr;
-          if (node->getChild(0)->getNumChildren() > 1)
-            module = node->getChild(0)->getChild(0);
-          if (module->getKind() != Node::Kind::Module)
-            break;
-            
-          canonical->addChild(module, dem);
-          canonical->addChild(identifier, dem);
-          return canonical;
+    case Node::Kind::ImplFunctionType: {
+      // Rewrite ImplFunctionType nodes as FunctionType nodes.
+      NodePointer fnty = dem.createNode(Node::Kind::FunctionType);
+      NodePointer args = dem.createNode(Node::Kind::ArgumentTuple);
+      NodePointer rett = dem.createNode(Node::Kind::ReturnType);
+      NodePointer args_ty = dem.createNode(Node::Kind::Type);
+      NodePointer args_tuple = dem.createNode(Node::Kind::Tuple);
+      for (NodePointer child : *node) {
+        if (child->getKind() == Node::Kind::ImplParameter) {
+          for (NodePointer type : *node)
+            if (type->getKind() == Node::Kind::Type &&
+                type->getNumChildren() == 1)
+              rett->addChild(type->getChild(0), dem);
+        } else if (child->getKind() == Node::Kind::ImplResult) {
+          for (NodePointer type : *node)
+            if (type->getKind() == Node::Kind::Type)
+              rett->addChild(type, dem);
         }
-  }
+      }
+      args_ty->addChild(args_tuple, dem);
+      args->addChild(args_ty, dem);
+      fnty->addChild(args, dem);
+      if (rett->getNumChildren() != 1)
+        rett->addChild(dem.createNode(Node::Kind::Tuple), dem);
+      fnty->addChild(rett, dem);
+      return fnty;
+    }
 
-  for (unsigned i = 0; i < node->getNumChildren(); ++i)
-    canonical->addChild(getNodeForPrinting(node->getChild(i)), dem);
-  return canonical;
+    case Node::Kind::SugaredOptional:
+      // This is particularly silly. The outermost sugared Optional is
+      // desugared. See SwiftASTContext::GetTypeName() and remove it there, too!
+      if (desugar && node->getNumChildren() == 1) {
+        desugar = false;
+        return Desugar(dem, node, Node::Kind::BoundGenericEnum,
+                       Node::Kind::Enum, "Optional");
+      }
+      return node;
+    case Node::Kind::SugaredArray:
+      // See comment on SugaredOptional.
+      if (desugar && node->getNumChildren() == 1) {
+        desugar = false;
+        return Desugar(dem, node, Node::Kind::BoundGenericStructure,
+                       Node::Kind::Structure, "Array");
+      }
+      return node;
+    case Node::Kind::SugaredDictionary:
+      // See comment on SugaredOptional.
+      if (desugar && node->getNumChildren() == 1) {
+        desugar = false;
+        return Desugar(dem, node, Node::Kind::BoundGenericStructure,
+                       Node::Kind::Structure, "Dictionary");
+      }
+      return node;
+    case Node::Kind::DependentAssociatedTypeRef:
+      if (node->getNumChildren() == 2 &&
+          node->getChild(0)->getKind() == Node::Kind::Identifier)
+        return node->getChild(0);
+      break;
+    default:
+      break;
+    }
+
+    // Bug-for-bug compatibility. Remove this loop!
+    // Strip out LocalDeclNames.
+    for (unsigned i = 0; i < node->getNumChildren(); ++i) {
+      NodePointer child = node->getChild(i);
+      if (child->getKind() == Node::Kind::LocalDeclName)
+        for (NodePointer identifier : *child)
+          if (identifier->getKind() == Node::Kind::Identifier) {
+            NodePointer module = nullptr;
+            if (node->getChild(0)->getNumChildren() > 1)
+              module = node->getChild(0)->getChild(0);
+            if (module->getKind() != Node::Kind::Module)
+              break;
+
+            canonical->addChild(module, dem);
+            canonical->addChild(identifier, dem);
+            return canonical;
+          }
+    }
+    return canonical;
+  });
 }
 
 /// Return the demangle tree representation with all "__C" module

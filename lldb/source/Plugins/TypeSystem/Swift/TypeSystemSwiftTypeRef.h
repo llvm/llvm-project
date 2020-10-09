@@ -257,6 +257,14 @@ public:
       bool print_help_if_available, bool print_extensions_if_available,
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
+  /// Recursively transform the demangle tree starting a \p node by
+  /// doing a post-order traversal and replacing each node with
+  /// fn(node).
+  static swift::Demangle::NodePointer Transform(
+      swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
+      std::function<swift::Demangle::NodePointer(swift::Demangle::NodePointer)>
+          fn);
+
   /// Return the canonicalized Demangle tree for a Swift mangled type name.
   static swift::Demangle::NodePointer
   GetCanonicalDemangleTree(lldb_private::Module *Module,
