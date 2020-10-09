@@ -15,10 +15,10 @@
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "GCNHazardRecognizer.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -28,6 +28,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -2841,6 +2842,18 @@ static int64_t getFoldableImm(const MachineOperand* MO) {
   return AMDGPU::NoRegister;
 }
 
+static void updateLiveVariables(LiveVariables *LV, MachineInstr &MI,
+                                MachineInstr &NewMI) {
+  if (LV) {
+    unsigned NumOps = MI.getNumOperands();
+    for (unsigned I = 1; I < NumOps; ++I) {
+      MachineOperand &Op = MI.getOperand(I);
+      if (Op.isReg() && Op.isKill())
+        LV->replaceKillInstruction(Op.getReg(), MI, NewMI);
+    }
+  }
+}
+
 MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
                                                  MachineInstr &MI,
                                                  LiveVariables *LV) const {
@@ -2888,43 +2901,53 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
   const MachineOperand *Src2 = getNamedOperand(MI, AMDGPU::OpName::src2);
   const MachineOperand *Clamp = getNamedOperand(MI, AMDGPU::OpName::clamp);
   const MachineOperand *Omod = getNamedOperand(MI, AMDGPU::OpName::omod);
+  MachineInstrBuilder MIB;
 
   if (!Src0Mods && !Src1Mods && !Clamp && !Omod &&
       // If we have an SGPR input, we will violate the constant bus restriction.
-      (ST.getConstantBusLimit(Opc) > 1 ||
-       !Src0->isReg() ||
+      (ST.getConstantBusLimit(Opc) > 1 || !Src0->isReg() ||
        !RI.isSGPRReg(MBB->getParent()->getRegInfo(), Src0->getReg()))) {
     if (auto Imm = getFoldableImm(Src2)) {
       unsigned NewOpc =
-         IsFMA ? (IsF16 ? AMDGPU::V_FMAAK_F16 : AMDGPU::V_FMAAK_F32)
-               : (IsF16 ? AMDGPU::V_MADAK_F16 : AMDGPU::V_MADAK_F32);
-      if (pseudoToMCOpcode(NewOpc) != -1)
-        return BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
-                 .add(*Dst)
-                 .add(*Src0)
-                 .add(*Src1)
-                 .addImm(Imm);
+          IsFMA ? (IsF16 ? AMDGPU::V_FMAAK_F16 : AMDGPU::V_FMAAK_F32)
+                : (IsF16 ? AMDGPU::V_MADAK_F16 : AMDGPU::V_MADAK_F32);
+      if (pseudoToMCOpcode(NewOpc) != -1) {
+        MIB = BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
+                  .add(*Dst)
+                  .add(*Src0)
+                  .add(*Src1)
+                  .addImm(Imm);
+        updateLiveVariables(LV, MI, *MIB);
+        return MIB;
+      }
     }
-    unsigned NewOpc =
-      IsFMA ? (IsF16 ? AMDGPU::V_FMAMK_F16 : AMDGPU::V_FMAMK_F32)
-            : (IsF16 ? AMDGPU::V_MADMK_F16 : AMDGPU::V_MADMK_F32);
+    unsigned NewOpc = IsFMA
+                          ? (IsF16 ? AMDGPU::V_FMAMK_F16 : AMDGPU::V_FMAMK_F32)
+                          : (IsF16 ? AMDGPU::V_MADMK_F16 : AMDGPU::V_MADMK_F32);
     if (auto Imm = getFoldableImm(Src1)) {
-      if (pseudoToMCOpcode(NewOpc) != -1)
-        return BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
-                 .add(*Dst)
-                 .add(*Src0)
-                 .addImm(Imm)
-                 .add(*Src2);
+      if (pseudoToMCOpcode(NewOpc) != -1) {
+        MIB = BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
+                  .add(*Dst)
+                  .add(*Src0)
+                  .addImm(Imm)
+                  .add(*Src2);
+        updateLiveVariables(LV, MI, *MIB);
+        return MIB;
+      }
     }
     if (auto Imm = getFoldableImm(Src0)) {
       if (pseudoToMCOpcode(NewOpc) != -1 &&
-          isOperandLegal(MI, AMDGPU::getNamedOperandIdx(NewOpc,
-                           AMDGPU::OpName::src0), Src1))
-        return BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
-                 .add(*Dst)
-                 .add(*Src1)
-                 .addImm(Imm)
-                 .add(*Src2);
+          isOperandLegal(
+              MI, AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::src0),
+              Src1)) {
+        MIB = BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
+                  .add(*Dst)
+                  .add(*Src1)
+                  .addImm(Imm)
+                  .add(*Src2);
+        updateLiveVariables(LV, MI, *MIB);
+        return MIB;
+      }
     }
   }
 
@@ -2933,16 +2956,18 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
   if (pseudoToMCOpcode(NewOpc) == -1)
     return nullptr;
 
-  return BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
-      .add(*Dst)
-      .addImm(Src0Mods ? Src0Mods->getImm() : 0)
-      .add(*Src0)
-      .addImm(Src1Mods ? Src1Mods->getImm() : 0)
-      .add(*Src1)
-      .addImm(0) // Src mods
-      .add(*Src2)
-      .addImm(Clamp ? Clamp->getImm() : 0)
-      .addImm(Omod ? Omod->getImm() : 0);
+  MIB = BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
+            .add(*Dst)
+            .addImm(Src0Mods ? Src0Mods->getImm() : 0)
+            .add(*Src0)
+            .addImm(Src1Mods ? Src1Mods->getImm() : 0)
+            .add(*Src1)
+            .addImm(0) // Src mods
+            .add(*Src2)
+            .addImm(Clamp ? Clamp->getImm() : 0)
+            .addImm(Omod ? Omod->getImm() : 0);
+  updateLiveVariables(LV, MI, *MIB);
+  return MIB;
 }
 
 // It's not generally safe to move VALU instructions across these since it will
