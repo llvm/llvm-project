@@ -262,23 +262,6 @@ option(LIBCXX_GENERATE_COVERAGE "Enable generating code coverage." OFF)
 set(LIBCXX_COVERAGE_LIBRARY "" CACHE STRING
     "The Profile-rt library used to build with code coverage")
 
-# Don't allow a user to accidentally overwrite the system libc++ installation on Darwin.
-# If the user specifies -DCMAKE_INSTALL_PREFIX=/usr the install rules for libc++
-# will not be generated and a warning will be issued.
-option(LIBCXX_OVERRIDE_DARWIN_INSTALL "Enable overwriting darwins libc++ installation." OFF)
-mark_as_advanced(LIBCXX_OVERRIDE_DARWIN_INSTALL) # Don't show this option by default.
-
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND NOT LIBCXX_OVERRIDE_DARWIN_INSTALL)
-  if ("${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr")
-    message(WARNING "Disabling libc++ install rules because installation would "
-                    "overwrite the systems installation. Configure with "
-                    "-DLIBCXX_OVERRIDE_DARWIN_INSTALL=ON to suppress this behaviour.")
-    mark_as_advanced(CLEAR LIBCXX_OVERRIDE_DARWIN_INSTALL) # Show the override option.
-    set(LIBCXX_INSTALL_HEADERS OFF)
-    set(LIBCXX_INSTALL_LIBRARY OFF)
-  endif()
-endif()
-
 set(LIBCXX_CONFIGURE_IDE_DEFAULT OFF)
 if (XCODE OR MSVC_IDE)
   set(LIBCXX_CONFIGURE_IDE_DEFAULT ON)
