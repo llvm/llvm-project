@@ -644,8 +644,10 @@ struct AllocMemOpConversion : public FIROpConversion<fir::AllocMemOp> {
       size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, opnd);
     heap.setAttr("callee", rewriter.getSymbolRefAttr(mallocFunc));
     SmallVector<mlir::Value, 1> args{size};
-    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(heap, ty, args,
-                                                    heap.getAttrs());
+    auto malloc = rewriter.create<mlir::LLVM::CallOp>(
+        loc, getVoidPtrType(heap.getContext()), args, heap.getAttrs());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(heap, ty,
+                                                       malloc.getResult(0));
     return success();
   }
 };
@@ -1649,7 +1651,7 @@ struct InsertOnRangeOpConversion
 
   // Increments an array of subscripts in a row major fasion.
   void incrementSubscripts(const SmallVector<uint64_t, 8> &dims,
-                     SmallVector<uint64_t, 8> &subscripts) const {
+                           SmallVector<uint64_t, 8> &subscripts) const {
     for (size_t i = dims.size(); i > 0; --i) {
       if (++subscripts[i - 1] < dims[i - 1]) {
         return;
