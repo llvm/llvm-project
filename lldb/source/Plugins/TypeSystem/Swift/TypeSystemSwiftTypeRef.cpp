@@ -1916,10 +1916,58 @@ TypeSystemSwift::TypeAllocationStrategy
 TypeSystemSwiftTypeRef::GetAllocationStrategy(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetAllocationStrategy(ReconstructType(type));
 }
+
 CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
     const std::vector<TupleElement> &elements) {
-  return m_swift_ast_context->CreateTupleType(elements);
+  auto impl = [&]() -> CompilerType {
+    using namespace swift::Demangle;
+    Demangler dem;
+    auto *tuple_type = dem.createNode(Node::Kind::Type);
+    auto *tuple = dem.createNode(Node::Kind::Tuple);
+    tuple_type->addChild(tuple, dem);
+
+    for (const auto &element : elements) {
+      auto *tuple_element = dem.createNode(Node::Kind::TupleElement);
+      tuple->addChild(tuple_element, dem);
+
+      // Add the element's name, if it has one.
+      // Ex: `(Int, Int)` vs `(x: Int, y: Int)`
+      if (!element.element_name.IsEmpty()) {
+        auto *name = dem.createNode(Node::Kind::TupleElementName,
+                                    element.element_name.GetStringRef());
+        tuple_element->addChild(name, dem);
+      }
+
+      auto *type = dem.createNode(Node::Kind::Type);
+      tuple_element->addChild(type, dem);
+      auto *element_type = GetDemangledType(
+          dem, element.element_type.GetMangledTypeName().GetStringRef());
+      type->addChild(element_type, dem);
+    }
+
+    return RemangleAsType(dem, tuple_type);
+  };
+
+  // The signature of VALIDATE_AND_RETURN doesn't support this function, below
+  // is an inlined function-specific variation.
+#ifndef NDEBUG
+  {
+    auto result = impl();
+    if (!m_swift_ast_context)
+      return result;
+    bool equivalent =
+        Equivalent(result, m_swift_ast_context->CreateTupleType(elements));
+    if (!equivalent)
+      llvm::dbgs() << "failing tuple type\n";
+    assert(equivalent &&
+           "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
+    return result;
+  }
+#else
+  return impl();
+#endif
 }
+
 void TypeSystemSwiftTypeRef::DumpTypeDescription(
     opaque_compiler_type_t type, bool print_help_if_available,
     bool print_extensions_if_available, lldb::DescriptionLevel level) {
