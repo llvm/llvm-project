@@ -15,9 +15,6 @@ namespace lldb_private {
 
 class Architecture : public PluginInterface {
 public:
-  Architecture() = default;
-  ~Architecture() override = default;
-
   /// This is currently intended to handle cases where a
   /// program stops at an instruction that won't get executed and it
   /// allows the stop reason, like "breakpoint hit", to be replaced
@@ -100,10 +97,6 @@ public:
                                                Target &target) const {
     return addr;
   }
-
-private:
-  Architecture(const Architecture &) = delete;
-  void operator=(const Architecture &) = delete;
 };
 
 } // namespace lldb_private

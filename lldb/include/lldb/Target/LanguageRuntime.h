@@ -59,8 +59,6 @@ protected:
 
 class LanguageRuntime : public Runtime, public PluginInterface {
 public:
-  ~LanguageRuntime() override;
-
   static LanguageRuntime *FindPlugin(Process *process,
                                      lldb::LanguageType language);
 
@@ -177,10 +175,6 @@ public:
 
 protected:
   LanguageRuntime(Process *process);
-
-private:
-  LanguageRuntime(const LanguageRuntime &) = delete;
-  const LanguageRuntime &operator=(const LanguageRuntime &) = delete;
 };
 
 } // namespace lldb_private

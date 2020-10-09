@@ -120,9 +120,6 @@ private:
   lldb::addr_t m_dyld_addr;
   lldb::addr_t m_mach_kernel_addr;
   lldb_private::ConstString m_dyld_plugin_name;
-
-  ProcessMachCore(const ProcessMachCore &) = delete;
-  const ProcessMachCore &operator=(const ProcessMachCore &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_MACH_CORE_PROCESSMACHCORE_H

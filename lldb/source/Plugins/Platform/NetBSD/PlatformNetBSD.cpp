@@ -117,8 +117,6 @@ PlatformNetBSD::PlatformNetBSD(bool is_host)
     : PlatformPOSIX(is_host) // This is the local host platform
 {}
 
-PlatformNetBSD::~PlatformNetBSD() = default;
-
 bool PlatformNetBSD::GetSupportedArchitectureAtIndex(uint32_t idx,
                                                      ArchSpec &arch) {
   if (IsHost()) {
