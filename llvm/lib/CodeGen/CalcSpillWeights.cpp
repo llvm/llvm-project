@@ -150,10 +150,10 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   MachineLoop *Loop = nullptr;
   bool IsExiting = false;
   float TotalWeight = 0;
-  unsigned NumInstr = 0; // Number of instructions using li
+  unsigned NumInstr = 0; // Number of instructions using LI
   SmallPtrSet<MachineInstr *, 8> Visited;
 
-  std::pair<unsigned, unsigned> TargetHint = MRI.getRegAllocationHint(LI.reg());
+  std::pair<Register, Register> TargetHint = MRI.getRegAllocationHint(LI.reg());
 
   if (LI.isSpillable() && VRM) {
     Register Reg = LI.reg();
@@ -192,22 +192,21 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
 
   // CopyHint is a sortable hint derived from a COPY instruction.
   struct CopyHint {
-    unsigned Reg;
-    float Weight;
-    bool IsPhys;
-    CopyHint(unsigned R, float W, bool P) :
-      Reg(R), Weight(W), IsPhys(P) {}
-    bool operator<(const CopyHint &rhs) const {
+    const Register Reg;
+    const float Weight;
+    CopyHint(Register R, float W) : Reg(R), Weight(W) {}
+    bool operator<(const CopyHint &Rhs) const {
       // Always prefer any physreg hint.
-      if (IsPhys != rhs.IsPhys)
-        return (IsPhys && !rhs.IsPhys);
-      if (Weight != rhs.Weight)
-        return (Weight > rhs.Weight);
-      return Reg < rhs.Reg; // Tie-breaker.
+      if (Reg.isPhysical() != Rhs.Reg.isPhysical())
+        return Reg.isPhysical();
+      if (Weight != Rhs.Weight)
+        return (Weight > Rhs.Weight);
+      return Reg.id() < Rhs.Reg.id(); // Tie-breaker.
     }
   };
-  std::set<CopyHint> CopyHints;
 
+  std::set<CopyHint> CopyHints;
+  DenseMap<unsigned, float> Hint;
   for (MachineRegisterInfo::reg_instr_nodbg_iterator
            I = MRI.reg_instr_nodbg_begin(LI.reg()),
            E = MRI.reg_instr_nodbg_end();
@@ -250,20 +249,17 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
     // Get allocation hints from copies.
     if (!MI->isCopy())
       continue;
-    Register hint = copyHint(MI, LI.reg(), TRI, MRI);
-    if (!hint)
+    Register HintReg = copyHint(MI, LI.reg(), TRI, MRI);
+    if (!HintReg)
       continue;
     // Force hweight onto the stack so that x86 doesn't add hidden precision,
     // making the comparison incorrectly pass (i.e., 1 > 1 == true??).
     //
     // FIXME: we probably shouldn't use floats at all.
-    volatile float HWeight = Hint[hint] += Weight;
-    if (Register::isVirtualRegister(hint) || MRI.isAllocatable(hint))
-      CopyHints.insert(
-          CopyHint(hint, HWeight, Register::isPhysicalRegister(hint)));
+    volatile float HWeight = Hint[HintReg] += Weight;
+    if (HintReg.isVirtual() || MRI.isAllocatable(HintReg))
+      CopyHints.insert(CopyHint(HintReg, HWeight));
   }
-
-  Hint.clear();
 
   // Pass all the sorted copy hints to mri.
   if (ShouldUpdateLI && CopyHints.size()) {
@@ -271,7 +267,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
     if (TargetHint.first == 0 && TargetHint.second)
       MRI.clearSimpleHint(LI.reg());
 
-    std::set<unsigned> HintedRegs;
+    std::set<Register> HintedRegs;
     for (auto &Hint : CopyHints) {
       if (!HintedRegs.insert(Hint.Reg).second ||
           (TargetHint.first != 0 && Hint.Reg == TargetHint.second))

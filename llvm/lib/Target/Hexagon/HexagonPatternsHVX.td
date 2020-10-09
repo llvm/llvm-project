@@ -12,9 +12,6 @@ def SDTHexagonVINSERTW0: SDTypeProfile<1, 2,
   [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisVT<2, i32>]>;
 def HexagonVINSERTW0: SDNode<"HexagonISD::VINSERTW0", SDTHexagonVINSERTW0>;
 
-def SDTHexagonVSPLATW: SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVT<1, i32>]>;
-def HexagonVSPLATW: SDNode<"HexagonISD::VSPLATW", SDTHexagonVSPLATW>;
-
 def HwLen2: SDNodeXForm<imm, [{
   const auto &ST = static_cast<const HexagonSubtarget&>(CurDAG->getSubtarget());
   return CurDAG->getTargetConstant(ST.getVectorLength()/2, SDLoc(N), MVT::i32);
@@ -242,17 +239,10 @@ let Predicates = [UseHVX] in {
   def: Pat<(VecPI8  (HexagonVSPLAT I32:$Rs)), (Rep (Vsplatrb $Rs))>;
   def: Pat<(VecPI16 (HexagonVSPLAT I32:$Rs)), (Rep (Vsplatrh $Rs))>;
   def: Pat<(VecPI32 (HexagonVSPLAT I32:$Rs)), (Rep (Vsplatrw $Rs))>;
-
-  def: Pat<(VecI8   (HexagonVSPLATW I32:$Rs)), (Vsplatrw $Rs)>;
-  def: Pat<(VecI16  (HexagonVSPLATW I32:$Rs)), (Vsplatrw $Rs)>;
-  def: Pat<(VecI32  (HexagonVSPLATW I32:$Rs)), (Vsplatrw $Rs)>;
-  def: Pat<(VecPI8  (HexagonVSPLATW I32:$Rs)), (Rep (Vsplatrw $Rs))>;
-  def: Pat<(VecPI16 (HexagonVSPLATW I32:$Rs)), (Rep (Vsplatrw $Rs))>;
-  def: Pat<(VecPI32 (HexagonVSPLATW I32:$Rs)), (Rep (Vsplatrw $Rs))>;
 }
 
 class Vneg1<ValueType VecTy>
-  : PatFrag<(ops), (VecTy (HexagonVSPLATW (i32 -1)))>;
+  : PatFrag<(ops), (VecTy (HexagonVSPLAT (i32 -1)))>;
 
 class Vnot<ValueType VecTy>
   : PatFrag<(ops node:$Vs), (xor $Vs, Vneg1<VecTy>)>;
