@@ -958,6 +958,15 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
     }
   }
 
+  // If all bits affected by the add are included in a high-bit-mask, do the
+  // add before the mask op:
+  // (X & 0xFF00) + xx00 --> (X + xx00) & 0xFF00
+  if (match(Op0, m_OneUse(m_And(m_Value(X), m_APInt(C2)))) &&
+      C2->isNegative() && C2->isShiftedMask() && *C == (*C & *C2)) {
+    Value *NewAdd = Builder.CreateAdd(X, ConstantInt::get(Ty, *C));
+    return BinaryOperator::CreateAnd(NewAdd, ConstantInt::get(Ty, *C2));
+  }
+
   return nullptr;
 }
 
@@ -1369,34 +1378,6 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   // A+B --> A|B iff A and B have no bits set in common.
   if (haveNoCommonBitsSet(LHS, RHS, DL, &AC, &I, &DT))
     return BinaryOperator::CreateOr(LHS, RHS);
-
-  // FIXME: We already did a check for ConstantInt RHS above this.
-  // FIXME: Is this pattern covered by another fold? No regression tests fail on
-  // removal.
-  if (ConstantInt *CRHS = dyn_cast<ConstantInt>(RHS)) {
-    // (X & FF00) + xx00  -> (X+xx00) & FF00
-    Value *X;
-    ConstantInt *C2;
-    if (LHS->hasOneUse() &&
-        match(LHS, m_And(m_Value(X), m_ConstantInt(C2))) &&
-        CRHS->getValue() == (CRHS->getValue() & C2->getValue())) {
-      // See if all bits from the first bit set in the Add RHS up are included
-      // in the mask.  First, get the rightmost bit.
-      const APInt &AddRHSV = CRHS->getValue();
-
-      // Form a mask of all bits from the lowest bit added through the top.
-      APInt AddRHSHighBits(~((AddRHSV & -AddRHSV)-1));
-
-      // See if the and mask includes all of these bits.
-      APInt AddRHSHighBitsAnd(AddRHSHighBits & C2->getValue());
-
-      if (AddRHSHighBits == AddRHSHighBitsAnd) {
-        // Okay, the xform is safe.  Insert the new add pronto.
-        Value *NewAdd = Builder.CreateAdd(X, CRHS, LHS->getName());
-        return BinaryOperator::CreateAnd(NewAdd, C2);
-      }
-    }
-  }
 
   // add (select X 0 (sub n A)) A  -->  select X A n
   {
