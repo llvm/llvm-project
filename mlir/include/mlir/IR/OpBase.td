@@ -791,12 +791,16 @@ class Attr<Pred condition, string descr = ""> :
   // instantiation.
   // TOOD(b/132458159): deduplicate the fields in attribute wrapper classes.
   Attr baseAttr = ?;
+
+  // The fully-qualified C++ namespace where the generated class lives.
+  string cppNamespace = "";
 }
 
 // An attribute of a specific dialect.
 class DialectAttr<Dialect d, Pred condition, string descr = ""> :
     Attr<condition, descr> {
   Dialect dialect = d;
+  let cppNamespace = d.cppNamespace;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1114,16 +1118,6 @@ class EnumAttrInfo<string name, list<EnumAttrCaseInfo> cases> {
   // The underlying type for the C++ enum class. An empty string mean the
   // underlying type is not explicitly specified.
   string underlyingType = "";
-
-  // The C++ namespaces that the enum class definition and utility functions
-  // should be placed into.
-  //
-  // Normally you want to place the full namespace path here. If it is nested,
-  // use "::" as the delimiter, e.g., given "A::B", generated code will be
-  // placed in `namespace A { namespace B { ... } }`. To avoid placing in any
-  // namespace, use "".
-  // TODO: use dialect to provide the namespace.
-  string cppNamespace = "";
 
   // The name of the utility function that converts a value of the underlying
   // type to the corresponding symbol. It will have the following signature:
@@ -1463,7 +1457,8 @@ class StructFieldAttr<string thisName, Attr thisType> {
 // useful when representing data that would normally be in a structure.
 class StructAttr<string name, Dialect d,
                  list<StructFieldAttr> attributes> :
-    DictionaryAttrBase<CPred<"$_self.isa<" # name # ">()">,
+    DictionaryAttrBase<CPred<"$_self.isa<" # d.cppNamespace
+                                           # "::" # name # ">()">,
         "DictionaryAttr with field(s): " #
         StrJoin<!foreach(a, attributes, "'" # a.name # "'"), ", ">.result #
         " (each field having its own constraints)"> {
@@ -1471,13 +1466,15 @@ class StructAttr<string name, Dialect d,
   string className = name;
 
   // Return type should match the name of the structure.
-  let returnType = name;
+  let returnType = d.cppNamespace # "::" # name;
 
   // Storage type should match the name of the structure.
-  let storageType = name;
+  let storageType = d.cppNamespace # "::" # name;
 
   // The dialect this StructAttr belongs to.
   Dialect dialect = d;
+
+  let cppNamespace = d.cppNamespace;
 
   // List of fields that the StructAttr contains.
   list<StructFieldAttr> fields = attributes;
