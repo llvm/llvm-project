@@ -7,6 +7,7 @@
 #===----------------------------------------------------------------------===##
 
 import os
+import pickle
 import pipes
 import platform
 import re
@@ -24,21 +25,17 @@ def _memoizeExpensiveOperation(extractCacheKey):
   """
   Allows memoizing a very expensive operation.
 
-  The caching is implemented as a list, and we search linearly for existing
-  entries. This is incredibly naive, however this allows the cache keys to
-  contain lists and other non-hashable objects. Assuming the operation we're
-  memoizing is very expensive, this is still a win anyway.
+  We pickle the cache key to make sure we store an immutable representation
+  of it. If we stored an object and the object was referenced elsewhere, it
+  could be changed from under our feet, which would break the cache.
   """
   def decorator(function):
-    cache = []
+    cache = {}
     def f(*args, **kwargs):
-      cacheKey = extractCacheKey(*args, **kwargs)
-      try:
-        result = next(res for (key, res) in cache if key == cacheKey)
-      except StopIteration: # This wasn't in the cache
-        result = function(*args, **kwargs)
-        cache.append((cacheKey, result))
-      return result
+      cacheKey = pickle.dumps(extractCacheKey(*args, **kwargs))
+      if cacheKey not in cache:
+        cache[cacheKey] = function(*args, **kwargs)
+      return cache[cacheKey]
     return f
   return decorator
 
