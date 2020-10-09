@@ -216,9 +216,13 @@ std::string SymbolInfoMap::SymbolInfo::getVarDecl(StringRef name) const {
   LLVM_DEBUG(llvm::dbgs() << "getVarDecl for '" << name << "': ");
   switch (kind) {
   case Kind::Attr: {
-    auto type =
-        op->getArg(*argIndex).get<NamedAttribute *>()->attr.getStorageType();
-    return std::string(formatv("{0} {1};\n", type, name));
+    if (op) {
+      auto type =
+          op->getArg(*argIndex).get<NamedAttribute *>()->attr.getStorageType();
+      return std::string(formatv("{0} {1};\n", type, name));
+    }
+    // TODO(suderman): Use a more exact type when available.
+    return std::string(formatv("Attribute {0};\n", name));
   }
   case Kind::Operand: {
     // Use operand range for captured operands (to support potential variadic
@@ -394,6 +398,11 @@ bool SymbolInfoMap::bindValue(StringRef symbol) {
   return symbolInfoMap.count(inserted->first) == 1;
 }
 
+bool SymbolInfoMap::bindAttr(StringRef symbol) {
+  auto inserted = symbolInfoMap.emplace(symbol, SymbolInfo::getAttr());
+  return symbolInfoMap.count(inserted->first) == 1;
+}
+
 bool SymbolInfoMap::contains(StringRef symbol) const {
   return find(symbol) != symbolInfoMap.end();
 }
@@ -558,15 +567,15 @@ std::vector<AppliedConstraint> Pattern::getConstraints() const {
   for (auto it : *listInit) {
     auto *dagInit = dyn_cast<llvm::DagInit>(it);
     if (!dagInit)
-      PrintFatalError(def.getLoc(), "all elements in Pattern multi-entity "
-                                    "constraints should be DAG nodes");
+      PrintFatalError(&def, "all elements in Pattern multi-entity "
+                            "constraints should be DAG nodes");
 
     std::vector<std::string> entities;
     entities.reserve(dagInit->arg_size());
     for (auto *argName : dagInit->getArgNames()) {
       if (!argName) {
         PrintFatalError(
-            def.getLoc(),
+            &def,
             "operands to additional constraints can only be symbol references");
       }
       entities.push_back(std::string(argName->getValue()));
@@ -584,7 +593,7 @@ int Pattern::getBenefit() const {
   int initBenefit = getSourcePattern().getNumOps();
   llvm::DagInit *delta = def.getValueAsDag("benefitDelta");
   if (delta->getNumArgs() != 1 || !isa<llvm::IntInit>(delta->getArg(0))) {
-    PrintFatalError(def.getLoc(),
+    PrintFatalError(&def,
                     "The 'addBenefit' takes and only takes one integer value");
   }
   return initBenefit + dyn_cast<llvm::IntInit>(delta->getArg(0))->getValue();
@@ -603,64 +612,120 @@ std::vector<Pattern::IdentifierLine> Pattern::getLocation() const {
   return result;
 }
 
+void Pattern::verifyBind(bool result, StringRef symbolName) {
+  if (!result) {
+    auto err = formatv("symbol '{0}' bound more than once", symbolName);
+    PrintFatalError(&def, err);
+  }
+}
+
 void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
                                   bool isSrcPattern) {
   auto treeName = tree.getSymbol();
-  if (!tree.isOperation()) {
+  auto numTreeArgs = tree.getNumArgs();
+
+  if (tree.isNativeCodeCall()) {
     if (!treeName.empty()) {
       PrintFatalError(
-          def.getLoc(),
-          formatv("binding symbol '{0}' to non-operation unsupported right now",
-                  treeName));
+          &def,
+          formatv(
+              "binding symbol '{0}' to native code call unsupported right now",
+              treeName));
+    }
+
+    for (int i = 0; i != numTreeArgs; ++i) {
+      if (auto treeArg = tree.getArgAsNestedDag(i)) {
+        // This DAG node argument is a DAG node itself. Go inside recursively.
+        collectBoundSymbols(treeArg, infoMap, isSrcPattern);
+        continue;
+      }
+
+      if (!isSrcPattern)
+        continue;
+
+      // We can only bind symbols to arguments in source pattern. Those
+      // symbols are referenced in result patterns.
+      auto treeArgName = tree.getArgName(i);
+
+      // `$_` is a special symbol meaning ignore the current argument.
+      if (!treeArgName.empty() && treeArgName != "_") {
+        if (tree.isNestedDagArg(i)) {
+          auto err = formatv("cannot bind '{0}' for nested native call arg",
+                             treeArgName);
+          PrintFatalError(&def, err);
+        }
+
+        DagLeaf leaf = tree.getArgAsLeaf(i);
+        auto constraint = leaf.getAsConstraint();
+        bool isAttr = leaf.isAttrMatcher() || leaf.isEnumAttrCase() ||
+                      leaf.isConstantAttr() ||
+                      constraint.getKind() == Constraint::Kind::CK_Attr;
+
+        if (isAttr) {
+          verifyBind(infoMap.bindAttr(treeArgName), treeArgName);
+          continue;
+        }
+
+        verifyBind(infoMap.bindValue(treeArgName), treeArgName);
+      }
+    }
+
+    return;
+  }
+
+  if (tree.isOperation()) {
+    auto &op = getDialectOp(tree);
+    auto numOpArgs = op.getNumArgs();
+
+    // The pattern might have the last argument specifying the location.
+    bool hasLocDirective = false;
+    if (numTreeArgs != 0) {
+      if (auto lastArg = tree.getArgAsNestedDag(numTreeArgs - 1))
+        hasLocDirective = lastArg.isLocationDirective();
+    }
+
+    if (numOpArgs != numTreeArgs - hasLocDirective) {
+      auto err = formatv("op '{0}' argument number mismatch: "
+                         "{1} in pattern vs. {2} in definition",
+                         op.getOperationName(), numTreeArgs, numOpArgs);
+      PrintFatalError(&def, err);
+    }
+
+    // The name attached to the DAG node's operator is for representing the
+    // results generated from this op. It should be remembered as bound results.
+    if (!treeName.empty()) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "found symbol bound to op result: " << treeName << '\n');
+      verifyBind(infoMap.bindOpResult(treeName, op), treeName);
+    }
+
+    for (int i = 0; i != numTreeArgs; ++i) {
+      if (auto treeArg = tree.getArgAsNestedDag(i)) {
+        // This DAG node argument is a DAG node itself. Go inside recursively.
+        collectBoundSymbols(treeArg, infoMap, isSrcPattern);
+        continue;
+      }
+
+      if (isSrcPattern) {
+        // We can only bind symbols to op arguments in source pattern. Those
+        // symbols are referenced in result patterns.
+        auto treeArgName = tree.getArgName(i);
+        // `$_` is a special symbol meaning ignore the current argument.
+        if (!treeArgName.empty() && treeArgName != "_") {
+          LLVM_DEBUG(llvm::dbgs() << "found symbol bound to op argument: "
+                                  << treeArgName << '\n');
+          verifyBind(infoMap.bindOpArgument(treeArgName, op, i), treeArgName);
+        }
+      }
     }
     return;
   }
 
-  auto &op = getDialectOp(tree);
-  auto numOpArgs = op.getNumArgs();
-  auto numTreeArgs = tree.getNumArgs();
-
-  // The pattern might have the last argument specifying the location.
-  bool hasLocDirective = false;
-  if (numTreeArgs != 0) {
-    if (auto lastArg = tree.getArgAsNestedDag(numTreeArgs - 1))
-      hasLocDirective = lastArg.isLocationDirective();
-  }
-
-  if (numOpArgs != numTreeArgs - hasLocDirective) {
-    auto err = formatv("op '{0}' argument number mismatch: "
-                       "{1} in pattern vs. {2} in definition",
-                       op.getOperationName(), numTreeArgs, numOpArgs);
-    PrintFatalError(def.getLoc(), err);
-  }
-
-  // The name attached to the DAG node's operator is for representing the
-  // results generated from this op. It should be remembered as bound results.
   if (!treeName.empty()) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "found symbol bound to op result: " << treeName << '\n');
-    if (!infoMap.bindOpResult(treeName, op))
-      PrintFatalError(def.getLoc(),
-                      formatv("symbol '{0}' bound more than once", treeName));
+    PrintFatalError(
+        &def, formatv("binding symbol '{0}' to non-operation/native code call "
+                      "unsupported right now",
+                      treeName));
   }
-
-  for (int i = 0; i != numTreeArgs; ++i) {
-    if (auto treeArg = tree.getArgAsNestedDag(i)) {
-      // This DAG node argument is a DAG node itself. Go inside recursively.
-      collectBoundSymbols(treeArg, infoMap, isSrcPattern);
-    } else if (isSrcPattern) {
-      // We can only bind symbols to op arguments in source pattern. Those
-      // symbols are referenced in result patterns.
-      auto treeArgName = tree.getArgName(i);
-      // `$_` is a special symbol meaning ignore the current argument.
-      if (!treeArgName.empty() && treeArgName != "_") {
-        LLVM_DEBUG(llvm::dbgs() << "found symbol bound to op argument: "
-                                << treeArgName << '\n');
-        if (!infoMap.bindOpArgument(treeArgName, op, i)) {
-          auto err = formatv("symbol '{0}' bound more than once", treeArgName);
-          PrintFatalError(def.getLoc(), err);
-        }
-      }
-    }
-  }
+  return;
 }
