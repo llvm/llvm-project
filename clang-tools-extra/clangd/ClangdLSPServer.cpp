@@ -1030,7 +1030,15 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
         return Reply(llvm::json::Array(Commands));
       };
 
-  Server->enumerateTweaks(File.file(), Params.range, std::move(ConsumeActions));
+  Server->enumerateTweaks(
+      File.file(), Params.range,
+      [&](const Tweak &T) {
+        if (!Opts.TweakFilter(T))
+          return false;
+        // FIXME: also consider CodeActionContext.only
+        return true;
+      },
+      std::move(ConsumeActions));
 }
 
 void ClangdLSPServer::onCompletion(const CompletionParams &Params,
