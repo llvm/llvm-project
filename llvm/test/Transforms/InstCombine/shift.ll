@@ -603,6 +603,37 @@ define i32 @test38(i32 %x) nounwind readnone {
   ret i32 %shl
 }
 
+define <2 x i32> @test38_uniform(<2 x i32> %x) nounwind readnone {
+; CHECK-LABEL: @test38_uniform(
+; CHECK-NEXT:    [[REM1:%.*]] = and <2 x i32> [[X:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[REM1]]
+; CHECK-NEXT:    ret <2 x i32> [[SHL]]
+;
+  %rem = srem <2 x i32> %x, <i32 32, i32 32>
+  %shl = shl <2 x i32> <i32 1, i32 1>, %rem
+  ret <2 x i32> %shl
+}
+
+define <3 x i32> @test38_nonuniform(<3 x i32> %x) nounwind readnone {
+; CHECK-LABEL: @test38_nonuniform(
+; CHECK-NEXT:    [[REM:%.*]] = srem <3 x i32> [[X:%.*]], <i32 32, i32 16, i32 1>
+; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i32> <i32 1, i32 1, i32 1>, [[REM]]
+; CHECK-NEXT:    ret <3 x i32> [[SHL]]
+;
+  %rem = srem <3 x i32> %x, <i32 32, i32 16, i32 1>
+  %shl = shl <3 x i32> <i32 1, i32 1, i32 1>, %rem
+  ret <3 x i32> %shl
+}
+
+define <2 x i32> @test38_undef(<2 x i32> %x) nounwind readnone {
+; CHECK-LABEL: @test38_undef(
+; CHECK-NEXT:    ret <2 x i32> undef
+;
+  %rem = srem <2 x i32> %x, <i32 32, i32 undef>
+  %shl = shl <2 x i32> <i32 1, i32 1>, %rem
+  ret <2 x i32> %shl
+}
+
 ; <rdar://problem/8756731>
 define i8 @test39(i32 %a0) {
 ; CHECK-LABEL: @test39(
