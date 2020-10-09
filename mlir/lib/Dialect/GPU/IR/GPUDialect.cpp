@@ -283,22 +283,20 @@ static LogicalResult verify(LaunchOp op) {
 //   (%size-x = %ssa-use, %size-y = %ssa-use, %size-z = %ssa-use)
 // where %size-* and %iter-* will correspond to the body region arguments.
 static void printSizeAssignment(OpAsmPrinter &p, KernelDim3 size,
-                                ValueRange operands, KernelDim3 ids) {
+                                KernelDim3 operands, KernelDim3 ids) {
   p << '(' << ids.x << ", " << ids.y << ", " << ids.z << ") in (";
-  p << size.x << " = " << operands[0] << ", ";
-  p << size.y << " = " << operands[1] << ", ";
-  p << size.z << " = " << operands[2] << ')';
+  p << size.x << " = " << operands.x << ", ";
+  p << size.y << " = " << operands.y << ", ";
+  p << size.z << " = " << operands.z << ')';
 }
 
 static void printLaunchOp(OpAsmPrinter &p, LaunchOp op) {
-  ValueRange operands = op.getOperands();
-
   // Print the launch configuration.
   p << LaunchOp::getOperationName() << ' ' << op.getBlocksKeyword();
-  printSizeAssignment(p, op.getGridSize(), operands.take_front(3),
+  printSizeAssignment(p, op.getGridSize(), op.getGridSizeOperandValues(),
                       op.getBlockIds());
   p << ' ' << op.getThreadsKeyword();
-  printSizeAssignment(p, op.getBlockSize(), operands.slice(3, 3),
+  printSizeAssignment(p, op.getBlockSize(), op.getBlockSizeOperandValues(),
                       op.getThreadIds());
 
   p.printRegion(op.body(), /*printEntryBlockArgs=*/false);
