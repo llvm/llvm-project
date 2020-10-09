@@ -328,8 +328,8 @@ static Instruction *foldShiftOfShiftedLogic(BinaryOperator &I,
   if (!LogicInst || !LogicInst->isBitwiseLogicOp() || !LogicInst->hasOneUse())
     return nullptr;
 
-  const APInt *C0, *C1;
-  if (!match(I.getOperand(1), m_APInt(C1)))
+  Constant *C0, *C1;
+  if (!match(I.getOperand(1), m_Constant(C1)))
     return nullptr;
 
   Instruction::BinaryOps ShiftOpcode = I.getOpcode();
@@ -340,10 +340,12 @@ static Instruction *foldShiftOfShiftedLogic(BinaryOperator &I,
   // TODO: Remove the one-use check if the other logic operand (Y) is constant.
   Value *X, *Y;
   auto matchFirstShift = [&](Value *V) {
-    return !isa<ConstantExpr>(V) &&
-           match(V, m_OneUse(m_Shift(m_Value(X), m_APInt(C0)))) &&
-           cast<BinaryOperator>(V)->getOpcode() == ShiftOpcode &&
-           (*C0 + *C1).ult(Ty->getScalarSizeInBits());
+    BinaryOperator *BO;
+    APInt Threshold(Ty->getScalarSizeInBits(), Ty->getScalarSizeInBits());
+    return match(V, m_BinOp(BO)) && BO->getOpcode() == ShiftOpcode &&
+           match(V, m_OneUse(m_Shift(m_Value(X), m_Constant(C0)))) &&
+           match(ConstantExpr::getAdd(C0, C1),
+                 m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, Threshold));
   };
 
   // Logic ops are commutative, so check each operand for a match.
@@ -355,7 +357,7 @@ static Instruction *foldShiftOfShiftedLogic(BinaryOperator &I,
     return nullptr;
 
   // shift (logic (shift X, C0), Y), C1 -> logic (shift X, C0+C1), (shift Y, C1)
-  Constant *ShiftSumC = ConstantInt::get(Ty, *C0 + *C1);
+  Constant *ShiftSumC = ConstantExpr::getAdd(C0, C1);
   Value *NewShift1 = Builder.CreateBinOp(ShiftOpcode, X, ShiftSumC);
   Value *NewShift2 = Builder.CreateBinOp(ShiftOpcode, Y, I.getOperand(1));
   return BinaryOperator::Create(LogicInst->getOpcode(), NewShift1, NewShift2);
