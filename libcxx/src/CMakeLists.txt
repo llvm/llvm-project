@@ -55,7 +55,7 @@ set(LIBCXX_SOURCES
   vector.cpp
   )
 
-if (LIBCXX_ENABLE_DEBUG_MODE)
+if (LIBCXX_ENABLE_DEBUG_MODE_SUPPORT)
   list(APPEND LIBCXX_SOURCES
     debug.cpp
     )
