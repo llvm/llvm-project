@@ -88,6 +88,7 @@ private:
   /// The storage of this type info object.
   const Storage *storage;
 
+  // See TypeIDExported below for an explanation of the trampoline behavior.
   friend struct detail::TypeIDExported;
 };
 
@@ -97,6 +98,7 @@ inline ::llvm::hash_code hash_value(TypeID id) {
 }
 
 namespace detail {
+
 /// The static local instance of each get method must be emitted with
 /// "default" (public) visibility across all shared libraries, regardless of
 /// whether they are compiled with hidden visibility or not. The only reliable
@@ -122,6 +124,7 @@ struct LLVM_EXTERNAL_VISIBILITY TypeIDExported {
     return TypeID(&instance);
   }
 };
+
 } // namespace detail
 
 template <typename T>
