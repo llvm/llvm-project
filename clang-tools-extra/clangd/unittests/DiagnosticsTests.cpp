@@ -705,11 +705,18 @@ $insert[[]]namespace ns {
   $nested[[X::]]Nested n;
 }
 class Y : $base[[public ns::X]] {};
-int main() {
-  ns::X *x;
+void test(ns::X *x, ns::X& ref_x) {
   x$access[[->]]f();
   auto& $type[[[]]a] = *x;
+
+  ns::X $incomplete[[var]];
+  $tag[[ref_x]]->f();
+  $use[[ns::X()]];
+  $sizeof[[sizeof]](ns::X);
+  for (auto it : $for[[ref_x]]);
 }
+
+ns::X $return[[func]]() {}
   )cpp");
   auto TU = TestTU::withCode(Test.code());
   TU.ExtraArgs.push_back("-std=c++17");
@@ -739,7 +746,37 @@ int main() {
                    "incomplete type 'ns::X' where a complete type is required"),
               DiagName("incomplete_type"),
               WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
-                          "Add include \"x.h\" for symbol ns::X")))));
+                          "Add include \"x.h\" for symbol ns::X"))),
+          AllOf(Diag(Test.range("incomplete"),
+                     "variable has incomplete type 'ns::X'"),
+                DiagName("typecheck_decl_incomplete_type"),
+                WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
+                            "Add include \"x.h\" for symbol ns::X"))),
+          AllOf(
+              Diag(Test.range("tag"), "incomplete definition of type 'ns::X'"),
+              DiagName("typecheck_incomplete_tag"),
+              WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
+                          "Add include \"x.h\" for symbol ns::X"))),
+          AllOf(
+              Diag(Test.range("use"), "invalid use of incomplete type 'ns::X'"),
+              DiagName("invalid_incomplete_type_use"),
+              WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
+                          "Add include \"x.h\" for symbol ns::X"))),
+          AllOf(Diag(Test.range("sizeof"), "invalid application of 'sizeof' to "
+                                           "an incomplete type 'ns::X'"),
+                DiagName("sizeof_alignof_incomplete_or_sizeless_type"),
+                WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
+                            "Add include \"x.h\" for symbol ns::X"))),
+          AllOf(Diag(Test.range("for"),
+                     "cannot use incomplete type 'ns::X' as a range"),
+                DiagName("for_range_incomplete_type"),
+                WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
+                            "Add include \"x.h\" for symbol ns::X"))),
+          AllOf(Diag(Test.range("return"),
+                     "incomplete result type 'ns::X' in function definition"),
+                DiagName("func_def_incomplete_result"),
+                WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
+                            "Add include \"x.h\" for symbol ns::X")))));
 }
 
 TEST(IncludeFixerTest, NoSuggestIncludeWhenNoDefinitionInHeader) {
