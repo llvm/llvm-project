@@ -616,8 +616,8 @@ define <2 x i32> @test38_uniform(<2 x i32> %x) nounwind readnone {
 
 define <3 x i32> @test38_nonuniform(<3 x i32> %x) nounwind readnone {
 ; CHECK-LABEL: @test38_nonuniform(
-; CHECK-NEXT:    [[REM:%.*]] = srem <3 x i32> [[X:%.*]], <i32 32, i32 16, i32 1>
-; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i32> <i32 1, i32 1, i32 1>, [[REM]]
+; CHECK-NEXT:    [[REM1:%.*]] = and <3 x i32> [[X:%.*]], <i32 31, i32 15, i32 0>
+; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i32> <i32 1, i32 1, i32 1>, [[REM1]]
 ; CHECK-NEXT:    ret <3 x i32> [[SHL]]
 ;
   %rem = srem <3 x i32> %x, <i32 32, i32 16, i32 1>
