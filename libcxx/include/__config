@@ -868,10 +868,6 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_EXPLICIT
 #endif
 
-#if !__has_builtin(__builtin_operator_new) || !__has_builtin(__builtin_operator_delete)
-#define _LIBCPP_HAS_NO_BUILTIN_OPERATOR_NEW_DELETE
-#endif
-
 #ifdef _LIBCPP_HAS_NO_STRONG_ENUMS
 #  define _LIBCPP_DECLARE_STRONG_ENUM(x) struct _LIBCPP_TYPE_VIS x { enum __lx
 #  define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x) \
