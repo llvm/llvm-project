@@ -931,6 +931,9 @@ namespace llvm {
       return true;
     }
 
+    bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                                SDValue C) const override;
+
     bool isDesirableToTransformToIntegerOp(unsigned Opc,
                                            EVT VT) const override {
       // Only handle float load/store pair because float(fpr) load/store
