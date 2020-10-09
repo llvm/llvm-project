@@ -681,13 +681,11 @@ Module::LookupInfo::LookupInfo(ConstString name,
            language == eLanguageTypeSwift) &&
           swift_method.IsValid())
         basename = swift_method.GetBasename();
-      else if ((language == eLanguageTypeUnknown ||
-                Language::LanguageIsCPlusPlus(language) ||
-                Language::LanguageIsC(language) ||
-                language == eLanguageTypeObjC_plus_plus) &&
-               cpp_method.IsValid())
-        basename = cpp_method.GetBasename();
 #endif // LLDB_ENABLE_SWIFT
+      if ((language == eLanguageTypeUnknown ||
+           Language::LanguageIsCFamily(language)) &&
+           cpp_method.IsValid())
+        basename = cpp_method.GetBasename();
 
       if (basename.empty()) {
         if (CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
