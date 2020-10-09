@@ -1885,11 +1885,16 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
   auto impl = [&]() -> CompilerType {
     using namespace swift::Demangle;
     Demangler dem;
+    auto *tuple_type = dem.createNode(Node::Kind::Type);
     auto *tuple = dem.createNode(Node::Kind::Tuple);
+    tuple_type->addChild(tuple, dem);
+
     for (const auto &element : elements) {
       auto *tuple_element = dem.createNode(Node::Kind::TupleElement);
       tuple->addChild(tuple_element, dem);
 
+      // Add the element's name, if it has one.
+      // Ex: `(Int, Int)` vs `(x: Int, y: Int)`
       if (!element.element_name.IsEmpty()) {
         auto *name = dem.createNode(Node::Kind::TupleElementName,
                                     element.element_name.GetStringRef());
@@ -1902,7 +1907,8 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
           dem, element.element_type.GetMangledTypeName().GetStringRef());
       type->addChild(element_type, dem);
     }
-    return RemangleAsType(dem, tuple);
+
+    return RemangleAsType(dem, tuple_type);
   };
 
   // The signature of VALIDATE_AND_RETURN doesn't support this function, below
