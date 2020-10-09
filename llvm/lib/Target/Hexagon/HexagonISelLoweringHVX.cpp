@@ -496,7 +496,9 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
     auto *IdxN = dyn_cast<ConstantSDNode>(SplatV.getNode());
     if (IdxN && IdxN->isNullValue())
       return getZero(dl, VecTy, DAG);
-    return DAG.getNode(HexagonISD::VSPLATW, dl, VecTy, SplatV);
+    MVT WordTy = MVT::getVectorVT(MVT::i32, HwLen/4);
+    SDValue S = DAG.getNode(HexagonISD::VSPLAT, dl, WordTy, SplatV);
+    return DAG.getBitcast(VecTy, S);
   }
 
   // Delay recognizing constant vectors until here, so that we can generate
@@ -1421,19 +1423,14 @@ HexagonTargetLowering::LowerHvxCttz(SDValue Op, SelectionDAG &DAG) const {
   // Calculate the vectors of 1 and bitwidth(x).
   MVT ElemTy = ty(InpV).getVectorElementType();
   unsigned ElemWidth = ElemTy.getSizeInBits();
-  // Using uint64_t because a shift by 32 can happen.
-  uint64_t Splat1 = 0, SplatW = 0;
-  assert(isPowerOf2_32(ElemWidth) && ElemWidth <= 32);
-  for (unsigned i = 0; i != 32/ElemWidth; ++i) {
-    Splat1 = (Splat1 << ElemWidth) | 1;
-    SplatW = (SplatW << ElemWidth) | ElemWidth;
-  }
-  SDValue Vec1 = DAG.getNode(HexagonISD::VSPLATW, dl, ResTy,
-                             DAG.getConstant(uint32_t(Splat1), dl, MVT::i32));
-  SDValue VecW = DAG.getNode(HexagonISD::VSPLATW, dl, ResTy,
-                             DAG.getConstant(uint32_t(SplatW), dl, MVT::i32));
-  SDValue VecN1 = DAG.getNode(HexagonISD::VSPLATW, dl, ResTy,
+
+  SDValue Vec1 = DAG.getNode(HexagonISD::VSPLAT, dl, ResTy,
+                             DAG.getConstant(1, dl, MVT::i32));
+  SDValue VecW = DAG.getNode(HexagonISD::VSPLAT, dl, ResTy,
+                             DAG.getConstant(ElemWidth, dl, MVT::i32));
+  SDValue VecN1 = DAG.getNode(HexagonISD::VSPLAT, dl, ResTy,
                               DAG.getConstant(-1, dl, MVT::i32));
+
   // Do not use DAG.getNOT, because that would create BUILD_VECTOR with
   // a BITCAST. Here we can skip the BITCAST (so we don't have to handle
   // it separately in custom combine or selection).

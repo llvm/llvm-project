@@ -82,7 +82,6 @@ enum NodeType : unsigned {
   QTRUE,
   QFALSE,
   VZERO,
-  VSPLATW,     // HVX splat of a 32-bit word with an arbitrary result type.
   TYPECAST,    // No-op that's used to convert between different legal
                // types in a register.
   VALIGN,      // Align two vectors (in Op0, Op1) to one that would have
