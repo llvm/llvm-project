@@ -23,8 +23,6 @@ class PlatformAndroid : public platform_linux::PlatformLinux {
 public:
   PlatformAndroid(bool is_host);
 
-  ~PlatformAndroid() override;
-
   static void Initialize();
 
   static void Terminate();
@@ -76,9 +74,6 @@ private:
   std::unique_ptr<AdbClient::SyncService> m_adb_sync_svc;
   std::string m_device_id;
   uint32_t m_sdk_version;
-
-  PlatformAndroid(const PlatformAndroid &) = delete;
-  const PlatformAndroid &operator=(const PlatformAndroid &) = delete;
 };
 
 } // namespace platofor_android

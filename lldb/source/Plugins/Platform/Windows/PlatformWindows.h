@@ -17,8 +17,6 @@ class PlatformWindows : public RemoteAwarePlatform {
 public:
   PlatformWindows(bool is_host);
 
-  ~PlatformWindows() override;
-
   static void Initialize();
 
   static void Terminate();
@@ -76,9 +74,6 @@ public:
   ConstString GetFullNameForDylib(ConstString basename) override;
 
 private:
-  PlatformWindows(const PlatformWindows &) = delete;
-  const PlatformWindows &operator=(const PlatformWindows &) = delete;
-
   lldb_private::Status EvaluateLoaderExpression(lldb_private::Process *process,
                                                 const char *expression,
                                                 lldb::ValueObjectSP &value);

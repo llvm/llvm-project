@@ -130,8 +130,6 @@ PlatformSP PlatformAndroid::CreateInstance(bool force, const ArchSpec *arch) {
 PlatformAndroid::PlatformAndroid(bool is_host)
     : PlatformLinux(is_host), m_sdk_version(0) {}
 
-PlatformAndroid::~PlatformAndroid() {}
-
 ConstString PlatformAndroid::GetPluginNameStatic(bool is_host) {
   if (is_host) {
     static ConstString g_host_name(Platform::GetHostPlatformName());
