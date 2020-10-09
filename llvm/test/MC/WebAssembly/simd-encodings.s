@@ -421,6 +421,9 @@ main:
     # CHECK: i16x8.avgr_u # encoding: [0xfd,0x9b,0x01]
     i16x8.avgr_u
 
+    # CHECK: i16x8.q15mulr_sat_s # encoding: [0xfd,0x9c,0x01]
+    i16x8.q15mulr_sat_s
+
     # CHECK: i32x4.abs # encoding: [0xfd,0xa0,0x01]
     i32x4.abs
 
