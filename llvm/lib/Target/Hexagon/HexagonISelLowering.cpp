@@ -1865,6 +1865,7 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::VPACKL:        return "HexagonISD::VPACKL";
   case HexagonISD::VUNPACK:       return "HexagonISD::VUNPACK";
   case HexagonISD::VUNPACKU:      return "HexagonISD::VUNPACKU";
+  case HexagonISD::ISEL:          return "HexagonISD::ISEL";
   case HexagonISD::OP_END:        break;
   }
   return nullptr;
