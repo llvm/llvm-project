@@ -22,8 +22,7 @@
 
 std::mutex m;
 
-int main()
-{
+int main(int, char**) {
   {
     m.lock();
     std::lock_guard<std::mutex> lg(m, std::adopt_lock);

@@ -104,7 +104,7 @@ bool VirtRegMap::hasPreferredPhys(Register VirtReg) {
     return false;
   if (Hint.isVirtual())
     Hint = getPhys(Hint);
-  return getPhys(VirtReg) == Hint;
+  return Register(getPhys(VirtReg)) == Hint;
 }
 
 bool VirtRegMap::hasKnownPreference(Register VirtReg) {

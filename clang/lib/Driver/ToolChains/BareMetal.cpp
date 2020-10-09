@@ -202,5 +202,5 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Args.MakeArgString(TC.GetLinkerPath()),
-                                         CmdArgs, Inputs));
+                                         CmdArgs, Inputs, Output));
 }

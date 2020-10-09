@@ -142,9 +142,9 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(std::string("-m") + *FamilyName));
   }
 
-  C.addCommand(
-      std::make_unique<Command>(JA, *this, ResponseFileSupport::AtFileCurCP(),
-                                Args.MakeArgString(Linker), CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), Args.MakeArgString(Linker),
+      CmdArgs, Inputs, Output));
 }
 
 llvm::Optional<std::string> AVRToolChain::findAVRLibcInstallation() const {

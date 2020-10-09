@@ -122,13 +122,12 @@ define <2 x i17> @rotr_v2i17_constant_splat_undef1(<2 x i17> %x) {
   ret <2 x i17> %r
 }
 
-; TODO: Allow arbitrary shift constants.
+; Allow arbitrary shift constants.
+; TODO: Support undef elements.
 
 define <2 x i32> @rotr_v2i32_constant_nonsplat(<2 x i32> %x) {
 ; CHECK-LABEL: @rotr_v2i32_constant_nonsplat(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[X:%.*]], <i32 17, i32 19>
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> [[X]], <i32 15, i32 13>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i32> [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[X]], <2 x i32> <i32 17, i32 19>)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %shl = shl <2 x i32> %x, <i32 17, i32 19>
@@ -165,9 +164,7 @@ define <2 x i32> @rotr_v2i32_constant_nonsplat_undef1(<2 x i32> %x) {
 
 define <2 x i36> @rotl_v2i36_constant_nonsplat(<2 x i36> %x) {
 ; CHECK-LABEL: @rotl_v2i36_constant_nonsplat(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i36> [[X:%.*]], <i36 21, i36 11>
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i36> [[X]], <i36 15, i36 25>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i36> [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i36> @llvm.fshl.v2i36(<2 x i36> [[X:%.*]], <2 x i36> [[X]], <2 x i36> <i36 21, i36 11>)
 ; CHECK-NEXT:    ret <2 x i36> [[R]]
 ;
   %shl = shl <2 x i36> %x, <i36 21, i36 11>

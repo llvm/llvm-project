@@ -14,6 +14,6 @@
 #   error "arc should not be enabled by default"
 #endif
 
-int main() {
+int main(int, char**) {
     return 0;
 }

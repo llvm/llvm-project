@@ -29,5 +29,3 @@ UnwindAssemblySP UnwindAssembly::FindPlugin(const ArchSpec &arch) {
 }
 
 UnwindAssembly::UnwindAssembly(const ArchSpec &arch) : m_arch(arch) {}
-
-UnwindAssembly::~UnwindAssembly() = default;

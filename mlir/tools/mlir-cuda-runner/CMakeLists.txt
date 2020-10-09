@@ -41,8 +41,6 @@ if(MLIR_CUDA_RUNNER_ENABLED)
   set(LIBS
     ${dialect_libs}
     ${conversion_libs}
-    LLVMCore
-    LLVMSupport
     MLIRJitRunner
     MLIRAnalysis
     MLIREDSC
@@ -73,6 +71,10 @@ if(MLIR_CUDA_RUNNER_ENABLED)
 
     DEPENDS
     cuda-runtime-wrappers
+
+    LINK_COMPONENTS
+    Core
+    Support
     )
   target_include_directories(mlir-cuda-runner
     PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}

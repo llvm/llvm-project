@@ -12,7 +12,7 @@
 
 extern void this_is_an_undefined_symbol();
 
-int main() {
+int main(int, char**) {
     this_is_an_undefined_symbol();
     return 1;
 }

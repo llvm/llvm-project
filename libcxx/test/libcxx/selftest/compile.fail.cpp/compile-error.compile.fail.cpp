@@ -11,4 +11,4 @@
 struct Foo { };
 typedef Foo::x x;
 
-int main() { }
+int main(int, char**) { return 0; }

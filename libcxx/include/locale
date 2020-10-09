@@ -197,10 +197,6 @@ template <class charT> class messages_byname;
 #include <nl_types.h>
 #endif
 
-#ifdef __APPLE__
-#include <Availability.h>
-#endif
-
 #ifdef _LIBCPP_LOCALE__L_EXTENSIONS
 #include <__bsd_locale_defaults.h>
 #else

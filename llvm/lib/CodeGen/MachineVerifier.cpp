@@ -1488,6 +1488,40 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     break;
   }
+  case TargetOpcode::G_VECREDUCE_SEQ_FADD:
+  case TargetOpcode::G_VECREDUCE_SEQ_FMUL:
+  case TargetOpcode::G_VECREDUCE_FADD:
+  case TargetOpcode::G_VECREDUCE_FMUL: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT Src1Ty = MRI->getType(MI->getOperand(1).getReg());
+    LLT Src2Ty = MRI->getType(MI->getOperand(2).getReg());
+    if (!DstTy.isScalar())
+      report("Vector reduction requires a scalar destination type", MI);
+    if (!Src1Ty.isScalar())
+      report("FADD/FMUL vector reduction requires a scalar 1st operand", MI);
+    if (!Src2Ty.isVector())
+      report("FADD/FMUL vector reduction must have a vector 2nd operand", MI);
+    break;
+  }
+  case TargetOpcode::G_VECREDUCE_FMAX:
+  case TargetOpcode::G_VECREDUCE_FMIN:
+  case TargetOpcode::G_VECREDUCE_ADD:
+  case TargetOpcode::G_VECREDUCE_MUL:
+  case TargetOpcode::G_VECREDUCE_AND:
+  case TargetOpcode::G_VECREDUCE_OR:
+  case TargetOpcode::G_VECREDUCE_XOR:
+  case TargetOpcode::G_VECREDUCE_SMAX:
+  case TargetOpcode::G_VECREDUCE_SMIN:
+  case TargetOpcode::G_VECREDUCE_UMAX:
+  case TargetOpcode::G_VECREDUCE_UMIN: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    if (!DstTy.isScalar())
+      report("Vector reduction requires a scalar destination type", MI);
+    if (!SrcTy.isVector())
+      report("Vector reduction requires vector source=", MI);
+    break;
+  }
   default:
     break;
   }

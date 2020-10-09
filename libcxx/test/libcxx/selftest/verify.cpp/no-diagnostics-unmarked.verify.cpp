@@ -14,4 +14,4 @@
 // Note: For the purpose of this test, make sure the file would otherwise
 //       compile to make sure we really fail due to a lack of markup.
 
-int main() { }
+int main(int, char**) { return 0; }

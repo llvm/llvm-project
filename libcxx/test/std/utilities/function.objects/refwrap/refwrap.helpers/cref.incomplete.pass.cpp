@@ -39,6 +39,7 @@ Foo& get_foo() {
     return foo;
 }
 
-int main() {
+int main(int, char**) {
     test();
+    return 0;
 }

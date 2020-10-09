@@ -15,4 +15,4 @@
 struct Foo { };
 typedef Foo::x x; // expected-error{{this is not found in the errors}}
 
-int main() { }
+int main(int, char**) { return 0; }

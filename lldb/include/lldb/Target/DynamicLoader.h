@@ -68,12 +68,6 @@ public:
   /// Construct with a process.
   DynamicLoader(Process *process);
 
-  /// Destructor.
-  ///
-  /// The destructor is virtual since this class is designed to be inherited
-  /// from by the plug-in instance.
-  ~DynamicLoader() override;
-
   /// Called after attaching a process.
   ///
   /// Allow DynamicLoader plug-ins to execute some code after attaching to a
@@ -308,10 +302,6 @@ protected:
   // Member variables.
   Process
       *m_process; ///< The process that this dynamic loader plug-in is tracking.
-
-private:
-  DynamicLoader(const DynamicLoader &) = delete;
-  const DynamicLoader &operator=(const DynamicLoader &) = delete;
 };
 
 } // namespace lldb_private

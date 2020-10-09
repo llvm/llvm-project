@@ -678,7 +678,7 @@ static bool isScopPassName(StringRef Name) {
 static bool
 parseTopLevelPipeline(ModulePassManager &MPM,
                       ArrayRef<PassBuilder::PipelineElement> Pipeline,
-                      bool VerifyEachPass, bool DebugLogging) {
+                      bool DebugLogging) {
   std::vector<PassBuilder::PipelineElement> FullPipeline;
   StringRef FirstName = Pipeline.front().Name;
 
@@ -698,11 +698,7 @@ parseTopLevelPipeline(ModulePassManager &MPM,
   }
 
   FPM.addPass(createFunctionToScopPassAdaptor(std::move(SPM)));
-  if (VerifyEachPass)
-    FPM.addPass(VerifierPass());
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-  if (VerifyEachPass)
-    MPM.addPass(VerifierPass());
 
   return true;
 }

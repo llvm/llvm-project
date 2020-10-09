@@ -130,7 +130,7 @@ struct generate_tests_imp<Throw, Catch, 0, first> {
 template <class Throw, class Catch, int level>
 struct generate_tests : generate_tests_imp<Throw, Catch, level, true> {};
 
-int main()
+int main(int, char**)
 {
   generate_tests<int, int, 3>()();
   generate_tests<Base, Derived, 2>()();
@@ -141,4 +141,6 @@ int main()
   generate_tests<int A::*, int A::*, 3>()();
   generate_tests<int A::*, void, 2>()();
   generate_tests<void, int A::*, 2>()();
+
+  return 0;
 }

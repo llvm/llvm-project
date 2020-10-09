@@ -427,7 +427,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       JA, *this,
       ResponseFileSupport{ResponseFileSupport::RF_Full, llvm::sys::WEM_UTF8,
                           "--options-file"},
-      Exec, CmdArgs, Inputs));
+      Exec, CmdArgs, Inputs, Output));
 }
 
 static bool shouldIncludePTX(const ArgList &Args, const char *gpu_arch) {
@@ -496,7 +496,7 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       JA, *this,
       ResponseFileSupport{ResponseFileSupport::RF_Full, llvm::sys::WEM_UTF8,
                           "--options-file"},
-      Exec, CmdArgs, Inputs));
+      Exec, CmdArgs, Inputs, Output));
 }
 
 void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -580,8 +580,10 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   const char *NVLinkWrapper =
       Args.MakeArgString(getToolChain().GetProgramPath("clang-nvlink-wrapper"));
   C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileCurCP(),
-      NVLinkWrapper, CmdArgs, Inputs));
+      JA, *this,
+      ResponseFileSupport{ResponseFileSupport::RF_Full, llvm::sys::WEM_UTF8,
+                          "--options-file"},
+      NVLinkWrapper, CmdArgs, Inputs, Output));
 }
 
 /// CUDA toolchain.  Our assembler is ptxas, and our "linker" is fatbinary,

@@ -63,7 +63,7 @@ void runtime_test()
 	assert( std::popcount(T(130)) == 2);
 }
 
-int main()
+int main(int, char**)
 {
 
     {
@@ -164,4 +164,6 @@ int main()
 	assert( std::popcount(val+1) ==  2);
 	}
 #endif
+
+    return 0;
 }

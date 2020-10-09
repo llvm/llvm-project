@@ -794,7 +794,8 @@ void ClangdLSPServer::onWorkspaceSymbol(
 void ClangdLSPServer::onPrepareRename(const TextDocumentPositionParams &Params,
                                       Callback<llvm::Optional<Range>> Reply) {
   Server->prepareRename(
-      Params.textDocument.uri.file(), Params.position, Opts.Rename,
+      Params.textDocument.uri.file(), Params.position, /*NewName*/ llvm::None,
+      Opts.Rename,
       [Reply = std::move(Reply)](llvm::Expected<RenameResult> Result) mutable {
         if (!Result)
           return Reply(Result.takeError());
@@ -1029,7 +1030,15 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
         return Reply(llvm::json::Array(Commands));
       };
 
-  Server->enumerateTweaks(File.file(), Params.range, std::move(ConsumeActions));
+  Server->enumerateTweaks(
+      File.file(), Params.range,
+      [&](const Tweak &T) {
+        if (!Opts.TweakFilter(T))
+          return false;
+        // FIXME: also consider CodeActionContext.only
+        return true;
+      },
+      std::move(ConsumeActions));
 }
 
 void ClangdLSPServer::onCompletion(const CompletionParams &Params,

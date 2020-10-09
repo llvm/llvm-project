@@ -395,6 +395,30 @@ the symbol that belongs to the partition. It may be constructed as follows:
 
 .. _partition: https://lld.llvm.org/Partitions.html
 
+``SHT_LLVM_BB_ADDR_MAP`` Section (basic block address map)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section stores the binary address of basic blocks along with other related
+metadata. This information can be used to map binary profiles (like perf
+profiles) directly to machine basic blocks.
+This section is emitted with ``-basic-block-sections=labels`` and will contain
+a BB address map table for every function which may be constructed as follows:
+
+.. code-block:: gas
+
+  .section  ".llvm_bb_addr_map","",@llvm_bb_addr_map
+  .quad     .Lfunc_begin0                 # address of the function
+  .byte     2                             # number of basic blocks
+  # BB record for BB_0
+   .uleb128  .Lfunc_beign0-.Lfunc_begin0  # BB_0 offset relative to function entry (always zero)
+   .uleb128  .LBB_END0_0-.Lfunc_begin0    # BB_0 size
+   .byte     x                            # BB_0 metadata
+  # BB record for BB_1
+   .uleb128  .LBB0_1-.Lfunc_begin0        # BB_1 offset relative to function entry
+   .uleb128  .LBB_END0_1-.Lfunc_begin0    # BB_1 size
+   .byte     y                            # BB_1 metadata
+
+This creates a BB address map table for a function with two basic blocks.
+
 CodeView-Dependent
 ------------------
 

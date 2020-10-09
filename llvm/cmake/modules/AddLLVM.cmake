@@ -1494,6 +1494,7 @@ def relpath(p):\n
     if os.path.splitdrive(p)[0] != os.path.splitdrive(base)[0]: return p\n
     if haslink(p) or haslink(base): return p\n
     return os.path.relpath(p, base)\n
+if len(sys.argv) < 3: sys.exit(0)\n
 sys.stdout.write(';'.join(relpath(p) for p in sys.argv[2].split(';')))"
     ${basedir}
     ${pathlist_escaped}

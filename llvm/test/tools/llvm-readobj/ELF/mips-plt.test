@@ -1,76 +1,99 @@
-# RUN: llvm-readobj -A %p/Inputs/got-plt.exe.elf-mipsel | FileCheck %s
-# RUN: llvm-readelf -A %p/Inputs/got-plt.exe.elf-mipsel | FileCheck --check-prefix=GNU %s
+## Check that we are able to dump MIPS PLT GOT entries using -A properly.
 
-# CHECK:      PLT GOT {
-# CHECK-NEXT:   Reserved entries [
-# CHECK-NEXT:     Entry {
-# CHECK-NEXT:       Address: 0x410814
-# CHECK-NEXT:       Initial: 0x0
-# CHECK-NEXT:       Purpose: PLT lazy resolver
-# CHECK-NEXT:     }
-# CHECK-NEXT:     Entry {
-# CHECK-NEXT:       Address: 0x410818
-# CHECK-NEXT:       Initial: 0x0
-# CHECK-NEXT:       Purpose: Module pointer
-# CHECK-NEXT:     }
-# CHECK-NEXT:   ]
-# CHECK-NEXT:   Entries [
-# CHECK-NEXT:     Entry {
-# CHECK-NEXT:       Address: 0x41081C
-# CHECK-NEXT:       Initial: 0x4007C0
-# CHECK-NEXT:       Value: 0x0
-# CHECK-NEXT:       Type: Function (0x2)
-# CHECK-NEXT:       Section: Undefined (0x0)
-# CHECK-NEXT:       Name: puts@GLIBC_2.0 (71)
-# CHECK-NEXT:     }
-# CHECK-NEXT:     Entry {
-# CHECK-NEXT:       Address: 0x410820
-# CHECK-NEXT:       Initial: 0x4007C0
-# CHECK-NEXT:       Value: 0x0
-# CHECK-NEXT:       Type: Function (0x2)
-# CHECK-NEXT:       Section: Undefined (0x0)
-# CHECK-NEXT:       Name: __libc_start_main@GLIBC_2.0 (53)
-# CHECK-NEXT:     }
-# CHECK-NEXT:   ]
-# CHECK-NEXT: }
+# RUN: yaml2obj --docnum=1 %s -o %t.plt.o
+# RUN: llvm-readobj -A %t.plt.o | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf -A %t.plt.o | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines --check-prefix=GNU
 
-# GNU:      Primary GOT:
-# GNU-NEXT:  Canonical gp value: 00418840
+# LLVM:      PLT GOT {
+# LLVM-NEXT:   Reserved entries [
+# LLVM-NEXT:     Entry {
+# LLVM-NEXT:       Address: 0x2000
+# LLVM-NEXT:       Initial: 0x0
+# LLVM-NEXT:       Purpose: PLT lazy resolver
+# LLVM-NEXT:     }
+# LLVM-NEXT:     Entry {
+# LLVM-NEXT:       Address: 0x2008
+# LLVM-NEXT:       Initial: 0x0
+# LLVM-NEXT:       Purpose: Module pointer
+# LLVM-NEXT:     }
+# LLVM-NEXT:   ]
+# LLVM-NEXT:   Entries [
+# LLVM-NEXT:     Entry {
+# LLVM-NEXT:       Address: 0x2010
+# LLVM-NEXT:       Initial: 0x0
+# LLVM-NEXT:       Value: 0x0
+# LLVM-NEXT:       Type: None (0x0)
+# LLVM-NEXT:       Section: Undefined (0x0)
+# LLVM-NEXT:       Name: foo (5)
+# LLVM-NEXT:     }
+# LLVM-NEXT:     Entry {
+# LLVM-NEXT:       Address: 0x2018
+# LLVM-NEXT:       Initial: 0x0
+# LLVM-NEXT:       Value: 0x0
+# LLVM-NEXT:       Type: None (0x0)
+# LLVM-NEXT:       Section: Undefined (0x0)
+# LLVM-NEXT:       Name: bar (1)
+# LLVM-NEXT:     }
+# LLVM-NEXT:   ]
+# LLVM-NEXT: }
 
-# GNU:       Reserved entries:
-# GNU-NEXT:    Address     Access  Initial Purpose
-# GNU-NEXT:   00410850 -32752(gp) 00000000 Lazy resolver
-# GNU-NEXT:   00410854 -32748(gp) 80000000 Module pointer (GNU extension)
+#       GNU:PLT GOT:
+# GNU-EMPTY:
+#  GNU-NEXT: Reserved entries:
+#  GNU-NEXT:   Address  Initial Purpose
+#  GNU-NEXT:  0000000000002000 0000000000000000 PLT lazy resolver
+#  GNU-NEXT:  0000000000002008 0000000000000000 Module pointer
+# GNU-EMPTY:
+#  GNU-NEXT: Entries:
+#  GNU-NEXT:   Address  Initial Sym.Val. Type    Ndx Name
+#  GNU-NEXT:  0000000000002010 0000000000000000 0000000000000000 NOTYPE  UND foo
+#  GNU-NEXT:  0000000000002018 0000000000000000 0000000000000000 NOTYPE  UND bar
+#   GNU-NOT:{{.}}
 
-# GNU:       Local entries:
-# GNU-NEXT:    Address     Access  Initial
-# GNU-NEXT:   00410858 -32744(gp) 004003d4
-# GNU-NEXT:   0041085c -32740(gp) 00410800
-# GNU-NEXT:   00410860 -32736(gp) 00000000
-
-# GNU:       Global entries:
-# GNU-NEXT:    Address     Access  Initial Sym.Val. Type    Ndx Name
-# GNU-NEXT:   00410864 -32732(gp) 00000000 00000000 FUNC    UND __gmon_start__
-# GNU-NEXT: PLT GOT:
-
-# GNU:       Reserved entries:
-# GNU-NEXT:    Address  Initial Purpose
-# GNU-NEXT:   00410814 00000000 PLT lazy resolver
-# GNU-NEXT:   00410818 00000000 Module pointer
-
-# GNU:       Entries:
-# GNU-NEXT:    Address  Initial Sym.Val. Type    Ndx Name
-# GNU-NEXT:   0041081c 004007c0 00000000 FUNC    UND puts
-# GNU-NEXT:   00410820 004007c0 00000000 FUNC    UND __libc_start_main
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Sections:
+  - Name:    .rel.plt
+    Type:    SHT_REL
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x1000
+    Link:    .dynsym
+    Relocations:
+      - Offset: 0x1
+        Symbol: 1
+        Type:   R_MIPS_JUMP_SLOT
+      - Offset: 0x2
+        Symbol: 2
+        Type:   R_MIPS_JUMP_SLOT
+  - Name:    .got.plt
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_WRITE, SHF_ALLOC ]
+    Address: 0x2000
+    Size:    32 ## (dynamic symbols number + 2) * 8
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_JMPREL
+        Value: 0x1000
+      - Tag:   DT_MIPS_PLTGOT
+        Value: 0x2000
+DynamicSymbols:
+  - Name:   "foo"
+  - Name:   "bar"
 
 ## Check we report errors when dynamic tags, needed for dumping PLT, are missing.
 
-# RUN: yaml2obj --docnum=1 -DTAG=DT_MIPS_PLTGOT %s -o %t.err1.o
+# RUN: yaml2obj --docnum=2 -DTAG=DT_MIPS_PLTGOT %s -o %t.err1.o
 # RUN: not llvm-readobj -A %t.err1.o 2>&1 | FileCheck %s -DFILE=%t.err1.o --check-prefix=ERR1
 
 # ERR1: error: '[[FILE]]': cannot find JMPREL dynamic tag
 
-# RUN: yaml2obj --docnum=1 -DTAG=DT_JMPREL %s -o %t.err2.o
+# RUN: yaml2obj --docnum=2 -DTAG=DT_JMPREL %s -o %t.err2.o
 # RUN: not llvm-readobj -A %t.err2.o 2>&1 | FileCheck %s -DFILE=%t.err2.o --check-prefix=ERR2
 
 # ERR2: error: '[[FILE]]': cannot find MIPS_PLTGOT dynamic tag
@@ -91,12 +114,12 @@ Sections:
         Value: 0
 
 ## Check we report errors when we are unable to find PLTGOT/JMPREL sections.
-# RUN: yaml2obj --docnum=2 %s -DVAL1=0xffff -o %t.err3.o
+# RUN: yaml2obj --docnum=3 %s -DVAL1=0xffff -o %t.err3.o
 # RUN: not llvm-readobj -A %t.err3.o 2>&1 | FileCheck %s -DFILE=%t.err3.o -check-prefix ERR3
 
 # ERR3: error: '[[FILE]]': there is no non-empty PLTGOT section at 0xffff
 
-# RUN: yaml2obj --docnum=2 %s -DVAL2=0xffff -o %t.err4.o
+# RUN: yaml2obj --docnum=3 %s -DVAL2=0xffff -o %t.err4.o
 # RUN: not llvm-readobj -A %t.err4.o 2>&1 | FileCheck %s -DFILE=%t.err4.o -check-prefix ERR4
 
 # ERR4: error: '[[FILE]]': there is no non-empty RELPLT section at 0xffff
@@ -126,23 +149,23 @@ DynamicSymbols: []
 
 ## Check we report errors when we are unable to dump PLTGOT properly.
 
-# RUN: yaml2obj --docnum=2 -DVAL1=0x100 %s -o %t.err5.o
+# RUN: yaml2obj --docnum=3 -DVAL1=0x100 %s -o %t.err5.o
 # RUN: not llvm-readobj -A %t.err5.o 2>&1 | FileCheck %s -DFILE=%t.err5.o -check-prefix ERR5
 
 # ERR5: error: '[[FILE]]': unable to read PLTGOT section content: section [index 2] has a sh_offset (0x70) + sh_size (0xffffffff) that is greater than the file size (0x280)
 
-# RUN: yaml2obj --docnum=2 -DVAL2=0x100 -DLINK=0xaaaaaaaa %s -o %t.err6.o
+# RUN: yaml2obj --docnum=3 -DVAL2=0x100 -DLINK=0xaaaaaaaa %s -o %t.err6.o
 # RUN: not llvm-readobj -A %t.err6.o 2>&1 | FileCheck %s -DFILE=%t.err6.o -check-prefix ERR6
 
 # ERR6: error: '[[FILE]]': unable to get a symbol table linked to the SHT_PROGBITS section with index 2: invalid section index: 2863311530
 
-# RUN: yaml2obj --docnum=2 -DVAL2=0x100 %s -o %t.err7.o
+# RUN: yaml2obj --docnum=3 -DVAL2=0x100 %s -o %t.err7.o
 # RUN: not llvm-readobj -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o -check-prefix ERR7
 
 # ERR7: error: '[[FILE]]': unable to get a string table for the SHT_DYNAMIC section with index 1: invalid sh_type for symbol table, expected SHT_SYMTAB or SHT_DYNSYM
 
 ## Check how we print PLT entries when they are unnamed section symbols.
-# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: yaml2obj --docnum=4 %s -o %t3
 # RUN: llvm-readobj -A %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=SEC-SYMS-LLVM
 # RUN: llvm-readelf -A %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=SEC-SYMS-GNU
 

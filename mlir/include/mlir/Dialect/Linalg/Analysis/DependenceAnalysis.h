@@ -98,6 +98,18 @@ public:
                                                  LinalgOp dstLinalgOp,
                                                  Value view) const;
 
+  /// Returns true if the two operations have the specified dependence from
+  /// `srcLinalgOp` to `dstLinalgOp`.
+  bool hasDependenceFrom(LinalgOp srcLinalgOp, LinalgOp dstLinalgOp,
+                         ArrayRef<DependenceType> depTypes = {
+                             DependenceType::RAW, DependenceType::WAW}) const;
+
+  /// Returns true if the `linalgOp` has dependences into or from it.
+  bool hasDependentOperations(LinalgOp linalgOp,
+                              ArrayRef<DependenceType> depTypes = {
+                                  DependenceType::RAW,
+                                  DependenceType::WAW}) const;
+
 private:
   // Keep dependences in both directions, this is not just a performance gain
   // but it also reduces usage errors.

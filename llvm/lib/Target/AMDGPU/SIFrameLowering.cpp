@@ -152,7 +152,7 @@ static void buildPrologSpill(LivePhysRegs &LiveRegs, MachineBasicBlock &MBB,
       MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore, 4,
       MFI.getObjectAlign(FI));
 
-  if (isUInt<12>(Offset)) {
+  if (SIInstrInfo::isLegalMUBUFImmOffset(Offset)) {
     BuildMI(MBB, I, DebugLoc(), TII->get(AMDGPU::BUFFER_STORE_DWORD_OFFSET))
       .addReg(SpillReg, RegState::Kill)
       .addReg(ScratchRsrcReg)
@@ -205,7 +205,7 @@ static void buildEpilogReload(LivePhysRegs &LiveRegs, MachineBasicBlock &MBB,
       MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad, 4,
       MFI.getObjectAlign(FI));
 
-  if (isUInt<12>(Offset)) {
+  if (SIInstrInfo::isLegalMUBUFImmOffset(Offset)) {
     BuildMI(MBB, I, DebugLoc(),
             TII->get(AMDGPU::BUFFER_LOAD_DWORD_OFFSET), SpillReg)
       .addReg(ScratchRsrcReg)

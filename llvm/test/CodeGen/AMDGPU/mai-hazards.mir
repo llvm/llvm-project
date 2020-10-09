@@ -480,6 +480,20 @@ body:             |
 ...
 ---
 
+# GCN-LABEL: name: valu_write_vgpr_accvgpr_write_load_1_and_3_depend
+# GCN:      V_MOV_B32
+# GCN-NEXT: V_ACCVGPR_WRITE_B32
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: FLAT_LOAD_DWORD
+name:            valu_write_vgpr_accvgpr_write_load_1_and_3_depend
+body:             |
+  bb.0:
+    $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+    $agpr0 = V_ACCVGPR_WRITE_B32 killed $vgpr2, implicit $exec
+    $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+...
+---
+
 # GCN-LABEL: name: valu_write_vgpr_accvgpr_read_load_2_and_3_depend
 # GCN:      V_MOV_B32
 # GCN-NEXT: V_ACCVGPR_READ_B32

@@ -262,6 +262,12 @@ public:
     return Options.FunctionSections;
   }
 
+  /// Return true if visibility attribute should not be emitted in xcoff,
+  /// corresponding to -mignore-xcoff-visibility.
+  bool getIgnoreXCOFFVisibility() const {
+    return Options.IgnoreXCOFFVisibility;
+  }
+
   /// If basic blocks should be emitted into their own section,
   /// corresponding to -fbasic-block-sections.
   llvm::BasicBlockSection getBBSectionsType() const {

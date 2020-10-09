@@ -133,3 +133,6 @@ if platform.system() == 'NetBSD' and os.geteuid() != 0:
         can_set_dbregs = False
 if can_set_dbregs:
     config.available_features.add('dbregs-set')
+
+# pass control variable through
+llvm_config.with_system_environment('FREEBSD_REMOTE_PLUGIN')

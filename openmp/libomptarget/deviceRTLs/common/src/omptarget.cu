@@ -155,14 +155,6 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime)
         "%d threads\n",
         (int)newTaskDescr->ThreadId(), (int)ThreadLimit);
 
-  if (RequiresDataSharing && GetLaneId() == 0) {
-    // Warp master initializes data sharing environment.
-    unsigned WID = threadId / WARPSIZE;
-    __kmpc_data_sharing_slot *RootS = currTeamDescr.RootS(
-        WID, WID == WARPSIZE - 1);
-    DataSharingState.SlotPtr[WID] = RootS;
-    DataSharingState.StackPtr[WID] = (void *)&RootS->Data[0];
-  }
 #ifdef OMPD_SUPPORT
   ompd_init_thread_parallel(); // __kmpc_kernel_parallel() is not called in
                                // spmd mode
