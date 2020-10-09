@@ -1,3 +1,8 @@
+set(LLVM_LINK_COMPONENTS
+  Demangle
+  Support
+  TableGen
+)
 
 add_tablegen(mlir-tblgen MLIR
   DialectGen.cpp
