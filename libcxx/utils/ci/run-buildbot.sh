@@ -143,6 +143,12 @@ generic-no-random_device)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-random_device.cmake"
     check-cxx-cxxabi
 ;;
+generic-no-localization)
+    export CC=clang
+    export CXX=clang++
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-localization.cmake"
+    check-cxx-cxxabi
+;;
 x86_64-apple-system)
     export CC=clang
     export CXX=clang++

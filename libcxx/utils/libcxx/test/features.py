@@ -75,6 +75,7 @@ macros = {
   '_LIBCPP_ABI_VERSION': 'libcpp-abi-version',
   '_LIBCPP_ABI_UNSTABLE': 'libcpp-abi-unstable',
   '_LIBCPP_HAS_NO_RANDOM_DEVICE': 'libcpp-has-no-random-device',
+  '_LIBCPP_HAS_NO_LOCALIZATION': 'libcpp-has-no-localization',
 }
 for macro, feature in macros.items():
   DEFAULT_FEATURES += [

@@ -113,6 +113,13 @@ steps:
     agents:
       queue: "libcxx-builders"
 
+  - label: "No locale"
+    command: "libcxx/utils/ci/run-buildbot.sh generic-no-localization"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+
   - label: "MacOS C++20"
     command: "libcxx/utils/ci/run-buildbot.sh generic-cxx2a"
     artifact_paths:
