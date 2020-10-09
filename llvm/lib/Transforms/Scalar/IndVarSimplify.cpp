@@ -131,6 +131,10 @@ static cl::opt<bool>
 LoopPredication("indvars-predicate-loops", cl::Hidden, cl::init(true),
                 cl::desc("Predicate conditions in read only loops"));
 
+static cl::opt<bool>
+AllowIVWidening("indvars-widen-indvars", cl::Hidden, cl::init(true),
+                cl::desc("Allow widening of indvars to eliminate s/zext"));
+
 namespace {
 
 struct RewritePhi;
@@ -1392,6 +1396,10 @@ void WidenIV::pushNarrowIVUsers(Instruction *NarrowDef, Instruction *WideDef) {
 /// It would be simpler to delete uses as they are processed, but we must avoid
 /// invalidating SCEV expressions.
 PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
+  // Bail if we disallowed widening.
+  if(!AllowIVWidening)
+    return nullptr;
+
   // Is this phi an induction variable?
   const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(OrigPhi));
   if (!AddRec)
