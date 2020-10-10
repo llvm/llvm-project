@@ -404,12 +404,7 @@ Status NativeProcessFreeBSD::Kill() {
     break;
   }
 
-  if (kill(GetID(), SIGKILL) != 0) {
-    error.SetErrorToErrno();
-    return error;
-  }
-
-  return error;
+  return PtraceWrapper(PT_KILL, m_pid);
 }
 
 Status NativeProcessFreeBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
