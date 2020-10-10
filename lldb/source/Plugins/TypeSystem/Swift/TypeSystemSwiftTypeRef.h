@@ -49,6 +49,7 @@ public:
   /// \}
 
   TypeSystemSwiftTypeRef(SwiftASTContext *swift_ast_context);
+  SwiftASTContext *GetSwiftASTContext() override { return m_swift_ast_context; }
 
   Module *GetModule() const override;
   swift::CanType GetCanonicalSwiftType(CompilerType compiler_type);
@@ -268,7 +269,7 @@ public:
 
   /// Return the canonicalized Demangle tree for a Swift mangled type name.
   static swift::Demangle::NodePointer
-  GetCanonicalDemangleTree(lldb_private::Module *Module,
+  GetCanonicalDemangleTree(SwiftASTContext *module_holder,
                            swift::Demangle::Demangler &dem,
                            llvm::StringRef mangled_name);
 
