@@ -2141,6 +2141,9 @@ SwiftLanguageRuntimeImpl::GetTypeInfo(CompilerType type,
   if (!ts)
     return nullptr;
 
+  // Resolve all type aliases.
+  type = type.GetCanonicalType();
+  
   // Resolve all generic type parameters in the type for the current
   // frame.  Archetype binding has to happen in the scratch context,
   // so we lock it while we are in this function.

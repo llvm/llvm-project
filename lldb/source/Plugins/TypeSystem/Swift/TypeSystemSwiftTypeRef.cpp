@@ -1250,6 +1250,19 @@ bool Equivalent<llvm::Optional<uint64_t>>(llvm::Optional<uint64_t> l,
   return false;
 }
 
+/// Version taylored to GetTypeBitAlign.
+template <>
+bool Equivalent<llvm::Optional<size_t>>(llvm::Optional<size_t> l,
+                                        llvm::Optional<size_t> r) {
+  if (l == r)
+    return true;
+  // Assume that any value is "better" than none.
+  if (l.hasValue() && !r.hasValue())
+    return true;
+  llvm::dbgs() << l << " != " << r << "\n";
+  return false;
+}
+
 } // namespace
 #endif
 
@@ -1615,6 +1628,22 @@ TypeSystemSwiftTypeRef::GetArrayElementType(opaque_compiler_type_t type,
   VALIDATE_AND_RETURN(impl, GetArrayElementType, type,
                       (ReconstructType(type), nullptr, exe_scope));
 }
+
+/// Determine wether this demangle tree contains an unresolved type alias.
+static bool ContainsUnresolvedTypeAlias(swift::Demangle::NodePointer node) {
+  if (!node)
+    return false;
+
+  if (node->getKind() == swift::Demangle::Node::Kind::TypeAlias)
+    return true;
+
+  for (swift::Demangle::NodePointer child : *node)
+    if (ContainsUnresolvedTypeAlias(child))
+      return true;
+
+  return false;
+}
+
 CompilerType
 TypeSystemSwiftTypeRef::GetCanonicalType(opaque_compiler_type_t type) {
   auto impl = [&]() {
@@ -1622,6 +1651,12 @@ TypeSystemSwiftTypeRef::GetCanonicalType(opaque_compiler_type_t type) {
     Demangler dem;
     NodePointer canonical =
         GetCanonicalDemangleTree(m_swift_ast_context, dem, AsMangledName(type));
+    if (ContainsUnresolvedTypeAlias(canonical)) {
+      // If this is a typealias defined in the expression evaluator,
+      // then we don't have debug info to resolve it from.
+      CompilerType ast_type = ReconstructType({this, type}).GetCanonicalType();
+      return GetTypeFromMangledTypename(ast_type.GetMangledTypeName());
+    }
     ConstString mangled(mangleNode(canonical));
     return GetTypeFromMangledTypename(mangled);
   };
@@ -1750,9 +1785,17 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
           AsMangledName(type));
       return {};
     }
+    // The hot code path is to ask the Swift runtime for the size.
     if (auto *runtime =
-            SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
-      return runtime->GetBitSize({this, type}, exe_scope);
+        SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
+      if (auto result = runtime->GetBitSize({this, type}, exe_scope))
+        return result;
+      // If this is an expression context, perhaps the type was
+      // defined in the expression. In that case we don't have debug
+      // info for it, so defer to SwiftASTContext.
+      if (llvm::isa<SwiftASTContextForExpressions>(m_swift_ast_context))
+        return ReconstructType({this, type}).GetBitSize(exe_scope);
+    }
 
     // If there is no process, we can still try to get the static size
     // information out of DWARF. Because it is stored in the Type
@@ -2078,8 +2121,15 @@ TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
       return {};
     }
     if (auto *runtime =
-            SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
-      return runtime->GetBitAlignment({this, type}, exe_scope);
+            SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
+      if (auto result = runtime->GetBitAlignment({this, type}, exe_scope))
+        return result;
+      // If this is an expression context, perhaps the type was
+      // defined in the expression. In that case we don't have debug
+      // info for it, so defer to SwiftASTContext.
+      if (llvm::isa<SwiftASTContextForExpressions>(m_swift_ast_context))
+        return ReconstructType({this, type}).GetTypeBitAlign(exe_scope);
+    }
 
     // If there is no process, we can still try to get the static
     // alignment information out of DWARF. Because it is stored in the
