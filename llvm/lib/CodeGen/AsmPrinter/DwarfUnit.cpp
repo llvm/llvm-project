@@ -1472,6 +1472,17 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     addBlock(Buffer, dwarf::DW_AT_allocated, DwarfExpr.finalize());
   }
 
+  if (auto *RankConst = CTy->getRankConst()) {
+    addSInt(Buffer, dwarf::DW_AT_rank, dwarf::DW_FORM_sdata,
+            RankConst->getSExtValue());
+  } else if (auto *RankExpr = CTy->getRankExp()) {
+    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+    DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
+    DwarfExpr.setMemoryLocationKind();
+    DwarfExpr.addExpression(RankExpr);
+    addBlock(Buffer, dwarf::DW_AT_rank, DwarfExpr.finalize());
+  }
+
   // Emit the element type.
   addType(Buffer, CTy->getBaseType());
 
