@@ -402,6 +402,30 @@ define <2 x i31> @fshl_constant_shift_amount_modulo_bitwidth_vec_const_expr(<2 x
   ret <2 x i31> %r
 }
 
+; TODO: Don't let SimplifyDemandedBits split up a rotate - keep the same operand.
+
+define i32 @rotl_common_demanded(i32 %a0) {
+; CHECK-LABEL: @rotl_common_demanded(
+; CHECK-NEXT:    [[X:%.*]] = xor i32 [[A0:%.*]], 2
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X]], i32 [[A0]], i32 8)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = xor i32 %a0, 2
+  %r = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 8)
+  ret i32 %r
+}
+
+define i33 @rotr_common_demanded(i33 %a0) {
+; CHECK-LABEL: @rotr_common_demanded(
+; CHECK-NEXT:    [[X:%.*]] = xor i33 [[A0:%.*]], 2
+; CHECK-NEXT:    [[R:%.*]] = call i33 @llvm.fshl.i33(i33 [[X]], i33 [[A0]], i33 25)
+; CHECK-NEXT:    ret i33 [[R]]
+;
+  %x = xor i33 %a0, 2
+  %r = call i33 @llvm.fshr.i33(i33 %x, i33 %x, i33 8)
+  ret i33 %r
+}
+
 ; The shift modulo bitwidth is the same for all vector elements.
 
 define <2 x i31> @fshl_only_op1_demanded_vec_nonsplat(<2 x i31> %x, <2 x i31> %y) {

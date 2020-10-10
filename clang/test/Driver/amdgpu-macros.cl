@@ -146,10 +146,11 @@
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx600 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX600 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX600 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx601 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX601 %s
-// RUN: %clang -E -dM -target amdgcn -mcpu=hainan %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX601 %s
-// RUN: %clang -E -dM -target amdgcn -mcpu=oland %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX601 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=pitcairn %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX601 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=verde %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX601 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx602 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX602 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=hainan %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX602 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=oland %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX602 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx700 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX700 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=kaveri %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX700 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx701 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX701 %s
@@ -160,6 +161,7 @@
 // RUN: %clang -E -dM -target amdgcn -mcpu=mullins %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX703 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx704 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX704 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=bonaire %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX704 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx705 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX705 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx801 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX801 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=carrizo %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX801 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx802 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX802 %s
@@ -169,6 +171,8 @@
 // RUN: %clang -E -dM -target amdgcn -mcpu=fiji %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX803 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=polaris10 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX803 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=polaris11 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX803 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx805 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX805 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=tongapro %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX805 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx810 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX810 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=stoney %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX810 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX900 %s
@@ -185,14 +189,17 @@
 
 // GFX600-DAG: #define FP_FAST_FMA 1
 // GFX601-DAG: #define FP_FAST_FMA 1
+// GFX602-DAG: #define FP_FAST_FMA 1
 // GFX700-DAG: #define FP_FAST_FMA 1
 // GFX701-DAG: #define FP_FAST_FMA 1
 // GFX702-DAG: #define FP_FAST_FMA 1
 // GFX703-DAG: #define FP_FAST_FMA 1
 // GFX704-DAG: #define FP_FAST_FMA 1
+// GFX705-DAG: #define FP_FAST_FMA 1
 // GFX801-DAG: #define FP_FAST_FMA 1
 // GFX802-DAG: #define FP_FAST_FMA 1
 // GFX803-DAG: #define FP_FAST_FMA 1
+// GFX805-DAG: #define FP_FAST_FMA 1
 // GFX810-DAG: #define FP_FAST_FMA 1
 // GFX900-DAG: #define FP_FAST_FMA 1
 // GFX902-DAG: #define FP_FAST_FMA 1
@@ -208,14 +215,17 @@
 
 // GFX600-DAG: #define FP_FAST_FMAF 1
 // GFX601-NOT: #define FP_FAST_FMAF 1
+// GFX602-NOT: #define FP_FAST_FMAF 1
 // GFX700-NOT: #define FP_FAST_FMAF 1
 // GFX701-DAG: #define FP_FAST_FMAF 1
 // GFX702-DAG: #define FP_FAST_FMAF 1
 // GFX703-NOT: #define FP_FAST_FMAF 1
 // GFX704-NOT: #define FP_FAST_FMAF 1
+// GFX705-NOT: #define FP_FAST_FMAF 1
 // GFX801-DAG: #define FP_FAST_FMAF 1
 // GFX802-NOT: #define FP_FAST_FMAF 1
 // GFX803-NOT: #define FP_FAST_FMAF 1
+// GFX805-NOT: #define FP_FAST_FMAF 1
 // GFX810-NOT: #define FP_FAST_FMAF 1
 // GFX900-DAG: #define FP_FAST_FMAF 1
 // GFX902-DAG: #define FP_FAST_FMAF 1
@@ -235,14 +245,17 @@
 
 // GFX600-DAG: #define __HAS_FMAF__ 1
 // GFX601-DAG: #define __HAS_FMAF__ 1
+// GFX602-DAG: #define __HAS_FMAF__ 1
 // GFX700-DAG: #define __HAS_FMAF__ 1
 // GFX701-DAG: #define __HAS_FMAF__ 1
 // GFX702-DAG: #define __HAS_FMAF__ 1
 // GFX703-DAG: #define __HAS_FMAF__ 1
 // GFX704-DAG: #define __HAS_FMAF__ 1
+// GFX705-DAG: #define __HAS_FMAF__ 1
 // GFX801-DAG: #define __HAS_FMAF__ 1
 // GFX802-DAG: #define __HAS_FMAF__ 1
 // GFX803-DAG: #define __HAS_FMAF__ 1
+// GFX805-DAG: #define __HAS_FMAF__ 1
 // GFX810-DAG: #define __HAS_FMAF__ 1
 // GFX900-DAG: #define __HAS_FMAF__ 1
 // GFX902-DAG: #define __HAS_FMAF__ 1
@@ -258,14 +271,17 @@
 
 // GFX600-DAG: #define __HAS_FP64__ 1
 // GFX601-DAG: #define __HAS_FP64__ 1
+// GFX602-DAG: #define __HAS_FP64__ 1
 // GFX700-DAG: #define __HAS_FP64__ 1
 // GFX701-DAG: #define __HAS_FP64__ 1
 // GFX702-DAG: #define __HAS_FP64__ 1
 // GFX703-DAG: #define __HAS_FP64__ 1
 // GFX704-DAG: #define __HAS_FP64__ 1
+// GFX705-DAG: #define __HAS_FP64__ 1
 // GFX801-DAG: #define __HAS_FP64__ 1
 // GFX802-DAG: #define __HAS_FP64__ 1
 // GFX803-DAG: #define __HAS_FP64__ 1
+// GFX805-DAG: #define __HAS_FP64__ 1
 // GFX810-DAG: #define __HAS_FP64__ 1
 // GFX900-DAG: #define __HAS_FP64__ 1
 // GFX902-DAG: #define __HAS_FP64__ 1
@@ -281,14 +297,17 @@
 
 // GFX600-DAG: #define __HAS_LDEXPF__ 1
 // GFX601-DAG: #define __HAS_LDEXPF__ 1
+// GFX602-DAG: #define __HAS_LDEXPF__ 1
 // GFX700-DAG: #define __HAS_LDEXPF__ 1
 // GFX701-DAG: #define __HAS_LDEXPF__ 1
 // GFX702-DAG: #define __HAS_LDEXPF__ 1
 // GFX703-DAG: #define __HAS_LDEXPF__ 1
 // GFX704-DAG: #define __HAS_LDEXPF__ 1
+// GFX705-DAG: #define __HAS_LDEXPF__ 1
 // GFX801-DAG: #define __HAS_LDEXPF__ 1
 // GFX802-DAG: #define __HAS_LDEXPF__ 1
 // GFX803-DAG: #define __HAS_LDEXPF__ 1
+// GFX805-DAG: #define __HAS_LDEXPF__ 1
 // GFX810-DAG: #define __HAS_LDEXPF__ 1
 // GFX900-DAG: #define __HAS_LDEXPF__ 1
 // GFX902-DAG: #define __HAS_LDEXPF__ 1
@@ -304,14 +323,17 @@
 
 // GFX600-DAG: #define __gfx600__ 1
 // GFX601-DAG: #define __gfx601__ 1
+// GFX602-DAG: #define __gfx602__ 1
 // GFX700-DAG: #define __gfx700__ 1
 // GFX701-DAG: #define __gfx701__ 1
 // GFX702-DAG: #define __gfx702__ 1
 // GFX703-DAG: #define __gfx703__ 1
 // GFX704-DAG: #define __gfx704__ 1
+// GFX705-DAG: #define __gfx705__ 1
 // GFX801-DAG: #define __gfx801__ 1
 // GFX802-DAG: #define __gfx802__ 1
 // GFX803-DAG: #define __gfx803__ 1
+// GFX805-DAG: #define __gfx805__ 1
 // GFX810-DAG: #define __gfx810__ 1
 // GFX900-DAG: #define __gfx900__ 1
 // GFX902-DAG: #define __gfx902__ 1
@@ -327,14 +349,17 @@
 
 // GFX600-DAG: #define __amdgcn_processor__ "gfx600"
 // GFX601-DAG: #define __amdgcn_processor__ "gfx601"
+// GFX602-DAG: #define __amdgcn_processor__ "gfx602"
 // GFX700-DAG: #define __amdgcn_processor__ "gfx700"
 // GFX701-DAG: #define __amdgcn_processor__ "gfx701"
 // GFX702-DAG: #define __amdgcn_processor__ "gfx702"
 // GFX703-DAG: #define __amdgcn_processor__ "gfx703"
 // GFX704-DAG: #define __amdgcn_processor__ "gfx704"
+// GFX705-DAG: #define __amdgcn_processor__ "gfx705"
 // GFX801-DAG: #define __amdgcn_processor__ "gfx801"
 // GFX802-DAG: #define __amdgcn_processor__ "gfx802"
 // GFX803-DAG: #define __amdgcn_processor__ "gfx803"
+// GFX805-DAG: #define __amdgcn_processor__ "gfx805"
 // GFX810-DAG: #define __amdgcn_processor__ "gfx810"
 // GFX900-DAG: #define __amdgcn_processor__ "gfx900"
 // GFX902-DAG: #define __amdgcn_processor__ "gfx902"
@@ -350,14 +375,17 @@
 
 // GFX600-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
 // GFX601-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX602-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
 // GFX700-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
 // GFX701-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
 // GFX702-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
 // GFX703-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
 // GFX704-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX705-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
 // GFX801-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
 // GFX802-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
 // GFX803-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX805-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
 // GFX810-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
 // GFX900-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
 // GFX902-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64

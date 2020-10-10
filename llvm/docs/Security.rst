@@ -34,7 +34,6 @@ The members of the group represent a wide cross-section of the community, and me
 * Oliver Hunt (Apple)
 * Paul Robinson (Sony)
 * Peter Smith (ARM)
-* Philip Reames (Azul Systems Inc)
 * Pietro Albini (individual; Rust)
 * Serge Guelton (RedHat)
 * Shayne Hiet-Block (Microsoft)
