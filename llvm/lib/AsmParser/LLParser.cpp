@@ -4722,9 +4722,17 @@ bool LLParser::ParseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(discriminator, MDField, );                                          \
   OPTIONAL(dataLocation, MDField, );                                           \
   OPTIONAL(associated, MDField, );                                             \
-  OPTIONAL(allocated, MDField, );
+  OPTIONAL(allocated, MDField, );                                              \
+  OPTIONAL(rank, MDSignedOrMDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
+
+  Metadata *Rank = nullptr;
+  if (rank.isMDSignedField())
+    Rank = ConstantAsMetadata::get(ConstantInt::getSigned(
+        Type::getInt64Ty(Context), rank.getMDSignedValue()));
+  else if (rank.isMDField())
+    Rank = rank.getMDFieldValue();
 
   // If this has an identifier try to build an ODR type.
   if (identifier.Val)
@@ -4732,8 +4740,8 @@ bool LLParser::ParseDICompositeType(MDNode *&Result, bool IsDistinct) {
             Context, *identifier.Val, tag.Val, name.Val, file.Val, line.Val,
             scope.Val, baseType.Val, size.Val, align.Val, offset.Val, flags.Val,
             elements.Val, runtimeLang.Val, vtableHolder.Val, templateParams.Val,
-            discriminator.Val, dataLocation.Val, associated.Val,
-            allocated.Val)) {
+            discriminator.Val, dataLocation.Val, associated.Val, allocated.Val,
+            Rank)) {
       Result = CT;
       return false;
     }
@@ -4745,7 +4753,8 @@ bool LLParser::ParseDICompositeType(MDNode *&Result, bool IsDistinct) {
       (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val, baseType.Val,
        size.Val, align.Val, offset.Val, flags.Val, elements.Val,
        runtimeLang.Val, vtableHolder.Val, templateParams.Val, identifier.Val,
-       discriminator.Val, dataLocation.Val, associated.Val, allocated.Val));
+       discriminator.Val, dataLocation.Val, associated.Val, allocated.Val,
+       Rank));
   return false;
 }
 
