@@ -11040,6 +11040,10 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(Lowered);
     return;
   }
+  case ISD::FSHL:
+  case ISD::FSHR:
+    // Don't handle funnel shifts here.
+    return;
   case ISD::BITCAST:
     // Don't handle bitcast here.
     return;
