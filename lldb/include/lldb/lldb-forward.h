@@ -227,7 +227,7 @@ class ThreadPlanStepThrough;
 class ThreadPlanTracer;
 class ThreadSpec;
 class Trace;
-class TraceSettingsParser;
+class TraceSessionFileParser;
 class TraceOptions;
 class Type;
 class TypeAndOrName;

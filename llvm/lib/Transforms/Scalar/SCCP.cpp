@@ -1467,6 +1467,7 @@ void SCCPSolver::Solve() {
 /// This scan also checks for values that use undefs. It conservatively marks
 /// them as overdefined.
 bool SCCPSolver::ResolvedUndefsIn(Function &F) {
+  bool MadeChange = false;
   for (BasicBlock &BB : F) {
     if (!BBExecutable.count(&BB))
       continue;
@@ -1492,8 +1493,10 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
         // more precise than this but it isn't worth bothering.
         for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
           ValueLatticeElement &LV = getStructValueState(&I, i);
-          if (LV.isUnknownOrUndef())
+          if (LV.isUnknownOrUndef()) {
             markOverdefined(LV, &I);
+            MadeChange = true;
+          }
         }
         continue;
       }
@@ -1520,7 +1523,7 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
       }
 
       markOverdefined(&I);
-      return true;
+      MadeChange = true;
     }
 
     // Check to see if we have a branch or switch on an undefined value.  If so
@@ -1537,7 +1540,8 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
       if (isa<UndefValue>(BI->getCondition())) {
         BI->setCondition(ConstantInt::getFalse(BI->getContext()));
         markEdgeExecutable(&BB, TI->getSuccessor(1));
-        return true;
+        MadeChange = true;
+        continue;
       }
 
       // Otherwise, it is a branch on a symbolic value which is currently
@@ -1546,7 +1550,7 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
       // FIXME: Distinguish between dead code and an LLVM "undef" value.
       BasicBlock *DefaultSuccessor = TI->getSuccessor(1);
       if (markEdgeExecutable(&BB, DefaultSuccessor))
-        return true;
+        MadeChange = true;
 
       continue;
     }
@@ -1565,7 +1569,8 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
       if (isa<UndefValue>(IBR->getAddress())) {
         IBR->setAddress(BlockAddress::get(IBR->getSuccessor(0)));
         markEdgeExecutable(&BB, IBR->getSuccessor(0));
-        return true;
+        MadeChange = true;
+        continue;
       }
 
       // Otherwise, it is a branch on a symbolic value which is currently
@@ -1575,7 +1580,7 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
       // we can assume the branch has undefined behavior instead.
       BasicBlock *DefaultSuccessor = IBR->getSuccessor(0);
       if (markEdgeExecutable(&BB, DefaultSuccessor))
-        return true;
+        MadeChange = true;
 
       continue;
     }
@@ -1590,7 +1595,8 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
       if (isa<UndefValue>(SI->getCondition())) {
         SI->setCondition(SI->case_begin()->getCaseValue());
         markEdgeExecutable(&BB, SI->case_begin()->getCaseSuccessor());
-        return true;
+        MadeChange = true;
+        continue;
       }
 
       // Otherwise, it is a branch on a symbolic value which is currently
@@ -1599,13 +1605,13 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
       // FIXME: Distinguish between dead code and an LLVM "undef" value.
       BasicBlock *DefaultSuccessor = SI->case_begin()->getCaseSuccessor();
       if (markEdgeExecutable(&BB, DefaultSuccessor))
-        return true;
+        MadeChange = true;
 
       continue;
     }
   }
 
-  return false;
+  return MadeChange;
 }
 
 static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
@@ -1963,13 +1969,12 @@ bool llvm::runIPSCCP(
   while (ResolvedUndefs) {
     LLVM_DEBUG(dbgs() << "RESOLVING UNDEFS\n");
     ResolvedUndefs = false;
-    for (Function &F : M)
-      if (Solver.ResolvedUndefsIn(F)) {
-        // We run Solve() after we resolved an undef in a function, because
-        // we might deduce a fact that eliminates an undef in another function.
-        Solver.Solve();
+    for (Function &F : M) {
+      if (Solver.ResolvedUndefsIn(F))
         ResolvedUndefs = true;
-      }
+    }
+    if (ResolvedUndefs)
+      Solver.Solve();
   }
 
   bool MadeChanges = false;

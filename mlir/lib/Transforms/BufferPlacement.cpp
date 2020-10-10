@@ -55,11 +55,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/BufferPlacement.h"
 #include "PassDetail.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/Bufferize.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/SetOperations.h"
 

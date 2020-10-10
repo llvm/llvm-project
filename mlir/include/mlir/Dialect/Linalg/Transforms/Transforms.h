@@ -347,9 +347,7 @@ struct LinalgTilingOptions {
   /// values must not fold away when tiling. Otherwise, use a more robust
   /// `tileSizeComputationFunction`.
   LinalgTilingOptions &setTileSizes(SmallVector<Value, 4> ts) {
-    tileSizeComputationFunction = [=](OpBuilder &, Operation *) {
-      return ts;
-    };
+    tileSizeComputationFunction = [=](OpBuilder &, Operation *) { return ts; };
     return *this;
   }
   /// Convenience function to set the `tileSizeComputationFunction` to a
@@ -748,6 +746,56 @@ public:
   LogicalResult matchAndRewrite(ConvOp minOp,
                                 PatternRewriter &rewriter) const override;
 };
+
+//===----------------------------------------------------------------------===//
+// Patterns to convert a LinalgOp to std.call @external library implementation.
+//===----------------------------------------------------------------------===//
+// Create a new call to the type-canonicalized `LinalgOp::getLibraryCallName()`
+// function. The implementation of the function can be either in the same module
+// or in an externally linked library.
+// This is a generic entry point for all LinalgOp, except for CopyOp and
+// IndexedGenericOp, for which omre specialized patterns are provided.
+class LinalgOpToLibraryCallRewrite : public RewritePattern {
+public:
+  LinalgOpToLibraryCallRewrite()
+      : RewritePattern(/*benefit=*/1, MatchAnyOpTypeTag()) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Rewrite pattern specialization for CopyOp, kicks in when both input and
+/// output permutations are left unspecified or are the identity.
+class CopyOpToLibraryCallRewrite : public OpRewritePattern<CopyOp> {
+public:
+  using OpRewritePattern<CopyOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(CopyOp op,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Rewrite CopyOp with permutations into a sequence of TransposeOp and
+/// permutation-free CopyOp. This interplays with TransposeOpConversion and
+/// LinalgConversion<CopyOp> to create a path to the LLVM dialect.
+class CopyTransposeRewrite : public OpRewritePattern<CopyOp> {
+public:
+  using OpRewritePattern<CopyOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(CopyOp op,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Conversion pattern specialization for IndexedGenericOp, has special handling
+/// for the extra index operands.
+class IndexedGenericOpToLibraryCallRewrite
+    : public OpRewritePattern<IndexedGenericOp> {
+public:
+  using OpRewritePattern<IndexedGenericOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(IndexedGenericOp op,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Populate the given list with patterns that convert from Linalg to Standard.
+void populateLinalgToStandardConversionPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *ctx);
 
 //===----------------------------------------------------------------------===//
 // Support for staged pattern application.

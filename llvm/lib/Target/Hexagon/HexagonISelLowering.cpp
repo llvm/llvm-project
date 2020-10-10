@@ -1851,7 +1851,6 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::PTRUE:         return "HexagonISD::PTRUE";
   case HexagonISD::PFALSE:        return "HexagonISD::PFALSE";
   case HexagonISD::VZERO:         return "HexagonISD::VZERO";
-  case HexagonISD::VSPLATW:       return "HexagonISD::VSPLATW";
   case HexagonISD::D2P:           return "HexagonISD::D2P";
   case HexagonISD::P2D:           return "HexagonISD::P2D";
   case HexagonISD::V2Q:           return "HexagonISD::V2Q";
@@ -1865,6 +1864,7 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::VPACKL:        return "HexagonISD::VPACKL";
   case HexagonISD::VUNPACK:       return "HexagonISD::VUNPACK";
   case HexagonISD::VUNPACKU:      return "HexagonISD::VUNPACKU";
+  case HexagonISD::ISEL:          return "HexagonISD::ISEL";
   case HexagonISD::OP_END:        break;
   }
   return nullptr;

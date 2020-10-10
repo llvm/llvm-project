@@ -8,18 +8,20 @@
 
 #include "TraceIntelPT.h"
 
-#include "TraceIntelPTSettingsParser.h"
+#include "TraceIntelPTSessionFileParser.h"
 #include "lldb/Core/PluginManager.h"
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::trace_intel_pt;
 using namespace llvm;
 
-LLDB_PLUGIN_DEFINE_ADV(TraceIntelPT, TraceIntelPT)
+LLDB_PLUGIN_DEFINE(TraceIntelPT)
 
 void TraceIntelPT::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "Intel Processor Trace",
-                                CreateInstance);
+                                CreateInstance,
+                                TraceIntelPTSessionFileParser::GetSchema());
 }
 
 void TraceIntelPT::Terminate() {
@@ -31,9 +33,8 @@ ConstString TraceIntelPT::GetPluginNameStatic() {
   return g_name;
 }
 
-std::unique_ptr<lldb_private::TraceSettingsParser>
-TraceIntelPT::CreateParser() {
-  return std::make_unique<TraceIntelPTSettingsParser>(*this);
+StringRef TraceIntelPT::GetSchema() {
+  return TraceIntelPTSessionFileParser::GetSchema();
 }
 
 //------------------------------------------------------------------
@@ -46,6 +47,10 @@ uint32_t TraceIntelPT::GetPluginVersion() { return 1; }
 
 void TraceIntelPT::Dump(lldb_private::Stream *s) const {}
 
-lldb::TraceSP TraceIntelPT::CreateInstance() {
-  return lldb::TraceSP(new TraceIntelPT());
+Expected<lldb::TraceSP>
+TraceIntelPT::CreateInstance(const json::Value &trace_session_file,
+                             StringRef session_file_dir, Debugger &debugger) {
+  return TraceIntelPTSessionFileParser(debugger, trace_session_file,
+                                       session_file_dir)
+      .Parse();
 }

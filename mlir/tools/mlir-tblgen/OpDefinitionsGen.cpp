@@ -487,7 +487,16 @@ void OpEmitter::genAttrGetters() {
 
   // Emit with return type specified.
   auto emitAttrWithReturnType = [&](StringRef name, Attribute attr) {
-    auto *method = opClass.addMethodAndPrune(attr.getReturnType(), name);
+    Dialect attrDialect = attr.getDialect();
+    // Does the current operation have a different namespace than the attribute?
+    bool differentNamespace =
+        attrDialect && opDialect && attrDialect != opDialect;
+    std::string returnType = differentNamespace
+                                 ? (llvm::Twine(attrDialect.getCppNamespace()) +
+                                    "::" + attr.getReturnType())
+                                       .str()
+                                 : attr.getReturnType().str();
+    auto *method = opClass.addMethodAndPrune(returnType, name);
     auto &body = method->body();
     body << "  auto attr = " << name << "Attr();\n";
     if (attr.hasDefaultValue()) {
@@ -1991,8 +2000,8 @@ void OpEmitter::genOpAsmInterface() {
   opClass.addTrait("::mlir::OpAsmOpInterface::Trait");
 
   // Generate the right accessor for the number of results.
-  auto *method = opClass.addMethodAndPrune(
-      "void", "getAsmResultNames", "::mlir::OpAsmSetValueNameFn", "setNameFn");
+  auto *method = opClass.addMethodAndPrune("void", "getAsmResultNames",
+                                           "OpAsmSetValueNameFn", "setNameFn");
   auto &body = method->body();
   for (int i = 0; i != numResults; ++i) {
     body << "  auto resultGroup" << i << " = getODSResults(" << i << ");\n"

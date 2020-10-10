@@ -143,4 +143,10 @@ module attributes {gpu.container_module} {
       "gpu.return"() : () -> ()
     } ) {gpu.kernel, sym_name = "kernel_1", type = (f32, memref<?xf32>) -> (), workgroup_attributions = 1: i64} : () -> ()
   }
+
+  func @async_token(%arg0 : !gpu.async.token) -> !gpu.async.token {
+    // CHECK-LABEL: func @async_token({{.*}}: !gpu.async.token)
+    // CHECK: return {{.*}} : !gpu.async.token
+    return %arg0 : !gpu.async.token
+  }
 }

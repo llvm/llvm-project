@@ -49,7 +49,6 @@ class VirtRegMap;
     VirtRegMap *const VRM;
     const MachineLoopInfo &Loops;
     const MachineBlockFrequencyInfo &MBFI;
-    DenseMap<unsigned, float> Hint;
 
   public:
     VirtRegAuxInfo(MachineFunction &MF, LiveIntervals &LIS, VirtRegMap *VRM,

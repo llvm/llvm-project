@@ -14,9 +14,11 @@
 #ifndef MLIR_DIALECT_ASYNC_IR_ASYNC_H
 #define MLIR_DIALECT_ASYNC_IR_ASYNC_H
 
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/StandardTypes.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir {

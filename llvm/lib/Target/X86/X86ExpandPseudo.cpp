@@ -346,7 +346,9 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
     // Copy the input argument of the pseudo into the argument of the
     // actual instruction.
-    TII->copyPhysReg(MBB, MBBI, DL, X86::RBX, InArg.getReg(), InArg.isKill());
+    // NOTE: We don't copy the kill flag since the input might be the same reg
+    // as one of the other operands of LCMPXCHG16B.
+    TII->copyPhysReg(MBB, MBBI, DL, X86::RBX, InArg.getReg(), false);
     // Create the actual instruction.
     MachineInstr *NewInstr = BuildMI(MBB, MBBI, DL, TII->get(X86::LCMPXCHG16B));
     // Copy the operands related to the address.

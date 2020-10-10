@@ -1430,7 +1430,7 @@ Error IRLinker::run() {
 
   if (!SrcM->getTargetTriple().empty()&&
       !SrcTriple.isCompatibleWith(DstTriple))
-    emitWarning("Linking two modules of different target triples: " +
+    emitWarning("Linking two modules of different target triples: '" +
                 SrcM->getModuleIdentifier() + "' is '" +
                 SrcM->getTargetTriple() + "' whereas '" +
                 DstM.getModuleIdentifier() + "' is '" + DstM.getTargetTriple() +

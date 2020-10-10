@@ -20,7 +20,7 @@
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/BufferPlacement.h"
+#include "mlir/Transforms/Bufferize.h"
 
 namespace {
 

@@ -18,78 +18,61 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
 
-// Helper structs used to extract the type of a trace settings json without
+// Helper structs used to extract the type of a trace session json without
 // having to parse the entire object.
 
 struct JSONSimplePluginSettings {
   std::string type;
 };
 
-struct JSONSimpleTraceSettings {
+struct JSONSimpleTraceSession {
   JSONSimplePluginSettings trace;
 };
 
 namespace llvm {
 namespace json {
 
-bool fromJSON(const json::Value &value,
-              JSONSimplePluginSettings &plugin_settings, json::Path path) {
+bool fromJSON(const Value &value, JSONSimplePluginSettings &plugin_settings,
+              Path path) {
   json::ObjectMapper o(value, path);
   return o && o.map("type", plugin_settings.type);
 }
 
-bool fromJSON(const json::Value &value, JSONSimpleTraceSettings &settings,
-              json::Path path) {
+bool fromJSON(const Value &value, JSONSimpleTraceSession &session, Path path) {
   json::ObjectMapper o(value, path);
-  return o && o.map("trace", settings.trace);
+  return o && o.map("trace", session.trace);
 }
 
 } // namespace json
 } // namespace llvm
 
-llvm::Expected<lldb::TraceSP> Trace::FindPlugin(Debugger &debugger,
-                                                const json::Value &settings,
-                                                StringRef info_dir) {
-  JSONSimpleTraceSettings json_settings;
-  json::Path::Root root("settings");
-  if (!json::fromJSON(settings, json_settings, root))
+static Error createInvalidPlugInError(StringRef plugin_name) {
+  return createStringError(
+      std::errc::invalid_argument,
+      "no trace plug-in matches the specified type: \"%s\"",
+      plugin_name.data());
+}
+
+Expected<lldb::TraceSP> Trace::FindPlugin(Debugger &debugger,
+                                          const json::Value &trace_session_file,
+                                          StringRef session_file_dir) {
+  JSONSimpleTraceSession json_session;
+  json::Path::Root root("traceSession");
+  if (!json::fromJSON(trace_session_file, json_session, root))
     return root.getError();
 
-  ConstString plugin_name(json_settings.trace.type);
-  auto create_callback = PluginManager::GetTraceCreateCallback(plugin_name);
-  if (create_callback) {
-    TraceSP instance = create_callback();
-    if (llvm::Error err = instance->ParseSettings(debugger, settings, info_dir))
-      return std::move(err);
-    return instance;
-  }
+  ConstString plugin_name(json_session.trace.type);
+  if (auto create_callback = PluginManager::GetTraceCreateCallback(plugin_name))
+    return create_callback(trace_session_file, session_file_dir, debugger);
 
-  return createStringError(
-      std::errc::invalid_argument,
-      "no trace plug-in matches the specified type: \"%s\"",
-      plugin_name.AsCString());
+  return createInvalidPlugInError(json_session.trace.type);
 }
 
-llvm::Expected<lldb::TraceSP> Trace::FindPlugin(StringRef name) {
+Expected<StringRef> Trace::FindPluginSchema(StringRef name) {
   ConstString plugin_name(name);
-  auto create_callback = PluginManager::GetTraceCreateCallback(plugin_name);
-  if (create_callback)
-    return create_callback();
+  StringRef schema = PluginManager::GetTraceSchema(plugin_name);
+  if (!schema.empty())
+    return schema;
 
-  return createStringError(
-      std::errc::invalid_argument,
-      "no trace plug-in matches the specified type: \"%s\"",
-      plugin_name.AsCString());
+  return createInvalidPlugInError(name);
 }
-
-llvm::Error Trace::ParseSettings(Debugger &debugger,
-                                 const llvm::json::Value &settings,
-                                 llvm::StringRef settings_dir) {
-  if (llvm::Error err =
-          CreateParser()->ParseSettings(debugger, settings, settings_dir))
-    return err;
-
-  return llvm::Error::success();
-}
-
-llvm::StringRef Trace::GetSchema() { return CreateParser()->GetSchema(); }

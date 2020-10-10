@@ -402,15 +402,15 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
       return BinaryOperator::Create(
           I.getOpcode(), Builder.CreateBinOp(I.getOpcode(), Op0, C), A);
 
-  // X shift (A srem B) -> X shift (A and B-1) iff B is a power of 2.
+  // X shift (A srem C) -> X shift (A and (C - 1)) iff C is a power of 2.
   // Because shifts by negative values (which could occur if A were negative)
   // are undefined.
-  const APInt *B;
-  if (Op1->hasOneUse() && match(Op1, m_SRem(m_Value(A), m_Power2(B)))) {
+  if (Op1->hasOneUse() && match(Op1, m_SRem(m_Value(A), m_Constant(C))) &&
+      match(C, m_Power2())) {
     // FIXME: Should this get moved into SimplifyDemandedBits by saying we don't
     // demand the sign bit (and many others) here??
-    Value *Rem = Builder.CreateAnd(A, ConstantInt::get(I.getType(), *B - 1),
-                                   Op1->getName());
+    Constant *Mask = ConstantExpr::getSub(C, ConstantInt::get(I.getType(), 1));
+    Value *Rem = Builder.CreateAnd(A, Mask, Op1->getName());
     return replaceOperand(I, 1, Rem);
   }
 
@@ -691,8 +691,9 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
     // require that the input operand is a shift-by-constant so that we have
     // confidence that the shifts will get folded together.  We could do this
     // xform in more cases, but it is unlikely to be profitable.
+    const APInt *TrShiftAmt;
     if (I.isLogicalShift() &&
-        match(TI->getOperand(0), m_Shift(m_Value(), m_ConstantInt()))) {
+        match(TI->getOperand(0), m_Shift(m_Value(), m_APInt(TrShiftAmt)))) {
       auto *TrOp = cast<Instruction>(TI->getOperand(0));
       Type *SrcTy = TrOp->getType();
 
