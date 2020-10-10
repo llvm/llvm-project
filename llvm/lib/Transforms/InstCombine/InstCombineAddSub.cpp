@@ -1290,7 +1290,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   Type *Ty = I.getType();
   if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS)) {
     Value *XorLHS = nullptr; ConstantInt *XorRHS = nullptr;
-    if (match(LHS, m_Xor(m_Value(XorLHS), m_ConstantInt(XorRHS)))) {
+    if (match(LHS, m_OneUse(m_Xor(m_Value(XorLHS), m_ConstantInt(XorRHS))))) {
       unsigned TySizeBits = Ty->getScalarSizeInBits();
       const APInt &RHSVal = CI->getValue();
       unsigned ExtendAmt = 0;
