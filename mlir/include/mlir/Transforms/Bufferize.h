@@ -1,4 +1,4 @@
-//===- BufferPlacement.h - Buffer Assignment Utilities ---------*- C++ -*-===//
+//===- Bufferize.h - Bufferization utilities --------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This header file defines buffer assignment helper methods to compute correct
-// and valid positions for placing Alloc and Dealloc operations.
+// We use the term "bufferize" to mean conversion from tensor types to
+// memref types.
+//
+// Generally speaking, for each op that operates on tensor types, a conversion
+// pattern needs to be written. The infrastructure in this file assists in
+// defining these conversion patterns in a composable way.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TRANSFORMS_BUFFERPLACEMENT_H
-#define MLIR_TRANSFORMS_BUFFERPLACEMENT_H
+#ifndef MLIR_TRANSFORMS_BUFFERIZE_H
+#define MLIR_TRANSFORMS_BUFFERIZE_H
 
 #include "mlir/Analysis/Liveness.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -256,4 +260,4 @@ static void populateWithBufferAssignmentOpConversionPatterns(
 }
 } // end namespace mlir
 
-#endif // MLIR_TRANSFORMS_BUFFERPLACEMENT_H
+#endif // MLIR_TRANSFORMS_BUFFERIZE_H
