@@ -491,6 +491,11 @@ bool MemCpyOptPass::moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI) {
   for (auto I = --SI->getIterator(), E = P->getIterator(); I != E; --I) {
     auto *C = &*I;
 
+    // Make sure hoisting does not perform a store that was not guaranteed to
+    // happen.
+    if (!isGuaranteedToTransferExecutionToSuccessor(C))
+      return false;
+
     bool MayAlias = isModOrRefSet(AA->getModRefInfo(C, None));
 
     bool NeedLift = false;
