@@ -193,13 +193,9 @@ define void @test_intermediate_write(i8* %b) #0 {
 
 define void @test_throwing_call(i8* %src, i64 %src_size, i8* %dst, i64 %dst_size, i8 %c) {
 ; CHECK-LABEL: @test_throwing_call(
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[DST:%.*]], i8 [[C:%.*]], i64 [[DST_SIZE:%.*]], i1 false)
 ; CHECK-NEXT:    call void @call() [[ATTR2:#.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_SIZE]], [[SRC_SIZE]]
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, i8* [[DST:%.*]], i64 [[SRC_SIZE]]
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP4]], i8 [[C:%.*]], i64 [[TMP3]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST]], i8* [[SRC:%.*]], i64 [[SRC_SIZE]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST]], i8* [[SRC:%.*]], i64 [[SRC_SIZE:%.*]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0i8.i64(i8* %dst, i8 %c, i64 %dst_size, i1 false)

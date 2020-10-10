@@ -1050,6 +1050,17 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   Value *DestSize = MemSet->getLength();
   Value *SrcSize = MemCpy->getLength();
 
+  // If the destination might be accessible by the caller, make sure we cannot
+  // unwind between the memset and the memcpy.
+  if (!MemCpy->getFunction()->doesNotThrow() &&
+      !isa<AllocaInst>(getUnderlyingObject(Dest))) {
+    for (const Instruction &I :
+         make_range(MemSet->getIterator(), MemCpy->getIterator())) {
+      if (I.mayThrow())
+        return false;
+    }
+  }
+
   // By default, create an unaligned memset.
   unsigned Align = 1;
   // If Dest is aligned, and SrcSize is constant, use the minimum alignment
