@@ -1,10 +1,11 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx600 -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX600 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tahiti -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX600 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx601 -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX601 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hainan -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX601 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=oland -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX601 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=pitcairn -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX601 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=verde -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX601 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx602 -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX602 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hainan -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX602 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=oland -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX602 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX700 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX700 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx701 -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX701 %s
@@ -15,6 +16,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=mullins -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX703 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx704 -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX704 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=bonaire -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX704 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx705 -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX705 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx801 -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX801 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=carrizo -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX801 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx802 -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX802 %s
@@ -24,6 +26,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX803 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=polaris10 -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX803 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=polaris11 -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX803 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx805 -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX805 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tongapro -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX805 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx810 -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX810 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=stoney -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX810 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=GFX900 %s
@@ -42,14 +46,17 @@
 
 ; GFX600: .amdgcn_target "amdgcn-amd-amdhsa--gfx600"
 ; GFX601: .amdgcn_target "amdgcn-amd-amdhsa--gfx601"
+; GFX602: .amdgcn_target "amdgcn-amd-amdhsa--gfx602"
 ; GFX700: .amdgcn_target "amdgcn-amd-amdhsa--gfx700"
 ; GFX701: .amdgcn_target "amdgcn-amd-amdhsa--gfx701"
 ; GFX702: .amdgcn_target "amdgcn-amd-amdhsa--gfx702"
 ; GFX703: .amdgcn_target "amdgcn-amd-amdhsa--gfx703"
 ; GFX704: .amdgcn_target "amdgcn-amd-amdhsa--gfx704"
+; GFX705: .amdgcn_target "amdgcn-amd-amdhsa--gfx705"
 ; GFX801: .amdgcn_target "amdgcn-amd-amdhsa--gfx801+xnack"
 ; GFX802: .amdgcn_target "amdgcn-amd-amdhsa--gfx802"
 ; GFX803: .amdgcn_target "amdgcn-amd-amdhsa--gfx803"
+; GFX805: .amdgcn_target "amdgcn-amd-amdhsa--gfx805"
 ; GFX810: .amdgcn_target "amdgcn-amd-amdhsa--gfx810+xnack"
 ; GFX900: .amdgcn_target "amdgcn-amd-amdhsa--gfx900"
 ; GFX902: .amdgcn_target "amdgcn-amd-amdhsa--gfx902+xnack"
