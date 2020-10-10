@@ -12,6 +12,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
@@ -71,7 +72,7 @@ public:
 
   CommandObjectTraceLoad(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "trace load",
-                            "Load processor trace data from a JSON file.",
+                            "Load a processor trace session from a JSON file.",
                             "trace load"),
         m_options() {}
 
@@ -82,8 +83,9 @@ public:
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     if (command.size() != 1) {
-      result.AppendError("a single path to a JSON file containing trace "
-                         "information is required");
+      result.AppendError(
+          "a single path to a JSON file containing a trace session"
+          "is required");
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
@@ -105,13 +107,14 @@ protected:
           buffer_or_error.getError().message().c_str()));
     }
 
-    llvm::Expected<json::Value> settings =
+    llvm::Expected<json::Value> session_file =
         json::parse(buffer_or_error.get()->getBuffer().str());
-    if (!settings)
-      return end_with_failure(settings.takeError());
+    if (!session_file)
+      return end_with_failure(session_file.takeError());
 
-    if (Expected<lldb::TraceSP> traceOrErr = Trace::FindPlugin(
-            GetDebugger(), *settings, json_file.GetDirectory().AsCString())) {
+    if (Expected<lldb::TraceSP> traceOrErr =
+            Trace::FindPlugin(GetDebugger(), *session_file,
+                              json_file.GetDirectory().AsCString())) {
       lldb::TraceSP trace_sp = traceOrErr.get();
       if (m_options.m_verbose)
         result.AppendMessageWithFormat("loading trace with plugin %s\n",
@@ -237,7 +240,8 @@ public:
   CommandObjectTraceSchema(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "trace schema",
                             "Show the schema of the given trace plugin.",
-                            "trace schema <plug-in>"),
+                            "trace schema <plug-in>. Use the plug-in name "
+                            "\"all\" to see all schemas.\n"),
         m_options() {}
 
   ~CommandObjectTraceSchema() override = default;
@@ -254,12 +258,21 @@ protected:
     }
 
     StringRef plugin_name(command[0].c_str());
+    if (plugin_name == "all") {
+      size_t index = 0;
+      while (true) {
+        StringRef schema = PluginManager::GetTraceSchema(index++);
+        if (schema.empty())
+          break;
 
-    if (Expected<lldb::TraceSP> traceOrErr = Trace::FindPlugin(plugin_name)) {
-      lldb::TraceSP trace_sp = traceOrErr.get();
-      result.AppendMessage(trace_sp->GetSchema());
+        result.AppendMessage(schema);
+      }
     } else {
-      error.SetErrorString(llvm::toString(traceOrErr.takeError()));
+      if (Expected<StringRef> schemaOrErr =
+              Trace::FindPluginSchema(plugin_name))
+        result.AppendMessage(*schemaOrErr);
+      else
+        error = schemaOrErr.takeError();
     }
 
     if (error.Success()) {

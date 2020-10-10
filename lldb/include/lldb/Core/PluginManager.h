@@ -332,11 +332,34 @@ public:
 
   // Trace
   static bool RegisterPlugin(ConstString name, const char *description,
-                             TraceCreateInstance create_callback);
+                             TraceCreateInstance create_callback,
+                             llvm::StringRef schema);
 
   static bool UnregisterPlugin(TraceCreateInstance create_callback);
 
   static TraceCreateInstance GetTraceCreateCallback(ConstString plugin_name);
+
+  /// Get the JSON schema for a trace session file corresponding to the given
+  /// plugin.
+  ///
+  /// \param[in] plugin_name
+  ///     The name of the plugin.
+  ///
+  /// \return
+  ///     An empty \a StringRef if no plugin was found with that plugin name,
+  ///     otherwise the actual schema is returned.
+  static llvm::StringRef GetTraceSchema(ConstString plugin_name);
+
+  /// Get the JSON schema for a trace session file corresponding to the plugin
+  /// given by its index.
+  ///
+  /// \param[in] index
+  ///     The index of the plugin to get the schema of.
+  ///
+  /// \return
+  ///     An empty \a StringRef if the index is greater than or equal to the
+  ///     number plugins, otherwise the actual schema is returned.
+  static llvm::StringRef GetTraceSchema(size_t index);
 
   // UnwindAssembly
   static bool RegisterPlugin(ConstString name, const char *description,

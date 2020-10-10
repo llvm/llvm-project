@@ -264,12 +264,13 @@ public:
   const std::vector<Instance> &GetInstances() const { return m_instances; }
   std::vector<Instance> &GetInstances() { return m_instances; }
 
-private:
   Instance *GetInstanceAtIndex(uint32_t idx) {
     if (idx < m_instances.size())
       return &m_instances[idx];
     return nullptr;
   }
+
+private:
   std::vector<Instance> m_instances;
 };
 
@@ -1007,7 +1008,16 @@ PluginManager::GetSymbolVendorCreateCallbackAtIndex(uint32_t idx) {
 
 #pragma mark Trace
 
-typedef PluginInstance<TraceCreateInstance> TraceInstance;
+struct TraceInstance : public PluginInstance<TraceCreateInstance> {
+  TraceInstance(ConstString name, std::string description,
+                CallbackType create_callback, llvm::StringRef schema)
+      : PluginInstance<TraceCreateInstance>(name, std::move(description),
+                                            create_callback),
+        schema(schema) {}
+
+  llvm::StringRef schema;
+};
+
 typedef PluginInstances<TraceInstance> TraceInstances;
 
 static TraceInstances &GetTraceInstances() {
@@ -1016,8 +1026,10 @@ static TraceInstances &GetTraceInstances() {
 }
 
 bool PluginManager::RegisterPlugin(ConstString name, const char *description,
-                                   TraceCreateInstance create_callback) {
-  return GetTraceInstances().RegisterPlugin(name, description, create_callback);
+                                   TraceCreateInstance create_callback,
+                                   llvm::StringRef schema) {
+  return GetTraceInstances().RegisterPlugin(name, description, create_callback,
+                                            schema);
 }
 
 bool PluginManager::UnregisterPlugin(TraceCreateInstance create_callback) {
@@ -1027,6 +1039,19 @@ bool PluginManager::UnregisterPlugin(TraceCreateInstance create_callback) {
 TraceCreateInstance
 PluginManager::GetTraceCreateCallback(ConstString plugin_name) {
   return GetTraceInstances().GetCallbackForName(plugin_name);
+}
+
+llvm::StringRef PluginManager::GetTraceSchema(ConstString plugin_name) {
+  for (const TraceInstance &instance : GetTraceInstances().GetInstances())
+    if (instance.name == plugin_name)
+      return instance.schema;
+  return llvm::StringRef();
+}
+
+llvm::StringRef PluginManager::GetTraceSchema(size_t index) {
+  if (TraceInstance *instance = GetTraceInstances().GetInstanceAtIndex(index))
+    return instance->schema;
+  return llvm::StringRef();
 }
 
 #pragma mark UnwindAssembly
