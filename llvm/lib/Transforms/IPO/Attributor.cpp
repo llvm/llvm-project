@@ -32,6 +32,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -45,6 +46,9 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "attributor"
+
+DEBUG_COUNTER(ManifestDBGCounter, "attributor-manifest",
+              "Determine what attributes are manifested in the IR");
 
 STATISTIC(NumFnDeleted, "Number of function deleted");
 STATISTIC(NumFnWithExactDefinition,
@@ -1126,6 +1130,10 @@ ChangeStatus Attributor::manifestAttributes() {
 
     // Skip dead code.
     if (isAssumedDead(*AA, nullptr, /* CheckBBLivenessOnly */ true))
+      continue;
+    // Check if the manifest debug counter that allows skipping manifestation of
+    // AAs
+    if (!DebugCounter::shouldExecute(ManifestDBGCounter))
       continue;
     // Manifest the state and record if we changed the IR.
     ChangeStatus LocalChange = AA->manifest(*this);
