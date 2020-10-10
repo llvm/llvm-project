@@ -3,6 +3,8 @@
 
 target datalayout = "n8:16:32:64"
 
+declare void @use(i32)
+
 define i32 @sextinreg(i32 %x) {
 ; CHECK-LABEL: @sextinreg(
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl i32 [[X:%.*]], 16
@@ -11,6 +13,22 @@ define i32 @sextinreg(i32 %x) {
 ;
   %t1 = and i32 %x, 65535
   %t2 = xor i32 %t1, -32768
+  %t3 = add i32 %t2, 32768
+  ret i32 %t3
+}
+
+define i32 @sextinreg_extra_use(i32 %x) {
+; CHECK-LABEL: @sextinreg_extra_use(
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 65535
+; CHECK-NEXT:    [[T2:%.*]] = xor i32 [[T1]], -32768
+; CHECK-NEXT:    call void @use(i32 [[T2]])
+; CHECK-NEXT:    [[SEXT:%.*]] = shl i32 [[X]], 16
+; CHECK-NEXT:    [[T3:%.*]] = ashr exact i32 [[SEXT]], 16
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t1 = and i32 %x, 65535
+  %t2 = xor i32 %t1, -32768
+  call void @use(i32 %t2)
   %t3 = add i32 %t2, 32768
   ret i32 %t3
 }
@@ -60,6 +78,21 @@ define i32 @sext(i16 %P) {
 ;
   %t1 = zext i16 %P to i32
   %t4 = xor i32 %t1, 32768
+  %t5 = add i32 %t4, -32768
+  ret i32 %t5
+}
+
+define i32 @sext_extra_use(i16 %P) {
+; CHECK-LABEL: @sext_extra_use(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[P:%.*]], -32768
+; CHECK-NEXT:    [[T4:%.*]] = zext i16 [[TMP1]] to i32
+; CHECK-NEXT:    call void @use(i32 [[T4]])
+; CHECK-NEXT:    [[T5:%.*]] = sext i16 [[P]] to i32
+; CHECK-NEXT:    ret i32 [[T5]]
+;
+  %t1 = zext i16 %P to i32
+  %t4 = xor i32 %t1, 32768
+  call void @use(i32 %t4)
   %t5 = add i32 %t4, -32768
   ret i32 %t5
 }
