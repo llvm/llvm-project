@@ -99,11 +99,9 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
 ///
 /// If C is a scalar/fixed width vector of known powers of 2, then this
 /// function returns a new scalar/fixed width vector obtained from logBase2
-/// of C.
+/// of C. Undef elements in a vector are set to zero.
 /// Return a null pointer otherwise.
 static Constant *getLogBase2(Constant *C) {
-  // Note that log2(iN undef) is *NOT* iN undef, because log2(iN undef) u< N.
-  // FIXME: just assert that C there is no undef in \p C.
   Type *Ty = C->getType();
   const APInt *IVal;
   if (match(C, m_APInt(IVal)) && IVal->isPowerOf2())
@@ -119,8 +117,9 @@ static Constant *getLogBase2(Constant *C) {
     Constant *Elt = C->getAggregateElement(I);
     if (!Elt)
       return nullptr;
+    // Note that log2(iN undef) is *NOT* iN undef, because log2(iN undef) u< N.
     if (isa<UndefValue>(Elt)) {
-      Elts.push_back(UndefValue::get(Ty->getScalarType()));
+      Elts.push_back(Constant::getNullValue(Ty->getScalarType()));
       continue;
     }
     if (!match(Elt, m_APInt(IVal)) || !IVal->isPowerOf2())
@@ -220,11 +219,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
 
     if (match(&I, m_Mul(m_Value(NewOp), m_Constant(C1)))) {
       // Replace X*(2^C) with X << C, where C is either a scalar or a vector.
-      // Note that we need to sanitize undef multipliers to 1,
-      // to avoid introducing poison.
-      Constant *SafeC1 = Constant::replaceUndefsWith(
-          C1, ConstantInt::get(C1->getType()->getScalarType(), 1));
-      if (Constant *NewCst = getLogBase2(SafeC1)) {
+      if (Constant *NewCst = getLogBase2(C1)) {
         BinaryOperator *Shl = BinaryOperator::CreateShl(NewOp, NewCst);
 
         if (I.hasNoUnsignedWrap())
