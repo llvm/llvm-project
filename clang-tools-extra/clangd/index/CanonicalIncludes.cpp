@@ -420,6 +420,8 @@ void CanonicalIncludes::addSystemHeadersMapping(const LangOptions &Language) {
       {"bits/signum.h", "<csignal>"},
       {"bits/sigset.h", "<csignal>"},
       {"bits/sigstack.h", "<csignal>"},
+      {"bits/stdint-intn.h", "<cstdint>"},
+      {"bits/stdint-uintn.h", "<cstdint>"},
       {"bits/stdio_lim.h", "<cstdio>"},
       {"bits/sys_errlist.h", "<cstdio>"},
       {"bits/time.h", "<ctime>"},
