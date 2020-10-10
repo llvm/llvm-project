@@ -355,8 +355,10 @@ ReachingDefAnalysis::getLiveInUses(MachineBasicBlock *MBB, int PhysReg,
       Uses.insert(&MI);
     }
   }
-  MachineInstr *Last = &*MBB->getLastNonDebugInstr();
-  return isReachingDefLiveOut(Last, PhysReg);
+  auto Last = MBB->getLastNonDebugInstr();
+  if (Last == MBB->end())
+    return true;
+  return isReachingDefLiveOut(&*Last, PhysReg);
 }
 
 void
@@ -481,8 +483,9 @@ bool ReachingDefAnalysis::isRegUsedAfter(MachineInstr *MI, int PhysReg) const {
 bool ReachingDefAnalysis::isRegDefinedAfter(MachineInstr *MI,
                                             int PhysReg) const {
   MachineBasicBlock *MBB = MI->getParent();
-  MachineInstr *Last = &*MBB->getLastNonDebugInstr();
-  if (getReachingDef(MI, PhysReg) != getReachingDef(Last, PhysReg))
+  auto Last = MBB->getLastNonDebugInstr();
+  if (Last != MBB->end() &&
+      getReachingDef(MI, PhysReg) != getReachingDef(&*Last, PhysReg))
     return true;
 
   if (auto *Def = getLocalLiveOutMIDef(MBB, PhysReg))
@@ -499,9 +502,9 @@ ReachingDefAnalysis::isReachingDefLiveOut(MachineInstr *MI, int PhysReg) const {
   if (!LiveRegs.contains(PhysReg))
     return false;
 
-  MachineInstr *Last = &*MBB->getLastNonDebugInstr();
+  auto Last = MBB->getLastNonDebugInstr();
   int Def = getReachingDef(MI, PhysReg);
-  if (getReachingDef(Last, PhysReg) != Def)
+  if (Last != MBB->end() && getReachingDef(&*Last, PhysReg) != Def)
     return false;
 
   // Finally check that the last instruction doesn't redefine the register.
@@ -519,11 +522,14 @@ MachineInstr* ReachingDefAnalysis::getLocalLiveOutMIDef(MachineBasicBlock *MBB,
   if (!LiveRegs.contains(PhysReg))
     return nullptr;
 
-  MachineInstr *Last = &*MBB->getLastNonDebugInstr();
-  int Def = getReachingDef(Last, PhysReg);
+  auto Last = MBB->getLastNonDebugInstr();
+  if (Last == MBB->end())
+    return nullptr;
+
+  int Def = getReachingDef(&*Last, PhysReg);
   for (auto &MO : Last->operands())
     if (isValidRegDefOf(MO, PhysReg))
-      return Last;
+      return &*Last;
 
   return Def < 0 ? nullptr : getInstFromId(MBB, Def);
 }
