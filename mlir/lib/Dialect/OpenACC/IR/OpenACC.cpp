@@ -653,6 +653,36 @@ static LogicalResult verify(acc::DataOp dataOp) {
 }
 
 //===----------------------------------------------------------------------===//
+// ExitDataOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(acc::ExitDataOp op) {
+  // 2.6.6. Data Exit Directive restriction
+  // At least one copyout, delete, or detach clause must appear on an exit data
+  // directive.
+  if (op.copyoutOperands().empty() && op.deleteOperands().empty() &&
+      op.detachOperands().empty())
+    return op.emitError(
+        "at least one operand in copyout, delete or detach must appear on the "
+        "exit data operation");
+
+  // The async attribute represent the async clause without value. Therefore the
+  // attribute and operand cannot appear at the same time.
+  if (op.asyncOperand() && op.async())
+    return op.emitError("async attribute cannot appear with asyncOperand");
+
+  // The wait attribute represent the wait clause without values. Therefore the
+  // attribute and operands cannot appear at the same time.
+  if (!op.waitOperands().empty() && op.wait())
+    return op.emitError("wait attribute cannot appear with waitOperands");
+
+  if (op.waitDevnum() && op.waitOperands().empty())
+    return op.emitError("wait_devnum cannot appear without waitOperands");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // InitOp
 //===----------------------------------------------------------------------===//
 
