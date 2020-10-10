@@ -1038,6 +1038,14 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   if (MemSet->getDest() != MemCpy->getDest())
     return false;
 
+  // Check that src and dst of the memcpy aren't the same. While memcpy
+  // operands cannot partially overlap, exact equality is allowed.
+  if (!AA->isNoAlias(MemoryLocation(MemCpy->getSource(),
+                                    LocationSize::precise(1)),
+                     MemoryLocation(MemCpy->getDest(),
+                                    LocationSize::precise(1))))
+    return false;
+
   // Check that there are no other dependencies on the memset destination.
   MemDepResult DstDepInfo =
       MD->getPointerDependencyFrom(MemoryLocation::getForDest(MemSet), false,

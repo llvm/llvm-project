@@ -36,7 +36,7 @@ invoke.cont6:
 
 declare i8* @get_ptr()
 
-define void @test2(i8 *%in) {
+define void @test2(i8* noalias %in) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL_I1_I:%.*]] = tail call i8* @get_ptr()
