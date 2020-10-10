@@ -106,6 +106,9 @@ DEVICE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t Var,
 INLINE void __kmpc_impl_syncthreads() { __builtin_amdgcn_s_barrier(); }
 
 INLINE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t) {
+}
+
+INLINE void __kmpc_impl_syncwarp64(__kmpc_impl_lanemask_t) {
   // AMDGCN doesn't need to sync threads in a warp
 }
 

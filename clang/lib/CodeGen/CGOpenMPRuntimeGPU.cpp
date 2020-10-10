@@ -30,98 +30,6 @@ using namespace CodeGen;
 using namespace llvm::omp;
 
 namespace {
-#if 0
-enum OpenMPRTLFunctionNVPTX {
-  /// Call to void __kmpc_kernel_init(kmp_int32 thread_limit,
-  /// int16_t RequiresOMPRuntime);
-  OMPRTL_NVPTX__kmpc_kernel_init,
-  /// Call to void __kmpc_kernel_deinit(int16_t IsOMPRuntimeInitialized);
-  OMPRTL_NVPTX__kmpc_kernel_deinit,
-  /// Call to void __kmpc_spmd_kernel_init(kmp_int32 thread_limit,
-  /// int16_t RequiresOMPRuntime);
-  OMPRTL_NVPTX__kmpc_spmd_kernel_init,
-  /// Call to void __kmpc_spmd_kernel_deinit_v2(int16_t RequiresOMPRuntime);
-  OMPRTL_NVPTX__kmpc_spmd_kernel_deinit_v2,
-  /// Call to void __kmpc_kernel_prepare_parallel(void
-  /// *outlined_function);
-  OMPRTL_NVPTX__kmpc_kernel_prepare_parallel,
-  /// Call to bool __kmpc_kernel_parallel(void **outlined_function);
-  OMPRTL_NVPTX__kmpc_kernel_parallel,
-  /// Call to void __kmpc_kernel_end_parallel();
-  OMPRTL_NVPTX__kmpc_kernel_end_parallel,
-  /// Call to void __kmpc_serialized_parallel(ident_t *loc, kmp_int32
-  /// global_tid);
-  OMPRTL_NVPTX__kmpc_serialized_parallel,
-  /// Call to void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32
-  /// global_tid);
-  OMPRTL_NVPTX__kmpc_end_serialized_parallel,
-  /// Call to int32_t __kmpc_shuffle_int32(int32_t element,
-  /// int16_t lane_offset, int16_t warp_size);
-  OMPRTL_NVPTX__kmpc_shuffle_int32,
-  /// Call to int64_t __kmpc_shuffle_int64(int64_t element,
-  /// int16_t lane_offset, int16_t warp_size);
-  OMPRTL_NVPTX__kmpc_shuffle_int64,
-  /// Call to __kmpc_nvptx_parallel_reduce_nowait_v2(ident_t *loc, kmp_int32
-  /// global_tid, kmp_int32 num_vars, size_t reduce_size, void* reduce_data,
-  /// void (*kmp_ShuffleReductFctPtr)(void *rhsData, int16_t lane_id, int16_t
-  /// lane_offset, int16_t shortCircuit),
-  /// void (*kmp_InterWarpCopyFctPtr)(void* src, int32_t warp_num));
-  OMPRTL_NVPTX__kmpc_nvptx_parallel_reduce_nowait_v2,
-  /// Call to __kmpc_nvptx_teams_reduce_nowait_v2(ident_t *loc, kmp_int32
-  /// global_tid, void *global_buffer, int32_t num_of_records, void*
-  /// reduce_data,
-  /// void (*kmp_ShuffleReductFctPtr)(void *rhsData, int16_t lane_id, int16_t
-  /// lane_offset, int16_t shortCircuit),
-  /// void (*kmp_InterWarpCopyFctPtr)(void* src, int32_t warp_num), void
-  /// (*kmp_ListToGlobalCpyFctPtr)(void *buffer, int idx, void *reduce_data),
-  /// void (*kmp_GlobalToListCpyFctPtr)(void *buffer, int idx,
-  /// void *reduce_data), void (*kmp_GlobalToListCpyPtrsFctPtr)(void *buffer,
-  /// int idx, void *reduce_data), void (*kmp_GlobalToListRedFctPtr)(void
-  /// *buffer, int idx, void *reduce_data));
-  OMPRTL_NVPTX__kmpc_nvptx_teams_reduce_nowait_v2,
-  /// Call to __kmpc_nvptx_end_reduce_nowait(int32_t global_tid);
-  OMPRTL_NVPTX__kmpc_end_reduce_nowait,
-  /// Call to void __kmpc_data_sharing_init_stack();
-  OMPRTL_NVPTX__kmpc_data_sharing_init_stack,
-  /// Call to void __kmpc_data_sharing_init_stack_spmd();
-  OMPRTL_NVPTX__kmpc_data_sharing_init_stack_spmd,
-  /// Call to void* __kmpc_data_sharing_coalesced_push_stack(size_t size,
-  /// int16_t UseSharedMemory);
-  OMPRTL_NVPTX__kmpc_data_sharing_coalesced_push_stack,
-  /// Call to void* __kmpc_data_sharing_push_stack(size_t size, int16_t
-  /// UseSharedMemory);
-  OMPRTL_NVPTX__kmpc_data_sharing_push_stack,
-  /// Call to void __kmpc_data_sharing_pop_stack(void *a);
-  OMPRTL_NVPTX__kmpc_data_sharing_pop_stack,
-  /// Call to void __kmpc_begin_sharing_variables(void ***args,
-  /// size_t n_args);
-  OMPRTL_NVPTX__kmpc_begin_sharing_variables,
-  /// Call to void __kmpc_end_sharing_variables();
-  OMPRTL_NVPTX__kmpc_end_sharing_variables,
-  /// Call to void __kmpc_get_shared_variables(void ***GlobalArgs)
-  OMPRTL_NVPTX__kmpc_get_shared_variables,
-  /// Call to uint16_t __kmpc_parallel_level(ident_t *loc, kmp_int32
-  /// global_tid);
-  OMPRTL_NVPTX__kmpc_parallel_level,
-  /// Call to int8_t __kmpc_is_spmd_exec_mode();
-  OMPRTL_NVPTX__kmpc_is_spmd_exec_mode,
-  /// Call to void __kmpc_get_team_static_memory(int16_t isSPMDExecutionMode,
-  /// const void *buf, size_t size, int16_t is_shared, const void **res);
-  OMPRTL_NVPTX__kmpc_get_team_static_memory,
-  /// Call to void __kmpc_restore_team_static_memory(int16_t
-  /// isSPMDExecutionMode, int16_t is_shared);
-  OMPRTL_NVPTX__kmpc_restore_team_static_memory,
-  /// Call to void __kmpc_barrier(ident_t *loc, kmp_int32 global_tid);
-  OMPRTL__kmpc_barrier,
-  /// Call to void __kmpc_barrier_simple_spmd(ident_t *loc, kmp_int32
-  /// global_tid);
-  OMPRTL__kmpc_barrier_simple_spmd,
-  /// Call to __kmpc_impl_lanemask_t __kmpc_warp_active_thread_mask(void);
-  OMPRTL_NVPTX__kmpc_warp_active_thread_mask,
-  /// Call to void __kmpc_syncwarp(__kmpc_impl_lanemask_t Mask);
-  OMPRTL_NVPTX__kmpc_syncwarp,
-};
-#endif
 /// Pre(post)-action for different OpenMP constructs specialized for NVPTX.
 class NVPTXActionTy final : public PrePostActionTy {
   llvm::FunctionCallee EnterCallee = nullptr;
@@ -1712,343 +1620,6 @@ void CGOpenMPRuntimeGPU::emitWorkerLoop(CodeGenFunction &CGF,
   clearLocThreadIdInsertPt(CGF);
 }
 
-#if 0
-/// Returns specified OpenMP runtime function for the current OpenMP
-/// implementation.  Specialized for the NVPTX device.
-/// \param Function OpenMP runtime function.
-/// \return Specified function.
-llvm::FunctionCallee
-CGOpenMPRuntimeGPU::createNVPTXRuntimeFunction(unsigned Function) {
-  llvm::FunctionCallee RTLFn = nullptr;
-
-  llvm::Type *LanemaskTy = CGM.getTriple().getArch() == llvm::Triple::amdgcn
-                               ? CGM.Int64Ty
-                               : CGM.Int32Ty;
-
-  switch (static_cast<OpenMPRTLFunctionNVPTX>(Function)) {
-  case OMPRTL_NVPTX__kmpc_kernel_init: {
-    // Build void __kmpc_kernel_init(kmp_int32 thread_limit, int16_t
-    // RequiresOMPRuntime);
-    llvm::Type *TypeParams[] = {CGM.Int32Ty, CGM.Int16Ty};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_kernel_init");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_kernel_deinit: {
-    // Build void __kmpc_kernel_deinit(int16_t IsOMPRuntimeInitialized);
-    llvm::Type *TypeParams[] = {CGM.Int16Ty};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_kernel_deinit");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_spmd_kernel_init: {
-    // Build void __kmpc_spmd_kernel_init(kmp_int32 thread_limit,
-    // int16_t RequiresOMPRuntime, int16_t RequiresDataSharing);
-    llvm::Type *TypeParams[] = {CGM.Int32Ty, CGM.Int16Ty};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_spmd_kernel_init");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_spmd_kernel_deinit_v2: {
-    // Build void __kmpc_spmd_kernel_deinit_v2(int16_t RequiresOMPRuntime);
-    llvm::Type *TypeParams[] = {CGM.Int16Ty};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_spmd_kernel_deinit_v2");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_kernel_prepare_parallel: {
-    /// Build void __kmpc_kernel_prepare_parallel(
-    /// void *outlined_function);
-    llvm::Type *TypeParams[] = {CGM.Int8PtrTy};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_kernel_prepare_parallel");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_kernel_parallel: {
-    /// Build bool __kmpc_kernel_parallel(void **outlined_function);
-    llvm::Type *TypeParams[] = {CGM.Int8PtrPtrTy};
-    llvm::Type *RetTy = CGM.getTypes().ConvertType(CGM.getContext().BoolTy);
-    auto *FnTy =
-        llvm::FunctionType::get(RetTy, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_kernel_parallel");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_kernel_end_parallel: {
-    /// Build void __kmpc_kernel_end_parallel();
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, llvm::None, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_kernel_end_parallel");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_serialized_parallel: {
-    // Build void __kmpc_serialized_parallel(ident_t *loc, kmp_int32
-    // global_tid);
-    if (CGM.getTriple().isAMDGCN()) {
-      unsigned DiagID = CGM.getDiags().getCustomDiagID(
-        DiagnosticsEngine::Remark,
-        "Nested parallel pragma, this will be serialized on device");
-      CGM.getDiags().Report(DiagID);
-    }
-    llvm::Type *TypeParams[] = {getIdentTyPointerTy(), CGM.Int32Ty};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_serialized_parallel");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_end_serialized_parallel: {
-    // Build void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32
-    // global_tid);
-    llvm::Type *TypeParams[] = {getIdentTyPointerTy(), CGM.Int32Ty};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_end_serialized_parallel");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_shuffle_int32: {
-    // Build int32_t __kmpc_shuffle_int32(int32_t element,
-    // int16_t lane_offset, int16_t warp_size);
-    llvm::Type *TypeParams[] = {CGM.Int32Ty, CGM.Int16Ty, CGM.Int16Ty};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_shuffle_int32");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_shuffle_int64: {
-    // Build int64_t __kmpc_shuffle_int64(int64_t element,
-    // int16_t lane_offset, int16_t warp_size);
-    llvm::Type *TypeParams[] = {CGM.Int64Ty, CGM.Int16Ty, CGM.Int16Ty};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.Int64Ty, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_shuffle_int64");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_nvptx_parallel_reduce_nowait_v2: {
-    // Build int32_t kmpc_nvptx_parallel_reduce_nowait_v2(ident_t *loc,
-    // kmp_int32 global_tid, kmp_int32 num_vars, size_t reduce_size, void*
-    // reduce_data, void (*kmp_ShuffleReductFctPtr)(void *rhsData, int16_t
-    // lane_id, int16_t lane_offset, int16_t Algorithm Version), void
-    // (*kmp_InterWarpCopyFctPtr)(void* src, int warp_num));
-    llvm::Type *ShuffleReduceTypeParams[] = {CGM.VoidPtrTy, CGM.Int16Ty,
-                                             CGM.Int16Ty, CGM.Int16Ty};
-    auto *ShuffleReduceFnTy =
-        llvm::FunctionType::get(CGM.VoidTy, ShuffleReduceTypeParams,
-                                /*isVarArg=*/false);
-    llvm::Type *InterWarpCopyTypeParams[] = {CGM.VoidPtrTy, CGM.Int32Ty};
-    auto *InterWarpCopyFnTy =
-        llvm::FunctionType::get(CGM.VoidTy, InterWarpCopyTypeParams,
-                                /*isVarArg=*/false);
-    llvm::Type *TypeParams[] = {getIdentTyPointerTy(),
-                                CGM.Int32Ty,
-                                CGM.Int32Ty,
-                                CGM.SizeTy,
-                                CGM.VoidPtrTy,
-                                ShuffleReduceFnTy->getPointerTo(),
-                                InterWarpCopyFnTy->getPointerTo()};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg=*/false);
-    RTLFn = CGM.CreateRuntimeFunction(
-        FnTy, /*Name=*/"__kmpc_nvptx_parallel_reduce_nowait_v2");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_end_reduce_nowait: {
-    // Build __kmpc_end_reduce_nowait(kmp_int32 global_tid);
-    llvm::Type *TypeParams[] = {CGM.Int32Ty};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg=*/false);
-    RTLFn = CGM.CreateRuntimeFunction(
-        FnTy, /*Name=*/"__kmpc_nvptx_end_reduce_nowait");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_nvptx_teams_reduce_nowait_v2: {
-    // Build int32_t __kmpc_nvptx_teams_reduce_nowait_v2(ident_t *loc, kmp_int32
-    // global_tid, void *global_buffer, int32_t num_of_records, void*
-    // reduce_data,
-    // void (*kmp_ShuffleReductFctPtr)(void *rhsData, int16_t lane_id, int16_t
-    // lane_offset, int16_t shortCircuit),
-    // void (*kmp_InterWarpCopyFctPtr)(void* src, int32_t warp_num), void
-    // (*kmp_ListToGlobalCpyFctPtr)(void *buffer, int idx, void *reduce_data),
-    // void (*kmp_GlobalToListCpyFctPtr)(void *buffer, int idx,
-    // void *reduce_data), void (*kmp_GlobalToListCpyPtrsFctPtr)(void *buffer,
-    // int idx, void *reduce_data), void (*kmp_GlobalToListRedFctPtr)(void
-    // *buffer, int idx, void *reduce_data));
-    llvm::Type *ShuffleReduceTypeParams[] = {CGM.VoidPtrTy, CGM.Int16Ty,
-                                             CGM.Int16Ty, CGM.Int16Ty};
-    auto *ShuffleReduceFnTy =
-        llvm::FunctionType::get(CGM.VoidTy, ShuffleReduceTypeParams,
-                                /*isVarArg=*/false);
-    llvm::Type *InterWarpCopyTypeParams[] = {CGM.VoidPtrTy, CGM.Int32Ty};
-    auto *InterWarpCopyFnTy =
-        llvm::FunctionType::get(CGM.VoidTy, InterWarpCopyTypeParams,
-                                /*isVarArg=*/false);
-    llvm::Type *GlobalListTypeParams[] = {CGM.VoidPtrTy, CGM.IntTy,
-                                          CGM.VoidPtrTy};
-    auto *GlobalListFnTy =
-        llvm::FunctionType::get(CGM.VoidTy, GlobalListTypeParams,
-                                /*isVarArg=*/false);
-    llvm::Type *TypeParams[] = {getIdentTyPointerTy(),
-                                CGM.Int32Ty,
-                                CGM.VoidPtrTy,
-                                CGM.Int32Ty,
-                                CGM.VoidPtrTy,
-                                ShuffleReduceFnTy->getPointerTo(),
-                                InterWarpCopyFnTy->getPointerTo(),
-                                GlobalListFnTy->getPointerTo(),
-                                GlobalListFnTy->getPointerTo(),
-                                GlobalListFnTy->getPointerTo(),
-                                GlobalListFnTy->getPointerTo()};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg=*/false);
-    RTLFn = CGM.CreateRuntimeFunction(
-        FnTy, /*Name=*/"__kmpc_nvptx_teams_reduce_nowait_v2");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_data_sharing_init_stack: {
-    /// Build void __kmpc_data_sharing_init_stack();
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, llvm::None, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_data_sharing_init_stack");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_data_sharing_init_stack_spmd: {
-    /// Build void __kmpc_data_sharing_init_stack_spmd();
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, llvm::None, /*isVarArg*/ false);
-    RTLFn =
-        CGM.CreateRuntimeFunction(FnTy, "__kmpc_data_sharing_init_stack_spmd");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_data_sharing_coalesced_push_stack: {
-    // Build void *__kmpc_data_sharing_coalesced_push_stack(size_t size,
-    // int16_t UseSharedMemory);
-    llvm::Type *TypeParams[] = {CGM.SizeTy, CGM.Int16Ty};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidPtrTy, TypeParams, /*isVarArg=*/false);
-    RTLFn = CGM.CreateRuntimeFunction(
-        FnTy, /*Name=*/"__kmpc_data_sharing_coalesced_push_stack");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_data_sharing_push_stack: {
-    // Build void *__kmpc_data_sharing_push_stack(size_t size, int16_t
-    // UseSharedMemory);
-    llvm::Type *TypeParams[] = {CGM.SizeTy, CGM.Int16Ty};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidPtrTy, TypeParams, /*isVarArg=*/false);
-    RTLFn = CGM.CreateRuntimeFunction(
-        FnTy, /*Name=*/"__kmpc_data_sharing_push_stack");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_data_sharing_pop_stack: {
-    // Build void __kmpc_data_sharing_pop_stack(void *a);
-    llvm::Type *TypeParams[] = {CGM.VoidPtrTy};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg=*/false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy,
-                                      /*Name=*/"__kmpc_data_sharing_pop_stack");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_begin_sharing_variables: {
-    /// Build void __kmpc_begin_sharing_variables(void ***args,
-    /// size_t n_args);
-    llvm::Type *TypeParams[] = {CGM.Int8PtrPtrTy->getPointerTo(), CGM.SizeTy};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_begin_sharing_variables");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_end_sharing_variables: {
-    /// Build void __kmpc_end_sharing_variables();
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, llvm::None, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_end_sharing_variables");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_get_shared_variables: {
-    /// Build void __kmpc_get_shared_variables(void ***GlobalArgs);
-    llvm::Type *TypeParams[] = {CGM.Int8PtrPtrTy->getPointerTo()};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_get_shared_variables");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_parallel_level: {
-    // Build uint16_t __kmpc_parallel_level(ident_t *loc, kmp_int32 global_tid);
-    llvm::Type *TypeParams[] = {getIdentTyPointerTy(), CGM.Int32Ty};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.Int16Ty, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_parallel_level");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_is_spmd_exec_mode: {
-    // Build int8_t __kmpc_is_spmd_exec_mode();
-    auto *FnTy = llvm::FunctionType::get(CGM.Int8Ty, /*isVarArg=*/false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_is_spmd_exec_mode");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_get_team_static_memory: {
-    // Build void __kmpc_get_team_static_memory(int16_t isSPMDExecutionMode,
-    // const void *buf, size_t size, int16_t is_shared, const void **res);
-    llvm::Type *TypeParams[] = {CGM.Int16Ty, CGM.VoidPtrTy, CGM.SizeTy,
-                                CGM.Int16Ty, CGM.VoidPtrPtrTy};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_get_team_static_memory");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_restore_team_static_memory: {
-    // Build void __kmpc_restore_team_static_memory(int16_t isSPMDExecutionMode,
-    // int16_t is_shared);
-    llvm::Type *TypeParams[] = {CGM.Int16Ty, CGM.Int16Ty};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg=*/false);
-    RTLFn =
-        CGM.CreateRuntimeFunction(FnTy, "__kmpc_restore_team_static_memory");
-    break;
-  }
-  case OMPRTL__kmpc_barrier: {
-    // Build void __kmpc_barrier(ident_t *loc, kmp_int32 global_tid);
-    llvm::Type *TypeParams[] = {getIdentTyPointerTy(), CGM.Int32Ty};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-    RTLFn =
-        CGM.CreateConvergentRuntimeFunction(FnTy, /*Name*/ "__kmpc_barrier");
-    break;
-  }
-  case OMPRTL__kmpc_barrier_simple_spmd: {
-    // Build void __kmpc_barrier_simple_spmd(ident_t *loc, kmp_int32
-    // global_tid);
-    llvm::Type *TypeParams[] = {getIdentTyPointerTy(), CGM.Int32Ty};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateConvergentRuntimeFunction(
-        FnTy, /*Name*/ "__kmpc_barrier_simple_spmd");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_warp_active_thread_mask: {
-    // Build __kmpc_impl_lanemask_t __kmpc_warp_active_thread_mask(void);
-    auto *FnTy =
-        llvm::FunctionType::get(LanemaskTy, llvm::None, /*isVarArg=*/false);
-    RTLFn = CGM.CreateConvergentRuntimeFunction(
-        FnTy, "__kmpc_warp_active_thread_mask");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_syncwarp: {
-    // Build void __kmpc_syncwarp(__kmpc_impl_lanemask_t Mask);
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.VoidTy,
-	  LanemaskTy,
-          /*isVarArg=*/false);
-    RTLFn = CGM.CreateConvergentRuntimeFunction(FnTy, "__kmpc_syncwarp");
-    break;
-  }
-  }
-  return RTLFn;
-}
-#endif
 void CGOpenMPRuntimeGPU::createOffloadEntry(llvm::Constant *ID,
                                               llvm::Constant *Addr,
                                               uint64_t Size, int32_t,
@@ -2722,6 +2293,7 @@ void CGOpenMPRuntimeGPU::emitNonSPMDParallelCall(
                                                       /*Name=*/".zero.addr");
   CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
 
+
   // ThreadId for serialized parallels is 0.
   Address ThreadIDAddr = ZeroAddr;
   auto &&CodeGen = [this, Fn, CapturedVars, Loc, &ThreadIDAddr](
@@ -2852,6 +2424,12 @@ void CGOpenMPRuntimeGPU::emitNonSPMDParallelCall(
   auto &&LNParallelGen = [this, Loc, &SeqGen, &L0ParallelGen](
                              CodeGenFunction &CGF, PrePostActionTy &Action) {
     if (IsInParallelRegion) {
+      if (CGM.getTriple().isAMDGCN()) {
+        unsigned DiagID = CGM.getDiags().getCustomDiagID(
+          DiagnosticsEngine::Remark,
+          "Nested parallel pragma, this will be serialized on device");
+        CGM.getDiags().Report(DiagID);
+      }
       SeqGen(CGF, Action);
     } else if (IsInTargetMasterThreadRegion) {
       L0ParallelGen(CGF, Action);
@@ -2918,6 +2496,7 @@ void CGOpenMPRuntimeGPU::emitSPMDParallelCall(
                                                       /*Name=*/".zero.addr");
   CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
 
+
   // ThreadId for serialized parallels is 0.
   Address ThreadIDAddr = ZeroAddr;
   auto &&CodeGen = [this, OutlinedFn, CapturedVars, Loc, &ThreadIDAddr](
@@ -2962,6 +2541,12 @@ void CGOpenMPRuntimeGPU::emitSPMDParallelCall(
     // If we are not in the target region, it is definitely L2 parallelism or
     // more, because for SPMD mode we always has L1 parallel level, sowe don't
     // need to check for orphaned directives.
+    if (CGM.getTriple().isAMDGCN()) {
+      unsigned DiagID = CGM.getDiags().getCustomDiagID(
+        DiagnosticsEngine::Remark,
+        "Nested parallel pragma, this will be serialized on device");
+      CGM.getDiags().Report(DiagID);
+    }
     RegionCodeGenTy RCG(SeqGen);
     RCG(CGF);
   }
@@ -3012,8 +2597,11 @@ void CGOpenMPRuntimeGPU::emitCriticalRegion(
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
 
   // Get the mask of active threads in the warp.
+  bool isAMDGCN = CGM.getTriple().isAMDGCN();
   llvm::Value *Mask = CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-      CGM.getModule(), OMPRTL___kmpc_warp_active_thread_mask));
+      CGM.getModule(),
+      isAMDGCN ?  OMPRTL___kmpc_warp_active_thread_mask64
+               :  OMPRTL___kmpc_warp_active_thread_mask));
   // Fetch team-local id of the thread.
   llvm::Value *ThreadID = RT.getGPUThreadID(CGF);
 
@@ -3055,8 +2643,11 @@ void CGOpenMPRuntimeGPU::emitCriticalRegion(
   // counter variable and returns to the loop.
   CGF.EmitBlock(SyncBB);
   // Reconverge active threads in the warp.
+  isAMDGCN = CGM.getTriple().isAMDGCN();
   (void)CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                                CGM.getModule(), OMPRTL___kmpc_syncwarp),
+                                CGM.getModule(),
+			          isAMDGCN ? OMPRTL___kmpc_syncwarp64
+			                   : OMPRTL___kmpc_syncwarp),
                             Mask);
 
   llvm::Value *IncCounterVal =
