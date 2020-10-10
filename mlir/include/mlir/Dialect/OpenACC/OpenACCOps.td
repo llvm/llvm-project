@@ -230,6 +230,46 @@ def OpenACC_TerminatorOp : OpenACC_Op<"terminator", [Terminator]> {
 }
 
 //===----------------------------------------------------------------------===//
+// 2.6.6 Exit Data Directive
+//===----------------------------------------------------------------------===//
+
+def OpenACC_ExitDataOp : OpenACC_Op<"exit_data", [AttrSizedOperandSegments]> {
+  let summary = "exit data operation";
+
+  let description = [{
+    The "acc.exit_data" operation represents the OpenACC exit data directive.
+
+    Example:
+
+    ```mlir
+    acc.exit_data delete(%d1 : memref<10xf32>) attributes {async}
+    ```
+  }];
+
+  let arguments = (ins Optional<I1>:$ifCond,
+                       Optional<IntOrIndex>:$asyncOperand,
+                       UnitAttr:$async,
+                       Optional<IntOrIndex>:$waitDevnum,
+                       Variadic<IntOrIndex>:$waitOperands,
+                       UnitAttr:$wait,
+                       Variadic<AnyType>:$copyoutOperands,
+                       Variadic<AnyType>:$deleteOperands,
+                       Variadic<AnyType>:$detachOperands,
+                       UnitAttr:$finalize);
+
+  let assemblyFormat = [{
+    ( `if` `(` $ifCond^ `)` )?
+    ( `async` `(` $asyncOperand^ `:` type($asyncOperand) `)` )?
+    ( `wait_devnum` `(` $waitDevnum^ `:` type($waitDevnum) `)` )?
+    ( `wait` `(` $waitOperands^ `:` type($waitOperands) `)` )?
+    ( `copyout` `(` $copyoutOperands^ `:` type($copyoutOperands) `)` )?
+    ( `delete` `(` $deleteOperands^ `:` type($deleteOperands) `)` )?
+    ( `detach` `(` $detachOperands^ `:` type($detachOperands) `)` )?
+    attr-dict-with-keyword
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // 2.9 loop Construct
 //===----------------------------------------------------------------------===//
 

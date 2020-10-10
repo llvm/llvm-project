@@ -648,3 +648,39 @@ acc.shutdown if(%ifCond)
 // CHECK: acc.shutdown device_num([[I32VALUE]] : i32)
 // CHECK: acc.shutdown device_num([[IDXVALUE]] : index)
 // CHECK: acc.shutdown if([[IFCOND]])
+
+// -----
+
+func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
+  %ifCond = constant true
+  %i64Value = constant 1 : i64
+  %i32Value = constant 1 : i32
+  %idxValue = constant 1 : index
+
+  acc.exit_data copyout(%a : memref<10xf32>)
+  acc.exit_data delete(%a : memref<10xf32>)
+  acc.exit_data delete(%a : memref<10xf32>) attributes {async,finalize}
+  acc.exit_data detach(%a : memref<10xf32>)
+  acc.exit_data copyout(%a : memref<10xf32>) attributes {async}
+  acc.exit_data delete(%a : memref<10xf32>) attributes {wait}
+  acc.exit_data async(%i64Value : i64) copyout(%a : memref<10xf32>)
+  acc.exit_data if(%ifCond) copyout(%a : memref<10xf32>)
+  acc.exit_data wait_devnum(%i64Value: i64) wait(%i32Value, %idxValue : i32, index) copyout(%a : memref<10xf32>)
+
+  return
+}
+
+// CHECK: func @testexitdataop([[ARGA:%.*]]: memref<10xf32>, [[ARGB:%.*]]: memref<10xf32>, [[ARGC:%.*]]: memref<10x10xf32>) {
+// CHECK: [[IFCOND1:%.*]] = constant true
+// CHECK: [[I64VALUE:%.*]] = constant 1 : i64
+// CHECK: [[I32VALUE:%.*]] = constant 1 : i32
+// CHECK: [[IDXVALUE:%.*]] = constant 1 : index
+// CHECK: acc.exit_data copyout([[ARGA]] : memref<10xf32>)
+// CHECK: acc.exit_data delete([[ARGA]] : memref<10xf32>)
+// CHECK: acc.exit_data delete([[ARGA]] : memref<10xf32>) attributes {async, finalize}
+// CHECK: acc.exit_data detach([[ARGA]] : memref<10xf32>)
+// CHECK: acc.exit_data copyout([[ARGA]] : memref<10xf32>) attributes {async}
+// CHECK: acc.exit_data delete([[ARGA]] : memref<10xf32>) attributes {wait}
+// CHECK: acc.exit_data async([[I64VALUE]] : i64) copyout([[ARGA]] : memref<10xf32>)
+// CHECK: acc.exit_data if([[IFCOND]]) copyout([[ARGA]] : memref<10xf32>)
+// CHECK: acc.exit_data wait_devnum([[I64VALUE]] : i64) wait([[I32VALUE]], [[IDXVALUE]] : i32, index) copyout([[ARGA]] : memref<10xf32>)
