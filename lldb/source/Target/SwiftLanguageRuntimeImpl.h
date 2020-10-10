@@ -148,19 +148,8 @@ public:
 
 protected:
   /// Use the reflection context to build a TypeRef object.
-  ///
-  /// \param module can be used to specify a module to look up DWARF
-  /// type references (such as type aliases and Clang types)
-  /// in. Module only needs to be specified when it is different from
-  /// \c type.GetTypeSystem().GetModule(). The only situation where it
-  /// is necessary to specify the module explicitly is if a type has
-  /// been imported into the scratch context. This is always the
-  /// module of the outermost type. Even for bound generic types,
-  /// we're only interested in the module the bound generic type came
-  /// from, the bound generic parameters can be resolved from their
-  /// type metadata alone.
   const swift::reflection::TypeRef *GetTypeRef(CompilerType type,
-                                               Module *module = nullptr);
+                                               SwiftASTContext *module_holder);
 
   /// If \p instance points to a Swift object, retrieve its
   /// RecordTypeInfo pass it to the callback \p fn. Repeat the process
