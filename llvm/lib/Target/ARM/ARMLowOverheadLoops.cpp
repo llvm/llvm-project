@@ -675,6 +675,8 @@ bool LowOverheadLoop::ValidateTailPredicate() {
   // before entering the loop.
   auto CannotProvideElements = [this](MachineBasicBlock *MBB,
                                       Register NumElements) {
+    if (MBB->empty())
+      return false;
     // NumElements is redefined in this block.
     if (RDA.hasLocalDefBefore(&MBB->back(), NumElements))
       return true;
