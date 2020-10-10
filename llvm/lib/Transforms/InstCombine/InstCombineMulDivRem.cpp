@@ -101,10 +101,10 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
 /// function returns a new scalar/fixed width vector obtained from logBase2
 /// of C.
 /// Return a null pointer otherwise.
-static Constant *getLogBase2(Type *Ty, Constant *C) {
+static Constant *getLogBase2(Constant *C) {
   // Note that log2(iN undef) is *NOT* iN undef, because log2(iN undef) u< N.
   // FIXME: just assert that C there is no undef in \p C.
-
+  Type *Ty = C->getType();
   const APInt *IVal;
   if (match(C, m_APInt(IVal)) && IVal->isPowerOf2())
     return ConstantInt::get(Ty, IVal->logBase2());
@@ -224,7 +224,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       // to avoid introducing poison.
       Constant *SafeC1 = Constant::replaceUndefsWith(
           C1, ConstantInt::get(C1->getType()->getScalarType(), 1));
-      if (Constant *NewCst = getLogBase2(NewOp->getType(), SafeC1)) {
+      if (Constant *NewCst = getLogBase2(SafeC1)) {
         BinaryOperator *Shl = BinaryOperator::CreateShl(NewOp, NewCst);
 
         if (I.hasNoUnsignedWrap())
@@ -913,7 +913,7 @@ struct UDivFoldAction {
 static Instruction *foldUDivPow2Cst(Value *Op0, Value *Op1,
                                     const BinaryOperator &I,
                                     InstCombinerImpl &IC) {
-  Constant *C1 = getLogBase2(Op0->getType(), cast<Constant>(Op1));
+  Constant *C1 = getLogBase2(cast<Constant>(Op1));
   if (!C1)
     llvm_unreachable("Failed to constant fold udiv -> logbase2");
   BinaryOperator *LShr = BinaryOperator::CreateLShr(Op0, C1);
@@ -934,7 +934,7 @@ static Instruction *foldUDivShl(Value *Op0, Value *Op1, const BinaryOperator &I,
   Value *N;
   if (!match(ShiftLeft, m_Shl(m_Constant(CI), m_Value(N))))
     llvm_unreachable("match should never fail here!");
-  Constant *Log2Base = getLogBase2(N->getType(), CI);
+  Constant *Log2Base = getLogBase2(CI);
   if (!Log2Base)
     llvm_unreachable("getLogBase2 should never fail here!");
   N = IC.Builder.CreateAdd(N, Log2Base);
@@ -1151,7 +1151,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     if (DivisorWasNegative)
       Op1 = ConstantExpr::getNeg(cast<Constant>(Op1));
     auto *AShr = BinaryOperator::CreateExactAShr(
-        Op0, getLogBase2(Ty, cast<Constant>(Op1)), I.getName());
+        Op0, getLogBase2(cast<Constant>(Op1)), I.getName());
     if (!DivisorWasNegative)
       return AShr;
     Builder.Insert(AShr);
