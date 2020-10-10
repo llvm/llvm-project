@@ -491,7 +491,7 @@ Status NativeProcessFreeBSD::PopulateMemoryRegionCache() {
     return Status("sysctl() for KERN_PROC_VMMAP failed");
   }
 
-  char *bp = buf->getBufferStart();;
+  char *bp = buf->getBufferStart();
   char *end = bp + len;
   while (bp < end) {
     auto *kv = reinterpret_cast<struct kinfo_vmentry *>(bp);
