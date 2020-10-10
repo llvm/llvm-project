@@ -479,7 +479,7 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   if (stack_frame_sp) {
     lldb::ValueObjectSP valobj_sp =
         stack_frame_sp->GetValueObjectForFrameVariable(self_var_sp,
-                                                       lldb::eNoDynamicValues);
+                                                       lldb::eDynamicCanRunTarget);
 
     if (valobj_sp)
       self_type = valobj_sp->GetCompilerType();
@@ -604,7 +604,7 @@ static void AddVariableInfo(
   if (stack_frame_sp) {
     lldb::ValueObjectSP valobj_sp =
         stack_frame_sp->GetValueObjectForFrameVariable(variable_sp,
-                                                       lldb::eNoDynamicValues);
+                                                       lldb::eDynamicCanRunTarget);
 
     if (!valobj_sp || valobj_sp->GetError().Fail()) {
       // Ignore the variable if we couldn't find its corresponding
@@ -628,12 +628,6 @@ static void AddVariableInfo(
   if (!target_type.IsValid())
     return;
 
-  // Resolve all archetypes in the variable type.
-  if (stack_frame_sp)
-    if (language_runtime)
-      target_type = language_runtime->BindGenericTypeParameters(*stack_frame_sp,
-                                                                target_type);
-
   // If we couldn't fully realize the type, then we aren't going
   // to get very far making a local out of it, so discard it here.
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES |
@@ -642,7 +636,7 @@ static void AddVariableInfo(
     if (log)
       log->Printf("Discarding local %s because we couldn't fully realize it, "
                   "our best attempt was: %s.",
-                  name_cstr, target_type.GetTypeName().AsCString("<unknown>"));
+                  name_cstr, target_type.GetDisplayTypeName().AsCString("<unknown>"));
     return;
   }
 
@@ -656,8 +650,27 @@ static void AddVariableInfo(
                   static_cast<void *>(swift_type.getPointer()),
                   static_cast<void *>(ast_context.GetASTContext()), s.c_str());
     }
+  // A one-off clone of variable_sp with the type replaced by target_type.
+  auto patched_variable_sp = std::make_shared<lldb_private::Variable>(
+      0, variable_sp->GetName().GetCString(), "",
+      std::make_shared<lldb_private::SymbolFileType>(
+          *variable_sp->GetType()->GetSymbolFile(),
+          std::make_shared<lldb_private::Type>(
+              0, variable_sp->GetType()->GetSymbolFile(),
+              variable_sp->GetType()->GetName(), llvm::None,
+              variable_sp->GetType()->GetSymbolContextScope(), LLDB_INVALID_UID,
+              Type::eEncodingIsUID, variable_sp->GetType()->GetDeclaration(),
+              target_type, lldb_private::Type::ResolveState::Full,
+              variable_sp->GetType()->GetPayload())),
+      variable_sp->GetScope(), variable_sp->GetSymbolContextScope(),
+      variable_sp->GetScopeRange(),
+      const_cast<lldb_private::Declaration *>(&variable_sp->GetDeclaration()),
+      variable_sp->LocationExpression(), variable_sp->IsExternal(),
+      variable_sp->IsArtificial(),
+      variable_sp->GetLocationIsConstantValueData(),
+      variable_sp->IsStaticMember(), variable_sp->IsConstant());
   SwiftASTManipulatorBase::VariableMetadataSP metadata_sp(
-      new VariableMetadataVariable(variable_sp));
+      new VariableMetadataVariable(patched_variable_sp));
   SwiftASTManipulator::VariableInfo variable_info(
       target_type, ast_context.GetASTContext()->getIdentifier(overridden_name),
       metadata_sp,
@@ -917,6 +930,23 @@ CreateMainFile(SwiftASTContextForExpressions &swift_ast_context,
   return {buffer_id, filename.str()};
 }
 
+/// Determine whether this type was defined inside an LLDB expression.
+template <typename TypeType> bool FromLLDBModuleImpl(TypeType *type) {
+  if (auto *decl = type->getDecl())
+    if (auto *module = decl->getModuleContext())
+      return module->getName().str().startswith("__lldb_expr_");
+  return false;
+};
+
+/// Determine whether this type was defined inside an LLDB expression.
+static bool FromLLDBModule(swift::TypeBase *type) {
+  if (auto *type_alias = llvm::dyn_cast<swift::TypeAliasType>(type))
+    return FromLLDBModuleImpl(type_alias);
+  if (auto *nominal = llvm::dyn_cast<swift::NominalType>(type))
+    return FromLLDBModuleImpl(nominal);
+  return false;
+}
+
 /// Attempt to materialize one variable.
 static llvm::Optional<SwiftExpressionParser::SILVariableInfo>
 MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
@@ -954,23 +984,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
         }
       }
     } else {
-      CompilerType actual_type(variable.GetType());
-      auto orig_swift_type = GetSwiftType(actual_type);
-      auto *swift_type = orig_swift_type->mapTypeOutOfContext().getPointer();
-      actual_type = ToCompilerType(swift_type);
-      lldb::StackFrameSP stack_frame_sp = stack_frame_wp.lock();
-      if (swift_type->hasTypeParameter()) {
-        if (stack_frame_sp && stack_frame_sp->GetThread() &&
-            stack_frame_sp->GetThread()->GetProcess()) {
-          auto *swift_runtime = SwiftLanguageRuntime::Get(
-              stack_frame_sp->GetThread()->GetProcess());
-          if (swift_runtime) {
-            actual_type = swift_runtime->BindGenericTypeParameters(
-                *stack_frame_sp, actual_type);
-          }
-        }
-      }
-
+      CompilerType actual_type = variable.GetType();
       // Desugar '$lldb_context', etc.
       auto transformed_type = GetSwiftType(actual_type).transform(
         [](swift::Type t) -> swift::Type {
@@ -981,7 +995,21 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
           }
           return t;
       });
-      actual_type = ToCompilerType(transformed_type.getPointer());
+      actual_type =
+          ToCompilerType(transformed_type->mapTypeOutOfContext().getPointer());
+      //        CompilerType return_ast_type =
+      // ToCompilerType(result_type->mapTypeOutOfContext());
+      auto *swift_ast_ctx =
+          llvm::cast<SwiftASTContext>(actual_type.GetTypeSystem());
+
+      // Currently the Swift runtime cannot resolve types that were
+      // defined in the expression evaluator. That's because we don't
+      // tell it about type metadata sections that were JIT-compiled
+      // by the expression evaluator. Until that is implemented, fall
+      // back to SwiftASTContext.
+      if (!FromLLDBModule(transformed_type.getPointer()))
+        actual_type =
+            swift_ast_ctx->GetTypeRefType(actual_type.GetOpaqueQualType());
 
       if (is_result)
         offset = materializer.AddResultVariable(
@@ -1009,9 +1037,6 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
     VariableMetadataVariable *variable_metadata =
         static_cast<VariableMetadataVariable *>(variable.m_metadata.get());
 
-    // FIXME: It would be nice if we could do something like
-    //        variable_metadata->m_variable_sp->SetType(variable.GetType())
-    //        here.
     offset = materializer.AddVariable(variable_metadata->m_variable_sp, error);
 
     if (!error.Success()) {
