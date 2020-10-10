@@ -113,6 +113,28 @@ exit:
   ret void
 }
 
+define void @test_guard_ule_12(i32* nocapture %a, i64 %N) {
+; CHECK-LABEL: Determining loop execution counts for: @test_guard_ule_12
+; CHECK-NEXT:  Loop %loop: backedge-taken count is %N
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is %N
+;
+entry:
+  %c.1 = icmp ule i64 %N, 12
+  br i1 %c.1, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %idx = getelementptr inbounds i32, i32* %a, i64 %iv
+  store i32 1, i32* %idx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, %N
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 define void @test_multiple_const_guards_order1(i32* nocapture %a, i64 %i) {
 ; CHECK-LABEL: @test_multiple_const_guards_order1
 ; CHECK:       Loop %loop: backedge-taken count is %i
