@@ -4906,7 +4906,9 @@ arrays which can be attached to actual arrays, this attachment between pointer
 and pointee is called association.  The optional ``associated`` is a
 DIExpression that describes whether the pointer array is currently associated.
 The optional ``allocated`` is a DIExpression that describes whether the
-allocatable array is currently allocated.
+allocatable array is currently allocated.  The optional ``rank`` is a
+DIExpression that describes the rank (number of dimensions) of fortran assumed
+rank array (rank is known at runtime).
 
 For ``DW_TAG_enumeration_type``, the ``elements:`` should be :ref:`enumerator
 descriptors <DIEnumerator>`, each representing the definition of an enumeration
