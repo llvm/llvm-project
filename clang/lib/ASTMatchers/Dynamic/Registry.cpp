@@ -433,6 +433,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isVirtual);
   REGISTER_MATCHER(isVirtualAsWritten);
   REGISTER_MATCHER(isVolatileQualified);
+  REGISTER_MATCHER(isWeak);
   REGISTER_MATCHER(isWritten);
   REGISTER_MATCHER(lValueReferenceType);
   REGISTER_MATCHER(labelDecl);
