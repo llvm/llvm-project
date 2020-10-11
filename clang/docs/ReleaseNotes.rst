@@ -255,6 +255,9 @@ Bug Fixes
 - Reject non-type template arguments formed by casting a non-zero integer
   to a pointer in pre-C++17 modes, instead of treating them as null
   pointers.
+- Fix template arguments of pointer and reference not taking the type as
+  part of their identity.
+  `Issue 47136 <https://github.com/llvm/llvm-project/issues/47136>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

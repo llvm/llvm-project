@@ -579,3 +579,22 @@ class Derived : Base<Derived>{
   }
 };
 } // no_crash
+
+namespace PR47792 {
+  using I = int;
+
+  template<decltype(auto)> int a;
+  const int n = 0;
+  const I n2 = 0;
+  static_assert(&a<n> == &a<0>, "both should have type 'int'");
+  static_assert(&a<n2> == &a<0>, "both should have type 'int'");
+
+  int m;
+  const int &r1 = m;
+  int &r2 = m;
+  static_assert(&a<r1> != &a<r2>, "should have different types");
+
+  const I &r3 = m;
+  static_assert(&a<r1> == &a<r3>, "should have different types");
+  static_assert(&a<r2> != &a<r3>, "should have different types");
+}
