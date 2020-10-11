@@ -195,6 +195,17 @@ void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
     delete Block;
 }
 
+VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
+  iterator It = begin();
+  while (It != end() &&
+         (It->getVPRecipeID() == VPRecipeBase::VPWidenPHISC ||
+          It->getVPRecipeID() == VPRecipeBase::VPWidenIntOrFpInductionSC ||
+          It->getVPRecipeID() == VPRecipeBase::VPPredInstPHISC ||
+          It->getVPRecipeID() == VPRecipeBase::VPWidenCanonicalIVSC))
+    It++;
+  return It;
+}
+
 BasicBlock *
 VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
   // BB stands for IR BasicBlocks. VPBB stands for VPlan VPBasicBlocks.
@@ -870,6 +881,10 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   ChainOp->printAsOperand(O, SlotTracker);
   O << " + reduce(";
   VecOp->printAsOperand(O, SlotTracker);
+  if (CondOp) {
+    O << ", ";
+    CondOp->printAsOperand(O, SlotTracker);
+  }
   O << ")";
 }
 
