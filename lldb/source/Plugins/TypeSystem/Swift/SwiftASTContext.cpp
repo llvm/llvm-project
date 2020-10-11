@@ -8314,7 +8314,7 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
                                        swift::SourceFile &source_file,
                                        Status &error) {
   llvm::SmallString<1> m_description;
-  llvm::SmallVector<swift::ModuleDecl::ImportedModule, 2> parsed_imports;
+  llvm::SmallVector<swift::ImportedModule, 2> parsed_imports;
 
   swift::ModuleDecl::ImportFilter import_filter {
       swift::ModuleDecl::ImportFilterKind::Exported,
