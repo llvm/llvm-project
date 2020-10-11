@@ -1189,7 +1189,8 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   swift::ImplicitImportInfo importInfo;
   importInfo.StdlibKind = swift::ImplicitStdlibKind::Stdlib;
   for (auto *module : additional_imports)
-    importInfo.AdditionalModules.emplace_back(module, /*exported*/ false);
+    importInfo.AdditionalImports.emplace_back(swift::ImportedModule(module),
+                                              swift::ImportOptions());
 
   auto module_id = ast_context->getIdentifier(expr_name_buf);
   auto &module = *swift::ModuleDecl::create(module_id, *ast_context,
