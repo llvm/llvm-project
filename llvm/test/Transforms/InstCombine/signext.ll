@@ -22,8 +22,7 @@ define i32 @sextinreg_extra_use(i32 %x) {
 ; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 65535
 ; CHECK-NEXT:    [[T2:%.*]] = xor i32 [[T1]], -32768
 ; CHECK-NEXT:    call void @use(i32 [[T2]])
-; CHECK-NEXT:    [[SEXT:%.*]] = shl i32 [[X]], 16
-; CHECK-NEXT:    [[T3:%.*]] = ashr exact i32 [[SEXT]], 16
+; CHECK-NEXT:    [[T3:%.*]] = add nsw i32 [[T2]], 32768
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t1 = and i32 %x, 65535
