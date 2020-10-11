@@ -18433,7 +18433,9 @@ static SDValue LowerEXTRACT_VECTOR_ELT_SSE4(SDValue Op, SelectionDAG &DAG) {
                          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32,
                                      DAG.getBitcast(MVT::v4i32, Vec), Idx));
 
-    SDValue Extract = DAG.getNode(X86ISD::PEXTRB, dl, MVT::i32, Vec, Idx);
+    unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+    SDValue Extract = DAG.getNode(X86ISD::PEXTRB, dl, MVT::i32, Vec,
+                                  DAG.getTargetConstant(IdxVal, dl, MVT::i8));
     return DAG.getNode(ISD::TRUNCATE, dl, VT, Extract);
   }
 
@@ -18588,7 +18590,8 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
                          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32,
                                      DAG.getBitcast(MVT::v4i32, Vec), Idx));
 
-    SDValue Extract = DAG.getNode(X86ISD::PEXTRW, dl, MVT::i32, Vec, Idx);
+    SDValue Extract = DAG.getNode(X86ISD::PEXTRW, dl, MVT::i32, Vec,
+                                  DAG.getTargetConstant(IdxVal, dl, MVT::i8));
     return DAG.getNode(ISD::TRUNCATE, dl, VT, Extract);
   }
 
@@ -18782,10 +18785,9 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
       Opc = X86ISD::PINSRB;
     }
 
-    if (N1.getValueType() != MVT::i32)
-      N1 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, N1);
-    if (N2.getValueType() != MVT::i32)
-      N2 = DAG.getIntPtrConstant(IdxVal, dl);
+    assert(N1.getValueType() != MVT::i32 && "Unexpected VT");
+    N1 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, N1);
+    N2 = DAG.getTargetConstant(IdxVal, dl, MVT::i8);
     return DAG.getNode(Opc, dl, VT, N0, N1, N2);
   }
 
@@ -39878,7 +39880,7 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
     unsigned OpCode = (SrcVT == MVT::v8i16 ? X86ISD::PEXTRW : X86ISD::PEXTRB);
     SrcOp = DAG.getBitcast(SrcVT, SrcOp);
     SDValue ExtOp = DAG.getNode(OpCode, dl, MVT::i32, SrcOp,
-                                DAG.getIntPtrConstant(SrcIdx, dl));
+                                DAG.getTargetConstant(SrcIdx, dl, MVT::i8));
     return DAG.getZExtOrTrunc(ExtOp, dl, VT);
   }
 
