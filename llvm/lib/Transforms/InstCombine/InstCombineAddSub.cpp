@@ -936,6 +936,25 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
       if ((*C2 | LHSKnown.Zero).isAllOnesValue())
         return BinaryOperator::CreateSub(ConstantInt::get(Ty, *C2 + *C), X);
     }
+
+    // Look for a math+logic pattern that corresponds to sext-in-register of a
+    // value with cleared high bits. Convert that into a pair of shifts:
+    // add (xor X, 0x80), 0xF..F80 --> (X << ShAmtC) >>s ShAmtC
+    // add (xor X, 0xF..F80), 0x80 --> (X << ShAmtC) >>s ShAmtC
+    if (Op0->hasOneUse() && *C2 == -(*C)) {
+      unsigned BitWidth = Ty->getScalarSizeInBits();
+      unsigned ShAmt = 0;
+      if (C->isPowerOf2())
+        ShAmt = BitWidth - C->logBase2() - 1;
+      else if (C2->isPowerOf2())
+        ShAmt = BitWidth - C2->logBase2() - 1;
+      if (ShAmt && MaskedValueIsZero(X, APInt::getHighBitsSet(BitWidth, ShAmt),
+                                     0, &Add)) {
+        Constant *ShAmtC = ConstantInt::get(Ty, ShAmt);
+        Value *NewShl = Builder.CreateShl(X, ShAmtC, "sext");
+        return BinaryOperator::CreateAShr(NewShl, ShAmtC);
+      }
+    }
   }
 
   if (C->isOneValue() && Op0->hasOneUse()) {
@@ -1284,39 +1303,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *X = foldNoWrapAdd(I, Builder))
     return X;
 
-  // FIXME: This should be moved into the above helper function to allow these
-  // transforms for general constant or constant splat vectors.
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   Type *Ty = I.getType();
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS)) {
-    Value *XorLHS = nullptr; ConstantInt *XorRHS = nullptr;
-    if (match(LHS, m_OneUse(m_Xor(m_Value(XorLHS), m_ConstantInt(XorRHS))))) {
-      unsigned TySizeBits = Ty->getScalarSizeInBits();
-      const APInt &RHSVal = CI->getValue();
-      unsigned ExtendAmt = 0;
-      // If we have ADD(XOR(AND(X, 0xFF), 0x80), 0xF..F80), it's a sext.
-      // If we have ADD(XOR(AND(X, 0xFF), 0xF..F80), 0x80), it's a sext.
-      if (XorRHS->getValue() == -RHSVal) {
-        if (RHSVal.isPowerOf2())
-          ExtendAmt = TySizeBits - RHSVal.logBase2() - 1;
-        else if (XorRHS->getValue().isPowerOf2())
-          ExtendAmt = TySizeBits - XorRHS->getValue().logBase2() - 1;
-      }
-
-      if (ExtendAmt) {
-        APInt Mask = APInt::getHighBitsSet(TySizeBits, ExtendAmt);
-        if (!MaskedValueIsZero(XorLHS, Mask, 0, &I))
-          ExtendAmt = 0;
-      }
-
-      if (ExtendAmt) {
-        Constant *ShAmt = ConstantInt::get(Ty, ExtendAmt);
-        Value *NewShl = Builder.CreateShl(XorLHS, ShAmt, "sext");
-        return BinaryOperator::CreateAShr(NewShl, ShAmt);
-      }
-    }
-  }
-
   if (Ty->isIntOrIntVectorTy(1))
     return BinaryOperator::CreateXor(LHS, RHS);
 

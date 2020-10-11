@@ -34,9 +34,8 @@ define i32 @sextinreg_extra_use(i32 %x) {
 
 define <2 x i32> @sextinreg_splat(<2 x i32> %x) {
 ; CHECK-LABEL: @sextinreg_splat(
-; CHECK-NEXT:    [[T1:%.*]] = and <2 x i32> [[X:%.*]], <i32 65535, i32 65535>
-; CHECK-NEXT:    [[T2:%.*]] = xor <2 x i32> [[T1]], <i32 -32768, i32 -32768>
-; CHECK-NEXT:    [[T3:%.*]] = add nsw <2 x i32> [[T2]], <i32 32768, i32 32768>
+; CHECK-NEXT:    [[SEXT:%.*]] = shl <2 x i32> [[X:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[T3:%.*]] = ashr exact <2 x i32> [[SEXT]], <i32 16, i32 16>
 ; CHECK-NEXT:    ret <2 x i32> [[T3]]
 ;
   %t1 = and <2 x i32> %x, <i32 65535, i32 65535>
@@ -59,9 +58,8 @@ define i32 @sextinreg_alt(i32 %x) {
 
 define <2 x i32> @sextinreg_alt_splat(<2 x i32> %x) {
 ; CHECK-LABEL: @sextinreg_alt_splat(
-; CHECK-NEXT:    [[T1:%.*]] = and <2 x i32> [[X:%.*]], <i32 65535, i32 65535>
-; CHECK-NEXT:    [[T2:%.*]] = xor <2 x i32> [[T1]], <i32 32768, i32 32768>
-; CHECK-NEXT:    [[T3:%.*]] = add nsw <2 x i32> [[T2]], <i32 -32768, i32 -32768>
+; CHECK-NEXT:    [[SEXT:%.*]] = shl <2 x i32> [[X:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[T3:%.*]] = ashr exact <2 x i32> [[SEXT]], <i32 16, i32 16>
 ; CHECK-NEXT:    ret <2 x i32> [[T3]]
 ;
   %t1 = and <2 x i32> %x, <i32 65535, i32 65535>
@@ -121,9 +119,8 @@ define i32 @sextinreg2(i32 %x) {
 
 define <2 x i32> @sextinreg2_splat(<2 x i32> %x) {
 ; CHECK-LABEL: @sextinreg2_splat(
-; CHECK-NEXT:    [[T1:%.*]] = and <2 x i32> [[X:%.*]], <i32 255, i32 255>
-; CHECK-NEXT:    [[T2:%.*]] = xor <2 x i32> [[T1]], <i32 128, i32 128>
-; CHECK-NEXT:    [[T3:%.*]] = add nsw <2 x i32> [[T2]], <i32 -128, i32 -128>
+; CHECK-NEXT:    [[SEXT:%.*]] = shl <2 x i32> [[X:%.*]], <i32 24, i32 24>
+; CHECK-NEXT:    [[T3:%.*]] = ashr exact <2 x i32> [[SEXT]], <i32 24, i32 24>
 ; CHECK-NEXT:    ret <2 x i32> [[T3]]
 ;
   %t1 = and <2 x i32> %x, <i32 255, i32 255>
@@ -184,9 +181,7 @@ define i32 @ashr(i32 %x) {
 
 define <2 x i32> @ashr_splat(<2 x i32> %x) {
 ; CHECK-LABEL: @ashr_splat(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 5, i32 5>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[SHR]], <i32 67108864, i32 67108864>
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw <2 x i32> [[XOR]], <i32 -67108864, i32 -67108864>
+; CHECK-NEXT:    [[SUB:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 5, i32 5>
 ; CHECK-NEXT:    ret <2 x i32> [[SUB]]
 ;
   %shr = lshr <2 x i32> %x, <i32 5, i32 5>
