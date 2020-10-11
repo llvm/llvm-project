@@ -122,7 +122,6 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     AllocaInst *PromiseAlloca;
     BasicBlock *ResumeEntryBlock;
     unsigned IndexField;
-    unsigned PromiseField;
     bool HasFinalSuspend;
   };
 
@@ -221,12 +220,6 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     if (ABI == coro::ABI::Switch)
       return SwitchLowering.PromiseAlloca;
     return nullptr;
-  }
-  unsigned getPromiseField() const {
-    assert(ABI == coro::ABI::Switch);
-    assert(FrameTy && "frame type not assigned");
-    assert(SwitchLowering.PromiseAlloca && "no promise alloca");
-    return SwitchLowering.PromiseField;
   }
 
   /// Allocate memory according to the rules of the active lowering.

@@ -43,9 +43,9 @@ exit:
 
 ; CHECK-LABEL: @a.resume(
 ; CHECK:         %testval = alloca i32, align 4
+; CHECK-NEXT:    getelementptr inbounds %a.Frame
 ; CHECK-NEXT:    %0 = bitcast i32* %testval to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* %0)
-; CHECK-NEXT:    getelementptr inbounds %a.Frame
 ; CHECK-NEXT:    getelementptr inbounds %"struct.lean_future<int>::Awaiter"
 ; CHECK-NEXT:    %val = load i32, i32* %Result
 ; CHECK-NEXT:    %test = load i32, i32* %testval
