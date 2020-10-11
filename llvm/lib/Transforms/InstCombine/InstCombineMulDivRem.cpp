@@ -95,41 +95,6 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
   return MadeChange ? V : nullptr;
 }
 
-/// A helper routine of InstCombiner::visitMul().
-///
-/// If C is a scalar/fixed width vector of known powers of 2, then this
-/// function returns a new scalar/fixed width vector obtained from logBase2
-/// of C. Undef elements in a vector are set to zero.
-/// Return a null pointer otherwise.
-static Constant *getLogBase2(Constant *C) {
-  Type *Ty = C->getType();
-  const APInt *IVal;
-  if (match(C, m_APInt(IVal)) && IVal->isPowerOf2())
-    return ConstantInt::get(Ty, IVal->logBase2());
-
-  // FIXME: We can extract pow of 2 of splat constant for scalable vectors.
-  if (!isa<FixedVectorType>(Ty))
-    return nullptr;
-
-  SmallVector<Constant *, 4> Elts;
-  for (unsigned I = 0, E = cast<FixedVectorType>(Ty)->getNumElements(); I != E;
-       ++I) {
-    Constant *Elt = C->getAggregateElement(I);
-    if (!Elt)
-      return nullptr;
-    // Note that log2(iN undef) is *NOT* iN undef, because log2(iN undef) u< N.
-    if (isa<UndefValue>(Elt)) {
-      Elts.push_back(Constant::getNullValue(Ty->getScalarType()));
-      continue;
-    }
-    if (!match(Elt, m_APInt(IVal)) || !IVal->isPowerOf2())
-      return nullptr;
-    Elts.push_back(ConstantInt::get(Ty->getScalarType(), IVal->logBase2()));
-  }
-
-  return ConstantVector::get(Elts);
-}
-
 // TODO: This is a specific form of a much more general pattern.
 //       We could detect a select with any binop identity constant, or we
 //       could use SimplifyBinOp to see if either arm of the select reduces.
@@ -219,7 +184,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
 
     if (match(&I, m_Mul(m_Value(NewOp), m_Constant(C1)))) {
       // Replace X*(2^C) with X << C, where C is either a scalar or a vector.
-      if (Constant *NewCst = getLogBase2(C1)) {
+      if (Constant *NewCst = ConstantExpr::getExactLogBase2(C1)) {
         BinaryOperator *Shl = BinaryOperator::CreateShl(NewOp, NewCst);
 
         if (I.hasNoUnsignedWrap())
@@ -908,7 +873,7 @@ struct UDivFoldAction {
 static Instruction *foldUDivPow2Cst(Value *Op0, Value *Op1,
                                     const BinaryOperator &I,
                                     InstCombinerImpl &IC) {
-  Constant *C1 = getLogBase2(cast<Constant>(Op1));
+  Constant *C1 = ConstantExpr::getExactLogBase2(cast<Constant>(Op1));
   if (!C1)
     llvm_unreachable("Failed to constant fold udiv -> logbase2");
   BinaryOperator *LShr = BinaryOperator::CreateLShr(Op0, C1);
@@ -929,7 +894,7 @@ static Instruction *foldUDivShl(Value *Op0, Value *Op1, const BinaryOperator &I,
   Value *N;
   if (!match(ShiftLeft, m_Shl(m_Constant(CI), m_Value(N))))
     llvm_unreachable("match should never fail here!");
-  Constant *Log2Base = getLogBase2(CI);
+  Constant *Log2Base = ConstantExpr::getExactLogBase2(CI);
   if (!Log2Base)
     llvm_unreachable("getLogBase2 should never fail here!");
   N = IC.Builder.CreateAdd(N, Log2Base);
@@ -1146,7 +1111,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     if (DivisorWasNegative)
       Op1 = ConstantExpr::getNeg(cast<Constant>(Op1));
     auto *AShr = BinaryOperator::CreateExactAShr(
-        Op0, getLogBase2(cast<Constant>(Op1)), I.getName());
+        Op0, ConstantExpr::getExactLogBase2(cast<Constant>(Op1)), I.getName());
     if (!DivisorWasNegative)
       return AShr;
     Builder.Insert(AShr);
