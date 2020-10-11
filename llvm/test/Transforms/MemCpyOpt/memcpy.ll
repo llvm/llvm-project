@@ -117,6 +117,65 @@ define void @test4_addrspace(i8 addrspace(1)* %P) {
   ret void
 }
 
+define void @test4_write_between(i8 *%P) {
+; CHECK-LABEL: @test4_write_between(
+; CHECK-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 8
+; CHECK-NEXT:    [[A2:%.*]] = bitcast %1* [[A1]] to i8*
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[A2]], i8* align 4 [[P:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    store i8 0, i8* [[A2]], align 1
+; CHECK-NEXT:    call void @test4a(i8* byval align 1 [[A2]])
+; CHECK-NEXT:    ret void
+;
+  %a1 = alloca %1
+  %a2 = bitcast %1* %a1 to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %a2, i8* align 4 %P, i64 8, i1 false)
+  store i8 0, i8* %a2
+  call void @test4a(i8* align 1 byval %a2)
+  ret void
+}
+
+define i8 @test4_read_between(i8 *%P) {
+; CHECK-LABEL: @test4_read_between(
+; CHECK-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 8
+; CHECK-NEXT:    [[A2:%.*]] = bitcast %1* [[A1]] to i8*
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[A2]], i8* align 4 [[P:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    [[X:%.*]] = load i8, i8* [[A2]], align 1
+; CHECK-NEXT:    call void @test4a(i8* byval align 1 [[A2]])
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %a1 = alloca %1
+  %a2 = bitcast %1* %a1 to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %a2, i8* align 4 %P, i64 8, i1 false)
+  %x = load i8, i8* %a2
+  call void @test4a(i8* align 1 byval %a2)
+  ret i8 %x
+}
+
+define void @test4_non_local(i8 *%P, i1 %c) {
+; CHECK-LABEL: @test4_non_local(
+; CHECK-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 8
+; CHECK-NEXT:    [[A2:%.*]] = bitcast %1* [[A1]] to i8*
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[A2]], i8* align 4 [[P:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[CALL:%.*]], label [[EXIT:%.*]]
+; CHECK:       call:
+; CHECK-NEXT:    call void @test4a(i8* byval align 1 [[A2]])
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  %a1 = alloca %1
+  %a2 = bitcast %1* %a1 to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %a2, i8* align 4 %P, i64 8, i1 false)
+  br i1 %c, label %call, label %exit
+
+call:
+  call void @test4a(i8* align 1 byval %a2)
+  br label %exit
+
+exit:
+  ret void
+}
+
 declare void @test4a(i8* align 1 byval)
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 declare void @llvm.memcpy.p0i8.p1i8.i64(i8* nocapture, i8 addrspace(1)* nocapture, i64, i1) nounwind
