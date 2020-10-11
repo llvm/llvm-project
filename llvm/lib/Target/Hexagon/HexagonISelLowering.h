@@ -53,8 +53,6 @@ enum NodeType : unsigned {
   CP,          // Constant pool.
 
   COMBINE,
-  VSPLAT,      // Generic splat, selection depends on argument/return
-               // types.
   VASL,
   VASR,
   VLSR,
@@ -81,7 +79,6 @@ enum NodeType : unsigned {
   QCAT,
   QTRUE,
   QFALSE,
-  VZERO,
   TYPECAST,    // No-op that's used to convert between different legal
                // types in a register.
   VALIGN,      // Align two vectors (in Op0, Op1) to one that would have

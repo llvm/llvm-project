@@ -1620,7 +1620,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     ISD::BUILD_VECTOR,          ISD::SCALAR_TO_VECTOR,
     ISD::EXTRACT_VECTOR_ELT,    ISD::INSERT_VECTOR_ELT,
     ISD::EXTRACT_SUBVECTOR,     ISD::INSERT_SUBVECTOR,
-    ISD::CONCAT_VECTORS,        ISD::VECTOR_SHUFFLE
+    ISD::CONCAT_VECTORS,        ISD::VECTOR_SHUFFLE,
+    ISD::SPLAT_VECTOR,
   };
 
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
@@ -1677,6 +1678,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::AND, NativeVT, Legal);
     setOperationAction(ISD::OR,  NativeVT, Legal);
     setOperationAction(ISD::XOR, NativeVT, Legal);
+
+    if (NativeVT.getVectorElementType() != MVT::i1)
+      setOperationAction(ISD::SPLAT_VECTOR, NativeVT, Legal);
   }
 
   // Custom lower unaligned loads.
@@ -1843,14 +1847,12 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::VASL:          return "HexagonISD::VASL";
   case HexagonISD::VASR:          return "HexagonISD::VASR";
   case HexagonISD::VLSR:          return "HexagonISD::VLSR";
-  case HexagonISD::VSPLAT:        return "HexagonISD::VSPLAT";
   case HexagonISD::VEXTRACTW:     return "HexagonISD::VEXTRACTW";
   case HexagonISD::VINSERTW0:     return "HexagonISD::VINSERTW0";
   case HexagonISD::VROR:          return "HexagonISD::VROR";
   case HexagonISD::READCYCLE:     return "HexagonISD::READCYCLE";
   case HexagonISD::PTRUE:         return "HexagonISD::PTRUE";
   case HexagonISD::PFALSE:        return "HexagonISD::PFALSE";
-  case HexagonISD::VZERO:         return "HexagonISD::VZERO";
   case HexagonISD::D2P:           return "HexagonISD::D2P";
   case HexagonISD::P2D:           return "HexagonISD::P2D";
   case HexagonISD::V2Q:           return "HexagonISD::V2Q";
@@ -2221,26 +2223,33 @@ HexagonTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG)
 SDValue
 HexagonTargetLowering::getVectorShiftByInt(SDValue Op, SelectionDAG &DAG)
       const {
-  if (auto *BVN = dyn_cast<BuildVectorSDNode>(Op.getOperand(1).getNode())) {
-    if (SDValue S = BVN->getSplatValue()) {
-      unsigned NewOpc;
-      switch (Op.getOpcode()) {
-        case ISD::SHL:
-          NewOpc = HexagonISD::VASL;
-          break;
-        case ISD::SRA:
-          NewOpc = HexagonISD::VASR;
-          break;
-        case ISD::SRL:
-          NewOpc = HexagonISD::VLSR;
-          break;
-        default:
-          llvm_unreachable("Unexpected shift opcode");
-      }
-      return DAG.getNode(NewOpc, SDLoc(Op), ty(Op), Op.getOperand(0), S);
-    }
+  unsigned NewOpc;
+  switch (Op.getOpcode()) {
+    case ISD::SHL:
+      NewOpc = HexagonISD::VASL;
+      break;
+    case ISD::SRA:
+      NewOpc = HexagonISD::VASR;
+      break;
+    case ISD::SRL:
+      NewOpc = HexagonISD::VLSR;
+      break;
+    default:
+      llvm_unreachable("Unexpected shift opcode");
   }
 
+  SDValue Op0 = Op.getOperand(0);
+  SDValue Op1 = Op.getOperand(1);
+  const SDLoc &dl(Op);
+
+  switch (Op1.getOpcode()) {
+    case ISD::BUILD_VECTOR:
+      if (SDValue S = cast<BuildVectorSDNode>(Op1)->getSplatValue())
+        return DAG.getNode(NewOpc, dl, ty(Op), Op0, S);
+      break;
+    case ISD::SPLAT_VECTOR:
+      return DAG.getNode(NewOpc, dl, ty(Op), Op0, Op1.getOperand(0));
+  }
   return SDValue();
 }
 
@@ -2317,9 +2326,10 @@ HexagonTargetLowering::buildVector32(ArrayRef<SDValue> Elem, const SDLoc &dl,
   bool AllConst = getBuildVectorConstInts(Elem, VecTy, DAG, Consts);
 
   unsigned First, Num = Elem.size();
-  for (First = 0; First != Num; ++First)
+  for (First = 0; First != Num; ++First) {
     if (!isUndef(Elem[First]))
       break;
+  }
   if (First == Num)
     return DAG.getUNDEF(VecTy);
 
@@ -2351,18 +2361,16 @@ HexagonTargetLowering::buildVector32(ArrayRef<SDValue> Elem, const SDLoc &dl,
 
     // Then try splat.
     bool IsSplat = true;
-    for (unsigned i = 0; i != Num; ++i) {
-      if (i == First)
-        continue;
+    for (unsigned i = First+1; i != Num; ++i) {
       if (Elem[i] == Elem[First] || isUndef(Elem[i]))
         continue;
       IsSplat = false;
       break;
     }
     if (IsSplat) {
-      // Legalize the operand to VSPLAT.
+      // Legalize the operand of SPLAT_VECTOR.
       SDValue Ext = DAG.getZExtOrTrunc(Elem[First], dl, MVT::i32);
-      return DAG.getNode(HexagonISD::VSPLAT, dl, VecTy, Ext);
+      return DAG.getNode(ISD::SPLAT_VECTOR, dl, VecTy, Ext);
     }
 
     // Generate
@@ -2400,9 +2408,10 @@ HexagonTargetLowering::buildVector64(ArrayRef<SDValue> Elem, const SDLoc &dl,
   bool AllConst = getBuildVectorConstInts(Elem, VecTy, DAG, Consts);
 
   unsigned First, Num = Elem.size();
-  for (First = 0; First != Num; ++First)
+  for (First = 0; First != Num; ++First) {
     if (!isUndef(Elem[First]))
       break;
+  }
   if (First == Num)
     return DAG.getUNDEF(VecTy);
 
@@ -2413,18 +2422,16 @@ HexagonTargetLowering::buildVector64(ArrayRef<SDValue> Elem, const SDLoc &dl,
   // First try splat if possible.
   if (ElemTy == MVT::i16) {
     bool IsSplat = true;
-    for (unsigned i = 0; i != Num; ++i) {
-      if (i == First)
-        continue;
+    for (unsigned i = First+1; i != Num; ++i) {
       if (Elem[i] == Elem[First] || isUndef(Elem[i]))
         continue;
       IsSplat = false;
       break;
     }
     if (IsSplat) {
-      // Legalize the operand to VSPLAT.
+      // Legalize the operand of SPLAT_VECTOR
       SDValue Ext = DAG.getZExtOrTrunc(Elem[First], dl, MVT::i32);
-      return DAG.getNode(HexagonISD::VSPLAT, dl, VecTy, Ext);
+      return DAG.getNode(ISD::SPLAT_VECTOR, dl, VecTy, Ext);
     }
   }
 
@@ -2642,7 +2649,7 @@ HexagonTargetLowering::getZero(const SDLoc &dl, MVT Ty, SelectionDAG &DAG)
     unsigned W = Ty.getSizeInBits();
     if (W <= 64)
       return DAG.getBitcast(Ty, DAG.getConstant(0, dl, MVT::getIntegerVT(W)));
-    return DAG.getNode(HexagonISD::VZERO, dl, Ty);
+    return DAG.getNode(ISD::SPLAT_VECTOR, dl, Ty, getZero(dl, MVT::i32, DAG));
   }
 
   if (Ty.isInteger())
@@ -3146,13 +3153,14 @@ HexagonTargetLowering::ReplaceNodeResults(SDNode *N,
 SDValue
 HexagonTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
       const {
-  if (DCI.isBeforeLegalizeOps())
-    return SDValue();
   if (isHvxOperation(N, DCI.DAG)) {
     if (SDValue V = PerformHvxDAGCombine(N, DCI))
       return V;
     return SDValue();
   }
+
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
 
   SDValue Op(N, 0);
   const SDLoc &dl(Op);
