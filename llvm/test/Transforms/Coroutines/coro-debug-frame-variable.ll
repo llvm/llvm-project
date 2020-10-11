@@ -25,19 +25,21 @@
 ; ones with identical line and column numbers.
 ;
 ; CHECK-LABEL: define void @f() {
-; CHECK:       init.ready:
+; CHECK:       entry:
 ; CHECK:         [[IGEP:%.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 4
+; CHECK:         [[JGEP:%.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 5
+; CHECK:       init.ready:
 ; CHECK:         call void @llvm.dbg.declare(metadata i32* [[IGEP]], metadata ![[IVAR:[0-9]+]], metadata !DIExpression()), !dbg ![[IDBGLOC:[0-9]+]]
 ; CHECK:       await.ready:
-; CHECK:         [[JGEP:%.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 5
 ; CHECK:         call void @llvm.dbg.declare(metadata i32* [[JGEP]], metadata ![[JVAR:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC:[0-9]+]]
 ;
 ; CHECK-LABEL: define internal fastcc void @f.resume({{.*}}) {
-; CHECK:       init.ready:
+; CHECK:       entry.resume:
 ; CHECK:         [[IGEP_RESUME:%.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 4
+; CHECK:         [[JGEP_RESUME:%.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 5
+; CHECK:       init.ready:
 ; CHECK:         call void @llvm.dbg.declare(metadata i32* [[IGEP_RESUME]], metadata ![[IVAR_RESUME:[0-9]+]], metadata !DIExpression()), !dbg ![[IDBGLOC_RESUME:[0-9]+]]
 ; CHECK:       await.ready:
-; CHECK:         [[JGEP_RESUME:%.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 5
 ; CHECK:         call void @llvm.dbg.declare(metadata i32* [[JGEP_RESUME]], metadata ![[JVAR_RESUME:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC_RESUME:[0-9]+]]
 ;
 ; CHECK: ![[IVAR]] = !DILocalVariable(name: "i"
