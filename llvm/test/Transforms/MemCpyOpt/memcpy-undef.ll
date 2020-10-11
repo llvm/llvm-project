@@ -6,6 +6,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 %struct.foo = type { i8, [7 x i8], i32 }
 
+; Check that the memcpy is removed.
 define i32 @test1(%struct.foo* nocapture %foobie) nounwind noinline ssp uwtable {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[BLETCH_SROA_1:%.*]] = alloca [7 x i8], align 1
@@ -26,10 +27,9 @@ define i32 @test1(%struct.foo* nocapture %foobie) nounwind noinline ssp uwtable 
   %4 = getelementptr inbounds %struct.foo, %struct.foo* %foobie, i64 0, i32 2
   store i32 20, i32* %4, align 4
   ret i32 undef
-
-; Check that the memcpy is removed.
 }
 
+; Check that the memcpy is removed.
 define void @test2(i8* sret noalias nocapture %out, i8* %in) nounwind noinline ssp uwtable {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[IN:%.*]])
@@ -38,10 +38,9 @@ define void @test2(i8* sret noalias nocapture %out, i8* %in) nounwind noinline s
   call void @llvm.lifetime.start.p0i8(i64 8, i8* %in)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %out, i8* %in, i64 8, i1 false)
   ret void
-
-; Check that the memcpy is removed.
 }
 
+; Check that the memcpy is not removed.
 define void @test3(i8* sret noalias nocapture %out, i8* %in) nounwind noinline ssp uwtable {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[IN:%.*]])
@@ -51,8 +50,18 @@ define void @test3(i8* sret noalias nocapture %out, i8* %in) nounwind noinline s
   call void @llvm.lifetime.start.p0i8(i64 4, i8* %in)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %out, i8* %in, i64 8, i1 false)
   ret void
+}
 
 ; Check that the memcpy is not removed.
+define void @test_lifetime_may_alias(i8* %lifetime, i8* %src, i8* %dst) {
+; CHECK-LABEL: @test_lifetime_may_alias(
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[LIFETIME:%.*]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST:%.*]], i8* [[SRC:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.lifetime.start.p0i8(i64 8, i8* %lifetime)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 8, i1 false)
+  ret void
 }
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
