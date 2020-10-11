@@ -4261,19 +4261,17 @@ define void @trunc_usat_v16i32_v16i8_store(<16 x i32>* %p0, <16 x i8>* %p1) {
 define <8 x i8> @trunc_usat_v8i16_v8i8(<8 x i16> %a0) {
 ; SSE2-LABEL: trunc_usat_v8i16_v8i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm1, %xmm0
-; SSE2-NEXT:    pminsw {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    psubusw {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    psubw %xmm1, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: trunc_usat_v8i16_v8i8:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSSE3-NEXT:    pxor %xmm1, %xmm0
-; SSSE3-NEXT:    pminsw {{.*}}(%rip), %xmm0
-; SSSE3-NEXT:    pxor %xmm1, %xmm0
+; SSSE3-NEXT:    movdqa %xmm0, %xmm1
+; SSSE3-NEXT:    psubusw {{.*}}(%rip), %xmm1
+; SSSE3-NEXT:    psubw %xmm1, %xmm0
 ; SSSE3-NEXT:    packuswb %xmm0, %xmm0
 ; SSSE3-NEXT:    retq
 ;
@@ -4327,20 +4325,18 @@ define <8 x i8> @trunc_usat_v8i16_v8i8(<8 x i16> %a0) {
 define void @trunc_usat_v8i16_v8i8_store(<8 x i16> %a0, <8 x i8> *%p1) {
 ; SSE2-LABEL: trunc_usat_v8i16_v8i8_store:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm1, %xmm0
-; SSE2-NEXT:    pminsw {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    psubusw {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    psubw %xmm1, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    movq %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: trunc_usat_v8i16_v8i8_store:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSSE3-NEXT:    pxor %xmm1, %xmm0
-; SSSE3-NEXT:    pminsw {{.*}}(%rip), %xmm0
-; SSSE3-NEXT:    pxor %xmm1, %xmm0
+; SSSE3-NEXT:    movdqa %xmm0, %xmm1
+; SSSE3-NEXT:    psubusw {{.*}}(%rip), %xmm1
+; SSSE3-NEXT:    psubw %xmm1, %xmm0
 ; SSSE3-NEXT:    packuswb %xmm0, %xmm0
 ; SSSE3-NEXT:    movq %xmm0, (%rdi)
 ; SSSE3-NEXT:    retq
@@ -4400,27 +4396,25 @@ define void @trunc_usat_v8i16_v8i8_store(<8 x i16> %a0, <8 x i8> *%p1) {
 define <16 x i8> @trunc_usat_v16i16_v16i8(<16 x i16> %a0) {
 ; SSE2-LABEL: trunc_usat_v16i16_v16i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [33023,33023,33023,33023,33023,33023,33023,33023]
-; SSE2-NEXT:    pminsw %xmm3, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    pminsw %xmm3, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE2-NEXT:    movdqa %xmm1, %xmm3
+; SSE2-NEXT:    psubusw %xmm2, %xmm3
+; SSE2-NEXT:    psubw %xmm3, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm3
+; SSE2-NEXT:    psubusw %xmm2, %xmm3
+; SSE2-NEXT:    psubw %xmm3, %xmm0
 ; SSE2-NEXT:    packuswb %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: trunc_usat_v16i16_v16i8:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSSE3-NEXT:    pxor %xmm2, %xmm1
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [33023,33023,33023,33023,33023,33023,33023,33023]
-; SSSE3-NEXT:    pminsw %xmm3, %xmm1
-; SSSE3-NEXT:    pxor %xmm2, %xmm1
-; SSSE3-NEXT:    pxor %xmm2, %xmm0
-; SSSE3-NEXT:    pminsw %xmm3, %xmm0
-; SSSE3-NEXT:    pxor %xmm2, %xmm0
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSSE3-NEXT:    movdqa %xmm1, %xmm3
+; SSSE3-NEXT:    psubusw %xmm2, %xmm3
+; SSSE3-NEXT:    psubw %xmm3, %xmm1
+; SSSE3-NEXT:    movdqa %xmm0, %xmm3
+; SSSE3-NEXT:    psubusw %xmm2, %xmm3
+; SSSE3-NEXT:    psubw %xmm3, %xmm0
 ; SSSE3-NEXT:    packuswb %xmm1, %xmm0
 ; SSSE3-NEXT:    retq
 ;
@@ -4494,50 +4488,48 @@ define <16 x i8> @trunc_usat_v16i16_v16i8(<16 x i16> %a0) {
 define <32 x i8> @trunc_usat_v32i16_v32i8(<32 x i16>* %p0) {
 ; SSE2-LABEL: trunc_usat_v32i16_v32i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    movdqa 48(%rdi), %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [33023,33023,33023,33023,33023,33023,33023,33023]
-; SSE2-NEXT:    pminsw %xmm3, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    movdqa 32(%rdi), %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    pminsw %xmm3, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    packuswb %xmm0, %xmm1
-; SSE2-NEXT:    movdqa 16(%rdi), %xmm4
-; SSE2-NEXT:    pxor %xmm2, %xmm4
-; SSE2-NEXT:    pminsw %xmm3, %xmm4
-; SSE2-NEXT:    pxor %xmm2, %xmm4
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    pminsw %xmm3, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    packuswb %xmm4, %xmm0
+; SSE2-NEXT:    movdqa 16(%rdi), %xmm2
+; SSE2-NEXT:    movdqa 32(%rdi), %xmm1
+; SSE2-NEXT:    movdqa 48(%rdi), %xmm3
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
+; SSE2-NEXT:    movdqa %xmm3, %xmm5
+; SSE2-NEXT:    psubusw %xmm4, %xmm5
+; SSE2-NEXT:    psubw %xmm5, %xmm3
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    psubusw %xmm4, %xmm5
+; SSE2-NEXT:    psubw %xmm5, %xmm1
+; SSE2-NEXT:    packuswb %xmm3, %xmm1
+; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    psubusw %xmm4, %xmm3
+; SSE2-NEXT:    psubw %xmm3, %xmm2
+; SSE2-NEXT:    movdqa %xmm0, %xmm3
+; SSE2-NEXT:    psubusw %xmm4, %xmm3
+; SSE2-NEXT:    psubw %xmm3, %xmm0
+; SSE2-NEXT:    packuswb %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: trunc_usat_v32i16_v32i8:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSSE3-NEXT:    movdqa 48(%rdi), %xmm0
-; SSSE3-NEXT:    pxor %xmm2, %xmm0
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [33023,33023,33023,33023,33023,33023,33023,33023]
-; SSSE3-NEXT:    pminsw %xmm3, %xmm0
-; SSSE3-NEXT:    pxor %xmm2, %xmm0
-; SSSE3-NEXT:    movdqa 32(%rdi), %xmm1
-; SSSE3-NEXT:    pxor %xmm2, %xmm1
-; SSSE3-NEXT:    pminsw %xmm3, %xmm1
-; SSSE3-NEXT:    pxor %xmm2, %xmm1
-; SSSE3-NEXT:    packuswb %xmm0, %xmm1
-; SSSE3-NEXT:    movdqa 16(%rdi), %xmm4
-; SSSE3-NEXT:    pxor %xmm2, %xmm4
-; SSSE3-NEXT:    pminsw %xmm3, %xmm4
-; SSSE3-NEXT:    pxor %xmm2, %xmm4
 ; SSSE3-NEXT:    movdqa (%rdi), %xmm0
-; SSSE3-NEXT:    pxor %xmm2, %xmm0
-; SSSE3-NEXT:    pminsw %xmm3, %xmm0
-; SSSE3-NEXT:    pxor %xmm2, %xmm0
-; SSSE3-NEXT:    packuswb %xmm4, %xmm0
+; SSSE3-NEXT:    movdqa 16(%rdi), %xmm2
+; SSSE3-NEXT:    movdqa 32(%rdi), %xmm1
+; SSSE3-NEXT:    movdqa 48(%rdi), %xmm3
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
+; SSSE3-NEXT:    movdqa %xmm3, %xmm5
+; SSSE3-NEXT:    psubusw %xmm4, %xmm5
+; SSSE3-NEXT:    psubw %xmm5, %xmm3
+; SSSE3-NEXT:    movdqa %xmm1, %xmm5
+; SSSE3-NEXT:    psubusw %xmm4, %xmm5
+; SSSE3-NEXT:    psubw %xmm5, %xmm1
+; SSSE3-NEXT:    packuswb %xmm3, %xmm1
+; SSSE3-NEXT:    movdqa %xmm2, %xmm3
+; SSSE3-NEXT:    psubusw %xmm4, %xmm3
+; SSSE3-NEXT:    psubw %xmm3, %xmm2
+; SSSE3-NEXT:    movdqa %xmm0, %xmm3
+; SSSE3-NEXT:    psubusw %xmm4, %xmm3
+; SSSE3-NEXT:    psubw %xmm3, %xmm0
+; SSSE3-NEXT:    packuswb %xmm2, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc_usat_v32i16_v32i8:
