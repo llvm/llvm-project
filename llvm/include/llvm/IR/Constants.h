@@ -1039,7 +1039,7 @@ public:
   /// function returns a new scalar/fixed width vector obtained from logBase2
   /// of C. Undef vector elements are set to zero.
   /// Return a null pointer otherwise.
-  static Constant *ConstantExpr::getExactLogBase2(Constant *C);
+  static Constant *getExactLogBase2(Constant *C);
 
   /// Return the identity constant for a binary opcode.
   /// The identity constant C is defined as X op C = X and C op X = X for every
