@@ -5188,14 +5188,13 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, <32 x i8>* %p, <32 x i8> %ma
 ; SSE2-LABEL: truncstore_v32i16_v32i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm7, %xmm7
-; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm6, %xmm1
-; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [33023,33023,33023,33023,33023,33023,33023,33023]
-; SSE2-NEXT:    pminsw %xmm8, %xmm1
-; SSE2-NEXT:    pxor %xmm6, %xmm1
-; SSE2-NEXT:    pxor %xmm6, %xmm0
-; SSE2-NEXT:    pminsw %xmm8, %xmm0
-; SSE2-NEXT:    pxor %xmm6, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [255,255,255,255,255,255,255,255]
+; SSE2-NEXT:    movdqa %xmm1, %xmm6
+; SSE2-NEXT:    psubusw %xmm8, %xmm6
+; SSE2-NEXT:    psubw %xmm6, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm6
+; SSE2-NEXT:    psubusw %xmm8, %xmm6
+; SSE2-NEXT:    psubw %xmm6, %xmm0
 ; SSE2-NEXT:    packuswb %xmm1, %xmm0
 ; SSE2-NEXT:    pcmpeqb %xmm7, %xmm4
 ; SSE2-NEXT:    pmovmskb %xmm4, %ecx
@@ -5265,23 +5264,23 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, <32 x i8>* %p, <32 x i8> %ma
 ; SSE2-NEXT:  # %bb.23: # %cond.store21
 ; SSE2-NEXT:    movb %ch, 11(%rdi)
 ; SSE2-NEXT:  .LBB15_24: # %else22
-; SSE2-NEXT:    pxor %xmm6, %xmm3
-; SSE2-NEXT:    pxor %xmm6, %xmm2
 ; SSE2-NEXT:    testl $4096, %eax # imm = 0x1000
 ; SSE2-NEXT:    pextrw $6, %xmm0, %ecx
 ; SSE2-NEXT:    je .LBB15_26
 ; SSE2-NEXT:  # %bb.25: # %cond.store23
 ; SSE2-NEXT:    movb %cl, 12(%rdi)
 ; SSE2-NEXT:  .LBB15_26: # %else24
-; SSE2-NEXT:    pminsw %xmm8, %xmm3
-; SSE2-NEXT:    pminsw %xmm8, %xmm2
+; SSE2-NEXT:    movdqa %xmm3, %xmm1
+; SSE2-NEXT:    psubusw %xmm8, %xmm1
+; SSE2-NEXT:    movdqa %xmm2, %xmm4
+; SSE2-NEXT:    psubusw %xmm8, %xmm4
 ; SSE2-NEXT:    testl $8192, %eax # imm = 0x2000
 ; SSE2-NEXT:    je .LBB15_28
 ; SSE2-NEXT:  # %bb.27: # %cond.store25
 ; SSE2-NEXT:    movb %ch, 13(%rdi)
 ; SSE2-NEXT:  .LBB15_28: # %else26
-; SSE2-NEXT:    pxor %xmm6, %xmm3
-; SSE2-NEXT:    pxor %xmm6, %xmm2
+; SSE2-NEXT:    psubw %xmm1, %xmm3
+; SSE2-NEXT:    psubw %xmm4, %xmm2
 ; SSE2-NEXT:    testl $16384, %eax # imm = 0x4000
 ; SSE2-NEXT:    pextrw $7, %xmm0, %ecx
 ; SSE2-NEXT:    je .LBB15_30
@@ -6408,14 +6407,13 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, <16 x i8>* %p, <16 x i8> %ma
 ; SSE2-LABEL: truncstore_v16i16_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm4, %xmm1
-; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [33023,33023,33023,33023,33023,33023,33023,33023]
-; SSE2-NEXT:    pminsw %xmm5, %xmm1
-; SSE2-NEXT:    pxor %xmm4, %xmm1
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    pminsw %xmm5, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    psubusw %xmm4, %xmm5
+; SSE2-NEXT:    psubw %xmm5, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm5
+; SSE2-NEXT:    psubusw %xmm4, %xmm5
+; SSE2-NEXT:    psubw %xmm5, %xmm0
 ; SSE2-NEXT:    packuswb %xmm1, %xmm0
 ; SSE2-NEXT:    pcmpeqb %xmm2, %xmm3
 ; SSE2-NEXT:    pmovmskb %xmm3, %eax
@@ -7049,10 +7047,9 @@ define void @truncstore_v8i16_v8i8(<8 x i16> %x, <8 x i8>* %p, <8 x i16> %mask) 
 ; SSE2-LABEL: truncstore_v8i16_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm3, %xmm0
-; SSE2-NEXT:    pminsw {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    pxor %xmm3, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm3
+; SSE2-NEXT:    psubusw {{.*}}(%rip), %xmm3
+; SSE2-NEXT:    psubw %xmm3, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    pcmpeqw %xmm1, %xmm2
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1

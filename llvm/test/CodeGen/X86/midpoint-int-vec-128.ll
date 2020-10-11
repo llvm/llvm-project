@@ -2170,20 +2170,19 @@ define <8 x i16> @vec128_i16_unsigned_reg_reg(<8 x i16> %a1, <8 x i16> %a2) noun
 ; SSE2-LABEL: vec128_i16_unsigned_reg_reg:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm3, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    pxor %xmm3, %xmm2
+; SSE2-NEXT:    pxor %xmm0, %xmm3
+; SSE2-NEXT:    pcmpgtw %xmm2, %xmm3
+; SSE2-NEXT:    por {{.*}}(%rip), %xmm3
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    pxor %xmm3, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    pcmpgtw %xmm1, %xmm4
-; SSE2-NEXT:    por {{.*}}(%rip), %xmm4
-; SSE2-NEXT:    movdqa %xmm2, %xmm5
-; SSE2-NEXT:    pminsw %xmm1, %xmm5
-; SSE2-NEXT:    pxor %xmm3, %xmm5
-; SSE2-NEXT:    pmaxsw %xmm1, %xmm2
-; SSE2-NEXT:    pxor %xmm3, %xmm2
-; SSE2-NEXT:    psubw %xmm5, %xmm2
+; SSE2-NEXT:    psubusw %xmm1, %xmm2
+; SSE2-NEXT:    psubusw %xmm0, %xmm1
+; SSE2-NEXT:    psubw %xmm0, %xmm2
+; SSE2-NEXT:    paddw %xmm0, %xmm2
+; SSE2-NEXT:    paddw %xmm1, %xmm2
 ; SSE2-NEXT:    psrlw $1, %xmm2
-; SSE2-NEXT:    pmullw %xmm4, %xmm2
+; SSE2-NEXT:    pmullw %xmm3, %xmm2
 ; SSE2-NEXT:    paddw %xmm0, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; SSE2-NEXT:    retq
