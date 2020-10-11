@@ -18433,7 +18433,9 @@ static SDValue LowerEXTRACT_VECTOR_ELT_SSE4(SDValue Op, SelectionDAG &DAG) {
                          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32,
                                      DAG.getBitcast(MVT::v4i32, Vec), Idx));
 
-    SDValue Extract = DAG.getNode(X86ISD::PEXTRB, dl, MVT::i32, Vec, Idx);
+    unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+    SDValue Extract = DAG.getNode(X86ISD::PEXTRB, dl, MVT::i32, Vec,
+                                  DAG.getTargetConstant(IdxVal, dl, MVT::i8));
     return DAG.getNode(ISD::TRUNCATE, dl, VT, Extract);
   }
 
@@ -18588,7 +18590,8 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
                          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32,
                                      DAG.getBitcast(MVT::v4i32, Vec), Idx));
 
-    SDValue Extract = DAG.getNode(X86ISD::PEXTRW, dl, MVT::i32, Vec, Idx);
+    SDValue Extract = DAG.getNode(X86ISD::PEXTRW, dl, MVT::i32, Vec,
+                                  DAG.getTargetConstant(IdxVal, dl, MVT::i8));
     return DAG.getNode(ISD::TRUNCATE, dl, VT, Extract);
   }
 
@@ -18782,10 +18785,9 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
       Opc = X86ISD::PINSRB;
     }
 
-    if (N1.getValueType() != MVT::i32)
-      N1 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, N1);
-    if (N2.getValueType() != MVT::i32)
-      N2 = DAG.getIntPtrConstant(IdxVal, dl);
+    assert(N1.getValueType() != MVT::i32 && "Unexpected VT");
+    N1 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, N1);
+    N2 = DAG.getTargetConstant(IdxVal, dl, MVT::i8);
     return DAG.getNode(Opc, dl, VT, N0, N1, N2);
   }
 
@@ -25227,12 +25229,11 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                          Op.getOperand(1), Op.getOperand(2), RoundingMode);
     }
     case BEXTRI: {
-      assert(IntrData->Opc0 == X86ISD::BEXTR && "Unexpected opcode");
+      assert(IntrData->Opc0 == X86ISD::BEXTRI && "Unexpected opcode");
 
-      // The control is a TargetConstant, but we need to convert it to a
-      // ConstantSDNode.
       uint64_t Imm = Op.getConstantOperandVal(2);
-      SDValue Control = DAG.getConstant(Imm, dl, Op.getValueType());
+      SDValue Control = DAG.getTargetConstant(Imm & 0xffff, dl,
+                                              Op.getValueType());
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
                          Op.getOperand(1), Control);
     }
@@ -26944,17 +26945,15 @@ static SDValue LowerMINMAX(SDValue Op, SelectionDAG &DAG) {
   SDValue N0 = Op.getOperand(0);
   SDValue N1 = Op.getOperand(1);
 
-  // For pre-SSE41, we can perform UMIN/UMAX v8i16 by flipping the signbit,
-  // using the SMIN/SMAX instructions and flipping the signbit back.
+  // For pre-SSE41, we can perform UMIN/UMAX v8i16 by using psubusw.
   if (VT == MVT::v8i16) {
     assert((Opcode == ISD::UMIN || Opcode == ISD::UMAX) &&
            "Unexpected MIN/MAX opcode");
-    SDValue Sign = DAG.getConstant(APInt::getSignedMinValue(16), DL, VT);
-    N0 = DAG.getNode(ISD::XOR, DL, VT, N0, Sign);
-    N1 = DAG.getNode(ISD::XOR, DL, VT, N1, Sign);
-    Opcode = (Opcode == ISD::UMIN ? ISD::SMIN : ISD::SMAX);
-    SDValue Result = DAG.getNode(Opcode, DL, VT, N0, N1);
-    return DAG.getNode(ISD::XOR, DL, VT, Result, Sign);
+    if (Opcode == ISD::UMIN)
+      return DAG.getNode(ISD::SUB, DL, VT, N0,
+                         DAG.getNode(ISD::USUBSAT, DL, VT, N0, N1));
+    return DAG.getNode(ISD::ADD, DL, VT,
+                       DAG.getNode(ISD::USUBSAT, DL, VT, N1, N0), N0);
   }
 
   // Else, expand to a compare/select.
@@ -30864,6 +30863,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(XOR)
   NODE_NAME_CASE(AND)
   NODE_NAME_CASE(BEXTR)
+  NODE_NAME_CASE(BEXTRI)
   NODE_NAME_CASE(BZHI)
   NODE_NAME_CASE(PDEP)
   NODE_NAME_CASE(PEXT)
@@ -34149,7 +34149,8 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.Zero &= Known2.Zero;
     break;
   }
-  case X86ISD::BEXTR: {
+  case X86ISD::BEXTR:
+  case X86ISD::BEXTRI: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
 
@@ -38477,16 +38478,17 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
       return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewSrc));
     return false;
   }
-  case X86ISD::BEXTR: {
+  case X86ISD::BEXTR:
+  case X86ISD::BEXTRI: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
 
     // Only bottom 16-bits of the control bits are required.
     if (auto *Cst1 = dyn_cast<ConstantSDNode>(Op1)) {
       // NOTE: SimplifyDemandedBits won't do this for constants.
-      const APInt &Val1 = Cst1->getAPIntValue();
-      APInt MaskedVal1 = Val1 & 0xFFFF;
-      if (MaskedVal1 != Val1) {
+      uint64_t Val1 = Cst1->getZExtValue();
+      uint64_t MaskedVal1 = Val1 & 0xFFFF;
+      if (Opc == X86ISD::BEXTR && MaskedVal1 != Val1) {
         SDLoc DL(Op);
         return TLO.CombineTo(
             Op, TLO.DAG.getNode(X86ISD::BEXTR, DL, VT, Op0,
@@ -38511,17 +38513,18 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
         Known = Known.zextOrTrunc(BitWidth);
         return false;
       }
+    } else {
+      assert(Opc == X86ISD::BEXTR && "Unexpected opcode!");
+      KnownBits Known1;
+      APInt DemandedMask(APInt::getLowBitsSet(BitWidth, 16));
+      if (SimplifyDemandedBits(Op1, DemandedMask, Known1, TLO, Depth + 1))
+        return true;
+
+      // If the length is 0, replace with 0.
+      KnownBits LengthBits = Known1.extractBits(8, 8);
+      if (LengthBits.isZero())
+        return TLO.CombineTo(Op, TLO.DAG.getConstant(0, SDLoc(Op), VT));
     }
-
-    KnownBits Known1;
-    APInt DemandedMask(APInt::getLowBitsSet(BitWidth, 16));
-    if (SimplifyDemandedBits(Op1, DemandedMask, Known1, TLO, Depth + 1))
-      return true;
-
-    // If the length is 0, replace with 0.
-    KnownBits LengthBits = Known1.extractBits(8, 8);
-    if (LengthBits.isZero())
-      return TLO.CombineTo(Op, TLO.DAG.getConstant(0, SDLoc(Op), VT));
 
     break;
   }
@@ -39875,7 +39878,7 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
     unsigned OpCode = (SrcVT == MVT::v8i16 ? X86ISD::PEXTRW : X86ISD::PEXTRB);
     SrcOp = DAG.getBitcast(SrcVT, SrcOp);
     SDValue ExtOp = DAG.getNode(OpCode, dl, MVT::i32, SrcOp,
-                                DAG.getIntPtrConstant(SrcIdx, dl));
+                                DAG.getTargetConstant(SrcIdx, dl, MVT::i8));
     return DAG.getZExtOrTrunc(ExtOp, dl, VT);
   }
 
@@ -49817,7 +49820,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::AND:            return combineAnd(N, DAG, DCI, Subtarget);
   case ISD::OR:             return combineOr(N, DAG, DCI, Subtarget);
   case ISD::XOR:            return combineXor(N, DAG, DCI, Subtarget);
-  case X86ISD::BEXTR:       return combineBEXTR(N, DAG, DCI, Subtarget);
+  case X86ISD::BEXTR:
+  case X86ISD::BEXTRI:      return combineBEXTR(N, DAG, DCI, Subtarget);
   case ISD::LOAD:           return combineLoad(N, DAG, DCI, Subtarget);
   case ISD::MLOAD:          return combineMaskedLoad(N, DAG, DCI, Subtarget);
   case ISD::STORE:          return combineStore(N, DAG, DCI, Subtarget);

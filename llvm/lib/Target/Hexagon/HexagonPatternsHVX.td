@@ -33,7 +33,6 @@ def Combineq: OutPatFrag<(ops node:$Qs, node:$Qt),
 def LoVec: OutPatFrag<(ops node:$Vs), (EXTRACT_SUBREG $Vs, vsub_lo)>;
 def HiVec: OutPatFrag<(ops node:$Vs), (EXTRACT_SUBREG $Vs, vsub_hi)>;
 
-def HexagonVZERO:      SDNode<"HexagonISD::VZERO",      SDTVecLeaf>;
 def HexagonQCAT:       SDNode<"HexagonISD::QCAT",       SDTVecBinOp>;
 def HexagonQTRUE:      SDNode<"HexagonISD::QTRUE",      SDTVecLeaf>;
 def HexagonQFALSE:     SDNode<"HexagonISD::QFALSE",     SDTVecLeaf>;
@@ -41,7 +40,7 @@ def HexagonVPACKL:     SDNode<"HexagonISD::VPACKL",     SDTVecUnaryOp>;
 def HexagonVUNPACK:    SDNode<"HexagonISD::VUNPACK",    SDTVecUnaryOp>;
 def HexagonVUNPACKU:   SDNode<"HexagonISD::VUNPACKU",   SDTVecUnaryOp>;
 
-def vzero:  PatFrag<(ops), (HexagonVZERO)>;
+def vzero:  PatFrag<(ops), (splat_vector (i32 0))>;
 def qtrue:  PatFrag<(ops), (HexagonQTRUE)>;
 def qfalse: PatFrag<(ops), (HexagonQFALSE)>;
 def qcat:   PatFrag<(ops node:$Qs, node:$Qt),
@@ -56,19 +55,6 @@ def VSxtb: OutPatFrag<(ops node:$Vs), (V6_vunpackb  $Vs)>;
 def VSxth: OutPatFrag<(ops node:$Vs), (V6_vunpackh  $Vs)>;
 def VZxtb: OutPatFrag<(ops node:$Vs), (V6_vunpackub $Vs)>;
 def VZxth: OutPatFrag<(ops node:$Vs), (V6_vunpackuh $Vs)>;
-
-def SplatB: SDNodeXForm<imm, [{
-  uint32_t V = N->getZExtValue();
-  assert(isUInt<8>(V));
-  uint32_t S = V << 24 | V << 16 | V << 8 | V;
-  return CurDAG->getTargetConstant(S, SDLoc(N), MVT::i32);
-}]>;
-
-def SplatH: SDNodeXForm<imm, [{
-  uint32_t V = N->getZExtValue();
-  assert(isUInt<16>(V));
-  return CurDAG->getTargetConstant(V << 16 | V, SDLoc(N), MVT::i32);
-}]>;
 
 def IsVecOff : PatLeaf<(i32 imm), [{
   int32_t V = N->getSExtValue();
@@ -226,23 +212,23 @@ def Rep: OutPatFrag<(ops node:$N), (Combinev $N, $N)>;
 
 let Predicates = [UseHVX] in {
   let AddedComplexity = 10 in {
-    def: Pat<(VecI8   (HexagonVSPLAT u8_0ImmPred:$V)),  (Vsplatib $V)>;
-    def: Pat<(VecI16  (HexagonVSPLAT u16_0ImmPred:$V)), (Vsplatih $V)>;
-    def: Pat<(VecI32  (HexagonVSPLAT anyimm:$V)),       (Vsplatiw $V)>;
-    def: Pat<(VecPI8  (HexagonVSPLAT u8_0ImmPred:$V)),  (Rep (Vsplatib $V))>;
-    def: Pat<(VecPI16 (HexagonVSPLAT u16_0ImmPred:$V)), (Rep (Vsplatih $V))>;
-    def: Pat<(VecPI32 (HexagonVSPLAT anyimm:$V)),       (Rep (Vsplatiw $V))>;
+    def: Pat<(VecI8   (splat_vector u8_0ImmPred:$V)),  (Vsplatib $V)>;
+    def: Pat<(VecI16  (splat_vector u16_0ImmPred:$V)), (Vsplatih $V)>;
+    def: Pat<(VecI32  (splat_vector anyimm:$V)),       (Vsplatiw $V)>;
+    def: Pat<(VecPI8  (splat_vector u8_0ImmPred:$V)),  (Rep (Vsplatib $V))>;
+    def: Pat<(VecPI16 (splat_vector u16_0ImmPred:$V)), (Rep (Vsplatih $V))>;
+    def: Pat<(VecPI32 (splat_vector anyimm:$V)),       (Rep (Vsplatiw $V))>;
   }
-  def: Pat<(VecI8   (HexagonVSPLAT I32:$Rs)), (Vsplatrb $Rs)>;
-  def: Pat<(VecI16  (HexagonVSPLAT I32:$Rs)), (Vsplatrh $Rs)>;
-  def: Pat<(VecI32  (HexagonVSPLAT I32:$Rs)), (Vsplatrw $Rs)>;
-  def: Pat<(VecPI8  (HexagonVSPLAT I32:$Rs)), (Rep (Vsplatrb $Rs))>;
-  def: Pat<(VecPI16 (HexagonVSPLAT I32:$Rs)), (Rep (Vsplatrh $Rs))>;
-  def: Pat<(VecPI32 (HexagonVSPLAT I32:$Rs)), (Rep (Vsplatrw $Rs))>;
+  def: Pat<(VecI8   (splat_vector I32:$Rs)), (Vsplatrb $Rs)>;
+  def: Pat<(VecI16  (splat_vector I32:$Rs)), (Vsplatrh $Rs)>;
+  def: Pat<(VecI32  (splat_vector I32:$Rs)), (Vsplatrw $Rs)>;
+  def: Pat<(VecPI8  (splat_vector I32:$Rs)), (Rep (Vsplatrb $Rs))>;
+  def: Pat<(VecPI16 (splat_vector I32:$Rs)), (Rep (Vsplatrh $Rs))>;
+  def: Pat<(VecPI32 (splat_vector I32:$Rs)), (Rep (Vsplatrw $Rs))>;
 }
 
 class Vneg1<ValueType VecTy>
-  : PatFrag<(ops), (VecTy (HexagonVSPLAT (i32 -1)))>;
+  : PatFrag<(ops), (VecTy (splat_vector (i32 -1)))>;
 
 class Vnot<ValueType VecTy>
   : PatFrag<(ops node:$Vs), (xor $Vs, Vneg1<VecTy>)>;

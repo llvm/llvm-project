@@ -73,15 +73,18 @@ CudaArchToStringMap arch_names[] = {
     SM(75),                          // Turing
     SM(80),                          // Ampere
     GFX(600), // tahiti
-    GFX(601), // pitcairn, verde, oland,hainan
+    GFX(601), // pitcairn, verde
+    GFX(602), // oland, hainan
     GFX(700), // kaveri
     GFX(701), // hawaii
     GFX(702), // 290,290x,R390,R390x
     GFX(703), // kabini mullins
     GFX(704), // bonaire
+    GFX(705),
     GFX(801), // carrizo
     GFX(802), // tonga,iceland
     GFX(803), // fiji,polaris10
+    GFX(805), // tongapro
     GFX(810), // stoney
     GFX(900), // vega, instinct
     GFX(902), GFX(904), GFX(906), GFX(908), GFX(909),

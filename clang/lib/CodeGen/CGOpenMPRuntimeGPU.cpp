@@ -5302,14 +5302,17 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
       case CudaArch::SM_80:
       case CudaArch::GFX600:
       case CudaArch::GFX601:
+      case CudaArch::GFX602:
       case CudaArch::GFX700:
       case CudaArch::GFX701:
       case CudaArch::GFX702:
       case CudaArch::GFX703:
       case CudaArch::GFX704:
+      case CudaArch::GFX705:
       case CudaArch::GFX801:
       case CudaArch::GFX802:
       case CudaArch::GFX803:
+      case CudaArch::GFX805:
       case CudaArch::GFX810:
       case CudaArch::GFX900:
       case CudaArch::GFX902:
@@ -5364,17 +5367,20 @@ static std::pair<unsigned, unsigned> getSMsBlocksPerSM(CodeGenModule &CGM) {
     return {84, 32};
   case CudaArch::GFX600:
   case CudaArch::GFX601:
+  case CudaArch::GFX602:
   case CudaArch::GFX700:
   case CudaArch::GFX701:
     return {44, 64}; // Hawaii
   case CudaArch::GFX702:
   case CudaArch::GFX703:
   case CudaArch::GFX704:
+  case CudaArch::GFX705:
   case CudaArch::GFX801:
   case CudaArch::GFX802:
     return {28, 64}; // Tonga
   case CudaArch::GFX803:
     return {64, 64}; // FIXME: Verify these settings or get autmatically
+  case CudaArch::GFX805:
   case CudaArch::GFX810:
   case CudaArch::GFX900:
   case CudaArch::GFX902:

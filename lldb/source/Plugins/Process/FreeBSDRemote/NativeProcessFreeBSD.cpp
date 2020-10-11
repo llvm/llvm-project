@@ -404,12 +404,7 @@ Status NativeProcessFreeBSD::Kill() {
     break;
   }
 
-  if (kill(GetID(), SIGKILL) != 0) {
-    error.SetErrorToErrno();
-    return error;
-  }
-
-  return error;
+  return PtraceWrapper(PT_KILL, m_pid);
 }
 
 Status NativeProcessFreeBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
@@ -496,7 +491,7 @@ Status NativeProcessFreeBSD::PopulateMemoryRegionCache() {
     return Status("sysctl() for KERN_PROC_VMMAP failed");
   }
 
-  char *bp = buf->getBufferStart();;
+  char *bp = buf->getBufferStart();
   char *end = bp + len;
   while (bp < end) {
     auto *kv = reinterpret_cast<struct kinfo_vmentry *>(bp);

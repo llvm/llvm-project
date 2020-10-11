@@ -62,17 +62,20 @@ enum GPUKind : uint32_t {
   // AMDGCN-based processors.
   GK_GFX600 = 32,
   GK_GFX601 = 33,
+  GK_GFX602 = 34,
 
   GK_GFX700 = 40,
   GK_GFX701 = 41,
   GK_GFX702 = 42,
   GK_GFX703 = 43,
   GK_GFX704 = 44,
+  GK_GFX705 = 45,
 
   GK_GFX801 = 50,
   GK_GFX802 = 51,
   GK_GFX803 = 52,
-  GK_GFX810 = 53,
+  GK_GFX805 = 53,
+  GK_GFX810 = 54,
 
   GK_GFX900 = 60,
   GK_GFX902 = 61,

@@ -94,6 +94,7 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::MUL,            T, Legal);
     setOperationAction(ISD::CTPOP,          T, Legal);
     setOperationAction(ISD::CTLZ,           T, Legal);
+    setOperationAction(ISD::SPLAT_VECTOR,   T, Legal);
     if (T != ByteV) {
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Legal);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Legal);
@@ -153,6 +154,7 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG,  T, Custom);
     setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Legal);
     setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Legal);
+    setOperationAction(ISD::SPLAT_VECTOR,             T, Custom);
 
     setOperationAction(ISD::LOAD,     T, Custom);
     setOperationAction(ISD::STORE,    T, Custom);
@@ -244,6 +246,7 @@ HexagonTargetLowering::initializeHVXLowering() {
     }
   }
 
+  setTargetDAGCombine(ISD::SPLAT_VECTOR);
   setTargetDAGCombine(ISD::VSELECT);
 }
 
@@ -497,7 +500,7 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
     if (IdxN && IdxN->isNullValue())
       return getZero(dl, VecTy, DAG);
     MVT WordTy = MVT::getVectorVT(MVT::i32, HwLen/4);
-    SDValue S = DAG.getNode(HexagonISD::VSPLAT, dl, WordTy, SplatV);
+    SDValue S = DAG.getNode(ISD::SPLAT_VECTOR, dl, WordTy, SplatV);
     return DAG.getBitcast(VecTy, S);
   }
 
@@ -1128,7 +1131,7 @@ HexagonTargetLowering::extendHvxVectorPred(SDValue VecV, const SDLoc &dl,
     return DAG.getNode(HexagonISD::Q2V, dl, ResTy, VecV);
 
   assert(ty(VecV).getVectorNumElements() == ResTy.getVectorNumElements());
-  SDValue True = DAG.getNode(HexagonISD::VSPLAT, dl, ResTy,
+  SDValue True = DAG.getNode(ISD::SPLAT_VECTOR, dl, ResTy,
                              DAG.getConstant(1, dl, MVT::i32));
   SDValue False = getZero(dl, ResTy, DAG);
   return DAG.getSelect(dl, ResTy, VecV, True, False);
@@ -1424,11 +1427,11 @@ HexagonTargetLowering::LowerHvxCttz(SDValue Op, SelectionDAG &DAG) const {
   MVT ElemTy = ty(InpV).getVectorElementType();
   unsigned ElemWidth = ElemTy.getSizeInBits();
 
-  SDValue Vec1 = DAG.getNode(HexagonISD::VSPLAT, dl, ResTy,
+  SDValue Vec1 = DAG.getNode(ISD::SPLAT_VECTOR, dl, ResTy,
                              DAG.getConstant(1, dl, MVT::i32));
-  SDValue VecW = DAG.getNode(HexagonISD::VSPLAT, dl, ResTy,
+  SDValue VecW = DAG.getNode(ISD::SPLAT_VECTOR, dl, ResTy,
                              DAG.getConstant(ElemWidth, dl, MVT::i32));
-  SDValue VecN1 = DAG.getNode(HexagonISD::VSPLAT, dl, ResTy,
+  SDValue VecN1 = DAG.getNode(ISD::SPLAT_VECTOR, dl, ResTy,
                               DAG.getConstant(-1, dl, MVT::i32));
 
   // Do not use DAG.getNOT, because that would create BUILD_VECTOR with
@@ -2009,6 +2012,7 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::SIGN_EXTEND:
       case ISD::ZERO_EXTEND:
       case ISD::SIGN_EXTEND_INREG:
+      case ISD::SPLAT_VECTOR:
         return SplitHvxPairOp(Op, DAG);
     }
   }
@@ -2131,14 +2135,14 @@ HexagonTargetLowering::ReplaceHvxNodeResults(SDNode *N,
 SDValue
 HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
       const {
-  if (DCI.isBeforeLegalizeOps())
-    return SDValue();
-
   const SDLoc &dl(N);
   SelectionDAG &DAG = DCI.DAG;
   SDValue Op(N, 0);
-
   unsigned Opc = Op.getOpcode();
+
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
   switch (Opc) {
     case ISD::VSELECT: {
       // (vselect (xor x, qtrue), v0, v1) -> (vselect x, v1, v0)
