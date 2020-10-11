@@ -262,6 +262,8 @@ def IfOp : SCF_Op<"if",
                                : OpBuilder::atBlockEnd(body, listener);
     }
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 def ParallelOp : SCF_Op<"parallel",
