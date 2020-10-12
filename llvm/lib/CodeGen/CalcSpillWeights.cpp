@@ -76,12 +76,11 @@ static Register copyHint(const MachineInstr *MI, unsigned Reg,
 }
 
 // Check if all values in LI are rematerializable
-static bool isRematerializable(const LiveInterval &LI,
-                               const LiveIntervals &LIS,
-                               VirtRegMap *VRM,
+static bool isRematerializable(const LiveInterval &LI, const LiveIntervals &LIS,
+                               const VirtRegMap &VRM,
                                const TargetInstrInfo &TII) {
   unsigned Reg = LI.reg();
-  unsigned Original = VRM ? VRM->getOriginal(Reg) : 0;
+  unsigned Original = VRM.getOriginal(Reg);
   for (LiveInterval::const_vni_iterator I = LI.vni_begin(), E = LI.vni_end();
        I != E; ++I) {
     const VNInfo *VNI = *I;
@@ -96,31 +95,28 @@ static bool isRematerializable(const LiveInterval &LI,
     // Trace copies introduced by live range splitting.  The inline
     // spiller can rematerialize through these copies, so the spill
     // weight must reflect this.
-    if (VRM) {
-      while (MI->isFullCopy()) {
-        // The copy destination must match the interval register.
-        if (MI->getOperand(0).getReg() != Reg)
-          return false;
+    while (MI->isFullCopy()) {
+      // The copy destination must match the interval register.
+      if (MI->getOperand(0).getReg() != Reg)
+        return false;
 
-        // Get the source register.
-        Reg = MI->getOperand(1).getReg();
+      // Get the source register.
+      Reg = MI->getOperand(1).getReg();
 
-        // If the original (pre-splitting) registers match this
-        // copy came from a split.
-        if (!Register::isVirtualRegister(Reg) ||
-            VRM->getOriginal(Reg) != Original)
-          return false;
+      // If the original (pre-splitting) registers match this
+      // copy came from a split.
+      if (!Register::isVirtualRegister(Reg) || VRM.getOriginal(Reg) != Original)
+        return false;
 
-        // Follow the copy live-in value.
-        const LiveInterval &SrcLI = LIS.getInterval(Reg);
-        LiveQueryResult SrcQ = SrcLI.Query(VNI->def);
-        VNI = SrcQ.valueIn();
-        assert(VNI && "Copy from non-existing value");
-        if (VNI->isPHIDef())
-          return false;
-        MI = LIS.getInstructionFromIndex(VNI->def);
-        assert(MI && "Dead valno in interval");
-      }
+      // Follow the copy live-in value.
+      const LiveInterval &SrcLI = LIS.getInterval(Reg);
+      LiveQueryResult SrcQ = SrcLI.Query(VNI->def);
+      VNI = SrcQ.valueIn();
+      assert(VNI && "Copy from non-existing value");
+      if (VNI->isPHIDef())
+        return false;
+      MI = LIS.getInstructionFromIndex(VNI->def);
+      assert(MI && "Dead valno in interval");
     }
 
     if (!TII.isTriviallyReMaterializable(*MI, LIS.getAliasAnalysis()))
@@ -155,9 +151,9 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
 
   std::pair<Register, Register> TargetHint = MRI.getRegAllocationHint(LI.reg());
 
-  if (LI.isSpillable() && VRM) {
+  if (LI.isSpillable()) {
     Register Reg = LI.reg();
-    Register Original = VRM->getOriginal(Reg);
+    Register Original = VRM.getOriginal(Reg);
     const LiveInterval &OrigInt = LIS.getInterval(Original);
     // li comes from a split of OrigInt. If OrigInt was marked
     // as not spillable, make sure the new interval is marked

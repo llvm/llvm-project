@@ -312,7 +312,7 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
   RegAllocBase::init(getAnalysis<VirtRegMap>(),
                      getAnalysis<LiveIntervals>(),
                      getAnalysis<LiveRegMatrix>());
-  VirtRegAuxInfo VRAI(*MF, *LIS, VRM, getAnalysis<MachineLoopInfo>(),
+  VirtRegAuxInfo VRAI(*MF, *LIS, *VRM, getAnalysis<MachineLoopInfo>(),
                       getAnalysis<MachineBlockFrequencyInfo>());
   VRAI.calculateSpillWeightsAndHints();
 
