@@ -3464,6 +3464,7 @@ static bool shouldReadExec(const MachineInstr &MI) {
     case AMDGPU::V_WRITELANE_B32:
     case AMDGPU::V_WRITELANE_B32_gfx6_gfx7:
     case AMDGPU::V_WRITELANE_B32_gfx10:
+        //TODO-GFX11
     case AMDGPU::V_WRITELANE_B32_vi:
       return false;
     }
@@ -6835,7 +6836,8 @@ enum SIEncodingFamily {
   GFX80 = 4,
   GFX9 = 5,
   GFX10 = 6,
-  SDWA10 = 7
+  SDWA10 = 7,
+  GFX11 = 11,
 };
 
 static SIEncodingFamily subtargetEncodingFamily(const GCNSubtarget &ST) {
@@ -6850,6 +6852,8 @@ static SIEncodingFamily subtargetEncodingFamily(const GCNSubtarget &ST) {
     return SIEncodingFamily::VI;
   case AMDGPUSubtarget::GFX10:
     return SIEncodingFamily::GFX10;
+  case AMDGPUSubtarget::GFX11:
+    return SIEncodingFamily::GFX11;
   }
   llvm_unreachable("Unknown subtarget generation!");
 }
@@ -6888,6 +6892,7 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
     Gen = SIEncodingFamily::GFX80;
 
   if (get(Opcode).TSFlags & SIInstrFlags::SDWA) {
+    assert(ST.hasSDWA() && "SDWA is not supported on this GPU");
     switch (ST.getGeneration()) {
     default:
       Gen = SIEncodingFamily::SDWA;
