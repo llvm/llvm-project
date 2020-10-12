@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangdLSPServer.h"
+#include "ClangdServer.h"
 #include "CodeComplete.h"
 #include "Diagnostics.h"
 #include "DraftStore.h"
@@ -18,6 +19,7 @@
 #include "URI.h"
 #include "refactor/Tweak.h"
 #include "support/Context.h"
+#include "support/MemoryTree.h"
 #include "support/Trace.h"
 #include "clang/Basic/Version.h"
 #include "clang/Tooling/Core/Replacement.h"
@@ -26,6 +28,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -33,6 +36,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <chrono>
 #include <cstddef>
 #include <memory>
 #include <mutex>
@@ -144,7 +148,6 @@ llvm::Error validateEdits(const DraftStore &DraftMgr, const FileEdits &FE) {
   return error("Files must be saved first: {0} (and {1} others)",
                LastInvalidFile, InvalidFileCount - 1);
 }
-
 } // namespace
 
 // MessageHandler dispatches incoming LSP messages.
@@ -163,14 +166,16 @@ public:
     log("<-- {0}", Method);
     if (Method == "exit")
       return false;
-    if (!Server.Server)
+    if (!Server.Server) {
       elog("Notification {0} before initialization", Method);
-    else if (Method == "$/cancelRequest")
+    } else if (Method == "$/cancelRequest") {
       onCancel(std::move(Params));
-    else if (auto Handler = Notifications.lookup(Method))
+    } else if (auto Handler = Notifications.lookup(Method)) {
       Handler(std::move(Params));
-    else
+      Server.maybeExportMemoryProfile();
+    } else {
       log("unhandled notification {0}", Method);
+    }
     return true;
   }
 
@@ -1234,6 +1239,25 @@ void ClangdLSPServer::publishDiagnostics(
   notify("textDocument/publishDiagnostics", Params);
 }
 
+void ClangdLSPServer::maybeExportMemoryProfile() {
+  if (!trace::enabled())
+    return;
+  // Profiling might be expensive, so we throttle it to happen once every 5
+  // minutes.
+  static constexpr auto ProfileInterval = std::chrono::minutes(5);
+  auto Now = std::chrono::steady_clock::now();
+  if (Now < NextProfileTime)
+    return;
+
+  static constexpr trace::Metric MemoryUsage(
+      "memory_usage", trace::Metric::Value, "component_name");
+  trace::Span Tracer("ProfileBrief");
+  MemoryTree MT;
+  profile(MT);
+  record(MT, "clangd_lsp_server", MemoryUsage);
+  NextProfileTime = Now + ProfileInterval;
+}
+
 // FIXME: This function needs to be properly tested.
 void ClangdLSPServer::onChangeConfiguration(
     const DidChangeConfigurationParams &Params) {
@@ -1404,6 +1428,9 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
   if (Opts.FoldingRanges)
     MsgHandler->bind("textDocument/foldingRange", &ClangdLSPServer::onFoldingRange);
   // clang-format on
+
+  // Delay first profile until we've finished warming up.
+  NextProfileTime = std::chrono::steady_clock::now() + std::chrono::minutes(1);
 }
 
 ClangdLSPServer::~ClangdLSPServer() {
@@ -1422,6 +1449,11 @@ bool ClangdLSPServer::run() {
   }
 
   return CleanExit && ShutdownRequestReceived;
+}
+
+void ClangdLSPServer::profile(MemoryTree &MT) const {
+  if (Server)
+    Server->profile(MT.child("clangd_server"));
 }
 
 std::vector<Fix> ClangdLSPServer::getFixes(llvm::StringRef File,
