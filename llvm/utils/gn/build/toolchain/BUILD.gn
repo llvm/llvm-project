@@ -56,7 +56,7 @@ template("unix_toolchain") {
     }
 
     tool("alink") {
-      if (current_os == "mac") {
+      if (current_os == "ios" || current_os == "mac") {
         command = "libtool -D -static -no_warning_for_no_symbols {{arflags}} -o {{output}} {{inputs}}"
       } else {
         # Remove the output file first so that ar doesn't try to modify the
@@ -70,7 +70,7 @@ template("unix_toolchain") {
       default_output_dir = "{{root_out_dir}}/lib"
     }
 
-    if (current_os == "mac") {
+    if (current_os == "ios" || current_os == "mac") {
       # gn < 1693 (e214b5d35898) doesn't support |frameworks|, requiring
       # frameworks to be listed in |libs|, but gn >= 1808 (3028c6a426a4) forbids
       # frameworks from appearing in |libs|. This assertion provides a helpful
@@ -89,7 +89,7 @@ template("unix_toolchain") {
 
     tool("solink") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
-      if (current_os == "mac") {
+      if (current_os == "ios" || current_os == "mac") {
         command = "$ld -shared {{ldflags}} -o $outfile {{inputs}} {{libs}} {{frameworks}}"
         default_output_extension = ".dylib"
       } else {
@@ -105,7 +105,7 @@ template("unix_toolchain") {
 
     tool("solink_module") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
-      if (current_os == "mac") {
+      if (current_os == "ios" || current_os == "mac") {
         command = "$ld -shared {{ldflags}} -Wl,-flat_namespace -Wl,-undefined,suppress -o $outfile {{inputs}} {{libs}} {{frameworks}}"
         default_output_extension = ".dylib"
       } else {
@@ -120,7 +120,7 @@ template("unix_toolchain") {
 
     tool("link") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
-      if (current_os == "mac") {
+      if (current_os == "ios" || current_os == "mac") {
         command =
             "$ld {{ldflags}} -o $outfile {{inputs}} {{libs}} {{frameworks}}"
       } else {
@@ -141,7 +141,7 @@ template("unix_toolchain") {
       description = "COPY {{source}} {{output}}"
     }
 
-    if (current_os == "mac") {
+    if (current_os == "ios" || current_os == "mac") {
       tool("copy_bundle_data") {
         # http://serverfault.com/q/209888/43689
         _copydir = "mkdir -p {{output}} && cd {{source}} && " +
@@ -164,7 +164,7 @@ template("unix_toolchain") {
 }
 
 unix_toolchain("unix") {
-  if (current_os != "mac") {
+  if (current_os != "ios" && current_os != "mac") {
     ar = "ar"
   }
 
@@ -189,7 +189,7 @@ template("stage2_unix_toolchain") {
       "//:clang($host_toolchain)",
       "//:lld($host_toolchain)",
     ]
-    if (current_os != "mac") {
+    if (current_os != "ios" && current_os != "mac") {
       ar = "bin/llvm-ar"
       deps += [ "//:llvm-ar($host_toolchain)" ]
     }
@@ -215,6 +215,22 @@ if (android_ndk_path != "") {
     toolchain_args = {
       current_os = "android"
       current_cpu = "arm"
+    }
+  }
+}
+
+if (host_os == "mac") {
+  stage2_unix_toolchain("stage2_ios_aarch64") {
+    toolchain_args = {
+      current_os = "ios"
+      current_cpu = "arm64"
+    }
+  }
+
+  stage2_unix_toolchain("stage2_iossim_x64") {
+    toolchain_args = {
+      current_os = "ios"
+      current_cpu = "x64"
     }
   }
 }
