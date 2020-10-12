@@ -1005,6 +1005,21 @@ let Command = "thread plan list" in {
     Desc<"Display thread plans for unreported threads">;
 }
 
+let Command = "thread trace dump instructions" in {
+  def thread_trace_dump_instructions_count : Option<"count", "c">, Group<1>,
+    Arg<"Count">,
+    Desc<"The number of instructions to display starting at the current "
+    "position in reverse order chronologically.">;
+  def thread_trace_dump_instructions_start_position:
+    Option<"start-position", "s">,
+    Group<1>,
+    Arg<"Index">,
+    Desc<"The position of the first instruction to print. Defaults to the "
+    "current position, i.e. where the thread is stopped. The instructions are "
+    "indexed in reverse order, which means that a start position of 0 refers "
+    "to the last instruction chronologically.">;
+}
+
 let Command = "type summary add" in {
   def type_summary_add_category : Option<"category", "w">, Arg<"Name">,
     Desc<"Add this to the given category instead of the default one.">;
