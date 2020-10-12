@@ -565,7 +565,9 @@ int hello;
 }
 
 MATCHER_P4(Stats, Name, UsesMemory, PreambleBuilds, ASTBuilds, "") {
-  return arg.first() == Name && (arg.second.UsedBytes != 0) == UsesMemory &&
+  return arg.first() == Name &&
+         (arg.second.UsedBytesAST + arg.second.UsedBytesPreamble != 0) ==
+             UsesMemory &&
          std::tie(arg.second.PreambleBuilds, ASTBuilds) ==
              std::tie(PreambleBuilds, ASTBuilds);
 }
