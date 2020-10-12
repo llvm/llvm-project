@@ -509,28 +509,33 @@ unsigned NameSection::numNames() const {
 // Create the custom "name" section containing debug symbol names.
 void NameSection::writeBody() {
   SubSection sub(WASM_NAMES_FUNCTION);
-  writeUleb128(sub.os, numNames(), "name count");
+  const int nameCount = numNames();
+  writeUleb128(sub.os, nameCount, "name count");
 
   // Names must appear in function index order.  As it happens importedSymbols
   // and inputFunctions are numbered in order with imported functions coming
   // first.
+  int namesWritten = 0;
   for (const Symbol *s : out.importSec->importedSymbols) {
     if (auto *f = dyn_cast<FunctionSymbol>(s)) {
       writeUleb128(sub.os, f->getFunctionIndex(), "func index");
       writeStr(sub.os, toString(*s), "symbol name");
+      ++namesWritten;
     }
   }
   for (const InputFunction *f : out.functionSec->inputFunctions) {
-    if (!f->getName().empty()) {
+    if (!f->getName().empty() || !f->getDebugName().empty()) {
       writeUleb128(sub.os, f->getFunctionIndex(), "func index");
       if (!f->getDebugName().empty()) {
         writeStr(sub.os, f->getDebugName(), "symbol name");
       } else {
         writeStr(sub.os, maybeDemangleSymbol(f->getName()), "symbol name");
       }
+      ++namesWritten;
     }
   }
 
+  assert(namesWritten == nameCount);
   sub.writeTo(bodyOutputStream);
 }
 
