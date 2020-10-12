@@ -79,8 +79,13 @@ public:
   /// Returns a derived context that will be destroyed when the event ends.
   /// Usually implementations will store an object in the returned context
   /// whose destructor records the end of the event.
-  /// The args are *Args, only complete when the event ends.
-  virtual Context beginSpan(llvm::StringRef Name, llvm::json::Object *Args);
+  /// The tracer may capture event details provided in SPAN_ATTACH() calls.
+  /// In this case it should call AttachDetails(), and pass in an empty Object
+  /// to hold them. This Object should be owned by the context, and the data
+  /// will be complete by the time the context is destroyed.
+  virtual Context
+  beginSpan(llvm::StringRef Name,
+            llvm::function_ref<void(llvm::json::Object *)> AttachDetails);
   // Called when a Span is destroyed (it may still be active on other threads).
   // beginSpan() and endSpan() will always form a proper stack on each thread.
   // The Context returned by beginSpan is active, but Args is not ready.
@@ -146,6 +151,8 @@ public:
   llvm::json::Object *const Args;
 
 private:
+  // Awkward constructor works around constant initialization.
+  Span(std::pair<Context, llvm::json::Object *>);
   WithContext RestoreCtx;
 };
 
