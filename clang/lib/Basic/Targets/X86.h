@@ -314,7 +314,7 @@ public:
     // Allow 32-bit only CPUs regardless of 64-bit mode unlike isValidCPUName.
     // NOTE: gcc rejects 32-bit mtune CPUs in 64-bit mode. But being lenient
     // since mtune was ignored by clang for so long.
-    return llvm::X86::parseArchX86(Name) != llvm::X86::CK_None;
+    return llvm::X86::parseTuneCPU(Name) != llvm::X86::CK_None;
   }
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
