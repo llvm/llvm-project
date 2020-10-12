@@ -4686,9 +4686,11 @@ char *Buffer = new (getASTContext(), 1) char[Name.size() + 1];
 void ValueDecl::anchor() {}
 
 bool ValueDecl::isWeak() const {
-  auto *MostRecent = getMostRecentDecl();
-  return MostRecent->hasAttr<WeakAttr>() ||
-         MostRecent->hasAttr<WeakRefAttr>() || isWeakImported();
+  for (const auto *I : attrs())
+    if (isa<WeakAttr>(I) || isa<WeakRefAttr>(I))
+      return true;
+
+  return isWeakImported();
 }
 
 void ImplicitParamDecl::anchor() {}
