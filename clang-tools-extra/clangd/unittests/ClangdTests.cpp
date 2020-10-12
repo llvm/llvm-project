@@ -17,6 +17,7 @@
 #include "TestFS.h"
 #include "TestTU.h"
 #include "URI.h"
+#include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "support/Threading.h"
 #include "clang/Config/config.h"
@@ -27,6 +28,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
@@ -48,6 +50,7 @@ namespace clangd {
 namespace {
 
 using ::testing::AllOf;
+using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::Field;
 using ::testing::Gt;
@@ -1236,6 +1239,21 @@ TEST(ClangdServer, TidyOverrideTest) {
   EXPECT_FALSE(DiagConsumer.HadDiagsInLastCallback);
 }
 
+TEST(ClangdServer, MemoryUsageTest) {
+  MockFS FS;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
+
+  auto FooCpp = testPath("foo.cpp");
+  Server.addDocument(FooCpp, "");
+  ASSERT_TRUE(Server.blockUntilIdleForTest());
+
+  llvm::BumpPtrAllocator Alloc;
+  MemoryTree MT(&Alloc);
+  Server.profile(MT);
+  ASSERT_TRUE(MT.children().count("tuscheduler"));
+  EXPECT_TRUE(MT.child("tuscheduler").children().count(FooCpp));
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
