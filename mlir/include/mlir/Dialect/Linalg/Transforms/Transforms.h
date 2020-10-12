@@ -49,11 +49,10 @@ void populateConvVectorizationPatterns(
     MLIRContext *context, SmallVectorImpl<OwningRewritePatternList> &patterns,
     ArrayRef<int64_t> tileSizes);
 
-/// Populates the given list with patterns to convert Linalg operations on
-/// tensors to buffers.
-void populateConvertLinalgOnTensorsToBuffersPatterns(
-    MLIRContext *context, BufferAssignmentTypeConverter &converter,
-    OwningRewritePatternList &patterns);
+/// Populates the given list with patterns to bufferize linalg ops.
+void populateLinalgBufferizePatterns(MLIRContext *context,
+                                     BufferAssignmentTypeConverter &converter,
+                                     OwningRewritePatternList &patterns);
 
 /// Performs standalone tiling of a single LinalgOp by `tileSizes`.
 /// and permute the loop nest according to `interchangeVector`
