@@ -183,8 +183,12 @@ public:
     Block *newBlock = rewriter.createBlock(&newRegion, newRegion.begin(),
                                            oldBlock->getArgumentTypes());
 
-    // Add the result arguments to the new block.
-    for (Value v : newOutputBuffers)
+    // Add the result arguments that do not come from init_tensors to the new
+    // block.
+    // TODO: update this assumption because the reality is more complex under
+    // linalg on tensor based transformations.
+    for (Value v :
+         ValueRange(newOutputBuffers).drop_front(adaptor.init_tensors().size()))
       newBlock->addArgument(v.getType().cast<MemRefType>().getElementType());
 
     // Clone the body of the old block to the new block.
