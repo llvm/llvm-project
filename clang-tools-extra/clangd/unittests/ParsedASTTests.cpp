@@ -59,7 +59,8 @@ MATCHER_P(DeclNamed, Name, "") {
 
 MATCHER_P(DeclKind, Kind, "") {
   if (NamedDecl *ND = dyn_cast<NamedDecl>(arg))
-    return ND->getDeclKindName() == Kind;
+    if (ND->getDeclKindName() == Kind)
+      return true;
   if (auto *Stream = result_listener->stream()) {
     llvm::raw_os_ostream OS(*Stream);
     arg->dump(OS);
