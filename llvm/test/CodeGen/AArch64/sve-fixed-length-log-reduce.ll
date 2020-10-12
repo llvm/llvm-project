@@ -48,11 +48,11 @@ define i8 @andv_v16i8(<16 x i8> %a) #0 {
 
 define i8 @andv_v32i8(<32 x i8>* %a) #0 {
 ; CHECK-LABEL: andv_v32i8:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].b, vl32
-; VBITS_GE_256-NEXT: ld1b { [[OP:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: andv b[[REDUCE:[0-9]+]], [[PG]], [[OP]].b
-; VBITS_GE_256-NEXT: fmov w0, s[[REDUCE]]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].b, vl32
+; CHECK-NEXT: ld1b { [[OP:z[0-9]+]].b }, [[PG]]/z, [x0]
+; CHECK-NEXT: andv b[[REDUCE:[0-9]+]], [[PG]], [[OP]].b
+; CHECK-NEXT: fmov w0, s[[REDUCE]]
+; CHECK-NEXT: ret
   %op = load <32 x i8>, <32 x i8>* %a
   %res = call i8 @llvm.experimental.vector.reduce.and.v32i8(<32 x i8> %op)
   ret i8 %res
@@ -129,11 +129,11 @@ define i16 @andv_v8i16(<8 x i16> %a) #0 {
 
 define i16 @andv_v16i16(<16 x i16>* %a) #0 {
 ; CHECK-LABEL: andv_v16i16:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_GE_256-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: andv h[[REDUCE:[0-9]+]], [[PG]], [[OP]].h
-; VBITS_GE_256-NEXT: fmov w0, s[[REDUCE]]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl16
+; CHECK-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-NEXT: andv h[[REDUCE:[0-9]+]], [[PG]], [[OP]].h
+; CHECK-NEXT: fmov w0, s[[REDUCE]]
+; CHECK-NEXT: ret
   %op = load <16 x i16>, <16 x i16>* %a
   %res = call i16 @llvm.experimental.vector.reduce.and.v16i16(<16 x i16> %op)
   ret i16 %res
@@ -209,11 +209,11 @@ define i32 @andv_v4i32(<4 x i32> %a) #0 {
 
 define i32 @andv_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-LABEL: andv_v8i32:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_GE_256-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: andv [[REDUCE:s[0-9]+]], [[PG]], [[OP]].s
-; VBITS_GE_256-NEXT: fmov w0, [[REDUCE]]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
+; CHECK-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT: andv [[REDUCE:s[0-9]+]], [[PG]], [[OP]].s
+; CHECK-NEXT: fmov w0, [[REDUCE]]
+; CHECK-NEXT: ret
   %op = load <8 x i32>, <8 x i32>* %a
   %res = call i32 @llvm.experimental.vector.reduce.and.v8i32(<8 x i32> %op)
   ret i32 %res
@@ -287,11 +287,11 @@ define i64 @andv_v2i64(<2 x i64> %a) #0 {
 
 define i64 @andv_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-LABEL: andv_v4i64:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_GE_256-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: andv [[REDUCE:d[0-9]+]], [[PG]], [[OP]].d
-; VBITS_GE_256-NEXT: fmov x0, [[REDUCE]]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
+; CHECK-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-NEXT: andv [[REDUCE:d[0-9]+]], [[PG]], [[OP]].d
+; CHECK-NEXT: fmov x0, [[REDUCE]]
+; CHECK-NEXT: ret
   %op = load <4 x i64>, <4 x i64>* %a
   %res = call i64 @llvm.experimental.vector.reduce.and.v4i64(<4 x i64> %op)
   ret i64 %res
@@ -371,11 +371,11 @@ define i8 @eorv_v16i8(<16 x i8> %a) #0 {
 
 define i8 @eorv_v32i8(<32 x i8>* %a) #0 {
 ; CHECK-LABEL: eorv_v32i8:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].b, vl32
-; VBITS_GE_256-NEXT: ld1b { [[OP:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: eorv b[[REDUCE:[0-9]+]], [[PG]], [[OP]].b
-; VBITS_GE_256-NEXT: fmov w0, s[[REDUCE]]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].b, vl32
+; CHECK-NEXT: ld1b { [[OP:z[0-9]+]].b }, [[PG]]/z, [x0]
+; CHECK-NEXT: eorv b[[REDUCE:[0-9]+]], [[PG]], [[OP]].b
+; CHECK-NEXT: fmov w0, s[[REDUCE]]
+; CHECK-NEXT: ret
   %op = load <32 x i8>, <32 x i8>* %a
   %res = call i8 @llvm.experimental.vector.reduce.xor.v32i8(<32 x i8> %op)
   ret i8 %res
@@ -452,11 +452,11 @@ define i16 @eorv_v8i16(<8 x i16> %a) #0 {
 
 define i16 @eorv_v16i16(<16 x i16>* %a) #0 {
 ; CHECK-LABEL: eorv_v16i16:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_GE_256-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: eorv h[[REDUCE:[0-9]+]], [[PG]], [[OP]].h
-; VBITS_GE_256-NEXT: fmov w0, s[[REDUCE]]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl16
+; CHECK-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-NEXT: eorv h[[REDUCE:[0-9]+]], [[PG]], [[OP]].h
+; CHECK-NEXT: fmov w0, s[[REDUCE]]
+; CHECK-NEXT: ret
   %op = load <16 x i16>, <16 x i16>* %a
   %res = call i16 @llvm.experimental.vector.reduce.xor.v16i16(<16 x i16> %op)
   ret i16 %res
@@ -532,11 +532,11 @@ define i32 @eorv_v4i32(<4 x i32> %a) #0 {
 
 define i32 @eorv_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-LABEL: eorv_v8i32:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_GE_256-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: eorv [[REDUCE:s[0-9]+]], [[PG]], [[OP]].s
-; VBITS_GE_256-NEXT: fmov w0, [[REDUCE]]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
+; CHECK-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT: eorv [[REDUCE:s[0-9]+]], [[PG]], [[OP]].s
+; CHECK-NEXT: fmov w0, [[REDUCE]]
+; CHECK-NEXT: ret
   %op = load <8 x i32>, <8 x i32>* %a
   %res = call i32 @llvm.experimental.vector.reduce.xor.v8i32(<8 x i32> %op)
   ret i32 %res
@@ -610,11 +610,11 @@ define i64 @eorv_v2i64(<2 x i64> %a) #0 {
 
 define i64 @eorv_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-LABEL: eorv_v4i64:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_GE_256-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: eorv [[REDUCE:d[0-9]+]], [[PG]], [[OP]].d
-; VBITS_GE_256-NEXT: fmov x0, [[REDUCE]]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
+; CHECK-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-NEXT: eorv [[REDUCE:d[0-9]+]], [[PG]], [[OP]].d
+; CHECK-NEXT: fmov x0, [[REDUCE]]
+; CHECK-NEXT: ret
   %op = load <4 x i64>, <4 x i64>* %a
   %res = call i64 @llvm.experimental.vector.reduce.xor.v4i64(<4 x i64> %op)
   ret i64 %res
@@ -694,11 +694,11 @@ define i8 @orv_v16i8(<16 x i8> %a) #0 {
 
 define i8 @orv_v32i8(<32 x i8>* %a) #0 {
 ; CHECK-LABEL: orv_v32i8:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].b, vl32
-; VBITS_GE_256-NEXT: ld1b { [[OP:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: orv b[[REDUCE:[0-9]+]], [[PG]], [[OP]].b
-; VBITS_GE_256-NEXT: fmov w0, s[[REDUCE]]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].b, vl32
+; CHECK-NEXT: ld1b { [[OP:z[0-9]+]].b }, [[PG]]/z, [x0]
+; CHECK-NEXT: orv b[[REDUCE:[0-9]+]], [[PG]], [[OP]].b
+; CHECK-NEXT: fmov w0, s[[REDUCE]]
+; CHECK-NEXT: ret
   %op = load <32 x i8>, <32 x i8>* %a
   %res = call i8 @llvm.experimental.vector.reduce.or.v32i8(<32 x i8> %op)
   ret i8 %res
@@ -775,11 +775,11 @@ define i16 @orv_v8i16(<8 x i16> %a) #0 {
 
 define i16 @orv_v16i16(<16 x i16>* %a) #0 {
 ; CHECK-LABEL: orv_v16i16:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_GE_256-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: orv h[[REDUCE:[0-9]+]], [[PG]], [[OP]].h
-; VBITS_GE_256-NEXT: fmov w0, s[[REDUCE]]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl16
+; CHECK-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-NEXT: orv h[[REDUCE:[0-9]+]], [[PG]], [[OP]].h
+; CHECK-NEXT: fmov w0, s[[REDUCE]]
+; CHECK-NEXT: ret
   %op = load <16 x i16>, <16 x i16>* %a
   %res = call i16 @llvm.experimental.vector.reduce.or.v16i16(<16 x i16> %op)
   ret i16 %res
@@ -855,11 +855,11 @@ define i32 @orv_v4i32(<4 x i32> %a) #0 {
 
 define i32 @orv_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-LABEL: orv_v8i32:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_GE_256-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: orv [[REDUCE:s[0-9]+]], [[PG]], [[OP]].s
-; VBITS_GE_256-NEXT: fmov w0, [[REDUCE]]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
+; CHECK-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT: orv [[REDUCE:s[0-9]+]], [[PG]], [[OP]].s
+; CHECK-NEXT: fmov w0, [[REDUCE]]
+; CHECK-NEXT: ret
   %op = load <8 x i32>, <8 x i32>* %a
   %res = call i32 @llvm.experimental.vector.reduce.or.v8i32(<8 x i32> %op)
   ret i32 %res
@@ -933,11 +933,11 @@ define i64 @orv_v2i64(<2 x i64> %a) #0 {
 
 define i64 @orv_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-LABEL: orv_v4i64:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_GE_256-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: orv [[REDUCE:d[0-9]+]], [[PG]], [[OP]].d
-; VBITS_GE_256-NEXT: fmov x0, [[REDUCE]]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
+; CHECK-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-NEXT: orv [[REDUCE:d[0-9]+]], [[PG]], [[OP]].d
+; CHECK-NEXT: fmov x0, [[REDUCE]]
+; CHECK-NEXT: ret
   %op = load <4 x i64>, <4 x i64>* %a
   %res = call i64 @llvm.experimental.vector.reduce.or.v4i64(<4 x i64> %op)
   ret i64 %res
