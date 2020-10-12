@@ -10,13 +10,12 @@
 
 #include "lldb/Host/Config.h"
 
-#include "GDBRemoteCommunicationServerLLGS.h"
-#include "lldb/Utility/GDBRemote.h"
 
 #include <chrono>
 #include <cstring>
 #include <thread>
 
+#include "GDBRemoteCommunicationServerLLGS.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Debug.h"
 #include "lldb/Host/File.h"
@@ -32,11 +31,13 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UriParser.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/JSON.h"
@@ -2876,8 +2877,7 @@ GDBRemoteCommunicationServerLLGS::ReadXferObject(llvm::StringRef object,
   if (object == "features" && annex == "target.xml")
     return BuildTargetXml();
 
-  return llvm::make_error<PacketUnimplementedError>(
-      "Xfer object not supported");
+  return llvm::make_error<UnimplementedError>();
 }
 
 GDBRemoteCommunication::PacketResult
