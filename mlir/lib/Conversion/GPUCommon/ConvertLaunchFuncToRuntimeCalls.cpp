@@ -113,10 +113,28 @@ protected:
       }};
   FunctionCallBuilder streamCreateCallBuilder = {
       "mgpuStreamCreate", llvmPointerType /* void *stream */, {}};
+  FunctionCallBuilder streamDestroyCallBuilder = {
+      "mgpuStreamDestroy", llvmVoidType, {llvmPointerType /* void *stream */}};
   FunctionCallBuilder streamSynchronizeCallBuilder = {
       "mgpuStreamSynchronize",
       llvmVoidType,
       {llvmPointerType /* void *stream */}};
+  FunctionCallBuilder streamWaitEventCallBuilder = {
+      "mgpuStreamWaitEvent",
+      llvmVoidType,
+      {llvmPointerType /* void *stream */, llvmPointerType /* void *event */}};
+  FunctionCallBuilder eventCreateCallBuilder = {
+      "mgpuEventCreate", llvmPointerType /* void *event */, {}};
+  FunctionCallBuilder eventDestroyCallBuilder = {
+      "mgpuEventDestroy", llvmVoidType, {llvmPointerType /* void *event */}};
+  FunctionCallBuilder eventSynchronizeCallBuilder = {
+      "mgpuEventSynchronize",
+      llvmVoidType,
+      {llvmPointerType /* void *event */}};
+  FunctionCallBuilder eventRecordCallBuilder = {
+      "mgpuEventRecord",
+      llvmVoidType,
+      {llvmPointerType /* void *event */, llvmPointerType /* void *stream */}};
   FunctionCallBuilder hostRegisterCallBuilder = {
       "mgpuMemHostRegisterMemRef",
       llvmVoidType,
