@@ -725,3 +725,38 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUMax) {
   EXPECT_EQ(0xffu, KnownUmax.Zero.getZExtValue());
   EXPECT_EQ(0xffffffffffffff00, KnownUmax.One.getZExtValue());
 }
+
+TEST_F(AArch64GISelMITest, TestInvalidQueries) {
+  StringRef MIRString = R"(
+   %src:_(s32) = COPY $w0
+   %thirty2:_(s32) = G_CONSTANT i32 32
+   %equalSized:_(s32) = G_SHL %src, %thirty2
+   %copy1:_(s32) = COPY %equalSized
+   %thirty3:_(s32) = G_CONSTANT i32 33
+   %biggerSized:_(s32) = G_SHL %src, %thirty3
+   %copy2:_(s32) = COPY %biggerSized
+)";
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  Register EqSizedCopyReg = Copies[Copies.size() - 2];
+  MachineInstr *EqSizedCopy = MRI->getVRegDef(EqSizedCopyReg);
+  Register EqSizedShl = EqSizedCopy->getOperand(1).getReg();
+
+  Register BiggerSizedCopyReg = Copies[Copies.size() - 1];
+  MachineInstr *BiggerSizedCopy = MRI->getVRegDef(BiggerSizedCopyReg);
+  Register BiggerSizedShl = BiggerSizedCopy->getOperand(1).getReg();
+
+  GISelKnownBits Info(*MF);
+  KnownBits EqSizeRes = Info.getKnownBits(EqSizedShl);
+  KnownBits BiggerSizeRes = Info.getKnownBits(BiggerSizedShl);
+
+
+  // We don't know what the result of the shift is, but we should not crash
+  EXPECT_TRUE(EqSizeRes.One.isNullValue());
+  EXPECT_TRUE(EqSizeRes.Zero.isNullValue());
+
+  EXPECT_TRUE(BiggerSizeRes.One.isNullValue());
+  EXPECT_TRUE(BiggerSizeRes.Zero.isNullValue());
+}
