@@ -1,4 +1,4 @@
-// RUN: %clang -std=c++14 -fcoroutines-ts -emit-llvm -S -O1 %s -o -
+// RUN: %clang -std=c++14 -fcoroutines-ts -emit-llvm -S -O1 %s -o - | FileCheck %s
 
 #include "Inputs/coroutine.h"
 
