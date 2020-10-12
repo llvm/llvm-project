@@ -2263,21 +2263,6 @@
 // CHECK_X86_64_M32: #define __k8__ 1
 // CHECK_X86_64_M32: #define i386 1
 
-// RUN: %clang -march=x86-64 -m64 -E -dM %s -o - 2>&1 \
-// RUN:     -target i386-unknown-linux \
-// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_X86_64_M64
-// CHECK_X86_64_M64: #define __MMX__ 1
-// CHECK_X86_64_M64: #define __SSE2_MATH__ 1
-// CHECK_X86_64_M64: #define __SSE2__ 1
-// CHECK_X86_64_M64: #define __SSE_MATH__ 1
-// CHECK_X86_64_M64: #define __SSE__ 1
-// CHECK_X86_64_M64: #define __amd64 1
-// CHECK_X86_64_M64: #define __amd64__ 1
-// CHECK_X86_64_M64: #define __k8 1
-// CHECK_X86_64_M64: #define __k8__ 1
-// CHECK_X86_64_M64: #define __x86_64 1
-// CHECK_X86_64_M64: #define __x86_64__ 1
-
 // RUN: %clang -march=k8 -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_K8_M32
