@@ -459,3 +459,23 @@ namespace PR46637 {
   X<f> y;
   int n = y.call(); // expected-error {{cannot initialize a variable of type 'int' with an rvalue of type 'void *'}}
 }
+
+namespace PR47792 {
+  using I = int;
+
+  template<decltype(auto)> int a;
+  const int n = 0;
+  const I n2 = 0;
+  static_assert(&a<n> == &a<0>, "both should have type 'int'");
+  static_assert(&a<n2> == &a<0>, "both should have type 'int'");
+
+  // FIXME: We will need to mangle these cases differently too!
+  int m;
+  const int &r1 = m;
+  int &r2 = m;
+  static_assert(&a<r1> != &a<r2>, "should have different types");
+
+  const I &r3 = m;
+  static_assert(&a<r1> == &a<r3>, "should have different types");
+  static_assert(&a<r2> != &a<r3>, "should have different types");
+}

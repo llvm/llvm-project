@@ -244,7 +244,8 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
     break;
 
   case Declaration:
-    ID.AddPointer(getAsDecl()? getAsDecl()->getCanonicalDecl() : nullptr);
+    ID.AddPointer(getAsDecl() ? getAsDecl()->getCanonicalDecl() : nullptr);
+    getParamTypeForDecl().Profile(ID);
     break;
 
   case Template:
@@ -294,7 +295,8 @@ bool TemplateArgument::structurallyEquals(const TemplateArgument &Other) const {
     return TypeOrValue.V == Other.TypeOrValue.V;
 
   case Declaration:
-    return getAsDecl() == Other.getAsDecl();
+    return getAsDecl() == Other.getAsDecl() &&
+           getParamTypeForDecl() == Other.getParamTypeForDecl();
 
   case Integral:
     return getIntegralType() == Other.getIntegralType() &&
