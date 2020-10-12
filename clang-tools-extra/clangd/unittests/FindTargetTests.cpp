@@ -148,6 +148,17 @@ TEST_F(TargetDeclTest, Exprs) {
   EXPECT_DECLS("LabelStmt", "label:");
 }
 
+TEST_F(TargetDeclTest, RecoveryForC) {
+  Flags = {"-xc", "-Xclang", "-frecovery-ast"};
+  Code = R"cpp(
+    // error-ok: testing behavior on broken code
+    // int f();
+    int f(int);
+    int x = [[f]]();
+  )cpp";
+  EXPECT_DECLS("DeclRefExpr", "int f(int)");
+}
+
 TEST_F(TargetDeclTest, Recovery) {
   Code = R"cpp(
     // error-ok: testing behavior on broken code
