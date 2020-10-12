@@ -744,11 +744,8 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
           Value *X = Builder.CreateBinOp(Op0BO->getOpcode(), YS, V1,
                                          Op0BO->getOperand(1)->getName());
           unsigned Op1Val = Op1C->getLimitedValue(TypeBits);
-
           APInt Bits = APInt::getHighBitsSet(TypeBits, TypeBits - Op1Val);
-          Constant *Mask = ConstantInt::get(I.getContext(), Bits);
-          if (VectorType *VT = dyn_cast<VectorType>(X->getType()))
-            Mask = ConstantVector::getSplat(VT->getElementCount(), Mask);
+          Constant *Mask = ConstantInt::get(Ty, Bits);
           return BinaryOperator::CreateAnd(X, Mask);
         }
 
