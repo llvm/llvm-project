@@ -790,7 +790,7 @@ void VPlanPrinter::dumpRegion(const VPRegionBlock *Region) {
   dumpEdges(Region);
 }
 
-void VPlanPrinter::printAsIngredient(raw_ostream &O, Value *V) {
+void VPlanPrinter::printAsIngredient(raw_ostream &O, const Value *V) {
   std::string IngredientString;
   raw_string_ostream RSO(IngredientString);
   if (auto *Inst = dyn_cast<Instruction>(V)) {
@@ -903,13 +903,14 @@ void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
                                            VPSlotTracker &SlotTracker) const {
-  O << "\"WIDEN " << VPlanIngredient(&Instr);
-  O << ", ";
-  getAddr()->printAsOperand(O, SlotTracker);
-  VPValue *Mask = getMask();
-  if (Mask) {
-    O << ", ";
-    Mask->printAsOperand(O, SlotTracker);
+  O << "\"WIDEN " << Instruction::getOpcodeName(Instr.getOpcode()) << " ";
+
+  bool First = true;
+  for (VPValue *Op : operands()) {
+    if (!First)
+      O << ", ";
+    Op->printAsOperand(O, SlotTracker);
+    First = false;
   }
 }
 

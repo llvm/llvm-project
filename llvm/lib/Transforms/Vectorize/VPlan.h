@@ -1778,7 +1778,7 @@ private:
 
   void dump();
 
-  static void printAsIngredient(raw_ostream &O, Value *V);
+  static void printAsIngredient(raw_ostream &O, const Value *V);
 };
 
 struct VPlanIngredient {
