@@ -11,48 +11,31 @@
 @global = external hidden global [0 x i8]
 
 define hidden i32* @i64(i8* %arg, i32* %arg10) {
-; PTR64_IDX64-LABEL: 'i64'
-; PTR64_IDX64-NEXT:  Classifying expressions for: @i64
-; PTR64_IDX64-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
-; PTR64_IDX64-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; PTR64_IDX64-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i64 ptrtoint ([0 x i8]* @global to i64)
-; PTR64_IDX64-NEXT:    --> (ptrtoint ([0 x i8]* @global to i64) + %arg) U: full-set S: full-set Exits: (ptrtoint ([0 x i8]* @global to i64) + %arg) LoopDispositions: { %bb11: Invariant }
-; PTR64_IDX64-NEXT:    %tmp13 = bitcast i8* %tmp12 to i32*
-; PTR64_IDX64-NEXT:    --> (ptrtoint ([0 x i8]* @global to i64) + %arg) U: full-set S: full-set Exits: (ptrtoint ([0 x i8]* @global to i64) + %arg) LoopDispositions: { %bb11: Invariant }
-; PTR64_IDX64-NEXT:    %tmp14 = load i32, i32* %tmp13, align 4
-; PTR64_IDX64-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
-; PTR64_IDX64-NEXT:    %tmp18 = add i32 %tmp, 2
-; PTR64_IDX64-NEXT:    --> {2,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; PTR64_IDX64-NEXT:  Determining loop execution counts for: @i64
-; PTR64_IDX64-NEXT:  Loop %bb11: Unpredictable backedge-taken count.
-; PTR64_IDX64-NEXT:  Loop %bb11: Unpredictable max backedge-taken count.
-; PTR64_IDX64-NEXT:  Loop %bb11: Unpredictable predicated backedge-taken count.
-;
-; PTR64_IDX32-LABEL: 'i64'
-; PTR64_IDX32-NEXT:  Classifying expressions for: @i64
-; PTR64_IDX32-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
-; PTR64_IDX32-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; PTR64_IDX32-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i64 ptrtoint ([0 x i8]* @global to i64)
-; PTR64_IDX32-NEXT:    --> ((trunc i64 ptrtoint ([0 x i8]* @global to i64) to i32) + %arg) U: full-set S: full-set Exits: ((trunc i64 ptrtoint ([0 x i8]* @global to i64) to i32) + %arg) LoopDispositions: { %bb11: Invariant }
-; PTR64_IDX32-NEXT:    %tmp13 = bitcast i8* %tmp12 to i32*
-; PTR64_IDX32-NEXT:    --> ((trunc i64 ptrtoint ([0 x i8]* @global to i64) to i32) + %arg) U: full-set S: full-set Exits: ((trunc i64 ptrtoint ([0 x i8]* @global to i64) to i32) + %arg) LoopDispositions: { %bb11: Invariant }
-; PTR64_IDX32-NEXT:    %tmp14 = load i32, i32* %tmp13, align 4
-; PTR64_IDX32-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
-; PTR64_IDX32-NEXT:    %tmp18 = add i32 %tmp, 2
-; PTR64_IDX32-NEXT:    --> {2,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; PTR64_IDX32-NEXT:  Determining loop execution counts for: @i64
-; PTR64_IDX32-NEXT:  Loop %bb11: Unpredictable backedge-taken count.
-; PTR64_IDX32-NEXT:  Loop %bb11: Unpredictable max backedge-taken count.
-; PTR64_IDX32-NEXT:  Loop %bb11: Unpredictable predicated backedge-taken count.
+; X64-LABEL: 'i64'
+; X64-NEXT:  Classifying expressions for: @i64
+; X64-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
+; X64-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
+; X64-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i64 ptrtoint ([0 x i8]* @global to i64)
+; X64-NEXT:    --> (@global + %arg) U: full-set S: full-set Exits: (@global + %arg) LoopDispositions: { %bb11: Invariant }
+; X64-NEXT:    %tmp13 = bitcast i8* %tmp12 to i32*
+; X64-NEXT:    --> (@global + %arg) U: full-set S: full-set Exits: (@global + %arg) LoopDispositions: { %bb11: Invariant }
+; X64-NEXT:    %tmp14 = load i32, i32* %tmp13, align 4
+; X64-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
+; X64-NEXT:    %tmp18 = add i32 %tmp, 2
+; X64-NEXT:    --> {2,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
+; X64-NEXT:  Determining loop execution counts for: @i64
+; X64-NEXT:  Loop %bb11: Unpredictable backedge-taken count.
+; X64-NEXT:  Loop %bb11: Unpredictable max backedge-taken count.
+; X64-NEXT:  Loop %bb11: Unpredictable predicated backedge-taken count.
 ;
 ; PTR32_IDX32-LABEL: 'i64'
 ; PTR32_IDX32-NEXT:  Classifying expressions for: @i64
 ; PTR32_IDX32-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; PTR32_IDX32-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; PTR32_IDX32-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i64 ptrtoint ([0 x i8]* @global to i64)
-; PTR32_IDX32-NEXT:    --> ((trunc i64 ptrtoint ([0 x i8]* @global to i64) to i32) + %arg) U: full-set S: full-set Exits: ((trunc i64 ptrtoint ([0 x i8]* @global to i64) to i32) + %arg) LoopDispositions: { %bb11: Invariant }
+; PTR32_IDX32-NEXT:    --> (@global + %arg) U: full-set S: full-set Exits: (@global + %arg) LoopDispositions: { %bb11: Invariant }
 ; PTR32_IDX32-NEXT:    %tmp13 = bitcast i8* %tmp12 to i32*
-; PTR32_IDX32-NEXT:    --> ((trunc i64 ptrtoint ([0 x i8]* @global to i64) to i32) + %arg) U: full-set S: full-set Exits: ((trunc i64 ptrtoint ([0 x i8]* @global to i64) to i32) + %arg) LoopDispositions: { %bb11: Invariant }
+; PTR32_IDX32-NEXT:    --> (@global + %arg) U: full-set S: full-set Exits: (@global + %arg) LoopDispositions: { %bb11: Invariant }
 ; PTR32_IDX32-NEXT:    %tmp14 = load i32, i32* %tmp13, align 4
 ; PTR32_IDX32-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; PTR32_IDX32-NEXT:    %tmp18 = add i32 %tmp, 2
@@ -67,9 +50,9 @@ define hidden i32* @i64(i8* %arg, i32* %arg10) {
 ; PTR32_IDX64-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; PTR32_IDX64-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; PTR32_IDX64-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i64 ptrtoint ([0 x i8]* @global to i64)
-; PTR32_IDX64-NEXT:    --> (ptrtoint ([0 x i8]* @global to i64) + %arg) U: [0,8589934591) S: full-set Exits: (ptrtoint ([0 x i8]* @global to i64) + %arg) LoopDispositions: { %bb11: Invariant }
+; PTR32_IDX64-NEXT:    --> (@global + %arg) U: [0,8589934591) S: full-set Exits: (@global + %arg) LoopDispositions: { %bb11: Invariant }
 ; PTR32_IDX64-NEXT:    %tmp13 = bitcast i8* %tmp12 to i32*
-; PTR32_IDX64-NEXT:    --> (ptrtoint ([0 x i8]* @global to i64) + %arg) U: [0,8589934591) S: full-set Exits: (ptrtoint ([0 x i8]* @global to i64) + %arg) LoopDispositions: { %bb11: Invariant }
+; PTR32_IDX64-NEXT:    --> (@global + %arg) U: [0,8589934591) S: full-set Exits: (@global + %arg) LoopDispositions: { %bb11: Invariant }
 ; PTR32_IDX64-NEXT:    %tmp14 = load i32, i32* %tmp13, align 4
 ; PTR32_IDX64-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; PTR32_IDX64-NEXT:    %tmp18 = add i32 %tmp, 2
@@ -103,9 +86,9 @@ define hidden i32* @i64_to_i32(i8* %arg, i32* %arg10) {
 ; PTR64_IDX64-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; PTR64_IDX64-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; PTR64_IDX64-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i32 ptrtoint ([0 x i8]* @global to i32)
-; PTR64_IDX64-NEXT:    --> ((sext i32 ptrtoint ([0 x i8]* @global to i32) to i64) + %arg) U: full-set S: full-set Exits: ((sext i32 ptrtoint ([0 x i8]* @global to i32) to i64) + %arg) LoopDispositions: { %bb11: Invariant }
+; PTR64_IDX64-NEXT:    --> ((sext i32 (trunc [0 x i8]* @global to i32) to i64) + %arg) U: full-set S: full-set Exits: ((sext i32 (trunc [0 x i8]* @global to i32) to i64) + %arg) LoopDispositions: { %bb11: Invariant }
 ; PTR64_IDX64-NEXT:    %tmp13 = bitcast i8* %tmp12 to i32*
-; PTR64_IDX64-NEXT:    --> ((sext i32 ptrtoint ([0 x i8]* @global to i32) to i64) + %arg) U: full-set S: full-set Exits: ((sext i32 ptrtoint ([0 x i8]* @global to i32) to i64) + %arg) LoopDispositions: { %bb11: Invariant }
+; PTR64_IDX64-NEXT:    --> ((sext i32 (trunc [0 x i8]* @global to i32) to i64) + %arg) U: full-set S: full-set Exits: ((sext i32 (trunc [0 x i8]* @global to i32) to i64) + %arg) LoopDispositions: { %bb11: Invariant }
 ; PTR64_IDX64-NEXT:    %tmp14 = load i32, i32* %tmp13, align 4
 ; PTR64_IDX64-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; PTR64_IDX64-NEXT:    %tmp18 = add i32 %tmp, 2
@@ -120,9 +103,9 @@ define hidden i32* @i64_to_i32(i8* %arg, i32* %arg10) {
 ; PTR64_IDX32-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; PTR64_IDX32-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; PTR64_IDX32-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i32 ptrtoint ([0 x i8]* @global to i32)
-; PTR64_IDX32-NEXT:    --> (ptrtoint ([0 x i8]* @global to i32) + %arg) U: full-set S: full-set Exits: (ptrtoint ([0 x i8]* @global to i32) + %arg) LoopDispositions: { %bb11: Invariant }
+; PTR64_IDX32-NEXT:    --> (@global + %arg) U: full-set S: full-set Exits: (@global + %arg) LoopDispositions: { %bb11: Invariant }
 ; PTR64_IDX32-NEXT:    %tmp13 = bitcast i8* %tmp12 to i32*
-; PTR64_IDX32-NEXT:    --> (ptrtoint ([0 x i8]* @global to i32) + %arg) U: full-set S: full-set Exits: (ptrtoint ([0 x i8]* @global to i32) + %arg) LoopDispositions: { %bb11: Invariant }
+; PTR64_IDX32-NEXT:    --> (@global + %arg) U: full-set S: full-set Exits: (@global + %arg) LoopDispositions: { %bb11: Invariant }
 ; PTR64_IDX32-NEXT:    %tmp14 = load i32, i32* %tmp13, align 4
 ; PTR64_IDX32-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; PTR64_IDX32-NEXT:    %tmp18 = add i32 %tmp, 2
@@ -137,9 +120,9 @@ define hidden i32* @i64_to_i32(i8* %arg, i32* %arg10) {
 ; PTR32_IDX32-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; PTR32_IDX32-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; PTR32_IDX32-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i32 ptrtoint ([0 x i8]* @global to i32)
-; PTR32_IDX32-NEXT:    --> (ptrtoint ([0 x i8]* @global to i32) + %arg) U: full-set S: full-set Exits: (ptrtoint ([0 x i8]* @global to i32) + %arg) LoopDispositions: { %bb11: Invariant }
+; PTR32_IDX32-NEXT:    --> (@global + %arg) U: full-set S: full-set Exits: (@global + %arg) LoopDispositions: { %bb11: Invariant }
 ; PTR32_IDX32-NEXT:    %tmp13 = bitcast i8* %tmp12 to i32*
-; PTR32_IDX32-NEXT:    --> (ptrtoint ([0 x i8]* @global to i32) + %arg) U: full-set S: full-set Exits: (ptrtoint ([0 x i8]* @global to i32) + %arg) LoopDispositions: { %bb11: Invariant }
+; PTR32_IDX32-NEXT:    --> (@global + %arg) U: full-set S: full-set Exits: (@global + %arg) LoopDispositions: { %bb11: Invariant }
 ; PTR32_IDX32-NEXT:    %tmp14 = load i32, i32* %tmp13, align 4
 ; PTR32_IDX32-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; PTR32_IDX32-NEXT:    %tmp18 = add i32 %tmp, 2
@@ -154,9 +137,9 @@ define hidden i32* @i64_to_i32(i8* %arg, i32* %arg10) {
 ; PTR32_IDX64-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; PTR32_IDX64-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; PTR32_IDX64-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i32 ptrtoint ([0 x i8]* @global to i32)
-; PTR32_IDX64-NEXT:    --> ((sext i32 ptrtoint ([0 x i8]* @global to i32) to i64) + %arg) U: [-2147483648,6442450943) S: full-set Exits: ((sext i32 ptrtoint ([0 x i8]* @global to i32) to i64) + %arg) LoopDispositions: { %bb11: Invariant }
+; PTR32_IDX64-NEXT:    --> ((sext i32 (trunc [0 x i8]* @global to i32) to i64) + %arg) U: [-2147483648,6442450943) S: full-set Exits: ((sext i32 (trunc [0 x i8]* @global to i32) to i64) + %arg) LoopDispositions: { %bb11: Invariant }
 ; PTR32_IDX64-NEXT:    %tmp13 = bitcast i8* %tmp12 to i32*
-; PTR32_IDX64-NEXT:    --> ((sext i32 ptrtoint ([0 x i8]* @global to i32) to i64) + %arg) U: [-2147483648,6442450943) S: full-set Exits: ((sext i32 ptrtoint ([0 x i8]* @global to i32) to i64) + %arg) LoopDispositions: { %bb11: Invariant }
+; PTR32_IDX64-NEXT:    --> ((sext i32 (trunc [0 x i8]* @global to i32) to i64) + %arg) U: [-2147483648,6442450943) S: full-set Exits: ((sext i32 (trunc [0 x i8]* @global to i32) to i64) + %arg) LoopDispositions: { %bb11: Invariant }
 ; PTR32_IDX64-NEXT:    %tmp14 = load i32, i32* %tmp13, align 4
 ; PTR32_IDX64-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; PTR32_IDX64-NEXT:    %tmp18 = add i32 %tmp, 2
@@ -185,48 +168,31 @@ bb17:                                             ; preds = %bb11
   br label %bb11
 }
 define hidden i32* @i64_to_i128(i8* %arg, i32* %arg10) {
-; PTR64_IDX64-LABEL: 'i64_to_i128'
-; PTR64_IDX64-NEXT:  Classifying expressions for: @i64_to_i128
-; PTR64_IDX64-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
-; PTR64_IDX64-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; PTR64_IDX64-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i128 ptrtoint ([0 x i8]* @global to i128)
-; PTR64_IDX64-NEXT:    --> ((trunc i128 ptrtoint ([0 x i8]* @global to i128) to i64) + %arg) U: full-set S: full-set Exits: ((trunc i128 ptrtoint ([0 x i8]* @global to i128) to i64) + %arg) LoopDispositions: { %bb11: Invariant }
-; PTR64_IDX64-NEXT:    %tmp13 = bitcast i8* %tmp12 to i32*
-; PTR64_IDX64-NEXT:    --> ((trunc i128 ptrtoint ([0 x i8]* @global to i128) to i64) + %arg) U: full-set S: full-set Exits: ((trunc i128 ptrtoint ([0 x i8]* @global to i128) to i64) + %arg) LoopDispositions: { %bb11: Invariant }
-; PTR64_IDX64-NEXT:    %tmp14 = load i32, i32* %tmp13, align 4
-; PTR64_IDX64-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
-; PTR64_IDX64-NEXT:    %tmp18 = add i32 %tmp, 2
-; PTR64_IDX64-NEXT:    --> {2,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; PTR64_IDX64-NEXT:  Determining loop execution counts for: @i64_to_i128
-; PTR64_IDX64-NEXT:  Loop %bb11: Unpredictable backedge-taken count.
-; PTR64_IDX64-NEXT:  Loop %bb11: Unpredictable max backedge-taken count.
-; PTR64_IDX64-NEXT:  Loop %bb11: Unpredictable predicated backedge-taken count.
-;
-; PTR64_IDX32-LABEL: 'i64_to_i128'
-; PTR64_IDX32-NEXT:  Classifying expressions for: @i64_to_i128
-; PTR64_IDX32-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
-; PTR64_IDX32-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; PTR64_IDX32-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i128 ptrtoint ([0 x i8]* @global to i128)
-; PTR64_IDX32-NEXT:    --> ((trunc i128 ptrtoint ([0 x i8]* @global to i128) to i32) + %arg) U: full-set S: full-set Exits: ((trunc i128 ptrtoint ([0 x i8]* @global to i128) to i32) + %arg) LoopDispositions: { %bb11: Invariant }
-; PTR64_IDX32-NEXT:    %tmp13 = bitcast i8* %tmp12 to i32*
-; PTR64_IDX32-NEXT:    --> ((trunc i128 ptrtoint ([0 x i8]* @global to i128) to i32) + %arg) U: full-set S: full-set Exits: ((trunc i128 ptrtoint ([0 x i8]* @global to i128) to i32) + %arg) LoopDispositions: { %bb11: Invariant }
-; PTR64_IDX32-NEXT:    %tmp14 = load i32, i32* %tmp13, align 4
-; PTR64_IDX32-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
-; PTR64_IDX32-NEXT:    %tmp18 = add i32 %tmp, 2
-; PTR64_IDX32-NEXT:    --> {2,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; PTR64_IDX32-NEXT:  Determining loop execution counts for: @i64_to_i128
-; PTR64_IDX32-NEXT:  Loop %bb11: Unpredictable backedge-taken count.
-; PTR64_IDX32-NEXT:  Loop %bb11: Unpredictable max backedge-taken count.
-; PTR64_IDX32-NEXT:  Loop %bb11: Unpredictable predicated backedge-taken count.
+; X64-LABEL: 'i64_to_i128'
+; X64-NEXT:  Classifying expressions for: @i64_to_i128
+; X64-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
+; X64-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
+; X64-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i128 ptrtoint ([0 x i8]* @global to i128)
+; X64-NEXT:    --> (@global + %arg) U: full-set S: full-set Exits: (@global + %arg) LoopDispositions: { %bb11: Invariant }
+; X64-NEXT:    %tmp13 = bitcast i8* %tmp12 to i32*
+; X64-NEXT:    --> (@global + %arg) U: full-set S: full-set Exits: (@global + %arg) LoopDispositions: { %bb11: Invariant }
+; X64-NEXT:    %tmp14 = load i32, i32* %tmp13, align 4
+; X64-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
+; X64-NEXT:    %tmp18 = add i32 %tmp, 2
+; X64-NEXT:    --> {2,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
+; X64-NEXT:  Determining loop execution counts for: @i64_to_i128
+; X64-NEXT:  Loop %bb11: Unpredictable backedge-taken count.
+; X64-NEXT:  Loop %bb11: Unpredictable max backedge-taken count.
+; X64-NEXT:  Loop %bb11: Unpredictable predicated backedge-taken count.
 ;
 ; PTR32_IDX32-LABEL: 'i64_to_i128'
 ; PTR32_IDX32-NEXT:  Classifying expressions for: @i64_to_i128
 ; PTR32_IDX32-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; PTR32_IDX32-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; PTR32_IDX32-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i128 ptrtoint ([0 x i8]* @global to i128)
-; PTR32_IDX32-NEXT:    --> ((trunc i128 ptrtoint ([0 x i8]* @global to i128) to i32) + %arg) U: full-set S: full-set Exits: ((trunc i128 ptrtoint ([0 x i8]* @global to i128) to i32) + %arg) LoopDispositions: { %bb11: Invariant }
+; PTR32_IDX32-NEXT:    --> (@global + %arg) U: full-set S: full-set Exits: (@global + %arg) LoopDispositions: { %bb11: Invariant }
 ; PTR32_IDX32-NEXT:    %tmp13 = bitcast i8* %tmp12 to i32*
-; PTR32_IDX32-NEXT:    --> ((trunc i128 ptrtoint ([0 x i8]* @global to i128) to i32) + %arg) U: full-set S: full-set Exits: ((trunc i128 ptrtoint ([0 x i8]* @global to i128) to i32) + %arg) LoopDispositions: { %bb11: Invariant }
+; PTR32_IDX32-NEXT:    --> (@global + %arg) U: full-set S: full-set Exits: (@global + %arg) LoopDispositions: { %bb11: Invariant }
 ; PTR32_IDX32-NEXT:    %tmp14 = load i32, i32* %tmp13, align 4
 ; PTR32_IDX32-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; PTR32_IDX32-NEXT:    %tmp18 = add i32 %tmp, 2
@@ -241,9 +207,9 @@ define hidden i32* @i64_to_i128(i8* %arg, i32* %arg10) {
 ; PTR32_IDX64-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; PTR32_IDX64-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; PTR32_IDX64-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i128 ptrtoint ([0 x i8]* @global to i128)
-; PTR32_IDX64-NEXT:    --> ((trunc i128 ptrtoint ([0 x i8]* @global to i128) to i64) + %arg) U: [0,8589934591) S: full-set Exits: ((trunc i128 ptrtoint ([0 x i8]* @global to i128) to i64) + %arg) LoopDispositions: { %bb11: Invariant }
+; PTR32_IDX64-NEXT:    --> (@global + %arg) U: [0,8589934591) S: full-set Exits: (@global + %arg) LoopDispositions: { %bb11: Invariant }
 ; PTR32_IDX64-NEXT:    %tmp13 = bitcast i8* %tmp12 to i32*
-; PTR32_IDX64-NEXT:    --> ((trunc i128 ptrtoint ([0 x i8]* @global to i128) to i64) + %arg) U: [0,8589934591) S: full-set Exits: ((trunc i128 ptrtoint ([0 x i8]* @global to i128) to i64) + %arg) LoopDispositions: { %bb11: Invariant }
+; PTR32_IDX64-NEXT:    --> (@global + %arg) U: [0,8589934591) S: full-set Exits: (@global + %arg) LoopDispositions: { %bb11: Invariant }
 ; PTR32_IDX64-NEXT:    %tmp14 = load i32, i32* %tmp13, align 4
 ; PTR32_IDX64-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; PTR32_IDX64-NEXT:    %tmp18 = add i32 %tmp, 2
