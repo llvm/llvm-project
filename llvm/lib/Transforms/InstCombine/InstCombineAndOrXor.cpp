@@ -2053,7 +2053,7 @@ Instruction *InstCombinerImpl::matchBSwap(BinaryOperator &Or) {
 }
 
 /// Match UB-safe variants of the funnel shift intrinsic.
-static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC) {
+static Instruction *matchFunnelShift(Instruction &Or) {
   // TODO: Can we reduce the code duplication between this and the related
   // rotate matching code under visitSelect and visitTrunc?
   unsigned Width = Or.getType()->getScalarSizeInBits();
@@ -2092,16 +2092,6 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC) {
         match(R, m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, APInt(Width, Width)))) {
       if (match(ConstantExpr::getAdd(LC, RC), m_SpecificInt(Width)))
         return L;
-    }
-
-    // (shl ShVal, X) | (lshr ShVal, (Width - x)) iff X < Width.
-    // We limit this to X < Width in case the backend re-expands the intrinsic,
-    // and has to reintroduce a shift modulo operation (InstCombine might remove
-    // it after this fold). This still doesn't guarantee that the final codegen
-    // will match this original pattern.
-    if (match(R, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(L))))) {
-      KnownBits KnownL = IC.computeKnownBits(L, /*Depth*/ 0, &Or);
-      return KnownL.getMaxValue().ult(Width) ? L : nullptr;
     }
 
     // For non-constant cases, the following patterns currently only work for
@@ -2600,7 +2590,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *BSwap = matchBSwap(I))
     return BSwap;
 
-  if (Instruction *Funnel = matchFunnelShift(I, *this))
+  if (Instruction *Funnel = matchFunnelShift(I))
     return Funnel;
 
   if (Instruction *Concat = matchOrConcat(I, Builder))
