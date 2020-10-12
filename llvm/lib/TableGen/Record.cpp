@@ -761,6 +761,12 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
       return NewInit;
     break;
 
+  case NOT:
+    if (IntInit *LHSi =
+            dyn_cast_or_null<IntInit>(LHS->convertInitializerTo(IntRecTy::get())))
+      return IntInit::get(LHSi->getValue() ? 0 : 1);
+    break;
+
   case HEAD:
     if (ListInit *LHSl = dyn_cast<ListInit>(LHS)) {
       assert(!LHSl->empty() && "Empty list in head");
@@ -820,6 +826,7 @@ std::string UnOpInit::getAsString() const {
   std::string Result;
   switch (getOpcode()) {
   case CAST: Result = "!cast<" + getType()->getAsString() + ">"; break;
+  case NOT: Result = "!not"; break;
   case HEAD: Result = "!head"; break;
   case TAIL: Result = "!tail"; break;
   case SIZE: Result = "!size"; break;
@@ -1014,6 +1021,7 @@ Init *BinOpInit::Fold(Record *CurRec) const {
   case MUL:
   case AND:
   case OR:
+  case XOR:
   case SHL:
   case SRA:
   case SRL: {
@@ -1029,7 +1037,8 @@ Init *BinOpInit::Fold(Record *CurRec) const {
       case ADD: Result = LHSv +  RHSv; break;
       case MUL: Result = LHSv *  RHSv; break;
       case AND: Result = LHSv &  RHSv; break;
-      case OR: Result = LHSv | RHSv; break;
+      case OR:  Result = LHSv | RHSv; break;
+      case XOR: Result = LHSv ^ RHSv; break;
       case SHL: Result = (uint64_t)LHSv << (uint64_t)RHSv; break;
       case SRA: Result = LHSv >> RHSv; break;
       case SRL: Result = (uint64_t)LHSv >> (uint64_t)RHSv; break;
@@ -1060,6 +1069,7 @@ std::string BinOpInit::getAsString() const {
   case MUL: Result = "!mul"; break;
   case AND: Result = "!and"; break;
   case OR: Result = "!or"; break;
+  case XOR: Result = "!xor"; break;
   case SHL: Result = "!shl"; break;
   case SRA: Result = "!sra"; break;
   case SRL: Result = "!srl"; break;
