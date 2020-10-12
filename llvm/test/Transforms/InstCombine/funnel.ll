@@ -168,7 +168,11 @@ define <3 x i36> @fshl_v3i36_constant_nonsplat_undef0(<3 x i36> %x, <3 x i36> %y
 
 define i64 @fshl_sub_mask(i64 %x, i64 %y, i64 %a) {
 ; CHECK-LABEL: @fshl_sub_mask(
-; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.fshl.i64(i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[MASK:%.*]] = and i64 [[A:%.*]], 63
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[X:%.*]], [[MASK]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i64 64, [[MASK]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[Y:%.*]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = or i64 [[SHL]], [[SHR]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %mask = and i64 %a, 63
@@ -183,7 +187,11 @@ define i64 @fshl_sub_mask(i64 %x, i64 %y, i64 %a) {
 
 define i64 @fshr_sub_mask(i64 %x, i64 %y, i64 %a) {
 ; CHECK-LABEL: @fshr_sub_mask(
-; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.fshr.i64(i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[MASK:%.*]] = and i64 [[A:%.*]], 63
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[X:%.*]], [[MASK]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i64 64, [[MASK]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[Y:%.*]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = or i64 [[SHL]], [[SHR]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %mask = and i64 %a, 63
@@ -196,7 +204,11 @@ define i64 @fshr_sub_mask(i64 %x, i64 %y, i64 %a) {
 
 define <2 x i64> @fshr_sub_mask_vector(<2 x i64> %x, <2 x i64> %y, <2 x i64> %a) {
 ; CHECK-LABEL: @fshr_sub_mask_vector(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]], <2 x i64> [[A:%.*]])
+; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i64> [[A:%.*]], <i64 63, i64 63>
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i64> [[X:%.*]], [[MASK]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw <2 x i64> <i64 64, i64 64>, [[MASK]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i64> [[Y:%.*]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i64> [[SHL]], [[SHR]]
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %mask = and <2 x i64> %a, <i64 63, i64 63>
