@@ -20,12 +20,12 @@ BufferizeTypeConverter::BufferizeTypeConverter() {
   // Keep all types unchanged.
   addConversion([](Type type) { return type; });
   // Convert RankedTensorType to MemRefType.
-  addConversion([](RankedTensorType type) {
-    return (Type)MemRefType::get(type.getShape(), type.getElementType());
+  addConversion([](RankedTensorType type) -> Type {
+    return MemRefType::get(type.getShape(), type.getElementType());
   });
   // Convert UnrankedTensorType to UnrankedMemRefType.
-  addConversion([](UnrankedTensorType type) {
-    return (Type)UnrankedMemRefType::get(type.getElementType(), 0);
+  addConversion([](UnrankedTensorType type) -> Type {
+    return UnrankedMemRefType::get(type.getElementType(), 0);
   });
 }
 
@@ -35,8 +35,8 @@ BufferizeTypeConverter::BufferizeTypeConverter() {
 void BufferizeTypeConverter::tryDecomposeValue(
     OpBuilder &builder, Location loc, Type type, Value value,
     SmallVectorImpl<Value> &results) {
-  for (auto conversion : decomposeValueConversions)
-    if (conversion(builder, loc, type, value, results) != llvm::None)
+  for (auto &conversion : decomposeValueConversions)
+    if (conversion(builder, loc, type, value, results))
       return;
   results.push_back(value);
 }
@@ -45,8 +45,8 @@ void BufferizeTypeConverter::tryDecomposeValue(
 /// functions. If it is unable to do so, the original type is returned.
 void BufferizeTypeConverter::tryDecomposeType(Type type,
                                               SmallVectorImpl<Type> &types) {
-  for (auto conversion : decomposeTypeConversions)
-    if (conversion(type, types) != llvm::None)
+  for (auto &conversion : decomposeTypeConversions)
+    if (conversion(type, types))
       return;
   types.push_back(type);
 }
@@ -54,11 +54,9 @@ void BufferizeTypeConverter::tryDecomposeType(Type type,
 /// This method returns ResultConversionKind for the input type.
 BufferizeTypeConverter::ResultConversionKind
 BufferizeTypeConverter::getResultConversionKind(Type origin, Type converted) {
-  for (auto conversion : resultTypeConversions) {
-    auto res = conversion(origin, converted);
-    if (res != llvm::None)
+  for (auto &conversion : resultTypeConversions)
+    if (auto res = conversion(origin, converted))
       return res.getValue();
-  }
   return KeepAsFunctionResult;
 }
 
@@ -90,11 +88,12 @@ LogicalResult BufferizeFuncOpConverter::matchAndRewrite(
     for (auto origin : originTypes) {
       Type converted = converter.convertType(origin);
       auto kind = converter.getResultConversionKind(origin, converted);
-      if (kind == BufferizeTypeConverter::AppendToArgumentsList)
+      if (kind == BufferizeTypeConverter::AppendToArgumentsList) {
         conversion.addInputs(converted);
-      else
-        // kind = BufferizeTypeConverter::KeepAsFunctionResult
+      } else {
+        assert(kind == BufferizeTypeConverter::KeepAsFunctionResult);
         newResultTypes.push_back(converted);
+      }
     }
   }
 
@@ -140,21 +139,19 @@ public:
     SmallVector<std::pair<unsigned, Value>, 2> res(toValuesMapping.begin(),
                                                    toValuesMapping.end());
     // Replace the indices with the actual values.
-    llvm::for_each(
-        toIndicesMapping, [&](const std::pair<unsigned, unsigned> &entry) {
-          assert(entry.second < valuesToReplaceIndices.size() &&
-                 "The value index is out of range.");
-          res.push_back({entry.first, valuesToReplaceIndices[entry.second]});
-        });
+    for (const std::pair<unsigned, unsigned> &entry : toIndicesMapping) {
+      assert(entry.second < valuesToReplaceIndices.size() &&
+             "The value index is out of range.");
+      res.push_back({entry.first, valuesToReplaceIndices[entry.second]});
+    }
     // Sort the values based on their adding orders.
     llvm::sort(res, [](const std::pair<unsigned, Value> &v1,
                        const std::pair<unsigned, Value> &v2) {
       return v1.first < v2.first;
     });
     // Fill the values.
-    llvm::for_each(res, [&](const std::pair<unsigned, Value> &entry) {
+    for (const std::pair<unsigned, Value> &entry : res)
       values.push_back(entry.second);
-    });
   }
 
 private:
@@ -187,8 +184,8 @@ LogicalResult BufferizeCallOpConverter::matchAndRewrite(
   // values if a decompose callback function has been provided by the user.
   for (auto operand : operands) {
     SmallVector<Value, 2> values;
-    this->converter.tryDecomposeValue(builder, loc, operand.getType(), operand,
-                                      values);
+    converter.tryDecomposeValue(builder, loc, operand.getType(), operand,
+                                values);
     newOperands.append(values.begin(), values.end());
   }
 
