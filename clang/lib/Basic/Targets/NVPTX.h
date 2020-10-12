@@ -128,8 +128,6 @@ public:
   void setSupportedOpenCLOpts() override {
     auto &Opts = getSupportedOpenCLOpts();
     Opts.support("cl_clang_storage_class_specifiers");
-    Opts.support("cl_khr_gl_sharing");
-    Opts.support("cl_khr_icd");
 
     Opts.support("cl_khr_fp64");
     Opts.support("cl_khr_byte_addressable_store");
