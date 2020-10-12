@@ -77,7 +77,7 @@ public:
 struct TestPatternDriver : public PassWrapper<TestPatternDriver, FunctionPass> {
   void runOnFunction() override {
     mlir::OwningRewritePatternList patterns;
-    populateWithGenerated(&getContext(), &patterns);
+    populateWithGenerated(&getContext(), patterns);
 
     // Verify named pattern is generated with expected name.
     patterns.insert<FoldingPattern, TestNamedPatternRule>(&getContext());
@@ -547,7 +547,7 @@ struct TestLegalizePatternDriver
   void runOnOperation() override {
     TestTypeConverter converter;
     mlir::OwningRewritePatternList patterns;
-    populateWithGenerated(&getContext(), &patterns);
+    populateWithGenerated(&getContext(), patterns);
     patterns.insert<
         TestRegionRewriteBlockMovement, TestRegionRewriteUndo, TestCreateBlock,
         TestCreateIllegalBlock, TestUndoBlockArgReplace, TestUndoBlockErase,

@@ -140,14 +140,28 @@ class BufferAssignmentOpConversionPattern
     : public OpConversionPattern<SourceOp> {
 public:
   explicit BufferAssignmentOpConversionPattern(
-      MLIRContext *context, BufferAssignmentTypeConverter *converter,
+      MLIRContext *context, BufferAssignmentTypeConverter &converter,
       PatternBenefit benefit = 1)
-      : OpConversionPattern<SourceOp>(context, benefit), converter(converter) {
-    assert(converter && "The type converter has not been defined");
-  }
+      : OpConversionPattern<SourceOp>(context, benefit), converter(converter) {}
 
 protected:
-  BufferAssignmentTypeConverter *converter;
+  BufferAssignmentTypeConverter &converter;
+};
+
+/// Helper conversion pattern that encapsulates a BufferAssignmentTypeConverter
+/// instance and that operates on Operation* to be compatible with OpInterfaces.
+/// This allows avoiding to instantiate N patterns for ops that can be subsumed
+/// by a single op interface (e.g. Linalg named ops).
+class BufferAssignmentConversionPattern : public ConversionPattern {
+public:
+  explicit BufferAssignmentConversionPattern(
+      MLIRContext *context, BufferAssignmentTypeConverter &converter,
+      PatternBenefit benefit = 1)
+      : ConversionPattern(benefit, converter, MatchAnyOpTypeTag()),
+        converter(converter) {}
+
+protected:
+  BufferAssignmentTypeConverter &converter;
 };
 
 /// Converts the signature of the function using BufferAssignmentTypeConverter.
@@ -191,15 +205,15 @@ public:
     OpBuilder builder(returnOp);
     for (auto operand : llvm::enumerate(operands)) {
       SmallVector<Value, 2> values;
-      this->converter->tryDecomposeValue(
-          builder, loc, operand.value().getType(), operand.value(), values);
+      this->converter.tryDecomposeValue(builder, loc, operand.value().getType(),
+                                        operand.value(), values);
       Type type = returnOp.getOperand(operand.index()).getType();
       SmallVector<Type, 2> originTypes;
-      this->converter->tryDecomposeType(type, originTypes);
+      this->converter.tryDecomposeType(type, originTypes);
       for (auto value : llvm::enumerate(values)) {
         Type origin = originTypes[value.index()];
         Type converted = value.value().getType();
-        auto kind = this->converter->getResultConversionKind(origin, converted);
+        auto kind = this->converter.getResultConversionKind(origin, converted);
         if (kind == BufferAssignmentTypeConverter::KeepAsFunctionResult)
           newOperands.push_back(value.value());
         else
@@ -247,10 +261,10 @@ public:
 template <typename ReturnOpSourceTy, typename ReturnOpTargetTy,
           typename CopyOpTy>
 static void populateWithBufferAssignmentOpConversionPatterns(
-    MLIRContext *context, BufferAssignmentTypeConverter *converter,
-    OwningRewritePatternList *patterns) {
+    MLIRContext *context, BufferAssignmentTypeConverter &converter,
+    OwningRewritePatternList &patterns) {
   // clang-format off
-  patterns->insert<
+  patterns.insert<
     BufferAssignmentCallOpConverter,
     BufferAssignmentFuncOpConverter,
     BufferAssignmentReturnOpConverter
