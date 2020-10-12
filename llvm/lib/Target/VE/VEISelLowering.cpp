@@ -679,6 +679,11 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
   /// } Stack
 
+  /// Branch {
+  // VE doesn't have BRCOND
+  setOperationAction(ISD::BRCOND, MVT::Other, Expand);
+  /// } Branch
+
   /// Int Ops {
   for (MVT IntVT : {MVT::i32, MVT::i64}) {
     // VE has no REM or DIVREM operations.
