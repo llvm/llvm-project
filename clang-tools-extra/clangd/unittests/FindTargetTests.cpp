@@ -728,6 +728,54 @@ TEST_F(TargetDeclTest, DependentExprs) {
                "template <typename T> T convert() const");
 }
 
+TEST_F(TargetDeclTest, DependentTypes) {
+  Flags = {"-fno-delayed-template-parsing"};
+
+  // Heuristic resolution of dependent type name
+  Code = R"cpp(
+        template <typename>
+        struct A { struct B {}; };
+
+        template <typename T>
+        void foo(typename A<T>::[[B]]);
+      )cpp";
+  EXPECT_DECLS("DependentNameTypeLoc", "struct B");
+
+  // Heuristic resolution of dependent type name which doesn't get a TypeLoc
+  Code = R"cpp(
+        template <typename>
+        struct A { struct B { struct C {}; }; };
+
+        template <typename T>
+        void foo(typename A<T>::[[B]]::C);
+      )cpp";
+  EXPECT_DECLS("NestedNameSpecifierLoc", "struct B");
+
+  // Heuristic resolution of dependent type name whose qualifier is also
+  // dependent
+  Code = R"cpp(
+        template <typename>
+        struct A { struct B { struct C {}; }; };
+
+        template <typename T>
+        void foo(typename A<T>::B::[[C]]);
+      )cpp";
+  EXPECT_DECLS("DependentNameTypeLoc", "struct C");
+
+  // Heuristic resolution of dependent template name
+  Code = R"cpp(
+        template <typename>
+        struct A {
+          template <typename> struct B {};
+        };
+
+        template <typename T>
+        void foo(typename A<T>::template [[B]]<int>);
+      )cpp";
+  EXPECT_DECLS("DependentTemplateSpecializationTypeLoc",
+               "template <typename> struct B");
+}
+
 TEST_F(TargetDeclTest, ObjC) {
   Flags = {"-xobjective-c"};
   Code = R"cpp(
