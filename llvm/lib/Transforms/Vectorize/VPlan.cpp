@@ -195,6 +195,17 @@ void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
     delete Block;
 }
 
+VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
+  iterator It = begin();
+  while (It != end() &&
+         (It->getVPRecipeID() == VPRecipeBase::VPWidenPHISC ||
+          It->getVPRecipeID() == VPRecipeBase::VPWidenIntOrFpInductionSC ||
+          It->getVPRecipeID() == VPRecipeBase::VPPredInstPHISC ||
+          It->getVPRecipeID() == VPRecipeBase::VPWidenCanonicalIVSC))
+    It++;
+  return It;
+}
+
 BasicBlock *
 VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
   // BB stands for IR BasicBlocks. VPBB stands for VPlan VPBasicBlocks.
@@ -525,7 +536,7 @@ void VPlan::execute(VPTransformState *State) {
                                    "trip.count.minus.1");
     auto VF = State->VF;
     Value *VTCMO =
-        VF == 1 ? TCMO : Builder.CreateVectorSplat(VF, TCMO, "broadcast");
+        VF.isScalar() ? TCMO : Builder.CreateVectorSplat(VF, TCMO, "broadcast");
     for (unsigned Part = 0, UF = State->UF; Part < UF; ++Part)
       State->set(BackedgeTakenCount, VTCMO, Part);
   }
@@ -870,6 +881,10 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   ChainOp->printAsOperand(O, SlotTracker);
   O << " + reduce(";
   VecOp->printAsOperand(O, SlotTracker);
+  if (CondOp) {
+    O << ", ";
+    CondOp->printAsOperand(O, SlotTracker);
+  }
   O << ")";
 }
 
@@ -915,7 +930,8 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
           ConstantInt::get(STy, Part * VF.getKnownMinValue() + Lane));
     // If VF == 1, there is only one iteration in the loop above, thus the
     // element pushed back into Indices is ConstantInt::get(STy, Part)
-    Constant *VStep = VF == 1 ? Indices.back() : ConstantVector::get(Indices);
+    Constant *VStep =
+        VF.isScalar() ? Indices.back() : ConstantVector::get(Indices);
     // Add the consecutive indices to the vector value.
     Value *CanonicalVectorIV = Builder.CreateAdd(VStart, VStep, "vec.iv");
     State.set(getVPValue(), CanonicalVectorIV, Part);

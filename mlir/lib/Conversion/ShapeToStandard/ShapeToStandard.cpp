@@ -99,10 +99,16 @@ LogicalResult BroadcastOpConverter::matchAndRewrite(
       rewriter.create<SelectOp>(loc, lhsRankULE, lhsRank, rhsRank);
   Value greaterRank =
       rewriter.create<SelectOp>(loc, lhsRankULE, rhsRank, lhsRank);
+  auto erasedRankType =
+      RankedTensorType::get({ShapedType::kDynamicSize}, indexTy);
+  Value rankErasedLhs =
+      rewriter.create<TensorCastOp>(loc, erasedRankType, transformed.lhs());
+  Value rankErasedRhs =
+      rewriter.create<TensorCastOp>(loc, erasedRankType, transformed.rhs());
   Value lesserRankOperand =
-      rewriter.create<SelectOp>(loc, lhsRankULE, op.lhs(), op.rhs());
+      rewriter.create<SelectOp>(loc, lhsRankULE, rankErasedLhs, rankErasedRhs);
   Value greaterRankOperand =
-      rewriter.create<SelectOp>(loc, lhsRankULE, op.rhs(), op.lhs());
+      rewriter.create<SelectOp>(loc, lhsRankULE, rankErasedRhs, rankErasedLhs);
 
   // Allocate stack memory for the broadcasted extent tensor.
   Type memTy = MemRefType::get({ShapedType::kDynamicSize}, indexTy);

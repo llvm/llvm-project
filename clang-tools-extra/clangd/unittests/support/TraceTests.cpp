@@ -186,6 +186,11 @@ TEST_F(CSVMetricsTracerTest, Escaping) {
                                          StartsWith("d,dist,\"a\nb\",1"), ""));
 }
 
+TEST_F(CSVMetricsTracerTest, IgnoresArgs) {
+  trace::Span Tracer("Foo");
+  EXPECT_EQ(nullptr, Tracer.Args);
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

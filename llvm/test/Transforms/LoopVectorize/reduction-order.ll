@@ -7,9 +7,9 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 ; in deterministic order.
 ; CHECK-LABEL: @foo(
 ; CHECK: vector.body:
-; CHECK: %[[VAR1:.*]] = add <4 x i32> <i32 3, i32 3, i32 3, i32 3>, %vec.phi1
+; CHECK: icmp ule <4 x i64>
+; CHECK-NEXT: %[[VAR1:.*]] = add <4 x i32> <i32 3, i32 3, i32 3, i32 3>, %vec.phi1
 ; CHECK-NEXT: %[[VAR2:.*]] = add <4 x i32> %vec.phi, <i32 5, i32 5, i32 5, i32 5>
-; CHECK-NEXT: icmp ule <4 x i64>
 ; CHECK-NEXT: select <4 x i1> {{.*}}, <4 x i32> %[[VAR2]], <4 x i32>
 ; CHECK-NEXT: select <4 x i1> {{.*}}, <4 x i32> %[[VAR1]], <4 x i32>
 ; CHECK: br i1 {{.*}}, label %middle.block, label %vector.body

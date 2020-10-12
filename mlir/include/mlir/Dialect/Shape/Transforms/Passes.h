@@ -41,8 +41,8 @@ void populateRemoveShapeConstraintsPatterns(OwningRewritePatternList &patterns,
 std::unique_ptr<FunctionPass> createRemoveShapeConstraintsPass();
 
 void populateShapeTypeConversionPatterns(
-    MLIRContext *ctx, BufferAssignmentTypeConverter *converter,
-    OwningRewritePatternList *patterns);
+    MLIRContext *ctx, BufferAssignmentTypeConverter &converter,
+    OwningRewritePatternList &patterns);
 // Collects a set of patterns to replace tensors as inputs and outputs to shape
 // operations with buffers. This only modifies the shape operations.
 std::unique_ptr<FunctionPass> createShapeTensorToMemrefPass();
