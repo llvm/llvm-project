@@ -183,12 +183,6 @@ struct FormatToken {
   /// before the token.
   bool MustBreakBefore = false;
 
-  /// Whether to not align across this token
-  ///
-  /// This happens for example when a preprocessor directive ended directly
-  /// before the token, but very rarely otherwise.
-  bool MustBreakAlignBefore = false;
-
   /// The raw text of the token.
   ///
   /// Contains the raw token text without leading whitespace and without leading
